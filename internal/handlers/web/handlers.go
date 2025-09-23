@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/arx-os/arxos/internal/api"
@@ -100,22 +101,38 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
 
 // HandleDashboard handles the dashboard page
 func (h *Handler) HandleDashboard(w http.ResponseWriter, r *http.Request) {
-	// Get dashboard data (placeholder - would need to implement proper API call)
-	var buildings []*models.FloorPlan
-	// TODO: Implement proper building service call
-	// ctx := r.Context()
-	// buildings, err := h.services.Building.GetAllBuildings(ctx)
+	ctx := r.Context()
+
+	// Get user from session
+	user := h.getUser(r)
+	userID := ""
+	if user != nil {
+		// Extract user ID from interface
+		if u, ok := user.(map[string]interface{}); ok {
+			if id, ok := u["id"].(string); ok {
+				userID = id
+			}
+		}
+	}
+
+	// Get buildings from service
+	buildings, err := h.services.Building.ListBuildings(ctx, userID, 10, 0)
+	if err != nil {
+		logger.Error("Failed to get buildings: %v", err)
+		buildings = []*models.FloorPlan{}
+	}
 
 	data := PageData{
 		Title:     "Dashboard",
 		NavActive: "dashboard",
-		User:      h.getUser(r),
+		User:      user,
 		Content: map[string]interface{}{
 			"BuildingCount":   len(buildings),
 			"RecentBuildings": buildings,
 			"EquipmentCount":  h.getTotalEquipmentCount(buildings),
 			"FailedEquipment": h.getFailedEquipmentCount(buildings),
 		},
+		CurrentTime: time.Now(),
 	}
 
 	if err := h.templates.Render(w, "dashboard", data); err != nil {
@@ -126,19 +143,46 @@ func (h *Handler) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 
 // HandleBuildingsList handles the buildings list page
 func (h *Handler) HandleBuildingsList(w http.ResponseWriter, r *http.Request) {
-	// Get buildings data (placeholder - would need to implement proper API call)
-	var buildings []*models.FloorPlan
-	// TODO: Implement proper building service call
-	// ctx := r.Context()
-	// buildings, err := h.services.Building.GetAllBuildings(ctx)
+	ctx := r.Context()
+
+	// Get user from session
+	user := h.getUser(r)
+	userID := ""
+	if user != nil {
+		// Extract user ID from interface
+		if u, ok := user.(map[string]interface{}); ok {
+			if id, ok := u["id"].(string); ok {
+				userID = id
+			}
+		}
+	}
+
+	// Get pagination parameters
+	limit := 20
+	offset := 0
+	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
+		if page, err := strconv.Atoi(pageStr); err == nil && page > 0 {
+			offset = (page - 1) * limit
+		}
+	}
+
+	// Get buildings from service
+	buildings, err := h.services.Building.ListBuildings(ctx, userID, limit, offset)
+	if err != nil {
+		logger.Error("Failed to list buildings: %v", err)
+		buildings = []*models.FloorPlan{}
+	}
 
 	data := PageData{
 		Title:     "Buildings",
 		NavActive: "buildings",
-		User:      h.getUser(r),
+		User:      user,
 		Content: map[string]interface{}{
 			"Buildings": buildings,
+			"Page":      (offset / limit) + 1,
+			"HasMore":   len(buildings) == limit,
 		},
+		CurrentTime: time.Now(),
 	}
 
 	if err := h.templates.Render(w, "buildings", data); err != nil {

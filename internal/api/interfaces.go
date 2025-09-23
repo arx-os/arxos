@@ -4,16 +4,12 @@ import (
 	"context"
 	"time"
 
+	apimodels "github.com/arx-os/arxos/internal/api/models"
 	"github.com/arx-os/arxos/pkg/models"
-	syncpkg "github.com/arx-os/arxos/pkg/sync"
 )
 
-// RequestInfo contains metadata about the HTTP request
-type RequestInfo struct {
-	IPAddress string
-	UserAgent string
-	RequestID string
-}
+// RequestInfo re-exported from models
+type RequestInfo = apimodels.RequestInfo
 
 // BuildingService defines the interface for building operations
 type BuildingService interface {
@@ -42,12 +38,12 @@ type BuildingService interface {
 // UserService defines the interface for user operations
 type UserService interface {
 	// User CRUD operations
-	GetUser(ctx context.Context, userID string) (*User, error)
-	CreateUser(ctx context.Context, req CreateUserRequest) (*User, error)
-	UpdateUser(ctx context.Context, userID string, updates UserUpdate) (*User, error)
+	GetUser(ctx context.Context, userID string) (*apimodels.User, error)
+	CreateUser(ctx context.Context, req apimodels.CreateUserRequest) (*apimodels.User, error)
+	UpdateUser(ctx context.Context, userID string, updates apimodels.UserUpdate) (*apimodels.User, error)
 	DeleteUser(ctx context.Context, userID string) error
-	ListUsers(ctx context.Context, filter UserFilter) ([]*User, error)
-	GetUserByEmail(ctx context.Context, email string) (*User, error)
+	ListUsers(ctx context.Context, filter apimodels.UserFilter) ([]*apimodels.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*apimodels.User, error)
 	GetUserPermissions(ctx context.Context, userID string) ([]string, error)
 	UpdateUserActivity(ctx context.Context, userID string) error
 	ChangePassword(ctx context.Context, userID, oldPassword, newPassword string) error
@@ -55,44 +51,22 @@ type UserService interface {
 	ConfirmPasswordReset(ctx context.Context, token, newPassword string) error
 }
 
-// UserFilter defines filtering options for listing users
-type UserFilter struct {
-	Role   string
-	OrgID  string
-	Active *bool
-}
-
-// CreateUserRequest defines the request for creating a user
-type CreateUserRequest struct {
-	Email       string   `json:"email"`
-	Password    string   `json:"password"`
-	Name        string   `json:"name"`
-	Role        string   `json:"role"`
-	OrgID       string   `json:"org_id"`
-	Permissions []string `json:"permissions"`
-}
-
-// UserUpdate defines fields that can be updated on a user
-type UserUpdate struct {
-	Name        *string  `json:"name,omitempty"`
-	Email       *string  `json:"email,omitempty"`
-	Password    *string  `json:"password,omitempty"`
-	Role        *string  `json:"role,omitempty"`
-	OrgID       *string  `json:"org_id,omitempty"`
-	Permissions []string `json:"permissions,omitempty"`
-	Active      *bool    `json:"active,omitempty"`
-}
+// Re-export user types from models package
+type UserFilter = apimodels.UserFilter
+type CreateUserRequest = apimodels.CreateUserRequest
+type UserUpdate = apimodels.UserUpdate
 
 // AuthService defines the interface for authentication operations
 type AuthService interface {
 	// Authentication
-	Login(ctx context.Context, email, password string) (*AuthResponse, error)
+	Login(ctx context.Context, email, password string) (*apimodels.AuthResponse, error)
 	Logout(ctx context.Context, token string) error
-	Register(ctx context.Context, email, password, name string) (*User, error)
+	Register(ctx context.Context, email, password, name string) (*apimodels.User, error)
 
 	// Token operations
-	ValidateToken(ctx context.Context, token string) (*TokenClaims, error)
-	RefreshToken(ctx context.Context, refreshToken string) (*AuthResponse, error)
+	ValidateToken(ctx context.Context, token string) (string, error) // returns userID
+	ValidateTokenClaims(ctx context.Context, token string) (*apimodels.TokenClaims, error)
+	RefreshToken(ctx context.Context, refreshToken string) (*apimodels.AuthResponse, error)
 	RevokeToken(ctx context.Context, token string) error
 
 	// Password operations
@@ -143,64 +117,14 @@ type StorageService interface {
 	GenerateDownloadURL(ctx context.Context, key string, expiry time.Duration) (string, error)
 }
 
-// User represents a user account
-type User struct {
-	ID             string    `json:"id"`
-	Email          string    `json:"email"`
-	Name           string    `json:"name"`
-	PasswordHash   string    `json:"-"` // Never send password hash to client
-	OrgID          string    `json:"org_id,omitempty"`
-	Role           string    `json:"role"`
-	Permissions    []string  `json:"permissions,omitempty"`
-	Active         bool      `json:"active"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
-	LastLoginAt    time.Time `json:"last_login_at,omitempty"`
-	LastActivityAt time.Time `json:"last_activity_at,omitempty"`
-}
-
-// Organization represents an organization
-type Organization struct {
-	ID          string      `json:"id"`
-	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	Plan        string      `json:"plan"` // free, starter, professional, enterprise
-	Active      bool        `json:"active"`
-	Settings    OrgSettings `json:"settings"`
-	CreatedAt   time.Time   `json:"created_at"`
-	UpdatedAt   time.Time   `json:"updated_at"`
-}
-
-// OrgSettings contains organization-specific settings
-type OrgSettings struct {
-	MaxBuildings int                    `json:"max_buildings"`
-	MaxUsers     int                    `json:"max_users"`
-	Features     map[string]bool        `json:"features"`
-	Metadata     map[string]interface{} `json:"metadata"`
-}
-
-// AuthResponse contains authentication response data
-type AuthResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	TokenType    string `json:"token_type"`
-	ExpiresIn    int    `json:"expires_in"`
-	User         *User  `json:"user"`
-}
-
-// TokenClaims contains JWT token claims
-type TokenClaims struct {
-	UserID    string    `json:"user_id"`
-	Email     string    `json:"email"`
-	OrgID     string    `json:"org_id"`
-	Role      string    `json:"role"`
-	ExpiresAt time.Time `json:"exp"`
-	IssuedAt  time.Time `json:"iat"`
-}
-
-// Re-export sync types for backwards compatibility
-type Change = syncpkg.Change
-type Conflict = syncpkg.Conflict
-type SyncRequest = syncpkg.SyncRequest
-type SyncResponse = syncpkg.SyncResponse
-type RejectedChange = syncpkg.RejectedChange
+// Re-export types from models package for backwards compatibility
+type User = apimodels.User
+type Organization = apimodels.Organization
+type OrgSettings = apimodels.OrgSettings
+type AuthResponse = apimodels.AuthResponse
+type TokenClaims = apimodels.TokenClaims
+type Change = apimodels.Change
+type Conflict = apimodels.Conflict
+type SyncRequest = apimodels.SyncRequest
+type SyncResponse = apimodels.SyncResponse
+type RejectedChange = apimodels.RejectedChange

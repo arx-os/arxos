@@ -1,18 +1,19 @@
 package web
 
 import (
-	"embed"
 	"fmt"
 	"html/template"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/arx-os/arxos/internal/common/logger"
 )
 
-//go:embed templates/*.html
-var templateFS embed.FS
+// templatePath is the path to the web templates directory
+var templatePath = "web/templates"
 
 // Templates holds all parsed templates
 type Templates struct {
@@ -29,25 +30,58 @@ func NewTemplates() (*Templates, error) {
 	}
 
 	// Parse base layout
-	base, err := template.New("base").Funcs(templateFuncs()).ParseFS(templateFS, "templates/base.html")
+	basePath := filepath.Join(templatePath, "layouts", "base.html")
+	baseContent, err := os.ReadFile(basePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read base template: %w", err)
+	}
+	base, err := template.New("base").Funcs(templateFuncs()).Parse(string(baseContent))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse base template: %w", err)
 	}
 	t.base = base
 
 	// Parse page templates
 	pages := []string{"login", "buildings", "dashboard"}
 	for _, page := range pages {
-		tmpl := template.Must(base.Clone())
-		_, err = tmpl.ParseFS(templateFS, "templates/"+page+".html")
+		tmpl, err := base.Clone()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to clone base template: %w", err)
+		}
+		pagePath := filepath.Join(templatePath, "pages", page+".html")
+		pageContent, err := os.ReadFile(pagePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read %s template: %w", page, err)
+		}
+		_, err = tmpl.Parse(string(pageContent))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse %s template: %w", page, err)
 		}
 		t.pages[page] = tmpl
 	}
 
-	// Fragment templates would be added here when needed
-	// For now, keeping it simple
+	// Parse fragment templates from partials directory
+	partialsDir := filepath.Join(templatePath, "partials")
+	partialFiles, err := filepath.Glob(filepath.Join(partialsDir, "*.html"))
+	if err != nil {
+		logger.Warn("Failed to list partial templates: %v", err)
+	} else {
+		for _, partialPath := range partialFiles {
+			name := filepath.Base(partialPath)
+			name = name[:len(name)-5] // Remove .html extension
+			partialContent, err := os.ReadFile(partialPath)
+			if err != nil {
+				logger.Warn("Failed to read partial %s: %v", name, err)
+				continue
+			}
+			tmpl, err := template.New(name).Funcs(templateFuncs()).Parse(string(partialContent))
+			if err != nil {
+				logger.Warn("Failed to parse partial %s: %v", name, err)
+				continue
+			}
+			t.fragments[name] = tmpl
+		}
+	}
 
 	return t, nil
 }

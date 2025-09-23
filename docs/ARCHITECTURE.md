@@ -804,6 +804,167 @@ export:
 - **Daemon Response**: < 30 seconds from IFC change to team updates
 - **Database Size**: ~2MB per 1,000 equipment items (with spatial indexes)
 
+## BuildingOps Layer - Physical Control & Automation
+
+### Overview
+
+BuildingOps extends ArxOS from a data management system to a complete building operating system with bidirectional physical control. Every path in the database can trigger real-world actions through three unified interfaces.
+
+### Control Interface Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   User Control Interfaces                    │
+├───────────────────┬──────────────────┬──────────────────────┤
+│   CLI Commands    │ Natural Language │  Visual Workflows    │
+│  arx set [path]   │  "Make it cooler" │   n8n Drag-Drop     │
+└───────────────────┴──────────────────┴──────────────────────┘
+                            │
+                    ┌───────▼───────┐
+                    │  Path Engine   │
+                    │  /B1/3/HVAC/*  │
+                    └───────┬───────┘
+                            │
+                    ┌───────▼───────┐
+                    │    PostGIS     │
+                    │   Database     │
+                    └───────┬───────┘
+                            │
+                    ┌───────▼───────┐
+                    │  Go Gateway    │
+                    │  Translation   │
+                    └───────┬───────┘
+                            │
+                    ┌───────▼───────┐
+                    │ TinyGo Devices │
+                    │  ESP32/RP2040  │
+                    └───────┬───────┘
+                            │
+                    ┌───────▼───────┐
+                    │Physical Actions│
+                    │ Servos, Relays │
+                    └────────────────┘
+```
+
+### Three Control Modes
+
+#### 1. CLI Path Control
+Direct terminal commands that map to physical actions:
+```bash
+# Direct control
+arx set /B1/3/HVAC/DAMPER-01 position:50
+arx set /B1/3/LIGHTS/ZONE-A brightness:75
+arx set /B1/3/DOORS/MAIN state:locked
+
+# Batch operations
+arx set /B1/*/LIGHTS/* state:off
+arx scene /B1/3/CONF-301 presentation
+```
+
+#### 2. Natural Language Processing
+AI-interpreted commands that resolve to paths:
+```bash
+arx do "turn off all lights on floor 3"
+arx do "set conference room to presentation mode"
+arx do "secure the building"
+```
+
+Natural language → Intent extraction → Path resolution → Physical action
+
+#### 3. Visual Workflow Automation (n8n)
+Drag-and-drop workflows that control physical systems:
+- Temperature sensor triggers → HVAC damper adjusts
+- Motion detected → Lights activate
+- Schedule reached → Building enters eco mode
+
+### Hardware Integration Architecture
+
+#### Three-Tier Hardware Stack
+
+```
+Cloud (ArxOS Core)          - Full Go, PostgreSQL/PostGIS
+    ↓
+Gateway (Raspberry Pi)      - Full Go, Protocol translation
+    ↓
+Edge Devices (ESP32)        - TinyGo, Simple HTTP/MQTT
+```
+
+#### Pure Go Implementation
+- **No C required**: 100% Go/TinyGo codebase
+- **Edge simplicity**: Devices only speak HTTP/MQTT
+- **Gateway complexity**: All protocol translation at gateway
+- **Type safety**: Go's type system throughout
+
+### Safety & Validation
+
+#### Command Validation Pipeline
+```go
+func ValidateCommand(cmd PathCommand) error {
+    // 1. Permission check
+    if !user.CanControl(cmd.Path) {
+        return ErrUnauthorized
+    }
+
+    // 2. Safety interlocks
+    if isEmergencyActive() && !cmd.Override {
+        return ErrSafetyInterlock
+    }
+
+    // 3. Range validation
+    if cmd.Value < 0 || cmd.Value > 100 {
+        return ErrOutOfRange
+    }
+
+    // 4. Rate limiting
+    if isRateLimited(cmd.Path) {
+        return ErrRateLimited
+    }
+
+    return nil
+}
+```
+
+### Workflow Integration
+
+#### n8n Integration via REST
+- ArxOS provides REST endpoints
+- n8n uses built-in HTTP Request nodes
+- No custom JavaScript required
+- Bidirectional communication supported
+
+#### Workflow Types
+1. **Reactive**: Equipment failure → Create work order
+2. **Scheduled**: Time-based maintenance routines
+3. **Predictive**: Pattern analysis → Preventive action
+4. **Emergency**: Alarm triggered → Building-wide response
+
+### Implementation Components
+
+```
+internal/
+├── control/          # Physical control logic
+│   ├── validator.go  # Safety validation
+│   ├── executor.go   # Command execution
+│   └── feedback.go   # Status monitoring
+├── nlp/              # Natural language processing
+│   ├── interpreter.go # Intent extraction
+│   └── resolver.go   # Path resolution
+├── workflow/         # n8n integration
+│   ├── handlers.go   # REST endpoints
+│   └── registry.go   # Workflow management
+└── hardware/         # Device communication
+    ├── gateway.go    # Protocol translation
+    └── mqtt.go       # Device messaging
+```
+
+### Performance Requirements
+
+- **Command latency**: < 100ms to gateway
+- **Physical actuation**: < 2s total
+- **Natural language**: < 500ms processing
+- **Workflow execution**: < 5s end-to-end
+- **Safety validation**: < 10ms
+
 ## Future Enhancements
 
 ### Phase 1 (Current - In Progress)

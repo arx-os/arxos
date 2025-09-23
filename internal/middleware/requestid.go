@@ -7,9 +7,6 @@ import (
 	"time"
 )
 
-// contextKey is a private type to avoid collisions in context
-type contextKey string
-
 const (
 	// ContextKeyRequestID stores the request ID in the context
 	ContextKeyRequestID contextKey = "request_id"

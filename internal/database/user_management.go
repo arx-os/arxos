@@ -41,12 +41,12 @@ func (p *PostGISDB) GetUser(ctx context.Context, id string) (*models.User, error
 	)
 
 	if err == sql.ErrNoRows {
-		return nil, errors.NewAppError(errors.CodeNotFound,
-			fmt.Sprintf("user not found: %s", id), err)
+		return nil, errors.New(errors.CodeNotFound,
+			fmt.Sprintf("user not found: %s", id))
 	}
 
 	if err != nil {
-		return nil, errors.WrapDatabaseError(err, "get user")
+		return nil, errors.Wrap(err, errors.CodeDatabase, "get user")
 	}
 
 	// Set nullable fields
@@ -91,12 +91,12 @@ func (p *PostGISDB) GetUserByEmail(ctx context.Context, email string) (*models.U
 	)
 
 	if err == sql.ErrNoRows {
-		return nil, errors.NewAppError(errors.CodeNotFound,
-			fmt.Sprintf("user not found: %s", email), err)
+		return nil, errors.New(errors.CodeNotFound,
+			fmt.Sprintf("user not found: %s", email))
 	}
 
 	if err != nil {
-		return nil, errors.WrapDatabaseError(err, "get user by email")
+		return nil, errors.Wrap(err, errors.CodeDatabase, "get user by email")
 	}
 
 	// Set nullable fields
@@ -127,7 +127,7 @@ func (p *PostGISDB) CreateUserWithPassword(ctx context.Context, user *models.Use
 	if password != "" {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {
-			return errors.WrapDatabaseError(err, "hash password")
+			return errors.Wrap(err, errors.CodeDatabase, "hash password")
 		}
 		user.PasswordHash = string(hashedPassword)
 	} else {
@@ -170,7 +170,7 @@ func (p *PostGISDB) CreateUser(ctx context.Context, user *models.User) error {
 	).Scan(&user.CreatedAt, &user.UpdatedAt)
 
 	if err != nil {
-		return errors.WrapDatabaseError(err, "create user")
+		return errors.Wrap(err, errors.CodeDatabase, "create user")
 	}
 
 	logger.Info("Created user: %s (%s)", user.Username, user.Email)
@@ -205,7 +205,7 @@ func (p *PostGISDB) UpdateUser(ctx context.Context, user *models.User) error {
 	).Scan(&user.UpdatedAt)
 
 	if err != nil {
-		return errors.WrapDatabaseError(err, "update user")
+		return errors.Wrap(err, errors.CodeDatabase, "update user")
 	}
 
 	logger.Info("Updated user: %s", user.ID)
@@ -218,17 +218,17 @@ func (p *PostGISDB) DeleteUser(ctx context.Context, id string) error {
 
 	result, err := p.db.ExecContext(ctx, query, id)
 	if err != nil {
-		return errors.WrapDatabaseError(err, "delete user")
+		return errors.Wrap(err, errors.CodeDatabase, "delete user")
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return errors.WrapDatabaseError(err, "check delete result")
+		return errors.Wrap(err, errors.CodeDatabase, "check delete result")
 	}
 
 	if rowsAffected == 0 {
-		return errors.NewAppError(errors.CodeNotFound,
-			fmt.Sprintf("user not found: %s", id), nil)
+		return errors.New(errors.CodeNotFound,
+			fmt.Sprintf("user not found: %s", id))
 	}
 
 	logger.Info("Deleted user: %s", id)
@@ -293,7 +293,7 @@ func (p *PostGISDB) CreateSession(ctx context.Context, session *models.UserSessi
 	).Scan(&session.CreatedAt)
 
 	if err != nil {
-		return errors.WrapDatabaseError(err, "create session")
+		return errors.Wrap(err, errors.CodeDatabase, "create session")
 	}
 
 	logger.Debug("Created session for user: %s", session.UserID)
@@ -322,12 +322,12 @@ func (p *PostGISDB) GetSession(ctx context.Context, token string) (*models.UserS
 	)
 
 	if err == sql.ErrNoRows {
-		return nil, errors.NewAppError(errors.CodeNotFound,
-			"session not found or expired", err)
+		return nil, errors.New(errors.CodeNotFound,
+			"session not found or expired")
 	}
 
 	if err != nil {
-		return nil, errors.WrapDatabaseError(err, "get session")
+		return nil, errors.Wrap(err, errors.CodeDatabase, "get session")
 	}
 
 	// Set nullable fields
@@ -369,12 +369,12 @@ func (p *PostGISDB) GetSessionByRefreshToken(ctx context.Context, refreshToken s
 	)
 
 	if err == sql.ErrNoRows {
-		return nil, errors.NewAppError(errors.CodeNotFound,
-			"session not found or expired", err)
+		return nil, errors.New(errors.CodeNotFound,
+			"session not found or expired")
 	}
 
 	if err != nil {
-		return nil, errors.WrapDatabaseError(err, "get session by refresh token")
+		return nil, errors.Wrap(err, errors.CodeDatabase, "get session by refresh token")
 	}
 
 	// Set nullable fields
@@ -405,7 +405,7 @@ func (p *PostGISDB) UpdateSession(ctx context.Context, session *models.UserSessi
 		session.ID, session.Token, session.ExpiresAt)
 
 	if err != nil {
-		return errors.WrapDatabaseError(err, "update session")
+		return errors.Wrap(err, errors.CodeDatabase, "update session")
 	}
 
 	return nil
@@ -421,7 +421,7 @@ func (p *PostGISDB) DeleteSession(ctx context.Context, id string) error {
 
 	_, err := p.db.ExecContext(ctx, query, id)
 	if err != nil {
-		return errors.WrapDatabaseError(err, "delete session")
+		return errors.Wrap(err, errors.CodeDatabase, "delete session")
 	}
 
 	logger.Debug("Deactivated session: %s", id)
@@ -437,7 +437,7 @@ func (p *PostGISDB) DeleteExpiredSessions(ctx context.Context) error {
 
 	result, err := p.db.ExecContext(ctx, query)
 	if err != nil {
-		return errors.WrapDatabaseError(err, "delete expired sessions")
+		return errors.Wrap(err, errors.CodeDatabase, "delete expired sessions")
 	}
 
 	rowsAffected, _ := result.RowsAffected()
@@ -514,7 +514,7 @@ func (p *PostGISDB) DeleteUserSessions(ctx context.Context, userID string) error
 
 	_, err := p.db.ExecContext(ctx, query, userID)
 	if err != nil {
-		return errors.WrapDatabaseError(err, "delete user sessions")
+		return errors.Wrap(err, errors.CodeDatabase, "delete user sessions")
 	}
 
 	logger.Info("Deactivated all sessions for user: %s", userID)
@@ -562,7 +562,7 @@ func (p *PostGISDB) CreatePasswordResetToken(ctx context.Context, token *models.
 	).Scan(&token.CreatedAt)
 
 	if err != nil {
-		return errors.WrapDatabaseError(err, "create password reset token")
+		return errors.Wrap(err, errors.CodeDatabase, "create password reset token")
 	}
 
 	logger.Info("Created password reset token for user: %s", token.UserID)
@@ -587,12 +587,12 @@ func (p *PostGISDB) GetPasswordResetToken(ctx context.Context, tokenStr string) 
 	)
 
 	if err == sql.ErrNoRows {
-		return nil, errors.NewAppError(errors.CodeNotFound,
-			"token not found or expired", err)
+		return nil, errors.New(errors.CodeNotFound,
+			"token not found or expired")
 	}
 
 	if err != nil {
-		return nil, errors.WrapDatabaseError(err, "get password reset token")
+		return nil, errors.Wrap(err, errors.CodeDatabase, "get password reset token")
 	}
 
 	if usedAt.Valid {
@@ -612,13 +612,13 @@ func (p *PostGISDB) MarkPasswordResetTokenUsed(ctx context.Context, tokenStr str
 
 	result, err := p.db.ExecContext(ctx, query, tokenStr)
 	if err != nil {
-		return errors.WrapDatabaseError(err, "mark token used")
+		return errors.Wrap(err, errors.CodeDatabase, "mark token used")
 	}
 
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
-		return errors.NewAppError(errors.CodeNotFound,
-			"token not found or already used", nil)
+		return errors.New(errors.CodeNotFound,
+			"token not found or already used")
 	}
 
 	return nil
@@ -633,7 +633,7 @@ func (p *PostGISDB) DeleteExpiredPasswordResetTokens(ctx context.Context) error 
 
 	result, err := p.db.ExecContext(ctx, query)
 	if err != nil {
-		return errors.WrapDatabaseError(err, "delete expired tokens")
+		return errors.Wrap(err, errors.CodeDatabase, "delete expired tokens")
 	}
 
 	rowsAffected, _ := result.RowsAffected()

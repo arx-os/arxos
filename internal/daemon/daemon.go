@@ -35,6 +35,9 @@ type Daemon struct {
 
 	// Statistics
 	stats Statistics
+
+	// Metrics
+	metrics *Metrics
 }
 
 // Config holds daemon configuration
@@ -59,6 +62,10 @@ type Config struct {
 
 	// Performance
 	MaxWorkers    int           `json:"max_workers"`
+
+	// Metrics
+	MetricsPort   int           `json:"metrics_port"`   // Port for Prometheus metrics (0 to disable)
+	EnableMetrics bool          `json:"enable_metrics"` // Enable Prometheus metrics export
 	QueueSize     int           `json:"queue_size"`
 	RetryAttempts int           `json:"retry_attempts"` // Retry failed imports
 	RetryInterval time.Duration `json:"retry_interval"` // Time between retries
@@ -118,6 +125,7 @@ func NewDaemon(config *Config) (*Daemon, error) {
 		stats: Statistics{
 			StartTime: time.Now(),
 		},
+		metrics: NewMetrics(),
 	}
 
 	// Create server for IPC

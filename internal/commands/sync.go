@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/arx-os/arxos/internal/bim"
 	"github.com/arx-os/arxos/internal/common/logger"
@@ -206,4 +208,57 @@ func gitCommit(repoPath, message string) error {
 
 	logger.Info("Committed changes to Git")
 	return nil
+}
+
+// convertToSimpleBIM converts a floor plan to a simple BIM representation
+func convertToSimpleBIM(floorPlan *models.FloorPlan) *bim.SimpleBuilding {
+	building := &bim.SimpleBuilding{
+		ID:        floorPlan.ID,
+		Name:      floorPlan.Name,
+		Type:      "Building",
+		Timestamp: time.Now(),
+		Version:   "1.0",
+		Metadata: map[string]interface{}{
+			"address":      floorPlan.Address,
+			"city":         floorPlan.City,
+			"state":        floorPlan.State,
+			"postal_code":  floorPlan.PostalCode,
+			"country":      floorPlan.Country,
+			"floors":       floorPlan.Floors,
+			"total_area":   floorPlan.TotalArea,
+			"building_type": floorPlan.BuildingType,
+		},
+	}
+
+	// Add floors
+	for i := 1; i <= floorPlan.Floors; i++ {
+		floor := bim.Component{
+			ID:       fmt.Sprintf("floor-%d", i),
+			Type:     "Floor",
+			Name:     fmt.Sprintf("Floor %d", i),
+			ParentID: floorPlan.ID,
+			Properties: map[string]interface{}{
+				"level": i,
+				"area":  floorPlan.TotalArea / float64(floorPlan.Floors),
+			},
+		}
+		building.Components = append(building.Components, floor)
+	}
+
+	// Add systems (placeholder)
+	systems := []string{"HVAC", "Electrical", "Plumbing", "Fire Safety"}
+	for _, system := range systems {
+		sysComponent := bim.Component{
+			ID:       fmt.Sprintf("system-%s", strings.ToLower(strings.ReplaceAll(system, " ", "-"))),
+			Type:     "System",
+			Name:     system + " System",
+			ParentID: floorPlan.ID,
+			Properties: map[string]interface{}{
+				"status": "operational",
+			},
+		}
+		building.Components = append(building.Components, sysComponent)
+	}
+
+	return building
 }

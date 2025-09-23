@@ -130,10 +130,12 @@ func (c *LRUCache) removeElement(e *list.Element) {
 
 // MemoryCache provides a simple in-memory cache with expiration
 type MemoryCache struct {
-	data   map[string]*memoryCacheItem
-	mu     sync.RWMutex
-	stopCh chan struct{}
-	wg     sync.WaitGroup
+	data    map[string]*memoryCacheItem
+	mu      sync.RWMutex
+	stopCh  chan struct{}
+	wg      sync.WaitGroup
+	started bool
+	closed  bool
 }
 
 type memoryCacheItem struct {
@@ -142,15 +144,13 @@ type memoryCacheItem struct {
 }
 
 // NewMemoryCache creates a new memory cache
+// Note: Caller must call Start() to enable automatic cleanup
+// and Close() when done to prevent goroutine leaks
 func NewMemoryCache() *MemoryCache {
-	cache := &MemoryCache{
+	return &MemoryCache{
 		data:   make(map[string]*memoryCacheItem),
 		stopCh: make(chan struct{}),
 	}
-	// Start cleanup goroutine
-	cache.wg.Add(1)
-	go cache.cleanupExpired()
-	return cache
 }
 
 // Get retrieves a value from cache
@@ -213,21 +213,68 @@ func (c *MemoryCache) cleanupExpired() {
 		case <-c.stopCh:
 			return
 		case <-ticker.C:
-			now := time.Now()
-			c.mu.Lock()
-			for key, item := range c.data {
-				if now.After(item.expireTime) {
-					delete(c.data, key)
-				}
-			}
-			c.mu.Unlock()
+			c.cleanupExpiredItems()
 		}
 	}
 }
 
+// cleanupExpiredItems removes expired items (can be called manually)
+func (c *MemoryCache) cleanupExpiredItems() {
+	now := time.Now()
+	expiredKeys := make([]string, 0)
+
+	// Collect expired keys with read lock
+	c.mu.RLock()
+	for key, item := range c.data {
+		if now.After(item.expireTime) {
+			expiredKeys = append(expiredKeys, key)
+		}
+	}
+	c.mu.RUnlock()
+
+	// Remove expired items with write lock
+	if len(expiredKeys) > 0 {
+		c.mu.Lock()
+		for _, key := range expiredKeys {
+			// Double-check expiration in case item was updated
+			if item, exists := c.data[key]; exists && now.After(item.expireTime) {
+				delete(c.data, key)
+			}
+		}
+		c.mu.Unlock()
+	}
+}
+
+// Start begins the automatic cleanup goroutine
+func (c *MemoryCache) Start() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.started || c.closed {
+		return
+	}
+
+	c.started = true
+	c.wg.Add(1)
+	go c.cleanupExpired()
+}
+
 // Close gracefully shuts down the cache and its cleanup goroutine
 func (c *MemoryCache) Close() error {
-	close(c.stopCh)
-	c.wg.Wait()
+	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		return nil
+	}
+	c.closed = true
+	c.mu.Unlock()
+
+	if c.stopCh != nil {
+		close(c.stopCh)
+	}
+
+	if c.started {
+		c.wg.Wait()
+	}
 	return nil
 }

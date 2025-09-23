@@ -11,6 +11,7 @@ import (
 
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/search"
+	"github.com/arx-os/arxos/pkg/models"
 	"github.com/google/uuid"
 )
 
@@ -139,21 +140,21 @@ func (h *Handler) handleGlobalSearch(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Perform search using search indexer
-	results, err := h.searchIndexer.Search(ctx, query, 20)
+    results, err := h.searchIndexer.Search(ctx, search.SearchOptions{Query: query, Limit: 20})
 	if err != nil {
 		logger.Error("Search failed: %v", err)
-		results = []search.Result{}
+        results = []search.SearchResult{}
 	}
 
 	// Track search for recent searches
-	if h.recentSearches != nil {
-		userID := "anonymous" // TODO: Get actual user ID from session
-		h.recentSearches.AddSearch(userID, query)
-	}
+    if h.recentSearches != nil {
+        userID := "anonymous" // TODO: Get actual user ID from session
+        h.recentSearches.Add(search.SearchQuery{Query: query, Timestamp: time.Now(), Results: len(results), UserID: userID})
+    }
 
 	// Format results for response
 	formattedResults := make([]map[string]interface{}, len(results))
-	for i, result := range results {
+    for i, result := range results {
 		formattedResults[i] = map[string]interface{}{
 			"id":          result.ID,
 			"type":        result.Type,
@@ -201,11 +202,7 @@ func (h *Handler) handleSearchSuggestions(w http.ResponseWriter, r *http.Request
 	ctx := r.Context()
 
 	// Get suggestions from search indexer
-	suggestions, err := h.searchIndexer.GetSuggestions(ctx, query, 5)
-	if err != nil {
-		logger.Error("Failed to get suggestions: %v", err)
-		suggestions = []string{}
-	}
+    suggestions := h.searchIndexer.Suggest(ctx, query, 5)
 
 	// Return suggestions
 	w.Header().Set("Content-Type", "application/json")
@@ -214,15 +211,13 @@ func (h *Handler) handleSearchSuggestions(w http.ResponseWriter, r *http.Request
 
 // handleRecentSearches returns recent searches for the user
 func (h *Handler) handleRecentSearches(w http.ResponseWriter, r *http.Request) {
-	userID := "anonymous" // TODO: Get actual user ID from session
-
 	if h.recentSearches == nil {
 		json.NewEncoder(w).Encode([]string{})
 		return
 	}
 
 	// Get recent searches
-	searches := h.recentSearches.GetRecentSearches(userID, 10)
+	searches := h.recentSearches.Get(10)
 
 	// Return recent searches
 	w.Header().Set("Content-Type", "application/json")

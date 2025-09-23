@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/arx-os/arxos/internal/common/logger"
@@ -138,7 +139,7 @@ func (b *S3Backend) Exists(ctx context.Context, key string) (bool, error) {
 
 	if err != nil {
 		// Check if the error is because the object doesn't exist
-		if isNotFoundError(err) {
+		if isS3NotFoundError(err) {
 			return false, nil
 		}
 		return false, fmt.Errorf("failed to check object existence: %w", err)
@@ -351,24 +352,20 @@ func (b *S3Backend) CreateBucket(ctx context.Context) error {
 
 // Helper functions
 
-func isNotFoundError(err error) bool {
+func isS3NotFoundError(err error) bool {
 	// Check for various "not found" error types
 	if err == nil {
 		return false
 	}
 	// This is a simplified check - in production, use proper AWS error checking
-	return contains(err.Error(), "NoSuchKey") || contains(err.Error(), "NotFound")
+	return strings.Contains(err.Error(), "NoSuchKey") || strings.Contains(err.Error(), "NotFound")
 }
 
 func isBucketExistsError(err error) bool {
 	if err == nil {
 		return false
 	}
-	return contains(err.Error(), "BucketAlreadyExists") || contains(err.Error(), "BucketAlreadyOwnedByYou")
-}
-
-func contains(s, substr string) bool {
-	return len(s) > 0 && len(substr) > 0 && (s == substr || len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr || len(substr) < len(s) && findSubstring(s, substr)))
+	return strings.Contains(err.Error(), "BucketAlreadyExists") || strings.Contains(err.Error(), "BucketAlreadyOwnedByYou")
 }
 
 func findSubstring(s, substr string) bool {

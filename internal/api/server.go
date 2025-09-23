@@ -10,12 +10,14 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/core/user"
 	"github.com/arx-os/arxos/internal/database"
+	"github.com/google/uuid"
+	"golang.org/x/time/rate"
 )
 
 // Config holds configuration for the API server
@@ -153,9 +155,9 @@ func (s *Server) setupRoutes() {
 	s.router.HandleFunc("/api/v1/equipment/{id}", s.handleEquipmentOperations)
 
 	// Sync endpoints
-	s.router.HandleFunc("/api/v1/sync/push", s.handleSyncPush)
-	s.router.HandleFunc("/api/v1/sync/pull", s.handleSyncPull)
-	s.router.HandleFunc("/api/v1/sync/status", s.handleSyncStatus)
+	s.router.HandleFunc("/api/v1/sync/push", s.HandleSyncPush)
+	s.router.HandleFunc("/api/v1/sync/pull", s.HandleSyncPull)
+	s.router.HandleFunc("/api/v1/sync/status", s.HandleSyncStatus)
 
 	// Upload endpoints
 	s.router.HandleFunc("/api/v1/upload/pdf", s.handlePDFUpload)
@@ -168,8 +170,73 @@ func (s *Server) Routes() http.Handler {
 	handler := s.loggingMiddleware(s.router)
 	handler = s.recoveryMiddleware(handler)
 	handler = s.corsMiddleware(handler)
-	handler = s.rateLimitMiddleware(handler)
+
+	// Apply local rate limiting (cycle-free)
+	rps := float64(s.config.RateLimit.RequestsPerMinute) / 60.0
+	if rps <= 0 {
+		rps = 100.0 / 60.0
+	}
+	burst := s.config.RateLimit.BurstSize
+	if burst <= 0 {
+		burst = 10
+	}
+	ipRL := newIPRateLimiter(rps, burst)
+	handler = ipRL.Middleware(handler)
+
 	return handler
+}
+
+// --- simple in-package IP-based rate limiter to avoid import cycles ---
+
+type ipRateLimiter struct {
+	visitors map[string]*rate.Limiter
+	burst    int
+	rate     rate.Limit
+	mu       sync.RWMutex
+}
+
+func newIPRateLimiter(rps float64, burst int) *ipRateLimiter {
+	return &ipRateLimiter{
+		visitors: make(map[string]*rate.Limiter),
+		burst:    burst,
+		rate:     rate.Limit(rps),
+	}
+}
+
+func (l *ipRateLimiter) getLimiter(key string) *rate.Limiter {
+	l.mu.RLock()
+	lim, ok := l.visitors[key]
+	l.mu.RUnlock()
+	if ok {
+		return lim
+	}
+	lim = rate.NewLimiter(l.rate, l.burst)
+	l.mu.Lock()
+	l.visitors[key] = lim
+	l.mu.Unlock()
+	return lim
+}
+
+func (l *ipRateLimiter) clientID(r *http.Request) string {
+	if ip := r.Header.Get("X-Forwarded-For"); ip != "" {
+		return ip
+	}
+	if ip := r.Header.Get("X-Real-IP"); ip != "" {
+		return ip
+	}
+	return r.RemoteAddr
+}
+
+func (l *ipRateLimiter) Middleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		lim := l.getLimiter(l.clientID(r))
+		if !lim.Allow() {
+			w.WriteHeader(http.StatusTooManyRequests)
+			w.Write([]byte(`{"error":"rate limit exceeded"}`))
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // Start starts the API server
@@ -285,7 +352,7 @@ func (s *Server) authenticate(r *http.Request) (*user.User, error) {
 	}
 
 	// Validate token with auth service
-	claims, err := s.services.Auth.ValidateToken(r.Context(), token)
+	claims, err := s.services.Auth.ValidateTokenClaims(r.Context(), token)
 	if err != nil {
 		return nil, err
 	}
@@ -446,9 +513,9 @@ func (s *Server) handleOrganizationInvitations(w http.ResponseWriter, r *http.Re
 func (s *Server) handleBuildings(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		s.handleListBuildings(w, r)
+		s.HandleListBuildings(w, r)
 	case http.MethodPost:
-		s.handleCreateBuilding(w, r)
+		s.HandleCreateBuilding(w, r)
 	default:
 		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}
@@ -458,9 +525,9 @@ func (s *Server) handleBuildings(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleEquipment(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		s.handleListEquipment(w, r)
+		s.HandleListEquipment(w, r)
 	case http.MethodPost:
-		s.handleCreateEquipment(w, r)
+		s.HandleCreateEquipment(w, r)
 	default:
 		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}

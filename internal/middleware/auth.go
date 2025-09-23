@@ -67,8 +67,8 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// Validate token
-		claims, err := m.authService.ValidateToken(r.Context(), token)
+		// Validate token and get claims
+		claims, err := m.authService.ValidateTokenClaims(r.Context(), token)
 		if err != nil {
 			logger.Debug("Invalid token: %v", err)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)

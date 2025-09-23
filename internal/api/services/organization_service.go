@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	api "github.com/arx-os/arxos/internal/api"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/pkg/models"
@@ -19,7 +20,7 @@ type OrganizationServiceImpl struct {
 }
 
 // NewOrganizationService creates a new organization service
-func NewOrganizationService(db database.DB) OrganizationService {
+func NewOrganizationService(db database.DB) api.OrganizationService {
 	return &OrganizationServiceImpl{
 		db: db,
 	}

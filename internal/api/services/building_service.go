@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	api "github.com/arx-os/arxos/internal/api"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/pkg/models"
@@ -16,7 +17,7 @@ type BuildingServiceImpl struct {
 }
 
 // NewBuildingService creates a new building service
-func NewBuildingService(db database.DB) BuildingService {
+func NewBuildingService(db database.DB) api.BuildingService {
 	return &BuildingServiceImpl{
 		db: db,
 	}

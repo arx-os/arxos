@@ -75,7 +75,7 @@ func (a *AzureBackend) Get(ctx context.Context, key string) ([]byte, error) {
 
 	downloadResponse, err := blobClient.DownloadStream(ctx, nil)
 	if err != nil {
-		if isNotFoundError(err) {
+		if isAzureNotFoundError(err) {
 			return nil, fmt.Errorf("blob not found: %s", key)
 		}
 		return nil, fmt.Errorf("failed to download blob: %w", err)
@@ -109,7 +109,7 @@ func (a *AzureBackend) Delete(ctx context.Context, key string) error {
 
 	_, err := blobClient.Delete(ctx, nil)
 	if err != nil {
-		if isNotFoundError(err) {
+		if isAzureNotFoundError(err) {
 			return nil // Already deleted
 		}
 		return fmt.Errorf("failed to delete blob: %w", err)
@@ -124,7 +124,7 @@ func (a *AzureBackend) Exists(ctx context.Context, key string) (bool, error) {
 
 	_, err := blobClient.GetProperties(ctx, nil)
 	if err != nil {
-		if isNotFoundError(err) {
+		if isAzureNotFoundError(err) {
 			return false, nil
 		}
 		return false, fmt.Errorf("failed to check blob existence: %w", err)
@@ -139,7 +139,7 @@ func (a *AzureBackend) GetReader(ctx context.Context, key string) (io.ReadCloser
 
 	downloadResponse, err := blobClient.DownloadStream(ctx, nil)
 	if err != nil {
-		if isNotFoundError(err) {
+		if isAzureNotFoundError(err) {
 			return nil, fmt.Errorf("blob not found: %s", key)
 		}
 		return nil, fmt.Errorf("failed to get reader: %w", err)
@@ -179,7 +179,7 @@ func (a *AzureBackend) GetMetadata(ctx context.Context, key string) (*Metadata, 
 
 	props, err := blobClient.GetProperties(ctx, nil)
 	if err != nil {
-		if isNotFoundError(err) {
+		if isAzureNotFoundError(err) {
 			return nil, fmt.Errorf("blob not found: %s", key)
 		}
 		return nil, fmt.Errorf("failed to get metadata: %w", err)
@@ -297,8 +297,8 @@ func (a *AzureBackend) IsAvailable(ctx context.Context) bool {
 	return err == nil
 }
 
-// isNotFoundError checks if the error is a not found error
-func isNotFoundError(err error) bool {
+// isAzureNotFoundError checks if the error is a not found error
+func isAzureNotFoundError(err error) bool {
 	var respErr *azcore.ResponseError
 	if errors.As(err, &respErr) {
 		return respErr.StatusCode == 404

@@ -545,16 +545,18 @@ func ProcessLiDARScan(pointCloud PointCloud, buildingID string) error {
 ## Code Organization
 
 ```go
-cmd/arx/
-├── main.go                   # Entry point, mode detection
-├── cmd_install.go            # Installation command (with professional setup)
-├── cmd_daemon.go            # Professional BIM integration daemon
-├── cmd_import.go            # Import to PostGIS operations
-├── cmd_export.go            # Export from PostGIS operations  
-├── cmd_query.go             # PostGIS spatial query operations
-├── cmd_repo.go              # Repository operations
-├── cmd_serve.go             # Server mode
-└── cmd_crud.go              # CRUD operations
+cmd/arx/                     # CLI entrypoints (thin UX layer)
+├── main.go                  # Entry point, mode detection
+├── cmd_install.go           # Installation command (with professional setup)
+├── cmd_daemon.go           # Professional BIM integration daemon
+├── cmd_import.go           # Import to PostGIS operations (delegates to services)
+├── cmd_export.go           # Export from PostGIS operations (delegates to services)
+├── cmd_query.go            # PostGIS spatial query operations (delegates to services)
+├── cmd_simulate.go         # Simulation operations (delegates to services)
+├── cmd_sync.go             # BIM synchronization (delegates to services)
+├── cmd_repo.go             # Repository operations
+├── cmd_serve.go            # Server mode
+└── cmd_crud.go             # CRUD operations
 
 internal/
 ├── database/               # Database implementations
@@ -605,7 +607,14 @@ internal/
 │   │   ├── ifc.go
 │   │   └── dwg.go
 │   ├── exporter/         # Export to various formats
+│   ├── bim_sync.go       # BIM synchronization service
+│   ├── export_command.go # Export operations service
+│   ├── import_command.go # Import operations service
+│   ├── query_service.go  # Database query service
 │   └── validator.go      # BIM validation
+├── simulation/           # Building simulation engine
+│   ├── engine.go         # Core simulation logic
+│   └── service.go        # Simulation service layer
 │
 ├── api/                  # REST API (server mode)
 │   ├── server.go        # HTTP server setup

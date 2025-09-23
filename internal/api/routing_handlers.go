@@ -16,11 +16,11 @@ func (s *Server) handleBuildingOperations(w http.ResponseWriter, r *http.Request
 
 	switch r.Method {
 	case http.MethodGet:
-		s.handleGetBuilding(w, r)
+		s.HandleGetBuilding(w, r)
 	case http.MethodPut:
-		s.handleUpdateBuilding(w, r)
+		s.HandleUpdateBuilding(w, r)
 	case http.MethodDelete:
-		s.handleDeleteBuilding(w, r)
+		s.HandleDeleteBuilding(w, r)
 	default:
 		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}
@@ -37,11 +37,11 @@ func (s *Server) handleEquipmentOperations(w http.ResponseWriter, r *http.Reques
 
 	switch r.Method {
 	case http.MethodGet:
-		s.handleGetEquipment(w, r)
+		s.HandleGetEquipment(w, r)
 	case http.MethodPut:
-		s.handleUpdateEquipment(w, r)
+		s.HandleUpdateEquipment(w, r)
 	case http.MethodDelete:
-		s.handleDeleteEquipment(w, r)
+		s.HandleDeleteEquipment(w, r)
 	default:
 		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}

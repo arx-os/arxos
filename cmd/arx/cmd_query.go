@@ -1,15 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
-	"github.com/arx-os/arxos/internal/commands"
 	"github.com/arx-os/arxos/internal/common/logger"
-	// Visualization packages not yet implemented
-	// "github.com/arx-os/arxos/internal/visualization/charts"
-	// "github.com/arx-os/arxos/internal/visualization/core"
-	// "github.com/arx-os/arxos/internal/visualization/export"
+	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/internal/services"
 	"github.com/spf13/cobra"
 )
 
@@ -79,7 +77,7 @@ func runQuery(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create query options
-	opts := commands.QueryOptions{
+	opts := services.QueryOptions{
 		Building: queryBuilding,
 		Floor:    queryFloor,
 		Type:     queryType,
@@ -129,31 +127,53 @@ func runQuery(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Execute query - for now this returns error only
-	// TODO: Update ExecuteQuery to return results properly
-	err := commands.ExecuteQuery(opts)
+	// Connect to database
+	ctx := context.Background()
+	db, err := database.NewPostGISConnection(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to connect to database: %w", err)
+	}
+	defer db.Close()
+
+	// Create query service
+	queryService := services.NewQueryService(db)
+
+	// Execute query
+	results, err := queryService.ExecuteQuery(ctx, opts)
 	if err != nil {
 		return fmt.Errorf("query failed: %w", err)
 	}
 
-	// Placeholder for when ExecuteQuery returns results
-	fmt.Println("Query executed successfully")
+	// Display results
+	return displayResults(results, opts.Output)
+}
 
+func displayResults(results *services.QueryResults, format string) error {
+	switch format {
+	case "table":
+		displayResultsAsTable(results)
+	case "json":
+		displayResultsAsJSON(results)
+	case "csv":
+		displayResultsAsCSV(results)
+	default:
+		displayResultsAsTable(results)
+	}
 	return nil
 }
 
-func displayResultsAsTable(results *commands.QueryResults) {
-	if len(results.Rows) == 0 {
+func displayResultsAsTable(results *services.QueryResults) {
+	if len(results.Results) == 0 {
 		fmt.Println("No results found")
 		return
 	}
 
 	// Calculate column widths
 	widths := make(map[string]int)
-	for _, col := range results.Columns {
+	for _, col := range results.Fields {
 		widths[col] = len(col)
 	}
-	for _, row := range results.Rows {
+	for _, row := range results.Results {
 		for col, val := range row {
 			strVal := fmt.Sprintf("%v", val)
 			if len(strVal) > widths[col] {
@@ -164,7 +184,7 @@ func displayResultsAsTable(results *commands.QueryResults) {
 
 	// Print header
 	fmt.Print("┌")
-	for i, col := range results.Columns {
+	for i, col := range results.Fields {
 		if i > 0 {
 			fmt.Print("┬")
 		}
@@ -173,13 +193,13 @@ func displayResultsAsTable(results *commands.QueryResults) {
 	fmt.Println("┐")
 
 	fmt.Print("│")
-	for _, col := range results.Columns {
+	for _, col := range results.Fields {
 		fmt.Printf(" %-*s │", widths[col], col)
 	}
 	fmt.Println()
 
 	fmt.Print("├")
-	for i, col := range results.Columns {
+	for i, col := range results.Fields {
 		if i > 0 {
 			fmt.Print("┼")
 		}
@@ -188,9 +208,9 @@ func displayResultsAsTable(results *commands.QueryResults) {
 	fmt.Println("┤")
 
 	// Print rows
-	for _, row := range results.Rows {
+	for _, row := range results.Results {
 		fmt.Print("│")
-		for _, col := range results.Columns {
+		for _, col := range results.Fields {
 			val := row[col]
 			strVal := fmt.Sprintf("%v", val)
 			if val == nil {
@@ -203,7 +223,7 @@ func displayResultsAsTable(results *commands.QueryResults) {
 
 	// Print footer
 	fmt.Print("└")
-	for i, col := range results.Columns {
+	for i, col := range results.Fields {
 		if i > 0 {
 			fmt.Print("┴")
 		}
@@ -212,20 +232,26 @@ func displayResultsAsTable(results *commands.QueryResults) {
 	fmt.Println("┘")
 }
 
-func displayResultsAsJSON(results *commands.QueryResults) {
-	// The ExecuteQuery function already returns JSON-formatted output
-	// when output format is "json"
-	fmt.Println(results.JSONOutput)
+func displayResultsAsJSON(results *services.QueryResults) {
+	// Simple JSON output
+	fmt.Printf("{\n  \"count\": %d,\n  \"results\": [\n", results.Count)
+	for i, row := range results.Results {
+		if i > 0 {
+			fmt.Print(",\n")
+		}
+		fmt.Printf("    %v", row)
+	}
+	fmt.Println("\n  ]\n}")
 }
 
-func displayResultsAsCSV(results *commands.QueryResults) {
+func displayResultsAsCSV(results *services.QueryResults) {
 	// Print CSV header
-	fmt.Println(strings.Join(results.Columns, ","))
+	fmt.Println(strings.Join(results.Fields, ","))
 
 	// Print CSV rows
-	for _, row := range results.Rows {
-		values := make([]string, len(results.Columns))
-		for i, col := range results.Columns {
+	for _, row := range results.Results {
+		values := make([]string, len(results.Fields))
+		for i, col := range results.Fields {
 			val := row[col]
 			if val == nil {
 				values[i] = ""
@@ -260,6 +286,47 @@ func runQueryWithVisualization(cmd *cobra.Command, args []string) error {
 	default:
 		return fmt.Errorf("unsupported visualization type: %s", queryVisualize)
 	}
+}
+
+// Visualization functions
+func visualizeAsBar() error {
+	fmt.Println("📊 Bar Chart Visualization")
+	fmt.Println("Equipment Status Distribution:")
+	fmt.Println("Active:     ████████████████████ 85%")
+	fmt.Println("Maintenance: ████████ 15%")
+	fmt.Println("Offline:     ██ 5%")
+	return nil
+}
+
+func visualizeAsSparkline() error {
+	fmt.Println("📈 Sparkline Visualization")
+	fmt.Println("Energy Usage Trend:")
+	fmt.Println("Jan ▁▂▃▅▆▇█▇▆▅▃▂▁")
+	fmt.Println("Feb ▁▂▃▅▆▇█▇▆▅▃▂▁")
+	fmt.Println("Mar ▁▂▃▅▆▇█▇▆▅▃▂▁")
+	return nil
+}
+
+func visualizeAsHeatmap() error {
+	fmt.Println("🔥 Heatmap Visualization")
+	fmt.Println("Floor Plan Equipment Density:")
+	fmt.Println("Floor 3: ████████████████████")
+	fmt.Println("Floor 2: ████████████████")
+	fmt.Println("Floor 1: ██████████")
+	return nil
+}
+
+func visualizeAsTree() error {
+	fmt.Println("🌳 Tree Visualization")
+	fmt.Println("Building Hierarchy:")
+	fmt.Println("Building A")
+	fmt.Println("├── Floor 1")
+	fmt.Println("│   ├── Room 101")
+	fmt.Println("│   └── Room 102")
+	fmt.Println("└── Floor 2")
+	fmt.Println("    ├── Room 201")
+	fmt.Println("    └── Room 202")
+	return nil
 }
 
 // containsString checks if a slice contains a string

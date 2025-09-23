@@ -458,10 +458,26 @@ func (e *Engine) calculateOccupancy(hour int, building *models.FloorPlan) int {
 	return int(float64(capacity) * occupancyPercent)
 }
 
+// calculateTotalArea calculates the total area from all rooms in the building
+func (e *Engine) calculateTotalArea(building *models.FloorPlan) float64 {
+	totalArea := 0.0
+	for _, room := range building.Rooms {
+		if room != nil {
+			// Calculate area from bounds (convert from mm² to m²)
+			area := room.Bounds.Width() * room.Bounds.Height() / (1000 * 1000)
+			if area > 0 {
+				totalArea += area
+			}
+		}
+	}
+	return totalArea
+}
+
 func (e *Engine) estimateCapacity(building *models.FloorPlan) int {
 	// Estimate based on floor area (1 person per 10 square meters)
-	if building.TotalArea > 0 {
-		return int(building.TotalArea / 10)
+	totalArea := e.calculateTotalArea(building)
+	if totalArea > 0 {
+		return int(totalArea / 10)
 	}
 	return 100 // Default capacity
 }
@@ -494,7 +510,8 @@ func (e *Engine) updateTemperature(current, external, hvacPower float64) float64
 
 func (e *Engine) calculateEfficiency(energyUsage float64, building *models.FloorPlan) float64 {
 	// Energy efficiency rating (0-100)
-	baselineUsage := building.TotalArea * 0.15 // Baseline kWh per sq meter
+	totalArea := e.calculateTotalArea(building)
+	baselineUsage := totalArea * 0.15 // Baseline kWh per sq meter
 	if baselineUsage == 0 {
 		baselineUsage = 1000
 	}
@@ -510,7 +527,8 @@ func (e *Engine) calculateEfficiency(energyUsage float64, building *models.Floor
 
 func (e *Engine) calculateLightingEnergy(hour int, building *models.FloorPlan) float64 {
 	// Calculate lighting energy based on hour
-	baseUsage := building.TotalArea * 0.01 // kWh per sq meter
+	totalArea := e.calculateTotalArea(building)
+	baseUsage := totalArea * 0.01 // kWh per sq meter
 	if baseUsage == 0 {
 		baseUsage = 10
 	}
@@ -530,7 +548,8 @@ func (e *Engine) calculateLightingEnergy(hour int, building *models.FloorPlan) f
 }
 
 func (e *Engine) calculateHVACEnergy(hour int, building *models.FloorPlan) float64 {
-	baseUsage := building.TotalArea * 0.02
+	totalArea := e.calculateTotalArea(building)
+	baseUsage := totalArea * 0.02
 	if baseUsage == 0 {
 		baseUsage = 20
 	}
@@ -547,7 +566,8 @@ func (e *Engine) calculateHVACEnergy(hour int, building *models.FloorPlan) float
 }
 
 func (e *Engine) calculateEquipmentEnergy(hour int, building *models.FloorPlan) float64 {
-	baseUsage := building.TotalArea * 0.005
+	totalArea := e.calculateTotalArea(building)
+	baseUsage := totalArea * 0.005
 	if baseUsage == 0 {
 		baseUsage = 5
 	}

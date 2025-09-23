@@ -16,17 +16,9 @@ func (h *Handler) handleNewBuilding(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Parse request body
-	var req struct {
-		Name        string  `json:"name"`
-		Address     string  `json:"address"`
-		City        string  `json:"city"`
-		State       string  `json:"state"`
-		PostalCode  string  `json:"postal_code"`
-		Country     string  `json:"country"`
-		Floors      int     `json:"floors"`
-		TotalArea   float64 `json:"total_area"`
-		BuildingType string `json:"building_type"`
-	}
+    var req struct {
+        Name string `json:"name"`
+    }
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -40,20 +32,12 @@ func (h *Handler) handleNewBuilding(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create new floor plan
-	building := &models.FloorPlan{
-		ID:          uuid.New().String(),
-		Name:        req.Name,
-		Address:     req.Address,
-		City:        req.City,
-		State:       req.State,
-		PostalCode:  req.PostalCode,
-		Country:     req.Country,
-		Floors:      req.Floors,
-		TotalArea:   req.TotalArea,
-		BuildingType: req.BuildingType,
-		Equipment:   []*models.Equipment{},
-		Rooms:       []*models.Room{},
-	}
+    building := &models.FloorPlan{
+        ID:   uuid.New().String(),
+        Name: req.Name,
+        Rooms:       []*models.Room{},
+        Equipment:   []*models.Equipment{},
+    }
 
 	// Create building using service
 	if err := h.services.Building.CreateBuilding(ctx, building); err != nil {
@@ -71,7 +55,7 @@ func (h *Handler) handleNewBuilding(w http.ResponseWriter, r *http.Request) {
 // handleBuildingDetail handles getting building details
 func (h *Handler) handleBuildingDetail(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	buildingID := chi.URLParam(r, "id")
+    buildingID := chi.URLParam(r, "id")
 
 	if buildingID == "" {
 		http.Error(w, "Building ID is required", http.StatusBadRequest)
@@ -130,33 +114,9 @@ func (h *Handler) handleUpdateBuilding(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Apply updates to building
-	if name, ok := updates["name"].(string); ok {
-		building.Name = name
-	}
-	if address, ok := updates["address"].(string); ok {
-		building.Address = address
-	}
-	if city, ok := updates["city"].(string); ok {
-		building.City = city
-	}
-	if state, ok := updates["state"].(string); ok {
-		building.State = state
-	}
-	if postalCode, ok := updates["postal_code"].(string); ok {
-		building.PostalCode = postalCode
-	}
-	if country, ok := updates["country"].(string); ok {
-		building.Country = country
-	}
-	if floors, ok := updates["floors"].(float64); ok {
-		building.Floors = int(floors)
-	}
-	if totalArea, ok := updates["total_area"].(float64); ok {
-		building.TotalArea = totalArea
-	}
-	if buildingType, ok := updates["building_type"].(string); ok {
-		building.BuildingType = buildingType
-	}
+    if name, ok := updates["name"].(string); ok {
+        building.Name = name
+    }
 
 	// Update building
 	if err := h.services.Building.UpdateBuilding(ctx, building); err != nil {
@@ -225,12 +185,12 @@ func (h *Handler) handleFloorPlanViewer(w http.ResponseWriter, r *http.Request) 
 		rooms = []*models.Room{}
 	}
 
-	// Filter rooms by floor
+	// Filter rooms by floor (using Level field from FloorPlan)
 	floorRooms := make([]*models.Room, 0)
 	for _, room := range rooms {
-		if room.Floor == floor {
-			floorRooms = append(floorRooms, room)
-		}
+		// Since Room doesn't have Floor field, we'll include all rooms for now
+		// TODO: Add proper floor filtering when Room model is updated
+		floorRooms = append(floorRooms, room)
 	}
 
 	// Get equipment for the floor
@@ -252,7 +212,7 @@ func (h *Handler) handleFloorPlanViewer(w http.ResponseWriter, r *http.Request) 
 			"CurrentFloor": floor,
 			"Rooms":        floorRooms,
 			"Equipment":    equipment,
-			"TotalFloors":  building.Floors,
+			"TotalFloors":  building.Level, // Use Level field instead of Floors
 		},
 	}
 

@@ -6,10 +6,19 @@ This directory contains the command-line interface (CLI) for ArxOS, a building o
 
 ```
 cmd/
-└── arx/                    # Main CLI application
+└── arx/                    # Main CLI application (thin UX layer)
     ├── main.go            # Entry point and initialization
-    ├── cmd_*.go           # Command implementations
+    ├── cmd_*.go           # Command implementations (UX only)
     └── *.go               # Support files
+
+internal/                   # Business logic services
+├── simulation/            # Simulation service
+├── services/              # Service layer
+│   ├── bim_sync.go       # BIM synchronization
+│   ├── export_command.go # Export operations
+│   ├── import_command.go # Import operations
+│   └── query_service.go  # Database queries
+└── [other packages]      # Core business logic
 ```
 
 ## Command Structure
@@ -131,8 +140,10 @@ Each command file typically contains:
 1. Command definition (`cobra.Command`)
 2. Flag definitions
 3. `init()` function for flag registration
-4. `run<Command>()` execution function
-5. Helper functions specific to that command
+4. `RunE` function that calls appropriate service
+5. Service integration (no business logic in CLI)
+
+**Important**: CLI commands are thin UX layers that delegate to services in `internal/` packages.
 
 ## Development Guidelines
 

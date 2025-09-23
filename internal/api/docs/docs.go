@@ -1193,8 +1193,6 @@ var SwaggerInfo = &swag.Spec{
 	Description:      "REST API for ArxOS Building Information Management System",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
-	LeftDelim:        "{{",
-	RightDelim:       "}}",
 }
 
 func init() {

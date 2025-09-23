@@ -38,7 +38,24 @@
 - Seamless sync between database and BIM formats
 - Version control integration for BIM files
 
-#### 3. Implemented Cloud Storage Backends (S3/GCS) ✅
+#### 3. Consolidated Command Architecture ✅
+**Problem:** Duplicate command logic existed between `cmd/arx` and `internal/commands`, violating DRY principles and making maintenance difficult.
+
+**Solution:**
+- Moved all business logic from `internal/commands` to appropriate service packages
+- Created service layer: `SimulationService`, `BIMSyncService`, `ExportCommandService`, `ImportCommandService`, `QueryService`
+- Updated CLI commands to be thin UX layers that delegate to services
+- Removed `internal/commands` directory entirely
+- Followed Go best practices with `cmd/` for entrypoints and `internal/` for business logic
+
+**Impact:**
+- Eliminated code duplication between CLI and internal packages
+- Improved maintainability with single source of truth for each operation
+- Better separation of concerns (CLI handles UX, services handle business logic)
+- Services are now reusable by API, daemon, and other components
+- Follows standard Go project structure conventions
+
+#### 4. Implemented Cloud Storage Backends (S3/GCS) ✅
 **Problem:** Storage was limited to local filesystem only.
 
 **Solution:**

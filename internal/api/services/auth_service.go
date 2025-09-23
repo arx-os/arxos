@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	api "github.com/arx-os/arxos/internal/api"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/internal/email"
@@ -17,15 +18,15 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// AuthServiceImpl implements the AuthService interface
+// AuthServiceImpl implements the api.AuthService interface
 type AuthServiceImpl struct {
 	db       database.DB
-	orgSvc   OrganizationService
+	orgSvc   api.OrganizationService
 	emailSvc email.EmailService
 }
 
 // NewAuthService creates a new auth service
-func NewAuthService(db database.DB) AuthService {
+func NewAuthService(db database.DB) api.AuthService {
 	// Use mock email service by default (can be configured later)
 	return &AuthServiceImpl{
 		db:       db,
@@ -34,7 +35,7 @@ func NewAuthService(db database.DB) AuthService {
 }
 
 // SetOrganizationService sets the organization service (for resolving roles)
-func (s *AuthServiceImpl) SetOrganizationService(orgSvc OrganizationService) {
+func (s *AuthServiceImpl) SetOrganizationService(orgSvc api.OrganizationService) {
 	s.orgSvc = orgSvc
 }
 
@@ -44,11 +45,11 @@ func (s *AuthServiceImpl) SetEmailService(emailSvc email.EmailService) {
 }
 
 // Login authenticates a user and returns tokens
-func (s *AuthServiceImpl) Login(ctx context.Context, email, password string) (*AuthResponse, error) {
+func (s *AuthServiceImpl) Login(ctx context.Context, email, password string) (*api.AuthResponse, error) {
 	// Extract request metadata from context (if available)
 	ipAddress := ""
 	userAgent := ""
-	if reqInfo, ok := ctx.Value("requestInfo").(RequestInfo); ok {
+	if reqInfo, ok := ctx.Value("requestInfo").(api.RequestInfo); ok {
 		ipAddress = reqInfo.IPAddress
 		userAgent = reqInfo.UserAgent
 	}
@@ -108,7 +109,7 @@ func (s *AuthServiceImpl) Login(ctx context.Context, email, password string) (*A
 	logger.Info("User %s logged in", email)
 
 	// Convert to API User type
-	apiUser := &User{
+	apiUser := &api.User{
 		ID:        user.ID,
 		Email:     user.Email,
 		Name:      user.FullName,
@@ -122,7 +123,7 @@ func (s *AuthServiceImpl) Login(ctx context.Context, email, password string) (*A
 		apiUser.LastLoginAt = *user.LastLogin
 	}
 
-	return &AuthResponse{
+	return &api.AuthResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		TokenType:    "Bearer",
@@ -154,7 +155,7 @@ func (s *AuthServiceImpl) Logout(ctx context.Context, token string) error {
 }
 
 // Register creates a new user account
-func (s *AuthServiceImpl) Register(ctx context.Context, email, password, name string) (*User, error) {
+func (s *AuthServiceImpl) Register(ctx context.Context, email, password, name string) (*api.User, error) {
 	// Check if user already exists
 	_, err := s.db.GetUserByEmail(ctx, email)
 	if err == nil {
@@ -191,7 +192,7 @@ func (s *AuthServiceImpl) Register(ctx context.Context, email, password, name st
 	logger.Info("User %s registered", email)
 
 	// Return API user type (without password hash)
-	return &User{
+	return &api.User{
 		ID:        user.ID,
 		Email:     user.Email,
 		Name:      user.FullName,
@@ -202,8 +203,8 @@ func (s *AuthServiceImpl) Register(ctx context.Context, email, password, name st
 	}, nil
 }
 
-// ValidateToken validates an access token
-func (s *AuthServiceImpl) ValidateToken(ctx context.Context, token string) (*TokenClaims, error) {
+// ValidateTokenClaims validates an access token and returns claims
+func (s *AuthServiceImpl) ValidateTokenClaims(ctx context.Context, token string) (*api.TokenClaims, error) {
 	// Get session from database
 	session, err := s.db.GetSession(ctx, token)
 	if err != nil {
@@ -234,7 +235,7 @@ func (s *AuthServiceImpl) ValidateToken(ctx context.Context, token string) (*Tok
 	role, orgID := s.getUserPrimaryRole(ctx, user.ID)
 
 	// Construct claims from session
-	claims := &TokenClaims{
+	claims := &api.TokenClaims{
 		UserID:    session.UserID,
 		Email:     user.Email,
 		OrgID:     orgID,
@@ -246,8 +247,17 @@ func (s *AuthServiceImpl) ValidateToken(ctx context.Context, token string) (*Tok
 	return claims, nil
 }
 
+// ValidateToken returns only the userID for a valid token
+func (s *AuthServiceImpl) ValidateToken(ctx context.Context, token string) (string, error) {
+	claims, err := s.ValidateTokenClaims(ctx, token)
+	if err != nil {
+		return "", err
+	}
+	return claims.UserID, nil
+}
+
 // RefreshToken generates new tokens from refresh token
-func (s *AuthServiceImpl) RefreshToken(ctx context.Context, refreshToken string) (*AuthResponse, error) {
+func (s *AuthServiceImpl) RefreshToken(ctx context.Context, refreshToken string) (*api.AuthResponse, error) {
 	// Get session by refresh token
 	session, err := s.db.GetSessionByRefreshToken(ctx, refreshToken)
 	if err != nil {
@@ -289,7 +299,7 @@ func (s *AuthServiceImpl) RefreshToken(ctx context.Context, refreshToken string)
 	}
 
 	// Convert to API User type
-	apiUser := &User{
+	apiUser := &api.User{
 		ID:        user.ID,
 		Email:     user.Email,
 		Name:      user.FullName,
@@ -303,7 +313,7 @@ func (s *AuthServiceImpl) RefreshToken(ctx context.Context, refreshToken string)
 		apiUser.LastLoginAt = *user.LastLogin
 	}
 
-	return &AuthResponse{
+	return &api.AuthResponse{
 		AccessToken:  newAccessToken,
 		RefreshToken: newRefreshToken,
 		TokenType:    "Bearer",

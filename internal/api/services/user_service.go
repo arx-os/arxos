@@ -7,27 +7,28 @@ import (
 	"sync"
 	"time"
 
+	api "github.com/arx-os/arxos/internal/api"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // UserServiceImpl implements the UserService interface
 type UserServiceImpl struct {
-	users map[string]*User // userID -> user
+	users map[string]*api.User // userID -> user
 	mu    sync.RWMutex
-	auth  AuthService // Reference to auth service for coordination
+	auth  api.AuthService // Reference to auth service for coordination
 }
 
 // NewUserService creates a new user service
-func NewUserService(auth AuthService) UserService {
+func NewUserService(auth api.AuthService) api.UserService {
 	return &UserServiceImpl{
-		users: make(map[string]*User),
+		users: make(map[string]*api.User),
 		auth:  auth,
 	}
 }
 
 // GetUser retrieves a user by ID
-func (s *UserServiceImpl) GetUser(ctx context.Context, userID string) (*User, error) {
+func (s *UserServiceImpl) GetUser(ctx context.Context, userID string) (*api.User, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -43,11 +44,11 @@ func (s *UserServiceImpl) GetUser(ctx context.Context, userID string) (*User, er
 }
 
 // ListUsers returns all users with optional filtering
-func (s *UserServiceImpl) ListUsers(ctx context.Context, filter UserFilter) ([]*User, error) {
+func (s *UserServiceImpl) ListUsers(ctx context.Context, filter api.UserFilter) ([]*api.User, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	var users []*User
+	var users []*api.User
 	for _, user := range s.users {
 		// Apply filters
 		if filter.Role != "" && user.Role != filter.Role {
@@ -70,7 +71,7 @@ func (s *UserServiceImpl) ListUsers(ctx context.Context, filter UserFilter) ([]*
 }
 
 // CreateUser creates a new user
-func (s *UserServiceImpl) CreateUser(ctx context.Context, req CreateUserRequest) (*User, error) {
+func (s *UserServiceImpl) CreateUser(ctx context.Context, req api.CreateUserRequest) (*api.User, error) {
 	// Check if email already exists
 	s.mu.RLock()
 	for _, user := range s.users {
@@ -88,7 +89,7 @@ func (s *UserServiceImpl) CreateUser(ctx context.Context, req CreateUserRequest)
 	}
 
 	// Create user
-	user := &User{
+	user := &api.User{
 		ID:           generateID(),
 		Email:        req.Email,
 		Name:         req.Name,
@@ -123,7 +124,7 @@ func (s *UserServiceImpl) CreateUser(ctx context.Context, req CreateUserRequest)
 }
 
 // UpdateUser updates an existing user
-func (s *UserServiceImpl) UpdateUser(ctx context.Context, userID string, updates UserUpdate) (*User, error) {
+func (s *UserServiceImpl) UpdateUser(ctx context.Context, userID string, updates api.UserUpdate) (*api.User, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -195,7 +196,7 @@ func (s *UserServiceImpl) DeleteUser(ctx context.Context, userID string) error {
 }
 
 // GetUserByEmail retrieves a user by email
-func (s *UserServiceImpl) GetUserByEmail(ctx context.Context, email string) (*User, error) {
+func (s *UserServiceImpl) GetUserByEmail(ctx context.Context, email string) (*api.User, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 

@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package api
+package services
 
 import (
 	"bytes"

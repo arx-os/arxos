@@ -96,6 +96,10 @@ func main() {
 		watchCmd,
 		serveCmd,
 
+		// Simulation and Sync
+		simulateCmd,
+		syncCmd,
+
 		// Visualization
 		visualizeCmd,
 		reportCmd,

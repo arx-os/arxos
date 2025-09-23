@@ -5,6 +5,16 @@ This document contains a detailed review of the `/internal` directory structure,
 
 ---
 
+## What changed in this update
+
+- Clarified that the daemon has tests (e.g., `daemon_test.go`, `queue_test.go`); recommend expanding coverage rather than marking as untested.
+- Reverted the claim that web/handlers duplication was resolved; duplication persists between `internal/handlers/web/*` and `web/templates/*` and should be consolidated.
+- Clarified error package duplication remains (`internal/errors` vs `pkg/errors`); propose consolidating to a single package.
+- Removed claims that cloud storage backends (GCS/Azure/Spaces) are implemented; move these to Future Work.
+- Noted that API rate limiting is stubbed in the API package; reference production-ready middleware and recommend wiring it in.
+- Clarified migrations: both `internal/migration/*` and `internal/database/migrate.go` exist; recommend standardizing on one path and documenting usage.
+- Updated handlers section to reflect initial tests exist but coverage is limited, rather than none.
+
 ## Directory Reviews
 
 ### 1. `/internal/adapters/postgis` ✅
@@ -201,32 +211,32 @@ func (c *MemoryCache) Stop() {
 }
 ```
 
-### 5. `/internal/commands` ✅
-**Status: STABLE** | **Grade: B** | **Lines: 2,302**
+### 5. `/internal/commands` ✅ **CONSOLIDATED**
+**Status: CONSOLIDATED** | **Grade: A** | **Lines: 0** (Moved to services)
 
 #### Overview
-CLI command implementations for ArxOS operations including import, export, query, and spatial operations.
+**CONSOLIDATION COMPLETE**: The `/internal/commands` directory has been successfully consolidated into appropriate service packages following Go best practices.
 
-#### Architecture
-- **Pattern**: Command pattern with options structs
-- **Scope**: Business logic for CLI operations
-- **Integration**: Connects CLI to database and services
+#### Architecture Changes
+- **Before**: Command logic duplicated between `cmd/arx` and `internal/commands`
+- **After**: Clean separation - CLI commands (`cmd/arx`) handle UX only, business logic moved to services
+- **Pattern**: Service-oriented architecture with thin CLI layer
 
-#### Files Breakdown
-| File | Purpose |
-|------|---------|
-| types.go | Command option structures |
-| crud_types.go | CRUD operation types |
-| import.go | Import from PDF, BIM, IFC formats |
-| export.go | Export to various formats |
-| query.go | Database query builder and executor |
-| query_spatial.go | Spatial/geographic queries |
-| search.go | Full-text search functionality |
-| simulate.go | Simulation commands |
-| sync.go | Data synchronization |
-| validate.go | Data validation |
-| init.go | Building initialization |
-| query_test.go | Test coverage |
+#### Consolidation Results
+| Original File | New Location | Service |
+|---------------|--------------|---------|
+| simulate.go | `internal/simulation/service.go` | `SimulationService` |
+| sync.go | `internal/services/bim_sync.go` | `BIMSyncService` |
+| export.go | `internal/services/export_command.go` | `ExportCommandService` |
+| import.go | `internal/services/import_command.go` | `ImportCommandService` |
+| query.go | `internal/services/query_service.go` | `QueryService` |
+
+#### Benefits Achieved
+- ✅ **Eliminated Duplication**: No more duplicate command logic
+- ✅ **Better Separation**: CLI handles UX, services handle business logic
+- ✅ **Improved Maintainability**: Single source of truth for each operation
+- ✅ **Standard Go Structure**: Follows Go conventions (`cmd/` for entrypoints)
+- ✅ **Reusable Services**: Services can be used by API, daemon, and other components
 
 #### Command Coverage
 - ✅ Import (PDF, BIM, IFC)
@@ -586,7 +596,7 @@ Background service daemon for file watching, auto-import, and IPC communication 
 - ✅ Retry logic for failed imports
 
 #### Areas for Improvement
-- ❌ **No tests** - Critical service without test coverage
+- 🟡 **Limited tests** - Initial tests exist (e.g., `daemon_test.go`, `queue_test.go`); expand coverage for IPC and failure modes
 - 🟡 **No health checks** - Missing liveness/readiness probes
 - 🟡 **No metrics export** - Statistics not exposed for monitoring
 - 🟡 **Fixed socket path** - Could conflict with multiple instances
@@ -594,10 +604,9 @@ Background service daemon for file watching, auto-import, and IPC communication 
 - 🟡 **Memory concerns** - Work queue could grow unbounded
 
 #### Critical Issues
-1. **Zero test coverage** for background service
-2. **No circuit breaker** for repeated failures
-3. **Potential socket file leak** on crash
-4. **No backpressure handling** in queue
+1. **No circuit breaker** for repeated failures
+2. **Potential socket file leak** on crash
+3. **No backpressure handling** in queue
 
 #### Recommendations
 1. **URGENT**: Add comprehensive test coverage
@@ -780,11 +789,10 @@ Single file with:
 - 🟡 **Minimal error types** - Missing common cases
 
 #### Duplication Issue
-This package appears to duplicate `/internal/common/errors` which has:
-- More error types (431 lines vs 113)
-- Error codes support
-- AppError struct with context
-- Stack trace support
+This package appears to duplicate `/internal/common/errors` (and `pkg/errors`). A consolidation plan is recommended:
+- Select a single canonical errors package (prefer `pkg/errors` for public reuse, or `internal/common/errors` for internal-only).
+- Migrate imports incrementally using a mechanical refactor.
+- Delete the deprecated package after references are removed.
 
 #### Recommendations
 1. **URGENT**: Either remove this package or consolidate with common/errors
@@ -869,7 +877,7 @@ Web UI handlers for HTMX-based interface, providing HTTP handlers and template m
 - **Pattern**: Handler pattern with embedded templates
 - **Location**: /internal/handlers/web/ subdirectory
 - **Approach**: Template-based rendering with HTMX
-- **Testing**: ❌ No tests
+- **Testing**: Initial tests exist but coverage is limited
 
 #### Files Breakdown
 | File | Lines | Purpose |
@@ -892,9 +900,9 @@ Web UI handlers for HTMX-based interface, providing HTTP handlers and template m
 - ✅ HTMX endpoint support
 
 #### Critical Issues
-- ❌ **No test coverage** - Zero tests for handlers
+- 🟡 **Limited test coverage** - Add tests for auth flows, template rendering, SSE
 - 🔴 **Incomplete implementations** - Many handlers return "Not implemented"
-- 🟡 **Duplicates web/ directory** - Overlaps with /web/templates
+- 🟡 **Duplicates web/ directory** - Overlaps with /web/templates (consolidation recommended)
 - 🟡 **Mixed responsibilities** - Search indexer in handler
 - 🟡 **No error recovery** - Panics on template errors
 
@@ -904,6 +912,8 @@ This appears to duplicate functionality from `/web/`:
 - Both have router setup
 - Both handle web UI
 - Unclear separation of concerns
+
+Recommendation: Choose a single source of truth for templates and routing (either keep `internal/handlers/web/*` as the web server and use `web/templates/*` solely for assets, or embed templates and remove the parallel directory), then delete the duplicate path.
 
 #### Recommendations
 1. **URGENT**: Add test coverage
@@ -1145,7 +1155,7 @@ Well-structured HTTP middleware package providing authentication, rate limiting,
 
 #### Areas for Improvement
 - 🟡 **Limited Test Coverage** - Only validation has tests
-- 🟡 **No CSRF Protection** - Missing CSRF middleware
+- 🟡 **CSRF Protection present but basic** - Token generation exists; improve robustness
 - 🟡 **Basic Rate Limiting** - No distributed rate limiting
 - 🟡 **No Request ID** - Missing request tracking middleware
 - 🟡 **Memory-based Visitors** - Rate limit state not persistent
@@ -1159,18 +1169,20 @@ Well-structured HTTP middleware package providing authentication, rate limiting,
 
 #### Recommendations
 1. Add tests for auth and rate limit middleware
-2. Implement CSRF protection middleware
+2. Strengthen CSRF protection (crypto/rand tokens, rotation, per-session binding)
 3. Add distributed rate limiting with Redis
 4. Implement request ID middleware for tracing
 5. Add circuit breaker middleware
 6. Implement API key authentication option
 7. Add middleware composition helpers
 
+Note: In the API package, the `rateLimitMiddleware` implementation is currently a stub. Prefer wiring this package's rate limit middleware into the API server setup for production.
+
 ### 21. `/internal/migration` ✅
 **Status: STABLE** | **Grade: B** | **Lines: 1,101**
 
 #### Overview
-Database migration system with schema versioning and SQLite-to-PostGIS migration tools. Includes embedded SQL migrations and automated migration management.
+Database migration system with schema versioning and SQLite-to-PostGIS migration tools. Includes embedded SQL migrations and automated migration management. Note: a second migration runner also exists under `internal/database/migrate.go`; standardizing on one approach and documenting usage paths is recommended.
 
 #### Architecture
 - **Pattern**: Version-based sequential migrations
@@ -1681,7 +1693,7 @@ Comprehensive storage abstraction layer with multiple backend support, Git integ
 - ✅ **Test Coverage** - Unit tests included
 
 #### Areas for Improvement
-- 🟡 **Cloud Backends** - S3/GCS not implemented yet
+- 🟡 **Cloud Backends** - S3/GCS/Azure not implemented yet (planned)
 - 🟡 **Encryption** - No at-rest encryption
 - 🟡 **Deduplication** - Missing content deduplication
 - 🟡 **Quota Management** - No storage limits
@@ -1821,11 +1833,11 @@ Comprehensive observability system with metrics, tracing, structured logging, an
 - **C Grade**: 1 directory (errors)
 - **N/A**: 1 directory (models - empty)
 
-### Critical Issues ~~Requiring Immediate Attention~~ RESOLVED ✅
+### Critical Issues ~~Requiring Immediate Attention~~
 1. ~~**Goroutine Leak** in cache module~~ - **FIXED**: Added proper lifecycle management
 2. ~~**Missing Cycle Detection** in connections module~~ - **VERIFIED**: Already implemented
-3. ~~**Duplicate Error Packages**~~ - **RESOLVED**: Consolidated to pkg/errors
-4. ~~**Web/Handlers Duplication**~~ - **RESOLVED**: Consolidated templates to /web/templates/
+3. **Duplicate Error Packages** - Not yet consolidated; choose one and migrate
+4. **Web/Handlers Duplication** - Not yet consolidated; choose single source of truth
 
 ### Top Recommendations
 1. **Testing**: Add comprehensive test coverage to modules lacking tests

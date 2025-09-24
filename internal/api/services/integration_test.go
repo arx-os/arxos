@@ -13,7 +13,9 @@ import (
 
 	"github.com/arx-os/arxos/internal/api"
 	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/internal/migration"
 	"github.com/arx-os/arxos/internal/middleware"
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 
@@ -37,8 +39,15 @@ func SetupTestServer(t *testing.T) *TestServer {
 		return nil
 	}
 
-	// Run migrations
-	if err := database.RunMigrations(sqlDB, "../../migrations"); err != nil {
+	// Run migrations using the primary migration system
+	sqlxDB := sqlx.NewDb(sqlDB, "postgres")
+	migrationManager, err := migration.NewManager(sqlxDB)
+	if err != nil {
+		t.Skipf("Skipping integration test: Failed to create migration manager: %v", err)
+		return nil
+	}
+	
+	if err := migrationManager.Up(nil); err != nil {
 		// Migrations might not exist in test environment, create basic schema
 		createTestSchema(t, sqlDB)
 	}

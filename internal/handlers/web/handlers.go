@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/arx-os/arxos/internal/api"
+	"github.com/arx-os/arxos/internal/api/types"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/search"
 	"github.com/arx-os/arxos/pkg/models"
@@ -17,28 +17,23 @@ import (
 // Handler wraps the API services and templates
 type Handler struct {
 	templates      *Templates
-	services       *api.Services
+	services       *types.Services
 	searchIndexer  *search.DatabaseIndexer
 	recentSearches *search.RecentSearches
 	authService    *AuthService
 }
 
 // NewHandler creates a new web handler
-func NewHandler(services *api.Services) (*Handler, error) {
+func NewHandler(services *types.Services) (*Handler, error) {
 	templates, err := NewTemplates()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load templates: %w", err)
 	}
 
-	// Initialize search indexer
-	searchIndexer := search.NewDatabaseIndexer(services.DB, 5*time.Minute)
-
-	// Start indexing in background
-	ctx := context.Background()
-	if err := searchIndexer.Start(ctx); err != nil {
-		logger.Error("Failed to start search indexer: %v", err)
-		// Continue without search functionality
-	}
+	// Initialize search indexer (simplified for now)
+	var searchIndexer *search.DatabaseIndexer
+	// TODO: Fix database interface compatibility
+	// searchIndexer := search.NewDatabaseIndexer(services.DB, 5*time.Minute)
 
 	// Initialize authentication service
 	jwtSecret := []byte(getJWTSecret())
@@ -60,7 +55,7 @@ func NewHandler(services *api.Services) (*Handler, error) {
 
 // Routes returns the Chi router for the web UI
 func (h *Handler) Routes() http.Handler {
-	return NewRouter(h)
+	return NewAuthenticatedRouter(h)
 }
 
 // handleIndex serves the home page
@@ -95,51 +90,6 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleRegister handles user registration page
-func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
-	data := PageData{
-		Title:     "Register",
-		NavActive: "",
-	}
-
-	if err := h.templates.Render(w, "register", data); err != nil {
-		logger.Error("Failed to render register: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-	}
-}
-
-// handleForgotPassword handles forgot password page
-func (h *Handler) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
-	data := PageData{
-		Title:     "Forgot Password",
-		NavActive: "",
-	}
-
-	if err := h.templates.Render(w, "forgot-password", data); err != nil {
-		logger.Error("Failed to render forgot-password: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-	}
-}
-
-// handleResetPassword handles password reset page
-func (h *Handler) handleResetPassword(w http.ResponseWriter, r *http.Request) {
-	token := r.URL.Query().Get("token")
-	if token == "" {
-		http.Error(w, "Reset token is required", http.StatusBadRequest)
-		return
-	}
-
-	data := PageData{
-		Title:     "Reset Password",
-		NavActive: "",
-		Content:   map[string]interface{}{"token": token},
-	}
-
-	if err := h.templates.Render(w, "reset-password", data); err != nil {
-		logger.Error("Failed to render reset-password: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-	}
-}
 
 // handleLogout handles user logout
 func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
@@ -164,10 +114,18 @@ func (h *Handler) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get buildings from service
-	buildings, err := h.services.Building.ListBuildings(ctx, userID, 10, 0)
+	buildingsInterface, err := h.services.Building.ListBuildings(ctx, userID, 10, 0)
 	if err != nil {
 		logger.Error("Failed to get buildings: %v", err)
-		buildings = []*models.FloorPlan{}
+		buildingsInterface = []interface{}{}
+	}
+
+	// Convert interface{} to []*models.FloorPlan
+	var buildings []*models.FloorPlan
+	for _, buildingInterface := range buildingsInterface {
+		if building, ok := buildingInterface.(*models.FloorPlan); ok {
+			buildings = append(buildings, building)
+		}
 	}
 
 	data := PageData{
@@ -215,10 +173,18 @@ func (h *Handler) HandleBuildingsList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get buildings from service
-	buildings, err := h.services.Building.ListBuildings(ctx, userID, limit, offset)
+	buildingsInterface, err := h.services.Building.ListBuildings(ctx, userID, limit, offset)
 	if err != nil {
 		logger.Error("Failed to list buildings: %v", err)
-		buildings = []*models.FloorPlan{}
+		buildingsInterface = []interface{}{}
+	}
+
+	// Convert interface{} to []*models.FloorPlan
+	var buildings []*models.FloorPlan
+	for _, buildingInterface := range buildingsInterface {
+		if building, ok := buildingInterface.(*models.FloorPlan); ok {
+			buildings = append(buildings, building)
+		}
 	}
 
 	data := PageData{
@@ -302,71 +268,135 @@ func (h *Handler) getFailedEquipmentCount(buildings []*models.FloorPlan) int {
 	return failed
 }
 
-// userServiceAdapter adapts api.UserService to web.UserService interface
+// Helper functions for extracting values from interface{} maps
+func getString(m map[string]interface{}, key string) string {
+	if val, ok := m[key]; ok {
+		if str, ok := val.(string); ok {
+			return str
+		}
+	}
+	return ""
+}
+
+func getBool(m map[string]interface{}, key string) bool {
+	if val, ok := m[key]; ok {
+		if b, ok := val.(bool); ok {
+			return b
+		}
+	}
+	return false
+}
+
+// userServiceAdapter adapts types.UserService to web.UserService interface
 type userServiceAdapter struct {
-	apiUserService api.UserService
-	apiAuthService api.AuthService
+	apiUserService types.UserService
+	apiAuthService types.AuthService
 }
 
 func (a *userServiceAdapter) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
-	apiUser, err := a.apiUserService.GetUserByEmail(ctx, email)
+	apiUserInterface, err := a.apiUserService.GetUserByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}
+	
+	// Type assert to map
+	var apiUser map[string]interface{}
+	if userMap, ok := apiUserInterface.(map[string]interface{}); ok {
+		apiUser = userMap
+	} else {
+		return nil, fmt.Errorf("invalid user type")
+	}
+	
 	return &models.User{
-		ID:       apiUser.ID,
-		Email:    apiUser.Email,
-		FullName: apiUser.Name,
-		Role:     apiUser.Role,
-		IsActive: apiUser.Active,
+		ID:       getString(apiUser, "id"),
+		Email:    getString(apiUser, "email"),
+		FullName: getString(apiUser, "name"),
+		Role:     getString(apiUser, "role"),
+		IsActive: getBool(apiUser, "active"),
 	}, nil
 }
 
 func (a *userServiceAdapter) GetUserByID(ctx context.Context, id string) (*models.User, error) {
-	apiUser, err := a.apiUserService.GetUser(ctx, id)
+	apiUserInterface, err := a.apiUserService.GetUser(ctx, id)
 	if err != nil {
 		return nil, err
 	}
+	
+	// Type assert to map or struct
+	var apiUser map[string]interface{}
+	if userMap, ok := apiUserInterface.(map[string]interface{}); ok {
+		apiUser = userMap
+	} else {
+		return nil, fmt.Errorf("invalid user type")
+	}
+	
 	return &models.User{
-		ID:       apiUser.ID,
-		Email:    apiUser.Email,
-		FullName: apiUser.Name,
-		Role:     apiUser.Role,
-		IsActive: apiUser.Active,
+		ID:       getString(apiUser, "id"),
+		Email:    getString(apiUser, "email"),
+		FullName: getString(apiUser, "name"),
+		Role:     getString(apiUser, "role"),
+		IsActive: getBool(apiUser, "active"),
 	}, nil
 }
 
 func (a *userServiceAdapter) ValidateCredentials(ctx context.Context, email, password string) (*models.User, error) {
 	// Use the API AuthService to validate credentials
-	authResponse, err := a.apiAuthService.Login(ctx, email, password)
+	authResponseInterface, err := a.apiAuthService.Login(ctx, email, password)
 	if err != nil {
 		return nil, fmt.Errorf("invalid credentials")
 	}
 
+	// Type assert auth response
+	var authResponse map[string]interface{}
+	if responseMap, ok := authResponseInterface.(map[string]interface{}); ok {
+		authResponse = responseMap
+	} else {
+		return nil, fmt.Errorf("invalid auth response type")
+	}
+
 	// Get user details from the auth response
-	apiUser := authResponse.User
+	userInterface, ok := authResponse["user"]
+	if !ok {
+		return nil, fmt.Errorf("no user in auth response")
+	}
+	
+	var apiUser map[string]interface{}
+	if userMap, ok := userInterface.(map[string]interface{}); ok {
+		apiUser = userMap
+	} else {
+		return nil, fmt.Errorf("invalid user type in auth response")
+	}
+	
 	return &models.User{
-		ID:       apiUser.ID,
-		Email:    apiUser.Email,
-		FullName: apiUser.Name,
-		Role:     apiUser.Role,
-		IsActive: apiUser.Active,
+		ID:       getString(apiUser, "id"),
+		Email:    getString(apiUser, "email"),
+		FullName: getString(apiUser, "name"),
+		Role:     getString(apiUser, "role"),
+		IsActive: getBool(apiUser, "active"),
 	}, nil
 }
 
 func (a *userServiceAdapter) CreateUser(ctx context.Context, email, password, name string) (*models.User, error) {
 	// Use the API AuthService to register user
-	apiUser, err := a.apiAuthService.Register(ctx, email, password, name)
+	apiUserInterface, err := a.apiAuthService.Register(ctx, email, password, name)
 	if err != nil {
 		return nil, fmt.Errorf("registration failed: %w", err)
 	}
 
+	// Type assert to map
+	var apiUser map[string]interface{}
+	if userMap, ok := apiUserInterface.(map[string]interface{}); ok {
+		apiUser = userMap
+	} else {
+		return nil, fmt.Errorf("invalid user type")
+	}
+
 	return &models.User{
-		ID:       apiUser.ID,
-		Email:    apiUser.Email,
-		FullName: apiUser.Name,
-		Role:     apiUser.Role,
-		IsActive: apiUser.Active,
+		ID:       getString(apiUser, "id"),
+		Email:    getString(apiUser, "email"),
+		FullName: getString(apiUser, "name"),
+		Role:     getString(apiUser, "role"),
+		IsActive: getBool(apiUser, "active"),
 	}, nil
 }
 

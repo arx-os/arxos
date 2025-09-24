@@ -10,14 +10,14 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/arx-os/arxos/internal/api/handlers"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/core/user"
 	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/internal/middleware"
 	"github.com/google/uuid"
-	"golang.org/x/time/rate"
 )
 
 // Config holds configuration for the API server
@@ -123,10 +123,10 @@ func (s *Server) setupRoutes() {
 	s.router.HandleFunc("/ready", s.handleReady)
 
 	// Auth endpoints
-	s.router.HandleFunc("/api/v1/auth/login", s.handleLogin)
-	s.router.HandleFunc("/api/v1/auth/logout", s.handleLogout)
-	s.router.HandleFunc("/api/v1/auth/register", s.handleRegister)
-	s.router.HandleFunc("/api/v1/auth/refresh", s.handleRefresh)
+	s.router.HandleFunc("/api/v1/auth/login", handlers.HandleLogin(s))
+	s.router.HandleFunc("/api/v1/auth/logout", handlers.HandleLogout(s))
+	s.router.HandleFunc("/api/v1/auth/register", handlers.HandleRegister(s))
+	s.router.HandleFunc("/api/v1/auth/refresh", handlers.HandleRefresh(s))
 
 	// User endpoints
 	s.router.HandleFunc("/api/v1/users", s.handleUsers)
@@ -172,7 +172,7 @@ func (s *Server) Routes() http.Handler {
 	handler = s.recoveryMiddleware(handler)
 	handler = s.corsMiddleware(handler)
 
-	// Apply local rate limiting (cycle-free)
+	// Apply rate limiting using shared middleware
 	rps := float64(s.config.RateLimit.RequestsPerMinute) / 60.0
 	if rps <= 0 {
 		rps = 100.0 / 60.0
@@ -181,64 +181,14 @@ func (s *Server) Routes() http.Handler {
 	if burst <= 0 {
 		burst = 10
 	}
-	ipRL := newIPRateLimiter(rps, burst)
-	handler = ipRL.Middleware(handler)
+	
+	// Use sophisticated rate limiter with path-specific limits
+	rateLimiter := middleware.NewRateLimiter(rps, burst)
+	handler = rateLimiter.MiddlewareWithCustomLimits(middleware.DefaultRateLimits)(handler)
 
 	return handler
 }
 
-// --- simple in-package IP-based rate limiter to avoid import cycles ---
-
-type ipRateLimiter struct {
-	visitors map[string]*rate.Limiter
-	burst    int
-	rate     rate.Limit
-	mu       sync.RWMutex
-}
-
-func newIPRateLimiter(rps float64, burst int) *ipRateLimiter {
-	return &ipRateLimiter{
-		visitors: make(map[string]*rate.Limiter),
-		burst:    burst,
-		rate:     rate.Limit(rps),
-	}
-}
-
-func (l *ipRateLimiter) getLimiter(key string) *rate.Limiter {
-	l.mu.RLock()
-	lim, ok := l.visitors[key]
-	l.mu.RUnlock()
-	if ok {
-		return lim
-	}
-	lim = rate.NewLimiter(l.rate, l.burst)
-	l.mu.Lock()
-	l.visitors[key] = lim
-	l.mu.Unlock()
-	return lim
-}
-
-func (l *ipRateLimiter) clientID(r *http.Request) string {
-	if ip := r.Header.Get("X-Forwarded-For"); ip != "" {
-		return ip
-	}
-	if ip := r.Header.Get("X-Real-IP"); ip != "" {
-		return ip
-	}
-	return r.RemoteAddr
-}
-
-func (l *ipRateLimiter) Middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		lim := l.getLimiter(l.clientID(r))
-		if !lim.Allow() {
-			w.WriteHeader(http.StatusTooManyRequests)
-			w.Write([]byte(`{"error":"rate limit exceeded"}`))
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
 
 // Start starts the API server
 func (s *Server) Start() error {

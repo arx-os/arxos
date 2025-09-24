@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/arx-os/arxos/internal/api"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/database"
 	servicesync "github.com/arx-os/arxos/internal/services/sync"
 	"github.com/arx-os/arxos/internal/storage"
 	"github.com/arx-os/arxos/pkg/models"
+	synctypes "github.com/arx-os/arxos/pkg/sync"
 )
 
 // SyncService handles synchronization between local and cloud storage
@@ -62,7 +62,7 @@ type SyncStatus struct {
 	InProgress  bool
 	PendingPush int
 	PendingPull int
-	Conflicts   []api.Conflict
+	Conflicts   []synctypes.Conflict
 	Error       error
 }
 
@@ -115,7 +115,7 @@ func (s *SyncService) PushBuilding(ctx context.Context, buildingID string) error
 	}
 
 	// Create sync request
-	syncReq := api.SyncRequest{
+	syncReq := synctypes.SyncRequest{
 		BuildingID: buildingID,
 		LastSync:   status.LastSync,
 		Changes:    changes,
@@ -267,7 +267,7 @@ func (s *SyncService) worker() {
 }
 
 // getLocalChanges retrieves local changes since last sync
-func (s *SyncService) getLocalChanges(ctx context.Context, buildingID string, since time.Time) ([]api.Change, error) {
+func (s *SyncService) getLocalChanges(ctx context.Context, buildingID string, since time.Time) ([]synctypes.Change, error) {
 	// Use change tracker to get changes
 	trackedChanges, err := s.changeTracker.GetChanges(ctx, since, "")
 	if err != nil {
@@ -277,7 +277,7 @@ func (s *SyncService) getLocalChanges(ctx context.Context, buildingID string, si
 	}
 
 	// Filter changes for this building
-	var changes []api.Change
+	var changes []synctypes.Change
 	for _, change := range trackedChanges {
 		// Include building changes and related entities
 		if change.Entity == "building" && change.EntityID == buildingID {
@@ -295,8 +295,8 @@ func (s *SyncService) getLocalChanges(ctx context.Context, buildingID string, si
 }
 
 // getLocalChangesFromDB fallback method to get changes from database
-func (s *SyncService) getLocalChangesFromDB(ctx context.Context, buildingID string, since time.Time) ([]api.Change, error) {
-	changes := []api.Change{}
+func (s *SyncService) getLocalChangesFromDB(ctx context.Context, buildingID string, since time.Time) ([]synctypes.Change, error) {
+	changes := []synctypes.Change{}
 
 	// Query database for changes
 	building, err := s.db.GetFloorPlan(ctx, buildingID)
@@ -305,7 +305,7 @@ func (s *SyncService) getLocalChangesFromDB(ctx context.Context, buildingID stri
 	}
 
 	if building != nil && building.UpdatedAt != nil && building.UpdatedAt.After(since) {
-		change := api.Change{
+		change := synctypes.Change{
 			ID:        fmt.Sprintf("%s-%d", buildingID, time.Now().Unix()),
 			Type:      "update",
 			Entity:    "building",
@@ -325,8 +325,8 @@ func (s *SyncService) getLocalChangesFromDB(ctx context.Context, buildingID stri
 }
 
 // getRemoteChanges retrieves remote changes since last sync
-func (s *SyncService) getRemoteChanges(ctx context.Context, buildingID string, since time.Time) ([]api.Change, error) {
-	changes := []api.Change{}
+func (s *SyncService) getRemoteChanges(ctx context.Context, buildingID string, since time.Time) ([]synctypes.Change, error) {
+	changes := []synctypes.Change{}
 
 	// List sync files from storage
 	prefix := fmt.Sprintf("sync/%s/", buildingID)
@@ -343,7 +343,7 @@ func (s *SyncService) getRemoteChanges(ctx context.Context, buildingID string, s
 			continue
 		}
 
-		var syncReq api.SyncRequest
+		var syncReq synctypes.SyncRequest
 		if err := json.Unmarshal(data, &syncReq); err != nil {
 			logger.Warn("Failed to unmarshal sync data from %s: %v", key, err)
 			continue
@@ -361,14 +361,14 @@ func (s *SyncService) getRemoteChanges(ctx context.Context, buildingID string, s
 }
 
 // applyRemoteChanges applies remote changes to local database
-func (s *SyncService) applyRemoteChanges(ctx context.Context, buildingID string, remoteChanges []api.Change) ([]api.Conflict, error) {
+func (s *SyncService) applyRemoteChanges(ctx context.Context, buildingID string, remoteChanges []synctypes.Change) ([]synctypes.Conflict, error) {
 	// Get local changes to check for conflicts
 	status := s.getStatus(buildingID)
 	localChanges, err := s.getLocalChanges(ctx, buildingID, status.LastSync)
 	if err != nil {
 		logger.Warn("Failed to get local changes for conflict detection: %v", err)
 		// Continue without conflict detection
-		localChanges = []api.Change{}
+		localChanges = []synctypes.Change{}
 	}
 
 	// Detect conflicts using the conflict resolver
@@ -378,7 +378,7 @@ func (s *SyncService) applyRemoteChanges(ctx context.Context, buildingID string,
 	}
 
 	// Convert detected conflicts to API conflicts
-	conflicts := []api.Conflict{}
+	conflicts := []synctypes.Conflict{}
 	for _, conflict := range detectedConflicts {
 		conflicts = append(conflicts, *conflict)
 	}
@@ -390,7 +390,7 @@ func (s *SyncService) applyRemoteChanges(ctx context.Context, buildingID string,
 			if err := s.applyBuildingChange(ctx, change); err != nil {
 				logger.Warn("Failed to apply building change: %v", err)
 				// Create conflict record
-				conflict := api.Conflict{
+				conflict := synctypes.Conflict{
 					ID:         fmt.Sprintf("conflict-%d", time.Now().UnixNano()),
 					Entity:     change.Entity,
 					EntityID:   change.EntityID,
@@ -418,7 +418,7 @@ func (s *SyncService) applyRemoteChanges(ctx context.Context, buildingID string,
 }
 
 // applyBuildingChange applies a building change
-func (s *SyncService) applyBuildingChange(ctx context.Context, change api.Change) error {
+func (s *SyncService) applyBuildingChange(ctx context.Context, change synctypes.Change) error {
 	// Get current building
 	building, err := s.db.GetFloorPlan(ctx, change.EntityID)
 	if err != nil {
@@ -459,7 +459,7 @@ func (s *SyncService) applyBuildingChange(ctx context.Context, change api.Change
 }
 
 // applyEquipmentChange applies an equipment change
-func (s *SyncService) applyEquipmentChange(ctx context.Context, change api.Change) error {
+func (s *SyncService) applyEquipmentChange(ctx context.Context, change synctypes.Change) error {
 	switch change.Type {
 	case "create":
 		equipment := &models.Equipment{
@@ -521,7 +521,7 @@ func (s *SyncService) applyEquipmentChange(ctx context.Context, change api.Chang
 }
 
 // applyRoomChange applies a room change
-func (s *SyncService) applyRoomChange(ctx context.Context, change api.Change) error {
+func (s *SyncService) applyRoomChange(ctx context.Context, change synctypes.Change) error {
 	switch change.Type {
 	case "create":
 		room := &models.Room{
@@ -594,7 +594,7 @@ func (s *SyncService) updateStatus(buildingID string, update func(*SyncStatus)) 
 }
 
 // isConflicting checks if a change is part of a conflict
-func (s *SyncService) isConflicting(change api.Change, conflicts []*api.Conflict) bool {
+func (s *SyncService) isConflicting(change synctypes.Change, conflicts []*synctypes.Conflict) bool {
 	for _, conflict := range conflicts {
 		if conflict.Entity == change.Entity && conflict.EntityID == change.EntityID {
 			return true

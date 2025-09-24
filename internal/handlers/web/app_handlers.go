@@ -293,14 +293,29 @@ func (h *Handler) handleFloorPlanSVG(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get rooms for the floor
-	rooms, err := h.services.Building.ListRooms(ctx, buildingID)
+	roomsInterface, err := h.services.Building.ListRooms(ctx, buildingID)
 	if err != nil {
 		logger.Error("Failed to get rooms: %v", err)
-		rooms = []*models.Room{}
+		roomsInterface = []interface{}{}
+	}
+
+	// Convert interface{} to []*models.Room
+	var rooms []*models.Room
+	for _, roomInterface := range roomsInterface {
+		if room, ok := roomInterface.(*models.Room); ok {
+			rooms = append(rooms, room)
+		}
+	}
+
+	// Type assert building to *models.FloorPlan
+	buildingPlan, ok := building.(*models.FloorPlan)
+	if !ok {
+		http.Error(w, "Invalid building type", http.StatusInternalServerError)
+		return
 	}
 
 	// Generate simple SVG floor plan
-	svg := generateSVGFloorPlan(building, rooms, floor)
+	svg := generateSVGFloorPlan(buildingPlan, rooms, floor)
 
 	// Return SVG
 	w.Header().Set("Content-Type", "image/svg+xml")
@@ -375,4 +390,57 @@ func generateSVGFloorPlan(building *models.FloorPlan, rooms []*models.Room, floo
 
 	svg += "\n</svg>"
 	return svg
+}
+
+// Authentication-related handlers
+
+// handleRegister handles user registration page
+func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
+	data := PageData{
+		Title:     "Register",
+		NavActive: "register",
+		User:      nil,
+		Content:   nil,
+	}
+
+	if err := h.templates.Render(w, "register", data); err != nil {
+		logger.Error("Failed to render register page: %v", err)
+		http.Error(w, "Template error", http.StatusInternalServerError)
+	}
+}
+
+// handleForgotPassword handles forgot password page
+func (h *Handler) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
+	data := PageData{
+		Title:     "Forgot Password",
+		NavActive: "forgot-password",
+		User:      nil,
+		Content:   nil,
+	}
+
+	if err := h.templates.Render(w, "forgot-password", data); err != nil {
+		logger.Error("Failed to render forgot password page: %v", err)
+		http.Error(w, "Template error", http.StatusInternalServerError)
+	}
+}
+
+// handleResetPassword handles password reset page
+func (h *Handler) handleResetPassword(w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		http.Error(w, "Reset token is required", http.StatusBadRequest)
+		return
+	}
+
+	data := PageData{
+		Title:     "Reset Password",
+		NavActive: "reset-password",
+		User:      nil,
+		Content:   map[string]interface{}{"token": token},
+	}
+
+	if err := h.templates.Render(w, "reset-password", data); err != nil {
+		logger.Error("Failed to render reset password page: %v", err)
+		http.Error(w, "Template error", http.StatusInternalServerError)
+	}
 }

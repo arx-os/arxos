@@ -15,6 +15,15 @@ func NewRouter(h *Handler) chi.Router {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
 	r.Use(appmw.RequestID)
+	
+	// Security middleware
+	r.Use(appmw.SecurityHeaders)
+	r.Use(appmw.InputValidation)
+	
+	// CSRF protection for state-changing operations
+	csrfStore := appmw.NewMemoryCSRFStore()
+	csrfMiddleware := appmw.NewCSRFMiddleware(csrfStore)
+	r.Use(csrfMiddleware.Handler)
 
 	// Static files served from web/ directory
 	// Note: Static files are handled by the template system or file server

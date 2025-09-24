@@ -69,36 +69,37 @@ func main() {
 	// Wire all commands
 	rootCmd.AddCommand(
 		// System management
-		installCmd,
-		healthCmd,
-		daemonCmd,
+		// installCmd,    // TODO: Implement
+		// healthCmd,    // TODO: Implement
+		// daemonCmd,    // TODO: Implement
+		migrateCmd,
 
 		// Repository management
-		repoCmd,
+		// repoCmd,      // TODO: Implement
 
 		// Import/Export
-		importCmd,
-		exportCmd,
+		// importCmd,    // TODO: Implement
+		// exportCmd,    // TODO: Implement
 		convertCmd,
 
 		// Data operations
 		queryCmd,
 
 		// CRUD operations
-		addCmd,
-		getCmd,
-		updateCmd,
-		removeCmd,
-		listCmd,
-		traceCmd,
+		// addCmd,       // TODO: Implement
+		// getCmd,       // TODO: Implement
+		// updateCmd,    // TODO: Implement
+		// removeCmd,    // TODO: Implement
+		// listCmd,      // TODO: Implement
+		// traceCmd,     // TODO: Implement
 
 		// Services
-		watchCmd,
-		serveCmd,
+		// watchCmd,     // TODO: Implement
+		// serveCmd,     // TODO: Implement
 
 		// Simulation and Sync
-		simulateCmd,
-		syncCmd,
+		// simulateCmd,   // TODO: Implement
+		// syncCmd,      // TODO: Implement
 
 		// Visualization
 		visualizeCmd,

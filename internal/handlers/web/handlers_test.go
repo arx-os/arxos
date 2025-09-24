@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/arx-os/arxos/internal/api"
+	"github.com/arx-os/arxos/internal/api/types"
 	apimodels "github.com/arx-os/arxos/internal/api/models"
 	"github.com/arx-os/arxos/internal/api/services"
 	"github.com/arx-os/arxos/internal/database"
@@ -582,7 +582,7 @@ func setupTestHandler() (*Handler, *MockDB) {
 	// Create mock auth service
 	mockAuthService2 := &MockAuthService{EnableAuth: false}
 
-	services := &api.Services{
+	services := &types.Services{
 		DB:   mockDB,
 		User: services.NewUserService(mockAuthService2),
 	}

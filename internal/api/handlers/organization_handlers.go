@@ -1,4 +1,4 @@
-package api
+package handlers
 
 import (
 	"encoding/json"
@@ -6,12 +6,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/arx-os/arxos/internal/api/types"
 	"github.com/arx-os/arxos/pkg/models"
 	"github.com/gorilla/mux"
 )
 
 // handleGetOrganizations handles GET /api/v1/organizations
-func (s *Server) handleGetOrganizations(w http.ResponseWriter, r *http.Request) {
+func handleGetOrganizations(s *types.Server) http.HandlerFunc { return func(w http.ResponseWriter, r *http.Request) {
 	// Check authentication
 	user, err := s.getCurrentUser(r)
 	if err != nil {
@@ -36,23 +37,25 @@ func (s *Server) handleGetOrganizations(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Get organizations through the service
-	organizations, err := s.services.Organization.ListOrganizations(r.Context(), user.ID)
+	organizations, err := s.Services.Organization.ListOrganizations(r.Context(), user.ID)
 
 	if err != nil {
 		s.respondError(w, http.StatusInternalServerError, "Failed to retrieve organizations")
 		return
 	}
 
-	s.respondJSON(w, http.StatusOK, map[string]interface{}{
-		"organizations": organizations,
-		"limit":         limit,
-		"offset":        offset,
-		"total":         len(organizations),
-	})
+		s.respondJSON(w, http.StatusOK, map[string]interface{}{
+			"organizations": organizations,
+			"limit":         limit,
+			"offset":        offset,
+			"total":         len(organizations),
+		})
+	}
 }
 
 // handleGetOrganization handles GET /api/v1/organizations/{id}
-func (s *Server) handleGetOrganization(w http.ResponseWriter, r *http.Request) {
+func HandleGetOrganization(s *types.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	// Check authentication
 	user, err := s.getCurrentUser(r)
 	if err != nil {
@@ -65,7 +68,7 @@ func (s *Server) handleGetOrganization(w http.ResponseWriter, r *http.Request) {
 	orgID := vars["id"]
 
 	// Get organization from service
-	org, err := s.services.Organization.GetOrganization(r.Context(), orgID)
+	org, err := s.Services.Organization.GetOrganization(r.Context(), orgID)
 	if err != nil {
 		s.respondError(w, http.StatusNotFound, "Organization not found")
 		return
@@ -77,11 +80,13 @@ func (s *Server) handleGetOrganization(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.respondJSON(w, http.StatusOK, org)
+		s.respondJSON(w, http.StatusOK, org)
+	}
 }
 
 // handleCreateOrganization handles POST /api/v1/organizations
-func (s *Server) handleCreateOrganization(w http.ResponseWriter, r *http.Request) {
+func HandleCreateOrganization(s *types.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	// Check authentication
 	user, err := s.getCurrentUser(r)
 	if err != nil {
@@ -102,7 +107,7 @@ func (s *Server) handleCreateOrganization(w http.ResponseWriter, r *http.Request
 	}
 
 	// Create organization through service
-	if s.services.Organization == nil {
+	if s.Services.Organization == nil {
 		s.respondError(w, http.StatusNotImplemented, "Organization service not configured")
 		return
 	}
@@ -124,7 +129,7 @@ func (s *Server) handleCreateOrganization(w http.ResponseWriter, r *http.Request
 		IsActive:    true,
 	}
 
-	err = s.services.Organization.CreateOrganization(r.Context(), org, user.ID)
+	err = s.Services.Organization.CreateOrganization(r.Context(), org, user.ID)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
 			s.respondError(w, http.StatusConflict, "Organization slug already exists")
@@ -134,11 +139,13 @@ func (s *Server) handleCreateOrganization(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	s.respondJSON(w, http.StatusCreated, org)
+		s.respondJSON(w, http.StatusCreated, org)
+	}
 }
 
 // handleUpdateOrganization handles PUT /api/v1/organizations/{id}
-func (s *Server) handleUpdateOrganization(w http.ResponseWriter, r *http.Request) {
+func HandleUpdateOrganization(s *types.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	// Check authentication
 	user, err := s.getCurrentUser(r)
 	if err != nil {
@@ -152,7 +159,7 @@ func (s *Server) handleUpdateOrganization(w http.ResponseWriter, r *http.Request
 
 	// Check if user has admin access to this organization
 	if user.Role != string(models.UserRoleAdmin) {
-		role, err := s.services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
+		role, err := s.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
 		if err != nil || role == nil || (*role != models.RoleOwner && *role != models.RoleAdmin) {
 			s.respondError(w, http.StatusForbidden, "Admin access required")
 			return
@@ -166,13 +173,13 @@ func (s *Server) handleUpdateOrganization(w http.ResponseWriter, r *http.Request
 	}
 
 	// Update organization through service
-	if s.services.Organization == nil {
+	if s.Services.Organization == nil {
 		s.respondError(w, http.StatusNotImplemented, "Organization service not configured")
 		return
 	}
 
 	// Convert update request to Organization model
-	org, err := s.services.Organization.GetOrganization(r.Context(), orgID)
+	org, err := s.Services.Organization.GetOrganization(r.Context(), orgID)
 	if err != nil {
 		s.respondError(w, http.StatusNotFound, "Organization not found")
 		return
@@ -192,17 +199,19 @@ func (s *Server) handleUpdateOrganization(w http.ResponseWriter, r *http.Request
 		org.LogoURL = req.LogoURL
 	}
 
-	err = s.services.Organization.UpdateOrganization(r.Context(), org)
+	err = s.Services.Organization.UpdateOrganization(r.Context(), org)
 	if err != nil {
 		s.respondError(w, http.StatusInternalServerError, "Failed to update organization")
 		return
 	}
 
-	s.respondJSON(w, http.StatusOK, org)
+		s.respondJSON(w, http.StatusOK, org)
+	}
 }
 
 // handleDeleteOrganization handles DELETE /api/v1/organizations/{id}
-func (s *Server) handleDeleteOrganization(w http.ResponseWriter, r *http.Request) {
+func HandleDeleteOrganization(s *types.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	// Check authentication
 	user, err := s.getCurrentUser(r)
 	if err != nil {
@@ -216,7 +225,7 @@ func (s *Server) handleDeleteOrganization(w http.ResponseWriter, r *http.Request
 
 	// Check if user has owner access to this organization
 	if user.Role != string(models.UserRoleAdmin) {
-		role, err := s.services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
+		role, err := s.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
 		if err != nil || role == nil || *role != models.RoleOwner {
 			s.respondError(w, http.StatusForbidden, "Owner access required")
 			return
@@ -224,7 +233,7 @@ func (s *Server) handleDeleteOrganization(w http.ResponseWriter, r *http.Request
 	}
 
 	// Delete organization
-	err = s.services.Organization.DeleteOrganization(r.Context(), orgID)
+	err = s.Services.Organization.DeleteOrganization(r.Context(), orgID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			s.respondError(w, http.StatusNotFound, "Organization not found")
@@ -234,14 +243,16 @@ func (s *Server) handleDeleteOrganization(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	s.respondJSON(w, http.StatusOK, map[string]interface{}{
-		"success": true,
-		"message": "Organization deleted successfully",
-	})
+		s.respondJSON(w, http.StatusOK, map[string]interface{}{
+			"success": true,
+			"message": "Organization deleted successfully",
+		})
+	}
 }
 
 // handleGetOrganizationMembers handles GET /api/v1/organizations/{id}/members
-func (s *Server) handleGetOrganizationMembers(w http.ResponseWriter, r *http.Request) {
+func HandleGetOrganizationMembers(s *types.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	// Check authentication
 	user, err := s.getCurrentUser(r)
 	if err != nil {
@@ -260,20 +271,22 @@ func (s *Server) handleGetOrganizationMembers(w http.ResponseWriter, r *http.Req
 	}
 
 	// Get members from database
-	members, err := s.services.Organization.GetMembers(r.Context(), orgID)
+	members, err := s.Services.Organization.GetMembers(r.Context(), orgID)
 	if err != nil {
 		s.respondError(w, http.StatusInternalServerError, "Failed to retrieve members")
 		return
 	}
 
-	s.respondJSON(w, http.StatusOK, map[string]interface{}{
-		"members": members,
-		"total":   len(members),
-	})
+		s.respondJSON(w, http.StatusOK, map[string]interface{}{
+			"members": members,
+			"total":   len(members),
+		})
+	}
 }
 
 // handleAddOrganizationMember handles POST /api/v1/organizations/{id}/members
-func (s *Server) handleAddOrganizationMember(w http.ResponseWriter, r *http.Request) {
+func HandleAddOrganizationMember(s *types.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	// Check authentication
 	user, err := s.getCurrentUser(r)
 	if err != nil {
@@ -287,7 +300,7 @@ func (s *Server) handleAddOrganizationMember(w http.ResponseWriter, r *http.Requ
 
 	// Check if user has admin access to this organization
 	if user.Role != string(models.UserRoleAdmin) {
-		role, err := s.services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
+		role, err := s.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
 		if err != nil || role == nil || (*role != models.RoleOwner && *role != models.RoleAdmin) {
 			s.respondError(w, http.StatusForbidden, "Admin access required")
 			return
@@ -311,7 +324,7 @@ func (s *Server) handleAddOrganizationMember(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Add member to organization
-	err = s.services.Organization.AddMember(r.Context(), orgID, req.UserID, models.Role(req.Role))
+	err = s.Services.Organization.AddMember(r.Context(), orgID, req.UserID, models.Role(req.Role))
 	if err != nil {
 		if strings.Contains(err.Error(), "already") {
 			s.respondError(w, http.StatusConflict, "User is already a member")
@@ -321,14 +334,16 @@ func (s *Server) handleAddOrganizationMember(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	s.respondJSON(w, http.StatusCreated, map[string]interface{}{
-		"success": true,
-		"message": "Member added successfully",
-	})
+		s.respondJSON(w, http.StatusCreated, map[string]interface{}{
+			"success": true,
+			"message": "Member added successfully",
+		})
+	}
 }
 
 // handleUpdateOrganizationMember handles PUT /api/v1/organizations/{id}/members/{user_id}
-func (s *Server) handleUpdateOrganizationMember(w http.ResponseWriter, r *http.Request) {
+func HandleUpdateOrganizationMember(s *types.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	// Check authentication
 	user, err := s.getCurrentUser(r)
 	if err != nil {
@@ -343,14 +358,14 @@ func (s *Server) handleUpdateOrganizationMember(w http.ResponseWriter, r *http.R
 
 	// Check if user has admin access to this organization
 	if user.Role != string(models.UserRoleAdmin) {
-		role, err := s.services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
+		role, err := s.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
 		if err != nil || role == nil || (*role != models.RoleOwner && *role != models.RoleAdmin) {
 			s.respondError(w, http.StatusForbidden, "Admin access required")
 			return
 		}
 
 		// Prevent non-owners from changing owner roles
-		targetRole, err := s.services.Organization.GetMemberRole(r.Context(), orgID, memberUserID)
+		targetRole, err := s.Services.Organization.GetMemberRole(r.Context(), orgID, memberUserID)
 		if err == nil && targetRole != nil && *targetRole == models.RoleOwner && *role != models.RoleOwner {
 			s.respondError(w, http.StatusForbidden, "Only owners can modify owner roles")
 			return
@@ -364,7 +379,7 @@ func (s *Server) handleUpdateOrganizationMember(w http.ResponseWriter, r *http.R
 	}
 
 	// Update member role
-	err = s.services.Organization.UpdateMemberRole(r.Context(), orgID, memberUserID, models.Role(req.Role))
+	err = s.Services.Organization.UpdateMemberRole(r.Context(), orgID, memberUserID, models.Role(req.Role))
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			s.respondError(w, http.StatusNotFound, "Member not found")
@@ -374,14 +389,16 @@ func (s *Server) handleUpdateOrganizationMember(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	s.respondJSON(w, http.StatusOK, map[string]interface{}{
-		"success": true,
-		"message": "Member updated successfully",
-	})
+		s.respondJSON(w, http.StatusOK, map[string]interface{}{
+			"success": true,
+			"message": "Member updated successfully",
+		})
+	}
 }
 
 // handleRemoveOrganizationMember handles DELETE /api/v1/organizations/{id}/members/{user_id}
-func (s *Server) handleRemoveOrganizationMember(w http.ResponseWriter, r *http.Request) {
+func HandleRemoveOrganizationMember(s *types.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	// Check authentication
 	user, err := s.getCurrentUser(r)
 	if err != nil {
@@ -396,7 +413,7 @@ func (s *Server) handleRemoveOrganizationMember(w http.ResponseWriter, r *http.R
 
 	// Check if user has admin access to this organization
 	if user.Role != string(models.UserRoleAdmin) {
-		role, err := s.services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
+		role, err := s.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
 		if err != nil || role == nil || (*role != models.RoleOwner && *role != models.RoleAdmin) {
 			// Allow users to remove themselves
 			if memberUserID != user.ID {
@@ -407,7 +424,7 @@ func (s *Server) handleRemoveOrganizationMember(w http.ResponseWriter, r *http.R
 	}
 
 	// Remove member from organization
-	err = s.services.Organization.RemoveMember(r.Context(), orgID, memberUserID)
+	err = s.Services.Organization.RemoveMember(r.Context(), orgID, memberUserID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			s.respondError(w, http.StatusNotFound, "Member not found")
@@ -421,10 +438,12 @@ func (s *Server) handleRemoveOrganizationMember(w http.ResponseWriter, r *http.R
 		"success": true,
 		"message": "Member removed successfully",
 	})
+	}
 }
 
 // handleCreateOrganizationInvitation handles POST /api/v1/organizations/{id}/invitations
-func (s *Server) handleCreateOrganizationInvitation(w http.ResponseWriter, r *http.Request) {
+func HandleCreateOrganizationInvitation(s *types.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	// Check authentication
 	user, err := s.getCurrentUser(r)
 	if err != nil {
@@ -438,7 +457,7 @@ func (s *Server) handleCreateOrganizationInvitation(w http.ResponseWriter, r *ht
 
 	// Check if user has admin access to this organization
 	if user.Role != string(models.UserRoleAdmin) {
-		role, err := s.services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
+		role, err := s.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
 		if err != nil || role == nil || (*role != models.RoleOwner && *role != models.RoleAdmin) {
 			s.respondError(w, http.StatusForbidden, "Admin access required")
 			return
@@ -458,22 +477,24 @@ func (s *Server) handleCreateOrganizationInvitation(w http.ResponseWriter, r *ht
 	}
 
 	// Create invitation through service
-	if s.services.Organization == nil {
+	if s.Services.Organization == nil {
 		s.respondError(w, http.StatusNotImplemented, "Organization service not configured")
 		return
 	}
 
-	invitation, err := s.services.Organization.CreateInvitation(r.Context(), orgID, req.Email, models.Role(req.Role), user.ID)
+	invitation, err := s.Services.Organization.CreateInvitation(r.Context(), orgID, req.Email, models.Role(req.Role), user.ID)
 	if err != nil {
 		s.respondError(w, http.StatusInternalServerError, "Failed to create invitation")
 		return
 	}
 
-	s.respondJSON(w, http.StatusCreated, invitation)
+		s.respondJSON(w, http.StatusCreated, invitation)
+	}
 }
 
 // handleGetOrganizationInvitations handles GET /api/v1/organizations/{id}/invitations
-func (s *Server) handleGetOrganizationInvitations(w http.ResponseWriter, r *http.Request) {
+func HandleGetOrganizationInvitations(s *types.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	// Check authentication
 	user, err := s.getCurrentUser(r)
 	if err != nil {
@@ -487,7 +508,7 @@ func (s *Server) handleGetOrganizationInvitations(w http.ResponseWriter, r *http
 
 	// Check if user has access to this organization
 	if user.Role != string(models.UserRoleAdmin) {
-		role, err := s.services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
+		role, err := s.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
 		if err != nil || role == nil || (*role != models.RoleOwner && *role != models.RoleAdmin) {
 			s.respondError(w, http.StatusForbidden, "Admin access required")
 			return
@@ -495,20 +516,22 @@ func (s *Server) handleGetOrganizationInvitations(w http.ResponseWriter, r *http
 	}
 
 	// Get invitations from database
-	invitations, err := s.services.Organization.ListPendingInvitations(r.Context(), orgID)
+	invitations, err := s.Services.Organization.ListPendingInvitations(r.Context(), orgID)
 	if err != nil {
 		s.respondError(w, http.StatusInternalServerError, "Failed to retrieve invitations")
 		return
 	}
 
-	s.respondJSON(w, http.StatusOK, map[string]interface{}{
-		"invitations": invitations,
-		"total":       len(invitations),
-	})
+		s.respondJSON(w, http.StatusOK, map[string]interface{}{
+			"invitations": invitations,
+			"total":       len(invitations),
+		})
+	}
 }
 
 // handleAcceptOrganizationInvitation handles POST /api/v1/invitations/accept
-func (s *Server) handleAcceptOrganizationInvitation(w http.ResponseWriter, r *http.Request) {
+func HandleAcceptOrganizationInvitation(s *types.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	// Check authentication
 	user, err := s.getCurrentUser(r)
 	if err != nil {
@@ -532,7 +555,7 @@ func (s *Server) handleAcceptOrganizationInvitation(w http.ResponseWriter, r *ht
 	}
 
 	// Accept invitation
-	err = s.services.Organization.AcceptInvitation(r.Context(), req.Token, user.ID)
+	err = s.Services.Organization.AcceptInvitation(r.Context(), req.Token, user.ID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "expired") {
 			s.respondError(w, http.StatusBadRequest, "Invalid or expired invitation")
@@ -544,14 +567,16 @@ func (s *Server) handleAcceptOrganizationInvitation(w http.ResponseWriter, r *ht
 		return
 	}
 
-	s.respondJSON(w, http.StatusOK, map[string]interface{}{
-		"success": true,
-		"message": "Invitation accepted successfully",
-	})
+		s.respondJSON(w, http.StatusOK, map[string]interface{}{
+			"success": true,
+			"message": "Invitation accepted successfully",
+		})
+	}
 }
 
 // handleRevokeOrganizationInvitation handles DELETE /api/v1/organizations/{id}/invitations/{invitation_id}
-func (s *Server) handleRevokeOrganizationInvitation(w http.ResponseWriter, r *http.Request) {
+func HandleRevokeOrganizationInvitation(s *types.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	// Check authentication
 	user, err := s.getCurrentUser(r)
 	if err != nil {
@@ -566,7 +591,7 @@ func (s *Server) handleRevokeOrganizationInvitation(w http.ResponseWriter, r *ht
 
 	// Check if user has admin access to this organization
 	if user.Role != string(models.UserRoleAdmin) {
-		role, err := s.services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
+		role, err := s.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
 		if err != nil || role == nil || (*role != models.RoleOwner && *role != models.RoleAdmin) {
 			s.respondError(w, http.StatusForbidden, "Admin access required")
 			return
@@ -574,7 +599,7 @@ func (s *Server) handleRevokeOrganizationInvitation(w http.ResponseWriter, r *ht
 	}
 
 	// Revoke invitation
-	err = s.services.Organization.RevokeInvitation(r.Context(), invitationID)
+	err = s.Services.Organization.RevokeInvitation(r.Context(), invitationID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			s.respondError(w, http.StatusNotFound, "Invitation not found")
@@ -586,8 +611,9 @@ func (s *Server) handleRevokeOrganizationInvitation(w http.ResponseWriter, r *ht
 		return
 	}
 
-	s.respondJSON(w, http.StatusOK, map[string]interface{}{
-		"success": true,
-		"message": "Invitation revoked successfully",
-	})
+		s.respondJSON(w, http.StatusOK, map[string]interface{}{
+			"success": true,
+			"message": "Invitation revoked successfully",
+		})
+	}
 }

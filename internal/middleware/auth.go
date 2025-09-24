@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/arx-os/arxos/internal/api"
+	"github.com/arx-os/arxos/internal/interfaces"
 	"github.com/arx-os/arxos/internal/common/logger"
 )
 
@@ -22,15 +22,23 @@ const (
 	ClaimsContextKey contextKey = "claims"
 )
 
+// User represents a user in the middleware context
+type User struct {
+	ID    string `json:"id"`
+	Email string `json:"email"`
+	Role  string `json:"role"`
+	OrgID string `json:"org_id"`
+}
+
 // AuthMiddleware provides JWT authentication middleware
 type AuthMiddleware struct {
-	authService api.AuthService
+	authService interfaces.AuthService
 	// List of paths that don't require authentication
 	publicPaths map[string]bool
 }
 
 // NewAuthMiddleware creates a new authentication middleware
-func NewAuthMiddleware(authService api.AuthService) *AuthMiddleware {
+func NewAuthMiddleware(authService interfaces.AuthService) *AuthMiddleware {
 	return &AuthMiddleware{
 		authService: authService,
 		publicPaths: map[string]bool{
@@ -77,7 +85,7 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 
 		// Add user info to context
 		ctx := context.WithValue(r.Context(), ClaimsContextKey, claims)
-		ctx = context.WithValue(ctx, UserContextKey, &api.User{
+		ctx = context.WithValue(ctx, UserContextKey, &User{
 			ID:    claims.UserID,
 			Email: claims.Email,
 			Role:  claims.Role,
@@ -124,7 +132,7 @@ func (m *AuthMiddleware) isPublicPath(path string) bool {
 func RequireRole(role string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			claims, ok := r.Context().Value(ClaimsContextKey).(*api.TokenClaims)
+			claims, ok := r.Context().Value(ClaimsContextKey).(*interfaces.TokenClaims)
 			if !ok {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
@@ -141,8 +149,8 @@ func RequireRole(role string) func(http.Handler) http.Handler {
 }
 
 // GetUser retrieves the authenticated user from the request context
-func GetUser(r *http.Request) *api.User {
-	user, ok := r.Context().Value(UserContextKey).(*api.User)
+func GetUser(r *http.Request) *User {
+	user, ok := r.Context().Value(UserContextKey).(*User)
 	if !ok {
 		return nil
 	}
@@ -150,8 +158,8 @@ func GetUser(r *http.Request) *api.User {
 }
 
 // GetClaims retrieves the JWT claims from the request context
-func GetClaims(r *http.Request) *api.TokenClaims {
-	claims, ok := r.Context().Value(ClaimsContextKey).(*api.TokenClaims)
+func GetClaims(r *http.Request) *interfaces.TokenClaims {
+	claims, ok := r.Context().Value(ClaimsContextKey).(*interfaces.TokenClaims)
 	if !ok {
 		return nil
 	}

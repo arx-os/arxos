@@ -1,12 +1,15 @@
-package api
+package handlers
 
 import (
 	"net/http"
 	"strings"
+
+	"github.com/arx-os/arxos/internal/api/types"
 )
 
 // handleBuildingOperations routes building-specific operations based on HTTP method
-func (s *Server) handleBuildingOperations(w http.ResponseWriter, r *http.Request) {
+func HandleBuildingOperations(s *types.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	// Extract building ID from path
 	path := strings.TrimPrefix(r.URL.Path, "/api/v1/buildings/")
 	if path == "" {
@@ -16,18 +19,20 @@ func (s *Server) handleBuildingOperations(w http.ResponseWriter, r *http.Request
 
 	switch r.Method {
 	case http.MethodGet:
-		s.HandleGetBuilding(w, r)
+		HandleGetBuilding(s)(w, r)
 	case http.MethodPut:
-		s.HandleUpdateBuilding(w, r)
+		HandleUpdateBuilding(s)(w, r)
 	case http.MethodDelete:
-		s.HandleDeleteBuilding(w, r)
+		HandleDeleteBuilding(s)(w, r)
 	default:
 		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+	}
 	}
 }
 
 // handleEquipmentOperations routes equipment-specific operations based on HTTP method
-func (s *Server) handleEquipmentOperations(w http.ResponseWriter, r *http.Request) {
+func HandleEquipmentOperations(s *types.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	// Extract equipment ID from path
 	path := strings.TrimPrefix(r.URL.Path, "/api/v1/equipment/")
 	if path == "" {
@@ -37,26 +42,30 @@ func (s *Server) handleEquipmentOperations(w http.ResponseWriter, r *http.Reques
 
 	switch r.Method {
 	case http.MethodGet:
-		s.HandleGetEquipment(w, r)
+		HandleGetEquipment(s)(w, r)
 	case http.MethodPut:
-		s.HandleUpdateEquipment(w, r)
+		HandleUpdateEquipment(s)(w, r)
 	case http.MethodDelete:
-		s.HandleDeleteEquipment(w, r)
+		HandleDeleteEquipment(s)(w, r)
 	default:
 		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+	}
 	}
 }
 
 // handleDeleteEquipment handles equipment deletion
-func (s *Server) handleDeleteEquipment(w http.ResponseWriter, r *http.Request) {
+func HandleDeleteEquipment(s *types.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	// Implementation would go here
 	s.respondJSON(w, http.StatusOK, map[string]string{
 		"message": "Equipment deleted successfully",
 	})
+	}
 }
 
 // handleSearch handles global search across all resources
-func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
+func HandleSearch(s *types.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	if query == "" {
 		s.respondError(w, http.StatusBadRequest, "Search query required")
@@ -70,10 +79,12 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.respondJSON(w, http.StatusOK, results)
+	}
 }
 
 // handlePDFUpload handles PDF file uploads for floor plans
-func (s *Server) handlePDFUpload(w http.ResponseWriter, r *http.Request) {
+func HandlePDFUpload(s *types.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
@@ -81,10 +92,12 @@ func (s *Server) handlePDFUpload(w http.ResponseWriter, r *http.Request) {
 
 	// Implementation delegated to upload_handler.go
 	s.handleUpload(w, r)
+	}
 }
 
 // handleUploadProgress returns upload progress status
-func (s *Server) handleUploadProgress(w http.ResponseWriter, r *http.Request) {
+func HandleUploadProgress(s *types.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	uploadID := r.URL.Query().Get("id")
 	if uploadID == "" {
 		s.respondError(w, http.StatusBadRequest, "Upload ID required")
@@ -97,10 +110,12 @@ func (s *Server) handleUploadProgress(w http.ResponseWriter, r *http.Request) {
 		"progress":  100,
 		"status":    "completed",
 	})
+	}
 }
 
 // handleUpload handles file uploads for floor plans
-func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
+func HandleUpload(s *types.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
@@ -126,4 +141,5 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		"filename": header.Filename,
 		"size":     header.Size,
 	})
+	}
 }

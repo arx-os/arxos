@@ -358,3 +358,13 @@ func (m *Manager) Validate() error {
 	logger.Info("All applied migrations are valid")
 	return nil
 }
+
+// GetAppliedMigrations returns a map of applied migration versions (public method)
+func (m *Manager) GetAppliedMigrations() (map[int]time.Time, error) {
+	return m.getAppliedMigrations()
+}
+
+// GetMigrations returns all available migrations
+func (m *Manager) GetMigrations() []Migration {
+	return m.migrations
+}

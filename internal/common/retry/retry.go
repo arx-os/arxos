@@ -119,6 +119,7 @@ func Do(ctx context.Context, operation Operation, config Config) Result {
 		err := operation(ctx)
 		if err == nil {
 			result.Success = true
+			result.LastError = nil
 			return result
 		}
 

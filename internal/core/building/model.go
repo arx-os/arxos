@@ -3,8 +3,8 @@ package building
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/arx-os/arxos/internal/core/equipment"
+	"github.com/google/uuid"
 )
 
 // BuildingModel represents the complete building model for import/export
@@ -37,39 +37,40 @@ type Floor struct {
 	Description string                 `json:"description,omitempty"`
 	Height      float64                `json:"height,omitempty"` // Floor height in meters
 	Area        float64                `json:"area,omitempty"`   // Floor area in square meters
+	Equipment   []*equipment.Equipment `json:"equipment,omitempty"`
 	Metadata    map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // Room represents a room in the building
 type Room struct {
-	ID          uuid.UUID              `json:"id"`
-	FloorID     uuid.UUID              `json:"floor_id"`
-	BuildingID  uuid.UUID              `json:"building_id"`
-	Name        string                 `json:"name"`
-	Type        string                 `json:"type"` // office, conference, storage, etc.
-	Area        float64                `json:"area,omitempty"`
-	Capacity    int                    `json:"capacity,omitempty"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	ID         uuid.UUID              `json:"id"`
+	FloorID    uuid.UUID              `json:"floor_id"`
+	BuildingID uuid.UUID              `json:"building_id"`
+	Name       string                 `json:"name"`
+	Type       string                 `json:"type"` // office, conference, storage, etc.
+	Area       float64                `json:"area,omitempty"`
+	Capacity   int                    `json:"capacity,omitempty"`
+	Metadata   map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // ImportMetadata contains information about the import process
 type ImportMetadata struct {
-	Format       string    `json:"format"`
-	SourceFile   string    `json:"source_file,omitempty"`
-	ImportedAt   time.Time `json:"imported_at"`
-	ImporterVersion string `json:"importer_version,omitempty"`
-	OriginalData map[string]interface{} `json:"original_data,omitempty"`
+	Format          string                 `json:"format"`
+	SourceFile      string                 `json:"source_file,omitempty"`
+	ImportedAt      time.Time              `json:"imported_at"`
+	ImporterVersion string                 `json:"importer_version,omitempty"`
+	OriginalData    map[string]interface{} `json:"original_data,omitempty"`
 }
 
 // ValidationIssue represents a validation problem found in the model
 type ValidationIssue struct {
-	Level       ValidationLevel `json:"level"`
-	Type        string          `json:"type"`
-	EntityType  string          `json:"entity_type,omitempty"`
-	EntityID    string          `json:"entity_id,omitempty"`
-	Field       string          `json:"field,omitempty"`
-	Message     string          `json:"message"`
-	Details     map[string]interface{} `json:"details,omitempty"`
+	Level      ValidationLevel        `json:"level"`
+	Type       string                 `json:"type"`
+	EntityType string                 `json:"entity_type,omitempty"`
+	EntityID   string                 `json:"entity_id,omitempty"`
+	Field      string                 `json:"field,omitempty"`
+	Message    string                 `json:"message"`
+	Details    map[string]interface{} `json:"details,omitempty"`
 }
 
 // ValidationLevel represents the severity of a validation issue
@@ -284,4 +285,9 @@ func (bm *BuildingModel) GetEquipmentByRoom(roomID string) []*equipment.Equipmen
 		}
 	}
 	return equipment
+}
+
+// GetAllEquipment returns all equipment in the building
+func (bm *BuildingModel) GetAllEquipment() []*equipment.Equipment {
+	return bm.Equipment
 }

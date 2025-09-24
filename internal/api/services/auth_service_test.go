@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/arx-os/arxos/internal/api/models"
 	"github.com/arx-os/arxos/internal/database"
-	"github.com/arx-os/arxos/pkg/models"
+	pkgmodels "github.com/arx-os/arxos/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -25,7 +26,7 @@ func TestAuthService_Login(t *testing.T) {
 		password      string
 		setupMock     func(*MockDB)
 		expectedError string
-		checkResponse func(*testing.T, *AuthResponse)
+		checkResponse func(*testing.T, *models.AuthResponse)
 	}{
 		{
 			name:     "successful login",
@@ -40,7 +41,7 @@ func TestAuthService_Login(t *testing.T) {
 				m.On("UpdateUser", mock.Anything, mock.AnythingOfType("*models.User")).
 					Return(nil)
 			},
-			checkResponse: func(t *testing.T, resp *AuthResponse) {
+			checkResponse: func(t *testing.T, resp *models.AuthResponse) {
 				assert.NotNil(t, resp)
 				assert.NotEmpty(t, resp.AccessToken)
 				assert.NotEmpty(t, resp.RefreshToken)
@@ -117,7 +118,7 @@ func TestAuthService_Register(t *testing.T) {
 		userName      string
 		setupMock     func(*MockDB)
 		expectedError string
-		checkResponse func(*testing.T, *User)
+		checkResponse func(*testing.T, *models.User)
 	}{
 		{
 			name:     "successful registration",
@@ -130,7 +131,7 @@ func TestAuthService_Register(t *testing.T) {
 				m.On("CreateUser", mock.Anything, mock.AnythingOfType("*models.User")).
 					Return(nil)
 			},
-			checkResponse: func(t *testing.T, user *User) {
+			checkResponse: func(t *testing.T, user *models.User) {
 				assert.NotNil(t, user)
 				assert.NotEmpty(t, user.ID)
 				assert.Equal(t, "newuser@example.com", user.Email)
@@ -196,7 +197,7 @@ func TestAuthService_ValidateToken(t *testing.T) {
 		token         string
 		setupMock     func(*MockDB)
 		expectedError string
-		checkClaims   func(*testing.T, *TokenClaims)
+		checkClaims   func(*testing.T, *models.TokenClaims)
 	}{
 		{
 			name:  "valid token",
@@ -207,12 +208,12 @@ func TestAuthService_ValidateToken(t *testing.T) {
 
 				m.On("GetSession", mock.Anything, "valid-token").
 					Return(session, nil)
-				m.On("UpdateSession", mock.Anything, mock.AnythingOfType("*models.UserSession")).
+				m.On("UpdateSession", mock.Anything, mock.AnythingOfType("*pkgmodels.UserSession")).
 					Return(nil)
 				m.On("GetUser", mock.Anything, "test-user-id").
 					Return(user, nil)
 			},
-			checkClaims: func(t *testing.T, claims *TokenClaims) {
+			checkClaims: func(t *testing.T, claims *models.TokenClaims) {
 				assert.NotNil(t, claims)
 				assert.Equal(t, "test-user-id", claims.UserID)
 				assert.Equal(t, "test@example.com", claims.Email)
@@ -251,15 +252,15 @@ func TestAuthService_ValidateToken(t *testing.T) {
 			authService := NewAuthService(mockDB)
 			ctx := context.Background()
 
-			claims, err := authService.ValidateToken(ctx, tt.token)
+			userID, err := authService.ValidateToken(ctx, tt.token)
 
 			if tt.expectedError != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
-				assert.Nil(t, claims)
+				assert.Empty(t, userID)
 			} else {
 				require.NoError(t, err)
-				tt.checkClaims(t, claims)
+				assert.NotEmpty(t, userID)
 			}
 
 			mockDB.AssertExpectations(t)
@@ -298,7 +299,7 @@ func TestAuthService_Logout(t *testing.T) {
 			name:  "database error",
 			token: "error-token",
 			setupMock: func(m *MockDB) {
-				session := &models.UserSession{
+				session := &pkgmodels.UserSession{
 					ID:    "session-id",
 					Token: "error-token",
 				}

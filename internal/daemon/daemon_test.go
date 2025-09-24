@@ -110,10 +110,10 @@ func TestDaemonWatchFile(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	config := &Config{
-		WatchDirs:     []string{tmpDir},
-		StateDir:      filepath.Join(tmpDir, "state"),
-		DatabasePath:  ":memory:",
-		SocketPath:    filepath.Join(tmpDir, "arxos.sock"),
+		WatchDirs:    []string{tmpDir},
+		StateDir:     filepath.Join(tmpDir, "state"),
+		DatabasePath: ":memory:",
+		SocketPath:   filepath.Join(tmpDir, "arxos.sock"),
 	}
 
 	daemon, _ := New(config)
@@ -139,12 +139,10 @@ func TestDaemonWatchFile(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Check statistics
-	daemon.mu.RLock()
-	stats := daemon.stats
-	daemon.mu.RUnlock()
+	stats := daemon.GetStats()
 
 	// Just check that stats exists, actual processing may not happen without full setup
-	assert.NotNil(t, stats)
+	assert.NotZero(t, stats.StartTime)
 }
 
 func TestDaemonStatistics(t *testing.T) {
@@ -164,9 +162,7 @@ func TestDaemonStatistics(t *testing.T) {
 	daemon.mu.Unlock()
 
 	// Get statistics
-	daemon.mu.RLock()
-	stats := daemon.stats
-	daemon.mu.RUnlock()
+	stats := daemon.GetStats()
 
 	assert.Equal(t, int64(10), stats.FilesProcessed)
 	assert.Equal(t, int64(8), stats.ImportSuccesses)
@@ -247,8 +243,8 @@ func TestConfigValidation(t *testing.T) {
 			wantErr: false, // Watch dirs are optional
 		},
 		{
-			name: "empty config",
-			config: &Config{},
+			name:    "empty config",
+			config:  &Config{},
 			wantErr: false, // Should use defaults
 		},
 	}
@@ -332,9 +328,7 @@ func TestDaemonConcurrency(t *testing.T) {
 	}
 	wg.Wait()
 
-	daemon.mu.RLock()
-	stats := daemon.stats
-	daemon.mu.RUnlock()
+	stats := daemon.GetStats()
 	assert.Equal(t, int64(10), stats.FilesProcessed)
 }
 

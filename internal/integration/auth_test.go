@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -26,15 +27,22 @@ func TestAuthenticationFlow(t *testing.T) {
 
 	// Create test user
 	user := &models.User{
-		ID:       "test-user-1",
-		Email:    "test@arxos.io",
-		Name:     "Test User",
-		Role:     "user",
-		Password: "hashed_password", // In real test, use proper hash
+		ID:           "test-user-1",
+		Email:        "test@arxos.io",
+		FullName:     "Test User",
+		Role:         "user",
+		PasswordHash: "hashed_password", // In real test, use proper hash
+		IsActive:     true,
 	}
 
 	// Save user to database
-	err := services.User.CreateUser(ctx, user)
+	createReq := api.CreateUserRequest{
+		Email:    user.Email,
+		Name:     user.FullName,
+		Role:     user.Role,
+		Password: "testpassword",
+	}
+	_, err := services.User.CreateUser(ctx, createReq)
 	require.NoError(t, err)
 
 	// Create handler with auth service
@@ -183,33 +191,42 @@ func TestRoleBasedAuthorization(t *testing.T) {
 	}{
 		{
 			user: &models.User{
-				ID:    "admin-1",
-				Email: "admin@arxos.io",
-				Name:  "Admin User",
-				Role:  "admin",
+				ID:       "admin-1",
+				Email:    "admin@arxos.io",
+				FullName: "Admin User",
+				Role:     "admin",
+				IsActive: true,
 			},
 		},
 		{
 			user: &models.User{
-				ID:    "user-1",
-				Email: "user@arxos.io",
-				Name:  "Regular User",
-				Role:  "user",
+				ID:       "user-1",
+				Email:    "user@arxos.io",
+				FullName: "Regular User",
+				Role:     "user",
+				IsActive: true,
 			},
 		},
 		{
 			user: &models.User{
-				ID:    "viewer-1",
-				Email: "viewer@arxos.io",
-				Name:  "Viewer User",
-				Role:  "viewer",
+				ID:       "viewer-1",
+				Email:    "viewer@arxos.io",
+				FullName: "Viewer User",
+				Role:     "viewer",
+				IsActive: true,
 			},
 		},
 	}
 
 	// Create users and get tokens
 	for i := range users {
-		err := services.User.CreateUser(ctx, users[i].user)
+		createReq := api.CreateUserRequest{
+			Email:    users[i].user.Email,
+			Name:     users[i].user.FullName,
+			Role:     users[i].user.Role,
+			Password: "testpassword",
+		}
+		_, err := services.User.CreateUser(ctx, createReq)
 		require.NoError(t, err)
 		// Get token for each user (simplified for test)
 		users[i].token = "test-token-" + users[i].user.Role
@@ -349,8 +366,8 @@ func TestSessionManagement(t *testing.T) {
 		// Wait for cleanup (cleanup interval is 1 minute in test)
 		time.Sleep(2 * time.Second)
 
-		// Force cleanup
-		sessionStore.removeExpired()
+		// Force cleanup - wait for automatic cleanup
+		time.Sleep(100 * time.Millisecond)
 
 		// Check that expired sessions are removed
 		assert.Equal(t, 0, sessionStore.Count())

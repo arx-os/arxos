@@ -61,7 +61,7 @@ type Config struct {
 	IgnorePatterns []string `json:"ignore_patterns"`
 
 	// Performance
-	MaxWorkers    int           `json:"max_workers"`
+	MaxWorkers int `json:"max_workers"`
 
 	// Metrics
 	MetricsPort   int           `json:"metrics_port"`   // Port for Prometheus metrics (0 to disable)
@@ -580,7 +580,16 @@ func (d *Daemon) GetStats() Statistics {
 	d.stats.mu.RLock()
 	defer d.stats.mu.RUnlock()
 
-	return d.stats
+	// Return a copy without the mutex to avoid lock copying
+	return Statistics{
+		StartTime:         d.stats.StartTime,
+		FilesProcessed:    d.stats.FilesProcessed,
+		ImportSuccesses:   d.stats.ImportSuccesses,
+		ImportFailures:    d.stats.ImportFailures,
+		LastProcessedFile: d.stats.LastProcessedFile,
+		LastProcessedTime: d.stats.LastProcessedTime,
+		// mu field is intentionally omitted
+	}
 }
 
 // waitForShutdown waits for shutdown signal

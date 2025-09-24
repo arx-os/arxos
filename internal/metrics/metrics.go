@@ -248,6 +248,14 @@ func (m *Metric) Set(v float64) {
 	m.value.Store(v)
 }
 
+// Get gets the current value
+func (m *Metric) Get() float64 {
+	if m.value.Load() == nil {
+		return 0
+	}
+	return m.value.Load().(float64)
+}
+
 // Observe adds an observation to a histogram
 func (m *Metric) Observe(v float64) {
 	if m.Type != MetricTypeHistogram && m.histogram != nil {

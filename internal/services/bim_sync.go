@@ -158,12 +158,9 @@ func (s *BIMSyncService) syncBIMToDatabase(opts BIMSyncOptions) error {
 			continue
 		}
 
-		// Convert to database model
-		// TODO: Properly convert complex BIM to FloorPlan
-		dbModel := &models.FloorPlan{
-			ID:   filepath.Base(filepath.Dir(path)),
-			Name: building.Name,
-		}
+		// Convert to database model using import implementations
+		impl := NewImportImplementations(s.db)
+		dbModel := impl.convertBIMToFloorPlan(building, filepath.Base(path))
 
 		// Save to database
 		if err := s.db.SaveFloorPlan(ctx, dbModel); err != nil {

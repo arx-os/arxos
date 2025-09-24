@@ -54,18 +54,28 @@ func (s *ExportCommandService) ExecuteExport(opts ExportCommandOptions) error {
 	}
 
 	// Run simulations if requested
-	// TODO: Implement simulation when package is available
+	var simResults interface{}
 	if opts.SimulateBeforeExp || opts.IncludeIntel {
-		logger.Warn("Simulation feature not yet implemented")
-		return fmt.Errorf("simulation feature not yet implemented")
+		simImpl := NewSimulationImplementations(s.db)
+		results, err := simImpl.RunComprehensiveSimulation(ctx, opts.BuildingID, map[string]interface{}{
+			"include_energy":    true,
+			"include_thermal":   true,
+			"include_occupancy": true,
+		})
+		if err != nil {
+			logger.Warn("Simulation failed: %v", err)
+			// Continue without simulation results
+		} else {
+			simResults = results
+		}
 	}
 
 	// Export based on format
 	switch opts.Format {
 	case "bim":
-		return s.exportBIM(building, nil, opts)
+		return s.exportBIM(building, simResults, opts)
 	case "json":
-		return s.exportJSON(building, nil, opts)
+		return s.exportJSON(building, simResults, opts)
 	case "pdf":
 		return fmt.Errorf("PDF export not yet implemented")
 	case "csv":

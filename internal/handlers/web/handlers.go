@@ -2,7 +2,6 @@ package web
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -44,7 +43,10 @@ func NewHandler(services *api.Services) (*Handler, error) {
 	// Initialize authentication service
 	jwtSecret := []byte(getJWTSecret())
 	sessionStore := NewMemorySessionStore(5 * time.Minute)
-	userServiceAdapter := &userServiceAdapter{apiUserService: services.User}
+	userServiceAdapter := &userServiceAdapter{
+		apiUserService: services.User,
+		apiAuthService: services.Auth,
+	}
 	authService := NewAuthService(jwtSecret, sessionStore, userServiceAdapter)
 
 	return &Handler{
@@ -89,6 +91,52 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.templates.Render(w, "login", data); err != nil {
 		logger.Error("Failed to render login: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
+// handleRegister handles user registration page
+func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
+	data := PageData{
+		Title:     "Register",
+		NavActive: "",
+	}
+
+	if err := h.templates.Render(w, "register", data); err != nil {
+		logger.Error("Failed to render register: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
+// handleForgotPassword handles forgot password page
+func (h *Handler) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
+	data := PageData{
+		Title:     "Forgot Password",
+		NavActive: "",
+	}
+
+	if err := h.templates.Render(w, "forgot-password", data); err != nil {
+		logger.Error("Failed to render forgot-password: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
+// handleResetPassword handles password reset page
+func (h *Handler) handleResetPassword(w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		http.Error(w, "Reset token is required", http.StatusBadRequest)
+		return
+	}
+
+	data := PageData{
+		Title:     "Reset Password",
+		NavActive: "",
+		Content:   map[string]interface{}{"token": token},
+	}
+
+	if err := h.templates.Render(w, "reset-password", data); err != nil {
+		logger.Error("Failed to render reset-password: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
@@ -257,6 +305,7 @@ func (h *Handler) getFailedEquipmentCount(buildings []*models.FloorPlan) int {
 // userServiceAdapter adapts api.UserService to web.UserService interface
 type userServiceAdapter struct {
 	apiUserService api.UserService
+	apiAuthService api.AuthService
 }
 
 func (a *userServiceAdapter) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
@@ -288,6 +337,45 @@ func (a *userServiceAdapter) GetUserByID(ctx context.Context, id string) (*model
 }
 
 func (a *userServiceAdapter) ValidateCredentials(ctx context.Context, email, password string) (*models.User, error) {
-	// This would need to be implemented in the API UserService or we need to handle auth differently
-	return nil, errors.New("credential validation not implemented")
+	// Use the API AuthService to validate credentials
+	authResponse, err := a.apiAuthService.Login(ctx, email, password)
+	if err != nil {
+		return nil, fmt.Errorf("invalid credentials")
+	}
+
+	// Get user details from the auth response
+	apiUser := authResponse.User
+	return &models.User{
+		ID:       apiUser.ID,
+		Email:    apiUser.Email,
+		FullName: apiUser.Name,
+		Role:     apiUser.Role,
+		IsActive: apiUser.Active,
+	}, nil
+}
+
+func (a *userServiceAdapter) CreateUser(ctx context.Context, email, password, name string) (*models.User, error) {
+	// Use the API AuthService to register user
+	apiUser, err := a.apiAuthService.Register(ctx, email, password, name)
+	if err != nil {
+		return nil, fmt.Errorf("registration failed: %w", err)
+	}
+
+	return &models.User{
+		ID:       apiUser.ID,
+		Email:    apiUser.Email,
+		FullName: apiUser.Name,
+		Role:     apiUser.Role,
+		IsActive: apiUser.Active,
+	}, nil
+}
+
+func (a *userServiceAdapter) RequestPasswordReset(ctx context.Context, email string) error {
+	// Use the API UserService to request password reset
+	return a.apiUserService.RequestPasswordReset(ctx, email)
+}
+
+func (a *userServiceAdapter) ResetPassword(ctx context.Context, token, newPassword string) error {
+	// Use the API UserService to reset password
+	return a.apiUserService.ConfirmPasswordReset(ctx, token, newPassword)
 }

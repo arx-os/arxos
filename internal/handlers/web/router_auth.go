@@ -4,7 +4,9 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chimw "github.com/go-chi/chi/v5/middleware"
+
+	"github.com/arx-os/arxos/internal/middleware"
 )
 
 // NewAuthenticatedRouter creates a router with authentication
@@ -12,16 +14,35 @@ func NewAuthenticatedRouter(h *Handler) chi.Router {
 	r := chi.NewRouter()
 
 	// Global middleware
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Compress(5))
-	r.Use(middleware.RealIP)
-	r.Use(middleware.RequestID)
+	r.Use(chimw.Logger)
+	r.Use(chimw.Recoverer)
+	r.Use(chimw.Compress(5))
+	r.Use(chimw.RealIP)
+	r.Use(chimw.RequestID)
+
+	// Security middleware
+	r.Use(middleware.SecurityHeaders)
+	r.Use(middleware.InputValidation)
+
+	// Rate limiting
+	rateLimiter := middleware.NewRateLimiter(10.0, 20) // 10 requests per second, burst of 20
+	r.Use(rateLimiter.Middleware)
+
+	// CSRF protection for state-changing operations
+	csrfStore := middleware.NewMemoryCSRFStore()
+	csrfMiddleware := middleware.NewCSRFMiddleware(csrfStore)
+	r.Use(csrfMiddleware.Handler)
 
 	// Public routes (no authentication required)
 	r.Group(func(r chi.Router) {
 		r.Get("/login", h.handleLogin)
 		r.Post("/api/auth/login", h.authService.Login)
+		r.Get("/register", h.handleRegister)
+		r.Post("/api/auth/register", h.authService.Register)
+		r.Get("/forgot-password", h.handleForgotPassword)
+		r.Post("/api/auth/forgot-password", h.authService.ForgotPassword)
+		r.Get("/reset-password", h.handleResetPassword)
+		r.Post("/api/auth/reset-password", h.authService.ResetPassword)
 		r.Get("/health", h.handleHealth)
 
 		// Static assets (CSS, JS, images)

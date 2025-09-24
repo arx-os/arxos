@@ -231,7 +231,12 @@ func (s *AuthService) ResetPassword(ctx context.Context, email string) error {
 		return fmt.Errorf("failed to create reset token: %w", err)
 	}
 
-	// TODO: Send email with reset link
+	// Send email with reset link
+	emailService := NewEmailServiceWithImplementations(s.db)
+	if err := emailService.SendPasswordResetEmail(ctx, user.ID, resetToken.Token); err != nil {
+		logger.Warn("Failed to send password reset email: %v", err)
+		// Don't fail the reset request if email fails
+	}
 	logger.Info("Password reset token created for user %s", user.Email)
 
 	return nil

@@ -1,9 +1,11 @@
 package web
 
 import (
-	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -12,8 +14,11 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/api"
+	apimodels "github.com/arx-os/arxos/internal/api/models"
+	"github.com/arx-os/arxos/internal/api/services"
 	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/pkg/models"
+	syncpkg "github.com/arx-os/arxos/pkg/sync"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -60,7 +65,7 @@ func (m *MockDB) GetUserByEmail(ctx context.Context, email string) (*models.User
 
 func (m *MockDB) CreateUser(ctx context.Context, user *models.User) error {
 	if m.shouldFail {
-		return database.ErrInternal
+		return fmt.Errorf("internal error")
 	}
 	m.users[user.ID] = user
 	return nil
@@ -68,7 +73,7 @@ func (m *MockDB) CreateUser(ctx context.Context, user *models.User) error {
 
 func (m *MockDB) UpdateUser(ctx context.Context, user *models.User) error {
 	if m.shouldFail {
-		return database.ErrInternal
+		return fmt.Errorf("internal error")
 	}
 	m.users[user.ID] = user
 	return nil
@@ -76,7 +81,7 @@ func (m *MockDB) UpdateUser(ctx context.Context, user *models.User) error {
 
 func (m *MockDB) DeleteUser(ctx context.Context, id string) error {
 	if m.shouldFail {
-		return database.ErrInternal
+		return fmt.Errorf("internal error")
 	}
 	delete(m.users, id)
 	return nil
@@ -84,7 +89,7 @@ func (m *MockDB) DeleteUser(ctx context.Context, id string) error {
 
 func (m *MockDB) CreateSession(ctx context.Context, session *models.UserSession) error {
 	if m.shouldFail {
-		return database.ErrInternal
+		return fmt.Errorf("internal error")
 	}
 	m.sessions[session.Token] = session
 	return nil
@@ -122,9 +127,9 @@ func (m *MockDB) GetBuilding(ctx context.Context, id string) (*models.Building, 
 	return building, nil
 }
 
-func (m *MockDB) ListBuildings(ctx context.Context, opts *database.ListOptions) ([]*models.Building, error) {
+func (m *MockDB) ListBuildings(ctx context.Context, opts interface{}) ([]*models.Building, error) {
 	if m.shouldFail {
-		return nil, database.ErrInternal
+		return nil, fmt.Errorf("internal error")
 	}
 	var buildings []*models.Building
 	for _, b := range m.buildings {
@@ -133,9 +138,17 @@ func (m *MockDB) ListBuildings(ctx context.Context, opts *database.ListOptions) 
 	return buildings, nil
 }
 
+// ListFloorPlans implements the database interface
+func (m *MockDB) ListFloorPlans(ctx context.Context) ([]*models.FloorPlan, error) {
+	if m.shouldFail {
+		return nil, fmt.Errorf("internal error")
+	}
+	return []*models.FloorPlan{}, nil
+}
+
 func (m *MockDB) CreateBuilding(ctx context.Context, building *models.Building) error {
 	if m.shouldFail {
-		return database.ErrInternal
+		return fmt.Errorf("internal error")
 	}
 	m.buildings[building.ID] = building
 	return nil
@@ -143,7 +156,7 @@ func (m *MockDB) CreateBuilding(ctx context.Context, building *models.Building) 
 
 func (m *MockDB) UpdateBuilding(ctx context.Context, building *models.Building) error {
 	if m.shouldFail {
-		return database.ErrInternal
+		return fmt.Errorf("internal error")
 	}
 	m.buildings[building.ID] = building
 	return nil
@@ -151,7 +164,7 @@ func (m *MockDB) UpdateBuilding(ctx context.Context, building *models.Building) 
 
 func (m *MockDB) DeleteBuilding(ctx context.Context, id string) error {
 	if m.shouldFail {
-		return database.ErrInternal
+		return fmt.Errorf("internal error")
 	}
 	delete(m.buildings, id)
 	return nil
@@ -168,11 +181,11 @@ func (m *MockDB) GetEquipment(ctx context.Context, id string) (*models.Equipment
 	return equipment, nil
 }
 
-func (m *MockDB) Query(ctx context.Context, query string, args ...interface{}) (*database.Rows, error) {
+func (m *MockDB) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	return nil, nil
 }
 
-func (m *MockDB) Exec(ctx context.Context, query string, args ...interface{}) (database.Result, error) {
+func (m *MockDB) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	return nil, nil
 }
 
@@ -180,9 +193,358 @@ func (m *MockDB) Close() error {
 	return nil
 }
 
+func (m *MockDB) AcceptOrganizationInvitation(ctx context.Context, token, userID string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) AddOrganizationMember(ctx context.Context, orgID, userID, role string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) ApplyChange(ctx context.Context, change *syncpkg.Change) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) BeginTx(ctx context.Context) (*sql.Tx, error) {
+	// Mock implementation for testing
+	return nil, nil
+}
+
+func (m *MockDB) Connect(ctx context.Context, dsn string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) CreateOrganization(ctx context.Context, org *models.Organization) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) CreateOrganizationInvitation(ctx context.Context, invitation *models.OrganizationInvitation) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) CreatePasswordResetToken(ctx context.Context, token *models.PasswordResetToken) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) DeleteEquipment(ctx context.Context, id string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) DeleteExpiredPasswordResetTokens(ctx context.Context) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) DeleteFloorPlan(ctx context.Context, id string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) DeleteOrganization(ctx context.Context, id string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) DeleteRoom(ctx context.Context, id string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) GetAllFloorPlans(ctx context.Context) ([]*models.FloorPlan, error) {
+	// Mock implementation for testing
+	return []*models.FloorPlan{}, nil
+}
+
+func (m *MockDB) GetChangesSince(ctx context.Context, since time.Time, entityType string) ([]*syncpkg.Change, error) {
+	// Mock implementation for testing
+	return []*syncpkg.Change{}, nil
+}
+
+func (m *MockDB) GetConflictCount(ctx context.Context, buildingID string) (int, error) {
+	// Mock implementation for testing
+	return 0, nil
+}
+
+func (m *MockDB) GetEntityVersion(ctx context.Context, entityType, entityID string) (int, error) {
+	// Mock implementation for testing
+	return 1, nil
+}
+
+func (m *MockDB) GetEquipmentByFloorPlan(ctx context.Context, floorPlanID string) ([]*models.Equipment, error) {
+	// Mock implementation for testing
+	return []*models.Equipment{}, nil
+}
+
+func (m *MockDB) GetFloorPlan(ctx context.Context, id string) (*models.FloorPlan, error) {
+	// Mock implementation for testing
+	return nil, nil
+}
+
+func (m *MockDB) GetLastSyncTime(ctx context.Context, buildingID string) (time.Time, error) {
+	// Mock implementation for testing
+	return time.Now(), nil
+}
+
+func (m *MockDB) GetOrganization(ctx context.Context, id string) (*models.Organization, error) {
+	// Mock implementation for testing
+	return nil, nil
+}
+
+func (m *MockDB) GetOrganizationInvitation(ctx context.Context, token string) (*models.OrganizationInvitation, error) {
+	// Mock implementation for testing
+	return nil, nil
+}
+
+func (m *MockDB) GetOrganizationInvitationByToken(ctx context.Context, token string) (*models.OrganizationInvitation, error) {
+	// Mock implementation for testing
+	return nil, nil
+}
+
+func (m *MockDB) GetOrganizationMember(ctx context.Context, orgID, userID string) (*models.OrganizationMember, error) {
+	// Mock implementation for testing
+	return nil, nil
+}
+
+func (m *MockDB) GetOrganizationMembers(ctx context.Context, orgID string) ([]*models.OrganizationMember, error) {
+	// Mock implementation for testing
+	return []*models.OrganizationMember{}, nil
+}
+
+func (m *MockDB) GetOrganizationsByUser(ctx context.Context, userID string) ([]*models.Organization, error) {
+	// Mock implementation for testing
+	return []*models.Organization{}, nil
+}
+
+func (m *MockDB) GetPasswordResetToken(ctx context.Context, token string) (*models.PasswordResetToken, error) {
+	// Mock implementation for testing
+	return nil, nil
+}
+
+func (m *MockDB) GetPendingChangesCount(ctx context.Context, buildingID string) (int, error) {
+	// Mock implementation for testing
+	return 0, nil
+}
+
+func (m *MockDB) GetPendingConflicts(ctx context.Context, buildingID string) ([]*syncpkg.Conflict, error) {
+	// Mock implementation for testing
+	return []*syncpkg.Conflict{}, nil
+}
+
+func (m *MockDB) GetRoom(ctx context.Context, id string) (*models.Room, error) {
+	// Mock implementation for testing
+	return nil, nil
+}
+
+func (m *MockDB) GetRoomsByFloorPlan(ctx context.Context, floorPlanID string) ([]*models.Room, error) {
+	// Mock implementation for testing
+	return []*models.Room{}, nil
+}
+
+func (m *MockDB) GetSessionByRefreshToken(ctx context.Context, refreshToken string) (*models.UserSession, error) {
+	// Mock implementation for testing
+	return nil, nil
+}
+
+func (m *MockDB) GetSpatialDB() (database.SpatialDB, error) {
+	// Mock implementation for testing
+	return nil, nil
+}
+
+func (m *MockDB) GetVersion(ctx context.Context) (int, error) {
+	// Mock implementation for testing
+	return 1, nil
+}
+
+func (m *MockDB) HasSpatialSupport() bool {
+	// Mock implementation for testing
+	return true
+}
+
+func (m *MockDB) ListOrganizationInvitations(ctx context.Context, orgID string) ([]*models.OrganizationInvitation, error) {
+	// Mock implementation for testing
+	return []*models.OrganizationInvitation{}, nil
+}
+
+func (m *MockDB) ListUsers(ctx context.Context, limit, offset int) ([]*models.User, error) {
+	// Mock implementation for testing
+	return []*models.User{}, nil
+}
+
+func (m *MockDB) MarkPasswordResetTokenUsed(ctx context.Context, token string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) Migrate(ctx context.Context) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) RemoveOrganizationMember(ctx context.Context, orgID, userID string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) ResolveConflict(ctx context.Context, conflictID string, resolution string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) RevokeOrganizationInvitation(ctx context.Context, invitationID string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) SaveConflict(ctx context.Context, conflict *syncpkg.Conflict) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) SaveEquipment(ctx context.Context, equipment *models.Equipment) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) SaveFloorPlan(ctx context.Context, floorPlan *models.FloorPlan) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) SaveRoom(ctx context.Context, room *models.Room) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) UpdateEquipment(ctx context.Context, equipment *models.Equipment) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) UpdateFloorPlan(ctx context.Context, floorPlan *models.FloorPlan) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) UpdateLastSyncTime(ctx context.Context, buildingID string, syncTime time.Time) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) UpdateOrganization(ctx context.Context, org *models.Organization) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) UpdateOrganizationMemberRole(ctx context.Context, orgID, userID, newRole string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) UpdateRoom(ctx context.Context, room *models.Room) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockDB) UpdateSession(ctx context.Context, session *models.UserSession) error {
+	// Mock implementation for testing
+	return nil
+}
+
 // Mock implementations of other required methods...
 func (m *MockDB) CreateUserWithPassword(ctx context.Context, user *models.User, password string) error {
 	return m.CreateUser(ctx, user)
+}
+
+// MockAuthService is a mock implementation of api.AuthService
+type MockAuthService struct {
+	EnableAuth bool
+}
+
+func (m *MockAuthService) Login(ctx context.Context, email, password string) (*apimodels.AuthResponse, error) {
+	// Mock implementation for testing
+	return &apimodels.AuthResponse{
+		AccessToken: "test-token",
+		TokenType:   "Bearer",
+		ExpiresIn:   3600,
+	}, nil
+}
+
+func (m *MockAuthService) Logout(ctx context.Context, token string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockAuthService) RefreshToken(ctx context.Context, refreshToken string) (*apimodels.AuthResponse, error) {
+	// Mock implementation for testing
+	return &apimodels.AuthResponse{
+		AccessToken: "new-test-token",
+		TokenType:   "Bearer",
+		ExpiresIn:   3600,
+	}, nil
+}
+
+func (m *MockAuthService) ValidateToken(ctx context.Context, token string) (string, error) {
+	if !m.EnableAuth {
+		// Auth disabled, return default user ID
+		return "test-user", nil
+	}
+
+	if token == "test-token" || token == "new-test-token" {
+		return "test-user", nil
+	}
+	return "", errors.New("invalid token")
+}
+
+func (m *MockAuthService) ChangePassword(ctx context.Context, userID, oldPassword, newPassword string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockAuthService) ConfirmPasswordReset(ctx context.Context, token, newPassword string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockAuthService) ResetPassword(ctx context.Context, email string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockAuthService) Register(ctx context.Context, email, password, fullName string) (*apimodels.User, error) {
+	// Mock implementation for testing
+	return &apimodels.User{
+		ID:     "test-user",
+		Email:  email,
+		Name:   fullName,
+		Active: true,
+	}, nil
+}
+
+func (m *MockAuthService) RevokeToken(ctx context.Context, token string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockAuthService) ValidateTokenClaims(ctx context.Context, token string) (*apimodels.TokenClaims, error) {
+	// Mock implementation for testing
+	return &apimodels.TokenClaims{
+		UserID: "test-user",
+		Email:  "test@example.com",
+		Role:   "user",
+	}, nil
 }
 
 func (m *MockDB) UpdateUserLoginInfo(ctx context.Context, userID string, success bool) error {
@@ -217,9 +579,12 @@ func setupTestHandler() (*Handler, *MockDB) {
 	mockDB := NewMockDB()
 
 	// Create mock services
+	// Create mock auth service
+	mockAuthService2 := &MockAuthService{EnableAuth: false}
+
 	services := &api.Services{
 		DB:   mockDB,
-		User: api.NewUserService(mockDB),
+		User: services.NewUserService(mockAuthService2),
 	}
 
 	// Create handler
@@ -245,7 +610,7 @@ func TestDashboardHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "/dashboard", nil)
 	w := httptest.NewRecorder()
 
-	handler.DashboardHandler(w, req)
+	handler.HandleDashboard(w, req)
 
 	resp := w.Result()
 	if resp.StatusCode != http.StatusOK {
@@ -268,12 +633,8 @@ func TestBuildingsHandler(t *testing.T) {
 		mockDB.buildings[string(rune('a'+i))] = &models.Building{
 			ID:          string(rune('a' + i)),
 			Name:        "Building " + string(rune('A'+i)),
-			Address:     "123 Test St",
-			City:        "Test City",
-			State:       "TS",
-			PostalCode:  "12345",
-			Country:     "Test Country",
-			BuildingType: "office",
+			Address:     "123 Test St, Test City, TS 12345, Test Country",
+			Description: "Test office building",
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
 		}
@@ -282,7 +643,7 @@ func TestBuildingsHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "/buildings", nil)
 	w := httptest.NewRecorder()
 
-	handler.BuildingsHandler(w, req)
+	handler.HandleBuildingsList(w, req)
 
 	resp := w.Result()
 	if resp.StatusCode != http.StatusOK {
@@ -304,19 +665,13 @@ func TestBuildingDetailHandler(t *testing.T) {
 	mockDB.buildings["test-id"] = &models.Building{
 		ID:          "test-id",
 		Name:        "Test Building",
-		Address:     "456 Main St",
-		City:        "Test City",
-		State:       "TS",
-		PostalCode:  "12345",
-		Country:     "USA",
-		BuildingType: "commercial",
-		Floors:      5,
-		TotalArea:   10000,
+		Address:     "456 Main St, Test City, TS 12345, USA",
+		Description: "Commercial building with 5 floors",
 	}
 
 	// Create router for path params
 	r := chi.NewRouter()
-	r.Get("/buildings/{id}", handler.BuildingDetailHandler)
+	r.Get("/buildings/{id}", handler.handleBuildingDetail)
 
 	req := httptest.NewRequest("GET", "/buildings/test-id", nil)
 	w := httptest.NewRecorder()
@@ -341,7 +696,7 @@ func TestLoginHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "/login", nil)
 	w := httptest.NewRecorder()
 
-	handler.LoginHandler(w, req)
+	handler.handleLogin(w, req)
 
 	resp := w.Result()
 	if resp.StatusCode != http.StatusOK {
@@ -376,7 +731,7 @@ func TestLoginPostHandler(t *testing.T) {
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()
 
-	handler.LoginPostHandler(w, req)
+	handler.handleLogin(w, req)
 
 	resp := w.Result()
 	// Should redirect on successful login
@@ -406,7 +761,7 @@ func TestLogoutHandler(t *testing.T) {
 	})
 	w := httptest.NewRecorder()
 
-	handler.LogoutHandler(w, req)
+	handler.handleLogout(w, req)
 
 	resp := w.Result()
 	// Should redirect after logout
@@ -438,7 +793,7 @@ func TestSearchHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "/search?q=headquarters", nil)
 	w := httptest.NewRecorder()
 
-	handler.SearchHandler(w, req)
+	handler.handleGlobalSearch(w, req)
 
 	resp := w.Result()
 	if resp.StatusCode != http.StatusOK {
@@ -449,7 +804,7 @@ func TestSearchHandler(t *testing.T) {
 	req.Header.Set("HX-Request", "true")
 	w = httptest.NewRecorder()
 
-	handler.SearchHandler(w, req)
+	handler.handleGlobalSearch(w, req)
 
 	resp = w.Result()
 	if resp.StatusCode != http.StatusOK {
@@ -464,7 +819,7 @@ func TestAPIHealthHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/health", nil)
 	w := httptest.NewRecorder()
 
-	handler.APIHealthHandler(w, req)
+	handler.handleHealth(w, req)
 
 	resp := w.Result()
 	if resp.StatusCode != http.StatusOK {
@@ -492,7 +847,7 @@ func TestErrorHandling(t *testing.T) {
 	req := httptest.NewRequest("GET", "/dashboard", nil)
 	w := httptest.NewRecorder()
 
-	handler.DashboardHandler(w, req)
+	handler.HandleDashboard(w, req)
 
 	resp := w.Result()
 	// Should handle error gracefully
@@ -522,7 +877,7 @@ func TestConcurrentRequests(t *testing.T) {
 			req := httptest.NewRequest("GET", "/buildings", nil)
 			w := httptest.NewRecorder()
 
-			handler.BuildingsHandler(w, req)
+			handler.HandleBuildingsList(w, req)
 
 			if w.Result().StatusCode != http.StatusOK {
 				t.Errorf("Concurrent request failed")
@@ -542,9 +897,10 @@ func BenchmarkDashboardHandler(b *testing.B) {
 
 	// Add test data
 	for i := 0; i < 100; i++ {
-		mockDB.buildings[string(i)] = &models.Building{
-			ID:   string(i),
-			Name: "Building " + string(i),
+		id := fmt.Sprintf("%d", i)
+		mockDB.buildings[id] = &models.Building{
+			ID:   id,
+			Name: "Building " + id,
 		}
 	}
 
@@ -552,7 +908,7 @@ func BenchmarkDashboardHandler(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		req := httptest.NewRequest("GET", "/dashboard", nil)
 		w := httptest.NewRecorder()
-		handler.DashboardHandler(w, req)
+		handler.HandleDashboard(w, req)
 	}
 }
 
@@ -562,9 +918,10 @@ func BenchmarkBuildingsHandler(b *testing.B) {
 
 	// Add test buildings
 	for i := 0; i < 100; i++ {
-		mockDB.buildings[string(i)] = &models.Building{
-			ID:   string(i),
-			Name: "Building " + string(i),
+		id := fmt.Sprintf("%d", i)
+		mockDB.buildings[id] = &models.Building{
+			ID:   id,
+			Name: "Building " + id,
 		}
 	}
 
@@ -572,6 +929,6 @@ func BenchmarkBuildingsHandler(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		req := httptest.NewRequest("GET", "/buildings", nil)
 		w := httptest.NewRecorder()
-		handler.BuildingsHandler(w, req)
+		handler.HandleBuildingsList(w, req)
 	}
 }

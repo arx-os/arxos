@@ -35,6 +35,9 @@ type UserService interface {
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 	GetUserByID(ctx context.Context, id string) (*models.User, error)
 	ValidateCredentials(ctx context.Context, email, password string) (*models.User, error)
+	CreateUser(ctx context.Context, email, password, name string) (*models.User, error)
+	RequestPasswordReset(ctx context.Context, email string) error
+	ResetPassword(ctx context.Context, token, newPassword string) error
 }
 
 // Session represents a user session
@@ -211,6 +214,145 @@ func (a *AuthService) Logout(w http.ResponseWriter, r *http.Request) {
 	} else {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 	}
+}
+
+// Register handles user registration
+func (a *AuthService) Register(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		Name     string `json:"name"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// Validate input
+	if req.Email == "" || req.Password == "" || req.Name == "" {
+		http.Error(w, "Email, password, and name are required", http.StatusBadRequest)
+		return
+	}
+
+	// Create user
+	user, err := a.userService.CreateUser(r.Context(), req.Email, req.Password, req.Name)
+	if err != nil {
+		logger.Warn("Failed registration attempt for %s: %v", req.Email, err)
+		http.Error(w, "Registration failed", http.StatusBadRequest)
+		return
+	}
+
+	// Auto-login after registration
+	token, err := a.generateJWT(user)
+	if err != nil {
+		logger.Error("Failed to generate JWT after registration: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Create session
+	sessionID := a.generateSessionID()
+	session := &Session{
+		ID:        sessionID,
+		UserID:    user.ID,
+		Email:     user.Email,
+		Name:      user.FullName,
+		Role:      user.Role,
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+		CreatedAt: time.Now(),
+	}
+
+	if err := a.sessionStore.Set(sessionID, session); err != nil {
+		logger.Error("Failed to store session after registration: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Set session cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_id",
+		Value:    sessionID,
+		Path:     "/",
+		Expires:  session.ExpiresAt,
+		HttpOnly: true,
+		Secure:   r.TLS != nil,
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	// Return success response
+	response := map[string]interface{}{
+		"token":      token,
+		"expires_at": session.ExpiresAt.Unix(),
+		"user": map[string]string{
+			"id":    user.ID,
+			"email": user.Email,
+			"name":  user.FullName,
+			"role":  user.Role,
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// ForgotPassword handles password reset requests
+func (a *AuthService) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email string `json:"email"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if req.Email == "" {
+		http.Error(w, "Email is required", http.StatusBadRequest)
+		return
+	}
+
+	// Request password reset (always return success for security)
+	err := a.userService.RequestPasswordReset(r.Context(), req.Email)
+	if err != nil {
+		logger.Warn("Password reset request failed for %s: %v", req.Email, err)
+	}
+
+	// Always return success to prevent email enumeration
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"message":"If the email exists, a password reset link has been sent"}`))
+}
+
+// ResetPassword handles password reset with token
+func (a *AuthService) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Token       string `json:"token"`
+		NewPassword string `json:"new_password"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if req.Token == "" || req.NewPassword == "" {
+		http.Error(w, "Token and new password are required", http.StatusBadRequest)
+		return
+	}
+
+	// Reset password
+	err := a.userService.ResetPassword(r.Context(), req.Token, req.NewPassword)
+	if err != nil {
+		logger.Warn("Password reset failed: %v", err)
+		http.Error(w, "Invalid or expired token", http.StatusBadRequest)
+		return
+	}
+
+	// Return success
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"message":"Password reset successfully"}`))
 }
 
 // validateJWT validates JWT token from Authorization header

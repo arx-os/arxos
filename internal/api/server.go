@@ -68,6 +68,7 @@ type Services struct {
 	Building     BuildingService
 	User         UserService
 	Organization OrganizationService
+	Equipment    EquipmentService
 	DB           database.ExtendedDB // Extended database interface with additional operations
 }
 

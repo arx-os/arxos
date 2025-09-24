@@ -201,9 +201,8 @@ func (s *UserService) ListUsers(ctx context.Context, page, limit int) ([]*models
 		return nil, 0, fmt.Errorf("invalid pagination: %w", err)
 	}
 
-	// For now, return empty list as we don't have a ListUsers method in DB interface
-	// TODO: Add ListUsers method to database interface
-	users := make([]*models.User, 0)
+	// List users (placeholder - would need proper implementation)
+	users := []*models.User{} // Empty list for now
 
 	// Remove password hashes
 	for _, user := range users {
@@ -224,6 +223,7 @@ func (s *UserService) GetUserOrganizations(ctx context.Context, userID string) (
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
+	// Get organizations by user (placeholder - would need proper implementation)
 	orgs, err := s.db.GetOrganizationsByUser(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user organizations: %w", err)

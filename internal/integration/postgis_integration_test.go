@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/arx-os/arxos/internal/adapters/postgis"
 	"github.com/arx-os/arxos/internal/core/building"
 	"github.com/arx-os/arxos/internal/core/equipment"
+	"github.com/arx-os/arxos/internal/core/spatial"
 )
 
 // TestPostGISIntegration tests the complete PostGIS integration
@@ -75,7 +75,7 @@ func TestPostGISIntegration(t *testing.T) {
 		// Create building
 		bldg := building.NewBuilding("TEST-001", "Test Building")
 		bldg.Address = "123 Test St"
-		bldg.SetOrigin(37.7749, -122.4194, 0, 0) // San Francisco
+		bldg.SetOrigin(37.7749, -122.4194, 0) // San Francisco
 
 		err := buildingRepo.Create(ctx, bldg)
 		assert.NoError(t, err)
@@ -93,7 +93,11 @@ func TestPostGISIntegration(t *testing.T) {
 		assert.NoError(t, err)
 
 		// List buildings
-		buildings, err := buildingRepo.List(ctx, 10, 0)
+		filter := building.Filter{
+			Limit:  10,
+			Offset: 0,
+		}
+		buildings, err := buildingRepo.List(ctx, filter)
 		assert.NoError(t, err)
 		assert.Greater(t, len(buildings), 0)
 
@@ -135,7 +139,12 @@ func TestPostGISIntegration(t *testing.T) {
 		assert.NoError(t, err)
 
 		// List equipment for building
-		equipmentList, err := equipmentRepo.ListByBuilding(ctx, bldg.ID, 100, 0)
+		filter := equipment.Filter{
+			BuildingID: bldg.ID,
+			Limit:      100,
+			Offset:     0,
+		}
+		equipmentList, err := equipmentRepo.List(ctx, filter)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(equipmentList))
 
@@ -148,7 +157,7 @@ func TestPostGISIntegration(t *testing.T) {
 	t.Run("SpatialQueries", func(t *testing.T) {
 		// Create building with known location
 		bldg := building.NewBuilding("TEST-003", "Spatial Test Building")
-		bldg.SetOrigin(37.7749, -122.4194, 0, 0)
+		bldg.SetOrigin(37.7749, -122.4194, 0)
 		err := buildingRepo.Create(ctx, bldg)
 		require.NoError(t, err)
 		defer buildingRepo.Delete(ctx, bldg.ID)
@@ -169,7 +178,7 @@ func TestPostGISIntegration(t *testing.T) {
 		// Test FindNearby
 		spatialQueries := postgis.NewSpatialQueries(client)
 		nearby, err := spatialQueries.FindEquipmentNearby(ctx,
-			postgis.WGS84Coordinate{Longitude: -122.4194, Latitude: 37.7749, Altitude: 0},
+			spatial.WGS84Coordinate{Longitude: -122.4194, Latitude: 37.7749, Altitude: 0},
 			1000) // 1km radius
 		assert.NoError(t, err)
 		assert.GreaterOrEqual(t, len(nearby), 2)

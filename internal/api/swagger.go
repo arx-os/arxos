@@ -57,9 +57,9 @@ type SuccessResponse struct {
 	Data    interface{} `json:"data"`
 }
 
-// ErrorResponse represents an error API response
-// @Description Standard error response
-type ErrorResponse struct {
+// SimpleErrorResponse represents a simple error API response
+// @Description Simple error response
+type SimpleErrorResponse struct {
 	Success bool   `json:"success" example:"false"`
 	Error   string `json:"error" example:"Internal server error"`
 	Code    string `json:"code,omitempty" example:"ERR_INTERNAL"`
@@ -88,4 +88,3 @@ type AuthRequest struct {
 	Email    string `json:"email" binding:"required,email" example:"user@example.com"`
 	Password string `json:"password" binding:"required,min=8" example:"password123"`
 }
-

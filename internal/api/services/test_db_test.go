@@ -7,6 +7,7 @@ import (
 
 	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/pkg/models"
+	syncpkg "github.com/arx-os/arxos/pkg/sync"
 )
 
 // TestDB wraps a sql.DB to implement the database.DB interface for testing
@@ -164,6 +165,226 @@ func (t *TestDB) GetOrganizationMembers(ctx context.Context, orgID string) ([]*m
 
 func (t *TestDB) GetOrganizationMember(ctx context.Context, orgID, userID string) (*models.OrganizationMember, error) {
 	return nil, sql.ErrNoRows
+}
+
+func (t *TestDB) AcceptOrganizationInvitation(ctx context.Context, token, userID string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) BeginTx(ctx context.Context) (*sql.Tx, error) {
+	// Mock implementation for testing
+	return t.db.BeginTx(ctx, nil)
+}
+
+func (t *TestDB) CreateOrganizationInvitation(ctx context.Context, invitation *models.OrganizationInvitation) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) ApplyChange(ctx context.Context, change *syncpkg.Change) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) CreatePasswordResetToken(ctx context.Context, token *models.PasswordResetToken) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) DeleteEquipment(ctx context.Context, id string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) DeleteExpiredPasswordResetTokens(ctx context.Context) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) DeleteFloorPlan(ctx context.Context, id string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) DeleteRoom(ctx context.Context, id string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	// Mock implementation for testing
+	return nil, nil
+}
+
+func (t *TestDB) GetAllFloorPlans(ctx context.Context) ([]*models.FloorPlan, error) {
+	// Mock implementation for testing
+	return []*models.FloorPlan{}, nil
+}
+
+func (t *TestDB) GetEquipment(ctx context.Context, id string) (*models.Equipment, error) {
+	// Mock implementation for testing
+	return nil, nil
+}
+
+func (t *TestDB) GetEquipmentByFloorPlan(ctx context.Context, floorPlanID string) ([]*models.Equipment, error) {
+	// Mock implementation for testing
+	return []*models.Equipment{}, nil
+}
+
+func (t *TestDB) GetFloorPlan(ctx context.Context, id string) (*models.FloorPlan, error) {
+	// Mock implementation for testing
+	return nil, nil
+}
+
+func (t *TestDB) GetOrganizationInvitation(ctx context.Context, token string) (*models.OrganizationInvitation, error) {
+	// Mock implementation for testing
+	return nil, nil
+}
+
+func (t *TestDB) GetOrganizationInvitationByToken(ctx context.Context, token string) (*models.OrganizationInvitation, error) {
+	// Mock implementation for testing
+	return nil, nil
+}
+
+func (t *TestDB) GetPasswordResetToken(ctx context.Context, token string) (*models.PasswordResetToken, error) {
+	// Mock implementation for testing
+	return nil, nil
+}
+
+func (t *TestDB) GetRoom(ctx context.Context, id string) (*models.Room, error) {
+	// Mock implementation for testing
+	return nil, nil
+}
+
+func (t *TestDB) GetRoomsByFloorPlan(ctx context.Context, floorPlanID string) ([]*models.Room, error) {
+	// Mock implementation for testing
+	return []*models.Room{}, nil
+}
+
+func (t *TestDB) GetSpatialDB() (database.SpatialDB, error) {
+	// Mock implementation for testing
+	return nil, nil
+}
+
+func (t *TestDB) GetVersion(ctx context.Context) (int, error) {
+	// Mock implementation for testing
+	return 1, nil
+}
+
+func (t *TestDB) HasSpatialSupport() bool {
+	// Mock implementation for testing
+	return true
+}
+
+func (t *TestDB) ListOrganizationInvitations(ctx context.Context, orgID string) ([]*models.OrganizationInvitation, error) {
+	// Mock implementation for testing
+	return []*models.OrganizationInvitation{}, nil
+}
+
+func (t *TestDB) MarkPasswordResetTokenUsed(ctx context.Context, token string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) Migrate(ctx context.Context) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	// Mock implementation for testing
+	return nil, nil
+}
+
+func (t *TestDB) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) RevokeOrganizationInvitation(ctx context.Context, invitationID string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) SaveEquipment(ctx context.Context, equipment *models.Equipment) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) SaveFloorPlan(ctx context.Context, floorPlan *models.FloorPlan) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) SaveRoom(ctx context.Context, room *models.Room) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) UpdateEquipment(ctx context.Context, equipment *models.Equipment) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) UpdateFloorPlan(ctx context.Context, floorPlan *models.FloorPlan) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) UpdateRoom(ctx context.Context, room *models.Room) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) GetChangesSince(ctx context.Context, since time.Time, entityType string) ([]*syncpkg.Change, error) {
+	// Mock implementation for testing
+	return []*syncpkg.Change{}, nil
+}
+
+func (t *TestDB) GetConflictCount(ctx context.Context, buildingID string) (int, error) {
+	// Mock implementation for testing
+	return 0, nil
+}
+
+func (t *TestDB) GetEntityVersion(ctx context.Context, entityType, entityID string) (int, error) {
+	// Mock implementation for testing
+	return 1, nil
+}
+
+func (t *TestDB) GetLastSyncTime(ctx context.Context, buildingID string) (time.Time, error) {
+	// Mock implementation for testing
+	return time.Now(), nil
+}
+
+func (t *TestDB) GetPendingChangesCount(ctx context.Context, buildingID string) (int, error) {
+	// Mock implementation for testing
+	return 0, nil
+}
+
+func (t *TestDB) GetPendingConflicts(ctx context.Context, buildingID string) ([]*syncpkg.Conflict, error) {
+	// Mock implementation for testing
+	return []*syncpkg.Conflict{}, nil
+}
+
+func (t *TestDB) ListUsers(ctx context.Context, limit, offset int) ([]*models.User, error) {
+	// Mock implementation for testing
+	return []*models.User{}, nil
+}
+
+func (t *TestDB) ResolveConflict(ctx context.Context, conflictID string, resolution string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) SaveConflict(ctx context.Context, conflict *syncpkg.Conflict) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (t *TestDB) UpdateLastSyncTime(ctx context.Context, buildingID string, syncTime time.Time) error {
+	// Mock implementation for testing
+	return nil
 }
 
 // Ensure TestDB implements database.DB

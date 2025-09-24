@@ -9,8 +9,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,7 +21,6 @@ import (
 
 // TestBuildingWorkflow tests the complete building creation and management workflow
 func TestBuildingWorkflow(t *testing.T) {
-	ctx := context.Background()
 	services, cleanup := setupTestServices(t)
 	defer cleanup()
 
@@ -40,15 +37,11 @@ func TestBuildingWorkflow(t *testing.T) {
 	var buildingID string
 
 	t.Run("CreateBuilding", func(t *testing.T) {
-		building := &models.Building{
+		building := &models.FloorPlan{
+			ID:          "test-building-1",
 			Name:        "Test Building",
-			Address:     "123 Test Street",
-			City:        "Test City",
-			Country:     "Test Country",
-			PostalCode:  "12345",
-			BuildingType: "office",
-			Floors:      5,
-			GrossArea:   10000.0,
+			Description: "Test office building",
+			Level:       1,
 		}
 
 		body, _ := json.Marshal(building)
@@ -95,8 +88,8 @@ func TestBuildingWorkflow(t *testing.T) {
 
 	t.Run("UpdateBuilding", func(t *testing.T) {
 		update := map[string]interface{}{
-			"name":    "Updated Building",
-			"floors":  6,
+			"name":   "Updated Building",
+			"floors": 6,
 		}
 
 		body, _ := json.Marshal(update)
@@ -230,9 +223,10 @@ END-ISO-10303-21;`
 
 	t.Run("ExportBIM", func(t *testing.T) {
 		// First create a building
-		building := &models.Building{
-			ID:   "test-building-export",
-			Name: "Export Test Building",
+		building := &models.FloorPlan{
+			ID:    "test-building-export",
+			Name:  "Export Test Building",
+			Level: 1,
 		}
 		err := services.Building.CreateBuilding(ctx, building)
 		require.NoError(t, err)
@@ -278,9 +272,10 @@ func TestEquipmentWorkflow(t *testing.T) {
 	token := getTestAuthToken(t, server)
 
 	// Create a building first
-	building := &models.Building{
-		ID:   "test-building-equip",
-		Name: "Equipment Test Building",
+	building := &models.FloorPlan{
+		ID:    "test-building-equip",
+		Name:  "Equipment Test Building",
+		Level: 1,
 	}
 	err = services.Building.CreateBuilding(ctx, building)
 	require.NoError(t, err)
@@ -416,9 +411,6 @@ func TestEquipmentWorkflow(t *testing.T) {
 // Helper functions
 
 func setupTestServices(t *testing.T) (*api.Services, func()) {
-	// Create temporary database for testing
-	ctx := context.Background()
-
 	// This is a simplified setup - in real tests you'd use a test database
 	services := &api.Services{
 		// Initialize services with test database

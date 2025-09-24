@@ -63,6 +63,7 @@ const (
 // Building represents the complete building model
 type Building struct {
 	// Header information
+	ID               string           `json:"id"`
 	Name             string           `json:"name"`
 	FileVersion      string           `json:"file_version"`
 	Generated        time.Time        `json:"generated"`
@@ -87,9 +88,20 @@ type Floor struct {
 	GridScale   GridScale                       `json:"grid_scale"`
 	Legend      map[rune]string                 `json:"legend"`
 	Layout      []string                        `json:"layout"` // ASCII art lines
+	Rooms       []Room                          `json:"rooms"`
 	Equipment   []Equipment                     `json:"equipment"`
 	Connections map[ConnectionType][]Connection `json:"connections"`
 	Issues      []Issue                         `json:"issues"`
+}
+
+// Room represents a room within a floor
+type Room struct {
+	ID          string     `json:"id"`
+	Name        string     `json:"name"`
+	Type        string     `json:"type"`
+	Location    Location   `json:"location"`
+	Dimensions  Dimensions `json:"dimensions"`
+	Description string     `json:"description,omitempty"`
 }
 
 // Dimensions represents floor dimensions

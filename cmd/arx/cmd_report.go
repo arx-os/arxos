@@ -70,14 +70,6 @@ func runReport(cmd *cobra.Command, args []string) error {
 	// TODO: Implement export when visualization package is available
 	logger.Warn("Report export not yet implemented")
 	return fmt.Errorf("report export not yet implemented")
-
-	fmt.Printf("Report generated successfully: %s\n", reportOutput)
-
-	// Show file info
-	absPath, _ := filepath.Abs(reportOutput)
-	fmt.Printf("Full path: %s\n", absPath)
-
-	return nil
 }
 
 func runBatchExport(building string) error {

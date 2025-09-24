@@ -60,7 +60,7 @@ func SetupTestServer(t *testing.T) *TestServer {
 	server := api.NewServer(":8080", services)
 
 	// Get router
-	router := server.Handler()
+	router := server.Routes()
 
 	return &TestServer{
 		Server:      server,

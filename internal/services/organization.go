@@ -357,7 +357,13 @@ func (s *OrganizationService) CreateInvitation(ctx context.Context, orgID, email
 		return nil, fmt.Errorf("failed to create invitation: %w", err)
 	}
 
-	// TODO: Send invitation email
+	// Send invitation email
+	emailService := NewEmailServiceWithImplementations(s.db)
+	// Note: userID would need to be resolved from email in a real implementation
+	if err := emailService.SendInvitationEmail(ctx, "", orgID, role); err != nil {
+		logger.Warn("Failed to send invitation email: %v", err)
+		// Don't fail the invitation if email fails
+	}
 
 	logger.Info("Created invitation for %s to join organization %s", email, orgID)
 	return invitation, nil

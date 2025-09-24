@@ -81,16 +81,16 @@ func (s *ImportCommandService) ExecuteImport(opts ImportCommandOptions) error {
 }
 
 func (s *ImportCommandService) importPDF(ctx context.Context, opts ImportCommandOptions) error {
-	// TODO: Implement PDF import when converter package is available
-	logger.Warn("PDF import not yet implemented")
-	return fmt.Errorf("PDF import not yet implemented")
+	// Use the import implementations
+	impl := NewImportImplementations(s.db)
+	return impl.ImportPDF(ctx, opts.InputFile, opts)
 }
 
 func (s *ImportCommandService) importBIM(ctx context.Context, opts ImportCommandOptions) error {
 	// Use the existing import service
 	// Note: This is a simplified version - the full import service would need proper initialization
 	logger.Info("Importing BIM file: %s", opts.InputFile)
-	
+
 	// For now, just validate the file exists and is readable
 	file, err := os.Open(opts.InputFile)
 	if err != nil {
@@ -99,31 +99,31 @@ func (s *ImportCommandService) importBIM(ctx context.Context, opts ImportCommand
 	defer file.Close()
 
 	logger.Info("✓ BIM file validated")
-	
+
 	if opts.ValidateOnly {
 		logger.Info("Validation only - no data imported")
 		return nil
 	}
 
-	// TODO: Implement actual BIM import using the import service
-	logger.Info("✓ BIM import completed (placeholder)")
-	return nil
+	// Use the import implementations
+	impl := NewImportImplementations(s.db)
+	return impl.ImportBIM(ctx, opts.InputFile, opts)
 }
 
 func (s *ImportCommandService) importIFC(ctx context.Context, opts ImportCommandOptions) error {
-	// TODO: Implement IFC import when converter package is available
-	logger.Warn("IFC import not yet implemented")
-	return fmt.Errorf("IFC import not yet implemented")
+	// Use the import implementations
+	impl := NewImportImplementations(s.db)
+	return impl.ImportIFC(ctx, opts.InputFile, opts)
 }
 
 func (s *ImportCommandService) importCSV(ctx context.Context, opts ImportCommandOptions) error {
-	// TODO: Implement CSV import using the import service
-	logger.Warn("CSV import not yet implemented")
-	return fmt.Errorf("CSV import not yet implemented")
+	// Use the import implementations
+	impl := NewImportImplementations(s.db)
+	return impl.ImportCSV(ctx, opts.InputFile, opts)
 }
 
 func (s *ImportCommandService) importJSON(ctx context.Context, opts ImportCommandOptions) error {
-	// TODO: Implement JSON import using the import service
-	logger.Warn("JSON import not yet implemented")
-	return fmt.Errorf("JSON import not yet implemented")
+	// Use the import implementations
+	impl := NewImportImplementations(s.db)
+	return impl.ImportJSON(ctx, opts.InputFile, opts)
 }

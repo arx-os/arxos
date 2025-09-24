@@ -15,7 +15,7 @@ COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 # Build flags with version info
 BUILD_FLAGS := -ldflags "$(LDFLAGS) -X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.Commit=$(COMMIT)"
 
-.PHONY: all build clean test run install help dev docker deploy test-integration docker-test-up docker-test-down
+.PHONY: all build clean test run install help dev docker deploy test-integration test-integration-web test-integration-api test-integration-full docker-test-up docker-test-down
 
 # Default target
 all: build
@@ -147,6 +147,48 @@ test-integration: docker-test-up
 	@$(MAKE) docker-test-down
 	@echo "✅ Integration tests complete"
 
+# Comprehensive integration tests
+test-integration-full: docker-test-up
+	@echo "🧪 Running comprehensive integration tests..."
+	@POSTGIS_HOST=localhost \
+	 POSTGIS_PORT=5432 \
+	 POSTGIS_DB=arxos_test \
+	 POSTGIS_USER=arxos \
+	 POSTGIS_PASSWORD=testpass \
+	 $(GO) test -tags=integration $(GOFLAGS) -timeout=15m ./internal/integration/...
+	@$(MAKE) docker-test-down
+	@echo "✅ Comprehensive integration tests complete"
+
+# Web interface integration tests
+test-integration-web: docker-test-up
+	@echo "🧪 Running web interface integration tests..."
+	@POSTGIS_HOST=localhost \
+	 POSTGIS_PORT=5432 \
+	 POSTGIS_DB=arxos_test \
+	 POSTGIS_USER=arxos \
+	 POSTGIS_PASSWORD=testpass \
+	 $(GO) test -tags=integration $(GOFLAGS) -run TestWebInterface ./internal/integration/...
+	@$(MAKE) docker-test-down
+	@echo "✅ Web interface integration tests complete"
+
+# API integration tests
+test-integration-api: docker-test-up
+	@echo "🧪 Running API integration tests..."
+	@POSTGIS_HOST=localhost \
+	 POSTGIS_PORT=5432 \
+	 POSTGIS_DB=arxos_test \
+	 POSTGIS_USER=arxos \
+	 POSTGIS_PASSWORD=testpass \
+	 $(GO) test -tags=integration $(GOFLAGS) -run TestAPI ./internal/integration/...
+	@$(MAKE) docker-test-down
+	@echo "✅ API integration tests complete"
+
+# Run integration tests with custom script
+test-integration-script:
+	@echo "🧪 Running integration tests with custom script..."
+	@./scripts/run_integration_tests.sh
+	@echo "✅ Integration tests complete"
+
 # Database commands
 db-backup:
 	@echo "💾 Creating database backup..."
@@ -178,6 +220,11 @@ help:
 	@echo "  make run          - Build and run arx CLI"
 	@echo "  make run-server   - Build and run arx in server mode"
 	@echo "  make test         - Run tests"
+	@echo "  make test-integration - Run basic integration tests (requires PostGIS)"
+	@echo "  make test-integration-full - Run comprehensive integration tests"
+	@echo "  make test-integration-web - Run web interface integration tests"
+	@echo "  make test-integration-api - Run API integration tests"
+	@echo "  make test-integration-script - Run integration tests with custom script"
 	@echo "  make test-coverage- Run tests with coverage report"
 	@echo "  make clean        - Remove build artifacts"
 	@echo "  make install      - Install arx to /usr/local/bin"

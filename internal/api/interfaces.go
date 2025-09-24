@@ -104,6 +104,15 @@ type OrganizationService interface {
 	CanUserAccessOrganization(ctx context.Context, orgID, userID string) (bool, error)
 }
 
+// EquipmentService defines the interface for equipment operations
+type EquipmentService interface {
+	CreateEquipment(ctx context.Context, equipment *models.Equipment) error
+	GetEquipment(ctx context.Context, id string) (*models.Equipment, error)
+	UpdateEquipment(ctx context.Context, equipment *models.Equipment) error
+	DeleteEquipment(ctx context.Context, id string) error
+	ListEquipment(ctx context.Context, buildingID string) ([]*models.Equipment, error)
+}
+
 // StorageService defines the interface for storage operations
 type StorageService interface {
 	// File operations

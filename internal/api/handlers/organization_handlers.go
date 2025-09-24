@@ -1,619 +1,708 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
-	"strconv"
-	"strings"
+	"time"
 
+	"github.com/arx-os/arxos/internal/api/models"
 	"github.com/arx-os/arxos/internal/api/types"
-	"github.com/arx-os/arxos/pkg/models"
-	"github.com/gorilla/mux"
+	domainmodels "github.com/arx-os/arxos/pkg/models"
 )
 
-// handleGetOrganizations handles GET /api/v1/organizations
-func handleGetOrganizations(s *types.Server) http.HandlerFunc { return func(w http.ResponseWriter, r *http.Request) {
+// OrganizationHandler handles organization-related HTTP requests
+type OrganizationHandler struct {
+	*BaseHandler
+}
+
+// NewOrganizationHandler creates a new organization handler
+func NewOrganizationHandler(server *types.Server) *OrganizationHandler {
+	return &OrganizationHandler{
+		BaseHandler: NewBaseHandler(server),
+	}
+}
+
+// HandleGetOrganizations handles GET /api/v1/organizations
+func (h *OrganizationHandler) HandleGetOrganizations(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
+
 	// Check authentication
-	user, err := s.getCurrentUser(r)
-	if err != nil {
-		s.respondError(w, http.StatusUnauthorized, "Authentication required")
+	user, ok := h.RequireAuth(w, r)
+	if !ok {
 		return
 	}
 
-	// Parse query parameters
-	limit := 100
-	offset := 0
+	// Parse pagination
+	limit, offset := h.ParsePagination(r)
 
-	if l := r.URL.Query().Get("limit"); l != "" {
-		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 1000 {
-			limit = parsed
-		}
-	}
-
-	if o := r.URL.Query().Get("offset"); o != "" {
-		if parsed, err := strconv.Atoi(o); err == nil && parsed >= 0 {
-			offset = parsed
-		}
+	// Parse filters (placeholder for future use)
+	_ = models.OrganizationFilter{
+		Plan:   r.URL.Query().Get("plan"),
+		Active: nil, // Could parse from query string if needed
 	}
 
 	// Get organizations through the service
-	organizations, err := s.Services.Organization.ListOrganizations(r.Context(), user.ID)
-
+	organizations, err := h.server.Services.Organization.ListOrganizations(r.Context(), user.ID)
 	if err != nil {
-		s.respondError(w, http.StatusInternalServerError, "Failed to retrieve organizations")
+		h.HandleError(w, r, err, "Failed to retrieve organizations")
 		return
 	}
 
-		s.respondJSON(w, http.StatusOK, map[string]interface{}{
-			"organizations": organizations,
-			"limit":         limit,
-			"offset":        offset,
-			"total":         len(organizations),
-		})
+	// Convert to response format
+	orgResponses := make([]models.OrganizationResponse, len(organizations))
+	for i, org := range organizations {
+		if o, ok := org.(*domainmodels.Organization); ok {
+			orgResponses[i] = models.OrganizationToResponse(o)
+		}
 	}
+
+	h.RespondPaginated(w, orgResponses, limit, offset, len(orgResponses))
 }
 
-// handleGetOrganization handles GET /api/v1/organizations/{id}
-func HandleGetOrganization(s *types.Server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+// HandleGetOrganization handles GET /api/v1/organizations/{id}
+func (h *OrganizationHandler) HandleGetOrganization(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
+
 	// Check authentication
-	user, err := s.getCurrentUser(r)
-	if err != nil {
-		s.respondError(w, http.StatusUnauthorized, "Authentication required")
+	user, ok := h.RequireAuth(w, r)
+	if !ok {
 		return
 	}
 
-	// Get organization ID from URL
-	vars := mux.Vars(r)
-	orgID := vars["id"]
+	// Parse organization ID
+	orgID, err := h.ParseID(r, "id")
+	if err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Invalid organization ID")
+		return
+	}
 
 	// Get organization from service
-	org, err := s.Services.Organization.GetOrganization(r.Context(), orgID)
+	org, err := h.server.Services.Organization.GetOrganization(r.Context(), orgID)
 	if err != nil {
-		s.respondError(w, http.StatusNotFound, "Organization not found")
+		h.HandleError(w, r, err, "Organization not found")
 		return
 	}
 
 	// Check if user has access to this organization
-	if !s.hasOrgAccess(r.Context(), user, org.ID) {
-		s.respondError(w, http.StatusForbidden, "Access denied")
+	if !h.server.HasOrgAccess(r.Context(), user, orgID) {
+		h.RespondError(w, http.StatusForbidden, "Access denied")
 		return
 	}
 
-		s.respondJSON(w, http.StatusOK, org)
+	// Convert to response format
+	if o, ok := org.(*domainmodels.Organization); ok {
+		h.RespondJSON(w, http.StatusOK, models.OrganizationToResponse(o))
+	} else {
+		h.RespondError(w, http.StatusInternalServerError, "Invalid organization data")
 	}
 }
 
-// handleCreateOrganization handles POST /api/v1/organizations
-func HandleCreateOrganization(s *types.Server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+// HandleCreateOrganization handles POST /api/v1/organizations
+func (h *OrganizationHandler) HandleCreateOrganization(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.LogRequest(r, http.StatusCreated, time.Since(start))
+	}()
+
 	// Check authentication
-	user, err := s.getCurrentUser(r)
+	user, ok := h.RequireAuth(w, r)
+	if !ok {
+		return
+	}
+
+	// Parse request
+	var req models.CreateOrganizationRequest
+	if err := h.ParseJSON(r, &req); err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	// Validate request
+	if err := h.ValidateRequest(req); err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Validation failed")
+		return
+	}
+
+	// Create organization
+	org, err := h.server.Services.Organization.CreateOrganization(r.Context(), req.Name, req.Description, user.ID)
 	if err != nil {
-		s.respondError(w, http.StatusUnauthorized, "Authentication required")
+		h.HandleError(w, r, err, "Failed to create organization")
 		return
 	}
 
-	var req models.OrganizationCreateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		s.respondError(w, http.StatusBadRequest, "Invalid request body")
-		return
-	}
-
-	// Validate required fields
-	if req.Name == "" || req.Slug == "" {
-		s.respondError(w, http.StatusBadRequest, "Name and slug are required")
-		return
-	}
-
-	// Create organization through service
-	if s.Services.Organization == nil {
-		s.respondError(w, http.StatusNotImplemented, "Organization service not configured")
-		return
-	}
-
-	// Convert request to Organization model
-	org := &models.Organization{
-		Name:        req.Name,
-		Slug:        req.Slug,
-		Description: req.Description,
-		Website:     req.Website,
-		LogoURL:     req.LogoURL,
-		Address:     req.Address,
-		City:        req.City,
-		State:       req.State,
-		Country:     req.Country,
-		PostalCode:  req.PostalCode,
-		Plan:        models.PlanFree, // Default to free plan
-		Status:      "active",
-		IsActive:    true,
-	}
-
-	err = s.Services.Organization.CreateOrganization(r.Context(), org, user.ID)
-	if err != nil {
-		if strings.Contains(err.Error(), "already exists") {
-			s.respondError(w, http.StatusConflict, "Organization slug already exists")
-		} else {
-			s.respondError(w, http.StatusInternalServerError, "Failed to create organization")
-		}
-		return
-	}
-
-		s.respondJSON(w, http.StatusCreated, org)
+	// Convert to response format
+	if o, ok := org.(*domainmodels.Organization); ok {
+		h.RespondJSON(w, http.StatusCreated, models.OrganizationToResponse(o))
+	} else {
+		h.RespondError(w, http.StatusInternalServerError, "Invalid organization data")
 	}
 }
 
-// handleUpdateOrganization handles PUT /api/v1/organizations/{id}
-func HandleUpdateOrganization(s *types.Server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+// HandleUpdateOrganization handles PUT /api/v1/organizations/{id}
+func (h *OrganizationHandler) HandleUpdateOrganization(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
+
 	// Check authentication
-	user, err := s.getCurrentUser(r)
-	if err != nil {
-		s.respondError(w, http.StatusUnauthorized, "Authentication required")
+	user, ok := h.RequireAuth(w, r)
+	if !ok {
 		return
 	}
 
-	// Get organization ID from URL
-	vars := mux.Vars(r)
-	orgID := vars["id"]
+	// Parse organization ID
+	orgID, err := h.ParseID(r, "id")
+	if err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Invalid organization ID")
+		return
+	}
 
 	// Check if user has admin access to this organization
-	if user.Role != string(models.UserRoleAdmin) {
-		role, err := s.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
-		if err != nil || role == nil || (*role != models.RoleOwner && *role != models.RoleAdmin) {
-			s.respondError(w, http.StatusForbidden, "Admin access required")
-			return
-		}
-	}
-
-	var req models.OrganizationUpdateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		s.respondError(w, http.StatusBadRequest, "Invalid request body")
-		return
-	}
-
-	// Update organization through service
-	if s.Services.Organization == nil {
-		s.respondError(w, http.StatusNotImplemented, "Organization service not configured")
-		return
-	}
-
-	// Convert update request to Organization model
-	org, err := s.Services.Organization.GetOrganization(r.Context(), orgID)
+	role, err := h.server.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
 	if err != nil {
-		s.respondError(w, http.StatusNotFound, "Organization not found")
+		h.HandleError(w, r, err, "Failed to check organization access")
 		return
 	}
 
-	// Apply updates
-	if req.Name != "" {
-		org.Name = req.Name
-	}
-	if req.Description != "" {
-		org.Description = req.Description
-	}
-	if req.Website != "" {
-		org.Website = req.Website
-	}
-	if req.LogoURL != "" {
-		org.LogoURL = req.LogoURL
+	if role != "admin" && string(user.Role) != string(domainmodels.UserRoleAdmin) {
+		h.RespondError(w, http.StatusForbidden, "Admin access required")
+		return
 	}
 
-	err = s.Services.Organization.UpdateOrganization(r.Context(), org)
+	// Parse request
+	var req models.UpdateOrganizationRequest
+	if err := h.ParseJSON(r, &req); err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	// Validate request
+	if err := h.ValidateRequest(req); err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Validation failed")
+		return
+	}
+
+	// Convert to updates map
+	updates := make(map[string]interface{})
+	if req.Name != nil && *req.Name != "" {
+		updates["name"] = *req.Name
+	}
+	if req.Description != nil && *req.Description != "" {
+		updates["description"] = *req.Description
+	}
+	if req.Website != nil && *req.Website != "" {
+		updates["website"] = *req.Website
+	}
+	if req.Address != nil && *req.Address != "" {
+		updates["address"] = *req.Address
+	}
+	if req.Phone != nil && *req.Phone != "" {
+		updates["phone"] = *req.Phone
+	}
+
+	// Update organization
+	org, err := h.server.Services.Organization.UpdateOrganization(r.Context(), orgID, updates)
 	if err != nil {
-		s.respondError(w, http.StatusInternalServerError, "Failed to update organization")
+		h.HandleError(w, r, err, "Failed to update organization")
 		return
 	}
 
-		s.respondJSON(w, http.StatusOK, org)
+	// Convert to response format
+	if o, ok := org.(*domainmodels.Organization); ok {
+		h.RespondJSON(w, http.StatusOK, models.OrganizationToResponse(o))
+	} else {
+		h.RespondError(w, http.StatusInternalServerError, "Invalid organization data")
 	}
 }
 
-// handleDeleteOrganization handles DELETE /api/v1/organizations/{id}
-func HandleDeleteOrganization(s *types.Server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+// HandleDeleteOrganization handles DELETE /api/v1/organizations/{id}
+func (h *OrganizationHandler) HandleDeleteOrganization(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
+
 	// Check authentication
-	user, err := s.getCurrentUser(r)
-	if err != nil {
-		s.respondError(w, http.StatusUnauthorized, "Authentication required")
+	user, ok := h.RequireAuth(w, r)
+	if !ok {
 		return
 	}
 
-	// Get organization ID from URL
-	vars := mux.Vars(r)
-	orgID := vars["id"]
+	// Parse organization ID
+	orgID, err := h.ParseID(r, "id")
+	if err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Invalid organization ID")
+		return
+	}
 
-	// Check if user has owner access to this organization
-	if user.Role != string(models.UserRoleAdmin) {
-		role, err := s.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
-		if err != nil || role == nil || *role != models.RoleOwner {
-			s.respondError(w, http.StatusForbidden, "Owner access required")
-			return
-		}
+	// Check if user has admin access to this organization
+	role, err := h.server.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
+	if err != nil {
+		h.HandleError(w, r, err, "Failed to check organization access")
+		return
+	}
+
+	if role != "admin" && string(user.Role) != string(domainmodels.UserRoleAdmin) {
+		h.RespondError(w, http.StatusForbidden, "Admin access required")
+		return
 	}
 
 	// Delete organization
-	err = s.Services.Organization.DeleteOrganization(r.Context(), orgID)
-	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			s.respondError(w, http.StatusNotFound, "Organization not found")
-		} else {
-			s.respondError(w, http.StatusInternalServerError, "Failed to delete organization")
-		}
+	if err := h.server.Services.Organization.DeleteOrganization(r.Context(), orgID); err != nil {
+		h.HandleError(w, r, err, "Failed to delete organization")
 		return
 	}
 
-		s.respondJSON(w, http.StatusOK, map[string]interface{}{
-			"success": true,
-			"message": "Organization deleted successfully",
-		})
-	}
+	h.RespondSuccess(w, nil, "Organization deleted successfully")
 }
 
-// handleGetOrganizationMembers handles GET /api/v1/organizations/{id}/members
-func HandleGetOrganizationMembers(s *types.Server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+// HandleGetMembers handles GET /api/v1/organizations/{id}/members
+func (h *OrganizationHandler) HandleGetMembers(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
+
 	// Check authentication
-	user, err := s.getCurrentUser(r)
-	if err != nil {
-		s.respondError(w, http.StatusUnauthorized, "Authentication required")
+	user, ok := h.RequireAuth(w, r)
+	if !ok {
 		return
 	}
 
-	// Get organization ID from URL
-	vars := mux.Vars(r)
-	orgID := vars["id"]
+	// Parse organization ID
+	orgID, err := h.ParseID(r, "id")
+	if err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Invalid organization ID")
+		return
+	}
 
 	// Check if user has access to this organization
-	if !s.hasOrgAccess(r.Context(), user, orgID) {
-		s.respondError(w, http.StatusForbidden, "Access denied")
+	if !h.server.HasOrgAccess(r.Context(), user, orgID) {
+		h.RespondError(w, http.StatusForbidden, "Access denied")
 		return
 	}
 
-	// Get members from database
-	members, err := s.Services.Organization.GetMembers(r.Context(), orgID)
+	// Get members
+	members, err := h.server.Services.Organization.GetMembers(r.Context(), orgID)
 	if err != nil {
-		s.respondError(w, http.StatusInternalServerError, "Failed to retrieve members")
+		h.HandleError(w, r, err, "Failed to retrieve members")
 		return
 	}
 
-		s.respondJSON(w, http.StatusOK, map[string]interface{}{
-			"members": members,
-			"total":   len(members),
-		})
-	}
+	h.RespondJSON(w, http.StatusOK, members)
 }
 
-// handleAddOrganizationMember handles POST /api/v1/organizations/{id}/members
-func HandleAddOrganizationMember(s *types.Server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+// HandleAddMember handles POST /api/v1/organizations/{id}/members
+func (h *OrganizationHandler) HandleAddMember(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.LogRequest(r, http.StatusCreated, time.Since(start))
+	}()
+
 	// Check authentication
-	user, err := s.getCurrentUser(r)
-	if err != nil {
-		s.respondError(w, http.StatusUnauthorized, "Authentication required")
+	user, ok := h.RequireAuth(w, r)
+	if !ok {
 		return
 	}
 
-	// Get organization ID from URL
-	vars := mux.Vars(r)
-	orgID := vars["id"]
+	// Parse organization ID
+	orgID, err := h.ParseID(r, "id")
+	if err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Invalid organization ID")
+		return
+	}
 
 	// Check if user has admin access to this organization
-	if user.Role != string(models.UserRoleAdmin) {
-		role, err := s.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
-		if err != nil || role == nil || (*role != models.RoleOwner && *role != models.RoleAdmin) {
-			s.respondError(w, http.StatusForbidden, "Admin access required")
-			return
-		}
-	}
-
-	var req struct {
-		UserID string `json:"user_id"`
-		Role   string `json:"role"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		s.respondError(w, http.StatusBadRequest, "Invalid request body")
-		return
-	}
-
-	// Validate required fields
-	if req.UserID == "" || req.Role == "" {
-		s.respondError(w, http.StatusBadRequest, "User ID and role are required")
-		return
-	}
-
-	// Add member to organization
-	err = s.Services.Organization.AddMember(r.Context(), orgID, req.UserID, models.Role(req.Role))
+	role, err := h.server.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
 	if err != nil {
-		if strings.Contains(err.Error(), "already") {
-			s.respondError(w, http.StatusConflict, "User is already a member")
-		} else {
-			s.respondError(w, http.StatusInternalServerError, "Failed to add member")
-		}
+		h.HandleError(w, r, err, "Failed to check organization access")
 		return
 	}
 
-		s.respondJSON(w, http.StatusCreated, map[string]interface{}{
-			"success": true,
-			"message": "Member added successfully",
-		})
+	if role != "admin" && string(user.Role) != string(domainmodels.UserRoleAdmin) {
+		h.RespondError(w, http.StatusForbidden, "Admin access required")
+		return
 	}
+
+	// Parse request
+	var req models.AddMemberRequest
+	if err := h.ParseJSON(r, &req); err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	// Validate request
+	if err := h.ValidateRequest(req); err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Validation failed")
+		return
+	}
+
+	// Add member
+	if err := h.server.Services.Organization.AddMember(r.Context(), orgID, req.UserID, req.Role); err != nil {
+		h.HandleError(w, r, err, "Failed to add member")
+		return
+	}
+
+	h.RespondSuccess(w, nil, "Member added successfully")
 }
 
-// handleUpdateOrganizationMember handles PUT /api/v1/organizations/{id}/members/{user_id}
-func HandleUpdateOrganizationMember(s *types.Server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+// HandleUpdateMemberRole handles PUT /api/v1/organizations/{id}/members/{user_id}
+func (h *OrganizationHandler) HandleUpdateMemberRole(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
+
 	// Check authentication
-	user, err := s.getCurrentUser(r)
-	if err != nil {
-		s.respondError(w, http.StatusUnauthorized, "Authentication required")
+	user, ok := h.RequireAuth(w, r)
+	if !ok {
 		return
 	}
 
-	// Get organization ID and user ID from URL
-	vars := mux.Vars(r)
-	orgID := vars["id"]
-	memberUserID := vars["user_id"]
-
-	// Check if user has admin access to this organization
-	if user.Role != string(models.UserRoleAdmin) {
-		role, err := s.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
-		if err != nil || role == nil || (*role != models.RoleOwner && *role != models.RoleAdmin) {
-			s.respondError(w, http.StatusForbidden, "Admin access required")
-			return
-		}
-
-		// Prevent non-owners from changing owner roles
-		targetRole, err := s.Services.Organization.GetMemberRole(r.Context(), orgID, memberUserID)
-		if err == nil && targetRole != nil && *targetRole == models.RoleOwner && *role != models.RoleOwner {
-			s.respondError(w, http.StatusForbidden, "Only owners can modify owner roles")
-			return
-		}
+	// Parse organization ID
+	orgID, err := h.ParseID(r, "id")
+	if err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Invalid organization ID")
+		return
 	}
 
-	var req models.OrganizationMemberUpdateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		s.respondError(w, http.StatusBadRequest, "Invalid request body")
+	// Parse user ID
+	userID, err := h.ParseID(r, "user_id")
+	if err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Invalid user ID")
+		return
+	}
+
+	// Check if user has admin access to this organization
+	role, err := h.server.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
+	if err != nil {
+		h.HandleError(w, r, err, "Failed to check organization access")
+		return
+	}
+
+	if role != "admin" && string(user.Role) != string(domainmodels.UserRoleAdmin) {
+		h.RespondError(w, http.StatusForbidden, "Admin access required")
+		return
+	}
+
+	// Parse request
+	var req models.UpdateMemberRoleRequest
+	if err := h.ParseJSON(r, &req); err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	// Validate request
+	if err := h.ValidateRequest(req); err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Validation failed")
 		return
 	}
 
 	// Update member role
-	err = s.Services.Organization.UpdateMemberRole(r.Context(), orgID, memberUserID, models.Role(req.Role))
-	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			s.respondError(w, http.StatusNotFound, "Member not found")
-		} else {
-			s.respondError(w, http.StatusInternalServerError, "Failed to update member")
-		}
+	if err := h.server.Services.Organization.UpdateMemberRole(r.Context(), orgID, userID, req.Role); err != nil {
+		h.HandleError(w, r, err, "Failed to update member role")
 		return
 	}
 
-		s.respondJSON(w, http.StatusOK, map[string]interface{}{
-			"success": true,
-			"message": "Member updated successfully",
-		})
-	}
+	h.RespondSuccess(w, nil, "Member role updated successfully")
 }
 
-// handleRemoveOrganizationMember handles DELETE /api/v1/organizations/{id}/members/{user_id}
-func HandleRemoveOrganizationMember(s *types.Server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+// HandleRemoveMember handles DELETE /api/v1/organizations/{id}/members/{user_id}
+func (h *OrganizationHandler) HandleRemoveMember(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
+
 	// Check authentication
-	user, err := s.getCurrentUser(r)
-	if err != nil {
-		s.respondError(w, http.StatusUnauthorized, "Authentication required")
+	user, ok := h.RequireAuth(w, r)
+	if !ok {
 		return
 	}
 
-	// Get organization ID and user ID from URL
-	vars := mux.Vars(r)
-	orgID := vars["id"]
-	memberUserID := vars["user_id"]
+	// Parse organization ID
+	orgID, err := h.ParseID(r, "id")
+	if err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Invalid organization ID")
+		return
+	}
+
+	// Parse user ID
+	userID, err := h.ParseID(r, "user_id")
+	if err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Invalid user ID")
+		return
+	}
 
 	// Check if user has admin access to this organization
-	if user.Role != string(models.UserRoleAdmin) {
-		role, err := s.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
-		if err != nil || role == nil || (*role != models.RoleOwner && *role != models.RoleAdmin) {
-			// Allow users to remove themselves
-			if memberUserID != user.ID {
-				s.respondError(w, http.StatusForbidden, "Admin access required")
-				return
-			}
-		}
-	}
-
-	// Remove member from organization
-	err = s.Services.Organization.RemoveMember(r.Context(), orgID, memberUserID)
+	role, err := h.server.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			s.respondError(w, http.StatusNotFound, "Member not found")
-		} else {
-			s.respondError(w, http.StatusInternalServerError, "Failed to remove member")
-		}
+		h.HandleError(w, r, err, "Failed to check organization access")
 		return
 	}
 
-	s.respondJSON(w, http.StatusOK, map[string]interface{}{
-		"success": true,
-		"message": "Member removed successfully",
-	})
+	if role != "admin" && string(user.Role) != string(domainmodels.UserRoleAdmin) {
+		h.RespondError(w, http.StatusForbidden, "Admin access required")
+		return
 	}
+
+	// Remove member
+	if err := h.server.Services.Organization.RemoveMember(r.Context(), orgID, userID); err != nil {
+		h.HandleError(w, r, err, "Failed to remove member")
+		return
+	}
+
+	h.RespondSuccess(w, nil, "Member removed successfully")
 }
 
-// handleCreateOrganizationInvitation handles POST /api/v1/organizations/{id}/invitations
-func HandleCreateOrganizationInvitation(s *types.Server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+// HandleCreateInvitation handles POST /api/v1/organizations/{id}/invitations
+func (h *OrganizationHandler) HandleCreateInvitation(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.LogRequest(r, http.StatusCreated, time.Since(start))
+	}()
+
 	// Check authentication
-	user, err := s.getCurrentUser(r)
-	if err != nil {
-		s.respondError(w, http.StatusUnauthorized, "Authentication required")
+	user, ok := h.RequireAuth(w, r)
+	if !ok {
 		return
 	}
 
-	// Get organization ID from URL
-	vars := mux.Vars(r)
-	orgID := vars["id"]
+	// Parse organization ID
+	orgID, err := h.ParseID(r, "id")
+	if err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Invalid organization ID")
+		return
+	}
 
 	// Check if user has admin access to this organization
-	if user.Role != string(models.UserRoleAdmin) {
-		role, err := s.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
-		if err != nil || role == nil || (*role != models.RoleOwner && *role != models.RoleAdmin) {
-			s.respondError(w, http.StatusForbidden, "Admin access required")
-			return
-		}
-	}
-
-	var req models.OrganizationInviteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		s.respondError(w, http.StatusBadRequest, "Invalid request body")
-		return
-	}
-
-	// Validate required fields
-	if req.Email == "" || req.Role == "" {
-		s.respondError(w, http.StatusBadRequest, "Email and role are required")
-		return
-	}
-
-	// Create invitation through service
-	if s.Services.Organization == nil {
-		s.respondError(w, http.StatusNotImplemented, "Organization service not configured")
-		return
-	}
-
-	invitation, err := s.Services.Organization.CreateInvitation(r.Context(), orgID, req.Email, models.Role(req.Role), user.ID)
+	role, err := h.server.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
 	if err != nil {
-		s.respondError(w, http.StatusInternalServerError, "Failed to create invitation")
+		h.HandleError(w, r, err, "Failed to check organization access")
 		return
 	}
 
-		s.respondJSON(w, http.StatusCreated, invitation)
+	if role != "admin" && string(user.Role) != string(domainmodels.UserRoleAdmin) {
+		h.RespondError(w, http.StatusForbidden, "Admin access required")
+		return
 	}
+
+	// Parse request
+	var req models.CreateInvitationRequest
+	if err := h.ParseJSON(r, &req); err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	// Validate request
+	if err := h.ValidateRequest(req); err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Validation failed")
+		return
+	}
+
+	// Create invitation
+	invitation, err := h.server.Services.Organization.CreateInvitation(r.Context(), orgID, req.Email, req.Role)
+	if err != nil {
+		h.HandleError(w, r, err, "Failed to create invitation")
+		return
+	}
+
+	h.RespondJSON(w, http.StatusCreated, invitation)
 }
 
-// handleGetOrganizationInvitations handles GET /api/v1/organizations/{id}/invitations
-func HandleGetOrganizationInvitations(s *types.Server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+// HandleGetInvitations handles GET /api/v1/organizations/{id}/invitations
+func (h *OrganizationHandler) HandleGetInvitations(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
+
 	// Check authentication
-	user, err := s.getCurrentUser(r)
-	if err != nil {
-		s.respondError(w, http.StatusUnauthorized, "Authentication required")
+	user, ok := h.RequireAuth(w, r)
+	if !ok {
 		return
 	}
 
-	// Get organization ID from URL
-	vars := mux.Vars(r)
-	orgID := vars["id"]
-
-	// Check if user has access to this organization
-	if user.Role != string(models.UserRoleAdmin) {
-		role, err := s.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
-		if err != nil || role == nil || (*role != models.RoleOwner && *role != models.RoleAdmin) {
-			s.respondError(w, http.StatusForbidden, "Admin access required")
-			return
-		}
-	}
-
-	// Get invitations from database
-	invitations, err := s.Services.Organization.ListPendingInvitations(r.Context(), orgID)
+	// Parse organization ID
+	orgID, err := h.ParseID(r, "id")
 	if err != nil {
-		s.respondError(w, http.StatusInternalServerError, "Failed to retrieve invitations")
+		h.RespondError(w, http.StatusBadRequest, "Invalid organization ID")
 		return
 	}
 
-		s.respondJSON(w, http.StatusOK, map[string]interface{}{
-			"invitations": invitations,
-			"total":       len(invitations),
-		})
+	// Check if user has admin access to this organization
+	role, err := h.server.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
+	if err != nil {
+		h.HandleError(w, r, err, "Failed to check organization access")
+		return
 	}
+
+	if role != "admin" && string(user.Role) != string(domainmodels.UserRoleAdmin) {
+		h.RespondError(w, http.StatusForbidden, "Admin access required")
+		return
+	}
+
+	// Get pending invitations
+	invitations, err := h.server.Services.Organization.ListPendingInvitations(r.Context(), orgID)
+	if err != nil {
+		h.HandleError(w, r, err, "Failed to retrieve invitations")
+		return
+	}
+
+	h.RespondJSON(w, http.StatusOK, invitations)
 }
 
-// handleAcceptOrganizationInvitation handles POST /api/v1/invitations/accept
-func HandleAcceptOrganizationInvitation(s *types.Server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+// HandleAcceptInvitation handles POST /api/v1/invitations/accept
+func (h *OrganizationHandler) HandleAcceptInvitation(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
+
 	// Check authentication
-	user, err := s.getCurrentUser(r)
-	if err != nil {
-		s.respondError(w, http.StatusUnauthorized, "Authentication required")
+	_, ok := h.RequireAuth(w, r)
+	if !ok {
 		return
 	}
 
-	var req struct {
-		Token string `json:"token"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		s.respondError(w, http.StatusBadRequest, "Invalid request body")
+	// Parse request
+	var req models.AcceptInvitationRequest
+	if err := h.ParseJSON(r, &req); err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
-	// Validate required fields
-	if req.Token == "" {
-		s.respondError(w, http.StatusBadRequest, "Token is required")
+	// Validate request
+	if err := h.ValidateRequest(req); err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Validation failed")
 		return
 	}
 
 	// Accept invitation
-	err = s.Services.Organization.AcceptInvitation(r.Context(), req.Token, user.ID)
-	if err != nil {
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "expired") {
-			s.respondError(w, http.StatusBadRequest, "Invalid or expired invitation")
-		} else if strings.Contains(err.Error(), "already") {
-			s.respondError(w, http.StatusConflict, "Already a member of this organization")
-		} else {
-			s.respondError(w, http.StatusInternalServerError, "Failed to accept invitation")
-		}
+	if err := h.server.Services.Organization.AcceptInvitation(r.Context(), req.Token); err != nil {
+		h.HandleError(w, r, err, "Failed to accept invitation")
 		return
 	}
 
-		s.respondJSON(w, http.StatusOK, map[string]interface{}{
-			"success": true,
-			"message": "Invitation accepted successfully",
-		})
-	}
+	h.RespondSuccess(w, nil, "Invitation accepted successfully")
 }
 
-// handleRevokeOrganizationInvitation handles DELETE /api/v1/organizations/{id}/invitations/{invitation_id}
-func HandleRevokeOrganizationInvitation(s *types.Server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+// HandleRevokeInvitation handles DELETE /api/v1/organizations/{id}/invitations/{invitation_id}
+func (h *OrganizationHandler) HandleRevokeInvitation(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
+
 	// Check authentication
-	user, err := s.getCurrentUser(r)
-	if err != nil {
-		s.respondError(w, http.StatusUnauthorized, "Authentication required")
+	user, ok := h.RequireAuth(w, r)
+	if !ok {
 		return
 	}
 
-	// Get organization ID and invitation ID from URL
-	vars := mux.Vars(r)
-	orgID := vars["id"]
-	invitationID := vars["invitation_id"]
+	// Parse organization ID
+	orgID, err := h.ParseID(r, "id")
+	if err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Invalid organization ID")
+		return
+	}
+
+	// Parse invitation ID
+	invitationID, err := h.ParseID(r, "invitation_id")
+	if err != nil {
+		h.RespondError(w, http.StatusBadRequest, "Invalid invitation ID")
+		return
+	}
 
 	// Check if user has admin access to this organization
-	if user.Role != string(models.UserRoleAdmin) {
-		role, err := s.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
-		if err != nil || role == nil || (*role != models.RoleOwner && *role != models.RoleAdmin) {
-			s.respondError(w, http.StatusForbidden, "Admin access required")
-			return
-		}
+	role, err := h.server.Services.Organization.GetMemberRole(r.Context(), orgID, user.ID)
+	if err != nil {
+		h.HandleError(w, r, err, "Failed to check organization access")
+		return
+	}
+
+	if role != "admin" && string(user.Role) != string(domainmodels.UserRoleAdmin) {
+		h.RespondError(w, http.StatusForbidden, "Admin access required")
+		return
 	}
 
 	// Revoke invitation
-	err = s.Services.Organization.RevokeInvitation(r.Context(), invitationID)
-	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			s.respondError(w, http.StatusNotFound, "Invitation not found")
-		} else if strings.Contains(err.Error(), "already accepted") {
-			s.respondError(w, http.StatusBadRequest, "Cannot revoke accepted invitation")
-		} else {
-			s.respondError(w, http.StatusInternalServerError, "Failed to revoke invitation")
-		}
+	if err := h.server.Services.Organization.RevokeInvitation(r.Context(), orgID, invitationID); err != nil {
+		h.HandleError(w, r, err, "Failed to revoke invitation")
 		return
 	}
 
-		s.respondJSON(w, http.StatusOK, map[string]interface{}{
-			"success": true,
-			"message": "Invitation revoked successfully",
-		})
-	}
+	h.RespondSuccess(w, nil, "Invitation revoked successfully")
+}
+
+// Legacy handler functions for backward compatibility
+func HandleGetOrganizations(s *types.Server) http.HandlerFunc {
+	handler := NewOrganizationHandler(s)
+	return handler.HandleGetOrganizations
+}
+
+func HandleGetOrganization(s *types.Server) http.HandlerFunc {
+	handler := NewOrganizationHandler(s)
+	return handler.HandleGetOrganization
+}
+
+func HandleCreateOrganization(s *types.Server) http.HandlerFunc {
+	handler := NewOrganizationHandler(s)
+	return handler.HandleCreateOrganization
+}
+
+func HandleUpdateOrganization(s *types.Server) http.HandlerFunc {
+	handler := NewOrganizationHandler(s)
+	return handler.HandleUpdateOrganization
+}
+
+func HandleDeleteOrganization(s *types.Server) http.HandlerFunc {
+	handler := NewOrganizationHandler(s)
+	return handler.HandleDeleteOrganization
+}
+
+func HandleGetMembers(s *types.Server) http.HandlerFunc {
+	handler := NewOrganizationHandler(s)
+	return handler.HandleGetMembers
+}
+
+func HandleAddMember(s *types.Server) http.HandlerFunc {
+	handler := NewOrganizationHandler(s)
+	return handler.HandleAddMember
+}
+
+func HandleUpdateMemberRole(s *types.Server) http.HandlerFunc {
+	handler := NewOrganizationHandler(s)
+	return handler.HandleUpdateMemberRole
+}
+
+func HandleRemoveMember(s *types.Server) http.HandlerFunc {
+	handler := NewOrganizationHandler(s)
+	return handler.HandleRemoveMember
+}
+
+func HandleCreateInvitation(s *types.Server) http.HandlerFunc {
+	handler := NewOrganizationHandler(s)
+	return handler.HandleCreateInvitation
+}
+
+func HandleGetInvitations(s *types.Server) http.HandlerFunc {
+	handler := NewOrganizationHandler(s)
+	return handler.HandleGetInvitations
+}
+
+func HandleAcceptInvitation(s *types.Server) http.HandlerFunc {
+	handler := NewOrganizationHandler(s)
+	return handler.HandleAcceptInvitation
+}
+
+func HandleRevokeInvitation(s *types.Server) http.HandlerFunc {
+	handler := NewOrganizationHandler(s)
+	return handler.HandleRevokeInvitation
 }

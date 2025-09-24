@@ -3,10 +3,13 @@ package types
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/arx-os/arxos/internal/interfaces"
+	domainmodels "github.com/arx-os/arxos/pkg/models"
+	"github.com/google/uuid"
 )
 
 // Config holds configuration for the API server
@@ -93,9 +96,29 @@ type UserService interface {
 	DeleteUser(ctx context.Context, id string) error
 	RequestPasswordReset(ctx context.Context, email string) error
 	ConfirmPasswordReset(ctx context.Context, token, newPassword string) error
+	ListUsers(ctx context.Context, filter interface{}) ([]interface{}, error)
+	ChangePassword(ctx context.Context, userID, currentPassword, newPassword string) error
+	GetUserOrganizations(ctx context.Context, userID string) ([]interface{}, error)
+	GetUserSessions(ctx context.Context, userID string) ([]interface{}, error)
+	DeleteSession(ctx context.Context, userID, sessionID string) error
 }
 
-type OrganizationService interface{}
+type OrganizationService interface {
+	ListOrganizations(ctx context.Context, userID string) ([]interface{}, error)
+	GetOrganization(ctx context.Context, id string) (interface{}, error)
+	CreateOrganization(ctx context.Context, name, description, userID string) (interface{}, error)
+	UpdateOrganization(ctx context.Context, id string, updates map[string]interface{}) (interface{}, error)
+	DeleteOrganization(ctx context.Context, id string) error
+	GetMembers(ctx context.Context, orgID string) ([]interface{}, error)
+	GetMemberRole(ctx context.Context, orgID, userID string) (string, error)
+	AddMember(ctx context.Context, orgID, userID, role string) error
+	UpdateMemberRole(ctx context.Context, orgID, userID, role string) error
+	RemoveMember(ctx context.Context, orgID, userID string) error
+	CreateInvitation(ctx context.Context, orgID, email, role string) (interface{}, error)
+	ListPendingInvitations(ctx context.Context, orgID string) ([]interface{}, error)
+	AcceptInvitation(ctx context.Context, token string) error
+	RevokeInvitation(ctx context.Context, orgID, invitationID string) error
+}
 
 type EquipmentService interface {
 	CreateEquipment(ctx context.Context, name, eqType, buildingID, roomID string, x, y, z float64) (interface{}, error)
@@ -139,6 +162,7 @@ type AuthService interface {
 	ValidateToken(ctx context.Context, token string) (*interfaces.TokenClaims, error)
 	RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
 	RevokeToken(ctx context.Context, token string) error
+	DeleteSession(ctx context.Context, userID, sessionID string) error
 }
 
 // Helper methods for Server
@@ -152,4 +176,48 @@ func (s *Server) RespondJSON(w http.ResponseWriter, statusCode int, data interfa
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(data)
+}
+
+// GetCurrentUser extracts the current user from the request context
+func (s *Server) GetCurrentUser(r *http.Request) (*domainmodels.User, error) {
+	// This would typically extract user from JWT token or session
+	// For now, return a placeholder implementation
+	userID := r.Header.Get("X-User-ID")
+	if userID == "" {
+		return nil, fmt.Errorf("user not authenticated")
+	}
+
+	// In a real implementation, you would:
+	// 1. Extract token from Authorization header
+	// 2. Validate token with AuthService
+	// 3. Return user information
+	return &domainmodels.User{
+		ID:   userID,
+		Role: "user", // This would come from token claims
+	}, nil
+}
+
+// HasOrgAccess checks if a user has access to an organization
+func (s *Server) HasOrgAccess(ctx context.Context, user *domainmodels.User, orgID string) bool {
+	// This would typically check user's organization membership
+	// For now, return true as a placeholder
+	return true
+}
+
+// ValidateRequest validates request data using a validator
+func (s *Server) ValidateRequest(data interface{}) error {
+	// This would use a validation library like go-playground/validator
+	// For now, return nil as a placeholder
+	return nil
+}
+
+// LogRequest logs the incoming request
+func (s *Server) LogRequest(r *http.Request, statusCode int, duration time.Duration) {
+	// This would use the logger to log request details
+	// For now, it's a placeholder
+}
+
+// GenerateID generates a new unique ID
+func (s *Server) GenerateID() string {
+	return uuid.New().String()
 }

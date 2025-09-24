@@ -7,6 +7,7 @@ import (
 
 	"github.com/arx-os/arxos/internal/api"
 	"github.com/arx-os/arxos/internal/bim"
+	"github.com/arx-os/arxos/internal/interfaces"
 	"github.com/arx-os/arxos/pkg/models"
 )
 
@@ -25,38 +26,33 @@ func NewMockAuthService() *MockAuthService {
 	}
 }
 
-func (m *MockAuthService) Login(ctx context.Context, username, password string) (*api.AuthResponse, error) {
+func (m *MockAuthService) Login(ctx context.Context, email, password string) (interface{}, error) {
 	// Simple mock implementation
-	if username == "testuser" && password == "TestPass123!" {
-		return &api.AuthResponse{
-			AccessToken:  "test-token",
-			RefreshToken: "test-refresh-token",
-			TokenType:    "Bearer",
-			ExpiresIn:    3600,
+	if email == "test@example.com" && password == "TestPass123!" {
+		return map[string]interface{}{
+			"access_token":  "test-token",
+			"refresh_token": "test-refresh-token",
+			"token_type":    "Bearer",
+			"expires_in":    3600,
 		}, nil
 	}
 	return nil, errors.New("invalid credentials")
 }
 
-func (m *MockAuthService) Register(ctx context.Context, email, password, name string) (*api.User, error) {
+func (m *MockAuthService) Register(ctx context.Context, email, password, name string) (interface{}, error) {
 	// Simple mock implementation
-	return &api.User{
-		ID:    "new-user-id",
-		Email: email,
-		Name:  name,
+	return map[string]interface{}{
+		"id":    "new-user-id",
+		"email": email,
+		"name":  name,
 	}, nil
 }
 
-func (m *MockAuthService) RefreshToken(ctx context.Context, refreshToken string) (*api.AuthResponse, error) {
+func (m *MockAuthService) RefreshToken(ctx context.Context, refreshToken string) (string, string, error) {
 	if refreshToken == "test-refresh-token" {
-		return &api.AuthResponse{
-			AccessToken:  "new-test-token",
-			RefreshToken: "new-refresh-token",
-			TokenType:    "Bearer",
-			ExpiresIn:    3600,
-		}, nil
+		return "new-test-token", "new-refresh-token", nil
 	}
-	return nil, errors.New("invalid refresh token")
+	return "", "", errors.New("invalid refresh token")
 }
 
 func (m *MockAuthService) Logout(ctx context.Context, token string) error {
@@ -64,16 +60,24 @@ func (m *MockAuthService) Logout(ctx context.Context, token string) error {
 	return nil
 }
 
-func (m *MockAuthService) ValidateToken(ctx context.Context, token string) (string, error) {
+func (m *MockAuthService) ValidateToken(ctx context.Context, token string) (*interfaces.TokenClaims, error) {
 	if !m.EnableAuth {
 		// Auth disabled, return default user ID
-		return "test-user", nil
+		return &interfaces.TokenClaims{
+			UserID: "test-user",
+			Email:  "test@example.com",
+			Role:   "user",
+		}, nil
 	}
 
 	if token == "test-token" || token == "new-test-token" {
-		return "test-user", nil
+		return &interfaces.TokenClaims{
+			UserID: "test-user",
+			Email:  "test@example.com",
+			Role:   "user",
+		}, nil
 	}
-	return "", errors.New("invalid token")
+	return nil, errors.New("invalid token")
 }
 
 func (m *MockAuthService) ChangePassword(ctx context.Context, userID, oldPassword, newPassword string) error {
@@ -93,6 +97,16 @@ func (m *MockAuthService) ResetPassword(ctx context.Context, email string) error
 
 func (m *MockAuthService) RevokeToken(ctx context.Context, token string) error {
 	delete(m.Sessions, token)
+	return nil
+}
+
+func (m *MockAuthService) GenerateToken(ctx context.Context, userID, email, role, orgID string) (string, error) {
+	// Mock implementation for testing
+	return "mock-token", nil
+}
+
+func (m *MockAuthService) DeleteSession(ctx context.Context, userID, sessionID string) error {
+	delete(m.Sessions, sessionID)
 	return nil
 }
 
@@ -116,21 +130,36 @@ func NewMockBuildingService() *MockBuildingService {
 	}
 }
 
-func (m *MockBuildingService) CreateBuilding(ctx context.Context, building *models.FloorPlan) error {
-	m.Buildings[building.ID] = building
-	return nil
+func (m *MockBuildingService) CreateBuilding(ctx context.Context, name string) (interface{}, error) {
+	// Create a mock building response
+	building := map[string]interface{}{
+		"id":   "mock-building-id",
+		"name": name,
+	}
+	return building, nil
 }
 
-func (m *MockBuildingService) GetBuilding(ctx context.Context, id string) (*models.FloorPlan, error) {
+func (m *MockBuildingService) GetBuilding(ctx context.Context, id string) (interface{}, error) {
 	if b, ok := m.Buildings[id]; ok {
 		return b, nil
 	}
 	return nil, errors.New("building not found")
 }
 
-func (m *MockBuildingService) UpdateBuilding(ctx context.Context, building *models.FloorPlan) error {
-	m.Buildings[building.ID] = building
-	return nil
+func (m *MockBuildingService) GetBuildings(ctx context.Context) ([]interface{}, error) {
+	var buildings []interface{}
+	for _, b := range m.Buildings {
+		buildings = append(buildings, b)
+	}
+	return buildings, nil
+}
+
+func (m *MockBuildingService) UpdateBuilding(ctx context.Context, id, name string) (interface{}, error) {
+	// Mock implementation for testing
+	return map[string]interface{}{
+		"id":   id,
+		"name": name,
+	}, nil
 }
 
 func (m *MockBuildingService) DeleteBuilding(ctx context.Context, id string) error {
@@ -153,8 +182,8 @@ func (m *MockBuildingService) DeleteEquipment(ctx context.Context, id string) er
 	return nil
 }
 
-func (m *MockBuildingService) ListBuildings(ctx context.Context, userID string, limit, offset int) ([]*models.FloorPlan, error) {
-	var buildings []*models.FloorPlan
+func (m *MockBuildingService) ListBuildings(ctx context.Context, orgID string, page, limit int) ([]interface{}, error) {
+	var buildings []interface{}
 	for _, b := range m.Buildings {
 		buildings = append(buildings, b)
 	}
@@ -184,14 +213,14 @@ func (m *MockBuildingService) GetRoom(ctx context.Context, id string) (*models.R
 	return nil, nil
 }
 
-func (m *MockBuildingService) ListEquipment(ctx context.Context, buildingID string, filters map[string]interface{}) ([]*models.Equipment, error) {
+func (m *MockBuildingService) ListEquipment(ctx context.Context, buildingID string, filters map[string]interface{}) ([]interface{}, error) {
 	// Mock implementation for testing
-	return []*models.Equipment{}, nil
+	return []interface{}{}, nil
 }
 
-func (m *MockBuildingService) ListRooms(ctx context.Context, buildingID string) ([]*models.Room, error) {
+func (m *MockBuildingService) ListRooms(ctx context.Context, buildingID string) ([]interface{}, error) {
 	// Mock implementation for testing
-	return []*models.Room{}, nil
+	return []interface{}{}, nil
 }
 
 func (m *MockBuildingService) UpdateEquipment(ctx context.Context, equipment *models.Equipment) error {
@@ -200,6 +229,30 @@ func (m *MockBuildingService) UpdateEquipment(ctx context.Context, equipment *mo
 }
 
 func (m *MockBuildingService) UpdateRoom(ctx context.Context, room *models.Room) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockBuildingService) GetConnectionGraph(ctx context.Context, buildingID string) (interface{}, error) {
+	// Mock implementation for testing
+	return map[string]interface{}{
+		"building_id": buildingID,
+		"connections": []interface{}{},
+	}, nil
+}
+
+func (m *MockBuildingService) CreateConnection(ctx context.Context, fromID, toID, connType string) (interface{}, error) {
+	// Mock implementation for testing
+	return map[string]interface{}{
+		"id":         "mock-connection-id",
+		"from_id":    fromID,
+		"to_id":      toID,
+		"type":       connType,
+		"created_at": "2023-01-01T00:00:00Z",
+	}, nil
+}
+
+func (m *MockBuildingService) DeleteConnection(ctx context.Context, connectionID string) error {
 	// Mock implementation for testing
 	return nil
 }
@@ -215,36 +268,35 @@ func NewMockUserService() *MockUserService {
 	}
 }
 
-func (m *MockUserService) CreateUser(ctx context.Context, req api.CreateUserRequest) (*api.User, error) {
+func (m *MockUserService) CreateUser(ctx context.Context, email, password, name string) (interface{}, error) {
 	user := &api.User{
-		ID:    "user-" + req.Email,
-		Email: req.Email,
-		Name:  req.Name,
-		Role:  req.Role,
-		OrgID: req.OrgID,
+		ID:    "user-" + email,
+		Email: email,
+		Name:  name,
+		Role:  "user",
 	}
 	m.Users[user.ID] = user
 	return user, nil
 }
 
-func (m *MockUserService) GetUser(ctx context.Context, id string) (*api.User, error) {
+func (m *MockUserService) GetUser(ctx context.Context, id string) (interface{}, error) {
 	if u, ok := m.Users[id]; ok {
 		return u, nil
 	}
 	return nil, errors.New("user not found")
 }
 
-func (m *MockUserService) UpdateUser(ctx context.Context, userID string, updates api.UserUpdate) (*api.User, error) {
-	if u, ok := m.Users[userID]; ok {
+func (m *MockUserService) UpdateUser(ctx context.Context, id string, updates map[string]interface{}) (interface{}, error) {
+	if u, ok := m.Users[id]; ok {
 		// Apply updates
-		if updates.Name != nil {
-			u.Name = *updates.Name
+		if name, ok := updates["name"].(string); ok {
+			u.Name = name
 		}
-		if updates.Email != nil {
-			u.Email = *updates.Email
+		if email, ok := updates["email"].(string); ok {
+			u.Email = email
 		}
-		if updates.Role != nil {
-			u.Role = *updates.Role
+		if role, ok := updates["role"].(string); ok {
+			u.Role = role
 		}
 		return u, nil
 	}
@@ -256,15 +308,15 @@ func (m *MockUserService) DeleteUser(ctx context.Context, id string) error {
 	return nil
 }
 
-func (m *MockUserService) ListUsers(ctx context.Context, filter api.UserFilter) ([]*api.User, error) {
-	var users []*api.User
+func (m *MockUserService) ListUsers(ctx context.Context, filter interface{}) ([]interface{}, error) {
+	var users []interface{}
 	for _, u := range m.Users {
 		users = append(users, u)
 	}
 	return users, nil
 }
 
-func (m *MockUserService) GetUserByEmail(ctx context.Context, email string) (*api.User, error) {
+func (m *MockUserService) GetUserByEmail(ctx context.Context, email string) (interface{}, error) {
 	for _, u := range m.Users {
 		if u.Email == email {
 			return u, nil
@@ -302,6 +354,21 @@ func (m *MockUserService) RequestPasswordReset(ctx context.Context, email string
 	return nil
 }
 
+func (m *MockUserService) DeleteSession(ctx context.Context, userID, sessionID string) error {
+	// Mock implementation for testing
+	return nil
+}
+
+func (m *MockUserService) GetUserOrganizations(ctx context.Context, userID string) ([]interface{}, error) {
+	// Mock implementation for testing
+	return []interface{}{}, nil
+}
+
+func (m *MockUserService) GetUserSessions(ctx context.Context, userID string) ([]interface{}, error) {
+	// Mock implementation for testing
+	return []interface{}{}, nil
+}
+
 // MockOrganizationService is a mock implementation of OrganizationService
 type MockOrganizationService struct {
 	Organizations map[string]*models.Organization
@@ -313,12 +380,18 @@ func NewMockOrganizationService() *MockOrganizationService {
 	}
 }
 
-func (m *MockOrganizationService) CreateOrganization(ctx context.Context, org *models.Organization, ownerID string) error {
-	m.Organizations[org.ID] = org
-	return nil
+func (m *MockOrganizationService) CreateOrganization(ctx context.Context, name, description, userID string) (interface{}, error) {
+	// Mock implementation for testing
+	org := map[string]interface{}{
+		"id":          "mock-org-id",
+		"name":        name,
+		"description": description,
+		"owner_id":    userID,
+	}
+	return org, nil
 }
 
-func (m *MockOrganizationService) GetOrganization(ctx context.Context, id string) (*models.Organization, error) {
+func (m *MockOrganizationService) GetOrganization(ctx context.Context, id string) (interface{}, error) {
 	if o, ok := m.Organizations[id]; ok {
 		return o, nil
 	}
@@ -330,9 +403,12 @@ func (m *MockOrganizationService) GetOrganizationBySlug(ctx context.Context, slu
 	return nil, errors.New("organization not found")
 }
 
-func (m *MockOrganizationService) UpdateOrganization(ctx context.Context, org *models.Organization) error {
-	m.Organizations[org.ID] = org
-	return nil
+func (m *MockOrganizationService) UpdateOrganization(ctx context.Context, id string, updates map[string]interface{}) (interface{}, error) {
+	// Mock implementation for testing
+	return map[string]interface{}{
+		"id":   id,
+		"name": updates["name"],
+	}, nil
 }
 
 func (m *MockOrganizationService) DeleteOrganization(ctx context.Context, id string) error {
@@ -340,15 +416,15 @@ func (m *MockOrganizationService) DeleteOrganization(ctx context.Context, id str
 	return nil
 }
 
-func (m *MockOrganizationService) ListOrganizations(ctx context.Context, userID string) ([]*models.Organization, error) {
-	var orgs []*models.Organization
+func (m *MockOrganizationService) ListOrganizations(ctx context.Context, userID string) ([]interface{}, error) {
+	var orgs []interface{}
 	for _, o := range m.Organizations {
 		orgs = append(orgs, o)
 	}
 	return orgs, nil
 }
 
-func (m *MockOrganizationService) AddMember(ctx context.Context, orgID, userID string, role models.Role) error {
+func (m *MockOrganizationService) AddMember(ctx context.Context, orgID, userID, role string) error {
 	return nil
 }
 
@@ -356,31 +432,30 @@ func (m *MockOrganizationService) RemoveMember(ctx context.Context, orgID, userI
 	return nil
 }
 
-func (m *MockOrganizationService) UpdateMemberRole(ctx context.Context, orgID, userID string, role models.Role) error {
+func (m *MockOrganizationService) UpdateMemberRole(ctx context.Context, orgID, userID, role string) error {
 	return nil
 }
 
-func (m *MockOrganizationService) GetMembers(ctx context.Context, orgID string) ([]*models.OrganizationMember, error) {
-	return []*models.OrganizationMember{}, nil
+func (m *MockOrganizationService) GetMembers(ctx context.Context, orgID string) ([]interface{}, error) {
+	return []interface{}{}, nil
 }
 
-func (m *MockOrganizationService) GetMemberRole(ctx context.Context, orgID, userID string) (*models.Role, error) {
+func (m *MockOrganizationService) GetMemberRole(ctx context.Context, orgID, userID string) (string, error) {
 	// Mock implementation for testing
-	role := models.Role("member")
-	return &role, nil
+	return "member", nil
 }
 
-func (m *MockOrganizationService) AcceptInvitation(ctx context.Context, token string, userID string) error {
+func (m *MockOrganizationService) AcceptInvitation(ctx context.Context, token string) error {
 	// Mock implementation for testing
 	return nil
 }
 
-func (m *MockOrganizationService) ListPendingInvitations(ctx context.Context, orgID string) ([]*models.OrganizationInvitation, error) {
+func (m *MockOrganizationService) ListPendingInvitations(ctx context.Context, orgID string) ([]interface{}, error) {
 	// Mock implementation for testing
-	return []*models.OrganizationInvitation{}, nil
+	return []interface{}{}, nil
 }
 
-func (m *MockOrganizationService) RevokeInvitation(ctx context.Context, invitationID string) error {
+func (m *MockOrganizationService) RevokeInvitation(ctx context.Context, orgID, invitationID string) error {
 	// Mock implementation for testing
 	return nil
 }
@@ -400,17 +475,16 @@ func (m *MockOrganizationService) HasPermission(ctx context.Context, orgID, user
 	return true, nil
 }
 
-func (m *MockOrganizationService) CreateInvitation(ctx context.Context, orgID, email string, role models.Role, invitedBy string) (*models.OrganizationInvitation, error) {
+func (m *MockOrganizationService) CreateInvitation(ctx context.Context, orgID, email, role string) (interface{}, error) {
 	// Mock implementation for testing
-	return &models.OrganizationInvitation{
-		ID:             "test-invitation",
-		OrganizationID: orgID,
-		Email:          email,
-		Role:           string(role),
-		Token:          "test-token",
-		InvitedBy:      invitedBy,
-		ExpiresAt:      time.Now().Add(24 * time.Hour),
-		CreatedAt:      time.Now(),
+	return map[string]interface{}{
+		"id":              "test-invitation",
+		"organization_id": orgID,
+		"email":           email,
+		"role":            role,
+		"token":           "test-token",
+		"expires_at":      time.Now().Add(24 * time.Hour),
+		"created_at":      time.Now(),
 	}, nil
 }
 

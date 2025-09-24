@@ -13,6 +13,7 @@ import (
 	"github.com/arx-os/arxos/internal/api"
 	apimodels "github.com/arx-os/arxos/internal/api/models"
 	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/internal/interfaces"
 	"github.com/arx-os/arxos/pkg/models"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -371,11 +372,11 @@ func (t *TestDBServer) UpdateUser(ctx context.Context, user *models.User) error 
 // MockAuthServiceServer is a mock implementation of api.AuthService for server tests
 type MockAuthServiceServer struct{}
 
-func (m *MockAuthServiceServer) Login(ctx context.Context, email, password string) (*apimodels.AuthResponse, error) {
-	return &apimodels.AuthResponse{
-		AccessToken: "test-token",
-		TokenType:   "Bearer",
-		ExpiresIn:   3600,
+func (m *MockAuthServiceServer) Login(ctx context.Context, email, password string) (interface{}, error) {
+	return map[string]interface{}{
+		"access_token": "test-token",
+		"token_type":   "Bearer",
+		"expires_in":   3600,
 	}, nil
 }
 
@@ -383,16 +384,16 @@ func (m *MockAuthServiceServer) Logout(ctx context.Context, token string) error 
 	return nil
 }
 
-func (m *MockAuthServiceServer) RefreshToken(ctx context.Context, refreshToken string) (*apimodels.AuthResponse, error) {
-	return &apimodels.AuthResponse{
-		AccessToken: "new-test-token",
-		TokenType:   "Bearer",
-		ExpiresIn:   3600,
-	}, nil
+func (m *MockAuthServiceServer) RefreshToken(ctx context.Context, refreshToken string) (string, string, error) {
+	return "new-test-token", "new-refresh-token", nil
 }
 
-func (m *MockAuthServiceServer) ValidateToken(ctx context.Context, token string) (string, error) {
-	return "test-user", nil
+func (m *MockAuthServiceServer) ValidateToken(ctx context.Context, token string) (*interfaces.TokenClaims, error) {
+	return &interfaces.TokenClaims{
+		UserID: "test-user",
+		Email:  "test@example.com",
+		Role:   "user",
+	}, nil
 }
 
 func (m *MockAuthServiceServer) ChangePassword(ctx context.Context, userID, oldPassword, newPassword string) error {
@@ -407,12 +408,12 @@ func (m *MockAuthServiceServer) ResetPassword(ctx context.Context, email string)
 	return nil
 }
 
-func (m *MockAuthServiceServer) Register(ctx context.Context, email, password, fullName string) (*apimodels.User, error) {
-	return &apimodels.User{
-		ID:     "test-user",
-		Email:  email,
-		Name:   fullName,
-		Active: true,
+func (m *MockAuthServiceServer) Register(ctx context.Context, email, password, fullName string) (interface{}, error) {
+	return map[string]interface{}{
+		"id":     "test-user",
+		"email":  email,
+		"name":   fullName,
+		"active": true,
 	}, nil
 }
 
@@ -428,27 +429,41 @@ func (m *MockAuthServiceServer) ValidateTokenClaims(ctx context.Context, token s
 	}, nil
 }
 
+func (m *MockAuthServiceServer) GenerateToken(ctx context.Context, userID, email, role, orgID string) (string, error) {
+	return "test-token", nil
+}
+
+func (m *MockAuthServiceServer) DeleteSession(ctx context.Context, userID, sessionID string) error {
+	return nil
+}
+
 // MockBuildingServiceServer is a mock implementation of api.BuildingService for server tests
 type MockBuildingServiceServer struct{}
 
-func (m *MockBuildingServiceServer) GetBuilding(ctx context.Context, id string) (*models.FloorPlan, error) {
-	return &models.FloorPlan{
-		ID:    id,
-		Name:  "Test Building",
-		Level: 1,
+func (m *MockBuildingServiceServer) GetBuilding(ctx context.Context, id string) (interface{}, error) {
+	return map[string]interface{}{
+		"id":    id,
+		"name":  "Test Building",
+		"level": 1,
 	}, nil
 }
 
-func (m *MockBuildingServiceServer) ListBuildings(ctx context.Context, userID string, limit, offset int) ([]*models.FloorPlan, error) {
-	return []*models.FloorPlan{}, nil
+func (m *MockBuildingServiceServer) ListBuildings(ctx context.Context, orgID string, page, limit int) ([]interface{}, error) {
+	return []interface{}{}, nil
 }
 
-func (m *MockBuildingServiceServer) CreateBuilding(ctx context.Context, building *models.FloorPlan) error {
-	return nil
+func (m *MockBuildingServiceServer) CreateBuilding(ctx context.Context, name string) (interface{}, error) {
+	return map[string]interface{}{
+		"id":   "mock-building-id",
+		"name": name,
+	}, nil
 }
 
-func (m *MockBuildingServiceServer) UpdateBuilding(ctx context.Context, building *models.FloorPlan) error {
-	return nil
+func (m *MockBuildingServiceServer) UpdateBuilding(ctx context.Context, id, name string) (interface{}, error) {
+	return map[string]interface{}{
+		"id":   id,
+		"name": name,
+	}, nil
 }
 
 func (m *MockBuildingServiceServer) DeleteBuilding(ctx context.Context, id string) error {
@@ -463,8 +478,8 @@ func (m *MockBuildingServiceServer) GetEquipment(ctx context.Context, id string)
 	}, nil
 }
 
-func (m *MockBuildingServiceServer) ListEquipment(ctx context.Context, buildingID string, filters map[string]interface{}) ([]*models.Equipment, error) {
-	return []*models.Equipment{}, nil
+func (m *MockBuildingServiceServer) ListEquipment(ctx context.Context, buildingID string, filters map[string]interface{}) ([]interface{}, error) {
+	return []interface{}{}, nil
 }
 
 func (m *MockBuildingServiceServer) CreateEquipment(ctx context.Context, equipment *models.Equipment) error {
@@ -486,8 +501,8 @@ func (m *MockBuildingServiceServer) GetRoom(ctx context.Context, id string) (*mo
 	}, nil
 }
 
-func (m *MockBuildingServiceServer) ListRooms(ctx context.Context, buildingID string) ([]*models.Room, error) {
-	return []*models.Room{}, nil
+func (m *MockBuildingServiceServer) ListRooms(ctx context.Context, buildingID string) ([]interface{}, error) {
+	return []interface{}{}, nil
 }
 
 func (m *MockBuildingServiceServer) CreateRoom(ctx context.Context, room *models.Room) error {
@@ -499,6 +514,32 @@ func (m *MockBuildingServiceServer) UpdateRoom(ctx context.Context, room *models
 }
 
 func (m *MockBuildingServiceServer) DeleteRoom(ctx context.Context, id string) error {
+	return nil
+}
+
+// Additional methods required by the interface
+func (m *MockBuildingServiceServer) GetBuildings(ctx context.Context) ([]interface{}, error) {
+	return []interface{}{}, nil
+}
+
+func (m *MockBuildingServiceServer) GetConnectionGraph(ctx context.Context, buildingID string) (interface{}, error) {
+	return map[string]interface{}{
+		"building_id": buildingID,
+		"connections": []interface{}{},
+	}, nil
+}
+
+func (m *MockBuildingServiceServer) CreateConnection(ctx context.Context, fromID, toID, connType string) (interface{}, error) {
+	return map[string]interface{}{
+		"id":         "mock-connection-id",
+		"from_id":    fromID,
+		"to_id":      toID,
+		"type":       connType,
+		"created_at": "2023-01-01T00:00:00Z",
+	}, nil
+}
+
+func (m *MockBuildingServiceServer) DeleteConnection(ctx context.Context, connectionID string) error {
 	return nil
 }
 

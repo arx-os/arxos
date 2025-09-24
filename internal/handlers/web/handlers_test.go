@@ -13,9 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/arx-os/arxos/internal/api/types"
 	apimodels "github.com/arx-os/arxos/internal/api/models"
-	"github.com/arx-os/arxos/internal/api/services"
+	"github.com/arx-os/arxos/internal/api/types"
 	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/pkg/models"
 	syncpkg "github.com/arx-os/arxos/pkg/sync"
@@ -547,6 +546,67 @@ func (m *MockAuthService) ValidateTokenClaims(ctx context.Context, token string)
 	}, nil
 }
 
+// Additional methods to implement types.UserService interface
+func (m *MockAuthService) GetUser(ctx context.Context, id string) (interface{}, error) {
+	return map[string]interface{}{
+		"id":    id,
+		"email": "test@example.com",
+		"name":  "Test User",
+	}, nil
+}
+
+func (m *MockAuthService) CreateUser(ctx context.Context, email, password, name string) (interface{}, error) {
+	return map[string]interface{}{
+		"id":    "test-user",
+		"email": email,
+		"name":  name,
+	}, nil
+}
+
+func (m *MockAuthService) UpdateUser(ctx context.Context, id string, updates map[string]interface{}) (interface{}, error) {
+	return map[string]interface{}{
+		"id":    id,
+		"email": "test@example.com",
+		"name":  "Updated User",
+	}, nil
+}
+
+func (m *MockAuthService) ListUsers(ctx context.Context, filter interface{}) ([]interface{}, error) {
+	return []interface{}{}, nil
+}
+
+func (m *MockAuthService) GetUserByEmail(ctx context.Context, email string) (interface{}, error) {
+	return map[string]interface{}{
+		"id":    "test-user",
+		"email": email,
+		"name":  "Test User",
+	}, nil
+}
+
+func (m *MockAuthService) GetUserOrganizations(ctx context.Context, userID string) ([]interface{}, error) {
+	return []interface{}{}, nil
+}
+
+func (m *MockAuthService) GetUserSessions(ctx context.Context, userID string) ([]interface{}, error) {
+	return []interface{}{}, nil
+}
+
+func (m *MockAuthService) DeleteSession(ctx context.Context, userID, sessionID string) error {
+	return nil
+}
+
+func (m *MockAuthService) GenerateToken(ctx context.Context, userID, email, role, orgID string) (string, error) {
+	return "test-token", nil
+}
+
+func (m *MockAuthService) DeleteUser(ctx context.Context, userID string) error {
+	return nil
+}
+
+func (m *MockAuthService) RequestPasswordReset(ctx context.Context, email string) error {
+	return nil
+}
+
 func (m *MockDB) UpdateUserLoginInfo(ctx context.Context, userID string, success bool) error {
 	return nil
 }
@@ -584,7 +644,7 @@ func setupTestHandler() (*Handler, *MockDB) {
 
 	services := &types.Services{
 		DB:   mockDB,
-		User: services.NewUserService(mockAuthService2),
+		User: mockAuthService2, // Use the mock directly since it implements the interface
 	}
 
 	// Create handler

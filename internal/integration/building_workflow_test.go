@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/arx-os/arxos/internal/api"
+	"github.com/arx-os/arxos/internal/api/types"
 	"github.com/arx-os/arxos/internal/handlers/web"
 	"github.com/arx-os/arxos/pkg/models"
 )
@@ -24,7 +25,11 @@ func TestBuildingWorkflow(t *testing.T) {
 	services, cleanup := setupTestServices(t)
 	defer cleanup()
 
-	handler, err := web.NewHandler(services)
+	typesServices := &types.Services{
+		DB:   services.DB,
+		User: services.User,
+	}
+	handler, err := web.NewHandler(typesServices)
 	require.NoError(t, err)
 
 	router := web.NewAuthenticatedRouter(handler)
@@ -156,7 +161,11 @@ func TestIFCImportExportWorkflow(t *testing.T) {
 	services, cleanup := setupTestServices(t)
 	defer cleanup()
 
-	handler, err := web.NewHandler(services)
+	typesServices := &types.Services{
+		DB:   services.DB,
+		User: services.User,
+	}
+	handler, err := web.NewHandler(typesServices)
 	require.NoError(t, err)
 
 	router := web.NewAuthenticatedRouter(handler)
@@ -228,7 +237,7 @@ END-ISO-10303-21;`
 			Name:  "Export Test Building",
 			Level: 1,
 		}
-		err := services.Building.CreateBuilding(ctx, building)
+		_, err := services.Building.CreateBuilding(ctx, building.Name)
 		require.NoError(t, err)
 
 		// Export to BIM format
@@ -262,7 +271,11 @@ func TestEquipmentWorkflow(t *testing.T) {
 	services, cleanup := setupTestServices(t)
 	defer cleanup()
 
-	handler, err := web.NewHandler(services)
+	typesServices := &types.Services{
+		DB:   services.DB,
+		User: services.User,
+	}
+	handler, err := web.NewHandler(typesServices)
 	require.NoError(t, err)
 
 	router := web.NewAuthenticatedRouter(handler)
@@ -277,7 +290,7 @@ func TestEquipmentWorkflow(t *testing.T) {
 		Name:  "Equipment Test Building",
 		Level: 1,
 	}
-	err = services.Building.CreateBuilding(ctx, building)
+	_, err = services.Building.CreateBuilding(ctx, building.Name)
 	require.NoError(t, err)
 
 	var equipmentID string
@@ -358,7 +371,7 @@ func TestEquipmentWorkflow(t *testing.T) {
 			Status: "operational",
 		}
 
-		err = services.Equipment.CreateEquipment(ctx, equipment2)
+		_, err = services.Equipment.CreateEquipment(ctx, equipment2.Name, equipment2.Type, equipment2.Path, "", 0, 0, 0)
 		require.NoError(t, err)
 
 		// Create connection between equipment

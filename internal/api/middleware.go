@@ -163,7 +163,7 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		claims, err := s.services.Auth.ValidateTokenClaims(r.Context(), token)
+		claims, err := s.services.Auth.ValidateToken(r.Context(), token)
 		if err != nil {
 			s.respondError(w, http.StatusUnauthorized, "Invalid or expired token")
 			return

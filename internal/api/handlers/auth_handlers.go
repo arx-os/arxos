@@ -3,164 +3,244 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
+	"time"
 
+	"github.com/arx-os/arxos/internal/api/models"
 	"github.com/arx-os/arxos/internal/api/types"
-	"github.com/arx-os/arxos/internal/common/logger"
+	domainmodels "github.com/arx-os/arxos/pkg/models"
 )
 
-// HandleLogin handles user login
-func HandleLogin(s *types.Server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		s.RespondError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
+// AuthHandler handles authentication-related HTTP requests
+type AuthHandler struct {
+	server *types.Server
+}
 
-	var req struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+// NewAuthHandler creates a new auth handler
+func NewAuthHandler(server *types.Server) *AuthHandler {
+	return &AuthHandler{
+		server: server,
 	}
+}
 
+// HandleLogin handles POST /api/v1/auth/login
+func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.server.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
+
+	// Parse request
+	var req domainmodels.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		s.RespondError(w, http.StatusBadRequest, "Invalid request body")
+		h.server.RespondError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
-	if s.Services.Auth == nil {
-		s.RespondError(w, http.StatusNotImplemented, "Authentication service not configured")
+	// Validate request
+	if err := h.server.ValidateRequest(req); err != nil {
+		h.server.RespondError(w, http.StatusBadRequest, "Validation failed")
 		return
 	}
 
-	response, err := s.Services.Auth.Login(r.Context(), req.Email, req.Password)
+	// Authenticate user
+	authResult, err := h.server.Services.Auth.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
-		s.RespondError(w, http.StatusUnauthorized, "Invalid credentials")
+		h.server.RespondError(w, http.StatusUnauthorized, "Invalid credentials")
 		return
+	}
+
+	// Convert to response format
+	if user, ok := authResult.(*domainmodels.User); ok {
+		// Generate tokens
+		accessToken, err := h.server.Services.Auth.GenerateToken(r.Context(), user.ID, user.Email, string(user.Role), "")
+		if err != nil {
+			h.server.RespondError(w, http.StatusInternalServerError, "Failed to generate access token")
+			return
 		}
 
-		s.RespondJSON(w, http.StatusOK, response)
+		refreshToken, err := h.server.Services.Auth.GenerateToken(r.Context(), user.ID, user.Email, string(user.Role), "")
+		if err != nil {
+			h.server.RespondError(w, http.StatusInternalServerError, "Failed to generate refresh token")
+			return
+		}
+
+		// Convert domain user to API user
+		apiUser := &models.User{
+			ID:        user.ID,
+			Email:     user.Email,
+			Name:      user.FullName,
+			Role:      user.Role,
+			Active:    user.IsActive,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
+		}
+
+		response := models.AuthResponse{
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+			ExpiresIn:    3600, // 1 hour
+			TokenType:    "Bearer",
+			User:         apiUser,
+		}
+
+		h.server.RespondJSON(w, http.StatusOK, response)
+	} else {
+		h.server.RespondError(w, http.StatusInternalServerError, "Invalid user data")
 	}
 }
 
-// HandleLogout handles user logout
-func HandleLogout(s *types.Server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		s.RespondError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
+// HandleLogout handles POST /api/v1/auth/logout
+func (h *AuthHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.server.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
 
-	// Extract token from Authorization header
+	// Get token from Authorization header
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
-		s.RespondError(w, http.StatusUnauthorized, "Authorization header required")
+		h.server.RespondError(w, http.StatusBadRequest, "Authorization header required")
 		return
 	}
 
-	// Parse Bearer token
-	parts := strings.SplitN(authHeader, " ", 2)
-	if len(parts) != 2 || parts[0] != "Bearer" {
-		s.RespondError(w, http.StatusUnauthorized, "Invalid authorization header format")
+	// Extract token (assuming "Bearer <token>" format)
+	token := authHeader
+	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+		token = authHeader[7:]
+	}
+
+	// Logout user
+	if err := h.server.Services.Auth.Logout(r.Context(), token); err != nil {
+		h.server.RespondError(w, http.StatusInternalServerError, "Failed to logout")
 		return
 	}
 
-	token := parts[1]
-	if token == "" {
-		s.RespondError(w, http.StatusUnauthorized, "Token required")
-		return
-	}
-
-	if s.Services.Auth == nil {
-		s.RespondError(w, http.StatusNotImplemented, "Authentication service not configured")
-		return
-	}
-
-	// Revoke the token (delete session)
-	if err := s.Services.Auth.RevokeToken(r.Context(), token); err != nil {
-		logger.Error("Failed to revoke token: %v", err)
-		// Don't expose internal errors, just return success
-		// Token might already be invalid
-	}
-
-		s.RespondJSON(w, http.StatusOK, map[string]interface{}{
-			"success": true,
-			"message": "Logged out successfully",
-		})
-	}
+	h.server.RespondJSON(w, http.StatusOK, map[string]string{"message": "Logged out successfully"})
 }
 
-// HandleRefresh handles token refresh
-func HandleRefresh(s *types.Server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		s.RespondError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
+// HandleRefresh handles POST /api/v1/auth/refresh
+func (h *AuthHandler) HandleRefresh(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.server.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
 
-	var req struct {
-		RefreshToken string `json:"refresh_token"`
-	}
-
+	// Parse request
+	var req domainmodels.TokenRefreshRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		s.RespondError(w, http.StatusBadRequest, "Invalid request body")
+		h.server.RespondError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
-	if req.RefreshToken == "" {
-		s.RespondError(w, http.StatusBadRequest, "Refresh token is required")
-		return
-	}
-
-	if s.Services.Auth == nil {
-		s.RespondError(w, http.StatusNotImplemented, "Authentication service not configured")
-		return
-	}
-
-	// Refresh the token
-	accessToken, refreshToken, err := s.Services.Auth.RefreshToken(r.Context(), req.RefreshToken)
+	// Refresh token
+	accessToken, refreshToken, err := h.server.Services.Auth.RefreshToken(r.Context(), req.RefreshToken)
 	if err != nil {
-		logger.Error("Token refresh failed: %v", err)
-		s.RespondError(w, http.StatusUnauthorized, "Invalid or expired refresh token")
+		h.server.RespondError(w, http.StatusUnauthorized, "Failed to refresh token")
 		return
 	}
 
-		s.RespondJSON(w, http.StatusOK, map[string]interface{}{
-			"access_token":  accessToken,
-			"refresh_token": refreshToken,
-		})
+	// For now, return a simple response without user data
+	// In a real implementation, you would extract user info from the token
+	response := models.AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpiresIn:    3600, // 1 hour
+		TokenType:    "Bearer",
+		User:         nil, // User data would be extracted from token
 	}
+
+	h.server.RespondJSON(w, http.StatusOK, response)
 }
 
-// HandleRegister handles user registration
-func HandleRegister(s *types.Server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		s.RespondError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
+// HandleRegister handles POST /api/v1/auth/register
+func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.server.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
 
-	var req struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-		Name     string `json:"name"`
-	}
-
+	// Parse request
+	var req domainmodels.UserCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		s.RespondError(w, http.StatusBadRequest, "Invalid request body")
+		h.server.RespondError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
-	if s.Services.Auth == nil {
-		s.RespondError(w, http.StatusNotImplemented, "Authentication service not configured")
+	// Validate request
+	if err := h.server.ValidateRequest(req); err != nil {
+		h.server.RespondError(w, http.StatusBadRequest, "Validation failed")
 		return
 	}
 
-	user, err := s.Services.Auth.Register(r.Context(), req.Email, req.Password, req.Name)
+	// Register user
+	user, err := h.server.Services.Auth.Register(r.Context(), req.Email, req.Password, req.Username)
 	if err != nil {
-		s.RespondError(w, http.StatusBadRequest, "Registration failed")
+		h.server.RespondError(w, http.StatusInternalServerError, "Failed to register user")
 		return
 	}
 
-		s.RespondJSON(w, http.StatusCreated, user)
+	// Convert interface{} to domain user
+	domainUser, ok := user.(*domainmodels.User)
+	if !ok {
+		h.server.RespondError(w, http.StatusInternalServerError, "Invalid user data")
+		return
 	}
+
+	// Generate tokens
+	accessToken, err := h.server.Services.Auth.GenerateToken(r.Context(), domainUser.ID, domainUser.Email, string(domainUser.Role), "")
+	if err != nil {
+		h.server.RespondError(w, http.StatusInternalServerError, "Failed to generate access token")
+		return
+	}
+
+	refreshToken, err := h.server.Services.Auth.GenerateToken(r.Context(), domainUser.ID, domainUser.Email, string(domainUser.Role), "")
+	if err != nil {
+		h.server.RespondError(w, http.StatusInternalServerError, "Failed to generate refresh token")
+		return
+	}
+
+	// Convert domain user to API user
+	apiUser := &models.User{
+		ID:        domainUser.ID,
+		Email:     domainUser.Email,
+		Name:      domainUser.FullName,
+		Role:      domainUser.Role,
+		Active:    domainUser.IsActive,
+		CreatedAt: domainUser.CreatedAt,
+		UpdatedAt: domainUser.UpdatedAt,
+	}
+
+	response := models.AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpiresIn:    3600, // 1 hour
+		TokenType:    "Bearer",
+		User:         apiUser,
+	}
+
+	h.server.RespondJSON(w, http.StatusCreated, response)
+}
+
+// HandleLogin is a convenience function for the server
+func HandleLogin(server *types.Server) http.HandlerFunc {
+	handler := NewAuthHandler(server)
+	return handler.HandleLogin
+}
+
+// HandleLogout is a convenience function for the server
+func HandleLogout(server *types.Server) http.HandlerFunc {
+	handler := NewAuthHandler(server)
+	return handler.HandleLogout
+}
+
+// HandleRefresh is a convenience function for the server
+func HandleRefresh(server *types.Server) http.HandlerFunc {
+	handler := NewAuthHandler(server)
+	return handler.HandleRefresh
+}
+
+// HandleRegister is a convenience function for the server
+func HandleRegister(server *types.Server) http.HandlerFunc {
+	handler := NewAuthHandler(server)
+	return handler.HandleRegister
 }

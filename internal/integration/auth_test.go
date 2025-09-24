@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/arx-os/arxos/internal/api"
+	"github.com/arx-os/arxos/internal/api/types"
 	"github.com/arx-os/arxos/internal/handlers/web"
 	"github.com/arx-os/arxos/pkg/models"
 )
@@ -36,17 +36,15 @@ func TestAuthenticationFlow(t *testing.T) {
 	}
 
 	// Save user to database
-	createReq := api.CreateUserRequest{
-		Email:    user.Email,
-		Name:     user.FullName,
-		Role:     user.Role,
-		Password: "testpassword",
-	}
-	_, err := services.User.CreateUser(ctx, createReq)
+	_, err := services.User.CreateUser(ctx, user.Email, "testpassword", user.FullName)
 	require.NoError(t, err)
 
 	// Create handler with auth service
-	handler, err := web.NewHandler(services)
+	typesServices := &types.Services{
+		DB:   services.DB,
+		User: services.User,
+	}
+	handler, err := web.NewHandler(typesServices)
 	require.NoError(t, err)
 
 	router := web.NewAuthenticatedRouter(handler)
@@ -220,19 +218,17 @@ func TestRoleBasedAuthorization(t *testing.T) {
 
 	// Create users and get tokens
 	for i := range users {
-		createReq := api.CreateUserRequest{
-			Email:    users[i].user.Email,
-			Name:     users[i].user.FullName,
-			Role:     users[i].user.Role,
-			Password: "testpassword",
-		}
-		_, err := services.User.CreateUser(ctx, createReq)
+		_, err := services.User.CreateUser(ctx, users[i].user.Email, "testpassword", users[i].user.FullName)
 		require.NoError(t, err)
 		// Get token for each user (simplified for test)
 		users[i].token = "test-token-" + users[i].user.Role
 	}
 
-	handler, err := web.NewHandler(services)
+	typesServices := &types.Services{
+		DB:   services.DB,
+		User: services.User,
+	}
+	handler, err := web.NewHandler(typesServices)
 	require.NoError(t, err)
 
 	router := web.NewAuthenticatedRouter(handler)

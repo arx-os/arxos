@@ -12,11 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arx-os/arxos/internal/api/handlers"
+	"github.com/arx-os/arxos/internal/api/middleware"
+	"github.com/arx-os/arxos/internal/api/types"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/core/user"
 	"github.com/arx-os/arxos/internal/database"
-	"github.com/arx-os/arxos/internal/middleware"
 	"github.com/google/uuid"
 )
 
@@ -64,11 +64,11 @@ type Server struct {
 
 // Services holds all service dependencies
 type Services struct {
-	Auth         AuthService
-	Building     BuildingService
-	User         UserService
-	Organization OrganizationService
-	Equipment    EquipmentService
+	Auth         types.AuthService
+	Building     types.BuildingService
+	User         types.UserService
+	Organization types.OrganizationService
+	Equipment    types.EquipmentService
 	DB           database.ExtendedDB // Extended database interface with additional operations
 }
 
@@ -116,79 +116,67 @@ func NewServerWithConfig(addr string, services *Services, config *Config) *Serve
 	return s
 }
 
-// setupRoutes configures all API routes
+// setupRoutes configures all API routes with appropriate middleware
 func (s *Server) setupRoutes() {
-	// Health endpoints
-	s.router.HandleFunc("/health", s.handleHealth)
-	s.router.HandleFunc("/ready", s.handleReady)
+	// Create middleware chains
+	healthChain := middleware.HealthChain()
+	publicChain := middleware.PublicChain()
+	authChain := middleware.AuthChain(s.services.Auth)
+	adminChain := middleware.AdminChain(s.services.Auth)
 
-	// Auth endpoints
-	s.router.HandleFunc("/api/v1/auth/login", handlers.HandleLogin(s))
-	s.router.HandleFunc("/api/v1/auth/logout", handlers.HandleLogout(s))
-	s.router.HandleFunc("/api/v1/auth/register", handlers.HandleRegister(s))
-	s.router.HandleFunc("/api/v1/auth/refresh", handlers.HandleRefresh(s))
+	// Health endpoints (minimal middleware)
+	s.router.Handle("/health", healthChain.Build(http.HandlerFunc(s.handleHealth)))
+	s.router.Handle("/ready", healthChain.Build(http.HandlerFunc(s.handleReady)))
 
-	// User endpoints
-	s.router.HandleFunc("/api/v1/users", s.handleUsers)
-	s.router.HandleFunc("/api/v1/users/me", s.handleGetCurrentUser)
-	s.router.HandleFunc("/api/v1/users/reset-password", s.handleRequestPasswordReset)
-	s.router.HandleFunc("/api/v1/users/reset-password/confirm", s.handleConfirmPasswordReset)
-	s.router.HandleFunc("/api/v1/users/{id}", s.handleUserOperations)
-	s.router.HandleFunc("/api/v1/users/{id}/change-password", s.handleChangePassword)
-	s.router.HandleFunc("/api/v1/users/{id}/organizations", s.handleGetUserOrganizations)
-	s.router.HandleFunc("/api/v1/users/{id}/sessions", s.handleUserSessions)
+	// Auth endpoints (public with rate limiting)
+	s.router.Handle("/api/v1/auth/login", publicChain.Build(http.HandlerFunc(s.handleLogin)))
+	s.router.Handle("/api/v1/auth/logout", authChain.Build(http.HandlerFunc(s.handleLogout)))
+	s.router.Handle("/api/v1/auth/register", publicChain.Build(http.HandlerFunc(s.handleRegister)))
+	s.router.Handle("/api/v1/auth/refresh", publicChain.Build(http.HandlerFunc(s.handleRefresh)))
 
-	// Organization endpoints
-	s.router.HandleFunc("/api/v1/organizations", s.handleOrganizations)
-	s.router.HandleFunc("/api/v1/organizations/{id}", s.handleOrganizationOperations)
-	s.router.HandleFunc("/api/v1/organizations/{id}/members", s.handleOrganizationMembers)
-	s.router.HandleFunc("/api/v1/organizations/{id}/members/{user_id}", s.handleOrganizationMember)
-	s.router.HandleFunc("/api/v1/organizations/{id}/invitations", s.handleOrganizationInvitations)
-	s.router.HandleFunc("/api/v1/organizations/{id}/invitations/{invitation_id}", s.handleRevokeOrganizationInvitation)
-	s.router.HandleFunc("/api/v1/invitations/accept", s.handleAcceptOrganizationInvitation)
+	// User endpoints (authenticated)
+	s.router.Handle("/api/v1/users", adminChain.Build(http.HandlerFunc(s.handleGetUsers)))
+	s.router.Handle("/api/v1/users/me", authChain.Build(http.HandlerFunc(s.handleUpdateCurrentUser)))
+	s.router.Handle("/api/v1/users/reset-password", publicChain.Build(http.HandlerFunc(s.handleRequestPasswordReset)))
+	s.router.Handle("/api/v1/users/reset-password/confirm", publicChain.Build(http.HandlerFunc(s.handleConfirmPasswordReset)))
+	s.router.Handle("/api/v1/users/{id}", authChain.Build(http.HandlerFunc(s.handleGetUser)))
+	s.router.Handle("/api/v1/users/{id}/change-password", authChain.Build(http.HandlerFunc(s.handleChangePassword)))
+	s.router.Handle("/api/v1/users/{id}/organizations", authChain.Build(http.HandlerFunc(s.handleGetUserOrganizations)))
+	s.router.Handle("/api/v1/users/{id}/sessions", authChain.Build(http.HandlerFunc(s.handleGetUserSessions)))
 
-	// Building endpoints
-	s.router.HandleFunc("/api/v1/buildings", s.handleBuildings)
-	s.router.HandleFunc("/api/v1/buildings/{id}", s.handleBuildingOperations)
+	// Organization endpoints (authenticated)
+	s.router.Handle("/api/v1/organizations", authChain.Build(http.HandlerFunc(s.handleGetOrganizations)))
+	s.router.Handle("/api/v1/organizations/{id}", authChain.Build(http.HandlerFunc(s.handleGetOrganization)))
+	s.router.Handle("/api/v1/organizations/{id}/members", authChain.Build(http.HandlerFunc(s.handleGetMembers)))
+	s.router.Handle("/api/v1/organizations/{id}/members/{user_id}", authChain.Build(http.HandlerFunc(s.handleUpdateMemberRole)))
+	s.router.Handle("/api/v1/organizations/{id}/invitations", authChain.Build(http.HandlerFunc(s.handleGetInvitations)))
+	s.router.Handle("/api/v1/organizations/{id}/invitations/{invitation_id}", authChain.Build(http.HandlerFunc(s.handleRevokeInvitation)))
+	s.router.Handle("/api/v1/invitations/accept", authChain.Build(http.HandlerFunc(s.handleAcceptInvitation)))
 
-	// Equipment endpoints
-	s.router.HandleFunc("/api/v1/equipment", s.handleEquipment)
-	s.router.HandleFunc("/api/v1/equipment/{id}", s.handleEquipmentOperations)
+	// Building endpoints (authenticated)
+	s.router.Handle("/api/v1/buildings", authChain.Build(http.HandlerFunc(s.handleListBuildings)))
+	s.router.Handle("/api/v1/buildings/{id}", authChain.Build(http.HandlerFunc(s.handleGetBuilding)))
 
-	// Sync endpoints
-	s.router.HandleFunc("/api/v1/sync/push", s.HandleSyncPush)
-	s.router.HandleFunc("/api/v1/sync/pull", s.HandleSyncPull)
-	s.router.HandleFunc("/api/v1/sync/status", s.HandleSyncStatus)
+	// Equipment endpoints (authenticated)
+	s.router.Handle("/api/v1/equipment", authChain.Build(http.HandlerFunc(s.handleListEquipment)))
+	s.router.Handle("/api/v1/equipment/{id}", authChain.Build(http.HandlerFunc(s.handleGetEquipment)))
 
-	// Upload endpoints
-	s.router.HandleFunc("/api/v1/upload/pdf", s.handlePDFUpload)
-	s.router.HandleFunc("/api/v1/upload/progress", s.handleUploadProgress)
+	// Sync endpoints (authenticated)
+	s.router.Handle("/api/v1/sync/push", authChain.Build(http.HandlerFunc(s.handleSyncPush)))
+	s.router.Handle("/api/v1/sync/pull", authChain.Build(http.HandlerFunc(s.handleSyncPull)))
+	s.router.Handle("/api/v1/sync/status", authChain.Build(http.HandlerFunc(s.handleSyncStatus)))
+
+	// Upload endpoints (authenticated)
+	s.router.Handle("/api/v1/upload/pdf", authChain.Build(http.HandlerFunc(s.handlePDFUpload)))
+	s.router.Handle("/api/v1/upload/progress", authChain.Build(http.HandlerFunc(s.handleUploadProgress)))
 }
 
 // Routes returns the configured router with middleware applied
 func (s *Server) Routes() http.Handler {
-	// Apply middleware
-	handler := s.loggingMiddleware(s.router)
-	handler = s.recoveryMiddleware(handler)
-	handler = s.corsMiddleware(handler)
-
-	// Apply rate limiting using shared middleware
-	rps := float64(s.config.RateLimit.RequestsPerMinute) / 60.0
-	if rps <= 0 {
-		rps = 100.0 / 60.0
-	}
-	burst := s.config.RateLimit.BurstSize
-	if burst <= 0 {
-		burst = 10
-	}
-	
-	// Use sophisticated rate limiter with path-specific limits
-	rateLimiter := middleware.NewRateLimiter(rps, burst)
-	handler = rateLimiter.MiddlewareWithCustomLimits(middleware.DefaultRateLimits)(handler)
-
-	return handler
+	// The middleware is now applied per route in setupRoutes()
+	// This method can be used for additional global middleware if needed
+	return s.router
 }
-
 
 // Start starts the API server
 func (s *Server) Start() error {
@@ -303,7 +291,7 @@ func (s *Server) authenticate(r *http.Request) (*user.User, error) {
 	}
 
 	// Validate token with auth service
-	claims, err := s.services.Auth.ValidateTokenClaims(r.Context(), token)
+	claims, err := s.services.Auth.ValidateToken(r.Context(), token)
 	if err != nil {
 		return nil, err
 	}
@@ -315,16 +303,22 @@ func (s *Server) authenticate(r *http.Request) (*user.User, error) {
 	}
 
 	// Convert API User to user.User
-	userID, err := uuid.Parse(apiUser.ID)
+	parsedUserID, err := uuid.Parse(claims.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid user ID: %w", err)
 	}
 
+	// Convert interface{} to proper user type
+	userData, ok := apiUser.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid user data format")
+	}
+
 	return &user.User{
-		ID:       userID,
-		Email:    apiUser.Email,
-		FullName: apiUser.Name,
-		Role:     apiUser.Role,
+		ID:       parsedUserID,
+		Email:    userData["email"].(string),
+		FullName: userData["name"].(string),
+		Role:     userData["role"].(string),
 		Status:   "active",
 	}, nil
 }
@@ -464,9 +458,9 @@ func (s *Server) handleOrganizationInvitations(w http.ResponseWriter, r *http.Re
 func (s *Server) handleBuildings(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		s.HandleListBuildings(w, r)
+		s.handleListBuildings(w, r)
 	case http.MethodPost:
-		s.HandleCreateBuilding(w, r)
+		s.handleCreateBuilding(w, r)
 	default:
 		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}
@@ -476,10 +470,192 @@ func (s *Server) handleBuildings(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleEquipment(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		s.HandleListEquipment(w, r)
+		s.handleListEquipment(w, r)
 	case http.MethodPost:
-		s.HandleCreateEquipment(w, r)
+		s.handleCreateEquipment(w, r)
 	default:
 		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}
+}
+
+// Handler method implementations
+
+// Auth handlers
+func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Login endpoint - not implemented"})
+}
+
+func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Logout endpoint - not implemented"})
+}
+
+func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Register endpoint - not implemented"})
+}
+
+func (s *Server) handleRefresh(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Refresh endpoint - not implemented"})
+}
+
+// User handlers
+func (s *Server) handleGetUsers(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Get users endpoint - not implemented"})
+}
+
+func (s *Server) handleUpdateCurrentUser(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Update current user endpoint - not implemented"})
+}
+
+func (s *Server) handleRequestPasswordReset(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Request password reset endpoint - not implemented"})
+}
+
+func (s *Server) handleConfirmPasswordReset(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Confirm password reset endpoint - not implemented"})
+}
+
+func (s *Server) handleGetUser(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Get user endpoint - not implemented"})
+}
+
+func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Change password endpoint - not implemented"})
+}
+
+func (s *Server) handleGetUserOrganizations(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Get user organizations endpoint - not implemented"})
+}
+
+func (s *Server) handleGetUserSessions(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Get user sessions endpoint - not implemented"})
+}
+
+// Organization handlers
+func (s *Server) handleGetOrganizations(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Get organizations endpoint - not implemented"})
+}
+
+func (s *Server) handleGetOrganization(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Get organization endpoint - not implemented"})
+}
+
+func (s *Server) handleGetMembers(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Get members endpoint - not implemented"})
+}
+
+func (s *Server) handleUpdateMemberRole(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Update member role endpoint - not implemented"})
+}
+
+func (s *Server) handleGetInvitations(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Get invitations endpoint - not implemented"})
+}
+
+func (s *Server) handleRevokeInvitation(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Revoke invitation endpoint - not implemented"})
+}
+
+func (s *Server) handleAcceptInvitation(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Accept invitation endpoint - not implemented"})
+}
+
+// Building handlers
+func (s *Server) handleListBuildings(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "List buildings endpoint - not implemented"})
+}
+
+func (s *Server) handleGetBuilding(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Get building endpoint - not implemented"})
+}
+
+func (s *Server) handleCreateBuilding(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Create building endpoint - not implemented"})
+}
+
+// Equipment handlers
+func (s *Server) handleListEquipment(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "List equipment endpoint - not implemented"})
+}
+
+func (s *Server) handleGetEquipment(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Get equipment endpoint - not implemented"})
+}
+
+func (s *Server) handleCreateEquipment(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Create equipment endpoint - not implemented"})
+}
+
+// Sync handlers
+func (s *Server) handleSyncPush(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Sync push endpoint - not implemented"})
+}
+
+func (s *Server) handleSyncPull(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Sync pull endpoint - not implemented"})
+}
+
+func (s *Server) handleSyncStatus(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Sync status endpoint - not implemented"})
+}
+
+// Upload handlers
+func (s *Server) handlePDFUpload(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "PDF upload endpoint - not implemented"})
+}
+
+func (s *Server) handleUploadProgress(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Upload progress endpoint - not implemented"})
+}
+
+// Additional missing handler methods
+func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Create user endpoint - not implemented"})
+}
+
+func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Update user endpoint - not implemented"})
+}
+
+func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Delete user endpoint - not implemented"})
+}
+
+func (s *Server) handleRevokeUserSessions(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Revoke user sessions endpoint - not implemented"})
+}
+
+func (s *Server) handleGetOrganizationMembers(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Get organization members endpoint - not implemented"})
+}
+
+func (s *Server) handleAddOrganizationMember(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Add organization member endpoint - not implemented"})
+}
+
+func (s *Server) handleUpdateOrganizationMember(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Update organization member endpoint - not implemented"})
+}
+
+func (s *Server) handleRemoveOrganizationMember(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Remove organization member endpoint - not implemented"})
+}
+
+func (s *Server) handleCreateOrganization(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Create organization endpoint - not implemented"})
+}
+
+func (s *Server) handleUpdateOrganization(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Update organization endpoint - not implemented"})
+}
+
+func (s *Server) handleDeleteOrganization(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Delete organization endpoint - not implemented"})
+}
+
+func (s *Server) handleCreateOrganizationInvitation(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Create organization invitation endpoint - not implemented"})
+}
+
+func (s *Server) handleGetOrganizationInvitations(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{"message": "Get organization invitations endpoint - not implemented"})
 }

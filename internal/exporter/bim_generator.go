@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -382,8 +383,13 @@ func (g *BIMGenerator) generateWithSpatialData(ctx context.Context, spatialDB da
 
 // getVersion returns the current ArxOS version
 func getVersion() string {
-	// TODO: Get from build info or config
-	return "1.0.0"
+	// Get from build info or config
+	// In a real implementation, this would read from build info or config
+	version := os.Getenv("ARXOS_VERSION")
+	if version == "" {
+		version = "1.0.0" // Default fallback
+	}
+	return version
 }
 
 // GenerateSummary generates a summary of the building

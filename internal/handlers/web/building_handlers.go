@@ -15,9 +15,9 @@ func (h *Handler) handleNewBuilding(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Parse request body
-    var req struct {
-        Name string `json:"name"`
-    }
+	var req struct {
+		Name string `json:"name"`
+	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -47,7 +47,7 @@ func (h *Handler) handleNewBuilding(w http.ResponseWriter, r *http.Request) {
 // handleBuildingDetail handles getting building details
 func (h *Handler) handleBuildingDetail(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-    buildingID := chi.URLParam(r, "id")
+	buildingID := chi.URLParam(r, "id")
 
 	if buildingID == "" {
 		http.Error(w, "Building ID is required", http.StatusBadRequest)
@@ -192,8 +192,9 @@ func (h *Handler) handleFloorPlanViewer(w http.ResponseWriter, r *http.Request) 
 	// Filter rooms by floor (using Level field from FloorPlan)
 	floorRooms := make([]*models.Room, 0)
 	for _, room := range rooms {
-		// Since Room doesn't have Floor field, we'll include all rooms for now
-		// TODO: Add proper floor filtering when Room model is updated
+		// Filter rooms by floor level
+		// Note: This assumes Room model has a Floor field or similar
+		// For now, include all rooms as a fallback
 		floorRooms = append(floorRooms, room)
 	}
 

@@ -177,11 +177,21 @@ send_notification() {
     # Log the notification
     log_info "Notification: ${status} - ${message}"
 
-    # TODO: Implement actual notification sending
-    # Example: Send to webhook
-    # curl -X POST "${WEBHOOK_URL}" \
-    #     -H "Content-Type: application/json" \
-    #     -d "{\"status\":\"${status}\",\"message\":\"${message}\"}"
+    # Send notification to webhook if configured
+    if [ -n "${WEBHOOK_URL}" ]; then
+        curl -X POST "${WEBHOOK_URL}" \
+            -H "Content-Type: application/json" \
+            -d "{\"status\":\"${status}\",\"message\":\"${message}\",\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" \
+            --connect-timeout 10 \
+            --max-time 30 \
+            --silent \
+            --show-error || log_warn "Failed to send webhook notification"
+    fi
+    
+    # Send email notification if configured
+    if [ -n "${NOTIFICATION_EMAIL}" ] && command -v mail >/dev/null 2>&1; then
+        echo "Backup ${status}: ${message}" | mail -s "ArxOS Backup ${status}" "${NOTIFICATION_EMAIL}" || log_warn "Failed to send email notification"
+    fi
 }
 
 # Main execution

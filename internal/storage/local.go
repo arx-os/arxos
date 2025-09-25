@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -105,6 +106,13 @@ func (l *LocalBackend) Delete(ctx context.Context, key string) error {
 		return fmt.Errorf("failed to delete file: %w", err)
 	}
 
+	// Also remove metadata file if it exists
+	metaPath := path + ".meta"
+	if err := os.Remove(metaPath); err != nil && !os.IsNotExist(err) {
+		// Log warning but don't fail the operation
+		fmt.Printf("Warning: failed to remove metadata file %s: %v\n", metaPath, err)
+	}
+
 	// Try to remove empty parent directories
 	l.cleanEmptyDirs(filepath.Dir(path))
 
@@ -196,13 +204,29 @@ func (l *LocalBackend) GetMetadata(ctx context.Context, key string) (*Metadata, 
 		return nil, fmt.Errorf("failed to stat file: %w", err)
 	}
 
-	return &Metadata{
+	// Create base metadata from file info
+	metadata := &Metadata{
 		Key:          key,
 		Size:         info.Size(),
 		ContentType:  l.detectContentType(path),
 		LastModified: info.ModTime(),
 		Metadata:     make(map[string]string),
-	}, nil
+	}
+
+	// Try to load extended metadata from sidecar file
+	metaPath := path + ".meta"
+	if extendedMeta, err := l.loadMetadataFromFile(metaPath); err == nil {
+		// Merge extended metadata
+		metadata.Metadata = extendedMeta.Metadata
+		if extendedMeta.ContentType != "" {
+			metadata.ContentType = extendedMeta.ContentType
+		}
+		if !extendedMeta.LastModified.IsZero() {
+			metadata.LastModified = extendedMeta.LastModified
+		}
+	}
+
+	return metadata, nil
 }
 
 // SetMetadata sets metadata for a key (limited support for local storage)
@@ -226,9 +250,10 @@ func (l *LocalBackend) SetMetadata(ctx context.Context, key string, metadata *Me
 
 	// Store extended metadata in a sidecar file if needed
 	if len(metadata.Metadata) > 0 {
-		// metaPath := path + ".meta"
-		// TODO: Implementation for metadata storage would go here
-		// For now, we'll skip this as it's not critical
+		metaPath := path + ".meta"
+		if err := l.saveMetadataToFile(metaPath, metadata); err != nil {
+			return fmt.Errorf("failed to save metadata: %w", err)
+		}
 	}
 
 	return nil
@@ -376,4 +401,57 @@ func (l *LocalBackend) detectContentType(path string) string {
 	default:
 		return "application/octet-stream"
 	}
+}
+
+// saveMetadataToFile saves metadata to a JSON sidecar file
+func (l *LocalBackend) saveMetadataToFile(metaPath string, metadata *Metadata) error {
+	// Create directory if it doesn't exist
+	dir := filepath.Dir(metaPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create metadata directory: %w", err)
+	}
+
+	// Write to temporary file first for atomic operation
+	tmpPath := metaPath + ".tmp"
+	file, err := os.Create(tmpPath)
+	if err != nil {
+		return fmt.Errorf("failed to create metadata file: %w", err)
+	}
+	defer file.Close()
+
+	// Encode metadata as JSON
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(metadata); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("failed to encode metadata: %w", err)
+	}
+
+	// Close file before renaming
+	file.Close()
+
+	// Atomic rename
+	if err := os.Rename(tmpPath, metaPath); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("failed to rename metadata file: %w", err)
+	}
+
+	return nil
+}
+
+// loadMetadataFromFile loads metadata from a JSON sidecar file
+func (l *LocalBackend) loadMetadataFromFile(metaPath string) (*Metadata, error) {
+	file, err := os.Open(metaPath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var metadata Metadata
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&metadata); err != nil {
+		return nil, fmt.Errorf("failed to decode metadata: %w", err)
+	}
+
+	return &metadata, nil
 }

@@ -11,9 +11,10 @@ import (
 
 // Dashboard provides a comprehensive metrics dashboard
 type Dashboard struct {
-	serviceName string
-	collector   *Collector
-	mu          sync.RWMutex
+	serviceName   string
+	collector     *Collector
+	systemMonitor *SystemMonitor
+	mu            sync.RWMutex
 
 	// Dashboard data
 	lastUpdate    time.Time
@@ -201,9 +202,9 @@ func (d *Dashboard) GetDashboardData() *DashboardData {
 
 	data := &DashboardData{
 		ServiceName:        d.serviceName,
-		Environment:        "production",                             // This would come from config
-		Version:            "2.0.0",                                  // This would come from build info
-		Uptime:             time.Since(now.Add(-time.Hour)).String(), // Placeholder
+		Environment:        "production", // This would come from config
+		Version:            "2.0.0",      // This would come from build info
+		Uptime:             d.getRealUptime(),
 		Timestamp:          now,
 		SystemInfo:         d.getSystemInfo(),
 		ServiceMetrics:     d.getServiceMetrics(),
@@ -221,6 +222,21 @@ func (d *Dashboard) GetDashboardData() *DashboardData {
 
 // getSystemInfo returns current system information
 func (d *Dashboard) getSystemInfo() SystemInfo {
+	// Use system monitor if available, otherwise fallback to basic info
+	if d.systemMonitor != nil {
+		systemInfo := d.systemMonitor.GetSystemInfo()
+		return SystemInfo{
+			GoVersion:    runtime.Version(),
+			NumCPU:       runtime.NumCPU(),
+			NumGoroutine: systemInfo.GoroutineCount,
+			MemoryMB:     systemInfo.MemoryUsage,
+			CPUPercent:   systemInfo.CPUUsage,
+			OpenFiles:    0, // Would need to be calculated
+			Uptime:       systemInfo.Uptime,
+		}
+	}
+
+	// Fallback to basic system information
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
@@ -229,10 +245,21 @@ func (d *Dashboard) getSystemInfo() SystemInfo {
 		NumCPU:       runtime.NumCPU(),
 		NumGoroutine: runtime.NumGoroutine(),
 		MemoryMB:     float64(m.Alloc) / 1024 / 1024,
-		CPUPercent:   0,                                               // This would need to be calculated
-		OpenFiles:    0,                                               // This would need to be calculated
-		Uptime:       time.Since(time.Now().Add(-time.Hour)).String(), // Placeholder
+		CPUPercent:   0, // Would need to be calculated
+		OpenFiles:    0, // Would need to be calculated
+		Uptime:       d.getRealUptime(),
 	}
+}
+
+// getRealUptime returns the actual service uptime
+func (d *Dashboard) getRealUptime() string {
+	if d.systemMonitor != nil {
+		systemInfo := d.systemMonitor.GetSystemInfo()
+		return systemInfo.Uptime
+	}
+
+	// Fallback to time since last update
+	return time.Since(d.lastUpdate).String()
 }
 
 // getServiceMetrics returns service-level metrics

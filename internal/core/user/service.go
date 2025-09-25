@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/services/email"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -14,9 +16,10 @@ import (
 
 // Service handles user and authentication operations
 type Service struct {
-	repo      Repository
-	jwtSecret []byte
-	jwtExpiry time.Duration
+	repo         Repository
+	jwtSecret    []byte
+	jwtExpiry    time.Duration
+	emailService email.Service
 }
 
 // NewService creates a new user service
@@ -26,6 +29,21 @@ func NewService(repo Repository, jwtSecret string, jwtExpiry time.Duration) *Ser
 		jwtSecret: []byte(jwtSecret),
 		jwtExpiry: jwtExpiry,
 	}
+}
+
+// NewServiceWithEmail creates a new user service with email support
+func NewServiceWithEmail(repo Repository, jwtSecret string, jwtExpiry time.Duration, emailService email.Service) *Service {
+	return &Service{
+		repo:         repo,
+		jwtSecret:    []byte(jwtSecret),
+		jwtExpiry:    jwtExpiry,
+		emailService: emailService,
+	}
+}
+
+// SetEmailService sets the email service for the user service
+func (s *Service) SetEmailService(emailService email.Service) {
+	s.emailService = emailService
 }
 
 // AuthToken represents authentication tokens
@@ -260,8 +278,14 @@ func (s *Service) ResetPassword(ctx context.Context, email string) error {
 		return fmt.Errorf("failed to create reset token: %w", err)
 	}
 
-	// TODO: Send email with reset link
-	fmt.Printf("Password reset token created for user %s: %s\n", user.Email, token)
+	// Send email with reset link
+	if err := s.sendPasswordResetEmail(user.Email, token); err != nil {
+		logger.Warn("Failed to send password reset email: %v", err)
+		// Don't fail the operation if email sending fails
+		fmt.Printf("Password reset token created for user %s: %s\n", user.Email, token)
+	} else {
+		logger.Info("Password reset email sent to %s", user.Email)
+	}
 
 	return nil
 }
@@ -380,4 +404,17 @@ func generateSecureToken() (string, error) {
 		return "", err
 	}
 	return base64.URLEncoding.EncodeToString(b), nil
+}
+
+// sendPasswordResetEmail sends a password reset email to the user
+func (s *Service) sendPasswordResetEmail(email, token string) error {
+	// Use the email service if available
+	if s.emailService != nil {
+		ctx := context.Background()
+		return s.emailService.SendPasswordResetEmail(ctx, email, token)
+	}
+
+	// Fallback to logging if email service is not configured
+	logger.Info("Email service not configured - would send password reset email to %s with token %s", email, token)
+	return nil
 }

@@ -75,6 +75,31 @@ type StorageConfig struct {
 	CloudRegion string            `json:"cloud_region"`
 	CloudPrefix string            `json:"cloud_prefix"`
 	Credentials map[string]string `json:"-"` // Sensitive, not serialized
+
+	// S3-specific configuration
+	S3 S3Config `json:"s3,omitempty"`
+
+	// Azure-specific configuration
+	Azure AzureConfig `json:"azure,omitempty"`
+}
+
+// S3Config contains S3-specific configuration
+type S3Config struct {
+	Region          string `json:"region"`
+	Bucket          string `json:"bucket"`
+	AccessKeyID     string `json:"-"` // Sensitive
+	SecretAccessKey string `json:"-"` // Sensitive
+	Endpoint        string `json:"endpoint,omitempty"`
+	UseSSL          bool   `json:"use_ssl"`
+}
+
+// AzureConfig contains Azure-specific configuration
+type AzureConfig struct {
+	AccountName      string `json:"account_name"`
+	AccountKey       string `json:"-"` // Sensitive
+	ContainerName    string `json:"container_name"`
+	SASToken         string `json:"-"` // Sensitive
+	ConnectionString string `json:"-"` // Sensitive
 }
 
 // DatabaseConfig defines database configuration (DEPRECATED - use PostGISConfig)
@@ -201,8 +226,8 @@ func Default() *Config {
 		},
 
 		Database: DatabaseConfig{
-			Type:            "sqlite", // Default to sqlite for local mode
-			Driver:          "sqlite", // Legacy field
+			Type:            "sqlite",                                     // Default to sqlite for local mode
+			Driver:          "sqlite",                                     // Legacy field
 			DataSourceName:  filepath.Join(homeDir, ".arxos", "arxos.db"), // Default SQLite path
 			MaxOpenConns:    25,
 			MaxConnections:  25, // Alias
@@ -309,12 +334,49 @@ func (c *Config) LoadFromEnv() {
 
 	// Storage credentials from environment
 	c.Storage.Credentials = make(map[string]string)
+
+	// S3 credentials
 	if key := os.Getenv("AWS_ACCESS_KEY_ID"); key != "" {
+		c.Storage.S3.AccessKeyID = key
 		c.Storage.Credentials["aws_access_key_id"] = key
 	}
 	if secret := os.Getenv("AWS_SECRET_ACCESS_KEY"); secret != "" {
+		c.Storage.S3.SecretAccessKey = secret
 		c.Storage.Credentials["aws_secret_access_key"] = secret
 	}
+	if region := os.Getenv("AWS_DEFAULT_REGION"); region != "" {
+		c.Storage.S3.Region = region
+	}
+	if bucket := os.Getenv("AWS_S3_BUCKET"); bucket != "" {
+		c.Storage.S3.Bucket = bucket
+	}
+	if endpoint := os.Getenv("AWS_S3_ENDPOINT"); endpoint != "" {
+		c.Storage.S3.Endpoint = endpoint
+	}
+	if ssl := os.Getenv("AWS_S3_USE_SSL"); ssl == "false" {
+		c.Storage.S3.UseSSL = false
+	} else {
+		c.Storage.S3.UseSSL = true
+	}
+
+	// Azure credentials
+	if account := os.Getenv("AZURE_STORAGE_ACCOUNT"); account != "" {
+		c.Storage.Azure.AccountName = account
+	}
+	if key := os.Getenv("AZURE_STORAGE_KEY"); key != "" {
+		c.Storage.Azure.AccountKey = key
+	}
+	if container := os.Getenv("AZURE_STORAGE_CONTAINER"); container != "" {
+		c.Storage.Azure.ContainerName = container
+	}
+	if sas := os.Getenv("AZURE_STORAGE_SAS_TOKEN"); sas != "" {
+		c.Storage.Azure.SASToken = sas
+	}
+	if connStr := os.Getenv("AZURE_STORAGE_CONNECTION_STRING"); connStr != "" {
+		c.Storage.Azure.ConnectionString = connStr
+	}
+
+	// GCP credentials
 	if token := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"); token != "" {
 		c.Storage.Credentials["gcp_credentials"] = token
 	}

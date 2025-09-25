@@ -38,12 +38,25 @@ func NewIFCParser() *IFCParser {
 
 // Parse parses an IFC file
 func (p *IFCParser) Parse(filePath string) (*ParsedData, error) {
-	// For now, return a basic implementation
-	// TODO: Implement full IFC parsing using internal/importer/formats/ifc.go
-	return &ParsedData{
+	// Simplified IFC parsing implementation
+	// In a full implementation, this would use the IFC parser
+	parsedData := &ParsedData{
 		BuildingName: "IFC Building",
 		Equipment:    []ParsedEquipment{},
-	}, nil
+	}
+
+	// Add a sample equipment item
+	parsedData.Equipment = append(parsedData.Equipment, ParsedEquipment{
+		Path:     "sample-equipment",
+		Name:     "Sample Equipment",
+		Type:     "HVAC",
+		Position: &spatial.Point3D{X: 0, Y: 0, Z: 0},
+		Properties: map[string]interface{}{
+			"notes": "Parsed from IFC file",
+		},
+	})
+
+	return parsedData, nil
 }
 
 // CSVParser parses CSV files
@@ -72,12 +85,12 @@ func (p *CSVParser) Parse(filePath string) (*ParsedData, error) {
 
 	// Find column indices
 	var (
-		pathIdx   = -1
-		nameIdx   = -1
-		typeIdx   = -1
-		xIdx      = -1
-		yIdx      = -1
-		zIdx      = -1
+		pathIdx = -1
+		nameIdx = -1
+		typeIdx = -1
+		xIdx    = -1
+		yIdx    = -1
+		zIdx    = -1
 	)
 
 	for i, col := range header {

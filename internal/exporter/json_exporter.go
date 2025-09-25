@@ -6,6 +6,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/pkg/models"
 )
 
@@ -111,8 +112,11 @@ func (e *JSONExporter) ExportSpatialData(results interface{}, w io.Writer) error
 		data.Properties["coordinate_system"] = "WGS84"
 	}
 
-	// TODO: Convert spatial results to GeoJSON features
+	// Convert spatial results to GeoJSON features
 	// This would handle PostGIS query results
+	if err := e.convertSpatialResultsToGeoJSON(results, &data); err != nil {
+		logger.Warn("Failed to convert spatial results to GeoJSON: %v", err)
+	}
 
 	// Encode to JSON
 	encoder := json.NewEncoder(w)
@@ -121,6 +125,135 @@ func (e *JSONExporter) ExportSpatialData(results interface{}, w io.Writer) error
 	}
 
 	return encoder.Encode(data)
+}
+
+// convertSpatialResultsToGeoJSON converts spatial query results to GeoJSON features
+func (e *JSONExporter) convertSpatialResultsToGeoJSON(results interface{}, data *SpatialDataJSON) error {
+	// Handle different types of spatial results
+	switch v := results.(type) {
+	case []*models.Equipment:
+		return e.convertEquipmentToGeoJSON(v, data)
+	case []*models.Room:
+		return e.convertRoomsToGeoJSON(v, data)
+	case []*models.FloorPlan:
+		return e.convertFloorsToGeoJSON(v, data)
+	case map[string]interface{}:
+		// Handle PostGIS query results
+		return e.convertPostGISResultsToGeoJSON(v, data)
+	default:
+		logger.Warn("Unknown spatial result type: %T", results)
+		return nil
+	}
+}
+
+// convertEquipmentToGeoJSON converts equipment list to GeoJSON features
+func (e *JSONExporter) convertEquipmentToGeoJSON(equipment []*models.Equipment, data *SpatialDataJSON) error {
+	for _, eq := range equipment {
+		if eq.Location == nil {
+			continue // Skip equipment without location
+		}
+
+		feature := map[string]interface{}{
+			"type": "Feature",
+			"geometry": map[string]interface{}{
+				"type": "Point",
+				"coordinates": []float64{
+					eq.Location.X, // longitude
+					eq.Location.Y, // latitude
+					eq.Location.Z, // altitude
+				},
+			},
+			"properties": map[string]interface{}{
+				"id":      eq.ID,
+				"path":    eq.Path,
+				"name":    eq.Name,
+				"type":    eq.Type,
+				"status":  eq.Status,
+				"floor":   eq.Location.Z, // Use Z as floor
+				"room_id": eq.RoomID,
+			},
+		}
+
+		data.Features = append(data.Features, feature)
+	}
+
+	return nil
+}
+
+// convertRoomsToGeoJSON converts room list to GeoJSON features
+func (e *JSONExporter) convertRoomsToGeoJSON(rooms []*models.Room, data *SpatialDataJSON) error {
+	for _, room := range rooms {
+		// Convert room bounds to polygon
+		coordinates := [][]float64{
+			{room.Bounds.MinX, room.Bounds.MinY},
+			{room.Bounds.MaxX, room.Bounds.MinY},
+			{room.Bounds.MaxX, room.Bounds.MaxY},
+			{room.Bounds.MinX, room.Bounds.MaxY},
+			{room.Bounds.MinX, room.Bounds.MinY}, // Close the polygon
+		}
+
+		// Calculate area
+		width := room.Bounds.MaxX - room.Bounds.MinX
+		height := room.Bounds.MaxY - room.Bounds.MinY
+		area := width * height
+
+		feature := map[string]interface{}{
+			"type": "Feature",
+			"geometry": map[string]interface{}{
+				"type":        "Polygon",
+				"coordinates": [][][]float64{coordinates},
+			},
+			"properties": map[string]interface{}{
+				"id":     room.ID,
+				"name":   room.Name,
+				"area":   area,
+				"width":  width,
+				"height": height,
+			},
+		}
+
+		data.Features = append(data.Features, feature)
+	}
+
+	return nil
+}
+
+// convertFloorsToGeoJSON converts floor list to GeoJSON features
+func (e *JSONExporter) convertFloorsToGeoJSON(floors []*models.FloorPlan, data *SpatialDataJSON) error {
+	for _, floor := range floors {
+		// Create a simple point feature for each floor
+		feature := map[string]interface{}{
+			"type": "Feature",
+			"geometry": map[string]interface{}{
+				"type":        "Point",
+				"coordinates": []float64{0, 0, float64(floor.Level)}, // Placeholder coordinates
+			},
+			"properties": map[string]interface{}{
+				"id":    floor.ID,
+				"name":  floor.Name,
+				"level": floor.Level,
+			},
+		}
+
+		data.Features = append(data.Features, feature)
+	}
+
+	return nil
+}
+
+// convertPostGISResultsToGeoJSON converts PostGIS query results to GeoJSON
+func (e *JSONExporter) convertPostGISResultsToGeoJSON(results map[string]interface{}, data *SpatialDataJSON) error {
+	// Handle PostGIS spatial query results
+	// This would typically contain geometry data from PostGIS queries
+	if features, ok := results["features"].([]interface{}); ok {
+		for _, feature := range features {
+			if featureMap, ok := feature.(map[string]interface{}); ok {
+				data.Features = append(data.Features, featureMap)
+			}
+		}
+	}
+
+	return nil
 }
 
 // ExportAPIResponse exports data in API response format

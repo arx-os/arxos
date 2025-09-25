@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/common/logger"
-	"github.com/arx-os/arxos/pkg/models"
 	"github.com/arx-os/arxos/pkg/errors"
+	"github.com/arx-os/arxos/pkg/models"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -165,8 +165,8 @@ func (p *PostGISDB) CreateUser(ctx context.Context, user *models.User) error {
 		user.Role, user.IsActive, user.EmailVerified,
 		sql.NullString{String: user.Phone, Valid: user.Phone != ""},
 		sql.NullString{String: user.AvatarURL, Valid: user.AvatarURL != ""},
-		"{}",  // preferences
-		"{}",  // metadata
+		"{}", // preferences
+		"{}", // metadata
 	).Scan(&user.CreatedAt, &user.UpdatedAt)
 
 	if err != nil {
@@ -287,8 +287,8 @@ func (p *PostGISDB) CreateSession(ctx context.Context, session *models.UserSessi
 		session.ID, session.UserID, session.Token, session.RefreshToken,
 		sql.NullString{String: session.IPAddress, Valid: session.IPAddress != ""},
 		sql.NullString{String: session.UserAgent, Valid: session.UserAgent != ""},
-		"{}",  // device_info
-		true,  // is_active
+		"{}", // device_info
+		true, // is_active
 		session.ExpiresAt, session.RefreshExpiresAt,
 	).Scan(&session.CreatedAt)
 
@@ -642,4 +642,157 @@ func (p *PostGISDB) DeleteExpiredPasswordResetTokens(ctx context.Context) error 
 	}
 
 	return nil
+}
+
+// ListUsers returns a paginated list of users
+func (p *PostGISDB) ListUsers(ctx context.Context, limit, offset int) ([]*models.User, error) {
+	query := `
+		SELECT id, email, username, full_name, role, is_active, email_verified, 
+		       phone, avatar_url, preferences, metadata, last_login, created_at, updated_at
+		FROM users 
+		WHERE is_active = true 
+		ORDER BY created_at DESC
+		LIMIT $1 OFFSET $2`
+
+	rows, err := p.db.QueryContext(ctx, query, limit, offset)
+	if err != nil {
+		return nil, errors.Wrap(err, errors.CodeDatabase, "list users")
+	}
+	defer rows.Close()
+
+	var users []*models.User
+	for rows.Next() {
+		user := &models.User{}
+		err := rows.Scan(
+			&user.ID, &user.Email, &user.Username, &user.FullName, &user.Role,
+			&user.IsActive, &user.EmailVerified, &user.Phone, &user.AvatarURL,
+			&user.Preferences, &user.Metadata, &user.LastLogin, &user.CreatedAt, &user.UpdatedAt,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, errors.CodeDatabase, "scan user")
+		}
+		users = append(users, user)
+	}
+
+	return users, nil
+}
+
+// CountUsers returns the total number of users
+func (p *PostGISDB) CountUsers(ctx context.Context) (int, error) {
+	query := `SELECT COUNT(*) FROM users WHERE is_active = true`
+
+	var count int
+	err := p.db.QueryRowContext(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, errors.Wrap(err, errors.CodeDatabase, "count users")
+	}
+
+	return count, nil
+}
+
+// SearchUsers searches for users by name or email
+func (p *PostGISDB) SearchUsers(ctx context.Context, query string, limit, offset int) ([]*models.User, error) {
+	searchQuery := `
+		SELECT id, email, username, full_name, role, is_active, email_verified, 
+		       phone, avatar_url, preferences, metadata, last_login, created_at, updated_at
+		FROM users 
+		WHERE is_active = true 
+		AND (LOWER(full_name) LIKE LOWER($1) OR LOWER(email) LIKE LOWER($1) OR LOWER(username) LIKE LOWER($1))
+		ORDER BY created_at DESC
+		LIMIT $2 OFFSET $3`
+
+	searchPattern := "%" + query + "%"
+	rows, err := p.db.QueryContext(ctx, searchQuery, searchPattern, limit, offset)
+	if err != nil {
+		return nil, errors.Wrap(err, errors.CodeDatabase, "search users")
+	}
+	defer rows.Close()
+
+	var users []*models.User
+	for rows.Next() {
+		user := &models.User{}
+		err := rows.Scan(
+			&user.ID, &user.Email, &user.Username, &user.FullName, &user.Role,
+			&user.IsActive, &user.EmailVerified, &user.Phone, &user.AvatarURL,
+			&user.Preferences, &user.Metadata, &user.LastLogin, &user.CreatedAt, &user.UpdatedAt,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, errors.CodeDatabase, "scan user")
+		}
+		users = append(users, user)
+	}
+
+	return users, nil
+}
+
+// CountUsersByQuery returns the count of users matching a search query
+func (p *PostGISDB) CountUsersByQuery(ctx context.Context, query string) (int, error) {
+	searchQuery := `
+		SELECT COUNT(*) FROM users 
+		WHERE is_active = true 
+		AND (LOWER(full_name) LIKE LOWER($1) OR LOWER(email) LIKE LOWER($1) OR LOWER(username) LIKE LOWER($1))`
+
+	searchPattern := "%" + query + "%"
+	var count int
+	err := p.db.QueryRowContext(ctx, searchQuery, searchPattern).Scan(&count)
+	if err != nil {
+		return 0, errors.Wrap(err, errors.CodeDatabase, "count users by query")
+	}
+
+	return count, nil
+}
+
+// CountActiveUsers returns the count of users with recent activity
+func (p *PostGISDB) CountActiveUsers(ctx context.Context) (int, error) {
+	query := `
+		SELECT COUNT(*) FROM users 
+		WHERE is_active = true 
+		AND last_login > NOW() - INTERVAL '30 days'`
+
+	var count int
+	err := p.db.QueryRowContext(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, errors.Wrap(err, errors.CodeDatabase, "count active users")
+	}
+
+	return count, nil
+}
+
+// GetUserStatsByRole returns user counts grouped by role
+func (p *PostGISDB) GetUserStatsByRole(ctx context.Context) (map[string]int, error) {
+	query := `
+		SELECT role, COUNT(*) 
+		FROM users 
+		WHERE is_active = true 
+		GROUP BY role`
+
+	rows, err := p.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, errors.Wrap(err, errors.CodeDatabase, "get user stats by role")
+	}
+	defer rows.Close()
+
+	stats := make(map[string]int)
+	for rows.Next() {
+		var role string
+		var count int
+		if err := rows.Scan(&role, &count); err != nil {
+			return nil, errors.Wrap(err, errors.CodeDatabase, "scan role stats")
+		}
+		stats[role] = count
+	}
+
+	return stats, nil
+}
+
+// BulkUpdateUsers updates multiple users in a single transaction
+func (p *PostGISDB) BulkUpdateUsers(ctx context.Context, updates []*models.UserUpdateRequest) error {
+	if len(updates) == 0 {
+		return nil
+	}
+
+	// For now, this is a placeholder implementation
+	// In a real implementation, you would need a structure that includes user IDs
+	// or modify the approach to work with the available fields
+	return errors.New(errors.CodeNotImplemented, "bulk update requires user IDs")
 }

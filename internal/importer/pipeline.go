@@ -6,9 +6,9 @@ import (
 	"io"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/core/building"
+	"github.com/google/uuid"
 )
 
 // ImportOptions contains options for the import process
@@ -211,8 +211,9 @@ func (p *Pipeline) Import(ctx context.Context, input io.Reader, opts ImportOptio
 		}
 	}
 
-	// TODO: Calculate coverage if needed
-	// Coverage calculation would go here
+	// Calculate coverage if needed
+	// Note: Coverage calculation would be implemented when ImportOptions includes this field
+	// For now, we'll skip this step
 
 	// Report progress
 	if opts.ProgressCallback != nil {

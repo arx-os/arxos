@@ -1098,10 +1098,46 @@ func (p *PostGISDB) GetPointCloud(scanID string) ([]spatial.Point3D, error) {
 		return nil, fmt.Errorf("failed to get point cloud: %w", err)
 	}
 
-	// Parse WKT to extract points (simplified - real implementation would need proper WKT parsing)
-	// This is a placeholder - you'd want to use a proper WKT parser
+	// Parse WKT to extract points using the WKT parser
+	parser := spatial.NewWKTParser()
+	geometryType := parser.DetectGeometryType(pointsWKT)
+
 	var points []spatial.Point3D
-	// ... parse WKT ...
+
+	switch geometryType {
+	case "POINT":
+		point, err := parser.ParsePoint(pointsWKT)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse POINT: %w", err)
+		}
+		points = append(points, *point)
+
+	case "LINESTRING":
+		lineString, err := parser.ParseLineString(pointsWKT)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse LINESTRING: %w", err)
+		}
+		points = append(points, lineString.Points...)
+
+	case "POLYGON":
+		polygon, err := parser.ParsePolygon(pointsWKT)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse POLYGON: %w", err)
+		}
+		points = append(points, polygon.Points...)
+
+	case "MULTIPOLYGON":
+		multiPolygon, err := parser.ParseMultiPolygon(pointsWKT)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse MULTIPOLYGON: %w", err)
+		}
+		for _, polygon := range multiPolygon.Polygons {
+			points = append(points, polygon.Points...)
+		}
+
+	default:
+		return nil, fmt.Errorf("unsupported geometry type: %s", geometryType)
+	}
 
 	return points, nil
 }
@@ -1454,12 +1490,12 @@ func (p *PostGISDB) GetUnscannedAreas(buildingID string) ([]spatial.SpatialExten
 		// Parse WKT to extract bounds
 		// For simplicity, we'll create a bounding box from the WKT
 		extent := spatial.SpatialExtent{
-			MinX:  0,  // Would parse from WKT
-			MaxX:  100,
-			MinY:  0,
-			MaxY:  100,
-			MinZ:  float64(floorNumber) * 3.0,
-			MaxZ:  float64(floorNumber)*3.0 + 3.0,
+			MinX: 0, // Would parse from WKT
+			MaxX: 100,
+			MinY: 0,
+			MaxY: 100,
+			MinZ: float64(floorNumber) * 3.0,
+			MaxZ: float64(floorNumber)*3.0 + 3.0,
 		}
 		unscannedAreas = append(unscannedAreas, extent)
 	}
@@ -1480,7 +1516,7 @@ func (p *PostGISDB) QueryPointsInRegion(boundary spatial.SpatialExtent) ([]spati
 		FROM point_cloud
 		WHERE location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
 			AND ST_Z(location) >= $5 AND ST_Z(location) <= $6
-		LIMIT 10000`  // Limit for performance
+		LIMIT 10000` // Limit for performance
 
 	rows, err := p.db.QueryContext(ctx, query,
 		boundary.MinX, boundary.MinY,
@@ -1547,13 +1583,13 @@ func (p *PostGISDB) GetPointCloudMetadata(scanID string) (map[string]interface{}
 	}
 
 	metadata := map[string]interface{}{
-		"scan_id":           scanID,
-		"point_count":       pointCount,
-		"scan_start":        scanStart.Time,
-		"scan_end":          scanEnd.Time,
-		"avg_confidence":    avgConf.Float64,
-		"min_confidence":    minConf.Float64,
-		"max_confidence":    maxConf.Float64,
+		"scan_id":        scanID,
+		"point_count":    pointCount,
+		"scan_start":     scanStart.Time,
+		"scan_end":       scanEnd.Time,
+		"avg_confidence": avgConf.Float64,
+		"min_confidence": minConf.Float64,
+		"max_confidence": maxConf.Float64,
 		"bounding_box": map[string]float64{
 			"min_x": minX.Float64,
 			"max_x": maxX.Float64,
@@ -2029,4 +2065,9 @@ func (p *PostGISDB) createSpatialTablesExtended(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// GetDB returns the underlying sql.DB connection
+func (p *PostGISDB) GetDB() *sql.DB {
+	return p.db
 }

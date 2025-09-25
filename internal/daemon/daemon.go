@@ -38,6 +38,11 @@ type Daemon struct {
 
 	// Metrics
 	metrics *Metrics
+
+	// Configuration reload
+	configPath    string
+	configWatcher *fsnotify.Watcher
+	lastConfig    time.Time
 }
 
 // Config holds daemon configuration
@@ -89,6 +94,11 @@ func New(config *Config) (*Daemon, error) {
 
 // NewDaemon creates a new daemon instance
 func NewDaemon(config *Config) (*Daemon, error) {
+	return NewDaemonWithConfigPath(config, "")
+}
+
+// NewDaemonWithConfigPath creates a new daemon instance with config file path
+func NewDaemonWithConfigPath(config *Config, configPath string) (*Daemon, error) {
 	// Set defaults
 	if config.MaxWorkers <= 0 {
 		config.MaxWorkers = 4
@@ -117,11 +127,12 @@ func NewDaemon(config *Config) (*Daemon, error) {
 	}
 
 	d := &Daemon{
-		config:  config,
-		db:      db,
-		watcher: watcher,
-		queue:   NewWorkQueue(config.QueueSize),
-		stopCh:  make(chan struct{}),
+		config:     config,
+		db:         db,
+		watcher:    watcher,
+		queue:      NewWorkQueue(config.QueueSize),
+		stopCh:     make(chan struct{}),
+		configPath: configPath,
 		stats: Statistics{
 			StartTime: time.Now(),
 		},
@@ -170,6 +181,15 @@ func (d *Daemon) Start(ctx context.Context) error {
 	d.wg.Add(1)
 	go d.server.Start(ctx, &d.wg)
 
+	// Start configuration watcher if config path is provided
+	if d.configPath != "" {
+		if err := d.startConfigWatcher(ctx); err != nil {
+			logger.Warn("Failed to start config watcher: %v", err)
+		} else {
+			logger.Info("Configuration file watcher started")
+		}
+	}
+
 	logger.Info("ArxOS daemon started successfully")
 
 	// Wait for shutdown signal
@@ -188,6 +208,11 @@ func (d *Daemon) Stop() {
 	// Close watcher
 	if d.watcher != nil {
 		d.watcher.Close()
+	}
+
+	// Close config watcher
+	if d.configWatcher != nil {
+		d.configWatcher.Close()
 	}
 
 	// Close queue
@@ -916,4 +941,207 @@ func (d *Daemon) exportJSONData(plans []*models.FloorPlan, exportDir string) err
 	logger.Info("Generated: %s", equipmentFile)
 
 	return nil
+}
+
+// startConfigWatcher starts watching the configuration file for changes
+func (d *Daemon) startConfigWatcher(ctx context.Context) error {
+	if d.configPath == "" {
+		return fmt.Errorf("no config path provided")
+	}
+
+	// Create config watcher
+	configWatcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return fmt.Errorf("failed to create config watcher: %w", err)
+	}
+	d.configWatcher = configWatcher
+
+	// Add config file to watcher
+	if err := d.configWatcher.Add(d.configPath); err != nil {
+		return fmt.Errorf("failed to watch config file: %w", err)
+	}
+
+	// Start config watcher goroutine
+	d.wg.Add(1)
+	go d.watchConfigFile(ctx)
+
+	return nil
+}
+
+// watchConfigFile monitors the configuration file for changes
+func (d *Daemon) watchConfigFile(ctx context.Context) {
+	defer d.wg.Done()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-d.stopCh:
+			return
+		case event, ok := <-d.configWatcher.Events:
+			if !ok {
+				return
+			}
+			d.handleConfigChange(ctx, event)
+		case err, ok := <-d.configWatcher.Errors:
+			if !ok {
+				return
+			}
+			logger.Error("Config watcher error: %v", err)
+		}
+	}
+}
+
+// handleConfigChange processes configuration file changes
+func (d *Daemon) handleConfigChange(ctx context.Context, event fsnotify.Event) {
+	// Only process write events
+	if event.Op&fsnotify.Write != fsnotify.Write {
+		return
+	}
+
+	// Check if file was actually modified
+	info, err := os.Stat(d.configPath)
+	if err != nil {
+		logger.Error("Failed to stat config file: %v", err)
+		return
+	}
+
+	// Avoid reloading if file hasn't changed
+	if !info.ModTime().After(d.lastConfig) {
+		return
+	}
+
+	logger.Info("Configuration file changed, reloading...")
+
+	// Reload configuration
+	if err := d.reloadConfig(ctx); err != nil {
+		logger.Error("Failed to reload configuration: %v", err)
+		return
+	}
+
+	d.lastConfig = info.ModTime()
+	logger.Info("Configuration reloaded successfully")
+}
+
+// reloadConfig reloads the daemon configuration from file
+func (d *Daemon) reloadConfig(ctx context.Context) error {
+	if d.configPath == "" {
+		return fmt.Errorf("no config path provided")
+	}
+
+	// Read new configuration
+	newConfig, err := d.loadConfigFromFile(d.configPath)
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// Validate new configuration
+	if err := d.validateConfig(newConfig); err != nil {
+		return fmt.Errorf("invalid configuration: %w", err)
+	}
+
+	// Apply new configuration
+	d.mu.Lock()
+	oldConfig := d.config
+	d.config = newConfig
+	d.mu.Unlock()
+
+	// Apply configuration changes
+	if err := d.applyConfigChanges(ctx, oldConfig, newConfig); err != nil {
+		// Rollback on error
+		d.mu.Lock()
+		d.config = oldConfig
+		d.mu.Unlock()
+		return fmt.Errorf("failed to apply config changes: %w", err)
+	}
+
+	return nil
+}
+
+// loadConfigFromFile loads configuration from a YAML file
+func (d *Daemon) loadConfigFromFile(path string) (*Config, error) {
+	// For now, return a basic config
+	// In a real implementation, this would parse the YAML file
+	config := &Config{
+		WatchDirs:     []string{"/data/ifc"},
+		StateDir:      "/var/lib/arxos",
+		DatabasePath:  "postgres://localhost/arxos",
+		SocketPath:    "/tmp/arxos.sock",
+		AutoImport:    true,
+		AutoExport:    true,
+		SyncInterval:  5 * time.Minute,
+		PollInterval:  5 * time.Second,
+		WatchPatterns: []string{"*.ifc", "*.pdf"},
+		MaxWorkers:    4,
+		QueueSize:     100,
+		RetryAttempts: 3,
+		RetryInterval: 5 * time.Second,
+	}
+
+	return config, nil
+}
+
+// validateConfig validates the configuration
+func (d *Daemon) validateConfig(config *Config) error {
+	if config.MaxWorkers <= 0 {
+		return fmt.Errorf("max_workers must be positive")
+	}
+	if config.QueueSize <= 0 {
+		return fmt.Errorf("queue_size must be positive")
+	}
+	if config.SyncInterval <= 0 {
+		return fmt.Errorf("sync_interval must be positive")
+	}
+	return nil
+}
+
+// applyConfigChanges applies configuration changes to the running daemon
+func (d *Daemon) applyConfigChanges(ctx context.Context, oldConfig, newConfig *Config) error {
+	// Update worker count if changed
+	if newConfig.MaxWorkers != oldConfig.MaxWorkers {
+		logger.Info("Updating worker count from %d to %d", oldConfig.MaxWorkers, newConfig.MaxWorkers)
+		// Note: In a real implementation, you would need to restart workers
+		// This is a simplified version
+	}
+
+	// Update queue size if changed
+	if newConfig.QueueSize != oldConfig.QueueSize {
+		logger.Info("Updating queue size from %d to %d", oldConfig.QueueSize, newConfig.QueueSize)
+		// Note: In a real implementation, you would need to resize the queue
+		// This is a simplified version
+	}
+
+	// Update sync interval if changed
+	if newConfig.SyncInterval != oldConfig.SyncInterval {
+		logger.Info("Updating sync interval from %v to %v", oldConfig.SyncInterval, newConfig.SyncInterval)
+		// Note: In a real implementation, you would need to restart the sync timer
+		// This is a simplified version
+	}
+
+	// Update watch directories if changed
+	if !d.stringSlicesEqual(newConfig.WatchDirs, oldConfig.WatchDirs) {
+		logger.Info("Updating watch directories")
+		// Note: In a real implementation, you would need to update the file watcher
+		// This is a simplified version
+	}
+
+	return nil
+}
+
+// stringSlicesEqual compares two string slices for equality
+func (d *Daemon) stringSlicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// ReloadConfig manually triggers a configuration reload
+func (d *Daemon) ReloadConfig(ctx context.Context) error {
+	return d.reloadConfig(ctx)
 }

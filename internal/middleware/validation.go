@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/arx-os/arxos/internal/common/logger"
 )
@@ -204,7 +205,35 @@ func ValidateDateRange(start, end string) error {
 		return fmt.Errorf("invalid end date format (use ISO 8601)")
 	}
 
-	// TODO: Add actual date comparison
+	// Parse and compare dates
+	startTime, err := time.Parse(time.RFC3339, start)
+	if err != nil {
+		// Try parsing without time component
+		startTime, err = time.Parse("2006-01-02", start)
+		if err != nil {
+			return fmt.Errorf("invalid start date format: %v", err)
+		}
+	}
+
+	endTime, err := time.Parse(time.RFC3339, end)
+	if err != nil {
+		// Try parsing without time component
+		endTime, err = time.Parse("2006-01-02", end)
+		if err != nil {
+			return fmt.Errorf("invalid end date format: %v", err)
+		}
+	}
+
+	// Validate date range
+	if startTime.After(endTime) {
+		return fmt.Errorf("start date must be before end date")
+	}
+
+	// Check if date range is reasonable (not more than 1 year)
+	if endTime.Sub(startTime) > 365*24*time.Hour {
+		return fmt.Errorf("date range cannot exceed 1 year")
+	}
+
 	return nil
 }
 

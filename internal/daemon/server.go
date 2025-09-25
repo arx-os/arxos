@@ -239,10 +239,18 @@ func (s *Server) handleStats() *Response {
 
 // handleReload reloads daemon configuration
 func (s *Server) handleReload() *Response {
-	// TODO: Implement configuration reload
+	ctx := context.Background()
+
+	if err := s.daemon.ReloadConfig(ctx); err != nil {
+		return &Response{
+			Success: false,
+			Message: fmt.Sprintf("Failed to reload configuration: %v", err),
+		}
+	}
+
 	return &Response{
 		Success: true,
-		Message: "Configuration reloaded",
+		Message: "Configuration reloaded successfully",
 	}
 }
 

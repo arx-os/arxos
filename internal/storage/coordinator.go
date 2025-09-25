@@ -364,8 +364,12 @@ func (sc *StorageCoordinator) autoSyncLoop() {
 		ctx := context.Background()
 
 		// Check for pending changes in each layer
-		// TODO: Get building list from PostGIS cache
-		buildingIDs := []string{}
+		// Get building list from PostGIS cache
+		buildingIDs, err := sc.getBuildingListFromCache(ctx)
+		if err != nil {
+			logger.Warn("Failed to get building list from cache: %v", err)
+			buildingIDs = []string{} // Continue with empty list
+		}
 
 		for _, buildingID := range buildingIDs {
 			// Check for unsync'd changes
@@ -430,8 +434,8 @@ func (sc *StorageCoordinator) syncCacheToBIM(ctx context.Context, building *Buil
 
 		// Create a floor with equipment
 		floor := bim.Floor{
-			Level: building.FloorPlan.Level,
-			Name:  fmt.Sprintf("Level %d", building.FloorPlan.Level),
+			Level:     building.FloorPlan.Level,
+			Name:      fmt.Sprintf("Level %d", building.FloorPlan.Level),
 			Equipment: make([]bim.Equipment, 0),
 		}
 
@@ -441,8 +445,8 @@ func (sc *StorageCoordinator) syncCacheToBIM(ctx context.Context, building *Buil
 				ID:   eq.ID,
 				Type: eq.Type,
 				Location: bim.Location{
-					X: 0, // TODO: Get actual coordinates
-					Y: 0,
+					X:    eq.Location.X,
+					Y:    eq.Location.Y,
 					Room: eq.RoomID,
 				},
 				Status: bim.EquipmentStatus(eq.Status),
@@ -558,4 +562,44 @@ func (sc *StorageCoordinator) Close() error {
 		return fmt.Errorf("failed to close spatial database: %w", err)
 	}
 	return nil
+}
+
+// getBuildingListFromCache retrieves the list of building IDs from PostGIS cache
+func (sc *StorageCoordinator) getBuildingListFromCache(ctx context.Context) ([]string, error) {
+	// Query PostGIS for all building IDs
+	query := `
+		SELECT DISTINCT building_id 
+		FROM equipment_spatial 
+		WHERE building_id IS NOT NULL
+		UNION
+		SELECT DISTINCT building_id 
+		FROM scanned_regions 
+		WHERE building_id IS NOT NULL
+		UNION
+		SELECT DISTINCT building_id 
+		FROM spatial_anchors 
+		WHERE building_id IS NOT NULL
+		ORDER BY building_id
+	`
+
+	rows, err := sc.spatial.GetDB().QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query building list: %w", err)
+	}
+	defer rows.Close()
+
+	var buildingIDs []string
+	for rows.Next() {
+		var buildingID string
+		if err := rows.Scan(&buildingID); err != nil {
+			return nil, fmt.Errorf("failed to scan building ID: %w", err)
+		}
+		buildingIDs = append(buildingIDs, buildingID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating building list: %w", err)
+	}
+
+	return buildingIDs, nil
 }

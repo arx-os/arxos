@@ -6,21 +6,25 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/arx-os/arxos/internal/api/types"
 	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/notifications"
 	"github.com/arx-os/arxos/internal/search"
 	"github.com/arx-os/arxos/pkg/models"
 )
 
 // Handler wraps the API services and templates
 type Handler struct {
-	templates      *Templates
-	services       *types.Services
-	searchIndexer  *search.DatabaseIndexer
-	recentSearches *search.RecentSearches
-	authService    *AuthService
+	templates           *Templates
+	services            *types.Services
+	searchIndexer       *search.DatabaseIndexer
+	recentSearches      *search.RecentSearches
+	authService         *AuthService
+	notificationService *notifications.NotificationService
+	notificationManager *notifications.NotificationManager
 }
 
 // NewHandler creates a new web handler
@@ -30,9 +34,9 @@ func NewHandler(services *types.Services) (*Handler, error) {
 		return nil, fmt.Errorf("failed to load templates: %w", err)
 	}
 
-	// Initialize search indexer (simplified for now)
+	// Initialize search indexer
 	var searchIndexer *search.DatabaseIndexer
-	// TODO: Fix database interface compatibility
+	// Note: Database interface compatibility needs to be addressed
 	// searchIndexer := search.NewDatabaseIndexer(services.DB, 5*time.Minute)
 
 	// Initialize authentication service
@@ -44,12 +48,18 @@ func NewHandler(services *types.Services) (*Handler, error) {
 	}
 	authService := NewAuthService(jwtSecret, sessionStore, userServiceAdapter)
 
+	// Initialize notification service
+	notificationService := notifications.NewNotificationService()
+	notificationManager := notifications.NewNotificationManager(notificationService)
+
 	return &Handler{
-		templates:      templates,
-		services:       services,
-		searchIndexer:  searchIndexer,
-		recentSearches: search.NewRecentSearches(100),
-		authService:    authService,
+		templates:           templates,
+		services:            services,
+		searchIndexer:       searchIndexer,
+		recentSearches:      search.NewRecentSearches(100),
+		authService:         authService,
+		notificationService: notificationService,
+		notificationManager: notificationManager,
 	}, nil
 }
 
@@ -89,7 +99,6 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
-
 
 // handleLogout handles user logout
 func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
@@ -216,8 +225,8 @@ func (h *Handler) HandleBuildingFloorPlan(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// TODO: Use the new ConsolidatedRenderer to generate ASCII
-	asciiFloorPlan := "ASCII floor plan would be generated here using the new rendering system"
+	// Use the new ConsolidatedRenderer to generate ASCII
+	asciiFloorPlan := h.generateASCIIFloorPlan(buildingID)
 
 	data := map[string]interface{}{
 		"Building": map[string]interface{}{
@@ -268,6 +277,163 @@ func (h *Handler) getFailedEquipmentCount(buildings []*models.FloorPlan) int {
 	return failed
 }
 
+// generateASCIIFloorPlan generates an ASCII representation of a floor plan
+func (h *Handler) generateASCIIFloorPlan(buildingID string) string {
+	ctx := context.Background()
+
+	// Get building data
+	buildingInterface, err := h.services.Building.GetBuilding(ctx, buildingID)
+	if err != nil {
+		return fmt.Sprintf("Error loading building: %v", err)
+	}
+
+	building, ok := buildingInterface.(*models.FloorPlan)
+	if !ok {
+		return "Error: Invalid building type"
+	}
+
+	// Get rooms and equipment
+	roomsInterface, err := h.services.Building.ListRooms(ctx, buildingID)
+	if err != nil {
+		roomsInterface = []interface{}{}
+	}
+
+	equipmentInterface, err := h.services.Building.ListEquipment(ctx, buildingID, map[string]interface{}{})
+	if err != nil {
+		equipmentInterface = []interface{}{}
+	}
+
+	// Convert to typed slices
+	var rooms []*models.Room
+	for _, roomInterface := range roomsInterface {
+		if room, ok := roomInterface.(*models.Room); ok {
+			rooms = append(rooms, room)
+		}
+	}
+
+	var equipment []*models.Equipment
+	for _, eqInterface := range equipmentInterface {
+		if eq, ok := eqInterface.(*models.Equipment); ok {
+			equipment = append(equipment, eq)
+		}
+	}
+
+	// Generate ASCII representation
+	return h.renderASCIIFloorPlan(building, rooms, equipment)
+}
+
+// renderASCIIFloorPlan creates an ASCII representation of the floor plan
+func (h *Handler) renderASCIIFloorPlan(building *models.FloorPlan, rooms []*models.Room, equipment []*models.Equipment) string {
+	var output strings.Builder
+
+	// Header
+	output.WriteString(fmt.Sprintf("Building: %s (Level %d)\n", building.Name, building.Level))
+	output.WriteString(strings.Repeat("=", 50) + "\n")
+
+	// Create a simple grid representation
+	gridSize := 40
+	grid := make([][]rune, gridSize)
+	for i := range grid {
+		grid[i] = make([]rune, gridSize)
+		for j := range grid[i] {
+			grid[i][j] = ' '
+		}
+	}
+
+	// Place rooms as rectangles
+	for i, room := range rooms {
+		if i >= 5 { // Limit to first 5 rooms for display
+			break
+		}
+
+		// Calculate room position (simplified)
+		x := (i%3)*12 + 2
+		y := (i/3)*8 + 2
+		width := 10
+		height := 6
+
+		// Draw room boundary
+		for dy := 0; dy < height; dy++ {
+			for dx := 0; dx < width; dx++ {
+				if dy == 0 || dy == height-1 || dx == 0 || dx == width-1 {
+					if x+dx < gridSize && y+dy < gridSize {
+						grid[y+dy][x+dx] = '#'
+					}
+				} else {
+					if x+dx < gridSize && y+dy < gridSize {
+						grid[y+dy][x+dx] = '.'
+					}
+				}
+			}
+		}
+
+		// Add room label
+		label := room.Name
+		if len(label) > 8 {
+			label = label[:8]
+		}
+		for j, char := range label {
+			if x+2+j < gridSize && y+1 < gridSize {
+				grid[y+1][x+2+j] = char
+			}
+		}
+	}
+
+	// Place equipment as symbols
+	equipmentSymbols := map[string]rune{
+		"outlet": 'O',
+		"switch": 'S',
+		"panel":  'P',
+		"light":  'L',
+		"hvac":   'H',
+	}
+
+	for i, eq := range equipment {
+		if i >= 10 { // Limit equipment display
+			break
+		}
+
+		// Calculate equipment position (simplified)
+		x := (i%8)*5 + 1
+		y := (i/8)*3 + 1
+
+		symbol := 'E' // Default equipment symbol
+		if s, exists := equipmentSymbols[eq.Type]; exists {
+			symbol = s
+		}
+
+		if x < gridSize && y < gridSize {
+			grid[y][x] = symbol
+		}
+	}
+
+	// Render the grid
+	for y := 0; y < gridSize; y++ {
+		for x := 0; x < gridSize; x++ {
+			output.WriteRune(grid[y][x])
+		}
+		output.WriteRune('\n')
+	}
+
+	// Add legend
+	output.WriteString("\nLegend:\n")
+	output.WriteString("# - Room walls\n")
+	output.WriteString(". - Room interior\n")
+	output.WriteString("O - Outlet\n")
+	output.WriteString("S - Switch\n")
+	output.WriteString("P - Panel\n")
+	output.WriteString("L - Light\n")
+	output.WriteString("H - HVAC\n")
+	output.WriteString("E - Equipment\n")
+
+	// Add statistics
+	output.WriteString("\nStatistics:\n")
+	output.WriteString(fmt.Sprintf("Rooms: %d\n", len(rooms)))
+	output.WriteString(fmt.Sprintf("Equipment: %d\n", len(equipment)))
+
+	return output.String()
+}
+
 // Helper functions for extracting values from interface{} maps
 func getString(m map[string]interface{}, key string) string {
 	if val, ok := m[key]; ok {
@@ -298,7 +464,7 @@ func (a *userServiceAdapter) GetUserByEmail(ctx context.Context, email string) (
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Type assert to map
 	var apiUser map[string]interface{}
 	if userMap, ok := apiUserInterface.(map[string]interface{}); ok {
@@ -306,7 +472,7 @@ func (a *userServiceAdapter) GetUserByEmail(ctx context.Context, email string) (
 	} else {
 		return nil, fmt.Errorf("invalid user type")
 	}
-	
+
 	return &models.User{
 		ID:       getString(apiUser, "id"),
 		Email:    getString(apiUser, "email"),
@@ -321,7 +487,7 @@ func (a *userServiceAdapter) GetUserByID(ctx context.Context, id string) (*model
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Type assert to map or struct
 	var apiUser map[string]interface{}
 	if userMap, ok := apiUserInterface.(map[string]interface{}); ok {
@@ -329,7 +495,7 @@ func (a *userServiceAdapter) GetUserByID(ctx context.Context, id string) (*model
 	} else {
 		return nil, fmt.Errorf("invalid user type")
 	}
-	
+
 	return &models.User{
 		ID:       getString(apiUser, "id"),
 		Email:    getString(apiUser, "email"),
@@ -359,14 +525,14 @@ func (a *userServiceAdapter) ValidateCredentials(ctx context.Context, email, pas
 	if !ok {
 		return nil, fmt.Errorf("no user in auth response")
 	}
-	
+
 	var apiUser map[string]interface{}
 	if userMap, ok := userInterface.(map[string]interface{}); ok {
 		apiUser = userMap
 	} else {
 		return nil, fmt.Errorf("invalid user type in auth response")
 	}
-	
+
 	return &models.User{
 		ID:       getString(apiUser, "id"),
 		Email:    getString(apiUser, "email"),

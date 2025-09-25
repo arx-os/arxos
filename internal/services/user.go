@@ -201,15 +201,29 @@ func (s *UserService) ListUsers(ctx context.Context, page, limit int) ([]*models
 		return nil, 0, fmt.Errorf("invalid pagination: %w", err)
 	}
 
-	// List users (placeholder - would need proper implementation)
-	users := []*models.User{} // Empty list for now
+	// Calculate offset
+	offset := (page - 1) * limit
+
+	// Get users from database
+	users, err := s.db.ListUsers(ctx, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list users: %w", err)
+	}
+
+	// Get total count for pagination
+	totalCount, err := s.db.CountUsers(ctx)
+	if err != nil {
+		// If count fails, we can still return the users
+		logger.Warn("Failed to get user count: %v", err)
+		totalCount = len(users)
+	}
 
 	// Remove password hashes
 	for _, user := range users {
 		user.PasswordHash = ""
 	}
 
-	return users, 0, nil
+	return users, totalCount, nil
 }
 
 // GetUserOrganizations returns all organizations a user belongs to
@@ -230,4 +244,118 @@ func (s *UserService) GetUserOrganizations(ctx context.Context, userID string) (
 	}
 
 	return orgs, nil
+}
+
+// SearchUsers searches for users by query string
+func (s *UserService) SearchUsers(ctx context.Context, query string, page, limit int) ([]*models.User, int, error) {
+	// Validate pagination
+	if err := middleware.ValidatePagination(page, limit); err != nil {
+		return nil, 0, fmt.Errorf("invalid pagination: %w", err)
+	}
+
+	// Calculate offset
+	offset := (page - 1) * limit
+
+	// Search users by name or email
+	users, err := s.db.SearchUsers(ctx, query, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to search users: %w", err)
+	}
+
+	// Get total count for pagination
+	totalCount, err := s.db.CountUsersByQuery(ctx, query)
+	if err != nil {
+		logger.Warn("Failed to get user search count: %v", err)
+		totalCount = len(users)
+	}
+
+	// Remove password hashes
+	for _, user := range users {
+		user.PasswordHash = ""
+	}
+
+	return users, totalCount, nil
+}
+
+// BulkUpdateUsers updates multiple users at once
+func (s *UserService) BulkUpdateUsers(ctx context.Context, updates []*models.UserUpdateRequest) error {
+	if len(updates) == 0 {
+		return fmt.Errorf("no updates provided")
+	}
+
+	// Process updates in batches
+	batchSize := 100
+	for i := 0; i < len(updates); i += batchSize {
+		end := i + batchSize
+		if end > len(updates) {
+			end = len(updates)
+		}
+
+		batch := updates[i:end]
+		if err := s.db.BulkUpdateUsers(ctx, batch); err != nil {
+			return fmt.Errorf("failed to update user batch %d-%d: %w", i, end-1, err)
+		}
+	}
+
+	logger.Info("Bulk updated %d users", len(updates))
+	return nil
+}
+
+// SyncUserData synchronizes user data with external systems
+func (s *UserService) SyncUserData(ctx context.Context, userID string) error {
+	// Get user
+	user, err := s.GetUser(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+
+	// Update last sync timestamp
+	user.Metadata["last_sync"] = time.Now()
+
+	// Update user in database
+	if err := s.db.UpdateUser(ctx, user); err != nil {
+		return fmt.Errorf("failed to update user sync timestamp: %w", err)
+	}
+
+	logger.Info("Synchronized user data for %s", user.Email)
+	return nil
+}
+
+// GetUserStats returns statistics about users
+func (s *UserService) GetUserStats(ctx context.Context) (*UserStats, error) {
+	stats := &UserStats{}
+
+	// Get total user count
+	totalCount, err := s.db.CountUsers(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get total user count: %w", err)
+	}
+	stats.TotalUsers = totalCount
+
+	// Get active user count (users with recent activity)
+	activeCount, err := s.db.CountActiveUsers(ctx)
+	if err != nil {
+		logger.Warn("Failed to get active user count: %v", err)
+		stats.ActiveUsers = totalCount // Fallback to total
+	} else {
+		stats.ActiveUsers = activeCount
+	}
+
+	// Get users by role
+	roleStats, err := s.db.GetUserStatsByRole(ctx)
+	if err != nil {
+		logger.Warn("Failed to get user role stats: %v", err)
+		stats.RoleDistribution = make(map[string]int)
+	} else {
+		stats.RoleDistribution = roleStats
+	}
+
+	return stats, nil
+}
+
+// UserStats contains user statistics
+type UserStats struct {
+	TotalUsers       int            `json:"total_users"`
+	ActiveUsers      int            `json:"active_users"`
+	RoleDistribution map[string]int `json:"role_distribution"`
 }

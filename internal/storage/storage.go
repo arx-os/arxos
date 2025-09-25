@@ -349,7 +349,7 @@ func (m *Manager) HealthCheck(ctx context.Context) error {
 }
 
 // NewFromConfig creates a storage backend from configuration
-func NewFromConfig(cfg config.StorageConfig) (Backend, error) {
+func NewFromConfig(ctx context.Context, cfg config.StorageConfig) (Backend, error) {
 	switch cfg.Backend {
 	case "local", "":
 		if cfg.LocalPath == "" {
@@ -357,12 +357,61 @@ func NewFromConfig(cfg config.StorageConfig) (Backend, error) {
 		}
 		return Local(cfg.LocalPath), nil
 	case "s3":
-		// TODO: Implement S3 backend
-		return nil, fmt.Errorf("S3 storage not yet implemented")
+		return NewS3BackendFromConfig(ctx, cfg)
 	case "azure":
-		// TODO: Implement Azure backend
-		return nil, fmt.Errorf("Azure storage not yet implemented")
+		return NewAzureBackendFromConfig(cfg)
 	default:
 		return nil, fmt.Errorf("unknown storage backend: %s", cfg.Backend)
 	}
+}
+
+// NewS3BackendFromConfig creates an S3 backend from configuration
+func NewS3BackendFromConfig(ctx context.Context, cfg config.StorageConfig) (Backend, error) {
+	if cfg.S3.Bucket == "" {
+		return nil, fmt.Errorf("S3 bucket not configured")
+	}
+	if cfg.S3.Region == "" {
+		return nil, fmt.Errorf("S3 region not configured")
+	}
+
+	s3Config := &S3Config{
+		Region:          cfg.S3.Region,
+		Bucket:          cfg.S3.Bucket,
+		AccessKeyID:     cfg.S3.AccessKeyID,
+		SecretAccessKey: cfg.S3.SecretAccessKey,
+		Endpoint:        cfg.S3.Endpoint,
+		UseSSL:          cfg.S3.UseSSL,
+	}
+
+	backend, err := NewS3Backend(ctx, s3Config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create S3 backend: %w", err)
+	}
+
+	return backend, nil
+}
+
+// NewAzureBackendFromConfig creates an Azure backend from configuration
+func NewAzureBackendFromConfig(cfg config.StorageConfig) (Backend, error) {
+	if cfg.Azure.ContainerName == "" {
+		return nil, fmt.Errorf("Azure container name not configured")
+	}
+	if cfg.Azure.AccountName == "" {
+		return nil, fmt.Errorf("Azure account name not configured")
+	}
+
+	azureConfig := &AzureConfig{
+		AccountName:      cfg.Azure.AccountName,
+		AccountKey:       cfg.Azure.AccountKey,
+		ContainerName:    cfg.Azure.ContainerName,
+		SASToken:         cfg.Azure.SASToken,
+		ConnectionString: cfg.Azure.ConnectionString,
+	}
+
+	backend, err := NewAzureBackend(context.Background(), azureConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Azure backend: %w", err)
+	}
+
+	return backend, nil
 }

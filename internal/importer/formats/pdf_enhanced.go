@@ -21,8 +21,8 @@ import (
 
 // EnhancedPDFImporter provides advanced PDF import capabilities
 type EnhancedPDFImporter struct {
-	textExtractor   *PDFTextExtractor
-	imageExtractor  *PDFImageExtractor
+	textExtractor  *PDFTextExtractor
+	imageExtractor *PDFImageExtractor
 	ocrEngine      *OCREngine
 	diagramParser  *DiagramParser
 	nlpProcessor   *NLPProcessor
@@ -41,8 +41,8 @@ func NewEnhancedPDFImporter() (*EnhancedPDFImporter, error) {
 	}
 
 	return &EnhancedPDFImporter{
-		textExtractor:   NewPDFTextExtractor(),
-		imageExtractor:  NewPDFImageExtractor(),
+		textExtractor:  NewPDFTextExtractor(),
+		imageExtractor: NewPDFImageExtractor(),
 		ocrEngine:      ocrEngine,
 		diagramParser:  NewDiagramParser(),
 		nlpProcessor:   NewNLPProcessor(),
@@ -59,7 +59,7 @@ func (p *EnhancedPDFImporter) GetFormat() string {
 // GetCapabilities returns enhanced importer capabilities
 func (p *EnhancedPDFImporter) GetCapabilities() importer.ImportCapabilities {
 	return importer.ImportCapabilities{
-		SupportsSpatial:    true,  // Can extract from diagrams
+		SupportsSpatial:    true, // Can extract from diagrams
 		SupportsHierarchy:  true,
 		SupportsMetadata:   true,
 		SupportsConfidence: true,
@@ -439,12 +439,19 @@ func (p *EnhancedPDFImporter) assessTextQuality(text string) float64 {
 }
 
 func (p *EnhancedPDFImporter) extractTables(pdfPath string) ([]ExtractedTable, error) {
-	// Basic table extraction - would be enhanced with proper library
-	var tables []ExtractedTable
+	// Use the table extractor for proper table extraction
+	config := DefaultTableExtractionConfig()
+	extractor := NewTableExtractor(config)
 
-	// This is a placeholder - in production, use a proper PDF table extraction library
-	// like tabula-go or similar
+	// Extract tables from PDF
+	tables, err := extractor.ExtractTables(context.Background(), pdfPath)
+	if err != nil {
+		logger.Warn("Table extraction failed: %v", err)
+		// Return empty tables instead of failing completely
+		return []ExtractedTable{}, nil
+	}
 
+	logger.Debug("Extracted %d tables from PDF: %s", len(tables), pdfPath)
 	return tables, nil
 }
 
@@ -503,18 +510,18 @@ func (p *EnhancedPDFImporter) normalizeEquipmentType(typeStr string) string {
 
 	// Map common variations to standard types
 	typeMap := map[string]string{
-		"hvac":         "hvac",
-		"air handler":  "hvac",
-		"ahu":          "hvac",
-		"vav":          "hvac",
-		"electrical":   "electrical",
-		"panel":        "electrical",
-		"lighting":     "lighting",
-		"plumbing":     "plumbing",
-		"fire":         "fire_safety",
-		"security":     "security",
-		"sensor":       "sensor",
-		"thermostat":   "sensor",
+		"hvac":        "hvac",
+		"air handler": "hvac",
+		"ahu":         "hvac",
+		"vav":         "hvac",
+		"electrical":  "electrical",
+		"panel":       "electrical",
+		"lighting":    "lighting",
+		"plumbing":    "plumbing",
+		"fire":        "fire_safety",
+		"security":    "security",
+		"sensor":      "sensor",
+		"thermostat":  "sensor",
 	}
 
 	for key, value := range typeMap {

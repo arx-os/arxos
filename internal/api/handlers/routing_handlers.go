@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/arx-os/arxos/internal/api/models"
 	"github.com/arx-os/arxos/internal/api/types"
@@ -189,27 +190,161 @@ func (h *RoutingHandler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 
 // handleBuildingSearch handles building-specific search
 func (h *RoutingHandler) handleBuildingSearch(w http.ResponseWriter, r *http.Request, query string, limit, offset int) {
-	// This would use the SearchService to search buildings
-	// For now, return a placeholder response
+	// Use the SearchService to search buildings via spatial query
+	if h.server.Services.Search != nil {
+		results, err := h.server.Services.Search.SpatialQuery(r.Context(), query, limit)
+		if err != nil {
+			h.RespondError(w, http.StatusInternalServerError, "Search failed")
+			return
+		}
+
+		h.RespondJSON(w, http.StatusOK, map[string]interface{}{
+			"query":   query,
+			"type":    "buildings",
+			"results": results,
+			"limit":   limit,
+			"offset":  offset,
+			"total":   len(results),
+		})
+		return
+	}
+
+	// Fallback to building service if search service not available
+	if h.server.Services.Building != nil {
+		buildings, err := h.server.Services.Building.GetBuildings(r.Context())
+		if err != nil {
+			h.RespondError(w, http.StatusInternalServerError, "Failed to get buildings")
+			return
+		}
+
+		// Simple client-side filtering
+		filtered := make([]interface{}, 0)
+		for _, building := range buildings {
+			if buildingMap, ok := building.(map[string]interface{}); ok {
+				if name, exists := buildingMap["name"]; exists {
+					if nameStr, ok := name.(string); ok {
+						if strings.Contains(strings.ToLower(nameStr), strings.ToLower(query)) {
+							filtered = append(filtered, building)
+						}
+					}
+				}
+			}
+		}
+
+		h.RespondJSON(w, http.StatusOK, map[string]interface{}{
+			"query":   query,
+			"type":    "buildings",
+			"results": filtered,
+			"limit":   limit,
+			"offset":  offset,
+			"total":   len(filtered),
+		})
+		return
+	}
+
+	// Fallback to empty results
 	h.RespondJSON(w, http.StatusOK, map[string]interface{}{
 		"query":   query,
 		"type":    "buildings",
 		"results": []interface{}{},
 		"limit":   limit,
 		"offset":  offset,
+		"total":   0,
 	})
 }
 
 // handleEquipmentSearch handles equipment-specific search
 func (h *RoutingHandler) handleEquipmentSearch(w http.ResponseWriter, r *http.Request, query string, limit, offset int) {
-	// This would use the SearchService to search equipment
-	// For now, return a placeholder response
+	// Use the SearchService to search equipment via spatial query
+	if h.server.Services.Search != nil {
+		results, err := h.server.Services.Search.SpatialQuery(r.Context(), query, limit)
+		if err != nil {
+			h.RespondError(w, http.StatusInternalServerError, "Search failed")
+			return
+		}
+
+		h.RespondJSON(w, http.StatusOK, map[string]interface{}{
+			"query":   query,
+			"type":    "equipment",
+			"results": results,
+			"limit":   limit,
+			"offset":  offset,
+			"total":   len(results),
+		})
+		return
+	}
+
+	// Fallback to equipment service if search service not available
+	if h.server.Services.Equipment != nil {
+		// Get building ID from query params for equipment search
+		buildingID := r.URL.Query().Get("building_id")
+		if buildingID == "" {
+			h.RespondError(w, http.StatusBadRequest, "building_id parameter required for equipment search")
+			return
+		}
+
+		equipment, err := h.server.Services.Equipment.GetEquipment(r.Context())
+		if err != nil {
+			h.RespondError(w, http.StatusInternalServerError, "Failed to get equipment")
+			return
+		}
+
+		// Simple client-side filtering
+		filtered := make([]interface{}, 0)
+		for _, eq := range equipment {
+			if eqMap, ok := eq.(map[string]interface{}); ok {
+				// Search in name, type, and path fields
+				searchable := []string{}
+				if name, exists := eqMap["name"]; exists {
+					if nameStr, ok := name.(string); ok {
+						searchable = append(searchable, nameStr)
+					}
+				}
+				if eqType, exists := eqMap["type"]; exists {
+					if typeStr, ok := eqType.(string); ok {
+						searchable = append(searchable, typeStr)
+					}
+				}
+				if path, exists := eqMap["path"]; exists {
+					if pathStr, ok := path.(string); ok {
+						searchable = append(searchable, pathStr)
+					}
+				}
+
+				// Check if any searchable field contains the query
+				matches := false
+				for _, field := range searchable {
+					if strings.Contains(strings.ToLower(field), strings.ToLower(query)) {
+						matches = true
+						break
+					}
+				}
+
+				if matches {
+					filtered = append(filtered, eq)
+				}
+			}
+		}
+
+		h.RespondJSON(w, http.StatusOK, map[string]interface{}{
+			"query":   query,
+			"type":    "equipment",
+			"results": filtered,
+			"limit":   limit,
+			"offset":  offset,
+			"total":   len(filtered),
+		})
+		return
+	}
+
+	// Fallback to empty results
 	h.RespondJSON(w, http.StatusOK, map[string]interface{}{
 		"query":   query,
 		"type":    "equipment",
 		"results": []interface{}{},
 		"limit":   limit,
 		"offset":  offset,
+		"total":   0,
 	})
 }
 

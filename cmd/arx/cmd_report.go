@@ -1,12 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"time"
 
 	"github.com/arx-os/arxos/internal/common/logger"
-	// "github.com/arx-os/arxos/internal/visualization/export" // TODO: Implement visualization package
+	"github.com/arx-os/arxos/internal/visualization/export"
 	"github.com/spf13/cobra"
 )
 
@@ -67,28 +68,40 @@ func runReport(cmd *cobra.Command, args []string) error {
 	}
 
 	// Generate single comprehensive report
-	// TODO: Implement export when visualization package is available
-	logger.Warn("Report export not yet implemented")
-	return fmt.Errorf("report export not yet implemented")
+	exporter := export.NewExporter(dbConn)
+	ctx := cmd.Context()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	return exporter.GenerateReport(ctx, building, reportFormat, reportOutput)
 }
 
 func runBatchExport(building string) error {
-	// TODO: Implement batch export when visualization package is available
-	logger.Warn("Batch export not yet implemented")
+	// Create batch exporter
+	exporter := export.NewExporter(dbConn)
+	ctx := context.Background()
 
-	// Create batch exporter placeholder
+	// Determine output directory
 	baseDir := "./exports"
 	if reportOutput != "" {
 		baseDir = filepath.Dir(reportOutput)
 	}
 
-	fmt.Printf("Dashboard exported to: %s\n", baseDir)
+	// Create timestamped subdirectory
+	timestamp := time.Now().Format("20060102_150405")
+	outputDir := filepath.Join(baseDir, fmt.Sprintf("%s_%s", building, timestamp))
+
+	// Export visualizations
+	if err := exporter.ExportVisualizations(ctx, building, outputDir); err != nil {
+		return fmt.Errorf("failed to export visualizations: %w", err)
+	}
+
+	fmt.Printf("Dashboard exported to: %s\n", outputDir)
 	fmt.Println("\nExported files:")
-	fmt.Println("  - equipment_status")
-	fmt.Println("  - energy_weekly")
-	fmt.Println("  - metrics_sparklines")
-	fmt.Println("  - occupancy_heatmap")
-	fmt.Println("  - system_hierarchy")
+	fmt.Println("  - equipment_status.txt")
+	fmt.Println("  - energy_usage.txt")
+	fmt.Println("  - occupancy_heatmap.txt")
 	fmt.Println("  - index.txt")
 
 	return nil

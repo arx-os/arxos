@@ -15,8 +15,8 @@ type ConfidenceLevel = models.ConfidenceLevel
 
 // Re-export public constructors for convenience
 var (
-	NewPoint3D = models.NewPoint3D
-	NewPoint2D = models.NewPoint2D
+	NewPoint3D     = models.NewPoint3D
+	NewPoint2D     = models.NewPoint2D
 	NewBoundingBox = models.NewBoundingBox
 )
 
@@ -167,8 +167,7 @@ func (c *CoverageMap) GetCoveragePercentage() float64 {
 
 	scannedArea := 0.0
 	for _, region := range c.ScannedRegions {
-		// Calculate area of region (simplified - assumes rectangular)
-		// TODO: Implement proper polygon area calculation
+		// Calculate area of region using proper polygon area calculation
 		scannedArea += calculatePolygonArea(region.Region.Boundary)
 	}
 

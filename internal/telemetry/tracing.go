@@ -11,24 +11,34 @@ import (
 
 // Tracer manages distributed tracing
 type Tracer struct {
-	config *ObservabilityConfig
-	spans  map[string]*Span
-	mu     sync.RWMutex
+	config  *ObservabilityConfig
+	backend Backend
+	spans   map[string]*Span
+	mu      sync.RWMutex
 }
 
 // Span represents a tracing span
 type Span struct {
-	TraceID    string                 `json:"trace_id"`
-	SpanID     string                 `json:"span_id"`
-	ParentID   string                 `json:"parent_id,omitempty"`
-	Name       string                 `json:"name"`
-	StartTime  time.Time              `json:"start_time"`
-	EndTime    *time.Time             `json:"end_time,omitempty"`
-	Duration   *time.Duration         `json:"duration,omitempty"`
-	Attributes map[string]interface{} `json:"attributes"`
-	Events     []SpanEvent            `json:"events"`
-	Status     SpanStatus             `json:"status"`
-	mu         sync.RWMutex
+	TraceID       string                 `json:"trace_id"`
+	SpanID        string                 `json:"span_id"`
+	ParentID      string                 `json:"parent_id,omitempty"`
+	Name          string                 `json:"name"`
+	OperationName string                 `json:"operation_name"` // Alias for Name for backend compatibility
+	StartTime     time.Time              `json:"start_time"`
+	EndTime       *time.Time             `json:"end_time,omitempty"`
+	Duration      *time.Duration         `json:"duration,omitempty"`
+	Attributes    map[string]interface{} `json:"attributes"`
+	Tags          map[string]interface{} `json:"tags"` // Alias for Attributes for backend compatibility
+	Events        []SpanEvent            `json:"events"`
+	Logs          []SpanLog              `json:"logs"` // Alias for Events for backend compatibility
+	Status        SpanStatus             `json:"status"`
+	mu            sync.RWMutex
+}
+
+// SpanLog represents a log entry within a span (alias for SpanEvent for backend compatibility)
+type SpanLog struct {
+	Timestamp time.Time              `json:"timestamp"`
+	Fields    map[string]interface{} `json:"fields"`
 }
 
 // SpanEvent represents an event within a span
@@ -69,6 +79,22 @@ func NewTracer(config *ObservabilityConfig) *Tracer {
 	}
 }
 
+// NewTracerWithBackend creates a new tracer with a specific backend
+func NewTracerWithBackend(config *ObservabilityConfig, backend Backend) *Tracer {
+	return &Tracer{
+		config:  config,
+		backend: backend,
+		spans:   make(map[string]*Span),
+	}
+}
+
+// SetBackend sets the tracing backend for the tracer
+func (t *Tracer) SetBackend(backend Backend) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.backend = backend
+}
+
 // StartSpan starts a new span
 func (t *Tracer) StartSpan(ctx context.Context, name string) (context.Context, *Span) {
 	traceID := generateTraceID()
@@ -82,14 +108,17 @@ func (t *Tracer) StartSpan(ctx context.Context, name string) (context.Context, *
 	}
 
 	span := &Span{
-		TraceID:    traceID,
-		SpanID:     spanID,
-		ParentID:   parentID,
-		Name:       name,
-		StartTime:  time.Now(),
-		Attributes: make(map[string]interface{}),
-		Events:     make([]SpanEvent, 0),
-		Status:     SpanStatus{Code: SpanStatusUnset},
+		TraceID:       traceID,
+		SpanID:        spanID,
+		ParentID:      parentID,
+		Name:          name,
+		OperationName: name, // Set alias for backend compatibility
+		StartTime:     time.Now(),
+		Attributes:    make(map[string]interface{}),
+		Tags:          make(map[string]interface{}), // Initialize tags alias
+		Events:        make([]SpanEvent, 0),
+		Logs:          make([]SpanLog, 0), // Initialize logs alias
+		Status:        SpanStatus{Code: SpanStatusUnset},
 	}
 
 	// Store span
@@ -116,7 +145,10 @@ func (t *Tracer) Stop() {
 
 	if len(spans) > 0 {
 		logger.Debug("Exporting %d remaining spans", len(spans))
-		// TODO: Export to tracing backend
+		// Export to tracing backend
+		if err := t.exportToBackend(spans); err != nil {
+			logger.Error("Failed to export spans to tracing backend: %v", err)
+		}
 	}
 }
 
@@ -138,6 +170,13 @@ func (s *Span) AddEvent(name string, attributes map[string]interface{}) {
 		Attributes: attributes,
 	}
 	s.Events = append(s.Events, event)
+
+	// Also add to logs for backend compatibility
+	log := SpanLog{
+		Timestamp: time.Now(),
+		Fields:    attributes,
+	}
+	s.Logs = append(s.Logs, log)
 }
 
 // SetStatus sets the status of the span
@@ -183,6 +222,14 @@ func (s *Span) Finish() {
 	logger.Debug("Span finished: %s (trace: %s, duration: %v)", s.Name, s.TraceID, duration)
 }
 
+// AddAttribute adds an attribute to the span
+func (s *Span) AddAttribute(key string, value interface{}) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Attributes[key] = value
+	s.Tags[key] = value // Update alias for backend compatibility
+}
+
 // SpanFromContext extracts a span from context
 func SpanFromContext(ctx context.Context) *Span {
 	if span, ok := ctx.Value(SpanContextKey).(*Span); ok {
@@ -207,4 +254,15 @@ func generateTraceID() string {
 // generateSpanID generates a unique span ID
 func generateSpanID() string {
 	return fmt.Sprintf("%016x", time.Now().UnixNano())
+}
+
+// exportToBackend exports spans to the configured tracing backend
+func (t *Tracer) exportToBackend(spans []*Span) error {
+	if t.backend == nil {
+		logger.Debug("No tracing backend configured, skipping export of %d spans", len(spans))
+		return nil
+	}
+
+	ctx := context.Background()
+	return t.backend.Export(ctx, spans)
 }

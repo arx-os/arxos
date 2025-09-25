@@ -18,8 +18,8 @@ import (
 
 // S3Backend implements Backend for AWS S3
 type S3Backend struct {
-	client     *s3.Client
-	bucket     string
+	client        *s3.Client
+	bucket        string
 	presignClient *s3.PresignClient
 }
 
@@ -34,14 +34,14 @@ type S3Config struct {
 }
 
 // NewS3Backend creates a new S3 backend
-func NewS3Backend(cfg *S3Config) (*S3Backend, error) {
+func NewS3Backend(ctx context.Context, cfg *S3Config) (*S3Backend, error) {
 	var awsCfg aws.Config
 	var err error
 
 	// Load AWS configuration
 	if cfg.AccessKeyID != "" && cfg.SecretAccessKey != "" {
 		// Use explicit credentials
-		awsCfg, err = config.LoadDefaultConfig(context.TODO(),
+		awsCfg, err = config.LoadDefaultConfig(ctx,
 			config.WithRegion(cfg.Region),
 			config.WithCredentialsProvider(
 				credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, ""),
@@ -49,7 +49,7 @@ func NewS3Backend(cfg *S3Config) (*S3Backend, error) {
 		)
 	} else {
 		// Use default credentials (IAM role, environment variables, etc.)
-		awsCfg, err = config.LoadDefaultConfig(context.TODO(),
+		awsCfg, err = config.LoadDefaultConfig(ctx,
 			config.WithRegion(cfg.Region),
 		)
 	}
@@ -215,10 +215,10 @@ func (b *S3Backend) SetMetadata(ctx context.Context, key string, metadata *Metad
 	copySource := fmt.Sprintf("%s/%s", b.bucket, key)
 
 	input := &s3.CopyObjectInput{
-		Bucket:     aws.String(b.bucket),
-		Key:        aws.String(key),
-		CopySource: aws.String(copySource),
-		Metadata:   metadata.Metadata,
+		Bucket:            aws.String(b.bucket),
+		Key:               aws.String(key),
+		CopySource:        aws.String(copySource),
+		Metadata:          metadata.Metadata,
 		MetadataDirective: types.MetadataDirectiveReplace,
 	}
 

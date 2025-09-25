@@ -52,6 +52,13 @@ type DB interface {
 	CreateUser(ctx context.Context, user *models.User) error
 	UpdateUser(ctx context.Context, user *models.User) error
 	DeleteUser(ctx context.Context, id string) error
+	ListUsers(ctx context.Context, limit, offset int) ([]*models.User, error)
+	CountUsers(ctx context.Context) (int, error)
+	SearchUsers(ctx context.Context, query string, limit, offset int) ([]*models.User, error)
+	CountUsersByQuery(ctx context.Context, query string) (int, error)
+	CountActiveUsers(ctx context.Context) (int, error)
+	GetUserStatsByRole(ctx context.Context) (map[string]int, error)
+	BulkUpdateUsers(ctx context.Context, updates []*models.UserUpdateRequest) error
 
 	// Session operations
 	CreateSession(ctx context.Context, session *models.UserSession) error

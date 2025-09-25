@@ -214,12 +214,31 @@ func (h *BaseHandler) GetUserIDFromContext(r *http.Request) (string, error) {
 
 // GetOrgIDFromContext extracts organization ID from request context
 func (h *BaseHandler) GetOrgIDFromContext(r *http.Request) (string, error) {
-	_, err := h.GetCurrentUser(r)
+	user, err := h.GetCurrentUser(r)
 	if err != nil {
 		return "", err
 	}
-	// Note: This would need to get organization ID from user's session or membership
-	// For now, return empty string as placeholder
+
+	// Try to get organization ID from user's metadata
+	if user.Metadata != nil {
+		if orgID, exists := user.Metadata["organization_id"]; exists {
+			if orgIDStr, ok := orgID.(string); ok {
+				return orgIDStr, nil
+			}
+		}
+	}
+
+	// Try to get from query parameter
+	if orgID := r.URL.Query().Get("org_id"); orgID != "" {
+		return orgID, nil
+	}
+
+	// Try to get from header
+	if orgID := r.Header.Get("X-Organization-ID"); orgID != "" {
+		return orgID, nil
+	}
+
+	// Return empty string if no organization ID found
 	return "", nil
 }
 
@@ -246,13 +265,42 @@ func (h *BaseHandler) ValidateOrgAccess(w http.ResponseWriter, r *http.Request, 
 		return nil, false
 	}
 
-	// Check if user belongs to the organization
-	// Note: This would need to check user's organization membership through a service
-	// For now, allow access for admin users
-	if string(user.Role) != string(domainmodels.UserRoleAdmin) {
-		h.RespondError(w, http.StatusForbidden, "Access denied to organization")
-		return nil, false
+	// Admin users have access to all organizations
+	if string(user.Role) == string(domainmodels.UserRoleAdmin) {
+		return user, true
 	}
 
-	return user, true
+	// Check if user belongs to the organization
+	// Try to get user's organizations from the service
+	if h.server.Services.Organization != nil {
+		userOrgs, err := h.server.Services.Organization.ListOrganizations(r.Context(), user.ID)
+		if err == nil {
+			// Check if user is a member of the requested organization
+			for _, org := range userOrgs {
+				if orgMap, ok := org.(map[string]interface{}); ok {
+					if orgIDFromMap, exists := orgMap["id"]; exists {
+						if orgIDStr, ok := orgIDFromMap.(string); ok && orgIDStr == orgID {
+							return user, true
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Check user's metadata for organization membership
+	if user.Metadata != nil {
+		if userOrgs, exists := user.Metadata["organizations"]; exists {
+			if orgs, ok := userOrgs.([]string); ok {
+				for _, org := range orgs {
+					if org == orgID {
+						return user, true
+					}
+				}
+			}
+		}
+	}
+
+	h.RespondError(w, http.StatusForbidden, "Access denied to organization")
+	return nil, false
 }

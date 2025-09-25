@@ -141,11 +141,4 @@ func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// rateLimitMiddleware implements rate limiting
-func (s *Server) rateLimitMiddleware(next http.Handler) http.Handler {
-	// Simple rate limiting - in production use a proper rate limiter
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// TODO: Implement proper rate limiting
-		next.ServeHTTP(w, r)
-	})
-}
+// rateLimitMiddleware is implemented in middleware.go

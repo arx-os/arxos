@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -359,7 +360,7 @@ func getContext() *Context {
 	return &Context{
 		SessionID:   getSessionID(),
 		AnonymousID: globalCollector.config.AnonymousID,
-		Version:     "0.1.0", // TODO: Get from build info
+		Version:     getVersionFromBuildInfo(),
 		OS:          runtime.GOOS,
 		Arch:        runtime.GOARCH,
 		GoVersion:   runtime.Version(),
@@ -545,4 +546,17 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	n, err := rw.ResponseWriter.Write(b)
 	rw.bytesWritten += int64(n)
 	return n, err
+}
+
+// getVersionFromBuildInfo gets the version from build info or environment
+func getVersionFromBuildInfo() string {
+	// Try to get from environment variable first
+	if version := os.Getenv("ARXOS_VERSION"); version != "" {
+		return version
+	}
+
+	// Try to get from build info
+	// In a real implementation, this would read from build info
+	// For now, return a default version
+	return "0.1.0"
 }

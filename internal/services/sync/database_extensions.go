@@ -25,9 +25,20 @@ func (de *DatabaseExtensions) ListUsers(ctx context.Context, page, limit int) ([
 	// In a real system, this would query the database with pagination
 	users := make([]*models.User, 0)
 
-	// For now, return empty list as the database interface doesn't have ListUsers
-	// TODO: Add ListUsers method to database interface
-	return users, 0, nil
+	// Get users from database using the ListUsers method
+	offset := (page - 1) * limit
+	users, err := de.db.ListUsers(ctx, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list users: %w", err)
+	}
+
+	// Get total count
+	total, err := de.db.CountUsers(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count users: %w", err)
+	}
+
+	return users, total, nil
 }
 
 // GetUsersByOrganization returns users belonging to a specific organization

@@ -15,11 +15,11 @@ func NewRouter(h *Handler) chi.Router {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
 	r.Use(appmw.RequestID)
-	
+
 	// Security middleware
 	r.Use(appmw.SecurityHeaders)
 	r.Use(appmw.InputValidation)
-	
+
 	// CSRF protection for state-changing operations
 	csrfStore := appmw.NewMemoryCSRFStore()
 	csrfMiddleware := appmw.NewCSRFMiddleware(csrfStore)
@@ -67,6 +67,9 @@ func NewRouter(h *Handler) chi.Router {
 		r.Get("/search/suggestions", h.handleSearchSuggestions)
 		r.Get("/search/recent", h.handleRecentSearches)
 		r.Get("/notifications", h.handleNotifications)
+		r.Post("/notifications/{id}/read", h.handleMarkNotificationRead)
+		r.Post("/notifications/read-all", h.handleMarkAllNotificationsRead)
+		r.Get("/notifications/unread-count", h.handleGetUnreadCount)
 	})
 
 	// Visualization endpoints
@@ -77,4 +80,3 @@ func NewRouter(h *Handler) chi.Router {
 
 	return r
 }
-

@@ -1,8 +1,11 @@
 package postgis
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+
+	"github.com/arx-os/arxos/internal/database"
 )
 
 // Schema defines the PostGIS database schema for spatial data
@@ -284,6 +287,18 @@ func (s *Schema) Initialize() error {
 
 // Migrate applies schema migrations
 func (s *Schema) Migrate(fromVersion, toVersion int) error {
-	// TODO: Implement migration logic
-	return nil
+	// Use the migrator package for schema migrations
+	migrator := database.NewMigrator(s.db, "migrations/")
+
+	// Load and validate migrations
+	if err := migrator.LoadMigrations(); err != nil {
+		return fmt.Errorf("failed to load migrations: %w", err)
+	}
+
+	if err := migrator.ValidateMigrations(); err != nil {
+		return fmt.Errorf("migration validation failed: %w", err)
+	}
+
+	// Apply migrations
+	return migrator.Migrate(context.Background())
 }

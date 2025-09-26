@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/arx-os/arxos/internal/common"
 	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/internal/hardware"
 )
@@ -63,7 +64,7 @@ func (hs *HardwareService) RegisterDevice(ctx context.Context, req hardware.Regi
 		req.Config,
 		json.RawMessage("{}"), // Default firmware
 		req.Location,
-		"default_user", // TODO: Get from context
+		common.GetUserIDFromContextSafe(ctx), // Get from context
 	).Scan(
 		&device.ID,
 		&device.Name,

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/arx-os/arxos/internal/common"
 	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/internal/ecosystem"
 )
@@ -64,7 +65,7 @@ func (ws *WorkflowService) CreateWorkflow(ctx context.Context, req ecosystem.Cre
 		req.Definition,
 		"created",
 		n8nWorkflow.ID,
-		"default_user", // TODO: Get from context
+		common.GetUserIDFromContextSafe(ctx), // Get from context
 		string(ecosystem.TierWorkflow),
 	).Scan(
 		&workflow.ID,
@@ -349,7 +350,7 @@ func (ws *WorkflowService) ExecuteWorkflow(ctx context.Context, workflowID strin
 	return workflowResult, nil
 }
 
-func (ws *WorkflowService) GetWorkflowStatus(ctx context.Context, executionID string) (*ecosystem.WorkflowStatus, error) {
+func (ws *WorkflowService) GetWorkflowStatus(ctx context.Context, executionID string) (*ecosystem.WorkflowExecutionStatus, error) {
 	// Get execution from database
 	var n8nExecutionID string
 	var status string
@@ -372,10 +373,10 @@ func (ws *WorkflowService) GetWorkflowStatus(ctx context.Context, executionID st
 	}
 
 	// Convert to ArxOS format
-	workflowStatus := &ecosystem.WorkflowStatus{
+	workflowStatus := &ecosystem.WorkflowExecutionStatus{
 		ExecutionID: executionID,
-		Status:      n8nExecution.Status,
-		Progress:    calculateProgress(n8nExecution.Status),
+		Status:      ecosystem.WorkflowStatus(n8nExecution.Status),
+		Progress:    float64(calculateProgress(n8nExecution.Status)),
 		CurrentStep: getCurrentStep(n8nExecution.Status),
 		LastUpdated: time.Now(),
 	}

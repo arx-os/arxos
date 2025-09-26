@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/arx-os/arxos/internal/common"
 	"github.com/arx-os/arxos/internal/hardware"
 	"github.com/arx-os/arxos/internal/services"
 	"github.com/go-chi/chi/v5"
@@ -153,8 +154,8 @@ func (mr *MarketplaceRouter) handleAddReview(w http.ResponseWriter, r *http.Requ
 	}
 
 	review.DeviceID = deviceID
-	// TODO: Get userID from authentication context
-	review.UserID = "current_user"
+	// Get userID from authentication context
+	review.UserID = common.GetUserIDFromContextSafe(ctx)
 
 	createdReview, err := mr.marketplaceManager.GetEnhancedMarketplace().AddReview(ctx, review)
 	if err != nil {
@@ -243,8 +244,8 @@ func (mr *MarketplaceRouter) handlePurchaseDevice(w http.ResponseWriter, r *http
 func (mr *MarketplaceRouter) handleListOrders(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// TODO: Get userID from authentication context
-	userID := "current_user"
+	// Get userID from authentication context
+	userID := common.GetUserIDFromContextSafe(ctx)
 
 	orders, err := mr.marketplaceManager.GetMarketplaceService().ListOrders(ctx, userID)
 	if err != nil {
@@ -292,8 +293,8 @@ func (mr *MarketplaceRouter) handleSubmitCertification(w http.ResponseWriter, r 
 		return
 	}
 
-	// TODO: Get userID from authentication context
-	certReq.RequestedBy = "current_user"
+	// Get userID from authentication context
+	certReq.RequestedBy = common.GetUserIDFromContextSafe(ctx)
 
 	result, err := mr.marketplaceManager.DeviceCertificationWorkflow(ctx, certReq)
 	if err != nil {

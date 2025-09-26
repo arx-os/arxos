@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/arx-os/arxos/internal/common"
 	"github.com/arx-os/arxos/internal/ecosystem"
 	"github.com/arx-os/arxos/internal/services"
 	"github.com/go-chi/chi/v5"
@@ -188,8 +189,18 @@ func (ch *CoreHandlers) handleRecentEquipment(w http.ResponseWriter, r *http.Req
 
 // Building Management Handlers
 func (ch *CoreHandlers) handleListBuildings(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement actual building listing
-	http.Error(w, "Not implemented", http.StatusNotImplemented)
+	// Get user ID from context
+	userID := common.GetUserIDFromContextSafe(r.Context())
+
+	// List buildings
+	buildings, err := ch.coreService.ListBuildings(r.Context(), userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(buildings)
 }
 
 func (ch *CoreHandlers) handleCreateBuilding(w http.ResponseWriter, r *http.Request) {
@@ -211,24 +222,115 @@ func (ch *CoreHandlers) handleCreateBuilding(w http.ResponseWriter, r *http.Requ
 }
 
 func (ch *CoreHandlers) handleGetBuilding(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement actual building retrieval
-	http.Error(w, "Not implemented", http.StatusNotImplemented)
+	buildingID := chi.URLParam(r, "id")
+	if buildingID == "" {
+		http.Error(w, "Building ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get building
+	building, err := ch.coreService.GetBuilding(r.Context(), buildingID)
+	if err != nil {
+		if err.Error() == "building not found" {
+			http.Error(w, "Building not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(building)
 }
 
 func (ch *CoreHandlers) handleUpdateBuilding(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement actual building update
-	http.Error(w, "Not implemented", http.StatusNotImplemented)
+	buildingID := chi.URLParam(r, "id")
+	if buildingID == "" {
+		http.Error(w, "Building ID is required", http.StatusBadRequest)
+		return
+	}
+
+	var req ecosystem.CreateBuildingRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Update building
+	building, err := ch.coreService.UpdateBuilding(r.Context(), buildingID, req)
+	if err != nil {
+		if err.Error() == "building not found" {
+			http.Error(w, "Building not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(building)
 }
 
 func (ch *CoreHandlers) handleDeleteBuilding(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement actual building deletion
-	http.Error(w, "Not implemented", http.StatusNotImplemented)
+	buildingID := chi.URLParam(r, "id")
+	if buildingID == "" {
+		http.Error(w, "Building ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Delete building
+	err := ch.coreService.DeleteBuilding(r.Context(), buildingID)
+	if err != nil {
+		if err.Error() == "building not found" {
+			http.Error(w, "Building not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // Equipment Management Handlers
 func (ch *CoreHandlers) handleListEquipment(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement actual equipment listing
-	http.Error(w, "Not implemented", http.StatusNotImplemented)
+	// Parse query parameters
+	buildingID := r.URL.Query().Get("building_id")
+	equipmentType := r.URL.Query().Get("type")
+	limitStr := r.URL.Query().Get("limit")
+	offsetStr := r.URL.Query().Get("offset")
+
+	// Parse limit and offset
+	limit := 100 // default limit
+	offset := 0  // default offset
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+	if offsetStr != "" {
+		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
+			offset = o
+		}
+	}
+
+	// Create query
+	query := ecosystem.EquipmentQuery{
+		BuildingID: buildingID,
+		Type:       equipmentType,
+		Limit:      limit,
+		Offset:     offset,
+	}
+
+	// Query equipment
+	equipment, err := ch.coreService.QueryEquipment(r.Context(), query)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(equipment)
 }
 
 func (ch *CoreHandlers) handleCreateEquipment(w http.ResponseWriter, r *http.Request) {
@@ -250,16 +352,72 @@ func (ch *CoreHandlers) handleCreateEquipment(w http.ResponseWriter, r *http.Req
 }
 
 func (ch *CoreHandlers) handleGetEquipment(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement actual equipment retrieval
-	http.Error(w, "Not implemented", http.StatusNotImplemented)
+	equipmentID := chi.URLParam(r, "id")
+	if equipmentID == "" {
+		http.Error(w, "Equipment ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get equipment
+	equipment, err := ch.coreService.GetEquipment(r.Context(), equipmentID)
+	if err != nil {
+		if err.Error() == "equipment not found" {
+			http.Error(w, "Equipment not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(equipment)
 }
 
 func (ch *CoreHandlers) handleUpdateEquipment(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement actual equipment update
-	http.Error(w, "Not implemented", http.StatusNotImplemented)
+	equipmentID := chi.URLParam(r, "id")
+	if equipmentID == "" {
+		http.Error(w, "Equipment ID is required", http.StatusBadRequest)
+		return
+	}
+
+	var req ecosystem.CreateEquipmentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Update equipment
+	equipment, err := ch.coreService.UpdateEquipment(r.Context(), equipmentID, req)
+	if err != nil {
+		if err.Error() == "equipment not found" {
+			http.Error(w, "Equipment not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(equipment)
 }
 
 func (ch *CoreHandlers) handleDeleteEquipment(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement actual equipment deletion
-	http.Error(w, "Not implemented", http.StatusNotImplemented)
+	equipmentID := chi.URLParam(r, "id")
+	if equipmentID == "" {
+		http.Error(w, "Equipment ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Delete equipment
+	err := ch.coreService.DeleteEquipment(r.Context(), equipmentID)
+	if err != nil {
+		if err.Error() == "equipment not found" {
+			http.Error(w, "Equipment not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

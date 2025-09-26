@@ -3,6 +3,7 @@ package ecosystem
 import (
 	"context"
 	"fmt"
+	"time"
 )
 
 // Manager handles the three-tier ecosystem coordination
@@ -140,20 +141,25 @@ func (m *Manager) ValidateTierAccess(userID string, tier Tier, feature string) e
 // Data structures for ecosystem services
 
 type Building struct {
-	ID       string                 `json:"id"`
-	Name     string                 `json:"name"`
-	Path     string                 `json:"path"`
-	Tier     Tier                   `json:"tier"`
-	Metadata map[string]interface{} `json:"metadata"`
+	ID        string                 `json:"id"`
+	Name      string                 `json:"name"`
+	Path      string                 `json:"path"`
+	Tier      Tier                   `json:"tier"`
+	Metadata  map[string]interface{} `json:"metadata"`
+	CreatedAt time.Time              `json:"created_at"`
+	UpdatedAt time.Time              `json:"updated_at"`
 }
 
 type Equipment struct {
-	ID       string                 `json:"id"`
-	Name     string                 `json:"name"`
-	Path     string                 `json:"path"`
-	Type     string                 `json:"type"`
-	Position map[string]interface{} `json:"position"`
-	Metadata map[string]interface{} `json:"metadata"`
+	ID        string                 `json:"id"`
+	Name      string                 `json:"name"`
+	Path      string                 `json:"path"`
+	Type      string                 `json:"type"`
+	Position  map[string]interface{} `json:"position"`
+	Metadata  map[string]interface{} `json:"metadata"`
+	Tier      Tier                   `json:"tier"`
+	CreatedAt time.Time              `json:"created_at"`
+	UpdatedAt time.Time              `json:"updated_at"`
 }
 
 type Device struct {
@@ -166,11 +172,15 @@ type Device struct {
 }
 
 type Workflow struct {
-	ID          string                 `json:"id"`
-	Name        string                 `json:"name"`
-	Description string                 `json:"description"`
-	Definition  map[string]interface{} `json:"definition"`
-	Status      string                 `json:"status"`
+	ID            string                 `json:"id"`
+	Name          string                 `json:"name"`
+	Description   string                 `json:"description"`
+	Definition    map[string]interface{} `json:"definition"`
+	Status        string                 `json:"status"`
+	Tier          Tier                   `json:"tier"`
+	N8nWorkflowID string                 `json:"n8n_workflow_id"`
+	CreatedAt     time.Time              `json:"created_at"`
+	UpdatedAt     time.Time              `json:"updated_at"`
 }
 
 // Request/Response types
@@ -295,6 +305,28 @@ type AnalyticsRequest struct {
 	Metrics    []string               `json:"metrics"`
 }
 
+// WorkflowExecutionStatus represents the status of a workflow execution
+type WorkflowExecutionStatus struct {
+	ExecutionID string                 `json:"execution_id"`
+	Status      WorkflowStatus         `json:"status"`
+	Progress    float64                `json:"progress"`
+	CurrentStep string                 `json:"current_step"`
+	LastUpdated time.Time              `json:"last_updated"`
+	Metrics     map[string]interface{} `json:"metrics,omitempty"`
+	Error       string                 `json:"error,omitempty"`
+}
+
+// WorkflowStatus represents the status of a workflow execution
+type WorkflowStatus string
+
+const (
+	WorkflowStatusPending   WorkflowStatus = "pending"
+	WorkflowStatusRunning   WorkflowStatus = "running"
+	WorkflowStatusCompleted WorkflowStatus = "completed"
+	WorkflowStatusFailed    WorkflowStatus = "failed"
+	WorkflowStatusCancelled WorkflowStatus = "cancelled"
+)
+
 // Result types
 
 type ImportResult struct {
@@ -314,11 +346,13 @@ type ExportResult struct {
 }
 
 type WorkflowResult struct {
-	ID       string                 `json:"id"`
-	Status   string                 `json:"status"`
-	Output   map[string]interface{} `json:"output"`
-	Duration int64                  `json:"duration_ms"`
-	Error    string                 `json:"error,omitempty"`
+	ID         string                 `json:"id"`
+	WorkflowID string                 `json:"workflow_id"`
+	Status     string                 `json:"status"`
+	Output     map[string]interface{} `json:"output"`
+	Metadata   map[string]interface{} `json:"metadata"`
+	Duration   int64                  `json:"duration_ms"`
+	Error      string                 `json:"error,omitempty"`
 }
 
 type PurchaseResult struct {

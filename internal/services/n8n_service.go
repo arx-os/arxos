@@ -254,7 +254,7 @@ func (ns *N8NService) CreateBuildingNode(buildingID string) N8NNode {
 			"url": fmt.Sprintf("{{$node['Building'].json['building_id']}}"),
 			"options": map[string]interface{}{
 				"response": map[string]interface{}{
-					"response": {
+					"response": map[string]interface{}{
 						"responseFormat": "json",
 					},
 				},
@@ -378,7 +378,7 @@ func (ns *N8NService) convertConnections(definition map[string]interface{}) map[
 func (ns *N8NService) makeRequest(ctx context.Context, method, path string, body []byte) ([]byte, error) {
 	var responseBody []byte
 
-	err := retry.Do(ctx, ns.retryConfig, func(ctx context.Context) error {
+	result := retry.Do(ctx, func(ctx context.Context) error {
 		url := ns.baseURL + path
 
 		var reqBody *bytes.Reader
@@ -420,10 +420,10 @@ func (ns *N8NService) makeRequest(ctx context.Context, method, path string, body
 
 		responseBody = bodyBuffer.Bytes()
 		return nil
-	})
+	}, ns.retryConfig)
 
-	if err != nil {
-		return nil, err
+	if !result.Success {
+		return nil, fmt.Errorf("request failed after %d attempts: %w", result.Attempts, result.LastError)
 	}
 	return responseBody, nil
 }

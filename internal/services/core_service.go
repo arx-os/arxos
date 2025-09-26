@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/arx-os/arxos/internal/common"
 	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/internal/ecosystem"
 )
@@ -51,7 +52,7 @@ func (cs *CoreService) CreateBuilding(ctx context.Context, req ecosystem.CreateB
 	`
 
 	var building ecosystem.Building
-	buildingID := generateBuildingID()
+	buildingID := common.GenerateBuildingID()
 
 	err = cs.db.QueryRow(ctx, query,
 		buildingID,
@@ -142,6 +143,92 @@ func (cs *CoreService) ListBuildings(ctx context.Context, userID string) ([]*eco
 	}
 
 	return buildings, nil
+}
+
+func (cs *CoreService) UpdateBuilding(ctx context.Context, id string, req ecosystem.CreateBuildingRequest) (*ecosystem.Building, error) {
+	// Validate request
+	if req.Name == "" {
+		return nil, fmt.Errorf("building name is required")
+	}
+	if req.Path == "" {
+		return nil, fmt.Errorf("building path is required")
+	}
+
+	// Check if building exists
+	var existingCount int
+	err := cs.db.QueryRow(ctx, "SELECT COUNT(*) FROM buildings WHERE id = $1", id).Scan(&existingCount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check existing building: %w", err)
+	}
+	if existingCount == 0 {
+		return nil, fmt.Errorf("building not found")
+	}
+
+	// Check if new path conflicts with other buildings
+	var pathCount int
+	err = cs.db.QueryRow(ctx, "SELECT COUNT(*) FROM buildings WHERE path = $1 AND id != $2", req.Path, id).Scan(&pathCount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check path conflict: %w", err)
+	}
+	if pathCount > 0 {
+		return nil, fmt.Errorf("building with path '%s' already exists", req.Path)
+	}
+
+	// Update building
+	query := `
+		UPDATE buildings 
+		SET name = $2, path = $3, metadata = $4, updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, name, path, tier, metadata, created_at, updated_at
+	`
+
+	var building ecosystem.Building
+	err = cs.db.QueryRow(ctx, query,
+		id,
+		req.Name,
+		req.Path,
+		req.Metadata,
+	).Scan(
+		&building.ID,
+		&building.Name,
+		&building.Path,
+		&building.Tier,
+		&building.Metadata,
+		&building.CreatedAt,
+		&building.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to update building: %w", err)
+	}
+
+	return &building, nil
+}
+
+func (cs *CoreService) DeleteBuilding(ctx context.Context, id string) error {
+	// Check if building exists
+	var existingCount int
+	err := cs.db.QueryRow(ctx, "SELECT COUNT(*) FROM buildings WHERE id = $1", id).Scan(&existingCount)
+	if err != nil {
+		return fmt.Errorf("failed to check existing building: %w", err)
+	}
+	if existingCount == 0 {
+		return fmt.Errorf("building not found")
+	}
+
+	// Delete associated equipment first
+	_, err = cs.db.Exec(ctx, "DELETE FROM equipment WHERE path LIKE (SELECT path FROM buildings WHERE id = $1) || '%'", id)
+	if err != nil {
+		return fmt.Errorf("failed to delete associated equipment: %w", err)
+	}
+
+	// Delete building
+	_, err = cs.db.Exec(ctx, "DELETE FROM buildings WHERE id = $1", id)
+	if err != nil {
+		return fmt.Errorf("failed to delete building: %w", err)
+	}
+
+	return nil
 }
 
 // Equipment management
@@ -320,6 +407,104 @@ func (cs *CoreService) QueryEquipment(ctx context.Context, query ecosystem.Equip
 	}
 
 	return equipment, nil
+}
+
+func (cs *CoreService) UpdateEquipment(ctx context.Context, id string, req ecosystem.CreateEquipmentRequest) (*ecosystem.Equipment, error) {
+	// Validate request
+	if req.Name == "" {
+		return nil, fmt.Errorf("equipment name is required")
+	}
+	if req.Path == "" {
+		return nil, fmt.Errorf("equipment path is required")
+	}
+	if req.Type == "" {
+		return nil, fmt.Errorf("equipment type is required")
+	}
+
+	// Check if equipment exists
+	var existingCount int
+	err := cs.db.QueryRow(ctx, "SELECT COUNT(*) FROM equipment WHERE id = $1", id).Scan(&existingCount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check existing equipment: %w", err)
+	}
+	if existingCount == 0 {
+		return nil, fmt.Errorf("equipment not found")
+	}
+
+	// Validate that the building exists
+	var buildingExists bool
+	err = cs.db.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM buildings WHERE path = $1)",
+		extractBuildingPath(req.Path)).Scan(&buildingExists)
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate building: %w", err)
+	}
+	if !buildingExists {
+		return nil, fmt.Errorf("building not found for path: %s", req.Path)
+	}
+
+	// Check if new path conflicts with other equipment
+	var pathCount int
+	err = cs.db.QueryRow(ctx, "SELECT COUNT(*) FROM equipment WHERE path = $1 AND id != $2", req.Path, id).Scan(&pathCount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check path conflict: %w", err)
+	}
+	if pathCount > 0 {
+		return nil, fmt.Errorf("equipment with path '%s' already exists", req.Path)
+	}
+
+	// Update equipment
+	query := `
+		UPDATE equipment 
+		SET name = $2, path = $3, type = $4, position = $5, metadata = $6, updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, name, path, type, position, tier, metadata, created_at, updated_at
+	`
+
+	var equipment ecosystem.Equipment
+	err = cs.db.QueryRow(ctx, query,
+		id,
+		req.Name,
+		req.Path,
+		req.Type,
+		req.Position,
+		req.Metadata,
+	).Scan(
+		&equipment.ID,
+		&equipment.Name,
+		&equipment.Path,
+		&equipment.Type,
+		&equipment.Position,
+		&equipment.Tier,
+		&equipment.Metadata,
+		&equipment.CreatedAt,
+		&equipment.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to update equipment: %w", err)
+	}
+
+	return &equipment, nil
+}
+
+func (cs *CoreService) DeleteEquipment(ctx context.Context, id string) error {
+	// Check if equipment exists
+	var existingCount int
+	err := cs.db.QueryRow(ctx, "SELECT COUNT(*) FROM equipment WHERE id = $1", id).Scan(&existingCount)
+	if err != nil {
+		return fmt.Errorf("failed to check existing equipment: %w", err)
+	}
+	if existingCount == 0 {
+		return fmt.Errorf("equipment not found")
+	}
+
+	// Delete equipment
+	_, err = cs.db.Exec(ctx, "DELETE FROM equipment WHERE id = $1", id)
+	if err != nil {
+		return fmt.Errorf("failed to delete equipment: %w", err)
+	}
+
+	return nil
 }
 
 // Spatial operations
@@ -541,10 +726,6 @@ func (cs *CoreService) exportCSV(ctx context.Context, req ecosystem.ExportReques
 }
 
 // Utility functions
-
-func generateBuildingID() string {
-	return fmt.Sprintf("building_%d", time.Now().UnixNano())
-}
 
 func generateEquipmentID() string {
 	return fmt.Sprintf("equipment_%d", time.Now().UnixNano())

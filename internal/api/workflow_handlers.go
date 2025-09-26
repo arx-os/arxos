@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/arx-os/arxos/internal/common"
 	"github.com/arx-os/arxos/internal/services"
 	"github.com/go-chi/chi/v5"
 )
@@ -55,7 +56,7 @@ func (wh *WorkflowHandlers) RegisterWorkflowRoutes(r chi.Router) {
 // Workflow management handlers
 
 func (wh *WorkflowHandlers) handleListWorkflows(w http.ResponseWriter, r *http.Request) {
-	userID := "default_user" // TODO: Get from context/auth
+	userID := common.GetUserIDFromContextSafe(r.Context()) // Get from context/auth
 
 	workflows, err := wh.workflowService.ListWorkflows(r.Context(), userID)
 	if err != nil {
@@ -277,7 +278,7 @@ func (wh *WorkflowHandlers) handleValidateWorkflow(w http.ResponseWriter, r *htt
 // Maintenance automation handlers
 
 func (wh *WorkflowHandlers) handleGetMaintenanceSchedules(w http.ResponseWriter, r *http.Request) {
-	userID := "default_user" // TODO: Get from context/auth
+	userID := common.GetUserIDFromContextSafe(r.Context()) // Get from context/auth
 
 	schedules, err := wh.workflowService.GetCMMCService().ListMaintenanceSchedules(r.Context(), userID)
 	if err != nil {

@@ -162,23 +162,7 @@ var healthCmd = &cobra.Command{
 	},
 }
 
-var migrateCmd = &cobra.Command{
-	Use:   "migrate",
-	Short: "Run database migrations",
-	Long:  "Apply database schema migrations to update the database structure",
-	Run: func(cmd *cobra.Command, args []string) {
-		ctx := context.Background()
-
-		logger.Info("Starting database migration...")
-
-		if err := dbConn.Migrate(ctx); err != nil {
-			logger.Error("Migration failed: %v", err)
-			os.Exit(1)
-		}
-
-		logger.Info("Database migration completed successfully")
-	},
-}
+// migrateCmd is defined in cmd_migrate.go
 
 // serveCmd will be implemented when proper service initialization is available
 

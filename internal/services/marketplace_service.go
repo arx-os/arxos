@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/arx-os/arxos/internal/common"
 	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/internal/hardware"
 )
@@ -137,7 +138,7 @@ func (ms *MarketplaceService) PurchaseDevice(ctx context.Context, req hardware.P
 	// Create order
 	order := &hardware.Order{
 		ID:         generateOrderID(),
-		UserID:     "default_user", // TODO: Get from context
+		UserID:     common.GetUserIDFromContextSafe(ctx), // Get from context
 		DeviceID:   req.DeviceID,
 		Quantity:   req.Quantity,
 		Status:     "pending",

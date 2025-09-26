@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/arx-os/arxos/internal/api/types"
+	"github.com/arx-os/arxos/internal/common"
 	"github.com/arx-os/arxos/internal/common/logger"
 	domainmodels "github.com/arx-os/arxos/pkg/models"
 )
@@ -49,12 +49,12 @@ func (m *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
 			Role:  claims.Role,
 		}
 
-		// Add user to context
-		ctx := context.WithValue(r.Context(), "user", user)
-		ctx = context.WithValue(ctx, "user_id", claims.UserID)
-		ctx = context.WithValue(ctx, "user_email", claims.Email)
-		ctx = context.WithValue(ctx, "user_role", claims.Role)
-		ctx = context.WithValue(ctx, "org_id", claims.OrgID)
+		// Add user to context using our standardized keys
+		ctx := context.WithValue(r.Context(), common.UserContextKey, user)
+		ctx = context.WithValue(ctx, common.UserIDContextKey, claims.UserID)
+		ctx = context.WithValue(ctx, common.UserEmailContextKey, claims.Email)
+		ctx = context.WithValue(ctx, common.UserRoleContextKey, claims.Role)
+		ctx = context.WithValue(ctx, common.OrgIDContextKey, claims.OrgID)
 
 		// Continue to next handler
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -65,16 +65,46 @@ func (m *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
 func (m *AuthMiddleware) RequireRole(role string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Get user from context (set by RequireAuth)
-			user, ok := r.Context().Value("user").(*domainmodels.User)
-			if !ok {
-				m.respondUnauthorized(w, "User not found in context")
+			// First ensure user is authenticated
+			userCtx, err := common.RequireUserInContext(r.Context())
+			if err != nil {
+				m.respondUnauthorized(w, "Authentication required")
 				return
 			}
 
-			// Check if user has required role
-			if user.Role != role && user.Role != string(domainmodels.UserRoleAdmin) {
+			// Check role
+			if userCtx.Role != role {
 				m.respondForbidden(w, fmt.Sprintf("Role '%s' required", role))
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// RequireAnyRole middleware that requires one of the specified roles
+func (m *AuthMiddleware) RequireAnyRole(roles ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// First ensure user is authenticated
+			userCtx, err := common.RequireUserInContext(r.Context())
+			if err != nil {
+				m.respondUnauthorized(w, "Authentication required")
+				return
+			}
+
+			// Check if user has any of the required roles
+			hasRole := false
+			for _, role := range roles {
+				if userCtx.Role == role {
+					hasRole = true
+					break
+				}
+			}
+
+			if !hasRole {
+				m.respondForbidden(w, fmt.Sprintf("One of roles %v required", roles))
 				return
 			}
 
@@ -85,36 +115,7 @@ func (m *AuthMiddleware) RequireRole(role string) func(http.Handler) http.Handle
 
 // RequireAdmin middleware that requires admin role
 func (m *AuthMiddleware) RequireAdmin(next http.Handler) http.Handler {
-	return m.RequireRole(string(domainmodels.UserRoleAdmin))(next)
-}
-
-// RequireOrgAccess middleware that requires organization access
-func (m *AuthMiddleware) RequireOrgAccess(orgID string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Get user from context
-			user, ok := r.Context().Value("user").(*domainmodels.User)
-			if !ok {
-				m.respondUnauthorized(w, "User not found in context")
-				return
-			}
-
-			// Get organization ID from context
-			userOrgID, ok := r.Context().Value("org_id").(string)
-			if !ok {
-				m.respondForbidden(w, "Organization access required")
-				return
-			}
-
-			// Check if user has access to the organization
-			if userOrgID != orgID && user.Role != string(domainmodels.UserRoleAdmin) {
-				m.respondForbidden(w, "Access denied to organization")
-				return
-			}
-
-			next.ServeHTTP(w, r)
-		})
-	}
+	return m.RequireRole("admin")(next)
 }
 
 // OptionalAuth middleware that adds user context if token is present
@@ -133,12 +134,12 @@ func (m *AuthMiddleware) OptionalAuth(next http.Handler) http.Handler {
 					Role:  claims.Role,
 				}
 
-				// Add user to context
-				ctx := context.WithValue(r.Context(), "user", user)
-				ctx = context.WithValue(ctx, "user_id", claims.UserID)
-				ctx = context.WithValue(ctx, "user_email", claims.Email)
-				ctx = context.WithValue(ctx, "user_role", claims.Role)
-				ctx = context.WithValue(ctx, "org_id", claims.OrgID)
+				// Add user to context using our standardized keys
+				ctx := context.WithValue(r.Context(), common.UserContextKey, user)
+				ctx = context.WithValue(ctx, common.UserIDContextKey, claims.UserID)
+				ctx = context.WithValue(ctx, common.UserEmailContextKey, claims.Email)
+				ctx = context.WithValue(ctx, common.UserRoleContextKey, claims.Role)
+				ctx = context.WithValue(ctx, common.OrgIDContextKey, claims.OrgID)
 
 				r = r.WithContext(ctx)
 			}
@@ -176,52 +177,4 @@ func (m *AuthMiddleware) respondForbidden(w http.ResponseWriter, message string)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusForbidden)
 	fmt.Fprintf(w, `{"error":"%s","code":"forbidden"}`, message)
-}
-
-// TokenRefreshMiddleware handles token refresh
-func (m *AuthMiddleware) TokenRefreshMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Check if token is about to expire
-		_, ok := r.Context().Value("user").(*domainmodels.User)
-		if !ok {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		// Check token expiration (this would need to be implemented in the auth service)
-		// For now, just pass through
-		next.ServeHTTP(w, r)
-	})
-}
-
-// RateLimitMiddleware provides rate limiting based on user
-func (m *AuthMiddleware) RateLimitMiddleware(requestsPerMinute int) func(http.Handler) http.Handler {
-	// This would implement rate limiting based on user ID
-	// For now, just pass through
-	return func(next http.Handler) http.Handler {
-		return next
-	}
-}
-
-// AuditMiddleware logs user actions
-func (m *AuthMiddleware) AuditMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-
-		// Get user info from context
-		userID := r.Context().Value("user_id")
-		userEmail := r.Context().Value("user_email")
-
-		// Log the request
-		logger.Info("API Request: %s %s - User: %s (%s) - %s",
-			r.Method, r.URL.Path, userID, userEmail, r.RemoteAddr)
-
-		// Continue to next handler
-		next.ServeHTTP(w, r)
-
-		// Log the response
-		duration := time.Since(start)
-		logger.Info("API Response: %s %s - Duration: %v",
-			r.Method, r.URL.Path, duration)
-	})
 }

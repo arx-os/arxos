@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/arx-os/arxos/internal/common"
 	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/internal/ecosystem"
 )
@@ -323,7 +324,7 @@ func (cs *CMMCService) CreateMaintenanceSchedule(ctx context.Context, req ecosys
 		req.Schedule,
 		req.Tasks,
 		"active",
-		"default_user", // TODO: Get from context
+		common.GetUserIDFromContextSafe(ctx), // Get from context
 		string(ecosystem.TierWorkflow),
 	).Scan(
 		&schedule.ID,
@@ -579,7 +580,7 @@ func (cs *CMMCService) GenerateReport(ctx context.Context, req ecosystem.Generat
 		req.Type,
 		reportData,
 		req.Format,
-		"default_user", // TODO: Get from context
+		common.GetUserIDFromContextSafe(ctx), // Get from context
 		int64(len(reportJSON)),
 		string(ecosystem.TierWorkflow),
 	).Scan(

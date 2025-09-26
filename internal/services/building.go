@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/arx-os/arxos/internal/common"
 	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/pkg/models"
 )
@@ -123,7 +124,7 @@ func (bs *BuildingService) DeleteBuilding(ctx context.Context, buildingID string
 
 // generateBuildingID generates a unique ID for new buildings
 func generateBuildingID() string {
-	return fmt.Sprintf("bld_%d", time.Now().UnixNano())
+	return common.GenerateBuildingID()
 }
 
 // Equipment operations

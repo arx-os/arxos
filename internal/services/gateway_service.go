@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/arx-os/arxos/internal/common"
 	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/internal/hardware"
 )
@@ -47,7 +48,7 @@ func (gs *GatewayService) DeployGateway(ctx context.Context, req hardware.Deploy
 		req.Config,
 		req.Devices,
 		req.Location,
-		"default_user", // TODO: Get from context
+		common.GetUserIDFromContextSafe(ctx), // Get from context
 	).Scan(
 		&gateway.ID,
 		&gateway.Name,

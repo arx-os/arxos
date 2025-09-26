@@ -387,5 +387,19 @@ func (t *TestDB) UpdateLastSyncTime(ctx context.Context, buildingID string, sync
 	return nil
 }
 
+func (t *TestDB) BulkUpdateUsers(ctx context.Context, updates []*models.UserUpdateRequest) error {
+	// Mock implementation for testing
+	return nil
+}
+
+// Additional missing methods for complete DB interface implementation
+func (t *TestDB) CountUsers(ctx context.Context) (int, error) { return 0, nil }
+func (t *TestDB) SearchUsers(ctx context.Context, query string, limit, offset int) ([]*models.User, error) {
+	return nil, nil
+}
+func (t *TestDB) CountUsersByQuery(ctx context.Context, query string) (int, error) { return 0, nil }
+func (t *TestDB) CountActiveUsers(ctx context.Context) (int, error)                { return 0, nil }
+func (t *TestDB) GetUserStatsByRole(ctx context.Context) (map[string]int, error)   { return nil, nil }
+
 // Ensure TestDB implements database.DB
 var _ database.DB = (*TestDB)(nil)

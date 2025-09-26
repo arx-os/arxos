@@ -369,6 +369,30 @@ func (t *TestDBServer) UpdateUser(ctx context.Context, user *models.User) error 
 	return nil
 }
 
+func (t *TestDBServer) BulkUpdateUsers(ctx context.Context, updates []*models.UserUpdateRequest) error {
+	return nil
+}
+
+func (t *TestDBServer) CountActiveUsers(ctx context.Context) (int, error) {
+	return 0, nil
+}
+
+func (t *TestDBServer) CountUsers(ctx context.Context) (int, error) {
+	return 0, nil
+}
+
+func (t *TestDBServer) CountUsersByQuery(ctx context.Context, query string) (int, error) {
+	return 0, nil
+}
+
+func (t *TestDBServer) GetUserStatsByRole(ctx context.Context) (map[string]int, error) {
+	return nil, nil
+}
+
+func (t *TestDBServer) SearchUsers(ctx context.Context, query string, limit, offset int) ([]*models.User, error) {
+	return nil, nil
+}
+
 // MockAuthServiceServer is a mock implementation of api.AuthService for server tests
 type MockAuthServiceServer struct{}
 

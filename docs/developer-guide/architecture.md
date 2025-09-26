@@ -1,8 +1,57 @@
-# ArxOS Architecture
+# ArxOS Developer Architecture: Three-Tier Ecosystem
 
 ## Overview
 
-ArxOS follows Clean Architecture principles with clear separation of concerns and dependency inversion. The system is designed to be modular, testable, and maintainable.
+ArxOS follows Clean Architecture principles with clear separation of concerns and dependency inversion. The system is designed as a **three-tier ecosystem** following the **Git + GitHub business model**:
+
+### **Three-Tier Architecture**
+1. **ArxOS Core (FREE)** - The "Git" of buildings - pure Go/TinyGo open source platform
+2. **Hardware Platform (FREEMIUM)** - The "GitHub Free" - open source IoT ecosystem with certified marketplace
+3. **Workflow Automation (PAID)** - The "GitHub Pro" - enterprise CMMS/CAFM platform with n8n integration
+
+This architecture enables sustainable open source adoption while providing clear revenue streams for continued development and support.
+
+## 🌟 **Ecosystem Development Strategy**
+
+### **Development Priorities by Tier**
+
+#### **Layer 1: ArxOS Core (FREE) - Foundation First**
+- **Goal**: Establish ArxOS as the standard building management platform
+- **Focus**: Core functionality, CLI, basic APIs, PostGIS integration
+- **Development**: Open source, community-driven
+- **Success Metrics**: GitHub stars, community contributors, building adoptions
+
+#### **Layer 2: Hardware Platform (FREEMIUM) - Ecosystem Building**
+- **Goal**: Create certified hardware marketplace and partner ecosystem
+- **Focus**: Device templates, gateway software, certification program
+- **Development**: Open source core + certified marketplace
+- **Success Metrics**: Certified devices, marketplace GMV, partner count
+
+#### **Layer 3: Workflow Automation (PAID) - Revenue Generation**
+- **Goal**: Monetize the platform through enterprise features
+- **Focus**: n8n integration, CMMS/CAFM features, professional support
+- **Development**: Enterprise-focused, revenue-generating
+- **Success Metrics**: Enterprise customers, ARR, customer satisfaction
+
+### **Technical Architecture Alignment**
+Each tier builds upon the previous, creating a cohesive ecosystem:
+
+```
+Layer 3 (PAID)    ┌─────────────────────────────────────┐
+                  │ n8n Workflows + CMMS/CAFM Features │
+                  │ Enterprise Integrations + Support  │
+                  └─────────────────┬───────────────────┘
+                                    │ Uses
+Layer 2 (FREEMIUM) ┌─────────────────▼───────────────────┐
+                  │ Certified Hardware + Marketplace    │
+                  │ Gateway Software + Device Templates │
+                  └─────────────────┬───────────────────┘
+                                    │ Uses
+Layer 1 (FREE)     ┌─────────────────▼───────────────────┐
+                  │ ArxOS Core + CLI + Basic APIs       │
+                  │ PostGIS + Path System + Open Source │
+                  └─────────────────────────────────────┘
+```
 
 ## Architecture Principles
 

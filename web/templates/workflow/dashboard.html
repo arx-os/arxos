@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArxOS Workflow Platform - Automation & CMMS</title>
+    <link rel="stylesheet" href="/static/css/tier-styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="tier-layout workflow">
+    <!-- Header -->
+    <header class="tier-header workflow">
+        <div class="container">
+            <a href="/workflow" class="tier-logo workflow">
+                <i class="fas fa-project-diagram"></i>
+                ArxOS Workflow
+            </a>
+            <div class="tier-badge workflow">PAID</div>
+            <nav class="tier-nav">
+                <a href="/workflow/dashboard" class="tier-nav-item workflow active">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Dashboard
+                </a>
+                <a href="/workflow/workflows" class="tier-nav-item workflow">
+                    <i class="fas fa-project-diagram"></i>
+                    Workflows
+                </a>
+                <a href="/workflow/workorders" class="tier-nav-item workflow">
+                    <i class="fas fa-clipboard-list"></i>
+                    Work Orders
+                </a>
+                <a href="/workflow/maintenance" class="tier-nav-item workflow">
+                    <i class="fas fa-tools"></i>
+                    Maintenance
+                </a>
+                <a href="/workflow/reports" class="tier-nav-item workflow">
+                    <i class="fas fa-chart-bar"></i>
+                    Reports
+                </a>
+                <a href="/workflow/analytics" class="tier-nav-item workflow">
+                    <i class="fas fa-analytics"></i>
+                    Analytics
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="tier-main">
+        <div class="tier-container">
+            <!-- Welcome Section -->
+            <div class="tier-fade-in">
+                <div class="tier-card workflow">
+                    <div class="tier-card-header">
+                        <h1 class="tier-card-title">ArxOS Workflow Platform</h1>
+                        <p class="tier-card-subtitle">Advanced automation, CMMS/CAFM, and workflow management</p>
+                    </div>
+                    <div class="tier-card-body">
+                        <p class="mb-4">The Workflow Platform provides enterprise-grade automation through n8n integration, comprehensive CMMS/CAFM capabilities, and advanced analytics for building operations management.</p>
+                        <div class="tier-grid tier-grid-3">
+                            <div class="feature-item">
+                                <i class="fas fa-project-diagram text-purple-600"></i>
+                                <h3>n8n Integration</h3>
+                                <p>Visual workflow automation and orchestration</p>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-clipboard-list text-purple-600"></i>
+                                <h3>CMMS/CAFM</h3>
+                                <p>Computerized maintenance and facility management</p>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-chart-bar text-purple-600"></i>
+                                <h3>Advanced Analytics</h3>
+                                <p>Business intelligence and operational insights</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="tier-grid tier-grid-4 mt-6">
+                <div class="tier-card workflow tier-fade-in">
+                    <div class="tier-card-body text-center">
+                        <div class="text-3xl font-bold text-purple-600" id="active-workflows-count">0</div>
+                        <div class="text-sm text-gray-600">Active Workflows</div>
+                    </div>
+                </div>
+                <div class="tier-card workflow tier-fade-in">
+                    <div class="tier-card-body text-center">
+                        <div class="text-3xl font-bold text-purple-600" id="open-workorders-count">0</div>
+                        <div class="text-sm text-gray-600">Open Work Orders</div>
+                    </div>
+                </div>
+                <div class="tier-card workflow tier-fade-in">
+                    <div class="tier-card-body text-center">
+                        <div class="text-3xl font-bold text-purple-600" id="maintenance-schedules-count">0</div>
+                        <div class="text-sm text-gray-600">Maintenance Schedules</div>
+                    </div>
+                </div>
+                <div class="tier-card workflow tier-fade-in">
+                    <div class="tier-card-body text-center">
+                        <div class="text-3xl font-bold text-green-600" id="automation-efficiency">0%</div>
+                        <div class="text-sm text-gray-600">Automation Efficiency</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Workflow Status & Work Orders -->
+            <div class="tier-grid tier-grid-2 mt-6">
+                <div class="tier-card workflow tier-fade-in">
+                    <div class="tier-card-header">
+                        <h2 class="tier-card-title">Active Workflows</h2>
+                    </div>
+                    <div class="tier-card-body">
+                        <div id="active-workflows" class="space-y-3">
+                            <!-- Active workflows will be loaded here -->
+                        </div>
+                        <div class="tier-card-footer">
+                            <a href="/workflow/workflows" class="tier-btn tier-btn-primary workflow">
+                                <i class="fas fa-plus"></i>
+                                Create Workflow
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tier-card workflow tier-fade-in">
+                    <div class="tier-card-header">
+                        <h2 class="tier-card-title">Recent Work Orders</h2>
+                    </div>
+                    <div class="tier-card-body">
+                        <div id="recent-workorders" class="space-y-3">
+                            <!-- Recent work orders will be loaded here -->
+                        </div>
+                        <div class="tier-card-footer">
+                            <a href="/workflow/workorders" class="tier-btn tier-btn-primary workflow">
+                                <i class="fas fa-plus"></i>
+                                Create Work Order
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Maintenance & Analytics -->
+            <div class="tier-grid tier-grid-2 mt-6">
+                <div class="tier-card workflow tier-fade-in">
+                    <div class="tier-card-header">
+                        <h2 class="tier-card-title">Maintenance Overview</h2>
+                    </div>
+                    <div class="tier-card-body">
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="flex items-center gap-2">
+                                    <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                    Scheduled Maintenance
+                                </span>
+                                <span class="font-semibold" id="scheduled-maintenance">0</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="flex items-center gap-2">
+                                    <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                                    Overdue Maintenance
+                                </span>
+                                <span class="font-semibold" id="overdue-maintenance">0</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="flex items-center gap-2">
+                                    <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                                    Critical Alerts
+                                </span>
+                                <span class="font-semibold" id="critical-alerts">0</span>
+                            </div>
+                        </div>
+                        <div class="tier-card-footer">
+                            <a href="/workflow/maintenance" class="tier-btn tier-btn-primary workflow">
+                                <i class="fas fa-tools"></i>
+                                Manage Maintenance
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tier-card workflow tier-fade-in">
+                    <div class="tier-card-header">
+                        <h2 class="tier-card-title">Performance Analytics</h2>
+                    </div>
+                    <div class="tier-card-body">
+                        <div class="space-y-4">
+                            <div class="analytics-item">
+                                <div class="flex justify-between items-center">
+                                    <span>Work Order Completion Rate</span>
+                                    <span class="font-semibold" id="completion-rate">0%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2 mt-1">
+                                    <div class="bg-purple-600 h-2 rounded-full" style="width: 0%" id="completion-bar"></div>
+                                </div>
+                            </div>
+                            <div class="analytics-item">
+                                <div class="flex justify-between items-center">
+                                    <span>Average Response Time</span>
+                                    <span class="font-semibold" id="response-time">0h</span>
+                                </div>
+                            </div>
+                            <div class="analytics-item">
+                                <div class="flex justify-between items-center">
+                                    <span>Cost Savings (Monthly)</span>
+                                    <span class="font-semibold text-green-600" id="cost-savings">$0</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tier-card-footer">
+                            <a href="/workflow/analytics" class="tier-btn tier-btn-primary workflow">
+                                <i class="fas fa-chart-bar"></i>
+                                View Analytics
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- n8n Integration Status -->
+            <div class="tier-card workflow tier-fade-in mt-6">
+                <div class="tier-card-header">
+                    <h2 class="tier-card-title">n8n Integration Status</h2>
+                    <p class="tier-card-subtitle">Workflow automation platform connectivity</p>
+                </div>
+                <div class="tier-card-body">
+                    <div class="tier-grid tier-grid-3">
+                        <div class="integration-status">
+                            <div class="flex items-center gap-3">
+                                <div class="w-4 h-4 bg-green-500 rounded-full" id="n8n-status-indicator"></div>
+                                <div>
+                                    <h3 class="font-semibold">n8n Connection</h3>
+                                    <p class="text-sm text-gray-600" id="n8n-status-text">Connected</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="integration-status">
+                            <div class="flex items-center gap-3">
+                                <i class="fas fa-project-diagram text-purple-600 text-xl"></i>
+                                <div>
+                                    <h3 class="font-semibold">Active Workflows</h3>
+                                    <p class="text-sm text-gray-600" id="n8n-workflows-count">0 workflows</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="integration-status">
+                            <div class="flex items-center gap-3">
+                                <i class="fas fa-clock text-purple-600 text-xl"></i>
+                                <div>
+                                    <h3 class="font-semibold">Last Execution</h3>
+                                    <p class="text-sm text-gray-600" id="last-execution">Never</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tier-card-footer">
+                        <a href="/workflow/n8n" class="tier-btn tier-btn-primary workflow">
+                            <i class="fas fa-external-link-alt"></i>
+                            Open n8n Console
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="tier-card workflow tier-fade-in mt-6">
+                <div class="tier-card-header">
+                    <h2 class="tier-card-title">Quick Actions</h2>
+                    <p class="tier-card-subtitle">Common workflow and maintenance tasks</p>
+                </div>
+                <div class="tier-card-body">
+                    <div class="tier-grid tier-grid-4">
+                        <a href="/workflow/workflows/create" class="quick-action-item">
+                            <i class="fas fa-project-diagram text-purple-600"></i>
+                            <span>Create Workflow</span>
+                        </a>
+                        <a href="/workflow/workorders/create" class="quick-action-item">
+                            <i class="fas fa-clipboard-list text-purple-600"></i>
+                            <span>New Work Order</span>
+                        </a>
+                        <a href="/workflow/maintenance/schedule" class="quick-action-item">
+                            <i class="fas fa-calendar-alt text-purple-600"></i>
+                            <span>Schedule Maintenance</span>
+                        </a>
+                        <a href="/workflow/reports/generate" class="quick-action-item">
+                            <i class="fas fa-file-alt text-purple-600"></i>
+                            <span>Generate Report</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-12">
+        <div class="tier-container py-6">
+            <div class="text-center text-gray-600">
+                <p>&copy; 2024 ArxOS. Enterprise workflow automation platform.</p>
+                <p class="text-sm mt-2">
+                    <a href="/workflow/docs" class="text-purple-600 hover:text-purple-800">Documentation</a> |
+                    <a href="/workflow/support" class="text-purple-600 hover:text-purple-800">Enterprise Support</a> |
+                    <a href="/workflow/training" class="text-purple-600 hover:text-purple-800">Training</a>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <style>
+        .quick-action-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            color: #374151;
+            transition: all 0.2s ease;
+        }
+
+        .quick-action-item:hover {
+            background-color: #faf5ff;
+            border-color: #e9d5ff;
+            transform: translateY(-2px);
+        }
+
+        .quick-action-item i {
+            font-size: 1.5rem;
+        }
+
+        .analytics-item {
+            padding: 0.5rem 0;
+        }
+    </style>
+
+    <script>
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                // Load workflow stats
+                const statsResponse = await fetch('/api/v1/workflow/stats');
+                const stats = await statsResponse.json();
+                
+                document.getElementById('active-workflows-count').textContent = stats.active_workflows || 0;
+                document.getElementById('open-workorders-count').textContent = stats.open_workorders || 0;
+                document.getElementById('maintenance-schedules-count').textContent = stats.maintenance_schedules || 0;
+                document.getElementById('automation-efficiency').textContent = (stats.automation_efficiency || 0) + '%';
+
+                // Load maintenance stats
+                document.getElementById('scheduled-maintenance').textContent = stats.scheduled_maintenance || 0;
+                document.getElementById('overdue-maintenance').textContent = stats.overdue_maintenance || 0;
+                document.getElementById('critical-alerts').textContent = stats.critical_alerts || 0;
+
+                // Load performance analytics
+                const completionRate = stats.completion_rate || 0;
+                document.getElementById('completion-rate').textContent = completionRate + '%';
+                document.getElementById('completion-bar').style.width = completionRate + '%';
+                document.getElementById('response-time').textContent = (stats.avg_response_time || 0) + 'h';
+                document.getElementById('cost-savings').textContent = '$' + (stats.monthly_cost_savings || 0);
+
+                // Load active workflows
+                const workflowsResponse = await fetch('/api/v1/workflow/workflows?status=active&limit=5');
+                const workflows = await workflowsResponse.json();
+                displayActiveWorkflows(workflows);
+
+                // Load recent work orders
+                const workordersResponse = await fetch('/api/v1/workflow/workorders?limit=5');
+                const workorders = await workordersResponse.json();
+                displayRecentWorkOrders(workorders);
+
+                // Load n8n integration status
+                const n8nResponse = await fetch('/api/v1/workflow/n8n/status');
+                const n8nStatus = await n8nResponse.json();
+                updateN8nStatus(n8nStatus);
+
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+
+        function displayActiveWorkflows(workflows) {
+            const container = document.getElementById('active-workflows');
+            if (workflows.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">No active workflows</p>';
+                return;
+            }
+
+            container.innerHTML = workflows.map(workflow => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                        <h4 class="font-medium">${workflow.name}</h4>
+                        <p class="text-sm text-gray-600">${workflow.description || 'No description'}</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="tier-status ${workflow.status === 'running' ? 'success' : 'warning'}">${workflow.status}</span>
+                        <span class="text-sm text-gray-500">${workflow.executions || 0} runs</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function displayRecentWorkOrders(workorders) {
+            const container = document.getElementById('recent-workorders');
+            if (workorders.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">No work orders found</p>';
+                return;
+            }
+
+            container.innerHTML = workorders.map(order => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                        <h4 class="font-medium">${order.title}</h4>
+                        <p class="text-sm text-gray-600">Priority: ${order.priority || 'Normal'} • Equipment: ${order.equipment_id || 'N/A'}</p>
+                    </div>
+                    <span class="tier-status ${getWorkOrderStatusClass(order.status)}">${order.status}</span>
+                </div>
+            `).join('');
+        }
+
+        function getWorkOrderStatusClass(status) {
+            switch (status) {
+                case 'completed': return 'success';
+                case 'in_progress': return 'info';
+                case 'open': return 'warning';
+                case 'cancelled': return 'error';
+                default: return 'info';
+            }
+        }
+
+        function updateN8nStatus(status) {
+            const indicator = document.getElementById('n8n-status-indicator');
+            const statusText = document.getElementById('n8n-status-text');
+            const workflowsCount = document.getElementById('n8n-workflows-count');
+            const lastExecution = document.getElementById('last-execution');
+
+            if (status.connected) {
+                indicator.className = 'w-4 h-4 bg-green-500 rounded-full';
+                statusText.textContent = 'Connected';
+            } else {
+                indicator.className = 'w-4 h-4 bg-red-500 rounded-full';
+                statusText.textContent = 'Disconnected';
+            }
+
+            workflowsCount.textContent = `${status.active_workflows || 0} workflows`;
+            lastExecution.textContent = status.last_execution ? new Date(status.last_execution).toLocaleString() : 'Never';
+        }
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', loadDashboardData);
+    </script>
+</body>
+</html>

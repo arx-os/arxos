@@ -3,15 +3,22 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
+	"github.com/arx-os/arxos/internal/api"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/internal/daemon"
 	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/internal/services"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/spf13/cobra"
 )
 
@@ -839,8 +846,119 @@ func startFileWatcher(ctx context.Context, watchDir string) error {
 }
 
 func startAPIServer(ctx context.Context, port int) error {
-	// TODO: Implement API server
-	logger.Info("API server not yet implemented on port %d", port)
+	logger.Info("Starting ArxOS web server on port %d", port)
+
+	// Check database connection
+	if postgisDB == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
+	// Initialize services
+	logger.Info("Initializing services...")
+
+	// Core service
+	coreService := services.NewCoreService(postgisDB)
+	logger.Info("Core service initialized")
+
+	// Hardware platform
+	hardwarePlatformFactory := services.NewHardwarePlatformFactory(postgisDB)
+	hardwarePlatform := hardwarePlatformFactory.CreatePlatform()
+	logger.Info("Hardware platform initialized")
+
+	// Create additional services
+	n8nService := services.NewN8NService("http://localhost:5678", "n8n-api-key")
+	cmmcService := services.NewCMMCService(postgisDB)
+	workflowService := services.NewWorkflowService(postgisDB, n8nService, cmmcService)
+
+	// Create execution engine and builder integration
+	executionEngine := services.NewWorkflowExecutionEngine(postgisDB, n8nService)
+	builderIntegration := services.NewWorkflowBuilderIntegration(n8nService, workflowService, executionEngine)
+	logger.Info("Workflow services initialized")
+
+	// Create API handlers
+	coreHandlers := api.NewCoreHandlers(coreService)
+	hardwareHandlers := api.NewHardwareHandlers(hardwarePlatform)
+	workflowHandlers := api.NewWorkflowHandlers(workflowService, builderIntegration)
+	logger.Info("API handlers initialized")
+
+	// Create web router
+	webRouter := api.NewWebRouter()
+	logger.Info("Web router initialized")
+
+	// Setup HTTP router
+	router := chi.NewRouter()
+
+	// Middleware
+	router.Use(middleware.Logger)
+	router.Use(middleware.Recoverer)
+	router.Use(middleware.RequestID)
+	router.Use(middleware.RealIP)
+	router.Use(middleware.Timeout(60 * time.Second))
+
+	// CORS middleware for development
+	router.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, HX-Request")
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	})
+
+	// Register routes
+	webRouter.RegisterRoutes(router)
+	coreHandlers.RegisterCoreRoutes(router)
+	hardwareHandlers.RegisterHardwareRoutes(router)
+	workflowHandlers.RegisterWorkflowRoutes(router)
+
+	logger.Info("Routes registered")
+
+	// Create HTTP server
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%d", port),
+		Handler: router,
+	}
+
+	// Start server in goroutine
+	go func() {
+		fmt.Printf("🌐 ArxOS Web Server starting on http://localhost:%d\n", port)
+		fmt.Println()
+		fmt.Println("Available endpoints:")
+		fmt.Printf("  • Landing Page:    http://localhost:%d\n", port)
+		fmt.Printf("  • Core Dashboard:  http://localhost:%d/core\n", port)
+		fmt.Printf("  • Hardware:        http://localhost:%d/hardware\n", port)
+		fmt.Printf("  • Workflow:        http://localhost:%d/workflow\n", port)
+		fmt.Println()
+		fmt.Println("Press Ctrl+C to stop the server")
+		fmt.Println()
+
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			fmt.Printf("❌ Server error: %v\n", err)
+			os.Exit(1)
+		}
+	}()
+
+	// Wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	fmt.Println("\n🛑 Shutting down server...")
+
+	// Graceful shutdown
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logger.Error("Server shutdown error: %v", err)
+		return err
+	}
+
+	logger.Info("Server stopped gracefully")
 	return nil
 }
 

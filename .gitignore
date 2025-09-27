@@ -6,7 +6,7 @@
 *.dylib
 
 # ArxOS specific binaries
-arx
+/arx
 arx.exe
 
 # Test binaries

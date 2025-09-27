@@ -122,11 +122,12 @@ func (c *ImprovedIFCConverter) ConvertToBIM(input io.Reader, output io.Writer) e
 			}
 
 			eq := Equipment{
-				ID:     eqEntity.ID,
-				Tag:    eqEntity.Name,
-				Name:   eqEntity.Name,
-				Type:   c.mapIFCToEquipmentType(eqEntity.Type),
-				Status: "operational",
+				ID:       eqEntity.ID,
+				Tag:      eqEntity.Name,
+				Name:     eqEntity.Name,
+				Type:     c.mapIFCToEquipmentType(eqEntity.Type),
+				Status:   "operational",
+				Location: c.extractEquipmentLocation(eqEntity, entities),
 			}
 
 			// Try to find which space/room this equipment belongs to
@@ -220,6 +221,41 @@ func (c *ImprovedIFCConverter) parseIFCEntities(input io.Reader) []IFCEntity {
 			case "IFCBUILDINGSTOREY":
 				if len(props) > 9 {
 					entity.Properties["elevation"] = strings.Trim(props[9], ".")
+				}
+			case "IFCSPACE":
+				// Extract space properties
+				if len(props) > 5 {
+					entity.Properties["name"] = strings.Trim(props[5], "'")
+				}
+			case "IFCCARTESIANPOINT":
+				// Extract coordinates from cartesian point
+				if len(props) > 0 {
+					coordsStr := strings.Trim(props[0], "()")
+					entity.Properties["coordinates"] = coordsStr
+					// Parse individual coordinates
+					coords := strings.Split(coordsStr, ",")
+					if len(coords) >= 1 {
+						entity.Properties["x"] = strings.TrimSpace(coords[0])
+					}
+					if len(coords) >= 2 {
+						entity.Properties["y"] = strings.TrimSpace(coords[1])
+					}
+					if len(coords) >= 3 {
+						entity.Properties["z"] = strings.TrimSpace(coords[2])
+					}
+				}
+			case "IFCAXIS2PLACEMENT3D":
+				// Extract placement references
+				if len(props) > 0 {
+					entity.Properties["location"] = strings.Trim(props[0], "#")
+				}
+			case "IFCLOCALPLACEMENT":
+				// Extract placement references
+				if len(props) > 0 {
+					entity.Properties["placement"] = strings.Trim(props[0], "#")
+				}
+				if len(props) > 1 {
+					entity.Properties["relative_placement"] = strings.Trim(props[1], "#")
 				}
 			}
 
@@ -359,4 +395,123 @@ func (c *ImprovedIFCConverter) mapIFCToEquipmentType(ifcType string) string {
 	default:
 		return "equipment"
 	}
+}
+
+// extractEquipmentLocation extracts X, Y coordinates from IFC equipment entity
+func (c *ImprovedIFCConverter) extractEquipmentLocation(eqEntity IFCEntity, entities []IFCEntity) Location {
+	// Default location if no coordinates found
+	location := Location{X: 0, Y: 0, Room: ""}
+
+	// Look for placement reference in equipment properties
+	placementRef := ""
+	for key, value := range eqEntity.Properties {
+		if strings.Contains(strings.ToLower(key), "placement") || strings.Contains(strings.ToLower(key), "location") {
+			placementRef = value
+			break
+		}
+	}
+
+	// If no direct placement reference, try to find through object placement
+	if placementRef == "" {
+		// Look for IFC object placement references
+		for _, ref := range eqEntity.References {
+			if placement := c.findEntityByID(entities, ref); placement != nil {
+				if placement.Type == "IFCOBJECTPLACEMENT" || placement.Type == "IFCLOCALPLACEMENT" {
+					placementRef = ref
+					break
+				}
+			}
+		}
+	}
+
+	// Extract coordinates from placement chain
+	if placementRef != "" {
+		coords := c.extractCoordinatesFromPlacement(placementRef, entities)
+		if coords.X != 0 || coords.Y != 0 {
+			location = coords
+		}
+	}
+
+	// If still no coordinates, try to extract from entity properties directly
+	if location.X == 0 && location.Y == 0 {
+		if x, ok := eqEntity.Properties["x"]; ok {
+			if xVal, err := strconv.ParseFloat(x, 64); err == nil {
+				location.X = xVal
+			}
+		}
+		if y, ok := eqEntity.Properties["y"]; ok {
+			if yVal, err := strconv.ParseFloat(y, 64); err == nil {
+				location.Y = yVal
+			}
+		}
+	}
+
+	return location
+}
+
+// extractCoordinatesFromPlacement recursively extracts coordinates from IFC placement chain
+func (c *ImprovedIFCConverter) extractCoordinatesFromPlacement(placementRef string, entities []IFCEntity) Location {
+	placement := c.findEntityByID(entities, placementRef)
+	if placement == nil {
+		return Location{X: 0, Y: 0, Room: ""}
+	}
+
+	// Look for axis placement reference
+	for _, ref := range placement.References {
+		if axisPlacement := c.findEntityByID(entities, ref); axisPlacement != nil {
+			if axisPlacement.Type == "IFCAXIS2PLACEMENT3D" {
+				// Look for cartesian point reference
+				for _, pointRef := range axisPlacement.References {
+					if point := c.findEntityByID(entities, pointRef); point != nil {
+						if point.Type == "IFCCARTESIANPOINT" {
+							return c.parseCartesianPoint(point)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return Location{X: 0, Y: 0, Room: ""}
+}
+
+// parseCartesianPoint extracts X, Y coordinates from IFC cartesian point
+func (c *ImprovedIFCConverter) parseCartesianPoint(point *IFCEntity) Location {
+	// IFC cartesian points are stored as: IFCCARTESIANPOINT((x,y,z))
+	// Look for coordinates in properties or parse from entity data
+	if coords, ok := point.Properties["coordinates"]; ok {
+		// Parse coordinates string like "(0.,0.,0.)"
+		coords = strings.Trim(coords, "()")
+		parts := strings.Split(coords, ",")
+		if len(parts) >= 2 {
+			x, _ := strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
+			y, _ := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+			return Location{X: x, Y: y, Room: ""}
+		}
+	}
+
+	// Try to parse from entity references or properties
+	for key, value := range point.Properties {
+		if strings.Contains(key, "x") || strings.Contains(key, "y") {
+			if val, err := strconv.ParseFloat(value, 64); err == nil {
+				if strings.Contains(key, "x") {
+					return Location{X: val, Y: 0, Room: ""}
+				} else if strings.Contains(key, "y") {
+					return Location{X: 0, Y: val, Room: ""}
+				}
+			}
+		}
+	}
+
+	return Location{X: 0, Y: 0, Room: ""}
+}
+
+// findEntityByID finds an entity by its ID
+func (c *ImprovedIFCConverter) findEntityByID(entities []IFCEntity, id string) *IFCEntity {
+	for i := range entities {
+		if entities[i].ID == id {
+			return &entities[i]
+		}
+	}
+	return nil
 }

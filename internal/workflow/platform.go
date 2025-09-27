@@ -2,29 +2,29 @@ package workflow
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
 // Platform manages the workflow automation ecosystem (Layer 3 - PAID)
 type Platform struct {
-	workflowManager    WorkflowManager
+	workflowManager    *WorkflowManager
 	cmmcManager        CMMCManager
 	automationManager  AutomationManager
 	analyticsManager   AnalyticsManager
 	integrationManager IntegrationManager
 }
 
-// WorkflowManager handles workflow creation and execution
-type WorkflowManager interface {
-	CreateWorkflow(ctx context.Context, req CreateWorkflowRequest) (*Workflow, error)
-	GetWorkflow(ctx context.Context, workflowID string) (*Workflow, error)
-	ListWorkflows(ctx context.Context, userID string) ([]*Workflow, error)
-	UpdateWorkflow(ctx context.Context, workflowID string, updates WorkflowUpdates) (*Workflow, error)
-	DeleteWorkflow(ctx context.Context, workflowID string) error
-	ExecuteWorkflow(ctx context.Context, workflowID string, input map[string]interface{}) (*WorkflowResult, error)
-	GetWorkflowStatus(ctx context.Context, executionID string) (*WorkflowStatus, error)
-	PauseWorkflow(ctx context.Context, workflowID string) error
-	ResumeWorkflow(ctx context.Context, workflowID string) error
+// WorkflowManagerInterface defines the interface for workflow management
+type WorkflowManagerInterface interface {
+	CreateWorkflow(workflow *Workflow) error
+	GetWorkflow(workflowID string) (*Workflow, error)
+	ListWorkflows() ([]*Workflow, error)
+	UpdateWorkflow(workflowID string, updates map[string]interface{}) error
+	DeleteWorkflow(workflowID string) error
+	ExecuteWorkflow(workflowID string, input map[string]interface{}) (*WorkflowExecution, error)
+	GetExecution(executionID string) (*WorkflowExecution, error)
+	GetMetrics() *WorkflowMetrics
 }
 
 // CMMCManager handles CMMS/CAFM features
@@ -95,7 +95,7 @@ func NewPlatform(
 	integrationManager IntegrationManager,
 ) *Platform {
 	return &Platform{
-		workflowManager:    workflowManager,
+		workflowManager:    &workflowManager,
 		cmmcManager:        cmmcManager,
 		automationManager:  automationManager,
 		analyticsManager:   analyticsManager,
@@ -105,39 +105,100 @@ func NewPlatform(
 
 // Workflow management methods
 func (p *Platform) CreateWorkflow(ctx context.Context, req CreateWorkflowRequest) (*Workflow, error) {
-	return p.workflowManager.CreateWorkflow(ctx, req)
+	workflow := &Workflow{
+		ID:          fmt.Sprintf("wf_%d", time.Now().UnixNano()),
+		Name:        req.Name,
+		Description: req.Description,
+		Version:     "1.0.0",
+		Status:      WorkflowStatusDraft,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+		CreatedBy:   "system", // In real implementation, get from context
+	}
+
+	err := p.workflowManager.CreateWorkflow(workflow)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create workflow: %w", err)
+	}
+	return workflow, nil
 }
 
 func (p *Platform) GetWorkflow(ctx context.Context, workflowID string) (*Workflow, error) {
-	return p.workflowManager.GetWorkflow(ctx, workflowID)
+	return p.workflowManager.GetWorkflow(workflowID)
 }
 
 func (p *Platform) ListWorkflows(ctx context.Context, userID string) ([]*Workflow, error) {
-	return p.workflowManager.ListWorkflows(ctx, userID)
+	workflows := p.workflowManager.ListWorkflows()
+	return workflows, nil
 }
 
 func (p *Platform) UpdateWorkflow(ctx context.Context, workflowID string, updates WorkflowUpdates) (*Workflow, error) {
-	return p.workflowManager.UpdateWorkflow(ctx, workflowID, updates)
+	updateMap := make(map[string]interface{})
+	if updates.Name != nil && *updates.Name != "" {
+		updateMap["name"] = *updates.Name
+	}
+	if updates.Description != nil && *updates.Description != "" {
+		updateMap["description"] = *updates.Description
+	}
+	if updates.Status != nil && *updates.Status != "" {
+		updateMap["status"] = *updates.Status
+	}
+
+	err := p.workflowManager.UpdateWorkflow(workflowID, updateMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update workflow: %w", err)
+	}
+
+	return p.workflowManager.GetWorkflow(workflowID)
 }
 
 func (p *Platform) DeleteWorkflow(ctx context.Context, workflowID string) error {
-	return p.workflowManager.DeleteWorkflow(ctx, workflowID)
+	return p.workflowManager.DeleteWorkflow(workflowID)
 }
 
 func (p *Platform) ExecuteWorkflow(ctx context.Context, workflowID string, input map[string]interface{}) (*WorkflowResult, error) {
-	return p.workflowManager.ExecuteWorkflow(ctx, workflowID, input)
+	execution, err := p.workflowManager.ExecuteWorkflow(ctx, workflowID, input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute workflow: %w", err)
+	}
+
+	// Convert WorkflowExecution to WorkflowResult
+	result := &WorkflowResult{
+		ID:          execution.ID,
+		WorkflowID:  workflowID,
+		Status:      string(execution.Status),
+		Output:      execution.Context, // Use Context as Output
+		Error:       execution.Error,
+		StartedAt:   execution.StartTime,
+		CompletedAt: execution.EndTime,
+	}
+
+	return result, nil
 }
 
-func (p *Platform) GetWorkflowStatus(ctx context.Context, executionID string) (*WorkflowStatus, error) {
-	return p.workflowManager.GetWorkflowStatus(ctx, executionID)
+func (p *Platform) GetWorkflowStatus(ctx context.Context, executionID string) (WorkflowStatus, error) {
+	execution, err := p.workflowManager.GetExecution(executionID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get execution: %w", err)
+	}
+
+	return WorkflowStatus(execution.Status), nil
 }
 
 func (p *Platform) PauseWorkflow(ctx context.Context, workflowID string) error {
-	return p.workflowManager.PauseWorkflow(ctx, workflowID)
+	// Update workflow status to paused
+	updates := map[string]interface{}{
+		"status": string(WorkflowStatusPaused),
+	}
+	return p.workflowManager.UpdateWorkflow(workflowID, updates)
 }
 
 func (p *Platform) ResumeWorkflow(ctx context.Context, workflowID string) error {
-	return p.workflowManager.ResumeWorkflow(ctx, workflowID)
+	// Update workflow status to active
+	updates := map[string]interface{}{
+		"status": string(WorkflowStatusActive),
+	}
+	return p.workflowManager.UpdateWorkflow(workflowID, updates)
 }
 
 // CMMC management methods
@@ -310,18 +371,7 @@ func (p *Platform) GetIntegrationStatus(ctx context.Context, integrationID strin
 
 // Data structures
 
-type Workflow struct {
-	ID          string                 `json:"id"`
-	Name        string                 `json:"name"`
-	Description string                 `json:"description"`
-	Definition  map[string]interface{} `json:"definition"`
-	Status      string                 `json:"status"`
-	Version     string                 `json:"version"`
-	UserID      string                 `json:"user_id"`
-	CreatedAt   time.Time              `json:"created_at"`
-	UpdatedAt   time.Time              `json:"updated_at"`
-}
-
+// WorkflowResult represents the result of a workflow execution
 type WorkflowResult struct {
 	ID          string                 `json:"id"`
 	WorkflowID  string                 `json:"workflow_id"`
@@ -331,15 +381,6 @@ type WorkflowResult struct {
 	Error       string                 `json:"error,omitempty"`
 	StartedAt   time.Time              `json:"started_at"`
 	CompletedAt *time.Time             `json:"completed_at,omitempty"`
-}
-
-type WorkflowStatus struct {
-	ExecutionID string                 `json:"execution_id"`
-	Status      string                 `json:"status"`
-	Progress    int                    `json:"progress"`
-	CurrentStep string                 `json:"current_step"`
-	Metrics     map[string]interface{} `json:"metrics"`
-	LastUpdated time.Time              `json:"last_updated"`
 }
 
 type WorkOrder struct {

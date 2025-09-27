@@ -1,552 +1,949 @@
-# ArxOS CLI Reference Guide
+# ArxOS CLI Reference
 
-## Command Structure
+## Overview
 
+The ArxOS CLI (`arx`) provides command-line access to all building management functionality. It follows a hierarchical command structure with subcommands for different modules and operations.
+
+## Installation
+
+### From Source
 ```bash
-arx [verb] [path] [parameters] [options]
+git clone https://github.com/arx-os/arxos.git
+cd arxos
+go build -o arx cmd/arx/main.go
 ```
 
-## Query Commands (Read Operations)
-
-### Basic Queries
-
+### From Binary
 ```bash
-# Get specific equipment information
-arx get /B1/3/SENSORS/TEMP-01
-
-# Query with wildcards
-arx query /B1/*/SENSORS/*
-arx query /B1/3/*/HVAC/*
-
-# List components in a location
-arx list /B1/3/CONF-301
+# Download latest release
+curl -L https://github.com/arx-os/arxos/releases/latest/download/arx-linux-amd64 -o arx
+chmod +x arx
+sudo mv arx /usr/local/bin/
 ```
 
-### Advanced Queries
+## Configuration
 
+### Initial Setup
 ```bash
-# Filter by value thresholds
-arx query /B1/*/SENSORS/TEMP-* --above 75
-arx query /B1/*/ENERGY/* --below 50
-
-# Filter by status
-arx query /B1/3/*/HVAC/* --status failed
-arx query /B1/*/*/* --status maintenance
-
-# Search by type
-arx find --type sensor --building B1 --floor 3
-arx find --type outlet --status available
-
-# Spatial queries (PostGIS-powered)
-arx query --near "12.5,8.3,1.1" --radius 2.0
-arx query --within-bounds "x1,y1,x2,y2"
-arx query --on-floor 3 --building B1
+arx config init
 ```
 
-### Live Monitoring
+This creates a configuration file at `~/.arxos/config.yaml`:
 
-```bash
-# Watch for changes
-arx watch /B1/3/SENSORS/* --interval 5s
+```yaml
+api:
+  base_url: "https://api.arxos.com"
+  api_key: "your-api-key"
+  timeout: 30s
 
-# Monitor with visualization
-arx monitor /B1/3/*/ENERGY/* --graph
-arx monitor /B1/*/TEMP/* --heatmap
+auth:
+  username: "your-username"
+  password: "your-password"
 
-# Stream real-time data
-arx stream /B1/3/SENSORS/* --format json
+logging:
+  level: "info"
+  format: "json"
+  output: "stdout"
+
+cache:
+  enabled: true
+  ttl: "1h"
+  max_size: "100MB"
 ```
 
-### Historical Data
-
+### Authentication
 ```bash
-# View history
-arx history /B1/3/HVAC/UNIT-01 --days 7
-arx history /B1/*/ENERGY/* --since "2024-01-01"
+# Login with username/password
+arx auth login
 
-# Analyze trends
-arx trends /B1/*/ENERGY/* --compare yesterday
-arx trends /B1/3/SENSORS/TEMP-* --period weekly
+# Set API key
+arx config set api.api_key "your-api-key"
+
+# Check authentication status
+arx auth status
 ```
 
-## Control Commands (Write Operations)
+## Global Options
 
-### Direct Control
+All commands support these global options:
 
+- `--config, -c`: Configuration file path
+- `--verbose, -v`: Verbose output
+- `--quiet, -q`: Quiet output
+- `--output, -o`: Output format (json, yaml, table)
+- `--help, -h`: Show help
+- `--version`: Show version
+
+## Analytics Commands
+
+### Energy Analytics
+
+#### Get Energy Data
 ```bash
-# Set specific values
-arx set /B1/3/HVAC/DAMPER-01 position:50
-arx set /B1/3/LIGHTS/ZONE-A brightness:75
-arx set /B1/3/DOORS/MAIN state:locked
+# Get energy consumption data
+arx analytics energy data --building main --start 2024-01-01 --end 2024-01-31
 
-# Adjust values
-arx adjust /B1/3/HVAC/SETPOINT +2
-arx adjust /B1/*/LIGHTS/* brightness:-10
+# Get energy data for specific room
+arx analytics energy data --room "/buildings/main/floors/2/rooms/classroom-205"
 
-# Toggle states
-arx toggle /B1/3/LIGHTS/*
-arx toggle /B1/*/DOORS/* --type magnetic
+# Get real-time energy data
+arx analytics energy data --realtime
+
+# Export energy data to CSV
+arx analytics energy data --building main --format csv --output energy_data.csv
 ```
 
-### Batch Operations
-
+#### Energy Recommendations
 ```bash
-# Control multiple paths
-arx set /B1/*/LIGHTS/* state:off
-arx set /B1/3/*/HVAC/* mode:eco
-arx set /B1/*/*/DOORS/* state:locked
+# Get energy optimization recommendations
+arx analytics energy recommendations --building main
 
-# Apply configuration file
-arx apply --file weekend-settings.yaml
-arx apply --file emergency-shutdown.yaml --force
+# Get recommendations for specific room
+arx analytics energy recommendations --room "/buildings/main/floors/2/rooms/classroom-205"
 
-# Execute command list
-arx batch execute commands.txt
+# Get high-priority recommendations only
+arx analytics energy recommendations --priority high
 ```
 
-### Scene Management
-
+#### Energy Baselines
 ```bash
-# Activate scenes
-arx scene /B1/3/CONF-301 presentation
-arx scene /B1/* night-mode
-arx scene /B1/3/* energy-saving
+# Calculate energy baselines
+arx analytics energy baseline --building main --period 30d
 
-# Save current state as scene
-arx scene --save current-state --name comfortable
-arx scene --save /B1/3/* --name "floor-3-default"
-
-# List available scenes
-arx scene --list
-arx scene --list --location /B1/3/CONF-301
-
-# Delete scene
-arx scene --delete comfortable
+# Update energy baselines
+arx analytics energy baseline --update --building main
 ```
 
-### Scheduled Operations
+### Predictive Analytics
 
+#### Generate Forecasts
 ```bash
-# Schedule one-time actions
-arx schedule /B1/*/LIGHTS/* off --at "10:00 PM"
-arx schedule /B1/3/HVAC/* eco --at "2024-12-25 18:00"
+# Generate energy consumption forecast
+arx analytics forecast energy --building main --duration 7d
 
-# Recurring schedules
-arx schedule /B1/3/HVAC/* eco --days "Sat,Sun"
-arx schedule /B1/*/LIGHTS/* dim:30 --daily "22:00"
-arx schedule /B1/*/HVAC/* maintenance --monthly 15
+# Generate occupancy forecast
+arx analytics forecast occupancy --room "/buildings/main/floors/2/rooms/classroom-205" --duration 24h
 
-# View schedules
-arx schedule --list
-arx schedule --list --path /B1/3/*
-
-# Cancel schedule
-arx schedule --cancel schedule-id-123
+# Generate maintenance forecast
+arx analytics forecast maintenance --building main --duration 30d
 ```
 
-## Natural Language Commands
-
-### Basic Natural Language
-
+#### Model Management
 ```bash
-# Simple commands
-arx do "turn off all lights"
-arx do "lock all doors"
-arx do "set temperature to 72"
+# List predictive models
+arx analytics models list
 
-# Location-specific
-arx do "turn off lights in conference room"
-arx do "make it cooler on floor 3"
-arx do "secure the east wing"
+# Train new model
+arx analytics models train --type energy --building main --data-period 90d
+
+# Evaluate model performance
+arx analytics models evaluate --model-id model_001
 ```
 
-### Context-Aware Commands
+### Performance Monitoring
 
+#### KPI Management
 ```bash
-# With context hints
-arx do "make it cooler" --room /B1/3/CONF-301
-arx do "save energy" --building B1
-arx do "prepare for meeting" --room /B1/3/CONF-301
+# List KPIs
+arx analytics kpis list --building main
 
-# Time-based context
-arx do "prepare building for weekend"
-arx do "activate night mode"
-arx do "start morning routine"
+# Create new KPI
+arx analytics kpis create --name "Energy Efficiency" --metric energy_consumption --threshold 1000
+
+# Update KPI threshold
+arx analytics kpis update kpi_001 --threshold 1200
 ```
 
-### Complex Natural Language
-
+#### Alerts
 ```bash
-# Conditional commands
-arx do "if temperature above 75, increase cooling"
-arx do "turn on lights where motion detected"
-arx do "lock doors where nobody present"
+# List active alerts
+arx analytics alerts list --status active
 
-# Multi-step operations
-arx do "prepare conference room for presentation then dim lobby lights"
-arx do "secure building and set HVAC to eco mode"
+# Acknowledge alert
+arx analytics alerts acknowledge alert_001
+
+# Create alert rule
+arx analytics alerts create --name "High Energy Usage" --condition "energy_consumption > 1000" --building main
+```
+
+### Anomaly Detection
+
+#### Detect Anomalies
+```bash
+# Detect anomalies in energy data
+arx analytics anomalies detect --metric energy_consumption --building main --period 7d
+
+# Detect anomalies in specific room
+arx analytics anomalies detect --room "/buildings/main/floors/2/rooms/classroom-205" --metric temperature
+```
+
+#### Anomaly Management
+```bash
+# List anomalies
+arx analytics anomalies list --status open
+
+# Mark anomaly as resolved
+arx analytics anomalies resolve anomaly_001
+
+# Get anomaly details
+arx analytics anomalies show anomaly_001
+```
+
+### Reports
+
+#### Generate Reports
+```bash
+# Generate energy report
+arx analytics reports generate energy --building main --period 30d --format pdf
+
+# Generate performance report
+arx analytics reports generate performance --building main --period 7d --format html
+
+# Generate custom report
+arx analytics reports generate custom --template energy_summary --building main --output report.pdf
+```
+
+#### Report Management
+```bash
+# List reports
+arx analytics reports list
+
+# Schedule report
+arx analytics reports schedule --template energy_summary --building main --frequency weekly
+
+# Download report
+arx analytics reports download report_001 --output energy_report.pdf
+```
+
+## IT Management Commands
+
+### Version Control (Git-like Operations)
+
+#### Branch Management
+```bash
+# Create a new branch for room configuration
+arx it vc branch create "/buildings/main/floors/2/rooms/classroom-205" "feature-interactive-board" "main"
+
+# List branches for a room
+arx it vc branch list "/buildings/main/floors/2/rooms/classroom-205"
+```
+
+#### Commit Operations
+```bash
+# Commit changes to room configuration
+arx it vc commit "/buildings/main/floors/2/rooms/classroom-205" "main" "Add interactive board setup" "it-admin@school.edu"
+
+# Show commit history
+arx it vc log "/buildings/main/floors/2/rooms/classroom-205" "main"
+
+# Rollback to previous commit
+arx it vc rollback "/buildings/main/floors/2/rooms/classroom-205" "main" "commit_1234567890"
+```
+
+#### Push/Pull Operations
+```bash
+# Push changes to physical deployment
+arx it vc push "/buildings/main/floors/2/rooms/classroom-205" "main"
+
+# Pull latest changes from physical deployment
+arx it vc pull "/buildings/main/floors/2/rooms/classroom-205" "main"
+```
+
+#### Pull Request Management
+```bash
+# Create a pull request
+arx it vc pr create "/buildings/main/floors/2/rooms/classroom-205" "Add Interactive Board" "Replace projector with interactive board" "teacher@school.edu" "main" "feature-interactive-board"
+
+# Review a pull request
+arx it vc pr review "pr_1234567890" "true" "it-manager@school.edu"
+
+# Merge a pull request
+arx it vc pr merge "pr_1234567890" "true"
+
+# List pull requests for a room
+arx it vc pr list "/buildings/main/floors/2/rooms/classroom-205"
+```
+
+#### Feature Requests and Emergency Fixes
+```bash
+# Create a feature request
+arx it vc feature-request create "/buildings/main/floors/2/rooms/classroom-205" "Add Smart Board" "Need interactive whiteboard for better engagement" "high" "teacher@school.edu"
+
+# Create an emergency fix
+arx it vc emergency-fix create "/buildings/main/floors/2/rooms/classroom-205" "Projector not working" "critical" "teacher@school.edu"
+```
+
+### Asset Management
+
+#### Asset Operations
+```bash
+# List assets
+arx it assets list --building main
+
+# List assets by room
+arx it assets list --room "/buildings/main/floors/2/rooms/classroom-205"
+
+# List assets by type
+arx it assets list --type laptop
+
+# Get asset details
+arx it assets show asset_001
+
+# Create new asset
+arx it assets create --name "Dell Latitude 5520" --type laptop --room "/buildings/main/floors/2/rooms/classroom-205"
+
+# Update asset
+arx it assets update asset_001 --status maintenance --notes "Under repair"
+
+# Delete asset
+arx it assets delete asset_001
+```
+
+#### Asset Search
+```bash
+# Search assets by name
+arx it assets search "Dell"
+
+# Search assets by serial number
+arx it assets search --serial "ABC123"
+
+# Search assets by asset tag
+arx it assets search --tag "LAP-001"
+```
+
+#### Asset Reports
+```bash
+# Generate asset inventory report
+arx it assets report inventory --building main --format csv
+
+# Generate asset status report
+arx it assets report status --building main
+
+# Generate asset location report
+arx it assets report location --building main --floor 2
+```
+
+### Room Setup Management
+
+#### Room Operations
+```bash
+# List room setups
+arx it rooms list --building main
+
+# Get room setup details
+arx it rooms show "/buildings/main/floors/2/rooms/classroom-205"
+
+# Create room setup
+arx it rooms create --room "/buildings/main/floors/2/rooms/classroom-205" --type traditional
+
+# Update room setup
+arx it rooms update "/buildings/main/floors/2/rooms/classroom-205" --type modern
+
+# Delete room setup
+arx it rooms delete "/buildings/main/floors/2/rooms/classroom-205"
+```
+
+#### Room Templates
+```bash
+# List room templates
+arx it rooms templates list
+
+# Create room template
+arx it rooms templates create --name "Traditional Classroom" --type traditional
+
+# Apply template to room
+arx it rooms apply-template "/buildings/main/floors/2/rooms/classroom-205" --template traditional_classroom
+```
+
+#### Room Summary
+```bash
+# Get room summary
+arx it rooms summary "/buildings/main/floors/2/rooms/classroom-205"
+
+# Get building summary
+arx it rooms summary --building main
+
+# Get floor summary
+arx it rooms summary --building main --floor 2
+```
+
+### Work Order Management
+
+#### Work Order Operations
+```bash
+# List work orders
+arx it workorders list --status open
+
+# List work orders by room
+arx it workorders list --room "/buildings/main/floors/2/rooms/classroom-205"
+
+# Get work order details
+arx it workorders show wo_001
+
+# Create work order
+arx it workorders create --room "/buildings/main/floors/2/rooms/classroom-205" --title "Install Projector" --type installation
+
+# Update work order
+arx it workorders update wo_001 --status in_progress --assigned-to "technician@school.edu"
+
+# Complete work order
+arx it workorders complete wo_001 --notes "Projector installed successfully"
+```
+
+#### Work Order Search
+```bash
+# Search work orders by title
+arx it workorders search "projector"
+
+# Search work orders by assignee
+arx it workorders search --assigned-to "technician@school.edu"
+
+# Search work orders by priority
+arx it workorders search --priority high
+```
+
+### Inventory Management
+
+#### Parts Management
+```bash
+# List parts
+arx it inventory parts list
+
+# Get part details
+arx it inventory parts show part_001
+
+# Create new part
+arx it inventory parts create --name "HDMI Cable" --category "Cables" --unit-price 25.0
+
+# Update part
+arx it inventory parts update part_001 --quantity 50
+
+# Delete part
+arx it inventory parts delete part_001
+```
+
+#### Suppliers
+```bash
+# List suppliers
+arx it inventory suppliers list
+
+# Create supplier
+arx it inventory suppliers create --name "Tech Supply Co" --contact "sales@techsupply.com"
+
+# Update supplier
+arx it inventory suppliers update supplier_001 --phone "+1-555-0123"
+```
+
+#### Purchase Orders
+```bash
+# List purchase orders
+arx it inventory orders list
+
+# Create purchase order
+arx it inventory orders create --supplier supplier_001 --items "part_001:10,part_002:5"
+
+# Get purchase order details
+arx it inventory orders show po_001
+
+# Update purchase order status
+arx it inventory orders update po_001 --status received
+```
+
+#### Inventory Reports
+```bash
+# Generate low stock report
+arx it inventory report low-stock --threshold 10
+
+# Generate inventory valuation report
+arx it inventory report valuation --building main
+
+# Generate supplier performance report
+arx it inventory report suppliers --period 30d
 ```
 
 ## Workflow Commands
 
 ### Workflow Management
 
+#### Workflow Operations
 ```bash
 # List workflows
 arx workflow list
-arx workflow list --active
-arx workflow list --category maintenance
 
-# Run workflows
-arx workflow run emergency-shutdown
-arx workflow run comfort-optimization --building B1
-arx workflow trigger fire-evacuation --zone /B1/3/EAST
+# Get workflow details
+arx workflow show workflow_001
 
-# Create workflows
-arx workflow create --from-template hvac-optimization
-arx workflow create --name "custom-routine" --file routine.yaml
+# Create workflow
+arx workflow create --name "Energy Optimization" --description "Automated energy optimization"
+
+# Update workflow
+arx workflow update workflow_001 --status active
+
+# Delete workflow
+arx workflow delete workflow_001
+```
+
+#### Workflow Execution
+```bash
+# Execute workflow
+arx workflow execute workflow_001 --input '{"building_id": "building_001"}'
+
+# Execute workflow with file input
+arx workflow execute workflow_001 --input-file input.json
+
+# Get execution status
+arx workflow status execution_001
+
+# List executions
+arx workflow executions list --workflow workflow_001
+```
+
+#### Workflow Templates
+```bash
+# List workflow templates
+arx workflow templates list
+
+# Create workflow from template
+arx workflow create --template energy_optimization --name "Building A Energy Optimization"
+
+# Export workflow as template
+arx workflow export workflow_001 --template-name "Custom Energy Optimization"
 ```
 
 ### n8n Integration
 
+#### n8n Operations
 ```bash
-# Connect to n8n
-arx workflow connect --n8n-url http://localhost:5678
-arx workflow connect --n8n-url https://n8n.company.com --api-key KEY
+# Test n8n connection
+arx workflow n8n test-connection
 
-# Import/Export workflows
-arx workflow import my-workflow.json
-arx workflow export comfort-control --format n8n
-arx workflow sync --bidirectional
+# List n8n workflows
+arx workflow n8n list
 
-# Workflow status
-arx workflow status
-arx workflow status workflow-id-123
-arx workflow logs workflow-id-123 --tail 50
+# Import n8n workflow
+arx workflow n8n import workflow_001
+
+# Export workflow to n8n
+arx workflow n8n export workflow_001
 ```
 
-### Testing & Simulation
+## CMMS/CAFM Commands
 
+### Facility Management
+
+#### Building Operations
 ```bash
-# Test workflows
-arx workflow test fire-evacuation --dry-run
-arx workflow test maintenance-routine --verbose
+# List buildings
+arx facility buildings list
 
-# Simulate scenarios
-arx workflow simulate power-failure
-arx workflow simulate fire-alarm --zone /B1/3/*
-arx workflow simulate sensor-failure /B1/3/SENSORS/TEMP-01
+# Get building details
+arx facility buildings show building_001
 
-# Validate workflows
-arx workflow validate my-workflow.json
-arx workflow validate --all
+# Create building
+arx facility buildings create --name "Main Building" --address "123 School St"
+
+# Update building
+arx facility buildings update building_001 --status active
 ```
 
-## Building Management Commands
-
-### Building Operations
-
+#### Space Management
 ```bash
-# Building status
-arx building status B1
-arx building status --all
-arx building health B1
+# List spaces
+arx facility spaces list --building building_001
 
-# Building control
-arx building shutdown B1 --emergency
-arx building startup B1 --normal
-arx building optimize B1 --target energy
-arx building optimize B1 --target comfort
+# Get space details
+arx facility spaces show space_001
 
-# Building modes
-arx building mode B1 --eco
-arx building mode B1 --comfort
-arx building mode B1 --security
+# Create space
+arx facility spaces create --building building_001 --name "Classroom 205" --type classroom
+
+# Update space
+arx facility spaces update space_001 --capacity 30
 ```
 
-### Floor Operations
+### Work Order Management
 
+#### Work Order Operations
 ```bash
-# Floor control
-arx floor /B1/3 --lights off
-arx floor /B1/3 --hvac eco
-arx floor /B1/3 --secure
+# List work orders
+arx facility workorders list --status open
 
-# Floor status
-arx floor status /B1/3
-arx floor occupancy /B1/3
-arx floor energy /B1/3 --period today
+# Get work order details
+arx facility workorders show wo_001
+
+# Create work order
+arx facility workorders create --title "HVAC Maintenance" --building building_001 --type maintenance
+
+# Update work order
+arx facility workorders update wo_001 --status in_progress --assigned-to "technician@school.edu"
+
+# Complete work order
+arx facility workorders complete wo_001 --notes "Maintenance completed successfully"
 ```
 
-### Zone Operations
-
+#### Maintenance Scheduling
 ```bash
-# Zone control
-arx zone /B1/3/EAST --evacuate
-arx zone /B1/*/PUBLIC --lights auto
-arx zone /B1/3/SECURE --lockdown
+# List maintenance schedules
+arx facility maintenance list --building building_001
 
-# Zone management
-arx zone create /B1/3/NEW --type office
-arx zone delete /B1/3/OLD --confirm
-arx zone merge /B1/3/EAST /B1/3/WEST --name COMBINED
+# Create maintenance schedule
+arx facility maintenance create --asset asset_001 --frequency monthly --type preventive
+
+# Update maintenance schedule
+arx facility maintenance update schedule_001 --frequency quarterly
+
+# Generate maintenance calendar
+arx facility maintenance calendar --building building_001 --month 2024-01
 ```
 
-## Diagnostic Commands
+### Inspection Management
 
-### System Health
-
+#### Inspection Operations
 ```bash
-# Health checks
-arx health /B1
-arx health /B1/3/HVAC/*
-arx health --all --verbose
+# List inspections
+arx facility inspections list --building building_001
 
-# Diagnostics
-arx diagnose /B1/3/HVAC/*
-arx diagnose /B1/*/SENSORS/* --deep
-arx diagnose --system-wide
+# Get inspection details
+arx facility inspections show inspection_001
 
-# Testing
-arx test /B1/3/SENSORS/*
-arx test /B1/*/SAFETY/* --emergency
-arx test --all --report diagnostic.pdf
+# Create inspection
+arx facility inspections create --building building_001 --type safety --inspector "inspector@school.edu"
+
+# Update inspection
+arx facility inspections update inspection_001 --status completed --score 95
 ```
 
-### Troubleshooting
-
+#### Inspection Templates
 ```bash
-# Troubleshoot equipment
-arx troubleshoot /B1/3/HVAC/UNIT-01
-arx troubleshoot /B1/*/FAILED/* --auto-fix
-arx troubleshoot --wizard
+# List inspection templates
+arx facility inspections templates list
 
-# Validation
-arx validate /B1/*/SAFETY/*
-arx validate /B1/3/* --strict
-arx validate --building B1 --compliance
+# Create inspection template
+arx facility inspections templates create --name "Safety Inspection" --type safety
 
-# Calibration
-arx calibrate /B1/3/SENSORS/TEMP-*
-arx calibrate /B1/*/SENSORS/* --auto
-arx calibrate --all --baseline reset
+# Apply template to inspection
+arx facility inspections apply-template inspection_001 --template safety_inspection
 ```
 
-## Import/Export Commands
+## Hardware Platform Commands
 
-### Import Operations
+### Device Management
 
+#### Device Operations
 ```bash
-# Import from files
-arx import building.ifc --building B1
-arx import floor-plan.pdf --building B1 --floor 3
-arx import sensors.csv --merge
+# List devices
+arx hardware devices list --building main
 
-# Import with options
-arx import data.ifc --validate --dry-run
-arx import legacy.bim --confidence medium
-arx import scan.las --point-cloud --align
+# Get device details
+arx hardware devices show device_001
+
+# Register device
+arx hardware devices register --name "Temperature Sensor 001" --type sensor --protocol mqtt
+
+# Update device
+arx hardware devices update device_001 --status online
+
+# Delete device
+arx hardware devices delete device_001
 ```
 
-### Export Operations
-
+#### Device Configuration
 ```bash
-# Export formats
-arx export B1 --format ifc
-arx export B1 --format bim
-arx export B1 --format pdf --template report
-arx export B1 --format csv --data sensors
+# Configure device
+arx hardware devices configure device_001 --config-file config.json
 
-# Export with filters
-arx export B1 --floor 3 --format ifc
-arx export B1 --type HVAC --format json
-arx export B1 --modified-since yesterday
+# Get device configuration
+arx hardware devices config device_001
+
+# Update device firmware
+arx hardware devices firmware device_001 --version 1.2.3
 ```
 
-## Repository Commands (Git-like)
+### Protocol Management
 
-### Repository Management
-
+#### Protocol Operations
 ```bash
-# Initialize repository
-arx repo init B1
-arx repo init B1 --remote https://github.com/org/building
+# List protocols
+arx hardware protocols list
 
-# Status and changes
-arx repo status
-arx repo diff
-arx repo diff --cached
+# Test protocol connection
+arx hardware protocols test mqtt --host mqtt.arxos.com --port 1883
 
-# Commits
-arx repo commit -m "Update HVAC settings"
-arx repo commit --amend
-arx repo log --oneline --graph
+# Configure protocol gateway
+arx hardware protocols configure mqtt --host mqtt.arxos.com --port 1883 --username user --password pass
 ```
 
-### Branching
+### Certification
 
+#### Certification Operations
 ```bash
-# Branch operations
-arx repo branch
-arx repo branch renovation
-arx repo checkout renovation
-arx repo checkout -b emergency-fix
+# List certifications
+arx hardware certifications list --device device_001
 
-# Merging
-arx repo merge renovation
-arx repo merge --no-ff feature-branch
-arx repo rebase main
+# Run certification test
+arx hardware certifications test device_001 --test-suite safety_basic
+
+# Get certification details
+arx hardware certifications show cert_001
+
+# Download certificate
+arx hardware certifications download cert_001 --output certificate.pdf
 ```
 
-## System Commands
-
-### Installation & Setup
-
+#### Test Management
 ```bash
-# Installation
-arx install
-arx install --with-postgis
-arx install --professional --with-daemon
-arx install --minimal
+# List test suites
+arx hardware tests list
 
-# Configuration
-arx config set postgis.host localhost
-arx config get server.port
-arx config list
+# Run specific test
+arx hardware tests run safety_basic --device device_001
+
+# Get test results
+arx hardware tests results test_001
+```
+
+## Building Path Commands
+
+### Path Operations
+```bash
+# List building structure
+arx building list
+
+# Get building details
+arx building show main
+
+# List floors
+arx building floors list --building main
+
+# List rooms
+arx building rooms list --building main --floor 2
+
+# Get room details
+arx building rooms show "/buildings/main/floors/2/rooms/classroom-205"
+```
+
+### Path Validation
+```bash
+# Validate building path
+arx building validate "/buildings/main/floors/2/rooms/classroom-205"
+
+# Check path exists
+arx building exists "/buildings/main/floors/2/rooms/classroom-205"
+
+# Get path info
+arx building info "/buildings/main/floors/2/rooms/classroom-205"
+```
+
+## Configuration Commands
+
+### Configuration Management
+```bash
+# Show current configuration
+arx config show
+
+# Set configuration value
+arx config set api.base_url "https://api.arxos.com"
+
+# Get configuration value
+arx config get api.base_url
+
+# Reset configuration
 arx config reset
+
+# Validate configuration
+arx config validate
 ```
 
-### Service Management
-
+### Environment Management
 ```bash
-# Daemon control
-arx daemon start
-arx daemon stop
-arx daemon restart
-arx daemon status
+# List environments
+arx env list
 
-# Server control
-arx serve
-arx serve --port 8080 --daemon
-arx serve --stop
-arx serve --status
+# Switch environment
+arx env switch production
+
+# Show current environment
+arx env current
+
+# Create environment
+arx env create staging --api-url "https://staging-api.arxos.com"
 ```
 
-### Maintenance
+## Utility Commands
 
+### Data Export/Import
 ```bash
-# Database operations
-arx db backup
-arx db restore backup-2024-01-01.sql
-arx db optimize
-arx db migrate
+# Export data
+arx export --type assets --building main --format csv --output assets.csv
 
-# System maintenance
-arx cache clear
-arx logs clean --older-than 30d
-arx update
-arx self-test
+# Import data
+arx import --type assets --file assets.csv --building main
+
+# Backup data
+arx backup --building main --output backup_2024-01-15.tar.gz
+
+# Restore data
+arx restore --file backup_2024-01-15.tar.gz --building main
 ```
 
-## Options & Flags
-
-### Global Options
-
+### System Information
 ```bash
---verbose, -v        # Verbose output
---quiet, -q          # Suppress output
---format, -f         # Output format (json, yaml, table)
---config             # Custom config file
---no-color           # Disable colored output
---dry-run            # Preview without changes
---force              # Skip confirmations
---help, -h           # Show help
+# Show system info
+arx system info
+
+# Show version
+arx version
+
+# Check system health
+arx system health
+
+# Show logs
+arx logs --level error --lines 100
 ```
 
-### Output Formats
-
+### Interactive Mode
 ```bash
-# Format options
---format json        # JSON output
---format yaml        # YAML output
---format csv         # CSV output
---format table       # Table output (default)
---format raw         # Raw output
+# Start interactive mode
+arx interactive
+
+# Run command in interactive mode
+arx interactive --command "analytics energy data --building main"
 ```
 
-### Authentication
+## Output Formats
 
+### Table Format (Default)
 ```bash
-# Auth options
---api-key KEY        # API key authentication
---token TOKEN        # Bearer token
---user USER          # Username
---password PASS      # Password (not recommended in CLI)
+arx it assets list --building main
 ```
 
-## Environment Variables
-
+### JSON Format
 ```bash
-# Configuration
-ARXOS_CONFIG_PATH    # Config file location
-ARXOS_DATABASE_URL   # Database connection
-ARXOS_LOG_LEVEL      # Log verbosity
+arx it assets list --building main --output json
+```
 
-# Authentication
-ARXOS_API_KEY        # API key
-ARXOS_TOKEN          # Auth token
+### YAML Format
+```bash
+arx it assets list --building main --output yaml
+```
 
-# Defaults
-ARXOS_DEFAULT_BUILDING  # Default building ID
-ARXOS_DEFAULT_FLOOR     # Default floor
-ARXOS_OUTPUT_FORMAT     # Default output format
+### CSV Format
+```bash
+arx it assets list --building main --output csv
 ```
 
 ## Examples
 
-### Morning Startup Routine
-
+### Complete IT Asset Setup
 ```bash
-# Automated morning routine
-arx scene /B1/* morning
-arx set /B1/*/HVAC/* mode:comfort
-arx set /B1/*/LIGHTS/PUBLIC/* state:on
-arx workflow run morning-checks
+# 1. Create room setup
+arx it rooms create --room "/buildings/main/floors/2/rooms/classroom-205" --type traditional
+
+# 2. Add assets to room
+arx it assets create --name "Epson Projector" --type projector --room "/buildings/main/floors/2/rooms/classroom-205"
+arx it assets create --name "Elmo Doc Camera" --type doc_camera --room "/buildings/main/floors/2/rooms/classroom-205"
+arx it assets create --name "Dell Docking Station" --type docking_station --room "/buildings/main/floors/2/rooms/classroom-205"
+
+# 3. Create work order for installation
+arx it workorders create --room "/buildings/main/floors/2/rooms/classroom-205" --title "Install Classroom Equipment" --type installation --priority high
+
+# 4. Get room summary
+arx it rooms summary "/buildings/main/floors/2/rooms/classroom-205"
 ```
 
-### Emergency Response
-
+### Energy Optimization Workflow
 ```bash
-# Fire emergency
-arx workflow trigger fire-evacuation
-arx set /B1/*/DOORS/* state:unlocked
-arx set /B1/*/LIGHTS/EMERGENCY/* state:on
-arx building broadcast "Emergency evacuation in progress"
+# 1. Check current energy consumption
+arx analytics energy data --building main --realtime
+
+# 2. Get optimization recommendations
+arx analytics energy recommendations --building main --priority high
+
+# 3. Create workflow for automation
+arx workflow create --name "Energy Optimization" --template energy_optimization
+
+# 4. Execute workflow
+arx workflow execute workflow_001 --input '{"building_id": "building_001"}'
 ```
 
-### Energy Optimization
-
+### Maintenance Management
 ```bash
-# Nightly energy saving
-arx query /B1/*/SENSORS/OCCUPANCY/* --status empty | \
-  xargs -I {} arx set {}/../../HVAC/* mode:eco
-arx set /B1/*/LIGHTS/* state:off --except EMERGENCY
-arx building mode B1 --eco
+# 1. List open work orders
+arx facility workorders list --status open
+
+# 2. Create maintenance schedule
+arx facility maintenance create --asset asset_001 --frequency monthly --type preventive
+
+# 3. Generate maintenance calendar
+arx facility maintenance calendar --building main --month 2024-01
+
+# 4. Complete work order
+arx facility workorders complete wo_001 --notes "Maintenance completed successfully"
 ```
 
-### Maintenance Mode
+## Troubleshooting
 
+### Common Issues
+
+#### Authentication Errors
 ```bash
-# Maintenance preparation
-arx workflow run pre-maintenance-checks
-arx zone /B1/3/EAST --maintenance-mode
-arx set /B1/3/EAST/*/HVAC/* state:off
-arx notify --team maintenance --message "Zone ready for maintenance"
+# Check authentication status
+arx auth status
+
+# Re-authenticate
+arx auth login
+
+# Check API key
+arx config get api.api_key
 ```
 
-## See Also
+#### Connection Issues
+```bash
+# Test API connection
+arx system health
 
-- [Architecture Documentation](ARCHITECTURE.md)
-- [Hardware Integration Guide](../hardware.md)
-- [n8n Workflow Documentation](../n8n.md)
-- [API Reference](api.md)
+# Check configuration
+arx config show
+
+# Test specific endpoint
+arx analytics energy data --building main --dry-run
+```
+
+#### Permission Errors
+```bash
+# Check user permissions
+arx auth permissions
+
+# List available commands
+arx --help
+```
+
+### Debug Mode
+```bash
+# Enable debug logging
+arx --verbose analytics energy data --building main
+
+# Show detailed error information
+arx --debug it assets list --building main
+```
+
+### Log Files
+```bash
+# Show log file location
+arx logs --info
+
+# Follow logs in real-time
+arx logs --follow
+
+# Filter logs by level
+arx logs --level error --lines 50
+```
+
+## Support
+
+For CLI support and questions:
+
+- **Documentation**: https://docs.arxos.com/cli
+- **Support Email**: cli-support@arxos.com
+- **GitHub Issues**: https://github.com/arx-os/arxos/issues
+- **Community Forum**: https://community.arxos.com

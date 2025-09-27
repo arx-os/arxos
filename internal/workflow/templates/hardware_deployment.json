@@ -1,0 +1,215 @@
+{
+  "name": "Hardware Deployment Pipeline",
+  "description": "Automated hardware deployment workflow for room configuration changes",
+  "version": "1.0.0",
+  "triggers": [
+    {
+      "type": "pull_request_merged",
+      "name": "PR Merged Trigger",
+      "config": {
+        "conditions": [
+          {
+            "field": "path",
+            "operator": "matches",
+            "value": "/buildings/*/rooms/*"
+          },
+          {
+            "field": "action",
+            "operator": "equals",
+            "value": "hardware_changed"
+          }
+        ]
+      }
+    }
+  ],
+  "workflow": {
+    "stages": [
+      {
+        "name": "Validation",
+        "steps": [
+          {
+            "name": "Check Hardware Compatibility",
+            "action": "hardware_validation",
+            "config": {
+              "room_path": "{{ pr.room_path }}",
+              "new_hardware": "{{ pr.hardware_changes }}"
+            }
+          },
+          {
+            "name": "Verify Power Requirements",
+            "action": "power_analysis",
+            "config": {
+              "room_path": "{{ pr.room_path }}",
+              "total_power": "{{ sum(pr.hardware_changes.power_draw) }}"
+            }
+          },
+          {
+            "name": "Check Network Capacity",
+            "action": "network_analysis",
+            "config": {
+              "room_path": "{{ pr.room_path }}",
+              "required_ports": "{{ pr.hardware_changes.network_ports }}"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Preparation",
+        "steps": [
+          {
+            "name": "Create Work Order",
+            "action": "create_work_order",
+            "config": {
+              "title": "Deploy Hardware: {{ pr.title }}",
+              "room_path": "{{ pr.room_path }}",
+              "priority": "{{ pr.priority }}",
+              "estimated_duration": "{{ calculate_duration(pr.hardware_changes) }}",
+              "description": "{{ pr.description }}"
+            }
+          },
+          {
+            "name": "Reserve Parts from Inventory",
+            "action": "reserve_parts",
+            "config": {
+              "parts": "{{ pr.hardware_changes.parts_required }}",
+              "room_path": "{{ pr.room_path }}",
+              "work_order_id": "{{ work_order.id }}"
+            }
+          },
+          {
+            "name": "Check Technician Availability",
+            "action": "check_technician_availability",
+            "config": {
+              "room_path": "{{ pr.room_path }}",
+              "required_skills": "{{ pr.hardware_changes.required_skills }}",
+              "estimated_duration": "{{ work_order.estimated_duration }}"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Deployment",
+        "steps": [
+          {
+            "name": "Schedule Installation",
+            "action": "schedule_installation",
+            "config": {
+              "work_order_id": "{{ work_order.id }}",
+              "technician": "{{ assign_technician(pr.room_path) }}",
+              "time_slot": "{{ find_available_slot(pr.room_path) }}",
+              "room_path": "{{ pr.room_path }}"
+            }
+          },
+          {
+            "name": "Deploy Hardware",
+            "action": "deploy_hardware",
+            "config": {
+              "room_path": "{{ pr.room_path }}",
+              "hardware_config": "{{ pr.hardware_changes }}",
+              "work_order_id": "{{ work_order.id }}",
+              "technician": "{{ work_order.assigned_to }}"
+            }
+          },
+          {
+            "name": "Configure Network",
+            "action": "configure_network",
+            "config": {
+              "room_path": "{{ pr.room_path }}",
+              "hardware_config": "{{ pr.hardware_changes }}",
+              "work_order_id": "{{ work_order.id }}"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Verification",
+        "steps": [
+          {
+            "name": "Test Hardware Functionality",
+            "action": "hardware_testing",
+            "config": {
+              "room_path": "{{ pr.room_path }}",
+              "test_suite": "room_functionality",
+              "hardware_config": "{{ pr.hardware_changes }}"
+            }
+          },
+          {
+            "name": "Verify Network Connectivity",
+            "action": "network_testing",
+            "config": {
+              "room_path": "{{ pr.room_path }}",
+              "hardware_config": "{{ pr.hardware_changes }}"
+            }
+          },
+          {
+            "name": "Update Room Status",
+            "action": "update_room_status",
+            "config": {
+              "room_path": "{{ pr.room_path }}",
+              "status": "active",
+              "last_updated": "{{ now() }}",
+              "hardware_config": "{{ pr.hardware_changes }}"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Notification",
+        "steps": [
+          {
+            "name": "Notify Stakeholders",
+            "action": "notify_stakeholders",
+            "config": {
+              "room_path": "{{ pr.room_path }}",
+              "message": "Hardware deployment completed successfully",
+              "recipients": [
+                "{{ pr.created_by }}",
+                "{{ work_order.assigned_to }}",
+                "facilities@school.edu"
+              ]
+            }
+          },
+          {
+            "name": "Update Documentation",
+            "action": "update_documentation",
+            "config": {
+              "room_path": "{{ pr.room_path }}",
+              "hardware_config": "{{ pr.hardware_changes }}",
+              "work_order_id": "{{ work_order.id }}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "error_handling": {
+    "on_failure": [
+      {
+        "name": "Rollback Changes",
+        "action": "rollback_hardware",
+        "config": {
+          "room_path": "{{ pr.room_path }}",
+          "original_config": "{{ pr.original_config }}"
+        }
+      },
+      {
+        "name": "Notify Failure",
+        "action": "notify_failure",
+        "config": {
+          "room_path": "{{ pr.room_path }}",
+          "error_message": "{{ error.message }}",
+          "recipients": [
+            "{{ pr.created_by }}",
+            "it-manager@school.edu"
+          ]
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "created_by": "system",
+    "created_at": "2024-01-15T10:00:00Z",
+    "version": "1.0.0",
+    "tags": ["hardware", "deployment", "automation"]
+  }
+}

@@ -78,15 +78,37 @@ Building: Main Office
         └── SCENES/presentation [READY]
 ```
 
+### **Advanced Analytics Engine**: Intelligent Building Optimization
+- **Energy Optimization**: Real-time energy consumption analysis and optimization recommendations
+- **Predictive Analytics**: Machine learning models for forecasting and trend analysis
+- **Performance Monitoring**: KPI tracking and threshold-based alerting
+- **Anomaly Detection**: Statistical analysis for identifying unusual patterns
+- **Report Generation**: Multi-format reports with templates and scheduling
+
+### **IT Asset Management**: Complete IT Infrastructure Control
+- **Asset Lifecycle Management**: From procurement to disposal with full tracking
+- **Configuration Management**: Template-based hardware/software configurations
+- **Room Setup Management**: Room-specific IT equipment layouts and connections
+- **Inventory Management**: Parts and supplies tracking with supplier integration
+- **Work Order Management**: IT work order creation, tracking, and resolution
+
+### **CMMS/CAFM Features**: Complete Facility Management
+- **Facility Management**: Building, space, and asset management
+- **Work Order Management**: Maintenance work order lifecycle
+- **Maintenance Scheduling**: Preventive and reactive maintenance planning
+- **Inspection Management**: Inspection workflows and compliance tracking
+- **Vendor Management**: External service provider and contract management
+
 ### **Open Hardware Ecosystem**: Build Your Own Devices
 - **TinyGo edge devices** ($3-15 ESP32/RP2040) - no C required
 - **Pure Go gateways** (Raspberry Pi) - handles complex protocols
 - **100% Go family** - single language from edge to cloud
 - **Pre-built templates** for common sensors/actuators
-- **ArxOS Certified Hardware** - partner ecosystem
+- **ArxOS Certified Hardware** - partner ecosystem with testing framework
 
 ### **Enterprise Workflow Automation**: Complete CMMS/CAFM Platform
 - **Visual workflow builder** - drag-and-drop building automation
+- **n8n Integration** - seamless integration with n8n workflow automation platform
 - **400+ integrations** - connect to any system
 - **Physical automation** - actual control of building systems
 - **Maintenance management** - work orders, PM schedules, asset lifecycle
@@ -172,9 +194,30 @@ arx do "make it cooler in here"
 arx scene /B1/3/CONF-301 presentation
 arx scene /B1/* night-mode
 
+# Analytics and optimization
+arx analytics energy data --building B1 --period 7d
+arx analytics energy recommendations --building B1 --priority high
+arx analytics forecast energy --building B1 --duration 24h
+
+# IT asset management
+arx it assets list --building B1
+arx it rooms setup --room "/buildings/B1/floors/2/rooms/classroom-205" --type traditional
+arx it workorders create --room "/buildings/B1/floors/2/rooms/classroom-205" --title "Install Projector"
+
+# Facility management
+arx facility workorders list --status open
+arx facility maintenance schedule --asset HVAC-001 --frequency monthly
+arx facility inspections create --building B1 --type safety
+
+# Hardware management
+arx hardware devices list --building B1
+arx hardware certifications test device-001 --test-suite safety_basic
+arx hardware protocols configure mqtt --host mqtt.arxos.com
+
 # Workflow automation
-arx workflow trigger emergency-shutdown
-arx workflow run comfort-optimization
+arx workflow list
+arx workflow execute energy-optimization --input '{"building_id": "B1"}'
+arx workflow n8n test-connection
 
 # Import/Export building data
 arx import building.bim.txt --building-id B1
@@ -188,16 +231,24 @@ arxos/
 ├── cmd/arx/                 # CLI application
 ├── internal/
 │   ├── adapters/postgis/    # PostgreSQL/PostGIS adapter
+│   ├── analytics/           # Analytics engine (energy, predictive, performance)
 │   ├── api/                 # REST API handlers
-│   ├── core/                # Domain models
-│   │   ├── building/       # Building entity
-│   │   ├── equipment/      # Equipment entity
-│   │   └── user/           # User entity
-│   ├── services/            # Business logic
-│   │   ├── import/         # Import service (IFC, CSV, JSON, BIM)
-│   │   └── export/         # Export service
-│   └── rendering/           # Tree renderer for .bim.txt
-└── pkg/models/              # Shared models
+│   ├── auth/                # Authentication and authorization
+│   ├── cache/               # Caching layer
+│   ├── common/              # Shared utilities and logger
+│   ├── config/              # Configuration management
+│   ├── core/                # Domain models and business logic
+│   ├── facility/            # CMMS/CAFM features
+│   ├── hardware/            # Hardware platform and certification
+│   ├── it/                  # IT asset management
+│   ├── middleware/          # HTTP middleware
+│   ├── services/            # Application services
+│   ├── workflow/            # Workflow automation and n8n integration
+│   └── ...                  # Other modules
+├── pkg/models/              # Shared models
+├── web/                     # Web interface
+├── docs/                    # Comprehensive documentation
+└── scripts/                 # Build and deployment scripts
 ```
 
 ## 🔧 Architecture
@@ -301,21 +352,30 @@ POSTGIS_PASSWORD=secret go test -tags=integration ./...
 
 ## 📚 Documentation
 
-### Ecosystem Documentation
-- **[ArxOS Core](docs/ARCHITECTURE.md)** - The Git-like building management engine
-- **[Hardware Platform](hardware.md)** - Open source IoT ecosystem and certified devices
-- **[Workflow Automation](n8n.md)** - Visual CMMS/CAFM platform with n8n integration
-- **[Business Model](docs/BUSINESS_MODEL.md)** - Ecosystem strategy and revenue model
+### System Architecture
+- **[System Architecture](docs/SYSTEM_ARCHITECTURE.md)** - Complete system overview and module integration
+- **[API Reference](docs/API_REFERENCE.md)** - Comprehensive REST API documentation
+- **[CLI Reference](docs/CLI_REFERENCE.md)** - Complete command-line interface guide
+- **[Integration Guide](docs/INTEGRATION_GUIDE.md)** - External system integration and internal module communication
+- **[Deployment Guide](docs/DEPLOYMENT_GUIDE.md)** - Production deployment and monitoring
 
-### Technical Documentation
-- **[API Reference](docs/api.md)** - REST API documentation
-- **[CLI Reference](docs/CLI_REFERENCE.md)** - Command-line interface guide
+### Module Documentation
+- **[Analytics Engine](internal/analytics/README.md)** - Energy optimization, predictive analytics, and reporting
+- **[IT Asset Management](internal/it/README.md)** - IT infrastructure management and configuration
+- **[Workflow Automation](internal/workflow/README.md)** - n8n integration and workflow management
+- **[CMMS/CAFM Features](internal/facility/README.md)** - Facility and maintenance management
+- **[Hardware Platform](internal/hardware/README.md)** - IoT device management and certification
+
+### Development
+- **[Developer Guide](docs/DEVELOPER_GUIDE.md)** - Complete development setup and best practices
+- **[Contributing](CONTRIBUTING.md)** - How to contribute to ArxOS
 - **[Architecture Guide](docs/architecture-clean.md)** - Clean architecture principles
 - **[Service Architecture](docs/SERVICE_ARCHITECTURE.md)** - Service layer design
 
-### Development
-- **[Contributing](CONTRIBUTING.md)** - How to contribute to ArxOS
-- **[Developer Guide](docs/developer-guide/architecture.md)** - Development setup and practices
+### Business Documentation
+- **[Business Model](docs/BUSINESS_MODEL.md)** - Ecosystem strategy and revenue model
+- **[Hardware Platform](hardware.md)** - Open source IoT ecosystem and certified devices
+- **[Workflow Automation](n8n.md)** - Visual CMMS/CAFM platform with n8n integration
 
 ## 📄 License
 

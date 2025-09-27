@@ -55,6 +55,9 @@ type Config struct {
 
 	// Security settings
 	Security SecurityConfig `json:"security"`
+
+	// TUI settings
+	TUI TUIConfig `json:"tui"`
 }
 
 // CloudConfig contains cloud-specific configuration
@@ -169,6 +172,112 @@ type SecurityConfig struct {
 	BcryptCost         int           `json:"bcrypt_cost"`
 }
 
+// TUIConfig contains Terminal User Interface settings
+type TUIConfig struct {
+	// Core TUI settings
+	Enabled        bool   `json:"enabled"`
+	Theme          string `json:"theme"`           // dark, light, auto
+	UpdateInterval string `json:"update_interval"` // e.g., "1s", "500ms"
+
+	// Performance settings
+	MaxEquipmentDisplay int  `json:"max_equipment_display"`
+	RealTimeEnabled     bool `json:"real_time_enabled"`
+	AnimationsEnabled   bool `json:"animations_enabled"`
+
+	// Spatial settings
+	SpatialPrecision string `json:"spatial_precision"` // e.g., "1mm", "1cm"
+	GridScale        string `json:"grid_scale"`        // e.g., "1:10", "1:20"
+
+	// UI settings
+	ShowCoordinates bool `json:"show_coordinates"`
+	ShowConfidence  bool `json:"show_confidence"`
+	CompactMode     bool `json:"compact_mode"`
+
+	// Advanced settings
+	CustomSymbols        map[string]string `json:"custom_symbols"`         // Custom equipment symbols
+	ColorScheme          string            `json:"color_scheme"`           // Custom color scheme name
+	Keybindings          map[string]string `json:"keybindings"`            // Custom key bindings
+	ViewportSize         int               `json:"viewport_size"`          // Number of items in viewport
+	RefreshRate          int               `json:"refresh_rate"`           // FPS for animations
+	EnableMouse          bool              `json:"enable_mouse"`           // Mouse support
+	EnableBracketedPaste bool              `json:"enable_bracketed_paste"` // Paste support
+}
+
+// Validate validates the TUI configuration
+func (c *TUIConfig) Validate() error {
+	// Validate update interval
+	if _, err := time.ParseDuration(c.UpdateInterval); err != nil {
+		return fmt.Errorf("invalid update_interval: %w", err)
+	}
+
+	// Validate theme
+	if c.Theme != "dark" && c.Theme != "light" && c.Theme != "auto" {
+		return fmt.Errorf("invalid theme: %s (must be dark, light, or auto)", c.Theme)
+	}
+
+	// Validate max equipment display
+	if c.MaxEquipmentDisplay <= 0 {
+		return fmt.Errorf("max_equipment_display must be positive")
+	}
+
+	// Validate spatial precision
+	if c.SpatialPrecision != "" {
+		validPrecisions := []string{"1mm", "1cm", "10cm", "1m"}
+		valid := false
+		for _, p := range validPrecisions {
+			if c.SpatialPrecision == p {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return fmt.Errorf("invalid spatial_precision: %s (must be one of: 1mm, 1cm, 10cm, 1m)", c.SpatialPrecision)
+		}
+	}
+
+	// Validate grid scale
+	if c.GridScale != "" {
+		validScales := []string{"1:5", "1:10", "1:20", "1:50", "1:100"}
+		valid := false
+		for _, s := range validScales {
+			if c.GridScale == s {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return fmt.Errorf("invalid grid_scale: %s (must be one of: 1:5, 1:10, 1:20, 1:50, 1:100)", c.GridScale)
+		}
+	}
+
+	// Validate viewport size
+	if c.ViewportSize <= 0 {
+		c.ViewportSize = 20 // Set default
+	}
+
+	// Validate refresh rate
+	if c.RefreshRate <= 0 {
+		c.RefreshRate = 30 // Set default
+	}
+
+	return nil
+}
+
+// ParseUpdateInterval parses the update interval string into a time.Duration
+func (c *TUIConfig) ParseUpdateInterval() (time.Duration, error) {
+	return time.ParseDuration(c.UpdateInterval)
+}
+
+// IsDarkTheme returns true if the theme is dark
+func (c *TUIConfig) IsDarkTheme() bool {
+	return c.Theme == "dark" || c.Theme == "auto"
+}
+
+// IsLightTheme returns true if the theme is light
+func (c *TUIConfig) IsLightTheme() bool {
+	return c.Theme == "light"
+}
+
 // Default returns a default configuration for local mode
 func Default() *Config {
 	homeDir, _ := os.UserHomeDir()
@@ -246,6 +355,36 @@ func Default() *Config {
 			Password: "",
 			SSLMode:  "disable",
 			SRID:     900913, // Web Mercator with millimeter precision
+		},
+
+		TUI: TUIConfig{
+			Enabled:             true,
+			Theme:               "dark",
+			UpdateInterval:      "1s",
+			MaxEquipmentDisplay: 1000,
+			RealTimeEnabled:     true,
+			AnimationsEnabled:   true,
+			SpatialPrecision:    "1mm",
+			GridScale:           "1:10",
+			ShowCoordinates:     true,
+			ShowConfidence:      true,
+			CompactMode:         false,
+			CustomSymbols: map[string]string{
+				"hvac":        "H",
+				"electrical":  "E",
+				"fire_safety": "F",
+				"plumbing":    "P",
+				"lighting":    "L",
+				"outlet":      "O",
+				"sensor":      "S",
+				"camera":      "C",
+			},
+			ColorScheme:          "default",
+			Keybindings:          make(map[string]string),
+			ViewportSize:         20,
+			RefreshRate:          30,
+			EnableMouse:          true,
+			EnableBracketedPaste: true,
 		},
 	}
 }
@@ -460,6 +599,62 @@ func (c *Config) LoadFromEnv() {
 			c.PostGIS.SRID = val
 		}
 	}
+
+	// TUI settings
+	if enabled := os.Getenv("ARXOS_TUI_ENABLED"); enabled == "true" || enabled == "false" {
+		c.TUI.Enabled = enabled == "true"
+	}
+	if theme := os.Getenv("ARXOS_TUI_THEME"); theme != "" {
+		c.TUI.Theme = theme
+	}
+	if interval := os.Getenv("ARXOS_TUI_UPDATE_INTERVAL"); interval != "" {
+		c.TUI.UpdateInterval = interval
+	}
+	if maxEquip := os.Getenv("ARXOS_TUI_MAX_EQUIPMENT"); maxEquip != "" {
+		if val, err := parseIntEnv(maxEquip); err == nil {
+			c.TUI.MaxEquipmentDisplay = val
+		}
+	}
+	if realtime := os.Getenv("ARXOS_TUI_REALTIME"); realtime == "true" || realtime == "false" {
+		c.TUI.RealTimeEnabled = realtime == "true"
+	}
+	if animations := os.Getenv("ARXOS_TUI_ANIMATIONS"); animations == "true" || animations == "false" {
+		c.TUI.AnimationsEnabled = animations == "true"
+	}
+	if precision := os.Getenv("ARXOS_TUI_SPATIAL_PRECISION"); precision != "" {
+		c.TUI.SpatialPrecision = precision
+	}
+	if scale := os.Getenv("ARXOS_TUI_GRID_SCALE"); scale != "" {
+		c.TUI.GridScale = scale
+	}
+	if coords := os.Getenv("ARXOS_TUI_SHOW_COORDINATES"); coords == "true" || coords == "false" {
+		c.TUI.ShowCoordinates = coords == "true"
+	}
+	if confidence := os.Getenv("ARXOS_TUI_SHOW_CONFIDENCE"); confidence == "true" || confidence == "false" {
+		c.TUI.ShowConfidence = confidence == "true"
+	}
+	if compact := os.Getenv("ARXOS_TUI_COMPACT_MODE"); compact == "true" || compact == "false" {
+		c.TUI.CompactMode = compact == "true"
+	}
+	if colorScheme := os.Getenv("ARXOS_TUI_COLOR_SCHEME"); colorScheme != "" {
+		c.TUI.ColorScheme = colorScheme
+	}
+	if viewport := os.Getenv("ARXOS_TUI_VIEWPORT_SIZE"); viewport != "" {
+		if val, err := parseIntEnv(viewport); err == nil {
+			c.TUI.ViewportSize = val
+		}
+	}
+	if refreshRate := os.Getenv("ARXOS_TUI_REFRESH_RATE"); refreshRate != "" {
+		if val, err := parseIntEnv(refreshRate); err == nil {
+			c.TUI.RefreshRate = val
+		}
+	}
+	if mouse := os.Getenv("ARXOS_TUI_ENABLE_MOUSE"); mouse == "true" || mouse == "false" {
+		c.TUI.EnableMouse = mouse == "true"
+	}
+	if paste := os.Getenv("ARXOS_TUI_ENABLE_BRACKETED_PASTE"); paste == "true" || paste == "false" {
+		c.TUI.EnableBracketedPaste = paste == "true"
+	}
 }
 
 // Validate checks if the configuration is valid
@@ -547,6 +742,11 @@ func (c *Config) Validate() error {
 		if c.Database.DataSourceName == "" {
 			return fmt.Errorf("database path or connection string required")
 		}
+	}
+
+	// Validate TUI configuration
+	if err := c.TUI.Validate(); err != nil {
+		return fmt.Errorf("invalid TUI configuration: %w", err)
 	}
 
 	return nil

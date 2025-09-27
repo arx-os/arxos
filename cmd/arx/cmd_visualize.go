@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
+
+	"github.com/arx-os/arxos/cmd/arx/tui"
 )
 
 // Parent visualize command
@@ -36,6 +39,7 @@ var (
 	vizBuilding string
 	vizFloor    int
 	vizRealtime bool
+	vizTUI      bool
 )
 
 func init() {
@@ -45,6 +49,10 @@ func init() {
 	visualizeCmd.AddCommand(vizStatusCmd)
 	visualizeCmd.AddCommand(vizMetricsCmd)
 	visualizeCmd.AddCommand(vizDashboardCmd)
+	visualizeCmd.AddCommand(vizFloorPlanCmd)
+	visualizeCmd.AddCommand(vizBuildingExplorerCmd)
+	visualizeCmd.AddCommand(vizEquipmentManagerCmd)
+	visualizeCmd.AddCommand(vizSpatialQueryCmd)
 
 	// Common flags
 	visualizeCmd.PersistentFlags().StringVarP(&vizOutput, "output", "o", "", "Output file")
@@ -53,6 +61,7 @@ func init() {
 	visualizeCmd.PersistentFlags().IntVar(&vizHeight, "height", 800, "Height in pixels")
 	visualizeCmd.PersistentFlags().StringVar(&vizBuilding, "building", "", "Filter by building")
 	visualizeCmd.PersistentFlags().IntVar(&vizFloor, "floor", -999, "Filter by floor")
+	visualizeCmd.PersistentFlags().BoolVar(&vizTUI, "tui", false, "Use interactive terminal interface")
 }
 
 // Demo visualization
@@ -101,6 +110,14 @@ Shows energy consumption patterns across building spaces.`,
 }
 
 func runVizEnergy(cmd *cobra.Command, args []string) error {
+	// Check if TUI mode is requested
+	if vizTUI {
+		// Run TUI energy visualization
+		ctx := context.Background()
+		return tui.RunTUICommand(ctx, "energy", vizBuilding)
+	}
+
+	// Default CLI mode
 	fmt.Println("⚡ Energy Usage Visualization")
 	fmt.Println("═══════════════════════════════════")
 	fmt.Println()
@@ -123,6 +140,8 @@ func runVizEnergy(cmd *cobra.Command, args []string) error {
 	if vizOutput != "" {
 		fmt.Printf("Saved to: %s\n", vizOutput)
 	}
+
+	fmt.Println("💡 Tip: Use --tui flag for interactive energy visualization")
 
 	return nil
 }
@@ -196,11 +215,21 @@ var vizDashboardCmd = &cobra.Command{
 	Use:   "dashboard",
 	Short: "Generate comprehensive building dashboard",
 	Long: `Generate comprehensive building dashboard with all visualizations.
-Combines spatial data, metrics, and status into unified view.`,
+Combines spatial data, metrics, and status into unified view.
+
+Use --tui flag for interactive terminal interface.`,
 	RunE: runVizDashboard,
 }
 
 func runVizDashboard(cmd *cobra.Command, args []string) error {
+	// Check if TUI mode is requested
+	if vizTUI {
+		// Run TUI dashboard
+		ctx := context.Background()
+		return tui.RunTUICommand(ctx, "dashboard")
+	}
+
+	// Default CLI mode
 	fmt.Println("🎯 Building Operations Dashboard")
 	fmt.Println("═══════════════════════════════════")
 	fmt.Println()
@@ -241,6 +270,267 @@ func runVizDashboard(cmd *cobra.Command, args []string) error {
 	} else if vizFormat == "html" {
 		fmt.Println("\nView dashboard at: http://localhost:8080/dashboard")
 	}
+
+	fmt.Println("\n💡 Tip: Use --tui flag for interactive terminal interface")
+
+	return nil
+}
+
+// Floor plan visualization
+var vizFloorPlanCmd = &cobra.Command{
+	Use:   "floorplan",
+	Short: "Generate ASCII floor plan visualization",
+	Long: `Generate professional ASCII floor plan visualization.
+Shows building layout with equipment positioning and spatial relationships.
+
+Use --tui flag for interactive floor plan explorer.`,
+	RunE: runVizFloorPlan,
+}
+
+func runVizFloorPlan(cmd *cobra.Command, args []string) error {
+	// Check if TUI mode is requested
+	if vizTUI {
+		// Run TUI floor plan
+		ctx := context.Background()
+		return tui.RunTUICommand(ctx, "floorplan", vizBuilding)
+	}
+
+	// Default CLI mode
+	fmt.Println("🏗️  ASCII Floor Plan Visualization")
+	fmt.Println("═══════════════════════════════════════")
+	fmt.Println()
+
+	fmt.Println("Building: ARXOS-001 - Floor 1")
+	fmt.Println("Scale: 1:50 (1 character = 0.5m)")
+	fmt.Println()
+
+	// Sample ASCII floor plan
+	fmt.Println("┌─────────────────────────────────────────────────────────┐")
+	fmt.Println("│                                                         │")
+	fmt.Println("│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  │")
+	fmt.Println("│  │   Office    │  │ Conference  │  │    Executive    │  │")
+	fmt.Println("│  │   Room A    │  │    Room     │  │     Suite       │  │")
+	fmt.Println("│  │     E       │  │      H      │  │        F        │  │")
+	fmt.Println("│  └─────────────┘  └─────────────┘  └─────────────────┘  │")
+	fmt.Println("│                                                         │")
+	fmt.Println("│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  │")
+	fmt.Println("│  │   Office    │  │   Office    │  │   Break Room    │  │")
+	fmt.Println("│  │   Room B    │  │   Room C    │  │                 │  │")
+	fmt.Println("│  │     E       │  │     E       │  │        P        │  │")
+	fmt.Println("│  └─────────────┘  └─────────────┘  └─────────────────┘  │")
+	fmt.Println("│                                                         │")
+	fmt.Println("│  ┌─────────────────────────────────────────────────────┐  │")
+	fmt.Println("│  │                Open Workspace                       │  │")
+	fmt.Println("│  │  L  L  L  L  L  L  L  L  L  L  L  L  L  L  L  L  │  │")
+	fmt.Println("│  │  O  O  O  O  O  O  O  O  O  O  O  O  O  O  O  O  │  │")
+	fmt.Println("│  └─────────────────────────────────────────────────────┘  │")
+	fmt.Println("└─────────────────────────────────────────────────────────┘")
+	fmt.Println()
+
+	fmt.Println("Equipment Legend:")
+	fmt.Println("┌─────────────────────────────────────┐")
+	fmt.Println("│ H = HVAC Unit                       │")
+	fmt.Println("│ E = Electrical Panel                │")
+	fmt.Println("│ F = Fire Safety Panel               │")
+	fmt.Println("│ P = Plumbing/Utilities              │")
+	fmt.Println("│ L = Lighting Fixture                │")
+	fmt.Println("│ O = Power Outlet                    │")
+	fmt.Println("└─────────────────────────────────────┘")
+	fmt.Println()
+
+	if vizOutput != "" {
+		fmt.Printf("Floor plan saved to: %s\n", vizOutput)
+	}
+
+	fmt.Println("💡 Tip: Use --tui flag for interactive floor plan explorer")
+
+	return nil
+}
+
+// Building explorer visualization
+var vizBuildingExplorerCmd = &cobra.Command{
+	Use:   "explorer",
+	Short: "Interactive building structure explorer",
+	Long: `Explore building hierarchy with interactive navigation.
+Navigate through buildings, floors, rooms, and equipment with full hierarchy support.
+
+Use --tui flag for interactive building explorer.`,
+	RunE: runVizBuildingExplorer,
+}
+
+func runVizBuildingExplorer(cmd *cobra.Command, args []string) error {
+	// Check if TUI mode is requested
+	if vizTUI {
+		// Run TUI building explorer
+		ctx := context.Background()
+		return tui.RunTUICommand(ctx, "explorer", vizBuilding)
+	}
+
+	// Default CLI mode
+	fmt.Println("🏢 Building Structure Explorer")
+	fmt.Println("═══════════════════════════════════════")
+	fmt.Println()
+
+	fmt.Println("Building: ARXOS-001 - Tech Office Complex")
+	fmt.Println("Address: 123 Tech Street, Innovation City")
+	fmt.Println()
+
+	// Building hierarchy
+	fmt.Println("Building Structure:")
+	fmt.Println("├─ Floor 1: Ground Floor (Lobby & Reception)")
+	fmt.Println("│  ├─ Room 101: Reception Area")
+	fmt.Println("│  ├─ Room 102: Security Office")
+	fmt.Println("│  └─ Room 103: Utility Room")
+	fmt.Println("├─ Floor 2: Office Spaces")
+	fmt.Println("│  ├─ Room 201: Conference Room A")
+	fmt.Println("│  ├─ Room 202: Conference Room B")
+	fmt.Println("│  ├─ Room 203: Open Workspace")
+	fmt.Println("│  └─ Room 204: Break Room")
+	fmt.Println("└─ Floor 3: Executive Floor")
+	fmt.Println("   ├─ Room 301: Executive Suite")
+	fmt.Println("   ├─ Room 302: Board Room")
+	fmt.Println("   └─ Room 303: Executive Kitchen")
+	fmt.Println()
+
+	fmt.Println("Equipment Summary:")
+	fmt.Println("├─ HVAC Systems: 3 units")
+	fmt.Println("├─ Electrical Panels: 5 panels")
+	fmt.Println("├─ Lighting Fixtures: 47 fixtures")
+	fmt.Println("├─ Power Outlets: 89 outlets")
+	fmt.Println("└─ Fire Safety: 12 devices")
+	fmt.Println()
+
+	if vizOutput != "" {
+		fmt.Printf("Building structure saved to: %s\n", vizOutput)
+	}
+
+	fmt.Println("💡 Tip: Use --tui flag for interactive building explorer")
+
+	return nil
+}
+
+// Equipment manager visualization
+var vizEquipmentManagerCmd = &cobra.Command{
+	Use:   "equipment",
+	Short: "Equipment management interface",
+	Long: `Manage and monitor building equipment with filtering and sorting capabilities.
+View equipment status, locations, and details with comprehensive management tools.
+
+Use --tui flag for interactive equipment manager.`,
+	RunE: runVizEquipmentManager,
+}
+
+func runVizEquipmentManager(cmd *cobra.Command, args []string) error {
+	// Check if TUI mode is requested
+	if vizTUI {
+		// Run TUI equipment manager
+		ctx := context.Background()
+		return tui.RunTUICommand(ctx, "equipment", vizBuilding)
+	}
+
+	// Default CLI mode
+	fmt.Println("🔧 Equipment Manager")
+	fmt.Println("═══════════════════════════════════════")
+	fmt.Println()
+
+	fmt.Println("Equipment Summary:")
+	fmt.Println("┌─────────────────────────────────────────────────────────────────┐")
+	fmt.Println("│ ID          │ Type        │ Status      │ Name              │ Location      │")
+	fmt.Println("├─────────────────────────────────────────────────────────────────┤")
+	fmt.Println("│ HVAC-001    │ HVAC        │ operational │ Main HVAC Unit    │ (10.5,15.2,2.0)│")
+	fmt.Println("│ ELEC-001    │ Electrical  │ operational │ Main Panel        │ (5.0,8.0,1.5) │")
+	fmt.Println("│ LIGHT-001   │ Lighting    │ maintenance │ Conf Room Light   │ (12.0,10.0,2.8)│")
+	fmt.Println("│ OUTLET-001  │ Electrical  │ operational │ Power Outlet A1   │ (8.5,6.0,1.2) │")
+	fmt.Println("│ FIRE-001    │ Fire Safety │ operational │ Fire Alarm Panel  │ (15.0,12.0,2.5)│")
+	fmt.Println("└─────────────────────────────────────────────────────────────────┘")
+	fmt.Println()
+
+	fmt.Println("Status Summary:")
+	fmt.Println("├─ Operational: 187 devices (75.7%)")
+	fmt.Println("├─ Maintenance: 42 devices (17.0%)")
+	fmt.Println("├─ Offline: 18 devices (7.3%)")
+	fmt.Println("└─ Total: 247 devices")
+	fmt.Println()
+
+	fmt.Println("Equipment Types:")
+	fmt.Println("├─ HVAC: 12 units")
+	fmt.Println("├─ Electrical: 156 devices")
+	fmt.Println("├─ Lighting: 47 fixtures")
+	fmt.Println("├─ Fire Safety: 12 devices")
+	fmt.Println("├─ Plumbing: 15 devices")
+	fmt.Println("└─ Security: 5 devices")
+	fmt.Println()
+
+	if vizOutput != "" {
+		fmt.Printf("Equipment list saved to: %s\n", vizOutput)
+	}
+
+	fmt.Println("💡 Tip: Use --tui flag for interactive equipment manager")
+
+	return nil
+}
+
+// Spatial query visualization
+var vizSpatialQueryCmd = &cobra.Command{
+	Use:   "query",
+	Short: "Spatial query interface",
+	Long: `Query equipment and spatial data using various spatial operations.
+Perform radius searches, bounding box queries, floor-based searches, and more.
+
+Use --tui flag for interactive spatial query interface.`,
+	RunE: runVizSpatialQuery,
+}
+
+func runVizSpatialQuery(cmd *cobra.Command, args []string) error {
+	// Check if TUI mode is requested
+	if vizTUI {
+		// Run TUI spatial query
+		ctx := context.Background()
+		return tui.RunTUICommand(ctx, "query", vizBuilding)
+	}
+
+	// Default CLI mode
+	fmt.Println("🗺️  Spatial Query Interface")
+	fmt.Println("═══════════════════════════════════════")
+	fmt.Println()
+
+	fmt.Println("Available Query Types:")
+	fmt.Println("1. Radius Query: Find equipment within a specified radius")
+	fmt.Println("2. Bounding Box: Find equipment within rectangular area")
+	fmt.Println("3. Floor Query: Find all equipment on a specific floor")
+	fmt.Println("4. Type Query: Find equipment of specific types")
+	fmt.Println()
+
+	fmt.Println("Sample Queries:")
+	fmt.Println("┌─────────────────────────────────────────────────────────────────┐")
+	fmt.Println("│ Query Type    │ Parameters                    │ Results         │")
+	fmt.Println("├─────────────────────────────────────────────────────────────────┤")
+	fmt.Println("│ Radius        │ Center: (10,10,2) R: 5m      │ 8 equipment     │")
+	fmt.Println("│ Bounding Box  │ Min: (0,0,1) Max: (20,15,3)  │ 23 equipment    │")
+	fmt.Println("│ Floor         │ Floor: 2                      │ 15 equipment    │")
+	fmt.Println("│ Type          │ Type: HVAC                    │ 3 equipment     │")
+	fmt.Println("└─────────────────────────────────────────────────────────────────┘")
+	fmt.Println()
+
+	fmt.Println("Spatial Coverage:")
+	fmt.Println("├─ Floor 1: 100% coverage (12.5m x 8.0m)")
+	fmt.Println("├─ Floor 2: 95% coverage (12.5m x 8.0m)")
+	fmt.Println("├─ Floor 3: 88% coverage (12.5m x 8.0m)")
+	fmt.Println("└─ Overall: 94% building coverage")
+	fmt.Println()
+
+	fmt.Println("Query Performance:")
+	fmt.Println("├─ Average Response Time: 45ms")
+	fmt.Println("├─ Spatial Index: Enabled (PostGIS)")
+	fmt.Println("├─ Max Query Radius: 50m")
+	fmt.Println("└─ Supported SRID: 900913 (Web Mercator)")
+	fmt.Println()
+
+	if vizOutput != "" {
+		fmt.Printf("Query results saved to: %s\n", vizOutput)
+	}
+
+	fmt.Println("💡 Tip: Use --tui flag for interactive spatial query interface")
 
 	return nil
 }

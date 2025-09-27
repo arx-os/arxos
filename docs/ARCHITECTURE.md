@@ -99,6 +99,11 @@ Just as Git became the standard because it was free and powerful, ArxOS follows 
 - Needs technical specifications and connection paths
 - Queries precise spatial relationships and system connections
 
+**Web User**: "Show me the building dashboard"
+- Uses HTMX-based web interface for building management
+- Gets functional, server-rendered interface for operations
+- Accesses building data through clean, GitHub-style interface
+
 ## System Architecture
 
 ```
@@ -138,10 +143,10 @@ Just as Git became the standard because it was free and powerful, ArxOS follows 
 │  └──────────┴──────────┴──────────┴──────────┴──────────┘ │
 ├─────────────────────────────────────────────────────────────┤
 │                      User Interfaces                        │
-│  ┌──────────┬──────────┬──────────┬────────────────────┐  │
-│  │ Terminal │  Web 3D  │Mobile AR │   Packet Radio    │  │
-│  │ (ASCII)  │ (Svelte) │ (React   │  (LoRaWAN/APRS)   │  │
-│  │Schematic │3D Visual │Precise AR│  Compressed       │  │
+│  ┌──────────┬──────────┬────────────────────────────────┐  │
+│  │ Terminal │   Web    │Mobile AR │   Packet Radio    │  │
+│  │ (ASCII)  │ (HTMX)   │ (React   │  (LoRaWAN/APRS)   │  │
+│  │Schematic │Functional│Precise AR│  Compressed       │  │
 │  └──────────┴──────────┴──────────┴────────────────────┘  │
 ├─────────────────────────────────────────────────────────────┤
 │                      Derived Outputs                        │
@@ -282,7 +287,7 @@ BIM Professional (Revit/AutoCAD/ArchiCAD/etc.)
    Automatic Derived Output Generation
    ├─ .bim.txt (Git/Human readable)
    ├─ Team Notifications
-   └─ Mobile/Web Interface Updates
+   └─ Web Interface Updates
 ```
 
 #### **Manual Import Flow**
@@ -301,20 +306,20 @@ PDF/IFC/LiDAR File
 
 #### **Bidirectional CLI Control Flow**
 ```
-Terminal CLI Commands ←→ PostGIS Database ←→ Mobile AR
+Terminal CLI Commands ←→ PostGIS Database ←→ Web Interface
      ↓                       ↓                ↓
 Professional Tools      .bim.txt         IFC Export
    (IFC Import)        (derived view)    (full precision)
 
 Examples:
 arx update OUTLET_02 --location "12.547,8.291,1.127" → PostGIS
-arx move HVAC_01 --by "0.05,0,0" → PostGIS → Mobile AR sees change
+arx move HVAC_01 --by "0.05,0,0" → PostGIS → Web interface sees change
 arx add /3/A/301/E/OUTLET_03 --location "x,y,z" → PostGIS → .bim.txt regen
 ```
 
 #### **Query Flow (PostGIS-Powered)**
 ```
-Terminal/Web/Mobile Query
+Terminal/Web Query
        ↓
    PostGIS Spatial Database
    (ST_Distance, ST_Contains, ST_Within, etc.)
@@ -400,9 +405,8 @@ arx query --floor 3 --contains "room_boundaries"     # Spatial containment
 arx query --building ARXOS-001 --spatial "ST_Distance(geom, point) < 5"
 
 # Changes immediately available to all interfaces:
-# - Mobile AR: Shows new precise position
-# - IFC Export: Contains updated coordinates  
 # - Web Interface: Queries return new position
+# - IFC Export: Contains updated coordinates  
 # - .bim.txt: May show change if grid-significant
 ```
 
@@ -565,20 +569,7 @@ func ProcessLiDARScan(pointCloud PointCloud, buildingID string) error {
   - Offline sync for remote locations
 - **Status**: Foundation established in `/mobile`
 
-### 3. Web 3D Interface (Future) - System Analysis
-- **Target Users**: Engineers, architects, system designers  
-- **Technology**: Svelte + Three.js + D3.js
-- **Data Source**: Combined .bim.txt and PostGIS for comprehensive visualization
-- **Architecture**: SPA with WebSocket real-time updates
-- **Features**:
-  - Interactive 3D building models
-  - Multi-level zoom (building → system → component)
-  - Real-time equipment status visualization
-  - Energy flow and system relationship mapping
-  - Historical data timeline and analysis
-- **Status**: Foundation established in `/web`
-
-### 4. Packet Radio Transport (Experimental) - Emergency Operations
+### 3. Packet Radio Transport (Experimental) - Emergency Operations
 - **Target Users**: Emergency responders, remote facility operators
 - **Technology**: LoRaWAN, APRS, custom protocols
 - **Data Source**: Compressed building data optimized for bandwidth constraints
@@ -675,12 +666,13 @@ internal/
     ├── logger.go        # Logging
     └── errors.go        # Error handling
 
-web/                     # Web 3D interface (Svelte)
-├── src/
-│   ├── components/     # Svelte components
-│   ├── lib/           # Client libraries
-│   └── stores/        # State management
-└── package.json
+web/                     # Web interface (HTMX)
+├── templates/          # HTML templates
+│   ├── layouts/       # Base layouts
+│   ├── pages/         # Page templates
+│   └── partials/      # Reusable fragments
+├── static/            # Static assets
+└── README.md          # Web interface docs
 
 mobile/                  # Mobile AR app (React Native)
 ├── src/
@@ -1047,7 +1039,7 @@ internal/
 - ⬜ Real-time digital twin simulation
 - ⬜ Predictive maintenance using spatial analytics
 - ⬜ Mobile AR application (React Native)
-- ⬜ Web 3D visualization (Svelte + Three.js)
+- ⬜ Advanced web visualization enhancements
 
 ### Phase 4 (Enterprise & Scale)
 - ⬜ Distributed PostGIS deployment

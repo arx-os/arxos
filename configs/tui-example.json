@@ -1,0 +1,98 @@
+{
+  "mode": "local",
+  "version": "0.1.0",
+  "state_dir": "~/.arxos",
+  "cache_dir": "~/.arxos/cache",
+  "cloud": {
+    "enabled": false,
+    "base_url": "https://api.arxos.io",
+    "sync_enabled": false,
+    "sync_interval": "5m"
+  },
+  "storage": {
+    "backend": "local",
+    "local_path": "~/.arxos/data"
+  },
+  "database": {
+    "type": "sqlite",
+    "driver": "sqlite",
+    "data_source_name": "~/.arxos/arxos.db",
+    "max_open_conns": 25,
+    "max_connections": 25,
+    "max_idle_conns": 5,
+    "conn_lifetime": "30m",
+    "conn_max_lifetime": "30m",
+    "migrations_path": "./migrations",
+    "auto_migrate": true
+  },
+  "postgis": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "arxos",
+    "user": "arxos",
+    "password": "",
+    "ssl_mode": "disable",
+    "srid": 900913
+  },
+  "api": {
+    "timeout": "30s",
+    "retry_attempts": 3,
+    "retry_delay": "1s",
+    "user_agent": "ArxOS-CLI/0.1.0"
+  },
+  "telemetry": {
+    "enabled": false,
+    "endpoint": "https://telemetry.arxos.io",
+    "sample_rate": 0.1,
+    "debug": false,
+    "anonymous_id": ""
+  },
+  "features": {
+    "cloud_sync": false,
+    "ai_integration": false,
+    "offline_mode": true,
+    "beta_features": false,
+    "analytics": false,
+    "auto_update": false
+  },
+  "security": {
+    "jwt_expiry": "24h",
+    "session_timeout": "30m",
+    "api_rate_limit": 100,
+    "api_rate_limit_window": "1m",
+    "enable_auth": true,
+    "enable_tls": false,
+    "tls_cert_path": "",
+    "allowed_origins": ["http://localhost:3000"],
+    "bcrypt_cost": 12
+  },
+  "tui": {
+    "enabled": true,
+    "theme": "dark",
+    "update_interval": "1s",
+    "max_equipment_display": 1000,
+    "real_time_enabled": true,
+    "animations_enabled": true,
+    "spatial_precision": "1mm",
+    "grid_scale": "1:10",
+    "show_coordinates": true,
+    "show_confidence": true,
+    "compact_mode": false,
+    "custom_symbols": {
+      "hvac": "H",
+      "electrical": "E",
+      "fire_safety": "F",
+      "plumbing": "P",
+      "lighting": "L",
+      "outlet": "O",
+      "sensor": "S",
+      "camera": "C"
+    },
+    "color_scheme": "default",
+    "keybindings": {},
+    "viewport_size": 20,
+    "refresh_rate": 30,
+    "enable_mouse": true,
+    "enable_bracketed_paste": true
+  }
+}

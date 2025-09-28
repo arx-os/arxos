@@ -107,4 +107,4 @@ Desktop.ini
 *.crt
 *.p12
 /secrets/
-/credentials/
+/credentials/cmd/arx/arx

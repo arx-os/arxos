@@ -18,10 +18,10 @@ type MockDB struct {
 }
 
 func (m *MockDB) Connect(ctx context.Context, dbPath string) error { return nil }
-func (m *MockDB) Close() error { return nil }
-func (m *MockDB) BeginTx(ctx context.Context) (*sql.Tx, error) { return nil, nil }
-func (m *MockDB) HasSpatialSupport() bool { return true }
-func (m *MockDB) GetSpatialDB() (database.SpatialDB, error) { return nil, nil }
+func (m *MockDB) Close() error                                     { return nil }
+func (m *MockDB) BeginTx(ctx context.Context) (*sql.Tx, error)     { return nil, nil }
+func (m *MockDB) HasSpatialSupport() bool                          { return true }
+func (m *MockDB) GetSpatialDB() (database.SpatialDB, error)        { return nil, nil }
 
 // Floor plan operations
 func (m *MockDB) GetFloorPlan(ctx context.Context, id string) (*models.FloorPlan, error) {
@@ -164,62 +164,108 @@ func (m *MockDB) DeleteRoom(ctx context.Context, id string) error {
 
 // User operations (not needed for CLI tests but required by interface)
 func (m *MockDB) GetUser(ctx context.Context, id string) (*models.User, error) { return nil, nil }
-func (m *MockDB) GetUserByEmail(ctx context.Context, email string) (*models.User, error) { return nil, nil }
+func (m *MockDB) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	return nil, nil
+}
 func (m *MockDB) CreateUser(ctx context.Context, user *models.User) error { return nil }
 func (m *MockDB) UpdateUser(ctx context.Context, user *models.User) error { return nil }
-func (m *MockDB) DeleteUser(ctx context.Context, id string) error { return nil }
-func (m *MockDB) ListUsers(ctx context.Context, limit, offset int) ([]*models.User, error) { return nil, nil }
+func (m *MockDB) DeleteUser(ctx context.Context, id string) error         { return nil }
+func (m *MockDB) ListUsers(ctx context.Context, limit, offset int) ([]*models.User, error) {
+	return nil, nil
+}
 func (m *MockDB) CountUsers(ctx context.Context) (int, error) { return 0, nil }
-func (m *MockDB) SearchUsers(ctx context.Context, query string, limit, offset int) ([]*models.User, error) { return nil, nil }
+func (m *MockDB) SearchUsers(ctx context.Context, query string, limit, offset int) ([]*models.User, error) {
+	return nil, nil
+}
 func (m *MockDB) CountUsersByQuery(ctx context.Context, query string) (int, error) { return 0, nil }
-func (m *MockDB) CountActiveUsers(ctx context.Context) (int, error) { return 0, nil }
-func (m *MockDB) GetUserStatsByRole(ctx context.Context) (map[string]int, error) { return nil, nil }
-func (m *MockDB) BulkUpdateUsers(ctx context.Context, updates []*models.UserUpdateRequest) error { return nil }
+func (m *MockDB) CountActiveUsers(ctx context.Context) (int, error)                { return 0, nil }
+func (m *MockDB) GetUserStatsByRole(ctx context.Context) (map[string]int, error)   { return nil, nil }
+func (m *MockDB) BulkUpdateUsers(ctx context.Context, updates []*models.UserUpdateRequest) error {
+	return nil
+}
 
 // Session operations (not needed for CLI tests but required by interface)
 func (m *MockDB) CreateSession(ctx context.Context, session *models.UserSession) error { return nil }
-func (m *MockDB) GetSession(ctx context.Context, token string) (*models.UserSession, error) { return nil, nil }
-func (m *MockDB) GetSessionByRefreshToken(ctx context.Context, refreshToken string) (*models.UserSession, error) { return nil, nil }
+func (m *MockDB) GetSession(ctx context.Context, token string) (*models.UserSession, error) {
+	return nil, nil
+}
+func (m *MockDB) GetSessionByRefreshToken(ctx context.Context, refreshToken string) (*models.UserSession, error) {
+	return nil, nil
+}
 func (m *MockDB) UpdateSession(ctx context.Context, session *models.UserSession) error { return nil }
-func (m *MockDB) DeleteSession(ctx context.Context, id string) error { return nil }
-func (m *MockDB) DeleteExpiredSessions(ctx context.Context) error { return nil }
-func (m *MockDB) DeleteUserSessions(ctx context.Context, userID string) error { return nil }
+func (m *MockDB) DeleteSession(ctx context.Context, id string) error                   { return nil }
+func (m *MockDB) DeleteExpiredSessions(ctx context.Context) error                      { return nil }
+func (m *MockDB) DeleteUserSessions(ctx context.Context, userID string) error          { return nil }
 
 // Password reset operations (not needed for CLI tests but required by interface)
-func (m *MockDB) CreatePasswordResetToken(ctx context.Context, token *models.PasswordResetToken) error { return nil }
-func (m *MockDB) GetPasswordResetToken(ctx context.Context, token string) (*models.PasswordResetToken, error) { return nil, nil }
+func (m *MockDB) CreatePasswordResetToken(ctx context.Context, token *models.PasswordResetToken) error {
+	return nil
+}
+func (m *MockDB) GetPasswordResetToken(ctx context.Context, token string) (*models.PasswordResetToken, error) {
+	return nil, nil
+}
 func (m *MockDB) MarkPasswordResetTokenUsed(ctx context.Context, token string) error { return nil }
-func (m *MockDB) DeleteExpiredPasswordResetTokens(ctx context.Context) error { return nil }
+func (m *MockDB) DeleteExpiredPasswordResetTokens(ctx context.Context) error         { return nil }
 
 // Organization operations (not needed for CLI tests but required by interface)
-func (m *MockDB) GetOrganization(ctx context.Context, id string) (*models.Organization, error) { return nil, nil }
-func (m *MockDB) GetOrganizationsByUser(ctx context.Context, userID string) ([]*models.Organization, error) { return nil, nil }
+func (m *MockDB) GetOrganization(ctx context.Context, id string) (*models.Organization, error) {
+	return nil, nil
+}
+func (m *MockDB) GetOrganizationsByUser(ctx context.Context, userID string) ([]*models.Organization, error) {
+	return nil, nil
+}
 func (m *MockDB) CreateOrganization(ctx context.Context, org *models.Organization) error { return nil }
 func (m *MockDB) UpdateOrganization(ctx context.Context, org *models.Organization) error { return nil }
-func (m *MockDB) DeleteOrganization(ctx context.Context, id string) error { return nil }
+func (m *MockDB) DeleteOrganization(ctx context.Context, id string) error                { return nil }
 
 // Organization member operations (not needed for CLI tests but required by interface)
-func (m *MockDB) AddOrganizationMember(ctx context.Context, orgID, userID, role string) error { return nil }
-func (m *MockDB) RemoveOrganizationMember(ctx context.Context, orgID, userID string) error { return nil }
-func (m *MockDB) UpdateOrganizationMemberRole(ctx context.Context, orgID, userID, role string) error { return nil }
-func (m *MockDB) GetOrganizationMembers(ctx context.Context, orgID string) ([]*models.OrganizationMember, error) { return nil, nil }
-func (m *MockDB) GetOrganizationMember(ctx context.Context, orgID, userID string) (*models.OrganizationMember, error) { return nil, nil }
+func (m *MockDB) AddOrganizationMember(ctx context.Context, orgID, userID, role string) error {
+	return nil
+}
+func (m *MockDB) RemoveOrganizationMember(ctx context.Context, orgID, userID string) error {
+	return nil
+}
+func (m *MockDB) UpdateOrganizationMemberRole(ctx context.Context, orgID, userID, role string) error {
+	return nil
+}
+func (m *MockDB) GetOrganizationMembers(ctx context.Context, orgID string) ([]*models.OrganizationMember, error) {
+	return nil, nil
+}
+func (m *MockDB) GetOrganizationMember(ctx context.Context, orgID, userID string) (*models.OrganizationMember, error) {
+	return nil, nil
+}
 
 // Organization invitation operations (not needed for CLI tests but required by interface)
-func (m *MockDB) CreateOrganizationInvitation(ctx context.Context, invitation *models.OrganizationInvitation) error { return nil }
-func (m *MockDB) GetOrganizationInvitationByToken(ctx context.Context, token string) (*models.OrganizationInvitation, error) { return nil, nil }
-func (m *MockDB) GetOrganizationInvitation(ctx context.Context, id string) (*models.OrganizationInvitation, error) { return nil, nil }
-func (m *MockDB) ListOrganizationInvitations(ctx context.Context, orgID string) ([]*models.OrganizationInvitation, error) { return nil, nil }
-func (m *MockDB) AcceptOrganizationInvitation(ctx context.Context, token, userID string) error { return nil }
+func (m *MockDB) CreateOrganizationInvitation(ctx context.Context, invitation *models.OrganizationInvitation) error {
+	return nil
+}
+func (m *MockDB) GetOrganizationInvitationByToken(ctx context.Context, token string) (*models.OrganizationInvitation, error) {
+	return nil, nil
+}
+func (m *MockDB) GetOrganizationInvitation(ctx context.Context, id string) (*models.OrganizationInvitation, error) {
+	return nil, nil
+}
+func (m *MockDB) ListOrganizationInvitations(ctx context.Context, orgID string) ([]*models.OrganizationInvitation, error) {
+	return nil, nil
+}
+func (m *MockDB) AcceptOrganizationInvitation(ctx context.Context, token, userID string) error {
+	return nil
+}
 func (m *MockDB) RevokeOrganizationInvitation(ctx context.Context, id string) error { return nil }
 
 // Query operations (not needed for CLI tests but required by interface)
-func (m *MockDB) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) { return nil, nil }
-func (m *MockDB) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row { return nil }
-func (m *MockDB) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) { return nil, nil }
+func (m *MockDB) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	return nil, nil
+}
+func (m *MockDB) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	return nil
+}
+func (m *MockDB) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	return nil, nil
+}
 
 // Migration operations (not needed for CLI tests but required by interface)
-func (m *MockDB) Migrate(ctx context.Context) error { return nil }
+func (m *MockDB) Migrate(ctx context.Context) error           { return nil }
 func (m *MockDB) GetVersion(ctx context.Context) (int, error) { return 1, nil }
 
 // Test setup helper
@@ -230,10 +276,10 @@ func setupTest() (*MockDB, context.Context) {
 		rooms:      make([]*models.Room, 0),
 	}
 	ctx := context.Background()
-	
+
 	// Set global database connection for testing
 	dbConn = mockDB
-	
+
 	return mockDB, ctx
 }
 
@@ -254,24 +300,24 @@ func TestAddBuilding(t *testing.T) {
 	defer cleanupTest()
 
 	tests := []struct {
-		name        string
+		name         string
 		buildingName string
-		expectError bool
+		expectError  bool
 	}{
 		{
-			name:        "Valid building name",
+			name:         "Valid building name",
 			buildingName: "Test Building",
-			expectError: false,
+			expectError:  false,
 		},
 		{
-			name:        "Empty building name",
+			name:         "Empty building name",
 			buildingName: "",
-			expectError: true,
+			expectError:  true,
 		},
 		{
-			name:        "Long building name",
+			name:         "Long building name",
 			buildingName: "Very Long Building Name That Should Still Work",
-			expectError: false,
+			expectError:  false,
 		},
 	}
 
@@ -279,9 +325,9 @@ func TestAddBuilding(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Reset mockDB for each test case
 			mockDB.reset()
-			
+
 			err := addBuilding(ctx, tt.buildingName)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "cannot be empty")
@@ -302,26 +348,26 @@ func TestAddEquipment(t *testing.T) {
 	defer cleanupTest()
 
 	tests := []struct {
-		name        string
+		name          string
 		equipmentName string
-		expectError bool
+		expectError   bool
 	}{
 		{
-			name:        "Valid equipment name",
+			name:          "Valid equipment name",
 			equipmentName: "Test Equipment",
-			expectError: false,
+			expectError:   false,
 		},
 		{
-			name:        "Empty equipment name",
+			name:          "Empty equipment name",
 			equipmentName: "",
-			expectError: true,
+			expectError:   true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := addEquipment(ctx, tt.equipmentName)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "cannot be empty")
@@ -361,7 +407,7 @@ func TestAddRoom(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := addRoom(ctx, tt.roomName)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "cannot be empty")
@@ -381,10 +427,10 @@ func TestGetBuilding(t *testing.T) {
 
 	// Create a test building
 	testBuilding := &models.FloorPlan{
-		ID:      "test-building-1",
-		Name:    "Test Building",
+		ID:       "test-building-1",
+		Name:     "Test Building",
 		Building: "Test Building",
-		Level:   1,
+		Level:    1,
 	}
 	mockDB.floorPlans = append(mockDB.floorPlans, testBuilding)
 
@@ -413,7 +459,7 @@ func TestGetBuilding(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := getBuilding(ctx, tt.buildingID)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				if tt.buildingID == "" {
@@ -466,7 +512,7 @@ func TestGetEquipment(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := getEquipment(ctx, tt.equipmentID)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				if tt.equipmentID == "" {
@@ -517,7 +563,7 @@ func TestGetRoom(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := getRoom(ctx, tt.roomID)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				if tt.roomID == "" {
@@ -538,10 +584,10 @@ func TestUpdateBuilding(t *testing.T) {
 
 	// Create a test building
 	testBuilding := &models.FloorPlan{
-		ID:      "test-building-1",
-		Name:    "Test Building",
+		ID:       "test-building-1",
+		Name:     "Test Building",
 		Building: "Test Building",
-		Level:   1,
+		Level:    1,
 	}
 	mockDB.floorPlans = append(mockDB.floorPlans, testBuilding)
 
@@ -570,7 +616,7 @@ func TestUpdateBuilding(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := updateBuilding(ctx, tt.buildingID)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				if tt.buildingID == "" {
@@ -623,7 +669,7 @@ func TestUpdateEquipment(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := updateEquipment(ctx, tt.equipmentID)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				if tt.equipmentID == "" {
@@ -676,7 +722,7 @@ func TestUpdateRoom(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := updateRoom(ctx, tt.roomID)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				if tt.roomID == "" {
@@ -697,35 +743,35 @@ func TestRemoveBuilding(t *testing.T) {
 
 	// Create a test building
 	testBuilding := &models.FloorPlan{
-		ID:      "test-building-1",
-		Name:    "Test Building",
+		ID:       "test-building-1",
+		Name:     "Test Building",
 		Building: "Test Building",
-		Level:   1,
+		Level:    1,
 	}
 	mockDB.floorPlans = append(mockDB.floorPlans, testBuilding)
 
 	tests := []struct {
-		name        string
-		buildingID  string
-		expectError bool
+		name          string
+		buildingID    string
+		expectError   bool
 		expectedCount int
 	}{
 		{
-			name:        "Valid building ID",
-			buildingID:  "test-building-1",
-			expectError: false,
+			name:          "Valid building ID",
+			buildingID:    "test-building-1",
+			expectError:   false,
 			expectedCount: 0,
 		},
 		{
-			name:        "Empty building ID",
-			buildingID:  "",
-			expectError: true,
+			name:          "Empty building ID",
+			buildingID:    "",
+			expectError:   true,
 			expectedCount: 0, // No building added because function fails early
 		},
 		{
-			name:        "Non-existent building ID",
-			buildingID:  "non-existent",
-			expectError: true,
+			name:          "Non-existent building ID",
+			buildingID:    "non-existent",
+			expectError:   true,
 			expectedCount: 0, // No building added because function fails early
 		},
 	}
@@ -737,16 +783,16 @@ func TestRemoveBuilding(t *testing.T) {
 			if tt.buildingID == "test-building-1" {
 				// Add test building for valid cases or non-empty ID cases
 				testBuilding := &models.FloorPlan{
-					ID:      "test-building-1",
-					Name:    "Test Building",
+					ID:       "test-building-1",
+					Name:     "Test Building",
 					Building: "Test Building",
-					Level:   1,
+					Level:    1,
 				}
 				mockDB.floorPlans = append(mockDB.floorPlans, testBuilding)
 			}
-			
+
 			err := removeBuilding(ctx, tt.buildingID)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				if tt.buildingID == "" {
@@ -757,7 +803,7 @@ func TestRemoveBuilding(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-			
+
 			assert.Len(t, mockDB.floorPlans, tt.expectedCount)
 		})
 	}
@@ -777,27 +823,27 @@ func TestRemoveEquipment(t *testing.T) {
 	mockDB.equipment = append(mockDB.equipment, testEquipment)
 
 	tests := []struct {
-		name        string
-		equipmentID string
-		expectError bool
+		name          string
+		equipmentID   string
+		expectError   bool
 		expectedCount int
 	}{
 		{
-			name:        "Valid equipment ID",
-			equipmentID: "test-equipment-1",
-			expectError: false,
+			name:          "Valid equipment ID",
+			equipmentID:   "test-equipment-1",
+			expectError:   false,
 			expectedCount: 0,
 		},
 		{
-			name:        "Empty equipment ID",
-			equipmentID: "",
-			expectError: true,
+			name:          "Empty equipment ID",
+			equipmentID:   "",
+			expectError:   true,
 			expectedCount: 0, // No equipment added because function fails early
 		},
 		{
-			name:        "Non-existent equipment ID",
-			equipmentID: "non-existent",
-			expectError: true,
+			name:          "Non-existent equipment ID",
+			equipmentID:   "non-existent",
+			expectError:   true,
 			expectedCount: 0, // No equipment added because function fails early
 		},
 	}
@@ -816,9 +862,9 @@ func TestRemoveEquipment(t *testing.T) {
 				}
 				mockDB.equipment = append(mockDB.equipment, testEquipment)
 			}
-			
+
 			err := removeEquipment(ctx, tt.equipmentID)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				if tt.equipmentID == "" {
@@ -829,7 +875,7 @@ func TestRemoveEquipment(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-			
+
 			assert.Len(t, mockDB.equipment, tt.expectedCount)
 		})
 	}
@@ -847,27 +893,27 @@ func TestRemoveRoom(t *testing.T) {
 	mockDB.rooms = append(mockDB.rooms, testRoom)
 
 	tests := []struct {
-		name        string
-		roomID      string
-		expectError bool
+		name          string
+		roomID        string
+		expectError   bool
 		expectedCount int
 	}{
 		{
-			name:        "Valid room ID",
-			roomID:      "test-room-1",
-			expectError: false,
+			name:          "Valid room ID",
+			roomID:        "test-room-1",
+			expectError:   false,
 			expectedCount: 0,
 		},
 		{
-			name:        "Empty room ID",
-			roomID:      "",
-			expectError: true,
+			name:          "Empty room ID",
+			roomID:        "",
+			expectError:   true,
 			expectedCount: 0, // No room added because function fails early
 		},
 		{
-			name:        "Non-existent room ID",
-			roomID:      "non-existent",
-			expectError: true,
+			name:          "Non-existent room ID",
+			roomID:        "non-existent",
+			expectError:   true,
 			expectedCount: 0, // No room added because function fails early
 		},
 	}
@@ -884,9 +930,9 @@ func TestRemoveRoom(t *testing.T) {
 				}
 				mockDB.rooms = append(mockDB.rooms, testRoom)
 			}
-			
+
 			err := removeRoom(ctx, tt.roomID)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				if tt.roomID == "" {
@@ -897,7 +943,7 @@ func TestRemoveRoom(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-			
+
 			assert.Len(t, mockDB.rooms, tt.expectedCount)
 		})
 	}
@@ -926,7 +972,7 @@ func TestTraceConnections(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			connections, err := traceConnections(ctx, tt.path)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "cannot be empty")
@@ -966,7 +1012,7 @@ func TestStartFileWatcher(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := startFileWatcher(ctx, tt.watchDir)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "cannot be empty")
@@ -983,10 +1029,10 @@ func TestRunSimulation(t *testing.T) {
 
 	// Create a test building
 	testBuilding := &models.FloorPlan{
-		ID:      "test-building-1",
-		Name:    "Test Building",
+		ID:       "test-building-1",
+		Name:     "Test Building",
 		Building: "Test Building",
-		Level:   1,
+		Level:    1,
 	}
 	mockDB.floorPlans = append(mockDB.floorPlans, testBuilding)
 
@@ -1025,7 +1071,7 @@ func TestRunSimulation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			results, err := runSimulation(ctx, tt.buildingID, tt.simType)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Nil(t, results)
@@ -1054,7 +1100,7 @@ func TestSyncData(t *testing.T) {
 	mockDB.floorPlans = testBuildings
 
 	err := syncData(ctx)
-	
+
 	assert.NoError(t, err)
 	// The function should complete without error and log the sync count
 	// Verify that buildings were accessed (they should be in the mockDB)
@@ -1065,7 +1111,7 @@ func TestSyncData(t *testing.T) {
 func BenchmarkAddBuilding(b *testing.B) {
 	mockDB, ctx := setupTest()
 	defer cleanupTest()
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		err := addBuilding(ctx, "Benchmark Building")
@@ -1073,7 +1119,7 @@ func BenchmarkAddBuilding(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
-	
+
 	// Verify buildings were created
 	assert.Len(b, mockDB.floorPlans, b.N)
 }
@@ -1081,16 +1127,16 @@ func BenchmarkAddBuilding(b *testing.B) {
 func BenchmarkGetBuilding(b *testing.B) {
 	mockDB, ctx := setupTest()
 	defer cleanupTest()
-	
+
 	// Create test building
 	testBuilding := &models.FloorPlan{
-		ID:      "benchmark-building",
-		Name:    "Benchmark Building",
+		ID:       "benchmark-building",
+		Name:     "Benchmark Building",
 		Building: "Benchmark Building",
-		Level:   1,
+		Level:    1,
 	}
 	mockDB.floorPlans = append(mockDB.floorPlans, testBuilding)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		err := getBuilding(ctx, "benchmark-building")

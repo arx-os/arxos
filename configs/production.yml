@@ -32,10 +32,6 @@ postgis:
   cache_ttl: 10m
   prepared_statements: true
 
-# SQLite settings (Fallback - disabled in production)
-sqlite:
-  enabled: false
-  path: "/data/.arxos/arxos.db"
 
 # Database common settings
 database:
@@ -217,7 +213,6 @@ telemetry:
 features:
   # Core features
   enable_postgis: true
-  enable_sqlite_fallback: false
   enable_hybrid_mode: false
 
   # Import/Export

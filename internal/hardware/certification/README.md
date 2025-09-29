@@ -505,17 +505,17 @@ func main() {
 }
 ```
 
-## 🤝 Contributing
+## 🛠️ Development
 
-1. Fork the repository
+1. Clone the repository
 2. Create a feature branch
 3. Implement your changes
 4. Add tests
-5. Submit a pull request
+5. Submit a merge request
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is proprietary - all rights reserved.
 
 ## 🆘 Support
 

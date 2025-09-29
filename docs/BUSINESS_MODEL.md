@@ -17,7 +17,7 @@ Git's success as a free tool can be attributed to several factors:
 1. **Distributed Architecture**: Allowed developers to work offline and commit changes locally
 2. **Efficient Branching and Merging**: Lightweight branches enabled experimentation without disruption
 3. **The Rise of GitHub**: Made Git accessible and social, fostering community growth
-4. **Community and Integration**: Open source fostered vibrant ecosystem with numerous integrations
+4. **Community and Integration**: Open architecture fostered vibrant ecosystem with numerous integrations
 
 ### How ArxOS Follows This Model
 
@@ -26,7 +26,7 @@ Git's success as a free tool can be attributed to several factors:
 | **Distributed Architecture** | **PostGIS-Centric Design** - Single source of truth with offline capability |
 | **Efficient Branching** | **Path-Based Version Control** - Track all building changes with Git-like history |
 | **GitHub Platform** | **n8n Workflow Automation** - Visual platform that makes ArxOS accessible |
-| **Community Ecosystem** | **Open Hardware Platform** - Community-driven IoT ecosystem |
+| **Partner Ecosystem** | **Hardware Platform** - Partner-driven IoT ecosystem |
 
 ## Three-Tier Ecosystem Architecture
 
@@ -40,14 +40,14 @@ Git's success as a free tool can be attributed to several factors:
 ├── PostGIS spatial database
 ├── Path-based addressing system
 ├── Version control for building changes
-├── Open source hardware designs
+├── Hardware designs
 ├── Community support forums
 └── Basic documentation
 ```
 
 **Strategic Value:**
 - Creates the **universal standard** for building management
-- Eliminates vendor lock-in through open source
+- Eliminates vendor lock-in through open architecture
 - Builds developer community and ecosystem
 - Generates network effects as more buildings adopt the platform
 
@@ -58,8 +58,8 @@ Git's success as a free tool can be attributed to several factors:
 ├── ArxOS Certified Hardware ($3-500)
 ├── Gateway software (free)
 ├── Basic device templates (free)
-├── Community hardware designs (free)
-├── Basic support (community)
+├── Partner hardware designs (free)
+├── Basic support (partner)
 ├── Hardware marketplace (commission)
 ├── Device certification program
 └── Partner ecosystem
@@ -111,7 +111,7 @@ Git's success as a free tool can be attributed to several factors:
 | Feature | Traditional BAS | ArxOS Ecosystem |
 |---------|----------------|-----------------|
 | **Cost** | $10,000-60,000 for 1000 points | $500-5,000 for equivalent |
-| **Vendor Lock-in** | High - proprietary protocols | None - open source |
+| **Vendor Lock-in** | High - proprietary protocols | None - open architecture |
 | **Customization** | Expensive consultants | Visual workflow builder |
 | **Integration** | Limited, costly | 400+ out-of-box connectors |
 | **API Access** | Limited | Everything is API |
@@ -123,7 +123,7 @@ Git's success as a free tool can be attributed to several factors:
 
 | Feature | Cloud IoT (AWS/Azure) | ArxOS Ecosystem |
 |---------|----------------------|-----------------|
-| **Pricing** | $100-1000/month + data costs | Open source core |
+| **Pricing** | $100-1000/month + data costs | Free core |
 | **Complexity** | High - requires cloud expertise | Simple - pure Go |
 | **Offline Capability** | Limited | Full offline operation |
 | **Data Ownership** | Vendor controlled | Customer controlled |
@@ -147,7 +147,7 @@ Git's success as a free tool can be attributed to several factors:
 ### Serviceable Addressable Market (SAM)
 
 **ArxOS SAM**: $5 billion
-- **Open Source Adoption**: 20% of target market
+- **Platform Adoption**: 20% of target market
 - **Cost Advantage**: 80% reduction enables new market segments
 - **Geographic Focus**: North America, Europe initially
 
@@ -197,11 +197,11 @@ Total: $95M-425M
 
 ## Go-to-Market Strategy
 
-### Phase 1: Open Source Community (Months 1-12)
+### Phase 1: Platform Community (Months 1-12)
 **Goal**: Establish ArxOS as the standard building management platform
 
 **Tactics:**
-- Release ArxOS Core as open source
+- Release ArxOS Core as free platform
 - Build developer community through GitHub
 - Create comprehensive documentation and tutorials
 - Speak at building automation conferences
@@ -253,7 +253,7 @@ Total: $95M-425M
 - **Scalability**: Mitigated by microservices architecture and horizontal scaling
 
 ### Business Risks
-- **Competition from Incumbents**: Mitigated by open source strategy and cost advantage
+- **Competition from Incumbents**: Mitigated by free platform strategy and cost advantage
 - **Market Adoption**: Mitigated by gradual rollout and community building
 - **Revenue Concentration**: Mitigated by diversified revenue streams
 
@@ -285,10 +285,10 @@ Total: $95M-425M
 
 ## Conclusion
 
-The ArxOS business model follows the proven **Git + GitHub strategy** that revolutionized software development. By making the core platform free and open source, ArxOS will become the universal standard for building management. The hardware platform creates a physical moat and ecosystem, while the workflow automation platform generates sustainable revenue through enterprise features.
+The ArxOS business model follows the proven **Git + GitHub strategy** that revolutionized software development. By making the core platform free, ArxOS will become the universal standard for building management. The hardware platform creates a physical moat and ecosystem, while the workflow automation platform generates sustainable revenue through enterprise features.
 
 This model provides:
-- **Sustainable competitive advantage** through open source adoption
+- **Sustainable competitive advantage** through platform adoption
 - **Multiple revenue streams** reducing business risk
 - **Network effects** as more buildings and partners join the ecosystem
 - **Clear path to profitability** through proven SaaS model

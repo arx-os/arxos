@@ -152,11 +152,24 @@ func TestValidate(t *testing.T) {
 					CloudBucket: "test-bucket",
 				},
 				Database: DatabaseConfig{
-					Type:           "sqlite",
-					DataSourceName: "/tmp/test.db",
+					Type:           "postgis",
+					DataSourceName: "postgres://localhost/arxos?sslmode=disable",
+				},
+				PostGIS: PostGISConfig{
+					Host:     "localhost",
+					Port:     5432,
+					Database: "arxos",
+					User:     "arxos",
+					Password: "test",
 				},
 				Security: SecurityConfig{
 					JWTSecret: "test-jwt-secret-123",
+				},
+				TUI: TUIConfig{
+					Enabled:             true,
+					Theme:               "dark",
+					UpdateInterval:      "1s",
+					MaxEquipmentDisplay: 1000,
 				},
 			},
 			wantErr: false,

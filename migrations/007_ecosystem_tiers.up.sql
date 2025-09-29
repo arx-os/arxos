@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS ecosystem_tiers (
 -- Insert default tiers
 INSERT INTO ecosystem_tiers (name, description, price, features, limits, api_endpoints) VALUES
 ('core', 'ArxOS Core - The "Git" of buildings', 'FREE', 
- '["building_management", "equipment_management", "spatial_queries", "import_export", "basic_cli", "version_control", "open_source_hardware", "community_support"]',
+ '["building_management", "equipment_management", "spatial_queries", "import_export", "basic_cli", "version_control", "hardware_designs", "partner_support"]',
  '{"buildings": -1, "users": 5, "api_calls": 1000, "storage_gb": 10, "support": "community"}',
  '["/api/v1/core/buildings", "/api/v1/core/equipment", "/api/v1/core/spatial", "/api/v1/core/import", "/api/v1/core/export"]'),
  

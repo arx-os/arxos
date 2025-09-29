@@ -62,23 +62,6 @@ services:
     networks:
       - arxos-test-network
 
-  # SQLite test runner (for hybrid testing)
-  sqlite-test-runner:
-    build:
-      context: ..
-      dockerfile: Dockerfile.test
-    container_name: arxos-sqlite-test
-    environment:
-      ARX_DB_TYPE: sqlite
-      ARX_DB_PATH: /tmp/test.db
-      CGO_ENABLED: 1
-    volumes:
-      - ..:/app:ro
-      - go-cache:/go/pkg/mod
-    working_dir: /app
-    command: go test ./... -v -short
-    networks:
-      - arxos-test-network
 
 networks:
   arxos-test-network:

@@ -1,7 +1,7 @@
 # Getting Started with ArxOS
 
 ## Welcome
-ArxOS is a modern building management system that helps you organize, visualize, and query building data with advanced spatial capabilities. This guide will help you get up and running quickly.
+ArxOS is a modern building management system built on **Clean Architecture principles** with **go-blueprint patterns** that helps you organize, visualize, and query building data with advanced spatial capabilities. This guide will help you get up and running quickly.
 
 ## Prerequisites
 

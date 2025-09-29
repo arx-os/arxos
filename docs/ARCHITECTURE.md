@@ -2,7 +2,43 @@
 
 ## Design Philosophy
 
-ArxOS follows a **PostGIS-centric professional BIM integration** architecture where PostGIS serves as the single source of truth for all spatial data, with seamless integration into existing professional BIM workflows through universal IFC compatibility. Just as Git revolutionized software development by providing distributed version control, ArxOS aims to revolutionize building management by providing version-controlled, queryable, and automatable building systems.
+ArxOS follows **Clean Architecture principles** with **go-blueprint patterns**, implementing a **PostGIS-centric professional BIM integration** architecture where PostGIS serves as the single source of truth for all spatial data. The system uses **dependency injection**, **interface segregation**, and **clean separation of concerns** to create a maintainable, testable, and scalable building management platform.
+
+Just as Git revolutionized software development by providing distributed version control, ArxOS aims to revolutionize building management by providing version-controlled, queryable, and automatable building systems.
+
+## 🏗️ **Clean Architecture Structure**
+
+ArxOS follows Clean Architecture principles with clear separation of concerns:
+
+```
+internal/
+├── app/           # Application layer (HTTP, CLI, TUI)
+│   ├── handlers/  # HTTP handlers (consolidated from api/handlers + handlers/web)
+│   ├── services/  # Application services (consolidated from services/)
+│   ├── middleware/ # HTTP middleware (consolidated from middleware/)
+│   └── cli/       # CLI commands (moved from cmd/)
+├── domain/        # Business logic (pure, no external dependencies)
+│   ├── building/  # Building management
+│   ├── equipment/ # Equipment operations  
+│   ├── spatial/   # Spatial operations
+│   ├── analytics/ # Analytics & reporting
+│   └── workflow/  # Workflow management
+├── infra/         # Infrastructure (external dependencies)
+│   ├── database/  # Database layer
+│   ├── cache/     # Caching
+│   ├── storage/   # File storage
+│   └── messaging/ # WebSocket, notifications
+└── web/           # Web interface
+    ├── static/    # Static assets
+    └── templates/ # HTML templates
+```
+
+### **Architecture Principles**
+
+1. **Dependency Inversion**: High-level modules don't depend on low-level modules
+2. **Interface Segregation**: Small, focused interfaces for better testability
+3. **Single Responsibility**: Each package has one clear purpose
+4. **Clean Boundaries**: Domain logic is independent of infrastructure concerns
 
 ## 🌟 **The Vision: Buildings as Codebases**
 
@@ -11,7 +47,7 @@ ArxOS transforms buildings into version-controlled, queryable, and automatable s
 ### **Three-Tier Ecosystem Architecture**
 
 #### **Layer 1: ArxOS Core (FREE - Like Git)**
-- **Pure Go/TinyGo codebase** - completely open source
+- **Pure Go/TinyGo codebase** - modern, efficient architecture
 - **Path-based architecture** - universal building addressing (`/B1/3/A/301/HVAC/UNIT-01`)
 - **PostGIS spatial intelligence** - native location awareness with millimeter precision
 - **CLI commands** - direct terminal control of building systems
@@ -19,7 +55,7 @@ ArxOS transforms buildings into version-controlled, queryable, and automatable s
 - **Version control** - Git-like tracking of all building changes
 
 #### **Layer 2: Hardware Platform (FREEMIUM - Like GitHub Free)**
-- **Open source hardware designs** - community-driven IoT ecosystem
+- **Hardware designs** - comprehensive IoT ecosystem
 - **$3-15 sensors** - accessible building automation for everyone
 - **Pure Go/TinyGo edge devices** - no C complexity, just Go everywhere
 - **Gateway translation layer** - handles complex protocols (BACnet, Modbus)
@@ -48,7 +84,7 @@ Just as Git became the standard because it was free and powerful, ArxOS follows 
 - **Network effects** - more users → better platform → more users
 
 ### **Revenue Streams**
-- **FREE**: Core ArxOS engine, CLI, basic APIs, open source hardware designs
+- **FREE**: Core ArxOS engine, CLI, basic APIs, hardware designs
 - **FREEMIUM**: Certified hardware marketplace, community support
 - **PAID**: Enterprise workflow automation, CMMS/CAFM features, professional support
 
@@ -418,7 +454,7 @@ arx query --building ARXOS-001 --spatial "ST_Distance(geom, point) < 5"
    ```
    ~/.arxos/
    ├── config.yaml           # Configuration
-   ├── arxos.db             # SQLite database (fallback)
+   ├── postgis.conf         # PostGIS configuration
    ├── postgis.conf          # PostGIS connection config
    ├── logs/                # Log files
    └── run/                 # PID files, sockets
@@ -426,7 +462,7 @@ arx query --building ARXOS-001 --spatial "ST_Distance(geom, point) < 5"
 
 2. **Initialize Databases**
    - Set up PostGIS spatial database (primary)
-   - Create SQLite fallback database
+   - Configure PostGIS connection
    - Run spatial migrations and indexing
    - Initialize system tables
 
@@ -600,9 +636,8 @@ cmd/arx/                     # CLI entrypoints (thin UX layer)
 internal/
 ├── database/               # Database implementations
 │   ├── postgis.go         # PostGIS spatial database (primary)
-│   ├── sqlite.go          # SQLite fallback database
 │   ├── spatial.go         # Spatial operations interface
-│   └── hybrid.go          # Hybrid PostGIS/SQLite support
+│   └── connection.go      # Database connection management
 │
 ├── daemon/                 # Professional BIM integration
 │   ├── ifc_watcher.go     # IFC file monitoring
@@ -733,7 +768,7 @@ WantedBy=multi-user.target
 Services communicate via:
 - **Unix sockets**: For local IPC (`~/.arxos/run/arxos.sock`)
 - **PID files**: For process management (`~/.arxos/run/watcher.pid`)
-- **SQLite**: Shared state with proper locking
+- **PostGIS**: Shared state with proper locking
 - **Filesystem events**: inotify/fsevents for file changes
 
 ## Configuration
@@ -743,7 +778,7 @@ System configuration in `~/.arxos/config.yaml`:
 ```yaml
 # System paths
 paths:
-  database: ~/.arxos/arxos.db      # SQLite fallback
+  database: postgres://localhost/arxos  # PostGIS connection
   postgis_config: ~/.arxos/postgis.conf
   buildings: ./buildings          # Git repositories
   logs: ~/.arxos/logs
@@ -776,8 +811,8 @@ professional:
 
 # Database fallback
 database:
-  type: hybrid                    # PostGIS primary, SQLite fallback
-  fallback: sqlite
+  type: postgis                   # PostGIS only
+  connection: postgres://localhost/arxos
   backup:
     enabled: true
     interval: 24h
@@ -1114,7 +1149,7 @@ arx daemon watch --ifc "C:\Project_Alpha\Tekla\*.ifc"     # Structural
 # No manual coordination required
 ```
 
-## Contributing
+## Development
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
 

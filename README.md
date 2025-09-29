@@ -26,7 +26,7 @@ arx history /B1/3/A/301 --since "1 week ago"
 ## 🏗️ **Three-Tier Ecosystem Architecture**
 
 ### **Layer 1: ArxOS Core (FREE - Like Git)**
-- **Pure Go/TinyGo codebase** - completely open source
+- **Pure Go/TinyGo codebase** - modern, efficient architecture
 - **Path-based architecture** - universal building addressing (`/B1/3/A/301/HVAC/UNIT-01`)
 - **PostGIS spatial intelligence** - native location awareness with millimeter precision
 - **CLI commands** - direct terminal control of building systems
@@ -34,7 +34,7 @@ arx history /B1/3/A/301 --since "1 week ago"
 - **Version control** - Git-like tracking of all building changes
 
 ### **Layer 2: Hardware Platform (FREEMIUM - Like GitHub Free)**
-- **Open source hardware designs** - community-driven IoT ecosystem
+- **Hardware designs** - comprehensive IoT ecosystem
 - **$3-15 sensors** - accessible building automation for everyone
 - **Pure Go/TinyGo edge devices** - no C complexity, just Go everywhere
 - **Gateway translation layer** - handles complex protocols (BACnet, Modbus)
@@ -120,18 +120,18 @@ Building: Main Office
 Just as Git became the standard because it was free and powerful, ArxOS follows the same strategy:
 
 1. **ArxOS Core (FREE)** - becomes the standard building management platform
-2. **Hardware Platform (FREEMIUM)** - creates ecosystem and community
+2. **Hardware Platform (FREEMIUM)** - creates ecosystem and partnerships
 3. **Workflow Automation (PAID)** - monetizes the platform through enterprise features
 
 ### **Revenue Streams**
-- **FREE**: Core ArxOS engine, CLI, basic APIs, open source hardware designs
-- **FREEMIUM**: Certified hardware marketplace, community support
+- **FREE**: Core ArxOS engine, CLI, basic APIs, hardware designs
+- **FREEMIUM**: Certified hardware marketplace, partner support
 - **PAID**: Enterprise workflow automation, CMMS/CAFM features, professional support
 
 ### **Competitive Advantages**
 - **80% cost reduction** vs traditional BAS systems
 - **Pure Go/TinyGo** - unique technical advantage
-- **Open hardware** - no vendor lock-in
+- **Open architecture** - no vendor lock-in
 - **Network effects** - more users → better platform → more users
 
 ## 🚀 Quick Start
@@ -368,25 +368,24 @@ POSTGIS_PASSWORD=secret go test -tags=integration ./...
 
 ### Development
 - **[Developer Guide](docs/DEVELOPER_GUIDE.md)** - Complete development setup and best practices
-- **[Contributing](CONTRIBUTING.md)** - How to contribute to ArxOS
+- **[Development](CONTRIBUTING.md)** - Development guidelines for ArxOS
 - **[Architecture Guide](docs/architecture-clean.md)** - Clean architecture principles
 - **[Service Architecture](docs/SERVICE_ARCHITECTURE.md)** - Service layer design
 
 ### Business Documentation
 - **[Business Model](docs/BUSINESS_MODEL.md)** - Ecosystem strategy and revenue model
-- **[Hardware Platform](hardware.md)** - Open source IoT ecosystem and certified devices
+- **[Hardware Platform](hardware.md)** - IoT ecosystem and certified devices
 - **[Workflow Automation](n8n.md)** - Visual CMMS/CAFM platform with n8n integration
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) for details
+Proprietary License - All rights reserved
 
-## 🤝 Contributing
+## 🛠️ Development
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+For development guidelines and setup instructions, please read our [Development Guide](CONTRIBUTING.md).
 
 ## 📞 Support
 
-- Create an [Issue](https://github.com/arx-os/arxos/issues) for bug reports
-- Start a [Discussion](https://github.com/arx-os/arxos/discussions) for questions
+- Contact support for bug reports and questions
 - Read the [Wiki](https://github.com/arx-os/arxos/wiki) for detailed guides

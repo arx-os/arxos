@@ -1,4 +1,4 @@
-# Contributing to ArxOS
+# Development Guidelines for ArxOS
 
 ## Getting Started
 
@@ -232,10 +232,10 @@ Use the `test_data/` directory for test fixtures:
    git rebase origin/main
    ```
 
-4. **Push and create PR:**
+4. **Push and create merge request:**
    ```bash
    git push origin feature/spatial-optimization
-   # Create PR through GitHub
+   # Create merge request through internal system
    ```
 
 #### Commit Message Format
@@ -274,7 +274,7 @@ Use the `test_data/` directory for test fixtures:
 - [ ] Documentation updated
 - [ ] Changelog entry added (if applicable)
 
-#### PR Requirements
+#### Merge Request Requirements
 - [ ] Clear description of changes
 - [ ] Link to related issues
 - [ ] Test coverage for new code
@@ -376,9 +376,9 @@ We follow Semantic Versioning (SemVer):
 
 ## Getting Help
 
-- **GitHub Issues**: Bug reports and feature requests
-- **GitHub Discussions**: General questions and discussions
+- **Internal Issues**: Bug reports and feature requests
+- **Internal Discussions**: General questions and discussions
 - **Code Review**: Request review from maintainers
 - **Documentation**: Check README.md and ARCHITECTURE.md
 
-Thank you for contributing to ArxOS!
+Thank you for developing ArxOS!

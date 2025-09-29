@@ -15,8 +15,8 @@ import (
 // @contact.url https://arxos.io/support
 // @contact.email support@arxos.io
 
-// @license.name MIT
-// @license.url https://opensource.org/licenses/MIT
+// @license.name Proprietary
+// @license.url Proprietary License
 
 // @host localhost:8080
 // @BasePath /api/v1

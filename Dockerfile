@@ -17,7 +17,7 @@ RUN go mod download
 COPY . .
 
 # Build single binary with pure Go (no CGO)
-# Using modernc.org/sqlite which doesn't require CGO
+# Using PostGIS for spatial operations
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -a -installsuffix cgo \
     -ldflags='-w -s -extldflags "-static"' \

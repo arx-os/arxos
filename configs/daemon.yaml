@@ -204,8 +204,6 @@ database:
     max_connections: 10
     max_idle: 2
 
-  sqlite:
-    path: "${SQLITE_PATH:-.arxos/arxos.db}"
 
   # Query settings
   timeout: 30s

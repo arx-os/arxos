@@ -15,7 +15,6 @@ import (
 	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/internal/interfaces"
 	"github.com/arx-os/arxos/pkg/models"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 // TestDBServer is a mock database for server testing
@@ -783,7 +782,7 @@ func TestPDFToASCII(t *testing.T) {
 
 func setupTestServer(t *testing.T) *api.Server {
 	// Create in-memory database
-	sqlDB, err := sql.Open("sqlite3", ":memory:")
+	sqlDB, err := sql.Open("postgres", "postgres://localhost/arxos_test?sslmode=disable")
 	if err != nil {
 		t.Fatalf("Failed to create test database: %v", err)
 	}

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The ArxOS Terminal User Interface (TUI) provides a powerful, interactive command-line experience for managing building information modeling (BIM) data. Built with the Bubble Tea framework, it offers professional ASCII art visualizations, real-time data updates, and intuitive navigation.
+The ArxOS Terminal User Interface (TUI) provides a powerful, interactive command-line experience for managing building information modeling (BIM) data. Built on **Clean Architecture principles** with **go-blueprint patterns** and the Bubble Tea framework, it offers professional ASCII art visualizations, real-time data updates, and intuitive navigation.
 
 ## Features
 
@@ -523,16 +523,16 @@ When reporting issues, please include:
 4. **Logs**: Relevant log file excerpts
 5. **Steps to reproduce**: Detailed reproduction steps
 
-### Contributing
+### Development
 
-To contribute to TUI development:
+For TUI development:
 
-1. **Fork the repository**
+1. **Clone the repository**
 2. **Create a feature branch**
 3. **Follow Go coding standards**
 4. **Add tests for new features**
 5. **Update documentation**
-6. **Submit a pull request**
+6. **Submit a merge request**
 
 ## Changelog
 

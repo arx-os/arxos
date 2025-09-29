@@ -2,10 +2,11 @@
 
 ## Executive Summary
 
-This document outlines the comprehensive design and architecture for integrating PostGIS-powered spatial visualizations directly into the ArxOS terminal interface. By leveraging modern terminal capabilities (Unicode, 256 colors, box-drawing characters) and PostGIS spatial queries, ArxOS provides rich spatial data visualization with bidirectional control without requiring a web browser or 3D interface.
+This document outlines the comprehensive design and architecture for integrating PostGIS-powered spatial visualizations directly into the ArxOS terminal interface. Built on **Clean Architecture principles** with **go-blueprint patterns**, ArxOS leverages modern terminal capabilities (Unicode, 256 colors, box-drawing characters) and PostGIS spatial queries to provide rich spatial data visualization with bidirectional control without requiring a web browser or 3D interface.
 
 ## Core Philosophy
 
+- **Clean Architecture**: Terminal visualizations follow Clean Architecture principles with clear separation of concerns
 - **PostGIS-Powered**: All visualizations query PostGIS spatial database for real-time data
 - **Bidirectional Control**: Terminal visualizations allow direct spatial data modification
 - **Terminal-First**: All visualizations must work in a standard terminal emulator
@@ -14,6 +15,7 @@ This document outlines the comprehensive design and architecture for integrating
 - **Spatial Intelligence**: Leverage PostGIS spatial functions for advanced visualizations
 - **Performance**: Visualizations should render in <100ms for responsive feel
 - **Real-time Updates**: Visualizations reflect PostGIS changes immediately
+- **Dependency Injection**: Terminal components use dependency injection for better testability
 
 ## Architecture Overview
 
@@ -892,13 +894,13 @@ func DetectCapabilities() TerminalCaps {
 ```go
 type VisualizationErrorHandler struct {
     fallbackRenderer Renderer
-    sqliteDB        *database.SQLiteDB // Fallback data source
+    postgisDB       *database.PostGISDB // Primary data source
 }
 
 func (veh *VisualizationErrorHandler) HandlePostGISFailure(query string) (string, error) {
-    // 1. Attempt SQLite fallback
-    if veh.sqliteDB != nil {
-        fallbackData, err := veh.sqliteDB.QueryBasic(query)
+    // 1. Attempt PostGIS query
+    if veh.postgisDB != nil {
+        fallbackData, err := veh.postgisDB.QueryBasic(query)
         if err == nil {
             return veh.fallbackRenderer.RenderWithWarning(fallbackData, "Using fallback data - PostGIS unavailable")
         }

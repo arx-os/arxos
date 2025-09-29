@@ -74,7 +74,6 @@ docker-compose -f docker/docker-compose.test.yml down -v
 ### Test Services (test.yml)
 - **postgis-test**: Isolated test database
 - **test-runner**: Go test execution
-- **sqlite-test-runner**: SQLite fallback testing
 
 ## Environment Variables
 
@@ -169,7 +168,7 @@ docker-compose up --build  # Rebuild images
 ## Architecture Notes
 
 1. **PostGIS Primary**: Uses PostGIS as the primary database with spatial capabilities
-2. **SQLite Fallback**: Application supports SQLite for environments without PostGIS
+2. **PostGIS Only**: Application requires PostGIS for spatial operations
 3. **Hybrid Mode**: Can operate with both databases simultaneously
 4. **Millimeter Precision**: Custom SRID 900913 for building-local coordinates
 5. **Git-like Versioning**: Building data tracked with repository-style versioning

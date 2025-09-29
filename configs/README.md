@@ -22,9 +22,9 @@ configs/
 ### Application Configurations
 
 #### development.yml
-- **Purpose**: Development environment settings with PostGIS primary and SQLite fallback
+- **Purpose**: Development environment settings with PostGIS primary
 - **Features**: Debug logging, hot reload, lower security settings for ease of development
-- **Database**: Hybrid mode (PostGIS + SQLite)
+- **Database**: PostGIS only
 - **Usage**: `arx --config configs/development.yml`
 
 #### production.yml
@@ -88,7 +88,7 @@ POSTGRES_USER=arxos
 POSTGRES_PASSWORD=secure_password
 
 # Application
-ARX_DB_TYPE=postgis  # postgis, sqlite, or hybrid
+ARX_DB_TYPE=postgis  # postgis only
 ARX_LOG_LEVEL=info
 API_PORT=8080
 
@@ -150,7 +150,7 @@ Configurations are loaded in the following order (later overrides earlier):
 
 | Feature | Development | Production |
 |---------|------------|------------|
-| Database | Hybrid (PostGIS + SQLite) | PostGIS only |
+| Database | PostGIS only | PostGIS only |
 | Logging | Text/Debug | JSON/Warn |
 | TLS | Disabled | Enabled |
 | Caching | Memory | Redis |
@@ -228,9 +228,9 @@ Both development and production configurations support monitoring:
 
 ## Migration from Old Configuration
 
-If upgrading from SQLite-only configuration:
+If upgrading from previous configuration:
 
-1. Update database type to `hybrid` or `postgis`
+1. Update database type to `postgis`
 2. Add PostGIS connection settings
 3. Run migrations: `arx migrate up`
 4. Verify spatial extensions: `arx db check`

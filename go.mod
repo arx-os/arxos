@@ -23,7 +23,6 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
-	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/pdfcpu/pdfcpu v0.11.0
 	github.com/prometheus/client_golang v1.19.1
 	github.com/spf13/cobra v1.10.1
@@ -73,6 +72,7 @@ require (
 	github.com/cncf/xds/go v0.0.0-20250501225837-2ac532fd4443 // indirect
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/envoyproxy/go-control-plane/envoy v1.32.4 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.2.1 // indirect
@@ -94,6 +94,7 @@ require (
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.15.0 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hhrutter/lzw v1.0.0 // indirect
 	github.com/hhrutter/pkcs7 v0.2.0 // indirect
 	github.com/hhrutter/tiff v1.0.2 // indirect
@@ -122,6 +123,7 @@ require (
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
 	github.com/quic-go/quic-go v0.54.0 // indirect
+	github.com/redis/go-redis/v9 v9.14.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.5.0 // indirect

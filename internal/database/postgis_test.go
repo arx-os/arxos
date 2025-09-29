@@ -267,8 +267,8 @@ func TestPostGISConfidenceTracking(t *testing.T) {
 	assert.Equal(t, "manual_entry", record.SemanticSource)
 }
 
-func TestPostGISHybridDB(t *testing.T) {
-	t.Skip("Hybrid DB functionality not yet implemented")
-	// The hybrid database concept combining PostGIS and SQLite
+func TestPostGISDatabase(t *testing.T) {
+	t.Skip("PostGIS database functionality not yet implemented")
+	// The PostGIS database for spatial operations
 	// is not yet implemented in the codebase
 }

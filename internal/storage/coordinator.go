@@ -2,7 +2,7 @@
 // This replaces the complex multi-backend storage system with a clean coordinator that bridges:
 // - .bim.txt files (schematic representation, source of truth)
 // - PostGIS database (millimeter-precision spatial data for AR)
-// - SQLite cache (query performance for terminal operations)
+// - Cache layer (query performance for terminal operations)
 package storage
 
 import (
@@ -32,7 +32,7 @@ type StorageCoordinator struct {
 // CoordinatorConfig contains configuration for the storage coordinator
 type CoordinatorConfig struct {
 	BIMFilesPath   string        // Path to .bim.txt files
-	DatabasePath   string        // Path to SQLite/PostGIS database
+	DatabasePath   string        // Path to PostGIS database
 	AutoSync       bool          // Automatically sync between layers
 	SyncInterval   time.Duration // How often to sync
 	ValidateOnSave bool          // Validate .bim.txt files on save
@@ -188,7 +188,7 @@ type BuildingData struct {
 	// Spatial data (from PostGIS)
 	SpatialAnchors []*database.SpatialAnchor
 
-	// Cache data (from SQLite)
+	// Cache data (from database)
 	FloorPlan *models.FloorPlan
 
 	// Metadata
@@ -233,7 +233,7 @@ func (sc *StorageCoordinator) getBuildingFromSpatial(ctx context.Context, buildi
 	}, nil
 }
 
-// getBuildingFromCache loads building data from SQLite cache
+// getBuildingFromCache loads building data from cache
 func (sc *StorageCoordinator) getBuildingFromCache(ctx context.Context, buildingID string) (*BuildingData, error) {
 	floorPlan, err := sc.cache.GetFloorPlan(ctx, buildingID)
 	if err != nil {

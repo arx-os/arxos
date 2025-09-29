@@ -2,6 +2,8 @@
 
 ## 🚀 Get Started in 5 Minutes
 
+ArxOS Terminal User Interface (TUI) is built on **Clean Architecture principles** with **go-blueprint patterns**, providing a powerful command-line experience for building management with real-time spatial visualizations.
+
 ### 1. Prerequisites
 
 ```bash

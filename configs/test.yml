@@ -22,14 +22,10 @@ postgis:
   drop_on_start: true
   seed_data: true
 
-# SQLite settings for unit tests
-sqlite:
-  enabled: true
-  path: ":memory:"  # In-memory database for fast tests
 
 # Database common settings
 database:
-  type: "${ARX_DB_TYPE:-sqlite}"  # Default to SQLite for speed
+  type: "${ARX_DB_TYPE:-postgis}"  # Use PostGIS for tests
   migrations_path: "./migrations"
   auto_migrate: true
   log_queries: false
@@ -105,7 +101,6 @@ testing:
 features:
   # Enable all features for testing
   enable_postgis: true
-  enable_sqlite_fallback: true
   enable_hybrid_mode: true
 
   # All imports/exports

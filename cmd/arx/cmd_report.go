@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/common/logger"
-	"github.com/arx-os/arxos/internal/visualization/export"
 	"github.com/spf13/cobra"
 )
 
@@ -68,19 +67,22 @@ func runReport(cmd *cobra.Command, args []string) error {
 	}
 
 	// Generate single comprehensive report
-	exporter := export.NewExporter(dbConn)
+	// TODO: Update to use DI container when export service is properly implemented
+	// For now, use placeholder implementation
 	ctx := cmd.Context()
 	if ctx == nil {
 		ctx = context.Background()
 	}
 
-	return exporter.GenerateReport(ctx, building, reportFormat, reportOutput)
+	logger.Info("Generating report", "building", building, "format", reportFormat, "output", reportOutput)
+	// Placeholder implementation - would use DI container to get export service
+	return fmt.Errorf("report generation not yet implemented - requires DI container integration")
 }
 
 func runBatchExport(building string) error {
 	// Create batch exporter
-	exporter := export.NewExporter(dbConn)
-	ctx := context.Background()
+	// TODO: Update to use DI container when export service is properly implemented
+	// For now, use placeholder implementation
 
 	// Determine output directory
 	baseDir := "./exports"
@@ -93,16 +95,16 @@ func runBatchExport(building string) error {
 	outputDir := filepath.Join(baseDir, fmt.Sprintf("%s_%s", building, timestamp))
 
 	// Export visualizations
-	if err := exporter.ExportVisualizations(ctx, building, outputDir); err != nil {
-		return fmt.Errorf("failed to export visualizations: %w", err)
-	}
+	// TODO: Implement actual export when DI container integration is complete
+	logger.Info("Batch export placeholder", "building", building, "output_dir", outputDir)
 
-	fmt.Printf("Dashboard exported to: %s\n", outputDir)
-	fmt.Println("\nExported files:")
+	fmt.Printf("Dashboard export placeholder for: %s\n", building)
+	fmt.Printf("Would export to: %s\n", outputDir)
+	fmt.Println("\nPlanned exported files:")
 	fmt.Println("  - equipment_status.txt")
 	fmt.Println("  - energy_usage.txt")
 	fmt.Println("  - occupancy_heatmap.txt")
 	fmt.Println("  - index.txt")
 
-	return nil
+	return fmt.Errorf("batch export not yet implemented - requires DI container integration")
 }

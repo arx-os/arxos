@@ -497,7 +497,7 @@ func TestDatabaseManager_Get(t *testing.T) {
 		t.Error("Expected nil connection")
 	}
 
-	// Skip actual connection test since we're not using SQLite
+	// Skip actual connection test since we're using PostGIS
 	// The Get method functionality is tested through the interface
 }
 

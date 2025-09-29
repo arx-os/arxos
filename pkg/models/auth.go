@@ -8,7 +8,6 @@ type AuthToken struct {
 	ExpiresIn    int64  `json:"expires_in"`
 }
 
-
 // PasswordResetConfirmRequest represents a password reset confirmation
 type PasswordResetConfirmRequest struct {
 	Token       string `json:"token"`
@@ -19,4 +18,18 @@ type PasswordResetConfirmRequest struct {
 type ChangePasswordRequest struct {
 	OldPassword string `json:"old_password"`
 	NewPassword string `json:"new_password"`
+}
+
+// RefreshTokenRequest represents a refresh token request
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+// RegisterRequest represents a user registration request
+type RegisterRequest struct {
+	Email       string `json:"email"`
+	Password    string `json:"password"`
+	FirstName   string `json:"first_name"`
+	LastName    string `json:"last_name"`
+	PhoneNumber string `json:"phone_number,omitempty"`
 }

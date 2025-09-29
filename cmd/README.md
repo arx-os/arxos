@@ -78,7 +78,7 @@ ArxOS leverages PostGIS for millimeter-precision spatial tracking:
 ```go
 // Hybrid database pattern
 PostGIS (Primary)     → Spatial queries, 3D coordinates
-SQLite (Fallback)     → Offline operation, metadata
+PostGIS Only          → Spatial operations, metadata
 ```
 
 ## Command Examples
@@ -179,7 +179,7 @@ if hybridDB != nil {
 - Use `RunE` for commands that can return errors
 - Provide clear error messages with context
 - Log warnings for non-critical failures
-- Fall back to SQLite when PostGIS unavailable
+- Requires PostGIS for spatial operations
 
 ## Testing
 
@@ -221,7 +221,7 @@ export ARX_STATE_DIR=.arxos
 Key dependencies managed via `go.mod`:
 - `github.com/spf13/cobra` - Command-line interface
 - `github.com/lib/pq` - PostgreSQL/PostGIS driver
-- `github.com/mattn/go-sqlite3` - SQLite fallback
+- `github.com/lib/pq` - PostGIS connection
 - Internal packages for spatial operations, database abstraction
 
 ## Performance Considerations
@@ -229,7 +229,7 @@ Key dependencies managed via `go.mod`:
 1. **Spatial Indices**: Automatically created for PostGIS tables
 2. **Connection Pooling**: Reuse database connections
 3. **Batch Operations**: Group multiple operations when possible
-4. **Caching**: Local SQLite cache for offline operation
+4. **Caching**: Local cache for performance optimization
 5. **Lazy Loading**: Load spatial data only when needed
 
 ## Future Enhancements
@@ -244,6 +244,6 @@ Key dependencies managed via `go.mod`:
 
 See LICENSE file in repository root.
 
-## Contributing
+## Development
 
 See CONTRIBUTING.md for development guidelines and code standards.

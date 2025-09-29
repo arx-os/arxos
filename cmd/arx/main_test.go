@@ -278,14 +278,18 @@ func setupTest() (*MockDB, context.Context) {
 	ctx := context.Background()
 
 	// Set global database connection for testing
-	dbConn = mockDB
+	// TODO: Update to use DI container when testing infrastructure is properly integrated
+	// For now, use placeholder implementation
+	// dbConn = mockDB
 
 	return mockDB, ctx
 }
 
 // Test cleanup helper
 func cleanupTest() {
-	dbConn = nil
+	// TODO: Update to use DI container when testing infrastructure is properly integrated
+	// For now, use placeholder implementation
+	// dbConn = nil
 }
 
 // Reset mockDB helper

@@ -147,7 +147,7 @@ await client.submitWorkOrder({
 
 ## Offline Capabilities
 
-- Local SQLite database for offline storage
+- Local storage for offline capabilities
 - Queue system for pending updates
 - Automatic sync when connection restored
 - Conflict resolution for concurrent edits

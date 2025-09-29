@@ -6,23 +6,24 @@ import (
 
 // User represents a system user
 type User struct {
-	ID                 string                 `json:"id"`
-	Email              string                 `json:"email"`
-	Username           string                 `json:"username"`
-	PasswordHash       string                 `json:"-"` // Never expose in JSON
-	FullName           string                 `json:"full_name,omitempty"`
-	Role               string                 `json:"role"`
-	IsActive           bool                   `json:"is_active"`
-	EmailVerified      bool                   `json:"email_verified"`
-	Phone              string                 `json:"phone,omitempty"`
-	AvatarURL          string                 `json:"avatar_url,omitempty"`
-	Preferences        map[string]interface{} `json:"preferences,omitempty"`
-	Metadata           map[string]interface{} `json:"metadata,omitempty"`
-	LastLogin          *time.Time             `json:"last_login,omitempty"`
-	FailedLoginAttempts int                   `json:"-"`
-	LockedUntil        *time.Time             `json:"-"`
-	CreatedAt          time.Time              `json:"created_at"`
-	UpdatedAt          time.Time              `json:"updated_at"`
+	ID                  string                 `json:"id"`
+	Email               string                 `json:"email"`
+	Username            string                 `json:"username"`
+	PasswordHash        string                 `json:"-"` // Never expose in JSON
+	FullName            string                 `json:"full_name,omitempty"`
+	Role                string                 `json:"role"`
+	OrganizationID      string                 `json:"organization_id,omitempty"`
+	IsActive            bool                   `json:"is_active"`
+	EmailVerified       bool                   `json:"email_verified"`
+	Phone               string                 `json:"phone,omitempty"`
+	AvatarURL           string                 `json:"avatar_url,omitempty"`
+	Preferences         map[string]interface{} `json:"preferences,omitempty"`
+	Metadata            map[string]interface{} `json:"metadata,omitempty"`
+	LastLogin           *time.Time             `json:"last_login,omitempty"`
+	FailedLoginAttempts int                    `json:"-"`
+	LockedUntil         *time.Time             `json:"-"`
+	CreatedAt           time.Time              `json:"created_at"`
+	UpdatedAt           time.Time              `json:"updated_at"`
 }
 
 // UserSession represents an active user session
@@ -57,18 +58,18 @@ type PasswordResetToken struct {
 
 // APIKey represents an API access key
 type APIKey struct {
-	ID          string                 `json:"id"`
-	UserID      string                 `json:"user_id,omitempty"`
-	OrganizationID string              `json:"organization_id,omitempty"`
-	Name        string                 `json:"name"`
-	KeyHash     string                 `json:"-"` // Never expose
-	LastFour    string                 `json:"last_four"`
-	Permissions map[string]interface{} `json:"permissions,omitempty"`
-	RateLimit   int                    `json:"rate_limit"`
-	IsActive    bool                   `json:"is_active"`
-	LastUsedAt  *time.Time             `json:"last_used_at,omitempty"`
-	ExpiresAt   *time.Time             `json:"expires_at,omitempty"`
-	CreatedAt   time.Time              `json:"created_at"`
+	ID             string                 `json:"id"`
+	UserID         string                 `json:"user_id,omitempty"`
+	OrganizationID string                 `json:"organization_id,omitempty"`
+	Name           string                 `json:"name"`
+	KeyHash        string                 `json:"-"` // Never expose
+	LastFour       string                 `json:"last_four"`
+	Permissions    map[string]interface{} `json:"permissions,omitempty"`
+	RateLimit      int                    `json:"rate_limit"`
+	IsActive       bool                   `json:"is_active"`
+	LastUsedAt     *time.Time             `json:"last_used_at,omitempty"`
+	ExpiresAt      *time.Time             `json:"expires_at,omitempty"`
+	CreatedAt      time.Time              `json:"created_at"`
 }
 
 // AuditLog represents an audit log entry
@@ -132,9 +133,9 @@ type LoginRequest struct {
 
 // LoginResponse represents a successful login response
 type LoginResponse struct {
-	User         *User   `json:"user"`
-	Token        string  `json:"token"`
-	RefreshToken string  `json:"refresh_token"`
+	User         *User     `json:"user"`
+	Token        string    `json:"token"`
+	RefreshToken string    `json:"refresh_token"`
 	ExpiresAt    time.Time `json:"expires_at"`
 }
 

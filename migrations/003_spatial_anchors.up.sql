@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS spatial_anchors (
     FOREIGN KEY (building_uuid) REFERENCES floor_plans(id)
 );
 
--- Index for spatial queries (simple for SQLite)
+-- Index for spatial queries (PostGIS)
 CREATE INDEX IF NOT EXISTS idx_spatial_anchors_location
     ON spatial_anchors(building_uuid, floor, x_meters, y_meters);
 

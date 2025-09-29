@@ -136,7 +136,7 @@ var (
 		"import_export",
 		"basic_cli",
 		"version_control",
-		"open_source_hardware",
+		"hardware_designs",
 		"community_support",
 	}
 

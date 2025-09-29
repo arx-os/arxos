@@ -1,236 +1,236 @@
-# ArxOS Makefile
+# ArxOS Makefile for Windows PowerShell
+# Provides easy commands for testing, building, and development
 
-# Variables
-BINARY_DIR := bin
-BINARY := $(BINARY_DIR)/arx
-GO := go
-GOFLAGS := -v
-LDFLAGS := -s -w
-
-# Version info
-VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-BUILD_TIME := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
-COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-
-# Build flags with version info
-BUILD_FLAGS := -ldflags "$(LDFLAGS) -X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.Commit=$(COMMIT)"
-
-.PHONY: all build clean test run install help dev docker deploy test-integration test-integration-web test-integration-api test-integration-full docker-test-up docker-test-down
+.PHONY: help test test-coverage test-race test-benchmark test-integration test-unit clean build run lint fmt vet mod-tidy security staticcheck install-tools
 
 # Default target
-all: build
+help:
+	@echo "ArxOS Development Commands"
+	@echo "=========================="
+	@echo ""
+	@echo "Testing Commands:"
+	@echo "  test              Run all tests"
+	@echo "  test-coverage     Run tests with coverage report"
+	@echo "  test-race         Run tests with race detection"
+	@echo "  test-benchmark    Run benchmarks"
+	@echo "  test-integration  Run integration tests only"
+	@echo "  test-unit         Run unit tests only"
+	@echo ""
+	@echo "Development Commands:"
+	@echo "  build             Build the application"
+	@echo "  run               Run the application"
+	@echo "  clean             Clean build artifacts"
+	@echo "  fmt               Format code"
+	@echo "  vet               Run go vet"
+	@echo "  mod-tidy          Tidy go.mod"
+	@echo "  lint              Run linter"
+	@echo "  security          Run security scan"
+	@echo "  staticcheck       Run static analysis"
+	@echo ""
+	@echo "Tool Installation:"
+	@echo "  install-tools     Install development tools"
+	@echo ""
 
-# Build single binary
-build:
-	@echo "🔨 Building ArxOS..."
-	@mkdir -p $(BINARY_DIR)
-	$(GO) build $(GOFLAGS) $(BUILD_FLAGS) -o $(BINARY) ./cmd/arx
-	@echo "✅ Build complete: $(BINARY)"
-
-# Run the CLI
-run: build
-	@echo "🚀 Running ArxOS..."
-	$(BINARY)
-
-# Run server mode
-run-server: build
-	@echo "🚀 Running ArxOS server..."
-	$(BINARY) serve
-
-# Run tests
+# Test commands
 test:
-	@echo "🧪 Running tests..."
-	$(GO) test -v ./...
+	@echo "Running all tests..."
+	@powershell -ExecutionPolicy Bypass -File scripts/run_tests.ps1
 
-# Run tests with coverage
 test-coverage:
-	@echo "🧪 Running tests with coverage..."
-	$(GO) test -v -cover -coverprofile=coverage.out ./...
-	$(GO) tool cover -html=coverage.out -o coverage.html
-	@echo "📊 Coverage report generated: coverage.html"
+	@echo "Running tests with coverage..."
+	@powershell -ExecutionPolicy Bypass -File scripts/run_tests.ps1 -CoverageThreshold 80
 
-# Clean build artifacts
+test-race:
+	@echo "Running tests with race detection..."
+	@powershell -ExecutionPolicy Bypass -File scripts/run_tests.ps1 -Race
+
+test-benchmark:
+	@echo "Running benchmarks..."
+	@powershell -ExecutionPolicy Bypass -File scripts/run_tests.ps1 -Benchmark
+
+test-integration:
+	@echo "Running integration tests..."
+	@go test -v -timeout=10m ./internal/app/...
+
+test-unit:
+	@echo "Running unit tests..."
+	@go test -v -timeout=10m ./internal/app/di/... ./internal/infra/messaging/... ./internal/domain/...
+
+# Development commands
+build:
+	@echo "Building ArxOS..."
+	@go build -o bin/arx.exe ./cmd/arx
+
+run:
+	@echo "Running ArxOS..."
+	@go run ./cmd/arx
+
 clean:
-	@echo "🧹 Cleaning..."
-	rm -rf $(BINARY_DIR)
-	rm -f coverage.out coverage.html
-	rm -f *.test
-	rm -rf testdata/output testdata/temp
-	@echo "✨ Clean complete"
+	@echo "Cleaning build artifacts..."
+	@if exist bin rmdir /s /q bin
+	@if exist coverage rmdir /s /q coverage
+	@if exist coverage_*.out del coverage_*.out
+	@go clean
 
-# Install binary to system
-install: build
-	@echo "📦 Installing ArxOS..."
-	@cp $(BINARY) /usr/local/bin/arx
-	@echo "✅ Installed to /usr/local/bin/arx"
-
-# Format code
 fmt:
-	@echo "🎨 Formatting code..."
-	$(GO) fmt ./...
-	@echo "✅ Code formatted"
+	@echo "Formatting code..."
+	@go fmt ./...
 
-# Run linter
+vet:
+	@echo "Running go vet..."
+	@go vet ./...
+
+mod-tidy:
+	@echo "Tidying go.mod..."
+	@go mod tidy
+
 lint:
-	@echo "🔍 Running linter..."
-	@which golangci-lint > /dev/null || (echo "❌ golangci-lint not installed. Run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest" && exit 1)
-	golangci-lint run
-	@echo "✅ Linting complete"
+	@echo "Running linter..."
+	@if exist $(GOPATH)\bin\golangci-lint.exe (
+		$(GOPATH)\bin\golangci-lint.exe run
+	) else (
+		echo "golangci-lint not found. Run 'make install-tools' to install it."
+	)
 
-# Check for security issues
 security:
-	@echo "🔒 Checking security..."
-	@which gosec > /dev/null || (echo "❌ gosec not installed. Run: go install github.com/securego/gosec/v2/cmd/gosec@latest" && exit 1)
-	gosec ./...
-	@echo "✅ Security check complete"
+	@echo "Running security scan..."
+	@if exist $(GOPATH)\bin\gosec.exe (
+		$(GOPATH)\bin\gosec.exe ./...
+	) else (
+		echo "gosec not found. Run 'make install-tools' to install it."
+	)
 
-# Update dependencies
-deps:
-	@echo "📦 Updating dependencies..."
-	$(GO) mod download
-	$(GO) mod tidy
-	@echo "✅ Dependencies updated"
+staticcheck:
+	@echo "Running static analysis..."
+	@if exist $(GOPATH)\bin\staticcheck.exe (
+		$(GOPATH)\bin\staticcheck.exe ./...
+	) else (
+		echo "staticcheck not found. Run 'make install-tools' to install it."
+	)
 
-# Development setup
-dev: deps build
-	@echo "🛠️  Development environment ready"
+# Tool installation
+install-tools:
+	@echo "Installing development tools..."
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+	@go install honnef.co/go/tools/cmd/staticcheck@latest
+	@echo "Tools installed successfully!"
+
+# Quick test for specific packages
+test-di:
+	@echo "Running DI tests..."
+	@go test -v ./internal/app/di/...
+
+test-websocket:
+	@echo "Running WebSocket tests..."
+	@go test -v ./internal/infra/messaging/...
+
+test-domain:
+	@echo "Running domain tests..."
+	@go test -v ./internal/domain/...
+
+test-app:
+	@echo "Running application tests..."
+	@go test -v ./internal/app/...
 
 # Docker commands
 docker-build:
-	@echo "🐳 Building Docker image..."
-	docker build -t arxos:latest .
-	@echo "✅ Docker image built"
+	@echo "Building Docker image..."
+	@docker build -t arxos .
 
 docker-run:
-	@echo "🐳 Starting Docker services..."
-	docker-compose up -d
-	@echo "✅ Docker services started"
+	@echo "Running Docker container..."
+	@docker run -p 8080:8080 arxos
 
-docker-stop:
-	@echo "🛑 Stopping Docker services..."
-	docker-compose down
-	@echo "✅ Docker services stopped"
-
-docker-logs:
-	@echo "📋 Showing Docker logs..."
-	docker-compose logs -f
-
-# Deployment commands
-deploy-dev: docker-build docker-run
-	@echo "🚀 Development deployment complete"
-	@echo "📡 API Server: http://localhost:8080"
-	@echo "📊 Traefik Dashboard: http://localhost:8888"
-
-deploy-prod:
-	@echo "🚀 Production deployment..."
-	@echo "⚠️  Make sure to configure .env file first"
-	docker-compose -f docker-compose.yml up -d
-	@echo "✅ Production deployment complete"
-
-# PostGIS test commands
-docker-test-up:
-	@echo "🐳 Starting PostGIS test container..."
-	@docker-compose -f docker-compose.test.yml up -d postgis
-	@sleep 5
-	@echo "✅ PostGIS test container ready"
-
-docker-test-down:
-	@echo "🛑 Stopping PostGIS test container..."
-	@docker-compose -f docker-compose.test.yml down -v
-	@echo "✅ PostGIS test container stopped"
-
-test-integration: docker-test-up
-	@echo "🧪 Running integration tests..."
-	@ARXOS_DB_TYPE=postgis \
-	 ARXOS_POSTGIS_URL=postgres://arxos:testpass@localhost:5432/arxos_test?sslmode=disable \
-	 $(GO) test -tags=integration $(GOFLAGS) ./internal/database/...
-	@$(MAKE) docker-test-down
-	@echo "✅ Integration tests complete"
-
-# Comprehensive integration tests
-test-integration-full: docker-test-up
-	@echo "🧪 Running comprehensive integration tests..."
-	@POSTGIS_HOST=localhost \
-	 POSTGIS_PORT=5432 \
-	 POSTGIS_DB=arxos_test \
-	 POSTGIS_USER=arxos \
-	 POSTGIS_PASSWORD=testpass \
-	 $(GO) test -tags=integration $(GOFLAGS) -timeout=15m ./internal/integration/...
-	@$(MAKE) docker-test-down
-	@echo "✅ Comprehensive integration tests complete"
-
-# Web interface integration tests
-test-integration-web: docker-test-up
-	@echo "🧪 Running web interface integration tests..."
-	@POSTGIS_HOST=localhost \
-	 POSTGIS_PORT=5432 \
-	 POSTGIS_DB=arxos_test \
-	 POSTGIS_USER=arxos \
-	 POSTGIS_PASSWORD=testpass \
-	 $(GO) test -tags=integration $(GOFLAGS) -run TestWebInterface ./internal/integration/...
-	@$(MAKE) docker-test-down
-	@echo "✅ Web interface integration tests complete"
-
-# API integration tests
-test-integration-api: docker-test-up
-	@echo "🧪 Running API integration tests..."
-	@POSTGIS_HOST=localhost \
-	 POSTGIS_PORT=5432 \
-	 POSTGIS_DB=arxos_test \
-	 POSTGIS_USER=arxos \
-	 POSTGIS_PASSWORD=testpass \
-	 $(GO) test -tags=integration $(GOFLAGS) -run TestAPI ./internal/integration/...
-	@$(MAKE) docker-test-down
-	@echo "✅ API integration tests complete"
-
-# Run integration tests with custom script
-test-integration-script:
-	@echo "🧪 Running integration tests with custom script..."
-	@./scripts/run_integration_tests.sh
-	@echo "✅ Integration tests complete"
+docker-test:
+	@echo "Running tests in Docker..."
+	@docker run --rm -v ${PWD}:/app -w /app golang:1.21 go test ./...
 
 # Database commands
-db-backup:
-	@echo "💾 Creating database backup..."
-	docker-compose exec arxos sqlite3 /app/data/arxos.db ".backup /app/data/backup-$(shell date +%Y%m%d-%H%M%S).db"
-	@echo "✅ Database backup created"
-
 db-migrate:
-	@echo "🔄 Running database migrations..."
-	docker-compose exec arxos ./arx migrate
-	@echo "✅ Database migrations complete"
+	@echo "Running database migrations..."
+	@go run ./cmd/arx migrate
 
-# Release commands
-release-prepare:
-	@echo "📦 Preparing release..."
-	@which goreleaser > /dev/null || (echo "❌ goreleaser not installed. Visit: https://goreleaser.com/install/" && exit 1)
-	goreleaser check
-	@echo "✅ Release preparation complete"
+db-seed:
+	@echo "Seeding database..."
+	@go run ./scripts/seed_test_data.go
 
-release-snapshot:
-	@echo "📦 Creating snapshot release..."
-	goreleaser release --snapshot --rm-dist
-	@echo "✅ Snapshot release created"
+# Development server
+dev:
+	@echo "Starting development server..."
+	@go run ./cmd/arx serve --port 8080 --config configs/development.yml
 
-# Help target
-help:
-	@echo "ArxOS Makefile Commands:"
-	@echo ""
-	@echo "  make build        - Build the arx binary"
-	@echo "  make run          - Build and run arx CLI"
-	@echo "  make run-server   - Build and run arx in server mode"
-	@echo "  make test         - Run tests"
-	@echo "  make test-integration - Run basic integration tests (requires PostGIS)"
-	@echo "  make test-integration-full - Run comprehensive integration tests"
-	@echo "  make test-integration-web - Run web interface integration tests"
-	@echo "  make test-integration-api - Run API integration tests"
-	@echo "  make test-integration-script - Run integration tests with custom script"
-	@echo "  make test-coverage- Run tests with coverage report"
-	@echo "  make clean        - Remove build artifacts"
-	@echo "  make install      - Install arx to /usr/local/bin"
-	@echo "  make fmt          - Format code"
-	@echo "  make lint         - Run linter (requires golangci-lint)"
-	@echo "  make security     - Run security check (requires gosec)"
-	@echo "  make deps         - Update dependencies"
-	@echo "  make dev          - Setup development environment"
-	@echo "  make help         - Show this help message"
+# Production build
+prod-build:
+	@echo "Building for production..."
+	@go build -ldflags="-s -w" -o bin/arx.exe ./cmd/arx
+
+# Test specific functionality
+test-health:
+	@echo "Testing health endpoint..."
+	@go run ./cmd/arx health
+
+test-config:
+	@echo "Testing configuration..."
+	@go test -v ./internal/config/...
+
+test-validation:
+	@echo "Testing validation..."
+	@go test -v ./internal/validation/...
+
+# Coverage report
+coverage-report:
+	@echo "Generating coverage report..."
+	@go test -coverprofile=coverage.out ./...
+	@go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report generated: coverage.html"
+
+# Performance tests
+perf-test:
+	@echo "Running performance tests..."
+	@go test -bench=. -benchmem ./...
+
+# Memory profiling
+mem-profile:
+	@echo "Running memory profiling..."
+	@go test -memprofile=mem.prof ./...
+	@go tool pprof mem.prof
+
+# CPU profiling
+cpu-profile:
+	@echo "Running CPU profiling..."
+	@go test -cpuprofile=cpu.prof ./...
+	@go tool pprof cpu.prof
+
+# All-in-one development setup
+setup:
+	@echo "Setting up development environment..."
+	@make install-tools
+	@make mod-tidy
+	@make fmt
+	@make vet
+	@echo "Development environment ready!"
+
+# CI/CD pipeline
+ci:
+	@echo "Running CI pipeline..."
+	@make fmt
+	@make vet
+	@make mod-tidy
+	@make test-coverage
+	@make security
+	@make staticcheck
+	@echo "CI pipeline completed!"
+
+# Release preparation
+release-prep:
+	@echo "Preparing for release..."
+	@make clean
+	@make fmt
+	@make vet
+	@make mod-tidy
+	@make test-coverage
+	@make security
+	@make staticcheck
+	@make prod-build
+	@echo "Release preparation completed!"

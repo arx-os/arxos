@@ -265,7 +265,7 @@ func (g *BIMGenerator) findRoom(plan *models.FloorPlan, roomID string) *models.R
 	return nil
 }
 
-// GenerateFromDatabase generates .bim.txt by querying the database (PostGIS or SQLite)
+// GenerateFromDatabase generates .bim.txt by querying the PostGIS database
 func (g *BIMGenerator) GenerateFromDatabase(ctx context.Context, db interface{}, buildingID string, w io.Writer) error {
 	logger.Info("Generating BIM text for building: %s from database", buildingID)
 
@@ -379,7 +379,7 @@ func (g *BIMGenerator) generateWithSpatialData(ctx context.Context, spatialDB da
 	return nil
 }
 
-// generateFromSQLite removed - using PostGIS only
+// Database generation using PostGIS only
 
 // getVersion returns the current ArxOS version
 func getVersion() string {

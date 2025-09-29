@@ -262,7 +262,7 @@ make build
 1. **Read the Documentation**: Start with `docs/DEVELOPER_GUIDE.md`
 2. **Explore Examples**: Check `demos/` directory
 3. **Join the Community**: [GitHub Discussions](https://github.com/arx-os/arxos/discussions)
-4. **Contribute**: Read `CONTRIBUTING.md`
+4. **Develop**: Read `CONTRIBUTING.md`
 
 ## 📚 Additional Resources
 

@@ -38,7 +38,7 @@ func GetTierInfo(tier Tier) TierInfo {
 	case TierCore:
 		return TierInfo{
 			Name:        "ArxOS Core",
-			Description: "The 'Git' of buildings - free and open source",
+			Description: "The 'Git' of buildings - free platform",
 			Price:       "FREE",
 			Features: []string{
 				"Pure Go/TinyGo codebase",
@@ -47,7 +47,7 @@ func GetTierInfo(tier Tier) TierInfo {
 				"CLI commands",
 				"Basic REST APIs",
 				"Version control",
-				"Open source hardware designs",
+				"Hardware designs",
 			},
 			Limits: map[string]interface{}{
 				"buildings":  -1, // unlimited
@@ -68,7 +68,7 @@ func GetTierInfo(tier Tier) TierInfo {
 	case TierHardware:
 		return TierInfo{
 			Name:        "Hardware Platform",
-			Description: "The 'GitHub Free' - open source IoT ecosystem",
+			Description: "The 'GitHub Free' - IoT ecosystem",
 			Price:       "FREEMIUM",
 			Features: []string{
 				"Certified hardware marketplace",

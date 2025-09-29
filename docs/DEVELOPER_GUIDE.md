@@ -15,7 +15,7 @@ This guide provides comprehensive information for developers working with the Ar
 7. [Testing](#testing)
 8. [Database Management](#database-management)
 9. [Deployment](#deployment)
-10. [Contributing](#contributing)
+10. [Development](#development)
 
 ## Getting Started
 
@@ -55,29 +55,44 @@ go run cmd/arx/main.go daemon start
 
 ### Clean Architecture Principles
 
-ArxOS follows clean architecture principles with clear separation of concerns:
+ArxOS follows **Clean Architecture principles** with **go-blueprint patterns**, implementing clear separation of concerns and dependency inversion:
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Presentation Layer                    │
-│  CLI, REST API, Web UI, Mobile App                     │
-├─────────────────────────────────────────────────────────┤
-│                    Business Logic Layer                  │
-│  Use Cases, Domain Services, Application Services      │
-├─────────────────────────────────────────────────────────┤
-│                    Data Access Layer                     │
-│  Repositories, Database Adapters, External APIs        │
-├─────────────────────────────────────────────────────────┤
-│                    Infrastructure Layer                  │
-│  Database, File System, External Services              │
-└─────────────────────────────────────────────────────────┘
+internal/
+├── app/           # Application layer (HTTP, CLI, TUI)
+│   ├── handlers/  # HTTP handlers (consolidated from api/handlers + handlers/web)
+│   ├── services/  # Application services (consolidated from services/)
+│   ├── middleware/ # HTTP middleware (consolidated from middleware/)
+│   └── cli/       # CLI commands (moved from cmd/)
+├── domain/        # Business logic (pure, no external dependencies)
+│   ├── building/  # Building management
+│   ├── equipment/ # Equipment operations  
+│   ├── spatial/   # Spatial operations
+│   ├── analytics/ # Analytics & reporting
+│   └── workflow/  # Workflow management
+├── infra/         # Infrastructure (external dependencies)
+│   ├── database/  # Database layer
+│   ├── cache/     # Caching
+│   ├── storage/   # File storage
+│   └── messaging/ # WebSocket, notifications
+└── web/           # Web interface
+    ├── static/    # Static assets
+    └── templates/ # HTML templates
 ```
+
+### Architecture Principles
+
+1. **Dependency Inversion**: High-level modules don't depend on low-level modules
+2. **Interface Segregation**: Small, focused interfaces for better testability
+3. **Single Responsibility**: Each package has one clear purpose
+4. **Clean Boundaries**: Domain logic is independent of infrastructure concerns
 
 ### Key Design Patterns
 
 - **Repository Pattern**: Data access abstraction
 - **Service Layer**: Business logic encapsulation
-- **Dependency Injection**: Loose coupling and testability
+- **Dependency Injection**: Better testability and modularity
+- **WebSocket Support**: Real-time building monitoring
 - **Command Query Separation**: Clear separation of read/write operations
 - **Event Sourcing**: Audit trail and state reconstruction
 
@@ -880,7 +895,7 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [main, develop]
-  pull_request:
+  merge_request:
     branches: [main]
 
 jobs:
@@ -960,11 +975,11 @@ jobs:
         # Add deployment commands here
 ```
 
-## Contributing
+## Development
 
 ### Development Workflow
 
-1. **Fork the repository**
+1. **Clone the repository**
 2. **Create a feature branch**:
    ```bash
    git checkout -b feature/your-feature-name
@@ -981,11 +996,11 @@ jobs:
    ```bash
    git commit -m "feat: add your feature description"
    ```
-7. **Push to your fork**:
+7. **Push to your branch**:
    ```bash
    git push origin feature/your-feature-name
    ```
-8. **Create a pull request**
+8. **Create a merge request**
 
 ### Code Style
 
@@ -1007,7 +1022,7 @@ docs(readme): update installation instructions
 test(analytics): add unit tests for energy module
 ```
 
-#### Pull Request Guidelines
+#### Merge Request Guidelines
 - Provide a clear description of changes
 - Include tests for new functionality
 - Update documentation as needed

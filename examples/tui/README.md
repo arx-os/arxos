@@ -224,7 +224,7 @@ export ARXOS_TUI_DEBUG=true
 ./arx visualize --tui --debug
 ```
 
-## Contributing
+## Development
 
 To add new examples:
 

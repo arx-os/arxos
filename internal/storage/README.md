@@ -23,7 +23,7 @@ The `StorageCoordinator` replaces the complex multi-backend storage system with 
 ┌─────────────────────────────────────────┐
 │        Storage Coordinator             │
 ├─────────────────────────────────────────┤
-│  BIM Files     │  PostGIS    │ SQLite  │
+│  BIM Files     │  PostGIS    │ Cache   │
 │  (.bim.txt)    │  (Spatial)  │ (Cache) │
 │  Schematic     │  Precision  │ Queries │
 └─────────────────────────────────────────┘
@@ -43,8 +43,8 @@ The `StorageCoordinator` replaces the complex multi-backend storage system with 
 - **Users**: AR mobile app, field technicians
 - **Precision**: Real-world coordinates (mm level)
 
-### 3. Query Level (SQLite Cache)
-- **Storage**: SQLite database
+### 3. Query Level (Cache)
+- **Storage**: In-memory cache
 - **Purpose**: Fast queries and system tracing
 - **Users**: Terminal operations, systems engineers
 - **Precision**: Optimized for relationships and performance
@@ -69,7 +69,7 @@ building, err := coordinator.GetBuilding(ctx, buildingID, QuerySpatial)
 ```go
 // Load for system tracing and analysis
 building, err := coordinator.GetBuilding(ctx, buildingID, QueryDetail)
-// Returns: SQLite cached data optimized for queries
+// Returns: Cached data optimized for queries
 ```
 
 ## Coordinate Translation
@@ -86,12 +86,12 @@ The coordinator automatically handles coordinate translation between:
 ```
 AR App Edit (3D) → PostGIS Update → Coordinate Translation → 
 Significant Change? → Yes: Update .bim.txt → Git Commit
-                   → No: Cache in SQLite only
+                   → No: Cache in memory only
 ```
 
 ### Terminal Edit Flow
 ```
-Terminal Edit → SQLite Cache → Auto-sync → .bim.txt Update → Git Commit
+Terminal Edit → Memory Cache → Auto-sync → .bim.txt Update → Git Commit
 ```
 
 ### BIM File Edit Flow
@@ -126,7 +126,7 @@ CleanupOldStorage("/old/storage/path")
 ```go
 config := &CoordinatorConfig{
     BIMFilesPath:   "~/.arxos/buildings",     // .bim.txt files
-    DatabasePath:   "~/.arxos/arxos.db",     // SQLite/PostGIS
+    DatabasePath:   "postgres://localhost/arxos",     // PostGIS
     AutoSync:       true,                     // Auto-sync between layers
     SyncInterval:   30 * time.Second,        // Sync frequency
     ValidateOnSave: true,                     // Validate .bim.txt files
@@ -135,7 +135,7 @@ config := &CoordinatorConfig{
 
 ## Future Enhancements
 
-- **PostGIS Integration**: Replace SQLite with PostGIS for true spatial operations
+- **PostGIS Integration**: Use PostGIS for all spatial operations
 - **Real-time Sync**: WebSocket updates between storage layers
 - **Conflict Resolution**: Handle concurrent edits from multiple sources
 - **Backup Strategy**: Automated backups of all storage layers

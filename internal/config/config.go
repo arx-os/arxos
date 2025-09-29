@@ -335,9 +335,9 @@ func Default() *Config {
 		},
 
 		Database: DatabaseConfig{
-			Type:            "sqlite",                                     // Default to sqlite for local mode
-			Driver:          "sqlite",                                     // Legacy field
-			DataSourceName:  filepath.Join(homeDir, ".arxos", "arxos.db"), // Default SQLite path
+			Type:            "postgis",                                    // Default to postgis
+			Driver:          "postgres",                                   // Legacy field
+			DataSourceName:  "postgres://localhost/arxos?sslmode=disable", // Default PostGIS path
 			MaxOpenConns:    25,
 			MaxConnections:  25, // Alias
 			MaxIdleConns:    5,
@@ -705,11 +705,11 @@ func (c *Config) Validate() error {
 
 	// Validate database settings
 	switch c.Database.Type {
-	case "sqlite", "postgis", "hybrid":
+	case "postgis":
 		// Valid types
 	case "": // Default to checking driver for backward compatibility
 		switch c.Database.Driver {
-		case "sqlite", "postgres":
+		case "postgres":
 			// Valid drivers
 		default:
 			return fmt.Errorf("invalid database driver: %s", c.Database.Driver)
@@ -719,7 +719,7 @@ func (c *Config) Validate() error {
 	}
 
 	// Validate PostGIS configuration if using PostGIS
-	if c.Database.Type == "postgis" || c.Database.Type == "hybrid" {
+	if c.Database.Type == "postgis" {
 		if c.PostGIS.Host == "" {
 			return fmt.Errorf("PostGIS host required when using PostGIS database")
 		}
@@ -737,8 +737,8 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	// Validate SQLite path for SQLite or hybrid
-	if c.Database.Type == "sqlite" || c.Database.Type == "hybrid" || c.Database.Type == "" {
+	// Validate PostGIS connection
+	if c.Database.Type == "postgis" || c.Database.Type == "" {
 		if c.Database.DataSourceName == "" {
 			return fmt.Errorf("database path or connection string required")
 		}

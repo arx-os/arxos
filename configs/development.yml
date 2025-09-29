@@ -1,5 +1,5 @@
 # ArxOS Development Configuration
-# This configuration uses PostGIS as primary with SQLite fallback
+# This configuration uses PostGIS as primary database
 
 # Core settings
 mode: hybrid
@@ -32,19 +32,10 @@ postgis:
   cache_ttl: 5m
   prepared_statements: true
 
-# SQLite settings (Fallback)
-sqlite:
-  enabled: true
-  path: "${ARX_DB_PATH:-.arxos/arxos.db}"
-  journal_mode: WAL
-  busy_timeout: 5000
-  cache_size: -64000  # 64MB
-  synchronous: NORMAL
-  foreign_keys: true
 
 # Database common settings
 database:
-  type: "${ARX_DB_TYPE:-hybrid}"  # postgis, sqlite, or hybrid
+  type: "${ARX_DB_TYPE:-postgis}"  # postgis only
   migrations_path: "./migrations"
   auto_migrate: true
   log_queries: true
@@ -203,7 +194,6 @@ monitoring:
 features:
   # Core features
   enable_postgis: true
-  enable_sqlite_fallback: true
   enable_hybrid_mode: true
 
   # Import/Export

@@ -2,16 +2,18 @@
 
 ## Overview
 
-ArxOS is a comprehensive "Building Operating System" that treats buildings as code repositories, providing a unified platform for building management, automation, and optimization. The system is built on a three-tier ecosystem model with clean architecture principles and production-ready infrastructure.
+ArxOS is a comprehensive "Building Operating System" that treats buildings as code repositories, providing a unified platform for building management, automation, and optimization. The system follows **Clean Architecture principles** with **go-blueprint patterns**, implementing a three-tier ecosystem model with production-ready infrastructure.
 
 ## Core Philosophy
 
 - **Buildings as Code**: Every building component is version-controlled and trackable
-- **Buildings as Repositories**: Room configurations are treated like Git repositories with branching, commits, and pull requests
+- **Buildings as Repositories**: Room configurations are treated like Git repositories with branching, commits, and merge requests
 - **Path-Based Addressing**: Universal addressing system for all building elements
 - **Git + GitHub Business Model**: Three-tier ecosystem (Core, Hardware, Workflow)
 - **PostGIS Spatial Intelligence**: Millimeter-precision location awareness
 - **Clean Architecture**: Separation of concerns with clear boundaries
+- **Dependency Injection**: Better testability and modularity
+- **Interface Segregation**: Small, focused interfaces for maintainability
 
 ## System Architecture
 
@@ -33,7 +35,7 @@ ArxOS is a comprehensive "Building Operating System" that treats buildings as co
 ├─────────────────────────────────────────────────────────────────┤
 │                      Data Access Layer                         │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐│
-│  │   PostGIS   │ │   SQLite    │ │    Redis    │ │   File      ││
+│  │   PostGIS   │ │    Redis    │ │   File      ││
 │  │  Database   │ │  Database   │ │    Cache    │ │   System    ││
 │  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘│
 ├─────────────────────────────────────────────────────────────────┤
@@ -45,39 +47,31 @@ ArxOS is a comprehensive "Building Operating System" that treats buildings as co
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Core Modules
+## Clean Architecture Modules
 
-### 1. Building Infrastructure (`internal/core/`)
-- **Path Management**: Universal addressing system for building components
-- **Spatial Queries**: PostGIS-based spatial operations and queries
-- **Git Integration**: Version control for building data
-- **Configuration Management**: YAML-based configuration system
+### 1. Application Layer (`internal/app/`)
+- **HTTP Handlers**: REST API endpoints and web interface handlers
+- **CLI Commands**: Terminal-based building management commands
+- **Application Services**: Business logic orchestration and coordination
+- **Middleware**: HTTP middleware for authentication, logging, and security
 
-### 2. Analytics Engine (`internal/analytics/`)
-- **Energy Optimization**: Real-time energy consumption analysis and optimization
-- **Predictive Analytics**: Machine learning models for forecasting and trends
-- **Performance Monitoring**: KPI tracking and threshold-based alerting
-- **Anomaly Detection**: Statistical analysis for identifying unusual patterns
-- **Report Generation**: Multi-format reports with templates and scheduling
+### 2. Domain Layer (`internal/domain/`)
+- **Building Management**: Core building entity and business rules
+- **Equipment Operations**: Equipment lifecycle and spatial operations
+- **Spatial Operations**: PostGIS-based spatial queries and calculations
+- **Analytics Engine**: Energy optimization, predictive analytics, and reporting
+- **Workflow Management**: Business workflow logic and automation rules
 
-### 3. IT Asset Management (`internal/it/`)
-- **Asset Lifecycle**: Complete IT asset management from procurement to disposal
-- **Configuration Management**: Template-based hardware/software configurations
-- **Room Setup Management**: Room-specific IT equipment layouts and connections
-- **Inventory Management**: Parts and supplies tracking with supplier integration
-- **Work Order Management**: IT work order creation, tracking, and resolution
+### 3. Infrastructure Layer (`internal/infra/`)
+- **Database**: PostGIS database access and spatial operations
+- **Cache**: Redis-based caching for performance optimization
+- **Storage**: File storage and document management
+- **Messaging**: WebSocket support for real-time building monitoring
 
-### 4. Workflow Automation (`internal/workflow/`)
-- **n8n Integration**: Seamless integration with n8n workflow automation platform
-- **Trigger Management**: Multiple trigger types (schedule, webhook, event, manual)
-- **Action Management**: Comprehensive action library for building operations
-- **Workflow Execution**: Asynchronous workflow execution with monitoring
-- **API Integration**: RESTful API for workflow management
-
-### 5. CMMS/CAFM Features (`internal/facility/`)
-- **Facility Management**: Building, space, and asset management
-- **Work Order Management**: Maintenance work order lifecycle
-- **Maintenance Scheduling**: Preventive and reactive maintenance planning
+### 4. Web Interface (`internal/web/`)
+- **Static Assets**: CSS, JavaScript, and image files
+- **HTML Templates**: HTMX-based dynamic web pages
+- **Web Handlers**: Web-specific request handling and routing
 - **Inspection Management**: Inspection workflows and compliance tracking
 - **Vendor Management**: External service provider and contract management
 
@@ -92,7 +86,7 @@ ArxOS is a comprehensive "Building Operating System" that treats buildings as co
 - **Version Control**: Git-like operations for room configurations
 - **Branch Management**: Create, merge, and manage configuration branches
 - **Commit History**: Track all changes to room configurations
-- **Pull Requests**: Review and approve configuration changes
+- **Merge Requests**: Review and approve configuration changes
 - **Rollback Capability**: Revert to previous configurations
 - **Feature Requests**: User-driven configuration improvements
 - **Emergency Fixes**: Rapid response to critical issues
@@ -106,7 +100,7 @@ ArxOS is a comprehensive "Building Operating System" that treats buildings as co
 - **Relationships**: Hierarchical building structure and equipment dependencies
 
 ### Secondary Storage
-- **SQLite**: Local development and fallback database
+- **PostGIS**: Spatial database for all operations
 - **Redis**: Caching layer for performance optimization
 - **File System**: Configuration files, templates, and static assets
 - **Git Repository**: Version-controlled building data and configurations

@@ -19,8 +19,8 @@ info:
     email: support@arxos.io
     url: https://arxos.io/support
   license:
-    name: MIT
-    url: https://opensource.org/licenses/MIT
+    name: Proprietary
+    url: Proprietary License
 
 servers:
   - url: https://api.arxos.io/v1

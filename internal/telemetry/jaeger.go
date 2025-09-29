@@ -111,7 +111,7 @@ func (b *JaegerBackend) convertToJaegerSpan(span *Span) JaegerSpan {
 	jaegerSpan := JaegerSpan{
 		TraceID:       span.TraceID,
 		SpanID:        span.SpanID,
-		OperationName: span.OperationName,
+		OperationName: span.Operation,
 		StartTime:     span.StartTime.UnixNano() / 1000, // Convert to microseconds
 		Duration:      int64(span.Duration.Microseconds()),
 		Tags:          make([]JaegerTag, 0),

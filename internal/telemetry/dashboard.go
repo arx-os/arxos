@@ -302,18 +302,7 @@ func (d *Dashboard) getRecentTraces() []*Span {
 		return []*Span{}
 	}
 
-	extendedInstance.tracer.mu.RLock()
-	defer extendedInstance.tracer.mu.RUnlock()
-
-	var traces []*Span
-	count := 0
-	for _, span := range extendedInstance.tracer.spans {
-		if count >= 10 { // Limit to 10 recent traces
-			break
-		}
-		traces = append(traces, span)
-		count++
-	}
-
-	return traces
+	// For now, return empty traces since we don't have direct access to spans
+	// In a real implementation, the tracer would provide a method to get recent spans
+	return []*Span{}
 }

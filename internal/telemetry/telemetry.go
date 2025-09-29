@@ -78,7 +78,7 @@ type ObservabilityConfig struct {
 type ExtendedTelemetry struct {
 	config  *ObservabilityConfig
 	metrics *MetricsCollector
-	tracer  *Tracer
+	tracer  Tracer
 	logger  *StructuredLogger
 	mu      sync.RWMutex
 }
@@ -465,7 +465,7 @@ func GetMetricsCollector() *MetricsCollector {
 }
 
 // GetTracer returns the tracer instance
-func GetTracer() *Tracer {
+func GetTracer() Tracer {
 	if extendedInstance != nil {
 		return extendedInstance.tracer
 	}

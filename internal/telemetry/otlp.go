@@ -120,13 +120,13 @@ func (b *OTLPBackend) convertToOTLPSpan(span *Span) OTLPSpan {
 	otlpSpan := OTLPSpan{
 		TraceID:           span.TraceID,
 		SpanID:            span.SpanID,
-		Name:              span.OperationName,
+		Name:              span.Operation,
 		StartTimeUnixNano: span.StartTime.UnixNano(),
-		EndTimeUnixNano:   span.StartTime.Add(*span.Duration).UnixNano(),
+		EndTimeUnixNano:   span.StartTime.Add(span.Duration).UnixNano(),
 		Attributes:        make([]OTLPAttribute, 0),
 		Events:            make([]OTLPEvent, 0),
 		Status: OTLPStatus{
-			Code: OTLPStatusCode(span.Status.Code),
+			Code: convertSpanStatusToOTLP(span.Status),
 		},
 	}
 
@@ -241,3 +241,17 @@ const (
 	OTLPStatusCodeOK    OTLPStatusCode = 1
 	OTLPStatusCodeError OTLPStatusCode = 2
 )
+
+// convertSpanStatusToOTLP converts our SpanStatus to OTLP status code
+func convertSpanStatusToOTLP(status SpanStatus) OTLPStatusCode {
+	switch status {
+	case SpanStatusOK:
+		return OTLPStatusCodeOK
+	case SpanStatusError:
+		return OTLPStatusCodeError
+	case SpanStatusCancelled:
+		return OTLPStatusCodeError
+	default:
+		return OTLPStatusCodeUnset
+	}
+}

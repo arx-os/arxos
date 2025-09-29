@@ -1,0 +1,246 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "ArxOS Workflow Automation",
+    "tags": ["arxos", "workflows", "automation"],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Active Workflows",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(workflow_status{status=\"active\"})",
+            "legendFormat": "Active Workflows"
+          },
+          {
+            "expr": "sum(workflow_status{status=\"inactive\"})",
+            "legendFormat": "Inactive Workflows"
+          },
+          {
+            "expr": "sum(workflow_status{status=\"error\"})",
+            "legendFormat": "Error Workflows"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "red",
+                  "value": 0
+                },
+                {
+                  "color": "yellow",
+                  "value": 1
+                },
+                {
+                  "color": "green",
+                  "value": 5
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Workflow Executions",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(workflow_executions_total)",
+            "legendFormat": "Total Executions"
+          },
+          {
+            "expr": "sum(workflow_executions_success_total)",
+            "legendFormat": "Successful Executions"
+          },
+          {
+            "expr": "sum(workflow_executions_failed_total)",
+            "legendFormat": "Failed Executions"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 8,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "n8n Integration",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "n8n_workflows_active",
+            "legendFormat": "n8n Active Workflows"
+          },
+          {
+            "expr": "n8n_executions_running",
+            "legendFormat": "Running Executions"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 16,
+          "y": 0
+        }
+      },
+      {
+        "id": 4,
+        "title": "Execution Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(workflow_executions_total[5m])",
+            "legendFormat": "Executions/sec"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Executions/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 5,
+        "title": "Execution Duration",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(workflow_execution_duration_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(workflow_execution_duration_bucket[5m]))",
+            "legendFormat": "50th percentile"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Seconds",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        }
+      },
+      {
+        "id": 6,
+        "title": "Trigger Types",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (trigger_type) (workflow_triggers_total)",
+            "legendFormat": "{{trigger_type}}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        }
+      },
+      {
+        "id": 7,
+        "title": "Action Types",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (action_type) (workflow_actions_total)",
+            "legendFormat": "{{action_type}}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        }
+      },
+      {
+        "id": 8,
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(workflow_executions_failed_total[5m])",
+            "legendFormat": "Failed Executions/sec"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Errors/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 24
+        }
+      },
+      {
+        "id": 9,
+        "title": "n8n Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "n8n_response_time",
+            "legendFormat": "n8n Response Time"
+          },
+          {
+            "expr": "n8n_queue_size",
+            "legendFormat": "Queue Size"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Time/Count",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 24
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 1
+  }
+}

@@ -18,7 +18,7 @@ type MetricsCollector struct {
 	counters map[string]*CounterMetric
 	gauges   map[string]*GaugeMetric
 	histos   map[string]*HistogramMetric
-	mu       sync.RWMutex
+	mu       sync.RWMutex `json:"-"`
 	server   *http.Server
 }
 
@@ -27,7 +27,7 @@ type CounterMetric struct {
 	Name  string            `json:"name"`
 	Value float64           `json:"value"`
 	Tags  map[string]string `json:"tags"`
-	mu    sync.RWMutex
+	mu    sync.RWMutex      `json:"-"`
 }
 
 // GaugeMetric represents a gauge metric
@@ -36,7 +36,7 @@ type GaugeMetric struct {
 	Value     float64           `json:"value"`
 	Tags      map[string]string `json:"tags"`
 	Timestamp time.Time         `json:"timestamp"`
-	mu        sync.RWMutex
+	mu        sync.RWMutex      `json:"-"`
 }
 
 // HistogramMetric represents a histogram metric
@@ -48,7 +48,7 @@ type HistogramMetric struct {
 	Max     float64           `json:"max"`
 	Buckets map[float64]int64 `json:"buckets"`
 	Tags    map[string]string `json:"tags"`
-	mu      sync.RWMutex
+	mu      sync.RWMutex      `json:"-"`
 }
 
 // NewMetricsCollector creates a new metrics collector

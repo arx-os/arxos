@@ -95,7 +95,7 @@ func (b *ZipkinBackend) convertToZipkinSpan(span *Span) ZipkinSpan {
 	zipkinSpan := ZipkinSpan{
 		TraceID:   span.TraceID,
 		ID:        span.SpanID,
-		Name:      span.OperationName,
+		Name:      span.Operation,
 		Timestamp: span.StartTime.UnixNano() / 1000, // Convert to microseconds
 		Duration:  int64(span.Duration.Microseconds()),
 		LocalEndpoint: ZipkinEndpoint{

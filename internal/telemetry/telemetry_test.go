@@ -24,7 +24,7 @@ func TestInitialize(t *testing.T) {
 
 	// Initialize telemetry
 	Initialize(cfg)
-	
+
 	// Verify global collector is set
 	assert.NotNil(t, globalCollector)
 	assert.Equal(t, cfg, globalCollector.config)
@@ -145,14 +145,14 @@ func TestCommand(t *testing.T) {
 	// Verify command was queued (Command creates both a track event and a metric event)
 	globalCollector.mu.Lock()
 	assert.Len(t, globalCollector.queue, 2)
-	
+
 	// Check the track event
 	trackEvent := globalCollector.queue[0]
 	assert.Equal(t, "track", trackEvent.Type)
 	assert.Equal(t, "command_executed", trackEvent.Name)
 	assert.Equal(t, []string{"arg1", "arg2"}, trackEvent.Properties["args"])
 	assert.Equal(t, true, trackEvent.Properties["success"])
-	
+
 	// Check the metric event
 	metricEvent := globalCollector.queue[1]
 	assert.Equal(t, "metric", metricEvent.Type)
@@ -318,12 +318,12 @@ func TestEvent_JSONSerialization(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, event.Type, unmarshaled.Type)
 	assert.Equal(t, event.Name, unmarshaled.Name)
-	
+
 	// JSON unmarshaling converts int to float64, so we need to check values individually
 	assert.Equal(t, "value", unmarshaled.Properties["string"])
 	assert.Equal(t, float64(42), unmarshaled.Properties["number"]) // JSON converts int to float64
 	assert.Equal(t, true, unmarshaled.Properties["bool"])
-	
+
 	assert.Equal(t, event.Metrics, unmarshaled.Metrics)
 	assert.Equal(t, event.Context, unmarshaled.Context)
 }

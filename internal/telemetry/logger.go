@@ -54,11 +54,11 @@ func (sl *StructuredLogger) LogWithContext(ctx context.Context, level, format st
 	}
 
 	// Extract tracing information from context
-	if traceID := TraceIDFromContext(ctx); traceID != "" {
+	if traceID := GetTraceIDFromContext(ctx); traceID != "" {
 		entry.TraceID = traceID
 	}
 
-	if span := SpanFromContext(ctx); span != nil {
+	if span := GetSpanFromContext(ctx); span != nil {
 		entry.SpanID = span.SpanID
 	}
 
@@ -81,11 +81,11 @@ func (sl *StructuredLogger) LogWithFields(ctx context.Context, level, message st
 	}
 
 	// Extract tracing information from context
-	if traceID := TraceIDFromContext(ctx); traceID != "" {
+	if traceID := GetTraceIDFromContext(ctx); traceID != "" {
 		entry.TraceID = traceID
 	}
 
-	if span := SpanFromContext(ctx); span != nil {
+	if span := GetSpanFromContext(ctx); span != nil {
 		entry.SpanID = span.SpanID
 	}
 

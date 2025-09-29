@@ -60,7 +60,7 @@ func (b *ConsoleBackend) Export(ctx context.Context, spans []*Span) error {
 
 	for _, span := range spans {
 		logger.Debug("Span: %s [%s] - %s (duration: %v)",
-			span.TraceID, span.SpanID, span.OperationName, span.Duration)
+			span.TraceID, span.SpanID, span.Operation, span.Duration)
 
 		for key, value := range span.Tags {
 			logger.Debug("  Tag: %s = %v", key, value)

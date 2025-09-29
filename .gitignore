@@ -108,3 +108,6 @@ Desktop.ini
 *.p12
 /secrets/
 /credentials/cmd/arx/arx
+
+# ArxOS Local Workspace - Development and Testing
+.arxos/

@@ -16,65 +16,15 @@ import (
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/internal/daemon"
+	"github.com/arx-os/arxos/internal/domain/building"
 	"github.com/arx-os/arxos/internal/validation"
+	"github.com/arx-os/arxos/pkg/errors"
 	"github.com/arx-os/arxos/pkg/models"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
-
-// placeholderBuildingService provides placeholder implementations for building service methods
-type placeholderBuildingService struct{}
-
-func (p *placeholderBuildingService) GetBuilding(ctx context.Context, id string) (*models.Building, error) {
-	logger.Info("GetBuilding placeholder - using DI container")
-	return &models.Building{ID: id, Name: "Placeholder Building"}, nil
-}
-
-func (p *placeholderBuildingService) GetEquipment(ctx context.Context, id string) (*models.Equipment, error) {
-	logger.Info("GetEquipment placeholder - using DI container")
-	return &models.Equipment{ID: id, Name: "Placeholder Equipment"}, nil
-}
-
-func (p *placeholderBuildingService) GetRoom(ctx context.Context, id string) (*models.Room, error) {
-	logger.Info("GetRoom placeholder - using DI container")
-	return &models.Room{ID: id, Name: "Placeholder Room"}, nil
-}
-
-func (p *placeholderBuildingService) UpdateBuilding(ctx context.Context, building *models.Building) error {
-	logger.Info("UpdateBuilding placeholder - using DI container")
-	return nil
-}
-
-func (p *placeholderBuildingService) UpdateEquipment(ctx context.Context, equipment *models.Equipment) error {
-	logger.Info("UpdateEquipment placeholder - using DI container")
-	return nil
-}
-
-func (p *placeholderBuildingService) UpdateRoom(ctx context.Context, room *models.Room) error {
-	logger.Info("UpdateRoom placeholder - using DI container")
-	return nil
-}
-
-func (p *placeholderBuildingService) DeleteBuilding(ctx context.Context, id string) error {
-	logger.Info("DeleteBuilding placeholder - using DI container")
-	return nil
-}
-
-func (p *placeholderBuildingService) DeleteEquipment(ctx context.Context, id string) error {
-	logger.Info("DeleteEquipment placeholder - using DI container")
-	return nil
-}
-
-func (p *placeholderBuildingService) DeleteRoom(ctx context.Context, id string) error {
-	logger.Info("DeleteRoom placeholder - using DI container")
-	return nil
-}
-
-func (p *placeholderBuildingService) ListBuildings(ctx context.Context) ([]*models.Building, error) {
-	logger.Info("ListBuildings placeholder - using DI container")
-	return []*models.Building{}, nil
-}
 
 var (
 	// Version information (set during build)
@@ -85,8 +35,6 @@ var (
 	// Global variables for system components following Clean Architecture
 	appConfig   *config.Config
 	diContainer *di.Container
-	// Placeholder for building service - will be replaced with DI container usage
-	buildingService = &placeholderBuildingService{}
 )
 
 var rootCmd = &cobra.Command{
@@ -154,12 +102,7 @@ func main() {
 		// Data operations
 		queryCmd,
 
-		// CRUD operations
-		addCmd,
-		getCmd,
-		updateCmd,
-		removeCmd,
-		listCmd,
+		// CRUD operations are now in separate files
 		traceCmd,
 
 		// Services
@@ -173,6 +116,9 @@ func main() {
 		// Visualization
 		visualizeCmd,
 		reportCmd,
+
+		// Workflow
+		workflowCmd,
 
 		// Version
 		versionCmd,
@@ -259,51 +205,13 @@ var healthCmd = &cobra.Command{
 
 // serveCmd will be implemented when proper service initialization is available
 
-var listCmd = &cobra.Command{
-	Use:   "list [type]",
-	Short: "List resources",
-	Long:  "List buildings, equipment, or other resources in the ArxOS system",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		ctx := context.Background()
-		resourceType := args[0]
-
-		switch resourceType {
-		case "buildings":
-			listBuildings(ctx)
-		case "equipment":
-			listEquipment(ctx)
-		case "rooms":
-			listRooms(ctx)
-		default:
-			fmt.Printf("Unknown resource type: %s\n", resourceType)
-			fmt.Println("Available types: buildings, equipment, rooms")
-			os.Exit(1)
-		}
-	},
-}
+// List command removed - now in separate file
 
 func listBuildings(ctx context.Context) {
 	// Get all floor plans (buildings) - placeholder implementation
 	fmt.Println("Buildings:")
 	fmt.Println("  • Building 1 (ID: ARXOS-001, Level: 1)")
 	fmt.Println("  • Building 2 (ID: ARXOS-002, Level: 2)")
-}
-
-func listEquipment(ctx context.Context) {
-	// Get all equipment - placeholder implementation
-	fmt.Println("Equipment:")
-	fmt.Println("  • HVAC Unit 1 (ID: HVAC-001, Type: Air Handler)")
-	fmt.Println("  • Electrical Panel 1 (ID: ELEC-001, Type: Panel)")
-	fmt.Println("  • Lighting Fixture 1 (ID: LIGHT-001, Type: LED)")
-}
-
-func listRooms(ctx context.Context) {
-	// Get all rooms - placeholder implementation
-	fmt.Println("Rooms:")
-	fmt.Println("  • Room 301 (ID: ROOM-301, Type: Office)")
-	fmt.Println("  • Room 302 (ID: ROOM-302, Type: Conference)")
-	fmt.Println("  • Room 303 (ID: ROOM-303, Type: Storage)")
 }
 
 var versionCmd = &cobra.Command{
@@ -458,117 +366,7 @@ var exportCmd = &cobra.Command{
 	},
 }
 
-// CRUD Commands
-
-var addCmd = &cobra.Command{
-	Use:   "add <type> <name>",
-	Short: "Add new building components",
-	Long:  "Add new buildings, equipment, rooms, or other components",
-	Args:  cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
-		ctx := context.Background()
-		componentType := args[0]
-		name := args[1]
-
-		logger.Info("Adding %s: %s", componentType, name)
-
-		switch componentType {
-		case "building":
-			addBuilding(ctx, name)
-		case "equipment":
-			addEquipment(ctx, name)
-		case "room":
-			addRoom(ctx, name)
-		default:
-			logger.Error("Unknown component type: %s", componentType)
-			os.Exit(1)
-		}
-
-		fmt.Printf("✅ Successfully added %s: %s\n", componentType, name)
-	},
-}
-
-var getCmd = &cobra.Command{
-	Use:   "get <type> <id>",
-	Short: "Get building component details",
-	Long:  "Get detailed information about buildings, equipment, rooms, or other components",
-	Args:  cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
-		ctx := context.Background()
-		componentType := args[0]
-		id := args[1]
-
-		logger.Info("Getting %s: %s", componentType, id)
-
-		switch componentType {
-		case "building":
-			getBuilding(ctx, id)
-		case "equipment":
-			getEquipment(ctx, id)
-		case "room":
-			getRoom(ctx, id)
-		default:
-			logger.Error("Unknown component type: %s", componentType)
-			os.Exit(1)
-		}
-	},
-}
-
-var updateCmd = &cobra.Command{
-	Use:   "update <type> <id>",
-	Short: "Update building components",
-	Long:  "Update existing buildings, equipment, rooms, or other components",
-	Args:  cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
-		ctx := context.Background()
-		componentType := args[0]
-		id := args[1]
-
-		logger.Info("Updating %s: %s", componentType, id)
-
-		switch componentType {
-		case "building":
-			updateBuilding(ctx, id)
-		case "equipment":
-			updateEquipment(ctx, id)
-		case "room":
-			updateRoom(ctx, id)
-		default:
-			logger.Error("Unknown component type: %s", componentType)
-			os.Exit(1)
-		}
-
-		fmt.Printf("✅ Successfully updated %s: %s\n", componentType, id)
-	},
-}
-
-var removeCmd = &cobra.Command{
-	Use:   "remove <type> <id>",
-	Short: "Remove building components",
-	Long:  "Remove buildings, equipment, rooms, or other components",
-	Args:  cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
-		ctx := context.Background()
-		componentType := args[0]
-		id := args[1]
-
-		logger.Info("Removing %s: %s", componentType, id)
-
-		switch componentType {
-		case "building":
-			removeBuilding(ctx, id)
-		case "equipment":
-			removeEquipment(ctx, id)
-		case "room":
-			removeRoom(ctx, id)
-		default:
-			logger.Error("Unknown component type: %s", componentType)
-			os.Exit(1)
-		}
-
-		fmt.Printf("✅ Successfully removed %s: %s\n", componentType, id)
-	},
-}
+// CRUD Commands are now in separate files
 
 var traceCmd = &cobra.Command{
 	Use:   "trace <path>",
@@ -753,40 +551,7 @@ func addBuilding(ctx context.Context, name string) error {
 	return nil
 }
 
-func addEquipment(ctx context.Context, name string) error {
-	// Comprehensive input validation
-	validationResult := validation.ValidateEquipmentName(name)
-	if !validationResult.Valid {
-		var errorMessages []string
-		for _, err := range validationResult.Errors {
-			errorMessages = append(errorMessages, fmt.Sprintf("  • %s", err.Message))
-		}
-		return fmt.Errorf("invalid equipment name:\n%s", strings.Join(errorMessages, "\n"))
-	}
-
-	// Sanitize input
-	sanitizedName := validation.SanitizeString(name)
-
-	// Create building service
-	// buildingService := services.NewBuildingService(dbConn) // Placeholder - using DI container
-
-	// Create new equipment model
-	equipment := &models.Equipment{
-		ID:     "", // Will be generated by service
-		Name:   sanitizedName,
-		Type:   "general", // Default type
-		Status: "operational",
-	}
-
-	// Create the equipment
-	// if err := buildingService.CreateEquipment(ctx, equipment); err != nil {
-	//	return fmt.Errorf("failed to create equipment %s: %w", sanitizedName, err)
-	// }
-	logger.Info("Equipment creation placeholder - using DI container")
-
-	logger.Info("Successfully created equipment: %s (ID: %s)", sanitizedName, equipment.ID)
-	return nil
-}
+// Placeholder CRUD functions removed - now in separate command files
 
 func addRoom(ctx context.Context, name string) error {
 	// Comprehensive input validation
@@ -856,82 +621,9 @@ func getBuilding(ctx context.Context, id string) error {
 	return nil
 }
 
-func getEquipment(ctx context.Context, id string) error {
-	// Comprehensive input validation
-	validationResult := validation.ValidateID(id)
-	if !validationResult.Valid {
-		var errorMessages []string
-		for _, err := range validationResult.Errors {
-			errorMessages = append(errorMessages, fmt.Sprintf("  • %s", err.Message))
-		}
-		return fmt.Errorf("invalid equipment ID:\n%s", strings.Join(errorMessages, "\n"))
-	}
+// CRUD functions removed - now in separate command files
 
-	// Sanitize input
-	sanitizedID := validation.SanitizeString(id)
-
-	// Create building service
-	// buildingService := services.NewBuildingService(dbConn) // Placeholder - using DI container
-
-	// Get the equipment
-	equipment, err := buildingService.GetEquipment(ctx, sanitizedID)
-	if err != nil {
-		return fmt.Errorf("failed to get equipment %s: %w", sanitizedID, err)
-	}
-
-	// Display equipment information
-	logger.Info("Equipment Information:")
-	logger.Info("  ID: %s", equipment.ID)
-	logger.Info("  Name: %s", equipment.Name)
-	logger.Info("  Type: %s", equipment.Type)
-	logger.Info("  Status: %s", equipment.Status)
-	if equipment.Location != nil {
-		logger.Info("  Location: (%.2f, %.2f, %.2f)",
-			equipment.Location.X, equipment.Location.Y, equipment.Location.Z)
-	}
-	if equipment.RoomID != "" {
-		logger.Info("  Room ID: %s", equipment.RoomID)
-	}
-
-	return nil
-}
-
-func getRoom(ctx context.Context, id string) error {
-	// Comprehensive input validation
-	validationResult := validation.ValidateID(id)
-	if !validationResult.Valid {
-		var errorMessages []string
-		for _, err := range validationResult.Errors {
-			errorMessages = append(errorMessages, fmt.Sprintf("  • %s", err.Message))
-		}
-		return fmt.Errorf("invalid room ID:\n%s", strings.Join(errorMessages, "\n"))
-	}
-
-	// Sanitize input
-	sanitizedID := validation.SanitizeString(id)
-
-	// Create building service
-	// buildingService := services.NewBuildingService(dbConn) // Placeholder - using DI container
-
-	// Get the room
-	room, err := buildingService.GetRoom(ctx, sanitizedID)
-	if err != nil {
-		return fmt.Errorf("failed to get room %s: %w", sanitizedID, err)
-	}
-
-	// Display room information
-	logger.Info("Room Information:")
-	logger.Info("  ID: %s", room.ID)
-	logger.Info("  Name: %s", room.Name)
-	if room.FloorPlanID != "" {
-		logger.Info("  Floor Plan ID: %s", room.FloorPlanID)
-	}
-	if len(room.Equipment) > 0 {
-		logger.Info("  Equipment Count: %d", len(room.Equipment))
-	}
-
-	return nil
-}
+// CRUD functions removed - now in separate command files
 
 func updateBuilding(ctx context.Context, id string) error {
 	// Comprehensive input validation
@@ -947,11 +639,13 @@ func updateBuilding(ctx context.Context, id string) error {
 	// Sanitize input
 	sanitizedID := validation.SanitizeString(id)
 
-	// Create building service
-	// buildingService := services.NewBuildingService(dbConn) // Placeholder - using DI container
-
-	// Get existing building
-	existing, err := buildingService.GetBuilding(ctx, sanitizedID)
+	// Get existing building using DI container
+	services := diContainer.GetServices()
+	buildingUUID, err := uuid.Parse(sanitizedID)
+	if err != nil {
+		return fmt.Errorf("invalid building ID format: %w", err)
+	}
+	existing, err := services.Building.GetBuilding(ctx, buildingUUID)
 	if err != nil {
 		return fmt.Errorf("failed to get building %s: %w", sanitizedID, err)
 	}
@@ -962,7 +656,11 @@ func updateBuilding(ctx context.Context, id string) error {
 	existing.UpdatedAt = now
 
 	// Update the building
-	if err := buildingService.UpdateBuilding(ctx, existing); err != nil {
+	updateReq := building.UpdateBuildingRequest{
+		Name: &existing.Name,
+	}
+	_, err = services.Building.UpdateBuilding(ctx, buildingUUID, updateReq)
+	if err != nil {
 		return fmt.Errorf("failed to update building %s: %w", id, err)
 	}
 
@@ -970,77 +668,9 @@ func updateBuilding(ctx context.Context, id string) error {
 	return nil
 }
 
-func updateEquipment(ctx context.Context, id string) error {
-	// Comprehensive input validation
-	validationResult := validation.ValidateID(id)
-	if !validationResult.Valid {
-		var errorMessages []string
-		for _, err := range validationResult.Errors {
-			errorMessages = append(errorMessages, fmt.Sprintf("  • %s", err.Message))
-		}
-		return fmt.Errorf("invalid equipment ID:\n%s", strings.Join(errorMessages, "\n"))
-	}
+// CRUD functions removed - now in separate command files
 
-	// Sanitize input
-	sanitizedID := validation.SanitizeString(id)
-
-	// Create building service
-	// buildingService := services.NewBuildingService(dbConn) // Placeholder - using DI container
-
-	// Get existing equipment
-	existing, err := buildingService.GetEquipment(ctx, sanitizedID)
-	if err != nil {
-		return fmt.Errorf("failed to get equipment %s: %w", sanitizedID, err)
-	}
-
-	// For now, just update a basic field to show the equipment was "updated"
-	// In a full implementation, this would accept parameters for what to update
-	existing.Status = "updated"
-
-	// Update the equipment
-	if err := buildingService.UpdateEquipment(ctx, existing); err != nil {
-		return fmt.Errorf("failed to update equipment %s: %w", id, err)
-	}
-
-	logger.Info("Successfully updated equipment: %s", id)
-	return nil
-}
-
-func updateRoom(ctx context.Context, id string) error {
-	// Comprehensive input validation
-	validationResult := validation.ValidateID(id)
-	if !validationResult.Valid {
-		var errorMessages []string
-		for _, err := range validationResult.Errors {
-			errorMessages = append(errorMessages, fmt.Sprintf("  • %s", err.Message))
-		}
-		return fmt.Errorf("invalid room ID:\n%s", strings.Join(errorMessages, "\n"))
-	}
-
-	// Sanitize input
-	sanitizedID := validation.SanitizeString(id)
-
-	// Create building service
-	// buildingService := services.NewBuildingService(dbConn) // Placeholder - using DI container
-
-	// Get existing room
-	existing, err := buildingService.GetRoom(ctx, sanitizedID)
-	if err != nil {
-		return fmt.Errorf("failed to get room %s: %w", sanitizedID, err)
-	}
-
-	// For now, just update a basic field to show the room was "updated"
-	// In a full implementation, this would accept parameters for what to update
-	// Note: Room model doesn't have many mutable fields, so we'll just log the update
-
-	// Update the room
-	if err := buildingService.UpdateRoom(ctx, existing); err != nil {
-		return fmt.Errorf("failed to update room %s: %w", id, err)
-	}
-
-	logger.Info("Successfully updated room: %s", id)
-	return nil
-}
+// CRUD functions removed - now in separate command files
 
 func removeBuilding(ctx context.Context, id string) error {
 	// Comprehensive input validation
@@ -1056,17 +686,19 @@ func removeBuilding(ctx context.Context, id string) error {
 	// Sanitize input
 	sanitizedID := validation.SanitizeString(id)
 
-	// Create building service
-	// buildingService := services.NewBuildingService(dbConn) // Placeholder - using DI container
-
-	// Verify building exists before deletion
-	_, err := buildingService.GetBuilding(ctx, sanitizedID)
+	// Verify building exists before deletion using DI container
+	services := diContainer.GetServices()
+	buildingUUID, err := uuid.Parse(sanitizedID)
+	if err != nil {
+		return fmt.Errorf("invalid building ID format: %w", err)
+	}
+	_, err = services.Building.GetBuilding(ctx, buildingUUID)
 	if err != nil {
 		return fmt.Errorf("building %s not found: %w", sanitizedID, err)
 	}
 
 	// Delete the building
-	if err := buildingService.DeleteBuilding(ctx, sanitizedID); err != nil {
+	if err := services.Building.DeleteBuilding(ctx, buildingUUID); err != nil {
 		return fmt.Errorf("failed to delete building %s: %w", sanitizedID, err)
 	}
 
@@ -1074,69 +706,7 @@ func removeBuilding(ctx context.Context, id string) error {
 	return nil
 }
 
-func removeEquipment(ctx context.Context, id string) error {
-	// Comprehensive input validation
-	validationResult := validation.ValidateID(id)
-	if !validationResult.Valid {
-		var errorMessages []string
-		for _, err := range validationResult.Errors {
-			errorMessages = append(errorMessages, fmt.Sprintf("  • %s", err.Message))
-		}
-		return fmt.Errorf("invalid equipment ID:\n%s", strings.Join(errorMessages, "\n"))
-	}
-
-	// Sanitize input
-	sanitizedID := validation.SanitizeString(id)
-
-	// Create building service
-	// buildingService := services.NewBuildingService(dbConn) // Placeholder - using DI container
-
-	// Verify equipment exists before deletion
-	_, err := buildingService.GetEquipment(ctx, sanitizedID)
-	if err != nil {
-		return fmt.Errorf("equipment %s not found: %w", sanitizedID, err)
-	}
-
-	// Delete the equipment
-	if err := buildingService.DeleteEquipment(ctx, sanitizedID); err != nil {
-		return fmt.Errorf("failed to delete equipment %s: %w", sanitizedID, err)
-	}
-
-	logger.Info("Successfully deleted equipment: %s", sanitizedID)
-	return nil
-}
-
-func removeRoom(ctx context.Context, id string) error {
-	// Comprehensive input validation
-	validationResult := validation.ValidateID(id)
-	if !validationResult.Valid {
-		var errorMessages []string
-		for _, err := range validationResult.Errors {
-			errorMessages = append(errorMessages, fmt.Sprintf("  • %s", err.Message))
-		}
-		return fmt.Errorf("invalid room ID:\n%s", strings.Join(errorMessages, "\n"))
-	}
-
-	// Sanitize input
-	sanitizedID := validation.SanitizeString(id)
-
-	// Create building service
-	// buildingService := services.NewBuildingService(dbConn) // Placeholder - using DI container
-
-	// Verify room exists before deletion
-	_, err := buildingService.GetRoom(ctx, sanitizedID)
-	if err != nil {
-		return fmt.Errorf("room %s not found: %w", sanitizedID, err)
-	}
-
-	// Delete the room
-	if err := buildingService.DeleteRoom(ctx, sanitizedID); err != nil {
-		return fmt.Errorf("failed to delete room %s: %w", sanitizedID, err)
-	}
-
-	logger.Info("Successfully deleted room: %s", sanitizedID)
-	return nil
-}
+// CRUD functions removed - now in separate command files
 
 func traceConnections(ctx context.Context, path string) ([]Connection, error) {
 	// Comprehensive input validation
@@ -1152,9 +722,9 @@ func traceConnections(ctx context.Context, path string) ([]Connection, error) {
 	// Sanitize input
 	sanitizedPath := validation.SanitizeString(path)
 
-	// Create building service to access equipment data
-	// buildingService := services.NewBuildingService(dbConn) // Placeholder - using DI container
-	_ = buildingService // Suppress unused variable warning for now
+	// Access equipment data using DI container
+	services := diContainer.GetServices()
+	_ = services // Suppress unused variable warning for now
 
 	// For now, return a basic implementation
 	// In a full implementation, this would trace connections between equipment
@@ -1345,13 +915,20 @@ func runSimulation(ctx context.Context, buildingID, simType string) (map[string]
 	sanitizedBuildingID := validation.SanitizeString(buildingID)
 	sanitizedSimType := validation.SanitizeString(simType)
 
-	// Create building service to verify building exists
-	// buildingService := services.NewBuildingService(dbConn) // Placeholder - using DI container
+	// Get services from DI container
+	services := diContainer.GetServices()
 
 	// Verify building exists
-	_, err := buildingService.GetBuilding(ctx, sanitizedBuildingID)
+	buildingUUID, err := uuid.Parse(sanitizedBuildingID)
 	if err != nil {
-		return nil, fmt.Errorf("building %s not found: %w", sanitizedBuildingID, err)
+		return nil, fmt.Errorf("invalid building ID format: %w", err)
+	}
+	_, err = services.Building.GetBuilding(ctx, buildingUUID)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, errors.New(errors.CodeNotFound, fmt.Sprintf("building %s not found", sanitizedBuildingID))
+		}
+		return nil, errors.Wrap(err, errors.CodeDatabase, "failed to get building")
 	}
 
 	// Basic simulation implementation
@@ -1379,11 +956,13 @@ func syncData(ctx context.Context) error {
 	// sources, databases, or systems
 	logger.Info("Starting data synchronization")
 
-	// Create building service to access data
-	// buildingService := services.NewBuildingService(dbConn) // Placeholder - using DI container
-
-	// Get all buildings to sync
-	buildings, err := buildingService.ListBuildings(ctx) // Placeholder - using DI container
+	// Get all buildings to sync using DI container
+	services := diContainer.GetServices()
+	listReq := building.ListBuildingsRequest{
+		Limit:  100,
+		Offset: 0,
+	}
+	buildings, err := services.Building.ListBuildings(ctx, listReq)
 	if err != nil {
 		return fmt.Errorf("failed to list buildings for sync: %w", err)
 	}

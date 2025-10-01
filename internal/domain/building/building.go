@@ -37,17 +37,6 @@ type Building struct {
 	UpdatedAt time.Time              `json:"updated_at" db:"updated_at"`
 }
 
-// Repository defines the interface for building data access following Clean Architecture principles
-type Repository interface {
-	Create(ctx context.Context, building *Building) error
-	GetByID(ctx context.Context, id uuid.UUID) (*Building, error)
-	GetByArxosID(ctx context.Context, arxosID string) (*Building, error)
-	Update(ctx context.Context, building *Building) error
-	Delete(ctx context.Context, id uuid.UUID) error
-	List(ctx context.Context, limit, offset int) ([]*Building, error)
-	Search(ctx context.Context, query string) ([]*Building, error)
-}
-
 // Service defines the interface for building business logic following Clean Architecture principles
 type Service interface {
 	CreateBuilding(ctx context.Context, req CreateBuildingRequest) (*Building, error)
@@ -59,7 +48,7 @@ type Service interface {
 	SearchBuildings(ctx context.Context, query string) ([]*Building, error)
 }
 
-// CreateBuildingRequest represents a request to create a building
+// Request types
 type CreateBuildingRequest struct {
 	ArxosID  string                 `json:"arxos_id" validate:"required"`
 	Name     string                 `json:"name" validate:"required"`
@@ -69,7 +58,6 @@ type CreateBuildingRequest struct {
 	Metadata map[string]interface{} `json:"metadata"`
 }
 
-// UpdateBuildingRequest represents a request to update a building
 type UpdateBuildingRequest struct {
 	Name     *string                `json:"name,omitempty"`
 	Address  *string                `json:"address,omitempty"`
@@ -78,16 +66,25 @@ type UpdateBuildingRequest struct {
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
-// ListBuildingsRequest represents a request to list buildings
 type ListBuildingsRequest struct {
 	Limit  int `json:"limit" validate:"min=1,max=100"`
 	Offset int `json:"offset" validate:"min=0"`
 }
 
+// SetCreatedAt sets the created at timestamp
+func (b *Building) SetCreatedAt() {
+	b.CreatedAt = time.Now()
+}
+
+// SetUpdatedAt sets the updated at timestamp
+func (b *Building) SetUpdatedAt() {
+	b.UpdatedAt = time.Now()
+}
+
 // Validate validates the building entity
 func (b *Building) Validate() error {
 	if b.ArxosID == "" {
-		return errors.New("arxos_id is required")
+		return ErrInvalidID
 	}
 	if b.Name == "" {
 		return errors.New("name is required")
@@ -95,14 +92,12 @@ func (b *Building) Validate() error {
 	return nil
 }
 
-// SetUpdatedAt updates the UpdatedAt timestamp
-func (b *Building) SetUpdatedAt() {
-	b.UpdatedAt = time.Now()
-}
-
-// SetCreatedAt sets the CreatedAt timestamp
-func (b *Building) SetCreatedAt() {
-	now := time.Now()
-	b.CreatedAt = now
-	b.UpdatedAt = now
+// NewBuilding creates a new building with default values
+func NewBuilding(arxosID, name string) *Building {
+	return &Building{
+		ID:       uuid.New(),
+		ArxosID:  arxosID,
+		Name:     name,
+		Metadata: make(map[string]interface{}),
+	}
 }

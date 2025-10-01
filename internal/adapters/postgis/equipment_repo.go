@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/arx-os/arxos/internal/domain/equipment"
 	"github.com/google/uuid"
-	"github.com/arx-os/arxos/internal/core/equipment"
 )
 
 // EquipmentRepository implements the equipment.Repository interface using PostGIS

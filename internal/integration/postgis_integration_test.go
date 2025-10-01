@@ -10,9 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/arx-os/arxos/internal/adapters/postgis"
-	"github.com/arx-os/arxos/internal/core/building"
-	"github.com/arx-os/arxos/internal/core/equipment"
-	"github.com/arx-os/arxos/internal/core/spatial"
+	"github.com/arx-os/arxos/internal/domain/building"
+	"github.com/arx-os/arxos/internal/domain/equipment"
+	"github.com/arx-os/arxos/internal/domain/spatial"
 )
 
 // TestPostGISIntegration tests the complete PostGIS integration

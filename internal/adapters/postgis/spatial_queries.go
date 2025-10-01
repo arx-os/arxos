@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/arx-os/arxos/internal/core/spatial"
+	"github.com/arx-os/arxos/internal/domain/spatial"
 )
 
 // SpatialQueries provides PostGIS spatial query operations

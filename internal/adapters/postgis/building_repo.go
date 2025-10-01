@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/arx-os/arxos/internal/domain/building"
 	"github.com/google/uuid"
-	"github.com/arx-os/arxos/internal/core/building"
 )
 
 // BuildingRepository implements the building.Repository interface using PostGIS

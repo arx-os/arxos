@@ -425,9 +425,7 @@ POSTGIS_PASSWORD=secret go test -tags=integration ./...
 
 ### Module Documentation
 - **[Analytics Engine](internal/analytics/README.md)** - Energy optimization, predictive analytics, and reporting
-- **[IT Asset Management](internal/it/README.md)** - IT infrastructure management and configuration
-- **[Workflow Automation](internal/workflow/README.md)** - n8n integration and workflow management
-- **[CMMS/CAFM Features](internal/facility/README.md)** - Facility and maintenance management
+- **[BuildingOps](internal/buildingops/)** - Unified building operations management (facility + IT infrastructure)
 - **[Hardware Platform](internal/hardware/README.md)** - IoT device management and certification
 
 ### Development

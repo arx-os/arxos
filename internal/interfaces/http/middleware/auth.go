@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/arx-os/arxos/internal/common/logger"
+	"gorm.io/gorm/logger"
 )
 
 // contextKey is a custom type for context keys to avoid collisions

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/interfaces/http/types"
+	"gorm.io/gorm/logger"
 )
 
 // BaseHandler provides common functionality for HTTP handlers

@@ -1,2 +1,0 @@
--- Initial migration placeholder
--- Actual schema is managed by PostGIS initialization

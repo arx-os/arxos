@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/arx-os/arxos/internal/common/logger"
+	"gorm.io/gorm/logger"
 )
 
 // RateLimiter provides rate limiting functionality

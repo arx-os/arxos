@@ -7,19 +7,19 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/arx-os/arxos/internal/application/services"
 	"github.com/arx-os/arxos/internal/interfaces/http/models"
 	"github.com/arx-os/arxos/internal/interfaces/http/types"
+	"github.com/arx-os/arxos/internal/usecase"
 )
 
 // OrganizationHandler handles organization-related HTTP requests
 type OrganizationHandler struct {
 	*BaseHandler
-	organizationService *services.OrganizationApplicationService
+	organizationService *usecase.OrganizationUseCase
 }
 
 // NewOrganizationHandler creates a new organization handler
-func NewOrganizationHandler(server *types.Server, organizationService *services.OrganizationApplicationService) *OrganizationHandler {
+func NewOrganizationHandler(server *types.Server, organizationService *usecase.OrganizationUseCase) *OrganizationHandler {
 	return &OrganizationHandler{
 		BaseHandler:         NewBaseHandler(server),
 		organizationService: organizationService,

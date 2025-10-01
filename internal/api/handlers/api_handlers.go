@@ -102,10 +102,10 @@ func (h *APIHandler) HandleListBuildings(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Convert to response format
-	buildingResponses := make([]models.BuildingResponse, len(buildings))
-	for i, building := range buildings {
+	buildingResponses := make([]*models.BuildingResponse, 0, len(buildings))
+	for _, building := range buildings {
 		if b, ok := building.(*domainmodels.Building); ok {
-			buildingResponses[i] = models.BuildingToResponse(b)
+			buildingResponses = append(buildingResponses, models.BuildingToResponse(b))
 		}
 	}
 
@@ -328,10 +328,10 @@ func (h *APIHandler) HandleListEquipment(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Convert to response format
-	equipmentResponses := make([]models.EquipmentResponse, len(equipment))
-	for i, eq := range equipment {
+	equipmentResponses := make([]*models.EquipmentResponse, 0, len(equipment))
+	for _, eq := range equipment {
 		if e, ok := eq.(*domainmodels.Equipment); ok {
-			equipmentResponses[i] = models.EquipmentToResponse(e)
+			equipmentResponses = append(equipmentResponses, models.EquipmentToResponse(e))
 		}
 	}
 
@@ -399,8 +399,19 @@ func (h *APIHandler) HandleCreateEquipment(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Create equipment
-	equipment, err := h.server.Services.Equipment.CreateEquipment(r.Context(), req.Name, req.Type, req.BuildingID, req.RoomID, req.X, req.Y, req.Z)
+	// Create equipment location
+	var x, y, z float64
+	if req.X != nil {
+		x = *req.X
+	}
+	if req.Y != nil {
+		y = *req.Y
+	}
+	if req.Z != nil {
+		z = *req.Z
+	}
+
+	equipment, err := h.server.Services.Equipment.CreateEquipment(r.Context(), req.Name, req.Type, req.BuildingID, req.RoomID, x, y, z)
 	if err != nil {
 		h.HandleError(w, r, err, "Failed to create equipment")
 		return

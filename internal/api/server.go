@@ -12,19 +12,27 @@ import (
 	"strings"
 	"time"
 
+	"github.com/arx-os/arxos/internal/api/autocert"
+	apicache "github.com/arx-os/arxos/internal/api/cache"
+	"github.com/arx-os/arxos/internal/api/metrics"
 	"github.com/arx-os/arxos/internal/api/middleware"
 	"github.com/arx-os/arxos/internal/api/types"
+	"github.com/arx-os/arxos/internal/api/versioning"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/core/user"
 	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/internal/infra/cache"
 	"github.com/google/uuid"
 )
 
 // Config holds configuration for the API server
 type Config struct {
-	CORS      CORSConfig      `json:"cors"`
-	RateLimit RateLimitConfig `json:"rate_limit"`
-	TLS       TLSConfig       `json:"tls"`
+	CORS       CORSConfig      `json:"cors"`
+	RateLimit  RateLimitConfig `json:"rate_limit"`
+	TLS        TLSConfig       `json:"tls"`
+	Cache      CacheConfig     `json:"cache"`
+	Metrics    MetricsConfig   `json:"metrics"`
+	Versioning VersionConfig   `json:"versioning"`
 }
 
 // CORSConfig configures Cross-Origin Resource Sharing
@@ -50,7 +58,29 @@ type TLSConfig struct {
 	KeyFile         string   `json:"key_file"`
 	AutoCert        bool     `json:"auto_cert"`
 	AutoCertDomains []string `json:"auto_cert_domains"`
+	AutoCertEmail   string   `json:"auto_cert_email"`
+	AutoCertStaging bool     `json:"auto_cert_staging"`
 	MinVersion      uint16   `json:"min_version"`
+}
+
+// CacheConfig configures API response caching
+type CacheConfig struct {
+	Enabled    bool          `json:"enabled"`
+	DefaultTTL time.Duration `json:"default_ttl"`
+	Prefix     string        `json:"prefix"`
+}
+
+// MetricsConfig configures Prometheus metrics
+type MetricsConfig struct {
+	Enabled bool   `json:"enabled"`
+	Port    int    `json:"port"`
+	Path    string `json:"path"`
+}
+
+// VersionConfig configures API versioning
+type VersionConfig struct {
+	DefaultVersion string   `json:"default_version"`
+	Supported      []string `json:"supported_versions"`
 }
 
 // Server represents the API server
@@ -60,6 +90,12 @@ type Server struct {
 	services *Services
 	server   *http.Server
 	router   *http.ServeMux
+
+	// Enhancement components
+	cacheManager     *apicache.Manager
+	metricsCollector *metrics.Collector
+	autocertManager  *autocert.Manager
+	versionRegistry  *versioning.VersionRegistry
 }
 
 // Services holds all service dependencies
@@ -70,6 +106,7 @@ type Services struct {
 	Organization types.OrganizationService
 	Equipment    types.EquipmentService
 	DB           database.ExtendedDB // Extended database interface with additional operations
+	Cache        cache.Interface     // Cache service for response caching
 }
 
 // DefaultConfig returns a default API server configuration
@@ -78,7 +115,7 @@ func DefaultConfig() *Config {
 		CORS: CORSConfig{
 			AllowedOrigins: []string{"*"}, // Configurable in production
 			AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-			AllowedHeaders: []string{"Content-Type", "Authorization", "X-Request-ID"},
+			AllowedHeaders: []string{"Content-Type", "Authorization", "X-Request-ID", "X-API-Version"},
 			MaxAge:         3600,
 		},
 		RateLimit: RateLimitConfig{
@@ -90,6 +127,20 @@ func DefaultConfig() *Config {
 		TLS: TLSConfig{
 			Enabled:    false,
 			MinVersion: 0x0303, // TLS 1.2
+		},
+		Cache: CacheConfig{
+			Enabled:    true,
+			DefaultTTL: 5 * time.Minute,
+			Prefix:     "arxos:api:",
+		},
+		Metrics: MetricsConfig{
+			Enabled: true,
+			Port:    9090,
+			Path:    "/metrics",
+		},
+		Versioning: VersionConfig{
+			DefaultVersion: "v1",
+			Supported:      []string{"v1", "v2"},
 		},
 	}
 }
@@ -112,8 +163,57 @@ func NewServerWithConfig(addr string, services *Services, config *Config) *Serve
 		router:   http.NewServeMux(),
 	}
 
+	// Initialize enhancements
+	s.initializeEnhancements()
+
 	s.setupRoutes()
 	return s
+}
+
+// initializeEnhancements initializes all API enhancement components
+func (s *Server) initializeEnhancements() {
+	// 1. Initialize metrics collector
+	if s.config.Metrics.Enabled {
+		s.metricsCollector = metrics.Initialize()
+		logger.Info("Metrics collector initialized")
+	}
+
+	// 2. Initialize cache manager
+	if s.config.Cache.Enabled && s.services.Cache != nil {
+		s.cacheManager = apicache.NewManager(
+			s.services.Cache,
+			apicache.Config{
+				Enabled:    s.config.Cache.Enabled,
+				DefaultTTL: s.config.Cache.DefaultTTL,
+				Prefix:     s.config.Cache.Prefix,
+			},
+		)
+		logger.Info("API cache manager initialized with TTL: %v", s.config.Cache.DefaultTTL)
+	}
+
+	// 3. Initialize versioning registry
+	s.versionRegistry = versioning.Initialize()
+	for _, version := range s.config.Versioning.Supported {
+		logger.Info("API version %s registered", version)
+	}
+
+	// 4. Initialize autocert manager (if enabled)
+	if s.config.TLS.AutoCert {
+		autocertConfig := autocert.Config{
+			Enabled: true,
+			Domains: s.config.TLS.AutoCertDomains,
+			Email:   s.config.TLS.AutoCertEmail,
+			Staging: s.config.TLS.AutoCertStaging,
+		}
+
+		autocertManager, err := autocert.NewManager(autocertConfig)
+		if err != nil {
+			logger.Error("Failed to initialize autocert: %v", err)
+		} else {
+			s.autocertManager = autocertManager
+			logger.Info("Autocert initialized for domains: %v", s.config.TLS.AutoCertDomains)
+		}
+	}
 }
 
 // setupRoutes configures all API routes with appropriate middleware
@@ -127,6 +227,12 @@ func (s *Server) setupRoutes() {
 	// Health endpoints (minimal middleware)
 	s.router.Handle("/health", healthChain.Build(http.HandlerFunc(s.handleHealth)))
 	s.router.Handle("/ready", healthChain.Build(http.HandlerFunc(s.handleReady)))
+
+	// Metrics endpoint (if enabled)
+	if s.config.Metrics.Enabled {
+		s.router.Handle(s.config.Metrics.Path, healthChain.Build(s.handleMetrics()))
+		logger.Info("Metrics endpoint registered at %s", s.config.Metrics.Path)
+	}
 
 	// Auth endpoints (public with rate limiting)
 	s.router.Handle("/api/v1/auth/login", publicChain.Build(http.HandlerFunc(s.handleLogin)))
@@ -251,10 +357,29 @@ func (s *Server) Stop(ctx context.Context) error {
 // Health check handlers
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	s.respondJSON(w, http.StatusOK, map[string]string{
-		"status": "healthy",
-		"time":   time.Now().Format(time.RFC3339),
-	})
+	checks := make(map[string]string)
+
+	// Check database
+	if s.services.DB != nil {
+		checks["database"] = "healthy"
+	} else {
+		checks["database"] = "unavailable"
+	}
+
+	// Check cache
+	if s.services.Cache != nil {
+		checks["cache"] = "healthy"
+	} else {
+		checks["cache"] = "unavailable"
+	}
+
+	health := map[string]interface{}{
+		"status":    "healthy",
+		"version":   s.config.Versioning.DefaultVersion,
+		"timestamp": time.Now().Format(time.RFC3339),
+		"checks":    checks,
+	}
+	s.respondJSON(w, http.StatusOK, health)
 }
 
 func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {

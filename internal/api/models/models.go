@@ -71,11 +71,11 @@ type UserFilter struct {
 
 // CreateUserRequest defines the request for creating a user
 type CreateUserRequest struct {
-	Email       string   `json:"email"`
-	Password    string   `json:"password"`
-	Name        string   `json:"name"`
-	Role        string   `json:"role"`
-	OrgID       string   `json:"org_id"`
+	Email       string   `json:"email" validate:"required,email"`
+	Password    string   `json:"password" validate:"required,min=8,max=72"`
+	Name        string   `json:"name" validate:"required,min=2,max=100"`
+	Role        string   `json:"role" validate:"required,oneof=admin manager technician viewer"`
+	OrgID       string   `json:"org_id" validate:"required,uuid"`
 	Permissions []string `json:"permissions"`
 }
 

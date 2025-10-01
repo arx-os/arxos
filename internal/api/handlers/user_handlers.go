@@ -50,10 +50,10 @@ func (h *UserHandler) HandleGetUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert to response format
-	userResponses := make([]models.UserResponse, len(users))
-	for i, user := range users {
+	userResponses := make([]*models.UserResponse, 0, len(users))
+	for _, user := range users {
 		if u, ok := user.(*domainmodels.User); ok {
-			userResponses[i] = models.UserToResponse(u)
+			userResponses = append(userResponses, models.UserToResponse(u))
 		}
 	}
 

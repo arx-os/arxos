@@ -51,10 +51,10 @@ func (h *OrganizationHandler) HandleGetOrganizations(w http.ResponseWriter, r *h
 	}
 
 	// Convert to response format
-	orgResponses := make([]models.OrganizationResponse, len(organizations))
-	for i, org := range organizations {
+	orgResponses := make([]*models.OrganizationResponse, 0, len(organizations))
+	for _, org := range organizations {
 		if o, ok := org.(*domainmodels.Organization); ok {
-			orgResponses[i] = models.OrganizationToResponse(o)
+			orgResponses = append(orgResponses, models.OrganizationToResponse(o))
 		}
 	}
 

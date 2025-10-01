@@ -9,6 +9,7 @@ import (
 
 	"github.com/arx-os/arxos/internal/api/models"
 	"github.com/arx-os/arxos/internal/api/types"
+	"github.com/arx-os/arxos/internal/api/validation"
 	"github.com/arx-os/arxos/internal/common/logger"
 	domainmodels "github.com/arx-os/arxos/pkg/models"
 	"github.com/go-chi/chi/v5"
@@ -119,11 +120,9 @@ func (h *BaseHandler) ParseJSON(r *http.Request, v interface{}) error {
 	return nil
 }
 
-// ValidateRequest validates the request data
+// ValidateRequest validates the request data using go-playground/validator
 func (h *BaseHandler) ValidateRequest(data interface{}) error {
-	// This would use a validation library like go-playground/validator
-	// For now, return nil as a placeholder
-	return nil
+	return validation.ValidateStruct(data)
 }
 
 // RespondJSON sends a JSON response

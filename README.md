@@ -7,7 +7,7 @@ ArxOS is the **next-generation Building Operating System** that treats buildings
 
 ## 🌟 **The Vision: Buildings as Codebases**
 
-ArxOS transforms buildings into version-controlled, queryable, and automatable systems:
+ArxOS transforms buildings into version-controlled, queryable, and automatable systems with a **unified platform experience**:
 
 ```bash
 # Traditional Building Management
@@ -15,13 +15,40 @@ ArxOS transforms buildings into version-controlled, queryable, and automatable s
 - Siloed systems that don't communicate
 - Manual processes for everything
 - No version control for building changes
+- Separate tools for CLI, web, mobile
 
-# ArxOS Building Management
-arx query /B1/3/*/HVAC/* --status failed
-arx set /B1/3/CONF-301/HVAC mode:presentation
-arx workflow trigger emergency-shutdown --building B1
-arx history /B1/3/A/301 --since "1 week ago"
+# ArxOS Building Management - ONE Install, EVERYTHING Connected
+$ brew install arxos && arx init
+✅ CLI installed
+✅ Web dashboard provisioned at https://your-org.arxos.io
+✅ Mobile app ready (scan QR to pair)
+✅ API access configured
+
+$ arx query /B1/3/*/HVAC/* --status failed
+✅ Results in terminal
+✅ Instantly visible on web dashboard
+✅ Mobile app notification sent
+
+$ arx set /B1/3/CONF-301/HVAC mode:presentation
+✅ Equipment controlled
+✅ Change synced to cloud
+✅ Visible everywhere: CLI, Web, Mobile, API
 ```
+
+### **🚀 The Game-Changing Difference**
+
+Unlike Git (CLI) ≠ GitHub (web), ArxOS gives you **everything in one install**:
+
+| What You Get | Traditional Tools | ArxOS |
+|--------------|-------------------|-------|
+| **CLI Tool** | ✅ Separate install | ✅ One install |
+| **Web Dashboard** | ❌ Separate sign-up | ✅ Auto-provisioned |
+| **Mobile App** | ❌ Separate app | ✅ Auto-paired |
+| **Cloud Sync** | ❌ Manual setup | ✅ Automatic |
+| **Team Access** | ❌ Manual invites | ✅ One command |
+| **API Keys** | ❌ Generate manually | ✅ Auto-configured |
+
+**Result**: Install once, access everywhere. Work in terminal, see updates on web. Add equipment on mobile, query in CLI. **Seamless.**
 
 ## 🏗️ **Three-Tier Ecosystem Architecture**
 
@@ -134,45 +161,82 @@ Just as Git became the standard because it was free and powerful, ArxOS follows 
 - **Open architecture** - no vendor lock-in
 - **Network effects** - more users → better platform → more users
 
-## 🚀 Quick Start
+## 🚀 Quick Start - The Unified Experience
 
-### Prerequisites
+### **The ArxOS Advantage: One Install = Complete Platform**
 
-ArxOS requires PostgreSQL with PostGIS extension:
+Unlike Git (CLI) and GitHub (web) being separate, **ArxOS owns everything**. One install gives you CLI + Web + Mobile + API access instantly.
 
-```bash
-# Using Docker (recommended)
-docker run -d --name arxos-db \
-  -e POSTGRES_DB=arxos \
-  -e POSTGRES_USER=arxos \
-  -e POSTGRES_PASSWORD=secret \
-  -p 5432:5432 \
-  postgis/postgis:16-3.4
-
-# Or install locally
-sudo apt install postgresql postgis
-```
-
-### Installation
+### **Installation**
 
 ```bash
-# Clone and build
-git clone https://github.com/arx-os/arxos.git
-cd arxos
-go build -o arx ./cmd/arx
+# Install ArxOS
+brew install arxos
+# OR: go install github.com/arx-os/arxos/cmd/arx@latest
 
-# Set environment variables
-export POSTGIS_HOST=localhost
-export POSTGIS_PORT=5432
-export POSTGIS_DB=arxos
-export POSTGIS_USER=arxos
-export POSTGIS_PASSWORD=secret
-
-# Initialize database
-arx init
+# That's it! Now initialize your platform...
 ```
 
-### Basic Usage
+### **First-Time Setup**
+
+```bash
+$ arx init
+
+╔═══════════════════════════════════════════════════════════╗
+║              Welcome to ArxOS! 🏗️                         ║
+╚═══════════════════════════════════════════════════════════╝
+
+ArxOS can run locally OR sync with ArxOS Cloud for:
+  • 🌐 Web dashboard - manage buildings from anywhere
+  • 📱 Mobile app - AR equipment tracking in the field
+  • 👥 Team collaboration - share access with your team
+  • ☁️  Automatic backups - never lose data
+  • 📊 Advanced analytics - energy optimization, insights
+
+Choose your deployment mode:
+  1. Cloud-First (recommended for teams)
+  2. Hybrid (local database + cloud sync)
+  3. Local-Only (no cloud, privacy-focused)
+> 1
+
+Create your FREE ArxOS Cloud account:
+Email: you@company.com
+Password: ********
+Organization name: Acme Buildings Inc.
+Choose subdomain: acme-buildings
+  └─ Your web dashboard: https://acme-buildings.arxos.io
+
+Initializing your platform...
+✅ ArxOS Cloud account created
+✅ Web dashboard provisioned at https://acme-buildings.arxos.io
+✅ Local cache initialized (~/.arxos/)
+✅ API access configured
+✅ Sync enabled (every 5 minutes)
+✅ Mobile app pairing ready
+
+Mobile App Setup:
+┌─────────────────┐
+│  █████████████  │
+│  ██ ▄▄▄▄▄ ██    │  1. Download ArxOS app
+│  ██ █   █ ██    │  2. Scan this QR code
+│  ██ █▄▄▄█ ██    │  3. Instant access!
+└─────────────────┘
+
+🎉 Your complete building management platform is ready!
+
+Access your buildings via:
+  • Terminal: arx query /B1/3/*/HVAC
+  • Web: https://acme-buildings.arxos.io
+  • Mobile: ArxOS app (iOS/Android)
+  • API: https://api.arxos.io (auto-authenticated)
+
+Next steps:
+  • Import your first building: arx import building.ifc
+  • Invite team members: arx team invite user@company.com
+  • Explore features: arx help
+```
+
+### **Your First Building**
 
 ```bash
 # Query operations (read sensors, check status)

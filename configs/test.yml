@@ -26,7 +26,7 @@ postgis:
 # Database common settings
 database:
   type: "${ARX_DB_TYPE:-postgis}"  # Use PostGIS for tests
-  migrations_path: "./migrations"
+  migrations_path: "./internal/migrations"
   auto_migrate: true
   log_queries: false
   transaction_mode: true  # Wrap each test in transaction

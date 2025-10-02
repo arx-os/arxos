@@ -7,18 +7,21 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/interfaces/http/models"
 	"github.com/arx-os/arxos/internal/interfaces/http/types"
+	"github.com/arx-os/arxos/internal/usecase"
+	pkgmodels "github.com/arx-os/arxos/pkg/models"
 )
 
 // UserHandler handles user-related HTTP requests
 type UserHandler struct {
 	*BaseHandler
-	userService *services.UserApplicationService
+	userService *usecase.UserUseCase
 }
 
 // NewUserHandler creates a new user handler
-func NewUserHandler(server *types.Server, userService *services.UserApplicationService) *UserHandler {
+func NewUserHandler(server *types.Server, userService *usecase.UserUseCase) *UserHandler {
 	return &UserHandler{
 		BaseHandler: NewBaseHandler(server),
 		userService: userService,
@@ -36,21 +39,41 @@ func (h *UserHandler) HandleGetUsers(w http.ResponseWriter, r *http.Request) {
 	limit, offset := h.parsePagination(r)
 
 	// Parse filters
-	filter := models.UserFilter{
-		Role: r.URL.Query().Get("role"),
+	roleStr := r.URL.Query().Get("role")
+	var role *string
+	if roleStr != "" {
+		role = &roleStr
+	}
+
+	filter := &domain.UserFilter{
+		Role: role,
 	}
 
 	// Get users from service
-	users, err := h.userService.ListUsers(r.Context(), filter, limit, offset)
+	users, err := h.userService.ListUsers(r.Context(), filter)
 	if err != nil {
 		h.HandleError(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
+	// Convert domain users to HTTP models
+	var userModels []*pkgmodels.User
+	for _, user := range users {
+		userModels = append(userModels, &pkgmodels.User{
+			ID:        user.ID,
+			Email:     user.Email,
+			FullName:  user.Name,
+			Role:      user.Role,
+			IsActive:  user.Active,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
+		})
+	}
+
 	// Convert to response format
 	response := models.UserListResponse{
-		Users:  users,
-		Total:  len(users), // This should come from the service
+		Users:  userModels,
+		Total:  len(userModels), // This should come from the service
 		Limit:  limit,
 		Offset: offset,
 	}
@@ -102,8 +125,15 @@ func (h *UserHandler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Convert HTTP model to domain model
+	domainReq := &domain.CreateUserRequest{
+		Email: req.Email,
+		Name:  req.Name,
+		Role:  req.Role,
+	}
+
 	// Create user through service
-	user, err := h.userService.CreateUser(r.Context(), req)
+	user, err := h.userService.CreateUser(r.Context(), domainReq)
 	if err != nil {
 		h.HandleError(w, r, err, http.StatusInternalServerError)
 		return
@@ -133,8 +163,15 @@ func (h *UserHandler) HandleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Convert HTTP model to domain model
+	domainReq := &domain.UpdateUserRequest{
+		ID:   userID,
+		Name: req.Name,
+		Role: req.Role,
+	}
+
 	// Update user through service
-	user, err := h.userService.UpdateUser(r.Context(), userID, req)
+	user, err := h.userService.UpdateUser(r.Context(), domainReq)
 	if err != nil {
 		h.HandleError(w, r, err, http.StatusInternalServerError)
 		return

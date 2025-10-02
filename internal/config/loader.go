@@ -152,7 +152,7 @@ func (cl *ConfigLoader) getDefaultConfig() *Config {
 			MaxIdleConns:    5,
 			ConnLifetime:    3600 * time.Second,
 			ConnMaxLifetime: 3600 * time.Second,
-			MigrationsPath:  "./migrations",
+			MigrationsPath:  "./internal/migrations",
 			AutoMigrate:     true,
 		},
 		PostGIS: PostGISConfig{

@@ -161,7 +161,7 @@ func (ds *DaemonService) processLoop() {
 }
 
 // processFile processes a file change event
-func (ds *DaemonService) processFile(event *FileEvent) error {
+func (ds *DaemonService) processFile(event *domain.FileEvent) error {
 	// Determine file format
 	format := ds.detectFileFormat(event.Path)
 	if format == "" {
@@ -203,7 +203,7 @@ func (ds *DaemonService) detectFileFormat(path string) string {
 }
 
 // processImport processes file import
-func (ds *DaemonService) processImport(event *FileEvent, format string) error {
+func (ds *DaemonService) processImport(event *domain.FileEvent, format string) error {
 	ds.logger.Info("Processing file import", "path", event.Path, "format", format)
 
 	// Read file data
@@ -219,6 +219,8 @@ func (ds *DaemonService) processImport(event *FileEvent, format string) error {
 	}
 
 	// Import building (this would call the use case)
+	// TODO: Implement actual import logic when building use case is available
+	_ = req // Prevent unused variable error
 	// building, err := ds.buildingUC.ImportBuilding(ds.ctx, req)
 	// if err != nil {
 	//     return fmt.Errorf("failed to import building: %w", err)
@@ -229,7 +231,7 @@ func (ds *DaemonService) processImport(event *FileEvent, format string) error {
 }
 
 // processExport processes file export
-func (ds *DaemonService) processExport(event *FileEvent, format string) error {
+func (ds *DaemonService) processExport(event *domain.FileEvent, format string) error {
 	ds.logger.Info("Processing file export", "path", event.Path, "format", format)
 
 	// Extract building ID from path or metadata
@@ -254,7 +256,7 @@ func (ds *DaemonService) processExport(event *FileEvent, format string) error {
 }
 
 // processSync processes file synchronization
-func (ds *DaemonService) processSync(event *FileEvent, format string) error {
+func (ds *DaemonService) processSync(event *domain.FileEvent, format string) error {
 	ds.logger.Info("Processing file sync", "path", event.Path, "format", format)
 
 	// Determine sync direction and perform sync
@@ -265,7 +267,7 @@ func (ds *DaemonService) processSync(event *FileEvent, format string) error {
 }
 
 // processWatch processes file watching (monitoring only)
-func (ds *DaemonService) processWatch(event *FileEvent, format string) error {
+func (ds *DaemonService) processWatch(event *domain.FileEvent, format string) error {
 	ds.logger.Info("Processing file watch", "path", event.Path, "format", format)
 
 	// Just log the change, don't process

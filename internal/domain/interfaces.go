@@ -3,6 +3,8 @@ package domain
 import (
 	"context"
 	"time"
+
+	"github.com/arx-os/arxos/internal/domain/building"
 )
 
 // Repository interfaces define the contract for data access following Clean Architecture
@@ -87,7 +89,30 @@ type EquipmentService interface {
 	DeleteEquipment(ctx context.Context, id string) error
 	ListEquipment(ctx context.Context, filter *EquipmentFilter) ([]*Equipment, error)
 	MoveEquipment(ctx context.Context, id string, newLocation *Location) error
-	GetEquipmentByBuilding(ctx context.Context, buildingID string) ([]*Equipment, error)
+}
+
+// BuildingRepositoryService defines the contract for building repository business operations
+// This is the main service for the "Git of Buildings" concept
+type BuildingRepositoryService interface {
+	// Repository management
+	CreateRepository(ctx context.Context, req *building.CreateRepositoryRequest) (*building.BuildingRepository, error)
+	GetRepository(ctx context.Context, id string) (*building.BuildingRepository, error)
+	UpdateRepository(ctx context.Context, id string, req *building.UpdateRepositoryRequest) error
+	DeleteRepository(ctx context.Context, id string) error
+	ListRepositories(ctx context.Context) ([]*building.BuildingRepository, error)
+
+	// IFC import (PRIMARY FORMAT)
+	ImportIFC(ctx context.Context, repoID string, ifcData []byte) (*building.IFCImportResult, error)
+
+	// Repository validation
+	ValidateRepository(ctx context.Context, repoID string) (*building.ValidationResult, error)
+
+	// Version control
+	CreateVersion(ctx context.Context, repoID string, message string) (*building.Version, error)
+	GetVersion(ctx context.Context, repoID string, version string) (*building.Version, error)
+	ListVersions(ctx context.Context, repoID string) ([]building.Version, error)
+	CompareVersions(ctx context.Context, repoID string, v1, v2 string) (*building.VersionDiff, error)
+	RollbackVersion(ctx context.Context, repoID string, version string) error
 }
 
 // OrganizationService defines the contract for organization business operations

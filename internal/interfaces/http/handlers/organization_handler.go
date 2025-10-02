@@ -7,9 +7,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/interfaces/http/models"
 	"github.com/arx-os/arxos/internal/interfaces/http/types"
 	"github.com/arx-os/arxos/internal/usecase"
+	pkgmodels "github.com/arx-os/arxos/pkg/models"
 )
 
 // OrganizationHandler handles organization-related HTTP requests
@@ -37,22 +39,49 @@ func (h *OrganizationHandler) HandleGetOrganizations(w http.ResponseWriter, r *h
 	limit, offset := h.parsePagination(r)
 
 	// Parse filters
-	filter := models.OrganizationFilter{
-		Plan:   r.URL.Query().Get("plan"),
-		Active: h.parseBoolQuery(r.URL.Query().Get("active")),
+	activeStr := r.URL.Query().Get("active")
+	var active *bool
+	if activeStr != "" {
+		activeVal := activeStr == "true"
+		active = &activeVal
+	}
+
+	planStr := r.URL.Query().Get("plan")
+	var plan *string
+	if planStr != "" {
+		plan = &planStr
+	}
+
+	filter := &domain.OrganizationFilter{
+		Plan:   plan,
+		Active: active,
 	}
 
 	// Get organizations through the service
-	organizations, err := h.organizationService.ListOrganizations(r.Context(), filter, limit, offset)
+	organizations, err := h.organizationService.ListOrganizations(r.Context(), filter)
 	if err != nil {
 		h.HandleError(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
+	// Convert domain organizations to HTTP models
+	var orgModels []*pkgmodels.Organization
+	for _, org := range organizations {
+		orgModels = append(orgModels, &pkgmodels.Organization{
+			ID:          org.ID,
+			Name:        org.Name,
+			Description: org.Description,
+			Plan:        pkgmodels.Plan(org.Plan),
+			IsActive:    org.Active,
+			CreatedAt:   org.CreatedAt,
+			UpdatedAt:   org.UpdatedAt,
+		})
+	}
+
 	// Convert to response format
 	response := models.OrganizationListResponse{
-		Organizations: organizations,
-		Total:         len(organizations), // This should come from the service
+		Organizations: orgModels,
+		Total:         len(orgModels), // This should come from the service
 		Limit:         limit,
 		Offset:        offset,
 	}
@@ -104,8 +133,15 @@ func (h *OrganizationHandler) HandleCreateOrganization(w http.ResponseWriter, r 
 		return
 	}
 
+	// Convert HTTP model to domain model
+	domainReq := &domain.CreateOrganizationRequest{
+		Name:        req.Name,
+		Description: req.Description,
+		Plan:        req.Plan,
+	}
+
 	// Create organization through service
-	organization, err := h.organizationService.CreateOrganization(r.Context(), req)
+	organization, err := h.organizationService.CreateOrganization(r.Context(), domainReq)
 	if err != nil {
 		h.HandleError(w, r, err, http.StatusInternalServerError)
 		return
@@ -135,8 +171,17 @@ func (h *OrganizationHandler) HandleUpdateOrganization(w http.ResponseWriter, r 
 		return
 	}
 
+	// Convert HTTP model to domain model
+	domainReq := &domain.UpdateOrganizationRequest{
+		ID:          orgID,
+		Name:        req.Name,
+		Description: req.Description,
+		Plan:        req.Plan,
+		Active:      req.IsActive,
+	}
+
 	// Update organization through service
-	organization, err := h.organizationService.UpdateOrganization(r.Context(), orgID, req)
+	organization, err := h.organizationService.UpdateOrganization(r.Context(), domainReq)
 	if err != nil {
 		h.HandleError(w, r, err, http.StatusInternalServerError)
 		return
@@ -186,16 +231,30 @@ func (h *OrganizationHandler) HandleGetOrganizationUsers(w http.ResponseWriter, 
 	limit, offset := h.parsePagination(r)
 
 	// Get organization users through service
-	users, err := h.organizationService.GetOrganizationUsers(r.Context(), orgID, limit, offset)
+	users, err := h.organizationService.GetOrganizationUsers(r.Context(), orgID)
 	if err != nil {
 		h.HandleError(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
+	// Convert domain users to HTTP models
+	var userModels []*pkgmodels.User
+	for _, user := range users {
+		userModels = append(userModels, &pkgmodels.User{
+			ID:        user.ID,
+			Email:     user.Email,
+			FullName:  user.Name,
+			Role:      user.Role,
+			IsActive:  user.Active,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
+		})
+	}
+
 	// Convert to response format
 	response := models.OrganizationUsersResponse{
-		Users:  users,
-		Total:  len(users), // This should come from the service
+		Users:  userModels,
+		Total:  len(userModels), // This should come from the service
 		Limit:  limit,
 		Offset: offset,
 	}

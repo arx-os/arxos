@@ -53,7 +53,7 @@ func (uc *BuildingOpsUseCase) SetBuildingMode(ctx context.Context, req *domain.S
 	uc.logger.Info("Setting building mode", "building_id", req.BuildingID, "mode", req.Mode)
 
 	// Get building
-	building, err := uc.buildingRepo.GetByID(ctx, req.BuildingID)
+	_, err := uc.buildingRepo.GetByID(ctx, req.BuildingID)
 	if err != nil {
 		return fmt.Errorf("building not found: %w", err)
 	}

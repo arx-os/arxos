@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"gorm.io/gorm/logger"
 )
 
 // Mode represents the operational mode of ArxOS
@@ -79,11 +77,23 @@ type StorageConfig struct {
 	CloudPrefix string            `json:"cloud_prefix"`
 	Credentials map[string]string `json:"-"` // Sensitive, not serialized
 
+	// Data directory configuration
+	Data DataConfig `json:"data"`
+
 	// S3-specific configuration
 	S3 S3Config `json:"s3,omitempty"`
 
 	// Azure-specific configuration
 	Azure AzureConfig `json:"azure,omitempty"`
+}
+
+// DataConfig defines data directory configuration for building repositories
+type DataConfig struct {
+	BasePath        string `json:"base_path"`        // Base directory for all ArxOS data
+	RepositoriesDir string `json:"repositories_dir"` // Subdirectory for building repositories
+	CacheDir        string `json:"cache_dir"`        // Subdirectory for cache data
+	LogsDir         string `json:"logs_dir"`         // Subdirectory for log files
+	TempDir         string `json:"temp_dir"`         // Subdirectory for temporary files
 }
 
 // S3Config contains S3-specific configuration
@@ -298,6 +308,13 @@ func Default() *Config {
 		Storage: StorageConfig{
 			Backend:   "local",
 			LocalPath: filepath.Join(homeDir, ".arxos", "data"),
+			Data: DataConfig{
+				BasePath:        filepath.Join(homeDir, ".arxos"),
+				RepositoriesDir: "repositories",
+				CacheDir:        "cache",
+				LogsDir:         "logs",
+				TempDir:         "temp",
+			},
 		},
 
 		API: APIConfig{
@@ -343,7 +360,7 @@ func Default() *Config {
 			MaxIdleConns:    5,
 			ConnLifetime:    30 * time.Minute,
 			ConnMaxLifetime: 30 * time.Minute, // Alias
-			MigrationsPath:  "./migrations",
+			MigrationsPath:  "./internal/migrations",
 			AutoMigrate:     true,
 		},
 
@@ -396,7 +413,7 @@ func Load(configPath string) (*Config, error) {
 	// Load from file if it exists
 	if configPath != "" {
 		if err := config.LoadFromFile(configPath); err != nil {
-			logger.Warn("Failed to load config file, using defaults: %v", err)
+			fmt.Printf("Warning: Failed to load config file, using defaults: %v\n", err)
 		}
 	}
 
@@ -457,6 +474,23 @@ func (c *Config) LoadFromEnv() {
 	}
 	if region := os.Getenv("ARXOS_STORAGE_REGION"); region != "" {
 		c.Storage.CloudRegion = region
+	}
+
+	// Data directory settings
+	if basePath := os.Getenv("ARXOS_DATA_PATH"); basePath != "" {
+		c.Storage.Data.BasePath = basePath
+	}
+	if reposDir := os.Getenv("ARXOS_REPOSITORIES_DIR"); reposDir != "" {
+		c.Storage.Data.RepositoriesDir = reposDir
+	}
+	if cacheDir := os.Getenv("ARXOS_CACHE_DIR"); cacheDir != "" {
+		c.Storage.Data.CacheDir = cacheDir
+	}
+	if logsDir := os.Getenv("ARXOS_LOGS_DIR"); logsDir != "" {
+		c.Storage.Data.LogsDir = logsDir
+	}
+	if tempDir := os.Getenv("ARXOS_TEMP_DIR"); tempDir != "" {
+		c.Storage.Data.TempDir = tempDir
 	}
 
 	// Feature flags
@@ -655,6 +689,7 @@ func (c *Config) LoadFromEnv() {
 	if paste := os.Getenv("ARXOS_TUI_ENABLE_BRACKETED_PASTE"); paste == "true" || paste == "false" {
 		c.TUI.EnableBracketedPaste = paste == "true"
 	}
+
 }
 
 // Validate checks if the configuration is valid
@@ -673,7 +708,7 @@ func (c *Config) Validate() error {
 			return fmt.Errorf("cloud URL required when cloud is enabled")
 		}
 		if c.Cloud.APIKey == "" && c.Mode == ModeCloud {
-			logger.Warn("No API key configured for cloud mode")
+			fmt.Printf("Warning: No API key configured for cloud mode\n")
 		}
 	}
 
@@ -758,6 +793,11 @@ func (c *Config) EnsureDirectories() error {
 		c.StateDir,
 		c.CacheDir,
 		c.Storage.LocalPath,
+		c.Storage.Data.BasePath,
+		filepath.Join(c.Storage.Data.BasePath, c.Storage.Data.RepositoriesDir),
+		filepath.Join(c.Storage.Data.BasePath, c.Storage.Data.CacheDir),
+		filepath.Join(c.Storage.Data.BasePath, c.Storage.Data.LogsDir),
+		filepath.Join(c.Storage.Data.BasePath, c.Storage.Data.TempDir),
 	}
 
 	for _, dir := range dirs {
@@ -850,6 +890,26 @@ func (c *Config) GetPostGISConfig() *PostGISConfig {
 	}
 }
 
+// GetRepositoriesPath returns the full path to the repositories directory
+func (c *Config) GetRepositoriesPath() string {
+	return filepath.Join(c.Storage.Data.BasePath, c.Storage.Data.RepositoriesDir)
+}
+
+// GetCachePath returns the full path to the cache directory
+func (c *Config) GetCachePath() string {
+	return filepath.Join(c.Storage.Data.BasePath, c.Storage.Data.CacheDir)
+}
+
+// GetLogsPath returns the full path to the logs directory
+func (c *Config) GetLogsPath() string {
+	return filepath.Join(c.Storage.Data.BasePath, c.Storage.Data.LogsDir)
+}
+
+// GetTempPath returns the full path to the temp directory
+func (c *Config) GetTempPath() string {
+	return filepath.Join(c.Storage.Data.BasePath, c.Storage.Data.TempDir)
+}
+
 // BuildPostGISConnectionString builds a PostgreSQL connection string from PostGIS config
 func (c *Config) BuildPostGISConnectionString() string {
 	dsn := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=%s",
@@ -866,7 +926,7 @@ func (c *Config) BuildPostGISConnectionString() string {
 
 // generateDevSecret generates a random JWT secret for development
 func generateDevSecret() string {
-	logger.Warn("Generating random JWT secret for development mode. Set ARXOS_JWT_SECRET for production.")
+	fmt.Printf("Warning: Generating random JWT secret for development mode. Set ARXOS_JWT_SECRET for production.\n")
 	// Simple dev secret (in production, this would use crypto/rand)
 	return fmt.Sprintf("dev-secret-%d", time.Now().UnixNano())
 }

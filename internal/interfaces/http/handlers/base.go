@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/arx-os/arxos/internal/interfaces/http/types"
-	"gorm.io/gorm/logger"
 )
 
 // BaseHandler provides common functionality for HTTP handlers
@@ -27,7 +27,7 @@ func (h *BaseHandler) RespondJSON(w http.ResponseWriter, statusCode int, data in
 	w.WriteHeader(statusCode)
 
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		logger.Error("Failed to encode JSON response: %v", err)
+		fmt.Printf("Failed to encode JSON response: %v\n", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -35,12 +35,12 @@ func (h *BaseHandler) RespondJSON(w http.ResponseWriter, statusCode int, data in
 
 // LogRequest logs an HTTP request
 func (h *BaseHandler) LogRequest(r *http.Request, statusCode int, duration time.Duration) {
-	logger.Info("%s %s - %d - %v", r.Method, r.URL.Path, statusCode, duration)
+	fmt.Printf("%s %s - %d - %v\n", r.Method, r.URL.Path, statusCode, duration)
 }
 
 // HandleError handles common HTTP errors
 func (h *BaseHandler) HandleError(w http.ResponseWriter, r *http.Request, err error, statusCode int) {
-	logger.Error("HTTP Error %d: %v", statusCode, err)
+	fmt.Printf("HTTP Error %d: %v\n", statusCode, err)
 	http.Error(w, err.Error(), statusCode)
 }
 

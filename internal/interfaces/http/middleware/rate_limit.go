@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"sync"
 	"time"
-
-	"gorm.io/gorm/logger"
 )
 
 // RateLimiter provides rate limiting functionality
@@ -39,7 +37,7 @@ func (rl *RateLimiter) RateLimitMiddleware(next http.Handler) http.Handler {
 		clientID := rl.getClientID(r)
 
 		if !rl.Allow(clientID) {
-			logger.Warn("Rate limit exceeded for client: %s", clientID)
+			fmt.Printf("Rate limit exceeded for client: %s\n", clientID)
 			rl.respondRateLimited(w)
 			return
 		}

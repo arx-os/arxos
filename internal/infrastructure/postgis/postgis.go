@@ -33,14 +33,20 @@ type PostGIS struct {
 
 // NewPostGIS creates a new PostGIS connection
 func NewPostGIS(config *PostGISConfig, logger domain.Logger) (*PostGIS, error) {
-	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+	dsn := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=%s",
 		config.Host,
 		config.Port,
 		config.User,
-		config.Password,
 		config.Database,
 		config.SSLMode,
 	)
+
+	// Add password only if it's not empty
+	if config.Password != "" {
+		dsn = fmt.Sprintf("%s password=%s", dsn, config.Password)
+	}
+
+	logger.Info("PostGIS connection attempt", "dsn", dsn, "host", config.Host, "port", config.Port, "user", config.User, "database", config.Database)
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {

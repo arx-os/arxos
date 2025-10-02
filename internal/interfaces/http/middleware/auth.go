@@ -2,10 +2,9 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
-
-	"gorm.io/gorm/logger"
 )
 
 // contextKey is a custom type for context keys to avoid collisions
@@ -65,7 +64,7 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 		// Extract token from request
 		token, err := m.authService.ExtractToken(r)
 		if err != nil {
-			logger.Error("Failed to extract token: %v", err)
+			fmt.Printf("Failed to extract token: %v\n", err)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -73,7 +72,7 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 		// Validate token
 		user, err := m.authService.ValidateToken(token)
 		if err != nil {
-			logger.Error("Invalid token: %v", err)
+			fmt.Printf("Invalid token: %v\n", err)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}

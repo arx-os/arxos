@@ -36,7 +36,7 @@ postgis:
 # Database common settings
 database:
   type: "${ARX_DB_TYPE:-postgis}"  # postgis only
-  migrations_path: "./migrations"
+  migrations_path: "./internal/migrations"
   auto_migrate: true
   log_queries: true
   slow_query_threshold: 100ms

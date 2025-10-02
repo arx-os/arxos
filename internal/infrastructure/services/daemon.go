@@ -218,15 +218,29 @@ func (ds *DaemonService) processImport(event *domain.FileEvent, format string) e
 		Data:   data,
 	}
 
-	// Import building (this would call the use case)
-	// TODO: Implement actual import logic when building use case is available
-	_ = req // Prevent unused variable error
-	// building, err := ds.buildingUC.ImportBuilding(ds.ctx, req)
-	// if err != nil {
-	//     return fmt.Errorf("failed to import building: %w", err)
+	// Import building using IfcOpenShell service
+	// TODO: Get IFC service from daemon configuration
+	// For now, log that we're ready for integration
+	ds.logger.Info("Processing file import",
+		"path", event.Path,
+		"format", format,
+		"size", len(data),
+		"request_format", req.Format, // Use the request to avoid unused variable
+		"status", "ready_for_ifcopenshell_integration")
+
+	// Placeholder - will be replaced with actual IfcOpenShell service call
+	// if format == "ifc" {
+	//     result, err := ds.ifcService.ParseIFC(ds.ctx, data)
+	//     if err != nil {
+	//         return fmt.Errorf("failed to parse IFC file: %w", err)
+	//     }
+	//     ds.logger.Info("IFC file parsed successfully",
+	//         "buildings", result.Buildings,
+	//         "spaces", result.Spaces,
+	//         "equipment", result.Equipment)
 	// }
 
-	ds.logger.Info("File imported successfully", "path", event.Path)
+	ds.logger.Info("File import processed successfully", "path", event.Path)
 	return nil
 }
 

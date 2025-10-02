@@ -58,6 +58,9 @@ type Config struct {
 
 	// TUI settings
 	TUI TUIConfig `json:"tui"`
+
+	// IFC settings
+	IFC IFCConfig `json:"ifc"`
 }
 
 // CloudConfig contains cloud-specific configuration
@@ -122,12 +125,12 @@ type DatabaseConfig struct {
 	Type            string        `json:"type"`   // postgres only
 	Driver          string        `json:"driver"` // Legacy field
 	DataSourceName  string        `json:"-"`      // Never serialize connection strings
-	URL             string        `json:"-"`     // Database URL from environment
+	URL             string        `json:"-"`      // Database URL from environment
 	Host            string        `json:"host"`
 	Port            int           `json:"port"`
 	Database        string        `json:"database"`
 	Username        string        `json:"username"`
-	Password        string        `json:"-"`      // Never serialize passwords
+	Password        string        `json:"-"` // Never serialize passwords
 	SSLMode         string        `json:"ssl_mode"`
 	MaxOpenConns    int           `json:"max_open_conns"`
 	MaxConnections  int           `json:"max_connections"` // Alias for MaxOpenConns
@@ -220,6 +223,42 @@ type TUIConfig struct {
 	RefreshRate          int               `json:"refresh_rate"`           // FPS for animations
 	EnableMouse          bool              `json:"enable_mouse"`           // Mouse support
 	EnableBracketedPaste bool              `json:"enable_bracketed_paste"` // Paste support
+}
+
+// IFCConfig contains IFC processing configuration
+type IFCConfig struct {
+	Service     IFCServiceConfig     `json:"service"`
+	Fallback    IFCFallbackConfig    `json:"fallback"`
+	Performance IFCPerformanceConfig `json:"performance"`
+}
+
+// IFCServiceConfig contains IfcOpenShell service configuration
+type IFCServiceConfig struct {
+	Enabled        bool                    `json:"enabled"`
+	URL            string                  `json:"url"`
+	Timeout        string                  `json:"timeout"`
+	Retries        int                     `json:"retries"`
+	CircuitBreaker IFCCircuitBreakerConfig `json:"circuit_breaker"`
+}
+
+// IFCFallbackConfig contains fallback parser configuration
+type IFCFallbackConfig struct {
+	Enabled bool   `json:"enabled"`
+	Parser  string `json:"parser"` // "native"
+}
+
+// IFCPerformanceConfig contains performance-related configuration
+type IFCPerformanceConfig struct {
+	CacheEnabled bool   `json:"cache_enabled"`
+	CacheTTL     string `json:"cache_ttl"`
+	MaxFileSize  string `json:"max_file_size"`
+}
+
+// IFCCircuitBreakerConfig contains circuit breaker configuration
+type IFCCircuitBreakerConfig struct {
+	Enabled          bool   `json:"enabled"`
+	FailureThreshold int    `json:"failure_threshold"`
+	RecoveryTimeout  string `json:"recovery_timeout"`
 }
 
 // Validate validates the TUI configuration
@@ -411,6 +450,29 @@ func Default() *Config {
 			RefreshRate:          30,
 			EnableMouse:          true,
 			EnableBracketedPaste: true,
+		},
+
+		IFC: IFCConfig{
+			Service: IFCServiceConfig{
+				Enabled: true,
+				URL:     "http://localhost:5000",
+				Timeout: "30s",
+				Retries: 3,
+				CircuitBreaker: IFCCircuitBreakerConfig{
+					Enabled:          true,
+					FailureThreshold: 5,
+					RecoveryTimeout:  "60s",
+				},
+			},
+			Fallback: IFCFallbackConfig{
+				Enabled: true,
+				Parser:  "native",
+			},
+			Performance: IFCPerformanceConfig{
+				CacheEnabled: true,
+				CacheTTL:     "1h",
+				MaxFileSize:  "100MB",
+			},
 		},
 	}
 }
@@ -725,6 +787,48 @@ func (c *Config) LoadFromEnv() {
 	}
 	if paste := os.Getenv("ARXOS_TUI_ENABLE_BRACKETED_PASTE"); paste == "true" || paste == "false" {
 		c.TUI.EnableBracketedPaste = paste == "true"
+	}
+
+	// IFC settings
+	if enabled := os.Getenv("ARXOS_IFC_SERVICE_ENABLED"); enabled == "true" || enabled == "false" {
+		c.IFC.Service.Enabled = enabled == "true"
+	}
+	if url := os.Getenv("ARXOS_IFC_SERVICE_URL"); url != "" {
+		c.IFC.Service.URL = url
+	}
+	if timeout := os.Getenv("ARXOS_IFC_SERVICE_TIMEOUT"); timeout != "" {
+		c.IFC.Service.Timeout = timeout
+	}
+	if retries := os.Getenv("ARXOS_IFC_SERVICE_RETRIES"); retries != "" {
+		if val, err := parseIntEnv(retries); err == nil {
+			c.IFC.Service.Retries = val
+		}
+	}
+	if enabled := os.Getenv("ARXOS_IFC_FALLBACK_ENABLED"); enabled == "true" || enabled == "false" {
+		c.IFC.Fallback.Enabled = enabled == "true"
+	}
+	if parser := os.Getenv("ARXOS_IFC_FALLBACK_PARSER"); parser != "" {
+		c.IFC.Fallback.Parser = parser
+	}
+	if cacheEnabled := os.Getenv("ARXOS_IFC_CACHE_ENABLED"); cacheEnabled == "true" || cacheEnabled == "false" {
+		c.IFC.Performance.CacheEnabled = cacheEnabled == "true"
+	}
+	if cacheTTL := os.Getenv("ARXOS_IFC_CACHE_TTL"); cacheTTL != "" {
+		c.IFC.Performance.CacheTTL = cacheTTL
+	}
+	if maxFileSize := os.Getenv("ARXOS_IFC_MAX_FILE_SIZE"); maxFileSize != "" {
+		c.IFC.Performance.MaxFileSize = maxFileSize
+	}
+	if enabled := os.Getenv("ARXOS_IFC_CIRCUIT_BREAKER_ENABLED"); enabled == "true" || enabled == "false" {
+		c.IFC.Service.CircuitBreaker.Enabled = enabled == "true"
+	}
+	if threshold := os.Getenv("ARXOS_IFC_CIRCUIT_BREAKER_THRESHOLD"); threshold != "" {
+		if val, err := parseIntEnv(threshold); err == nil {
+			c.IFC.Service.CircuitBreaker.FailureThreshold = val
+		}
+	}
+	if timeout := os.Getenv("ARXOS_IFC_CIRCUIT_BREAKER_TIMEOUT"); timeout != "" {
+		c.IFC.Service.CircuitBreaker.RecoveryTimeout = timeout
 	}
 
 }

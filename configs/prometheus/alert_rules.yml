@@ -1,0 +1,102 @@
+groups:
+  - name: arxos.rules
+    rules:
+      # High Error Rate Alert
+      - alert: HighErrorRate
+        expr: rate(ifc_requests_total{status="error"}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate detected"
+          description: "IFC service error rate is {{ $value }} errors per second"
+
+      # High Response Time Alert
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(ifc_request_duration_seconds_bucket[5m])) > 5
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is {{ $value }} seconds"
+
+      # Service Down Alert
+      - alert: ServiceDown
+        expr: up{job="ifcopenshell-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "IfcOpenShell service is down"
+          description: "IfcOpenShell service has been down for more than 1 minute"
+
+      # High Memory Usage Alert
+      - alert: HighMemoryUsage
+        expr: (process_resident_memory_bytes / 1024 / 1024) > 3000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value }} MB"
+
+      # Cache Hit Rate Low Alert
+      - alert: LowCacheHitRate
+        expr: (cache_hits_total / (cache_hits_total + cache_misses_total)) < 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value }}%"
+
+      # Database Connection Alert
+      - alert: DatabaseConnectionFailed
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection failed"
+          description: "PostgreSQL database is unreachable"
+
+      # Redis Connection Alert
+      - alert: RedisConnectionFailed
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis connection failed"
+          description: "Redis cache is unreachable"
+
+      # High File Processing Time Alert
+      - alert: HighFileProcessingTime
+        expr: histogram_quantile(0.99, rate(ifc_file_processing_duration_seconds_bucket[5m])) > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High file processing time"
+          description: "99th percentile file processing time is {{ $value }} seconds"
+
+      # Disk Space Alert
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space is less than 10% available"
+
+      # High CPU Usage Alert
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}%"

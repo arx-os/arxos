@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"os"
 
@@ -40,21 +42,61 @@ func CreateImportCommand(serviceContext interface{}) *cobra.Command {
 			fmt.Printf("   Format: %s\n", format)
 
 			// Read file data
-			file, err := os.Open(filePath)
+			fileData, err := os.ReadFile(filePath)
 			if err != nil {
-				return fmt.Errorf("failed to open file: %w", err)
+				return fmt.Errorf("failed to read file: %w", err)
 			}
-			defer file.Close()
 
-			// Import using the service
-			// TODO: Fix this when we resolve the import cycle
-			// For now, just show a placeholder message
-			fmt.Printf("   Note: IFC import not yet connected to services (import cycle issue)\n")
+			// Get service context for IFC processing
+			sc, ok := serviceContext.(RepositoryServiceProvider)
+			if !ok {
+				return fmt.Errorf("service context not available")
+			}
 
-			// Placeholder result
-			fmt.Printf("✅ Successfully imported: %s\n", filePath)
-			fmt.Printf("   Repository: %s\n", repoID)
-			fmt.Printf("   Format: %s\n", format)
+			// Import using the IFC service
+			if format == "ifc" {
+				fmt.Printf("   File size: %d bytes\n", len(fileData))
+				fmt.Printf("   Processing with IfcOpenShell service...\n")
+
+				// Get repository service (includes IFC processing)
+				repoService := sc.GetRepositoryService()
+
+				// Import IFC file through the complete pipeline
+				// Convert []byte to io.Reader for the service
+				reader := bytes.NewReader(fileData)
+				result, err := repoService.ImportIFC(context.Background(), repoID, reader)
+				if err != nil {
+					return fmt.Errorf("failed to import IFC file: %w", err)
+				}
+
+				// Display results using the actual IFCImportResult type
+				fmt.Printf("✅ Successfully imported: %s\n", filePath)
+				fmt.Printf("   Repository: %s\n", repoID)
+				fmt.Printf("   Format: %s\n", format)
+				fmt.Printf("   IFC File ID: %s\n", result.IFCFileID)
+				fmt.Printf("   Entities: %d\n", result.Entities)
+				fmt.Printf("   Properties: %d\n", result.Properties)
+				fmt.Printf("   Materials: %d\n", result.Materials)
+				fmt.Printf("   Classifications: %d\n", result.Classifications)
+
+				if len(result.Warnings) > 0 {
+					fmt.Printf("   Warnings: %d\n", len(result.Warnings))
+					for _, warning := range result.Warnings {
+						fmt.Printf("     ⚠️  %s\n", warning)
+					}
+				}
+
+				if len(result.Errors) > 0 {
+					fmt.Printf("   Errors: %d\n", len(result.Errors))
+					for _, error := range result.Errors {
+						fmt.Printf("     ❌ %s\n", error)
+					}
+				}
+
+			} else {
+				return fmt.Errorf("unsupported format: %s", format)
+			}
+
 			return nil
 		},
 	}

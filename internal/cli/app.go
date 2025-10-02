@@ -119,7 +119,7 @@ func (a *App) wireCommands() {
 
 	// Service commands
 	a.rootCmd.AddCommand(commands.CreateServeCommand())
-	a.rootCmd.AddCommand(commands.CreateWatchCommand())
+	a.rootCmd.AddCommand(commands.CreateWatchCommand(serviceContext))
 
 	// Utility commands
 	a.rootCmd.AddCommand(commands.CreateTraceCommand())

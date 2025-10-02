@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # ArxOS main application (development)
+  arxos-dev:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - ARXOS_MODE=local
+      - ARXOS_IFC_SERVICE_URL=http://ifcopenshell-service:5000
+      - ARXOS_IFC_SERVICE_ENABLED=true
+      - ARXOS_IFC_FALLBACK_ENABLED=true
+      - ARXOS_TUI_ENABLED=true
+      - POSTGIS_HOST=postgis
+      - POSTGIS_DATABASE=arxos
+      - POSTGIS_USER=arxos
+      - POSTGIS_PASSWORD=arxos
+    depends_on:
+      - ifcopenshell-service
+      - postgis
+    volumes:
+      - .:/app
+      - arxos-data:/app/data
+    networks:
+      - arxos-network
+    command: go run cmd/arx/main.go serve
+
+  # IfcOpenShell microservice (development)
+  ifcopenshell-service:
+    build: ./services/ifcopenshell-service
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - DEBUG=true
+      - MAX_FILE_SIZE=104857600  # 100MB
+      - CACHE_ENABLED=true
+      - CACHE_TTL=3600
+    volumes:
+      - ./services/ifcopenshell-service:/app
+      - ifc-cache:/app/cache
+    networks:
+      - arxos-network
+    command: python main.py
+
+  # PostGIS database
+  postgis:
+    image: postgis/postgis:15-3.3
+    environment:
+      - POSTGRES_DB=arxos
+      - POSTGRES_USER=arxos
+      - POSTGRES_PASSWORD=arxos
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgis-data:/var/lib/postgresql/data
+      - ./scripts/init-postgis.sql:/docker-entrypoint-initdb.d/init-postgis.sql
+    networks:
+      - arxos-network
+
+volumes:
+  arxos-data:
+    driver: local
+  postgis-data:
+    driver: local
+  ifc-cache:
+    driver: local
+
+networks:
+  arxos-network:
+    driver: bridge

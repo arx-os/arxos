@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/internal/domain"
@@ -12,6 +13,7 @@ import (
 	"github.com/arx-os/arxos/internal/domain/design"
 	"github.com/arx-os/arxos/internal/infrastructure"
 	"github.com/arx-os/arxos/internal/infrastructure/filesystem"
+	"github.com/arx-os/arxos/internal/infrastructure/ifc"
 	"github.com/arx-os/arxos/internal/infrastructure/postgis"
 	"github.com/arx-os/arxos/internal/infrastructure/repository"
 	"github.com/arx-os/arxos/internal/interfaces/http/handlers"
@@ -45,6 +47,11 @@ type Container struct {
 	// Infrastructure services
 	filesystemService *filesystem.RepositoryFilesystemService
 	dataManager       *filesystem.DataManager
+
+	// IFC services
+	ifcOpenShellClient *ifc.IfcOpenShellClient
+	nativeParser       *ifc.NativeParser
+	ifcService         *ifc.EnhancedIFCService
 
 	// Use cases
 	userUC         *usecase.UserUseCase
@@ -196,6 +203,38 @@ func (c *Container) initInfrastructureServices(ctx context.Context) error {
 	repositoriesPath := c.dataManager.GetRepositoriesPath()
 	c.filesystemService = filesystem.NewRepositoryFilesystemService(repositoriesPath)
 
+	// Initialize IFC services
+	if err := c.initIFCServices(ctx); err != nil {
+		return fmt.Errorf("failed to initialize IFC services: %w", err)
+	}
+
+	return nil
+}
+
+// initIFCServices initializes IFC-related services
+func (c *Container) initIFCServices(ctx context.Context) error {
+	// Create IfcOpenShell client
+	c.ifcOpenShellClient = ifc.NewIfcOpenShellClient(
+		c.config.IFC.Service.URL,
+		30*time.Second, // TODO: Parse from config
+		3,              // retries
+	)
+
+	// Create native parser as fallback
+	c.nativeParser = ifc.NewNativeParser(100 * 1024 * 1024) // 100MB
+
+	// Create enhanced IFC service with logging
+	logger := ifc.NewDefaultLogger()
+	c.ifcService = ifc.NewEnhancedIFCService(
+		c.ifcOpenShellClient,
+		c.nativeParser,
+		c.config.IFC.Service.Enabled,
+		c.config.IFC.Fallback.Enabled,
+		5,              // failure threshold
+		60*time.Second, // recovery timeout
+		logger,
+	)
+
 	return nil
 }
 
@@ -215,7 +254,7 @@ func (c *Container) initUseCases(ctx context.Context) error {
 
 	// Building repository use cases
 	c.repositoryUC = usecase.NewRepositoryUseCase(c.repositoryRepo, c.versionRepo, c.ifcRepo, nil, c.logger)
-	c.ifcUC = usecase.NewIFCUseCase(c.repositoryRepo, c.ifcRepo, nil, c.logger)
+	c.ifcUC = usecase.NewIFCUseCase(c.repositoryRepo, c.ifcRepo, nil, c.ifcService, c.logger)
 	c.versionUC = usecase.NewVersionUseCase(c.repositoryRepo, c.versionRepo, c.logger)
 
 	// Component use case
@@ -307,6 +346,24 @@ func (c *Container) GetIFCUseCase() *usecase.IFCUseCase {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.ifcUC
+}
+
+func (c *Container) GetIfcOpenShellClient() *ifc.IfcOpenShellClient {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.ifcOpenShellClient
+}
+
+func (c *Container) GetNativeParser() *ifc.NativeParser {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.nativeParser
+}
+
+func (c *Container) GetIFCService() *ifc.EnhancedIFCService {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.ifcService
 }
 
 func (c *Container) GetVersionUseCase() *usecase.VersionUseCase {

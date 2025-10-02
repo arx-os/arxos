@@ -2,6 +2,8 @@ package types
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -44,10 +46,25 @@ func NewBaseHandler(server *Server) *BaseHandler {
 func (h *BaseHandler) RespondJSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	// JSON encoding would be implemented here
+
+	if data != nil {
+		json.NewEncoder(w).Encode(data)
+	}
 }
 
 // LogRequest logs an HTTP request
 func (h *BaseHandler) LogRequest(r *http.Request, statusCode int, duration time.Duration) {
-	// Request logging would be implemented here
+	fmt.Printf("%s %s - %d - %v\n", r.Method, r.URL.Path, statusCode, duration)
+}
+
+// HandleError handles common HTTP errors
+func (h *BaseHandler) HandleError(w http.ResponseWriter, r *http.Request, err error, statusCode int) {
+	fmt.Printf("HTTP Error %d: %v\n", statusCode, err)
+	http.Error(w, err.Error(), statusCode)
+}
+
+// ValidateContentType validates that the request has the expected content type
+func (h *BaseHandler) ValidateContentType(r *http.Request, expectedType string) bool {
+	contentType := r.Header.Get("Content-Type")
+	return contentType == expectedType
 }

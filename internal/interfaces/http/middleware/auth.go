@@ -1,147 +1,94 @@
+// Package middleware provides HTTP middleware following Clean Architecture
 package middleware
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/arx-os/arxos/pkg/auth"
 )
 
-// contextKey is a custom type for context keys to avoid collisions
-type contextKey string
+// AuthMiddleware provides authentication middleware
+func AuthMiddleware(jwtManager *auth.JWTManager) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Skip auth for health check and public endpoints
+			if isPublicEndpoint(r.URL.Path) {
+				next.ServeHTTP(w, r)
+				return
+			}
 
-const (
-	// UserContextKey is the key for storing user in context
-	UserContextKey contextKey = "user"
-	// ClaimsContextKey is the key for storing claims in context
-	ClaimsContextKey contextKey = "claims"
-)
+			// Extract token from Authorization header
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				http.Error(w, "Authorization header required", http.StatusUnauthorized)
+				return
+			}
 
-// User represents a user in the middleware context
-type User struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
-	Role  string `json:"role"`
-	OrgID string `json:"org_id"`
-}
+			// Check Bearer token format
+			if !strings.HasPrefix(authHeader, "Bearer ") {
+				http.Error(w, "Invalid authorization format", http.StatusUnauthorized)
+				return
+			}
 
-// AuthMiddleware provides JWT authentication middleware
-type AuthMiddleware struct {
-	authService AuthService
-	// List of paths that don't require authentication
-	publicPaths map[string]bool
-}
+			token := strings.TrimPrefix(authHeader, "Bearer ")
+			if token == "" {
+				http.Error(w, "Token required", http.StatusUnauthorized)
+				return
+			}
 
-// AuthService interface for authentication operations
-type AuthService interface {
-	ValidateToken(token string) (*User, error)
-	ExtractToken(r *http.Request) (string, error)
-}
+			// Validate token using JWT manager
+			if jwtManager != nil {
+				claims, err := jwtManager.ValidateToken(token)
+				if err != nil {
+					http.Error(w, "Invalid token", http.StatusUnauthorized)
+					return
+				}
 
-// NewAuthMiddleware creates a new authentication middleware
-func NewAuthMiddleware(authService AuthService) *AuthMiddleware {
-	return &AuthMiddleware{
-		authService: authService,
-		publicPaths: map[string]bool{
-			"/health":               true,
-			"/ready":                true,
-			"/api/v1/":              true,
-			"/api/v1/auth/login":    true,
-			"/api/v1/auth/register": true,
-		},
+				// Add user context from JWT claims
+				ctx := r.Context()
+				ctx = context.WithValue(ctx, "user_id", claims.UserID)
+				ctx = context.WithValue(ctx, "user_email", claims.Email)
+				ctx = context.WithValue(ctx, "user_role", claims.Role)
+				ctx = context.WithValue(ctx, "organization_id", claims.OrganizationID)
+				ctx = context.WithValue(ctx, "permissions", claims.Permissions)
+				ctx = context.WithValue(ctx, "session_id", claims.SessionID)
+
+				next.ServeHTTP(w, r.WithContext(ctx))
+			} else {
+				// Fallback: basic token validation if JWT manager not available
+				if len(token) < 10 {
+					http.Error(w, "Invalid token", http.StatusUnauthorized)
+					return
+				}
+
+				// Add basic user context
+				ctx := r.Context()
+				ctx = context.WithValue(ctx, "user_id", "user123") // Placeholder
+				ctx = context.WithValue(ctx, "user_role", "user")  // Placeholder
+
+				next.ServeHTTP(w, r.WithContext(ctx))
+			}
+		})
 	}
 }
 
-// Middleware returns the authentication middleware function
-func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Check if the path is public
-		if m.isPublicPath(r.URL.Path) {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		// Extract token from request
-		token, err := m.authService.ExtractToken(r)
-		if err != nil {
-			fmt.Printf("Failed to extract token: %v\n", err)
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		// Validate token
-		user, err := m.authService.ValidateToken(token)
-		if err != nil {
-			fmt.Printf("Invalid token: %v\n", err)
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		// Add user to context
-		ctx := context.WithValue(r.Context(), UserContextKey, user)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
-// isPublicPath checks if a path is public (doesn't require authentication)
-func (m *AuthMiddleware) isPublicPath(path string) bool {
-	// Check exact matches first
-	if m.publicPaths[path] {
-		return true
+// isPublicEndpoint checks if the endpoint is public (no auth required)
+func isPublicEndpoint(path string) bool {
+	publicPaths := []string{
+		"/health",
+		"/api/v1/health",
+		"/api/v1/auth/login",
+		"/api/v1/auth/register",
+		"/api/v1/auth/refresh",
 	}
 
-	// Check prefix matches
-	for publicPath := range m.publicPaths {
+	for _, publicPath := range publicPaths {
 		if strings.HasPrefix(path, publicPath) {
 			return true
 		}
 	}
 
 	return false
-}
-
-// GetUserFromContext extracts user from request context
-func GetUserFromContext(ctx context.Context) (*User, bool) {
-	user, ok := ctx.Value(UserContextKey).(*User)
-	return user, ok
-}
-
-// RequireRole creates middleware that requires a specific role
-func RequireRole(requiredRole string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			user, ok := GetUserFromContext(r.Context())
-			if !ok {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-
-			if user.Role != requiredRole {
-				http.Error(w, "Forbidden", http.StatusForbidden)
-				return
-			}
-
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
-// RequireOrganization creates middleware that requires organization membership
-func RequireOrganization(orgID string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			user, ok := GetUserFromContext(r.Context())
-			if !ok {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-
-			if user.OrgID != orgID {
-				http.Error(w, "Forbidden", http.StatusForbidden)
-				return
-			}
-
-			next.ServeHTTP(w, r)
-		})
-	}
 }

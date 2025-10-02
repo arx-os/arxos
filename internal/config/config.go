@@ -6,8 +6,10 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -120,6 +122,13 @@ type DatabaseConfig struct {
 	Type            string        `json:"type"`   // postgres only
 	Driver          string        `json:"driver"` // Legacy field
 	DataSourceName  string        `json:"-"`      // Never serialize connection strings
+	URL             string        `json:"-"`     // Database URL from environment
+	Host            string        `json:"host"`
+	Port            int           `json:"port"`
+	Database        string        `json:"database"`
+	Username        string        `json:"username"`
+	Password        string        `json:"-"`      // Never serialize passwords
+	SSLMode         string        `json:"ssl_mode"`
 	MaxOpenConns    int           `json:"max_open_conns"`
 	MaxConnections  int           `json:"max_connections"` // Alias for MaxOpenConns
 	MaxIdleConns    int           `json:"max_idle_conns"`
@@ -468,6 +477,34 @@ func (c *Config) LoadFromEnv() {
 	// Storage settings
 	if backend := os.Getenv("ARXOS_STORAGE_BACKEND"); backend != "" {
 		c.Storage.Backend = backend
+	}
+
+	// Database settings
+	if dbURL := os.Getenv("ARXOS_DATABASE_URL"); dbURL != "" {
+		c.Database.URL = dbURL
+		c.Database.DataSourceName = dbURL
+		// Parse URL components for individual fields
+		c.parseDatabaseURL(dbURL)
+	}
+	if host := os.Getenv("ARXOS_DB_HOST"); host != "" {
+		c.Database.Host = host
+	}
+	if port := os.Getenv("ARXOS_DB_PORT"); port != "" {
+		if p, err := strconv.Atoi(port); err == nil {
+			c.Database.Port = p
+		}
+	}
+	if database := os.Getenv("ARXOS_DB_NAME"); database != "" {
+		c.Database.Database = database
+	}
+	if username := os.Getenv("ARXOS_DB_USER"); username != "" {
+		c.Database.Username = username
+	}
+	if password := os.Getenv("ARXOS_DB_PASSWORD"); password != "" {
+		c.Database.Password = password
+	}
+	if sslMode := os.Getenv("ARXOS_DB_SSL_MODE"); sslMode != "" {
+		c.Database.SSLMode = sslMode
 	}
 	if bucket := os.Getenv("ARXOS_STORAGE_BUCKET"); bucket != "" {
 		c.Storage.CloudBucket = bucket
@@ -929,6 +966,45 @@ func generateDevSecret() string {
 	fmt.Printf("Warning: Generating random JWT secret for development mode. Set ARXOS_JWT_SECRET for production.\n")
 	// Simple dev secret (in production, this would use crypto/rand)
 	return fmt.Sprintf("dev-secret-%d", time.Now().UnixNano())
+}
+
+// parseDatabaseURL parses a database URL and populates individual fields
+func (c *Config) parseDatabaseURL(dbURL string) {
+	u, err := url.Parse(dbURL)
+	if err != nil {
+		return // Ignore parsing errors, use defaults
+	}
+
+	// Extract host and port
+	if u.Host != "" {
+		parts := strings.Split(u.Host, ":")
+		if len(parts) > 0 {
+			c.Database.Host = parts[0]
+		}
+		if len(parts) > 1 {
+			if port, err := strconv.Atoi(parts[1]); err == nil {
+				c.Database.Port = port
+			}
+		}
+	}
+
+	// Extract database name
+	if u.Path != "" {
+		c.Database.Database = strings.TrimPrefix(u.Path, "/")
+	}
+
+	// Extract username and password
+	if u.User != nil {
+		c.Database.Username = u.User.Username()
+		if password, ok := u.User.Password(); ok {
+			c.Database.Password = password
+		}
+	}
+
+	// Extract SSL mode from query parameters
+	if sslMode := u.Query().Get("sslmode"); sslMode != "" {
+		c.Database.SSLMode = sslMode
+	}
 }
 
 // buildPostgresDSN builds a PostgreSQL connection string from environment variables

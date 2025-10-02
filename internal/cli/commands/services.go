@@ -6,28 +6,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// createServeCommand creates the serve command
-func CreateServeCommand() *cobra.Command {
-	return &cobra.Command{
-		Use:   "serve",
-		Short: "Start the API server",
-		Long:  "Start the ArxOS REST API server for web and mobile access",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("Starting ArxOS API server...")
-
-			// TODO: Implement API server
-			// This would typically involve:
-			// 1. Initialize HTTP server
-			// 2. Set up routes and middleware
-			// 3. Connect to database
-			// 4. Start listening for requests
-
-			fmt.Println("✅ ArxOS API server started on :8080")
-			return nil
-		},
-	}
-}
-
 // createWatchCommand creates the watch command
 func CreateWatchCommand() *cobra.Command {
 	return &cobra.Command{

@@ -14,7 +14,7 @@ import (
 	"github.com/arx-os/arxos/internal/infrastructure/filesystem"
 	"github.com/arx-os/arxos/internal/infrastructure/postgis"
 	"github.com/arx-os/arxos/internal/infrastructure/repository"
-	"github.com/arx-os/arxos/internal/interfaces"
+	"github.com/arx-os/arxos/internal/interfaces/http/handlers"
 	"github.com/arx-os/arxos/internal/usecase"
 )
 
@@ -64,7 +64,7 @@ type Container struct {
 	designUC design.DesignInterface
 
 	// Interfaces
-	httpHandler *interfaces.HTTPHandler
+	apiHandler *handlers.APIHandler
 
 	mu          sync.RWMutex
 	initialized bool
@@ -229,14 +229,8 @@ func (c *Container) initUseCases(ctx context.Context) error {
 
 // initInterfaces initializes interface layer
 func (c *Container) initInterfaces(ctx context.Context) error {
-	// HTTP handler
-	c.httpHandler = interfaces.NewHTTPHandler(
-		c.userUC,
-		c.buildingUC,
-		c.equipmentUC,
-		c.organizationUC,
-		c.logger,
-	)
+	// API handler
+	c.apiHandler = handlers.NewAPIHandler(nil)
 
 	return nil
 }
@@ -272,10 +266,10 @@ func (c *Container) GetLogger() domain.Logger {
 	return c.logger
 }
 
-func (c *Container) GetHTTPHandler() *interfaces.HTTPHandler {
+func (c *Container) GetAPIHandler() *handlers.APIHandler {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.httpHandler
+	return c.apiHandler
 }
 
 func (c *Container) GetUserUseCase() *usecase.UserUseCase {

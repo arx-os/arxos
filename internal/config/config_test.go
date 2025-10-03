@@ -364,15 +364,149 @@ func TestGetConfigPath(t *testing.T) {
 	os.Chdir(tmpDir)
 	defer os.Chdir(oldWd)
 
+	// Create arxos.yml in current directory (should be preferred over JSON)
+	os.WriteFile("arxos.yml", []byte("{}"), 0644)
+	path = GetConfigPath()
+	assert.Equal(t, "arxos.yml", path)
+
 	// Create arxos.json in current directory
 	os.WriteFile("arxos.json", []byte("{}"), 0644)
 	path = GetConfigPath()
-	assert.Equal(t, "arxos.json", path)
+	assert.Equal(t, "arxos.yml", path) // YAML should still be preferred
 
 	// Test default path
+	os.Remove("arxos.yml")
 	os.Remove("arxos.json")
 	path = GetConfigPath()
 	homeDir, _ := os.UserHomeDir()
 	expected := filepath.Join(homeDir, ".arxos", "config.json")
 	assert.Equal(t, expected, path)
+}
+
+func TestLoadFromYAMLFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "test-config.yml")
+
+	yamlConfig := `
+mode: cloud
+version: "1.0.0"
+state_dir: "/test/state"
+cache_dir: "/test/cache"
+cloud:
+  enabled: true
+  base_url: "https://test.arxos.io"
+  api_key: "test-key-123"
+  org_id: "org-456"
+storage:
+  backend: "s3"
+  cloud_bucket: "test-bucket"
+  cloud_region: "us-east-1"
+features:
+  cloud_sync: true
+  ai_integration: true
+`
+
+	// Write test config to file
+	err := os.WriteFile(configPath, []byte(yamlConfig), 0644)
+	require.NoError(t, err)
+
+	// Load config from file
+	config := Default()
+	err = config.LoadFromFile(configPath)
+	require.NoError(t, err)
+
+	assert.Equal(t, ModeCloud, config.Mode)
+	assert.Equal(t, "1.0.0", config.Version)
+	assert.Equal(t, "/test/state", config.StateDir)
+	assert.True(t, config.Cloud.Enabled)
+	assert.Equal(t, "https://test.arxos.io", config.Cloud.BaseURL)
+	// APIKey is not serialized to JSON (json:"-" tag) so it won't round-trip
+	assert.Equal(t, "", config.Cloud.APIKey)
+	assert.Equal(t, "s3", config.Storage.Backend)
+	assert.Equal(t, "test-bucket", config.Storage.CloudBucket)
+	assert.True(t, config.Features.CloudSync)
+	assert.True(t, config.Features.AIIntegration)
+}
+
+func TestEnvironmentVariableSubstitution(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "test-config.yml")
+
+	// Set environment variables
+	os.Setenv("TEST_DB_HOST", "test-host")
+	os.Setenv("TEST_DB_PORT", "5433")
+	os.Setenv("TEST_API_URL", "https://api.test.com")
+	os.Setenv("TEST_BUCKET", "test-bucket")
+
+	defer func() {
+		os.Unsetenv("TEST_DB_HOST")
+		os.Unsetenv("TEST_DB_PORT")
+		os.Unsetenv("TEST_API_URL")
+		os.Unsetenv("TEST_BUCKET")
+	}()
+
+	yamlConfig := `
+mode: cloud
+version: "1.0.0"
+postgis:
+  host: "${TEST_DB_HOST}"
+  port: ${TEST_DB_PORT}
+  database: "arxos"
+  user: "arxos"
+cloud:
+  base_url: "${TEST_API_URL}"
+storage:
+  backend: "s3"
+  cloud_bucket: "${TEST_BUCKET}"
+  cloud_region: "us-east-1"
+`
+
+	// Write test config to file
+	err := os.WriteFile(configPath, []byte(yamlConfig), 0644)
+	require.NoError(t, err)
+
+	// Load config from file
+	config := Default()
+	err = config.LoadFromFile(configPath)
+	require.NoError(t, err)
+
+	assert.Equal(t, "test-host", config.PostGIS.Host)
+	assert.Equal(t, 5433, config.PostGIS.Port)
+	assert.Equal(t, "https://api.test.com", config.Cloud.BaseURL)
+	assert.Equal(t, "test-bucket", config.Storage.CloudBucket)
+}
+
+func TestEnvironmentVariableSubstitutionWithDefaults(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "test-config.yml")
+
+	yamlConfig := `
+mode: cloud
+version: "1.0.0"
+postgis:
+  host: "${MISSING_VAR:-localhost}"
+  port: ${MISSING_PORT:-5432}
+  database: "arxos"
+  user: "arxos"
+cloud:
+  base_url: "${MISSING_API_URL:-https://api.arxos.io}"
+storage:
+  backend: "s3"
+  cloud_bucket: "${MISSING_BUCKET:-default-bucket}"
+  cloud_region: "us-east-1"
+`
+
+	// Write test config to file
+	err := os.WriteFile(configPath, []byte(yamlConfig), 0644)
+	require.NoError(t, err)
+
+	// Load config from file
+	config := Default()
+	err = config.LoadFromFile(configPath)
+	require.NoError(t, err)
+
+	assert.Equal(t, "localhost", config.PostGIS.Host)
+	assert.Equal(t, 5432, config.PostGIS.Port)
+	assert.Equal(t, "https://api.arxos.io", config.Cloud.BaseURL)
+	assert.Equal(t, "default-bucket", config.Storage.CloudBucket)
 }

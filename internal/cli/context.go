@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/arx-os/arxos/internal/app"
+	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/building"
 	"github.com/arx-os/arxos/internal/domain/component"
 	"github.com/arx-os/arxos/internal/domain/design"
@@ -25,6 +26,7 @@ func NewServiceContext(container *app.Container) *ServiceContext {
 	}
 }
 
+// Repository Services
 // GetRepositoryService returns the repository service
 func (sc *ServiceContext) GetRepositoryService() building.RepositoryService {
 	// Return a service that wraps the use cases
@@ -36,14 +38,83 @@ func (sc *ServiceContext) GetRepositoryService() building.RepositoryService {
 	}
 }
 
+// Component Services
 // GetComponentService returns the component service
 func (sc *ServiceContext) GetComponentService() component.ComponentService {
 	return sc.container.GetComponentUseCase()
 }
 
+// Design Services
 // GetDesignService returns the design service
 func (sc *ServiceContext) GetDesignService() design.DesignInterface {
 	return sc.container.GetDesignUseCase()
+}
+
+// Building Services
+// GetBuildingService returns the building service
+func (sc *ServiceContext) GetBuildingService() *usecase.BuildingUseCase {
+	return sc.container.GetBuildingUseCase()
+}
+
+// Equipment Services
+// GetEquipmentService returns the equipment service
+func (sc *ServiceContext) GetEquipmentService() *usecase.EquipmentUseCase {
+	return sc.container.GetEquipmentUseCase()
+}
+
+// User Services
+// GetUserService returns the user service
+func (sc *ServiceContext) GetUserService() *usecase.UserUseCase {
+	return sc.container.GetUserUseCase()
+}
+
+// Organization Services
+// GetOrganizationService returns the organization service
+func (sc *ServiceContext) GetOrganizationService() *usecase.OrganizationUseCase {
+	return sc.container.GetOrganizationUseCase()
+}
+
+// IFC Services
+// GetIFCService returns the IFC service
+func (sc *ServiceContext) GetIFCService() *usecase.IFCUseCase {
+	return sc.container.GetIFCUseCase()
+}
+
+// Version Services
+// GetVersionService returns the version service
+func (sc *ServiceContext) GetVersionService() *usecase.VersionUseCase {
+	return sc.container.GetVersionUseCase()
+}
+
+// Infrastructure Services
+// GetDatabaseService returns the database service
+func (sc *ServiceContext) GetDatabaseService() domain.Database {
+	return sc.container.GetDatabase()
+}
+
+// GetCacheService returns the cache service
+func (sc *ServiceContext) GetCacheService() domain.Cache {
+	return sc.container.GetCache()
+}
+
+// GetLoggerService returns the logger service
+func (sc *ServiceContext) GetLoggerService() domain.Logger {
+	return sc.container.GetLogger()
+}
+
+// GetFilesystemService returns the filesystem service
+func (sc *ServiceContext) GetFilesystemService() *filesystem.RepositoryFilesystemService {
+	return sc.container.GetFilesystemService()
+}
+
+// Health Services
+// GetHealthService returns a health check service
+func (sc *ServiceContext) GetHealthService() *HealthServiceImpl {
+	return &HealthServiceImpl{
+		database: sc.container.GetDatabase(),
+		cache:    sc.container.GetCache(),
+		logger:   sc.container.GetLogger(),
+	}
 }
 
 // RepositoryServiceImpl implements building.RepositoryService interface
@@ -128,4 +199,57 @@ func (s *RepositoryServiceImpl) CompareVersions(ctx context.Context, repoID stri
 // RollbackVersion rolls back to a specific version
 func (s *RepositoryServiceImpl) RollbackVersion(ctx context.Context, repoID string, version string) error {
 	return s.versionUC.RollbackVersion(ctx, repoID, version)
+}
+
+// HealthServiceImpl implements health check functionality
+type HealthServiceImpl struct {
+	database domain.Database
+	cache    domain.Cache
+	logger   domain.Logger
+}
+
+// CheckHealth performs comprehensive health checks
+func (h *HealthServiceImpl) CheckHealth(ctx context.Context) (*HealthStatus, error) {
+	status := &HealthStatus{
+		Overall: "healthy",
+		Checks:  make(map[string]string),
+	}
+
+	// Check database connectivity
+	if h.database != nil {
+		if err := h.database.Health(ctx); err != nil {
+			status.Checks["database"] = "unhealthy"
+			status.Overall = "unhealthy"
+			h.logger.Error("Database health check failed", "error", err)
+		} else {
+			status.Checks["database"] = "healthy"
+		}
+	} else {
+		status.Checks["database"] = "not_configured"
+	}
+
+	// Check cache connectivity
+	if h.cache != nil {
+		// Test cache with a simple operation
+		testKey := "health_check_test"
+		if err := h.cache.Set(ctx, testKey, "test", 1); err != nil {
+			status.Checks["cache"] = "unhealthy"
+			status.Overall = "unhealthy"
+			h.logger.Error("Cache health check failed", "error", err)
+		} else {
+			// Clean up test key
+			h.cache.Delete(ctx, testKey)
+			status.Checks["cache"] = "healthy"
+		}
+	} else {
+		status.Checks["cache"] = "not_configured"
+	}
+
+	return status, nil
+}
+
+// HealthStatus represents the health status of system components
+type HealthStatus struct {
+	Overall string            `json:"overall"`
+	Checks  map[string]string `json:"checks"`
 }

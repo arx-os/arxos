@@ -9,9 +9,12 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Mode represents the operational mode of ArxOS
@@ -29,67 +32,67 @@ const (
 // Config represents the complete ArxOS configuration
 type Config struct {
 	// Core settings
-	Mode     Mode   `json:"mode"`
-	Version  string `json:"version"`
-	StateDir string `json:"state_dir"`
-	CacheDir string `json:"cache_dir"`
+	Mode     Mode   `json:"mode" yaml:"mode"`
+	Version  string `json:"version" yaml:"version"`
+	StateDir string `json:"state_dir" yaml:"state_dir"`
+	CacheDir string `json:"cache_dir" yaml:"cache_dir"`
 
 	// Cloud settings
-	Cloud CloudConfig `json:"cloud"`
+	Cloud CloudConfig `json:"cloud" yaml:"cloud"`
 
 	// Storage settings
-	Storage StorageConfig `json:"storage"`
+	Storage StorageConfig `json:"storage" yaml:"storage"`
 
 	// Database settings
-	Database DatabaseConfig `json:"database"`
-	PostGIS  PostGISConfig  `json:"postgis"`
+	Database DatabaseConfig `json:"database" yaml:"database"`
+	PostGIS  PostGISConfig  `json:"postgis" yaml:"postgis"`
 
 	// API settings
-	API APIConfig `json:"api"`
+	API APIConfig `json:"api" yaml:"api"`
 
 	// Telemetry settings
-	Telemetry TelemetryConfig `json:"telemetry"`
+	Telemetry TelemetryConfig `json:"telemetry" yaml:"telemetry"`
 
 	// Feature flags
-	Features FeatureFlags `json:"features"`
+	Features FeatureFlags `json:"features" yaml:"features"`
 
 	// Security settings
-	Security SecurityConfig `json:"security"`
+	Security SecurityConfig `json:"security" yaml:"security"`
 
 	// TUI settings
-	TUI TUIConfig `json:"tui"`
+	TUI TUIConfig `json:"tui" yaml:"tui"`
 
 	// IFC settings
-	IFC IFCConfig `json:"ifc"`
+	IFC IFCConfig `json:"ifc" yaml:"ifc"`
 }
 
 // CloudConfig contains cloud-specific configuration
 type CloudConfig struct {
-	Enabled      bool          `json:"enabled"`
-	BaseURL      string        `json:"base_url"`
-	APIKey       string        `json:"-"` // Never serialize API keys
-	OrgID        string        `json:"org_id"`
-	SyncEnabled  bool          `json:"sync_enabled"`
-	SyncInterval time.Duration `json:"sync_interval"`
+	Enabled      bool          `json:"enabled" yaml:"enabled"`
+	BaseURL      string        `json:"base_url" yaml:"base_url"`
+	APIKey       string        `json:"-" yaml:"-"` // Never serialize API keys
+	OrgID        string        `json:"org_id" yaml:"org_id"`
+	SyncEnabled  bool          `json:"sync_enabled" yaml:"sync_enabled"`
+	SyncInterval time.Duration `json:"sync_interval" yaml:"sync_interval"`
 }
 
 // StorageConfig defines storage backend configuration
 type StorageConfig struct {
-	Backend     string            `json:"backend"` // local, s3, gcs, azure
-	LocalPath   string            `json:"local_path"`
-	CloudBucket string            `json:"cloud_bucket"`
-	CloudRegion string            `json:"cloud_region"`
-	CloudPrefix string            `json:"cloud_prefix"`
-	Credentials map[string]string `json:"-"` // Sensitive, not serialized
+	Backend     string            `json:"backend" yaml:"backend"` // local, s3, gcs, azure
+	LocalPath   string            `json:"local_path" yaml:"local_path"`
+	CloudBucket string            `json:"cloud_bucket" yaml:"cloud_bucket"`
+	CloudRegion string            `json:"cloud_region" yaml:"cloud_region"`
+	CloudPrefix string            `json:"cloud_prefix" yaml:"cloud_prefix"`
+	Credentials map[string]string `json:"-" yaml:"-"` // Sensitive, not serialized
 
 	// Data directory configuration
-	Data DataConfig `json:"data"`
+	Data DataConfig `json:"data" yaml:"data"`
 
 	// S3-specific configuration
-	S3 S3Config `json:"s3,omitempty"`
+	S3 S3Config `json:"s3,omitempty" yaml:"s3,omitempty"`
 
 	// Azure-specific configuration
-	Azure AzureConfig `json:"azure,omitempty"`
+	Azure AzureConfig `json:"azure,omitempty" yaml:"azure,omitempty"`
 }
 
 // DataConfig defines data directory configuration for building repositories
@@ -143,13 +146,13 @@ type DatabaseConfig struct {
 
 // PostGISConfig defines PostGIS spatial database configuration
 type PostGISConfig struct {
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	Database string `json:"database"`
-	User     string `json:"user"`
-	Password string `json:"-"` // Sensitive
-	SSLMode  string `json:"ssl_mode"`
-	SRID     int    `json:"srid"` // Spatial reference ID (default: 900913)
+	Host     string `json:"host" yaml:"host"`
+	Port     int    `json:"port" yaml:"port"`
+	Database string `json:"database" yaml:"database"`
+	User     string `json:"user" yaml:"user"`
+	Password string `json:"-" yaml:"-"` // Sensitive
+	SSLMode  string `json:"ssl_mode" yaml:"ssl_mode"`
+	SRID     int    `json:"srid" yaml:"srid"` // Spatial reference ID (default: 900913)
 }
 
 // APIConfig contains API client configuration
@@ -171,12 +174,12 @@ type TelemetryConfig struct {
 
 // FeatureFlags controls feature availability
 type FeatureFlags struct {
-	CloudSync     bool `json:"cloud_sync"`
-	AIIntegration bool `json:"ai_integration"`
-	OfflineMode   bool `json:"offline_mode"`
-	BetaFeatures  bool `json:"beta_features"`
-	Analytics     bool `json:"analytics"`
-	AutoUpdate    bool `json:"auto_update"`
+	CloudSync     bool `json:"cloud_sync" yaml:"cloud_sync"`
+	AIIntegration bool `json:"ai_integration" yaml:"ai_integration"`
+	OfflineMode   bool `json:"offline_mode" yaml:"offline_mode"`
+	BetaFeatures  bool `json:"beta_features" yaml:"beta_features"`
+	Analytics     bool `json:"analytics" yaml:"analytics"`
+	AutoUpdate    bool `json:"auto_update" yaml:"auto_update"`
 }
 
 // SecurityConfig contains security-related settings
@@ -504,15 +507,25 @@ func Load(configPath string) (*Config, error) {
 	return config, nil
 }
 
-// LoadFromFile loads configuration from a JSON file
+// LoadFromFile loads configuration from a JSON or YAML file
 func (c *Config) LoadFromFile(path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	if err := json.Unmarshal(data, c); err != nil {
-		return fmt.Errorf("failed to parse config file: %w", err)
+	// Process environment variable substitution before parsing
+	data = []byte(substituteEnvVars(string(data)))
+
+	// Determine format based on file extension
+	if strings.HasSuffix(strings.ToLower(path), ".yml") || strings.HasSuffix(strings.ToLower(path), ".yaml") {
+		if err := yaml.Unmarshal(data, c); err != nil {
+			return fmt.Errorf("failed to parse YAML config file: %w", err)
+		}
+	} else {
+		if err := json.Unmarshal(data, c); err != nil {
+			return fmt.Errorf("failed to parse JSON config file: %w", err)
+		}
 	}
 
 	return nil
@@ -992,13 +1005,23 @@ func GetConfigPath() string {
 		return path
 	}
 
-	// Check current directory
+	// Check current directory for YAML files first
+	if _, err := os.Stat("arxos.yml"); err == nil {
+		return "arxos.yml"
+	}
+	if _, err := os.Stat("arxos.yaml"); err == nil {
+		return "arxos.yaml"
+	}
 	if _, err := os.Stat("arxos.json"); err == nil {
 		return "arxos.json"
 	}
 
-	// Use home directory
+	// Use home directory - prefer YAML
 	homeDir, _ := os.UserHomeDir()
+	yamlPath := filepath.Join(homeDir, ".arxos", "config.yml")
+	if _, err := os.Stat(yamlPath); err == nil {
+		return yamlPath
+	}
 	return filepath.Join(homeDir, ".arxos", "config.json")
 }
 
@@ -1143,4 +1166,39 @@ func parseIntEnv(value string) (int, error) {
 	var result int
 	_, err := fmt.Sscanf(value, "%d", &result)
 	return result, err
+}
+
+// substituteEnvVars replaces environment variable references in configuration strings
+// Supports ${VAR} and ${VAR:-default} syntax
+func substituteEnvVars(content string) string {
+	// Pattern to match ${VAR} or ${VAR:-default}
+	pattern := regexp.MustCompile(`\$\{([^}:]+)(?::-(.*?))?\}`)
+	
+	return pattern.ReplaceAllStringFunc(content, func(match string) string {
+		// Extract variable name and default value
+		start := strings.Index(match, "${") + 2
+		end := strings.Index(match, "}")
+		if end == -1 {
+			return match // Malformed, return as-is
+		}
+		
+		varPart := match[start:end]
+		var varName, defaultValue string
+		
+		// Check for default value syntax ${VAR:-default}
+		if colonIndex := strings.Index(varPart, ":-"); colonIndex != -1 {
+			varName = varPart[:colonIndex]
+			defaultValue = varPart[colonIndex+2:]
+		} else {
+			varName = varPart
+		}
+		
+		// Get environment variable value
+		if value := os.Getenv(varName); value != "" {
+			return value
+		}
+		
+		// Return default value if environment variable not set
+		return defaultValue
+	})
 }

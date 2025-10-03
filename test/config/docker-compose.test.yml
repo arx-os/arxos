@@ -1,0 +1,156 @@
+# Docker Compose for Integration Testing
+# Provides isolated test environment with all required services
+
+version: '3.8'
+
+services:
+  # Test Database
+  postgres-test:
+    image: postgis/postgis:15-3.3
+    environment:
+      POSTGRES_DB: arxos_test
+      POSTGRES_USER: arxos_test
+      POSTGRES_PASSWORD: test_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+      - ./scripts/init-postgis.sql:/docker-entrypoint-initdb.d/init-postgis.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arxos_test -d arxos_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Test Redis Cache
+  redis-test:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_test_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Test IFC Service
+  ifcopenshell-test:
+    build:
+      context: ../services/ifcopenshell-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    environment:
+      - FLASK_ENV=testing
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./fixtures/ifc_files:/app/test_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Test ArxOS API Server
+  arxos-api-test:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.test
+    ports:
+      - "8080:8080"
+    environment:
+      - CONFIG_PATH=/app/test/config/test_config.yaml
+      - DATABASE_URL=postgres://arxos_test:test_password@postgres-test:5432/arxos_test?sslmode=disable
+      - REDIS_URL=redis://redis-test:6379
+      - IFC_SERVICE_URL=http://ifcopenshell-test:8080
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+      ifcopenshell-test:
+        condition: service_healthy
+    volumes:
+      - ./config:/app/test/config
+      - ./fixtures:/app/test/fixtures
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Test Mobile App (React Native)
+  mobile-app-test:
+    build:
+      context: ../../mobile
+      dockerfile: Dockerfile.test
+    ports:
+      - "8082:8080"
+    environment:
+      - API_BASE_URL=http://arxos-api-test:8080
+      - WS_URL=ws://arxos-api-test:8080/ws
+      - AR_PLATFORM=ARKit
+    depends_on:
+      arxos-api-test:
+        condition: service_healthy
+    volumes:
+      - ../../mobile:/app
+      - ./fixtures:/app/test/fixtures
+
+  # Test CLI
+  cli-test:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.test
+    environment:
+      - CONFIG_PATH=/app/test/config/test_config.yaml
+      - DATABASE_URL=postgres://arxos_test:test_password@postgres-test:5432/arxos_test?sslmode=disable
+    depends_on:
+      arxos-api-test:
+        condition: service_healthy
+    volumes:
+      - ./config:/app/test/config
+      - ./fixtures:/app/test/fixtures
+    command: ["tail", "-f", "/dev/null"]  # Keep container running for tests
+
+  # Test Data Generator
+  test-data-generator:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.test
+    environment:
+      - CONFIG_PATH=/app/test/config/test_config.yaml
+      - DATABASE_URL=postgres://arxos_test:test_password@postgres-test:5432/arxos_test?sslmode=disable
+    depends_on:
+      arxos-api-test:
+        condition: service_healthy
+    volumes:
+      - ./config:/app/test/config
+      - ./fixtures:/app/test/fixtures
+    command: ["go", "run", "test/helpers/test_data_generator.go"]
+
+  # Performance Testing
+  performance-test:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.test
+    environment:
+      - API_BASE_URL=http://arxos-api-test:8080
+      - TEST_CONFIG_PATH=/app/test/config/test_config.yaml
+    depends_on:
+      arxos-api-test:
+        condition: service_healthy
+    volumes:
+      - ./config:/app/test/config
+      - ./fixtures:/app/test/fixtures
+    command: ["go", "test", "-v", "./test/integration/performance/..."]
+
+volumes:
+  postgres_test_data:
+  redis_test_data:
+
+networks:
+  default:
+    name: arxos_test_network

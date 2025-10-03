@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 )
@@ -47,7 +48,7 @@ func (m *CORSMiddleware) CORS(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Methods", strings.Join(m.allowedMethods, ", "))
 		w.Header().Set("Access-Control-Allow-Headers", strings.Join(m.allowedHeaders, ", "))
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		w.Header().Set("Access-Control-Max-Age", string(rune(m.maxAge)))
+		w.Header().Set("Access-Control-Max-Age", fmt.Sprintf("%d", m.maxAge))
 
 		// Handle preflight requests
 		if r.Method == "OPTIONS" {

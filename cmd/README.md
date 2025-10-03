@@ -6,62 +6,72 @@ This directory contains the command-line interface (CLI) for ArxOS, a building o
 
 ```
 cmd/
-└── arx/                    # Main CLI application (thin UX layer)
-    ├── main.go            # Entry point and initialization
-    ├── cmd_*.go           # Command implementations (UX only)
-    └── *.go               # Support files
+└── arx/                    # Main CLI application entry point
+    └── main.go            # Application entry point and initialization
 
-internal/                   # Business logic services
-├── simulation/            # Simulation service
-├── services/              # Service layer
-│   ├── bim_sync.go       # BIM synchronization
-│   ├── export_command.go # Export operations
-│   ├── import_command.go # Import operations
-│   └── query_service.go  # Database queries
-└── [other packages]      # Core business logic
+internal/cli/               # CLI implementation (Clean Architecture)
+├── app.go                 # CLI application setup and DI container
+├── cli.go                 # CLI utilities and validation helpers
+├── context.go             # Service context for dependency injection
+├── errors.go              # Sophisticated error handling
+└── commands/              # Command implementations
+    ├── system.go          # System management (install, health, migrate)
+    ├── crud.go            # CRUD operations (add, get, update, remove)
+    ├── repository.go      # Repository management (init, clone, status, sync)
+    ├── import_export.go   # Import/Export operations (import, export, convert)
+    ├── component.go       # Component management commands
+    ├── services.go        # Service commands (serve, watch)
+    ├── utility.go         # Utility commands (query, trace, visualize, report)
+    ├── cadtui.go         # CAD Terminal User Interface
+    └── serve.go          # HTTP server command
 ```
 
 ## Command Structure
 
-The ArxOS CLI uses [Cobra](https://github.com/spf13/cobra) for command parsing and follows a modular architecture where each major command group has its own file(s).
+The ArxOS CLI uses [Cobra](https://github.com/spf13/cobra) for command parsing and follows Clean Architecture principles with proper dependency injection and service context.
 
 ### Core Commands
 
-#### System Commands
-- **`main.go`** - Application entry point, database initialization, PostGIS setup
-- **`cmd_install.go`** - System installation and initialization
-- **`cmd_health.go`** - System health checks including PostGIS connectivity
-- **`cmd_daemon.go`** - Background daemon for file watching and auto-import
+#### System Commands (`system.go`)
+- **`install`** - System installation and initialization
+- **`health`** - System health checks including PostGIS connectivity
+- **`migrate`** - Database migration commands
 
-#### CRUD Operations
-- **`cmd_add.go`** - Add equipment with 3D spatial coordinates
-- **`cmd_get.go`** - Retrieve equipment with spatial data
-- **`cmd_update.go`** - Update equipment positions and metadata
-- **`cmd_remove.go`** - Remove equipment with cascade options
-- **`cmd_list.go`** - List equipment with spatial filtering
-- **`cmd_trace.go`** - Trace equipment dependencies and relationships
+#### CRUD Operations (`crud.go`)
+- **`add`** - Add building components (equipment, rooms, floors)
+- **`get`** - Retrieve building component details
+- **`update`** - Update building components
+- **`remove`** - Remove building components
 
-#### Import/Export Pipeline
-- **`cmd_import.go`** - Import IFC/BIM files to PostGIS
-- **`cmd_export.go`** - Export to multiple formats (IFC, CSV, JSON, BIM)
-- **`cmd_convert.go`** - Convert between building data formats
+#### Repository Management (`repository.go`)
+- **`repo init`** - Initialize building repository with version control
+- **`repo clone`** - Clone remote repositories
+- **`repo status`** - Repository status with spatial statistics
+- **`repo commit`** - Commit changes to repository
+- **`repo push`** - Push changes to remote
+- **`repo pull`** - Pull changes from remote
 
-#### Repository Management
-- **`cmd_repo_common.go`** - Shared repository types and utilities
-- **`cmd_repo_init.go`** - Initialize BIM repository with version control
-- **`cmd_repo_clone.go`** - Clone remote repositories
-- **`cmd_repo_status.go`** - Repository status with spatial statistics
-- **`cmd_repo_sync.go`** - Push/Pull/Diff operations
-- **`cmd_repo_history.go`** - Commit history and branch management
+#### Import/Export Pipeline (`import_export.go`)
+- **`import`** - Import IFC/BIM files to PostGIS
+- **`export`** - Export to multiple formats (IFC, CSV, JSON, BIM)
+- **`convert`** - Convert between building data formats
 
-#### Query & Analysis
-- **`cmd_query.go`** - Spatial queries using PostGIS
-- **`cmd_report.go`** - Generate building reports
-- **`cmd_visualize.go`** - Create visualizations with spatial data
+#### Component Management (`component.go`)
+- **`component`** - Component management commands
 
-#### Services
-- **`cmd_serve.go`** - REST API server
-- **`cmd_watch.go`** - File system monitoring
+#### Services (`services.go`)
+- **`serve`** - REST API server
+- **`watch`** - File system monitoring
+
+#### Utility Commands (`utility.go`)
+- **`query`** - Spatial queries using PostGIS
+- **`trace`** - Trace building component connections
+- **`visualize`** - Generate building visualizations
+- **`report`** - Generate building reports
+- **`version`** - Print version information
+
+#### Interactive Interface (`cadtui.go`)
+- **`cadtui`** - Computer-Aided Design Terminal User Interface
 
 ## PostGIS Integration
 

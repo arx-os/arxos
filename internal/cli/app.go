@@ -90,9 +90,9 @@ func (a *App) wireCommands() {
 	serviceContext := NewServiceContext(a.container)
 
 	// System management commands
-	a.rootCmd.AddCommand(commands.CreateInstallCommand())
-	a.rootCmd.AddCommand(commands.CreateHealthCommand())
-	a.rootCmd.AddCommand(commands.CreateMigrateCommand())
+	a.rootCmd.AddCommand(commands.CreateInstallCommand(serviceContext))
+	a.rootCmd.AddCommand(commands.CreateHealthCommand(serviceContext))
+	a.rootCmd.AddCommand(commands.CreateMigrateCommand(serviceContext))
 
 	// Repository management commands
 	a.rootCmd.AddCommand(commands.CreateRepoCommand(serviceContext))
@@ -105,27 +105,27 @@ func (a *App) wireCommands() {
 
 	// Import/Export commands
 	a.rootCmd.AddCommand(commands.CreateImportCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.CreateExportCommand())
-	a.rootCmd.AddCommand(commands.CreateConvertCommand())
+	a.rootCmd.AddCommand(commands.CreateExportCommand(serviceContext))
+	a.rootCmd.AddCommand(commands.CreateConvertCommand(serviceContext))
 
 	// Data operations
-	a.rootCmd.AddCommand(commands.CreateQueryCommand())
+	a.rootCmd.AddCommand(commands.CreateQueryCommand(serviceContext))
 
 	// CRUD operations
-	a.rootCmd.AddCommand(commands.CreateAddCommand())
-	a.rootCmd.AddCommand(commands.CreateGetCommand())
-	a.rootCmd.AddCommand(commands.CreateUpdateCommand())
-	a.rootCmd.AddCommand(commands.CreateRemoveCommand())
+	a.rootCmd.AddCommand(commands.CreateAddCommand(serviceContext))
+	a.rootCmd.AddCommand(commands.CreateGetCommand(serviceContext))
+	a.rootCmd.AddCommand(commands.CreateUpdateCommand(serviceContext))
+	a.rootCmd.AddCommand(commands.CreateRemoveCommand(serviceContext))
 
 	// Service commands
-	a.rootCmd.AddCommand(commands.CreateServeCommand())
+	a.rootCmd.AddCommand(commands.CreateServeCommand(serviceContext))
 	a.rootCmd.AddCommand(commands.CreateWatchCommand(serviceContext))
 
 	// Utility commands
-	a.rootCmd.AddCommand(commands.CreateTraceCommand())
-	a.rootCmd.AddCommand(commands.CreateVisualizeCommand())
-	a.rootCmd.AddCommand(commands.CreateReportCommand())
-	a.rootCmd.AddCommand(commands.CreateVersionCommand())
+	a.rootCmd.AddCommand(commands.CreateTraceCommand(serviceContext))
+	a.rootCmd.AddCommand(commands.CreateVisualizeCommand(serviceContext))
+	a.rootCmd.AddCommand(commands.CreateReportCommand(serviceContext))
+	a.rootCmd.AddCommand(commands.CreateVersionCommand(serviceContext))
 }
 
 // GetConfig returns the application configuration

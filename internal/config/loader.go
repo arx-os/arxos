@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 // ConfigLoader loads configuration from various sources
@@ -528,8 +530,16 @@ func (fcs *FileConfigSource) Load() (*Config, error) {
 	}
 
 	var config Config
-	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	
+	// Determine format based on file extension
+	if strings.HasSuffix(strings.ToLower(fcs.path), ".yml") || strings.HasSuffix(strings.ToLower(fcs.path), ".yaml") {
+		if err := yaml.Unmarshal(data, &config); err != nil {
+			return nil, fmt.Errorf("failed to parse YAML config file: %w", err)
+		}
+	} else {
+		if err := json.Unmarshal(data, &config); err != nil {
+			return nil, fmt.Errorf("failed to parse JSON config file: %w", err)
+		}
 	}
 
 	return &config, nil

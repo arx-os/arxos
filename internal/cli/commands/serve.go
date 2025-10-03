@@ -21,7 +21,7 @@ import (
 )
 
 // CreateServeCommand creates the serve command
-func CreateServeCommand() *cobra.Command {
+func CreateServeCommand(serviceContext interface{}) *cobra.Command {
 	var (
 		port     int
 		host     string

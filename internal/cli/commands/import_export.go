@@ -111,7 +111,7 @@ func CreateImportCommand(serviceContext interface{}) *cobra.Command {
 }
 
 // createExportCommand creates the export command
-func CreateExportCommand() *cobra.Command {
+func CreateExportCommand(serviceContext interface{}) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export <building-id>",
 		Short: "Export building data",
@@ -145,7 +145,7 @@ func CreateExportCommand() *cobra.Command {
 }
 
 // createConvertCommand creates the convert command
-func CreateConvertCommand() *cobra.Command {
+func CreateConvertCommand(serviceContext interface{}) *cobra.Command {
 	return &cobra.Command{
 		Use:   "convert <input> <output>",
 		Short: "Convert between building data formats",

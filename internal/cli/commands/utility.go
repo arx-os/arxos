@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// createQueryCommand creates the query command
-func CreateQueryCommand() *cobra.Command {
+// CreateQueryCommand creates the query command
+func CreateQueryCommand(serviceContext interface{}) *cobra.Command {
 	return &cobra.Command{
 		Use:   "query <sql>",
 		Short: "Execute database queries",
@@ -16,7 +16,7 @@ func CreateQueryCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			sql := args[0]
 
-			fmt.Printf("Executing query: %s\n", sql)
+			fmt.Printf("🔍 Executing query: %s\n", sql)
 
 			// TODO: Implement query execution
 			// This would typically involve:
@@ -31,8 +31,8 @@ func CreateQueryCommand() *cobra.Command {
 	}
 }
 
-// createTraceCommand creates the trace command
-func CreateTraceCommand() *cobra.Command {
+// CreateTraceCommand creates the trace command
+func CreateTraceCommand(serviceContext interface{}) *cobra.Command {
 	return &cobra.Command{
 		Use:   "trace <path>",
 		Short: "Trace building component connections",
@@ -57,8 +57,8 @@ func CreateTraceCommand() *cobra.Command {
 	}
 }
 
-// createVisualizeCommand creates the visualize command
-func CreateVisualizeCommand() *cobra.Command {
+// CreateVisualizeCommand creates the visualize command
+func CreateVisualizeCommand(serviceContext interface{}) *cobra.Command {
 	return &cobra.Command{
 		Use:   "visualize <building-id>",
 		Short: "Generate building visualizations",
@@ -82,8 +82,8 @@ func CreateVisualizeCommand() *cobra.Command {
 	}
 }
 
-// createReportCommand creates the report command
-func CreateReportCommand() *cobra.Command {
+// CreateReportCommand creates the report command
+func CreateReportCommand(serviceContext interface{}) *cobra.Command {
 	return &cobra.Command{
 		Use:   "report <type>",
 		Short: "Generate building reports",
@@ -107,8 +107,8 @@ func CreateReportCommand() *cobra.Command {
 	}
 }
 
-// createVersionCommand creates the version command
-func CreateVersionCommand() *cobra.Command {
+// CreateVersionCommand creates the version command
+func CreateVersionCommand(serviceContext interface{}) *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
 		Short: "Print version information",

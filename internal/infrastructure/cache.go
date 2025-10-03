@@ -3,6 +3,7 @@ package infrastructure
 import (
 	"context"
 	"encoding/json"
+	"sync"
 	"time"
 
 	"github.com/arx-os/arxos/internal/config"
@@ -12,76 +13,42 @@ import (
 // Cache implements the cache interface following Clean Architecture
 type Cache struct {
 	config *config.Config
-	// Add actual cache client fields here
-	// client redis.Client
-	// or in-memory cache
+	imc    *InMemoryCache
 }
 
 // NewCache creates a new cache instance
 func NewCache(cfg *config.Config) (domain.Cache, error) {
 	cache := &Cache{
 		config: cfg,
-	}
-
-	// Initialize cache connection
-	if err := cache.initialize(); err != nil {
-		return nil, err
+		imc:    NewInMemoryCache().(*InMemoryCache),
 	}
 
 	return cache, nil
 }
 
-// initialize sets up the cache connection
-func (c *Cache) initialize() error {
-	// TODO: Implement actual cache initialization logic
-	// This would typically involve:
-	// 1. Parse cache configuration from config
-	// 2. Connect to Redis/Memcached
-	// 3. Test connection
-	// 4. Set up connection pool
-
-	return nil
-}
-
 // Get retrieves a value from cache
 func (c *Cache) Get(ctx context.Context, key string) (interface{}, error) {
-	// TODO: Implement actual cache get logic
-	// This would typically involve:
-	// 1. Serialize key
-	// 2. Get from cache
-	// 3. Deserialize value
-	// 4. Return value
-
-	return nil, nil // Cache miss
+	return c.imc.Get(ctx, key)
 }
 
 // Set stores a value in cache with TTL
 func (c *Cache) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
-	// TODO: Implement actual cache set logic
-	// This would typically involve:
-	// 1. Serialize value
-	// 2. Serialize key
-	// 3. Set in cache with TTL
-
-	return nil
+	return c.imc.Set(ctx, key, value, ttl)
 }
 
 // Delete removes a value from cache
 func (c *Cache) Delete(ctx context.Context, key string) error {
-	// TODO: Implement actual cache delete logic
-	return nil
+	return c.imc.Delete(ctx, key)
 }
 
 // Clear removes all values from cache
-func (c Cache) Clear(ctx context.Context) error {
-	// TODO: Implement actual cache clear logic
-	return nil
+func (c *Cache) Clear(ctx context.Context) error {
+	return c.imc.Clear(ctx)
 }
 
 // Close closes the cache connection
 func (c *Cache) Close() error {
-	// TODO: Implement actual cache close logic
-	return nil
+	return c.imc.Close()
 }
 
 // Helper methods for serialization
@@ -128,6 +95,7 @@ func (rc *RedisCache) InvalidateByTags(ctx context.Context, tags []string) error
 // InMemoryCache implements an in-memory cache for development/testing
 type InMemoryCache struct {
 	data map[string]cacheEntry
+	mu   sync.RWMutex
 }
 
 type cacheEntry struct {
@@ -144,14 +112,19 @@ func NewInMemoryCache() domain.Cache {
 
 // Get retrieves a value from in-memory cache
 func (imc *InMemoryCache) Get(ctx context.Context, key string) (interface{}, error) {
+	imc.mu.RLock()
 	entry, exists := imc.data[key]
+	imc.mu.RUnlock()
+	
 	if !exists {
 		return nil, nil // Cache miss
 	}
 
 	// Check if expired
 	if time.Now().After(entry.expiresAt) {
+		imc.mu.Lock()
 		delete(imc.data, key)
+		imc.mu.Unlock()
 		return nil, nil // Cache miss
 	}
 
@@ -160,6 +133,9 @@ func (imc *InMemoryCache) Get(ctx context.Context, key string) (interface{}, err
 
 // Set stores a value in in-memory cache with TTL
 func (imc *InMemoryCache) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+	imc.mu.Lock()
+	defer imc.mu.Unlock()
+	
 	imc.data[key] = cacheEntry{
 		value:     value,
 		expiresAt: time.Now().Add(ttl),
@@ -169,12 +145,18 @@ func (imc *InMemoryCache) Set(ctx context.Context, key string, value interface{}
 
 // Delete removes a value from in-memory cache
 func (imc *InMemoryCache) Delete(ctx context.Context, key string) error {
+	imc.mu.Lock()
+	defer imc.mu.Unlock()
+	
 	delete(imc.data, key)
 	return nil
 }
 
 // Clear removes all values from in-memory cache
 func (imc *InMemoryCache) Clear(ctx context.Context) error {
+	imc.mu.Lock()
+	defer imc.mu.Unlock()
+	
 	imc.data = make(map[string]cacheEntry)
 	return nil
 }

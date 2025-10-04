@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	// Version information (set during build)
+	// Version information (set during build via ldflags)
 	Version   = "dev"
 	BuildTime = "unknown"
 	Commit    = "unknown"
@@ -32,8 +32,8 @@ func main() {
 		}
 	}
 
-	// Create CLI application
-	app := cli.NewApp(cfg)
+	// Create CLI application with version info
+	app := cli.NewAppWithVersion(cfg, Version, BuildTime, Commit)
 
 	// Execute root command
 	if err := app.Execute(); err != nil {

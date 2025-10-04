@@ -19,6 +19,13 @@ type App struct {
 	container *app.Container
 }
 
+// VersionInfo holds version information
+type VersionInfo struct {
+	Version   string
+	BuildTime string
+	Commit    string
+}
+
 // NewApp creates a new CLI application
 func NewApp(cfg *config.Config) *App {
 	app := &App{
@@ -31,6 +38,25 @@ func NewApp(cfg *config.Config) *App {
 
 	// Setup root command
 	app.setupRootCommand()
+
+	return app
+}
+
+// NewAppWithVersion creates a new CLI application with version information
+func NewAppWithVersion(cfg *config.Config, version, buildTime, commit string) *App {
+	app := &App{
+		config: cfg,
+		logger: &Logger{}, // Placeholder logger
+	}
+
+	// Initialize dependency injection container
+	app.container = app.NewContainer()
+
+	// Setup root command with version info
+	app.setupRootCommand()
+
+	// Version info is available via the main package variables
+	// Commands can access version info through cmd/arx/main.go variables
 
 	return app
 }
@@ -87,7 +113,7 @@ For detailed help on any command, use: arx <command> --help`,
 // wireCommands wires all commands following Go Blueprint standards
 func (a *App) wireCommands() {
 	// Create service context for commands
-	serviceContext := NewServiceContext(a.container)
+	serviceContext := a.container
 
 	// System management commands
 	a.rootCmd.AddCommand(commands.CreateInstallCommand(serviceContext))

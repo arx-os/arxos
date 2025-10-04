@@ -1,0 +1,51 @@
+{
+  "buildings": [
+    {
+      "id": "B001_TC001",
+      "name": "Test Building Alpha",
+      "address": "123 Test Street",
+      "city": "Test City",
+      "state": "TS",
+      "country": "TT",
+      "latitude": 37.7749,
+      "longitude": -122.4194,
+      "altitude": 0.0,
+      "building_type": "Commercial",
+      "description": "Test building for CI/CD validation"
+    },
+    {
+      "id": "B002_TC002", 
+      "name": "Test Building Beta",
+      "address": "456 Validation Ave",
+      "city": "Test City",
+      "state": "TS", 
+      "country": "TT",
+      "latitude": 37.7849,
+      "longitude": -122.4294,
+      "altitude": 10.5,
+      "building_type": "Residential",
+      "description": "Secondary test building for load testing"
+    }
+  ],
+  "equipment": [
+    {
+      "id": "E001_TC001",
+      "name": "Test HVAC Unit",
+      "type": "hvac",
+      "status": "operational",
+      "equipment_tag": "HVAC-001",
+      "manufacturer": "Test Manufacturer",
+      "model": "Test Model-100"
+    }
+  ],
+  "rooms": [
+    {
+      "id": "R001_TC001",
+      "name": "Test Room Alpha",
+      "room_number": "TC-001",
+      "room_type": "office",
+      "floor_level": 1,
+      "area_sqmm": 20000000
+    }
+  ]
+}

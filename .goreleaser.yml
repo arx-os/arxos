@@ -1,0 +1,262 @@
+# Goreleaser configuration for ArxOS
+# This file is used to create releases with automatically built binaries
+# See: https://goreleaser.com/customization/
+
+before:
+  hooks:
+    # Ensure all tests pass before creating release
+    - go test ./...
+    - go mod verify
+
+# Build configuration
+builds:
+  - id: arxos-cli
+    main: ./cmd/arx/main.go
+    binary: arxos
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/arx-os/arxos/cmd/arx.Version={{.Version}}
+      - -X github.com/arx-os/arxos/cmd/arx.BuildTime={{.Date}}
+      - -X github.com/arx-os/arxos/cmd/arx.Commit={{.Commit}}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+      - arm
+
+# Archive configuration
+archives:
+  - id: arxos-cli-archive
+    builds:
+      - arxos-cli
+    name_template: "arxos_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+    replacements:
+      darwin: macos
+      windows: windows
+      linux: linux
+    files:
+      - README.md
+      - QUICKSTART.md
+      - docker-compose.yml
+      - docker-compose.prod.yml
+      - docker-compose.test.yml
+      - configs/
+    format: tar.gz
+
+# Checksums for integrity verification
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: "sha256"
+
+# Docker configuration (for Docker Hub and GitHub Container Registry)
+dockers:
+  - id: arxos-main
+    image_templates:
+      - joelpate/arxos:latest
+      - joelpate/arxos:{{ .Major }}.{{ .Minor }}
+      - joelpate/arxos:{{ .Version }}
+      - ghcr.io/joelpate/arxos:latest
+      - ghcr.io/joelpate/arxos:{{ .Major }}.{{ .Minor }}
+      - ghcr.io/joelpate/arxos:{{ .Version }}
+    goos: linux
+    goarch: amd64
+    main: ./cmd/arx/main.go
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - --build-arg=VERSION={{ .Version }}
+      - --build-arg=COMMIT={{ .ShortCommit }}
+    build_context: .
+    extra_files:
+      - README.md
+      - configs/
+
+# Snapcraft configuration (for Linux Snap package)
+snapshot:
+  name_template: "{{ .ProjectName }}"
+  grade: stable
+  confinement: classic
+
+snapcrafts:
+  - id: arxos-snap
+    builds:
+      - arxos-cli
+    name_template: "{{ .ProjectName }}"
+    grade: stable
+    confinement: classic
+
+# Homebrew formula configuration (for macOS installs via Homebrew)
+# Comented out until proper tap is created
+# brews:
+#   - name: arxos
+#     description: "ArxOS - The Building Operating System"
+#     homepage: "https://github.com/joelpate/arxos"
+#     repository:
+#       tap: "homebrew/core"  # Use official tap until custom tap is created
+#     license: "Proprietary"
+#     skip_upload: true  # Skip until properly configured
+
+# Scoop manifest (for Windows package manager)
+# Commented out until proper bucket is created
+# scoop:
+#   name: arxos
+#   bucket: main
+#   homepage: "https://github.com/joelpate/arxos"
+#   description: "ArxOS - The Building Operating System"
+#   license: "Proprietary"
+
+# Release notes configuration
+release:
+  name_template: 'Release {{ .Tag }}'
+  header: |
+    ## ArxOS {{ .Tag }}
+    
+    ArxOS Release: {{ .Tag }}
+    
+    ### What's New in {{ .Tag }}
+    {{ range .Changes }}
+    - {{ .Commit.Message }}
+    {{ end }}
+    
+  footer: |
+    ### Installation
+    
+    #### Binary Download
+    Download the appropriate binary for your platform from the assets below.
+    
+    #### Docker Installation
+    ```bash
+    docker pull joelpate/arxos:{{ .Tag }}
+    ```
+    
+    #### Quick Start
+    ```bash
+    # After installation
+    arxos init
+    arxos version
+    ```
+    
+    ### Documentation
+    - [Quick Start Guide](README.md#quick-start)
+    - [Architecture Overview](docs/architecture/SERVICE_ARCHITECTURE.md)
+    - [Deployment Guide](docs/deployment/DEPLOYMENT_GUIDE.md)
+    
+  draft: false
+  prerelease: auto  # Mark as pre-release if tag starts with v0
+  mode: replace
+
+# NFPM configuration (for .deb, .rpm packages)
+nfpms:
+  - id: arxos-deb
+    builds:
+      - arxos-cli
+    package: "arxos"
+    vendor: "ArxOS"
+    homepage: "https://github.com/joelpate/arxos"
+    description: "ArxOS - The Building Operating System"
+    license: "Proprietary"
+    formats:
+      - deb
+    contents:
+      - src: arxos
+        dst: /usr/local/bin/arxos
+      - src: README.md
+        dst: /usr/share/doc/arxos/README.md
+    overrides:
+      deb:
+        dependencies:
+          - postgresql-14
+          - postgresql-client-14
+          - postgresql-14-postgis-3
+          - git
+          - curl
+        conflicts:
+          - postgresql-15
+          - postgresql-16
+        
+  - id: arxos-rpm
+    builds:
+      - arxos-cli
+    package: "arxos"
+    vendor: "ArxOS"
+    homepage: "https://github.com/joelpate/arxos"
+    description: "ArxOS - The Building Operating System"
+    license: "Proprietary"
+    formats:
+      - rpm
+    contents:
+      - src: arxos
+        dst: /usr/local/bin/arxos
+      - src: README.md
+        dst: /usr/share/doc/arxos/README.md
+    overrides:
+      rpm:
+        dependencies:
+          - postgresql14-server
+          - postgresql14
+          - postgis35_14
+          - git
+          - curl
+        conflicts:
+          - postgresql15
+          - postgresql16
+
+# Changelog configuration
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^Merge"
+      - "^doc:"
+      - "^test:"
+      - "^ci:"
+      - "^style:"
+      - "^refactor:"
+      - "^chore:"
+
+# GitHub milestone configuration
+milestones:
+  - name: "Release {{ .Major }}.{{ .Minor }}"
+    description: "Release {{ .Version }} containing various improvements and fixes."
+
+# Commit message format
+meta:
+  branch_prefixes:
+    - "release/"
+  branch_name: "release/{{ .Version }}"
+
+# Announcers for different platforms
+announce:
+  skip: true  # Will be handled by GitHub Actions workflow
+
+# Blobs (additional files to include)
+blobs:
+  - name: "mobile"
+    provider: "files"
+    directory: "mobile"
+    include:
+      - "**/*"
+    exclude:
+      - "node_modules/**/*"
+      - ".git/**/*"
+      - "android/build/**/*"
+      - "ios/build/**/*"
+
+# Universal binaries for macOS (Intel + Apple Silicon)
+# Create universal binaries that merge amd64 and arm64 builds for macOS
+universal_binaries:
+  - replace: true
+    goos: darwin
+
+# Validate configuration on each run
+validations:
+  - lint: goreleaser-release

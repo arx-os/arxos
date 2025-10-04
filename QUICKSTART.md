@@ -7,6 +7,7 @@ Get up and running with ArxOS in under 5 minutes!
 - **Go 1.21+** - [Download](https://golang.org/dl/)
 - **Docker & Docker Compose** - [Download](https://www.docker.com/products/docker-desktop)
 - **Git** - [Download](https://git-scm.com/downloads)
+- **Make** - Usually pre-installed on macOS/Linux
 
 ## 🚀 Quick Start
 
@@ -18,10 +19,13 @@ git clone https://github.com/arx-os/arxos.git
 cd arxos
 
 # Copy environment configuration
-cp env.example .env
+cp .env.example .env
 
 # Start the development environment
 docker-compose up -d
+
+# For testing environment, use:
+# docker-compose -f docker-compose.test.yml up -d
 ```
 
 ### 2. Install Dependencies
@@ -32,6 +36,9 @@ go mod download
 
 # Run database migrations
 go run cmd/arx/main.go migrate up
+
+# Or use the Makefile for setup
+make setup
 ```
 
 ### 3. Build and Run
@@ -58,6 +65,9 @@ make build
 
 # Test API endpoint
 curl http://localhost:8080/health
+
+# Check mobile app (if needed)
+cd mobile && npm install && npm start
 ```
 
 ## 🏗️ First Building
@@ -66,25 +76,25 @@ curl http://localhost:8080/health
 
 ```bash
 # Create a building
-./bin/arx building create "Main Campus" --address "123 University Ave"
+./bin/arx building create --name "Main Campus" --address "123 University Ave"
 
 # Add floors
-./bin/arx building floor add "Main Campus" "Ground Floor" --level 0
-./bin/arx building floor add "Main Campus" "First Floor" --level 1
+./bin/arx building floor add --building "Main Campus" --name "Ground Floor" --level 0
+./bin/arx building floor add --building "Main Campus" --name "First Floor" --level 1
 
 # Add rooms
-./bin/arx building room add "Main Campus" "Ground Floor" "Lobby" --type common
-./bin/arx building room add "Main Campus" "First Floor" "Conference Room A" --type meeting
+./bin/arx building room add --building "Main Campus" --floor "Ground Floor" --name "Lobby" --type common
+./bin/arx building room add --building "Main Campus" --floor "First Floor" --name "Conference Room A" --type meeting
 ```
 
 ### Import Building Data
 
 ```bash
 # Import from IFC file
-./bin/arx convert ifc-to-bim /path/to/building.ifc
+./bin/arx ifc import /path/to/building.ifc
 
 # Import from PDF
-./bin/arx convert pdf-to-bim /path/to/floorplan.pdf
+./bin/arx pdf import /path/to/floorplan.pdf
 ```
 
 ### Query Building Data
@@ -111,6 +121,9 @@ make test
 # Run tests with coverage
 make test-coverage
 
+# Run integration tests
+make test-integration
+
 # Run specific module tests
 go test ./internal/spatial/...
 ```
@@ -131,14 +144,14 @@ make clean
 ### Development Server
 
 ```bash
-# Start development server with hot reload
-make dev
-
-# Start with debugging
-make debug
+# Start development server
+make run-dev
 
 # View logs
 make logs
+
+# Stop all services
+make stop
 ```
 
 ## 📊 Monitoring
@@ -146,27 +159,27 @@ make logs
 ### Performance Monitoring
 
 ```bash
-# View performance metrics
-./bin/arx performance metrics
+# Run performance tests
+make perf-test
 
-# Generate performance report
-./bin/arx performance report
+# Check service health
+make health
 
-# Monitor real-time performance
-./bin/arx performance monitor
+# View system logs
+make logs
 ```
 
 ### System Health
 
 ```bash
 # Check system health
-./bin/arx health
+make health
 
 # View system status
 ./bin/arx status
 
 # Check database connectivity
-./bin/arx db status
+docker-compose ps postgis
 ```
 
 ## 🛠️ Common Tasks
@@ -184,7 +197,7 @@ make logs
 ./bin/arx migrate create "add_new_table"
 
 # Reset database
-./bin/arx db reset
+make db-reset
 ```
 
 ### Configuration
@@ -226,7 +239,7 @@ lsof -i :8080
 kill -9 <PID>
 
 # Or use a different port
-export API_PORT=8081
+export ARXOS_API_PORT=8081
 ./bin/arx serve
 ```
 
@@ -248,6 +261,10 @@ docker-compose logs postgis
 make clean
 go mod tidy
 make build
+
+# Or use the complete cleanup
+make clean-all
+make build
 ```
 
 ### Getting Help
@@ -259,18 +276,18 @@ make build
 
 ## 🎯 Next Steps
 
-1. **Read the Documentation**: Start with `docs/DEVELOPER_GUIDE.md`
-2. **Explore Examples**: Check `demos/` directory
+1. **Read the Documentation**: Start with `docs/architecture/SERVICE_ARCHITECTURE.md`
+2. **Explore Examples**: Check `examples/` directory
 3. **Join the Community**: [GitHub Discussions](https://github.com/arx-os/arxos/discussions)
-4. **Develop**: Read `CONTRIBUTING.md`
+4. **Develop**: Read `docs/deployment/DEPLOYMENT_GUIDE.md`
 
 ## 📚 Additional Resources
 
-- [Architecture Overview](docs/ARCHITECTURE.md)
-- [API Reference](docs/API_REFERENCE.md)
-- [CLI Reference](docs/CLI_REFERENCE.md)
-- [Deployment Guide](docs/DEPLOYMENT_GUIDE.md)
-- [Integration Guide](docs/INTEGRATION_GUIDE.md)
+- [Architecture Overview](docs/architecture/SERVICE_ARCHITECTURE.md)
+- [API Documentation](docs/api/API_DOCUMENTATION.md)
+- [Deployment Guide](docs/deployment/DEPLOYMENT_GUIDE.md)
+- [Integration Flow](docs/integration/INTEGRATION_FLOW.md)
+- [CLI Integration](docs/integration/CLI_INTEGRATION.md)
 
 ---
 

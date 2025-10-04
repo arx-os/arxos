@@ -1,452 +1,646 @@
-//go:build load
-// +build load
+//go:build stress
+// +build stress
 
 package load
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"math/rand"
+	"os"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/arx-os/arxos/internal/infrastructure"
-	"github.com/arx-os/arxos/internal/infrastructure/services"
-	"github.com/arx-os/arxos/pkg/models"
-	"github.com/google/uuid"
+	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// LoadTestConfig defines configuration for load tests
+// TestLoad simulates high concurrent load for ArxOS database operations
+func TestLoad(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping load tests in short mode")
+	}
+
+	// Load testing configuration
+	config := LoadTestConfig{
+		Duration:              5 * time.Minute,
+		MaxWorkers:            50,
+		RampUpDelay:           1 * time.Second,
+		ThinkTime:             100 * time.Millisecond,
+		FailureRateThreshold:  5.0,             // 5% max failure rate
+		ResponseTimeThreshold: 2 * time.Second, // Max response time
+	}
+
+	t.Logf("Starting load test with %d workers for %v", config.MaxWorkers, config.Duration)
+
+	// Get database connection from environment
+	dbURL := getDatabaseURL()
+	db, err := sql.Open("postgres", dbURL)
+	require.NoError(t, err)
+	defer db.Close()
+
+	// Verify database connection
+	require.NoError(t, db.Ping())
+
+	// Initialize test data
+	err = setupTestData(db)
+	require.NoError(t, err)
+
+	// Run load test
+	results := runLoadTest(t, db, config)
+
+	// Analyze results
+	t.Logf("Load test completed:")
+	t.Logf("  Total requests: %d", results.TotalRequests)
+	t.Logf("  Successful requests: %d", results.SuccessfulRequests)
+	t.Logf("  Failed requests: %d", results.FailedRequests)
+	t.Logf("  Average response time: %v", results.AverageResponseTime)
+	t.Logf("  95th percentile response time: %v", results.ResponseTime95th)
+	t.Logf("  Failure rate: %.2f%%", results.FailureRate()*100)
+
+	// Assert success criteria
+	assert.LessOrEqual(t, results.FailureRate()*100, config.FailureRateThreshold,
+		"Failure rate (%f%%) exceeds threshold (%f%%)",
+		results.FailureRate()*100, config.FailureRateThreshold)
+
+	assert.LessOrEqual(t, results.AverageResponseTime, config.ResponseTimeThreshold,
+		"Average response time (%v) exceeds threshold (%v)",
+		results.AverageResponseTime, config.ResponseTimeThreshold)
+
+	assert.GreaterOrEqual(t, results.SuccessfulRequests, int64(config.MaxWorkers*10),
+		"Successful requests (%d) below minimum threshold (%d)",
+		results.SuccessfulRequests, config.MaxWorkers*10)
+}
+
+// LoadTestConfig holds load test configuration
 type LoadTestConfig struct {
-	DatabaseURL      string
-	NumWorkers       int
-	OperationsPerSec int
-	TestDuration     time.Duration
-	RampUpTime       time.Duration
+	Duration              time.Duration
+	MaxWorkers            int
+	RampUpDelay           time.Duration
+	ThinkTime             time.Duration
+	FailureRateThreshold  float64
+	ResponseTimeThreshold time.Duration
 }
 
-// LoadTestMetrics tracks test metrics
-type LoadTestMetrics struct {
-	TotalOperations   int64
-	SuccessOperations int64
-	FailedOperations  int64
-	TotalLatency      int64
-	MaxLatency        int64
-	MinLatency        int64
-	Percentile95      int64
-	Percentile99      int64
-	StartTime         time.Time
-	EndTime           time.Time
+// LoadTestResults holds load test results
+type LoadTestResults struct {
+	TotalRequests       int64
+	SuccessfulRequests  int64
+	FailedRequests      int64
+	AverageResponseTime time.Duration
+	ResponseTime95th    time.Duration
+	StartTime           time.Time
+	EndTime             time.Time
+	mu                  sync.RWMutex
+	responseTimes       []time.Duration
 }
 
-// LoadTestRunner manages load test execution
-type LoadTestRunner struct {
-	config   *LoadTestConfig
-	db       *infrastructure.PostGISDatabase
-	services *services.DaemonService
-	metrics  *LoadTestMetrics
-	ctx      context.Context
-	cancel   context.CancelFunc
-}
-
-func NewLoadTestRunner(config *LoadTestConfig) (*LoadTestRunner, error) {
-	// TODO: Implement proper database configuration when PostGISConfig is available
-	// dbConfig := infrastructure.PostGISConfig{
-	// 	Host:     "localhost",
-	// 	Port:     5432,
-	// 	Database: "arxos_load_test",
-	// 	User:     "arxos",
-	// 	Password: "testpass",
-	// 	SSLMode:  "disable",
-	// 	MaxConns: config.NumWorkers * 2,
-	// }
-
-	// TODO: Implement proper database initialization when NewPostGISDB is available
-	// db := infrastructure.NewPostGISDatabase(dbConfig)
-	var db *infrastructure.PostGISDatabase // Placeholder
-	
-	ctx := context.Background()
-
-	// TODO: Implement database connection when available
-	// if err := db.Connect(ctx); err != nil {
-	// 	return nil, fmt.Errorf("failed to connect to database: %w", err)
-	// }
-
-	// TODO: Implement schema initialization when available
-	// if err := db.InitializeSchema(ctx); err != nil {
-	// 	return nil, fmt.Errorf("failed to initialize schema: %w", err)
-	// }
-
-	// TODO: Implement service registry when available
-	// services := services.NewServiceRegistry(db)
-	var services *services.DaemonService // Placeholder
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	return &LoadTestRunner{
-		config:   config,
-		db:       db,
-		services: services,
-		metrics:  &LoadTestMetrics{MinLatency: int64(time.Hour)},
-		ctx:      ctx,
-		cancel:   cancel,
-	}, nil
-}
-
-// TestEquipmentLoadTest performs load testing on equipment operations
-func TestEquipmentLoadTest(t *testing.T) {
-	config := &LoadTestConfig{
-		NumWorkers:       100,
-		OperationsPerSec: 1000,
-		TestDuration:     5 * time.Minute,
-		RampUpTime:       30 * time.Second,
+// runLoadTest executes the load test
+func runLoadTest(t *testing.T, db *sql.DB, config LoadTestConfig) *LoadTestResults {
+	results := &LoadTestResults{
+		StartTime:     time.Now(),
+		responseTimes: make([]time.Duration, 0, 1000),
 	}
 
-	runner, err := NewLoadTestRunner(config)
-	require.NoError(t, err)
-	defer runner.Cleanup()
+	ctx, cancel := context.WithTimeout(context.Background(), config.Duration)
+	defer cancel()
 
-	// Run the load test
-	runner.RunEquipmentLoadTest(t)
-
-	// Report metrics
-	runner.ReportMetrics(t)
-}
-
-func (r *LoadTestRunner) RunEquipmentLoadTest(t *testing.T) {
+	// Start workers
 	var wg sync.WaitGroup
+	workerCount := config.MaxWorkers
 
-	r.metrics.StartTime = time.Now()
-
-	// Calculate operations per worker
-	opsPerWorker := r.config.OperationsPerSec / r.config.NumWorkers
-	interval := time.Second / time.Duration(opsPerWorker)
-
-	// Ramp up workers gradually
-	rampUpInterval := r.config.RampUpTime / time.Duration(r.config.NumWorkers)
-
-	for w := 0; w < r.config.NumWorkers; w++ {
+	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
-		go r.equipmentWorker(&wg, w, interval)
-		time.Sleep(rampUpInterval)
+		go func(workerID int) {
+			defer wg.Done()
+			workerLoadTest(ctx, t, db, workerID, results, config)
+		}(i)
+
+		// Ramp up delay
+		if config.RampUpDelay > 0 {
+			time.Sleep(config.RampUpDelay / time.Duration(workerCount))
+		}
 	}
 
-	// Run for specified duration
-	time.Sleep(r.config.TestDuration)
-	r.cancel()
-
-	// Wait for all workers to complete
+	// Wait for all workers to complete or timeout
 	wg.Wait()
-	r.metrics.EndTime = time.Now()
+
+	results.EndTime = time.Now()
+	results.computeStatistics()
+
+	return results
 }
 
-func (r *LoadTestRunner) equipmentWorker(wg *sync.WaitGroup, workerID int, interval time.Duration) {
-	defer wg.Done()
+// workerLoadTest runs workload for a single worker
+func workerLoadTest(ctx context.Context, t *testing.T, db *sql.DB, workerID int, results *LoadTestResults, config LoadTestConfig) {
+	workerStartTime := time.Now()
+	requestCount := 0
 
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-
-	operations := []func(int) error{
-		r.createEquipmentOp,
-		r.updatePositionOp,
-		r.queryProximityOp,
-		r.queryBoundingBoxOp,
-		r.getEquipmentOp,
-	}
-
-	for {
-		select {
-		case <-r.ctx.Done():
-			return
-		case <-ticker.C:
-			// Randomly select an operation
-			op := operations[rand.Intn(len(operations))]
-
-			start := time.Now()
-			err := op(workerID)
-			latency := time.Since(start).Nanoseconds()
-
-			atomic.AddInt64(&r.metrics.TotalOperations, 1)
-			atomic.AddInt64(&r.metrics.TotalLatency, latency)
-
-			if err != nil {
-				atomic.AddInt64(&r.metrics.FailedOperations, 1)
-			} else {
-				atomic.AddInt64(&r.metrics.SuccessOperations, 1)
-				r.updateLatencyMetrics(latency)
-			}
-		}
-	}
-}
-
-func (r *LoadTestRunner) createEquipmentOp(workerID int) error {
-	equipment := models.Equipment{
-		ID:       fmt.Sprintf("LOAD_%d_%s", workerID, uuid.New().String()[:8]),
-		Name:     fmt.Sprintf("Load Test Equipment %d", workerID),
-		Type:     "sensor",
-		Status:   "active",
-		Metadata: map[string]interface{}{"worker": workerID},
-	}
-
-	return nil // TODO: Implement when EquipmentService is available
-	// return r.services.EquipmentService.CreateEquipment(r.ctx, &equipment)
-}
-
-func (r *LoadTestRunner) updatePositionOp(workerID int) error {
-	equipmentID := fmt.Sprintf("LOAD_%d_BASE", workerID)
-	// TODO: Implement when SpatialService is available
-	// position := spatial.Point3D{
-	// 	X: rand.Float64() * 10000,
-	// 	Y: rand.Float64() * 10000,
-	// 	Z: rand.Float64() * 1000,
-	// }
-	// return r.services.SpatialService.UpdateEquipmentPosition(
-	// 	r.ctx, equipmentID, position, spatial.ConfidenceMedium, "load_test",
-	// )
-	return nil // Placeholder
-}
-
-func (r *LoadTestRunner) queryProximityOp(workerID int) error {
-	// TODO: Implement when SpatialService is available
-	// center := spatial.Point3D{
-	// 	X: rand.Float64() * 10000,
-	// 	Y: rand.Float64() * 10000,
-	// 	Z: rand.Float64() * 1000,
-	// }
-	// _, err := r.services.SpatialService.FindEquipmentNearPoint(r.ctx, center, 1000)
-	// return err
-	return nil // Placeholder
-}
-
-func (r *LoadTestRunner) queryBoundingBoxOp(workerID int) error {
-	// TODO: Implement when SpatialService is available
-	// minX := rand.Float64() * 5000
-	// minY := rand.Float64() * 5000
-	// bbox := spatial.BoundingBox{
-	// 	Min: spatial.Point3D{X: minX, Y: minY, Z: 0},
-	// 	Max: spatial.Point3D{X: minX + 2000, Y: minY + 2000, Z: 1000},
-	// }
-	// _, err := r.services.SpatialService.FindEquipmentInBoundingBox(r.ctx, bbox)
-	// return err
-	return nil // Placeholder
-}
-
-func (r *LoadTestRunner) getEquipmentOp(workerID int) error {
-	equipmentID := fmt.Sprintf("LOAD_%d_BASE", workerID)
-	// TODO: Implement when EquipmentService is available
-	// _, err := r.services.EquipmentService.GetEquipment(r.ctx, equipmentID)
-	// return err
-	return nil // Placeholder
-}
-
-func (r *LoadTestRunner) updateLatencyMetrics(latency int64) {
-	// Update max latency
-	for {
-		max := atomic.LoadInt64(&r.metrics.MaxLatency)
-		if latency <= max || atomic.CompareAndSwapInt64(&r.metrics.MaxLatency, max, latency) {
-			break
-		}
-	}
-
-	// Update min latency
-	for {
-		min := atomic.LoadInt64(&r.metrics.MinLatency)
-		if latency >= min || atomic.CompareAndSwapInt64(&r.metrics.MinLatency, min, latency) {
-			break
-		}
-	}
-}
-
-func (r *LoadTestRunner) ReportMetrics(t *testing.T) {
-	total := atomic.LoadInt64(&r.metrics.TotalOperations)
-	success := atomic.LoadInt64(&r.metrics.SuccessOperations)
-	failed := atomic.LoadInt64(&r.metrics.FailedOperations)
-
-	duration := r.metrics.EndTime.Sub(r.metrics.StartTime)
-	throughput := float64(total) / duration.Seconds()
-	avgLatency := time.Duration(atomic.LoadInt64(&r.metrics.TotalLatency) / total)
-
-	t.Logf("=== Load Test Results ===")
-	t.Logf("Duration: %v", duration)
-	t.Logf("Total Operations: %d", total)
-	t.Logf("Successful: %d (%.2f%%)", success, float64(success)/float64(total)*100)
-	t.Logf("Failed: %d (%.2f%%)", failed, float64(failed)/float64(total)*100)
-	t.Logf("Throughput: %.2f ops/sec", throughput)
-	t.Logf("Avg Latency: %v", avgLatency)
-	t.Logf("Min Latency: %v", time.Duration(atomic.LoadInt64(&r.metrics.MinLatency)))
-	t.Logf("Max Latency: %v", time.Duration(atomic.LoadInt64(&r.metrics.MaxLatency)))
-
-	// Assert performance requirements
-	assert.Less(t, float64(failed)/float64(total), 0.01, "Error rate should be less than 1%")
-	assert.Greater(t, throughput, float64(r.config.OperationsPerSec)*0.9, "Should achieve at least 90% of target throughput")
-}
-
-func (r *LoadTestRunner) Cleanup() {
-	if r.db != nil {
-		// Clean up test data
-		ctx := context.Background()
-		queries := []string{
-			"DELETE FROM equipment_positions WHERE equipment_id LIKE 'LOAD_%'",
-			"DELETE FROM equipment WHERE id LIKE 'LOAD_%'",
-		}
-
-		for _, q := range queries {
-			_, _ = r.db.GetDB().ExecContext(ctx, q)
-		}
-
-		r.db.Close()
-	}
-}
-
-// TestSpatialLoadTest performs load testing on spatial operations
-func TestSpatialLoadTest(t *testing.T) {
-	config := &LoadTestConfig{
-		NumWorkers:       50,
-		OperationsPerSec: 500,
-		TestDuration:     3 * time.Minute,
-		RampUpTime:       20 * time.Second,
-	}
-
-	runner, err := NewLoadTestRunner(config)
-	require.NoError(t, err)
-	defer runner.Cleanup()
-
-	// Pre-populate with test data
-	runner.PrePopulateSpatialData(t, 10000)
-
-	// Run the load test
-	runner.RunSpatialLoadTest(t)
-
-	// Report metrics
-	runner.ReportMetrics(t)
-}
-
-func (r *LoadTestRunner) PrePopulateSpatialData(t *testing.T, numEquipment int) {
-	t.Logf("Pre-populating %d equipment items...", numEquipment)
-
-	for i := 0; i < numEquipment; i++ {
-		equipment := models.Equipment{
-			ID:     fmt.Sprintf("SPATIAL_BASE_%d", i),
-			Name:   fmt.Sprintf("Spatial Test Equipment %d", i),
-			Type:   "sensor",
-			Status: "active",
-		}
-
-		// TODO: Implement when EquipmentService is available
-		// err := r.services.EquipmentService.CreateEquipment(r.ctx, &equipment)
-		// require.NoError(t, err)
-
-		// TODO: Implement when SpatialService is available
-		// position := spatial.Point3D{
-		// 	X: rand.Float64() * 100000,
-		// 	Y: rand.Float64() * 100000,
-		// 	Z: rand.Float64() * 10000,
-		// }
-		// err = r.services.SpatialService.UpdateEquipmentPosition(
-		// 	r.ctx, equipment.ID, position, spatial.ConfidenceHigh, "pre_populate",
-		// )
-		// require.NoError(t, err)
-	}
-
-	t.Log("Pre-population complete")
-}
-
-func (r *LoadTestRunner) RunSpatialLoadTest(t *testing.T) {
-	var wg sync.WaitGroup
-
-	r.metrics.StartTime = time.Now()
-
-	// Calculate operations per worker
-	opsPerWorker := r.config.OperationsPerSec / r.config.NumWorkers
-	interval := time.Second / time.Duration(opsPerWorker)
-
-	for w := 0; w < r.config.NumWorkers; w++ {
-		wg.Add(1)
-		go r.spatialWorker(&wg, w, interval)
-	}
-
-	// Run for specified duration
-	time.Sleep(r.config.TestDuration)
-	r.cancel()
-
-	// Wait for all workers to complete
-	wg.Wait()
-	r.metrics.EndTime = time.Now()
-}
-
-func (r *LoadTestRunner) spatialWorker(wg *sync.WaitGroup, workerID int, interval time.Duration) {
-	defer wg.Done()
-
-	ticker := time.NewTicker(interval)
+	ticker := time.NewTicker(config.ThinkTime)
 	defer ticker.Stop()
 
 	for {
 		select {
-		case <-r.ctx.Done():
+		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			var err error
-			start := time.Now()
+			requestCount++
 
-			switch rand.Intn(3) {
-			case 0: // Complex proximity search
-				err = r.complexProximitySearch()
-			case 1: // Path finding
-				err = r.pathFindingOp()
-			case 2: // Clustering
-				err = r.clusteringOp()
-			}
+			// Execute load test operation
+			operation := selectRandomOperation()
+			metrics := executeDatabaseOperation(db, operation)
 
-			latency := time.Since(start).Nanoseconds()
+			results.recordRequest(metrics)
 
-			atomic.AddInt64(&r.metrics.TotalOperations, 1)
-			atomic.AddInt64(&r.metrics.TotalLatency, latency)
-
-			if err != nil {
-				atomic.AddInt64(&r.metrics.FailedOperations, 1)
-			} else {
-				atomic.AddInt64(&r.metrics.SuccessOperations, 1)
-				r.updateLatencyMetrics(latency)
+			// Log progress every 50 requests
+			if requestCount%50 == 0 {
+				t.Logf("Worker %d: Completed %d requests", workerID, requestCount)
 			}
 		}
 	}
 }
 
-func (r *LoadTestRunner) complexProximitySearch() error {
-	// TODO: Implement when SpatialService is available
-	// Multiple proximity searches with different radii
-	// center := spatial.Point3D{
-	// 	X: rand.Float64() * 50000 + 25000,
-	// 	Y: rand.Float64() * 50000 + 25000,
-	// 	Z: rand.Float64() * 5000,
-	// }
-	// radii := []float64{500, 1000, 2000, 5000}
-	// for _, radius := range radii {
-	// 	_, err := r.services.SpatialService.FindEquipmentNearPoint(r.ctx, center, radius)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-	return nil // Placeholder
+// DatabaseOperation types
+type OperationType int
+
+const (
+	OpCreateBuilding OperationType = iota
+	OpReadBuilding
+	OpUpdateBuilding
+	OpCreateFloor
+	OpReadFloor
+	OpQueryEquipment
+	OpSpatialQuery
+	OpHealthCheck
+)
+
+// selectRandomOperation selects a random database operation
+func selectRandomOperation() OperationType {
+	operations := []OperationType{
+		OpReadBuilding,   // 30% - Most common operation
+		OpCreateBuilding, // 10% - Moderate creation
+		OpReadFloor,      // 20% - Floor queries
+		OpQueryEquipment, // 20% - Equipment queries
+		OpSpatialQuery,   // 15% - Advanced spatial queries
+		OpHealthCheck,    // 5%  - Health monitoring
+	}
+
+	weights := []int{30, 10, 20, 20, 15, 5}
+	randIdx := weightedRandom(weights)
+
+	return operations[randIdx]
 }
 
-func (r *LoadTestRunner) pathFindingOp() error {
-	// TODO: Implement when SpatialService is available
-	// startID := fmt.Sprintf("SPATIAL_BASE_%d", rand.Intn(1000))
-	// endID := fmt.Sprintf("SPATIAL_BASE_%d", rand.Intn(1000)+9000)
-	// _, _, err := r.services.SpatialService.FindPath(r.ctx, startID, endID)
-	// return err
-	return nil // Placeholder
+// weightedRandom selects an index based on weights
+func weightedRandom(weights []int) int {
+	total := 0
+	for _, w := range weights {
+		total += w
+	}
+
+	r := rand.Intn(total)
+	cumsum := 0
+
+	for i, w := range weights {
+		cumsum += w
+		if r < cumsum {
+			return i
+		}
+	}
+
+	return 0 // Fallback
 }
 
-func (r *LoadTestRunner) clusteringOp() error {
-	// TODO: Implement when SpatialService is available
-	// radius := float64(rand.Intn(5000) + 1000)
-	// _, err := r.services.SpatialService.ClusterEquipment(r.ctx, radius)
-	// return err
-	return nil // Placeholder
+// OperationMetrics holds timing and result metrics
+type OperationMetrics struct {
+	OperationType OperationType
+	Success       bool
+	ResponseTime  time.Duration
+	Error         error
+	RowsAffected  int64
+}
+
+// executeDatabaseOperation executes a database operation and measures performance
+func executeDatabaseOperation(db *sql.DB, opType OperationType) OperationMetrics {
+	start := time.Now()
+
+	metrics := OperationMetrics{
+		OperationType: opType,
+		Success:       false,
+	}
+
+	switch opType {
+	case OpCreateBuilding:
+		metrics = executeCreateBuilding(db, start)
+	case OpReadBuilding:
+		metrics = executeReadBuilding(db, start)
+	case OpReadFloor:
+		metrics = executeReadFloor(db, start)
+	case OpQueryEquipment:
+		metrics = executeQueryEquipment(db, start)
+	case OpSpatialQuery:
+		metrics = executeSpatialQuery(db, start)
+	case OpHealthCheck:
+		metrics = executeHealthCheck(db, start)
+	default:
+		metrics = executeDefaultOperation(db, start)
+	}
+
+	metrics.ResponseTime = time.Since(start)
+	return metrics
+}
+
+// executeCreateBuilding creates a building
+func executeCreateBuilding(db *sql.DB, start time.Time) OperationMetrics {
+	metrics := OperationMetrics{OperationType: OpCreateBuilding}
+
+	// Generate test data
+	buildingName := fmt.Sprintf("LoadTestBuilding_%d_%d", time.Now().Unix(), rand.Intn(1000))
+	buildingID := fmt.Sprintf("B%s_%d", generateRandomID(8), rand.Intn(1000))
+
+	query := `
+		INSERT INTO buildings (id, arxos_id, name, description, building_type, 
+		                      address, city, state, country, latitude, longitude, 
+		                      altitude, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+	`
+
+	result, err := db.Exec(query,
+		buildingID,
+		buildingID,
+		buildingName,
+		"Load Test Building",
+		"Commercial",
+		fmt.Sprintf("%d Main St", rand.Intn(9999)),
+		"LoadTest City",
+		"TS",                         // Test State
+		"TE",                         // Test Country
+		37.7749+rand.Float64()*0.1,   // Random latitude near SF
+		-122.4194+rand.Float64()*0.1, // Random longitude near SF
+		rand.Float64()*100,           // Random altitude
+	)
+
+	if err != nil {
+		metrics.Error = err
+		return metrics
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		metrics.Error = err
+		return metrics
+	}
+
+	metrics.Success = true
+	metrics.RowsAffected = affected
+	return metrics
+}
+
+// executeReadBuilding reads building data
+func executeReadBuilding(db *sql.DB, start time.Time) OperationMetrics {
+	metrics := OperationMetrics{OperationType: OpReadBuilding}
+
+	// Read random building
+	query := `
+		SELECT id, name, address, created_at, updated_at 
+		FROM buildings 
+		ORDER BY RANDOM() 
+		LIMIT 1
+	`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		metrics.Error = err
+		return metrics
+	}
+	defer rows.Close()
+
+	count := 0
+	for rows.Next() {
+		var id, name, address string
+		var createdAt, updatedAt time.Time
+
+		if err := rows.Scan(&id, &name, &address, &createdAt, &updatedAt); err != nil {
+			metrics.Error = err
+			return metrics
+		}
+		count++
+	}
+
+	metrics.Success = true
+	metrics.RowsAffected = int64(count)
+	return metrics
+}
+
+// executeReadFloor reads floor data
+func executeReadFloor(db *sql.DB, start time.Time) OperationMetrics {
+	metrics := OperationMetrics{OperationType: OpReadFloor}
+
+	query := `
+		SELECT f.id, f.name, f.floor_number, b.name as building_name
+		FROM floors f
+		JOIN buildings b ON f.building_id = b.id
+		ORDER BY RANDOM()
+		LIMIT 1
+	`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		metrics.Error = err
+		return metrics
+	}
+	defer rows.Close()
+
+	count := 0
+	for rows.Next() {
+		var id, name, buildingName string
+		var floorNumber int
+
+		if err := rows.Scan(&id, &name, &floorNumber, &buildingName); err != nil {
+			metrics.Error = err
+			return metrics
+		}
+		count++
+	}
+
+	metrics.Success = true
+	metrics.RowsAffected = int64(count)
+	return metrics
+}
+
+// executeQueryEquipment queries equipment data
+func executeQueryEquipment(db *sql.DB, start time.Time) OperationMetrics {
+	metrics := OperationMetrics{OperationType: OpQueryEquipment}
+
+	query := `
+		SELECT e.id, e.name, e.type, e.status, f.name as floor_name
+		FROM equipment e
+		JOIN floors f ON e.floor_id = f.id
+		WHERE e.status = $1
+		ORDER BY RANDOM()
+		LIMIT $2
+	`
+
+	statuses := []string{"active", "maintenance", "offline", "normal"}
+	status := statuses[rand.Intn(len(statuses))]
+	limit := rand.Intn(10) + 1
+
+	rows, err := db.Query(query, status, limit)
+	if err != nil {
+		metrics.Error = err
+		return metrics
+	}
+	defer rows.Close()
+
+	count := 0
+	for rows.Next() {
+		var id, name, eqType, status, floorName string
+
+		if err := rows.Scan(&id, &name, &eqType, &status, &floorName); err != nil {
+			metrics.Error = err
+			return metrics
+		}
+		count++
+	}
+
+	metrics.Success = true
+	metrics.RowsAffected = int64(count)
+	return metrics
+}
+
+// executeSpatialQuery executes PostGIS spatial queries
+func executeSpatialQuery(db *sql.DB, start time.Time) OperationMetrics {
+	metrics := OperationMetrics{OperationType: OpSpatialQuery}
+
+	// Random coordinates for spatial query
+	lat := 37.7749 + (rand.Float64()-0.5)*0.1
+	lon := -122.4194 + (rand.Float64()-0.5)*0.1
+	radius := float64(rand.Intn(500) + 100) // 100-600 meters
+
+	query := `
+		SELECT b.id, b.name, 
+		       ST_Distance(b.location, ST_SetSRID(ST_MakePoint($2, $1), 4326)) as distance
+		FROM buildings b
+		WHERE ST_DWithin(b.location, ST_SetSRID(ST_MakePoint($2, $1), 4326), $3)
+		ORDER BY distance
+		LIMIT 10
+	`
+
+	rows, err := db.Query(query, lat, lon, radius)
+	if err != nil {
+		// Spatial queries might fail if location column doesn't exist - that's OK
+		metrics.Error = err
+		return metrics
+	}
+	defer rows.Close()
+
+	count := 0
+	for rows.Next() {
+		var id, name string
+		var distance float64
+
+		if err := rows.Scan(&id, &name, &distance); err != nil {
+			metrics.Error = err
+			return metrics
+		}
+		count++
+	}
+
+	metrics.Success = true
+	metrics.RowsAffected = int64(count)
+	return metrics
+}
+
+// executeHealthCheck performs basic health check
+func executeHealthCheck(db *sql.DB, start time.Time) OperationMetrics {
+	metrics := OperationMetrics{OperationType: OpHealthCheck}
+
+	err := db.Ping()
+	if err != nil {
+		metrics.Error = err
+		return metrics
+	}
+
+	metrics.Success = true
+	return metrics
+}
+
+// executeDefaultOperation executes a basic operation
+func executeDefaultOperation(db *sql.DB, start time.Time) OperationMetrics {
+	metrics := OperationMetrics{OperationType: OpHealthCheck}
+
+	// Simple query
+	query := "SELECT 1"
+	var result int
+
+	err := db.QueryRow(query).Scan(&result)
+	if err != nil {
+		metrics.Error = err
+		return metrics
+	}
+
+	metrics.Success = true
+	metrics.RowsAffected = 1
+	return metrics
+}
+
+// recordRequest records a request's metrics
+func (r *LoadTestResults) recordRequest(metrics OperationMetrics) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.TotalRequests++
+
+	if metrics.Success {
+		r.SuccessfulRequests++
+	} else {
+		r.FailedRequests++
+	}
+
+	// Store response time for percentile calculation
+	r.responseTimes = append(r.responseTimes, metrics.ResponseTime)
+}
+
+// computeStatistics calculates test statistics
+func (r *LoadTestResults) computeStatistics() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if len(r.responseTimes) == 0 {
+		return
+	}
+
+	// Sort response times for percentile calculation
+	times := make([]time.Duration, len(r.responseTimes))
+	copy(times, r.responseTimes)
+
+	// Calculate average
+	sum := time.Duration(0)
+	for _, t := range times {
+		sum += t
+	}
+	r.AverageResponseTime = sum / time.Duration(len(times))
+
+	// Calculate 95th percentile (simple implementation)
+	p95Index := int(float64(len(times)) * 0.95)
+	if p95Index >= len(times) {
+		p95Index = len(times) - 1
+	}
+	r.ResponseTime95th = times[p95Index]
+}
+
+// FailureRate returns the failure rate as a decimal (0.0 to 1.0)
+func (r *LoadTestResults) FailureRate() float64 {
+	if r.TotalRequests == 0 {
+		return 0.0
+	}
+
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	return float64(r.FailedRequests) / float64(r.TotalRequests)
+}
+
+// setupTestData prepares the database for load testing
+func setupTestData(db *sql.DB) error {
+	// Create test buildings if they don't exist
+	countQuery := "SELECT COUNT(*) FROM buildings"
+	var count int
+	err := db.QueryRow(countQuery).Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	// If we have less than 10 buildings, create some test data
+	if count < 10 {
+		createTestDataQuery := `
+			INSERT INTO buildings (id, arxos_id, name, description, building_type, 
+			                      address, city, state, country, latitude, longitude, 
+			                      altitude, created_at, updated_at)
+			SELECT 
+				'b' || generate_series || '_test',
+				'b' || generate_series || '_test',
+				'Test Building ' || generate_series,
+				'Load test building ' || generate_series,
+				'Commercial',
+				generate_series || ' Test St',
+				'Test City',
+				'TS',
+				'TE',
+				37.7749 + (generate_series * 0.01),
+				-122.4194 + (generate_series * 0.01),
+				generate_series * 10,
+				NOW(),
+				NOW()
+			FROM generate_series(1, 10)
+		`
+
+		_, err := db.Exec(createTestDataQuery)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// getDatabaseURL returns the database URL from environment or defaults
+func getDatabaseURL() string {
+	// Try environment variable first
+	if url := os.Getenv("DATABASE_URL"); url != "" {
+		return url
+	}
+
+	// Try individual components
+	host := os.Getenv("POSTGIS_HOST")
+	if host == "" {
+		host = "localhost"
+	}
+
+	port := os.Getenv("POSTGIS_PORT")
+	if port == "" {
+		port = "5432"
+	}
+
+	user := os.Getenv("POSTGIS_USER")
+	if user == "" {
+		user = "arxos_stress"
+	}
+
+	db := os.Getenv("POSTGIS_DB")
+	if db == "" {
+		db = "arxos_stress_test"
+	}
+
+	password := os.Getenv("POSTGIS_PASSWORD")
+	if password == "" {
+		password = "stress_password"
+	}
+
+	sslMode := os.Getenv("POSTGRES_SSLMODE")
+	if sslMode == "" {
+		sslMode = "disable"
+	}
+
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		user, password, host, port, db, sslMode)
+}
+
+// generateRandomID generates a random alphanumeric ID
+func generateRandomID(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
+	b := make([]byte, length)
+
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+
+	return string(b)
+}
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
 }

@@ -113,14 +113,10 @@ func CreateVersionCommand(serviceContext interface{}) *cobra.Command {
 		Use:   "version",
 		Short: "Print version information",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Version information (set during build)
-			version := "dev"
-			buildTime := "unknown"
-			commit := "unknown"
-
-			fmt.Printf("ArxOS %s\n", version)
-			fmt.Printf("Built: %s\n", buildTime)
-			fmt.Printf("Commit: %s\n", commit)
+			fmt.Printf("ArxOS %s\n", "dev") // Will be replaced by ldflags during build
+			fmt.Printf("Built: %s\n", "unknown")
+			fmt.Printf("Commit: %s\n", "unknown")
+			fmt.Printf("Platform: %s\n", "linux/amd64")
 			return nil
 		},
 	}

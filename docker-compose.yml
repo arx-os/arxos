@@ -1,104 +1,128 @@
+# ArxOS Development Configuration
+# Default Docker Compose file for development and personal use
+# 
+# Usage:
+#   docker-compose up                    # Start default services
+#   docker-compose up postgis redis      # Start specific services
+#   docker-compose -f docker-compose.prod.yml up  # Production mode
+#
+# Extend with docker-compose.override.yml for local customizations
+
 version: '3.8'
 
 services:
-  # ArxOS main application
-  arxos:
+  # ArxOS Development Application
+  arxos-dev:
     build: .
     ports:
       - "8080:8080"
     environment:
-      - ARXOS_MODE=local
+      - ARXOS_MODE=development
+      - ARXOS_LOG_LEVEL=debug
       - ARXOS_IFC_SERVICE_URL=http://ifcopenshell-service:5000
       - ARXOS_IFC_SERVICE_ENABLED=true
       - ARXOS_IFC_FALLBACK_ENABLED=true
       - POSTGIS_HOST=postgis
-      - POSTGIS_DATABASE=arxos
+      - POSTGIS_DATABASE=arxos_dev
       - POSTGIS_USER=arxos
-      - POSTGIS_PASSWORD=arxos
+      - POSTGIS_PASSWORD=arxos_dev
     depends_on:
-      - ifcopenshell-service
-      - postgis
+      postgis:
+        condition: service_healthy
+      ifcopenshell-service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
-      - arxos-data:/app/data
+      - .:/app                     # Mount source for development
+      - arxos-dev-data:/app/data  # Persistent data storage
     networks:
-      - arxos-network
+      - arxos-dev-network
+    command: ["go", "run", "cmd/arx/main.go", "serve"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
-  # IfcOpenShell microservice
+  # IfcOpenShell Development Service
   ifcopenshell-service:
     build: ./services/ifcopenshell-service
     ports:
       - "5000:5000"
     environment:
-      - FLASK_ENV=production
-      - MAX_FILE_SIZE=104857600  # 100MB
+      - FLASK_ENV=development
+      - DEBUG=true
+      - MAX_FILE_SIZE=209715200  # 200MB max file size
       - CACHE_ENABLED=true
-      - CACHE_TTL=3600
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=1
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
     volumes:
-      - ifc-cache:/app/cache
+      - ./services/ifcopenshell-service:/app    # Mount source for development
+      - ifc-dev-cache:/app/cache               # Cache storage
     networks:
-      - arxos-network
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: '1.0'
-        reservations:
-          memory: 512M
-          cpus: '0.25'
+      - arxos-dev-network
+    depends_on:
+      redis:
+        condition: service_healthy
 
-  # PostGIS database
+  # PostGIS Development Database
   postgis:
     image: postgis/postgis:15-3.3
     environment:
-      - POSTGRES_DB=arxos
+      - POSTGRES_DB=arxos_dev
       - POSTGRES_USER=arxos
-      - POSTGRES_PASSWORD=arxos
+      - POSTGRES_PASSWORD=arxos_dev
       - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
     ports:
       - "5432:5432"
     volumes:
-      - postgis-data:/var/lib/postgresql/data
+      - postgis-dev-data:/var/lib/postgresql/data
       - ./scripts/init-postgis.sql:/docker-entrypoint-initdb.d/init-postgis.sql
     networks:
-      - arxos-network
+      - arxos-dev-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U arxos -d arxos"]
+      test: ["CMD-SHELL", "pg_isready -U arxos -d arxos_dev"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
-  # Redis cache (optional, for future use)
+  # Redis Development Cache
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
     volumes:
-      - redis-data:/data
+      - redis-dev-data:/data
     networks:
-      - arxos-network
-    command: redis-server --appendonly yes
+      - arxos-dev-network
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 3
+      start_period: 10s
 
 volumes:
-  arxos-data:
+  arxos-dev-data:
     driver: local
-  postgis-data:
+  postgis-dev-data:
     driver: local
-  ifc-cache:
+  ifc-dev-cache:
     driver: local
-  redis-data:
+  redis-dev-data:
     driver: local
 
 networks:
-  arxos-network:
+  arxos-dev-network:
     driver: bridge

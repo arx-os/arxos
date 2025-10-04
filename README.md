@@ -1,7 +1,7 @@
 # ArxOS: The Git of Buildings
 
 [![Go Version](https://img.shields.io/badge/Go-1.21-blue.svg)](https://go.dev)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-Proprietary-red.svg)]
 
 ArxOS is the **next-generation Building Operating System** that treats buildings like code repositories. Just as Git revolutionized software development, ArxOS is revolutionizing building management by providing a universal platform for building data, control, and automation.
 
@@ -171,8 +171,8 @@ Unlike Git (CLI) and GitHub (web) being separate, **ArxOS owns everything**. One
 
 ```bash
 # Install ArxOS
-brew install arxos
-# OR: go install github.com/arx-os/arxos/cmd/arx@latest
+go install github.com/arx-os/arxos/cmd/arx@latest
+# OR: make build (for local development)
 
 # That's it! Now initialize your platform...
 ```
@@ -232,7 +232,7 @@ Access your buildings via:
 
 Next steps:
   • Import your first building: arx import building.ifc
-  • Invite team members: arx team invite user@company.com
+  • Initialize repository: arx repo init --name "Main Campus"
   • Explore features: arx help
 ```
 
@@ -244,48 +244,41 @@ arx get /B1/3/SENSORS/TEMP-01
 arx query /B1/*/SENSORS/* --above 75
 arx watch /B1/3/ENERGY/* --interval 5s
 
-# Control operations (actuate physical devices)
-arx set /B1/3/LIGHTS/ZONE-A brightness:75
-arx set /B1/3/HVAC/DAMPER-01 position:50
-arx set /B1/*/LIGHTS/* state:off
+# Component management
+arx component add --path /B1/3/LIGHTS/ZONE-A --type light --name "Zone A Lights"
+arx component update /B1/3/LIGHTS/ZONE-A --status on --brightness 75
+arx component remove /B1/3/LIGHTS/ZONE-A
 
-# Natural language commands
-arx do "turn off all lights on floor 3"
-arx do "set conference room to presentation mode"
-arx do "make it cooler in here"
+# Building repository operations
+arx repo init --name "Main Campus"
+arx repo status
+arx repo commit --message "Added new HVAC system"
 
-# Scene control
-arx scene /B1/3/CONF-301 presentation
-arx scene /B1/* night-mode
-
-# Analytics and optimization
-arx analytics energy data --building B1 --period 7d
-arx analytics energy recommendations --building B1 --priority high
-arx analytics forecast energy --building B1 --duration 24h
-
-# IT asset management
-arx it assets list --building B1
-arx it rooms setup --room "/buildings/B1/floors/2/rooms/classroom-205" --type traditional
-arx it workorders create --room "/buildings/B1/floors/2/rooms/classroom-205" --title "Install Projector"
-
-# Facility management
-arx facility workorders list --status open
-arx facility maintenance schedule --asset HVAC-001 --frequency monthly
-arx facility inspections create --building B1 --type safety
-
-# Hardware management
-arx hardware devices list --building B1
-arx hardware certifications test device-001 --test-suite safety_basic
-arx hardware protocols configure mqtt --host mqtt.arxos.com
-
-# Workflow automation
-arx workflow list
-arx workflow execute energy-optimization --input '{"building_id": "B1"}'
-arx workflow n8n test-connection
-
-# Import/Export building data
-arx import building.bim.txt --building-id B1
+# Data conversion and import
+arx convert ifc-to-bim /path/to/building.ifc
+arx import /path/to/building.bim.txt --building-id B1
 arx export B1 --format json > building.json
+
+# System management
+arx health
+arx version
+arx serve --port 8080
+
+# Database operations
+arx migrate up
+arx migrate down
+arx migrate status
+
+# Reporting and visualization
+arx report energy --building B1 --period 7d
+arx visualize /B1/3 --format svg > floor_plan.svg
+
+# Component tracing
+arx trace /B1/3/HVAC/UNIT-01 --upstream
+arx trace /B1/3/LIGHTS/ZONE-A --downstream
+
+# Watch for changes
+arx watch /B1/3/SENSORS/* --interval 5s
 ```
 
 ## 📁 Project Structure
@@ -294,23 +287,27 @@ arx export B1 --format json > building.json
 arxos/
 ├── cmd/arx/                 # CLI application
 ├── internal/
-│   ├── adapters/postgis/    # PostgreSQL/PostGIS adapter
-│   ├── analytics/           # Analytics engine (energy, predictive, performance)
-│   ├── api/                 # REST API handlers
-│   ├── auth/                # Authentication and authorization
-│   ├── cache/               # Caching layer
-│   ├── common/              # Shared utilities and logger
+│   ├── domain/              # Domain models and business logic
+│   ├── infrastructure/      # Infrastructure layer (PostGIS, cache, etc.)
+│   │   ├── postgis/         # PostgreSQL/PostGIS adapter
+│   │   ├── cache/           # Caching layer
+│   │   └── services/        # Infrastructure services
+│   ├── interfaces/          # Interface layer
+│   │   ├── http/            # REST API handlers
+│   │   ├── graphql/         # GraphQL API
+│   │   ├── websocket/       # WebSocket handlers
+│   │   └── tui/             # Terminal UI
+│   ├── usecase/             # Use case layer
 │   ├── config/              # Configuration management
-│   ├── core/                # Domain models and business logic
-│   ├── facility/            # CMMS/CAFM features
-│   ├── hardware/            # Hardware platform and certification
-│   ├── it/                  # IT asset management
-│   ├── middleware/          # HTTP middleware
-│   ├── services/            # Application services
-│   ├── workflow/            # Workflow automation and n8n integration
-│   └── ...                  # Other modules
-├── pkg/models/              # Shared models
-├── web/                     # Web interface
+│   └── migrations/          # Database migrations
+├── pkg/                     # Shared packages
+│   ├── auth/                # Authentication and authorization
+│   ├── models/              # Shared models
+│   ├── errors/              # Error handling
+│   └── validation/          # Validation utilities
+├── mobile/                  # React Native mobile app
+├── services/                # External microservices
+│   └── ifcopenshell-service/ # IFC processing service
 ├── docs/                    # Comprehensive documentation
 └── scripts/                 # Build and deployment scripts
 ```
@@ -326,35 +323,69 @@ arxos/
 
 ### Database Schema
 ```sql
--- Buildings with GPS origin
-buildings (
-  id UUID PRIMARY KEY,
-  arxos_id TEXT UNIQUE,
-  name TEXT,
-  address TEXT,
-  origin GEOMETRY(Point, 4326),  -- WGS84 coordinates
-  rotation FLOAT                  -- Building rotation from north
+-- Organizations for multi-tenancy
+organizations (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  created_at TIMESTAMP,
+  updated_at TIMESTAMP
 )
 
--- Equipment with 3D positions
-equipment (
-  id UUID PRIMARY KEY,
-  building_id UUID REFERENCES buildings,
-  path TEXT,                      -- Hierarchical path
-  name TEXT,
-  type TEXT,
-  position GEOMETRY(PointZ, 4326), -- 3D WGS84 coordinates
-  status TEXT,
-  confidence SMALLINT              -- Position confidence level
-)
-
--- Users with roles
+-- Users with organization-based access
 users (
-  id UUID PRIMARY KEY,
-  email TEXT UNIQUE,
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
   full_name TEXT,
-  role TEXT,  -- admin, manager, technician, viewer
-  status TEXT
+  organization_id TEXT,
+  role TEXT NOT NULL DEFAULT 'user',
+  is_active BOOLEAN DEFAULT true,
+  last_login TIMESTAMP,
+  created_at TIMESTAMP,
+  updated_at TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id)
+)
+
+-- Buildings with location data
+buildings (
+  id TEXT PRIMARY KEY,
+  arxos_id TEXT UNIQUE NOT NULL,  -- e.g., ARXOS-NA-US-NY-NYC-0001
+  name TEXT NOT NULL,
+  address TEXT,
+  city TEXT,
+  state TEXT,
+  country TEXT,
+  postal_code TEXT,
+  latitude REAL,
+  longitude REAL,
+  organization_id TEXT,
+  total_area REAL,
+  floors_count INTEGER,
+  year_built INTEGER,
+  building_type TEXT,
+  status TEXT DEFAULT 'OPERATIONAL',
+  metadata JSON,
+  created_at TIMESTAMP,
+  updated_at TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id)
+)
+
+-- Floors within buildings
+floors (
+  id TEXT PRIMARY KEY,
+  building_id TEXT NOT NULL,
+  level INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  area REAL,
+  height REAL,
+  floor_type TEXT,
+  status TEXT DEFAULT 'OPERATIONAL',
+  metadata JSON,
+  created_at TIMESTAMP,
+  updated_at TIMESTAMP,
+  FOREIGN KEY (building_id) REFERENCES buildings(id) ON DELETE CASCADE
 )
 ```
 
@@ -405,39 +436,40 @@ GET /api/v1/spatial/floor?building={id}&floor={number}
 
 ```bash
 # Run all tests
-go test ./...
+make test
 
-# Run with coverage
-go test -cover ./...
+# Run tests with coverage
+make test-coverage
 
 # Run integration tests (requires PostgreSQL)
-POSTGIS_PASSWORD=secret go test -tags=integration ./...
+make test-integration
+
+# Run specific module tests
+go test ./internal/domain/...
 ```
 
 ## 📚 Documentation
 
 ### System Architecture
-- **[System Architecture](docs/SYSTEM_ARCHITECTURE.md)** - Complete system overview and module integration
-- **[API Reference](docs/API_REFERENCE.md)** - Comprehensive REST API documentation
-- **[CLI Reference](docs/CLI_REFERENCE.md)** - Complete command-line interface guide
-- **[Integration Guide](docs/INTEGRATION_GUIDE.md)** - External system integration and internal module communication
-- **[Deployment Guide](docs/DEPLOYMENT_GUIDE.md)** - Production deployment and monitoring
+- **[Service Architecture](docs/architecture/SERVICE_ARCHITECTURE.md)** - Complete system overview and module integration
+- **[API Documentation](docs/api/API_DOCUMENTATION.md)** - Comprehensive REST API documentation
+- **[Integration Flow](docs/integration/INTEGRATION_FLOW.md)** - External system integration and internal module communication
+- **[Deployment Guide](docs/deployment/DEPLOYMENT_GUIDE.md)** - Production deployment and monitoring
 
 ### Module Documentation
-- **[Analytics Engine](internal/analytics/README.md)** - Energy optimization, predictive analytics, and reporting
-- **[BuildingOps](internal/buildingops/)** - Unified building operations management (facility + IT infrastructure)
-- **[Hardware Platform](internal/hardware/README.md)** - IoT device management and certification
+- **[CLI Integration](docs/integration/CLI_INTEGRATION.md)** - Command-line interface integration
+- **[IFC Integration](docs/integration/IFCOPENSHELL_INTEGRATION.md)** - IFC file processing integration
+- **[CADTUI Workflow](docs/architecture/CADTUI_VISUAL_CONTEXT.md)** - Computer-Aided Design Terminal UI
 
 ### Development
-- **[Developer Guide](docs/DEVELOPER_GUIDE.md)** - Complete development setup and best practices
-- **[Development](CONTRIBUTING.md)** - Development guidelines for ArxOS
-- **[Architecture Guide](docs/architecture-clean.md)** - Clean architecture principles
-- **[Service Architecture](docs/SERVICE_ARCHITECTURE.md)** - Service layer design
+- **[Quick Start](QUICKSTART.md)** - Complete development setup and first steps
+- **[Development Guide](mobile/DEVELOPMENT_GUIDE.md)** - Mobile development guidelines
+- **[Technical Specifications](mobile/TECHNICAL_SPECIFICATIONS.md)** - Technical implementation details
+- **[Implementation Plan](mobile/IMPLEMENTATION_PLAN.md)** - Development roadmap
 
 ### Business Documentation
-- **[Business Model](docs/BUSINESS_MODEL.md)** - Ecosystem strategy and revenue model
-- **[Hardware Platform](hardware.md)** - IoT ecosystem and certified devices
-- **[Workflow Automation](n8n.md)** - Visual CMMS/CAFM platform with n8n integration
+- **[Automation Examples](docs/automation/AUTOMATION_EXAMPLE.md)** - Workflow automation examples
+- **[Intelligent Automation](docs/automation/INTELLIGENT_AUTOMATION.md)** - AI-powered automation features
 
 ## 📄 License
 
@@ -445,7 +477,7 @@ Proprietary License - All rights reserved
 
 ## 🛠️ Development
 
-For development guidelines and setup instructions, please read our [Development Guide](CONTRIBUTING.md).
+For development guidelines and setup instructions, please read our [Quick Start Guide](QUICKSTART.md).
 
 ## 📞 Support
 

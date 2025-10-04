@@ -1,8 +1,8 @@
 module github.com/arx-os/arxos
 
-go 1.24.0
+go 1.21.0
 
-toolchain go1.24.5
+toolchain go1.21.5
 
 require (
 	github.com/charmbracelet/bubbletea v0.25.0

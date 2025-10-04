@@ -1,24 +1,230 @@
+# golangci-lint configuration for ArxOS
+# See: https://golangci-lint.run/usage/configuration/
+
 run:
-  timeout: 5m
-  go: "1.21"
+  timeout: 10m
+  skip-dirs:
+    - vendor/
+    - node_modules/
+    - mobile/node_modules/              # Mobile app dependencies
+    - mobile/android/app/build/         # Android build artifacts
+    - mobile/android/.gradle/           # Gradle cache
+    - mobile/ios/build/                # iOS build artifacts
+    - mobile/ios/DerivedData/          # iOS derived data
+    - mobile/ios/Pods/                 # iOS CocoaPods
+    - services/ifcopenshell-service/venv/  # Python virtual environment
+    - services/*/venv/                 # Hooks for microservices virtual envs
+    - tmp/
+    - temp/
+  skip-files:
+    - ".*\\.pb\\.go$"                  # Protobuf generated files
+    - ".*_mock\\.go$"                  # Mock files
+    - ".*_test\\.go$"                  # Test files
+    - "^cmd/arx/main\\.go$"            # Generated CLI code
+    - "^mobile/.*\\.js$"               # Mobile JavaScript files
+    - "^mobile/.*\\.tsx?$"             # Mobile TypeScript files
+    - "^mobile/.*\\.json$"             # Mobile package files
+    - "^services/.*\\.py$"              # Python microservice files
 
-output:
-  format: colored-line-number
-  print-issued-line: true
-  print-linter-name: true
+linters-settings:
+  # Cyclomatic complexity settings
+  # Reduced from 15 to 12 for ArxOS spatial computing complexity
+  cyclop:
+    min-complexity: 12
+  
+  # Custom errcheck settings
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+  
+  # Go vet settings (same as govet)
+  govet:
+    enable:
+      - printf
+      - shadow
+  
+  # Staticcheck settings
+  staticcheck:
+    checks: ["all"]
+    go: "1.21"
+  
+  # Gosec security scanner settings
+  gosec:
+    excludes:
+      - G307  # Defer method which returns only an error can be replaced with an inline function
+      - G204  # Audit use of command execution
+  
+  # Gofmt settings
+  gofmt:
+    simplify: true
+  
+  # Goimports settings
+  goimports:
+    local-prefixes: github.com/arx-os/arxos
+  
+  # Ineffassign settings
+  ineffassign:
+    filter-pattern: "^internal/test/.*\\.go$"
+  
+  # Misspell settings
+  misspell:
+    locale: US
+  
+  # Prealloc settings
+  prealloc:
+    simple: true
+    range-loops: true
+    for-loops: false
+  
+  # Testpackage settings
+  testpackage:
+    skip-files:
+      - internal/test/
+  
+  # Whitespace settings
+  whitespace:
+    multi-if: true
+    multi-func: true
 
-issues:
-  max-issues-per-linter: 0
-  max-same-issues: 0
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gomnd
-        - funlen
-        - dupl
-        - goconst
+  # Dogsled settings (function parameters)
+  dogsled:
+    max-blank-identifiers: 3
+
+  # Nakedret settings
+  nakedret:
+    max-func-lines: 10
+  
+  # Goconst settings
+  goconst:
+    match-case: true
+    min-string-len: 4
+    min-occurrences: 2
+
+  # Gochecknoglobals settings
+  gochecknoglobals:
+    check-consts: true
+    check-types: true
 
 linters:
+  disable-all: true
   enable:
+    # Code quality
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    
+    # Style
     - gofmt
     - goimports
+    - misspell
+    - whitespace
+    
+    # Performance
+    - prealloc
+    
+    # Security
+    - gosec
+    
+    # Complexity
+    - cyclop
+    
+    # Best practices
+    - gocritic
+    - goconst
+    - nakedret
+    
+    # Reliability
+    - revive
+    - bodyclose      # HTTP response body close check
+    - dogsled        # Function parameter count
+    - exportloopref  # Loop variable export reference
+    - gochecknoglobals # Global variable checks
+    - rowserrcheck   # SQL row errors
+    
+    # Documentation
+    - godot  # Check if comments end with a period
+      
+    # Test-related (only for test files)
+    - testpackage
+
+issues:
+  exclude-rules:
+    # Exclude all linters from vendor directories
+    - path: vendor/
+      linters:
+        - all
+    
+    # Exclude generated CLI code
+    - path: cmd/arx/main.go
+      linters:
+        - gocyclo
+        - gocritic
+    
+    # Exclude test files from certain linters
+    - path: _test\.go$
+      linters:
+        - testpackage
+        - gocyclo
+        - funlen
+    
+    # Exclude mock files
+    - path: .*_mock\.go$
+      linters:
+        - gocyclo
+    
+    # Exclude protobuf generated files
+    - path: .*\.pb\.go$
+      linters:
+        - all
+    
+    # Suppress specific Go vet warnings for generated code
+    - text: "composite literal uses unkeyed fields"
+      linters:
+        - govet
+    
+    # Allow specific patterns for domain models
+    - text: "exported .* should have comment"
+      path: internal/domain/
+      linters:
+        - revive
+    
+    # Suppress gosec warnings for acceptable patterns
+    - text: "Subprocess launching with variable"
+      linters:
+        - gosec
+    
+    # Exclude complexity warnings for initialization code
+    - path: internal/config/
+      linters:
+        - gocyclo
+        - gocritic
+        - dogsled
+        - gochecknoglobals
+
+    # Allow constants in domain models
+    - path: internal/domain/
+      linters:
+        - goconst
+
+    # Exclude mobile/generated files from certain linters
+    - path: mobile/
+      linters:
+        - nakedret
+        - exportloopref
+
+    # Exclude service integration code from global checks
+    - path: internal/infrastructure/
+      linters:
+        - gochecknoglobals
+
+  exclude-use-default: false
+  
+  max-per-linter: 0
+  max-same-issues: 0
+  
+service:
+  golangci-lint-version: 1.57.2

@@ -450,4 +450,4 @@ For development guidelines and setup instructions, please read our [Development 
 ## 📞 Support
 
 - Contact support for bug reports and questions
-- Read the [Wiki](https://github.com/arx-os/arxos/wiki) for detailed guides
+- Read the [Wiki](https://github.com/arx-os/arxos/wiki) for detailed guides# Trigger fresh CI run after formatting fixes

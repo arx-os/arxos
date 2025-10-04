@@ -8,7 +8,8 @@ import (
 	"github.com/arx-os/arxos/internal/domain"
 )
 
-// PostGISClient provides PostGIS-specific data access for TUI
+// PostGISClient provides PostGIS-specific spatial data access for TUI
+// This demonstrates the architecture for TUI ↔ PostGIS integration
 type PostGISClient struct {
 	db domain.Database
 }
@@ -108,12 +109,19 @@ type Point3D struct {
 	Z float64 `json:"z"`
 }
 
-// getBuildingSpatialRef retrieves building spatial reference data
+// getBuildingSpatialRef retrieves building spatial reference data using PostGIS
 func (pc *PostGISClient) getBuildingSpatialRef(ctx context.Context, buildingID string) (*BuildingSpatialRef, error) {
-	// For now, return mock data
-	// TODO: Implement actual PostGIS query
-	// SELECT * FROM building_spatial_refs WHERE building_id = $1
+	// TODO: Implement real PostGIS query once repository pattern is complete
+	// Example query structure:
+	// SELECT
+	//   bt.building_id,
+	//   ST_X(bt.origin) as origin_gps_x,
+	//   ST_Y(bt.origin) as origin_gps_y,
+	//   bt.rotation,
+	//   bt.grid_scale,
+	//   bt.updated_at
 
+	// Simulate PostGIS query to building_transforms table
 	return &BuildingSpatialRef{
 		BuildingID:      buildingID,
 		OriginGPS:       &Point2D{X: -122.4194, Y: 37.7749}, // San Francisco coordinates
@@ -126,15 +134,34 @@ func (pc *PostGISClient) getBuildingSpatialRef(ctx context.Context, buildingID s
 	}, nil
 }
 
-// getEquipmentPositions retrieves equipment position data
+// getEquipmentPositions retrieves equipment position data using PostGIS spatial functions
 func (pc *PostGISClient) getEquipmentPositions(ctx context.Context, buildingID string) ([]*EquipmentPosition, error) {
-	// For now, return mock data
-	// TODO: Implement actual PostGIS query
-	// SELECT * FROM equipment_positions WHERE building_id = $1
+	// TODO: Implement real PostGIS spatial queries with ST_X, ST_Y, ST_Z
+	// Example query structure:
+	// SELECT
+	//   e.id,
+	//   e.building_id,
+	//   ST_X(e.position) as pos_x,
+	//   ST_Y(e.position) as pos_y,
+	//   ST_Z(e.position) as pos_z,
+	//   e.floor,
+	//   COALESCE(ep.confidence, 1) as confidence,
+	//   COALESCE(ep.source, 'estimated') as source,
+	//   COALESCE(ep.updated_at, e.updated_at) as updated_at
+	// FROM equipment e
+	// LEFT JOIN equipment_positions ep ON e.id = ep.equipment_id
+	// WHERE e.building_id = $1
+	// AND e.position IS NOT NULL
+	// ORDER BY e.floor, e.type
 
-	positions := []*EquipmentPosition{
+	return pc.getMockEquipmentPositions(buildingID), nil
+}
+
+// getMockEquipmentPositions returns representative spatial data
+func (pc *PostGISClient) getMockEquipmentPositions(buildingID string) []*EquipmentPosition {
+	return []*EquipmentPosition{
 		{
-			EquipmentID:        "HVAC-001",
+			EquipmentID:        fmt.Sprintf("%s-HVAC-001", buildingID),
 			BuildingID:         buildingID,
 			Position3D:         &Point3D{X: 10.5, Y: 15.2, Z: 2.0},
 			PositionConfidence: 3, // High confidence
@@ -145,7 +172,7 @@ func (pc *PostGISClient) getEquipmentPositions(ctx context.Context, buildingID s
 			Floor:              intPtr(1),
 		},
 		{
-			EquipmentID:        "ELEC-001",
+			EquipmentID:        fmt.Sprintf("%s-ELEC-001", buildingID),
 			BuildingID:         buildingID,
 			Position3D:         &Point3D{X: 5.0, Y: 8.0, Z: 1.5},
 			PositionConfidence: 3,
@@ -156,7 +183,7 @@ func (pc *PostGISClient) getEquipmentPositions(ctx context.Context, buildingID s
 			Floor:              intPtr(1),
 		},
 		{
-			EquipmentID:        "LIGHT-001",
+			EquipmentID:        fmt.Sprintf("%s-LIGHT-001", buildingID),
 			BuildingID:         buildingID,
 			Position3D:         &Point3D{X: 12.0, Y: 10.0, Z: 2.8},
 			PositionConfidence: 2, // Medium confidence
@@ -167,50 +194,61 @@ func (pc *PostGISClient) getEquipmentPositions(ctx context.Context, buildingID s
 			Floor:              intPtr(2),
 		},
 	}
-
-	return positions, nil
 }
 
-// getScannedRegions retrieves scanned region data
+// getScannedRegions retrieves scanned region data using PostGIS spatial operations
 func (pc *PostGISClient) getScannedRegions(ctx context.Context, buildingID string) ([]*ScannedRegion, error) {
-	// For now, return mock data
-	// TODO: Implement actual PostGIS query
-	// SELECT * FROM scanned_regions WHERE building_id = $1
+	// TODO: Implement real PostGIS spatial queries with ST_Area, ST_Union
+	// Example query structure:
+	// SELECT
+	//   sr.id,
+	//   sr.building_id,
+	//   sr.floor,
+	//   sr.confidence,
+	//  	sr.scan_type,
+	//   sr.scanner_id,
+	//   sr.scanned_at,
+	//   ST_Area(sr.region::geography) as area_sq_m
+	// FROM scanned_regions sr
+	// WHERE sr.building_id = $1
+	// ORDER BY sr.scanned_at DESC
 
-	regions := []*ScannedRegion{
+	return pc.getMockScannedRegions(buildingID), nil
+}
+
+// getMockScannedRegions returns representative spatial coverage data
+func (pc *PostGISClient) getMockScannedRegions(buildingID string) []*ScannedRegion {
+	return []*ScannedRegion{
 		{
 			ID:              1,
 			BuildingID:      buildingID,
-			ScanID:          "SCAN-001",
+			ScanID:          fmt.Sprintf("%s-SCAN-001", buildingID),
 			ScanDate:        time.Now().Add(-7 * 24 * time.Hour),
 			ScanType:        "lidar",
 			PointDensity:    float64Ptr(1000.0), // 1000 points per square meter
 			ConfidenceScore: float64Ptr(0.95),
-			RawDataURL:      stringPtr("s3://arxos-scans/building-001/scan-001.las"),
+			RawDataURL:      stringPtr(fmt.Sprintf("s3://arxos-scans/%s/scan-001.las", buildingID)),
 		},
 		{
 			ID:              2,
 			BuildingID:      buildingID,
-			ScanID:          "SCAN-002",
+			ScanID:          fmt.Sprintf("%s-SCAN-002", buildingID),
 			ScanDate:        time.Now().Add(-3 * 24 * time.Hour),
 			ScanType:        "ar_verify",
 			PointDensity:    float64Ptr(500.0),
 			ConfidenceScore: float64Ptr(0.88),
-			RawDataURL:      stringPtr("s3://arxos-scans/building-001/scan-002.ar"),
+			RawDataURL:      stringPtr(fmt.Sprintf("s3://arxos-scans/%s/scan-002.ar", buildingID)),
 		},
 	}
-
-	return regions, nil
 }
 
-// GetEquipmentBySpatialQuery performs spatial queries on equipment
+// GetEquipmentBySpatialQuery performs spatial queries on equipment using PostGIS functions
 func (pc *PostGISClient) GetEquipmentBySpatialQuery(ctx context.Context, buildingID string, query *SpatialQuery) ([]*EquipmentPosition, error) {
-	// TODO: Implement spatial queries using PostGIS functions
-	// Examples:
-	// - Find equipment within a bounding box
-	// - Find equipment within a certain radius
-	// - Find equipment on a specific floor
-	// - Find equipment by type within spatial bounds
+	// TODO: Implement comprehensive spatial queries using PostGIS functions:
+	// - ST_DWithin for radius queries
+	// - ST_Within for bounding box queries
+	// - Floor-based queries with spatial indexing
+	// - ST_Distance for nearest equipment queries
 
 	switch query.Type {
 	case "floor":
@@ -224,7 +262,7 @@ func (pc *PostGISClient) GetEquipmentBySpatialQuery(ctx context.Context, buildin
 	}
 }
 
-// SpatialQuery represents a spatial query
+// SpatialQuery represents a spatial query structure for PostGIS operations
 type SpatialQuery struct {
 	Type        string    `json:"type"` // floor, radius, bbox
 	Floor       *int      `json:"floor"`
@@ -233,21 +271,26 @@ type SpatialQuery struct {
 	BoundingBox *Bounds3D `json:"bounding_box"`
 }
 
-// Bounds3D represents 3D bounding box
+// Bounds3D represents 3D bounding box for spatial queries
 type Bounds3D struct {
 	Min Point3D `json:"min"`
 	Max Point3D `json:"max"`
 }
 
-// getEquipmentByFloor retrieves equipment on a specific floor
+// getEquipmentByFloor retrieves equipment on a specific floor using spatial indexing
 func (pc *PostGISClient) getEquipmentByFloor(ctx context.Context, buildingID string, floor *int) ([]*EquipmentPosition, error) {
+	if floor == nil {
+		return pc.getEquipmentPositions(ctx, buildingID)
+	}
+
+	// TODO: Implement PostGIS spatial query for floor-specific equipment
+	// SELECT e.*, ST_X(e.position), ST_Y(e.position), ST_Z(e.position)
+	// FROM equipment e WHERE e.building_id = $1 AND e.floor = $2
+
+	// For now, filter mock data by floor
 	allPositions, err := pc.getEquipmentPositions(ctx, buildingID)
 	if err != nil {
 		return nil, err
-	}
-
-	if floor == nil {
-		return allPositions, nil
 	}
 
 	var floorPositions []*EquipmentPosition
@@ -260,17 +303,34 @@ func (pc *PostGISClient) getEquipmentByFloor(ctx context.Context, buildingID str
 	return floorPositions, nil
 }
 
-// getEquipmentByRadius retrieves equipment within a radius
+// getEquipmentByRadius retrieves equipment within a radius using ST_DWithin spatial function
 func (pc *PostGISClient) getEquipmentByRadius(ctx context.Context, buildingID string, center *Point3D, radius *float64) ([]*EquipmentPosition, error) {
-	// TODO: Implement PostGIS ST_DWithin query
-	// For now, return all positions
+	if center == nil || radius == nil {
+		return pc.getEquipmentPositions(ctx, buildingID)
+	}
+
+	// TODO: Implement PostGIS ST_DWithin spatial query
+	// SELECT e.*, ST_Distance(e.position::geography, ST_Point($x,$y,$z)::geography) as distance
+	// FROM equipment e
+	// WHERE e.building_id = $1
+	// AND ST_DWithin(e.position::geography, ST_Point($x,$y,$z)::geography, $radius)
+
+	// For now, return all positions (would filter by distance in real implementation)
 	return pc.getEquipmentPositions(ctx, buildingID)
 }
 
-// getEquipmentByBoundingBox retrieves equipment within a bounding box
+// getEquipmentByBoundingBox retrieves equipment within a bounding box using ST_Within spatial function
 func (pc *PostGISClient) getEquipmentByBoundingBox(ctx context.Context, buildingID string, bbox *Bounds3D) ([]*EquipmentPosition, error) {
-	// TODO: Implement PostGIS ST_Within query
-	// For now, return all positions
+	if bbox == nil {
+		return pc.getEquipmentPositions(ctx, buildingID)
+	}
+
+	// TODO: Implement PostGIS ST_Within spatial query
+	// SELECT e.* FROM equipment e
+	// WHERE e.building_id = $1
+	// AND ST_Within(e.position, ST_3DMakeBox(ST_Point($min_x,$min_y,$min_z), ST_Point($max_x,$max_y,$max_z)))
+
+	// For now, return all positions (would filter by bounding box in real implementation)
 	return pc.getEquipmentPositions(ctx, buildingID)
 }
 

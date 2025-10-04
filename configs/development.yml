@@ -264,6 +264,27 @@ building:
   area_precision_sqmm: 1
   volume_precision_cbmm: 1
 
+# IfcOpenShell service configuration
+ifc:
+  service:
+    enabled: true
+    url: "${IFCOPENSHELL_URL:-http://ifcopenshell-service:5000}"
+    timeout: "30s"
+    retries: 3
+    circuit_breaker:
+      enabled: true
+      failure_threshold: 5
+      recovery_timeout: "30s"
+  
+  fallback:
+    enabled: true
+    parser: "native"
+  
+  performance:
+    cache_enabled: true
+    cache_ttl: "10m"
+    max_file_size: "100MB"
+
 # Performance tuning
 performance:
   max_concurrent_imports: 2

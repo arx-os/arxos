@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jmoiron/sqlx"
+
 	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/building"
@@ -35,6 +37,7 @@ type Container struct {
 	buildingRepo     domain.BuildingRepository
 	equipmentRepo    domain.EquipmentRepository
 	organizationRepo domain.OrganizationRepository
+	spatialRepo      domain.SpatialRepository
 
 	// Building repository domain repositories
 	repositoryRepo building.RepositoryRepository
@@ -186,6 +189,10 @@ func (c *Container) initRepositories(ctx context.Context) error {
 	// Component repository
 	c.componentRepo = repository.NewPostGISComponentRepository(c.postgis.GetDB())
 
+	// Create sqlx.DB from the PostGIS sql.DB
+	sqlxDB := sqlx.NewDb(c.postgis.GetDB(), "postgres")
+	c.spatialRepo = postgis.NewSpatialRepository(sqlxDB, c.logger)
+
 	return nil
 }
 
@@ -333,6 +340,12 @@ func (c *Container) GetOrganizationUseCase() *usecase.OrganizationUseCase {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.organizationUC
+}
+
+func (c *Container) GetSpatialRepository() domain.SpatialRepository {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.spatialRepo
 }
 
 // Building repository getters

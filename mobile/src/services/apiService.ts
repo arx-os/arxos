@@ -13,8 +13,8 @@ import {errorHandler, ErrorType, ErrorSeverity, createError} from '../utils/erro
 
 // API Configuration
 const API_BASE_URL = __DEV__ 
-  ? 'http://localhost:8080/api/v1' 
-  : 'https://api.arxos.com/v1';
+  ? 'http://localhost:8080/api/v1/mobile' 
+  : 'https://api.arxos.com/v1/mobile';
 
 const API_TIMEOUT = 30000; // 30 seconds
 
@@ -93,8 +93,8 @@ apiClient.interceptors.response.use(
         const refreshToken = state.auth.refreshToken;
         
         if (refreshToken) {
-          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-            refreshToken,
+          const response = await axios.post(`${API_BASE_URL.replace('/mobile', '')}/mobile/auth/refresh`, {
+            refresh_token: refreshToken,
           });
           
           const {accessToken, refreshToken: newRefreshToken} = response.data.data;

@@ -22,12 +22,12 @@ class EquipmentService {
    */
   async getEquipmentByBuilding(buildingId: string): Promise<Equipment[]> {
     try {
-      const response = await apiService.get<Equipment[]>(`/equipment/building/${buildingId}`);
+      const response = await apiService.get<{equipment: Equipment[], total: number}>(`/equipment/building/${buildingId}`);
       
       // Cache equipment data locally
-      await storageService.setEquipmentData(buildingId, response);
+      await storageService.setEquipmentData(buildingId, response.equipment);
       
-      return response;
+      return response.equipment;
     } catch (error) {
       // Fallback to cached data if available
       const cachedData = await storageService.getEquipmentData(buildingId);

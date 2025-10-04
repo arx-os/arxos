@@ -13,3 +13,4 @@ export * from './apiService';
 export * from './cameraService';
 export * from './locationService';
 export * from './notificationService';
+export * from './spatialService';

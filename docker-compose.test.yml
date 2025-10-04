@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  arxos-test:
+    build: .
+    environment:
+      - ARXOS_MODE=test
+      - POSTGIS_HOST=postgis-test
+      - POSTGIS_PORT=5432
+      - POSTGIS_DB=arxos_test
+      - POSTGIS_USER=arxos_test
+      - POSTGIS_PASSWORD=test_password
+    depends_on:
+      postgis-test:
+        condition: service_healthy
+    command: ["sleep", "30"]
+  
+  postgis-test:
+    image: postgis/postgis:14-3.4
+    environment:
+      POSTGRES_DB: arxos_test
+      POSTGRES_USER: arxos_test
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arxos_test -d arxos_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5433:5432"

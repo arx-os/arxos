@@ -13,7 +13,7 @@ import (
 
 // JobHandler handles job-related HTTP requests
 type JobHandler struct {
-	*types.BaseHandler
+	BaseHandler
 	jobQueue *jobs.JobQueue
 	logger   domain.Logger
 }
@@ -25,7 +25,7 @@ func NewJobHandler(
 	logger domain.Logger,
 ) *JobHandler {
 	return &JobHandler{
-		BaseHandler: types.NewBaseHandler(server),
+		BaseHandler: nil, // Will be injected by container
 		jobQueue:    jobQueue,
 		logger:      logger,
 	}
@@ -76,20 +76,20 @@ func (h *JobHandler) CreateJob(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Job creation requested")
 
 	// Validate content type
-	if !h.ValidateContentType(r, "application/json") {
-		h.HandleError(w, r, fmt.Errorf("content type must be application/json"), http.StatusBadRequest)
+	if err := h.ValidateContentType(r, "application/json"); err != nil {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("content type must be application/json"))
 		return
 	}
 
 	var req CreateJobRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.HandleError(w, r, fmt.Errorf("invalid request body: %v", err), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %v", err))
 		return
 	}
 
 	// Validate request
 	if req.Type == "" {
-		h.HandleError(w, r, fmt.Errorf("job type is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("job type is required"))
 		return
 	}
 
@@ -119,7 +119,7 @@ func (h *JobHandler) CreateJob(w http.ResponseWriter, r *http.Request) {
 	// Enqueue job
 	if err := h.jobQueue.Enqueue(*job); err != nil {
 		h.logger.Error("Failed to enqueue job", "error", err)
-		h.HandleError(w, r, fmt.Errorf("failed to enqueue job: %v", err), http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to enqueue job: %v", err))
 		return
 	}
 
@@ -150,19 +150,19 @@ func (h *JobHandler) CreateBulkJobs(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Bulk job creation requested")
 
 	// Validate content type
-	if !h.ValidateContentType(r, "application/json") {
-		h.HandleError(w, r, fmt.Errorf("content type must be application/json"), http.StatusBadRequest)
+	if err := h.ValidateContentType(r, "application/json"); err != nil {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("content type must be application/json"))
 		return
 	}
 
 	var reqs []CreateJobRequest
 	if err := json.NewDecoder(r.Body).Decode(&reqs); err != nil {
-		h.HandleError(w, r, fmt.Errorf("invalid request body: %v", err), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %v", err))
 		return
 	}
 
 	if len(reqs) == 0 {
-		h.HandleError(w, r, fmt.Errorf("jobs array cannot be empty"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("jobs array cannot be empty"))
 		return
 	}
 
@@ -268,8 +268,8 @@ func (h *JobHandler) CreateScheduledJob(w http.ResponseWriter, r *http.Request) 
 	h.logger.Info("Scheduled job creation requested")
 
 	// Validate content type
-	if !h.ValidateContentType(r, "application/json") {
-		h.HandleError(w, r, fmt.Errorf("content type must be application/json"), http.StatusBadRequest)
+	if err := h.ValidateContentType(r, "application/json"); err != nil {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("content type must be application/json"))
 		return
 	}
 
@@ -283,18 +283,18 @@ func (h *JobHandler) CreateScheduledJob(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.HandleError(w, r, fmt.Errorf("invalid request body: %v", err), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %v", err))
 		return
 	}
 
 	// Validate request
 	if req.Type == "" {
-		h.HandleError(w, r, fmt.Errorf("job type is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("job type is required"))
 		return
 	}
 
 	if req.ScheduledAt.IsZero() {
-		h.HandleError(w, r, fmt.Errorf("scheduled_at is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("scheduled_at is required"))
 		return
 	}
 
@@ -319,7 +319,7 @@ func (h *JobHandler) CreateScheduledJob(w http.ResponseWriter, r *http.Request) 
 	// Enqueue job
 	if err := h.jobQueue.Enqueue(*job); err != nil {
 		h.logger.Error("Failed to enqueue scheduled job", "error", err)
-		h.HandleError(w, r, fmt.Errorf("failed to enqueue scheduled job: %v", err), http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to enqueue scheduled job: %v", err))
 		return
 	}
 
@@ -350,8 +350,8 @@ func (h *JobHandler) CreateRecurringJob(w http.ResponseWriter, r *http.Request) 
 	h.logger.Info("Recurring job creation requested")
 
 	// Validate content type
-	if !h.ValidateContentType(r, "application/json") {
-		h.HandleError(w, r, fmt.Errorf("content type must be application/json"), http.StatusBadRequest)
+	if err := h.ValidateContentType(r, "application/json"); err != nil {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("content type must be application/json"))
 		return
 	}
 
@@ -367,25 +367,25 @@ func (h *JobHandler) CreateRecurringJob(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.HandleError(w, r, fmt.Errorf("invalid request body: %v", err), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %v", err))
 		return
 	}
 
 	// Validate request
 	if req.Type == "" {
-		h.HandleError(w, r, fmt.Errorf("job type is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("job type is required"))
 		return
 	}
 
 	if req.Interval == "" {
-		h.HandleError(w, r, fmt.Errorf("interval is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("interval is required"))
 		return
 	}
 
 	// Parse interval
 	_, err := time.ParseDuration(req.Interval)
 	if err != nil {
-		h.HandleError(w, r, fmt.Errorf("invalid interval format: %v", err), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid interval format: %v", err))
 		return
 	}
 
@@ -423,7 +423,7 @@ func (h *JobHandler) CreateRecurringJob(w http.ResponseWriter, r *http.Request) 
 	// Enqueue job
 	if err := h.jobQueue.Enqueue(*job); err != nil {
 		h.logger.Error("Failed to enqueue recurring job", "error", err)
-		h.HandleError(w, r, fmt.Errorf("failed to enqueue recurring job: %v", err), http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to enqueue recurring job: %v", err))
 		return
 	}
 

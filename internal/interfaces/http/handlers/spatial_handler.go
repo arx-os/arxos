@@ -15,7 +15,7 @@ import (
 
 // SpatialHandler handles spatial and AR-related HTTP requests for mobile clients
 type SpatialHandler struct {
-	*types.BaseHandler
+	BaseHandler
 	buildingUC  *usecase.BuildingUseCase
 	equipmentUC *usecase.EquipmentUseCase
 	spatialRepo domain.SpatialRepository
@@ -25,7 +25,7 @@ type SpatialHandler struct {
 // NewSpatialHandler creates a new spatial handler
 func NewSpatialHandler(server *types.Server, buildingUC *usecase.BuildingUseCase, equipmentUC *usecase.EquipmentUseCase, spatialRepo domain.SpatialRepository, logger domain.Logger) *SpatialHandler {
 	return &SpatialHandler{
-		BaseHandler: types.NewBaseHandler(server),
+		BaseHandler: nil, // Will be injected by container
 		buildingUC:  buildingUC,
 		equipmentUC: equipmentUC,
 		spatialRepo: spatialRepo,

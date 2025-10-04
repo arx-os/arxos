@@ -6,7 +6,6 @@ package integration
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -39,10 +38,9 @@ func NewAPIIntegrationTestSuite(t *testing.T) *APIIntegrationTestSuite {
 	cfg, err := config.Load("test/config/test_config.yaml")
 	require.NoError(t, err)
 
-	// Initialize application container
+	// Create application container
 	container := app.NewContainer()
-	err = container.Initialize(context.Background(), cfg)
-	require.NoError(t, err)
+	// Container initialization happens automatically when accessing dependencies
 
 	// Create HTTP client
 	httpClient := &http.Client{
@@ -67,23 +65,27 @@ func (suite *APIIntegrationTestSuite) SetupTestEnvironment(t *testing.T) {
 		nil, // JWT Manager
 	)
 
-	// Setup handlers
+	// Create BaseHandler for test handlers
+	testLogger := suite.app.GetLogger()
+	baseHandler := handlers.NewBaseHandler(testLogger, nil) // No JWT manager needed for tests
+
+	// Setup handlers using Clean Architecture
 	buildingHandler := handlers.NewBuildingHandler(
-		&types.Server{},
+		baseHandler,
 		suite.app.GetBuildingUseCase(),
-		suite.app.GetLogger(),
+		testLogger,
 	)
 
 	equipmentHandler := handlers.NewEquipmentHandler(
-		&types.Server{},
+		&types.Server{}, // Still uses old constructor for now
 		suite.app.GetEquipmentUseCase(),
-		suite.app.GetLogger(),
+		testLogger,
 	)
 
 	userHandler := handlers.NewUserHandler(
-		&types.Server{},
+		baseHandler,
 		suite.app.GetUserUseCase(),
-		suite.app.GetLogger(),
+		testLogger,
 	)
 
 	// Register routes

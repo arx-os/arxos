@@ -1,13 +1,18 @@
 package commands
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
 
+	"github.com/arx-os/arxos/internal/usecase"
 	"github.com/spf13/cobra"
 )
+
+// IFCServiceProvider interface for IFC import services
+type IFCServiceProvider interface {
+	GetIFCService() *usecase.IFCUseCase
+}
 
 // createImportCommand creates the import command
 func CreateImportCommand(serviceContext interface{}) *cobra.Command {
@@ -48,7 +53,7 @@ func CreateImportCommand(serviceContext interface{}) *cobra.Command {
 			}
 
 			// Get service context for IFC processing
-			sc, ok := serviceContext.(RepositoryServiceProvider)
+			sc, ok := serviceContext.(IFCServiceProvider)
 			if !ok {
 				return fmt.Errorf("service context not available")
 			}
@@ -58,13 +63,11 @@ func CreateImportCommand(serviceContext interface{}) *cobra.Command {
 				fmt.Printf("   File size: %d bytes\n", len(fileData))
 				fmt.Printf("   Processing with IfcOpenShell service...\n")
 
-				// Get repository service (includes IFC processing)
-				repoService := sc.GetRepositoryService()
+				// Get IFC service for processing
+				ifcUC := sc.GetIFCService()
 
 				// Import IFC file through the complete pipeline
-				// Convert []byte to io.Reader for the service
-				reader := bytes.NewReader(fileData)
-				result, err := repoService.ImportIFC(context.Background(), repoID, reader)
+				result, err := ifcUC.ImportIFC(context.Background(), repoID, fileData)
 				if err != nil {
 					return fmt.Errorf("failed to import IFC file: %w", err)
 				}

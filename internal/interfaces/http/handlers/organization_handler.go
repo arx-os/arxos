@@ -16,14 +16,14 @@ import (
 
 // OrganizationHandler handles organization-related HTTP requests
 type OrganizationHandler struct {
-	*BaseHandler
+	BaseHandler
 	organizationService *usecase.OrganizationUseCase
 }
 
 // NewOrganizationHandler creates a new organization handler
 func NewOrganizationHandler(server *types.Server, organizationService *usecase.OrganizationUseCase) *OrganizationHandler {
 	return &OrganizationHandler{
-		BaseHandler:         NewBaseHandler(server),
+		BaseHandler:         nil, // Will be injected by container
 		organizationService: organizationService,
 	}
 }
@@ -60,7 +60,7 @@ func (h *OrganizationHandler) HandleGetOrganizations(w http.ResponseWriter, r *h
 	// Get organizations through the service
 	organizations, err := h.organizationService.ListOrganizations(r.Context(), filter)
 	if err != nil {
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -99,14 +99,14 @@ func (h *OrganizationHandler) HandleGetOrganization(w http.ResponseWriter, r *ht
 	// Extract organization ID from URL path
 	orgID := h.extractIDFromPath(r.URL.Path, "/api/v1/organizations/")
 	if orgID == "" {
-		h.HandleError(w, r, nil, http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, nil)
 		return
 	}
 
 	// Get organization from service
 	organization, err := h.organizationService.GetOrganization(r.Context(), orgID)
 	if err != nil {
-		h.HandleError(w, r, err, http.StatusNotFound)
+		h.RespondError(w, http.StatusNotFound, err)
 		return
 	}
 
@@ -123,13 +123,13 @@ func (h *OrganizationHandler) HandleCreateOrganization(w http.ResponseWriter, r 
 	// Parse request body
 	var req models.CreateOrganizationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.HandleError(w, r, err, http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, err)
 		return
 	}
 
 	// Validate request
 	if err := h.validateCreateOrganizationRequest(&req); err != nil {
-		h.HandleError(w, r, err, http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, err)
 		return
 	}
 
@@ -143,7 +143,7 @@ func (h *OrganizationHandler) HandleCreateOrganization(w http.ResponseWriter, r 
 	// Create organization through service
 	organization, err := h.organizationService.CreateOrganization(r.Context(), domainReq)
 	if err != nil {
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -160,14 +160,14 @@ func (h *OrganizationHandler) HandleUpdateOrganization(w http.ResponseWriter, r 
 	// Extract organization ID from URL path
 	orgID := h.extractIDFromPath(r.URL.Path, "/api/v1/organizations/")
 	if orgID == "" {
-		h.HandleError(w, r, nil, http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, nil)
 		return
 	}
 
 	// Parse request body
 	var req models.UpdateOrganizationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.HandleError(w, r, err, http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, err)
 		return
 	}
 
@@ -183,7 +183,7 @@ func (h *OrganizationHandler) HandleUpdateOrganization(w http.ResponseWriter, r 
 	// Update organization through service
 	organization, err := h.organizationService.UpdateOrganization(r.Context(), domainReq)
 	if err != nil {
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -200,13 +200,13 @@ func (h *OrganizationHandler) HandleDeleteOrganization(w http.ResponseWriter, r 
 	// Extract organization ID from URL path
 	orgID := h.extractIDFromPath(r.URL.Path, "/api/v1/organizations/")
 	if orgID == "" {
-		h.HandleError(w, r, nil, http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, nil)
 		return
 	}
 
 	// Delete organization through service
 	if err := h.organizationService.DeleteOrganization(r.Context(), orgID); err != nil {
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -223,7 +223,7 @@ func (h *OrganizationHandler) HandleGetOrganizationUsers(w http.ResponseWriter, 
 	// Extract organization ID from URL path
 	orgID := h.extractIDFromPath(r.URL.Path, "/api/v1/organizations/")
 	if orgID == "" {
-		h.HandleError(w, r, nil, http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, nil)
 		return
 	}
 
@@ -233,7 +233,7 @@ func (h *OrganizationHandler) HandleGetOrganizationUsers(w http.ResponseWriter, 
 	// Get organization users through service
 	users, err := h.organizationService.GetOrganizationUsers(r.Context(), orgID)
 	if err != nil {
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 

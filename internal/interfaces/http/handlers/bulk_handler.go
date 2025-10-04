@@ -8,13 +8,12 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
-	"github.com/arx-os/arxos/internal/interfaces/http/types"
 	"github.com/arx-os/arxos/internal/usecase"
 )
 
 // BulkHandler handles bulk operations for multiple entities
 type BulkHandler struct {
-	*types.BaseHandler
+	BaseHandler
 	buildingUC  *usecase.BuildingUseCase
 	equipmentUC *usecase.EquipmentUseCase
 	componentUC interface{} // ComponentService interface
@@ -22,9 +21,9 @@ type BulkHandler struct {
 	logger      domain.Logger
 }
 
-// NewBulkHandler creates a new bulk handler
+// NewBulkHandler creates a new bulk handler with proper dependency injection
 func NewBulkHandler(
-	server *types.Server,
+	base BaseHandler,
 	buildingUC *usecase.BuildingUseCase,
 	equipmentUC *usecase.EquipmentUseCase,
 	componentUC interface{},
@@ -32,7 +31,7 @@ func NewBulkHandler(
 	logger domain.Logger,
 ) *BulkHandler {
 	return &BulkHandler{
-		BaseHandler: types.NewBaseHandler(server),
+		BaseHandler: base,
 		buildingUC:  buildingUC,
 		equipmentUC: equipmentUC,
 		componentUC: componentUC,
@@ -100,25 +99,25 @@ func (h *BulkHandler) BulkCreate(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Bulk create requested")
 
 	// Validate content type
-	if !h.ValidateContentType(r, "application/json") {
-		h.HandleError(w, r, fmt.Errorf("content type must be application/json"), http.StatusBadRequest)
+	if err := h.ValidateContentType(r, "application/json"); err != nil {
+		h.RespondError(w, http.StatusBadRequest, err)
 		return
 	}
 
 	var req BulkCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.HandleError(w, r, fmt.Errorf("invalid request body: %v", err), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %v", err))
 		return
 	}
 
 	// Validate request
 	if req.EntityType == "" {
-		h.HandleError(w, r, fmt.Errorf("entity_type is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("entity_type is required"))
 		return
 	}
 
 	if len(req.Data) == 0 {
-		h.HandleError(w, r, fmt.Errorf("data array cannot be empty"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("data array cannot be empty"))
 		return
 	}
 
@@ -131,7 +130,7 @@ func (h *BulkHandler) BulkCreate(w http.ResponseWriter, r *http.Request) {
 	response, err := h.processBulkCreate(r.Context(), &req)
 	if err != nil {
 		h.logger.Error("Bulk create failed", "error", err)
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -149,25 +148,25 @@ func (h *BulkHandler) BulkUpdate(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Bulk update requested")
 
 	// Validate content type
-	if !h.ValidateContentType(r, "application/json") {
-		h.HandleError(w, r, fmt.Errorf("content type must be application/json"), http.StatusBadRequest)
+	if err := h.ValidateContentType(r, "application/json"); err != nil {
+		h.RespondError(w, http.StatusBadRequest, err)
 		return
 	}
 
 	var req BulkUpdateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.HandleError(w, r, fmt.Errorf("invalid request body: %v", err), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %v", err))
 		return
 	}
 
 	// Validate request
 	if req.EntityType == "" {
-		h.HandleError(w, r, fmt.Errorf("entity_type is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("entity_type is required"))
 		return
 	}
 
 	if len(req.Data) == 0 {
-		h.HandleError(w, r, fmt.Errorf("data array cannot be empty"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("data array cannot be empty"))
 		return
 	}
 
@@ -180,7 +179,7 @@ func (h *BulkHandler) BulkUpdate(w http.ResponseWriter, r *http.Request) {
 	response, err := h.processBulkUpdate(r.Context(), &req)
 	if err != nil {
 		h.logger.Error("Bulk update failed", "error", err)
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -198,25 +197,25 @@ func (h *BulkHandler) BulkDelete(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Bulk delete requested")
 
 	// Validate content type
-	if !h.ValidateContentType(r, "application/json") {
-		h.HandleError(w, r, fmt.Errorf("content type must be application/json"), http.StatusBadRequest)
+	if err := h.ValidateContentType(r, "application/json"); err != nil {
+		h.RespondError(w, http.StatusBadRequest, err)
 		return
 	}
 
 	var req BulkDeleteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.HandleError(w, r, fmt.Errorf("invalid request body: %v", err), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %v", err))
 		return
 	}
 
 	// Validate request
 	if req.EntityType == "" {
-		h.HandleError(w, r, fmt.Errorf("entity_type is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("entity_type is required"))
 		return
 	}
 
 	if len(req.IDs) == 0 {
-		h.HandleError(w, r, fmt.Errorf("ids array cannot be empty"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("ids array cannot be empty"))
 		return
 	}
 
@@ -229,7 +228,7 @@ func (h *BulkHandler) BulkDelete(w http.ResponseWriter, r *http.Request) {
 	response, err := h.processBulkDelete(r.Context(), &req)
 	if err != nil {
 		h.logger.Error("Bulk delete failed", "error", err)
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 

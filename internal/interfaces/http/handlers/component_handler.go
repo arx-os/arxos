@@ -16,7 +16,7 @@ import (
 
 // ComponentHandler handles component-related HTTP requests
 type ComponentHandler struct {
-	*types.BaseHandler
+	BaseHandler
 	componentUC component.ComponentService
 	logger      domain.Logger
 }
@@ -24,7 +24,7 @@ type ComponentHandler struct {
 // NewComponentHandler creates a new component handler
 func NewComponentHandler(server *types.Server, componentUC component.ComponentService, logger domain.Logger) *ComponentHandler {
 	return &ComponentHandler{
-		BaseHandler: types.NewBaseHandler(server),
+		BaseHandler: nil, // Will be injected by container
 		componentUC: componentUC,
 		logger:      logger,
 	}
@@ -81,7 +81,7 @@ func (h *ComponentHandler) ListComponents(w http.ResponseWriter, r *http.Request
 	components, err := h.componentUC.ListComponents(r.Context(), filter)
 	if err != nil {
 		h.logger.Error("Failed to list components", "error", err)
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -109,14 +109,14 @@ func (h *ComponentHandler) CreateComponent(w http.ResponseWriter, r *http.Reques
 	h.logger.Info("Create component requested")
 
 	// Validate content type
-	if !h.ValidateContentType(r, "application/json") {
-		h.HandleError(w, r, fmt.Errorf("content type must be application/json"), http.StatusBadRequest)
+	if err := h.ValidateContentType(r, "application/json"); err != nil {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("content type must be application/json"))
 		return
 	}
 
 	var req component.CreateComponentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.HandleError(w, r, fmt.Errorf("invalid request body: %v", err), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %v", err))
 		return
 	}
 
@@ -127,11 +127,11 @@ func (h *ComponentHandler) CreateComponent(w http.ResponseWriter, r *http.Reques
 
 		// Check for validation errors
 		if err.Error() == "component name is required" || err.Error() == "building ID is required" {
-			h.HandleError(w, r, err, http.StatusBadRequest)
+			h.RespondError(w, http.StatusBadRequest, err)
 			return
 		}
 
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -150,7 +150,7 @@ func (h *ComponentHandler) GetComponent(w http.ResponseWriter, r *http.Request) 
 
 	componentID := chi.URLParam(r, "id")
 	if componentID == "" {
-		h.HandleError(w, r, fmt.Errorf("component ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("component ID is required"))
 		return
 	}
 
@@ -161,11 +161,11 @@ func (h *ComponentHandler) GetComponent(w http.ResponseWriter, r *http.Request) 
 
 		// Check for not found
 		if err.Error() == "component not found" {
-			h.HandleError(w, r, err, http.StatusNotFound)
+			h.RespondError(w, http.StatusNotFound, err)
 			return
 		}
 
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -184,19 +184,19 @@ func (h *ComponentHandler) UpdateComponent(w http.ResponseWriter, r *http.Reques
 
 	componentID := chi.URLParam(r, "id")
 	if componentID == "" {
-		h.HandleError(w, r, fmt.Errorf("component ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("component ID is required"))
 		return
 	}
 
 	// Validate content type
-	if !h.ValidateContentType(r, "application/json") {
-		h.HandleError(w, r, fmt.Errorf("content type must be application/json"), http.StatusBadRequest)
+	if err := h.ValidateContentType(r, "application/json"); err != nil {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("content type must be application/json"))
 		return
 	}
 
 	var req component.UpdateComponentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.HandleError(w, r, fmt.Errorf("invalid request body: %v", err), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %v", err))
 		return
 	}
 
@@ -210,17 +210,17 @@ func (h *ComponentHandler) UpdateComponent(w http.ResponseWriter, r *http.Reques
 
 		// Check for validation errors
 		if err.Error() == "component name is required" {
-			h.HandleError(w, r, err, http.StatusBadRequest)
+			h.RespondError(w, http.StatusBadRequest, err)
 			return
 		}
 
 		// Check for not found
 		if err.Error() == "component not found" {
-			h.HandleError(w, r, err, http.StatusNotFound)
+			h.RespondError(w, http.StatusNotFound, err)
 			return
 		}
 
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -239,7 +239,7 @@ func (h *ComponentHandler) DeleteComponent(w http.ResponseWriter, r *http.Reques
 
 	componentID := chi.URLParam(r, "id")
 	if componentID == "" {
-		h.HandleError(w, r, fmt.Errorf("component ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("component ID is required"))
 		return
 	}
 
@@ -250,11 +250,11 @@ func (h *ComponentHandler) DeleteComponent(w http.ResponseWriter, r *http.Reques
 
 		// Check for not found
 		if err.Error() == "component not found" {
-			h.HandleError(w, r, err, http.StatusNotFound)
+			h.RespondError(w, http.StatusNotFound, err)
 			return
 		}
 
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -273,7 +273,7 @@ func (h *ComponentHandler) GetComponentsByBuilding(w http.ResponseWriter, r *htt
 
 	buildingID := chi.URLParam(r, "building_id")
 	if buildingID == "" {
-		h.HandleError(w, r, fmt.Errorf("building ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("building ID is required"))
 		return
 	}
 
@@ -304,7 +304,7 @@ func (h *ComponentHandler) GetComponentsByBuilding(w http.ResponseWriter, r *htt
 	components, err := h.componentUC.ListComponents(r.Context(), filter)
 	if err != nil {
 		h.logger.Error("Failed to get components by building", "building_id", buildingID, "error", err)
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -329,13 +329,13 @@ func (h *ComponentHandler) UpdateComponentStatus(w http.ResponseWriter, r *http.
 
 	componentID := chi.URLParam(r, "id")
 	if componentID == "" {
-		h.HandleError(w, r, fmt.Errorf("component ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("component ID is required"))
 		return
 	}
 
 	// Validate content type
-	if !h.ValidateContentType(r, "application/json") {
-		h.HandleError(w, r, fmt.Errorf("content type must be application/json"), http.StatusBadRequest)
+	if err := h.ValidateContentType(r, "application/json"); err != nil {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("content type must be application/json"))
 		return
 	}
 
@@ -345,7 +345,7 @@ func (h *ComponentHandler) UpdateComponentStatus(w http.ResponseWriter, r *http.
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.HandleError(w, r, fmt.Errorf("invalid request body: %v", err), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %v", err))
 		return
 	}
 
@@ -359,11 +359,11 @@ func (h *ComponentHandler) UpdateComponentStatus(w http.ResponseWriter, r *http.
 
 		// Check for not found
 		if err.Error() == "component not found" {
-			h.HandleError(w, r, err, http.StatusNotFound)
+			h.RespondError(w, http.StatusNotFound, err)
 			return
 		}
 
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -371,7 +371,7 @@ func (h *ComponentHandler) UpdateComponentStatus(w http.ResponseWriter, r *http.
 	updatedComponent, err := h.componentUC.GetComponent(r.Context(), componentID)
 	if err != nil {
 		h.logger.Error("Failed to get updated component", "component_id", componentID, "error", err)
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -390,10 +390,10 @@ func (h *ComponentHandler) GetComponentHistory(w http.ResponseWriter, r *http.Re
 
 	componentID := chi.URLParam(r, "id")
 	if componentID == "" {
-		h.HandleError(w, r, fmt.Errorf("component ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("component ID is required"))
 		return
 	}
 
 	// TODO: Implement GetComponentHistory in use case
-	h.HandleError(w, r, fmt.Errorf("component history functionality not yet implemented"), http.StatusNotImplemented)
+	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("component history functionality not yet implemented"))
 }

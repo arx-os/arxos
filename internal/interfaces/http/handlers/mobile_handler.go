@@ -14,7 +14,7 @@ import (
 
 // MobileHandler handles mobile-specific HTTP requests for AR and spatial functionality
 type MobileHandler struct {
-	*types.BaseHandler
+	BaseHandler
 	buildingUC  *usecase.BuildingUseCase
 	equipmentUC *usecase.EquipmentUseCase
 	logger      domain.Logger
@@ -23,7 +23,7 @@ type MobileHandler struct {
 // NewMobileHandler creates a new mobile handler
 func NewMobileHandler(server *types.Server, buildingUC *usecase.BuildingUseCase, equipmentUC *usecase.EquipmentUseCase, logger domain.Logger) *MobileHandler {
 	return &MobileHandler{
-		BaseHandler: types.NewBaseHandler(server),
+		BaseHandler: nil, // Will be injected by container
 		buildingUC:  buildingUC,
 		equipmentUC: equipmentUC,
 		logger:      logger,

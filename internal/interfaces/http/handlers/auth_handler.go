@@ -1,28 +1,33 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
-	"github.com/arx-os/arxos/internal/interfaces/http/types"
 	"github.com/arx-os/arxos/internal/usecase"
 	"github.com/arx-os/arxos/pkg/auth"
 )
 
-// AuthHandler handles authentication-related HTTP requests for mobile clients
+// AuthHandler handles authentication-related HTTP requests following Clean Architecture
 type AuthHandler struct {
-	*types.BaseHandler
+	BaseHandler
 	userUC *usecase.UserUseCase
+	jwtMgr *auth.JWTManager
 	logger domain.Logger
 }
 
-// NewAuthHandler creates a new authentication handler
-func NewAuthHandler(server *types.Server, userUC *usecase.UserUseCase, logger domain.Logger) *AuthHandler {
+// NewAuthHandler creates a new authentication handler with proper dependency injection
+func NewAuthHandler(
+	base BaseHandler,
+	userUC *usecase.UserUseCase,
+	jwtMgr *auth.JWTManager,
+	logger domain.Logger,
+) *AuthHandler {
 	return &AuthHandler{
-		BaseHandler: types.NewBaseHandler(server),
+		BaseHandler: base,
 		userUC:      userUC,
+		jwtMgr:      jwtMgr,
 		logger:      logger,
 	}
 }
@@ -73,7 +78,7 @@ func (h *AuthHandler) HandleMobileLogin(w http.ResponseWriter, r *http.Request) 
 	}()
 
 	var req MobileLoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := h.ParseRequestBody(r, &req); err != nil {
 		h.logger.Error("Invalid login request body", "error", err)
 		h.RespondJSON(w, http.StatusBadRequest, MobileAuthError{
 			Code:    "invalid_request",
@@ -153,7 +158,7 @@ func (h *AuthHandler) HandleMobileRegister(w http.ResponseWriter, r *http.Reques
 	}()
 
 	var req MobileRegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := h.ParseRequestBody(r, &req); err != nil {
 		h.logger.Error("Invalid register request body", "error", err)
 		h.RespondJSON(w, http.StatusBadRequest, MobileAuthError{
 			Code:    "invalid_request",
@@ -242,7 +247,7 @@ func (h *AuthHandler) HandleMobileRefreshToken(w http.ResponseWriter, r *http.Re
 		RefreshToken string `json:"refresh_token" validate:"required"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := h.ParseRequestBody(r, &req); err != nil {
 		h.logger.Error("Invalid refresh request body", "error", err)
 		h.RespondJSON(w, http.StatusBadRequest, MobileAuthError{
 			Code:    "invalid_request",

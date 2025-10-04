@@ -16,7 +16,7 @@ import (
 
 // EquipmentHandler handles equipment-related HTTP requests
 type EquipmentHandler struct {
-	*types.BaseHandler
+	BaseHandler
 	equipmentUC *usecase.EquipmentUseCase
 	logger      domain.Logger
 }
@@ -24,7 +24,7 @@ type EquipmentHandler struct {
 // NewEquipmentHandler creates a new equipment handler
 func NewEquipmentHandler(server *types.Server, equipmentUC *usecase.EquipmentUseCase, logger domain.Logger) *EquipmentHandler {
 	return &EquipmentHandler{
-		BaseHandler: types.NewBaseHandler(server),
+		BaseHandler: nil, // Will be injected by container
 		equipmentUC: equipmentUC,
 		logger:      logger,
 	}
@@ -83,7 +83,7 @@ func (h *EquipmentHandler) ListEquipment(w http.ResponseWriter, r *http.Request)
 	equipment, err := h.equipmentUC.ListEquipment(r.Context(), filter)
 	if err != nil {
 		h.logger.Error("Failed to list equipment", "error", err)
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -112,14 +112,14 @@ func (h *EquipmentHandler) CreateEquipment(w http.ResponseWriter, r *http.Reques
 	h.logger.Info("Create equipment requested")
 
 	// Validate content type
-	if !h.ValidateContentType(r, "application/json") {
-		h.HandleError(w, r, fmt.Errorf("content type must be application/json"), http.StatusBadRequest)
+	if err := h.ValidateContentType(r, "application/json"); err != nil {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("content type must be application/json"))
 		return
 	}
 
 	var req domain.CreateEquipmentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.HandleError(w, r, fmt.Errorf("invalid request body: %v", err), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %v", err))
 		return
 	}
 
@@ -130,11 +130,11 @@ func (h *EquipmentHandler) CreateEquipment(w http.ResponseWriter, r *http.Reques
 
 		// Check for validation errors
 		if err.Error() == "equipment name is required" || err.Error() == "building ID is required" {
-			h.HandleError(w, r, err, http.StatusBadRequest)
+			h.RespondError(w, http.StatusBadRequest, err)
 			return
 		}
 
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -153,7 +153,7 @@ func (h *EquipmentHandler) GetEquipment(w http.ResponseWriter, r *http.Request) 
 
 	equipmentID := chi.URLParam(r, "id")
 	if equipmentID == "" {
-		h.HandleError(w, r, fmt.Errorf("equipment ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("equipment ID is required"))
 		return
 	}
 
@@ -164,11 +164,11 @@ func (h *EquipmentHandler) GetEquipment(w http.ResponseWriter, r *http.Request) 
 
 		// Check for not found
 		if err.Error() == "equipment not found" {
-			h.HandleError(w, r, err, http.StatusNotFound)
+			h.RespondError(w, http.StatusNotFound, err)
 			return
 		}
 
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -187,19 +187,19 @@ func (h *EquipmentHandler) UpdateEquipment(w http.ResponseWriter, r *http.Reques
 
 	equipmentID := chi.URLParam(r, "id")
 	if equipmentID == "" {
-		h.HandleError(w, r, fmt.Errorf("equipment ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("equipment ID is required"))
 		return
 	}
 
 	// Validate content type
-	if !h.ValidateContentType(r, "application/json") {
-		h.HandleError(w, r, fmt.Errorf("content type must be application/json"), http.StatusBadRequest)
+	if err := h.ValidateContentType(r, "application/json"); err != nil {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("content type must be application/json"))
 		return
 	}
 
 	var req domain.UpdateEquipmentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.HandleError(w, r, fmt.Errorf("invalid request body: %v", err), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %v", err))
 		return
 	}
 
@@ -213,17 +213,17 @@ func (h *EquipmentHandler) UpdateEquipment(w http.ResponseWriter, r *http.Reques
 
 		// Check for validation errors
 		if err.Error() == "equipment name is required" {
-			h.HandleError(w, r, err, http.StatusBadRequest)
+			h.RespondError(w, http.StatusBadRequest, err)
 			return
 		}
 
 		// Check for not found
 		if err.Error() == "equipment not found" {
-			h.HandleError(w, r, err, http.StatusNotFound)
+			h.RespondError(w, http.StatusNotFound, err)
 			return
 		}
 
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -242,7 +242,7 @@ func (h *EquipmentHandler) DeleteEquipment(w http.ResponseWriter, r *http.Reques
 
 	equipmentID := chi.URLParam(r, "id")
 	if equipmentID == "" {
-		h.HandleError(w, r, fmt.Errorf("equipment ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("equipment ID is required"))
 		return
 	}
 
@@ -253,11 +253,11 @@ func (h *EquipmentHandler) DeleteEquipment(w http.ResponseWriter, r *http.Reques
 
 		// Check for not found
 		if err.Error() == "equipment not found" {
-			h.HandleError(w, r, err, http.StatusNotFound)
+			h.RespondError(w, http.StatusNotFound, err)
 			return
 		}
 
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -276,7 +276,7 @@ func (h *EquipmentHandler) GetEquipmentByBuilding(w http.ResponseWriter, r *http
 
 	buildingID := chi.URLParam(r, "building_id")
 	if buildingID == "" {
-		h.HandleError(w, r, fmt.Errorf("building ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("building ID is required"))
 		return
 	}
 
@@ -311,7 +311,7 @@ func (h *EquipmentHandler) GetEquipmentByBuilding(w http.ResponseWriter, r *http
 	equipment, err := h.equipmentUC.ListEquipment(r.Context(), filter)
 	if err != nil {
 		h.logger.Error("Failed to get equipment by building", "building_id", buildingID, "error", err)
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -338,12 +338,12 @@ func (h *EquipmentHandler) GetEquipmentByFloor(w http.ResponseWriter, r *http.Re
 	floorID := chi.URLParam(r, "floor_id")
 
 	if buildingID == "" {
-		h.HandleError(w, r, fmt.Errorf("building ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("building ID is required"))
 		return
 	}
 
 	if floorID == "" {
-		h.HandleError(w, r, fmt.Errorf("floor ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("floor ID is required"))
 		return
 	}
 
@@ -381,7 +381,7 @@ func (h *EquipmentHandler) GetEquipmentByFloor(w http.ResponseWriter, r *http.Re
 	equipment, err := h.equipmentUC.ListEquipment(r.Context(), filter)
 	if err != nil {
 		h.logger.Error("Failed to get equipment by floor", "building_id", buildingID, "floor_id", floorID, "error", err)
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 

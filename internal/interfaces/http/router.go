@@ -159,13 +159,12 @@ func NewRouterConfig(server *types.Server, container *app.Container, jwtConfig *
 // createMobileHandlers creates mobile-specific handlers with proper dependencies
 func createMobileHandlers(config *RouterConfig) *mobileHandlers {
 	logger := config.Container.GetLogger()
-	userUC := config.Container.GetUserUseCase()
 	buildingUC := config.Container.GetBuildingUseCase()
 	equipmentUC := config.Container.GetEquipmentUseCase()
 	spatialRepo := config.Container.GetSpatialRepository()
 
 	return &mobileHandlers{
-		authHandler:    handlers.NewAuthHandler(config.Server, userUC, logger),
+		authHandler:    config.Container.GetAuthHandler(),
 		mobileHandler:  handlers.NewMobileHandler(config.Server, buildingUC, equipmentUC, logger),
 		spatialHandler: handlers.NewSpatialHandler(config.Server, buildingUC, equipmentUC, spatialRepo, logger),
 	}
@@ -174,7 +173,7 @@ func createMobileHandlers(config *RouterConfig) *mobileHandlers {
 // createPublicHandlers creates public handlers for unauthenticated endpoints
 func createPublicHandlers(config *RouterConfig) *publicHandlers {
 	return &publicHandlers{
-		apiHandler: handlers.NewAPIHandler(config.Server),
+		apiHandler: config.Container.GetAPIHandler(),
 	}
 }
 
@@ -182,12 +181,15 @@ func createPublicHandlers(config *RouterConfig) *publicHandlers {
 func createAPIHandlers(config *RouterConfig) *apiHandlers {
 	logger := config.Container.GetLogger()
 	userUC := config.Container.GetUserUseCase()
-	buildingUC := config.Container.GetBuildingUseCase()
 	equipmentUC := config.Container.GetEquipmentUseCase()
 
+	// Create BaseHandler for handlers not yet in Container
+	// TODO: Move all handlers to Container for Clean Architecture
+	baseHandler := handlers.NewBaseHandler(logger, nil) // No JWT manager needed for these for now
+
 	return &apiHandlers{
-		buildingHandler:  handlers.NewBuildingHandler(config.Server, buildingUC, logger),
+		buildingHandler:  config.Container.GetBuildingHandler(),
 		equipmentHandler: handlers.NewEquipmentHandler(config.Server, equipmentUC, logger),
-		userHandler:      handlers.NewUserHandler(config.Server, userUC, logger),
+		userHandler:      handlers.NewUserHandler(baseHandler, userUC, logger),
 	}
 }

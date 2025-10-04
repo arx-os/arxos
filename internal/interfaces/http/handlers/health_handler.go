@@ -12,7 +12,7 @@ import (
 
 // HealthHandler handles health check endpoints
 type HealthHandler struct {
-	*types.BaseHandler
+	BaseHandler
 	database  domain.Database
 	cache     domain.Cache
 	logger    domain.Logger
@@ -27,7 +27,7 @@ func NewHealthHandler(
 	logger domain.Logger,
 ) *HealthHandler {
 	return &HealthHandler{
-		BaseHandler: types.NewBaseHandler(server),
+		BaseHandler: nil, // Will be injected by container
 		database:    database,
 		cache:       cache,
 		logger:      logger,

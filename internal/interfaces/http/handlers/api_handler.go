@@ -4,19 +4,21 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/interfaces/http/models"
-	"github.com/arx-os/arxos/internal/interfaces/http/types"
 )
 
-// APIHandler handles general API requests
+// APIHandler handles general API requests following Clean Architecture
 type APIHandler struct {
-	*BaseHandler
+	BaseHandler
+	logger domain.Logger
 }
 
-// NewAPIHandler creates a new API handler
-func NewAPIHandler(server *types.Server) *APIHandler {
+// NewAPIHandler creates a new API handler with proper dependency injection
+func NewAPIHandler(base BaseHandler, logger domain.Logger) *APIHandler {
 	return &APIHandler{
-		BaseHandler: NewBaseHandler(server),
+		BaseHandler: base,
+		logger:      logger,
 	}
 }
 

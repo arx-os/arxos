@@ -15,7 +15,7 @@ import (
 
 // IFCHandler handles IFC-related HTTP requests
 type IFCHandler struct {
-	*types.BaseHandler
+	BaseHandler
 	ifcUC  *usecase.IFCUseCase
 	logger domain.Logger
 }
@@ -23,7 +23,7 @@ type IFCHandler struct {
 // NewIFCHandler creates a new IFC handler
 func NewIFCHandler(server *types.Server, ifcUC *usecase.IFCUseCase, logger domain.Logger) *IFCHandler {
 	return &IFCHandler{
-		BaseHandler: types.NewBaseHandler(server),
+		BaseHandler: nil, // Will be injected by container
 		ifcUC:       ifcUC,
 		logger:      logger,
 	}
@@ -39,8 +39,8 @@ func (h *IFCHandler) ImportIFC(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Import IFC requested")
 
 	// Validate content type
-	if !h.ValidateContentType(r, "application/json") {
-		h.HandleError(w, r, fmt.Errorf("content type must be application/json"), http.StatusBadRequest)
+	if err := h.ValidateContentType(r, "application/json"); err != nil {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("content type must be application/json"))
 		return
 	}
 
@@ -49,17 +49,17 @@ func (h *IFCHandler) ImportIFC(w http.ResponseWriter, r *http.Request) {
 		IFCData      string `json:"ifc_data"` // Base64 encoded IFC data
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.HandleError(w, r, fmt.Errorf("invalid request body: %v", err), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %v", err))
 		return
 	}
 
 	// Validate required fields
 	if req.RepositoryID == "" {
-		h.HandleError(w, r, fmt.Errorf("repository_id is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("repository_id is required"))
 		return
 	}
 	if req.IFCData == "" {
-		h.HandleError(w, r, fmt.Errorf("ifc_data is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("ifc_data is required"))
 		return
 	}
 
@@ -70,7 +70,7 @@ func (h *IFCHandler) ImportIFC(w http.ResponseWriter, r *http.Request) {
 	importResult, err := h.ifcUC.ImportIFC(r.Context(), req.RepositoryID, ifcData)
 	if err != nil {
 		h.logger.Error("Failed to import IFC", "error", err)
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -88,8 +88,8 @@ func (h *IFCHandler) ValidateIFC(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Validate IFC requested")
 
 	// Validate content type
-	if !h.ValidateContentType(r, "application/json") {
-		h.HandleError(w, r, fmt.Errorf("content type must be application/json"), http.StatusBadRequest)
+	if err := h.ValidateContentType(r, "application/json"); err != nil {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("content type must be application/json"))
 		return
 	}
 
@@ -97,13 +97,13 @@ func (h *IFCHandler) ValidateIFC(w http.ResponseWriter, r *http.Request) {
 		IFCFileID string `json:"ifc_file_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.HandleError(w, r, fmt.Errorf("invalid request body: %v", err), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %v", err))
 		return
 	}
 
 	// Validate required fields
 	if req.IFCFileID == "" {
-		h.HandleError(w, r, fmt.Errorf("ifc_file_id is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("ifc_file_id is required"))
 		return
 	}
 
@@ -111,7 +111,7 @@ func (h *IFCHandler) ValidateIFC(w http.ResponseWriter, r *http.Request) {
 	validationResult, err := h.ifcUC.ValidateIFC(r.Context(), req.IFCFileID)
 	if err != nil {
 		h.logger.Error("Failed to validate IFC", "error", err)
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -145,7 +145,7 @@ func (h *IFCHandler) ExportIFC(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Export IFC requested")
 
 	// TODO: Implement ExportIFC in use case
-	h.HandleError(w, r, fmt.Errorf("export IFC functionality not yet implemented"), http.StatusNotImplemented)
+	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("export IFC functionality not yet implemented"))
 }
 
 // GetImportJob handles GET /api/v1/ifc/import/{job_id}
@@ -159,12 +159,12 @@ func (h *IFCHandler) GetImportJob(w http.ResponseWriter, r *http.Request) {
 
 	jobID := chi.URLParam(r, "job_id")
 	if jobID == "" {
-		h.HandleError(w, r, fmt.Errorf("job ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("job ID is required"))
 		return
 	}
 
 	// TODO: Implement GetImportJob in use case
-	h.HandleError(w, r, fmt.Errorf("get import job functionality not yet implemented"), http.StatusNotImplemented)
+	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("get import job functionality not yet implemented"))
 }
 
 // GetExportJob handles GET /api/v1/ifc/export/{job_id}
@@ -178,12 +178,12 @@ func (h *IFCHandler) GetExportJob(w http.ResponseWriter, r *http.Request) {
 
 	jobID := chi.URLParam(r, "job_id")
 	if jobID == "" {
-		h.HandleError(w, r, fmt.Errorf("job ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("job ID is required"))
 		return
 	}
 
 	// TODO: Implement GetExportJob in use case
-	h.HandleError(w, r, fmt.Errorf("get export job functionality not yet implemented"), http.StatusNotImplemented)
+	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("get export job functionality not yet implemented"))
 }
 
 // ListImportJobs handles GET /api/v1/ifc/import
@@ -196,7 +196,7 @@ func (h *IFCHandler) ListImportJobs(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("List import jobs requested")
 
 	// TODO: Implement ListImportJobs in use case
-	h.HandleError(w, r, fmt.Errorf("list import jobs functionality not yet implemented"), http.StatusNotImplemented)
+	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("list import jobs functionality not yet implemented"))
 }
 
 // ListExportJobs handles GET /api/v1/ifc/export
@@ -209,7 +209,7 @@ func (h *IFCHandler) ListExportJobs(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("List export jobs requested")
 
 	// TODO: Implement ListExportJobs in use case
-	h.HandleError(w, r, fmt.Errorf("list export jobs functionality not yet implemented"), http.StatusNotImplemented)
+	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("list export jobs functionality not yet implemented"))
 }
 
 // CancelImportJob handles DELETE /api/v1/ifc/import/{job_id}
@@ -223,12 +223,12 @@ func (h *IFCHandler) CancelImportJob(w http.ResponseWriter, r *http.Request) {
 
 	jobID := chi.URLParam(r, "job_id")
 	if jobID == "" {
-		h.HandleError(w, r, fmt.Errorf("job ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("job ID is required"))
 		return
 	}
 
 	// TODO: Implement CancelImportJob in use case
-	h.HandleError(w, r, fmt.Errorf("cancel import job functionality not yet implemented"), http.StatusNotImplemented)
+	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("cancel import job functionality not yet implemented"))
 }
 
 // CancelExportJob handles DELETE /api/v1/ifc/export/{job_id}
@@ -242,12 +242,12 @@ func (h *IFCHandler) CancelExportJob(w http.ResponseWriter, r *http.Request) {
 
 	jobID := chi.URLParam(r, "job_id")
 	if jobID == "" {
-		h.HandleError(w, r, fmt.Errorf("job ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("job ID is required"))
 		return
 	}
 
 	// TODO: Implement CancelExportJob in use case
-	h.HandleError(w, r, fmt.Errorf("cancel export job functionality not yet implemented"), http.StatusNotImplemented)
+	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("cancel export job functionality not yet implemented"))
 }
 
 // GetImportJobLogs handles GET /api/v1/ifc/import/{job_id}/logs
@@ -261,12 +261,12 @@ func (h *IFCHandler) GetImportJobLogs(w http.ResponseWriter, r *http.Request) {
 
 	jobID := chi.URLParam(r, "job_id")
 	if jobID == "" {
-		h.HandleError(w, r, fmt.Errorf("job ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("job ID is required"))
 		return
 	}
 
 	// TODO: Implement GetImportJobLogs in use case
-	h.HandleError(w, r, fmt.Errorf("get import job logs functionality not yet implemented"), http.StatusNotImplemented)
+	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("get import job logs functionality not yet implemented"))
 }
 
 // GetExportJobLogs handles GET /api/v1/ifc/export/{job_id}/logs
@@ -280,10 +280,10 @@ func (h *IFCHandler) GetExportJobLogs(w http.ResponseWriter, r *http.Request) {
 
 	jobID := chi.URLParam(r, "job_id")
 	if jobID == "" {
-		h.HandleError(w, r, fmt.Errorf("job ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("job ID is required"))
 		return
 	}
 
 	// TODO: Implement GetExportJobLogs in use case
-	h.HandleError(w, r, fmt.Errorf("get export job logs functionality not yet implemented"), http.StatusNotImplemented)
+	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("get export job logs functionality not yet implemented"))
 }

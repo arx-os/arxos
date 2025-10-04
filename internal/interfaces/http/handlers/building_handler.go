@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,21 +9,24 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/arx-os/arxos/internal/domain"
-	"github.com/arx-os/arxos/internal/interfaces/http/types"
 	"github.com/arx-os/arxos/internal/usecase"
 )
 
-// BuildingHandler handles building-related HTTP requests
+// BuildingHandler handles building-related HTTP requests following Clean Architecture
 type BuildingHandler struct {
-	*types.BaseHandler
+	BaseHandler
 	buildingUC *usecase.BuildingUseCase
 	logger     domain.Logger
 }
 
-// NewBuildingHandler creates a new building handler
-func NewBuildingHandler(server *types.Server, buildingUC *usecase.BuildingUseCase, logger domain.Logger) *BuildingHandler {
+// NewBuildingHandler creates a new building handler with proper dependency injection
+func NewBuildingHandler(
+	base BaseHandler,
+	buildingUC *usecase.BuildingUseCase,
+	logger domain.Logger,
+) *BuildingHandler {
 	return &BuildingHandler{
-		BaseHandler: types.NewBaseHandler(server),
+		BaseHandler: base,
 		buildingUC:  buildingUC,
 		logger:      logger,
 	}
@@ -65,7 +67,7 @@ func (h *BuildingHandler) ListBuildings(w http.ResponseWriter, r *http.Request) 
 	buildings, err := h.buildingUC.ListBuildings(r.Context(), filter)
 	if err != nil {
 		h.logger.Error("Failed to list buildings", "error", err)
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -87,15 +89,15 @@ func (h *BuildingHandler) CreateBuilding(w http.ResponseWriter, r *http.Request)
 
 	h.logger.Info("Create building requested")
 
-	// Validate content type
-	if !h.ValidateContentType(r, "application/json") {
-		h.HandleError(w, r, fmt.Errorf("content type must be application/json"), http.StatusBadRequest)
+	// Validate content type and parse request body
+	if err := h.ValidateContentType(r, "application/json"); err != nil {
+		h.RespondError(w, http.StatusBadRequest, err)
 		return
 	}
 
 	var req domain.CreateBuildingRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.HandleError(w, r, fmt.Errorf("invalid request body: %v", err), http.StatusBadRequest)
+	if err := h.ParseRequestBody(r, &req); err != nil {
+		h.RespondError(w, http.StatusBadRequest, err)
 		return
 	}
 
@@ -106,11 +108,11 @@ func (h *BuildingHandler) CreateBuilding(w http.ResponseWriter, r *http.Request)
 
 		// Check for validation errors
 		if err.Error() == "building name is required" {
-			h.HandleError(w, r, err, http.StatusBadRequest)
+			h.RespondError(w, http.StatusBadRequest, err)
 			return
 		}
 
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -129,7 +131,7 @@ func (h *BuildingHandler) GetBuilding(w http.ResponseWriter, r *http.Request) {
 
 	buildingID := chi.URLParam(r, "id")
 	if buildingID == "" {
-		h.HandleError(w, r, fmt.Errorf("building ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("building ID is required"))
 		return
 	}
 
@@ -137,7 +139,7 @@ func (h *BuildingHandler) GetBuilding(w http.ResponseWriter, r *http.Request) {
 	building, err := h.buildingUC.GetBuilding(r.Context(), buildingID)
 	if err != nil {
 		h.logger.Error("Failed to get building", "building_id", buildingID, "error", err)
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -156,19 +158,19 @@ func (h *BuildingHandler) UpdateBuilding(w http.ResponseWriter, r *http.Request)
 
 	buildingID := chi.URLParam(r, "id")
 	if buildingID == "" {
-		h.HandleError(w, r, fmt.Errorf("building ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("building ID is required"))
 		return
 	}
 
 	// Validate content type
-	if !h.ValidateContentType(r, "application/json") {
-		h.HandleError(w, r, fmt.Errorf("content type must be application/json"), http.StatusBadRequest)
+	if err := h.ValidateContentType(r, "application/json"); err != nil {
+		h.RespondError(w, http.StatusBadRequest, err)
 		return
 	}
 
 	var req domain.UpdateBuildingRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.HandleError(w, r, fmt.Errorf("invalid request body: %v", err), http.StatusBadRequest)
+	if err := h.ParseRequestBody(r, &req); err != nil {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %v", err))
 		return
 	}
 
@@ -179,11 +181,11 @@ func (h *BuildingHandler) UpdateBuilding(w http.ResponseWriter, r *http.Request)
 
 		// Check for validation errors
 		if err.Error() == "building name is required" {
-			h.HandleError(w, r, err, http.StatusBadRequest)
+			h.RespondError(w, http.StatusBadRequest, err)
 			return
 		}
 
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -202,7 +204,7 @@ func (h *BuildingHandler) DeleteBuilding(w http.ResponseWriter, r *http.Request)
 
 	buildingID := chi.URLParam(r, "id")
 	if buildingID == "" {
-		h.HandleError(w, r, fmt.Errorf("building ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("building ID is required"))
 		return
 	}
 
@@ -210,7 +212,7 @@ func (h *BuildingHandler) DeleteBuilding(w http.ResponseWriter, r *http.Request)
 	err := h.buildingUC.DeleteBuilding(r.Context(), buildingID)
 	if err != nil {
 		h.logger.Error("Failed to delete building", "building_id", buildingID, "error", err)
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -229,12 +231,12 @@ func (h *BuildingHandler) ImportBuilding(w http.ResponseWriter, r *http.Request)
 
 	buildingID := chi.URLParam(r, "id")
 	if buildingID == "" {
-		h.HandleError(w, r, fmt.Errorf("building ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("building ID is required"))
 		return
 	}
 
 	// TODO: Implement IFC import logic
-	h.HandleError(w, r, fmt.Errorf("import functionality not yet implemented"), http.StatusNotImplemented)
+	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("import functionality not yet implemented"))
 }
 
 // ExportBuilding handles GET /api/v1/buildings/{id}/export
@@ -248,10 +250,10 @@ func (h *BuildingHandler) ExportBuilding(w http.ResponseWriter, r *http.Request)
 
 	buildingID := chi.URLParam(r, "id")
 	if buildingID == "" {
-		h.HandleError(w, r, fmt.Errorf("building ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("building ID is required"))
 		return
 	}
 
 	// TODO: Implement IFC export logic
-	h.HandleError(w, r, fmt.Errorf("export functionality not yet implemented"), http.StatusNotImplemented)
+	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("export functionality not yet implemented"))
 }

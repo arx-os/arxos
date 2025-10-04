@@ -9,15 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/spf13/cobra"
 
 	"github.com/arx-os/arxos/internal/app"
-	"github.com/arx-os/arxos/internal/interfaces/http/handlers"
-	httpmiddleware "github.com/arx-os/arxos/internal/interfaces/http/middleware"
+	httppkg "github.com/arx-os/arxos/internal/interfaces/http"
 	"github.com/arx-os/arxos/internal/interfaces/http/types"
-	"github.com/arx-os/arxos/pkg/auth"
 )
 
 // CreateServeCommand creates the serve command
@@ -46,70 +42,35 @@ func CreateServeCommand(serviceContext interface{}) *cobra.Command {
 	return cmd
 }
 
-// runServer starts the HTTP server
+// runServer starts the HTTP server using Clean Architecture
 func runServer(host string, port int, certFile, keyFile string) error {
 	fmt.Printf("🚀 Starting ArxOS HTTP server on %s:%d\n", host, port)
 
-	// Create DI container
+	// Create DI container and initialize all services
 	container := app.NewContainer()
+	ctx := context.Background()
 
-	// Get dependencies from container
-	buildingUC := container.GetBuildingUseCase()
+	// Container is already initialized when we get dependencies from it
+
 	logger := container.GetLogger()
 
-	// Create JWT manager
-	jwtConfig := &auth.JWTConfig{
-		SecretKey:          "dev_jwt_secret_key_change_in_production",
-		AccessTokenExpiry:  15 * time.Minute,
-		RefreshTokenExpiry: 7 * 24 * time.Hour,
-		Issuer:             "arxos",
-		Audience:           "arxos-clients",
-		Algorithm:          "HS256",
-	}
-
-	jwtManager, err := auth.NewJWTManager(jwtConfig)
-	if err != nil {
-		return fmt.Errorf("failed to create JWT manager: %w", err)
-	}
-
-	// Create server configuration using existing types
+	// Create server configuration
 	serverConfig := types.NewServer(fmt.Sprintf("%d", port), host)
 
-	// Create handlers using existing architecture
-	apiHandler := handlers.NewAPIHandler(serverConfig)
-	buildingHandler := handlers.NewBuildingHandler(serverConfig, buildingUC, logger)
+	// Create router using Clean Architecture
+	routerConfig := &httppkg.RouterConfig{
+		Container: container,
+		Server:    serverConfig,
+	}
 
-	// Create router and setup middleware
-	router := chi.NewRouter()
+	httpRouter := httppkg.NewRouter(routerConfig)
 
-	// Setup middleware
-	router.Use(middleware.RequestID)
-	router.Use(middleware.RealIP)
-	router.Use(middleware.Logger)
-	router.Use(middleware.Recoverer)
-	router.Use(middleware.Timeout(60 * time.Second))
-	router.Use(httpmiddleware.RateLimit(100, time.Minute))
-	router.Use(httpmiddleware.AuthMiddleware(jwtManager))
-
-	// Register routes
-	router.Get("/health", apiHandler.HandleHealth)
-	router.Route("/api/v1", func(r chi.Router) {
-		r.Get("/health", apiHandler.HandleHealth)
-		r.Route("/buildings", func(r chi.Router) {
-			r.Get("/", buildingHandler.ListBuildings)
-			r.Post("/", buildingHandler.CreateBuilding)
-			r.Get("/{id}", buildingHandler.GetBuilding)
-			r.Put("/{id}", buildingHandler.UpdateBuilding)
-			r.Delete("/{id}", buildingHandler.DeleteBuilding)
-			r.Post("/{id}/import", buildingHandler.ImportBuilding)
-			r.Get("/{id}/export", buildingHandler.ExportBuilding)
-		})
-	})
+	logger.Info("Clean Architecture router configured successfully")
 
 	// Create HTTP server
 	srv := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", host, port),
-		Handler:      router,
+		Handler:      httpRouter,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  120 * time.Second,

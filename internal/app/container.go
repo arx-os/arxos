@@ -20,6 +20,7 @@ import (
 	"github.com/arx-os/arxos/internal/infrastructure/repository"
 	"github.com/arx-os/arxos/internal/interfaces/http/handlers"
 	"github.com/arx-os/arxos/internal/usecase"
+	"github.com/arx-os/arxos/pkg/auth"
 )
 
 // Container implements dependency injection container following Go Blueprint standards
@@ -27,10 +28,11 @@ type Container struct {
 	config *config.Config
 
 	// Infrastructure layer
-	db      domain.Database
-	postgis *postgis.PostGIS
-	cache   domain.Cache
-	logger  domain.Logger
+	db         domain.Database
+	postgis    *postgis.PostGIS
+	cache      domain.Cache
+	logger     domain.Logger
+	jwtManager *auth.JWTManager
 
 	// Domain repositories (interfaces)
 	userRepo         domain.UserRepository
@@ -75,6 +77,10 @@ type Container struct {
 
 	// Interfaces
 	apiHandler *handlers.APIHandler
+
+	// HTTP Handlers (Following Clean Architecture)
+	buildingHandler *handlers.BuildingHandler
+	authHandler     *handlers.AuthHandler
 
 	mu          sync.RWMutex
 	initialized bool
@@ -210,6 +216,20 @@ func (c *Container) initInfrastructureServices(ctx context.Context) error {
 	repositoriesPath := c.dataManager.GetRepositoriesPath()
 	c.filesystemService = filesystem.NewRepositoryFilesystemService(repositoriesPath)
 
+	// JWT Manager
+	jwtConfig := &auth.JWTConfig{
+		SecretKey:          c.config.Security.JWTSecret,
+		AccessTokenExpiry:  c.config.Security.JWTExpiry,
+		RefreshTokenExpiry: c.config.Security.JWTExpiry * 7, // Refresh valid for 7x longer
+		Issuer:             "arxos",
+		Audience:           "arxos-users",
+	}
+	jwtManager, err := auth.NewJWTManager(jwtConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create JWT manager: %w", err)
+	}
+	c.jwtManager = jwtManager
+
 	// Initialize IFC services
 	if err := c.initIFCServices(ctx); err != nil {
 		return fmt.Errorf("failed to initialize IFC services: %w", err)
@@ -273,10 +293,28 @@ func (c *Container) initUseCases(ctx context.Context) error {
 	return nil
 }
 
-// initInterfaces initializes interface layer
+// initInterfaces initializes interface layer following Clean Architecture
 func (c *Container) initInterfaces(ctx context.Context) error {
+	// Create BaseHandler implementation
+	baseHandler := handlers.NewBaseHandler(c.logger, c.jwtManager)
+
 	// API handler
-	c.apiHandler = handlers.NewAPIHandler(nil)
+	c.apiHandler = handlers.NewAPIHandler(baseHandler, c.logger)
+
+	// Building handler with use case dependency
+	c.buildingHandler = handlers.NewBuildingHandler(
+		baseHandler,
+		c.GetBuildingUseCase(),
+		c.logger,
+	)
+
+	// Auth handler with use case and JWT manager dependencies
+	c.authHandler = handlers.NewAuthHandler(
+		baseHandler,
+		c.GetUserUseCase(),
+		c.jwtManager,
+		c.logger,
+	)
 
 	return nil
 }
@@ -316,6 +354,20 @@ func (c *Container) GetAPIHandler() *handlers.APIHandler {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.apiHandler
+}
+
+// GetBuildingHandler returns the building handler
+func (c *Container) GetBuildingHandler() *handlers.BuildingHandler {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.buildingHandler
+}
+
+// GetAuthHandler returns the auth handler
+func (c *Container) GetAuthHandler() *handlers.AuthHandler {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.authHandler
 }
 
 func (c *Container) GetUserUseCase() *usecase.UserUseCase {

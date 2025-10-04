@@ -10,21 +10,20 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/arx-os/arxos/internal/domain"
-	"github.com/arx-os/arxos/internal/interfaces/http/types"
 	"github.com/arx-os/arxos/internal/usecase"
 )
 
 // UserHandler handles user-related HTTP requests
 type UserHandler struct {
-	*types.BaseHandler
+	BaseHandler
 	userUC *usecase.UserUseCase
 	logger domain.Logger
 }
 
-// NewUserHandler creates a new user handler
-func NewUserHandler(server *types.Server, userUC *usecase.UserUseCase, logger domain.Logger) *UserHandler {
+// NewUserHandler creates a new user handler with proper dependency injection
+func NewUserHandler(base BaseHandler, userUC *usecase.UserUseCase, logger domain.Logger) *UserHandler {
 	return &UserHandler{
-		BaseHandler: types.NewBaseHandler(server),
+		BaseHandler: base,
 		userUC:      userUC,
 		logger:      logger,
 	}
@@ -82,7 +81,7 @@ func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := h.userUC.ListUsers(r.Context(), filter)
 	if err != nil {
 		h.logger.Error("Failed to list users", "error", err)
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -110,14 +109,14 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Create user requested")
 
 	// Validate content type
-	if !h.ValidateContentType(r, "application/json") {
-		h.HandleError(w, r, fmt.Errorf("content type must be application/json"), http.StatusBadRequest)
+	if err := h.ValidateContentType(r, "application/json"); err != nil {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("content type must be application/json"))
 		return
 	}
 
 	var req domain.CreateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.HandleError(w, r, fmt.Errorf("invalid request body: %v", err), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %v", err))
 		return
 	}
 
@@ -128,17 +127,17 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 		// Check for validation errors
 		if err.Error() == "email is required" || err.Error() == "name is required" {
-			h.HandleError(w, r, err, http.StatusBadRequest)
+			h.RespondError(w, http.StatusBadRequest, err)
 			return
 		}
 
 		// Check for duplicate email
 		if err.Error() == "user with email already exists" {
-			h.HandleError(w, r, err, http.StatusConflict)
+			h.RespondError(w, http.StatusConflict, err)
 			return
 		}
 
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -157,7 +156,7 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 
 	userID := chi.URLParam(r, "id")
 	if userID == "" {
-		h.HandleError(w, r, fmt.Errorf("user ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("user ID is required"))
 		return
 	}
 
@@ -168,11 +167,11 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 
 		// Check for not found
 		if err.Error() == "user not found" {
-			h.HandleError(w, r, err, http.StatusNotFound)
+			h.RespondError(w, http.StatusNotFound, err)
 			return
 		}
 
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -191,19 +190,19 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	userID := chi.URLParam(r, "id")
 	if userID == "" {
-		h.HandleError(w, r, fmt.Errorf("user ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("user ID is required"))
 		return
 	}
 
 	// Validate content type
-	if !h.ValidateContentType(r, "application/json") {
-		h.HandleError(w, r, fmt.Errorf("content type must be application/json"), http.StatusBadRequest)
+	if err := h.ValidateContentType(r, "application/json"); err != nil {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("content type must be application/json"))
 		return
 	}
 
 	var req domain.UpdateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.HandleError(w, r, fmt.Errorf("invalid request body: %v", err), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %v", err))
 		return
 	}
 
@@ -217,17 +216,17 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 		// Check for validation errors
 		if err.Error() == "email is required" || err.Error() == "name is required" {
-			h.HandleError(w, r, err, http.StatusBadRequest)
+			h.RespondError(w, http.StatusBadRequest, err)
 			return
 		}
 
 		// Check for not found
 		if err.Error() == "user not found" {
-			h.HandleError(w, r, err, http.StatusNotFound)
+			h.RespondError(w, http.StatusNotFound, err)
 			return
 		}
 
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -246,7 +245,7 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	userID := chi.URLParam(r, "id")
 	if userID == "" {
-		h.HandleError(w, r, fmt.Errorf("user ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("user ID is required"))
 		return
 	}
 
@@ -257,11 +256,11 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 		// Check for not found
 		if err.Error() == "user not found" {
-			h.HandleError(w, r, err, http.StatusNotFound)
+			h.RespondError(w, http.StatusNotFound, err)
 			return
 		}
 
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -280,12 +279,12 @@ func (h *UserHandler) GetUserByEmail(w http.ResponseWriter, r *http.Request) {
 
 	email := chi.URLParam(r, "email")
 	if email == "" {
-		h.HandleError(w, r, fmt.Errorf("email is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("email is required"))
 		return
 	}
 
 	// TODO: Implement GetUserByEmail in use case
-	h.HandleError(w, r, fmt.Errorf("get user by email functionality not yet implemented"), http.StatusNotImplemented)
+	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("get user by email functionality not yet implemented"))
 }
 
 // GetUsersByOrganization handles GET /api/v1/organizations/{organization_id}/users
@@ -299,7 +298,7 @@ func (h *UserHandler) GetUsersByOrganization(w http.ResponseWriter, r *http.Requ
 
 	organizationID := chi.URLParam(r, "organization_id")
 	if organizationID == "" {
-		h.HandleError(w, r, fmt.Errorf("organization ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("organization ID is required"))
 		return
 	}
 
@@ -329,7 +328,7 @@ func (h *UserHandler) GetUsersByOrganization(w http.ResponseWriter, r *http.Requ
 	users, err := h.userUC.ListUsers(r.Context(), filter)
 	if err != nil {
 		h.logger.Error("Failed to get users by organization", "organization_id", organizationID, "error", err)
-		h.HandleError(w, r, err, http.StatusInternalServerError)
+		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -354,12 +353,12 @@ func (h *UserHandler) ActivateUser(w http.ResponseWriter, r *http.Request) {
 
 	userID := chi.URLParam(r, "id")
 	if userID == "" {
-		h.HandleError(w, r, fmt.Errorf("user ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("user ID is required"))
 		return
 	}
 
 	// TODO: Implement ActivateUser in use case
-	h.HandleError(w, r, fmt.Errorf("activate user functionality not yet implemented"), http.StatusNotImplemented)
+	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("activate user functionality not yet implemented"))
 }
 
 // DeactivateUser handles POST /api/v1/users/{id}/deactivate
@@ -373,10 +372,10 @@ func (h *UserHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 
 	userID := chi.URLParam(r, "id")
 	if userID == "" {
-		h.HandleError(w, r, fmt.Errorf("user ID is required"), http.StatusBadRequest)
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("user ID is required"))
 		return
 	}
 
 	// TODO: Implement DeactivateUser in use case
-	h.HandleError(w, r, fmt.Errorf("deactivate user functionality not yet implemented"), http.StatusNotImplemented)
+	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("deactivate user functionality not yet implemented"))
 }

@@ -14,6 +14,16 @@ import (
 	"github.com/arx-os/arxos/internal/usecase"
 )
 
+// RepositoryServiceProvider interface for repository services
+type RepositoryServiceProvider interface {
+	GetRepositoryService() building.RepositoryService
+}
+
+// IFCServiceProvider interface for IFC import services
+type IFCServiceProvider interface {
+	GetIFCService() *usecase.IFCUseCase
+}
+
 // ServiceContext provides access to services for CLI commands
 type ServiceContext struct {
 	container *app.Container

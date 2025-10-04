@@ -8,9 +8,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/internal/tui/services"
 	"github.com/arx-os/arxos/internal/tui/utils"
-	"github.com/arx-os/arxos/internal/config"
 )
 
 // FloorPlanModel represents the floor plan TUI model

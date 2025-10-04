@@ -12,17 +12,17 @@ import (
 // SpatialValidator provides validation for spatial operations and data
 type SpatialValidator struct {
 	// Configuration for validation rules
-	maxDistance float64 // Maximum allowed distance in mm
-	minConfidence float64 // Minimum confidence threshold
-	maxAge time.Duration // Maximum age for spatial data
+	maxDistance   float64       // Maximum allowed distance in mm
+	minConfidence float64       // Minimum confidence threshold
+	maxAge        time.Duration // Maximum age for spatial data
 }
 
 // NewSpatialValidator creates a new spatial validator with default settings
 func NewSpatialValidator() *SpatialValidator {
 	return &SpatialValidator{
-		maxDistance: 10000.0, // 10 meters in mm
-		minConfidence: 0.5, // 50% confidence minimum
-		maxAge: 24 * time.Hour, // 24 hours max age
+		maxDistance:   10000.0,        // 10 meters in mm
+		minConfidence: 0.5,            // 50% confidence minimum
+		maxAge:        24 * time.Hour, // 24 hours max age
 	}
 }
 
@@ -85,7 +85,7 @@ func (sv *SpatialValidator) ValidateQuaternion(quat *Quaternion) error {
 
 	// Check if quaternion is normalized (magnitude should be approximately 1)
 	magnitude := math.Sqrt(quat.W*quat.W + quat.X*quat.X + quat.Y*quat.Y + quat.Z*quat.Z)
-	if math.Abs(magnitude - 1.0) > 0.001 {
+	if math.Abs(magnitude-1.0) > 0.001 {
 		return fmt.Errorf("quaternion is not normalized (magnitude: %f)", magnitude)
 	}
 
@@ -119,7 +119,7 @@ func (sv *SpatialValidator) ValidateSpatialAnchor(anchor *SpatialAnchor) error {
 	}
 
 	if anchor.Confidence < sv.minConfidence {
-		return fmt.Errorf("spatial anchor confidence %f is below minimum threshold %f", 
+		return fmt.Errorf("spatial anchor confidence %f is below minimum threshold %f",
 			anchor.Confidence, sv.minConfidence)
 	}
 
@@ -178,7 +178,7 @@ func (sv *SpatialValidator) ValidateARNavigationPath(path *ARNavigationPath) err
 	}
 
 	if path.Distance > sv.maxDistance {
-		return fmt.Errorf("AR navigation path distance %f exceeds maximum %f", 
+		return fmt.Errorf("AR navigation path distance %f exceeds maximum %f",
 			path.Distance, sv.maxDistance)
 	}
 
@@ -310,19 +310,19 @@ func (sv *SpatialValidator) ValidateARSessionMetrics(metrics *ARSessionMetrics) 
 	}
 
 	// Validate duration
-	if math.Abs(metrics.Duration - metrics.EndTime.Sub(metrics.StartTime).Seconds()) > 1.0 {
+	if math.Abs(metrics.Duration-metrics.EndTime.Sub(metrics.StartTime).Seconds()) > 1.0 {
 		return fmt.Errorf("AR session duration mismatch with time range")
 	}
 
 	// Validate counts (non-negative)
 	counts := map[string]int{
-		"anchors detected": metrics.AnchorsDetected,
-		"anchors created": metrics.AnchorsCreated,
-		"anchors updated": metrics.AnchorsUpdated,
-		"anchors removed": metrics.AnchorsRemoved,
+		"anchors detected":            metrics.AnchorsDetected,
+		"anchors created":             metrics.AnchorsCreated,
+		"anchors updated":             metrics.AnchorsUpdated,
+		"anchors removed":             metrics.AnchorsRemoved,
 		"equipment overlays rendered": metrics.EquipmentOverlaysRendered,
 		"navigation paths calculated": metrics.NavigationPathsCalculated,
-		"errors encountered": metrics.ErrorsEncountered,
+		"errors encountered":          metrics.ErrorsEncountered,
 	}
 
 	for name, count := range counts {
@@ -371,7 +371,7 @@ func (sv *SpatialValidator) ValidateDistance(from, to *SpatialLocation, expected
 	// Allow 5% tolerance
 	tolerance := expectedDistance * 0.05
 	if distanceDiff > tolerance {
-		return fmt.Errorf("distance validation failed: expected %f, actual %f (diff: %f, tolerance: %f)", 
+		return fmt.Errorf("distance validation failed: expected %f, actual %f (diff: %f, tolerance: %f)",
 			expectedDistance, actualDistance, distanceDiff, tolerance)
 	}
 
@@ -386,7 +386,7 @@ func (sv *SpatialValidator) ValidateWithinBounds(location *SpatialLocation, boun
 
 	point := location.ToPoint3D()
 	if !bounds.Contains(point) {
-		return fmt.Errorf("spatial location %s is outside bounds (min: %v, max: %v)", 
+		return fmt.Errorf("spatial location %s is outside bounds (min: %v, max: %v)",
 			location.String(), bounds.Min, bounds.Max)
 	}
 
@@ -410,15 +410,15 @@ func isValidHexColor(color string) bool {
 	if color == "" {
 		return false
 	}
-	
+
 	if color[0] != '#' {
 		return false
 	}
 
 	if len(color) == 4 || len(color) == 7 {
 		for _, char := range color[1:] {
-			if !((char >= '0' && char <= '9') || 
-				(char >= 'A' && char <= 'F') || 
+			if !((char >= '0' && char <= '9') ||
+				(char >= 'A' && char <= 'F') ||
 				(char >= 'a' && char <= 'f')) {
 				return false
 			}
@@ -460,7 +460,7 @@ func (sl *SpatialLocation) IsValid() bool {
 	if sl == nil {
 		return false
 	}
-	
+
 	return !math.IsNaN(sl.X) && !math.IsNaN(sl.Y) && !math.IsNaN(sl.Z) &&
 		!math.IsInf(sl.X, 0) && !math.IsInf(sl.Y, 0) && !math.IsInf(sl.Z, 0)
 }

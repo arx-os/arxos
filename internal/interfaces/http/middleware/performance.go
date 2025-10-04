@@ -14,7 +14,7 @@ func PerformanceMiddleware(metricsCollector interface{}, logger domain.Logger) f
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
-			
+
 			// Create a response writer wrapper to capture status code
 			pw := &performanceResponseWriter{
 				ResponseWriter: w,
@@ -26,7 +26,7 @@ func PerformanceMiddleware(metricsCollector interface{}, logger domain.Logger) f
 
 			// Calculate metrics
 			duration := time.Since(start)
-			
+
 			// Record metrics
 			recordHTTPMetrics(metricsCollector, r, pw.statusCode, duration, logger)
 		})
@@ -49,7 +49,7 @@ func (pw *performanceResponseWriter) WriteHeader(code int) {
 func recordHTTPMetrics(metricsCollector interface{}, r *http.Request, statusCode int, duration time.Duration, logger domain.Logger) {
 	// This is a simplified implementation
 	// In a real implementation, you would use the metricsCollector to record metrics
-	
+
 	logger.Debug("HTTP request completed",
 		"method", r.Method,
 		"path", r.URL.Path,
@@ -63,14 +63,14 @@ func DatabasePerformanceMiddleware(logger domain.Logger) func(func(context.Conte
 	return func(dbFunc func(context.Context, string, ...interface{}) error) func(context.Context, string, ...interface{}) error {
 		return func(ctx context.Context, query string, args ...interface{}) error {
 			start := time.Now()
-			
+
 			err := dbFunc(ctx, query, args...)
-			
+
 			duration := time.Since(start)
-			
+
 			// Record database metrics
 			recordDatabaseMetrics(query, duration, err, logger)
-			
+
 			return err
 		}
 	}
@@ -80,7 +80,7 @@ func DatabasePerformanceMiddleware(logger domain.Logger) func(func(context.Conte
 func recordDatabaseMetrics(query string, duration time.Duration, err error, logger domain.Logger) {
 	// This is a simplified implementation
 	// In a real implementation, you would record detailed database metrics
-	
+
 	logger.Debug("Database query completed",
 		"query", query,
 		"duration", duration,
@@ -93,14 +93,14 @@ func CachePerformanceMiddleware(logger domain.Logger) func(func(context.Context,
 	return func(cacheFunc func(context.Context, string) (interface{}, error)) func(context.Context, string) (interface{}, error) {
 		return func(ctx context.Context, key string) (interface{}, error) {
 			start := time.Now()
-			
+
 			result, err := cacheFunc(ctx, key)
-			
+
 			duration := time.Since(start)
-			
+
 			// Record cache metrics
 			recordCacheMetrics(key, duration, err == nil, logger)
-			
+
 			return result, err
 		}
 	}
@@ -110,7 +110,7 @@ func CachePerformanceMiddleware(logger domain.Logger) func(func(context.Context,
 func recordCacheMetrics(key string, duration time.Duration, hit bool, logger domain.Logger) {
 	// This is a simplified implementation
 	// In a real implementation, you would record detailed cache metrics
-	
+
 	logger.Debug("Cache operation completed",
 		"key", key,
 		"duration", duration,
@@ -120,15 +120,15 @@ func recordCacheMetrics(key string, duration time.Duration, hit bool, logger dom
 
 // PerformanceStats tracks performance statistics
 type PerformanceStats struct {
-	mu                sync.RWMutex
-	requestCount      int64
-	successCount      int64
-	errorCount        int64
-	totalLatency      time.Duration
-	maxLatency        time.Duration
-	minLatency        time.Duration
-	statusCodes       map[int]int64
-	lastReset         time.Time
+	mu           sync.RWMutex
+	requestCount int64
+	successCount int64
+	errorCount   int64
+	totalLatency time.Duration
+	maxLatency   time.Duration
+	minLatency   time.Duration
+	statusCodes  map[int]int64
+	lastReset    time.Time
 }
 
 // NewPerformanceStats creates a new performance stats tracker
@@ -145,7 +145,7 @@ func (ps *PerformanceStats) RecordRequest(statusCode int, latency time.Duration)
 	defer ps.mu.Unlock()
 
 	ps.requestCount++
-	
+
 	if statusCode >= 200 && statusCode < 400 {
 		ps.successCount++
 	} else {
@@ -153,15 +153,15 @@ func (ps *PerformanceStats) RecordRequest(statusCode int, latency time.Duration)
 	}
 
 	ps.totalLatency += latency
-	
+
 	if latency > ps.maxLatency {
 		ps.maxLatency = latency
 	}
-	
+
 	if ps.minLatency == 0 || latency < ps.minLatency {
 		ps.minLatency = latency
 	}
-	
+
 	ps.statusCodes[statusCode]++
 }
 
@@ -204,13 +204,13 @@ func (ps *PerformanceStats) Reset() {
 
 // PerformanceConfig represents performance monitoring configuration
 type PerformanceConfig struct {
-	EnableHTTPMonitoring    bool          `json:"enable_http_monitoring"`
-	EnableDatabaseMonitoring bool         `json:"enable_database_monitoring"`
-	EnableCacheMonitoring   bool          `json:"enable_cache_monitoring"`
-	SlowQueryThreshold      time.Duration `json:"slow_query_threshold"`
-	SlowRequestThreshold    time.Duration `json:"slow_request_threshold"`
-	MetricsInterval         time.Duration `json:"metrics_interval"`
-	EnableDetailedLogging   bool          `json:"enable_detailed_logging"`
+	EnableHTTPMonitoring     bool          `json:"enable_http_monitoring"`
+	EnableDatabaseMonitoring bool          `json:"enable_database_monitoring"`
+	EnableCacheMonitoring    bool          `json:"enable_cache_monitoring"`
+	SlowQueryThreshold       time.Duration `json:"slow_query_threshold"`
+	SlowRequestThreshold     time.Duration `json:"slow_request_threshold"`
+	MetricsInterval          time.Duration `json:"metrics_interval"`
+	EnableDetailedLogging    bool          `json:"enable_detailed_logging"`
 }
 
 // DefaultPerformanceConfig returns default performance configuration
@@ -218,11 +218,11 @@ func DefaultPerformanceConfig() *PerformanceConfig {
 	return &PerformanceConfig{
 		EnableHTTPMonitoring:     true,
 		EnableDatabaseMonitoring: true,
-		EnableCacheMonitoring:   true,
-		SlowQueryThreshold:      100 * time.Millisecond,
-		SlowRequestThreshold:    500 * time.Millisecond,
-		MetricsInterval:         30 * time.Second,
-		EnableDetailedLogging:   false,
+		EnableCacheMonitoring:    true,
+		SlowQueryThreshold:       100 * time.Millisecond,
+		SlowRequestThreshold:     500 * time.Millisecond,
+		MetricsInterval:          30 * time.Second,
+		EnableDetailedLogging:    false,
 	}
 }
 
@@ -245,30 +245,30 @@ func NewPerformanceMonitor(config *PerformanceConfig, logger domain.Logger) *Per
 // GetPerformanceReport returns a comprehensive performance report
 func (pm *PerformanceMonitor) GetPerformanceReport() map[string]interface{} {
 	stats := pm.stats.GetStats()
-	
+
 	report := map[string]interface{}{
 		"timestamp": time.Now(),
 		"config":    pm.config,
 		"stats":     stats,
 		"health":    pm.getHealthStatus(),
 	}
-	
+
 	return report
 }
 
 // getHealthStatus returns the health status based on performance metrics
 func (pm *PerformanceMonitor) getHealthStatus() map[string]interface{} {
 	stats := pm.stats.GetStats()
-	
+
 	requestCount := stats["request_count"].(int64)
 	errorCount := stats["error_count"].(int64)
 	avgLatency := stats["average_latency"].(time.Duration)
-	
+
 	errorRate := float64(0)
 	if requestCount > 0 {
 		errorRate = float64(errorCount) / float64(requestCount) * 100
 	}
-	
+
 	status := "healthy"
 	if errorRate > 10 || avgLatency > pm.config.SlowRequestThreshold {
 		status = "degraded"
@@ -276,10 +276,10 @@ func (pm *PerformanceMonitor) getHealthStatus() map[string]interface{} {
 	if errorRate > 25 || avgLatency > pm.config.SlowRequestThreshold*2 {
 		status = "unhealthy"
 	}
-	
+
 	return map[string]interface{}{
-		"status":     status,
-		"error_rate": errorRate,
+		"status":      status,
+		"error_rate":  errorRate,
 		"avg_latency": avgLatency,
 		"thresholds": map[string]interface{}{
 			"slow_request": pm.config.SlowRequestThreshold,
@@ -307,7 +307,7 @@ func (pm *PerformanceMonitor) StartMonitoring(ctx context.Context) {
 func (pm *PerformanceMonitor) logPerformanceMetrics() {
 	stats := pm.stats.GetStats()
 	health := pm.getHealthStatus()
-	
+
 	pm.logger.Info("Performance metrics",
 		"request_count", stats["request_count"],
 		"error_count", stats["error_count"],

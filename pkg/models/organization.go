@@ -8,10 +8,10 @@ import (
 type Plan string
 
 const (
-	PlanFree       Plan = "free"
-	PlanStarter    Plan = "starter"
+	PlanFree         Plan = "free"
+	PlanStarter      Plan = "starter"
 	PlanProfessional Plan = "professional"
-	PlanEnterprise Plan = "enterprise"
+	PlanEnterprise   Plan = "enterprise"
 )
 
 // Organization represents a company or team using the system
@@ -51,23 +51,23 @@ type OrganizationMember struct {
 	Permissions    map[string]interface{} `json:"permissions,omitempty"`
 	JoinedAt       time.Time              `json:"joined_at"`
 	InvitedBy      string                 `json:"invited_by,omitempty"`
-	User           *User                  `json:"user,omitempty"` // Populated when needed
+	User           *User                  `json:"user,omitempty"`         // Populated when needed
 	Organization   *Organization          `json:"organization,omitempty"` // Populated when needed
 }
 
 // OrganizationInvitation represents an invitation to join an organization
 type OrganizationInvitation struct {
-	ID             string     `json:"id"`
-	OrganizationID string     `json:"organization_id"`
-	Email          string     `json:"email"`
-	Role           string     `json:"role"`
-	Token          string     `json:"-"` // Never expose in JSON
-	InvitedBy      string     `json:"invited_by"`
-	AcceptedAt     *time.Time `json:"accepted_at,omitempty"`
-	ExpiresAt      time.Time  `json:"expires_at"`
-	CreatedAt      time.Time  `json:"created_at"`
-	Organization   *Organization `json:"organization,omitempty"` // Populated when needed
-	InvitedByUser  *User        `json:"invited_by_user,omitempty"` // Populated when needed
+	ID             string        `json:"id"`
+	OrganizationID string        `json:"organization_id"`
+	Email          string        `json:"email"`
+	Role           string        `json:"role"`
+	Token          string        `json:"-"` // Never expose in JSON
+	InvitedBy      string        `json:"invited_by"`
+	AcceptedAt     *time.Time    `json:"accepted_at,omitempty"`
+	ExpiresAt      time.Time     `json:"expires_at"`
+	CreatedAt      time.Time     `json:"created_at"`
+	Organization   *Organization `json:"organization,omitempty"`    // Populated when needed
+	InvitedByUser  *User         `json:"invited_by_user,omitempty"` // Populated when needed
 }
 
 // OrganizationCreateRequest represents an organization creation request
@@ -149,8 +149,8 @@ const (
 type SubscriptionTier string
 
 const (
-	TierFree       SubscriptionTier = "free"
-	TierBasic      SubscriptionTier = "basic"
+	TierFree         SubscriptionTier = "free"
+	TierBasic        SubscriptionTier = "basic"
 	TierProfessional SubscriptionTier = "professional"
-	TierEnterprise SubscriptionTier = "enterprise"
+	TierEnterprise   SubscriptionTier = "enterprise"
 )

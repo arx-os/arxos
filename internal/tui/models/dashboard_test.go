@@ -7,9 +7,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/internal/tui/services"
 	"github.com/arx-os/arxos/internal/tui/utils"
-	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/pkg/models/building"
 )
 

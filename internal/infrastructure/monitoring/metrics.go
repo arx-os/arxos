@@ -11,9 +11,9 @@ import (
 
 // MetricsCollector collects and manages application metrics
 type MetricsCollector struct {
-	mu       sync.RWMutex
-	metrics  map[string]*Metric
-	logger   domain.Logger
+	mu        sync.RWMutex
+	metrics   map[string]*Metric
+	logger    domain.Logger
 	startTime time.Time
 }
 
@@ -40,84 +40,84 @@ const (
 
 // PerformanceMetrics represents application performance metrics
 type PerformanceMetrics struct {
-	HTTPRequests     *HTTPRequestMetrics     `json:"http_requests"`
-	DatabaseQueries  *DatabaseQueryMetrics   `json:"database_queries"`
-	CacheOperations  *CacheOperationMetrics  `json:"cache_operations"`
-	SystemResources  *SystemResourceMetrics  `json:"system_resources"`
-	BusinessMetrics  *BusinessMetrics        `json:"business_metrics"`
-	Timestamp        time.Time               `json:"timestamp"`
-	Uptime           time.Duration          `json:"uptime"`
+	HTTPRequests    *HTTPRequestMetrics    `json:"http_requests"`
+	DatabaseQueries *DatabaseQueryMetrics  `json:"database_queries"`
+	CacheOperations *CacheOperationMetrics `json:"cache_operations"`
+	SystemResources *SystemResourceMetrics `json:"system_resources"`
+	BusinessMetrics *BusinessMetrics       `json:"business_metrics"`
+	Timestamp       time.Time              `json:"timestamp"`
+	Uptime          time.Duration          `json:"uptime"`
 }
 
 // HTTPRequestMetrics tracks HTTP request performance
 type HTTPRequestMetrics struct {
-	TotalRequests    int64         `json:"total_requests"`
-	SuccessfulRequests int64       `json:"successful_requests"`
-	FailedRequests   int64         `json:"failed_requests"`
-	AverageLatency   time.Duration `json:"average_latency"`
-	MaxLatency       time.Duration `json:"max_latency"`
-	MinLatency       time.Duration `json:"min_latency"`
-	RequestsPerSecond float64      `json:"requests_per_second"`
-	StatusCodes      map[int]int64 `json:"status_codes"`
+	TotalRequests      int64         `json:"total_requests"`
+	SuccessfulRequests int64         `json:"successful_requests"`
+	FailedRequests     int64         `json:"failed_requests"`
+	AverageLatency     time.Duration `json:"average_latency"`
+	MaxLatency         time.Duration `json:"max_latency"`
+	MinLatency         time.Duration `json:"min_latency"`
+	RequestsPerSecond  float64       `json:"requests_per_second"`
+	StatusCodes        map[int]int64 `json:"status_codes"`
 }
 
 // DatabaseQueryMetrics tracks database query performance
 type DatabaseQueryMetrics struct {
-	TotalQueries     int64         `json:"total_queries"`
-	SlowQueries      int64         `json:"slow_queries"`
-	AverageLatency   time.Duration `json:"average_latency"`
-	MaxLatency       time.Duration `json:"max_latency"`
-	MinLatency       time.Duration `json:"min_latency"`
-	ConnectionPool   *ConnectionPoolMetrics `json:"connection_pool"`
-	QueryTypes       map[string]int64 `json:"query_types"`
+	TotalQueries   int64                  `json:"total_queries"`
+	SlowQueries    int64                  `json:"slow_queries"`
+	AverageLatency time.Duration          `json:"average_latency"`
+	MaxLatency     time.Duration          `json:"max_latency"`
+	MinLatency     time.Duration          `json:"min_latency"`
+	ConnectionPool *ConnectionPoolMetrics `json:"connection_pool"`
+	QueryTypes     map[string]int64       `json:"query_types"`
 }
 
 // ConnectionPoolMetrics tracks database connection pool metrics
 type ConnectionPoolMetrics struct {
-	MaxOpenConns     int   `json:"max_open_conns"`
-	OpenConns        int   `json:"open_conns"`
-	InUse            int   `json:"in_use"`
-	Idle             int   `json:"idle"`
-	WaitCount        int64 `json:"wait_count"`
-	WaitDuration     time.Duration `json:"wait_duration"`
-	MaxIdleClosed    int64 `json:"max_idle_closed"`
-	MaxIdleTimeClosed int64 `json:"max_idle_time_closed"`
-	MaxLifetimeClosed int64 `json:"max_lifetime_closed"`
+	MaxOpenConns      int           `json:"max_open_conns"`
+	OpenConns         int           `json:"open_conns"`
+	InUse             int           `json:"in_use"`
+	Idle              int           `json:"idle"`
+	WaitCount         int64         `json:"wait_count"`
+	WaitDuration      time.Duration `json:"wait_duration"`
+	MaxIdleClosed     int64         `json:"max_idle_closed"`
+	MaxIdleTimeClosed int64         `json:"max_idle_time_closed"`
+	MaxLifetimeClosed int64         `json:"max_lifetime_closed"`
 }
 
 // CacheOperationMetrics tracks cache operation performance
 type CacheOperationMetrics struct {
-	TotalOperations  int64   `json:"total_operations"`
-	CacheHits        int64   `json:"cache_hits"`
-	CacheMisses      int64   `json:"cache_misses"`
-	HitRate          float64 `json:"hit_rate"`
-	AverageLatency   time.Duration `json:"average_latency"`
-	MaxLatency       time.Duration `json:"max_latency"`
-	MinLatency       time.Duration `json:"min_latency"`
-	OperationsPerSecond float64 `json:"operations_per_second"`
+	TotalOperations     int64         `json:"total_operations"`
+	CacheHits           int64         `json:"cache_hits"`
+	CacheMisses         int64         `json:"cache_misses"`
+	HitRate             float64       `json:"hit_rate"`
+	AverageLatency      time.Duration `json:"average_latency"`
+	MaxLatency          time.Duration `json:"max_latency"`
+	MinLatency          time.Duration `json:"min_latency"`
+	OperationsPerSecond float64       `json:"operations_per_second"`
 }
 
 // SystemResourceMetrics tracks system resource usage
 type SystemResourceMetrics struct {
-	CPUUsage         float64 `json:"cpu_usage"`
-	MemoryUsage      int64   `json:"memory_usage"`
-	MemoryAvailable  int64   `json:"memory_available"`
-	DiskUsage        int64   `json:"disk_usage"`
-	DiskAvailable    int64   `json:"disk_available"`
-	Goroutines       int     `json:"goroutines"`
-	GCPauseTime      time.Duration `json:"gc_pause_time"`
+	CPUUsage        float64       `json:"cpu_usage"`
+	MemoryUsage     int64         `json:"memory_usage"`
+	MemoryAvailable int64         `json:"memory_available"`
+	DiskUsage       int64         `json:"disk_usage"`
+	DiskAvailable   int64         `json:"disk_available"`
+	Goroutines      int           `json:"goroutines"`
+	GCPauseTime     time.Duration `json:"gc_pause_time"`
 }
 
 // BusinessMetrics tracks business-specific metrics
 type BusinessMetrics struct {
-	TotalBuildings   int64 `json:"total_buildings"`
-	TotalEquipment   int64 `json:"total_equipment"`
-	TotalComponents  int64 `json:"total_components"`
-	TotalUsers       int64 `json:"total_users"`
+	TotalBuildings     int64 `json:"total_buildings"`
+	TotalEquipment     int64 `json:"total_equipment"`
+	TotalComponents    int64 `json:"total_components"`
+	TotalUsers         int64 `json:"total_users"`
 	TotalOrganizations int64 `json:"total_organizations"`
-	ActiveSessions   int64 `json:"active_sessions"`
-	IFCImports       int64 `json:"ifc_imports"`
-	IFCExports       int64 `json:"ifc_exports"`
+	ActiveSessions     int64 `json:"active_sessions"`
+	IFCImports         int64 `json:"ifc_imports"`
+	IFCExports         int64 `json:"ifc_exports"`
 }
 
 // NewMetricsCollector creates a new metrics collector
@@ -495,10 +495,10 @@ func (mc *MetricsCollector) StartMetricsCollection(ctx context.Context) {
 func (mc *MetricsCollector) collectSystemMetrics() {
 	// Collect goroutine count
 	mc.SetGauge("goroutines", 0, map[string]string{"source": "runtime"})
-	
+
 	// Collect memory usage (simplified)
 	mc.SetGauge("memory_usage", int64(0), map[string]string{"source": "runtime"})
-	
+
 	// Collect other system metrics
 	mc.logger.Debug("System metrics collected")
 }

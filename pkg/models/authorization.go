@@ -5,11 +5,11 @@ type Role string
 
 // Standard roles
 const (
-	RoleOwner   Role = "owner"
-	RoleAdmin   Role = "admin"
-	RoleEditor  Role = "editor"
-	RoleViewer  Role = "viewer"
-	RoleGuest   Role = "guest"
+	RoleOwner  Role = "owner"
+	RoleAdmin  Role = "admin"
+	RoleEditor Role = "editor"
+	RoleViewer Role = "viewer"
+	RoleGuest  Role = "guest"
 )
 
 // Permission represents a specific permission in the system

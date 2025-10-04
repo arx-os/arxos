@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	_ "github.com/lib/pq"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 )
 
 // Config holds PostGIS connection configuration
@@ -39,28 +39,28 @@ func NewClient(config *Config) (*Client, error) {
 		config.Database,
 		config.SSLMode,
 	)
-	
+
 	db, err := sqlx.Connect("postgres", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to PostGIS: %w", err)
 	}
-	
+
 	// Configure connection pool
 	db.SetMaxOpenConns(config.MaxConnections)
 	db.SetMaxIdleConns(config.MaxIdleConns)
 	db.SetConnMaxLifetime(config.ConnMaxLifetime)
 	db.SetConnMaxIdleTime(config.ConnMaxIdleTime)
-	
+
 	client := &Client{
 		db:     db,
 		config: config,
 	}
-	
+
 	// Initialize PostGIS extensions
 	if err := client.initializePostGIS(); err != nil {
 		return nil, fmt.Errorf("failed to initialize PostGIS: %w", err)
 	}
-	
+
 	return client, nil
 }
 
@@ -78,7 +78,7 @@ func (c *Client) Close() error {
 func (c *Client) Health(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	
+
 	return c.db.PingContext(ctx)
 }
 
@@ -90,13 +90,13 @@ func (c *Client) initializePostGIS() error {
 		"CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;",
 		"CREATE EXTENSION IF NOT EXISTS postgis_tiger_geocoder;",
 	}
-	
+
 	for _, ext := range extensions {
 		if _, err := c.db.Exec(ext); err != nil {
 			return fmt.Errorf("failed to create extension: %w", err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -153,7 +153,7 @@ func (c *Client) CreateSchema(ctx context.Context) error {
 	CREATE INDEX IF NOT EXISTS idx_equipment_location ON equipment USING GIST (location);
 	CREATE INDEX IF NOT EXISTS idx_equipment_building_id ON equipment (building_id);
 	`
-	
+
 	_, err := c.db.ExecContext(ctx, schema)
 	return err
 }
@@ -166,7 +166,7 @@ func (c *Client) DropSchema(ctx context.Context) error {
 		DROP TABLE IF EXISTS users CASCADE;
 		DROP TABLE IF EXISTS organizations CASCADE;
 	`
-	
+
 	_, err := c.db.ExecContext(ctx, schema)
 	return err
 }

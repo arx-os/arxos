@@ -54,11 +54,11 @@ type SyncRequest struct {
 
 // SyncResponse represents a synchronization response
 type SyncResponse struct {
-	Success         bool                   `json:"success"`
-	Message         string                 `json:"message,omitempty"`
-	AppliedChanges  []Change               `json:"applied_changes,omitempty"`
-	RejectedChanges []RejectedChange       `json:"rejected_changes,omitempty"`
-	Conflicts       []Conflict             `json:"conflicts,omitempty"`
+	Success         bool             `json:"success"`
+	Message         string           `json:"message,omitempty"`
+	AppliedChanges  []Change         `json:"applied_changes,omitempty"`
+	RejectedChanges []RejectedChange `json:"rejected_changes,omitempty"`
+	Conflicts       []Conflict       `json:"conflicts,omitempty"`
 }
 
 // RejectedChange represents a change that was rejected during sync

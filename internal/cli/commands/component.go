@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"github.com/arx-os/arxos/internal/domain/component"
+	"github.com/spf13/cobra"
 )
 
 // ComponentServiceProvider provides access to component services

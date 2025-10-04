@@ -6,41 +6,41 @@ import (
 	"sync"
 	"time"
 
+	"github.com/arx-os/arxos/internal/config"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // PostgreSQL driver
-	"github.com/arx-os/arxos/internal/config"
 )
 
 // ConnectionPool manages database connections with advanced pooling
 type ConnectionPool struct {
-	config     *config.Config
-	primary    *sqlx.DB
-	readOnly   *sqlx.DB
-	mu         sync.RWMutex
-	stats      *PoolStats
+	config      *config.Config
+	primary     *sqlx.DB
+	readOnly    *sqlx.DB
+	mu          sync.RWMutex
+	stats       *PoolStats
 	healthCheck *HealthChecker
 }
 
 // PoolStats tracks connection pool statistics
 type PoolStats struct {
-	MaxOpenConns     int           `json:"max_open_conns"`
-	OpenConns        int           `json:"open_conns"`
-	InUse            int           `json:"in_use"`
-	Idle             int           `json:"idle"`
-	WaitCount        int64         `json:"wait_count"`
-	WaitDuration     time.Duration `json:"wait_duration"`
-	MaxIdleClosed    int64         `json:"max_idle_closed"`
-	MaxIdleTimeClosed int64        `json:"max_idle_time_closed"`
-	MaxLifetimeClosed int64        `json:"max_lifetime_closed"`
-	LastChecked      time.Time     `json:"last_checked"`
+	MaxOpenConns      int           `json:"max_open_conns"`
+	OpenConns         int           `json:"open_conns"`
+	InUse             int           `json:"in_use"`
+	Idle              int           `json:"idle"`
+	WaitCount         int64         `json:"wait_count"`
+	WaitDuration      time.Duration `json:"wait_duration"`
+	MaxIdleClosed     int64         `json:"max_idle_closed"`
+	MaxIdleTimeClosed int64         `json:"max_idle_time_closed"`
+	MaxLifetimeClosed int64         `json:"max_lifetime_closed"`
+	LastChecked       time.Time     `json:"last_checked"`
 }
 
 // HealthChecker performs database health checks
 type HealthChecker struct {
-	lastCheck    time.Time
+	lastCheck     time.Time
 	checkInterval time.Duration
-	isHealthy    bool
-	mu           sync.RWMutex
+	isHealthy     bool
+	mu            sync.RWMutex
 }
 
 // NewConnectionPool creates a new connection pool with read/write separation
@@ -72,7 +72,7 @@ func NewConnectionPool(cfg *config.Config) (*ConnectionPool, error) {
 // initPrimaryConnection initializes the primary database connection
 func (cp *ConnectionPool) initPrimaryConnection() error {
 	dsn := cp.config.BuildPostGISConnectionString()
-	
+
 	conn, err := sqlx.ConnectContext(context.Background(), "postgres", dsn)
 	if err != nil {
 		return fmt.Errorf("failed to connect to primary database: %w", err)
@@ -80,7 +80,7 @@ func (cp *ConnectionPool) initPrimaryConnection() error {
 
 	// Configure connection pool for primary
 	cp.configureConnectionPool(conn, cp.config.Database.MaxOpenConns, cp.config.Database.MaxIdleConns)
-	
+
 	cp.primary = conn
 	return nil
 }
@@ -97,7 +97,7 @@ func (cp *ConnectionPool) configureConnectionPool(conn *sqlx.DB, maxOpen, maxIdl
 	conn.SetMaxOpenConns(maxOpen)
 	conn.SetMaxIdleConns(maxIdle)
 	conn.SetConnMaxLifetime(cp.config.Database.ConnMaxLifetime)
-	
+
 	// Set connection timeout
 	conn.SetConnMaxIdleTime(5 * time.Minute)
 }
@@ -255,11 +255,11 @@ func (cp *ConnectionPool) GetConnectionInfo() map[string]interface{} {
 	defer cp.mu.RUnlock()
 
 	info := map[string]interface{}{
-		"primary_available": cp.primary != nil,
+		"primary_available":  cp.primary != nil,
 		"readonly_available": cp.readOnly != nil,
-		"health_status": cp.healthCheck.isHealthy,
-		"last_health_check": cp.healthCheck.lastCheck,
-		"stats": cp.stats,
+		"health_status":      cp.healthCheck.isHealthy,
+		"last_health_check":  cp.healthCheck.lastCheck,
+		"stats":              cp.stats,
 	}
 
 	if cp.primary != nil {

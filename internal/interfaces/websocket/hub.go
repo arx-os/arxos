@@ -367,11 +367,11 @@ func (h *Hub) GetHubStats() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"total_clients":    len(h.clients),
-		"total_rooms":      len(h.rooms),
-		"room_stats":       roomStats,
-		"config":           h.config,
-		"message_history":  len(h.messageHistory),
+		"total_clients":   len(h.clients),
+		"total_rooms":     len(h.rooms),
+		"room_stats":      roomStats,
+		"config":          h.config,
+		"message_history": len(h.messageHistory),
 	}
 }
 

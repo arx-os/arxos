@@ -13,9 +13,9 @@ import (
 // HealthHandler handles health check endpoints
 type HealthHandler struct {
 	*types.BaseHandler
-	database domain.Database
-	cache    domain.Cache
-	logger   domain.Logger
+	database  domain.Database
+	cache     domain.Cache
+	logger    domain.Logger
 	startTime time.Time
 }
 
@@ -37,33 +37,33 @@ func NewHealthHandler(
 
 // HealthResponse represents a health check response
 type HealthResponse struct {
-	Status    string                 `json:"status"`
-	Timestamp time.Time              `json:"timestamp"`
-	Uptime    time.Duration          `json:"uptime"`
-	Version   string                 `json:"version"`
+	Status    string                   `json:"status"`
+	Timestamp time.Time                `json:"timestamp"`
+	Uptime    time.Duration            `json:"uptime"`
+	Version   string                   `json:"version"`
 	Services  map[string]ServiceHealth `json:"services"`
-	System    SystemHealth           `json:"system"`
-	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+	System    SystemHealth             `json:"system"`
+	Metadata  map[string]interface{}   `json:"metadata,omitempty"`
 }
 
 // ServiceHealth represents the health of a service
 type ServiceHealth struct {
-	Status      string                 `json:"status"`
-	ResponseTime time.Duration         `json:"response_time,omitempty"`
-	LastCheck   time.Time              `json:"last_check"`
-	Error       string                 `json:"error,omitempty"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	Status       string                 `json:"status"`
+	ResponseTime time.Duration          `json:"response_time,omitempty"`
+	LastCheck    time.Time              `json:"last_check"`
+	Error        string                 `json:"error,omitempty"`
+	Metadata     map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // SystemHealth represents system health information
 type SystemHealth struct {
-	CPUUsage      float64 `json:"cpu_usage"`
-	MemoryUsage   int64   `json:"memory_usage"`
-	MemoryAvailable int64 `json:"memory_available"`
-	Goroutines    int     `json:"goroutines"`
-	GCPauseTime   time.Duration `json:"gc_pause_time"`
-	DiskUsage     int64   `json:"disk_usage"`
-	DiskAvailable int64   `json:"disk_available"`
+	CPUUsage        float64       `json:"cpu_usage"`
+	MemoryUsage     int64         `json:"memory_usage"`
+	MemoryAvailable int64         `json:"memory_available"`
+	Goroutines      int           `json:"goroutines"`
+	GCPauseTime     time.Duration `json:"gc_pause_time"`
+	DiskUsage       int64         `json:"disk_usage"`
+	DiskAvailable   int64         `json:"disk_available"`
 }
 
 // Health handles basic health check requests
@@ -77,7 +77,7 @@ func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 
 	// Check all services
 	services := h.checkAllServices(r.Context())
-	
+
 	// Determine overall status
 	overallStatus := "healthy"
 	for _, service := range services {
@@ -124,7 +124,7 @@ func (h *HealthHandler) HealthDetailed(w http.ResponseWriter, r *http.Request) {
 	// Perform comprehensive health checks
 	services := h.checkAllServicesDetailed(r.Context())
 	systemHealth := h.getSystemHealthDetailed()
-	
+
 	// Determine overall status
 	overallStatus := "healthy"
 	for _, service := range services {
@@ -142,8 +142,8 @@ func (h *HealthHandler) HealthDetailed(w http.ResponseWriter, r *http.Request) {
 		Services:  services,
 		System:    systemHealth,
 		Metadata: map[string]interface{}{
-			"build_time":    h.startTime,
-			"go_version":    runtime.Version(),
+			"build_time":   h.startTime,
+			"go_version":   runtime.Version(),
 			"architecture": runtime.GOARCH,
 			"os":           runtime.GOOS,
 		},
@@ -169,7 +169,7 @@ func (h *HealthHandler) Readiness(w http.ResponseWriter, r *http.Request) {
 
 	// Check critical services for readiness
 	services := h.checkCriticalServices(r.Context())
-	
+
 	// Determine readiness status
 	ready := true
 	for _, service := range services {
@@ -257,10 +257,10 @@ func (h *HealthHandler) checkCriticalServices(ctx context.Context) map[string]Se
 // checkDatabase checks database health
 func (h *HealthHandler) checkDatabase(ctx context.Context) ServiceHealth {
 	start := time.Now()
-	
+
 	err := h.database.Health(ctx)
 	responseTime := time.Since(start)
-	
+
 	status := "healthy"
 	errorMsg := ""
 	if err != nil {
@@ -279,14 +279,14 @@ func (h *HealthHandler) checkDatabase(ctx context.Context) ServiceHealth {
 // checkDatabaseDetailed performs detailed database health check
 func (h *HealthHandler) checkDatabaseDetailed(ctx context.Context) ServiceHealth {
 	start := time.Now()
-	
+
 	err := h.database.Health(ctx)
 	responseTime := time.Since(start)
-	
+
 	status := "healthy"
 	errorMsg := ""
 	metadata := make(map[string]interface{})
-	
+
 	if err != nil {
 		status = "unhealthy"
 		errorMsg = err.Error()
@@ -308,11 +308,11 @@ func (h *HealthHandler) checkDatabaseDetailed(ctx context.Context) ServiceHealth
 // checkCache checks cache health
 func (h *HealthHandler) checkCache(ctx context.Context) ServiceHealth {
 	start := time.Now()
-	
+
 	// Simple cache health check
 	_, err := h.cache.Get(ctx, "health_check")
 	responseTime := time.Since(start)
-	
+
 	status := "healthy"
 	errorMsg := ""
 	if err != nil {
@@ -331,11 +331,11 @@ func (h *HealthHandler) checkCache(ctx context.Context) ServiceHealth {
 // checkCacheDetailed performs detailed cache health check
 func (h *HealthHandler) checkCacheDetailed(ctx context.Context) ServiceHealth {
 	start := time.Now()
-	
+
 	// Test cache operations
 	testKey := "health_check_test"
 	testValue := "test_value"
-	
+
 	err := h.cache.Set(ctx, testKey, testValue, time.Minute)
 	if err == nil {
 		_, err = h.cache.Get(ctx, testKey)
@@ -343,13 +343,13 @@ func (h *HealthHandler) checkCacheDetailed(ctx context.Context) ServiceHealth {
 			h.cache.Delete(ctx, testKey)
 		}
 	}
-	
+
 	responseTime := time.Since(start)
-	
+
 	status := "healthy"
 	errorMsg := ""
 	metadata := make(map[string]interface{})
-	
+
 	if err != nil {
 		status = "unhealthy"
 		errorMsg = err.Error()
@@ -400,7 +400,7 @@ func (h *HealthHandler) getSystemHealth() SystemHealth {
 	runtime.ReadMemStats(&m)
 
 	return SystemHealth{
-		CPUUsage:       0, // Would need external library for CPU usage
+		CPUUsage:        0, // Would need external library for CPU usage
 		MemoryUsage:     int64(m.Alloc),
 		MemoryAvailable: int64(m.Sys - m.Alloc),
 		Goroutines:      runtime.NumGoroutine(),
@@ -416,7 +416,7 @@ func (h *HealthHandler) getSystemHealthDetailed() SystemHealth {
 	runtime.ReadMemStats(&m)
 
 	return SystemHealth{
-		CPUUsage:       0, // Would need external library for CPU usage
+		CPUUsage:        0, // Would need external library for CPU usage
 		MemoryUsage:     int64(m.Alloc),
 		MemoryAvailable: int64(m.Sys - m.Alloc),
 		Goroutines:      runtime.NumGoroutine(),

@@ -11,23 +11,23 @@ import (
 
 // JobQueue manages background job processing
 type JobQueue struct {
-	jobs      chan Job
-	workers   []*Worker
-	mu        sync.RWMutex
-	logger    domain.Logger
-	config    *QueueConfig
-	running   bool
-	ctx       context.Context
-	cancel    context.CancelFunc
+	jobs    chan Job
+	workers []*Worker
+	mu      sync.RWMutex
+	logger  domain.Logger
+	config  *QueueConfig
+	running bool
+	ctx     context.Context
+	cancel  context.CancelFunc
 }
 
 // QueueConfig represents job queue configuration
 type QueueConfig struct {
-	MaxWorkers    int           `json:"max_workers"`
-	QueueSize     int           `json:"queue_size"`
-	WorkerTimeout time.Duration `json:"worker_timeout"`
-	RetryAttempts int           `json:"retry_attempts"`
-	RetryDelay    time.Duration `json:"retry_delay"`
+	MaxWorkers      int           `json:"max_workers"`
+	QueueSize       int           `json:"queue_size"`
+	WorkerTimeout   time.Duration `json:"worker_timeout"`
+	RetryAttempts   int           `json:"retry_attempts"`
+	RetryDelay      time.Duration `json:"retry_delay"`
 	CleanupInterval time.Duration `json:"cleanup_interval"`
 }
 
@@ -70,7 +70,7 @@ func (jq *JobQueue) Start() error {
 		return fmt.Errorf("job queue is already running")
 	}
 
-	jq.logger.Info("Starting job queue", 
+	jq.logger.Info("Starting job queue",
 		"max_workers", jq.config.MaxWorkers,
 		"queue_size", jq.config.QueueSize,
 	)
@@ -154,12 +154,12 @@ func (jq *JobQueue) GetQueueStats() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"running":       jq.running,
-		"queue_size":    len(jq.jobs),
-		"max_workers":   jq.config.MaxWorkers,
+		"running":        jq.running,
+		"queue_size":     len(jq.jobs),
+		"max_workers":    jq.config.MaxWorkers,
 		"active_workers": len(jq.workers),
-		"workers":       workerStats,
-		"config":        jq.config,
+		"workers":        workerStats,
+		"config":         jq.config,
 	}
 }
 
@@ -181,7 +181,7 @@ func (jq *JobQueue) startCleanupRoutine() {
 // cleanup performs cleanup operations
 func (jq *JobQueue) cleanup() {
 	jq.logger.Debug("Performing job queue cleanup")
-	
+
 	// Clean up completed jobs, remove old logs, etc.
 	// This would be implemented based on specific requirements
 }
@@ -253,13 +253,13 @@ func generateJobID() string {
 
 // Worker represents a job worker
 type Worker struct {
-	ID       int
-	jobs     <-chan Job
-	logger   domain.Logger
-	config   *QueueConfig
-	running  bool
-	mu       sync.RWMutex
-	stats    *WorkerStats
+	ID         int
+	jobs       <-chan Job
+	logger     domain.Logger
+	config     *QueueConfig
+	running    bool
+	mu         sync.RWMutex
+	stats      *WorkerStats
 	processors map[string]JobProcessor
 }
 
@@ -278,11 +278,11 @@ type WorkerStats struct {
 // NewWorker creates a new worker
 func NewWorker(id int, jobs <-chan Job, logger domain.Logger, config *QueueConfig) *Worker {
 	return &Worker{
-		ID:       id,
-		jobs:     jobs,
-		logger:   logger,
-		config:   config,
-		stats:    &WorkerStats{StartTime: time.Now()},
+		ID:         id,
+		jobs:       jobs,
+		logger:     logger,
+		config:     config,
+		stats:      &WorkerStats{StartTime: time.Now()},
 		processors: make(map[string]JobProcessor),
 	}
 }
@@ -327,12 +327,12 @@ func (w *Worker) Stop() {
 // processJob processes a job
 func (w *Worker) processJob(job Job) {
 	start := time.Now()
-	
+
 	w.mu.Lock()
 	w.stats.LastJobTime = time.Now()
 	w.mu.Unlock()
 
-	w.logger.Debug("Processing job", 
+	w.logger.Debug("Processing job",
 		"worker_id", w.ID,
 		"job_id", job.ID,
 		"job_type", job.Type,
@@ -347,7 +347,7 @@ func (w *Worker) processJob(job Job) {
 	// Get processor for job type
 	processor, exists := w.processors[job.Type]
 	if !exists {
-		w.logger.Error("No processor found for job type", 
+		w.logger.Error("No processor found for job type",
 			"worker_id", w.ID,
 			"job_id", job.ID,
 			"job_type", job.Type,
@@ -361,11 +361,11 @@ func (w *Worker) processJob(job Job) {
 	defer cancel()
 
 	result, err := processor.Process(ctx, job)
-	
+
 	duration := time.Since(start)
-	
+
 	if err != nil {
-		w.logger.Error("Job processing failed", 
+		w.logger.Error("Job processing failed",
 			"worker_id", w.ID,
 			"job_id", job.ID,
 			"error", err,
@@ -373,7 +373,7 @@ func (w *Worker) processJob(job Job) {
 		)
 		w.updateStats(false, duration)
 	} else {
-		w.logger.Debug("Job processed successfully", 
+		w.logger.Debug("Job processed successfully",
 			"worker_id", w.ID,
 			"job_id", job.ID,
 			"duration", duration,
@@ -383,7 +383,7 @@ func (w *Worker) processJob(job Job) {
 
 	// Store result if needed
 	if result != nil {
-		w.logger.Debug("Job result", 
+		w.logger.Debug("Job result",
 			"worker_id", w.ID,
 			"job_id", job.ID,
 			"result", result,
@@ -414,16 +414,16 @@ func (w *Worker) GetStats() map[string]interface{} {
 	defer w.mu.RUnlock()
 
 	return map[string]interface{}{
-		"id":              w.ID,
-		"running":         w.running,
-		"jobs_processed":  w.stats.JobsProcessed,
-		"jobs_succeeded":  w.stats.JobsSucceeded,
-		"jobs_failed":     w.stats.JobsFailed,
-		"total_time":      w.stats.TotalTime,
-		"average_time":    w.stats.AverageTime,
-		"last_job_time":   w.stats.LastJobTime,
-		"uptime":          w.stats.Uptime,
-		"start_time":      w.stats.StartTime,
+		"id":             w.ID,
+		"running":        w.running,
+		"jobs_processed": w.stats.JobsProcessed,
+		"jobs_succeeded": w.stats.JobsSucceeded,
+		"jobs_failed":    w.stats.JobsFailed,
+		"total_time":     w.stats.TotalTime,
+		"average_time":   w.stats.AverageTime,
+		"last_job_time":  w.stats.LastJobTime,
+		"uptime":         w.stats.Uptime,
+		"start_time":     w.stats.StartTime,
 	}
 }
 

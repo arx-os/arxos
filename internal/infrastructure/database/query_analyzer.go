@@ -30,23 +30,23 @@ type QueryAnalysis struct {
 
 // QueryOptimization represents query optimization suggestions
 type QueryOptimization struct {
-	OriginalQuery    string   `json:"original_query"`
-	OptimizedQuery   string   `json:"optimized_query"`
-	Optimizations    []string `json:"optimizations"`
-	ExpectedImprovement string `json:"expected_improvement"`
-	RiskLevel        string   `json:"risk_level"`
+	OriginalQuery       string   `json:"original_query"`
+	OptimizedQuery      string   `json:"optimized_query"`
+	Optimizations       []string `json:"optimizations"`
+	ExpectedImprovement string   `json:"expected_improvement"`
+	RiskLevel           string   `json:"risk_level"`
 }
 
 // SlowQuery represents a slow query with analysis
 type SlowQuery struct {
-	Query         string        `json:"query"`
-	AverageTime   time.Duration `json:"average_time"`
-	CallCount     int64         `json:"call_count"`
-	TotalTime     time.Duration `json:"total_time"`
-	MinTime       time.Duration `json:"min_time"`
-	MaxTime       time.Duration `json:"max_time"`
-	Analysis      *QueryAnalysis `json:"analysis,omitempty"`
-	Optimization  *QueryOptimization `json:"optimization,omitempty"`
+	Query        string             `json:"query"`
+	AverageTime  time.Duration      `json:"average_time"`
+	CallCount    int64              `json:"call_count"`
+	TotalTime    time.Duration      `json:"total_time"`
+	MinTime      time.Duration      `json:"min_time"`
+	MaxTime      time.Duration      `json:"max_time"`
+	Analysis     *QueryAnalysis     `json:"analysis,omitempty"`
+	Optimization *QueryOptimization `json:"optimization,omitempty"`
 }
 
 // NewQueryAnalyzer creates a new query analyzer
@@ -92,10 +92,10 @@ func (qa *QueryAnalyzer) AnalyzeQuery(ctx context.Context, query string) (*Query
 // getExecutionPlan gets the execution plan for a query
 func (qa *QueryAnalyzer) getExecutionPlan(ctx context.Context, query string) (string, error) {
 	conn := qa.pool.GetConnectionForRead()
-	
+
 	// Use EXPLAIN to get execution plan
 	explainQuery := fmt.Sprintf("EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) %s", query)
-	
+
 	rows, err := conn.QueryContext(ctx, explainQuery)
 	if err != nil {
 		return "", fmt.Errorf("failed to execute EXPLAIN: %w", err)
@@ -273,7 +273,7 @@ func (qa *QueryAnalyzer) generateIndexRecommendations(query string, analysis *Qu
 	for _, table := range tables {
 		for _, column := range columns {
 			if strings.Contains(query, fmt.Sprintf("%s.%s", table, column)) {
-				analysis.Recommendations = append(analysis.Recommendations, 
+				analysis.Recommendations = append(analysis.Recommendations,
 					fmt.Sprintf("Consider creating index on %s.%s", table, column))
 			}
 		}
@@ -297,14 +297,14 @@ func (qa *QueryAnalyzer) extractTables(query string) []string {
 	// Simple table extraction - in production, you'd use a proper SQL parser
 	tablePattern := regexp.MustCompile(`FROM\s+(\w+)`)
 	matches := tablePattern.FindAllStringSubmatch(query, -1)
-	
+
 	var tables []string
 	for _, match := range matches {
 		if len(match) > 1 {
 			tables = append(tables, match[1])
 		}
 	}
-	
+
 	return tables
 }
 
@@ -313,14 +313,14 @@ func (qa *QueryAnalyzer) extractColumns(query string) []string {
 	// Simple column extraction - in production, you'd use a proper SQL parser
 	columnPattern := regexp.MustCompile(`(\w+)\.(\w+)`)
 	matches := columnPattern.FindAllStringSubmatch(query, -1)
-	
+
 	var columns []string
 	for _, match := range matches {
 		if len(match) > 2 {
 			columns = append(columns, match[2])
 		}
 	}
-	
+
 	return columns
 }
 
@@ -396,7 +396,7 @@ func (qa *QueryAnalyzer) calculateExpectedImprovement(analysis *QueryAnalysis) s
 // GetSlowQueries retrieves slow queries from the database
 func (qa *QueryAnalyzer) GetSlowQueries(ctx context.Context, limit int) ([]*SlowQuery, error) {
 	conn := qa.pool.GetConnectionForRead()
-	
+
 	query := `
 		SELECT 
 			query,
@@ -431,9 +431,9 @@ func (qa *QueryAnalyzer) GetSlowQueries(ctx context.Context, limit int) ([]*Slow
 		sq.CallCount = calls
 		// Parse durations (simplified - in production you'd parse properly)
 		sq.AverageTime = time.Millisecond * 100 // Placeholder
-		sq.TotalTime = time.Millisecond * 1000   // Placeholder
-		sq.MinTime = time.Millisecond * 50        // Placeholder
-		sq.MaxTime = time.Millisecond * 200       // Placeholder
+		sq.TotalTime = time.Millisecond * 1000  // Placeholder
+		sq.MinTime = time.Millisecond * 50      // Placeholder
+		sq.MaxTime = time.Millisecond * 200     // Placeholder
 
 		slowQueries = append(slowQueries, &sq)
 	}

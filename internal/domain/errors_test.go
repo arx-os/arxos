@@ -11,32 +11,32 @@ import (
 
 func TestDomainError_Basic(t *testing.T) {
 	tests := []struct {
-		name     string
+		name      string
 		errorType ErrorType
 		code      string
 		message   string
-		expected string
+		expected  string
 	}{
 		{
-			name:     "Simple validation error",
+			name:      "Simple validation error",
 			errorType: ErrorTypeValidation,
 			code:      "VALIDATION_ERROR",
 			message:   "Invalid input",
-			expected: "[validation] VALIDATION_ERROR: Invalid input",
+			expected:  "[validation] VALIDATION_ERROR: Invalid input",
 		},
 		{
-			name:     "Spatial error",
+			name:      "Spatial error",
 			errorType: ErrorTypeSpatial,
 			code:      "SPATIAL_VALIDATION_ERROR",
 			message:   "Invalid coordinates",
-			expected: "[spatial] SPATIAL_VALIDATION_ERROR: Invalid coordinates",
+			expected:  "[spatial] SPATIAL_VALIDATION_ERROR: Invalid coordinates",
 		},
 		{
-			name:     "AR error",
+			name:      "AR error",
 			errorType: ErrorTypeAR,
 			code:      "AR_INITIALIZATION_ERROR",
 			message:   "Failed to initialize AR session",
-			expected: "[ar] AR_INITIALIZATION_ERROR: Failed to initialize AR session",
+			expected:  "[ar] AR_INITIALIZATION_ERROR: Failed to initialize AR session",
 		},
 	}
 
@@ -51,7 +51,7 @@ func TestDomainError_Basic(t *testing.T) {
 
 			assert.Equal(t, tt.expected, err.Error())
 			assert.Equal(t, tt.errorType, err.Type)
-		assert.Equal(t, tt.code, err.Code)
+			assert.Equal(t, tt.code, err.Code)
 			assert.Equal(t, tt.message, err.Message)
 			assert.False(t, err.IsRetryable())
 			assert.NotNil(t, err.Timestamp)
@@ -262,13 +262,13 @@ func TestBusinessLogicErrorConstructors(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-	t.Run(tt.name, func(t *testing.T) {
-		err := tt.creator()
-		if tt.wantErr {
-			assert.NotNil(t, err)
-			assert.NotEmpty(t, err.Code)
-		}
-	})
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.creator()
+			if tt.wantErr {
+				assert.NotNil(t, err)
+				assert.NotEmpty(t, err.Code)
+			}
+		})
 	}
 }
 
@@ -280,14 +280,14 @@ func TestInfrastructureErrorConstructors(t *testing.T) {
 	}{
 		{
 			name: "Database error",
-		 		creator: func() *DomainError {
+			creator: func() *DomainError {
 				return NewDatabaseError("CONNECT", "Connection failed", nil)
 			},
 			wantErr: true,
 		},
 		{
 			name: "Cache error",
-		creator: func() *DomainError {
+			creator: func() *DomainError {
 				return NewCacheError("SET", "Failed to set value", nil)
 			},
 			wantErr: true,
@@ -402,37 +402,37 @@ func TestBusinessDomainErrorConstructors(t *testing.T) {
 
 func TestErrorHandlingUtilities(t *testing.T) {
 	tests := []struct {
-		name     string
-		inputErr error
-		isDomain bool
+		name      string
+		inputErr  error
+		isDomain  bool
 		retryable bool
 		errorType ErrorType
 	}{
 		{
-			name:     "Domain error",
-			inputErr: NewValidationError("email", "Invalid format", nil),
-			isDomain: true,
+			name:      "Domain error",
+			inputErr:  NewValidationError("email", "Invalid format", nil),
+			isDomain:  true,
 			retryable: false,
 			errorType: ErrorTypeValidation,
 		},
 		{
-			name:     "Wrapped domain error",
-			inputErr: fmt.Errorf("wrapped: %w", NewValidationError("email", "Invalid format", nil)),
-			isDomain: false, // fmt.Errorf wraps the error, so IsDomainError returns false
+			name:      "Wrapped domain error",
+			inputErr:  fmt.Errorf("wrapped: %w", NewValidationError("email", "Invalid format", nil)),
+			isDomain:  false, // fmt.Errorf wraps the error, so IsDomainError returns false
 			retryable: false,
 			errorType: ErrorTypeValidation, // GetDomainError extracts the wrapped domain error
 		},
 		{
-			name:     "Regular error",
-			inputErr: errors.New("regular error"),
-			isDomain: false,
+			name:      "Regular error",
+			inputErr:  errors.New("regular error"),
+			isDomain:  false,
 			retryable: true, // Default behavior
 			errorType: ErrorTypeInternal,
 		},
 		{
-			name:     "Nil error",
-			inputErr: nil,
-			isDomain: false,
+			name:      "Nil error",
+			inputErr:  nil,
+			isDomain:  false,
 			retryable: false,
 			errorType: ErrorTypeInternal,
 		},
@@ -443,7 +443,7 @@ func TestErrorHandlingUtilities(t *testing.T) {
 			assert.Equal(t, tt.isDomain, IsDomainError(tt.inputErr))
 			assert.Equal(t, tt.retryable, IsRetryableError(tt.inputErr))
 			assert.Equal(t, tt.errorType, ErrorTypeOf(tt.inputErr))
-			
+
 			domainErr := GetDomainError(tt.inputErr)
 			if tt.isDomain || tt.name == "Wrapped domain error" {
 				assert.NotNil(t, domainErr)
@@ -496,7 +496,7 @@ func TestDomainErrorContextUtilities(t *testing.T) {
 		location := &SpatialLocation{X: 100, Y: 200, Z: 300}
 		bounds := map[string]interface{}{"min": 0, "max": 1000}
 		AddSpatialContext(err, location, bounds)
-		assert.Equal(t, location,	err.Context["location"])
+		assert.Equal(t, location, err.Context["location"])
 		assert.Equal(t, bounds, err.Context["bounds"])
 	})
 
@@ -597,7 +597,7 @@ func TestDomainErrorNilHandling(t *testing.T) {
 
 func BenchmarkDomainErrorCreation(b *testing.B) {
 	b.ReportAllocs()
-	
+
 	for i := 0; i < b.N; i++ {
 		err := NewDomainError(ErrorTypeValidation, "TEST_ERROR", "Test message").
 			WithContext("user_id", "123").
@@ -613,10 +613,10 @@ func BenchmarkDomainErrorString(b *testing.B) {
 		WithCause(errors.New("cause")).
 		WithContext("user_id", "123").
 		Build()
-	
+
 	b.ReportAllocs()
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		_ = err.Error()
 	}
@@ -624,10 +624,10 @@ func BenchmarkDomainErrorString(b *testing.B) {
 
 func BenchmarkErrorTypeCheck(b *testing.B) {
 	err := NewValidationError("email", "Invalid format", nil)
-	
+
 	b.ReportAllocs()
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		_ = ErrorTypeOf(err)
 	}

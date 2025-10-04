@@ -9,33 +9,33 @@ import (
 type ErrorType string
 
 const (
-	ErrorTypeValidation    ErrorType = "validation"
-	ErrorTypeNotFound      ErrorType = "not_found"
-	ErrorTypeConflict      ErrorType = "conflict"
-	ErrorTypeUnauthorized  ErrorType = "unauthorized"
-	ErrorTypeForbidden     ErrorType = "forbidden"
-	ErrorTypeRateLimited   ErrorType = "rate_limited"
-	ErrorTypeInternal      ErrorType = "internal"
-	ErrorTypeExternal      ErrorType = "external"
-	ErrorTypeTimeout       ErrorType = "timeout"
-	ErrorTypeSpatial       ErrorType = "spatial"
-	ErrorTypeAR            ErrorType = "ar"
-	ErrorTypeIFC           ErrorType = "ifc"
-	ErrorTypeDatabase      ErrorType = "database"
-	ErrorTypeCache         ErrorType = "cache"
-	ErrorTypeNetwork       ErrorType = "network"
+	ErrorTypeValidation   ErrorType = "validation"
+	ErrorTypeNotFound     ErrorType = "not_found"
+	ErrorTypeConflict     ErrorType = "conflict"
+	ErrorTypeUnauthorized ErrorType = "unauthorized"
+	ErrorTypeForbidden    ErrorType = "forbidden"
+	ErrorTypeRateLimited  ErrorType = "rate_limited"
+	ErrorTypeInternal     ErrorType = "internal"
+	ErrorTypeExternal     ErrorType = "external"
+	ErrorTypeTimeout      ErrorType = "timeout"
+	ErrorTypeSpatial      ErrorType = "spatial"
+	ErrorTypeAR           ErrorType = "ar"
+	ErrorTypeIFC          ErrorType = "ifc"
+	ErrorTypeDatabase     ErrorType = "database"
+	ErrorTypeCache        ErrorType = "cache"
+	ErrorTypeNetwork      ErrorType = "network"
 )
 
 // DomainError represents a domain-specific error with type, message, and context
 type DomainError struct {
-	Type        ErrorType              `json:"type"`
-	Code        string                 `json:"code"`
-	Message     string                 `json:"message"`
-	Context     map[string]interface{} `json:"context,omitempty"`
-	Cause       error                  `json:"cause,omitempty"`
-	Timestamp   time.Time              `json:"timestamp"`
-	Retryable   bool                   `json:"retryable"`
-	UserAction  string                 `json:"user_action,omitempty"`
+	Type       ErrorType              `json:"type"`
+	Code       string                 `json:"code"`
+	Message    string                 `json:"message"`
+	Context    map[string]interface{} `json:"context,omitempty"`
+	Cause      error                  `json:"cause,omitempty"`
+	Timestamp  time.Time              `json:"timestamp"`
+	Retryable  bool                   `json:"retryable"`
+	UserAction string                 `json:"user_action,omitempty"`
 }
 
 // Error implements the error interface
@@ -418,17 +418,17 @@ func GetDomainError(err error) *DomainError {
 	if err == nil {
 		return nil
 	}
-	
+
 	domainErr, ok := err.(*DomainError)
 	if ok {
 		return domainErr
 	}
-	
+
 	// Try to unwrap the error
 	if wrapErr, ok := err.(interface{ Unwrap() error }); ok {
 		return GetDomainError(wrapErr.Unwrap())
 	}
-	
+
 	return nil
 }
 
@@ -438,7 +438,7 @@ func IsRetryableError(err error) bool {
 	if domainErr != nil {
 		return domainErr.IsRetryable()
 	}
-	
+
 	// Default retryable for network/database errors
 	return err != nil
 }
@@ -457,7 +457,7 @@ func WrapError(err error, errorType ErrorType, code, message string) *DomainErro
 	if err == nil {
 		return nil
 	}
-	
+
 	return NewDomainError(errorType, code, message).
 		WithCause(err).
 		WithRetryable(IsRetryableError(err)).

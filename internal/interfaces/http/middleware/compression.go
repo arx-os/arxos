@@ -27,7 +27,7 @@ func CompressionMiddleware() func(http.Handler) http.Handler {
 			// Create gzip writer
 			gz := gzipWriterPool.Get().(*gzip.Writer)
 			defer gzipWriterPool.Put(gz)
-			
+
 			gz.Reset(w)
 			defer gz.Close()
 
@@ -177,15 +177,15 @@ func BrotliCompressionMiddleware() func(http.Handler) http.Handler {
 // CompressionStats tracks compression statistics
 type CompressionStats struct {
 	RequestsCompressed int64   `json:"requests_compressed"`
-	BytesSaved        int64   `json:"bytes_saved"`
-	CompressionRatio  float64 `json:"compression_ratio"`
-	AverageSavings    float64 `json:"average_savings"`
+	BytesSaved         int64   `json:"bytes_saved"`
+	CompressionRatio   float64 `json:"compression_ratio"`
+	AverageSavings     float64 `json:"average_savings"`
 }
 
 // CompressionMetricsMiddleware provides compression metrics
 func CompressionMetricsMiddleware() func(http.Handler) http.Handler {
 	stats := &CompressionStats{}
-	
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Wrap response writer to track metrics
@@ -208,10 +208,10 @@ type metricsResponseWriter struct {
 // Write tracks the number of bytes written
 func (mrw *metricsResponseWriter) Write(b []byte) (int, error) {
 	n, err := mrw.ResponseWriter.Write(b)
-	
+
 	// Track metrics (simplified - in real implementation you'd track original vs compressed size)
 	mrw.stats.RequestsCompressed++
-	
+
 	return n, err
 }
 

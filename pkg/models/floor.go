@@ -33,10 +33,10 @@ type Room struct {
 type EquipmentStatus string
 
 const (
-	EquipmentStatusActive       EquipmentStatus = "active"
-	EquipmentStatusInactive     EquipmentStatus = "inactive"
-	EquipmentStatusMaintenance  EquipmentStatus = "maintenance"
-	EquipmentStatusFaulty       EquipmentStatus = "faulty"
+	EquipmentStatusActive         EquipmentStatus = "active"
+	EquipmentStatusInactive       EquipmentStatus = "inactive"
+	EquipmentStatusMaintenance    EquipmentStatus = "maintenance"
+	EquipmentStatusFaulty         EquipmentStatus = "faulty"
 	EquipmentStatusDecommissioned EquipmentStatus = "decommissioned"
 )
 
@@ -44,8 +44,8 @@ const (
 type Equipment struct {
 	ID         string                 `json:"id"`
 	Name       string                 `json:"name"`
-	Type       string                 `json:"type"` // outlet, switch, panel, etc.
-	Path       string                 `json:"path"` // Universal path: N/3/A/301/E
+	Type       string                 `json:"type"`               // outlet, switch, panel, etc.
+	Path       string                 `json:"path"`               // Universal path: N/3/A/301/E
 	Location   *Point3D               `json:"location,omitempty"` // Use unified 3D coordinates
 	RoomID     string                 `json:"room_id,omitempty"`
 	Status     string                 `json:"status"`

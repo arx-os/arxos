@@ -19,18 +19,18 @@ type RedisCache struct {
 
 // RedisConfig represents Redis configuration
 type RedisConfig struct {
-	Host     string        `json:"host"`
-	Port     int           `json:"port"`
-	Password string        `json:"password"`
-	DB       int           `json:"db"`
-	PoolSize int           `json:"pool_size"`
-	MinIdleConns int       `json:"min_idle_conns"`
-	MaxRetries int         `json:"max_retries"`
-	DialTimeout time.Duration `json:"dial_timeout"`
-	ReadTimeout time.Duration `json:"read_timeout"`
+	Host         string        `json:"host"`
+	Port         int           `json:"port"`
+	Password     string        `json:"password"`
+	DB           int           `json:"db"`
+	PoolSize     int           `json:"pool_size"`
+	MinIdleConns int           `json:"min_idle_conns"`
+	MaxRetries   int           `json:"max_retries"`
+	DialTimeout  time.Duration `json:"dial_timeout"`
+	ReadTimeout  time.Duration `json:"read_timeout"`
 	WriteTimeout time.Duration `json:"write_timeout"`
-	IdleTimeout time.Duration `json:"idle_timeout"`
-	MaxConnAge time.Duration `json:"max_conn_age"`
+	IdleTimeout  time.Duration `json:"idle_timeout"`
+	MaxConnAge   time.Duration `json:"max_conn_age"`
 }
 
 // NewRedisCache creates a new Redis cache instance
@@ -74,7 +74,7 @@ func (rc *RedisCache) Close() error {
 func (rc *RedisCache) GetStats(ctx context.Context) (map[string]interface{}, error) {
 	// Placeholder implementation
 	return map[string]interface{}{
-		"status": "not_implemented",
+		"status":  "not_implemented",
 		"message": "Redis implementation is a placeholder",
 	}, nil
 }

@@ -8,19 +8,19 @@ import (
 // Component represents a universal building component
 // This is the core domain model for any physical element in a building
 type Component struct {
-	ID          string                 `json:"id"`
-	Name        string                 `json:"name"`
-	Type        ComponentType          `json:"type"`
-	Path        string                 `json:"path"`        // Universal path like /B1/3/CONF-301/HVAC/UNIT-01
-	Location    Location               `json:"location"`     // Spatial coordinates
-	Properties  map[string]interface{} `json:"properties"`   // Type-specific properties
-	Relations   []Relation             `json:"relations"`    // Connections to other components
-	Status      ComponentStatus        `json:"status"`
-	Version     string                 `json:"version"`
-	CreatedAt   time.Time              `json:"created_at"`
-	UpdatedAt   time.Time              `json:"updated_at"`
-	CreatedBy   string                 `json:"created_by"`
-	UpdatedBy   string                 `json:"updated_by"`
+	ID         string                 `json:"id"`
+	Name       string                 `json:"name"`
+	Type       ComponentType          `json:"type"`
+	Path       string                 `json:"path"`       // Universal path like /B1/3/CONF-301/HVAC/UNIT-01
+	Location   Location               `json:"location"`   // Spatial coordinates
+	Properties map[string]interface{} `json:"properties"` // Type-specific properties
+	Relations  []Relation             `json:"relations"`  // Connections to other components
+	Status     ComponentStatus        `json:"status"`
+	Version    string                 `json:"version"`
+	CreatedAt  time.Time              `json:"created_at"`
+	UpdatedAt  time.Time              `json:"updated_at"`
+	CreatedBy  string                 `json:"created_by"`
+	UpdatedBy  string                 `json:"updated_by"`
 }
 
 // ComponentType represents the type of component
@@ -28,38 +28,38 @@ type ComponentType string
 
 const (
 	// HVAC Components
-	ComponentTypeHVACUnit      ComponentType = "hvac_unit"
-	ComponentTypeDamper        ComponentType = "damper"
-	ComponentTypeThermostat    ComponentType = "thermostat"
-	ComponentTypeVent          ComponentType = "vent"
-	
+	ComponentTypeHVACUnit   ComponentType = "hvac_unit"
+	ComponentTypeDamper     ComponentType = "damper"
+	ComponentTypeThermostat ComponentType = "thermostat"
+	ComponentTypeVent       ComponentType = "vent"
+
 	// Electrical Components
-	ComponentTypePanel         ComponentType = "electrical_panel"
-	ComponentTypeOutlet       ComponentType = "outlet"
-	ComponentTypeSwitch       ComponentType = "switch"
-	ComponentTypeLight        ComponentType = "light"
-	
+	ComponentTypePanel  ComponentType = "electrical_panel"
+	ComponentTypeOutlet ComponentType = "outlet"
+	ComponentTypeSwitch ComponentType = "switch"
+	ComponentTypeLight  ComponentType = "light"
+
 	// Plumbing Components
-	ComponentTypeFaucet        ComponentType = "faucet"
-	ComponentTypeToilet        ComponentType = "toilet"
-	ComponentTypePipe          ComponentType = "pipe"
-	ComponentTypeValve         ComponentType = "valve"
-	
+	ComponentTypeFaucet ComponentType = "faucet"
+	ComponentTypeToilet ComponentType = "toilet"
+	ComponentTypePipe   ComponentType = "pipe"
+	ComponentTypeValve  ComponentType = "valve"
+
 	// Fire Safety Components
-	ComponentTypeDetector      ComponentType = "fire_detector"
-	ComponentTypeSprinkler    ComponentType = "sprinkler"
-	ComponentTypeAlarm         ComponentType = "fire_alarm"
-	
+	ComponentTypeDetector  ComponentType = "fire_detector"
+	ComponentTypeSprinkler ComponentType = "sprinkler"
+	ComponentTypeAlarm     ComponentType = "fire_alarm"
+
 	// Access Control Components
-	ComponentTypeDoor          ComponentType = "door"
-	ComponentTypeLock          ComponentType = "lock"
-	ComponentTypeCardReader    ComponentType = "card_reader"
-	
+	ComponentTypeDoor       ComponentType = "door"
+	ComponentTypeLock       ComponentType = "lock"
+	ComponentTypeCardReader ComponentType = "card_reader"
+
 	// Generic Components
-	ComponentTypeGeneric       ComponentType = "generic"
-	ComponentTypeFood          ComponentType = "food_item"
-	ComponentTypeFurniture     ComponentType = "furniture"
-	ComponentTypeEquipment     ComponentType = "equipment"
+	ComponentTypeGeneric   ComponentType = "generic"
+	ComponentTypeFood      ComponentType = "food_item"
+	ComponentTypeFurniture ComponentType = "furniture"
+	ComponentTypeEquipment ComponentType = "equipment"
 )
 
 // ComponentStatus represents the operational status of a component
@@ -86,24 +86,24 @@ type Location struct {
 
 // Relation represents a connection between components
 type Relation struct {
-	ID          string         `json:"id"`
-	Type        RelationType   `json:"type"`
-	TargetID    string         `json:"target_id"`
-	TargetPath  string         `json:"target_path"`
-	Properties  map[string]interface{} `json:"properties"`
-	CreatedAt   time.Time      `json:"created_at"`
+	ID         string                 `json:"id"`
+	Type       RelationType           `json:"type"`
+	TargetID   string                 `json:"target_id"`
+	TargetPath string                 `json:"target_path"`
+	Properties map[string]interface{} `json:"properties"`
+	CreatedAt  time.Time              `json:"created_at"`
 }
 
 // RelationType represents the type of relation between components
 type RelationType string
 
 const (
-	RelationTypeConnected     RelationType = "connected"
-	RelationTypeControlled    RelationType = "controlled"
-	RelationTypeSupplies      RelationType = "supplies"
-	RelationTypeDependsOn     RelationType = "depends_on"
-	RelationTypeContains      RelationType = "contains"
-	RelationTypeAdjacent      RelationType = "adjacent"
+	RelationTypeConnected  RelationType = "connected"
+	RelationTypeControlled RelationType = "controlled"
+	RelationTypeSupplies   RelationType = "supplies"
+	RelationTypeDependsOn  RelationType = "depends_on"
+	RelationTypeContains   RelationType = "contains"
+	RelationTypeAdjacent   RelationType = "adjacent"
 )
 
 // NewComponent creates a new Component instance
@@ -111,7 +111,7 @@ func NewComponent(name string, compType ComponentType, path string, location Loc
 	if name == "" || path == "" || createdBy == "" {
 		return nil, fmt.Errorf("component name, path, and creator cannot be empty")
 	}
-	
+
 	now := time.Now()
 	return &Component{
 		ID:         fmt.Sprintf("comp-%d", now.UnixNano()),

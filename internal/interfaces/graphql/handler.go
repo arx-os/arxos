@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/arx-os/arxos/internal/domain"
 	"github.com/graphql-go/graphql"
 	"github.com/graphql-go/graphql/language/location"
-	"github.com/arx-os/arxos/internal/domain"
 )
 
 // Handler handles GraphQL requests
@@ -27,16 +27,16 @@ type GraphQLRequest struct {
 
 // GraphQLResponse represents a GraphQL response
 type GraphQLResponse struct {
-	Data   interface{}            `json:"data,omitempty"`
-	Errors []GraphQLError         `json:"errors,omitempty"`
+	Data       interface{}            `json:"data,omitempty"`
+	Errors     []GraphQLError         `json:"errors,omitempty"`
 	Extensions map[string]interface{} `json:"extensions,omitempty"`
 }
 
 // GraphQLError represents a GraphQL error
 type GraphQLError struct {
-	Message   string                 `json:"message"`
-	Locations []ErrorLocation        `json:"locations,omitempty"`
-	Path      []interface{}          `json:"path,omitempty"`
+	Message    string                 `json:"message"`
+	Locations  []ErrorLocation        `json:"locations,omitempty"`
+	Path       []interface{}          `json:"path,omitempty"`
 	Extensions map[string]interface{} `json:"extensions,omitempty"`
 }
 
@@ -58,7 +58,7 @@ func NewHandler(schema *Schema, logger domain.Logger) *Handler {
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	defer func() {
-		h.logger.Debug("GraphQL request completed", 
+		h.logger.Debug("GraphQL request completed",
 			"method", r.Method,
 			"path", r.URL.Path,
 			"duration", time.Since(start),
@@ -427,12 +427,12 @@ func GraphQLMiddleware(logger domain.Logger) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Add GraphQL-specific headers
 			w.Header().Set("X-GraphQL-Version", "1.0")
-			
-			logger.Debug("GraphQL middleware applied", 
+
+			logger.Debug("GraphQL middleware applied",
 				"path", r.URL.Path,
 				"method", r.Method,
 			)
-			
+
 			next.ServeHTTP(w, r)
 		})
 	}

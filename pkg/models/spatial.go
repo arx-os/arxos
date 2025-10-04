@@ -258,13 +258,13 @@ func (c ConfidenceLevel) AccuracyRange() float64 {
 	case ConfidenceUnknown:
 		return 10000.0 // ±10m
 	case ConfidenceLow:
-		return 5000.0  // ±5m
+		return 5000.0 // ±5m
 	case ConfidenceMedium:
-		return 1000.0  // ±1m
+		return 1000.0 // ±1m
 	case ConfidenceHigh:
-		return 100.0   // ±10cm
+		return 100.0 // ±10cm
 	case ConfidencePrecise:
-		return 10.0    // ±1cm
+		return 10.0 // ±1cm
 	default:
 		return 10000.0
 	}

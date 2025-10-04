@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/arx-os/arxos/internal/domain"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/arx-os/arxos/internal/domain"
 )
 
 // Handler handles WebSocket connections
@@ -61,7 +61,7 @@ func (h *Handler) ServeWS(w http.ResponseWriter, r *http.Request) {
 	// Register client with hub
 	h.hub.register <- client
 
-	h.logger.Info("WebSocket client connected", 
+	h.logger.Info("WebSocket client connected",
 		"client_id", clientID,
 		"ip_address", client.IPAddress,
 		"user_agent", client.UserAgent,
@@ -113,7 +113,7 @@ func (h *Handler) ServeWSWithAuth(authFunc func(*http.Request) (string, error)) 
 		// Register client with hub
 		h.hub.register <- client
 
-		h.logger.Info("Authenticated WebSocket client connected", 
+		h.logger.Info("Authenticated WebSocket client connected",
 			"client_id", clientID,
 			"user_id", userID,
 			"ip_address", client.IPAddress,
@@ -227,7 +227,7 @@ func (h *Handler) getClientIP(r *http.Request) string {
 	if ip := r.Header.Get("X-Real-IP"); ip != "" {
 		return ip
 	}
-	
+
 	// Fallback to remote address
 	return r.RemoteAddr
 }
@@ -238,12 +238,12 @@ func (h *Handler) getSessionID(r *http.Request) string {
 	if cookie, err := r.Cookie("session_id"); err == nil {
 		return cookie.Value
 	}
-	
+
 	// Check headers
 	if sessionID := r.Header.Get("X-Session-ID"); sessionID != "" {
 		return sessionID
 	}
-	
+
 	return ""
 }
 
@@ -253,12 +253,12 @@ func (h *Handler) getUserID(r *http.Request) string {
 	if userID := r.Header.Get("X-User-ID"); userID != "" {
 		return userID
 	}
-	
+
 	// Check query parameters
 	if userID := r.URL.Query().Get("user_id"); userID != "" {
 		return userID
 	}
-	
+
 	return ""
 }
 
@@ -269,12 +269,12 @@ func WebSocketMiddleware(logger domain.Logger) func(http.Handler) http.Handler {
 			// Add WebSocket-specific headers
 			w.Header().Set("Upgrade", "websocket")
 			w.Header().Set("Connection", "Upgrade")
-			
-			logger.Debug("WebSocket middleware applied", 
+
+			logger.Debug("WebSocket middleware applied",
 				"path", r.URL.Path,
 				"method", r.Method,
 			)
-			
+
 			next.ServeHTTP(w, r)
 		})
 	}
@@ -282,28 +282,28 @@ func WebSocketMiddleware(logger domain.Logger) func(http.Handler) http.Handler {
 
 // WebSocketStats represents WebSocket statistics
 type WebSocketStats struct {
-	TotalConnections    int64     `json:"total_connections"`
-	ActiveConnections   int       `json:"active_connections"`
-	TotalRooms          int       `json:"total_rooms"`
-	TotalMessages       int64     `json:"total_messages"`
-	AverageConnections  float64   `json:"average_connections"`
-	PeakConnections     int       `json:"peak_connections"`
-	LastCleanup         time.Time `json:"last_cleanup"`
-	Uptime              time.Duration `json:"uptime"`
+	TotalConnections   int64         `json:"total_connections"`
+	ActiveConnections  int           `json:"active_connections"`
+	TotalRooms         int           `json:"total_rooms"`
+	TotalMessages      int64         `json:"total_messages"`
+	AverageConnections float64       `json:"average_connections"`
+	PeakConnections    int           `json:"peak_connections"`
+	LastCleanup        time.Time     `json:"last_cleanup"`
+	Uptime             time.Duration `json:"uptime"`
 }
 
 // GetWebSocketStats returns comprehensive WebSocket statistics
 func (h *Handler) GetWebSocketStats() *WebSocketStats {
 	hubStats := h.GetHubStats()
-	
+
 	return &WebSocketStats{
 		TotalConnections:   int64(hubStats["total_clients"].(int)),
 		ActiveConnections:  hubStats["total_clients"].(int),
 		TotalRooms:         hubStats["total_rooms"].(int),
-		TotalMessages:      0, // Would need to track this
-		AverageConnections: 0, // Would need to track this over time
-		PeakConnections:    0, // Would need to track this
-		LastCleanup:        time.Now(), // Would need to track this
+		TotalMessages:      0,                      // Would need to track this
+		AverageConnections: 0,                      // Would need to track this over time
+		PeakConnections:    0,                      // Would need to track this
+		LastCleanup:        time.Now(),             // Would need to track this
 		Uptime:             time.Since(time.Now()), // Would need to track hub start time
 	}
 }

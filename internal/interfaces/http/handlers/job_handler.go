@@ -26,8 +26,8 @@ func NewJobHandler(
 ) *JobHandler {
 	return &JobHandler{
 		BaseHandler: types.NewBaseHandler(server),
-		jobQueue:   jobQueue,
-		logger:     logger,
+		jobQueue:    jobQueue,
+		logger:      logger,
 	}
 }
 
@@ -58,12 +58,12 @@ type JobResponse struct {
 
 // JobStatsResponse represents job queue statistics
 type JobStatsResponse struct {
-	Running        bool                   `json:"running"`
-	QueueSize      int                    `json:"queue_size"`
-	MaxWorkers     int                    `json:"max_workers"`
-	ActiveWorkers  int                    `json:"active_workers"`
-	Workers        []map[string]interface{} `json:"workers"`
-	Config         map[string]interface{} `json:"config"`
+	Running       bool                     `json:"running"`
+	QueueSize     int                      `json:"queue_size"`
+	MaxWorkers    int                      `json:"max_workers"`
+	ActiveWorkers int                      `json:"active_workers"`
+	Workers       []map[string]interface{} `json:"workers"`
+	Config        map[string]interface{}   `json:"config"`
 }
 
 // CreateJob creates a new background job
@@ -95,7 +95,7 @@ func (h *JobHandler) CreateJob(w http.ResponseWriter, r *http.Request) {
 
 	// Create job
 	job := jobs.NewJob(req.Type, req.Data)
-	
+
 	// Set priority
 	if req.Priority > 0 {
 		job.Priority = jobs.Priority(req.Priority)
@@ -178,7 +178,7 @@ func (h *JobHandler) CreateBulkJobs(w http.ResponseWriter, r *http.Request) {
 
 		// Create job
 		job := jobs.NewJob(req.Type, req.Data)
-		
+
 		// Set priority
 		if req.Priority > 0 {
 			job.Priority = jobs.Priority(req.Priority)
@@ -300,7 +300,7 @@ func (h *JobHandler) CreateScheduledJob(w http.ResponseWriter, r *http.Request) 
 
 	// Create scheduled job
 	job := jobs.NewScheduledJob(req.Type, req.Data, req.ScheduledAt)
-	
+
 	// Set priority
 	if req.Priority > 0 {
 		job.Priority = jobs.Priority(req.Priority)
@@ -397,7 +397,7 @@ func (h *JobHandler) CreateRecurringJob(w http.ResponseWriter, r *http.Request) 
 
 	// Create first job
 	job := jobs.NewScheduledJob(req.Type, req.Data, startAt)
-	
+
 	// Set priority
 	if req.Priority > 0 {
 		job.Priority = jobs.Priority(req.Priority)

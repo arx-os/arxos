@@ -87,15 +87,15 @@ func (ip *IFCProcessor) processExport(ctx context.Context, job Job) (interface{}
 
 	// This would call the export method when implemented
 	ip.logger.Info("IFC export started", "job_id", job.ID, "repository_id", repositoryID, "ifc_file_id", ifcFileID, "format", format)
-	
+
 	// Simulate export process
 	time.Sleep(2 * time.Second)
-	
+
 	result := map[string]interface{}{
-		"export_id":    fmt.Sprintf("export_%d", time.Now().Unix()),
-		"format":       format,
-		"file_size":    1024000,
-		"exported_at":  time.Now(),
+		"export_id":   fmt.Sprintf("export_%d", time.Now().Unix()),
+		"format":      format,
+		"file_size":   1024000,
+		"exported_at": time.Now(),
 	}
 
 	ip.logger.Info("IFC export completed", "job_id", job.ID, "result", result)
@@ -111,10 +111,10 @@ func (ip *IFCProcessor) processValidate(ctx context.Context, job Job) (interface
 
 	// This would call the validation method when implemented
 	ip.logger.Info("IFC validation started", "job_id", job.ID)
-	
+
 	// Simulate validation process
 	time.Sleep(1 * time.Second)
-	
+
 	result := map[string]interface{}{
 		"valid":        true,
 		"errors":       []string{},
@@ -182,8 +182,8 @@ func (ap *AnalyticsProcessor) processBuildingPerformance(ctx context.Context, jo
 		return nil, fmt.Errorf("end_date is required")
 	}
 
-	ap.logger.Info("Building performance analysis started", 
-		"job_id", job.ID, 
+	ap.logger.Info("Building performance analysis started",
+		"job_id", job.ID,
 		"building_id", buildingID,
 		"start_date", startDate,
 		"end_date", endDate,
@@ -193,13 +193,13 @@ func (ap *AnalyticsProcessor) processBuildingPerformance(ctx context.Context, jo
 	time.Sleep(3 * time.Second)
 
 	result := map[string]interface{}{
-		"building_id":     buildingID,
-		"analysis_type":   "building_performance",
-		"period":          fmt.Sprintf("%s to %s", startDate, endDate),
+		"building_id":       buildingID,
+		"analysis_type":     "building_performance",
+		"period":            fmt.Sprintf("%s to %s", startDate, endDate),
 		"energy_efficiency": 85.5,
-		"occupancy_rate":     92.3,
-		"maintenance_score":  78.9,
-		"generated_at":       time.Now(),
+		"occupancy_rate":    92.3,
+		"maintenance_score": 78.9,
+		"generated_at":      time.Now(),
 	}
 
 	ap.logger.Info("Building performance analysis completed", "job_id", job.ID, "result", result)
@@ -213,8 +213,8 @@ func (ap *AnalyticsProcessor) processEquipmentUtilization(ctx context.Context, j
 		return nil, fmt.Errorf("building_id is required")
 	}
 
-	ap.logger.Info("Equipment utilization analysis started", 
-		"job_id", job.ID, 
+	ap.logger.Info("Equipment utilization analysis started",
+		"job_id", job.ID,
 		"building_id", buildingID,
 	)
 
@@ -222,9 +222,9 @@ func (ap *AnalyticsProcessor) processEquipmentUtilization(ctx context.Context, j
 	time.Sleep(2 * time.Second)
 
 	result := map[string]interface{}{
-		"building_id":       buildingID,
-		"analysis_type":     "equipment_utilization",
-		"hvac_utilization":  76.8,
+		"building_id":            buildingID,
+		"analysis_type":          "equipment_utilization",
+		"hvac_utilization":       76.8,
 		"electrical_utilization": 82.1,
 		"plumbing_utilization":   68.4,
 		"security_utilization":   91.2,
@@ -242,8 +242,8 @@ func (ap *AnalyticsProcessor) processEnergyConsumption(ctx context.Context, job 
 		return nil, fmt.Errorf("building_id is required")
 	}
 
-	ap.logger.Info("Energy consumption analysis started", 
-		"job_id", job.ID, 
+	ap.logger.Info("Energy consumption analysis started",
+		"job_id", job.ID,
 		"building_id", buildingID,
 	)
 
@@ -251,14 +251,14 @@ func (ap *AnalyticsProcessor) processEnergyConsumption(ctx context.Context, job 
 	time.Sleep(4 * time.Second)
 
 	result := map[string]interface{}{
-		"building_id":         buildingID,
-		"analysis_type":       "energy_consumption",
-		"total_consumption":   125000, // kWh
-		"peak_demand":         850,    // kW
-		"average_demand":      520,    // kW
-		"cost_savings":        15.2,  // %
-		"carbon_footprint":    45.8,  // tons CO2
-		"generated_at":        time.Now(),
+		"building_id":       buildingID,
+		"analysis_type":     "energy_consumption",
+		"total_consumption": 125000, // kWh
+		"peak_demand":       850,    // kW
+		"average_demand":    520,    // kW
+		"cost_savings":      15.2,   // %
+		"carbon_footprint":  45.8,   // tons CO2
+		"generated_at":      time.Now(),
 	}
 
 	ap.logger.Info("Energy consumption analysis completed", "job_id", job.ID, "result", result)
@@ -272,8 +272,8 @@ func (ap *AnalyticsProcessor) processMaintenanceSchedule(ctx context.Context, jo
 		return nil, fmt.Errorf("building_id is required")
 	}
 
-	ap.logger.Info("Maintenance schedule analysis started", 
-		"job_id", job.ID, 
+	ap.logger.Info("Maintenance schedule analysis started",
+		"job_id", job.ID,
 		"building_id", buildingID,
 	)
 
@@ -285,8 +285,8 @@ func (ap *AnalyticsProcessor) processMaintenanceSchedule(ctx context.Context, jo
 		"analysis_type":     "maintenance_schedule",
 		"overdue_tasks":     12,
 		"upcoming_tasks":    28,
-		"critical_alerts":    3,
-		"maintenance_score":  78.5,
+		"critical_alerts":   3,
+		"maintenance_score": 78.5,
 		"next_inspection":   time.Now().Add(7 * 24 * time.Hour),
 		"generated_at":      time.Now(),
 	}
@@ -349,8 +349,8 @@ func (np *NotificationProcessor) processEmail(ctx context.Context, job Job) (int
 		return nil, fmt.Errorf("body is required")
 	}
 
-	np.logger.Info("Sending email notification", 
-		"job_id", job.ID, 
+	np.logger.Info("Sending email notification",
+		"job_id", job.ID,
 		"recipient", recipient,
 		"subject", subject,
 	)
@@ -383,8 +383,8 @@ func (np *NotificationProcessor) processSMS(ctx context.Context, job Job) (inter
 		return nil, fmt.Errorf("message is required")
 	}
 
-	np.logger.Info("Sending SMS notification", 
-		"job_id", job.ID, 
+	np.logger.Info("Sending SMS notification",
+		"job_id", job.ID,
 		"recipient", recipient,
 	)
 
@@ -421,8 +421,8 @@ func (np *NotificationProcessor) processPush(ctx context.Context, job Job) (inte
 		return nil, fmt.Errorf("body is required")
 	}
 
-	np.logger.Info("Sending push notification", 
-		"job_id", job.ID, 
+	np.logger.Info("Sending push notification",
+		"job_id", job.ID,
 		"user_id", userID,
 		"title", title,
 	)
@@ -456,8 +456,8 @@ func (np *NotificationProcessor) processWebhook(ctx context.Context, job Job) (i
 		return nil, fmt.Errorf("payload is required")
 	}
 
-	np.logger.Info("Sending webhook notification", 
-		"job_id", job.ID, 
+	np.logger.Info("Sending webhook notification",
+		"job_id", job.ID,
 		"url", url,
 	)
 

@@ -135,12 +135,12 @@ func TestLoadTesting(t *testing.T) {
 					return
 				}
 
-			// Make HTTP request
-			resp, err := suite.httpClient.Post(
-				"http://localhost:8080/api/v1/buildings",
-				"application/json",
-				bytes.NewBuffer(jsonBody),
-			)
+				// Make HTTP request
+				resp, err := suite.httpClient.Post(
+					"http://localhost:8080/api/v1/buildings",
+					"application/json",
+					bytes.NewBuffer(jsonBody),
+				)
 				if err != nil {
 					errors <- err
 					return

@@ -115,7 +115,7 @@ func (imc *InMemoryCache) Get(ctx context.Context, key string) (interface{}, err
 	imc.mu.RLock()
 	entry, exists := imc.data[key]
 	imc.mu.RUnlock()
-	
+
 	if !exists {
 		return nil, nil // Cache miss
 	}
@@ -135,7 +135,7 @@ func (imc *InMemoryCache) Get(ctx context.Context, key string) (interface{}, err
 func (imc *InMemoryCache) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
 	imc.mu.Lock()
 	defer imc.mu.Unlock()
-	
+
 	imc.data[key] = cacheEntry{
 		value:     value,
 		expiresAt: time.Now().Add(ttl),
@@ -147,7 +147,7 @@ func (imc *InMemoryCache) Set(ctx context.Context, key string, value interface{}
 func (imc *InMemoryCache) Delete(ctx context.Context, key string) error {
 	imc.mu.Lock()
 	defer imc.mu.Unlock()
-	
+
 	delete(imc.data, key)
 	return nil
 }
@@ -156,7 +156,7 @@ func (imc *InMemoryCache) Delete(ctx context.Context, key string) error {
 func (imc *InMemoryCache) Clear(ctx context.Context) error {
 	imc.mu.Lock()
 	defer imc.mu.Unlock()
-	
+
 	imc.data = make(map[string]cacheEntry)
 	return nil
 }

@@ -89,9 +89,9 @@ const (
 	CodePreconditionFailed ErrorCode = "PRECONDITION_FAILED"
 
 	// Auth error codes
-	CodeUnauthorized  ErrorCode = "UNAUTHORIZED"
-	CodeForbidden     ErrorCode = "FORBIDDEN"
-	CodeTokenExpired  ErrorCode = "TOKEN_EXPIRED"
+	CodeUnauthorized ErrorCode = "UNAUTHORIZED"
+	CodeForbidden    ErrorCode = "FORBIDDEN"
+	CodeTokenExpired ErrorCode = "TOKEN_EXPIRED"
 
 	// System error codes
 	CodeInternal       ErrorCode = "INTERNAL"
@@ -111,8 +111,8 @@ const (
 
 	// Spatial error codes
 	CodeInvalidCoordinates ErrorCode = "INVALID_COORDINATES"
-	CodeOutOfBounds       ErrorCode = "OUT_OF_BOUNDS"
-	CodeSpatialQuery      ErrorCode = "SPATIAL_QUERY"
+	CodeOutOfBounds        ErrorCode = "OUT_OF_BOUNDS"
+	CodeSpatialQuery       ErrorCode = "SPATIAL_QUERY"
 )
 
 // AppError represents an application error with additional context
@@ -387,7 +387,7 @@ func HTTPStatus(err error) int {
 	case CodeUnavailable:
 		return http.StatusServiceUnavailable
 	case CodeDatabase, CodeDBConnection, CodeDBQuery, CodeDBTransaction,
-	     CodeDataCorruption, CodeInternal, CodeSpatialQuery:
+		CodeDataCorruption, CodeInternal, CodeSpatialQuery:
 		return http.StatusInternalServerError
 	default:
 		return http.StatusInternalServerError

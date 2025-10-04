@@ -6,16 +6,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/jmoiron/sqlx"
 )
 
 // QueryOptimizer provides query optimization and caching
 type QueryOptimizer struct {
-	pool           *ConnectionPool
-	cache          QueryCache
+	pool               *ConnectionPool
+	cache              QueryCache
 	slowQueryThreshold time.Duration
-	logger         domain.Logger
+	logger             domain.Logger
 }
 
 // QueryCache provides query result caching
@@ -38,14 +38,14 @@ type QueryStats struct {
 
 // QueryPlan represents a query execution plan
 type QueryPlan struct {
-	Query      string                 `json:"query"`
-	Args       []interface{}          `json:"args"`
-	CacheKey   string                 `json:"cache_key"`
-	CacheTTL   time.Duration          `json:"cache_ttl"`
-	ReadOnly   bool                   `json:"read_only"`
-	Timeout    time.Duration          `json:"timeout"`
-	Retries    int                    `json:"retries"`
-	Metadata   map[string]interface{} `json:"metadata"`
+	Query    string                 `json:"query"`
+	Args     []interface{}          `json:"args"`
+	CacheKey string                 `json:"cache_key"`
+	CacheTTL time.Duration          `json:"cache_ttl"`
+	ReadOnly bool                   `json:"read_only"`
+	Timeout  time.Duration          `json:"timeout"`
+	Retries  int                    `json:"retries"`
+	Metadata map[string]interface{} `json:"metadata"`
 }
 
 // NewQueryOptimizer creates a new query optimizer
@@ -61,11 +61,11 @@ func NewQueryOptimizer(pool *ConnectionPool, cache QueryCache, logger domain.Log
 // ExecuteQuery executes a query with optimization
 func (qo *QueryOptimizer) ExecuteQuery(ctx context.Context, plan *QueryPlan) (*QueryResult, error) {
 	start := time.Now()
-	
+
 	// Check cache first for read-only queries
 	var result *QueryResult
 	var cacheHit bool
-	
+
 	if plan.ReadOnly && plan.CacheKey != "" {
 		if cached, err := qo.cache.Get(ctx, plan.CacheKey); err == nil && cached != nil {
 			if cachedResult, ok := cached.(*QueryResult); ok {
@@ -122,7 +122,7 @@ func (qo *QueryOptimizer) ExecuteQuery(ctx context.Context, plan *QueryPlan) (*Q
 // executeQueryWithRetry executes a query with retry logic
 func (qo *QueryOptimizer) executeQueryWithRetry(ctx context.Context, plan *QueryPlan) (*QueryResult, error) {
 	var lastErr error
-	
+
 	for attempt := 0; attempt <= plan.Retries; attempt++ {
 		// Set timeout for this attempt
 		queryCtx := ctx
@@ -134,7 +134,7 @@ func (qo *QueryOptimizer) executeQueryWithRetry(ctx context.Context, plan *Query
 
 		// Get appropriate connection
 		conn := qo.getConnection(plan.ReadOnly)
-		
+
 		// Execute query
 		result, err := qo.executeSingleQuery(queryCtx, conn, plan)
 		if err == nil {
@@ -142,7 +142,7 @@ func (qo *QueryOptimizer) executeQueryWithRetry(ctx context.Context, plan *Query
 		}
 
 		lastErr = err
-		
+
 		// Check if error is retryable
 		if !qo.isRetryableError(err) {
 			break
@@ -161,7 +161,7 @@ func (qo *QueryOptimizer) executeQueryWithRetry(ctx context.Context, plan *Query
 func (qo *QueryOptimizer) executeSingleQuery(ctx context.Context, conn *sqlx.DB, plan *QueryPlan) (*QueryResult, error) {
 	// Determine query type
 	queryType := qo.getQueryType(plan.Query)
-	
+
 	switch queryType {
 	case "SELECT":
 		return qo.executeSelectQuery(ctx, conn, plan)
@@ -249,7 +249,7 @@ func (qo *QueryOptimizer) getConnection(readOnly bool) *sqlx.DB {
 // getQueryType determines the type of SQL query
 func (qo *QueryOptimizer) getQueryType(query string) string {
 	query = strings.TrimSpace(strings.ToUpper(query))
-	
+
 	if strings.HasPrefix(query, "SELECT") {
 		return "SELECT"
 	} else if strings.HasPrefix(query, "INSERT") {
@@ -265,7 +265,7 @@ func (qo *QueryOptimizer) getQueryType(query string) string {
 	} else if strings.HasPrefix(query, "ALTER") {
 		return "ALTER"
 	}
-	
+
 	return "UNKNOWN"
 }
 
@@ -274,7 +274,7 @@ func (qo *QueryOptimizer) isRetryableError(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	errStr := err.Error()
 	retryableErrors := []string{
 		"connection reset by peer",
@@ -284,13 +284,13 @@ func (qo *QueryOptimizer) isRetryableError(err error) bool {
 		"temporary failure",
 		"server closed connection",
 	}
-	
+
 	for _, retryableErr := range retryableErrors {
 		if strings.Contains(strings.ToLower(errStr), retryableErr) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 

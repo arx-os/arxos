@@ -3,19 +3,19 @@ package graphql
 import (
 	"fmt"
 
-	"github.com/graphql-go/graphql"
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/usecase"
+	"github.com/graphql-go/graphql"
 )
 
 // Resolvers contains all GraphQL resolvers
 type Resolvers struct {
-	buildingUC   *usecase.BuildingUseCase
-	equipmentUC  *usecase.EquipmentUseCase
-	componentUC  interface{} // ComponentService interface
-	userUC       *usecase.UserUseCase
+	buildingUC     *usecase.BuildingUseCase
+	equipmentUC    *usecase.EquipmentUseCase
+	componentUC    interface{} // ComponentService interface
+	userUC         *usecase.UserUseCase
 	organizationUC *usecase.OrganizationUseCase
-	logger       domain.Logger
+	logger         domain.Logger
 }
 
 // NewResolvers creates a new resolvers instance
@@ -69,7 +69,7 @@ func (r *Resolvers) CreateBuilding(p graphql.ResolveParams) (interface{}, error)
 
 	// Convert input to CreateBuildingRequest
 	req := &domain.CreateBuildingRequest{
-		Name: input["name"].(string),
+		Name:    input["name"].(string),
 		Address: input["address"].(string),
 	}
 

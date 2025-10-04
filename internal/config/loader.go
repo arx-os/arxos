@@ -530,7 +530,7 @@ func (fcs *FileConfigSource) Load() (*Config, error) {
 	}
 
 	var config Config
-	
+
 	// Determine format based on file extension
 	if strings.HasSuffix(strings.ToLower(fcs.path), ".yml") || strings.HasSuffix(strings.ToLower(fcs.path), ".yaml") {
 		if err := yaml.Unmarshal(data, &config); err != nil {

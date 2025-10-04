@@ -195,21 +195,21 @@ func TestConcurrentCacheAccess(t *testing.T) {
 
 	// Test concurrent access
 	done := make(chan bool, 10)
-	
+
 	for i := 0; i < 10; i++ {
 		go func(i int) {
 			key := fmt.Sprintf("key%d", i)
 			value := fmt.Sprintf("value%d", i)
-			
+
 			// Set
 			err := cache.Set(ctx, key, value, time.Minute)
 			assert.NoError(t, err)
-			
+
 			// Get
 			retrieved, err := cache.Get(ctx, key)
 			assert.NoError(t, err)
 			assert.Equal(t, value, retrieved)
-			
+
 			done <- true
 		}(i)
 	}
@@ -223,7 +223,7 @@ func TestConcurrentCacheAccess(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		key := fmt.Sprintf("key%d", i)
 		expectedValue := fmt.Sprintf("value%d", i)
-		
+
 		value, err := cache.Get(ctx, key)
 		require.NoError(t, err)
 		assert.Equal(t, expectedValue, value)

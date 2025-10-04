@@ -1173,7 +1173,7 @@ func parseIntEnv(value string) (int, error) {
 func substituteEnvVars(content string) string {
 	// Pattern to match ${VAR} or ${VAR:-default}
 	pattern := regexp.MustCompile(`\$\{([^}:]+)(?::-(.*?))?\}`)
-	
+
 	return pattern.ReplaceAllStringFunc(content, func(match string) string {
 		// Extract variable name and default value
 		start := strings.Index(match, "${") + 2
@@ -1181,10 +1181,10 @@ func substituteEnvVars(content string) string {
 		if end == -1 {
 			return match // Malformed, return as-is
 		}
-		
+
 		varPart := match[start:end]
 		var varName, defaultValue string
-		
+
 		// Check for default value syntax ${VAR:-default}
 		if colonIndex := strings.Index(varPart, ":-"); colonIndex != -1 {
 			varName = varPart[:colonIndex]
@@ -1192,12 +1192,12 @@ func substituteEnvVars(content string) string {
 		} else {
 			varName = varPart
 		}
-		
+
 		// Get environment variable value
 		if value := os.Getenv(varName); value != "" {
 			return value
 		}
-		
+
 		// Return default value if environment variable not set
 		return defaultValue
 	})

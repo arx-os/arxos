@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/arx-os/arxos/internal/domain/component"
+	"github.com/google/uuid"
 )
 
 // ComponentUseCase implements component.ComponentService

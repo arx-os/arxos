@@ -24,8 +24,8 @@ func TestDatabaseHealth(t *testing.T) {
 			SRID:     900913,
 		},
 		Database: config.DatabaseConfig{
-			MaxOpenConns:   10,
-			MaxIdleConns:   5,
+			MaxOpenConns:    10,
+			MaxIdleConns:    5,
 			ConnMaxLifetime: 30 * time.Minute,
 		},
 	}
@@ -55,8 +55,8 @@ func TestDatabaseConnect(t *testing.T) {
 			SRID:     900913,
 		},
 		Database: config.DatabaseConfig{
-			MaxOpenConns:   10,
-			MaxIdleConns:   5,
+			MaxOpenConns:    10,
+			MaxIdleConns:    5,
 			ConnMaxLifetime: 30 * time.Minute,
 		},
 	}
@@ -67,7 +67,7 @@ func TestDatabaseConnect(t *testing.T) {
 
 	ctx := context.Background()
 	err := db.Connect(ctx)
-	
+
 	// Should fail with invalid connection details
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to connect to database")

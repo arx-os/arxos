@@ -208,7 +208,7 @@ func (r *PostGISComponentRepository) List(ctx context.Context, filter component.
 	query := `SELECT id, name, type, path, location_json, properties_json, 
 		       relations_json, status, version, created_at, updated_at, 
 		       created_by, updated_by FROM components`
-	
+
 	args := []interface{}{}
 	argIndex := 1
 	conditions := []string{}
@@ -289,7 +289,7 @@ func (r *PostGISComponentRepository) List(ctx context.Context, filter component.
 // Count returns the total count of components matching the filter
 func (r *PostGISComponentRepository) Count(ctx context.Context, filter component.ComponentFilter) (int64, error) {
 	query := `SELECT COUNT(*) FROM components`
-	
+
 	args := []interface{}{}
 	argIndex := 1
 	conditions := []string{}

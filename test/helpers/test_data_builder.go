@@ -150,20 +150,20 @@ END-ISO-10303-21;
 	// Import the IFC data (this would call the actual IFC use case)
 	// For now, return a mock successful result
 	result := &domain.IFCImportResult{
-		Success:             true,
-		RepositoryID:        repositoryID,
-		ComponentsImported:  50 + rand.Intn(50), // Random between 50-100
-		ComponentsSkipped:   rand.Intn(10),      // Random between 0-10
-		Errors:              []string{},
-		Warnings:            []string{"Some materials could not be resolved"},
-		ProcessingTime:      float64(10 + rand.Intn(30)), // Random between 10-40 seconds
-		FileName:            fmt.Sprintf("test_building_%d.ifc", rand.Intn(1000)),
-		FileSize:            int64(500000 + rand.Intn(500000)), // Random between 0.5-1MB
-		ImportDate:          time.Now(),
-		IFCVersion:          "IFC4",
-		SchemaURL:           "https://standards.buildingsmart.org/IFC/RELEASE/IFC4",
+		Success:            true,
+		RepositoryID:       repositoryID,
+		ComponentsImported: 50 + rand.Intn(50), // Random between 50-100
+		ComponentsSkipped:  rand.Intn(10),      // Random between 0-10
+		Errors:             []string{},
+		Warnings:           []string{"Some materials could not be resolved"},
+		ProcessingTime:     float64(10 + rand.Intn(30)), // Random between 10-40 seconds
+		FileName:           fmt.Sprintf("test_building_%d.ifc", rand.Intn(1000)),
+		FileSize:           int64(500000 + rand.Intn(500000)), // Random between 0.5-1MB
+		ImportDate:         time.Now(),
+		IFCVersion:         "IFC4",
+		SchemaURL:          "https://standards.buildingsmart.org/IFC/RELEASE/IFC4",
 	}
-	
+
 	return result, nil
 }
 
@@ -175,14 +175,14 @@ func (tdb *TestDataBuilder) BuildTestSpatialData(ctx context.Context, equipmentI
 		Y: float64(rand.Intn(100)),
 		Z: float64(rand.Intn(20)),
 	}
-	
+
 	rotation := &domain.Quaternion{
 		W: 1.0,
 		X: 0,
 		Y: 0,
 		Z: 0,
 	}
-	
+
 	anchor := &domain.SpatialAnchor{
 		ID:               fmt.Sprintf("test-anchor-%d", rand.Intn(1000)),
 		Position:         position,
@@ -200,7 +200,7 @@ func (tdb *TestDataBuilder) BuildTestSpatialData(ctx context.Context, equipmentI
 		Range:            10.0, // 10 meters
 		Metadata:         map[string]interface{}{"source": "test", "quality": "high"},
 	}
-	
+
 	return anchor, nil
 }
 
@@ -212,30 +212,30 @@ func (tdb *TestDataBuilder) BuildTestARData(ctx context.Context, equipmentID str
 		Y: float64(rand.Intn(100)),
 		Z: float64(rand.Intn(20)),
 	}
-	
+
 	rotation := &domain.Quaternion{
 		W: 1.0,
 		X: 0,
 		Y: 0,
 		Z: 0,
 	}
-	
+
 	scale := &domain.SpatialLocation{
 		X: 1.0,
 		Y: 1.0,
 		Z: 1.0,
 	}
-	
+
 	arVisibility := domain.ARVisibility{
-		IsVisible:         true,
-		Distance:           float64(rand.Intn(50)), // Random distance 0-50 meters
-		OcclusionLevel:     float64(rand.Intn(100)) / 100, // Random 0-1
-		LightingCondition: "good",
-		Contrast:          0.8 + rand.Float64()*0.2, // Random between 0.8-1.0
-		Brightness:        0.7 + rand.Float64()*0.3, // Random between 0.7-1.0
+		IsVisible:           true,
+		Distance:            float64(rand.Intn(50)),        // Random distance 0-50 meters
+		OcclusionLevel:      float64(rand.Intn(100)) / 100, // Random 0-1
+		LightingCondition:   "good",
+		Contrast:            0.8 + rand.Float64()*0.2, // Random between 0.8-1.0
+		Brightness:          0.7 + rand.Float64()*0.3, // Random between 0.7-1.0
 		LastVisibilityCheck: time.Now(),
 	}
-	
+
 	metadata := domain.EquipmentARMetadata{
 		Name:         fmt.Sprintf("Test AR Equipment %d", rand.Intn(1000)),
 		Type:         "HVAC",
@@ -246,7 +246,7 @@ func (tdb *TestDataBuilder) BuildTestARData(ctx context.Context, equipmentID str
 		Tags:         []string{"equipment", "ar", "test"},
 		Attrs:        map[string]interface{}{"test": true, "generated": true},
 	}
-	
+
 	overlay := &domain.EquipmentAROverlay{
 		EquipmentID:  equipmentID,
 		Position:     position,
@@ -261,7 +261,7 @@ func (tdb *TestDataBuilder) BuildTestARData(ctx context.Context, equipmentID str
 		LOD:          1,
 		Metadata:     metadata,
 	}
-	
+
 	return overlay, nil
 }
 
@@ -269,9 +269,9 @@ func (tdb *TestDataBuilder) BuildTestARData(ctx context.Context, equipmentID str
 func (tdb *TestDataBuilder) BuildTestNavigationData(ctx context.Context, from, to *domain.SpatialLocation) (*domain.ARNavigationPath, error) {
 	// Create waypoints between from and to
 	numWaypoints := 5
-	
+
 	waypoints := make([]*domain.SpatialLocation, 0, numWaypoints+1)
-	
+
 	for i := 0; i <= numWaypoints; i++ {
 		t := float64(i) / float64(numWaypoints)
 		waypoint := &domain.SpatialLocation{
@@ -281,7 +281,7 @@ func (tdb *TestDataBuilder) BuildTestNavigationData(ctx context.Context, from, t
 		}
 		waypoints = append(waypoints, waypoint)
 	}
-	
+
 	// Calculate distance
 	totalDistance := 0.0
 	for i := 0; i < len(waypoints)-1; i++ {
@@ -290,7 +290,7 @@ func (tdb *TestDataBuilder) BuildTestNavigationData(ctx context.Context, from, t
 		dz := waypoints[i+1].Z - waypoints[i].Z
 		totalDistance += math.Sqrt(dx*dx + dy*dy + dz*dz)
 	}
-	
+
 	// Create AR instructions for each waypoint
 	var instructions []domain.ARInstruction
 	for i, waypoint := range waypoints {
@@ -298,14 +298,14 @@ func (tdb *TestDataBuilder) BuildTestNavigationData(ctx context.Context, from, t
 		if i == len(waypoints)-1 {
 			instructionType = "stop"
 		}
-		
+
 		instructions = append(instructions, domain.ARInstruction{
-			ID:                 fmt.Sprintf("instruction-%d", i),
-			Type:               instructionType,
-			Position:           waypoint,
-			Description:        fmt.Sprintf("Move to waypoint %d", i+1),
-			EstimatedDuration:  5.0, // 5 seconds per instruction
-			Priority:           "medium",
+			ID:                fmt.Sprintf("instruction-%d", i),
+			Type:              instructionType,
+			Position:          waypoint,
+			Description:       fmt.Sprintf("Move to waypoint %d", i+1),
+			EstimatedDuration: 5.0, // 5 seconds per instruction
+			Priority:          "medium",
 			ARVisualization: domain.ARVisualization{
 				Type:      "arrow",
 				Color:     "#00ff00",
@@ -316,20 +316,20 @@ func (tdb *TestDataBuilder) BuildTestNavigationData(ctx context.Context, from, t
 			},
 		})
 	}
-	
+
 	path := &domain.ARNavigationPath{
-		ID:                   fmt.Sprintf("nav-path-%d", rand.Intn(1000)),
-		Waypoints:            waypoints,
-		Distance:             totalDistance,
-		EstimatedTime:        totalDistance / 1.4, // Walking speed in mm/s
-		Obstacles:            []*domain.SpatialLocation{}, // No obstacles for simplicity
-		ARInstructions:       instructions,
-		Difficulty:           "easy",
-		Accessibility:        true,
-		Hazardous:            false,
-		CreatedAt:            time.Now(),
+		ID:             fmt.Sprintf("nav-path-%d", rand.Intn(1000)),
+		Waypoints:      waypoints,
+		Distance:       totalDistance,
+		EstimatedTime:  totalDistance / 1.4,         // Walking speed in mm/s
+		Obstacles:      []*domain.SpatialLocation{}, // No obstacles for simplicity
+		ARInstructions: instructions,
+		Difficulty:     "easy",
+		Accessibility:  true,
+		Hazardous:      false,
+		CreatedAt:      time.Now(),
 	}
-	
+
 	return path, nil
 }
 
@@ -338,7 +338,7 @@ func (tdb *TestDataBuilder) BuildTestPerformanceData(ctx context.Context, sessio
 	// Create performance metrics with realistic test data
 	startTime := time.Now().Add(-time.Hour)
 	endTime := time.Now()
-	
+
 	metrics := &domain.ARSessionMetrics{
 		SessionID:                 sessionID,
 		StartTime:                 startTime,
@@ -351,13 +351,13 @@ func (tdb *TestDataBuilder) BuildTestPerformanceData(ctx context.Context, sessio
 		EquipmentOverlaysRendered: rand.Intn(200),
 		NavigationPathsCalculated: rand.Intn(20),
 		ErrorsEncountered:         rand.Intn(5),
-		AverageFrameRate:          float64(30 + rand.Intn(30)), // Random between 30-60 FPS
+		AverageFrameRate:          float64(30 + rand.Intn(30)),     // Random between 30-60 FPS
 		AverageTrackingQuality:    float64(80+rand.Intn(20)) / 100, // Random between 0.8-1.0
-		BatteryUsage:              float64(20 + rand.Intn(60)), // Random between 20-80%
-		MemoryUsage:               float64(100 + rand.Intn(200)), // Random between 100-300 MB
-		ThermalState:              "normal", // Could be randomized: normal, slight, intermediate, critical
+		BatteryUsage:              float64(20 + rand.Intn(60)),     // Random between 20-80%
+		MemoryUsage:               float64(100 + rand.Intn(200)),   // Random between 100-300 MB
+		ThermalState:              "normal",                        // Could be randomized: normal, slight, intermediate, critical
 	}
-	
+
 	return metrics, nil
 }
 

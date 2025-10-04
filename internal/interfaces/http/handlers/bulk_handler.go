@@ -15,11 +15,11 @@ import (
 // BulkHandler handles bulk operations for multiple entities
 type BulkHandler struct {
 	*types.BaseHandler
-	buildingUC   *usecase.BuildingUseCase
-	equipmentUC  *usecase.EquipmentUseCase
-	componentUC  interface{} // ComponentService interface
-	userUC       *usecase.UserUseCase
-	logger       domain.Logger
+	buildingUC  *usecase.BuildingUseCase
+	equipmentUC *usecase.EquipmentUseCase
+	componentUC interface{} // ComponentService interface
+	userUC      *usecase.UserUseCase
+	logger      domain.Logger
 }
 
 // NewBulkHandler creates a new bulk handler
@@ -32,12 +32,12 @@ func NewBulkHandler(
 	logger domain.Logger,
 ) *BulkHandler {
 	return &BulkHandler{
-		BaseHandler:  types.NewBaseHandler(server),
-		buildingUC:   buildingUC,
-		equipmentUC:  equipmentUC,
-		componentUC:  componentUC,
-		userUC:       userUC,
-		logger:       logger,
+		BaseHandler: types.NewBaseHandler(server),
+		buildingUC:  buildingUC,
+		equipmentUC: equipmentUC,
+		componentUC: componentUC,
+		userUC:      userUC,
+		logger:      logger,
 	}
 }
 
@@ -58,8 +58,8 @@ type BulkUpdateRequest struct {
 // BulkDeleteRequest represents a bulk delete request
 type BulkDeleteRequest struct {
 	EntityType string      `json:"entity_type"`
-	IDs         []string    `json:"ids"`
-	Options     BulkOptions `json:"options"`
+	IDs        []string    `json:"ids"`
+	Options    BulkOptions `json:"options"`
 }
 
 // BulkOptions represents options for bulk operations
@@ -71,15 +71,15 @@ type BulkOptions struct {
 
 // BulkResponse represents the response from a bulk operation
 type BulkResponse struct {
-	Success      bool                   `json:"success"`
-	Processed    int                    `json:"processed"`
-	Successful   int                    `json:"successful"`
-	Failed       int                    `json:"failed"`
-	Errors       []BulkError            `json:"errors,omitempty"`
-	Results      []map[string]interface{} `json:"results,omitempty"`
-	Duration     time.Duration           `json:"duration"`
-	EntityType   string                 `json:"entity_type"`
-	Operation    string                 `json:"operation"`
+	Success    bool                     `json:"success"`
+	Processed  int                      `json:"processed"`
+	Successful int                      `json:"successful"`
+	Failed     int                      `json:"failed"`
+	Errors     []BulkError              `json:"errors,omitempty"`
+	Results    []map[string]interface{} `json:"results,omitempty"`
+	Duration   time.Duration            `json:"duration"`
+	EntityType string                   `json:"entity_type"`
+	Operation  string                   `json:"operation"`
 }
 
 // BulkError represents an error in a bulk operation
@@ -288,7 +288,7 @@ func (h *BulkHandler) processBatchCreate(ctx context.Context, entityType string,
 
 	for i, item := range batch {
 		index := startIndex + i
-		
+
 		// Convert to appropriate request type
 		req, err := h.convertToCreateRequest(entityType, item)
 		if err != nil {
@@ -314,7 +314,7 @@ func (h *BulkHandler) processBatchCreate(ctx context.Context, entityType string,
 			response.Results = append(response.Results, result)
 			response.Successful++
 		}
-		
+
 		response.Processed++
 	}
 
@@ -372,7 +372,7 @@ func (h *BulkHandler) processBatchUpdate(ctx context.Context, entityType string,
 
 	for i, item := range batch {
 		index := startIndex + i
-		
+
 		// Convert to appropriate request type
 		req, err := h.convertToUpdateRequest(entityType, item)
 		if err != nil {
@@ -398,7 +398,7 @@ func (h *BulkHandler) processBatchUpdate(ctx context.Context, entityType string,
 			response.Results = append(response.Results, result)
 			response.Successful++
 		}
-		
+
 		response.Processed++
 	}
 
@@ -456,7 +456,7 @@ func (h *BulkHandler) processBatchDelete(ctx context.Context, entityType string,
 
 	for i, id := range batch {
 		index := startIndex + i
-		
+
 		// Delete entity
 		err := h.deleteEntity(ctx, entityType, id)
 		if err != nil {
@@ -474,7 +474,7 @@ func (h *BulkHandler) processBatchDelete(ctx context.Context, entityType string,
 			})
 			response.Successful++
 		}
-		
+
 		response.Processed++
 	}
 

@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/gorilla/websocket"
 )
 
 // Client represents a WebSocket client connection
@@ -55,8 +55,8 @@ type Message struct {
 
 // ClientConfig represents client configuration
 type ClientConfig struct {
-	ReadBufferSize  int           `json:"read_buffer_size"`
-	WriteBufferSize int           `json:"write_buffer_size"`
+	ReadBufferSize  int `json:"read_buffer_size"`
+	WriteBufferSize int `json:"write_buffer_size"`
 	CheckOrigin     func(r *http.Request) bool
 }
 

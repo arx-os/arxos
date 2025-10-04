@@ -89,7 +89,7 @@ func TestSpatialValidator_ValidateQuaternion(t *testing.T) {
 		},
 		{
 			name:    "Infinite components",
-			quat:  &Quaternion{W: math.Inf(1), X: math.Inf(1), Y: math.Inf(1), Z: math.Inf(1)},
+			quat:    &Quaternion{W: math.Inf(1), X: math.Inf(1), Y: math.Inf(1), Z: math.Inf(1)},
 			wantErr: true,
 			errMsg:  "quaternion components cannot be infinite",
 		},
@@ -136,7 +136,7 @@ func TestSpatialValidator_ValidateSpatialAnchor(t *testing.T) {
 				RoomID:      "room-001",
 				EquipmentID: "equipment-001",
 				Platform:    "ARKit",
-				Stability:    0.8,
+				Stability:   0.8,
 				Range:       10.0,
 			},
 			wantErr: false,
@@ -150,9 +150,9 @@ func TestSpatialValidator_ValidateSpatialAnchor(t *testing.T) {
 		{
 			name: "Empty ID",
 			anchor: &SpatialAnchor{
-				ID:       "",
-				Position: &SpatialLocation{X: 100, Y: 200, Z: 300},
-				Rotation: &Quaternion{W: 1, X: 0, Y: 0, Z: 0},
+				ID:         "",
+				Position:   &SpatialLocation{X: 100, Y: 200, Z: 300},
+				Rotation:   &Quaternion{W: 1, X: 0, Y: 0, Z: 0},
 				BuildingID: "building-001",
 			},
 			wantErr: true,
@@ -189,8 +189,8 @@ func TestSpatialValidator_ValidateSpatialAnchor(t *testing.T) {
 				Position:   &SpatialLocation{X: 100, Y: 200, Z: 300},
 				Rotation:   &Quaternion{W: 1, X: 0, Y: 0, Z: 0},
 				Confidence: 0.9,
-				Timestamp: time.Now(), // Use current time
-				Platform:  "InvalidPlatform",
+				Timestamp:  time.Now(), // Use current time
+				Platform:   "InvalidPlatform",
 				BuildingID: "building-001",
 			},
 			wantErr: true,
@@ -227,10 +227,10 @@ func TestSpatialValidator_ValidateARNavigationPath(t *testing.T) {
 			Position: waypoints[1],
 			Priority: "medium",
 			ARVisualization: ARVisualization{
-				Type:  "arrow",
-				Color: "#00ff00",
-				Size:  1.0,
-				Opacity: 0.8,
+				Type:      "arrow",
+				Color:     "#00ff00",
+				Size:      1.0,
+				Opacity:   0.8,
 				Intensity: 1.0,
 				Animation: "pulse",
 			},
@@ -238,10 +238,10 @@ func TestSpatialValidator_ValidateARNavigationPath(t *testing.T) {
 	}
 
 	tests := []struct {
-		name string
-		path *ARNavigationPath
+		name    string
+		path    *ARNavigationPath
 		wantErr bool
-		errMsg string
+		errMsg  string
 	}{
 		{
 			name: "Valid navigation path",
@@ -284,9 +284,9 @@ func TestSpatialValidator_ValidateARNavigationPath(t *testing.T) {
 		{
 			name: "Invalid difficulty",
 			path: &ARNavigationPath{
-				ID:        "path-001",
-				Distance:  100,
-				Waypoints: waypoints,
+				ID:         "path-001",
+				Distance:   100,
+				Waypoints:  waypoints,
 				Difficulty: "invalid",
 			},
 			wantErr: true,
@@ -295,8 +295,8 @@ func TestSpatialValidator_ValidateARNavigationPath(t *testing.T) {
 		{
 			name: "Distance exceeds maximum",
 			path: &ARNavigationPath{
-				ID:       "path-001",
-				Distance: 20000.0, // Exceeds default max distance
+				ID:        "path-001",
+				Distance:  20000.0, // Exceeds default max distance
 				Waypoints: waypoints,
 			},
 			wantErr: true,
@@ -319,22 +319,22 @@ func TestSpatialValidator_ValidateARNavigationPath(t *testing.T) {
 
 func TestSpatialValidator_ValidateARInstruction(t *testing.T) {
 	validator := NewSpatialValidator()
-	
+
 	position := &SpatialLocation{X: 100, Y: 200, Z: 300}
 	visualization := ARVisualization{
-		Type:     "arrow",
-		Color:    "#00ff00",
-		Size:     1.0,
-		Opacity:  0.8,
+		Type:      "arrow",
+		Color:     "#00ff00",
+		Size:      1.0,
+		Opacity:   0.8,
 		Intensity: 1.0,
 		Animation: "pulse",
 	}
 
 	tests := []struct {
-		name       string
+		name        string
 		instruction *ARInstruction
-		wantErr    bool
-		errMsg     string
+		wantErr     bool
+		errMsg      string
 	}{
 		{
 			name: "Valid instruction",
@@ -350,16 +350,16 @@ func TestSpatialValidator_ValidateARInstruction(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:       "Nil instruction",
+			name:        "Nil instruction",
 			instruction: nil,
-			wantErr:    true,
-			errMsg:     "AR instruction cannot be nil",
+			wantErr:     true,
+			errMsg:      "AR instruction cannot be nil",
 		},
 		{
 			name: "Empty ID",
 			instruction: &ARInstruction{
-				ID:    "",
-				Type:  "move",
+				ID:   "",
+				Type: "move",
 			},
 			wantErr: true,
 			errMsg:  "AR instruction ID cannot be empty",
@@ -412,10 +412,10 @@ func TestSpatialValidator_ValidateARVisualization(t *testing.T) {
 	validator := NewSpatialValidator()
 
 	tests := []struct {
-		name         string
+		name          string
 		visualization *ARVisualization
-		wantErr      bool
-		errMsg       string
+		wantErr       bool
+		errMsg        string
 	}{
 		{
 			name: "Valid visualization",
@@ -430,10 +430,10 @@ func TestSpatialValidator_ValidateARVisualization(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:         "Nil visualization",
+			name:          "Nil visualization",
 			visualization: nil,
-			wantErr:      true,
-			errMsg:       "AR visualization cannot be nil",
+			wantErr:       true,
+			errMsg:        "AR visualization cannot be nil",
 		},
 		{
 			name: "Invalid type",
@@ -484,7 +484,7 @@ func TestSpatialValidator_ValidateARVisualization(t *testing.T) {
 			name: "Invalid intensity",
 			visualization: &ARVisualization{
 				Type:      "arrow",
-				Size:      1.0, // Add size field
+				Size:      1.0,  // Add size field
 				Intensity: -0.5, // < 0
 			},
 			wantErr: true,
@@ -535,7 +535,7 @@ func TestSpatialValidator_ValidateARSessionMetrics(t *testing.T) {
 				EndTime:                   endTime,
 				Duration:                  3600.0, // 1 hour in seconds
 				AnchorsDetected:           10,
-				AnchorsCreated:           5,
+				AnchorsCreated:            5,
 				EquipmentOverlaysRendered: 20,
 				AverageFrameRate:          30.0,
 				AverageTrackingQuality:    0.9,
@@ -586,11 +586,11 @@ func TestSpatialValidator_ValidateARSessionMetrics(t *testing.T) {
 		{
 			name: "Invalid tracking quality",
 			metrics: &ARSessionMetrics{
-				SessionID:               "session-001",
-				StartTime:               startTime,
-				EndTime:                 endTime,
-				Duration:                3600.0, // Add duration
-				AverageTrackingQuality: 1.5, // > 1
+				SessionID:              "session-001",
+				StartTime:              startTime,
+				EndTime:                endTime,
+				Duration:               3600.0, // Add duration
+				AverageTrackingQuality: 1.5,    // > 1
 			},
 			wantErr: true,
 			errMsg:  "AR session tracking quality must be between 0 and 1",
@@ -601,8 +601,8 @@ func TestSpatialValidator_ValidateARSessionMetrics(t *testing.T) {
 				SessionID:    "session-001",
 				StartTime:    startTime,
 				EndTime:      endTime,
-				Duration:    3600.0, // Add duration
-				BatteryUsage: 150.0, // > 100%
+				Duration:     3600.0, // Add duration
+				BatteryUsage: 150.0,  // > 100%
 			},
 			wantErr: true,
 			errMsg:  "AR session battery usage must be between 0 and 100 percent",
@@ -610,10 +610,10 @@ func TestSpatialValidator_ValidateARSessionMetrics(t *testing.T) {
 		{
 			name: "Invalid thermal state",
 			metrics: &ARSessionMetrics{
-				SessionID:   "session-001",
-				StartTime:   startTime,
-				EndTime:     endTime,
-				Duration:    3600.0, // Add duration
+				SessionID:    "session-001",
+				StartTime:    startTime,
+				EndTime:      endTime,
+				Duration:     3600.0,       // Add duration
 				ThermalState: "overheated", // Invalid state
 			},
 			wantErr: true,
@@ -638,25 +638,25 @@ func TestSpatialValidator_ValidateDistance(t *testing.T) {
 	validator := NewSpatialValidator()
 
 	tests := []struct {
-		name            string
-		from            *SpatialLocation
-		to              *SpatialLocation
+		name             string
+		from             *SpatialLocation
+		to               *SpatialLocation
 		expectedDistance float64
-		wantErr         bool
+		wantErr          bool
 	}{
 		{
-			name:            "Valid distance within tolerance",
-			from:            &SpatialLocation{X: 0, Y: 0, Z: 0},
-			to:              &SpatialLocation{X: 100, Y: 100, Z: 0},
+			name:             "Valid distance within tolerance",
+			from:             &SpatialLocation{X: 0, Y: 0, Z: 0},
+			to:               &SpatialLocation{X: 100, Y: 100, Z: 0},
 			expectedDistance: 141.42,
-			wantErr:         false,
+			wantErr:          false,
 		},
 		{
-			name:            "Distance outside tolerance",
-			from:            &SpatialLocation{X: 0, Y: 0, Z: 0},
-			to:              &SpatialLocation{X: 100, Y: 100, Z: 0},
+			name:             "Distance outside tolerance",
+			from:             &SpatialLocation{X: 0, Y: 0, Z: 0},
+			to:               &SpatialLocation{X: 100, Y: 100, Z: 0},
 			expectedDistance: 200.0, // Too far from actual distance
-			wantErr:         true,
+			wantErr:          true,
 		},
 		{
 			name:             "Nil locations",
@@ -778,30 +778,30 @@ func TestSpatialLocation_IsValid(t *testing.T) {
 
 func TestSpatialValidator_Configuration(t *testing.T) {
 	tests := []struct {
-		name             string
-		maxDistance      float64
-		minConfidence    float64
+		name            string
+		maxDistance     float64
+		minConfidence   float64
 		maxAge          time.Duration
 		expectConfigErr bool
 	}{
 		{
-			name:             "Valid configuration",
-			maxDistance:      5000.0,
-			minConfidence:    0.7,
+			name:            "Valid configuration",
+			maxDistance:     5000.0,
+			minConfidence:   0.7,
 			maxAge:          12 * time.Hour,
 			expectConfigErr: false,
 		},
 		{
-			name:             "High confidence threshold",
-			maxDistance:      10000.0,
-			minConfidence:    1.5, // Invalid: > 1
+			name:            "High confidence threshold",
+			maxDistance:     10000.0,
+			minConfidence:   1.5, // Invalid: > 1
 			maxAge:          24 * time.Hour,
 			expectConfigErr: true,
 		},
 		{
-			name:             "Negative distance",
-			maxDistance:      -1000.0,
-			minConfidence:    0.5,
+			name:            "Negative distance",
+			maxDistance:     -1000.0,
+			minConfidence:   0.5,
 			maxAge:          24 * time.Hour,
 			expectConfigErr: true,
 		},

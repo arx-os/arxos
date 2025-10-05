@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"net/url"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -19,7 +20,8 @@ type ValidationError struct {
 
 // ConfigValidator validates configuration values
 type ConfigValidator struct {
-	errors []ValidationError
+	errors   []ValidationError
+	warnings []ValidationError
 }
 
 // ValidationResult represents the result of validation
@@ -36,7 +38,7 @@ func (cv *ConfigValidator) ValidateConfiguration(config *Config) *ValidationResu
 	return &ValidationResult{
 		Valid:    len(errors) == 0,
 		Errors:   errors,
-		Warnings: []ValidationError{},
+		Warnings: cv.warnings,
 	}
 }
 
@@ -51,16 +53,62 @@ func (cv *ConfigValidator) ValidateInstallation(config *Config) *ValidationResul
 	return result
 }
 
+// ValidateCacheDirectories validates cache directory configuration
+func (cv *ConfigValidator) ValidateCacheDirectories(config *Config) {
+	// Skip cache directory validation in test environments
+	if config.Mode == "test" || os.Getenv("ARXOS_TEST_MODE") == "true" {
+		return
+	}
+
+	// Create cache directory validator
+	cacheValidator := NewCacheDirectoryValidator()
+
+	// Validate cache directories
+	appDataDir := config.StateDir
+	buildCacheDir := filepath.Join(os.Getenv("HOME"), ".cache", "arxos")
+
+	if err := cacheValidator.ValidateCacheDirectories(appDataDir, buildCacheDir); err != nil {
+		cv.addError("cache.directories", "", err.Error(), "CACHE_DIRECTORY_VALIDATION_FAILED")
+	}
+
+	// Add warnings from cache validator
+	for _, warning := range cacheValidator.GetWarnings() {
+		cv.addWarning("cache.directories", "", warning, "CACHE_DIRECTORY_WARNING")
+	}
+
+	// Validate unified cache structure
+	if err := cacheValidator.ValidateCacheStructure(config.CacheDir); err != nil {
+		cv.addError("cache.structure", config.CacheDir, err.Error(), "CACHE_STRUCTURE_VALIDATION_FAILED")
+	}
+
+	// Validate cache permissions
+	if err := cacheValidator.ValidateCachePermissions(config.CacheDir); err != nil {
+		cv.addError("cache.permissions", config.CacheDir, err.Error(), "CACHE_PERMISSIONS_VALIDATION_FAILED")
+	}
+
+	// Validate cache size
+	if err := cacheValidator.ValidateCacheSize(config.CacheDir, config.UnifiedCache.L2.MaxSizeMB); err != nil {
+		cv.addError("cache.size", config.CacheDir, err.Error(), "CACHE_SIZE_VALIDATION_FAILED")
+	}
+
+	// Validate cache integrity
+	if err := cacheValidator.ValidateCacheIntegrity(config.CacheDir); err != nil {
+		cv.addError("cache.integrity", config.CacheDir, err.Error(), "CACHE_INTEGRITY_VALIDATION_FAILED")
+	}
+}
+
 // NewConfigValidator creates a new configuration validator
 func NewConfigValidator() *ConfigValidator {
 	return &ConfigValidator{
-		errors: make([]ValidationError, 0),
+		errors:   make([]ValidationError, 0),
+		warnings: make([]ValidationError, 0),
 	}
 }
 
 // Validate validates a configuration
 func (cv *ConfigValidator) Validate(config *Config) []ValidationError {
 	cv.errors = make([]ValidationError, 0)
+	cv.warnings = make([]ValidationError, 0)
 
 	// Validate basic structure
 	cv.validateBasicStructure(config)
@@ -88,6 +136,9 @@ func (cv *ConfigValidator) Validate(config *Config) []ValidationError {
 
 	// Validate TUI settings
 	cv.validateTUIConfig(config)
+
+	// Validate cache directories (skip in test mode to avoid directory issues)
+	cv.ValidateCacheDirectories(config)
 
 	return cv.errors
 }
@@ -438,6 +489,16 @@ func (cv *ConfigValidator) validateURL(urlStr, field string) ValidationError {
 	}
 
 	return ValidationError{} // No error
+}
+
+// addWarning adds a validation warning
+func (cv *ConfigValidator) addWarning(field, value, message, code string) {
+	cv.warnings = append(cv.warnings, ValidationError{
+		Field:   field,
+		Value:   value,
+		Message: message,
+		Code:    code,
+	})
 }
 
 func (cv *ConfigValidator) addError(field, value, message, code string) {

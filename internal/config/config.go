@@ -530,7 +530,7 @@ func Default() *Config {
 				Enabled:    true,
 				MaxSizeMB:  1000, // 1GB
 				DefaultTTL: time.Hour,
-				Path:       "cache/l2",
+				Path:       filepath.Join(homeDir, ".arxos", "cache", "l2"),
 			},
 			L3: struct {
 				Enabled    bool          `json:"enabled" yaml:"enabled"`

@@ -45,6 +45,162 @@ This guide provides comprehensive instructions for deploying the ArxOS IfcOpenSh
 └─────────────────┘
 ```
 
+## Test Environment Setup
+
+### Test Database Configuration
+
+For testing and development, set up a separate test database:
+
+```bash
+# Create test database and user
+psql -h localhost -p 5432 -U postgres -d postgres -c "
+CREATE USER arxos_test WITH PASSWORD 'test_password' CREATEDB;
+CREATE DATABASE arxos_test OWNER arxos_test;
+"
+
+# Grant permissions and enable extensions
+psql -h localhost -p 5432 -U postgres -d arxos_test -c "
+ALTER USER arxos_test CREATEDB CREATEROLE SUPERUSER;
+CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS postgis_topology;
+CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";
+"
+```
+
+### Test Environment Variables
+
+```bash
+# Test configuration
+export ARXOS_MODE=test
+export POSTGIS_HOST=localhost
+export POSTGIS_PORT=5432
+export POSTGIS_DATABASE=arxos_test
+export POSTGIS_USER=arxos_test
+export POSTGIS_PASSWORD=test_password
+export POSTGIS_SSLMODE=disable
+export POSTGIS_SRID=900913
+
+# Test security configuration
+export ARXOS_JWT_SECRET=test_jwt_secret_key_for_integration_tests
+export ARXOS_JWT_EXPIRY=24h
+export ARXOS_JWT_ALGORITHM=HS256
+export ARXOS_ENABLE_AUTH=false
+export ARXOS_ENABLE_TLS=false
+```
+
+### Docker Compose Test Environment
+
+```yaml
+# docker-compose.test.yml
+version: '3.8'
+
+services:
+  postgres-test:
+    image: postgis/postgis:15-3.3
+    environment:
+      POSTGRES_DB: arxos_test
+      POSTGRES_USER: arxos_test
+      POSTGRES_PASSWORD: test_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+      - ./scripts/init-postgis.sql:/docker-entrypoint-initdb.d/init-postgis.sql
+
+  redis-test:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_test_data:/data
+
+volumes:
+  postgres_test_data:
+  redis_test_data:
+```
+
+### Running Tests
+
+```bash
+# Start test environment
+docker-compose -f docker-compose.test.yml up -d
+
+# Run integration tests
+make test-integration
+
+# Run specific test
+go test -v ./test/integration/services/ -run TestBuildingService -timeout 2m
+
+# Stop test environment
+docker-compose -f docker-compose.test.yml down
+```
+
+## Configuration Management
+
+### Environment Variables
+
+ArxOS uses environment variables with the `ARXOS_` prefix for configuration:
+
+```bash
+# Core configuration
+export ARXOS_MODE=production
+export ARXOS_VERSION=1.0.0
+export ARXOS_STATE_DIR=/var/lib/arxos
+export ARXOS_CACHE_DIR=/var/cache/arxos
+
+# Database configuration
+export ARXOS_DB_HOST=localhost
+export ARXOS_DB_PORT=5432
+export ARXOS_DB_NAME=arxos
+export ARXOS_DB_USER=arxos
+export ARXOS_DB_PASSWORD=secure_password
+
+# PostGIS configuration (primary database)
+export POSTGIS_HOST=localhost
+export POSTGIS_PORT=5432
+export POSTGIS_DATABASE=arxos
+export POSTGIS_USER=arxos
+export POSTGIS_PASSWORD=secure_password
+export POSTGIS_SSLMODE=require
+export POSTGIS_SRID=900913
+
+# Security configuration
+export ARXOS_JWT_SECRET=your-secure-jwt-secret-key
+export ARXOS_JWT_EXPIRY=1h
+export ARXOS_JWT_ALGORITHM=HS256
+export ARXOS_ENABLE_AUTH=true
+export ARXOS_ENABLE_TLS=true
+
+# Redis configuration
+export REDIS_HOST=localhost
+export REDIS_PORT=6379
+export REDIS_PASSWORD=secure_redis_password
+export REDIS_DB=0
+```
+
+### Configuration Files
+
+Configuration files are located in `configs/`:
+
+- `configs/environments/production.yml` - Production settings
+- `configs/environments/development.yml` - Development settings
+- `configs/environments/test.yml` - Test settings
+- `configs/api.example.yaml` - API server configuration example
+
+### Configuration Validation
+
+```bash
+# Validate configuration
+arx config validate
+
+# Generate configuration from templates
+arx config generate --env=production
+
+# Test configuration loading
+arx config test --config=configs/environments/production.yml
+```
+
 ## Prerequisites
 
 ### System Requirements

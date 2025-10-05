@@ -1,0 +1,4 @@
+./building_repo.go
+./client.go
+./postgis.go
+./spatial_repo.go

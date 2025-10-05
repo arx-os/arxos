@@ -1,0 +1,7 @@
+./auth.go
+./authorization.go
+./building.go
+./floor.go
+./organization.go
+./spatial.go
+./user.go

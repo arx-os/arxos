@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/arx-os/arxos/internal/app"
+	"github.com/arx-os/arxos/internal/build"
 	"github.com/arx-os/arxos/internal/cli/commands"
 	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/internal/domain"
@@ -147,6 +148,9 @@ func (a *App) wireCommands() {
 	// Service commands
 	a.rootCmd.AddCommand(commands.CreateServeCommand(serviceContext))
 	a.rootCmd.AddCommand(commands.CreateWatchCommand(serviceContext))
+
+	// Build performance commands
+	a.rootCmd.AddCommand(build.PerformanceCommand())
 
 	// Utility commands
 	a.rootCmd.AddCommand(commands.CreateTraceCommand(serviceContext))

@@ -1,0 +1,14 @@
+./api_handler.go
+./auth_handler.go
+./base.go
+./building_handler.go
+./bulk_handler.go
+./component_handler.go
+./equipment_handler.go
+./health_handler.go
+./ifc_handler.go
+./job_handler.go
+./mobile_handler.go
+./organization_handler.go
+./spatial_handler.go
+./user_handler.go

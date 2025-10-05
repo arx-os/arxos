@@ -1,7 +1,13 @@
 # ArxOS Makefile
 # Provides commands for building, testing, and running the ArxOS platform with IfcOpenShell integration
 
-.PHONY: help build build-all test test-all docker docker-all run run-dev clean lint format security test-coverage clean-all
+.PHONY: help build build-all test test-all docker docker-all run run-dev clean lint format security test-coverage clean-all build-cached build-parallel build-with-metrics
+
+# Build optimization variables
+GOCACHE ?= $(PWD)/.cache/go-build
+GOMODCACHE ?= $(PWD)/.cache/go-mod
+DOCKER_CACHE ?= $(PWD)/.cache/docker
+BUILD_CACHE_DIR ?= $(PWD)/.cache
 
 # Default target
 help:
@@ -9,6 +15,9 @@ help:
 	@echo ""
 	@echo "Building:"
 	@echo "  build          Build ArxOS main application"
+	@echo "  build-cached   Build ArxOS with build cache optimization"
+	@echo "  build-parallel Build all components in parallel"
+	@echo "  build-with-metrics Build with performance monitoring"
 	@echo "  build-all      Build all components (ArxOS + IfcOpenShell service)"
 	@echo "  docker         Build Docker images for all services"
 	@echo "  docker-dev     Build Docker images for development"
@@ -29,6 +38,7 @@ help:
 	@echo "  lint           Run linters on Go code"
 	@echo "  format         Format Go code"
 	@echo "  clean          Clean build artifacts"
+	@echo "  clean-cache    Clean build cache"
 	@echo "  setup          Setup development environment"
 	@echo "  security       Run security scanning"
 	@echo "  test-coverage  Run tests with coverage report"
@@ -41,26 +51,76 @@ build:
 	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/arx cmd/arx/main.go
 	@echo "✅ ArxOS built successfully"
 
-build-all: build build-ifc-service
+# Build with caching optimization
+build-cached:
+	@echo "Building ArxOS with build cache optimization..."
+	mkdir -p bin $(GOCACHE) $(GOMODCACHE)
+	GOCACHE=$(GOCACHE) GOMODCACHE=$(GOMODCACHE) \
+	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/arx cmd/arx/main.go
+	@echo "✅ ArxOS built successfully with cache"
+
+# Build with performance monitoring
+build-with-metrics:
+	@echo "Building ArxOS with performance monitoring..."
+	mkdir -p bin $(GOCACHE) $(GOMODCACHE)
+	@start_time=$$(date +%s); \
+	GOCACHE=$(GOCACHE) GOMODCACHE=$(GOMODCACHE) \
+	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/arx cmd/arx/main.go; \
+	end_time=$$(date +%s); \
+	duration=$$((end_time - start_time)); \
+	build_size=$$(du -h bin/arx | cut -f1); \
+	echo "✅ Build completed in $$duration seconds (size: $$build_size)"
+
+# Parallel builds
+build-parallel:
+	@echo "Building all components in parallel..."
+	@$(MAKE) -j4 build-go build-ifc-service build-mobile
 	@echo "✅ All components built successfully"
+
+build-go:
+	@echo "Building Go application..."
+	mkdir -p bin $(GOCACHE) $(GOMODCACHE)
+	GOCACHE=$(GOCACHE) GOMODCACHE=$(GOMODCACHE) \
+	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/arx cmd/arx/main.go
+	@echo "✅ Go application built successfully"
 
 build-ifc-service:
 	@echo "Building IfcOpenShell service..."
 	cd services/ifcopenshell-service && pip install -r requirements.txt || exit 1
 	@echo "✅ IfcOpenShell service built successfully"
 
-# Docker builds
+build-mobile:
+	@echo "Building mobile application..."
+	cd mobile && npm ci || exit 1
+	@echo "✅ Mobile application built successfully"
+
+build-all: build-cached build-ifc-service
+	@echo "✅ All components built successfully"
+
+# Docker builds with caching
 docker:
-	@echo "Building Docker images..."
-	docker build -t joelpate/arxos:latest . || exit 1
-	docker build -t joelpate/arxos-ifc-service:latest services/ifcopenshell-service/ || exit 1
-	@echo "✅ Docker images built successfully"
+	@echo "Building Docker images with cache optimization..."
+	DOCKER_BUILDKIT=1 docker build \
+		--cache-from joelpate/arxos:latest \
+		--cache-to joelpate/arxos:cache \
+		-t joelpate/arxos:latest . || exit 1
+	DOCKER_BUILDKIT=1 docker build \
+		--cache-from joelpate/arxos-ifc-service:latest \
+		--cache-to joelpate/arxos-ifc-service:cache \
+		-t joelpate/arxos-ifc-service:latest services/ifcopenshell-service/ || exit 1
+	@echo "✅ Docker images built successfully with cache"
 
 docker-dev:
-	@echo "Building development Docker images..."
-	docker build -t joelpate/arxos:dev . || exit 1
-	docker build -t joelpate/arxos-ifc-service:dev services/ifcopenshell-service/ || exit 1
-	@echo "✅ Development Docker images built successfully"
+	@echo "Building development Docker images with cache optimization..."
+	DOCKER_BUILDKIT=1 docker build \
+		--cache-from joelpate/arxos:dev \
+		--cache-to joelpate/arxos:dev-cache \
+		-t joelpate/arxos:dev . || exit 1
+	DOCKER_BUILDKIT=1 docker build \
+		--cache-from joelpate/arxos-ifc-service:dev \
+		--cache-to joelpate/arxos-ifc-service:dev-cache \
+		-t joelpate/arxos-ifc-service:dev services/ifcopenshell-service/ || exit 1
+	@echo "✅ Development Docker images built successfully with cache"
 
 # Testing
 test:
@@ -139,6 +199,19 @@ clean:
 	rm -rf services/ifcopenshell-service/tests/__pycache__/
 	docker system prune -f
 	@echo "✅ Cleanup completed"
+
+# Clean build cache
+clean-cache:
+	@echo "Cleaning build cache..."
+	rm -rf $(BUILD_CACHE_DIR)
+	@echo "✅ Build cache cleaned"
+
+# Clean Docker cache
+clean-docker-cache:
+	@echo "Cleaning Docker cache..."
+	docker builder prune -f
+	docker system prune -f
+	@echo "✅ Docker cache cleaned"
 
 # Setup development environment
 setup:

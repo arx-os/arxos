@@ -1,0 +1,10 @@
+./cadtui.go
+./component.go
+./config.go
+./crud.go
+./import_export.go
+./repository.go
+./serve.go
+./services.go
+./system.go
+./utility.go

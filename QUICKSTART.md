@@ -8,6 +8,7 @@ Get up and running with ArxOS in under 5 minutes!
 - **Docker & Docker Compose** - [Download](https://www.docker.com/products/docker-desktop)
 - **Git** - [Download](https://git-scm.com/downloads)
 - **Make** - Usually pre-installed on macOS/Linux
+- **PostgreSQL 14+** - [Download](https://www.postgresql.org/download/)
 
 ## 🚀 Quick Start
 
@@ -28,7 +29,38 @@ docker-compose up -d
 # docker-compose -f docker-compose.test.yml up -d
 ```
 
-### 2. Install Dependencies
+### 2. Database Setup
+
+```bash
+# Create main database and user
+psql -h localhost -p 5432 -U postgres -d postgres -c "
+CREATE USER arxos WITH PASSWORD 'arxos' CREATEDB;
+CREATE DATABASE arxos OWNER arxos;
+"
+
+# Enable PostGIS extensions
+psql -h localhost -p 5432 -U postgres -d arxos -c "
+CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS postgis_topology;
+CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";
+"
+
+# Create test database and user (for running tests)
+psql -h localhost -p 5432 -U postgres -d postgres -c "
+CREATE USER arxos_test WITH PASSWORD 'test_password' CREATEDB;
+CREATE DATABASE arxos_test OWNER arxos_test;
+"
+
+# Enable PostGIS extensions for test database
+psql -h localhost -p 5432 -U postgres -d arxos_test -c "
+ALTER USER arxos_test CREATEDB CREATEROLE SUPERUSER;
+CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS postgis_topology;
+CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";
+"
+```
+
+### 3. Install Dependencies
 
 ```bash
 # Download Go modules
@@ -41,34 +73,134 @@ go run cmd/arx/main.go migrate up
 make setup
 ```
 
-### 3. Build and Run
+### 4. Build and Run
 
 ```bash
 # Build the application
 make build
 
 # Run the CLI
-./bin/arx version
+./bin/arx --help
 
-# Start the API server
-./bin/arx serve
+# Run the API server
+./bin/arx server
+
+# Run tests
+make test
+
+# Run integration tests
+make test-integration
 ```
 
-### 4. Verify Installation
+## 🔧 Configuration
+
+### Environment Variables
+
+ArxOS uses environment variables with the `ARXOS_` prefix for configuration:
 
 ```bash
-# Check system status
-./bin/arx status
+# Core configuration
+export ARXOS_MODE=development
+export ARXOS_VERSION=1.0.0
+export ARXOS_STATE_DIR=./state
+export ARXOS_CACHE_DIR=./cache
 
-# List available commands
-./bin/arx help
+# Database configuration
+export ARXOS_DB_HOST=localhost
+export ARXOS_DB_PORT=5432
+export ARXOS_DB_NAME=arxos
+export ARXOS_DB_USER=arxos
+export ARXOS_DB_PASSWORD=arxos
 
-# Test API endpoint
-curl http://localhost:8080/health
+# PostGIS configuration (primary database)
+export POSTGIS_HOST=localhost
+export POSTGIS_PORT=5432
+export POSTGIS_DATABASE=arxos
+export POSTGIS_USER=arxos
+export POSTGIS_PASSWORD=arxos
+export POSTGIS_SSLMODE=disable
+export POSTGIS_SRID=900913
 
-# Check mobile app (if needed)
-cd mobile && npm install && npm start
+# Security configuration
+export ARXOS_JWT_SECRET=your-secure-jwt-secret-key
+export ARXOS_JWT_EXPIRY=24h
+export ARXOS_ENABLE_AUTH=false
+export ARXOS_ENABLE_TLS=false
+
+# Redis configuration
+export REDIS_HOST=localhost
+export REDIS_PORT=6379
+export REDIS_PASSWORD=""
+export REDIS_DB=0
 ```
+
+### Configuration Files
+
+Configuration files are located in `configs/`:
+
+- `configs/environments/development.yml` - Development settings
+- `configs/environments/production.yml` - Production settings
+- `configs/environments/test.yml` - Test settings
+- `configs/api.example.yaml` - API server configuration example
+
+## 🧪 Testing
+
+### Run Tests
+
+```bash
+# Unit tests
+make test
+
+# Integration tests
+make test-integration
+
+# Specific test
+go test -v ./test/integration/services/ -run TestBuildingService
+
+# Test with timeout
+go test -v ./test/integration/services/ -run TestBuildingService -timeout 2m
+```
+
+### Test Database
+
+The test suite uses a separate database (`arxos_test`) to avoid conflicts with development data. Make sure you've set up the test database as shown in the Database Setup section above.
+
+## 📱 Mobile Development
+
+### Prerequisites
+
+- **Node.js 20+** - [Download](https://nodejs.org/)
+- **React Native CLI** - `npm install -g @react-native-community/cli`
+- **iOS**: Xcode 15+ and iOS Simulator
+- **Android**: Android Studio and Android SDK
+
+### Setup
+
+```bash
+# Navigate to mobile directory
+cd mobile
+
+# Install dependencies
+npm install
+
+# iOS setup
+cd ios && pod install && cd ..
+
+# Run on iOS
+npm run ios
+
+# Run on Android
+npm run android
+```
+
+### Mobile Dependencies
+
+The mobile app uses modern dependencies:
+
+- **React Native**: 0.73.6
+- **TypeScript**: 5.3.3
+- **React**: 18.3.1
+- **Node.js**: 20+
 
 ## 🏗️ First Building
 
@@ -230,41 +362,53 @@ make db-reset
 
 ### Common Issues
 
-**Port already in use:**
+1. **Database Connection Failed**
+   ```bash
+   # Check if PostgreSQL is running
+   docker ps | grep postgres
+   
+   # Check database exists
+   psql -h localhost -p 5432 -U postgres -l | grep arxos
+   ```
+
+2. **Test Database Issues**
+   ```bash
+   # Recreate test database
+   psql -h localhost -p 5432 -U postgres -d postgres -c "
+   DROP DATABASE IF EXISTS arxos_test;
+   CREATE DATABASE arxos_test OWNER arxos_test;
+   "
+   ```
+
+3. **Configuration Issues**
+   ```bash
+   # Validate configuration
+   go run cmd/arx/main.go config validate
+   
+   # Test configuration loading
+   go run cmd/arx/main.go config test
+   ```
+
+4. **Mobile Build Issues**
+   ```bash
+   # Clean and reinstall
+   cd mobile
+   rm -rf node_modules package-lock.json
+   npm install
+   cd ios && pod install && cd ..
+   ```
+
+### Logs
+
 ```bash
-# Check what's using port 8080
-lsof -i :8080
+# Application logs
+docker-compose logs -f arxos
 
-# Kill the process
-kill -9 <PID>
+# Database logs
+docker-compose logs -f postgres
 
-# Or use a different port
-export ARXOS_API_PORT=8081
-./bin/arx serve
-```
-
-**Database connection failed:**
-```bash
-# Check if PostGIS is running
-docker-compose ps
-
-# Restart PostGIS
-docker-compose restart postgis
-
-# Check database logs
-docker-compose logs postgis
-```
-
-**Build failures:**
-```bash
-# Clean and rebuild
-make clean
-go mod tidy
-make build
-
-# Or use the complete cleanup
-make clean-all
-make build
+# All services
+docker-compose logs -f
 ```
 
 ### Getting Help

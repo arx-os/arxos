@@ -1,5 +1,5 @@
 # ArxOS Dockerfile
-# Multi-stage build for optimized production image
+# Multi-stage build for optimized production image with BuildKit cache optimization
 
 # Build arguments for version injection
 ARG VERSION=unknown
@@ -18,16 +18,19 @@ WORKDIR /app
 # Copy go mod files first for better layer caching
 COPY go.mod go.sum ./
 
-# Download dependencies
-RUN go mod download && go mod verify
+# Download dependencies with cache mount
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download && go mod verify
 
 # Copy only necessary source directories (optimizes layer caching)
 COPY cmd/ cmd/
 COPY internal/ internal/
 COPY pkg/ pkg/
 
-# Build the application with version information
-RUN CGO_ENABLED=0 GOOS=linux go install \
+# Build the application with version information and cache mounts
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=linux go install \
     -a -installsuffix cgo \
     -ldflags="-s -w -X github.com/arx-os/arxos/cmd/arx.Version=${VERSION} -X github.com/arx-os/arxos/cmd/arx.Commit=${COMMIT} -X github.com/arx-os/arxos/cmd/arx.BuildTime=${BUILD_TIME}" \
     ./cmd/arx

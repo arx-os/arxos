@@ -1,0 +1,8 @@
+./config.go
+./environments.go
+./loader.go
+./manager.go
+./migration.go
+./service_loader.go
+./templates.go
+./validator.go

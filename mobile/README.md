@@ -32,6 +32,37 @@ The app follows a clean architecture pattern with:
 - **Axios**: HTTP client
 - **React Native Vector Icons**: Icon library
 
+## Dependencies
+
+### Core Dependencies
+
+- **React Native**: 0.73.6
+- **TypeScript**: 5.3.3
+- **React**: 18.3.1
+- **Node.js**: 20+
+
+### Mobile-Specific Dependencies
+
+- **@react-native-async-storage/async-storage**: 1.21.0
+- **@react-native-community/geolocation**: 3.2.0
+- **react-native-camera**: 4.2.1
+- **react-native-geolocation-service**: 5.3.1
+- **react-native-image-picker**: 7.1.0
+- **react-native-push-notification**: 8.1.1
+- **react-native-sqlite-storage**: 6.0.1
+- **react-native-vector-icons**: 10.0.3
+
+### Development Dependencies
+
+- **@types/react**: 18.3.1
+- **@types/react-native**: 0.73.0
+- **@typescript-eslint/eslint-plugin**: 6.21.0
+- **@typescript-eslint/parser**: 6.21.0
+- **eslint**: 8.57.0
+- **eslint-plugin-react**: 7.34.1
+- **eslint-plugin-react-hooks**: 4.6.0
+- **eslint-plugin-react-native**: 4.1.0
+
 ## Project Structure
 
 ```
@@ -51,39 +82,130 @@ src/
 
 ### Prerequisites
 
-- Node.js 16+
-- React Native CLI
-- iOS Simulator (Mac) or Android Emulator
-- Xcode (iOS development)
-- Android Studio (Android development)
+- **Node.js 20+** - [Download](https://nodejs.org/)
+- **React Native CLI** - `npm install -g @react-native-community/cli`
+- **iOS**: Xcode 15+ and iOS Simulator
+- **Android**: Android Studio and Android SDK
+- **CocoaPods** (iOS only) - `sudo gem install cocoapods`
 
 ### Installation
 
-1. Clone the repository
-2. Install dependencies:
+```bash
+# Clone the repository
+git clone https://github.com/arx-os/arxos.git
+cd arxos/mobile
+
+# Install dependencies
+npm install
+
+# iOS setup (macOS only)
+cd ios && pod install && cd ..
+
+# Start Metro bundler
+npm start
+```
+
+### Running the App
+
+```bash
+# Run on iOS
+npm run ios
+
+# Run on Android
+npm run android
+
+# Run on both platforms
+npm run start:ios
+npm run start:android
+```
+
+### Building for Production
+
+```bash
+# Build for iOS
+npm run build:ios
+
+# Build for Android
+npm run build:android
+
+# Build for both platforms
+npm run build:all
+```
+
+### Testing
+
+```bash
+# Run unit tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run tests in watch mode
+npm run test:watch
+```
+
+### Troubleshooting
+
+#### Common Issues
+
+1. **Metro bundler issues**
    ```bash
-   npm install
+   # Clear Metro cache
+   npm start -- --reset-cache
+   
+   # Clear npm cache
+   npm cache clean --force
    ```
 
-3. Install iOS dependencies (Mac only):
+2. **iOS build issues**
    ```bash
-   cd ios && pod install && cd ..
+   # Clean iOS build
+   cd ios && xcodebuild clean && cd ..
+   
+   # Reinstall pods
+   cd ios && pod deintegrate && pod install && cd ..
    ```
 
-4. Start the Metro bundler:
+3. **Android build issues**
    ```bash
-   npm start
+   # Clean Android build
+   cd android && ./gradlew clean && cd ..
+   
+   # Clear Gradle cache
+   cd android && ./gradlew cleanBuildCache && cd ..
    ```
 
-5. Run on iOS:
+4. **TypeScript errors**
    ```bash
-   npm run ios
+   # Check TypeScript configuration
+   npx tsc --noEmit
+   
+   # Update type definitions
+   npm install --save-dev @types/react @types/react-native
    ```
 
-6. Run on Android:
-   ```bash
-   npm run android
-   ```
+#### Performance Optimization
+
+- **Enable Hermes** (Android): Already enabled in `android/app/build.gradle`
+- **Enable Flipper** (Development): Configured in `ios/Podfile`
+- **Bundle Analysis**: Use `npm run analyze` to analyze bundle size
+
+### Development Workflow
+
+1. **Start development server**: `npm start`
+2. **Run on device**: `npm run ios` or `npm run android`
+3. **Test changes**: Use hot reload for instant feedback
+4. **Debug**: Use React Native Debugger or Flipper
+5. **Test**: Run `npm test` before committing
+
+### Contributing
+
+1. Follow the existing code style
+2. Write tests for new features
+3. Update documentation as needed
+4. Ensure TypeScript compilation passes
+5. Test on both iOS and Android platforms
 
 ## Development
 

@@ -26,6 +26,25 @@ Content-Type: application/octet-stream
 ```bash
 IFC_AUTH_ENABLED=true
 IFC_JWT_SECRET=your_secure_jwt_secret_key
+IFC_JWT_ALGORITHM=HS256
+```
+
+### JWT Configuration
+
+The JWT authentication supports multiple algorithms:
+
+- **HS256** (default): HMAC with SHA-256
+- **HS384**: HMAC with SHA-384  
+- **HS512**: HMAC with SHA-512
+- **RS256**: RSA with SHA-256
+- **RS384**: RSA with SHA-384
+- **RS512**: RSA with SHA-512
+
+```bash
+# Configure JWT algorithm
+export ARXOS_JWT_ALGORITHM=HS256
+export ARXOS_JWT_SECRET=your-secure-secret-key
+export ARXOS_JWT_EXPIRY=24h
 ```
 
 ## API Endpoints
@@ -87,7 +106,84 @@ Detailed health check with service status and metrics.
 }
 ```
 
-### IFC Processing
+### UUID Migration (Phase 4)
+
+#### POST /api/v1/buildings/{id}/migrate-uuid
+
+Migrate a building from legacy string IDs to UUID format.
+
+**Request**:
+- **Method**: POST
+- **Path**: `/api/v1/buildings/{id}/migrate-uuid`
+- **Headers**: `Authorization: Bearer <jwt_token>`
+
+**Response**:
+```json
+{
+  "success": true,
+  "building_id": "550e8400-e29b-41d4-a716-446655440000",
+  "legacy_id": "building-123",
+  "migrated_entities": {
+    "floors": 5,
+    "rooms": 25,
+    "equipment": 150
+  },
+  "migration_time": "2024-01-01T00:00:00Z"
+}
+```
+
+#### GET /api/v1/test/health
+
+Test infrastructure health check endpoint.
+
+**Request**:
+- **Method**: GET
+- **Path**: `/api/v1/test/health`
+
+**Response**:
+```json
+{
+  "status": "healthy",
+  "service": "arxos-test",
+  "version": "1.0.0",
+  "timestamp": "2024-01-01T00:00:00Z",
+  "database": {
+    "connected": true,
+    "test_database": "arxos_test"
+  },
+  "config": {
+    "loaded": true,
+    "jwt_algorithm": "HS256"
+  }
+}
+```
+
+#### POST /api/v1/test/setup
+
+Set up test environment and database.
+
+**Request**:
+- **Method**: POST
+- **Path**: `/api/v1/test/setup`
+- **Headers**: `Authorization: Bearer <jwt_token>`
+
+**Response**:
+```json
+{
+  "success": true,
+  "test_database": {
+    "created": true,
+    "name": "arxos_test",
+    "extensions": ["postgis", "postgis_topology", "uuid-ossp"]
+  },
+  "test_user": {
+    "created": true,
+    "name": "arxos_test",
+    "permissions": ["CREATEDB", "CREATEROLE", "SUPERUSER"]
+  },
+  "setup_time": "2024-01-01T00:00:00Z"
+}
+```
 
 #### POST /api/parse
 

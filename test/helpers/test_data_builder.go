@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/arx-os/arxos/internal/usecase"
 )
 
@@ -88,7 +89,7 @@ func (tdb *TestDataBuilder) BuildTestEquipment(ctx context.Context, buildingID s
 	// but are not part of the initial equipment creation
 
 	equipmentReq := &domain.CreateEquipmentRequest{
-		BuildingID: buildingID,
+		BuildingID: types.FromString(buildingID),
 		Name:       fmt.Sprintf("Test Equipment %d", rand.Intn(1000)),
 		Type:       equipmentTypes[rand.Intn(len(equipmentTypes))],
 		Model:      fmt.Sprintf("Test Model %d", rand.Intn(1000)),
@@ -118,7 +119,7 @@ func (tdb *TestDataBuilder) BuildTestBuildingsWithEquipment(ctx context.Context,
 
 		// Create equipment for building
 		for j := 0; j < equipmentPerBuilding; j++ {
-			_, err := tdb.BuildTestEquipment(ctx, building.ID)
+			_, err := tdb.BuildTestEquipment(ctx, building.ID.String())
 			if err != nil {
 				return nil, fmt.Errorf("failed to create equipment %d for building %d: %w", j, i, err)
 			}

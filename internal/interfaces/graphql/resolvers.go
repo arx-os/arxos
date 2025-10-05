@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/arx-os/arxos/internal/usecase"
 	"github.com/graphql-go/graphql"
 )
@@ -44,7 +45,7 @@ func (r *Resolvers) GetBuilding(p graphql.ResolveParams) (interface{}, error) {
 		return nil, fmt.Errorf("building id is required")
 	}
 
-	building, err := r.buildingUC.GetBuilding(p.Context, id)
+	building, err := r.buildingUC.GetBuilding(p.Context, types.FromString(id))
 	if err != nil {
 		r.logger.Error("Failed to get building", "id", id, "error", err)
 		return nil, err
@@ -106,7 +107,7 @@ func (r *Resolvers) UpdateBuilding(p graphql.ResolveParams) (interface{}, error)
 
 	// Convert input to UpdateBuildingRequest
 	req := &domain.UpdateBuildingRequest{
-		ID: id,
+		ID: types.FromString(id),
 	}
 
 	if name, ok := input["name"].(string); ok {
@@ -184,14 +185,14 @@ func (r *Resolvers) CreateEquipment(p graphql.ResolveParams) (interface{}, error
 	req := &domain.CreateEquipmentRequest{
 		Name:       input["name"].(string),
 		Type:       input["type"].(string),
-		BuildingID: input["buildingId"].(string),
+		BuildingID: types.FromString(input["buildingId"].(string)),
 	}
 
 	if floorID, ok := input["floorId"].(string); ok {
-		req.FloorID = floorID
+		req.FloorID = types.FromString(floorID)
 	}
 	if roomID, ok := input["roomId"].(string); ok {
-		req.RoomID = roomID
+		req.RoomID = types.FromString(roomID)
 	}
 	if _, ok := input["location"].(string); ok {
 		// Parse location string (e.g., "x,y,z")
@@ -222,7 +223,7 @@ func (r *Resolvers) UpdateEquipment(p graphql.ResolveParams) (interface{}, error
 
 	// Convert input to UpdateEquipmentRequest
 	req := &domain.UpdateEquipmentRequest{
-		ID: id,
+		ID: types.FromString(id),
 	}
 
 	if name, ok := input["name"].(string); ok {
@@ -342,7 +343,7 @@ func (r *Resolvers) UpdateUser(p graphql.ResolveParams) (interface{}, error) {
 
 	// Convert input to UpdateUserRequest
 	req := &domain.UpdateUserRequest{
-		ID: id,
+		ID: types.FromString(id),
 	}
 
 	if name, ok := input["name"].(string); ok {

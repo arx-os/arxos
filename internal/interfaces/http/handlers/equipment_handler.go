@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/arx-os/arxos/internal/domain"
+	domaintypes "github.com/arx-os/arxos/internal/domain/types"
 	"github.com/arx-os/arxos/internal/interfaces/http/types"
 	"github.com/arx-os/arxos/internal/usecase"
 )
@@ -67,13 +68,16 @@ func (h *EquipmentHandler) ListEquipment(w http.ResponseWriter, r *http.Request)
 
 	// Set optional filters
 	if buildingID != "" {
-		filter.BuildingID = &buildingID
+		buildingIDTyped := domaintypes.FromString(buildingID)
+		filter.BuildingID = &buildingIDTyped
 	}
 	if floorID != "" {
-		filter.FloorID = &floorID
+		floorIDTyped := domaintypes.FromString(floorID)
+		filter.FloorID = &floorIDTyped
 	}
 	if roomID != "" {
-		filter.RoomID = &roomID
+		roomIDTyped := domaintypes.FromString(roomID)
+		filter.RoomID = &roomIDTyped
 	}
 	if equipmentType != "" {
 		filter.Type = &equipmentType
@@ -204,7 +208,7 @@ func (h *EquipmentHandler) UpdateEquipment(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Set the ID from URL parameter
-	req.ID = equipmentID
+	req.ID = domaintypes.FromString(equipmentID)
 
 	// Call use case
 	equipment, err := h.equipmentUC.UpdateEquipment(r.Context(), &req)
@@ -304,7 +308,8 @@ func (h *EquipmentHandler) GetEquipmentByBuilding(w http.ResponseWriter, r *http
 
 	// Set building filter
 	if buildingID != "" {
-		filter.BuildingID = &buildingID
+		buildingIDTyped := domaintypes.FromString(buildingID)
+		filter.BuildingID = &buildingIDTyped
 	}
 
 	// Call use case
@@ -371,10 +376,12 @@ func (h *EquipmentHandler) GetEquipmentByFloor(w http.ResponseWriter, r *http.Re
 
 	// Set building and floor filters
 	if buildingID != "" {
-		filter.BuildingID = &buildingID
+		buildingIDTyped := domaintypes.FromString(buildingID)
+		filter.BuildingID = &buildingIDTyped
 	}
 	if floorID != "" {
-		filter.FloorID = &floorID
+		floorIDTyped := domaintypes.FromString(floorID)
+		filter.FloorID = &floorIDTyped
 	}
 
 	// Call use case

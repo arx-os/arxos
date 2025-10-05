@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/infrastructure/utils"
 )
 
 // EquipmentUseCase implements the equipment business logic following Clean Architecture
@@ -13,6 +14,7 @@ type EquipmentUseCase struct {
 	equipmentRepo domain.EquipmentRepository
 	buildingRepo  domain.BuildingRepository
 	logger        domain.Logger
+	idGenerator   *utils.IDGenerator
 }
 
 // NewEquipmentUseCase creates a new EquipmentUseCase
@@ -21,6 +23,7 @@ func NewEquipmentUseCase(equipmentRepo domain.EquipmentRepository, buildingRepo 
 		equipmentRepo: equipmentRepo,
 		buildingRepo:  buildingRepo,
 		logger:        logger,
+		idGenerator:   utils.NewIDGenerator(),
 	}
 }
 
@@ -35,15 +38,15 @@ func (uc *EquipmentUseCase) CreateEquipment(ctx context.Context, req *domain.Cre
 	}
 
 	// Verify building exists
-	_, err := uc.buildingRepo.GetByID(ctx, req.BuildingID)
+	_, err := uc.buildingRepo.GetByID(ctx, req.BuildingID.String())
 	if err != nil {
-		uc.logger.Error("Failed to verify building exists", "building_id", req.BuildingID, "error", err)
+		uc.logger.Error("Failed to verify building exists", "building_id", req.BuildingID.String(), "error", err)
 		return nil, fmt.Errorf("building not found: %w", err)
 	}
 
 	// Create equipment entity
 	equipment := &domain.Equipment{
-		ID:         uc.generateEquipmentID(),
+		ID:         uc.idGenerator.GenerateEquipmentID(req.Name),
 		BuildingID: req.BuildingID,
 		FloorID:    req.FloorID,
 		RoomID:     req.RoomID,
@@ -88,9 +91,9 @@ func (uc *EquipmentUseCase) UpdateEquipment(ctx context.Context, req *domain.Upd
 	uc.logger.Info("Updating equipment", "equipment_id", req.ID)
 
 	// Get existing equipment
-	equipment, err := uc.equipmentRepo.GetByID(ctx, req.ID)
+	equipment, err := uc.equipmentRepo.GetByID(ctx, req.ID.String())
 	if err != nil {
-		uc.logger.Error("Failed to get equipment for update", "equipment_id", req.ID, "error", err)
+		uc.logger.Error("Failed to get equipment for update", "equipment_id", req.ID.String(), "error", err)
 		return nil, fmt.Errorf("failed to get equipment: %w", err)
 	}
 
@@ -229,7 +232,7 @@ func (uc *EquipmentUseCase) GetEquipmentByBuilding(ctx context.Context, building
 // Private helper methods
 
 func (uc *EquipmentUseCase) validateCreateEquipment(req *domain.CreateEquipmentRequest) error {
-	if req.BuildingID == "" {
+	if req.BuildingID.IsEmpty() {
 		return fmt.Errorf("building ID is required")
 	}
 	if req.Name == "" {
@@ -290,9 +293,4 @@ func (uc *EquipmentUseCase) validateUpdateEquipment(equipment *domain.Equipment)
 	}
 
 	return nil
-}
-
-func (uc *EquipmentUseCase) generateEquipmentID() string {
-	// TODO: Implement proper ID generation (UUID, etc.)
-	return fmt.Sprintf("equipment_%d", time.Now().UnixNano())
 }

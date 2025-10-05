@@ -1,8 +1,8 @@
 module github.com/arx-os/arxos
 
-go 1.21.0
+go 1.24.0
 
-toolchain go1.21.5
+toolchain go1.24.5
 
 require (
 	github.com/charmbracelet/bubbletea v0.25.0
@@ -24,6 +24,7 @@ require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/gofrs/uuid v4.4.0+incompatible // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect

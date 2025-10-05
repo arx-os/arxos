@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/types"
 )
 
 // BuildingOpsUseCase implements building operations business logic following Clean Architecture
@@ -29,7 +30,7 @@ func (uc *BuildingOpsUseCase) ControlEquipment(ctx context.Context, req *domain.
 	uc.logger.Info("Controlling equipment", "equipment_id", req.EquipmentID, "action", req.Action)
 
 	// Get equipment
-	equipment, err := uc.equipmentRepo.GetByID(ctx, req.EquipmentID)
+	equipment, err := uc.equipmentRepo.GetByID(ctx, req.EquipmentID.String())
 	if err != nil {
 		return fmt.Errorf("equipment not found: %w", err)
 	}
@@ -53,13 +54,13 @@ func (uc *BuildingOpsUseCase) SetBuildingMode(ctx context.Context, req *domain.S
 	uc.logger.Info("Setting building mode", "building_id", req.BuildingID, "mode", req.Mode)
 
 	// Get building
-	_, err := uc.buildingRepo.GetByID(ctx, req.BuildingID)
+	_, err := uc.buildingRepo.GetByID(ctx, req.BuildingID.String())
 	if err != nil {
 		return fmt.Errorf("building not found: %w", err)
 	}
 
 	// Get all equipment in building
-	equipment, err := uc.equipmentRepo.GetByBuilding(ctx, req.BuildingID)
+	equipment, err := uc.equipmentRepo.GetByBuilding(ctx, req.BuildingID.String())
 	if err != nil {
 		return fmt.Errorf("failed to get building equipment: %w", err)
 	}
@@ -77,17 +78,17 @@ func (uc *BuildingOpsUseCase) SetBuildingMode(ctx context.Context, req *domain.S
 }
 
 // MonitorBuildingHealth monitors the health of building systems
-func (uc *BuildingOpsUseCase) MonitorBuildingHealth(ctx context.Context, buildingID string) (*domain.BuildingHealthReport, error) {
-	uc.logger.Info("Monitoring building health", "building_id", buildingID)
+func (uc *BuildingOpsUseCase) MonitorBuildingHealth(ctx context.Context, buildingID types.ID) (*domain.BuildingHealthReport, error) {
+	uc.logger.Info("Monitoring building health", "building_id", buildingID.String())
 
 	// Get building
-	building, err := uc.buildingRepo.GetByID(ctx, buildingID)
+	building, err := uc.buildingRepo.GetByID(ctx, buildingID.String())
 	if err != nil {
 		return nil, fmt.Errorf("building not found: %w", err)
 	}
 
 	// Get equipment
-	equipment, err := uc.equipmentRepo.GetByBuilding(ctx, buildingID)
+	equipment, err := uc.equipmentRepo.GetByBuilding(ctx, buildingID.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get building equipment: %w", err)
 	}
@@ -105,7 +106,7 @@ func (uc *BuildingOpsUseCase) MonitorBuildingHealth(ctx context.Context, buildin
 	failedCount := 0
 	for _, eq := range equipment {
 		health := uc.assessEquipmentHealth(eq)
-		report.EquipmentHealth[eq.ID] = health
+		report.EquipmentHealth[eq.ID.String()] = health
 		if health == "failed" {
 			failedCount++
 		}

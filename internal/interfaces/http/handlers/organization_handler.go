@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
+	domaintypes "github.com/arx-os/arxos/internal/domain/types"
 	"github.com/arx-os/arxos/internal/interfaces/http/models"
 	"github.com/arx-os/arxos/internal/interfaces/http/types"
 	"github.com/arx-os/arxos/internal/usecase"
@@ -68,7 +69,7 @@ func (h *OrganizationHandler) HandleGetOrganizations(w http.ResponseWriter, r *h
 	var orgModels []*pkgmodels.Organization
 	for _, org := range organizations {
 		orgModels = append(orgModels, &pkgmodels.Organization{
-			ID:          org.ID,
+			ID:          org.ID.String(),
 			Name:        org.Name,
 			Description: org.Description,
 			Plan:        pkgmodels.Plan(org.Plan),
@@ -173,7 +174,7 @@ func (h *OrganizationHandler) HandleUpdateOrganization(w http.ResponseWriter, r 
 
 	// Convert HTTP model to domain model
 	domainReq := &domain.UpdateOrganizationRequest{
-		ID:          orgID,
+		ID:          domaintypes.FromString(orgID),
 		Name:        req.Name,
 		Description: req.Description,
 		Plan:        req.Plan,
@@ -241,7 +242,7 @@ func (h *OrganizationHandler) HandleGetOrganizationUsers(w http.ResponseWriter, 
 	var userModels []*pkgmodels.User
 	for _, user := range users {
 		userModels = append(userModels, &pkgmodels.User{
-			ID:        user.ID,
+			ID:        user.ID.String(),
 			Email:     user.Email,
 			FullName:  user.Name,
 			Role:      user.Role,

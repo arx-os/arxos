@@ -118,16 +118,16 @@ func (m *MobileHandler) HandleMobileEquipment(w http.ResponseWriter, r *http.Req
 	// Filter equipment by building ID and convert to mobile format
 	mobileEquipment := []MobileEquipment{}
 	for _, eq := range equipment {
-		if eq.BuildingID == buildingID {
+		if eq.BuildingID.String() == buildingID {
 			mobileEq := MobileEquipment{
-				ID:         eq.ID,
+				ID:         eq.ID.String(),
 				Name:       eq.Name,
 				Type:       eq.Type,
 				Model:      eq.Model,
 				Status:     eq.Status,
-				BuildingID: eq.BuildingID,
-				FloorID:    eq.FloorID,
-				RoomID:     eq.RoomID,
+				BuildingID: eq.BuildingID.String(),
+				FloorID:    eq.FloorID.String(),
+				RoomID:     eq.RoomID.String(),
 				CreatedAt:  eq.CreatedAt.Format(time.RFC3339),
 				UpdatedAt:  eq.UpdatedAt.Format(time.RFC3339),
 			}
@@ -190,14 +190,14 @@ func (m *MobileHandler) HandleMobileEquipmentDetail(w http.ResponseWriter, r *ht
 
 	// Convert to mobile format
 	mobileEq := MobileEquipment{
-		ID:         equipment.ID,
+		ID:         equipment.ID.String(),
 		Name:       equipment.Name,
 		Type:       equipment.Type,
 		Model:      equipment.Model,
 		Status:     equipment.Status,
-		BuildingID: equipment.BuildingID,
-		FloorID:    equipment.FloorID,
-		RoomID:     equipment.RoomID,
+		BuildingID: equipment.BuildingID.String(),
+		FloorID:    equipment.FloorID.String(),
+		RoomID:     equipment.RoomID.String(),
 		CreatedAt:  equipment.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:  equipment.UpdatedAt.Format(time.RFC3339),
 	}

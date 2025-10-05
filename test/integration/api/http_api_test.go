@@ -18,6 +18,7 @@ import (
 	"github.com/arx-os/arxos/internal/interfaces/http/handlers"
 	"github.com/arx-os/arxos/internal/interfaces/http/middleware"
 	"github.com/arx-os/arxos/internal/interfaces/http/types"
+	"github.com/arx-os/arxos/test/helpers"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,9 +35,8 @@ type APIIntegrationTestSuite struct {
 
 // NewAPIIntegrationTestSuite creates a new API integration test suite
 func NewAPIIntegrationTestSuite(t *testing.T) *APIIntegrationTestSuite {
-	// Load test configuration
-	cfg, err := config.Load("test/config/test_config.yaml")
-	require.NoError(t, err)
+	// Load test configuration using helper function
+	cfg := helpers.LoadTestConfig(t)
 
 	// Create application container
 	container := app.NewContainer()

@@ -223,6 +223,7 @@ func (c *Container) initInfrastructureServices(ctx context.Context) error {
 		RefreshTokenExpiry: c.config.Security.JWTExpiry * 7, // Refresh valid for 7x longer
 		Issuer:             "arxos",
 		Audience:           "arxos-users",
+		Algorithm:          "HS256", // Default algorithm
 	}
 	jwtManager, err := auth.NewJWTManager(jwtConfig)
 	if err != nil {
@@ -302,16 +303,18 @@ func (c *Container) initInterfaces(ctx context.Context) error {
 	c.apiHandler = handlers.NewAPIHandler(baseHandler, c.logger)
 
 	// Building handler with use case dependency
+	// Access fields directly to avoid deadlock (we already hold the write lock)
 	c.buildingHandler = handlers.NewBuildingHandler(
 		baseHandler,
-		c.GetBuildingUseCase(),
+		c.buildingUC, // Direct field access instead of c.GetBuildingUseCase()
 		c.logger,
 	)
 
 	// Auth handler with use case and JWT manager dependencies
+	// Access fields directly to avoid deadlock (we already hold the write lock)
 	c.authHandler = handlers.NewAuthHandler(
 		baseHandler,
-		c.GetUserUseCase(),
+		c.userUC, // Direct field access instead of c.GetUserUseCase()
 		c.jwtManager,
 		c.logger,
 	)

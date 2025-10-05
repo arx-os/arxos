@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/types"
+	"github.com/arx-os/arxos/internal/infrastructure/utils"
 )
 
 // BuildingUseCase implements the building business logic following Clean Architecture
@@ -13,6 +15,7 @@ type BuildingUseCase struct {
 	buildingRepo  domain.BuildingRepository
 	equipmentRepo domain.EquipmentRepository
 	logger        domain.Logger
+	idGenerator   *utils.IDGenerator
 }
 
 // NewBuildingUseCase creates a new BuildingUseCase
@@ -21,6 +24,7 @@ func NewBuildingUseCase(buildingRepo domain.BuildingRepository, equipmentRepo do
 		buildingRepo:  buildingRepo,
 		equipmentRepo: equipmentRepo,
 		logger:        logger,
+		idGenerator:   utils.NewIDGenerator(),
 	}
 }
 
@@ -36,7 +40,7 @@ func (uc *BuildingUseCase) CreateBuilding(ctx context.Context, req *domain.Creat
 
 	// Create building entity
 	building := &domain.Building{
-		ID:          uc.generateBuildingID(),
+		ID:          uc.idGenerator.GenerateBuildingID(req.Name),
 		Name:        req.Name,
 		Address:     req.Address,
 		Coordinates: req.Coordinates,
@@ -44,8 +48,19 @@ func (uc *BuildingUseCase) CreateBuilding(ctx context.Context, req *domain.Creat
 		UpdatedAt:   time.Now(),
 	}
 
-	// Save to repository
-	if err := uc.buildingRepo.Create(ctx, building); err != nil {
+	// Save to repository - convert ID to string for compatibility
+	buildingForRepo := &domain.Building{
+		ID:          types.ID{Legacy: building.ID.String()}, // Convert to legacy format for repository
+		Name:        building.Name,
+		Address:     building.Address,
+		Coordinates: building.Coordinates,
+		Floors:      building.Floors,
+		Equipment:   building.Equipment,
+		CreatedAt:   building.CreatedAt,
+		UpdatedAt:   building.UpdatedAt,
+	}
+
+	if err := uc.buildingRepo.Create(ctx, buildingForRepo); err != nil {
 		uc.logger.Error("Failed to create building", "error", err)
 		return nil, fmt.Errorf("failed to create building: %w", err)
 	}
@@ -55,20 +70,30 @@ func (uc *BuildingUseCase) CreateBuilding(ctx context.Context, req *domain.Creat
 }
 
 // GetBuilding retrieves a building by ID
-func (uc *BuildingUseCase) GetBuilding(ctx context.Context, id string) (*domain.Building, error) {
-	uc.logger.Info("Getting building", "building_id", id)
+func (uc *BuildingUseCase) GetBuilding(ctx context.Context, id types.ID) (*domain.Building, error) {
+	uc.logger.Info("Getting building", "building_id", id.String())
 
-	if id == "" {
+	if id.IsEmpty() {
 		return nil, fmt.Errorf("building ID is required")
 	}
 
-	building, err := uc.buildingRepo.GetByID(ctx, id)
+	building, err := uc.buildingRepo.GetByID(ctx, id.String())
 	if err != nil {
-		uc.logger.Error("Failed to get building", "building_id", id, "error", err)
+		uc.logger.Error("Failed to get building", "building_id", id.String(), "error", err)
 		return nil, fmt.Errorf("failed to get building: %w", err)
 	}
 
-	return building, nil
+	// Convert back to new ID format
+	return &domain.Building{
+		ID:          types.FromString(building.ID.String()),
+		Name:        building.Name,
+		Address:     building.Address,
+		Coordinates: building.Coordinates,
+		Floors:      building.Floors,
+		Equipment:   building.Equipment,
+		CreatedAt:   building.CreatedAt,
+		UpdatedAt:   building.UpdatedAt,
+	}, nil
 }
 
 // UpdateBuilding updates an existing building
@@ -76,9 +101,9 @@ func (uc *BuildingUseCase) UpdateBuilding(ctx context.Context, req *domain.Updat
 	uc.logger.Info("Updating building", "building_id", req.ID)
 
 	// Get existing building
-	building, err := uc.buildingRepo.GetByID(ctx, req.ID)
+	building, err := uc.buildingRepo.GetByID(ctx, req.ID.String())
 	if err != nil {
-		uc.logger.Error("Failed to get building for update", "building_id", req.ID, "error", err)
+		uc.logger.Error("Failed to get building for update", "building_id", req.ID.String(), "error", err)
 		return nil, fmt.Errorf("failed to get building: %w", err)
 	}
 
@@ -169,7 +194,7 @@ func (uc *BuildingUseCase) ImportBuilding(ctx context.Context, req *domain.Impor
 		// TODO: Get IfcOpenShell service from dependency injection
 		// For now, create a placeholder building
 		building := &domain.Building{
-			ID:          uc.generateBuildingID(),
+			ID:          uc.idGenerator.GenerateBuildingID("Imported Building"),
 			Name:        "Imported Building",
 			Address:     "Imported Address",
 			Coordinates: nil, // TODO: Extract from IFC data
@@ -232,9 +257,4 @@ func (uc *BuildingUseCase) validateUpdateBuilding(building *domain.Building) err
 	}
 
 	return nil
-}
-
-func (uc *BuildingUseCase) generateBuildingID() string {
-	// TODO: Implement proper ID generation (UUID, etc.)
-	return fmt.Sprintf("building_%d", time.Now().UnixNano())
 }

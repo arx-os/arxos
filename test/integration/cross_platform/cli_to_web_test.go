@@ -15,6 +15,8 @@ import (
 	"github.com/arx-os/arxos/internal/app"
 	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/types"
+	"github.com/arx-os/arxos/test/helpers"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,13 +33,12 @@ type CrossPlatformTestSuite struct {
 
 // NewCrossPlatformTestSuite creates a new cross-platform test suite
 func NewCrossPlatformTestSuite(t *testing.T) *CrossPlatformTestSuite {
-	// Load test configuration
-	cfg, err := config.Load("test/config/test_config.yaml")
-	require.NoError(t, err)
+	// Load test configuration using helper function
+	cfg := helpers.LoadTestConfig(t)
 
 	// Initialize application container
 	container := app.NewContainer()
-	err = container.Initialize(context.Background(), cfg)
+	err := container.Initialize(context.Background(), cfg)
 	require.NoError(t, err)
 
 	// Create HTTP client
@@ -116,7 +117,7 @@ func TestCLIToWebIntegration(t *testing.T) {
 
 		// Verify building is accessible via Web API
 		resp, err := suite.httpClient.Get(
-			"http://localhost:8080/api/v1/buildings/" + building.ID,
+			"http://localhost:8080/api/v1/buildings/" + building.ID.String(),
 		)
 		require.NoError(t, err)
 		defer resp.Body.Close()
@@ -127,7 +128,7 @@ func TestCLIToWebIntegration(t *testing.T) {
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		require.NoError(t, err)
 
-		assert.Equal(t, building.ID, response["id"])
+		assert.Equal(t, building.ID.String(), response["id"])
 		assert.Equal(t, "CLI Created Building", response["name"])
 		assert.Equal(t, "456 CLI Street", response["address"])
 	})
@@ -137,7 +138,7 @@ func TestCLIToWebIntegration(t *testing.T) {
 
 		// Simulate CLI updating equipment
 		equipmentReq := &domain.UpdateEquipmentRequest{
-			ID:     "cross-platform-equipment-1",
+			ID:     types.FromString("cross-platform-equipment-1"),
 			Status: stringPtr("maintenance"),
 		}
 
@@ -147,7 +148,7 @@ func TestCLIToWebIntegration(t *testing.T) {
 
 		// Verify equipment update is visible via Web API
 		resp, err := suite.httpClient.Get(
-			"http://localhost:8080/api/v1/equipment/" + updatedEquipment.ID,
+			"http://localhost:8080/api/v1/equipment/" + updatedEquipment.ID.String(),
 		)
 		require.NoError(t, err)
 		defer resp.Body.Close()
@@ -227,10 +228,10 @@ func TestWebToCLIIntegration(t *testing.T) {
 
 		// Verify building is accessible via CLI (through use case)
 		ctx := context.Background()
-		retrievedBuilding, err := suite.app.GetBuildingUseCase().GetBuilding(ctx, buildingID)
+		retrievedBuilding, err := suite.app.GetBuildingUseCase().GetBuilding(ctx, types.FromString(buildingID))
 		require.NoError(t, err)
 
-		assert.Equal(t, buildingID, retrievedBuilding.ID)
+		assert.Equal(t, buildingID, retrievedBuilding.ID.String())
 		assert.Equal(t, "Web Created Building", retrievedBuilding.Name)
 		assert.Equal(t, "789 Web Street", retrievedBuilding.Address)
 	})
@@ -282,7 +283,7 @@ func TestMobileToBackendIntegration(t *testing.T) {
 
 		// Simulate mobile AR service updating equipment status
 		equipmentReq := &domain.UpdateEquipmentRequest{
-			ID:     "cross-platform-equipment-1",
+			ID:     types.FromString("cross-platform-equipment-1"),
 			Status: stringPtr("testing"),
 		}
 
@@ -292,7 +293,7 @@ func TestMobileToBackendIntegration(t *testing.T) {
 
 		// Verify status update is visible via Web API
 		resp, err := suite.httpClient.Get(
-			"http://localhost:8080/api/v1/equipment/" + updatedEquipment.ID,
+			"http://localhost:8080/api/v1/equipment/" + updatedEquipment.ID.String(),
 		)
 		require.NoError(t, err)
 		defer resp.Body.Close()
@@ -346,7 +347,7 @@ func TestRealTimeSyncIntegration(t *testing.T) {
 		// Simulate CLI updating building
 		ctx := context.Background()
 		updateReq := &domain.UpdateBuildingRequest{
-			ID:      "cross-platform-building-1",
+			ID:      types.FromString("cross-platform-building-1"),
 			Name:    stringPtr("Real-Time Updated Building"),
 			Address: stringPtr("999 Real-Time Street"),
 		}
@@ -390,7 +391,7 @@ func TestRealTimeSyncIntegration(t *testing.T) {
 		// Simulate Mobile AR updating equipment status
 		ctx := context.Background()
 		updateReq := &domain.UpdateEquipmentRequest{
-			ID:     "cross-platform-equipment-1",
+			ID:     types.FromString("cross-platform-equipment-1"),
 			Status: stringPtr("operational"),
 		}
 
@@ -468,7 +469,7 @@ func TestDataConsistencyIntegration(t *testing.T) {
 
 		// Update equipment status via Mobile AR (simulated)
 		updateReq := &domain.UpdateEquipmentRequest{
-			ID:     equipmentID,
+			ID:     types.FromString(equipmentID),
 			Status: stringPtr("maintenance"),
 		}
 
@@ -481,7 +482,7 @@ func TestDataConsistencyIntegration(t *testing.T) {
 		// 1. CLI can see the data
 		retrievedBuilding, err := suite.app.GetBuildingUseCase().GetBuilding(ctx, building.ID)
 		require.NoError(t, err)
-		assert.Equal(t, building.ID, retrievedBuilding.ID)
+		assert.Equal(t, building.ID.String(), retrievedBuilding.ID.String())
 
 		retrievedEquipment, err := suite.app.GetEquipmentUseCase().GetEquipment(ctx, equipmentID)
 		require.NoError(t, err)
@@ -489,7 +490,7 @@ func TestDataConsistencyIntegration(t *testing.T) {
 
 		// 2. Web API can see the data
 		buildingResp, err := suite.httpClient.Get(
-			"http://localhost:8080/api/v1/buildings/" + building.ID,
+			"http://localhost:8080/api/v1/buildings/" + building.ID.String(),
 		)
 		require.NoError(t, err)
 		defer buildingResp.Body.Close()

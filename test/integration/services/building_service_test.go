@@ -15,6 +15,8 @@ import (
 	"github.com/arx-os/arxos/internal/app"
 	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/types"
+	"github.com/arx-os/arxos/test/helpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -38,14 +40,19 @@ type TestDataBuilder struct {
 
 // NewIntegrationTestSuite creates a new integration test suite
 func NewIntegrationTestSuite(t *testing.T) *IntegrationTestSuite {
-	// Load test configuration
-	cfg, err := config.Load("test/config/test_config.yaml")
-	require.NoError(t, err)
+	// Load test configuration using helper function
+	cfg := helpers.LoadTestConfig(t)
+
+	// Create context with timeout for initialization
+	ctx := helpers.TestTimeoutVeryLong(t)
 
 	// Initialize application container
 	container := app.NewContainer()
-	err = container.Initialize(context.Background(), cfg)
+	err := container.Initialize(ctx, cfg)
 	require.NoError(t, err)
+
+	// Check that context hasn't timed out
+	helpers.AssertNoTimeout(t, ctx, "container initialization")
 
 	// Initialize test data builder
 	testData := &TestDataBuilder{}
@@ -108,7 +115,7 @@ func (suite *IntegrationTestSuite) TeardownTestEnvironment(t *testing.T) {
 func (suite *IntegrationTestSuite) setupTestData(t *testing.T) {
 	// Create test organization
 	org := &domain.Organization{
-		ID:          "test-org-1",
+		ID:          types.FromString("test-org-1"),
 		Name:        "Test Organization",
 		Description: "Test organization for integration tests",
 		Plan:        "premium",
@@ -120,7 +127,7 @@ func (suite *IntegrationTestSuite) setupTestData(t *testing.T) {
 
 	// Create test user
 	user := &domain.User{
-		ID:        "test-user-1",
+		ID:        types.FromString("test-user-1"),
 		Email:     "test@example.com",
 		Name:      "Test User",
 		Role:      "admin",
@@ -132,7 +139,7 @@ func (suite *IntegrationTestSuite) setupTestData(t *testing.T) {
 
 	// Create test building
 	building := &domain.Building{
-		ID:          "test-building-1",
+		ID:          types.FromString("test-building-1"),
 		Name:        "Test Building",
 		Address:     "123 Test Street, Test City",
 		Coordinates: &domain.Location{X: 40.7128, Y: -74.0060, Z: 0},
@@ -143,7 +150,7 @@ func (suite *IntegrationTestSuite) setupTestData(t *testing.T) {
 
 	// Create test equipment
 	equipment := &domain.Equipment{
-		ID:         "test-equipment-1",
+		ID:         types.FromString("test-equipment-1"),
 		BuildingID: building.ID,
 		Name:       "Test HVAC Unit",
 		Type:       "HVAC",
@@ -233,7 +240,7 @@ func TestBuildingServiceIntegration(t *testing.T) {
 		require.NoError(t, err)
 
 		// Delete building
-		err = suite.app.GetBuildingUseCase().DeleteBuilding(ctx, building.ID)
+		err = suite.app.GetBuildingUseCase().DeleteBuilding(ctx, building.ID.String())
 		require.NoError(t, err)
 
 		// Verify building was deleted
@@ -302,13 +309,13 @@ func TestEquipmentServiceIntegration(t *testing.T) {
 		buildingID := suite.testData.buildings[0].ID
 
 		// Get equipment by building
-		equipment, err := suite.app.GetEquipmentUseCase().GetEquipmentByBuilding(ctx, buildingID)
+		equipment, err := suite.app.GetEquipmentUseCase().GetEquipmentByBuilding(ctx, buildingID.String())
 		require.NoError(t, err)
 		assert.NotEmpty(t, equipment)
 
 		// Verify all equipment belongs to the building
 		for _, eq := range equipment {
-			assert.Equal(t, buildingID, eq.BuildingID)
+			assert.Equal(t, buildingID.String(), eq.BuildingID.String())
 		}
 	})
 }

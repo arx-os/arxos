@@ -111,7 +111,7 @@ func (h *AuthHandler) HandleMobileLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	tokenPair, err := jwtMgr.GenerateTokenPair(user.ID, user.Email, user.Name, user.Role, "", []string{"mobile_access"}, "", map[string]interface{}{
+	tokenPair, err := jwtMgr.GenerateTokenPair(user.ID.String(), user.Email, user.Name, user.Role, "", []string{"mobile_access"}, "", map[string]interface{}{
 		"platform": "mobile",
 		"app":      "arxos_mobile",
 	})
@@ -126,7 +126,7 @@ func (h *AuthHandler) HandleMobileLogin(w http.ResponseWriter, r *http.Request) 
 
 	// Create response using actual domain structure
 	userResponse := &MobileUserResponse{
-		ID:          user.ID,
+		ID:          user.ID.String(),
 		Username:    user.Name, // Use Name as Username for now
 		Email:       user.Email,
 		Role:        user.Role,
@@ -197,7 +197,7 @@ func (h *AuthHandler) HandleMobileRegister(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	tokenPair, err := jwtMgr.GenerateTokenPair(user.ID, user.Email, user.Name, user.Role, "", []string{"mobile_access"}, "", map[string]interface{}{
+	tokenPair, err := jwtMgr.GenerateTokenPair(user.ID.String(), user.Email, user.Name, user.Role, "", []string{"mobile_access"}, "", map[string]interface{}{
 		"platform": "mobile",
 		"app":      "arxos_mobile",
 	})
@@ -212,7 +212,7 @@ func (h *AuthHandler) HandleMobileRegister(w http.ResponseWriter, r *http.Reques
 
 	// Create response using actual domain structure
 	userResponse := &MobileUserResponse{
-		ID:          user.ID,
+		ID:          user.ID.String(),
 		Username:    user.Name,
 		Email:       user.Email,
 		Role:        user.Role,
@@ -292,7 +292,7 @@ func (h *AuthHandler) HandleMobileRefreshToken(w http.ResponseWriter, r *http.Re
 	}
 
 	// Generate new tokens
-	tokenPair, err := jwtMgr.GenerateTokenPair(user.ID, user.Email, user.Name, user.Role, claims.OrganizationID, claims.Permissions, "", map[string]interface{}{
+	tokenPair, err := jwtMgr.GenerateTokenPair(user.ID.String(), user.Email, user.Name, user.Role, claims.OrganizationID, claims.Permissions, "", map[string]interface{}{
 		"platform": "mobile",
 		"app":      "arxos_mobile",
 	})
@@ -307,7 +307,7 @@ func (h *AuthHandler) HandleMobileRefreshToken(w http.ResponseWriter, r *http.Re
 
 	// Create response using actual domain structure
 	userResponse := &MobileUserResponse{
-		ID:             user.ID,
+		ID:             user.ID.String(),
 		Username:       user.Name,
 		Email:          user.Email,
 		Role:           user.Role,
@@ -355,7 +355,7 @@ func (h *AuthHandler) HandleMobileProfile(w http.ResponseWriter, r *http.Request
 
 	// Create response using actual domain structure
 	userResponse := &MobileUserResponse{
-		ID:          user.ID,
+		ID:          user.ID.String(),
 		Username:    user.Name,
 		Email:       user.Email,
 		Role:        user.Role,

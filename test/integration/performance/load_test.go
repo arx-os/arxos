@@ -16,6 +16,7 @@ import (
 
 	"github.com/arx-os/arxos/internal/app"
 	"github.com/arx-os/arxos/internal/config"
+	"github.com/arx-os/arxos/test/helpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -30,13 +31,12 @@ type PerformanceTestSuite struct {
 
 // NewPerformanceTestSuite creates a new performance test suite
 func NewPerformanceTestSuite(t *testing.T) *PerformanceTestSuite {
-	// Load test configuration
-	cfg, err := config.Load("test/config/test_config.yaml")
-	require.NoError(t, err)
+	// Load test configuration using helper function
+	cfg := helpers.LoadTestConfig(t)
 
 	// Initialize application container
 	container := app.NewContainer()
-	err = container.Initialize(context.Background(), cfg)
+	err := container.Initialize(context.Background(), cfg)
 	require.NoError(t, err)
 
 	// Create HTTP client with timeout

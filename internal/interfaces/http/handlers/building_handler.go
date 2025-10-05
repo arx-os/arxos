@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/arx-os/arxos/internal/usecase"
 )
 
@@ -136,7 +137,7 @@ func (h *BuildingHandler) GetBuilding(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Call use case
-	building, err := h.buildingUC.GetBuilding(r.Context(), buildingID)
+	building, err := h.buildingUC.GetBuilding(r.Context(), types.FromString(buildingID))
 	if err != nil {
 		h.logger.Error("Failed to get building", "building_id", buildingID, "error", err)
 		h.RespondError(w, http.StatusInternalServerError, err)

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/arx-os/arxos/pkg/auth"
 )
 
@@ -138,7 +139,7 @@ func (h *BaseHandlerImpl) RequireAuth(next http.Handler) http.Handler {
 
 		// Extract user from claims and add to context
 		user := &domain.User{
-			ID:    claims.UserID,
+			ID:    types.FromString(claims.UserID),
 			Email: claims.Email,
 			Role:  claims.Role,
 		}

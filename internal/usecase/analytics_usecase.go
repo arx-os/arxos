@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/types"
 )
 
 // AnalyticsUseCase implements analytics business logic following Clean Architecture
@@ -25,24 +26,24 @@ func NewAnalyticsUseCase(buildingRepo domain.BuildingRepository, equipmentRepo d
 }
 
 // GetBuildingAnalytics retrieves analytics for a specific building
-func (uc *AnalyticsUseCase) GetBuildingAnalytics(ctx context.Context, buildingID string) (*domain.BuildingAnalytics, error) {
-	uc.logger.Info("Getting building analytics", "building_id", buildingID)
+func (uc *AnalyticsUseCase) GetBuildingAnalytics(ctx context.Context, buildingID types.ID) (*domain.BuildingAnalytics, error) {
+	uc.logger.Info("Getting building analytics", "building_id", buildingID.String())
 
-	if buildingID == "" {
+	if buildingID.IsEmpty() {
 		return nil, fmt.Errorf("building ID is required")
 	}
 
 	// Verify building exists
-	building, err := uc.buildingRepo.GetByID(ctx, buildingID)
+	building, err := uc.buildingRepo.GetByID(ctx, buildingID.String())
 	if err != nil {
-		uc.logger.Error("Failed to get building for analytics", "building_id", buildingID, "error", err)
+		uc.logger.Error("Failed to get building for analytics", "building_id", buildingID.String(), "error", err)
 		return nil, fmt.Errorf("building not found: %w", err)
 	}
 
 	// Get equipment for the building
-	equipment, err := uc.equipmentRepo.GetByBuilding(ctx, buildingID)
+	equipment, err := uc.equipmentRepo.GetByBuilding(ctx, buildingID.String())
 	if err != nil {
-		uc.logger.Error("Failed to get equipment for analytics", "building_id", buildingID, "error", err)
+		uc.logger.Error("Failed to get equipment for analytics", "building_id", buildingID.String(), "error", err)
 		return nil, fmt.Errorf("failed to get equipment: %w", err)
 	}
 

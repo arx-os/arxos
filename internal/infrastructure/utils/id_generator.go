@@ -1,10 +1,11 @@
 package utils
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"time"
+
+	"github.com/arx-os/arxos/internal/domain/types"
+	"github.com/google/uuid"
 )
 
 // IDGenerator provides ID generation utilities following Clean Architecture
@@ -15,54 +16,75 @@ func NewIDGenerator() *IDGenerator {
 	return &IDGenerator{}
 }
 
-// GenerateUUID generates a random UUID-like string
+// GenerateID generates a new ID with UUID
+func (g *IDGenerator) GenerateID() types.ID {
+	return types.NewID()
+}
+
+// GenerateIDWithLegacy generates a new ID with both UUID and legacy values
+func (g *IDGenerator) GenerateIDWithLegacy(legacy string) types.ID {
+	return types.NewIDWithLegacy(legacy)
+}
+
+// GenerateUUID generates a random UUID string
 func (g *IDGenerator) GenerateUUID() string {
-	b := make([]byte, 16)
-	_, err := rand.Read(b)
-	if err != nil {
-		// Fallback to timestamp-based ID
-		return fmt.Sprintf("%d", time.Now().UnixNano())
-	}
-
-	// Format as UUID-like string
-	return fmt.Sprintf("%s-%s-%s-%s-%s",
-		hex.EncodeToString(b[0:4]),
-		hex.EncodeToString(b[4:6]),
-		hex.EncodeToString(b[6:8]),
-		hex.EncodeToString(b[8:10]),
-		hex.EncodeToString(b[10:16]))
+	return uuid.New().String()
 }
 
-// GenerateEquipmentID generates an equipment ID
-func (g *IDGenerator) GenerateEquipmentID(name string) string {
+// GenerateEquipmentID generates an equipment ID with legacy format for backward compatibility
+func (g *IDGenerator) GenerateEquipmentID(name string) types.ID {
 	timestamp := time.Now().Unix()
-	return fmt.Sprintf("EQ-%s-%d", sanitizeName(name), timestamp)
+	legacyID := fmt.Sprintf("EQ-%s-%d", sanitizeName(name), timestamp)
+	return types.NewIDWithLegacy(legacyID)
 }
 
-// GenerateBuildingID generates a building ID
-func (g *IDGenerator) GenerateBuildingID(name string) string {
+// GenerateBuildingID generates a building ID with legacy format for backward compatibility
+func (g *IDGenerator) GenerateBuildingID(name string) types.ID {
 	timestamp := time.Now().Unix()
-	return fmt.Sprintf("BLD-%s-%d", sanitizeName(name), timestamp)
+	legacyID := fmt.Sprintf("BLD-%s-%d", sanitizeName(name), timestamp)
+	return types.NewIDWithLegacy(legacyID)
 }
 
-// GenerateUserID generates a user ID
-func (g *IDGenerator) GenerateUserID(email string) string {
+// GenerateUserID generates a user ID with legacy format for backward compatibility
+func (g *IDGenerator) GenerateUserID(email string) types.ID {
 	timestamp := time.Now().Unix()
-	return fmt.Sprintf("USR-%s-%d", sanitizeName(email), timestamp)
+	legacyID := fmt.Sprintf("USR-%s-%d", sanitizeName(email), timestamp)
+	return types.NewIDWithLegacy(legacyID)
 }
 
-// GenerateOrganizationID generates an organization ID
-func (g *IDGenerator) GenerateOrganizationID(name string) string {
+// GenerateOrganizationID generates an organization ID with legacy format for backward compatibility
+func (g *IDGenerator) GenerateOrganizationID(name string) types.ID {
 	timestamp := time.Now().Unix()
-	return fmt.Sprintf("ORG-%s-%d", sanitizeName(name), timestamp)
+	legacyID := fmt.Sprintf("ORG-%s-%d", sanitizeName(name), timestamp)
+	return types.NewIDWithLegacy(legacyID)
+}
+
+// GenerateFloorID generates a floor ID with legacy format for backward compatibility
+func (g *IDGenerator) GenerateFloorID(buildingID types.ID, level int) types.ID {
+	timestamp := time.Now().Unix()
+	legacyID := fmt.Sprintf("FLR-%s-%d-%d", buildingID.String(), level, timestamp)
+	return types.NewIDWithLegacy(legacyID)
+}
+
+// GenerateRoomID generates a room ID with legacy format for backward compatibility
+func (g *IDGenerator) GenerateRoomID(floorID types.ID, roomNumber string) types.ID {
+	timestamp := time.Now().Unix()
+	legacyID := fmt.Sprintf("RM-%s-%s-%d", floorID.String(), sanitizeName(roomNumber), timestamp)
+	return types.NewIDWithLegacy(legacyID)
 }
 
 // sanitizeName sanitizes a name for use in IDs
 func sanitizeName(name string) string {
 	// Simple sanitization - replace spaces and special chars with dashes
+	// This maintains backward compatibility with existing ID formats
+	if name == "" {
+		return "unknown"
+	}
+
+	// Replace spaces and special characters with dashes
 	result := ""
 	for _, char := range name {
-		if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || (char >= '0' && char <= '9') {
+		if char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z' || char >= '0' && char <= '9' {
 			result += string(char)
 		} else {
 			result += "-"
@@ -70,8 +92,8 @@ func sanitizeName(name string) string {
 	}
 
 	// Limit length and clean up multiple dashes
-	if len(result) > 10 {
-		result = result[:10]
+	if len(result) > 20 {
+		result = result[:20]
 	}
 
 	// Remove leading/trailing dashes
@@ -83,7 +105,7 @@ func sanitizeName(name string) string {
 	}
 
 	if result == "" {
-		result = "ID"
+		return "unknown"
 	}
 
 	return result

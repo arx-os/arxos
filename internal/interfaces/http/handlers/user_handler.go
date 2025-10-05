@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/arx-os/arxos/internal/domain"
+	domaintypes "github.com/arx-os/arxos/internal/domain/types"
 	"github.com/arx-os/arxos/internal/usecase"
 )
 
@@ -207,7 +208,7 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set the ID from URL parameter
-	req.ID = userID
+	req.ID = domaintypes.FromString(userID)
 
 	// Call use case
 	user, err := h.userUC.UpdateUser(r.Context(), &req)

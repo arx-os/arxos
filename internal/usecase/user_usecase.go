@@ -6,19 +6,22 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/infrastructure/utils"
 )
 
 // UserUseCase implements the user business logic following Clean Architecture
 type UserUseCase struct {
-	userRepo domain.UserRepository
-	logger   domain.Logger
+	userRepo    domain.UserRepository
+	logger      domain.Logger
+	idGenerator *utils.IDGenerator
 }
 
 // NewUserUseCase creates a new UserUseCase
 func NewUserUseCase(userRepo domain.UserRepository, logger domain.Logger) *UserUseCase {
 	return &UserUseCase{
-		userRepo: userRepo,
-		logger:   logger,
+		userRepo:    userRepo,
+		logger:      logger,
+		idGenerator: utils.NewIDGenerator(),
 	}
 }
 
@@ -40,7 +43,7 @@ func (uc *UserUseCase) CreateUser(ctx context.Context, req *domain.CreateUserReq
 
 	// Create user entity
 	user := &domain.User{
-		ID:        uc.generateUserID(),
+		ID:        uc.idGenerator.GenerateUserID(req.Email),
 		Email:     req.Email,
 		Name:      req.Name,
 		Role:      req.Role,
@@ -81,9 +84,9 @@ func (uc *UserUseCase) UpdateUser(ctx context.Context, req *domain.UpdateUserReq
 	uc.logger.Info("Updating user", "user_id", req.ID)
 
 	// Get existing user
-	user, err := uc.userRepo.GetByID(ctx, req.ID)
+	user, err := uc.userRepo.GetByID(ctx, req.ID.String())
 	if err != nil {
-		uc.logger.Error("Failed to get user for update", "user_id", req.ID, "error", err)
+		uc.logger.Error("Failed to get user for update", "user_id", req.ID.String(), "error", err)
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
@@ -257,9 +260,4 @@ func (uc *UserUseCase) validateUpdateUser(user *domain.User) error {
 	}
 
 	return nil
-}
-
-func (uc *UserUseCase) generateUserID() string {
-	// TODO: Implement proper ID generation (UUID, etc.)
-	return fmt.Sprintf("user_%d", time.Now().UnixNano())
 }

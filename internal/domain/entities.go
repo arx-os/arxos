@@ -2,13 +2,15 @@ package domain
 
 import (
 	"time"
+
+	"github.com/arx-os/arxos/internal/domain/types"
 )
 
 // Core domain entities following Clean Architecture principles
 
 // User represents a user in the system
 type User struct {
-	ID        string    `json:"id"`
+	ID        types.ID  `json:"id"`
 	Email     string    `json:"email"`
 	Name      string    `json:"name"`
 	Role      string    `json:"role"`
@@ -19,7 +21,7 @@ type User struct {
 
 // Organization represents an organization in the system
 type Organization struct {
-	ID          string    `json:"id"`
+	ID          types.ID  `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	Plan        string    `json:"plan"`
@@ -30,7 +32,7 @@ type Organization struct {
 
 // Building represents a building in the system
 type Building struct {
-	ID          string       `json:"id"`
+	ID          types.ID     `json:"id"`
 	Name        string       `json:"name"`
 	Address     string       `json:"address"`
 	Coordinates *Location    `json:"coordinates,omitempty"`
@@ -42,8 +44,8 @@ type Building struct {
 
 // Floor represents a floor within a building
 type Floor struct {
-	ID         string       `json:"id"`
-	BuildingID string       `json:"building_id"`
+	ID         types.ID     `json:"id"`
+	BuildingID types.ID     `json:"building_id"`
 	Name       string       `json:"name"`
 	Level      int          `json:"level"`
 	Rooms      []*Room      `json:"rooms,omitempty"`
@@ -54,8 +56,8 @@ type Floor struct {
 
 // Room represents a room within a floor
 type Room struct {
-	ID        string       `json:"id"`
-	FloorID   string       `json:"floor_id"`
+	ID        types.ID     `json:"id"`
+	FloorID   types.ID     `json:"floor_id"`
 	Name      string       `json:"name"`
 	Number    string       `json:"number"`
 	Equipment []*Equipment `json:"equipment,omitempty"`
@@ -65,10 +67,10 @@ type Room struct {
 
 // Equipment represents equipment within a building
 type Equipment struct {
-	ID         string    `json:"id"`
-	BuildingID string    `json:"building_id"`
-	FloorID    string    `json:"floor_id,omitempty"`
-	RoomID     string    `json:"room_id,omitempty"`
+	ID         types.ID  `json:"id"`
+	BuildingID types.ID  `json:"building_id"`
+	FloorID    types.ID  `json:"floor_id,omitempty"`
+	RoomID     types.ID  `json:"room_id,omitempty"`
 	Name       string    `json:"name"`
 	Type       string    `json:"type"`
 	Model      string    `json:"model,omitempty"`
@@ -96,10 +98,10 @@ type CreateUserRequest struct {
 
 // UpdateUserRequest represents the request to update a user
 type UpdateUserRequest struct {
-	ID     string  `json:"id" validate:"required"`
-	Name   *string `json:"name,omitempty"`
-	Role   *string `json:"role,omitempty"`
-	Active *bool   `json:"active,omitempty"`
+	ID     types.ID `json:"id" validate:"required"`
+	Name   *string  `json:"name,omitempty"`
+	Role   *string  `json:"role,omitempty"`
+	Active *bool    `json:"active,omitempty"`
 }
 
 // CreateOrganizationRequest represents the request to create an organization
@@ -111,11 +113,11 @@ type CreateOrganizationRequest struct {
 
 // UpdateOrganizationRequest represents the request to update an organization
 type UpdateOrganizationRequest struct {
-	ID          string  `json:"id" validate:"required"`
-	Name        *string `json:"name,omitempty"`
-	Description *string `json:"description,omitempty"`
-	Plan        *string `json:"plan,omitempty"`
-	Active      *bool   `json:"active,omitempty"`
+	ID          types.ID `json:"id" validate:"required"`
+	Name        *string  `json:"name,omitempty"`
+	Description *string  `json:"description,omitempty"`
+	Plan        *string  `json:"plan,omitempty"`
+	Active      *bool    `json:"active,omitempty"`
 }
 
 // CreateBuildingRequest represents the request to create a building
@@ -127,7 +129,7 @@ type CreateBuildingRequest struct {
 
 // UpdateBuildingRequest represents the request to update a building
 type UpdateBuildingRequest struct {
-	ID          string    `json:"id" validate:"required"`
+	ID          types.ID  `json:"id" validate:"required"`
 	Name        *string   `json:"name,omitempty"`
 	Address     *string   `json:"address,omitempty"`
 	Coordinates *Location `json:"coordinates,omitempty"`
@@ -135,9 +137,9 @@ type UpdateBuildingRequest struct {
 
 // CreateEquipmentRequest represents the request to create equipment
 type CreateEquipmentRequest struct {
-	BuildingID string    `json:"building_id" validate:"required"`
-	FloorID    string    `json:"floor_id,omitempty"`
-	RoomID     string    `json:"room_id,omitempty"`
+	BuildingID types.ID  `json:"building_id" validate:"required"`
+	FloorID    types.ID  `json:"floor_id,omitempty"`
+	RoomID     types.ID  `json:"room_id,omitempty"`
 	Name       string    `json:"name" validate:"required"`
 	Type       string    `json:"type" validate:"required"`
 	Model      string    `json:"model,omitempty"`
@@ -146,7 +148,7 @@ type CreateEquipmentRequest struct {
 
 // UpdateEquipmentRequest represents the request to update equipment
 type UpdateEquipmentRequest struct {
-	ID       string    `json:"id" validate:"required"`
+	ID       types.ID  `json:"id" validate:"required"`
 	Name     *string   `json:"name,omitempty"`
 	Type     *string   `json:"type,omitempty"`
 	Model    *string   `json:"model,omitempty"`
@@ -190,20 +192,20 @@ type BuildingFilter struct {
 
 // EquipmentFilter represents filters for equipment queries
 type EquipmentFilter struct {
-	BuildingID *string `json:"building_id,omitempty"`
-	FloorID    *string `json:"floor_id,omitempty"`
-	RoomID     *string `json:"room_id,omitempty"`
-	Type       *string `json:"type,omitempty"`
-	Status     *string `json:"status,omitempty"`
-	Limit      int     `json:"limit,omitempty"`
-	Offset     int     `json:"offset,omitempty"`
+	BuildingID *types.ID `json:"building_id,omitempty"`
+	FloorID    *types.ID `json:"floor_id,omitempty"`
+	RoomID     *types.ID `json:"room_id,omitempty"`
+	Type       *string   `json:"type,omitempty"`
+	Status     *string   `json:"status,omitempty"`
+	Limit      int       `json:"limit,omitempty"`
+	Offset     int       `json:"offset,omitempty"`
 }
 
 // Analytics entities
 
 // BuildingAnalytics represents analytics for a specific building
 type BuildingAnalytics struct {
-	BuildingID           string    `json:"building_id"`
+	BuildingID           types.ID  `json:"building_id"`
 	BuildingName         string    `json:"building_name"`
 	TotalEquipment       int       `json:"total_equipment"`
 	OperationalEquipment int       `json:"operational_equipment"`
@@ -234,7 +236,7 @@ type EquipmentAnalytics struct {
 
 // ControlEquipmentRequest represents a request to control equipment
 type ControlEquipmentRequest struct {
-	EquipmentID string         `json:"equipment_id" validate:"required"`
+	EquipmentID types.ID       `json:"equipment_id" validate:"required"`
 	Action      *ControlAction `json:"action" validate:"required"`
 }
 
@@ -246,13 +248,13 @@ type ControlAction struct {
 
 // SetBuildingModeRequest represents a request to set building mode
 type SetBuildingModeRequest struct {
-	BuildingID string `json:"building_id" validate:"required"`
-	Mode       string `json:"mode" validate:"required"`
+	BuildingID types.ID `json:"building_id" validate:"required"`
+	Mode       string   `json:"mode" validate:"required"`
 }
 
 // BuildingHealthReport represents a building health report
 type BuildingHealthReport struct {
-	BuildingID      string            `json:"building_id"`
+	BuildingID      types.ID          `json:"building_id"`
 	BuildingName    string            `json:"building_name"`
 	OverallHealth   string            `json:"overall_health"`
 	EquipmentHealth map[string]string `json:"equipment_health"`

@@ -2,12 +2,14 @@ package helpers
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/arx-os/arxos/internal/config"
+	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -103,22 +105,6 @@ func AssertConfigInvalid(t *testing.T, cfg *config.Config, expectedError string)
 	if expectedError != "" {
 		assert.Contains(t, err.Error(), expectedError)
 	}
-}
-
-// TestTimeout creates a context with a test timeout
-func TestTimeout(t *testing.T, duration time.Duration) {
-	timeout := duration
-	if timeout == 0 {
-		timeout = 5 * time.Second
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	t.Cleanup(cancel)
-	_ = ctx // Acknowledge the variable is intentionally unused
-
-	// Return the context for use in tests
-	// Note: This is a helper function that sets up cleanup
-	// The actual context should be created in the test
 }
 
 // TestEnvironment sets up environment variables for testing
@@ -239,4 +225,138 @@ func TestEnvironmentConfigPath(t *testing.T, environment string) string {
 	require.NoError(t, err)
 
 	return filepath.Join(envDir, environment+".yml")
+}
+
+// FindTestConfigFile finds the test configuration file regardless of working directory
+func FindTestConfigFile() (string, error) {
+	// Try different possible locations for the test config file
+	possiblePaths := []string{
+		"test/config/test_config.yaml",           // From project root
+		"../../config/test_config.yaml",           // From test/integration/services
+		"../config/test_config.yaml",              // From test/integration
+		"config/test_config.yaml",                // From test directory
+	}
+
+	for _, path := range possiblePaths {
+		if _, err := os.Stat(path); err == nil {
+			return path, nil
+		}
+	}
+
+	return "", os.ErrNotExist
+}
+
+// LoadTestConfig loads the test configuration file
+func LoadTestConfig(t *testing.T) *config.Config {
+	configPath, err := FindTestConfigFile()
+	require.NoError(t, err, "Test config file not found")
+
+	cfg, err := config.Load(configPath)
+	require.NoError(t, err, "Failed to load test config")
+
+	return cfg
+}
+
+// TestTimeout creates a context with a test timeout
+func TestTimeout(t *testing.T, duration time.Duration) context.Context {
+	timeout := duration
+	if timeout == 0 {
+		timeout = 30 * time.Second // Default test timeout
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	t.Cleanup(cancel)
+	return ctx
+}
+
+// TestTimeoutShort creates a short timeout context for quick operations
+func TestTimeoutShort(t *testing.T) context.Context {
+	return TestTimeout(t, 10*time.Second)
+}
+
+// TestTimeoutLong creates a long timeout context for heavy operations
+func TestTimeoutLong(t *testing.T) context.Context {
+	return TestTimeout(t, 2*time.Minute)
+}
+
+// TestTimeoutVeryLong creates a very long timeout context for database migrations
+func TestTimeoutVeryLong(t *testing.T) context.Context {
+	return TestTimeout(t, 5*time.Minute)
+}
+
+// AssertNoTimeout asserts that a context hasn't timed out
+func AssertNoTimeout(t *testing.T, ctx context.Context, operation string) {
+	select {
+	case <-ctx.Done():
+		if ctx.Err() == context.DeadlineExceeded {
+			t.Fatalf("Operation '%s' timed out: %v", operation, ctx.Err())
+		}
+		t.Fatalf("Operation '%s' was cancelled: %v", operation, ctx.Err())
+	default:
+		// Context is still valid
+	}
+}
+
+// TestDatabaseSetup sets up a test database connection
+func TestDatabaseSetup(t *testing.T) (context.Context, *sqlx.DB) {
+	ctx := TestTimeoutLong(t)
+	
+	// Load test config
+	cfg := LoadTestConfig(t)
+	
+	// Build connection string
+	dsn := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=%s password=%s",
+		cfg.PostGIS.Host,
+		cfg.PostGIS.Port,
+		cfg.PostGIS.User,
+		cfg.PostGIS.Database,
+		cfg.PostGIS.SSLMode,
+		cfg.PostGIS.Password,
+	)
+	
+	// Connect to database
+	db, err := sqlx.ConnectContext(ctx, "postgres", dsn)
+	require.NoError(t, err, "Failed to connect to test database")
+	
+	// Test connection
+	err = db.PingContext(ctx)
+	require.NoError(t, err, "Failed to ping test database")
+	
+	// Set up cleanup
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Logf("Warning: Failed to close database connection: %v", err)
+		}
+	})
+	
+	return ctx, db
+}
+
+// TestDatabaseCleanup cleans up test database
+func TestDatabaseCleanup(t *testing.T, db *sqlx.DB) {
+	ctx := TestTimeoutShort(t)
+	
+	// Drop all tables in public schema
+	rows, err := db.QueryContext(ctx, `
+		SELECT tablename FROM pg_tables 
+		WHERE schemaname = 'public' AND tablename NOT LIKE 'pg_%'
+	`)
+	require.NoError(t, err, "Failed to query tables")
+	defer rows.Close()
+	
+	var tables []string
+	for rows.Next() {
+		var tableName string
+		err := rows.Scan(&tableName)
+		require.NoError(t, err, "Failed to scan table name")
+		tables = append(tables, tableName)
+	}
+	
+	// Drop tables
+	for _, table := range tables {
+		_, err := db.ExecContext(ctx, fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE", table))
+		if err != nil {
+			t.Logf("Warning: Failed to drop table %s: %v", table, err)
+		}
+	}
 }

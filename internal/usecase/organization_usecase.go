@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/infrastructure/utils"
 )
 
 // OrganizationUseCase implements the organization business logic following Clean Architecture
@@ -13,6 +14,7 @@ type OrganizationUseCase struct {
 	organizationRepo domain.OrganizationRepository
 	userRepo         domain.UserRepository
 	logger           domain.Logger
+	idGenerator      *utils.IDGenerator
 }
 
 // NewOrganizationUseCase creates a new OrganizationUseCase
@@ -21,6 +23,7 @@ func NewOrganizationUseCase(organizationRepo domain.OrganizationRepository, user
 		organizationRepo: organizationRepo,
 		userRepo:         userRepo,
 		logger:           logger,
+		idGenerator:      utils.NewIDGenerator(),
 	}
 }
 
@@ -42,7 +45,7 @@ func (uc *OrganizationUseCase) CreateOrganization(ctx context.Context, req *doma
 
 	// Create organization entity
 	organization := &domain.Organization{
-		ID:          uc.generateOrganizationID(),
+		ID:          uc.idGenerator.GenerateOrganizationID(req.Name),
 		Name:        req.Name,
 		Description: req.Description,
 		Plan:        req.Plan,
@@ -83,9 +86,9 @@ func (uc *OrganizationUseCase) UpdateOrganization(ctx context.Context, req *doma
 	uc.logger.Info("Updating organization", "organization_id", req.ID)
 
 	// Get existing organization
-	organization, err := uc.organizationRepo.GetByID(ctx, req.ID)
+	organization, err := uc.organizationRepo.GetByID(ctx, req.ID.String())
 	if err != nil {
-		uc.logger.Error("Failed to get organization for update", "organization_id", req.ID, "error", err)
+		uc.logger.Error("Failed to get organization for update", "organization_id", req.ID.String(), "error", err)
 		return nil, fmt.Errorf("failed to get organization: %w", err)
 	}
 
@@ -314,9 +317,4 @@ func (uc *OrganizationUseCase) validateUpdateOrganization(organization *domain.O
 	}
 
 	return nil
-}
-
-func (uc *OrganizationUseCase) generateOrganizationID() string {
-	// TODO: Implement proper ID generation (UUID, etc.)
-	return fmt.Sprintf("org_%d", time.Now().UnixNano())
 }

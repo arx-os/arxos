@@ -27,6 +27,8 @@ const (
 	ModeCloud Mode = "cloud"
 	// ModeHybrid operates locally with optional cloud sync
 	ModeHybrid Mode = "hybrid"
+	// ModeProduction operates in production mode
+	ModeProduction Mode = "production"
 )
 
 // Config represents the complete ArxOS configuration
@@ -64,6 +66,9 @@ type Config struct {
 
 	// IFC settings
 	IFC IFCConfig `json:"ifc" yaml:"ifc"`
+
+	// Unified Cache settings - Multi-tier caching strategy
+	UnifiedCache UnifiedCacheConfig `json:"unified_cache" yaml:"unified_cache"`
 }
 
 // CloudConfig contains cloud-specific configuration
@@ -262,6 +267,34 @@ type IFCCircuitBreakerConfig struct {
 	Enabled          bool   `json:"enabled"`
 	FailureThreshold int    `json:"failure_threshold"`
 	RecoveryTimeout  string `json:"recovery_timeout"`
+}
+
+// UnifiedCacheConfig defines the multi-tier cache configuration
+type UnifiedCacheConfig struct {
+	// L1: In-memory cache (fastest, smallest)
+	L1 struct {
+		Enabled    bool          `json:"enabled" yaml:"enabled"`
+		MaxEntries int64         `json:"max_entries" yaml:"max_entries"` // Max entries in L1
+		DefaultTTL time.Duration `json:"default_ttl" yaml:"default_ttl"`
+	} `json:"l1" yaml:"l1"`
+
+	// L2: Local disk cache (fast, persistent)
+	L2 struct {
+		Enabled    bool          `json:"enabled" yaml:"enabled"`
+		MaxSizeMB  int64         `json:"max_size_mb" yaml:"max_size_mb"` // Max disk usage in MB
+		DefaultTTL time.Duration `json:"default_ttl" yaml:"default_ttl"`
+		Path       string        `json:"path" yaml:"path"`
+	} `json:"l2" yaml:"l2"`
+
+	// L3: Network cache (Redis, shared)
+	L3 struct {
+		Enabled    bool          `json:"enabled" yaml:"enabled"`
+		DefaultTTL time.Duration `json:"default_ttl" yaml:"default_ttl"`
+		Host       string        `json:"host" yaml:"host"`
+		Port       int           `json:"port" yaml:"port"`
+		Password   string        `json:"password" yaml:"password"`
+		DB         int           `json:"db" yaml:"db"`
+	} `json:"l3" yaml:"l3"`
 }
 
 // Validate validates the TUI configuration
@@ -475,6 +508,44 @@ func Default() *Config {
 				CacheEnabled: true,
 				CacheTTL:     "1h",
 				MaxFileSize:  "100MB",
+			},
+		},
+
+		UnifiedCache: UnifiedCacheConfig{
+			L1: struct {
+				Enabled    bool          `json:"enabled" yaml:"enabled"`
+				MaxEntries int64         `json:"max_entries" yaml:"max_entries"`
+				DefaultTTL time.Duration `json:"default_ttl" yaml:"default_ttl"`
+			}{
+				Enabled:    true,
+				MaxEntries: 10000,
+				DefaultTTL: 5 * time.Minute,
+			},
+			L2: struct {
+				Enabled    bool          `json:"enabled" yaml:"enabled"`
+				MaxSizeMB  int64         `json:"max_size_mb" yaml:"max_size_mb"`
+				DefaultTTL time.Duration `json:"default_ttl" yaml:"default_ttl"`
+				Path       string        `json:"path" yaml:"path"`
+			}{
+				Enabled:    true,
+				MaxSizeMB:  1000, // 1GB
+				DefaultTTL: time.Hour,
+				Path:       "cache/l2",
+			},
+			L3: struct {
+				Enabled    bool          `json:"enabled" yaml:"enabled"`
+				DefaultTTL time.Duration `json:"default_ttl" yaml:"default_ttl"`
+				Host       string        `json:"host" yaml:"host"`
+				Port       int           `json:"port" yaml:"port"`
+				Password   string        `json:"password" yaml:"password"`
+				DB         int           `json:"db" yaml:"db"`
+			}{
+				Enabled:    false, // Disabled by default
+				DefaultTTL: 24 * time.Hour,
+				Host:       "localhost",
+				Port:       6379,
+				Password:   "",
+				DB:         0,
 			},
 		},
 	}

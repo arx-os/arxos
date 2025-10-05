@@ -14,6 +14,7 @@ import (
 	"github.com/arx-os/arxos/internal/domain/component"
 	"github.com/arx-os/arxos/internal/domain/design"
 	"github.com/arx-os/arxos/internal/infrastructure"
+	"github.com/arx-os/arxos/internal/infrastructure/cache"
 	"github.com/arx-os/arxos/internal/infrastructure/filesystem"
 	"github.com/arx-os/arxos/internal/infrastructure/ifc"
 	"github.com/arx-os/arxos/internal/infrastructure/postgis"
@@ -162,10 +163,10 @@ func (c *Container) initInfrastructure(ctx context.Context) error {
 		return fmt.Errorf("failed to create PostGIS connection: %w", err)
 	}
 
-	// Cache
-	cache, err := infrastructure.NewCache(c.config)
+	// Cache - Use unified cache implementation
+	cache, err := cache.NewUnifiedCache(c.config, c.logger)
 	if err != nil {
-		return fmt.Errorf("failed to create cache: %w", err)
+		return fmt.Errorf("failed to create unified cache: %w", err)
 	}
 	c.cache = cache
 

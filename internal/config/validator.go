@@ -9,17 +9,46 @@ import (
 	"time"
 )
 
-// ConfigValidator validates configuration values
-type ConfigValidator struct {
-	errors []ValidationError
-}
-
 // ValidationError represents a configuration validation error
 type ValidationError struct {
 	Field   string `json:"field"`
 	Value   string `json:"value"`
 	Message string `json:"message"`
 	Code    string `json:"code"`
+}
+
+// ConfigValidator validates configuration values
+type ConfigValidator struct {
+	errors []ValidationError
+}
+
+// ValidationResult represents the result of validation
+type ValidationResult struct {
+	Valid    bool              `json:"valid"`
+	Errors   []ValidationError `json:"errors"`
+	Warnings []ValidationError `json:"warnings"`
+}
+
+// ValidateConfiguration validates the entire configuration and returns a result
+func (cv *ConfigValidator) ValidateConfiguration(config *Config) *ValidationResult {
+	errors := cv.Validate(config)
+
+	return &ValidationResult{
+		Valid:    len(errors) == 0,
+		Errors:   errors,
+		Warnings: []ValidationError{},
+	}
+}
+
+// ValidateInstallation validates the installation
+func (cv *ConfigValidator) ValidateInstallation(config *Config) *ValidationResult {
+	// First validate the configuration
+	result := cv.ValidateConfiguration(config)
+
+	// Add installation-specific validations
+	// (e.g., check if directories exist, permissions, etc.)
+
+	return result
 }
 
 // NewConfigValidator creates a new configuration validator
@@ -322,6 +351,8 @@ func (cv *ConfigValidator) validateTemplateStructure(template *ConfigTemplate) {
 
 	if template.Environment == "" {
 		cv.addError("template.environment", "", "Template environment is required", "TEMPLATE_ENVIRONMENT_REQUIRED")
+	} else if !isValidEnvironment(template.Environment) {
+		cv.addError("template.environment", string(template.Environment), "Invalid template environment", "INVALID_TEMPLATE_ENVIRONMENT")
 	}
 
 	if template.Config == nil {

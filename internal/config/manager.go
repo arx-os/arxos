@@ -260,7 +260,7 @@ func (cm *Manager) generateConfigFromTemplate(template *ConfigTemplate, variable
 		value := variables[variable.Name]
 
 		if value == nil {
-			value = variable.DefaultValue
+			value = variable.Default
 		}
 
 		if value == nil && variable.Required {

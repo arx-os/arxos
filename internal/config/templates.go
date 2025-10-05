@@ -1,349 +1,431 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
+	"runtime"
+	"time"
 )
 
 // ConfigTemplate represents a configuration template
 type ConfigTemplate struct {
-	Name        string                 `json:"name"`
-	Description string                 `json:"description"`
-	Environment Environment            `json:"environment"`
-	Config      map[string]interface{} `json:"config"`
-	Variables   []TemplateVariable     `json:"variables"`
+	Name        string
+	Description string
+	Mode        Mode
+	Config      *Config
+	Environment Environment
+	Variables   []TemplateVariable
 }
 
-// TemplateVariable represents a variable in a configuration template
+// TemplateVariable represents a template variable
 type TemplateVariable struct {
-	Name         string      `json:"name"`
-	Description  string      `json:"description"`
-	DefaultValue interface{} `json:"default_value"`
-	Required     bool        `json:"required"`
-	Type         string      `json:"type"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Type        string `json:"type"`
+	Default     string `json:"default"`
+	Required    bool   `json:"required"`
 }
 
-// ConfigTemplateManager manages configuration templates
-type ConfigTemplateManager struct {
-	templatesDir string
-	templates    map[string]*ConfigTemplate
-}
+// GetConfigTemplates returns available configuration templates
+func GetConfigTemplates() []ConfigTemplate {
+	homeDir, _ := os.UserHomeDir()
+	basePath := filepath.Join(homeDir, ".arxos")
 
-// NewConfigTemplateManager creates a new template manager
-func NewConfigTemplateManager(templatesDir string) *ConfigTemplateManager {
-	return &ConfigTemplateManager{
-		templatesDir: templatesDir,
-		templates:    make(map[string]*ConfigTemplate),
+	return []ConfigTemplate{
+		{
+			Name:        "local",
+			Description: "Local development with no cloud sync",
+			Mode:        ModeLocal,
+			Config:      createLocalTemplate(basePath),
+			Environment: EnvDevelopment,
+			Variables:   getLocalTemplateVariables(),
+		},
+		{
+			Name:        "cloud",
+			Description: "Cloud-first with automatic sync",
+			Mode:        ModeCloud,
+			Config:      createCloudTemplate(basePath),
+			Environment: EnvStaging,
+			Variables:   getCloudTemplateVariables(),
+		},
+		{
+			Name:        "hybrid",
+			Description: "Local database with cloud sync",
+			Mode:        ModeHybrid,
+			Config:      createHybridTemplate(basePath),
+			Environment: EnvInternal,
+			Variables:   getHybridTemplateVariables(),
+		},
+		{
+			Name:        "production",
+			Description: "Production-ready configuration",
+			Mode:        ModeHybrid, // Use hybrid as production mode
+			Config:      createProductionTemplate(basePath),
+			Environment: EnvProduction,
+			Variables:   getProductionTemplateVariables(),
+		},
 	}
 }
 
-// LoadTemplates loads all configuration templates from the templates directory
-func (ctm *ConfigTemplateManager) LoadTemplates() error {
-	if ctm.templatesDir == "" {
-		return fmt.Errorf("templates directory not set")
+// createLocalTemplate creates a local development template
+func createLocalTemplate(basePath string) *Config {
+	return &Config{
+		Mode:     ModeLocal,
+		Version:  "0.1.0",
+		StateDir: basePath,
+		CacheDir: filepath.Join(basePath, "cache"),
+
+		Cloud: CloudConfig{
+			Enabled:      false,
+			BaseURL:      "https://api.arxos.io",
+			SyncEnabled:  false,
+			SyncInterval: 5 * time.Minute,
+		},
+
+		Storage: StorageConfig{
+			Backend:   "local",
+			LocalPath: filepath.Join(basePath, "data"),
+			Data: DataConfig{
+				BasePath:        basePath,
+				RepositoriesDir: "repositories",
+				CacheDir:        "cache",
+				LogsDir:         "logs",
+				TempDir:         "temp",
+			},
+		},
+
+		API: APIConfig{
+			Timeout:       30 * time.Second,
+			RetryAttempts: 3,
+			RetryDelay:    1 * time.Second,
+			UserAgent:     "ArxOS-CLI/0.1.0",
+		},
+
+		Telemetry: TelemetryConfig{
+			Enabled:    false,
+			Endpoint:   "https://telemetry.arxos.io",
+			SampleRate: 0.1,
+			Debug:      true,
+		},
+
+		Features: FeatureFlags{
+			CloudSync:     false,
+			AIIntegration: false,
+			OfflineMode:   true,
+			BetaFeatures:  true,
+			Analytics:     false,
+			AutoUpdate:    false,
+		},
+
+		Security: SecurityConfig{
+			JWTExpiry:          24 * time.Hour,
+			SessionTimeout:     30 * time.Minute,
+			APIRateLimit:       1000,
+			APIRateLimitWindow: time.Minute,
+			EnableAuth:         false,
+			EnableTLS:          false,
+			AllowedOrigins:     []string{"http://localhost:3000", "http://localhost:8080"},
+			BcryptCost:         4, // Lower cost for development
+		},
+
+		TUI: TUIConfig{
+			Enabled:             true,
+			Theme:               "dark",
+			UpdateInterval:      "1s",
+			MaxEquipmentDisplay: 1000,
+			RealTimeEnabled:     true,
+			AnimationsEnabled:   true,
+			SpatialPrecision:    "1mm",
+			GridScale:           "1:10",
+			ShowCoordinates:     true,
+			ShowConfidence:      true,
+			CompactMode:         false,
+			CustomSymbols: map[string]string{
+				"hvac":        "H",
+				"electrical":  "E",
+				"fire_safety": "F",
+				"plumbing":    "P",
+				"lighting":    "L",
+				"outlet":      "O",
+				"sensor":      "S",
+				"camera":      "C",
+			},
+			ColorScheme:          "default",
+			ViewportSize:         20,
+			RefreshRate:          30,
+			EnableMouse:          true,
+			EnableBracketedPaste: true,
+		},
+
+		IFC: IFCConfig{
+			Service: IFCServiceConfig{
+				Enabled: true,
+				URL:     "http://localhost:5000",
+				Timeout: "30s",
+				Retries: 3,
+				CircuitBreaker: IFCCircuitBreakerConfig{
+					Enabled:          true,
+					FailureThreshold: 5,
+					RecoveryTimeout:  "60s",
+				},
+			},
+			Fallback: IFCFallbackConfig{
+				Enabled: true,
+				Parser:  "native",
+			},
+			Performance: IFCPerformanceConfig{
+				CacheEnabled: true,
+				CacheTTL:     "1h",
+				MaxFileSize:  "100MB",
+			},
+		},
+
+		Database: DatabaseConfig{
+			Type:            "postgis",
+			Driver:          "postgres",
+			Host:            "localhost",
+			Port:            5432,
+			Database:        "arxos_dev",
+			Username:        "arxos",
+			Password:        "arxos_dev",
+			SSLMode:         "disable",
+			MaxOpenConns:    25,
+			MaxConnections:  25,
+			MaxIdleConns:    5,
+			ConnLifetime:    30 * time.Minute,
+			ConnMaxLifetime: 30 * time.Minute,
+			MigrationsPath:  "./internal/migrations",
+			AutoMigrate:     true,
+		},
+
+		PostGIS: PostGISConfig{
+			Host:     "localhost",
+			Port:     5432,
+			Database: "arxos_dev",
+			User:     "arxos",
+			Password: "arxos_dev",
+			SSLMode:  "disable",
+			SRID:     900913,
+		},
 	}
-
-	// Ensure templates directory exists
-	if err := os.MkdirAll(ctm.templatesDir, 0755); err != nil {
-		return fmt.Errorf("failed to create templates directory: %w", err)
-	}
-
-	// Load built-in templates
-	ctm.loadBuiltinTemplates()
-
-	// Load templates from files
-	return ctm.loadTemplatesFromFiles()
 }
 
-// GetTemplate returns a template by name
-func (ctm *ConfigTemplateManager) GetTemplate(name string) (*ConfigTemplate, error) {
-	template, exists := ctm.templates[name]
-	if !exists {
-		return nil, fmt.Errorf("template '%s' not found", name)
-	}
-	return template, nil
+// createCloudTemplate creates a cloud-first template
+func createCloudTemplate(basePath string) *Config {
+	cfg := createLocalTemplate(basePath)
+	cfg.Mode = ModeCloud
+	cfg.Cloud.Enabled = true
+	cfg.Cloud.SyncEnabled = true
+	cfg.Features.CloudSync = true
+	cfg.Features.BetaFeatures = false
+	cfg.Security.EnableAuth = true
+	cfg.Security.BcryptCost = 10
+	cfg.Telemetry.Enabled = true
+	cfg.Telemetry.Debug = false
+	return cfg
 }
 
-// ListTemplates returns all available templates
-func (ctm *ConfigTemplateManager) ListTemplates() []*ConfigTemplate {
-	templates := make([]*ConfigTemplate, 0, len(ctm.templates))
-	for _, template := range ctm.templates {
-		templates = append(templates, template)
-	}
-	return templates
+// createHybridTemplate creates a hybrid template
+func createHybridTemplate(basePath string) *Config {
+	cfg := createLocalTemplate(basePath)
+	cfg.Mode = ModeHybrid
+	cfg.Cloud.Enabled = true
+	cfg.Cloud.SyncEnabled = true
+	cfg.Features.CloudSync = true
+	cfg.Features.OfflineMode = true
+	cfg.Security.EnableAuth = true
+	cfg.Security.BcryptCost = 10
+	cfg.Telemetry.Enabled = true
+	cfg.Telemetry.Debug = false
+	return cfg
 }
 
-// SaveTemplate saves a template to file
-func (ctm *ConfigTemplateManager) SaveTemplate(template *ConfigTemplate) error {
-	if ctm.templatesDir == "" {
-		return fmt.Errorf("templates directory not set")
+// createProductionTemplate creates a production template
+func createProductionTemplate(basePath string) *Config {
+	cfg := createLocalTemplate(basePath)
+	cfg.Mode = ModeHybrid // Use hybrid as production mode
+	cfg.Cloud.Enabled = true
+	cfg.Cloud.SyncEnabled = true
+	cfg.Features.CloudSync = true
+	cfg.Features.BetaFeatures = false
+	cfg.Features.Analytics = true
+	cfg.Security.EnableAuth = true
+	cfg.Security.EnableTLS = true
+	cfg.Security.BcryptCost = 14
+	cfg.Security.APIRateLimit = 100
+	cfg.Telemetry.Enabled = true
+	cfg.Telemetry.Debug = false
+	cfg.Telemetry.SampleRate = 0.01
+	cfg.TUI.Enabled = false // Disable TUI in production
+	cfg.Database.MaxOpenConns = 100
+	cfg.Database.MaxConnections = 100
+	cfg.Database.MaxIdleConns = 10
+	return cfg
+}
+
+// CreateConfigFromTemplate creates a configuration from a template
+func CreateConfigFromTemplate(templateName, dataDir string) (*Config, error) {
+	templates := GetConfigTemplates()
+
+	var template *ConfigTemplate
+	for _, t := range templates {
+		if t.Name == templateName {
+			template = &t
+			break
+		}
 	}
 
-	filename := fmt.Sprintf("%s.json", template.Name)
-	filepath := filepath.Join(ctm.templatesDir, filename)
+	if template == nil {
+		return nil, fmt.Errorf("unknown template: %s", templateName)
+	}
 
-	data, err := json.MarshalIndent(template, "", "  ")
+	// Create a copy of the template config
+	cfg := *template.Config
+
+	// Override data directory if provided
+	if dataDir != "" {
+		cfg.Storage.Data.BasePath = dataDir
+		cfg.StateDir = dataDir
+		cfg.CacheDir = filepath.Join(dataDir, "cache")
+		cfg.Storage.LocalPath = filepath.Join(dataDir, "data")
+	}
+
+	return &cfg, nil
+}
+
+// getLocalTemplateVariables returns variables for local template
+func getLocalTemplateVariables() []TemplateVariable {
+	return []TemplateVariable{
+		{
+			Name:        "data_dir",
+			Description: "Directory for local data storage",
+			Type:        "string",
+			Default:     "~/.arxos",
+			Required:    false,
+		},
+		{
+			Name:        "database_host",
+			Description: "Database host",
+			Type:        "string",
+			Default:     "localhost",
+			Required:    true,
+		},
+		{
+			Name:        "database_port",
+			Description: "Database port",
+			Type:        "int",
+			Default:     "5432",
+			Required:    true,
+		},
+	}
+}
+
+// getCloudTemplateVariables returns variables for cloud template
+func getCloudTemplateVariables() []TemplateVariable {
+	return []TemplateVariable{
+		{
+			Name:        "cloud_url",
+			Description: "Cloud API URL",
+			Type:        "string",
+			Default:     "https://api.arxos.io",
+			Required:    true,
+		},
+		{
+			Name:        "api_key",
+			Description: "API key for cloud access",
+			Type:        "string",
+			Default:     "",
+			Required:    true,
+		},
+		{
+			Name:        "sync_interval",
+			Description: "Sync interval in minutes",
+			Type:        "int",
+			Default:     "5",
+			Required:    false,
+		},
+	}
+}
+
+// getHybridTemplateVariables returns variables for hybrid template
+func getHybridTemplateVariables() []TemplateVariable {
+	return []TemplateVariable{
+		{
+			Name:        "data_dir",
+			Description: "Directory for local data storage",
+			Type:        "string",
+			Default:     "~/.arxos",
+			Required:    false,
+		},
+		{
+			Name:        "cloud_url",
+			Description: "Cloud API URL",
+			Type:        "string",
+			Default:     "https://api.arxos.io",
+			Required:    true,
+		},
+		{
+			Name:        "api_key",
+			Description: "API key for cloud access",
+			Type:        "string",
+			Default:     "",
+			Required:    true,
+		},
+	}
+}
+
+// getProductionTemplateVariables returns variables for production template
+func getProductionTemplateVariables() []TemplateVariable {
+	return []TemplateVariable{
+		{
+			Name:        "data_dir",
+			Description: "Directory for local data storage",
+			Type:        "string",
+			Default:     "~/.arxos",
+			Required:    false,
+		},
+		{
+			Name:        "cloud_url",
+			Description: "Cloud API URL",
+			Type:        "string",
+			Default:     "https://api.arxos.io",
+			Required:    true,
+		},
+		{
+			Name:        "api_key",
+			Description: "API key for cloud access",
+			Type:        "string",
+			Default:     "",
+			Required:    true,
+		},
+		{
+			Name:        "enable_tls",
+			Description: "Enable TLS encryption",
+			Type:        "bool",
+			Default:     "true",
+			Required:    false,
+		},
+	}
+}
+
+// GetDefaultDataPath returns the default data path based on the operating system
+func GetDefaultDataPath() string {
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("failed to marshal template: %w", err)
+		// Fallback to current directory if home directory cannot be determined
+		return ".arxos"
 	}
 
-	if err := os.WriteFile(filepath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write template file: %w", err)
-	}
-
-	ctm.templates[template.Name] = template
-	return nil
-}
-
-// CreateTemplate creates a new template
-func (ctm *ConfigTemplateManager) CreateTemplate(name, description string, environment Environment) *ConfigTemplate {
-	template := &ConfigTemplate{
-		Name:        name,
-		Description: description,
-		Environment: environment,
-		Config:      make(map[string]interface{}),
-		Variables:   make([]TemplateVariable, 0),
-	}
-
-	ctm.templates[name] = template
-	return template
-}
-
-// Private methods
-
-func (ctm *ConfigTemplateManager) loadBuiltinTemplates() {
-	// Development template
-	devTemplate := ctm.CreateTemplate("development", "Development environment configuration", EnvDevelopment)
-	devTemplate.Config = map[string]interface{}{
-		"mode": "local",
-		"postgis": map[string]interface{}{
-			"host":     "{{db_host}}",
-			"port":     "{{db_port}}",
-			"database": "{{db_name}}",
-			"user":     "{{db_user}}",
-			"password": "{{db_password}}",
-			"ssl_mode": "disable",
-		},
-		"api": map[string]interface{}{
-			"host": "localhost",
-			"port": "{{api_port}}",
-		},
-		"features": map[string]interface{}{
-			"debug_mode":      true,
-			"verbose_logging": true,
-			"offline_mode":    true,
-		},
-		"telemetry": map[string]interface{}{
-			"enabled": false,
-		},
-	}
-	devTemplate.Variables = []TemplateVariable{
-		{Name: "db_host", Description: "Database host", DefaultValue: "localhost", Required: true, Type: "string"},
-		{Name: "db_port", Description: "Database port", DefaultValue: 5432, Required: true, Type: "int"},
-		{Name: "db_name", Description: "Database name", DefaultValue: "arxos_dev", Required: true, Type: "string"},
-		{Name: "db_user", Description: "Database user", DefaultValue: "arxos", Required: true, Type: "string"},
-		{Name: "db_password", Description: "Database password", DefaultValue: "", Required: false, Type: "string"},
-		{Name: "api_port", Description: "API server port", DefaultValue: 8080, Required: true, Type: "int"},
-	}
-
-	// Production template
-	prodTemplate := ctm.CreateTemplate("production", "Production environment configuration", EnvProduction)
-	prodTemplate.Config = map[string]interface{}{
-		"mode": "cloud",
-		"postgis": map[string]interface{}{
-			"host":     "{{db_host}}",
-			"port":     "{{db_port}}",
-			"database": "{{db_name}}",
-			"user":     "{{db_user}}",
-			"password": "{{db_password}}",
-			"ssl_mode": "require",
-		},
-		"api": map[string]interface{}{
-			"host": "{{api_host}}",
-			"port": "{{api_port}}",
-		},
-		"features": map[string]interface{}{
-			"debug_mode":      false,
-			"verbose_logging": false,
-			"offline_mode":    false,
-		},
-		"telemetry": map[string]interface{}{
-			"enabled": true,
-		},
-		"security": map[string]interface{}{
-			"require_https":   true,
-			"session_timeout": "8h",
-		},
-	}
-	prodTemplate.Variables = []TemplateVariable{
-		{Name: "db_host", Description: "Database host", DefaultValue: "", Required: true, Type: "string"},
-		{Name: "db_port", Description: "Database port", DefaultValue: 5432, Required: true, Type: "int"},
-		{Name: "db_name", Description: "Database name", DefaultValue: "", Required: true, Type: "string"},
-		{Name: "db_user", Description: "Database user", DefaultValue: "", Required: true, Type: "string"},
-		{Name: "db_password", Description: "Database password", DefaultValue: "", Required: true, Type: "string"},
-		{Name: "api_host", Description: "API server host", DefaultValue: "0.0.0.0", Required: true, Type: "string"},
-		{Name: "api_port", Description: "API server port", DefaultValue: 8080, Required: true, Type: "int"},
-	}
-
-	// Staging template
-	stagingTemplate := ctm.CreateTemplate("staging", "Staging environment configuration", EnvStaging)
-	stagingTemplate.Config = map[string]interface{}{
-		"mode": "hybrid",
-		"postgis": map[string]interface{}{
-			"host":     "{{db_host}}",
-			"port":     "{{db_port}}",
-			"database": "{{db_name}}",
-			"user":     "{{db_user}}",
-			"password": "{{db_password}}",
-			"ssl_mode": "prefer",
-		},
-		"api": map[string]interface{}{
-			"host": "{{api_host}}",
-			"port": "{{api_port}}",
-		},
-		"features": map[string]interface{}{
-			"debug_mode":      true,
-			"verbose_logging": true,
-			"offline_mode":    false,
-		},
-		"telemetry": map[string]interface{}{
-			"enabled": true,
-		},
-		"security": map[string]interface{}{
-			"require_https":   true,
-			"session_timeout": "4h",
-		},
-	}
-	stagingTemplate.Variables = []TemplateVariable{
-		{Name: "db_host", Description: "Database host", DefaultValue: "", Required: true, Type: "string"},
-		{Name: "db_port", Description: "Database port", DefaultValue: 5432, Required: true, Type: "int"},
-		{Name: "db_name", Description: "Database name", DefaultValue: "", Required: true, Type: "string"},
-		{Name: "db_user", Description: "Database user", DefaultValue: "", Required: true, Type: "string"},
-		{Name: "db_password", Description: "Database password", DefaultValue: "", Required: true, Type: "string"},
-		{Name: "api_host", Description: "API server host", DefaultValue: "0.0.0.0", Required: true, Type: "string"},
-		{Name: "api_port", Description: "API server port", DefaultValue: 8080, Required: true, Type: "int"},
-	}
-
-	// Docker template
-	dockerTemplate := ctm.CreateTemplate("docker", "Docker environment configuration", EnvDevelopment)
-	dockerTemplate.Config = map[string]interface{}{
-		"mode": "local",
-		"postgis": map[string]interface{}{
-			"host":     "{{db_host}}",
-			"port":     "{{db_port}}",
-			"database": "{{db_name}}",
-			"user":     "{{db_user}}",
-			"password": "{{db_password}}",
-			"ssl_mode": "disable",
-		},
-		"api": map[string]interface{}{
-			"host": "0.0.0.0",
-			"port": "{{api_port}}",
-		},
-		"features": map[string]interface{}{
-			"debug_mode":      true,
-			"verbose_logging": true,
-			"offline_mode":    true,
-		},
-		"telemetry": map[string]interface{}{
-			"enabled": false,
-		},
-	}
-	dockerTemplate.Variables = []TemplateVariable{
-		{Name: "db_host", Description: "Database host", DefaultValue: "postgres", Required: true, Type: "string"},
-		{Name: "db_port", Description: "Database port", DefaultValue: 5432, Required: true, Type: "int"},
-		{Name: "db_name", Description: "Database name", DefaultValue: "arxos", Required: true, Type: "string"},
-		{Name: "db_user", Description: "Database user", DefaultValue: "arxos", Required: true, Type: "string"},
-		{Name: "db_password", Description: "Database password", DefaultValue: "arxos", Required: true, Type: "string"},
-		{Name: "api_port", Description: "API server port", DefaultValue: 8080, Required: true, Type: "int"},
-	}
-
-	// Kubernetes template
-	k8sTemplate := ctm.CreateTemplate("kubernetes", "Kubernetes environment configuration", EnvProduction)
-	k8sTemplate.Config = map[string]interface{}{
-		"mode": "cloud",
-		"postgis": map[string]interface{}{
-			"host":     "{{db_host}}",
-			"port":     "{{db_port}}",
-			"database": "{{db_name}}",
-			"user":     "{{db_user}}",
-			"password": "{{db_password}}",
-			"ssl_mode": "require",
-		},
-		"api": map[string]interface{}{
-			"host": "0.0.0.0",
-			"port": "{{api_port}}",
-		},
-		"features": map[string]interface{}{
-			"debug_mode":      false,
-			"verbose_logging": false,
-			"offline_mode":    false,
-		},
-		"telemetry": map[string]interface{}{
-			"enabled": true,
-		},
-		"security": map[string]interface{}{
-			"require_https":   true,
-			"session_timeout": "8h",
-		},
-	}
-	k8sTemplate.Variables = []TemplateVariable{
-		{Name: "db_host", Description: "Database host", DefaultValue: "", Required: true, Type: "string"},
-		{Name: "db_port", Description: "Database port", DefaultValue: 5432, Required: true, Type: "int"},
-		{Name: "db_name", Description: "Database name", DefaultValue: "", Required: true, Type: "string"},
-		{Name: "db_user", Description: "Database user", DefaultValue: "", Required: true, Type: "string"},
-		{Name: "db_password", Description: "Database password", DefaultValue: "", Required: true, Type: "string"},
-		{Name: "api_port", Description: "API server port", DefaultValue: 8080, Required: true, Type: "int"},
-	}
-}
-
-func (ctm *ConfigTemplateManager) loadTemplatesFromFiles() error {
-	if ctm.templatesDir == "" {
-		return nil
-	}
-
-	entries, err := os.ReadDir(ctm.templatesDir)
-	if err != nil {
-		return fmt.Errorf("failed to read templates directory: %w", err)
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
-			continue
-		}
-
-		filepath := filepath.Join(ctm.templatesDir, entry.Name())
-		data, err := os.ReadFile(filepath)
-		if err != nil {
-			continue // Skip files that can't be read
-		}
-
-		var template ConfigTemplate
-		if err := json.Unmarshal(data, &template); err != nil {
-			continue // Skip files that can't be parsed
-		}
-
-		ctm.templates[template.Name] = &template
-	}
-
-	return nil
-}
-
-// GetDefaultTemplateForEnvironment returns the default template for an environment
-func (ctm *ConfigTemplateManager) GetDefaultTemplateForEnvironment(env Environment) *ConfigTemplate {
-	switch env {
-	case EnvDevelopment:
-		return ctm.templates["development"]
-	case EnvStaging:
-		return ctm.templates["staging"]
-	case EnvProduction:
-		return ctm.templates["production"]
-	case EnvInternal:
-		return ctm.templates["kubernetes"] // Use k8s template for internal
+	switch runtime.GOOS {
+	case "windows":
+		// Windows: %APPDATA%\arxos
+		return filepath.Join(homeDir, "AppData", "Roaming", "arxos")
+	case "darwin":
+		// macOS: ~/Library/Application Support/arxos
+		return filepath.Join(homeDir, "Library", "Application Support", "arxos")
 	default:
-		return ctm.templates["development"]
+		// Linux/Unix: ~/.local/share/arxos (XDG Base Directory)
+		return filepath.Join(homeDir, ".local", "share", "arxos")
 	}
 }

@@ -20,6 +20,7 @@ go.debug
 go-build-*/
 # ArxOS build cache (Phase 6 optimization)
 .cache/
+build-metrics.json
 
 # Go Module Backup Files
 *.mod.bak

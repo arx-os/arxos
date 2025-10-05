@@ -117,6 +117,7 @@ func (a *App) wireCommands() {
 	serviceContext := a.container
 
 	// System management commands
+	a.rootCmd.AddCommand(commands.CreateInitCommand(serviceContext))
 	a.rootCmd.AddCommand(commands.CreateInstallCommand(serviceContext))
 	a.rootCmd.AddCommand(commands.CreateHealthCommand(serviceContext))
 	a.rootCmd.AddCommand(commands.CreateMigrateCommand(serviceContext))

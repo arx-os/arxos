@@ -316,7 +316,7 @@ func TestMigrateConfigData(t *testing.T) {
 		},
 	}
 
-	migrated, _, changes, err = migrator.migrateConfigData(source, "postgis.yml")
+	migrated, _, _, err = migrator.migrateConfigData(source, "postgis.yml")
 	require.NoError(t, err)
 
 	// Verify postgis defaults were added

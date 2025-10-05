@@ -1,0 +1,18 @@
+postgis:
+    cache_ttl: 5m
+    conn_max_lifetime: 30m
+    database: ${POSTGIS_DATABASE:-arxos}
+    enable_query_cache: true
+    host: ${POSTGIS_HOST:-localhost}
+    max_connections: 25
+    max_idle_conns: 5
+    password: ${POSTGIS_PASSWORD:-arxos_dev}
+    port: ${POSTGIS_PORT:-5432}
+    precision_mm: true
+    prepared_statements: true
+    srid: 900913
+    ssl_cert_path: ${POSTGIS_SSL_CERT_PATH:-}
+    ssl_key_path: ${POSTGIS_SSL_KEY_PATH:-}
+    ssl_mode: ${POSTGIS_SSLMODE:-disable}
+    ssl_root_cert_path: ${POSTGIS_SSL_ROOT_CERT_PATH:-}
+    user: ${POSTGIS_USER:-arxos}

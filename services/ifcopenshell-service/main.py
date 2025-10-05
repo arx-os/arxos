@@ -1,5 +1,7 @@
 import os
+import time
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import ifcopenshell
 import ifcopenshell.util.element
 import io
@@ -11,17 +13,27 @@ from models.validation import validator
 from models.spatial import spatial_query
 from models.performance import performance_cache, performance_monitor, cache_key_generator
 from models.errors import error_handler, IFCParseError, IFCValidationError, SpatialQueryError
+from config import get_config, validate_environment, get_health_info
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Get configuration
+config = get_config()
 logger = logging.getLogger(__name__)
+
+# Validate environment
+if not validate_environment():
+    logger.error("Environment validation failed")
+    exit(1)
 
 app = Flask(__name__)
 
-# Configuration
-MAX_FILE_SIZE = int(os.getenv('MAX_FILE_SIZE', 100 * 1024 * 1024))  # 100MB
-CACHE_ENABLED = os.getenv('CACHE_ENABLED', 'True').lower() == 'true'
-CACHE_TTL = int(os.getenv('CACHE_TTL', 3600))  # 1 hour
+# Configure CORS
+cors_config = config.get_cors_config()
+CORS(app, origins=cors_config['origins'], supports_credentials=cors_config['supports_credentials'])
+
+# Configuration from config module
+MAX_FILE_SIZE = config.max_file_size
+CACHE_ENABLED = config.cache_enabled
+CACHE_TTL = config.cache_ttl
 
 # Simple in-memory cache for development
 cache = {}
@@ -54,13 +66,15 @@ def health():
         test_model = ifcopenshell.file()
         test_model.create_entity('IfcProject')
         
+        # Get health information from config
+        health_info = get_health_info()
+        
         return jsonify({
             "status": "healthy",
             "service": "ifcopenshell",
             "version": ifcopenshell.version,
             "timestamp": datetime.utcnow().isoformat(),
-            "cache_enabled": CACHE_ENABLED,
-            "max_file_size_mb": MAX_FILE_SIZE / (1024 * 1024)
+            **health_info
         })
     except Exception as e:
         logger.error(f"Health check failed: {e}")
@@ -153,12 +167,9 @@ def parse_ifc():
             logger.info(f"IFC parsing completed: {result['total_entities']} total entities in {processing_time:.3f}s")
             return jsonify(result)
             
-        except Exception as e:
+        except ifcopenshell.Error as e:
             processing_time = time.time() - start_time
             performance_monitor.record_request("parse", processing_time, False)
-            raise e
-        
-        except ifcopenshell.Error as e:
             logger.error(f"IfcOpenShell parsing error: {str(e)}")
             error_response = error_handler.handle_error(
                 IFCParseError(f"Failed to parse IFC file: {str(e)}", {
@@ -170,11 +181,23 @@ def parse_ifc():
             return jsonify(error_response), 400
             
         except Exception as e:
+            processing_time = time.time() - start_time
+            performance_monitor.record_request("parse", processing_time, False)
             logger.error(f"Parsing error: {str(e)}")
             error_response = error_handler.handle_error(
                 e, {"endpoint": "parse", "file_size": len(ifc_data)}
             )
             return jsonify(error_response), 500
+            
+    except Exception as e:
+        logger.error(f"Unexpected error in parse_ifc: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": {
+                "code": "INTERNAL_ERROR",
+                "message": f"Internal server error: {str(e)}"
+            }
+        }), 500
 
 @app.route('/api/validate', methods=['POST'])
 def validate_ifc():

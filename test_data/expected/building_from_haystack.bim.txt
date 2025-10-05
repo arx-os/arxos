@@ -1,0 +1,108 @@
+BUILDING DATA - HAYSTACK CONVERSION
+===================================
+Source: sample_haystack.json
+Converted: 2024-01-01T12:00:00Z
+Format: BIM Text (ArxOS)
+
+BUILDING INFORMATION:
+--------------------
+Building ID: ARXOS-HAYSTACK-001
+Name: Sample Building
+Description: Building Management System Haystack Data
+Format: Haystack JSON v3.0
+
+SITES:
+------
+MAIN SITE - main
+  Status: OPERATIONAL
+
+BUILDING SITES:
+--------------
+BUILDING1 - Sample Building
+  Site: main
+  Status: OPERATIONAL
+
+FLOORS:
+-------
+GROUND FLOOR - Ground Floor
+  Site: building1
+  Status: OPERATIONAL
+
+FIRST FLOOR - First Floor
+  Site: building1
+  Status: OPERATIONAL
+
+ROOMS:
+------
+ROOM 101 - Room 101
+  Site: building1
+  Zone: ground-floor
+  Status: OPERATIONAL
+
+ROOM 102 - Room 102
+  Site: building1
+  Zone: ground-floor
+  Status: OPERATIONAL
+
+ROOM 201 - Room 201
+  Site: building1
+  Zone: first-floor
+  Status: OPERATIONAL
+
+EQUIPMENT:
+----------
+AHU-01 - AHU-01
+  Site: building1
+  Type: hvac
+  Status: OPERATIONAL
+
+VAV-101 - VAV-101
+  Site: building1
+  Type: hvac
+  Zone: room-101
+  Status: OPERATIONAL
+
+SENSORS:
+--------
+ROOM 101 TEMPERATURE - Room 101 Temperature
+  Site: building1
+  Type: sensor
+  Unit: fahrenheit
+  Zone: room-101
+  Status: OPERATIONAL
+
+ROOM 101 SETPOINT - Room 101 Setpoint
+  Site: building1
+  Type: setpoint
+  Unit: fahrenheit
+  Zone: room-101
+  Status: OPERATIONAL
+
+ROOM 102 TEMPERATURE - Room 102 Temperature
+  Site: building1
+  Type: sensor
+  Unit: fahrenheit
+  Zone: room-102
+  Status: OPERATIONAL
+
+ROOM 102 SETPOINT - Room 102 Setpoint
+  Site: building1
+  Type: setpoint
+  Unit: fahrenheit
+  Zone: room-102
+  Status: OPERATIONAL
+
+HAYSTACK METADATA:
+-----------------
+Version: 3.0
+Display Name: ArxOS Test Building Haystack Data
+Navigation: Building Management System
+
+NOTES:
+------
+- Converted from Haystack JSON format
+- Includes sites, floors, rooms, equipment, and sensors
+- Temperature data in Fahrenheit
+- Equipment categorized as HVAC
+- Sensor types: temperature sensors and setpoints
+- Zone-based organization for rooms and equipment

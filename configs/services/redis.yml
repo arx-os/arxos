@@ -1,0 +1,15 @@
+redis:
+    db: ${REDIS_DB:-0}
+    default_ttl: 1h
+    dial_timeout: 5s
+    host: ${REDIS_HOST:-localhost}
+    max_retries: 3
+    max_ttl: 24h
+    password: ${REDIS_PASSWORD:-}
+    pool_min_idle: 2
+    pool_size: 10
+    port: ${REDIS_PORT:-6379}
+    read_timeout: 3s
+    retry_backoff: 1s
+    tls_enabled: ${REDIS_TLS_ENABLED:-false}
+    write_timeout: 3s

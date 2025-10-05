@@ -119,6 +119,7 @@ func (a *App) wireCommands() {
 	a.rootCmd.AddCommand(commands.CreateInstallCommand(serviceContext))
 	a.rootCmd.AddCommand(commands.CreateHealthCommand(serviceContext))
 	a.rootCmd.AddCommand(commands.CreateMigrateCommand(serviceContext))
+	a.rootCmd.AddCommand(commands.CreateConfigCommand(serviceContext))
 
 	// Repository management commands
 	a.rootCmd.AddCommand(commands.CreateRepoCommand(serviceContext))

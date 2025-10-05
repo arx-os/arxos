@@ -550,7 +550,7 @@ func setupTestData(db *sql.DB) error {
 	countQuery := "SELECT COUNT(*) FROM buildings"
 	var count int
 	err := db.QueryRow(countQuery).Scan(&count)
-	if err != nil {
+			if err != nil {
 		return err
 	}
 

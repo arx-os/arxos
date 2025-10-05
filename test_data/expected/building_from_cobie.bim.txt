@@ -1,0 +1,86 @@
+BUILDING DATA - COBIE CONVERSION
+================================
+Source: sample_cobie.csv
+Converted: 2024-01-01T12:00:00Z
+Format: BIM Text (ArxOS)
+
+BUILDING INFORMATION:
+--------------------
+Building ID: ARXOS-COBIE-001
+Name: COBie Building
+Description: Construction Operations Building information exchange
+Format: COBie CSV
+
+FLOORS:
+-------
+GROUND FLOOR - Ground Floor
+  Status: OPERATIONAL
+
+FIRST FLOOR - First Floor
+  Status: OPERATIONAL
+
+ROOF - Roof
+  Status: OPERATIONAL
+
+SPACES:
+-------
+ROOM 101 - Room 101
+  Floor: Ground Floor
+  Category: Office
+  Description: Main office space
+  Area: 150 sq ft
+  Created By: John Doe
+  Created On: 2024-01-01
+  Status: OPERATIONAL
+
+ROOM 102 - Room 102
+  Floor: Ground Floor
+  Category: Conference
+  Description: Meeting room
+  Area: 50 sq ft
+  Created By: John Doe
+  Created On: 2024-01-01
+  Status: OPERATIONAL
+
+ROOM 201 - Room 201
+  Floor: First Floor
+  Category: Office
+  Description: Executive office
+  Area: 200 sq ft
+  Created By: John Doe
+  Created On: 2024-01-01
+  Status: OPERATIONAL
+
+COMPONENTS:
+----------
+AHU-01 - AHU-01
+  Category: HVAC
+  Floor: Roof
+  Description: Air handling unit
+  Created By: Jane Smith
+  Created On: 2024-01-01
+  Status: OPERATIONAL
+
+VAV-101 - VAV-101
+  Category: HVAC
+  Floor: Ground Floor
+  Description: VAV box for Room 101
+  Created By: Jane Smith
+  Created On: 2024-01-01
+  Status: OPERATIONAL
+
+LIGHT-101-01 - LIGHT-101-01
+  Category: Electrical
+  Floor: Ground Floor
+  Description: LED Panel Light
+  Created By: Bob Johnson
+  Created On: 2024-01-01
+  Status: OPERATIONAL
+
+NOTES:
+------
+- Converted from COBie CSV format
+- Includes both spaces and components
+- Tracks creation metadata (author, date)
+- Areas in square feet
+- Component categories: HVAC, Electrical

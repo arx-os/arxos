@@ -1,0 +1,129 @@
+# ArxOS Test Environment Configuration
+# This configuration is optimized for testing and CI/CD
+
+# Core settings
+mode: local
+version: "0.1.0-test"
+state_dir: "/tmp/arxos-test"
+cache_dir: "/tmp/arxos-test/cache"
+
+# Cloud settings
+cloud:
+  enabled: false
+  base_url: "https://test-api.arxos.io"
+  sync_enabled: false
+  sync_interval: "1m"
+
+# Storage settings
+storage:
+  backend: "local"
+  local_path: "/tmp/arxos-test/data"
+  data:
+    base_path: "/tmp/arxos-test"
+    repositories_dir: "repositories"
+    cache_dir: "cache"
+    logs_dir: "logs"
+    temp_dir: "temp"
+
+# Database settings (legacy)
+database:
+  type: "postgis"
+  driver: "postgres"
+  host: "localhost"
+  port: 5432
+  database: "arxos_test"
+  username: "arxos_test"
+  ssl_mode: "disable"
+  max_open_conns: 5
+  max_connections: 5
+  max_idle_conns: 2
+  conn_lifetime: "5m"
+  conn_max_lifetime: "5m"
+  migrations_path: "./internal/migrations"
+  auto_migrate: true
+
+# PostGIS settings (primary)
+postgis:
+  host: "localhost"
+  port: 5432
+  database: "arxos_test"
+  user: "arxos_test"
+  ssl_mode: "disable"
+  srid: 900913
+
+# API settings
+api:
+  timeout: "10s"
+  retry_attempts: 1
+  retry_delay: "100ms"
+  user_agent: "ArxOS-CLI/0.1.0-test"
+
+# Telemetry settings
+telemetry:
+  enabled: false
+  endpoint: "https://test-telemetry.arxos.io"
+  sample_rate: 0.0
+  debug: true
+
+# Feature flags
+features:
+  cloud_sync: false
+  ai_integration: false
+  offline_mode: true
+  beta_features: true
+  analytics: false
+  auto_update: false
+
+# Security settings
+security:
+  jwt_expiry: "1h"
+  session_timeout: "5m"
+  api_rate_limit: 10000
+  api_rate_limit_window: "1m"
+  enable_auth: false
+  enable_tls: false
+  allowed_origins:
+    - "http://localhost:3000"
+    - "http://localhost:8080"
+    - "http://test.arxos.io"
+  bcrypt_cost: 4
+
+# TUI settings
+tui:
+  enabled: false
+  theme: "light"
+  update_interval: "500ms"
+  max_equipment_display: 100
+  real_time_enabled: false
+  animations_enabled: false
+  spatial_precision: "1cm"
+  grid_scale: "1:20"
+  show_coordinates: false
+  show_confidence: false
+  compact_mode: true
+  custom_symbols: {}
+  color_scheme: "test"
+  keybindings: {}
+  viewport_size: 10
+  refresh_rate: 10
+  enable_mouse: false
+  enable_bracketed_paste: false
+
+# IFC settings
+ifc:
+  service:
+    enabled: false
+    url: "http://localhost:5000"
+    timeout: "5s"
+    retries: 1
+    circuit_breaker:
+      enabled: false
+      failure_threshold: 1
+      recovery_timeout: "10s"
+  fallback:
+    enabled: true
+    parser: "native"
+  performance:
+    cache_enabled: false
+    cache_ttl: "1m"
+    max_file_size: "10MB"

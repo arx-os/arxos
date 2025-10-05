@@ -491,6 +491,11 @@ func Load(configPath string) (*Config, error) {
 		}
 	}
 
+	// Load service configurations
+	if err := config.LoadServiceConfigs(); err != nil {
+		fmt.Printf("Warning: Failed to load service configs: %v\n", err)
+	}
+
 	// Override with environment variables
 	config.LoadFromEnv()
 
@@ -996,6 +1001,89 @@ func (c *Config) IsCloudEnabled() bool {
 // IsOfflineMode returns true if operating in offline mode
 func (c *Config) IsOfflineMode() bool {
 	return c.Mode == ModeLocal || (c.Mode == ModeHybrid && c.Features.OfflineMode)
+}
+
+// LoadServiceConfigs loads service-specific configurations
+func (c *Config) LoadServiceConfigs() error {
+	serviceLoader := NewServiceConfigLoader("configs")
+	serviceConfigs, err := serviceLoader.LoadServiceConfigs()
+	if err != nil {
+		return fmt.Errorf("failed to load service configs: %w", err)
+	}
+
+	// Apply PostGIS service config if available
+	if postgisConfig, exists := serviceConfigs["postgis"]; exists {
+		if postgisMap, ok := postgisConfig.(map[string]interface{}); ok {
+			if postgis, ok := postgisMap["postgis"].(map[string]interface{}); ok {
+				c.applyPostGISServiceConfig(postgis)
+			}
+		}
+	}
+
+	// Apply Redis service config if available
+	if redisConfig, exists := serviceConfigs["redis"]; exists {
+		if redisMap, ok := redisConfig.(map[string]interface{}); ok {
+			if redis, ok := redisMap["redis"].(map[string]interface{}); ok {
+				c.applyRedisServiceConfig(redis)
+			}
+		}
+	}
+
+	// Apply IFC service config if available
+	if ifcConfig, exists := serviceConfigs["ifc_service"]; exists {
+		if ifcMap, ok := ifcConfig.(map[string]interface{}); ok {
+			if ifc, ok := ifcMap["ifc_service"].(map[string]interface{}); ok {
+				c.applyIFCServiceConfig(ifc)
+			}
+		}
+	}
+
+	return nil
+}
+
+// applyPostGISServiceConfig applies PostGIS service configuration
+func (c *Config) applyPostGISServiceConfig(config map[string]interface{}) {
+	if host, ok := config["host"].(string); ok {
+		c.PostGIS.Host = host
+	}
+	if port, ok := config["port"].(int); ok {
+		c.PostGIS.Port = port
+	}
+	if database, ok := config["database"].(string); ok {
+		c.PostGIS.Database = database
+	}
+	if user, ok := config["user"].(string); ok {
+		c.PostGIS.User = user
+	}
+	if sslMode, ok := config["ssl_mode"].(string); ok {
+		c.PostGIS.SSLMode = sslMode
+	}
+	if srid, ok := config["srid"].(int); ok {
+		c.PostGIS.SRID = srid
+	}
+}
+
+// applyRedisServiceConfig applies Redis service configuration
+func (c *Config) applyRedisServiceConfig(config map[string]interface{}) {
+	// Redis config would be applied to a RedisConfig struct if we had one
+	// For now, we'll just store it in a generic way
+	// This is a placeholder for future Redis integration
+}
+
+// applyIFCServiceConfig applies IFC service configuration
+func (c *Config) applyIFCServiceConfig(config map[string]interface{}) {
+	if enabled, ok := config["enabled"].(bool); ok {
+		c.IFC.Service.Enabled = enabled
+	}
+	if url, ok := config["url"].(string); ok {
+		c.IFC.Service.URL = url
+	}
+	if timeout, ok := config["timeout"].(string); ok {
+		c.IFC.Service.Timeout = timeout
+	}
+	if retries, ok := config["retries"].(int); ok {
+		c.IFC.Service.Retries = retries
+	}
 }
 
 // GetConfigPath returns the default configuration file path

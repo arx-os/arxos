@@ -9,6 +9,7 @@ This directory contains sample output from various format converters, used for t
 - `building_from_haystack.bim.txt` - Output from Haystack IoT data conversion
 - `building_from_ifc.bim.txt` - Output from IFC BIM model conversion
 - `merged_building.bim.txt` - Output from merging multiple input formats
+- `sample_floorplan.txt` - Reference floor plan output
 
 ## Purpose
 
@@ -22,11 +23,15 @@ These files serve as:
 
 ```bash
 # Run converter accuracy tests
-./test/scripts/test_converter_accuracy.sh
+make test-integration
 
 # Compare output against baselines
-diff expected_output.bim.txt actual_output.bim.txt
+diff test_data/expected/building_from_ifc.bim.txt actual_output.bim.txt
 
 # Validate converter output format
-arx validate test/converter_output/building_from_ifc.bim.txt
+arx validate test_data/expected/building_from_ifc.bim.txt
+
+# Test specific converter
+arx convert ifc-to-bim test_data/inputs/sample.ifc > test_output.bim.txt
+diff test_data/expected/building_from_ifc.bim.txt test_output.bim.txt
 ```

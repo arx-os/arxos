@@ -1,0 +1,71 @@
+BUILDING DATA - IFC CONVERSION
+===============================
+Source: sample.ifc
+Converted: 2024-01-01T12:00:00Z
+Format: BIM Text (ArxOS)
+
+BUILDING INFORMATION:
+--------------------
+Building ID: ARXOS-IFC-001
+Name: Sample Building
+Description: A sample building for testing
+Project: Sample Project
+Author: Author
+Organization: Organization
+
+FLOORS:
+-------
+FLOOR 1 - Ground Floor
+  Level: 0
+  Elevation: 0.0mm
+  Status: OPERATIONAL
+
+FLOOR 2 - First Floor  
+  Level: 1
+  Elevation: 3000.0mm
+  Status: OPERATIONAL
+
+SPACES:
+-------
+ROOM 101 - Office Space
+  Floor: Ground Floor
+  Type: INTERNAL
+  Status: OPERATIONAL
+  Location: (0, 0, 0)
+
+ROOM 102 - Conference Room
+  Floor: Ground Floor
+  Type: INTERNAL
+  Status: OPERATIONAL
+  Location: (10000, 0, 0)
+
+ROOM 201 - Executive Office
+  Floor: First Floor
+  Type: INTERNAL
+  Status: OPERATIONAL
+  Location: (0, 0, 3000)
+
+MECHANICAL SYSTEMS:
+------------------
+AHU-01 - Air Handling Unit
+  Type: Flow Controller
+  Description: Rooftop AHU
+  Status: OPERATIONAL
+
+VAV-101 - VAV Box
+  Type: Flow Controller
+  Description: Variable Air Volume Box for Room 101
+  Status: OPERATIONAL
+
+COORDINATE SYSTEM:
+-----------------
+Units: Millimeters
+Origin: (0, 0, 0)
+Projection: Local Building Coordinates
+
+NOTES:
+------
+- All coordinates in millimeters
+- Building has 2 floors with 3 spaces
+- HVAC system includes AHU and VAV components
+- Converted from IFC4x3 format

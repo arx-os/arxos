@@ -1,0 +1,141 @@
+# ArxOS Production Environment Configuration
+# This configuration is optimized for production deployment
+
+# Core settings
+mode: cloud
+version: "1.0.0"
+state_dir: "/var/lib/arxos"
+cache_dir: "/var/cache/arxos"
+
+# Cloud settings
+cloud:
+  enabled: true
+  base_url: "https://api.arxos.io"
+  sync_enabled: true
+  sync_interval: "5m"
+
+# Storage settings
+storage:
+  backend: "s3"
+  local_path: "/var/lib/arxos/data"
+  cloud_bucket: "${ARXOS_S3_BUCKET}"
+  cloud_region: "${ARXOS_S3_REGION}"
+  cloud_prefix: "arxos"
+  data:
+    base_path: "/var/lib/arxos"
+    repositories_dir: "repositories"
+    cache_dir: "cache"
+    logs_dir: "logs"
+    temp_dir: "temp"
+
+# Database settings (legacy)
+database:
+  type: "postgis"
+  driver: "postgres"
+  host: "${ARXOS_DB_HOST}"
+  port: 5432
+  database: "${ARXOS_DB_NAME}"
+  username: "${ARXOS_DB_USER}"
+  ssl_mode: "require"
+  max_open_conns: 50
+  max_connections: 50
+  max_idle_conns: 10
+  conn_lifetime: "1h"
+  conn_max_lifetime: "1h"
+  migrations_path: "./internal/migrations"
+  auto_migrate: false
+
+# PostGIS settings (primary)
+postgis:
+  host: "${POSTGIS_HOST}"
+  port: 5432
+  database: "${POSTGIS_DATABASE}"
+  user: "${POSTGIS_USER}"
+  ssl_mode: "require"
+  srid: 900913
+
+# API settings
+api:
+  timeout: "30s"
+  retry_attempts: 5
+  retry_delay: "2s"
+  user_agent: "ArxOS-CLI/1.0.0"
+
+# Telemetry settings
+telemetry:
+  enabled: true
+  endpoint: "https://telemetry.arxos.io"
+  sample_rate: 0.01
+  debug: false
+
+# Feature flags
+features:
+  cloud_sync: true
+  ai_integration: true
+  offline_mode: false
+  beta_features: false
+  analytics: true
+  auto_update: true
+
+# Security settings
+security:
+  jwt_expiry: "1h"
+  session_timeout: "15m"
+  api_rate_limit: 1000
+  api_rate_limit_window: "1m"
+  enable_auth: true
+  enable_tls: true
+  tls_cert_path: "/etc/ssl/certs/arxos.crt"
+  tls_key_path: "/etc/ssl/private/arxos.key"
+  allowed_origins:
+    - "https://app.arxos.io"
+    - "https://admin.arxos.io"
+  bcrypt_cost: 14
+
+# TUI settings
+tui:
+  enabled: false
+  theme: "auto"
+  update_interval: "5s"
+  max_equipment_display: 5000
+  real_time_enabled: true
+  animations_enabled: false
+  spatial_precision: "1mm"
+  grid_scale: "1:10"
+  show_coordinates: true
+  show_confidence: true
+  compact_mode: true
+  custom_symbols:
+    hvac: "H"
+    electrical: "E"
+    fire_safety: "F"
+    plumbing: "P"
+    lighting: "L"
+    outlet: "O"
+    sensor: "S"
+    camera: "C"
+  color_scheme: "default"
+  keybindings: {}
+  viewport_size: 50
+  refresh_rate: 60
+  enable_mouse: true
+  enable_bracketed_paste: true
+
+# IFC settings
+ifc:
+  service:
+    enabled: true
+    url: "${IFC_SERVICE_URL}"
+    timeout: "60s"
+    retries: 5
+    circuit_breaker:
+      enabled: true
+      failure_threshold: 10
+      recovery_timeout: "300s"
+  fallback:
+    enabled: true
+    parser: "native"
+  performance:
+    cache_enabled: true
+    cache_ttl: "24h"
+    max_file_size: "500MB"

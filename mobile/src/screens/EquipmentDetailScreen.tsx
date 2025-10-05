@@ -34,7 +34,7 @@ export const EquipmentDetailScreen: React.FC = () => {
   const [equipmentItem, setEquipmentItem] = useState<Equipment | null>(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<EquipmentStatus>('normal');
+  const [selectedStatus, setSelectedStatus] = useState<EquipmentStatus>(EquipmentStatus.OPERATIONAL);
   const [note, setNote] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   
@@ -55,18 +55,11 @@ export const EquipmentDetailScreen: React.FC = () => {
       const location = await locationService.getCurrentLocation();
       
       const update: EquipmentStatusUpdate = {
-        id: `update_${Date.now()}`,
         equipmentId: equipmentItem.id,
         status: selectedStatus,
         notes: note,
-        photos: photos,
-        location: location,
-        timestamp: new Date().toISOString(),
-        technicianId: user.id,
-        buildingId: equipmentItem.location.buildingId,
-        floorId: equipmentItem.location.floorId,
-        roomId: equipmentItem.location.roomId,
-        syncStatus: 'pending',
+        updatedBy: 'current_user', // TODO: Get from auth context
+        updatedAt: new Date(),
       };
       
       await dispatch(updateEquipmentStatus(update));
@@ -94,7 +87,7 @@ export const EquipmentDetailScreen: React.FC = () => {
   
   const handleSelectPhoto = async () => {
     try {
-      const photo = await cameraService.selectPhoto();
+      const photo = await cameraService.selectFromGallery();
       if (photo) {
         setPhotos(prev => [...prev, photo.uri]);
       }
@@ -160,13 +153,15 @@ export const EquipmentDetailScreen: React.FC = () => {
           <View style={styles.infoRow}>
             <Icon name="location-on" size={20} color="#666666" />
             <Text style={styles.infoText}>
-              {equipmentItem.location.floorId} - {equipmentItem.location.roomId}
+              {equipmentItem.floorId} - {equipmentItem.roomId}
             </Text>
           </View>
-          {equipmentItem.location.address && (
+          {equipmentItem.location && (
             <View style={styles.infoRow}>
               <Icon name="place" size={20} color="#666666" />
-              <Text style={styles.infoText}>{equipmentItem.location.address}</Text>
+              <Text style={styles.infoText}>
+                {equipmentItem.location.x.toFixed(2)}, {equipmentItem.location.y.toFixed(2)}, {equipmentItem.location.z.toFixed(2)}
+              </Text>
             </View>
           )}
         </View>
@@ -176,15 +171,15 @@ export const EquipmentDetailScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>Specifications</Text>
           <View style={styles.infoRow}>
             <Icon name="info" size={20} color="#666666" />
-            <Text style={styles.infoText}>Model: {equipmentItem.specifications.model}</Text>
+            <Text style={styles.infoText}>Model: {equipmentItem.model || 'N/A'}</Text>
           </View>
           <View style={styles.infoRow}>
             <Icon name="business" size={20} color="#666666" />
-            <Text style={styles.infoText}>Manufacturer: {equipmentItem.specifications.manufacturer}</Text>
+            <Text style={styles.infoText}>Manufacturer: {equipmentItem.manufacturer || 'N/A'}</Text>
           </View>
           <View style={styles.infoRow}>
             <Icon name="confirmation-number" size={20} color="#666666" />
-            <Text style={styles.infoText}>Serial: {equipmentItem.specifications.serialNumber}</Text>
+            <Text style={styles.infoText}>Serial: N/A</Text>
           </View>
         </View>
         
@@ -194,20 +189,20 @@ export const EquipmentDetailScreen: React.FC = () => {
           <View style={styles.infoRow}>
             <Icon name="schedule" size={20} color="#666666" />
             <Text style={styles.infoText}>
-              {new Date(equipmentItem.lastUpdated).toLocaleString()}
+              {equipmentItem.updatedAt.toLocaleString()}
             </Text>
           </View>
           <View style={styles.infoRow}>
             <Icon name="person" size={20} color="#666666" />
-            <Text style={styles.infoText}>By: {equipmentItem.lastUpdatedBy}</Text>
+            <Text style={styles.infoText}>By: System</Text>
           </View>
         </View>
         
         {/* Notes */}
-        {equipmentItem.notes && (
+        {equipmentItem.maintenanceNotes && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Notes</Text>
-            <Text style={styles.notesText}>{equipmentItem.notes}</Text>
+            <Text style={styles.notesText}>{equipmentItem.maintenanceNotes}</Text>
           </View>
         )}
         

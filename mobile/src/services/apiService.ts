@@ -8,7 +8,7 @@ import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError} fro
 import {APIResponse, APIError} from '@/types/api';
 import {store} from '@/store';
 import {logout} from '@/store/slices/authSlice';
-import {logger} from '../utils/logger';
+import {Logger} from "../utils/logger";
 import {errorHandler, ErrorType, ErrorSeverity, createError} from '../utils/errorHandler';
 
 // API Configuration
@@ -17,6 +17,9 @@ const API_BASE_URL = __DEV__
   : 'https://api.arxos.com/v1/mobile';
 
 const API_TIMEOUT = 30000; // 30 seconds
+
+// Create logger instance
+const logger = new Logger('ApiService');
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
@@ -48,13 +51,13 @@ apiClient.interceptors.request.use(
       logger.debug(`API Request: ${config.method?.toUpperCase()} ${config.url}`, {
         headers: config.headers,
         data: config.data,
-      }, 'ApiService');
+      });
     }
     
     return config;
   },
   (error) => {
-    logger.error('Request interceptor error', error, 'ApiService');
+    logger.error('Request interceptor error', error as Error);
     return Promise.reject(error);
   }
 );
@@ -66,7 +69,7 @@ apiClient.interceptors.response.use(
     if (__DEV__) {
       logger.debug(`API Response: ${response.status} ${response.config.url}`, {
         data: response.data,
-      }, 'ApiService');
+      });
     }
     
     return response;
@@ -81,11 +84,11 @@ apiClient.interceptors.response.use(
       url: error.config?.url,
       method: error.config?.method,
       data: error.response?.data,
-    }, 'ApiService');
+    });
     
     // Handle 401 errors (unauthorized)
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
+    if (error.response?.status === 401 && originalRequest && !(originalRequest as any)._retry) {
+      (originalRequest as any)._retry = true;
       
       try {
         // Try to refresh token
@@ -115,7 +118,7 @@ apiClient.interceptors.response.use(
         }
       } catch (refreshError) {
         // Refresh failed, logout user
-        logger.error('Token refresh failed', refreshError, 'ApiService');
+        logger.error('Token refresh failed', refreshError as Error);
         store.dispatch(logout());
         return Promise.reject(refreshError);
       }
@@ -129,7 +132,7 @@ apiClient.interceptors.response.use(
         ErrorSeverity.HIGH,
         { 
           component: 'ApiService', 
-          retryable: error.response?.status >= 500,
+          retryable: (error.response?.status || 0) >= 500,
           details: {
             status: error.response?.status,
             statusText: error.response?.statusText,
@@ -171,7 +174,7 @@ export class ApiService {
         logger.info(`Retrying request (attempt ${retryCount + 1}/${this.maxRetries})`, {
           url: axiosError.config?.url,
           status: axiosError.response?.status,
-        }, 'ApiService');
+        });
 
         // Wait before retry with exponential backoff
         await new Promise(resolve => setTimeout(resolve, this.retryDelay * Math.pow(2, retryCount)));

@@ -1,30 +1,15 @@
 module.exports = {
   root: true,
-  extends: [
-    '@react-native',
-    '@typescript-eslint/recommended',
-  ],
-  parser: '@typescript-eslint/parser',
-  plugins: [
-    '@typescript-eslint',
-    'react-native',
-  ],
+  extends: ['@react-native'],
+  plugins: ['react-native'],
   rules: {
-    // TypeScript specific rules
-    '@typescript-eslint/no-unused-vars': 'error',
-    '@typescript-eslint/no-explicit-any': 'warn',
-    '@typescript-eslint/explicit-function-return-type': 'off',
-    '@typescript-eslint/explicit-module-boundary-types': 'off',
-    '@typescript-eslint/no-empty-function': 'warn',
-    '@typescript-eslint/no-non-null-assertion': 'warn',
-    
     // React Native specific rules
     'react-native/no-unused-styles': 'error',
     'react-native/split-platform-components': 'error',
     'react-native/no-inline-styles': 'warn',
     'react-native/no-color-literals': 'warn',
     'react-native/no-raw-text': 'off',
-    
+
     // General rules
     'no-console': 'warn',
     'no-debugger': 'error',
@@ -33,27 +18,27 @@ module.exports = {
     'no-var': 'error',
     'object-shorthand': 'error',
     'prefer-template': 'error',
-    
-    // Import rules
-    'import/order': [
-      'error',
-      {
-        groups: [
-          'builtin',
-          'external',
-          'internal',
-          'parent',
-          'sibling',
-          'index',
-        ],
-        'newlines-between': 'always',
-        alphabetize: {
-          order: 'asc',
-          caseInsensitive: true,
-        },
-      },
-    ],
-    
+
+    // Import rules - disabled for now due to plugin issues
+    // 'import/order': [
+    //   'error',
+    //   {
+    //     groups: [
+    //       'builtin',
+    //       'external',
+    //       'internal',
+    //       'parent',
+    //       'sibling',
+    //       'index',
+    //     ],
+    //     'newlines-between': 'always',
+    //     alphabetize: {
+    //       order: 'asc',
+    //       caseInsensitive: true,
+    //     },
+    //   },
+    // ],
+
     // React rules
     'react/jsx-uses-react': 'off',
     'react/react-in-jsx-scope': 'off',

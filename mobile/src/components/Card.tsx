@@ -32,13 +32,12 @@ export const Card: React.FC<CardProps> = ({
   ...props
 }) => {
   const getCardStyle = (): ViewStyle => {
-    const baseStyle = [styles.card, styles[`${variant}Card`], styles[`${padding}Padding`]];
-    
-    if (style) {
-      baseStyle.push(style);
-    }
-    
-    return StyleSheet.flatten(baseStyle);
+    return StyleSheet.flatten([
+      styles.card, 
+      styles[`${variant}Card`], 
+      styles[`${padding}Padding`],
+      style
+    ]) as ViewStyle;
   };
 
   if (onPress) {
@@ -55,7 +54,7 @@ export const Card: React.FC<CardProps> = ({
   }
 
   return (
-    <View style={getCardStyle()} testID={testID} {...props}>
+    <View style={getCardStyle()} testID={testID}>
       {children}
     </View>
   );

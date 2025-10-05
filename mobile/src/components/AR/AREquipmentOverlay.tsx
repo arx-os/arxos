@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { EquipmentAROverlay, EquipmentStatus } from '../../domain/AREntities';
 import { Vector3 } from '../../types/SpatialTypes';
-import { Logger } from '../../utils/Logger';
+import { Logger } from "../../utils/logger";
 
 interface AREquipmentOverlayProps {
   equipment: EquipmentAROverlay;
@@ -193,7 +193,7 @@ export const AREquipmentOverlay: React.FC<AREquipmentOverlayProps> = ({
           <View style={styles.equipmentInfo}>
             <Text style={styles.equipmentName}>{equipment.metadata.name}</Text>
             <Text style={styles.equipmentType}>{equipment.metadata.type}</Text>
-            <Text style={styles.equipmentModel}>{equipment.metadata.model}</Text>
+            <Text style={styles.equipmentModelText}>{equipment.metadata.model}</Text>
             
             {equipment.metadata.manufacturer && (
               <Text style={styles.equipmentManufacturer}>
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
     color: '#cccccc',
     marginBottom: 3,
   },
-  equipmentModel: {
+  equipmentModelText: {
     fontSize: 12,
     color: '#aaaaaa',
     marginBottom: 3,

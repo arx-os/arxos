@@ -4,7 +4,10 @@
  */
 
 import {apiService} from './apiService';
-import {logger} from '../utils/logger';
+import {Logger} from "../utils/logger";
+
+// Create logger instance
+const logger = new Logger('SpatialService');
 
 // API Configuration
 const SPATIAL_API_BASE = __DEV__ 

@@ -3,9 +3,14 @@
  * Handles Augmented Reality functionality with spatial anchors
  */
 
-import {logger} from '../utils/logger';
+import {Logger} from "../utils/logger";
 import {errorHandler, ErrorType, ErrorSeverity, createError} from '../utils/errorHandler';
 import {permissionManager, PermissionType} from '../utils/permissions';
+import {Platform} from 'react-native';
+import DeviceInfo from 'react-native-device-info';
+
+// Create logger instance
+const logger = new Logger('ARService');
 
 export interface ARAnchor {
   id: string;
@@ -71,7 +76,7 @@ class ARService {
    */
   async initialize(): Promise<void> {
     try {
-      logger.info('Initializing AR service', {}, 'ARService');
+      logger.info('Initializing AR service');
 
       // Check AR support
       const isSupported = await this.checkARSupport();
@@ -93,9 +98,9 @@ class ARService {
       }
 
       this.isInitialized = true;
-      logger.info('AR service initialized successfully', {}, 'ARService');
+      logger.info('AR service initialized successfully');
     } catch (error) {
-      logger.error('Failed to initialize AR service', error, 'ARService');
+      logger.error('Failed to initialize AR service', error as Error);
       throw errorHandler.handleError(
         createError(
           ErrorType.AR,
@@ -117,18 +122,18 @@ class ARService {
       if (Platform.OS === 'ios') {
         // Check iOS version (ARKit requires iOS 11+)
         const version = await DeviceInfo.getSystemVersion();
-        const majorVersion = parseInt(version.split('.')[0], 10);
+        const majorVersion = parseInt(version.split('.')[0] || '0', 10);
         return majorVersion >= 11;
       } else if (Platform.OS === 'android') {
         // Check Android version (ARCore requires Android 7.0+)
         const version = await DeviceInfo.getSystemVersion();
-        const majorVersion = parseInt(version.split('.')[0], 10);
+        const majorVersion = parseInt(version.split('.')[0] || '0', 10);
         return majorVersion >= 7;
       }
       
       return false;
     } catch (error) {
-      logger.error('Failed to check AR support', error, 'ARService');
+      logger.error('Failed to check AR support', error as Error);
       return false;
     }
   }
@@ -142,7 +147,7 @@ class ARService {
         await this.initialize();
       }
 
-      logger.info('Starting AR session', {config}, 'ARService');
+      logger.info('Starting AR session', {config});
 
       // Update configuration
       if (config) {
@@ -164,10 +169,10 @@ class ARService {
       // Start platform-specific AR session
       await this.startPlatformSession();
 
-      logger.info('AR session started successfully', {sessionId: session.id}, 'ARService');
+      logger.info('AR session started successfully', {sessionId: session.id});
       return session;
     } catch (error) {
-      logger.error('Failed to start AR session', error, 'ARService');
+      logger.error('Failed to start AR session', error);
       throw errorHandler.handleError(
         createError(
           ErrorType.AR,
@@ -186,19 +191,19 @@ class ARService {
   async stopSession(): Promise<void> {
     try {
       if (!this.currentSession) {
-        logger.warn('No active AR session to stop', {}, 'ARService');
+        logger.warn('No active AR session to stop', {});
         return;
       }
 
-      logger.info('Stopping AR session', {sessionId: this.currentSession.id}, 'ARService');
+      logger.info('Stopping AR session', {sessionId: this.currentSession.id});
 
       // Stop platform-specific AR session
       await this.stopPlatformSession();
 
       this.currentSession = null;
-      logger.info('AR session stopped successfully', {}, 'ARService');
+      logger.info('AR session stopped successfully', {});
     } catch (error) {
-      logger.error('Failed to stop AR session', error, 'ARService');
+      logger.error('Failed to stop AR session', error);
       throw errorHandler.handleError(
         createError(
           ErrorType.AR,
@@ -223,7 +228,7 @@ class ARService {
         throw new Error('No active AR session');
       }
 
-      logger.info('Creating AR anchor', {position, equipmentId}, 'ARService');
+      logger.info('Creating AR anchor', {position, equipmentId});
 
       const anchor: ARAnchor = {
         id: `ar_anchor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -241,10 +246,10 @@ class ARService {
       // Create platform-specific anchor
       await this.createPlatformAnchor(anchor);
 
-      logger.info('AR anchor created successfully', {anchorId: anchor.id}, 'ARService');
+      logger.info('AR anchor created successfully', {anchorId: anchor.id});
       return anchor;
     } catch (error) {
-      logger.error('Failed to create AR anchor', error, 'ARService');
+      logger.error('Failed to create AR anchor', error);
       throw errorHandler.handleError(
         createError(
           ErrorType.AR,
@@ -271,11 +276,20 @@ class ARService {
         throw new Error(`Anchor not found: ${anchorId}`);
       }
 
-      logger.info('Updating AR anchor', {anchorId, updates}, 'ARService');
+      logger.info('Updating AR anchor', {anchorId, updates});
 
-      const updatedAnchor = {
-        ...this.currentSession.anchors[anchorIndex],
-        ...updates,
+      const currentAnchor = this.currentSession.anchors[anchorIndex];
+      if (!currentAnchor) {
+        throw new Error(`Anchor not found at index: ${anchorIndex}`);
+      }
+
+      const updatedAnchor: ARAnchor = {
+        id: currentAnchor.id,
+        position: updates.position || currentAnchor.position,
+        rotation: updates.rotation || currentAnchor.rotation,
+        scale: updates.scale || currentAnchor.scale,
+        equipmentId: updates.equipmentId || currentAnchor.equipmentId,
+        createdAt: currentAnchor.createdAt,
         updatedAt: new Date().toISOString(),
       };
 
@@ -284,10 +298,10 @@ class ARService {
       // Update platform-specific anchor
       await this.updatePlatformAnchor(updatedAnchor);
 
-      logger.info('AR anchor updated successfully', {anchorId}, 'ARService');
+      logger.info('AR anchor updated successfully', {anchorId});
       return updatedAnchor;
     } catch (error) {
-      logger.error('Failed to update AR anchor', error, 'ARService');
+      logger.error('Failed to update AR anchor', error);
       throw errorHandler.handleError(
         createError(
           ErrorType.AR,
@@ -309,7 +323,7 @@ class ARService {
         throw new Error('No active AR session');
       }
 
-      logger.info('Removing AR anchor', {anchorId}, 'ARService');
+      logger.info('Removing AR anchor', {anchorId});
 
       const anchorIndex = this.currentSession.anchors.findIndex(a => a.id === anchorId);
       if (anchorIndex === -1) {
@@ -322,9 +336,9 @@ class ARService {
       // Remove from session
       this.currentSession.anchors.splice(anchorIndex, 1);
 
-      logger.info('AR anchor removed successfully', {anchorId}, 'ARService');
+      logger.info('AR anchor removed successfully', {anchorId});
     } catch (error) {
-      logger.error('Failed to remove AR anchor', error, 'ARService');
+      logger.error('Failed to remove AR anchor', error);
       throw errorHandler.handleError(
         createError(
           ErrorType.AR,
@@ -346,15 +360,15 @@ class ARService {
         throw new Error('No active AR session');
       }
 
-      logger.debug('Performing hit test', {screenX, screenY}, 'ARService');
+      logger.debug('Performing hit test', {screenX, screenY});
 
       // Perform platform-specific hit test
       const results = await this.performPlatformHitTest(screenX, screenY);
 
-      logger.debug('Hit test completed', {resultCount: results.length}, 'ARService');
+      logger.debug('Hit test completed', {resultCount: results.length});
       return results;
     } catch (error) {
-      logger.error('Failed to perform hit test', error, 'ARService');
+      logger.error('Failed to perform hit test', error);
       throw errorHandler.handleError(
         createError(
           ErrorType.AR,
@@ -430,7 +444,7 @@ class ARService {
   private async createPlatformAnchor(anchor: ARAnchor): Promise<void> {
     // This would integrate with actual AR framework (ARKit/ARCore)
     // For now, we'll simulate anchor creation
-    logger.debug('Platform anchor created', {anchorId: anchor.id}, 'ARService');
+    logger.debug('Platform anchor created', {anchorId: anchor.id});
   }
 
   /**
@@ -439,7 +453,7 @@ class ARService {
   private async updatePlatformAnchor(anchor: ARAnchor): Promise<void> {
     // This would integrate with actual AR framework (ARKit/ARCore)
     // For now, we'll simulate anchor update
-    logger.debug('Platform anchor updated', {anchorId: anchor.id}, 'ARService');
+    logger.debug('Platform anchor updated', {anchorId: anchor.id});
   }
 
   /**
@@ -448,7 +462,7 @@ class ARService {
   private async removePlatformAnchor(anchorId: string): Promise<void> {
     // This would integrate with actual AR framework (ARKit/ARCore)
     // For now, we'll simulate anchor removal
-    logger.debug('Platform anchor removed', {anchorId}, 'ARService');
+    logger.debug('Platform anchor removed', {anchorId});
   }
 
   /**
@@ -475,9 +489,9 @@ class ARService {
         await this.stopSession();
       }
       this.isInitialized = false;
-      logger.info('AR service cleaned up', {}, 'ARService');
+      logger.info('AR service cleaned up', {});
     } catch (error) {
-      logger.error('Failed to cleanup AR service', error, 'ARService');
+      logger.error('Failed to cleanup AR service', error);
     }
   }
 }

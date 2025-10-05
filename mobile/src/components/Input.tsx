@@ -61,41 +61,22 @@ export const Input = forwardRef<TextInput, InputProps>(({
   const [isFocused, setIsFocused] = useState(false);
 
   const getContainerStyle = (): ViewStyle => {
-    const baseStyle = [styles.container];
-    
-    if (error) {
-      baseStyle.push(styles.errorContainer);
-    } else if (isFocused) {
-      baseStyle.push(styles.focusedContainer);
-    }
-    
-    if (disabled) {
-      baseStyle.push(styles.disabledContainer);
-    }
-    
-    if (style) {
-      baseStyle.push(style);
-    }
-    
-    return StyleSheet.flatten(baseStyle);
+    return StyleSheet.flatten([
+      styles.container,
+      error && styles.errorContainer,
+      isFocused && !error && styles.focusedContainer,
+      disabled && styles.disabledContainer,
+      style
+    ]) as ViewStyle;
   };
 
   const getInputStyle = (): TextStyle => {
-    const baseStyle = [styles.input];
-    
-    if (multiline) {
-      baseStyle.push(styles.multilineInput);
-    }
-    
-    if (disabled) {
-      baseStyle.push(styles.disabledInput);
-    }
-    
-    if (inputStyle) {
-      baseStyle.push(inputStyle);
-    }
-    
-    return StyleSheet.flatten(baseStyle);
+    return StyleSheet.flatten([
+      styles.input,
+      multiline && styles.multilineInput,
+      disabled && styles.disabledInput,
+      inputStyle
+    ]) as TextStyle;
   };
 
   return (
@@ -152,7 +133,7 @@ export const Input = forwardRef<TextInput, InputProps>(({
       {(error || helperText) && (
         <View style={styles.messageContainer}>
           {error ? (
-            <View style={styles.errorContainer}>
+            <View style={styles.errorMessageContainer}>
               <Icon name="error" size={16} color="#FF3B30" />
               <Text style={styles.errorText}>{error}</Text>
             </View>
@@ -244,7 +225,7 @@ const styles = StyleSheet.create({
   messageContainer: {
     marginTop: 4,
   },
-  errorContainer: {
+  errorMessageContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },

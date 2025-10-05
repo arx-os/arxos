@@ -60,7 +60,7 @@ export const CameraScreen: React.FC = () => {
   
   const handleSelectPhoto = async () => {
     try {
-      const photo = await cameraService.selectPhoto({
+      const photo = await cameraService.selectFromGallery({
         quality: 0.8,
         maxWidth: 1920,
         maxHeight: 1080,
@@ -188,7 +188,7 @@ export const CameraScreen: React.FC = () => {
                     {photo.width} × {photo.height}
                   </Text>
                   <Text style={styles.photoInfoText}>
-                    {(photo.fileSize / 1024).toFixed(1)} KB
+                    {photo.fileSize ? (photo.fileSize / 1024).toFixed(1) : 'Unknown'} KB
                   </Text>
                 </View>
                 <View style={styles.photoActions}>

@@ -11,10 +11,10 @@ import {
   ARSessionMetrics
 } from '../domain/AREntities';
 import { Vector3, SpatialUtils } from '../types/SpatialTypes';
-import { Equipment } from '../types/Equipment';
+import { Equipment } from '../types/equipment';
 import { LocalStorageService } from './LocalStorageService';
-import { SyncService } from './SyncService';
-import { Logger } from '../utils/Logger';
+import { SyncService } from './syncService';
+import { Logger } from "../utils/logger";
 
 export class OfflineARService {
   private readonly MAX_CACHE_SIZE = 1000; // Maximum number of equipment items to cache
@@ -77,8 +77,8 @@ export class OfflineARService {
       });
       
     } catch (error) {
-      this.logger.error('Failed to cache equipment for offline AR', { error, buildingId });
-      throw new Error(`Equipment caching failed: ${error.message}`);
+      this.logger.error('Failed to cache equipment for offline AR', { error: error as Error, buildingId });
+      throw new Error(`Equipment caching failed: ${(error as Error).message}`);
     }
   }
   
@@ -103,8 +103,8 @@ export class OfflineARService {
       this.logger.info('Spatial anchor stored for offline use', { anchorId: anchor.id });
       
     } catch (error) {
-      this.logger.error('Failed to store spatial anchor for offline use', { error, anchorId: anchor.id });
-      throw new Error(`Spatial anchor storage failed: ${error.message}`);
+      this.logger.error('Failed to store spatial anchor for offline use', { error: error as Error, anchorId: anchor.id });
+      throw new Error(`Spatial anchor storage failed: ${(error as Error).message}`);
     }
   }
   
@@ -141,7 +141,7 @@ export class OfflineARService {
           });
           
           // Mark conflict as failed
-          await this.localStorageService.markConflictResolutionFailed(conflict.id, error.message);
+          await this.localStorageService.markConflictResolutionFailed(conflict.id, (error as Error).message);
         }
       }
       
@@ -151,7 +151,7 @@ export class OfflineARService {
       
     } catch (error) {
       this.logger.error('Failed to resolve spatial conflicts', { error });
-      throw new Error(`Conflict resolution failed: ${error.message}`);
+      throw new Error(`Conflict resolution failed: ${(error as Error).message}`);
     }
   }
   
@@ -178,7 +178,7 @@ export class OfflineARService {
       
     } catch (error) {
       this.logger.error('Failed to sync offline AR data', { error });
-      throw new Error(`AR data sync failed: ${error.message}`);
+      throw new Error(`AR data sync failed: ${(error as Error).message}`);
     }
   }
   
@@ -211,7 +211,7 @@ export class OfflineARService {
       
     } catch (error) {
       this.logger.error('Failed to get cached equipment for AR', { error });
-      throw new Error(`Cached equipment retrieval failed: ${error.message}`);
+      throw new Error(`Cached equipment retrieval failed: ${(error as Error).message}`);
     }
   }
   
@@ -262,7 +262,7 @@ export class OfflineARService {
     try {
       return await this.localStorageService.getARSessionMetrics(sessionId);
     } catch (error) {
-      this.logger.error('Failed to get AR session metrics', { error, sessionId });
+      this.logger.error('Failed to get AR session metrics', { error: error as Error, sessionId });
       return null;
     }
   }
@@ -290,7 +290,7 @@ export class OfflineARService {
         await this.syncService.syncSpatialAnchor(anchor);
         await this.localStorageService.markSpatialAnchorSynced(anchor.id);
       } catch (error) {
-        await this.localStorageService.markSpatialAnchorSyncFailed(anchor.id, error.message);
+        await this.localStorageService.markSpatialAnchorSyncFailed(anchor.id, (error as Error).message);
       }
     }
   }
@@ -306,7 +306,7 @@ export class OfflineARService {
         await this.syncService.syncSpatialDataUpdate(update);
         await this.localStorageService.markSpatialDataUpdateSynced(update.id);
       } catch (error) {
-        await this.localStorageService.markSpatialDataUpdateSyncFailed(update.id, error.message);
+        await this.localStorageService.markSpatialDataUpdateSyncFailed(update.id, (error as Error).message);
       }
     }
   }
@@ -322,7 +322,7 @@ export class OfflineARService {
         await this.syncService.syncEquipmentStatusUpdate(update);
         await this.localStorageService.markEquipmentStatusUpdateSynced(update.id);
       } catch (error) {
-        await this.localStorageService.markEquipmentStatusUpdateSyncFailed(update.id, error.message);
+        await this.localStorageService.markEquipmentStatusUpdateSyncFailed(update.id, (error as Error).message);
       }
     }
   }
@@ -474,6 +474,9 @@ class SpatialConflictResolver {
   private async resolveDuplicateConflict(conflict: SpatialConflict): Promise<SpatialResolution> {
     // Keep the first anchor, remove duplicates
     const primaryAnchor = conflict.conflictingAnchors[0];
+    if (!primaryAnchor) {
+      throw new Error('No primary anchor found in conflict resolution');
+    }
     
     return {
       id: this.generateId(),
@@ -496,9 +499,16 @@ class SpatialConflictResolver {
     const avgConfidence = anchors.reduce((sum, a) => sum + a.confidence, 0) / anchors.length;
     
     return {
-      ...anchors[0],
+      id: this.generateId(),
       position: avgPosition,
-      confidence: avgConfidence
+      rotation: anchors[0]?.rotation || { x: 0, y: 0, z: 0, w: 1 },
+      timestamp: anchors[0]?.timestamp || new Date(),
+      equipmentId: anchors[0]?.equipmentId || '',
+      buildingId: anchors[0]?.buildingId || '',
+      floorId: anchors[0]?.floorId || '',
+      confidence: avgConfidence,
+      validationStatus: 'pending',
+      lastUpdated: new Date()
     };
   }
   

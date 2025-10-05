@@ -9,7 +9,7 @@ import { OfflineARService } from '../services/OfflineARService';
 import { ARNavigationService } from '../services/ARNavigationService';
 import { Vector3, SpatialUtils } from '../types/SpatialTypes';
 import { EquipmentStatus, SpatialConflict, SpatialResolution } from '../domain/AREntities';
-import { Logger } from '../utils/Logger';
+import { Logger } from "../utils/logger";
 
 // Mock implementations for testing
 class MockAREngine implements AREngine {

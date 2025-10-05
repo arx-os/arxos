@@ -12,7 +12,9 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import {RootStackParamList} from '@/types/navigation';
 import {useAppSelector} from '@/store/hooks';
 import {authService} from '../services/authService';
-import {logger} from '../utils/logger';
+import {Logger} from "../utils/logger";
+
+const logger = new Logger('AppNavigator');
 import {errorHandler} from '../utils/errorHandler';
 
 // Import screens
@@ -36,8 +38,8 @@ const Drawer = createDrawerNavigator();
 const TabNavigator: React.FC = () => {
   return (
     <Tab.Navigator
-      screenOptions={({route}) => ({
-        tabBarIcon: ({focused, color, size}) => {
+      screenOptions={({route}: any) => ({
+        tabBarIcon: ({focused, color, size}: any) => {
           let iconName: string;
           
           switch (route.name) {
@@ -134,7 +136,7 @@ const DrawerNavigator: React.FC = () => {
         component={TabNavigator}
         options={{
           title: 'ArxOS Mobile',
-          drawerIcon: ({color, size}) => (
+          drawerIcon: ({color, size}: any) => (
             <Icon name="home" size={size} color={color} />
           ),
         }}
@@ -144,7 +146,7 @@ const DrawerNavigator: React.FC = () => {
         component={ProfileScreen}
         options={{
           title: 'Profile',
-          drawerIcon: ({color, size}) => (
+          drawerIcon: ({color, size}: any) => (
             <Icon name="person" size={size} color={color} />
           ),
         }}
@@ -154,7 +156,7 @@ const DrawerNavigator: React.FC = () => {
         component={SyncScreen}
         options={{
           title: 'Sync Status',
-          drawerIcon: ({color, size}) => (
+          drawerIcon: ({color, size}: any) => (
             <Icon name="sync" size={size} color={color} />
           ),
         }}
@@ -172,10 +174,10 @@ export const AppNavigator: React.FC = () => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        logger.info('Initializing authentication state', {}, 'AppNavigator');
+        logger.info('Initializing authentication state', {});
         await authService.initializeAuth();
-      } catch (error) {
-        logger.error('Failed to initialize authentication', error, 'AppNavigator');
+      } catch (error: any) {
+        logger.error('Failed to initialize authentication', error);
         errorHandler.handleError(error, 'AppNavigator');
       }
     };
@@ -190,7 +192,7 @@ export const AppNavigator: React.FC = () => {
   
   // Show offline screen if not online
   if (!isOnline) {
-    logger.info('App is offline, showing offline screen', {}, 'AppNavigator');
+    logger.info('App is offline, showing offline screen', {});
     return (
       <Stack.Navigator screenOptions={{headerShown: false}}>
         <Stack.Screen name="Offline" component={OfflineScreen} />
@@ -200,7 +202,7 @@ export const AppNavigator: React.FC = () => {
   
   // Show login screen if not authenticated
   if (!isAuthenticated) {
-    logger.info('User not authenticated, showing login screen', {}, 'AppNavigator');
+    logger.info('User not authenticated, showing login screen', {});
     return (
       <Stack.Navigator screenOptions={{headerShown: false}}>
         <Stack.Screen name="Login" component={LoginScreen} />
@@ -209,10 +211,10 @@ export const AppNavigator: React.FC = () => {
   }
   
   // Show main app if authenticated
-  logger.info('User authenticated, showing main app', {}, 'AppNavigator');
+  logger.info('User authenticated, showing main app', {});
   return (
     <Stack.Navigator screenOptions={{headerShown: false}}>
-      <Stack.Screen name="Main" component={DrawerNavigator} />
+      <Stack.Screen name="Home" component={DrawerNavigator} />
       <Stack.Screen
         name="EquipmentDetail"
         component={EquipmentDetailScreen}

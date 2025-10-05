@@ -17,7 +17,7 @@ class LocationService {
   async requestLocationPermission(): Promise<boolean> {
     if (Platform.OS === 'android') {
       const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION as any,
         {
           title: 'Location Permission',
           message: 'ArxOS needs access to your location to track equipment positions',
@@ -52,6 +52,7 @@ class LocationService {
             altitude: position.coords.altitude || undefined,
             heading: position.coords.heading || undefined,
             speed: position.coords.speed || undefined,
+            timestamp: new Date(position.timestamp),
           });
         },
         (error) => {
@@ -91,6 +92,7 @@ class LocationService {
           altitude: position.coords.altitude || undefined,
           heading: position.coords.heading || undefined,
           speed: position.coords.speed || undefined,
+          timestamp: new Date(position.timestamp),
         };
         onLocationUpdate(location);
       },
@@ -173,7 +175,7 @@ class LocationService {
   formatLocation(location: GPSLocation): string {
     const lat = location.latitude.toFixed(6);
     const lng = location.longitude.toFixed(6);
-    const accuracy = location.accuracy.toFixed(1);
+    const accuracy = (location.accuracy || 0).toFixed(1);
     
     return `${lat}, ${lng} (±${accuracy}m)`;
   }

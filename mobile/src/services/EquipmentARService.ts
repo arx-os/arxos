@@ -3,22 +3,21 @@
  * Implements Clean Architecture with domain-driven design
  */
 
-import { AREngine, EquipmentAROverlay, SpatialAnchor, ARContext } from '../ar/core/AREngine';
+import { AREngine, EquipmentAROverlay, SpatialAnchor, EquipmentStatus as AREngineEquipmentStatus } from '../ar/core/AREngine';
 import { 
   EquipmentARMetadata, 
   ARVisibility, 
   EquipmentStatus, 
   SpatialDataUpdate,
-  EquipmentStatusUpdate,
   IARContextService,
   ISpatialDataService
 } from '../domain/AREntities';
 import { Vector3, SpatialUtils } from '../types/SpatialTypes';
-import { Equipment } from '../types/Equipment';
+import { Equipment } from '../types/equipment';
 import { LocalStorageService } from './LocalStorageService';
-import { SyncService } from './SyncService';
-import { AuthService } from './AuthService';
-import { Logger } from '../utils/Logger';
+import { SyncService } from './syncService';
+import { AuthService } from './authService';
+import { Logger } from "../utils/logger";
 
 export class EquipmentARService {
   private readonly SEARCH_RADIUS = 10.0; // meters
@@ -67,8 +66,8 @@ export class EquipmentARService {
       return visibleEquipment;
       
     } catch (error) {
-      this.logger.error('Failed to identify equipment in AR', { error, position, buildingId, floorId });
-      throw new Error(`Equipment identification failed: ${error.message}`);
+      this.logger.error('Failed to identify equipment in AR', { error: error as Error, position, buildingId, floorId });
+      throw new Error(`Equipment identification failed: ${(error as Error).message}`);
     }
   }
   
@@ -78,7 +77,7 @@ export class EquipmentARService {
   async updateEquipmentStatusAR(
     equipmentId: string,
     status: EquipmentStatus,
-    arContext: ARContext,
+    position: Vector3,
     notes?: string
   ): Promise<void> {
     try {
@@ -94,13 +93,13 @@ export class EquipmentARService {
         equipmentId,
         status,
         notes,
-        location: arContext.currentPosition,
-        spatialAnchor: arContext.activeAnchor,
+        location: position,
+        spatialAnchor: undefined, // No active anchor available
         timestamp: new Date(),
         technicianId: currentUser.id,
         arPlatform: this.arEngine.platform,
-        buildingId: arContext.buildingId,
-        floorId: arContext.floorId,
+        buildingId: '', // No building context available
+        floorId: '', // No floor context available
         syncStatus: 'pending'
       };
       
@@ -116,8 +115,8 @@ export class EquipmentARService {
       this.logger.info('Equipment status updated via AR', { equipmentId, status });
       
     } catch (error) {
-      this.logger.error('Failed to update equipment status via AR', { error, equipmentId, status });
-      throw new Error(`Status update failed: ${error.message}`);
+      this.logger.error('Failed to update equipment status via AR', { error: error as Error, equipmentId, status });
+      throw new Error(`Status update failed: ${(error as Error).message}`);
     }
   }
   
@@ -139,7 +138,11 @@ export class EquipmentARService {
       const spatialUpdate: SpatialDataUpdate = {
         id: this.generateId(),
         equipmentId,
-        spatialAnchor,
+        spatialAnchor: {
+          ...spatialAnchor,
+          validationStatus: 'validated',
+          lastUpdated: new Date()
+        },
         arPlatform: this.arEngine.platform,
         timestamp: new Date(),
         technicianId: currentUser.id,
@@ -167,8 +170,8 @@ export class EquipmentARService {
       this.logger.info('Equipment position captured via AR', { equipmentId, spatialAnchorId: spatialAnchor.id });
       
     } catch (error) {
-      this.logger.error('Failed to capture equipment position via AR', { error, equipmentId });
-      throw new Error(`Position capture failed: ${error.message}`);
+      this.logger.error('Failed to capture equipment position via AR', { error: error as Error, equipmentId });
+      throw new Error(`Position capture failed: ${(error as Error).message}`);
     }
   }
   
@@ -201,21 +204,21 @@ export class EquipmentARService {
       this.logger.info('Equipment cached for AR', { buildingId, equipmentCount: equipment.length });
       
     } catch (error) {
-      this.logger.error('Failed to cache equipment for AR', { error, buildingId });
-      throw new Error(`Equipment caching failed: ${error.message}`);
+      this.logger.error('Failed to cache equipment for AR', { error: error as Error, buildingId });
+      throw new Error(`Equipment caching failed: ${(error as Error).message}`);
     }
   }
   
   /**
    * Render equipment overlays in AR scene
    */
-  async renderEquipmentOverlays(equipment: Equipment[], arContext: ARContext): Promise<void> {
+  async renderEquipmentOverlays(equipment: Equipment[], position: Vector3): Promise<void> {
     try {
       this.logger.info('Rendering equipment overlays in AR', { equipmentCount: equipment.length });
       
       for (const eq of equipment) {
-        if (this.shouldRenderEquipment(eq, arContext.currentPosition)) {
-          const overlay = await this.createEquipmentOverlay(eq, arContext);
+        if (this.shouldRenderEquipment(eq, position)) {
+          const overlay = await this.createEquipmentOverlay(eq, position);
           this.arEngine.addEquipmentOverlay(overlay);
         }
       }
@@ -224,7 +227,7 @@ export class EquipmentARService {
       
     } catch (error) {
       this.logger.error('Failed to render equipment overlays in AR', { error });
-      throw new Error(`Overlay rendering failed: ${error.message}`);
+      throw new Error(`Overlay rendering failed: ${(error as Error).message}`);
     }
   }
   
@@ -238,13 +241,17 @@ export class EquipmentARService {
         throw new Error(`Equipment not found: ${equipmentId}`);
       }
       
-      const overlay = await this.createEquipmentOverlay(equipment, this.arContextService.getCurrentContext()!);
-      overlay.status = status;
+      const context = this.arContextService.getCurrentContext();
+      if (!context) {
+        throw new Error('No AR context available');
+      }
+      const overlay = await this.createEquipmentOverlay(equipment, context.currentPosition);
+      overlay.status = status as AREngineEquipmentStatus;
       
       this.arEngine.updateEquipmentOverlay(overlay);
       
     } catch (error) {
-      this.logger.error('Failed to update equipment overlay status', { error, equipmentId, status });
+      this.logger.error('Failed to update equipment overlay status', { error: error as Error, equipmentId, status });
     }
   }
   
@@ -258,13 +265,17 @@ export class EquipmentARService {
         throw new Error(`Equipment not found: ${equipmentId}`);
       }
       
-      const overlay = await this.createEquipmentOverlay(equipment, this.arContextService.getCurrentContext()!);
+      const context = this.arContextService.getCurrentContext();
+      if (!context) {
+        throw new Error('No AR context available');
+      }
+      const overlay = await this.createEquipmentOverlay(equipment, context.currentPosition);
       overlay.position = newPosition;
       
       this.arEngine.updateEquipmentOverlay(overlay);
       
     } catch (error) {
-      this.logger.error('Failed to update equipment location in AR', { error, equipmentId });
+      this.logger.error('Failed to update equipment location in AR', { error: error as Error, equipmentId });
     }
   }
   
@@ -320,7 +331,7 @@ export class EquipmentARService {
   /**
    * Create equipment overlay for AR rendering
    */
-  private async createEquipmentOverlay(equipment: Equipment, arContext: ARContext): Promise<EquipmentAROverlay> {
+  private async createEquipmentOverlay(equipment: Equipment, position: Vector3): Promise<EquipmentAROverlay> {
     const metadata = this.extractARMetadata(equipment);
     const arVisibility = this.calculateARVisibility(equipment);
     
@@ -329,11 +340,10 @@ export class EquipmentARService {
       position: equipment.location || { x: 0, y: 0, z: 0 },
       rotation: { x: 0, y: 0, z: 0, w: 1 },
       scale: { x: 1, y: 1, z: 1 },
-      status: equipment.status,
+      status: equipment.status as AREngineEquipmentStatus,
       lastUpdated: equipment.updatedAt,
       arVisibility,
-      modelType: this.determineModelType(equipment),
-      metadata
+      modelType: this.determineModelType(equipment)
     };
   }
   

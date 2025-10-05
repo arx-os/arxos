@@ -4,9 +4,12 @@
  */
 
 import SQLite from 'react-native-sqlite-storage';
-import {logger} from '../utils/logger';
+import {Logger} from "../utils/logger";
 import {errorHandler, ErrorType, ErrorSeverity, createError} from '../utils/errorHandler';
 import {environment} from '../config/environment';
+
+// Create logger instance
+const logger = new Logger('StorageService');
 
 // Database schema interfaces
 export interface EquipmentRecord {
@@ -54,8 +57,7 @@ class StorageService {
   private isInitialized = false;
 
   constructor() {
-    // Enable promise-based API
-    SQLite.enablePromise(true);
+    // SQLite configuration is handled automatically
   }
 
   /**
@@ -67,21 +69,25 @@ class StorageService {
         return;
       }
 
-      logger.info('Initializing SQLite database', {}, 'StorageService');
+      logger.info('Initializing SQLite database', {});
 
       this.db = await SQLite.openDatabase({
         name: environment.databaseName,
         location: 'default',
         createFromLocation: '~www/ArxOSMobile.db',
+      }, () => {
+        logger.info('Database opened successfully');
+      }, (error: any) => {
+        logger.error('Database open error', error as Error);
       });
 
       await this.createTables();
       await this.createIndexes();
       
       this.isInitialized = true;
-      logger.info('SQLite database initialized successfully', {}, 'StorageService');
+      logger.info('SQLite database initialized successfully', {});
     } catch (error) {
-      logger.error('Failed to initialize database', error, 'StorageService');
+      logger.error('Failed to initialize database', error);
       throw errorHandler.handleError(
         createError(
           ErrorType.STORAGE,
@@ -158,7 +164,7 @@ class StorageService {
       await this.db.executeSql(table);
     }
 
-    logger.debug('Database tables created', {}, 'StorageService');
+    logger.debug('Database tables created', {});
   }
 
   /**
@@ -184,7 +190,7 @@ class StorageService {
       await this.db.executeSql(index);
     }
 
-    logger.debug('Database indexes created', {}, 'StorageService');
+    logger.debug('Database indexes created', {});
   }
 
   /**
@@ -220,9 +226,9 @@ class StorageService {
         equipment.isDirty ? 1 : 0,
       ]);
 
-      logger.debug('Equipment saved', { id: equipment.id }, 'StorageService');
+      logger.debug('Equipment saved', { id: equipment.id });
     } catch (error) {
-      logger.error('Failed to save equipment', error, 'StorageService');
+      logger.error('Failed to save equipment', error);
       throw errorHandler.handleError(
         createError(
           ErrorType.STORAGE,
@@ -251,7 +257,7 @@ class StorageService {
       const row = results.rows.item(0);
       return this.mapEquipmentRow(row);
     } catch (error) {
-      logger.error('Failed to get equipment', error, 'StorageService');
+      logger.error('Failed to get equipment', error);
       throw errorHandler.handleError(
         createError(
           ErrorType.STORAGE,
@@ -280,7 +286,7 @@ class StorageService {
 
       return equipment;
     } catch (error) {
-      logger.error('Failed to get all equipment', error, 'StorageService');
+      logger.error('Failed to get all equipment', error);
       throw errorHandler.handleError(
         createError(
           ErrorType.STORAGE,
@@ -302,9 +308,9 @@ class StorageService {
       const sql = 'DELETE FROM equipment WHERE id = ?';
       await this.db!.executeSql(sql, [id]);
 
-      logger.debug('Equipment deleted', { id }, 'StorageService');
+      logger.debug('Equipment deleted', { id });
     } catch (error) {
-      logger.error('Failed to delete equipment', error, 'StorageService');
+      logger.error('Failed to delete equipment', error);
       throw errorHandler.handleError(
         createError(
           ErrorType.STORAGE,
@@ -343,9 +349,9 @@ class StorageService {
         operation.lastAttempt || null,
       ]);
 
-      logger.debug('Added to sync queue', { id: operation.id }, 'StorageService');
+      logger.debug('Added to sync queue', { id: operation.id });
     } catch (error) {
-      logger.error('Failed to add to sync queue', error, 'StorageService');
+      logger.error('Failed to add to sync queue', error);
       throw errorHandler.handleError(
         createError(
           ErrorType.STORAGE,
@@ -384,7 +390,7 @@ class StorageService {
 
       return queue;
     } catch (error) {
-      logger.error('Failed to get sync queue', error, 'StorageService');
+      logger.error('Failed to get sync queue', error);
       throw errorHandler.handleError(
         createError(
           ErrorType.STORAGE,
@@ -406,9 +412,9 @@ class StorageService {
       const sql = 'DELETE FROM sync_queue WHERE id = ?';
       await this.db!.executeSql(sql, [id]);
 
-      logger.debug('Removed from sync queue', { id }, 'StorageService');
+      logger.debug('Removed from sync queue', { id });
     } catch (error) {
-      logger.error('Failed to remove from sync queue', error, 'StorageService');
+      logger.error('Failed to remove from sync queue', error);
       throw errorHandler.handleError(
         createError(
           ErrorType.STORAGE,
@@ -437,9 +443,9 @@ class StorageService {
 
       await this.db!.executeSql(sql, [key, value, new Date().toISOString()]);
 
-      logger.debug('Setting saved', { key }, 'StorageService');
+      logger.debug('Setting saved', { key });
     } catch (error) {
-      logger.error('Failed to save setting', error, 'StorageService');
+      logger.error('Failed to save setting', error);
       throw errorHandler.handleError(
         createError(
           ErrorType.STORAGE,
@@ -467,7 +473,7 @@ class StorageService {
 
       return results.rows.item(0).value;
     } catch (error) {
-      logger.error('Failed to get setting', error, 'StorageService');
+      logger.error('Failed to get setting', error);
       throw errorHandler.handleError(
         createError(
           ErrorType.STORAGE,
@@ -517,9 +523,9 @@ class StorageService {
         await this.db!.executeSql(`DELETE FROM ${table}`);
       }
 
-      logger.info('All data cleared from database', {}, 'StorageService');
+      logger.info('All data cleared from database', {});
     } catch (error) {
-      logger.error('Failed to clear database', error, 'StorageService');
+      logger.error('Failed to clear database', error);
       throw errorHandler.handleError(
         createError(
           ErrorType.STORAGE,
@@ -543,7 +549,7 @@ class StorageService {
       
       return results.rows.item(0).count;
     } catch (error) {
-      logger.error('Failed to get database size', error, 'StorageService');
+      logger.error('Failed to get database size', error);
       return 0;
     }
   }
@@ -557,10 +563,10 @@ class StorageService {
         await this.db.close();
         this.db = null;
         this.isInitialized = false;
-        logger.info('Database connection closed', {}, 'StorageService');
+        logger.info('Database connection closed', {});
       }
     } catch (error) {
-      logger.error('Failed to close database', error, 'StorageService');
+      logger.error('Failed to close database', error);
     }
   }
 }

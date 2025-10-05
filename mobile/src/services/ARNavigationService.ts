@@ -5,9 +5,9 @@
 
 import { AREngine, ARNavigationPath, ARInstruction, ARVisualization } from '../ar/core/AREngine';
 import { Vector3, SpatialUtils } from '../types/SpatialTypes';
-import { BuildingLayout, FloorLayout, RoomLayout } from '../types/BuildingTypes';
+// BuildingLayout, FloorLayout, and RoomLayout are declared locally below
 import { LocalStorageService } from './LocalStorageService';
-import { Logger } from '../utils/Logger';
+import { Logger } from "../utils/logger";
 
 export class ARNavigationService {
   private readonly MAX_PATH_DISTANCE = 1000; // meters
@@ -48,19 +48,14 @@ export class ARNavigationService {
       const arInstructions = await this.generateARInstructions(path, buildingLayout);
       
       const navigationPath: ARNavigationPath = {
-        id: this.generateId(),
         waypoints: path.waypoints,
         distance: path.distance,
         estimatedTime: path.estimatedTime,
         obstacles: path.obstacles,
-        arInstructions,
-        difficulty: this.calculatePathDifficulty(path),
-        accessibility: this.checkAccessibility(path, buildingLayout),
-        createdAt: new Date()
+        arInstructions
       };
       
       this.logger.info('AR navigation path calculated', { 
-        pathId: navigationPath.id,
         waypointsCount: path.waypoints.length,
         distance: path.distance,
         estimatedTime: path.estimatedTime
@@ -69,8 +64,8 @@ export class ARNavigationService {
       return navigationPath;
       
     } catch (error) {
-      this.logger.error('Failed to calculate AR navigation path', { error, from, to, buildingId });
-      throw new Error(`AR navigation path calculation failed: ${error.message}`);
+      this.logger.error('Failed to calculate AR navigation path', { error: error as Error, from, to, buildingId });
+      throw new Error(`AR navigation path calculation failed: ${(error as Error).message}`);
     }
   }
   
@@ -79,7 +74,7 @@ export class ARNavigationService {
    */
   async showNavigationPath(path: ARNavigationPath): Promise<void> {
     try {
-      this.logger.info('Showing navigation path in AR', { pathId: path.id });
+      this.logger.info('Showing navigation path in AR', { waypointsCount: path.waypoints.length });
       
       // Show path in AR engine
       this.arEngine.showNavigationPath(path);
@@ -87,11 +82,11 @@ export class ARNavigationService {
       // Start navigation guidance
       await this.startNavigationGuidance(path);
       
-      this.logger.info('Navigation path shown in AR', { pathId: path.id });
+      this.logger.info('Navigation path shown in AR', { waypointsCount: path.waypoints.length });
       
     } catch (error) {
-      this.logger.error('Failed to show navigation path in AR', { error, pathId: path.id });
-      throw new Error(`Navigation path display failed: ${error.message}`);
+      this.logger.error('Failed to show navigation path in AR', { error: error as Error, waypointsCount: path.waypoints.length });
+      throw new Error(`Navigation path display failed: ${(error as Error).message}`);
     }
   }
   
@@ -118,14 +113,18 @@ export class ARNavigationService {
     currentPosition: Vector3
   ): Promise<ARNavigationPath | null> {
     try {
-      this.logger.info('Updating navigation path', { pathId: currentPath.id, currentPosition });
+      this.logger.info('Updating navigation path', { waypointsCount: currentPath.waypoints.length, currentPosition });
       
       // Check if we've reached the destination
       const destination = currentPath.waypoints[currentPath.waypoints.length - 1];
+      if (!destination) {
+        this.logger.warn('No destination waypoint found');
+        return null;
+      }
       const distanceToDestination = SpatialUtils.distance(currentPosition, destination);
       
       if (distanceToDestination < this.MIN_WAYPOINT_DISTANCE) {
-        this.logger.info('Destination reached', { pathId: currentPath.id });
+        this.logger.info('Destination reached', { waypointsCount: currentPath.waypoints.length });
         return null; // Navigation complete
       }
       
@@ -133,7 +132,7 @@ export class ARNavigationService {
       const obstacles = await this.detectObstacles(currentPosition, currentPath);
       if (obstacles.length > 0) {
         this.logger.info('Obstacles detected, recalculating path', { 
-          pathId: currentPath.id, 
+          waypointsCount: currentPath.waypoints.length, 
           obstaclesCount: obstacles.length 
         });
         
@@ -154,7 +153,7 @@ export class ARNavigationService {
       return currentPath;
       
     } catch (error) {
-      this.logger.error('Failed to update navigation path', { error, pathId: currentPath.id });
+      this.logger.error('Failed to update navigation path', { error: error as Error, waypointsCount: currentPath.waypoints.length });
       return null;
     }
   }
@@ -172,7 +171,9 @@ export class ARNavigationService {
       let minDistance = Infinity;
       
       for (let i = 0; i < path.waypoints.length; i++) {
-        const distance = SpatialUtils.distance(currentPosition, path.waypoints[i]);
+        const waypoint = path.waypoints[i];
+        if (!waypoint) continue;
+        const distance = SpatialUtils.distance(currentPosition, waypoint);
         if (distance < minDistance) {
           minDistance = distance;
           closestWaypointIndex = i;
@@ -224,9 +225,15 @@ export class ARNavigationService {
       const waypoint = path.waypoints[i];
       const nextWaypoint = path.waypoints[i + 1];
       
+      if (!waypoint) continue;
+      
       let instructionType: ARInstruction['type'] = 'move';
       let description = `Move to waypoint ${i + 1}`;
-      let arVisualization: ARVisualization;
+      let arVisualization: ARVisualization = {
+        type: 'arrow',
+        color: '#ffffff',
+        size: 1.0
+      };
       
       if (i === path.waypoints.length - 1) {
         instructionType = 'stop';
@@ -235,8 +242,7 @@ export class ARNavigationService {
           type: 'highlight',
           color: '#00ff00',
           size: 2.0,
-          animation: 'pulse',
-          opacity: 0.8
+          animation: 'pulse'
         };
       } else if (nextWaypoint) {
         const direction = this.calculateDirection(waypoint, nextWaypoint);
@@ -249,8 +255,7 @@ export class ARNavigationService {
             type: 'arrow',
             color: '#ffaa00',
             size: 1.5,
-            animation: 'rotate',
-            opacity: 0.9
+            animation: 'rotate'
           };
         } else {
           instructionType = 'move';
@@ -259,20 +264,16 @@ export class ARNavigationService {
             type: 'arrow',
             color: '#00aaff',
             size: 1.0,
-            animation: 'pulse',
-            opacity: 0.8
+            animation: 'pulse'
           };
         }
       }
       
       instructions.push({
-        id: this.generateId(),
         type: instructionType,
         position: waypoint,
         description,
-        arVisualization,
-        estimatedDuration: this.estimateInstructionDuration(instructionType, waypoint, nextWaypoint),
-        priority: this.calculateInstructionPriority(instructionType, i, path.waypoints.length)
+        arVisualization
       });
     }
     
@@ -284,7 +285,7 @@ export class ARNavigationService {
    */
   private async startNavigationGuidance(path: ARNavigationPath): Promise<void> {
     // Implementation would start voice guidance, haptic feedback, etc.
-    this.logger.info('Navigation guidance started', { pathId: path.id });
+    this.logger.info('Navigation guidance started', { waypointsCount: path.waypoints.length });
   }
   
   /**
@@ -494,7 +495,11 @@ class ARPathfinder {
     let totalDistance = 0;
     
     for (let i = 0; i < waypoints.length - 1; i++) {
-      totalDistance += SpatialUtils.distance(waypoints[i], waypoints[i + 1]);
+      const current = waypoints[i];
+      const next = waypoints[i + 1];
+      if (current && next) {
+        totalDistance += SpatialUtils.distance(current, next);
+      }
     }
     
     return totalDistance;

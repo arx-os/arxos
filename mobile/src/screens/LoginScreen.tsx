@@ -21,11 +21,12 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useAppDispatch} from '@/store/hooks';
 import {login} from '@/store/slices/authSlice';
-import {logger} from '../utils/logger';
+import {Logger} from "../utils/logger";
 import {errorHandler} from '../utils/errorHandler';
 
 export const LoginScreen: React.FC = () => {
   const dispatch = useAppDispatch();
+  const logger = new Logger('LoginScreen');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -89,17 +90,17 @@ export const LoginScreen: React.FC = () => {
     setIsLoading(true);
     
     try {
-      logger.info('User attempting login', {username}, 'LoginScreen');
+      logger.info('User attempting login', {username});
       
       await dispatch(login({
         username: username.trim(),
         password: password.trim(),
       }));
       
-      logger.info('User login successful', {username}, 'LoginScreen');
+      logger.info('User login successful', {username});
       
     } catch (error: any) {
-      logger.error('Login failed', error, 'LoginScreen');
+      logger.error('Login failed', error as Error);
       errorHandler.handleError(error, 'LoginScreen');
       
       Alert.alert(
@@ -151,7 +152,7 @@ export const LoginScreen: React.FC = () => {
             
             {/* Login Form */}
             <View style={styles.form}>
-              <View style={[styles.inputContainer, errors.username && styles.inputError]}>
+              <View style={[styles.inputContainer, errors.username ? styles.inputError : null]}>
                 <Icon name="person" size={20} color="#666666" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
@@ -165,7 +166,7 @@ export const LoginScreen: React.FC = () => {
               </View>
               {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
               
-              <View style={[styles.inputContainer, errors.password && styles.inputError]}>
+              <View style={[styles.inputContainer, errors.password ? styles.inputError : null]}>
                 <Icon name="lock" size={20} color="#666666" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}

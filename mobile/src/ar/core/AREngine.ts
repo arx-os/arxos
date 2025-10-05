@@ -3,7 +3,7 @@
  * Implements Clean Architecture principles with domain-driven design
  */
 
-import { Vector3, Quaternion } from '../types/SpatialTypes';
+import { Vector3, Quaternion } from '../../types/SpatialTypes';
 
 export interface AREngine {
   // Platform identification
@@ -197,13 +197,13 @@ abstract class BaseAREngine implements AREngine {
   
   protected abstract renderEquipmentOverlay(equipment: EquipmentAROverlay): void;
   protected abstract hideEquipmentOverlay(equipmentId: string): void;
-  protected abstract detectAnchors(): Promise<SpatialAnchor[]>;
-  protected abstract createAnchor(position: Vector3): Promise<SpatialAnchor>;
-  protected abstract updateAnchor(anchor: SpatialAnchor): Promise<void>;
-  protected abstract removeAnchor(anchorId: string): Promise<void>;
-  protected abstract calculatePath(from: Vector3, to: Vector3): Promise<ARNavigationPath>;
-  protected abstract showNavigationPath(path: ARNavigationPath): void;
-  protected abstract hideNavigationPath(): void;
+  abstract detectAnchors(): Promise<SpatialAnchor[]>;
+  abstract createAnchor(position: Vector3): Promise<SpatialAnchor>;
+  abstract updateAnchor(anchor: SpatialAnchor): Promise<void>;
+  abstract removeAnchor(anchorId: string): Promise<void>;
+  abstract calculatePath(from: Vector3, to: Vector3): Promise<ARNavigationPath>;
+  abstract showNavigationPath(path: ARNavigationPath): void;
+  abstract hideNavigationPath(): void;
 }
 
 // ARKit Implementation
@@ -230,7 +230,7 @@ class ARKitEngine extends BaseAREngine {
       // Set up delegates
       this.setupARKitDelegates();
       
-    } catch (error) {
+    } catch (error: any) {
       this.emitError({
         code: 'ARKIT_INIT_ERROR',
         message: `Failed to initialize ARKit: ${error.message}`,
@@ -246,7 +246,7 @@ class ARKitEngine extends BaseAREngine {
     try {
       await this.session.run();
       this.sessionActive = true;
-    } catch (error) {
+    } catch (error: any) {
       this.emitError({
         code: 'ARKIT_SESSION_ERROR',
         message: `Failed to start ARKit session: ${error.message}`,
@@ -331,12 +331,12 @@ class ARKitEngine extends BaseAREngine {
     };
   }
   
-  protected async detectAnchors(): Promise<SpatialAnchor[]> {
+  async detectAnchors(): Promise<SpatialAnchor[]> {
     const arkitAnchors = this.session.currentFrame?.anchors || [];
-    return arkitAnchors.map(anchor => this.convertARKitAnchor(anchor));
+    return arkitAnchors.map((anchor: any) => this.convertARKitAnchor(anchor));
   }
   
-  protected async createAnchor(position: Vector3): Promise<SpatialAnchor> {
+  async createAnchor(position: Vector3): Promise<SpatialAnchor> {
     // Create ARKit anchor at specified position
     const arkitAnchor = await this.session.addAnchor({
       position: [position.x, position.y, position.z]
@@ -345,7 +345,7 @@ class ARKitEngine extends BaseAREngine {
     return this.convertARKitAnchor(arkitAnchor);
   }
   
-  protected async updateAnchor(anchor: SpatialAnchor): Promise<void> {
+  async updateAnchor(anchor: SpatialAnchor): Promise<void> {
     // Update ARKit anchor
     await this.session.updateAnchor(anchor.id, {
       position: [anchor.position.x, anchor.position.y, anchor.position.z],
@@ -353,11 +353,11 @@ class ARKitEngine extends BaseAREngine {
     });
   }
   
-  protected async removeAnchor(anchorId: string): Promise<void> {
+  async removeAnchor(anchorId: string): Promise<void> {
     await this.session.removeAnchor(anchorId);
   }
   
-  protected async calculatePath(from: Vector3, to: Vector3): Promise<ARNavigationPath> {
+  async calculatePath(from: Vector3, to: Vector3): Promise<ARNavigationPath> {
     // Use ARKit's pathfinding capabilities
     const path = await this.session.findPath(from, to);
     
@@ -370,12 +370,12 @@ class ARKitEngine extends BaseAREngine {
     };
   }
   
-  protected showNavigationPath(path: ARNavigationPath): void {
+  showNavigationPath(path: ARNavigationPath): void {
     // Render navigation path in ARKit scene
     this.sceneView.addNavigationPath(path);
   }
   
-  protected hideNavigationPath(): void {
+  hideNavigationPath(): void {
     this.sceneView.removeNavigationPath();
   }
   
@@ -420,7 +420,7 @@ class ARCoreEngine extends BaseAREngine {
     try {
       // Initialize ARCore session
       this.session = new ARSession();
-      this.sceneView = new ARSceneView();
+      this.sceneView = new ARSCNView();
       
       // Configure session
       const config = {
@@ -434,7 +434,7 @@ class ARCoreEngine extends BaseAREngine {
       // Set up listeners
       this.setupARCoreListeners();
       
-    } catch (error) {
+    } catch (error: any) {
       this.emitError({
         code: 'ARCORE_INIT_ERROR',
         message: `Failed to initialize ARCore: ${error.message}`,
@@ -450,7 +450,7 @@ class ARCoreEngine extends BaseAREngine {
     try {
       await this.session.resume();
       this.sessionActive = true;
-    } catch (error) {
+    } catch (error: any) {
       this.emitError({
         code: 'ARCORE_SESSION_ERROR',
         message: `Failed to start ARCore session: ${error.message}`,
@@ -526,12 +526,12 @@ class ARCoreEngine extends BaseAREngine {
     };
   }
   
-  protected async detectAnchors(): Promise<SpatialAnchor[]> {
+  async detectAnchors(): Promise<SpatialAnchor[]> {
     const arcoreAnchors = this.session.getAllAnchors();
-    return arcoreAnchors.map(anchor => this.convertARCoreAnchor(anchor));
+    return arcoreAnchors.map((anchor: any) => this.convertARCoreAnchor(anchor));
   }
   
-  protected async createAnchor(position: Vector3): Promise<SpatialAnchor> {
+  async createAnchor(position: Vector3): Promise<SpatialAnchor> {
     const arcoreAnchor = await this.session.createAnchor({
       position: [position.x, position.y, position.z]
     });
@@ -539,17 +539,17 @@ class ARCoreEngine extends BaseAREngine {
     return this.convertARCoreAnchor(arcoreAnchor);
   }
   
-  protected async updateAnchor(anchor: SpatialAnchor): Promise<void> {
+  async updateAnchor(anchor: SpatialAnchor): Promise<void> {
     // ARCore anchors are immutable, so we create a new one
     await this.removeAnchor(anchor.id);
     await this.createAnchor(anchor.position);
   }
   
-  protected async removeAnchor(anchorId: string): Promise<void> {
+  async removeAnchor(anchorId: string): Promise<void> {
     await this.session.removeAnchor(anchorId);
   }
   
-  protected async calculatePath(from: Vector3, to: Vector3): Promise<ARNavigationPath> {
+  async calculatePath(from: Vector3, to: Vector3): Promise<ARNavigationPath> {
     // Use ARCore's pathfinding capabilities
     const path = await this.session.findPath(from, to);
     
@@ -562,12 +562,12 @@ class ARCoreEngine extends BaseAREngine {
     };
   }
   
-  protected showNavigationPath(path: ARNavigationPath): void {
+  showNavigationPath(path: ARNavigationPath): void {
     // Render navigation path in ARCore scene
     this.sceneView.addNavigationPath(path);
   }
   
-  protected hideNavigationPath(): void {
+  hideNavigationPath(): void {
     this.sceneView.removeNavigationPath();
   }
   

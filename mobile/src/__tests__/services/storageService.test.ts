@@ -25,7 +25,7 @@ describe('StorageService', () => {
       close: jest.fn(() => Promise.resolve()),
     };
     
-    mockSQLite.openDatabase.mockResolvedValue(mockDb);
+    mockSQLite.openDatabase.mockReturnValue(mockDb as any);
   });
 
   describe('initialize', () => {
@@ -215,8 +215,8 @@ describe('StorageService', () => {
 
       // Assert
       expect(result).toHaveLength(2);
-      expect(result[0].name).toBe('Equipment 1');
-      expect(result[1].name).toBe('Equipment 2');
+      expect(result[0]?.name).toBe('Equipment 1');
+      expect(result[1]?.name).toBe('Equipment 2');
     });
   });
 

@@ -15,7 +15,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { EquipmentStatus, EquipmentARMetadata } from '../../domain/AREntities';
-import { Logger } from '../../utils/Logger';
+import { Logger } from "../../utils/logger";
 
 interface ARStatusUpdatePanelProps {
   equipment: {

@@ -3,7 +3,7 @@
  */
 
 import { SpatialAnchor } from '../domain/AREntities';
-import { Logger } from '../utils/Logger';
+import { Logger } from "../utils/logger";
 
 export class SyncService {
   private logger: Logger;

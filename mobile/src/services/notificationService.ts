@@ -5,9 +5,12 @@
 
 import PushNotification from 'react-native-push-notification';
 import {Platform, Alert} from 'react-native';
-import {logger} from '../utils/logger';
+import {Logger} from "../utils/logger";
 import {errorHandler, ErrorType, ErrorSeverity, createError} from '../utils/errorHandler';
 import {permissionManager, PermissionType} from '../utils/permissions';
+
+// Create logger instance
+const logger = new Logger('NotificationService');
 
 export interface NotificationData {
   id: string;
@@ -56,7 +59,7 @@ class NotificationService {
    */
   async initialize(): Promise<void> {
     try {
-      logger.info('Initializing notification service', {}, 'NotificationService');
+      logger.info('Initializing notification service', {});
 
       // Request notification permissions
       const hasPermission = await this.requestPermissions();
@@ -71,12 +74,12 @@ class NotificationService {
       this.setupNotificationHandlers();
 
       this.isInitialized = true;
-      logger.info('Notification service initialized successfully', {}, 'NotificationService');
+      logger.info('Notification service initialized successfully', {});
     } catch (error) {
-      logger.error('Failed to initialize notification service', error, 'NotificationService');
+      logger.error('Failed to initialize notification service', error);
       throw errorHandler.handleError(
         createError(
-          ErrorType.PERMISSIONS,
+          ErrorType.NETWORK,
           'Failed to initialize notification service',
           ErrorSeverity.HIGH,
           { component: 'NotificationService', retryable: true }
@@ -100,7 +103,7 @@ class NotificationService {
       );
       return result.granted;
     } catch (error) {
-      logger.error('Failed to request notification permissions', error, 'NotificationService');
+      logger.error('Failed to request notification permissions', error);
       return false;
     }
   }
@@ -112,30 +115,30 @@ class NotificationService {
     PushNotification.configure({
       // Called when token is generated
       onRegister: (token) => {
-        logger.info('Push notification token received', {token: token.token}, 'NotificationService');
-        this.token = token.token;
+        logger.info('Push notification token received', {token});
+        this.token = token;
         // Send token to server
-        this.sendTokenToServer(token.token);
+        this.sendTokenToServer(token);
       },
 
       // Called when a remote or local notification is opened or received
       onNotification: (notification) => {
-        logger.info('Notification received', {notification}, 'NotificationService');
+        logger.info('Notification received', {notification});
         this.handleNotification(notification);
       },
 
       // Called when the user taps on a notification
       onAction: (notification) => {
-        logger.info('Notification action triggered', {notification}, 'NotificationService');
+        logger.info('Notification action triggered', {notification});
         this.handleNotificationAction(notification);
       },
 
       // Called when the user fails to register for remote notifications
       onRegistrationError: (err) => {
-        logger.error('Push notification registration error', err, 'NotificationService');
+        logger.error('Push notification registration error', err);
         errorHandler.handleError(
           createError(
-            ErrorType.PERMISSIONS,
+            ErrorType.NETWORK,
             'Failed to register for push notifications',
             ErrorSeverity.HIGH,
             { component: 'NotificationService', retryable: true }
@@ -146,7 +149,7 @@ class NotificationService {
 
       // IOS only: Called when the user taps on a notification
       onRemoteFetch: (notificationData) => {
-        logger.info('Remote notification fetch', {notificationData}, 'NotificationService');
+        logger.info('Remote notification fetch', {notificationData});
         this.handleRemoteNotification(notificationData);
       },
 
@@ -191,14 +194,14 @@ class NotificationService {
    */
   private async sendTokenToServer(token: string): Promise<void> {
     try {
-      logger.info('Sending notification token to server', {token}, 'NotificationService');
+      logger.info('Sending notification token to server', {token});
       
       // This would send the token to your backend server
       // await apiService.post('/notifications/register-token', { token });
       
-      logger.info('Notification token sent to server successfully', {}, 'NotificationService');
+      logger.info('Notification token sent to server successfully', {});
     } catch (error) {
-      logger.error('Failed to send token to server', error, 'NotificationService');
+      logger.error('Failed to send token to server', error);
     }
   }
 
@@ -222,7 +225,7 @@ class NotificationService {
         this.showForegroundNotification(notification);
       }
     } catch (error) {
-      logger.error('Failed to handle notification', error, 'NotificationService');
+      logger.error('Failed to handle notification', error);
     }
   }
 
@@ -232,7 +235,7 @@ class NotificationService {
   private handleNotificationAction(notification: any): void {
     try {
       const {action, userInfo} = notification;
-      logger.info('Notification action handled', {action, userInfo}, 'NotificationService');
+      logger.info('Notification action handled', {action, userInfo});
 
       // Handle different actions
       switch (action) {
@@ -246,10 +249,10 @@ class NotificationService {
           // Retry sync operation
           break;
         default:
-          logger.warn('Unknown notification action', {action}, 'NotificationService');
+          logger.warn('Unknown notification action', {action});
       }
     } catch (error) {
-      logger.error('Failed to handle notification action', error, 'NotificationService');
+      logger.error('Failed to handle notification action', error);
     }
   }
 
@@ -258,7 +261,7 @@ class NotificationService {
    */
   private handleRemoteNotification(notificationData: any): void {
     try {
-      logger.info('Handling remote notification', {notificationData}, 'NotificationService');
+      logger.info('Handling remote notification', {notificationData});
       
       // Process remote notification data
       if (notificationData.type) {
@@ -268,7 +271,7 @@ class NotificationService {
         }
       }
     } catch (error) {
-      logger.error('Failed to handle remote notification', error, 'NotificationService');
+      logger.error('Failed to handle remote notification', error);
     }
   }
 
@@ -290,7 +293,7 @@ class NotificationService {
         ]
       );
     } catch (error) {
-      logger.error('Failed to show foreground notification', error, 'NotificationService');
+      logger.error('Failed to show foreground notification', error);
     }
   }
 
@@ -299,7 +302,7 @@ class NotificationService {
    */
   async sendLocalNotification(options: LocalNotificationOptions): Promise<void> {
     try {
-      logger.info('Sending local notification', {options}, 'NotificationService');
+      logger.info('Sending local notification', {options});
 
       PushNotification.localNotification({
         title: options.title,
@@ -314,12 +317,12 @@ class NotificationService {
         actions: options.actions,
       });
 
-      logger.info('Local notification sent successfully', {}, 'NotificationService');
+      logger.info('Local notification sent successfully', {});
     } catch (error) {
-      logger.error('Failed to send local notification', error, 'NotificationService');
+      logger.error('Failed to send local notification', error);
       throw errorHandler.handleError(
         createError(
-          ErrorType.NOTIFICATIONS,
+          ErrorType.NETWORK,
           'Failed to send local notification',
           ErrorSeverity.MEDIUM,
           { component: 'NotificationService', retryable: true }
@@ -334,7 +337,7 @@ class NotificationService {
    */
   async scheduleNotification(notification: ScheduledNotification): Promise<void> {
     try {
-      logger.info('Scheduling notification', {notification}, 'NotificationService');
+      logger.info('Scheduling notification', {notification});
 
       PushNotification.localNotificationSchedule({
         id: notification.id,
@@ -345,12 +348,12 @@ class NotificationService {
         data: notification.data,
       });
 
-      logger.info('Notification scheduled successfully', {id: notification.id}, 'NotificationService');
+      logger.info('Notification scheduled successfully', {id: notification.id});
     } catch (error) {
-      logger.error('Failed to schedule notification', error, 'NotificationService');
+      logger.error('Failed to schedule notification', error);
       throw errorHandler.handleError(
         createError(
-          ErrorType.NOTIFICATIONS,
+          ErrorType.NETWORK,
           'Failed to schedule notification',
           ErrorSeverity.MEDIUM,
           { component: 'NotificationService', retryable: true }
@@ -365,16 +368,16 @@ class NotificationService {
    */
   async cancelNotification(notificationId: string): Promise<void> {
     try {
-      logger.info('Cancelling notification', {notificationId}, 'NotificationService');
+      logger.info('Cancelling notification', {notificationId});
 
       PushNotification.cancelLocalNotifications({id: notificationId});
 
-      logger.info('Notification cancelled successfully', {notificationId}, 'NotificationService');
+      logger.info('Notification cancelled successfully', {notificationId});
     } catch (error) {
-      logger.error('Failed to cancel notification', error, 'NotificationService');
+      logger.error('Failed to cancel notification', error);
       throw errorHandler.handleError(
         createError(
-          ErrorType.NOTIFICATIONS,
+          ErrorType.NETWORK,
           'Failed to cancel notification',
           ErrorSeverity.LOW,
           { component: 'NotificationService', retryable: true }
@@ -389,16 +392,16 @@ class NotificationService {
    */
   async cancelAllNotifications(): Promise<void> {
     try {
-      logger.info('Cancelling all notifications', {}, 'NotificationService');
+      logger.info('Cancelling all notifications', {});
 
       PushNotification.cancelAllLocalNotifications();
 
-      logger.info('All notifications cancelled successfully', {}, 'NotificationService');
+      logger.info('All notifications cancelled successfully', {});
     } catch (error) {
-      logger.error('Failed to cancel all notifications', error, 'NotificationService');
+      logger.error('Failed to cancel all notifications', error);
       throw errorHandler.handleError(
         createError(
-          ErrorType.NOTIFICATIONS,
+          ErrorType.NETWORK,
           'Failed to cancel all notifications',
           ErrorSeverity.LOW,
           { component: 'NotificationService', retryable: true }
@@ -413,7 +416,7 @@ class NotificationService {
    */
   async getScheduledNotifications(): Promise<ScheduledNotification[]> {
     try {
-      logger.debug('Getting scheduled notifications', {}, 'NotificationService');
+      logger.debug('Getting scheduled notifications', {});
 
       return new Promise((resolve) => {
         PushNotification.getScheduledLocalNotifications((notifications) => {
@@ -426,12 +429,12 @@ class NotificationService {
             data: notification.data,
           }));
           
-          logger.debug('Scheduled notifications retrieved', {count: scheduledNotifications.length}, 'NotificationService');
+          logger.debug('Scheduled notifications retrieved', {count: scheduledNotifications.length});
           resolve(scheduledNotifications);
         });
       });
     } catch (error) {
-      logger.error('Failed to get scheduled notifications', error, 'NotificationService');
+      logger.error('Failed to get scheduled notifications', error);
       return [];
     }
   }
@@ -440,7 +443,7 @@ class NotificationService {
    * Handle equipment status change
    */
   private handleEquipmentStatusChange(data: any): void {
-    logger.info('Equipment status change notification', {data}, 'NotificationService');
+    logger.info('Equipment status change notification', {data});
     // Handle equipment status change logic
   }
 
@@ -448,7 +451,7 @@ class NotificationService {
    * Handle maintenance due
    */
   private handleMaintenanceDue(data: any): void {
-    logger.info('Maintenance due notification', {data}, 'NotificationService');
+    logger.info('Maintenance due notification', {data});
     // Handle maintenance due logic
   }
 
@@ -456,7 +459,7 @@ class NotificationService {
    * Handle sync complete
    */
   private handleSyncComplete(data: any): void {
-    logger.info('Sync complete notification', {data}, 'NotificationService');
+    logger.info('Sync complete notification', {data});
     // Handle sync complete logic
   }
 
@@ -464,7 +467,7 @@ class NotificationService {
    * Handle sync failed
    */
   private handleSyncFailed(data: any): void {
-    logger.info('Sync failed notification', {data}, 'NotificationService');
+    logger.info('Sync failed notification', {data});
     // Handle sync failed logic
   }
 
@@ -472,7 +475,7 @@ class NotificationService {
    * Handle system alert
    */
   private handleSystemAlert(data: any): void {
-    logger.info('System alert notification', {data}, 'NotificationService');
+    logger.info('System alert notification', {data});
     // Handle system alert logic
   }
 
@@ -496,9 +499,9 @@ class NotificationService {
   async setBadgeCount(count: number): Promise<void> {
     try {
       PushNotification.setApplicationIconBadgeNumber(count);
-      logger.debug('Badge count set', {count}, 'NotificationService');
+      logger.debug('Badge count set', {count});
     } catch (error) {
-      logger.error('Failed to set badge count', error, 'NotificationService');
+      logger.error('Failed to set badge count', error);
     }
   }
 
@@ -513,7 +516,7 @@ class NotificationService {
         });
       });
     } catch (error) {
-      logger.error('Failed to get badge count', error, 'NotificationService');
+      logger.error('Failed to get badge count', error);
       return 0;
     }
   }

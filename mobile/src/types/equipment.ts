@@ -50,3 +50,36 @@ export interface EquipmentSearchResult {
   totalCount: number;
   searchTime: number;
 }
+
+export interface EquipmentSearchRequest {
+  query?: string;
+  filters?: EquipmentFilter;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  limit?: number;
+  offset?: number;
+}
+
+export interface EquipmentSearchResponse {
+  results: EquipmentSearchResult;
+  success: boolean;
+  message?: string;
+}
+
+export interface EquipmentStatusUpdate {
+  equipmentId: string;
+  status: EquipmentStatus;
+  notes?: string;
+  updatedBy: string;
+  updatedAt: Date;
+}
+
+export interface GPSLocation {
+  latitude: number;
+  longitude: number;
+  altitude?: number;
+  accuracy?: number;
+  heading?: number;
+  speed?: number;
+  timestamp: Date;
+}

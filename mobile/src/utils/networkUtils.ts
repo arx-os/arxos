@@ -3,7 +3,7 @@
  * Common network and connectivity functions
  */
 
-import NetInfo from '@react-native-netinfo/netinfo';
+import NetInfo from '@react-native-community/netinfo';
 
 export interface NetworkState {
   isConnected: boolean;

@@ -17,28 +17,19 @@ import {
   ActivityIndicator,
   Modal,
   Dimensions,
+  ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useNavigation} from '@react-navigation/native';
 import {useAppSelector, useAppDispatch} from '@/store/hooks';
 import {fetchEquipment, searchEquipment} from '@/store/slices/equipmentSlice';
-import {logger} from '../utils/logger';
+import {Logger} from "../utils/logger";
+import {Equipment} from '@/types/equipment';
+
+const logger = new Logger('EquipmentScreen');
 import {errorHandler} from '../utils/errorHandler';
 
 const {width} = Dimensions.get('window');
-
-interface Equipment {
-  id: string;
-  name: string;
-  type: string;
-  status: 'normal' | 'needs-repair' | 'failed' | 'maintenance';
-  location: {
-    floorId: string;
-    roomId: string;
-  };
-  lastMaintenance?: string;
-  nextMaintenance?: string;
-}
 
 interface FilterOptions {
   status: string[];
@@ -74,7 +65,7 @@ export const EquipmentScreen: React.FC = () => {
       if (filters.type.length > 0 && !filters.type.includes(item.type)) {
         return false;
       }
-      if (filters.floor.length > 0 && !filters.floor.includes(item.location.floorId)) {
+      if (filters.floor.length > 0 && !filters.floor.includes(item.floorId || '')) {
         return false;
       }
       return true;
@@ -95,8 +86,8 @@ export const EquipmentScreen: React.FC = () => {
           bValue = b.status;
           break;
         case 'location':
-          aValue = `${a.location.floorId}-${a.location.roomId}`;
-          bValue = `${b.location.floorId}-${b.location.roomId}`;
+          aValue = `${a.floorId || ''}-${a.roomId || ''}`;
+          bValue = `${b.floorId || ''}-${b.roomId || ''}`;
           break;
         default:
           aValue = a.name.toLowerCase();
@@ -115,7 +106,7 @@ export const EquipmentScreen: React.FC = () => {
 
   useEffect(() => {
     if (user?.organizationId) {
-      logger.info('Loading equipment data', {organizationId: user.organizationId}, 'EquipmentScreen');
+      logger.info('Loading equipment data', {organizationId: user.organizationId});
       dispatch(fetchEquipment(user.organizationId));
     }
   }, [dispatch, user?.organizationId]);
@@ -126,8 +117,8 @@ export const EquipmentScreen: React.FC = () => {
       if (user?.organizationId) {
         await dispatch(fetchEquipment(user.organizationId));
       }
-    } catch (error) {
-      logger.error('Refresh failed', error, 'EquipmentScreen');
+    } catch (error: any) {
+      logger.error('Refresh failed', error);
       errorHandler.handleError(error, 'EquipmentScreen');
     } finally {
       setRefreshing(false);
@@ -139,21 +130,20 @@ export const EquipmentScreen: React.FC = () => {
     
     if (query.trim().length > 0) {
       try {
-        logger.info('Searching equipment', {query}, 'EquipmentScreen');
+        logger.info('Searching equipment', {query});
         await dispatch(searchEquipment({
           query: query.trim(),
-          organizationId: user?.organizationId || '',
         }));
-      } catch (error) {
-        logger.error('Search failed', error, 'EquipmentScreen');
+      } catch (error: any) {
+        logger.error('Search failed', error);
         errorHandler.handleError(error, 'EquipmentScreen');
       }
     }
   }, [dispatch, user?.organizationId]);
 
   const handleEquipmentPress = useCallback((equipment: Equipment) => {
-    logger.info('Equipment selected', {equipmentId: equipment.id}, 'EquipmentScreen');
-    navigation.navigate('EquipmentDetail' as never, {equipmentId: equipment.id});
+    logger.info('Equipment selected', {equipmentId: equipment.id});
+    (navigation as any).navigate('EquipmentDetail', {equipmentId: equipment.id});
   }, [navigation]);
 
   const handleFilterChange = useCallback((filterType: keyof FilterOptions, value: string) => {
@@ -234,7 +224,7 @@ export const EquipmentScreen: React.FC = () => {
         <View style={styles.locationContainer}>
           <Icon name="location-on" size={16} color="#666666" />
           <Text style={styles.locationText}>
-            Floor {item.location.floorId}, Room {item.location.roomId}
+            Floor {item.floorId || 'N/A'}, Room {item.roomId || 'N/A'}
           </Text>
         </View>
         
@@ -314,16 +304,16 @@ export const EquipmentScreen: React.FC = () => {
           {/* Floor Filter */}
           <View style={styles.filterSection}>
             <Text style={styles.filterSectionTitle}>Floor</Text>
-            {Array.from(new Set(equipment.map(eq => eq.location.floorId))).map(floor => (
+            {Array.from(new Set(equipment.map(eq => eq.floorId).filter(Boolean))).map(floor => (
               <TouchableOpacity
                 key={floor}
                 style={styles.filterOption}
-                onPress={() => handleFilterChange('floor', floor)}>
+                onPress={() => handleFilterChange('floor', floor || '')}>
                 <View style={styles.filterOptionContent}>
                   <Icon name="layers" size={20} color="#666666" />
                   <Text style={styles.filterOptionText}>Floor {floor}</Text>
                 </View>
-                {filters.floor.includes(floor) && (
+                {filters.floor.includes(floor || '') && (
                   <Icon name="check" size={20} color="#007AFF" />
                 )}
               </TouchableOpacity>

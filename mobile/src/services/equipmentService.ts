@@ -11,9 +11,10 @@ import {
   EquipmentSearchResponse,
   EquipmentStatusUpdate,
   EquipmentSearchResult,
+  EquipmentStatus,
 } from '@/types/equipment';
 import {SyncResult} from '@/types/sync';
-import {logger} from '../utils/logger';
+import {logger} from "../utils/logger";
 import {errorHandler, ErrorType, ErrorSeverity, createError} from '../utils/errorHandler';
 
 class EquipmentService {
@@ -25,14 +26,19 @@ class EquipmentService {
       const response = await apiService.get<{equipment: Equipment[], total: number}>(`/equipment/building/${buildingId}`);
       
       // Cache equipment data locally
-      await storageService.setEquipmentData(buildingId, response.equipment);
+      for (const equipment of response.equipment) {
+        const equipmentRecord = this.convertEquipmentToRecord(equipment);
+        await storageService.saveEquipment(equipmentRecord);
+      }
       
       return response.equipment;
     } catch (error) {
       // Fallback to cached data if available
-      const cachedData = await storageService.getEquipmentData(buildingId);
-      if (cachedData) {
-        return cachedData;
+      const cachedData = await storageService.getAllEquipment();
+      if (cachedData && cachedData.length > 0) {
+        return cachedData
+          .map(record => this.convertRecordToEquipment(record))
+          .filter(eq => eq.buildingId === buildingId);
       }
       throw error;
     }
@@ -61,9 +67,9 @@ class EquipmentService {
       return response;
     } catch (error) {
       // Fallback to cached data
-      const cachedData = await storageService.getEquipmentById(equipmentId);
+      const cachedData = await storageService.getEquipment(equipmentId);
       if (cachedData) {
-        return cachedData;
+        return this.convertRecordToEquipment(cachedData);
       }
       throw error;
     }
@@ -76,13 +82,26 @@ class EquipmentService {
     try {
       const response = await apiService.post<EquipmentStatusUpdate>('/equipment/status', update);
       
-      // Update local cache
-      await storageService.updateEquipmentStatus(update);
+      // Update local cache by saving the updated equipment
+      const equipmentRecord = await storageService.getEquipment(update.equipmentId);
+      if (equipmentRecord) {
+        equipmentRecord.status = update.status;
+        equipmentRecord.updatedAt = new Date().toISOString();
+        await storageService.saveEquipment(equipmentRecord);
+      }
       
       return response;
     } catch (error) {
       // Store update for later sync
-      await storageService.addPendingUpdate(update);
+      await storageService.addToSyncQueue({
+        id: `status_${update.equipmentId}_${Date.now()}`,
+        operation: 'UPDATE',
+        table: 'equipment',
+        recordId: update.equipmentId,
+        data: update,
+        retryCount: 0,
+        createdAt: new Date().toISOString()
+      });
       throw error;
     }
   }
@@ -94,11 +113,24 @@ class EquipmentService {
     try {
       await apiService.post(`/equipment/${equipmentId}/notes`, {note});
       
-      // Update local cache
-      await storageService.addEquipmentNote(equipmentId, note);
+      // Update local cache by updating equipment maintenance notes
+      const equipmentRecord = await storageService.getEquipment(equipmentId);
+      if (equipmentRecord) {
+        equipmentRecord.notes = (equipmentRecord.notes || '') + '\n' + note;
+        equipmentRecord.updatedAt = new Date().toISOString();
+        await storageService.saveEquipment(equipmentRecord);
+      }
     } catch (error) {
       // Store note for later sync
-      await storageService.addPendingNote(equipmentId, note);
+      await storageService.addToSyncQueue({
+        id: `note_${equipmentId}_${Date.now()}`,
+        operation: 'UPDATE',
+        table: 'equipment',
+        recordId: equipmentId,
+        data: {equipmentId, note},
+        retryCount: 0,
+        createdAt: new Date().toISOString()
+      });
       throw error;
     }
   }
@@ -123,7 +155,15 @@ class EquipmentService {
       return response.photoUrl;
     } catch (error) {
       // Store photo for later upload
-      await storageService.addPendingPhoto(equipmentId, photoUri);
+      await storageService.addToSyncQueue({
+        id: `photo_${equipmentId}_${Date.now()}`,
+        operation: 'UPDATE',
+        table: 'equipment',
+        recordId: equipmentId,
+        data: {equipmentId, photoUri},
+        retryCount: 0,
+        createdAt: new Date().toISOString()
+      });
       throw error;
     }
   }
@@ -136,48 +176,33 @@ class EquipmentService {
       synced: 0,
       failed: 0,
       errors: [],
+      duration: 0
     };
     
     try {
       // Get pending updates
-      const pendingUpdates = await storageService.getPendingUpdates();
+      const pendingUpdates = await storageService.getSyncQueue();
       
       for (const update of pendingUpdates) {
         try {
-          await this.updateEquipmentStatus(update);
-          await storageService.removePendingUpdate(update.id);
+          // Process different types of sync operations
+          if (update.operation === 'UPDATE' && update.table === 'equipment') {
+            if (update.data.equipmentId && update.data.status) {
+              // Equipment status update
+              await this.updateEquipmentStatus(update.data);
+            } else if (update.data.equipmentId && update.data.note) {
+              // Equipment note addition
+              await this.addEquipmentNote(update.data.equipmentId, update.data.note);
+            } else if (update.data.equipmentId && update.data.photoUri) {
+              // Equipment photo upload
+              await this.uploadEquipmentPhoto(update.data.equipmentId, update.data.photoUri);
+            }
+          }
+          await storageService.removeFromSyncQueue(update.id);
           result.synced++;
         } catch (error: any) {
           result.failed++;
           result.errors.push(`Failed to sync update ${update.id}: ${error.message}`);
-        }
-      }
-      
-      // Get pending notes
-      const pendingNotes = await storageService.getPendingNotes();
-      
-      for (const note of pendingNotes) {
-        try {
-          await this.addEquipmentNote(note.equipmentId, note.note);
-          await storageService.removePendingNote(note.id);
-          result.synced++;
-        } catch (error: any) {
-          result.failed++;
-          result.errors.push(`Failed to sync note ${note.id}: ${error.message}`);
-        }
-      }
-      
-      // Get pending photos
-      const pendingPhotos = await storageService.getPendingPhotos();
-      
-      for (const photo of pendingPhotos) {
-        try {
-          await this.uploadEquipmentPhoto(photo.equipmentId, photo.photoUri);
-          await storageService.removePendingPhoto(photo.id);
-          result.synced++;
-        } catch (error: any) {
-          result.failed++;
-          result.errors.push(`Failed to sync photo ${photo.id}: ${error.message}`);
         }
       }
       
@@ -192,13 +217,18 @@ class EquipmentService {
    * Search equipment locally (offline)
    */
   private async searchEquipmentLocally(request: EquipmentSearchRequest): Promise<EquipmentSearchResponse> {
-    const equipment = await storageService.getEquipmentData(request.buildingId);
+    const allEquipment = await storageService.getAllEquipment();
+    const equipment = allEquipment.map(record => this.convertRecordToEquipment(record));
     
-    if (!equipment) {
+    if (!equipment || equipment.length === 0) {
       return {
-        equipment: [],
-        total: 0,
-        hasMore: false,
+        results: {
+          equipment: [],
+          totalCount: 0,
+          searchTime: 0
+        },
+        success: true,
+        message: 'No equipment found'
       };
     }
     
@@ -209,8 +239,8 @@ class EquipmentService {
         eq.type.toLowerCase().includes(request.query.toLowerCase());
       
       const matchesFilters = !request.filters || (
-        (!request.filters.floor || eq.location.floorId === request.filters.floor) &&
-        (!request.filters.room || eq.location.roomId === request.filters.room) &&
+        (!request.filters.floorId || eq.floorId === request.filters.floorId) &&
+        (!request.filters.roomId || eq.roomId === request.filters.roomId) &&
         (!request.filters.type || eq.type === request.filters.type) &&
         (!request.filters.status || eq.status === request.filters.status)
       );
@@ -224,9 +254,59 @@ class EquipmentService {
     const paginatedEquipment = filteredEquipment.slice(offset, offset + limit);
     
     return {
-      equipment: paginatedEquipment,
-      total: filteredEquipment.length,
-      hasMore: offset + limit < filteredEquipment.length,
+      results: {
+        equipment: paginatedEquipment,
+        totalCount: filteredEquipment.length,
+        searchTime: Date.now()
+      },
+      success: true,
+      message: 'Search completed successfully'
+    };
+  }
+
+  /**
+   * Convert Equipment to EquipmentRecord for storage
+   */
+  private convertEquipmentToRecord(equipment: Equipment): any {
+    return {
+      id: equipment.id,
+      name: equipment.name,
+      type: equipment.type,
+      location: equipment.location ? JSON.stringify(equipment.location) : '',
+      status: equipment.status,
+      lastMaintenance: equipment.lastMaintenance?.toISOString(),
+      nextMaintenance: equipment.nextMaintenance?.toISOString(),
+      specifications: '',
+      photos: [],
+      notes: equipment.maintenanceNotes,
+      createdAt: equipment.createdAt?.toISOString() || new Date().toISOString(),
+      updatedAt: equipment.updatedAt?.toISOString() || new Date().toISOString(),
+      syncedAt: new Date().toISOString(),
+      isDirty: false
+    };
+  }
+
+  /**
+   * Convert EquipmentRecord to Equipment for API usage
+   */
+  private convertRecordToEquipment(record: any): Equipment {
+    return {
+      id: record.id,
+      name: record.name,
+      type: record.type,
+      model: record.model || '',
+      manufacturer: record.manufacturer || '',
+      status: record.status as EquipmentStatus,
+      location: record.location ? JSON.parse(record.location) : undefined,
+      buildingId: record.buildingId || '', // Default empty string since it's not in EquipmentRecord
+      floorId: record.floorId || '',
+      roomId: record.roomId || '',
+      installationDate: record.installationDate ? new Date(record.installationDate) : undefined,
+      lastMaintenance: record.lastMaintenance ? new Date(record.lastMaintenance) : undefined,
+      nextMaintenance: record.nextMaintenance ? new Date(record.nextMaintenance) : undefined,
+      maintenanceNotes: record.notes,
+      createdAt: record.createdAt ? new Date(record.createdAt) : new Date(),
+      updatedAt: record.updatedAt ? new Date(record.updatedAt) : new Date()
     };
   }
 }

@@ -14,7 +14,7 @@ import {
   Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import NetInfo from '@react-native-netinfo/netinfo';
+import NetInfo from '@react-native-community/netinfo';
 import {useAppSelector, useAppDispatch} from '@/store/hooks';
 import {setOnlineStatus} from '@/store/slices/syncSlice';
 

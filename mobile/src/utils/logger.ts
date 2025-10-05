@@ -25,3 +25,9 @@ export class Logger {
     console.debug(`[${this.context}] DEBUG: ${message}`, data ? JSON.stringify(data, null, 2) : '');
   }
 }
+
+// Default export for backward compatibility
+export default Logger;
+
+// Named export for backward compatibility
+export const logger = Logger;

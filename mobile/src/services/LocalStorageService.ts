@@ -3,8 +3,8 @@
  */
 
 import { SpatialAnchor, ARSessionMetrics } from '../domain/AREntities';
-import { Equipment } from '../types/Equipment';
-import { Logger } from '../utils/Logger';
+import { Equipment } from '../types/equipment';
+import { Logger } from "../utils/logger";
 
 export class LocalStorageService {
   private logger: Logger;

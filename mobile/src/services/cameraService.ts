@@ -5,9 +5,12 @@
 
 import {Platform, Alert} from 'react-native';
 import {launchCamera, launchImageLibrary, ImagePickerResponse, MediaType} from 'react-native-image-picker';
-import {logger} from '../utils/logger';
+import {Logger} from "../utils/logger";
 import {errorHandler, ErrorType, ErrorSeverity, createError} from '../utils/errorHandler';
 import {permissionManager, PermissionType} from '../utils/permissions';
+
+// Create logger instance
+const logger = new Logger('CameraService');
 
 export interface CameraOptions {
   quality?: number; // 0-1
@@ -15,7 +18,7 @@ export interface CameraOptions {
   maxHeight?: number;
   allowsEditing?: boolean;
   aspect?: [number, number];
-  mediaType?: MediaType;
+  mediaType?: 'photo' | 'video' | 'mixed';
   includeBase64?: boolean;
   saveToPhotos?: boolean;
 }
@@ -60,7 +63,7 @@ class CameraService {
       const result = await permissionManager.checkPermission(PermissionType.CAMERA);
       return result.granted;
     } catch (error) {
-      logger.error('Failed to check camera permissions', error, 'CameraService');
+      logger.error('Failed to check camera permissions', error);
       return false;
     }
   }
@@ -79,7 +82,7 @@ class CameraService {
       );
       return result.granted;
     } catch (error) {
-      logger.error('Failed to request camera permissions', error, 'CameraService');
+      logger.error('Failed to request camera permissions', error);
       return false;
     }
   }
@@ -89,7 +92,7 @@ class CameraService {
    */
   async takePhoto(options?: Partial<CameraOptions>): Promise<PhotoResult> {
     try {
-      logger.info('Taking photo with camera', {options}, 'CameraService');
+      logger.info('Taking photo with camera', {options});
 
       // Check permissions
       const hasPermission = await this.checkPermissions();
@@ -100,7 +103,12 @@ class CameraService {
         }
       }
 
-      const cameraOptions = {...this.defaultOptions, ...options};
+      const cameraOptions = {
+        ...this.defaultOptions, 
+        ...options,
+        mediaType: (options?.mediaType as MediaType) || this.defaultOptions.mediaType,
+        quality: (options?.quality as any) || this.defaultOptions.quality
+      };
 
       return new Promise((resolve, reject) => {
         launchCamera(cameraOptions, (response: ImagePickerResponse) => {
@@ -108,10 +116,10 @@ class CameraService {
         });
       });
     } catch (error) {
-      logger.error('Failed to take photo', error, 'CameraService');
+      logger.error('Failed to take photo', error);
       throw errorHandler.handleError(
         createError(
-          ErrorType.PERMISSIONS,
+          ErrorType.CAMERA,
           'Failed to take photo',
           ErrorSeverity.HIGH,
           { component: 'CameraService', retryable: true }
@@ -126,7 +134,7 @@ class CameraService {
    */
   async selectFromGallery(options?: Partial<CameraOptions>): Promise<PhotoResult> {
     try {
-      logger.info('Selecting photo from gallery', {options}, 'CameraService');
+      logger.info('Selecting photo from gallery', {options});
 
       // Check storage permissions for Android
       if (Platform.OS === 'android') {
@@ -145,7 +153,12 @@ class CameraService {
         }
       }
 
-      const galleryOptions = {...this.defaultOptions, ...options};
+      const galleryOptions = {
+        ...this.defaultOptions, 
+        ...options,
+        mediaType: (options?.mediaType as MediaType) || this.defaultOptions.mediaType,
+        quality: (options?.quality as any) || this.defaultOptions.quality
+      };
 
       return new Promise((resolve, reject) => {
         launchImageLibrary(galleryOptions, (response: ImagePickerResponse) => {
@@ -153,10 +166,10 @@ class CameraService {
         });
       });
     } catch (error) {
-      logger.error('Failed to select photo from gallery', error, 'CameraService');
+      logger.error('Failed to select photo from gallery', error);
       throw errorHandler.handleError(
         createError(
-          ErrorType.PERMISSIONS,
+          ErrorType.CAMERA,
           'Failed to select photo from gallery',
           ErrorSeverity.HIGH,
           { component: 'CameraService', retryable: true }
@@ -223,7 +236,7 @@ class CameraService {
       }
 
       if (response.errorMessage) {
-        logger.error('Image picker error', {error: response.errorMessage}, 'CameraService');
+        logger.error('Image picker error', {error: response.errorMessage});
         reject(new Error(response.errorMessage));
         return;
       }
@@ -234,6 +247,10 @@ class CameraService {
       }
 
       const asset = response.assets[0];
+      if (!asset) {
+        reject(new Error('No photo selected'));
+        return;
+      }
       if (!asset.uri) {
         reject(new Error('Photo URI is missing'));
         return;
@@ -248,10 +265,7 @@ class CameraService {
         fileName: asset.fileName,
         base64: asset.base64,
         timestamp: new Date().toISOString(),
-        location: asset.location ? {
-          latitude: asset.location.latitude,
-          longitude: asset.location.longitude,
-        } : undefined,
+        location: undefined, // Asset doesn't have location property
       };
 
       logger.info('Photo captured successfully', {
@@ -259,11 +273,11 @@ class CameraService {
         width: photoResult.width,
         height: photoResult.height,
         fileSize: photoResult.fileSize,
-      }, 'CameraService');
+      });
 
       resolve(photoResult);
     } catch (error) {
-      logger.error('Failed to handle image picker response', error, 'CameraService');
+      logger.error('Failed to handle image picker response', error);
       reject(error as Error);
     }
   }
@@ -280,7 +294,7 @@ class CameraService {
     } = {}
   ): Promise<string> {
     try {
-      logger.info('Compressing image', {uri, options}, 'CameraService');
+      logger.info('Compressing image', {uri, options});
 
       // This would integrate with a image compression library
       // For now, we'll return the original URI
@@ -288,13 +302,13 @@ class CameraService {
       
       const compressedUri = uri; // Placeholder
       
-      logger.info('Image compressed successfully', {originalUri: uri, compressedUri}, 'CameraService');
+      logger.info('Image compressed successfully', {originalUri: uri, compressedUri});
       return compressedUri;
     } catch (error) {
-      logger.error('Failed to compress image', error, 'CameraService');
+      logger.error('Failed to compress image', error);
       throw errorHandler.handleError(
         createError(
-          ErrorType.DATA_PROCESSING,
+          ErrorType.CAMERA,
           'Failed to compress image',
           ErrorSeverity.MEDIUM,
           { component: 'CameraService', retryable: true }
@@ -314,7 +328,7 @@ class CameraService {
     format: string;
   }> {
     try {
-      logger.debug('Getting image metadata', {uri}, 'CameraService');
+      logger.debug('Getting image metadata', {uri});
 
       // This would integrate with a metadata extraction library
       // For now, we'll return placeholder data
@@ -325,13 +339,13 @@ class CameraService {
         format: 'JPEG',
       };
 
-      logger.debug('Image metadata retrieved', {uri, metadata}, 'CameraService');
+      logger.debug('Image metadata retrieved', {uri, metadata});
       return metadata;
     } catch (error) {
-      logger.error('Failed to get image metadata', error, 'CameraService');
+      logger.error('Failed to get image metadata', error);
       throw errorHandler.handleError(
         createError(
-          ErrorType.DATA_PROCESSING,
+          ErrorType.CAMERA,
           'Failed to get image metadata',
           ErrorSeverity.LOW,
           { component: 'CameraService', retryable: true }
@@ -380,19 +394,19 @@ class CameraService {
     size: {width: number; height: number} = {width: 200, height: 200}
   ): Promise<string> {
     try {
-      logger.info('Generating thumbnail', {uri, size}, 'CameraService');
+      logger.info('Generating thumbnail', {uri, size});
 
       // This would integrate with a thumbnail generation library
       // For now, we'll return the original URI
       const thumbnailUri = uri; // Placeholder
 
-      logger.info('Thumbnail generated successfully', {originalUri: uri, thumbnailUri}, 'CameraService');
+      logger.info('Thumbnail generated successfully', {originalUri: uri, thumbnailUri});
       return thumbnailUri;
     } catch (error) {
-      logger.error('Failed to generate thumbnail', error, 'CameraService');
+      logger.error('Failed to generate thumbnail', error);
       throw errorHandler.handleError(
         createError(
-          ErrorType.DATA_PROCESSING,
+          ErrorType.CAMERA,
           'Failed to generate thumbnail',
           ErrorSeverity.MEDIUM,
           { component: 'CameraService', retryable: true }
@@ -407,7 +421,7 @@ class CameraService {
    */
   async saveToGallery(uri: string): Promise<void> {
     try {
-      logger.info('Saving photo to gallery', {uri}, 'CameraService');
+      logger.info('Saving photo to gallery', {uri});
 
       // Check storage permissions
       const hasPermission = await permissionManager.checkPermission(PermissionType.STORAGE);
@@ -426,12 +440,12 @@ class CameraService {
 
       // This would integrate with a photo saving library
       // For now, we'll simulate the save operation
-      logger.info('Photo saved to gallery successfully', {uri}, 'CameraService');
+      logger.info('Photo saved to gallery successfully', {uri});
     } catch (error) {
-      logger.error('Failed to save photo to gallery', error, 'CameraService');
+      logger.error('Failed to save photo to gallery', error);
       throw errorHandler.handleError(
         createError(
-          ErrorType.PERMISSIONS,
+          ErrorType.CAMERA,
           'Failed to save photo to gallery',
           ErrorSeverity.MEDIUM,
           { component: 'CameraService', retryable: true }
@@ -446,16 +460,16 @@ class CameraService {
    */
   async deletePhoto(uri: string): Promise<void> {
     try {
-      logger.info('Deleting photo file', {uri}, 'CameraService');
+      logger.info('Deleting photo file', {uri});
 
       // This would integrate with a file deletion library
       // For now, we'll simulate the deletion
-      logger.info('Photo file deleted successfully', {uri}, 'CameraService');
+      logger.info('Photo file deleted successfully', {uri});
     } catch (error) {
-      logger.error('Failed to delete photo file', error, 'CameraService');
+      logger.error('Failed to delete photo file', error);
       throw errorHandler.handleError(
         createError(
-          ErrorType.DATA_PROCESSING,
+          ErrorType.CAMERA,
           'Failed to delete photo file',
           ErrorSeverity.LOW,
           { component: 'CameraService', retryable: true }

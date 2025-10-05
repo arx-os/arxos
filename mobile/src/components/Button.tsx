@@ -47,37 +47,24 @@ export const Button: React.FC<ButtonProps> = ({
   const isDisabled = disabled || loading;
 
   const getButtonStyle = (): ViewStyle => {
-    const baseStyle = [styles.button, styles[`${size}Button`]];
-    
-    if (fullWidth) {
-      baseStyle.push(styles.fullWidth);
-    }
-    
-    if (isDisabled) {
-      baseStyle.push(styles.disabled);
-    }
-    
-    baseStyle.push(styles[`${variant}Button`]);
-    
-    if (style) {
-      baseStyle.push(style);
-    }
-    
-    return StyleSheet.flatten(baseStyle);
+    return StyleSheet.flatten([
+      styles.button, 
+      styles[`${size}Button`],
+      fullWidth && styles.fullWidth,
+      isDisabled && styles.disabled,
+      styles[`${variant}Button`],
+      style
+    ]) as ViewStyle;
   };
 
   const getTextStyle = (): TextStyle => {
-    const baseStyle = [styles.text, styles[`${size}Text`], styles[`${variant}Text`]];
-    
-    if (isDisabled) {
-      baseStyle.push(styles.disabledText);
-    }
-    
-    if (textStyle) {
-      baseStyle.push(textStyle);
-    }
-    
-    return StyleSheet.flatten(baseStyle);
+    return StyleSheet.flatten([
+      styles.text, 
+      styles[`${size}Text`], 
+      styles[`${variant}Text`],
+      isDisabled && styles.disabledText,
+      textStyle
+    ]) as TextStyle;
   };
 
   const renderContent = () => {
@@ -99,7 +86,7 @@ export const Button: React.FC<ButtonProps> = ({
           <Icon
             name={icon}
             size={size === 'small' ? 16 : size === 'large' ? 24 : 20}
-            color={getTextStyle().color}
+            color={String(getTextStyle().color || '#000000')}
             style={styles.leftIcon}
           />
         )}
@@ -108,7 +95,7 @@ export const Button: React.FC<ButtonProps> = ({
           <Icon
             name={icon}
             size={size === 'small' ? 16 : size === 'large' ? 24 : 20}
-            color={getTextStyle().color}
+            color={String(getTextStyle().color || '#000000')}
             style={styles.rightIcon}
           />
         )}

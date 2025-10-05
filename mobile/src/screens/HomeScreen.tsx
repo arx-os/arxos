@@ -20,7 +20,7 @@ import {useNavigation} from '@react-navigation/native';
 import {useAppSelector, useAppDispatch} from '@/store/hooks';
 import {fetchEquipment} from '@/store/slices/equipmentSlice';
 import {syncData} from '@/store/slices/syncSlice';
-import {logger} from '../utils/logger';
+import {Logger} from "../utils/logger";
 import {errorHandler} from '../utils/errorHandler';
 
 export const HomeScreen: React.FC = () => {
@@ -28,6 +28,7 @@ export const HomeScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const {user} = useAppSelector(state => state.auth);
   const {equipment, isLoading} = useAppSelector(state => state.equipment);
+  const logger = new Logger('HomeScreen');
   const {isOnline, lastSync, pendingUpdates} = useAppSelector(state => state.sync);
   
   const [refreshing, setRefreshing] = useState(false);
@@ -35,18 +36,18 @@ export const HomeScreen: React.FC = () => {
   useEffect(() => {
     // Load equipment data on mount
     if (user?.organizationId) {
-      logger.info('Loading equipment data', {organizationId: user.organizationId}, 'HomeScreen');
+      logger.info('Loading equipment data', {organizationId: user.organizationId});
       dispatch(fetchEquipment(user.organizationId));
     }
   }, [dispatch, user?.organizationId]);
   
   const handleSync = useCallback(async () => {
     try {
-      logger.info('Manual sync triggered', {}, 'HomeScreen');
+      logger.info('Manual sync triggered');
       await dispatch(syncData());
     } catch (error) {
-      logger.error('Sync failed', error, 'HomeScreen');
-      errorHandler.handleError(error, 'HomeScreen');
+      logger.error('Sync failed', error as Error);
+      errorHandler.handleError(error as Error, 'HomeScreen');
       Alert.alert('Sync Failed', 'Failed to sync data. Please try again.');
     }
   }, [dispatch]);
@@ -59,8 +60,8 @@ export const HomeScreen: React.FC = () => {
       }
       await dispatch(syncData());
     } catch (error) {
-      logger.error('Refresh failed', error, 'HomeScreen');
-      errorHandler.handleError(error, 'HomeScreen');
+      logger.error('Refresh failed', error as Error);
+      errorHandler.handleError(error as Error, 'HomeScreen');
     } finally {
       setRefreshing(false);
     }
@@ -196,12 +197,12 @@ export const HomeScreen: React.FC = () => {
               <TouchableOpacity
                 key={eq.id}
                 style={styles.equipmentItem}
-                onPress={() => navigation.navigate('EquipmentDetail' as never, {equipmentId: eq.id})}
+                onPress={() => (navigation as any).navigate('EquipmentDetail', {equipmentId: eq.id})}
               >
                 <View style={styles.equipmentInfo}>
                   <Text style={styles.equipmentName}>{eq.name}</Text>
                   <Text style={styles.equipmentLocation}>
-                    {eq.location.floorId} - {eq.location.roomId}
+                    {eq.floorId || 'N/A'} - {eq.roomId || 'N/A'}
                   </Text>
                 </View>
                 <View style={styles.equipmentStatus}>

@@ -3,8 +3,8 @@
  * Connects to ArxOS backend mobile API endpoints
  */
 
-import { Logger } from '../utils/Logger';
-import { axios } from 'axios';
+import { Logger } from "../utils/logger";
+import axios from 'axios';
 
 // API Configuration
 const API_BASE_URL = __DEV__ 
@@ -232,6 +232,39 @@ export class AuthService {
       this.currentUser = null;
       return null;
     }
+  }
+
+  /**
+   * Alias for getProfile for backward compatibility
+   */
+  async getUserProfile(accessToken: string): Promise<User> {
+    return this.getProfile(accessToken);
+  }
+
+  /**
+   * Initialize authentication (placeholder for future implementation)
+   */
+  async initializeAuth(): Promise<void> {
+    this.logger.info('Initializing authentication');
+    // Future implementation
+  }
+
+  /**
+   * Change password (placeholder for future implementation)
+   */
+  async changePassword(oldPassword: string, newPassword: string): Promise<void> {
+    this.logger.info('Changing password');
+    // Future implementation
+    throw new Error('Change password not implemented');
+  }
+
+  /**
+   * Reset password (placeholder for future implementation)
+   */
+  async resetPassword(email: string): Promise<void> {
+    this.logger.info('Resetting password');
+    // Future implementation
+    throw new Error('Reset password not implemented');
   }
 }
 

@@ -18,6 +18,8 @@ go.mod.bak
 .profile
 go.debug
 go-build-*/
+# ArxOS build cache (Phase 6 optimization)
+.cache/
 
 # Go Module Backup Files
 *.mod.bak

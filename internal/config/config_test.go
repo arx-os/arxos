@@ -10,6 +10,166 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// createCompleteTestConfig creates a complete test configuration with all required fields
+func createCompleteTestConfig() *config.Config {
+	return &config.Config{
+		Mode:     config.ModeLocal,
+		Version:  "0.1.0",
+		StateDir: "/tmp/test",
+		CacheDir: "/tmp/test/cache",
+
+		Cloud: config.CloudConfig{
+			Enabled:      false,
+			BaseURL:      "https://api.arxos.io",
+			SyncEnabled:  false,
+			SyncInterval: 5 * time.Minute,
+		},
+
+		Storage: config.StorageConfig{
+			Backend:   "local",
+			LocalPath: "/tmp/test/data",
+			Data: config.DataConfig{
+				BasePath:        "/tmp/test",
+				RepositoriesDir: "repositories",
+				CacheDir:        "cache",
+				LogsDir:         "logs",
+				TempDir:         "temp",
+			},
+		},
+
+		API: config.APIConfig{
+			Timeout:       30 * time.Second,
+			RetryAttempts: 3,
+			RetryDelay:    1 * time.Second,
+			UserAgent:     "ArxOS-CLI/0.1.0",
+		},
+
+		Telemetry: config.TelemetryConfig{
+			Enabled:    false,
+			Endpoint:   "https://telemetry.arxos.io",
+			SampleRate: 0.1,
+			Debug:      false,
+		},
+
+		Features: config.FeatureFlags{
+			CloudSync:     false,
+			AIIntegration: false,
+			OfflineMode:   true,
+			BetaFeatures:  false,
+			Analytics:     false,
+			AutoUpdate:    false,
+		},
+
+		Security: config.SecurityConfig{
+			JWTExpiry:          24 * time.Hour,
+			SessionTimeout:     30 * time.Minute,
+			APIRateLimit:       100,
+			APIRateLimitWindow: 1 * time.Minute,
+			EnableAuth:         true,
+			EnableTLS:          false,
+			AllowedOrigins:     []string{"http://localhost:3000"},
+			BcryptCost:         12,
+		},
+
+		Database: config.DatabaseConfig{
+			Type:            "postgis",
+			Driver:          "postgres",
+			DataSourceName:  "postgres://localhost/arxos?sslmode=disable",
+			MaxOpenConns:    25,
+			MaxConnections:  25,
+			MaxIdleConns:    5,
+			ConnLifetime:    30 * time.Minute,
+			ConnMaxLifetime: 30 * time.Minute,
+			MigrationsPath:  "./internal/migrations",
+			AutoMigrate:     true,
+		},
+
+		PostGIS: config.PostGISConfig{
+			Host:     "localhost",
+			Port:     5432,
+			Database: "test_db",
+			User:     "test_user",
+			Password: "test_pass",
+			SSLMode:  "disable",
+			SRID:     900913,
+		},
+
+		TUI: config.TUIConfig{
+			Enabled:             true,
+			Theme:               "dark",
+			UpdateInterval:      "1s",
+			MaxEquipmentDisplay: 1000,
+			RealTimeEnabled:     true,
+			AnimationsEnabled:   true,
+			SpatialPrecision:    "1mm",
+			GridScale:           "1:10",
+			ShowCoordinates:     true,
+			ShowConfidence:      true,
+			CompactMode:         false,
+			CustomSymbols: map[string]string{
+				"hvac":        "H",
+				"electrical":  "E",
+				"plumbing":    "P",
+				"fire_safety": "F",
+			},
+			ViewportSize: 20,
+			RefreshRate:  30,
+		},
+
+		IFC: config.IFCConfig{
+			Service: config.IFCServiceConfig{
+				Enabled: true,
+				URL:     "http://localhost:8000",
+				Timeout: "30s",
+				Retries: 3,
+			},
+			Performance: config.IFCPerformanceConfig{
+				CacheEnabled: true,
+				CacheTTL:     "1h",
+				MaxFileSize:  "100MB",
+			},
+		},
+
+		UnifiedCache: config.UnifiedCacheConfig{
+			L1: struct {
+				Enabled    bool          `json:"enabled" yaml:"enabled"`
+				MaxEntries int64         `json:"max_entries" yaml:"max_entries"`
+				DefaultTTL time.Duration `json:"default_ttl" yaml:"default_ttl"`
+			}{
+				Enabled:    true,
+				MaxEntries: 10000,
+				DefaultTTL: 5 * time.Minute,
+			},
+			L2: struct {
+				Enabled    bool          `json:"enabled" yaml:"enabled"`
+				MaxSizeMB  int64         `json:"max_size_mb" yaml:"max_size_mb"`
+				DefaultTTL time.Duration `json:"default_ttl" yaml:"default_ttl"`
+				Path       string        `json:"path" yaml:"path"`
+			}{
+				Enabled:    true,
+				MaxSizeMB:  1000,
+				DefaultTTL: time.Hour,
+				Path:       "/tmp/test/cache/l2",
+			},
+			L3: struct {
+				Enabled    bool          `json:"enabled" yaml:"enabled"`
+				DefaultTTL time.Duration `json:"default_ttl" yaml:"default_ttl"`
+				Host       string        `json:"host" yaml:"host"`
+				Port       int           `json:"port" yaml:"port"`
+				Password   string        `json:"password" yaml:"password"`
+				DB         int           `json:"db" yaml:"db"`
+			}{
+				Enabled:    false,
+				DefaultTTL: 24 * time.Hour,
+				Host:       "localhost",
+				Port:       6379,
+				Password:   "",
+				DB:         0,
+			},
+		},
+	}
+}
+
 func TestConfigValidation(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -17,21 +177,8 @@ func TestConfigValidation(t *testing.T) {
 		expected bool
 	}{
 		{
-			name: "valid local config",
-			config: &config.Config{
-				Mode:     config.ModeLocal,
-				Version:  "0.1.0",
-				StateDir: "/tmp/test",
-				CacheDir: "/tmp/test/cache",
-				Database: config.DatabaseConfig{
-					Type:     "postgis",
-					Host:     "localhost",
-					Port:     5432,
-					Database: "test_db",
-					Username: "test_user",
-					Password: "test_pass",
-				},
-			},
+			name:     "valid local config",
+			config:   createCompleteTestConfig(),
 			expected: true,
 		},
 		{
@@ -59,18 +206,11 @@ func TestConfigValidation(t *testing.T) {
 		},
 		{
 			name: "invalid database port",
-			config: &config.Config{
-				Mode:     config.ModeLocal,
-				Version:  "0.1.0",
-				StateDir: "/tmp/test",
-				CacheDir: "/tmp/test/cache",
-				Database: config.DatabaseConfig{
-					Type:     "postgis",
-					Host:     "localhost",
-					Port:     99999, // Invalid port
-					Database: "test_db",
-				},
-			},
+			config: func() *config.Config {
+				cfg := createCompleteTestConfig()
+				cfg.PostGIS.Port = 99999 // Invalid port
+				return cfg
+			}(),
 			expected: false,
 		},
 	}
@@ -224,65 +364,69 @@ func TestConfigSaveJSON(t *testing.T) {
 }
 
 func TestConfigValidationErrors(t *testing.T) {
-	cfg := &config.Config{
-		Mode:    "invalid_mode",
-		Version: "",
-		Database: config.DatabaseConfig{
-			Port: 99999,
-		},
-		Security: config.SecurityConfig{
-			JWTExpiry: -1 * time.Hour,
-		},
-	}
+	// Test invalid mode
+	cfg1 := createCompleteTestConfig()
+	cfg1.Mode = "invalid_mode"
 
 	validator := config.NewConfigValidator()
-	result := validator.ValidateConfiguration(cfg)
-
+	result := validator.ValidateConfiguration(cfg1)
 	assert.False(t, result.Valid)
-	assert.NotEmpty(t, result.Errors)
+	assert.Contains(t, getErrorCodes(result.Errors), "INVALID_MODE")
 
-	// Check specific errors
-	errorCodes := make([]string, len(result.Errors))
-	for i, err := range result.Errors {
-		errorCodes[i] = err.Code
+	// Test missing version
+	cfg2 := createCompleteTestConfig()
+	cfg2.Version = ""
+
+	result = validator.ValidateConfiguration(cfg2)
+	assert.False(t, result.Valid)
+	assert.Contains(t, getErrorCodes(result.Errors), "MISSING_VERSION")
+
+	// Test invalid database port
+	cfg3 := createCompleteTestConfig()
+	cfg3.PostGIS.Port = 99999
+
+	result = validator.ValidateConfiguration(cfg3)
+	assert.False(t, result.Valid)
+	assert.Contains(t, getErrorCodes(result.Errors), "INVALID_DB_PORT")
+
+	// Test invalid JWT expiry
+	cfg4 := createCompleteTestConfig()
+	cfg4.Security.JWTExpiry = -1 * time.Hour
+
+	result = validator.ValidateConfiguration(cfg4)
+	assert.False(t, result.Valid)
+	assert.Contains(t, getErrorCodes(result.Errors), "INVALID_JWT_EXPIRY")
+}
+
+// Helper function to extract error codes
+func getErrorCodes(errors []config.ValidationError) []string {
+	codes := make([]string, len(errors))
+	for i, err := range errors {
+		codes[i] = err.Code
 	}
-
-	assert.Contains(t, errorCodes, "INVALID_MODE")
-	assert.Contains(t, errorCodes, "MISSING_VERSION")
-	assert.Contains(t, errorCodes, "INVALID_DATABASE_PORT")
-	assert.Contains(t, errorCodes, "INVALID_JWT_EXPIRY")
+	return codes
 }
 
 func TestConfigValidationWarnings(t *testing.T) {
-	cfg := &config.Config{
-		Mode:     config.ModeLocal,
-		Version:  "0.1.0",
-		StateDir: "/tmp/test",
-		CacheDir: "/tmp/test/cache",
-		Database: config.DatabaseConfig{
-			Type:         "postgis",
-			Host:         "localhost",
-			Port:         5432,
-			Database:     "test_db",
-			MaxOpenConns: 0, // Should generate warning
-		},
-		Security: config.SecurityConfig{
-			JWTExpiry:  2 * time.Minute, // Very short, should generate warning
-			BcryptCost: 3,               // Very low, should generate warning
-		},
-	}
+	cfg := createCompleteTestConfig()
+
+	// Set values that should generate warnings
+	cfg.Database.MaxOpenConns = 0             // Should generate warning
+	cfg.Security.JWTExpiry = 30 * time.Minute // Short but valid, should generate warning
+	cfg.Security.BcryptCost = 6               // Low but valid, should generate warning
 
 	validator := config.NewConfigValidator()
 	result := validator.ValidateConfiguration(cfg)
+
+	if !result.Valid {
+		t.Logf("Configuration is not valid. Errors: %+v", result.Errors)
+	}
 
 	assert.True(t, result.Valid) // Should still be valid
 	assert.NotEmpty(t, result.Warnings)
 
 	// Check specific warnings
-	warningCodes := make([]string, len(result.Warnings))
-	for i, warning := range result.Warnings {
-		warningCodes[i] = warning.Code
-	}
+	warningCodes := getErrorCodes(result.Warnings)
 
 	assert.Contains(t, warningCodes, "INVALID_MAX_OPEN_CONNS")
 	assert.Contains(t, warningCodes, "SHORT_JWT_EXPIRY")

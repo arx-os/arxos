@@ -180,6 +180,10 @@ func (cv *ConfigValidator) validateBasicStructure(config *Config) {
 	if config.Mode == "" {
 		cv.addError("mode", "", "Mode is required", "MODE_REQUIRED")
 	}
+
+	if config.Version == "" {
+		cv.addError("version", "", "Version is required", "MISSING_VERSION")
+	}
 }
 
 func (cv *ConfigValidator) validateEnvironmentSettings(config *Config) {
@@ -225,6 +229,11 @@ func (cv *ConfigValidator) validateDatabaseConfig(config *Config) {
 	// Validate SRID
 	if config.PostGIS.SRID <= 0 {
 		cv.addError("postgis.srid", fmt.Sprintf("%d", config.PostGIS.SRID), "SRID must be positive", "INVALID_SRID")
+	}
+
+	// Add warnings for suboptimal database settings
+	if config.Database.MaxOpenConns <= 0 {
+		cv.addWarning("database.max_open_conns", fmt.Sprintf("%d", config.Database.MaxOpenConns), "MaxOpenConns should be greater than 0", "INVALID_MAX_OPEN_CONNS")
 	}
 }
 
@@ -294,6 +303,15 @@ func (cv *ConfigValidator) validateSecurityConfig(config *Config) {
 	// Validate bcrypt cost
 	if config.Security.BcryptCost < 4 || config.Security.BcryptCost > 31 {
 		cv.addError("security.bcrypt_cost", fmt.Sprintf("%d", config.Security.BcryptCost), "Bcrypt cost must be between 4 and 31", "INVALID_BCRYPT_COST")
+	}
+
+	// Add warnings for suboptimal security settings
+	if config.Security.JWTExpiry < 1*time.Hour {
+		cv.addWarning("security.jwt_expiry", config.Security.JWTExpiry.String(), "JWT expiry is very short, consider using at least 1 hour", "SHORT_JWT_EXPIRY")
+	}
+
+	if config.Security.BcryptCost < 10 {
+		cv.addWarning("security.bcrypt_cost", fmt.Sprintf("%d", config.Security.BcryptCost), "Bcrypt cost is low, consider using at least 10 for better security", "LOW_BCRYPT_COST")
 	}
 }
 
@@ -447,7 +465,7 @@ func (cv *ConfigValidator) validateTemplateConfig(template *ConfigTemplate) {
 	}
 }
 
-func (cv *ConfigValidator) findUsedVariables(config interface{}, usedVariables map[string]bool) {
+func (cv *ConfigValidator) findUsedVariables(config any, usedVariables map[string]bool) {
 	switch v := config.(type) {
 	case string:
 		// Find template variables in string values
@@ -458,11 +476,11 @@ func (cv *ConfigValidator) findUsedVariables(config interface{}, usedVariables m
 				usedVariables[strings.TrimSpace(match[1])] = true
 			}
 		}
-	case map[string]interface{}:
+	case map[string]any:
 		for _, value := range v {
 			cv.findUsedVariables(value, usedVariables)
 		}
-	case []interface{}:
+	case []any:
 		for _, value := range v {
 			cv.findUsedVariables(value, usedVariables)
 		}

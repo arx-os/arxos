@@ -44,21 +44,21 @@ func DefaultSessionConfig() *SessionConfig {
 
 // Session represents an active user session
 type Session struct {
-	ID               string                 `json:"id"`
-	UserID           string                 `json:"user_id"`
-	OrganizationID   string                 `json:"organization_id,omitempty"`
-	Token            string                 `json:"token"`
-	RefreshToken     string                 `json:"refresh_token"`
-	IPAddress        string                 `json:"ip_address,omitempty"`
-	UserAgent        string                 `json:"user_agent,omitempty"`
-	DeviceInfo       map[string]interface{} `json:"device_info,omitempty"`
-	IsActive         bool                   `json:"is_active"`
-	ExpiresAt        time.Time              `json:"expires_at"`
-	RefreshExpiresAt time.Time              `json:"refresh_expires_at"`
-	LastActivity     time.Time              `json:"last_activity"`
-	LastAccessAt     time.Time              `json:"last_access_at"`
-	CreatedAt        time.Time              `json:"created_at"`
-	UpdatedAt        time.Time              `json:"updated_at"`
+	ID               string         `json:"id"`
+	UserID           string         `json:"user_id"`
+	OrganizationID   string         `json:"organization_id,omitempty"`
+	Token            string         `json:"token"`
+	RefreshToken     string         `json:"refresh_token"`
+	IPAddress        string         `json:"ip_address,omitempty"`
+	UserAgent        string         `json:"user_agent,omitempty"`
+	DeviceInfo       map[string]any `json:"device_info,omitempty"`
+	IsActive         bool           `json:"is_active"`
+	ExpiresAt        time.Time      `json:"expires_at"`
+	RefreshExpiresAt time.Time      `json:"refresh_expires_at"`
+	LastActivity     time.Time      `json:"last_activity"`
+	LastAccessAt     time.Time      `json:"last_access_at"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
 }
 
 // SessionStore defines the interface for session storage
@@ -111,7 +111,7 @@ func NewSessionManager(config *SessionConfig, store SessionStore, jwtMgr *JWTMan
 }
 
 // CreateSession creates a new user session
-func (sm *SessionManager) CreateSession(userID, organizationID, ipAddress, userAgent string, deviceInfo map[string]interface{}) (*Session, error) {
+func (sm *SessionManager) CreateSession(userID, organizationID, ipAddress, userAgent string, deviceInfo map[string]any) (*Session, error) {
 	// Check session limit
 	sessions, err := sm.store.ListByUserID(userID)
 	if err != nil {
@@ -356,14 +356,14 @@ func (sm *SessionManager) removeOldestSession(sessions []*Session) error {
 
 // SessionInfo represents session information for display
 type SessionInfo struct {
-	ID           string                 `json:"id"`
-	IPAddress    string                 `json:"ip_address"`
-	UserAgent    string                 `json:"user_agent"`
-	DeviceInfo   map[string]interface{} `json:"device_info"`
-	IsCurrent    bool                   `json:"is_current"`
-	LastActivity time.Time              `json:"last_activity"`
-	CreatedAt    time.Time              `json:"created_at"`
-	ExpiresAt    time.Time              `json:"expires_at"`
+	ID           string         `json:"id"`
+	IPAddress    string         `json:"ip_address"`
+	UserAgent    string         `json:"user_agent"`
+	DeviceInfo   map[string]any `json:"device_info"`
+	IsCurrent    bool           `json:"is_current"`
+	LastActivity time.Time      `json:"last_activity"`
+	CreatedAt    time.Time      `json:"created_at"`
+	ExpiresAt    time.Time      `json:"expires_at"`
 }
 
 // GetSessionInfo returns session information for display

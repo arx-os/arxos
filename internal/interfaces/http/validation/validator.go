@@ -93,7 +93,7 @@ func (v *Validator) registerRules() {
 }
 
 // ValidateStruct validates a struct using struct tags
-func (v *Validator) ValidateStruct(s interface{}) map[string]string {
+func (v *Validator) ValidateStruct(s any) map[string]string {
 	errors := make(map[string]string)
 
 	// Simple validation for common struct types
@@ -131,7 +131,7 @@ func (v *Validator) ValidateStruct(s interface{}) map[string]string {
 }
 
 // ValidateRequest validates an HTTP request
-func (v *Validator) ValidateRequest(r *http.Request, target interface{}) map[string]string {
+func (v *Validator) ValidateRequest(r *http.Request, target any) map[string]string {
 	// Validate content type for POST/PUT/PATCH requests
 	if r.Method == "POST" || r.Method == "PUT" || r.Method == "PATCH" {
 		contentType := r.Header.Get("Content-Type")

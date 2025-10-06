@@ -15,7 +15,7 @@ type IFCServiceProvider interface {
 }
 
 // createImportCommand creates the import command
-func CreateImportCommand(serviceContext interface{}) *cobra.Command {
+func CreateImportCommand(serviceContext any) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "import <file>",
 		Short: "Import building data from files",
@@ -114,7 +114,7 @@ func CreateImportCommand(serviceContext interface{}) *cobra.Command {
 }
 
 // createExportCommand creates the export command
-func CreateExportCommand(serviceContext interface{}) *cobra.Command {
+func CreateExportCommand(serviceContext any) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export <building-id>",
 		Short: "Export building data",
@@ -148,7 +148,7 @@ func CreateExportCommand(serviceContext interface{}) *cobra.Command {
 }
 
 // createConvertCommand creates the convert command
-func CreateConvertCommand(serviceContext interface{}) *cobra.Command {
+func CreateConvertCommand(serviceContext any) *cobra.Command {
 	return &cobra.Command{
 		Use:   "convert <input> <output>",
 		Short: "Convert between building data formats",

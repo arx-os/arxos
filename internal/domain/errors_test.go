@@ -117,7 +117,7 @@ func TestSpatialErrorConstructors(t *testing.T) {
 			creator: func() *DomainError {
 				return NewSpatialOutOfBoundsError(
 					&SpatialLocation{X: 100, Y: 200, Z: 300},
-					map[string]interface{}{"min": 0, "max": 50},
+					map[string]any{"min": 0, "max": 50},
 				)
 			},
 			wantErr: true,
@@ -494,7 +494,7 @@ func TestDomainErrorContextUtilities(t *testing.T) {
 
 	t.Run("AddSpatialContext", func(t *testing.T) {
 		location := &SpatialLocation{X: 100, Y: 200, Z: 300}
-		bounds := map[string]interface{}{"min": 0, "max": 1000}
+		bounds := map[string]any{"min": 0, "max": 1000}
 		AddSpatialContext(err, location, bounds)
 		assert.Equal(t, location, err.Context["location"])
 		assert.Equal(t, bounds, err.Context["bounds"])

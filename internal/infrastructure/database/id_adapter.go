@@ -26,57 +26,57 @@ func NewIDAdapter(db *sqlx.DB, logger domain.Logger) *IDAdapter {
 }
 
 // QueryRow executes a query that returns a single row, handling both ID formats
-func (a *IDAdapter) QueryRow(ctx context.Context, query string, args ...interface{}) *sqlx.Row {
+func (a *IDAdapter) QueryRow(ctx context.Context, query string, args ...any) *sqlx.Row {
 	// Convert args to handle both ID formats
 	convertedArgs := a.convertArgs(args)
 	return a.db.QueryRowxContext(ctx, query, convertedArgs...)
 }
 
 // Query executes a query that returns multiple rows, handling both ID formats
-func (a *IDAdapter) Query(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error) {
+func (a *IDAdapter) Query(ctx context.Context, query string, args ...any) (*sqlx.Rows, error) {
 	// Convert args to handle both ID formats
 	convertedArgs := a.convertArgs(args)
 	return a.db.QueryxContext(ctx, query, convertedArgs...)
 }
 
 // Exec executes a query without returning rows, handling both ID formats
-func (a *IDAdapter) Exec(ctx context.Context, query string, args ...interface{}) (driver.Result, error) {
+func (a *IDAdapter) Exec(ctx context.Context, query string, args ...any) (driver.Result, error) {
 	// Convert args to handle both ID formats
 	convertedArgs := a.convertArgs(args)
 	return a.db.ExecContext(ctx, query, convertedArgs...)
 }
 
 // Get executes a query and scans the result into a struct, handling both ID formats
-func (a *IDAdapter) Get(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
+func (a *IDAdapter) Get(ctx context.Context, dest any, query string, args ...any) error {
 	// Convert args to handle both ID formats
 	convertedArgs := a.convertArgs(args)
 	return a.db.GetContext(ctx, dest, query, convertedArgs...)
 }
 
 // Select executes a query and scans the results into a slice, handling both ID formats
-func (a *IDAdapter) Select(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
+func (a *IDAdapter) Select(ctx context.Context, dest any, query string, args ...any) error {
 	// Convert args to handle both ID formats
 	convertedArgs := a.convertArgs(args)
 	return a.db.SelectContext(ctx, dest, query, convertedArgs...)
 }
 
 // NamedQuery executes a named query, handling both ID formats
-func (a *IDAdapter) NamedQuery(ctx context.Context, query string, arg interface{}) (*sqlx.Rows, error) {
+func (a *IDAdapter) NamedQuery(ctx context.Context, query string, arg any) (*sqlx.Rows, error) {
 	// Convert named args to handle both ID formats
 	convertedArg := a.convertNamedArgs(arg)
 	return a.db.NamedQueryContext(ctx, query, convertedArg)
 }
 
 // NamedExec executes a named query without returning rows, handling both ID formats
-func (a *IDAdapter) NamedExec(ctx context.Context, query string, arg interface{}) (driver.Result, error) {
+func (a *IDAdapter) NamedExec(ctx context.Context, query string, arg any) (driver.Result, error) {
 	// Convert named args to handle both ID formats
 	convertedArg := a.convertNamedArgs(arg)
 	return a.db.NamedExecContext(ctx, query, convertedArg)
 }
 
-// convertArgs converts interface{} arguments to handle both ID formats
-func (a *IDAdapter) convertArgs(args []interface{}) []interface{} {
-	converted := make([]interface{}, len(args))
+// convertArgs converts any arguments to handle both ID formats
+func (a *IDAdapter) convertArgs(args []any) []any {
+	converted := make([]any, len(args))
 	for i, arg := range args {
 		converted[i] = a.convertArg(arg)
 	}
@@ -84,7 +84,7 @@ func (a *IDAdapter) convertArgs(args []interface{}) []interface{} {
 }
 
 // convertArg converts a single argument to handle both ID formats
-func (a *IDAdapter) convertArg(arg interface{}) interface{} {
+func (a *IDAdapter) convertArg(arg any) any {
 	switch v := arg.(type) {
 	case types.ID:
 		// For ID types, use the primary identifier (UUID if available, otherwise legacy)
@@ -100,10 +100,10 @@ func (a *IDAdapter) convertArg(arg interface{}) interface{} {
 }
 
 // convertNamedArgs converts named arguments to handle both ID formats
-func (a *IDAdapter) convertNamedArgs(arg interface{}) interface{} {
+func (a *IDAdapter) convertNamedArgs(arg any) any {
 	switch v := arg.(type) {
-	case map[string]interface{}:
-		converted := make(map[string]interface{})
+	case map[string]any:
+		converted := make(map[string]any)
 		for key, value := range v {
 			converted[key] = a.convertArg(value)
 		}
@@ -116,36 +116,36 @@ func (a *IDAdapter) convertNamedArgs(arg interface{}) interface{} {
 }
 
 // BuildQuery builds a query that can handle both UUID and legacy ID lookups
-func (a *IDAdapter) BuildQuery(baseQuery, idColumn string, id types.ID) (string, []interface{}) {
+func (a *IDAdapter) BuildQuery(baseQuery, idColumn string, id types.ID) (string, []any) {
 	if id.IsEmpty() {
-		return baseQuery + " WHERE 1=0", []interface{}{} // Return empty result for empty ID
+		return baseQuery + " WHERE 1=0", []any{} // Return empty result for empty ID
 	}
 
 	var whereClause string
-	var args []interface{}
+	var args []any
 
 	if id.UUID != "" && id.Legacy != "" {
 		// Both UUID and legacy available - check both columns
 		whereClause = fmt.Sprintf(" WHERE (%s = $1 OR %s = $2)", idColumn, idColumn)
-		args = []interface{}{id.UUID, id.Legacy}
+		args = []any{id.UUID, id.Legacy}
 	} else if id.UUID != "" {
 		// Only UUID available
 		whereClause = fmt.Sprintf(" WHERE %s = $1", idColumn)
-		args = []interface{}{id.UUID}
+		args = []any{id.UUID}
 	} else {
 		// Only legacy available
 		whereClause = fmt.Sprintf(" WHERE %s = $1", idColumn)
-		args = []interface{}{id.Legacy}
+		args = []any{id.Legacy}
 	}
 
 	return baseQuery + whereClause, args
 }
 
 // BuildInsertQuery builds an insert query that handles both UUID and legacy ID columns
-func (a *IDAdapter) BuildInsertQuery(table string, id types.ID, data map[string]interface{}) (string, []interface{}) {
+func (a *IDAdapter) BuildInsertQuery(table string, id types.ID, data map[string]any) (string, []any) {
 	columns := make([]string, 0, len(data)+2) // +2 for id and uuid_id
 	placeholders := make([]string, 0, len(data)+2)
-	args := make([]interface{}, 0, len(data)+2)
+	args := make([]any, 0, len(data)+2)
 
 	// Add ID columns
 	if id.Legacy != "" {
@@ -178,9 +178,9 @@ func (a *IDAdapter) BuildInsertQuery(table string, id types.ID, data map[string]
 }
 
 // BuildUpdateQuery builds an update query that handles both UUID and legacy ID columns
-func (a *IDAdapter) BuildUpdateQuery(table string, id types.ID, data map[string]interface{}) (string, []interface{}) {
+func (a *IDAdapter) BuildUpdateQuery(table string, id types.ID, data map[string]any) (string, []any) {
 	setClauses := make([]string, 0, len(data))
-	args := make([]interface{}, 0, len(data))
+	args := make([]any, 0, len(data))
 
 	// Add data columns
 	for column, value := range data {
@@ -215,22 +215,22 @@ func (a *IDAdapter) BuildUpdateQuery(table string, id types.ID, data map[string]
 }
 
 // BuildDeleteQuery builds a delete query that handles both UUID and legacy ID columns
-func (a *IDAdapter) BuildDeleteQuery(table string, id types.ID) (string, []interface{}) {
+func (a *IDAdapter) BuildDeleteQuery(table string, id types.ID) (string, []any) {
 	var whereClause string
-	var args []interface{}
+	var args []any
 
 	if id.UUID != "" && id.Legacy != "" {
 		// Both UUID and legacy available - check both columns
 		whereClause = fmt.Sprintf(" WHERE (uuid_id = $1 OR id = $2)")
-		args = []interface{}{id.UUID, id.Legacy}
+		args = []any{id.UUID, id.Legacy}
 	} else if id.UUID != "" {
 		// Only UUID available
 		whereClause = fmt.Sprintf(" WHERE uuid_id = $1")
-		args = []interface{}{id.UUID}
+		args = []any{id.UUID}
 	} else {
 		// Only legacy available
 		whereClause = fmt.Sprintf(" WHERE id = $1")
-		args = []interface{}{id.Legacy}
+		args = []any{id.Legacy}
 	}
 
 	query := fmt.Sprintf("DELETE FROM %s%s", table, whereClause)

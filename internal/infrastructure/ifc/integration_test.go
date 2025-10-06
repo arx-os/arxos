@@ -20,7 +20,7 @@ func TestIfcOpenShellClient_Integration(t *testing.T) {
 		switch r.URL.Path {
 		case "/health":
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			json.NewEncoder(w).Encode(map[string]any{
 				"status":  "healthy",
 				"service": "ifcopenshell",
 				"version": "0.8.3",
@@ -77,7 +77,7 @@ func TestIfcOpenShellClient_Integration(t *testing.T) {
 				QueryType:  "within_bounds",
 				Results:    []SpatialEntity{},
 				TotalFound: 0,
-				Metadata: map[string]interface{}{
+				Metadata: map[string]any{
 					"timestamp": time.Now().Format(time.RFC3339),
 				},
 			})
@@ -99,21 +99,21 @@ func TestIfcOpenShellClient_Integration(t *testing.T) {
 					"IfcBuilding": 1,
 					"IfcSpace":    5,
 				},
-				Metadata: map[string]interface{}{
+				Metadata: map[string]any{
 					"timestamp": time.Now().Format(time.RFC3339),
 				},
 			})
 		case "/metrics":
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			json.NewEncoder(w).Encode(map[string]any{
 				"success": true,
 				"service": "ifcopenshell",
-				"cache_stats": map[string]interface{}{
+				"cache_stats": map[string]any{
 					"hits":             10,
 					"misses":           5,
 					"hit_rate_percent": 66.67,
 				},
-				"performance_metrics": map[string]interface{}{
+				"performance_metrics": map[string]any{
 					"requests_total":      15,
 					"requests_per_second": 2.5,
 					"error_rate":          0.1,
@@ -493,7 +493,7 @@ func (m *MockIfcOpenShellClient) Metrics(ctx context.Context) (*MetricsResult, e
 
 type MockLogger struct{}
 
-func (m *MockLogger) Info(msg string, args ...interface{})  {}
-func (m *MockLogger) Warn(msg string, args ...interface{})  {}
-func (m *MockLogger) Error(msg string, args ...interface{}) {}
-func (m *MockLogger) Debug(msg string, args ...interface{}) {}
+func (m *MockLogger) Info(msg string, args ...any)  {}
+func (m *MockLogger) Warn(msg string, args ...any)  {}
+func (m *MockLogger) Error(msg string, args ...any) {}
+func (m *MockLogger) Debug(msg string, args ...any) {}

@@ -65,7 +65,7 @@ type ComponentService interface {
 	ListComponents(ctx context.Context, filter ComponentFilter) ([]*Component, error)
 
 	// AddProperty adds a property to a component
-	AddProperty(ctx context.Context, componentID, key string, value interface{}) error
+	AddProperty(ctx context.Context, componentID, key string, value any) error
 
 	// RemoveProperty removes a property from a component
 	RemoveProperty(ctx context.Context, componentID, key string) error
@@ -85,30 +85,30 @@ type ComponentService interface {
 
 // CreateComponentRequest represents a request to create a new component
 type CreateComponentRequest struct {
-	Name       string                 `json:"name" validate:"required"`
-	Type       ComponentType          `json:"type" validate:"required"`
-	Path       string                 `json:"path" validate:"required"`
-	Location   Location               `json:"location"`
-	Properties map[string]interface{} `json:"properties,omitempty"`
-	CreatedBy  string                 `json:"created_by" validate:"required"`
+	Name       string         `json:"name" validate:"required"`
+	Type       ComponentType  `json:"type" validate:"required"`
+	Path       string         `json:"path" validate:"required"`
+	Location   Location       `json:"location"`
+	Properties map[string]any `json:"properties,omitempty"`
+	CreatedBy  string         `json:"created_by" validate:"required"`
 }
 
 // UpdateComponentRequest represents a request to update a component
 type UpdateComponentRequest struct {
-	ID         string                 `json:"id" validate:"required"`
-	Name       *string                `json:"name,omitempty"`
-	Path       *string                `json:"path,omitempty"`
-	Location   *Location              `json:"location,omitempty"`
-	Properties map[string]interface{} `json:"properties,omitempty"`
-	Status     *ComponentStatus       `json:"status,omitempty"`
-	UpdatedBy  string                 `json:"updated_by" validate:"required"`
+	ID         string           `json:"id" validate:"required"`
+	Name       *string          `json:"name,omitempty"`
+	Path       *string          `json:"path,omitempty"`
+	Location   *Location        `json:"location,omitempty"`
+	Properties map[string]any   `json:"properties,omitempty"`
+	Status     *ComponentStatus `json:"status,omitempty"`
+	UpdatedBy  string           `json:"updated_by" validate:"required"`
 }
 
 // AddRelationRequest represents a request to add a relation between components
 type AddRelationRequest struct {
-	SourceComponentID string                 `json:"source_component_id" validate:"required"`
-	RelationType      RelationType           `json:"relation_type" validate:"required"`
-	TargetComponentID string                 `json:"target_component_id" validate:"required"`
-	Properties        map[string]interface{} `json:"properties,omitempty"`
-	CreatedBy         string                 `json:"created_by" validate:"required"`
+	SourceComponentID string         `json:"source_component_id" validate:"required"`
+	RelationType      RelationType   `json:"relation_type" validate:"required"`
+	TargetComponentID string         `json:"target_component_id" validate:"required"`
+	Properties        map[string]any `json:"properties,omitempty"`
+	CreatedBy         string         `json:"created_by" validate:"required"`
 }

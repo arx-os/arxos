@@ -178,22 +178,22 @@ func (a *App) GetLogger() domain.Logger {
 // Logger is a placeholder logger implementation
 type Logger struct{}
 
-func (l *Logger) Debug(msg string, fields ...interface{}) {
+func (l *Logger) Debug(msg string, fields ...any) {
 	fmt.Printf("[DEBUG] %s %v\n", msg, fields)
 }
 
-func (l *Logger) Info(msg string, fields ...interface{}) {
+func (l *Logger) Info(msg string, fields ...any) {
 	fmt.Printf("[INFO] %s %v\n", msg, fields)
 }
 
-func (l *Logger) Warn(msg string, fields ...interface{}) {
+func (l *Logger) Warn(msg string, fields ...any) {
 	fmt.Printf("[WARN] %s %v\n", msg, fields)
 }
 
-func (l *Logger) Error(msg string, fields ...interface{}) {
+func (l *Logger) Error(msg string, fields ...any) {
 	fmt.Printf("[ERROR] %s %v\n", msg, fields)
 }
 
-func (l *Logger) Fatal(msg string, fields ...interface{}) {
+func (l *Logger) Fatal(msg string, fields ...any) {
 	fmt.Printf("[FATAL] %s %v\n", msg, fields)
 }

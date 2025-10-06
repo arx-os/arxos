@@ -108,7 +108,7 @@ func (ds *DaemonService) Health(ctx context.Context) (*domain.ServiceHealth, err
 		ServiceName: ds.config.Name,
 		Status:      "healthy",
 		LastCheck:   time.Now(),
-		Details:     make(map[string]interface{}),
+		Details:     make(map[string]any),
 	}
 
 	// Check file watcher health

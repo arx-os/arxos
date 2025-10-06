@@ -18,7 +18,7 @@ type DesignServiceProvider interface {
 }
 
 // CreateCADTUICommand creates the CADTUI command
-func CreateCADTUICommand(serviceContext interface{}) *cobra.Command {
+func CreateCADTUICommand(serviceContext any) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cadtui",
 		Short: "Launch Computer-Aided Design Terminal User Interface",

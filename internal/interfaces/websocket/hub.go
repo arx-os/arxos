@@ -357,7 +357,7 @@ func (h *Hub) GetClientSubscriptions(client *Client) []string {
 }
 
 // GetHubStats returns hub statistics
-func (h *Hub) GetHubStats() map[string]interface{} {
+func (h *Hub) GetHubStats() map[string]any {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
@@ -366,7 +366,7 @@ func (h *Hub) GetHubStats() map[string]interface{} {
 		roomStats[roomID] = len(clients)
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"total_clients":   len(h.clients),
 		"total_rooms":     len(h.rooms),
 		"room_stats":      roomStats,

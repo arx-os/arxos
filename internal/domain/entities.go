@@ -263,10 +263,10 @@ type BuildingHealthReport struct {
 
 // ServiceHealth represents the health of a service
 type ServiceHealth struct {
-	ServiceName string                 `json:"service_name"`
-	Status      string                 `json:"status"`
-	LastCheck   time.Time              `json:"last_check"`
-	Details     map[string]interface{} `json:"details"`
+	ServiceName string         `json:"service_name"`
+	Status      string         `json:"status"`
+	LastCheck   time.Time      `json:"last_check"`
+	Details     map[string]any `json:"details"`
 }
 
 // FileEvent represents a file change event

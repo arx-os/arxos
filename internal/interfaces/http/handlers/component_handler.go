@@ -86,11 +86,11 @@ func (h *ComponentHandler) ListComponents(w http.ResponseWriter, r *http.Request
 	}
 
 	// Return response
-	response := map[string]interface{}{
+	response := map[string]any{
 		"components": components,
 		"limit":      limit,
 		"offset":     offset,
-		"filters": map[string]interface{}{
+		"filters": map[string]any{
 			"building_id": buildingID,
 			"type":        componentType,
 			"status":      status,
@@ -309,7 +309,7 @@ func (h *ComponentHandler) GetComponentsByBuilding(w http.ResponseWriter, r *htt
 	}
 
 	// Return response
-	response := map[string]interface{}{
+	response := map[string]any{
 		"building_id": buildingID,
 		"components":  components,
 		"limit":       limit,

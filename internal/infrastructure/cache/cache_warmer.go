@@ -16,13 +16,13 @@ type CacheWarmer struct {
 
 // WarmingStrategy defines how to warm the cache
 type WarmingStrategy struct {
-	Name        string                                                    `json:"name"`
-	Description string                                                    `json:"description"`
-	Pattern     string                                                    `json:"pattern"`
-	Priority    int                                                       `json:"priority"`
-	Frequency   time.Duration                                             `json:"frequency"`
-	DataLoader  func(ctx context.Context) (map[string]interface{}, error) `json:"-"`
-	Metadata    map[string]interface{}                                    `json:"metadata"`
+	Name        string                                            `json:"name"`
+	Description string                                            `json:"description"`
+	Pattern     string                                            `json:"pattern"`
+	Priority    int                                               `json:"priority"`
+	Frequency   time.Duration                                     `json:"frequency"`
+	DataLoader  func(ctx context.Context) (map[string]any, error) `json:"-"`
+	Metadata    map[string]any                                    `json:"metadata"`
 }
 
 // NewCacheWarmer creates a new cache warmer
@@ -117,18 +117,18 @@ func GetDefaultWarmingStrategies() []WarmingStrategy {
 			Pattern:     "template:building",
 			Priority:    9,
 			Frequency:   24 * time.Hour,
-			DataLoader: func(ctx context.Context) (map[string]interface{}, error) {
+			DataLoader: func(ctx context.Context) (map[string]any, error) {
 				// In a real implementation, this would load from database
-				return map[string]interface{}{
-					"residential": map[string]interface{}{
+				return map[string]any{
+					"residential": map[string]any{
 						"name": "Residential Building",
 						"type": "residential",
 					},
-					"commercial": map[string]interface{}{
+					"commercial": map[string]any{
 						"name": "Commercial Building",
 						"type": "commercial",
 					},
-					"industrial": map[string]interface{}{
+					"industrial": map[string]any{
 						"name": "Industrial Building",
 						"type": "industrial",
 					},
@@ -141,17 +141,17 @@ func GetDefaultWarmingStrategies() []WarmingStrategy {
 			Pattern:     "equipment:types",
 			Priority:    8,
 			Frequency:   12 * time.Hour,
-			DataLoader: func(ctx context.Context) (map[string]interface{}, error) {
-				return map[string]interface{}{
-					"hvac": map[string]interface{}{
+			DataLoader: func(ctx context.Context) (map[string]any, error) {
+				return map[string]any{
+					"hvac": map[string]any{
 						"name":     "HVAC Equipment",
 						"category": "mechanical",
 					},
-					"electrical": map[string]interface{}{
+					"electrical": map[string]any{
 						"name":     "Electrical Equipment",
 						"category": "electrical",
 					},
-					"plumbing": map[string]interface{}{
+					"plumbing": map[string]any{
 						"name":     "Plumbing Equipment",
 						"category": "plumbing",
 					},
@@ -164,13 +164,13 @@ func GetDefaultWarmingStrategies() []WarmingStrategy {
 			Pattern:     "spatial:query",
 			Priority:    7,
 			Frequency:   6 * time.Hour,
-			DataLoader: func(ctx context.Context) (map[string]interface{}, error) {
-				return map[string]interface{}{
-					"floor_plan": map[string]interface{}{
+			DataLoader: func(ctx context.Context) (map[string]any, error) {
+				return map[string]any{
+					"floor_plan": map[string]any{
 						"query": "SELECT * FROM floors WHERE building_id = ?",
 						"type":  "floor_plan",
 					},
-					"equipment_locations": map[string]interface{}{
+					"equipment_locations": map[string]any{
 						"query": "SELECT * FROM equipment WHERE floor_id = ?",
 						"type":  "equipment_locations",
 					},
@@ -183,13 +183,13 @@ func GetDefaultWarmingStrategies() []WarmingStrategy {
 			Pattern:     "api:response",
 			Priority:    6,
 			Frequency:   2 * time.Hour,
-			DataLoader: func(ctx context.Context) (map[string]interface{}, error) {
-				return map[string]interface{}{
-					"health_check": map[string]interface{}{
+			DataLoader: func(ctx context.Context) (map[string]any, error) {
+				return map[string]any{
+					"health_check": map[string]any{
 						"status":    "healthy",
 						"timestamp": time.Now(),
 					},
-					"version_info": map[string]interface{}{
+					"version_info": map[string]any{
 						"version": "0.1.0",
 						"build":   "dev",
 					},
@@ -235,7 +235,7 @@ func (cw *CacheWarmer) scheduleStrategy(ctx context.Context, strategy WarmingStr
 }
 
 // WarmSpecificKeys warms specific cache keys
-func (cw *CacheWarmer) WarmSpecificKeys(ctx context.Context, keys map[string]interface{}, ttl time.Duration) error {
+func (cw *CacheWarmer) WarmSpecificKeys(ctx context.Context, keys map[string]any, ttl time.Duration) error {
 	cw.logger.Info("Warming specific cache keys", "count", len(keys))
 
 	stored := 0
@@ -257,14 +257,14 @@ func (cw *CacheWarmer) WarmSpecificKeys(ctx context.Context, keys map[string]int
 }
 
 // GetWarmingStats returns statistics about cache warming
-func (cw *CacheWarmer) GetWarmingStats(ctx context.Context) (map[string]interface{}, error) {
+func (cw *CacheWarmer) GetWarmingStats(ctx context.Context) (map[string]any, error) {
 	// Get cache stats
 	cacheStats, err := cw.cache.GetStats(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"cache_stats":     cacheStats,
 		"warming_enabled": true,
 		"last_warming":    time.Now(), // In production, track actual last warming time

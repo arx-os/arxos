@@ -17,13 +17,13 @@ type IndexManager struct {
 
 // IndexDefinition represents a database index
 type IndexDefinition struct {
-	Name       string                 `json:"name"`
-	Table      string                 `json:"table"`
-	Columns    []string               `json:"columns"`
-	Unique     bool                   `json:"unique"`
-	Partial    string                 `json:"partial,omitempty"`
-	Concurrent bool                   `json:"concurrent"`
-	Metadata   map[string]interface{} `json:"metadata,omitempty"`
+	Name       string         `json:"name"`
+	Table      string         `json:"table"`
+	Columns    []string       `json:"columns"`
+	Unique     bool           `json:"unique"`
+	Partial    string         `json:"partial,omitempty"`
+	Concurrent bool           `json:"concurrent"`
+	Metadata   map[string]any `json:"metadata,omitempty"`
 }
 
 // IndexStats represents index usage statistics
@@ -193,7 +193,7 @@ func (im *IndexManager) GetUnusedIndexes(ctx context.Context) ([]string, error) 
 }
 
 // GetSlowQueries returns slow queries from pg_stat_statements
-func (im *IndexManager) GetSlowQueries(ctx context.Context, minDuration time.Duration) ([]map[string]interface{}, error) {
+func (im *IndexManager) GetSlowQueries(ctx context.Context, minDuration time.Duration) ([]map[string]any, error) {
 	conn := im.pool.GetConnectionForRead()
 
 	query := `
@@ -216,15 +216,15 @@ func (im *IndexManager) GetSlowQueries(ctx context.Context, minDuration time.Dur
 	}
 	defer rows.Close()
 
-	var slowQueries []map[string]interface{}
+	var slowQueries []map[string]any
 	for rows.Next() {
-		var query, calls, totalTime, meanTime, rowCount, hitPercent interface{}
+		var query, calls, totalTime, meanTime, rowCount, hitPercent any
 
 		if err := rows.Scan(&query, &calls, &totalTime, &meanTime, &rowCount, &hitPercent); err != nil {
 			return nil, fmt.Errorf("failed to scan slow query: %w", err)
 		}
 
-		slowQueries = append(slowQueries, map[string]interface{}{
+		slowQueries = append(slowQueries, map[string]any{
 			"query":       query,
 			"calls":       calls,
 			"total_time":  totalTime,

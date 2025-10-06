@@ -129,17 +129,17 @@ type OrganizationService interface {
 
 // Logger interface for logging operations
 type Logger interface {
-	Debug(msg string, fields ...interface{})
-	Info(msg string, fields ...interface{})
-	Warn(msg string, fields ...interface{})
-	Error(msg string, fields ...interface{})
-	Fatal(msg string, fields ...interface{})
+	Debug(msg string, fields ...any)
+	Info(msg string, fields ...any)
+	Warn(msg string, fields ...any)
+	Error(msg string, fields ...any)
+	Fatal(msg string, fields ...any)
 }
 
 // Cache interface for caching operations
 type Cache interface {
-	Get(ctx context.Context, key string) (interface{}, error)
-	Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error
+	Get(ctx context.Context, key string) (any, error)
+	Set(ctx context.Context, key string, value any, ttl time.Duration) error
 	Delete(ctx context.Context, key string) error
 	Clear(ctx context.Context) error
 }
@@ -149,7 +149,7 @@ type Database interface {
 	Connect(ctx context.Context) error
 	Close() error
 	Health(ctx context.Context) error
-	BeginTx(ctx context.Context) (interface{}, error)
-	CommitTx(tx interface{}) error
-	RollbackTx(tx interface{}) error
+	BeginTx(ctx context.Context) (any, error)
+	CommitTx(tx any) error
+	RollbackTx(tx any) error
 }

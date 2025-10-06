@@ -124,7 +124,7 @@ func TestLoadTesting(t *testing.T) {
 				defer wg.Done()
 
 				// Create building request
-				reqBody := map[string]interface{}{
+				reqBody := map[string]any{
 					"name":    fmt.Sprintf("Load Test Building %d", requestID),
 					"address": fmt.Sprintf("%d Load Test Street", requestID),
 				}
@@ -269,7 +269,7 @@ func TestStressTesting(t *testing.T) {
 				// Alternate between create, read, update operations
 				switch requestID % 3 {
 				case 0: // Create
-					reqBody := map[string]interface{}{
+					reqBody := map[string]any{
 						"name":    fmt.Sprintf("Stress Test Building %d", requestID),
 						"address": fmt.Sprintf("%d Stress Test Street", requestID),
 					}
@@ -316,7 +316,7 @@ func TestStressTesting(t *testing.T) {
 
 				case 2: // Update
 					buildingID := fmt.Sprintf("perf-building-%d", requestID%100)
-					updateBody := map[string]interface{}{
+					updateBody := map[string]any{
 						"name": fmt.Sprintf("Updated Stress Building %d", requestID),
 					}
 
@@ -413,7 +413,7 @@ func TestMemoryUsage(t *testing.T) {
 		for iteration := 0; iteration < numIterations; iteration++ {
 			// Create batch of buildings
 			for i := 0; i < batchSize; i++ {
-				reqBody := map[string]interface{}{
+				reqBody := map[string]any{
 					"name":    fmt.Sprintf("Memory Test Building %d-%d", iteration, i),
 					"address": fmt.Sprintf("%d Memory Test Street", iteration*batchSize+i),
 				}
@@ -473,7 +473,7 @@ func BenchmarkBuildingCreation(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		reqBody := map[string]interface{}{
+		reqBody := map[string]any{
 			"name":    fmt.Sprintf("Benchmark Building %d", i),
 			"address": fmt.Sprintf("%d Benchmark Street", i),
 		}

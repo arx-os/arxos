@@ -24,7 +24,7 @@ type DesignInterface interface {
 
 	// Design Tools
 	GetDesignTools(ctx context.Context) ([]DesignTool, error)
-	UseDesignTool(ctx context.Context, toolID string, params map[string]interface{}) error
+	UseDesignTool(ctx context.Context, toolID string, params map[string]any) error
 
 	// Viewport Management
 	SetViewport(ctx context.Context, viewport Viewport) error
@@ -43,20 +43,20 @@ type CreateComponentRequest struct {
 	Type        component.ComponentType `json:"type"`
 	Path        string                  `json:"path"`
 	Location    component.Location      `json:"location"`
-	Properties  map[string]interface{}  `json:"properties"`
+	Properties  map[string]any          `json:"properties"`
 	VisualStyle *VisualStyle            `json:"visual_style,omitempty"`
 	CreatedBy   string                  `json:"created_by"`
 }
 
 // UpdateComponentRequest represents a request to update a component through the design interface
 type UpdateComponentRequest struct {
-	ID          string                 `json:"id"`
-	Name        *string                `json:"name,omitempty"`
-	Path        *string                `json:"path,omitempty"`
-	Location    *component.Location    `json:"location,omitempty"`
-	Properties  map[string]interface{} `json:"properties,omitempty"`
-	VisualStyle *VisualStyle           `json:"visual_style,omitempty"`
-	UpdatedBy   string                 `json:"updated_by"`
+	ID          string              `json:"id"`
+	Name        *string             `json:"name,omitempty"`
+	Path        *string             `json:"path,omitempty"`
+	Location    *component.Location `json:"location,omitempty"`
+	Properties  map[string]any      `json:"properties,omitempty"`
+	VisualStyle *VisualStyle        `json:"visual_style,omitempty"`
+	UpdatedBy   string              `json:"updated_by"`
 }
 
 // VisualRepresentation represents how a component appears in the design interface
@@ -107,10 +107,10 @@ type VisualStyle struct {
 
 // Animation represents dynamic visual effects
 type Animation struct {
-	Type       AnimationType          `json:"type"`
-	Duration   int                    `json:"duration"` // milliseconds
-	Repeat     bool                   `json:"repeat"`
-	Properties map[string]interface{} `json:"properties"`
+	Type       AnimationType  `json:"type"`
+	Duration   int            `json:"duration"` // milliseconds
+	Repeat     bool           `json:"repeat"`
+	Properties map[string]any `json:"properties"`
 }
 
 // AnimationType represents types of animations
@@ -161,13 +161,13 @@ type Grid struct {
 
 // DesignTool represents a tool available in the design interface
 type DesignTool struct {
-	ID          string                 `json:"id"`
-	Name        string                 `json:"name"`
-	Description string                 `json:"description"`
-	Category    ToolCategory           `json:"category"`
-	Icon        string                 `json:"icon"`
-	Parameters  map[string]interface{} `json:"parameters"`
-	Enabled     bool                   `json:"enabled"`
+	ID          string         `json:"id"`
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	Category    ToolCategory   `json:"category"`
+	Icon        string         `json:"icon"`
+	Parameters  map[string]any `json:"parameters"`
+	Enabled     bool           `json:"enabled"`
 }
 
 // ToolCategory represents categories of design tools
@@ -185,12 +185,12 @@ const (
 
 // DesignAction represents an action in the design history
 type DesignAction struct {
-	ID          string                 `json:"id"`
-	Type        ActionType             `json:"type"`
-	ComponentID string                 `json:"component_id"`
-	Data        map[string]interface{} `json:"data"`
-	Timestamp   string                 `json:"timestamp"`
-	User        string                 `json:"user"`
+	ID          string         `json:"id"`
+	Type        ActionType     `json:"type"`
+	ComponentID string         `json:"component_id"`
+	Data        map[string]any `json:"data"`
+	Timestamp   string         `json:"timestamp"`
+	User        string         `json:"user"`
 }
 
 // ActionType represents types of design actions

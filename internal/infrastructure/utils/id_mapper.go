@@ -47,7 +47,7 @@ func (m *IDMapper) CreateMapping(ctx context.Context, table, uuidID, legacyID st
 
 	_, err := m.db.ExecContext(ctx, query, uuidID, legacyID, table, time.Now(), false)
 	if err != nil {
-		m.logger.Error("Failed to create ID mapping", map[string]interface{}{
+		m.logger.Error("Failed to create ID mapping", map[string]any{
 			"table":     table,
 			"uuid_id":   uuidID,
 			"legacy_id": legacyID,
@@ -131,7 +131,7 @@ func (m *IDMapper) ResolveID(ctx context.Context, table string, id types.ID) (ty
 
 // MigrateTableIDs migrates all IDs in a table from legacy to UUID format
 func (m *IDMapper) MigrateTableIDs(ctx context.Context, table string) error {
-	m.logger.Info("Starting ID migration for table", map[string]interface{}{
+	m.logger.Info("Starting ID migration for table", map[string]any{
 		"table": table,
 	})
 
@@ -151,7 +151,7 @@ func (m *IDMapper) MigrateTableIDs(ctx context.Context, table string) error {
 	for rows.Next() {
 		var legacyID string
 		if err := rows.Scan(&legacyID); err != nil {
-			m.logger.Error("Failed to scan legacy ID", map[string]interface{}{
+			m.logger.Error("Failed to scan legacy ID", map[string]any{
 				"table": table,
 				"error": err,
 			})
@@ -168,7 +168,7 @@ func (m *IDMapper) MigrateTableIDs(ctx context.Context, table string) error {
 
 		_, err := m.db.ExecContext(ctx, updateQuery, newUUID, legacyID)
 		if err != nil {
-			m.logger.Error("Failed to update record with UUID", map[string]interface{}{
+			m.logger.Error("Failed to update record with UUID", map[string]any{
 				"table":     table,
 				"legacy_id": legacyID,
 				"uuid":      newUUID,
@@ -179,7 +179,7 @@ func (m *IDMapper) MigrateTableIDs(ctx context.Context, table string) error {
 
 		// Create mapping
 		if err := m.CreateMapping(ctx, table, newUUID, legacyID); err != nil {
-			m.logger.Error("Failed to create ID mapping", map[string]interface{}{
+			m.logger.Error("Failed to create ID mapping", map[string]any{
 				"table":     table,
 				"legacy_id": legacyID,
 				"uuid":      newUUID,
@@ -191,7 +191,7 @@ func (m *IDMapper) MigrateTableIDs(ctx context.Context, table string) error {
 		migratedCount++
 	}
 
-	m.logger.Info("Completed ID migration for table", map[string]interface{}{
+	m.logger.Info("Completed ID migration for table", map[string]any{
 		"table":          table,
 		"migrated_count": migratedCount,
 	})
@@ -200,7 +200,7 @@ func (m *IDMapper) MigrateTableIDs(ctx context.Context, table string) error {
 }
 
 // GetMigrationStatus returns the migration status for a table
-func (m *IDMapper) GetMigrationStatus(ctx context.Context, table string) (map[string]interface{}, error) {
+func (m *IDMapper) GetMigrationStatus(ctx context.Context, table string) (map[string]any, error) {
 	// Count total records
 	var totalRecords int
 	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM %s`, table)
@@ -225,7 +225,7 @@ func (m *IDMapper) GetMigrationStatus(ctx context.Context, table string) (map[st
 		return nil, fmt.Errorf("failed to count mappings: %w", err)
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"table":          table,
 		"total_records":  totalRecords,
 		"uuid_records":   uuidRecords,

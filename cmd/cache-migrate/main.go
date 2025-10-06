@@ -20,33 +20,33 @@ type CacheMigrationScript struct {
 
 // Logger interface for migration logging
 type Logger interface {
-	Debug(msg string, fields ...interface{})
-	Info(msg string, fields ...interface{})
-	Warn(msg string, fields ...interface{})
-	Error(msg string, fields ...interface{})
-	Fatal(msg string, fields ...interface{})
+	Debug(msg string, fields ...any)
+	Info(msg string, fields ...any)
+	Warn(msg string, fields ...any)
+	Error(msg string, fields ...any)
+	Fatal(msg string, fields ...any)
 }
 
 // SimpleLogger implements Logger interface
 type SimpleLogger struct{}
 
-func (l *SimpleLogger) Debug(msg string, fields ...interface{}) {
+func (l *SimpleLogger) Debug(msg string, fields ...any) {
 	fmt.Printf("[DEBUG] %s\n", msg)
 }
 
-func (l *SimpleLogger) Info(msg string, fields ...interface{}) {
+func (l *SimpleLogger) Info(msg string, fields ...any) {
 	fmt.Printf("[INFO] %s\n", msg)
 }
 
-func (l *SimpleLogger) Warn(msg string, fields ...interface{}) {
+func (l *SimpleLogger) Warn(msg string, fields ...any) {
 	fmt.Printf("[WARN] %s\n", msg)
 }
 
-func (l *SimpleLogger) Error(msg string, fields ...interface{}) {
+func (l *SimpleLogger) Error(msg string, fields ...any) {
 	fmt.Printf("[ERROR] %s\n", msg)
 }
 
-func (l *SimpleLogger) Fatal(msg string, fields ...interface{}) {
+func (l *SimpleLogger) Fatal(msg string, fields ...any) {
 	fmt.Printf("[FATAL] %s\n", msg)
 	os.Exit(1)
 }

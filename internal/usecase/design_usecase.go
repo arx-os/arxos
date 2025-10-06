@@ -37,7 +37,7 @@ func (uc *DesignUseCase) CreateComponent(ctx context.Context, req design.CreateC
 	// Add visual style to properties if provided
 	if req.VisualStyle != nil {
 		if componentReq.Properties == nil {
-			componentReq.Properties = make(map[string]interface{})
+			componentReq.Properties = make(map[string]any)
 		}
 		componentReq.Properties["visual_style"] = req.VisualStyle
 	}
@@ -66,7 +66,7 @@ func (uc *DesignUseCase) UpdateComponent(ctx context.Context, req design.UpdateC
 	// Add visual style to properties if provided
 	if req.VisualStyle != nil {
 		if componentReq.Properties == nil {
-			componentReq.Properties = make(map[string]interface{})
+			componentReq.Properties = make(map[string]any)
 		}
 		componentReq.Properties["visual_style"] = req.VisualStyle
 	}
@@ -254,7 +254,7 @@ func (uc *DesignUseCase) GetDesignTools(ctx context.Context) ([]design.DesignToo
 }
 
 // UseDesignTool uses a design tool with parameters
-func (uc *DesignUseCase) UseDesignTool(ctx context.Context, toolID string, params map[string]interface{}) error {
+func (uc *DesignUseCase) UseDesignTool(ctx context.Context, toolID string, params map[string]any) error {
 	switch toolID {
 	case "create_component":
 		return uc.handleCreateComponentTool(ctx, params)
@@ -393,22 +393,22 @@ func (uc *DesignUseCase) getDefaultVisualStyle(compType component.ComponentType)
 
 // Tool handler methods
 
-func (uc *DesignUseCase) handleCreateComponentTool(ctx context.Context, params map[string]interface{}) error {
+func (uc *DesignUseCase) handleCreateComponentTool(ctx context.Context, params map[string]any) error {
 	// TODO: Implement create component tool
 	return nil
 }
 
-func (uc *DesignUseCase) handleMoveComponentTool(ctx context.Context, params map[string]interface{}) error {
+func (uc *DesignUseCase) handleMoveComponentTool(ctx context.Context, params map[string]any) error {
 	// TODO: Implement move component tool
 	return nil
 }
 
-func (uc *DesignUseCase) handleConnectComponentsTool(ctx context.Context, params map[string]interface{}) error {
+func (uc *DesignUseCase) handleConnectComponentsTool(ctx context.Context, params map[string]any) error {
 	// TODO: Implement connect components tool
 	return nil
 }
 
-func (uc *DesignUseCase) handleZoomToFitTool(ctx context.Context, params map[string]interface{}) error {
+func (uc *DesignUseCase) handleZoomToFitTool(ctx context.Context, params map[string]any) error {
 	// TODO: Implement zoom to fit tool
 	return nil
 }

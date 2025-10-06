@@ -43,16 +43,16 @@ type HealthResponse struct {
 	Version   string                   `json:"version"`
 	Services  map[string]ServiceHealth `json:"services"`
 	System    SystemHealth             `json:"system"`
-	Metadata  map[string]interface{}   `json:"metadata,omitempty"`
+	Metadata  map[string]any           `json:"metadata,omitempty"`
 }
 
 // ServiceHealth represents the health of a service
 type ServiceHealth struct {
-	Status       string                 `json:"status"`
-	ResponseTime time.Duration          `json:"response_time,omitempty"`
-	LastCheck    time.Time              `json:"last_check"`
-	Error        string                 `json:"error,omitempty"`
-	Metadata     map[string]interface{} `json:"metadata,omitempty"`
+	Status       string         `json:"status"`
+	ResponseTime time.Duration  `json:"response_time,omitempty"`
+	LastCheck    time.Time      `json:"last_check"`
+	Error        string         `json:"error,omitempty"`
+	Metadata     map[string]any `json:"metadata,omitempty"`
 }
 
 // SystemHealth represents system health information
@@ -97,7 +97,7 @@ func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 		Version:   "1.0.0", // This would come from build info
 		Services:  services,
 		System:    systemHealth,
-		Metadata: map[string]interface{}{
+		Metadata: map[string]any{
 			"build_time": h.startTime,
 			"go_version": runtime.Version(),
 		},
@@ -141,7 +141,7 @@ func (h *HealthHandler) HealthDetailed(w http.ResponseWriter, r *http.Request) {
 		Version:   "1.0.0",
 		Services:  services,
 		System:    systemHealth,
-		Metadata: map[string]interface{}{
+		Metadata: map[string]any{
 			"build_time":   h.startTime,
 			"go_version":   runtime.Version(),
 			"architecture": runtime.GOARCH,
@@ -179,7 +179,7 @@ func (h *HealthHandler) Readiness(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	response := map[string]interface{}{
+	response := map[string]any{
 		"ready":     ready,
 		"timestamp": time.Now(),
 		"services":  services,
@@ -203,7 +203,7 @@ func (h *HealthHandler) Liveness(w http.ResponseWriter, r *http.Request) {
 	h.logger.Debug("Liveness check requested")
 
 	// Simple liveness check - just return OK if the service is running
-	response := map[string]interface{}{
+	response := map[string]any{
 		"alive":     true,
 		"timestamp": time.Now(),
 		"uptime":    time.Since(h.startTime),
@@ -285,7 +285,7 @@ func (h *HealthHandler) checkDatabaseDetailed(ctx context.Context) ServiceHealth
 
 	status := "healthy"
 	errorMsg := ""
-	metadata := make(map[string]interface{})
+	metadata := make(map[string]any)
 
 	if err != nil {
 		status = "unhealthy"
@@ -348,7 +348,7 @@ func (h *HealthHandler) checkCacheDetailed(ctx context.Context) ServiceHealth {
 
 	status := "healthy"
 	errorMsg := ""
-	metadata := make(map[string]interface{})
+	metadata := make(map[string]any)
 
 	if err != nil {
 		status = "unhealthy"
@@ -373,7 +373,7 @@ func (h *HealthHandler) checkExternalServices(ctx context.Context) ServiceHealth
 	return ServiceHealth{
 		Status:    "healthy",
 		LastCheck: time.Now(),
-		Metadata: map[string]interface{}{
+		Metadata: map[string]any{
 			"services": []string{"ifc_service", "notification_service"},
 			"status":   "not_implemented",
 		},
@@ -386,7 +386,7 @@ func (h *HealthHandler) checkExternalServicesDetailed(ctx context.Context) Servi
 	return ServiceHealth{
 		Status:    "healthy",
 		LastCheck: time.Now(),
-		Metadata: map[string]interface{}{
+		Metadata: map[string]any{
 			"services": []string{"ifc_service", "notification_service"},
 			"status":   "not_implemented",
 			"details":  "External service health checks not yet implemented",
@@ -439,17 +439,17 @@ func (h *HealthHandler) Metrics(w http.ResponseWriter, r *http.Request) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
-	metrics := map[string]interface{}{
+	metrics := map[string]any{
 		"timestamp": time.Now(),
 		"uptime":    time.Since(h.startTime),
-		"system": map[string]interface{}{
+		"system": map[string]any{
 			"goroutines":     runtime.NumGoroutine(),
 			"memory_alloc":   m.Alloc,
 			"memory_total":   m.TotalAlloc,
 			"gc_cycles":      m.NumGC,
 			"gc_pause_total": m.PauseTotalNs,
 		},
-		"services": map[string]interface{}{
+		"services": map[string]any{
 			"database": h.checkDatabase(r.Context()),
 			"cache":    h.checkCache(r.Context()),
 		},

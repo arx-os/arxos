@@ -348,16 +348,16 @@ type SpatialBounds struct {
 
 // SpatialQueryResult represents the result of a spatial query
 type SpatialQueryResult struct {
-	Success    bool                   `json:"success"`
-	QueryType  string                 `json:"query_type"`
-	Results    []SpatialEntity        `json:"results"`
-	TotalFound int                    `json:"total_found"`
-	Bounds     *SpatialBounds         `json:"bounds,omitempty"`
-	EntityID   string                 `json:"entity_id,omitempty"`
-	Center     []float64              `json:"center,omitempty"`
-	Radius     float64                `json:"radius,omitempty"`
-	Metadata   map[string]interface{} `json:"metadata"`
-	Error      *IFCError              `json:"error,omitempty"`
+	Success    bool            `json:"success"`
+	QueryType  string          `json:"query_type"`
+	Results    []SpatialEntity `json:"results"`
+	TotalFound int             `json:"total_found"`
+	Bounds     *SpatialBounds  `json:"bounds,omitempty"`
+	EntityID   string          `json:"entity_id,omitempty"`
+	Center     []float64       `json:"center,omitempty"`
+	Radius     float64         `json:"radius,omitempty"`
+	Metadata   map[string]any  `json:"metadata"`
+	Error      *IFCError       `json:"error,omitempty"`
 }
 
 // SpatialEntity represents a spatial entity result
@@ -372,20 +372,20 @@ type SpatialEntity struct {
 
 // MetricsResult represents service metrics
 type MetricsResult struct {
-	Success            bool                   `json:"success"`
-	Service            string                 `json:"service"`
-	CacheStats         map[string]interface{} `json:"cache_stats"`
-	PerformanceMetrics map[string]interface{} `json:"performance_metrics"`
-	Configuration      map[string]interface{} `json:"configuration"`
-	Error              *IFCError              `json:"error,omitempty"`
+	Success            bool           `json:"success"`
+	Service            string         `json:"service"`
+	CacheStats         map[string]any `json:"cache_stats"`
+	PerformanceMetrics map[string]any `json:"performance_metrics"`
+	Configuration      map[string]any `json:"configuration"`
+	Error              *IFCError      `json:"error,omitempty"`
 }
 
 // SpatialBoundsResult represents spatial bounds information
 type SpatialBoundsResult struct {
-	Success         bool                   `json:"success"`
-	BoundingBox     *SpatialBounds         `json:"bounding_box"`
-	SpatialCoverage map[string]float64     `json:"spatial_coverage"`
-	EntityCounts    map[string]int         `json:"entity_counts"`
-	Metadata        map[string]interface{} `json:"metadata"`
-	Error           *IFCError              `json:"error,omitempty"`
+	Success         bool               `json:"success"`
+	BoundingBox     *SpatialBounds     `json:"bounding_box"`
+	SpatialCoverage map[string]float64 `json:"spatial_coverage"`
+	EntityCounts    map[string]int     `json:"entity_counts"`
+	Metadata        map[string]any     `json:"metadata"`
+	Error           *IFCError          `json:"error,omitempty"`
 }

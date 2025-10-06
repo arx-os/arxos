@@ -14,11 +14,11 @@ import (
 // MockLogger implements domain.Logger for testing
 type MockLogger struct{}
 
-func (m *MockLogger) Debug(msg string, fields ...interface{}) {}
-func (m *MockLogger) Info(msg string, fields ...interface{})  {}
-func (m *MockLogger) Warn(msg string, fields ...interface{})  {}
-func (m *MockLogger) Error(msg string, fields ...interface{}) {}
-func (m *MockLogger) Fatal(msg string, fields ...interface{}) {}
+func (m *MockLogger) Debug(msg string, fields ...any) {}
+func (m *MockLogger) Info(msg string, fields ...any)  {}
+func (m *MockLogger) Warn(msg string, fields ...any)  {}
+func (m *MockLogger) Error(msg string, fields ...any) {}
+func (m *MockLogger) Fatal(msg string, fields ...any) {}
 
 func TestUnifiedCacheBasicOperations(t *testing.T) {
 	// Create temporary directory for testing

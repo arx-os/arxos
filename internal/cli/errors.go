@@ -83,7 +83,7 @@ func (eh *ErrorHandler) HandleServiceError(err error, service, operation string)
 }
 
 // ValidateAndHandle validates a value and handles errors if validation fails
-func (eh *ErrorHandler) ValidateAndHandle(field string, value interface{}, validator func(interface{}) error) {
+func (eh *ErrorHandler) ValidateAndHandle(field string, value any, validator func(any) error) {
 	if err := validator(value); err != nil {
 		eh.HandleValidationError(err, field, fmt.Sprintf("%v", value))
 	}

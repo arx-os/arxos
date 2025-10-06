@@ -64,11 +64,11 @@ type EnhancedBuilding struct {
 	Systems []string    `json:"systems"` // System IDs
 
 	// Metadata
-	Source     string                 `json:"source"`
-	Confidence ConfidenceLevel        `json:"confidence"`
-	ImportedAt time.Time              `json:"imported_at"`
-	UpdatedAt  time.Time              `json:"updated_at"`
-	Properties map[string]interface{} `json:"properties,omitempty"`
+	Source     string          `json:"source"`
+	Confidence ConfidenceLevel `json:"confidence"`
+	ImportedAt time.Time       `json:"imported_at"`
+	UpdatedAt  time.Time       `json:"updated_at"`
+	Properties map[string]any  `json:"properties,omitempty"`
 
 	// Data quality
 	ValidationIssues []string `json:"validation_issues,omitempty"`
@@ -77,25 +77,25 @@ type EnhancedBuilding struct {
 
 // BuildingCreateRequest represents a request to create a building
 type BuildingCreateRequest struct {
-	Name         string                 `json:"name" validate:"required,min=1,max=200"`
-	Description  string                 `json:"description,omitempty"`
-	Address      string                 `json:"address,omitempty"`
-	BuildingType BuildingType           `json:"building_type,omitempty"`
-	Status       BuildingStatus         `json:"status,omitempty"`
-	Origin       *Point3D               `json:"origin,omitempty"`
-	Properties   map[string]interface{} `json:"properties,omitempty"`
+	Name         string         `json:"name" validate:"required,min=1,max=200"`
+	Description  string         `json:"description,omitempty"`
+	Address      string         `json:"address,omitempty"`
+	BuildingType BuildingType   `json:"building_type,omitempty"`
+	Status       BuildingStatus `json:"status,omitempty"`
+	Origin       *Point3D       `json:"origin,omitempty"`
+	Properties   map[string]any `json:"properties,omitempty"`
 }
 
 // BuildingUpdateRequest represents a request to update a building
 type BuildingUpdateRequest struct {
-	ID           string                 `json:"id" validate:"required"`
-	Name         *string                `json:"name,omitempty" validate:"omitempty,min=1,max=200"`
-	Description  *string                `json:"description,omitempty"`
-	Address      *string                `json:"address,omitempty"`
-	BuildingType *BuildingType          `json:"building_type,omitempty"`
-	Status       *BuildingStatus        `json:"status,omitempty"`
-	Origin       *Point3D               `json:"origin,omitempty"`
-	Properties   map[string]interface{} `json:"properties,omitempty"`
+	ID           string          `json:"id" validate:"required"`
+	Name         *string         `json:"name,omitempty" validate:"omitempty,min=1,max=200"`
+	Description  *string         `json:"description,omitempty"`
+	Address      *string         `json:"address,omitempty"`
+	BuildingType *BuildingType   `json:"building_type,omitempty"`
+	Status       *BuildingStatus `json:"status,omitempty"`
+	Origin       *Point3D        `json:"origin,omitempty"`
+	Properties   map[string]any  `json:"properties,omitempty"`
 }
 
 // BuildingQuery represents a building search query
@@ -411,7 +411,7 @@ func (bm *BuildingManager) RemoveEquipment(building *EnhancedBuilding, equipment
 }
 
 // UpdateEquipment updates equipment in the building
-func (bm *BuildingManager) UpdateEquipment(building *EnhancedBuilding, equipmentID string, updates map[string]interface{}) error {
+func (bm *BuildingManager) UpdateEquipment(building *EnhancedBuilding, equipmentID string, updates map[string]any) error {
 	equipment := bm.GetEquipmentByID(building, equipmentID)
 	if equipment == nil {
 		return errors.New(errors.CodeNotFound, fmt.Sprintf("Equipment %s not found", equipmentID))

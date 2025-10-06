@@ -164,8 +164,8 @@ func (s *IFCService) IsServiceAvailable(ctx context.Context) bool {
 }
 
 // GetServiceStatus returns the current status of the service
-func (s *IFCService) GetServiceStatus(ctx context.Context) map[string]interface{} {
-	status := map[string]interface{}{
+func (s *IFCService) GetServiceStatus(ctx context.Context) map[string]any {
+	status := map[string]any{
 		"service_enabled":          s.serviceEnabled,
 		"fallback_enabled":         s.fallbackEnabled,
 		"circuit_breaker_state":    s.circuitBreaker.state.String(),

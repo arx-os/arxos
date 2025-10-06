@@ -178,31 +178,31 @@ func (ca *CacheAnalytics) GetAnalytics(ctx context.Context) (*AnalyticsMetrics, 
 }
 
 // GetPerformanceReport returns a detailed performance report
-func (ca *CacheAnalytics) GetPerformanceReport(ctx context.Context) (map[string]interface{}, error) {
+func (ca *CacheAnalytics) GetPerformanceReport(ctx context.Context) (map[string]any, error) {
 	analytics, err := ca.GetAnalytics(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	report := map[string]interface{}{
-		"summary": map[string]interface{}{
+	report := map[string]any{
+		"summary": map[string]any{
 			"total_requests":        analytics.TotalRequests,
 			"hit_rate":              analytics.HitRate,
 			"average_response_time": analytics.AverageResponseTime,
 			"uptime":                time.Since(analytics.StartTime),
 		},
-		"layer_performance": map[string]interface{}{
-			"l1": map[string]interface{}{
+		"layer_performance": map[string]any{
+			"l1": map[string]any{
 				"hits":     analytics.L1Hits,
 				"misses":   analytics.L1Misses,
 				"hit_rate": analytics.L1HitRate,
 			},
-			"l2": map[string]interface{}{
+			"l2": map[string]any{
 				"hits":     analytics.L2Hits,
 				"misses":   analytics.L2Misses,
 				"hit_rate": analytics.L2HitRate,
 			},
-			"l3": map[string]interface{}{
+			"l3": map[string]any{
 				"hits":     analytics.L3Hits,
 				"misses":   analytics.L3Misses,
 				"hit_rate": analytics.L3HitRate,

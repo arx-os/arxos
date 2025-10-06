@@ -21,14 +21,14 @@ type IFCBuilding struct {
 
 // IFCEntity represents an IFC entity (building element)
 type IFCEntity struct {
-	ID          string                 `json:"id"`
-	Type        string                 `json:"type"` // IfcWall, IfcDoor, IfcWindow, etc.
-	Name        string                 `json:"name"`
-	Description string                 `json:"description"`
-	Properties  map[string]interface{} `json:"properties"`
-	Geometry    Geometry               `json:"geometry"`
-	Location    Location               `json:"location"`
-	CreatedAt   time.Time              `json:"created_at"`
+	ID          string         `json:"id"`
+	Type        string         `json:"type"` // IfcWall, IfcDoor, IfcWindow, etc.
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	Properties  map[string]any `json:"properties"`
+	Geometry    Geometry       `json:"geometry"`
+	Location    Location       `json:"location"`
+	CreatedAt   time.Time      `json:"created_at"`
 }
 
 // IFCProperty represents an IFC property
@@ -44,11 +44,11 @@ type IFCProperty struct {
 
 // IFCMaterial represents an IFC material
 type IFCMaterial struct {
-	ID         string                 `json:"id"`
-	Name       string                 `json:"name"`
-	Type       string                 `json:"type"`
-	Properties map[string]interface{} `json:"properties"`
-	CreatedAt  time.Time              `json:"created_at"`
+	ID         string         `json:"id"`
+	Name       string         `json:"name"`
+	Type       string         `json:"type"`
+	Properties map[string]any `json:"properties"`
+	CreatedAt  time.Time      `json:"created_at"`
 }
 
 // IFCClassification represents an IFC classification

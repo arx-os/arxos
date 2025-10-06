@@ -23,7 +23,7 @@ func TestBuildingManager(t *testing.T) {
 		Confidence:   ConfidenceMedium,
 		ImportedAt:   time.Now(),
 		UpdatedAt:    time.Now(),
-		Properties:   map[string]interface{}{"test": true},
+		Properties:   map[string]any{"test": true},
 		Coverage:     75.5,
 	}
 
@@ -53,7 +53,7 @@ func TestBuildingManager(t *testing.T) {
 		Description: "Ground level floor",
 		Rooms:       []*Room{},
 		Equipment:   []*Equipment{},
-		Metadata:    map[string]interface{}{},
+		Metadata:    map[string]any{},
 	}
 
 	err := bm.AddFloor(building, floor1)
@@ -74,7 +74,7 @@ func TestBuildingManager(t *testing.T) {
 		Location: &Point3D{X: 1000, Y: 2000, Z: 0},
 		Status:   StatusOperational,
 		Model:    "TC-HVAC-1000",
-		Metadata: map[string]interface{}{},
+		Metadata: map[string]any{},
 	}
 
 	err = bm.AddEquipment(building, 1, equipment1)
@@ -102,7 +102,7 @@ func TestBuildingManager(t *testing.T) {
 	}
 
 	// Test updating equipment
-	updates := map[string]interface{}{
+	updates := map[string]any{
 		"name":   "Updated HVAC Unit",
 		"status": StatusMaintenance,
 	}
@@ -388,7 +388,7 @@ func TestBuildingManagerErrors(t *testing.T) {
 	}
 
 	// Test updating non-existent equipment
-	updates := map[string]interface{}{"name": "Updated"}
+	updates := map[string]any{"name": "Updated"}
 	err = bm.UpdateEquipment(building, "non-existent", updates)
 	if err == nil {
 		t.Error("Expected error when updating non-existent equipment")

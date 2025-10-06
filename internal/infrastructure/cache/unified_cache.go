@@ -45,15 +45,15 @@ type UnifiedCache struct {
 
 // CacheEntry represents a cached item with metadata
 type CacheEntry struct {
-	Key      string      `json:"key"`
-	Value    interface{} `json:"value"`
-	Created  time.Time   `json:"created"`
-	Expires  time.Time   `json:"expires"`
-	Layer    CacheLayer  `json:"layer"`
-	HitCount int64       `json:"hit_count"`
-	LastHit  time.Time   `json:"last_hit"`
-	Size     int64       `json:"size"`
-	Tags     []string    `json:"tags,omitempty"`
+	Key      string     `json:"key"`
+	Value    any        `json:"value"`
+	Created  time.Time  `json:"created"`
+	Expires  time.Time  `json:"expires"`
+	Layer    CacheLayer `json:"layer"`
+	HitCount int64      `json:"hit_count"`
+	LastHit  time.Time  `json:"last_hit"`
+	Size     int64      `json:"size"`
+	Tags     []string   `json:"tags,omitempty"`
 }
 
 // CacheStats tracks cache performance
@@ -114,7 +114,7 @@ func NewUnifiedCache(cfg *config.Config, logger domain.Logger) (*UnifiedCache, e
 }
 
 // Get retrieves a value from the cache using the multi-tier strategy
-func (uc *UnifiedCache) Get(ctx context.Context, key string) (interface{}, error) {
+func (uc *UnifiedCache) Get(ctx context.Context, key string) (any, error) {
 	// Try L1 (in-memory) first
 	if value, found := uc.getFromL1(key); found {
 		uc.incrementStats("l1_hit")
@@ -148,7 +148,7 @@ func (uc *UnifiedCache) Get(ctx context.Context, key string) (interface{}, error
 }
 
 // Set stores a value in the appropriate cache layers
-func (uc *UnifiedCache) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+func (uc *UnifiedCache) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
 	// Determine which layers to use based on TTL and size
 	entry := &CacheEntry{
 		Key:      key,
@@ -247,7 +247,7 @@ func (uc *UnifiedCache) InvalidateByTags(ctx context.Context, tags []string) err
 
 // L1 Cache Methods (In-Memory)
 
-func (uc *UnifiedCache) getFromL1(key string) (interface{}, bool) {
+func (uc *UnifiedCache) getFromL1(key string) (any, bool) {
 	uc.l1Mu.RLock()
 	defer uc.l1Mu.RUnlock()
 
@@ -273,7 +273,7 @@ func (uc *UnifiedCache) getFromL1(key string) (interface{}, bool) {
 	return entry.Value, true
 }
 
-func (uc *UnifiedCache) setInL1(key string, value interface{}, ttl time.Duration) error {
+func (uc *UnifiedCache) setInL1(key string, value any, ttl time.Duration) error {
 	uc.l1Mu.Lock()
 	defer uc.l1Mu.Unlock()
 
@@ -303,7 +303,7 @@ func (uc *UnifiedCache) deleteFromL1(key string) {
 
 // L2 Cache Methods (Local Disk)
 
-func (uc *UnifiedCache) getFromL2(key string) (interface{}, bool) {
+func (uc *UnifiedCache) getFromL2(key string) (any, bool) {
 	uc.l2Mu.RLock()
 	defer uc.l2Mu.RUnlock()
 
@@ -327,7 +327,7 @@ func (uc *UnifiedCache) getFromL2(key string) (interface{}, bool) {
 	return entry.Value, true
 }
 
-func (uc *UnifiedCache) setInL2(key string, value interface{}, ttl time.Duration) error {
+func (uc *UnifiedCache) setInL2(key string, value any, ttl time.Duration) error {
 	uc.l2Mu.Lock()
 	defer uc.l2Mu.Unlock()
 

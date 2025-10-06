@@ -60,7 +60,7 @@ func main() {
 // ConsoleLogger implements domain.Logger for console output
 type ConsoleLogger struct{}
 
-func (l *ConsoleLogger) Info(msg string, fields ...interface{}) {
+func (l *ConsoleLogger) Info(msg string, fields ...any) {
 	fmt.Printf("[INFO] %s", msg)
 	if len(fields) > 0 {
 		fmt.Printf(" %v", fields)
@@ -68,7 +68,7 @@ func (l *ConsoleLogger) Info(msg string, fields ...interface{}) {
 	fmt.Println()
 }
 
-func (l *ConsoleLogger) Error(msg string, fields ...interface{}) {
+func (l *ConsoleLogger) Error(msg string, fields ...any) {
 	fmt.Printf("[ERROR] %s", msg)
 	if len(fields) > 0 {
 		fmt.Printf(" %v", fields)
@@ -76,7 +76,7 @@ func (l *ConsoleLogger) Error(msg string, fields ...interface{}) {
 	fmt.Println()
 }
 
-func (l *ConsoleLogger) Debug(msg string, fields ...interface{}) {
+func (l *ConsoleLogger) Debug(msg string, fields ...any) {
 	fmt.Printf("[DEBUG] %s", msg)
 	if len(fields) > 0 {
 		fmt.Printf(" %v", fields)
@@ -84,7 +84,7 @@ func (l *ConsoleLogger) Debug(msg string, fields ...interface{}) {
 	fmt.Println()
 }
 
-func (l *ConsoleLogger) Warn(msg string, fields ...interface{}) {
+func (l *ConsoleLogger) Warn(msg string, fields ...any) {
 	fmt.Printf("[WARN] %s", msg)
 	if len(fields) > 0 {
 		fmt.Printf(" %v", fields)
@@ -92,7 +92,7 @@ func (l *ConsoleLogger) Warn(msg string, fields ...interface{}) {
 	fmt.Println()
 }
 
-func (l *ConsoleLogger) Fatal(msg string, fields ...interface{}) {
+func (l *ConsoleLogger) Fatal(msg string, fields ...any) {
 	fmt.Printf("[FATAL] %s", msg)
 	if len(fields) > 0 {
 		fmt.Printf(" %v", fields)

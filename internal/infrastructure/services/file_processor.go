@@ -73,8 +73,8 @@ func (fp *FileProcessor) Stop() error {
 }
 
 // Health returns the health of the file processor
-func (fp *FileProcessor) Health() (map[string]interface{}, error) {
-	return map[string]interface{}{
+func (fp *FileProcessor) Health() (map[string]any, error) {
+	return map[string]any{
 		"status":     "healthy",
 		"workers":    fp.workers,
 		"queue_size": len(fp.jobQueue),

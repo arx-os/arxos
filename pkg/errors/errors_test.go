@@ -35,9 +35,9 @@ func TestSentinelErrors(t *testing.T) {
 func TestFormattingFunctions(t *testing.T) {
 	tests := []struct {
 		name   string
-		fn     func(string, ...interface{}) error
+		fn     func(string, ...any) error
 		format string
-		args   []interface{}
+		args   []any
 		want   string
 		check  func(error) bool
 	}{
@@ -45,7 +45,7 @@ func TestFormattingFunctions(t *testing.T) {
 			name:   "NotFoundf",
 			fn:     NotFoundf,
 			format: "user %s",
-			args:   []interface{}{"123"},
+			args:   []any{"123"},
 			want:   "not found: user 123",
 			check:  IsNotFound,
 		},
@@ -53,7 +53,7 @@ func TestFormattingFunctions(t *testing.T) {
 			name:   "AlreadyExistsf",
 			fn:     AlreadyExistsf,
 			format: "building %s",
-			args:   []interface{}{"B1"},
+			args:   []any{"B1"},
 			want:   "already exists: building B1",
 			check:  IsAlreadyExists,
 		},
@@ -61,7 +61,7 @@ func TestFormattingFunctions(t *testing.T) {
 			name:   "InvalidInputf",
 			fn:     InvalidInputf,
 			format: "invalid ID %d",
-			args:   []interface{}{-1},
+			args:   []any{-1},
 			want:   "invalid input: invalid ID -1",
 			check:  IsInvalidInput,
 		},
@@ -69,7 +69,7 @@ func TestFormattingFunctions(t *testing.T) {
 			name:   "Unauthorizedf",
 			fn:     Unauthorizedf,
 			format: "token expired for user %s",
-			args:   []interface{}{"admin"},
+			args:   []any{"admin"},
 			want:   "unauthorized: token expired for user admin",
 			check:  IsUnauthorized,
 		},

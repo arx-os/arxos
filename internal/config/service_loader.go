@@ -22,8 +22,8 @@ func NewServiceConfigLoader(configDir string) *ServiceConfigLoader {
 }
 
 // LoadServiceConfigs loads all service configurations
-func (scl *ServiceConfigLoader) LoadServiceConfigs() (map[string]interface{}, error) {
-	serviceConfigs := make(map[string]interface{})
+func (scl *ServiceConfigLoader) LoadServiceConfigs() (map[string]any, error) {
+	serviceConfigs := make(map[string]any)
 
 	servicesDir := filepath.Join(scl.configDir, "services")
 
@@ -46,13 +46,13 @@ func (scl *ServiceConfigLoader) LoadServiceConfigs() (map[string]interface{}, er
 }
 
 // LoadServiceConfig loads a specific service configuration
-func (scl *ServiceConfigLoader) LoadServiceConfig(serviceName string) (map[string]interface{}, error) {
+func (scl *ServiceConfigLoader) LoadServiceConfig(serviceName string) (map[string]any, error) {
 	servicePath := filepath.Join(scl.configDir, "services", serviceName+".yml")
 	return scl.loadYAMLFile(servicePath)
 }
 
 // loadYAMLFile loads a YAML file and returns its contents as a map
-func (scl *ServiceConfigLoader) loadYAMLFile(filePath string) (map[string]interface{}, error) {
+func (scl *ServiceConfigLoader) loadYAMLFile(filePath string) (map[string]any, error) {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("service config file not found: %s", filePath)
 	}
@@ -65,7 +65,7 @@ func (scl *ServiceConfigLoader) loadYAMLFile(filePath string) (map[string]interf
 	// Process environment variable substitution
 	data = []byte(substituteEnvVars(string(data)))
 
-	var config map[string]interface{}
+	var config map[string]any
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse service config file %s: %w", filePath, err)
 	}
@@ -74,7 +74,7 @@ func (scl *ServiceConfigLoader) loadYAMLFile(filePath string) (map[string]interf
 }
 
 // GetServiceConfigValue gets a specific value from a service config
-func (scl *ServiceConfigLoader) GetServiceConfigValue(serviceName, key string) (interface{}, error) {
+func (scl *ServiceConfigLoader) GetServiceConfigValue(serviceName, key string) (any, error) {
 	config, err := scl.LoadServiceConfig(serviceName)
 	if err != nil {
 		return nil, err

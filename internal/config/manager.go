@@ -116,7 +116,7 @@ func (cm *Manager) SaveConfiguration() error {
 }
 
 // LoadFromTemplate loads configuration from a template
-func (cm *Manager) LoadFromTemplate(templateName string, variables map[string]interface{}) error {
+func (cm *Manager) LoadFromTemplate(templateName string, variables map[string]any) error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
@@ -246,7 +246,7 @@ func (cm *Manager) setupConfigurationSources() {
 	}
 }
 
-func (cm *Manager) generateConfigFromTemplate(template *ConfigTemplate, variables map[string]interface{}) (*Config, error) {
+func (cm *Manager) generateConfigFromTemplate(template *ConfigTemplate, variables map[string]any) (*Config, error) {
 	// Convert template config to JSON
 	templateData, err := json.Marshal(template.Config)
 	if err != nil {

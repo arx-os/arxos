@@ -144,16 +144,16 @@ func (jq *JobQueue) EnqueueWithPriority(job Job, priority Priority) error {
 }
 
 // GetQueueStats returns queue statistics
-func (jq *JobQueue) GetQueueStats() map[string]interface{} {
+func (jq *JobQueue) GetQueueStats() map[string]any {
 	jq.mu.RLock()
 	defer jq.mu.RUnlock()
 
-	workerStats := make([]map[string]interface{}, len(jq.workers))
+	workerStats := make([]map[string]any, len(jq.workers))
 	for i, worker := range jq.workers {
 		workerStats[i] = worker.GetStats()
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"running":        jq.running,
 		"queue_size":     len(jq.jobs),
 		"max_workers":    jq.config.MaxWorkers,
@@ -188,18 +188,18 @@ func (jq *JobQueue) cleanup() {
 
 // Job represents a background job
 type Job struct {
-	ID          string                 `json:"id"`
-	Type        string                 `json:"type"`
-	Priority    Priority               `json:"priority"`
-	Data        map[string]interface{} `json:"data"`
-	CreatedAt   time.Time              `json:"created_at"`
-	ScheduledAt time.Time              `json:"scheduled_at"`
-	Attempts    int                    `json:"attempts"`
-	MaxAttempts int                    `json:"max_attempts"`
-	Status      JobStatus              `json:"status"`
-	Result      interface{}            `json:"result,omitempty"`
-	Error       string                 `json:"error,omitempty"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	ID          string         `json:"id"`
+	Type        string         `json:"type"`
+	Priority    Priority       `json:"priority"`
+	Data        map[string]any `json:"data"`
+	CreatedAt   time.Time      `json:"created_at"`
+	ScheduledAt time.Time      `json:"scheduled_at"`
+	Attempts    int            `json:"attempts"`
+	MaxAttempts int            `json:"max_attempts"`
+	Status      JobStatus      `json:"status"`
+	Result      any            `json:"result,omitempty"`
+	Error       string         `json:"error,omitempty"`
+	Metadata    map[string]any `json:"metadata,omitempty"`
 }
 
 // Priority represents job priority
@@ -224,7 +224,7 @@ const (
 )
 
 // NewJob creates a new job
-func NewJob(jobType string, data map[string]interface{}) *Job {
+func NewJob(jobType string, data map[string]any) *Job {
 	return &Job{
 		ID:          generateJobID(),
 		Type:        jobType,
@@ -235,12 +235,12 @@ func NewJob(jobType string, data map[string]interface{}) *Job {
 		Attempts:    0,
 		MaxAttempts: 3,
 		Status:      JobStatusPending,
-		Metadata:    make(map[string]interface{}),
+		Metadata:    make(map[string]any),
 	}
 }
 
 // NewScheduledJob creates a new scheduled job
-func NewScheduledJob(jobType string, data map[string]interface{}, scheduledAt time.Time) *Job {
+func NewScheduledJob(jobType string, data map[string]any, scheduledAt time.Time) *Job {
 	job := NewJob(jobType, data)
 	job.ScheduledAt = scheduledAt
 	return job
@@ -409,11 +409,11 @@ func (w *Worker) updateStats(success bool, duration time.Duration) {
 }
 
 // GetStats returns worker statistics
-func (w *Worker) GetStats() map[string]interface{} {
+func (w *Worker) GetStats() map[string]any {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	return map[string]interface{}{
+	return map[string]any{
 		"id":             w.ID,
 		"running":        w.running,
 		"jobs_processed": w.stats.JobsProcessed,
@@ -429,7 +429,7 @@ func (w *Worker) GetStats() map[string]interface{} {
 
 // JobProcessor defines the interface for job processors
 type JobProcessor interface {
-	Process(ctx context.Context, job Job) (interface{}, error)
+	Process(ctx context.Context, job Job) (any, error)
 	GetJobType() string
 }
 
@@ -453,6 +453,6 @@ func (bp *BaseProcessor) GetJobType() string {
 }
 
 // Process processes a job (to be implemented by specific processors)
-func (bp *BaseProcessor) Process(ctx context.Context, job Job) (interface{}, error) {
+func (bp *BaseProcessor) Process(ctx context.Context, job Job) (any, error) {
 	return nil, fmt.Errorf("Process method not implemented")
 }

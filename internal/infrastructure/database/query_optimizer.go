@@ -20,8 +20,8 @@ type QueryOptimizer struct {
 
 // QueryCache provides query result caching
 type QueryCache interface {
-	Get(ctx context.Context, key string) (interface{}, error)
-	Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error
+	Get(ctx context.Context, key string) (any, error)
+	Set(ctx context.Context, key string, value any, ttl time.Duration) error
 	Delete(ctx context.Context, key string) error
 	Clear(ctx context.Context) error
 }
@@ -38,14 +38,14 @@ type QueryStats struct {
 
 // QueryPlan represents a query execution plan
 type QueryPlan struct {
-	Query    string                 `json:"query"`
-	Args     []interface{}          `json:"args"`
-	CacheKey string                 `json:"cache_key"`
-	CacheTTL time.Duration          `json:"cache_ttl"`
-	ReadOnly bool                   `json:"read_only"`
-	Timeout  time.Duration          `json:"timeout"`
-	Retries  int                    `json:"retries"`
-	Metadata map[string]interface{} `json:"metadata"`
+	Query    string         `json:"query"`
+	Args     []any          `json:"args"`
+	CacheKey string         `json:"cache_key"`
+	CacheTTL time.Duration  `json:"cache_ttl"`
+	ReadOnly bool           `json:"read_only"`
+	Timeout  time.Duration  `json:"timeout"`
+	Retries  int            `json:"retries"`
+	Metadata map[string]any `json:"metadata"`
 }
 
 // NewQueryOptimizer creates a new query optimizer
@@ -180,9 +180,9 @@ func (qo *QueryOptimizer) executeSelectQuery(ctx context.Context, conn *sqlx.DB,
 	}
 	defer rows.Close()
 
-	var results []map[string]interface{}
+	var results []map[string]any
 	for rows.Next() {
-		row := make(map[string]interface{})
+		row := make(map[string]any)
 		if err := rows.MapScan(row); err != nil {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
@@ -295,7 +295,7 @@ func (qo *QueryOptimizer) isRetryableError(err error) bool {
 }
 
 // GenerateCacheKey generates a cache key for a query
-func (qo *QueryOptimizer) GenerateCacheKey(query string, args []interface{}) string {
+func (qo *QueryOptimizer) GenerateCacheKey(query string, args []any) string {
 	// Simple hash-based cache key generation
 	key := fmt.Sprintf("query:%s:%v", query, args)
 	return fmt.Sprintf("%x", []byte(key))
@@ -310,11 +310,11 @@ func (qo *QueryOptimizer) InvalidateCache(ctx context.Context, pattern string) e
 
 // QueryResult represents the result of a query execution
 type QueryResult struct {
-	Data         []map[string]interface{} `json:"data"`
-	RowsAffected int64                    `json:"rows_affected"`
-	QueryType    string                   `json:"query_type"`
-	Stats        *QueryStats              `json:"stats,omitempty"`
-	Metadata     map[string]interface{}   `json:"metadata,omitempty"`
+	Data         []map[string]any `json:"data"`
+	RowsAffected int64            `json:"rows_affected"`
+	QueryType    string           `json:"query_type"`
+	Stats        *QueryStats      `json:"stats,omitempty"`
+	Metadata     map[string]any   `json:"metadata,omitempty"`
 }
 
 // GetStats returns query execution statistics

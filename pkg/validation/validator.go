@@ -13,10 +13,10 @@ import (
 
 // ValidationError represents a validation error
 type ValidationError struct {
-	Field   string      `json:"field"`
-	Message string      `json:"message"`
-	Code    string      `json:"code"`
-	Value   interface{} `json:"value,omitempty"`
+	Field   string `json:"field"`
+	Message string `json:"message"`
+	Code    string `json:"code"`
+	Value   any    `json:"value,omitempty"`
 }
 
 // Error implements the error interface
@@ -37,7 +37,7 @@ func (vr *ValidationResult) IsValid() bool {
 }
 
 // AddError adds a validation error
-func (vr *ValidationResult) AddError(field, message, code string, value interface{}) {
+func (vr *ValidationResult) AddError(field, message, code string, value any) {
 	vr.Errors = append(vr.Errors, ValidationError{
 		Field:   field,
 		Message: message,
@@ -48,7 +48,7 @@ func (vr *ValidationResult) AddError(field, message, code string, value interfac
 }
 
 // AddWarning adds a validation warning
-func (vr *ValidationResult) AddWarning(field, message, code string, value interface{}) {
+func (vr *ValidationResult) AddWarning(field, message, code string, value any) {
 	vr.Warnings = append(vr.Warnings, ValidationError{
 		Field:   field,
 		Message: message,
@@ -59,21 +59,21 @@ func (vr *ValidationResult) AddWarning(field, message, code string, value interf
 
 // Validator defines the interface for validators
 type Validator interface {
-	Validate(value interface{}) *ValidationResult
+	Validate(value any) *ValidationResult
 	GetRules() []ValidationRule
 }
 
 // ValidationRule represents a single validation rule
 type ValidationRule struct {
-	Name        string                 `json:"name"`
-	Description string                 `json:"description"`
-	Required    bool                   `json:"required"`
-	Type        string                 `json:"type"`
-	Min         interface{}            `json:"min,omitempty"`
-	Max         interface{}            `json:"max,omitempty"`
-	Pattern     string                 `json:"pattern,omitempty"`
-	Options     []interface{}          `json:"options,omitempty"`
-	Custom      func(interface{}) bool `json:"-"`
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	Required    bool           `json:"required"`
+	Type        string         `json:"type"`
+	Min         any            `json:"min,omitempty"`
+	Max         any            `json:"max,omitempty"`
+	Pattern     string         `json:"pattern,omitempty"`
+	Options     []any          `json:"options,omitempty"`
+	Custom      func(any) bool `json:"-"`
 }
 
 // BaseValidator provides common validation functionality
@@ -94,7 +94,7 @@ func (bv *BaseValidator) AddRule(field string, rule ValidationRule) {
 }
 
 // Validate validates a struct against its rules
-func (bv *BaseValidator) Validate(value interface{}) *ValidationResult {
+func (bv *BaseValidator) Validate(value any) *ValidationResult {
 	result := &ValidationResult{Valid: true}
 
 	v := reflect.ValueOf(value)
@@ -134,7 +134,7 @@ func (bv *BaseValidator) Validate(value interface{}) *ValidationResult {
 }
 
 // validateField validates a single field against its rules
-func (bv *BaseValidator) validateField(fieldName string, value interface{}, rules []ValidationRule) *ValidationResult {
+func (bv *BaseValidator) validateField(fieldName string, value any, rules []ValidationRule) *ValidationResult {
 	result := &ValidationResult{Valid: true}
 
 	for _, rule := range rules {
@@ -150,7 +150,7 @@ func (bv *BaseValidator) validateField(fieldName string, value interface{}, rule
 }
 
 // validateRule validates a field against a single rule
-func (bv *BaseValidator) validateRule(fieldName string, value interface{}, rule ValidationRule) *ValidationResult {
+func (bv *BaseValidator) validateRule(fieldName string, value any, rule ValidationRule) *ValidationResult {
 	result := &ValidationResult{Valid: true}
 
 	// Check required
@@ -206,7 +206,7 @@ func (bv *BaseValidator) validateRule(fieldName string, value interface{}, rule 
 }
 
 // validateType validates the type of a value
-func (bv *BaseValidator) validateType(value interface{}, expectedType string) bool {
+func (bv *BaseValidator) validateType(value any, expectedType string) bool {
 	switch expectedType {
 	case "string":
 		_, ok := value.(string)
@@ -242,7 +242,7 @@ func (bv *BaseValidator) validateType(value interface{}, expectedType string) bo
 }
 
 // validateRange validates the range of a value
-func (bv *BaseValidator) validateRange(value interface{}, min, max interface{}) error {
+func (bv *BaseValidator) validateRange(value any, min, max any) error {
 	switch v := value.(type) {
 	case int:
 		if min != nil {
@@ -293,7 +293,7 @@ func (bv *BaseValidator) validateRange(value interface{}, min, max interface{}) 
 }
 
 // validatePattern validates a value against a regex pattern
-func (bv *BaseValidator) validatePattern(value interface{}, pattern string) error {
+func (bv *BaseValidator) validatePattern(value any, pattern string) error {
 	str, ok := value.(string)
 	if !ok {
 		return fmt.Errorf("pattern validation only applies to strings")
@@ -312,7 +312,7 @@ func (bv *BaseValidator) validatePattern(value interface{}, pattern string) erro
 }
 
 // validateOptions validates that a value is one of the allowed options
-func (bv *BaseValidator) validateOptions(value interface{}, options []interface{}) error {
+func (bv *BaseValidator) validateOptions(value any, options []any) error {
 	for _, option := range options {
 		if reflect.DeepEqual(value, option) {
 			return nil
@@ -323,7 +323,7 @@ func (bv *BaseValidator) validateOptions(value interface{}, options []interface{
 
 // Helper functions
 
-func isEmpty(value interface{}) bool {
+func isEmpty(value any) bool {
 	if value == nil {
 		return true
 	}

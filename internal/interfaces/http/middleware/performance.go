@@ -10,7 +10,7 @@ import (
 )
 
 // PerformanceMiddleware provides performance monitoring for HTTP requests
-func PerformanceMiddleware(metricsCollector interface{}, logger domain.Logger) func(http.Handler) http.Handler {
+func PerformanceMiddleware(metricsCollector any, logger domain.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
@@ -46,7 +46,7 @@ func (pw *performanceResponseWriter) WriteHeader(code int) {
 }
 
 // recordHTTPMetrics records HTTP performance metrics
-func recordHTTPMetrics(metricsCollector interface{}, r *http.Request, statusCode int, duration time.Duration, logger domain.Logger) {
+func recordHTTPMetrics(metricsCollector any, r *http.Request, statusCode int, duration time.Duration, logger domain.Logger) {
 	// This is a simplified implementation
 	// In a real implementation, you would use the metricsCollector to record metrics
 
@@ -59,9 +59,9 @@ func recordHTTPMetrics(metricsCollector interface{}, r *http.Request, statusCode
 }
 
 // DatabasePerformanceMiddleware provides performance monitoring for database operations
-func DatabasePerformanceMiddleware(logger domain.Logger) func(func(context.Context, string, ...interface{}) error) func(context.Context, string, ...interface{}) error {
-	return func(dbFunc func(context.Context, string, ...interface{}) error) func(context.Context, string, ...interface{}) error {
-		return func(ctx context.Context, query string, args ...interface{}) error {
+func DatabasePerformanceMiddleware(logger domain.Logger) func(func(context.Context, string, ...any) error) func(context.Context, string, ...any) error {
+	return func(dbFunc func(context.Context, string, ...any) error) func(context.Context, string, ...any) error {
+		return func(ctx context.Context, query string, args ...any) error {
 			start := time.Now()
 
 			err := dbFunc(ctx, query, args...)
@@ -89,9 +89,9 @@ func recordDatabaseMetrics(query string, duration time.Duration, err error, logg
 }
 
 // CachePerformanceMiddleware provides performance monitoring for cache operations
-func CachePerformanceMiddleware(logger domain.Logger) func(func(context.Context, string) (interface{}, error)) func(context.Context, string) (interface{}, error) {
-	return func(cacheFunc func(context.Context, string) (interface{}, error)) func(context.Context, string) (interface{}, error) {
-		return func(ctx context.Context, key string) (interface{}, error) {
+func CachePerformanceMiddleware(logger domain.Logger) func(func(context.Context, string) (any, error)) func(context.Context, string) (any, error) {
+	return func(cacheFunc func(context.Context, string) (any, error)) func(context.Context, string) (any, error) {
+		return func(ctx context.Context, key string) (any, error) {
 			start := time.Now()
 
 			result, err := cacheFunc(ctx, key)
@@ -166,7 +166,7 @@ func (ps *PerformanceStats) RecordRequest(statusCode int, latency time.Duration)
 }
 
 // GetStats returns current performance statistics
-func (ps *PerformanceStats) GetStats() map[string]interface{} {
+func (ps *PerformanceStats) GetStats() map[string]any {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
 
@@ -175,7 +175,7 @@ func (ps *PerformanceStats) GetStats() map[string]interface{} {
 		avgLatency = ps.totalLatency / time.Duration(ps.requestCount)
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"request_count":   ps.requestCount,
 		"success_count":   ps.successCount,
 		"error_count":     ps.errorCount,
@@ -243,10 +243,10 @@ func NewPerformanceMonitor(config *PerformanceConfig, logger domain.Logger) *Per
 }
 
 // GetPerformanceReport returns a comprehensive performance report
-func (pm *PerformanceMonitor) GetPerformanceReport() map[string]interface{} {
+func (pm *PerformanceMonitor) GetPerformanceReport() map[string]any {
 	stats := pm.stats.GetStats()
 
-	report := map[string]interface{}{
+	report := map[string]any{
 		"timestamp": time.Now(),
 		"config":    pm.config,
 		"stats":     stats,
@@ -257,7 +257,7 @@ func (pm *PerformanceMonitor) GetPerformanceReport() map[string]interface{} {
 }
 
 // getHealthStatus returns the health status based on performance metrics
-func (pm *PerformanceMonitor) getHealthStatus() map[string]interface{} {
+func (pm *PerformanceMonitor) getHealthStatus() map[string]any {
 	stats := pm.stats.GetStats()
 
 	requestCount := stats["request_count"].(int64)
@@ -277,11 +277,11 @@ func (pm *PerformanceMonitor) getHealthStatus() map[string]interface{} {
 		status = "unhealthy"
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"status":      status,
 		"error_rate":  errorRate,
 		"avg_latency": avgLatency,
-		"thresholds": map[string]interface{}{
+		"thresholds": map[string]any{
 			"slow_request": pm.config.SlowRequestThreshold,
 			"error_rate":   10.0,
 		},

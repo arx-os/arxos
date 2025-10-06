@@ -74,7 +74,7 @@ func (cm *ConfigMigrator) MigrateConfig(sourcePath, targetPath string) (*Migrati
 	}
 
 	// Parse source file
-	var sourceConfig map[string]interface{}
+	var sourceConfig map[string]any
 	if err := yaml.Unmarshal(data, &sourceConfig); err != nil {
 		result.Error = fmt.Errorf("failed to parse source file: %w", err)
 		return result, result.Error
@@ -163,10 +163,10 @@ func (cm *ConfigMigrator) migrateServiceConfigs() ([]MigrationResult, error) {
 }
 
 // migrateConfigData migrates configuration data from old format to new format
-func (cm *ConfigMigrator) migrateConfigData(source map[string]interface{}, sourcePath string) (map[string]interface{}, []string, []string, error) {
+func (cm *ConfigMigrator) migrateConfigData(source map[string]any, sourcePath string) (map[string]any, []string, []string, error) {
 	var warnings []string
 	var changes []string
-	migrated := make(map[string]interface{})
+	migrated := make(map[string]any)
 
 	// Copy all fields from source
 	for key, value := range source {
@@ -200,7 +200,7 @@ func (cm *ConfigMigrator) migrateConfigData(source map[string]interface{}, sourc
 }
 
 // migrateEnvironmentConfig migrates environment-specific configuration
-func (cm *ConfigMigrator) migrateEnvironmentConfig(config map[string]interface{}) ([]string, []string) {
+func (cm *ConfigMigrator) migrateEnvironmentConfig(config map[string]any) ([]string, []string) {
 	var warnings []string
 	var changes []string
 
@@ -235,19 +235,19 @@ func (cm *ConfigMigrator) migrateEnvironmentConfig(config map[string]interface{}
 }
 
 // migratePostGISConfig migrates PostGIS configuration
-func (cm *ConfigMigrator) migratePostGISConfig(config map[string]interface{}) ([]string, []string) {
+func (cm *ConfigMigrator) migratePostGISConfig(config map[string]any) ([]string, []string) {
 	var warnings []string
 	var changes []string
 
 	// Ensure postgis section exists
 	if _, exists := config["postgis"]; !exists {
-		config["postgis"] = make(map[string]interface{})
+		config["postgis"] = make(map[string]any)
 		changes = append(changes, "Added postgis section")
 	}
 
-	postgis, ok := config["postgis"].(map[string]interface{})
+	postgis, ok := config["postgis"].(map[string]any)
 	if !ok {
-		postgis = make(map[string]interface{})
+		postgis = make(map[string]any)
 		config["postgis"] = postgis
 	}
 
@@ -286,19 +286,19 @@ func (cm *ConfigMigrator) migratePostGISConfig(config map[string]interface{}) ([
 }
 
 // migrateRedisConfig migrates Redis configuration
-func (cm *ConfigMigrator) migrateRedisConfig(config map[string]interface{}) ([]string, []string) {
+func (cm *ConfigMigrator) migrateRedisConfig(config map[string]any) ([]string, []string) {
 	var warnings []string
 	var changes []string
 
 	// Ensure redis section exists
 	if _, exists := config["redis"]; !exists {
-		config["redis"] = make(map[string]interface{})
+		config["redis"] = make(map[string]any)
 		changes = append(changes, "Added redis section")
 	}
 
-	redis, ok := config["redis"].(map[string]interface{})
+	redis, ok := config["redis"].(map[string]any)
 	if !ok {
-		redis = make(map[string]interface{})
+		redis = make(map[string]any)
 		config["redis"] = redis
 	}
 
@@ -322,19 +322,19 @@ func (cm *ConfigMigrator) migrateRedisConfig(config map[string]interface{}) ([]s
 }
 
 // migrateIFCConfig migrates IFC service configuration
-func (cm *ConfigMigrator) migrateIFCConfig(config map[string]interface{}) ([]string, []string) {
+func (cm *ConfigMigrator) migrateIFCConfig(config map[string]any) ([]string, []string) {
 	var warnings []string
 	var changes []string
 
 	// Ensure ifc_service section exists
 	if _, exists := config["ifc_service"]; !exists {
-		config["ifc_service"] = make(map[string]interface{})
+		config["ifc_service"] = make(map[string]any)
 		changes = append(changes, "Added ifc_service section")
 	}
 
-	ifc, ok := config["ifc_service"].(map[string]interface{})
+	ifc, ok := config["ifc_service"].(map[string]any)
 	if !ok {
-		ifc = make(map[string]interface{})
+		ifc = make(map[string]any)
 		config["ifc_service"] = ifc
 	}
 

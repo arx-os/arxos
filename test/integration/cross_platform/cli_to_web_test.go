@@ -124,7 +124,7 @@ func TestCLIToWebIntegration(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		require.NoError(t, err)
 
@@ -155,7 +155,7 @@ func TestCLIToWebIntegration(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		require.NoError(t, err)
 
@@ -180,11 +180,11 @@ func TestCLIToWebIntegration(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		require.NoError(t, err)
 
-		components := response["components"].([]interface{})
+		components := response["components"].([]any)
 		assert.NotEmpty(t, components)
 	})
 }
@@ -197,7 +197,7 @@ func TestWebToCLIIntegration(t *testing.T) {
 
 	t.Run("WebCreateBuildingCLIView", func(t *testing.T) {
 		// Simulate Web creating building via API
-		reqBody := map[string]interface{}{
+		reqBody := map[string]any{
 			"name":    "Web Created Building",
 			"address": "789 Web Street",
 			"coordinates": map[string]float64{
@@ -220,7 +220,7 @@ func TestWebToCLIIntegration(t *testing.T) {
 
 		assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		require.NoError(t, err)
 
@@ -238,7 +238,7 @@ func TestWebToCLIIntegration(t *testing.T) {
 
 	t.Run("WebUpdateEquipmentCLIView", func(t *testing.T) {
 		// Simulate Web updating equipment via API
-		updateBody := map[string]interface{}{
+		updateBody := map[string]any{
 			"status": "needs_repair",
 		}
 
@@ -300,7 +300,7 @@ func TestMobileToBackendIntegration(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		require.NoError(t, err)
 
@@ -336,7 +336,7 @@ func TestRealTimeSyncIntegration(t *testing.T) {
 		suite.wsConn = conn
 
 		// Subscribe to building updates
-		subscribeMsg := map[string]interface{}{
+		subscribeMsg := map[string]any{
 			"type":    "subscribe",
 			"channel": "buildings",
 		}
@@ -360,14 +360,14 @@ func TestRealTimeSyncIntegration(t *testing.T) {
 		_, messageData, err := conn.ReadMessage()
 		require.NoError(t, err)
 
-		var update map[string]interface{}
+		var update map[string]any
 		err = json.Unmarshal(messageData, &update)
 		require.NoError(t, err)
 
 		assert.Equal(t, "building_updated", update["type"])
 		assert.NotNil(t, update["data"])
 
-		data := update["data"].(map[string]interface{})
+		data := update["data"].(map[string]any)
 		assert.Equal(t, "cross-platform-building-1", data["id"])
 		assert.Equal(t, "Real-Time Updated Building", data["name"])
 	})
@@ -380,7 +380,7 @@ func TestRealTimeSyncIntegration(t *testing.T) {
 		defer conn.Close()
 
 		// Subscribe to equipment updates
-		subscribeMsg := map[string]interface{}{
+		subscribeMsg := map[string]any{
 			"type":    "subscribe",
 			"channel": "equipment",
 		}
@@ -403,14 +403,14 @@ func TestRealTimeSyncIntegration(t *testing.T) {
 		_, messageData, err := conn.ReadMessage()
 		require.NoError(t, err)
 
-		var update map[string]interface{}
+		var update map[string]any
 		err = json.Unmarshal(messageData, &update)
 		require.NoError(t, err)
 
 		assert.Equal(t, "equipment_updated", update["type"])
 		assert.NotNil(t, update["data"])
 
-		data := update["data"].(map[string]interface{})
+		data := update["data"].(map[string]any)
 		assert.Equal(t, "cross-platform-equipment-1", data["id"])
 		assert.Equal(t, "operational", data["status"])
 	})
@@ -436,7 +436,7 @@ func TestDataConsistencyIntegration(t *testing.T) {
 		require.NoError(t, err)
 
 		// Create equipment via Web API
-		equipmentReqBody := map[string]interface{}{
+		equipmentReqBody := map[string]any{
 			"building_id": building.ID,
 			"name":        "Consistency Test Equipment",
 			"type":        "HVAC",
@@ -461,7 +461,7 @@ func TestDataConsistencyIntegration(t *testing.T) {
 
 		assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-		var equipmentResponse map[string]interface{}
+		var equipmentResponse map[string]any
 		err = json.NewDecoder(resp.Body).Decode(&equipmentResponse)
 		require.NoError(t, err)
 
@@ -505,7 +505,7 @@ func TestDataConsistencyIntegration(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, equipmentResp.StatusCode)
 
-		var equipmentData map[string]interface{}
+		var equipmentData map[string]any
 		err = json.NewDecoder(equipmentResp.Body).Decode(&equipmentData)
 		require.NoError(t, err)
 

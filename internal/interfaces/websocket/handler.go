@@ -127,7 +127,7 @@ func (h *Handler) ServeWSWithAuth(authFunc func(*http.Request) (string, error)) 
 }
 
 // BroadcastToRoom broadcasts a message to all clients in a room
-func (h *Handler) BroadcastToRoom(roomID string, messageType string, content string, data map[string]interface{}) {
+func (h *Handler) BroadcastToRoom(roomID string, messageType string, content string, data map[string]any) {
 	msg := Message{
 		Type:      messageType,
 		Content:   content,
@@ -140,7 +140,7 @@ func (h *Handler) BroadcastToRoom(roomID string, messageType string, content str
 }
 
 // BroadcastToTopic broadcasts a message to all clients subscribed to a topic
-func (h *Handler) BroadcastToTopic(topic string, messageType string, content string, data map[string]interface{}) {
+func (h *Handler) BroadcastToTopic(topic string, messageType string, content string, data map[string]any) {
 	msg := Message{
 		Type:      messageType,
 		Content:   content,
@@ -153,7 +153,7 @@ func (h *Handler) BroadcastToTopic(topic string, messageType string, content str
 }
 
 // SendToUser sends a message to all clients of a specific user
-func (h *Handler) SendToUser(userID string, messageType string, content string, data map[string]interface{}) {
+func (h *Handler) SendToUser(userID string, messageType string, content string, data map[string]any) {
 	msg := Message{
 		Type:      messageType,
 		Content:   content,
@@ -178,21 +178,21 @@ func (h *Handler) BroadcastSystemMessage(messageType string, content string) {
 }
 
 // GetHubStats returns hub statistics
-func (h *Handler) GetHubStats() map[string]interface{} {
+func (h *Handler) GetHubStats() map[string]any {
 	return h.hub.GetHubStats()
 }
 
 // GetClientStats returns client statistics
-func (h *Handler) GetClientStats() map[string]interface{} {
+func (h *Handler) GetClientStats() map[string]any {
 	h.hub.mu.RLock()
 	defer h.hub.mu.RUnlock()
 
-	clientStats := make(map[string]interface{})
+	clientStats := make(map[string]any)
 	for client := range h.hub.clients {
 		clientStats[client.ID] = client.GetClientInfo()
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"total_clients": len(h.hub.clients),
 		"clients":       clientStats,
 	}

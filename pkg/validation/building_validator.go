@@ -24,7 +24,7 @@ func NewBuildingValidator() *BuildingValidator {
 		Type:        "string",
 		Min:         1,
 		Max:         100,
-		Custom: func(value interface{}) bool {
+		Custom: func(value any) bool {
 			if str, ok := value.(string); ok {
 				return isValidBuildingID(str)
 			}
@@ -40,7 +40,7 @@ func NewBuildingValidator() *BuildingValidator {
 		Type:        "string",
 		Min:         1,
 		Max:         200,
-		Custom: func(value interface{}) bool {
+		Custom: func(value any) bool {
 			if str, ok := value.(string); ok {
 				return isValidBuildingName(str)
 			}
@@ -55,7 +55,7 @@ func NewBuildingValidator() *BuildingValidator {
 		Required:    false,
 		Type:        "string",
 		Max:         500,
-		Custom: func(value interface{}) bool {
+		Custom: func(value any) bool {
 			if str, ok := value.(string); ok {
 				return isValidAddress(str)
 			}
@@ -69,7 +69,7 @@ func NewBuildingValidator() *BuildingValidator {
 		Description: "Building type must be one of the valid types",
 		Required:    false,
 		Type:        "string",
-		Options: []interface{}{
+		Options: []any{
 			"office", "residential", "commercial", "industrial",
 			"educational", "healthcare", "retail", "warehouse", "mixed",
 		},
@@ -81,7 +81,7 @@ func NewBuildingValidator() *BuildingValidator {
 		Description: "Building status must be one of the valid statuses",
 		Required:    false,
 		Type:        "string",
-		Options: []interface{}{
+		Options: []any{
 			"active", "inactive", "maintenance", "construction", "demolished",
 		},
 	})
@@ -110,7 +110,7 @@ func NewBuildingValidator() *BuildingValidator {
 }
 
 // ValidateBuilding validates a building struct
-func (bv *BuildingValidator) ValidateBuilding(building interface{}) *ValidationResult {
+func (bv *BuildingValidator) ValidateBuilding(building any) *ValidationResult {
 	result := bv.Validate(building)
 
 	// Additional business rule validations
@@ -122,7 +122,7 @@ func (bv *BuildingValidator) ValidateBuilding(building interface{}) *ValidationR
 }
 
 // validateBusinessRules validates additional business rules
-func (bv *BuildingValidator) validateBusinessRules(building interface{}, result *ValidationResult) {
+func (bv *BuildingValidator) validateBusinessRules(building any, result *ValidationResult) {
 	// This would contain additional business logic validation
 	// For example, checking that certain combinations of fields are valid
 	// or that the building meets specific requirements
@@ -215,7 +215,7 @@ func NewEquipmentValidator() *EquipmentValidator {
 		Description: "Equipment type must be a valid type",
 		Required:    true,
 		Type:        "string",
-		Options: []interface{}{
+		Options: []any{
 			"hvac", "electrical", "plumbing", "security", "fire_safety",
 			"lighting", "elevator", "generator", "sensor", "controller",
 		},
@@ -228,7 +228,7 @@ func NewEquipmentValidator() *EquipmentValidator {
 		Required:    false,
 		Type:        "string",
 		Pattern:     `^[A-Z0-9]+(/[A-Z0-9]+)*$`,
-		Custom: func(value interface{}) bool {
+		Custom: func(value any) bool {
 			if str, ok := value.(string); ok {
 				return isValidEquipmentPath(str)
 			}
@@ -242,7 +242,7 @@ func NewEquipmentValidator() *EquipmentValidator {
 		Description: "Equipment status must be a valid status",
 		Required:    false,
 		Type:        "string",
-		Options: []interface{}{
+		Options: []any{
 			"OPERATIONAL", "DEGRADED", "FAILED", "MAINTENANCE", "OFFLINE", "UNKNOWN",
 		},
 	})
@@ -294,7 +294,7 @@ func NewRoomValidator() *RoomValidator {
 		Description: "Room type must be a valid type",
 		Required:    false,
 		Type:        "string",
-		Options: []interface{}{
+		Options: []any{
 			"office", "conference", "lobby", "restroom", "storage", "mechanical",
 			"electrical", "server", "kitchen", "break_room", "reception",
 		},
@@ -426,11 +426,11 @@ func isValidEquipmentPath(path string) bool {
 
 // ValidationContext provides context for validation
 type ValidationContext struct {
-	BuildingID string                 `json:"building_id,omitempty"`
-	UserID     string                 `json:"user_id,omitempty"`
-	Operation  string                 `json:"operation,omitempty"` // create, update, delete
-	Timestamp  time.Time              `json:"timestamp"`
-	Metadata   map[string]interface{} `json:"metadata,omitempty"`
+	BuildingID string         `json:"building_id,omitempty"`
+	UserID     string         `json:"user_id,omitempty"`
+	Operation  string         `json:"operation,omitempty"` // create, update, delete
+	Timestamp  time.Time      `json:"timestamp"`
+	Metadata   map[string]any `json:"metadata,omitempty"`
 }
 
 // NewValidationContext creates a new validation context
@@ -440,12 +440,12 @@ func NewValidationContext(buildingID, userID, operation string) *ValidationConte
 		UserID:     userID,
 		Operation:  operation,
 		Timestamp:  time.Now(),
-		Metadata:   make(map[string]interface{}),
+		Metadata:   make(map[string]any),
 	}
 }
 
 // ValidateWithContext validates data with additional context
-func (vc *ValidationContext) ValidateWithContext(validator Validator, data interface{}) *ValidationResult {
+func (vc *ValidationContext) ValidateWithContext(validator Validator, data any) *ValidationResult {
 	result := validator.Validate(data)
 
 	// Add context-specific validations

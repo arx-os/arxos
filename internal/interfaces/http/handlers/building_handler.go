@@ -73,7 +73,7 @@ func (h *BuildingHandler) ListBuildings(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Return response using BaseHandler
-	response := map[string]interface{}{
+	response := map[string]any{
 		"buildings": buildings,
 		"limit":     limit,
 		"offset":    offset,

@@ -63,8 +63,8 @@ func (fw *FileWatcher) Events() <-chan *domain.FileEvent {
 }
 
 // Health returns the health of the file watcher
-func (fw *FileWatcher) Health() (map[string]interface{}, error) {
-	return map[string]interface{}{
+func (fw *FileWatcher) Health() (map[string]any, error) {
+	return map[string]any{
 		"status":       "healthy",
 		"watch_paths":  len(fw.watchPaths),
 		"event_buffer": len(fw.events),

@@ -20,24 +20,24 @@ type Handler struct {
 
 // GraphQLRequest represents a GraphQL request
 type GraphQLRequest struct {
-	Query         string                 `json:"query"`
-	Variables     map[string]interface{} `json:"variables"`
-	OperationName string                 `json:"operationName"`
+	Query         string         `json:"query"`
+	Variables     map[string]any `json:"variables"`
+	OperationName string         `json:"operationName"`
 }
 
 // GraphQLResponse represents a GraphQL response
 type GraphQLResponse struct {
-	Data       interface{}            `json:"data,omitempty"`
-	Errors     []GraphQLError         `json:"errors,omitempty"`
-	Extensions map[string]interface{} `json:"extensions,omitempty"`
+	Data       any            `json:"data,omitempty"`
+	Errors     []GraphQLError `json:"errors,omitempty"`
+	Extensions map[string]any `json:"extensions,omitempty"`
 }
 
 // GraphQLError represents a GraphQL error
 type GraphQLError struct {
-	Message    string                 `json:"message"`
-	Locations  []ErrorLocation        `json:"locations,omitempty"`
-	Path       []interface{}          `json:"path,omitempty"`
-	Extensions map[string]interface{} `json:"extensions,omitempty"`
+	Message    string          `json:"message"`
+	Locations  []ErrorLocation `json:"locations,omitempty"`
+	Path       []any           `json:"path,omitempty"`
+	Extensions map[string]any  `json:"extensions,omitempty"`
 }
 
 // ErrorLocation represents the location of an error
@@ -112,7 +112,7 @@ func (h *Handler) parseGetRequest(r *http.Request) (GraphQLRequest, error) {
 		return GraphQLRequest{}, fmt.Errorf("query parameter is required")
 	}
 
-	var variables map[string]interface{}
+	var variables map[string]any
 	if vars := r.URL.Query().Get("variables"); vars != "" {
 		if err := json.Unmarshal([]byte(vars), &variables); err != nil {
 			return GraphQLRequest{}, fmt.Errorf("invalid variables: %v", err)

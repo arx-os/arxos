@@ -7,15 +7,15 @@ import (
 
 // Change represents a data change
 type Change struct {
-	ID        string                 `json:"id"`
-	ChangeID  string                 `json:"change_id"` // Alias for ID for compatibility
-	Type      string                 `json:"type"`      // create, update, delete
-	Entity    string                 `json:"entity"`    // building, equipment, room
-	EntityID  string                 `json:"entity_id"`
-	Data      map[string]interface{} `json:"data"`
-	Timestamp time.Time              `json:"timestamp"`
-	UserID    string                 `json:"user_id"`
-	Version   int                    `json:"version,omitempty"`
+	ID        string         `json:"id"`
+	ChangeID  string         `json:"change_id"` // Alias for ID for compatibility
+	Type      string         `json:"type"`      // create, update, delete
+	Entity    string         `json:"entity"`    // building, equipment, room
+	EntityID  string         `json:"entity_id"`
+	Data      map[string]any `json:"data"`
+	Timestamp time.Time      `json:"timestamp"`
+	UserID    string         `json:"user_id"`
+	Version   int            `json:"version,omitempty"`
 }
 
 // GetChangeID returns the change ID
@@ -28,28 +28,28 @@ func (c *Change) GetChangeID() string {
 
 // Conflict represents a sync conflict
 type Conflict struct {
-	ID            string                 `json:"id"`
-	Entity        string                 `json:"entity"`
-	EntityID      string                 `json:"entity_id"`
-	ConflictType  string                 `json:"conflict_type"`
-	LocalVersion  int                    `json:"local_version"`
-	RemoteVersion int                    `json:"remote_version"`
-	LocalData     map[string]interface{} `json:"local_data"`
-	RemoteData    map[string]interface{} `json:"remote_data"`
-	LocalChange   *Change                `json:"local_change,omitempty"`
-	RemoteChange  *Change                `json:"remote_change,omitempty"`
-	Resolution    string                 `json:"resolution"`
-	ResolvedBy    string                 `json:"resolved_by,omitempty"`
-	CreatedAt     time.Time              `json:"created_at"`
-	ResolvedAt    *time.Time             `json:"resolved_at,omitempty"`
+	ID            string         `json:"id"`
+	Entity        string         `json:"entity"`
+	EntityID      string         `json:"entity_id"`
+	ConflictType  string         `json:"conflict_type"`
+	LocalVersion  int            `json:"local_version"`
+	RemoteVersion int            `json:"remote_version"`
+	LocalData     map[string]any `json:"local_data"`
+	RemoteData    map[string]any `json:"remote_data"`
+	LocalChange   *Change        `json:"local_change,omitempty"`
+	RemoteChange  *Change        `json:"remote_change,omitempty"`
+	Resolution    string         `json:"resolution"`
+	ResolvedBy    string         `json:"resolved_by,omitempty"`
+	CreatedAt     time.Time      `json:"created_at"`
+	ResolvedAt    *time.Time     `json:"resolved_at,omitempty"`
 }
 
 // SyncRequest represents a synchronization request
 type SyncRequest struct {
-	BuildingID string                 `json:"building_id"`
-	Changes    []Change               `json:"changes"`
-	LastSync   time.Time              `json:"last_sync"`
-	Metadata   map[string]interface{} `json:"metadata"`
+	BuildingID string         `json:"building_id"`
+	Changes    []Change       `json:"changes"`
+	LastSync   time.Time      `json:"last_sync"`
+	Metadata   map[string]any `json:"metadata"`
 }
 
 // SyncResponse represents a synchronization response

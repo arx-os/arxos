@@ -10,11 +10,11 @@ import (
 
 // ErrorResponse represents a standardized error response
 type ErrorResponse struct {
-	Error     string                 `json:"error"`
-	Message   string                 `json:"message"`
-	Code      string                 `json:"code,omitempty"`
-	RequestID string                 `json:"request_id,omitempty"`
-	Details   map[string]interface{} `json:"details,omitempty"`
+	Error     string         `json:"error"`
+	Message   string         `json:"message"`
+	Code      string         `json:"code,omitempty"`
+	RequestID string         `json:"request_id,omitempty"`
+	Details   map[string]any `json:"details,omitempty"`
 }
 
 // ErrorHandlerMiddleware provides centralized error handling
@@ -42,7 +42,7 @@ type panicResponseWriter struct {
 	logger domain.Logger
 }
 
-func (prw *panicResponseWriter) handlePanic(err interface{}, r *http.Request) {
+func (prw *panicResponseWriter) handlePanic(err any, r *http.Request) {
 	// Log the panic
 	prw.logger.Error("HTTP Handler Panic",
 		"error", err,
@@ -66,7 +66,7 @@ func (prw *panicResponseWriter) handlePanic(err interface{}, r *http.Request) {
 }
 
 // WriteErrorResponse writes a standardized error response
-func WriteErrorResponse(w http.ResponseWriter, r *http.Request, statusCode int, error, message, code string, details map[string]interface{}) {
+func WriteErrorResponse(w http.ResponseWriter, r *http.Request, statusCode int, error, message, code string, details map[string]any) {
 	errorResp := ErrorResponse{
 		Error:     error,
 		Message:   message,
@@ -86,7 +86,7 @@ func ValidationErrorResponse(w http.ResponseWriter, r *http.Request, validationE
 		"Validation Error",
 		"Request validation failed",
 		"VALIDATION_ERROR",
-		map[string]interface{}{"validation_errors": validationErrors})
+		map[string]any{"validation_errors": validationErrors})
 }
 
 // NotFoundErrorResponse writes a not found error response

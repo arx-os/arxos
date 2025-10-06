@@ -199,7 +199,7 @@ func (tdb *TestDataBuilder) BuildTestSpatialData(ctx context.Context, equipmentI
 		Platform:         "ARKit",
 		Stability:        0.9,
 		Range:            10.0, // 10 meters
-		Metadata:         map[string]interface{}{"source": "test", "quality": "high"},
+		Metadata:         map[string]any{"source": "test", "quality": "high"},
 	}
 
 	return anchor, nil
@@ -245,7 +245,7 @@ func (tdb *TestDataBuilder) BuildTestARData(ctx context.Context, equipmentID str
 		Criticality:  "medium",
 		Color:        "#00ff00",
 		Tags:         []string{"equipment", "ar", "test"},
-		Attrs:        map[string]interface{}{"test": true, "generated": true},
+		Attrs:        map[string]any{"test": true, "generated": true},
 	}
 
 	overlay := &domain.EquipmentAROverlay{

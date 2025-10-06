@@ -17,15 +17,17 @@ type HealthStatus struct {
 
 // SystemServiceProvider provides access to system services
 type SystemServiceProvider interface {
-	GetHealthService() interface {
-		CheckHealth(ctx context.Context) (*HealthStatus, error)
-	}
+	GetHealthService() HealthService
 	GetDatabaseService() domain.Database
 	GetLoggerService() domain.Logger
 }
 
+type HealthService interface {
+	CheckHealth(ctx context.Context) (*HealthStatus, error)
+}
+
 // CreateInstallCommand creates the install command
-func CreateInstallCommand(serviceContext interface{}) *cobra.Command {
+func CreateInstallCommand(serviceContext any) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "install",
 		Short: "Install ArxOS system components",
@@ -95,7 +97,7 @@ This command will:
 }
 
 // CreateHealthCommand creates the health command
-func CreateHealthCommand(serviceContext interface{}) *cobra.Command {
+func CreateHealthCommand(serviceContext any) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "health",
 		Short: "Check system health",
@@ -162,7 +164,7 @@ This command performs comprehensive health checks:
 }
 
 // CreateMigrateCommand creates the migrate command
-func CreateMigrateCommand(serviceContext interface{}) *cobra.Command {
+func CreateMigrateCommand(serviceContext any) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "migrate",
 		Short: "Database migration commands",
@@ -207,7 +209,7 @@ func getHealthIcon(status string) string {
 }
 
 // createMigrateUpCommand creates the migrate up command
-func createMigrateUpCommand(serviceContext interface{}) *cobra.Command {
+func createMigrateUpCommand(serviceContext any) *cobra.Command {
 	return &cobra.Command{
 		Use:   "up",
 		Short: "Run pending migrations",
@@ -222,7 +224,7 @@ func createMigrateUpCommand(serviceContext interface{}) *cobra.Command {
 }
 
 // createMigrateDownCommand creates the migrate down command
-func createMigrateDownCommand(serviceContext interface{}) *cobra.Command {
+func createMigrateDownCommand(serviceContext any) *cobra.Command {
 	return &cobra.Command{
 		Use:   "down",
 		Short: "Rollback last migration",
@@ -237,7 +239,7 @@ func createMigrateDownCommand(serviceContext interface{}) *cobra.Command {
 }
 
 // createMigrateStatusCommand creates the migrate status command
-func createMigrateStatusCommand(serviceContext interface{}) *cobra.Command {
+func createMigrateStatusCommand(serviceContext any) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
 		Short: "Show migration status",
@@ -253,7 +255,7 @@ func createMigrateStatusCommand(serviceContext interface{}) *cobra.Command {
 }
 
 // createMigrateCreateCommand creates the migrate create command
-func createMigrateCreateCommand(serviceContext interface{}) *cobra.Command {
+func createMigrateCreateCommand(serviceContext any) *cobra.Command {
 	return &cobra.Command{
 		Use:   "create <name>",
 		Short: "Create new migration",

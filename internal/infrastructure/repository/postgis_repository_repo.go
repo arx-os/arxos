@@ -33,7 +33,7 @@ func (r *PostGISRepositoryRepository) Create(ctx context.Context, repo *building
 	structureJSON := `{"ifc_files":[],"plans":[],"equipment":[],"operations":{},"integrations":[]}`
 
 	// Handle nil current version
-	var currentVersionID interface{}
+	var currentVersionID any
 	if repo.Current != nil {
 		currentVersionID = repo.Current.ID
 	}

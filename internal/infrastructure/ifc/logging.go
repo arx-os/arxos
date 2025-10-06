@@ -221,7 +221,7 @@ func (s *EnhancedIFCService) tryIfcOpenShellValidation(ctx context.Context, data
 }
 
 // GetServiceStatus returns the current status of the service with logging
-func (s *EnhancedIFCService) GetServiceStatus(ctx context.Context) map[string]interface{} {
+func (s *EnhancedIFCService) GetServiceStatus(ctx context.Context) map[string]any {
 	s.logger.Debug("Getting service status")
 
 	status := s.IFCService.GetServiceStatus(ctx)

@@ -116,26 +116,26 @@ type EquipmentQueryParams struct {
 
 // ComponentRequest represents component-related request validation
 type CreateComponentRequest struct {
-	Name       string                 `json:"name" validate:"required,min=2,max=100"`
-	Type       string                 `json:"type" validate:"required,component_type"`
-	Path       string                 `json:"path" validate:"required,building_path"`
-	Location   map[string]interface{} `json:"location"`
-	Properties map[string]interface{} `json:"properties"`
-	Building   string                 `json:"building" validate:"required,uuid"`
-	Floor      string                 `json:"floor" validate:"uuid"`
-	Room       string                 `json:"room" validate:"uuid"`
+	Name       string         `json:"name" validate:"required,min=2,max=100"`
+	Type       string         `json:"type" validate:"required,component_type"`
+	Path       string         `json:"path" validate:"required,building_path"`
+	Location   map[string]any `json:"location"`
+	Properties map[string]any `json:"properties"`
+	Building   string         `json:"building" validate:"required,uuid"`
+	Floor      string         `json:"floor" validate:"uuid"`
+	Room       string         `json:"room" validate:"uuid"`
 }
 
 type UpdateComponentRequest struct {
-	ID         string                 `json:"id" validate:"required,uuid"`
-	Name       string                 `json:"name" validate:"min=2,max=100"`
-	Type       string                 `json:"type" validate:"component_type"`
-	Path       string                 `json:"path" validate:"building_path"`
-	Location   map[string]interface{} `json:"location"`
-	Properties map[string]interface{} `json:"properties"`
-	Building   string                 `json:"building" validate:"uuid"`
-	Floor      string                 `json:"floor" validate:"uuid"`
-	Room       string                 `json:"room" validate:"uuid"`
+	ID         string         `json:"id" validate:"required,uuid"`
+	Name       string         `json:"name" validate:"min=2,max=100"`
+	Type       string         `json:"type" validate:"component_type"`
+	Path       string         `json:"path" validate:"building_path"`
+	Location   map[string]any `json:"location"`
+	Properties map[string]any `json:"properties"`
+	Building   string         `json:"building" validate:"uuid"`
+	Floor      string         `json:"floor" validate:"uuid"`
+	Room       string         `json:"room" validate:"uuid"`
 }
 
 type ComponentQueryParams struct {

@@ -117,12 +117,12 @@ const (
 
 // AppError represents an application error with additional context
 type AppError struct {
-	Code       ErrorCode              `json:"code"`
-	Message    string                 `json:"message"`
-	Details    string                 `json:"details,omitempty"`
-	Err        error                  `json:"-"`
-	StackTrace string                 `json:"-"`
-	Context    map[string]interface{} `json:"context,omitempty"`
+	Code       ErrorCode      `json:"code"`
+	Message    string         `json:"message"`
+	Details    string         `json:"details,omitempty"`
+	Err        error          `json:"-"`
+	StackTrace string         `json:"-"`
+	Context    map[string]any `json:"context,omitempty"`
 }
 
 // Error implements the error interface
@@ -145,9 +145,9 @@ func (e *AppError) WithDetails(details string) *AppError {
 }
 
 // WithContext adds context to the error
-func (e *AppError) WithContext(key string, value interface{}) *AppError {
+func (e *AppError) WithContext(key string, value any) *AppError {
 	if e.Context == nil {
-		e.Context = make(map[string]interface{})
+		e.Context = make(map[string]any)
 	}
 	e.Context[key] = value
 	return e
@@ -159,7 +159,7 @@ func New(code ErrorCode, message string) *AppError {
 		Code:       code,
 		Message:    message,
 		StackTrace: getStackTrace(2),
-		Context:    make(map[string]interface{}),
+		Context:    make(map[string]any),
 	}
 }
 
@@ -181,44 +181,44 @@ func Wrap(err error, code ErrorCode, message string) *AppError {
 		Message:    message,
 		Err:        err,
 		StackTrace: getStackTrace(2),
-		Context:    make(map[string]interface{}),
+		Context:    make(map[string]any),
 	}
 }
 
 // Formatting functions for common errors
 
 // NotFoundf creates a formatted not found error
-func NotFoundf(format string, args ...interface{}) error {
+func NotFoundf(format string, args ...any) error {
 	return fmt.Errorf("%w: %s", ErrNotFound, fmt.Sprintf(format, args...))
 }
 
 // AlreadyExistsf creates a formatted already exists error
-func AlreadyExistsf(format string, args ...interface{}) error {
+func AlreadyExistsf(format string, args ...any) error {
 	return fmt.Errorf("%w: %s", ErrAlreadyExists, fmt.Sprintf(format, args...))
 }
 
 // InvalidInputf creates a formatted invalid input error
-func InvalidInputf(format string, args ...interface{}) error {
+func InvalidInputf(format string, args ...any) error {
 	return fmt.Errorf("%w: %s", ErrInvalidInput, fmt.Sprintf(format, args...))
 }
 
 // Unauthorizedf creates a formatted unauthorized error
-func Unauthorizedf(format string, args ...interface{}) error {
+func Unauthorizedf(format string, args ...any) error {
 	return fmt.Errorf("%w: %s", ErrUnauthorized, fmt.Sprintf(format, args...))
 }
 
 // Forbiddenf creates a formatted forbidden error
-func Forbiddenf(format string, args ...interface{}) error {
+func Forbiddenf(format string, args ...any) error {
 	return fmt.Errorf("%w: %s", ErrForbidden, fmt.Sprintf(format, args...))
 }
 
 // Internalf creates a formatted internal error
-func Internalf(format string, args ...interface{}) error {
+func Internalf(format string, args ...any) error {
 	return fmt.Errorf("%w: %s", ErrInternal, fmt.Sprintf(format, args...))
 }
 
 // Databasef creates a formatted database error
-func Databasef(format string, args ...interface{}) error {
+func Databasef(format string, args ...any) error {
 	return fmt.Errorf("%w: %s", ErrDatabase, fmt.Sprintf(format, args...))
 }
 

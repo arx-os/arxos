@@ -61,26 +61,26 @@ func TestLoadServiceConfigs(t *testing.T) {
 	assert.Contains(t, configs, "ifc_service")
 
 	// Verify postgis config structure
-	postgis, ok := configs["postgis"].(map[string]interface{})
+	postgis, ok := configs["postgis"].(map[string]any)
 	require.True(t, ok)
-	postgisData, ok := postgis["postgis"].(map[string]interface{})
+	postgisData, ok := postgis["postgis"].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, "localhost", postgisData["host"])
 	assert.Equal(t, 5432, postgisData["port"])
 	assert.Equal(t, "test_db", postgisData["database"])
 
 	// Verify redis config structure
-	redis, ok := configs["redis"].(map[string]interface{})
+	redis, ok := configs["redis"].(map[string]any)
 	require.True(t, ok)
-	redisData, ok := redis["redis"].(map[string]interface{})
+	redisData, ok := redis["redis"].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, "localhost", redisData["host"])
 	assert.Equal(t, 6379, redisData["port"])
 
 	// Verify ifc config structure
-	ifc, ok := configs["ifc_service"].(map[string]interface{})
+	ifc, ok := configs["ifc_service"].(map[string]any)
 	require.True(t, ok)
-	ifcData, ok := ifc["ifc_service"].(map[string]interface{})
+	ifcData, ok := ifc["ifc_service"].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, true, ifcData["enabled"])
 	assert.Equal(t, "http://localhost:5000", ifcData["url"])
@@ -111,7 +111,7 @@ func TestLoadServiceConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify config structure
-	postgis, ok := config["postgis"].(map[string]interface{})
+	postgis, ok := config["postgis"].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, "test-host", postgis["host"])
 	assert.Equal(t, 5433, postgis["port"])
@@ -275,7 +275,7 @@ func TestLoadServiceConfigs_EnvironmentVariableSubstitution(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify environment variables were substituted
-	postgis, ok := config["postgis"].(map[string]interface{})
+	postgis, ok := config["postgis"].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, "env-host", postgis["host"])
 	assert.Equal(t, 5433, postgis["port"])

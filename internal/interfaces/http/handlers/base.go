@@ -16,7 +16,7 @@ import (
 // BaseHandler defines the common HTTP handler interface following Clean Architecture
 type BaseHandler interface {
 	// HTTP Response Helpers
-	RespondJSON(w http.ResponseWriter, statusCode int, data interface{})
+	RespondJSON(w http.ResponseWriter, statusCode int, data any)
 	RespondError(w http.ResponseWriter, statusCode int, err error)
 
 	// Request Validation
@@ -32,7 +32,7 @@ type BaseHandler interface {
 	LogError(r *http.Request, err error, statusCode int)
 
 	// Request Helpers
-	ParseRequestBody(r *http.Request, v interface{}) error
+	ParseRequestBody(r *http.Request, v any) error
 	ParseURLParams(r *http.Request) map[string]string
 }
 
@@ -51,7 +51,7 @@ func NewBaseHandler(logger domain.Logger, jwtManager *auth.JWTManager) BaseHandl
 }
 
 // RespondJSON sends a JSON response with proper headers
-func (h *BaseHandlerImpl) RespondJSON(w http.ResponseWriter, statusCode int, data interface{}) {
+func (h *BaseHandlerImpl) RespondJSON(w http.ResponseWriter, statusCode int, data any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	w.WriteHeader(statusCode)
@@ -69,7 +69,7 @@ func (h *BaseHandlerImpl) RespondJSON(w http.ResponseWriter, statusCode int, dat
 func (h *BaseHandlerImpl) RespondError(w http.ResponseWriter, statusCode int, err error) {
 	h.logger.Error("HTTP error response", "status", statusCode, "error", err)
 
-	errorResponse := map[string]interface{}{
+	errorResponse := map[string]any{
 		"error":     http.StatusText(statusCode),
 		"message":   err.Error(),
 		"status":    statusCode,
@@ -173,7 +173,7 @@ func (h *BaseHandlerImpl) LogError(r *http.Request, err error, statusCode int) {
 }
 
 // ParseRequestBody parses JSON request body into a Go struct
-func (h *BaseHandlerImpl) ParseRequestBody(r *http.Request, v interface{}) error {
+func (h *BaseHandlerImpl) ParseRequestBody(r *http.Request, v any) error {
 	if r.Body == nil {
 		return fmt.Errorf("request body is nil")
 	}

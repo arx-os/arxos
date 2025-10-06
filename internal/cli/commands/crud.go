@@ -19,7 +19,7 @@ type CRUDServiceProvider interface {
 }
 
 // CreateAddCommand creates the add command
-func CreateAddCommand(serviceContext interface{}) *cobra.Command {
+func CreateAddCommand(serviceContext any) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add <type> <name>",
 		Short: "Add new building components",
@@ -91,7 +91,7 @@ Examples:
 }
 
 // CreateGetCommand creates the get command
-func CreateGetCommand(serviceContext interface{}) *cobra.Command {
+func CreateGetCommand(serviceContext any) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get <type> <id>",
 		Short: "Get building component details",
@@ -161,7 +161,7 @@ Examples:
 }
 
 // CreateUpdateCommand creates the update command
-func CreateUpdateCommand(serviceContext interface{}) *cobra.Command {
+func CreateUpdateCommand(serviceContext any) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update <type> <id>",
 		Short: "Update building components",
@@ -230,7 +230,7 @@ Examples:
 }
 
 // CreateRemoveCommand creates the remove command
-func CreateRemoveCommand(serviceContext interface{}) *cobra.Command {
+func CreateRemoveCommand(serviceContext any) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remove <type> <id>",
 		Short: "Remove building components",

@@ -176,7 +176,7 @@ func TestMigrateEnvironmentConfig(t *testing.T) {
 	migrator := NewConfigMigrator(tmpDir)
 
 	// Test config with hybrid mode (should be changed to local)
-	config := map[string]interface{}{
+	config := map[string]any{
 		"mode": "hybrid",
 	}
 
@@ -187,7 +187,7 @@ func TestMigrateEnvironmentConfig(t *testing.T) {
 	assert.Equal(t, "local", config["mode"])
 
 	// Test config with missing required fields
-	config = map[string]interface{}{
+	config = map[string]any{
 		"mode": "local",
 	}
 
@@ -208,7 +208,7 @@ func TestMigratePostGISConfig(t *testing.T) {
 	migrator := NewConfigMigrator(tmpDir)
 
 	// Test config with missing postgis section
-	config := map[string]interface{}{
+	config := map[string]any{
 		"mode": "local",
 	}
 
@@ -224,7 +224,7 @@ func TestMigratePostGISConfig(t *testing.T) {
 	assert.Contains(t, changes, "Added default PostGIS SRID")
 
 	// Verify postgis section was created
-	postgis, ok := config["postgis"].(map[string]interface{})
+	postgis, ok := config["postgis"].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, "localhost", postgis["host"])
 	assert.Equal(t, 5432, postgis["port"])
@@ -240,7 +240,7 @@ func TestMigrateRedisConfig(t *testing.T) {
 	migrator := NewConfigMigrator(tmpDir)
 
 	// Test config with missing redis section
-	config := map[string]interface{}{
+	config := map[string]any{
 		"mode": "local",
 	}
 
@@ -253,7 +253,7 @@ func TestMigrateRedisConfig(t *testing.T) {
 	assert.Contains(t, changes, "Added default Redis database")
 
 	// Verify redis section was created
-	redis, ok := config["redis"].(map[string]interface{})
+	redis, ok := config["redis"].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, "localhost", redis["host"])
 	assert.Equal(t, 6379, redis["port"])
@@ -266,7 +266,7 @@ func TestMigrateIFCConfig(t *testing.T) {
 	migrator := NewConfigMigrator(tmpDir)
 
 	// Test config with missing ifc_service section
-	config := map[string]interface{}{
+	config := map[string]any{
 		"mode": "local",
 	}
 
@@ -280,7 +280,7 @@ func TestMigrateIFCConfig(t *testing.T) {
 	assert.Contains(t, changes, "Added default IFC service retries")
 
 	// Verify ifc_service section was created
-	ifc, ok := config["ifc_service"].(map[string]interface{})
+	ifc, ok := config["ifc_service"].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, true, ifc["enabled"])
 	assert.Equal(t, "http://localhost:5000", ifc["url"])
@@ -294,9 +294,9 @@ func TestMigrateConfigData(t *testing.T) {
 	migrator := NewConfigMigrator(tmpDir)
 
 	// Test migration with development config
-	source := map[string]interface{}{
+	source := map[string]any{
 		"mode": "hybrid",
-		"postgis": map[string]interface{}{
+		"postgis": map[string]any{
 			"host": "localhost",
 			"port": 5432,
 		},
@@ -310,8 +310,8 @@ func TestMigrateConfigData(t *testing.T) {
 	assert.Equal(t, "local", migrated["mode"])
 
 	// Test migration with postgis config
-	source = map[string]interface{}{
-		"postgis": map[string]interface{}{
+	source = map[string]any{
+		"postgis": map[string]any{
 			"host": "localhost",
 		},
 	}
@@ -320,7 +320,7 @@ func TestMigrateConfigData(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify postgis defaults were added
-	postgis, ok := migrated["postgis"].(map[string]interface{})
+	postgis, ok := migrated["postgis"].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, "localhost", postgis["host"])
 	assert.Equal(t, 5432, postgis["port"])        // Default added

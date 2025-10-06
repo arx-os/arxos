@@ -250,11 +250,11 @@ func (cp *ConnectionPool) RefreshConnections() error {
 }
 
 // GetConnectionInfo returns detailed connection information
-func (cp *ConnectionPool) GetConnectionInfo() map[string]interface{} {
+func (cp *ConnectionPool) GetConnectionInfo() map[string]any {
 	cp.mu.RLock()
 	defer cp.mu.RUnlock()
 
-	info := map[string]interface{}{
+	info := map[string]any{
 		"primary_available":  cp.primary != nil,
 		"readonly_available": cp.readOnly != nil,
 		"health_status":      cp.healthCheck.isHealthy,

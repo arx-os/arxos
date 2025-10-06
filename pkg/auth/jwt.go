@@ -45,14 +45,14 @@ func DefaultJWTConfig() *JWTConfig {
 
 // Claims represents the JWT claims structure
 type Claims struct {
-	UserID         string                 `json:"user_id"`
-	Email          string                 `json:"email"`
-	Username       string                 `json:"username"`
-	Role           string                 `json:"role"`
-	OrganizationID string                 `json:"organization_id,omitempty"`
-	Permissions    []string               `json:"permissions,omitempty"`
-	SessionID      string                 `json:"session_id,omitempty"`
-	DeviceInfo     map[string]interface{} `json:"device_info,omitempty"`
+	UserID         string         `json:"user_id"`
+	Email          string         `json:"email"`
+	Username       string         `json:"username"`
+	Role           string         `json:"role"`
+	OrganizationID string         `json:"organization_id,omitempty"`
+	Permissions    []string       `json:"permissions,omitempty"`
+	SessionID      string         `json:"session_id,omitempty"`
+	DeviceInfo     map[string]any `json:"device_info,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -68,8 +68,8 @@ type TokenPair struct {
 // JWTManager handles JWT token operations
 type JWTManager struct {
 	config     *JWTConfig
-	signingKey interface{}
-	verifyKey  interface{}
+	signingKey any
+	verifyKey  any
 }
 
 // NewJWTManager creates a new JWT manager
@@ -123,7 +123,7 @@ func (m *JWTManager) setupRSAKeys() error {
 }
 
 // GenerateTokenPair creates both access and refresh tokens
-func (m *JWTManager) GenerateTokenPair(userID, email, username, role, organizationID string, permissions []string, sessionID string, deviceInfo map[string]interface{}) (*TokenPair, error) {
+func (m *JWTManager) GenerateTokenPair(userID, email, username, role, organizationID string, permissions []string, sessionID string, deviceInfo map[string]any) (*TokenPair, error) {
 	now := time.Now()
 
 	// Create access token claims
@@ -200,7 +200,7 @@ func (m *JWTManager) generateToken(claims *Claims) (string, error) {
 
 // ValidateToken validates a JWT token and returns the claims
 func (m *JWTManager) ValidateToken(tokenString string) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
 		// Verify the signing method
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); ok && m.config.Algorithm[:2] == "HS" {
 			return m.verifyKey, nil
@@ -304,7 +304,7 @@ func GenerateRSAKeyPair() (privateKeyPEM, publicKeyPEM string, err error) {
 
 // IsTokenExpired checks if a token is expired without full validation
 func IsTokenExpired(tokenString string) (bool, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
 		return []byte("dummy"), nil // We only want to check expiration
 	})
 

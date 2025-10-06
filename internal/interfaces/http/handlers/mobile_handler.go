@@ -75,7 +75,7 @@ func (m *MobileHandler) HandleMobileEquipment(w http.ResponseWriter, r *http.Req
 
 	buildingID := chi.URLParam(r, "buildingId")
 	if buildingID == "" {
-		m.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{
+		m.RespondJSON(w, http.StatusBadRequest, map[string]any{
 			"error": "building_id_required",
 		})
 		return
@@ -109,7 +109,7 @@ func (m *MobileHandler) HandleMobileEquipment(w http.ResponseWriter, r *http.Req
 	equipment, err := m.equipmentUC.ListEquipment(ctx, filter)
 	if err != nil {
 		m.logger.Error("Failed to get mobile equipment", "building_id", buildingID, "error", err)
-		m.RespondJSON(w, http.StatusInternalServerError, map[string]interface{}{
+		m.RespondJSON(w, http.StatusInternalServerError, map[string]any{
 			"error": "failed_to_get_equipment",
 		})
 		return
@@ -171,7 +171,7 @@ func (m *MobileHandler) HandleMobileEquipmentDetail(w http.ResponseWriter, r *ht
 
 	equipmentID := chi.URLParam(r, "equipmentId")
 	if equipmentID == "" {
-		m.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{
+		m.RespondJSON(w, http.StatusBadRequest, map[string]any{
 			"error": "equipment_id_required",
 		})
 		return
@@ -182,7 +182,7 @@ func (m *MobileHandler) HandleMobileEquipmentDetail(w http.ResponseWriter, r *ht
 	equipment, err := m.equipmentUC.GetEquipment(ctx, equipmentID)
 	if err != nil {
 		m.logger.Error("Failed to get mobile equipment detail", "equipment_id", equipmentID, "error", err)
-		m.RespondJSON(w, http.StatusNotFound, map[string]interface{}{
+		m.RespondJSON(w, http.StatusNotFound, map[string]any{
 			"error": "equipment_not_found",
 		})
 		return
@@ -219,7 +219,7 @@ func (m *MobileHandler) HandleMobileEquipmentDetail(w http.ResponseWriter, r *ht
 	}
 
 	m.logger.Info("Mobile equipment detail retrieved", "equipment_id", equipmentID)
-	m.RespondJSON(w, http.StatusOK, map[string]interface{}{
+	m.RespondJSON(w, http.StatusOK, map[string]any{
 		"equipment": mobileEq,
 	})
 }

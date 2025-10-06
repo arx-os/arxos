@@ -23,9 +23,9 @@ type RedisL3Cache struct {
 
 // RedisEntry represents a Redis cache entry
 type RedisEntry struct {
-	Value     interface{} `json:"value"`
-	ExpiresAt time.Time   `json:"expires_at"`
-	CreatedAt time.Time   `json:"created_at"`
+	Value     any       `json:"value"`
+	ExpiresAt time.Time `json:"expires_at"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // NewRedisL3Cache creates a new Redis L3 cache instance
@@ -50,7 +50,7 @@ func NewRedisL3Cache(cfg *config.UnifiedCacheConfig, logger domain.Logger) (*Red
 }
 
 // Get retrieves a value from Redis
-func (r *RedisL3Cache) Get(ctx context.Context, key string) (interface{}, error) {
+func (r *RedisL3Cache) Get(ctx context.Context, key string) (any, error) {
 	fullKey := r.prefix + key
 
 	// In a real implementation, this would be:
@@ -74,7 +74,7 @@ func (r *RedisL3Cache) Get(ctx context.Context, key string) (interface{}, error)
 }
 
 // Set stores a value in Redis
-func (r *RedisL3Cache) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+func (r *RedisL3Cache) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
 	fullKey := r.prefix + key
 
 	entry := &RedisEntry{
@@ -137,14 +137,14 @@ func (r *RedisL3Cache) Close() error {
 }
 
 // GetStats returns Redis cache statistics
-func (r *RedisL3Cache) GetStats(ctx context.Context) (map[string]interface{}, error) {
+func (r *RedisL3Cache) GetStats(ctx context.Context) (map[string]any, error) {
 	// In a real implementation, this would use Redis INFO command:
 	// info, err := r.client.Info(ctx, "memory", "stats").Result()
 	// if err != nil {
 	//     return nil, err
 	// }
 
-	stats := map[string]interface{}{
+	stats := map[string]any{
 		"keys_count":   len(r.simulatedStore),
 		"memory_usage": r.calculateMemoryUsage(),
 		"hit_rate":     0.0, // Would be calculated from Redis stats
@@ -259,7 +259,7 @@ func (r *RedisL3Cache) Decrement(ctx context.Context, key string, delta int64) (
 }
 
 // SetMultiple sets multiple key-value pairs
-func (r *RedisL3Cache) SetMultiple(ctx context.Context, data map[string]interface{}, ttl time.Duration) error {
+func (r *RedisL3Cache) SetMultiple(ctx context.Context, data map[string]any, ttl time.Duration) error {
 	// In a real implementation, this would use Redis pipeline:
 	// pipe := r.client.Pipeline()
 	// for key, value := range data {
@@ -279,7 +279,7 @@ func (r *RedisL3Cache) SetMultiple(ctx context.Context, data map[string]interfac
 }
 
 // GetMultiple retrieves multiple values from Redis
-func (r *RedisL3Cache) GetMultiple(ctx context.Context, keys []string) (map[string]interface{}, error) {
+func (r *RedisL3Cache) GetMultiple(ctx context.Context, keys []string) (map[string]any, error) {
 	// In a real implementation, this would be:
 	// fullKeys := make([]string, len(keys))
 	// for i, key := range keys {
@@ -289,7 +289,7 @@ func (r *RedisL3Cache) GetMultiple(ctx context.Context, keys []string) (map[stri
 	// if err != nil {
 	//     return nil, err
 	// }
-	// result := make(map[string]interface{})
+	// result := make(map[string]any)
 	// for i, value := range values {
 	//     if value != nil {
 	//         result[keys[i]] = value
@@ -297,7 +297,7 @@ func (r *RedisL3Cache) GetMultiple(ctx context.Context, keys []string) (map[stri
 	// }
 	// return result, nil
 
-	result := make(map[string]interface{})
+	result := make(map[string]any)
 	for _, key := range keys {
 		if value, err := r.Get(ctx, key); err == nil && value != nil {
 			result[key] = value

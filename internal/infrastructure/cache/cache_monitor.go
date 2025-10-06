@@ -43,24 +43,24 @@ type MonitoringConfig struct {
 
 // MonitoringMetric represents a monitoring data point
 type MonitoringMetric struct {
-	Timestamp  time.Time              `json:"timestamp"`
-	MetricType string                 `json:"metric_type"`
-	Value      float64                `json:"value"`
-	Unit       string                 `json:"unit"`
-	Tags       map[string]string      `json:"tags"`
-	Metadata   map[string]interface{} `json:"metadata"`
+	Timestamp  time.Time         `json:"timestamp"`
+	MetricType string            `json:"metric_type"`
+	Value      float64           `json:"value"`
+	Unit       string            `json:"unit"`
+	Tags       map[string]string `json:"tags"`
+	Metadata   map[string]any    `json:"metadata"`
 }
 
 // Alert represents a monitoring alert
 type Alert struct {
-	ID         string                 `json:"id"`
-	Severity   AlertSeverity          `json:"severity"`
-	Type       string                 `json:"type"`
-	Message    string                 `json:"message"`
-	Timestamp  time.Time              `json:"timestamp"`
-	Resolved   bool                   `json:"resolved"`
-	ResolvedAt *time.Time             `json:"resolved_at,omitempty"`
-	Metadata   map[string]interface{} `json:"metadata"`
+	ID         string         `json:"id"`
+	Severity   AlertSeverity  `json:"severity"`
+	Type       string         `json:"type"`
+	Message    string         `json:"message"`
+	Timestamp  time.Time      `json:"timestamp"`
+	Resolved   bool           `json:"resolved"`
+	ResolvedAt *time.Time     `json:"resolved_at,omitempty"`
+	Metadata   map[string]any `json:"metadata"`
 }
 
 // AlertSeverity defines alert severity levels
@@ -97,9 +97,9 @@ type HealthStatus struct {
 
 // ComponentHealth represents health of a cache component
 type ComponentHealth struct {
-	Status    string                 `json:"status"`
-	LastCheck time.Time              `json:"last_check"`
-	Details   map[string]interface{} `json:"details"`
+	Status    string         `json:"status"`
+	LastCheck time.Time      `json:"last_check"`
+	Details   map[string]any `json:"details"`
 }
 
 // NewCacheMonitor creates a new cache monitor
@@ -277,7 +277,7 @@ func (cm *CacheMonitor) checkL1Health(ctx context.Context) ComponentHealth {
 	health := ComponentHealth{
 		Status:    "healthy",
 		LastCheck: time.Now(),
-		Details:   make(map[string]interface{}),
+		Details:   make(map[string]any),
 	}
 
 	// Test L1 cache with a simple operation
@@ -317,7 +317,7 @@ func (cm *CacheMonitor) checkL2Health(ctx context.Context) ComponentHealth {
 	health := ComponentHealth{
 		Status:    "healthy",
 		LastCheck: time.Now(),
-		Details:   make(map[string]interface{}),
+		Details:   make(map[string]any),
 	}
 
 	// Test L2 cache with a longer TTL to ensure it goes to L2
@@ -357,7 +357,7 @@ func (cm *CacheMonitor) checkL3Health(ctx context.Context) ComponentHealth {
 	health := ComponentHealth{
 		Status:    "healthy",
 		LastCheck: time.Now(),
-		Details:   make(map[string]interface{}),
+		Details:   make(map[string]any),
 	}
 
 	// L3 cache might not be enabled
@@ -424,7 +424,7 @@ func (cm *CacheMonitor) triggerAlert(alertType string, severity AlertSeverity, m
 		Message:   message,
 		Timestamp: time.Now(),
 		Resolved:  false,
-		Metadata:  make(map[string]interface{}),
+		Metadata:  make(map[string]any),
 	}
 
 	// Check if we already have this alert active
@@ -455,7 +455,7 @@ func (cm *CacheMonitor) recordMetric(metricType string, value float64, unit stri
 		Value:      value,
 		Unit:       unit,
 		Tags:       tags,
-		Metadata:   make(map[string]interface{}),
+		Metadata:   make(map[string]any),
 	}
 
 	select {

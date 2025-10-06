@@ -26,7 +26,7 @@ func NewIFCProcessor(ifcUC *usecase.IFCUseCase, logger domain.Logger) *IFCProces
 }
 
 // Process processes an IFC job
-func (ip *IFCProcessor) Process(ctx context.Context, job Job) (interface{}, error) {
+func (ip *IFCProcessor) Process(ctx context.Context, job Job) (any, error) {
 	ip.logger.Info("Processing IFC job", "job_id", job.ID)
 
 	operation, ok := job.Data["operation"].(string)
@@ -47,7 +47,7 @@ func (ip *IFCProcessor) Process(ctx context.Context, job Job) (interface{}, erro
 }
 
 // processImport processes IFC import
-func (ip *IFCProcessor) processImport(ctx context.Context, job Job) (interface{}, error) {
+func (ip *IFCProcessor) processImport(ctx context.Context, job Job) (any, error) {
 	repositoryID, ok := job.Data["repository_id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("repository_id is required")
@@ -69,7 +69,7 @@ func (ip *IFCProcessor) processImport(ctx context.Context, job Job) (interface{}
 }
 
 // processExport processes IFC export
-func (ip *IFCProcessor) processExport(ctx context.Context, job Job) (interface{}, error) {
+func (ip *IFCProcessor) processExport(ctx context.Context, job Job) (any, error) {
 	repositoryID, ok := job.Data["repository_id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("repository_id is required")
@@ -91,7 +91,7 @@ func (ip *IFCProcessor) processExport(ctx context.Context, job Job) (interface{}
 	// Simulate export process
 	time.Sleep(2 * time.Second)
 
-	result := map[string]interface{}{
+	result := map[string]any{
 		"export_id":   fmt.Sprintf("export_%d", time.Now().Unix()),
 		"format":      format,
 		"file_size":   1024000,
@@ -103,7 +103,7 @@ func (ip *IFCProcessor) processExport(ctx context.Context, job Job) (interface{}
 }
 
 // processValidate processes IFC validation
-func (ip *IFCProcessor) processValidate(ctx context.Context, job Job) (interface{}, error) {
+func (ip *IFCProcessor) processValidate(ctx context.Context, job Job) (any, error) {
 	_, ok := job.Data["ifc_data"].([]byte)
 	if !ok {
 		return nil, fmt.Errorf("ifc_data is required")
@@ -115,7 +115,7 @@ func (ip *IFCProcessor) processValidate(ctx context.Context, job Job) (interface
 	// Simulate validation process
 	time.Sleep(1 * time.Second)
 
-	result := map[string]interface{}{
+	result := map[string]any{
 		"valid":        true,
 		"errors":       []string{},
 		"warnings":     []string{"Minor geometry issue detected"},
@@ -143,7 +143,7 @@ func NewAnalyticsProcessor(analyticsUC *usecase.AnalyticsUseCase, logger domain.
 }
 
 // Process processes an analytics job
-func (ap *AnalyticsProcessor) Process(ctx context.Context, job Job) (interface{}, error) {
+func (ap *AnalyticsProcessor) Process(ctx context.Context, job Job) (any, error) {
 	ap.logger.Info("Processing analytics job", "job_id", job.ID)
 
 	analysisType, ok := job.Data["analysis_type"].(string)
@@ -166,7 +166,7 @@ func (ap *AnalyticsProcessor) Process(ctx context.Context, job Job) (interface{}
 }
 
 // processBuildingPerformance processes building performance analysis
-func (ap *AnalyticsProcessor) processBuildingPerformance(ctx context.Context, job Job) (interface{}, error) {
+func (ap *AnalyticsProcessor) processBuildingPerformance(ctx context.Context, job Job) (any, error) {
 	buildingID, ok := job.Data["building_id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("building_id is required")
@@ -192,7 +192,7 @@ func (ap *AnalyticsProcessor) processBuildingPerformance(ctx context.Context, jo
 	// Simulate analysis process
 	time.Sleep(3 * time.Second)
 
-	result := map[string]interface{}{
+	result := map[string]any{
 		"building_id":       buildingID,
 		"analysis_type":     "building_performance",
 		"period":            fmt.Sprintf("%s to %s", startDate, endDate),
@@ -207,7 +207,7 @@ func (ap *AnalyticsProcessor) processBuildingPerformance(ctx context.Context, jo
 }
 
 // processEquipmentUtilization processes equipment utilization analysis
-func (ap *AnalyticsProcessor) processEquipmentUtilization(ctx context.Context, job Job) (interface{}, error) {
+func (ap *AnalyticsProcessor) processEquipmentUtilization(ctx context.Context, job Job) (any, error) {
 	buildingID, ok := job.Data["building_id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("building_id is required")
@@ -221,7 +221,7 @@ func (ap *AnalyticsProcessor) processEquipmentUtilization(ctx context.Context, j
 	// Simulate analysis process
 	time.Sleep(2 * time.Second)
 
-	result := map[string]interface{}{
+	result := map[string]any{
 		"building_id":            buildingID,
 		"analysis_type":          "equipment_utilization",
 		"hvac_utilization":       76.8,
@@ -236,7 +236,7 @@ func (ap *AnalyticsProcessor) processEquipmentUtilization(ctx context.Context, j
 }
 
 // processEnergyConsumption processes energy consumption analysis
-func (ap *AnalyticsProcessor) processEnergyConsumption(ctx context.Context, job Job) (interface{}, error) {
+func (ap *AnalyticsProcessor) processEnergyConsumption(ctx context.Context, job Job) (any, error) {
 	buildingID, ok := job.Data["building_id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("building_id is required")
@@ -250,7 +250,7 @@ func (ap *AnalyticsProcessor) processEnergyConsumption(ctx context.Context, job 
 	// Simulate analysis process
 	time.Sleep(4 * time.Second)
 
-	result := map[string]interface{}{
+	result := map[string]any{
 		"building_id":       buildingID,
 		"analysis_type":     "energy_consumption",
 		"total_consumption": 125000, // kWh
@@ -266,7 +266,7 @@ func (ap *AnalyticsProcessor) processEnergyConsumption(ctx context.Context, job 
 }
 
 // processMaintenanceSchedule processes maintenance schedule analysis
-func (ap *AnalyticsProcessor) processMaintenanceSchedule(ctx context.Context, job Job) (interface{}, error) {
+func (ap *AnalyticsProcessor) processMaintenanceSchedule(ctx context.Context, job Job) (any, error) {
 	buildingID, ok := job.Data["building_id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("building_id is required")
@@ -280,7 +280,7 @@ func (ap *AnalyticsProcessor) processMaintenanceSchedule(ctx context.Context, jo
 	// Simulate analysis process
 	time.Sleep(2 * time.Second)
 
-	result := map[string]interface{}{
+	result := map[string]any{
 		"building_id":       buildingID,
 		"analysis_type":     "maintenance_schedule",
 		"overdue_tasks":     12,
@@ -310,7 +310,7 @@ func NewNotificationProcessor(logger domain.Logger) *NotificationProcessor {
 }
 
 // Process processes a notification job
-func (np *NotificationProcessor) Process(ctx context.Context, job Job) (interface{}, error) {
+func (np *NotificationProcessor) Process(ctx context.Context, job Job) (any, error) {
 	np.logger.Info("Processing notification job", "job_id", job.ID)
 
 	notificationType, ok := job.Data["type"].(string)
@@ -333,7 +333,7 @@ func (np *NotificationProcessor) Process(ctx context.Context, job Job) (interfac
 }
 
 // processEmail processes email notifications
-func (np *NotificationProcessor) processEmail(ctx context.Context, job Job) (interface{}, error) {
+func (np *NotificationProcessor) processEmail(ctx context.Context, job Job) (any, error) {
 	recipient, ok := job.Data["recipient"].(string)
 	if !ok {
 		return nil, fmt.Errorf("recipient is required")
@@ -358,7 +358,7 @@ func (np *NotificationProcessor) processEmail(ctx context.Context, job Job) (int
 	// Simulate email sending
 	time.Sleep(500 * time.Millisecond)
 
-	result := map[string]interface{}{
+	result := map[string]any{
 		"notification_type": "email",
 		"recipient":         recipient,
 		"subject":           subject,
@@ -372,7 +372,7 @@ func (np *NotificationProcessor) processEmail(ctx context.Context, job Job) (int
 }
 
 // processSMS processes SMS notifications
-func (np *NotificationProcessor) processSMS(ctx context.Context, job Job) (interface{}, error) {
+func (np *NotificationProcessor) processSMS(ctx context.Context, job Job) (any, error) {
 	recipient, ok := job.Data["recipient"].(string)
 	if !ok {
 		return nil, fmt.Errorf("recipient is required")
@@ -391,7 +391,7 @@ func (np *NotificationProcessor) processSMS(ctx context.Context, job Job) (inter
 	// Simulate SMS sending
 	time.Sleep(300 * time.Millisecond)
 
-	result := map[string]interface{}{
+	result := map[string]any{
 		"notification_type": "sms",
 		"recipient":         recipient,
 		"message":           message,
@@ -405,7 +405,7 @@ func (np *NotificationProcessor) processSMS(ctx context.Context, job Job) (inter
 }
 
 // processPush processes push notifications
-func (np *NotificationProcessor) processPush(ctx context.Context, job Job) (interface{}, error) {
+func (np *NotificationProcessor) processPush(ctx context.Context, job Job) (any, error) {
 	userID, ok := job.Data["user_id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("user_id is required")
@@ -430,7 +430,7 @@ func (np *NotificationProcessor) processPush(ctx context.Context, job Job) (inte
 	// Simulate push notification
 	time.Sleep(200 * time.Millisecond)
 
-	result := map[string]interface{}{
+	result := map[string]any{
 		"notification_type": "push",
 		"user_id":           userID,
 		"title":             title,
@@ -445,13 +445,13 @@ func (np *NotificationProcessor) processPush(ctx context.Context, job Job) (inte
 }
 
 // processWebhook processes webhook notifications
-func (np *NotificationProcessor) processWebhook(ctx context.Context, job Job) (interface{}, error) {
+func (np *NotificationProcessor) processWebhook(ctx context.Context, job Job) (any, error) {
 	url, ok := job.Data["url"].(string)
 	if !ok {
 		return nil, fmt.Errorf("url is required")
 	}
 
-	payload, ok := job.Data["payload"].(map[string]interface{})
+	payload, ok := job.Data["payload"].(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("payload is required")
 	}
@@ -464,7 +464,7 @@ func (np *NotificationProcessor) processWebhook(ctx context.Context, job Job) (i
 	// Simulate webhook sending
 	time.Sleep(1 * time.Second)
 
-	result := map[string]interface{}{
+	result := map[string]any{
 		"notification_type": "webhook",
 		"url":               url,
 		"payload":           payload,

@@ -15,7 +15,7 @@ import (
 )
 
 // AssertBuildingEqual asserts that two buildings are equal
-func AssertBuildingEqual(t *testing.T, expected, actual *domain.Building, msgAndArgs ...interface{}) bool {
+func AssertBuildingEqual(t *testing.T, expected, actual *domain.Building, msgAndArgs ...any) bool {
 	if expected == nil && actual == nil {
 		return true
 	}
@@ -30,7 +30,7 @@ func AssertBuildingEqual(t *testing.T, expected, actual *domain.Building, msgAnd
 }
 
 // AssertEquipmentEqual asserts that two equipment items are equal
-func AssertEquipmentEqual(t *testing.T, expected, actual *domain.Equipment, msgAndArgs ...interface{}) bool {
+func AssertEquipmentEqual(t *testing.T, expected, actual *domain.Equipment, msgAndArgs ...any) bool {
 	if expected == nil && actual == nil {
 		return true
 	}
@@ -48,7 +48,7 @@ func AssertEquipmentEqual(t *testing.T, expected, actual *domain.Equipment, msgA
 }
 
 // AssertLocationEqual asserts that two locations are equal
-func AssertLocationEqual(t *testing.T, expected, actual *domain.Location, msgAndArgs ...interface{}) bool {
+func AssertLocationEqual(t *testing.T, expected, actual *domain.Location, msgAndArgs ...any) bool {
 	if expected == nil && actual == nil {
 		return true
 	}
@@ -62,7 +62,7 @@ func AssertLocationEqual(t *testing.T, expected, actual *domain.Location, msgAnd
 }
 
 // AssertSpatialLocationEqual asserts that two spatial locations are equal
-func AssertSpatialLocationEqual(t *testing.T, expected, actual *domain.SpatialLocation, msgAndArgs ...interface{}) bool {
+func AssertSpatialLocationEqual(t *testing.T, expected, actual *domain.SpatialLocation, msgAndArgs ...any) bool {
 	if expected == nil && actual == nil {
 		return true
 	}
@@ -76,7 +76,7 @@ func AssertSpatialLocationEqual(t *testing.T, expected, actual *domain.SpatialLo
 }
 
 // AssertSpatialAnchorEqual asserts that two spatial anchors are equal
-func AssertSpatialAnchorEqual(t *testing.T, expected, actual *domain.SpatialAnchor, msgAndArgs ...interface{}) bool {
+func AssertSpatialAnchorEqual(t *testing.T, expected, actual *domain.SpatialAnchor, msgAndArgs ...any) bool {
 	if expected == nil && actual == nil {
 		return true
 	}
@@ -92,7 +92,7 @@ func AssertSpatialAnchorEqual(t *testing.T, expected, actual *domain.SpatialAnch
 }
 
 // AssertAREquipmentOverlayEqual asserts that two AR equipment overlays are equal
-func AssertAREquipmentOverlayEqual(t *testing.T, expected, actual *domain.EquipmentAROverlay, msgAndArgs ...interface{}) bool {
+func AssertAREquipmentOverlayEqual(t *testing.T, expected, actual *domain.EquipmentAROverlay, msgAndArgs ...any) bool {
 	if expected == nil && actual == nil {
 		return true
 	}
@@ -107,7 +107,7 @@ func AssertAREquipmentOverlayEqual(t *testing.T, expected, actual *domain.Equipm
 }
 
 // AssertARNavigationPathEqual asserts that two AR navigation paths are equal
-func AssertARNavigationPathEqual(t *testing.T, expected, actual *domain.ARNavigationPath, msgAndArgs ...interface{}) bool {
+func AssertARNavigationPathEqual(t *testing.T, expected, actual *domain.ARNavigationPath, msgAndArgs ...any) bool {
 	if expected == nil && actual == nil {
 		return true
 	}
@@ -124,7 +124,7 @@ func AssertARNavigationPathEqual(t *testing.T, expected, actual *domain.ARNaviga
 }
 
 // AssertTimeEqual asserts that two times are equal within a tolerance
-func AssertTimeEqual(t *testing.T, expected, actual time.Time, tolerance time.Duration, msgAndArgs ...interface{}) bool {
+func AssertTimeEqual(t *testing.T, expected, actual time.Time, tolerance time.Duration, msgAndArgs ...any) bool {
 	diff := expected.Sub(actual)
 	if diff < 0 {
 		diff = -diff
@@ -136,7 +136,7 @@ func AssertTimeEqual(t *testing.T, expected, actual time.Time, tolerance time.Du
 }
 
 // AssertSliceEqual asserts that two slices are equal
-func AssertSliceEqual(t *testing.T, expected, actual interface{}, msgAndArgs ...interface{}) bool {
+func AssertSliceEqual(t *testing.T, expected, actual any, msgAndArgs ...any) bool {
 	expectedValue := reflect.ValueOf(expected)
 	actualValue := reflect.ValueOf(actual)
 
@@ -161,7 +161,7 @@ func AssertSliceEqual(t *testing.T, expected, actual interface{}, msgAndArgs ...
 }
 
 // AssertMapEqual asserts that two maps are equal
-func AssertMapEqual(t *testing.T, expected, actual interface{}, msgAndArgs ...interface{}) bool {
+func AssertMapEqual(t *testing.T, expected, actual any, msgAndArgs ...any) bool {
 	expectedValue := reflect.ValueOf(expected)
 	actualValue := reflect.ValueOf(actual)
 
@@ -186,7 +186,7 @@ func AssertMapEqual(t *testing.T, expected, actual interface{}, msgAndArgs ...in
 }
 
 // AssertHTTPResponseEqual asserts that an HTTP response matches expectations
-func AssertHTTPResponseEqual(t *testing.T, expectedStatus int, actualStatus int, expectedBody interface{}, actualBody interface{}, msgAndArgs ...interface{}) bool {
+func AssertHTTPResponseEqual(t *testing.T, expectedStatus int, actualStatus int, expectedBody any, actualBody any, msgAndArgs ...any) bool {
 	statusEqual := assert.Equal(t, expectedStatus, actualStatus, "HTTP status code mismatch")
 
 	var bodyEqual bool
@@ -206,7 +206,7 @@ func AssertHTTPResponseEqual(t *testing.T, expectedStatus int, actualStatus int,
 }
 
 // AssertPerformanceWithinBounds asserts that performance metrics are within acceptable bounds
-func AssertPerformanceWithinBounds(t *testing.T, metric string, value float64, min, max float64, msgAndArgs ...interface{}) bool {
+func AssertPerformanceWithinBounds(t *testing.T, metric string, value float64, min, max float64, msgAndArgs ...any) bool {
 	if value < min || value > max {
 		return assert.Fail(t, fmt.Sprintf("Performance metric %s value %f is outside bounds [%f, %f]", metric, value, min, max), msgAndArgs...)
 	}
@@ -214,7 +214,7 @@ func AssertPerformanceWithinBounds(t *testing.T, metric string, value float64, m
 }
 
 // AssertMemoryUsageWithinBounds asserts that memory usage is within acceptable bounds
-func AssertMemoryUsageWithinBounds(t *testing.T, currentMB, maxMB float64, msgAndArgs ...interface{}) bool {
+func AssertMemoryUsageWithinBounds(t *testing.T, currentMB, maxMB float64, msgAndArgs ...any) bool {
 	if currentMB > maxMB {
 		return assert.Fail(t, fmt.Sprintf("Memory usage %f MB exceeds maximum %f MB", currentMB, maxMB), msgAndArgs...)
 	}
@@ -222,7 +222,7 @@ func AssertMemoryUsageWithinBounds(t *testing.T, currentMB, maxMB float64, msgAn
 }
 
 // AssertResponseTimeWithinBounds asserts that response time is within acceptable bounds
-func AssertResponseTimeWithinBounds(t *testing.T, duration time.Duration, maxDuration time.Duration, msgAndArgs ...interface{}) bool {
+func AssertResponseTimeWithinBounds(t *testing.T, duration time.Duration, maxDuration time.Duration, msgAndArgs ...any) bool {
 	if duration > maxDuration {
 		return assert.Fail(t, fmt.Sprintf("Response time %v exceeds maximum %v", duration, maxDuration), msgAndArgs...)
 	}
@@ -230,7 +230,7 @@ func AssertResponseTimeWithinBounds(t *testing.T, duration time.Duration, maxDur
 }
 
 // AssertErrorContains asserts that an error contains a specific message
-func AssertErrorContains(t *testing.T, err error, contains string, msgAndArgs ...interface{}) bool {
+func AssertErrorContains(t *testing.T, err error, contains string, msgAndArgs ...any) bool {
 	if err == nil {
 		return assert.Fail(t, "Expected error but got nil", msgAndArgs...)
 	}
@@ -238,76 +238,76 @@ func AssertErrorContains(t *testing.T, err error, contains string, msgAndArgs ..
 }
 
 // AssertNoError asserts that there is no error
-func AssertNoError(t *testing.T, err error, msgAndArgs ...interface{}) bool {
+func AssertNoError(t *testing.T, err error, msgAndArgs ...any) bool {
 	return assert.NoError(t, err, msgAndArgs...)
 }
 
 // AssertTrue asserts that a condition is true
-func AssertTrue(t *testing.T, condition bool, msgAndArgs ...interface{}) bool {
+func AssertTrue(t *testing.T, condition bool, msgAndArgs ...any) bool {
 	return assert.True(t, condition, msgAndArgs...)
 }
 
 // AssertFalse asserts that a condition is false
-func AssertFalse(t *testing.T, condition bool, msgAndArgs ...interface{}) bool {
+func AssertFalse(t *testing.T, condition bool, msgAndArgs ...any) bool {
 	return assert.False(t, condition, msgAndArgs...)
 }
 
 // AssertNotEmpty asserts that a value is not empty
-func AssertNotEmpty(t *testing.T, value interface{}, msgAndArgs ...interface{}) bool {
+func AssertNotEmpty(t *testing.T, value any, msgAndArgs ...any) bool {
 	return assert.NotEmpty(t, value, msgAndArgs...)
 }
 
 // AssertEmpty asserts that a value is empty
-func AssertEmpty(t *testing.T, value interface{}, msgAndArgs ...interface{}) bool {
+func AssertEmpty(t *testing.T, value any, msgAndArgs ...any) bool {
 	return assert.Empty(t, value, msgAndArgs...)
 }
 
 // AssertNil asserts that a value is nil
-func AssertNil(t *testing.T, value interface{}, msgAndArgs ...interface{}) bool {
+func AssertNil(t *testing.T, value any, msgAndArgs ...any) bool {
 	return assert.Nil(t, value, msgAndArgs...)
 }
 
 // AssertNotNil asserts that a value is not nil
-func AssertNotNil(t *testing.T, value interface{}, msgAndArgs ...interface{}) bool {
+func AssertNotNil(t *testing.T, value any, msgAndArgs ...any) bool {
 	return assert.NotNil(t, value, msgAndArgs...)
 }
 
 // AssertEqual asserts that two values are equal
-func AssertEqual(t *testing.T, expected, actual interface{}, msgAndArgs ...interface{}) bool {
+func AssertEqual(t *testing.T, expected, actual any, msgAndArgs ...any) bool {
 	return assert.Equal(t, expected, actual, msgAndArgs...)
 }
 
 // AssertNotEqual asserts that two values are not equal
-func AssertNotEqual(t *testing.T, expected, actual interface{}, msgAndArgs ...interface{}) bool {
+func AssertNotEqual(t *testing.T, expected, actual any, msgAndArgs ...any) bool {
 	return assert.NotEqual(t, expected, actual, msgAndArgs...)
 }
 
 // AssertContains asserts that a container contains a specific element
-func AssertContains(t *testing.T, container, element interface{}, msgAndArgs ...interface{}) bool {
+func AssertContains(t *testing.T, container, element any, msgAndArgs ...any) bool {
 	return assert.Contains(t, container, element, msgAndArgs...)
 }
 
 // AssertNotContains asserts that a container does not contain a specific element
-func AssertNotContains(t *testing.T, container, element interface{}, msgAndArgs ...interface{}) bool {
+func AssertNotContains(t *testing.T, container, element any, msgAndArgs ...any) bool {
 	return assert.NotContains(t, container, element, msgAndArgs...)
 }
 
 // AssertGreater asserts that the first value is greater than the second
-func AssertGreater(t *testing.T, first, second interface{}, msgAndArgs ...interface{}) bool {
+func AssertGreater(t *testing.T, first, second any, msgAndArgs ...any) bool {
 	return assert.Greater(t, first, second, msgAndArgs...)
 }
 
 // AssertLess asserts that the first value is less than the second
-func AssertLess(t *testing.T, first, second interface{}, msgAndArgs ...interface{}) bool {
+func AssertLess(t *testing.T, first, second any, msgAndArgs ...any) bool {
 	return assert.Less(t, first, second, msgAndArgs...)
 }
 
 // AssertGreaterOrEqual asserts that the first value is greater than or equal to the second
-func AssertGreaterOrEqual(t *testing.T, first, second interface{}, msgAndArgs ...interface{}) bool {
+func AssertGreaterOrEqual(t *testing.T, first, second any, msgAndArgs ...any) bool {
 	return assert.GreaterOrEqual(t, first, second, msgAndArgs...)
 }
 
 // AssertLessOrEqual asserts that the first value is less than or equal to the second
-func AssertLessOrEqual(t *testing.T, first, second interface{}, msgAndArgs ...interface{}) bool {
+func AssertLessOrEqual(t *testing.T, first, second any, msgAndArgs ...any) bool {
 	return assert.LessOrEqual(t, first, second, msgAndArgs...)
 }

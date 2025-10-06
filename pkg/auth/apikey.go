@@ -47,29 +47,29 @@ func DefaultAPIKeyConfig() *APIKeyConfig {
 
 // APIKey represents an API access key
 type APIKey struct {
-	ID             string                 `json:"id"`
-	UserID         string                 `json:"user_id,omitempty"`
-	OrganizationID string                 `json:"organization_id,omitempty"`
-	Name           string                 `json:"name"`
-	KeyHash        string                 `json:"-"` // Never expose in JSON
-	LastFour       string                 `json:"last_four"`
-	Permissions    map[string]interface{} `json:"permissions,omitempty"`
-	RateLimit      int                    `json:"rate_limit"`
-	IsActive       bool                   `json:"is_active"`
-	LastUsedAt     *time.Time             `json:"last_used_at,omitempty"`
-	ExpiresAt      *time.Time             `json:"expires_at,omitempty"`
-	CreatedAt      time.Time              `json:"created_at"`
-	UpdatedAt      time.Time              `json:"updated_at"`
+	ID             string         `json:"id"`
+	UserID         string         `json:"user_id,omitempty"`
+	OrganizationID string         `json:"organization_id,omitempty"`
+	Name           string         `json:"name"`
+	KeyHash        string         `json:"-"` // Never expose in JSON
+	LastFour       string         `json:"last_four"`
+	Permissions    map[string]any `json:"permissions,omitempty"`
+	RateLimit      int            `json:"rate_limit"`
+	IsActive       bool           `json:"is_active"`
+	LastUsedAt     *time.Time     `json:"last_used_at,omitempty"`
+	ExpiresAt      *time.Time     `json:"expires_at,omitempty"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
 }
 
 // APIKeyCreateRequest represents a request to create an API key
 type APIKeyCreateRequest struct {
-	Name           string                 `json:"name" validate:"required,min=1,max=100"`
-	UserID         string                 `json:"user_id,omitempty"`
-	OrganizationID string                 `json:"organization_id,omitempty"`
-	Permissions    map[string]interface{} `json:"permissions,omitempty"`
-	RateLimit      int                    `json:"rate_limit,omitempty"`
-	ExpiresAt      *time.Time             `json:"expires_at,omitempty"`
+	Name           string         `json:"name" validate:"required,min=1,max=100"`
+	UserID         string         `json:"user_id,omitempty"`
+	OrganizationID string         `json:"organization_id,omitempty"`
+	Permissions    map[string]any `json:"permissions,omitempty"`
+	RateLimit      int            `json:"rate_limit,omitempty"`
+	ExpiresAt      *time.Time     `json:"expires_at,omitempty"`
 }
 
 // APIKeyResponse represents an API key response (includes the actual key)
@@ -272,7 +272,7 @@ func (akm *APIKeyManager) ListOrganizationAPIKeys(organizationID string) ([]*API
 }
 
 // UpdateAPIKey updates an API key
-func (akm *APIKeyManager) UpdateAPIKey(id string, updates map[string]interface{}) error {
+func (akm *APIKeyManager) UpdateAPIKey(id string, updates map[string]any) error {
 	apiKey, err := akm.store.Get(id)
 	if err != nil {
 		return errors.Wrap(err, errors.CodeNotFound, "API key not found")
@@ -283,7 +283,7 @@ func (akm *APIKeyManager) UpdateAPIKey(id string, updates map[string]interface{}
 		apiKey.Name = name
 	}
 
-	if permissions, ok := updates["permissions"].(map[string]interface{}); ok {
+	if permissions, ok := updates["permissions"].(map[string]any); ok {
 		apiKey.Permissions = permissions
 	}
 

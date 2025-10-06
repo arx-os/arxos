@@ -65,9 +65,9 @@ type MobileUserResponse struct {
 }
 
 type MobileAuthError struct {
-	Code    string                 `json:"code"`
-	Message string                 `json:"message"`
-	Details map[string]interface{} `json:"details,omitempty"`
+	Code    string         `json:"code"`
+	Message string         `json:"message"`
+	Details map[string]any `json:"details,omitempty"`
 }
 
 // HandleMobileLogin handles POST /api/v1/mobile/auth/login
@@ -111,7 +111,7 @@ func (h *AuthHandler) HandleMobileLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	tokenPair, err := jwtMgr.GenerateTokenPair(user.ID.String(), user.Email, user.Name, user.Role, "", []string{"mobile_access"}, "", map[string]interface{}{
+	tokenPair, err := jwtMgr.GenerateTokenPair(user.ID.String(), user.Email, user.Name, user.Role, "", []string{"mobile_access"}, "", map[string]any{
 		"platform": "mobile",
 		"app":      "arxos_mobile",
 	})
@@ -141,7 +141,7 @@ func (h *AuthHandler) HandleMobileLogin(w http.ResponseWriter, r *http.Request) 
 		TokenType:    tokenPair.TokenType,
 	}
 
-	response := map[string]interface{}{
+	response := map[string]any{
 		"user":   userResponse,
 		"tokens": tokensResponse,
 	}
@@ -197,7 +197,7 @@ func (h *AuthHandler) HandleMobileRegister(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	tokenPair, err := jwtMgr.GenerateTokenPair(user.ID.String(), user.Email, user.Name, user.Role, "", []string{"mobile_access"}, "", map[string]interface{}{
+	tokenPair, err := jwtMgr.GenerateTokenPair(user.ID.String(), user.Email, user.Name, user.Role, "", []string{"mobile_access"}, "", map[string]any{
 		"platform": "mobile",
 		"app":      "arxos_mobile",
 	})
@@ -227,7 +227,7 @@ func (h *AuthHandler) HandleMobileRegister(w http.ResponseWriter, r *http.Reques
 		TokenType:    tokenPair.TokenType,
 	}
 
-	response := map[string]interface{}{
+	response := map[string]any{
 		"user":   userResponse,
 		"tokens": tokensResponse,
 	}
@@ -292,7 +292,7 @@ func (h *AuthHandler) HandleMobileRefreshToken(w http.ResponseWriter, r *http.Re
 	}
 
 	// Generate new tokens
-	tokenPair, err := jwtMgr.GenerateTokenPair(user.ID.String(), user.Email, user.Name, user.Role, claims.OrganizationID, claims.Permissions, "", map[string]interface{}{
+	tokenPair, err := jwtMgr.GenerateTokenPair(user.ID.String(), user.Email, user.Name, user.Role, claims.OrganizationID, claims.Permissions, "", map[string]any{
 		"platform": "mobile",
 		"app":      "arxos_mobile",
 	})
@@ -323,7 +323,7 @@ func (h *AuthHandler) HandleMobileRefreshToken(w http.ResponseWriter, r *http.Re
 		TokenType:    tokenPair.TokenType,
 	}
 
-	response := map[string]interface{}{
+	response := map[string]any{
 		"user":   userResponse,
 		"tokens": tokensResponse,
 	}
@@ -364,7 +364,7 @@ func (h *AuthHandler) HandleMobileProfile(w http.ResponseWriter, r *http.Request
 	}
 
 	h.logger.Info("Mobile profile retrieved", "user_id", user.ID)
-	h.RespondJSON(w, http.StatusOK, map[string]interface{}{
+	h.RespondJSON(w, http.StatusOK, map[string]any{
 		"user": userResponse,
 	})
 }
@@ -383,7 +383,7 @@ func (h *AuthHandler) HandleMobileLogout(w http.ResponseWriter, r *http.Request)
 	// For now, just log the logout
 
 	h.logger.Info("Mobile user logged out", "user_id", userID)
-	h.RespondJSON(w, http.StatusOK, map[string]interface{}{
+	h.RespondJSON(w, http.StatusOK, map[string]any{
 		"message": "Successfully logged out",
 	})
 }

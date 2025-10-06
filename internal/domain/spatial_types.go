@@ -46,21 +46,21 @@ func Identity() Quaternion {
 
 // SpatialAnchor represents a persistent spatial reference point for AR
 type SpatialAnchor struct {
-	ID               string                 `json:"id" yaml:"id"`
-	Position         *SpatialLocation       `json:"position" yaml:"position"`
-	Rotation         *Quaternion            `json:"rotation" yaml:"rotation"`
-	Confidence       float64                `json:"confidence" yaml:"confidence"`
-	Timestamp        time.Time              `json:"timestamp" yaml:"timestamp"`
-	BuildingID       string                 `json:"building_id" yaml:"building_id"`
-	FloorID          string                 `json:"floor_id" yaml:"floor_id"`
-	RoomID           string                 `json:"room_id" yaml:"room_id"`
-	EquipmentID      string                 `json:"equipment_id" yaml:"equipment_id"`
-	ValidationStatus string                 `json:"validation_status" yaml:"validation_status"`
-	LastUpdated      time.Time              `json:"last_updated" yaml:"last_updated"`
-	Platform         string                 `json:"platform" yaml:"platform"`   // ARKit, ARCore, etc.
-	Stability        float64                `json:"stability" yaml:"stability"` // 0-1 scale
-	Range            float64                `json:"range" yaml:"range"`         // Detection range in meters
-	Metadata         map[string]interface{} `json:"metadata" yaml:"metadata"`
+	ID               string           `json:"id" yaml:"id"`
+	Position         *SpatialLocation `json:"position" yaml:"position"`
+	Rotation         *Quaternion      `json:"rotation" yaml:"rotation"`
+	Confidence       float64          `json:"confidence" yaml:"confidence"`
+	Timestamp        time.Time        `json:"timestamp" yaml:"timestamp"`
+	BuildingID       string           `json:"building_id" yaml:"building_id"`
+	FloorID          string           `json:"floor_id" yaml:"floor_id"`
+	RoomID           string           `json:"room_id" yaml:"room_id"`
+	EquipmentID      string           `json:"equipment_id" yaml:"equipment_id"`
+	ValidationStatus string           `json:"validation_status" yaml:"validation_status"`
+	LastUpdated      time.Time        `json:"last_updated" yaml:"last_updated"`
+	Platform         string           `json:"platform" yaml:"platform"`   // ARKit, ARCore, etc.
+	Stability        float64          `json:"stability" yaml:"stability"` // 0-1 scale
+	Range            float64          `json:"range" yaml:"range"`         // Detection range in meters
+	Metadata         map[string]any   `json:"metadata" yaml:"metadata"`
 }
 
 // SpatialDataUpdate represents a spatial data update from mobile AR
@@ -107,14 +107,14 @@ type ARVisibility struct {
 
 // EquipmentARMetadata represents metadata for AR equipment visualization
 type EquipmentARMetadata struct {
-	Name         string                 `json:"name" yaml:"name"`
-	Type         string                 `json:"type" yaml:"type"`
-	Model        string                 `json:"model" yaml:"model"`
-	Manufacturer string                 `json:"manufacturer" yaml:"manufacturer"`
-	Criticality  string                 `json:"criticality" yaml:"criticality"` // low, medium, high, critical
-	Color        string                 `json:"color" yaml:"color"`             // Hex color for visualization
-	Tags         []string               `json:"tags" yaml:"tags"`
-	Attrs        map[string]interface{} `json:"attributes" yaml:"attributes"`
+	Name         string         `json:"name" yaml:"name"`
+	Type         string         `json:"type" yaml:"type"`
+	Model        string         `json:"model" yaml:"model"`
+	Manufacturer string         `json:"manufacturer" yaml:"manufacturer"`
+	Criticality  string         `json:"criticality" yaml:"criticality"` // low, medium, high, critical
+	Color        string         `json:"color" yaml:"color"`             // Hex color for visualization
+	Tags         []string       `json:"tags" yaml:"tags"`
+	Attrs        map[string]any `json:"attributes" yaml:"attributes"`
 }
 
 // ARNavigationPath represents a navigation path for AR guidance

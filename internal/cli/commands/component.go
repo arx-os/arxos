@@ -14,7 +14,7 @@ type ComponentServiceProvider interface {
 }
 
 // CreateComponentCommands creates component management commands
-func CreateComponentCommands(serviceContext interface{}) *cobra.Command {
+func CreateComponentCommands(serviceContext any) *cobra.Command {
 	componentCmd := &cobra.Command{
 		Use:   "component",
 		Short: "Manage building components",
@@ -29,7 +29,7 @@ func CreateComponentCommands(serviceContext interface{}) *cobra.Command {
 }
 
 // createComponentCreateCommand creates the component create command
-func createComponentCreateCommand(serviceContext interface{}) *cobra.Command {
+func createComponentCreateCommand(serviceContext any) *cobra.Command {
 	var (
 		name     string
 		compType string
@@ -126,7 +126,7 @@ func createComponentCreateCommand(serviceContext interface{}) *cobra.Command {
 }
 
 // createComponentGetCommand creates the component get command
-func createComponentGetCommand(serviceContext interface{}) *cobra.Command {
+func createComponentGetCommand(serviceContext any) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get <identifier>",
 		Short: "Get a component by ID or path",
@@ -182,7 +182,7 @@ func createComponentGetCommand(serviceContext interface{}) *cobra.Command {
 }
 
 // createComponentListCommand creates the component list command
-func createComponentListCommand(serviceContext interface{}) *cobra.Command {
+func createComponentListCommand(serviceContext any) *cobra.Command {
 	var (
 		compType string
 		status   string

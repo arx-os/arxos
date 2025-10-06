@@ -32,7 +32,7 @@ func ValidationMiddleware(validator *validation.Validator) func(http.Handler) ht
 }
 
 // ValidateStruct validates a struct and returns validation errors
-func ValidateStruct(validator *validation.Validator, target interface{}) map[string]string {
+func ValidateStruct(validator *validation.Validator, target any) map[string]string {
 	return validator.ValidateStruct(target)
 }
 
@@ -43,7 +43,7 @@ func ValidateQueryParams(validator *validation.Validator, r *http.Request, rules
 
 // WriteValidationError writes a validation error response
 func WriteValidationError(w http.ResponseWriter, r *http.Request, errors map[string]string) {
-	errorResp := map[string]interface{}{
+	errorResp := map[string]any{
 		"error":             "Validation Error",
 		"message":           "Request validation failed",
 		"code":              "VALIDATION_ERROR",

@@ -26,13 +26,13 @@ type Client struct {
 	ID string
 
 	// Client metadata
-	UserID      string                 `json:"user_id"`
-	SessionID   string                 `json:"session_id"`
-	IPAddress   string                 `json:"ip_address"`
-	UserAgent   string                 `json:"user_agent"`
-	ConnectedAt time.Time              `json:"connected_at"`
-	LastPong    time.Time              `json:"last_pong"`
-	Metadata    map[string]interface{} `json:"metadata"`
+	UserID      string         `json:"user_id"`
+	SessionID   string         `json:"session_id"`
+	IPAddress   string         `json:"ip_address"`
+	UserAgent   string         `json:"user_agent"`
+	ConnectedAt time.Time      `json:"connected_at"`
+	LastPong    time.Time      `json:"last_pong"`
+	Metadata    map[string]any `json:"metadata"`
 
 	// Logger
 	logger domain.Logger
@@ -43,14 +43,14 @@ type Client struct {
 
 // Message represents a WebSocket message
 type Message struct {
-	Type      string                 `json:"type"`
-	Content   string                 `json:"content"`
-	ClientID  string                 `json:"client_id"`
-	RoomID    string                 `json:"room_id,omitempty"`
-	Topic     string                 `json:"topic,omitempty"`
-	Timestamp time.Time              `json:"timestamp"`
-	Data      map[string]interface{} `json:"data,omitempty"`
-	Error     string                 `json:"error,omitempty"`
+	Type      string         `json:"type"`
+	Content   string         `json:"content"`
+	ClientID  string         `json:"client_id"`
+	RoomID    string         `json:"room_id,omitempty"`
+	Topic     string         `json:"topic,omitempty"`
+	Timestamp time.Time      `json:"timestamp"`
+	Data      map[string]any `json:"data,omitempty"`
+	Error     string         `json:"error,omitempty"`
 }
 
 // ClientConfig represents client configuration
@@ -80,7 +80,7 @@ func NewClient(conn *websocket.Conn, hub *Hub, id string, logger domain.Logger) 
 		ID:          id,
 		ConnectedAt: time.Now(),
 		LastPong:    time.Now(),
-		Metadata:    make(map[string]interface{}),
+		Metadata:    make(map[string]any),
 		logger:      logger,
 	}
 }
@@ -261,7 +261,7 @@ func (c *Client) handleDirectMessage(msg Message) {
 		Content:   content,
 		Timestamp: time.Now(),
 		ClientID:  c.ID,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"from_client_id": c.ID,
 		},
 	}
@@ -284,7 +284,7 @@ func (c *Client) handleGetHistory(msg Message) {
 		Type:      "history_response",
 		Timestamp: time.Now(),
 		ClientID:  "system",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"room_id": roomID,
 			"history": history,
 		},
@@ -299,7 +299,7 @@ func (c *Client) handleGetStats(msg Message) {
 		Type:      "stats_response",
 		Timestamp: time.Now(),
 		ClientID:  "system",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"stats": stats,
 		},
 	}
@@ -318,7 +318,7 @@ func (c *Client) sendError(errorMsg, originalType string) {
 		Error:     errorMsg,
 		Timestamp: time.Now(),
 		ClientID:  "system",
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"original_type": originalType,
 		},
 	}
@@ -336,14 +336,14 @@ func (c *Client) Close() {
 }
 
 // SetMetadata sets client metadata
-func (c *Client) SetMetadata(key string, value interface{}) {
+func (c *Client) SetMetadata(key string, value any) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.Metadata[key] = value
 }
 
 // GetMetadata gets client metadata
-func (c *Client) GetMetadata(key string) (interface{}, bool) {
+func (c *Client) GetMetadata(key string) (any, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	value, exists := c.Metadata[key]
@@ -351,11 +351,11 @@ func (c *Client) GetMetadata(key string) (interface{}, bool) {
 }
 
 // GetClientInfo returns client information
-func (c *Client) GetClientInfo() map[string]interface{} {
+func (c *Client) GetClientInfo() map[string]any {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	return map[string]interface{}{
+	return map[string]any{
 		"id":           c.ID,
 		"user_id":      c.UserID,
 		"session_id":   c.SessionID,

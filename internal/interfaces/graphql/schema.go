@@ -273,7 +273,7 @@ func NewSchema(resolvers *Resolvers) (*Schema, error) {
 }
 
 // Execute executes a GraphQL query
-func (s *Schema) Execute(query string, variables map[string]interface{}) *graphql.Result {
+func (s *Schema) Execute(query string, variables map[string]any) *graphql.Result {
 	return graphql.Do(graphql.Params{
 		Schema:         *s.schema,
 		RequestString:  query,
@@ -309,16 +309,16 @@ func (s *Schema) getBuildingType() *graphql.Object {
 			},
 			"equipment": &graphql.Field{
 				Type: graphql.NewList(s.getEquipmentType()),
-				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				Resolve: func(p graphql.ResolveParams) (any, error) {
 					// This would resolve equipment for the building
-					return []interface{}{}, nil
+					return []any{}, nil
 				},
 			},
 			"components": &graphql.Field{
 				Type: graphql.NewList(s.getComponentType()),
-				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				Resolve: func(p graphql.ResolveParams) (any, error) {
 					// This would resolve components for the building
-					return []interface{}{}, nil
+					return []any{}, nil
 				},
 			},
 		},
@@ -362,7 +362,7 @@ func (s *Schema) getEquipmentType() *graphql.Object {
 			},
 			"building": &graphql.Field{
 				Type: s.getBuildingType(),
-				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				Resolve: func(p graphql.ResolveParams) (any, error) {
 					// This would resolve the building for the equipment
 					return nil, nil
 				},

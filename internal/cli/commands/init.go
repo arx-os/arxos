@@ -15,15 +15,17 @@ import (
 // InitServiceProvider provides access to initialization services
 type InitServiceProvider interface {
 	GetDataManager() *filesystem.DataManager
-	GetLoggerService() interface {
-		Info(msg string, fields ...interface{})
-		Error(msg string, fields ...interface{})
-		Debug(msg string, fields ...interface{})
-	}
+	GetLoggerService() Logger
+}
+
+type Logger interface {
+	Info(msg string, fields ...any)
+	Error(msg string, fields ...any)
+	Debug(msg string, fields ...any)
 }
 
 // CreateInitCommand creates the init command
-func CreateInitCommand(serviceContext interface{}) *cobra.Command {
+func CreateInitCommand(serviceContext any) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Initialize ArxOS configuration and directories",
@@ -58,7 +60,7 @@ Examples:
 }
 
 // runInitCommand executes the initialization process
-func runInitCommand(cmd *cobra.Command, serviceContext interface{}) error {
+func runInitCommand(cmd *cobra.Command, serviceContext any) error {
 	fmt.Println("🚀 Initializing ArxOS...")
 	fmt.Println("================================")
 

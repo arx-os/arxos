@@ -29,31 +29,31 @@ type SpatialScale struct {
 
 // MobileSpatialAnchor represents an AR spatial anchor for mobile API responses
 type MobileSpatialAnchor struct {
-	ID          string                 `json:"id"`
-	BuildingID  string                 `json:"building_id"`
-	EquipmentID string                 `json:"equipment_id,omitempty"`
-	Position    SpatialPosition        `json:"position"`
-	Rotation    SpatialRotation        `json:"rotation,omitempty"`
-	Scale       SpatialScale           `json:"scale,omitempty"`
-	Confidence  float64                `json:"confidence"`
-	AnchorType  string                 `json:"anchor_type"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
-	CreatedAt   time.Time              `json:"created_at"`
-	UpdatedAt   time.Time              `json:"updated_at"`
-	CreatedBy   string                 `json:"created_by,omitempty"`
+	ID          string          `json:"id"`
+	BuildingID  string          `json:"building_id"`
+	EquipmentID string          `json:"equipment_id,omitempty"`
+	Position    SpatialPosition `json:"position"`
+	Rotation    SpatialRotation `json:"rotation,omitempty"`
+	Scale       SpatialScale    `json:"scale,omitempty"`
+	Confidence  float64         `json:"confidence"`
+	AnchorType  string          `json:"anchor_type"`
+	Metadata    map[string]any  `json:"metadata,omitempty"`
+	CreatedAt   time.Time       `json:"created_at"`
+	UpdatedAt   time.Time       `json:"updated_at"`
+	CreatedBy   string          `json:"created_by,omitempty"`
 }
 
 // CreateSpatialAnchorRequest represents a request to create a spatial anchor
 type CreateSpatialAnchorRequest struct {
-	BuildingID  string                 `json:"building_id" validate:"required"`
-	EquipmentID string                 `json:"equipment_id,omitempty"`
-	Position    SpatialPosition        `json:"position" validate:"required"`
-	Rotation    *SpatialRotation       `json:"rotation,omitempty"`
-	Scale       *SpatialScale          `json:"scale,omitempty"`
-	Confidence  float64                `json:"confidence"`
-	AnchorType  string                 `json:"anchor_type"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
-	CreatedBy   string                 `json:"created_by,omitempty"`
+	BuildingID  string           `json:"building_id" validate:"required"`
+	EquipmentID string           `json:"equipment_id,omitempty"`
+	Position    SpatialPosition  `json:"position" validate:"required"`
+	Rotation    *SpatialRotation `json:"rotation,omitempty"`
+	Scale       *SpatialScale    `json:"scale,omitempty"`
+	Confidence  float64          `json:"confidence"`
+	AnchorType  string           `json:"anchor_type"`
+	Metadata    map[string]any   `json:"metadata,omitempty"`
+	CreatedBy   string           `json:"created_by,omitempty"`
 }
 
 // SpatialAnchorFilter represents filters for spatial anchor queries
@@ -137,11 +137,11 @@ type SpatialRepository interface {
 
 // UpdateSpatialAnchorRequest represents a request to update a spatial anchor
 type UpdateSpatialAnchorRequest struct {
-	Position   *SpatialPosition       `json:"position,omitempty"`
-	Rotation   *SpatialRotation       `json:"rotation,omitempty"`
-	Scale      *SpatialScale          `json:"scale,omitempty"`
-	Confidence *float64               `json:"confidence,omitempty"`
-	Metadata   map[string]interface{} `json:"metadata,omitempty"`
+	Position   *SpatialPosition `json:"position,omitempty"`
+	Rotation   *SpatialRotation `json:"rotation,omitempty"`
+	Scale      *SpatialScale    `json:"scale,omitempty"`
+	Confidence *float64         `json:"confidence,omitempty"`
+	Metadata   map[string]any   `json:"metadata,omitempty"`
 }
 
 // SpatialAnalytics represents spatial analytics data

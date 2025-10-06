@@ -22,32 +22,32 @@ type OrganizationListResponse struct {
 
 // CreateOrganizationRequest represents the request to create an organization
 type CreateOrganizationRequest struct {
-	Name        string                 `json:"name" validate:"required"`
-	Description string                 `json:"description"`
-	Plan        string                 `json:"plan" validate:"required,oneof=free pro enterprise"`
-	IsActive    bool                   `json:"is_active"`
-	Metadata    map[string]interface{} `json:"metadata"`
+	Name        string         `json:"name" validate:"required"`
+	Description string         `json:"description"`
+	Plan        string         `json:"plan" validate:"required,oneof=free pro enterprise"`
+	IsActive    bool           `json:"is_active"`
+	Metadata    map[string]any `json:"metadata"`
 }
 
 // UpdateOrganizationRequest represents the request to update an organization
 type UpdateOrganizationRequest struct {
-	Name        *string                `json:"name,omitempty"`
-	Description *string                `json:"description,omitempty"`
-	Plan        *string                `json:"plan,omitempty"`
-	IsActive    *bool                  `json:"is_active,omitempty"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	Name        *string        `json:"name,omitempty"`
+	Description *string        `json:"description,omitempty"`
+	Plan        *string        `json:"plan,omitempty"`
+	IsActive    *bool          `json:"is_active,omitempty"`
+	Metadata    map[string]any `json:"metadata,omitempty"`
 }
 
 // OrganizationResponse represents an organization in API responses
 type OrganizationResponse struct {
-	ID          string                 `json:"id"`
-	Name        string                 `json:"name"`
-	Description string                 `json:"description"`
-	Plan        string                 `json:"plan"`
-	IsActive    bool                   `json:"is_active"`
-	Metadata    map[string]interface{} `json:"metadata"`
-	CreatedAt   time.Time              `json:"created_at"`
-	UpdatedAt   time.Time              `json:"updated_at"`
+	ID          string         `json:"id"`
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	Plan        string         `json:"plan"`
+	IsActive    bool           `json:"is_active"`
+	Metadata    map[string]any `json:"metadata"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
 }
 
 // OrganizationUsersResponse represents the response for listing organization users

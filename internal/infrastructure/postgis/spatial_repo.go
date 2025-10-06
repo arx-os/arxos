@@ -176,7 +176,7 @@ func (r *SpatialRepository) GetSpatialAnchorsByBuilding(ctx context.Context, bui
 		WHERE building_id = $1
 	`
 
-	args := []interface{}{buildingID}
+	args := []any{buildingID}
 	argIndex := 2
 
 	if filter.AnchorType != nil {

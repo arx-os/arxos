@@ -16,43 +16,43 @@ const (
 
 // Organization represents a company or team using the system
 type Organization struct {
-	ID                    string                 `json:"id"`
-	Name                  string                 `json:"name"`
-	Slug                  string                 `json:"slug"`
-	Description           string                 `json:"description,omitempty"`
-	Website               string                 `json:"website,omitempty"`
-	LogoURL               string                 `json:"logo_url,omitempty"`
-	Address               string                 `json:"address,omitempty"`
-	City                  string                 `json:"city,omitempty"`
-	State                 string                 `json:"state,omitempty"`
-	Country               string                 `json:"country,omitempty"`
-	PostalCode            string                 `json:"postal_code,omitempty"`
-	Phone                 string                 `json:"phone,omitempty"`
-	Email                 string                 `json:"email,omitempty"`
-	Plan                  Plan                   `json:"plan"`
-	Status                string                 `json:"status"`
-	MaxUsers              int                    `json:"max_users"`
-	MaxBuildings          int                    `json:"max_buildings"`
-	Settings              map[string]interface{} `json:"settings,omitempty"`
-	Metadata              map[string]interface{} `json:"metadata,omitempty"`
-	IsActive              bool                   `json:"is_active"`
-	SubscriptionTier      string                 `json:"subscription_tier"`
-	SubscriptionExpiresAt *time.Time             `json:"subscription_expires_at,omitempty"`
-	CreatedAt             time.Time              `json:"created_at"`
-	UpdatedAt             time.Time              `json:"updated_at"`
+	ID                    string         `json:"id"`
+	Name                  string         `json:"name"`
+	Slug                  string         `json:"slug"`
+	Description           string         `json:"description,omitempty"`
+	Website               string         `json:"website,omitempty"`
+	LogoURL               string         `json:"logo_url,omitempty"`
+	Address               string         `json:"address,omitempty"`
+	City                  string         `json:"city,omitempty"`
+	State                 string         `json:"state,omitempty"`
+	Country               string         `json:"country,omitempty"`
+	PostalCode            string         `json:"postal_code,omitempty"`
+	Phone                 string         `json:"phone,omitempty"`
+	Email                 string         `json:"email,omitempty"`
+	Plan                  Plan           `json:"plan"`
+	Status                string         `json:"status"`
+	MaxUsers              int            `json:"max_users"`
+	MaxBuildings          int            `json:"max_buildings"`
+	Settings              map[string]any `json:"settings,omitempty"`
+	Metadata              map[string]any `json:"metadata,omitempty"`
+	IsActive              bool           `json:"is_active"`
+	SubscriptionTier      string         `json:"subscription_tier"`
+	SubscriptionExpiresAt *time.Time     `json:"subscription_expires_at,omitempty"`
+	CreatedAt             time.Time      `json:"created_at"`
+	UpdatedAt             time.Time      `json:"updated_at"`
 }
 
 // OrganizationMember represents a user's membership in an organization
 type OrganizationMember struct {
-	ID             string                 `json:"id"`
-	OrganizationID string                 `json:"organization_id"`
-	UserID         string                 `json:"user_id"`
-	Role           string                 `json:"role"`
-	Permissions    map[string]interface{} `json:"permissions,omitempty"`
-	JoinedAt       time.Time              `json:"joined_at"`
-	InvitedBy      string                 `json:"invited_by,omitempty"`
-	User           *User                  `json:"user,omitempty"`         // Populated when needed
-	Organization   *Organization          `json:"organization,omitempty"` // Populated when needed
+	ID             string         `json:"id"`
+	OrganizationID string         `json:"organization_id"`
+	UserID         string         `json:"user_id"`
+	Role           string         `json:"role"`
+	Permissions    map[string]any `json:"permissions,omitempty"`
+	JoinedAt       time.Time      `json:"joined_at"`
+	InvitedBy      string         `json:"invited_by,omitempty"`
+	User           *User          `json:"user,omitempty"`         // Populated when needed
+	Organization   *Organization  `json:"organization,omitempty"` // Populated when needed
 }
 
 // OrganizationInvitation represents an invitation to join an organization
@@ -72,41 +72,41 @@ type OrganizationInvitation struct {
 
 // OrganizationCreateRequest represents an organization creation request
 type OrganizationCreateRequest struct {
-	Name        string                 `json:"name" validate:"required,min=2,max=100"`
-	Slug        string                 `json:"slug" validate:"required,min=2,max=50,alphanum"`
-	Description string                 `json:"description,omitempty"`
-	Website     string                 `json:"website,omitempty" validate:"omitempty,url"`
-	LogoURL     string                 `json:"logo_url,omitempty" validate:"omitempty,url"`
-	Address     string                 `json:"address,omitempty"`
-	City        string                 `json:"city,omitempty"`
-	State       string                 `json:"state,omitempty"`
-	Country     string                 `json:"country,omitempty"`
-	PostalCode  string                 `json:"postal_code,omitempty"`
-	Phone       string                 `json:"phone,omitempty"`
-	Email       string                 `json:"email,omitempty" validate:"omitempty,email"`
-	Settings    map[string]interface{} `json:"settings,omitempty"`
+	Name        string         `json:"name" validate:"required,min=2,max=100"`
+	Slug        string         `json:"slug" validate:"required,min=2,max=50,alphanum"`
+	Description string         `json:"description,omitempty"`
+	Website     string         `json:"website,omitempty" validate:"omitempty,url"`
+	LogoURL     string         `json:"logo_url,omitempty" validate:"omitempty,url"`
+	Address     string         `json:"address,omitempty"`
+	City        string         `json:"city,omitempty"`
+	State       string         `json:"state,omitempty"`
+	Country     string         `json:"country,omitempty"`
+	PostalCode  string         `json:"postal_code,omitempty"`
+	Phone       string         `json:"phone,omitempty"`
+	Email       string         `json:"email,omitempty" validate:"omitempty,email"`
+	Settings    map[string]any `json:"settings,omitempty"`
 }
 
 // OrganizationUpdateRequest represents an organization update request
 type OrganizationUpdateRequest struct {
-	Name        string                 `json:"name,omitempty" validate:"omitempty,min=2,max=100"`
-	Description string                 `json:"description,omitempty"`
-	Website     string                 `json:"website,omitempty" validate:"omitempty,url"`
-	LogoURL     string                 `json:"logo_url,omitempty" validate:"omitempty,url"`
-	Address     string                 `json:"address,omitempty"`
-	City        string                 `json:"city,omitempty"`
-	State       string                 `json:"state,omitempty"`
-	Country     string                 `json:"country,omitempty"`
-	PostalCode  string                 `json:"postal_code,omitempty"`
-	Phone       string                 `json:"phone,omitempty"`
-	Email       string                 `json:"email,omitempty" validate:"omitempty,email"`
-	Settings    map[string]interface{} `json:"settings,omitempty"`
+	Name        string         `json:"name,omitempty" validate:"omitempty,min=2,max=100"`
+	Description string         `json:"description,omitempty"`
+	Website     string         `json:"website,omitempty" validate:"omitempty,url"`
+	LogoURL     string         `json:"logo_url,omitempty" validate:"omitempty,url"`
+	Address     string         `json:"address,omitempty"`
+	City        string         `json:"city,omitempty"`
+	State       string         `json:"state,omitempty"`
+	Country     string         `json:"country,omitempty"`
+	PostalCode  string         `json:"postal_code,omitempty"`
+	Phone       string         `json:"phone,omitempty"`
+	Email       string         `json:"email,omitempty" validate:"omitempty,email"`
+	Settings    map[string]any `json:"settings,omitempty"`
 }
 
 // OrganizationMemberUpdateRequest represents a member update request
 type OrganizationMemberUpdateRequest struct {
-	Role        string                 `json:"role" validate:"required,oneof=owner admin member viewer"`
-	Permissions map[string]interface{} `json:"permissions,omitempty"`
+	Role        string         `json:"role" validate:"required,oneof=owner admin member viewer"`
+	Permissions map[string]any `json:"permissions,omitempty"`
 }
 
 // OrganizationInviteRequest represents an invitation request

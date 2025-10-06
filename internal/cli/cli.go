@@ -28,7 +28,7 @@ func NewCLI(app *App) *CLI {
 // Validation utilities
 
 // ValidateNonEmpty validates that a value is not empty
-func ValidateNonEmpty(value interface{}) error {
+func ValidateNonEmpty(value any) error {
 	if str, ok := value.(string); ok && str == "" {
 		return errors.New(errors.CodeInvalidInput, "value cannot be empty")
 	}
@@ -36,7 +36,7 @@ func ValidateNonEmpty(value interface{}) error {
 }
 
 // ValidatePositiveNumber validates that a number is positive
-func ValidatePositiveNumber(value interface{}) error {
+func ValidatePositiveNumber(value any) error {
 	switch v := value.(type) {
 	case int:
 		if v <= 0 {
@@ -166,9 +166,9 @@ func (c *CLI) IsValidOutputFormat(format string) bool {
 	return false
 }
 
-// ConvertMetadata converts string metadata to interface{} metadata
-func (c *CLI) ConvertMetadata(metadata map[string]string) map[string]interface{} {
-	result := make(map[string]interface{})
+// ConvertMetadata converts string metadata to any metadata
+func (c *CLI) ConvertMetadata(metadata map[string]string) map[string]any {
+	result := make(map[string]any)
 	for k, v := range metadata {
 		result[k] = v
 	}
@@ -197,7 +197,7 @@ func (c *CLI) EnsureFileExists(filePath string) error {
 }
 
 // GetDatabaseConnection returns a database connection using DI container
-func (c *CLI) GetDatabaseConnection(ctx context.Context) (interface{}, error) {
+func (c *CLI) GetDatabaseConnection(ctx context.Context) (any, error) {
 	// Note: Database health check would be implemented when services are available
 	return nil, errors.New(errors.CodeDatabase, "database connection not implemented")
 }
@@ -205,43 +205,43 @@ func (c *CLI) GetDatabaseConnection(ctx context.Context) (interface{}, error) {
 // Logging utilities
 
 // LogInfo logs an info message with context
-func (c *CLI) LogInfo(message string, fields ...interface{}) {
+func (c *CLI) LogInfo(message string, fields ...any) {
 	fmt.Printf("[INFO] %s %v\n", message, fields)
 }
 
 // LogError logs an error message with context
-func (c *CLI) LogError(message string, fields ...interface{}) {
+func (c *CLI) LogError(message string, fields ...any) {
 	fmt.Printf("[ERROR] %s %v\n", message, fields)
 }
 
 // LogWarning logs a warning message with context
-func (c *CLI) LogWarning(message string, fields ...interface{}) {
+func (c *CLI) LogWarning(message string, fields ...any) {
 	fmt.Printf("[WARN] %s %v\n", message, fields)
 }
 
 // LogDebug logs a debug message with context
-func (c *CLI) LogDebug(message string, fields ...interface{}) {
+func (c *CLI) LogDebug(message string, fields ...any) {
 	fmt.Printf("[DEBUG] %s %v\n", message, fields)
 }
 
 // Success output utilities
 
 // PrintSuccess prints a success message with emoji
-func (c *CLI) PrintSuccess(message string, args ...interface{}) {
+func (c *CLI) PrintSuccess(message string, args ...any) {
 	fmt.Printf("✅ %s\n", fmt.Sprintf(message, args...))
 }
 
 // PrintInfo prints an info message with emoji
-func (c *CLI) PrintInfo(message string, args ...interface{}) {
+func (c *CLI) PrintInfo(message string, args ...any) {
 	fmt.Printf("ℹ️  %s\n", fmt.Sprintf(message, args...))
 }
 
 // PrintWarning prints a warning message with emoji
-func (c *CLI) PrintWarning(message string, args ...interface{}) {
+func (c *CLI) PrintWarning(message string, args ...any) {
 	fmt.Printf("⚠️  %s\n", fmt.Sprintf(message, args...))
 }
 
 // PrintError prints an error message with emoji
-func (c *CLI) PrintError(message string, args ...interface{}) {
+func (c *CLI) PrintError(message string, args ...any) {
 	fmt.Printf("❌ %s\n", fmt.Sprintf(message, args...))
 }

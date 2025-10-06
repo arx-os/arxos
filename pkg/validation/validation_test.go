@@ -515,7 +515,7 @@ func TestCustomValidation(t *testing.T) {
 		Description: "Custom field validation",
 		Required:    true,
 		Type:        "string",
-		Custom: func(value interface{}) bool {
+		Custom: func(value any) bool {
 			if str, ok := value.(string); ok {
 				return len(str) >= 5 && strings.Contains(str, "test")
 			}

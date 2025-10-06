@@ -23,35 +23,35 @@ type UserListResponse struct {
 
 // CreateUserRequest represents the request to create a user
 type CreateUserRequest struct {
-	Email    string                 `json:"email" validate:"required,email"`
-	Name     string                 `json:"name" validate:"required"`
-	Password string                 `json:"password" validate:"required,min=8"`
-	Role     string                 `json:"role" validate:"required,oneof=admin user"`
-	OrgID    string                 `json:"org_id"`
-	IsActive bool                   `json:"is_active"`
-	Metadata map[string]interface{} `json:"metadata"`
+	Email    string         `json:"email" validate:"required,email"`
+	Name     string         `json:"name" validate:"required"`
+	Password string         `json:"password" validate:"required,min=8"`
+	Role     string         `json:"role" validate:"required,oneof=admin user"`
+	OrgID    string         `json:"org_id"`
+	IsActive bool           `json:"is_active"`
+	Metadata map[string]any `json:"metadata"`
 }
 
 // UpdateUserRequest represents the request to update a user
 type UpdateUserRequest struct {
-	Name     *string                `json:"name,omitempty"`
-	Email    *string                `json:"email,omitempty"`
-	Role     *string                `json:"role,omitempty"`
-	IsActive *bool                  `json:"is_active,omitempty"`
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	Name     *string        `json:"name,omitempty"`
+	Email    *string        `json:"email,omitempty"`
+	Role     *string        `json:"role,omitempty"`
+	IsActive *bool          `json:"is_active,omitempty"`
+	Metadata map[string]any `json:"metadata,omitempty"`
 }
 
 // UserResponse represents a user in API responses
 type UserResponse struct {
-	ID        string                 `json:"id"`
-	Email     string                 `json:"email"`
-	Name      string                 `json:"name"`
-	Role      string                 `json:"role"`
-	OrgID     string                 `json:"org_id"`
-	IsActive  bool                   `json:"is_active"`
-	Metadata  map[string]interface{} `json:"metadata"`
-	CreatedAt time.Time              `json:"created_at"`
-	UpdatedAt time.Time              `json:"updated_at"`
+	ID        string         `json:"id"`
+	Email     string         `json:"email"`
+	Name      string         `json:"name"`
+	Role      string         `json:"role"`
+	OrgID     string         `json:"org_id"`
+	IsActive  bool           `json:"is_active"`
+	Metadata  map[string]any `json:"metadata"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
 }
 
 // LoginRequest represents a login request

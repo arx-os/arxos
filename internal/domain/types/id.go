@@ -92,7 +92,7 @@ func (id *ID) UnmarshalJSON(data []byte) error {
 }
 
 // Scan implements sql.Scanner for database scanning
-func (id *ID) Scan(value interface{}) error {
+func (id *ID) Scan(value any) error {
 	if value == nil {
 		*id = ID{}
 		return nil
@@ -111,7 +111,7 @@ func (id *ID) Scan(value interface{}) error {
 }
 
 // Value implements driver.Valuer for database storage
-func (id ID) Value() (interface{}, error) {
+func (id ID) Value() (any, error) {
 	if id.UUID != "" {
 		return id.UUID, nil
 	}
@@ -130,16 +130,16 @@ func (id ID) Equal(other ID) bool {
 }
 
 // ToLegacyMap returns a map for legacy database operations
-func (id ID) ToLegacyMap() map[string]interface{} {
-	return map[string]interface{}{
+func (id ID) ToLegacyMap() map[string]any {
+	return map[string]any{
 		"id":      id.Legacy,
 		"uuid_id": id.UUID,
 	}
 }
 
 // ToUUIDMap returns a map for UUID-based database operations
-func (id ID) ToUUIDMap() map[string]interface{} {
-	return map[string]interface{}{
+func (id ID) ToUUIDMap() map[string]any {
+	return map[string]any{
 		"uuid_id": id.UUID,
 		"id":      id.Legacy,
 	}

@@ -1084,8 +1084,8 @@ func (c *Config) LoadServiceConfigs() error {
 
 	// Apply PostGIS service config if available
 	if postgisConfig, exists := serviceConfigs["postgis"]; exists {
-		if postgisMap, ok := postgisConfig.(map[string]interface{}); ok {
-			if postgis, ok := postgisMap["postgis"].(map[string]interface{}); ok {
+		if postgisMap, ok := postgisConfig.(map[string]any); ok {
+			if postgis, ok := postgisMap["postgis"].(map[string]any); ok {
 				c.applyPostGISServiceConfig(postgis)
 			}
 		}
@@ -1093,8 +1093,8 @@ func (c *Config) LoadServiceConfigs() error {
 
 	// Apply Redis service config if available
 	if redisConfig, exists := serviceConfigs["redis"]; exists {
-		if redisMap, ok := redisConfig.(map[string]interface{}); ok {
-			if redis, ok := redisMap["redis"].(map[string]interface{}); ok {
+		if redisMap, ok := redisConfig.(map[string]any); ok {
+			if redis, ok := redisMap["redis"].(map[string]any); ok {
 				c.applyRedisServiceConfig(redis)
 			}
 		}
@@ -1102,8 +1102,8 @@ func (c *Config) LoadServiceConfigs() error {
 
 	// Apply IFC service config if available
 	if ifcConfig, exists := serviceConfigs["ifc_service"]; exists {
-		if ifcMap, ok := ifcConfig.(map[string]interface{}); ok {
-			if ifc, ok := ifcMap["ifc_service"].(map[string]interface{}); ok {
+		if ifcMap, ok := ifcConfig.(map[string]any); ok {
+			if ifc, ok := ifcMap["ifc_service"].(map[string]any); ok {
 				c.applyIFCServiceConfig(ifc)
 			}
 		}
@@ -1113,7 +1113,7 @@ func (c *Config) LoadServiceConfigs() error {
 }
 
 // applyPostGISServiceConfig applies PostGIS service configuration
-func (c *Config) applyPostGISServiceConfig(config map[string]interface{}) {
+func (c *Config) applyPostGISServiceConfig(config map[string]any) {
 	if host, ok := config["host"].(string); ok {
 		c.PostGIS.Host = host
 	}
@@ -1135,14 +1135,14 @@ func (c *Config) applyPostGISServiceConfig(config map[string]interface{}) {
 }
 
 // applyRedisServiceConfig applies Redis service configuration
-func (c *Config) applyRedisServiceConfig(config map[string]interface{}) {
+func (c *Config) applyRedisServiceConfig(config map[string]any) {
 	// Redis config would be applied to a RedisConfig struct if we had one
 	// For now, we'll just store it in a generic way
 	// This is a placeholder for future Redis integration
 }
 
 // applyIFCServiceConfig applies IFC service configuration
-func (c *Config) applyIFCServiceConfig(config map[string]interface{}) {
+func (c *Config) applyIFCServiceConfig(config map[string]any) {
 	if enabled, ok := config["enabled"].(bool); ok {
 		c.IFC.Service.Enabled = enabled
 	}

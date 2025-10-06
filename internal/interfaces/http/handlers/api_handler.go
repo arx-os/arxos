@@ -33,7 +33,7 @@ func (h *APIHandler) HandleHealth(w http.ResponseWriter, r *http.Request) {
 		Status:    "healthy",
 		Version:   "2.0.0",
 		Timestamp: time.Now().UTC(),
-		Checks: map[string]interface{}{
+		Checks: map[string]any{
 			"database": "connected",
 			"cache":    "connected",
 		},
@@ -89,7 +89,7 @@ func (h *APIHandler) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// Placeholder metrics response
-	response := map[string]interface{}{
+	response := map[string]any{
 		"requests_total":      1000,
 		"requests_per_second": 10.5,
 		"response_time_ms":    150,

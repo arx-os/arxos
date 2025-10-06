@@ -23,7 +23,7 @@ func TestJWTManager(t *testing.T) {
 		"org123",
 		[]string{"read", "write"},
 		"session123",
-		map[string]interface{}{"device": "mobile"},
+		map[string]any{"device": "mobile"},
 	)
 	if err != nil {
 		t.Fatalf("Failed to generate token pair: %v", err)
@@ -265,7 +265,7 @@ func TestAPIKeyManager(t *testing.T) {
 	req := &APIKeyCreateRequest{
 		Name:        "Test API Key",
 		UserID:      "user123",
-		Permissions: map[string]interface{}{"read": true},
+		Permissions: map[string]any{"read": true},
 		RateLimit:   1000,
 	}
 
@@ -320,7 +320,7 @@ func TestSessionManager(t *testing.T) {
 		"org123",
 		"192.168.1.1",
 		"Mozilla/5.0",
-		map[string]interface{}{"device": "desktop"},
+		map[string]any{"device": "desktop"},
 	)
 	if err != nil {
 		t.Fatalf("Failed to create session: %v", err)

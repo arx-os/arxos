@@ -10,7 +10,7 @@ import (
 )
 
 // CreateConfigCommand creates the config command group
-func CreateConfigCommand(serviceContext interface{}) *cobra.Command {
+func CreateConfigCommand(serviceContext any) *cobra.Command {
 	configCmd := &cobra.Command{
 		Use:   "config",
 		Short: "Configuration management commands",
@@ -29,7 +29,7 @@ func CreateConfigCommand(serviceContext interface{}) *cobra.Command {
 }
 
 // createConfigValidateCommand creates the config validate command
-func createConfigValidateCommand(serviceContext interface{}) *cobra.Command {
+func createConfigValidateCommand(serviceContext any) *cobra.Command {
 	return &cobra.Command{
 		Use:   "validate [config-path]",
 		Short: "Validate configuration file",
@@ -64,7 +64,7 @@ Examples:
 }
 
 // createConfigLoadCommand creates the config load command
-func createConfigLoadCommand(serviceContext interface{}) *cobra.Command {
+func createConfigLoadCommand(serviceContext any) *cobra.Command {
 	return &cobra.Command{
 		Use:   "load [config-path]",
 		Short: "Load and display configuration",
@@ -104,7 +104,7 @@ Examples:
 }
 
 // createConfigSaveCommand creates the config save command
-func createConfigSaveCommand(serviceContext interface{}) *cobra.Command {
+func createConfigSaveCommand(serviceContext any) *cobra.Command {
 	return &cobra.Command{
 		Use:   "save [output-path]",
 		Short: "Save current configuration to file",
@@ -140,7 +140,7 @@ Examples:
 }
 
 // createConfigTemplateCommand creates the config template command
-func createConfigTemplateCommand(serviceContext interface{}) *cobra.Command {
+func createConfigTemplateCommand(serviceContext any) *cobra.Command {
 	return &cobra.Command{
 		Use:   "template [environment] [output-path]",
 		Short: "Generate configuration template",
@@ -186,7 +186,7 @@ Examples:
 }
 
 // createConfigMigrateCommand creates the config migrate command
-func createConfigMigrateCommand(serviceContext interface{}) *cobra.Command {
+func createConfigMigrateCommand(serviceContext any) *cobra.Command {
 	return &cobra.Command{
 		Use:   "migrate [old-path] [new-path]",
 		Short: "Migrate legacy configuration files to new format",
@@ -251,7 +251,7 @@ Examples:
 }
 
 // createConfigServicesCommand creates the config services command
-func createConfigServicesCommand(serviceContext interface{}) *cobra.Command {
+func createConfigServicesCommand(serviceContext any) *cobra.Command {
 	servicesCmd := &cobra.Command{
 		Use:   "services",
 		Short: "Manage service configurations",
@@ -265,7 +265,7 @@ func createConfigServicesCommand(serviceContext interface{}) *cobra.Command {
 }
 
 // createConfigServicesListCommand creates the config services list command
-func createConfigServicesListCommand(serviceContext interface{}) *cobra.Command {
+func createConfigServicesListCommand(serviceContext any) *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List available service configurations",
@@ -293,7 +293,7 @@ func createConfigServicesListCommand(serviceContext interface{}) *cobra.Command 
 }
 
 // createConfigServicesLoadCommand creates the config services load command
-func createConfigServicesLoadCommand(serviceContext interface{}) *cobra.Command {
+func createConfigServicesLoadCommand(serviceContext any) *cobra.Command {
 	return &cobra.Command{
 		Use:   "load [service-name]",
 		Short: "Load and display service configuration",

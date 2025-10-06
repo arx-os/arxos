@@ -198,7 +198,7 @@ func ValidateConflict(conflict Conflict) error {
 }
 
 // CreateChange creates a new change with generated ID
-func CreateChange(changeType, entity, entityID, userID string, data map[string]interface{}) Change {
+func CreateChange(changeType, entity, entityID, userID string, data map[string]any) Change {
 	return Change{
 		ID:        generateChangeID(),
 		Type:      changeType,
@@ -229,8 +229,8 @@ func CreateConflict(entity, entityID, conflictType string, localChange, remoteCh
 }
 
 // MergeChangeData merges data from two changes
-func MergeChangeData(change1, change2 Change) map[string]interface{} {
-	merged := make(map[string]interface{})
+func MergeChangeData(change1, change2 Change) map[string]any {
+	merged := make(map[string]any)
 
 	// Start with first change data
 	for key, value := range change1.Data {

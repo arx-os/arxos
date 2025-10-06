@@ -14,7 +14,7 @@ type RepositoryServiceProvider interface {
 }
 
 // createRepoCommand creates the repository management command
-func CreateRepoCommand(serviceContext interface{}) *cobra.Command {
+func CreateRepoCommand(serviceContext any) *cobra.Command {
 	repoCmd := &cobra.Command{
 		Use:   "repo",
 		Short: "Manage building repositories",
@@ -33,7 +33,7 @@ func CreateRepoCommand(serviceContext interface{}) *cobra.Command {
 }
 
 // createRepoInitCommand creates the repo init command
-func createRepoInitCommand(serviceContext interface{}) *cobra.Command {
+func createRepoInitCommand(serviceContext any) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init <name>",
 		Short: "Initialize a new building repository",

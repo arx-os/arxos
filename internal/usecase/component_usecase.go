@@ -165,7 +165,7 @@ func (uc *ComponentUseCase) ListComponents(ctx context.Context, filter component
 }
 
 // AddProperty adds a property to a component
-func (uc *ComponentUseCase) AddProperty(ctx context.Context, componentID, key string, value interface{}) error {
+func (uc *ComponentUseCase) AddProperty(ctx context.Context, componentID, key string, value any) error {
 	if componentID == "" || key == "" {
 		return fmt.Errorf("component ID and property key cannot be empty")
 	}

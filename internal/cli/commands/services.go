@@ -12,7 +12,7 @@ type ServiceContextProvider interface {
 }
 
 // createWatchCommand creates the watch command
-func CreateWatchCommand(serviceContext interface{}) *cobra.Command {
+func CreateWatchCommand(serviceContext any) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "watch <directory>",
 		Short: "Watch directory for file changes",

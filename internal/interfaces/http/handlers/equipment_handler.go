@@ -92,11 +92,11 @@ func (h *EquipmentHandler) ListEquipment(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Return response
-	response := map[string]interface{}{
+	response := map[string]any{
 		"equipment": equipment,
 		"limit":     limit,
 		"offset":    offset,
-		"filters": map[string]interface{}{
+		"filters": map[string]any{
 			"building_id": buildingID,
 			"floor_id":    floorID,
 			"room_id":     roomID,
@@ -321,7 +321,7 @@ func (h *EquipmentHandler) GetEquipmentByBuilding(w http.ResponseWriter, r *http
 	}
 
 	// Return response
-	response := map[string]interface{}{
+	response := map[string]any{
 		"building_id": buildingID,
 		"equipment":   equipment,
 		"limit":       limit,
@@ -393,7 +393,7 @@ func (h *EquipmentHandler) GetEquipmentByFloor(w http.ResponseWriter, r *http.Re
 	}
 
 	// Return response
-	response := map[string]interface{}{
+	response := map[string]any{
 		"building_id": buildingID,
 		"floor_id":    floorID,
 		"equipment":   equipment,

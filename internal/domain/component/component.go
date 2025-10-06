@@ -8,19 +8,19 @@ import (
 // Component represents a universal building component
 // This is the core domain model for any physical element in a building
 type Component struct {
-	ID         string                 `json:"id"`
-	Name       string                 `json:"name"`
-	Type       ComponentType          `json:"type"`
-	Path       string                 `json:"path"`       // Universal path like /B1/3/CONF-301/HVAC/UNIT-01
-	Location   Location               `json:"location"`   // Spatial coordinates
-	Properties map[string]interface{} `json:"properties"` // Type-specific properties
-	Relations  []Relation             `json:"relations"`  // Connections to other components
-	Status     ComponentStatus        `json:"status"`
-	Version    string                 `json:"version"`
-	CreatedAt  time.Time              `json:"created_at"`
-	UpdatedAt  time.Time              `json:"updated_at"`
-	CreatedBy  string                 `json:"created_by"`
-	UpdatedBy  string                 `json:"updated_by"`
+	ID         string          `json:"id"`
+	Name       string          `json:"name"`
+	Type       ComponentType   `json:"type"`
+	Path       string          `json:"path"`       // Universal path like /B1/3/CONF-301/HVAC/UNIT-01
+	Location   Location        `json:"location"`   // Spatial coordinates
+	Properties map[string]any  `json:"properties"` // Type-specific properties
+	Relations  []Relation      `json:"relations"`  // Connections to other components
+	Status     ComponentStatus `json:"status"`
+	Version    string          `json:"version"`
+	CreatedAt  time.Time       `json:"created_at"`
+	UpdatedAt  time.Time       `json:"updated_at"`
+	CreatedBy  string          `json:"created_by"`
+	UpdatedBy  string          `json:"updated_by"`
 }
 
 // ComponentType represents the type of component
@@ -86,12 +86,12 @@ type Location struct {
 
 // Relation represents a connection between components
 type Relation struct {
-	ID         string                 `json:"id"`
-	Type       RelationType           `json:"type"`
-	TargetID   string                 `json:"target_id"`
-	TargetPath string                 `json:"target_path"`
-	Properties map[string]interface{} `json:"properties"`
-	CreatedAt  time.Time              `json:"created_at"`
+	ID         string         `json:"id"`
+	Type       RelationType   `json:"type"`
+	TargetID   string         `json:"target_id"`
+	TargetPath string         `json:"target_path"`
+	Properties map[string]any `json:"properties"`
+	CreatedAt  time.Time      `json:"created_at"`
 }
 
 // RelationType represents the type of relation between components
@@ -119,7 +119,7 @@ func NewComponent(name string, compType ComponentType, path string, location Loc
 		Type:       compType,
 		Path:       path,
 		Location:   location,
-		Properties: make(map[string]interface{}),
+		Properties: make(map[string]any),
 		Relations:  []Relation{},
 		Status:     ComponentStatusActive,
 		Version:    "1.0.0",
@@ -131,16 +131,16 @@ func NewComponent(name string, compType ComponentType, path string, location Loc
 }
 
 // AddProperty adds a property to the component
-func (c *Component) AddProperty(key string, value interface{}) {
+func (c *Component) AddProperty(key string, value any) {
 	if c.Properties == nil {
-		c.Properties = make(map[string]interface{})
+		c.Properties = make(map[string]any)
 	}
 	c.Properties[key] = value
 	c.UpdatedAt = time.Now()
 }
 
 // AddRelation adds a relation to another component
-func (c *Component) AddRelation(relType RelationType, targetID, targetPath string, properties map[string]interface{}) {
+func (c *Component) AddRelation(relType RelationType, targetID, targetPath string, properties map[string]any) {
 	relation := Relation{
 		ID:         fmt.Sprintf("rel-%d", time.Now().UnixNano()),
 		Type:       relType,
@@ -161,7 +161,7 @@ func (c *Component) UpdateStatus(status ComponentStatus, updatedBy string) {
 }
 
 // GetProperty retrieves a property value
-func (c *Component) GetProperty(key string) (interface{}, bool) {
+func (c *Component) GetProperty(key string) (any, bool) {
 	if c.Properties == nil {
 		return nil, false
 	}

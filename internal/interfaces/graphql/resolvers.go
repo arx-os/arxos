@@ -13,7 +13,7 @@ import (
 type Resolvers struct {
 	buildingUC     *usecase.BuildingUseCase
 	equipmentUC    *usecase.EquipmentUseCase
-	componentUC    interface{} // ComponentService interface
+	componentUC    any // ComponentService interface
 	userUC         *usecase.UserUseCase
 	organizationUC *usecase.OrganizationUseCase
 	logger         domain.Logger
@@ -23,7 +23,7 @@ type Resolvers struct {
 func NewResolvers(
 	buildingUC *usecase.BuildingUseCase,
 	equipmentUC *usecase.EquipmentUseCase,
-	componentUC interface{},
+	componentUC any,
 	userUC *usecase.UserUseCase,
 	organizationUC *usecase.OrganizationUseCase,
 	logger domain.Logger,
@@ -39,7 +39,7 @@ func NewResolvers(
 }
 
 // Building resolvers
-func (r *Resolvers) GetBuilding(p graphql.ResolveParams) (interface{}, error) {
+func (r *Resolvers) GetBuilding(p graphql.ResolveParams) (any, error) {
 	id, ok := p.Args["id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("building id is required")
@@ -54,7 +54,7 @@ func (r *Resolvers) GetBuilding(p graphql.ResolveParams) (interface{}, error) {
 	return building, nil
 }
 
-func (r *Resolvers) GetBuildings(p graphql.ResolveParams) (interface{}, error) {
+func (r *Resolvers) GetBuildings(p graphql.ResolveParams) (any, error) {
 	// Parse arguments
 	// This would need to be implemented - for now return empty list
 	buildings := []*domain.Building{}
@@ -62,8 +62,8 @@ func (r *Resolvers) GetBuildings(p graphql.ResolveParams) (interface{}, error) {
 	return buildings, nil
 }
 
-func (r *Resolvers) CreateBuilding(p graphql.ResolveParams) (interface{}, error) {
-	input, ok := p.Args["input"].(map[string]interface{})
+func (r *Resolvers) CreateBuilding(p graphql.ResolveParams) (any, error) {
+	input, ok := p.Args["input"].(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("input is required")
 	}
@@ -94,13 +94,13 @@ func (r *Resolvers) CreateBuilding(p graphql.ResolveParams) (interface{}, error)
 	return building, nil
 }
 
-func (r *Resolvers) UpdateBuilding(p graphql.ResolveParams) (interface{}, error) {
+func (r *Resolvers) UpdateBuilding(p graphql.ResolveParams) (any, error) {
 	id, ok := p.Args["id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("building id is required")
 	}
 
-	input, ok := p.Args["input"].(map[string]interface{})
+	input, ok := p.Args["input"].(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("input is required")
 	}
@@ -136,7 +136,7 @@ func (r *Resolvers) UpdateBuilding(p graphql.ResolveParams) (interface{}, error)
 	return building, nil
 }
 
-func (r *Resolvers) DeleteBuilding(p graphql.ResolveParams) (interface{}, error) {
+func (r *Resolvers) DeleteBuilding(p graphql.ResolveParams) (any, error) {
 	id, ok := p.Args["id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("building id is required")
@@ -152,7 +152,7 @@ func (r *Resolvers) DeleteBuilding(p graphql.ResolveParams) (interface{}, error)
 }
 
 // Equipment resolvers
-func (r *Resolvers) GetEquipment(p graphql.ResolveParams) (interface{}, error) {
+func (r *Resolvers) GetEquipment(p graphql.ResolveParams) (any, error) {
 	id, ok := p.Args["id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("equipment id is required")
@@ -167,7 +167,7 @@ func (r *Resolvers) GetEquipment(p graphql.ResolveParams) (interface{}, error) {
 	return equipment, nil
 }
 
-func (r *Resolvers) GetEquipments(p graphql.ResolveParams) (interface{}, error) {
+func (r *Resolvers) GetEquipments(p graphql.ResolveParams) (any, error) {
 	// Parse arguments
 	// This would need to be implemented - for now return empty list
 	equipments := []*domain.Equipment{}
@@ -175,8 +175,8 @@ func (r *Resolvers) GetEquipments(p graphql.ResolveParams) (interface{}, error) 
 	return equipments, nil
 }
 
-func (r *Resolvers) CreateEquipment(p graphql.ResolveParams) (interface{}, error) {
-	input, ok := p.Args["input"].(map[string]interface{})
+func (r *Resolvers) CreateEquipment(p graphql.ResolveParams) (any, error) {
+	input, ok := p.Args["input"].(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("input is required")
 	}
@@ -210,13 +210,13 @@ func (r *Resolvers) CreateEquipment(p graphql.ResolveParams) (interface{}, error
 	return equipment, nil
 }
 
-func (r *Resolvers) UpdateEquipment(p graphql.ResolveParams) (interface{}, error) {
+func (r *Resolvers) UpdateEquipment(p graphql.ResolveParams) (any, error) {
 	id, ok := p.Args["id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("equipment id is required")
 	}
 
-	input, ok := p.Args["input"].(map[string]interface{})
+	input, ok := p.Args["input"].(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("input is required")
 	}
@@ -251,7 +251,7 @@ func (r *Resolvers) UpdateEquipment(p graphql.ResolveParams) (interface{}, error
 	return equipment, nil
 }
 
-func (r *Resolvers) DeleteEquipment(p graphql.ResolveParams) (interface{}, error) {
+func (r *Resolvers) DeleteEquipment(p graphql.ResolveParams) (any, error) {
 	id, ok := p.Args["id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("equipment id is required")
@@ -267,7 +267,7 @@ func (r *Resolvers) DeleteEquipment(p graphql.ResolveParams) (interface{}, error
 }
 
 // Component resolvers
-func (r *Resolvers) GetComponent(p graphql.ResolveParams) (interface{}, error) {
+func (r *Resolvers) GetComponent(p graphql.ResolveParams) (any, error) {
 	id, ok := p.Args["id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("component id is required")
@@ -278,14 +278,14 @@ func (r *Resolvers) GetComponent(p graphql.ResolveParams) (interface{}, error) {
 	return nil, fmt.Errorf("component service not implemented")
 }
 
-func (r *Resolvers) GetComponents(p graphql.ResolveParams) (interface{}, error) {
+func (r *Resolvers) GetComponents(p graphql.ResolveParams) (any, error) {
 	// This would need to be implemented based on the component service interface
 	r.logger.Warn("GetComponents not implemented")
-	return []interface{}{}, nil
+	return []any{}, nil
 }
 
 // User resolvers
-func (r *Resolvers) GetUser(p graphql.ResolveParams) (interface{}, error) {
+func (r *Resolvers) GetUser(p graphql.ResolveParams) (any, error) {
 	id, ok := p.Args["id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("user id is required")
@@ -300,7 +300,7 @@ func (r *Resolvers) GetUser(p graphql.ResolveParams) (interface{}, error) {
 	return user, nil
 }
 
-func (r *Resolvers) GetUsers(p graphql.ResolveParams) (interface{}, error) {
+func (r *Resolvers) GetUsers(p graphql.ResolveParams) (any, error) {
 	// Parse arguments
 	// This would need to be implemented - for now return empty list
 	users := []*domain.User{}
@@ -308,8 +308,8 @@ func (r *Resolvers) GetUsers(p graphql.ResolveParams) (interface{}, error) {
 	return users, nil
 }
 
-func (r *Resolvers) CreateUser(p graphql.ResolveParams) (interface{}, error) {
-	input, ok := p.Args["input"].(map[string]interface{})
+func (r *Resolvers) CreateUser(p graphql.ResolveParams) (any, error) {
+	input, ok := p.Args["input"].(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("input is required")
 	}
@@ -330,13 +330,13 @@ func (r *Resolvers) CreateUser(p graphql.ResolveParams) (interface{}, error) {
 	return user, nil
 }
 
-func (r *Resolvers) UpdateUser(p graphql.ResolveParams) (interface{}, error) {
+func (r *Resolvers) UpdateUser(p graphql.ResolveParams) (any, error) {
 	id, ok := p.Args["id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("user id is required")
 	}
 
-	input, ok := p.Args["input"].(map[string]interface{})
+	input, ok := p.Args["input"].(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("input is required")
 	}
@@ -365,7 +365,7 @@ func (r *Resolvers) UpdateUser(p graphql.ResolveParams) (interface{}, error) {
 	return user, nil
 }
 
-func (r *Resolvers) DeleteUser(p graphql.ResolveParams) (interface{}, error) {
+func (r *Resolvers) DeleteUser(p graphql.ResolveParams) (any, error) {
 	id, ok := p.Args["id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("user id is required")
@@ -381,7 +381,7 @@ func (r *Resolvers) DeleteUser(p graphql.ResolveParams) (interface{}, error) {
 }
 
 // Organization resolvers
-func (r *Resolvers) GetOrganization(p graphql.ResolveParams) (interface{}, error) {
+func (r *Resolvers) GetOrganization(p graphql.ResolveParams) (any, error) {
 	id, ok := p.Args["id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("organization id is required")
@@ -396,7 +396,7 @@ func (r *Resolvers) GetOrganization(p graphql.ResolveParams) (interface{}, error
 	return organization, nil
 }
 
-func (r *Resolvers) GetOrganizations(p graphql.ResolveParams) (interface{}, error) {
+func (r *Resolvers) GetOrganizations(p graphql.ResolveParams) (any, error) {
 	// Parse arguments
 	// This would need to be implemented - for now return empty list
 	organizations := []*domain.Organization{}

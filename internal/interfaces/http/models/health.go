@@ -4,10 +4,10 @@ import "time"
 
 // HealthResponse represents the health check response
 type HealthResponse struct {
-	Status    string                 `json:"status"`
-	Version   string                 `json:"version"`
-	Timestamp time.Time              `json:"timestamp"`
-	Checks    map[string]interface{} `json:"checks"`
+	Status    string         `json:"status"`
+	Version   string         `json:"version"`
+	Timestamp time.Time      `json:"timestamp"`
+	Checks    map[string]any `json:"checks"`
 }
 
 // APIInfoResponse represents API information response

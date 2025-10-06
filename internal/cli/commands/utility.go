@@ -7,7 +7,7 @@ import (
 )
 
 // CreateQueryCommand creates the query command
-func CreateQueryCommand(serviceContext interface{}) *cobra.Command {
+func CreateQueryCommand(serviceContext any) *cobra.Command {
 	return &cobra.Command{
 		Use:   "query <sql>",
 		Short: "Execute database queries",
@@ -32,7 +32,7 @@ func CreateQueryCommand(serviceContext interface{}) *cobra.Command {
 }
 
 // CreateTraceCommand creates the trace command
-func CreateTraceCommand(serviceContext interface{}) *cobra.Command {
+func CreateTraceCommand(serviceContext any) *cobra.Command {
 	return &cobra.Command{
 		Use:   "trace <path>",
 		Short: "Trace building component connections",
@@ -58,7 +58,7 @@ func CreateTraceCommand(serviceContext interface{}) *cobra.Command {
 }
 
 // CreateVisualizeCommand creates the visualize command
-func CreateVisualizeCommand(serviceContext interface{}) *cobra.Command {
+func CreateVisualizeCommand(serviceContext any) *cobra.Command {
 	return &cobra.Command{
 		Use:   "visualize <building-id>",
 		Short: "Generate building visualizations",
@@ -83,7 +83,7 @@ func CreateVisualizeCommand(serviceContext interface{}) *cobra.Command {
 }
 
 // CreateReportCommand creates the report command
-func CreateReportCommand(serviceContext interface{}) *cobra.Command {
+func CreateReportCommand(serviceContext any) *cobra.Command {
 	return &cobra.Command{
 		Use:   "report <type>",
 		Short: "Generate building reports",
@@ -108,7 +108,7 @@ func CreateReportCommand(serviceContext interface{}) *cobra.Command {
 }
 
 // CreateVersionCommand creates the version command
-func CreateVersionCommand(serviceContext interface{}) *cobra.Command {
+func CreateVersionCommand(serviceContext any) *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
 		Short: "Print version information",

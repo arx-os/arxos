@@ -28,14 +28,14 @@ const (
 
 // DomainError represents a domain-specific error with type, message, and context
 type DomainError struct {
-	Type       ErrorType              `json:"type"`
-	Code       string                 `json:"code"`
-	Message    string                 `json:"message"`
-	Context    map[string]interface{} `json:"context,omitempty"`
-	Cause      error                  `json:"cause,omitempty"`
-	Timestamp  time.Time              `json:"timestamp"`
-	Retryable  bool                   `json:"retryable"`
-	UserAction string                 `json:"user_action,omitempty"`
+	Type       ErrorType      `json:"type"`
+	Code       string         `json:"code"`
+	Message    string         `json:"message"`
+	Context    map[string]any `json:"context,omitempty"`
+	Cause      error          `json:"cause,omitempty"`
+	Timestamp  time.Time      `json:"timestamp"`
+	Retryable  bool           `json:"retryable"`
+	UserAction string         `json:"user_action,omitempty"`
 }
 
 // Error implements the error interface
@@ -67,7 +67,7 @@ func (e *DomainError) IsRetryable() bool {
 }
 
 // GetContext returns the error context
-func (e *DomainError) GetContext() map[string]interface{} {
+func (e *DomainError) GetContext() map[string]any {
 	if e == nil {
 		return nil
 	}
@@ -87,13 +87,13 @@ func NewDomainError(errorType ErrorType, code, message string) *DomainErrorBuild
 			Code:      code,
 			Message:   message,
 			Timestamp: time.Now(),
-			Context:   make(map[string]interface{}),
+			Context:   make(map[string]any),
 		},
 	}
 }
 
 // WithContext adds context information to the error
-func (b *DomainErrorBuilder) WithContext(key string, value interface{}) *DomainErrorBuilder {
+func (b *DomainErrorBuilder) WithContext(key string, value any) *DomainErrorBuilder {
 	if b.err != nil {
 		b.err.Context[key] = value
 	}
@@ -162,7 +162,7 @@ func NewSpatialCalibrationError(message string, cause error) *DomainError {
 }
 
 // NewSpatialOutOfBoundsError creates an out of bounds error
-func NewSpatialOutOfBoundsError(location *SpatialLocation, bounds interface{}) *DomainError {
+func NewSpatialOutOfBoundsError(location *SpatialLocation, bounds any) *DomainError {
 	return NewDomainError(ErrorTypeSpatial, "SPATIAL_OUT_OF_BOUNDS", "Spatial location is out of bounds").
 		WithContext("location", location).
 		WithContext("bounds", bounds).
@@ -489,7 +489,7 @@ func AddTimingContext(e *DomainError, startTime time.Time) {
 }
 
 // AddSpatialContext adds spatial information to error context
-func AddSpatialContext(e *DomainError, location *SpatialLocation, bounds interface{}) {
+func AddSpatialContext(e *DomainError, location *SpatialLocation, bounds any) {
 	if e != nil && e.Context != nil {
 		e.Context["location"] = location
 		e.Context["bounds"] = bounds

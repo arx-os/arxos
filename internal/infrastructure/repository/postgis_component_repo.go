@@ -209,7 +209,7 @@ func (r *PostGISComponentRepository) List(ctx context.Context, filter component.
 		       relations_json, status, version, created_at, updated_at, 
 		       created_by, updated_by FROM components`
 
-	args := []interface{}{}
+	args := []any{}
 	argIndex := 1
 	conditions := []string{}
 
@@ -290,7 +290,7 @@ func (r *PostGISComponentRepository) List(ctx context.Context, filter component.
 func (r *PostGISComponentRepository) Count(ctx context.Context, filter component.ComponentFilter) (int64, error) {
 	query := `SELECT COUNT(*) FROM components`
 
-	args := []interface{}{}
+	args := []any{}
 	argIndex := 1
 	conditions := []string{}
 

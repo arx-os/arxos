@@ -23,13 +23,13 @@ import (
 
 // ChaosTestConfig defines configuration for chaos tests
 type ChaosTestConfig struct {
-	DatabaseURL           string
-	NumWorkers            int
-	TestDuration          time.Duration
-	ConnectionDropRate    float64 // Probability of dropping a connection
-	SlowQueryRate         float64 // Probability of introducing query delay
-	DataCorruptionRate    float64 // Probability of data corruption simulation
-	NetworkPartitionRate  float64 // Probability of network partition
+	DatabaseURL            string
+	NumWorkers             int
+	TestDuration           time.Duration
+	ConnectionDropRate     float64 // Probability of dropping a connection
+	SlowQueryRate          float64 // Probability of introducing query delay
+	DataCorruptionRate     float64 // Probability of data corruption simulation
+	NetworkPartitionRate   float64 // Probability of network partition
 	ResourceExhaustionRate float64 // Probability of resource exhaustion
 }
 
@@ -107,12 +107,12 @@ func NewChaosTestRunner(config *ChaosTestConfig) (*ChaosTestRunner, error) {
 // TestDatabaseResilience tests database resilience under failure conditions
 func TestDatabaseResilience(t *testing.T) {
 	config := &ChaosTestConfig{
-		NumWorkers:            20,
-		TestDuration:          5 * time.Minute,
-		ConnectionDropRate:    0.1,  // 10% chance
-		SlowQueryRate:         0.15, // 15% chance
-		DataCorruptionRate:    0.05, // 5% chance
-		NetworkPartitionRate:  0.02, // 2% chance
+		NumWorkers:             20,
+		TestDuration:           5 * time.Minute,
+		ConnectionDropRate:     0.1,  // 10% chance
+		SlowQueryRate:          0.15, // 15% chance
+		DataCorruptionRate:     0.05, // 5% chance
+		NetworkPartitionRate:   0.02, // 2% chance
 		ResourceExhaustionRate: 0.05, // 5% chance
 	}
 
@@ -141,7 +141,7 @@ func (r *ChaosTestRunner) PrepareTestData(t *testing.T) {
 			Name:     fmt.Sprintf("Chaos Test Equipment %d", i),
 			Type:     "sensor",
 			Status:   "active",
-			Metadata: map[string]interface{}{"checksum": i},
+			Metadata: map[string]any{"checksum": i},
 		}
 
 		// TODO: Implement when EquipmentService is available
@@ -549,8 +549,8 @@ func contains(s, substr string) bool {
 
 // Circuit breaker implementation
 var (
-	circuitFailures int32
-	circuitOpen     int32
+	circuitFailures  int32
+	circuitOpen      int32
 	circuitThreshold int32 = 5
 )
 

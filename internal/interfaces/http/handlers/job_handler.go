@@ -33,37 +33,37 @@ func NewJobHandler(
 
 // CreateJobRequest represents a job creation request
 type CreateJobRequest struct {
-	Type        string                 `json:"type"`
-	Priority    int                    `json:"priority"`
-	Data        map[string]interface{} `json:"data"`
-	ScheduledAt *time.Time             `json:"scheduled_at,omitempty"`
-	MaxAttempts int                    `json:"max_attempts,omitempty"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	Type        string         `json:"type"`
+	Priority    int            `json:"priority"`
+	Data        map[string]any `json:"data"`
+	ScheduledAt *time.Time     `json:"scheduled_at,omitempty"`
+	MaxAttempts int            `json:"max_attempts,omitempty"`
+	Metadata    map[string]any `json:"metadata,omitempty"`
 }
 
 // JobResponse represents a job response
 type JobResponse struct {
-	ID          string                 `json:"id"`
-	Type        string                 `json:"type"`
-	Priority    int                    `json:"priority"`
-	Status      string                 `json:"status"`
-	CreatedAt   time.Time              `json:"created_at"`
-	ScheduledAt time.Time              `json:"scheduled_at"`
-	Attempts    int                    `json:"attempts"`
-	MaxAttempts int                    `json:"max_attempts"`
-	Result      interface{}            `json:"result,omitempty"`
-	Error       string                 `json:"error,omitempty"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	ID          string         `json:"id"`
+	Type        string         `json:"type"`
+	Priority    int            `json:"priority"`
+	Status      string         `json:"status"`
+	CreatedAt   time.Time      `json:"created_at"`
+	ScheduledAt time.Time      `json:"scheduled_at"`
+	Attempts    int            `json:"attempts"`
+	MaxAttempts int            `json:"max_attempts"`
+	Result      any            `json:"result,omitempty"`
+	Error       string         `json:"error,omitempty"`
+	Metadata    map[string]any `json:"metadata,omitempty"`
 }
 
 // JobStatsResponse represents job queue statistics
 type JobStatsResponse struct {
-	Running       bool                     `json:"running"`
-	QueueSize     int                      `json:"queue_size"`
-	MaxWorkers    int                      `json:"max_workers"`
-	ActiveWorkers int                      `json:"active_workers"`
-	Workers       []map[string]interface{} `json:"workers"`
-	Config        map[string]interface{}   `json:"config"`
+	Running       bool             `json:"running"`
+	QueueSize     int              `json:"queue_size"`
+	MaxWorkers    int              `json:"max_workers"`
+	ActiveWorkers int              `json:"active_workers"`
+	Workers       []map[string]any `json:"workers"`
+	Config        map[string]any   `json:"config"`
 }
 
 // CreateJob creates a new background job
@@ -221,7 +221,7 @@ func (h *JobHandler) CreateBulkJobs(w http.ResponseWriter, r *http.Request) {
 		responses = append(responses, response)
 	}
 
-	result := map[string]interface{}{
+	result := map[string]any{
 		"created": len(responses),
 		"failed":  len(errors),
 		"jobs":    responses,
@@ -251,8 +251,8 @@ func (h *JobHandler) GetJobStats(w http.ResponseWriter, r *http.Request) {
 		QueueSize:     stats["queue_size"].(int),
 		MaxWorkers:    stats["max_workers"].(int),
 		ActiveWorkers: stats["active_workers"].(int),
-		Workers:       stats["workers"].([]map[string]interface{}),
-		Config:        stats["config"].(map[string]interface{}),
+		Workers:       stats["workers"].([]map[string]any),
+		Config:        stats["config"].(map[string]any),
 	}
 
 	h.RespondJSON(w, http.StatusOK, response)
@@ -274,12 +274,12 @@ func (h *JobHandler) CreateScheduledJob(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var req struct {
-		Type        string                 `json:"type"`
-		Priority    int                    `json:"priority"`
-		Data        map[string]interface{} `json:"data"`
-		ScheduledAt time.Time              `json:"scheduled_at"`
-		MaxAttempts int                    `json:"max_attempts,omitempty"`
-		Metadata    map[string]interface{} `json:"metadata,omitempty"`
+		Type        string         `json:"type"`
+		Priority    int            `json:"priority"`
+		Data        map[string]any `json:"data"`
+		ScheduledAt time.Time      `json:"scheduled_at"`
+		MaxAttempts int            `json:"max_attempts,omitempty"`
+		Metadata    map[string]any `json:"metadata,omitempty"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -356,14 +356,14 @@ func (h *JobHandler) CreateRecurringJob(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var req struct {
-		Type        string                 `json:"type"`
-		Priority    int                    `json:"priority"`
-		Data        map[string]interface{} `json:"data"`
-		Interval    string                 `json:"interval"` // e.g., "1h", "30m", "1d"
-		StartAt     *time.Time             `json:"start_at,omitempty"`
-		EndAt       *time.Time             `json:"end_at,omitempty"`
-		MaxAttempts int                    `json:"max_attempts,omitempty"`
-		Metadata    map[string]interface{} `json:"metadata,omitempty"`
+		Type        string         `json:"type"`
+		Priority    int            `json:"priority"`
+		Data        map[string]any `json:"data"`
+		Interval    string         `json:"interval"` // e.g., "1h", "30m", "1d"
+		StartAt     *time.Time     `json:"start_at,omitempty"`
+		EndAt       *time.Time     `json:"end_at,omitempty"`
+		MaxAttempts int            `json:"max_attempts,omitempty"`
+		Metadata    map[string]any `json:"metadata,omitempty"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -453,11 +453,11 @@ func (h *JobHandler) GetJobTypes(w http.ResponseWriter, r *http.Request) {
 
 	h.logger.Debug("Job types requested")
 
-	jobTypes := []map[string]interface{}{
+	jobTypes := []map[string]any{
 		{
 			"type":        "ifc_import",
 			"description": "Import IFC files into the system",
-			"parameters": map[string]interface{}{
+			"parameters": map[string]any{
 				"repository_id": "string (required)",
 				"ifc_data":      "bytes (required)",
 			},
@@ -465,7 +465,7 @@ func (h *JobHandler) GetJobTypes(w http.ResponseWriter, r *http.Request) {
 		{
 			"type":        "ifc_export",
 			"description": "Export IFC files from the system",
-			"parameters": map[string]interface{}{
+			"parameters": map[string]any{
 				"repository_id": "string (required)",
 				"ifc_file_id":   "string (required)",
 				"format":        "string (optional, default: IFC4)",
@@ -474,14 +474,14 @@ func (h *JobHandler) GetJobTypes(w http.ResponseWriter, r *http.Request) {
 		{
 			"type":        "ifc_validate",
 			"description": "Validate IFC file structure",
-			"parameters": map[string]interface{}{
+			"parameters": map[string]any{
 				"ifc_data": "bytes (required)",
 			},
 		},
 		{
 			"type":        "analytics",
 			"description": "Generate analytics reports",
-			"parameters": map[string]interface{}{
+			"parameters": map[string]any{
 				"analysis_type": "string (required)",
 				"building_id":   "string (required)",
 				"start_date":    "string (optional)",
@@ -491,7 +491,7 @@ func (h *JobHandler) GetJobTypes(w http.ResponseWriter, r *http.Request) {
 		{
 			"type":        "notification",
 			"description": "Send notifications",
-			"parameters": map[string]interface{}{
+			"parameters": map[string]any{
 				"type":      "string (required: email, sms, push, webhook)",
 				"recipient": "string (required)",
 				"message":   "string (required)",
@@ -499,7 +499,7 @@ func (h *JobHandler) GetJobTypes(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	h.RespondJSON(w, http.StatusOK, map[string]interface{}{
+	h.RespondJSON(w, http.StatusOK, map[string]any{
 		"job_types": jobTypes,
 		"count":     len(jobTypes),
 	})

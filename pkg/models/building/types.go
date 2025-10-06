@@ -48,11 +48,11 @@ type BuildingModel struct {
 	Systems []System `json:"systems"`
 
 	// Metadata
-	Source     DataSource             `json:"source"`
-	Confidence ConfidenceLevel        `json:"confidence"`
-	ImportedAt time.Time              `json:"imported_at"`
-	UpdatedAt  time.Time              `json:"updated_at"`
-	Properties map[string]interface{} `json:"properties,omitempty"`
+	Source     DataSource      `json:"source"`
+	Confidence ConfidenceLevel `json:"confidence"`
+	ImportedAt time.Time       `json:"imported_at"`
+	UpdatedAt  time.Time       `json:"updated_at"`
+	Properties map[string]any  `json:"properties,omitempty"`
 
 	// Data quality
 	ValidationIssues []ValidationIssue `json:"validation_issues,omitempty"`
@@ -76,8 +76,8 @@ type Floor struct {
 	Equipment []Equipment `json:"equipment"`
 
 	// Data quality
-	Confidence ConfidenceLevel        `json:"confidence"`
-	Properties map[string]interface{} `json:"properties,omitempty"`
+	Confidence ConfidenceLevel `json:"confidence"`
+	Properties map[string]any  `json:"properties,omitempty"`
 }
 
 // Room represents a space within a floor
@@ -101,8 +101,8 @@ type Room struct {
 	Equipment []string `json:"equipment_ids"` // equipment in this room
 
 	// Data quality
-	Confidence ConfidenceLevel        `json:"confidence"`
-	Properties map[string]interface{} `json:"properties,omitempty"`
+	Confidence ConfidenceLevel `json:"confidence"`
+	Properties map[string]any  `json:"properties,omitempty"`
 }
 
 // Equipment represents any device or component in the building
@@ -132,9 +132,9 @@ type Equipment struct {
 	InstallDate  *time.Time `json:"install_date,omitempty"`
 
 	// Data quality
-	Confidence   ConfidenceLevel        `json:"confidence"`
-	LastVerified *time.Time             `json:"last_verified,omitempty"`
-	Properties   map[string]interface{} `json:"properties,omitempty"`
+	Confidence   ConfidenceLevel `json:"confidence"`
+	LastVerified *time.Time      `json:"last_verified,omitempty"`
+	Properties   map[string]any  `json:"properties,omitempty"`
 }
 
 // System represents a building system (HVAC, electrical, plumbing, etc.)
@@ -151,16 +151,16 @@ type System struct {
 	Connections []Connection `json:"connections"` // how equipment is connected
 
 	// Data quality
-	Confidence ConfidenceLevel        `json:"confidence"`
-	Properties map[string]interface{} `json:"properties,omitempty"`
+	Confidence ConfidenceLevel `json:"confidence"`
+	Properties map[string]any  `json:"properties,omitempty"`
 }
 
 // Connection represents how equipment is connected in a system
 type Connection struct {
-	FromID     string                 `json:"from_id"`
-	ToID       string                 `json:"to_id"`
-	Type       string                 `json:"type"` // power, data, pipe, duct, etc.
-	Properties map[string]interface{} `json:"properties,omitempty"`
+	FromID     string         `json:"from_id"`
+	ToID       string         `json:"to_id"`
+	Type       string         `json:"type"` // power, data, pipe, duct, etc.
+	Properties map[string]any `json:"properties,omitempty"`
 }
 
 // SpatialReference defines the spatial coordinate system

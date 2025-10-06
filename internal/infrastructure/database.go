@@ -96,7 +96,7 @@ func (db *Database) Health(ctx context.Context) error {
 }
 
 // BeginTx starts a new transaction
-func (db *Database) BeginTx(ctx context.Context) (interface{}, error) {
+func (db *Database) BeginTx(ctx context.Context) (any, error) {
 	if db.conn == nil {
 		return nil, fmt.Errorf("database connection is nil")
 	}
@@ -110,7 +110,7 @@ func (db *Database) BeginTx(ctx context.Context) (interface{}, error) {
 }
 
 // CommitTx commits a transaction
-func (db *Database) CommitTx(tx interface{}) error {
+func (db *Database) CommitTx(tx any) error {
 	if tx == nil {
 		return fmt.Errorf("transaction is nil")
 	}
@@ -128,7 +128,7 @@ func (db *Database) CommitTx(tx interface{}) error {
 }
 
 // RollbackTx rolls back a transaction
-func (db *Database) RollbackTx(tx interface{}) error {
+func (db *Database) RollbackTx(tx any) error {
 	if tx == nil {
 		return fmt.Errorf("transaction is nil")
 	}

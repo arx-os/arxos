@@ -87,11 +87,11 @@ func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return response
-	response := map[string]interface{}{
+	response := map[string]any{
 		"users":  users,
 		"limit":  limit,
 		"offset": offset,
-		"filters": map[string]interface{}{
+		"filters": map[string]any{
 			"organization_id": organizationID,
 			"role":            role,
 			"active":          active,
@@ -334,7 +334,7 @@ func (h *UserHandler) GetUsersByOrganization(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Return response
-	response := map[string]interface{}{
+	response := map[string]any{
 		"organization_id": organizationID,
 		"users":           users,
 		"limit":           limit,

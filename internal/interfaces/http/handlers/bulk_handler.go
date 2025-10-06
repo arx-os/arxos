@@ -16,7 +16,7 @@ type BulkHandler struct {
 	BaseHandler
 	buildingUC  *usecase.BuildingUseCase
 	equipmentUC *usecase.EquipmentUseCase
-	componentUC interface{} // ComponentService interface
+	componentUC any // ComponentService interface
 	userUC      *usecase.UserUseCase
 	logger      domain.Logger
 }
@@ -26,7 +26,7 @@ func NewBulkHandler(
 	base BaseHandler,
 	buildingUC *usecase.BuildingUseCase,
 	equipmentUC *usecase.EquipmentUseCase,
-	componentUC interface{},
+	componentUC any,
 	userUC *usecase.UserUseCase,
 	logger domain.Logger,
 ) *BulkHandler {
@@ -42,16 +42,16 @@ func NewBulkHandler(
 
 // BulkCreateRequest represents a bulk create request
 type BulkCreateRequest struct {
-	EntityType string                   `json:"entity_type"`
-	Data       []map[string]interface{} `json:"data"`
-	Options    BulkOptions              `json:"options"`
+	EntityType string           `json:"entity_type"`
+	Data       []map[string]any `json:"data"`
+	Options    BulkOptions      `json:"options"`
 }
 
 // BulkUpdateRequest represents a bulk update request
 type BulkUpdateRequest struct {
-	EntityType string                   `json:"entity_type"`
-	Data       []map[string]interface{} `json:"data"`
-	Options    BulkOptions              `json:"options"`
+	EntityType string           `json:"entity_type"`
+	Data       []map[string]any `json:"data"`
+	Options    BulkOptions      `json:"options"`
 }
 
 // BulkDeleteRequest represents a bulk delete request
@@ -70,15 +70,15 @@ type BulkOptions struct {
 
 // BulkResponse represents the response from a bulk operation
 type BulkResponse struct {
-	Success    bool                     `json:"success"`
-	Processed  int                      `json:"processed"`
-	Successful int                      `json:"successful"`
-	Failed     int                      `json:"failed"`
-	Errors     []BulkError              `json:"errors,omitempty"`
-	Results    []map[string]interface{} `json:"results,omitempty"`
-	Duration   time.Duration            `json:"duration"`
-	EntityType string                   `json:"entity_type"`
-	Operation  string                   `json:"operation"`
+	Success    bool             `json:"success"`
+	Processed  int              `json:"processed"`
+	Successful int              `json:"successful"`
+	Failed     int              `json:"failed"`
+	Errors     []BulkError      `json:"errors,omitempty"`
+	Results    []map[string]any `json:"results,omitempty"`
+	Duration   time.Duration    `json:"duration"`
+	EntityType string           `json:"entity_type"`
+	Operation  string           `json:"operation"`
 }
 
 // BulkError represents an error in a bulk operation
@@ -242,7 +242,7 @@ func (h *BulkHandler) processBulkCreate(ctx context.Context, req *BulkCreateRequ
 		EntityType: req.EntityType,
 		Operation:  "create",
 		Errors:     []BulkError{},
-		Results:    []map[string]interface{}{},
+		Results:    []map[string]any{},
 	}
 
 	// Process in batches
@@ -277,12 +277,12 @@ func (h *BulkHandler) processBulkCreate(ctx context.Context, req *BulkCreateRequ
 }
 
 // processBatchCreate processes a batch of create operations
-func (h *BulkHandler) processBatchCreate(ctx context.Context, entityType string, batch []map[string]interface{}, startIndex int) (*BulkResponse, error) {
+func (h *BulkHandler) processBatchCreate(ctx context.Context, entityType string, batch []map[string]any, startIndex int) (*BulkResponse, error) {
 	response := &BulkResponse{
 		EntityType: entityType,
 		Operation:  "create",
 		Errors:     []BulkError{},
-		Results:    []map[string]interface{}{},
+		Results:    []map[string]any{},
 	}
 
 	for i, item := range batch {
@@ -326,7 +326,7 @@ func (h *BulkHandler) processBulkUpdate(ctx context.Context, req *BulkUpdateRequ
 		EntityType: req.EntityType,
 		Operation:  "update",
 		Errors:     []BulkError{},
-		Results:    []map[string]interface{}{},
+		Results:    []map[string]any{},
 	}
 
 	// Process in batches
@@ -361,12 +361,12 @@ func (h *BulkHandler) processBulkUpdate(ctx context.Context, req *BulkUpdateRequ
 }
 
 // processBatchUpdate processes a batch of update operations
-func (h *BulkHandler) processBatchUpdate(ctx context.Context, entityType string, batch []map[string]interface{}, startIndex int) (*BulkResponse, error) {
+func (h *BulkHandler) processBatchUpdate(ctx context.Context, entityType string, batch []map[string]any, startIndex int) (*BulkResponse, error) {
 	response := &BulkResponse{
 		EntityType: entityType,
 		Operation:  "update",
 		Errors:     []BulkError{},
-		Results:    []map[string]interface{}{},
+		Results:    []map[string]any{},
 	}
 
 	for i, item := range batch {
@@ -410,7 +410,7 @@ func (h *BulkHandler) processBulkDelete(ctx context.Context, req *BulkDeleteRequ
 		EntityType: req.EntityType,
 		Operation:  "delete",
 		Errors:     []BulkError{},
-		Results:    []map[string]interface{}{},
+		Results:    []map[string]any{},
 	}
 
 	// Process in batches
@@ -450,7 +450,7 @@ func (h *BulkHandler) processBatchDelete(ctx context.Context, entityType string,
 		EntityType: entityType,
 		Operation:  "delete",
 		Errors:     []BulkError{},
-		Results:    []map[string]interface{}{},
+		Results:    []map[string]any{},
 	}
 
 	for i, id := range batch {
@@ -467,7 +467,7 @@ func (h *BulkHandler) processBatchDelete(ctx context.Context, entityType string,
 			})
 			response.Failed++
 		} else {
-			response.Results = append(response.Results, map[string]interface{}{
+			response.Results = append(response.Results, map[string]any{
 				"id":      id,
 				"deleted": true,
 			})
@@ -482,7 +482,7 @@ func (h *BulkHandler) processBatchDelete(ctx context.Context, entityType string,
 
 // Helper methods for entity operations
 
-func (h *BulkHandler) convertToCreateRequest(entityType string, data map[string]interface{}) (interface{}, error) {
+func (h *BulkHandler) convertToCreateRequest(entityType string, data map[string]any) (any, error) {
 	// Convert map to JSON and then to appropriate request type
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -513,7 +513,7 @@ func (h *BulkHandler) convertToCreateRequest(entityType string, data map[string]
 	}
 }
 
-func (h *BulkHandler) convertToUpdateRequest(entityType string, data map[string]interface{}) (interface{}, error) {
+func (h *BulkHandler) convertToUpdateRequest(entityType string, data map[string]any) (any, error) {
 	// Convert map to JSON and then to appropriate request type
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -544,7 +544,7 @@ func (h *BulkHandler) convertToUpdateRequest(entityType string, data map[string]
 	}
 }
 
-func (h *BulkHandler) createEntity(ctx context.Context, entityType string, req interface{}) (map[string]interface{}, error) {
+func (h *BulkHandler) createEntity(ctx context.Context, entityType string, req any) (map[string]any, error) {
 	switch entityType {
 	case "building":
 		if req, ok := req.(*domain.CreateBuildingRequest); ok {
@@ -552,7 +552,7 @@ func (h *BulkHandler) createEntity(ctx context.Context, entityType string, req i
 			if err != nil {
 				return nil, err
 			}
-			return map[string]interface{}{
+			return map[string]any{
 				"id":   building.ID,
 				"name": building.Name,
 			}, nil
@@ -563,7 +563,7 @@ func (h *BulkHandler) createEntity(ctx context.Context, entityType string, req i
 			if err != nil {
 				return nil, err
 			}
-			return map[string]interface{}{
+			return map[string]any{
 				"id":   equipment.ID,
 				"name": equipment.Name,
 			}, nil
@@ -574,7 +574,7 @@ func (h *BulkHandler) createEntity(ctx context.Context, entityType string, req i
 			if err != nil {
 				return nil, err
 			}
-			return map[string]interface{}{
+			return map[string]any{
 				"id":    user.ID,
 				"email": user.Email,
 			}, nil
@@ -583,7 +583,7 @@ func (h *BulkHandler) createEntity(ctx context.Context, entityType string, req i
 	return nil, fmt.Errorf("unsupported entity type: %s", entityType)
 }
 
-func (h *BulkHandler) updateEntity(ctx context.Context, entityType string, req interface{}) (map[string]interface{}, error) {
+func (h *BulkHandler) updateEntity(ctx context.Context, entityType string, req any) (map[string]any, error) {
 	switch entityType {
 	case "building":
 		if req, ok := req.(*domain.UpdateBuildingRequest); ok {
@@ -591,7 +591,7 @@ func (h *BulkHandler) updateEntity(ctx context.Context, entityType string, req i
 			if err != nil {
 				return nil, err
 			}
-			return map[string]interface{}{
+			return map[string]any{
 				"id":   building.ID,
 				"name": building.Name,
 			}, nil
@@ -602,7 +602,7 @@ func (h *BulkHandler) updateEntity(ctx context.Context, entityType string, req i
 			if err != nil {
 				return nil, err
 			}
-			return map[string]interface{}{
+			return map[string]any{
 				"id":   equipment.ID,
 				"name": equipment.Name,
 			}, nil
@@ -613,7 +613,7 @@ func (h *BulkHandler) updateEntity(ctx context.Context, entityType string, req i
 			if err != nil {
 				return nil, err
 			}
-			return map[string]interface{}{
+			return map[string]any{
 				"id":    user.ID,
 				"email": user.Email,
 			}, nil

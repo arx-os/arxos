@@ -48,7 +48,7 @@ type ConflictResolver interface {
 type ConflictResolution struct {
 	ConflictID    string                     `json:"conflict_id"`
 	Resolution    ConflictResolutionStrategy `json:"resolution"`
-	ResolvedData  map[string]interface{}     `json:"resolved_data"`
+	ResolvedData  map[string]any             `json:"resolved_data"`
 	AppliedChange *Change                    `json:"applied_change,omitempty"`
 	Reason        string                     `json:"reason"`
 	ResolvedBy    string                     `json:"resolved_by"`
@@ -145,7 +145,7 @@ func (r *LastWriteWinsResolver) ResolveConflict(ctx context.Context, conflict *C
 		return nil, errors.New(errors.CodeConflict, "conflict cannot be auto-resolved")
 	}
 
-	var resolvedData map[string]interface{}
+	var resolvedData map[string]any
 	var appliedChange *Change
 	var reason string
 
@@ -199,7 +199,7 @@ func (r *FirstWriteWinsResolver) ResolveConflict(ctx context.Context, conflict *
 		return nil, errors.New(errors.CodeConflict, "conflict cannot be auto-resolved")
 	}
 
-	var resolvedData map[string]interface{}
+	var resolvedData map[string]any
 	var appliedChange *Change
 	var reason string
 
@@ -254,7 +254,7 @@ func (r *MergeResolver) ResolveConflict(ctx context.Context, conflict *Conflict)
 	}
 
 	// Merge non-conflicting fields
-	resolvedData := make(map[string]interface{})
+	resolvedData := make(map[string]any)
 
 	// Start with local data
 	for key, value := range conflict.LocalData {

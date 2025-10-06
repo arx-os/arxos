@@ -35,15 +35,15 @@ func NewSpatialHandler(server *types.Server, buildingUC *usecase.BuildingUseCase
 
 // Spatial Response Types for Mobile AR - simplified to avoid cross-handler dependencies
 type SpatialAnchor struct {
-	ID          string                 `json:"id"`
-	BuildingID  string                 `json:"building_id"`
-	Position    SpatialPosition        `json:"position"`
-	EquipmentID string                 `json:"equipment_id,omitempty"`
-	Confidence  float64                `json:"confidence"`
-	CreatedAt   string                 `json:"created_at"`
-	UpdatedAt   string                 `json:"updated_at"`
-	AnchorType  string                 `json:"anchor_type"` // "equipment", "reference", "floor"
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	ID          string          `json:"id"`
+	BuildingID  string          `json:"building_id"`
+	Position    SpatialPosition `json:"position"`
+	EquipmentID string          `json:"equipment_id,omitempty"`
+	Confidence  float64         `json:"confidence"`
+	CreatedAt   string          `json:"created_at"`
+	UpdatedAt   string          `json:"updated_at"`
+	AnchorType  string          `json:"anchor_type"` // "equipment", "reference", "floor"
+	Metadata    map[string]any  `json:"metadata,omitempty"`
 }
 
 type SpatialPosition struct {
@@ -53,9 +53,9 @@ type SpatialPosition struct {
 }
 
 type NearbyEquipmentResponse struct {
-	Equipment    []map[string]interface{} `json:"equipment"`
-	TotalFound   int                      `json:"total_found"`
-	SearchRadius float64                  `json:"search_radius"`
+	Equipment    []map[string]any `json:"equipment"`
+	TotalFound   int              `json:"total_found"`
+	SearchRadius float64          `json:"search_radius"`
 }
 
 // HandleCreateSpatialAnchor handles POST /api/v1/mobile/spatial/anchors
@@ -66,16 +66,16 @@ func (s *SpatialHandler) HandleCreateSpaticialAnchor(w http.ResponseWriter, r *h
 	}()
 
 	var anchorReq struct {
-		BuildingID  string                 `json:"building_id" validate:"required"`
-		Position    SpatialPosition        `json:"position" validate:"required"`
-		EquipmentID string                 `json:"equipment_id,omitempty"`
-		AnchorType  string                 `json:"anchor_type,omitempty"`
-		Metadata    map[string]interface{} `json:"metadata,omitempty"`
+		BuildingID  string          `json:"building_id" validate:"required"`
+		Position    SpatialPosition `json:"position" validate:"required"`
+		EquipmentID string          `json:"equipment_id,omitempty"`
+		AnchorType  string          `json:"anchor_type,omitempty"`
+		Metadata    map[string]any  `json:"metadata,omitempty"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&anchorReq); err != nil {
 		s.logger.Error("Invalid spatial anchor request", "error", err)
-		s.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{
+		s.RespondJSON(w, http.StatusBadRequest, map[string]any{
 			"error": "invalid_anchor_request",
 		})
 		return
@@ -105,7 +105,7 @@ func (s *SpatialHandler) HandleCreateSpaticialAnchor(w http.ResponseWriter, r *h
 	}
 
 	s.logger.Info("Spatial anchor created", "anchor_id", anchor.ID, "building_id", anchorReq.BuildingID, "user_id", userID)
-	s.RespondJSON(w, http.StatusCreated, map[string]interface{}{
+	s.RespondJSON(w, http.StatusCreated, map[string]any{
 		"anchor": anchor,
 	})
 }
@@ -119,7 +119,7 @@ func (s *SpatialHandler) HandleGetSpatialAnchors(w http.ResponseWriter, r *http.
 
 	buildingID := chi.URLParam(r, "buildingId")
 	if buildingID == "" {
-		s.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{
+		s.RespondJSON(w, http.StatusBadRequest, map[string]any{
 			"error": "building_id_required",
 		})
 		return
@@ -149,7 +149,7 @@ func (s *SpatialHandler) HandleGetSpatialAnchors(w http.ResponseWriter, r *http.
 			CreatedAt:   time.Now().Add(-7 * 24 * time.Hour).Format(time.RFC3339),
 			UpdatedAt:   time.Now().Add(-1 * time.Hour).Format(time.RFC3339),
 			AnchorType:  "equipment",
-			Metadata:    map[string]interface{}{"scan_source": "lidar"},
+			Metadata:    map[string]any{"scan_source": "lidar"},
 		},
 		{
 			ID:         "anchor-reference-001",
@@ -159,7 +159,7 @@ func (s *SpatialHandler) HandleGetSpatialAnchors(w http.ResponseWriter, r *http.
 			CreatedAt:  time.Now().Add(-30 * 24 * time.Hour).Format(time.RFC3339),
 			UpdatedAt:  time.Now().Add(-1 * time.Hour).Format(time.RFC3339),
 			AnchorType: "reference",
-			Metadata:   map[string]interface{}{"origin": true},
+			Metadata:   map[string]any{"origin": true},
 		},
 	}
 
@@ -184,7 +184,7 @@ func (s *SpatialHandler) HandleGetSpatialAnchors(w http.ResponseWriter, r *http.
 	}
 
 	s.logger.Info("Spatial anchors retrieved", "building_id", buildingID, "count", len(filteredAnchors))
-	s.RespondJSON(w, http.StatusOK, map[string]interface{}{
+	s.RespondJSON(w, http.StatusOK, map[string]any{
 		"anchors": filteredAnchors,
 		"total":   len(filteredAnchors),
 	})
@@ -200,7 +200,7 @@ func (s *SpatialHandler) HandleNearbyEquipment(w http.ResponseWriter, r *http.Re
 	// Parse query parameters
 	buildingID := r.URL.Query().Get("building_id")
 	if buildingID == "" {
-		s.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{
+		s.RespondJSON(w, http.StatusBadRequest, map[string]any{
 			"error": "building_id_required",
 		})
 		return
@@ -239,9 +239,9 @@ func (s *SpatialHandler) HandleNearbyEquipment(w http.ResponseWriter, r *http.Re
 	// ORDER BY ST_Distance(e.position, ST_Point($x,$y,$z)) ASC LIMIT $limit
 
 	// For now, simulate nearby equipment data
-	nearbyItems := []map[string]interface{}{
+	nearbyItems := []map[string]any{
 		{
-			"equipment": map[string]interface{}{
+			"equipment": map[string]any{
 				"id":          "hvac-001",
 				"name":        "Main HVAC Unit",
 				"type":        "hvac",
@@ -253,7 +253,7 @@ func (s *SpatialHandler) HandleNearbyEquipment(w http.ResponseWriter, r *http.Re
 			"bearing":  45.0,
 		},
 		{
-			"equipment": map[string]interface{}{
+			"equipment": map[string]any{
 				"id":          "electrical-001",
 				"name":        "Electrical Panel",
 				"type":        "electrical",
@@ -284,16 +284,16 @@ func (s *SpatialHandler) HandleSpatialMapping(w http.ResponseWriter, r *http.Req
 	}()
 
 	var mappingReq struct {
-		BuildingID string                 `json:"building_id" validate:"required"`
-		SessionID  string                 `json:"session_id" validate:"required"`
-		Anchor     []SpatialAnchor        `json:"anchors"`
-		Points     []SpatialPosition      `json:"points"`
-		Metadata   map[string]interface{} `json:"metadata"`
+		BuildingID string            `json:"building_id" validate:"required"`
+		SessionID  string            `json:"session_id" validate:"required"`
+		Anchor     []SpatialAnchor   `json:"anchors"`
+		Points     []SpatialPosition `json:"points"`
+		Metadata   map[string]any    `json:"metadata"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&mappingReq); err != nil {
 		s.logger.Error("Invalid spatial mapping request", "error", err)
-		s.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{
+		s.RespondJSON(w, http.StatusBadRequest, map[string]any{
 			"error": "invalid_mapping_request",
 		})
 		return
@@ -310,7 +310,7 @@ func (s *SpatialHandler) HandleSpatialMapping(w http.ResponseWriter, r *http.Req
 	// 4. Calculate building coverage percentage
 
 	// For now, simulate mapping data processing
-	mappingResult := map[string]interface{}{
+	mappingResult := map[string]any{
 		"session_id":      mappingReq.SessionID,
 		"building_id":     mappingReq.BuildingID,
 		"anchors_created": len(mappingReq.Anchor),
@@ -320,7 +320,7 @@ func (s *SpatialHandler) HandleSpatialMapping(w http.ResponseWriter, r *http.Req
 	}
 
 	s.logger.Info("Spatial mapping data received", "building_id", mappingReq.BuildingID, "session_id", mappingReq.SessionID, "user_id", userID, "anchors", len(mappingReq.Anchor), "points", len(mappingReq.Points))
-	s.RespondJSON(w, http.StatusOK, map[string]interface{}{
+	s.RespondJSON(w, http.StatusOK, map[string]any{
 		"mapping_result": mappingResult,
 	})
 }
@@ -358,16 +358,16 @@ func (s *SpatialHandler) HandleBuildingsList(w http.ResponseWriter, r *http.Requ
 	buildings, err := s.buildingUC.ListBuildings(ctx, filter)
 	if err != nil {
 		s.logger.Error("Failed to get buildings", "error", err)
-		s.RespondJSON(w, http.StatusInternalServerError, map[string]interface{}{
+		s.RespondJSON(w, http.StatusInternalServerError, map[string]any{
 			"error": "failed_to_get_buildings",
 		})
 		return
 	}
 
 	// Convert to mobile format
-	mobileBuildings := make([]map[string]interface{}, len(buildings))
+	mobileBuildings := make([]map[string]any, len(buildings))
 	for i, building := range buildings {
-		mobileBuilding := map[string]interface{}{
+		mobileBuilding := map[string]any{
 			"id":                   building.ID,
 			"name":                 building.Name,
 			"address":              building.Address,
@@ -382,7 +382,7 @@ func (s *SpatialHandler) HandleBuildingsList(w http.ResponseWriter, r *http.Requ
 	}
 
 	s.logger.Info("Mobile buildings list retrieved", "count", len(buildings))
-	s.RespondJSON(w, http.StatusOK, map[string]interface{}{
+	s.RespondJSON(w, http.StatusOK, map[string]any{
 		"buildings": mobileBuildings,
 		"total":     len(buildings),
 		"has_more":  len(buildings) == limit,

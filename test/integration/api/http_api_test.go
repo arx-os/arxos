@@ -155,7 +155,7 @@ func TestHTTPAPI(t *testing.T) {
 
 	t.Run("CreateBuilding", func(t *testing.T) {
 		// Create building request
-		reqBody := map[string]interface{}{
+		reqBody := map[string]any{
 			"name":    "API Test Building",
 			"address": "123 API Street",
 			"coordinates": map[string]float64{
@@ -180,7 +180,7 @@ func TestHTTPAPI(t *testing.T) {
 		// Verify response
 		assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		require.NoError(t, err)
 
@@ -191,7 +191,7 @@ func TestHTTPAPI(t *testing.T) {
 
 	t.Run("GetBuilding", func(t *testing.T) {
 		// First create a building
-		reqBody := map[string]interface{}{
+		reqBody := map[string]any{
 			"name":    "Get Test Building",
 			"address": "456 Get Street",
 		}
@@ -207,7 +207,7 @@ func TestHTTPAPI(t *testing.T) {
 		require.NoError(t, err)
 		defer createResp.Body.Close()
 
-		var createResponse map[string]interface{}
+		var createResponse map[string]any
 		err = json.NewDecoder(createResp.Body).Decode(&createResponse)
 		require.NoError(t, err)
 
@@ -220,7 +220,7 @@ func TestHTTPAPI(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		require.NoError(t, err)
 
@@ -230,7 +230,7 @@ func TestHTTPAPI(t *testing.T) {
 
 	t.Run("UpdateBuilding", func(t *testing.T) {
 		// First create a building
-		reqBody := map[string]interface{}{
+		reqBody := map[string]any{
 			"name":    "Update Test Building",
 			"address": "789 Update Street",
 		}
@@ -246,14 +246,14 @@ func TestHTTPAPI(t *testing.T) {
 		require.NoError(t, err)
 		defer createResp.Body.Close()
 
-		var createResponse map[string]interface{}
+		var createResponse map[string]any
 		err = json.NewDecoder(createResp.Body).Decode(&createResponse)
 		require.NoError(t, err)
 
 		buildingID := createResponse["id"].(string)
 
 		// Update the building
-		updateBody := map[string]interface{}{
+		updateBody := map[string]any{
 			"name":    "Updated Test Building",
 			"address": "999 Updated Street",
 		}
@@ -271,7 +271,7 @@ func TestHTTPAPI(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		require.NoError(t, err)
 
@@ -282,7 +282,7 @@ func TestHTTPAPI(t *testing.T) {
 	t.Run("ListBuildings", func(t *testing.T) {
 		// Create multiple buildings
 		for i := 0; i < 3; i++ {
-			reqBody := map[string]interface{}{
+			reqBody := map[string]any{
 				"name":    fmt.Sprintf("List Test Building %d", i+1),
 				"address": fmt.Sprintf("%d List Street", 100+i),
 			}
@@ -306,17 +306,17 @@ func TestHTTPAPI(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		require.NoError(t, err)
 
-		buildings := response["buildings"].([]interface{})
+		buildings := response["buildings"].([]any)
 		assert.GreaterOrEqual(t, len(buildings), 3)
 	})
 
 	t.Run("CreateEquipment", func(t *testing.T) {
 		// First create a building
-		buildingReqBody := map[string]interface{}{
+		buildingReqBody := map[string]any{
 			"name":    "Equipment Test Building",
 			"address": "123 Equipment Street",
 		}
@@ -332,14 +332,14 @@ func TestHTTPAPI(t *testing.T) {
 		require.NoError(t, err)
 		defer buildingResp.Body.Close()
 
-		var buildingResponse map[string]interface{}
+		var buildingResponse map[string]any
 		err = json.NewDecoder(buildingResp.Body).Decode(&buildingResponse)
 		require.NoError(t, err)
 
 		buildingID := buildingResponse["id"].(string)
 
 		// Create equipment
-		equipmentReqBody := map[string]interface{}{
+		equipmentReqBody := map[string]any{
 			"building_id": buildingID,
 			"name":        "API Test Equipment",
 			"type":        "HVAC",
@@ -364,7 +364,7 @@ func TestHTTPAPI(t *testing.T) {
 
 		assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		require.NoError(t, err)
 
@@ -387,7 +387,7 @@ func TestHTTPAPI(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 		// Test missing required fields
-		reqBody := map[string]interface{}{
+		reqBody := map[string]any{
 			"address": "Missing Name Street",
 		}
 
@@ -436,7 +436,7 @@ func TestGraphQLAPI(t *testing.T) {
 			}
 		`
 
-		reqBody := map[string]interface{}{
+		reqBody := map[string]any{
 			"query": query,
 		}
 
@@ -453,12 +453,12 @@ func TestGraphQLAPI(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		require.NoError(t, err)
 
 		assert.NotNil(t, response["data"])
-		data := response["data"].(map[string]interface{})
+		data := response["data"].(map[string]any)
 		assert.NotNil(t, data["buildings"])
 	})
 
@@ -477,7 +477,7 @@ func TestGraphQLAPI(t *testing.T) {
 			}
 		`
 
-		reqBody := map[string]interface{}{
+		reqBody := map[string]any{
 			"query": mutation,
 		}
 
@@ -494,12 +494,12 @@ func TestGraphQLAPI(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		require.NoError(t, err)
 
 		assert.NotNil(t, response["data"])
-		data := response["data"].(map[string]interface{})
+		data := response["data"].(map[string]any)
 		assert.NotNil(t, data["createBuilding"])
 	})
 
@@ -513,7 +513,7 @@ func TestGraphQLAPI(t *testing.T) {
 			}
 		`
 
-		reqBody := map[string]interface{}{
+		reqBody := map[string]any{
 			"query": query,
 		}
 
@@ -530,7 +530,7 @@ func TestGraphQLAPI(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		require.NoError(t, err)
 
@@ -571,7 +571,7 @@ func TestWebSocketAPI(t *testing.T) {
 		defer conn.Close()
 
 		// Subscribe to building updates
-		subscribeMsg := map[string]interface{}{
+		subscribeMsg := map[string]any{
 			"type":    "subscribe",
 			"channel": "buildings",
 		}
@@ -580,7 +580,7 @@ func TestWebSocketAPI(t *testing.T) {
 		require.NoError(t, err)
 
 		// Create a building via HTTP API
-		reqBody := map[string]interface{}{
+		reqBody := map[string]any{
 			"name":    "WebSocket Test Building",
 			"address": "123 WebSocket Street",
 		}
@@ -600,7 +600,7 @@ func TestWebSocketAPI(t *testing.T) {
 		_, messageData, err := conn.ReadMessage()
 		require.NoError(t, err)
 
-		var update map[string]interface{}
+		var update map[string]any
 		err = json.Unmarshal(messageData, &update)
 		require.NoError(t, err)
 
@@ -616,7 +616,7 @@ func TestAuthenticationAPI(t *testing.T) {
 	defer suite.TeardownTestEnvironment(t)
 
 	t.Run("UserRegistration", func(t *testing.T) {
-		reqBody := map[string]interface{}{
+		reqBody := map[string]any{
 			"email":    "test@example.com",
 			"name":     "Test User",
 			"password": "testpassword123",
@@ -636,7 +636,7 @@ func TestAuthenticationAPI(t *testing.T) {
 
 		assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		require.NoError(t, err)
 
@@ -647,7 +647,7 @@ func TestAuthenticationAPI(t *testing.T) {
 
 	t.Run("UserAuthentication", func(t *testing.T) {
 		// First register a user
-		registerBody := map[string]interface{}{
+		registerBody := map[string]any{
 			"email":    "auth@example.com",
 			"name":     "Auth User",
 			"password": "authpassword123",
@@ -666,7 +666,7 @@ func TestAuthenticationAPI(t *testing.T) {
 		registerResp.Body.Close()
 
 		// Now authenticate
-		authBody := map[string]interface{}{
+		authBody := map[string]any{
 			"email":    "auth@example.com",
 			"password": "authpassword123",
 		}
@@ -684,7 +684,7 @@ func TestAuthenticationAPI(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		require.NoError(t, err)
 

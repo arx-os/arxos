@@ -35,41 +35,41 @@ func (l *Logger) SetLevel(level LogLevel) {
 }
 
 // Debug logs a debug message
-func (l *Logger) Debug(format string, args ...interface{}) {
+func (l *Logger) Debug(format string, args ...any) {
 	if l.level <= DEBUG {
 		l.logger.Printf("[DEBUG] "+format, args...)
 	}
 }
 
 // Info logs an info message
-func (l *Logger) Info(format string, args ...interface{}) {
+func (l *Logger) Info(format string, args ...any) {
 	if l.level <= INFO {
 		l.logger.Printf("[INFO] "+format, args...)
 	}
 }
 
 // Warn logs a warning message
-func (l *Logger) Warn(format string, args ...interface{}) {
+func (l *Logger) Warn(format string, args ...any) {
 	if l.level <= WARN {
 		l.logger.Printf("[WARN] "+format, args...)
 	}
 }
 
 // Error logs an error message
-func (l *Logger) Error(format string, args ...interface{}) {
+func (l *Logger) Error(format string, args ...any) {
 	if l.level <= ERROR {
 		l.logger.Printf("[ERROR] "+format, args...)
 	}
 }
 
 // Fatal logs a fatal message and exits
-func (l *Logger) Fatal(format string, args ...interface{}) {
+func (l *Logger) Fatal(format string, args ...any) {
 	l.logger.Printf("[FATAL] "+format, args...)
 	os.Exit(1)
 }
 
 // WithFields creates a logger with additional fields
-func (l *Logger) WithFields(fields map[string]interface{}) *Logger {
+func (l *Logger) WithFields(fields map[string]any) *Logger {
 	// Simplified implementation - in a real logger you'd store fields
 	return l
 }

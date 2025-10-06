@@ -19,13 +19,13 @@ type MetricsCollector struct {
 
 // Metric represents a single metric
 type Metric struct {
-	Name        string                 `json:"name"`
-	Type        MetricType             `json:"type"`
-	Value       interface{}            `json:"value"`
-	Labels      map[string]string      `json:"labels"`
-	Timestamp   time.Time              `json:"timestamp"`
-	Description string                 `json:"description"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	Name        string            `json:"name"`
+	Type        MetricType        `json:"type"`
+	Value       any               `json:"value"`
+	Labels      map[string]string `json:"labels"`
+	Timestamp   time.Time         `json:"timestamp"`
+	Description string            `json:"description"`
+	Metadata    map[string]any    `json:"metadata,omitempty"`
 }
 
 // MetricType represents the type of metric
@@ -130,7 +130,7 @@ func NewMetricsCollector(logger domain.Logger) *MetricsCollector {
 }
 
 // RecordMetric records a metric
-func (mc *MetricsCollector) RecordMetric(name string, metricType MetricType, value interface{}, labels map[string]string) {
+func (mc *MetricsCollector) RecordMetric(name string, metricType MetricType, value any, labels map[string]string) {
 	mc.mu.Lock()
 	defer mc.mu.Unlock()
 
@@ -190,7 +190,7 @@ func (mc *MetricsCollector) IncrementCounter(name string, labels map[string]stri
 }
 
 // SetGauge sets a gauge metric value
-func (mc *MetricsCollector) SetGauge(name string, value interface{}, labels map[string]string) {
+func (mc *MetricsCollector) SetGauge(name string, value any, labels map[string]string) {
 	mc.RecordMetric(name, Gauge, value, labels)
 }
 

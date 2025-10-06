@@ -177,7 +177,7 @@ func (uc *IFCUseCase) ValidateIFC(ctx context.Context, ifcFileID string) (*build
 }
 
 // GetServiceStatus returns the status of the IfcOpenShell service
-func (uc *IFCUseCase) GetServiceStatus(ctx context.Context) map[string]interface{} {
+func (uc *IFCUseCase) GetServiceStatus(ctx context.Context) map[string]any {
 	return uc.ifcService.GetServiceStatus(ctx)
 }
 

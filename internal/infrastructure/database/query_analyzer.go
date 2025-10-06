@@ -18,14 +18,14 @@ type QueryAnalyzer struct {
 
 // QueryAnalysis represents the analysis of a query
 type QueryAnalysis struct {
-	Query           string                 `json:"query"`
-	ExecutionPlan   string                 `json:"execution_plan"`
-	CostEstimate    float64                `json:"cost_estimate"`
-	IndexUsage      []string               `json:"index_usage"`
-	TableScans      []string               `json:"table_scans"`
-	Recommendations []string               `json:"recommendations"`
-	Warnings        []string               `json:"warnings"`
-	Metadata        map[string]interface{} `json:"metadata"`
+	Query           string         `json:"query"`
+	ExecutionPlan   string         `json:"execution_plan"`
+	CostEstimate    float64        `json:"cost_estimate"`
+	IndexUsage      []string       `json:"index_usage"`
+	TableScans      []string       `json:"table_scans"`
+	Recommendations []string       `json:"recommendations"`
+	Warnings        []string       `json:"warnings"`
+	Metadata        map[string]any `json:"metadata"`
 }
 
 // QueryOptimization represents query optimization suggestions
@@ -67,7 +67,7 @@ func (qa *QueryAnalyzer) AnalyzeQuery(ctx context.Context, query string) (*Query
 		TableScans:      []string{},
 		Recommendations: []string{},
 		Warnings:        []string{},
-		Metadata:        make(map[string]interface{}),
+		Metadata:        make(map[string]any),
 	}
 
 	// Get execution plan

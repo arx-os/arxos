@@ -71,7 +71,7 @@ func (gzw *gzipResponseWriter) Flush() {
 
 // gzipWriterPool is a pool of gzip writers for reuse
 var gzipWriterPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return gzip.NewWriter(nil)
 	},
 }

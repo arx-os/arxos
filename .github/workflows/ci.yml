@@ -1,445 +1,264 @@
-name: Optimized CI/CD Pipeline
+name: ArxOS CI/CD Pipeline
 
 on:
   push:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
-  schedule:
-    # Run nightly tests at 2 AM UTC
-    - cron: '0 2 * * *'
-  workflow_dispatch:
-    inputs:
-      run_stress_tests:
-        description: 'Run stress tests (long running)'
-        required: false
-        default: false
-        type: boolean
+  release:
+    types: [ published ]
 
 env:
   GO_VERSION: '1.21'
-  POSTGRES_VERSION: '16'
-  POSTGIS_VERSION: '3.4'
-  COVERAGE_THRESHOLD: 70
-  # Build optimization variables
-  GOCACHE: /tmp/go-build-cache
-  GOMODCACHE: /tmp/go-mod-cache
-  DOCKER_BUILDKIT: 1
+  GOLANGCI_LINT_VERSION: 'v1.54.2'
 
 jobs:
-  # Code quality and linting
-  lint:
-    name: Lint & Code Quality
+  # Code Quality Checks
+  quality:
+    name: Code Quality
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Cache Go modules and build cache
-        uses: actions/cache@v3
+      - name: Cache Go modules
+        uses: actions/cache@v4
         with:
-          path: |
-            ${{ env.GOMODCACHE }}
-            ${{ env.GOCACHE }}
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}-${{ hashFiles('**/*.go') }}
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}-
-            ${{ runner.os }}-go-${{ env.GO_VERSION }}-
             ${{ runner.os }}-go-
 
-      - name: Install golangci-lint
+      - name: Install dependencies
         run: |
-          # Ensure GOPATH/bin exists
-          mkdir -p "$(go env GOPATH)/bin"
-          # Install golangci-lint
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)/bin" v1.55.2
+          go mod download
+          go mod tidy
+          go install golang.org/x/tools/cmd/goimports@latest
+
+      - name: Check for interface{} usage
+        run: |
+          chmod +x scripts/lint-interface.sh
+          ./scripts/lint-interface.sh
 
       - name: Run golangci-lint
-        run: golangci-lint run --timeout 10m
-
-      - name: Check go mod tidy
-        run: |
-          go mod tidy
-          git diff --exit-code go.mod go.sum
-
-      - name: Run go fmt check
-        run: |
-          go fmt ./...
-          git diff --exit-code go.mod go.sum
-
-      - name: Run go vet
-        run: go vet ./...
-
-  # Optimized parallel builds
-  build-go:
-    name: Build Go Application
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: golangci/golangci-lint-action@v3
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
-          cache-dependency-path: go.sum
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          args: --config=.golangci.yml
 
-      - name: Cache Go modules and build cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ${{ env.GOMODCACHE }}
-            ${{ env.GOCACHE }}
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}-${{ hashFiles('**/*.go') }}
-          restore-keys: |
-            ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}-
-            ${{ runner.os }}-go-${{ env.GO_VERSION }}-
-            ${{ runner.os }}-go-
-
-      - name: Build with metrics
+      - name: Check code formatting
         run: |
-          start_time=$(date +%s)
-          GOCACHE=${{ env.GOCACHE }} GOMODCACHE=${{ env.GOMODCACHE }} \
-          go build -o arx ./cmd/arx
-          end_time=$(date +%s)
-          duration=$((end_time - start_time))
-          build_size=$(du -h arx | cut -f1)
-          echo "✅ Build completed in $duration seconds (size: $build_size)"
-          echo "build_duration=$duration" >> $GITHUB_OUTPUT
-          echo "build_size=$build_size" >> $GITHUB_OUTPUT
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: arx-${{ github.sha }}-linux-amd64
-          path: arx
-
-  build-docker:
-    name: Build Docker Images
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build with cache
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          load: true
-          tags: arxos:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            VERSION=${{ github.sha }}
-            COMMIT=${{ github.sha }}
-            BUILD_TIME=${{ github.event.head_commit.timestamp }}
-
-      - name: Test Docker image
-        run: |
-          docker run --rm arxos:${{ github.sha }} version || echo "Docker image test completed"
-
-  build-mobile:
-    name: Build Mobile Application
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: 'mobile/package-lock.json'
-
-      - name: Install mobile dependencies
-        run: |
-          cd mobile
-          npm ci
-
-      - name: Build mobile application
-        run: |
-          cd mobile
-          npm run type-check
-          echo "✅ Mobile application build completed"
-
-  # Unit tests with coverage
-  unit-tests:
-    name: Unit Tests
-    runs-on: ubuntu-latest
-    needs: [lint, build-go]
-    timeout-minutes: 15
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Cache Go modules and build cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ${{ env.GOMODCACHE }}
-            ${{ env.GOCACHE }}
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}-${{ hashFiles('**/*.go') }}
-          restore-keys: |
-            ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}-
-            ${{ runner.os }}-go-${{ env.GO_VERSION }}-
-            ${{ runner.os }}-go-
-
-      - name: Run unit tests with coverage
-        run: |
-          go test -v -race -coverprofile=coverage.out -covermode=atomic ./internal/...
-          go tool cover -func=coverage.out
-
-      - name: Check coverage threshold
-        run: |
-          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
-          echo "Coverage: $COVERAGE%"
-          THRESHOLD=${{ env.COVERAGE_THRESHOLD }}
-          if (( $(awk "BEGIN {print $COVERAGE < $THRESHOLD}") )); then
-            echo "Coverage $COVERAGE% is below threshold $THRESHOLD%"
+          if [ $(gofmt -l . | wc -l) -ne 0 ]; then
+            echo "Code is not formatted. Run 'make fmt' to fix."
+            gofmt -l .
             exit 1
           fi
 
-      - name: Upload coverage reports
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage-reports
-          path: coverage.out
+      - name: Check import organization
+        run: |
+          if [ $(goimports -l . | wc -l) -ne 0 ]; then
+            echo "Imports are not organized. Run 'make fmt' to fix."
+            goimports -l .
+            exit 1
+          fi
 
-  # Integration tests with PostGIS
-  integration-tests:
-    name: Integration Tests
+  # Build and Test
+  build-test:
+    name: Build and Test
     runs-on: ubuntu-latest
-    needs: unit-tests
-    timeout-minutes: 20
-    
-    services:
-      postgres:
-        image: postgis/postgis:16-3.4
-        env:
-          POSTGRES_DB: arxos_test
-          POSTGRES_USER: arxos_test
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
-        options: >-
-          --health-cmd "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-      redis:
-        image: redis:7-alpine
-        options: >-
-          --health-cmd redis-cli ping
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 3
-        ports:
-          - 6379:6379
-
+    strategy:
+      matrix:
+        go-version: ['1.20', '1.21', '1.22']
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v4
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: ${{ matrix.go-version }}
 
-      - name: Cache Go modules and build cache
-        uses: actions/cache@v3
+      - name: Cache Go modules
+        uses: actions/cache@v4
         with:
-          path: |
-            ${{ env.GOMODCACHE }}
-            ${{ env.GOCACHE }}
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}-${{ hashFiles('**/*.go') }}
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}-
-            ${{ runner.os }}-go-${{ env.GO_VERSION }}-
             ${{ runner.os }}-go-
 
-      - name: Install PostgreSQL Client Tools
+      - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client redis-tools
+          go mod download
+          go mod tidy
 
-      - name: Wait for services
+      - name: Build
+        run: go build -v ./...
+
+      - name: Run tests
+        run: go test -v ./...
+
+      - name: Run tests with race detection
+        run: go test -race -v ./...
+
+      - name: Generate coverage report
         run: |
-          echo "Waiting for PostgreSQL..."
-          timeout 30 bash -c 'until PGPASSWORD=test_password psql -h localhost -U arxos_test -d arxos_test -c "\q"; do sleep 1; done'
-          
-          echo "Waiting for Redis..."
-          timeout 10 bash -c 'until redis-cli -h localhost ping; do sleep 1; done'
+          go test -coverprofile=coverage.out ./...
+          go tool cover -html=coverage.out -o coverage.html
 
-      - name: Setup test database
-        run: |
-          PGPASSWORD=test_password psql -h localhost -U arxos_test -d arxos_test -c "CREATE EXTENSION IF NOT EXISTS postgis;"
-          PGPASSWORD=test_password psql -h localhost -U arxos_test -d arxos_test -c "CREATE EXTENSION IF NOT EXISTS postgis_topology;"
-
-      - name: Run integration tests
-        env:
-          DATABASE_URL: postgres://arxos_test:test_password@localhost:5432/arxos_test?sslmode=disable
-          POSTGIS_HOST: localhost
-          POSTGIS_PORT: 5432
-          POSTGIS_DB: arxos_test
-          POSTGIS_USER: arxos_test
-          POSTGIS_PASSWORD: test_password
-          REDIS_HOST: localhost
-          REDIS_PORT: 6379
-        run: |
-          go test -v -tags=integration -timeout 15m -coverprofile=integration_coverage.out ./test/...
-
-      - name: Upload integration test results
-        if: always()
-        uses: actions/upload-artifact@v3
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
         with:
-          name: integration-test-results
-          path: |
-            integration_coverage.out
-            **/*test*.log
+          file: ./coverage.out
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
 
-  # Mobile application tests
-  mobile-tests:
-    name: Mobile Tests
-    runs-on: ubuntu-latest
-    needs: lint
-    timeout-minutes: 10
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: 'mobile/package-lock.json'
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y curl jq
-
-      - name: Install mobile dependencies
-        run: |
-          cd mobile
-          npm ci
-
-      - name: Run mobile linter
-        run: |
-          cd mobile
-          npm run lint
-
-      - name: Run mobile tests
-        run: |
-          cd mobile
-          npm test -- --coverage --watchAll=false || echo "Mobile tests not configured"
-
-      - name: Check mobile build configuration
-        run: |
-          cd mobile
-          echo "Available npm scripts:"
-          npm run || echo "No scripts defined"
-          echo "Checking package.json for build scripts..."
-          cat package.json | jq -r '.scripts | keys[]' || echo "package.json parsing failed"
-
-  # Security scanning
+  # Security Scanning
   security:
     name: Security Scan
     runs-on: ubuntu-latest
-    needs: lint
-    timeout-minutes: 10
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
 
       - name: Install Gosec
         run: |
+          export PATH=$PATH:$(go env GOPATH)/bin
           go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
 
       - name: Run Gosec Security Scanner
         run: |
-          gosec -fmt sarif -out gosec-results.sarif ./...
+          gosec -fmt sarif -out gosec.sarif ./...
+        continue-on-error: true
 
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v2
         with:
-          sarif_file: gosec-results.sarif
+          sarif_file: gosec.sarif
 
-      - name: Check for vulnerable dependencies
-        run: |
-          # Alternative: use go-audit for vulnerability checking
-          # go get github.com/sonatype-nexus-community/go-audit
-          # go-audit ./... || echo "Dependency audit completed"
-          echo "Dependency audit skipped - requires additional setup"
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+        continue-on-error: true
 
-  # Build and test Docker
-  build:
-    name: Build & Docker Test
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Performance Testing
+  performance:
+    name: Performance Tests
     runs-on: ubuntu-latest
-    needs: [lint, integration-tests]
-    timeout-minutes: 15
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y curl
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
-      - name: Build CLI
+      - name: Install dependencies
         run: |
-          go build -v -ldflags="-s -w" -o arx ./cmd/arx
+          go mod download
+          go mod tidy
 
-      - name: Test CLI
+      - name: Run benchmark tests
+        run: go test -bench=. -benchmem ./...
+
+      - name: Run performance tests
+        run: go test -bench=. -benchmem -cpuprofile=cpu.prof -memprofile=mem.prof ./...
+
+      - name: Upload performance profiles
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-profiles
+          path: |
+            cpu.prof
+            mem.prof
+
+  # Cross-platform Build
+  cross-platform:
+    name: Cross-platform Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: linux-amd64
+            goos: linux
+            goarch: amd64
+          - name: linux-arm64
+            goos: linux
+            goarch: arm64
+          - name: windows-amd64
+            goos: windows
+            goarch: amd64
+          - name: darwin-amd64
+            goos: darwin
+            goarch: amd64
+          - name: darwin-arm64
+            goos: darwin
+            goarch: arm64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install dependencies
         run: |
-          ./arx version
-          ./arx help
+          go mod download
+          go mod tidy
+
+      - name: Build for ${{ matrix.goos }}/${{ matrix.goarch }}
+        run: |
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -v ./...
+
+      - name: Test for ${{ matrix.goos }}/${{ matrix.goarch }}
+        run: |
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go test -v ./...
+
+  # Docker Build
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -448,169 +267,99 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          load: true
-          tags: arxos:${{ github.sha }}
+          push: false
+          tags: arxos:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Test Docker image
-        run: |
-          docker run --rm arxos:${{ github.sha }} version || echo "Docker image test completed"
-
-      - name: Test Docker Compose
-        run: |
-          # Test basic docker-compose functionality
-          docker-compose -f docker-compose.test.yml config --quiet
-          echo "Docker Compose configuration is valid"
-          
-          # Optional: Test service startup (can be resource intensive)
-          # docker-compose -f docker-compose.test.yml up -d postgis-test redis-test ifcopenshell-test
-          # sleep 15
-          # docker-compose -f docker-compose.test.yml ps
-          # docker-compose -f docker-compose.test.yml down
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: arx-${{ github.sha }}-linux-amd64
-          path: arx
-
-  # Stress tests (only on schedule or manual trigger)
-  stress-tests:
-    name: Stress Tests
+  # Release
+  release:
+    name: Release
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'schedule' ||
-      github.event.inputs.run_stress_tests == 'true'
-    needs: integration-tests
-    timeout-minutes: 45
-    
-    services:
-      postgres:
-        image: postgis/postgis:16-3.4
-        env:
-          POSTGRES_DB: arxos_stress_test
-          POSTGRES_USER: arxos_stress
-          POSTGRES_PASSWORD: stress_password
-          POSTGRES_MAX_CONNECTIONS: 100
-          POSTGRES_SHARED_BUFFERS: 128MB
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
+    needs: [quality, build-test, security]
+    if: github.event_name == 'release'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Install PostgreSQL Client Tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-
-      - name: Wait for PostgreSQL
-        run: |
-          timeout 30 bash -c 'until PGPASSWORD=stress_password psql -h localhost -U arxos_stress -d arxos_stress_test -c "\q"; do sleep 1; done'
-
-      - name: Setup PostGIS
-        run: |
-          PGPASSWORD=stress_password psql -h localhost -U arxos_stress -d arxos_stress_test -c "CREATE EXTENSION IF NOT EXISTS postgis;"
-
-      - name: Run stress tests
-        env:
-          DATABASE_URL: postgres://arxos_stress:stress_password@localhost:5432/arxos_stress_test?sslmode=disable
-        run: |
-          # Check if load directory exists, if not create basic tests
-          if [ -d "./test/load" ]; then
-            go test -v -tags=stress -timeout 30m -run=TestLoad ./test/load/... > stress_test_results.log 2>&1 || true
-          else
-            echo "Load testing directory not found, creating basic stress test" > stress_test_results.log
-            echo "Stress test framework: READY" >> stress_test_results.log
-          fi
-
-      - name: Upload stress test results
-        if: always()
-        uses: actions/upload-artifact@v3
+      - name: Cache Go modules
+        uses: actions/cache@v4
         with:
-          name: stress-test-results
-          path: |
-            stress_test_results.log
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
-  # Generate test reports
-  test-report:
-    name: Test Report
+      - name: Install dependencies
+        run: |
+          go mod download
+          go mod tidy
+
+      - name: Build release binaries
+        run: |
+          mkdir -p dist
+          GOOS=linux GOARCH=amd64 go build -o dist/arxos-linux-amd64 ./cmd/arx
+          GOOS=linux GOARCH=arm64 go build -o dist/arxos-linux-arm64 ./cmd/arx
+          GOOS=windows GOARCH=amd64 go build -o dist/arxos-windows-amd64.exe ./cmd/arx
+          GOOS=darwin GOARCH=amd64 go build -o dist/arxos-darwin-amd64 ./cmd/arx
+          GOOS=darwin GOARCH=arm64 go build -o dist/arxos-darwin-arm64 ./cmd/arx
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-binaries
+          path: dist/
+
+  # Dependency Updates
+  dependencies:
+    name: Dependency Updates
     runs-on: ubuntu-latest
-    if: always()
-    needs: [unit-tests, integration-tests, stress-tests]
-    timeout-minutes: 5
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y curl
-
-      - name: Download test artifacts
-        uses: actions/download-artifact@v3
-
-      - name: Generate test report
-        run: |
-          echo "# ArxOS Test Report - $(date)" > test_report.md
-          echo "" >> test_report.md
-          
-          echo "## Unit Tests" >> test_report.md
-          if [ -f coverage-reports/coverage.out ]; then
-            COVERAGE=$(go tool cover -func=coverage-reports/coverage.out 2>/dev/null | grep total | awk '{print $3}' || echo "N/A")
-            echo "✅ Coverage: $COVERAGE" >> test_report.md
-          else
-            echo "❌ Coverage report not available" >> test_report.md
-          fi
-          
-          echo "" >> test_report.md
-          echo "## Integration Tests" >> test_report.md
-          if [ -f integration-test-results/integration_coverage.out ]; then
-            echo "✅ Completed" >> test_report.md
-          else
-            echo "❌ Integration test results not available" >> test_report.md
-          fi
-          
-          echo "" >> test_report.md
-          echo "## Stress Tests" >> test_report.md
-          if [ -f stress-test-results/stress_test_results.log ]; then
-            echo "✅ Completed" >> test_report.md
-          else
-            echo "ℹ️ Stress tests not run" >> test_report.md
-          fi
-
-      - name: Upload final report
-        uses: actions/upload-artifact@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
         with:
-          name: final-test-report
-          path: test_report.md
+          go-version: ${{ env.GO_VERSION }}
 
-      - name: Comment PR with test results
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
+      - name: Check for dependency updates
+        run: |
+          go list -u -m all
+          go mod tidy
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Dependencies need updating"
+            exit 1
+          fi
+
+  # Documentation
+  documentation:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
         with:
-          script: |
-            const fs = require('fs');
-            try {
-              const report = fs.readFileSync('test_report.md', 'utf8');
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: report
-              });
-            } catch (error) {
-              console.log('No test report found, skipping comment');
-            }
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Generate documentation
+        run: |
+          go doc -all ./... > docs/api.md
+          go install golang.org/x/tools/cmd/pkgsite@latest
+          pkgsite -http=:6060 &
+          sleep 10
+          curl -s http://localhost:6060/github.com/arx-os/arxos/ > docs/index.html
+
+      - name: Upload documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: docs/

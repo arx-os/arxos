@@ -1,323 +1,231 @@
-# ArxOS Makefile
-# Provides commands for building, testing, and running the ArxOS platform with IfcOpenShell integration
+# Makefile for ArxOS
+# Provides targets for development, testing, and linting
 
-.PHONY: help build build-all test test-all docker docker-all run run-dev clean lint format security test-coverage clean-all build-cached build-parallel build-with-metrics
-
-# Build optimization variables
-GOCACHE ?= $(PWD)/.cache/go-build
-GOMODCACHE ?= $(PWD)/.cache/go-mod
-DOCKER_CACHE ?= $(PWD)/.cache/docker
-BUILD_CACHE_DIR ?= $(PWD)/.cache
+.PHONY: help build test lint lint-fix clean install-tools check-interface
 
 # Default target
-help:
-	@echo "ArxOS Development Commands:"
-	@echo ""
-	@echo "Building:"
-	@echo "  build          Build ArxOS main application"
-	@echo "  build-cached   Build ArxOS with build cache optimization"
-	@echo "  build-parallel Build all components in parallel"
-	@echo "  build-with-metrics Build with performance monitoring"
-	@echo "  build-all      Build all components (ArxOS + IfcOpenShell service)"
-	@echo "  docker         Build Docker images for all services"
-	@echo "  docker-dev     Build Docker images for development"
-	@echo ""
-	@echo "Testing:"
-	@echo "  test           Run ArxOS Go tests"
-	@echo "  test-ifc       Run IfcOpenShell service tests"
-	@echo "  test-all       Run all tests"
-	@echo "  test-integration Run integration tests"
-	@echo ""
-	@echo "Running:"
-	@echo "  run            Run ArxOS with Docker Compose"
-	@echo "  run-dev        Run ArxOS in development mode"
-	@echo "  run-ifc        Run only IfcOpenShell service"
-	@echo "  stop           Stop all services"
-	@echo ""
-	@echo "Development:"
-	@echo "  lint           Run linters on Go code"
-	@echo "  format         Format Go code"
-	@echo "  clean          Clean build artifacts"
-	@echo "  clean-cache    Clean build cache"
-	@echo "  setup          Setup development environment"
-	@echo "  security       Run security scanning"
-	@echo "  test-coverage  Run tests with coverage report"
-	@echo "  clean-all      Complete cleanup including Docker"
+help: ## Show this help message
+	@echo "ArxOS Development Makefile"
+	@echo "Available targets:"
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-# Building
-build:
+# Build targets
+build: ## Build the project
 	@echo "Building ArxOS..."
-	mkdir -p bin
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/arx cmd/arx/main.go
-	@echo "✅ ArxOS built successfully"
+	go build -v ./...
 
-# Build with caching optimization
-build-cached:
-	@echo "Building ArxOS with build cache optimization..."
-	mkdir -p bin $(GOCACHE) $(GOMODCACHE)
-	GOCACHE=$(GOCACHE) GOMODCACHE=$(GOMODCACHE) \
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/arx cmd/arx/main.go
-	@echo "✅ ArxOS built successfully with cache"
+build-race: ## Build with race detection
+	@echo "Building ArxOS with race detection..."
+	go build -race -v ./...
 
-# Build with performance monitoring
-build-with-metrics:
-	@echo "Building ArxOS with performance monitoring..."
-	mkdir -p bin $(GOCACHE) $(GOMODCACHE)
-	@start_time=$$(date +%s); \
-	GOCACHE=$(GOCACHE) GOMODCACHE=$(GOMODCACHE) \
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/arx cmd/arx/main.go; \
-	end_time=$$(date +%s); \
-	duration=$$((end_time - start_time)); \
-	build_size=$$(du -h bin/arx | cut -f1); \
-	echo "✅ Build completed in $$duration seconds (size: $$build_size)"
+# Test targets
+test: ## Run all tests
+	@echo "Running tests..."
+	go test -v ./...
 
-# Parallel builds
-build-parallel:
-	@echo "Building all components in parallel..."
-	@$(MAKE) -j4 build-go build-ifc-service build-mobile
-	@echo "✅ All components built successfully"
+test-race: ## Run tests with race detection
+	@echo "Running tests with race detection..."
+	go test -race -v ./...
 
-build-go:
-	@echo "Building Go application..."
-	mkdir -p bin $(GOCACHE) $(GOMODCACHE)
-	GOCACHE=$(GOCACHE) GOMODCACHE=$(GOMODCACHE) \
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/arx cmd/arx/main.go
-	@echo "✅ Go application built successfully"
+test-coverage: ## Run tests with coverage
+	@echo "Running tests with coverage..."
+	go test -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report generated: coverage.html"
 
-build-ifc-service:
-	@echo "Building IfcOpenShell service..."
-	cd services/ifcopenshell-service && pip install -r requirements.txt || exit 1
-	@echo "✅ IfcOpenShell service built successfully"
+test-bench: ## Run benchmark tests
+	@echo "Running benchmark tests..."
+	go test -bench=. -benchmem ./...
 
-build-mobile:
-	@echo "Building mobile application..."
-	cd mobile && npm ci || exit 1
-	@echo "✅ Mobile application built successfully"
-
-build-all: build-cached build-ifc-service
-	@echo "✅ All components built successfully"
-
-# Docker builds with caching
-docker:
-	@echo "Building Docker images with cache optimization..."
-	DOCKER_BUILDKIT=1 docker build \
-		--cache-from joelpate/arxos:latest \
-		--cache-to joelpate/arxos:cache \
-		-t joelpate/arxos:latest . || exit 1
-	DOCKER_BUILDKIT=1 docker build \
-		--cache-from joelpate/arxos-ifc-service:latest \
-		--cache-to joelpate/arxos-ifc-service:cache \
-		-t joelpate/arxos-ifc-service:latest services/ifcopenshell-service/ || exit 1
-	@echo "✅ Docker images built successfully with cache"
-
-docker-dev:
-	@echo "Building development Docker images with cache optimization..."
-	DOCKER_BUILDKIT=1 docker build \
-		--cache-from joelpate/arxos:dev \
-		--cache-to joelpate/arxos:dev-cache \
-		-t joelpate/arxos:dev . || exit 1
-	DOCKER_BUILDKIT=1 docker build \
-		--cache-from joelpate/arxos-ifc-service:dev \
-		--cache-to joelpate/arxos-ifc-service:dev-cache \
-		-t joelpate/arxos-ifc-service:dev services/ifcopenshell-service/ || exit 1
-	@echo "✅ Development Docker images built successfully with cache"
-
-# Testing
-test:
-	@echo "Running ArxOS tests..."
-	go test ./internal/infrastructure/ifc/... -v || exit 1
-	@echo "✅ ArxOS tests completed"
-
-test-ifc:
-	@echo "Running IfcOpenShell service tests..."
-	cd services/ifcopenshell-service && python -m pytest tests/ -v || exit 1
-	@echo "✅ IfcOpenShell service tests completed"
-
-test-all: test test-ifc
-	@echo "✅ All tests completed"
-
-test-integration:
-	@echo "Running integration tests..."
-	@echo "Starting services..."
-	docker-compose -f docker-compose.test.yml up -d --wait
-	@echo "Waiting for services to be ready..."
-	@while ! curl -f http://localhost:8080/health >/dev/null 2>&1; do \
-		echo "Waiting for ArxOS API..."; sleep 2; \
-	done
-	@echo "Running integration tests..."
-	go test ./test/integration/... -v
-	@echo "Stopping services..."
-	docker-compose -f docker-compose.test.yml down
-	@echo "✅ Integration tests completed"
-
-# Running services
-run:
-	@echo "Starting ArxOS with Docker Compose..."
-	docker-compose up -d
-	@echo "✅ ArxOS started successfully"
-	@echo "ArxOS API: http://localhost:8080"
-	@echo "IfcOpenShell Service: http://localhost:5000"
-	@echo "PostGIS Database: localhost:5432"
-
-run-dev:
-	@echo "Starting ArxOS in development mode..."
-	docker-compose up -d
-	@echo "✅ ArxOS development environment started"
-	@echo "ArxOS API: http://localhost:8080"
-	@echo "IfcOpenShell Service: http://localhost:5000"
-	@echo "PostGIS Database: localhost:5432"
-
-run-ifc:
-	@echo "Starting only IfcOpenShell service..."
-	docker-compose up -d ifcopenshell-service postgis
-	@echo "✅ IfcOpenShell service started"
-	@echo "IfcOpenShell Service: http://localhost:5000"
-	@echo "PostGIS Database: localhost:5432"
-
-stop:
-	@echo "Stopping all services..."
-	docker-compose down || true
-	docker-compose -f docker-compose.test.yml down || true
-	@echo "✅ All services stopped"
-
-# Development tools
-lint:
+# Linting targets
+lint: ## Run all linters
 	@echo "Running linters..."
-	golangci-lint run ./...
-	@echo "✅ Linting completed"
+	@$(MAKE) check-interface
+	@$(MAKE) golangci-lint
 
-format:
+lint-fix: ## Run linters and fix issues where possible
+	@echo "Running linters with auto-fix..."
+	@$(MAKE) check-interface
+	golangci-lint run --fix
+
+check-interface: ## Check for interface{} usage
+	@echo "Checking for interface{} usage..."
+	@./scripts/lint-interface.sh
+
+golangci-lint: ## Run golangci-lint
+	@echo "Running golangci-lint..."
+	golangci-lint run --config=.golangci.yml
+
+# Formatting targets
+fmt: ## Format Go code
 	@echo "Formatting Go code..."
 	go fmt ./...
 	goimports -w .
-	@echo "✅ Code formatted"
 
-clean:
+fmt-check: ## Check if code is formatted
+	@echo "Checking code formatting..."
+	@if [ $$(gofmt -l . | wc -l) -ne 0 ]; then \
+		echo "Code is not formatted. Run 'make fmt' to fix."; \
+		gofmt -l .; \
+		exit 1; \
+	fi
+	@if [ $$(goimports -l . | wc -l) -ne 0 ]; then \
+		echo "Imports are not organized. Run 'make fmt' to fix."; \
+		goimports -l .; \
+		exit 1; \
+	fi
+
+# Code generation targets
+generate: ## Generate code
+	@echo "Generating code..."
+	go generate ./...
+
+# Clean targets
+clean: ## Clean build artifacts
 	@echo "Cleaning build artifacts..."
-	rm -rf bin/
-	rm -rf services/ifcopenshell-service/__pycache__/
-	rm -rf services/ifcopenshell-service/tests/__pycache__/
-	docker system prune -f
-	@echo "✅ Cleanup completed"
+	go clean -cache
+	rm -f coverage.out coverage.html
+	rm -rf dist/
 
-# Clean build cache
-clean-cache:
-	@echo "Cleaning build cache..."
-	rm -rf $(BUILD_CACHE_DIR)
-	@echo "✅ Build cache cleaned"
+clean-mod: ## Clean module cache
+	@echo "Cleaning module cache..."
+	go clean -modcache
 
-# Clean Docker cache
-clean-docker-cache:
-	@echo "Cleaning Docker cache..."
-	docker builder prune -f
-	docker system prune -f
-	@echo "✅ Docker cache cleaned"
+# Installation targets
+install-tools: ## Install development tools
+	@echo "Installing development tools..."
+	@if ! command -v golangci-lint >/dev/null 2>&1; then \
+		echo "Installing golangci-lint..."; \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.54.2; \
+	fi
+	@if ! command -v goimports >/dev/null 2>&1; then \
+		echo "Installing goimports..."; \
+		go install golang.org/x/tools/cmd/goimports@latest; \
+	fi
+	@if ! command -v pre-commit >/dev/null 2>&1; then \
+		echo "Installing pre-commit..."; \
+		pip install pre-commit; \
+	fi
 
-# Setup development environment
-setup:
-	@echo "Setting up development environment..."
-	@echo "Installing Go dependencies..."
-	go mod download || exit 1
-	@echo "Installing Python dependencies..."
-	cd services/ifcopenshell-service && pip install -r requirements.txt || exit 1
-	@echo "Creating necessary directories..."
-	mkdir -p bin/
-	mkdir -p data/{state,cache}
-	mkdir -p logs/
-	mkdir -p data/uploads/
-	@echo "✅ Development environment setup completed"
+install-pre-commit: ## Install pre-commit hooks
+	@echo "Installing pre-commit hooks..."
+	pre-commit install
 
-# Health checks
-health:
-	@echo "Checking service health..."
-	@echo "ArxOS API:"
-	@curl -s http://localhost:8080/health || echo "❌ ArxOS API not responding"
-	@echo "IfcOpenShell Service:"
-	@curl -s http://localhost:5000/health || echo "❌ IfcOpenShell service not responding"
-	@echo "PostGIS Database:"
-	@pg_isready -h localhost -p 5432 -U arxos || echo "❌ PostGIS database not responding"
+# Development targets
+dev-setup: install-tools install-pre-commit ## Set up development environment
+	@echo "Development environment setup complete!"
 
-# Logs
-logs:
-	@echo "Showing service logs..."
-	docker-compose logs -f
+# CI/CD targets
+ci-test: test-race test-coverage ## Run CI tests
+	@echo "CI tests completed!"
 
-logs-ifc:
-	@echo "Showing IfcOpenShell service logs..."
-	docker-compose logs -f ifcopenshell-service
+ci-lint: lint ## Run CI linting
+	@echo "CI linting completed!"
 
-# Database operations
-db-migrate:
-	@echo "Running database migrations..."
-	go run cmd/arx/main.go migrate up
-	@echo "✅ Database migrations completed"
+ci-build: build-race ## Run CI build
+	@echo "CI build completed!"
 
-db-reset:
-	@echo "Resetting database..."
-	docker-compose down postgis || true
-	docker volume rm arxos_postgis-data arxos-dev-data || true
-	docker-compose up -d postgis || exit 1
-	@while ! pg_isready -h localhost -p 5432 -U arxos >/dev/null 2>&1; do \
-		echo "Waiting for PostGIS..."; sleep 2; \
-	done
-	$(MAKE) db-migrate
-	@echo "✅ Database reset completed"
+# Security targets
+security: ## Run security checks
+	@echo "Running security checks..."
+	gosec ./...
 
-# IFC testing
-test-ifc-file:
-	@echo "Testing IFC file processing..."
-	@if [ -z "$(FILE)" ]; then echo "Usage: make test-ifc-file FILE=path/to/file.ifc"; exit 1; fi
-	@echo "Testing file: $(FILE)"
-	@curl -X POST -H "Content-Type: application/octet-stream" --data-binary @$(FILE) http://localhost:5000/api/parse
-	@echo ""
-
-# Performance testing
-perf-test:
-	@echo "Running performance tests..."
-	@echo "Testing IfcOpenShell service performance..."
-	@for i in {1..10}; do \
-		echo "Request $$i:"; \
-		time curl -s -X POST -H "Content-Type: application/octet-stream" --data-binary @test_data/inputs/sample.ifc http://localhost:5000/api/parse > /dev/null; \
-	done
-	@echo "✅ Performance tests completed"
-
-# Documentation
-docs:
+# Documentation targets
+docs: ## Generate documentation
 	@echo "Generating documentation..."
-	@echo "ArxOS API Documentation:"
-	@echo "  - Health: GET http://localhost:8080/health"
-	@echo "  - IFC Import: POST http://localhost:8080/api/ifc/import"
-	@echo ""
-	@echo "IfcOpenShell Service Documentation:"
-	@echo "  - Health: GET http://localhost:5000/health"
-	@echo "  - Parse: POST http://localhost:5000/api/parse"
-	@echo "  - Validate: POST http://localhost:5000/api/validate"
-	@echo "  - Metrics: GET http://localhost:5000/metrics"
-	@echo ""
-	@echo "PostGIS Database:"
-	@echo "  - Host: localhost"
-	@echo "  - Port: 5432"
-	@echo "  - Database: arxos_dev"
-	@echo "  - User: arxos"
-	@echo "  - Password: arxos_dev"
+	godoc -http=:6060 &
+	@echo "Documentation server started at http://localhost:6060"
+	@echo "Press Ctrl+C to stop"
 
-# Security scanning
-security:
-	@echo "Running security scans..."
-	@echo "Scanning Go dependencies..."
-	go list -m all > go-deps.txt || echo "Dependency list created"
-	@echo "✅ Security scanning completed"
+# Release targets
+release-check: ## Check if ready for release
+	@echo "Checking release readiness..."
+	@$(MAKE) fmt-check
+	@$(MAKE) lint
+	@$(MAKE) test
+	@$(MAKE) build
+	@echo "Release check completed!"
 
-# Testing with coverage
-test-coverage:
-	@echo "Running tests with coverage..."
-	mkdir -p coverage/
-	go test -coverprofile=coverage/coverage.out ./... -v || exit 1
-	go tool cover -html=coverage/coverage.out -o coverage/coverage.html
-	@echo "✅ Coverage report generated: coverage/coverage.html"
+# Docker targets
+docker-build: ## Build Docker image
+	@echo "Building Docker image..."
+	docker build -t arxos:latest .
 
-# Clean up everything
-clean-all: clean
-	@echo "Cleaning all artifacts..."
-	docker system prune -a -f || true
-	@echo "✅ Complete cleanup finished"
+docker-run: ## Run Docker container
+	@echo "Running Docker container..."
+	docker run -p 8080:8080 arxos:latest
+
+# Database targets
+db-migrate: ## Run database migrations
+	@echo "Running database migrations..."
+	go run cmd/migrate/main.go
+
+db-seed: ## Seed database with test data
+	@echo "Seeding database..."
+	go run cmd/seed/main.go
+
+# Monitoring targets
+monitor: ## Start monitoring
+	@echo "Starting monitoring..."
+	go run cmd/monitor/main.go
+
+# Backup targets
+backup: ## Create backup
+	@echo "Creating backup..."
+	go run cmd/backup/main.go
+
+# Restore targets
+restore: ## Restore from backup
+	@echo "Restoring from backup..."
+	go run cmd/restore/main.go
+
+# Health check targets
+health: ## Check system health
+	@echo "Checking system health..."
+	go run cmd/health/main.go
+
+# Performance targets
+perf-test: ## Run performance tests
+	@echo "Running performance tests..."
+	go test -bench=. -benchmem -cpuprofile=cpu.prof -memprofile=mem.prof ./...
+
+perf-analyze: ## Analyze performance profiles
+	@echo "Analyzing performance profiles..."
+	go tool pprof cpu.prof
+	go tool pprof mem.prof
+
+# Dependencies
+deps: ## Download dependencies
+	@echo "Downloading dependencies..."
+	go mod download
+	go mod tidy
+
+deps-update: ## Update dependencies
+	@echo "Updating dependencies..."
+	go get -u ./...
+	go mod tidy
+
+# Version targets
+version: ## Show version information
+	@echo "ArxOS Version Information:"
+	@echo "Go version: $$(go version)"
+	@echo "Git commit: $$(git rev-parse HEAD)"
+	@echo "Git branch: $$(git rev-parse --abbrev-ref HEAD)"
+	@echo "Build time: $$(date)"
+
+# Environment targets
+env: ## Show environment information
+	@echo "Environment Information:"
+	@echo "GOOS: $$(go env GOOS)"
+	@echo "GOARCH: $$(go env GOARCH)"
+	@echo "GOPATH: $$(go env GOPATH)"
+	@echo "GOROOT: $$(go env GOROOT)"
+	@echo "GOMOD: $$(go env GOMOD)"
+
+# Quick development workflow
+dev: fmt lint test ## Quick development workflow (format, lint, test)
+	@echo "Development workflow completed!"
+
+# Full development workflow
+full: clean deps fmt lint test build ## Full development workflow
+	@echo "Full development workflow completed!"

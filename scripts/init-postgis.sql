@@ -22,42 +22,55 @@ VALUES (
 -- ENUM TYPES
 -- ============================================================================
 
-CREATE TYPE IF NOT EXISTS equipment_status AS ENUM (
-    'operational',
-    'maintenance',
-    'fault',
-    'decommissioned',
-    'planned'
-);
+-- Create ENUM types if they don't exist
+DO $$ BEGIN
+    CREATE TYPE equipment_status AS ENUM (
+        'operational',
+        'maintenance',
+        'fault',
+        'decommissioned',
+        'planned'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TYPE IF NOT EXISTS equipment_type AS ENUM (
-    'hvac',
-    'electrical',
-    'plumbing',
-    'fire_safety',
-    'security',
-    'elevator',
-    'lighting',
-    'network',
-    'structural',
-    'other'
-);
+DO $$ BEGIN
+    CREATE TYPE equipment_type AS ENUM (
+        'hvac',
+        'electrical',
+        'plumbing',
+        'fire_safety',
+        'security',
+        'elevator',
+        'lighting',
+        'network',
+        'structural',
+        'other'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TYPE IF NOT EXISTS room_type AS ENUM (
-    'office',
-    'conference',
-    'bathroom',
-    'kitchen',
-    'storage',
-    'hallway',
-    'lobby',
-    'mechanical',
-    'electrical',
-    'it_room',
-    'stairwell',
-    'elevator_shaft',
-    'other'
-);
+DO $$ BEGIN
+    CREATE TYPE room_type AS ENUM (
+        'office',
+        'conference',
+        'bathroom',
+        'kitchen',
+        'storage',
+        'hallway',
+        'lobby',
+        'mechanical',
+        'electrical',
+        'it_room',
+        'stairwell',
+        'elevator_shaft',
+        'other'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- ============================================================================
 -- CORE TABLES

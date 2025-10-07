@@ -25,7 +25,7 @@ arx import data/ifc/metro-general-hospital-complete.ifc --repository "Metro Gene
             "confidence": 0.95,
             "naming_suggestions": [
                 "Metro General Hospital",
-                "Metro General Medical Center", 
+                "Metro General Medical Center",
                 "Metro General Healthcare Facility"
             ],
             "properties": {
@@ -166,9 +166,9 @@ Metro General Hospital/
 │   │   ├── metro-general-hospital-mech-v1.ifc
 │   │   └── metro-general-hospital-elec-v1.ifc
 │   ├── plans/
-│   │   ├── floor-1-emergency.pdf
-│   │   ├── floor-2-surgery.pdf
-│   │   └── floor-3-patient-rooms.pdf
+│   │   ├── floor-1-emergency.ifc
+│   │   ├── floor-2-surgery.ifc
+│   │   └── floor-3-patient-rooms.ifc
 │   ├── equipment/
 │   │   ├── hvac-systems.csv
 │   │   ├── electrical-panels.csv
@@ -210,7 +210,7 @@ Metro General Hospital/
 │   ├── README.md                      # Auto-generated
 │   ├── equipment-list.md              # Auto-generated
 │   ├── emergency/
-│   │   ├── evacuation-plans.pdf
+│   │   ├── evacuation-plans.ifc
 │   │   └── emergency-contacts.yaml
 │   └── compliance/
 │       ├── hipaa-checklist.yaml
@@ -252,18 +252,18 @@ template:
   priority: "high"
   estimated_duration: "4 hours"
   required_skills: ["hvac_technician", "certified_hvac"]
-  
+
 tasks:
   - name: "Filter Replacement"
     description: "Replace air filters in all AHUs"
     duration: "2 hours"
     equipment: ["AHU-01-MR1", "AHU-02-MR2"]
-    
+
   - name: "System Inspection"
     description: "Inspect HVAC system components"
     duration: "1 hour"
     equipment: ["CH-01-ROOF", "VAV-301-OR"]
-    
+
   - name: "Performance Testing"
     description: "Test system performance and efficiency"
     duration: "1 hour"
@@ -282,18 +282,18 @@ template:
   priority: "critical"
   estimated_duration: "8 hours"
   required_skills: ["joint_commission_surveyor", "facilities_manager"]
-  
+
 tasks:
   - name: "Life Safety Inspection"
     description: "Inspect life safety systems"
     duration: "3 hours"
     systems: ["fire", "electrical", "hvac"]
-    
+
   - name: "Environment of Care"
     description: "Inspect environment of care standards"
     duration: "2 hours"
     areas: ["patient_rooms", "operating_rooms", "emergency"]
-    
+
   - name: "Documentation Review"
     description: "Review maintenance documentation"
     duration: "3 hours"
@@ -334,12 +334,12 @@ user_preferences:
     operating_rooms: "OR-{floor}{room}"
     patient_rooms: "Bed {room}"
     equipment: "{type}-{location}-{id}"
-  
+
   maintenance_schedules:
     hvac: "monthly"
-    electrical: "monthly" 
+    electrical: "monthly"
     medical_equipment: "weekly"
-  
+
   compliance_standards:
     primary: "Joint Commission"
     secondary: ["HIPAA", "NFPA", "ASHRAE"]

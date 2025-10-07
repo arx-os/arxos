@@ -3,7 +3,7 @@
  * Common validation functions for forms and data
  */
 
-import {VALIDATION_RULES} from '@/constants';
+import { VALIDATION_RULES } from '@/constants';
 
 export const validateRequired = (value: any): boolean => {
   if (value === null || value === undefined) return false;
@@ -91,61 +91,61 @@ export const validateUsername = (username: string): boolean => {
   if (!username) return false;
   const trimmed = username.trim();
   return validateLength(trimmed, VALIDATION_RULES.USERNAME_MIN_LENGTH, VALIDATION_RULES.USERNAME_MAX_LENGTH) &&
-         /^[a-zA-Z0-9_-]+$/.test(trimmed);
+    /^[a-zA-Z0-9_-]+$/.test(trimmed);
 };
 
 export const validatePassword = (password: string): boolean => {
   if (!password) return false;
   const trimmed = password.trim();
   return validateLength(trimmed, VALIDATION_RULES.PASSWORD_MIN_LENGTH, VALIDATION_RULES.PASSWORD_MAX_LENGTH) &&
-         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(trimmed);
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(trimmed);
 };
 
 export const validatePasswordStrength = (password: string): {
   score: number;
   feedback: string[];
 } => {
-  if (!password) return {score: 0, feedback: ['Password is required']};
-  
+  if (!password) return { score: 0, feedback: ['Password is required'] };
+
   const feedback: string[] = [];
   let score = 0;
-  
+
   // Length check
   if (password.length >= 8) {
     score += 1;
   } else {
     feedback.push('Password must be at least 8 characters long');
   }
-  
+
   // Lowercase check
   if (/[a-z]/.test(password)) {
     score += 1;
   } else {
     feedback.push('Password must contain at least one lowercase letter');
   }
-  
+
   // Uppercase check
   if (/[A-Z]/.test(password)) {
     score += 1;
   } else {
     feedback.push('Password must contain at least one uppercase letter');
   }
-  
+
   // Number check
   if (/\d/.test(password)) {
     score += 1;
   } else {
     feedback.push('Password must contain at least one number');
   }
-  
+
   // Special character check
   if (/[@$!%*?&]/.test(password)) {
     score += 1;
   } else {
     feedback.push('Password must contain at least one special character (@$!%*?&)');
   }
-  
-  return {score, feedback};
+
+  return { score, feedback };
 };
 
 export const validateEquipmentName = (name: string): boolean => {
@@ -180,9 +180,6 @@ export const validateImageFile = (fileName: string): boolean => {
   return validateFileType(fileName, allowedTypes);
 };
 
-export const validatePdfFile = (fileName: string): boolean => {
-  return validateFileType(fileName, ['pdf']);
-};
 
 export const validateCsvFile = (fileName: string): boolean => {
   return validateFileType(fileName, ['csv']);
@@ -284,11 +281,11 @@ export const validateRgbColor = (color: string): boolean => {
   const rgbRegex = /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/;
   const match = color.trim().match(rgbRegex);
   if (!match) return false;
-  
+
   const r = parseInt(match[1]);
   const g = parseInt(match[2]);
   const b = parseInt(match[3]);
-  
+
   return r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255;
 };
 
@@ -297,65 +294,65 @@ export const validateHslColor = (color: string): boolean => {
   const hslRegex = /^hsl\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*\)$/;
   const match = color.trim().match(hslRegex);
   if (!match) return false;
-  
+
   const h = parseInt(match[1]);
   const s = parseInt(match[2]);
   const l = parseInt(match[3]);
-  
+
   return h >= 0 && h <= 360 && s >= 0 && s <= 100 && l >= 0 && l <= 100;
 };
 
 export const validateCreditCard = (cardNumber: string): boolean => {
   if (!cardNumber) return false;
-  
+
   // Remove spaces and dashes
   const cleaned = cardNumber.replace(/[\s-]/g, '');
-  
+
   // Check if it's all digits
   if (!/^\d+$/.test(cleaned)) return false;
-  
+
   // Check length (13-19 digits)
   if (cleaned.length < 13 || cleaned.length > 19) return false;
-  
+
   // Luhn algorithm
   let sum = 0;
   let isEven = false;
-  
+
   for (let i = cleaned.length - 1; i >= 0; i--) {
     let digit = parseInt(cleaned[i]);
-    
+
     if (isEven) {
       digit *= 2;
       if (digit > 9) {
         digit -= 9;
       }
     }
-    
+
     sum += digit;
     isEven = !isEven;
   }
-  
+
   return sum % 10 === 0;
 };
 
 export const validateExpiryDate = (expiryDate: string): boolean => {
   if (!expiryDate) return false;
-  
+
   const dateRegex = /^(0[1-9]|1[0-2])\/([0-9]{2})$/;
   const match = expiryDate.trim().match(dateRegex);
-  
+
   if (!match) return false;
-  
+
   const month = parseInt(match[1]);
   const year = parseInt('20' + match[2]);
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth() + 1;
-  
+
   if (year < currentYear || (year === currentYear && month < currentMonth)) {
     return false;
   }
-  
+
   return true;
 };
 
@@ -367,8 +364,8 @@ export const validateCvv = (cvv: string): boolean => {
 
 export const validatePostalCode = (postalCode: string, country: string = 'US'): boolean => {
   if (!postalCode) return false;
-  
-  const patterns: {[key: string]: RegExp} = {
+
+  const patterns: { [key: string]: RegExp } = {
     US: /^\d{5}(-\d{4})?$/,
     CA: /^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$/,
     UK: /^[A-Za-z]{1,2}\d[A-Za-z\d]? \d[A-Za-z]{2}$/,
@@ -377,10 +374,10 @@ export const validatePostalCode = (postalCode: string, country: string = 'US'): 
     JP: /^\d{3}-\d{4}$/,
     AU: /^\d{4}$/,
   };
-  
+
   const pattern = patterns[country.toUpperCase()];
   if (!pattern) return false;
-  
+
   return pattern.test(postalCode.trim());
 };
 
@@ -398,40 +395,40 @@ export const validateEin = (ein: string): boolean => {
 
 export const validateIsbn = (isbn: string): boolean => {
   if (!isbn) return false;
-  
+
   // Remove hyphens and spaces
   const cleaned = isbn.replace(/[\s-]/g, '');
-  
+
   // Check if it's 10 or 13 digits
   if (cleaned.length === 10) {
     return validateIsbn10(cleaned);
   } else if (cleaned.length === 13) {
     return validateIsbn13(cleaned);
   }
-  
+
   return false;
 };
 
 const validateIsbn10 = (isbn: string): boolean => {
   if (!/^\d{9}[\dX]$/.test(isbn)) return false;
-  
+
   let sum = 0;
   for (let i = 0; i < 9; i++) {
     sum += parseInt(isbn[i]) * (10 - i);
   }
-  
+
   const checkDigit = isbn[9] === 'X' ? 10 : parseInt(isbn[9]);
   return (sum + checkDigit) % 11 === 0;
 };
 
 const validateIsbn13 = (isbn: string): boolean => {
   if (!/^\d{13}$/.test(isbn)) return false;
-  
+
   let sum = 0;
   for (let i = 0; i < 12; i++) {
     sum += parseInt(isbn[i]) * (i % 2 === 0 ? 1 : 3);
   }
-  
+
   const checkDigit = (10 - (sum % 10)) % 10;
   return checkDigit === parseInt(isbn[12]);
 };
@@ -444,7 +441,7 @@ export const validateVin = (vin: string): boolean => {
 
 export const validateLicensePlate = (plate: string, state: string = 'US'): boolean => {
   if (!plate) return false;
-  
+
   // Basic validation - can be enhanced for specific states
   const plateRegex = /^[A-Za-z0-9\s-]{1,8}$/;
   return plateRegex.test(plate.trim());
@@ -452,8 +449,8 @@ export const validateLicensePlate = (plate: string, state: string = 'US'): boole
 
 export const validatePassport = (passport: string, country: string = 'US'): boolean => {
   if (!passport) return false;
-  
-  const patterns: {[key: string]: RegExp} = {
+
+  const patterns: { [key: string]: RegExp } = {
     US: /^\d{9}$/,
     CA: /^[A-Za-z]{2}\d{6}$/,
     UK: /^\d{9}$/,
@@ -462,16 +459,16 @@ export const validatePassport = (passport: string, country: string = 'US'): bool
     JP: /^[A-Za-z]{2}\d{7}$/,
     AU: /^[A-Za-z]{2}\d{7}$/,
   };
-  
+
   const pattern = patterns[country.toUpperCase()];
   if (!pattern) return false;
-  
+
   return pattern.test(passport.trim());
 };
 
 export const validateDriversLicense = (license: string, state: string = 'US'): boolean => {
   if (!license) return false;
-  
+
   // Basic validation - can be enhanced for specific states
   const licenseRegex = /^[A-Za-z0-9\s-]{1,20}$/;
   return licenseRegex.test(license.trim());

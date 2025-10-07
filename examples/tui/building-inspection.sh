@@ -44,18 +44,18 @@ echo
 run_tui() {
     local mode="$1"
     local description="$2"
-    
+
     echo "🚀 Starting $description..."
     echo "   Mode: $mode"
     echo "   Building: $BUILDING_ID"
     echo
-    
+
     if ! ./arx visualize $mode --tui --building "$BUILDING_ID"; then
         echo "❌ Failed to start $description"
         echo "   Check logs: ~/.arxos/logs/tui.log"
         return 1
     fi
-    
+
     echo "✅ $description completed"
     echo
 }
@@ -137,7 +137,7 @@ echo
 if [ "${GENERATE_REPORT:-false}" = "true" ]; then
     echo "📄 Generating Inspection Report..."
     ./arx report generate --building "$BUILDING_ID" --inspector "$INSPECTOR" --date "$DATE"
-    echo "✅ Report generated: reports/inspection-$BUILDING_ID-$(date +%Y%m%d).pdf"
+    echo "✅ Report generated: reports/inspection-$BUILDING_ID-$(date +%Y%m%d).json"
 fi
 
 echo "🎉 Inspection workflow completed successfully!"

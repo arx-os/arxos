@@ -20,7 +20,6 @@ const (
 type DataSource string
 
 const (
-	DataSourcePDF        DataSource = "pdf"
 	DataSourceIFC        DataSource = "ifc"
 	DataSourceBIM        DataSource = "bim"
 	DataSourceDWG        DataSource = "dwg"

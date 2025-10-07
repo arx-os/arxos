@@ -164,6 +164,6 @@ echo
 echo "Demo complete! The marked changes are saved in .arxos/demo_floor.json"
 echo
 echo "Next steps for Phase 1:"
-echo "  - Implement real PDF parsing"
-echo "  - Add PDF export with markups"
+echo "  - Implement real IFC parsing"
+echo "  - Add IFC export with markups"
 echo "  - Integrate with Git for version control"

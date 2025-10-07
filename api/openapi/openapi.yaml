@@ -476,7 +476,7 @@ paths:
                   format: binary
                 format:
                   type: string
-                  enum: [ifc, pdf, csv, json]
+                  enum: [ifc, csv, json]
                 building_id:
                   type: string
                   format: uuid
@@ -556,7 +556,7 @@ paths:
                   format: uuid
                 format:
                   type: string
-                  enum: [ifc, json, csv, pdf]
+                  enum: [ifc, json, csv]
                 include_equipment:
                   type: boolean
                   default: true

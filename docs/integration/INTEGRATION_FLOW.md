@@ -134,7 +134,7 @@ File System Event → Daemon Service → File Processor
      │                    │              │
      ▼                    ▼              ▼
   IFC File          File Watcher    Format Detection
-  Created           Triggers        (IFC, PDF, etc.)
+  Created           Triggers        (IFC, JSON, etc.)
 ```
 
 ### Phase 2: IFC Processing
@@ -172,7 +172,7 @@ type DaemonService struct {
 func (ds *DaemonService) processImport(event *domain.FileEvent, format string) error {
     // Current: Logging and preparation
     // Future: Direct IFC service integration
-    
+
     // if format == "ifc" {
     //     result, err := ds.ifcService.ParseIFC(ds.ctx, data)
     //     if err != nil {
@@ -214,7 +214,7 @@ func (s *IFCService) ParseIFC(ctx context.Context, data []byte) (*IFCResult, err
             s.circuitBreaker.reset()
             return result, nil
         }
-        
+
         s.circuitBreaker.recordFailure()
         fmt.Printf("IfcOpenShell service failed, using fallback: %v\n", err)
     }
@@ -243,7 +243,7 @@ func (r *PostGISIFCRepository) Create(ctx context.Context, ifcFile *building.IFC
             id, name, path, version, discipline, size, entities, validated, created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     `
-    
+
     _, err := r.db.ExecContext(ctx, query,
         ifcFile.ID,
         ifcFile.Name,
@@ -256,11 +256,11 @@ func (r *PostGISIFCRepository) Create(ctx context.Context, ifcFile *building.IFC
         ifcFile.CreatedAt,
         ifcFile.UpdatedAt,
     )
-    
+
     if err != nil {
         return fmt.Errorf("failed to create IFC file record: %w", err)
     }
-    
+
     return nil
 }
 ```
@@ -275,15 +275,15 @@ func (r *PostGISIFCRepository) Create(ctx context.Context, ifcFile *building.IFC
 def parse_ifc():
     try:
         ifc_data = request.get_data()
-        
+
         # Parse with IfcOpenShell
         model = ifcopenshell.open(io.BytesIO(ifc_data))
-        
+
         # Extract entities
         buildings = len(model.by_type('IfcBuilding'))
         spaces = len(model.by_type('IfcSpace'))
         equipment = len(model.by_type('IfcFlowTerminal'))
-        
+
         result = {
             "success": True,
             "buildings": buildings,
@@ -296,9 +296,9 @@ def parse_ifc():
                 "processing_time": f"{processing_time:.3f}s"
             }
         }
-        
+
         return jsonify(result)
-        
+
     except Exception as e:
         return jsonify({
             "success": False,

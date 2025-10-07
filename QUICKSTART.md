@@ -225,8 +225,8 @@ The mobile app uses modern dependencies:
 # Import from IFC file
 ./bin/arx ifc import /path/to/building.ifc
 
-# Import from PDF
-./bin/arx pdf import /path/to/floorplan.pdf
+# Import from other formats
+./bin/arx import /path/to/building.json
 ```
 
 ### Query Building Data
@@ -366,7 +366,7 @@ make db-reset
    ```bash
    # Check if PostgreSQL is running
    docker ps | grep postgres
-   
+
    # Check database exists
    psql -h localhost -p 5432 -U postgres -l | grep arxos
    ```
@@ -384,7 +384,7 @@ make db-reset
    ```bash
    # Validate configuration
    go run cmd/arx/main.go config validate
-   
+
    # Test configuration loading
    go run cmd/arx/main.go config test
    ```

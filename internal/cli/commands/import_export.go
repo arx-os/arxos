@@ -19,7 +19,7 @@ func CreateImportCommand(serviceContext any) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "import <file>",
 		Short: "Import building data from files",
-		Long:  "Import building data from IFC, PDF, or other supported formats",
+		Long:  "Import building data from IFC files",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			filePath := args[0]
@@ -106,7 +106,7 @@ func CreateImportCommand(serviceContext any) *cobra.Command {
 
 	// Add flags
 	cmd.Flags().StringP("repository", "r", "", "Repository ID (required)")
-	cmd.Flags().StringP("format", "f", "", "File format (ifc, pdf, csv, json) - auto-detected if not specified")
+	cmd.Flags().StringP("format", "f", "", "File format (ifc) - auto-detected if not specified")
 	cmd.Flags().Bool("validate", true, "Validate against buildingSMART standards")
 	cmd.Flags().BoolP("enhance", "e", false, "Enhance with spatial data")
 
@@ -118,7 +118,7 @@ func CreateExportCommand(serviceContext any) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export <building-id>",
 		Short: "Export building data",
-		Long:  "Export building data to various formats (IFC, PDF, JSON)",
+		Long:  "Export building data to various formats (IFC, JSON)",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			buildingID := args[0]
@@ -134,7 +134,7 @@ func CreateExportCommand(serviceContext any) *cobra.Command {
 			// This would typically involve:
 			// 1. Get building data from database
 			// 2. Convert to target format
-			// 3. Generate IFC/PDF/JSON output
+			// 3. Generate IFC/JSON output
 			// 4. Save to file
 
 			fmt.Printf("✅ Successfully exported building %s to %s\n", buildingID, format)
@@ -143,7 +143,7 @@ func CreateExportCommand(serviceContext any) *cobra.Command {
 	}
 
 	// Add format flag
-	cmd.Flags().StringP("format", "f", "json", "Export format (json, ifc, pdf)")
+	cmd.Flags().StringP("format", "f", "json", "Export format (json, ifc)")
 	return cmd
 }
 
@@ -152,7 +152,7 @@ func CreateConvertCommand(serviceContext any) *cobra.Command {
 	return &cobra.Command{
 		Use:   "convert <input> <output>",
 		Short: "Convert between building data formats",
-		Long:  "Convert building data between IFC, PDF, JSON, and other supported formats",
+		Long:  "Convert building data between IFC, JSON, and other supported formats",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			input := args[0]

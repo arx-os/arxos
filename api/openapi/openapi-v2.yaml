@@ -4,82 +4,82 @@ info:
   version: 2.0.0
   description: |
     # ArxOS Building Management System API
-    
+
     The ArxOS API provides comprehensive building management capabilities with
     advanced spatial queries, real-time monitoring, and workflow automation.
-    
+
     ## Version Information
-    
+
     - **Current Version**: v1 (stable)
     - **Latest Version**: v2 (beta)
     - **Supported Versions**: v1, v2
-    
+
     ## Version Selection
-    
+
     Clients can specify the API version using one of the following methods (in order of precedence):
-    
+
     1. **URL Path**: `/api/v2/buildings`
     2. **Accept Header**: `Accept: application/vnd.arxos.v2+json`
     3. **Custom Header**: `X-API-Version: v2`
     4. **Query Parameter**: `?version=v2`
     5. **Default**: v1 (if no version specified)
-    
+
     ## Authentication
-    
+
     All endpoints require JWT authentication except `/auth/login` and `/auth/register`.
-    
+
     Include the JWT token in the `Authorization` header:
     ```
     Authorization: Bearer <your_jwt_token>
     ```
-    
+
     ## Rate Limiting
-    
+
     API requests are rate-limited to protect service availability:
-    
+
     - **Free Tier**: 100 requests/minute
     - **Starter Tier**: 1,000 requests/minute
     - **Professional Tier**: 10,000 requests/minute
     - **Enterprise Tier**: Custom limits
-    
+
     Rate limit information is included in response headers:
     - `X-RateLimit-Limit`: Maximum requests per window
     - `X-RateLimit-Remaining`: Remaining requests in current window
     - `X-RateLimit-Reset`: Time when the rate limit resets (Unix timestamp)
-    
+
     ## Caching
-    
+
     Responses include cache-control headers:
     - `Cache-Control`: Caching directives
     - `ETag`: Entity tag for conditional requests
     - `Last-Modified`: Last modification timestamp
-    
+
     Use `If-None-Match` and `If-Modified-Since` headers for conditional requests.
-    
+
     ## Spatial Queries
-    
+
     Spatial queries use WGS84 coordinates (SRID 4326). All distances are in meters.
     All 3D positions use building-local coordinates with millimeter precision.
-    
+
     ## Validation
-    
+
     Request validation uses go-playground/validator with custom ArxOS rules:
     - `arxos_id`: ArxOS ID format (e.g., ARXOS-001)
     - `building_path`: Building path format (e.g., /B1/3/A/301)
     - `equipment_status`: Valid equipment status
     - `building_status`: Valid building status
-    
+
     Validation errors return detailed field-level error messages.
-    
+
     ## Deprecation Policy
-    
+
     Deprecated API versions include warning headers:
     - `Warning`: Deprecation notice
     - `Sunset`: Sunset date (RFC 8594)
     - `Link`: Link to successor version
-    
+
     API versions are maintained for a minimum of 12 months after deprecation.
-    
+
   contact:
     name: ArxOS Support
     email: support@arxos.io
@@ -116,7 +116,7 @@ tags:
   - name: Workflows
     description: Workflow automation and orchestration
   - name: Import
-    description: Data import from IFC, PDF, and other formats
+    description: Data import from IFC and other formats
   - name: Export
     description: Data export to various formats
   - name: Sync
@@ -166,7 +166,7 @@ paths:
                   database: healthy
                   cache: healthy
                   storage: healthy
-  
+
   /metrics:
     get:
       summary: Prometheus metrics
@@ -290,7 +290,7 @@ components:
           maxLength: 72
           description: User password (8-72 characters)
           example: SecurePassword123!
-    
+
     RefreshTokenRequest:
       type: object
       required:
@@ -300,7 +300,7 @@ components:
           type: string
           description: Refresh token from login response
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-    
+
     AuthResponse:
       type: object
       required:
@@ -328,7 +328,7 @@ components:
           example: 3600
         user:
           $ref: '#/components/schemas/User'
-    
+
     # User Schemas
     User:
       type: object
@@ -378,7 +378,7 @@ components:
           format: date-time
           description: Last update timestamp
           example: '2025-09-30T12:00:00Z'
-    
+
     # Building Schemas (Enhanced with validation)
     CreateBuildingRequest:
       type: object
@@ -445,7 +445,7 @@ components:
           example:
             floors: 102
             year_built: 1931
-    
+
     BuildingResponse:
       type: object
       required:
@@ -499,7 +499,7 @@ components:
           type: string
           format: date-time
           example: '2025-09-30T12:00:00Z'
-    
+
     # Equipment Schemas (Enhanced)
     CreateEquipmentRequest:
       type: object
@@ -559,7 +559,7 @@ components:
         metadata:
           type: object
           additionalProperties: true
-    
+
     # Error Schemas (Enhanced with validation errors)
     Error:
       type: object
@@ -581,7 +581,7 @@ components:
           description: Additional error details
           example:
             request_id: abc-123-def
-    
+
     ValidationError:
       allOf:
         - $ref: '#/components/schemas/Error'
@@ -612,7 +612,7 @@ components:
                     type: string
                     description: Value that failed validation
                     example: invalid-email
-    
+
     # Pagination Schema
     PaginationInfo:
       type: object
@@ -642,7 +642,7 @@ components:
           type: integer
           description: Total number of pages
           example: 8
-    
+
     PaginatedResponse:
       type: object
       required:
@@ -655,7 +655,7 @@ components:
           description: Array of data items
         pagination:
           $ref: '#/components/schemas/PaginationInfo'
-    
+
     # Point3D Schema (Enhanced)
     Point3D:
       type: object
@@ -679,7 +679,7 @@ components:
           format: double
           description: Z coordinate (meters, elevation)
           example: 3.0
-    
+
     # Health Response
     HealthResponse:
       type: object
@@ -736,7 +736,7 @@ components:
                 message: password must be at least 8 characters
                 tag: min
                 value: ""
-    
+
     Unauthorized:
       description: Authentication required or invalid credentials
       headers:
@@ -751,7 +751,7 @@ components:
           example:
             error: Invalid or missing authentication token
             code: UNAUTHORIZED
-    
+
     Forbidden:
       description: Insufficient permissions
       content:
@@ -761,7 +761,7 @@ components:
           example:
             error: Insufficient permissions for this operation
             code: FORBIDDEN
-    
+
     NotFound:
       description: Resource not found
       content:
@@ -771,7 +771,7 @@ components:
           example:
             error: Resource not found
             code: NOT_FOUND
-    
+
     RateLimitExceeded:
       description: Rate limit exceeded
       headers:
@@ -803,7 +803,7 @@ components:
               limit: 100
               window: 60
               retry_after: 45
-    
+
     InternalError:
       description: Internal server error
       headers:

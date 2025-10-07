@@ -37,7 +37,7 @@ func CreateWatchCommand(serviceContext any) *cobra.Command {
 
 			fmt.Printf("   Repository: %s\n", repoID)
 			fmt.Printf("   Auto-processing: enabled\n")
-			fmt.Printf("   Supported formats: .ifc, .ifczip, .ifcxml, .pdf\n")
+			fmt.Printf("   Supported formats: .ifc, .ifczip, .ifcxml\n")
 
 			// TODO: Implement daemon service integration
 			// This would typically involve:
@@ -60,7 +60,7 @@ func CreateWatchCommand(serviceContext any) *cobra.Command {
 	// Add flags
 	cmd.Flags().StringP("repository", "r", "", "Repository ID (required)")
 	cmd.Flags().Bool("recursive", true, "Watch subdirectories recursively")
-	cmd.Flags().StringSlice("patterns", []string{"*.ifc", "*.ifczip", "*.ifcxml", "*.pdf"}, "File patterns to watch")
+	cmd.Flags().StringSlice("patterns", []string{"*.ifc", "*.ifczip", "*.ifcxml"}, "File patterns to watch")
 
 	return cmd
 }

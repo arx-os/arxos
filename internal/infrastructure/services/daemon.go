@@ -191,8 +191,6 @@ func (ds *DaemonService) detectFileFormat(path string) string {
 	switch ext {
 	case ".ifc", ".ifczip", ".ifcxml":
 		return "ifc"
-	case ".pdf":
-		return "pdf"
 	case ".csv":
 		return "csv"
 	case ".json":

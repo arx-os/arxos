@@ -183,12 +183,6 @@ func (fp *FileProcessor) processJob(job *ProcessingJob) error {
 	switch job.Format {
 	case "ifc":
 		return fp.processIFCFile(job, data)
-	case "pdf":
-		return fp.processPDFFile(job, data)
-	case "csv":
-		return fp.processCSVFile(job, data)
-	case "json":
-		return fp.processJSONFile(job, data)
 	default:
 		return fmt.Errorf("unsupported file format: %s", job.Format)
 	}
@@ -213,53 +207,9 @@ func (fp *FileProcessor) processIFCFile(job *ProcessingJob, data []byte) error {
 	return nil
 }
 
-// processPDFFile processes a PDF file
-func (fp *FileProcessor) processPDFFile(job *ProcessingJob, data []byte) error {
-	fp.logger.Info("Processing PDF file", "path", job.FilePath, "size", len(data))
-
-	// PDF processing logic would go here
-	// For now, just validate that it's a valid PDF file
-	if len(data) < 10 {
-		return fmt.Errorf("file too small to be a valid PDF file")
-	}
-
-	// Check for PDF header
-	if !fp.isPDFFile(data) {
-		return fmt.Errorf("file does not appear to be a valid PDF file")
-	}
-
-	fp.logger.Info("PDF file validated successfully", "path", job.FilePath)
-	return nil
-}
-
-// processCSVFile processes a CSV file
-func (fp *FileProcessor) processCSVFile(job *ProcessingJob, data []byte) error {
-	fp.logger.Info("Processing CSV file", "path", job.FilePath, "size", len(data))
-
-	// CSV processing logic would go here
-	fp.logger.Info("CSV file processed successfully", "path", job.FilePath)
-	return nil
-}
-
-// processJSONFile processes a JSON file
-func (fp *FileProcessor) processJSONFile(job *ProcessingJob, data []byte) error {
-	fp.logger.Info("Processing JSON file", "path", job.FilePath, "size", len(data))
-
-	// JSON processing logic would go here
-	fp.logger.Info("JSON file processed successfully", "path", job.FilePath)
-	return nil
-}
-
 // isIFCFile checks if data represents an IFC file
 func (fp *FileProcessor) isIFCFile(data []byte) bool {
 	// Simple IFC file detection
 	ifcHeader := "ISO-10303-21"
 	return len(data) > len(ifcHeader) && string(data[:len(ifcHeader)]) == ifcHeader
-}
-
-// isPDFFile checks if data represents a PDF file
-func (fp *FileProcessor) isPDFFile(data []byte) bool {
-	// Simple PDF file detection
-	pdfHeader := "%PDF-"
-	return len(data) > len(pdfHeader) && string(data[:len(pdfHeader)]) == pdfHeader
 }

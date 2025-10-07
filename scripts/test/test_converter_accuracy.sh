@@ -19,10 +19,10 @@ mkdir -p "$OUTPUT_DIR"
 if [ -f "$TEST_DATA_DIR/sample.ifc" ]; then
     echo "Testing IFC conversion..."
     arx convert "$TEST_DATA_DIR/sample.ifc" "$OUTPUT_DIR/ifc_test.bim.txt"
-    
+
     # Validate output
     arx validate "$OUTPUT_DIR/ifc_test.bim.txt"
-    
+
     if [ $? -eq 0 ]; then
         echo "✓ IFC conversion passed"
     else
@@ -31,21 +31,21 @@ if [ -f "$TEST_DATA_DIR/sample.ifc" ]; then
     fi
 fi
 
-# Test PDF conversion
-if [ -f "$TEST_DATA_DIR/sample_floorplan.txt" ]; then
-    echo "Testing PDF conversion..."
-    # Note: This would need a real PDF file for testing
-    echo "⚠ PDF test skipped - no PDF test file available"
+# Test other format conversion
+if [ -f "$TEST_DATA_DIR/sample_building.json" ]; then
+    echo "Testing JSON conversion..."
+    # Note: This would need a real JSON file for testing
+    echo "⚠ JSON test skipped - no JSON test file available"
 fi
 
 # Test Haystack conversion
 if [ -f "$TEST_DATA_DIR/sample_haystack.json" ]; then
     echo "Testing Haystack conversion..."
     arx convert "$TEST_DATA_DIR/sample_haystack.json" "$OUTPUT_DIR/haystack_test.bim.txt"
-    
+
     # Validate output
     arx validate "$OUTPUT_DIR/haystack_test.bim.txt"
-    
+
     if [ $? -eq 0 ]; then
         echo "✓ Haystack conversion passed"
     else
@@ -58,10 +58,10 @@ fi
 if [ -f "$TEST_DATA_DIR/sample.gbxml" ]; then
     echo "Testing gbXML conversion..."
     arx convert "$TEST_DATA_DIR/sample.gbxml" "$OUTPUT_DIR/gbxml_test.bim.txt"
-    
+
     # Validate output
     arx validate "$OUTPUT_DIR/gbxml_test.bim.txt"
-    
+
     if [ $? -eq 0 ]; then
         echo "✓ gbXML conversion passed"
     else

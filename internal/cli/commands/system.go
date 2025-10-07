@@ -186,10 +186,9 @@ This command provides database migration functionality:
 	}
 
 	// Add subcommands
-	cmd.AddCommand(createMigrateUpCommand(serviceContext))
-	cmd.AddCommand(createMigrateDownCommand(serviceContext))
-	cmd.AddCommand(createMigrateStatusCommand(serviceContext))
-	cmd.AddCommand(createMigrateCreateCommand(serviceContext))
+	cmd.AddCommand(createMigrateUpCommand())
+	cmd.AddCommand(createMigrateDownCommand())
+	cmd.AddCommand(createMigrateStatusCommand())
 
 	return cmd
 }
@@ -209,7 +208,7 @@ func getHealthIcon(status string) string {
 }
 
 // createMigrateUpCommand creates the migrate up command
-func createMigrateUpCommand(serviceContext any) *cobra.Command {
+func createMigrateUpCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "up",
 		Short: "Run pending migrations",
@@ -224,7 +223,7 @@ func createMigrateUpCommand(serviceContext any) *cobra.Command {
 }
 
 // createMigrateDownCommand creates the migrate down command
-func createMigrateDownCommand(serviceContext any) *cobra.Command {
+func createMigrateDownCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "down",
 		Short: "Rollback last migration",
@@ -239,7 +238,7 @@ func createMigrateDownCommand(serviceContext any) *cobra.Command {
 }
 
 // createMigrateStatusCommand creates the migrate status command
-func createMigrateStatusCommand(serviceContext any) *cobra.Command {
+func createMigrateStatusCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
 		Short: "Show migration status",
@@ -249,23 +248,6 @@ func createMigrateStatusCommand(serviceContext any) *cobra.Command {
 			// TODO: Implement status logic
 			fmt.Println("  Current version: 001")
 			fmt.Println("  Pending migrations: 0")
-			return nil
-		},
-	}
-}
-
-// createMigrateCreateCommand creates the migrate create command
-func createMigrateCreateCommand(serviceContext any) *cobra.Command {
-	return &cobra.Command{
-		Use:   "create <name>",
-		Short: "Create new migration",
-		Long:  "Create a new database migration file",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			name := args[0]
-			fmt.Printf("📝 Creating migration: %s\n", name)
-			// TODO: Implement migration creation logic
-			fmt.Printf("✅ Migration '%s' created successfully\n", name)
 			return nil
 		},
 	}

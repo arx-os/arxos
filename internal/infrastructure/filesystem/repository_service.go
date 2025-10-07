@@ -126,7 +126,7 @@ import:
   auto_validate: true
   create_backup: true
   max_file_size_mb: 500
-  allowed_formats: ["ifc", "pdf", "csv", "json", "yaml"]
+  allowed_formats: ["ifc", "csv", "json", "yaml"]
 `,
 		time.Now().Format(time.RFC3339),
 		repo.ID,
@@ -315,7 +315,7 @@ __pycache__/
 
 # Keep important files
 !data/ifc/*.ifc
-!data/plans/*.pdf
+!data/plans/*.ifc
 !data/equipment/*.csv
 !data/spatial/*.json
 !data/spatial/*.geojson

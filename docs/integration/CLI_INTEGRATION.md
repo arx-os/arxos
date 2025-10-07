@@ -36,14 +36,14 @@ func CreateImportCommand(serviceContext interface{}) *cobra.Command {
     cmd := &cobra.Command{
         Use:   "import <file>",
         Short: "Import building data from files",
-        Long:  "Import building data from IFC, PDF, or other supported formats",
+        Long:  "Import building data from IFC or other supported formats",
         Args:  cobra.ExactArgs(1),
         RunE: func(cmd *cobra.Command, args []string) error {
             filePath := args[0]
-            
+
             // Get repository ID from flags
             repoID, _ := cmd.Flags().GetString("repository")
-            
+
             // Get format from flags or auto-detect
             format, _ := cmd.Flags().GetString("format")
             if format == "" {
@@ -51,35 +51,35 @@ func CreateImportCommand(serviceContext interface{}) *cobra.Command {
                     format = "ifc"
                 }
             }
-            
+
             // Read file data
             fileData, err := os.ReadFile(filePath)
             if err != nil {
                 return fmt.Errorf("failed to read file: %w", err)
             }
-            
+
             // Import using the IFC service
             if format == "ifc" {
                 // TODO: Get IFC service from service context
                 fmt.Printf("   File size: %d bytes\n", len(fileData))
                 fmt.Printf("   Ready for IfcOpenShell integration\n")
-                
+
                 fmt.Printf("✅ Successfully imported: %s\n", filePath)
                 fmt.Printf("   Repository: %s\n", repoID)
                 fmt.Printf("   Format: %s\n", format)
                 fmt.Printf("   Entities: [Will be populated by IfcOpenShell service]\n")
             }
-            
+
             return nil
         },
     }
-    
+
     // Add flags
     cmd.Flags().StringP("repository", "r", "", "Repository ID (required)")
-    cmd.Flags().StringP("format", "f", "", "File format (ifc, pdf, csv, json)")
+    cmd.Flags().StringP("format", "f", "", "File format (ifc, csv, json)")
     cmd.Flags().Bool("validate", true, "Validate against buildingSMART standards")
     cmd.Flags().BoolP("enhance", "e", false, "Enhance with spatial data")
-    
+
     return cmd
 }
 ```
@@ -119,7 +119,7 @@ type Container struct {
     ifcOpenShellClient *ifc.IfcOpenShellClient
     nativeParser       *ifc.NativeParser
     ifcService         *ifc.EnhancedIFCService
-    
+
     // Use cases
     ifcUC        *usecase.IFCUseCase        // ← CLI accesses this
     repositoryUC *usecase.RepositoryUseCase
@@ -132,10 +132,10 @@ func (c *Container) initIFCServices(ctx context.Context) error {
         30*time.Second,
         3, // retries
     )
-    
+
     // Create native parser as fallback
     c.nativeParser = ifc.NewNativeParser(100 * 1024 * 1024)
-    
+
     // Create enhanced IFC service
     c.ifcService = ifc.NewEnhancedIFCService(
         c.ifcOpenShellClient,
@@ -146,20 +146,20 @@ func (c *Container) initIFCServices(ctx context.Context) error {
         60*time.Second, // recovery timeout
         logger,
     )
-    
+
     return nil
 }
 
 func (c *Container) initUseCases(ctx context.Context) error {
     // IFC use case with service integration
     c.ifcUC = usecase.NewIFCUseCase(
-        c.repositoryRepo, 
-        c.ifcRepo, 
-        nil, 
+        c.repositoryRepo,
+        c.ifcRepo,
+        nil,
         c.ifcService,    // ← Injected IFC service
         c.logger,
     )
-    
+
     return nil
 }
 ```
@@ -183,25 +183,25 @@ func CreateImportCommand(serviceContext interface{}) *cobra.Command {
             filePath := args[0]                    // "building.ifc"
             repoID, _ := cmd.Flags().GetString("repository")  // "repo-123"
             format, _ := cmd.Flags().GetString("format")      // "ifc"
-            
+
             // Read file data
             fileData, err := os.ReadFile(filePath)
-            
+
             // Get service from context
             sc, ok := serviceContext.(*cli.ServiceContext)
             if !ok {
                 return fmt.Errorf("service context not available")
             }
-            
+
             // Get repository service (includes IFC processing)
             repoService := sc.GetRepositoryService()
-            
+
             // Import IFC file
             result, err := repoService.ImportIFC(context.Background(), repoID, fileData)
             if err != nil {
                 return fmt.Errorf("failed to import IFC: %w", err)
             }
-            
+
             fmt.Printf("✅ Successfully imported: %s\n", filePath)
             fmt.Printf("   Repository: %s\n", repoID)
             fmt.Printf("   Format: %s\n", format)
@@ -209,7 +209,7 @@ func CreateImportCommand(serviceContext interface{}) *cobra.Command {
             fmt.Printf("   Buildings: %d\n", result.Buildings)
             fmt.Printf("   Spaces: %d\n", result.Spaces)
             fmt.Printf("   Equipment: %d\n", result.Equipment)
-            
+
             return nil
         },
     }
@@ -245,7 +245,7 @@ func (uc *IFCUseCase) ImportIFC(ctx context.Context, repoID string, ifcData []by
     if err != nil {
         return nil, fmt.Errorf("failed to parse IFC file: %w", err)
     }
-    
+
     // Create IFC file record with parsed data
     ifcFile := &building.IFCFile{
         ID:         uc.generateIFCFileID(),
@@ -255,12 +255,12 @@ func (uc *IFCUseCase) ImportIFC(ctx context.Context, repoID string, ifcData []by
         Entities:   parseResult.TotalEntities,
         Validated:  true,
     }
-    
+
     // Save to PostGIS
     if err := uc.ifcRepo.Create(ctx, ifcFile); err != nil {
         return nil, fmt.Errorf("failed to save IFC file: %w", err)
     }
-    
+
     return &building.IFCImportResult{
         Success:      true,
         RepositoryID: repoID,
@@ -365,16 +365,16 @@ func NewApp(cfg *config.Config) *App {
         config: cfg,
         logger: &Logger{},
     }
-    
+
     // Initialize dependency injection container
     app.container = app.NewContainer()
-    
+
     // Initialize container with context
     ctx := context.Background()
     if err := container.Initialize(ctx, a.config); err != nil {
         fmt.Printf("Warning: Failed to initialize container: %v\n", err)
     }
-    
+
     return app
 }
 ```
@@ -417,7 +417,7 @@ arx cadtui
 # > import building.ifc
 # > validate
 # > query spaces
-# > export pdf
+# > export ifc
 ```
 
 ## Benefits of CLI Integration
@@ -446,7 +446,7 @@ arx cadtui
 
 ```
 arx
-├── import <file>           # Import IFC/PDF files
+├── import <file>           # Import IFC files
 ├── export <format>         # Export building data
 ├── repo                    # Repository management
 │   ├── init <name>         # Create repository

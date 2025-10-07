@@ -455,6 +455,11 @@ func (c *Container) GetDesignUseCase() design.DesignInterface {
 	return c.designUC
 }
 
+// GetDesignService returns the design service (implements DesignServiceProvider interface)
+func (c *Container) GetDesignService() design.DesignInterface {
+	return c.GetDesignUseCase()
+}
+
 func (c *Container) GetFilesystemService() *filesystem.RepositoryFilesystemService {
 	c.mu.RLock()
 	defer c.mu.RUnlock()

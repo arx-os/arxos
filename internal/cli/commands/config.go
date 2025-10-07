@@ -18,18 +18,18 @@ func CreateConfigCommand(serviceContext any) *cobra.Command {
 	}
 
 	// Add subcommands
-	configCmd.AddCommand(createConfigValidateCommand(serviceContext))
-	configCmd.AddCommand(createConfigLoadCommand(serviceContext))
-	configCmd.AddCommand(createConfigSaveCommand(serviceContext))
-	configCmd.AddCommand(createConfigTemplateCommand(serviceContext))
-	configCmd.AddCommand(createConfigMigrateCommand(serviceContext))
-	configCmd.AddCommand(createConfigServicesCommand(serviceContext))
+	configCmd.AddCommand(createConfigValidateCommand())
+	configCmd.AddCommand(createConfigLoadCommand())
+	configCmd.AddCommand(createConfigSaveCommand())
+	configCmd.AddCommand(createConfigTemplateCommand())
+	configCmd.AddCommand(createConfigMigrateCommand())
+	configCmd.AddCommand(createConfigServicesCommand())
 
 	return configCmd
 }
 
 // createConfigValidateCommand creates the config validate command
-func createConfigValidateCommand(serviceContext any) *cobra.Command {
+func createConfigValidateCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "validate [config-path]",
 		Short: "Validate configuration file",
@@ -38,7 +38,7 @@ func createConfigValidateCommand(serviceContext any) *cobra.Command {
 Examples:
   arx config validate                    # Validate default config
   arx config validate configs/environments/development.yml`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			configPath := ""
 			if len(args) > 0 {
 				configPath = args[0]
@@ -64,7 +64,7 @@ Examples:
 }
 
 // createConfigLoadCommand creates the config load command
-func createConfigLoadCommand(serviceContext any) *cobra.Command {
+func createConfigLoadCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "load [config-path]",
 		Short: "Load and display configuration",
@@ -73,7 +73,7 @@ func createConfigLoadCommand(serviceContext any) *cobra.Command {
 Examples:
   arx config load                        # Load default config
   arx config load configs/environments/production.yml`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			configPath := ""
 			if len(args) > 0 {
 				configPath = args[0]
@@ -104,7 +104,7 @@ Examples:
 }
 
 // createConfigSaveCommand creates the config save command
-func createConfigSaveCommand(serviceContext any) *cobra.Command {
+func createConfigSaveCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "save [output-path]",
 		Short: "Save current configuration to file",
@@ -113,7 +113,7 @@ func createConfigSaveCommand(serviceContext any) *cobra.Command {
 Examples:
   arx config save                        # Save to default location
   arx config save my-config.yml         # Save to specific file`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			outputPath := ""
 			if len(args) > 0 {
 				outputPath = args[0]
@@ -140,7 +140,7 @@ Examples:
 }
 
 // createConfigTemplateCommand creates the config template command
-func createConfigTemplateCommand(serviceContext any) *cobra.Command {
+func createConfigTemplateCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "template [environment] [output-path]",
 		Short: "Generate configuration template",
@@ -149,7 +149,7 @@ func createConfigTemplateCommand(serviceContext any) *cobra.Command {
 Examples:
   arx config template development        # Generate development template
   arx config template production prod.yml # Generate production template to specific file`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return fmt.Errorf("environment is required (development, production, test)")
 			}
@@ -186,7 +186,7 @@ Examples:
 }
 
 // createConfigMigrateCommand creates the config migrate command
-func createConfigMigrateCommand(serviceContext any) *cobra.Command {
+func createConfigMigrateCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "migrate [old-path] [new-path]",
 		Short: "Migrate legacy configuration files to new format",
@@ -195,7 +195,7 @@ func createConfigMigrateCommand(serviceContext any) *cobra.Command {
 Examples:
   arx config migrate                    # Migrate all config files
   arx config migrate old.yml new.yml   # Migrate specific file`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				// Migrate all configurations
 				fmt.Println("🔄 Migrating all configuration files...")
@@ -251,26 +251,26 @@ Examples:
 }
 
 // createConfigServicesCommand creates the config services command
-func createConfigServicesCommand(serviceContext any) *cobra.Command {
+func createConfigServicesCommand() *cobra.Command {
 	servicesCmd := &cobra.Command{
 		Use:   "services",
 		Short: "Manage service configurations",
 		Long:  "List, load, and manage service-specific configurations",
 	}
 
-	servicesCmd.AddCommand(createConfigServicesListCommand(serviceContext))
-	servicesCmd.AddCommand(createConfigServicesLoadCommand(serviceContext))
+	servicesCmd.AddCommand(createConfigServicesListCommand())
+	servicesCmd.AddCommand(createConfigServicesLoadCommand())
 
 	return servicesCmd
 }
 
 // createConfigServicesListCommand creates the config services list command
-func createConfigServicesListCommand(serviceContext any) *cobra.Command {
+func createConfigServicesListCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List available service configurations",
 		Long:  "List all available service configuration files",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			serviceLoader := config.NewServiceConfigLoader("configs")
 			services, err := serviceLoader.ListAvailableServices()
 			if err != nil {
@@ -293,12 +293,12 @@ func createConfigServicesListCommand(serviceContext any) *cobra.Command {
 }
 
 // createConfigServicesLoadCommand creates the config services load command
-func createConfigServicesLoadCommand(serviceContext any) *cobra.Command {
+func createConfigServicesLoadCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "load [service-name]",
 		Short: "Load and display service configuration",
 		Long:  "Load and display a specific service configuration",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return fmt.Errorf("service name is required")
 			}

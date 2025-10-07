@@ -13,17 +13,17 @@ echo "Building ArxOS..."
 go build -o arx ./cmd/arx
 echo ""
 
-echo "1. Importing Alafia ES PDF floor plan..."
-./arx import Alafia_ES_IDF_CallOut.pdf 2>/dev/null || echo "   PDF already imported"
+echo "1. Importing Alafia ES floor plan..."
+./arx import Alafia_ES_IDF_CallOut.ifc 2>/dev/null || echo "   IFC already imported"
 
 echo ""
 echo "2. Current floor plan status..."
 ./arx status Alafia_ES_IDF_CallOut
 
 echo ""
-echo "3. Adding IDF equipment from the PDF..."
-./arx add "IDF 800b" --type idf --room area_13 --location 75,10 --floor Alafia_ES_IDF_CallOut.json
-./arx add "IDF 606a" --type idf --room area_31 --location 15,50 --floor Alafia_ES_IDF_CallOut.json
+echo "3. Adding IDF equipment from the floor plan..."
+./arx add "IDF 800b" --type idf --room area_13 --location 75,10 --floor Alafia_ES_IDF_CallOut.ifc
+./arx add "IDF 606a" --type idf --room area_31 --location 15,50 --floor Alafia_ES_IDF_CallOut.ifc
 ./arx add "IDF 507a" --type idf --room area_32 --location 45,50 --floor Alafia_ES_IDF_CallOut.json
 ./arx add "IDF 516" --type idf --room area_33 --location 75,50 --floor Alafia_ES_IDF_CallOut.json
 

@@ -175,29 +175,32 @@ func (c *Container) initInfrastructure(ctx context.Context) error {
 
 // initRepositories initializes repository implementations
 func (c *Container) initRepositories(ctx context.Context) error {
-	// User repository
-	c.userRepo = infrastructure.NewUserRepository(c.db, c.cache)
+	// Use PostGIS implementations for all repositories
+	db := c.postgis.GetDB()
 
-	// Building repository
-	c.buildingRepo = infrastructure.NewBuildingRepository(c.db, c.cache)
+	// User repository - PostGIS implementation
+	c.userRepo = postgis.NewUserRepository(db)
 
-	// Equipment repository
-	c.equipmentRepo = infrastructure.NewEquipmentRepository(c.db, c.cache)
+	// Building repository - PostGIS implementation
+	c.buildingRepo = postgis.NewBuildingRepository(db)
 
-	// Organization repository
-	c.organizationRepo = infrastructure.NewOrganizationRepository(c.db, c.cache)
+	// Equipment repository - PostGIS implementation
+	c.equipmentRepo = postgis.NewEquipmentRepository(db)
+
+	// Organization repository - PostGIS implementation
+	c.organizationRepo = postgis.NewOrganizationRepository(db)
 
 	// Building repository domain repositories
 	// Initialize with PostGIS implementations
-	c.repositoryRepo = repository.NewPostGISRepositoryRepository(c.postgis.GetDB())
-	c.versionRepo = repository.NewPostGISVersionRepository(c.postgis.GetDB())
-	c.ifcRepo = repository.NewPostGISIFCRepository(c.postgis.GetDB())
+	c.repositoryRepo = repository.NewPostGISRepositoryRepository(db)
+	c.versionRepo = repository.NewPostGISVersionRepository(db)
+	c.ifcRepo = repository.NewPostGISIFCRepository(db)
 
 	// Component repository
-	c.componentRepo = repository.NewPostGISComponentRepository(c.postgis.GetDB())
+	c.componentRepo = repository.NewPostGISComponentRepository(db)
 
 	// Create sqlx.DB from the PostGIS sql.DB
-	sqlxDB := sqlx.NewDb(c.postgis.GetDB(), "postgres")
+	sqlxDB := sqlx.NewDb(db, "postgres")
 	c.spatialRepo = postgis.NewSpatialRepository(sqlxDB, c.logger)
 
 	return nil

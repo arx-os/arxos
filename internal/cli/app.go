@@ -125,6 +125,21 @@ func (a *App) wireCommands() {
 	// Repository management commands
 	a.rootCmd.AddCommand(commands.CreateRepoCommand(serviceContext))
 
+	// Building management commands
+	a.rootCmd.AddCommand(commands.CreateBuildingCommands(serviceContext))
+
+	// Floor management commands
+	a.rootCmd.AddCommand(commands.CreateFloorCommands(serviceContext))
+
+	// Equipment management commands
+	a.rootCmd.AddCommand(commands.CreateEquipmentCommands(serviceContext))
+
+	// User management commands
+	a.rootCmd.AddCommand(commands.CreateUserCommands(serviceContext))
+
+	// Spatial query commands
+	a.rootCmd.AddCommand(commands.CreateSpatialCommands(serviceContext))
+
 	// Component management commands
 	a.rootCmd.AddCommand(commands.CreateComponentCommands(serviceContext))
 

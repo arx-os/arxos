@@ -226,16 +226,16 @@ func DefaultPerformanceConfig() *PerformanceConfig {
 	}
 }
 
-// PerformanceMonitor manages performance monitoring
-type PerformanceMonitor struct {
+// HTTPPerformanceMonitor manages performance monitoring
+type HTTPPerformanceMonitor struct {
 	config *PerformanceConfig
 	stats  *PerformanceStats
 	logger domain.Logger
 }
 
-// NewPerformanceMonitor creates a new performance monitor
-func NewPerformanceMonitor(config *PerformanceConfig, logger domain.Logger) *PerformanceMonitor {
-	return &PerformanceMonitor{
+// NewHTTPPerformanceMonitor creates a new performance monitor
+func NewHTTPPerformanceMonitor(config *PerformanceConfig, logger domain.Logger) *HTTPPerformanceMonitor {
+	return &HTTPPerformanceMonitor{
 		config: config,
 		stats:  NewPerformanceStats(),
 		logger: logger,
@@ -243,7 +243,7 @@ func NewPerformanceMonitor(config *PerformanceConfig, logger domain.Logger) *Per
 }
 
 // GetPerformanceReport returns a comprehensive performance report
-func (pm *PerformanceMonitor) GetPerformanceReport() map[string]any {
+func (pm *HTTPPerformanceMonitor) GetPerformanceReport() map[string]any {
 	stats := pm.stats.GetStats()
 
 	report := map[string]any{
@@ -257,7 +257,7 @@ func (pm *PerformanceMonitor) GetPerformanceReport() map[string]any {
 }
 
 // getHealthStatus returns the health status based on performance metrics
-func (pm *PerformanceMonitor) getHealthStatus() map[string]any {
+func (pm *HTTPPerformanceMonitor) getHealthStatus() map[string]any {
 	stats := pm.stats.GetStats()
 
 	requestCount := stats["request_count"].(int64)
@@ -289,7 +289,7 @@ func (pm *PerformanceMonitor) getHealthStatus() map[string]any {
 }
 
 // StartMonitoring starts background performance monitoring
-func (pm *PerformanceMonitor) StartMonitoring(ctx context.Context) {
+func (pm *HTTPPerformanceMonitor) StartMonitoring(ctx context.Context) {
 	ticker := time.NewTicker(pm.config.MetricsInterval)
 	defer ticker.Stop()
 
@@ -304,7 +304,7 @@ func (pm *PerformanceMonitor) StartMonitoring(ctx context.Context) {
 }
 
 // logPerformanceMetrics logs current performance metrics
-func (pm *PerformanceMonitor) logPerformanceMetrics() {
+func (pm *HTTPPerformanceMonitor) logPerformanceMetrics() {
 	stats := pm.stats.GetStats()
 	health := pm.getHealthStatus()
 

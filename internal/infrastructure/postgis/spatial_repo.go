@@ -1,5 +1,7 @@
 package postgis
 
+// Advanced spatial queries using PostGIS
+
 import (
 	"context"
 	"fmt"
@@ -118,13 +120,13 @@ func (r *SpatialRepository) CreateSpatialSchema(ctx context.Context) error {
 func (r *SpatialRepository) CreateSpatialAnchor(ctx context.Context, req *domain.CreateSpatialAnchorRequest) (*domain.MobileSpatialAnchor, error) {
 	query := `
 		INSERT INTO spatial_anchors (
-			id, building_id, equipment_id, position, 
+			id, building_id, equipment_id, position,
 			confidence, anchor_type, metadata, created_by
 		) VALUES (
 			$1, $2, $3, ST_SetSRID(ST_MakePoint($4, $5), 4326),
 			$6, $7, $8, $9
 		)
-		RETURNING id, building_id, equipment_id, 
+		RETURNING id, building_id, equipment_id,
 			ST_X(position) as pos_x, ST_Y(position) as pos_y,
 			confidence, anchor_type, metadata, created_at, updated_at
 	`
@@ -167,7 +169,7 @@ func (r *SpatialRepository) CreateSpatialAnchor(ctx context.Context, req *domain
 // GetSpatialAnchorsByBuilding retrieves spatial anchors for a building
 func (r *SpatialRepository) GetSpatialAnchorsByBuilding(ctx context.Context, buildingID string, filter *domain.SpatialAnchorFilter) ([]*domain.MobileSpatialAnchor, error) {
 	query := `
-		SELECT 
+		SELECT
 			id, building_id, equipment_id,
 		ST_X(position) as pos_x, ST_Y(position) as pos_y,
 			confidence, anchor_type, metadata,
@@ -239,7 +241,7 @@ func (r *SpatialRepository) GetSpatialAnchorsByBuilding(ctx context.Context, bui
 // FindNearbyEquipment finds equipment within a spatial radius
 func (r *SpatialRepository) FindNearbyEquipment(ctx context.Context, req *domain.NearbyEquipmentRequest) ([]*domain.NearbyEquipmentResult, error) {
 	query := `
-		SELECT 
+		SELECT
 			pk.textval AS equipment_id,
 			e.name AS equipment_name,
 			e.type AS equipment_type,

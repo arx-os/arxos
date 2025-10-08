@@ -57,6 +57,30 @@ type OrganizationRepository interface {
 	RemoveUser(ctx context.Context, orgID, userID string) error
 }
 
+// FloorRepository defines the contract for floor data operations
+type FloorRepository interface {
+	Create(ctx context.Context, floor *Floor) error
+	GetByID(ctx context.Context, id string) (*Floor, error)
+	GetByBuilding(ctx context.Context, buildingID string) ([]*Floor, error)
+	Update(ctx context.Context, floor *Floor) error
+	Delete(ctx context.Context, id string) error
+	List(ctx context.Context, buildingID string, limit, offset int) ([]*Floor, error)
+	GetRooms(ctx context.Context, floorID string) ([]*Room, error)
+	GetEquipment(ctx context.Context, floorID string) ([]*Equipment, error)
+}
+
+// RoomRepository defines the contract for room data operations
+type RoomRepository interface {
+	Create(ctx context.Context, room *Room) error
+	GetByID(ctx context.Context, id string) (*Room, error)
+	GetByFloor(ctx context.Context, floorID string) ([]*Room, error)
+	GetByNumber(ctx context.Context, floorID, number string) (*Room, error)
+	Update(ctx context.Context, room *Room) error
+	Delete(ctx context.Context, id string) error
+	List(ctx context.Context, floorID string, limit, offset int) ([]*Room, error)
+	GetEquipment(ctx context.Context, roomID string) ([]*Equipment, error)
+}
+
 // Service interfaces define the contract for business logic
 
 // UserService defines the contract for user business operations

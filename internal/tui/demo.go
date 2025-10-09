@@ -48,7 +48,8 @@ func Demo() error {
 	cfg := config.Default()
 
 	// Create dashboard model
-	dataService := services.NewDataService(nil)
+	// Demo mode: create empty data service (nil repositories for demo)
+	dataService := services.NewDataService(nil, nil, nil)
 	dashboard := models.NewDashboardModel(&cfg.TUI, dataService)
 
 	// Create Bubble Tea program
@@ -73,7 +74,8 @@ func DemoWithData() error {
 	cfg := config.Default()
 
 	// Create dashboard model
-	dataService := services.NewDataService(nil)
+	// Demo mode: create empty data service (nil repositories for demo)
+	dataService := services.NewDataService(nil, nil, nil)
 	dashboard := models.NewDashboardModel(&cfg.TUI, dataService)
 
 	// Create Bubble Tea program

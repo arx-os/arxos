@@ -7,15 +7,39 @@ import (
 // Version represents a version snapshot of a building repository
 // This implements Git-like version control for buildings
 type Version struct {
-	ID           string    `json:"id"`
-	RepositoryID string    `json:"repository_id"`
-	Tag          string    `json:"tag"`     // v1.0.0, v1.1.0, etc.
-	Message      string    `json:"message"` // Commit message
-	Author       string    `json:"author"`
-	Hash         string    `json:"hash"`    // Git commit hash
-	Parent       string    `json:"parent"`  // Parent version ID
-	Changes      []Change  `json:"changes"` // List of changes in this version
-	CreatedAt    time.Time `json:"created_at"`
+	ID           string          `json:"id"`
+	RepositoryID string          `json:"repository_id"`
+	Hash         string          `json:"hash"`      // SHA-256 hash of version contents
+	Snapshot     string          `json:"snapshot"`  // Hash of building snapshot
+	Parent       string          `json:"parent"`    // Parent version hash (empty for initial)
+	Parents      []string        `json:"parents"`   // Multiple parents for merges
+	Tag          string          `json:"tag"`       // v1.0.0, v1.1.0, etc.
+	Message      string          `json:"message"`   // Commit message
+	Author       Author          `json:"author"`    // Who made the change
+	Timestamp    time.Time       `json:"timestamp"` // When version was created
+	Metadata     VersionMetadata `json:"metadata"`  // Additional metadata
+
+	// Deprecated: Use Author struct instead
+	// Kept for backward compatibility during migration
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	Changes   []Change  `json:"changes,omitempty"` // Deprecated: Use Metadata.ChangeSummary
+}
+
+// Author represents the author of a version
+type Author struct {
+	Name  string `json:"name"`  // User name
+	Email string `json:"email"` // User email
+	ID    string `json:"id"`    // User ID
+}
+
+// VersionMetadata provides additional version information
+type VersionMetadata struct {
+	ChangeCount    int        `json:"change_count"`              // Number of changes
+	ChangeSummary  Summary    `json:"change_summary"`            // High-level summary
+	Source         string     `json:"source"`                    // How created (manual, import, sync)
+	SystemVersion  string     `json:"system_version"`            // ArxOS version
+	ValidatedAt    *time.Time `json:"validated_at,omitempty"`    // When validated
+	ValidationHash string     `json:"validation_hash,omitempty"` // Hash of validation result
 }
 
 // VersionDiff represents the differences between two versions

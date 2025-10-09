@@ -10,15 +10,19 @@ import (
 )
 
 // DataService provides spatial data access for TUI components
-// Demonstrates TUI ↔ PostGIS integration architecture
+// Follows Clean Architecture by using repositories instead of raw DB queries
 type DataService struct {
-	db domain.Database
+	buildingRepo  domain.BuildingRepository
+	equipmentRepo domain.EquipmentRepository
+	floorRepo     domain.FloorRepository
 }
 
 // NewDataService creates a new data service instance
-func NewDataService(db domain.Database) *DataService {
+func NewDataService(buildingRepo domain.BuildingRepository, equipmentRepo domain.EquipmentRepository, floorRepo domain.FloorRepository) *DataService {
 	return &DataService{
-		db: db,
+		buildingRepo:  buildingRepo,
+		equipmentRepo: equipmentRepo,
+		floorRepo:     floorRepo,
 	}
 }
 
@@ -99,183 +103,151 @@ func (ds *DataService) GetBuildingData(ctx context.Context, buildingID string) (
 	return buildingData, nil
 }
 
-// getBuilding retrieves building information using spatial queries
+// getBuilding retrieves building information using repository
 func (ds *DataService) getBuilding(ctx context.Context, buildingID string) (*building.BuildingModel, error) {
-	// TODO: Implement PostGIS spatial query for building bounds
-	// SELECT b.*,
-	//   ST_XMin(ST_Extent(e.position)) as min_x,
-	//   ST_YMin(ST_Extent(e.position)) as min_y,
-	//   ST_XMax(ST_Extent(e.position)) as max_x,
-	//   ST_YMax(ST_Extent(e.position)) as max_y,
-	//   ST_Area(ST_ConvexHull(ST_Collect(e.position))) as building_area
-	// FROM buildings b
-	// LEFT JOIN equipment e ON b.building_id = e.building_id
-	// WHERE b.id = $1
+	// Use repository to get building data
+	bldg, err := ds.buildingRepo.GetByID(ctx, buildingID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get building: %w", err)
+	}
 
-	// Simulate realistic building data from spatial queries
+	// Convert domain.Building to building.BuildingModel for TUI
 	return &building.BuildingModel{
-		ID:          buildingID,
-		Name:        "ArxOS Demo Building",
-		Address:     "123 Tech Street, Innovation City",
-		Description: "Demo building for ArxOS TUI spatial integration",
-		ImportedAt:  time.Now().Add(-30 * 24 * time.Hour),
-		UpdatedAt:   time.Now(),
+		ID:          bldg.ID.String(),
+		Name:        bldg.Name,
+		Address:     bldg.Address,
+		Description: "", // Could add description field to domain.Building
+		ImportedAt:  bldg.CreatedAt,
+		UpdatedAt:   bldg.UpdatedAt,
 	}, nil
 }
 
-// getFloors retrieves floor information with spatial bounds using PostGIS
+// getFloors retrieves floor information using repository
 func (ds *DataService) getFloors(ctx context.Context, buildingID string) ([]*building.Floor, error) {
-	// TODO: Implement PostGIS spatial query for floor bounds
-	// SELECT
-	//   e.floor,
-	//   COUNT(*) as equipment_count,
-	//   ST_XMin(ST_Extent(e.position)) as min_x,
-	//   ST_YMin(ST_Extent(e.position)) as min_y,
-	//   ST_XMax(ST_Extent(e.position)) as max_x,
-	//   ST_YMax(ST_Extent(e.position)) as max_y,
-	//   ST_ZMin(ST_Extent(e.position)) as min_z,
-	//   ST_ZMax(ST_Extent(e.position)) as max_z
-	// FROM equipment e
-	// WHERE e.building_id = $1
-	// AND e.position IS NOT NULL
-	// GROUP BY e.floor
-	// ORDER BY e.floor
+	// Use repository to get floors
+	domainFloors, err := ds.floorRepo.GetByBuilding(ctx, buildingID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get floors: %w", err)
+	}
 
-	// Simulate realistic floor data from spatial queries
-	return []*building.Floor{
-		{
-			ID:          fmt.Sprintf("%s-floor-1", buildingID),
-			Number:      1,
-			Name:        "Ground Floor",
-			Description: "Main entrance and lobby with spatial coverage",
-			Height:      3.5,
-			Elevation:   0.0,
-			Confidence:  building.ConfidenceHigh,
-		},
-		{
-			ID:          fmt.Sprintf("%s-floor-2", buildingID),
-			Number:      2,
-			Name:        "Second Floor",
-			Description: "Office spaces with spatial mapping",
-			Height:      3.0,
-			Elevation:   3.5,
-			Confidence:  building.ConfidenceHigh,
-		},
-		{
-			ID:          fmt.Sprintf("%s-floor-3", buildingID),
-			Number:      3,
-			Name:        "Third Floor",
-			Description: "Meeting rooms with precise spatial coordinates",
-			Height:      3.0,
-			Elevation:   6.5,
-			Confidence:  building.ConfidenceMedium,
-		},
-	}, nil
+	// Convert domain.Floor to building.Floor for TUI
+	var floors []*building.Floor
+	for _, domainFloor := range domainFloors {
+		// Get equipment count for this floor to determine confidence
+		floorEquipment, _ := ds.floorRepo.GetEquipment(ctx, domainFloor.ID.String())
+		equipCount := len(floorEquipment)
+
+		// Determine confidence based on data quality
+		confidence := building.ConfidenceLow
+		if equipCount > 10 {
+			confidence = building.ConfidenceHigh
+		} else if equipCount > 0 {
+			confidence = building.ConfidenceMedium
+		}
+
+		floors = append(floors, &building.Floor{
+			ID:          domainFloor.ID.String(),
+			Number:      domainFloor.Level,
+			Name:        domainFloor.Name,
+			Description: "Floor from database", // Could add description to domain.Floor
+			Height:      3.0,                   // Default height - could add to domain.Floor
+			Elevation:   float64(domainFloor.Level) * 3.0,
+			Confidence:  confidence,
+		})
+	}
+
+	return floors, nil
 }
 
-// getEquipment retrieves equipment information with 3D spatial positions using PostGIS
+// getEquipment retrieves equipment information using repository
 func (ds *DataService) getEquipment(ctx context.Context, buildingID string) ([]*building.Equipment, error) {
-	// TODO: Implement PostGIS spatial query for equipment positions
-	// SELECT
-	//   e.id,
-	//   e.name,
-	//   e.type,
-	//   e.status,
-	//   ST_X(e.position) as pos_x,
-	//   ST_Y(e.position) as pos_y,
-	//   ST_Z(e.position) as pos_z,
-	//   e.floor,
-	//   COALESCE(ep.confidence, 1) as position_confidence,
-	//   COALESCE(ep.source, 'estimated') as position_source,
-	//   COALESCE(ep.updated_at, e.updated_at) as position_updated
-	// FROM equipment e
-	// LEFT JOIN equipment_positions ep ON e.id = ep.equipment_id
-	// WHERE e.building_id = $1
-	// AND e.position IS NOT NULL
-	// ORDER BY e.floor, e.type
+	// Use repository to get equipment
+	domainEquipment, err := ds.equipmentRepo.GetByBuilding(ctx, buildingID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get equipment: %w", err)
+	}
 
-	// Simulate realistic equipment data from spatial queries
-	return []*building.Equipment{
-		{
-			ID:       fmt.Sprintf("%s-HVAC-001", buildingID),
-			Name:     "Main HVAC Unit",
-			Type:     "HVAC",
-			Status:   "operational",
-			RoomID:   fmt.Sprintf("%s-floor-1", buildingID),
-			Position: &building.Point3D{X: 10.5, Y: 15.2, Z: 2.0},
-		},
-		{
-			ID:       fmt.Sprintf("%s-ELEC-001", buildingID),
-			Name:     "Main Electrical Panel",
-			Type:     "Electrical",
-			Status:   "operational",
-			RoomID:   fmt.Sprintf("%s-floor-1", buildingID),
-			Position: &building.Point3D{X: 5.0, Y: 8.0, Z: 1.5},
-		},
-		{
-			ID:       fmt.Sprintf("%s-LIGHT-001", buildingID),
-			Name:     "Conference Room Light",
-			Type:     "Lighting",
-			Status:   "maintenance",
-			RoomID:   fmt.Sprintf("%s-floor-2", buildingID),
-			Position: &building.Point3D{X: 12.0, Y: 10.0, Z: 2.8},
-		},
-		{
-			ID:       fmt.Sprintf("%s-OUTLET-001", buildingID),
-			Name:     "Power Outlet A1",
-			Type:     "Electrical",
-			Status:   "operational",
-			RoomID:   fmt.Sprintf("%s-floor-2", buildingID),
-			Position: &building.Point3D{X: 8.5, Y: 6.0, Z: 1.2},
-		},
-		{
-			ID:       fmt.Sprintf("%s-FIRE-001", buildingID),
-			Name:     "Fire Alarm Panel",
-			Type:     "Fire Safety",
-			Status:   "operational",
-			RoomID:   fmt.Sprintf("%s-floor-1", buildingID),
-			Position: &building.Point3D{X: 15.0, Y: 12.0, Z: 2.5},
-		},
-	}, nil
+	// Convert domain.Equipment to building.Equipment for TUI
+	var equipment []*building.Equipment
+	for _, domainEq := range domainEquipment {
+		// Convert location to Point3D if available
+		var position *building.Point3D
+		if domainEq.Location != nil {
+			position = &building.Point3D{
+				X: domainEq.Location.X,
+				Y: domainEq.Location.Y,
+				Z: domainEq.Location.Z,
+			}
+		}
+
+		equipment = append(equipment, &building.Equipment{
+			ID:       domainEq.ID.String(),
+			Name:     domainEq.Name,
+			Type:     domainEq.Type,
+			Status:   domainEq.Status,
+			RoomID:   domainEq.RoomID.String(),
+			Position: position,
+		})
+	}
+
+	return equipment, nil
 }
 
-// getAlerts retrieves spatial-aware alerts for a building
+// getAlerts retrieves alerts based on equipment status
 func (ds *DataService) getAlerts(ctx context.Context, buildingID string) ([]Alert, error) {
-	// TODO: Implement spatial-aware alert queries
-	// Could include spatial coverage alerts, equipment position alerts, etc.
+	// Get equipment to check for alert conditions
+	equipment, err := ds.equipmentRepo.GetByBuilding(ctx, buildingID)
+	if err != nil {
+		// If we can't get equipment, return empty alerts instead of erroring
+		return []Alert{}, nil
+	}
 
-	return []Alert{
-		{
-			ID:       "ALERT-001",
-			Severity: "warning",
-			Message:  fmt.Sprintf("%s-HVAC-001: Maintenance due in 7 days", buildingID),
-			Time:     time.Now().Add(-2 * time.Hour),
-			Source:   "spatial_maintenance_scheduler",
-		},
-		{
-			ID:       "ALERT-002",
+	var alerts []Alert
+
+	// Generate alerts based on equipment status
+	for _, eq := range equipment {
+		switch eq.Status {
+		case "failed":
+			alerts = append(alerts, Alert{
+				ID:       fmt.Sprintf("ALERT-%s", eq.ID.String()[:8]),
+				Severity: "error",
+				Message:  fmt.Sprintf("%s: Equipment failed - immediate attention required", eq.Name),
+				Time:     time.Now(),
+				Source:   "equipment_monitor",
+			})
+		case "maintenance":
+			alerts = append(alerts, Alert{
+				ID:       fmt.Sprintf("ALERT-%s", eq.ID.String()[:8]),
+				Severity: "warning",
+				Message:  fmt.Sprintf("%s: In maintenance mode", eq.Name),
+				Time:     time.Now(),
+				Source:   "maintenance_scheduler",
+			})
+		}
+	}
+
+	// If no alerts, return a friendly info message
+	if len(alerts) == 0 {
+		alerts = append(alerts, Alert{
+			ID:       "ALERT-INFO",
 			Severity: "info",
-			Message:  fmt.Sprintf("%s-LIGHT-001: Scheduled maintenance completed", buildingID),
-			Time:     time.Now().Add(-1 * time.Hour),
-			Source:   "spatial_maintenance_scheduler",
-		},
-		{
-			ID:       "ALERT-003",
-			Severity: "info",
-			Message:  "Spatial coverage improved by 5% after latest scan",
-			Time:     time.Now().Add(-30 * time.Minute),
-			Source:   "spatial_coverage_monitor",
-		},
-	}, nil
+			Message:  "All systems operational",
+			Time:     time.Now(),
+			Source:   "system_monitor",
+		})
+	}
+
+	return alerts, nil
 }
 
-// calculateSpatialMetrics calculates building performance metrics including spatial coverage
+// calculateSpatialMetrics calculates building performance metrics from real data
 func (ds *DataService) calculateSpatialMetrics(ctx context.Context, buildingID string, equipment []*building.Equipment) (*BuildingMetrics, error) {
-	// Calculate metrics from equipment data
+	// Calculate metrics from actual equipment data
 	totalEquipment := len(equipment)
 	operational := 0
 	maintenance := 0
 	offline := 0
+	withLocation := 0
 
 	for _, eq := range equipment {
 		switch eq.Status {
@@ -286,17 +258,29 @@ func (ds *DataService) calculateSpatialMetrics(ctx context.Context, buildingID s
 		case "offline":
 			offline++
 		}
+
+		// Count equipment with location data for coverage calculation
+		if eq.Position != nil {
+			withLocation++
+		}
 	}
 
-	// TODO: Calculate actual spatial coverage using PostGIS spatial functions
-	// SELECT calculate_building_coverage($1) -- Uses the spatial function from migration 005
+	// Calculate spatial coverage based on equipment with location data
+	spatialCoverage := 0.0
+	if totalEquipment > 0 {
+		spatialCoverage = float64(withLocation) / float64(totalEquipment) * 100.0
+	}
 
-	spatialCoverage := 94.2 // Simulated coverage calculation
+	// Calculate operational percentage
+	uptime := 0.0
+	if totalEquipment > 0 {
+		uptime = float64(operational) / float64(totalEquipment) * 100.0
+	}
 
 	metrics := &BuildingMetrics{
-		Uptime:         98.5,
-		EnergyPerSqM:   125.0,
-		ResponseTime:   4 * time.Minute,
+		Uptime:         uptime,
+		EnergyPerSqM:   0.0,             // TODO: Implement energy calculation
+		ResponseTime:   1 * time.Minute, // TODO: Implement response time tracking
 		Coverage:       spatialCoverage,
 		TotalEquipment: totalEquipment,
 		Operational:    operational,
@@ -308,75 +292,129 @@ func (ds *DataService) calculateSpatialMetrics(ctx context.Context, buildingID s
 	return metrics, nil
 }
 
-// GetEquipmentByFloor retrieves equipment for a specific floor using spatial indexing
+// GetEquipmentByFloor retrieves equipment for a specific floor
 func (ds *DataService) GetEquipmentByFloor(ctx context.Context, buildingID string, floorNumber int) ([]*building.Equipment, error) {
-	// TODO: Implement PostGIS spatial query for floor-specific equipment
-	// SELECT * FROM equipment
-	// WHERE building_id = $1 AND floor = $2 AND position IS NOT NULL
-	// ORDER BY ST_Distance(ST_Point(ST_X(position), ST_Y(position)), ST_Point(0,0))
-
-	allEquipment, err := ds.getEquipment(ctx, buildingID)
+	// Get all floors for the building to find the matching floor
+	floors, err := ds.floorRepo.GetByBuilding(ctx, buildingID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get floors: %w", err)
 	}
 
-	var floorEquipment []*building.Equipment
-	floorID := fmt.Sprintf("%s-floor-%d", buildingID, floorNumber)
-
-	for _, eq := range allEquipment {
-		if eq.RoomID == floorID {
-			floorEquipment = append(floorEquipment, eq)
+	// Find the floor with matching level
+	var targetFloorID string
+	for _, floor := range floors {
+		if floor.Level == floorNumber {
+			targetFloorID = floor.ID.String()
+			break
 		}
 	}
 
-	return floorEquipment, nil
-}
-
-// GetSpatialData retrieves spatial data for ASCII floor plan visualization using PostGIS
-func (ds *DataService) GetSpatialData(ctx context.Context, buildingID string) (*SpatialData, error) {
-	// TODO: Implement comprehensive PostGIS spatial queries for visualization
-	// This would query multiple spatial tables and return processed data for ASCII rendering
-
-	// SELECT
-	//   e.floor,
-	//   COUNT(*) as equipment_count,
-	//   ST_XMin(ST_Extent(e.position)) as min_x,
-	//   ST_YMin(ST_Extent(e.position)) as min_y,
-	//   ST_XMax(ST_Extent(e.position)) - ST_XMin(ST_Extent(e.position)) as width,
-	//   ST_YMax(ST_Extent(e.position)) - ST_YMin(ST_Extent(e.position)) as height
-	// FROM equipment e
-	// WHERE e.building_id = $1
-	// AND e.position IS NOT NULL
-	// GROUP BY e.floor
-	// ORDER BY e.floor
-
-	return ds.getMockSpatialData(buildingID), nil
-}
-
-// getMockSpatialData returns realistic spatial data demonstrating PostGIS integration
-func (ds *DataService) getMockSpatialData(buildingID string) *SpatialData {
-	return &SpatialData{
-		BuildingID: buildingID,
-		Floors: []FloorSpatialData{
-			{
-				FloorNumber: 1,
-				Bounds:      Bounds{X: 0, Y: 0, Width: 20, Height: 15},
-				Equipment: []EquipmentSpatialData{
-					{ID: fmt.Sprintf("%s-HVAC-001", buildingID), X: 10.5, Y: 15.2, Type: "HVAC"},
-					{ID: fmt.Sprintf("%s-ELEC-001", buildingID), X: 5.0, Y: 8.0, Type: "Electrical"},
-					{ID: fmt.Sprintf("%s-FIRE-001", buildingID), X: 15.0, Y: 12.0, Type: "Fire Safety"},
-				},
-			},
-			{
-				FloorNumber: 2,
-				Bounds:      Bounds{X: 0, Y: 0, Width: 25, Height: 18},
-				Equipment: []EquipmentSpatialData{
-					{ID: fmt.Sprintf("%s-LIGHT-001", buildingID), X: 12.0, Y: 10.0, Type: "Lighting"},
-					{ID: fmt.Sprintf("%s-OUTLET-001", buildingID), X: 8.5, Y: 6.0, Type: "Electrical"},
-				},
-			},
-		},
+	if targetFloorID == "" {
+		return []*building.Equipment{}, nil // No floor found, return empty
 	}
+
+	// Get equipment for this floor
+	domainEquipment, err := ds.floorRepo.GetEquipment(ctx, targetFloorID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get floor equipment: %w", err)
+	}
+
+	// Convert to TUI equipment format
+	var equipment []*building.Equipment
+	for _, domainEq := range domainEquipment {
+		var position *building.Point3D
+		if domainEq.Location != nil {
+			position = &building.Point3D{
+				X: domainEq.Location.X,
+				Y: domainEq.Location.Y,
+				Z: domainEq.Location.Z,
+			}
+		}
+
+		equipment = append(equipment, &building.Equipment{
+			ID:       domainEq.ID.String(),
+			Name:     domainEq.Name,
+			Type:     domainEq.Type,
+			Status:   domainEq.Status,
+			RoomID:   domainEq.RoomID.String(),
+			Position: position,
+		})
+	}
+
+	return equipment, nil
+}
+
+// GetSpatialData retrieves spatial data for ASCII floor plan visualization
+func (ds *DataService) GetSpatialData(ctx context.Context, buildingID string) (*SpatialData, error) {
+	// Get floors and equipment for the building
+	floors, err := ds.floorRepo.GetByBuilding(ctx, buildingID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get floors: %w", err)
+	}
+
+	spatialData := &SpatialData{
+		BuildingID: buildingID,
+		Floors:     []FloorSpatialData{},
+	}
+
+	// Build spatial data for each floor
+	for _, floor := range floors {
+		floorEquipment, err := ds.floorRepo.GetEquipment(ctx, floor.ID.String())
+		if err != nil {
+			continue // Skip floors we can't get equipment for
+		}
+
+		// Calculate bounds from equipment positions
+		minX, minY, maxX, maxY := 0.0, 0.0, 20.0, 15.0 // Defaults
+		if len(floorEquipment) > 0 {
+			minX, minY = floorEquipment[0].Location.X, floorEquipment[0].Location.Y
+			maxX, maxY = minX, minY
+
+			for _, eq := range floorEquipment {
+				if eq.Location == nil {
+					continue
+				}
+				if eq.Location.X < minX {
+					minX = eq.Location.X
+				}
+				if eq.Location.Y < minY {
+					minY = eq.Location.Y
+				}
+				if eq.Location.X > maxX {
+					maxX = eq.Location.X
+				}
+				if eq.Location.Y > maxY {
+					maxY = eq.Location.Y
+				}
+			}
+		}
+
+		// Build equipment spatial data
+		var equipmentData []EquipmentSpatialData
+		for _, eq := range floorEquipment {
+			if eq.Location != nil {
+				equipmentData = append(equipmentData, EquipmentSpatialData{
+					ID:   eq.ID.String(),
+					X:    eq.Location.X,
+					Y:    eq.Location.Y,
+					Type: eq.Type,
+				})
+			}
+		}
+
+		spatialData.Floors = append(spatialData.Floors, FloorSpatialData{
+			FloorNumber: floor.Level,
+			Bounds: Bounds{
+				X:      minX,
+				Y:      minY,
+				Width:  maxX - minX,
+				Height: maxY - minY,
+			},
+			Equipment: equipmentData,
+		})
+	}
+
+	return spatialData, nil
 }
 
 // SpatialData represents spatial information for TUI visualization
@@ -408,15 +446,8 @@ type Bounds struct {
 	Height float64 `json:"height"`
 }
 
-// GetDB returns the database instance
-func (ds *DataService) GetDB() domain.Database {
-	return ds.db
-}
-
-// Close closes the data service
+// Close closes the data service (repositories don't need explicit closing)
 func (ds *DataService) Close() error {
-	if ds.db != nil {
-		return ds.db.Close()
-	}
+	// Repositories are stateless and don't need closing
 	return nil
 }

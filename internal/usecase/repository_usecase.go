@@ -75,11 +75,22 @@ func (uc *RepositoryUseCase) CreateRepository(ctx context.Context, req *building
 		RepositoryID: repoID,
 		Tag:          "v1.0.0",
 		Message:      "Initial repository creation",
-		Author:       req.Author,
-		Hash:         uc.generateHash(),
-		Parent:       "",
-		Changes:      []building.Change{},
-		CreatedAt:    time.Now(),
+		Author: building.Author{
+			Name:  req.Author,
+			Email: "", // TODO: Get from user context
+			ID:    "", // TODO: Get from user context
+		},
+		Hash:      uc.generateHash(),
+		Parent:    "",
+		Timestamp: time.Now(),
+		Metadata: building.VersionMetadata{
+			ChangeCount:   0,
+			ChangeSummary: building.Summary{},
+			Source:        "manual",
+			SystemVersion: "1.0.0", // TODO: Get from build info
+		},
+		CreatedAt: time.Now(), // Deprecated but kept for compatibility
+		Changes:   []building.Change{},
 	}
 
 	if err := uc.versionRepo.Create(ctx, initialVersion); err != nil {

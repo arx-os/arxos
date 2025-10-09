@@ -14,7 +14,7 @@ import (
 )
 
 func TestEquipmentAPI_EndToEnd(t *testing.T) {
-	server, container := setupTestServer(t)
+	server, container := setupTestServerWithConfig(t)
 	if server == nil {
 		return
 	}
@@ -212,7 +212,7 @@ func TestEquipmentAPI_EndToEnd(t *testing.T) {
 }
 
 func TestEquipmentAPI_Validation(t *testing.T) {
-	server, container := setupTestServer(t)
+	server, container := setupTestServerWithConfig(t)
 	if server == nil {
 		return
 	}
@@ -262,7 +262,7 @@ func TestEquipmentAPI_Validation(t *testing.T) {
 }
 
 func TestEquipmentAPI_LocationTracking(t *testing.T) {
-	server, container := setupTestServer(t)
+	server, container := setupTestServerWithConfig(t)
 	if server == nil {
 		return
 	}

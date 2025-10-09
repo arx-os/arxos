@@ -10,6 +10,7 @@ import (
 	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/infrastructure"
+	"github.com/arx-os/arxos/internal/infrastructure/postgis"
 	"github.com/arx-os/arxos/internal/tui/models"
 	"github.com/arx-os/arxos/internal/tui/services"
 )
@@ -39,8 +40,14 @@ func (t *TUI) RunDashboard() error {
 		return fmt.Errorf("invalid TUI configuration: %w", err)
 	}
 
-	// Create data service
-	dataService := services.NewDataService(t.db)
+	// Get repositories from database
+	buildingRepo, equipmentRepo, floorRepo, err := t.getRepositories()
+	if err != nil {
+		return fmt.Errorf("failed to get repositories: %w", err)
+	}
+
+	// Create data service with repositories
+	dataService := services.NewDataService(buildingRepo, equipmentRepo, floorRepo)
 	defer dataService.Close()
 
 	// Create dashboard model
@@ -68,8 +75,14 @@ func (t *TUI) RunBuildingExplorer(buildingID string) error {
 		return fmt.Errorf("invalid TUI configuration: %w", err)
 	}
 
-	// Create data service
-	dataService := services.NewDataService(t.db)
+	// Get repositories
+	buildingRepo, equipmentRepo, floorRepo, err := t.getRepositories()
+	if err != nil {
+		return fmt.Errorf("failed to get repositories: %w", err)
+	}
+
+	// Create data service with repositories
+	dataService := services.NewDataService(buildingRepo, equipmentRepo, floorRepo)
 	defer dataService.Close()
 
 	// Create building explorer model
@@ -97,8 +110,14 @@ func (t *TUI) RunEquipmentManager(floorID string) error {
 		return fmt.Errorf("invalid TUI configuration: %w", err)
 	}
 
-	// Create data service
-	dataService := services.NewDataService(t.db)
+	// Get repositories
+	buildingRepo, equipmentRepo, floorRepo, err := t.getRepositories()
+	if err != nil {
+		return fmt.Errorf("failed to get repositories: %w", err)
+	}
+
+	// Create data service with repositories
+	dataService := services.NewDataService(buildingRepo, equipmentRepo, floorRepo)
 	defer dataService.Close()
 
 	// Create equipment manager model
@@ -126,8 +145,14 @@ func (t *TUI) RunSpatialQuery() error {
 		return fmt.Errorf("invalid TUI configuration: %w", err)
 	}
 
-	// Create data service
-	dataService := services.NewDataService(t.db)
+	// Get repositories
+	buildingRepo, equipmentRepo, floorRepo, err := t.getRepositories()
+	if err != nil {
+		return fmt.Errorf("failed to get repositories: %w", err)
+	}
+
+	// Create data service with repositories
+	dataService := services.NewDataService(buildingRepo, equipmentRepo, floorRepo)
 	defer dataService.Close()
 
 	// Create spatial query model
@@ -257,8 +282,14 @@ func (t *TUI) RunFloorPlan(buildingID string) error {
 		return fmt.Errorf("invalid TUI configuration: %w", err)
 	}
 
-	// Create data service
-	dataService := services.NewDataService(t.db)
+	// Get repositories
+	buildingRepo, equipmentRepo, floorRepo, err := t.getRepositories()
+	if err != nil {
+		return fmt.Errorf("failed to get repositories: %w", err)
+	}
+
+	// Create data service with repositories
+	dataService := services.NewDataService(buildingRepo, equipmentRepo, floorRepo)
 	defer dataService.Close()
 
 	// Create floor plan model
@@ -287,4 +318,26 @@ func TUICommands() []string {
 		"floorplan",
 		"explorer",
 	}
+}
+
+// getRepositories creates repositories from the database connection
+func (t *TUI) getRepositories() (domain.BuildingRepository, domain.EquipmentRepository, domain.FloorRepository, error) {
+	// Cast database to infrastructure.Database to access GetDB()
+	db, ok := t.db.(*infrastructure.Database)
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("invalid database type")
+	}
+
+	// Get underlying SQL connection
+	sqlDB := db.GetDB()
+	if sqlDB == nil {
+		return nil, nil, nil, fmt.Errorf("database connection is nil")
+	}
+
+	// Create repositories using postgis implementations
+	buildingRepo := postgis.NewBuildingRepository(sqlDB.DB)
+	equipmentRepo := postgis.NewEquipmentRepository(sqlDB.DB)
+	floorRepo := postgis.NewFloorRepository(sqlDB.DB)
+
+	return buildingRepo, equipmentRepo, floorRepo, nil
 }

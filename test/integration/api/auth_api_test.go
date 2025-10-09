@@ -13,7 +13,7 @@ import (
 )
 
 func TestAuthAPI_MobileRegistration(t *testing.T) {
-	server, container := setupTestServer(t)
+	server, container := setupTestServerWithConfig(t)
 	if server == nil {
 		return
 	}
@@ -58,7 +58,7 @@ func TestAuthAPI_MobileRegistration(t *testing.T) {
 }
 
 func TestAuthAPI_MobileLogin(t *testing.T) {
-	server, container := setupTestServer(t)
+	server, container := setupTestServerWithConfig(t)
 	if server == nil {
 		return
 	}
@@ -115,7 +115,7 @@ func TestAuthAPI_MobileLogin(t *testing.T) {
 }
 
 func TestUserUseCase_Registration(t *testing.T) {
-	server, container := setupTestServer(t)
+	server, container := setupTestServerWithConfig(t)
 	if server == nil {
 		return
 	}
@@ -150,7 +150,7 @@ func TestUserUseCase_Registration(t *testing.T) {
 }
 
 func TestUserUseCase_List(t *testing.T) {
-	server, container := setupTestServer(t)
+	server, container := setupTestServerWithConfig(t)
 	if server == nil {
 		return
 	}
@@ -209,7 +209,7 @@ func TestUserUseCase_List(t *testing.T) {
 }
 
 func TestUserUseCase_Update(t *testing.T) {
-	server, container := setupTestServer(t)
+	server, container := setupTestServerWithConfig(t)
 	if server == nil {
 		return
 	}

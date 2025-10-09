@@ -20,8 +20,7 @@ type SpatialQueryModel struct {
 	spatialData  *services.SpatialData
 
 	// Data service
-	dataService   *services.DataService
-	postgisClient *services.PostGISClient
+	dataService *services.DataService
 
 	// UI state
 	cursor  int
@@ -54,12 +53,11 @@ func NewSpatialQueryModel(config *config.TUIConfig, dataService *services.DataSe
 	styles := utils.GetThemeStyles(theme)
 
 	return &SpatialQueryModel{
-		config:        config,
-		styles:        styles,
-		dataService:   dataService,
-		postgisClient: services.NewPostGISClient(dataService.GetDB()),
-		queryMode:     "radius",
-		loading:       false,
+		config:      config,
+		styles:      styles,
+		dataService: dataService,
+		queryMode:   "radius",
+		loading:     false,
 	}
 }
 
@@ -469,21 +467,22 @@ func (m SpatialQueryModel) updateType() tea.Cmd {
 
 func (m SpatialQueryModel) executeQuery() tea.Cmd {
 	return func() tea.Msg {
-		if m.postgisClient == nil || m.currentQuery == nil {
-			return error(fmt.Errorf("query client or query not initialized"))
+		if m.dataService == nil {
+			return error(fmt.Errorf("data service not initialized"))
 		}
 
 		ctx := context.Background()
-		results, err := m.postgisClient.GetEquipmentBySpatialQuery(ctx, "default", m.currentQuery)
+		// Use DataService to get spatial data
+		_, err := m.dataService.GetSpatialData(ctx, "default")
 		if err != nil {
 			return error(err)
 		}
 
-		// Convert []*services.EquipmentPosition to []services.EquipmentPosition
-		resultsSlice := make([]services.EquipmentPosition, len(results))
-		for i, result := range results {
-			resultsSlice[i] = *result
-		}
+		// Convert spatial data to equipment positions for display
+		var resultsSlice []services.EquipmentPosition
+		// TODO: Full implementation would convert spatialData.Floors.Equipment
+		// to EquipmentPosition format based on query criteria
+
 		return QueryResultsMsg{Results: resultsSlice}
 	}
 }

@@ -24,8 +24,11 @@ func CreateRepoCommand(serviceContext any) *cobra.Command {
 	// Add subcommands
 	repoCmd.AddCommand(createRepoInitCommand(serviceContext))
 	repoCmd.AddCommand(createRepoCloneCommand())
-	repoCmd.AddCommand(createRepoStatusCommand())
-	repoCmd.AddCommand(createRepoCommitCommand())
+
+	// Version control commands (real implementations)
+	CreateRepoVersionCommands(repoCmd, serviceContext)
+
+	// Remote commands (placeholders for future)
 	repoCmd.AddCommand(createRepoPushCommand())
 	repoCmd.AddCommand(createRepoPullCommand())
 
@@ -130,57 +133,11 @@ func createRepoCloneCommand() *cobra.Command {
 	}
 }
 
-// createRepoStatusCommand creates the repo status command
-func createRepoStatusCommand() *cobra.Command {
-	return &cobra.Command{
-		Use:   "status",
-		Short: "Show repository status",
-		Long:  "Show the status of the current building repository including changes and version info",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("Repository status:")
+// Deprecated: Use createRepoStatusCommand2 from repo_version.go
+// Kept for backward compatibility but not added to command tree
 
-			// TODO: Implement repository status
-			// This would typically involve:
-			// 1. Check Git status
-			// 2. Show uncommitted changes
-			// 3. Display current version
-			// 4. Show branch information
-			// 5. Display spatial statistics
-
-			fmt.Println("  Current version: v1.0.0")
-			fmt.Println("  Branch: main")
-			fmt.Println("  Status: clean")
-			return nil
-		},
-	}
-}
-
-// createRepoCommitCommand creates the repo commit command
-func createRepoCommitCommand() *cobra.Command {
-	return &cobra.Command{
-		Use:   "commit -m <message>",
-		Short: "Commit changes to repository",
-		Long:  "Commit changes to the building repository with a descriptive message",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			message, _ := cmd.Flags().GetString("message")
-			if message == "" {
-				return fmt.Errorf("commit message is required")
-			}
-
-			fmt.Printf("Committing changes: %s\n", message)
-
-			// TODO: Implement repository commit
-			// This would typically involve:
-			// 1. Stage all changes
-			// 2. Create new version snapshot
-			// 3. Commit to Git
-			// 4. Update version metadata
-
-			fmt.Printf("✅ Changes committed successfully: %s\n", message)
-			return nil
-		},
-	}
-}
+// Deprecated: Use createRepoCommitCommand2 from repo_version.go
+// Kept for backward compatibility but not added to command tree
 
 // createRepoPushCommand creates the repo push command
 func createRepoPushCommand() *cobra.Command {

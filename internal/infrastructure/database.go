@@ -145,6 +145,12 @@ func (db *Database) RollbackTx(tx any) error {
 	return nil
 }
 
+// GetDB returns the underlying database connection for direct SQL operations
+// This is useful for repository initialization
+func (db *Database) GetDB() *sqlx.DB {
+	return db.conn
+}
+
 // PostGISDatabase extends Database with PostGIS-specific functionality
 type PostGISDatabase struct {
 	*Database

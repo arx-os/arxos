@@ -55,15 +55,26 @@ func (uc *VersionUseCase) CreateVersion(ctx context.Context, repoID string, mess
 		RepositoryID: repoID,
 		Tag:          newTag,
 		Message:      message,
-		Author:       "system", // TODO: Get from context/auth
-		Hash:         uc.generateHash(),
-		Parent:       "",
-		Changes:      []building.Change{}, // TODO: Calculate actual changes
-		CreatedAt:    time.Now(),
+		Author: building.Author{
+			Name:  "system", // TODO: Get from context/auth
+			Email: "",       // TODO: Get from context/auth
+			ID:    "",       // TODO: Get from context/auth
+		},
+		Hash:      uc.generateHash(),
+		Parent:    "",
+		Timestamp: time.Now(),
+		Metadata: building.VersionMetadata{
+			ChangeCount:   0, // TODO: Calculate actual changes
+			ChangeSummary: building.Summary{},
+			Source:        "manual",
+			SystemVersion: "1.0.0", // TODO: Get from build info
+		},
+		CreatedAt: time.Now(),          // Deprecated but kept for compatibility
+		Changes:   []building.Change{}, // Deprecated but kept for compatibility
 	}
 
 	if parentVersion != nil {
-		version.Parent = parentVersion.ID
+		version.Parent = parentVersion.Hash
 	}
 
 	// TODO: Calculate changes between versions

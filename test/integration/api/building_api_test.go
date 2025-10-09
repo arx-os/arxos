@@ -5,67 +5,16 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"testing"
-	"time"
 
-	"github.com/arx-os/arxos/internal/app"
-	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
-	httpRouter "github.com/arx-os/arxos/internal/interfaces/http"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// setupTestServer creates a test server with in-memory dependencies
-func setupTestServer(t *testing.T) (*httptest.Server, *app.Container) {
-	t.Helper()
-
-	// Load test configuration
-	cfg := &config.Config{
-		Mode: "test",
-		PostGIS: config.PostGISConfig{
-			Host:     "localhost",
-			Port:     5432,
-			Database: "arxos_test",
-			User:     "arxos_test",
-			Password: "test_password",
-			SSLMode:  "disable",
-		},
-		Security: config.SecurityConfig{
-			JWTSecret: "test-secret-key-for-testing-only",
-			JWTExpiry: 24 * time.Hour,
-		},
-		Database: config.DatabaseConfig{
-			MaxOpenConns: 10,
-			MaxIdleConns: 5,
-			ConnLifetime: 5 * time.Minute,
-		},
-	}
-
-	// Initialize container
-	container := app.NewContainer()
-	err := container.Initialize(context.Background(), cfg)
-	if err != nil {
-		t.Skipf("Cannot initialize container (database may not be available): %v", err)
-		return nil, nil
-	}
-
-	// Create router config
-	routerConfig := &httpRouter.RouterConfig{
-		Container: container,
-	}
-	r := httpRouter.NewRouter(routerConfig)
-
-	// Create test server
-	server := httptest.NewServer(r)
-
-	return server, container
-}
-
 func TestBuildingAPI_EndToEnd(t *testing.T) {
-	server, container := setupTestServer(t)
+	server, container := setupTestServerWithConfig(t)
 	if server == nil {
 		return
 	}
@@ -263,7 +212,7 @@ func TestBuildingAPI_EndToEnd(t *testing.T) {
 }
 
 func TestBuildingAPI_Validation(t *testing.T) {
-	server, container := setupTestServer(t)
+	server, container := setupTestServerWithConfig(t)
 	if server == nil {
 		return
 	}
@@ -310,7 +259,7 @@ func TestBuildingAPI_Validation(t *testing.T) {
 }
 
 func TestBuildingAPI_ErrorCases(t *testing.T) {
-	server, container := setupTestServer(t)
+	server, container := setupTestServerWithConfig(t)
 	if server == nil {
 		return
 	}

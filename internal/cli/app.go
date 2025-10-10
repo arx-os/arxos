@@ -143,6 +143,24 @@ func (a *App) wireCommands() {
 	// Component management commands
 	a.rootCmd.AddCommand(commands.CreateComponentCommands(serviceContext))
 
+	// BAS/BMS integration commands
+	a.rootCmd.AddCommand(commands.NewBASCommand(serviceContext))
+
+	// Git workflow commands
+	a.rootCmd.AddCommand(commands.NewBranchCommand(serviceContext))
+	a.rootCmd.AddCommand(commands.NewCheckoutCommand(serviceContext))
+	a.rootCmd.AddCommand(commands.NewMergeCommand(serviceContext))
+	a.rootCmd.AddCommand(commands.NewLogCommand(serviceContext))
+	a.rootCmd.AddCommand(commands.NewDiffCommand(serviceContext))
+
+	// Pull request commands (CMMS workflow)
+	a.rootCmd.AddCommand(commands.NewPRCommand(serviceContext))
+	a.rootCmd.AddCommand(commands.NewIssueCommand(serviceContext))
+
+	// Contributor management commands
+	a.rootCmd.AddCommand(commands.NewContributorCommand(serviceContext))
+	a.rootCmd.AddCommand(commands.NewTeamCommand(serviceContext))
+
 	// CADTUI command
 	a.rootCmd.AddCommand(commands.CreateCADTUICommand(serviceContext))
 

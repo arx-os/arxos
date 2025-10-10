@@ -184,16 +184,41 @@ func (ds *DaemonService) processFile(event *domain.FileEvent) error {
 	}
 }
 
-// detectFileFormat detects the format of a file based on extension
+// detectFileFormat detects the format of a file based on extension and filename
 func (ds *DaemonService) detectFileFormat(path string) string {
 	ext := strings.ToLower(filepath.Ext(path))
+	filename := strings.ToLower(filepath.Base(path))
 
 	switch ext {
 	case ".ifc", ".ifczip", ".ifcxml":
 		return "ifc"
+	case ".csv":
+		// Check if it's a BAS export based on filename
+		if ds.isBASCSVFile(filename) {
+			return "bas_csv"
+		}
+		return "csv"
 	default:
 		return ""
 	}
+}
+
+// isBASCSVFile checks if a CSV filename indicates it's a BAS export
+func (ds *DaemonService) isBASCSVFile(filename string) bool {
+	// Check for BAS system names in filename
+	basIndicators := []string{
+		"metasys", "desigo", "siemens", "honeywell", "ebi",
+		"niagara", "tridium", "schneider", "bacnet", "modbus",
+		"points", "bas", "bms", "controls", "hvac_points",
+	}
+
+	for _, indicator := range basIndicators {
+		if strings.Contains(filename, indicator) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // processImport processes file import

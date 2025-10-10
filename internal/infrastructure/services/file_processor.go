@@ -183,6 +183,8 @@ func (fp *FileProcessor) processJob(job *ProcessingJob) error {
 	switch job.Format {
 	case "ifc":
 		return fp.processIFCFile(job, data)
+	case "bas_csv":
+		return fp.processBASCSVFile(job, data)
 	default:
 		return fmt.Errorf("unsupported file format: %s", job.Format)
 	}
@@ -212,4 +214,58 @@ func (fp *FileProcessor) isIFCFile(data []byte) bool {
 	// Simple IFC file detection
 	ifcHeader := "ISO-10303-21"
 	return len(data) > len(ifcHeader) && string(data[:len(ifcHeader)]) == ifcHeader
+}
+
+// processBASCSVFile processes a BAS CSV export file
+func (fp *FileProcessor) processBASCSVFile(job *ProcessingJob, data []byte) error {
+	fp.logger.Info("Processing BAS CSV file", "path", job.FilePath, "size", len(data))
+
+	// TODO: Wire to BAS import use case
+	// For now, just validate it's a valid CSV
+	if len(data) < 10 {
+		return fmt.Errorf("file too small to be a valid CSV file")
+	}
+
+	// Check for CSV-like content (has commas or headers)
+	if !fp.isCSVFile(data) {
+		return fmt.Errorf("file does not appear to be a valid CSV file")
+	}
+
+	fp.logger.Info("BAS CSV file validated successfully", "path", job.FilePath)
+	
+	// TODO: Call BAS import use case here
+	// result, err := basImportUC.ImportBASPoints(ctx, domain.ImportBASPointsRequest{
+	//     FilePath: job.FilePath,
+	//     BuildingID: job.BuildingID,
+	//     BASSystemID: job.BASSystemID,
+	//     AutoMap: true,
+	//     AutoCommit: true,
+	// })
+	
+	return nil
+}
+
+// isCSVFile checks if data represents a CSV file
+func (fp *FileProcessor) isCSVFile(data []byte) bool {
+	// Simple CSV detection - check for comma-separated values in first line
+	firstLine := ""
+	for i, b := range data {
+		if b == '\n' || i > 500 {
+			break
+		}
+		firstLine += string(b)
+	}
+	
+	// CSV should have at least one comma in header
+	return len(firstLine) > 0 && (data[0] != '#') && containsComma(firstLine)
+}
+
+// containsComma checks if a string contains a comma
+func containsComma(s string) bool {
+	for _, c := range s {
+		if c == ',' {
+			return true
+		}
+	}
+	return false
 }

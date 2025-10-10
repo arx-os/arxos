@@ -1,6 +1,14 @@
-# ArxOS IfcOpenShell Integration Architecture
+# ArxOS Integration Architecture
 
 ## Overview
+
+The ArxOS system provides multiple integration points for external systems and services. This document covers the core IFC processing integration. For other integrations, see:
+
+- **[Meraki AR Navigation](MERAKI_AR_NAVIGATION.md)** - Cisco Meraki network device tracking with AR navigation
+- **[CLI Integration](CLI_INTEGRATION.md)** - Command-line interface integration patterns
+- **[IfcOpenShell Integration](IFCOPENSHELL_INTEGRATION.md)** - Detailed IFC service documentation
+
+## IfcOpenShell Integration
 
 The ArxOS system integrates IfcOpenShell with PostGIS and the daemon service to create a complete building data processing pipeline. Here's how they work together:
 

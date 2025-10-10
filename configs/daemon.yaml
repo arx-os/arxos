@@ -129,20 +129,6 @@ export:
       file_pattern: "{building}_{date}.bim.txt"
       include_metadata: true
 
-    csv:
-      enabled: true
-      output_dir: "${EXPORT_DIR:-/data/exports}/csv"
-      file_pattern: "{building}_equipment_{date}.csv"
-      include_headers: true
-      delimiter: ","
-
-    json:
-      enabled: true
-      output_dir: "${EXPORT_DIR:-/data/exports}/json"
-      file_pattern: "{building}_{date}.json"
-      pretty_print: false
-      include_spatial: true
-
   # Export settings
   compress_output: true
   create_manifest: true

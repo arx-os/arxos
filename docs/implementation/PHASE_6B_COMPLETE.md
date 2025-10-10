@@ -737,7 +737,7 @@ Size:     18.45 MB
 
 ### 2. File Content Tracking (Deferred)
 - Current: Files tree is placeholder (empty)
-- Need: Track IFC files, PDFs, plans
+- Need: Track IFC files and plans
 - Impact: Can version building data, but not documents
 - Timeline: Phase 6C or later
 
@@ -936,7 +936,7 @@ $ arx repo log       # View history
 
 **File Tracking**:
 - Store IFC files in object store
-- Track PDFs, plans, specifications
+- Track plans and specifications
 - Binary diff for large files
 - File deduplication
 

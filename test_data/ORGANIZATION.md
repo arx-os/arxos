@@ -5,11 +5,8 @@ This directory contains test fixtures for the ArxOS test suite.
 ## Structure
 
 ### `/inputs/`
-Sample input files in various formats that the converter processes:
-- `.ifc` - Industry Foundation Classes files
-- `.csv` - COBie CSV exports
-- `.json` - Haystack JSON files
-- `.gbxml` - Green Building XML files
+Sample input files for IFC processing:
+- `.ifc` - Industry Foundation Classes files (ONLY format supported)
 
 **Error Testing Files:**
 - `malformed.ifc` - Malformed IFC file for error handling tests
@@ -21,10 +18,6 @@ Expected output files for validation:
 
 **Available Expected Outputs:**
 - `building_from_ifc.bim.txt` - IFC conversion output
-- `building_from_gbxml.bim.txt` - gbXML conversion output
-- `building_from_cobie.bim.txt` - COBie conversion output
-- `building_from_haystack.bim.txt` - Haystack conversion output
-- `merged_building.bim.txt` - Multi-format merged output
 - `sample_floorplan.txt` - Reference floor plan
 
 ## Usage
@@ -37,11 +30,11 @@ expectedOutput := "../../test_data/expected/building_from_ifc.bim.txt"
 
 ## Adding New Test Data
 
-1. Place input files in `/inputs/` with descriptive names
+1. Place IFC input files in `/inputs/` with descriptive names
 2. Place expected outputs in `/expected/` with matching names
-3. Use consistent naming: `sample_<format>` for inputs, `building_from_<format>.bim.txt` for expected
-4. For error testing: use `malformed_<format>` or `invalid_<format>` naming
-5. Update this documentation when adding new formats
+3. Use consistent naming: `sample_<description>.ifc` for inputs, `building_from_ifc.bim.txt` for expected
+4. For error testing: use `malformed_<description>.ifc` or `invalid_<description>.ifc` naming
+5. Update this documentation when adding new test scenarios
 
 ## Error Testing
 

@@ -88,7 +88,7 @@ func DefaultValidationRules() *RepositoryValidationRules {
 			"documentation/README.md",
 		},
 		MaxFileSize:    500 * 1024 * 1024, // 500MB
-		AllowedFormats: []string{"ifc", "csv", "json", "yaml"},
+		AllowedFormats: []string{"ifc"},
 		MaxEntities:    1000000,
 	}
 }

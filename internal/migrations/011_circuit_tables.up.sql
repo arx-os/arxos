@@ -12,7 +12,7 @@ CREATE TABLE circuits (
     name VARCHAR(255) NOT NULL,
     repository_id VARCHAR(255) REFERENCES building_repositories(id) ON DELETE CASCADE,
     source_type VARCHAR(20) NOT NULL DEFAULT 'created', -- 'imported', 'created', 'converted'
-    source_format VARCHAR(20), -- 'pdf', 'ifc', etc.
+    source_format VARCHAR(20), -- 'ifc', etc.
     source_file_path TEXT, -- Original file path for imported circuits
     grid_data JSONB NOT NULL DEFAULT '{}',
     metadata JSONB DEFAULT '{}',
@@ -127,22 +127,22 @@ CREATE INDEX idx_simulation_results_status ON simulation_results(status);
 CREATE INDEX idx_simulation_results_created_at ON simulation_results(created_at);
 
 -- Add constraints
-ALTER TABLE circuits ADD CONSTRAINT chk_circuits_source_type 
+ALTER TABLE circuits ADD CONSTRAINT chk_circuits_source_type
     CHECK (source_type IN ('imported', 'created', 'converted'));
 
-ALTER TABLE circuit_components ADD CONSTRAINT chk_circuit_components_type 
+ALTER TABLE circuit_components ADD CONSTRAINT chk_circuit_components_type
     CHECK (type IN ('resistor', 'capacitor', 'inductor', 'voltage_source', 'current_source', 'ground', 'wire', 'junction'));
 
-ALTER TABLE circuit_connections ADD CONSTRAINT chk_circuit_connections_type 
+ALTER TABLE circuit_connections ADD CONSTRAINT chk_circuit_connections_type
     CHECK (properties->>'type' IN ('wire', 'bus', 'power', 'signal'));
 
-ALTER TABLE field_markups ADD CONSTRAINT chk_field_markups_via 
+ALTER TABLE field_markups ADD CONSTRAINT chk_field_markups_via
     CHECK (via IN ('ar', 'text'));
 
-ALTER TABLE field_markups ADD CONSTRAINT chk_field_markups_status 
+ALTER TABLE field_markups ADD CONSTRAINT chk_field_markups_status
     CHECK (status IN ('pending', 'applied', 'rejected', 'synced'));
 
-ALTER TABLE simulation_results ADD CONSTRAINT chk_simulation_results_status 
+ALTER TABLE simulation_results ADD CONSTRAINT chk_simulation_results_status
     CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled'));
 
 -- Add triggers for updated_at timestamps
@@ -173,7 +173,7 @@ COMMENT ON TABLE field_markups IS 'Field markups from mobile AR/text input';
 COMMENT ON TABLE simulation_results IS 'Results from circuit simulations';
 
 COMMENT ON COLUMN circuits.source_type IS 'How the circuit was created: imported, created, or converted';
-COMMENT ON COLUMN circuits.source_format IS 'Original format if imported (pdf, ifc, etc.)';
+COMMENT ON COLUMN circuits.source_format IS 'Original format if imported (ifc, etc.)';
 COMMENT ON COLUMN circuits.source_file_path IS 'Path to original file if imported';
 COMMENT ON COLUMN circuits.grid_data IS 'Grid configuration and state';
 

@@ -61,7 +61,7 @@ type Plan struct {
 	Path      string    `json:"path"`
 	Type      string    `json:"type"` // floor-plan, site-plan, section, etc.
 	Floor     string    `json:"floor"`
-	Format    string    `json:"format"` // pdf, dwg, etc.
+	Format    string    `json:"format"` // ifc, etc.
 	Size      int64     `json:"size"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -73,7 +73,7 @@ type Equipment struct {
 	Name      string    `json:"name"`
 	Path      string    `json:"path"`
 	Type      string    `json:"type"`   // hvac, electrical, plumbing, etc.
-	Format    string    `json:"format"` // csv, json, etc.
+	Format    string    `json:"format"` // ifc
 	Size      int64     `json:"size"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

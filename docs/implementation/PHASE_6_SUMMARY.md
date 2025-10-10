@@ -476,7 +476,7 @@ result := Rollback(ctx, buildingID, targetVersion, &Options{
 
 **Files Tree Implementation**:
 - Track IFC files in object store
-- Store PDFs, plans, specifications
+- Store plans and specifications
 - Binary diff for large files
 - File deduplication
 

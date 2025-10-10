@@ -86,7 +86,7 @@ We will implement a **hybrid content-addressable version control system** combin
 - IFC validation reports
 
 **Plans & Drawings:**
-- Floor plans (PDF, DWG)
+- Floor plans (IFC)
 - Site plans
 - Sections and elevations
 - As-built drawings
@@ -577,10 +577,6 @@ Equipment Changes:
 Spatial Changes:
   ↻ Floor 3 area increased: 5000.0m² → 5250.0m²
   + Added Room 306 (Conference Room, 45.5m²)
-
-Files:
-  + Added HVAC-upgrade-plan.pdf (2.3 MB)
-  + Added AHU-105-datasheet.pdf (850 KB)
 ```
 
 ---
@@ -612,7 +608,7 @@ main:      v1.0 ──→ v1.1 ──→ v1.2 (base)
 **Non-Conflicting Changes (Auto-Merge):**
 - Different entities modified (Equipment A vs Equipment B)
 - Different properties modified (name vs capacity)
-- Different files modified (plan1.pdf vs plan2.pdf)
+- Different files modified (plan1.ifc vs plan2.ifc)
 - Different floors modified (Floor 1 vs Floor 2)
 
 **Conflicting Changes (Manual Resolution):**

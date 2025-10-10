@@ -183,7 +183,7 @@ type BoundsDiff struct {
 type FileChange struct {
 	Path     string `json:"path"`
 	Name     string `json:"name"`
-	Type     string `json:"type"` // "ifc", "pdf", "dwg", etc.
+	Type     string `json:"type"` // "ifc", etc.
 	OldHash  string `json:"old_hash,omitempty"`
 	NewHash  string `json:"new_hash,omitempty"`
 	OldSize  int64  `json:"old_size,omitempty"`

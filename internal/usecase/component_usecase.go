@@ -11,6 +11,7 @@ import (
 )
 
 // ComponentUseCase implements component.ComponentService
+// Domain-agnostic: manages components for any spatial structure (buildings, ships, warehouses, etc.)
 type ComponentUseCase struct {
 	componentRepo component.ComponentRepository
 }
@@ -23,6 +24,7 @@ func NewComponentUseCase(componentRepo component.ComponentRepository) component.
 }
 
 // CreateComponent creates a new component with validation
+// Accepts any component type - domain-agnostic implementation
 func (uc *ComponentUseCase) CreateComponent(ctx context.Context, req component.CreateComponentRequest) (*component.Component, error) {
 	// Validate request
 	if err := uc.validateCreateRequest(req); err != nil {

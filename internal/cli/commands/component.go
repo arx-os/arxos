@@ -17,8 +17,11 @@ type ComponentServiceProvider interface {
 func CreateComponentCommands(serviceContext any) *cobra.Command {
 	componentCmd := &cobra.Command{
 		Use:   "component",
-		Short: "Manage building components",
-		Long:  "Create, update, and manage universal building components",
+		Short: "Manage spatial components",
+		Long: `Create, update, and manage universal spatial components.
+
+Components are domain-agnostic - use them for buildings, ships, warehouses,
+or any physical space. The type system is completely flexible.`,
 	}
 
 	componentCmd.AddCommand(createComponentCreateCommand(serviceContext))
@@ -45,8 +48,21 @@ func createComponentCreateCommand(serviceContext any) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create",
-		Short: "Create a new building component",
-		Long:  "Create a new universal building component with specified properties",
+		Short: "Create a new spatial component",
+		Long: `Create a new universal spatial component with specified properties.
+
+Components can be anything: HVAC, electrical, torpedoes, cargo, sandwiches, etc.
+The type field accepts any string - use whatever makes sense for your domain.
+
+Examples:
+  # Building equipment
+  arx component create --name "HVAC-301" --type hvac_unit --path /B1/3/R301/HVAC/UNIT-01
+
+  # Ship equipment
+  arx component create --name "Torpedo-1" --type torpedo --path /USS-Enterprise/deck-3/bay-1/torpedo-1
+
+  # Warehouse inventory
+  arx component create --name "Forklift-5" --type forklift --path /warehouse-a/aisle-b/forklift-5`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			sc, ok := serviceContext.(ComponentServiceProvider)
@@ -195,7 +211,9 @@ func createComponentListCommand(serviceContext any) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List components with optional filtering",
-		Long:  "List building components with optional filtering by type, status, location, etc.",
+		Long: `List spatial components with optional filtering by type, status, location, etc.
+
+Works for any domain - filter by custom types, spaces, or properties.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			sc, ok := serviceContext.(ComponentServiceProvider)

@@ -258,11 +258,11 @@ func TestSnapshotService_CaptureSnapshot(t *testing.T) {
 		t.Error("Snapshot hash is empty")
 	}
 
-	if snapshot.BuildingTree == "" {
+	if snapshot.SpaceTree == "" {
 		t.Error("Building tree hash is empty")
 	}
 
-	if snapshot.EquipmentTree == "" {
+	if snapshot.ItemTree == "" {
 		t.Error("Equipment tree hash is empty")
 	}
 
@@ -330,11 +330,11 @@ func TestSnapshotService_CaptureSnapshot_EmptyBuilding(t *testing.T) {
 	}
 
 	// Empty building should still have valid tree hashes (empty trees)
-	if snapshot.BuildingTree == "" {
+	if snapshot.SpaceTree == "" {
 		t.Error("Building tree hash is empty")
 	}
 
-	if snapshot.EquipmentTree == "" {
+	if snapshot.ItemTree == "" {
 		t.Error("Equipment tree hash is empty")
 	}
 

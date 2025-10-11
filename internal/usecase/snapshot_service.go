@@ -58,14 +58,14 @@ func (s *SnapshotService) CaptureSnapshot(ctx context.Context, repoID string) (*
 	if err != nil {
 		return nil, fmt.Errorf("failed to capture building tree: %w", err)
 	}
-	snapshot.BuildingTree = buildingTree
+	snapshot.SpaceTree = buildingTree
 
 	// Capture equipment tree
 	equipmentTree, err := s.captureEquipmentTree(ctx, repoID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to capture equipment tree: %w", err)
 	}
-	snapshot.EquipmentTree = equipmentTree
+	snapshot.ItemTree = equipmentTree
 
 	// Capture spatial tree
 	spatialTree, err := s.captureSpatialTree(ctx, repoID)

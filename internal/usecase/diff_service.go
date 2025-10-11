@@ -68,18 +68,18 @@ func (s *DiffService) DiffSnapshots(ctx context.Context, fromTag, toTag string, 
 	snapshotDiff := s.phaseOneTreeDiff(fromSnapshot, toSnapshot)
 
 	// Phase 2: Subtree-level diff (medium) - only for changed trees
-	if snapshotDiff.BuildingChanged {
-		buildingDiff, err := s.phaseTwoBuildingDiff(ctx, fromSnapshot.BuildingTree, toSnapshot.BuildingTree)
+	if snapshotDiff.SpaceChanged {
+		buildingDiff, err := s.phaseTwoBuildingDiff(ctx, fromSnapshot.SpaceTree, toSnapshot.SpaceTree)
 		if err != nil {
-			return nil, fmt.Errorf("failed to diff building tree: %w", err)
+			return nil, fmt.Errorf("failed to diff space tree: %w", err)
 		}
 		result.BuildingDiff = buildingDiff
 	}
 
-	if snapshotDiff.EquipmentChanged {
-		equipmentDiff, err := s.phaseTwoEquipmentDiff(ctx, fromSnapshot.EquipmentTree, toSnapshot.EquipmentTree)
+	if snapshotDiff.ItemChanged {
+		equipmentDiff, err := s.phaseTwoEquipmentDiff(ctx, fromSnapshot.ItemTree, toSnapshot.ItemTree)
 		if err != nil {
-			return nil, fmt.Errorf("failed to diff equipment tree: %w", err)
+			return nil, fmt.Errorf("failed to diff item tree: %w", err)
 		}
 		result.EquipmentDiff = equipmentDiff
 	}
@@ -107,8 +107,8 @@ func (s *DiffService) phaseOneTreeDiff(from, to *building.Snapshot) *building.Sn
 	return &building.SnapshotDiff{
 		FromHash:          from.Hash,
 		ToHash:            to.Hash,
-		BuildingChanged:   from.BuildingTree != to.BuildingTree,
-		EquipmentChanged:  from.EquipmentTree != to.EquipmentTree,
+		SpaceChanged:      from.SpaceTree != to.SpaceTree,
+		ItemChanged:       from.ItemTree != to.ItemTree,
 		SpatialChanged:    from.SpatialTree != to.SpatialTree,
 		FilesChanged:      from.FilesTree != to.FilesTree,
 		OperationsChanged: from.OperationsTree != to.OperationsTree,

@@ -159,8 +159,8 @@ func TestCalculateSnapshotHash(t *testing.T) {
 			name: "basic snapshot",
 			snapshot: &Snapshot{
 				RepositoryID:   "repo-123",
-				BuildingTree:   "building-hash",
-				EquipmentTree:  "equipment-hash",
+				SpaceTree:      "space-hash",
+				ItemTree:       "item-hash",
 				SpatialTree:    "spatial-hash",
 				FilesTree:      "files-hash",
 				OperationsTree: "operations-hash",
@@ -170,8 +170,8 @@ func TestCalculateSnapshotHash(t *testing.T) {
 			name: "snapshot with metadata",
 			snapshot: &Snapshot{
 				RepositoryID:   "repo-456",
-				BuildingTree:   "building-hash-2",
-				EquipmentTree:  "equipment-hash-2",
+				SpaceTree:      "space-hash-2",
+				ItemTree:       "item-hash-2",
 				SpatialTree:    "spatial-hash-2",
 				FilesTree:      "files-hash-2",
 				OperationsTree: "operations-hash-2",
@@ -209,7 +209,7 @@ func TestCalculateSnapshotHash(t *testing.T) {
 
 			// Verify different snapshots produce different hashes
 			differentSnapshot := *tt.snapshot
-			differentSnapshot.BuildingTree = "different-hash"
+			differentSnapshot.SpaceTree = "different-hash"
 			got3 := CalculateSnapshotHash(&differentSnapshot)
 			if got == got3 {
 				t.Error("CalculateSnapshotHash() produced same hash for different snapshots")
@@ -244,8 +244,8 @@ func TestSerializeDeserializeObject(t *testing.T) {
 			obj: &Snapshot{
 				Hash:           "snapshot-hash",
 				RepositoryID:   "repo-123",
-				BuildingTree:   "building-hash",
-				EquipmentTree:  "equipment-hash",
+				SpaceTree:      "space-hash",
+				ItemTree:       "item-hash",
 				SpatialTree:    "spatial-hash",
 				FilesTree:      "files-hash",
 				OperationsTree: "operations-hash",
@@ -343,8 +343,8 @@ func TestSnapshotDiff(t *testing.T) {
 	diff := &SnapshotDiff{
 		FromHash:          "hash1",
 		ToHash:            "hash2",
-		BuildingChanged:   true,
-		EquipmentChanged:  false,
+		SpaceChanged:      true,
+		ItemChanged:       false,
 		SpatialChanged:    true,
 		FilesChanged:      false,
 		OperationsChanged: false,
@@ -357,11 +357,11 @@ func TestSnapshotDiff(t *testing.T) {
 	if diff.ToHash != "hash2" {
 		t.Errorf("ToHash = %v, want hash2", diff.ToHash)
 	}
-	if !diff.BuildingChanged {
-		t.Error("BuildingChanged should be true")
+	if !diff.SpaceChanged {
+		t.Error("SpaceChanged should be true")
 	}
-	if diff.EquipmentChanged {
-		t.Error("EquipmentChanged should be false")
+	if diff.ItemChanged {
+		t.Error("ItemChanged should be false")
 	}
 }
 

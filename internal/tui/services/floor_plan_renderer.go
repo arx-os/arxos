@@ -13,6 +13,7 @@ type FloorPlanRenderer struct {
 	scale      float64 // meters per character
 	showGrid   bool
 	showLabels bool
+	symbolMap  map[string]rune // Type → Symbol mapping (configurable)
 }
 
 // NewFloorPlanRenderer creates a new floor plan renderer
@@ -23,10 +24,48 @@ func NewFloorPlanRenderer(width, height int, scale float64) *FloorPlanRenderer {
 		scale:      scale,
 		showGrid:   true,
 		showLabels: true,
+		symbolMap:  getDefaultSymbolMap(),
+	}
+}
+
+// getDefaultSymbolMap returns default symbol mappings for common types
+// Users can override these or add new mappings for custom types
+func getDefaultSymbolMap() map[string]rune {
+	return map[string]rune{
+		// Building equipment (common)
+		"hvac":       'H',
+		"hvac_unit":  'H',
+		"electrical": 'E',
+		"lighting":   'L',
+		"light":      'L',
+		"fire":       'F',
+		"fire_alarm": 'F',
+		"plumbing":   'P',
+		"outlet":     'O',
+		"switch":     'S',
+		"panel":      'P',
+		"door":       'D',
+
+		// Generic
+		"generic":   '•',
+		"equipment": '⚙',
+		"furniture": '◘',
+
+		// Custom examples (ship, warehouse, etc.)
+		"torpedo":   'T',
+		"cargo":     'C',
+		"container": 'C',
+		"forklift":  'F',
+		"sandwich":  'S',
+		"food_item": 'F',
+
+		// Fallback
+		"unknown": '?',
 	}
 }
 
 // RenderFloorPlan renders a complete floor plan
+// Works for any spatial level (floor, deck, level, etc.)
 func (fpr *FloorPlanRenderer) RenderFloorPlan(spatialData *SpatialData, floorNumber int) string {
 	var result strings.Builder
 
@@ -40,7 +79,7 @@ func (fpr *FloorPlanRenderer) RenderFloorPlan(spatialData *SpatialData, floorNum
 	}
 
 	if floorData == nil {
-		return fmt.Sprintf("Floor %d not found", floorNumber)
+		return fmt.Sprintf("Level %d not found", floorNumber)
 	}
 
 	// Render header
@@ -55,15 +94,16 @@ func (fpr *FloorPlanRenderer) RenderFloorPlan(spatialData *SpatialData, floorNum
 	result.WriteString(fpr.renderLegend())
 	result.WriteString("\n\n")
 
-	// Render equipment list
+	// Render item list
 	result.WriteString(fpr.renderEquipmentList(floorData.Equipment))
 
 	return result.String()
 }
 
 // renderHeader renders the floor plan header
-func (fpr *FloorPlanRenderer) renderHeader(buildingID string, floorNumber int) string {
-	header := fmt.Sprintf("Building: %s - Floor %d", buildingID, floorNumber)
+// Uses generic "Structure" and "Level" for domain-agnostic display
+func (fpr *FloorPlanRenderer) renderHeader(structureID string, levelNumber int) string {
+	header := fmt.Sprintf("Structure: %s - Level %d", structureID, levelNumber)
 	header += fmt.Sprintf(" (Scale: 1:%.0f)", fpr.scale*100) // Convert to cm scale
 
 	// Center the header
@@ -192,27 +232,37 @@ func (fpr *FloorPlanRenderer) addEquipmentToGrid(grid [][]rune, equipment []Equi
 }
 
 // getEquipmentSymbol returns the ASCII symbol for equipment type
-func (fpr *FloorPlanRenderer) getEquipmentSymbol(equipmentType string) rune {
-	switch strings.ToLower(equipmentType) {
-	case "hvac":
-		return 'H'
-	case "electrical":
-		return 'E'
-	case "lighting":
-		return 'L'
-	case "fire":
-		return 'F'
-	case "plumbing":
-		return 'P'
-	case "outlet":
-		return 'O'
-	case "switch":
-		return 'S'
-	case "panel":
-		return 'P'
-	default:
-		return '?'
+// Supports custom types with intelligent fallback to first letter
+func (fpr *FloorPlanRenderer) getEquipmentSymbol(itemType string) rune {
+	// Check if we have a custom mapping
+	if symbol, exists := fpr.symbolMap[strings.ToLower(itemType)]; exists {
+		return symbol
 	}
+
+	// Fallback: Use first letter of type (uppercase)
+	// This allows ANY custom type to render intelligently
+	// e.g., "refrigerator" → 'R', "missile" → 'M'
+	if len(itemType) > 0 {
+		return rune(strings.ToUpper(itemType)[0])
+	}
+
+	// Ultimate fallback
+	return '?'
+}
+
+// SetSymbol allows users to set custom symbol mappings for item types
+// This makes the renderer truly domain-agnostic
+func (fpr *FloorPlanRenderer) SetSymbol(itemType string, symbol rune) {
+	fpr.symbolMap[strings.ToLower(itemType)] = symbol
+}
+
+// GetSymbolMap returns a copy of the current symbol mappings
+func (fpr *FloorPlanRenderer) GetSymbolMap() map[string]rune {
+	result := make(map[string]rune, len(fpr.symbolMap))
+	for k, v := range fpr.symbolMap {
+		result[k] = v
+	}
+	return result
 }
 
 // addGridLines adds coordinate grid lines
@@ -251,11 +301,12 @@ func (fpr *FloorPlanRenderer) gridToString(grid [][]rune) string {
 	return result.String()
 }
 
-// renderLegend renders the equipment legend
+// renderLegend renders the item symbol legend
+// Shows common symbols and notes that custom types use first letter
 func (fpr *FloorPlanRenderer) renderLegend() string {
 	var result strings.Builder
 
-	result.WriteString("Equipment Legend:\n")
+	result.WriteString("Item Legend:\n")
 	result.WriteString("┌─────────────────────────────────────┐\n")
 
 	legendItems := []struct {
@@ -269,11 +320,16 @@ func (fpr *FloorPlanRenderer) renderLegend() string {
 		{'P', "Plumbing/Panel"},
 		{'O', "Outlet"},
 		{'S', "Switch"},
+		{'•', "Generic Item"},
 	}
 
 	for _, item := range legendItems {
 		result.WriteString(fmt.Sprintf("│ %c = %-25s │\n", item.symbol, item.name))
 	}
+
+	result.WriteString("│                                     │\n")
+	result.WriteString("│ Custom types use first letter      │\n")
+	result.WriteString("│ (e.g., Torpedo=T, Cargo=C)         │\n")
 
 	result.WriteString("└─────────────────────────────────────┘\n")
 	result.WriteString(fmt.Sprintf("Grid Scale: 1 character = %.1fm\n", fpr.scale))
@@ -281,15 +337,16 @@ func (fpr *FloorPlanRenderer) renderLegend() string {
 	return result.String()
 }
 
-// renderEquipmentList renders a detailed equipment list
+// renderEquipmentList renders a detailed item list
+// Domain-agnostic: works for equipment, cargo, inventory, etc.
 func (fpr *FloorPlanRenderer) renderEquipmentList(equipment []EquipmentSpatialData) string {
 	if len(equipment) == 0 {
-		return "No equipment found on this floor."
+		return "No items found on this level."
 	}
 
 	var result strings.Builder
 
-	result.WriteString("Equipment Details:\n")
+	result.WriteString("Item Details:\n")
 	result.WriteString("┌─────────────────────────────────────────────────────────────────┐\n")
 	result.WriteString("│ ID          │ Type        │ Position (m)     │ Grid Position   │\n")
 	result.WriteString("├─────────────────────────────────────────────────────────────────┤\n")

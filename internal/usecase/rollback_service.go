@@ -185,7 +185,7 @@ func (s *RollbackService) previewRollback(ctx context.Context, buildingID string
 	}
 
 	// Count what would be restored
-	buildingCount, err := s.countBuildingEntities(ctx, targetSnapshot.BuildingTree)
+	buildingCount, err := s.countBuildingEntities(ctx, targetSnapshot.SpaceTree)
 	if err != nil {
 		return nil, fmt.Errorf("failed to count building entities: %w", err)
 	}
@@ -193,7 +193,7 @@ func (s *RollbackService) previewRollback(ctx context.Context, buildingID string
 	changes.FloorsRestored = buildingCount.Floors
 	changes.RoomsRestored = buildingCount.Rooms
 
-	equipmentCount, err := s.countEquipment(ctx, targetSnapshot.EquipmentTree)
+	equipmentCount, err := s.countEquipment(ctx, targetSnapshot.ItemTree)
 	if err != nil {
 		return nil, fmt.Errorf("failed to count equipment: %w", err)
 	}
@@ -217,7 +217,7 @@ func (s *RollbackService) performRollback(ctx context.Context, buildingID string
 	}
 
 	// Step 1: Restore building metadata
-	if err := s.restoreBuilding(ctx, buildingID, targetSnapshot.BuildingTree); err != nil {
+	if err := s.restoreBuilding(ctx, buildingID, targetSnapshot.SpaceTree); err != nil {
 		return nil, fmt.Errorf("failed to restore building: %w", err)
 	}
 	changes.BuildingRestored = true
@@ -229,7 +229,7 @@ func (s *RollbackService) performRollback(ctx context.Context, buildingID string
 	})
 
 	// Step 2: Restore floors
-	floorsRestored, err := s.restoreFloors(ctx, buildingID, targetSnapshot.BuildingTree)
+	floorsRestored, err := s.restoreFloors(ctx, buildingID, targetSnapshot.SpaceTree)
 	if err != nil {
 		return nil, fmt.Errorf("failed to restore floors: %w", err)
 	}
@@ -243,7 +243,7 @@ func (s *RollbackService) performRollback(ctx context.Context, buildingID string
 	}
 
 	// Step 3: Restore equipment
-	equipmentRestored, err := s.restoreEquipment(ctx, buildingID, targetSnapshot.EquipmentTree)
+	equipmentRestored, err := s.restoreEquipment(ctx, buildingID, targetSnapshot.ItemTree)
 	if err != nil {
 		return nil, fmt.Errorf("failed to restore equipment: %w", err)
 	}

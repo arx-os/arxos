@@ -17,8 +17,8 @@ func TestDiffService_PhaseOneTreeDiff(t *testing.T) {
 
 	fromSnapshot := &building.Snapshot{
 		Hash:           "snapshot1",
-		BuildingTree:   "building-tree-1",
-		EquipmentTree:  "equipment-tree-1",
+		SpaceTree:      "space-tree-1",
+		ItemTree:       "item-tree-1",
 		SpatialTree:    "spatial-tree-1",
 		FilesTree:      "files-tree-1",
 		OperationsTree: "operations-tree-1",
@@ -26,8 +26,8 @@ func TestDiffService_PhaseOneTreeDiff(t *testing.T) {
 
 	toSnapshot := &building.Snapshot{
 		Hash:           "snapshot2",
-		BuildingTree:   "building-tree-1",   // Same
-		EquipmentTree:  "equipment-tree-2",  // Changed
+		SpaceTree:      "space-tree-1",      // Same
+		ItemTree:       "item-tree-2",       // Changed
 		SpatialTree:    "spatial-tree-1",    // Same
 		FilesTree:      "files-tree-2",      // Changed
 		OperationsTree: "operations-tree-1", // Same
@@ -36,8 +36,8 @@ func TestDiffService_PhaseOneTreeDiff(t *testing.T) {
 	diff := service.phaseOneTreeDiff(fromSnapshot, toSnapshot)
 
 	// Verify tree-level comparison
-	assert.False(t, diff.BuildingChanged, "Building tree should not have changed")
-	assert.True(t, diff.EquipmentChanged, "Equipment tree should have changed")
+	assert.False(t, diff.SpaceChanged, "Space tree should not have changed")
+	assert.True(t, diff.ItemChanged, "Item tree should have changed")
 	assert.False(t, diff.SpatialChanged, "Spatial tree should not have changed")
 	assert.True(t, diff.FilesChanged, "Files tree should have changed")
 	assert.False(t, diff.OperationsChanged, "Operations tree should not have changed")

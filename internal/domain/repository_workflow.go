@@ -6,8 +6,9 @@ import (
 	"github.com/arx-os/arxos/internal/domain/types"
 )
 
-// Git-like workflow domain entities for collaborative building management
+// Git-like workflow domain entities for collaborative spatial management
 // These implement GitHub-style branching, commits, and collaboration
+// Domain-agnostic: works for buildings, ships, warehouses, or any spatial structure
 
 // BranchType represents the type/purpose of a branch
 type BranchType string
@@ -35,23 +36,24 @@ const (
 	BranchStatusClosed BranchStatus = "closed"
 )
 
-// Branch represents a Git-like branch in a building repository
+// Branch represents a Git-like branch in a spatial repository
+// Works for any domain: building renovations, ship modifications, warehouse reconfigurations
 type Branch struct {
-	ID           types.ID     `json:"id"`
-	RepositoryID types.ID     `json:"repository_id"`
-	Name         string       `json:"name"`
-	DisplayName  string       `json:"display_name"`
-	Description  string       `json:"description,omitempty"`
+	ID           types.ID `json:"id"`
+	RepositoryID types.ID `json:"repository_id"`
+	Name         string   `json:"name"`
+	DisplayName  string   `json:"display_name"`
+	Description  string   `json:"description,omitempty"`
 
 	// Branch metadata
 	BaseCommit *types.ID `json:"base_commit,omitempty"` // What this branched from
 	HeadCommit *types.ID `json:"head_commit,omitempty"` // Current tip
 
 	// Branch type and protection
-	BranchType         BranchType `json:"branch_type"`
-	Protected          bool       `json:"protected"`
-	RequiresReview     bool       `json:"requires_review"`
-	AutoDeleteOnMerge  bool       `json:"auto_delete_on_merge"`
+	BranchType        BranchType `json:"branch_type"`
+	Protected         bool       `json:"protected"`
+	RequiresReview    bool       `json:"requires_review"`
+	AutoDeleteOnMerge bool       `json:"auto_delete_on_merge"`
 
 	// Status
 	Status    BranchStatus `json:"status"`
@@ -110,9 +112,9 @@ type Commit struct {
 
 // ChangesSummary provides high-level summary of changes in a commit
 type ChangesSummary struct {
-	BuildingsAdded   int `json:"buildings_added"`
+	BuildingsAdded    int `json:"buildings_added"`
 	BuildingsModified int `json:"buildings_modified"`
-	BuildingsDeleted int `json:"buildings_deleted"`
+	BuildingsDeleted  int `json:"buildings_deleted"`
 
 	FloorsAdded    int `json:"floors_added"`
 	FloorsModified int `json:"floors_modified"`
@@ -159,8 +161,8 @@ const (
 
 // CommitChange represents a single entity change in a commit
 type CommitChange struct {
-	ID       types.ID   `json:"id"`
-	CommitID types.ID   `json:"commit_id"`
+	ID       types.ID `json:"id"`
+	CommitID types.ID `json:"commit_id"`
 
 	// Entity identification
 	EntityType EntityType `json:"entity_type"`
@@ -186,11 +188,11 @@ type BranchState struct {
 	BranchID     types.ID `json:"branch_id"`
 
 	// Entity counts
-	BuildingsCount  int `json:"buildings_count"`
-	FloorsCount     int `json:"floors_count"`
-	RoomsCount      int `json:"rooms_count"`
-	EquipmentCount  int `json:"equipment_count"`
-	BASPointsCount  int `json:"bas_points_count"`
+	BuildingsCount int `json:"buildings_count"`
+	FloorsCount    int `json:"floors_count"`
+	RoomsCount     int `json:"rooms_count"`
+	EquipmentCount int `json:"equipment_count"`
+	BASPointsCount int `json:"bas_points_count"`
 
 	// Uncommitted changes
 	HasUncommittedChanges   bool `json:"has_uncommitted_changes"`
@@ -213,8 +215,8 @@ type WorkingDirectory struct {
 	CurrentCommitID *types.ID `json:"current_commit_id,omitempty"`
 
 	// Working state
-	HasUncommittedChanges bool                     `json:"has_uncommitted_changes"`
-	StagedChanges         []CommitChange           `json:"staged_changes,omitempty"`
+	HasUncommittedChanges bool           `json:"has_uncommitted_changes"`
+	StagedChanges         []CommitChange `json:"staged_changes,omitempty"`
 
 	// Metadata
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
@@ -312,12 +314,12 @@ type BranchFilter struct {
 
 // CommitFilter represents filters for querying commits
 type CommitFilter struct {
-	RepositoryID *types.ID `json:"repository_id,omitempty"`
-	BranchID     *types.ID `json:"branch_id,omitempty"`
-	AuthorID     *types.ID `json:"author_id,omitempty"`
+	RepositoryID *types.ID  `json:"repository_id,omitempty"`
+	BranchID     *types.ID  `json:"branch_id,omitempty"`
+	AuthorID     *types.ID  `json:"author_id,omitempty"`
 	Since        *time.Time `json:"since,omitempty"`
 	Until        *time.Time `json:"until,omitempty"`
-	MergeCommit  *bool     `json:"merge_commit,omitempty"`
+	MergeCommit  *bool      `json:"merge_commit,omitempty"`
 }
 
 // Repository Interfaces
@@ -396,4 +398,3 @@ type CommitComparison struct {
 	Summary    ChangesSummary
 	Changes    []CommitChange
 }
-

@@ -145,9 +145,9 @@ func TestRollbackService_PreviewRollback(t *testing.T) {
 
 	// Create test snapshot
 	snapshot := &building.Snapshot{
-		Hash:          "snapshot-123",
-		BuildingTree:  "building-tree-123",
-		EquipmentTree: "equipment-tree-123",
+		Hash:      "snapshot-123",
+		SpaceTree: "space-tree-123",
+		ItemTree:  "item-tree-123",
 		Metadata: building.SnapshotMetadata{
 			FloorCount:     3,
 			RoomCount:      15,

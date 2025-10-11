@@ -49,40 +49,46 @@ type TreeEntry struct {
 	Mode string     `json:"mode"` // File mode (for compatibility)
 }
 
-// Snapshot represents a complete building state at a point in time
+// Snapshot represents a complete spatial structure state at a point in time
 // Snapshots use Merkle trees for efficient comparison
+// Domain-agnostic: works for buildings, ships, warehouses, or any spatial hierarchy
 type Snapshot struct {
 	Hash           string           `json:"hash"`            // Content hash of snapshot
-	RepositoryID   string           `json:"repository_id"`   // Which building repository
-	BuildingTree   string           `json:"building_tree"`   // Hash of building structure tree
-	EquipmentTree  string           `json:"equipment_tree"`  // Hash of equipment tree
-	SpatialTree    string           `json:"spatial_tree"`    // Hash of spatial data tree
-	FilesTree      string           `json:"files_tree"`      // Hash of files tree
-	OperationsTree string           `json:"operations_tree"` // Hash of operations tree
+	RepositoryID   string           `json:"repository_id"`   // Which spatial repository
+	SpaceTree      string           `json:"space_tree"`      // Hash of spatial hierarchy tree (was: building_tree)
+	ItemTree       string           `json:"item_tree"`       // Hash of items tree (was: equipment_tree)
+	SpatialTree    string           `json:"spatial_tree"`    // Hash of spatial data tree (AR anchors, point clouds)
+	FilesTree      string           `json:"files_tree"`      // Hash of files tree (IFC, photos, documents)
+	OperationsTree string           `json:"operations_tree"` // Hash of operations tree (BAS, sensors)
 	Metadata       SnapshotMetadata `json:"metadata"`        // Additional metadata
 	CreatedAt      time.Time        `json:"created_at"`      // Snapshot creation time
 }
 
 // SnapshotMetadata provides high-level statistics about a snapshot
+// Counts are domain-agnostic (spaces and items, not buildings and equipment)
 type SnapshotMetadata struct {
-	BuildingCount  int               `json:"building_count"`  // Number of buildings (usually 1)
-	FloorCount     int               `json:"floor_count"`     // Number of floors
-	RoomCount      int               `json:"room_count"`      // Number of rooms
-	EquipmentCount int               `json:"equipment_count"` // Number of equipment items
-	FileCount      int               `json:"file_count"`      // Number of files
-	TotalSize      int64             `json:"total_size"`      // Total data size
-	Checksums      map[string]string `json:"checksums"`       // Component checksums
+	SpaceCount int               `json:"space_count"` // Number of spaces (buildings, floors, rooms, decks, etc.)
+	ItemCount  int               `json:"item_count"`  // Number of items (equipment, cargo, etc.)
+	FileCount  int               `json:"file_count"`  // Number of files
+	TotalSize  int64             `json:"total_size"`  // Total data size
+	Checksums  map[string]string `json:"checksums"`   // Component checksums
+
+	// Legacy fields (deprecated, use space_count and item_count)
+	BuildingCount  int `json:"building_count,omitempty"`  // Deprecated: Use space_count
+	FloorCount     int `json:"floor_count,omitempty"`     // Deprecated: Use space_count
+	RoomCount      int `json:"room_count,omitempty"`      // Deprecated: Use space_count
+	EquipmentCount int `json:"equipment_count,omitempty"` // Deprecated: Use item_count
 }
 
 // SnapshotDiff represents the high-level differences between two snapshots
 type SnapshotDiff struct {
 	FromHash          string `json:"from_hash"`
 	ToHash            string `json:"to_hash"`
-	BuildingChanged   bool   `json:"building_changed"`
-	EquipmentChanged  bool   `json:"equipment_changed"`
-	SpatialChanged    bool   `json:"spatial_changed"`
-	FilesChanged      bool   `json:"files_changed"`
-	OperationsChanged bool   `json:"operations_changed"`
+	SpaceChanged      bool   `json:"space_changed"`      // Spatial hierarchy changed
+	ItemChanged       bool   `json:"item_changed"`       // Items changed
+	SpatialChanged    bool   `json:"spatial_changed"`    // AR anchors/point clouds changed
+	FilesChanged      bool   `json:"files_changed"`      // Files changed
+	OperationsChanged bool   `json:"operations_changed"` // BAS/sensor data changed
 }
 
 // ObjectRepository defines the contract for object storage operations
@@ -175,8 +181,8 @@ func CalculateSnapshotHash(snapshot *Snapshot) string {
 
 	// Hash format: repository_id + all tree hashes
 	hasher.Write([]byte(snapshot.RepositoryID))
-	hasher.Write([]byte(snapshot.BuildingTree))
-	hasher.Write([]byte(snapshot.EquipmentTree))
+	hasher.Write([]byte(snapshot.SpaceTree))
+	hasher.Write([]byte(snapshot.ItemTree))
 	hasher.Write([]byte(snapshot.SpatialTree))
 	hasher.Write([]byte(snapshot.FilesTree))
 	hasher.Write([]byte(snapshot.OperationsTree))

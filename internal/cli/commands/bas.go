@@ -7,6 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/types"
+	"github.com/arx-os/arxos/internal/usecase"
 	"github.com/spf13/cobra"
 )
 
@@ -14,14 +17,13 @@ import (
 // The actual implementation is in internal/infrastructure/container
 type ServiceContainer interface{}
 
-
 // NewBASCommand creates the BAS integration command
 func NewBASCommand(serviceContext any) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "bas",
 		Short: "BAS/BMS integration commands",
 		Long: `Manage Building Automation System (BAS) integrations.
-		
+
 ArxOS integrates with BAS systems like Johnson Controls Metasys, Siemens Desigo,
 Honeywell, and Tridium Niagara to provide spatial reference and version control
 for control points.
@@ -56,7 +58,7 @@ func newBASImportCommand(serviceContext any) *cobra.Command {
 		Use:   "import <file>",
 		Short: "Import BAS points from CSV export",
 		Long: `Import BAS control points from a CSV export file.
-		
+
 Supported formats:
   - Johnson Controls Metasys CSV exports
   - Siemens Desigo point lists
@@ -82,15 +84,8 @@ Examples:
 				return fmt.Errorf("--building flag is required")
 			}
 
-			// Get service container
-			container, ok := serviceContext.(*ServiceContainer)
-			if !ok || container == nil {
-				// Fallback to placeholder for now (backwards compatibility)
-				return runBASImportPlaceholder(filePath, buildingID, systemType, autoMap, autoCommit, repoID)
-			}
-
-			// Call actual use case
-			return runBASImportReal(cmd.Context(), container, filePath, buildingID, systemType, autoMap, autoCommit, repoID)
+			// Try to use real implementation via container
+			return runBASImportReal(cmd.Context(), serviceContext, filePath, buildingID, systemType, autoMap, autoCommit, repoID)
 		},
 	}
 
@@ -103,11 +98,102 @@ Examples:
 	return cmd
 }
 
+// ContainerProvider interface for accessing the DI container
+type ContainerProvider interface {
+	GetBASImportUseCase() interface{} // Returns *usecase.BASImportUseCase
+	GetLogger() interface{}           // Returns domain.Logger
+}
+
 // runBASImportReal executes the real BAS import using the container
-func runBASImportReal(ctx context.Context, container *ServiceContainer, filePath, buildingID, systemType string, autoMap, autoCommit bool, repoID string) error {
-	// TODO: Implement real import using container.BASImportUC
-	// For now, return not implemented error
-	return fmt.Errorf("real implementation coming soon - use placeholder for now")
+func runBASImportReal(ctx context.Context, container interface{}, filePath, buildingID, systemType string, autoMap, autoCommit bool, repoID string) error {
+	// Cast to container provider
+	cp, ok := container.(ContainerProvider)
+	if !ok {
+		// Fallback to placeholder if container doesn't implement interface
+		return runBASImportPlaceholder(filePath, buildingID, systemType, autoMap, autoCommit, repoID)
+	}
+
+	// Get BASImportUseCase from container
+	basImportUCInterface := cp.GetBASImportUseCase()
+	if basImportUCInterface == nil {
+		return runBASImportPlaceholder(filePath, buildingID, systemType, autoMap, autoCommit, repoID)
+	}
+
+	// Type assert to the actual use case
+	basImportUC, ok := basImportUCInterface.(*usecase.BASImportUseCase)
+	if !ok {
+		return runBASImportPlaceholder(filePath, buildingID, systemType, autoMap, autoCommit, repoID)
+	}
+
+	// Build import request
+	req := domain.ImportBASPointsRequest{
+		FilePath:   filePath,
+		BuildingID: types.FromString(buildingID),
+		SystemType: parseBASSystemType(systemType),
+		AutoMap:    autoMap,
+		AutoCommit: autoCommit,
+	}
+
+	// Set BAS system ID (required)
+	// For now, create a temporary ID - in production this would come from existing system
+	req.BASSystemID = types.NewID()
+
+	// Set repository ID if provided
+	if repoID != "" {
+		rid := types.FromString(repoID)
+		req.RepositoryID = &rid
+	}
+
+	fmt.Printf("🔍 Analyzing BAS export file...\n")
+	fmt.Printf("   File: %s\n", filepath.Base(filePath))
+	fmt.Printf("   Building: %s\n", buildingID)
+	fmt.Printf("   System: %s\n", systemType)
+	fmt.Printf("\n")
+
+	// Execute import
+	result, err := basImportUC.ImportBASPoints(ctx, req)
+	if err != nil {
+		return fmt.Errorf("BAS import failed: %w", err)
+	}
+
+	// Display results
+	fmt.Printf("✅ BAS import complete!\n")
+	fmt.Printf("\n")
+	fmt.Printf("Results:\n")
+	fmt.Printf("   Points added: %d\n", result.PointsAdded)
+	fmt.Printf("   Points modified: %d\n", result.PointsModified)
+	fmt.Printf("   Points deleted: %d\n", result.PointsDeleted)
+	fmt.Printf("   Points mapped: %d\n", result.PointsMapped)
+	fmt.Printf("   Points unmapped: %d\n", result.PointsUnmapped)
+	fmt.Printf("   Duration: %dms\n", result.DurationMS)
+	fmt.Printf("   Status: %s\n", result.Status)
+	fmt.Printf("\n")
+
+	if result.PointsUnmapped > 0 {
+		fmt.Printf("Next steps:\n")
+		fmt.Printf("  • Map unmapped points: arx bas unmapped --building %s\n", buildingID)
+		fmt.Printf("  • Map specific point: arx bas map <point-id> --room <room-id>\n")
+	}
+
+	return nil
+}
+
+// parseBASSystemType converts string to BASSystemType
+func parseBASSystemType(systemType string) domain.BASSystemType {
+	switch strings.ToLower(systemType) {
+	case "metasys", "johnson_controls_metasys":
+		return domain.BASSystemTypeMetasys
+	case "desigo", "siemens_desigo":
+		return domain.BASSystemTypeDesigo
+	case "honeywell", "honeywell_ebi":
+		return domain.BASSystemTypeHoneywell
+	case "niagara", "tridium_niagara":
+		return domain.BASSystemTypeNiagara
+	case "schneider", "schneider_electric":
+		return domain.BASSystemTypeSchneiderElectric
+	default:
+		return domain.BASSystemTypeOther
+	}
 }
 
 // runBASImportPlaceholder executes the placeholder logic (what was there before)
@@ -340,4 +426,3 @@ Examples:
 
 	return cmd
 }
-

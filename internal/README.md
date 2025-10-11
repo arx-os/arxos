@@ -2,6 +2,8 @@
 
 This directory contains the internal implementation of ArxOS following **Clean Architecture** principles and [Go Blueprint](https://github.com/Melkeydev/go-blueprint) standards.
 
+**Domain-Agnostic Design:** ArxOS is a universal spatial operating system. While examples often reference buildings, the architecture supports ships, warehouses, factories, data centers, or any spatial structure.
+
 ## 🏗️ Architecture Overview
 
 ArxOS follows Clean Architecture with clear separation of concerns across four main layers:
@@ -9,7 +11,7 @@ ArxOS follows Clean Architecture with clear separation of concerns across four m
 ```
 internal/
 ├── app/           # Dependency Injection Container
-├── domain/        # Business Logic & Entities  
+├── domain/        # Business Logic & Entities
 ├── usecase/       # Application Business Rules
 ├── infrastructure/ # External Concerns
 ├── interfaces/    # Interface Adapters
@@ -21,7 +23,7 @@ internal/
 The `/internal` directory now fully complies with [Go Blueprint](https://github.com/Melkeydev/go-blueprint) standards:
 
 - **Clean Architecture Layers**: Proper separation of concerns
-- **Dependency Inversion**: Inner layers don't depend on outer layers  
+- **Dependency Inversion**: Inner layers don't depend on outer layers
 - **Interface-Based Design**: All dependencies through interfaces
 - **Professional Structure**: Follows enterprise Go standards
 - **Testable Architecture**: Easy to mock and unit test
@@ -32,17 +34,24 @@ The `/internal` directory now fully complies with [Go Blueprint](https://github.
 - **`container.go`** - Main DI container managing all dependencies
 
 ### `/domain` - Business Logic & Entities
-- **`entities.go`** - Core domain entities (User, Building, Equipment, etc.)
+- **`entities.go`** - Core domain entities (User, Space, Item, etc.)
+- **`component/`** - Universal component system (domain-agnostic)
+- **`building/`** - Version control objects (Snapshot, Tree, Object)
 - **`interfaces.go`** - Repository and service interfaces
 - **Pure business logic** - No external dependencies
 
 ### `/usecase` - Application Business Rules
 - **`user_usecase.go`** - User management business logic
-- **`building_usecase.go`** - Building management business logic
-- **`equipment_usecase.go`** - Equipment management business logic
+- **`building_usecase.go`** - Spatial structure management (buildings, ships, etc.)
+- **`equipment_usecase.go`** - Item management (equipment, cargo, inventory)
+- **`component_usecase.go`** - Universal component operations
 - **`organization_usecase.go`** - Organization management business logic
 - **`analytics_usecase.go`** - Analytics and reporting business logic
-- **`buildingops_usecase.go`** - Building operations and control logic
+- **`buildingops_usecase.go`** - Operational control logic
+- **`bas_import_usecase.go`** - BAS/sensor integration
+- **`branch_usecase.go`** - Git-like branching
+- **`pull_request_usecase.go`** - PR workflow (CMMS)
+- **`issue_usecase.go`** - Issue tracking
 
 ### `/infrastructure` - External Concerns
 - **`cache.go`** - Caching implementations
@@ -69,17 +78,17 @@ The `/internal` directory now fully complies with [Go Blueprint](https://github.
 - **`templates.go`** - Configuration templates
 - **`validator.go`** - Configuration validation
 
-## 🔄 **How BuildingOps and Daemon Fit in Go Blueprint**
+## 🔄 **How Core Services Fit in Go Blueprint**
 
-### **BuildingOps** → **Use Case Layer** (`/usecase/buildingops_usecase.go`)
-- **Purpose**: Building operations and control business logic
-- **Responsibilities**: Equipment control, building mode management, health monitoring
-- **Why Use Case**: Contains business rules for building operations
+### **Operational Control** → **Use Case Layer** (`/usecase/buildingops_usecase.go`)
+- **Purpose**: Operational control business logic (works for any domain)
+- **Responsibilities**: Item control, system mode management, health monitoring
+- **Why Use Case**: Contains business rules for operations
 - **Dependencies**: Only depends on domain interfaces (repositories, logger)
 
 ### **Daemon** → **Infrastructure Layer** (`/infrastructure/services/`)
 - **Purpose**: Background service for file watching and processing
-- **Responsibilities**: File system monitoring, auto-import/export, background processing
+- **Responsibilities**: File system monitoring, auto-import/export (IFC, CSV, etc.)
 - **Why Infrastructure**: External concern (file system, background processing)
 - **Dependencies**: Can depend on use cases and domain interfaces
 

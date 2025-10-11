@@ -38,9 +38,21 @@ type Container struct {
 	// Domain repositories (interfaces)
 	userRepo         domain.UserRepository
 	buildingRepo     domain.BuildingRepository
+	floorRepo        domain.FloorRepository
+	roomRepo         domain.RoomRepository
 	equipmentRepo    domain.EquipmentRepository
 	organizationRepo domain.OrganizationRepository
 	spatialRepo      domain.SpatialRepository
+
+	// BAS repositories
+	basPointRepo  domain.BASPointRepository
+	basSystemRepo domain.BASSystemRepository
+
+	// Git workflow repositories
+	branchRepo      domain.BranchRepository
+	commitRepo      domain.CommitRepository
+	pullRequestRepo domain.PullRequestRepository
+	issueRepo       domain.IssueRepository
 
 	// Building repository domain repositories
 	repositoryRepo building.RepositoryRepository
@@ -64,6 +76,15 @@ type Container struct {
 	buildingUC     *usecase.BuildingUseCase
 	equipmentUC    *usecase.EquipmentUseCase
 	organizationUC *usecase.OrganizationUseCase
+
+	// BAS use cases
+	basImportUC *usecase.BASImportUseCase
+
+	// Git workflow use cases
+	branchUC      *usecase.BranchUseCase
+	commitUC      *usecase.CommitUseCase
+	pullRequestUC *usecase.PullRequestUseCase
+	issueUC       *usecase.IssueUseCase
 
 	// Building repository use cases
 	repositoryUC *usecase.RepositoryUseCase
@@ -178,17 +199,23 @@ func (c *Container) initRepositories(ctx context.Context) error {
 	// Use PostGIS implementations for all repositories
 	db := c.postgis.GetDB()
 
-	// User repository - PostGIS implementation
+	// Core repositories - PostGIS implementation
 	c.userRepo = postgis.NewUserRepository(db)
-
-	// Building repository - PostGIS implementation
 	c.buildingRepo = postgis.NewBuildingRepository(db)
-
-	// Equipment repository - PostGIS implementation
+	c.floorRepo = postgis.NewFloorRepository(db)
+	c.roomRepo = postgis.NewRoomRepository(db)
 	c.equipmentRepo = postgis.NewEquipmentRepository(db)
-
-	// Organization repository - PostGIS implementation
 	c.organizationRepo = postgis.NewOrganizationRepository(db)
+
+	// BAS repositories - PostGIS implementation
+	c.basPointRepo = postgis.NewBASPointRepository(db)
+	c.basSystemRepo = postgis.NewBASSystemRepository(db)
+
+	// Git workflow repositories - PostGIS implementation
+	c.branchRepo = postgis.NewBranchRepository(db)
+	c.pullRequestRepo = postgis.NewPullRequestRepository(db)
+	c.issueRepo = postgis.NewIssueRepository(db)
+	// Note: CommitRepository will be added when implemented in postgis package
 
 	// Building repository domain repositories
 	// Initialize with PostGIS implementations
@@ -272,17 +299,42 @@ func (c *Container) initIFCServices(ctx context.Context) error {
 
 // initUseCases initializes use case layer
 func (c *Container) initUseCases(ctx context.Context) error {
-	// User use case
+	// Core use cases
 	c.userUC = usecase.NewUserUseCase(c.userRepo, c.logger)
-
-	// Building use case
 	c.buildingUC = usecase.NewBuildingUseCase(c.buildingRepo, c.equipmentRepo, c.logger)
-
-	// Equipment use case
 	c.equipmentUC = usecase.NewEquipmentUseCase(c.equipmentRepo, c.buildingRepo, c.logger)
-
-	// Organization use case
 	c.organizationUC = usecase.NewOrganizationUseCase(c.organizationRepo, c.userRepo, c.logger)
+
+	// BAS use case - Wire with all dependencies
+	c.basImportUC = usecase.NewBASImportUseCase(
+		c.basPointRepo,
+		c.basSystemRepo,
+		c.roomRepo,
+		c.equipmentRepo,
+		c.logger,
+	)
+
+	// Git workflow use cases
+	c.branchUC = usecase.NewBranchUseCase(
+		c.branchRepo,
+		c.commitRepo, // May be nil until CommitRepository is implemented
+		c.logger,
+	)
+
+	c.pullRequestUC = usecase.NewPullRequestUseCase(
+		c.pullRequestRepo,
+		c.branchRepo,
+		c.commitRepo, // May be nil until CommitRepository is implemented
+		nil,          // Assignment repo - TODO: implement when needed
+		c.logger,
+	)
+
+	c.issueUC = usecase.NewIssueUseCase(
+		c.issueRepo,
+		c.branchUC,
+		c.pullRequestUC,
+		c.logger,
+	)
 
 	// Building repository use cases
 	c.repositoryUC = usecase.NewRepositoryUseCase(c.repositoryRepo, c.versionRepo, c.ifcRepo, nil, c.logger)
@@ -474,6 +526,69 @@ func (c *Container) GetDataManager() *filesystem.DataManager {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.dataManager
+}
+
+// BAS use case getters
+func (c *Container) GetBASImportUseCase() *usecase.BASImportUseCase {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.basImportUC
+}
+
+// Git workflow use case getters
+func (c *Container) GetBranchUseCase() *usecase.BranchUseCase {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.branchUC
+}
+
+func (c *Container) GetCommitUseCase() *usecase.CommitUseCase {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.commitUC
+}
+
+func (c *Container) GetPullRequestUseCase() *usecase.PullRequestUseCase {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.pullRequestUC
+}
+
+func (c *Container) GetIssueUseCase() *usecase.IssueUseCase {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.issueUC
+}
+
+// Repository getters
+func (c *Container) GetBASPointRepository() domain.BASPointRepository {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.basPointRepo
+}
+
+func (c *Container) GetBASSystemRepository() domain.BASSystemRepository {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.basSystemRepo
+}
+
+func (c *Container) GetBranchRepository() domain.BranchRepository {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.branchRepo
+}
+
+func (c *Container) GetFloorRepository() domain.FloorRepository {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.floorRepo
+}
+
+func (c *Container) GetRoomRepository() domain.RoomRepository {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.roomRepo
 }
 
 // Shutdown gracefully shuts down all dependencies

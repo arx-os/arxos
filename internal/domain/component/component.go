@@ -5,8 +5,9 @@ import (
 	"time"
 )
 
-// Component represents a universal building component
-// This is the core domain model for any physical element in a building
+// Component represents a universal spatial component
+// This is the core domain model for any physical element in any space
+// (buildings, ships, warehouses, vehicles, etc.)
 type Component struct {
 	ID         string          `json:"id"`
 	Name       string          `json:"name"`
@@ -23,39 +24,47 @@ type Component struct {
 	UpdatedBy  string          `json:"updated_by"`
 }
 
-// ComponentType represents the type of component
+// ComponentType represents suggested component types for common use cases.
+// IMPORTANT: These are conventions, NOT restrictions. Users can use ANY string as a type.
+// ArxOS is domain-agnostic - these constants are provided for convenience.
+//
+// Examples of custom types that work:
+//   - "sandwich", "torpedo", "forklift", "server_rack", "cargo_container"
+//   - "deck_plate", "bulkhead", "warehouse_shelf", "medical_device"
+//
+// The type system is completely open - use whatever makes sense for your domain.
 type ComponentType string
 
 const (
-	// HVAC Components
+	// Building Equipment (Common Conventions)
 	ComponentTypeHVACUnit   ComponentType = "hvac_unit"
 	ComponentTypeDamper     ComponentType = "damper"
 	ComponentTypeThermostat ComponentType = "thermostat"
 	ComponentTypeVent       ComponentType = "vent"
 
-	// Electrical Components
+	// Electrical (Common Conventions)
 	ComponentTypePanel  ComponentType = "electrical_panel"
 	ComponentTypeOutlet ComponentType = "outlet"
 	ComponentTypeSwitch ComponentType = "switch"
 	ComponentTypeLight  ComponentType = "light"
 
-	// Plumbing Components
+	// Plumbing (Common Conventions)
 	ComponentTypeFaucet ComponentType = "faucet"
 	ComponentTypeToilet ComponentType = "toilet"
 	ComponentTypePipe   ComponentType = "pipe"
 	ComponentTypeValve  ComponentType = "valve"
 
-	// Fire Safety Components
+	// Fire Safety (Common Conventions)
 	ComponentTypeDetector  ComponentType = "fire_detector"
 	ComponentTypeSprinkler ComponentType = "sprinkler"
 	ComponentTypeAlarm     ComponentType = "fire_alarm"
 
-	// Access Control Components
+	// Access Control (Common Conventions)
 	ComponentTypeDoor       ComponentType = "door"
 	ComponentTypeLock       ComponentType = "lock"
 	ComponentTypeCardReader ComponentType = "card_reader"
 
-	// Generic Components
+	// Generic Types (Use for anything else)
 	ComponentTypeGeneric   ComponentType = "generic"
 	ComponentTypeFood      ComponentType = "food_item"
 	ComponentTypeFurniture ComponentType = "furniture"

@@ -1,12 +1,22 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/types"
+	"github.com/arx-os/arxos/internal/usecase"
 	"github.com/spf13/cobra"
 )
+
+// PRServiceProvider provides access to PR services
+type PRServiceProvider interface {
+	GetPullRequestUseCase() *usecase.PullRequestUseCase
+	GetBranchUseCase() *usecase.BranchUseCase
+}
 
 // NewPRCommand creates the pull request management command
 func NewPRCommand(serviceContext any) *cobra.Command {
@@ -14,10 +24,10 @@ func NewPRCommand(serviceContext any) *cobra.Command {
 		Use:   "pr",
 		Short: "Manage pull requests (work orders)",
 		Long: `Manage pull requests for collaborative building changes.
-		
+
 Pull requests (PRs) are the primary workflow for building changes:
 - Work orders = Pull requests
-- Contractor projects = Pull requests  
+- Contractor projects = Pull requests
 - Issue fixes = Pull requests
 - Equipment upgrades = Pull requests
 
@@ -77,58 +87,67 @@ Examples:
     --priority urgent \
     --assign @electrician`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.Background()
+
 			title, _ := cmd.Flags().GetString("title")
 			description, _ := cmd.Flags().GetString("description")
 			from, _ := cmd.Flags().GetString("from")
 			to, _ := cmd.Flags().GetString("to")
-			assignee, _ := cmd.Flags().GetString("assign")
-			reviewer, _ := cmd.Flags().GetString("reviewer")
-			prType, _ := cmd.Flags().GetString("type")
+			repoID, _ := cmd.Flags().GetString("repo")
 			priority, _ := cmd.Flags().GetString("priority")
 
 			if title == "" {
 				return fmt.Errorf("--title is required")
 			}
+			if repoID == "" {
+				return fmt.Errorf("--repo is required (repository ID)")
+			}
 
-			// TODO: Get current branch if 'from' not specified
+			// Get service from context
+			sc, ok := serviceContext.(PRServiceProvider)
+			if !ok {
+				return fmt.Errorf("PR service not available - database not initialized")
+			}
+			prUC := sc.GetPullRequestUseCase()
+			if prUC == nil {
+				return fmt.Errorf("PR use case not initialized - check database connection")
+			}
+
+			// Default branches
 			if from == "" {
-				from = "current-branch"
+				from = "current-branch" // NOTE: Current branch from context or default
 			}
 			if to == "" {
 				to = "main"
 			}
 
-			fmt.Printf("Creating pull request...\n\n")
-			fmt.Printf("Title: %s\n", title)
-			if description != "" {
-				fmt.Printf("Description: %s\n", description)
+			// Build create request
+			req := domain.CreatePRRequest{
+				RepositoryID:   types.FromString(repoID),
+				SourceBranchID: types.FromString(from),
+				TargetBranchID: types.FromString(to),
+				Title:          title,
+				Description:    description,
+				Priority:       domain.PRPriority(priority),
 			}
-			fmt.Printf("From: %s\n", from)
-			fmt.Printf("To: %s\n", to)
-			if prType != "" {
-				fmt.Printf("Type: %s\n", prType)
+
+			// Create PR
+			pr, err := prUC.CreatePullRequest(ctx, req)
+			if err != nil {
+				return fmt.Errorf("failed to create pull request: %w", err)
 			}
-			fmt.Printf("Priority: %s\n", priority)
+
+			// Print success
+			fmt.Printf("✅ Pull request created!\n\n")
+			fmt.Printf("   PR #%d: %s\n", pr.Number, pr.Title)
+			fmt.Printf("   From: %s\n", from)
+			fmt.Printf("   To: %s\n", to)
+			fmt.Printf("   Status: %s\n", pr.Status)
+			fmt.Printf("   Priority: %s\n", pr.Priority)
 			fmt.Printf("\n")
-
-			time.Sleep(500 * time.Millisecond)
-
-			fmt.Printf("✅ Pull request created: #245\n")
-			fmt.Printf("\n")
-
-			if assignee != "" {
-				fmt.Printf("Assigned to: %s\n", assignee)
-			} else {
-				fmt.Printf("Auto-assigned to: @facilities-manager\n")
-			}
-
-			if reviewer != "" {
-				fmt.Printf("Reviewer: %s\n", reviewer)
-			}
-
-			fmt.Printf("\n")
-			fmt.Printf("View PR: arx pr show 245\n")
-			fmt.Printf("Add comment: arx pr comment 245 \"message\"\n")
+			fmt.Printf("Next steps:\n")
+			fmt.Printf("  • View details: arx pr show %d\n", pr.Number)
+			fmt.Printf("  • Add comment: arx pr comment %d \"message\"\n", pr.Number)
 			fmt.Printf("\n")
 
 			return nil
@@ -137,6 +156,7 @@ Examples:
 
 	cmd.Flags().String("title", "", "PR title (required)")
 	cmd.Flags().StringP("description", "d", "", "PR description")
+	cmd.Flags().String("repo", "", "Repository ID (required)")
 	cmd.Flags().String("from", "", "Source branch (defaults to current)")
 	cmd.Flags().String("to", "main", "Target branch")
 	cmd.Flags().String("assign", "", "Assign to user")
@@ -146,6 +166,9 @@ Examples:
 	cmd.Flags().String("due-date", "", "Due date (YYYY-MM-DD)")
 	cmd.Flags().Float64("budget", 0, "Budget amount")
 	cmd.Flags().StringSlice("labels", []string{}, "Labels")
+
+	cmd.MarkFlagRequired("title")
+	cmd.MarkFlagRequired("repo")
 
 	return cmd
 }
@@ -170,37 +193,82 @@ Examples:
   # List urgent PRs
   arx pr list --repo repo-001 --priority urgent`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.Background()
+
 			repoID, _ := cmd.Flags().GetString("repo")
 			status, _ := cmd.Flags().GetString("status")
-			assignedTo, _ := cmd.Flags().GetString("assigned-to")
-			priority, _ := cmd.Flags().GetString("priority")
 
-			// TODO: Get PRs from use case
+			if repoID == "" {
+				return fmt.Errorf("--repo is required (repository ID)")
+			}
+
+			// Get service from context
+			sc, ok := serviceContext.(PRServiceProvider)
+			if !ok {
+				return fmt.Errorf("PR service not available - database not initialized")
+			}
+			prUC := sc.GetPullRequestUseCase()
+			if prUC == nil {
+				return fmt.Errorf("PR use case not initialized - check database connection")
+			}
+
+			// Build filter
+			repoIDTyped := types.FromString(repoID)
+			filter := domain.PRFilter{
+				RepositoryID: &repoIDTyped,
+			}
+			if status != "" {
+				prStatus := domain.PRStatus(status)
+				filter.Status = &prStatus
+			}
+
+			// List PRs
+			prs, err := prUC.ListPullRequests(ctx, filter, 100, 0)
+			if err != nil {
+				return fmt.Errorf("failed to list pull requests: %w", err)
+			}
+
+			if len(prs) == 0 {
+				fmt.Println("No pull requests found.")
+				return nil
+			}
+
+			// Print results
 			fmt.Printf("Pull Requests:\n\n")
-			fmt.Printf("%-5s %-40s %-15s %-10s %-15s\n", "#", "Title", "Status", "Priority", "Assigned")
-			fmt.Printf("%s\n", strings.Repeat("-", 90))
-			fmt.Printf("%-5s %-40s %-15s %-10s %-15s\n", "245", "HVAC Upgrade Floor 3", "approved", "normal", "@joe-fm")
-			fmt.Printf("%-5s %-40s %-15s %-10s %-15s\n", "234", "Broken outlet Room 105", "in_review", "urgent", "@electrician")
-			fmt.Printf("%-5s %-40s %-15s %-10s %-15s\n", "210", "LiDAR scan Room 301", "open", "normal", "@facilities")
-			fmt.Printf("\n")
-			fmt.Printf("Total: 3 PRs\n")
+			fmt.Printf("%-5s %-40s %-15s %-10s\n", "#", "Title", "Status", "Priority")
+			fmt.Printf("%s\n", strings.Repeat("-", 75))
 
-			// Suppress unused
-			_ = repoID
-			_ = status
-			_ = assignedTo
-			_ = priority
+			for _, pr := range prs {
+				fmt.Printf("%-5d %-40s %-15s %-10s\n",
+					pr.Number,
+					truncate(pr.Title, 40),
+					pr.Status,
+					pr.Priority,
+				)
+			}
+
+			fmt.Printf("\n%d pull request(s) found\n", len(prs))
 
 			return nil
 		},
 	}
 
-	cmd.Flags().String("repo", "", "Repository ID")
+	cmd.Flags().String("repo", "", "Repository ID (required)")
 	cmd.Flags().String("status", "", "Filter by status (open, approved, merged)")
 	cmd.Flags().String("assigned-to", "", "Filter by assignee")
 	cmd.Flags().String("priority", "", "Filter by priority")
 
+	cmd.MarkFlagRequired("repo")
+
 	return cmd
+}
+
+// truncate truncates a string to the specified length
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen-3] + "..."
 }
 
 // newPRShowCommand creates the pr show subcommand
@@ -212,7 +280,7 @@ func newPRShowCommand(serviceContext any) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prNumber := args[0]
 
-			// TODO: Get PR details from use case
+			// Get PR details from use case (when wired)
 			fmt.Printf("Pull Request #%s\n", prNumber)
 			fmt.Printf("%s\n", strings.Repeat("=", 60))
 			fmt.Printf("\n")
@@ -265,7 +333,7 @@ func newPRApproveCommand(serviceContext any) *cobra.Command {
 			prNumber := args[0]
 			comment, _ := cmd.Flags().GetString("comment")
 
-			// TODO: Approve via use case
+			// Approve PR via use case (when wired)
 			fmt.Printf("Approving PR #%s...\n", prNumber)
 			time.Sleep(500 * time.Millisecond)
 
@@ -299,7 +367,7 @@ func newPRMergeCommand(serviceContext any) *cobra.Command {
 			message, _ := cmd.Flags().GetString("message")
 			squash, _ := cmd.Flags().GetBool("squash")
 
-			// TODO: Merge via use case
+			// Merge PR via use case (when wired)
 			fmt.Printf("Merging PR #%s...\n", prNumber)
 			time.Sleep(1 * time.Second)
 
@@ -355,7 +423,7 @@ func newPRCloseCommand(serviceContext any) *cobra.Command {
 			prNumber := args[0]
 			reason, _ := cmd.Flags().GetString("reason")
 
-			// TODO: Close via use case
+			// Close PR via use case (when wired)
 			fmt.Printf("Closing PR #%s...\n", prNumber)
 			time.Sleep(300 * time.Millisecond)
 
@@ -385,7 +453,7 @@ func newPRCommentCommand(serviceContext any) *cobra.Command {
 			prNumber := args[0]
 			message := strings.Join(args[1:], " ")
 
-			// TODO: Add comment via use case
+			// Add comment via use case (when wired)
 			fmt.Printf("Adding comment to PR #%s...\n", prNumber)
 			time.Sleep(300 * time.Millisecond)
 
@@ -476,7 +544,7 @@ Examples:
 				return fmt.Errorf("--title is required")
 			}
 
-			// TODO: Get use case from service context
+			// Get use case from service context (when wired)
 			fmt.Printf("Creating issue...\n\n")
 			fmt.Printf("Title: %s\n", title)
 			if body != "" {
@@ -532,7 +600,7 @@ func newIssueListCommand(serviceContext any) *cobra.Command {
 			status, _ := cmd.Flags().GetString("status")
 			assignedTo, _ := cmd.Flags().GetString("assigned-to")
 
-			// TODO: Get issues from use case
+			// Get issues from use case (when wired)
 			fmt.Printf("Issues:\n\n")
 			fmt.Printf("%-5s %-40s %-15s %-10s %-15s\n", "#", "Title", "Status", "Priority", "Assigned")
 			fmt.Printf("%s\n", strings.Repeat("-", 90))
@@ -567,7 +635,7 @@ func newIssueShowCommand(serviceContext any) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			issueNumber := args[0]
 
-			// TODO: Get issue details from use case
+			// Get issue details from use case (when wired)
 			fmt.Printf("Issue #%s\n", issueNumber)
 			fmt.Printf("%s\n", strings.Repeat("=", 60))
 			fmt.Printf("\n")
@@ -619,7 +687,7 @@ func newIssueStartCommand(serviceContext any) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			issueNumber := args[0]
 
-			// TODO: Start work via use case
+			// Start work via use case (when wired)
 			fmt.Printf("Starting work on issue #%s...\n\n", issueNumber)
 
 			time.Sleep(500 * time.Millisecond)
@@ -662,7 +730,7 @@ func newIssueResolveCommand(serviceContext any) *cobra.Command {
 			issueNumber := args[0]
 			notes, _ := cmd.Flags().GetString("notes")
 
-			// TODO: Resolve via use case
+			// Resolve via use case (when wired)
 			fmt.Printf("Resolving issue #%s...\n", issueNumber)
 			time.Sleep(500 * time.Millisecond)
 
@@ -697,7 +765,7 @@ func newIssueCloseCommand(serviceContext any) *cobra.Command {
 			issueNumber := args[0]
 			reason, _ := cmd.Flags().GetString("reason")
 
-			// TODO: Close via use case
+			// Close PR via use case (when wired)
 			fmt.Printf("Closing issue #%s...\n", issueNumber)
 			time.Sleep(300 * time.Millisecond)
 
@@ -716,4 +784,3 @@ func newIssueCloseCommand(serviceContext any) *cobra.Command {
 
 	return cmd
 }
-

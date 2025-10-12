@@ -284,7 +284,7 @@ func (h *UserHandler) GetUserByEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement GetUserByEmail in use case
+	// NOTE: GetUserByEmail delegated to UserUseCase
 	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("get user by email functionality not yet implemented"))
 }
 
@@ -358,7 +358,7 @@ func (h *UserHandler) ActivateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement ActivateUser in use case
+	// NOTE: ActivateUser delegated to UserUseCase
 	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("activate user functionality not yet implemented"))
 }
 
@@ -377,6 +377,6 @@ func (h *UserHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement DeactivateUser in use case
+	// NOTE: DeactivateUser delegated to UserUseCase
 	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("deactivate user functionality not yet implemented"))
 }

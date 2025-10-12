@@ -173,10 +173,10 @@ func (s *RepositoryServiceImpl) ListRepositories(ctx context.Context) ([]*buildi
 
 // ImportIFC imports IFC data into a repository
 func (s *RepositoryServiceImpl) ImportIFC(ctx context.Context, repoID string, ifcData io.Reader) (*building.IFCImportResult, error) {
-	// TODO: Convert io.Reader to []byte
+	// Convert io.Reader to []byte for IFC use case
 	data, err := io.ReadAll(ifcData)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read IFC data: %w", err)
 	}
 	return s.ifcUC.ImportIFC(ctx, repoID, data)
 }

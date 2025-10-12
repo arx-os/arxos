@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"github.com/arx-os/arxos/internal/domain/building"
@@ -89,8 +90,15 @@ func (r *PostGISVersionRepository) GetByID(ctx context.Context, id string) (*bui
 		version.Parent = parentID.String
 	}
 
-	// TODO: Deserialize changes JSON
-	version.Changes = []building.Change{}
+	// Deserialize changes JSON
+	if changesJSON != "" {
+		if err := json.Unmarshal([]byte(changesJSON), &version.Changes); err != nil {
+			// Log error but don't fail - use empty changes
+			version.Changes = []building.Change{}
+		}
+	} else {
+		version.Changes = []building.Change{}
+	}
 
 	return &version, nil
 }
@@ -131,8 +139,15 @@ func (r *PostGISVersionRepository) GetByRepositoryAndTag(ctx context.Context, re
 		version.Parent = parentID.String
 	}
 
-	// TODO: Deserialize changes JSON
-	version.Changes = []building.Change{}
+	// Deserialize changes JSON
+	if changesJSON != "" {
+		if err := json.Unmarshal([]byte(changesJSON), &version.Changes); err != nil {
+			// Log error but don't fail - use empty changes
+			version.Changes = []building.Change{}
+		}
+	} else {
+		version.Changes = []building.Change{}
+	}
 
 	return &version, nil
 }
@@ -178,8 +193,18 @@ func (r *PostGISVersionRepository) ListByRepository(ctx context.Context, repoID 
 			version.Parent = parentID.String
 		}
 
-		// TODO: Deserialize changes JSON
-		version.Changes = []building.Change{}
+		// Deserialize changes JSON
+		if changesJSON != "" {
+			var changes []building.Change
+			if err := json.Unmarshal([]byte(changesJSON), &changes); err != nil {
+				// If deserialization fails, use empty array (data might be malformed)
+				version.Changes = []building.Change{}
+			} else {
+				version.Changes = changes
+			}
+		} else {
+			version.Changes = []building.Change{}
+		}
 
 		versions = append(versions, version)
 	}
@@ -225,8 +250,15 @@ func (r *PostGISVersionRepository) GetLatest(ctx context.Context, repoID string)
 		version.Parent = parentID.String
 	}
 
-	// TODO: Deserialize changes JSON
-	version.Changes = []building.Change{}
+	// Deserialize changes JSON
+	if changesJSON != "" {
+		if err := json.Unmarshal([]byte(changesJSON), &version.Changes); err != nil {
+			// Log error but don't fail - use empty changes
+			version.Changes = []building.Change{}
+		}
+	} else {
+		version.Changes = []building.Change{}
+	}
 
 	return &version, nil
 }

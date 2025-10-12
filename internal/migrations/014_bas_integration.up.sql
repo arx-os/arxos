@@ -8,10 +8,10 @@
 -- ============================================================================
 -- Stores BAS system configurations (Metasys, Desigo, Honeywell, etc.)
 CREATE TABLE IF NOT EXISTS bas_systems (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    building_id UUID NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
+    id TEXT PRIMARY KEY DEFAULT uuid_generate_v4()::TEXT,
+    building_id TEXT NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
     repository_id UUID REFERENCES building_repositories(id) ON DELETE CASCADE,
-    
+
     -- System identification
     name TEXT NOT NULL,
     system_type TEXT NOT NULL CHECK (system_type IN (
@@ -24,27 +24,27 @@ CREATE TABLE IF NOT EXISTS bas_systems (
     )),
     vendor TEXT,
     version TEXT,
-    
+
     -- Connection details (optional, for live integration)
     host TEXT,
     port INTEGER,
     protocol TEXT CHECK (protocol IN ('bacnet', 'modbus', 'lonworks', 'http', 'https', NULL)),
-    
+
     -- Configuration
     enabled BOOLEAN NOT NULL DEFAULT true,
     read_only BOOLEAN NOT NULL DEFAULT true, -- ArxOS defaults to read-only
     sync_interval INTEGER, -- Seconds between syncs (if live connection)
     last_sync TIMESTAMPTZ,
-    
+
     -- Metadata
     metadata JSONB DEFAULT '{}',
     notes TEXT,
-    
+
     -- Audit fields
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
-    
+    created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+
     CONSTRAINT bas_systems_unique_name UNIQUE(building_id, name)
 );
 
@@ -62,62 +62,62 @@ COMMENT ON COLUMN bas_systems.sync_interval IS 'Auto-sync interval in seconds (N
 -- ============================================================================
 -- Stores individual BAS control points (sensors, actuators, setpoints)
 CREATE TABLE IF NOT EXISTS bas_points (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    building_id UUID NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
-    bas_system_id UUID NOT NULL REFERENCES bas_systems(id) ON DELETE CASCADE,
-    
+    id TEXT PRIMARY KEY DEFAULT uuid_generate_v4()::TEXT,
+    building_id TEXT NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
+    bas_system_id TEXT NOT NULL REFERENCES bas_systems(id) ON DELETE CASCADE,
+
     -- Spatial links (where is this point physically?)
-    room_id UUID REFERENCES rooms(id) ON DELETE SET NULL,
-    floor_id UUID REFERENCES floors(id) ON DELETE SET NULL,
-    equipment_id UUID REFERENCES equipment(id) ON DELETE SET NULL,
-    
+    room_id TEXT REFERENCES rooms(id) ON DELETE SET NULL,
+    floor_id TEXT REFERENCES floors(id) ON DELETE SET NULL,
+    equipment_id TEXT REFERENCES equipment(id) ON DELETE SET NULL,
+
     -- BAS identifiers
     point_name TEXT NOT NULL,
     device_id TEXT NOT NULL,
     object_type TEXT NOT NULL, -- "Analog Input", "Binary Output", etc.
     object_instance INTEGER,
-    
+
     -- Point metadata
     description TEXT,
     units TEXT, -- degF, PSI, CFM, %, etc.
     point_type TEXT, -- temperature, pressure, flow, status, etc.
-    
+
     -- Location parsing (from CSV import)
     location_text TEXT, -- Original location string from BAS export
-    
+
     -- Spatial coordinates (optional, for precise positioning)
     location GEOMETRY(POINTZ, 4326),
-    
+
     -- Point configuration
     writeable BOOLEAN NOT NULL DEFAULT false,
     min_value NUMERIC(10,2),
     max_value NUMERIC(10,2),
-    
+
     -- Current value (if live connection enabled)
     current_value TEXT,
     current_value_numeric NUMERIC(10,2),
     current_value_boolean BOOLEAN,
     last_updated TIMESTAMPTZ,
-    
+
     -- Mapping status
     mapped BOOLEAN NOT NULL DEFAULT false,
     mapping_confidence SMALLINT DEFAULT 0 CHECK (mapping_confidence BETWEEN 0 AND 3),
-    
+
     -- Import tracking
     imported_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     import_source TEXT, -- filename or source identifier
-    
+
     -- Version control (which version added/removed this point)
     added_in_version UUID REFERENCES versions(id) ON DELETE SET NULL,
     removed_in_version UUID REFERENCES versions(id) ON DELETE SET NULL,
-    
+
     -- Metadata
     metadata JSONB DEFAULT '{}',
-    
+
     -- Audit fields
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
+
     -- Unique constraint on BAS identifiers
     CONSTRAINT bas_points_unique_identifier UNIQUE(bas_system_id, device_id, point_name)
 );
@@ -149,10 +149,10 @@ ALTER TABLE rooms ADD COLUMN IF NOT EXISTS width REAL CHECK (width > 0);
 ALTER TABLE rooms ADD COLUMN IF NOT EXISTS length REAL CHECK (length > 0);
 ALTER TABLE rooms ADD COLUMN IF NOT EXISTS geometry GEOMETRY(POLYGON, 4326);
 
-ALTER TABLE rooms ADD COLUMN IF NOT EXISTS fidelity_source TEXT DEFAULT 'text' 
+ALTER TABLE rooms ADD COLUMN IF NOT EXISTS fidelity_source TEXT DEFAULT 'text'
     CHECK (fidelity_source IN ('text', 'ifc', 'lidar', 'survey', 'manual'));
 
-ALTER TABLE rooms ADD COLUMN IF NOT EXISTS confidence_level SMALLINT DEFAULT 0 
+ALTER TABLE rooms ADD COLUMN IF NOT EXISTS confidence_level SMALLINT DEFAULT 0
     CHECK (confidence_level BETWEEN 0 AND 3);
 
 ALTER TABLE rooms ADD COLUMN IF NOT EXISTS scan_session_id UUID;
@@ -175,38 +175,38 @@ COMMENT ON COLUMN rooms.scan_session_id IS 'Reference to LiDAR scan session if r
 -- ============================================================================
 -- Track BAS import operations for audit and debugging
 CREATE TABLE IF NOT EXISTS bas_import_history (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    building_id UUID NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
-    bas_system_id UUID NOT NULL REFERENCES bas_systems(id) ON DELETE CASCADE,
+    id TEXT PRIMARY KEY DEFAULT uuid_generate_v4()::TEXT,
+    building_id TEXT NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
+    bas_system_id TEXT NOT NULL REFERENCES bas_systems(id) ON DELETE CASCADE,
     repository_id UUID REFERENCES building_repositories(id) ON DELETE SET NULL,
     version_id UUID REFERENCES versions(id) ON DELETE SET NULL,
-    
+
     -- Import details
     filename TEXT NOT NULL,
     file_size BIGINT NOT NULL,
     file_hash TEXT NOT NULL, -- SHA-256 of imported file
-    
+
     -- Import results
     points_added INTEGER NOT NULL DEFAULT 0,
     points_modified INTEGER NOT NULL DEFAULT 0,
     points_deleted INTEGER NOT NULL DEFAULT 0,
     points_mapped INTEGER NOT NULL DEFAULT 0,
     points_unmapped INTEGER NOT NULL DEFAULT 0,
-    
+
     -- Status
     status TEXT NOT NULL CHECK (status IN ('success', 'partial', 'failed')),
     error_message TEXT,
     errors JSONB DEFAULT '[]',
-    
+
     -- Timing
     started_at TIMESTAMPTZ NOT NULL,
     completed_at TIMESTAMPTZ,
     duration_ms INTEGER,
-    
+
     -- Audit
-    imported_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    imported_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     import_method TEXT CHECK (import_method IN ('cli', 'api', 'daemon', 'manual')),
-    
+
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

@@ -451,8 +451,8 @@ func Default() *Config {
 		PostGIS: PostGISConfig{
 			Host:     "localhost",
 			Port:     5432,
-			Database: "arxos",
-			User:     "arxos",
+			Database: "arxos_dev",
+			User:     "joelpate",
 			Password: "",
 			SSLMode:  "disable",
 			SRID:     900913, // Web Mercator with millimeter precision

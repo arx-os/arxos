@@ -1,0 +1,156 @@
+# ArxOS Documentation Index
+
+*Last Updated: October 12, 2025*
+
+## 📚 Quick Navigation
+
+### Getting Started
+- [Main README](../README.md) - Project overview and goals
+- [Quickstart Guide](../QUICKSTART.md) - Get up and running fast
+- [Next Steps Roadmap](NEXT_STEPS_ROADMAP.md) - **⭐ Development priorities and implementation plan**
+- [Database Setup](DATABASE_SETUP.md) - PostgreSQL/PostGIS configuration
+- [Postgres Terminal Guide](POSTGRES_TERMINAL_GUIDE.md) - Database operations
+
+### Architecture
+- [Service Architecture](architecture/SERVICE_ARCHITECTURE.md) - Core service design
+- [Directory Structure](architecture/DIRECTORY_STRUCTURE.md) - Project organization
+- [Unified Cache Architecture](architecture/UNIFIED_CACHE_ARCHITECTURE.md) - L1/L2/L3 caching
+- [Unified Space Architecture](architecture/UNIFIED_SPACE_ARCHITECTURE.md) - Domain-agnostic spatial model
+- [Offline Sync Architecture](OFFLINE_SYNC_ARCHITECTURE.md) - Conflict resolution & sync
+- [CADTUI Visual Context](architecture/CADTUI_VISUAL_CONTEXT.md) - Terminal UI design
+- [Coding Standards](architecture/CODING_STANDARDS.md) - Code style and conventions
+
+### Integration Guides
+- [BAS Integration](integration/BAS_INTEGRATION.md) - Building Automation Systems
+- [IFC Integration](integration/IFCOPENSHELL_INTEGRATION.md) - IfcOpenShell service
+- [CLI Integration](integration/CLI_INTEGRATION.md) - Command-line interface
+- [Integration Flow](integration/INTEGRATION_FLOW.md) - System interconnections
+- [CADTUI Workflow](integration/CADTUI_WORKFLOW_INTEGRATION.md) - TUI user flows
+- [Meraki AR Navigation](integration/MERAKI_AR_NAVIGATION.md) - Augmented reality
+
+### API Documentation
+- [API Documentation](api/API_DOCUMENTATION.md) - REST API endpoints
+- [OpenAPI Specifications](../api/openapi/) - Swagger/OpenAPI specs
+
+### Testing
+- [Integration Test Guide](testing/INTEGRATION_TEST_GUIDE.md) - E2E testing
+- [TUI Data Integration](testing/TUI_DATA_INTEGRATION.md) - TUI test data
+- [Use Case Test Progress](testing/USECASE_TEST_PROGRESS.md) - Test coverage
+
+### Deployment
+- [Deployment Guide](deployment/DEPLOYMENT_GUIDE.md) - Production deployment
+- [Docker Guide](docker/README.md) - Container orchestration
+
+### Automation
+- [Intelligent Automation](automation/INTELLIGENT_AUTOMATION.md) - AI-driven workflows
+- [Automation Examples](automation/AUTOMATION_EXAMPLE.md) - Practical examples
+
+### Implementation Notes
+- [Implementation Progress](implementation/IMPLEMENTATION_PROGRESS_SUMMARY.md) - Overall progress
+- [Phase 1: BAS Integration](implementation/PHASE_1_BAS_INTEGRATION_COMPLETE.md)
+- [Phase 2: Git Workflow](implementation/PHASE_2_GIT_WORKFLOW_COMPLETE.md)
+
+### Architecture Decisions
+- [006: TUI Data Integration](architecture/decisions/006-tui-data-integration.md)
+- [007: Version Control System](architecture/decisions/007-version-control-system.md)
+
+## 📦 Archive
+
+Historical session summaries and completed work are in [docs/archive/](archive/README.md).
+
+## 🗂️ Directory Structure
+
+```
+docs/
+├── DOCUMENTATION_INDEX.md          ← You are here
+├── DATABASE_SETUP.md               Active guides
+├── POSTGRES_TERMINAL_GUIDE.md
+├── OFFLINE_SYNC_ARCHITECTURE.md
+│
+├── api/                            API documentation
+│   └── API_DOCUMENTATION.md
+│
+├── architecture/                   Core architecture
+│   ├── SERVICE_ARCHITECTURE.md
+│   ├── DIRECTORY_STRUCTURE.md
+│   ├── UNIFIED_CACHE_ARCHITECTURE.md
+│   ├── UNIFIED_SPACE_ARCHITECTURE.md
+│   ├── CADTUI_VISUAL_CONTEXT.md
+│   ├── CODING_STANDARDS.md
+│   └── decisions/
+│       ├── 006-tui-data-integration.md
+│       └── 007-version-control-system.md
+│
+├── automation/                     Automation guides
+│   ├── INTELLIGENT_AUTOMATION.md
+│   └── AUTOMATION_EXAMPLE.md
+│
+├── deployment/                     Deployment
+│   └── DEPLOYMENT_GUIDE.md
+│
+├── docker/                         Container docs
+│   └── README.md
+│
+├── implementation/                 Implementation notes
+│   ├── IMPLEMENTATION_PROGRESS_SUMMARY.md
+│   ├── PHASE_1_BAS_INTEGRATION_COMPLETE.md
+│   └── PHASE_2_GIT_WORKFLOW_COMPLETE.md
+│
+├── integration/                    Integration guides
+│   ├── BAS_INTEGRATION.md
+│   ├── CADTUI_WORKFLOW_INTEGRATION.md
+│   ├── CLI_INTEGRATION.md
+│   ├── IFCOPENSHELL_INTEGRATION.md
+│   ├── INTEGRATION_FLOW.md
+│   ├── MERAKI_AR_NAVIGATION.md
+│   └── README.md
+│
+├── testing/                        Testing guides
+│   ├── INTEGRATION_TEST_GUIDE.md
+│   ├── TUI_DATA_INTEGRATION.md
+│   └── USECASE_TEST_PROGRESS.md
+│
+└── archive/                        Historical documents
+    ├── README.md
+    └── [30+ session summaries]
+```
+
+## 🆕 Latest Updates
+
+**October 12, 2025:**
+- ✅ Resolved all 197 TODO/FIXME comments (100% complete)
+- ✅ Implemented equipment topology system with graph relationships
+- ✅ Added context extraction helpers for user authentication
+- ✅ Cleaned up and organized all documentation
+- ✅ Created comprehensive [Next Steps Roadmap](NEXT_STEPS_ROADMAP.md) for 4 priority features
+
+## 🔍 Finding Information
+
+- **New to ArxOS?** Start with [README](../README.md) → [QUICKSTART](../QUICKSTART.md)
+- **Setting up dev environment?** See [DATABASE_SETUP](DATABASE_SETUP.md)
+- **Understanding the architecture?** Read [Service Architecture](architecture/SERVICE_ARCHITECTURE.md)
+- **Integrating a system?** Check [integration/](integration/)
+- **Looking for API docs?** See [api/API_DOCUMENTATION](api/API_DOCUMENTATION.md)
+- **Need historical context?** Browse [archive/](archive/)
+
+## 📝 Contributing to Documentation
+
+When adding documentation:
+
+1. **Active Guides** → `/docs/` (operational, frequently referenced)
+2. **Architecture** → `/docs/architecture/` (design decisions, patterns)
+3. **Integration** → `/docs/integration/` (how systems connect)
+4. **Session Summaries** → `/docs/archive/` (historical work logs)
+5. **User-facing** → Project root (README, QUICKSTART)
+
+## 🔗 External Resources
+
+- [IfcOpenShell Documentation](http://ifcopenshell.org/)
+- [PostGIS Manual](https://postgis.net/documentation/)
+- [Bubbletea TUI Framework](https://github.com/charmbracelet/bubbletea)
+- [React Native Docs](https://reactnative.dev/)
+
+---
+
+*For questions or documentation improvements, see [CONTRIBUTING](../CONTRIBUTING.md)*
+

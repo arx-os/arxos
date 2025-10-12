@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/arx-os/arxos/internal/config"
-	"github.com/arx-os/arxos/internal/domain"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // PostgreSQL driver
+
+	"github.com/arx-os/arxos/internal/config"
+	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/types"
 )
 
 // Database implements the database interface following Clean Architecture
@@ -63,6 +65,12 @@ func (db *Database) Close() error {
 		return db.conn.Close()
 	}
 	return nil
+}
+
+// DB returns the underlying *sql.DB for direct access
+// This is needed for repositories that require *sql.DB
+func (db *Database) DB() *sqlx.DB {
+	return db.conn
 }
 
 // Health checks the health of the database connection
@@ -182,12 +190,157 @@ type SpatialQueries struct {
 
 // QueryWithinBounds queries for objects within spatial bounds
 func (sq *SpatialQueries) QueryWithinBounds(ctx context.Context, bounds *domain.Location, radius float64) ([]*domain.Equipment, error) {
-	// TODO: Implement PostGIS spatial queries
-	return nil, fmt.Errorf("not implemented")
+	query := `
+		SELECT
+			id, building_id, floor_id, room_id,
+			name, equipment_type as type, model,
+			location_x, location_y, location_z,
+			status, created_at, updated_at
+		FROM equipment
+		WHERE location_x IS NOT NULL
+		  AND location_y IS NOT NULL
+		  AND SQRT(
+				POW(location_x - $1, 2) +
+				POW(location_y - $2, 2) +
+				POW(COALESCE(location_z, 0) - $3, 2)
+			  ) <= $4
+		ORDER BY SQRT(
+				POW(location_x - $1, 2) +
+				POW(location_y - $2, 2) +
+				POW(COALESCE(location_z, 0) - $3, 2)
+			  )
+		LIMIT 1000
+	`
+
+	rows, err := sq.db.DB().QueryContext(ctx, query, bounds.X, bounds.Y, bounds.Z, radius)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query equipment within bounds: %w", err)
+	}
+	defer rows.Close()
+
+	var equipment []*domain.Equipment
+	for rows.Next() {
+		var e domain.Equipment
+		var locX, locY, locZ *float64
+		var floorID, roomID *string
+
+		err := rows.Scan(
+			&e.ID, &e.BuildingID, &floorID, &roomID,
+			&e.Name, &e.Type, &e.Model,
+			&locX, &locY, &locZ,
+			&e.Status, &e.CreatedAt, &e.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan equipment: %w", err)
+		}
+
+		// Set optional fields
+		if floorID != nil {
+			e.FloorID = types.ID{Legacy: *floorID}
+		}
+		if roomID != nil {
+			e.RoomID = types.ID{Legacy: *roomID}
+		}
+
+		// Set location if all coordinates are present
+		if locX != nil && locY != nil {
+			e.Location = &domain.Location{
+				X: *locX,
+				Y: *locY,
+				Z: 0,
+			}
+			if locZ != nil {
+				e.Location.Z = *locZ
+			}
+		}
+
+		equipment = append(equipment, &e)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating equipment rows: %w", err)
+	}
+
+	return equipment, nil
 }
 
 // QueryNearest queries for nearest objects to a point
 func (sq *SpatialQueries) QueryNearest(ctx context.Context, point *domain.Location, limit int) ([]*domain.Equipment, error) {
-	// TODO: Implement PostGIS nearest neighbor queries
-	return nil, fmt.Errorf("not implemented")
+	if limit <= 0 {
+		limit = 10 // default limit
+	}
+	if limit > 1000 {
+		limit = 1000 // max limit for performance
+	}
+
+	query := `
+		SELECT
+			id, building_id, floor_id, room_id,
+			name, equipment_type as type, model,
+			location_x, location_y, location_z,
+			status, created_at, updated_at,
+			SQRT(
+				POW(location_x - $1, 2) +
+				POW(location_y - $2, 2) +
+				POW(COALESCE(location_z, 0) - $3, 2)
+			) as distance
+		FROM equipment
+		WHERE location_x IS NOT NULL
+		  AND location_y IS NOT NULL
+		ORDER BY distance
+		LIMIT $4
+	`
+
+	rows, err := sq.db.DB().QueryContext(ctx, query, point.X, point.Y, point.Z, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query nearest equipment: %w", err)
+	}
+	defer rows.Close()
+
+	var equipment []*domain.Equipment
+	for rows.Next() {
+		var e domain.Equipment
+		var locX, locY, locZ *float64
+		var floorID, roomID *string
+		var distance float64
+
+		err := rows.Scan(
+			&e.ID, &e.BuildingID, &floorID, &roomID,
+			&e.Name, &e.Type, &e.Model,
+			&locX, &locY, &locZ,
+			&e.Status, &e.CreatedAt, &e.UpdatedAt,
+			&distance,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan equipment: %w", err)
+		}
+
+		// Set optional fields
+		if floorID != nil {
+			e.FloorID = types.ID{Legacy: *floorID}
+		}
+		if roomID != nil {
+			e.RoomID = types.ID{Legacy: *roomID}
+		}
+
+		// Set location if all coordinates are present
+		if locX != nil && locY != nil {
+			e.Location = &domain.Location{
+				X: *locX,
+				Y: *locY,
+				Z: 0,
+			}
+			if locZ != nil {
+				e.Location.Z = *locZ
+			}
+		}
+
+		equipment = append(equipment, &e)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating equipment rows: %w", err)
+	}
+
+	return equipment, nil
 }

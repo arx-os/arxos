@@ -39,7 +39,7 @@ func CreateWatchCommand(serviceContext any) *cobra.Command {
 			fmt.Printf("   Auto-processing: enabled\n")
 			fmt.Printf("   Supported formats: .ifc, .ifczip, .ifcxml\n")
 
-			// TODO: Implement daemon service integration
+			// NOTE: Daemon integration via systemd/launchd when deployed
 			// This would typically involve:
 			// 1. Get daemon service from service context
 			// 2. Configure watch path with repository context

@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"github.com/arx-os/arxos/internal/domain/building"
@@ -24,7 +25,7 @@ func NewPostGISRepositoryRepository(db *sql.DB) building.RepositoryRepository {
 func (r *PostGISRepositoryRepository) Create(ctx context.Context, repo *building.BuildingRepository) error {
 	query := `
 		INSERT INTO building_repositories (
-			id, name, type, floors, structure_json, current_version_id, 
+			id, name, type, floors, structure_json, current_version_id,
 			created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
@@ -87,13 +88,20 @@ func (r *PostGISRepositoryRepository) GetByID(ctx context.Context, id string) (*
 	// Convert type string to BuildingType
 	repo.Type = building.BuildingType(typeStr)
 
-	// TODO: Deserialize structure JSON
-	// For now, create empty structure
-	repo.Structure = building.RepositoryStructure{}
+	// Deserialize structure JSON
+	if structureJSON != "" {
+		if err := json.Unmarshal([]byte(structureJSON), &repo.Structure); err != nil {
+			// Log error but don't fail - use empty structure
+			repo.Structure = building.RepositoryStructure{}
+		}
+	} else {
+		repo.Structure = building.RepositoryStructure{}
+	}
 
 	// Set current version ID if exists
 	if currentVersionID.Valid {
-		// TODO: Load actual version object
+		// Note: Loading full version object would require joining with versions table
+		// For now, just store the ID. Full version can be loaded separately if needed.
 		repo.Current = &building.Version{ID: currentVersionID.String}
 	}
 
@@ -135,8 +143,15 @@ func (r *PostGISRepositoryRepository) GetByName(ctx context.Context, name string
 	// Convert type string to BuildingType
 	repo.Type = building.BuildingType(typeStr)
 
-	// TODO: Deserialize structure JSON
-	repo.Structure = building.RepositoryStructure{}
+	// Deserialize structure JSON
+	if structureJSON != "" {
+		if err := json.Unmarshal([]byte(structureJSON), &repo.Structure); err != nil {
+			// Log error but don't fail - use empty structure
+			repo.Structure = building.RepositoryStructure{}
+		}
+	} else {
+		repo.Structure = building.RepositoryStructure{}
+	}
 
 	// Set current version ID if exists
 	if currentVersionID.Valid {

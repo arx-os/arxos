@@ -18,11 +18,11 @@ CREATE TABLE IF NOT EXISTS issues (
     body TEXT, -- Issue description
     
     -- Spatial context (WHERE is the problem?)
-    building_id UUID REFERENCES buildings(id) ON DELETE SET NULL,
-    floor_id UUID REFERENCES floors(id) ON DELETE SET NULL,
-    room_id UUID REFERENCES rooms(id) ON DELETE SET NULL,
-    equipment_id UUID REFERENCES equipment(id) ON DELETE SET NULL,
-    bas_point_id UUID REFERENCES bas_points(id) ON DELETE SET NULL,
+    building_id TEXT REFERENCES buildings(id) ON DELETE SET NULL,
+    floor_id TEXT REFERENCES floors(id) ON DELETE SET NULL,
+    room_id TEXT REFERENCES rooms(id) ON DELETE SET NULL,
+    equipment_id TEXT REFERENCES equipment(id) ON DELETE SET NULL,
+    bas_point_id TEXT REFERENCES bas_points(id) ON DELETE SET NULL,
     
     -- Spatial location (from AR or manual)
     location GEOMETRY(POINTZ, 4326),
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS issues (
     priority TEXT NOT NULL DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent', 'emergency')),
     
     -- Assignment
-    assigned_to UUID REFERENCES users(id) ON DELETE SET NULL,
+    assigned_to TEXT REFERENCES users(id) ON DELETE SET NULL,
     assigned_team TEXT,
     auto_assigned BOOLEAN NOT NULL DEFAULT false,
     
@@ -62,11 +62,11 @@ CREATE TABLE IF NOT EXISTS issues (
     pr_id UUID REFERENCES pull_requests(id) ON DELETE SET NULL, -- Auto-created PR
     
     -- Reporter information
-    reported_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reported_by TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     reported_via TEXT CHECK (reported_via IN ('mobile_ar', 'mobile_app', 'cli', 'api', 'web', NULL)),
     
     -- Resolution
-    resolved_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    resolved_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     resolved_at TIMESTAMPTZ,
     resolution_notes TEXT,
     
@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS issue_labels (
     
     -- Audit
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     
     CONSTRAINT issue_labels_unique_name UNIQUE(repository_id, name)
 );
@@ -153,7 +153,7 @@ CREATE TABLE IF NOT EXISTS issue_label_assignments (
     
     -- Audit
     added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    added_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    added_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     
     PRIMARY KEY (issue_id, label_id)
 );
@@ -182,7 +182,7 @@ CREATE TABLE IF NOT EXISTS issue_comments (
     )),
     
     -- Author
-    author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    author_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     
     -- Threading
     parent_comment_id UUID REFERENCES issue_comments(id) ON DELETE CASCADE,
@@ -235,7 +235,7 @@ CREATE TABLE IF NOT EXISTS issue_photos (
     caption TEXT,
     
     -- Upload metadata
-    uploaded_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    uploaded_by TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -276,7 +276,7 @@ CREATE TABLE IF NOT EXISTS issue_activity_log (
     metadata JSONB DEFAULT '{}',
     
     -- Actor
-    actor_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    actor_id TEXT REFERENCES users(id) ON DELETE SET NULL,
     
     -- Timestamp
     occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

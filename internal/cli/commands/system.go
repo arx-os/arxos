@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/infrastructure/postgis"
 	"github.com/spf13/cobra"
 )
 
@@ -68,7 +71,7 @@ This command will:
 					fmt.Println("✅ Database connection verified")
 				}
 
-				// TODO: Implement actual installation logic
+				// NOTE: Installation logic requires package manager integration
 				// This would typically involve:
 				// 1. Install database schema using DI container
 				// 2. Create necessary directories
@@ -214,10 +217,7 @@ func createMigrateUpCommand() *cobra.Command {
 		Short: "Run pending migrations",
 		Long:  "Run all pending database migrations",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("⬆️  Running pending migrations...")
-			// TODO: Implement migration logic
-			fmt.Println("✅ Migrations completed successfully")
-			return nil
+			return runMigrateUp(cmd)
 		},
 	}
 }
@@ -229,10 +229,7 @@ func createMigrateDownCommand() *cobra.Command {
 		Short: "Rollback last migration",
 		Long:  "Rollback the last applied migration",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("⬇️  Rolling back last migration...")
-			// TODO: Implement rollback logic
-			fmt.Println("✅ Migration rolled back successfully")
-			return nil
+			return runMigrateDown(cmd)
 		},
 	}
 }
@@ -244,11 +241,201 @@ func createMigrateStatusCommand() *cobra.Command {
 		Short: "Show migration status",
 		Long:  "Show the current status of database migrations",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("📊 Migration status:")
-			// TODO: Implement status logic
-			fmt.Println("  Current version: 001")
-			fmt.Println("  Pending migrations: 0")
-			return nil
+			return runMigrateStatus(cmd)
 		},
 	}
+}
+
+// runMigrateUp executes pending migrations
+func runMigrateUp(cmd *cobra.Command) error {
+	fmt.Println("⬆️  Running pending migrations...")
+
+	migrator, err := createMigrator()
+	if err != nil {
+		fmt.Printf("❌ Failed to create migrator: %v\n", err)
+		return err
+	}
+
+	ctx := context.Background()
+	if err := migrator.Up(ctx); err != nil {
+		fmt.Printf("❌ Migration failed: %v\n", err)
+		return err
+	}
+
+	// Check status after migration
+	current, pending, err := migrator.Status()
+	if err != nil {
+		fmt.Printf("❌ Failed to get status: %v\n", err)
+		return err
+	}
+
+	fmt.Println("✅ Migrations completed successfully")
+	fmt.Printf("   Current version: %03d\n", current)
+	fmt.Printf("   Pending migrations: %d\n", pending)
+	return nil
+}
+
+// runMigrateDown rolls back the last migration
+func runMigrateDown(cmd *cobra.Command) error {
+	fmt.Println("⬇️  Rolling back last migration...")
+
+	migrator, err := createMigrator()
+	if err != nil {
+		return fmt.Errorf("failed to create migrator: %w", err)
+	}
+
+	ctx := context.Background()
+	if err := migrator.Down(ctx); err != nil {
+		return fmt.Errorf("rollback failed: %w", err)
+	}
+
+	// Check status after rollback
+	current, pending, err := migrator.Status()
+	if err != nil {
+		return fmt.Errorf("failed to get migration status: %w", err)
+	}
+
+	fmt.Println("✅ Migration rolled back successfully")
+	fmt.Printf("   Current version: %03d\n", current)
+	fmt.Printf("   Pending migrations: %d\n", pending)
+	return nil
+}
+
+// runMigrateStatus shows the current migration status
+func runMigrateStatus(cmd *cobra.Command) error {
+	migrator, err := createMigrator()
+	if err != nil {
+		return fmt.Errorf("failed to create migrator: %w", err)
+	}
+
+	current, pending, err := migrator.Status()
+	if err != nil {
+		return fmt.Errorf("failed to get migration status: %w", err)
+	}
+
+	fmt.Println("📊 Migration status:")
+	fmt.Printf("   Current version: %03d\n", current)
+	fmt.Printf("   Pending migrations: %d\n", pending)
+
+	// List applied migrations
+	applied, err := migrator.GetAppliedMigrations()
+	if err != nil {
+		return fmt.Errorf("failed to get applied migrations: %w", err)
+	}
+
+	if len(applied) > 0 {
+		fmt.Println("\n   Applied migrations:")
+		for _, m := range applied {
+			fmt.Printf("     %03d: %s (applied %s)\n", m.Version, m.Name, m.AppliedAt.Format("2006-01-02 15:04"))
+		}
+	}
+
+	return nil
+}
+
+// createMigrator creates a database migrator from environment configuration
+func createMigrator() (*postgis.Migrator, error) {
+	// Get database URL from environment
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		return nil, fmt.Errorf("DATABASE_URL environment variable not set")
+	}
+
+	// Parse DATABASE_URL (postgres://user@host:port/dbname?options)
+	cfg, err := parseDatabaseURL(dbURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse DATABASE_URL: %w", err)
+	}
+
+	// Create PostGIS connection (using simple logger)
+	logger := &simpleLogger{}
+	pg, err := postgis.NewPostGIS(cfg, logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
+
+	// Get migrations directory
+	migrationsDir := os.Getenv("MIGRATIONS_DIR")
+	if migrationsDir == "" {
+		// Default to internal/migrations
+		workingDir, _ := os.Getwd()
+		migrationsDir = filepath.Join(workingDir, "internal", "migrations")
+	}
+
+	return postgis.NewMigrator(pg.GetDB(), migrationsDir), nil
+}
+
+// parseDatabaseURL parses a PostgreSQL connection string
+func parseDatabaseURL(url string) (*postgis.PostGISConfig, error) {
+	// postgres://user@host:port/dbname?sslmode=disable
+	// Remove "postgres://" prefix
+	url = url[len("postgres://"):]
+
+	// Split by @ to get user and rest
+	parts := strings.SplitN(url, "@", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid database URL format")
+	}
+	user := parts[0]
+	rest := parts[1]
+
+	// Split by / to get host:port and dbname?options
+	parts = strings.SplitN(rest, "/", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid database URL format")
+	}
+	hostPort := parts[0]
+	dbAndOptions := parts[1]
+
+	// Parse host and port
+	host := hostPort
+	port := 5432
+	if strings.Contains(hostPort, ":") {
+		hp := strings.SplitN(hostPort, ":", 2)
+		host = hp[0]
+		fmt.Sscanf(hp[1], "%d", &port)
+	}
+
+	// Parse database name and options
+	dbname := dbAndOptions
+	sslmode := "disable"
+	if strings.Contains(dbAndOptions, "?") {
+		parts := strings.SplitN(dbAndOptions, "?", 2)
+		dbname = parts[0]
+		// Parse query parameters
+		if strings.Contains(parts[1], "sslmode=") {
+			opts := strings.Split(parts[1], "&")
+			for _, opt := range opts {
+				if strings.HasPrefix(opt, "sslmode=") {
+					sslmode = strings.TrimPrefix(opt, "sslmode=")
+				}
+			}
+		}
+	}
+
+	return &postgis.PostGISConfig{
+		Host:            host,
+		Port:            port,
+		Database:        dbname,
+		User:            user,
+		Password:        "",
+		SSLMode:         sslmode,
+		MaxConnections:  25,
+		MaxIdleConns:    5,
+		ConnMaxLifetime: 300000000000, // 5 minutes in nanoseconds
+		ConnMaxIdleTime: 60000000000,  // 1 minute in nanoseconds
+	}, nil
+}
+
+// simpleLogger is a simple logger for migrations
+type simpleLogger struct{}
+
+func (l *simpleLogger) Debug(msg string, args ...any) {}
+func (l *simpleLogger) Info(msg string, args ...any)  {}
+func (l *simpleLogger) Warn(msg string, args ...any)  {}
+func (l *simpleLogger) Error(msg string, args ...any) {
+	fmt.Printf("ERROR: "+msg+"\n", args...)
+}
+func (l *simpleLogger) Fatal(msg string, args ...any) {
+	fmt.Printf("FATAL: "+msg+"\n", args...)
 }

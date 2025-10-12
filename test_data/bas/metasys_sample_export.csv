@@ -1,20 +1,30 @@
-Point Name,Device,Object Type,Description,Units,Location
-AI-1-1,100301,Analog Input,Zone Temperature,degF,Floor 3 Room 301
-AV-1-1,100301,Analog Value,Cooling Setpoint,degF,Floor 3 Room 301
-BO-1-1,100301,Binary Output,Damper Command,%,Floor 3 Room 301
-BI-1-1,100301,Binary Input,Fan Status,On/Off,Floor 3 Room 301
-AI-1-2,100302,Analog Input,Zone Temperature,degF,Floor 3 Room 302
-AV-1-2,100302,Analog Value,Cooling Setpoint,degF,Floor 3 Room 302
-BO-1-2,100302,Binary Output,Damper Command,%,Floor 3 Room 302
-BI-1-2,100302,Binary Input,Fan Status,On/Off,Floor 3 Room 302
-AI-1-3,100303,Analog Input,Zone Temperature,degF,Floor 3 Room 303
-AV-1-3,100303,Analog Value,Cooling Setpoint,degF,Floor 3 Room 303
-AI-2-1,100201,Analog Input,Zone Temperature,degF,Floor 2 Room 201
-AV-2-1,100201,Analog Value,Cooling Setpoint,degF,Floor 2 Room 201
-AI-2-2,100202,Analog Input,Zone Temperature,degF,Floor 2 Room 202
-AV-2-2,100202,Analog Value,Cooling Setpoint,degF,Floor 2 Room 202
-AI-SA-1,100101,Analog Input,Supply Air Temperature,degF,Floor 1 AHU Room
-AI-SA-2,100101,Analog Input,Supply Air Pressure,PSI,Floor 1 AHU Room
-AI-RA-1,100101,Analog Input,Return Air Temperature,degF,Floor 1 AHU Room
-BO-CF-1,100101,Binary Output,Cooling Fan Command,On/Off,Floor 1 AHU Room
-
+Point Name,Device,Object Type,Object Instance,Description,Units,Location,Min Value,Max Value,Writeable
+AI-1-1,100301,analogInput,1,Zone Temperature,degF,Floor 1 Room 101,0,120,false
+AV-1-1,100301,analogValue,1,Cooling Setpoint,degF,Floor 1 Room 101,60,85,true
+BO-1-1,100301,binaryOutput,1,Damper Command,percent,Floor 1 Room 101,0,100,true
+AI-1-2,100301,analogInput,2,Zone Humidity,%RH,Floor 1 Room 101,0,100,false
+BI-1-1,100301,binaryInput,1,Occupancy Status,state,Floor 1 Room 101,0,1,false
+AI-2-1,100302,analogInput,1,Zone Temperature,degF,Floor 1 Room 102,0,120,false
+AV-2-1,100302,analogValue,1,Cooling Setpoint,degF,Floor 1 Room 102,60,85,true
+BO-2-1,100302,binaryOutput,1,Damper Command,percent,Floor 1 Room 102,0,100,true
+AI-2-2,100302,analogInput,2,Zone Humidity,%RH,Floor 1 Room 102,0,100,false
+BI-2-1,100302,binaryInput,1,Occupancy Status,state,Floor 1 Room 102,0,1,false
+AI-3-1,100303,analogInput,1,Zone Temperature,degF,Floor 1 Room 103,0,120,false
+AV-3-1,100303,analogValue,1,Cooling Setpoint,degF,Floor 1 Room 103,60,85,true
+BO-3-1,100303,binaryOutput,1,Damper Command,percent,Floor 1 Room 103,0,100,true
+AI-3-2,100303,analogInput,2,Zone Humidity,%RH,Floor 1 Room 103,0,100,false
+BI-3-1,100303,binaryInput,1,Occupancy Status,state,Floor 1 Room 103,0,1,false
+AI-AHU-1,100401,analogInput,101,Supply Air Temperature,degF,Floor 1 Mechanical Room,0,120,false
+AI-AHU-2,100401,analogInput,102,Return Air Temperature,degF,Floor 1 Mechanical Room,0,120,false
+AI-AHU-3,100401,analogInput,103,Mixed Air Temperature,degF,Floor 1 Mechanical Room,0,120,false
+AO-AHU-1,100401,analogOutput,101,Cooling Valve Position,percent,Floor 1 Mechanical Room,0,100,true
+AO-AHU-2,100401,analogOutput,102,Heating Valve Position,percent,Floor 1 Mechanical Room,0,100,true
+BO-AHU-1,100401,binaryOutput,101,Supply Fan Command,state,Floor 1 Mechanical Room,0,1,true
+BO-AHU-2,100401,binaryOutput,102,Return Fan Command,state,Floor 1 Mechanical Room,0,1,true
+AI-CHILLER-1,100501,analogInput,201,Chilled Water Supply Temp,degF,Basement Mechanical Room,30,60,false
+AI-CHILLER-2,100501,analogInput,202,Chilled Water Return Temp,degF,Basement Mechanical Room,30,60,false
+AI-CHILLER-3,100501,analogInput,203,Chiller Power Consumption,kW,Basement Mechanical Room,0,500,false
+BO-CHILLER-1,100501,binaryOutput,201,Chiller Enable Command,state,Basement Mechanical Room,0,1,true
+AI-BOILER-1,100601,analogInput,301,Hot Water Supply Temp,degF,Basement Mechanical Room,100,200,false
+AI-BOILER-2,100601,analogInput,302,Hot Water Return Temp,degF,Basement Mechanical Room,100,200,false
+BO-BOILER-1,100601,binaryOutput,301,Boiler Enable Command,state,Basement Mechanical Room,0,1,true

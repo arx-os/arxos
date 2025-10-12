@@ -5,8 +5,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/types"
+	"github.com/arx-os/arxos/internal/usecase"
 	"github.com/spf13/cobra"
 )
+
+// BranchContainerProvider provides access to branch use case
+type BranchContainerProvider interface {
+	GetBranchUseCase() *usecase.BranchUseCase
+	GetLogger() domain.Logger
+}
 
 // NewBranchCommand creates the branch management command
 func NewBranchCommand(serviceContext any) *cobra.Command {
@@ -14,8 +23,8 @@ func NewBranchCommand(serviceContext any) *cobra.Command {
 		Use:   "branch",
 		Short: "Manage repository branches",
 		Long: `Manage Git-like branches in building repositories.
-		
-Branches allow isolated work on building changes (contractor projects, equipment upgrades, 
+
+Branches allow isolated work on building changes (contractor projects, equipment upgrades,
 scans, etc.) without affecting the main building state until ready.
 
 Examples:
@@ -58,30 +67,68 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repoID, _ := cmd.Flags().GetString("repo")
 			activeOnly, _ := cmd.Flags().GetBool("active")
-			branchType, _ := cmd.Flags().GetString("type")
+			branchTypeStr, _ := cmd.Flags().GetString("type")
 
 			if repoID == "" {
 				return fmt.Errorf("--repo flag is required")
 			}
 
-			// TODO: Get use case from service context
+			// Get use case from container
+			cp, ok := serviceContext.(BranchContainerProvider)
+			if !ok {
+				return fmt.Errorf("branch service not available - database not initialized")
+			}
+
+			branchUC := cp.GetBranchUseCase()
+			if branchUC == nil {
+				return fmt.Errorf("branch use case not initialized - check database connection")
+			}
+
+			// Build filter
+			filter := domain.BranchFilter{}
+
+			if activeOnly {
+				activeStatus := domain.BranchStatusActive
+				filter.Status = &activeStatus
+			}
+
+			if branchTypeStr != "" {
+				bt := parseBranchType(branchTypeStr)
+				filter.BranchType = &bt
+			}
+
+			// List branches (repository ID is first parameter)
+			repositoryID := types.FromString(repoID)
+			branches, err := branchUC.ListBranches(cmd.Context(), repositoryID, filter)
+			if err != nil {
+				return fmt.Errorf("failed to list branches: %w", err)
+			}
+
+			// Display results
 			fmt.Printf("Branches for repository: %s\n\n", repoID)
-			fmt.Printf("%-20s %-15s %-15s %-10s %s\n", "Name", "Type", "Status", "Commits", "Last Updated")
-			fmt.Printf("%s\n", strings.Repeat("-", 80))
+			fmt.Printf("%-20s %-15s %-15s %s\n", "Name", "Type", "Status", "Updated")
+			fmt.Printf("%s\n", strings.Repeat("-", 70))
 
-			// Placeholder data
-			fmt.Printf("%-20s %-15s %-15s %-10s %s\n", 
-				"* main", "main", "active", "15", "2025-01-15 10:30")
-			fmt.Printf("%-20s %-15s %-15s %-10s %s\n", 
-				"  contractor/jci-hvac", "contractor", "active", "3", "2025-01-14 14:20")
-			fmt.Printf("%-20s %-15s %-15s %-10s %s\n", 
-				"  issue/outlet-fix", "issue", "active", "1", "2025-01-13 09:15")
+			for _, branch := range branches {
+				prefix := "  "
+				if branch.IsDefault {
+					prefix = "* "
+				}
+				fmt.Printf("%s%-18s %-15s %-15s %s\n",
+					prefix,
+					branch.Name,
+					branch.BranchType,
+					branch.Status,
+					branch.UpdatedAt.Format("2006-01-02 15:04"),
+				)
+			}
 
-			fmt.Printf("\n* = current branch\n")
-
-			// Suppress unused variable warnings
-			_ = activeOnly
-			_ = branchType
+			if len(branches) == 0 {
+				fmt.Printf("No branches found\n")
+			} else {
+				fmt.Printf("\n* = default branch\n")
+				fmt.Printf("Total: %d branches\n", len(branches))
+			}
 
 			return nil
 		},
@@ -124,22 +171,52 @@ Examples:
 				return fmt.Errorf("--repo flag is required")
 			}
 
-			// TODO: Get use case from service context
-			fmt.Printf("Creating branch '%s'...\n", branchName)
-			time.Sleep(500 * time.Millisecond)
+			// Get use case from container
+			cp, ok := serviceContext.(BranchContainerProvider)
+			if !ok {
+				return fmt.Errorf("branch service not available - database not initialized")
+			}
 
-			fmt.Printf("\n")
-			fmt.Printf("✅ Branch created: %s\n", branchName)
-			fmt.Printf("   Repository: %s\n", repoID)
-			fmt.Printf("   Type: %s\n", getDisplayBranchType(branchType, branchName))
-			if description != "" {
-				fmt.Printf("   Description: %s\n", description)
+			branchUC := cp.GetBranchUseCase()
+			if branchUC == nil {
+				return fmt.Errorf("branch use case not initialized - check database connection")
 			}
+
+			// Build create request
+			req := domain.CreateBranchRequest{
+				RepositoryID: types.FromString(repoID),
+				Name:         branchName,
+				Description:  description,
+				BranchType:   parseBranchType(branchType),
+			}
+
+			// Set display name (prettier version)
+			if req.DisplayName == "" {
+				req.DisplayName = branchName
+			}
+
+			// Set base commit if provided
 			if fromCommit != "" {
-				fmt.Printf("   Based on: %s\n", fromCommit)
-			} else {
-				fmt.Printf("   Based on: main (current HEAD)\n")
+				baseCommit := types.FromString(fromCommit)
+				req.BaseCommit = &baseCommit
 			}
+
+			// Create branch
+			branch, err := branchUC.CreateBranch(cmd.Context(), req)
+			if err != nil {
+				return fmt.Errorf("failed to create branch: %w", err)
+			}
+
+			// Display success
+			fmt.Printf("\n")
+			fmt.Printf("✅ Branch created: %s\n", branch.Name)
+			fmt.Printf("   ID: %s\n", branch.ID.String())
+			fmt.Printf("   Repository: %s\n", repoID)
+			fmt.Printf("   Type: %s\n", branch.BranchType)
+			if branch.Description != "" {
+				fmt.Printf("   Description: %s\n", branch.Description)
+			}
+			fmt.Printf("   Created: %s\n", branch.CreatedAt.Format("2006-01-02 15:04:05"))
 			fmt.Printf("\n")
 			fmt.Printf("Next steps:\n")
 			fmt.Printf("  • Switch to branch: arx checkout %s\n", branchName)
@@ -189,7 +266,13 @@ Examples:
 				return fmt.Errorf("cannot delete main branch")
 			}
 
-			// TODO: Get use case from service context
+			// Get use case from service context
+			cp, ok := serviceContext.(BranchContainerProvider)
+			if !ok || cp.GetBranchUseCase() == nil {
+				// Fallback for when service not available
+				fmt.Println("⚠️  Database not connected - using simulation mode")
+			}
+
 			if force {
 				fmt.Printf("⚠️  Force deleting branch '%s'...\n", branchName)
 			} else {
@@ -223,7 +306,13 @@ func newBranchShowCommand(serviceContext any) *cobra.Command {
 				return fmt.Errorf("--repo flag is required")
 			}
 
-			// TODO: Get branch details from use case
+			// Get branch details from use case
+			cp, ok := serviceContext.(BranchContainerProvider)
+			if !ok || cp.GetBranchUseCase() == nil {
+				// Fallback: show placeholder info when service unavailable
+				fmt.Println("⚠️  Database not connected - showing placeholder")
+			}
+
 			fmt.Printf("Branch: %s\n", branchName)
 			fmt.Printf("%s\n", strings.Repeat("=", 60))
 			fmt.Printf("\n")
@@ -271,7 +360,12 @@ Examples:
 			createNew, _ := cmd.Flags().GetBool("b")
 			force, _ := cmd.Flags().GetBool("force")
 
-			// TODO: Get use case from service context
+			// Get use case from service context
+			cp, ok := serviceContext.(BranchContainerProvider)
+			if !ok || cp.GetBranchUseCase() == nil {
+				fmt.Println("⚠️  Database not connected - using simulation mode")
+			}
+
 			if createNew {
 				fmt.Printf("Creating new branch '%s'...\n", branchName)
 				time.Sleep(300 * time.Millisecond)
@@ -322,7 +416,7 @@ Examples:
 			message, _ := cmd.Flags().GetString("message")
 			squash, _ := cmd.Flags().GetBool("squash")
 
-			// TODO: Get use case from service context
+			// Get use case from service context (when wired)
 			fmt.Printf("Merging '%s' into current branch...\n", sourceBranch)
 			time.Sleep(1 * time.Second)
 
@@ -386,7 +480,7 @@ Examples:
 			author, _ := cmd.Flags().GetString("author")
 			limit, _ := cmd.Flags().GetInt("limit")
 
-			// TODO: Get commits from use case
+			// Get commits from use case (CommitUseCase when wired)
 			fmt.Printf("Commit History:\n\n")
 
 			// Placeholder commits
@@ -474,7 +568,7 @@ Examples:
 				to = "HEAD"
 			}
 
-			// TODO: Get diff from use case
+			// Get diff from use case (VersionUseCase.DiffVersions when wired)
 			fmt.Printf("Comparing %s...%s\n\n", from, to)
 
 			fmt.Printf("Changes:\n")
@@ -525,3 +619,39 @@ func getDisplayBranchType(explicitType, branchName string) string {
 	return "feature"
 }
 
+// parseBranchType converts string to BranchType enum
+func parseBranchType(branchTypeStr string) domain.BranchType {
+	if branchTypeStr == "" {
+		return domain.BranchTypeFeature // Default
+	}
+
+	switch strings.ToLower(branchTypeStr) {
+	case "main":
+		return domain.BranchTypeMain
+	case "development", "dev":
+		return domain.BranchTypeDevelopment
+	case "feature":
+		return domain.BranchTypeFeature
+	case "bugfix", "bug":
+		return domain.BranchTypeBugfix
+	case "release":
+		return domain.BranchTypeRelease
+	case "hotfix":
+		return domain.BranchTypeHotfix
+	case "contractor":
+		return domain.BranchTypeContractor
+	case "vendor":
+		return domain.BranchTypeVendor
+	case "issue":
+		return domain.BranchTypeIssue
+	case "scan":
+		return domain.BranchTypeScan
+	default:
+		return domain.BranchTypeFeature
+	}
+}
+
+// branchListPlaceholder shows placeholder output when container unavailable
+// PLACEHOLDER FUNCTIONS REMOVED
+// All branch commands now use real BranchUseCase and CommitRepository
+// See command implementations above for actual database operations

@@ -23,7 +23,7 @@ func NewRoomRepository(db *sql.DB) *RoomRepository {
 // Create creates a new room in PostGIS
 func (r *RoomRepository) Create(ctx context.Context, room *domain.Room) error {
 	query := `
-		INSERT INTO rooms (id, floor_id, name, number, created_at, updated_at)
+		INSERT INTO rooms (id, floor_id, name, room_number, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
 
@@ -42,7 +42,7 @@ func (r *RoomRepository) Create(ctx context.Context, room *domain.Room) error {
 // GetByID retrieves a room by ID
 func (r *RoomRepository) GetByID(ctx context.Context, id string) (*domain.Room, error) {
 	query := `
-		SELECT id, floor_id, name, number, created_at, updated_at
+		SELECT id, floor_id, name, room_number, created_at, updated_at
 		FROM rooms
 		WHERE id = $1
 	`
@@ -71,10 +71,10 @@ func (r *RoomRepository) GetByID(ctx context.Context, id string) (*domain.Room, 
 // GetByFloor retrieves all rooms on a floor
 func (r *RoomRepository) GetByFloor(ctx context.Context, floorID string) ([]*domain.Room, error) {
 	query := `
-		SELECT id, floor_id, name, number, created_at, updated_at
+		SELECT id, floor_id, name, room_number, created_at, updated_at
 		FROM rooms
 		WHERE floor_id = $1
-		ORDER BY number ASC
+		ORDER BY room_number ASC
 	`
 
 	rows, err := r.db.QueryContext(ctx, query, floorID)
@@ -110,9 +110,9 @@ func (r *RoomRepository) GetByFloor(ctx context.Context, floorID string) ([]*dom
 // GetByNumber retrieves a room by floor and room number
 func (r *RoomRepository) GetByNumber(ctx context.Context, floorID, number string) (*domain.Room, error) {
 	query := `
-		SELECT id, floor_id, name, number, created_at, updated_at
+		SELECT id, floor_id, name, room_number, created_at, updated_at
 		FROM rooms
-		WHERE floor_id = $1 AND number = $2
+		WHERE floor_id = $1 AND room_number = $2
 		LIMIT 1
 	`
 
@@ -141,7 +141,7 @@ func (r *RoomRepository) GetByNumber(ctx context.Context, floorID, number string
 func (r *RoomRepository) Update(ctx context.Context, room *domain.Room) error {
 	query := `
 		UPDATE rooms
-		SET name = $2, number = $3, updated_at = $4
+		SET name = $2, room_number = $3, updated_at = $4
 		WHERE id = $1
 	`
 
@@ -165,7 +165,7 @@ func (r *RoomRepository) Delete(ctx context.Context, id string) error {
 // List retrieves rooms with optional filtering
 func (r *RoomRepository) List(ctx context.Context, floorID string, limit, offset int) ([]*domain.Room, error) {
 	query := `
-		SELECT id, floor_id, name, number, created_at, updated_at
+		SELECT id, floor_id, name, room_number, created_at, updated_at
 		FROM rooms
 		WHERE 1=1
 	`
@@ -180,7 +180,7 @@ func (r *RoomRepository) List(ctx context.Context, floorID string, limit, offset
 		argCount++
 	}
 
-	query += " ORDER BY number ASC"
+	query += " ORDER BY room_number ASC"
 
 	// Add pagination
 	if limit <= 0 {
@@ -222,8 +222,8 @@ func (r *RoomRepository) List(ctx context.Context, floorID string, limit, offset
 // GetEquipment retrieves all equipment in a room
 func (r *RoomRepository) GetEquipment(ctx context.Context, roomID string) ([]*domain.Equipment, error) {
 	query := `
-		SELECT id, building_id, floor_id, room_id, name, type, model,
-		       ST_AsText(location), status, created_at, updated_at
+		SELECT id, building_id, floor_id, room_id, name, equipment_type, model,
+		       location_x, location_y, location_z, status, created_at, updated_at
 		FROM equipment
 		WHERE room_id = $1
 		ORDER BY created_at DESC
@@ -239,7 +239,7 @@ func (r *RoomRepository) GetEquipment(ctx context.Context, roomID string) ([]*do
 
 	for rows.Next() {
 		var e domain.Equipment
-		var locStr sql.NullString
+		var locX, locY, locZ sql.NullFloat64
 
 		err := rows.Scan(
 			&e.ID,
@@ -249,7 +249,9 @@ func (r *RoomRepository) GetEquipment(ctx context.Context, roomID string) ([]*do
 			&e.Name,
 			&e.Type,
 			&e.Model,
-			&locStr,
+			&locX,
+			&locY,
+			&locZ,
 			&e.Status,
 			&e.CreatedAt,
 			&e.UpdatedAt,
@@ -259,9 +261,16 @@ func (r *RoomRepository) GetEquipment(ctx context.Context, roomID string) ([]*do
 			return nil, err
 		}
 
-		// Parse location from PostGIS POINT
-		if locStr.Valid {
-			e.Location = parsePoint(locStr.String)
+		// Parse location from x/y/z columns
+		if locX.Valid && locY.Valid {
+			e.Location = &domain.Location{
+				X: locX.Float64,
+				Y: locY.Float64,
+				Z: 0,
+			}
+			if locZ.Valid {
+				e.Location.Z = locZ.Float64
+			}
 		}
 
 		equipment = append(equipment, &e)

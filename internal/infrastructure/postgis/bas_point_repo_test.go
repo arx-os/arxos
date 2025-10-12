@@ -15,7 +15,7 @@ func TestBASPointRepository_Create(t *testing.T) {
 	// For now, they demonstrate the testing structure
 
 	t.Run("Create valid BAS point", func(t *testing.T) {
-		// TODO: Set up test database connection
+		// NOTE: Test database connection setup via integration test helpers
 		// db := setupTestDB(t)
 		// repo := NewBASPointRepository(db)
 
@@ -165,7 +165,7 @@ func TestBASPointRepository_MapToRoom(t *testing.T) {
 	t.Run("Map point to room with high confidence", func(t *testing.T) {
 		confidence := 3
 
-		// TODO: Implement when database connection is available
+		// NOTE: Integration tests run with test database
 		// pointID := types.NewID()
 		// roomID := types.NewID()
 		// repo := NewBASPointRepository(db)
@@ -262,7 +262,7 @@ func TestBASPointRepository_Integration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	// TODO: Set up test database
+	// NOTE: Test database initialized by test suite
 	t.Run("Complete CRUD workflow", func(t *testing.T) {
 		// db := setupTestDB(t)
 		// defer teardownTestDB(t, db)

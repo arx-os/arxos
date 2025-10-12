@@ -73,12 +73,14 @@ func (suite *APIIntegrationTestSuite) SetupTestEnvironment(t *testing.T) {
 	buildingHandler := handlers.NewBuildingHandler(
 		baseHandler,
 		suite.app.GetBuildingUseCase(),
+		suite.app.GetIFCUseCase(),
 		testLogger,
 	)
 
 	equipmentHandler := handlers.NewEquipmentHandler(
 		&types.Server{}, // Still uses old constructor for now
 		suite.app.GetEquipmentUseCase(),
+		suite.app.GetRelationshipRepository(),
 		testLogger,
 	)
 

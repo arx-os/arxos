@@ -144,8 +144,25 @@ func (h *IFCHandler) ExportIFC(w http.ResponseWriter, r *http.Request) {
 
 	h.logger.Info("Export IFC requested")
 
-	// TODO: Implement ExportIFC in use case
-	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("export IFC functionality not yet implemented"))
+	buildingID := chi.URLParam(r, "id")
+	if buildingID == "" {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("building ID is required"))
+		return
+	}
+
+	// Export IFC from use case
+	ifcData, err := h.ifcUC.ExportIFC(r.Context(), buildingID)
+	if err != nil {
+		h.logger.Error("IFC export failed", "error", err)
+		h.RespondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	// Return IFC file as download
+	w.Header().Set("Content-Type", "application/x-step")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=building-%s.ifc", buildingID))
+	w.WriteHeader(http.StatusOK)
+	w.Write(ifcData)
 }
 
 // GetImportJob handles GET /api/v1/ifc/import/{job_id}
@@ -163,8 +180,13 @@ func (h *IFCHandler) GetImportJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement GetImportJob in use case
-	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("get import job functionality not yet implemented"))
+	// Return stub response (async job tracking not yet implemented)
+	h.RespondJSON(w, http.StatusOK, map[string]any{
+		"job_id":    jobID,
+		"status":    "unknown",
+		"message":   "Async job tracking not yet implemented. IFC imports are currently synchronous.",
+		"createdAt": time.Now(),
+	})
 }
 
 // GetExportJob handles GET /api/v1/ifc/export/{job_id}
@@ -182,8 +204,13 @@ func (h *IFCHandler) GetExportJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement GetExportJob in use case
-	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("get export job functionality not yet implemented"))
+	// Return stub response (async job tracking not yet implemented)
+	h.RespondJSON(w, http.StatusOK, map[string]any{
+		"job_id":    jobID,
+		"status":    "unknown",
+		"message":   "Async job tracking not yet implemented. IFC exports are currently synchronous.",
+		"createdAt": time.Now(),
+	})
 }
 
 // ListImportJobs handles GET /api/v1/ifc/import
@@ -195,8 +222,12 @@ func (h *IFCHandler) ListImportJobs(w http.ResponseWriter, r *http.Request) {
 
 	h.logger.Info("List import jobs requested")
 
-	// TODO: Implement ListImportJobs in use case
-	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("list import jobs functionality not yet implemented"))
+	// Return empty list (async job tracking not yet implemented)
+	h.RespondJSON(w, http.StatusOK, map[string]any{
+		"jobs":    []any{},
+		"total":   0,
+		"message": "Async job tracking not yet implemented. IFC imports are currently synchronous.",
+	})
 }
 
 // ListExportJobs handles GET /api/v1/ifc/export
@@ -208,8 +239,12 @@ func (h *IFCHandler) ListExportJobs(w http.ResponseWriter, r *http.Request) {
 
 	h.logger.Info("List export jobs requested")
 
-	// TODO: Implement ListExportJobs in use case
-	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("list export jobs functionality not yet implemented"))
+	// Return empty list (async job tracking not yet implemented)
+	h.RespondJSON(w, http.StatusOK, map[string]any{
+		"jobs":    []any{},
+		"total":   0,
+		"message": "Async job tracking not yet implemented. IFC exports are currently synchronous.",
+	})
 }
 
 // CancelImportJob handles DELETE /api/v1/ifc/import/{job_id}
@@ -227,8 +262,11 @@ func (h *IFCHandler) CancelImportJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement CancelImportJob in use case
-	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("cancel import job functionality not yet implemented"))
+	// Return stub response (async job tracking not yet implemented)
+	h.RespondJSON(w, http.StatusOK, map[string]any{
+		"job_id":  jobID,
+		"message": "Async job tracking not yet implemented. Cannot cancel synchronous operations.",
+	})
 }
 
 // CancelExportJob handles DELETE /api/v1/ifc/export/{job_id}
@@ -246,8 +284,11 @@ func (h *IFCHandler) CancelExportJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement CancelExportJob in use case
-	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("cancel export job functionality not yet implemented"))
+	// Return stub response (async job tracking not yet implemented)
+	h.RespondJSON(w, http.StatusOK, map[string]any{
+		"job_id":  jobID,
+		"message": "Async job tracking not yet implemented. Cannot cancel synchronous operations.",
+	})
 }
 
 // GetImportJobLogs handles GET /api/v1/ifc/import/{job_id}/logs
@@ -265,8 +306,12 @@ func (h *IFCHandler) GetImportJobLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement GetImportJobLogs in use case
-	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("get import job logs functionality not yet implemented"))
+	// Return empty logs (async job tracking not yet implemented)
+	h.RespondJSON(w, http.StatusOK, map[string]any{
+		"job_id":  jobID,
+		"logs":    []string{},
+		"message": "Async job tracking not yet implemented. No logs available for synchronous operations.",
+	})
 }
 
 // GetExportJobLogs handles GET /api/v1/ifc/export/{job_id}/logs
@@ -284,6 +329,10 @@ func (h *IFCHandler) GetExportJobLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement GetExportJobLogs in use case
-	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("get export job logs functionality not yet implemented"))
+	// Return empty logs (async job tracking not yet implemented)
+	h.RespondJSON(w, http.StatusOK, map[string]any{
+		"job_id":  jobID,
+		"logs":    []string{},
+		"message": "Async job tracking not yet implemented. No logs available for synchronous operations.",
+	})
 }

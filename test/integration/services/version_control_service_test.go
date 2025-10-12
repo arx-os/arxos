@@ -261,9 +261,9 @@ func TestVersionControl_CompleteWorkflow(t *testing.T) {
 	// Step 8: Test tree-level diff optimization
 	t.Log("Step 8: Testing tree-level diff optimization")
 
-	// Building tree should be the same in snapshot2 and snapshot3
-	assert.Equal(t, snapshot2.BuildingTree, snapshot3.BuildingTree, "Building tree should be identical")
-	assert.Equal(t, snapshot2.EquipmentTree, snapshot3.EquipmentTree, "Equipment tree should be identical")
+	// Space tree should be the same in snapshot2 and snapshot3
+	assert.Equal(t, snapshot2.SpaceTree, snapshot3.SpaceTree, "Space tree should be identical")
+	assert.Equal(t, snapshot2.ItemTree, snapshot3.ItemTree, "Item tree should be identical")
 
 	t.Logf("  Tree-level optimization working: identical trees share hashes")
 
@@ -585,19 +585,19 @@ func TestVersionControl_ContentDeduplication(t *testing.T) {
 	snapshot2, err := snapshotService.CaptureSnapshot(ctx, buildingID.String())
 	require.NoError(t, err)
 
-	// Verify deduplication: Building tree should be identical
-	assert.Equal(t, snapshot1.BuildingTree, snapshot2.BuildingTree,
-		"Building tree should be identical (deduplication)")
+	// Verify deduplication: Space tree should be identical
+	assert.Equal(t, snapshot1.SpaceTree, snapshot2.SpaceTree,
+		"Space tree should be identical (deduplication)")
 
-	// Equipment tree should be different
-	assert.NotEqual(t, snapshot1.EquipmentTree, snapshot2.EquipmentTree,
-		"Equipment tree should be different")
+	// Item tree should be different
+	assert.NotEqual(t, snapshot1.ItemTree, snapshot2.ItemTree,
+		"Item tree should be different")
 
 	t.Log("✅ Content deduplication verified")
-	t.Logf("   Building tree shared: %s", snapshot1.BuildingTree[:12])
-	t.Logf("   Equipment trees differ: %s vs %s",
-		snapshot1.EquipmentTree[:12],
-		snapshot2.EquipmentTree[:12])
+	t.Logf("   Space tree shared: %s", snapshot1.SpaceTree[:12])
+	t.Logf("   Item trees differ: %s vs %s",
+		snapshot1.ItemTree[:12],
+		snapshot2.ItemTree[:12])
 }
 
 // setupVersionControlDB sets up database for version control tests

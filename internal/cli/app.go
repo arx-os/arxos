@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/arx-os/arxos/internal/app"
 	"github.com/arx-os/arxos/internal/cli/commands"
@@ -68,8 +69,17 @@ func (a *App) NewContainer() *app.Container {
 	// Initialize container with context
 	ctx := context.Background()
 	if err := container.Initialize(ctx, a.config); err != nil {
-		// Log error but don't fail - container will be initialized lazily
-		fmt.Printf("Warning: Failed to initialize container: %v\n", err)
+		// FAIL FAST - Don't continue with broken container
+		fmt.Fprintf(os.Stderr, "❌ FATAL: Failed to initialize ArxOS container\n")
+		fmt.Fprintf(os.Stderr, "\nError: %v\n\n", err)
+		fmt.Fprintf(os.Stderr, "Common causes:\n")
+		fmt.Fprintf(os.Stderr, "  1. PostgreSQL not running (check: psql -h localhost -U postgres)\n")
+		fmt.Fprintf(os.Stderr, "  2. Database not created (run: createdb arxos_dev)\n")
+		fmt.Fprintf(os.Stderr, "  3. PostGIS extension not installed (run: CREATE EXTENSION postgis;)\n")
+		fmt.Fprintf(os.Stderr, "  4. Invalid connection settings in config\n\n")
+		fmt.Fprintf(os.Stderr, "Quick fix:\n")
+		fmt.Fprintf(os.Stderr, "  ./scripts/setup-dev-database.sh\n\n")
+		os.Exit(1)
 	}
 
 	return container
@@ -130,6 +140,9 @@ func (a *App) wireCommands() {
 
 	// Floor management commands
 	a.rootCmd.AddCommand(commands.CreateFloorCommands(serviceContext))
+
+	// Room management commands
+	a.rootCmd.AddCommand(commands.CreateRoomCommands(serviceContext))
 
 	// Equipment management commands
 	a.rootCmd.AddCommand(commands.CreateEquipmentCommands(serviceContext))

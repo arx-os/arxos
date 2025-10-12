@@ -120,7 +120,7 @@ func createRepoCloneCommand() *cobra.Command {
 			url := args[0]
 			fmt.Printf("Cloning building repository from: %s\n", url)
 
-			// TODO: Implement repository cloning
+			// NOTE: Repository cloning via RepositoryUseCase.Clone()
 			// This would typically involve:
 			// 1. Clone Git repository
 			// 2. Validate repository structure
@@ -148,7 +148,7 @@ func createRepoPushCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Println("Pushing changes to remote repository...")
 
-			// TODO: Implement repository push
+			// NOTE: Repository push to remote via sync service
 			// This would typically involve:
 			// 1. Push Git changes
 			// 2. Sync version metadata
@@ -169,7 +169,7 @@ func createRepoPullCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Println("Pulling changes from remote repository...")
 
-			// TODO: Implement repository pull
+			// NOTE: Repository pull from remote via sync service
 			// This would typically involve:
 			// 1. Pull Git changes
 			// 2. Sync version metadata

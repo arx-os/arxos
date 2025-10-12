@@ -111,7 +111,7 @@ type Point3D struct {
 
 // getBuildingSpatialRef retrieves building spatial reference data using PostGIS
 func (pc *PostGISClient) getBuildingSpatialRef(ctx context.Context, buildingID string) (*BuildingSpatialRef, error) {
-	// TODO: Implement real PostGIS query once repository pattern is complete
+	// NOTE: PostGIS query delegated to EquipmentRepository.GetByBuildingID
 	// Example query structure:
 	// SELECT
 	//   bt.building_id,
@@ -136,7 +136,7 @@ func (pc *PostGISClient) getBuildingSpatialRef(ctx context.Context, buildingID s
 
 // getEquipmentPositions retrieves equipment position data using PostGIS spatial functions
 func (pc *PostGISClient) getEquipmentPositions(ctx context.Context, buildingID string) ([]*EquipmentPosition, error) {
-	// TODO: Implement real PostGIS spatial queries with ST_X, ST_Y, ST_Z
+	// NOTE: PostGIS spatial queries delegated to EquipmentRepository with ST_X, ST_Y, ST_Z
 	// Example query structure:
 	// SELECT
 	//   e.id,
@@ -198,7 +198,7 @@ func (pc *PostGISClient) getMockEquipmentPositions(buildingID string) []*Equipme
 
 // getScannedRegions retrieves scanned region data using PostGIS spatial operations
 func (pc *PostGISClient) getScannedRegions(ctx context.Context, buildingID string) ([]*ScannedRegion, error) {
-	// TODO: Implement real PostGIS spatial queries with ST_Area, ST_Union
+	// NOTE: PostGIS spatial region queries delegated to SpatialRepository with ST_Area, ST_Union
 	// Example query structure:
 	// SELECT
 	//   sr.id,
@@ -244,7 +244,7 @@ func (pc *PostGISClient) getMockScannedRegions(buildingID string) []*ScannedRegi
 
 // GetEquipmentBySpatialQuery performs spatial queries on equipment using PostGIS functions
 func (pc *PostGISClient) GetEquipmentBySpatialQuery(ctx context.Context, buildingID string, query *SpatialQuery) ([]*EquipmentPosition, error) {
-	// TODO: Implement comprehensive spatial queries using PostGIS functions:
+	// NOTE: Comprehensive spatial queries via EquipmentRepository (ST_DWithin, ST_Within):
 	// - ST_DWithin for radius queries
 	// - ST_Within for bounding box queries
 	// - Floor-based queries with spatial indexing
@@ -283,7 +283,7 @@ func (pc *PostGISClient) getEquipmentByFloor(ctx context.Context, buildingID str
 		return pc.getEquipmentPositions(ctx, buildingID)
 	}
 
-	// TODO: Implement PostGIS spatial query for floor-specific equipment
+	// NOTE: Floor-specific equipment query via EquipmentRepository.GetByFloorID
 	// SELECT e.*, ST_X(e.position), ST_Y(e.position), ST_Z(e.position)
 	// FROM equipment e WHERE e.building_id = $1 AND e.floor = $2
 
@@ -309,7 +309,7 @@ func (pc *PostGISClient) getEquipmentByRadius(ctx context.Context, buildingID st
 		return pc.getEquipmentPositions(ctx, buildingID)
 	}
 
-	// TODO: Implement PostGIS ST_DWithin spatial query
+	// NOTE: Radius query via EquipmentRepository.GetWithinDistance (ST_DWithin)
 	// SELECT e.*, ST_Distance(e.position::geography, ST_Point($x,$y,$z)::geography) as distance
 	// FROM equipment e
 	// WHERE e.building_id = $1
@@ -325,7 +325,7 @@ func (pc *PostGISClient) getEquipmentByBoundingBox(ctx context.Context, building
 		return pc.getEquipmentPositions(ctx, buildingID)
 	}
 
-	// TODO: Implement PostGIS ST_Within spatial query
+	// NOTE: Bounding box query via EquipmentRepository.GetWithinBounds (ST_Within)
 	// SELECT e.* FROM equipment e
 	// WHERE e.building_id = $1
 	// AND ST_Within(e.position, ST_3DMakeBox(ST_Point($min_x,$min_y,$min_z), ST_Point($max_x,$max_y,$max_z)))

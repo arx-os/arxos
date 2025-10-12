@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS pull_requests (
     approved_count INTEGER NOT NULL DEFAULT 0,
     
     -- Assignment
-    assigned_to UUID REFERENCES users(id) ON DELETE SET NULL,
+    assigned_to TEXT REFERENCES users(id) ON DELETE SET NULL,
     assigned_team TEXT, -- 'electricians', 'hvac-contractors', etc.
     auto_assigned BOOLEAN NOT NULL DEFAULT false,
     
@@ -74,14 +74,14 @@ CREATE TABLE IF NOT EXISTS pull_requests (
     metadata JSONB DEFAULT '{}',
     
     -- Author
-    created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_by TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     
     -- Audit trail
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     closed_at TIMESTAMPTZ,
     merged_at TIMESTAMPTZ,
-    merged_by UUID REFERENCES users(id) ON DELETE SET NULL
+    merged_by TEXT REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE UNIQUE INDEX idx_pull_requests_number ON pull_requests(repository_id, number);
@@ -106,7 +106,7 @@ COMMENT ON COLUMN pull_requests.auto_assigned IS 'Whether PR was auto-assigned b
 CREATE TABLE IF NOT EXISTS pr_reviewers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     pr_id UUID NOT NULL REFERENCES pull_requests(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     
     -- Review status
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN (
@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS pr_reviewers (
     
     -- Audit
     added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    added_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    added_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     
     CONSTRAINT pr_reviewers_unique UNIQUE(pr_id, user_id)
 );
@@ -141,7 +141,7 @@ COMMENT ON TABLE pr_reviewers IS 'Reviewers assigned to pull requests';
 CREATE TABLE IF NOT EXISTS pr_reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     pr_id UUID NOT NULL REFERENCES pull_requests(id) ON DELETE CASCADE,
-    reviewer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reviewer_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     
     -- Review decision
     decision TEXT NOT NULL CHECK (decision IN ('approve', 'request_changes', 'comment')),
@@ -189,7 +189,7 @@ CREATE TABLE IF NOT EXISTS pr_comments (
     entity_id UUID,
     
     -- Author
-    author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    author_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     
     -- Reactions (like GitHub reactions)
     reactions JSONB DEFAULT '{}', -- {thumbs_up: 5, heart: 2, etc.}
@@ -235,7 +235,7 @@ CREATE TABLE IF NOT EXISTS pr_files (
     )),
     
     -- Upload metadata
-    uploaded_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    uploaded_by TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     
     -- Description
@@ -270,7 +270,7 @@ CREATE TABLE IF NOT EXISTS pr_assignment_rules (
     priority_level TEXT,
     
     -- Assignment action
-    assign_to_user UUID REFERENCES users(id) ON DELETE SET NULL,
+    assign_to_user TEXT REFERENCES users(id) ON DELETE SET NULL,
     assign_to_team TEXT,
     notify_users UUID[], -- Additional users to notify
     
@@ -279,7 +279,7 @@ CREATE TABLE IF NOT EXISTS pr_assignment_rules (
     
     -- Audit
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    created_by UUID REFERENCES users(id) ON DELETE SET NULL
+    created_by TEXT REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_pr_assignment_rules_repo ON pr_assignment_rules(repository_id);
@@ -320,7 +320,7 @@ CREATE TABLE IF NOT EXISTS pr_activity_log (
     metadata JSONB DEFAULT '{}',
     
     -- Actor
-    actor_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    actor_id TEXT REFERENCES users(id) ON DELETE SET NULL,
     
     -- Timestamp
     occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

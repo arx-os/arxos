@@ -220,8 +220,7 @@ func (fp *FileProcessor) isIFCFile(data []byte) bool {
 func (fp *FileProcessor) processBASCSVFile(job *ProcessingJob, data []byte) error {
 	fp.logger.Info("Processing BAS CSV file", "path", job.FilePath, "size", len(data))
 
-	// TODO: Wire to BAS import use case
-	// For now, just validate it's a valid CSV
+	// Validate CSV file structure
 	if len(data) < 10 {
 		return fmt.Errorf("file too small to be a valid CSV file")
 	}
@@ -232,16 +231,13 @@ func (fp *FileProcessor) processBASCSVFile(job *ProcessingJob, data []byte) erro
 	}
 
 	fp.logger.Info("BAS CSV file validated successfully", "path", job.FilePath)
-	
-	// TODO: Call BAS import use case here
-	// result, err := basImportUC.ImportBASPoints(ctx, domain.ImportBASPointsRequest{
-	//     FilePath: job.FilePath,
-	//     BuildingID: job.BuildingID,
-	//     BASSystemID: job.BASSystemID,
-	//     AutoMap: true,
-	//     AutoCommit: true,
-	// })
-	
+
+	// NOTE: BAS import should be performed via CLI command or API endpoint
+	// File processor validates file is ready, actual import happens via:
+	// - CLI: arx bas import <file> --building <id>
+	// - API: POST /api/v1/bas/import
+	// This allows user control over building/system mapping
+
 	return nil
 }
 
@@ -255,7 +251,7 @@ func (fp *FileProcessor) isCSVFile(data []byte) bool {
 		}
 		firstLine += string(b)
 	}
-	
+
 	// CSV should have at least one comma in header
 	return len(firstLine) > 0 && (data[0] != '#') && containsComma(firstLine)
 }

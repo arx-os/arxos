@@ -1,4 +1,4 @@
-package test_domain_agnostic
+package unit_test
 
 import (
 	"fmt"

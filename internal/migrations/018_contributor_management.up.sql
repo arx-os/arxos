@@ -11,8 +11,8 @@
 CREATE TABLE IF NOT EXISTS repository_contributors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     repository_id UUID NOT NULL REFERENCES building_repositories(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
     -- Role in repository
     role TEXT NOT NULL DEFAULT 'reader' CHECK (role IN (
         'owner',        -- Full control, can delete repository
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS repository_contributors (
         'reporter',     -- Can create issues only
         'reader'        -- Read-only access
     )),
-    
+
     -- Permissions (granular control beyond role)
     can_read BOOLEAN NOT NULL DEFAULT true,
     can_write BOOLEAN NOT NULL DEFAULT false,
@@ -35,31 +35,31 @@ CREATE TABLE IF NOT EXISTS repository_contributors (
     can_assign_issues BOOLEAN NOT NULL DEFAULT false,
     can_manage_contributors BOOLEAN NOT NULL DEFAULT false,
     can_manage_settings BOOLEAN NOT NULL DEFAULT false,
-    
+
     -- Access scope (what parts of building they can access)
     scope_all_buildings BOOLEAN NOT NULL DEFAULT true,
     scope_building_ids UUID[], -- Specific buildings if not all
     scope_floor_ids UUID[], -- Specific floors
     scope_room_types TEXT[], -- Specific room types (electrical, hvac, etc.)
     scope_equipment_types TEXT[], -- Specific equipment types
-    
+
     -- Invitation/approval metadata
-    invited_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    invited_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     invited_at TIMESTAMPTZ,
     accepted_at TIMESTAMPTZ,
-    
+
     -- Status
     status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended')),
-    
+
     -- Metadata
     notes TEXT, -- Why this user has access
     metadata JSONB DEFAULT '{}',
-    
+
     -- Audit
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
+
     CONSTRAINT repository_contributors_unique UNIQUE(repository_id, user_id)
 );
 
@@ -78,13 +78,13 @@ COMMENT ON COLUMN repository_contributors.scope_building_ids IS 'Limit access to
 CREATE TABLE IF NOT EXISTS teams (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     repository_id UUID REFERENCES building_repositories(id) ON DELETE CASCADE,
-    organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
-    
+    organization_id TEXT REFERENCES organizations(id) ON DELETE CASCADE,
+
     -- Team identification
     slug TEXT NOT NULL, -- URL-friendly: "electrician-team", "hvac-contractors"
     name TEXT NOT NULL, -- Display name: "Electrician Team"
     description TEXT,
-    
+
     -- Team type
     team_type TEXT CHECK (team_type IN (
         'internal',     -- Building staff
@@ -94,26 +94,26 @@ CREATE TABLE IF NOT EXISTS teams (
         'engineering',  -- Engineering team
         'custom'        -- Custom team
     )),
-    
+
     -- Default permissions for team members
     default_role TEXT DEFAULT 'contributor',
-    
+
     -- Team lead
-    lead_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    
+    lead_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+
     -- Specialization (what this team works on)
     specializations TEXT[], -- ['electrical', 'hvac', 'plumbing']
-    
+
     -- Metadata
     color TEXT, -- Hex color for UI
     avatar_url TEXT,
     metadata JSONB DEFAULT '{}',
-    
+
     -- Audit
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
+
     CONSTRAINT teams_unique_slug UNIQUE(repository_id, slug),
     CONSTRAINT teams_scope CHECK (repository_id IS NOT NULL OR organization_id IS NOT NULL)
 );
@@ -133,22 +133,22 @@ COMMENT ON TABLE teams IS 'Teams for organizing users (electricians, contractors
 CREATE TABLE IF NOT EXISTS team_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
     -- Role in team
     team_role TEXT NOT NULL DEFAULT 'member' CHECK (team_role IN (
         'lead',      -- Team leader
         'admin',     -- Team administrator
         'member'     -- Regular member
     )),
-    
+
     -- Status
     status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
-    
+
     -- Audit
     added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    added_by UUID REFERENCES users(id) ON DELETE SET NULL,
-    
+    added_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+
     CONSTRAINT team_members_unique UNIQUE(team_id, user_id)
 );
 
@@ -165,32 +165,32 @@ COMMENT ON TABLE team_members IS 'Team membership linking users to teams';
 CREATE TABLE IF NOT EXISTS access_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     repository_id UUID NOT NULL REFERENCES building_repositories(id) ON DELETE CASCADE,
-    
+
     -- Rule identification
     name TEXT NOT NULL,
     description TEXT,
     enabled BOOLEAN NOT NULL DEFAULT true,
     priority INTEGER NOT NULL DEFAULT 0, -- Higher priority rules evaluated first
-    
+
     -- Conditions (when does this rule apply?)
     condition_user_domain TEXT, -- Email domain: "@company.com"
     condition_user_role TEXT, -- User role in organization
     condition_user_tags TEXT[], -- User tags
     condition_equipment_type TEXT, -- Grant access based on equipment expertise
     condition_specialization TEXT, -- User specialization
-    
+
     -- Actions (what happens when rule matches?)
     action_add_to_team UUID REFERENCES teams(id) ON DELETE CASCADE,
     action_grant_role TEXT, -- Role to grant
     action_notify_admin BOOLEAN NOT NULL DEFAULT true,
     action_require_approval BOOLEAN NOT NULL DEFAULT false,
-    
+
     -- Metadata
     metadata JSONB DEFAULT '{}',
-    
+
     -- Audit
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    created_by UUID REFERENCES users(id) ON DELETE SET NULL
+    created_by TEXT REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_access_rules_repo ON access_rules(repository_id);
@@ -207,7 +207,7 @@ CREATE TABLE IF NOT EXISTS branch_protection_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     repository_id UUID NOT NULL REFERENCES building_repositories(id) ON DELETE CASCADE,
     branch_pattern TEXT NOT NULL, -- "main", "contractor/*", etc.
-    
+
     -- Protection settings
     require_pr BOOLEAN NOT NULL DEFAULT false, -- Require PR to merge
     require_reviews INTEGER NOT NULL DEFAULT 0, -- Minimum reviews needed
@@ -215,25 +215,25 @@ CREATE TABLE IF NOT EXISTS branch_protection_rules (
     dismiss_stale_reviews BOOLEAN NOT NULL DEFAULT false,
     require_status_checks BOOLEAN NOT NULL DEFAULT false,
     require_up_to_date BOOLEAN NOT NULL DEFAULT false,
-    
+
     -- Who can push/merge?
     allow_force_push BOOLEAN NOT NULL DEFAULT false,
     allow_deletions BOOLEAN NOT NULL DEFAULT false,
     restrict_push_to_admins BOOLEAN NOT NULL DEFAULT false,
-    
+
     -- Auto-merge settings
     allow_auto_merge BOOLEAN NOT NULL DEFAULT false,
     auto_merge_method TEXT CHECK (auto_merge_method IN ('merge', 'squash', 'rebase', NULL)),
-    
+
     -- Allowed users/teams
     allowed_push_user_ids UUID[],
     allowed_push_team_ids UUID[],
     allowed_merge_user_ids UUID[],
     allowed_merge_team_ids UUID[],
-    
+
     -- Metadata
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -249,7 +249,7 @@ COMMENT ON TABLE branch_protection_rules IS 'Branch protection rules (who can pu
 CREATE TABLE IF NOT EXISTS access_audit_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     repository_id UUID REFERENCES building_repositories(id) ON DELETE CASCADE,
-    
+
     -- Action details
     action TEXT NOT NULL CHECK (action IN (
         'contributor_added',
@@ -265,20 +265,20 @@ CREATE TABLE IF NOT EXISTS access_audit_log (
         'branch_protected',
         'branch_unprotected'
     )),
-    
+
     -- Subjects (who/what was affected)
-    subject_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    subject_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
     subject_team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
-    
+
     -- Details
     details TEXT,
     old_value JSONB,
     new_value JSONB,
-    
+
     -- Actor
-    actor_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    actor_id TEXT REFERENCES users(id) ON DELETE SET NULL,
     actor_ip TEXT,
-    
+
     -- Timestamp
     occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -294,30 +294,29 @@ COMMENT ON TABLE access_audit_log IS 'Audit log for all access control changes';
 -- Create default teams for existing repositories
 -- ============================================================================
 -- Every repository should have default teams
-INSERT INTO teams (repository_id, slug, name, description, team_type, specializations, created_at)
-SELECT 
-    br.id as repository_id,
-    unnest(ARRAY['facility-managers', 'building-staff', 'contractors', 'vendors']) as slug,
-    unnest(ARRAY['Facility Managers', 'Building Staff', 'Contractors', 'Vendors']) as name,
-    unnest(ARRAY[
-        'Facility management team',
-        'Building staff and custodians',
-        'External contractors',
-        'Vendors and suppliers'
-    ]) as description,
-    unnest(ARRAY['facilities', 'internal', 'contractor', 'vendor']) as team_type,
-    unnest(ARRAY[
-        ARRAY['facilities', 'management']::TEXT[],
-        ARRAY['maintenance', 'operations']::TEXT[],
-        ARRAY[]::TEXT[],
-        ARRAY[]::TEXT[]
-    ]) as specializations,
-    NOW() as created_at
-FROM building_repositories br
-WHERE NOT EXISTS (
-    SELECT 1 FROM teams t WHERE t.repository_id = br.id AND t.slug = 'facility-managers'
-)
-ON CONFLICT DO NOTHING;
+-- Create default teams (avoid unnest array casting issues)
+DO $$
+DECLARE
+    repo RECORD;
+BEGIN
+    FOR repo IN SELECT id FROM building_repositories LOOP
+        INSERT INTO teams (repository_id, slug, name, description, team_type, specializations, created_at)
+        VALUES (repo.id, 'facility-managers', 'Facility Managers', 'Facility management team', 'facilities', ARRAY['facilities', 'management']::TEXT[], NOW())
+        ON CONFLICT DO NOTHING;
+
+        INSERT INTO teams (repository_id, slug, name, description, team_type, specializations, created_at)
+        VALUES (repo.id, 'building-staff', 'Building Staff', 'Building staff and custodians', 'internal', ARRAY['maintenance', 'operations']::TEXT[], NOW())
+        ON CONFLICT DO NOTHING;
+
+        INSERT INTO teams (repository_id, slug, name, description, team_type, specializations, created_at)
+        VALUES (repo.id, 'contractors', 'Contractors', 'External contractors', 'contractor', ARRAY[]::TEXT[], NOW())
+        ON CONFLICT DO NOTHING;
+
+        INSERT INTO teams (repository_id, slug, name, description, team_type, specializations, created_at)
+        VALUES (repo.id, 'vendors', 'Vendors', 'Vendors and suppliers', 'vendor', ARRAY[]::TEXT[], NOW())
+        ON CONFLICT DO NOTHING;
+    END LOOP;
+END $$;
 
 -- ============================================================================
 -- Functions and Triggers
@@ -382,7 +381,7 @@ BEGIN
             to_jsonb(OLD)
         );
     END IF;
-    
+
     RETURN COALESCE(NEW, OLD);
 END;
 $$ LANGUAGE plpgsql;
@@ -398,11 +397,11 @@ CREATE TRIGGER repository_contributors_audit
 
 -- Active contributors per repository
 CREATE OR REPLACE VIEW v_repository_contributors AS
-SELECT 
+SELECT
     rc.repository_id,
     rc.user_id,
     u.email,
-    u.name as user_name,
+    u.full_name as user_name,
     rc.role,
     rc.status,
     rc.created_at,
@@ -412,13 +411,13 @@ JOIN users u ON u.id = rc.user_id
 LEFT JOIN team_members tm ON tm.user_id = rc.user_id
 LEFT JOIN teams t ON t.id = tm.team_id AND t.repository_id = rc.repository_id
 WHERE rc.status = 'active'
-GROUP BY rc.repository_id, rc.user_id, u.email, u.name, rc.role, rc.status, rc.created_at;
+GROUP BY rc.repository_id, rc.user_id, u.email, u.full_name, rc.role, rc.status, rc.created_at;
 
 COMMENT ON VIEW v_repository_contributors IS 'Active contributors with team memberships';
 
 -- Team roster with members
 CREATE OR REPLACE VIEW v_team_roster AS
-SELECT 
+SELECT
     t.id as team_id,
     t.repository_id,
     t.slug as team_slug,

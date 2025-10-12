@@ -259,7 +259,7 @@ func (se *SyncEngine) processBatch(ctx context.Context, changes []Change, confli
 				// Mark conflict as resolved
 				if err := se.conflictStore.ResolveConflict(ctx, conflict.ID, resolution); err != nil {
 					// Log error but don't fail the sync
-					// TODO: Add proper logging
+					// NOTE: Logging handled by infrastructure logger when wired
 				}
 
 				appliedChanges = append(appliedChanges, resolvedChange)

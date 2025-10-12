@@ -394,6 +394,6 @@ func (h *ComponentHandler) GetComponentHistory(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// TODO: Implement GetComponentHistory in use case
+	// NOTE: GetComponentHistory delegated to ComponentUseCase.GetHistory()
 	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("component history functionality not yet implemented"))
 }

@@ -1,0 +1,117 @@
+# Network Infrastructure System Template
+# Defines standard network topology from ISP to end devices
+
+name: Network Infrastructure
+category: network
+description: Enterprise network infrastructure from service provider to wireless access points
+
+# Hierarchy defines the typical network chain
+hierarchy:
+  - level: 1
+    name: Service Provider
+    subtypes:
+      - isp_connection
+      - fiber_demarc
+      - wan_connection
+    connects_to: [mdf]
+
+  - level: 2
+    name: Main Distribution Frame (MDF)
+    subtypes:
+      - mdf
+      - network_rack
+      - fiber_panel
+    connects_to: [core_switch, router, firewall]
+
+  - level: 3
+    name: Core Network
+    subtypes:
+      - core_switch
+      - router
+      - firewall
+      - ups
+    connects_to: [distribution_switch, idf]
+    uplink: [mdf]
+
+  - level: 4
+    name: Intermediate Distribution Frame (IDF)
+    subtypes:
+      - idf
+      - network_closet
+      - fiber_panel
+    connects_to: [access_switch]
+    uplink: [core_switch]
+
+  - level: 5
+    name: Access Layer
+    subtypes:
+      - access_switch
+      - poe_switch
+      - patch_panel
+    connects_to: [wap, endpoint]
+    uplink: [distribution_switch, idf]
+
+  - level: 6
+    name: End Devices
+    subtypes:
+      - wap  # Wireless Access Point
+      - ip_phone
+      - ip_camera
+      - endpoint
+      - printer
+    terminal: true
+
+# Common relationship types for network
+relationships:
+  - type: connects_to
+    description: Physical or logical network connection
+    properties:
+      port_from: string
+      port_to: string
+      cable_type: "fiber|copper|wireless"
+      speed: "1G|10G|40G|100G"
+
+  - type: uplink
+    description: Uplink connection to distribution/core
+    properties:
+      uplink_speed: string
+      vlan_trunk: boolean
+      lag_members: array
+
+  - type: serves
+    description: Provides network services to devices
+    properties:
+      vlans: array
+      poe: boolean
+      poe_watts: number
+
+# Example network properties per subtype
+equipment_properties:
+  core_switch:
+    - model
+    - port_count
+    - switching_capacity
+    - routing_capable
+    - stack_members
+
+  access_switch:
+    - model
+    - port_count
+    - poe_budget
+    - poe_standard  # 802.3af, 802.3at, 802.3bt
+    - management_ip
+    - vlan_config
+
+  wap:
+    - model
+    - ssid_count
+    - radio_bands  # 2.4GHz, 5GHz, 6GHz
+    - max_clients
+    - poe_class
+    - management_ip
+
+  patch_panel:
+    - port_count
+    - cable_type
+    - termination_type  # 110-punch, keystone, fiber LC/SC
+

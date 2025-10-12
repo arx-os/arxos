@@ -1,9 +1,11 @@
 package infrastructure
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/internal/domain"
@@ -129,7 +131,7 @@ func (jl *JSONLogger) LogJSON(level, msg string, fields map[string]any) {
 	logEntry := map[string]any{
 		"level":   level,
 		"message": msg,
-		"time":    fmt.Sprintf("%d", 0), // TODO: Add timestamp
+		"time":    time.Now().Format(time.RFC3339),
 	}
 
 	// Add fields to log entry
@@ -137,7 +139,14 @@ func (jl *JSONLogger) LogJSON(level, msg string, fields map[string]any) {
 		logEntry[k] = v
 	}
 
-	// TODO: Marshal to JSON and log
-	// For now, use the base logger
-	jl.Logger.log(level, msg)
+	// Marshal to JSON
+	jsonBytes, err := json.Marshal(logEntry)
+	if err != nil {
+		// Fallback to base logger if JSON marshaling fails
+		jl.Logger.log(level, msg)
+		return
+	}
+
+	// Log the JSON string
+	jl.Logger.log(level, string(jsonBytes))
 }

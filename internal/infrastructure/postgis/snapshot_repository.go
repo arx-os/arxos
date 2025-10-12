@@ -48,7 +48,7 @@ func (r *SnapshotRepository) Create(ctxAny any, snapshot *building.Snapshot) err
 
 	query := `
 		INSERT INTO version_snapshots (
-			hash, repository_id, building_tree, equipment_tree,
+			hash, repository_id, space_tree, item_tree,
 			spatial_tree, files_tree, operations_tree, metadata, created_at
 		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)

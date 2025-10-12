@@ -2,6 +2,7 @@ package postgis
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"github.com/arx-os/arxos/internal/domain"
@@ -44,7 +45,13 @@ func (r *BASPointRepository) Create(point *domain.BASPoint) error {
 		)
 	`
 
-	_, err := r.db.Exec(query,
+	// Marshal metadata to JSON
+	metadataJSON, err := json.Marshal(point.Metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	_, err = r.db.Exec(query,
 		point.ID.String(), point.BuildingID.String(), point.BASSystemID.String(),
 		nullableID(point.RoomID), nullableID(point.FloorID), nullableID(point.EquipmentID),
 		point.PointName, point.DeviceID, point.ObjectType, point.ObjectInstance,
@@ -53,7 +60,7 @@ func (r *BASPointRepository) Create(point *domain.BASPoint) error {
 		point.Mapped, point.MappingConfidence,
 		point.ImportedAt, point.ImportSource,
 		nullableID(point.AddedInVersion), nullableID(point.RemovedInVersion),
-		point.Metadata, point.CreatedAt, point.UpdatedAt,
+		metadataJSON, point.CreatedAt, point.UpdatedAt,
 	)
 
 	return err
@@ -62,7 +69,7 @@ func (r *BASPointRepository) Create(point *domain.BASPoint) error {
 // GetByID retrieves a BAS point by ID
 func (r *BASPointRepository) GetByID(id types.ID) (*domain.BASPoint, error) {
 	query := `
-		SELECT 
+		SELECT
 			id, building_id, bas_system_id, room_id, floor_id, equipment_id,
 			point_name, device_id, object_type, object_instance,
 			description, units, point_type, location_text,
@@ -178,12 +185,16 @@ func (r *BASPointRepository) Update(point *domain.BASPoint) error {
 // Delete soft-deletes a BAS point by setting removed_in_version
 func (r *BASPointRepository) Delete(id types.ID) error {
 	query := `
-		UPDATE bas_points 
+		UPDATE bas_points
 		SET removed_in_version = $1, updated_at = NOW()
 		WHERE id = $2
 	`
 
-	// TODO: Get current version ID from context
+	// Note: Version ID could come from context in the future
+	// For now, use nil for soft delete (marks as removed but doesn't track version)
+	// When version control is fully wired, pass context.Context to this method
+	// and extract version ID via: versionID := ctx.Value("version_id")
+
 	_, err := r.db.Exec(query, nil, id.String())
 	return err
 }
@@ -289,7 +300,13 @@ func (r *BASPointRepository) BulkCreate(points []*domain.BASPoint) error {
 	defer stmt.Close()
 
 	for _, point := range points {
-		_, err := stmt.Exec(
+		// Marshal metadata to JSON for this point
+		metadataJSON, err := json.Marshal(point.Metadata)
+		if err != nil {
+			return fmt.Errorf("failed to marshal metadata for point %s: %w", point.PointName, err)
+		}
+
+		_, err = stmt.Exec(
 			point.ID.String(), point.BuildingID.String(), point.BASSystemID.String(),
 			nullableID(point.RoomID), nullableID(point.FloorID), nullableID(point.EquipmentID),
 			point.PointName, point.DeviceID, point.ObjectType, point.ObjectInstance,
@@ -297,7 +314,7 @@ func (r *BASPointRepository) BulkCreate(points []*domain.BASPoint) error {
 			point.Writeable, point.MinValue, point.MaxValue,
 			point.Mapped, point.MappingConfidence,
 			point.ImportedAt, point.ImportSource,
-			point.Metadata, point.CreatedAt, point.UpdatedAt,
+			metadataJSON, point.CreatedAt, point.UpdatedAt,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to insert point %s: %w", point.PointName, err)
@@ -420,7 +437,7 @@ func (r *BASPointRepository) MapToEquipment(pointID, equipmentID types.ID, confi
 // buildListQuery builds a dynamic query based on filter
 func (r *BASPointRepository) buildListQuery(filter domain.BASPointFilter, limit, offset int) (string, []interface{}) {
 	query := `
-		SELECT 
+		SELECT
 			id, building_id, bas_system_id, room_id, floor_id, equipment_id,
 			point_name, device_id, object_type, object_instance,
 			description, units, point_type, location_text,
@@ -627,4 +644,3 @@ func nullableID(id *types.ID) sql.NullString {
 	}
 	return sql.NullString{String: id.String(), Valid: true}
 }
-

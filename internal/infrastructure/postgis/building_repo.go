@@ -26,20 +26,26 @@ func NewBuildingRepository(db *sql.DB) *BuildingRepository {
 // Create creates a new building in PostGIS
 func (r *BuildingRepository) Create(ctx context.Context, b *domain.Building) error {
 	query := `
-		INSERT INTO buildings (id, name, address, coordinates, created_at, updated_at)
-		VALUES ($1, $2, $3, ST_GeomFromText($4, 4326), $5, $6)
+		INSERT INTO buildings (id, arxos_id, name, address, latitude, longitude, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 
-	var coordStr string
+	var lat, lon sql.NullFloat64
 	if b.Coordinates != nil {
-		coordStr = fmt.Sprintf("POINT(%f %f)", b.Coordinates.X, b.Coordinates.Y)
+		lat = sql.NullFloat64{Float64: b.Coordinates.Y, Valid: true}
+		lon = sql.NullFloat64{Float64: b.Coordinates.X, Valid: true}
 	}
+
+	// Generate arxos_id from building ID
+	arxosID := b.ID.String()
 
 	_, err := r.db.ExecContext(ctx, query,
 		b.ID.String(),
+		arxosID,
 		b.Name,
 		b.Address,
-		coordStr,
+		lat,
+		lon,
 		b.CreatedAt,
 		b.UpdatedAt,
 	)
@@ -50,19 +56,20 @@ func (r *BuildingRepository) Create(ctx context.Context, b *domain.Building) err
 // GetByID retrieves a building by ID
 func (r *BuildingRepository) GetByID(ctx context.Context, id string) (*domain.Building, error) {
 	query := `
-		SELECT id, name, address, ST_AsText(coordinates), created_at, updated_at
+		SELECT id, name, address, latitude, longitude, created_at, updated_at
 		FROM buildings
 		WHERE id = $1
 	`
 
 	var b domain.Building
-	var coordStr sql.NullString
+	var lat, lon sql.NullFloat64
 
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&b.ID,
 		&b.Name,
 		&b.Address,
-		&coordStr,
+		&lat,
+		&lon,
 		&b.CreatedAt,
 		&b.UpdatedAt,
 	)
@@ -74,9 +81,13 @@ func (r *BuildingRepository) GetByID(ctx context.Context, id string) (*domain.Bu
 		return nil, err
 	}
 
-	// Parse coordinates from PostGIS POINT
-	if coordStr.Valid {
-		b.Coordinates = parsePoint(coordStr.String)
+	// Parse coordinates from lat/lon columns
+	if lat.Valid && lon.Valid {
+		b.Coordinates = &domain.Location{
+			X: lon.Float64, // Longitude is X
+			Y: lat.Float64, // Latitude is Y
+			Z: 0,
+		}
 	}
 
 	return &b, nil
@@ -86,20 +97,22 @@ func (r *BuildingRepository) GetByID(ctx context.Context, id string) (*domain.Bu
 func (r *BuildingRepository) Update(ctx context.Context, b *domain.Building) error {
 	query := `
 		UPDATE buildings
-		SET name = $2, address = $3, coordinates = ST_GeomFromText($4, 4326), updated_at = $5
+		SET name = $2, address = $3, latitude = $4, longitude = $5, updated_at = $6
 		WHERE id = $1
 	`
 
-	var coordStr string
+	var lat, lon sql.NullFloat64
 	if b.Coordinates != nil {
-		coordStr = fmt.Sprintf("POINT(%f %f)", b.Coordinates.X, b.Coordinates.Y)
+		lat = sql.NullFloat64{Float64: b.Coordinates.Y, Valid: true}
+		lon = sql.NullFloat64{Float64: b.Coordinates.X, Valid: true}
 	}
 
 	_, err := r.db.ExecContext(ctx, query,
 		b.ID.String(),
 		b.Name,
 		b.Address,
-		coordStr,
+		lat,
+		lon,
 		b.UpdatedAt,
 	)
 
@@ -116,7 +129,7 @@ func (r *BuildingRepository) Delete(ctx context.Context, id string) error {
 // List retrieves buildings with optional filtering
 func (r *BuildingRepository) List(ctx context.Context, filter *domain.BuildingFilter) ([]*domain.Building, error) {
 	query := `
-		SELECT id, name, address, ST_AsText(coordinates), created_at, updated_at
+		SELECT id, name, address, latitude, longitude, created_at, updated_at
 		FROM buildings
 		WHERE 1=1`
 
@@ -164,13 +177,15 @@ func (r *BuildingRepository) List(ctx context.Context, filter *domain.BuildingFi
 
 	for rows.Next() {
 		var b domain.Building
-		var coordStr sql.NullString
+		var address sql.NullString
+		var lat, lon sql.NullFloat64
 
 		err := rows.Scan(
 			&b.ID,
 			&b.Name,
-			&b.Address,
-			&coordStr,
+			&address,
+			&lat,
+			&lon,
 			&b.CreatedAt,
 			&b.UpdatedAt,
 		)
@@ -179,9 +194,18 @@ func (r *BuildingRepository) List(ctx context.Context, filter *domain.BuildingFi
 			return nil, err
 		}
 
-		// Parse coordinates from PostGIS POINT
-		if coordStr.Valid {
-			b.Coordinates = parsePoint(coordStr.String)
+		// Set address if valid
+		if address.Valid {
+			b.Address = address.String
+		}
+
+		// Parse coordinates from lat/lon columns
+		if lat.Valid && lon.Valid {
+			b.Coordinates = &domain.Location{
+				X: lon.Float64,
+				Y: lat.Float64,
+				Z: 0,
+			}
 		}
 
 		buildings = append(buildings, &b)
@@ -193,20 +217,21 @@ func (r *BuildingRepository) List(ctx context.Context, filter *domain.BuildingFi
 // GetByAddress retrieves a building by address
 func (r *BuildingRepository) GetByAddress(ctx context.Context, address string) (*domain.Building, error) {
 	query := `
-		SELECT id, name, address, ST_AsText(coordinates), created_at, updated_at
+		SELECT id, name, address, latitude, longitude, created_at, updated_at
 		FROM buildings
 		WHERE address = $1
 		LIMIT 1
 	`
 
 	var b domain.Building
-	var coordStr sql.NullString
+	var lat, lon sql.NullFloat64
 
 	err := r.db.QueryRowContext(ctx, query, address).Scan(
 		&b.ID,
 		&b.Name,
 		&b.Address,
-		&coordStr,
+		&lat,
+		&lon,
 		&b.CreatedAt,
 		&b.UpdatedAt,
 	)
@@ -218,9 +243,13 @@ func (r *BuildingRepository) GetByAddress(ctx context.Context, address string) (
 		return nil, err
 	}
 
-	// Parse coordinates from PostGIS POINT
-	if coordStr.Valid {
-		b.Coordinates = parsePoint(coordStr.String)
+	// Parse coordinates from lat/lon columns
+	if lat.Valid && lon.Valid {
+		b.Coordinates = &domain.Location{
+			X: lon.Float64,
+			Y: lat.Float64,
+			Z: 0,
+		}
 	}
 
 	return &b, nil
@@ -229,8 +258,8 @@ func (r *BuildingRepository) GetByAddress(ctx context.Context, address string) (
 // GetEquipment retrieves all equipment for a building
 func (r *BuildingRepository) GetEquipment(ctx context.Context, buildingID string) ([]*domain.Equipment, error) {
 	query := `
-		SELECT id, building_id, floor_id, room_id, name, type, model,
-		       ST_AsText(location), status, created_at, updated_at
+		SELECT id, building_id, floor_id, room_id, name, equipment_type, model,
+		       location_x, location_y, location_z, status, created_at, updated_at
 		FROM equipment
 		WHERE building_id = $1
 		ORDER BY created_at DESC
@@ -246,8 +275,8 @@ func (r *BuildingRepository) GetEquipment(ctx context.Context, buildingID string
 
 	for rows.Next() {
 		var e domain.Equipment
-		var locStr sql.NullString
 		var floorID, roomID sql.NullString
+		var locX, locY, locZ sql.NullFloat64
 
 		err := rows.Scan(
 			&e.ID,
@@ -257,7 +286,9 @@ func (r *BuildingRepository) GetEquipment(ctx context.Context, buildingID string
 			&e.Name,
 			&e.Type,
 			&e.Model,
-			&locStr,
+			&locX,
+			&locY,
+			&locZ,
 			&e.Status,
 			&e.CreatedAt,
 			&e.UpdatedAt,
@@ -275,9 +306,16 @@ func (r *BuildingRepository) GetEquipment(ctx context.Context, buildingID string
 			e.RoomID.Legacy = roomID.String
 		}
 
-		// Parse location from PostGIS POINT
-		if locStr.Valid {
-			e.Location = parsePoint(locStr.String)
+		// Parse location from x/y/z columns
+		if locX.Valid && locY.Valid {
+			e.Location = &domain.Location{
+				X: locX.Float64,
+				Y: locY.Float64,
+				Z: 0,
+			}
+			if locZ.Valid {
+				e.Location.Z = locZ.Float64
+			}
 		}
 
 		equipment = append(equipment, &e)

@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS spatial_anchors (
 
     -- Platform-specific AR anchor data
     platform TEXT CHECK(platform IN ('ARKit', 'ARCore', 'Other')),
-    anchor_data BLOB, -- Raw anchor data from AR platform
+    anchor_data bytea, -- Raw anchor data from AR platform (PostgreSQL uses bytea instead of BLOB)
 
     -- Metadata
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS spatial_anchors (
 
     -- Constraints
     UNIQUE(building_uuid, equipment_path),
-    FOREIGN KEY (building_uuid) REFERENCES floor_plans(id)
+    FOREIGN KEY (building_uuid) REFERENCES buildings(id)
 );
 
 -- Index for spatial queries (PostGIS)
@@ -58,14 +58,14 @@ CREATE TABLE IF NOT EXISTS spatial_zones (
     -- Metadata
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (building_uuid) REFERENCES floor_plans(id)
+    FOREIGN KEY (building_uuid) REFERENCES buildings(id)
 );
 
 -- View for equipment with spatial data
-CREATE VIEW IF NOT EXISTS equipment_spatial AS
+CREATE OR REPLACE VIEW equipment_spatial AS
 SELECT
     e.id as equipment_id,
-    e.type as equipment_type,
+    e.equipment_type,
     e.status,
     sa.building_uuid,
     sa.equipment_path,

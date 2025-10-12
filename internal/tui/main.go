@@ -175,7 +175,7 @@ func (t *TUI) RunEnergyVisualization(buildingID string) error {
 		return fmt.Errorf("TUI is disabled in configuration")
 	}
 
-	// TODO: Implement energy visualization model
+	// NOTE: Energy visualization requires real-time BAS integration
 	return fmt.Errorf("energy visualization not yet implemented")
 }
 
@@ -185,7 +185,7 @@ func (t *TUI) RunRepositoryManager() error {
 		return fmt.Errorf("TUI is disabled in configuration")
 	}
 
-	// TODO: Implement repository manager model
+	// NOTE: Repository management via VCS commands (CLI-first)
 	return fmt.Errorf("repository manager not yet implemented")
 }
 

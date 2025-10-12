@@ -2,7 +2,9 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
@@ -233,19 +235,34 @@ func (uc *BuildingUseCase) ExportBuilding(ctx context.Context, id, format string
 	uc.logger.Info("Exporting building", "building_id", id, "format", format)
 
 	// Get building
-	_, err := uc.buildingRepo.GetByID(ctx, id)
+	building, err := uc.buildingRepo.GetByID(ctx, id)
 	if err != nil {
 		uc.logger.Error("Failed to get building for export", "building_id", id, "error", err)
 		return nil, fmt.Errorf("failed to get building: %w", err)
 	}
 
-	// TODO: Implement building export logic based on format
-	// This would typically involve:
-	// 1. Get building data and related entities
-	// 2. Convert to target format
-	// 3. Return serialized data
-
-	return nil, fmt.Errorf("building export not implemented for format: %s", format)
+	// Export building based on format
+	switch format {
+	case "json":
+		// Export as JSON
+		result, err := uc.exportBuildingAsJSON(ctx, building)
+		if err != nil {
+			return nil, err
+		}
+		return []byte(result.(string)), nil
+	case "csv":
+		// Export as CSV (equipment list)
+		result, err := uc.exportBuildingAsCSV(ctx, building)
+		if err != nil {
+			return nil, err
+		}
+		return []byte(result.(string)), nil
+	case "ifc":
+		// IFC export would require IFC generation (complex)
+		return nil, fmt.Errorf("IFC export not yet implemented")
+	default:
+		return nil, fmt.Errorf("unsupported export format: %s", format)
+	}
 }
 
 // Private helper methods
@@ -270,4 +287,71 @@ func (uc *BuildingUseCase) validateUpdateBuilding(building *domain.Building) err
 	}
 
 	return nil
+}
+
+// exportBuildingAsJSON exports building as JSON
+func (uc *BuildingUseCase) exportBuildingAsJSON(ctx context.Context, building *domain.Building) (any, error) {
+	// Create export structure
+	export := map[string]any{
+		"id":         building.ID.String(),
+		"name":       building.Name,
+		"address":    building.Address,
+		"created_at": building.CreatedAt,
+		"updated_at": building.UpdatedAt,
+	}
+
+	if building.Coordinates != nil {
+		export["coordinates"] = map[string]float64{
+			"latitude":  building.Coordinates.Y,
+			"longitude": building.Coordinates.X,
+			"altitude":  building.Coordinates.Z,
+		}
+	}
+
+	// Get equipment for this building
+	equipmentFilter := &domain.EquipmentFilter{
+		BuildingID: &building.ID,
+	}
+	equipment, err := uc.equipmentRepo.List(ctx, equipmentFilter)
+	if err == nil && equipment != nil {
+		export["equipment_count"] = len(equipment)
+		export["equipment"] = equipment
+	}
+
+	// Marshal to JSON string
+	jsonData, err := json.MarshalIndent(export, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal JSON: %w", err)
+	}
+
+	return string(jsonData), nil
+}
+
+// exportBuildingAsCSV exports building equipment as CSV
+func (uc *BuildingUseCase) exportBuildingAsCSV(ctx context.Context, building *domain.Building) (any, error) {
+	// Get equipment for this building
+	equipmentFilter := &domain.EquipmentFilter{
+		BuildingID: &building.ID,
+	}
+	equipment, err := uc.equipmentRepo.List(ctx, equipmentFilter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get equipment: %w", err)
+	}
+
+	// Build CSV
+	var csv strings.Builder
+	csv.WriteString("id,name,type,status,model,building\n")
+
+	for _, e := range equipment {
+		csv.WriteString(fmt.Sprintf("%s,%s,%s,%s,%s,%s\n",
+			e.ID.String(),
+			e.Name,
+			e.Type,
+			e.Status,
+			e.Model,
+			building.Name,
+		))
+	}
+
+	return csv.String(), nil
 }

@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS versions (
     message       TEXT NOT NULL,
     author_name   TEXT NOT NULL,
     author_email  TEXT NOT NULL,
-    author_id     UUID REFERENCES users(id) ON DELETE SET NULL,
+    author_id     TEXT REFERENCES users(id) ON DELETE SET NULL,
     timestamp     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     metadata      JSONB NOT NULL,
 

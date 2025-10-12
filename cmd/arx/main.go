@@ -24,9 +24,9 @@ func main() {
 			PostGIS: config.PostGISConfig{
 				Host:     "localhost",
 				Port:     5432,
-				Database: "arxos_db",
-				User:     "arxos_user",
-				Password: "arxos_password",
+				Database: "arxos_dev",
+				User:     "joelpate",
+				Password: "",
 				SSLMode:  "disable",
 			},
 		}

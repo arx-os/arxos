@@ -17,6 +17,7 @@ import (
 type BuildingHandler struct {
 	BaseHandler
 	buildingUC *usecase.BuildingUseCase
+	ifcUC      *usecase.IFCUseCase
 	logger     domain.Logger
 }
 
@@ -24,11 +25,13 @@ type BuildingHandler struct {
 func NewBuildingHandler(
 	base BaseHandler,
 	buildingUC *usecase.BuildingUseCase,
+	ifcUC *usecase.IFCUseCase,
 	logger domain.Logger,
 ) *BuildingHandler {
 	return &BuildingHandler{
 		BaseHandler: base,
 		buildingUC:  buildingUC,
+		ifcUC:       ifcUC,
 		logger:      logger,
 	}
 }
@@ -236,8 +239,38 @@ func (h *BuildingHandler) ImportBuilding(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// TODO: Implement IFC import logic
-	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("import functionality not yet implemented"))
+	// Parse multipart form data for IFC file upload
+	if err := r.ParseMultipartForm(32 << 20); err != nil { // 32 MB max
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("failed to parse multipart form: %v", err))
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("file is required: %v", err))
+		return
+	}
+	defer file.Close()
+
+	h.logger.Info("Received IFC file", "filename", header.Filename, "size", header.Size)
+
+	// Read file data
+	fileData := make([]byte, header.Size)
+	if _, err := file.Read(fileData); err != nil {
+		h.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to read file: %v", err))
+		return
+	}
+
+	// Import via IFC use case
+	result, err := h.ifcUC.ImportIFC(r.Context(), buildingID, fileData)
+	if err != nil {
+		h.logger.Error("IFC import failed", "error", err)
+		h.RespondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	h.logger.Info("IFC import successful", "repository_id", result.RepositoryID, "ifc_file_id", result.IFCFileID)
+	h.RespondJSON(w, http.StatusOK, result)
 }
 
 // ExportBuilding handles GET /api/v1/buildings/{id}/export
@@ -255,6 +288,35 @@ func (h *BuildingHandler) ExportBuilding(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// TODO: Implement IFC export logic
-	h.RespondError(w, http.StatusNotImplemented, fmt.Errorf("export functionality not yet implemented"))
+	// Get export format from query params (default to "json")
+	format := r.URL.Query().Get("format")
+	if format == "" {
+		format = "json"
+	}
+
+	// Export via building use case
+	data, err := h.buildingUC.ExportBuilding(r.Context(), buildingID, format)
+	if err != nil {
+		h.logger.Error("Building export failed", "error", err)
+		h.RespondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	// Set appropriate content type based on format
+	var contentType string
+	switch format {
+	case "json":
+		contentType = "application/json"
+	case "csv":
+		contentType = "text/csv"
+	case "ifc":
+		contentType = "application/x-step"
+	default:
+		contentType = "application/octet-stream"
+	}
+
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=building-%s.%s", buildingID, format))
+	w.WriteHeader(http.StatusOK)
+	w.Write(data)
 }

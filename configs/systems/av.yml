@@ -1,0 +1,87 @@
+# Audio/Visual System Template
+# Defines AV equipment topology for classrooms and presentation spaces
+
+name: Audio/Visual System
+category: av
+description: Classroom and presentation AV equipment
+
+hierarchy:
+  - level: 1
+    name: Control System
+    subtypes:
+      - av_controller
+      - control_processor
+      - touch_panel
+    controls: [display, projector, audio]
+
+  - level: 2
+    name: Video Sources
+    subtypes:
+      - desktop_computer
+      - laptop_connection
+      - document_camera
+      - blu_ray_player
+      - streaming_device
+    connects_to: [video_switcher, display]
+
+  - level: 3
+    name: Video Distribution
+    subtypes:
+      - video_switcher
+      - hdmi_extender
+      - wireless_presentation
+      - video_scaler
+    feeds: [display, projector]
+
+  - level: 4
+    name: Display Devices
+    subtypes:
+      - projector
+      - interactive_panel
+      - display_monitor
+      - video_wall
+    terminal: true
+
+  - level: 5
+    name: Audio System
+    subtypes:
+      - audio_amplifier
+      - dsp_processor
+      - microphone
+      - speaker
+      - soundbar
+    terminal: true
+
+relationships:
+  - type: connects_to
+    description: AV signal connection
+    properties:
+      cable_type: "hdmi|displayport|vga|sdi|dante"
+      resolution: string
+      audio_channels: number
+
+  - type: controls
+    description: Control relationship
+    properties:
+      control_protocol: "rs232|ethernet|ir|cec"
+
+equipment_properties:
+  projector:
+    - lumens
+    - resolution
+    - throw_ratio
+    - lamp_hours
+    - lens_type
+
+  interactive_panel:
+    - screen_size
+    - resolution
+    - touch_points
+    - os_type
+
+  speaker:
+    - wattage
+    - impedance
+    - coverage_angle
+    - mounting_type
+

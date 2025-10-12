@@ -161,80 +161,52 @@ Just as Git became the standard because it was free and powerful, ArxOS follows 
 - **Open architecture** - no vendor lock-in
 - **Network effects** - more users → better platform → more users
 
-## 🚀 Quick Start - The Unified Experience
+## 🚀 Quick Start
 
-### **The ArxOS Advantage: One Install = Complete Platform**
+### **Current Status: Under Active Development**
 
-Unlike Git (CLI) and GitHub (web) being separate, **ArxOS owns everything**. One install gives you CLI + Web + Mobile + API access instantly.
+ArxOS is being actively developed with a focus on completing core features. See `PROJECT_STATUS.md` for honest assessment of what works.
 
-### **Installation**
-
-```bash
-# Install ArxOS
-go install github.com/arx-os/arxos/cmd/arx@latest
-# OR: make build (for local development)
-
-# That's it! Now initialize your platform...
-```
-
-### **First-Time Setup**
+### **Installation (Development)**
 
 ```bash
-$ arx init
+# Clone repository
+git clone https://github.com/arx-os/arxos.git
+cd arxos
 
-╔═══════════════════════════════════════════════════════════╗
-║              Welcome to ArxOS! 🏗️                         ║
-╚═══════════════════════════════════════════════════════════╝
+# Install dependencies
+go mod download
 
-ArxOS can run locally OR sync with ArxOS Cloud for:
-  • 🌐 Web dashboard - manage buildings from anywhere
-  • 📱 Mobile app - AR equipment tracking in the field
-  • 👥 Team collaboration - share access with your team
-  • ☁️  Automatic backups - never lose data
-  • 📊 Advanced analytics - energy optimization, insights
+# Setup database
+./scripts/setup-dev-database.sh
 
-Choose your deployment mode:
-  1. Cloud-First (recommended for teams)
-  2. Hybrid (local database + cloud sync)
-  3. Local-Only (no cloud, privacy-focused)
-> 1
+# Run migrations
+go run cmd/arx/main.go migrate up
 
-Create your FREE ArxOS Cloud account:
-Email: you@company.com
-Password: ********
-Organization name: Acme Buildings Inc.
-Choose subdomain: acme-buildings
-  └─ Your web dashboard: https://acme-buildings.arxos.io
-
-Initializing your platform...
-✅ ArxOS Cloud account created
-✅ Web dashboard provisioned at https://acme-buildings.arxos.io
-✅ Local cache initialized (~/.arxos/)
-✅ API access configured
-✅ Sync enabled (every 5 minutes)
-✅ Mobile app pairing ready
-
-Mobile App Setup:
-┌─────────────────┐
-│  █████████████  │
-│  ██ ▄▄▄▄▄ ██    │  1. Download ArxOS app
-│  ██ █   █ ██    │  2. Scan this QR code
-│  ██ █▄▄▄█ ██    │  3. Instant access!
-└─────────────────┘
-
-🎉 Your complete building management platform is ready!
-
-Access your buildings via:
-  • Terminal: arx query /B1/3/*/HVAC
-  • Web: https://acme-buildings.arxos.io
-  • Mobile: ArxOS app (iOS/Android)
-  • API: https://api.arxos.io (auto-authenticated)
-
-Next steps:
-  • Import your first building: arx import building.ifc
-  • Initialize repository: arx repo init --name "Main Campus"
-  • Explore features: arx help
+# Build
+make build
 ```
+
+### **Development Setup**
+
+```bash
+# After installation, verify setup
+$ go run cmd/arx/main.go health
+
+Expected output:
+✓ Database: Connected
+✓ PostGIS: Available
+✓ Cache: Ready
+✓ System: Operational
+
+# Check migration status
+$ go run cmd/arx/main.go migrate status
+
+# Try creating a building (Phase 2 - In Progress)
+$ go run cmd/arx/main.go building create --name "Test School" --address "123 Main St"
+```
+
+**Note:** Most CLI commands are being actively wired to database operations. See `PROJECT_STATUS.md` for feature completion status.
 
 ### **Your First Building**
 

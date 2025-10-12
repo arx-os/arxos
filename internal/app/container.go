@@ -29,11 +29,12 @@ type Container struct {
 	config *config.Config
 
 	// Infrastructure layer
-	db         domain.Database
-	postgis    *postgis.PostGIS
-	cache      domain.Cache
-	logger     domain.Logger
-	jwtManager *auth.JWTManager
+	db          domain.Database
+	postgis     *postgis.PostGIS
+	cache       domain.Cache
+	logger      domain.Logger
+	jwtManager  *auth.JWTManager
+	rbacManager *auth.RBACManager
 
 	// Domain repositories (interfaces)
 	userRepo         domain.UserRepository
@@ -43,6 +44,7 @@ type Container struct {
 	equipmentRepo    domain.EquipmentRepository
 	organizationRepo domain.OrganizationRepository
 	spatialRepo      domain.SpatialRepository
+	relationshipRepo domain.RelationshipRepository
 
 	// BAS repositories
 	basPointRepo  domain.BASPointRepository
@@ -74,6 +76,8 @@ type Container struct {
 	// Use cases
 	userUC         *usecase.UserUseCase
 	buildingUC     *usecase.BuildingUseCase
+	floorUC        *usecase.FloorUseCase
+	roomUC         *usecase.RoomUseCase
 	equipmentUC    *usecase.EquipmentUseCase
 	organizationUC *usecase.OrganizationUseCase
 
@@ -101,8 +105,9 @@ type Container struct {
 	apiHandler *handlers.APIHandler
 
 	// HTTP Handlers (Following Clean Architecture)
-	buildingHandler *handlers.BuildingHandler
-	authHandler     *handlers.AuthHandler
+	buildingHandler     *handlers.BuildingHandler
+	authHandler         *handlers.AuthHandler
+	organizationHandler *handlers.OrganizationHandler
 
 	mu          sync.RWMutex
 	initialized bool
@@ -191,6 +196,11 @@ func (c *Container) initInfrastructure(ctx context.Context) error {
 	}
 	c.cache = cache
 
+	// RBAC Manager - Initialize with default configuration
+	rbacConfig := auth.DefaultRBACConfig()
+	c.rbacManager = auth.NewRBACManager(rbacConfig)
+	c.logger.Info("RBAC manager initialized with role-based access control")
+
 	return nil
 }
 
@@ -206,6 +216,7 @@ func (c *Container) initRepositories(ctx context.Context) error {
 	c.roomRepo = postgis.NewRoomRepository(db)
 	c.equipmentRepo = postgis.NewEquipmentRepository(db)
 	c.organizationRepo = postgis.NewOrganizationRepository(db)
+	c.relationshipRepo = postgis.NewRelationshipRepository(db)
 
 	// BAS repositories - PostGIS implementation
 	c.basPointRepo = postgis.NewBASPointRepository(db)
@@ -213,9 +224,9 @@ func (c *Container) initRepositories(ctx context.Context) error {
 
 	// Git workflow repositories - PostGIS implementation
 	c.branchRepo = postgis.NewBranchRepository(db)
+	c.commitRepo = postgis.NewCommitRepository(db)
 	c.pullRequestRepo = postgis.NewPullRequestRepository(db)
 	c.issueRepo = postgis.NewIssueRepository(db)
-	// Note: CommitRepository will be added when implemented in postgis package
 
 	// Building repository domain repositories
 	// Initialize with PostGIS implementations
@@ -272,11 +283,19 @@ func (c *Container) initInfrastructureServices(ctx context.Context) error {
 
 // initIFCServices initializes IFC-related services
 func (c *Container) initIFCServices(ctx context.Context) error {
+	// Parse timeout from config
+	timeout := 30 * time.Second // default
+	if c.config.IFC.Service.Timeout != "" {
+		if parsed, err := time.ParseDuration(c.config.IFC.Service.Timeout); err == nil {
+			timeout = parsed
+		}
+	}
+
 	// Create IfcOpenShell client
 	c.ifcOpenShellClient = ifc.NewIfcOpenShellClient(
 		c.config.IFC.Service.URL,
-		30*time.Second, // TODO: Parse from config
-		3,              // retries
+		timeout,
+		3, // retries
 	)
 
 	// Create native parser as fallback
@@ -302,6 +321,8 @@ func (c *Container) initUseCases(ctx context.Context) error {
 	// Core use cases
 	c.userUC = usecase.NewUserUseCase(c.userRepo, c.logger)
 	c.buildingUC = usecase.NewBuildingUseCase(c.buildingRepo, c.equipmentRepo, c.logger)
+	c.floorUC = usecase.NewFloorUseCase(c.floorRepo, c.buildingRepo, c.logger)
+	c.roomUC = usecase.NewRoomUseCase(c.roomRepo, c.floorRepo, c.buildingRepo, c.logger)
 	c.equipmentUC = usecase.NewEquipmentUseCase(c.equipmentRepo, c.buildingRepo, c.logger)
 	c.organizationUC = usecase.NewOrganizationUseCase(c.organizationRepo, c.userRepo, c.logger)
 
@@ -317,15 +338,21 @@ func (c *Container) initUseCases(ctx context.Context) error {
 	// Git workflow use cases
 	c.branchUC = usecase.NewBranchUseCase(
 		c.branchRepo,
-		c.commitRepo, // May be nil until CommitRepository is implemented
+		c.commitRepo,
+		c.logger,
+	)
+
+	c.commitUC = usecase.NewCommitUseCase(
+		c.commitRepo,
+		c.branchRepo,
 		c.logger,
 	)
 
 	c.pullRequestUC = usecase.NewPullRequestUseCase(
 		c.pullRequestRepo,
 		c.branchRepo,
-		c.commitRepo, // May be nil until CommitRepository is implemented
-		nil,          // Assignment repo - TODO: implement when needed
+		c.commitRepo,
+		nil, // Assignment repo - will implement when needed
 		c.logger,
 	)
 
@@ -363,6 +390,7 @@ func (c *Container) initInterfaces(ctx context.Context) error {
 	c.buildingHandler = handlers.NewBuildingHandler(
 		baseHandler,
 		c.buildingUC, // Direct field access instead of c.GetBuildingUseCase()
+		c.ifcUC,      // Direct field access for IFC use case
 		c.logger,
 	)
 
@@ -372,6 +400,13 @@ func (c *Container) initInterfaces(ctx context.Context) error {
 		baseHandler,
 		c.userUC, // Direct field access instead of c.GetUserUseCase()
 		c.jwtManager,
+		c.logger,
+	)
+
+	// Organization handler with use case dependency
+	c.organizationHandler = handlers.NewOrganizationHandler(
+		baseHandler,
+		c.organizationUC, // Direct field access
 		c.logger,
 	)
 
@@ -409,6 +444,12 @@ func (c *Container) GetLogger() domain.Logger {
 	return c.logger
 }
 
+func (c *Container) GetRBACManager() *auth.RBACManager {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.rbacManager
+}
+
 func (c *Container) GetAPIHandler() *handlers.APIHandler {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -427,6 +468,12 @@ func (c *Container) GetAuthHandler() *handlers.AuthHandler {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.authHandler
+}
+
+func (c *Container) GetOrganizationHandler() *handlers.OrganizationHandler {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.organizationHandler
 }
 
 func (c *Container) GetUserUseCase() *usecase.UserUseCase {
@@ -457,6 +504,12 @@ func (c *Container) GetSpatialRepository() domain.SpatialRepository {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.spatialRepo
+}
+
+func (c *Container) GetRelationshipRepository() domain.RelationshipRepository {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.relationshipRepo
 }
 
 // Building repository getters
@@ -591,6 +644,20 @@ func (c *Container) GetRoomRepository() domain.RoomRepository {
 	return c.roomRepo
 }
 
+// GetFloorUseCase returns the floor use case
+func (c *Container) GetFloorUseCase() *usecase.FloorUseCase {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.floorUC
+}
+
+// GetRoomUseCase returns the room use case
+func (c *Container) GetRoomUseCase() *usecase.RoomUseCase {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.roomUC
+}
+
 // Shutdown gracefully shuts down all dependencies
 func (c *Container) Shutdown(ctx context.Context) error {
 	c.mu.Lock()
@@ -608,8 +675,12 @@ func (c *Container) Shutdown(ctx context.Context) error {
 		err = fmt.Errorf("failed to close database: %w", dbErr)
 	}
 
-	// Close cache (cache interface doesn't have Close method, so skip for now)
-	// TODO: Add Close method to cache interface if needed
+	// Close cache
+	if c.cache != nil {
+		if cacheErr := c.cache.Close(); cacheErr != nil {
+			err = fmt.Errorf("failed to close cache: %w", cacheErr)
+		}
+	}
 
 	c.initialized = false
 	return err

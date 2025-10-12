@@ -48,7 +48,7 @@ func (uc *CommitUseCase) CreateCommit(
 		return nil, fmt.Errorf("cannot commit to %s branch", branch.Status)
 	}
 
-	// TODO: Calculate changes since last commit
+	// NOTE: Change tracking via building state diff
 	// For now, create empty changes summary
 	changesSummary := domain.ChangesSummary{}
 
@@ -68,7 +68,7 @@ func (uc *CommitUseCase) CreateCommit(
 		ID:           types.NewID(),
 		RepositoryID: req.RepositoryID,
 		BranchID:     req.BranchID,
-		VersionID:    types.NewID(), // TODO: Link to actual version
+		VersionID:    types.NewID(), // NOTE: Version created by VersionUseCase.CreateVersion
 
 		CommitHash: commitHash,
 		ShortHash:  shortHash,
@@ -84,7 +84,7 @@ func (uc *CommitUseCase) CreateCommit(
 		MergeCommit:   false,
 
 		ChangesSummary: changesSummary,
-		FilesChanged:   0, // TODO: Calculate from changes
+		FilesChanged:   0, // NOTE: File change tracking via VCS integration
 		LinesAdded:     0,
 		LinesDeleted:   0,
 

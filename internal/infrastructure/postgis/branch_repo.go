@@ -56,7 +56,7 @@ func (r *BranchRepository) Create(branch *domain.Branch) error {
 // GetByID retrieves a branch by ID
 func (r *BranchRepository) GetByID(id types.ID) (*domain.Branch, error) {
 	query := `
-		SELECT 
+		SELECT
 			id, repository_id, name, display_name, description,
 			base_commit, head_commit,
 			branch_type, protected, requires_review, auto_delete_on_merge,
@@ -192,7 +192,7 @@ func (r *BranchRepository) List(filter domain.BranchFilter) ([]*domain.Branch, e
 // GetByName retrieves a branch by name within a repository
 func (r *BranchRepository) GetByName(repositoryID types.ID, name string) (*domain.Branch, error) {
 	query := `
-		SELECT 
+		SELECT
 			id, repository_id, name, display_name, description,
 			base_commit, head_commit,
 			branch_type, protected, requires_review, auto_delete_on_merge,
@@ -258,7 +258,7 @@ func (r *BranchRepository) GetByName(repositoryID types.ID, name string) (*domai
 // GetDefaultBranch retrieves the default branch for a repository
 func (r *BranchRepository) GetDefaultBranch(repositoryID types.ID) (*domain.Branch, error) {
 	query := `
-		SELECT 
+		SELECT
 			id, repository_id, name, display_name, description,
 			base_commit, head_commit,
 			branch_type, protected, requires_review, auto_delete_on_merge,
@@ -362,7 +362,7 @@ func (r *BranchRepository) MarkMerged(branchID, mergedBy types.ID) error {
 // buildListQuery builds a dynamic list query based on filter
 func (r *BranchRepository) buildListQuery(filter domain.BranchFilter) (string, []interface{}) {
 	query := `
-		SELECT 
+		SELECT
 			id, repository_id, name, display_name, description,
 			base_commit, head_commit,
 			branch_type, protected, requires_review, auto_delete_on_merge,
@@ -526,7 +526,7 @@ func (r *CommitRepository) Create(commit *domain.Commit) error {
 // GetByID retrieves a commit by ID
 func (r *CommitRepository) GetByID(id types.ID) (*domain.Commit, error) {
 	query := `
-		SELECT 
+		SELECT
 			id, repository_id, branch_id, version_id,
 			commit_hash, short_hash,
 			message, description,
@@ -544,7 +544,7 @@ func (r *CommitRepository) GetByID(id types.ID) (*domain.Commit, error) {
 // GetByHash retrieves a commit by hash
 func (r *CommitRepository) GetByHash(hash string) (*domain.Commit, error) {
 	query := `
-		SELECT 
+		SELECT
 			id, repository_id, branch_id, version_id,
 			commit_hash, short_hash,
 			message, description,
@@ -623,7 +623,7 @@ func (r *CommitRepository) GetParents(commitID types.ID) ([]*domain.Commit, erro
 // GetChildren retrieves child commits
 func (r *CommitRepository) GetChildren(commitID types.ID) ([]*domain.Commit, error) {
 	query := `
-		SELECT 
+		SELECT
 			id, repository_id, branch_id, version_id,
 			commit_hash, short_hash,
 			message, description,
@@ -656,26 +656,42 @@ func (r *CommitRepository) GetChildren(commitID types.ID) ([]*domain.Commit, err
 
 // IsAncestor checks if one commit is an ancestor of another
 func (r *CommitRepository) IsAncestor(ancestor, descendant types.ID) (bool, error) {
-	// TODO: Implement graph traversal
-	// For now, simple parent check
-	commit, err := r.GetByID(descendant)
+	// Use recursive CTE (Common Table Expression) for efficient graph traversal
+	query := `
+		WITH RECURSIVE commit_ancestry AS (
+			-- Base case: start with the descendant commit
+			SELECT id, parent_commits
+			FROM repository_commits
+			WHERE id = $1
+
+			UNION ALL
+
+			-- Recursive case: get all parent commits
+			SELECT c.id, c.parent_commits
+			FROM repository_commits c
+			INNER JOIN commit_ancestry ca
+				ON c.id = ANY(ca.parent_commits)
+		)
+		SELECT EXISTS (
+			SELECT 1
+			FROM commit_ancestry
+			WHERE id = $2
+		) as is_ancestor
+	`
+
+	var isAncestor bool
+	err := r.db.QueryRow(query, descendant.String(), ancestor.String()).Scan(&isAncestor)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to check ancestry: %w", err)
 	}
 
-	for _, parentID := range commit.ParentCommits {
-		if parentID.Equal(ancestor) {
-			return true, nil
-		}
-	}
-
-	return false, nil
+	return isAncestor, nil
 }
 
 // buildCommitListQuery builds a dynamic commit query
 func (r *CommitRepository) buildCommitListQuery(filter domain.CommitFilter, limit, offset int) (string, []interface{}) {
 	query := `
-		SELECT 
+		SELECT
 			id, repository_id, branch_id, version_id,
 			commit_hash, short_hash,
 			message, description,
@@ -787,4 +803,3 @@ func (r *CommitRepository) scanCommit(scanner interface {
 
 	return commit, nil
 }
-

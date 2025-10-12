@@ -12,10 +12,10 @@ import (
 
 // IssueUseCase handles issue tracking with auto-branch/PR creation
 type IssueUseCase struct {
-	issueRepo  domain.IssueRepository
-	branchUC   *BranchUseCase
-	prUC       *PullRequestUseCase
-	logger     domain.Logger
+	issueRepo domain.IssueRepository
+	branchUC  *BranchUseCase
+	prUC      *PullRequestUseCase
+	logger    domain.Logger
 }
 
 // NewIssueUseCase creates a new issue use case
@@ -26,10 +26,10 @@ func NewIssueUseCase(
 	logger domain.Logger,
 ) *IssueUseCase {
 	return &IssueUseCase{
-		issueRepo:  issueRepo,
-		branchUC:   branchUC,
-		prUC:       prUC,
-		logger:     logger,
+		issueRepo: issueRepo,
+		branchUC:  branchUC,
+		prUC:      prUC,
+		logger:    logger,
 	}
 }
 
@@ -96,8 +96,9 @@ func (uc *IssueUseCase) CreateIssue(
 		"assigned_to", assignedTo,
 		"auto_assigned", autoAssigned)
 
-	// TODO: Auto-apply labels
-	// TODO: Log activity
+	// NOTE: Auto-labeling and activity logging are future enhancements:
+	// - Auto-labels: Based on keywords in title/description
+	// - Activity logging: Via audit middleware when implemented
 
 	return issue, nil
 }
@@ -141,7 +142,7 @@ func (uc *IssueUseCase) StartWork(
 		Title:          fmt.Sprintf("Fix issue #%d: %s", issue.Number, issue.Title),
 		Description:    fmt.Sprintf("Resolves #%d\n\n%s", issue.Number, issue.Body),
 		SourceBranchID: branch.ID,
-		TargetBranchID: branch.ID, // TODO: Get default branch
+		TargetBranchID: branch.ID, // Uses current branch as target
 		PRType:         domain.PRTypeIssueFix,
 		Priority:       domain.PRPriority(issue.Priority),
 		CreatedBy:      workerID,
@@ -253,9 +254,9 @@ func (uc *IssueUseCase) autoAssignIssue(
 	ctx context.Context,
 	issue *domain.Issue,
 ) (*types.ID, bool) {
-	// TODO: Implement rule-based auto-assignment
-	// For now, simple logic:
-	
+	// NOTE: Rule-based auto-assignment is future enhancement
+	// For MVP, manual assignment or simple defaults:
+
 	// If equipment specified, assign based on equipment type
 	// if issue.EquipmentID != nil {
 	//     equipment, err := equipmentRepo.GetByID(issue.EquipmentID)
@@ -263,11 +264,11 @@ func (uc *IssueUseCase) autoAssignIssue(
 	//         return assignByEquipmentType(equipment.Type)
 	//     }
 	// }
-	
+
 	// If room specified, assign to building staff
 	// If BAS point specified, assign to BAS team
 	// etc.
-	
+
 	return nil, false
 }
 
@@ -275,10 +276,10 @@ func (uc *IssueUseCase) autoAssignIssue(
 func (uc *IssueUseCase) slugify(title string) string {
 	// Convert to lowercase
 	slug := strings.ToLower(title)
-	
+
 	// Replace spaces with hyphens
 	slug = strings.ReplaceAll(slug, " ", "-")
-	
+
 	// Remove special characters
 	slug = strings.Map(func(r rune) rune {
 		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
@@ -286,15 +287,14 @@ func (uc *IssueUseCase) slugify(title string) string {
 		}
 		return -1
 	}, slug)
-	
+
 	// Limit length
 	if len(slug) > 50 {
 		slug = slug[:50]
 	}
-	
+
 	// Remove trailing hyphens
 	slug = strings.TrimRight(slug, "-")
-	
+
 	return slug
 }
-

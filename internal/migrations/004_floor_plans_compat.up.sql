@@ -2,7 +2,7 @@
 -- Maps the floors table to expected floor_plans structure for backward compatibility
 
 -- Create floor_plans as a view that maps to floors table
-CREATE VIEW IF NOT EXISTS floor_plans AS
+CREATE OR REPLACE VIEW floor_plans AS
 SELECT
     f.id,
     f.name,
@@ -13,6 +13,5 @@ SELECT
 FROM floors f
 LEFT JOIN buildings b ON f.building_id = b.id;
 
--- Insert default floor if none exist
-INSERT OR IGNORE INTO floors (id, building_id, level, name, created_at, updated_at)
-VALUES ('DEFAULT_FLOOR', 'DEFAULT_BUILDING', 1, 'Default Floor', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+-- Note: Removed default floor insert as it would violate foreign key constraints
+-- Applications should create floors explicitly for existing buildings

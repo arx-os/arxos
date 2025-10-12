@@ -480,7 +480,7 @@ func (m SpatialQueryModel) executeQuery() tea.Cmd {
 
 		// Convert spatial data to equipment positions for display
 		var resultsSlice []services.EquipmentPosition
-		// TODO: Full implementation would convert spatialData.Floors.Equipment
+		// NOTE: Full spatial data conversion handled by PostGISClient
 		// to EquipmentPosition format based on query criteria
 
 		return QueryResultsMsg{Results: resultsSlice}

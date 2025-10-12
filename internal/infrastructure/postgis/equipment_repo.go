@@ -23,32 +23,42 @@ func NewEquipmentRepository(db *sql.DB) *EquipmentRepository {
 // Create creates new equipment in PostGIS
 func (r *EquipmentRepository) Create(ctx context.Context, e *domain.Equipment) error {
 	query := `
-		INSERT INTO equipment (id, building_id, floor_id, room_id, name, type, model, location, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, ST_GeomFromText($8, 4326), $9, $10, $11)
+		INSERT INTO equipment (id, building_id, floor_id, room_id, equipment_tag, name, equipment_type, model,
+		                       location_x, location_y, location_z, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 	`
 
-	var floorID, roomID, locationStr any
+	var floorID, roomID sql.NullString
+	var locX, locY, locZ sql.NullFloat64
 
 	// Handle nullable fields
 	if !e.FloorID.IsEmpty() {
-		floorID = e.FloorID.String()
+		floorID = sql.NullString{String: e.FloorID.String(), Valid: true}
 	}
 	if !e.RoomID.IsEmpty() {
-		roomID = e.RoomID.String()
+		roomID = sql.NullString{String: e.RoomID.String(), Valid: true}
 	}
 	if e.Location != nil {
-		locationStr = fmt.Sprintf("POINT(%f %f %f)", e.Location.X, e.Location.Y, e.Location.Z)
+		locX = sql.NullFloat64{Float64: e.Location.X, Valid: true}
+		locY = sql.NullFloat64{Float64: e.Location.Y, Valid: true}
+		locZ = sql.NullFloat64{Float64: e.Location.Z, Valid: true}
 	}
+
+	// Generate equipment tag (unique identifier)
+	equipmentTag := e.ID.String()
 
 	_, err := r.db.ExecContext(ctx, query,
 		e.ID.String(),
 		e.BuildingID.String(),
 		floorID,
 		roomID,
+		equipmentTag,
 		e.Name,
 		e.Type,
 		e.Model,
-		locationStr,
+		locX,
+		locY,
+		locZ,
 		e.Status,
 		e.CreatedAt,
 		e.UpdatedAt,
@@ -60,15 +70,15 @@ func (r *EquipmentRepository) Create(ctx context.Context, e *domain.Equipment) e
 // GetByID retrieves equipment by ID
 func (r *EquipmentRepository) GetByID(ctx context.Context, id string) (*domain.Equipment, error) {
 	query := `
-		SELECT id, building_id, floor_id, room_id, name, type, model,
-		       ST_AsText(location), status, created_at, updated_at
+		SELECT id, building_id, floor_id, room_id, name, equipment_type, model,
+		       location_x, location_y, location_z, status, created_at, updated_at
 		FROM equipment
 		WHERE id = $1
 	`
 
 	var e domain.Equipment
-	var locStr sql.NullString
 	var floorID, roomID sql.NullString
+	var locX, locY, locZ sql.NullFloat64
 
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&e.ID,
@@ -78,7 +88,9 @@ func (r *EquipmentRepository) GetByID(ctx context.Context, id string) (*domain.E
 		&e.Name,
 		&e.Type,
 		&e.Model,
-		&locStr,
+		&locX,
+		&locY,
+		&locZ,
 		&e.Status,
 		&e.CreatedAt,
 		&e.UpdatedAt,
@@ -99,9 +111,16 @@ func (r *EquipmentRepository) GetByID(ctx context.Context, id string) (*domain.E
 		e.RoomID.Legacy = roomID.String
 	}
 
-	// Parse location from PostGIS POINT
-	if locStr.Valid {
-		e.Location = parsePoint(locStr.String)
+	// Parse location from x/y/z columns
+	if locX.Valid && locY.Valid {
+		e.Location = &domain.Location{
+			X: locX.Float64,
+			Y: locY.Float64,
+			Z: 0,
+		}
+		if locZ.Valid {
+			e.Location.Z = locZ.Float64
+		}
 	}
 
 	return &e, nil
@@ -110,8 +129,8 @@ func (r *EquipmentRepository) GetByID(ctx context.Context, id string) (*domain.E
 // GetByBuilding retrieves equipment by building ID
 func (r *EquipmentRepository) GetByBuilding(ctx context.Context, buildingID string) ([]*domain.Equipment, error) {
 	query := `
-		SELECT id, building_id, floor_id, room_id, name, type, model,
-		       ST_AsText(location), status, created_at, updated_at
+		SELECT id, building_id, floor_id, room_id, name, equipment_type, model,
+		       location_x, location_y, location_z, status, created_at, updated_at
 		FROM equipment
 		WHERE building_id = $1
 		ORDER BY created_at DESC
@@ -129,10 +148,10 @@ func (r *EquipmentRepository) GetByBuilding(ctx context.Context, buildingID stri
 // GetByType retrieves equipment by type
 func (r *EquipmentRepository) GetByType(ctx context.Context, equipmentType string) ([]*domain.Equipment, error) {
 	query := `
-		SELECT id, building_id, floor_id, room_id, name, type, model,
-		       ST_AsText(location), status, created_at, updated_at
+		SELECT id, building_id, floor_id, room_id, name, equipment_type, model,
+		       location_x, location_y, location_z, status, created_at, updated_at
 		FROM equipment
-		WHERE type = $1
+		WHERE equipment_type = $1
 		ORDER BY created_at DESC
 	`
 
@@ -148,8 +167,8 @@ func (r *EquipmentRepository) GetByType(ctx context.Context, equipmentType strin
 // List retrieves equipment with optional filtering
 func (r *EquipmentRepository) List(ctx context.Context, filter *domain.EquipmentFilter) ([]*domain.Equipment, error) {
 	query := `
-		SELECT id, building_id, floor_id, room_id, name, type, model,
-		       ST_AsText(location), status, created_at, updated_at
+		SELECT id, building_id, floor_id, room_id, name, equipment_type, model,
+		       location_x, location_y, location_z, status, created_at, updated_at
 		FROM equipment
 		WHERE 1=1`
 
@@ -174,7 +193,7 @@ func (r *EquipmentRepository) List(ctx context.Context, filter *domain.Equipment
 			argCount++
 		}
 		if filter.Type != nil {
-			query += fmt.Sprintf(" AND type = $%d", argCount)
+			query += fmt.Sprintf(" AND equipment_type = $%d", argCount)
 			args = append(args, *filter.Type)
 			argCount++
 		}
@@ -215,14 +234,17 @@ func (r *EquipmentRepository) List(ctx context.Context, filter *domain.Equipment
 func (r *EquipmentRepository) Update(ctx context.Context, e *domain.Equipment) error {
 	query := `
 		UPDATE equipment
-		SET name = $2, type = $3, model = $4, location = ST_GeomFromText($5, 4326),
-		    status = $6, updated_at = $7
+		SET name = $2, equipment_type = $3, model = $4,
+		    location_x = $5, location_y = $6, location_z = $7,
+		    status = $8, updated_at = $9
 		WHERE id = $1
 	`
 
-	var locationStr any
+	var locX, locY, locZ sql.NullFloat64
 	if e.Location != nil {
-		locationStr = fmt.Sprintf("POINT(%f %f %f)", e.Location.X, e.Location.Y, e.Location.Z)
+		locX = sql.NullFloat64{Float64: e.Location.X, Valid: true}
+		locY = sql.NullFloat64{Float64: e.Location.Y, Valid: true}
+		locZ = sql.NullFloat64{Float64: e.Location.Z, Valid: true}
 	}
 
 	_, err := r.db.ExecContext(ctx, query,
@@ -230,7 +252,9 @@ func (r *EquipmentRepository) Update(ctx context.Context, e *domain.Equipment) e
 		e.Name,
 		e.Type,
 		e.Model,
-		locationStr,
+		locX,
+		locY,
+		locZ,
 		e.Status,
 		e.UpdatedAt,
 	)
@@ -248,8 +272,8 @@ func (r *EquipmentRepository) Delete(ctx context.Context, id string) error {
 // GetByLocation retrieves equipment by location (building, floor, room)
 func (r *EquipmentRepository) GetByLocation(ctx context.Context, buildingID, floor, room string) ([]*domain.Equipment, error) {
 	query := `
-		SELECT id, building_id, floor_id, room_id, name, type, model,
-		       ST_AsText(location), status, created_at, updated_at
+		SELECT id, building_id, floor_id, room_id, name, equipment_type, model,
+		       location_x, location_y, location_z, status, created_at, updated_at
 		FROM equipment
 		WHERE building_id = $1`
 
@@ -284,8 +308,8 @@ func (r *EquipmentRepository) scanEquipmentRows(rows *sql.Rows) ([]*domain.Equip
 
 	for rows.Next() {
 		var e domain.Equipment
-		var locStr sql.NullString
 		var floorID, roomID sql.NullString
+		var locX, locY, locZ sql.NullFloat64
 
 		err := rows.Scan(
 			&e.ID,
@@ -295,7 +319,9 @@ func (r *EquipmentRepository) scanEquipmentRows(rows *sql.Rows) ([]*domain.Equip
 			&e.Name,
 			&e.Type,
 			&e.Model,
-			&locStr,
+			&locX,
+			&locY,
+			&locZ,
 			&e.Status,
 			&e.CreatedAt,
 			&e.UpdatedAt,
@@ -313,9 +339,16 @@ func (r *EquipmentRepository) scanEquipmentRows(rows *sql.Rows) ([]*domain.Equip
 			e.RoomID.Legacy = roomID.String
 		}
 
-		// Parse location from PostGIS POINT
-		if locStr.Valid {
-			e.Location = parsePoint(locStr.String)
+		// Parse location from x/y/z columns
+		if locX.Valid && locY.Valid {
+			e.Location = &domain.Location{
+				X: locX.Float64,
+				Y: locY.Float64,
+				Z: 0,
+			}
+			if locZ.Valid {
+				e.Location.Z = locZ.Float64
+			}
 		}
 
 		equipment = append(equipment, &e)

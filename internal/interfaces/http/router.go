@@ -53,10 +53,16 @@ func NewRouter(config *RouterConfig) chi.Router {
 		r.Route("/buildings", func(r chi.Router) {
 			r.Use(httpmiddleware.AuthMiddleware(config.JWTManager))
 			r.Use(httpmiddleware.RateLimit(100, time.Hour))
-			r.Get("/", apiHandlers.buildingHandler.ListBuildings)
-			r.Post("/", apiHandlers.buildingHandler.CreateBuilding)
-			r.Get("/{id}", apiHandlers.buildingHandler.GetBuilding)
-			r.Put("/{id}", apiHandlers.buildingHandler.UpdateBuilding)
+
+			rbac := config.Container.GetRBACManager()
+
+			// List and Get require read permission
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/", apiHandlers.buildingHandler.ListBuildings)
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/{id}", apiHandlers.buildingHandler.GetBuilding)
+
+			// Create and Update require write permission
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/", apiHandlers.buildingHandler.CreateBuilding)
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Put("/{id}", apiHandlers.buildingHandler.UpdateBuilding)
 		})
 
 		// Mobile API routes (mobile-optimized with AR/spatial features)
@@ -113,9 +119,43 @@ func NewRouter(config *RouterConfig) chi.Router {
 			if apiHandlers.equipmentHandler != nil {
 				r.Use(httpmiddleware.AuthMiddleware(config.JWTManager))
 				r.Use(httpmiddleware.RateLimit(100, time.Hour))
-				r.Get("/", apiHandlers.equipmentHandler.ListEquipment)
-				r.Post("/", apiHandlers.equipmentHandler.CreateEquipment)
-				r.Get("/{id}", apiHandlers.equipmentHandler.GetEquipment)
+
+				rbac := config.Container.GetRBACManager()
+
+				// Read operations
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentRead)).Get("/", apiHandlers.equipmentHandler.ListEquipment)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentRead)).Get("/{id}", apiHandlers.equipmentHandler.GetEquipment)
+
+				// Write operations
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentWrite)).Post("/", apiHandlers.equipmentHandler.CreateEquipment)
+
+				// Relationship endpoints (graph topology)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentRead)).Get("/{id}/relationships", apiHandlers.equipmentHandler.ListRelationships)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentRead)).Get("/{id}/hierarchy", apiHandlers.equipmentHandler.GetHierarchy)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentWrite)).Post("/{id}/relationships", apiHandlers.equipmentHandler.CreateRelationship)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentWrite)).Delete("/{id}/relationships/{rel_id}", apiHandlers.equipmentHandler.DeleteRelationship)
+			}
+		})
+
+		// Organization management (admin only)
+		r.Route("/organizations", func(r chi.Router) {
+			if apiHandlers.organizationHandler != nil {
+				r.Use(httpmiddleware.AuthMiddleware(config.JWTManager))
+				r.Use(httpmiddleware.RateLimit(100, time.Hour))
+
+				rbac := config.Container.GetRBACManager()
+
+				// Read operations (admin/manager can view)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionOrgRead)).Get("/", apiHandlers.organizationHandler.ListOrganizations)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionOrgRead)).Get("/{id}", apiHandlers.organizationHandler.GetOrganization)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionOrgRead)).Get("/{id}/users", apiHandlers.organizationHandler.GetOrganizationUsers)
+
+				// Write operations (admin only)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionOrgWrite)).Post("/", apiHandlers.organizationHandler.CreateOrganization)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionOrgWrite)).Put("/{id}", apiHandlers.organizationHandler.UpdateOrganization)
+
+				// Delete operations (super admin only)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionOrgDelete)).Delete("/{id}", apiHandlers.organizationHandler.DeleteOrganization)
 			}
 		})
 	})
@@ -137,9 +177,10 @@ type publicHandlers struct {
 
 // apiHandlers holds authenticated API handlers
 type apiHandlers struct {
-	buildingHandler  *handlers.BuildingHandler
-	equipmentHandler *handlers.EquipmentHandler
-	userHandler      *handlers.UserHandler
+	buildingHandler     *handlers.BuildingHandler
+	equipmentHandler    *handlers.EquipmentHandler
+	userHandler         *handlers.UserHandler
+	organizationHandler *handlers.OrganizationHandler
 }
 
 // NewRouterConfig creates a router configuration from existing dependencies
@@ -184,12 +225,15 @@ func createAPIHandlers(config *RouterConfig) *apiHandlers {
 	equipmentUC := config.Container.GetEquipmentUseCase()
 
 	// Create BaseHandler for handlers not yet in Container
-	// TODO: Move all handlers to Container for Clean Architecture
+	// NOTE: Handlers are wired via Container in createAPIHandlers()
 	baseHandler := handlers.NewBaseHandler(logger, nil) // No JWT manager needed for these for now
 
+	relationshipRepo := config.Container.GetRelationshipRepository()
+
 	return &apiHandlers{
-		buildingHandler:  config.Container.GetBuildingHandler(),
-		equipmentHandler: handlers.NewEquipmentHandler(config.Server, equipmentUC, logger),
-		userHandler:      handlers.NewUserHandler(baseHandler, userUC, logger),
+		buildingHandler:     config.Container.GetBuildingHandler(),
+		equipmentHandler:    handlers.NewEquipmentHandler(config.Server, equipmentUC, relationshipRepo, logger),
+		userHandler:         handlers.NewUserHandler(baseHandler, userUC, logger),
+		organizationHandler: config.Container.GetOrganizationHandler(),
 	}
 }

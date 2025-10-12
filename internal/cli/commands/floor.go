@@ -5,17 +5,16 @@ import (
 	"fmt"
 	"os"
 	"text/tabwriter"
-	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
-	"github.com/arx-os/arxos/internal/infrastructure/postgis"
+	"github.com/arx-os/arxos/internal/usecase"
 	"github.com/spf13/cobra"
 )
 
 // FloorServiceProvider provides access to floor services
 type FloorServiceProvider interface {
-	GetPostGIS() *postgis.PostGIS
+	GetFloorUseCase() *usecase.FloorUseCase
 }
 
 // CreateFloorCommands creates floor management commands
@@ -59,8 +58,7 @@ func createFloorCreateCommand(serviceContext any) *cobra.Command {
 			if !ok {
 				return fmt.Errorf("service context is not available")
 			}
-			postgisClient := sc.GetPostGIS()
-			floorRepo := postgis.NewFloorRepository(postgisClient.GetDB())
+			floorUC := sc.GetFloorUseCase()
 
 			// Validate required fields
 			if name == "" {
@@ -70,17 +68,15 @@ func createFloorCreateCommand(serviceContext any) *cobra.Command {
 				return fmt.Errorf("building ID is required (--building)")
 			}
 
-			// Create floor
-			floor := &domain.Floor{
-				ID:         types.NewID(),
+			// Create request
+			req := &domain.CreateFloorRequest{
 				BuildingID: types.FromString(buildingID),
 				Name:       name,
 				Level:      level,
-				CreatedAt:  time.Now(),
-				UpdatedAt:  time.Now(),
 			}
 
-			err := floorRepo.Create(ctx, floor)
+			// Create floor
+			floor, err := floorUC.CreateFloor(ctx, req)
 			if err != nil {
 				return fmt.Errorf("failed to create floor: %w", err)
 			}
@@ -135,11 +131,10 @@ func createFloorListCommand(serviceContext any) *cobra.Command {
 			if !ok {
 				return fmt.Errorf("service context is not available")
 			}
-			postgisClient := sc.GetPostGIS()
-			floorRepo := postgis.NewFloorRepository(postgisClient.GetDB())
+			floorUC := sc.GetFloorUseCase()
 
 			// List floors
-			floors, err := floorRepo.GetByBuilding(ctx, buildingID)
+			floors, err := floorUC.ListFloors(ctx, types.FromString(buildingID), limit, offset)
 			if err != nil {
 				return fmt.Errorf("failed to list floors: %w", err)
 			}
@@ -198,11 +193,10 @@ func createFloorGetCommand(serviceContext any) *cobra.Command {
 			if !ok {
 				return fmt.Errorf("service context is not available")
 			}
-			postgisClient := sc.GetPostGIS()
-			floorRepo := postgis.NewFloorRepository(postgisClient.GetDB())
+			floorUC := sc.GetFloorUseCase()
 
 			// Get floor
-			floor, err := floorRepo.GetByID(ctx, floorID)
+			floor, err := floorUC.GetFloor(ctx, types.FromString(floorID))
 			if err != nil {
 				return fmt.Errorf("failed to get floor: %w", err)
 			}
@@ -215,19 +209,6 @@ func createFloorGetCommand(serviceContext any) *cobra.Command {
 			fmt.Printf("   Building: %s\n", floor.BuildingID.String())
 			fmt.Printf("   Created:  %s\n", floor.CreatedAt.Format("2006-01-02 15:04:05"))
 			fmt.Printf("   Updated:  %s\n", floor.UpdatedAt.Format("2006-01-02 15:04:05"))
-
-			// Get rooms on this floor
-			rooms, err := floorRepo.GetRooms(ctx, floorID)
-			if err == nil && len(rooms) > 0 {
-				fmt.Printf("   Rooms:    %d\n", len(rooms))
-			}
-
-			// Get equipment on this floor
-			equipment, err := floorRepo.GetEquipment(ctx, floorID)
-			if err == nil && len(equipment) > 0 {
-				fmt.Printf("   Equipment: %d item(s)\n", len(equipment))
-			}
-
 			fmt.Printf("\n")
 
 			return nil
@@ -260,8 +241,7 @@ func createFloorDeleteCommand(serviceContext any) *cobra.Command {
 			if !ok {
 				return fmt.Errorf("service context is not available")
 			}
-			postgisClient := sc.GetPostGIS()
-			floorRepo := postgis.NewFloorRepository(postgisClient.GetDB())
+			floorUC := sc.GetFloorUseCase()
 
 			// Confirmation prompt unless --force
 			if !force {
@@ -275,7 +255,7 @@ func createFloorDeleteCommand(serviceContext any) *cobra.Command {
 			}
 
 			// Delete floor
-			err := floorRepo.Delete(ctx, floorID)
+			err := floorUC.DeleteFloor(ctx, floorID)
 			if err != nil {
 				return fmt.Errorf("failed to delete floor: %w", err)
 			}

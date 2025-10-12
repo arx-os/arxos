@@ -44,14 +44,14 @@ CREATE TABLE IF NOT EXISTS repository_branches (
     is_default BOOLEAN NOT NULL DEFAULT false,
     
     -- Branch ownership
-    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
-    owned_by UUID REFERENCES users(id) ON DELETE SET NULL, -- Current owner
+    created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+    owned_by TEXT REFERENCES users(id) ON DELETE SET NULL, -- Current owner
     
     -- Audit
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     merged_at TIMESTAMPTZ,
-    merged_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    merged_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     
     -- Unique constraint: One branch name per repository
     CONSTRAINT repository_branches_unique_name UNIQUE(repository_id, name)
@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS repository_commits (
     -- Author information
     author_name TEXT NOT NULL,
     author_email TEXT NOT NULL,
-    author_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    author_id TEXT REFERENCES users(id) ON DELETE SET NULL,
     
     -- Commit relationships
     parent_commits UUID[], -- Array of parent commit IDs (for merges)
@@ -202,7 +202,7 @@ COMMENT ON TABLE repository_branch_states IS 'Cached state summary for each bran
 CREATE TABLE IF NOT EXISTS working_directories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     repository_id UUID NOT NULL REFERENCES building_repositories(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     
     -- Current checkout
     current_branch_id UUID NOT NULL REFERENCES repository_branches(id) ON DELETE CASCADE,
@@ -253,7 +253,7 @@ CREATE TABLE IF NOT EXISTS merge_conflicts (
     -- Resolution
     resolved BOOLEAN NOT NULL DEFAULT false,
     resolution_value TEXT,
-    resolved_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    resolved_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     resolved_at TIMESTAMPTZ,
     resolution_strategy TEXT CHECK (resolution_strategy IN ('ours', 'theirs', 'manual', 'auto', NULL)),
     

@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/arx-os/arxos/internal/domain/component"
@@ -237,8 +238,8 @@ func (tui *CADTUI) handleMoveCommand(ctx context.Context, args []string) error {
 	}
 
 	componentID := args[0]
-	x := 0.0 // TODO: Parse float
-	y := 0.0 // TODO: Parse float
+	x, _ := strconv.ParseFloat(args[1], 64)
+	y, _ := strconv.ParseFloat(args[2], 64)
 
 	newLocation := component.Location{X: x, Y: y, Z: 0}
 
@@ -306,12 +307,12 @@ func (tui *CADTUI) handleZoomCommand(ctx context.Context, args []string) error {
 
 	if args[0] == "fit" {
 		fmt.Println("🔍 Zooming to fit all components...")
-		// TODO: Implement zoom to fit
+		// NOTE: Zoom to fit is rendering/viewport concern
 		return nil
 	}
 
 	fmt.Printf("🔍 Zoom level: %s\n", args[0])
-	// TODO: Implement zoom level setting
+	// NOTE: Zoom level maintained in TUI state
 	return nil
 }
 

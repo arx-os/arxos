@@ -602,8 +602,8 @@ func (s *RollbackService) countEquipment(ctx context.Context, equipmentTreeHash 
 // generateRollbackTag generates a tag for a rollback version
 func (s *RollbackService) generateRollbackTag(currentTag string) string {
 	// Simple incrementing strategy
-	// v1.2.3 -> v1.2.4
-	// TODO: Implement proper semantic versioning
+	// v1.2.3 -> v1.2.3-rollback-{timestamp}
+	// Semantic versioning: use prerelease tag for rollbacks
 	return fmt.Sprintf("%s-rollback-%d", currentTag, time.Now().Unix())
 }
 

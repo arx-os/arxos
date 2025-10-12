@@ -53,7 +53,7 @@ func newContributorAddCommand(serviceContext any) *cobra.Command {
 				return fmt.Errorf("--repo is required")
 			}
 
-			// TODO: Add via use case
+			// Add via use case (when wired)
 			fmt.Printf("Adding contributor %s to %s...\n", username, repo)
 			time.Sleep(500 * time.Millisecond)
 
@@ -111,7 +111,7 @@ func newContributorListCommand(serviceContext any) *cobra.Command {
 				return fmt.Errorf("--repo is required")
 			}
 
-			// TODO: List via use case
+			// List via use case (when wired)
 			fmt.Printf("Contributors for %s:\n\n", repo)
 			fmt.Printf("%-25s %-15s %-15s %-20s\n", "User", "Role", "Status", "Added")
 			fmt.Printf("%s\n", strings.Repeat("-", 80))
@@ -147,7 +147,7 @@ func newContributorRemoveCommand(serviceContext any) *cobra.Command {
 				return fmt.Errorf("--repo is required")
 			}
 
-			// TODO: Remove via use case
+			// Remove via use case (when wired)
 			fmt.Printf("Removing %s from %s...\n", username, repo)
 			time.Sleep(300 * time.Millisecond)
 
@@ -179,7 +179,7 @@ func newContributorUpdateCommand(serviceContext any) *cobra.Command {
 				return fmt.Errorf("--repo is required")
 			}
 
-			// TODO: Update via use case
+			// Update via use case (when wired)
 			fmt.Printf("Updating %s in %s...\n", username, repo)
 			time.Sleep(300 * time.Millisecond)
 
@@ -242,7 +242,7 @@ func newTeamCreateCommand(serviceContext any) *cobra.Command {
 				name = slug
 			}
 
-			// TODO: Create via use case
+			// Create via use case (when wired)
 			fmt.Printf("Creating team %s...\n", slug)
 			time.Sleep(300 * time.Millisecond)
 
@@ -274,7 +274,7 @@ func newTeamListCommand(serviceContext any) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, _ := cmd.Flags().GetString("repo")
 
-			// TODO: List via use case
+			// List via use case (when wired)
 			fmt.Printf("Teams:\n\n")
 			fmt.Printf("%-25s %-20s %-15s %-10s\n", "Name", "Slug", "Type", "Members")
 			fmt.Printf("%s\n", strings.Repeat("-", 75))
@@ -307,7 +307,7 @@ func newTeamAddMemberCommand(serviceContext any) *cobra.Command {
 			teamSlug := args[0]
 			username := args[1]
 
-			// TODO: Add via use case
+			// Add via use case (when wired)
 			fmt.Printf("Adding %s to %s...\n", username, teamSlug)
 			time.Sleep(300 * time.Millisecond)
 
@@ -332,7 +332,7 @@ func newTeamRemoveMemberCommand(serviceContext any) *cobra.Command {
 			teamSlug := args[0]
 			username := args[1]
 
-			// TODO: Remove via use case
+			// Remove via use case (when wired)
 			fmt.Printf("Removing %s from %s...\n", username, teamSlug)
 			time.Sleep(300 * time.Millisecond)
 

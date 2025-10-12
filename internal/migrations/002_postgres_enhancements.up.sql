@@ -192,9 +192,27 @@ ORDER BY MIN(m.next_due_date);
 -- =============================================================================
 -- Create Indexes for JSON queries (PostgreSQL specific)
 -- =============================================================================
-CREATE INDEX IF NOT EXISTS idx_buildings_metadata ON buildings USING gin (metadata);
-CREATE INDEX IF NOT EXISTS idx_equipment_metadata ON equipment USING gin (metadata);
-CREATE INDEX IF NOT EXISTS idx_points_metadata ON points USING gin (metadata);
+-- Note: GIN indexes require jsonb type or cast. Skip if metadata is json type.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_name = 'buildings' AND column_name = 'metadata'
+               AND data_type = 'jsonb') THEN
+        CREATE INDEX IF NOT EXISTS idx_buildings_metadata ON buildings USING gin (metadata);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_name = 'equipment' AND column_name = 'metadata'
+               AND data_type = 'jsonb') THEN
+        CREATE INDEX IF NOT EXISTS idx_equipment_metadata ON equipment USING gin (metadata);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_name = 'points' AND column_name = 'metadata'
+               AND data_type = 'jsonb') THEN
+        CREATE INDEX IF NOT EXISTS idx_points_metadata ON points USING gin (metadata);
+    END IF;
+END $$;
 
 -- =============================================================================
 -- Add Full Text Search (PostgreSQL specific)

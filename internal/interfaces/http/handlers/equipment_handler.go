@@ -18,16 +18,18 @@ import (
 // EquipmentHandler handles equipment-related HTTP requests
 type EquipmentHandler struct {
 	BaseHandler
-	equipmentUC *usecase.EquipmentUseCase
-	logger      domain.Logger
+	equipmentUC      *usecase.EquipmentUseCase
+	relationshipRepo domain.RelationshipRepository
+	logger           domain.Logger
 }
 
 // NewEquipmentHandler creates a new equipment handler
-func NewEquipmentHandler(server *types.Server, equipmentUC *usecase.EquipmentUseCase, logger domain.Logger) *EquipmentHandler {
+func NewEquipmentHandler(server *types.Server, equipmentUC *usecase.EquipmentUseCase, relationshipRepo domain.RelationshipRepository, logger domain.Logger) *EquipmentHandler {
 	return &EquipmentHandler{
-		BaseHandler: nil, // Will be injected by container
-		equipmentUC: equipmentUC,
-		logger:      logger,
+		BaseHandler:      nil, // Will be injected by container
+		equipmentUC:      equipmentUC,
+		relationshipRepo: relationshipRepo,
+		logger:           logger,
 	}
 }
 

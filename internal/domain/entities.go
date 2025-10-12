@@ -73,7 +73,12 @@ type Equipment struct {
 	RoomID     types.ID  `json:"room_id,omitempty"`
 	Name       string    `json:"name"`
 	Type       string    `json:"type"`
+	Category   string    `json:"category,omitempty"` // electrical, network, hvac, custodial, etc.
+	Subtype    string    `json:"subtype,omitempty"`  // transformer, panel, spill_marker, etc.
 	Model      string    `json:"model,omitempty"`
+	ParentID   *types.ID `json:"parent_id,omitempty"` // Direct parent for quick lookup
+	SystemID   *types.ID `json:"system_id,omitempty"` // Optional system membership
+	Tags       []string  `json:"tags,omitempty"`      // Flexible tagging
 	Location   *Location `json:"location,omitempty"`
 	Status     string    `json:"status"`
 	CreatedAt  time.Time `json:"created_at"`
@@ -133,6 +138,34 @@ type UpdateBuildingRequest struct {
 	Name        *string   `json:"name,omitempty"`
 	Address     *string   `json:"address,omitempty"`
 	Coordinates *Location `json:"coordinates,omitempty"`
+}
+
+// CreateFloorRequest represents the request to create a floor
+type CreateFloorRequest struct {
+	BuildingID types.ID `json:"building_id" validate:"required"`
+	Name       string   `json:"name" validate:"required"`
+	Level      int      `json:"level" validate:"required"`
+}
+
+// UpdateFloorRequest represents the request to update a floor
+type UpdateFloorRequest struct {
+	ID    types.ID `json:"id" validate:"required"`
+	Name  *string  `json:"name,omitempty"`
+	Level *int     `json:"level,omitempty"`
+}
+
+// CreateRoomRequest represents the request to create a room
+type CreateRoomRequest struct {
+	FloorID types.ID `json:"floor_id" validate:"required"`
+	Name    string   `json:"name" validate:"required"`
+	Number  string   `json:"number" validate:"required"`
+}
+
+// UpdateRoomRequest represents the request to update a room
+type UpdateRoomRequest struct {
+	ID     types.ID `json:"id" validate:"required"`
+	Name   *string  `json:"name,omitempty"`
+	Number *string  `json:"number,omitempty"`
 }
 
 // CreateEquipmentRequest represents the request to create equipment

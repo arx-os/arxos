@@ -32,7 +32,7 @@ database:
   host: "localhost"
   port: 5432
   database: "arxos_dev"
-  username: "arxos"
+  username: "joelpate"
   ssl_mode: "disable"
   max_open_conns: 25
   max_connections: 25
@@ -47,7 +47,7 @@ postgis:
   host: "localhost"
   port: 5432
   database: "arxos_dev"
-  user: "arxos"
+  user: "joelpate"
   ssl_mode: "disable"
   srid: 900913
 

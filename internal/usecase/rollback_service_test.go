@@ -180,9 +180,9 @@ func TestRollbackService_PreviewRollback(t *testing.T) {
 		Entries: make([]building.TreeEntry, 50), // 50 equipment items
 	}
 
-	mockTreeRepo.On("Load", ctx, "building-tree-123").Return(buildingTree, nil)
+	mockTreeRepo.On("Load", ctx, "space-tree-123").Return(buildingTree, nil)
 	mockTreeRepo.On("Load", ctx, "floors-tree-123").Return(floorsTree, nil)
-	mockTreeRepo.On("Load", ctx, "equipment-tree-123").Return(equipmentTree, nil)
+	mockTreeRepo.On("Load", ctx, "item-tree-123").Return(equipmentTree, nil)
 	mockTreeRepo.On("Load", ctx, "hvac-tree").Return(hvacTree, nil)
 
 	// Execute preview

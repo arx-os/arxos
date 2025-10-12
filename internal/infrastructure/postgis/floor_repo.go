@@ -231,8 +231,8 @@ func (r *FloorRepository) GetRooms(ctx context.Context, floorID string) ([]*doma
 // GetEquipment retrieves all equipment on a floor
 func (r *FloorRepository) GetEquipment(ctx context.Context, floorID string) ([]*domain.Equipment, error) {
 	query := `
-		SELECT id, building_id, floor_id, room_id, name, type, model,
-		       ST_AsText(location), status, created_at, updated_at
+		SELECT id, building_id, floor_id, room_id, name, equipment_type, model,
+		       location_x, location_y, location_z, status, created_at, updated_at
 		FROM equipment
 		WHERE floor_id = $1
 		ORDER BY created_at DESC
@@ -248,8 +248,8 @@ func (r *FloorRepository) GetEquipment(ctx context.Context, floorID string) ([]*
 
 	for rows.Next() {
 		var e domain.Equipment
-		var locStr sql.NullString
 		var roomID sql.NullString
+		var locX, locY, locZ sql.NullFloat64
 
 		err := rows.Scan(
 			&e.ID,
@@ -259,7 +259,9 @@ func (r *FloorRepository) GetEquipment(ctx context.Context, floorID string) ([]*
 			&e.Name,
 			&e.Type,
 			&e.Model,
-			&locStr,
+			&locX,
+			&locY,
+			&locZ,
 			&e.Status,
 			&e.CreatedAt,
 			&e.UpdatedAt,
@@ -274,9 +276,16 @@ func (r *FloorRepository) GetEquipment(ctx context.Context, floorID string) ([]*
 			e.RoomID.Legacy = roomID.String
 		}
 
-		// Parse location from PostGIS POINT
-		if locStr.Valid {
-			e.Location = parsePoint(locStr.String)
+		// Parse location from x/y/z columns
+		if locX.Valid && locY.Valid {
+			e.Location = &domain.Location{
+				X: locX.Float64,
+				Y: locY.Float64,
+				Z: 0,
+			}
+			if locZ.Valid {
+				e.Location.Z = locZ.Float64
+			}
 		}
 
 		equipment = append(equipment, &e)

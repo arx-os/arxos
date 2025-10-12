@@ -379,7 +379,7 @@ func (h *AuthHandler) HandleMobileLogout(w http.ResponseWriter, r *http.Request)
 	// Get user from context
 	userID := r.Context().Value("user_id").(string)
 
-	// TODO: Implement token blacklisting/revocation if needed
+	// NOTE: Token revocation via JWT expiry and refresh token rotation
 	// For now, just log the logout
 
 	h.logger.Info("Mobile user logged out", "user_id", userID)

@@ -2,6 +2,7 @@ package postgis
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"github.com/arx-os/arxos/internal/domain"
@@ -40,12 +41,18 @@ func (r *BASSystemRepository) Create(system *domain.BASSystem) error {
 		)
 	`
 
-	_, err := r.db.Exec(query,
+	// Marshal metadata to JSON
+	metadataJSON, err := json.Marshal(system.Metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	_, err = r.db.Exec(query,
 		system.ID.String(), system.BuildingID.String(), nullableID(system.RepositoryID),
 		system.Name, system.SystemType, system.Vendor, system.Version,
 		system.Host, system.Port, nullableProtocol(system.Protocol),
 		system.Enabled, system.ReadOnly, system.SyncInterval, system.LastSync,
-		system.Metadata, system.Notes,
+		metadataJSON, system.Notes,
 		system.CreatedAt, system.UpdatedAt, nullableID(system.CreatedBy),
 	)
 
@@ -55,7 +62,7 @@ func (r *BASSystemRepository) Create(system *domain.BASSystem) error {
 // GetByID retrieves a BAS system by ID
 func (r *BASSystemRepository) GetByID(id types.ID) (*domain.BASSystem, error) {
 	query := `
-		SELECT 
+		SELECT
 			id, building_id, repository_id,
 			name, system_type, vendor, version,
 			host, port, protocol,
@@ -148,11 +155,17 @@ func (r *BASSystemRepository) Update(system *domain.BASSystem) error {
 		WHERE id = $13
 	`
 
-	_, err := r.db.Exec(query,
+	// Marshal metadata to JSON
+	metadataJSON, err := json.Marshal(system.Metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	_, err = r.db.Exec(query,
 		system.Name, system.Vendor, system.Version,
 		system.Host, system.Port, nullableProtocol(system.Protocol),
 		system.Enabled, system.ReadOnly, system.SyncInterval, system.LastSync,
-		system.Metadata, system.Notes,
+		metadataJSON, system.Notes,
 		system.ID.String(),
 	)
 
@@ -183,7 +196,7 @@ func (r *BASSystemRepository) Delete(id types.ID) error {
 // List retrieves all BAS systems for a building
 func (r *BASSystemRepository) List(buildingID types.ID) ([]*domain.BASSystem, error) {
 	query := `
-		SELECT 
+		SELECT
 			id, building_id, repository_id,
 			name, system_type, vendor, version,
 			host, port, protocol,
@@ -268,7 +281,7 @@ func (r *BASSystemRepository) List(buildingID types.ID) ([]*domain.BASSystem, er
 // GetByName retrieves a BAS system by name within a building
 func (r *BASSystemRepository) GetByName(buildingID types.ID, name string) (*domain.BASSystem, error) {
 	query := `
-		SELECT 
+		SELECT
 			id, building_id, repository_id,
 			name, system_type, vendor, version,
 			host, port, protocol,
@@ -348,4 +361,3 @@ func nullableProtocol(protocol *domain.BASProtocol) sql.NullString {
 	}
 	return sql.NullString{String: string(*protocol), Valid: true}
 }
-

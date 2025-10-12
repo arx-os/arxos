@@ -1,0 +1,105 @@
+# Electrical Distribution System Template
+# Defines standard electrical hierarchy and topology
+
+name: Electrical Distribution System
+category: electrical
+description: Standard electrical power distribution from service entrance to end devices
+
+# Hierarchy defines the typical equipment chain
+hierarchy:
+  - level: 1
+    name: Service Entrance
+    subtypes:
+      - utility_transformer
+      - service_disconnect
+      - meter
+    feeds: [main_panel]
+
+  - level: 2
+    name: Main Distribution
+    subtypes:
+      - main_panel
+      - switchboard
+      - transformer  # step-down transformer
+    feeds: [distribution_panel, subpanel]
+
+  - level: 3
+    name: Distribution Panels
+    subtypes:
+      - distribution_panel
+      - panelboard
+      - load_center
+    feeds: [subpanel, branch_circuit]
+
+  - level: 4
+    name: Subpanels
+    subtypes:
+      - subpanel
+      - branch_panel
+    feeds: [junction_box, circuit]
+
+  - level: 5
+    name: Junction/Distribution
+    subtypes:
+      - junction_box
+      - pull_box
+      - disconnect
+    feeds: [outlet, switch, light, device]
+
+  - level: 6
+    name: End Devices
+    subtypes:
+      - outlet
+      - receptacle
+      - switch
+      - light_fixture
+      - hardwired_device
+    terminal: true
+
+# Common relationship types for electrical
+relationships:
+  - type: feeds
+    description: Provides electrical power to downstream equipment
+    properties:
+      voltage: "120V|208V|240V|277V|480V"
+      phases: "1|3"
+      amperage: number
+
+  - type: protects
+    description: Circuit breaker protects downstream circuit
+    properties:
+      breaker_size: number
+      trip_curve: string
+
+  - type: grounds
+    description: Equipment grounding relationship
+    properties:
+      ground_size: string
+
+# Example electrical properties per subtype
+equipment_properties:
+  transformer:
+    - voltage_primary
+    - voltage_secondary
+    - kva_rating
+    - impedance
+
+  panel:
+    - voltage
+    - phases
+    - main_breaker_size
+    - branch_circuits
+    - bus_rating
+
+  outlet:
+    - voltage
+    - amperage
+    - outlet_type  # duplex, gfci, quad, etc.
+    - circuit_number
+
+  light_fixture:
+    - wattage
+    - lamp_type
+    - voltage
+    - control_type  # switch, occupancy, daylight
+

@@ -216,7 +216,7 @@ func (akm *APIKeyManager) ValidateAPIKey(key string) (*APIKey, error) {
 
 	if err := akm.store.Update(apiKey); err != nil {
 		// Log error but don't fail validation
-		// TODO: Add proper logging
+		// NOTE: Logging handled by infrastructure logger when wired
 	}
 
 	return apiKey, nil

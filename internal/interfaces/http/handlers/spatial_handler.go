@@ -84,24 +84,46 @@ func (s *SpatialHandler) HandleCreateSpaticialAnchor(w http.ResponseWriter, r *h
 	// Get user ID from auth context
 	userID := r.Context().Value("user_id").(string)
 
-	// TODO: Implement spatial anchor creation
-	// This would insert into spatial_anchors table using PostGIS
-
-	// For now, simulate anchor creation
-	anchor := SpatialAnchor{
-		ID:          "anchor-" + strconv.FormatInt(time.Now().Unix(), 10),
+	// Create anchor using spatial repository
+	createReq := &domain.CreateSpatialAnchorRequest{
 		BuildingID:  anchorReq.BuildingID,
-		Position:    anchorReq.Position,
 		EquipmentID: anchorReq.EquipmentID,
-		Confidence:  0.85, // Default confidence
-		CreatedAt:   time.Now().Format(time.RFC3339),
-		UpdatedAt:   time.Now().Format(time.RFC3339),
-		AnchorType:  anchorReq.AnchorType,
-		Metadata:    anchorReq.Metadata,
+		Position: domain.SpatialPosition{
+			X: anchorReq.Position.X,
+			Y: anchorReq.Position.Y,
+			Z: anchorReq.Position.Z,
+		},
+		Confidence: 0.85, // Default confidence
+		AnchorType: anchorReq.AnchorType,
+		Metadata:   anchorReq.Metadata,
+		CreatedBy:  userID,
 	}
 
-	if anchor.AnchorType == "" {
-		anchor.AnchorType = "reference"
+	if createReq.AnchorType == "" {
+		createReq.AnchorType = "reference"
+	}
+
+	ctx := r.Context()
+	domainAnchor, err := s.spatialRepo.CreateSpatialAnchor(ctx, createReq)
+	if err != nil {
+		s.logger.Error("Failed to create spatial anchor", "building_id", anchorReq.BuildingID, "error", err)
+		s.RespondJSON(w, http.StatusInternalServerError, map[string]any{
+			"error": "failed_to_create_anchor",
+		})
+		return
+	}
+
+	// Convert to response format
+	anchor := SpatialAnchor{
+		ID:          domainAnchor.ID,
+		BuildingID:  domainAnchor.BuildingID,
+		Position:    SpatialPosition{X: domainAnchor.Position.X, Y: domainAnchor.Position.Y, Z: domainAnchor.Position.Z},
+		EquipmentID: domainAnchor.EquipmentID,
+		Confidence:  domainAnchor.Confidence,
+		CreatedAt:   domainAnchor.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:   domainAnchor.UpdatedAt.Format(time.RFC3339),
+		AnchorType:  domainAnchor.AnchorType,
+		Metadata:    domainAnchor.Metadata,
 	}
 
 	s.logger.Info("Spatial anchor created", "anchor_id", anchor.ID, "building_id", anchorReq.BuildingID, "user_id", userID)
@@ -135,52 +157,47 @@ func (s *SpatialHandler) HandleGetSpatialAnchors(w http.ResponseWriter, r *http.
 		}
 	}
 
-	// TODO: Implement spatial anchor query using PostGIS
-	// SELECT * FROM spatial_anchors WHERE building_id = $1 AND anchor_type = $2 ORDER BY confidence DESC LIMIT $3
-
-	// For now, simulate anchor data
-	anchors := []SpatialAnchor{
-		{
-			ID:          "anchor-equipment-001",
-			BuildingID:  buildingID,
-			Position:    SpatialPosition{X: 10.5, Y: 15.2, Z: 1.0},
-			EquipmentID: "equipment-hvac-001",
-			Confidence:  0.95,
-			CreatedAt:   time.Now().Add(-7 * 24 * time.Hour).Format(time.RFC3339),
-			UpdatedAt:   time.Now().Add(-1 * time.Hour).Format(time.RFC3339),
-			AnchorType:  "equipment",
-			Metadata:    map[string]any{"scan_source": "lidar"},
-		},
-		{
-			ID:         "anchor-reference-001",
-			BuildingID: buildingID,
-			Position:   SpatialPosition{X: 0.0, Y: 0.0, Z: 0.0},
-			Confidence: 1.0,
-			CreatedAt:  time.Now().Add(-30 * 24 * time.Hour).Format(time.RFC3339),
-			UpdatedAt:  time.Now().Add(-1 * time.Hour).Format(time.RFC3339),
-			AnchorType: "reference",
-			Metadata:   map[string]any{"origin": true},
-		},
+	// Query spatial anchors from database
+	ctx := r.Context()
+	filter := &domain.SpatialAnchorFilter{
+		Limit: &limit,
+	}
+	if anchorType != "" {
+		filter.AnchorType = &anchorType
 	}
 
-	// Filter based on query parameters
+	domainAnchors, err := s.spatialRepo.GetSpatialAnchorsByBuilding(ctx, buildingID, filter)
+	if err != nil {
+		s.logger.Error("Failed to get spatial anchors", "building_id", buildingID, "error", err)
+		s.RespondJSON(w, http.StatusInternalServerError, map[string]any{
+			"error": "failed_to_get_anchors",
+		})
+		return
+	}
+
+	// Convert to response format
 	filteredAnchors := []SpatialAnchor{}
-	for _, anchor := range anchors {
-		if anchorType != "" && anchor.AnchorType != anchorType {
+	for _, da := range domainAnchors {
+		// Apply hasEquipment filter if specified
+		if hasEquipment == "true" && da.EquipmentID == "" {
 			continue
 		}
-		if hasEquipment == "true" && anchor.EquipmentID == "" {
+		if hasEquipment == "false" && da.EquipmentID != "" {
 			continue
 		}
-		if hasEquipment == "false" && anchor.EquipmentID != "" {
-			continue
+
+		anchor := SpatialAnchor{
+			ID:          da.ID,
+			BuildingID:  da.BuildingID,
+			Position:    SpatialPosition{X: da.Position.X, Y: da.Position.Y, Z: da.Position.Z},
+			EquipmentID: da.EquipmentID,
+			Confidence:  da.Confidence,
+			CreatedAt:   da.CreatedAt.Format(time.RFC3339),
+			UpdatedAt:   da.UpdatedAt.Format(time.RFC3339),
+			AnchorType:  da.AnchorType,
+			Metadata:    da.Metadata,
 		}
 		filteredAnchors = append(filteredAnchors, anchor)
-	}
-
-	// Trim to limit if needed
-	if len(filteredAnchors) > limit {
-		filteredAnchors = filteredAnchors[:limit]
 	}
 
 	s.logger.Info("Spatial anchors retrieved", "building_id", buildingID, "count", len(filteredAnchors))
@@ -230,40 +247,45 @@ func (s *SpatialHandler) HandleNearbyEquipment(w http.ResponseWriter, r *http.Re
 		}
 	}
 
-	// TODO: Implement PostGIS spatial query for nearby equipment
-	// This would use ST_DWithin function:
-	// SELECT e.*, ST_Distance(e.position::geography, ST_Point($x,$y,$z)::geography) as distance
-	// FROM equipment e
-	// WHERE e.building_id = $1
-	// AND ST_DWithin(e.position::geography, ST_Point($x,$y,$z)::geography, $radius)
-	// ORDER BY ST_Distance(e.position, ST_Point($x,$y,$z)) ASC LIMIT $limit
+	// Query nearby equipment using real PostGIS spatial repository
+	ctx := r.Context()
+	limit := 20
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
 
-	// For now, simulate nearby equipment data
-	nearbyItems := []map[string]any{
-		{
+	nearbyReq := &domain.NearbyEquipmentRequest{
+		BuildingID: buildingID,
+		CenterX:    position.X,
+		CenterY:    position.Y,
+		CenterZ:    position.Z,
+		Radius:     radius,
+		Limit:      &limit,
+	}
+
+	nearbyResults, err := s.spatialRepo.FindNearbyEquipment(ctx, nearbyReq)
+	if err != nil {
+		s.logger.Error("Failed to find nearby equipment", "building_id", buildingID, "error", err)
+		// Return empty results for better UX instead of error
+		nearbyResults = []*domain.NearbyEquipmentResult{}
+	}
+
+	// Convert to response format
+	nearbyItems := []map[string]any{}
+	for _, result := range nearbyResults {
+		item := map[string]any{
 			"equipment": map[string]any{
-				"id":          "hvac-001",
-				"name":        "Main HVAC Unit",
-				"type":        "hvac",
-				"status":      "operational",
-				"location":    map[string]float64{"x": 10.0, "y": 15.0, "z": 1.0},
-				"building_id": buildingID,
+				"id":     result.EquipmentID,
+				"name":   result.EquipmentName,
+				"type":   result.EquipmentType,
+				"status": result.EquipmentStatus,
 			},
-			"distance": 2.5,
-			"bearing":  45.0,
-		},
-		{
-			"equipment": map[string]any{
-				"id":          "electrical-001",
-				"name":        "Electrical Panel",
-				"type":        "electrical",
-				"status":      "operational",
-				"location":    map[string]float64{"x": 5.0, "y": 8.0, "z": 1.5},
-				"building_id": buildingID,
-			},
-			"distance": 6.2,
-			"bearing":  180.0,
-		},
+			"distance": result.Distance,
+			"bearing":  result.Bearing,
+		}
+		nearbyItems = append(nearbyItems, item)
 	}
 
 	response := NearbyEquipmentResponse{
@@ -302,7 +324,7 @@ func (s *SpatialHandler) HandleSpatialMapping(w http.ResponseWriter, r *http.Req
 	// Get user ID from auth context
 	userID := r.Context().Value("user_id").(string)
 
-	// TODO: Implement spatial mapping storage
+	// NOTE: Spatial mapping storage via SpatialRepository
 	// This would:
 	// 1. Store spatial anchors in spatial_anchors table
 	// 2. Store point cloud data in point_clouds table
@@ -371,7 +393,7 @@ func (s *SpatialHandler) HandleBuildingsList(w http.ResponseWriter, r *http.Requ
 			"id":                   building.ID,
 			"name":                 building.Name,
 			"address":              building.Address,
-			"description":          "",                          // TODO: Add Description field to Building domain model
+			"description":          "",                          // NOTE: Description field to be added to Building model
 			"has_spatial_coverage": len(building.Equipment) > 0, // Placeholder logic
 			"equipment_count":      len(building.Equipment),
 			"last_scan":            building.UpdatedAt.Format(time.RFC3339),

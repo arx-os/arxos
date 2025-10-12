@@ -1,0 +1,71 @@
+# Safety & Compliance System Template
+# Defines safety equipment and hazard zones
+
+name: Safety & Compliance
+category: safety
+description: Safety equipment, hazard zones, and compliance markers
+
+hierarchy:
+  - level: 1
+    name: Safety Equipment
+    subtypes:
+      - fire_extinguisher
+      - aed  # Automated External Defibrillator
+      - first_aid_kit
+      - eyewash_station
+      - safety_shower
+      - fire_alarm_pull
+      - emergency_light
+      - exit_sign
+    terminal: true
+
+  - level: 2
+    name: Hazard Zones
+    subtypes:
+      - asbestos_zone
+      - lead_paint_zone
+      - chemical_storage
+      - electrical_room
+      - confined_space
+      - high_noise_area
+    terminal: true
+
+  - level: 3
+    name: Compliance Markers
+    subtypes:
+      - inspection_tag
+      - certification_label
+      - warning_sign
+      - restricted_access
+    terminal: true
+
+equipment_properties:
+  fire_extinguisher:
+    - type  # ABC, CO2, water, foam
+    - size_lbs
+    - last_inspection
+    - expiry_date
+    - inspection_due
+
+  aed:
+    - model
+    - serial_number
+    - battery_expiry
+    - pad_expiry
+    - last_inspection
+
+  asbestos_zone:
+    - material_type
+    - condition  # good, fair, poor
+    - inspection_date
+    - inspector_name
+    - abatement_required
+    - boundary_polygon  # GeoJSON for zone boundary
+
+  inspection_tag:
+    - inspection_type
+    - inspector
+    - passed  # boolean
+    - next_due_date
+    - certificate_number
+

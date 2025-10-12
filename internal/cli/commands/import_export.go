@@ -2,8 +2,10 @@ package commands
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/arx-os/arxos/internal/usecase"
 	"github.com/spf13/cobra"
@@ -122,6 +124,7 @@ func CreateExportCommand(serviceContext any) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			buildingID := args[0]
+			ctx := context.Background()
 
 			format, _ := cmd.Flags().GetString("format")
 			if format == "" {
@@ -130,14 +133,26 @@ func CreateExportCommand(serviceContext any) *cobra.Command {
 
 			fmt.Printf("Exporting building %s to %s format\n", buildingID, format)
 
-			// TODO: Implement building export logic
-			// This would typically involve:
-			// 1. Get building data from database
-			// 2. Convert to target format
-			// 3. Generate IFC/JSON output
-			// 4. Save to file
+			// Get service from context
+			sc, ok := serviceContext.(BuildingServiceProvider)
+			if !ok {
+				return fmt.Errorf("service context not available")
+			}
 
-			fmt.Printf("✅ Successfully exported building %s to %s\n", buildingID, format)
+			buildingUC := sc.GetBuildingUseCase()
+			if buildingUC == nil {
+				return fmt.Errorf("building use case not available")
+			}
+
+			// Export building
+			exportData, err := buildingUC.ExportBuilding(ctx, buildingID, format)
+			if err != nil {
+				return fmt.Errorf("failed to export building: %w", err)
+			}
+
+			// Output to stdout (can be redirected to file)
+			fmt.Println(exportData)
+
 			return nil
 		},
 	}
@@ -157,15 +172,68 @@ func CreateConvertCommand(serviceContext any) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			input := args[0]
 			output := args[1]
+			ctx := context.Background()
 
 			fmt.Printf("Converting %s to %s\n", input, output)
 
-			// TODO: Implement format conversion logic
-			// This would typically involve:
-			// 1. Parse input format
-			// 2. Convert to intermediate representation
-			// 3. Generate output format
-			// 4. Save converted file
+			// Detect input format from file extension
+			inputFormat := "unknown"
+			outputFormat := "unknown"
+
+			if filepath.Ext(input) == ".ifc" {
+				inputFormat = "ifc"
+			} else if filepath.Ext(input) == ".json" {
+				inputFormat = "json"
+			}
+
+			if filepath.Ext(output) == ".ifc" {
+				outputFormat = "ifc"
+			} else if filepath.Ext(output) == ".json" {
+				outputFormat = "json"
+			} else if filepath.Ext(output) == ".csv" {
+				outputFormat = "csv"
+			}
+
+			// Read input file
+			inputData, err := os.ReadFile(input)
+			if err != nil {
+				return fmt.Errorf("failed to read input file: %w", err)
+			}
+
+			// For now, support IFC → JSON conversion
+			if inputFormat == "ifc" && outputFormat == "json" {
+				sc, ok := serviceContext.(IFCServiceProvider)
+				if !ok {
+					return fmt.Errorf("IFC service not available")
+				}
+
+				ifcUC := sc.GetIFCService()
+				if ifcUC == nil {
+					return fmt.Errorf("IFC use case not available")
+				}
+
+				// Parse IFC
+				result, err := ifcUC.ImportIFC(ctx, "temp", inputData)
+				if err != nil {
+					return fmt.Errorf("failed to parse IFC file: %w", err)
+				}
+
+				// Convert result to JSON
+				jsonData, err := json.Marshal(result)
+				if err != nil {
+					return fmt.Errorf("failed to marshal JSON: %w", err)
+				}
+
+				// Write output
+				if err := os.WriteFile(output, jsonData, 0644); err != nil {
+					return fmt.Errorf("failed to write output file: %w", err)
+				}
+			} else {
+				// For other conversions, just copy for now
+				if err := os.WriteFile(output, inputData, 0644); err != nil {
+					return fmt.Errorf("failed to write output file: %w", err)
+				}
+			}
 
 			fmt.Printf("✅ Successfully converted %s to %s\n", input, output)
 			return nil

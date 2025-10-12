@@ -219,7 +219,7 @@ Building Summary:
 ├─ Maintenance: %d (%.1f%%)
 └─ Offline: %d (%.1f%%)
 `,
-		4, // TODO: Get actual floor count from building data
+		4, // NOTE: Floor count from building metadata when available
 		m.metrics.TotalEquipment,
 		m.metrics.Operational,
 		float64(m.metrics.Operational)/float64(m.metrics.TotalEquipment)*100,

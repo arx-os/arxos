@@ -7,6 +7,7 @@ import (
 
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
+	"github.com/arx-os/arxos/pkg/naming"
 )
 
 // BASPointRepository implements BAS point repository for PostGIS
@@ -378,18 +379,63 @@ func (r *BASPointRepository) BulkUpdate(points []*domain.BASPoint) error {
 	return nil
 }
 
-// MapToRoom maps a BAS point to a room
+// MapToRoom maps a BAS point to a room and generates the full path
 func (r *BASPointRepository) MapToRoom(pointID, roomID types.ID, confidence int) error {
+	// First, get the point to retrieve its name
+	point, err := r.GetByID(pointID)
+	if err != nil {
+		return fmt.Errorf("failed to get BAS point: %w", err)
+	}
+
+	// Get room information to generate path
+	roomQuery := `
+		SELECT r.number, r.floor_id, f.level, f.building_id, b.name
+		FROM rooms r
+		JOIN floors f ON r.floor_id = f.id
+		JOIN buildings b ON f.building_id = b.id
+		WHERE r.id = $1
+	`
+
+	var roomNumber string
+	var floorLevel int
+	var floorID, buildingID string
+	var buildingName string
+
+	err = r.db.QueryRow(roomQuery, roomID.String()).Scan(
+		&roomNumber, &floorID, &floorLevel, &buildingID, &buildingName,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to get room information: %w", err)
+	}
+
+	// Generate path components
+	buildingCode := naming.BuildingCodeFromName(buildingName)
+	floorCode := naming.FloorCodeFromLevel(fmt.Sprintf("%d", floorLevel))
+	roomCode := naming.RoomCodeFromName(roomNumber)
+	systemCode := "BAS"
+	pointCode := point.PointName
+
+	// Generate full path
+	fullPath := naming.GenerateEquipmentPath(
+		buildingCode,
+		floorCode,
+		roomCode,
+		systemCode,
+		pointCode,
+	)
+
+	// Update point with room mapping and full path
 	query := `
 		UPDATE bas_points SET
 			room_id = $1,
+			path = $2,
 			mapped = true,
-			mapping_confidence = $2,
+			mapping_confidence = $3,
 			updated_at = NOW()
-		WHERE id = $3
+		WHERE id = $4
 	`
 
-	result, err := r.db.Exec(query, roomID.String(), confidence, pointID.String())
+	result, err := r.db.Exec(query, roomID.String(), fullPath, confidence, pointID.String())
 	if err != nil {
 		return err
 	}

@@ -49,9 +49,9 @@ type BASSystem struct {
 	Protocol *BASProtocol `json:"protocol,omitempty"`
 
 	// Configuration
-	Enabled      bool  `json:"enabled"`
-	ReadOnly     bool  `json:"read_only"`
-	SyncInterval *int  `json:"sync_interval,omitempty"` // Seconds
+	Enabled      bool       `json:"enabled"`
+	ReadOnly     bool       `json:"read_only"`
+	SyncInterval *int       `json:"sync_interval,omitempty"` // Seconds
 	LastSync     *time.Time `json:"last_sync,omitempty"`
 
 	// Metadata
@@ -66,9 +66,9 @@ type BASSystem struct {
 
 // BASPoint represents a single BAS control point (sensor, actuator, setpoint)
 type BASPoint struct {
-	ID          types.ID  `json:"id"`
-	BuildingID  types.ID  `json:"building_id"`
-	BASSystemID types.ID  `json:"bas_system_id"`
+	ID          types.ID `json:"id"`
+	BuildingID  types.ID `json:"building_id"`
+	BASSystemID types.ID `json:"bas_system_id"`
 
 	// Spatial links
 	RoomID      *types.ID `json:"room_id,omitempty"`
@@ -76,15 +76,16 @@ type BASPoint struct {
 	EquipmentID *types.ID `json:"equipment_id,omitempty"`
 
 	// BAS identifiers
-	PointName      string  `json:"point_name"`
-	DeviceID       string  `json:"device_id"`
-	ObjectType     string  `json:"object_type"`
-	ObjectInstance *int    `json:"object_instance,omitempty"`
+	PointName      string `json:"point_name"`
+	Path           string `json:"path,omitempty"` // Universal naming convention path (e.g. /B1/3/301/BAS/AI-1-1)
+	DeviceID       string `json:"device_id"`
+	ObjectType     string `json:"object_type"`
+	ObjectInstance *int   `json:"object_instance,omitempty"`
 
 	// Point metadata
-	Description string  `json:"description,omitempty"`
-	Units       string  `json:"units,omitempty"`
-	PointType   string  `json:"point_type,omitempty"`
+	Description string `json:"description,omitempty"`
+	Units       string `json:"units,omitempty"`
+	PointType   string `json:"point_type,omitempty"`
 
 	// Location
 	LocationText string    `json:"location_text,omitempty"` // From CSV import
@@ -102,8 +103,8 @@ type BASPoint struct {
 	LastUpdated         *time.Time `json:"last_updated,omitempty"`
 
 	// Mapping status
-	Mapped             bool `json:"mapped"`
-	MappingConfidence  int  `json:"mapping_confidence"` // 0-3
+	Mapped            bool `json:"mapped"`
+	MappingConfidence int  `json:"mapping_confidence"` // 0-3
 
 	// Import tracking
 	ImportedAt   time.Time `json:"imported_at"`
@@ -124,10 +125,10 @@ type BASPoint struct {
 // BASImportResult represents the result of a BAS import operation
 type BASImportResult struct {
 	// Import details
-	ImportID   types.ID  `json:"import_id"`
-	Filename   string    `json:"filename"`
-	FileSize   int64     `json:"file_size"`
-	FileHash   string    `json:"file_hash"`
+	ImportID types.ID `json:"import_id"`
+	Filename string   `json:"filename"`
+	FileSize int64    `json:"file_size"`
+	FileHash string   `json:"file_hash"`
 
 	// Results
 	PointsAdded    int `json:"points_added"`
@@ -170,28 +171,28 @@ type CreateBASSystemRequest struct {
 
 // UpdateBASSystemRequest represents a request to update a BAS system
 type UpdateBASSystemRequest struct {
-	ID       types.ID      `json:"id" validate:"required"`
-	Name     *string       `json:"name,omitempty"`
-	Vendor   *string       `json:"vendor,omitempty"`
-	Version  *string       `json:"version,omitempty"`
-	Host     *string       `json:"host,omitempty"`
-	Port     *int          `json:"port,omitempty"`
-	Protocol *BASProtocol  `json:"protocol,omitempty"`
-	Enabled  *bool         `json:"enabled,omitempty"`
-	ReadOnly *bool         `json:"read_only,omitempty"`
-	Notes    *string       `json:"notes,omitempty"`
+	ID       types.ID     `json:"id" validate:"required"`
+	Name     *string      `json:"name,omitempty"`
+	Vendor   *string      `json:"vendor,omitempty"`
+	Version  *string      `json:"version,omitempty"`
+	Host     *string      `json:"host,omitempty"`
+	Port     *int         `json:"port,omitempty"`
+	Protocol *BASProtocol `json:"protocol,omitempty"`
+	Enabled  *bool        `json:"enabled,omitempty"`
+	ReadOnly *bool        `json:"read_only,omitempty"`
+	Notes    *string      `json:"notes,omitempty"`
 }
 
 // ImportBASPointsRequest represents a request to import BAS points
 type ImportBASPointsRequest struct {
-	BuildingID   types.ID      `json:"building_id" validate:"required"`
-	BASSystemID  types.ID      `json:"bas_system_id" validate:"required"`
-	RepositoryID *types.ID     `json:"repository_id,omitempty"`
-	FilePath     string        `json:"file_path" validate:"required"`
-	SystemType   BASSystemType `json:"system_type" validate:"required"`
-	AutoMap      bool          `json:"auto_map"` // Attempt to map points to rooms/equipment
-	AutoCommit   bool          `json:"auto_commit"` // Create version commit after import
-	CommitMessage string       `json:"commit_message,omitempty"`
+	BuildingID    types.ID      `json:"building_id" validate:"required"`
+	BASSystemID   types.ID      `json:"bas_system_id" validate:"required"`
+	RepositoryID  *types.ID     `json:"repository_id,omitempty"`
+	FilePath      string        `json:"file_path" validate:"required"`
+	SystemType    BASSystemType `json:"system_type" validate:"required"`
+	AutoMap       bool          `json:"auto_map"`    // Attempt to map points to rooms/equipment
+	AutoCommit    bool          `json:"auto_commit"` // Create version commit after import
+	CommitMessage string        `json:"commit_message,omitempty"`
 }
 
 // BASPointFilter represents filters for querying BAS points
@@ -262,4 +263,3 @@ type BASImportHistoryRepository interface {
 	List(buildingID types.ID, limit, offset int) ([]*BASImportResult, error)
 	GetByFileHash(hash string) (*BASImportResult, error)
 }
-

@@ -163,9 +163,28 @@ Just as Git became the standard because it was free and powerful, ArxOS follows 
 
 ## 🚀 Quick Start
 
-### **Current Status: Under Active Development**
+### **⚠️ Current Status: Active Development - Not Production Ready**
 
-ArxOS is being actively developed with a focus on completing core features. See `PROJECT_STATUS.md` for honest assessment of what works.
+**Completion: 60-70%**
+
+ArxOS has excellent architecture and solid foundations, but integration work remains. Many CLI commands and API endpoints need wiring to use cases. See [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) for brutally honest assessment of what works vs what's placeholder code.
+
+**What Works:**
+- ✅ Database schema (107 tables, spatial intelligence)
+- ✅ Auth/JWT system
+- ✅ BAS CSV import (fully functional)
+- ✅ Git-like version control (branches, commits, PRs)
+- ✅ Equipment topology with graph queries
+- ✅ Basic building/equipment CRUD
+
+**What Needs Work:**
+- ⚠️ CLI commands (some show fake data)
+- ⚠️ IFC import (metadata only, not full conversion)
+- ⚠️ HTTP API (40% coverage, workflow endpoints missing)
+- ⚠️ Test coverage (~15%)
+- ⚠️ Mobile app (placeholder implementations)
+
+**See [`docs/WIRING_PLAN.md`](docs/WIRING_PLAN.md) for systematic completion plan.**
 
 ### **Installation (Development)**
 
@@ -202,11 +221,13 @@ Expected output:
 # Check migration status
 $ go run cmd/arx/main.go migrate status
 
-# Try creating a building (Phase 2 - In Progress)
+# Try real working commands
 $ go run cmd/arx/main.go building create --name "Test School" --address "123 Main St"
+$ go run cmd/arx/main.go branch list --repo <repo-id>
+$ go run cmd/arx/main.go bas import points.csv --building <building-id>
 ```
 
-**Note:** Most CLI commands are being actively wired to database operations. See `PROJECT_STATUS.md` for feature completion status.
+**⚠️ Note:** Some CLI commands show placeholder data. See [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) for command-by-command status and [`docs/WIRING_PLAN.md`](docs/WIRING_PLAN.md) for completion plan.
 
 ### **Your First Building**
 

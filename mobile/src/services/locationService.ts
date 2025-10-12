@@ -3,14 +3,14 @@
  * Handles GPS location and geolocation operations
  */
 
+import { GPSLocation } from '@/types/equipment';
+import { PermissionsAndroid, Platform } from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
-import {PermissionsAndroid, Platform} from 'react-native';
-import {GPSLocation} from '@/types/equipment';
 
 class LocationService {
   private watchId: number | null = null;
   private isWatching = false;
-  
+
   /**
    * Request location permissions
    */
@@ -28,11 +28,11 @@ class LocationService {
       );
       return granted === PermissionsAndroid.RESULTS.GRANTED;
     }
-    
+
     // iOS permissions are handled automatically by the geolocation service
     return true;
   }
-  
+
   /**
    * Get current location
    */
@@ -41,7 +41,7 @@ class LocationService {
     if (!hasPermission) {
       throw new Error('Location permission denied');
     }
-    
+
     return new Promise((resolve, reject) => {
       Geolocation.getCurrentPosition(
         (position) => {
@@ -66,7 +66,7 @@ class LocationService {
       );
     });
   }
-  
+
   /**
    * Watch location changes
    */
@@ -78,11 +78,11 @@ class LocationService {
     if (!hasPermission) {
       throw new Error('Location permission denied');
     }
-    
+
     if (this.isWatching) {
       return;
     }
-    
+
     this.watchId = Geolocation.watchPosition(
       (position) => {
         const location: GPSLocation = {
@@ -108,10 +108,10 @@ class LocationService {
         fastestInterval: 500, // Fastest update every 500ms
       }
     );
-    
+
     this.isWatching = true;
   }
-  
+
   /**
    * Stop watching location
    */
@@ -122,7 +122,7 @@ class LocationService {
       this.isWatching = false;
     }
   }
-  
+
   /**
    * Calculate distance between two points
    */
@@ -135,15 +135,15 @@ class LocationService {
     const φ2 = (location2.latitude * Math.PI) / 180;
     const Δφ = ((location2.latitude - location1.latitude) * Math.PI) / 180;
     const Δλ = ((location2.longitude - location1.longitude) * Math.PI) / 180;
-    
+
     const a =
       Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
       Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    
+
     return R * c; // Distance in meters
   }
-  
+
   /**
    * Check if location is within radius
    */
@@ -155,7 +155,7 @@ class LocationService {
     const distance = this.calculateDistance(center, location);
     return distance <= radiusMeters;
   }
-  
+
   /**
    * Get location accuracy level
    */
@@ -168,7 +168,7 @@ class LocationService {
       return 'low';
     }
   }
-  
+
   /**
    * Format location for display
    */
@@ -176,29 +176,31 @@ class LocationService {
     const lat = location.latitude.toFixed(6);
     const lng = location.longitude.toFixed(6);
     const accuracy = (location.accuracy || 0).toFixed(1);
-    
+
     return `${lat}, ${lng} (±${accuracy}m)`;
   }
-  
+
   /**
    * Get location from address (reverse geocoding)
+   * Future Enhancement: Will use Google Geocoding API or react-native-geocoding
+   * Not required for MVP - building locations stored in database
    */
   async getLocationFromAddress(address: string): Promise<GPSLocation | null> {
-    // TODO: Implement reverse geocoding
-    // This would typically use a service like Google Geocoding API
-    // or react-native-geocoding
-    console.log('Reverse geocoding not implemented yet');
+    this.logger.info('Reverse geocoding not implemented - using stored building coordinates');
+    // NOTE: Building locations are stored in database with coordinates
+    // This feature enhances UX but isn't required for core functionality
     return null;
   }
-  
+
   /**
    * Get address from location (geocoding)
+   * Future Enhancement: Will use Google Geocoding API or react-native-geocoding
+   * Not required for MVP - buildings have stored addresses
    */
   async getAddressFromLocation(location: GPSLocation): Promise<string | null> {
-    // TODO: Implement geocoding
-    // This would typically use a service like Google Geocoding API
-    // or react-native-geocoding
-    console.log('Geocoding not implemented yet');
+    this.logger.info('Geocoding not implemented - using stored building addresses');
+    // NOTE: Building addresses are stored in database
+    // This feature enhances UX but isn't required for core functionality
     return null;
   }
 }

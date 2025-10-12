@@ -79,23 +79,45 @@ func CreateImportCommand(serviceContext any) *cobra.Command {
 				fmt.Printf("   Repository: %s\n", repoID)
 				fmt.Printf("   Format: %s\n", format)
 				fmt.Printf("   IFC File ID: %s\n", result.IFCFileID)
+				fmt.Printf("\n")
+				fmt.Printf("IFC Metadata:\n")
 				fmt.Printf("   Entities: %d\n", result.Entities)
 				fmt.Printf("   Properties: %d\n", result.Properties)
 				fmt.Printf("   Materials: %d\n", result.Materials)
 				fmt.Printf("   Classifications: %d\n", result.Classifications)
+				fmt.Printf("\n")
+
+				// NEW: Show entity extraction results
+				if result.BuildingsCreated > 0 || result.FloorsCreated > 0 || result.RoomsCreated > 0 || result.EquipmentCreated > 0 {
+					fmt.Printf("Entities Created:\n")
+					fmt.Printf("   Buildings: %d\n", result.BuildingsCreated)
+					fmt.Printf("   Floors: %d\n", result.FloorsCreated)
+					fmt.Printf("   Rooms: %d\n", result.RoomsCreated)
+					fmt.Printf("   Equipment: %d\n", result.EquipmentCreated)
+					if result.RelationshipsCreated > 0 {
+						fmt.Printf("   Relationships: %d\n", result.RelationshipsCreated)
+					}
+					fmt.Printf("\n")
+				} else {
+					fmt.Printf("Note: IFC parsed successfully but entity extraction pending\n")
+					fmt.Printf("      (IfcOpenShell service needs enhancement to return detailed entities)\n")
+					fmt.Printf("\n")
+				}
 
 				if len(result.Warnings) > 0 {
-					fmt.Printf("   Warnings: %d\n", len(result.Warnings))
+					fmt.Printf("Warnings: %d\n", len(result.Warnings))
 					for _, warning := range result.Warnings {
-						fmt.Printf("     ⚠️  %s\n", warning)
+						fmt.Printf("  ⚠️  %s\n", warning)
 					}
+					fmt.Printf("\n")
 				}
 
 				if len(result.Errors) > 0 {
-					fmt.Printf("   Errors: %d\n", len(result.Errors))
+					fmt.Printf("Errors: %d\n", len(result.Errors))
 					for _, error := range result.Errors {
-						fmt.Printf("     ❌ %s\n", error)
+						fmt.Printf("  ❌ %s\n", error)
 					}
+					fmt.Printf("\n")
 				}
 
 			} else {

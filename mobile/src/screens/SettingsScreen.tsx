@@ -3,75 +3,75 @@
  * App configuration and preferences
  */
 
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import {
+  setAREnabled,
+  setAutoSync,
+  setBiometricEnabled,
+  setCameraQuality,
+  setDebugMode,
+  setLightEstimation,
+  setPlaneDetection,
+  setPushNotifications,
+  setSyncInterval,
+  setTheme,
+} from '@/store/slices/settingsSlice';
 import React from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   SafeAreaView,
+  ScrollView,
+  StyleSheet,
   Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {useAppSelector, useAppDispatch} from '@/store/hooks';
-import {
-  setTheme,
-  setAutoSync,
-  setSyncInterval,
-  setAREnabled,
-  setPlaneDetection,
-  setLightEstimation,
-  setCameraQuality,
-  setBiometricEnabled,
-  setPushNotifications,
-  setDebugMode,
-} from '@/store/slices/settingsSlice';
 
 export const SettingsScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const settings = useAppSelector(state => state.settings);
-  
+
   const handleThemeChange = (theme: 'light' | 'dark' | 'auto') => {
     dispatch(setTheme(theme));
   };
-  
+
   const handleAutoSyncChange = (value: boolean) => {
     dispatch(setAutoSync(value));
   };
-  
+
   const handleSyncIntervalChange = (interval: number) => {
     dispatch(setSyncInterval(interval));
   };
-  
+
   const handleAREnabledChange = (value: boolean) => {
     dispatch(setAREnabled(value));
   };
-  
+
   const handlePlaneDetectionChange = (value: boolean) => {
     dispatch(setPlaneDetection(value));
   };
-  
+
   const handleLightEstimationChange = (value: boolean) => {
     dispatch(setLightEstimation(value));
   };
-  
+
   const handleCameraQualityChange = (quality: 'low' | 'medium' | 'high') => {
     dispatch(setCameraQuality(quality));
   };
-  
+
   const handleBiometricEnabledChange = (value: boolean) => {
     dispatch(setBiometricEnabled(value));
   };
-  
+
   const handlePushNotificationsChange = (value: boolean) => {
     dispatch(setPushNotifications(value));
   };
-  
+
   const handleDebugModeChange = (value: boolean) => {
     dispatch(setDebugMode(value));
   };
-  
+
   const getSyncIntervalText = (interval: number) => {
     const minutes = interval / 60000;
     if (minutes < 60) {
@@ -80,7 +80,7 @@ export const SettingsScreen: React.FC = () => {
     const hours = minutes / 60;
     return `${hours}h`;
   };
-  
+
   const renderSettingItem = (
     title: string,
     subtitle: string,
@@ -103,49 +103,49 @@ export const SettingsScreen: React.FC = () => {
       {rightComponent || (onPress && <Icon name="chevron-right" size={24} color="#cccccc" />)}
     </TouchableOpacity>
   );
-  
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* App Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>App Settings</Text>
-          
+
           {renderSettingItem(
             'Theme',
             'Choose your preferred theme',
             'palette',
             () => {
-              // TODO: Show theme picker
+              // NOTE: Theme picker modal - Future enhancement
             },
             <Text style={styles.settingValue}>{settings.theme}</Text>
           )}
-          
+
           {renderSettingItem(
             'Language',
             'Select your language',
             'language',
             () => {
-              // TODO: Show language picker
+              // NOTE: Language picker modal - Future enhancement
             },
             <Text style={styles.settingValue}>{settings.language}</Text>
           )}
-          
+
           {renderSettingItem(
             'Font Size',
             'Adjust text size',
             'text-fields',
             () => {
-              // TODO: Show font size picker
+              // NOTE: Font size picker modal - Future enhancement
             },
             <Text style={styles.settingValue}>{settings.fontSize}</Text>
           )}
         </View>
-        
+
         {/* Sync Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Sync Settings</Text>
-          
+
           {renderSettingItem(
             'Auto Sync',
             'Automatically sync data when online',
@@ -154,36 +154,36 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={settings.autoSync}
               onValueChange={handleAutoSyncChange}
-              trackColor={{false: '#e0e0e0', true: '#007AFF'}}
+              trackColor={{ false: '#e0e0e0', true: '#007AFF' }}
               thumbColor={settings.autoSync ? 'white' : '#f4f3f4'}
             />
           )}
-          
+
           {renderSettingItem(
             'Sync Interval',
             'How often to sync data',
             'schedule',
             () => {
-              // TODO: Show sync interval picker
+              // NOTE: Sync interval picker modal - Future enhancement
             },
             <Text style={styles.settingValue}>{getSyncIntervalText(settings.syncInterval)}</Text>
           )}
-          
+
           {renderSettingItem(
             'Max Retries',
             'Maximum sync retry attempts',
             'refresh',
             () => {
-              // TODO: Show retry picker
+              // NOTE: Retry count picker modal - Future enhancement
             },
             <Text style={styles.settingValue}>{settings.maxRetries}</Text>
           )}
         </View>
-        
+
         {/* AR Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>AR Settings</Text>
-          
+
           {renderSettingItem(
             'AR Enabled',
             'Enable augmented reality features',
@@ -192,11 +192,11 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={settings.arEnabled}
               onValueChange={handleAREnabledChange}
-              trackColor={{false: '#e0e0e0', true: '#007AFF'}}
+              trackColor={{ false: '#e0e0e0', true: '#007AFF' }}
               thumbColor={settings.arEnabled ? 'white' : '#f4f3f4'}
             />
           )}
-          
+
           {renderSettingItem(
             'Plane Detection',
             'Detect horizontal and vertical planes',
@@ -205,11 +205,11 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={settings.planeDetection}
               onValueChange={handlePlaneDetectionChange}
-              trackColor={{false: '#e0e0e0', true: '#007AFF'}}
+              trackColor={{ false: '#e0e0e0', true: '#007AFF' }}
               thumbColor={settings.planeDetection ? 'white' : '#f4f3f4'}
             />
           )}
-          
+
           {renderSettingItem(
             'Light Estimation',
             'Estimate lighting conditions',
@@ -218,26 +218,26 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={settings.lightEstimation}
               onValueChange={handleLightEstimationChange}
-              trackColor={{false: '#e0e0e0', true: '#007AFF'}}
+              trackColor={{ false: '#e0e0e0', true: '#007AFF' }}
               thumbColor={settings.lightEstimation ? 'white' : '#f4f3f4'}
             />
           )}
         </View>
-        
+
         {/* Camera Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Camera Settings</Text>
-          
+
           {renderSettingItem(
             'Photo Quality',
             'Quality of captured photos',
             'camera-alt',
             () => {
-              // TODO: Show quality picker
+              // NOTE: Photo quality picker modal - Future enhancement
             },
             <Text style={styles.settingValue}>{settings.cameraQuality}</Text>
           )}
-          
+
           {renderSettingItem(
             'Auto Focus',
             'Automatically focus camera',
@@ -246,13 +246,13 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={settings.autoFocus}
               onValueChange={(value) => {
-                // TODO: Implement auto focus setting
+                // NOTE: Auto focus setting persistence - Future enhancement
               }}
-              trackColor={{false: '#e0e0e0', true: '#007AFF'}}
+              trackColor={{ false: '#e0e0e0', true: '#007AFF' }}
               thumbColor={settings.autoFocus ? 'white' : '#f4f3f4'}
             />
           )}
-          
+
           {renderSettingItem(
             'Flash Enabled',
             'Use flash when taking photos',
@@ -261,18 +261,18 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={settings.flashEnabled}
               onValueChange={(value) => {
-                // TODO: Implement flash setting
+                // NOTE: Flash setting persistence - Future enhancement
               }}
-              trackColor={{false: '#e0e0e0', true: '#007AFF'}}
+              trackColor={{ false: '#e0e0e0', true: '#007AFF' }}
               thumbColor={settings.flashEnabled ? 'white' : '#f4f3f4'}
             />
           )}
         </View>
-        
+
         {/* Security Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Security Settings</Text>
-          
+
           {renderSettingItem(
             'Biometric Authentication',
             'Use fingerprint or face ID',
@@ -281,21 +281,21 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={settings.biometricEnabled}
               onValueChange={handleBiometricEnabledChange}
-              trackColor={{false: '#e0e0e0', true: '#007AFF'}}
+              trackColor={{ false: '#e0e0e0', true: '#007AFF' }}
               thumbColor={settings.biometricEnabled ? 'white' : '#f4f3f4'}
             />
           )}
-          
+
           {renderSettingItem(
             'Auto Lock Timeout',
             'Lock app after inactivity',
             'lock',
             () => {
-              // TODO: Show timeout picker
+              // NOTE: Network timeout picker modal - Future enhancement
             },
             <Text style={styles.settingValue}>{settings.autoLockTimeout / 60000}m</Text>
           )}
-          
+
           {renderSettingItem(
             'Require Password on Startup',
             'Ask for password when app starts',
@@ -304,18 +304,18 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={settings.requirePasswordOnStartup}
               onValueChange={(value) => {
-                // TODO: Implement password on startup
+                // NOTE: Password on startup - Future security enhancement
               }}
-              trackColor={{false: '#e0e0e0', true: '#007AFF'}}
+              trackColor={{ false: '#e0e0e0', true: '#007AFF' }}
               thumbColor={settings.requirePasswordOnStartup ? 'white' : '#f4f3f4'}
             />
           )}
         </View>
-        
+
         {/* Notification Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Notification Settings</Text>
-          
+
           {renderSettingItem(
             'Push Notifications',
             'Receive push notifications',
@@ -324,11 +324,11 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={settings.pushNotifications}
               onValueChange={handlePushNotificationsChange}
-              trackColor={{false: '#e0e0e0', true: '#007AFF'}}
+              trackColor={{ false: '#e0e0e0', true: '#007AFF' }}
               thumbColor={settings.pushNotifications ? 'white' : '#f4f3f4'}
             />
           )}
-          
+
           {renderSettingItem(
             'Email Notifications',
             'Receive email notifications',
@@ -337,13 +337,13 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={settings.emailNotifications}
               onValueChange={(value) => {
-                // TODO: Implement email notifications
+                // NOTE: Email notifications - Future enhancement
               }}
-              trackColor={{false: '#e0e0e0', true: '#007AFF'}}
+              trackColor={{ false: '#e0e0e0', true: '#007AFF' }}
               thumbColor={settings.emailNotifications ? 'white' : '#f4f3f4'}
             />
           )}
-          
+
           {renderSettingItem(
             'Sync Notifications',
             'Notify about sync status',
@@ -352,18 +352,18 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={settings.syncNotifications}
               onValueChange={(value) => {
-                // TODO: Implement sync notifications
+                // NOTE: Sync notifications - Future enhancement
               }}
-              trackColor={{false: '#e0e0e0', true: '#007AFF'}}
+              trackColor={{ false: '#e0e0e0', true: '#007AFF' }}
               thumbColor={settings.syncNotifications ? 'white' : '#f4f3f4'}
             />
           )}
         </View>
-        
+
         {/* Debug Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Debug Settings</Text>
-          
+
           {renderSettingItem(
             'Debug Mode',
             'Enable debug logging and features',
@@ -372,21 +372,21 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={settings.debugMode}
               onValueChange={handleDebugModeChange}
-              trackColor={{false: '#e0e0e0', true: '#007AFF'}}
+              trackColor={{ false: '#e0e0e0', true: '#007AFF' }}
               thumbColor={settings.debugMode ? 'white' : '#f4f3f4'}
             />
           )}
-          
+
           {renderSettingItem(
             'Log Level',
             'Set logging verbosity',
             'assignment',
             () => {
-              // TODO: Show log level picker
+              // NOTE: Log level picker modal - Future enhancement
             },
             <Text style={styles.settingValue}>{settings.logLevel}</Text>
           )}
-          
+
           {renderSettingItem(
             'Performance Monitoring',
             'Monitor app performance',
@@ -395,28 +395,28 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={settings.performanceMonitoring}
               onValueChange={(value) => {
-                // TODO: Implement performance monitoring
+                // NOTE: Performance monitoring toggle - Future enhancement
               }}
-              trackColor={{false: '#e0e0e0', true: '#007AFF'}}
+              trackColor={{ false: '#e0e0e0', true: '#007AFF' }}
               thumbColor={settings.performanceMonitoring ? 'white' : '#f4f3f4'}
             />
           )}
         </View>
-        
+
         {/* App Info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>App Information</Text>
-          
+
           {renderSettingItem(
             'Version',
             'App version and build',
             'info',
             () => {
-              // TODO: Show version info
+              // NOTE: Version info modal - Future enhancement
             },
             <Text style={styles.settingValue}>0.1.0</Text>
           )}
-          
+
           {renderSettingItem(
             'About',
             'Learn more about ArxOS',
@@ -425,7 +425,7 @@ export const SettingsScreen: React.FC = () => {
               // TODO: Show about screen
             }
           )}
-          
+
           {renderSettingItem(
             'Privacy Policy',
             'View privacy policy',
@@ -434,7 +434,7 @@ export const SettingsScreen: React.FC = () => {
               // TODO: Show privacy policy
             }
           )}
-          
+
           {renderSettingItem(
             'Terms of Service',
             'View terms of service',

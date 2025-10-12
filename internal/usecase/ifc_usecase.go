@@ -8,16 +8,22 @@ import (
 
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/building"
+	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/arx-os/arxos/internal/infrastructure/ifc"
+	"github.com/arx-os/arxos/pkg/naming"
 )
 
 // IFCUseCase implements IFC import and validation business logic using IfcOpenShell service
 type IFCUseCase struct {
-	repoRepo   building.RepositoryRepository
-	ifcRepo    building.IFCRepository
-	validator  building.RepositoryValidator
-	ifcService *ifc.EnhancedIFCService
-	logger     domain.Logger
+	repoRepo      building.RepositoryRepository
+	ifcRepo       building.IFCRepository
+	validator     building.RepositoryValidator
+	ifcService    *ifc.EnhancedIFCService
+	buildingRepo  domain.BuildingRepository
+	floorRepo     domain.FloorRepository
+	roomRepo      domain.RoomRepository
+	equipmentRepo domain.EquipmentRepository
+	logger        domain.Logger
 }
 
 // NewIFCUseCase creates a new IFCUseCase
@@ -26,14 +32,22 @@ func NewIFCUseCase(
 	ifcRepo building.IFCRepository,
 	validator building.RepositoryValidator,
 	ifcService *ifc.EnhancedIFCService,
+	buildingRepo domain.BuildingRepository,
+	floorRepo domain.FloorRepository,
+	roomRepo domain.RoomRepository,
+	equipmentRepo domain.EquipmentRepository,
 	logger domain.Logger,
 ) *IFCUseCase {
 	return &IFCUseCase{
-		repoRepo:   repoRepo,
-		ifcRepo:    ifcRepo,
-		validator:  validator,
-		ifcService: ifcService,
-		logger:     logger,
+		repoRepo:      repoRepo,
+		ifcRepo:       ifcRepo,
+		validator:     validator,
+		ifcService:    ifcService,
+		buildingRepo:  buildingRepo,
+		floorRepo:     floorRepo,
+		roomRepo:      roomRepo,
+		equipmentRepo: equipmentRepo,
+		logger:        logger,
 	}
 }
 
@@ -54,6 +68,11 @@ func (uc *IFCUseCase) ImportIFC(ctx context.Context, repoID string, ifcData []by
 		uc.logger.Error("Failed to parse IFC file", "error", err)
 		return nil, fmt.Errorf("failed to parse IFC file: %w", err)
 	}
+
+	// Convert to enhanced result for entity extraction
+	// When IFC service is enhanced, it will return detailed entities
+	// For now, this converts counts-only result to empty entity arrays
+	enhancedResult := parseResult.ConvertToEnhanced()
 
 	// Detect discipline from IFC schema and content
 	discipline := uc.detectDiscipline(parseResult)
@@ -98,6 +117,23 @@ func (uc *IFCUseCase) ImportIFC(ctx context.Context, repoID string, ifcData []by
 		return nil, fmt.Errorf("failed to save IFC file: %w", err)
 	}
 
+	// NEW: Extract entities from IFC and create domain objects
+	extractionResult, err := uc.extractEntitiesFromIFC(ctx, enhancedResult, repoID)
+	if err != nil {
+		uc.logger.Error("Failed to extract entities from IFC", "error", err)
+		// Don't fail the entire import - file record is saved
+		// Just log the error and continue
+	}
+
+	// Update import result with extraction statistics
+	if extractionResult != nil {
+		result.BuildingsCreated = extractionResult.BuildingsCreated
+		result.FloorsCreated = extractionResult.FloorsCreated
+		result.RoomsCreated = extractionResult.RoomsCreated
+		result.EquipmentCreated = extractionResult.EquipmentCreated
+		result.RelationshipsCreated = extractionResult.RelationshipsCreated
+	}
+
 	// Update repository structure
 	repo.Structure.IFCFiles = append(repo.Structure.IFCFiles, *ifcFile)
 	repo.UpdatedAt = time.Now()
@@ -111,9 +147,10 @@ func (uc *IFCUseCase) ImportIFC(ctx context.Context, repoID string, ifcData []by
 		"repository_id", repoID,
 		"ifc_file_id", ifcFile.ID,
 		"entities", parseResult.TotalEntities,
-		"buildings", parseResult.Buildings,
-		"spaces", parseResult.Spaces,
-		"equipment", parseResult.Equipment)
+		"buildings_created", extractionResult.BuildingsCreated,
+		"floors_created", extractionResult.FloorsCreated,
+		"rooms_created", extractionResult.RoomsCreated,
+		"equipment_created", extractionResult.EquipmentCreated)
 
 	return result, nil
 }
@@ -400,4 +437,380 @@ func (uc *IFCUseCase) calculateComplianceScore(validationResult *ifc.ValidationR
 	}
 
 	return score
+}
+
+// extractEntitiesFromIFC extracts domain entities from enhanced IFC parse results
+// This method orchestrates the full entity extraction process
+func (uc *IFCUseCase) extractEntitiesFromIFC(ctx context.Context, enhancedResult *ifc.EnhancedIFCResult, repoID string) (*EntityExtractionResult, error) {
+	result := &EntityExtractionResult{
+		BuildingsCreated:     0,
+		FloorsCreated:        0,
+		RoomsCreated:         0,
+		EquipmentCreated:     0,
+		RelationshipsCreated: 0,
+	}
+
+	// Check if we have detailed entity data
+	if len(enhancedResult.BuildingEntities) == 0 {
+		uc.logger.Warn("IFC service returned counts only, not detailed entities",
+			"building_count", enhancedResult.Buildings,
+			"space_count", enhancedResult.Spaces,
+			"equipment_count", enhancedResult.Equipment)
+		return result, nil // Gracefully handle when service doesn't return detailed data yet
+	}
+
+	uc.logger.Info("Extracting entities from IFC",
+		"buildings", len(enhancedResult.BuildingEntities),
+		"floors", len(enhancedResult.FloorEntities),
+		"spaces", len(enhancedResult.SpaceEntities),
+		"equipment", len(enhancedResult.EquipmentEntities))
+
+	// Track GlobalID to domain ID mapping for relationship preservation
+	globalIDMap := make(map[string]types.ID)
+
+	// Step 1: Extract Buildings
+	for _, ifcBuilding := range enhancedResult.BuildingEntities {
+		buildingID, err := uc.extractBuilding(ctx, ifcBuilding)
+		if err != nil {
+			uc.logger.Error("Failed to extract building", "global_id", ifcBuilding.GlobalID, "error", err)
+			continue
+		}
+		globalIDMap[ifcBuilding.GlobalID] = buildingID
+		result.BuildingsCreated++
+	}
+
+	// Step 2: Extract Floors
+	floorMap := make(map[string]types.ID) // Map floor GlobalID to Floor ID
+	for _, ifcFloor := range enhancedResult.FloorEntities {
+		// Get parent building ID (assume first building for now)
+		var buildingID types.ID
+		if len(enhancedResult.BuildingEntities) > 0 {
+			buildingID = globalIDMap[enhancedResult.BuildingEntities[0].GlobalID]
+		}
+
+		floorID, err := uc.extractFloor(ctx, ifcFloor, buildingID)
+		if err != nil {
+			uc.logger.Error("Failed to extract floor", "global_id", ifcFloor.GlobalID, "error", err)
+			continue
+		}
+		globalIDMap[ifcFloor.GlobalID] = floorID
+		floorMap[ifcFloor.GlobalID] = floorID
+		result.FloorsCreated++
+	}
+
+	// Step 3: Extract Rooms/Spaces
+	roomMap := make(map[string]types.ID) // Map space GlobalID to Room ID
+	for _, ifcSpace := range enhancedResult.SpaceEntities {
+		// Get parent floor ID
+		floorID, exists := floorMap[ifcSpace.FloorID]
+		if !exists {
+			uc.logger.Warn("Floor not found for space", "space_id", ifcSpace.GlobalID, "floor_id", ifcSpace.FloorID)
+			continue
+		}
+
+		roomID, err := uc.extractRoom(ctx, ifcSpace, floorID)
+		if err != nil {
+			uc.logger.Error("Failed to extract room", "global_id", ifcSpace.GlobalID, "error", err)
+			continue
+		}
+		globalIDMap[ifcSpace.GlobalID] = roomID
+		roomMap[ifcSpace.GlobalID] = roomID
+		result.RoomsCreated++
+	}
+
+	// Step 4: Extract Equipment
+	for _, ifcEquipment := range enhancedResult.EquipmentEntities {
+		// Get parent room ID if specified
+		var roomID *types.ID
+		if ifcEquipment.SpaceID != "" {
+			if rid, exists := roomMap[ifcEquipment.SpaceID]; exists {
+				roomID = &rid
+			}
+		}
+
+		equipID, err := uc.extractEquipment(ctx, ifcEquipment, roomID)
+		if err != nil {
+			uc.logger.Error("Failed to extract equipment", "global_id", ifcEquipment.GlobalID, "error", err)
+			continue
+		}
+		globalIDMap[ifcEquipment.GlobalID] = equipID
+		result.EquipmentCreated++
+	}
+
+	uc.logger.Info("Entity extraction complete",
+		"buildings", result.BuildingsCreated,
+		"floors", result.FloorsCreated,
+		"rooms", result.RoomsCreated,
+		"equipment", result.EquipmentCreated)
+
+	return result, nil
+}
+
+// extractBuilding converts IFC building entity to domain Building
+func (uc *IFCUseCase) extractBuilding(ctx context.Context, ifcBuilding ifc.IFCBuildingEntity) (types.ID, error) {
+	building := &domain.Building{
+		ID:   types.NewID(),
+		Name: ifcBuilding.Name,
+	}
+
+	// Extract address if available
+	if ifcBuilding.Address != nil {
+		addressParts := []string{}
+		if len(ifcBuilding.Address.AddressLines) > 0 {
+			addressParts = append(addressParts, ifcBuilding.Address.AddressLines...)
+		}
+		if ifcBuilding.Address.Town != "" {
+			addressParts = append(addressParts, ifcBuilding.Address.Town)
+		}
+		if ifcBuilding.Address.Region != "" {
+			addressParts = append(addressParts, ifcBuilding.Address.Region)
+		}
+		if ifcBuilding.Address.PostalCode != "" {
+			addressParts = append(addressParts, ifcBuilding.Address.PostalCode)
+		}
+		if len(addressParts) > 0 {
+			building.Address = fmt.Sprintf("%s", addressParts[0])
+			if len(addressParts) > 1 {
+				building.Address += fmt.Sprintf(", %s", addressParts[1])
+			}
+		}
+	}
+
+	// Extract coordinates if elevation is specified
+	if ifcBuilding.Elevation != 0 {
+		building.Coordinates = &domain.Location{
+			X: 0, // Building origin X (could be from site placement)
+			Y: 0, // Building origin Y
+			Z: ifcBuilding.Elevation,
+		}
+	}
+
+	// Set timestamps
+	building.CreatedAt = time.Now()
+	building.UpdatedAt = time.Now()
+
+	// Create building
+	if err := uc.buildingRepo.Create(ctx, building); err != nil {
+		return types.ID{}, fmt.Errorf("failed to create building: %w", err)
+	}
+
+	uc.logger.Info("Extracted building from IFC",
+		"building_id", building.ID,
+		"name", building.Name,
+		"global_id", ifcBuilding.GlobalID)
+
+	return building.ID, nil
+}
+
+// extractFloor converts IFC floor entity to domain Floor
+func (uc *IFCUseCase) extractFloor(ctx context.Context, ifcFloor ifc.IFCFloorEntity, buildingID types.ID) (types.ID, error) {
+	// Use LongName if available, otherwise use Name
+	floorName := ifcFloor.Name
+	if ifcFloor.LongName != "" {
+		floorName = ifcFloor.LongName
+	}
+
+	floor := &domain.Floor{
+		ID:         types.NewID(),
+		BuildingID: buildingID,
+		Name:       floorName,
+		Level:      int(ifcFloor.Elevation), // Convert elevation to floor number
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+	}
+
+	// Create floor
+	if err := uc.floorRepo.Create(ctx, floor); err != nil {
+		return types.ID{}, fmt.Errorf("failed to create floor: %w", err)
+	}
+
+	uc.logger.Info("Extracted floor from IFC",
+		"floor_id", floor.ID,
+		"name", floor.Name,
+		"level", floor.Level,
+		"elevation", ifcFloor.Elevation,
+		"global_id", ifcFloor.GlobalID)
+
+	return floor.ID, nil
+}
+
+// extractRoom converts IFC space entity to domain Room
+func (uc *IFCUseCase) extractRoom(ctx context.Context, ifcSpace ifc.IFCSpaceEntity, floorID types.ID) (types.ID, error) {
+	// Use LongName if available, otherwise use Name
+	roomName := ifcSpace.LongName
+	if roomName == "" {
+		roomName = ifcSpace.Name
+	}
+
+	room := &domain.Room{
+		ID:        types.NewID(),
+		FloorID:   floorID,
+		Number:    ifcSpace.Name, // Room number
+		Name:      roomName,      // Room name
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	// Create room
+	if err := uc.roomRepo.Create(ctx, room); err != nil {
+		return types.ID{}, fmt.Errorf("failed to create room: %w", err)
+	}
+
+	uc.logger.Info("Extracted room from IFC",
+		"room_id", room.ID,
+		"number", room.Number,
+		"name", room.Name,
+		"global_id", ifcSpace.GlobalID)
+
+	return room.ID, nil
+}
+
+// extractEquipment converts IFC equipment entity to domain Equipment
+func (uc *IFCUseCase) extractEquipment(ctx context.Context, ifcEquip ifc.IFCEquipmentEntity, roomID *types.ID) (types.ID, error) {
+	// Get building ID and floor ID from room if available
+	var buildingID types.ID
+	var floorID types.ID
+	var buildingCode, floorCode, roomCode string
+
+	// Lookup room hierarchy to get FloorID and BuildingID
+	// This ensures equipment has proper building and floor references
+	if roomID != nil {
+		room, err := uc.roomRepo.GetByID(ctx, roomID.String())
+		if err != nil {
+			uc.logger.Warn("Failed to lookup room for equipment", "room_id", *roomID, "error", err)
+			// Continue with zero values - equipment will still be created with room reference
+		} else {
+			floorID = room.FloorID
+			roomCode = naming.RoomCodeFromName(room.Number)
+
+			// Lookup floor to get building ID
+			floor, err := uc.floorRepo.GetByID(ctx, floorID.String())
+			if err != nil {
+				uc.logger.Warn("Failed to lookup floor for equipment", "floor_id", floorID, "error", err)
+			} else {
+				buildingID = floor.BuildingID
+				floorCode = naming.FloorCodeFromLevel(fmt.Sprintf("%d", floor.Level))
+
+				// Lookup building to get name for building code
+				building, err := uc.buildingRepo.GetByID(ctx, buildingID.String())
+				if err != nil {
+					uc.logger.Warn("Failed to lookup building for equipment", "building_id", buildingID, "error", err)
+					buildingCode = "B1" // fallback
+				} else {
+					buildingCode = naming.BuildingCodeFromName(building.Name)
+				}
+			}
+		}
+	}
+
+	// Map IFC category to system code
+	category := uc.mapIFCTypeToCategory(ifcEquip.ObjectType)
+	systemCode := naming.GetSystemCode(category)
+
+	// Generate equipment code from name and tag
+	equipmentCode := naming.GenerateEquipmentCode(ifcEquip.Name, ifcEquip.Tag)
+
+	// Generate universal path
+	equipmentPath := naming.GenerateEquipmentPath(
+		buildingCode,
+		floorCode,
+		roomCode,
+		systemCode,
+		equipmentCode,
+	)
+
+	equipment := &domain.Equipment{
+		ID:         types.NewID(),
+		BuildingID: buildingID,
+		FloorID:    floorID,
+		RoomID:     *roomID,
+		Name:       ifcEquip.Name,
+		Type:       ifcEquip.ObjectType,
+		Category:   category,
+		Subtype:    ifcEquip.ObjectType,
+		Status:     "OPERATIONAL",
+		Path:       equipmentPath, // Universal naming convention path
+	}
+
+	// Extract geometry if available
+	if ifcEquip.Placement != nil {
+		equipment.Location = &domain.Location{
+			X: ifcEquip.Placement.X,
+			Y: ifcEquip.Placement.Y,
+			Z: ifcEquip.Placement.Z,
+		}
+	}
+
+	// Set timestamps
+	equipment.CreatedAt = time.Now()
+	equipment.UpdatedAt = time.Now()
+
+	// Create equipment
+	if err := uc.equipmentRepo.Create(ctx, equipment); err != nil {
+		return types.ID{}, fmt.Errorf("failed to create equipment: %w", err)
+	}
+
+	uc.logger.Info("Extracted equipment from IFC",
+		"equipment_id", equipment.ID,
+		"name", equipment.Name,
+		"path", equipmentPath,
+		"category", equipment.Category,
+		"global_id", ifcEquip.GlobalID)
+
+	return equipment.ID, nil
+}
+
+// mapIFCTypeToCategory maps IFC object types to equipment categories
+func (uc *IFCUseCase) mapIFCTypeToCategory(ifcType string) string {
+	// Map IFC types to ArxOS equipment categories
+	switch ifcType {
+	// Electrical
+	case "IfcElectricDistributionBoard", "IfcElectricFlowStorageDevice",
+		"IfcElectricGenerator", "IfcElectricMotor", "IfcElectricTimeControl":
+		return "electrical"
+
+	// HVAC
+	case "IfcAirTerminal", "IfcAirTerminalBox", "IfcAirToAirHeatRecovery",
+		"IfcBoiler", "IfcChiller", "IfcCoil", "IfcCompressor",
+		"IfcDamper", "IfcDuctFitting", "IfcDuctSegment", "IfcDuctSilencer",
+		"IfcFan", "IfcFilter", "IfcHeatExchanger", "IfcHumidifier",
+		"IfcPipeFitting", "IfcPipeSegment", "IfcPump", "IfcTank",
+		"IfcTubeBundle", "IfcUnitaryEquipment", "IfcValve":
+		return "hvac"
+
+	// Plumbing
+	case "IfcSanitaryTerminal", "IfcWasteTerminal":
+		return "plumbing"
+
+	// Safety/Fire
+	case "IfcFireSuppressionTerminal", "IfcAlarm", "IfcSensor":
+		return "safety"
+
+	// Lighting
+	case "IfcLightFixture", "IfcLamp":
+		return "lighting"
+
+	// Communication/Network
+	case "IfcCommunicationsAppliance", "IfcAudioVisualAppliance":
+		return "network"
+
+	default:
+		return "other"
+	}
+}
+
+// generateArxosID generates an ArxOS building ID from building name
+func (uc *IFCUseCase) generateArxosID(buildingName string) string {
+	// Simple ID generation - can be enhanced later with location data
+	timestamp := time.Now().Format("20060102")
+	return fmt.Sprintf("ARXOS-BLD-%s", timestamp)
+}
+
+// EntityExtractionResult tracks entity extraction statistics
+type EntityExtractionResult struct {
+	BuildingsCreated     int
+	FloorsCreated        int
+	RoomsCreated         int
+	EquipmentCreated     int
+	RelationshipsCreated int
 }

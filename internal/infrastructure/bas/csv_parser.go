@@ -330,12 +330,18 @@ func (p *CSVParser) ToBASPoints(parsed *ParsedBASData, buildingID, systemID type
 	now := time.Now()
 
 	for _, parsed := range parsed.Points {
+		// Generate initial path (without room - unmapped)
+		// Format: /B1/BAS/[POINT-NAME]
+		// Will be updated to full path when mapped to room
+		basPath := fmt.Sprintf("/B1/BAS/%s", parsed.PointName)
+
 		point := &domain.BASPoint{
 			ID:          types.NewID(),
 			BuildingID:  buildingID,
 			BASSystemID: systemID,
 
 			PointName:      parsed.PointName,
+			Path:           basPath, // Initial unmapped path
 			DeviceID:       parsed.DeviceID,
 			ObjectType:     parsed.ObjectType,
 			ObjectInstance: parsed.ObjectInstance,
@@ -398,7 +404,7 @@ type ParsedLocation struct {
 // extractFloor attempts to extract floor information
 func (p *CSVParser) extractFloor(text string) string {
 	// Patterns: "floor 3", "3rd floor", "fl 3", "f3", "level 3"
-	
+
 	// First check for "Xrd floor" pattern (number before pattern)
 	words := strings.Fields(text)
 	for i, word := range words {
@@ -432,14 +438,14 @@ func (p *CSVParser) extractFloor(text string) string {
 func (p *CSVParser) extractRoom(text string) string {
 	// Patterns: "room 301", "rm 301", "r301", "conf a", "conference room a"
 	words := strings.Fields(text)
-	
+
 	for i, word := range words {
 		wordLower := strings.ToLower(word)
-		
+
 		// Check if word matches room patterns
-		if wordLower == "room" || wordLower == "rm" || wordLower == "conference" || 
-		   wordLower == "conf" || wordLower == "office" || wordLower == "lab" || 
-		   wordLower == "classroom" {
+		if wordLower == "room" || wordLower == "rm" || wordLower == "conference" ||
+			wordLower == "conf" || wordLower == "office" || wordLower == "lab" ||
+			wordLower == "classroom" {
 			// Get next word (room number/name)
 			if i < len(words)-1 {
 				nextWord := words[i+1]
@@ -462,10 +468,10 @@ func (p *CSVParser) extractRoom(text string) string {
 func (p *CSVParser) extractBuilding(text string) string {
 	// Patterns: "building 1", "bldg 1", "b1"
 	words := strings.Fields(text)
-	
+
 	for i, word := range words {
 		wordLower := strings.ToLower(word)
-		
+
 		// Check if word matches building patterns
 		if wordLower == "building" || wordLower == "bldg" || wordLower == "bld" {
 			// Get next word (building number/identifier)
@@ -558,4 +564,3 @@ func (p *CSVParser) ValidateCSV(filePath string) error {
 
 	return nil
 }
-

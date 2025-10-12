@@ -122,6 +122,13 @@ type IFCImportResult struct {
 	Warnings        []string  `json:"warnings"`
 	Errors          []string  `json:"errors"`
 	CreatedAt       time.Time `json:"created_at"`
+
+	// NEW: Entity extraction tracking
+	BuildingsCreated     int `json:"buildings_created"`
+	FloorsCreated        int `json:"floors_created"`
+	RoomsCreated         int `json:"rooms_created"`
+	EquipmentCreated     int `json:"equipment_created"`
+	RelationshipsCreated int `json:"relationships_created"`
 }
 
 // IFCValidationResult represents the result of IFC validation

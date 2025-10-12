@@ -2,12 +2,23 @@
 
 *Last Updated: October 12, 2025*
 
+## 🎯 Start Here - Essential Documents
+
+**New to ArxOS? Read these first:**
+1. **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - **⭐ Honest assessment of what works vs placeholder code**
+2. **[README.md](../README.md)** - Project vision and overview
+3. **[WIRING_PLAN.md](WIRING_PLAN.md)** - **⭐ Tactical plan for completing integration**
+4. **[NEXT_STEPS_ROADMAP.md](NEXT_STEPS_ROADMAP.md)** - Development priorities (now realistic)
+5. **[QUICKSTART.md](../QUICKSTART.md)** - Get up and running
+
 ## 📚 Quick Navigation
 
 ### Getting Started
-- [Main README](../README.md) - Project overview and goals
+- [Main README](../README.md) - Project overview and vision
+- [Project Status](PROJECT_STATUS.md) - **NEW: Brutally honest assessment (60-70% complete)**
+- [Wiring Plan](WIRING_PLAN.md) - **NEW: Systematic completion plan with effort estimates**
+- [Next Steps Roadmap](NEXT_STEPS_ROADMAP.md) - Development priorities (updated with reality checks)
 - [Quickstart Guide](../QUICKSTART.md) - Get up and running fast
-- [Next Steps Roadmap](NEXT_STEPS_ROADMAP.md) - **⭐ Development priorities and implementation plan**
 - [Database Setup](DATABASE_SETUP.md) - PostgreSQL/PostGIS configuration
 - [Postgres Terminal Guide](POSTGRES_TERMINAL_GUIDE.md) - Database operations
 
@@ -46,9 +57,8 @@
 - [Automation Examples](automation/AUTOMATION_EXAMPLE.md) - Practical examples
 
 ### Implementation Notes
-- [Implementation Progress](implementation/IMPLEMENTATION_PROGRESS_SUMMARY.md) - Overall progress
-- [Phase 1: BAS Integration](implementation/PHASE_1_BAS_INTEGRATION_COMPLETE.md)
-- [Phase 2: Git Workflow](implementation/PHASE_2_GIT_WORKFLOW_COMPLETE.md)
+- [Implementation Progress](implementation/IMPLEMENTATION_PROGRESS_SUMMARY.md) - **Updated: Realistic 60-65% assessment**
+- **Historical Phase Docs Moved to Archive** (claimed "complete" when features had placeholders)
 
 ### Architecture Decisions
 - [006: TUI Data Integration](architecture/decisions/006-tui-data-integration.md)
@@ -117,16 +127,24 @@ docs/
 
 ## 🆕 Latest Updates
 
-**October 12, 2025:**
-- ✅ Resolved all 197 TODO/FIXME comments (100% complete)
+**October 12, 2025 - Documentation Refactor:**
+- ✅ **Created [PROJECT_STATUS.md](PROJECT_STATUS.md)** - Brutally honest 60-70% assessment
+- ✅ **Created [WIRING_PLAN.md](WIRING_PLAN.md)** - Command-by-command completion plan
+- ✅ **Updated all docs** - Removed optimistic claims, added reality checks
+- ✅ **Archived optimistic docs** - Moved "Phase Complete" docs to archive
+- ✅ **CLI/API Audit** - Identified 27 working commands, 8 placeholders, 22 missing endpoints
+- ⚠️ **Realistic assessment:** Architecture excellent (95%), Integration incomplete (40%), Testing low (15%)
+
+**Earlier (Historical):**
 - ✅ Implemented equipment topology system with graph relationships
 - ✅ Added context extraction helpers for user authentication
-- ✅ Cleaned up and organized all documentation
-- ✅ Created comprehensive [Next Steps Roadmap](NEXT_STEPS_ROADMAP.md) for 4 priority features
+- ✅ Created comprehensive database schema (107 tables, 33 migrations)
 
 ## 🔍 Finding Information
 
-- **New to ArxOS?** Start with [README](../README.md) → [QUICKSTART](../QUICKSTART.md)
+- **New to ArxOS?** Start with [PROJECT_STATUS.md](PROJECT_STATUS.md) → [README](../README.md) → [QUICKSTART](../QUICKSTART.md)
+- **Want to contribute?** See [WIRING_PLAN.md](WIRING_PLAN.md) for specific tasks with effort estimates
+- **Checking feature status?** See [PROJECT_STATUS.md](PROJECT_STATUS.md) for what works vs placeholders
 - **Setting up dev environment?** See [DATABASE_SETUP](DATABASE_SETUP.md)
 - **Understanding the architecture?** Read [Service Architecture](architecture/SERVICE_ARCHITECTURE.md)
 - **Integrating a system?** Check [integration/](integration/)

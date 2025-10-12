@@ -72,6 +72,7 @@ type Equipment struct {
 	FloorID    types.ID  `json:"floor_id,omitempty"`
 	RoomID     types.ID  `json:"room_id,omitempty"`
 	Name       string    `json:"name"`
+	Path       string    `json:"path,omitempty"` // Universal naming convention path (e.g. /B1/3/301/HVAC/VAV-301)
 	Type       string    `json:"type"`
 	Category   string    `json:"category,omitempty"` // electrical, network, hvac, custodial, etc.
 	Subtype    string    `json:"subtype,omitempty"`  // transformer, panel, spill_marker, etc.

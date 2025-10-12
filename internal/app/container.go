@@ -108,6 +108,9 @@ type Container struct {
 	buildingHandler     *handlers.BuildingHandler
 	authHandler         *handlers.AuthHandler
 	organizationHandler *handlers.OrganizationHandler
+	basHandler          *handlers.BASHandler
+	prHandler           *handlers.PRHandler
+	issueHandler        *handlers.IssueHandler
 
 	mu          sync.RWMutex
 	initialized bool
@@ -365,7 +368,17 @@ func (c *Container) initUseCases(ctx context.Context) error {
 
 	// Building repository use cases
 	c.repositoryUC = usecase.NewRepositoryUseCase(c.repositoryRepo, c.versionRepo, c.ifcRepo, nil, c.logger)
-	c.ifcUC = usecase.NewIFCUseCase(c.repositoryRepo, c.ifcRepo, nil, c.ifcService, c.logger)
+	c.ifcUC = usecase.NewIFCUseCase(
+		c.repositoryRepo,
+		c.ifcRepo,
+		nil, // validator - will be wired later
+		c.ifcService,
+		c.buildingRepo,
+		c.floorRepo,
+		c.roomRepo,
+		c.equipmentRepo,
+		c.logger,
+	)
 	c.versionUC = usecase.NewVersionUseCase(c.repositoryRepo, c.versionRepo, c.logger)
 
 	// Component use case
@@ -407,6 +420,30 @@ func (c *Container) initInterfaces(ctx context.Context) error {
 	c.organizationHandler = handlers.NewOrganizationHandler(
 		baseHandler,
 		c.organizationUC, // Direct field access
+		c.logger,
+	)
+
+	// BAS handler with BAS use case and repository dependencies
+	c.basHandler = handlers.NewBASHandler(
+		baseHandler,
+		c.basImportUC,   // BAS import use case
+		c.basPointRepo,  // BAS point repository
+		c.basSystemRepo, // BAS system repository
+		c.logger,
+	)
+
+	// PR handler with PR and branch use cases
+	c.prHandler = handlers.NewPRHandler(
+		baseHandler,
+		c.pullRequestUC, // Pull request use case
+		c.branchUC,      // Branch use case
+		c.logger,
+	)
+
+	// Issue handler with issue use case
+	c.issueHandler = handlers.NewIssueHandler(
+		baseHandler,
+		c.issueUC, // Issue use case
 		c.logger,
 	)
 
@@ -468,6 +505,27 @@ func (c *Container) GetAuthHandler() *handlers.AuthHandler {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.authHandler
+}
+
+// GetBASHandler returns the BAS handler
+func (c *Container) GetBASHandler() *handlers.BASHandler {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.basHandler
+}
+
+// GetPRHandler returns the PR handler
+func (c *Container) GetPRHandler() *handlers.PRHandler {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.prHandler
+}
+
+// GetIssueHandler returns the issue handler
+func (c *Container) GetIssueHandler() *handlers.IssueHandler {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.issueHandler
 }
 
 func (c *Container) GetOrganizationHandler() *handlers.OrganizationHandler {

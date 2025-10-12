@@ -1,25 +1,45 @@
 # ArxOS Next Steps Roadmap
 
 **Date:** October 12, 2025
-**Status:** Post TODO Cleanup - Ready for Feature Development
+**Status:** Integration Phase - Wiring Use Cases to Interfaces
 
-## Current State Summary
+## Reality Check - Current State Summary
 
-✅ **Code Quality:** 100% TODO-free, fully compiling, all tests passing
-✅ **Documentation:** Organized and indexed
-✅ **Architecture:** Clean, maintainable, well-structured
+⚠️ **Actual Completion:** 60-70% (architecture excellent, integration incomplete)
+✅ **Code Quality:** Compiles successfully, ~15% test coverage
+✅ **Documentation:** Now accurately reflects reality
+✅ **Architecture:** Clean, maintainable, well-structured - **this is the strength**
+
+### Status Legend:
+- ✅ **Fully Functional** - Works end-to-end, tested
+- ⚠️ **Partially Implemented** - Core logic exists, needs wiring/testing
+- 🎭 **Placeholder** - Shows fake data or placeholder messages
+- ❌ **Not Implemented** - Doesn't exist yet
+
+**See [`PROJECT_STATUS.md`](PROJECT_STATUS.md) for detailed assessment and [`WIRING_PLAN.md`](WIRING_PLAN.md) for execution plan.**
 
 ## 4 Priority Features - Implementation Plan
 
 ### Priority 1: IFC Import 🏗️
 
-**Current State:**
+**Status: ⚠️ 40% Complete - Core gap, needs full entity extraction**
+
+**What Works:**
 - ✅ IFCUseCase with parsing logic implemented
 - ✅ IfcOpenShell service integration
 - ✅ IFC validation and metadata extraction
-- ⚠️ Basic entity extraction (buildings, spaces, equipment counts)
-- ❌ Full building data conversion (IFC → Domain entities)
+- ✅ Entity counting (buildings, spaces, equipment counts)
+- ✅ CLI command `arx import` calls real implementation
+
+**What Doesn't Work:**
+- 🎭 IFC import creates IFCFile record but not domain entities
+- ❌ No Building/Floor/Room/Equipment creation from IFC
+- ❌ No geometry/coordinate extraction
+- ❌ No property mapping to equipment metadata
+- ❌ No relationship preservation (spatial hierarchy lost)
 - ❌ Equipment relationship mapping from IFC
+
+**Wiring Required: 8-12 hours (see WIRING_PLAN.md "IFC Import Deep Dive")**
 
 **Next Steps:**
 
@@ -66,14 +86,24 @@
 
 ### Priority 2: Mobile App 📱
 
-**Current State:**
-- ✅ Mobile API handlers implemented
-- ✅ Equipment list/detail endpoints
-- ✅ Spatial data structures defined
-- ⚠️ AR metadata placeholders (no real anchor integration)
-- ❌ Spatial anchor storage and retrieval
-- ❌ Point cloud data capture
-- ❌ AR session management
+**Status: ⚠️ 50% Complete - Backend works, AR features need implementation**
+
+**What Works:**
+- ✅ Mobile auth endpoints (login, register, refresh, profile)
+- ✅ Equipment list/detail endpoints functional
+- ✅ Spatial query endpoints exist
+- ✅ Building/floor/room CRUD via API
+- ✅ Basic mobile UI structure
+
+**What Doesn't Work:**
+- 🎭 AR spatial anchor endpoints exist but storage incomplete
+- 🎭 Mobile services have placeholder implementations (getUserProfile, changePassword)
+- ❌ Spatial anchor persistence not implemented
+- ❌ Point cloud data capture not implemented
+- ❌ AR session management not implemented
+- ❌ Offline sync queue defined but not functional
+
+**Wiring Required: 16-21 hours backend + 20-30 hours mobile UI**
 
 **Next Steps:**
 
@@ -126,15 +156,26 @@
 
 ### Priority 3: Multi-User Support 👥
 
-**Current State:**
-- ✅ RBAC system implemented
+**Status: ✅ 75% Complete - Core auth works, collaboration features needed**
+
+**What Works:**
+- ✅ RBAC system fully implemented
 - ✅ JWT authentication with refresh tokens
 - ✅ Permission middleware on routes
-- ✅ User/organization management
-- ✅ Session tracking
-- ⚠️ Limited role definitions (need more granular permissions)
-- ❌ Real-time collaboration features
-- ❌ Activity feed and notifications
+- ✅ User/organization management (CRUD)
+- ✅ Session tracking with login/logout
+- ✅ Role-based access control enforced on API
+- ✅ Multi-tenancy via organizations
+
+**What Doesn't Work:**
+- ⚠️ Limited role definitions (only basic roles)
+- ❌ Real-time collaboration (WebSocket presence tracking)
+- ❌ Activity feed not implemented
+- ❌ User notifications system not implemented
+- ❌ Team/group management beyond organizations
+- ❌ Comment threads on equipment/rooms
+
+**Wiring Required: 15-21 hours for collaboration features (can defer)**
 
 **Next Steps:**
 
@@ -180,16 +221,24 @@
 
 ### Priority 4: Equipment Systems ⚡
 
-**Current State:**
+**Status: ✅ 85% Complete - Core topology works, templates need testing**
+
+**What Works:**
 - ✅ Hybrid graph model implemented (item_relationships table)
 - ✅ Equipment domain with category/subtype/parent
 - ✅ Relationship repository with recursive CTEs
-- ✅ Graph traversal queries (upstream/downstream)
-- ✅ System templates (YAML configs for 7 systems)
-- ✅ API endpoints for relationship CRUD
-- ❌ Template instantiation logic
-- ❌ System validation rules
-- ❌ Visual topology rendering
+- ✅ Graph traversal queries (upstream/downstream) functional
+- ✅ System templates (YAML configs for 7 systems: electrical, HVAC, network, etc.)
+- ✅ API endpoints for relationship CRUD working
+- ✅ Equipment hierarchy queries via API
+
+**What Doesn't Work:**
+- ⚠️ Template instantiation logic exists but needs more testing
+- ⚠️ System validation rules basic (needs enhancement)
+- ❌ Visual topology rendering (frontend feature, not critical for backend)
+- ❌ Bulk equipment operations need optimization
+
+**Wiring Required: 14-19 hours for template testing and validation**
 
 **Next Steps:**
 
@@ -242,39 +291,49 @@
 
 ---
 
-## Implementation Order Recommendation
+## Implementation Order Recommendation (Updated for Reality)
 
-### Phase 1 (Immediate - Week 1-2): **Equipment Systems** ✅
-*Why First:* Just implemented, needs validation and testing before moving on.
+### **NEW Priority: BAS CLI Wiring (Week 1) - CRITICAL**
+**Why First:** Small, contained feature to prove wiring pattern. Builds confidence.
+- Wire `arx bas list/unmapped/map/show` commands (10-14 hours)
+- Tests the pattern for all other CLI wiring
+- **Success Criteria:** All BAS commands work with real database data
 
-- Complete template instantiation
-- Test with real electrical system
-- Validate graph traversal queries
-- Document template creation
+### **Phase 1 (Week 2-3): IFC Import - CRITICAL** 🏗️
+**Why Second:** Unblocks testing with real buildings. Core use case for Joel's workplace.
+- Full entity extraction (8-12 hours)
+- Extract Building/Floor/Room/Equipment from IFC
+- Map geometry and properties
+- Test with AC20-FZK-Haus.ifc
+- **Success Criteria:** `arx import building.ifc` creates complete building in database
 
-### Phase 2 (Near-term - Week 3-4): **IFC Import** 🏗️
-*Why Second:* Foundational data source, enables testing other features with real data.
+### **Phase 2 (Week 4-6): HTTP API Completion** 📡
+**Why Third:** Mobile app and external integrations need these endpoints.
+- Add BAS endpoints (8-10 hours)
+- Add PR/Issue endpoints (14-18 hours)
+- Add Version Control endpoints (6-8 hours)
+- Test with Postman
+- **Success Criteria:** 80%+ use case coverage via REST API
 
-- Full entity extraction
-- Geometry processing
-- Property mapping
-- Test with sample IFC files
+### **Phase 3 (Week 7-9): Testing & Validation** ✅
+**Why Fourth:** Prove everything works together before adding more features.
+- Add use case tests (20-30 hours)
+- Add integration tests (10-15 hours)
+- Test end-to-end workflows (10-15 hours)
+- **Success Criteria:** 60%+ test coverage, core workflows proven
 
-### Phase 3 (Mid-term - Week 5-7): **Multi-User Support** 👥
-*Why Third:* Enables team collaboration before field deployment.
+### **Phase 4 (Week 10-13): Mobile App Enhancement** 📱
+**Why Fifth:** After backend is solid and tested.
+- Complete AR anchor storage (4-5 hours)
+- AR session management (3-4 hours)
+- Offline sync implementation (6-8 hours)
+- Mobile UI polish (20-30 hours)
+- **Success Criteria:** Field-testable with AR features
 
-- Enhanced RBAC
-- Real-time collaboration
-- Activity feed
-- Team management
-
-### Phase 4 (Long-term - Week 8-12): **Mobile App** 📱
-*Why Last:* Most complex, requires backend features to be solid first.
-
-- AR anchor integration
-- Spatial data capture
-- Mobile UI development
-- Field testing
+### **Defer to Post-MVP:**
+- ⏸️ Multi-User Collaboration (WebSocket, activity feed) - Core auth works
+- ⏸️ Equipment Template Testing - Basics work, enhance later
+- ⏸️ Remote Repository (clone/push/pull) - Not needed for single-workplace deployment
 
 ---
 

@@ -158,6 +158,67 @@ func NewRouter(config *RouterConfig) chi.Router {
 				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionOrgDelete)).Delete("/{id}", apiHandlers.organizationHandler.DeleteOrganization)
 			}
 		})
+
+		// BAS (Building Automation System) endpoints
+		r.Route("/bas", func(r chi.Router) {
+			if apiHandlers.basHandler != nil {
+				r.Use(httpmiddleware.AuthMiddleware(config.JWTManager))
+				r.Use(httpmiddleware.RateLimit(100, time.Hour))
+
+				rbac := config.Container.GetRBACManager()
+
+				// Import endpoint (write permission required)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/import", apiHandlers.basHandler.HandleImport)
+
+				// Read operations (read permission required)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/systems", apiHandlers.basHandler.HandleListSystems)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/points", apiHandlers.basHandler.HandleListPoints)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/points/{id}", apiHandlers.basHandler.HandleGetPoint)
+
+				// Map operation (write permission required)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/points/{id}/map", apiHandlers.basHandler.HandleMapPoint)
+			}
+		})
+
+		// Pull Request endpoints (CMMS/Work Order workflow)
+		r.Route("/pr", func(r chi.Router) {
+			if apiHandlers.prHandler != nil {
+				r.Use(httpmiddleware.AuthMiddleware(config.JWTManager))
+				r.Use(httpmiddleware.RateLimit(100, time.Hour))
+
+				rbac := config.Container.GetRBACManager()
+
+				// Create and list operations
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/", apiHandlers.prHandler.HandleCreatePR)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/", apiHandlers.prHandler.HandleListPRs)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/{id}", apiHandlers.prHandler.HandleGetPR)
+
+				// PR workflow operations
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/{id}/approve", apiHandlers.prHandler.HandleApprovePR)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/{id}/merge", apiHandlers.prHandler.HandleMergePR)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/{id}/close", apiHandlers.prHandler.HandleClosePR)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Post("/{id}/comments", apiHandlers.prHandler.HandleAddComment)
+			}
+		})
+
+		// Issue endpoints (Issue tracking)
+		r.Route("/issues", func(r chi.Router) {
+			if apiHandlers.issueHandler != nil {
+				r.Use(httpmiddleware.AuthMiddleware(config.JWTManager))
+				r.Use(httpmiddleware.RateLimit(100, time.Hour))
+
+				rbac := config.Container.GetRBACManager()
+
+				// Create and list operations
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/", apiHandlers.issueHandler.HandleCreateIssue)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/", apiHandlers.issueHandler.HandleListIssues)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/{id}", apiHandlers.issueHandler.HandleGetIssue)
+
+				// Issue workflow operations
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/{id}/assign", apiHandlers.issueHandler.HandleAssignIssue)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/{id}/close", apiHandlers.issueHandler.HandleCloseIssue)
+			}
+		})
 	})
 
 	return router
@@ -181,6 +242,9 @@ type apiHandlers struct {
 	equipmentHandler    *handlers.EquipmentHandler
 	userHandler         *handlers.UserHandler
 	organizationHandler *handlers.OrganizationHandler
+	basHandler          *handlers.BASHandler
+	prHandler           *handlers.PRHandler
+	issueHandler        *handlers.IssueHandler
 }
 
 // NewRouterConfig creates a router configuration from existing dependencies
@@ -235,5 +299,8 @@ func createAPIHandlers(config *RouterConfig) *apiHandlers {
 		equipmentHandler:    handlers.NewEquipmentHandler(config.Server, equipmentUC, relationshipRepo, logger),
 		userHandler:         handlers.NewUserHandler(baseHandler, userUC, logger),
 		organizationHandler: config.Container.GetOrganizationHandler(),
+		basHandler:          config.Container.GetBASHandler(),
+		prHandler:           config.Container.GetPRHandler(),
+		issueHandler:        config.Container.GetIssueHandler(),
 	}
 }

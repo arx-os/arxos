@@ -117,6 +117,9 @@ func createEquipmentCreateCommand(serviceContext any) *cobra.Command {
 			fmt.Printf("   ID:       %s\n", equipment.ID.String())
 			fmt.Printf("   Name:     %s\n", equipment.Name)
 			fmt.Printf("   Type:     %s\n", equipment.Type)
+			if equipment.Path != "" {
+				fmt.Printf("   Path:     %s  🎯 (Auto-generated)\n", equipment.Path)
+			}
 			if equipment.Model != "" {
 				fmt.Printf("   Model:    %s\n", equipment.Model)
 			}

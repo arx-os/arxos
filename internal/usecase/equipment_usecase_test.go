@@ -48,7 +48,9 @@ func TestEquipmentUseCase_CreateEquipment(t *testing.T) {
 			return e.Name == "New HVAC Unit" && e.Type == "hvac"
 		})).Return(nil)
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		req := &domain.CreateEquipmentRequest{
 			BuildingID: testBuilding.ID,
@@ -81,7 +83,9 @@ func TestEquipmentUseCase_CreateEquipment(t *testing.T) {
 		mockBuildingRepo := new(MockBuildingRepository)
 		mockLogger := createPermissiveMockLogger()
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		req := &domain.CreateEquipmentRequest{
 			BuildingID: types.NewID(),
@@ -105,7 +109,9 @@ func TestEquipmentUseCase_CreateEquipment(t *testing.T) {
 		mockBuildingRepo := new(MockBuildingRepository)
 		mockLogger := createPermissiveMockLogger()
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		req := &domain.CreateEquipmentRequest{
 			BuildingID: types.NewID(),
@@ -129,7 +135,9 @@ func TestEquipmentUseCase_CreateEquipment(t *testing.T) {
 		mockBuildingRepo := new(MockBuildingRepository)
 		mockLogger := createPermissiveMockLogger()
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		req := &domain.CreateEquipmentRequest{
 			BuildingID: types.NewID(),
@@ -158,7 +166,9 @@ func TestEquipmentUseCase_CreateEquipment(t *testing.T) {
 		mockBuildingRepo.On("GetByID", mock.Anything, testBuildingID.String()).
 			Return(nil, errors.New("building not found"))
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		req := &domain.CreateEquipmentRequest{
 			BuildingID: testBuildingID,
@@ -191,7 +201,9 @@ func TestEquipmentUseCase_GetEquipment(t *testing.T) {
 		mockEquipmentRepo.On("GetByID", mock.Anything, testEquipment.ID.String()).
 			Return(testEquipment, nil)
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		// Act
 		result, err := uc.GetEquipment(context.Background(), testEquipment.ID.String())
@@ -210,7 +222,9 @@ func TestEquipmentUseCase_GetEquipment(t *testing.T) {
 		mockBuildingRepo := new(MockBuildingRepository)
 		mockLogger := createPermissiveMockLogger()
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		// Act
 		result, err := uc.GetEquipment(context.Background(), "")
@@ -233,7 +247,9 @@ func TestEquipmentUseCase_GetEquipment(t *testing.T) {
 		mockEquipmentRepo.On("GetByID", mock.Anything, testID).
 			Return(nil, errors.New("equipment not found"))
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		// Act
 		result, err := uc.GetEquipment(context.Background(), testID)
@@ -264,7 +280,9 @@ func TestEquipmentUseCase_UpdateEquipment(t *testing.T) {
 			return e.Name == newName && e.Status == newStatus
 		})).Return(nil)
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		req := &domain.UpdateEquipmentRequest{
 			ID:     existingEquipment.ID,
@@ -294,7 +312,9 @@ func TestEquipmentUseCase_UpdateEquipment(t *testing.T) {
 		mockEquipmentRepo.On("GetByID", mock.Anything, testID.String()).
 			Return(nil, errors.New("equipment not found"))
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		newName := "Updated Equipment"
 		req := &domain.UpdateEquipmentRequest{
@@ -325,7 +345,9 @@ func TestEquipmentUseCase_UpdateEquipment(t *testing.T) {
 		mockEquipmentRepo.On("GetByID", mock.Anything, existingEquipment.ID.String()).
 			Return(existingEquipment, nil)
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		req := &domain.UpdateEquipmentRequest{
 			ID:   existingEquipment.ID,
@@ -354,7 +376,9 @@ func TestEquipmentUseCase_UpdateEquipment(t *testing.T) {
 		mockEquipmentRepo.On("GetByID", mock.Anything, existingEquipment.ID.String()).
 			Return(existingEquipment, nil)
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		req := &domain.UpdateEquipmentRequest{
 			ID:     existingEquipment.ID,
@@ -388,7 +412,9 @@ func TestEquipmentUseCase_DeleteEquipment(t *testing.T) {
 		mockEquipmentRepo.On("Delete", mock.Anything, testEquipment.ID.String()).
 			Return(nil)
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		// Act
 		err := uc.DeleteEquipment(context.Background(), testEquipment.ID.String())
@@ -404,7 +430,9 @@ func TestEquipmentUseCase_DeleteEquipment(t *testing.T) {
 		mockBuildingRepo := new(MockBuildingRepository)
 		mockLogger := createPermissiveMockLogger()
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		// Act
 		err := uc.DeleteEquipment(context.Background(), "")
@@ -426,7 +454,9 @@ func TestEquipmentUseCase_DeleteEquipment(t *testing.T) {
 		mockEquipmentRepo.On("GetByID", mock.Anything, testID).
 			Return(nil, errors.New("equipment not found"))
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		// Act
 		err := uc.DeleteEquipment(context.Background(), testID)
@@ -450,7 +480,9 @@ func TestEquipmentUseCase_DeleteEquipment(t *testing.T) {
 		mockEquipmentRepo.On("GetByID", mock.Anything, testEquipment.ID.String()).
 			Return(testEquipment, nil)
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		// Act
 		err := uc.DeleteEquipment(context.Background(), testEquipment.ID.String())
@@ -480,7 +512,9 @@ func TestEquipmentUseCase_ListEquipment(t *testing.T) {
 			return f.Limit == 100 // Default pagination
 		})).Return(equipment, nil)
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		filter := &domain.EquipmentFilter{}
 
@@ -509,7 +543,9 @@ func TestEquipmentUseCase_ListEquipment(t *testing.T) {
 			return f.Type != nil && *f.Type == testType && f.Limit == 50
 		})).Return(equipment, nil)
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		filter := &domain.EquipmentFilter{
 			Type:  &testType,
@@ -535,7 +571,9 @@ func TestEquipmentUseCase_ListEquipment(t *testing.T) {
 		mockEquipmentRepo.On("List", mock.Anything, mock.Anything).
 			Return(nil, errors.New("database error"))
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		filter := &domain.EquipmentFilter{}
 
@@ -571,7 +609,9 @@ func TestEquipmentUseCase_MoveEquipment(t *testing.T) {
 			return e.Location != nil && e.Location.X == 30.0 && e.Location.Y == 40.0 && e.Location.Z == 5.0
 		})).Return(nil)
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		// Act
 		err := uc.MoveEquipment(context.Background(), testEquipment.ID.String(), newLocation)
@@ -593,7 +633,9 @@ func TestEquipmentUseCase_MoveEquipment(t *testing.T) {
 		mockEquipmentRepo.On("GetByID", mock.Anything, testID).
 			Return(nil, errors.New("equipment not found"))
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		// Act
 		err := uc.MoveEquipment(context.Background(), testID, newLocation)
@@ -625,7 +667,9 @@ func TestEquipmentUseCase_GetEquipmentByBuilding(t *testing.T) {
 		mockEquipmentRepo.On("GetByBuilding", mock.Anything, testBuilding.ID.String()).
 			Return(equipment, nil)
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		// Act
 		result, err := uc.GetEquipmentByBuilding(context.Background(), testBuilding.ID.String())
@@ -644,7 +688,9 @@ func TestEquipmentUseCase_GetEquipmentByBuilding(t *testing.T) {
 		mockBuildingRepo := new(MockBuildingRepository)
 		mockLogger := createPermissiveMockLogger()
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		// Act
 		result, err := uc.GetEquipmentByBuilding(context.Background(), "")
@@ -667,7 +713,9 @@ func TestEquipmentUseCase_GetEquipmentByBuilding(t *testing.T) {
 		mockBuildingRepo.On("GetByID", mock.Anything, testBuildingID).
 			Return(nil, errors.New("building not found"))
 
-		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockLogger)
+		mockFloorRepo := new(MockFloorRepository)
+		mockRoomRepo := new(MockRoomRepository)
+		uc := NewEquipmentUseCase(mockEquipmentRepo, mockBuildingRepo, mockFloorRepo, mockRoomRepo, mockLogger)
 
 		// Act
 		result, err := uc.GetEquipmentByBuilding(context.Background(), testBuildingID)

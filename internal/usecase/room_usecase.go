@@ -59,6 +59,9 @@ func (uc *RoomUseCase) CreateRoom(ctx context.Context, req *domain.CreateRoomReq
 		FloorID:   req.FloorID,
 		Name:      req.Name,
 		Number:    req.Number,
+		Location:  req.Location,
+		Width:     req.Width,
+		Height:    req.Height,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -130,6 +133,15 @@ func (uc *RoomUseCase) UpdateRoom(ctx context.Context, req *domain.UpdateRoomReq
 	}
 	if req.Number != nil {
 		room.Number = *req.Number
+	}
+	if req.Location != nil {
+		room.Location = req.Location
+	}
+	if req.Width != nil {
+		room.Width = *req.Width
+	}
+	if req.Height != nil {
+		room.Height = *req.Height
 	}
 	room.UpdatedAt = time.Now()
 

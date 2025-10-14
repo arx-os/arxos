@@ -1,0 +1,147 @@
+ArxOS MVP - Copy-Paste Test Commands
+=====================================
+
+Run these commands ONE AT A TIME in a separate terminal.
+After each command, COPY THE ID from the output!
+
+
+STEP 1: Build
+--------------
+cd /Users/joelpate/repos/arxos
+go build -o arx ./cmd/arx
+./arx health
+
+
+STEP 2: Create Building
+------------------------
+./arx building create --name "Main School" --address "123 Main Street"
+
+👆 COPY THE BUILDING ID and replace <building-id> below with it
+
+
+STEP 3: Create Floor
+--------------------
+./arx floor create --building <building-id> --level 3 --name "Third Floor"
+
+👆 COPY THE FLOOR ID and replace <floor-id> below with it
+
+
+STEP 4: Create Room 301
+-----------------------
+./arx room create --floor <floor-id> --name "Classroom" --number "301" --x 0 --y 0 --width 30 --height 20
+
+👆 COPY THE ROOM ID and replace <room-301-id> below with it
+
+
+STEP 5: Create IDF-3A
+---------------------
+./arx room create --floor <floor-id> --name "Network Closet" --number "IDF-3A" --x 35 --y 0 --width 10 --height 10
+
+👆 COPY THE ROOM ID and replace <room-idf-id> below with it
+
+
+STEP 6: Create Hallway
+----------------------
+./arx room create --floor <floor-id> --name "Hallway" --number "HALL-3A" --x 0 --y 25 --width 50 --height 10
+
+
+STEP 7: Add HVAC Equipment
+---------------------------
+./arx equipment create --name "VAV-301" --type hvac --building <building-id> --floor <floor-id> --room <room-301-id> --x 15 --y 10
+
+👆 LOOK FOR THE PATH! Should show: /MAIN-SCHOOL/3/301/HVAC/VAV-301 🎯
+
+
+STEP 8: Add Network Switch
+---------------------------
+./arx equipment create --name "SW-01" --type network --building <building-id> --floor <floor-id> --room <room-idf-id> --x 38 --y 5
+
+👆 LOOK FOR THE PATH! Should show: /MAIN-SCHOOL/3/IDF-3A/NETWORK/SW-01 🎯
+
+
+STEP 9: Add Lighting
+--------------------
+./arx equipment create --name "LIGHT-HALL-1" --type lighting --building <building-id> --floor <floor-id> --room <hallway-id> --x 25 --y 30
+
+👆 LOOK FOR THE PATH!
+
+
+STEP 10: List Everything
+------------------------
+./arx building list
+./arx room list --floor <floor-id>
+./arx equipment list --building <building-id>
+
+
+STEP 11: RENDER IT! 🎨
+----------------------
+./arx render <building-id> --floor 3
+
+👆 This launches the interactive TUI!
+Press 'q' to quit when done
+
+
+BONUS: Test Room Move/Resize
+-----------------------------
+./arx room move <room-301-id> --x 5 --y 5
+./arx room resize <room-301-id> --width 35 --height 25
+./arx render <building-id> --floor 3
+
+
+CLEANUP
+-------
+./arx building delete <building-id> --force
+
+
+=====================================
+USING ENVIRONMENT VARIABLES (EASIER)
+=====================================
+
+If you prefer to use variables (recommended):
+
+
+# Build
+cd /Users/joelpate/repos/arxos
+go build -o arx ./cmd/arx
+
+# Create and store IDs
+export BUILDING_ID=$(./arx building create --name "Main School" --address "123 Main St" | grep "ID:" | awk '{print $2}')
+echo "Building: $BUILDING_ID"
+
+export FLOOR_ID=$(./arx floor create --building $BUILDING_ID --level 3 --name "Third Floor" | grep "ID:" | awk '{print $2}')
+echo "Floor: $FLOOR_ID"
+
+export ROOM_301=$(./arx room create --floor $FLOOR_ID --name "Classroom" --number "301" --x 0 --y 0 --width 30 --height 20 | grep "ID:" | awk '{print $2}')
+echo "Room 301: $ROOM_301"
+
+export ROOM_IDF=$(./arx room create --floor $FLOOR_ID --name "Network Closet" --number "IDF-3A" --x 35 --y 0 --width 10 --height 10 | grep "ID:" | awk '{print $2}')
+echo "IDF-3A: $ROOM_IDF"
+
+export ROOM_HALL=$(./arx room create --floor $FLOOR_ID --name "Hallway" --number "HALL-3A" --x 0 --y 25 --width 50 --height 10 | grep "ID:" | awk '{print $2}')
+echo "Hallway: $ROOM_HALL"
+
+# Now add equipment (paths auto-generate!)
+./arx equipment create --name "VAV-301" --type hvac --building $BUILDING_ID --floor $FLOOR_ID --room $ROOM_301 --x 15 --y 10
+
+./arx equipment create --name "SW-01" --type network --building $BUILDING_ID --floor $FLOOR_ID --room $ROOM_IDF --x 38 --y 5
+
+./arx equipment create --name "LIGHT-HALL-1" --type lighting --building $BUILDING_ID --floor $FLOOR_ID --room $ROOM_HALL --x 25 --y 30
+
+# List everything
+echo
+echo "=== Buildings ==="
+./arx building list
+
+echo
+echo "=== Rooms on Floor 3 ==="
+./arx room list --floor $FLOOR_ID
+
+echo
+echo "=== Equipment ==="
+./arx equipment list --building $BUILDING_ID
+
+# RENDER IT!
+echo
+echo "🎨 Launching floor plan renderer..."
+./arx render $BUILDING_ID --floor 3
+

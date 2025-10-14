@@ -326,7 +326,7 @@ func (c *Container) initUseCases(ctx context.Context) error {
 	c.buildingUC = usecase.NewBuildingUseCase(c.buildingRepo, c.equipmentRepo, c.logger)
 	c.floorUC = usecase.NewFloorUseCase(c.floorRepo, c.buildingRepo, c.logger)
 	c.roomUC = usecase.NewRoomUseCase(c.roomRepo, c.floorRepo, c.buildingRepo, c.logger)
-	c.equipmentUC = usecase.NewEquipmentUseCase(c.equipmentRepo, c.buildingRepo, c.logger)
+	c.equipmentUC = usecase.NewEquipmentUseCase(c.equipmentRepo, c.buildingRepo, c.floorRepo, c.roomRepo, c.logger)
 	c.organizationUC = usecase.NewOrganizationUseCase(c.organizationRepo, c.userRepo, c.logger)
 
 	// BAS use case - Wire with all dependencies
@@ -455,6 +455,11 @@ func (c *Container) GetConfig() *config.Config {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.config
+}
+
+// GetContainer returns the container itself (for interface satisfaction)
+func (c *Container) GetContainer() *Container {
+	return c
 }
 
 func (c *Container) GetDatabase() domain.Database {
@@ -714,6 +719,20 @@ func (c *Container) GetRoomUseCase() *usecase.RoomUseCase {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.roomUC
+}
+
+// GetBuildingRepository returns the building repository
+func (c *Container) GetBuildingRepository() domain.BuildingRepository {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.buildingRepo
+}
+
+// GetEquipmentRepository returns the equipment repository
+func (c *Container) GetEquipmentRepository() domain.EquipmentRepository {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.equipmentRepo
 }
 
 // Shutdown gracefully shuts down all dependencies

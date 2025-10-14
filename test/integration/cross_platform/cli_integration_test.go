@@ -111,11 +111,12 @@ func TestIntegration_CompleteWorkflow(t *testing.T) {
 	buildingRepo := postgis.NewBuildingRepository(db.DB)
 	equipmentRepo := postgis.NewEquipmentRepository(db.DB)
 	floorRepo := postgis.NewFloorRepository(db.DB)
+	roomRepo := postgis.NewRoomRepository(db.DB)
 	logger := &testLogger{}
 
 	// Setup use cases
 	buildingUC := usecase.NewBuildingUseCase(buildingRepo, equipmentRepo, logger)
-	equipmentUC := usecase.NewEquipmentUseCase(equipmentRepo, buildingRepo, logger)
+	equipmentUC := usecase.NewEquipmentUseCase(equipmentRepo, buildingRepo, floorRepo, roomRepo, logger)
 
 	ctx := context.Background()
 
@@ -214,10 +215,12 @@ func TestIntegration_SpatialOperations(t *testing.T) {
 
 	buildingRepo := postgis.NewBuildingRepository(db.DB)
 	equipmentRepo := postgis.NewEquipmentRepository(db.DB)
+	floorRepo := postgis.NewFloorRepository(db.DB)
+	roomRepo := postgis.NewRoomRepository(db.DB)
 	logger := &testLogger{}
 
 	buildingUC := usecase.NewBuildingUseCase(buildingRepo, equipmentRepo, logger)
-	equipmentUC := usecase.NewEquipmentUseCase(equipmentRepo, buildingRepo, logger)
+	equipmentUC := usecase.NewEquipmentUseCase(equipmentRepo, buildingRepo, floorRepo, roomRepo, logger)
 
 	ctx := context.Background()
 

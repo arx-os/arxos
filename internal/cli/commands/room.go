@@ -29,6 +29,8 @@ func CreateRoomCommands(serviceContext any) *cobra.Command {
 	roomCmd.AddCommand(createRoomListCommand(serviceContext))
 	roomCmd.AddCommand(createRoomGetCommand(serviceContext))
 	roomCmd.AddCommand(createRoomDeleteCommand(serviceContext))
+	roomCmd.AddCommand(createRoomMoveCommand(serviceContext))
+	roomCmd.AddCommand(createRoomResizeCommand(serviceContext))
 
 	return roomCmd
 }
@@ -39,17 +41,22 @@ func createRoomCreateCommand(serviceContext any) *cobra.Command {
 		name    string
 		number  string
 		floorID string
+		x       float64
+		y       float64
+		width   float64
+		height  float64
 	)
 
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new room",
-		Long:  "Create a new room on a floor with specified room number",
+		Long:  "Create a new room on a floor with specified room number and optional dimensions",
 		Example: `  # Create a room
   arx room create --floor abc123 --name "Room 101" --number "101"
 
-  # Create conference room
-  arx room create --floor abc123 --name "Conference Room A" --number "201"`,
+  # Create room with position and dimensions
+  arx room create --floor abc123 --name "Room 101" --number "101" \
+    --x 10 --y 20 --width 30 --height 20`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
@@ -78,6 +85,23 @@ func createRoomCreateCommand(serviceContext any) *cobra.Command {
 				Number:  number,
 			}
 
+			// Add location if provided
+			if x != 0 || y != 0 {
+				req.Location = &domain.Location{
+					X: x,
+					Y: y,
+					Z: 0,
+				}
+			}
+
+			// Add dimensions if provided
+			if width > 0 {
+				req.Width = width
+			}
+			if height > 0 {
+				req.Height = height
+			}
+
 			// Create room
 			room, err := roomUC.CreateRoom(ctx, req)
 			if err != nil {
@@ -100,6 +124,10 @@ func createRoomCreateCommand(serviceContext any) *cobra.Command {
 	cmd.Flags().StringVarP(&name, "name", "n", "", "Room name (required)")
 	cmd.Flags().StringVar(&number, "number", "", "Room number (required)")
 	cmd.Flags().StringVarP(&floorID, "floor", "f", "", "Floor ID (required)")
+	cmd.Flags().Float64Var(&x, "x", 0, "X coordinate (optional)")
+	cmd.Flags().Float64Var(&y, "y", 0, "Y coordinate (optional)")
+	cmd.Flags().Float64Var(&width, "width", 0, "Width in meters (optional)")
+	cmd.Flags().Float64Var(&height, "height", 0, "Height in meters (optional)")
 
 	cmd.MarkFlagRequired("name")
 	cmd.MarkFlagRequired("number")
@@ -273,6 +301,141 @@ func createRoomDeleteCommand(serviceContext any) *cobra.Command {
 
 	// Add flags
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "Skip confirmation prompt")
+
+	return cmd
+}
+
+// createRoomMoveCommand creates the room move command
+func createRoomMoveCommand(serviceContext any) *cobra.Command {
+	var (
+		x float64
+		y float64
+	)
+
+	cmd := &cobra.Command{
+		Use:   "move <room-id>",
+		Short: "Move a room to a new position",
+		Long:  "Move a room to a new position on the floor plan (sets the center point)",
+		Example: `  # Move room to position (10, 20)
+  arx room move abc123 --x 10 --y 20`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.Background()
+			roomID := args[0]
+
+			// Get service from context
+			sc, ok := serviceContext.(RoomServiceProvider)
+			if !ok {
+				return fmt.Errorf("service context is not available")
+			}
+			roomUC := sc.GetRoomUseCase()
+
+			// Get existing room
+			room, err := roomUC.GetRoom(ctx, types.FromString(roomID))
+			if err != nil {
+				return fmt.Errorf("failed to get room: %w", err)
+			}
+
+			// Update location
+			location := &domain.Location{
+				X: x,
+				Y: y,
+				Z: 0, // Floor level
+			}
+
+			// Create update request
+			req := &domain.UpdateRoomRequest{
+				ID:       room.ID,
+				Location: location,
+			}
+
+			// Update room
+			updatedRoom, err := roomUC.UpdateRoom(ctx, req)
+			if err != nil {
+				return fmt.Errorf("failed to move room: %w", err)
+			}
+
+			// Print success
+			fmt.Printf("✅ Room moved successfully!\n\n")
+			fmt.Printf("   Room:     %s (%s)\n", updatedRoom.Name, updatedRoom.Number)
+			fmt.Printf("   Position: (%.2f, %.2f)\n", updatedRoom.Location.X, updatedRoom.Location.Y)
+			fmt.Printf("\n")
+
+			return nil
+		},
+	}
+
+	// Add flags
+	cmd.Flags().Float64Var(&x, "x", 0, "X coordinate (required)")
+	cmd.Flags().Float64Var(&y, "y", 0, "Y coordinate (required)")
+
+	cmd.MarkFlagRequired("x")
+	cmd.MarkFlagRequired("y")
+
+	return cmd
+}
+
+// createRoomResizeCommand creates the room resize command
+func createRoomResizeCommand(serviceContext any) *cobra.Command {
+	var (
+		width  float64
+		height float64
+	)
+
+	cmd := &cobra.Command{
+		Use:   "resize <room-id>",
+		Short: "Resize a room",
+		Long:  "Resize a room by setting its width and height dimensions",
+		Example: `  # Resize room to 30x20 meters
+  arx room resize abc123 --width 30 --height 20`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.Background()
+			roomID := args[0]
+
+			// Get service from context
+			sc, ok := serviceContext.(RoomServiceProvider)
+			if !ok {
+				return fmt.Errorf("service context is not available")
+			}
+			roomUC := sc.GetRoomUseCase()
+
+			// Get existing room
+			room, err := roomUC.GetRoom(ctx, types.FromString(roomID))
+			if err != nil {
+				return fmt.Errorf("failed to get room: %w", err)
+			}
+
+			// Create update request
+			req := &domain.UpdateRoomRequest{
+				ID:     room.ID,
+				Width:  &width,
+				Height: &height,
+			}
+
+			// Update room
+			updatedRoom, err := roomUC.UpdateRoom(ctx, req)
+			if err != nil {
+				return fmt.Errorf("failed to resize room: %w", err)
+			}
+
+			// Print success
+			fmt.Printf("✅ Room resized successfully!\n\n")
+			fmt.Printf("   Room:       %s (%s)\n", updatedRoom.Name, updatedRoom.Number)
+			fmt.Printf("   Dimensions: %.2f x %.2f meters\n", updatedRoom.Width, updatedRoom.Height)
+			fmt.Printf("   Area:       %.2f m²\n", updatedRoom.Width*updatedRoom.Height)
+			fmt.Printf("\n")
+
+			return nil
+		},
+	}
+
+	// Add flags
+	cmd.Flags().Float64Var(&width, "width", 0, "Width in meters (required)")
+	cmd.Flags().Float64Var(&height, "height", 0, "Height in meters (required)")
+
+	cmd.MarkFlagRequired("width")
+	cmd.MarkFlagRequired("height")
 
 	return cmd
 }

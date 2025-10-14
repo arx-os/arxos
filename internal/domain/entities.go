@@ -60,6 +60,10 @@ type Room struct {
 	FloorID   types.ID     `json:"floor_id"`
 	Name      string       `json:"name"`
 	Number    string       `json:"number"`
+	Location  *Location    `json:"location,omitempty"` // Center point (x, y)
+	Width     float64      `json:"width,omitempty"`    // Width in meters
+	Height    float64      `json:"height,omitempty"`   // Height in meters (for 3D)
+	Metadata  interface{}  `json:"metadata,omitempty"` // Additional room properties
 	Equipment []*Equipment `json:"equipment,omitempty"`
 	CreatedAt time.Time    `json:"created_at"`
 	UpdatedAt time.Time    `json:"updated_at"`
@@ -157,16 +161,22 @@ type UpdateFloorRequest struct {
 
 // CreateRoomRequest represents the request to create a room
 type CreateRoomRequest struct {
-	FloorID types.ID `json:"floor_id" validate:"required"`
-	Name    string   `json:"name" validate:"required"`
-	Number  string   `json:"number" validate:"required"`
+	FloorID  types.ID  `json:"floor_id" validate:"required"`
+	Name     string    `json:"name" validate:"required"`
+	Number   string    `json:"number" validate:"required"`
+	Location *Location `json:"location,omitempty"`
+	Width    float64   `json:"width,omitempty"`
+	Height   float64   `json:"height,omitempty"`
 }
 
 // UpdateRoomRequest represents the request to update a room
 type UpdateRoomRequest struct {
-	ID     types.ID `json:"id" validate:"required"`
-	Name   *string  `json:"name,omitempty"`
-	Number *string  `json:"number,omitempty"`
+	ID       types.ID  `json:"id" validate:"required"`
+	Name     *string   `json:"name,omitempty"`
+	Number   *string   `json:"number,omitempty"`
+	Location *Location `json:"location,omitempty"`
+	Width    *float64  `json:"width,omitempty"`
+	Height   *float64  `json:"height,omitempty"`
 }
 
 // CreateEquipmentRequest represents the request to create equipment

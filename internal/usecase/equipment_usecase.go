@@ -3,25 +3,31 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/infrastructure/utils"
+	"github.com/arx-os/arxos/pkg/naming"
 )
 
 // EquipmentUseCase implements the equipment business logic following Clean Architecture
 type EquipmentUseCase struct {
 	equipmentRepo domain.EquipmentRepository
 	buildingRepo  domain.BuildingRepository
+	floorRepo     domain.FloorRepository
+	roomRepo      domain.RoomRepository
 	logger        domain.Logger
 	idGenerator   *utils.IDGenerator
 }
 
 // NewEquipmentUseCase creates a new EquipmentUseCase
-func NewEquipmentUseCase(equipmentRepo domain.EquipmentRepository, buildingRepo domain.BuildingRepository, logger domain.Logger) *EquipmentUseCase {
+func NewEquipmentUseCase(equipmentRepo domain.EquipmentRepository, buildingRepo domain.BuildingRepository, floorRepo domain.FloorRepository, roomRepo domain.RoomRepository, logger domain.Logger) *EquipmentUseCase {
 	return &EquipmentUseCase{
 		equipmentRepo: equipmentRepo,
 		buildingRepo:  buildingRepo,
+		floorRepo:     floorRepo,
+		roomRepo:      roomRepo,
 		logger:        logger,
 		idGenerator:   utils.NewIDGenerator(),
 	}
@@ -38,10 +44,58 @@ func (uc *EquipmentUseCase) CreateEquipment(ctx context.Context, req *domain.Cre
 	}
 
 	// Verify building exists
-	_, err := uc.buildingRepo.GetByID(ctx, req.BuildingID.String())
+	building, err := uc.buildingRepo.GetByID(ctx, req.BuildingID.String())
 	if err != nil {
 		uc.logger.Error("Failed to verify building exists", "building_id", req.BuildingID.String(), "error", err)
 		return nil, fmt.Errorf("building not found: %w", err)
+	}
+
+	// Generate universal path
+	equipmentPath := ""
+	if !req.FloorID.IsEmpty() && !req.RoomID.IsEmpty() {
+		// Get floor and room details for path generation
+		floor, err := uc.floorRepo.GetByID(ctx, req.FloorID.String())
+		if err == nil {
+			room, err := uc.roomRepo.GetByID(ctx, req.RoomID.String())
+			if err == nil {
+				// Generate path components
+				buildingCode := naming.BuildingCodeFromName(building.Name)
+				floorCode := strconv.Itoa(floor.Level)
+				roomCode := naming.RoomCodeFromName(room.Number)
+				systemCode := naming.GetSystemCode(req.Type)
+				equipmentCode := naming.GenerateEquipmentCode(req.Name, "")
+
+				// Generate full path
+				equipmentPath = naming.GenerateEquipmentPath(
+					buildingCode,
+					floorCode,
+					roomCode,
+					systemCode,
+					equipmentCode,
+				)
+
+				uc.logger.Info("Generated equipment path", "path", equipmentPath)
+			}
+		}
+	} else if !req.FloorID.IsEmpty() {
+		// Floor-level equipment (no room)
+		floor, err := uc.floorRepo.GetByID(ctx, req.FloorID.String())
+		if err == nil {
+			buildingCode := naming.BuildingCodeFromName(building.Name)
+			floorCode := strconv.Itoa(floor.Level)
+			systemCode := naming.GetSystemCode(req.Type)
+			equipmentCode := naming.GenerateEquipmentCode(req.Name, "")
+
+			equipmentPath = naming.GenerateEquipmentPath(
+				buildingCode,
+				floorCode,
+				"", // No room
+				systemCode,
+				equipmentCode,
+			)
+
+			uc.logger.Info("Generated floor-level equipment path", "path", equipmentPath)
+		}
 	}
 
 	// Create equipment entity
@@ -51,6 +105,7 @@ func (uc *EquipmentUseCase) CreateEquipment(ctx context.Context, req *domain.Cre
 		FloorID:    req.FloorID,
 		RoomID:     req.RoomID,
 		Name:       req.Name,
+		Path:       equipmentPath, // Store generated path
 		Type:       req.Type,
 		Model:      req.Model,
 		Location:   req.Location,

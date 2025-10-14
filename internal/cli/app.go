@@ -198,6 +198,7 @@ func (a *App) wireCommands() {
 	// Utility commands
 	a.rootCmd.AddCommand(commands.CreateTraceCommand(serviceContext))
 	a.rootCmd.AddCommand(commands.CreateVisualizeCommand(serviceContext))
+	a.rootCmd.AddCommand(commands.CreateRenderCommand(serviceContext))
 	a.rootCmd.AddCommand(commands.CreateReportCommand(serviceContext))
 	a.rootCmd.AddCommand(commands.CreateVersionCommand(serviceContext))
 }

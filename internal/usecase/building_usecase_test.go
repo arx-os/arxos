@@ -133,6 +133,22 @@ func (m *MockEquipmentRepository) GetByLocation(ctx context.Context, buildingID 
 	return args.Get(0).([]*domain.Equipment), args.Error(1)
 }
 
+func (m *MockEquipmentRepository) GetByPath(ctx context.Context, exactPath string) (*domain.Equipment, error) {
+	args := m.Called(ctx, exactPath)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.Equipment), args.Error(1)
+}
+
+func (m *MockEquipmentRepository) FindByPath(ctx context.Context, pathPattern string) ([]*domain.Equipment, error) {
+	args := m.Called(ctx, pathPattern)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*domain.Equipment), args.Error(1)
+}
+
 // Test fixtures for BuildingUseCase
 func createTestBuilding() *domain.Building {
 	return &domain.Building{

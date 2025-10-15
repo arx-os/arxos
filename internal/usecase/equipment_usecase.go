@@ -33,6 +33,12 @@ func NewEquipmentUseCase(equipmentRepo domain.EquipmentRepository, buildingRepo 
 	}
 }
 
+// GetRepository returns the equipment repository
+// This allows handlers to access repository methods directly for simple queries
+func (uc *EquipmentUseCase) GetRepository() domain.EquipmentRepository {
+	return uc.equipmentRepo
+}
+
 // CreateEquipment creates new equipment
 func (uc *EquipmentUseCase) CreateEquipment(ctx context.Context, req *domain.CreateEquipmentRequest) (*domain.Equipment, error) {
 	uc.logger.Info("Creating equipment", "name", req.Name, "building_id", req.BuildingID)

@@ -42,6 +42,10 @@ type EquipmentRepository interface {
 	Update(ctx context.Context, equipment *Equipment) error
 	Delete(ctx context.Context, id string) error
 	GetByLocation(ctx context.Context, buildingID string, floor string, room string) ([]*Equipment, error)
+	
+	// Path-based query methods
+	GetByPath(ctx context.Context, exactPath string) (*Equipment, error)
+	FindByPath(ctx context.Context, pathPattern string) ([]*Equipment, error)
 }
 
 // OrganizationRepository defines the contract for organization data operations

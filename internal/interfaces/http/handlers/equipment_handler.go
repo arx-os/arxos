@@ -404,3 +404,114 @@ func (h *EquipmentHandler) GetEquipmentByFloor(w http.ResponseWriter, r *http.Re
 	}
 	h.RespondJSON(w, http.StatusOK, response)
 }
+
+// GetByPath handles GET /api/v1/equipment/path/{path}
+// Get equipment by exact path match
+func (h *EquipmentHandler) GetByPath(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
+
+	// Get path from URL parameter
+	path := chi.URLParam(r, "path")
+	if path == "" {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("path parameter is required"))
+		return
+	}
+
+	// Get equipment repository from context
+	equipmentRepo := h.equipmentUC.GetRepository()
+	if equipmentRepo == nil {
+		h.RespondError(w, http.StatusInternalServerError, fmt.Errorf("equipment repository not available"))
+		return
+	}
+
+	// Query by exact path
+	equipment, err := equipmentRepo.GetByPath(r.Context(), path)
+	if err != nil {
+		h.logger.Error("Failed to get equipment by path", "path", path, "error", err)
+		h.RespondError(w, http.StatusNotFound, err)
+		return
+	}
+
+	h.RespondJSON(w, http.StatusOK, equipment)
+}
+
+// FindByPath handles GET /api/v1/equipment/path-pattern?pattern=/B1/3/*/HVAC/*
+// Find equipment matching a path pattern (supports wildcards)
+func (h *EquipmentHandler) FindByPath(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
+
+	// Get path pattern from query parameter
+	pathPattern := r.URL.Query().Get("pattern")
+	if pathPattern == "" {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("pattern parameter is required"))
+		return
+	}
+
+	// Get optional filters
+	status := r.URL.Query().Get("status")
+	eqType := r.URL.Query().Get("type")
+	
+	// Parse limit
+	limit := 100
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	// Get equipment repository from context
+	equipmentRepo := h.equipmentUC.GetRepository()
+	if equipmentRepo == nil {
+		h.RespondError(w, http.StatusInternalServerError, fmt.Errorf("equipment repository not available"))
+		return
+	}
+
+	// Query by path pattern
+	equipment, err := equipmentRepo.FindByPath(r.Context(), pathPattern)
+	if err != nil {
+		h.logger.Error("Failed to find equipment by path pattern", "pattern", pathPattern, "error", err)
+		h.RespondError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	// Apply additional filters if specified
+	if status != "" {
+		filtered := make([]*domain.Equipment, 0)
+		for _, eq := range equipment {
+			if eq.Status == status {
+				filtered = append(filtered, eq)
+			}
+		}
+		equipment = filtered
+	}
+
+	if eqType != "" {
+		filtered := make([]*domain.Equipment, 0)
+		for _, eq := range equipment {
+			if eq.Type == eqType {
+				filtered = append(filtered, eq)
+			}
+		}
+		equipment = filtered
+	}
+
+	// Apply limit
+	if len(equipment) > limit {
+		equipment = equipment[:limit]
+	}
+
+	// Return response
+	response := map[string]any{
+		"pattern":   pathPattern,
+		"equipment": equipment,
+		"count":     len(equipment),
+		"limit":     limit,
+	}
+	h.RespondJSON(w, http.StatusOK, response)
+}

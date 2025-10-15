@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/arx-os/arxos/internal/domain"
 )
@@ -24,12 +25,13 @@ func NewEquipmentRepository(db *sql.DB) *EquipmentRepository {
 func (r *EquipmentRepository) Create(ctx context.Context, e *domain.Equipment) error {
 	query := `
 		INSERT INTO equipment (id, building_id, floor_id, room_id, equipment_tag, name, equipment_type, model,
-		                       location_x, location_y, location_z, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		                       location_x, location_y, location_z, path, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 	`
 
 	var floorID, roomID sql.NullString
 	var locX, locY, locZ sql.NullFloat64
+	var path sql.NullString
 
 	// Handle nullable fields
 	if !e.FloorID.IsEmpty() {
@@ -42,6 +44,9 @@ func (r *EquipmentRepository) Create(ctx context.Context, e *domain.Equipment) e
 		locX = sql.NullFloat64{Float64: e.Location.X, Valid: true}
 		locY = sql.NullFloat64{Float64: e.Location.Y, Valid: true}
 		locZ = sql.NullFloat64{Float64: e.Location.Z, Valid: true}
+	}
+	if e.Path != "" {
+		path = sql.NullString{String: e.Path, Valid: true}
 	}
 
 	// Generate equipment tag (unique identifier)
@@ -59,6 +64,7 @@ func (r *EquipmentRepository) Create(ctx context.Context, e *domain.Equipment) e
 		locX,
 		locY,
 		locZ,
+		path,
 		e.Status,
 		e.CreatedAt,
 		e.UpdatedAt,
@@ -71,7 +77,7 @@ func (r *EquipmentRepository) Create(ctx context.Context, e *domain.Equipment) e
 func (r *EquipmentRepository) GetByID(ctx context.Context, id string) (*domain.Equipment, error) {
 	query := `
 		SELECT id, building_id, floor_id, room_id, name, equipment_type, model,
-		       location_x, location_y, location_z, status, created_at, updated_at
+		       location_x, location_y, location_z, path, status, created_at, updated_at
 		FROM equipment
 		WHERE id = $1
 	`
@@ -79,6 +85,7 @@ func (r *EquipmentRepository) GetByID(ctx context.Context, id string) (*domain.E
 	var e domain.Equipment
 	var floorID, roomID sql.NullString
 	var locX, locY, locZ sql.NullFloat64
+	var path sql.NullString
 
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&e.ID,
@@ -91,6 +98,7 @@ func (r *EquipmentRepository) GetByID(ctx context.Context, id string) (*domain.E
 		&locX,
 		&locY,
 		&locZ,
+		&path,
 		&e.Status,
 		&e.CreatedAt,
 		&e.UpdatedAt,
@@ -109,6 +117,9 @@ func (r *EquipmentRepository) GetByID(ctx context.Context, id string) (*domain.E
 	}
 	if roomID.Valid {
 		e.RoomID.Legacy = roomID.String
+	}
+	if path.Valid {
+		e.Path = path.String
 	}
 
 	// Parse location from x/y/z columns
@@ -130,7 +141,7 @@ func (r *EquipmentRepository) GetByID(ctx context.Context, id string) (*domain.E
 func (r *EquipmentRepository) GetByBuilding(ctx context.Context, buildingID string) ([]*domain.Equipment, error) {
 	query := `
 		SELECT id, building_id, floor_id, room_id, name, equipment_type, model,
-		       location_x, location_y, location_z, status, created_at, updated_at
+		       location_x, location_y, location_z, path, status, created_at, updated_at
 		FROM equipment
 		WHERE building_id = $1
 		ORDER BY created_at DESC
@@ -149,7 +160,7 @@ func (r *EquipmentRepository) GetByBuilding(ctx context.Context, buildingID stri
 func (r *EquipmentRepository) GetByType(ctx context.Context, equipmentType string) ([]*domain.Equipment, error) {
 	query := `
 		SELECT id, building_id, floor_id, room_id, name, equipment_type, model,
-		       location_x, location_y, location_z, status, created_at, updated_at
+		       location_x, location_y, location_z, path, status, created_at, updated_at
 		FROM equipment
 		WHERE equipment_type = $1
 		ORDER BY created_at DESC
@@ -168,7 +179,7 @@ func (r *EquipmentRepository) GetByType(ctx context.Context, equipmentType strin
 func (r *EquipmentRepository) List(ctx context.Context, filter *domain.EquipmentFilter) ([]*domain.Equipment, error) {
 	query := `
 		SELECT id, building_id, floor_id, room_id, name, equipment_type, model,
-		       location_x, location_y, location_z, status, created_at, updated_at
+		       location_x, location_y, location_z, path, status, created_at, updated_at
 		FROM equipment
 		WHERE 1=1`
 
@@ -273,7 +284,7 @@ func (r *EquipmentRepository) Delete(ctx context.Context, id string) error {
 func (r *EquipmentRepository) GetByLocation(ctx context.Context, buildingID, floor, room string) ([]*domain.Equipment, error) {
 	query := `
 		SELECT id, building_id, floor_id, room_id, name, equipment_type, model,
-		       location_x, location_y, location_z, status, created_at, updated_at
+		       location_x, location_y, location_z, path, status, created_at, updated_at
 		FROM equipment
 		WHERE building_id = $1`
 
@@ -310,6 +321,7 @@ func (r *EquipmentRepository) scanEquipmentRows(rows *sql.Rows) ([]*domain.Equip
 		var e domain.Equipment
 		var floorID, roomID sql.NullString
 		var locX, locY, locZ sql.NullFloat64
+		var path sql.NullString
 
 		err := rows.Scan(
 			&e.ID,
@@ -322,6 +334,7 @@ func (r *EquipmentRepository) scanEquipmentRows(rows *sql.Rows) ([]*domain.Equip
 			&locX,
 			&locY,
 			&locZ,
+			&path,
 			&e.Status,
 			&e.CreatedAt,
 			&e.UpdatedAt,
@@ -337,6 +350,9 @@ func (r *EquipmentRepository) scanEquipmentRows(rows *sql.Rows) ([]*domain.Equip
 		}
 		if roomID.Valid {
 			e.RoomID.Legacy = roomID.String
+		}
+		if path.Valid {
+			e.Path = path.String
 		}
 
 		// Parse location from x/y/z columns
@@ -355,4 +371,97 @@ func (r *EquipmentRepository) scanEquipmentRows(rows *sql.Rows) ([]*domain.Equip
 	}
 
 	return equipment, nil
+}
+
+// GetByPath retrieves equipment by exact path match
+func (r *EquipmentRepository) GetByPath(ctx context.Context, exactPath string) (*domain.Equipment, error) {
+	query := `
+		SELECT id, building_id, floor_id, room_id, name, equipment_type, model,
+		       location_x, location_y, location_z, path, status, created_at, updated_at
+		FROM equipment
+		WHERE path = $1
+	`
+
+	var e domain.Equipment
+	var floorID, roomID sql.NullString
+	var locX, locY, locZ sql.NullFloat64
+	var path sql.NullString
+
+	err := r.db.QueryRowContext(ctx, query, exactPath).Scan(
+		&e.ID,
+		&e.BuildingID,
+		&floorID,
+		&roomID,
+		&e.Name,
+		&e.Type,
+		&e.Model,
+		&locX,
+		&locY,
+		&locZ,
+		&path,
+		&e.Status,
+		&e.CreatedAt,
+		&e.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("equipment not found at path: %s", exactPath)
+		}
+		return nil, err
+	}
+
+	// Set nullable fields
+	if floorID.Valid {
+		e.FloorID.Legacy = floorID.String
+	}
+	if roomID.Valid {
+		e.RoomID.Legacy = roomID.String
+	}
+	if path.Valid {
+		e.Path = path.String
+	}
+
+	// Parse location from x/y/z columns
+	if locX.Valid && locY.Valid {
+		e.Location = &domain.Location{
+			X: locX.Float64,
+			Y: locY.Float64,
+			Z: 0,
+		}
+		if locZ.Valid {
+			e.Location.Z = locZ.Float64
+		}
+	}
+
+	return &e, nil
+}
+
+// FindByPath retrieves equipment matching a path pattern (supports wildcards)
+// Pattern examples: /B1/3/*/HVAC/*, /B1/*/NETWORK/SW-*, /*/*/SAFETY/EXTING-*
+func (r *EquipmentRepository) FindByPath(ctx context.Context, pathPattern string) ([]*domain.Equipment, error) {
+	// Convert path pattern to SQL LIKE pattern
+	// Replace * with % for SQL LIKE
+	sqlPattern := strings.ReplaceAll(pathPattern, "*", "%")
+	
+	// Validate pattern has at least some specificity
+	if sqlPattern == "%" || sqlPattern == "/%" {
+		return nil, fmt.Errorf("path pattern too broad, must include at least one specific segment")
+	}
+
+	query := `
+		SELECT id, building_id, floor_id, room_id, name, equipment_type, model,
+		       location_x, location_y, location_z, path, status, created_at, updated_at
+		FROM equipment
+		WHERE path LIKE $1
+		ORDER BY path ASC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, sqlPattern)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query equipment by path pattern: %w", err)
+	}
+	defer rows.Close()
+
+	return r.scanEquipmentRows(rows)
 }

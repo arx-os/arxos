@@ -690,3 +690,237 @@ func nullableID(id *types.ID) sql.NullString {
 	}
 	return sql.NullString{String: id.String(), Valid: true}
 }
+
+// GetByPath retrieves a BAS point by exact path match
+func (r *BASPointRepository) GetByPath(exactPath string) (*domain.BASPoint, error) {
+	query := `
+		SELECT
+			id, building_id, bas_system_id, room_id, floor_id, equipment_id,
+			point_name, device_id, object_type, object_instance,
+			description, units, point_type, location_text,
+			writeable, min_value, max_value,
+			current_value, current_value_numeric, current_value_boolean, last_updated,
+			mapped, mapping_confidence,
+			imported_at, import_source,
+			added_in_version, removed_in_version,
+			metadata, path, created_at, updated_at
+		FROM bas_points
+		WHERE path = $1 AND removed_in_version IS NULL
+	`
+
+	point := &domain.BASPoint{}
+	var roomID, floorID, equipmentID, addedInVersion, removedInVersion sql.NullString
+	var objectInstance sql.NullInt64
+	var minValue, maxValue, currentNumeric sql.NullFloat64
+	var currentValue sql.NullString
+	var currentBoolean sql.NullBool
+	var lastUpdated sql.NullTime
+	var importSource sql.NullString
+	var path sql.NullString
+	var metadataJSON []byte
+
+	err := r.db.QueryRow(query, exactPath).Scan(
+		&point.ID, &point.BuildingID, &point.BASSystemID,
+		&roomID, &floorID, &equipmentID,
+		&point.PointName, &point.DeviceID, &point.ObjectType, &objectInstance,
+		&point.Description, &point.Units, &point.PointType, &point.LocationText,
+		&point.Writeable, &minValue, &maxValue,
+		&currentValue, &currentNumeric, &currentBoolean, &lastUpdated,
+		&point.Mapped, &point.MappingConfidence,
+		&point.ImportedAt, &importSource,
+		&addedInVersion, &removedInVersion,
+		&metadataJSON, &path, &point.CreatedAt, &point.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("BAS point not found at path: %s", exactPath)
+		}
+		return nil, err
+	}
+
+	// Unmarshal metadata
+	if len(metadataJSON) > 0 {
+		if err := json.Unmarshal(metadataJSON, &point.Metadata); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+		}
+	}
+
+	// Handle nullable fields
+	if roomID.Valid {
+		id := types.FromString(roomID.String)
+		point.RoomID = &id
+	}
+	if floorID.Valid {
+		id := types.FromString(floorID.String)
+		point.FloorID = &id
+	}
+	if equipmentID.Valid {
+		id := types.FromString(equipmentID.String)
+		point.EquipmentID = &id
+	}
+	if objectInstance.Valid {
+		val := int(objectInstance.Int64)
+		point.ObjectInstance = &val
+	}
+	if minValue.Valid {
+		point.MinValue = &minValue.Float64
+	}
+	if maxValue.Valid {
+		point.MaxValue = &maxValue.Float64
+	}
+	if currentValue.Valid {
+		point.CurrentValue = &currentValue.String
+	}
+	if currentNumeric.Valid {
+		point.CurrentValueNumeric = &currentNumeric.Float64
+	}
+	if currentBoolean.Valid {
+		point.CurrentValueBoolean = &currentBoolean.Bool
+	}
+	if lastUpdated.Valid {
+		point.LastUpdated = &lastUpdated.Time
+	}
+	if importSource.Valid {
+		point.ImportSource = importSource.String
+	}
+	if addedInVersion.Valid {
+		id := types.FromString(addedInVersion.String)
+		point.AddedInVersion = &id
+	}
+	if removedInVersion.Valid {
+		id := types.FromString(removedInVersion.String)
+		point.RemovedInVersion = &id
+	}
+	if path.Valid {
+		point.Path = path.String
+	}
+
+	return point, nil
+}
+
+// FindByPath retrieves BAS points matching a path pattern (supports wildcards)
+// Pattern examples: /B1/3/*/BAS/*, /B1/*/301/BAS/AI-*
+func (r *BASPointRepository) FindByPath(pathPattern string) ([]*domain.BASPoint, error) {
+	// Convert path pattern to SQL LIKE pattern
+	sqlPattern := naming.ToSQLPattern(pathPattern)
+	
+	// Validate pattern has at least some specificity
+	if sqlPattern == "%" || sqlPattern == "/%" {
+		return nil, fmt.Errorf("path pattern too broad, must include at least one specific segment")
+	}
+
+	query := `
+		SELECT
+			id, building_id, bas_system_id, room_id, floor_id, equipment_id,
+			point_name, device_id, object_type, object_instance,
+			description, units, point_type, location_text,
+			writeable, min_value, max_value,
+			current_value, current_value_numeric, current_value_boolean, last_updated,
+			mapped, mapping_confidence,
+			imported_at, import_source,
+			added_in_version, removed_in_version,
+			metadata, path, created_at, updated_at
+		FROM bas_points
+		WHERE path LIKE $1 AND removed_in_version IS NULL
+		ORDER BY path ASC
+	`
+
+	rows, err := r.db.Query(query, sqlPattern)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query BAS points by path pattern: %w", err)
+	}
+	defer rows.Close()
+
+	var points []*domain.BASPoint
+	for rows.Next() {
+		point := &domain.BASPoint{}
+		var roomID, floorID, equipmentID, addedInVersion, removedInVersion sql.NullString
+		var objectInstance sql.NullInt64
+		var minValue, maxValue, currentNumeric sql.NullFloat64
+		var currentValue sql.NullString
+		var currentBoolean sql.NullBool
+		var lastUpdated sql.NullTime
+		var importSource sql.NullString
+		var path sql.NullString
+		var metadataJSON []byte
+
+		err := rows.Scan(
+			&point.ID, &point.BuildingID, &point.BASSystemID,
+			&roomID, &floorID, &equipmentID,
+			&point.PointName, &point.DeviceID, &point.ObjectType, &objectInstance,
+			&point.Description, &point.Units, &point.PointType, &point.LocationText,
+			&point.Writeable, &minValue, &maxValue,
+			&currentValue, &currentNumeric, &currentBoolean, &lastUpdated,
+			&point.Mapped, &point.MappingConfidence,
+			&point.ImportedAt, &importSource,
+			&addedInVersion, &removedInVersion,
+			&metadataJSON, &path, &point.CreatedAt, &point.UpdatedAt,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		// Unmarshal metadata
+		if len(metadataJSON) > 0 {
+			if err := json.Unmarshal(metadataJSON, &point.Metadata); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+			}
+		}
+
+		// Handle nullable fields
+		if roomID.Valid {
+			id := types.FromString(roomID.String)
+			point.RoomID = &id
+		}
+		if floorID.Valid {
+			id := types.FromString(floorID.String)
+			point.FloorID = &id
+		}
+		if equipmentID.Valid {
+			id := types.FromString(equipmentID.String)
+			point.EquipmentID = &id
+		}
+		if objectInstance.Valid {
+			val := int(objectInstance.Int64)
+			point.ObjectInstance = &val
+		}
+		if minValue.Valid {
+			point.MinValue = &minValue.Float64
+		}
+		if maxValue.Valid {
+			point.MaxValue = &maxValue.Float64
+		}
+		if currentValue.Valid {
+			point.CurrentValue = &currentValue.String
+		}
+		if currentNumeric.Valid {
+			point.CurrentValueNumeric = &currentNumeric.Float64
+		}
+		if currentBoolean.Valid {
+			point.CurrentValueBoolean = &currentBoolean.Bool
+		}
+		if lastUpdated.Valid {
+			point.LastUpdated = &lastUpdated.Time
+		}
+		if importSource.Valid {
+			point.ImportSource = importSource.String
+		}
+		if addedInVersion.Valid {
+			id := types.FromString(addedInVersion.String)
+			point.AddedInVersion = &id
+		}
+		if removedInVersion.Valid {
+			id := types.FromString(removedInVersion.String)
+			point.RemovedInVersion = &id
+		}
+		if path.Valid {
+			point.Path = path.String
+		}
+
+		points = append(points, point)
+	}
+
+	return points, nil
+}

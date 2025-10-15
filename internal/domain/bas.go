@@ -241,6 +241,10 @@ type BASPointRepository interface {
 	// Mapping operations
 	MapToRoom(pointID, roomID types.ID, confidence int) error
 	MapToEquipment(pointID, equipmentID types.ID, confidence int) error
+	
+	// Path-based query methods
+	GetByPath(exactPath string) (*BASPoint, error)
+	FindByPath(pathPattern string) ([]*BASPoint, error)
 }
 
 // BASSystemRepository defines the interface for BAS system data access

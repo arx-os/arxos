@@ -134,6 +134,10 @@ func NewRouter(config *RouterConfig) chi.Router {
 				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentRead)).Get("/{id}/hierarchy", apiHandlers.equipmentHandler.GetHierarchy)
 				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentWrite)).Post("/{id}/relationships", apiHandlers.equipmentHandler.CreateRelationship)
 				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentWrite)).Delete("/{id}/relationships/{rel_id}", apiHandlers.equipmentHandler.DeleteRelationship)
+				
+				// Path-based query endpoints (universal naming convention)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentRead)).Get("/path/{path}", apiHandlers.equipmentHandler.GetByPath)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentRead)).Get("/path-pattern", apiHandlers.equipmentHandler.FindByPath)
 			}
 		})
 

@@ -409,18 +409,25 @@ func TestIFCService_Integration(t *testing.T) {
 		ifcData := []byte("fake ifc data")
 
 		// Mock successful IfcOpenShell response
-		mockClient.parseResult = &IFCResult{
-			Success:       true,
-			Buildings:     1,
-			Spaces:        5,
-			TotalEntities: 6,
+		mockClient.parseResult = &EnhancedIFCResult{
+			Success:           true,
+			TotalEntities:     6,
+			BuildingEntities:  []IFCBuildingEntity{{Name: "Test Building"}},
+			FloorEntities:     []IFCFloorEntity{},
+			SpaceEntities:     []IFCSpaceEntity{{Name: "Test Space"}},
+			EquipmentEntities: []IFCEquipmentEntity{},
+			Relationships:     []IFCRelationship{},
+			Metadata: IFCMetadata{
+				IFCVersion:     "IFC4",
+				ProcessingTime: "0.1s",
+			},
 		}
 		mockClient.parseError = nil
 
 		result, err := service.ParseIFC(ctx, ifcData)
 		require.NoError(t, err)
 		assert.True(t, result.Success)
-		assert.Equal(t, 1, result.Buildings)
+		assert.Equal(t, 1, len(result.BuildingEntities))
 	})
 
 	t.Run("IfcOpenShell Failure with Fallback", func(t *testing.T) {
@@ -446,7 +453,7 @@ END-ISO-10303-21;`)
 		result, err := service.ParseIFC(ctx, ifcData)
 		require.NoError(t, err)
 		assert.True(t, result.Success)
-		assert.Equal(t, 1, result.Buildings) // From native parser
+		assert.Equal(t, 1, len(result.BuildingEntities)) // From native parser
 	})
 
 	t.Run("Service Status", func(t *testing.T) {
@@ -459,11 +466,11 @@ END-ISO-10303-21;`)
 
 // Mock implementations for testing
 type MockIfcOpenShellClient struct {
-	parseResult *IFCResult
+	parseResult *EnhancedIFCResult
 	parseError  error
 }
 
-func (m *MockIfcOpenShellClient) ParseIFC(ctx context.Context, data []byte) (*IFCResult, error) {
+func (m *MockIfcOpenShellClient) ParseIFC(ctx context.Context, data []byte) (*EnhancedIFCResult, error) {
 	return m.parseResult, m.parseError
 }
 

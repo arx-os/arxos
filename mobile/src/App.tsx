@@ -13,6 +13,7 @@ import {PersistGate} from 'redux-persist/integration/react';
 import {store, persistor} from '@/store';
 import {AppNavigator} from '@/navigation/AppNavigator';
 import {LoadingScreen} from '@/screens/LoadingScreen';
+import {NetworkStatus} from '@/components/NetworkStatus';
 
 const Stack = createStackNavigator();
 
@@ -23,6 +24,7 @@ const App: React.FC = () => {
         <NavigationContainer>
           <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
           <AppNavigator />
+          <NetworkStatus />
         </NavigationContainer>
       </PersistGate>
     </Provider>

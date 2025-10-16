@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
@@ -13,24 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Test fixtures for EquipmentUseCase
-func createTestEquipment() *domain.Equipment {
-	return &domain.Equipment{
-		ID:         types.NewID(),
-		BuildingID: types.NewID(),
-		Name:       "Test HVAC Unit",
-		Type:       "hvac",
-		Model:      "HV-2000",
-		Status:     "operational",
-		Location: &domain.Location{
-			X: 10.0,
-			Y: 20.0,
-			Z: 2.5,
-		},
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-}
+// Test fixtures for EquipmentUseCase - using shared createTestEquipment from testing_helpers.go
 
 // TestEquipmentUseCase_CreateEquipment tests the CreateEquipment method
 func TestEquipmentUseCase_CreateEquipment(t *testing.T) {

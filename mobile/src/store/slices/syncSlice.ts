@@ -6,6 +6,7 @@
 import {createSlice, createAsyncThunk, PayloadAction} from '@reduxjs/toolkit';
 import {SyncState, SyncQueueItem, SyncResult, SyncSettings} from '@/types/sync';
 import {syncService} from '@/services/syncService';
+import {storageService} from '@/services/storageService';
 
 // Initial state
 const initialState: SyncState = {
@@ -23,6 +24,8 @@ export const syncData = createAsyncThunk(
   async (_, {rejectWithValue}) => {
     try {
       const result = await syncService.syncAllData();
+      // Update last sync timestamp
+      await storageService.setSetting('lastSync', new Date().toISOString());
       return result;
     } catch (error: any) {
       return rejectWithValue(error.message);
@@ -35,6 +38,8 @@ export const syncQueue = createAsyncThunk(
   async (_, {rejectWithValue}) => {
     try {
       const result = await syncService.syncQueue();
+      // Update last sync timestamp
+      await storageService.setSetting('lastSync', new Date().toISOString());
       return result;
     } catch (error: any) {
       return rejectWithValue(error.message);
@@ -65,6 +70,50 @@ export const clearSyncErrors = createAsyncThunk(
     }
   }
 );
+
+export const loadSyncQueue = createAsyncThunk(
+  'sync/loadQueue',
+  async (_, {rejectWithValue}) => {
+    try {
+      const queue = await storageService.getSyncQueue();
+      const lastSync = await storageService.getSetting('lastSync');
+      
+      // Convert SyncQueueRecord to SyncQueueItem
+      const syncQueueItems: SyncQueueItem[] = queue.map(item => ({
+        id: item.id,
+        type: mapTableToSyncType(item.table),
+        data: item.data,
+        priority: 'medium',
+        retryCount: item.retryCount,
+        maxRetries: 3,
+        createdAt: item.createdAt,
+        lastAttempt: item.lastAttempt,
+        status: item.retryCount >= 3 ? 'failed' : 'pending',
+      }));
+
+      return { queue: syncQueueItems, lastSync };
+    } catch (error: any) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+// Helper function to map table to sync type
+function mapTableToSyncType(table: string): 'equipment_update' | 'spatial_update' | 'photo_upload' | 'status_update' | 'note_update' {
+  switch (table) {
+    case 'spatial_anchors':
+    case 'spatial_data':
+      return 'spatial_update';
+    case 'equipment':
+      return 'equipment_update';
+    case 'photos':
+      return 'photo_upload';
+    case 'equipment_notes':
+      return 'note_update';
+    default:
+      return 'status_update';
+  }
+}
 
 // Sync slice
 const syncSlice = createSlice({
@@ -152,6 +201,17 @@ const syncSlice = createSlice({
     builder
       .addCase(clearSyncErrors.fulfilled, (state) => {
         state.syncErrors = [];
+      });
+
+    // Load sync queue
+    builder
+      .addCase(loadSyncQueue.fulfilled, (state, action) => {
+        state.queue = action.payload.queue;
+        state.lastSync = action.payload.lastSync;
+        state.pendingUpdates = action.payload.queue.length;
+      })
+      .addCase(loadSyncQueue.rejected, (state, action) => {
+        state.syncErrors.push(`Failed to load sync queue: ${action.payload}`);
       });
   },
 });

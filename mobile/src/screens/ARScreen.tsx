@@ -17,17 +17,30 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useAppSelector, useAppDispatch} from '@/store/hooks';
 import {initializeAR, startARSession, stopARSession, createSpatialAnchor} from '@/store/slices/arSlice';
 import {SpatialAnchor} from '@/types/ar';
+import {Equipment} from '@/types/equipment';
+import {equipmentService} from '@/services/equipmentService';
+import {AREquipmentOverlay} from '@/components/AR/AREquipmentOverlay';
 
 export const ARScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const {isSupported, permissionGranted, sessionActive, detectedAnchors, selectedAnchor} = useAppSelector(state => state.ar);
   const [showEquipmentModal, setShowEquipmentModal] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
+  const [isLoadingEquipment, setIsLoadingEquipment] = useState(false);
   
   useEffect(() => {
     // Initialize AR when component mounts
     initializeARService();
   }, []);
+
+  useEffect(() => {
+    // Load equipment when AR session starts
+    if (sessionActive) {
+      loadEquipmentData();
+    }
+  }, [sessionActive]);
   
   const initializeARService = async () => {
     setIsInitializing(true);
@@ -37,6 +50,61 @@ export const ARScreen: React.FC = () => {
       Alert.alert('AR Initialization Failed', error.message);
     } finally {
       setIsInitializing(false);
+    }
+  };
+
+  const loadEquipmentData = async () => {
+    setIsLoadingEquipment(true);
+    try {
+      // For demo purposes, we'll use a mock building ID
+      // In a real app, this would come from navigation params or user selection
+      const buildingId = 'demo-building-1';
+      const equipmentData = await equipmentService.getEquipmentByBuilding(buildingId);
+      setEquipment(equipmentData);
+    } catch (error: any) {
+      Alert.alert('Failed to Load Equipment', error.message);
+    } finally {
+      setIsLoadingEquipment(false);
+    }
+  };
+
+  const handleEquipmentSelect = (equipmentId: string) => {
+    const selected = equipment.find(eq => eq.id === equipmentId);
+    setSelectedEquipment(selected || null);
+    setShowEquipmentModal(true);
+  };
+
+  const handleEquipmentStatusUpdate = async (equipmentId: string, status: string) => {
+    try {
+      await equipmentService.updateEquipmentStatus({
+        equipmentId,
+        status,
+        timestamp: new Date().toISOString(),
+        technicianId: 'current-user', // This would come from auth
+        notes: 'Status updated via AR',
+      });
+      
+      // Update local state
+      setEquipment(prev => prev.map(eq => 
+        eq.id === equipmentId ? { ...eq, status } : eq
+      ));
+      
+      Alert.alert('Success', 'Equipment status updated successfully');
+    } catch (error: any) {
+      Alert.alert('Update Failed', error.message);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'operational':
+        return '#4CAF50';
+      case 'needs_attention':
+        return '#FF9800';
+      case 'out_of_service':
+        return '#F44336';
+      default:
+        return '#666666';
     }
   };
   
@@ -146,6 +214,40 @@ export const ARScreen: React.FC = () => {
           <Text style={styles.arPlaceholderSubtext}>
             This is where the AR camera feed would be displayed
           </Text>
+          
+          {/* Equipment Overlays */}
+          {isLoadingEquipment ? (
+            <View style={styles.loadingOverlay}>
+              <Text style={styles.loadingText}>Loading equipment...</Text>
+            </View>
+          ) : (
+            <View style={styles.equipmentOverlays}>
+              {equipment.slice(0, 3).map((eq, index) => (
+                <AREquipmentOverlay
+                  key={eq.id}
+                  equipment={{
+                    id: eq.id,
+                    name: eq.name,
+                    type: eq.type,
+                    status: eq.status,
+                    position: { x: 0, y: 0, z: 0 }, // Mock position
+                    metadata: {
+                      lastMaintenance: eq.lastMaintenance,
+                      nextMaintenance: eq.nextMaintenance,
+                      specifications: eq.specifications,
+                    }
+                  }}
+                  position={{ x: index * 50, y: 0, z: -100 }}
+                  onStatusUpdate={handleEquipmentStatusUpdate}
+                  onPositionUpdate={() => {}} // Mock function
+                  onEquipmentSelect={handleEquipmentSelect}
+                  isSelected={selectedEquipment?.id === eq.id}
+                  scale={1.0}
+                  opacity={1.0}
+                />
+              ))}
+            </View>
+          )}
         </View>
         
         {/* AR Controls */}
@@ -439,5 +541,93 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999999',
     fontStyle: 'italic',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  equipmentOverlays: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  equipmentDetails: {
+    padding: 20,
+  },
+  equipmentInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  equipmentLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333333',
+  },
+  equipmentValue: {
+    fontSize: 16,
+    color: '#666666',
+    flex: 1,
+    textAlign: 'right',
+  },
+  statusButtons: {
+    marginTop: 20,
+    gap: 12,
+  },
+  statusButton: {
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  statusButtonGood: {
+    backgroundColor: '#4CAF50',
+  },
+  statusButtonWarning: {
+    backgroundColor: '#FF9800',
+  },
+  statusButtonError: {
+    backgroundColor: '#F44336',
+  },
+  statusButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  equipmentItem: {
+    padding: 16,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  equipmentItemName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 4,
+  },
+  equipmentItemType: {
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 4,
+  },
+  equipmentItemStatus: {
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });

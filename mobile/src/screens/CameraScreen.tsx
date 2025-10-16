@@ -13,44 +13,38 @@ import {
   Image,
   ScrollView,
   Alert,
+  TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useRoute} from '@react-navigation/native';
 import {cameraService, PhotoResult} from '@/services/cameraService';
 import {equipmentService} from '@/services/equipmentService';
+import {photoService, PhotoData} from '@/services/photoService';
 
 export const CameraScreen: React.FC = () => {
   const route = useRoute();
   const {equipmentId, purpose} = route.params as {equipmentId?: string; purpose: 'photo' | 'scan' | 'ar'};
   
-  const [photos, setPhotos] = useState<PhotoResult[]>([]);
+  const [photos, setPhotos] = useState<PhotoData[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
+  const [notes, setNotes] = useState('');
   
   const handleTakePhoto = async () => {
+    if (!equipmentId) {
+      Alert.alert('Error', 'Equipment ID is required to take photos');
+      return;
+    }
+
     setIsCapturing(true);
     try {
-      const photo = await cameraService.takePhoto({
-        quality: 0.8,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        allowsEditing: false,
-        mediaType: 'photo',
-      });
+      const photoData = await photoService.capturePhoto(equipmentId, notes);
       
-      if (photo) {
-        setPhotos(prev => [...prev, photo]);
-        
-        // If equipment ID is provided, upload photo immediately
-        if (equipmentId) {
-          try {
-            await equipmentService.uploadEquipmentPhoto(equipmentId, photo.uri);
-            Alert.alert('Success', 'Photo uploaded successfully');
-          } catch (error: any) {
-            Alert.alert('Upload Failed', `Failed to upload photo: ${error.message}`);
-          }
-        }
-      }
+      // Save photo and queue for sync
+      await photoService.savePhoto(photoData);
+      setPhotos(prev => [...prev, photoData]);
+      
+      Alert.alert('Success', 'Photo captured and saved. It will sync when online.');
     } catch (error: any) {
       Alert.alert('Camera Error', `Failed to take photo: ${error.message}`);
     } finally {
@@ -59,28 +53,19 @@ export const CameraScreen: React.FC = () => {
   };
   
   const handleSelectPhoto = async () => {
+    if (!equipmentId) {
+      Alert.alert('Error', 'Equipment ID is required to select photos');
+      return;
+    }
+
     try {
-      const photo = await cameraService.selectFromGallery({
-        quality: 0.8,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        allowsEditing: false,
-        mediaType: 'photo',
-      });
+      const photoData = await photoService.selectPhoto(equipmentId, notes);
       
-      if (photo) {
-        setPhotos(prev => [...prev, photo]);
-        
-        // If equipment ID is provided, upload photo immediately
-        if (equipmentId) {
-          try {
-            await equipmentService.uploadEquipmentPhoto(equipmentId, photo.uri);
-            Alert.alert('Success', 'Photo uploaded successfully');
-          } catch (error: any) {
-            Alert.alert('Upload Failed', `Failed to upload photo: ${error.message}`);
-          }
-        }
-      }
+      // Save photo and queue for sync
+      await photoService.savePhoto(photoData);
+      setPhotos(prev => [...prev, photoData]);
+      
+      Alert.alert('Success', 'Photo selected and saved. It will sync when online.');
     } catch (error: any) {
       Alert.alert('Gallery Error', `Failed to select photo: ${error.message}`);
     }
@@ -126,6 +111,20 @@ export const CameraScreen: React.FC = () => {
         <Text style={styles.cameraPlaceholderSubtext}>
           This is where the camera feed would be displayed
         </Text>
+      </View>
+      
+      {/* Notes Input */}
+      <View style={styles.notesContainer}>
+        <Text style={styles.notesLabel}>Photo Notes (Optional)</Text>
+        <TextInput
+          style={styles.notesInput}
+          value={notes}
+          onChangeText={setNotes}
+          placeholder="Add notes about this photo..."
+          placeholderTextColor="#999999"
+          multiline
+          numberOfLines={3}
+        />
       </View>
       
       {/* Camera Controls */}
@@ -269,6 +268,28 @@ const styles = StyleSheet.create({
     color: '#cccccc',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  notesContainer: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  notesLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 8,
+  },
+  notesInput: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#333333',
+    backgroundColor: '#f9f9f9',
+    textAlignVertical: 'top',
   },
   cameraControls: {
     position: 'absolute',

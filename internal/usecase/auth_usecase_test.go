@@ -14,83 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// MockUserRepository is a mock implementation of domain.UserRepository
-type MockUserRepository struct {
-	mock.Mock
-}
-
-func (m *MockUserRepository) Create(ctx context.Context, user *domain.User) error {
-	args := m.Called(ctx, user)
-	return args.Error(0)
-}
-
-func (m *MockUserRepository) GetByID(ctx context.Context, id string) (*domain.User, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*domain.User), args.Error(1)
-}
-
-func (m *MockUserRepository) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
-	args := m.Called(ctx, email)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*domain.User), args.Error(1)
-}
-
-func (m *MockUserRepository) List(ctx context.Context, filter *domain.UserFilter) ([]*domain.User, error) {
-	args := m.Called(ctx, filter)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).([]*domain.User), args.Error(1)
-}
-
-func (m *MockUserRepository) Update(ctx context.Context, user *domain.User) error {
-	args := m.Called(ctx, user)
-	return args.Error(0)
-}
-
-func (m *MockUserRepository) Delete(ctx context.Context, id string) error {
-	args := m.Called(ctx, id)
-	return args.Error(0)
-}
-
-func (m *MockUserRepository) GetOrganizations(ctx context.Context, userID string) ([]*domain.Organization, error) {
-	args := m.Called(ctx, userID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).([]*domain.Organization), args.Error(1)
-}
-
-// MockLogger is a mock implementation of domain.Logger
-type MockLogger struct {
-	mock.Mock
-}
-
-func (m *MockLogger) Debug(msg string, fields ...any) {
-	m.Called(msg, fields)
-}
-
-func (m *MockLogger) Info(msg string, fields ...any) {
-	m.Called(msg, fields)
-}
-
-func (m *MockLogger) Warn(msg string, fields ...any) {
-	m.Called(msg, fields)
-}
-
-func (m *MockLogger) Error(msg string, fields ...any) {
-	m.Called(msg, fields)
-}
-
-func (m *MockLogger) Fatal(msg string, fields ...any) {
-	m.Called(msg, fields)
-}
-
 // Helper functions to create test auth components
 func createTestJWTManager(t *testing.T) *auth.JWTManager {
 	config := &auth.JWTConfig{
@@ -125,29 +48,7 @@ func createTestSessionManager() *auth.SessionManager {
 	return nil
 }
 
-// createPermissiveMockLogger creates a mock logger that allows all log calls
-func createPermissiveMockLogger() *MockLogger {
-	mockLogger := new(MockLogger)
-	mockLogger.On("Debug", mock.Anything, mock.Anything).Return().Maybe()
-	mockLogger.On("Info", mock.Anything, mock.Anything).Return().Maybe()
-	mockLogger.On("Warn", mock.Anything, mock.Anything).Return().Maybe()
-	mockLogger.On("Error", mock.Anything, mock.Anything).Return().Maybe()
-	mockLogger.On("Fatal", mock.Anything, mock.Anything).Return().Maybe()
-	return mockLogger
-}
-
-// Test fixtures
-func createTestUser() *domain.User {
-	return &domain.User{
-		ID:        types.NewID(),
-		Email:     "test@example.com",
-		Name:      "Test User",
-		Role:      "user",
-		Active:    true,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-}
+// Test fixtures - using shared createTestUser from testing_helpers.go
 
 // TestAuthUseCase_Login tests the Login method
 func TestAuthUseCase_Login(t *testing.T) {

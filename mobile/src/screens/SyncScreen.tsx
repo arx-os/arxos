@@ -16,13 +16,18 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useAppSelector, useAppDispatch} from '@/store/hooks';
-import {syncData, retryFailedSync, clearSyncErrors} from '@/store/slices/syncSlice';
+import {syncData, retryFailedSync, clearSyncErrors, loadSyncQueue} from '@/store/slices/syncSlice';
 import {SyncQueueItem} from '@/types/sync';
 
 export const SyncScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const {isOnline, lastSync, pendingUpdates, syncInProgress, syncErrors, queue} = useAppSelector(state => state.sync);
   const [refreshing, setRefreshing] = useState(false);
+  
+  useEffect(() => {
+    // Load sync queue on mount
+    dispatch(loadSyncQueue());
+  }, [dispatch]);
   
   const handleManualSync = async () => {
     try {
@@ -50,6 +55,7 @@ export const SyncScreen: React.FC = () => {
   
   const handleRefresh = async () => {
     setRefreshing(true);
+    await dispatch(loadSyncQueue());
     await handleManualSync();
     setRefreshing(false);
   };

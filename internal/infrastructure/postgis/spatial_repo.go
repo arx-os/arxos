@@ -4,6 +4,7 @@ package postgis
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -385,20 +386,37 @@ func (r *SpatialRepository) UpdateSpatialAnchor(ctx context.Context, anchorID st
 	argCount := 1
 
 	if req.Position != nil {
-		updates = append(updates, fmt.Sprintf("x_meters = $%d, y_meters = $%d, z_meters = $%d", argCount, argCount+1, argCount+2))
-		args = append(args, req.Position.X, req.Position.Y, req.Position.Z)
-		argCount += 3
+		updates = append(updates, fmt.Sprintf("position = ST_SetSRID(ST_MakePoint($%d, $%d), 4326)", argCount, argCount+1))
+		args = append(args, req.Position.X, req.Position.Y)
+		argCount += 2
 	}
 
 	if req.Rotation != nil {
-		updates = append(updates, fmt.Sprintf("rotation_x = $%d, rotation_y = $%d, rotation_z = $%d, rotation_w = $%d", argCount, argCount+1, argCount+2, argCount+3))
-		args = append(args, req.Rotation.X, req.Rotation.Y, req.Rotation.Z, req.Rotation.W)
-		argCount += 4
+		updates = append(updates, fmt.Sprintf("rotation = $%d", argCount))
+		args = append(args, pq.Array([]float64{req.Rotation.X, req.Rotation.Y, req.Rotation.Z, req.Rotation.W}))
+		argCount++
+	}
+
+	if req.Scale != nil {
+		updates = append(updates, fmt.Sprintf("scale = $%d", argCount))
+		args = append(args, pq.Array([]float64{req.Scale.X, req.Scale.Y, req.Scale.Z}))
+		argCount++
 	}
 
 	if req.Confidence != nil {
-		// Store confidence in metadata for now (no direct column in current schema)
-		r.logger.Info("Confidence update requested but no column exists", "confidence", *req.Confidence)
+		updates = append(updates, fmt.Sprintf("confidence = $%d", argCount))
+		args = append(args, *req.Confidence)
+		argCount++
+	}
+
+	if req.Metadata != nil {
+		updates = append(updates, fmt.Sprintf("metadata = $%d", argCount))
+		metadataJSON, err := json.Marshal(req.Metadata)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal metadata: %w", err)
+		}
+		args = append(args, string(metadataJSON))
+		argCount++
 	}
 
 	if len(updates) == 0 {
@@ -406,9 +424,7 @@ func (r *SpatialRepository) UpdateSpatialAnchor(ctx context.Context, anchorID st
 	}
 
 	// Add updated_at
-	updates = append(updates, fmt.Sprintf("updated_at = $%d", argCount))
-	args = append(args, "NOW()")
-	argCount++
+	updates = append(updates, "updated_at = NOW()")
 
 	// Add WHERE clause
 	args = append(args, anchorID)
@@ -417,34 +433,20 @@ func (r *SpatialRepository) UpdateSpatialAnchor(ctx context.Context, anchorID st
 		UPDATE spatial_anchors
 		SET %s
 		WHERE id = $%d
-		RETURNING id, building_uuid, equipment_path, x_meters, y_meters, z_meters,
-				  rotation_x, rotation_y, rotation_z, rotation_w,
-				  created_at, updated_at, created_by
+		RETURNING id, building_id, equipment_id,
+			ST_X(position) as pos_x, ST_Y(position) as pos_y,
+			confidence, anchor_type, metadata, created_at, updated_at
 	`, strings.Join(updates, ", "), argCount)
 
 	var anchor domain.MobileSpatialAnchor
-	var rotX, rotY, rotZ, rotW *float64
-	var createdBy *string
-
 	err := r.db.QueryRowContext(ctx, query, args...).Scan(
 		&anchor.ID, &anchor.BuildingID, &anchor.EquipmentID,
-		&anchor.Position.X, &anchor.Position.Y, &anchor.Position.Z,
-		&rotX, &rotY, &rotZ, &rotW,
-		&anchor.CreatedAt, &anchor.UpdatedAt, &createdBy,
+		&anchor.Position.X, &anchor.Position.Y,
+		&anchor.Confidence, &anchor.AnchorType, &anchor.Metadata,
+		&anchor.CreatedAt, &anchor.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update spatial anchor: %w", err)
-	}
-
-	// Set rotation if present
-	if rotX != nil && rotY != nil && rotZ != nil && rotW != nil {
-		anchor.Rotation = domain.SpatialRotation{
-			X: *rotX, Y: *rotY, Z: *rotZ, W: *rotW,
-		}
-	}
-
-	if createdBy != nil {
-		anchor.CreatedBy = *createdBy
 	}
 
 	return &anchor, nil
@@ -499,6 +501,8 @@ func (r *SpatialRepository) UpdateEquipmentPosition(ctx context.Context, equipme
 	return nil
 }
 
+
+// GetSpatialAnalytics gets spatial analytics for a building
 func (r *SpatialRepository) GetSpatialAnalytics(ctx context.Context, buildingID string) (*domain.SpatialAnalytics, error) {
 	// Query for coverage metrics
 	var totalEquipment, positionedEquipment int64
@@ -520,7 +524,7 @@ func (r *SpatialRepository) GetSpatialAnalytics(ctx context.Context, buildingID 
 	anchorQuery := `
 		SELECT COUNT(*) as total_anchors
 		FROM spatial_anchors
-		WHERE building_uuid = $1
+		WHERE building_id = $1
 	`
 
 	err = r.db.QueryRowContext(ctx, anchorQuery, buildingID).Scan(&totalAnchors)

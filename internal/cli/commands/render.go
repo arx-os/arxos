@@ -53,6 +53,7 @@ Shows rooms as boxes and equipment as symbols (H=HVAC, E=Electrical, etc.)`,
 				container.GetBuildingRepository(),
 				container.GetEquipmentRepository(),
 				container.GetFloorRepository(),
+				container.GetRoomRepository(),
 			)
 			defer dataService.Close()
 

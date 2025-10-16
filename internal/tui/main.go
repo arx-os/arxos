@@ -41,13 +41,13 @@ func (t *TUI) RunDashboard() error {
 	}
 
 	// Get repositories from database
-	buildingRepo, equipmentRepo, floorRepo, err := t.getRepositories()
+	buildingRepo, equipmentRepo, floorRepo, roomRepo, err := t.getRepositories()
 	if err != nil {
 		return fmt.Errorf("failed to get repositories: %w", err)
 	}
 
 	// Create data service with repositories
-	dataService := services.NewDataService(buildingRepo, equipmentRepo, floorRepo)
+	dataService := services.NewDataService(buildingRepo, equipmentRepo, floorRepo, roomRepo)
 	defer dataService.Close()
 
 	// Create dashboard model
@@ -76,13 +76,13 @@ func (t *TUI) RunBuildingExplorer(buildingID string) error {
 	}
 
 	// Get repositories
-	buildingRepo, equipmentRepo, floorRepo, err := t.getRepositories()
+	buildingRepo, equipmentRepo, floorRepo, roomRepo, err := t.getRepositories()
 	if err != nil {
 		return fmt.Errorf("failed to get repositories: %w", err)
 	}
 
 	// Create data service with repositories
-	dataService := services.NewDataService(buildingRepo, equipmentRepo, floorRepo)
+	dataService := services.NewDataService(buildingRepo, equipmentRepo, floorRepo, roomRepo)
 	defer dataService.Close()
 
 	// Create building explorer model
@@ -111,13 +111,13 @@ func (t *TUI) RunEquipmentManager(floorID string) error {
 	}
 
 	// Get repositories
-	buildingRepo, equipmentRepo, floorRepo, err := t.getRepositories()
+	buildingRepo, equipmentRepo, floorRepo, roomRepo, err := t.getRepositories()
 	if err != nil {
 		return fmt.Errorf("failed to get repositories: %w", err)
 	}
 
 	// Create data service with repositories
-	dataService := services.NewDataService(buildingRepo, equipmentRepo, floorRepo)
+	dataService := services.NewDataService(buildingRepo, equipmentRepo, floorRepo, roomRepo)
 	defer dataService.Close()
 
 	// Create equipment manager model
@@ -146,13 +146,13 @@ func (t *TUI) RunSpatialQuery() error {
 	}
 
 	// Get repositories
-	buildingRepo, equipmentRepo, floorRepo, err := t.getRepositories()
+	buildingRepo, equipmentRepo, floorRepo, roomRepo, err := t.getRepositories()
 	if err != nil {
 		return fmt.Errorf("failed to get repositories: %w", err)
 	}
 
 	// Create data service with repositories
-	dataService := services.NewDataService(buildingRepo, equipmentRepo, floorRepo)
+	dataService := services.NewDataService(buildingRepo, equipmentRepo, floorRepo, roomRepo)
 	defer dataService.Close()
 
 	// Create spatial query model
@@ -283,13 +283,13 @@ func (t *TUI) RunFloorPlan(buildingID string) error {
 	}
 
 	// Get repositories
-	buildingRepo, equipmentRepo, floorRepo, err := t.getRepositories()
+	buildingRepo, equipmentRepo, floorRepo, roomRepo, err := t.getRepositories()
 	if err != nil {
 		return fmt.Errorf("failed to get repositories: %w", err)
 	}
 
 	// Create data service with repositories
-	dataService := services.NewDataService(buildingRepo, equipmentRepo, floorRepo)
+	dataService := services.NewDataService(buildingRepo, equipmentRepo, floorRepo, roomRepo)
 	defer dataService.Close()
 
 	// Create floor plan model
@@ -321,23 +321,24 @@ func TUICommands() []string {
 }
 
 // getRepositories creates repositories from the database connection
-func (t *TUI) getRepositories() (domain.BuildingRepository, domain.EquipmentRepository, domain.FloorRepository, error) {
+func (t *TUI) getRepositories() (domain.BuildingRepository, domain.EquipmentRepository, domain.FloorRepository, domain.RoomRepository, error) {
 	// Cast database to infrastructure.Database to access GetDB()
 	db, ok := t.db.(*infrastructure.Database)
 	if !ok {
-		return nil, nil, nil, fmt.Errorf("invalid database type")
+		return nil, nil, nil, nil, fmt.Errorf("invalid database type")
 	}
 
 	// Get underlying SQL connection
 	sqlDB := db.GetDB()
 	if sqlDB == nil {
-		return nil, nil, nil, fmt.Errorf("database connection is nil")
+		return nil, nil, nil, nil, fmt.Errorf("database connection is nil")
 	}
 
 	// Create repositories using postgis implementations
 	buildingRepo := postgis.NewBuildingRepository(sqlDB.DB)
 	equipmentRepo := postgis.NewEquipmentRepository(sqlDB.DB)
 	floorRepo := postgis.NewFloorRepository(sqlDB.DB)
+	roomRepo := postgis.NewRoomRepository(sqlDB.DB)
 
-	return buildingRepo, equipmentRepo, floorRepo, nil
+	return buildingRepo, equipmentRepo, floorRepo, roomRepo, nil
 }

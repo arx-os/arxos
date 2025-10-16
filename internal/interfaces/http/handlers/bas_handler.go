@@ -397,3 +397,105 @@ func parseBASSystemType(systemType string) domain.BASSystemType {
 		return domain.BASSystemTypeOther
 	}
 }
+
+// HandleGetByPath handles GET /api/v1/bas/points/path/{path}
+// Get BAS point by exact path match
+func (h *BASHandler) HandleGetByPath(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
+
+	// Get path from URL parameter
+	path := chi.URLParam(r, "path")
+	if path == "" {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("path parameter is required"))
+		return
+	}
+
+	// Query by exact path
+	point, err := h.basPointRepo.GetByPath(path)
+	if err != nil {
+		h.logger.Error("Failed to get BAS point by path", "path", path, "error", err)
+		h.RespondError(w, http.StatusNotFound, err)
+		return
+	}
+
+	h.RespondJSON(w, http.StatusOK, point)
+}
+
+// HandleFindByPath handles GET /api/v1/bas/points/path-pattern?pattern=/B1/3/*/BAS/*
+// Find BAS points matching a path pattern (supports wildcards)
+func (h *BASHandler) HandleFindByPath(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
+
+	// Get path pattern from query parameter
+	pathPattern := r.URL.Query().Get("pattern")
+	if pathPattern == "" {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("pattern parameter is required"))
+		return
+	}
+
+	// Get optional filters
+	mapped := r.URL.Query().Get("mapped")
+	pointType := r.URL.Query().Get("point_type")
+	
+	// Parse limit
+	limit := 100
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	// Query by path pattern
+	points, err := h.basPointRepo.FindByPath(pathPattern)
+	if err != nil {
+		h.logger.Error("Failed to find BAS points by path pattern", "pattern", pathPattern, "error", err)
+		h.RespondError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	// Apply additional filters if specified
+	if mapped != "" {
+		filtered := make([]*domain.BASPoint, 0)
+		isMapped := mapped == "true"
+		for _, point := range points {
+			if point.Mapped == isMapped {
+				filtered = append(filtered, point)
+			}
+		}
+		points = filtered
+	}
+
+	if pointType != "" {
+		filtered := make([]*domain.BASPoint, 0)
+		for _, point := range points {
+			if point.PointType == pointType {
+				filtered = append(filtered, point)
+			}
+		}
+		points = filtered
+	}
+
+	// Apply limit
+	if len(points) > limit {
+		points = points[:limit]
+	}
+
+	// Return response
+	response := map[string]any{
+		"points":  points,
+		"total":   len(points),
+		"pattern": pathPattern,
+		"filters": map[string]any{
+			"mapped":     mapped,
+			"point_type": pointType,
+		},
+	}
+
+	h.RespondJSON(w, http.StatusOK, response)
+}

@@ -155,13 +155,138 @@ func (fpr *FloorPlanRenderer) createGrid(floor *FloorSpatialData) [][]rune {
 		}
 	}
 
-	// Add basic room structure (mock for now)
-	fpr.addBasicRoomStructure(grid)
+	// Add real room structure from spatial data
+	fpr.addRealRoomStructure(grid, floor)
 
 	return grid
 }
 
-// addBasicRoomStructure adds basic room walls and structure
+// addRealRoomStructure adds real room walls and structure from spatial data
+func (fpr *FloorPlanRenderer) addRealRoomStructure(grid [][]rune, floor *FloorSpatialData) {
+	// If no room data, fall back to basic structure
+	if len(floor.Rooms) == 0 {
+		fpr.addBasicRoomStructure(grid)
+		return
+	}
+
+	// Add outer walls based on floor bounds
+	fpr.addOuterWalls(grid, floor.Bounds)
+
+	// Add individual rooms
+	for _, room := range floor.Rooms {
+		fpr.addRoomToGrid(grid, room, floor.Bounds)
+	}
+}
+
+// addOuterWalls adds outer walls based on floor bounds
+func (fpr *FloorPlanRenderer) addOuterWalls(grid [][]rune, bounds Bounds) {
+	height := len(grid)
+	width := len(grid[0])
+
+	// Add outer walls
+	for i := 0; i < height; i++ {
+		if i == 0 || i == height-1 {
+			// Top and bottom walls
+			for j := 0; j < width; j++ {
+				grid[i][j] = '─'
+			}
+		} else {
+			// Side walls
+			grid[i][0] = '│'
+			grid[i][width-1] = '│'
+		}
+	}
+
+	// Add corners
+	grid[0][0] = '┌'
+	grid[0][width-1] = '┐'
+	grid[height-1][0] = '└'
+	grid[height-1][width-1] = '┘'
+}
+
+// addRoomToGrid adds a single room to the grid
+func (fpr *FloorPlanRenderer) addRoomToGrid(grid [][]rune, room RoomSpatialData, floorBounds Bounds) {
+	height := len(grid)
+	width := len(grid[0])
+
+	// Convert room coordinates to grid coordinates
+	// Room coordinates are relative to floor bounds
+	roomMinX := int((room.X - room.Width/2 - floorBounds.X) / fpr.scale)
+	roomMinY := int((room.Y - room.Height/2 - floorBounds.Y) / fpr.scale)
+	roomMaxX := int((room.X + room.Width/2 - floorBounds.X) / fpr.scale)
+	roomMaxY := int((room.Y + room.Height/2 - floorBounds.Y) / fpr.scale)
+
+	// Ensure coordinates are within grid bounds
+	if roomMinX < 0 {
+		roomMinX = 0
+	}
+	if roomMinY < 0 {
+		roomMinY = 0
+	}
+	if roomMaxX >= width {
+		roomMaxX = width - 1
+	}
+	if roomMaxY >= height {
+		roomMaxY = height - 1
+	}
+
+	// Draw room walls (only if room is large enough to be visible)
+	if roomMaxX > roomMinX+1 && roomMaxY > roomMinY+1 {
+		// Top and bottom walls
+		for j := roomMinX; j <= roomMaxX; j++ {
+			if roomMinY >= 0 && roomMinY < height {
+				grid[roomMinY][j] = '─'
+			}
+			if roomMaxY >= 0 && roomMaxY < height {
+				grid[roomMaxY][j] = '─'
+			}
+		}
+
+		// Left and right walls
+		for i := roomMinY; i <= roomMaxY; i++ {
+			if roomMinX >= 0 && roomMinX < width {
+				grid[i][roomMinX] = '│'
+			}
+			if roomMaxX >= 0 && roomMaxX < width {
+				grid[i][roomMaxX] = '│'
+			}
+		}
+
+		// Add corners
+		if roomMinX >= 0 && roomMinX < width && roomMinY >= 0 && roomMinY < height {
+			grid[roomMinY][roomMinX] = '┌'
+		}
+		if roomMaxX >= 0 && roomMaxX < width && roomMinY >= 0 && roomMinY < height {
+			grid[roomMinY][roomMaxX] = '┐'
+		}
+		if roomMinX >= 0 && roomMinX < width && roomMaxY >= 0 && roomMaxY < height {
+			grid[roomMaxY][roomMinX] = '└'
+		}
+		if roomMaxX >= 0 && roomMaxX < width && roomMaxY >= 0 && roomMaxY < height {
+			grid[roomMaxY][roomMaxX] = '┘'
+		}
+
+		// Add room label in the center if there's space
+		centerX := (roomMinX + roomMaxX) / 2
+		centerY := (roomMinY + roomMaxY) / 2
+		if centerX >= 0 && centerX < width && centerY >= 0 && centerY < height {
+			// Only add label if the room is large enough
+			if roomMaxX-roomMinX > 4 && roomMaxY-roomMinY > 2 {
+				roomLabel := room.Number
+				if len(roomLabel) > roomMaxX-roomMinX-1 {
+					roomLabel = roomLabel[:roomMaxX-roomMinX-1]
+				}
+				for i, char := range roomLabel {
+					if centerX+i >= 0 && centerX+i < width && centerY >= 0 && centerY < height {
+						grid[centerY][centerX+i] = char
+					}
+				}
+			}
+		}
+	}
+}
+
+// addBasicRoomStructure adds basic room walls and structure (fallback)
 func (fpr *FloorPlanRenderer) addBasicRoomStructure(grid [][]rune) {
 	height := len(grid)
 	width := len(grid[0])

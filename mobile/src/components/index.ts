@@ -16,3 +16,4 @@ export {
   type SkeletonProps,
   type SkeletonTextProps,
 } from './LoadingSpinner';
+export {NetworkStatus, type NetworkStatusProps} from './NetworkStatus';

@@ -15,7 +15,7 @@ import {
 import { Vector3, SpatialUtils } from '../types/SpatialTypes';
 import { Equipment } from '../types/equipment';
 import { LocalStorageService } from './LocalStorageService';
-import { SyncService } from './syncService';
+import { syncService } from './syncService';
 import { AuthService } from './authService';
 import { Logger } from "../utils/logger";
 
@@ -29,7 +29,7 @@ export class EquipmentARService {
     private arContextService: IARContextService,
     private spatialDataService: ISpatialDataService,
     private localStorageService: LocalStorageService,
-    private syncService: SyncService,
+    private syncService: typeof syncService,
     private authService: AuthService,
     private logger: Logger
   ) {}

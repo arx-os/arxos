@@ -16,7 +16,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import NetInfo from '@react-native-community/netinfo';
 import {useAppSelector, useAppDispatch} from '@/store/hooks';
-import {setOnlineStatus} from '@/store/slices/syncSlice';
+import {setOnlineStatus, syncQueue, loadSyncQueue} from '@/store/slices/syncSlice';
 
 export const OfflineScreen: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -24,6 +24,9 @@ export const OfflineScreen: React.FC = () => {
   const [isCheckingConnection, setIsCheckingConnection] = useState(false);
   
   useEffect(() => {
+    // Load sync queue on mount
+    dispatch(loadSyncQueue());
+    
     // Listen for network changes
     const unsubscribe = NetInfo.addEventListener(state => {
       dispatch(setOnlineStatus(state.isConnected || false));
@@ -50,7 +53,7 @@ export const OfflineScreen: React.FC = () => {
     }
   };
   
-  const handleRetrySync = () => {
+  const handleRetrySync = async () => {
     Alert.alert(
       'Retry Sync',
       'This will attempt to sync your data when you are back online.',
@@ -58,9 +61,13 @@ export const OfflineScreen: React.FC = () => {
         {text: 'Cancel', style: 'cancel'},
         {
           text: 'Retry',
-          onPress: () => {
-            // TODO: Implement retry sync logic
-            Alert.alert('Sync Queued', 'Your data will sync when connection is restored.');
+          onPress: async () => {
+            try {
+              await dispatch(syncQueue());
+              Alert.alert('Sync Complete', 'Your data has been synced successfully.');
+            } catch (error: any) {
+              Alert.alert('Sync Failed', error.message || 'Failed to sync data.');
+            }
           },
         },
       ]

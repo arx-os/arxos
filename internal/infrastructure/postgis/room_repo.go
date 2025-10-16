@@ -23,15 +23,42 @@ func NewRoomRepository(db *sql.DB) *RoomRepository {
 // Create creates a new room in PostGIS
 func (r *RoomRepository) Create(ctx context.Context, room *domain.Room) error {
 	query := `
-		INSERT INTO rooms (id, floor_id, name, room_number, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO rooms (id, floor_id, name, room_number, width, height, area, geometry, center_point, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
+
+	// Convert location to PostGIS geometry if available
+	var geometry interface{}
+	var centerPoint interface{}
+
+	if room.Location != nil {
+		// Create center point from location
+		centerPoint = fmt.Sprintf("POINT(%f %f)", room.Location.X, room.Location.Y)
+
+		// If we have width and height, create a simple rectangular geometry
+		if room.Width > 0 && room.Height > 0 {
+			halfWidth := room.Width / 2.0
+			halfHeight := room.Height / 2.0
+			minX := room.Location.X - halfWidth
+			maxX := room.Location.X + halfWidth
+			minY := room.Location.Y - halfHeight
+			maxY := room.Location.Y + halfHeight
+
+			geometry = fmt.Sprintf("POLYGON((%f %f, %f %f, %f %f, %f %f, %f %f))",
+				minX, minY, maxX, minY, maxX, maxY, minX, maxY, minX, minY)
+		}
+	}
 
 	_, err := r.db.ExecContext(ctx, query,
 		room.ID.String(),
 		room.FloorID.String(),
 		room.Name,
 		room.Number,
+		room.Width,
+		room.Height,
+		room.Width*room.Height, // Calculate area from width*height
+		geometry,
+		centerPoint,
 		room.CreatedAt,
 		room.UpdatedAt,
 	)
@@ -42,18 +69,27 @@ func (r *RoomRepository) Create(ctx context.Context, room *domain.Room) error {
 // GetByID retrieves a room by ID
 func (r *RoomRepository) GetByID(ctx context.Context, id string) (*domain.Room, error) {
 	query := `
-		SELECT id, floor_id, name, room_number, created_at, updated_at
+		SELECT id, floor_id, name, room_number, width, height, area, 
+		       ST_X(center_point) as center_x, ST_Y(center_point) as center_y,
+		       created_at, updated_at
 		FROM rooms
 		WHERE id = $1
 	`
 
 	var room domain.Room
+	var width, height, area sql.NullFloat64
+	var centerX, centerY sql.NullFloat64
 
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&room.ID,
 		&room.FloorID,
 		&room.Name,
 		&room.Number,
+		&width,
+		&height,
+		&area,
+		&centerX,
+		&centerY,
 		&room.CreatedAt,
 		&room.UpdatedAt,
 	)
@@ -65,13 +101,30 @@ func (r *RoomRepository) GetByID(ctx context.Context, id string) (*domain.Room, 
 		return nil, err
 	}
 
+	// Set geometry fields if they exist
+	if width.Valid {
+		room.Width = width.Float64
+	}
+	if height.Valid {
+		room.Height = height.Float64
+	}
+	if centerX.Valid && centerY.Valid {
+		room.Location = &domain.Location{
+			X: centerX.Float64,
+			Y: centerY.Float64,
+			Z: 0, // Default Z to 0 for 2D rooms
+		}
+	}
+
 	return &room, nil
 }
 
 // GetByFloor retrieves all rooms on a floor
 func (r *RoomRepository) GetByFloor(ctx context.Context, floorID string) ([]*domain.Room, error) {
 	query := `
-		SELECT id, floor_id, name, room_number, created_at, updated_at
+		SELECT id, floor_id, name, room_number, width, height, area,
+		       ST_X(center_point) as center_x, ST_Y(center_point) as center_y,
+		       created_at, updated_at
 		FROM rooms
 		WHERE floor_id = $1
 		ORDER BY room_number ASC
@@ -87,18 +140,40 @@ func (r *RoomRepository) GetByFloor(ctx context.Context, floorID string) ([]*dom
 
 	for rows.Next() {
 		var room domain.Room
+		var width, height, area sql.NullFloat64
+		var centerX, centerY sql.NullFloat64
 
 		err := rows.Scan(
 			&room.ID,
 			&room.FloorID,
 			&room.Name,
 			&room.Number,
+			&width,
+			&height,
+			&area,
+			&centerX,
+			&centerY,
 			&room.CreatedAt,
 			&room.UpdatedAt,
 		)
 
 		if err != nil {
 			return nil, err
+		}
+
+		// Set geometry fields if they exist
+		if width.Valid {
+			room.Width = width.Float64
+		}
+		if height.Valid {
+			room.Height = height.Float64
+		}
+		if centerX.Valid && centerY.Valid {
+			room.Location = &domain.Location{
+				X: centerX.Float64,
+				Y: centerY.Float64,
+				Z: 0,
+			}
 		}
 
 		rooms = append(rooms, &room)
@@ -277,4 +352,116 @@ func (r *RoomRepository) GetEquipment(ctx context.Context, roomID string) ([]*do
 	}
 
 	return equipment, nil
+}
+
+// GetRoomsInBounds retrieves rooms within a bounding box
+func (r *RoomRepository) GetRoomsInBounds(ctx context.Context, minX, minY, maxX, maxY float64) ([]*domain.Room, error) {
+	query := `
+		SELECT id, floor_id, name, room_number, width, height, area,
+		       ST_X(center_point) as center_x, ST_Y(center_point) as center_y,
+		       created_at, updated_at
+		FROM rooms
+		WHERE geometry && ST_MakeEnvelope($1, $2, $3, $4, 4326)
+		ORDER BY room_number ASC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, minX, minY, maxX, maxY)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return r.scanRoomRows(rows)
+}
+
+// GetRoomsNearPoint retrieves rooms within a radius of a point
+func (r *RoomRepository) GetRoomsNearPoint(ctx context.Context, x, y, radiusMeters float64) ([]*domain.Room, error) {
+	query := `
+		SELECT id, floor_id, name, room_number, width, height, area,
+		       ST_X(center_point) as center_x, ST_Y(center_point) as center_y,
+		       created_at, updated_at
+		FROM rooms
+		WHERE ST_DWithin(
+			center_point::geography,
+			ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+			$3
+		)
+		ORDER BY ST_Distance(center_point::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography)
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, x, y, radiusMeters)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return r.scanRoomRows(rows)
+}
+
+// GetRoomGeometry retrieves room geometry as GeoJSON
+func (r *RoomRepository) GetRoomGeometry(ctx context.Context, roomID string) (string, error) {
+	query := `
+		SELECT ST_AsGeoJSON(geometry) as geojson
+		FROM rooms
+		WHERE id = $1 AND geometry IS NOT NULL
+	`
+
+	var geojson string
+	err := r.db.QueryRowContext(ctx, query, roomID).Scan(&geojson)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", fmt.Errorf("room geometry not found")
+		}
+		return "", err
+	}
+
+	return geojson, nil
+}
+
+// scanRoomRows is a helper function to scan room rows with geometry data
+func (r *RoomRepository) scanRoomRows(rows *sql.Rows) ([]*domain.Room, error) {
+	var rooms []*domain.Room
+
+	for rows.Next() {
+		var room domain.Room
+		var width, height, area sql.NullFloat64
+		var centerX, centerY sql.NullFloat64
+
+		err := rows.Scan(
+			&room.ID,
+			&room.FloorID,
+			&room.Name,
+			&room.Number,
+			&width,
+			&height,
+			&area,
+			&centerX,
+			&centerY,
+			&room.CreatedAt,
+			&room.UpdatedAt,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		// Set geometry fields if they exist
+		if width.Valid {
+			room.Width = width.Float64
+		}
+		if height.Valid {
+			room.Height = height.Float64
+		}
+		if centerX.Valid && centerY.Valid {
+			room.Location = &domain.Location{
+				X: centerX.Float64,
+				Y: centerY.Float64,
+				Z: 0,
+			}
+		}
+
+		rooms = append(rooms, &room)
+	}
+
+	return rooms, nil
 }

@@ -4,32 +4,16 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
-	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-// MockOrganizationRepository is a mock implementation of domain.OrganizationRepository
-type MockOrganizationRepository struct {
-	mock.Mock
-}
-
-func (m *MockOrganizationRepository) Create(ctx context.Context, org *domain.Organization) error {
-	args := m.Called(ctx, org)
-	return args.Error(0)
-}
-
-func (m *MockOrganizationRepository) GetByID(ctx context.Context, id string) (*domain.Organization, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*domain.Organization), args.Error(1)
-}
+// Test fixtures - using shared helpers from testing_helpers.go
+// Note: Organization repository has additional methods (GetByName, GetUsers, AddUser, RemoveUser)
+// that need to be added to the shared MockOrganizationRepository if needed
 
 func (m *MockOrganizationRepository) GetByName(ctx context.Context, name string) (*domain.Organization, error) {
 	args := m.Called(ctx, name)
@@ -37,24 +21,6 @@ func (m *MockOrganizationRepository) GetByName(ctx context.Context, name string)
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*domain.Organization), args.Error(1)
-}
-
-func (m *MockOrganizationRepository) List(ctx context.Context, filter *domain.OrganizationFilter) ([]*domain.Organization, error) {
-	args := m.Called(ctx, filter)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).([]*domain.Organization), args.Error(1)
-}
-
-func (m *MockOrganizationRepository) Update(ctx context.Context, org *domain.Organization) error {
-	args := m.Called(ctx, org)
-	return args.Error(0)
-}
-
-func (m *MockOrganizationRepository) Delete(ctx context.Context, id string) error {
-	args := m.Called(ctx, id)
-	return args.Error(0)
 }
 
 func (m *MockOrganizationRepository) GetUsers(ctx context.Context, orgID string) ([]*domain.User, error) {
@@ -73,19 +39,6 @@ func (m *MockOrganizationRepository) AddUser(ctx context.Context, orgID, userID 
 func (m *MockOrganizationRepository) RemoveUser(ctx context.Context, orgID, userID string) error {
 	args := m.Called(ctx, orgID, userID)
 	return args.Error(0)
-}
-
-// Test fixtures
-func createTestOrganization() *domain.Organization {
-	return &domain.Organization{
-		ID:          types.NewID(),
-		Name:        "Test Organization",
-		Description: "A test organization",
-		Plan:        "professional",
-		Active:      true,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
 }
 
 // TestOrganizationUseCase_CreateOrganization tests the CreateOrganization method

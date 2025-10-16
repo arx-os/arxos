@@ -15,14 +15,16 @@ type DataService struct {
 	buildingRepo  domain.BuildingRepository
 	equipmentRepo domain.EquipmentRepository
 	floorRepo     domain.FloorRepository
+	roomRepo      domain.RoomRepository
 }
 
 // NewDataService creates a new data service instance
-func NewDataService(buildingRepo domain.BuildingRepository, equipmentRepo domain.EquipmentRepository, floorRepo domain.FloorRepository) *DataService {
+func NewDataService(buildingRepo domain.BuildingRepository, equipmentRepo domain.EquipmentRepository, floorRepo domain.FloorRepository, roomRepo domain.RoomRepository) *DataService {
 	return &DataService{
 		buildingRepo:  buildingRepo,
 		equipmentRepo: equipmentRepo,
 		floorRepo:     floorRepo,
+		roomRepo:      roomRepo,
 	}
 }
 
@@ -359,14 +361,61 @@ func (ds *DataService) GetSpatialData(ctx context.Context, buildingID string) (*
 
 	// Build spatial data for each floor
 	for _, floor := range floors {
+		// Get rooms for this floor
+		floorRooms, err := ds.roomRepo.GetByFloor(ctx, floor.ID.String())
+		if err != nil {
+			// Log error but continue - rooms are optional for visualization
+			fmt.Printf("Warning: Failed to get rooms for floor %s: %v\n", floor.ID.String(), err)
+		}
+
+		// Get equipment for this floor
 		floorEquipment, err := ds.floorRepo.GetEquipment(ctx, floor.ID.String())
 		if err != nil {
 			continue // Skip floors we can't get equipment for
 		}
 
-		// Calculate bounds from equipment positions
+		// Calculate bounds from room and equipment positions
 		minX, minY, maxX, maxY := 0.0, 0.0, 20.0, 15.0 // Defaults
-		if len(floorEquipment) > 0 {
+		hasData := false
+
+		// First, try to get bounds from rooms (more accurate)
+		if len(floorRooms) > 0 {
+			hasData = true
+			firstRoom := floorRooms[0]
+			if firstRoom.Location != nil {
+				minX = firstRoom.Location.X - firstRoom.Width/2
+				minY = firstRoom.Location.Y - firstRoom.Height/2
+				maxX = firstRoom.Location.X + firstRoom.Width/2
+				maxY = firstRoom.Location.Y + firstRoom.Height/2
+			}
+
+			// Expand bounds to include all rooms
+			for _, room := range floorRooms {
+				if room.Location != nil {
+					roomMinX := room.Location.X - room.Width/2
+					roomMinY := room.Location.Y - room.Height/2
+					roomMaxX := room.Location.X + room.Width/2
+					roomMaxY := room.Location.Y + room.Height/2
+
+					if roomMinX < minX {
+						minX = roomMinX
+					}
+					if roomMinY < minY {
+						minY = roomMinY
+					}
+					if roomMaxX > maxX {
+						maxX = roomMaxX
+					}
+					if roomMaxY > maxY {
+						maxY = roomMaxY
+					}
+				}
+			}
+		}
+
+		// If no room data, fall back to equipment positions
+		if !hasData && len(floorEquipment) > 0 {
+			hasData = true
 			minX, minY = floorEquipment[0].Location.X, floorEquipment[0].Location.Y
 			maxX, maxY = minX, minY
 
@@ -386,6 +435,23 @@ func (ds *DataService) GetSpatialData(ctx context.Context, buildingID string) (*
 				if eq.Location.Y > maxY {
 					maxY = eq.Location.Y
 				}
+			}
+		}
+
+		// Build room spatial data
+		var roomData []RoomSpatialData
+		for _, room := range floorRooms {
+			if room.Location != nil {
+				roomData = append(roomData, RoomSpatialData{
+					ID:     room.ID.String(),
+					Name:   room.Name,
+					Number: room.Number,
+					X:      room.Location.X,
+					Y:      room.Location.Y,
+					Width:  room.Width,
+					Height: room.Height,
+					Area:   room.Width * room.Height, // Calculate area
+				})
 			}
 		}
 
@@ -410,6 +476,7 @@ func (ds *DataService) GetSpatialData(ctx context.Context, buildingID string) (*
 				Width:  maxX - minX,
 				Height: maxY - minY,
 			},
+			Rooms:     roomData,
 			Equipment: equipmentData,
 		})
 	}
@@ -427,7 +494,20 @@ type SpatialData struct {
 type FloorSpatialData struct {
 	FloorNumber int                    `json:"floor_number"`
 	Bounds      Bounds                 `json:"bounds"`
+	Rooms       []RoomSpatialData      `json:"rooms"`
 	Equipment   []EquipmentSpatialData `json:"equipment"`
+}
+
+// RoomSpatialData represents spatial data for a room
+type RoomSpatialData struct {
+	ID     string  `json:"id"`
+	Name   string  `json:"name"`
+	Number string  `json:"number"`
+	X      float64 `json:"x"`      // Center X coordinate
+	Y      float64 `json:"y"`      // Center Y coordinate
+	Width  float64 `json:"width"`  // Room width in meters
+	Height float64 `json:"height"` // Room height in meters
+	Area   float64 `json:"area"`   // Room area in square meters
 }
 
 // EquipmentSpatialData represents spatial data for equipment

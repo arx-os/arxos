@@ -5,6 +5,7 @@
 
 import {apiService} from './apiService';
 import {storageService} from './storageService';
+import {syncService} from './syncService';
 import {
   Equipment,
   EquipmentSearchRequest,
@@ -87,22 +88,30 @@ class EquipmentService {
       if (equipmentRecord) {
         equipmentRecord.status = update.status;
         equipmentRecord.updatedAt = new Date().toISOString();
+        equipmentRecord.syncedAt = new Date().toISOString();
+        equipmentRecord.isDirty = false;
         await storageService.saveEquipment(equipmentRecord);
       }
       
       return response;
     } catch (error) {
-      // Store update for later sync
-      await storageService.addToSyncQueue({
-        id: `status_${update.equipmentId}_${Date.now()}`,
-        operation: 'UPDATE',
-        table: 'equipment',
-        recordId: update.equipmentId,
-        data: update,
-        retryCount: 0,
-        createdAt: new Date().toISOString()
-      });
-      throw error;
+      // If online update fails, queue for offline sync
+      logger.warn('Online update failed, queuing for offline sync', error);
+      
+      // Update local cache and mark as dirty
+      const equipmentRecord = await storageService.getEquipment(update.equipmentId);
+      if (equipmentRecord) {
+        equipmentRecord.status = update.status;
+        equipmentRecord.updatedAt = new Date().toISOString();
+        equipmentRecord.isDirty = true;
+        await storageService.saveEquipment(equipmentRecord);
+      }
+      
+      // Queue for sync using the new sync service
+      await syncService.queueEquipmentStatusUpdate(update);
+      
+      // Return the update as if it succeeded (it will sync later)
+      return update;
     }
   }
   

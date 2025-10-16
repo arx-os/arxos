@@ -673,7 +673,54 @@ func (uc *IFCUseCase) extractRoom(ctx context.Context, ifcSpace ifc.IFCSpaceEnti
 		UpdatedAt: time.Now(),
 	}
 
-	// Create room
+	// Extract geometry information from IFC space
+	if ifcSpace.Placement != nil {
+		// Set room center location from IFC placement
+		room.Location = &domain.Location{
+			X: ifcSpace.Placement.X,
+			Y: ifcSpace.Placement.Y,
+			Z: ifcSpace.Placement.Z,
+		}
+	}
+
+	// Extract room dimensions from bounding box if available
+	if ifcSpace.BoundingBox != nil {
+		// Calculate width and height from bounding box
+		room.Width = ifcSpace.BoundingBox.MaxX - ifcSpace.BoundingBox.MinX
+		room.Height = ifcSpace.BoundingBox.MaxY - ifcSpace.BoundingBox.MinY
+
+		// If we don't have a center point from placement, calculate it from bounding box
+		if room.Location == nil {
+			room.Location = &domain.Location{
+				X: (ifcSpace.BoundingBox.MaxX + ifcSpace.BoundingBox.MinX) / 2.0,
+				Y: (ifcSpace.BoundingBox.MaxY + ifcSpace.BoundingBox.MinY) / 2.0,
+				Z: (ifcSpace.BoundingBox.MaxZ + ifcSpace.BoundingBox.MinZ) / 2.0,
+			}
+		}
+	}
+
+	// If we still don't have dimensions, try to extract from properties
+	if room.Width == 0 && room.Height == 0 {
+		// Look for common property names that might contain dimensions
+		// This would be enhanced if the Python service extracts more property sets
+		uc.logger.Debug("No bounding box found for room, using default dimensions",
+			"room_name", room.Name, "global_id", ifcSpace.GlobalID)
+
+		// Set reasonable defaults for rooms without geometry
+		room.Width = 4.0  // 4 meters default width
+		room.Height = 4.0 // 4 meters default height
+
+		// Set default center if no placement
+		if room.Location == nil {
+			room.Location = &domain.Location{
+				X: 0.0,
+				Y: 0.0,
+				Z: 0.0,
+			}
+		}
+	}
+
+	// Create room with geometry data
 	if err := uc.roomRepo.Create(ctx, room); err != nil {
 		return types.ID{}, fmt.Errorf("failed to create room: %w", err)
 	}
@@ -682,6 +729,9 @@ func (uc *IFCUseCase) extractRoom(ctx context.Context, ifcSpace ifc.IFCSpaceEnti
 		"room_id", room.ID,
 		"number", room.Number,
 		"name", room.Name,
+		"width", room.Width,
+		"height", room.Height,
+		"location", room.Location,
 		"global_id", ifcSpace.GlobalID)
 
 	return room.ID, nil

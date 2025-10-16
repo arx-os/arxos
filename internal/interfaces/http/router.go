@@ -234,6 +234,10 @@ func NewRouter(config *RouterConfig) chi.Router {
 
 				// Map operation (write permission required)
 				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/points/{id}/map", apiHandlers.basHandler.HandleMapPoint)
+
+				// Path-based query endpoints (universal naming convention)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/points/path/{path}", apiHandlers.basHandler.HandleGetByPath)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/points/path-pattern", apiHandlers.basHandler.HandleFindByPath)
 			}
 		})
 

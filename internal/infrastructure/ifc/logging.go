@@ -70,8 +70,8 @@ func NewEnhancedIFCService(
 	}
 }
 
-// ParseIFC parses an IFC file with enhanced logging
-func (s *EnhancedIFCService) ParseIFC(ctx context.Context, data []byte) (*IFCResult, error) {
+// ParseIFC parses an IFC file with enhanced logging and returns detailed entities
+func (s *EnhancedIFCService) ParseIFC(ctx context.Context, data []byte) (*EnhancedIFCResult, error) {
 	s.logger.Info("Starting IFC parsing", "data_size", len(data))
 
 	startTime := time.Now()
@@ -86,6 +86,10 @@ func (s *EnhancedIFCService) ParseIFC(ctx context.Context, data []byte) (*IFCRes
 			s.logger.Info("Successfully parsed IFC with IfcOpenShell service",
 				"duration", duration.String(),
 				"buildings", result.Buildings,
+				"building_entities", len(result.BuildingEntities),
+				"floor_entities", len(result.FloorEntities),
+				"space_entities", len(result.SpaceEntities),
+				"equipment_entities", len(result.EquipmentEntities),
 				"spaces", result.Spaces,
 				"equipment", result.Equipment)
 			return result, nil
@@ -94,11 +98,11 @@ func (s *EnhancedIFCService) ParseIFC(ctx context.Context, data []byte) (*IFCRes
 		s.logger.Warn("IfcOpenShell service failed, using fallback", "error", err)
 	}
 
-	// Fallback to native parser
+	// Fallback to native parser - convert to enhanced format
 	if s.fallbackEnabled && s.nativeParser != nil {
 		s.logger.Debug("Attempting to parse with native parser")
 
-		result, err := s.nativeParser.ParseIFC(ctx, data)
+		basicResult, err := s.nativeParser.ParseIFC(ctx, data)
 		if err != nil {
 			duration := time.Since(startTime)
 			s.logger.Error("Native parser failed", "error", err, "duration", duration.String())
@@ -108,10 +112,12 @@ func (s *EnhancedIFCService) ParseIFC(ctx context.Context, data []byte) (*IFCRes
 		duration := time.Since(startTime)
 		s.logger.Info("Successfully parsed IFC with native parser",
 			"duration", duration.String(),
-			"buildings", result.Buildings,
-			"spaces", result.Spaces,
-			"equipment", result.Equipment)
-		return result, nil
+			"buildings", basicResult.Buildings,
+			"spaces", basicResult.Spaces,
+			"equipment", basicResult.Equipment)
+
+		// Convert to enhanced format
+		return basicResult.ConvertToEnhanced(), nil
 	}
 
 	s.logger.Error("No IFC parser available")
@@ -167,7 +173,7 @@ func (s *EnhancedIFCService) ValidateIFC(ctx context.Context, data []byte) (*Val
 }
 
 // tryIfcOpenShellService attempts to use the IfcOpenShell service with logging
-func (s *EnhancedIFCService) tryIfcOpenShellService(ctx context.Context, data []byte) (*IFCResult, error) {
+func (s *EnhancedIFCService) tryIfcOpenShellService(ctx context.Context, data []byte) (*EnhancedIFCResult, error) {
 	// Check circuit breaker
 	if s.circuitBreaker.state == Open {
 		if time.Since(s.circuitBreaker.lastFailureTime) > s.circuitBreaker.recoveryTimeout {
@@ -179,7 +185,7 @@ func (s *EnhancedIFCService) tryIfcOpenShellService(ctx context.Context, data []
 		}
 	}
 
-	// Call the service
+	// Call the service - returns EnhancedIFCResult with detailed entities
 	s.logger.Debug("Calling IfcOpenShell service")
 	result, err := s.ifcOpenShellClient.ParseIFC(ctx, data)
 	if err != nil {
@@ -189,7 +195,11 @@ func (s *EnhancedIFCService) tryIfcOpenShellService(ctx context.Context, data []
 	}
 
 	s.circuitBreaker.recordSuccess()
-	s.logger.Debug("IfcOpenShell service call successful")
+	s.logger.Debug("IfcOpenShell service call successful",
+		"building_entities", len(result.BuildingEntities),
+		"floor_entities", len(result.FloorEntities),
+		"space_entities", len(result.SpaceEntities),
+		"equipment_entities", len(result.EquipmentEntities))
 	return result, nil
 }
 

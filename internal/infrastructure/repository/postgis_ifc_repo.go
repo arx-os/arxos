@@ -24,13 +24,14 @@ func NewPostGISIFCRepository(db *sql.DB) building.IFCRepository {
 func (r *PostGISIFCRepository) Create(ctx context.Context, ifcFile *building.IFCFile) error {
 	query := `
 		INSERT INTO ifc_files (
-			id, name, path, version, discipline, size, entities,
+			id, repository_id, name, path, version, discipline, size, entities,
 			validated, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
 
 	_, err := r.db.ExecContext(ctx, query,
 		ifcFile.ID,
+		ifcFile.RepositoryID,
 		ifcFile.Name,
 		ifcFile.Path,
 		ifcFile.Version,
@@ -48,7 +49,7 @@ func (r *PostGISIFCRepository) Create(ctx context.Context, ifcFile *building.IFC
 // GetByID retrieves an IFC file by ID
 func (r *PostGISIFCRepository) GetByID(ctx context.Context, id string) (*building.IFCFile, error) {
 	query := `
-		SELECT id, name, path, version, discipline, size, entities,
+		SELECT id, repository_id, name, path, version, discipline, size, entities,
 			   validated, created_at, updated_at
 		FROM ifc_files
 		WHERE id = $1
@@ -58,6 +59,7 @@ func (r *PostGISIFCRepository) GetByID(ctx context.Context, id string) (*buildin
 
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&ifcFile.ID,
+		&ifcFile.RepositoryID,
 		&ifcFile.Name,
 		&ifcFile.Path,
 		&ifcFile.Version,
@@ -82,7 +84,7 @@ func (r *PostGISIFCRepository) GetByID(ctx context.Context, id string) (*buildin
 // GetByRepository retrieves all IFC files for a repository
 func (r *PostGISIFCRepository) GetByRepository(ctx context.Context, repoID string) ([]building.IFCFile, error) {
 	query := `
-		SELECT id, name, path, version, discipline, size, entities,
+		SELECT id, repository_id, name, path, version, discipline, size, entities,
 			   validated, created_at, updated_at
 		FROM ifc_files
 		WHERE repository_id = $1
@@ -101,6 +103,7 @@ func (r *PostGISIFCRepository) GetByRepository(ctx context.Context, repoID strin
 
 		err := rows.Scan(
 			&ifcFile.ID,
+			&ifcFile.RepositoryID,
 			&ifcFile.Name,
 			&ifcFile.Path,
 			&ifcFile.Version,

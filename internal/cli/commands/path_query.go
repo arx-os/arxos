@@ -15,8 +15,9 @@ import (
 
 // CreatePathGetCommand creates the path-based get command
 // Usage: arx get /B1/3/301/HVAC/VAV-301
-//        arx get /B1/3/*/HVAC/*
-func CreatePathGetCommand() *cobra.Command {
+//
+//	arx get /B1/3/*/HVAC/*
+func CreatePathGetCommand(container *app.Container) *cobra.Command {
 	var (
 		verbose bool
 		format  string
@@ -53,17 +54,14 @@ Examples:
 
 			// Validate path starts with /
 			if !strings.HasPrefix(pathPattern, "/") {
+				fmt.Fprintf(os.Stderr, "Error: path must start with / (e.g., /B1/3/301/HVAC/VAV-301)\n")
 				return fmt.Errorf("path must start with / (e.g., /B1/3/301/HVAC/VAV-301)")
 			}
 
-			// Get container from context
-			container, ok := cmd.Context().Value("container").(*app.Container)
-			if !ok {
-				return fmt.Errorf("service container not available")
-			}
-
+			// Get equipment repository from container
 			equipmentRepo := container.GetEquipmentRepository()
 			if equipmentRepo == nil {
+				fmt.Fprintf(os.Stderr, "Error: equipment repository not available\n")
 				return fmt.Errorf("equipment repository not available")
 			}
 
@@ -74,6 +72,7 @@ Examples:
 				// Find by pattern
 				equipment, err := equipmentRepo.FindByPath(ctx, pathPattern)
 				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error: failed to query equipment: %v\n", err)
 					return fmt.Errorf("failed to query equipment: %w", err)
 				}
 
@@ -97,8 +96,10 @@ Examples:
 				eq, err := equipmentRepo.GetByPath(ctx, pathPattern)
 				if err != nil {
 					if strings.Contains(err.Error(), "not found") {
+						fmt.Fprintf(os.Stderr, "Error: equipment not found at path: %s\n", pathPattern)
 						return fmt.Errorf("equipment not found at path: %s", pathPattern)
 					}
+					fmt.Fprintf(os.Stderr, "Error: failed to get equipment: %v\n", err)
 					return fmt.Errorf("failed to get equipment: %w", err)
 				}
 
@@ -177,21 +178,21 @@ func displayEquipmentList(equipment []*domain.Equipment, verbose bool) {
 // displayEquipmentDetails displays detailed information for a single equipment
 func displayEquipmentDetails(eq *domain.Equipment, verbose bool) {
 	fmt.Printf("Equipment Details:\n\n")
-	
+
 	if eq.Path != "" {
 		fmt.Printf("   Path:     %s\n", eq.Path)
 	}
 	fmt.Printf("   ID:       %s\n", eq.ID.String())
 	fmt.Printf("   Name:     %s\n", eq.Name)
 	fmt.Printf("   Type:     %s\n", eq.Type)
-	
+
 	if eq.Category != "" {
 		fmt.Printf("   Category: %s\n", eq.Category)
 	}
 	if eq.Model != "" {
 		fmt.Printf("   Model:    %s\n", eq.Model)
 	}
-	
+
 	fmt.Printf("   Status:   %s\n", eq.Status)
 	fmt.Printf("   Building: %s\n", eq.BuildingID.String())
 
@@ -217,14 +218,14 @@ func displayEquipmentDetails(eq *domain.Equipment, verbose bool) {
 
 // CreatePathQueryCommand creates a query command with path patterns and filters
 // Usage: arx query /B1/3/*/HVAC/* --status active
-func CreatePathQueryCommand() *cobra.Command {
+func CreatePathQueryCommand(container *app.Container) *cobra.Command {
 	var (
-		status    string
-		eqType    string
-		building  string
-		verbose   bool
-		format    string
-		limit     int
+		status   string
+		eqType   string
+		building string
+		verbose  bool
+		format   string
+		limit    int
 	)
 
 	cmd := &cobra.Command{
@@ -259,12 +260,7 @@ Supports wildcards in paths and additional filtering by status, type, etc.`,
 				pathPattern, _ = cmd.Flags().GetString("path")
 			}
 
-			// Get container from context
-			container, ok := cmd.Context().Value("container").(*app.Container)
-			if !ok {
-				return fmt.Errorf("service container not available")
-			}
-
+			// Get equipment repository from container
 			equipmentRepo := container.GetEquipmentRepository()
 			if equipmentRepo == nil {
 				return fmt.Errorf("equipment repository not available")
@@ -352,4 +348,3 @@ Supports wildcards in paths and additional filtering by status, type, etc.`,
 
 	return cmd
 }
-

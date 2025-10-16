@@ -12,10 +12,12 @@ import (
 
 // FloorUseCase implements the floor business logic following Clean Architecture
 type FloorUseCase struct {
-	floorRepo    domain.FloorRepository
-	buildingRepo domain.BuildingRepository
-	logger       domain.Logger
-	idGenerator  *utils.IDGenerator
+	floorRepo     domain.FloorRepository
+	roomRepo      domain.RoomRepository
+	equipmentRepo domain.EquipmentRepository
+	buildingRepo  domain.BuildingRepository
+	logger        domain.Logger
+	idGenerator   *utils.IDGenerator
 }
 
 // NewFloorUseCase creates a new FloorUseCase
@@ -26,6 +28,16 @@ func NewFloorUseCase(floorRepo domain.FloorRepository, buildingRepo domain.Build
 		logger:       logger,
 		idGenerator:  utils.NewIDGenerator(),
 	}
+}
+
+// SetRoomRepository injects the room repository (for avoiding circular dependencies)
+func (uc *FloorUseCase) SetRoomRepository(roomRepo domain.RoomRepository) {
+	uc.roomRepo = roomRepo
+}
+
+// SetEquipmentRepository injects the equipment repository (for avoiding circular dependencies)
+func (uc *FloorUseCase) SetEquipmentRepository(equipmentRepo domain.EquipmentRepository) {
+	uc.equipmentRepo = equipmentRepo
 }
 
 // CreateFloor creates a new floor in a building
@@ -156,6 +168,62 @@ func (uc *FloorUseCase) DeleteFloor(ctx context.Context, id string) error {
 
 	uc.logger.Info("Floor deleted successfully", "floor_id", id)
 	return nil
+}
+
+// GetFloorRooms retrieves all rooms for a floor
+func (uc *FloorUseCase) GetFloorRooms(ctx context.Context, floorID types.ID) ([]*domain.Room, error) {
+	uc.logger.Info("Getting floor rooms", "floor_id", floorID.String())
+
+	if floorID.IsEmpty() {
+		return nil, fmt.Errorf("floor ID is required")
+	}
+
+	if uc.roomRepo == nil {
+		return nil, fmt.Errorf("room repository not initialized")
+	}
+
+	// Validate floor exists
+	_, err := uc.floorRepo.GetByID(ctx, floorID.String())
+	if err != nil {
+		return nil, fmt.Errorf("floor not found: %w", err)
+	}
+
+	rooms, err := uc.roomRepo.GetByFloor(ctx, floorID.String())
+	if err != nil {
+		uc.logger.Error("Failed to get floor rooms", "floor_id", floorID.String(), "error", err)
+		return nil, fmt.Errorf("failed to get floor rooms: %w", err)
+	}
+
+	uc.logger.Info("Floor rooms retrieved successfully", "count", len(rooms))
+	return rooms, nil
+}
+
+// GetFloorEquipment retrieves all equipment for a floor
+func (uc *FloorUseCase) GetFloorEquipment(ctx context.Context, floorID types.ID) ([]*domain.Equipment, error) {
+	uc.logger.Info("Getting floor equipment", "floor_id", floorID.String())
+
+	if floorID.IsEmpty() {
+		return nil, fmt.Errorf("floor ID is required")
+	}
+
+	if uc.equipmentRepo == nil {
+		return nil, fmt.Errorf("equipment repository not initialized")
+	}
+
+	// Validate floor exists
+	_, err := uc.floorRepo.GetByID(ctx, floorID.String())
+	if err != nil {
+		return nil, fmt.Errorf("floor not found: %w", err)
+	}
+
+	equipment, err := uc.equipmentRepo.GetByFloor(ctx, floorID.String())
+	if err != nil {
+		uc.logger.Error("Failed to get floor equipment", "floor_id", floorID.String(), "error", err)
+		return nil, fmt.Errorf("failed to get floor equipment: %w", err)
+	}
+
+	uc.logger.Info("Floor equipment retrieved successfully", "count", len(equipment))
+	return equipment, nil
 }
 
 // validateCreateFloor validates floor creation request

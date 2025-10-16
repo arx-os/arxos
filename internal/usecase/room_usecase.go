@@ -12,11 +12,12 @@ import (
 
 // RoomUseCase implements the room business logic following Clean Architecture
 type RoomUseCase struct {
-	roomRepo     domain.RoomRepository
-	floorRepo    domain.FloorRepository
-	buildingRepo domain.BuildingRepository
-	logger       domain.Logger
-	idGenerator  *utils.IDGenerator
+	roomRepo      domain.RoomRepository
+	equipmentRepo domain.EquipmentRepository
+	floorRepo     domain.FloorRepository
+	buildingRepo  domain.BuildingRepository
+	logger        domain.Logger
+	idGenerator   *utils.IDGenerator
 }
 
 // NewRoomUseCase creates a new RoomUseCase
@@ -28,6 +29,11 @@ func NewRoomUseCase(roomRepo domain.RoomRepository, floorRepo domain.FloorReposi
 		logger:       logger,
 		idGenerator:  utils.NewIDGenerator(),
 	}
+}
+
+// SetEquipmentRepository injects the equipment repository (for avoiding circular dependencies)
+func (uc *RoomUseCase) SetEquipmentRepository(equipmentRepo domain.EquipmentRepository) {
+	uc.equipmentRepo = equipmentRepo
 }
 
 // CreateRoom creates a new room on a floor
@@ -176,6 +182,34 @@ func (uc *RoomUseCase) DeleteRoom(ctx context.Context, id string) error {
 
 	uc.logger.Info("Room deleted successfully", "room_id", id)
 	return nil
+}
+
+// GetRoomEquipment retrieves all equipment for a room
+func (uc *RoomUseCase) GetRoomEquipment(ctx context.Context, roomID types.ID) ([]*domain.Equipment, error) {
+	uc.logger.Info("Getting room equipment", "room_id", roomID.String())
+
+	if roomID.IsEmpty() {
+		return nil, fmt.Errorf("room ID is required")
+	}
+
+	if uc.equipmentRepo == nil {
+		return nil, fmt.Errorf("equipment repository not initialized")
+	}
+
+	// Validate room exists
+	_, err := uc.roomRepo.GetByID(ctx, roomID.String())
+	if err != nil {
+		return nil, fmt.Errorf("room not found: %w", err)
+	}
+
+	equipment, err := uc.equipmentRepo.GetByRoom(ctx, roomID.String())
+	if err != nil {
+		uc.logger.Error("Failed to get room equipment", "room_id", roomID.String(), "error", err)
+		return nil, fmt.Errorf("failed to get room equipment: %w", err)
+	}
+
+	uc.logger.Info("Room equipment retrieved successfully", "count", len(equipment))
+	return equipment, nil
 }
 
 // validateCreateRoom validates room creation request

@@ -8,7 +8,7 @@ import (
 
 // IfcOpenShellClientInterface defines the interface for IfcOpenShell clients
 type IfcOpenShellClientInterface interface {
-	ParseIFC(ctx context.Context, data []byte) (*IFCResult, error)
+	ParseIFC(ctx context.Context, data []byte) (*EnhancedIFCResult, error)
 	ValidateIFC(ctx context.Context, data []byte) (*ValidationResult, error)
 	Health(ctx context.Context) (*HealthResult, error)
 	IsAvailable(ctx context.Context) bool
@@ -68,7 +68,7 @@ func NewIFCService(
 }
 
 // ParseIFC parses an IFC file with fallback mechanism
-func (s *IFCService) ParseIFC(ctx context.Context, data []byte) (*IFCResult, error) {
+func (s *IFCService) ParseIFC(ctx context.Context, data []byte) (*EnhancedIFCResult, error) {
 	// Try IfcOpenShell service first if enabled
 	if s.serviceEnabled && s.ifcOpenShellClient != nil {
 		result, err := s.tryIfcOpenShellService(ctx, data)
@@ -81,9 +81,13 @@ func (s *IFCService) ParseIFC(ctx context.Context, data []byte) (*IFCResult, err
 		fmt.Printf("IfcOpenShell service failed, using fallback: %v\n", err)
 	}
 
-	// Fallback to native parser
+	// Fallback to native parser - convert to enhanced format
 	if s.fallbackEnabled && s.nativeParser != nil {
-		return s.nativeParser.ParseIFC(ctx, data)
+		basicResult, err := s.nativeParser.ParseIFC(ctx, data)
+		if err != nil {
+			return nil, err
+		}
+		return basicResult.ConvertToEnhanced(), nil
 	}
 
 	return nil, fmt.Errorf("no IFC parser available")
@@ -111,7 +115,7 @@ func (s *IFCService) ValidateIFC(ctx context.Context, data []byte) (*ValidationR
 }
 
 // tryIfcOpenShellService attempts to use the IfcOpenShell service
-func (s *IFCService) tryIfcOpenShellService(ctx context.Context, data []byte) (*IFCResult, error) {
+func (s *IFCService) tryIfcOpenShellService(ctx context.Context, data []byte) (*EnhancedIFCResult, error) {
 	// Check circuit breaker
 	if s.circuitBreaker.state == Open {
 		if time.Since(s.circuitBreaker.lastFailureTime) > s.circuitBreaker.recoveryTimeout {
@@ -121,7 +125,7 @@ func (s *IFCService) tryIfcOpenShellService(ctx context.Context, data []byte) (*
 		}
 	}
 
-	// Call the service
+	// Call the service - returns EnhancedIFCResult with detailed entities
 	result, err := s.ifcOpenShellClient.ParseIFC(ctx, data)
 	if err != nil {
 		s.circuitBreaker.recordFailure()

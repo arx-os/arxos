@@ -290,6 +290,42 @@ func (uc *EquipmentUseCase) GetEquipmentByBuilding(ctx context.Context, building
 	return equipment, nil
 }
 
+// GetEquipmentByPath retrieves equipment by exact path
+func (uc *EquipmentUseCase) GetEquipmentByPath(ctx context.Context, path string) (*domain.Equipment, error) {
+	uc.logger.Info("Getting equipment by path", "path", path)
+
+	if path == "" {
+		return nil, fmt.Errorf("path is required")
+	}
+
+	equipment, err := uc.equipmentRepo.GetByPath(ctx, path)
+	if err != nil {
+		uc.logger.Error("Failed to get equipment by path", "path", path, "error", err)
+		return nil, fmt.Errorf("equipment not found at path %s: %w", path, err)
+	}
+
+	return equipment, nil
+}
+
+// FindEquipmentByPath finds equipment matching a path pattern with wildcards
+// Pattern examples: /B1/3/*/HVAC/*, /B1/*/NETWORK/SW-*
+func (uc *EquipmentUseCase) FindEquipmentByPath(ctx context.Context, pathPattern string) ([]*domain.Equipment, error) {
+	uc.logger.Info("Finding equipment by path pattern", "pattern", pathPattern)
+
+	if pathPattern == "" {
+		return nil, fmt.Errorf("path pattern is required")
+	}
+
+	equipment, err := uc.equipmentRepo.FindByPath(ctx, pathPattern)
+	if err != nil {
+		uc.logger.Error("Failed to find equipment by path pattern", "pattern", pathPattern, "error", err)
+		return nil, fmt.Errorf("failed to query equipment: %w", err)
+	}
+
+	uc.logger.Info("Found equipment by path pattern", "pattern", pathPattern, "count", len(equipment))
+	return equipment, nil
+}
+
 // Private helper methods
 
 func (uc *EquipmentUseCase) validateCreateEquipment(req *domain.CreateEquipmentRequest) error {

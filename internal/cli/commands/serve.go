@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/arx-os/arxos/internal/app"
+	"github.com/arx-os/arxos/internal/config"
 	httppkg "github.com/arx-os/arxos/internal/interfaces/http"
 	"github.com/arx-os/arxos/internal/interfaces/http/types"
 )
@@ -46,11 +47,19 @@ func CreateServeCommand(serviceContext any) *cobra.Command {
 func runServer(host string, port int, certFile, keyFile string) error {
 	fmt.Printf("🚀 Starting ArxOS HTTP server on %s:%d\n", host, port)
 
+	// Load configuration
+	cfg, err := loadConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
+
 	// Create DI container and initialize all services
 	container := app.NewContainer()
 	ctx := context.Background()
 
-	// Container is already initialized when we get dependencies from it
+	if err := container.Initialize(ctx, cfg); err != nil {
+		return fmt.Errorf("failed to initialize container: %w", err)
+	}
 
 	logger := container.GetLogger()
 
@@ -116,4 +125,25 @@ func runServer(host string, port int, certFile, keyFile string) error {
 
 	fmt.Println("✅ Server shutdown complete")
 	return nil
+}
+
+// loadConfig loads the ArxOS configuration
+func loadConfig() (*config.Config, error) {
+	// Try to load config from file
+	cfg, err := config.Load("")
+	if err != nil {
+		// Fallback to default development config
+		cfg = &config.Config{
+			Mode: "development",
+			PostGIS: config.PostGISConfig{
+				Host:     "localhost",
+				Port:     5432,
+				Database: "arxos",
+				User:     "arxos",
+				Password: "",
+				SSLMode:  "disable",
+			},
+		}
+	}
+	return cfg, nil
 }

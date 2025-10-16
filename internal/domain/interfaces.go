@@ -37,12 +37,14 @@ type EquipmentRepository interface {
 	Create(ctx context.Context, equipment *Equipment) error
 	GetByID(ctx context.Context, id string) (*Equipment, error)
 	GetByBuilding(ctx context.Context, buildingID string) ([]*Equipment, error)
+	GetByFloor(ctx context.Context, floorID string) ([]*Equipment, error)
+	GetByRoom(ctx context.Context, roomID string) ([]*Equipment, error)
 	GetByType(ctx context.Context, equipmentType string) ([]*Equipment, error)
 	List(ctx context.Context, filter *EquipmentFilter) ([]*Equipment, error)
 	Update(ctx context.Context, equipment *Equipment) error
 	Delete(ctx context.Context, id string) error
 	GetByLocation(ctx context.Context, buildingID string, floor string, room string) ([]*Equipment, error)
-	
+
 	// Path-based query methods
 	GetByPath(ctx context.Context, exactPath string) (*Equipment, error)
 	FindByPath(ctx context.Context, pathPattern string) ([]*Equipment, error)

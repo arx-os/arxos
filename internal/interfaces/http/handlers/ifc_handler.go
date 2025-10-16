@@ -3,7 +3,9 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -30,52 +32,117 @@ func NewIFCHandler(server *types.Server, ifcUC *usecase.IFCUseCase, logger domai
 }
 
 // ImportIFC handles POST /api/v1/ifc/import
+// Supports both multipart file upload and JSON with base64 data
 func (h *IFCHandler) ImportIFC(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	defer func() {
 		h.LogRequest(r, http.StatusAccepted, time.Since(start))
 	}()
 
-	h.logger.Info("Import IFC requested")
+	h.logger.Info("IFC import requested")
 
-	// Validate content type
-	if err := h.ValidateContentType(r, "application/json"); err != nil {
-		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("content type must be application/json"))
+	var ifcData []byte
+	var repositoryID string
+
+	// Check content type to determine parsing method
+	contentType := r.Header.Get("Content-Type")
+
+	if strings.HasPrefix(contentType, "multipart/form-data") {
+		// Handle multipart file upload (preferred method for large files)
+		h.logger.Info("Processing multipart file upload")
+
+		// Parse multipart form (32MB max)
+		if err := r.ParseMultipartForm(32 << 20); err != nil {
+			h.logger.Error("Failed to parse multipart form", "error", err)
+			h.RespondError(w, http.StatusBadRequest, fmt.Errorf("failed to parse multipart form: %w", err))
+			return
+		}
+
+		// Get repository ID from form
+		repositoryID = r.FormValue("repository_id")
+		if repositoryID == "" {
+			h.RespondError(w, http.StatusBadRequest, fmt.Errorf("repository_id is required"))
+			return
+		}
+
+		// Get uploaded file
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			h.logger.Error("Failed to get uploaded file", "error", err)
+			h.RespondError(w, http.StatusBadRequest, fmt.Errorf("file is required: %w", err))
+			return
+		}
+		defer file.Close()
+
+		h.logger.Info("File uploaded", "filename", header.Filename, "size", header.Size)
+
+		// Read file data
+		var readErr error
+		ifcData, readErr = io.ReadAll(file)
+		if readErr != nil {
+			h.logger.Error("Failed to read uploaded file", "error", readErr)
+			h.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to read file: %w", readErr))
+			return
+		}
+
+	} else {
+		// Handle JSON request (backward compatibility)
+		h.logger.Info("Processing JSON request")
+
+		var req struct {
+			RepositoryID string `json:"repository_id"`
+			IFCData      string `json:"ifc_data"` // Base64 encoded or raw IFC string
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %w", err))
+			return
+		}
+
+		// Validate required fields
+		if req.RepositoryID == "" {
+			h.RespondError(w, http.StatusBadRequest, fmt.Errorf("repository_id is required"))
+			return
+		}
+		if req.IFCData == "" {
+			h.RespondError(w, http.StatusBadRequest, fmt.Errorf("ifc_data is required"))
+			return
+		}
+
+		repositoryID = req.RepositoryID
+		ifcData = []byte(req.IFCData)
+	}
+
+	// Validate file size (max 100MB)
+	maxSize := 100 * 1024 * 1024 // 100MB
+	if len(ifcData) > maxSize {
+		h.RespondError(w, http.StatusRequestEntityTooLarge,
+			fmt.Errorf("file too large: %d bytes (max: %d bytes)", len(ifcData), maxSize))
 		return
 	}
 
-	var req struct {
-		RepositoryID string `json:"repository_id"`
-		IFCData      string `json:"ifc_data"` // Base64 encoded IFC data
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %v", err))
-		return
-	}
+	h.logger.Info("Starting IFC import", "repository_id", repositoryID, "size", len(ifcData))
 
-	// Validate required fields
-	if req.RepositoryID == "" {
-		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("repository_id is required"))
-		return
-	}
-	if req.IFCData == "" {
-		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("ifc_data is required"))
-		return
-	}
-
-	// Decode base64 IFC data
-	ifcData := []byte(req.IFCData) // In real implementation, decode base64
-
-	// Call use case
-	importResult, err := h.ifcUC.ImportIFC(r.Context(), req.RepositoryID, ifcData)
+	// Call use case to import IFC
+	importResult, err := h.ifcUC.ImportIFC(r.Context(), repositoryID, ifcData)
 	if err != nil {
-		h.logger.Error("Failed to import IFC", "error", err)
+		h.logger.Error("IFC import failed", "error", err, "repository_id", repositoryID)
 		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	// Return response
-	h.RespondJSON(w, http.StatusAccepted, importResult)
+	h.logger.Info("IFC import completed successfully",
+		"repository_id", repositoryID,
+		"ifc_file_id", importResult.IFCFileID,
+		"buildings_created", importResult.BuildingsCreated,
+		"floors_created", importResult.FloorsCreated,
+		"equipment_created", importResult.EquipmentCreated)
+
+	// Return success response
+	h.RespondJSON(w, http.StatusOK, map[string]any{
+		"success": true,
+		"result":  importResult,
+		"message": "IFC file imported successfully",
+	})
 }
 
 // ValidateIFC handles POST /api/v1/ifc/validate

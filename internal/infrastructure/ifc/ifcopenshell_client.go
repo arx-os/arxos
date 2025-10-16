@@ -91,8 +91,8 @@ func NewIfcOpenShellClient(baseURL string, timeout time.Duration, retries int) *
 	}
 }
 
-// ParseIFC parses an IFC file and returns the result
-func (c *IfcOpenShellClient) ParseIFC(ctx context.Context, data []byte) (*IFCResult, error) {
+// ParseIFC parses an IFC file and returns the enhanced result with detailed entities
+func (c *IfcOpenShellClient) ParseIFC(ctx context.Context, data []byte) (*EnhancedIFCResult, error) {
 	req, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+"/api/parse", bytes.NewReader(data))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -111,13 +111,17 @@ func (c *IfcOpenShellClient) ParseIFC(ctx context.Context, data []byte) (*IFCRes
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	var result IFCResult
+	// Parse into EnhancedIFCResult to get detailed entities
+	var result EnhancedIFCResult
 	if err := json.Unmarshal(body, &result); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	if !result.Success {
-		return nil, fmt.Errorf("IFC parsing failed: %s", result.Error.Message)
+		if result.Error != nil {
+			return nil, fmt.Errorf("IFC parsing failed: %s", result.Error.Message)
+		}
+		return nil, fmt.Errorf("IFC parsing failed: unknown error")
 	}
 
 	return &result, nil

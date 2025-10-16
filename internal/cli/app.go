@@ -185,9 +185,10 @@ func (a *App) wireCommands() {
 	// Data operations
 	a.rootCmd.AddCommand(commands.CreateQueryCommand(serviceContext))
 
-	// Path-based query command (primary get command using universal paths)
-	a.rootCmd.AddCommand(commands.CreatePathGetCommand())
-	
+	// Path-based query commands (universal naming convention)
+	a.rootCmd.AddCommand(commands.CreatePathGetCommand(serviceContext))
+	a.rootCmd.AddCommand(commands.CreatePathQueryCommand(serviceContext))
+
 	// CRUD operations
 	a.rootCmd.AddCommand(commands.CreateAddCommand(serviceContext))
 	a.rootCmd.AddCommand(commands.CreateUpdateCommand(serviceContext))

@@ -42,16 +42,17 @@ type RepositoryStructure struct {
 
 // IFCFile represents an IFC building model file
 type IFCFile struct {
-	ID         string    `json:"id"`
-	Name       string    `json:"name"`
-	Path       string    `json:"path"`
-	Version    string    `json:"version"`    // IFC version (4.0, 4.3, etc.)
-	Discipline string    `json:"discipline"` // architectural, hvac, electrical, etc.
-	Size       int64     `json:"size"`
-	Entities   int       `json:"entities"`
-	Validated  bool      `json:"validated"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID           string    `json:"id"`
+	RepositoryID string    `json:"repository_id"`
+	Name         string    `json:"name"`
+	Path         string    `json:"path"`
+	Version      string    `json:"version"`    // IFC version (4.0, 4.3, etc.)
+	Discipline   string    `json:"discipline"` // architectural, hvac, electrical, etc.
+	Size         int64     `json:"size"`
+	Entities     int       `json:"entities"`
+	Validated    bool      `json:"validated"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 // Plan represents floor plans and drawings

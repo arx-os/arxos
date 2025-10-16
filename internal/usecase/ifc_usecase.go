@@ -63,46 +63,43 @@ func (uc *IFCUseCase) ImportIFC(ctx context.Context, repoID string, ifcData []by
 	}
 
 	// Parse IFC data using IfcOpenShell service
-	parseResult, err := uc.ifcService.ParseIFC(ctx, ifcData)
+	// This now returns EnhancedIFCResult with detailed entities
+	enhancedResult, err := uc.ifcService.ParseIFC(ctx, ifcData)
 	if err != nil {
 		uc.logger.Error("Failed to parse IFC file", "error", err)
 		return nil, fmt.Errorf("failed to parse IFC file: %w", err)
 	}
 
-	// Convert to enhanced result for entity extraction
-	// When IFC service is enhanced, it will return detailed entities
-	// For now, this converts counts-only result to empty entity arrays
-	enhancedResult := parseResult.ConvertToEnhanced()
-
 	// Detect discipline from IFC schema and content
-	discipline := uc.detectDiscipline(parseResult)
+	discipline := uc.detectDiscipline(enhancedResult)
 
 	// Create IFC file record with parsed data
 	ifcFile := &building.IFCFile{
-		ID:         uc.generateIFCFileID(),
-		Name:       fmt.Sprintf("import-%d.ifc", time.Now().Unix()),
-		Path:       fmt.Sprintf("data/ifc/import-%d.ifc", time.Now().Unix()),
-		Version:    parseResult.Metadata.IFCVersion,
-		Discipline: discipline,
-		Size:       int64(len(ifcData)),
-		Entities:   parseResult.TotalEntities,
-		Validated:  true,
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
+		ID:           uc.generateIFCFileID(),
+		RepositoryID: repoID,
+		Name:         fmt.Sprintf("import-%d.ifc", time.Now().Unix()),
+		Path:         fmt.Sprintf("data/ifc/import-%d.ifc", time.Now().Unix()),
+		Version:      enhancedResult.Metadata.IFCVersion,
+		Discipline:   discipline,
+		Size:         int64(len(ifcData)),
+		Entities:     enhancedResult.TotalEntities,
+		Validated:    true,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
 	}
 
 	// Extract counts from parse result
-	propertiesCount := uc.countProperties(parseResult)
-	materialsCount := uc.countMaterials(parseResult)
-	classificationsCount := uc.countClassifications(parseResult)
-	warnings := uc.extractWarnings(parseResult)
+	propertiesCount := uc.countProperties(enhancedResult)
+	materialsCount := uc.countMaterials(enhancedResult)
+	classificationsCount := uc.countClassifications(enhancedResult)
+	warnings := uc.extractWarnings(enhancedResult)
 
 	// Create import result with actual parsed data
 	result := &building.IFCImportResult{
 		Success:         true,
 		RepositoryID:    repoID,
 		IFCFileID:       ifcFile.ID,
-		Entities:        parseResult.TotalEntities,
+		Entities:        enhancedResult.TotalEntities,
 		Properties:      propertiesCount,
 		Materials:       materialsCount,
 		Classifications: classificationsCount,
@@ -146,7 +143,7 @@ func (uc *IFCUseCase) ImportIFC(ctx context.Context, repoID string, ifcData []by
 	uc.logger.Info("IFC import completed",
 		"repository_id", repoID,
 		"ifc_file_id", ifcFile.ID,
-		"entities", parseResult.TotalEntities,
+		"entities", enhancedResult.TotalEntities,
 		"buildings_created", extractionResult.BuildingsCreated,
 		"floors_created", extractionResult.FloorsCreated,
 		"rooms_created", extractionResult.RoomsCreated,
@@ -304,11 +301,11 @@ END-ISO-10303-21;
 // Helper methods
 
 func (uc *IFCUseCase) generateIFCFileID() string {
-	return fmt.Sprintf("ifc-%d", time.Now().UnixNano())
+	return types.NewID().String()
 }
 
 // detectDiscipline detects the discipline from IFC file content
-func (uc *IFCUseCase) detectDiscipline(parseResult *ifc.IFCResult) string {
+func (uc *IFCUseCase) detectDiscipline(parseResult *ifc.EnhancedIFCResult) string {
 	// Analyze entity counts to determine primary discipline
 	if parseResult.Equipment > parseResult.Walls && parseResult.Equipment > parseResult.Spaces {
 		return "mep" // Mechanical, Electrical, Plumbing
@@ -322,23 +319,23 @@ func (uc *IFCUseCase) detectDiscipline(parseResult *ifc.IFCResult) string {
 }
 
 // countProperties estimates property count from parse result
-func (uc *IFCUseCase) countProperties(parseResult *ifc.IFCResult) int {
+func (uc *IFCUseCase) countProperties(parseResult *ifc.EnhancedIFCResult) int {
 	// Average 7 properties per entity
 	return parseResult.TotalEntities * 7
 }
 
 // countMaterials counts materials from parse result
-func (uc *IFCUseCase) countMaterials(parseResult *ifc.IFCResult) int {
+func (uc *IFCUseCase) countMaterials(parseResult *ifc.EnhancedIFCResult) int {
 	return parseResult.Walls + parseResult.Doors + parseResult.Windows
 }
 
 // countClassifications counts classifications from parse result
-func (uc *IFCUseCase) countClassifications(parseResult *ifc.IFCResult) int {
+func (uc *IFCUseCase) countClassifications(parseResult *ifc.EnhancedIFCResult) int {
 	return parseResult.Buildings + parseResult.Spaces + (parseResult.Equipment / 2)
 }
 
 // extractWarnings extracts warnings from parse result
-func (uc *IFCUseCase) extractWarnings(parseResult *ifc.IFCResult) []string {
+func (uc *IFCUseCase) extractWarnings(parseResult *ifc.EnhancedIFCResult) []string {
 	warnings := []string{}
 
 	if parseResult.TotalEntities == 0 {
@@ -450,8 +447,13 @@ func (uc *IFCUseCase) extractEntitiesFromIFC(ctx context.Context, enhancedResult
 		RelationshipsCreated: 0,
 	}
 
-	// Check if we have detailed entity data
-	if len(enhancedResult.BuildingEntities) == 0 {
+	// Check if we have any detailed entity data
+	hasDetailedEntities := len(enhancedResult.BuildingEntities) > 0 ||
+		len(enhancedResult.FloorEntities) > 0 ||
+		len(enhancedResult.SpaceEntities) > 0 ||
+		len(enhancedResult.EquipmentEntities) > 0
+
+	if !hasDetailedEntities {
 		uc.logger.Warn("IFC service returned counts only, not detailed entities",
 			"building_count", enhancedResult.Buildings,
 			"space_count", enhancedResult.Spaces,
@@ -468,27 +470,46 @@ func (uc *IFCUseCase) extractEntitiesFromIFC(ctx context.Context, enhancedResult
 	// Track GlobalID to domain ID mapping for relationship preservation
 	globalIDMap := make(map[string]types.ID)
 
-	// Step 1: Extract Buildings
-	for _, ifcBuilding := range enhancedResult.BuildingEntities {
-		buildingID, err := uc.extractBuilding(ctx, ifcBuilding)
-		if err != nil {
-			uc.logger.Error("Failed to extract building", "global_id", ifcBuilding.GlobalID, "error", err)
-			continue
+	// Step 1: Extract Buildings (or create default if none exist)
+	var primaryBuildingID types.ID
+
+	if len(enhancedResult.BuildingEntities) > 0 {
+		// Extract buildings from IFC
+		for _, ifcBuilding := range enhancedResult.BuildingEntities {
+			buildingID, err := uc.extractBuilding(ctx, ifcBuilding)
+			if err != nil {
+				uc.logger.Error("Failed to extract building", "global_id", ifcBuilding.GlobalID, "error", err)
+				continue
+			}
+			globalIDMap[ifcBuilding.GlobalID] = buildingID
+			if primaryBuildingID.IsEmpty() {
+				primaryBuildingID = buildingID
+			}
+			result.BuildingsCreated++
 		}
-		globalIDMap[ifcBuilding.GlobalID] = buildingID
+	} else {
+		// No building entities in IFC - create a default building
+		uc.logger.Warn("No building entities found in IFC, creating default building")
+		defaultBuilding := &domain.Building{
+			ID:        types.NewID(),
+			Name:      fmt.Sprintf("Imported Building %s", time.Now().Format("2006-01-02")),
+			Address:   "Address not specified in IFC",
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+		if err := uc.buildingRepo.Create(ctx, defaultBuilding); err != nil {
+			return nil, fmt.Errorf("failed to create default building: %w", err)
+		}
+		primaryBuildingID = defaultBuilding.ID
 		result.BuildingsCreated++
+		uc.logger.Info("Created default building", "building_id", primaryBuildingID, "name", defaultBuilding.Name)
 	}
 
 	// Step 2: Extract Floors
 	floorMap := make(map[string]types.ID) // Map floor GlobalID to Floor ID
 	for _, ifcFloor := range enhancedResult.FloorEntities {
-		// Get parent building ID (assume first building for now)
-		var buildingID types.ID
-		if len(enhancedResult.BuildingEntities) > 0 {
-			buildingID = globalIDMap[enhancedResult.BuildingEntities[0].GlobalID]
-		}
-
-		floorID, err := uc.extractFloor(ctx, ifcFloor, buildingID)
+		// Use primary building ID
+		floorID, err := uc.extractFloor(ctx, ifcFloor, primaryBuildingID)
 		if err != nil {
 			uc.logger.Error("Failed to extract floor", "global_id", ifcFloor.GlobalID, "error", err)
 			continue
@@ -519,6 +540,7 @@ func (uc *IFCUseCase) extractEntitiesFromIFC(ctx context.Context, enhancedResult
 	}
 
 	// Step 4: Extract Equipment
+	// Use primary building ID as default for equipment without rooms
 	for _, ifcEquipment := range enhancedResult.EquipmentEntities {
 		// Get parent room ID if specified
 		var roomID *types.ID
@@ -528,7 +550,7 @@ func (uc *IFCUseCase) extractEntitiesFromIFC(ctx context.Context, enhancedResult
 			}
 		}
 
-		equipID, err := uc.extractEquipment(ctx, ifcEquipment, roomID)
+		equipID, err := uc.extractEquipment(ctx, ifcEquipment, roomID, primaryBuildingID)
 		if err != nil {
 			uc.logger.Error("Failed to extract equipment", "global_id", ifcEquipment.GlobalID, "error", err)
 			continue
@@ -666,9 +688,9 @@ func (uc *IFCUseCase) extractRoom(ctx context.Context, ifcSpace ifc.IFCSpaceEnti
 }
 
 // extractEquipment converts IFC equipment entity to domain Equipment
-func (uc *IFCUseCase) extractEquipment(ctx context.Context, ifcEquip ifc.IFCEquipmentEntity, roomID *types.ID) (types.ID, error) {
+func (uc *IFCUseCase) extractEquipment(ctx context.Context, ifcEquip ifc.IFCEquipmentEntity, roomID *types.ID, defaultBuildingID types.ID) (types.ID, error) {
 	// Get building ID and floor ID from room if available
-	var buildingID types.ID
+	buildingID := defaultBuildingID // Use default if no room
 	var floorID types.ID
 	var buildingCode, floorCode, roomCode string
 
@@ -723,13 +745,17 @@ func (uc *IFCUseCase) extractEquipment(ctx context.Context, ifcEquip ifc.IFCEqui
 		ID:         types.NewID(),
 		BuildingID: buildingID,
 		FloorID:    floorID,
-		RoomID:     *roomID,
 		Name:       ifcEquip.Name,
 		Type:       ifcEquip.ObjectType,
 		Category:   category,
 		Subtype:    ifcEquip.ObjectType,
 		Status:     "OPERATIONAL",
 		Path:       equipmentPath, // Universal naming convention path
+	}
+
+	// Set RoomID only if not nil
+	if roomID != nil {
+		equipment.RoomID = *roomID
 	}
 
 	// Extract geometry if available

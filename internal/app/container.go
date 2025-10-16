@@ -329,6 +329,11 @@ func (c *Container) initUseCases(ctx context.Context) error {
 	c.equipmentUC = usecase.NewEquipmentUseCase(c.equipmentRepo, c.buildingRepo, c.floorRepo, c.roomRepo, c.logger)
 	c.organizationUC = usecase.NewOrganizationUseCase(c.organizationRepo, c.userRepo, c.logger)
 
+	// Inject additional repositories (avoids circular dependencies)
+	c.floorUC.SetRoomRepository(c.roomRepo)
+	c.floorUC.SetEquipmentRepository(c.equipmentRepo)
+	c.roomUC.SetEquipmentRepository(c.equipmentRepo)
+
 	// BAS use case - Wire with all dependencies
 	c.basImportUC = usecase.NewBASImportUseCase(
 		c.basPointRepo,
@@ -600,7 +605,13 @@ func (c *Container) GetNativeParser() *ifc.NativeParser {
 	return c.nativeParser
 }
 
-func (c *Container) GetIFCService() *ifc.EnhancedIFCService {
+func (c *Container) GetIFCService() *usecase.IFCUseCase {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.ifcUC
+}
+
+func (c *Container) GetIFCServiceLayer() *ifc.EnhancedIFCService {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.ifcService
@@ -662,6 +673,14 @@ func (c *Container) GetCommitUseCase() *usecase.CommitUseCase {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.commitUC
+}
+
+// GetDiffService returns the diff service
+// TODO: Implement full DiffService with snapshot, object, and tree repositories
+func (c *Container) GetDiffService() *usecase.DiffService {
+	// For now, return nil - diff functionality requires additional repo wiring
+	// The VC handler has placeholder response for diff endpoint
+	return nil
 }
 
 func (c *Container) GetPullRequestUseCase() *usecase.PullRequestUseCase {

@@ -65,6 +65,59 @@ func NewRouter(config *RouterConfig) chi.Router {
 			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Put("/{id}", apiHandlers.buildingHandler.UpdateBuilding)
 		})
 
+		// Floor management endpoints
+		r.Route("/floors", func(r chi.Router) {
+			r.Use(httpmiddleware.AuthMiddleware(config.JWTManager))
+			r.Use(httpmiddleware.RateLimit(100, time.Hour))
+
+			rbac := config.Container.GetRBACManager()
+
+			// CRUD operations
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/", apiHandlers.floorHandler.ListFloors)
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/{id}", apiHandlers.floorHandler.GetFloor)
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/", apiHandlers.floorHandler.CreateFloor)
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Put("/{id}", apiHandlers.floorHandler.UpdateFloor)
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Delete("/{id}", apiHandlers.floorHandler.DeleteFloor)
+
+			// Floor relationships
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/{id}/rooms", apiHandlers.floorHandler.GetFloorRooms)
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/{id}/equipment", apiHandlers.floorHandler.GetFloorEquipment)
+		})
+
+		// Room management endpoints
+		r.Route("/rooms", func(r chi.Router) {
+			r.Use(httpmiddleware.AuthMiddleware(config.JWTManager))
+			r.Use(httpmiddleware.RateLimit(100, time.Hour))
+
+			rbac := config.Container.GetRBACManager()
+
+			// CRUD operations
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/", apiHandlers.roomHandler.ListRooms)
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/{id}", apiHandlers.roomHandler.GetRoom)
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/", apiHandlers.roomHandler.CreateRoom)
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Put("/{id}", apiHandlers.roomHandler.UpdateRoom)
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Delete("/{id}", apiHandlers.roomHandler.DeleteRoom)
+
+			// Room relationships
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/{id}/equipment", apiHandlers.roomHandler.GetRoomEquipment)
+		})
+
+		// Version Control endpoints (Git-like workflow)
+		r.Route("/vc", func(r chi.Router) {
+			r.Use(httpmiddleware.AuthMiddleware(config.JWTManager))
+			r.Use(httpmiddleware.RateLimit(100, time.Hour))
+
+			rbac := config.Container.GetRBACManager()
+
+			// Status and log (read operations)
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/status", apiHandlers.vcHandler.GetStatus)
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/log", apiHandlers.vcHandler.GetLog)
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/diff", apiHandlers.vcHandler.GetDiff)
+
+			// Commit (write operation)
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/commit", apiHandlers.vcHandler.CreateCommit)
+		})
+
 		// Mobile API routes (mobile-optimized with AR/spatial features)
 		r.Route("/mobile", func(r chi.Router) {
 			// Mobile authentication endpoints (public)
@@ -134,7 +187,7 @@ func NewRouter(config *RouterConfig) chi.Router {
 				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentRead)).Get("/{id}/hierarchy", apiHandlers.equipmentHandler.GetHierarchy)
 				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentWrite)).Post("/{id}/relationships", apiHandlers.equipmentHandler.CreateRelationship)
 				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentWrite)).Delete("/{id}/relationships/{rel_id}", apiHandlers.equipmentHandler.DeleteRelationship)
-				
+
 				// Path-based query endpoints (universal naming convention)
 				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentRead)).Get("/path/{path}", apiHandlers.equipmentHandler.GetByPath)
 				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentRead)).Get("/path-pattern", apiHandlers.equipmentHandler.FindByPath)
@@ -223,6 +276,28 @@ func NewRouter(config *RouterConfig) chi.Router {
 				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/{id}/close", apiHandlers.issueHandler.HandleCloseIssue)
 			}
 		})
+
+		// IFC Import/Export endpoints (Building data import/export)
+		r.Route("/ifc", func(r chi.Router) {
+			if apiHandlers.ifcHandler != nil {
+				r.Use(httpmiddleware.AuthMiddleware(config.JWTManager))
+				r.Use(httpmiddleware.RateLimit(10, time.Hour)) // Lower rate limit for file uploads
+
+				rbac := config.Container.GetRBACManager()
+
+				// IFC import (multipart file upload or JSON)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/import", apiHandlers.ifcHandler.ImportIFC)
+
+				// IFC validation
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Post("/validate", apiHandlers.ifcHandler.ValidateIFC)
+
+				// IFC export
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Post("/export/{id}", apiHandlers.ifcHandler.ExportIFC)
+
+				// Service status
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/status", apiHandlers.ifcHandler.GetServiceStatus)
+			}
+		})
 	})
 
 	return router
@@ -243,12 +318,16 @@ type publicHandlers struct {
 // apiHandlers holds authenticated API handlers
 type apiHandlers struct {
 	buildingHandler     *handlers.BuildingHandler
+	floorHandler        *handlers.FloorHandler
+	roomHandler         *handlers.RoomHandler
 	equipmentHandler    *handlers.EquipmentHandler
 	userHandler         *handlers.UserHandler
 	organizationHandler *handlers.OrganizationHandler
 	basHandler          *handlers.BASHandler
 	prHandler           *handlers.PRHandler
 	issueHandler        *handlers.IssueHandler
+	ifcHandler          *handlers.IFCHandler
+	vcHandler           *handlers.VersionControlHandler
 }
 
 // NewRouterConfig creates a router configuration from existing dependencies
@@ -290,7 +369,13 @@ func createPublicHandlers(config *RouterConfig) *publicHandlers {
 func createAPIHandlers(config *RouterConfig) *apiHandlers {
 	logger := config.Container.GetLogger()
 	userUC := config.Container.GetUserUseCase()
+	floorUC := config.Container.GetFloorUseCase()
+	roomUC := config.Container.GetRoomUseCase()
 	equipmentUC := config.Container.GetEquipmentUseCase()
+	ifcUC := config.Container.GetIFCUseCase()
+	branchUC := config.Container.GetBranchUseCase()
+	commitUC := config.Container.GetCommitUseCase()
+	diffSvc := config.Container.GetDiffService() // May be nil
 
 	// Create BaseHandler for handlers not yet in Container
 	// NOTE: Handlers are wired via Container in createAPIHandlers()
@@ -300,11 +385,15 @@ func createAPIHandlers(config *RouterConfig) *apiHandlers {
 
 	return &apiHandlers{
 		buildingHandler:     config.Container.GetBuildingHandler(),
+		floorHandler:        handlers.NewFloorHandler(config.Server, floorUC, logger),
+		roomHandler:         handlers.NewRoomHandler(config.Server, roomUC, logger),
 		equipmentHandler:    handlers.NewEquipmentHandler(config.Server, equipmentUC, relationshipRepo, logger),
 		userHandler:         handlers.NewUserHandler(baseHandler, userUC, logger),
 		organizationHandler: config.Container.GetOrganizationHandler(),
 		basHandler:          config.Container.GetBASHandler(),
 		prHandler:           config.Container.GetPRHandler(),
 		issueHandler:        config.Container.GetIssueHandler(),
+		ifcHandler:          handlers.NewIFCHandler(config.Server, ifcUC, logger),
+		vcHandler:           handlers.NewVersionControlHandler(config.Server, branchUC, commitUC, diffSvc, logger), // diff service may be nil
 	}
 }

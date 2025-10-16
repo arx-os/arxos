@@ -69,6 +69,8 @@ logs/
 *.old
 # Coverage
 coverage.out
+*_coverage.out
+*.out
 coverage.html
 *.coverprofile
 # Archives and backups
@@ -146,7 +148,7 @@ cache/ifc/
 
 # Python Virtual Environments
 venv*/
-.env*/ 
+.env*/
 python_env*/
 # React Native / Mobile (ArxOS Mobile App)
 node_modules/

@@ -156,6 +156,44 @@ func (r *EquipmentRepository) GetByBuilding(ctx context.Context, buildingID stri
 	return r.scanEquipmentRows(rows)
 }
 
+// GetByFloor retrieves all equipment on a specific floor
+func (r *EquipmentRepository) GetByFloor(ctx context.Context, floorID string) ([]*domain.Equipment, error) {
+	query := `
+		SELECT id, building_id, floor_id, room_id, name, equipment_type, model,
+		       location_x, location_y, location_z, path, status, created_at, updated_at
+		FROM equipment
+		WHERE floor_id = $1
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, floorID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return r.scanEquipmentRows(rows)
+}
+
+// GetByRoom retrieves all equipment in a specific room
+func (r *EquipmentRepository) GetByRoom(ctx context.Context, roomID string) ([]*domain.Equipment, error) {
+	query := `
+		SELECT id, building_id, floor_id, room_id, name, equipment_type, model,
+		       location_x, location_y, location_z, path, status, created_at, updated_at
+		FROM equipment
+		WHERE room_id = $1
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, roomID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return r.scanEquipmentRows(rows)
+}
+
 // GetByType retrieves equipment by type
 func (r *EquipmentRepository) GetByType(ctx context.Context, equipmentType string) ([]*domain.Equipment, error) {
 	query := `
@@ -319,7 +357,7 @@ func (r *EquipmentRepository) scanEquipmentRows(rows *sql.Rows) ([]*domain.Equip
 
 	for rows.Next() {
 		var e domain.Equipment
-		var floorID, roomID sql.NullString
+		var floorID, roomID, model sql.NullString
 		var locX, locY, locZ sql.NullFloat64
 		var path sql.NullString
 
@@ -330,7 +368,7 @@ func (r *EquipmentRepository) scanEquipmentRows(rows *sql.Rows) ([]*domain.Equip
 			&roomID,
 			&e.Name,
 			&e.Type,
-			&e.Model,
+			&model,
 			&locX,
 			&locY,
 			&locZ,
@@ -350,6 +388,9 @@ func (r *EquipmentRepository) scanEquipmentRows(rows *sql.Rows) ([]*domain.Equip
 		}
 		if roomID.Valid {
 			e.RoomID.Legacy = roomID.String
+		}
+		if model.Valid {
+			e.Model = model.String
 		}
 		if path.Valid {
 			e.Path = path.String
@@ -383,7 +424,7 @@ func (r *EquipmentRepository) GetByPath(ctx context.Context, exactPath string) (
 	`
 
 	var e domain.Equipment
-	var floorID, roomID sql.NullString
+	var floorID, roomID, model sql.NullString
 	var locX, locY, locZ sql.NullFloat64
 	var path sql.NullString
 
@@ -394,7 +435,7 @@ func (r *EquipmentRepository) GetByPath(ctx context.Context, exactPath string) (
 		&roomID,
 		&e.Name,
 		&e.Type,
-		&e.Model,
+		&model,
 		&locX,
 		&locY,
 		&locZ,
@@ -417,6 +458,9 @@ func (r *EquipmentRepository) GetByPath(ctx context.Context, exactPath string) (
 	}
 	if roomID.Valid {
 		e.RoomID.Legacy = roomID.String
+	}
+	if model.Valid {
+		e.Model = model.String
 	}
 	if path.Valid {
 		e.Path = path.String
@@ -443,7 +487,7 @@ func (r *EquipmentRepository) FindByPath(ctx context.Context, pathPattern string
 	// Convert path pattern to SQL LIKE pattern
 	// Replace * with % for SQL LIKE
 	sqlPattern := strings.ReplaceAll(pathPattern, "*", "%")
-	
+
 	// Validate pattern has at least some specificity
 	if sqlPattern == "%" || sqlPattern == "/%" {
 		return nil, fmt.Errorf("path pattern too broad, must include at least one specific segment")

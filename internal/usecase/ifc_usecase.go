@@ -591,9 +591,9 @@ func (uc *IFCUseCase) extractBuilding(ctx context.Context, ifcBuilding ifc.IFCBu
 			addressParts = append(addressParts, ifcBuilding.Address.PostalCode)
 		}
 		if len(addressParts) > 0 {
-			building.Address = fmt.Sprintf("%s", addressParts[0])
+			building.Address = addressParts[0]
 			if len(addressParts) > 1 {
-				building.Address += fmt.Sprintf(", %s", addressParts[1])
+				building.Address += ", " + addressParts[1]
 			}
 		}
 	}

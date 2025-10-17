@@ -391,3 +391,36 @@ func (uc *EquipmentUseCase) validateUpdateEquipment(equipment *domain.Equipment)
 
 	return nil
 }
+
+// GetByPath retrieves equipment by exact path
+func (uc *EquipmentUseCase) GetByPath(ctx context.Context, path string) (*domain.Equipment, error) {
+	uc.logger.Info("Getting equipment by path", "path", path)
+
+	// Validate path format
+	if !naming.IsValidPath(path) {
+		return nil, fmt.Errorf("invalid path format: %s", path)
+	}
+
+	equipment, err := uc.equipmentRepo.GetByPath(ctx, path)
+	if err != nil {
+		uc.logger.Error("Failed to get equipment by path", "path", path, "error", err)
+		return nil, fmt.Errorf("failed to get equipment by path: %w", err)
+	}
+
+	uc.logger.Info("Equipment found", "path", path, "name", equipment.Name)
+	return equipment, nil
+}
+
+// FindByPath finds equipment matching path pattern (supports wildcards)
+func (uc *EquipmentUseCase) FindByPath(ctx context.Context, pathPattern string) ([]*domain.Equipment, error) {
+	uc.logger.Info("Finding equipment by path pattern", "pattern", pathPattern)
+
+	equipment, err := uc.equipmentRepo.FindByPath(ctx, pathPattern)
+	if err != nil {
+		uc.logger.Error("Failed to find equipment by path", "pattern", pathPattern, "error", err)
+		return nil, fmt.Errorf("failed to find equipment by path: %w", err)
+	}
+
+	uc.logger.Info("Found equipment", "count", len(equipment), "pattern", pathPattern)
+	return equipment, nil
+}

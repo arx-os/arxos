@@ -64,14 +64,14 @@ Arxos provides **three complementary interfaces** that close the loop on a build
 - Bidirectional bridge to professional design tools
 - Import IFC files → populate Arxos
 - Export Arxos data → IFC for architects/engineers
-- **Status:** Import parsing works, entity extraction ready
+- **Status:** Python service complete with full entity extraction, Go consumption needs wiring (~85% complete)
 
 ### 3. React Native + AR (Field Layer)
 **For:** Field techs, facility staff actually IN the building
 - Scan QR codes, capture spatial anchors, take photos
 - See equipment overlays in AR
 - Update/create records on the spot
-- **Status:** Structure complete (~40%), needs wiring
+- **Status:** Backend endpoints functional (auth, equipment, spatial), mobile UI ~40% complete, AR features need wiring
 
 **Result:** Architect exports IFC → IT tech manages via CLI → Field tech updates via mobile → Everyone sees the same data.
 

@@ -18,7 +18,7 @@ import (
 
 func TestFloorRoomRESTAPI(t *testing.T) {
 	// Setup test container and router
-	container, cleanup := setupTestContainer(t)
+	container, cleanup := setupTestContainerLegacy(t)
 	defer cleanup()
 
 	jwtConfig := &auth.JWTConfig{
@@ -274,7 +274,7 @@ func TestFloorRoomRESTAPI(t *testing.T) {
 }
 
 // setupTestContainer initializes a test container with database connection
-func setupTestContainer(t *testing.T) (*app.Container, func()) {
+func setupTestContainerLegacy(t *testing.T) (*app.Container, func()) {
 	container := app.NewContainer()
 
 	cleanup := func() {

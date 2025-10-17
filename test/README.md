@@ -1,508 +1,599 @@
-# ArxOS Integration Testing Suite
+# ArxOS Test Suite
+
+**Last Updated:** October 17, 2025  
+**Test Coverage:** ~18% (Target: 30-40%)  
+**Status:** Infrastructure Complete, Ready for Comprehensive Testing
+
+---
 
 ## Overview
 
-The ArxOS Integration Testing Suite provides comprehensive testing across all platform components - CLI, Web API, Mobile AR, and Backend Services. This suite ensures that the "Git of Buildings" platform functions as a cohesive system with proper data consistency, real-time synchronization, and cross-platform compatibility.
+The ArxOS test suite provides comprehensive testing for the "Git for Buildings" platform, covering unit tests, integration tests, and end-to-end workflows.
 
-## 🏗️ **Integration Testing Architecture**
+**Testing Philosophy:**
+- Write tests that validate real user scenarios
+- Use Go's native testing framework
+- Maintain test isolation with transactions
+- Follow engineering best practices
 
-### **Testing Pyramid**
+---
+
+## Quick Start
+
+### 1. Start Test Database
+
+```bash
+# Start test database with Docker
+make test-db-start
+
+# Run migrations
+make migrate-test
+
+# Verify database is ready
+docker-compose -f docker-compose.test.yml ps
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    E2E Tests (10%)                         │
-│  • Full user workflows • Cross-platform scenarios         │
-├─────────────────────────────────────────────────────────────┤
-│                 Integration Tests (30%)                     │
-│  • Service-to-service • API integration • Database ops     │
-├─────────────────────────────────────────────────────────────┤
-│                   Unit Tests (60%)                          │
-│  • Component isolation • Business logic • Edge cases      │
-└─────────────────────────────────────────────────────────────┘
+
+### 2. Run Tests
+
+```bash
+# Run all integration tests
+make test-integration
+
+# Run with coverage
+make test-integration-coverage
+
+# Run only unit tests (no database needed)
+make test-short
+
+# Run specific category
+go test ./test/integration/api/... -v
+go test ./test/integration/workflow/... -v
+go test ./test/integration/repository/... -v
 ```
 
-### **Test Categories**
+### 3. View Results
 
-1. **Service Integration Tests** - Backend service interactions
-2. **API Integration Tests** - HTTP/GraphQL/WebSocket endpoints  
-3. **Database Integration Tests** - PostGIS operations and transactions
-4. **Mobile Integration Tests** - React Native app functionality
-5. **AR Integration Tests** - ARKit/ARCore with backend sync
-6. **Cross-Platform Tests** - CLI ↔ Web ↔ Mobile interactions
-7. **Performance Integration Tests** - Load testing and bottlenecks
-8. **Security Integration Tests** - Authentication and authorization flows
+```bash
+# Open coverage report
+open coverage-integration.html
 
-## 📁 **Directory Structure**
+# Check test output
+cat test/results/integration_test_results.json
+```
+
+---
+
+## Directory Structure
 
 ```
 test/
-├── integration/
-│   ├── services/           # Service-to-service integration
-│   │   ├── building_service_test.go
-│   │   ├── equipment_service_test.go
-│   │   ├── ifc_service_test.go
-│   │   └── sync_service_test.go
-│   ├── api/                # API endpoint integration
-│   │   ├── http_api_test.go
-│   │   ├── graphql_api_test.go
-│   │   ├── websocket_test.go
-│   │   └── auth_api_test.go
-│   ├── database/           # Database integration
-│   │   ├── postgis_test.go
-│   │   ├── spatial_queries_test.go
-│   │   ├── transactions_test.go
-│   │   └── migrations_test.go
-│   ├── mobile/             # Mobile app integration
-│   │   ├── ar_integration_test.ts
-│   │   ├── offline_sync_test.ts
-│   │   ├── navigation_test.ts
-│   │   └── equipment_management_test.ts
-│   ├── cross_platform/     # Cross-platform workflows
-│   │   ├── cli_to_web_test.go
-│   │   ├── mobile_to_backend_test.ts
-│   │   └── real_time_sync_test.go
-│   ├── performance/        # Performance integration
-│   │   ├── load_test.go
-│   │   ├── stress_test.go
-│   │   └── benchmark_test.go
-│   └── security/           # Security integration
-│       ├── auth_flow_test.go
-│       ├── rbac_test.go
-│       └── data_encryption_test.go
-├── fixtures/               # Test data and fixtures
-│   ├── buildings/
-│   ├── equipment/
-│   ├── ifc_files/
-│   └── spatial_data/
-├── helpers/                # Test utilities and helpers
-│   ├── test_server.go
-│   ├── mock_services.go
+├── README.md                          # This file
+├── REORGANIZATION_PLAN.md             # Cleanup documentation
+├── CLEANUP_SUMMARY_OCT_17_2025.md     # Recent cleanup summary
+│
+├── fixtures/                          # Test data files
+│   └── sample_buildings.json
+│
+├── helpers/                           # Shared test utilities
+│   ├── assertions.go
+│   ├── config_builder.go
 │   ├── test_data_builder.go
-│   └── assertions.go
-├── config/                 # Test configuration
-│   ├── test_config.yaml
-│   ├── docker-compose.test.yml
-│   └── test_environment.sh
-└── integration_test_runner.go
+│   ├── test_server.go
+│   └── test_utils.go
+│
+├── unit/                              # Unit tests (fast, no dependencies)
+│   └── domain_agnostic_test.go
+│
+├── integration/                       # Integration tests (require database)
+│   ├── README.md                      # Integration test guide
+│   ├── config.go                      # Database config
+│   ├── container.go                   # Test container setup
+│   ├── test_helpers.go                # Helper utilities
+│   │
+│   ├── api/                           # HTTP API tests
+│   │   ├── README.md
+│   │   ├── auth_api_test.go           # Authentication
+│   │   ├── building_api_test.go       # Building endpoints
+│   │   ├── equipment_api_test.go      # Equipment endpoints
+│   │   ├── floor_room_test.go         # Floor/room endpoints
+│   │   ├── ifc_import_test.go         # IFC import endpoints
+│   │   ├── enhanced_api_test.go       # Enhanced features
+│   │   ├── http_api_test.go           # Core HTTP tests
+│   │   └── test_helpers.go            # HTTP server setup
+│   │
+│   ├── repository/                    # Repository/database tests
+│   │   ├── README.md
+│   │   ├── building_test.go           # Building repository
+│   │   └── crud_test.go               # CRUD operations
+│   │
+│   ├── workflow/                      # End-to-end workflows
+│   │   ├── README.md
+│   │   ├── complete_workflows_test.go # Complete scenarios
+│   │   ├── e2e_workflow_test.go       # E2E validation
+│   │   ├── ifc_import_test.go         # IFC import workflow
+│   │   ├── path_query_test.go         # Path query testing
+│   │   ├── path_query_integration_test.go
+│   │   └── version_control_test.go    # Git-like workflow
+│   │
+│   ├── cli/                           # CLI command tests
+│   │   └── cli_integration_test.go
+│   │
+│   ├── cross_platform/                # Cross-platform tests
+│   │   ├── cli_integration_test.go
+│   │   └── cli_to_web_test.go
+│   │
+│   ├── services/                      # Service layer tests
+│   │   ├── building_service_test.go
+│   │   └── version_control_service_test.go
+│   │
+│   └── performance/                   # Performance tests
+│       └── load_test.go
+│
+├── load/                              # Standalone load tests
+│   └── load_test.go
+│
+├── chaos/                             # Chaos engineering tests
+│   └── chaos_test.go
+│
+└── config/                            # Test configuration
+    ├── test_config.yaml
+    └── test_environment.sh
 ```
 
-## 🚀 **Quick Start**
+---
 
-### **Prerequisites**
-- Docker and Docker Compose
-- Go 1.21+
-- Node.js 18+ (for mobile tests)
-- PostgreSQL with PostGIS extension
+## Test Categories
 
-### **Setup Test Environment**
+### Unit Tests (`test/unit/`)
+**Purpose:** Fast, isolated tests with no external dependencies  
+**Requires:** Nothing (pure Go)  
+**Run:** `go test ./test/unit/... -v`
+
+**What to test:**
+- Domain logic
+- Business rules
+- Algorithms
+- Validation functions
+
+### Integration Tests (`test/integration/`)
+**Purpose:** Test component interactions with real dependencies  
+**Requires:** Test database, migrations  
+**Run:** `make test-integration`
+
+**Subcategories:**
+
+#### API Tests (`integration/api/`)
+- HTTP endpoint testing
+- Authentication flows
+- Request/response validation
+- Error handling
+
+#### Repository Tests (`integration/repository/`)
+- Database CRUD operations
+- PostGIS spatial queries
+- Transaction handling
+- Data persistence
+
+#### Workflow Tests (`integration/workflow/`)
+- End-to-end user scenarios
+- Multi-step processes (IFC import → query → export)
+- Feature integrations (BAS + IFC)
+- Complete lifecycle testing
+
+#### CLI Tests (`integration/cli/`)
+- Command execution
+- Output validation
+- Error handling
+
+---
+
+## Running Tests
+
+### All Tests
+
 ```bash
-# Clone the repository
-git clone https://github.com/arx-os/arxos.git
-cd arxos
+# All tests (unit + integration)
+go test ./... -v
 
-# Make test environment script executable
-chmod +x test/config/test_environment.sh
+# Only unit tests (fast)
+make test-short
 
-# Run the test environment setup
-./test/config/test_environment.sh
+# Only integration tests (requires database)
+make test-integration
 ```
 
-### **Run All Integration Tests**
+### By Category
+
 ```bash
-# Run all integration tests
-go run test/integration_test_runner.go
+# API tests
+go test ./test/integration/api/... -v
 
-# Run with verbose output
-go run test/integration_test_runner.go -verbose
+# Repository tests
+go test ./test/integration/repository/... -v
 
-# Run specific test categories
-go run test/integration_test_runner.go -only=api,services
+# Workflow tests
+go test ./test/integration/workflow/... -v
 
-# Skip specific test categories
-go run test/integration_test_runner.go -skip=performance,security
-```
-
-### **Run Individual Test Categories**
-```bash
-# Service integration tests
-go test -v ./test/integration/services/...
-
-# API integration tests
-go test -v ./test/integration/api/...
-
-# Database integration tests
-go test -v ./test/integration/database/...
-
-# Cross-platform integration tests
-go test -v ./test/integration/cross_platform/...
+# CLI tests
+go test ./test/integration/cli/... -v
 
 # Performance tests
-go test -v ./test/integration/performance/...
-
-# Mobile AR integration tests
-cd mobile && npm test
+go test ./test/integration/performance/... -v
 ```
 
-## 🔧 **Configuration**
+### With Options
 
-### **Test Configuration (`test/config/test_config.yaml`)**
-```yaml
-# Server Configuration
-server:
-  host: "localhost"
-  port: 8080
-  read_timeout: 30s
-  write_timeout: 30s
-  idle_timeout: 120s
-
-# Database Configuration
-database:
-  host: "localhost"
-  port: 5432
-  name: "arxos_test"
-  user: "arxos_test"
-  password: "test_password"
-  ssl_mode: "disable"
-  max_open_conns: 25
-  max_idle_conns: 5
-  conn_max_lifetime: 5m
-
-# Feature Flags for Testing
-features:
-  enable_graphql: true
-  enable_websocket: true
-  enable_ar_integration: true
-  enable_offline_sync: true
-  enable_performance_monitoring: true
-
-# Performance Testing Configuration
-performance:
-  max_concurrent_requests: 100
-  request_timeout: 30s
-  memory_limit_mb: 512
-  cpu_limit_percent: 80
-```
-
-### **Docker Compose (`test/config/docker-compose.test.yml`)**
-The Docker Compose configuration provides isolated test environments with:
-- PostgreSQL with PostGIS
-- Redis cache
-- IFC OpenShell service
-- ArxOS API server
-- Mobile app test environment
-- Performance testing tools
-
-## 📊 **Test Categories Details**
-
-### **1. Service Integration Tests**
-Tests the interaction between different backend services:
-- Building service ↔ Equipment service
-- IFC service ↔ Component service
-- Sync service ↔ All services
-- Authentication service ↔ All services
-
-**Key Test Scenarios:**
-- Create building → Create equipment → Update status
-- Import IFC → Extract components → Update building
-- Real-time sync between services
-- Error handling and recovery
-
-### **2. API Integration Tests**
-Tests HTTP, GraphQL, and WebSocket APIs:
-- REST API endpoints
-- GraphQL queries and mutations
-- WebSocket real-time updates
-- Authentication flows
-- Error handling and validation
-
-**Key Test Scenarios:**
-- CRUD operations via REST API
-- Complex queries via GraphQL
-- Real-time updates via WebSocket
-- Authentication and authorization
-- Rate limiting and security
-
-### **3. Database Integration Tests**
-Tests PostGIS database operations:
-- Spatial queries and indexing
-- Transaction handling
-- Data consistency
-- Migration testing
-- Performance under load
-
-**Key Test Scenarios:**
-- Spatial queries with PostGIS
-- Transaction rollback scenarios
-- Data consistency across operations
-- Migration up/down testing
-- Connection pooling and performance
-
-### **4. Mobile Integration Tests**
-Tests React Native mobile app functionality:
-- AR engine integration
-- Offline data synchronization
-- Equipment management
-- Navigation and pathfinding
-- Cross-platform data sync
-
-**Key Test Scenarios:**
-- AR equipment identification
-- Offline data caching and sync
-- Equipment status updates via AR
-- Spatial data collection
-- Navigation path calculation
-
-### **5. Cross-Platform Integration Tests**
-Tests interactions between CLI, Web, and Mobile:
-- CLI → Web API → Database
-- Mobile AR → Backend → Web interface
-- Real-time sync across platforms
-- Data consistency validation
-
-**Key Test Scenarios:**
-- CLI creates building → Web displays it
-- Mobile updates equipment → CLI sees change
-- Real-time sync across all platforms
-- Data consistency validation
-
-### **6. Performance Integration Tests**
-Tests system performance under load:
-- Load testing with concurrent requests
-- Stress testing with extreme load
-- Memory usage and leak detection
-- Database performance under load
-- API response time validation
-
-**Key Test Scenarios:**
-- Concurrent building creation
-- High-volume equipment queries
-- Spatial query performance
-- Memory leak detection
-- Response time validation
-
-### **7. Security Integration Tests**
-Tests security features:
-- Authentication flows
-- Authorization and RBAC
-- Data encryption
-- API security
-- Cross-platform security
-
-**Key Test Scenarios:**
-- JWT authentication flow
-- Role-based access control
-- Data encryption validation
-- API security headers
-- Cross-platform security
-
-## 🛠️ **Test Utilities**
-
-### **Test Data Builder**
-```go
-// Create test data
-builder := helpers.NewTestDataBuilder(buildingUC, equipmentUC, userUC, organizationUC, componentUC, ifcUC)
-
-// Build test organization
-org, err := builder.BuildTestOrganization(ctx)
-
-// Build test building with equipment
-buildings, err := builder.BuildTestBuildingsWithEquipment(ctx, 10, 5)
-```
-
-### **Test Server Helper**
-```go
-// Create test server
-server, err := helpers.NewTestServer(cfg)
-
-// Start server
-err = server.Start()
-defer server.Close()
-
-// Get HTTP client
-client := server.GetHTTPClient()
-```
-
-### **Custom Assertions**
-```go
-// Custom assertions for domain objects
-helpers.AssertBuildingEqual(t, expectedBuilding, actualBuilding)
-helpers.AssertEquipmentEqual(t, expectedEquipment, actualEquipment)
-helpers.AssertSpatialAnchorEqual(t, expectedAnchor, actualAnchor)
-helpers.AssertAREquipmentOverlayEqual(t, expectedOverlay, actualOverlay)
-```
-
-## 📈 **Test Reports**
-
-### **Report Formats**
-- **JSON**: Machine-readable format for CI/CD integration
-- **HTML**: Human-readable format with detailed results
-- **JUnit**: Standard format for CI/CD systems
-
-### **Report Contents**
-- Test execution summary
-- Category-wise breakdown
-- Performance metrics
-- Error details and stack traces
-- Coverage information (if enabled)
-
-### **Report Location**
-Reports are generated in the `test/results/` directory:
-- `integration_test_report.json`
-- `integration_test_report.html`
-- `integration_test_report.xml`
-
-## 🔍 **Debugging and Troubleshooting**
-
-### **Common Issues**
-
-1. **Database Connection Issues**
-   ```bash
-   # Check PostgreSQL status
-   docker-compose -f test/config/docker-compose.test.yml exec postgres-test pg_isready
-   
-   # Check database logs
-   docker-compose -f test/config/docker-compose.test.yml logs postgres-test
-   ```
-
-2. **Service Startup Issues**
-   ```bash
-   # Check service health
-   curl http://localhost:8080/health
-   
-   # Check service logs
-   docker-compose -f test/config/docker-compose.test.yml logs arxos-api-test
-   ```
-
-3. **Mobile Test Issues**
-   ```bash
-   # Check mobile app logs
-   docker-compose -f test/config/docker-compose.test.yml logs mobile-app-test
-   
-   # Restart mobile services
-   docker-compose -f test/config/docker-compose.test.yml restart mobile-app-test
-   ```
-
-### **Debug Mode**
 ```bash
-# Run tests with debug logging
-go run test/integration_test_runner.go -verbose -timeout=60m
+# With coverage
+make test-integration-coverage
+
+# Specific test function
+go test ./test/integration/workflow -run TestIFCImport -v
+
+# With race detection
+go test ./test/integration/... -race -v
+
+# With timeout
+go test ./test/integration/... -timeout 30m -v
 ```
 
-### **Test Data Cleanup**
+---
+
+## Test Infrastructure
+
+### Test Database
+
+**Docker Compose Setup:**
 ```bash
-# Clean up test data
-docker-compose -f test/config/docker-compose.test.yml exec arxos-api-test go run test/helpers/cleanup_test_data.go
+# Start
+make test-db-start
+
+# Check status
+docker-compose -f docker-compose.test.yml ps
+
+# Stop
+make test-db-stop
+
+# Clean (removes volumes)
+make test-db-clean
 ```
 
-## 🚀 **CI/CD Integration**
+**Manual Setup:**
+```bash
+# Create test database
+createdb arxos_test
+psql arxos_test -c "CREATE EXTENSION postgis;"
 
-### **GitHub Actions**
-```yaml
-name: Integration Tests
-on: [push, pull_request]
-
-jobs:
-  integration-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
-        with:
-          go-version: '1.21'
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - name: Run Integration Tests
-        run: |
-          chmod +x test/config/test_environment.sh
-          ./test/config/test_environment.sh
-      - name: Upload Test Results
-        uses: actions/upload-artifact@v3
-        with:
-          name: test-results
-          path: test/results/
+# Run migrations
+export TEST_DB_PORT=5432
+make migrate-test
 ```
 
-### **Jenkins Pipeline**
-```groovy
-pipeline {
-    agent any
-    stages {
-        stage('Setup') {
-            steps {
-                sh 'chmod +x test/config/test_environment.sh'
-            }
-        }
-        stage('Integration Tests') {
-            steps {
-                sh './test/config/test_environment.sh'
-            }
-        }
-        stage('Publish Results') {
-            steps {
-                publishTestResults testResultsPattern: 'test/results/*.xml'
-            }
-        }
+### Environment Variables
+
+```bash
+# Required for integration tests
+export TEST_DB_HOST=localhost
+export TEST_DB_PORT=5433          # Use 5433 for Docker test DB
+export TEST_DB_USER=postgres
+export TEST_DB_PASSWORD=postgres
+export TEST_DB_NAME=arxos_test
+export TEST_DB_SSLMODE=disable
+
+# Optional for IFC import tests
+export IFC_SERVICE_URL=http://localhost:5001
+```
+
+### Test Container
+
+Integration tests use a test container that provides:
+- Database connection
+- Repository access
+- Use case access
+- Helper methods for test data creation
+- Automatic cleanup
+
+```go
+func TestExample(t *testing.T) {
+    // Setup
+    container := setupTestContainer(t)
+    if container == nil {
+        t.Skip("Test database not available")
+    }
+    
+    // Create test data
+    building := container.CreateTestBuilding(t, "Test Building")
+    
+    // Run test with real database
+    // Automatic cleanup on test completion
+}
+```
+
+---
+
+## Test Data
+
+### Fixtures (`test/fixtures/`)
+
+Place test data files here:
+- Sample IFC files
+- BAS CSV exports
+- Building JSON files
+- Equipment data
+
+**Example:**
+```
+test/fixtures/
+├── sample_buildings.json
+└── (add your test files)
+```
+
+### Test Data in `test_data/`
+
+Sample files for integration tests:
+```
+test_data/
+├── inputs/                    # Sample IFC files
+│   ├── AC20-FZK-Haus.ifc
+│   ├── Duplex_A_20110907.ifc
+│   └── sample.ifc
+└── bas/                       # Sample BAS files
+    └── sample_bas_export.csv
+```
+
+---
+
+## Best Practices
+
+### 1. Test Independence ✅
+Each test should be completely independent:
+```go
+func TestExample(t *testing.T) {
+    // Create own test data
+    building := container.CreateTestBuilding(t, "Test Building")
+    
+    // Don't rely on other tests' data
+    // Don't assume test execution order
+}
+```
+
+### 2. Use t.Helper() ✅
+Mark helper functions:
+```go
+func createTestBuilding(t *testing.T) *domain.Building {
+    t.Helper()  // Makes error messages point to caller
+    // ...
+}
+```
+
+### 3. Cleanup with t.Cleanup() ✅
+Register cleanup automatically:
+```go
+func TestExample(t *testing.T) {
+    db := SetupTestDB(t)
+    // Cleanup registered automatically via t.Cleanup()
+    // No need for defer or manual cleanup
+}
+```
+
+### 4. Skip Gracefully ✅
+Don't fail tests due to missing infrastructure:
+```go
+func TestExample(t *testing.T) {
+    if testing.Short() {
+        t.Skip("Skipping integration test in short mode")
+    }
+    
+    container := setupTestContainer(t)
+    if container == nil {
+        t.Skip("Test database not available")
     }
 }
 ```
 
-## 📚 **Best Practices**
+### 5. Clear Test Names ✅
+Use descriptive names:
+```go
+// Good
+func TestEquipmentRepository_GetByPath_ExactMatch(t *testing.T)
 
-### **Test Organization**
-- Group related tests in the same file
-- Use descriptive test names
-- Follow the Arrange-Act-Assert pattern
-- Keep tests independent and isolated
+// Bad
+func TestGet(t *testing.T)
+```
 
-### **Test Data Management**
-- Use the TestDataBuilder for consistent test data
-- Clean up test data after each test
-- Use realistic test data that matches production scenarios
-- Avoid hardcoded values in tests
+### 6. Table-Driven Tests ✅
+Test multiple scenarios:
+```go
+tests := []struct{
+    name     string
+    input    string
+    expected int
+}{
+    {"Case 1", "input1", 1},
+    {"Case 2", "input2", 2},
+}
 
-### **Performance Testing**
-- Set realistic performance thresholds
-- Test under various load conditions
-- Monitor memory usage and leaks
-- Validate response times and throughput
-
-### **Error Handling**
-- Test both success and failure scenarios
-- Validate error messages and codes
-- Test error recovery mechanisms
-- Ensure proper cleanup on errors
-
-## 🤝 **Contributing**
-
-### **Adding New Tests**
-1. Create test file in appropriate category directory
-2. Follow existing naming conventions
-3. Use test utilities and helpers
-4. Add test data to fixtures if needed
-5. Update documentation
-
-### **Test Standards**
-- All tests must be deterministic
-- Tests should clean up after themselves
-- Use meaningful assertions
-- Include proper error handling
-- Follow Go testing conventions
-
-### **Code Review**
-- Ensure tests cover edge cases
-- Validate test data is realistic
-- Check for proper cleanup
-- Verify error handling
-- Ensure tests are maintainable
-
-## 📞 **Support**
-
-For questions or issues with the integration testing suite:
-- Create an issue in the GitHub repository
-- Check the troubleshooting section
-- Review existing test examples
-- Consult the ArxOS documentation
+for _, tt := range tests {
+    t.Run(tt.name, func(t *testing.T) {
+        // Test tt.input, tt.expected
+    })
+}
+```
 
 ---
 
-**Happy Testing! 🧪✨**
+## Coverage Goals
+
+**Current:** ~18%  
+**Target:** 30-40%
+
+### Priority Areas:
+
+1. **High Priority:**
+   - IFC import workflows
+   - Path query operations
+   - Repository CRUD
+   - Authentication flows
+
+2. **Medium Priority:**
+   - HTTP API endpoints
+   - Version control workflows
+   - Service integrations
+
+3. **Low Priority:**
+   - Edge cases
+   - Performance tests
+   - Chaos tests
+
+**Command:**
+```bash
+# Generate coverage report
+make test-integration-coverage
+
+# View by package
+go test ./... -coverprofile=coverage.out
+go tool cover -func=coverage.out
+```
+
+---
+
+## Troubleshooting
+
+### Tests Skip: "Test database not available"
+
+**Problem:** Can't connect to database
+
+**Solution:**
+```bash
+# Start test database
+make test-db-start
+
+# Verify connection
+psql -h localhost -p 5433 -U postgres -d arxos_test
+
+# Check environment variables
+echo $TEST_DB_PORT  # Should be 5433 for Docker
+```
+
+### Tests Skip: "Database migrations not run"
+
+**Problem:** Schema not initialized
+
+**Solution:**
+```bash
+export TEST_DB_PORT=5433
+make migrate-test
+```
+
+### Tests Fail: Connection refused
+
+**Problem:** Wrong port or database not running
+
+**Solution:**
+```bash
+# Check what's running
+docker-compose -f docker-compose.test.yml ps
+
+# Check port
+netstat -an | grep 5433
+
+# Restart services
+make test-db-stop
+make test-db-start
+```
+
+---
+
+## CI/CD Integration
+
+### GitHub Actions Example
+
+```yaml
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgis/postgis:15-3.3-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: arxos_test
+        ports:
+          - 5432:5432
+    
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      
+      - name: Run migrations
+        run: make migrate-test
+        env:
+          TEST_DB_PORT: 5432
+      
+      - name: Run tests
+        run: make test-integration
+        env:
+          TEST_DB_PORT: 5432
+```
+
+---
+
+## Recent Cleanup (October 17, 2025)
+
+### Reorganization Completed ✅
+
+- ✅ Moved 11 files to proper locations
+- ✅ Deleted 2 obsolete shell scripts
+- ✅ Removed 2 redundant directories
+- ✅ Fixed 5 linting errors
+- ✅ Created 3 category READMEs
+- ✅ Consolidated test structure
+
+**See:** `test/CLEANUP_SUMMARY_OCT_17_2025.md` for details
+
+---
+
+## Contributing
+
+### Adding New Tests
+
+1. **Choose correct location:**
+   - API test → `integration/api/`
+   - Repository test → `integration/repository/`
+   - Workflow test → `integration/workflow/`
+   - Unit test → `unit/`
+
+2. **Follow naming:**
+   - `*_test.go` suffix
+   - Descriptive names
+   - Clear purpose
+
+3. **Use helpers:**
+   - `setupTestContainer(t)` for integration tests
+   - `LoadTestIFCFile(t, filename)` for test data
+   - `CreateTestContext(t)` for timeouts
+
+4. **Add documentation:**
+   - Update relevant README
+   - Add comments explaining test purpose
+   - Document prerequisites
+
+---
+
+## Resources
+
+- [Integration Test Guide](integration/README.md) - Detailed integration testing guide
+- [Go Testing Package](https://pkg.go.dev/testing) - Official Go testing docs
+- [Testify](https://github.com/stretchr/testify) - Assertion library we use
+
+---
+
+**Test Suite Status:** Clean, Organized, Production-Ready ✅  
+**Ready for:** Comprehensive testing and deployment!

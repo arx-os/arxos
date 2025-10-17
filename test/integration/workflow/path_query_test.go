@@ -108,8 +108,15 @@ func TestPathBasedQueries(t *testing.T) {
 
 // TestPathQueryUseCases tests path queries through use case layer
 func TestPathQueryUseCases(t *testing.T) {
-	// This would test the use case layer if we add path query methods there
-	t.Skip("Use case layer tests - to be implemented")
+	// Skip for now - requires full container setup with test database
+	// This test validates the use case layer methods we just added
+	// TODO: Implement when test container setup is available
+	t.Skip("Use case layer tests require full container setup - implement in Week 4 testing phase")
+
+	// Future implementation:
+	// container := setupTestContainerWithDB(t)
+	// equipmentUC := container.GetEquipmentUseCase()
+	// Test GetByPath() and FindByPath() via use case
 }
 
 // Helper function to setup test database

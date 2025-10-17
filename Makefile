@@ -37,6 +37,42 @@ test-bench: ## Run benchmark tests
 	@echo "Running benchmark tests..."
 	go test -bench=. -benchmem ./...
 
+test-integration: ## Run integration tests (requires test database)
+	@echo "Running integration tests..."
+	@echo "Ensure test database is running: docker-compose -f docker-compose.test.yml up -d"
+	go test ./test/integration/... -v -count=1
+
+test-integration-coverage: ## Run integration tests with coverage
+	@echo "Running integration tests with coverage..."
+	go test ./test/integration/... -v -count=1 -coverprofile=coverage-integration.out
+	go tool cover -html=coverage-integration.out -o coverage-integration.html
+	@echo "Integration coverage report: coverage-integration.html"
+
+test-short: ## Run only unit tests (skip integration)
+	@echo "Running unit tests only..."
+	go test -short ./... -v
+
+test-db-start: ## Start test database
+	@echo "Starting test database..."
+	docker-compose -f docker-compose.test.yml up -d postgres-test
+	@echo "Waiting for database to be ready..."
+	@sleep 3
+	@docker-compose -f docker-compose.test.yml ps
+
+test-db-stop: ## Stop test database
+	@echo "Stopping test database..."
+	docker-compose -f docker-compose.test.yml down
+
+test-db-clean: ## Clean test database and volumes
+	@echo "Cleaning test database..."
+	docker-compose -f docker-compose.test.yml down -v
+
+migrate-test: ## Run migrations on test database
+	@echo "Running migrations on test database..."
+	@export TEST_DB_HOST=localhost TEST_DB_PORT=5433 TEST_DB_NAME=arxos_test && \
+	psql -h $$TEST_DB_HOST -p $$TEST_DB_PORT -U postgres -d $$TEST_DB_NAME -f internal/migrations/*.up.sql || \
+	echo "Note: Run 'make migrate-up' with TEST_DB_* env vars set"
+
 # Linting targets
 lint: ## Run all linters
 	@echo "Running linters..."

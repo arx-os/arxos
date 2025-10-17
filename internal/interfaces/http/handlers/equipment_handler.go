@@ -420,15 +420,8 @@ func (h *EquipmentHandler) GetByPath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get equipment repository from context
-	equipmentRepo := h.equipmentUC.GetRepository()
-	if equipmentRepo == nil {
-		h.RespondError(w, http.StatusInternalServerError, fmt.Errorf("equipment repository not available"))
-		return
-	}
-
-	// Query by exact path
-	equipment, err := equipmentRepo.GetByPath(r.Context(), path)
+	// Call use case method (Clean Architecture)
+	equipment, err := h.equipmentUC.GetByPath(r.Context(), path)
 	if err != nil {
 		h.logger.Error("Failed to get equipment by path", "path", path, "error", err)
 		h.RespondError(w, http.StatusNotFound, err)
@@ -456,7 +449,7 @@ func (h *EquipmentHandler) FindByPath(w http.ResponseWriter, r *http.Request) {
 	// Get optional filters
 	status := r.URL.Query().Get("status")
 	eqType := r.URL.Query().Get("type")
-	
+
 	// Parse limit
 	limit := 100
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
@@ -465,15 +458,8 @@ func (h *EquipmentHandler) FindByPath(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Get equipment repository from context
-	equipmentRepo := h.equipmentUC.GetRepository()
-	if equipmentRepo == nil {
-		h.RespondError(w, http.StatusInternalServerError, fmt.Errorf("equipment repository not available"))
-		return
-	}
-
-	// Query by path pattern
-	equipment, err := equipmentRepo.FindByPath(r.Context(), pathPattern)
+	// Call use case method (Clean Architecture)
+	equipment, err := h.equipmentUC.FindByPath(r.Context(), pathPattern)
 	if err != nil {
 		h.logger.Error("Failed to find equipment by path pattern", "pattern", pathPattern, "error", err)
 		h.RespondError(w, http.StatusBadRequest, err)

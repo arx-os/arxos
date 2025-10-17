@@ -110,7 +110,7 @@ arxos/
 GET /health
 Response: {"status": "healthy", "service": "ifcopenshell", "version": "0.8.3"}
 
-# IFC Parsing
+# IFC Parsing (Enhanced with Detailed Entity Extraction)
 POST /api/parse
 Content-Type: application/octet-stream
 Body: IFC file binary data
@@ -119,13 +119,74 @@ Response: {
   "buildings": 1,
   "spaces": 25,
   "equipment": 150,
-  "entities": 500,
+  "walls": 200,
+  "doors": 50,
+  "windows": 75,
+  "total_entities": 501,
   "metadata": {
     "ifc_version": "IFC4",
     "file_size": 1024000,
-    "processing_time": "2.5s"
-  }
+    "processing_time": "2.5s",
+    "timestamp": "2025-10-17T00:00:00Z"
+  },
+  "building_entities": [{
+    "global_id": "2O2Fr$t4X7Zf8NOew3FLOH",
+    "name": "Main Building",
+    "description": "Office Building",
+    "long_name": "Corporate Headquarters",
+    "address": {
+      "address_lines": ["123 Main St"],
+      "postal_code": "12345",
+      "town": "San Francisco",
+      "region": "CA",
+      "country": "USA"
+    },
+    "elevation": 0.0,
+    "properties": {}
+  }],
+  "floor_entities": [{
+    "global_id": "3pDfk9sdF2x9483jdkFl03",
+    "name": "Level 1",
+    "long_name": "First Floor",
+    "description": "Ground Floor",
+    "elevation": 0.0,
+    "height": 3.5,
+    "properties": {}
+  }],
+  "space_entities": [{
+    "global_id": "0YgR8dkF3x0394jfkDl93",
+    "name": "Room 101",
+    "long_name": "Conference Room A",
+    "description": "Main conference room",
+    "floor_id": "3pDfk9sdF2x9483jdkFl03",
+    "placement": {"x": 10.5, "y": 5.2, "z": 0.0},
+    "bounding_box": null,
+    "properties": {}
+  }],
+  "equipment_entities": [{
+    "global_id": "1KjDf8sdK3x8473hfkEl82",
+    "name": "VAV-101",
+    "description": "VAV Box for Room 101",
+    "object_type": "IfcAirTerminalBox",
+    "tag": "VAV-101",
+    "space_id": "0YgR8dkF3x0394jfkDl93",
+    "placement": {"x": 10.5, "y": 5.2, "z": 3.0},
+    "category": "hvac",
+    "property_sets": [{
+      "name": "Pset_AirTerminalBoxTypeCommon",
+      "properties": {"NominalAirFlowRate": 500, "NominalPower": 1200}
+    }],
+    "classification": []
+  }],
+  "relationships": [{
+    "type": "contains",
+    "relating_object": "0YgR8dkF3x0394jfkDl93",
+    "related_objects": ["1KjDf8sdK3x8473hfkEl82"],
+    "description": "Spatial containment"
+  }]
 }
+
+**Note**: The service returns both legacy counts (buildings, spaces, equipment) for backward compatibility AND detailed entity arrays for full extraction.
 
 # IFC Validation
 POST /api/validate
@@ -259,12 +320,21 @@ func (c *IfcOpenShellClient) ParseIFC(data []byte) (*IFCResult, error) {
 - [x] Performance optimization and caching
 - [x] Comprehensive error handling
 - [x] Service monitoring and metrics
+- [x] **Detailed entity extraction** - building_entities[], floor_entities[], space_entities[], equipment_entities[]
+- [x] **Relationship extraction** - relationships[] array with spatial containment
+- [x] **Property set extraction** - Psets with full metadata
+- [x] **3D coordinate extraction** - placement data from IfcLocalPlacement
 
 #### ✅ **Phase 2 Status: COMPLETE**
 **Implementation Date**: Completed during development session
 **Additional Features Delivered**:
 - Advanced validation with buildingSMART compliance checking
 - Comprehensive spatial query operations (bounds, proximity, relationships)
+- **Full entity extraction**: Returns detailed entity arrays (not just counts)
+- **Spatial hierarchy preservation**: Extracts parent-child relationships
+- **Property set extraction**: Using ifcopenshell.util.element for Psets
+- **Coordinate extraction**: 3D placement from IfcLocalPlacement
+- **Category mapping**: IFC types → Arxos categories (electrical, hvac, plumbing, etc.)
 - Redis-based caching with local fallback
 - Performance monitoring with metrics collection
 - Enhanced error handling with recovery strategies
@@ -343,6 +413,111 @@ services:
       timeout: 10s
       retries: 3
 ```
+
+### Phase 4: Go Integration (Current Phase) ⏳ **IN PROGRESS**
+**Goal**: Wire ArxOS Go code to consume detailed entity arrays from Python service
+
+#### Current State:
+- ✅ Python service returns complete entity data (buildings, floors, spaces, equipment)
+- ✅ Python service extracts relationships and property sets
+- ✅ Python service provides 3D coordinates and spatial hierarchy
+- ⏳ Go IFC use case (`internal/usecase/ifc_usecase.go`) needs wiring
+- ⏳ Go code currently only processes entity counts, not entity arrays
+
+#### Required Go-Side Changes:
+
+**1. Parse building_entities Array** (`internal/usecase/ifc_usecase.go`)
+```go
+// Current: Only uses counts
+buildings := result["buildings"].(float64)
+
+// Required: Parse building_entities array
+buildingEntities := result["building_entities"].([]interface{})
+for _, entity := range buildingEntities {
+    bldg := entity.(map[string]interface{})
+    building := &domain.Building{
+        ID:      types.NewID(),
+        Name:    bldg["name"].(string),
+        Address: extractAddress(bldg["address"]),
+        // ... map other fields
+    }
+    buildingRepo.Create(ctx, building)
+}
+```
+
+**2. Parse floor_entities Array**
+```go
+floorEntities := result["floor_entities"].([]interface{})
+for _, entity := range floorEntities {
+    flr := entity.(map[string]interface{})
+    floor := &domain.Floor{
+        ID:         types.NewID(),
+        BuildingID: lookupBuildingByGlobalID(flr["building_id"]),
+        Name:       flr["name"].(string),
+        Level:      inferLevelFromElevation(flr["elevation"]),
+        // ... map other fields
+    }
+    floorRepo.Create(ctx, floor)
+}
+```
+
+**3. Parse space_entities Array**
+```go
+spaceEntities := result["space_entities"].([]interface{})
+for _, entity := range spaceEntities {
+    spc := entity.(map[string]interface{})
+    room := &domain.Room{
+        ID:       types.NewID(),
+        FloorID:  lookupFloorByGlobalID(spc["floor_id"]),
+        Name:     spc["name"].(string),
+        Location: extractLocation(spc["placement"]),
+        // ... map other fields
+    }
+    roomRepo.Create(ctx, room)
+}
+```
+
+**4. Parse equipment_entities Array**
+```go
+equipmentEntities := result["equipment_entities"].([]interface{})
+for _, entity := range equipmentEntities {
+    eq := entity.(map[string]interface{})
+    equipment := &domain.Equipment{
+        ID:       types.NewID(),
+        RoomID:   lookupRoomByGlobalID(eq["space_id"]),
+        Name:     eq["name"].(string),
+        Category: eq["category"].(string),
+        Location: extractLocation(eq["placement"]),
+        Metadata: extractPropertySets(eq["property_sets"]),
+        // ... map other fields
+    }
+    equipmentRepo.Create(ctx, equipment)
+}
+```
+
+**5. Process relationships Array**
+```go
+relationships := result["relationships"].([]interface{})
+for _, rel := range relationships {
+    relationship := rel.(map[string]interface{})
+    // Create parent-child links in item_relationships table
+    // Use relationshipRepo to establish topology
+}
+```
+
+#### Implementation Checklist:
+- [ ] Update `IFCUseCase.ImportIFC()` to parse entity arrays
+- [ ] Create helper functions: extractAddress(), extractLocation(), extractPropertySets()
+- [ ] Build global_id → Arxos ID mapping for cross-references
+- [ ] Handle missing/optional fields gracefully
+- [ ] Generate universal naming paths for all equipment
+- [ ] Wrap in database transaction for atomicity
+- [ ] Add error handling and logging
+- [ ] Create version commit after successful import
+
+**Estimated Effort:** 6-8 hours
+
+**See Also**: [IfcOpenShell Service API Documentation](IFCOPENSHELL_SERVICE_API.md) for complete response schemas
 
 ## Configuration Management
 

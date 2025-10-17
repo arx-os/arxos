@@ -448,8 +448,8 @@ arx bas map AI-1-1 --room <room-id>
 - Client: `internal/infrastructure/ifc/client.go`
 
 **Status:**
-- ✅ Go implementation complete
-- ⏳ Python service needs enhancement
+- ✅ Python service complete (returns detailed entity arrays: building_entities[], floor_entities[], space_entities[], equipment_entities[], relationships[])
+- ⏳ Go use case needs wiring to consume entity arrays (currently only processes counts)
 
 **Usage:**
 ```bash

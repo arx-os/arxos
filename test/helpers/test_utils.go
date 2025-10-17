@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,11 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/config"
+	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/types"
+	"github.com/arx-os/arxos/internal/infrastructure"
+	"github.com/arx-os/arxos/internal/infrastructure/postgis"
+	"github.com/arx-os/arxos/internal/usecase"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -231,10 +237,10 @@ func TestEnvironmentConfigPath(t *testing.T, environment string) string {
 func FindTestConfigFile() (string, error) {
 	// Try different possible locations for the test config file
 	possiblePaths := []string{
-		"test/config/test_config.yaml",           // From project root
-		"../../config/test_config.yaml",           // From test/integration/services
-		"../config/test_config.yaml",              // From test/integration
-		"config/test_config.yaml",                // From test directory
+		"test/config/test_config.yaml",  // From project root
+		"../../config/test_config.yaml", // From test/integration/services
+		"../config/test_config.yaml",    // From test/integration
+		"config/test_config.yaml",       // From test directory
 	}
 
 	for _, path := range possiblePaths {
@@ -300,10 +306,10 @@ func AssertNoTimeout(t *testing.T, ctx context.Context, operation string) {
 // TestDatabaseSetup sets up a test database connection
 func TestDatabaseSetup(t *testing.T) (context.Context, *sqlx.DB) {
 	ctx := TestTimeoutLong(t)
-	
+
 	// Load test config
 	cfg := LoadTestConfig(t)
-	
+
 	// Build connection string
 	dsn := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=%s password=%s",
 		cfg.PostGIS.Host,
@@ -313,37 +319,37 @@ func TestDatabaseSetup(t *testing.T) (context.Context, *sqlx.DB) {
 		cfg.PostGIS.SSLMode,
 		cfg.PostGIS.Password,
 	)
-	
+
 	// Connect to database
 	db, err := sqlx.ConnectContext(ctx, "postgres", dsn)
 	require.NoError(t, err, "Failed to connect to test database")
-	
+
 	// Test connection
 	err = db.PingContext(ctx)
 	require.NoError(t, err, "Failed to ping test database")
-	
+
 	// Set up cleanup
 	t.Cleanup(func() {
 		if err := db.Close(); err != nil {
 			t.Logf("Warning: Failed to close database connection: %v", err)
 		}
 	})
-	
+
 	return ctx, db
 }
 
 // TestDatabaseCleanup cleans up test database
 func TestDatabaseCleanup(t *testing.T, db *sqlx.DB) {
 	ctx := TestTimeoutShort(t)
-	
+
 	// Drop all tables in public schema
 	rows, err := db.QueryContext(ctx, `
-		SELECT tablename FROM pg_tables 
+		SELECT tablename FROM pg_tables
 		WHERE schemaname = 'public' AND tablename NOT LIKE 'pg_%'
 	`)
 	require.NoError(t, err, "Failed to query tables")
 	defer rows.Close()
-	
+
 	var tables []string
 	for rows.Next() {
 		var tableName string
@@ -351,7 +357,7 @@ func TestDatabaseCleanup(t *testing.T, db *sqlx.DB) {
 		require.NoError(t, err, "Failed to scan table name")
 		tables = append(tables, tableName)
 	}
-	
+
 	// Drop tables
 	for _, table := range tables {
 		_, err := db.ExecContext(ctx, fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE", table))
@@ -359,4 +365,175 @@ func TestDatabaseCleanup(t *testing.T, db *sqlx.DB) {
 			t.Logf("Warning: Failed to drop table %s: %v", table, err)
 		}
 	}
+}
+
+// SetupTestDB sets up a test database and returns cleanup function
+func SetupTestDB(t *testing.T) (*sqlx.DB, func()) {
+	_, db := TestDatabaseSetup(t)
+
+	cleanup := func() {
+		if db != nil {
+			db.Close()
+		}
+	}
+
+	return db, cleanup
+}
+
+// TestLogger is a simple logger for testing
+type TestLogger struct{}
+
+// NewTestLogger creates a new test logger
+func NewTestLogger() *TestLogger {
+	return &TestLogger{}
+}
+
+// Debug logs a debug message
+func (l *TestLogger) Debug(msg string, fields ...any) {
+	// Silent in tests
+}
+
+// Info logs an info message
+func (l *TestLogger) Info(msg string, fields ...any) {
+	// Silent in tests
+}
+
+// Warn logs a warning message
+func (l *TestLogger) Warn(msg string, fields ...any) {
+	// Silent in tests
+}
+
+// Error logs an error message
+func (l *TestLogger) Error(msg string, fields ...any) {
+	// Silent in tests
+}
+
+// Fatal logs a fatal message
+func (l *TestLogger) Fatal(msg string, fields ...any) {
+	// Silent in tests
+}
+
+// SetupTestEnvironment sets up test database and logger for integration tests
+func SetupTestEnvironment(t *testing.T) (*sql.DB, func()) {
+	cfg := &config.Config{
+		Mode: "test",
+		PostGIS: config.PostGISConfig{
+			Host:     "localhost",
+			Port:     5432,
+			Database: "arxos_test",
+			User:     "arxos",
+			Password: "",
+			SSLMode:  "disable",
+		},
+	}
+
+	dbInterface, err := infrastructure.NewDatabase(cfg)
+	require.NoError(t, err, "Failed to connect to test database")
+
+	// Get the underlying *sql.DB
+	db, ok := dbInterface.(*infrastructure.Database)
+	require.True(t, ok, "Failed to cast database to concrete type")
+
+	cleanup := func() {
+		if db != nil {
+			db.GetDB().Close()
+		}
+	}
+
+	return db.GetDB().DB, cleanup
+}
+
+// UniqueTestID generates a unique test ID using timestamp
+func UniqueTestID() types.ID {
+	return types.FromString(fmt.Sprintf("test-%d", time.Now().UnixNano()))
+}
+
+// RepositoryCollection holds all repositories for testing
+type RepositoryCollection struct {
+	BuildingRepo  domain.BuildingRepository
+	FloorRepo     domain.FloorRepository
+	RoomRepo      domain.RoomRepository
+	EquipmentRepo domain.EquipmentRepository
+	BranchRepo    domain.BranchRepository
+	CommitRepo    domain.CommitRepository
+	PRRepo        domain.PullRequestRepository
+	IssueRepo     domain.IssueRepository
+}
+
+// SetupRepositories creates all repository instances for testing
+func SetupRepositories(db *sql.DB) *RepositoryCollection {
+	return &RepositoryCollection{
+		BuildingRepo:  postgis.NewBuildingRepository(db),
+		FloorRepo:     postgis.NewFloorRepository(db),
+		RoomRepo:      postgis.NewRoomRepository(db),
+		EquipmentRepo: postgis.NewEquipmentRepository(db),
+		BranchRepo:    postgis.NewBranchRepository(db),
+		CommitRepo:    postgis.NewCommitRepository(db),
+		PRRepo:        postgis.NewPullRequestRepository(db),
+		IssueRepo:     postgis.NewIssueRepository(db),
+	}
+}
+
+// SetupBuildingUseCase creates a BuildingUseCase for testing
+func SetupBuildingUseCase(repos *RepositoryCollection, logger domain.Logger) *usecase.BuildingUseCase {
+	return usecase.NewBuildingUseCase(
+		repos.BuildingRepo,
+		repos.EquipmentRepo,
+		logger,
+	)
+}
+
+// SetupEquipmentUseCase creates an EquipmentUseCase for testing
+func SetupEquipmentUseCase(repos *RepositoryCollection, logger domain.Logger) *usecase.EquipmentUseCase {
+	return usecase.NewEquipmentUseCase(
+		repos.EquipmentRepo,
+		repos.BuildingRepo,
+		repos.FloorRepo,
+		repos.RoomRepo,
+		logger,
+	)
+}
+
+// SetupBranchUseCase creates a BranchUseCase for testing
+func SetupBranchUseCase(repos *RepositoryCollection, logger domain.Logger) *usecase.BranchUseCase {
+	return usecase.NewBranchUseCase(
+		repos.BranchRepo,
+		repos.CommitRepo,
+		logger,
+	)
+}
+
+// SetupCommitUseCase creates a CommitUseCase for testing
+func SetupCommitUseCase(repos *RepositoryCollection, logger domain.Logger) *usecase.CommitUseCase {
+	return usecase.NewCommitUseCase(
+		repos.CommitRepo,
+		repos.BranchRepo,
+		logger,
+	)
+}
+
+// SetupPullRequestUseCase creates a PullRequestUseCase for testing
+func SetupPullRequestUseCase(repos *RepositoryCollection, db *sql.DB, logger domain.Logger) *usecase.PullRequestUseCase {
+	return usecase.NewPullRequestUseCase(
+		repos.PRRepo,
+		repos.BranchRepo,
+		repos.CommitRepo,
+		nil, // PR assignment repo - not needed for basic testing
+		logger,
+	)
+}
+
+// SetupIssueUseCase creates an IssueUseCase for testing
+func SetupIssueUseCase(
+	repos *RepositoryCollection,
+	prUC *usecase.PullRequestUseCase,
+	branchUC *usecase.BranchUseCase,
+	logger domain.Logger,
+) *usecase.IssueUseCase {
+	return usecase.NewIssueUseCase(
+		repos.IssueRepo,
+		branchUC,
+		prUC,
+		logger,
+	)
 }

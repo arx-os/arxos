@@ -300,6 +300,9 @@ func TestBuildingUseCase_DeleteBuilding(t *testing.T) {
 
 		mockBuildingRepo.On("GetByID", mock.Anything, testBuilding.ID.String()).
 			Return(testBuilding, nil)
+		// Mock the equipment check - return empty list (no equipment blocking deletion)
+		mockEquipmentRepo.On("GetByBuilding", mock.Anything, testBuilding.ID.String()).
+			Return([]*domain.Equipment{}, nil)
 		mockBuildingRepo.On("Delete", mock.Anything, testBuilding.ID.String()).
 			Return(nil)
 
@@ -311,6 +314,7 @@ func TestBuildingUseCase_DeleteBuilding(t *testing.T) {
 		// Assert
 		require.NoError(t, err)
 		mockBuildingRepo.AssertExpectations(t)
+		mockEquipmentRepo.AssertExpectations(t)
 	})
 
 	t.Run("validation fails - empty ID", func(t *testing.T) {
@@ -363,6 +367,9 @@ func TestBuildingUseCase_DeleteBuilding(t *testing.T) {
 
 		mockBuildingRepo.On("GetByID", mock.Anything, testBuilding.ID.String()).
 			Return(testBuilding, nil)
+		// Mock the equipment check - return empty list
+		mockEquipmentRepo.On("GetByBuilding", mock.Anything, testBuilding.ID.String()).
+			Return([]*domain.Equipment{}, nil)
 		mockBuildingRepo.On("Delete", mock.Anything, testBuilding.ID.String()).
 			Return(errors.New("database error"))
 
@@ -375,6 +382,7 @@ func TestBuildingUseCase_DeleteBuilding(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to delete building")
 		mockBuildingRepo.AssertExpectations(t)
+		mockEquipmentRepo.AssertExpectations(t)
 	})
 }
 
@@ -454,4 +462,3 @@ func TestBuildingUseCase_ListBuildings(t *testing.T) {
 		mockBuildingRepo.AssertExpectations(t)
 	})
 }
-

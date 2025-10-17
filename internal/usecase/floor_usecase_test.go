@@ -223,6 +223,9 @@ func TestFloorUseCase_ListFloors(t *testing.T) {
 			createTestFloor(),
 		}
 
+		// Mock building validation check
+		mockBuildingRepo.On("GetByID", mock.Anything, testBuilding.ID.String()).
+			Return(testBuilding, nil)
 		mockFloorRepo.On("GetByBuilding", mock.Anything, testBuilding.ID.String()).
 			Return(floors, nil)
 
@@ -235,6 +238,7 @@ func TestFloorUseCase_ListFloors(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, result)
 		assert.Len(t, result, 2)
+		mockBuildingRepo.AssertExpectations(t)
 		mockFloorRepo.AssertExpectations(t)
 	})
 
@@ -246,6 +250,9 @@ func TestFloorUseCase_ListFloors(t *testing.T) {
 
 		testBuilding := createTestBuilding()
 
+		// Mock building validation check
+		mockBuildingRepo.On("GetByID", mock.Anything, testBuilding.ID.String()).
+			Return(testBuilding, nil)
 		mockFloorRepo.On("GetByBuilding", mock.Anything, testBuilding.ID.String()).
 			Return([]*domain.Floor{}, nil)
 
@@ -305,9 +312,8 @@ func TestFloorUseCase_DeleteFloor(t *testing.T) {
 
 		// Assert
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to get floor")
+		assert.Contains(t, err.Error(), "floor not found")
 		mockFloorRepo.AssertExpectations(t)
 		mockFloorRepo.AssertNotCalled(t, "Delete")
 	})
 }
-

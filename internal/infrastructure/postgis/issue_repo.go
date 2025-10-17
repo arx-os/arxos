@@ -2,6 +2,7 @@ package postgis
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"github.com/arx-os/arxos/internal/domain"
@@ -45,7 +46,13 @@ func (r *IssueRepository) Create(issue *domain.Issue) error {
 		RETURNING number
 	`
 
-	err := r.db.QueryRow(query,
+	// Marshal metadata to JSON
+	metadataJSON, err := json.Marshal(issue.Metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	err = r.db.QueryRow(query,
 		issue.ID.String(), issue.RepositoryID.String(), issue.Title, issue.Body,
 		nullableID(issue.BuildingID), nullableID(issue.FloorID), nullableID(issue.RoomID),
 		nullableID(issue.EquipmentID), nullableID(issue.BASPointID),
@@ -54,7 +61,7 @@ func (r *IssueRepository) Create(issue *domain.Issue) error {
 		nullableID(issue.AssignedTo), issue.AssignedTeam, issue.AutoAssigned,
 		nullableID(issue.BranchID), nullableID(issue.PRID),
 		issue.ReportedBy.String(), nullableReportedVia(issue.ReportedVia),
-		issue.Metadata, issue.CreatedAt, issue.UpdatedAt,
+		metadataJSON, issue.CreatedAt, issue.UpdatedAt,
 	).Scan(&issue.Number)
 
 	return err
@@ -63,7 +70,7 @@ func (r *IssueRepository) Create(issue *domain.Issue) error {
 // GetByID retrieves an issue by ID
 func (r *IssueRepository) GetByID(id types.ID) (*domain.Issue, error) {
 	query := `
-		SELECT 
+		SELECT
 			id, repository_id, number, title, body,
 			building_id, floor_id, room_id, equipment_id, bas_point_id,
 			location_description,
@@ -84,7 +91,7 @@ func (r *IssueRepository) GetByID(id types.ID) (*domain.Issue, error) {
 // GetByNumber retrieves an issue by number
 func (r *IssueRepository) GetByNumber(repositoryID types.ID, number int) (*domain.Issue, error) {
 	query := `
-		SELECT 
+		SELECT
 			id, repository_id, number, title, body,
 			building_id, floor_id, room_id, equipment_id, bas_point_id,
 			location_description,
@@ -112,20 +119,29 @@ func (r *IssueRepository) Update(issue *domain.Issue) error {
 			priority = $4,
 			assigned_to = $5,
 			assigned_team = $6,
-			resolution_notes = $7,
-			verified_by_reporter = $8,
-			metadata = $9,
+			branch_id = $7,
+			pr_id = $8,
+			resolution_notes = $9,
+			verified_by_reporter = $10,
+			metadata = $11,
 			updated_at = NOW()
-		WHERE id = $10
+		WHERE id = $12
 	`
 
-	_, err := r.db.Exec(query,
+	// Marshal metadata to JSON
+	metadataJSON, err := json.Marshal(issue.Metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	_, err = r.db.Exec(query,
 		issue.Title, issue.Body,
 		issue.Status, issue.Priority,
 		nullableID(issue.AssignedTo), issue.AssignedTeam,
+		nullableID(issue.BranchID), nullableID(issue.PRID),
 		issue.ResolutionNotes,
 		issue.VerifiedByReporter,
-		issue.Metadata,
+		metadataJSON,
 		issue.ID.String(),
 	)
 
@@ -290,7 +306,7 @@ func (r *IssueRepository) Reopen(id types.ID) error {
 // buildListQuery builds a dynamic issue list query
 func (r *IssueRepository) buildListQuery(filter domain.IssueFilter, limit, offset int) (string, []interface{}) {
 	query := `
-		SELECT 
+		SELECT
 			id, repository_id, number, title, body,
 			building_id, floor_id, room_id, equipment_id, bas_point_id,
 			location_description,
@@ -432,6 +448,7 @@ func (r *IssueRepository) scanIssue(scanner interface {
 	var resolvedBy sql.NullString
 	var resolvedAt, verifiedAt, closedAt sql.NullTime
 	var resolutionNotes sql.NullString
+	var metadataJSON []byte
 
 	err := scanner.Scan(
 		&issue.ID, &issue.RepositoryID, &issue.Number, &issue.Title, &body,
@@ -443,7 +460,7 @@ func (r *IssueRepository) scanIssue(scanner interface {
 		&issue.ReportedBy, &reportedVia,
 		&resolvedBy, &resolvedAt, &resolutionNotes,
 		&issue.VerifiedByReporter, &verifiedAt,
-		&issue.Metadata, &issue.CreatedAt, &issue.UpdatedAt, &closedAt,
+		&metadataJSON, &issue.CreatedAt, &issue.UpdatedAt, &closedAt,
 	)
 
 	if err != nil {
@@ -516,6 +533,14 @@ func (r *IssueRepository) scanIssue(scanner interface {
 		issue.ClosedAt = &closedAt.Time
 	}
 
+	// Unmarshal metadata JSON
+	if len(metadataJSON) > 0 {
+		issue.Metadata = make(map[string]interface{})
+		if err := json.Unmarshal(metadataJSON, &issue.Metadata); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+		}
+	}
+
 	return issue, nil
 }
 
@@ -526,4 +551,3 @@ func nullableReportedVia(via *domain.ReportedVia) sql.NullString {
 	}
 	return sql.NullString{String: string(*via), Valid: true}
 }
-

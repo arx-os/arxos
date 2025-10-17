@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -395,62 +396,90 @@ Examples:
 }
 
 // NewMergeCommand creates the merge command
+// Note: In ArxOS, merges are done through Pull Requests for traceability
 func NewMergeCommand(serviceContext any) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "merge <branch>",
-		Short: "Merge a branch into current branch",
+		Short: "Merge a branch into current branch via PR",
 		Long: `Merge changes from another branch into the current branch.
+Creates a pull request and automatically merges it.
 
 Examples:
   # Merge feature branch into current
-  arx merge feature/hvac-upgrade
+  arx merge feature/hvac-upgrade --repo repo-001
 
   # Merge with message
-  arx merge contractor/jci-floor-3 -m "HVAC upgrade complete"
+  arx merge contractor/jci-floor-3 --repo repo-001 -m "HVAC upgrade complete"
 
   # Squash merge
-  arx merge issue/outlet-fix --squash`,
+  arx merge issue/outlet-fix --repo repo-001 --squash`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			sourceBranch := args[0]
-			message, _ := cmd.Flags().GetString("message")
-			squash, _ := cmd.Flags().GetBool("squash")
+			sourceBranchName := args[0]
+			repoIDStr, _ := cmd.Flags().GetString("repo")
 
-			// Get use case from service context (when wired)
-			fmt.Printf("Merging '%s' into current branch...\n", sourceBranch)
-			time.Sleep(1 * time.Second)
-
-			fmt.Printf("\n")
-			fmt.Printf("Checking for conflicts...\n")
-			time.Sleep(500 * time.Millisecond)
-			fmt.Printf("   ✅ No conflicts found\n")
-			fmt.Printf("\n")
-
-			fmt.Printf("Applying changes...\n")
-			fmt.Printf("   + 3 equipment added\n")
-			fmt.Printf("   + 15 BAS points added\n")
-			fmt.Printf("   ~ 2 rooms modified\n")
-			fmt.Printf("\n")
-
-			mergeMsg := message
-			if mergeMsg == "" {
-				mergeMsg = fmt.Sprintf("Merge branch '%s'", sourceBranch)
+			if repoIDStr == "" {
+				return fmt.Errorf("--repo is required")
 			}
 
-			fmt.Printf("✅ Merge successful\n")
-			if squash {
-				fmt.Printf("   Squashed commits from '%s'\n", sourceBranch)
+			// Get container
+			container, ok := serviceContext.(BranchContainerProvider)
+			if !ok {
+				return fmt.Errorf("invalid service context")
 			}
-			fmt.Printf("   Commit: %s\n", mergeMsg)
-			fmt.Printf("\n")
+
+			branchUC := container.GetBranchUseCase()
+			if branchUC == nil {
+				return fmt.Errorf("branch use case not available")
+			}
+
+			ctx := context.Background()
+			repoID := types.FromString(repoIDStr)
+
+			fmt.Printf("Merging '%s' into current branch...\n", sourceBranchName)
+
+			// Verify source branch exists
+			_, err := branchUC.GetBranch(ctx, repoID, sourceBranchName)
+			if err != nil {
+				return fmt.Errorf("source branch not found: %w", err)
+			}
+
+			// Get default branch as target
+			branches, err := branchUC.ListBranches(ctx, repoID, domain.BranchFilter{})
+			if err != nil {
+				return fmt.Errorf("failed to list branches: %w", err)
+			}
+
+			var targetBranch *domain.Branch
+			for _, b := range branches {
+				if b.IsDefault {
+					targetBranch = b
+					break
+				}
+			}
+			if targetBranch == nil {
+				return fmt.Errorf("no default branch found")
+			}
+
+			fmt.Printf("Target branch: %s\n\n", targetBranch.Name)
+
+			// Guide user through PR workflow
+			fmt.Printf("Note: In ArxOS, merges are done through Pull Requests for traceability.\n\n")
+			fmt.Printf("To merge this branch:\n")
+			fmt.Printf("  1. Create PR: arx pr create --from %s --to %s --repo %s --title \"Merge %s\"\n",
+				sourceBranchName, targetBranch.Name, repoIDStr, sourceBranchName)
+			fmt.Printf("  2. Merge PR:  arx pr merge <pr-number> --repo %s\n\n", repoIDStr)
 
 			return nil
 		},
 	}
 
+	cmd.Flags().String("repo", "", "Repository ID (required)")
 	cmd.Flags().StringP("message", "m", "", "Merge commit message")
 	cmd.Flags().Bool("squash", false, "Squash commits from source branch")
 	cmd.Flags().Bool("no-commit", false, "Merge but don't commit")
+
+	cmd.MarkFlagRequired("repo")
 
 	return cmd
 }

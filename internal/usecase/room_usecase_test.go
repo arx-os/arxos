@@ -25,6 +25,9 @@ func TestRoomUseCase_CreateRoom(t *testing.T) {
 
 		mockFloorRepo.On("GetByID", mock.Anything, testFloor.ID.String()).
 			Return(testFloor, nil)
+		// Mock duplicate check - room doesn't exist yet
+		mockRoomRepo.On("GetByNumber", mock.Anything, testFloor.ID.String(), "101").
+			Return(nil, errors.New("not found"))
 		mockRoomRepo.On("Create", mock.Anything, mock.MatchedBy(func(r *domain.Room) bool {
 			return r.Name == "Test Room" && r.Number == "101"
 		})).Return(nil)
@@ -199,6 +202,9 @@ func TestRoomUseCase_ListRooms(t *testing.T) {
 			createTestRoom(),
 		}
 
+		// Mock floor validation check
+		mockFloorRepo.On("GetByID", mock.Anything, testFloor.ID.String()).
+			Return(testFloor, nil)
 		mockRoomRepo.On("GetByFloor", mock.Anything, testFloor.ID.String()).
 			Return(rooms, nil)
 
@@ -211,6 +217,7 @@ func TestRoomUseCase_ListRooms(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, result)
 		assert.Len(t, result, 2)
+		mockFloorRepo.AssertExpectations(t)
 		mockRoomRepo.AssertExpectations(t)
 	})
 
@@ -223,6 +230,9 @@ func TestRoomUseCase_ListRooms(t *testing.T) {
 
 		testFloor := createTestFloor()
 
+		// Mock floor validation check
+		mockFloorRepo.On("GetByID", mock.Anything, testFloor.ID.String()).
+			Return(testFloor, nil)
 		mockRoomRepo.On("GetByFloor", mock.Anything, testFloor.ID.String()).
 			Return([]*domain.Room{}, nil)
 
@@ -284,9 +294,8 @@ func TestRoomUseCase_DeleteRoom(t *testing.T) {
 
 		// Assert
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to get room")
+		assert.Contains(t, err.Error(), "room not found")
 		mockRoomRepo.AssertExpectations(t)
 		mockRoomRepo.AssertNotCalled(t, "Delete")
 	})
 }
-

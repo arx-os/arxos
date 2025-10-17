@@ -2,6 +2,7 @@ package postgis
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"github.com/arx-os/arxos/internal/domain"
@@ -510,14 +511,26 @@ func (r *CommitRepository) Create(commit *domain.Commit) error {
 		parentStrs[i] = parent.String()
 	}
 
-	_, err := r.db.Exec(query,
+	// Marshal changes summary to JSON
+	changesSummaryJSON, err := json.Marshal(commit.ChangesSummary)
+	if err != nil {
+		return fmt.Errorf("failed to marshal changes summary: %w", err)
+	}
+
+	// Marshal metadata to JSON
+	metadataJSON, err := json.Marshal(commit.Metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	_, err = r.db.Exec(query,
 		commit.ID.String(), commit.RepositoryID.String(), commit.BranchID.String(), commit.VersionID.String(),
 		commit.CommitHash, commit.ShortHash,
 		commit.Message, commit.Description,
 		commit.AuthorName, commit.AuthorEmail, nullableID(commit.AuthorID),
 		pq.Array(parentStrs), commit.MergeCommit,
-		commit.ChangesSummary, commit.FilesChanged, commit.LinesAdded, commit.LinesDeleted,
-		pq.Array(commit.Tags), commit.Metadata, commit.CommittedAt,
+		changesSummaryJSON, commit.FilesChanged, commit.LinesAdded, commit.LinesDeleted,
+		pq.Array(commit.Tags), metadataJSON, commit.CommittedAt,
 	)
 
 	return err

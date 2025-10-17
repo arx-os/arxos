@@ -67,6 +67,17 @@ logs/
 *.bak
 *.backup
 *.old
+
+# AI Session Notes (temporary working files)
+*_SESSION_*.md
+*_WIRING_*.md
+*_AUDIT_*.md
+*_SUMMARY.md
+*_STATUS.md
+*_RESULTS.md
+*_NOTES.md
+START_HERE.md
+QUICK_START_CHECKLIST.md
 # Coverage
 coverage.out
 *_coverage.out

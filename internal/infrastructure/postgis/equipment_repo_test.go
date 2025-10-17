@@ -3,6 +3,7 @@ package postgis_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"testing"
 	"time"
 
@@ -233,9 +234,9 @@ func TestEquipmentRepository_GetByType(t *testing.T) {
 	types_list := []string{"hvac", "hvac", "lighting", "security"}
 	for i, eqType := range types_list {
 		equipment := &domain.Equipment{
-			ID:         types.FromString("test-equipment-type-" + string(rune(i))),
+			ID:         types.FromString(fmt.Sprintf("test-equipment-type-%d", i)),
 			BuildingID: building.ID,
-			Name:       "Equipment " + string(rune(i)),
+			Name:       fmt.Sprintf("Equipment %d", i),
 			Type:       eqType,
 			Status:     "operational",
 			CreatedAt:  time.Now(),

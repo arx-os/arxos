@@ -106,11 +106,30 @@ func (h *BaseHandlerImpl) ValidateRequest(r *http.Request) error {
 
 // GetUserFromContext extracts user information from request context
 func (h *BaseHandlerImpl) GetUserFromContext(ctx context.Context) (*domain.User, error) {
+	// Try to get full user object first (if set by middleware)
 	user, ok := ctx.Value("user").(*domain.User)
-	if !ok || user == nil {
-		return nil, fmt.Errorf("user not found in context")
+	if ok && user != nil {
+		return user, nil
 	}
-	return user, nil
+
+	// Fallback: Build user from JWT claims
+	userID, ok := ctx.Value("user_id").(string)
+	if !ok || userID == "" {
+		return nil, fmt.Errorf("user not authenticated")
+	}
+
+	email, _ := ctx.Value("user_email").(string)
+	role, _ := ctx.Value("user_role").(string)
+
+	// Build minimal user object from claims
+	// Note: Full user details could be fetched from UserRepository if needed
+	return &domain.User{
+		ID:     types.FromString(userID),
+		Email:  email,
+		Name:   email, // Fallback to email if name not in claims
+		Role:   role,
+		Active: true,
+	}, nil
 }
 
 // RequireAuth creates middleware to require authentication

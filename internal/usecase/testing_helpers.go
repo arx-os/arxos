@@ -309,7 +309,7 @@ func createTestEquipment() *domain.Equipment {
 		ID:         types.NewID(),
 		BuildingID: types.NewID(),
 		Name:       "Test Equipment",
-		Type:       "HVAC",
+		Type:       "hvac", // Use lowercase per validation requirements
 		Model:      "Test Model 3000",
 		Status:     "operational",
 		Location: &domain.Location{

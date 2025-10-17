@@ -269,3 +269,92 @@ func (h *IssueHandler) HandleCloseIssue(w http.ResponseWriter, r *http.Request) 
 		"message":  "Issue closed successfully",
 	})
 }
+
+// HandleStartWork handles POST /api/v1/issues/{id}/start
+func (h *IssueHandler) HandleStartWork(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
+
+	// Get issue ID from URL
+	issueIDStr := chi.URLParam(r, "id")
+	if issueIDStr == "" {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("issue ID is required"))
+		return
+	}
+
+	// Get user from context
+	user, err := h.GetUserFromContext(r.Context())
+	if err != nil {
+		h.RespondError(w, http.StatusUnauthorized, err)
+		return
+	}
+
+	// Start work on issue (creates branch and PR)
+	issueID := types.FromString(issueIDStr)
+	branch, pr, err := h.issueUC.StartWork(r.Context(), issueID, user.ID)
+	if err != nil {
+		h.logger.Error("Failed to start work on issue", "issue_id", issueIDStr, "error", err)
+		h.RespondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	h.RespondJSON(w, http.StatusOK, map[string]any{
+		"success": true,
+		"branch":  branch,
+		"pr":      pr,
+		"message": fmt.Sprintf("Work started on issue %s", issueIDStr),
+	})
+}
+
+// HandleResolveIssue handles POST /api/v1/issues/{id}/resolve
+func (h *IssueHandler) HandleResolveIssue(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		h.LogRequest(r, http.StatusOK, time.Since(start))
+	}()
+
+	// Get issue ID from URL
+	issueIDStr := chi.URLParam(r, "id")
+	if issueIDStr == "" {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("issue ID is required"))
+		return
+	}
+
+	// Parse request body
+	var req struct {
+		ResolutionNotes string `json:"resolution_notes"`
+	}
+	if err := h.ParseRequestBody(r, &req); err != nil {
+		h.RespondError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	// Get user from context
+	user, err := h.GetUserFromContext(r.Context())
+	if err != nil {
+		h.RespondError(w, http.StatusUnauthorized, err)
+		return
+	}
+
+	// Resolve issue
+	issueID := types.FromString(issueIDStr)
+	resolveReq := domain.ResolveIssueRequest{
+		IssueID:         issueID,
+		ResolvedBy:      user.ID,
+		ResolutionNotes: req.ResolutionNotes,
+	}
+
+	if err := h.issueUC.ResolveIssue(r.Context(), resolveReq); err != nil {
+		h.logger.Error("Failed to resolve issue", "issue_id", issueIDStr, "error", err)
+		h.RespondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	h.RespondJSON(w, http.StatusOK, map[string]any{
+		"success":  true,
+		"issue_id": issueIDStr,
+		"message":  "Issue resolved successfully",
+	})
+}

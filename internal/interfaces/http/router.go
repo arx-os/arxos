@@ -277,6 +277,8 @@ func NewRouter(config *RouterConfig) chi.Router {
 
 				// Issue workflow operations
 				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/{id}/assign", apiHandlers.issueHandler.HandleAssignIssue)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/{id}/start", apiHandlers.issueHandler.HandleStartWork)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/{id}/resolve", apiHandlers.issueHandler.HandleResolveIssue)
 				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/{id}/close", apiHandlers.issueHandler.HandleCloseIssue)
 			}
 		})

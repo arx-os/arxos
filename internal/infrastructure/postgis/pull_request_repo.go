@@ -2,6 +2,7 @@ package postgis
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"github.com/arx-os/arxos/internal/domain"
@@ -46,14 +47,20 @@ func (r *PullRequestRepository) Create(pr *domain.PullRequest) error {
 		RETURNING number
 	`
 
-	err := r.db.QueryRow(query,
+	// Marshal metadata to JSON
+	metadataJSON, err := json.Marshal(pr.Metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	err = r.db.QueryRow(query,
 		pr.ID.String(), pr.RepositoryID.String(), pr.Title, pr.Description,
 		pr.SourceBranchID.String(), pr.TargetBranchID.String(),
 		pr.PRType, pr.Status, pr.Priority,
 		pr.RequiresReview, pr.RequiredReviewers, pr.ApprovedCount,
 		nullableID(pr.AssignedTo), pr.AssignedTeam, pr.AutoAssigned,
 		pr.EstimatedHours, pr.ActualHours, pr.BudgetAmount, pr.ActualCost,
-		pr.DueDate, pq.Array(pr.Labels), pr.Metadata,
+		pr.DueDate, pq.Array(pr.Labels), metadataJSON,
 		pr.CreatedBy.String(), pr.CreatedAt, pr.UpdatedAt,
 	).Scan(&pr.Number)
 
@@ -63,7 +70,7 @@ func (r *PullRequestRepository) Create(pr *domain.PullRequest) error {
 // GetByID retrieves a pull request by ID
 func (r *PullRequestRepository) GetByID(id types.ID) (*domain.PullRequest, error) {
 	query := `
-		SELECT 
+		SELECT
 			id, repository_id, number, title, description,
 			source_branch_id, target_branch_id,
 			pr_type, status, priority,
@@ -82,7 +89,7 @@ func (r *PullRequestRepository) GetByID(id types.ID) (*domain.PullRequest, error
 // GetByNumber retrieves a pull request by number
 func (r *PullRequestRepository) GetByNumber(repositoryID types.ID, number int) (*domain.PullRequest, error) {
 	query := `
-		SELECT 
+		SELECT
 			id, repository_id, number, title, description,
 			source_branch_id, target_branch_id,
 			pr_type, status, priority,
@@ -118,13 +125,19 @@ func (r *PullRequestRepository) Update(pr *domain.PullRequest) error {
 		WHERE id = $13
 	`
 
-	_, err := r.db.Exec(query,
+	// Marshal metadata to JSON
+	metadataJSON, err := json.Marshal(pr.Metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	_, err = r.db.Exec(query,
 		pr.Title, pr.Description,
 		pr.Status, pr.Priority,
 		nullableID(pr.AssignedTo), pr.AssignedTeam,
 		pr.ApprovedCount,
 		pr.ActualHours, pr.ActualCost,
-		pr.DueDate, pq.Array(pr.Labels), pr.Metadata,
+		pr.DueDate, pq.Array(pr.Labels), metadataJSON,
 		pr.ID.String(),
 	)
 
@@ -252,7 +265,7 @@ func (r *PullRequestRepository) Close(id types.ID) error {
 // buildListQuery builds a dynamic PR list query
 func (r *PullRequestRepository) buildListQuery(filter domain.PRFilter, limit, offset int) (string, []interface{}) {
 	query := `
-		SELECT 
+		SELECT
 			id, repository_id, number, title, description,
 			source_branch_id, target_branch_id,
 			pr_type, status, priority,
@@ -366,6 +379,7 @@ func (r *PullRequestRepository) scanPR(scanner interface {
 	var estimatedHours, actualHours, budgetAmount, actualCost sql.NullFloat64
 	var dueDate, closedAt, mergedAt sql.NullTime
 	var labelsArray pq.StringArray
+	var metadataJSON []byte
 
 	err := scanner.Scan(
 		&pr.ID, &pr.RepositoryID, &pr.Number, &pr.Title, &description,
@@ -374,7 +388,7 @@ func (r *PullRequestRepository) scanPR(scanner interface {
 		&pr.RequiresReview, &pr.RequiredReviewers, &pr.ApprovedCount,
 		&assignedTo, &assignedTeam, &pr.AutoAssigned,
 		&estimatedHours, &actualHours, &budgetAmount, &actualCost,
-		&dueDate, &labelsArray, &pr.Metadata,
+		&dueDate, &labelsArray, &metadataJSON,
 		&pr.CreatedBy, &pr.CreatedAt, &pr.UpdatedAt, &closedAt, &mergedAt, &mergedBy,
 	)
 
@@ -383,6 +397,15 @@ func (r *PullRequestRepository) scanPR(scanner interface {
 			return nil, fmt.Errorf("pull request not found")
 		}
 		return nil, err
+	}
+
+	// Unmarshal metadata JSON
+	if len(metadataJSON) > 0 {
+		if err := json.Unmarshal(metadataJSON, &pr.Metadata); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+		}
+	} else {
+		pr.Metadata = make(map[string]interface{})
 	}
 
 	// Handle nullable fields
@@ -428,4 +451,3 @@ func (r *PullRequestRepository) scanPR(scanner interface {
 
 	return pr, nil
 }
-

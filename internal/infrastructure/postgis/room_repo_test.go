@@ -75,6 +75,8 @@ func TestRoomRepository_Create(t *testing.T) {
 		FloorID:   floor.ID,
 		Name:      "Conference Room A",
 		Number:    "101",
+		Width:     5.0, // 5 meters
+		Height:    3.0, // 3 meters
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -144,6 +146,8 @@ func TestRoomRepository_GetByFloor(t *testing.T) {
 			FloorID:   floor.ID,
 			Name:      fmt.Sprintf("Room %d", i),
 			Number:    fmt.Sprintf("10%d", i),
+			Width:     float64(4 + i), // Varying widths 5-9 meters
+			Height:    3.0,            // 3 meters
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
@@ -216,6 +220,8 @@ func TestRoomRepository_GetByNumber(t *testing.T) {
 		FloorID:   floor.ID,
 		Name:      "Room 205",
 		Number:    "205",
+		Width:     6.0, // 6 meters
+		Height:    3.0, // 3 meters
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -289,6 +295,8 @@ func TestRoomRepository_Update(t *testing.T) {
 		FloorID:   floor.ID,
 		Name:      "Original Name",
 		Number:    "100",
+		Width:     4.5, // 4.5 meters
+		Height:    3.0, // 3 meters
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -365,6 +373,8 @@ func TestRoomRepository_Delete(t *testing.T) {
 		FloorID:   floor.ID,
 		Name:      "To Be Deleted",
 		Number:    "999",
+		Width:     5.5, // 5.5 meters
+		Height:    3.0, // 3 meters
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}

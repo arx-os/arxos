@@ -27,7 +27,7 @@ func (r *BASPointRepository) Create(point *domain.BASPoint) error {
 	query := `
 		INSERT INTO bas_points (
 			id, building_id, bas_system_id, room_id, floor_id, equipment_id,
-			point_name, device_id, object_type, object_instance,
+			point_name, path, device_id, object_type, object_instance,
 			description, units, point_type, location_text,
 			writeable, min_value, max_value,
 			mapped, mapping_confidence,
@@ -36,13 +36,13 @@ func (r *BASPointRepository) Create(point *domain.BASPoint) error {
 			metadata, created_at, updated_at
 		) VALUES (
 			$1, $2, $3, $4, $5, $6,
-			$7, $8, $9, $10,
-			$11, $12, $13, $14,
-			$15, $16, $17,
-			$18, $19,
-			$20, $21,
-			$22, $23,
-			$24, $25, $26
+			$7, $8, $9, $10, $11,
+			$12, $13, $14, $15,
+			$16, $17, $18,
+			$19, $20,
+			$21, $22,
+			$23, $24,
+			$25, $26, $27
 		)
 	`
 
@@ -55,7 +55,7 @@ func (r *BASPointRepository) Create(point *domain.BASPoint) error {
 	_, err = r.db.Exec(query,
 		point.ID.String(), point.BuildingID.String(), point.BASSystemID.String(),
 		nullableID(point.RoomID), nullableID(point.FloorID), nullableID(point.EquipmentID),
-		point.PointName, point.DeviceID, point.ObjectType, point.ObjectInstance,
+		point.PointName, point.Path, point.DeviceID, point.ObjectType, point.ObjectInstance,
 		point.Description, point.Units, point.PointType, point.LocationText,
 		point.Writeable, point.MinValue, point.MaxValue,
 		point.Mapped, point.MappingConfidence,
@@ -72,7 +72,7 @@ func (r *BASPointRepository) GetByID(id types.ID) (*domain.BASPoint, error) {
 	query := `
 		SELECT
 			id, building_id, bas_system_id, room_id, floor_id, equipment_id,
-			point_name, device_id, object_type, object_instance,
+			point_name, path, device_id, object_type, object_instance,
 			description, units, point_type, location_text,
 			writeable, min_value, max_value,
 			current_value, current_value_numeric, current_value_boolean, last_updated,
@@ -85,22 +85,23 @@ func (r *BASPointRepository) GetByID(id types.ID) (*domain.BASPoint, error) {
 	`
 
 	point := &domain.BASPoint{}
-	var roomID, floorID, equipmentID, addedInVersion, removedInVersion sql.NullString
+	var roomID, floorID, equipmentID, addedInVersion, removedInVersion, path sql.NullString
 	var objectInstance sql.NullInt64
 	var minValue, maxValue, currentNumeric sql.NullFloat64
 	var currentValue, currentBoolean, lastUpdated sql.NullTime
+	var metadataJSON []byte
 
 	err := r.db.QueryRow(query, id.String()).Scan(
 		&point.ID, &point.BuildingID, &point.BASSystemID,
 		&roomID, &floorID, &equipmentID,
-		&point.PointName, &point.DeviceID, &point.ObjectType, &objectInstance,
+		&point.PointName, &path, &point.DeviceID, &point.ObjectType, &objectInstance,
 		&point.Description, &point.Units, &point.PointType, &point.LocationText,
 		&point.Writeable, &minValue, &maxValue,
 		&currentValue, &currentNumeric, &currentBoolean, &lastUpdated,
 		&point.Mapped, &point.MappingConfidence,
 		&point.ImportedAt, &point.ImportSource,
 		&addedInVersion, &removedInVersion,
-		&point.Metadata, &point.CreatedAt, &point.UpdatedAt,
+		&metadataJSON, &point.CreatedAt, &point.UpdatedAt,
 	)
 
 	if err != nil {
@@ -141,6 +142,17 @@ func (r *BASPointRepository) GetByID(id types.ID) (*domain.BASPoint, error) {
 		id := types.FromString(removedInVersion.String)
 		point.RemovedInVersion = &id
 	}
+	if path.Valid {
+		point.Path = path.String
+	}
+
+	// Unmarshal metadata JSON
+	if len(metadataJSON) > 0 {
+		point.Metadata = make(map[string]interface{})
+		if err := json.Unmarshal(metadataJSON, &point.Metadata); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+		}
+	}
 
 	return point, nil
 }
@@ -149,34 +161,42 @@ func (r *BASPointRepository) GetByID(id types.ID) (*domain.BASPoint, error) {
 func (r *BASPointRepository) Update(point *domain.BASPoint) error {
 	query := `
 		UPDATE bas_points SET
-			room_id = $1,
-			floor_id = $2,
-			equipment_id = $3,
-			description = $4,
-			units = $5,
-			point_type = $6,
-			location_text = $7,
-			writeable = $8,
-			min_value = $9,
-			max_value = $10,
-			current_value = $11,
-			current_value_numeric = $12,
-			current_value_boolean = $13,
-			last_updated = $14,
-			mapped = $15,
-			mapping_confidence = $16,
-			metadata = $17,
+			point_name = $1,
+			room_id = $2,
+			floor_id = $3,
+			equipment_id = $4,
+			description = $5,
+			units = $6,
+			point_type = $7,
+			location_text = $8,
+			writeable = $9,
+			min_value = $10,
+			max_value = $11,
+			current_value = $12,
+			current_value_numeric = $13,
+			current_value_boolean = $14,
+			last_updated = $15,
+			mapped = $16,
+			mapping_confidence = $17,
+			metadata = $18,
 			updated_at = NOW()
-		WHERE id = $18
+		WHERE id = $19
 	`
 
-	_, err := r.db.Exec(query,
+	// Marshal metadata to JSON
+	metadataJSON, err := json.Marshal(point.Metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	_, err = r.db.Exec(query,
+		point.PointName,
 		nullableID(point.RoomID), nullableID(point.FloorID), nullableID(point.EquipmentID),
 		point.Description, point.Units, point.PointType, point.LocationText,
 		point.Writeable, point.MinValue, point.MaxValue,
 		point.CurrentValue, point.CurrentValueNumeric, point.CurrentValueBoolean, point.LastUpdated,
 		point.Mapped, point.MappingConfidence,
-		point.Metadata,
+		metadataJSON,
 		point.ID.String(),
 	)
 
@@ -485,7 +505,7 @@ func (r *BASPointRepository) buildListQuery(filter domain.BASPointFilter, limit,
 	query := `
 		SELECT
 			id, building_id, bas_system_id, room_id, floor_id, equipment_id,
-			point_name, device_id, object_type, object_instance,
+			point_name, path, device_id, object_type, object_instance,
 			description, units, point_type, location_text,
 			writeable, min_value, max_value,
 			current_value, current_value_numeric, current_value_boolean, last_updated,
@@ -609,24 +629,25 @@ func (r *BASPointRepository) scanBASPoint(scanner interface {
 	Scan(dest ...interface{}) error
 }) (*domain.BASPoint, error) {
 	point := &domain.BASPoint{}
-	var roomID, floorID, equipmentID, addedInVersion, removedInVersion sql.NullString
+	var roomID, floorID, equipmentID, addedInVersion, removedInVersion, path sql.NullString
 	var objectInstance sql.NullInt64
 	var minValue, maxValue, currentNumeric sql.NullFloat64
 	var currentValue, importSource sql.NullString
 	var currentBoolean sql.NullBool
 	var lastUpdated sql.NullTime
+	var metadataJSON []byte
 
 	err := scanner.Scan(
 		&point.ID, &point.BuildingID, &point.BASSystemID,
 		&roomID, &floorID, &equipmentID,
-		&point.PointName, &point.DeviceID, &point.ObjectType, &objectInstance,
+		&point.PointName, &path, &point.DeviceID, &point.ObjectType, &objectInstance,
 		&point.Description, &point.Units, &point.PointType, &point.LocationText,
 		&point.Writeable, &minValue, &maxValue,
 		&currentValue, &currentNumeric, &currentBoolean, &lastUpdated,
 		&point.Mapped, &point.MappingConfidence,
 		&point.ImportedAt, &importSource,
 		&addedInVersion, &removedInVersion,
-		&point.Metadata, &point.CreatedAt, &point.UpdatedAt,
+		&metadataJSON, &point.CreatedAt, &point.UpdatedAt,
 	)
 
 	if err != nil {
@@ -678,6 +699,17 @@ func (r *BASPointRepository) scanBASPoint(scanner interface {
 	if removedInVersion.Valid {
 		id := types.FromString(removedInVersion.String)
 		point.RemovedInVersion = &id
+	}
+	if path.Valid {
+		point.Path = path.String
+	}
+
+	// Unmarshal metadata JSON
+	if len(metadataJSON) > 0 {
+		point.Metadata = make(map[string]interface{})
+		if err := json.Unmarshal(metadataJSON, &point.Metadata); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+		}
 	}
 
 	return point, nil
@@ -804,7 +836,7 @@ func (r *BASPointRepository) GetByPath(exactPath string) (*domain.BASPoint, erro
 func (r *BASPointRepository) FindByPath(pathPattern string) ([]*domain.BASPoint, error) {
 	// Convert path pattern to SQL LIKE pattern
 	sqlPattern := naming.ToSQLPattern(pathPattern)
-	
+
 	// Validate pattern has at least some specificity
 	if sqlPattern == "%" || sqlPattern == "/%" {
 		return nil, fmt.Errorf("path pattern too broad, must include at least one specific segment")

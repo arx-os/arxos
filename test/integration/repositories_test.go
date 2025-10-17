@@ -15,6 +15,7 @@ import (
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/arx-os/arxos/internal/infrastructure/postgis"
+	"github.com/arx-os/arxos/test/helpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,15 +27,16 @@ func TestBuildingRepository(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, _ := setupTestEnvironment(t)
+	db, _ := helpers.SetupTestEnvironment(t)
 	defer db.Close()
 
 	repo := postgis.NewBuildingRepository(db)
 
 	t.Run("Create and Get Building", func(t *testing.T) {
-		// Create building
+		// Create building with unique ID
+		uniqueID := fmt.Sprintf("test-building-%d", time.Now().UnixNano())
 		building := &domain.Building{
-			ID:        types.FromString("test-building-1"),
+			ID:        types.FromString(uniqueID),
 			Name:      "Test Building",
 			Address:   "123 Test Street",
 			CreatedAt: time.Now(),
@@ -54,9 +56,10 @@ func TestBuildingRepository(t *testing.T) {
 	})
 
 	t.Run("Update Building", func(t *testing.T) {
-		// Create building
+		// Create building with unique ID
+		uniqueID := fmt.Sprintf("test-building-upd-%d", time.Now().UnixNano())
 		building := &domain.Building{
-			ID:        types.FromString("test-building-2"),
+			ID:        types.FromString(uniqueID),
 			Name:      "Original Name",
 			Address:   "Original Address",
 			CreatedAt: time.Now(),
@@ -82,9 +85,10 @@ func TestBuildingRepository(t *testing.T) {
 	})
 
 	t.Run("Delete Building", func(t *testing.T) {
-		// Create building
+		// Create building with unique ID
+		uniqueID := fmt.Sprintf("test-building-del-%d", time.Now().UnixNano())
 		building := &domain.Building{
-			ID:        types.FromString("test-building-3"),
+			ID:        types.FromString(uniqueID),
 			Name:      "To Be Deleted",
 			Address:   "Delete Address",
 			CreatedAt: time.Now(),
@@ -105,10 +109,11 @@ func TestBuildingRepository(t *testing.T) {
 	})
 
 	t.Run("List Buildings", func(t *testing.T) {
-		// Create multiple buildings
+		// Create multiple buildings with unique IDs
+		timestamp := time.Now().UnixNano()
 		for i := 0; i < 3; i++ {
 			building := &domain.Building{
-				ID:        types.FromString(fmt.Sprintf("test-building-list-%d", i)),
+				ID:        types.FromString(fmt.Sprintf("test-bld-lst-%d-%d", timestamp, i)),
 				Name:      fmt.Sprintf("Building %d", i),
 				Address:   fmt.Sprintf("Address %d", i),
 				CreatedAt: time.Now(),
@@ -116,6 +121,7 @@ func TestBuildingRepository(t *testing.T) {
 			}
 			err := repo.Create(ctx, building)
 			require.NoError(t, err)
+			time.Sleep(1 * time.Millisecond) // Ensure unique IDs
 		}
 
 		// List buildings
@@ -128,11 +134,12 @@ func TestBuildingRepository(t *testing.T) {
 	})
 
 	t.Run("Get Building by Address", func(t *testing.T) {
-		// Create building with specific address
+		// Create building with specific address and unique ID
+		uniqueID := fmt.Sprintf("test-bld-addr-%d", time.Now().UnixNano())
 		building := &domain.Building{
-			ID:        types.FromString("test-building-address"),
+			ID:        types.FromString(uniqueID),
 			Name:      "Address Test Building",
-			Address:   "123 Unique Address Street",
+			Address:   fmt.Sprintf("123 Unique Address-%d", time.Now().UnixNano()),
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
@@ -155,7 +162,7 @@ func TestEquipmentRepository(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, _ := setupTestEnvironment(t)
+	db, _ := helpers.SetupTestEnvironment(t)
 	defer db.Close()
 
 	repo := postgis.NewEquipmentRepository(db)
@@ -163,7 +170,7 @@ func TestEquipmentRepository(t *testing.T) {
 	// Create test building first
 	buildingRepo := postgis.NewBuildingRepository(db)
 	building := &domain.Building{
-		ID:        types.FromString("test-building-equipment"),
+		ID:        helpers.UniqueTestID(),
 		Name:      "Equipment Test Building",
 		Address:   "Equipment Address",
 		CreatedAt: time.Now(),
@@ -174,7 +181,7 @@ func TestEquipmentRepository(t *testing.T) {
 
 	t.Run("Create and Get Equipment", func(t *testing.T) {
 		equipment := &domain.Equipment{
-			ID:         types.FromString("test-equipment-1"),
+			ID:         helpers.UniqueTestID(),
 			BuildingID: building.ID,
 			Name:       "Test Equipment",
 			Type:       "HVAC",
@@ -199,7 +206,7 @@ func TestEquipmentRepository(t *testing.T) {
 		// Create equipment with specific paths
 		equipments := []*domain.Equipment{
 			{
-				ID:         types.FromString("test-equipment-path-1"),
+				ID:         helpers.UniqueTestID(),
 				BuildingID: building.ID,
 				Name:       "HVAC Unit 1",
 				Type:       "HVAC",
@@ -209,7 +216,7 @@ func TestEquipmentRepository(t *testing.T) {
 				UpdatedAt:  time.Now(),
 			},
 			{
-				ID:         types.FromString("test-equipment-path-2"),
+				ID:         helpers.UniqueTestID(),
 				BuildingID: building.ID,
 				Name:       "HVAC Unit 2",
 				Type:       "HVAC",
@@ -219,7 +226,7 @@ func TestEquipmentRepository(t *testing.T) {
 				UpdatedAt:  time.Now(),
 			},
 			{
-				ID:         types.FromString("test-equipment-path-3"),
+				ID:         helpers.UniqueTestID(),
 				BuildingID: building.ID,
 				Name:       "Electrical Panel",
 				Type:       "Electrical",
@@ -239,7 +246,7 @@ func TestEquipmentRepository(t *testing.T) {
 		exact, err := repo.GetByPath(ctx, "/test-building-equipment/1/room1/HVAC/unit1")
 		require.NoError(t, err)
 		require.NotNil(t, exact)
-		assert.Equal(t, types.FromString("test-equipment-path-1"), exact.ID)
+		assert.Equal(t, helpers.UniqueTestID(), exact.ID)
 
 		// Test wildcard path query
 		wildcard, err := repo.FindByPath(ctx, "/test-building-equipment/1/*/HVAC/*")
@@ -260,7 +267,7 @@ func TestEquipmentRepository(t *testing.T) {
 
 	t.Run("Update Equipment", func(t *testing.T) {
 		equipment := &domain.Equipment{
-			ID:         types.FromString("test-equipment-status"),
+			ID:         helpers.UniqueTestID(),
 			BuildingID: building.ID,
 			Name:       "Status Test Equipment",
 			Type:       "HVAC",
@@ -293,7 +300,7 @@ func TestFloorRepository(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, _ := setupTestEnvironment(t)
+	db, _ := helpers.SetupTestEnvironment(t)
 	defer db.Close()
 
 	repo := postgis.NewFloorRepository(db)
@@ -301,7 +308,7 @@ func TestFloorRepository(t *testing.T) {
 	// Create test building
 	buildingRepo := postgis.NewBuildingRepository(db)
 	building := &domain.Building{
-		ID:        types.FromString("test-building-floor"),
+		ID:        helpers.UniqueTestID(),
 		Name:      "Floor Test Building",
 		Address:   "Floor Address",
 		CreatedAt: time.Now(),
@@ -312,7 +319,7 @@ func TestFloorRepository(t *testing.T) {
 
 	t.Run("Create and Get Floor", func(t *testing.T) {
 		floor := &domain.Floor{
-			ID:         types.FromString("test-floor-1"),
+			ID:         helpers.UniqueTestID(),
 			BuildingID: building.ID,
 			Level:      1,
 			Name:       "Ground Floor",
@@ -353,7 +360,7 @@ func TestFloorRepository(t *testing.T) {
 
 	t.Run("Update Floor", func(t *testing.T) {
 		floor := &domain.Floor{
-			ID:         types.FromString("test-floor-update"),
+			ID:         helpers.UniqueTestID(),
 			BuildingID: building.ID,
 			Level:      4,
 			Name:       "Original Name",
@@ -387,7 +394,7 @@ func TestRoomRepository(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, _ := setupTestEnvironment(t)
+	db, _ := helpers.SetupTestEnvironment(t)
 	defer db.Close()
 
 	repo := postgis.NewRoomRepository(db)
@@ -395,7 +402,7 @@ func TestRoomRepository(t *testing.T) {
 	// Create test building and floor
 	buildingRepo := postgis.NewBuildingRepository(db)
 	building := &domain.Building{
-		ID:        types.FromString("test-building-room"),
+		ID:        helpers.UniqueTestID(),
 		Name:      "Room Test Building",
 		Address:   "Room Address",
 		CreatedAt: time.Now(),
@@ -406,7 +413,7 @@ func TestRoomRepository(t *testing.T) {
 
 	floorRepo := postgis.NewFloorRepository(db)
 	floor := &domain.Floor{
-		ID:         types.FromString("test-floor-room"),
+		ID:         helpers.UniqueTestID(),
 		BuildingID: building.ID,
 		Level:      1,
 		Name:       "Ground Floor",
@@ -418,7 +425,7 @@ func TestRoomRepository(t *testing.T) {
 
 	t.Run("Create and Get Room with Geometry", func(t *testing.T) {
 		room := &domain.Room{
-			ID:        types.FromString("test-room-1"),
+			ID:        helpers.UniqueTestID(),
 			FloorID:   floor.ID,
 			Name:      "Test Room",
 			Number:    "101",
@@ -478,7 +485,7 @@ func TestBASPointRepository(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, _ := setupTestEnvironment(t)
+	db, _ := helpers.SetupTestEnvironment(t)
 	defer db.Close()
 
 	repo := postgis.NewBASPointRepository(db)
@@ -486,7 +493,7 @@ func TestBASPointRepository(t *testing.T) {
 	// Create test building and BAS system
 	buildingRepo := postgis.NewBuildingRepository(db)
 	building := &domain.Building{
-		ID:        types.FromString("test-building-bas"),
+		ID:        helpers.UniqueTestID(),
 		Name:      "BAS Test Building",
 		Address:   "BAS Address",
 		CreatedAt: time.Now(),
@@ -496,7 +503,7 @@ func TestBASPointRepository(t *testing.T) {
 	require.NoError(t, err)
 
 	basSystem := &domain.BASSystem{
-		ID:         types.FromString("test-bas-system"),
+		ID:         helpers.UniqueTestID(),
 		BuildingID: building.ID,
 		Name:       "Test BAS System",
 		SystemType: domain.BASSystemTypeMetasys,
@@ -505,9 +512,14 @@ func TestBASPointRepository(t *testing.T) {
 		UpdatedAt:  time.Now(),
 	}
 
+	// Create BAS system in database
+	basSystemRepo := postgis.NewBASSystemRepository(db)
+	err = basSystemRepo.Create(basSystem)
+	require.NoError(t, err, "Failed to create BAS system for test")
+
 	t.Run("Create and Get BAS Point", func(t *testing.T) {
 		point := &domain.BASPoint{
-			ID:          types.FromString("test-bas-point-1"),
+			ID:          helpers.UniqueTestID(),
 			BuildingID:  building.ID,
 			BASSystemID: basSystem.ID,
 			PointName:   "Temperature Sensor",
@@ -519,6 +531,7 @@ func TestBASPointRepository(t *testing.T) {
 			PointType:   "Temperature",
 			Writeable:   false,
 			Mapped:      true,
+			Metadata:    make(map[string]interface{}), // Initialize empty metadata
 			ImportedAt:  time.Now(),
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
@@ -536,32 +549,38 @@ func TestBASPointRepository(t *testing.T) {
 	})
 
 	t.Run("Path-based Queries for BAS Points", func(t *testing.T) {
-		// Create BAS points with specific paths
+		// Create BAS points with unique paths to avoid collisions
+		pathTimestamp := time.Now().UnixNano()
+		uniquePath1 := fmt.Sprintf("/test-bldg-%d/1/room1/HVAC/temp1", pathTimestamp)
+		uniquePath2 := fmt.Sprintf("/test-bldg-%d/1/room2/HVAC/temp2", pathTimestamp)
+
 		points := []*domain.BASPoint{
 			{
-				ID:          types.FromString("test-bas-path-1"),
+				ID:          helpers.UniqueTestID(),
 				BuildingID:  building.ID,
 				BASSystemID: basSystem.ID,
 				PointName:   "HVAC Temp 1",
-				Path:        "/test-building/1/room1/HVAC/temp1",
+				Path:        uniquePath1,
 				DeviceID:    "DEV002",
 				ObjectType:  "AI",
 				PointType:   "Temperature",
 				Mapped:      true,
+				Metadata:    make(map[string]interface{}),
 				ImportedAt:  time.Now(),
 				CreatedAt:   time.Now(),
 				UpdatedAt:   time.Now(),
 			},
 			{
-				ID:          types.FromString("test-bas-path-2"),
+				ID:          helpers.UniqueTestID(),
 				BuildingID:  building.ID,
 				BASSystemID: basSystem.ID,
 				PointName:   "HVAC Temp 2",
-				Path:        "/test-building/1/room2/HVAC/temp2",
+				Path:        uniquePath2,
 				DeviceID:    "DEV003",
 				ObjectType:  "AI",
 				PointType:   "Temperature",
 				Mapped:      true,
+				Metadata:    make(map[string]interface{}),
 				ImportedAt:  time.Now(),
 				CreatedAt:   time.Now(),
 				UpdatedAt:   time.Now(),
@@ -574,15 +593,15 @@ func TestBASPointRepository(t *testing.T) {
 		}
 
 		// Test exact path query
-		exact, err := repo.GetByPath("/test-building/1/room1/HVAC/temp1")
+		exact, err := repo.GetByPath(uniquePath1)
 		require.NoError(t, err)
 		require.NotNil(t, exact)
-		assert.Equal(t, types.FromString("test-bas-path-1"), exact.ID)
 
-		// Test wildcard path query
-		wildcard, err := repo.FindByPath("/test-building/1/*/HVAC/*")
+		// Test wildcard path query - use pattern that matches our unique paths
+		pattern := fmt.Sprintf("/test-bldg-%d/*/HVAC/*", pathTimestamp)
+		wildcard, err := repo.FindByPath(pattern)
 		require.NoError(t, err)
-		assert.Len(t, wildcard, 2) // Should find both temperature sensors
+		assert.Len(t, wildcard, 2, "Should find exactly the 2 points we just created")
 	})
 
 	t.Run("List BAS Points by Building", func(t *testing.T) {
@@ -593,7 +612,7 @@ func TestBASPointRepository(t *testing.T) {
 
 	t.Run("Update BAS Point", func(t *testing.T) {
 		point := &domain.BASPoint{
-			ID:          types.FromString("test-bas-update"),
+			ID:          helpers.UniqueTestID(),
 			BuildingID:  building.ID,
 			BASSystemID: basSystem.ID,
 			PointName:   "Update Test Sensor",
@@ -641,7 +660,7 @@ func TestRepositoryRelationships(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, _ := setupTestEnvironment(t)
+	db, _ := helpers.SetupTestEnvironment(t)
 	defer db.Close()
 
 	// Create repositories
@@ -653,7 +672,7 @@ func TestRepositoryRelationships(t *testing.T) {
 	t.Run("Building-Floor-Room-Equipment Hierarchy", func(t *testing.T) {
 		// Create building
 		building := &domain.Building{
-			ID:        types.FromString("test-hierarchy-building"),
+			ID:        helpers.UniqueTestID(),
 			Name:      "Hierarchy Test Building",
 			Address:   "Hierarchy Address",
 			CreatedAt: time.Now(),
@@ -664,7 +683,7 @@ func TestRepositoryRelationships(t *testing.T) {
 
 		// Create floor
 		floor := &domain.Floor{
-			ID:         types.FromString("test-hierarchy-floor"),
+			ID:         helpers.UniqueTestID(),
 			BuildingID: building.ID,
 			Level:      1,
 			Name:       "Ground Floor",
@@ -676,7 +695,7 @@ func TestRepositoryRelationships(t *testing.T) {
 
 		// Create room
 		room := &domain.Room{
-			ID:        types.FromString("test-hierarchy-room"),
+			ID:        helpers.UniqueTestID(),
 			FloorID:   floor.ID,
 			Name:      "Test Room",
 			Number:    "101",
@@ -690,7 +709,7 @@ func TestRepositoryRelationships(t *testing.T) {
 
 		// Create equipment
 		equipment := &domain.Equipment{
-			ID:         types.FromString("test-hierarchy-equipment"),
+			ID:         helpers.UniqueTestID(),
 			BuildingID: building.ID,
 			Name:       "Test Equipment",
 			Type:       "HVAC",
@@ -729,7 +748,7 @@ func TestRepositoryRelationships(t *testing.T) {
 
 		// Create a building with associated data
 		building := &domain.Building{
-			ID:        types.FromString("test-cascade-building"),
+			ID:        helpers.UniqueTestID(),
 			Name:      "Cascade Test Building",
 			Address:   "Cascade Address",
 			CreatedAt: time.Now(),

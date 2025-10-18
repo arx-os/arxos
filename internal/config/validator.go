@@ -119,6 +119,9 @@ func (cv *ConfigValidator) Validate(config *Config) []ValidationError {
 	// Validate database configuration
 	cv.validateDatabaseConfig(config)
 
+	// Validate cloud configuration
+	cv.validateCloudConfig(config)
+
 	// Validate API configuration
 	cv.validateAPIConfig(config)
 
@@ -237,6 +240,25 @@ func (cv *ConfigValidator) validateDatabaseConfig(config *Config) {
 	}
 }
 
+func (cv *ConfigValidator) validateCloudConfig(config *Config) {
+	// Only validate cloud settings if cloud is enabled
+	if !config.Cloud.Enabled {
+		return
+	}
+
+	// Validate cloud base URL
+	if config.Cloud.BaseURL == "" {
+		cv.addError("cloud.base_url", "", "Cloud base URL is required when cloud is enabled", "MISSING_CLOUD_BASE_URL")
+	} else if !cv.isValidCloudURL(config.Cloud.BaseURL) {
+		cv.addError("cloud.base_url", config.Cloud.BaseURL, "Invalid cloud base URL format", "INVALID_CLOUD_BASE_URL")
+	}
+
+	// Validate sync interval if sync is enabled
+	if config.Cloud.SyncEnabled && config.Cloud.SyncInterval <= 0 {
+		cv.addError("cloud.sync_interval", config.Cloud.SyncInterval.String(), "Sync interval must be positive when sync is enabled", "INVALID_SYNC_INTERVAL")
+	}
+}
+
 func (cv *ConfigValidator) validateAPIConfig(config *Config) {
 	// Validate timeout
 	if config.API.Timeout < 1*time.Second {
@@ -316,8 +338,17 @@ func (cv *ConfigValidator) validateSecurityConfig(config *Config) {
 }
 
 func (cv *ConfigValidator) validateFeatureFlags(config *Config) {
-	// Feature flags validation is handled by the struct tags
-	// No additional validation needed for boolean flags
+	// Check for conflicting features
+
+	// Cloud sync without cloud enabled
+	if config.Features.CloudSync && !config.Cloud.Enabled {
+		cv.addWarning("features.cloud_sync", "true", "Cloud sync enabled but cloud is disabled", "CONFLICTING_FEATURES")
+	}
+
+	// Offline mode with cloud sync
+	if config.Features.OfflineMode && config.Features.CloudSync {
+		cv.addWarning("features.offline_mode", "true", "Offline mode and cloud sync both enabled", "CONFLICTING_FEATURES")
+	}
 }
 
 func (cv *ConfigValidator) validateTelemetryConfig(config *Config) {
@@ -366,15 +397,23 @@ func (cv *ConfigValidator) validateStorageConfig(config *Config) {
 }
 
 func (cv *ConfigValidator) validateTUIConfig(config *Config) {
-	// Validate TUI theme
-	if config.TUI.Theme != "" && !isValidTUITheme(config.TUI.Theme) {
-		cv.addError("tui.theme", config.TUI.Theme, "Invalid TUI theme", "INVALID_TUI_THEME")
+	// Skip TUI validation if TUI is disabled
+	if !config.TUI.Enabled {
+		return
 	}
 
-	// Validate update interval
+	// Validate TUI theme (warn only, don't fail)
+	if config.TUI.Theme != "" && !isValidTUITheme(config.TUI.Theme) {
+		cv.addWarning("tui.theme", config.TUI.Theme, "Invalid TUI theme (must be dark, light, or auto)", "INVALID_TUI_THEME")
+	}
+
+	// Validate update interval (string format)
 	if config.TUI.UpdateInterval != "" {
-		if _, err := time.ParseDuration(config.TUI.UpdateInterval); err != nil {
+		duration, err := time.ParseDuration(config.TUI.UpdateInterval)
+		if err != nil {
 			cv.addError("tui.update_interval", config.TUI.UpdateInterval, "Invalid update interval format", "INVALID_UPDATE_INTERVAL")
+		} else if duration <= 0 {
+			cv.addError("tui.update_interval", config.TUI.UpdateInterval, "Update interval must be positive", "INVALID_TUI_UPDATE_INTERVAL")
 		}
 	}
 
@@ -541,7 +580,7 @@ func isValidEnvironment(env Environment) bool {
 
 func isValidMode(mode string) bool {
 	switch mode {
-	case "local", "hybrid", "cloud":
+	case "local", "hybrid", "cloud", "production":
 		return true
 	default:
 		return false
@@ -555,6 +594,25 @@ func isValidSSLMode(sslMode string) bool {
 	default:
 		return false
 	}
+}
+
+func (cv *ConfigValidator) isValidCloudURL(urlStr string) bool {
+	// Must start with http:// or https://
+	if !strings.HasPrefix(urlStr, "http://") && !strings.HasPrefix(urlStr, "https://") {
+		return false
+	}
+
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return false
+	}
+
+	// Must have a valid host
+	if parsedURL.Host == "" {
+		return false
+	}
+
+	return true
 }
 
 func isValidTUITheme(theme string) bool {

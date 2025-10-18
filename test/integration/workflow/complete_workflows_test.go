@@ -1,6 +1,7 @@
-package integration
+package workflow
 
 import (
+	integration "github.com/arx-os/arxos/test/integration"
 	"context"
 	"fmt"
 	"os"
@@ -22,7 +23,7 @@ func TestWorkflowIFCImportToPathQuery(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	container := setupTestContainer(t)
+	container := integration.SetupTestContainer(t)
 	if container == nil {
 		t.Skip("Test container not available - requires database")
 	}
@@ -106,7 +107,7 @@ func TestWorkflowBASImportPlusIFCImport(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	container := setupTestContainer(t)
+	container := integration.SetupTestContainer(t)
 	if container == nil {
 		t.Skip("Test container not available - requires database")
 	}
@@ -159,7 +160,7 @@ func TestWorkflowVersionControl(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	container := setupTestContainer(t)
+	container := integration.SetupTestContainer(t)
 	if container == nil {
 		t.Skip("Test container not available")
 	}
@@ -230,7 +231,7 @@ func TestWorkflowCompleteLifecycle(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	container := setupTestContainer(t)
+	container := integration.SetupTestContainer(t)
 	if container == nil {
 		t.Skip("Test container not available")
 	}
@@ -296,7 +297,7 @@ func TestWorkflowPathQueryPerformance(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	container := setupTestContainer(t)
+	container := integration.SetupTestContainer(t)
 	if container == nil {
 		t.Skip("Test container not available")
 	}

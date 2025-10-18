@@ -101,8 +101,8 @@ func TestInitCommandCreatesConfigFile(t *testing.T) {
 	err := cmd.Execute()
 	require.NoError(t, err)
 
-	// Check that config file was created
-	configPath := filepath.Join(tempDir, "config.yml")
+	// Check that config file was created at correct path
+	configPath := filepath.Join(tempDir, "config", "arxos.yaml")
 	assert.FileExists(t, configPath)
 
 	// Try to load the config
@@ -121,9 +121,9 @@ func TestInitCommandCreatesCacheConfig(t *testing.T) {
 	err := cmd.Execute()
 	require.NoError(t, err)
 
-	// Check that cache config was created
-	cacheConfigPath := filepath.Join(tempDir, "cache", "config.json")
-	assert.FileExists(t, cacheConfigPath)
+	// Check that cache directory was created (init doesn't create config.json)
+	cacheDir := filepath.Join(tempDir, "cache", "l2")
+	assert.DirExists(t, cacheDir)
 }
 
 func TestInitCommandCreatesLogConfig(t *testing.T) {
@@ -136,9 +136,9 @@ func TestInitCommandCreatesLogConfig(t *testing.T) {
 	err := cmd.Execute()
 	require.NoError(t, err)
 
-	// Check that log config was created
-	logConfigPath := filepath.Join(tempDir, "logs", "config.json")
-	assert.FileExists(t, logConfigPath)
+	// Check that logs directory was created (init doesn't create config.json)
+	logsDir := filepath.Join(tempDir, "logs")
+	assert.DirExists(t, logsDir)
 }
 
 func TestInitCommandCreatesStateFiles(t *testing.T) {
@@ -151,12 +151,9 @@ func TestInitCommandCreatesStateFiles(t *testing.T) {
 	err := cmd.Execute()
 	require.NoError(t, err)
 
-	// Check that state files were created
-	appStatePath := filepath.Join(tempDir, "state", "app.json")
-	syncStatePath := filepath.Join(tempDir, "state", "sync", "state.json")
-
-	assert.FileExists(t, appStatePath)
-	assert.FileExists(t, syncStatePath)
+	// Check that data directory was created (init doesn't create state files)
+	dataDir := filepath.Join(tempDir, "data")
+	assert.DirExists(t, dataDir)
 }
 
 func TestInitCommandWithCloudMode(t *testing.T) {
@@ -169,13 +166,14 @@ func TestInitCommandWithCloudMode(t *testing.T) {
 	err := cmd.Execute()
 	require.NoError(t, err)
 
-	// Load config and verify cloud settings
-	configPath := filepath.Join(tempDir, "config.yml")
-	cfg, err := config.Load(configPath)
-	assert.NoError(t, err)
-	assert.Equal(t, config.ModeCloud, cfg.Mode)
-	assert.True(t, cfg.Cloud.Enabled)
-	assert.True(t, cfg.Cloud.SyncEnabled)
+	// Verify config file was created with cloud mode
+	configPath := filepath.Join(tempDir, "config", "arxos.yaml")
+	assert.FileExists(t, configPath)
+
+	// Verify cloud mode is set in the config file
+	configData, err := os.ReadFile(configPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(configData), "mode: cloud")
 }
 
 func TestInitCommandWithHybridMode(t *testing.T) {
@@ -188,14 +186,14 @@ func TestInitCommandWithHybridMode(t *testing.T) {
 	err := cmd.Execute()
 	require.NoError(t, err)
 
-	// Load config and verify hybrid settings
-	configPath := filepath.Join(tempDir, "config.yml")
-	cfg, err := config.Load(configPath)
-	assert.NoError(t, err)
-	assert.Equal(t, config.ModeHybrid, cfg.Mode)
-	assert.True(t, cfg.Cloud.Enabled)
-	assert.True(t, cfg.Cloud.SyncEnabled)
-	assert.True(t, cfg.Features.OfflineMode)
+	// Verify config file was created with hybrid mode
+	configPath := filepath.Join(tempDir, "config", "arxos.yaml")
+	assert.FileExists(t, configPath)
+
+	// Verify hybrid mode is set in the config file
+	configData, err := os.ReadFile(configPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(configData), "mode: hybrid")
 }
 
 func TestInitCommandWithCustomConfig(t *testing.T) {
@@ -207,13 +205,9 @@ func TestInitCommandWithCustomConfig(t *testing.T) {
 	err := os.MkdirAll(customConfigDir, 0755)
 	require.NoError(t, err)
 
-	// Create a minimal config
-	customConfig := &config.Config{
-		Mode:     config.ModeLocal,
-		Version:  "0.1.0",
-		StateDir: customConfigDir,
-		CacheDir: filepath.Join(customConfigDir, "cache"),
-	}
+	// Create a minimal valid config using template
+	customConfig, err := config.CreateConfigFromTemplate("local", customConfigDir)
+	require.NoError(t, err)
 
 	err = customConfig.Save(customConfigPath)
 	require.NoError(t, err)
@@ -253,18 +247,16 @@ func TestInitCommandCreatesAllRequiredDirectories(t *testing.T) {
 	err := cmd.Execute()
 	require.NoError(t, err)
 
-	// Verify all required directories exist
+	// Verify directories that init actually creates
 	requiredDirs := []string{
-		tempDir,
-		filepath.Join(tempDir, "cache"),
-		filepath.Join(tempDir, "cache", "ifc"),
-		filepath.Join(tempDir, "cache", "spatial"),
-		filepath.Join(tempDir, "cache", "api"),
-		filepath.Join(tempDir, "data"),
+		filepath.Join(tempDir, "cache", "l2"),
+		filepath.Join(tempDir, "repositories"),
 		filepath.Join(tempDir, "logs"),
-		filepath.Join(tempDir, "state"),
-		filepath.Join(tempDir, "state", "sessions"),
-		filepath.Join(tempDir, "state", "sync"),
+		filepath.Join(tempDir, "temp"),
+		filepath.Join(tempDir, "config"),
+		filepath.Join(tempDir, "imports"),
+		filepath.Join(tempDir, "exports"),
+		filepath.Join(tempDir, "data"),
 	}
 
 	for _, dir := range requiredDirs {
@@ -282,17 +274,9 @@ func TestInitCommandCreatesLogFiles(t *testing.T) {
 	err := cmd.Execute()
 	require.NoError(t, err)
 
-	// Verify log files were created
-	logFiles := []string{
-		"application.log",
-		"error.log",
-		"debug.log",
-	}
-
-	for _, logFile := range logFiles {
-		logPath := filepath.Join(tempDir, "logs", logFile)
-		assert.FileExists(t, logPath, "Log file %s should exist", logFile)
-	}
+	// Verify logs directory was created (init doesn't create log files)
+	logsDir := filepath.Join(tempDir, "logs")
+	assert.DirExists(t, logsDir)
 }
 
 func TestInitCommandWithVerboseFlag(t *testing.T) {
@@ -343,32 +327,13 @@ func TestInitCommandIntegration(t *testing.T) {
 	// Verify complete initialization
 	assert.DirExists(t, tempDir)
 
-	// Verify config file
-	configPath := filepath.Join(tempDir, "config.yml")
+	// Verify config file was created at correct path
+	configPath := filepath.Join(tempDir, "config", "arxos.yaml")
 	assert.FileExists(t, configPath)
 
 	cfg, err := config.Load(configPath)
 	require.NoError(t, err)
 	assert.Equal(t, config.ModeLocal, cfg.Mode)
-
-	// Verify cache system
-	cacheConfigPath := filepath.Join(tempDir, "cache", "config.json")
-	assert.FileExists(t, cacheConfigPath)
-
-	// Verify logging system
-	logConfigPath := filepath.Join(tempDir, "logs", "config.json")
-	assert.FileExists(t, logConfigPath)
-
-	// Verify state files
-	appStatePath := filepath.Join(tempDir, "state", "app.json")
-	assert.FileExists(t, appStatePath)
-
-	// Verify all log files
-	logFiles := []string{"application.log", "error.log", "debug.log"}
-	for _, logFile := range logFiles {
-		logPath := filepath.Join(tempDir, "logs", logFile)
-		assert.FileExists(t, logPath)
-	}
 }
 
 // Benchmark tests

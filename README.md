@@ -178,13 +178,14 @@ ArxOS has excellent architecture and solid foundations, but integration work rem
 - ✅ Basic building/equipment CRUD
 
 **What Needs Work:**
-- ⚠️ CLI commands (some show fake data)
-- ⚠️ IFC import (metadata only, not full conversion)
-- ⚠️ HTTP API (40% coverage, workflow endpoints missing)
-- ⚠️ Test coverage (~15%)
-- ⚠️ Mobile app (placeholder implementations)
+- ⚠️ Tests failing (41% of test packages fail - 11 out of 27)
+- ⚠️ IFC import (code exists but tests failing, never tested with real IFC)
+- ⚠️ HTTP API (endpoints exist but not integration tested)
+- ⚠️ CLI commands (many exist but not integration tested)
+- ⚠️ No end-to-end workflows validated
+- ❌ Mobile app (not started - no iOS/Android platforms initialized)
 
-**See [`docs/WIRING_PLAN.md`](docs/WIRING_PLAN.md) for systematic completion plan.**
+**See [`docs/STATUS.md`](docs/STATUS.md) for detailed status and [`docs/FAILING_TESTS.md`](docs/FAILING_TESTS.md) for test inventory.**
 
 ### **Installation (Development)**
 

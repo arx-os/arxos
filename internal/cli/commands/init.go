@@ -51,6 +51,17 @@ Examples:
 			mode, _ := cmd.Flags().GetString("mode")
 			dataDir, _ := cmd.Flags().GetString("data-dir")
 
+			// Validate mode
+			validModes := map[string]bool{
+				"local":      true,
+				"cloud":      true,
+				"hybrid":     true,
+				"production": true,
+			}
+			if !validModes[mode] {
+				return fmt.Errorf("invalid mode '%s': must be one of: local, cloud, hybrid, production", mode)
+			}
+
 			if force {
 				fmt.Println("🔄 Force initialization enabled")
 			}

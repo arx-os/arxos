@@ -1,4 +1,4 @@
-package integration
+package workflow
 
 import (
 	"context"

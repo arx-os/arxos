@@ -42,8 +42,15 @@ func setupTestObjectRepository(t *testing.T) (*ObjectRepository, func()) {
 
 	repo := NewObjectRepository(db, tempDir)
 
+	// Clean up any existing test data from previous runs
+	db.ExecContext(context.Background(), "DELETE FROM version_objects WHERE hash LIKE 'test-%' OR hash LIKE 'small-%' OR hash LIKE 'medium-%' OR hash LIKE 'large-%'")
+	db.ExecContext(context.Background(), "DELETE FROM version_objects WHERE type = 'test'")
+
 	// Return cleanup function that removes both DB and temp dir
 	return repo, func() {
+		// Clean up test data
+		db.ExecContext(context.Background(), "DELETE FROM version_objects WHERE hash LIKE 'test-%' OR hash LIKE 'small-%' OR hash LIKE 'medium-%' OR hash LIKE 'large-%'")
+		db.ExecContext(context.Background(), "DELETE FROM version_objects WHERE type = 'test'")
 		os.RemoveAll(tempDir)
 		db.Close()
 	}
@@ -61,6 +68,10 @@ func TestObjectRepository_StoreAndLoad_SmallObject(t *testing.T) {
 		Size:     100,
 		Contents: []byte("This is a small test object that should be stored in the database"),
 	}
+
+	// Pre-calculate hash and ensure it's clean before test
+	obj.Hash = building.CalculateObjectHash(obj.Type, obj.Size, obj.Contents)
+	repo.db.ExecContext(ctx, "DELETE FROM version_objects WHERE hash = $1", obj.Hash)
 
 	// Store object
 	hash, err := repo.Store(ctx, obj)
@@ -118,6 +129,13 @@ func TestObjectRepository_StoreAndLoad_MediumObject(t *testing.T) {
 		Contents: contents,
 	}
 
+	// Pre-calculate hash and ensure it's clean before test
+	obj.Hash = building.CalculateObjectHash(obj.Type, obj.Size, obj.Contents)
+	repo.db.ExecContext(ctx, "DELETE FROM version_objects WHERE hash = $1", obj.Hash)
+	// Also clean up any filesystem objects from previous runs
+	objectPath := repo.getObjectPath(obj.Hash)
+	os.RemoveAll(filepath.Dir(objectPath))
+
 	// Store object
 	hash, err := repo.Store(ctx, obj)
 	if err != nil {
@@ -125,7 +143,7 @@ func TestObjectRepository_StoreAndLoad_MediumObject(t *testing.T) {
 	}
 
 	// Verify file was created
-	objectPath := repo.getObjectPath(hash)
+	objectPath = repo.getObjectPath(hash)
 	if _, err := os.Stat(objectPath); os.IsNotExist(err) {
 		t.Errorf("Object file was not created at %s", objectPath)
 	}
@@ -168,6 +186,13 @@ func TestObjectRepository_StoreAndLoad_LargeObject(t *testing.T) {
 		Size:     int64(len(contents)),
 		Contents: contents,
 	}
+
+	// Pre-calculate hash and ensure it's clean before test
+	obj.Hash = building.CalculateObjectHash(obj.Type, obj.Size, obj.Contents)
+	repo.db.ExecContext(ctx, "DELETE FROM version_objects WHERE hash = $1", obj.Hash)
+	// Also clean up any filesystem objects from previous runs
+	objectPath := repo.getObjectPath(obj.Hash)
+	os.RemoveAll(filepath.Dir(objectPath))
 
 	// Store object
 	hash, err := repo.Store(ctx, obj)
@@ -242,6 +267,10 @@ func TestObjectRepository_IncrementRef(t *testing.T) {
 		Contents: []byte("test object for ref count"),
 	}
 
+	// Pre-calculate hash and ensure it's clean before test
+	obj.Hash = building.CalculateObjectHash(obj.Type, obj.Size, obj.Contents)
+	repo.db.ExecContext(ctx, "DELETE FROM version_objects WHERE hash = $1", obj.Hash)
+
 	hash, err := repo.Store(ctx, obj)
 	if err != nil {
 		t.Fatalf("Failed to store object: %v", err)
@@ -282,8 +311,12 @@ func TestObjectRepository_DecrementRef(t *testing.T) {
 	obj := &building.Object{
 		Type:     building.ObjectTypeBlob,
 		Size:     50,
-		Contents: []byte("test object for ref count"),
+		Contents: []byte("test object for decrement ref count test"),
 	}
+
+	// Pre-calculate hash and ensure it's clean before test
+	obj.Hash = building.CalculateObjectHash(obj.Type, obj.Size, obj.Contents)
+	repo.db.ExecContext(ctx, "DELETE FROM version_objects WHERE hash = $1", obj.Hash)
 
 	hash, err := repo.Store(ctx, obj)
 	if err != nil {
@@ -440,6 +473,10 @@ func TestObjectRepository_Deduplication(t *testing.T) {
 		Size:     int64(len(contents)),
 		Contents: contents,
 	}
+
+	// Pre-calculate hash and ensure it's clean before test
+	obj1.Hash = building.CalculateObjectHash(obj1.Type, obj1.Size, obj1.Contents)
+	repo.db.ExecContext(ctx, "DELETE FROM version_objects WHERE hash = $1", obj1.Hash)
 
 	// Store first object
 	hash1, err := repo.Store(ctx, obj1)

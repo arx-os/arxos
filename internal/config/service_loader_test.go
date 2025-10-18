@@ -165,10 +165,10 @@ func TestGetServiceConfigValue(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create test service config file
-	configContent := `postgis:
-  host: test-host
-  port: 5432
-  database: test_db`
+	// Note: File is named postgis.yml, so content shouldn't have "postgis:" wrapper
+	configContent := `host: test-host
+port: 5432
+database: test_db`
 
 	err = os.WriteFile(filepath.Join(servicesDir, "postgis.yml"), []byte(configContent), 0644)
 	require.NoError(t, err)

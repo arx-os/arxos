@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -444,8 +445,16 @@ func SetupTestEnvironment(t *testing.T) (*sql.DB, func()) {
 }
 
 // UniqueTestID generates a unique test ID using timestamp
+var (
+	idCounter uint64
+	idMutex   sync.Mutex
+)
+
 func UniqueTestID() types.ID {
-	return types.FromString(fmt.Sprintf("test-%d", time.Now().UnixNano()))
+	idMutex.Lock()
+	defer idMutex.Unlock()
+	idCounter++
+	return types.FromString(fmt.Sprintf("test-%d-%d", time.Now().UnixNano(), idCounter))
 }
 
 // RepositoryCollection holds all repositories for testing

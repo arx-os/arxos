@@ -1,6 +1,7 @@
-package integration
+package workflow
 
 import (
+	integration "github.com/arx-os/arxos/test/integration"
 	"context"
 	"os"
 	"path/filepath"
@@ -20,7 +21,7 @@ func TestIFCImportE2E(t *testing.T) {
 
 	// Setup test environment
 	ctx := context.Background()
-	container := setupTestContainer(t)
+	container := integration.SetupTestContainer(t)
 	if container == nil {
 		t.Skip("Test container not available - requires database")
 	}
@@ -237,7 +238,7 @@ func TestIFCImportEdgeCases(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	container := setupTestContainer(t)
+	container := integration.SetupTestContainer(t)
 	if container == nil {
 		t.Skip("Test container not available")
 	}

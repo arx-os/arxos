@@ -3,7 +3,7 @@
  * Comprehensive tests for complete workflows including IFC import, BAS mapping, Git workflow, and PR approval
  */
 
-package integration
+package workflow
 
 import (
 	"bytes"

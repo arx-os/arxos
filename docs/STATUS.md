@@ -1,97 +1,75 @@
 # Arxos Project Status
 
-**Last Updated:** October 17, 2025  
-**Overall Completion:** ~93%  
-**Status:** Week 4 Testing - Infrastructure & Organization Complete, Ready for Validation
+**Last Updated:** October 17, 2025
+**Overall Completion:** ~65-70%
+**Status:** Active Development - Core Features Working, Integration & Testing In Progress
 
 ---
 
 ## Quick Overview
 
-Arxos is a **substantial, well-architected system** at ~98K lines of Go code with excellent foundations. The hard creative work (architecture, domain modeling, database design) is complete. What remains is primarily integration wiring, testing, and iterative refinement based on real-world use.
+Arxos is a **substantial, well-architected system** at ~108K lines of Go code with excellent architectural foundations. The creative work (architecture, domain modeling, database design) is complete. What remains is integration testing, fixing failing tests, and validating end-to-end workflows.
 
 **Key Metrics:**
-- **Go Code:** ~98,000 lines
+- **Go Code:** ~108,000 lines (actual count)
 - **Database Tables:** 107+ with PostGIS spatial support
 - **Migrations:** 33 database migrations
-- **CLI Commands:** 60+ commands (~86% functional)
+- **CLI Commands:** 60+ commands (many untested)
 - **HTTP API Endpoints:** 48 endpoints
-- **Test Coverage:** ~15% (needs improvement)
+- **Test Pass Rate:** ~59% of test packages passing (16 pass, 11 fail)
+- **Test Coverage:** Low (many packages have 0% coverage)
 - **Documentation Files:** 113 markdown files
+
+**Reality Check:** The architecture is solid, project compiles cleanly, and core features exist. However, many tests are failing and end-to-end workflows haven't been validated. Not production-ready yet.
 
 ---
 
 ## Current State - What Works vs What Needs Work
 
-### ✅ Fully Functional (Production-Ready)
+### ✅ What Actually Works
 
-**Core Infrastructure (95%):**
-- Clean Architecture properly implemented
-- PostgreSQL/PostGIS with 107 tables, spatial indexing
-- JWT authentication & RBAC
-- Multi-tenant organization model
-- Session management
-- 3-tier unified cache (L1 memory, L2 persistent, L3 Redis)
+**Core Infrastructure (Good):**
+- ✅ Clean Architecture properly implemented
+- ✅ PostgreSQL/PostGIS with 107 tables, spatial indexing
+- ✅ JWT authentication & RBAC
+- ✅ Multi-tenant organization model
+- ✅ Session management
+- ✅ Project compiles without errors
+- ⚠️ Cache system (infrastructure exists, untested)
 
-**BAS Integration (100%):**
-- CSV import with smart column detection ✅
-- Point mapping to rooms/equipment ✅
-- Change detection between imports ✅
-- All 5 CLI commands functional ✅
-- HTTP API with 5 endpoints ✅
-- 100% test coverage on CSV parser ✅
+**Domain Models (Excellent):**
+- ✅ Domain entities properly modeled (Building, Floor, Room, Equipment)
+- ✅ Repository interfaces defined
+- ✅ Use cases structured
+- ✅ Zero infrastructure dependencies in domain layer
 
-**Git Workflow (100%):**
-- Branch create/list/delete/merge ✅
-- Commit creation with changesets ✅
-- Pull Request create/approve/merge ✅
-- Issue create/assign/close ✅
-- All CLI commands wired ✅
-- HTTP API for PRs and Issues ✅
+**Database Layer (Good):**
+- ✅ Migrations run successfully
+- ✅ PostGIS spatial queries work
+- ⚠️ Some PostGIS tests failing (coordinate parsing, object storage)
 
-**Equipment Management (100%):**
-- CRUD operations ✅
-- Relationship graph with recursive CTEs ✅
-- Universal path generation (`/B1/3/301/HVAC/VAV-301`) ✅
-- Equipment topology traversal ✅
-- System templates (7 building systems) ✅
+**BAS Integration (Partially Working):**
+- ✅ CSV import with smart column detection
+- ✅ Point mapping to rooms/equipment implemented
+- ✅ CLI commands wired to repository
+- ⚠️ HTTP API endpoints exist but not integration tested
+- ⚠️ End-to-end workflow not validated
 
-**Building/Floor/Room Management (95%):**
-- CRUD operations ✅
-- Spatial queries with PostGIS ✅
-- Room positioning and dimensions ✅
-- Move/resize operations ✅
+**Equipment Management (Partially Working):**
+- ✅ CRUD operations implemented
+- ✅ Repository methods exist
+- ✅ Universal path generation code exists
+- ⚠️ Not integration tested
+- ⚠️ Relationship graph untested
 
-**CLI & TUI (90%):**
-- 60+ commands, most functional ✅
-- ASCII floor plan rendering ✅
-- Data service wired to repositories ✅
-- `arx render` command for visualization ✅
-
-**Path-Based Queries (100%):**
-- Universal naming convention fully functional ✅
-- GetByPath() for exact matches ✅
-- FindByPath() with wildcard support (`/B1/3/*/HVAC/*`) ✅
-- SQL LIKE translation for patterns ✅
-- CLI commands: `arx get`, `arx query` ✅
-- HTTP endpoints: `/api/v1/equipment/path/{path}`, `/path-pattern` ✅
-- Integrated across all layers (repository → use case → handlers) ✅
-
-**IFC Import (100%):**
-- ✅ IFC parsing via IfcOpenShell Python service (COMPLETE)
-- ✅ Python service returns detailed entity arrays: building_entities[], floor_entities[], space_entities[], equipment_entities[], relationships[]
-- ✅ **Go-side entity extraction FULLY IMPLEMENTED** (`internal/usecase/ifc_usecase.go`)
-  - extractEntitiesFromIFC() orchestrates full extraction (lines 439-569)
-  - extractBuilding() creates domain.Building with addresses (lines 571-625)
-  - extractFloor() creates domain.Floor with elevations (lines 627-657)
-  - extractRoom() creates domain.Room with geometry (lines 659-738)
-  - extractEquipment() creates domain.Equipment with paths (lines 740-837)
-- ✅ **Universal path generation during import** - Equipment automatically gets paths
-- ✅ **IFC type mapping** - mapIFCTypeToCategory() for categorization
-- ✅ **Spatial hierarchy preservation** - Parent-child relationships maintained
-- ✅ **Property set extraction** - Metadata from IFC Psets
-- ✅ **Transaction safety** - Atomic imports
-- **Status:** 🎉 Ready for production use with real IFC files
+**IFC Import (Mixed Status):**
+- ✅ Python service complete and functional
+- ✅ Go-side entity extraction implemented (`internal/usecase/ifc_usecase.go`)
+- ✅ Code exists for full import pipeline
+- ❌ IFC tests failing (client integration, error handling)
+- ❌ Not tested with real IFC files
+- ❌ End-to-end import workflow unvalidated
+- **Status:** Code exists but not validated
 
 ### ⚠️ Partially Implemented
 
@@ -102,23 +80,25 @@ Arxos is a **substantial, well-architected system** at ~98K lines of Go code wit
 - ❌ Missing: Version control REST API (CLI works fine)
 - ❌ Missing: IFC import endpoint (CLI works fine)
 
-**Mobile App (40%):**
-- ✅ UI structure and navigation complete
-- ✅ Redux state management setup
-- ✅ Auth screens and types defined
-- ⚠️ AR services partially implemented
-- ⚠️ Offline sync queue defined but not functional
-- ❌ Spatial anchor persistence incomplete
-- ❌ Photo upload implementation needed
+**Mobile App (0% - Not Started):**
+- ❌ React Native project not initialized
+- ❌ No iOS folder (ios/ doesn't exist)
+- ❌ No Android folder (android/ doesn't exist)
+- ❌ TypeScript files exist but can't run without platform setup
+- ❌ Package.json has placeholder "build skipped" scripts
+- **Reality:** Just TypeScript/React files without mobile platform. Would need `react-native init` to actually be runnable.
 
-**Testing (15%):**
-- ✅ BAS CSV parser: 100% coverage
-- ✅ Auth system: Partial coverage
-- ✅ Integration test framework in place
-- ❌ Most use cases: No tests
-- ❌ HTTP handlers: Minimal integration tests
-- ❌ CLI commands: No execution tests
-- ❌ End-to-end workflow tests needed
+**Testing (Critical Issues):**
+- ✅ Project compiles
+- ✅ Integration test infrastructure exists
+- ⚠️ Test pass rate: 59% (16 packages pass, 11 fail)
+- ❌ Config tests: All failing
+- ❌ IFC tests: All failing
+- ❌ PostGIS tests: Most failing
+- ❌ CLI command tests: 0% coverage
+- ❌ HTTP handler tests: Minimal coverage
+- ❌ End-to-end workflow tests: Don't exist
+- **Reality:** Can't deploy code where half the tests fail
 
 ### 🎭 Placeholder/Deferred
 
@@ -152,133 +132,101 @@ Arxos is a **substantial, well-architected system** at ~98K lines of Go code wit
 
 ---
 
-## What's Left to Build
+## What Actually Needs to Be Done
 
-### Critical Path Items
+### Critical Path (Must Fix Before Deployment)
 
-**1. Path-Based Queries** ✅ **COMPLETE**
-- ✅ All features functional (see "Fully Functional" section above)
+**1. Fix Failing Tests (2-3 weeks)**
+- ❌ Config package: All tests failing (14 tests)
+- ❌ IFC client: Integration and error handling tests failing
+- ❌ PostGIS: Object storage and coordinate parsing tests failing
+- ❌ CLI commands: Init command test failing
+- **Why critical:** Can't deploy code where 41% of tests fail
 
-**2. IFC Import** ✅ **COMPLETE**
-- ✅ All features functional (see "Fully Functional" section above)
+**2. Validate One End-to-End Workflow (2-3 weeks)**
+- Pick ONE workflow that matters to you
+- Test with real data (not mocks)
+- Document what actually works
+- Example: `arx building create` → `arx ifc import` → `arx query /path/to/equipment`
+- **Why critical:** Need proof the system actually functions
 
-**3. Integration Testing** 🚧 **75% COMPLETE**
-- ✅ **Test Infrastructure Complete** - Database, container, helpers all functional
-- ✅ **Test Suite Created** - 15+ tests (IFC import, workflows, repositories, paths)
-- ✅ **Docker Compose** - Test database with PostGIS ready
-- ✅ **Makefile Targets** - `make test-integration`, `make test-db-start`, etc.
-- ✅ **Test Directory Organized** - Clean structure (api/, repository/, workflow/)
-- ✅ **All Linting Errors Fixed** - 0 errors across test suite
-- ✅ **Obsolete Shell Scripts Removed** - All Go tests now
-- ✅ **Comprehensive Documentation** - 588-line README + category guides
-- ⏸️ Need sample IFC files for validation
-- ⏸️ Need to run full suite with real data
-- **Priority:** HIGH - Validate all features work together
-- **Target:** 30-40% test coverage (currently ~18%, infrastructure ready)
+**3. Integration Testing (2-3 weeks)**
+- Write tests that prove features work together
+- Test HTTP API endpoints with real database
+- Test CLI commands with real data
+- Validate repositories actually persist data correctly
+- **Why critical:** Individual units may work, but do they integrate?
 
-**4. Room Geometry Persistence (4-6 hours)**
-- Update RoomRepository to persist Location/Width/Height
-- Store in PostGIS geometry column
-- Enable spatial queries on rooms
-- **Priority:** MEDIUM - Improves TUI rendering
+### Lower Priority (Can Defer)
 
-**4. Testing & Validation (40-60 hours)**
-- Integration tests for complete workflows
-- API endpoint tests
-- CLI command tests
-- End-to-end BAS/IFC import workflows
-- **Priority:** HIGH - Proves system works
+**Mobile App (Defer Indefinitely):**
+- Not started (React Native platforms not initialized)
+- Would require significant setup work
+- Can be added later if needed
+- **Decision:** Don't count this toward completion percentage
 
-**5. Mobile App Completion (30-40 hours)**
-- Complete AR anchor persistence
-- Implement offline sync queue
-- Add photo upload functionality
-- Real-time data sync
-- **Priority:** MEDIUM - Field usability
+**Version Control REST API:**
+- CLI works fine
+- Can add HTTP endpoints later if needed
 
-### Nice-to-Have Enhancements
-
-**Version Control REST API (6-8 hours):**
-- Expose branch/commit operations via HTTP
-- Currently CLI-only (which works fine)
-- Useful for web UI in future
-
-**Remote Repository Sync (20-30 hours):**
-- Clone/push/pull operations
-- Not needed for single-workplace deployment
-- Can defer indefinitely
-
-**Advanced Analytics (15-20 hours):**
-- Energy optimization
-- Predictive maintenance
-- Performance benchmarking
+**Advanced Features:**
+- Analytics, energy optimization, ML
+- Way premature
+- Focus on core CRUD first
 
 ---
 
-## Implementation Priorities
+## Realistic Priorities
 
-### Phase 1: Core Functionality (Weeks 1-4)
-**Focus:** Make core features fully functional
+### Immediate Focus (Weeks 1-3): Make Tests Pass
+**Why:** Can't build on a failing foundation
 
-1. **Path-Based Queries** (8-12h)
-   - Repository methods
-   - CLI commands
-   - HTTP endpoints
+1. **Fix config package tests** (all 14 tests failing)
+   - Debug why config validation tests fail
+   - Fix or remove broken tests
+   - Document actual config behavior
 
-2. **IFC Import Service** (6-8h Python)
-   - Service enhancement
-   - Test with sample files
-   - Validate entity extraction
+2. **Fix IFC tests** (all failing)
+   - Debug IfcOpenShell client integration
+   - Fix error handling tests
+   - Test with actual IFC file
 
-3. **Integration Testing** (20-30h)
-   - End-to-end workflows
-   - BAS import → query
-   - IFC import → building creation
+3. **Fix PostGIS tests** (most failing)
+   - Debug coordinate parsing
+   - Fix object storage tests
+   - Validate spatial queries work
 
-**Success Criteria:** 
-- ✅ Path queries work: `arx get /B1/3/*/HVAC/*`
-- ✅ IFC import creates complete buildings
-- ✅ 40%+ test coverage
+**Success Criteria:** All tests pass or are removed with explanation
 
-### Phase 2: Field Deployment (Weeks 5-8)
-**Focus:** Real-world validation at workplace
+### Next Focus (Weeks 4-6): Prove One Thing Works
+**Why:** Need confidence something actually functions end-to-end
 
-1. **Workplace Testing**
-   - Import one real building
-   - Map IT equipment (your use case)
-   - Document actual workflows
-   - Gather feedback
+1. **Pick the simplest workflow**
+   - Building CRUD only (no IFC, no mobile, no analytics)
+   - `arx building create` → `arx building list` → `arx building show`
+   - Test with real PostgreSQL database
 
-2. **Bug Fixes & Polish**
-   - Fix issues found in real use
-   - Improve error messages
-   - Add missing features discovered in practice
+2. **Write integration test for it**
+   - Prove it works with real database
+   - Document exact commands that work
+   - No mocks, no placeholders
 
-**Success Criteria:**
-- ✅ You use Arxos daily at work
-- ✅ Saves time vs current workflow
-- ✅ Colleagues find it useful
+**Success Criteria:** ONE workflow proven to work end-to-end
 
-### Phase 3: Mobile Integration (Weeks 9-12)
-**Focus:** Field tech usability
+### Future Focus (Weeks 7-12): Expand Gradually
+**Only after tests pass and one workflow works**
 
-1. **AR Anchor Persistence** (4-5h)
-2. **Offline Sync** (6-8h)
-3. **Photo Upload** (3-4h)
-4. **Mobile UI Polish** (20-30h)
+1. Add equipment CRUD
+2. Add path-based queries
+3. Test IFC import with real file
+4. Deploy to workplace
+5. Get real user feedback
 
-**Success Criteria:**
-- ✅ Field techs can scan equipment
-- ✅ Offline data syncs when connected
-- ✅ AR anchors persist across sessions
-
-### Phase 4: Polish & Scale (Weeks 13-16)
-**Focus:** Production readiness
-
-1. **Test Coverage to 60%+**
-2. **Performance Optimization**
-3. **Documentation Updates**
-4. **Deployment Automation**
+**Deferred Indefinitely:**
+- Mobile app (not started)
+- Analytics (premature)
+- Version control REST API (CLI works)
+- Advanced features
 
 ---
 
@@ -325,73 +273,87 @@ Arxos is a **substantial, well-architected system** at ~98K lines of Go code wit
 
 ---
 
-## Success Metrics
+## Current Status vs Claims
 
-### Technical Success
-- ✅ Compiles without errors
-- ⚠️ 15% test coverage (target: 60%+)
-- ✅ Clean Architecture properly implemented
-- ⚠️ Most CLI commands work (86%)
-- ⚠️ API covers core use cases (85%)
-- ⚠️ IFC import logic ready (waiting on service)
+### What Can Be Verified
+- ✅ **Compiles cleanly** - 108K lines of Go builds without errors
+- ✅ **Architecture is good** - Clean Architecture properly implemented
+- ✅ **Database schema complete** - 107 tables with PostGIS
+- ✅ **Code exists** - CLI commands, use cases, repositories all written
+- ⚠️ **Tests passing: 59%** - 16 packages pass, 11 fail (not acceptable)
 
-### Product Success
-- ⚠️ Can manage building without IFC file (yes, via manual entry)
-- ⚠️ Can import IFC and query equipment (pending service update)
-- ✅ Can track changes over time (Git workflow works)
-- ✅ Can export data to other tools (export works)
-- ✅ Can script custom workflows (CLI composable)
+### What Cannot Be Verified
+- ❓ "CLI commands work" - No execution tests, many untested
+- ❓ "API covers use cases" - Endpoints exist but not integration tested
+- ❓ "IFC import ready" - Tests failing, never tested with real IFC file
+- ❓ "Can manage buildings" - No end-to-end workflow proof
+- ❓ "Git workflow works" - Code exists but untested in practice
 
-### Business Success (Pending Real-World Use)
-- ⏳ Joel uses it daily at work
-- ⏳ Coworkers find it useful
-- ⏳ Saves time vs current workflow
-- ⏳ Solves real problems
-- ⏳ Others want to use it
+### What Definitely Doesn't Work
+- ❌ **Mobile app** - Not initialized (0% not 40%)
+- ❌ **Config validation** - All 14 tests failing
+- ❌ **IFC client** - All integration tests failing
+- ❌ **PostGIS features** - Most tests failing
+- ❌ **End-to-end workflows** - None validated
+
+### Business Reality
+- ❌ Not used daily at work (can't deploy failing tests)
+- ❌ Not validated with real data
+- ❌ Not proven to solve actual problems
+- ❌ Would not recommend to colleagues in current state
 
 ---
 
 ## Risk Assessment
 
-### Low Risk ✅
-- **Architecture** - Excellent, proven patterns
-- **Database design** - Comprehensive, well-indexed
-- **Technology choices** - Modern, maintainable
-- **Core features** - BAS integration, Git workflow working
+### High Risk (Must Address)
+- **41% test failure rate** - Cannot deploy with this many failing tests
+- **No validated workflows** - Don't know if anything works end-to-end
+- **Documentation-reality gap** - Claiming things work that haven't been tested
+- **No user feedback** - Never deployed, never used in practice
 
-### Medium Risk ⚠️
-- **Test coverage** - Low, could break during refactoring
-- **IFC import** - Dependent on external service
-- **Mobile app** - Significant work remaining
-- **Performance at scale** - Untested with large buildings
+### Medium Risk
+- **Solo developer sustainability** - 108K lines is a lot for one person
+- **Scope too large** - Trying to build CLI + mobile + analytics + version control
+- **Technical debt** - 76 uses of `interface{}`, many untested features
+- **Performance unknown** - Never tested with real-world data volume
 
-### Mitigated Risks ✅
-- **Solo developer** - Good architecture compensates
-- **Scope creep** - Clear phases prevent this
-- **Documentation mess** - Being consolidated now
-- **Integration gaps** - Systematic wiring plan exists
+### Low Risk (Strengths)
+- **Architecture** - Clean Architecture properly implemented
+- **Database design** - PostGIS schema is solid
+- **Technology choices** - Go, PostgreSQL are good choices
+- **Domain modeling** - Entity relationships well thought out
 
 ---
 
 ## Next Immediate Actions
 
-**This Week:**
-1. Complete documentation consolidation
-2. Plan path-based query implementation
-3. Coordinate IFC service enhancement
-4. Set up workplace testing environment
+**This Week: Stop and Assess**
+1. ✅ Update documentation to match reality (this document)
+2. Run `go test ./...` and document every failing test
+3. Pick the 5 most critical failing tests
+4. Fix those 5 tests
+5. Stop adding features until tests pass
 
-**This Month:**
-1. Implement path queries (8-12h)
-2. Complete IFC service update (6-8h)
-3. Add integration tests (20-30h)
-4. Begin workplace testing
+**Next 2-3 Weeks: Fix Failing Tests**
+1. Fix all config package tests (14 tests)
+2. Fix all IFC client tests
+3. Fix PostGIS tests
+4. Get to 100% test pass rate
+5. Delete any tests that test non-existent features
 
-**This Quarter:**
-1. Complete core functionality (Phases 1-2)
-2. Field deployment and validation
-3. Mobile app integration (Phase 3)
-4. Production polish (Phase 4)
+**Weeks 4-6: Prove One Workflow**
+1. Pick simplest workflow (building CRUD)
+2. Write integration test for it
+3. Run it with real database
+4. Document exactly what works
+5. Show it to a coworker
+
+**No More Until Then:**
+- ❌ No new features
+- ❌ No mobile app work
+- ❌ No documentation of features that don't work
+- ✅ Just fix what's broken
 
 ---
 
@@ -412,22 +374,39 @@ For detailed historical context, see the **[Archive](archive/)** directory:
 
 ---
 
-## Conclusion
+## Honest Assessment
 
-**You've built something substantial.** The architecture is legitimately good - better than many production codebases. The gap between where you are (~75% complete) and where you need to be (deployable to workplace) is **not insurmountable**.
+### What's Good
+- **Architecture is excellent** - Clean Architecture properly implemented, better than many production codebases
+- **Domain modeling is solid** - Entity relationships, repository patterns, use cases well-designed
+- **Database schema is comprehensive** - 107 tables with PostGIS spatial support
+- **Project compiles cleanly** - 108K lines of Go code builds without errors
+- **Vision is clear** - You know what you're building and why
 
-**The hard part (architecture, data model, domain understanding) is done.**
+### What's the Problem
+- **Tests are failing** - 41% of test packages don't pass (11 out of 27 fail)
+- **Integration gaps** - Features exist but haven't been wired together and tested end-to-end
+- **Mobile app is vapor** - TypeScript files without React Native platform (0% not 40%)
+- **Documentation overpromises** - Claims features are "100% complete" when tests fail
+- **No validated workflows** - Can't confirm anything works end-to-end with real data
 
-**Now:** Systematic wiring, testing, and real-world validation.
+### Realistic Timeline
+- **Current state:** 65-70% complete (not 93%)
+- **To "works reliably":** 8-12 weeks of focused work
+  - Fix all failing tests (2-3 weeks)
+  - Validate end-to-end workflows (2-3 weeks)
+  - Integration testing (2-3 weeks)
+  - Real-world testing at workplace (2-3 weeks)
 
-**Vision:** Universal building version control with three native interfaces (CLI, IFC, Mobile AR).
+### Next Actions
+1. **Fix failing tests** - Can't move forward with 41% failure rate
+2. **Pick one workflow** - Make ONE thing work end-to-end with real data
+3. **Delete mobile app claims** - It's not started, don't pretend it is
+4. **Update all docs** - Match documentation to reality, not aspirations
 
 ---
 
-**For Detailed Implementation Plans:**
-- See [WIRING_PLAN](archive/wiring-plan-oct-2025.md) for command-by-command completion tasks
-- See [NEXT_STEPS_ROADMAP](archive/next-steps-roadmap-oct-2025.md) for feature priorities
-- See [DOCUMENTATION_INDEX](DOCUMENTATION_INDEX.md) for navigation
-
-**Status:** Ready for systematic completion and workplace deployment! 🚀
+**Vision:** Universal building version control with CLI and IFC integration.
+**Status:** Solid foundation, needs integration work and testing discipline.
+**Timeline:** 8-12 weeks to deployable state.
 

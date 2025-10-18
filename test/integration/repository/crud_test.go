@@ -1,4 +1,4 @@
-package integration
+package repository
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
+	integration "github.com/arx-os/arxos/test/integration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +20,7 @@ func TestBuildingRepositoryCRUD(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	container := setupTestContainer(t)
+	container := integration.SetupTestContainer(t)
 	if container == nil {
 		t.Skip("Test container not available - requires database")
 	}
@@ -146,7 +147,7 @@ func TestEquipmentRepositoryCRUD(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	container := setupTestContainer(t)
+	container := integration.SetupTestContainer(t)
 	if container == nil {
 		t.Skip("Test container not available")
 	}
@@ -328,7 +329,7 @@ func TestFloorRepositoryCRUD(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	container := setupTestContainer(t)
+	container := integration.SetupTestContainer(t)
 	if container == nil {
 		t.Skip("Test container not available")
 	}
@@ -380,7 +381,7 @@ func TestRoomRepositoryCRUD(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	container := setupTestContainer(t)
+	container := integration.SetupTestContainer(t)
 	if container == nil {
 		t.Skip("Test container not available")
 	}

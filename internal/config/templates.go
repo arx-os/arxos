@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -223,6 +225,7 @@ func createCloudTemplate(basePath string) *Config {
 	cfg.Security.BcryptCost = 10
 	cfg.Telemetry.Enabled = true
 	cfg.Telemetry.Debug = false
+	cfg.Telemetry.AnonymousID = generateAnonymousID() // Required when telemetry is enabled
 	return cfg
 }
 
@@ -238,13 +241,14 @@ func createHybridTemplate(basePath string) *Config {
 	cfg.Security.BcryptCost = 10
 	cfg.Telemetry.Enabled = true
 	cfg.Telemetry.Debug = false
+	cfg.Telemetry.AnonymousID = generateAnonymousID() // Required when telemetry is enabled
 	return cfg
 }
 
 // createProductionTemplate creates a production template
 func createProductionTemplate(basePath string) *Config {
 	cfg := createLocalTemplate(basePath)
-	cfg.Mode = ModeHybrid // Use hybrid as production mode
+	cfg.Mode = ModeProduction
 	cfg.Cloud.Enabled = true
 	cfg.Cloud.SyncEnabled = true
 	cfg.Features.CloudSync = true
@@ -252,16 +256,26 @@ func createProductionTemplate(basePath string) *Config {
 	cfg.Features.Analytics = true
 	cfg.Security.EnableAuth = true
 	cfg.Security.EnableTLS = true
+	cfg.Security.TLSCertPath = filepath.Join(basePath, "certs", "server.crt")
+	cfg.Security.TLSKeyPath = filepath.Join(basePath, "certs", "server.key")
 	cfg.Security.BcryptCost = 14
 	cfg.Security.APIRateLimit = 100
 	cfg.Telemetry.Enabled = true
 	cfg.Telemetry.Debug = false
 	cfg.Telemetry.SampleRate = 0.01
-	cfg.TUI.Enabled = false // Disable TUI in production
+	cfg.Telemetry.AnonymousID = generateAnonymousID() // Required when telemetry is enabled
+	cfg.TUI.Enabled = false                           // Disable TUI in production
 	cfg.Database.MaxOpenConns = 100
 	cfg.Database.MaxConnections = 100
 	cfg.Database.MaxIdleConns = 10
 	return cfg
+}
+
+// generateAnonymousID generates a random anonymous ID for telemetry
+func generateAnonymousID() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return hex.EncodeToString(b)
 }
 
 // CreateConfigFromTemplate creates a configuration from a template

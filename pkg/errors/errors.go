@@ -138,6 +138,39 @@ func (e *AppError) Unwrap() error {
 	return e.Err
 }
 
+// Is implements error matching for sentinel errors
+func (e *AppError) Is(target error) bool {
+	// Match against sentinel errors based on error code
+	switch target {
+	case ErrNotFound:
+		return e.Code == CodeNotFound
+	case ErrAlreadyExists:
+		return e.Code == CodeAlreadyExists
+	case ErrInvalidInput:
+		return e.Code == CodeInvalidInput
+	case ErrUnauthorized:
+		return e.Code == CodeUnauthorized || e.Code == CodeTokenExpired
+	case ErrForbidden:
+		return e.Code == CodeForbidden
+	case ErrInternal:
+		return e.Code == CodeInternal
+	case ErrTimeout:
+		return e.Code == CodeTimeout
+	case ErrCanceled:
+		return e.Code == CodeCanceled
+	case ErrDatabase:
+		return e.Code == CodeDatabase || e.Code == CodeDBConnection || e.Code == CodeDBQuery || e.Code == CodeDBTransaction
+	case ErrNotImplemented:
+		return e.Code == CodeNotImplemented
+	case ErrUnavailable:
+		return e.Code == CodeUnavailable
+	case ErrInvalidFormat:
+		return e.Code == CodeInvalidFormat
+	default:
+		return false
+	}
+}
+
 // WithDetails adds details to the error
 func (e *AppError) WithDetails(details string) *AppError {
 	e.Details = details

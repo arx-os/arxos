@@ -23,9 +23,9 @@ type TestContainer struct {
 	Logger domain.Logger
 }
 
-// setupTestContainer initializes a full test container with all dependencies
+// SetupTestContainer initializes a full test container with all dependencies
 // This is the main entry point for integration tests
-func setupTestContainer(t *testing.T) *TestContainer {
+func SetupTestContainer(t *testing.T) *TestContainer {
 	t.Helper()
 
 	// Setup test database
@@ -49,9 +49,9 @@ func setupTestContainer(t *testing.T) *TestContainer {
 	return testContainer
 }
 
-// setupTestContainerWithTransaction creates a test container with transaction isolation
+// SetupTestContainerWithTransaction creates a test container with transaction isolation
 // The transaction will be rolled back on cleanup, ensuring tests don't affect each other
-func setupTestContainerWithTransaction(t *testing.T) *TestContainer {
+func SetupTestContainerWithTransaction(t *testing.T) *TestContainer {
 	t.Helper()
 
 	// Setup database with transaction
@@ -64,7 +64,7 @@ func setupTestContainerWithTransaction(t *testing.T) *TestContainer {
 	// This requires repositories to accept *sql.Tx instead of *sql.DB
 	// For now, we'll use the non-transactional approach and rely on cleanup
 
-	container := setupTestContainer(t)
+	container := SetupTestContainer(t)
 	if container != nil {
 		container.TX = tx
 

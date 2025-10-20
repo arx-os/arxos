@@ -221,18 +221,30 @@ func (r *BASSystemRepository) List(buildingID types.ID) ([]*domain.BASSystem, er
 		var vendor, version, host, protocol, notes sql.NullString
 		var port, syncInterval sql.NullInt64
 		var lastSync sql.NullTime
+		var metadataJSON []byte // Scan JSONB as bytes first
 
 		err := rows.Scan(
 			&system.ID, &system.BuildingID, &repositoryID,
 			&system.Name, &system.SystemType, &vendor, &version,
 			&host, &port, &protocol,
 			&system.Enabled, &system.ReadOnly, &syncInterval, &lastSync,
-			&system.Metadata, &notes,
+			&metadataJSON, &notes,
 			&system.CreatedAt, &system.UpdatedAt, &createdBy,
 		)
 
 		if err != nil {
 			return nil, err
+		}
+
+		// Parse metadata JSON
+		if len(metadataJSON) > 0 {
+			system.Metadata = make(map[string]interface{})
+			if err := json.Unmarshal(metadataJSON, &system.Metadata); err != nil {
+				// If unmarshal fails, initialize empty map
+				system.Metadata = make(map[string]interface{})
+			}
+		} else {
+			system.Metadata = make(map[string]interface{})
 		}
 
 		// Handle nullable fields

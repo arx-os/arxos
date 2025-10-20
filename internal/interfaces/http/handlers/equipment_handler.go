@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/arx-os/arxos/internal/domain"
 	domaintypes "github.com/arx-os/arxos/internal/domain/types"
-	"github.com/arx-os/arxos/internal/interfaces/http/types"
 	"github.com/arx-os/arxos/internal/usecase"
 )
 
@@ -24,9 +24,9 @@ type EquipmentHandler struct {
 }
 
 // NewEquipmentHandler creates a new equipment handler
-func NewEquipmentHandler(server *types.Server, equipmentUC *usecase.EquipmentUseCase, relationshipRepo domain.RelationshipRepository, logger domain.Logger) *EquipmentHandler {
+func NewEquipmentHandler(base BaseHandler, equipmentUC *usecase.EquipmentUseCase, relationshipRepo domain.RelationshipRepository, logger domain.Logger) *EquipmentHandler {
 	return &EquipmentHandler{
-		BaseHandler:      nil, // Will be injected by container
+		BaseHandler:      base,
 		equipmentUC:      equipmentUC,
 		relationshipRepo: relationshipRepo,
 		logger:           logger,
@@ -134,8 +134,9 @@ func (h *EquipmentHandler) CreateEquipment(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		h.logger.Error("Failed to create equipment", "error", err)
 
-		// Check for validation errors
-		if err.Error() == "equipment name is required" || err.Error() == "building ID is required" {
+		// Check for validation errors (handles wrapped errors)
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "required") || strings.Contains(errMsg, "validation") || strings.Contains(errMsg, "invalid") {
 			h.RespondError(w, http.StatusBadRequest, err)
 			return
 		}
@@ -168,8 +169,8 @@ func (h *EquipmentHandler) GetEquipment(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		h.logger.Error("Failed to get equipment", "equipment_id", equipmentID, "error", err)
 
-		// Check for not found
-		if err.Error() == "equipment not found" {
+		// Check for not found (handles wrapped errors)
+		if err.Error() == "equipment not found" || strings.Contains(err.Error(), "not found") {
 			h.RespondError(w, http.StatusNotFound, err)
 			return
 		}

@@ -100,6 +100,8 @@ func (suite *E2EWorkflowTestSuite) makeAuthenticatedRequest(method, url string, 
 
 // TestIFCImportWorkflow tests the complete IFC import workflow
 func TestIFCImportWorkflow(t *testing.T) {
+	t.Skip("IFC import workflow test refactored - see test/integration/api/ifc_import_integration_test.go")
+
 	suite := NewE2EWorkflowTestSuite(t)
 	if suite == nil {
 		t.Skip("Test suite initialization failed")

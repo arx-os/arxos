@@ -409,7 +409,7 @@ func (r *BASPointRepository) MapToRoom(pointID, roomID types.ID, confidence int)
 
 	// Get room information to generate path
 	roomQuery := `
-		SELECT r.number, r.floor_id, f.level, f.building_id, b.name
+		SELECT r.room_number, r.floor_id, f.level, f.building_id, b.name
 		FROM rooms r
 		JOIN floors f ON r.floor_id = f.id
 		JOIN buildings b ON f.building_id = b.id

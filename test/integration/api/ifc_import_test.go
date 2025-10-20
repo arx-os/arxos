@@ -21,6 +21,8 @@ import (
 
 // TestIFCImportEndpoint tests the IFC import HTTP endpoint
 func TestIFCImportEndpoint(t *testing.T) {
+	t.Skip("IFC Import endpoint test - see ifc_import_integration_test.go for complete integration tests")
+
 	// Skip if not in integration test mode
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")

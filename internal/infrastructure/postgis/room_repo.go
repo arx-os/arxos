@@ -49,14 +49,27 @@ func (r *RoomRepository) Create(ctx context.Context, room *domain.Room) error {
 		}
 	}
 
+	// Use nil for zero values to satisfy CHECK constraints
+	var width, height, area interface{}
+	if room.Width > 0 {
+		width = room.Width
+		if room.Height > 0 {
+			height = room.Height
+			area = room.Width * room.Height
+		}
+	}
+	if room.Height > 0 && width == nil {
+		height = room.Height
+	}
+
 	_, err := r.db.ExecContext(ctx, query,
 		room.ID.String(),
 		room.FloorID.String(),
 		room.Name,
 		room.Number,
-		room.Width,
-		room.Height,
-		room.Width*room.Height, // Calculate area from width*height
+		width,  // NULL if 0
+		height, // NULL if 0
+		area,   // NULL if either dimension is 0
 		geometry,
 		centerPoint,
 		room.CreatedAt,
@@ -69,7 +82,7 @@ func (r *RoomRepository) Create(ctx context.Context, room *domain.Room) error {
 // GetByID retrieves a room by ID
 func (r *RoomRepository) GetByID(ctx context.Context, id string) (*domain.Room, error) {
 	query := `
-		SELECT id, floor_id, name, room_number, width, height, area, 
+		SELECT id, floor_id, name, room_number, width, height, area,
 		       ST_X(center_point) as center_x, ST_Y(center_point) as center_y,
 		       created_at, updated_at
 		FROM rooms

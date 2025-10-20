@@ -1,6 +1,0 @@
-./entities.go
-./errors.go
-./interfaces.go
-./spatial.go
-./spatial_types.go
-./spatial_validation.go

@@ -11,7 +11,6 @@ import (
 
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
-	httptypes "github.com/arx-os/arxos/internal/interfaces/http/types"
 	"github.com/arx-os/arxos/internal/usecase"
 )
 
@@ -23,9 +22,9 @@ type RoomHandler struct {
 }
 
 // NewRoomHandler creates a new room handler
-func NewRoomHandler(server *httptypes.Server, roomUC *usecase.RoomUseCase, logger domain.Logger) *RoomHandler {
+func NewRoomHandler(base BaseHandler, roomUC *usecase.RoomUseCase, logger domain.Logger) *RoomHandler {
 	return &RoomHandler{
-		BaseHandler: nil, // Will be injected by container if needed
+		BaseHandler: base,
 		roomUC:      roomUC,
 		logger:      logger,
 	}

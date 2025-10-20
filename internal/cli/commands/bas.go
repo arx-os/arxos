@@ -207,18 +207,33 @@ func parseBASSystemType(systemType string) domain.BASSystemType {
 	}
 }
 
-// getOrCreateBASSystem creates a BAS system for the import
+// getOrCreateBASSystem gets an existing BAS system or creates a new one
 func getOrCreateBASSystem(ctx context.Context, repo domain.BASSystemRepository, buildingID types.ID, systemType domain.BASSystemType, systemTypeStr string) (types.ID, error) {
-	// NOTE: System detection and reuse handled by BASImportUseCase
-	// For now, create a new system each time
+	// List systems for building using the List method
+	systems, err := repo.List(buildingID)
+	if err != nil {
+		return types.ID{}, fmt.Errorf("failed to list BAS systems: %w", err)
+	}
 
+	// Find system by type
+	for _, system := range systems {
+		if system.SystemType == systemType {
+			fmt.Printf("   ✅ Using existing BAS system: %s (ID: %s)\n", system.Name, system.ID.String())
+			return system.ID, nil
+		}
+	}
+
+	// Create new system
 	systemID := types.NewID()
 	now := time.Now()
+
+	// Create a safe name that includes timestamp to ensure uniqueness
+	systemName := fmt.Sprintf("%s System - %s", strings.Title(systemTypeStr), time.Now().Format("2006-01-02"))
 
 	system := &domain.BASSystem{
 		ID:         systemID,
 		BuildingID: buildingID,
-		Name:       fmt.Sprintf("%s System", strings.Title(systemTypeStr)),
+		Name:       systemName,
 		SystemType: systemType,
 		Enabled:    true,
 		ReadOnly:   true,

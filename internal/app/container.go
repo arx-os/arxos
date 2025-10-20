@@ -339,6 +339,7 @@ func (c *Container) initUseCases(ctx context.Context) error {
 		c.basPointRepo,
 		c.basSystemRepo,
 		c.roomRepo,
+		c.floorRepo,
 		c.equipmentRepo,
 		c.logger,
 	)
@@ -489,6 +490,12 @@ func (c *Container) GetLogger() domain.Logger {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.logger
+}
+
+func (c *Container) GetJWTManager() *auth.JWTManager {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.jwtManager
 }
 
 func (c *Container) GetRBACManager() *auth.RBACManager {

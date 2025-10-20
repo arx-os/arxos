@@ -11,7 +11,6 @@ import (
 
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
-	httptypes "github.com/arx-os/arxos/internal/interfaces/http/types"
 	"github.com/arx-os/arxos/internal/usecase"
 )
 
@@ -23,9 +22,9 @@ type FloorHandler struct {
 }
 
 // NewFloorHandler creates a new floor handler
-func NewFloorHandler(server *httptypes.Server, floorUC *usecase.FloorUseCase, logger domain.Logger) *FloorHandler {
+func NewFloorHandler(base BaseHandler, floorUC *usecase.FloorUseCase, logger domain.Logger) *FloorHandler {
 	return &FloorHandler{
-		BaseHandler: nil, // Will be injected by container if needed
+		BaseHandler: base,
 		floorUC:     floorUC,
 		logger:      logger,
 	}

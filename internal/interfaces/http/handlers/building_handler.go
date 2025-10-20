@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -110,8 +111,9 @@ func (h *BuildingHandler) CreateBuilding(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		h.logger.Error("Failed to create building", "error", err)
 
-		// Check for validation errors
-		if err.Error() == "building name is required" {
+		// Check for validation errors (handles wrapped errors)
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "required") || strings.Contains(errMsg, "validation") || strings.Contains(errMsg, "invalid") {
 			h.RespondError(w, http.StatusBadRequest, err)
 			return
 		}
@@ -139,10 +141,24 @@ func (h *BuildingHandler) GetBuilding(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate ID format (must be valid UUID)
+	id := types.FromString(buildingID)
+	if !id.IsUUID() {
+		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid building ID format"))
+		return
+	}
+
 	// Call use case
-	building, err := h.buildingUC.GetBuilding(r.Context(), types.FromString(buildingID))
+	building, err := h.buildingUC.GetBuilding(r.Context(), id)
 	if err != nil {
 		h.logger.Error("Failed to get building", "building_id", buildingID, "error", err)
+
+		// Return 404 if building not found
+		if err.Error() == "building not found" || strings.Contains(err.Error(), "not found") {
+			h.RespondError(w, http.StatusNotFound, err)
+			return
+		}
+
 		h.RespondError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -177,6 +193,9 @@ func (h *BuildingHandler) UpdateBuilding(w http.ResponseWriter, r *http.Request)
 		h.RespondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %v", err))
 		return
 	}
+
+	// Set building ID from URL parameter
+	req.ID = types.FromString(buildingID)
 
 	// Call use case
 	building, err := h.buildingUC.UpdateBuilding(r.Context(), &req)

@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/stretchr/testify/assert"
@@ -21,9 +23,12 @@ func TestAuthAPI_MobileRegistration(t *testing.T) {
 	defer container.Shutdown(context.Background())
 
 	t.Run("RegisterMobileUser", func(t *testing.T) {
+		// Use unique email to avoid conflicts between test runs
+		uniqueEmail := fmt.Sprintf("testuser-%d@example.com", time.Now().UnixNano())
+
 		registerReq := map[string]any{
 			"username":  "testuser",
-			"email":     "testuser@example.com",
+			"email":     uniqueEmail,
 			"password":  "SecurePass123!",
 			"full_name": "Test User",
 		}
@@ -49,7 +54,7 @@ func TestAuthAPI_MobileRegistration(t *testing.T) {
 		assert.Contains(t, result, "tokens")
 
 		user := result["user"].(map[string]any)
-		assert.Equal(t, "testuser@example.com", user["email"])
+		assert.Equal(t, uniqueEmail, user["email"])
 
 		tokens := result["tokens"].(map[string]any)
 		assert.NotEmpty(t, tokens["access_token"])
@@ -126,18 +131,25 @@ func TestUserUseCase_Registration(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("RegisterUser_Success", func(t *testing.T) {
-		user, err := userUC.RegisterUser(ctx, "newuser@example.com", "New User", "SecurePass123!", "user")
+		// Use unique email to avoid conflicts on repeated test runs
+		uniqueEmail := fmt.Sprintf("newuser-%d@example.com", time.Now().UnixNano())
+		user, err := userUC.RegisterUser(ctx, uniqueEmail, "New User", "SecurePass123!", "user")
 		require.NoError(t, err)
 		assert.NotNil(t, user)
-		assert.Equal(t, "newuser@example.com", user.Email)
+		assert.Equal(t, uniqueEmail, user.Email)
 		assert.Equal(t, "New User", user.Name)
 		assert.Equal(t, "user", user.Role)
 		assert.True(t, user.Active)
 	})
 
 	t.Run("RegisterUser_DuplicateEmail", func(t *testing.T) {
+		// Register a user first
+		dupEmail := fmt.Sprintf("duplicate-%d@example.com", time.Now().UnixNano())
+		_, err := userUC.RegisterUser(ctx, dupEmail, "First User", "SecurePass123!", "user")
+		require.NoError(t, err)
+
 		// Try to register with same email again
-		_, err := userUC.RegisterUser(ctx, "newuser@example.com", "Duplicate User", "AnotherPass123!", "user")
+		_, err = userUC.RegisterUser(ctx, dupEmail, "Duplicate User", "AnotherPass123!", "user")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "already exists")
 	})
@@ -219,8 +231,9 @@ func TestUserUseCase_Update(t *testing.T) {
 	userUC := container.GetUserUseCase()
 	ctx := context.Background()
 
-	// Create a user
-	user, err := userUC.RegisterUser(ctx, "updatetest@example.com", "Update Test", "UpdatePass123!", "user")
+	// Create a user with unique email
+	uniqueEmail := fmt.Sprintf("updatetest-%d@example.com", time.Now().UnixNano())
+	user, err := userUC.RegisterUser(ctx, uniqueEmail, "Update Test", "UpdatePass123!", "user")
 	require.NoError(t, err)
 
 	t.Run("UpdateUserName", func(t *testing.T) {

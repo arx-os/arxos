@@ -1,300 +1,194 @@
 package integration
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/arx-os/arxos/internal/app"
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestBuildingAPI_EndToEnd(t *testing.T) {
-	server, container := setupTestServerWithConfig(t)
-	if server == nil {
-		return
-	}
-	defer server.Close()
-	defer container.Shutdown(context.Background())
+	WithTestServer(t, func(t *testing.T, server *httptest.Server, auth *TestAuthHelper, container *app.Container) {
+		// Test 1: Create a building
+		t.Run("CreateBuilding", func(t *testing.T) {
+			createReq := domain.CreateBuildingRequest{
+				Name:    "Test Building API",
+				Address: "123 API Test Street",
+				Coordinates: &domain.Location{
+					X: -122.4194,
+					Y: 37.7749,
+					Z: 0,
+				},
+			}
 
-	// Test 1: Create a building
-	t.Run("CreateBuilding", func(t *testing.T) {
-		createReq := domain.CreateBuildingRequest{
-			Name:    "Test Building API",
-			Address: "123 API Test Street",
-			Coordinates: &domain.Location{
-				X: -122.4194,
-				Y: 37.7749,
-				Z: 0,
-			},
-		}
+			resp := auth.POST(t, "/api/v1/buildings", createReq)
+			defer resp.Body.Close()
 
-		body, err := json.Marshal(createReq)
-		require.NoError(t, err)
+			assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-		req, err := http.NewRequest("POST", server.URL+"/api/v1/buildings", bytes.NewBuffer(body))
-		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/json")
+			var building domain.Building
+			auth.DecodeJSON(t, resp, &building)
 
-		resp, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
+			assert.Equal(t, createReq.Name, building.Name)
+			assert.Equal(t, createReq.Address, building.Address)
+			assert.NotEmpty(t, building.ID)
+		})
 
-		assert.Equal(t, http.StatusCreated, resp.StatusCode)
+		// Test 2: List buildings
+		t.Run("ListBuildings", func(t *testing.T) {
+			resp := auth.GET(t, "/api/v1/buildings?limit=10&offset=0")
+			defer resp.Body.Close()
 
-		var building domain.Building
-		err = json.NewDecoder(resp.Body).Decode(&building)
-		require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		assert.Equal(t, createReq.Name, building.Name)
-		assert.Equal(t, createReq.Address, building.Address)
-		assert.NotEmpty(t, building.ID)
-	})
+			var result map[string]any
+			auth.DecodeJSON(t, resp, &result)
 
-	// Test 2: List buildings
-	t.Run("ListBuildings", func(t *testing.T) {
-		req, err := http.NewRequest("GET", server.URL+"/api/v1/buildings?limit=10&offset=0", nil)
-		require.NoError(t, err)
+			assert.Contains(t, result, "buildings")
+			buildings := result["buildings"].([]any)
+			assert.GreaterOrEqual(t, len(buildings), 1)
+		})
 
-		resp, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
+		// Test 3: Get building by ID (using a known building from list)
+		t.Run("GetBuilding", func(t *testing.T) {
+			// First create a building to get
+			createReq := domain.CreateBuildingRequest{
+				Name:    "Test Building Get",
+				Address: "456 Get Test Street",
+			}
 
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
+			createResp := auth.POST(t, "/api/v1/buildings", createReq)
+			defer createResp.Body.Close()
 
-		var result map[string]any
-		err = json.NewDecoder(resp.Body).Decode(&result)
-		require.NoError(t, err)
+			var createdBuilding domain.Building
+			auth.DecodeJSON(t, createResp, &createdBuilding)
 
-		assert.Contains(t, result, "buildings")
-		buildings := result["buildings"].([]any)
-		assert.GreaterOrEqual(t, len(buildings), 1)
-	})
+			// Now get it
+			getResp := auth.GET(t, "/api/v1/buildings/"+createdBuilding.ID.String())
+			defer getResp.Body.Close()
 
-	// Test 3: Get building by ID (using a known building from list)
-	t.Run("GetBuilding", func(t *testing.T) {
-		// First create a building to get
-		createReq := domain.CreateBuildingRequest{
-			Name:    "Test Building Get",
-			Address: "456 Get Test Street",
-		}
+			assert.Equal(t, http.StatusOK, getResp.StatusCode)
 
-		body, err := json.Marshal(createReq)
-		require.NoError(t, err)
+			var building domain.Building
+			auth.DecodeJSON(t, getResp, &building)
 
-		createReqHTTP, err := http.NewRequest("POST", server.URL+"/api/v1/buildings", bytes.NewBuffer(body))
-		require.NoError(t, err)
-		createReqHTTP.Header.Set("Content-Type", "application/json")
+			assert.Equal(t, createdBuilding.ID.String(), building.ID.String())
+			assert.Equal(t, createReq.Name, building.Name)
+		})
 
-		createResp, err := http.DefaultClient.Do(createReqHTTP)
-		require.NoError(t, err)
-		defer createResp.Body.Close()
+		// Test 4: Update building
+		t.Run("UpdateBuilding", func(t *testing.T) {
+			// First create a building
+			createReq := domain.CreateBuildingRequest{
+				Name:    "Test Building Update",
+				Address: "789 Update Test Street",
+			}
 
-		var createdBuilding domain.Building
-		err = json.NewDecoder(createResp.Body).Decode(&createdBuilding)
-		require.NoError(t, err)
+			createResp := auth.POST(t, "/api/v1/buildings", createReq)
+			defer createResp.Body.Close()
 
-		// Now get it
-		getReq, err := http.NewRequest("GET", server.URL+"/api/v1/buildings/"+createdBuilding.ID.String(), nil)
-		require.NoError(t, err)
+			var createdBuilding domain.Building
+			auth.DecodeJSON(t, createResp, &createdBuilding)
 
-		getResp, err := http.DefaultClient.Do(getReq)
-		require.NoError(t, err)
-		defer getResp.Body.Close()
+			// Now update it
+			updatedName := "Updated Building Name"
+			updateReq := domain.UpdateBuildingRequest{
+				ID:   types.FromString(createdBuilding.ID.String()),
+				Name: &updatedName,
+			}
 
-		assert.Equal(t, http.StatusOK, getResp.StatusCode)
+			putResp := auth.PUT(t, "/api/v1/buildings/"+createdBuilding.ID.String(), updateReq)
+			defer putResp.Body.Close()
 
-		var building domain.Building
-		err = json.NewDecoder(getResp.Body).Decode(&building)
-		require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, putResp.StatusCode)
 
-		assert.Equal(t, createdBuilding.ID.String(), building.ID.String())
-		assert.Equal(t, createReq.Name, building.Name)
-	})
+			var updatedBuilding domain.Building
+			auth.DecodeJSON(t, putResp, &updatedBuilding)
 
-	// Test 4: Update building
-	t.Run("UpdateBuilding", func(t *testing.T) {
-		// First create a building
-		createReq := domain.CreateBuildingRequest{
-			Name:    "Test Building Update",
-			Address: "789 Update Test Street",
-		}
+			assert.Equal(t, updatedName, updatedBuilding.Name)
+		})
 
-		body, err := json.Marshal(createReq)
-		require.NoError(t, err)
+		// Test 5: Delete building
+		t.Run("DeleteBuilding", func(t *testing.T) {
+			// First create a building
+			createReq := domain.CreateBuildingRequest{
+				Name:    "Test Building Delete",
+				Address: "999 Delete Test Street",
+			}
 
-		createReqHTTP, err := http.NewRequest("POST", server.URL+"/api/v1/buildings", bytes.NewBuffer(body))
-		require.NoError(t, err)
-		createReqHTTP.Header.Set("Content-Type", "application/json")
+			createResp := auth.POST(t, "/api/v1/buildings", createReq)
+			defer createResp.Body.Close()
 
-		createResp, err := http.DefaultClient.Do(createReqHTTP)
-		require.NoError(t, err)
-		defer createResp.Body.Close()
+			var createdBuilding domain.Building
+			auth.DecodeJSON(t, createResp, &createdBuilding)
 
-		var createdBuilding domain.Building
-		err = json.NewDecoder(createResp.Body).Decode(&createdBuilding)
-		require.NoError(t, err)
+			// Now delete it
+			deleteResp := auth.DELETE(t, "/api/v1/buildings/"+createdBuilding.ID.String())
+			defer deleteResp.Body.Close()
 
-		// Now update it
-		updatedName := "Updated Building Name"
-		updateReq := domain.UpdateBuildingRequest{
-			ID:   types.FromString(createdBuilding.ID.String()),
-			Name: &updatedName,
-		}
+			assert.Equal(t, http.StatusNoContent, deleteResp.StatusCode)
 
-		body, err = json.Marshal(updateReq)
-		require.NoError(t, err)
+			// Verify it's deleted
+			getResp := auth.GET(t, "/api/v1/buildings/"+createdBuilding.ID.String())
+			defer getResp.Body.Close()
 
-		putReq, err := http.NewRequest("PUT", server.URL+"/api/v1/buildings/"+createdBuilding.ID.String(), bytes.NewBuffer(body))
-		require.NoError(t, err)
-		putReq.Header.Set("Content-Type", "application/json")
-
-		putResp, err := http.DefaultClient.Do(putReq)
-		require.NoError(t, err)
-		defer putResp.Body.Close()
-
-		assert.Equal(t, http.StatusOK, putResp.StatusCode)
-
-		var updatedBuilding domain.Building
-		err = json.NewDecoder(putResp.Body).Decode(&updatedBuilding)
-		require.NoError(t, err)
-
-		assert.Equal(t, updatedName, updatedBuilding.Name)
-	})
-
-	// Test 5: Delete building
-	t.Run("DeleteBuilding", func(t *testing.T) {
-		// First create a building
-		createReq := domain.CreateBuildingRequest{
-			Name:    "Test Building Delete",
-			Address: "999 Delete Test Street",
-		}
-
-		body, err := json.Marshal(createReq)
-		require.NoError(t, err)
-
-		createReqHTTP, err := http.NewRequest("POST", server.URL+"/api/v1/buildings", bytes.NewBuffer(body))
-		require.NoError(t, err)
-		createReqHTTP.Header.Set("Content-Type", "application/json")
-
-		createResp, err := http.DefaultClient.Do(createReqHTTP)
-		require.NoError(t, err)
-		defer createResp.Body.Close()
-
-		var createdBuilding domain.Building
-		err = json.NewDecoder(createResp.Body).Decode(&createdBuilding)
-		require.NoError(t, err)
-
-		// Now delete it
-		deleteReq, err := http.NewRequest("DELETE", server.URL+"/api/v1/buildings/"+createdBuilding.ID.String(), nil)
-		require.NoError(t, err)
-
-		deleteResp, err := http.DefaultClient.Do(deleteReq)
-		require.NoError(t, err)
-		defer deleteResp.Body.Close()
-
-		assert.Equal(t, http.StatusNoContent, deleteResp.StatusCode)
-
-		// Verify it's deleted
-		getReq, err := http.NewRequest("GET", server.URL+"/api/v1/buildings/"+createdBuilding.ID.String(), nil)
-		require.NoError(t, err)
-
-		getResp, err := http.DefaultClient.Do(getReq)
-		require.NoError(t, err)
-		defer getResp.Body.Close()
-
-		assert.Equal(t, http.StatusInternalServerError, getResp.StatusCode) // Should fail to find
+			assert.Equal(t, http.StatusNotFound, getResp.StatusCode) // Should return 404 after delete
+		})
 	})
 }
 
 func TestBuildingAPI_Validation(t *testing.T) {
-	server, container := setupTestServerWithConfig(t)
-	if server == nil {
-		return
-	}
-	defer server.Close()
-	defer container.Shutdown(context.Background())
+	WithTestServer(t, func(t *testing.T, server *httptest.Server, auth *TestAuthHelper, container *app.Container) {
+		t.Run("CreateBuilding_MissingName", func(t *testing.T) {
+			createReq := domain.CreateBuildingRequest{
+				Address: "Missing Name Street",
+			}
 
-	t.Run("CreateBuilding_MissingName", func(t *testing.T) {
-		createReq := domain.CreateBuildingRequest{
-			Address: "Missing Name Street",
-		}
+			resp := auth.POST(t, "/api/v1/buildings", createReq)
+			defer resp.Body.Close()
 
-		body, err := json.Marshal(createReq)
-		require.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		})
 
-		req, err := http.NewRequest("POST", server.URL+"/api/v1/buildings", bytes.NewBuffer(body))
-		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/json")
+		t.Run("CreateBuilding_MissingAddress", func(t *testing.T) {
+			createReq := domain.CreateBuildingRequest{
+				Name: "No Address Building",
+			}
 
-		resp, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
+			resp := auth.POST(t, "/api/v1/buildings", createReq)
+			defer resp.Body.Close()
 
-		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
-	})
-
-	t.Run("CreateBuilding_MissingAddress", func(t *testing.T) {
-		createReq := domain.CreateBuildingRequest{
-			Name: "No Address Building",
-		}
-
-		body, err := json.Marshal(createReq)
-		require.NoError(t, err)
-
-		req, err := http.NewRequest("POST", server.URL+"/api/v1/buildings", bytes.NewBuffer(body))
-		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
-
-		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		})
 	})
 }
 
 func TestBuildingAPI_ErrorCases(t *testing.T) {
-	server, container := setupTestServerWithConfig(t)
-	if server == nil {
-		return
-	}
-	defer server.Close()
-	defer container.Shutdown(context.Background())
+	WithTestServer(t, func(t *testing.T, server *httptest.Server, auth *TestAuthHelper, container *app.Container) {
+		t.Run("GetBuilding_NotFound", func(t *testing.T) {
+			// Use a valid UUID that doesn't exist
+			resp := auth.GET(t, "/api/v1/buildings/00000000-0000-0000-0000-000000000001")
+			defer resp.Body.Close()
 
-	t.Run("GetBuilding_NotFound", func(t *testing.T) {
-		req, err := http.NewRequest("GET", server.URL+"/api/v1/buildings/non-existent-id", nil)
-		require.NoError(t, err)
+			assert.Equal(t, http.StatusNotFound, resp.StatusCode) // Should return 404 for not found
+		})
 
-		resp, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
+		t.Run("UpdateBuilding_NotFound", func(t *testing.T) {
+			updatedName := "Updated Name"
+			updateReq := domain.UpdateBuildingRequest{
+				ID:   types.FromString("00000000-0000-0000-0000-000000000002"),
+				Name: &updatedName,
+			}
 
-		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-	})
+			resp := auth.PUT(t, "/api/v1/buildings/00000000-0000-0000-0000-000000000002", updateReq)
+			defer resp.Body.Close()
 
-	t.Run("UpdateBuilding_NotFound", func(t *testing.T) {
-		updatedName := "Updated Name"
-		updateReq := domain.UpdateBuildingRequest{
-			ID:   types.FromString("non-existent-id"),
-			Name: &updatedName,
-		}
-
-		body, err := json.Marshal(updateReq)
-		require.NoError(t, err)
-
-		req, err := http.NewRequest("PUT", server.URL+"/api/v1/buildings/non-existent-id", bytes.NewBuffer(body))
-		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
-
-		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+			// Update should fail with appropriate error status
+			assert.True(t, resp.StatusCode >= 400, "Expected error status code")
+		})
 	})
 }

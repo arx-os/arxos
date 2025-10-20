@@ -1,5 +1,0 @@
-./apikey.go
-./jwt.go
-./password.go
-./rbac.go
-./session.go

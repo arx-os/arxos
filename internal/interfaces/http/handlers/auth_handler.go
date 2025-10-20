@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
@@ -171,16 +173,34 @@ func (h *AuthHandler) HandleMobileRegister(w http.ResponseWriter, r *http.Reques
 	ctx := r.Context()
 	createReq := &domain.CreateUserRequest{
 		Email: req.Email,
-		Name:  req.Username,  // Use Username as Name
-		Role:  "mobile_user", // Default role for mobile users
+		Name:  req.Username, // Use Username as Name
+		Role:  "user",       // Default role for mobile users
 	}
 
 	user, err := h.userUC.CreateUser(ctx, createReq)
 	if err != nil {
 		h.logger.Error("User registration failed", "error", err, "username", req.Username)
-		h.RespondJSON(w, http.StatusConflict, MobileAuthError{
-			Code:    "user_already_exists",
-			Message: "User already exists with this username or email",
+
+		// Check error type for appropriate status code
+		if strings.Contains(err.Error(), "already exists") {
+			h.RespondJSON(w, http.StatusConflict, MobileAuthError{
+				Code:    "user_already_exists",
+				Message: "User already exists with this username or email",
+			})
+			return
+		}
+
+		if strings.Contains(err.Error(), "validation failed") || strings.Contains(err.Error(), "invalid") {
+			h.RespondJSON(w, http.StatusBadRequest, MobileAuthError{
+				Code:    "validation_error",
+				Message: fmt.Sprintf("Validation failed: %v", err),
+			})
+			return
+		}
+
+		h.RespondJSON(w, http.StatusInternalServerError, MobileAuthError{
+			Code:    "registration_failed",
+			Message: "Failed to create user account",
 		})
 		return
 	}

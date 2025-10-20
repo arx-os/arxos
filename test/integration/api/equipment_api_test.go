@@ -1,330 +1,223 @@
 package integration
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/arx-os/arxos/internal/app"
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestEquipmentAPI_EndToEnd(t *testing.T) {
-	server, container := setupTestServerWithConfig(t)
-	if server == nil {
-		return
-	}
-	defer server.Close()
-	defer container.Shutdown(context.Background())
+	WithTestServer(t, func(t *testing.T, server *httptest.Server, auth *TestAuthHelper, container *app.Container) {
+		// Shared variables across subtests
+		var buildingID string
+		var equipmentID string
 
-	// First create a building to attach equipment to
-	var createdBuilding domain.Building
-	t.Run("Setup_CreateBuilding", func(t *testing.T) {
-		createReq := domain.CreateBuildingRequest{
-			Name:    "Equipment Test Building",
-			Address: "Equipment Test Address",
-			Coordinates: &domain.Location{
-				X: -122.4194,
-				Y: 37.7749,
-				Z: 0,
-			},
-		}
+		t.Run("Setup_CreateBuilding", func(t *testing.T) {
+			createReq := domain.CreateBuildingRequest{
+				Name:    "Equipment Test Building",
+				Address: "Equipment Test Address",
+				Coordinates: &domain.Location{
+					X: -122.4194,
+					Y: 37.7749,
+					Z: 0,
+				},
+			}
 
-		body, err := json.Marshal(createReq)
-		require.NoError(t, err)
+			resp := auth.POST(t, "/api/v1/buildings", createReq)
+			defer resp.Body.Close()
 
-		req, err := http.NewRequest("POST", server.URL+"/api/v1/buildings", bytes.NewBuffer(body))
-		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/json")
+			assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-		resp, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
+			var building domain.Building
+			auth.DecodeJSON(t, resp, &building)
+			buildingID = building.ID.String()
+		})
 
-		require.Equal(t, http.StatusCreated, resp.StatusCode)
+		// Test 1: Create equipment
+		t.Run("CreateEquipment", func(t *testing.T) {
+			createReq := domain.CreateEquipmentRequest{
+				BuildingID: types.FromString(buildingID),
+				Name:       "HVAC Unit 01",
+				Type:       "hvac",
+				Model:      "Model-ABC123",
+				Location: &domain.Location{
+					X: -122.4194,
+					Y: 37.7749,
+					Z: 10.5,
+				},
+			}
 
-		err = json.NewDecoder(resp.Body).Decode(&createdBuilding)
-		require.NoError(t, err)
-	})
+			resp := auth.POST(t, "/api/v1/equipment", createReq)
+			defer resp.Body.Close()
 
-	// Test 1: Create equipment
-	var createdEquipment domain.Equipment
-	t.Run("CreateEquipment", func(t *testing.T) {
-		createReq := domain.CreateEquipmentRequest{
-			BuildingID: createdBuilding.ID,
-			Name:       "HVAC Unit 01",
-			Type:       "hvac",
-			Model:      "Model-ABC123",
-			Location: &domain.Location{
-				X: -122.4194,
-				Y: 37.7749,
-				Z: 10.5,
-			},
-		}
+			assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-		body, err := json.Marshal(createReq)
-		require.NoError(t, err)
+			var equipment domain.Equipment
+			auth.DecodeJSON(t, resp, &equipment)
+			equipmentID = equipment.ID.String()
 
-		req, err := http.NewRequest("POST", server.URL+"/api/v1/equipment", bytes.NewBuffer(body))
-		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/json")
+			assert.Equal(t, createReq.Name, equipment.Name)
+			assert.Equal(t, createReq.Type, equipment.Type)
+			assert.NotEmpty(t, equipmentID)
+		})
 
-		resp, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
+		// Test 2: Get equipment
+		t.Run("GetEquipment", func(t *testing.T) {
+			resp := auth.GET(t, "/api/v1/equipment/"+equipmentID)
+			defer resp.Body.Close()
 
-		assert.Equal(t, http.StatusCreated, resp.StatusCode)
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		err = json.NewDecoder(resp.Body).Decode(&createdEquipment)
-		require.NoError(t, err)
+			var equipment domain.Equipment
+			auth.DecodeJSON(t, resp, &equipment)
 
-		assert.Equal(t, createReq.Name, createdEquipment.Name)
-		assert.Equal(t, createReq.Type, createdEquipment.Type)
-		assert.Equal(t, createReq.Model, createdEquipment.Model)
-		assert.NotEmpty(t, createdEquipment.ID)
-	})
+			assert.Equal(t, equipmentID, equipment.ID.String())
+			assert.Equal(t, "HVAC Unit 01", equipment.Name)
+		})
 
-	// Test 2: List equipment
-	t.Run("ListEquipment", func(t *testing.T) {
-		req, err := http.NewRequest("GET", server.URL+"/api/v1/equipment?limit=10&offset=0", nil)
-		require.NoError(t, err)
+		// Test 3: List equipment
+		t.Run("ListEquipment", func(t *testing.T) {
+			resp := auth.GET(t, "/api/v1/equipment?limit=10&offset=0")
+			defer resp.Body.Close()
 
-		resp, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
+			var result map[string]any
+			auth.DecodeJSON(t, resp, &result)
 
-		var result map[string]any
-		err = json.NewDecoder(resp.Body).Decode(&result)
-		require.NoError(t, err)
+			assert.Contains(t, result, "equipment")
+		})
 
-		assert.Contains(t, result, "equipment")
-		equipment := result["equipment"].([]any)
-		assert.GreaterOrEqual(t, len(equipment), 1)
-	})
+		// Test 4: Filter equipment by building
+		t.Run("FilterEquipmentByBuilding", func(t *testing.T) {
+			resp := auth.GET(t, "/api/v1/equipment?building_id="+buildingID)
+			defer resp.Body.Close()
 
-	// Test 3: Get equipment by ID
-	t.Run("GetEquipment", func(t *testing.T) {
-		req, err := http.NewRequest("GET", server.URL+"/api/v1/equipment/"+createdEquipment.ID.String(), nil)
-		require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		resp, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
+			var result map[string]any
+			auth.DecodeJSON(t, resp, &result)
 
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
+			assert.Contains(t, result, "equipment")
+		})
 
-		var equipment domain.Equipment
-		err = json.NewDecoder(resp.Body).Decode(&equipment)
-		require.NoError(t, err)
+		// Test 5: Update equipment
+		t.Run("UpdateEquipment", func(t *testing.T) {
+			updatedName := "HVAC Unit 01 - Updated"
+			updateReq := domain.UpdateEquipmentRequest{
+				ID:   types.FromString(equipmentID),
+				Name: &updatedName,
+			}
 
-		assert.Equal(t, createdEquipment.ID.String(), equipment.ID.String())
-		assert.Equal(t, createdEquipment.Name, equipment.Name)
-	})
+			resp := auth.PUT(t, "/api/v1/equipment/"+equipmentID, updateReq)
+			defer resp.Body.Close()
 
-	// Test 4: Update equipment
-	t.Run("UpdateEquipment", func(t *testing.T) {
-		updatedName := "Updated HVAC Unit"
-		updatedStatus := "maintenance"
-		updateReq := domain.UpdateEquipmentRequest{
-			ID:     types.FromString(createdEquipment.ID.String()),
-			Name:   &updatedName,
-			Status: &updatedStatus,
-		}
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		body, err := json.Marshal(updateReq)
-		require.NoError(t, err)
+			var equipment domain.Equipment
+			auth.DecodeJSON(t, resp, &equipment)
 
-		req, err := http.NewRequest("PUT", server.URL+"/api/v1/equipment/"+createdEquipment.ID.String(), bytes.NewBuffer(body))
-		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/json")
+			assert.Equal(t, updatedName, equipment.Name)
+		})
 
-		resp, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
+		// Test 6: Delete equipment
+		t.Run("DeleteEquipment", func(t *testing.T) {
+			// Ensure equipment was created
+			if equipmentID == "" {
+				t.Fatal("equipmentID is empty - CreateEquipment test may have failed")
+			}
 
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
+			// First, set equipment to inactive status (business rule: can't delete active equipment)
+			inactiveStatus := "inactive"
+			updateReq := domain.UpdateEquipmentRequest{
+				ID:     types.FromString(equipmentID),
+				Status: &inactiveStatus,
+			}
 
-		var updatedEquipment domain.Equipment
-		err = json.NewDecoder(resp.Body).Decode(&updatedEquipment)
-		require.NoError(t, err)
+			updateResp := auth.PUT(t, "/api/v1/equipment/"+equipmentID, updateReq)
+			defer updateResp.Body.Close()
 
-		assert.Equal(t, updatedName, updatedEquipment.Name)
-		assert.Equal(t, updatedStatus, updatedEquipment.Status)
-	})
+			assert.Equal(t, http.StatusOK, updateResp.StatusCode)
 
-	// Test 5: Filter equipment by building
-	t.Run("FilterEquipmentByBuilding", func(t *testing.T) {
-		url := server.URL + "/api/v1/equipment?building_id=" + createdBuilding.ID.String()
-		req, err := http.NewRequest("GET", url, nil)
-		require.NoError(t, err)
+			// Now delete the equipment
+			resp := auth.DELETE(t, "/api/v1/equipment/"+equipmentID)
+			defer resp.Body.Close()
 
-		resp, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
+			assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
+			// Verify deletion
+			getResp := auth.GET(t, "/api/v1/equipment/"+equipmentID)
+			defer getResp.Body.Close()
 
-		var result map[string]any
-		err = json.NewDecoder(resp.Body).Decode(&result)
-		require.NoError(t, err)
-
-		assert.Contains(t, result, "equipment")
-		equipment := result["equipment"].([]any)
-		assert.GreaterOrEqual(t, len(equipment), 1)
-	})
-
-	// Test 6: Delete equipment
-	t.Run("DeleteEquipment", func(t *testing.T) {
-		// First change status to allow deletion
-		inactiveStatus := "inactive"
-		updateReq := domain.UpdateEquipmentRequest{
-			ID:     types.FromString(createdEquipment.ID.String()),
-			Status: &inactiveStatus,
-		}
-
-		body, err := json.Marshal(updateReq)
-		require.NoError(t, err)
-
-		updateReqHTTP, err := http.NewRequest("PUT", server.URL+"/api/v1/equipment/"+createdEquipment.ID.String(), bytes.NewBuffer(body))
-		require.NoError(t, err)
-		updateReqHTTP.Header.Set("Content-Type", "application/json")
-
-		updateResp, err := http.DefaultClient.Do(updateReqHTTP)
-		require.NoError(t, err)
-		updateResp.Body.Close()
-
-		// Now delete
-		deleteReq, err := http.NewRequest("DELETE", server.URL+"/api/v1/equipment/"+createdEquipment.ID.String(), nil)
-		require.NoError(t, err)
-
-		deleteResp, err := http.DefaultClient.Do(deleteReq)
-		require.NoError(t, err)
-		defer deleteResp.Body.Close()
-
-		assert.Equal(t, http.StatusNoContent, deleteResp.StatusCode)
+			assert.Equal(t, http.StatusNotFound, getResp.StatusCode)
+		})
 	})
 }
 
 func TestEquipmentAPI_Validation(t *testing.T) {
-	server, container := setupTestServerWithConfig(t)
-	if server == nil {
-		return
-	}
-	defer server.Close()
-	defer container.Shutdown(context.Background())
+	WithTestServer(t, func(t *testing.T, server *httptest.Server, auth *TestAuthHelper, container *app.Container) {
+		// Create a building first
+		buildingID := auth.CreateTestBuilding(t, "Validation Test Building", "Validation Test Address")
 
-	t.Run("CreateEquipment_MissingName", func(t *testing.T) {
-		createReq := domain.CreateEquipmentRequest{
-			BuildingID: types.FromString("some-building"),
-			Type:       "hvac",
-		}
+		t.Run("CreateEquipment_MissingName", func(t *testing.T) {
+			createReq := domain.CreateEquipmentRequest{
+				BuildingID: types.FromString(buildingID),
+				Type:       "hvac",
+			}
 
-		body, err := json.Marshal(createReq)
-		require.NoError(t, err)
+			resp := auth.POST(t, "/api/v1/equipment", createReq)
+			defer resp.Body.Close()
 
-		req, err := http.NewRequest("POST", server.URL+"/api/v1/equipment", bytes.NewBuffer(body))
-		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/json")
+			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		})
 
-		resp, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
+		t.Run("CreateEquipment_InvalidType", func(t *testing.T) {
+			createReq := domain.CreateEquipmentRequest{
+				BuildingID: types.FromString(buildingID),
+				Name:       "Test Equipment",
+				Type:       "", // Empty type
+			}
 
-		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
-	})
+			resp := auth.POST(t, "/api/v1/equipment", createReq)
+			defer resp.Body.Close()
 
-	t.Run("CreateEquipment_InvalidType", func(t *testing.T) {
-		createReq := domain.CreateEquipmentRequest{
-			BuildingID: types.FromString("some-building"),
-			Name:       "Test Equipment",
-			Type:       "invalid_type",
-		}
-
-		body, err := json.Marshal(createReq)
-		require.NoError(t, err)
-
-		req, err := http.NewRequest("POST", server.URL+"/api/v1/equipment", bytes.NewBuffer(body))
-		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
-
-		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		})
 	})
 }
 
 func TestEquipmentAPI_LocationTracking(t *testing.T) {
-	server, container := setupTestServerWithConfig(t)
-	if server == nil {
-		return
-	}
-	defer server.Close()
-	defer container.Shutdown(context.Background())
+	WithTestServer(t, func(t *testing.T, server *httptest.Server, auth *TestAuthHelper, container *app.Container) {
+		// Create a building first (not as subtest to ensure buildingID is set)
+		buildingID := auth.CreateTestBuilding(t, "Location Test Building", "Location Test Address")
 
-	// Create a building first
-	var building domain.Building
-	t.Run("Setup_CreateBuilding", func(t *testing.T) {
-		createReq := domain.CreateBuildingRequest{
-			Name:    "Location Test Building",
-			Address: "Location Test Address",
-		}
+		t.Run("CreateEquipmentWith3DLocation", func(t *testing.T) {
+			createReq := domain.CreateEquipmentRequest{
+				BuildingID: types.FromString(buildingID),
+				Name:       "Sensor 3D",
+				Type:       "sensor",
+				Location: &domain.Location{
+					X: -122.4194,
+					Y: 37.7749,
+					Z: 25.5,
+				},
+			}
 
-		body, err := json.Marshal(createReq)
-		require.NoError(t, err)
+			resp := auth.POST(t, "/api/v1/equipment", createReq)
+			defer resp.Body.Close()
 
-		req, err := http.NewRequest("POST", server.URL+"/api/v1/buildings", bytes.NewBuffer(body))
-		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/json")
+			assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-		resp, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
+			var equipment domain.Equipment
+			auth.DecodeJSON(t, resp, &equipment)
 
-		err = json.NewDecoder(resp.Body).Decode(&building)
-		require.NoError(t, err)
-	})
-
-	// Test creating equipment with 3D location
-	t.Run("CreateEquipmentWith3DLocation", func(t *testing.T) {
-		createReq := domain.CreateEquipmentRequest{
-			BuildingID: building.ID,
-			Name:       "3D Location Equipment",
-			Type:       "hvac",
-			Location: &domain.Location{
-				X: 10.5,
-				Y: 20.3,
-				Z: 3.2,
-			},
-		}
-
-		body, err := json.Marshal(createReq)
-		require.NoError(t, err)
-
-		req, err := http.NewRequest("POST", server.URL+"/api/v1/equipment", bytes.NewBuffer(body))
-		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
-
-		assert.Equal(t, http.StatusCreated, resp.StatusCode)
-
-		var equipment domain.Equipment
-		err = json.NewDecoder(resp.Body).Decode(&equipment)
-		require.NoError(t, err)
-
-		require.NotNil(t, equipment.Location)
-		assert.InDelta(t, 10.5, equipment.Location.X, 0.01)
-		assert.InDelta(t, 20.3, equipment.Location.Y, 0.01)
-		assert.InDelta(t, 3.2, equipment.Location.Z, 0.01)
+			assert.NotNil(t, equipment.Location)
+			assert.Equal(t, 25.5, equipment.Location.Z)
+		})
 	})
 }

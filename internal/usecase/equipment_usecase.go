@@ -340,7 +340,7 @@ func (uc *EquipmentUseCase) validateCreateEquipment(req *domain.CreateEquipmentR
 	}
 
 	// Validate equipment type
-	validTypes := []string{"hvac", "electrical", "plumbing", "security", "fire_safety", "elevator", "lighting"}
+	validTypes := []string{"hvac", "electrical", "plumbing", "security", "fire_safety", "elevator", "lighting", "sensor", "camera", "access_control"}
 	valid := false
 	for _, t := range validTypes {
 		if req.Type == t {
@@ -364,7 +364,7 @@ func (uc *EquipmentUseCase) validateUpdateEquipment(equipment *domain.Equipment)
 	}
 
 	// Validate equipment type
-	validTypes := []string{"hvac", "electrical", "plumbing", "security", "fire_safety", "elevator", "lighting"}
+	validTypes := []string{"hvac", "electrical", "plumbing", "security", "fire_safety", "elevator", "lighting", "sensor", "camera", "access_control"}
 	valid := false
 	for _, t := range validTypes {
 		if equipment.Type == t {

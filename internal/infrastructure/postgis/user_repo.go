@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/arx-os/arxos/internal/domain"
 )
@@ -23,14 +24,25 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 // Create creates a new user in PostGIS
 func (r *UserRepository) Create(ctx context.Context, u *domain.User) error {
 	query := `
-		INSERT INTO users (id, email, name, role, active, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO users (id, email, username, full_name, password_hash, role, is_active, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
+
+	// Generate username from email if not provided
+	username := u.Email
+	if idx := strings.Index(username, "@"); idx > 0 {
+		username = username[:idx]
+	}
+
+	// Password hash should be empty for now (will be set during registration)
+	passwordHash := ""
 
 	_, err := r.db.ExecContext(ctx, query,
 		u.ID.String(),
 		u.Email,
-		u.Name,
+		username,
+		u.Name, // This maps to full_name in database
+		passwordHash,
 		u.Role,
 		u.Active,
 		u.CreatedAt,
@@ -43,7 +55,7 @@ func (r *UserRepository) Create(ctx context.Context, u *domain.User) error {
 // GetByID retrieves a user by ID
 func (r *UserRepository) GetByID(ctx context.Context, id string) (*domain.User, error) {
 	query := `
-		SELECT id, email, name, role, active, created_at, updated_at
+		SELECT id, email, full_name, role, is_active, created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`
@@ -53,7 +65,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*domain.User, 
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&u.ID,
 		&u.Email,
-		&u.Name,
+		&u.Name, // Maps from full_name
 		&u.Role,
 		&u.Active,
 		&u.CreatedAt,
@@ -73,7 +85,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*domain.User, 
 // GetByEmail retrieves a user by email
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
 	query := `
-		SELECT id, email, name, role, active, created_at, updated_at
+		SELECT id, email, full_name, role, is_active, created_at, updated_at
 		FROM users
 		WHERE email = $1
 	`
@@ -83,7 +95,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*domain.
 	err := r.db.QueryRowContext(ctx, query, email).Scan(
 		&u.ID,
 		&u.Email,
-		&u.Name,
+		&u.Name, // Maps from full_name
 		&u.Role,
 		&u.Active,
 		&u.CreatedAt,
@@ -103,7 +115,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*domain.
 // List retrieves a list of users with filtering
 func (r *UserRepository) List(ctx context.Context, filter *domain.UserFilter) ([]*domain.User, error) {
 	query := `
-		SELECT id, email, name, role, active, created_at, updated_at
+		SELECT id, email, full_name, role, is_active, created_at, updated_at
 		FROM users
 		WHERE 1=1`
 
@@ -123,7 +135,7 @@ func (r *UserRepository) List(ctx context.Context, filter *domain.UserFilter) ([
 			argCount++
 		}
 		if filter.Active != nil {
-			query += fmt.Sprintf(" AND active = $%d", argCount)
+			query += fmt.Sprintf(" AND is_active = $%d", argCount)
 			args = append(args, *filter.Active)
 			argCount++
 		}
@@ -160,7 +172,7 @@ func (r *UserRepository) List(ctx context.Context, filter *domain.UserFilter) ([
 		err := rows.Scan(
 			&u.ID,
 			&u.Email,
-			&u.Name,
+			&u.Name, // Maps from full_name
 			&u.Role,
 			&u.Active,
 			&u.CreatedAt,
@@ -181,14 +193,14 @@ func (r *UserRepository) List(ctx context.Context, filter *domain.UserFilter) ([
 func (r *UserRepository) Update(ctx context.Context, u *domain.User) error {
 	query := `
 		UPDATE users
-		SET email = $2, name = $3, role = $4, active = $5, updated_at = $6
+		SET email = $2, full_name = $3, role = $4, is_active = $5, updated_at = $6
 		WHERE id = $1
 	`
 
 	_, err := r.db.ExecContext(ctx, query,
 		u.ID.String(),
 		u.Email,
-		u.Name,
+		u.Name, // Maps to full_name
 		u.Role,
 		u.Active,
 		u.UpdatedAt,

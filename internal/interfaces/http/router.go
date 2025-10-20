@@ -60,9 +60,10 @@ func NewRouter(config *RouterConfig) chi.Router {
 			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/", apiHandlers.buildingHandler.ListBuildings)
 			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingRead)).Get("/{id}", apiHandlers.buildingHandler.GetBuilding)
 
-			// Create and Update require write permission
+			// Create, Update, and Delete require write permission
 			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Post("/", apiHandlers.buildingHandler.CreateBuilding)
 			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Put("/{id}", apiHandlers.buildingHandler.UpdateBuilding)
+			r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionBuildingWrite)).Delete("/{id}", apiHandlers.buildingHandler.DeleteBuilding)
 		})
 
 		// Floor management endpoints
@@ -181,6 +182,8 @@ func NewRouter(config *RouterConfig) chi.Router {
 
 				// Write operations
 				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentWrite)).Post("/", apiHandlers.equipmentHandler.CreateEquipment)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentWrite)).Put("/{id}", apiHandlers.equipmentHandler.UpdateEquipment)
+				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentWrite)).Delete("/{id}", apiHandlers.equipmentHandler.DeleteEquipment)
 
 				// Relationship endpoints (graph topology)
 				r.With(httpmiddleware.RequirePermission(rbac, auth.PermissionEquipmentRead)).Get("/{id}/relationships", apiHandlers.equipmentHandler.ListRelationships)
@@ -391,9 +394,9 @@ func createAPIHandlers(config *RouterConfig) *apiHandlers {
 
 	return &apiHandlers{
 		buildingHandler:     config.Container.GetBuildingHandler(),
-		floorHandler:        handlers.NewFloorHandler(config.Server, floorUC, logger),
-		roomHandler:         handlers.NewRoomHandler(config.Server, roomUC, logger),
-		equipmentHandler:    handlers.NewEquipmentHandler(config.Server, equipmentUC, relationshipRepo, logger),
+		floorHandler:        handlers.NewFloorHandler(baseHandler, floorUC, logger),
+		roomHandler:         handlers.NewRoomHandler(baseHandler, roomUC, logger),
+		equipmentHandler:    handlers.NewEquipmentHandler(baseHandler, equipmentUC, relationshipRepo, logger),
 		userHandler:         handlers.NewUserHandler(baseHandler, userUC, logger),
 		organizationHandler: config.Container.GetOrganizationHandler(),
 		basHandler:          config.Container.GetBASHandler(),

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
@@ -15,12 +16,13 @@ import (
 
 // BASImportUseCase handles importing BAS points from external systems
 type BASImportUseCase struct {
-	basPointRepo   domain.BASPointRepository
-	basSystemRepo  domain.BASSystemRepository
-	roomRepo       domain.RoomRepository
-	equipmentRepo  domain.EquipmentRepository
-	parser         *bas.CSVParser
-	logger         domain.Logger
+	basPointRepo  domain.BASPointRepository
+	basSystemRepo domain.BASSystemRepository
+	roomRepo      domain.RoomRepository
+	floorRepo     domain.FloorRepository
+	equipmentRepo domain.EquipmentRepository
+	parser        *bas.CSVParser
+	logger        domain.Logger
 }
 
 // NewBASImportUseCase creates a new BAS import use case
@@ -28,6 +30,7 @@ func NewBASImportUseCase(
 	basPointRepo domain.BASPointRepository,
 	basSystemRepo domain.BASSystemRepository,
 	roomRepo domain.RoomRepository,
+	floorRepo domain.FloorRepository,
 	equipmentRepo domain.EquipmentRepository,
 	logger domain.Logger,
 ) *BASImportUseCase {
@@ -35,6 +38,7 @@ func NewBASImportUseCase(
 		basPointRepo:  basPointRepo,
 		basSystemRepo: basSystemRepo,
 		roomRepo:      roomRepo,
+		floorRepo:     floorRepo,
 		equipmentRepo: equipmentRepo,
 		parser:        bas.NewCSVParser(),
 		logger:        logger,
@@ -295,13 +299,195 @@ func (uc *BASImportUseCase) findMatchingRoom(
 	buildingID types.ID,
 	parsedLoc *bas.ParsedLocation,
 ) (*types.ID, int) {
-	// NOTE: Smart room matching via spatial queries (PostGIS ST_Contains, fuzzy name match)
-	// 1. Get all rooms in building
-	// 2. Match by floor + room number/name
-	// 3. Calculate confidence (1=fuzzy match, 2=good match, 3=exact match)
-	
-	// For now, return nil (unmapped)
-	return nil, 0
+	// If no room info in parsed location, can't match
+	if parsedLoc.Room == "" {
+		return nil, 0
+	}
+
+	// Get all floors for the building
+	floors, err := uc.floorRepo.GetByBuilding(ctx, buildingID.String())
+	if err != nil {
+		uc.logger.Warn("Failed to get floors for matching", "building_id", buildingID, "error", err)
+		return nil, 0
+	}
+
+	if len(floors) == 0 {
+		uc.logger.Warn("No floors found in building", "building_id", buildingID)
+		return nil, 0
+	}
+
+	// If we have floor info, try to match floor first
+	var targetFloorID *types.ID
+	if parsedLoc.Floor != "" {
+		// Try to find matching floor by level/name
+		// Floor could be "1", "ground", "basement", "-1", etc.
+		for _, floor := range floors {
+			matched := false
+
+			// Match by level number (Floor "1" matches level 1)
+			floorNumStr := fmt.Sprintf("%d", floor.Level)
+			if parsedLoc.Floor == floorNumStr {
+				matched = true
+			}
+
+			// Match by name (case-insensitive)
+			if parsedLoc.Floor == strings.ToLower(floor.Name) {
+				matched = true
+			}
+
+			// Special case: "basement" or "b" matches negative levels or level 0 named "basement"
+			if (parsedLoc.Floor == "basement" || parsedLoc.Floor == "b") &&
+				(floor.Level < 0 || strings.Contains(strings.ToLower(floor.Name), "basement")) {
+				matched = true
+			}
+
+			// Special case: "ground" or "g" matches level 0 or first floor
+			if (parsedLoc.Floor == "ground" || parsedLoc.Floor == "g") &&
+				(floor.Level == 0 || strings.Contains(strings.ToLower(floor.Name), "ground")) {
+				matched = true
+			}
+
+			if matched {
+				targetFloorID = &floor.ID
+				uc.logger.Debug("Matched floor",
+					"parsed_floor", parsedLoc.Floor,
+					"floor_name", floor.Name,
+					"floor_level", floor.Level)
+				break
+			}
+		}
+	}
+
+	// If no floor matched but we have floors, try the first/default floor
+	if targetFloorID == nil && len(floors) > 0 {
+		// Use the first floor (often Ground/First floor)
+		targetFloorID = &floors[0].ID
+		uc.logger.Debug("No floor match, using first floor", "floor_id", targetFloorID)
+	}
+
+	// Get rooms for the target floor
+	var rooms []*domain.Room
+	if targetFloorID != nil {
+		rooms, err = uc.roomRepo.GetByFloor(ctx, targetFloorID.String())
+		if err != nil {
+			uc.logger.Warn("Failed to get rooms for floor", "floor_id", targetFloorID, "error", err)
+			return nil, 0
+		}
+	}
+
+	if len(rooms) == 0 {
+		uc.logger.Debug("No rooms found for matching", "floor_id", targetFloorID)
+		return nil, 0
+	}
+
+	// Match room by number or name with fuzzy matching
+	bestMatch := (*types.ID)(nil)
+	bestConfidence := 0
+
+	for _, room := range rooms {
+		confidence := 0
+
+		// Normalize strings for comparison
+		roomNumberLower := strings.ToLower(strings.TrimSpace(room.Number))
+		roomNameLower := strings.ToLower(strings.TrimSpace(room.Name))
+		parsedRoomLower := strings.ToLower(strings.TrimSpace(parsedLoc.Room))
+
+		// 1. Exact match on room number (highest confidence)
+		if roomNumberLower == parsedRoomLower {
+			confidence = 3
+		} else if roomNameLower == parsedRoomLower {
+			// 2. Exact match on room name
+			confidence = 3
+		} else if roomNumberLower != "" && strings.Contains(parsedRoomLower, roomNumberLower) {
+			// 3. Room number in parsed location
+			confidence = 2
+		} else if parsedRoomLower != "" && strings.Contains(roomNumberLower, parsedRoomLower) {
+			// 3b. Parsed room in room number
+			confidence = 2
+		} else if matchesFuzzyName(parsedRoomLower, roomNameLower) {
+			// 4. Fuzzy name matching (special cases like "mechanical" → "Mechanical Room")
+			confidence = 2
+		} else if strings.Contains(roomNameLower, parsedRoomLower) && len(parsedRoomLower) >= 3 {
+			// 5. Partial word matching in room name (3+ chars)
+			confidence = 2
+		} else if len(parsedRoomLower) >= 2 && strings.Contains(roomNumberLower, parsedRoomLower) {
+			// 6. Weak matches - only if no better match
+			confidence = 1
+		}
+
+		// Log matching attempt for debugging
+		if confidence > 0 {
+			uc.logger.Debug("Room match found",
+				"point_location", parsedLoc.OriginalText,
+				"room_number", room.Number,
+				"room_name", room.Name,
+				"parsed_room", parsedLoc.Room,
+				"confidence", confidence)
+		}
+
+		// Update best match if this is better
+		if confidence > bestConfidence {
+			bestConfidence = confidence
+			bestMatch = &room.ID
+		}
+	}
+
+	if bestMatch != nil {
+		uc.logger.Info("Successfully matched room",
+			"parsed_location", parsedLoc.OriginalText,
+			"room_id", bestMatch.String(),
+			"confidence", bestConfidence)
+	} else {
+		uc.logger.Debug("No room match found",
+			"parsed_location", parsedLoc.OriginalText,
+			"parsed_floor", parsedLoc.Floor,
+			"parsed_room", parsedLoc.Room)
+	}
+
+	return bestMatch, bestConfidence
+}
+
+// matchesFuzzyName checks for common fuzzy name patterns
+func matchesFuzzyName(parsed, roomName string) bool {
+	// Common room type mappings
+	fuzzyMappings := map[string][]string{
+		"mechanical": {"mechanical", "mech", "equipment", "equip"},
+		"mech":       {"mechanical", "mech", "equipment"},
+		"electrical": {"electrical", "elec", "power"},
+		"elec":       {"electrical", "elec"},
+		"conference": {"conference", "conf", "meeting"},
+		"conf":       {"conference", "conf", "meeting"},
+		"office":     {"office", "workspace"},
+		"storage":    {"storage", "store", "closet"},
+		"restroom":   {"restroom", "bathroom", "toilet", "wc"},
+		"lobby":      {"lobby", "entrance", "reception"},
+		"server":     {"server", "data", "telecom", "it"},
+		"lab":        {"lab", "laboratory"},
+	}
+
+	// Check if parsed room matches any fuzzy mappings
+	for key, variants := range fuzzyMappings {
+		if parsed == key || contains(variants, parsed) {
+			// Check if room name contains any of the variants
+			for _, variant := range variants {
+				if strings.Contains(roomName, variant) {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+// contains checks if a string slice contains a value
+func contains(slice []string, value string) bool {
+	for _, item := range slice {
+		if item == value {
+			return true
+		}
+	}
+	return false
 }
 
 // calculateFileHash computes SHA-256 hash of file
@@ -373,4 +559,3 @@ func (uc *BASImportUseCase) MapPointToEquipment(
 
 	return uc.basPointRepo.MapToEquipment(req.PointID, *req.EquipmentID, req.Confidence)
 }
-

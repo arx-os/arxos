@@ -1,7 +1,6 @@
 package workflow
 
 import (
-	integration "github.com/arx-os/arxos/test/integration"
 	"context"
 	"fmt"
 	"os"
@@ -9,8 +8,11 @@ import (
 	"testing"
 	"time"
 
+	integration "github.com/arx-os/arxos/test/integration"
+
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
+	"github.com/arx-os/arxos/internal/domain/versioncontrol"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -181,7 +183,7 @@ func TestWorkflowVersionControl(t *testing.T) {
 
 	// Step 2: Create initial commit
 	t.Log("Step 2: Creating initial commit...")
-	commit := &domain.Commit{
+	commit := &versioncontrol.Commit{
 		Message: "Initial building creation",
 		// Author: "test-user",
 	}
@@ -191,7 +193,7 @@ func TestWorkflowVersionControl(t *testing.T) {
 
 	// Step 3: Create feature branch
 	t.Log("Step 3: Creating feature branch...")
-	branch := &domain.Branch{
+	branch := &versioncontrol.Branch{
 		Name:        "feature/updates",
 		Description: "Test updates to building",
 		// SourceBranch: "main",
@@ -208,7 +210,7 @@ func TestWorkflowVersionControl(t *testing.T) {
 
 	// Step 5: Commit changes
 	t.Log("Step 5: Committing changes...")
-	commit2 := &domain.Commit{
+	commit2 := &versioncontrol.Commit{
 		Message: "Updated building address",
 		// BranchID: branch.ID,
 	}

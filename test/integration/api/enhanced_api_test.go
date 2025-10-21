@@ -140,16 +140,16 @@ func (suite *EnhancedAPITestSuite) authenticateTestUser(t *testing.T) {
 
 // generateTestToken generates a JWT token for testing
 func (suite *EnhancedAPITestSuite) generateTestToken(t *testing.T) string {
-	tokenPair, err := suite.jwtManager.GenerateTokenPair(
-		suite.testUser.ID,
-		suite.testUser.Email,
-		suite.testUser.Name,
-		suite.testUser.Role,
-		"",                               // organizationID
-		[]string{"read", "write"},        // permissions
-		"test-session",                   // sessionID
-		map[string]any{"device": "test"}, // deviceInfo
-	)
+	tokenPair, err := suite.jwtManager.GenerateTokenPair(&auth.TokenGenerationRequest{
+		UserID:         suite.testUser.ID,
+		Email:          suite.testUser.Email,
+		Username:       suite.testUser.Name,
+		Role:           suite.testUser.Role,
+		OrganizationID: "",
+		Permissions:    []string{"read", "write"},
+		SessionID:      "test-session",
+		DeviceInfo:     map[string]any{"device": "test"},
+	})
 	require.NoError(t, err)
 	return tokenPair.AccessToken
 }

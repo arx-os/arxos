@@ -11,6 +11,7 @@ import (
 	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/arx-os/arxos/internal/infrastructure"
 	"github.com/arx-os/arxos/internal/infrastructure/postgis"
+	"github.com/arx-os/arxos/internal/usecase/building"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -30,7 +31,7 @@ func TestBuildingCRUD(t *testing.T) {
 	// Create repository and use case
 	buildingRepo := postgis.NewBuildingRepository(db)
 	equipmentRepo := postgis.NewEquipmentRepository(db)
-	buildingUC := usecase.NewBuildingUseCase(buildingRepo, equipmentRepo, logger)
+	buildingUC := building.NewBuildingUseCase(buildingRepo, equipmentRepo, logger)
 
 	// Test 1: Create Building
 	t.Run("Create Building", func(t *testing.T) {
@@ -223,7 +224,7 @@ func TestBuildingValidation(t *testing.T) {
 
 	buildingRepo := postgis.NewBuildingRepository(db)
 	equipmentRepo := postgis.NewEquipmentRepository(db)
-	buildingUC := usecase.NewBuildingUseCase(buildingRepo, equipmentRepo, logger)
+	buildingUC := building.NewBuildingUseCase(buildingRepo, equipmentRepo, logger)
 
 	t.Run("Create Building without Name", func(t *testing.T) {
 		req := &domain.CreateBuildingRequest{

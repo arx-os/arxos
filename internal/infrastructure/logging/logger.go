@@ -3,6 +3,8 @@ package logging
 import (
 	"log"
 	"os"
+
+	"github.com/arx-os/arxos/internal/domain"
 )
 
 // LogLevel represents the severity of a log message
@@ -69,7 +71,7 @@ func (l *Logger) Fatal(format string, args ...any) {
 }
 
 // WithFields creates a logger with additional fields
-func (l *Logger) WithFields(fields map[string]any) *Logger {
+func (l *Logger) WithFields(fields map[string]any) domain.Logger {
 	// Simplified implementation - in a real logger you'd store fields
 	return l
 }

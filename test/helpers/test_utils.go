@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"github.com/arx-os/arxos/internal/domain/versioncontrol"
 	"context"
 	"database/sql"
 	"fmt"
@@ -11,14 +10,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/arx-os/arxos/internal/domain/versioncontrol"
+
 	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/arx-os/arxos/internal/infrastructure"
 	"github.com/arx-os/arxos/internal/infrastructure/postgis"
+	"github.com/arx-os/arxos/internal/usecase/building"
 	buildinguc "github.com/arx-os/arxos/internal/usecase/building"
 	vcuc "github.com/arx-os/arxos/internal/usecase/versioncontrol"
-	"github.com/arx-os/arxos/internal/usecase/building"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -415,6 +416,11 @@ func (l *TestLogger) Error(msg string, fields ...any) {
 // Fatal logs a fatal message
 func (l *TestLogger) Fatal(msg string, fields ...any) {
 	// Silent in tests
+}
+
+// WithFields creates a logger with additional fields
+func (l *TestLogger) WithFields(fields map[string]any) domain.Logger {
+	return l
 }
 
 // SetupTestEnvironment sets up test database and logger for integration tests

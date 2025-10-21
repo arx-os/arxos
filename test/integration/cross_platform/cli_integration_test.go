@@ -6,6 +6,7 @@ import (
 
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/infrastructure/postgis"
+	"github.com/arx-os/arxos/internal/usecase/building"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
@@ -15,11 +16,12 @@ import (
 // testLogger implements domain.Logger for tests
 type testLogger struct{}
 
-func (l *testLogger) Debug(msg string, fields ...any) {}
-func (l *testLogger) Info(msg string, fields ...any)  {}
-func (l *testLogger) Warn(msg string, fields ...any)  {}
-func (l *testLogger) Error(msg string, fields ...any) {}
-func (l *testLogger) Fatal(msg string, fields ...any) {}
+func (l *testLogger) Debug(msg string, fields ...any)                {}
+func (l *testLogger) Info(msg string, fields ...any)                 {}
+func (l *testLogger) Warn(msg string, fields ...any)                 {}
+func (l *testLogger) Error(msg string, fields ...any)                {}
+func (l *testLogger) Fatal(msg string, fields ...any)                {}
+func (l *testLogger) WithFields(fields map[string]any) domain.Logger { return l }
 
 // setupTestDB creates a test database connection and runs migrations
 func setupTestDB(t *testing.T) *sqlx.DB {
@@ -60,7 +62,7 @@ func TestCLI_BuildingCommands(t *testing.T) {
 	equipmentRepo := postgis.NewEquipmentRepository(db.DB)
 	logger := &testLogger{}
 
-	buildingUC := usecase.NewBuildingUseCase(buildingRepo, equipmentRepo, logger)
+	buildingUC := building.NewBuildingUseCase(buildingRepo, equipmentRepo, logger)
 
 	t.Run("CreateBuilding_ViaUseCase", func(t *testing.T) {
 		req := &domain.CreateBuildingRequest{
@@ -114,8 +116,8 @@ func TestIntegration_CompleteWorkflow(t *testing.T) {
 	logger := &testLogger{}
 
 	// Setup use cases
-	buildingUC := usecase.NewBuildingUseCase(buildingRepo, equipmentRepo, logger)
-	equipmentUC := usecase.NewEquipmentUseCase(equipmentRepo, buildingRepo, floorRepo, roomRepo, logger)
+	buildingUC := building.NewBuildingUseCase(buildingRepo, equipmentRepo, logger)
+	equipmentUC := building.NewEquipmentUseCase(equipmentRepo, buildingRepo, floorRepo, roomRepo, logger)
 
 	ctx := context.Background()
 
@@ -218,8 +220,8 @@ func TestIntegration_SpatialOperations(t *testing.T) {
 	roomRepo := postgis.NewRoomRepository(db.DB)
 	logger := &testLogger{}
 
-	buildingUC := usecase.NewBuildingUseCase(buildingRepo, equipmentRepo, logger)
-	equipmentUC := usecase.NewEquipmentUseCase(equipmentRepo, buildingRepo, floorRepo, roomRepo, logger)
+	buildingUC := building.NewBuildingUseCase(buildingRepo, equipmentRepo, logger)
+	equipmentUC := building.NewEquipmentUseCase(equipmentRepo, buildingRepo, floorRepo, roomRepo, logger)
 
 	ctx := context.Background()
 

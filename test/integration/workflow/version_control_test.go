@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
-	"github.com/arx-os/arxos/internal/domain/versioncontrol"
 	"github.com/arx-os/arxos/internal/domain/types"
+	"github.com/arx-os/arxos/internal/domain/versioncontrol"
 	"github.com/arx-os/arxos/test/helpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -69,7 +69,7 @@ func TestPRWorkflow_Complete(t *testing.T) {
 	// Step 2: Create main branch
 	t.Log("Step 2: Creating main branch")
 	userID := types.FromString("test-user-pr")
-	mainBranch, err := branchUC.CreateBranch(ctx, domain.CreateBranchRequest{
+	mainBranch, err := branchUC.CreateBranch(ctx, versioncontrol.CreateBranchRequest{
 		RepositoryID: repoID,
 		Name:         "main",
 		DisplayName:  "Main Branch",
@@ -82,7 +82,7 @@ func TestPRWorkflow_Complete(t *testing.T) {
 
 	// Step 3: Create feature branch
 	t.Log("Step 3: Creating feature branch")
-	featureBranch, err := branchUC.CreateBranch(ctx, domain.CreateBranchRequest{
+	featureBranch, err := branchUC.CreateBranch(ctx, versioncontrol.CreateBranchRequest{
 		RepositoryID: repoID,
 		Name:         "feature/test-feature",
 		DisplayName:  "Test Feature",
@@ -95,7 +95,7 @@ func TestPRWorkflow_Complete(t *testing.T) {
 
 	// Step 3.5: Create dev branch (non-protected target)
 	t.Log("Step 3.5: Creating dev branch")
-	devBranch, err := branchUC.CreateBranch(ctx, domain.CreateBranchRequest{
+	devBranch, err := branchUC.CreateBranch(ctx, versioncontrol.CreateBranchRequest{
 		RepositoryID: repoID,
 		Name:         "dev",
 		DisplayName:  "Development Branch",
@@ -113,7 +113,7 @@ func TestPRWorkflow_Complete(t *testing.T) {
 		Description:    "This is a test PR for integration testing",
 		SourceBranchID: featureBranch.ID,
 		TargetBranchID: devBranch.ID, // Use dev instead of main
-		PRType:         domain.PRTypeFeature,
+		PRType:         versioncontrol.PRTypeFeature,
 		Priority:       versioncontrol.PRPriorityNormal,
 		CreatedBy:      userID,
 	}
@@ -123,7 +123,7 @@ func TestPRWorkflow_Complete(t *testing.T) {
 	require.NotNil(t, pr)
 	assert.Equal(t, "Test Feature PR", pr.Title)
 	assert.Equal(t, versioncontrol.PRStatusOpen, pr.Status)
-	assert.Equal(t, domain.PRTypeFeature, pr.PRType)
+	assert.Equal(t, versioncontrol.PRTypeFeature, pr.PRType)
 	assert.False(t, pr.RequiresReview, "Dev target should not require review")
 
 	// Step 5: Get PR
@@ -241,7 +241,7 @@ func TestIssueWorkflow_Complete(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, issue)
 	assert.Equal(t, "Test outlet not working", issue.Title)
-	assert.Equal(t, domain.IssueStatusOpen, issue.Status)
+	assert.Equal(t, versioncontrol.IssueStatusOpen, issue.Status)
 
 	// Step 3: Get Issue
 	t.Log("Step 3: Retrieving Issue")
@@ -266,19 +266,19 @@ func TestIssueWorkflow_Complete(t *testing.T) {
 	require.NotNil(t, branch)
 	require.NotNil(t, pr)
 	assert.Contains(t, branch.Name, "issue/")
-	assert.Equal(t, domain.PRTypeIssueFix, pr.PRType)
+	assert.Equal(t, versioncontrol.PRTypeIssueFix, pr.PRType)
 
 	// Step 6: Verify issue status updated
 	t.Log("Step 6: Verifying issue status")
 	updatedIssue, err := issueUC.GetIssue(ctx, repoID, issue.Number)
 	require.NoError(t, err)
-	assert.Equal(t, domain.IssueStatusInProgress, updatedIssue.Status)
+	assert.Equal(t, versioncontrol.IssueStatusInProgress, updatedIssue.Status)
 	assert.NotNil(t, updatedIssue.BranchID)
 	assert.NotNil(t, updatedIssue.PRID)
 
 	// Step 7: Resolve issue
 	t.Log("Step 7: Resolving issue")
-	resolveReq := domain.ResolveIssueRequest{
+	resolveReq := versioncontrol.ResolveIssueRequest{
 		IssueID:         issue.ID,
 		ResolvedBy:      userID,
 		ResolutionNotes: "Reset breaker - outlet now working",
@@ -291,7 +291,7 @@ func TestIssueWorkflow_Complete(t *testing.T) {
 	t.Log("Step 8: Verifying issue resolved")
 	resolvedIssue, err := issueUC.GetIssue(ctx, repoID, issue.Number)
 	require.NoError(t, err)
-	assert.Equal(t, domain.IssueStatusResolved, resolvedIssue.Status)
+	assert.Equal(t, versioncontrol.IssueStatusResolved, resolvedIssue.Status)
 	assert.NotNil(t, resolvedIssue.ResolvedAt)
 
 	// Step 9: Close issue
@@ -303,7 +303,7 @@ func TestIssueWorkflow_Complete(t *testing.T) {
 	t.Log("Step 10: Verifying issue closed")
 	closedIssue, err := issueUC.GetIssue(ctx, repoID, issue.Number)
 	require.NoError(t, err)
-	assert.Equal(t, domain.IssueStatusClosed, closedIssue.Status)
+	assert.Equal(t, versioncontrol.IssueStatusClosed, closedIssue.Status)
 	assert.NotNil(t, closedIssue.ClosedAt)
 
 	t.Log("✅ Issue workflow test complete")
@@ -379,14 +379,14 @@ func TestPRIssueIntegration(t *testing.T) {
 
 	issue, err := issueUC.CreateIssue(ctx, issueReq)
 	require.NoError(t, err)
-	assert.Equal(t, domain.IssueStatusOpen, issue.Status)
+	assert.Equal(t, versioncontrol.IssueStatusOpen, issue.Status)
 
 	// 2. Start work (creates branch + PR)
 	branch, pr, err := issueUC.StartWork(ctx, issue.ID, userID)
 	require.NoError(t, err)
 	assert.NotNil(t, branch)
 	assert.NotNil(t, pr)
-	assert.Equal(t, domain.PRTypeIssueFix, pr.PRType)
+	assert.Equal(t, versioncontrol.PRTypeIssueFix, pr.PRType)
 
 	// 3. Approve PR
 	reviewerID := types.FromString("test-reviewer")
@@ -394,7 +394,7 @@ func TestPRIssueIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	// 4. Resolve issue
-	resolveReq := domain.ResolveIssueRequest{
+	resolveReq := versioncontrol.ResolveIssueRequest{
 		IssueID:         issue.ID,
 		ResolvedBy:      userID,
 		ResolutionNotes: "Adjusted VAV damper, cooling restored",
@@ -419,7 +419,7 @@ func TestPRIssueIntegration(t *testing.T) {
 	// Verify final states
 	finalIssue, err := issueUC.GetIssue(ctx, repoID, issue.Number)
 	require.NoError(t, err)
-	assert.Equal(t, domain.IssueStatusClosed, finalIssue.Status)
+	assert.Equal(t, versioncontrol.IssueStatusClosed, finalIssue.Status)
 
 	finalPR, err := prUC.GetPullRequest(ctx, repoID, pr.Number)
 	require.NoError(t, err)

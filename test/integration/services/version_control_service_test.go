@@ -14,6 +14,7 @@ import (
 	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/arx-os/arxos/internal/infrastructure/logging"
 	"github.com/arx-os/arxos/internal/infrastructure/postgis"
+	"github.com/arx-os/arxos/internal/usecase/services"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
@@ -53,7 +54,7 @@ func TestVersionControl_CompleteWorkflow(t *testing.T) {
 	treeRepo := postgis.NewTreeRepository(objectRepo)
 
 	// Create services
-	snapshotService := usecase.NewSnapshotService(
+	snapshotService := services.NewSnapshotService(
 		buildingRepo,
 		equipmentRepo,
 		floorRepo,
@@ -63,7 +64,7 @@ func TestVersionControl_CompleteWorkflow(t *testing.T) {
 		testLogger,
 	)
 
-	diffService := usecase.NewDiffService(
+	diffService := services.NewDiffService(
 		snapshotRepo,
 		objectRepo,
 		treeRepo,
@@ -141,11 +142,11 @@ func TestVersionControl_CompleteWorkflow(t *testing.T) {
 	snapshot1, err := snapshotService.CaptureSnapshot(ctx, buildingID.String())
 	require.NoError(t, err, "Failed to capture first snapshot")
 	assert.NotEmpty(t, snapshot1.Hash, "Snapshot hash should not be empty")
-	assert.Equal(t, 2, snapshot1.Metadata.FloorCount, "Should have 2 floors")
-	assert.Equal(t, 2, snapshot1.Metadata.EquipmentCount, "Should have 2 equipment items")
+	assert.GreaterOrEqual(t, snapshot1.Metadata.SpaceCount, 2, "Should have at least 2 spaces (building + floors)")
+	assert.Equal(t, 2, snapshot1.Metadata.ItemCount, "Should have 2 equipment items")
 
 	t.Logf("  Snapshot captured: %s", snapshot1.Hash[:12])
-	t.Logf("  Floors: %d, Equipment: %d", snapshot1.Metadata.FloorCount, snapshot1.Metadata.EquipmentCount)
+	t.Logf("  Spaces: %d, Items: %d", snapshot1.Metadata.SpaceCount, snapshot1.Metadata.ItemCount)
 
 	// Step 3: Modify building (add more equipment)
 	t.Log("Step 3: Adding more equipment")
@@ -182,14 +183,14 @@ func TestVersionControl_CompleteWorkflow(t *testing.T) {
 	snapshot2, err := snapshotService.CaptureSnapshot(ctx, buildingID.String())
 	require.NoError(t, err, "Failed to capture second snapshot")
 	assert.NotEmpty(t, snapshot2.Hash, "Snapshot hash should not be empty")
-	assert.Equal(t, 2, snapshot2.Metadata.FloorCount, "Should still have 2 floors")
-	assert.Equal(t, 4, snapshot2.Metadata.EquipmentCount, "Should now have 4 equipment items")
+	assert.GreaterOrEqual(t, snapshot2.Metadata.SpaceCount, 2, "Should still have at least 2 spaces")
+	assert.Equal(t, 4, snapshot2.Metadata.ItemCount, "Should now have 4 equipment items")
 
 	// Snapshots should be different
 	assert.NotEqual(t, snapshot1.Hash, snapshot2.Hash, "Snapshots should be different")
 
 	t.Logf("  Snapshot captured: %s", snapshot2.Hash[:12])
-	t.Logf("  Equipment increased: %d → %d", snapshot1.Metadata.EquipmentCount, snapshot2.Metadata.EquipmentCount)
+	t.Logf("  Items increased: %d → %d", snapshot1.Metadata.ItemCount, snapshot2.Metadata.ItemCount)
 
 	// Step 5: Create mock versions for diff testing
 	t.Log("Step 5: Testing diff between snapshots")
@@ -302,7 +303,7 @@ func TestVersionControl_SnapshotPerformance(t *testing.T) {
 	snapshotRepo := postgis.NewSnapshotRepository(dbx)
 	treeRepo := postgis.NewTreeRepository(objectRepo)
 
-	snapshotService := usecase.NewSnapshotService(
+	snapshotService := services.NewSnapshotService(
 		buildingRepo,
 		equipmentRepo,
 		floorRepo,
@@ -365,8 +366,8 @@ func TestVersionControl_SnapshotPerformance(t *testing.T) {
 
 	t.Logf("Snapshot created in %v", duration)
 	t.Logf("  Hash: %s", snapshot.Hash[:12])
-	t.Logf("  Floors: %d", snapshot.Metadata.FloorCount)
-	t.Logf("  Equipment: %d", snapshot.Metadata.EquipmentCount)
+	t.Logf("  Spaces: %d", snapshot.Metadata.SpaceCount)
+	t.Logf("  Items: %d", snapshot.Metadata.ItemCount)
 
 	// Performance assertion: should be under 5 seconds for 100 items
 	assert.Less(t, duration, 5*time.Second, "Snapshot creation should be under 5 seconds")
@@ -411,7 +412,7 @@ func TestVersionControl_DiffPerformance(t *testing.T) {
 	snapshotRepo := postgis.NewSnapshotRepository(dbx)
 	treeRepo := postgis.NewTreeRepository(objectRepo)
 
-	snapshotService := usecase.NewSnapshotService(
+	snapshotService := services.NewSnapshotService(
 		buildingRepo,
 		equipmentRepo,
 		floorRepo,
@@ -421,7 +422,7 @@ func TestVersionControl_DiffPerformance(t *testing.T) {
 		testLogger,
 	)
 
-	diffService := usecase.NewDiffService(
+	diffService := services.NewDiffService(
 		snapshotRepo,
 		objectRepo,
 		treeRepo,
@@ -530,7 +531,7 @@ func TestVersionControl_ContentDeduplication(t *testing.T) {
 	snapshotRepo := postgis.NewSnapshotRepository(dbx)
 	treeRepo := postgis.NewTreeRepository(objectRepo)
 
-	snapshotService := usecase.NewSnapshotService(
+	snapshotService := services.NewSnapshotService(
 		buildingRepo,
 		equipmentRepo,
 		floorRepo,

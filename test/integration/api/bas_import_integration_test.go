@@ -10,6 +10,7 @@ import (
 
 	"github.com/arx-os/arxos/internal/app"
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/bas"
 	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,11 +41,11 @@ func TestBASImportIntegration(t *testing.T) {
 				t.Skip("Metasys sample CSV not found")
 			}
 
-			req := domain.ImportBASPointsRequest{
+			req := bas.ImportBASPointsRequest{
 				FilePath:    csvPath,
 				BuildingID:  buildingID,
 				BASSystemID: systemID,
-				SystemType:  domain.BASSystemTypeMetasys,
+				SystemType:  bas.BASSystemTypeMetasys,
 				AutoMap:     true,
 				AutoCommit:  false,
 			}
@@ -114,11 +115,11 @@ func TestBASImportIntegration(t *testing.T) {
 
 			// Import with auto-map
 			csvPath := "../../../test_data/bas/metasys_sample_export.csv"
-			req := domain.ImportBASPointsRequest{
+			req := bas.ImportBASPointsRequest{
 				FilePath:    csvPath,
 				BuildingID:  buildingID,
 				BASSystemID: systemID,
-				SystemType:  domain.BASSystemTypeMetasys,
+				SystemType:  bas.BASSystemTypeMetasys,
 				AutoMap:     true,
 				AutoCommit:  false,
 			}
@@ -148,11 +149,11 @@ func TestBASImportIntegration(t *testing.T) {
 
 			// Import CSV
 			csvPath := "../../../test_data/bas/metasys_sample_export.csv"
-			req := domain.ImportBASPointsRequest{
+			req := bas.ImportBASPointsRequest{
 				FilePath:    csvPath,
 				BuildingID:  buildingID,
 				BASSystemID: systemID,
-				SystemType:  domain.BASSystemTypeMetasys,
+				SystemType:  bas.BASSystemTypeMetasys,
 				AutoMap:     false, // Disable auto-map to just test parsing
 				AutoCommit:  false,
 			}
@@ -190,7 +191,7 @@ func TestBASImportIntegration(t *testing.T) {
 			systemID1 := createTestBASSystem(t, container, buildingID)
 
 			// Try to create another with different type
-			systemID2 := createTestBASSystemWithType(t, container, buildingID, domain.BASSystemTypeDesigo)
+			systemID2 := createTestBASSystemWithType(t, container, buildingID, bas.BASSystemTypeDesigo)
 
 			// Should be different systems
 			assert.NotEqual(t, systemID1, systemID2, "Different system types should have different IDs")
@@ -213,11 +214,11 @@ func TestBASImportIntegration(t *testing.T) {
 
 			// Measure import time
 			csvPath := "../../../test_data/bas/metasys_sample_export.csv"
-			req := domain.ImportBASPointsRequest{
+			req := bas.ImportBASPointsRequest{
 				FilePath:    csvPath,
 				BuildingID:  buildingID,
 				BASSystemID: systemID,
-				SystemType:  domain.BASSystemTypeMetasys,
+				SystemType:  bas.BASSystemTypeMetasys,
 				AutoMap:     true,
 				AutoCommit:  false,
 			}
@@ -240,11 +241,11 @@ func TestBASImportIntegration(t *testing.T) {
 
 			// First import
 			csvPath := "../../../test_data/bas/metasys_sample_export.csv"
-			req := domain.ImportBASPointsRequest{
+			req := bas.ImportBASPointsRequest{
 				FilePath:    csvPath,
 				BuildingID:  buildingID,
 				BASSystemID: systemID,
-				SystemType:  domain.BASSystemTypeMetasys,
+				SystemType:  bas.BASSystemTypeMetasys,
 				AutoMap:     false,
 				AutoCommit:  false,
 			}
@@ -261,11 +262,11 @@ func TestBASImportIntegration(t *testing.T) {
 				t.Skip("test_points.csv not found")
 			}
 
-			req2 := domain.ImportBASPointsRequest{
+			req2 := bas.ImportBASPointsRequest{
 				FilePath:    csvPath2,
 				BuildingID:  buildingID,
 				BASSystemID: systemID,
-				SystemType:  domain.BASSystemTypeMetasys,
+				SystemType:  bas.BASSystemTypeMetasys,
 				AutoMap:     false,
 				AutoCommit:  false,
 			}
@@ -350,11 +351,11 @@ func createTestBuildingStructureForBAS(t *testing.T, container *app.Container) t
 // Helper: Create test BAS system
 func createTestBASSystem(t *testing.T, container *app.Container, buildingID types.ID) types.ID {
 	t.Helper()
-	return createTestBASSystemWithType(t, container, buildingID, domain.BASSystemTypeMetasys)
+	return createTestBASSystemWithType(t, container, buildingID, bas.BASSystemTypeMetasys)
 }
 
 // Helper: Create test BAS system with specific type
-func createTestBASSystemWithType(t *testing.T, container *app.Container, buildingID types.ID, systemType domain.BASSystemType) types.ID {
+func createTestBASSystemWithType(t *testing.T, container *app.Container, buildingID types.ID, systemType bas.BASSystemType) types.ID {
 	t.Helper()
 
 	basSystemRepo := container.GetBASSystemRepository()
@@ -378,7 +379,7 @@ func createTestBASSystemWithType(t *testing.T, container *app.Container, buildin
 	systemID := types.NewID()
 	systemName := fmt.Sprintf("%s Test System %d", systemType, time.Now().UnixNano())
 
-	system := &domain.BASSystem{
+	system := &bas.BASSystem{
 		ID:         systemID,
 		BuildingID: buildingID,
 		Name:       systemName,

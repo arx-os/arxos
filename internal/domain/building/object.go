@@ -72,12 +72,6 @@ type SnapshotMetadata struct {
 	FileCount  int               `json:"file_count"`  // Number of files
 	TotalSize  int64             `json:"total_size"`  // Total data size
 	Checksums  map[string]string `json:"checksums"`   // Component checksums
-
-	// Legacy fields (deprecated, use space_count and item_count)
-	BuildingCount  int `json:"building_count,omitempty"`  // Deprecated: Use space_count
-	FloorCount     int `json:"floor_count,omitempty"`     // Deprecated: Use space_count
-	RoomCount      int `json:"room_count,omitempty"`      // Deprecated: Use space_count
-	EquipmentCount int `json:"equipment_count,omitempty"` // Deprecated: Use item_count
 }
 
 // SnapshotDiff represents the high-level differences between two snapshots
@@ -191,11 +185,11 @@ func CalculateSnapshotHash(snapshot *Snapshot) string {
 }
 
 // SerializeObject serializes an object to bytes (for storage)
-func SerializeObject(obj interface{}) ([]byte, error) {
+func SerializeObject(obj any) ([]byte, error) {
 	return json.Marshal(obj)
 }
 
 // DeserializeObject deserializes bytes to an object
-func DeserializeObject(data []byte, obj interface{}) error {
+func DeserializeObject(data []byte, obj any) error {
 	return json.Unmarshal(data, obj)
 }

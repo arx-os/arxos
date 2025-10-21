@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/bas"
 	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -23,22 +23,22 @@ func TestBASPointRepository_Create(t *testing.T) {
 		systemID := types.NewID()
 		now := time.Now()
 
-		point := &domain.BASPoint{
-			ID:          types.NewID(),
-			BuildingID:  buildingID,
-			BASSystemID: systemID,
-			PointName:   "AI-1-1",
-			DeviceID:    "100301",
-			ObjectType:  "Analog Input",
-			Description: "Zone Temperature",
-			Units:       "degF",
-			PointType:   "temperature",
-			Writeable:   false,
-			Mapped:      false,
+		point := &bas.BASPoint{
+			ID:                types.NewID(),
+			BuildingID:        buildingID,
+			BASSystemID:       systemID,
+			PointName:         "AI-1-1",
+			DeviceID:          "100301",
+			ObjectType:        "Analog Input",
+			Description:       "Zone Temperature",
+			Units:             "degF",
+			PointType:         "temperature",
+			Writeable:         false,
+			Mapped:            false,
 			MappingConfidence: 0,
-			ImportedAt:  now,
-			CreatedAt:   now,
-			UpdatedAt:   now,
+			ImportedAt:        now,
+			CreatedAt:         now,
+			UpdatedAt:         now,
 		}
 
 		// err := repo.Create(point)
@@ -52,7 +52,7 @@ func TestBASPointRepository_Create(t *testing.T) {
 		minVal := 32.0
 		maxVal := 120.0
 
-		point := &domain.BASPoint{
+		point := &bas.BASPoint{
 			ID:          types.NewID(),
 			BuildingID:  types.NewID(),
 			BASSystemID: types.NewID(),
@@ -78,19 +78,19 @@ func TestBASPointRepository_Create(t *testing.T) {
 	t.Run("Create point with room mapping", func(t *testing.T) {
 		roomID := types.NewID()
 
-		point := &domain.BASPoint{
-			ID:          types.NewID(),
-			BuildingID:  types.NewID(),
-			BASSystemID: types.NewID(),
-			RoomID:      &roomID,
-			PointName:   "AI-1-1",
-			DeviceID:    "100301",
-			ObjectType:  "Analog Input",
-			Mapped:      true,
+		point := &bas.BASPoint{
+			ID:                types.NewID(),
+			BuildingID:        types.NewID(),
+			BASSystemID:       types.NewID(),
+			RoomID:            &roomID,
+			PointName:         "AI-1-1",
+			DeviceID:          "100301",
+			ObjectType:        "Analog Input",
+			Mapped:            true,
 			MappingConfidence: 3,
-			ImportedAt:  time.Now(),
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
+			ImportedAt:        time.Now(),
+			CreatedAt:         time.Now(),
+			UpdatedAt:         time.Now(),
 		}
 
 		// err := repo.Create(point)
@@ -107,7 +107,7 @@ func TestBASPointRepository_BulkCreate(t *testing.T) {
 		systemID := types.NewID()
 		now := time.Now()
 
-		points := []*domain.BASPoint{
+		points := []*bas.BASPoint{
 			{
 				ID:          types.NewID(),
 				BuildingID:  buildingID,
@@ -151,7 +151,7 @@ func TestBASPointRepository_BulkCreate(t *testing.T) {
 	})
 
 	t.Run("Bulk create with empty slice", func(t *testing.T) {
-		points := []*domain.BASPoint{}
+		points := []*bas.BASPoint{}
 
 		// repo := NewBASPointRepository(db)
 		// err := repo.BulkCreate(points)
@@ -188,7 +188,7 @@ func TestBASPointRepository_Filter(t *testing.T) {
 	t.Run("Filter by building", func(t *testing.T) {
 		buildingID := types.NewID()
 
-		filter := domain.BASPointFilter{
+		filter := bas.BASPointFilter{
 			BuildingID: &buildingID,
 		}
 
@@ -207,7 +207,7 @@ func TestBASPointRepository_Filter(t *testing.T) {
 	t.Run("Filter by room", func(t *testing.T) {
 		roomID := types.NewID()
 
-		filter := domain.BASPointFilter{
+		filter := bas.BASPointFilter{
 			RoomID: &roomID,
 		}
 
@@ -221,7 +221,7 @@ func TestBASPointRepository_Filter(t *testing.T) {
 	t.Run("Filter by unmapped status", func(t *testing.T) {
 		mapped := false
 
-		filter := domain.BASPointFilter{
+		filter := bas.BASPointFilter{
 			Mapped: &mapped,
 		}
 
@@ -270,7 +270,7 @@ func TestBASPointRepository_Integration(t *testing.T) {
 		// repo := NewBASPointRepository(db)
 
 		// 1. Create point
-		point := &domain.BASPoint{
+		point := &bas.BASPoint{
 			ID:          types.NewID(),
 			BuildingID:  types.NewID(),
 			BASSystemID: types.NewID(),
@@ -314,4 +314,3 @@ func TestBASPointRepository_Integration(t *testing.T) {
 		assert.NotNil(t, point)
 	})
 }
-

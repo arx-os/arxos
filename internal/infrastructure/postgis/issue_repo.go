@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/versioncontrol"
 	"github.com/arx-os/arxos/internal/domain/types"
 )
 
@@ -22,7 +22,7 @@ func NewIssueRepository(db *sql.DB) *IssueRepository {
 }
 
 // Create creates a new issue
-func (r *IssueRepository) Create(issue *domain.Issue) error {
+func (r *IssueRepository) Create(issue *versioncontrol.Issue) error {
 	query := `
 		INSERT INTO issues (
 			id, repository_id, title, body,
@@ -68,7 +68,7 @@ func (r *IssueRepository) Create(issue *domain.Issue) error {
 }
 
 // GetByID retrieves an issue by ID
-func (r *IssueRepository) GetByID(id types.ID) (*domain.Issue, error) {
+func (r *IssueRepository) GetByID(id types.ID) (*versioncontrol.Issue, error) {
 	query := `
 		SELECT
 			id, repository_id, number, title, body,
@@ -89,7 +89,7 @@ func (r *IssueRepository) GetByID(id types.ID) (*domain.Issue, error) {
 }
 
 // GetByNumber retrieves an issue by number
-func (r *IssueRepository) GetByNumber(repositoryID types.ID, number int) (*domain.Issue, error) {
+func (r *IssueRepository) GetByNumber(repositoryID types.ID, number int) (*versioncontrol.Issue, error) {
 	query := `
 		SELECT
 			id, repository_id, number, title, body,
@@ -110,7 +110,7 @@ func (r *IssueRepository) GetByNumber(repositoryID types.ID, number int) (*domai
 }
 
 // Update updates an existing issue
-func (r *IssueRepository) Update(issue *domain.Issue) error {
+func (r *IssueRepository) Update(issue *versioncontrol.Issue) error {
 	query := `
 		UPDATE issues SET
 			title = $1,
@@ -170,7 +170,7 @@ func (r *IssueRepository) Delete(id types.ID) error {
 }
 
 // List retrieves issues with filtering
-func (r *IssueRepository) List(filter domain.IssueFilter, limit, offset int) ([]*domain.Issue, error) {
+func (r *IssueRepository) List(filter versioncontrol.IssueFilter, limit, offset int) ([]*versioncontrol.Issue, error) {
 	query, args := r.buildListQuery(filter, limit, offset)
 
 	rows, err := r.db.Query(query, args...)
@@ -179,7 +179,7 @@ func (r *IssueRepository) List(filter domain.IssueFilter, limit, offset int) ([]
 	}
 	defer rows.Close()
 
-	issues := make([]*domain.Issue, 0)
+	issues := make([]*versioncontrol.Issue, 0)
 	for rows.Next() {
 		issue, err := r.scanIssue(rows)
 		if err != nil {
@@ -192,7 +192,7 @@ func (r *IssueRepository) List(filter domain.IssueFilter, limit, offset int) ([]
 }
 
 // Count counts issues matching filter
-func (r *IssueRepository) Count(filter domain.IssueFilter) (int, error) {
+func (r *IssueRepository) Count(filter versioncontrol.IssueFilter) (int, error) {
 	query, args := r.buildCountQuery(filter)
 
 	var count int
@@ -201,45 +201,45 @@ func (r *IssueRepository) Count(filter domain.IssueFilter) (int, error) {
 }
 
 // ListOpen retrieves all open issues for a repository
-func (r *IssueRepository) ListOpen(repositoryID types.ID) ([]*domain.Issue, error) {
-	status := domain.IssueStatusOpen
-	return r.List(domain.IssueFilter{
+func (r *IssueRepository) ListOpen(repositoryID types.ID) ([]*versioncontrol.Issue, error) {
+	status := versioncontrol.IssueStatusOpen
+	return r.List(versioncontrol.IssueFilter{
 		RepositoryID: &repositoryID,
 		Status:       &status,
 	}, 100, 0)
 }
 
 // ListAssigned retrieves all issues assigned to a user
-func (r *IssueRepository) ListAssigned(userID types.ID) ([]*domain.Issue, error) {
-	return r.List(domain.IssueFilter{
+func (r *IssueRepository) ListAssigned(userID types.ID) ([]*versioncontrol.Issue, error) {
+	return r.List(versioncontrol.IssueFilter{
 		AssignedTo: &userID,
 	}, 100, 0)
 }
 
 // ListByRoom retrieves all issues for a room
-func (r *IssueRepository) ListByRoom(roomID types.ID) ([]*domain.Issue, error) {
-	return r.List(domain.IssueFilter{
+func (r *IssueRepository) ListByRoom(roomID types.ID) ([]*versioncontrol.Issue, error) {
+	return r.List(versioncontrol.IssueFilter{
 		RoomID: &roomID,
 	}, 100, 0)
 }
 
 // ListByEquipment retrieves all issues for equipment
-func (r *IssueRepository) ListByEquipment(equipmentID types.ID) ([]*domain.Issue, error) {
-	return r.List(domain.IssueFilter{
+func (r *IssueRepository) ListByEquipment(equipmentID types.ID) ([]*versioncontrol.Issue, error) {
+	return r.List(versioncontrol.IssueFilter{
 		EquipmentID: &equipmentID,
 	}, 100, 0)
 }
 
 // ListUnverified retrieves resolved but unverified issues
-func (r *IssueRepository) ListUnverified(repositoryID types.ID) ([]*domain.Issue, error) {
-	return r.List(domain.IssueFilter{
+func (r *IssueRepository) ListUnverified(repositoryID types.ID) ([]*versioncontrol.Issue, error) {
+	return r.List(versioncontrol.IssueFilter{
 		RepositoryID: &repositoryID,
 		Unverified:   true,
 	}, 100, 0)
 }
 
 // UpdateStatus updates the status of an issue
-func (r *IssueRepository) UpdateStatus(id types.ID, status domain.IssueStatus) error {
+func (r *IssueRepository) UpdateStatus(id types.ID, status versioncontrol.IssueStatus) error {
 	query := `UPDATE issues SET status = $1, updated_at = NOW() WHERE id = $2`
 	_, err := r.db.Exec(query, status, id.String())
 	return err
@@ -304,7 +304,7 @@ func (r *IssueRepository) Reopen(id types.ID) error {
 }
 
 // buildListQuery builds a dynamic issue list query
-func (r *IssueRepository) buildListQuery(filter domain.IssueFilter, limit, offset int) (string, []interface{}) {
+func (r *IssueRepository) buildListQuery(filter versioncontrol.IssueFilter, limit, offset int) (string, []any) {
 	query := `
 		SELECT
 			id, repository_id, number, title, body,
@@ -321,7 +321,7 @@ func (r *IssueRepository) buildListQuery(filter domain.IssueFilter, limit, offse
 		WHERE 1=1
 	`
 
-	args := make([]interface{}, 0)
+	args := make([]any, 0)
 	argCount := 1
 
 	if filter.RepositoryID != nil {
@@ -405,10 +405,10 @@ func (r *IssueRepository) buildListQuery(filter domain.IssueFilter, limit, offse
 }
 
 // buildCountQuery builds a count query
-func (r *IssueRepository) buildCountQuery(filter domain.IssueFilter) (string, []interface{}) {
+func (r *IssueRepository) buildCountQuery(filter versioncontrol.IssueFilter) (string, []any) {
 	query := `SELECT COUNT(*) FROM issues WHERE 1=1`
 
-	args := make([]interface{}, 0)
+	args := make([]any, 0)
 	argCount := 1
 
 	if filter.RepositoryID != nil {
@@ -438,9 +438,9 @@ func (r *IssueRepository) buildCountQuery(filter domain.IssueFilter) (string, []
 
 // scanIssue scans a row into an Issue entity
 func (r *IssueRepository) scanIssue(scanner interface {
-	Scan(dest ...interface{}) error
-}) (*domain.Issue, error) {
-	issue := &domain.Issue{}
+	Scan(dest ...any) error
+}) (*versioncontrol.Issue, error) {
+	issue := &versioncontrol.Issue{}
 	var body, locationDesc sql.NullString
 	var buildingID, floorID, roomID, equipmentID, basPointID sql.NullString
 	var assignedTo, assignedTeam, branchID, prID sql.NullString
@@ -513,7 +513,7 @@ func (r *IssueRepository) scanIssue(scanner interface {
 		issue.PRID = &id
 	}
 	if reportedVia.Valid {
-		via := domain.ReportedVia(reportedVia.String)
+		via := versioncontrol.ReportedVia(reportedVia.String)
 		issue.ReportedVia = &via
 	}
 	if resolvedBy.Valid {
@@ -535,7 +535,7 @@ func (r *IssueRepository) scanIssue(scanner interface {
 
 	// Unmarshal metadata JSON
 	if len(metadataJSON) > 0 {
-		issue.Metadata = make(map[string]interface{})
+		issue.Metadata = make(map[string]any)
 		if err := json.Unmarshal(metadataJSON, &issue.Metadata); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
 		}
@@ -545,7 +545,7 @@ func (r *IssueRepository) scanIssue(scanner interface {
 }
 
 // nullableReportedVia converts a pointer to ReportedVia to sql.NullString
-func nullableReportedVia(via *domain.ReportedVia) sql.NullString {
+func nullableReportedVia(via *versioncontrol.ReportedVia) sql.NullString {
 	if via == nil {
 		return sql.NullString{Valid: false}
 	}

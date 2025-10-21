@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/config"
+	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/infrastructure/cache"
 	"github.com/spf13/cobra"
 )
@@ -25,6 +26,7 @@ type Logger interface {
 	Warn(msg string, fields ...any)
 	Error(msg string, fields ...any)
 	Fatal(msg string, fields ...any)
+	WithFields(fields map[string]any) domain.Logger
 }
 
 // SimpleLogger implements Logger interface
@@ -49,6 +51,11 @@ func (l *SimpleLogger) Error(msg string, fields ...any) {
 func (l *SimpleLogger) Fatal(msg string, fields ...any) {
 	fmt.Printf("[FATAL] %s\n", msg)
 	os.Exit(1)
+}
+
+func (l *SimpleLogger) WithFields(fields map[string]any) domain.Logger {
+	// Simple logger doesn't support fields, return self
+	return l
 }
 
 // NewCacheMigrationScript creates a new migration script

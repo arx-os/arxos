@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"github.com/arx-os/arxos/internal/domain/versioncontrol"
 	"context"
 	"database/sql"
 	"fmt"
@@ -15,7 +16,9 @@ import (
 	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/arx-os/arxos/internal/infrastructure"
 	"github.com/arx-os/arxos/internal/infrastructure/postgis"
-	"github.com/arx-os/arxos/internal/usecase"
+	buildinguc "github.com/arx-os/arxos/internal/usecase/building"
+	vcuc "github.com/arx-os/arxos/internal/usecase/versioncontrol"
+	"github.com/arx-os/arxos/internal/usecase/building"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -463,10 +466,10 @@ type RepositoryCollection struct {
 	FloorRepo     domain.FloorRepository
 	RoomRepo      domain.RoomRepository
 	EquipmentRepo domain.EquipmentRepository
-	BranchRepo    domain.BranchRepository
-	CommitRepo    domain.CommitRepository
-	PRRepo        domain.PullRequestRepository
-	IssueRepo     domain.IssueRepository
+	BranchRepo    versioncontrol.BranchRepository
+	CommitRepo    versioncontrol.CommitRepository
+	PRRepo        versioncontrol.PullRequestRepository
+	IssueRepo     versioncontrol.IssueRepository
 }
 
 // SetupRepositories creates all repository instances for testing
@@ -484,8 +487,8 @@ func SetupRepositories(db *sql.DB) *RepositoryCollection {
 }
 
 // SetupBuildingUseCase creates a BuildingUseCase for testing
-func SetupBuildingUseCase(repos *RepositoryCollection, logger domain.Logger) *usecase.BuildingUseCase {
-	return usecase.NewBuildingUseCase(
+func SetupBuildingUseCase(repos *RepositoryCollection, logger domain.Logger) *building.BuildingUseCase {
+	return buildinguc.NewBuildingUseCase(
 		repos.BuildingRepo,
 		repos.EquipmentRepo,
 		logger,
@@ -493,8 +496,8 @@ func SetupBuildingUseCase(repos *RepositoryCollection, logger domain.Logger) *us
 }
 
 // SetupEquipmentUseCase creates an EquipmentUseCase for testing
-func SetupEquipmentUseCase(repos *RepositoryCollection, logger domain.Logger) *usecase.EquipmentUseCase {
-	return usecase.NewEquipmentUseCase(
+func SetupEquipmentUseCase(repos *RepositoryCollection, logger domain.Logger) *building.EquipmentUseCase {
+	return buildinguc.NewEquipmentUseCase(
 		repos.EquipmentRepo,
 		repos.BuildingRepo,
 		repos.FloorRepo,
@@ -504,8 +507,8 @@ func SetupEquipmentUseCase(repos *RepositoryCollection, logger domain.Logger) *u
 }
 
 // SetupBranchUseCase creates a BranchUseCase for testing
-func SetupBranchUseCase(repos *RepositoryCollection, logger domain.Logger) *usecase.BranchUseCase {
-	return usecase.NewBranchUseCase(
+func SetupBranchUseCase(repos *RepositoryCollection, logger domain.Logger) *vcuc.BranchUseCase {
+	return vcuc.NewBranchUseCase(
 		repos.BranchRepo,
 		repos.CommitRepo,
 		logger,
@@ -513,8 +516,8 @@ func SetupBranchUseCase(repos *RepositoryCollection, logger domain.Logger) *usec
 }
 
 // SetupCommitUseCase creates a CommitUseCase for testing
-func SetupCommitUseCase(repos *RepositoryCollection, logger domain.Logger) *usecase.CommitUseCase {
-	return usecase.NewCommitUseCase(
+func SetupCommitUseCase(repos *RepositoryCollection, logger domain.Logger) *vcuc.CommitUseCase {
+	return vcuc.NewCommitUseCase(
 		repos.CommitRepo,
 		repos.BranchRepo,
 		logger,
@@ -522,8 +525,8 @@ func SetupCommitUseCase(repos *RepositoryCollection, logger domain.Logger) *usec
 }
 
 // SetupPullRequestUseCase creates a PullRequestUseCase for testing
-func SetupPullRequestUseCase(repos *RepositoryCollection, db *sql.DB, logger domain.Logger) *usecase.PullRequestUseCase {
-	return usecase.NewPullRequestUseCase(
+func SetupPullRequestUseCase(repos *RepositoryCollection, db *sql.DB, logger domain.Logger) *vcuc.PullRequestUseCase {
+	return vcuc.NewPullRequestUseCase(
 		repos.PRRepo,
 		repos.BranchRepo,
 		repos.CommitRepo,
@@ -535,11 +538,11 @@ func SetupPullRequestUseCase(repos *RepositoryCollection, db *sql.DB, logger dom
 // SetupIssueUseCase creates an IssueUseCase for testing
 func SetupIssueUseCase(
 	repos *RepositoryCollection,
-	prUC *usecase.PullRequestUseCase,
-	branchUC *usecase.BranchUseCase,
+	prUC *vcuc.PullRequestUseCase,
+	branchUC *vcuc.BranchUseCase,
 	logger domain.Logger,
-) *usecase.IssueUseCase {
-	return usecase.NewIssueUseCase(
+) *vcuc.IssueUseCase {
+	return vcuc.NewIssueUseCase(
 		repos.IssueRepo,
 		branchUC,
 		prUC,

@@ -12,19 +12,19 @@ import (
 
 	"github.com/arx-os/arxos/internal/domain"
 	domaintypes "github.com/arx-os/arxos/internal/domain/types"
-	"github.com/arx-os/arxos/internal/usecase"
+	"github.com/arx-os/arxos/internal/usecase/building"
 )
 
 // EquipmentHandler handles equipment-related HTTP requests
 type EquipmentHandler struct {
 	BaseHandler
-	equipmentUC      *usecase.EquipmentUseCase
+	equipmentUC      *building.EquipmentUseCase
 	relationshipRepo domain.RelationshipRepository
 	logger           domain.Logger
 }
 
 // NewEquipmentHandler creates a new equipment handler
-func NewEquipmentHandler(base BaseHandler, equipmentUC *usecase.EquipmentUseCase, relationshipRepo domain.RelationshipRepository, logger domain.Logger) *EquipmentHandler {
+func NewEquipmentHandler(base BaseHandler, equipmentUC *building.EquipmentUseCase, relationshipRepo domain.RelationshipRepository, logger domain.Logger) *EquipmentHandler {
 	return &EquipmentHandler{
 		BaseHandler:      base,
 		equipmentUC:      equipmentUC,

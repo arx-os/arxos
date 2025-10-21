@@ -6,7 +6,14 @@ import (
 	"os"
 
 	"github.com/arx-os/arxos/internal/app"
-	"github.com/arx-os/arxos/internal/cli/commands"
+	"github.com/arx-os/arxos/internal/cli/commands/building"
+	"github.com/arx-os/arxos/internal/cli/commands/component"
+	"github.com/arx-os/arxos/internal/cli/commands/integration"
+	"github.com/arx-os/arxos/internal/cli/commands/spatial"
+	"github.com/arx-os/arxos/internal/cli/commands/system"
+	"github.com/arx-os/arxos/internal/cli/commands/user"
+	"github.com/arx-os/arxos/internal/cli/commands/utility"
+	"github.com/arx-os/arxos/internal/cli/commands/versioncontrol"
 	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/spf13/cobra"
@@ -126,84 +133,84 @@ func (a *App) wireCommands() {
 	serviceContext := a.container
 
 	// System management commands
-	a.rootCmd.AddCommand(commands.CreateInitCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.CreateInstallCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.CreateHealthCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.CreateMigrateCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.CreateConfigCommand(serviceContext))
+	a.rootCmd.AddCommand(system.CreateInitCommand(serviceContext))
+	a.rootCmd.AddCommand(system.CreateInstallCommand(serviceContext))
+	a.rootCmd.AddCommand(system.CreateHealthCommand(serviceContext))
+	a.rootCmd.AddCommand(system.CreateMigrateCommand(serviceContext))
+	a.rootCmd.AddCommand(system.CreateConfigCommand(serviceContext))
 
 	// Repository management commands
-	a.rootCmd.AddCommand(commands.CreateRepoCommand(serviceContext))
+	a.rootCmd.AddCommand(versioncontrol.CreateRepoCommand(serviceContext))
 
 	// Building management commands
-	a.rootCmd.AddCommand(commands.CreateBuildingCommands(serviceContext))
+	a.rootCmd.AddCommand(building.CreateBuildingCommands(serviceContext))
 
 	// Floor management commands
-	a.rootCmd.AddCommand(commands.CreateFloorCommands(serviceContext))
+	a.rootCmd.AddCommand(building.CreateFloorCommands(serviceContext))
 
 	// Room management commands
-	a.rootCmd.AddCommand(commands.CreateRoomCommands(serviceContext))
+	a.rootCmd.AddCommand(building.CreateRoomCommands(serviceContext))
 
 	// Equipment management commands
-	a.rootCmd.AddCommand(commands.CreateEquipmentCommands(serviceContext))
+	a.rootCmd.AddCommand(building.CreateEquipmentCommands(serviceContext))
 
 	// User management commands
-	a.rootCmd.AddCommand(commands.CreateUserCommands(serviceContext))
+	a.rootCmd.AddCommand(user.CreateUserCommands(serviceContext))
 
 	// Spatial query commands
-	a.rootCmd.AddCommand(commands.CreateSpatialCommands(serviceContext))
+	a.rootCmd.AddCommand(spatial.CreateSpatialCommands(serviceContext))
 
 	// Component management commands
-	a.rootCmd.AddCommand(commands.CreateComponentCommands(serviceContext))
+	a.rootCmd.AddCommand(component.CreateComponentCommands(serviceContext))
 
 	// BAS/BMS integration commands
-	a.rootCmd.AddCommand(commands.NewBASCommand(serviceContext))
+	a.rootCmd.AddCommand(integration.NewBASCommand(serviceContext))
 
 	// Git workflow commands
-	a.rootCmd.AddCommand(commands.NewBranchCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.NewCheckoutCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.NewMergeCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.NewLogCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.NewDiffCommand(serviceContext))
+	a.rootCmd.AddCommand(versioncontrol.NewBranchCommand(serviceContext))
+	a.rootCmd.AddCommand(versioncontrol.NewCheckoutCommand(serviceContext))
+	a.rootCmd.AddCommand(versioncontrol.NewMergeCommand(serviceContext))
+	a.rootCmd.AddCommand(versioncontrol.NewLogCommand(serviceContext))
+	a.rootCmd.AddCommand(versioncontrol.NewDiffCommand(serviceContext))
 
 	// Pull request commands (CMMS workflow)
-	a.rootCmd.AddCommand(commands.NewPRCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.NewIssueCommand(serviceContext))
+	a.rootCmd.AddCommand(versioncontrol.NewPRCommand(serviceContext))
+	a.rootCmd.AddCommand(versioncontrol.NewIssueCommand(serviceContext))
 
 	// Contributor management commands
-	a.rootCmd.AddCommand(commands.NewContributorCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.NewTeamCommand(serviceContext))
+	a.rootCmd.AddCommand(user.NewContributorCommand(serviceContext))
+	a.rootCmd.AddCommand(user.NewTeamCommand(serviceContext))
 
 	// CADTUI command
-	a.rootCmd.AddCommand(commands.CreateCADTUICommand(serviceContext))
+	a.rootCmd.AddCommand(component.CreateCADTUICommand(serviceContext))
 
 	// Import/Export commands
-	a.rootCmd.AddCommand(commands.CreateImportCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.CreateExportCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.CreateConvertCommand(serviceContext))
+	a.rootCmd.AddCommand(integration.CreateImportCommand(serviceContext))
+	a.rootCmd.AddCommand(integration.CreateExportCommand(serviceContext))
+	a.rootCmd.AddCommand(integration.CreateConvertCommand(serviceContext))
 
 	// Data operations
-	a.rootCmd.AddCommand(commands.CreateQueryCommand(serviceContext))
+	a.rootCmd.AddCommand(utility.CreateQueryCommand(serviceContext))
 
 	// Path-based query commands (universal naming convention)
-	a.rootCmd.AddCommand(commands.CreatePathGetCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.CreatePathQueryCommand(serviceContext))
+	a.rootCmd.AddCommand(spatial.CreatePathGetCommand(serviceContext))
+	a.rootCmd.AddCommand(spatial.CreatePathQueryCommand(serviceContext))
 
 	// CRUD operations
-	a.rootCmd.AddCommand(commands.CreateAddCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.CreateUpdateCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.CreateRemoveCommand(serviceContext))
+	a.rootCmd.AddCommand(utility.CreateAddCommand(serviceContext))
+	a.rootCmd.AddCommand(utility.CreateUpdateCommand(serviceContext))
+	a.rootCmd.AddCommand(utility.CreateRemoveCommand(serviceContext))
 
 	// Service commands
-	a.rootCmd.AddCommand(commands.CreateServeCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.CreateWatchCommand(serviceContext))
+	a.rootCmd.AddCommand(system.CreateServeCommand(serviceContext))
+	a.rootCmd.AddCommand(utility.CreateWatchCommand(serviceContext))
 
 	// Utility commands
-	a.rootCmd.AddCommand(commands.CreateTraceCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.CreateVisualizeCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.CreateRenderCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.CreateReportCommand(serviceContext))
-	a.rootCmd.AddCommand(commands.CreateVersionCommand(serviceContext))
+	a.rootCmd.AddCommand(utility.CreateTraceCommand(serviceContext))
+	a.rootCmd.AddCommand(utility.CreateVisualizeCommand(serviceContext))
+	a.rootCmd.AddCommand(utility.CreateRenderCommand(serviceContext))
+	a.rootCmd.AddCommand(utility.CreateReportCommand(serviceContext))
+	a.rootCmd.AddCommand(utility.CreateVersionCommand(serviceContext))
 }
 
 // GetConfig returns the application configuration

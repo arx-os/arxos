@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/versioncontrol"
 	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/arx-os/arxos/test/helpers"
 	"github.com/stretchr/testify/assert"
@@ -72,7 +73,7 @@ func TestPRWorkflow_Complete(t *testing.T) {
 		RepositoryID: repoID,
 		Name:         "main",
 		DisplayName:  "Main Branch",
-		BranchType:   domain.BranchTypeMain,
+		BranchType:   versioncontrol.BranchTypeMain,
 		CreatedBy:    &userID,
 	})
 	require.NoError(t, err)
@@ -85,7 +86,7 @@ func TestPRWorkflow_Complete(t *testing.T) {
 		RepositoryID: repoID,
 		Name:         "feature/test-feature",
 		DisplayName:  "Test Feature",
-		BranchType:   domain.BranchTypeFeature,
+		BranchType:   versioncontrol.BranchTypeFeature,
 		CreatedBy:    &userID,
 	})
 	require.NoError(t, err)
@@ -98,7 +99,7 @@ func TestPRWorkflow_Complete(t *testing.T) {
 		RepositoryID: repoID,
 		Name:         "dev",
 		DisplayName:  "Development Branch",
-		BranchType:   domain.BranchTypeDevelopment,
+		BranchType:   versioncontrol.BranchTypeDevelopment,
 		CreatedBy:    &userID,
 	})
 	require.NoError(t, err)
@@ -106,14 +107,14 @@ func TestPRWorkflow_Complete(t *testing.T) {
 
 	// Step 4: Create Pull Request
 	t.Log("Step 4: Creating Pull Request")
-	prReq := domain.CreatePRRequest{
+	prReq := versioncontrol.CreatePRRequest{
 		RepositoryID:   repoID,
 		Title:          "Test Feature PR",
 		Description:    "This is a test PR for integration testing",
 		SourceBranchID: featureBranch.ID,
 		TargetBranchID: devBranch.ID, // Use dev instead of main
 		PRType:         domain.PRTypeFeature,
-		Priority:       domain.PRPriorityNormal,
+		Priority:       versioncontrol.PRPriorityNormal,
 		CreatedBy:      userID,
 	}
 
@@ -121,7 +122,7 @@ func TestPRWorkflow_Complete(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, pr)
 	assert.Equal(t, "Test Feature PR", pr.Title)
-	assert.Equal(t, domain.PRStatusOpen, pr.Status)
+	assert.Equal(t, versioncontrol.PRStatusOpen, pr.Status)
 	assert.Equal(t, domain.PRTypeFeature, pr.PRType)
 	assert.False(t, pr.RequiresReview, "Dev target should not require review")
 
@@ -134,7 +135,7 @@ func TestPRWorkflow_Complete(t *testing.T) {
 
 	// Step 6: List PRs
 	t.Log("Step 6: Listing PRs")
-	filter := domain.PRFilter{
+	filter := versioncontrol.PRFilter{
 		RepositoryID: &repoID,
 	}
 	prs, err := prUC.ListPullRequests(ctx, filter, 10, 0)
@@ -149,7 +150,7 @@ func TestPRWorkflow_Complete(t *testing.T) {
 
 	// Step 8: Merge PR
 	t.Log("Step 8: Merging PR")
-	mergeReq := domain.MergePRRequest{
+	mergeReq := versioncontrol.MergePRRequest{
 		PRID:     pr.ID,
 		MergedBy: userID,
 		Message:  "Merge feature branch",
@@ -163,7 +164,7 @@ func TestPRWorkflow_Complete(t *testing.T) {
 	t.Log("Step 9: Verifying PR is merged")
 	mergedPR, err := prUC.GetPullRequest(ctx, repoID, pr.Number)
 	require.NoError(t, err)
-	assert.Equal(t, domain.PRStatusMerged, mergedPR.Status)
+	assert.Equal(t, versioncontrol.PRStatusMerged, mergedPR.Status)
 	assert.NotNil(t, mergedPR.MergedAt, "MergedAt should be set")
 
 	t.Log("✅ PR workflow test complete")
@@ -227,12 +228,12 @@ func TestIssueWorkflow_Complete(t *testing.T) {
 	// Step 2: Create Issue
 	t.Log("Step 2: Creating Issue")
 	userID := types.FromString("test-user-issue")
-	issueReq := domain.CreateIssueRequest{
+	issueReq := versioncontrol.CreateIssueRequest{
 		RepositoryID: repoID,
 		Title:        "Test outlet not working",
 		Body:         "Outlet in room 105 is not providing power",
-		IssueType:    domain.IssueTypeProblem,
-		Priority:     domain.IssuePriorityHigh,
+		IssueType:    versioncontrol.IssueTypeProblem,
+		Priority:     versioncontrol.IssuePriorityHigh,
 		ReportedBy:   userID,
 	}
 
@@ -251,7 +252,7 @@ func TestIssueWorkflow_Complete(t *testing.T) {
 
 	// Step 4: List Issues
 	t.Log("Step 4: Listing Issues")
-	filter := domain.IssueFilter{
+	filter := versioncontrol.IssueFilter{
 		RepositoryID: &repoID,
 	}
 	issues, err := issueUC.ListIssues(ctx, filter, 10, 0)
@@ -367,12 +368,12 @@ func TestPRIssueIntegration(t *testing.T) {
 	userID := types.FromString("test-user-integration")
 
 	// 1. Create issue
-	issueReq := domain.CreateIssueRequest{
+	issueReq := versioncontrol.CreateIssueRequest{
 		RepositoryID: repoID,
 		Title:        "HVAC not cooling properly",
 		Body:         "VAV damper stuck, needs adjustment",
-		IssueType:    domain.IssueTypeProblem,
-		Priority:     domain.IssuePriorityHigh,
+		IssueType:    versioncontrol.IssueTypeProblem,
+		Priority:     versioncontrol.IssuePriorityHigh,
 		ReportedBy:   userID,
 	}
 
@@ -402,7 +403,7 @@ func TestPRIssueIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	// 5. Merge PR
-	mergeReq := domain.MergePRRequest{
+	mergeReq := versioncontrol.MergePRRequest{
 		PRID:     pr.ID,
 		MergedBy: userID,
 		Message:  "Fix HVAC cooling issue",
@@ -422,7 +423,7 @@ func TestPRIssueIntegration(t *testing.T) {
 
 	finalPR, err := prUC.GetPullRequest(ctx, repoID, pr.Number)
 	require.NoError(t, err)
-	assert.Equal(t, domain.PRStatusMerged, finalPR.Status)
+	assert.Equal(t, versioncontrol.PRStatusMerged, finalPR.Status)
 
 	t.Log("✅ PR/Issue integration workflow complete")
 }

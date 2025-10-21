@@ -11,7 +11,10 @@ import (
 	"github.com/arx-os/arxos/internal/domain/component"
 	"github.com/arx-os/arxos/internal/domain/design"
 	"github.com/arx-os/arxos/internal/infrastructure/filesystem"
-	"github.com/arx-os/arxos/internal/usecase"
+	"github.com/arx-os/arxos/internal/usecase/auth"
+	"github.com/arx-os/arxos/internal/usecase/integration"
+	"github.com/arx-os/arxos/internal/usecase/versioncontrol"
+	buildinguc "github.com/arx-os/arxos/internal/usecase/building"
 )
 
 // RepositoryServiceProvider interface for repository services
@@ -21,7 +24,7 @@ type RepositoryServiceProvider interface {
 
 // IFCServiceProvider interface for IFC import services
 type IFCServiceProvider interface {
-	GetIFCService() *usecase.IFCUseCase
+	GetIFCService() *integration.IFCUseCase
 }
 
 // ServiceContext provides access to services for CLI commands
@@ -62,37 +65,37 @@ func (sc *ServiceContext) GetDesignService() design.DesignInterface {
 
 // Building Services
 // GetBuildingService returns the building service
-func (sc *ServiceContext) GetBuildingService() *usecase.BuildingUseCase {
+func (sc *ServiceContext) GetBuildingService() *buildinguc.BuildingUseCase {
 	return sc.container.GetBuildingUseCase()
 }
 
 // Equipment Services
 // GetEquipmentService returns the equipment service
-func (sc *ServiceContext) GetEquipmentService() *usecase.EquipmentUseCase {
+func (sc *ServiceContext) GetEquipmentService() *buildinguc.EquipmentUseCase {
 	return sc.container.GetEquipmentUseCase()
 }
 
 // User Services
 // GetUserService returns the user service
-func (sc *ServiceContext) GetUserService() *usecase.UserUseCase {
+func (sc *ServiceContext) GetUserService() *auth.UserUseCase {
 	return sc.container.GetUserUseCase()
 }
 
 // Organization Services
 // GetOrganizationService returns the organization service
-func (sc *ServiceContext) GetOrganizationService() *usecase.OrganizationUseCase {
+func (sc *ServiceContext) GetOrganizationService() *auth.OrganizationUseCase {
 	return sc.container.GetOrganizationUseCase()
 }
 
 // IFC Services
 // GetIFCService returns the IFC service
-func (sc *ServiceContext) GetIFCService() *usecase.IFCUseCase {
+func (sc *ServiceContext) GetIFCService() *integration.IFCUseCase {
 	return sc.container.GetIFCUseCase()
 }
 
 // Version Services
 // GetVersionService returns the version service
-func (sc *ServiceContext) GetVersionService() *usecase.VersionUseCase {
+func (sc *ServiceContext) GetVersionService() *versioncontrol.VersionUseCase {
 	return sc.container.GetVersionUseCase()
 }
 
@@ -129,9 +132,9 @@ func (sc *ServiceContext) GetHealthService() *HealthServiceImpl {
 
 // RepositoryServiceImpl implements building.RepositoryService interface
 type RepositoryServiceImpl struct {
-	repositoryUC *usecase.RepositoryUseCase
-	ifcUC        *usecase.IFCUseCase
-	versionUC    *usecase.VersionUseCase
+	repositoryUC *versioncontrol.RepositoryUseCase
+	ifcUC        *integration.IFCUseCase
+	versionUC    *versioncontrol.VersionUseCase
 	filesystem   *filesystem.RepositoryFilesystemService
 }
 
@@ -227,7 +230,7 @@ func (h *HealthServiceImpl) CheckHealth(ctx context.Context) (*HealthStatus, err
 
 	// Check database connectivity
 	if h.database != nil {
-		if err := h.database.Health(ctx); err != nil {
+		if err := h.database.Ping(); err != nil {
 			status.Checks["database"] = "unhealthy"
 			status.Overall = "unhealthy"
 			h.logger.Error("Database health check failed", "error", err)

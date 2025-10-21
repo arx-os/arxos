@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -8,6 +9,10 @@ import (
 )
 
 func TestJWTManager(t *testing.T) {
+	// Set up test environment
+	os.Setenv("ARXOS_JWT_SECRET", "test-secret-key-for-jwt-testing")
+	defer os.Unsetenv("ARXOS_JWT_SECRET")
+
 	config := DefaultJWTConfig()
 	jwtMgr, err := NewJWTManager(config)
 	if err != nil {
@@ -15,16 +20,16 @@ func TestJWTManager(t *testing.T) {
 	}
 
 	// Test token generation
-	tokenPair, err := jwtMgr.GenerateTokenPair(
-		"user123",
-		"test@example.com",
-		"testuser",
-		"admin",
-		"org123",
-		[]string{"read", "write"},
-		"session123",
-		map[string]any{"device": "mobile"},
-	)
+	tokenPair, err := jwtMgr.GenerateTokenPair(&TokenGenerationRequest{
+		UserID:         "user123",
+		Email:          "test@example.com",
+		Username:       "testuser",
+		Role:           "admin",
+		OrganizationID: "org123",
+		Permissions:    []string{"read", "write"},
+		SessionID:      "session123",
+		DeviceInfo:     map[string]any{"device": "mobile"},
+	})
 	if err != nil {
 		t.Fatalf("Failed to generate token pair: %v", err)
 	}
@@ -74,6 +79,9 @@ func TestJWTManager(t *testing.T) {
 	}
 
 	// Test expired token
+	os.Setenv("ARXOS_JWT_SECRET", "test-expired-secret-key")
+	defer os.Unsetenv("ARXOS_JWT_SECRET")
+
 	expiredConfig := DefaultJWTConfig()
 	expiredConfig.AccessTokenExpiry = -time.Hour // Expired in the past
 	expiredJwtMgr, err := NewJWTManager(expiredConfig)
@@ -81,16 +89,15 @@ func TestJWTManager(t *testing.T) {
 		t.Fatalf("Failed to create expired JWT manager: %v", err)
 	}
 
-	expiredTokenPair, err := expiredJwtMgr.GenerateTokenPair(
-		"user123",
-		"test@example.com",
-		"testuser",
-		"admin",
-		"org123",
-		[]string{"read", "write"},
-		"session123",
-		nil,
-	)
+	expiredTokenPair, err := expiredJwtMgr.GenerateTokenPair(&TokenGenerationRequest{
+		UserID:         "user123",
+		Email:          "test@example.com",
+		Username:       "testuser",
+		Role:           "admin",
+		OrganizationID: "org123",
+		Permissions:    []string{"read", "write"},
+		SessionID:      "session123",
+	})
 	if err != nil {
 		t.Fatalf("Failed to generate expired token: %v", err)
 	}
@@ -105,6 +112,9 @@ func TestJWTManager(t *testing.T) {
 }
 
 func TestPasswordManager(t *testing.T) {
+	os.Setenv("ARXOS_JWT_SECRET", "test-secret-for-password-manager")
+	defer os.Unsetenv("ARXOS_JWT_SECRET")
+
 	config := DefaultPasswordConfig()
 	pm := NewPasswordManager(config)
 
@@ -317,6 +327,9 @@ func TestAPIKeyManager(t *testing.T) {
 }
 
 func TestSessionManager(t *testing.T) {
+	os.Setenv("ARXOS_JWT_SECRET", "test-secret-for-session-manager")
+	defer os.Unsetenv("ARXOS_JWT_SECRET")
+
 	config := DefaultSessionConfig()
 	store := &mockSessionStore{}
 	jwtMgr, _ := NewJWTManager(DefaultJWTConfig())

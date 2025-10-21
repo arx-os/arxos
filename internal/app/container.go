@@ -10,6 +10,9 @@ import (
 
 	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/bas"
+	"github.com/arx-os/arxos/internal/domain/spatial"
+	"github.com/arx-os/arxos/internal/domain/versioncontrol"
 	"github.com/arx-os/arxos/internal/domain/building"
 	"github.com/arx-os/arxos/internal/domain/component"
 	"github.com/arx-os/arxos/internal/domain/design"
@@ -20,7 +23,12 @@ import (
 	"github.com/arx-os/arxos/internal/infrastructure/postgis"
 	"github.com/arx-os/arxos/internal/infrastructure/repository"
 	"github.com/arx-os/arxos/internal/interfaces/http/handlers"
-	"github.com/arx-os/arxos/internal/usecase"
+	authuc "github.com/arx-os/arxos/internal/usecase/auth"
+	buildinguc "github.com/arx-os/arxos/internal/usecase/building"
+	designuc "github.com/arx-os/arxos/internal/usecase/design"
+	"github.com/arx-os/arxos/internal/usecase/integration"
+	"github.com/arx-os/arxos/internal/usecase/services"
+	vcuc "github.com/arx-os/arxos/internal/usecase/versioncontrol"
 	"github.com/arx-os/arxos/pkg/auth"
 )
 
@@ -43,18 +51,18 @@ type Container struct {
 	roomRepo         domain.RoomRepository
 	equipmentRepo    domain.EquipmentRepository
 	organizationRepo domain.OrganizationRepository
-	spatialRepo      domain.SpatialRepository
+	spatialRepo      spatial.SpatialRepository
 	relationshipRepo domain.RelationshipRepository
 
 	// BAS repositories
-	basPointRepo  domain.BASPointRepository
-	basSystemRepo domain.BASSystemRepository
+	basPointRepo  bas.BASPointRepository
+	basSystemRepo bas.BASSystemRepository
 
 	// Git workflow repositories
-	branchRepo      domain.BranchRepository
-	commitRepo      domain.CommitRepository
-	pullRequestRepo domain.PullRequestRepository
-	issueRepo       domain.IssueRepository
+	branchRepo      versioncontrol.BranchRepository
+	commitRepo      versioncontrol.CommitRepository
+	pullRequestRepo versioncontrol.PullRequestRepository
+	issueRepo       versioncontrol.IssueRepository
 
 	// Building repository domain repositories
 	repositoryRepo building.RepositoryRepository
@@ -74,26 +82,26 @@ type Container struct {
 	ifcService         *ifc.EnhancedIFCService
 
 	// Use cases
-	userUC         *usecase.UserUseCase
-	buildingUC     *usecase.BuildingUseCase
-	floorUC        *usecase.FloorUseCase
-	roomUC         *usecase.RoomUseCase
-	equipmentUC    *usecase.EquipmentUseCase
-	organizationUC *usecase.OrganizationUseCase
+	userUC         *authuc.UserUseCase
+	buildingUC     *buildinguc.BuildingUseCase
+	floorUC        *buildinguc.FloorUseCase
+	roomUC         *buildinguc.RoomUseCase
+	equipmentUC    *buildinguc.EquipmentUseCase
+	organizationUC *authuc.OrganizationUseCase
 
 	// BAS use cases
-	basImportUC *usecase.BASImportUseCase
+	basImportUC *integration.BASImportUseCase
 
 	// Git workflow use cases
-	branchUC      *usecase.BranchUseCase
-	commitUC      *usecase.CommitUseCase
-	pullRequestUC *usecase.PullRequestUseCase
-	issueUC       *usecase.IssueUseCase
+	branchUC      *vcuc.BranchUseCase
+	commitUC      *vcuc.CommitUseCase
+	pullRequestUC *vcuc.PullRequestUseCase
+	issueUC       *vcuc.IssueUseCase
 
 	// Building repository use cases
-	repositoryUC *usecase.RepositoryUseCase
-	ifcUC        *usecase.IFCUseCase
-	versionUC    *usecase.VersionUseCase
+	repositoryUC *vcuc.RepositoryUseCase
+	ifcUC        *integration.IFCUseCase
+	versionUC    *vcuc.VersionUseCase
 
 	// Component use case
 	componentUC component.ComponentService
@@ -322,12 +330,12 @@ func (c *Container) initIFCServices(ctx context.Context) error {
 // initUseCases initializes use case layer
 func (c *Container) initUseCases(ctx context.Context) error {
 	// Core use cases
-	c.userUC = usecase.NewUserUseCase(c.userRepo, c.logger)
-	c.buildingUC = usecase.NewBuildingUseCase(c.buildingRepo, c.equipmentRepo, c.logger)
-	c.floorUC = usecase.NewFloorUseCase(c.floorRepo, c.buildingRepo, c.logger)
-	c.roomUC = usecase.NewRoomUseCase(c.roomRepo, c.floorRepo, c.buildingRepo, c.logger)
-	c.equipmentUC = usecase.NewEquipmentUseCase(c.equipmentRepo, c.buildingRepo, c.floorRepo, c.roomRepo, c.logger)
-	c.organizationUC = usecase.NewOrganizationUseCase(c.organizationRepo, c.userRepo, c.logger)
+	c.userUC = authuc.NewUserUseCase(c.userRepo, c.logger)
+	c.buildingUC = buildinguc.NewBuildingUseCase(c.buildingRepo, c.equipmentRepo, c.logger)
+	c.floorUC = buildinguc.NewFloorUseCase(c.floorRepo, c.buildingRepo, c.logger)
+	c.roomUC = buildinguc.NewRoomUseCase(c.roomRepo, c.floorRepo, c.buildingRepo, c.logger)
+	c.equipmentUC = buildinguc.NewEquipmentUseCase(c.equipmentRepo, c.buildingRepo, c.floorRepo, c.roomRepo, c.logger)
+	c.organizationUC = authuc.NewOrganizationUseCase(c.organizationRepo, c.userRepo, c.logger)
 
 	// Inject additional repositories (avoids circular dependencies)
 	c.floorUC.SetRoomRepository(c.roomRepo)
@@ -335,7 +343,7 @@ func (c *Container) initUseCases(ctx context.Context) error {
 	c.roomUC.SetEquipmentRepository(c.equipmentRepo)
 
 	// BAS use case - Wire with all dependencies
-	c.basImportUC = usecase.NewBASImportUseCase(
+	c.basImportUC = integration.NewBASImportUseCase(
 		c.basPointRepo,
 		c.basSystemRepo,
 		c.roomRepo,
@@ -345,19 +353,19 @@ func (c *Container) initUseCases(ctx context.Context) error {
 	)
 
 	// Git workflow use cases
-	c.branchUC = usecase.NewBranchUseCase(
+	c.branchUC = vcuc.NewBranchUseCase(
 		c.branchRepo,
 		c.commitRepo,
 		c.logger,
 	)
 
-	c.commitUC = usecase.NewCommitUseCase(
+	c.commitUC = vcuc.NewCommitUseCase(
 		c.commitRepo,
 		c.branchRepo,
 		c.logger,
 	)
 
-	c.pullRequestUC = usecase.NewPullRequestUseCase(
+	c.pullRequestUC = vcuc.NewPullRequestUseCase(
 		c.pullRequestRepo,
 		c.branchRepo,
 		c.commitRepo,
@@ -365,7 +373,7 @@ func (c *Container) initUseCases(ctx context.Context) error {
 		c.logger,
 	)
 
-	c.issueUC = usecase.NewIssueUseCase(
+	c.issueUC = vcuc.NewIssueUseCase(
 		c.issueRepo,
 		c.branchUC,
 		c.pullRequestUC,
@@ -373,8 +381,8 @@ func (c *Container) initUseCases(ctx context.Context) error {
 	)
 
 	// Building repository use cases
-	c.repositoryUC = usecase.NewRepositoryUseCase(c.repositoryRepo, c.versionRepo, c.ifcRepo, nil, c.logger)
-	c.ifcUC = usecase.NewIFCUseCase(
+	c.repositoryUC = vcuc.NewRepositoryUseCase(c.repositoryRepo, c.versionRepo, c.ifcRepo, nil, c.logger)
+	c.ifcUC = integration.NewIFCUseCase(
 		c.repositoryRepo,
 		c.ifcRepo,
 		nil, // validator - will be wired later
@@ -385,13 +393,13 @@ func (c *Container) initUseCases(ctx context.Context) error {
 		c.equipmentRepo,
 		c.logger,
 	)
-	c.versionUC = usecase.NewVersionUseCase(c.repositoryRepo, c.versionRepo, c.logger)
+	c.versionUC = vcuc.NewVersionUseCase(c.repositoryRepo, c.versionRepo, c.logger)
 
 	// Component use case
-	c.componentUC = usecase.NewComponentUseCase(c.componentRepo)
+	c.componentUC = buildinguc.NewComponentUseCase(c.componentRepo)
 
 	// Design use case
-	c.designUC = usecase.NewDesignUseCase(c.componentUC)
+	c.designUC = designuc.NewDesignUseCase(c.componentUC)
 
 	return nil
 }
@@ -551,31 +559,31 @@ func (c *Container) GetOrganizationHandler() *handlers.OrganizationHandler {
 	return c.organizationHandler
 }
 
-func (c *Container) GetUserUseCase() *usecase.UserUseCase {
+func (c *Container) GetUserUseCase() *authuc.UserUseCase {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.userUC
 }
 
-func (c *Container) GetBuildingUseCase() *usecase.BuildingUseCase {
+func (c *Container) GetBuildingUseCase() *buildinguc.BuildingUseCase {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.buildingUC
 }
 
-func (c *Container) GetEquipmentUseCase() *usecase.EquipmentUseCase {
+func (c *Container) GetEquipmentUseCase() *buildinguc.EquipmentUseCase {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.equipmentUC
 }
 
-func (c *Container) GetOrganizationUseCase() *usecase.OrganizationUseCase {
+func (c *Container) GetOrganizationUseCase() *authuc.OrganizationUseCase {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.organizationUC
 }
 
-func (c *Container) GetSpatialRepository() domain.SpatialRepository {
+func (c *Container) GetSpatialRepository() spatial.SpatialRepository {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.spatialRepo
@@ -588,13 +596,13 @@ func (c *Container) GetRelationshipRepository() domain.RelationshipRepository {
 }
 
 // Building repository getters
-func (c *Container) GetRepositoryUseCase() *usecase.RepositoryUseCase {
+func (c *Container) GetRepositoryUseCase() *vcuc.RepositoryUseCase {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.repositoryUC
 }
 
-func (c *Container) GetIFCUseCase() *usecase.IFCUseCase {
+func (c *Container) GetIFCUseCase() *integration.IFCUseCase {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.ifcUC
@@ -612,7 +620,7 @@ func (c *Container) GetNativeParser() *ifc.NativeParser {
 	return c.nativeParser
 }
 
-func (c *Container) GetIFCService() *usecase.IFCUseCase {
+func (c *Container) GetIFCService() *integration.IFCUseCase {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.ifcUC
@@ -624,7 +632,7 @@ func (c *Container) GetIFCServiceLayer() *ifc.EnhancedIFCService {
 	return c.ifcService
 }
 
-func (c *Container) GetVersionUseCase() *usecase.VersionUseCase {
+func (c *Container) GetVersionUseCase() *vcuc.VersionUseCase {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.versionUC
@@ -663,20 +671,20 @@ func (c *Container) GetDataManager() *filesystem.DataManager {
 }
 
 // BAS use case getters
-func (c *Container) GetBASImportUseCase() *usecase.BASImportUseCase {
+func (c *Container) GetBASImportUseCase() *integration.BASImportUseCase {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.basImportUC
 }
 
 // Git workflow use case getters
-func (c *Container) GetBranchUseCase() *usecase.BranchUseCase {
+func (c *Container) GetBranchUseCase() *vcuc.BranchUseCase {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.branchUC
 }
 
-func (c *Container) GetCommitUseCase() *usecase.CommitUseCase {
+func (c *Container) GetCommitUseCase() *vcuc.CommitUseCase {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.commitUC
@@ -684,38 +692,38 @@ func (c *Container) GetCommitUseCase() *usecase.CommitUseCase {
 
 // GetDiffService returns the diff service
 // TODO: Implement full DiffService with snapshot, object, and tree repositories
-func (c *Container) GetDiffService() *usecase.DiffService {
+func (c *Container) GetDiffService() *services.DiffService {
 	// For now, return nil - diff functionality requires additional repo wiring
 	// The VC handler has placeholder response for diff endpoint
 	return nil
 }
 
-func (c *Container) GetPullRequestUseCase() *usecase.PullRequestUseCase {
+func (c *Container) GetPullRequestUseCase() *vcuc.PullRequestUseCase {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.pullRequestUC
 }
 
-func (c *Container) GetIssueUseCase() *usecase.IssueUseCase {
+func (c *Container) GetIssueUseCase() *vcuc.IssueUseCase {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.issueUC
 }
 
 // Repository getters
-func (c *Container) GetBASPointRepository() domain.BASPointRepository {
+func (c *Container) GetBASPointRepository() bas.BASPointRepository {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.basPointRepo
 }
 
-func (c *Container) GetBASSystemRepository() domain.BASSystemRepository {
+func (c *Container) GetBASSystemRepository() bas.BASSystemRepository {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.basSystemRepo
 }
 
-func (c *Container) GetBranchRepository() domain.BranchRepository {
+func (c *Container) GetBranchRepository() versioncontrol.BranchRepository {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.branchRepo
@@ -734,14 +742,14 @@ func (c *Container) GetRoomRepository() domain.RoomRepository {
 }
 
 // GetFloorUseCase returns the floor use case
-func (c *Container) GetFloorUseCase() *usecase.FloorUseCase {
+func (c *Container) GetFloorUseCase() *buildinguc.FloorUseCase {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.floorUC
 }
 
 // GetRoomUseCase returns the room use case
-func (c *Container) GetRoomUseCase() *usecase.RoomUseCase {
+func (c *Container) GetRoomUseCase() *buildinguc.RoomUseCase {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.roomUC

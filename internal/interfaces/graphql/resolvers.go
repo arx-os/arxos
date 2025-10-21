@@ -5,27 +5,28 @@ import (
 
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
-	"github.com/arx-os/arxos/internal/usecase"
+	"github.com/arx-os/arxos/internal/usecase/auth"
+	"github.com/arx-os/arxos/internal/usecase/building"
 	"github.com/graphql-go/graphql"
 )
 
 // Resolvers contains all GraphQL resolvers
 type Resolvers struct {
-	buildingUC     *usecase.BuildingUseCase
-	equipmentUC    *usecase.EquipmentUseCase
+	buildingUC     *building.BuildingUseCase
+	equipmentUC    *building.EquipmentUseCase
 	componentUC    any // ComponentService interface
-	userUC         *usecase.UserUseCase
-	organizationUC *usecase.OrganizationUseCase
+	userUC         *auth.UserUseCase
+	organizationUC *auth.OrganizationUseCase
 	logger         domain.Logger
 }
 
 // NewResolvers creates a new resolvers instance
 func NewResolvers(
-	buildingUC *usecase.BuildingUseCase,
-	equipmentUC *usecase.EquipmentUseCase,
+	buildingUC *building.BuildingUseCase,
+	equipmentUC *building.EquipmentUseCase,
 	componentUC any,
-	userUC *usecase.UserUseCase,
-	organizationUC *usecase.OrganizationUseCase,
+	userUC *auth.UserUseCase,
+	organizationUC *auth.OrganizationUseCase,
 	logger domain.Logger,
 ) *Resolvers {
 	return &Resolvers{

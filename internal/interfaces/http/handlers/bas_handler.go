@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	domainbas "github.com/arx-os/arxos/internal/domain/bas"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,25 +14,26 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/bas"
 	"github.com/arx-os/arxos/internal/domain/types"
-	"github.com/arx-os/arxos/internal/usecase"
+	"github.com/arx-os/arxos/internal/usecase/integration"
 )
 
 // BASHandler handles BAS (Building Automation System) HTTP requests
 type BASHandler struct {
 	BaseHandler
-	basImportUC   *usecase.BASImportUseCase
-	basPointRepo  domain.BASPointRepository
-	basSystemRepo domain.BASSystemRepository
+	basImportUC   *integration.BASImportUseCase
+	basPointRepo  bas.BASPointRepository
+	basSystemRepo bas.BASSystemRepository
 	logger        domain.Logger
 }
 
 // NewBASHandler creates a new BAS handler with proper dependency injection
 func NewBASHandler(
 	base BaseHandler,
-	basImportUC *usecase.BASImportUseCase,
-	basPointRepo domain.BASPointRepository,
-	basSystemRepo domain.BASSystemRepository,
+	basImportUC *integration.BASImportUseCase,
+	basPointRepo bas.BASPointRepository,
+	basSystemRepo bas.BASSystemRepository,
 	logger domain.Logger,
 ) *BASHandler {
 	return &BASHandler{
@@ -108,14 +110,14 @@ func (h *BASHandler) HandleImport(w http.ResponseWriter, r *http.Request) {
 
 	// Create BAS system
 	basSystemID := types.NewID()
-	basSystem := &domain.BASSystem{
+	basSystem := &bas.BASSystem{
 		ID:         basSystemID,
 		BuildingID: bid,
 		Name:       fmt.Sprintf("%s System", systemType),
 		SystemType: basSystemType,
 		Enabled:    true,
 		ReadOnly:   true,
-		Metadata:   make(map[string]interface{}),
+		Metadata:   make(map[string]any),
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),
 	}
@@ -127,7 +129,7 @@ func (h *BASHandler) HandleImport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build import request
-	importReq := domain.ImportBASPointsRequest{
+	importReq := domainbas.ImportBASPointsRequest{
 		FilePath:    tempFilePath,
 		BuildingID:  bid,
 		BASSystemID: basSystemID,
@@ -200,7 +202,7 @@ func (h *BASHandler) HandleListPoints(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// Build filter from query parameters
-	filter := domain.BASPointFilter{}
+	filter := bas.BASPointFilter{}
 
 	if buildingID := r.URL.Query().Get("building_id"); buildingID != "" {
 		bid := types.FromString(buildingID)
@@ -379,22 +381,22 @@ func (h *BASHandler) HandleMapPoint(w http.ResponseWriter, r *http.Request) {
 }
 
 // parseBASSystemType converts string to BASSystemType
-func parseBASSystemType(systemType string) domain.BASSystemType {
+func parseBASSystemType(systemType string) bas.BASSystemType {
 	systemType = strings.ToLower(systemType)
 
 	switch systemType {
 	case "metasys", "johnson_controls_metasys":
-		return domain.BASSystemTypeMetasys
+		return bas.BASSystemTypeMetasys
 	case "desigo", "siemens_desigo":
-		return domain.BASSystemTypeDesigo
+		return bas.BASSystemTypeDesigo
 	case "honeywell", "honeywell_ebi":
-		return domain.BASSystemTypeHoneywell
+		return bas.BASSystemTypeHoneywell
 	case "niagara", "tridium_niagara":
-		return domain.BASSystemTypeNiagara
+		return bas.BASSystemTypeNiagara
 	case "schneider", "schneider_electric":
-		return domain.BASSystemTypeSchneiderElectric
+		return bas.BASSystemTypeSchneiderElectric
 	default:
-		return domain.BASSystemTypeOther
+		return bas.BASSystemTypeOther
 	}
 }
 
@@ -461,7 +463,7 @@ func (h *BASHandler) HandleFindByPath(w http.ResponseWriter, r *http.Request) {
 
 	// Apply additional filters if specified
 	if mapped != "" {
-		filtered := make([]*domain.BASPoint, 0)
+		filtered := make([]*bas.BASPoint, 0)
 		isMapped := mapped == "true"
 		for _, point := range points {
 			if point.Mapped == isMapped {
@@ -472,7 +474,7 @@ func (h *BASHandler) HandleFindByPath(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if pointType != "" {
-		filtered := make([]*domain.BASPoint, 0)
+		filtered := make([]*bas.BASPoint, 0)
 		for _, point := range points {
 			if point.PointType == pointType {
 				filtered = append(filtered, point)

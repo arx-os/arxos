@@ -12,28 +12,31 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/spatial"
 	"github.com/arx-os/arxos/internal/domain/types"
-	"github.com/arx-os/arxos/internal/usecase"
+	"github.com/arx-os/arxos/internal/usecase/auth"
+	"github.com/arx-os/arxos/internal/usecase/integration"
+	"github.com/arx-os/arxos/internal/usecase/building"
 )
 
 // TestDataBuilder helps create test data for integration tests
 type TestDataBuilder struct {
-	buildingUC     *usecase.BuildingUseCase
-	equipmentUC    *usecase.EquipmentUseCase
-	userUC         *usecase.UserUseCase
-	organizationUC *usecase.OrganizationUseCase
-	componentUC    *usecase.ComponentUseCase
-	ifcUC          *usecase.IFCUseCase
+	buildingUC     *building.BuildingUseCase
+	equipmentUC    *building.EquipmentUseCase
+	userUC         *auth.UserUseCase
+	organizationUC *auth.OrganizationUseCase
+	componentUC    *building.ComponentUseCase
+	ifcUC          *integration.IFCUseCase
 }
 
 // NewTestDataBuilder creates a new test data builder
 func NewTestDataBuilder(
-	buildingUC *usecase.BuildingUseCase,
-	equipmentUC *usecase.EquipmentUseCase,
-	userUC *usecase.UserUseCase,
-	organizationUC *usecase.OrganizationUseCase,
-	componentUC *usecase.ComponentUseCase,
-	ifcUC *usecase.IFCUseCase,
+	buildingUC *building.BuildingUseCase,
+	equipmentUC *building.EquipmentUseCase,
+	userUC *auth.UserUseCase,
+	organizationUC *auth.OrganizationUseCase,
+	componentUC *building.ComponentUseCase,
+	ifcUC *integration.IFCUseCase,
 ) *TestDataBuilder {
 	return &TestDataBuilder{
 		buildingUC:     buildingUC,
@@ -130,7 +133,7 @@ func (tdb *TestDataBuilder) BuildTestBuildingsWithEquipment(ctx context.Context,
 }
 
 // BuildTestIFCData creates test IFC data
-func (tdb *TestDataBuilder) BuildTestIFCData(ctx context.Context, repositoryID string) (*domain.IFCImportResult, error) {
+func (tdb *TestDataBuilder) BuildTestIFCData(ctx context.Context, repositoryID string) (*spatial.IFCImportResult, error) {
 	// Create mock IFC data (placeholder for future use)
 	_ = []byte(fmt.Sprintf(`
 ISO-10303-21;
@@ -150,7 +153,7 @@ END-ISO-10303-21;
 
 	// Import the IFC data (this would call the actual IFC use case)
 	// For now, return a mock successful result
-	result := &domain.IFCImportResult{
+	result := &spatial.IFCImportResult{
 		Success:            true,
 		RepositoryID:       repositoryID,
 		ComponentsImported: 50 + rand.Intn(50), // Random between 50-100
@@ -169,22 +172,22 @@ END-ISO-10303-21;
 }
 
 // BuildTestSpatialData creates test spatial data
-func (tdb *TestDataBuilder) BuildTestSpatialData(ctx context.Context, equipmentID string) (*domain.SpatialAnchor, error) {
+func (tdb *TestDataBuilder) BuildTestSpatialData(ctx context.Context, equipmentID string) (*spatial.SpatialAnchor, error) {
 	// Create spatial anchor with realistic test data
-	position := &domain.SpatialLocation{
+	position := &spatial.SpatialLocation{
 		X: float64(rand.Intn(100)),
 		Y: float64(rand.Intn(100)),
 		Z: float64(rand.Intn(20)),
 	}
 
-	rotation := &domain.Quaternion{
+	rotation := &spatial.Quaternion{
 		W: 1.0,
 		X: 0,
 		Y: 0,
 		Z: 0,
 	}
 
-	anchor := &domain.SpatialAnchor{
+	anchor := &spatial.SpatialAnchor{
 		ID:               fmt.Sprintf("test-anchor-%d", rand.Intn(1000)),
 		Position:         position,
 		Rotation:         rotation,
@@ -206,28 +209,28 @@ func (tdb *TestDataBuilder) BuildTestSpatialData(ctx context.Context, equipmentI
 }
 
 // BuildTestARData creates test AR data
-func (tdb *TestDataBuilder) BuildTestARData(ctx context.Context, equipmentID string) (*domain.EquipmentAROverlay, error) {
+func (tdb *TestDataBuilder) BuildTestARData(ctx context.Context, equipmentID string) (*spatial.EquipmentAROverlay, error) {
 	// Create AR overlay with realistic test data
-	position := &domain.SpatialLocation{
+	position := &spatial.SpatialLocation{
 		X: float64(rand.Intn(100)),
 		Y: float64(rand.Intn(100)),
 		Z: float64(rand.Intn(20)),
 	}
 
-	rotation := &domain.Quaternion{
+	rotation := &spatial.Quaternion{
 		W: 1.0,
 		X: 0,
 		Y: 0,
 		Z: 0,
 	}
 
-	scale := &domain.SpatialLocation{
+	scale := &spatial.SpatialLocation{
 		X: 1.0,
 		Y: 1.0,
 		Z: 1.0,
 	}
 
-	arVisibility := domain.ARVisibility{
+	arVisibility := spatial.ARVisibility{
 		IsVisible:           true,
 		Distance:            float64(rand.Intn(50)),        // Random distance 0-50 meters
 		OcclusionLevel:      float64(rand.Intn(100)) / 100, // Random 0-1
@@ -237,7 +240,7 @@ func (tdb *TestDataBuilder) BuildTestARData(ctx context.Context, equipmentID str
 		LastVisibilityCheck: time.Now(),
 	}
 
-	metadata := domain.EquipmentARMetadata{
+	metadata := spatial.EquipmentARMetadata{
 		Name:         fmt.Sprintf("Test AR Equipment %d", rand.Intn(1000)),
 		Type:         "HVAC",
 		Model:        fmt.Sprintf("AR Model %d", rand.Intn(1000)),
@@ -248,7 +251,7 @@ func (tdb *TestDataBuilder) BuildTestARData(ctx context.Context, equipmentID str
 		Attrs:        map[string]any{"test": true, "generated": true},
 	}
 
-	overlay := &domain.EquipmentAROverlay{
+	overlay := &spatial.EquipmentAROverlay{
 		EquipmentID:  equipmentID,
 		Position:     position,
 		Rotation:     rotation,
@@ -267,15 +270,15 @@ func (tdb *TestDataBuilder) BuildTestARData(ctx context.Context, equipmentID str
 }
 
 // BuildTestNavigationData creates test navigation data
-func (tdb *TestDataBuilder) BuildTestNavigationData(ctx context.Context, from, to *domain.SpatialLocation) (*domain.ARNavigationPath, error) {
+func (tdb *TestDataBuilder) BuildTestNavigationData(ctx context.Context, from, to *spatial.SpatialLocation) (*spatial.ARNavigationPath, error) {
 	// Create waypoints between from and to
 	numWaypoints := 5
 
-	waypoints := make([]*domain.SpatialLocation, 0, numWaypoints+1)
+	waypoints := make([]*spatial.SpatialLocation, 0, numWaypoints+1)
 
 	for i := 0; i <= numWaypoints; i++ {
 		t := float64(i) / float64(numWaypoints)
-		waypoint := &domain.SpatialLocation{
+		waypoint := &spatial.SpatialLocation{
 			X: from.X + (to.X-from.X)*t,
 			Y: from.Y + (to.Y-from.Y)*t,
 			Z: from.Z + (to.Z-from.Z)*t,
@@ -293,21 +296,21 @@ func (tdb *TestDataBuilder) BuildTestNavigationData(ctx context.Context, from, t
 	}
 
 	// Create AR instructions for each waypoint
-	var instructions []domain.ARInstruction
+	var instructions []spatial.ARInstruction
 	for i, waypoint := range waypoints {
 		instructionType := "move"
 		if i == len(waypoints)-1 {
 			instructionType = "stop"
 		}
 
-		instructions = append(instructions, domain.ARInstruction{
+		instructions = append(instructions, spatial.ARInstruction{
 			ID:                fmt.Sprintf("instruction-%d", i),
 			Type:              instructionType,
 			Position:          waypoint,
 			Description:       fmt.Sprintf("Move to waypoint %d", i+1),
 			EstimatedDuration: 5.0, // 5 seconds per instruction
 			Priority:          "medium",
-			ARVisualization: domain.ARVisualization{
+			ARVisualization: spatial.ARVisualization{
 				Type:      "arrow",
 				Color:     "#00ff00",
 				Size:      1.0,
@@ -318,12 +321,12 @@ func (tdb *TestDataBuilder) BuildTestNavigationData(ctx context.Context, from, t
 		})
 	}
 
-	path := &domain.ARNavigationPath{
+	path := &spatial.ARNavigationPath{
 		ID:             fmt.Sprintf("nav-path-%d", rand.Intn(1000)),
 		Waypoints:      waypoints,
 		Distance:       totalDistance,
 		EstimatedTime:  totalDistance / 1.4,         // Walking speed in mm/s
-		Obstacles:      []*domain.SpatialLocation{}, // No obstacles for simplicity
+		Obstacles:      []*spatial.SpatialLocation{}, // No obstacles for simplicity
 		ARInstructions: instructions,
 		Difficulty:     "easy",
 		Accessibility:  true,
@@ -335,12 +338,12 @@ func (tdb *TestDataBuilder) BuildTestNavigationData(ctx context.Context, from, t
 }
 
 // BuildTestPerformanceData creates test performance data
-func (tdb *TestDataBuilder) BuildTestPerformanceData(ctx context.Context, sessionID string) (*domain.ARSessionMetrics, error) {
+func (tdb *TestDataBuilder) BuildTestPerformanceData(ctx context.Context, sessionID string) (*spatial.ARSessionMetrics, error) {
 	// Create performance metrics with realistic test data
 	startTime := time.Now().Add(-time.Hour)
 	endTime := time.Now()
 
-	metrics := &domain.ARSessionMetrics{
+	metrics := &spatial.ARSessionMetrics{
 		SessionID:                 sessionID,
 		StartTime:                 startTime,
 		EndTime:                   endTime,

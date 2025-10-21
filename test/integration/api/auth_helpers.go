@@ -47,18 +47,16 @@ func NewTestAuthHelper(t *testing.T, server *httptest.Server, jwtManager *auth.J
 func (h *TestAuthHelper) generateToken(t *testing.T) {
 	t.Helper()
 
-	tokenPair, err := h.jwtManager.GenerateTokenPair(
-		h.userID,
-		h.email,
-		"Test User",
-		h.role,
-		"", // organization ID
-		[]string{"building:read", "building:write", "building:delete", "equipment:read", "equipment:write", "equipment:delete"},
-		"", // session ID
-		map[string]any{
-			"test": true,
-		},
-	)
+	tokenPair, err := h.jwtManager.GenerateTokenPair(&auth.TokenGenerationRequest{
+		UserID:         h.userID,
+		Email:          h.email,
+		Username:       "Test User",
+		Role:           h.role,
+		OrganizationID: "",
+		Permissions:    []string{"building:read", "building:write", "building:delete", "equipment:read", "equipment:write", "equipment:delete"},
+		SessionID:      "",
+		DeviceInfo:     map[string]any{"test": true},
+	})
 	require.NoError(t, err, "Failed to generate token")
 
 	h.token = tokenPair.AccessToken

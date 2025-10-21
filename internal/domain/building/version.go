@@ -18,11 +18,6 @@ type Version struct {
 	Author       Author          `json:"author"`    // Who made the change
 	Timestamp    time.Time       `json:"timestamp"` // When version was created
 	Metadata     VersionMetadata `json:"metadata"`  // Additional metadata
-
-	// Deprecated: Use Author struct instead
-	// Kept for backward compatibility during migration
-	CreatedAt time.Time `json:"created_at,omitempty"`
-	Changes   []Change  `json:"changes,omitempty"` // Deprecated: Use Metadata.ChangeSummary
 }
 
 // Author represents the author of a version

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
+	buildinguc "github.com/arx-os/arxos/internal/usecase/building"
 )
 
 // DaemonConfig holds daemon configuration
@@ -32,7 +33,7 @@ type WatchPath struct {
 type DaemonService struct {
 	config      *DaemonConfig
 	logger      domain.Logger
-	buildingUC  *domain.BuildingService // Use case for building operations
+	buildingUC  *buildinguc.BuildingUseCase // Use case for building operations
 	fileWatcher *FileWatcher
 	processor   *FileProcessor
 	ctx         context.Context
@@ -40,7 +41,7 @@ type DaemonService struct {
 }
 
 // NewDaemonService creates a new daemon service
-func NewDaemonService(config *DaemonConfig, logger domain.Logger, buildingUC *domain.BuildingService) *DaemonService {
+func NewDaemonService(config *DaemonConfig, logger domain.Logger, buildingUC *buildinguc.BuildingUseCase) *DaemonService {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &DaemonService{

@@ -28,8 +28,8 @@ func (r *RoomRepository) Create(ctx context.Context, room *domain.Room) error {
 	`
 
 	// Convert location to PostGIS geometry if available
-	var geometry interface{}
-	var centerPoint interface{}
+	var geometry any
+	var centerPoint any
 
 	if room.Location != nil {
 		// Create center point from location
@@ -50,7 +50,7 @@ func (r *RoomRepository) Create(ctx context.Context, room *domain.Room) error {
 	}
 
 	// Use nil for zero values to satisfy CHECK constraints
-	var width, height, area interface{}
+	var width, height, area any
 	if room.Width > 0 {
 		width = room.Width
 		if room.Height > 0 {
@@ -132,6 +132,60 @@ func (r *RoomRepository) GetByID(ctx context.Context, id string) (*domain.Room, 
 	return &room, nil
 }
 
+// GetByNumber retrieves a room by floor ID and room number
+func (r *RoomRepository) GetByNumber(ctx context.Context, floorID, number string) (*domain.Room, error) {
+	query := `
+		SELECT id, floor_id, name, room_number, width, height, area,
+		       ST_X(center_point) as center_x, ST_Y(center_point) as center_y,
+		       created_at, updated_at
+		FROM rooms
+		WHERE floor_id = $1 AND room_number = $2
+	`
+
+	var room domain.Room
+	var width, height, area sql.NullFloat64
+	var centerX, centerY sql.NullFloat64
+
+	err := r.db.QueryRowContext(ctx, query, floorID, number).Scan(
+		&room.ID,
+		&room.FloorID,
+		&room.Name,
+		&room.Number,
+		&width,
+		&height,
+		&area,
+		&centerX,
+		&centerY,
+		&room.CreatedAt,
+		&room.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil // Room not found - return nil without error for duplicate check
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get room by number: %w", err)
+	}
+
+	// Set geometry fields if they exist
+	if width.Valid {
+		room.Width = width.Float64
+	}
+	if height.Valid {
+		room.Height = height.Float64
+	}
+	if centerX.Valid && centerY.Valid {
+		room.Location = &domain.Location{
+			X: centerX.Float64,
+			Y: centerY.Float64,
+			Z: 0,
+		}
+	}
+
+	return &room, nil
+}
+
 // GetByFloor retrieves all rooms on a floor
 func (r *RoomRepository) GetByFloor(ctx context.Context, floorID string) ([]*domain.Room, error) {
 	query := `
@@ -196,60 +250,6 @@ func (r *RoomRepository) GetByFloor(ctx context.Context, floorID string) ([]*dom
 }
 
 // GetByNumber retrieves a room by floor and room number
-func (r *RoomRepository) GetByNumber(ctx context.Context, floorID, number string) (*domain.Room, error) {
-	query := `
-		SELECT id, floor_id, name, room_number, created_at, updated_at
-		FROM rooms
-		WHERE floor_id = $1 AND room_number = $2
-		LIMIT 1
-	`
-
-	var room domain.Room
-
-	err := r.db.QueryRowContext(ctx, query, floorID, number).Scan(
-		&room.ID,
-		&room.FloorID,
-		&room.Name,
-		&room.Number,
-		&room.CreatedAt,
-		&room.UpdatedAt,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("room not found")
-		}
-		return nil, err
-	}
-
-	return &room, nil
-}
-
-// Update updates an existing room
-func (r *RoomRepository) Update(ctx context.Context, room *domain.Room) error {
-	query := `
-		UPDATE rooms
-		SET name = $2, room_number = $3, updated_at = $4
-		WHERE id = $1
-	`
-
-	_, err := r.db.ExecContext(ctx, query,
-		room.ID.String(),
-		room.Name,
-		room.Number,
-		room.UpdatedAt,
-	)
-
-	return err
-}
-
-// Delete deletes a room by ID
-func (r *RoomRepository) Delete(ctx context.Context, id string) error {
-	query := `DELETE FROM rooms WHERE id = $1`
-	_, err := r.db.ExecContext(ctx, query, id)
-	return err
-}
-
 // List retrieves rooms with optional filtering
 func (r *RoomRepository) List(ctx context.Context, floorID string, limit, offset int) ([]*domain.Room, error) {
 	query := `
@@ -305,6 +305,31 @@ func (r *RoomRepository) List(ctx context.Context, floorID string, limit, offset
 	}
 
 	return rooms, nil
+}
+
+// Update updates an existing room
+func (r *RoomRepository) Update(ctx context.Context, room *domain.Room) error {
+	query := `
+		UPDATE rooms
+		SET name = $2, room_number = $3, updated_at = $4
+		WHERE id = $1
+	`
+
+	_, err := r.db.ExecContext(ctx, query,
+		room.ID.String(),
+		room.Name,
+		room.Number,
+		room.UpdatedAt,
+	)
+
+	return err
+}
+
+// Delete deletes a room by ID
+func (r *RoomRepository) Delete(ctx context.Context, id string) error {
+	query := `DELETE FROM rooms WHERE id = $1`
+	_, err := r.db.ExecContext(ctx, query, id)
+	return err
 }
 
 // GetEquipment retrieves all equipment in a room

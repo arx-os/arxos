@@ -166,9 +166,9 @@ func TestCSVParser_ParseLocationText(t *testing.T) {
 	parser := NewCSVParser()
 
 	tests := []struct {
-		input          string
-		expectedFloor  string
-		expectedRoom   string
+		input            string
+		expectedFloor    string
+		expectedRoom     string
 		expectedBuilding string
 	}{
 		{"Floor 3 Room 301", "3", "301", ""},
@@ -508,4 +508,3 @@ func BenchmarkCSVParser_ParseCSV(b *testing.B) {
 		}
 	}
 }
-

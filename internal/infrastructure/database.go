@@ -73,6 +73,12 @@ func (db *Database) DB() *sqlx.DB {
 	return db.conn
 }
 
+// Ping checks if the database connection is alive
+// Implements domain.Database interface
+func (db *Database) Ping() error {
+	return db.Health(context.Background())
+}
+
 // Health checks the health of the database connection
 func (db *Database) Health(ctx context.Context) error {
 	if db.conn == nil {

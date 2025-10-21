@@ -9,21 +9,22 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/spatial"
 	"github.com/arx-os/arxos/internal/interfaces/http/types"
-	"github.com/arx-os/arxos/internal/usecase"
+	"github.com/arx-os/arxos/internal/usecase/building"
 )
 
 // SpatialHandler handles spatial and AR-related HTTP requests for mobile clients
 type SpatialHandler struct {
 	BaseHandler
-	buildingUC  *usecase.BuildingUseCase
-	equipmentUC *usecase.EquipmentUseCase
-	spatialRepo domain.SpatialRepository
+	buildingUC  *building.BuildingUseCase
+	equipmentUC *building.EquipmentUseCase
+	spatialRepo spatial.SpatialRepository
 	logger      domain.Logger
 }
 
 // NewSpatialHandler creates a new spatial handler
-func NewSpatialHandler(server *types.Server, buildingUC *usecase.BuildingUseCase, equipmentUC *usecase.EquipmentUseCase, spatialRepo domain.SpatialRepository, logger domain.Logger) *SpatialHandler {
+func NewSpatialHandler(server *types.Server, buildingUC *building.BuildingUseCase, equipmentUC *building.EquipmentUseCase, spatialRepo spatial.SpatialRepository, logger domain.Logger) *SpatialHandler {
 	return &SpatialHandler{
 		BaseHandler: nil, // Will be injected by container
 		buildingUC:  buildingUC,
@@ -85,10 +86,10 @@ func (s *SpatialHandler) HandleCreateSpaticialAnchor(w http.ResponseWriter, r *h
 	userID := r.Context().Value("user_id").(string)
 
 	// Create anchor using spatial repository
-	createReq := &domain.CreateSpatialAnchorRequest{
+	createReq := &spatial.CreateSpatialAnchorRequest{
 		BuildingID:  anchorReq.BuildingID,
 		EquipmentID: anchorReq.EquipmentID,
-		Position: domain.SpatialPosition{
+		Position: spatial.SpatialPosition{
 			X: anchorReq.Position.X,
 			Y: anchorReq.Position.Y,
 			Z: anchorReq.Position.Z,
@@ -159,7 +160,7 @@ func (s *SpatialHandler) HandleGetSpatialAnchors(w http.ResponseWriter, r *http.
 
 	// Query spatial anchors from database
 	ctx := r.Context()
-	filter := &domain.SpatialAnchorFilter{
+	filter := &spatial.SpatialAnchorFilter{
 		Limit: &limit,
 	}
 	if anchorType != "" {
@@ -256,7 +257,7 @@ func (s *SpatialHandler) HandleNearbyEquipment(w http.ResponseWriter, r *http.Re
 		}
 	}
 
-	nearbyReq := &domain.NearbyEquipmentRequest{
+	nearbyReq := &spatial.NearbyEquipmentRequest{
 		BuildingID: buildingID,
 		CenterX:    position.X,
 		CenterY:    position.Y,
@@ -269,7 +270,7 @@ func (s *SpatialHandler) HandleNearbyEquipment(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		s.logger.Error("Failed to find nearby equipment", "building_id", buildingID, "error", err)
 		// Return empty results for better UX instead of error
-		nearbyResults = []*domain.NearbyEquipmentResult{}
+		nearbyResults = []*spatial.NearbyEquipmentResult{}
 	}
 
 	// Convert to response format

@@ -80,8 +80,8 @@ type FilesDiff struct {
 // FieldChange represents a change to a single field
 type FieldChange struct {
 	Field    string      `json:"field"`
-	OldValue interface{} `json:"old_value"`
-	NewValue interface{} `json:"new_value"`
+	OldValue any `json:"old_value"`
+	NewValue any `json:"new_value"`
 	Path     string      `json:"path"` // JSON path to field (e.g., "building.name")
 }
 
@@ -214,8 +214,8 @@ type DetailedChange struct {
 	EntityName  string      `json:"entity_name,omitempty"`
 	Path        string      `json:"path"`
 	Description string      `json:"description"` // Human-readable description
-	OldValue    interface{} `json:"old_value,omitempty"`
-	NewValue    interface{} `json:"new_value,omitempty"`
+	OldValue    any `json:"old_value,omitempty"`
+	NewValue    any `json:"new_value,omitempty"`
 	Severity    string      `json:"severity"` // "info", "minor", "major", "critical"
 }
 

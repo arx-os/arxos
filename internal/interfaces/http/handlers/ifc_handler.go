@@ -12,18 +12,18 @@ import (
 
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/interfaces/http/types"
-	"github.com/arx-os/arxos/internal/usecase"
+	"github.com/arx-os/arxos/internal/usecase/integration"
 )
 
 // IFCHandler handles IFC-related HTTP requests
 type IFCHandler struct {
 	BaseHandler
-	ifcUC  *usecase.IFCUseCase
+	ifcUC  *integration.IFCUseCase
 	logger domain.Logger
 }
 
 // NewIFCHandler creates a new IFC handler
-func NewIFCHandler(server *types.Server, ifcUC *usecase.IFCUseCase, logger domain.Logger) *IFCHandler {
+func NewIFCHandler(server *types.Server, ifcUC *integration.IFCUseCase, logger domain.Logger) *IFCHandler {
 	return &IFCHandler{
 		BaseHandler: nil, // Will be injected by container
 		ifcUC:       ifcUC,

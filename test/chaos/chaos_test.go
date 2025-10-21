@@ -4,6 +4,7 @@
 package chaos
 
 import (
+	"github.com/arx-os/arxos/internal/domain/spatial"
 	"context"
 	"database/sql"
 	"fmt"

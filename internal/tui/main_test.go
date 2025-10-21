@@ -14,6 +14,7 @@ type MockDatabase struct{}
 
 func (m *MockDatabase) Connect(ctx context.Context) error        { return nil }
 func (m *MockDatabase) Close() error                             { return nil }
+func (m *MockDatabase) Ping() error                              { return nil }
 func (m *MockDatabase) Health(ctx context.Context) error         { return nil }
 func (m *MockDatabase) BeginTx(ctx context.Context) (any, error) { return nil, nil }
 func (m *MockDatabase) CommitTx(tx any) error                    { return nil }

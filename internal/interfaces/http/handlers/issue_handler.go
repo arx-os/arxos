@@ -9,21 +9,22 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/versioncontrol"
 	"github.com/arx-os/arxos/internal/domain/types"
-	"github.com/arx-os/arxos/internal/usecase"
+	vcuc "github.com/arx-os/arxos/internal/usecase/versioncontrol"
 )
 
 // IssueHandler handles Issue HTTP requests
 type IssueHandler struct {
 	BaseHandler
-	issueUC *usecase.IssueUseCase
+	issueUC *vcuc.IssueUseCase
 	logger  domain.Logger
 }
 
 // NewIssueHandler creates a new Issue handler with proper dependency injection
 func NewIssueHandler(
 	base BaseHandler,
-	issueUC *usecase.IssueUseCase,
+	issueUC *vcuc.IssueUseCase,
 	logger domain.Logger,
 ) *IssueHandler {
 	return &IssueHandler{
@@ -43,7 +44,7 @@ func (h *IssueHandler) HandleCreateIssue(w http.ResponseWriter, r *http.Request)
 	h.logger.Info("Create issue requested")
 
 	// Parse request body
-	var req domain.CreateIssueRequest
+	var req versioncontrol.CreateIssueRequest
 	if err := h.ParseRequestBody(r, &req); err != nil {
 		h.RespondError(w, http.StatusBadRequest, err)
 		return
@@ -78,18 +79,18 @@ func (h *IssueHandler) HandleListIssues(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Build filter
-	filter := domain.IssueFilter{}
+	filter := versioncontrol.IssueFilter{}
 
 	rid := types.FromString(repositoryID)
 	filter.RepositoryID = &rid
 
 	if status := r.URL.Query().Get("status"); status != "" {
-		issueStatus := domain.IssueStatus(status)
+		issueStatus := versioncontrol.IssueStatus(status)
 		filter.Status = &issueStatus
 	}
 
 	if priority := r.URL.Query().Get("priority"); priority != "" {
-		issuePriority := domain.IssuePriority(priority)
+		issuePriority := versioncontrol.IssuePriority(priority)
 		filter.Priority = &issuePriority
 	}
 
@@ -99,7 +100,7 @@ func (h *IssueHandler) HandleListIssues(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if issueType := r.URL.Query().Get("type"); issueType != "" {
-		iType := domain.IssueType(issueType)
+		iType := versioncontrol.IssueType(issueType)
 		filter.IssueType = &iType
 	}
 
@@ -251,7 +252,7 @@ func (h *IssueHandler) HandleCloseIssue(w http.ResponseWriter, r *http.Request) 
 
 	// Close issue
 	issueID := types.FromString(issueIDStr)
-	resolveReq := domain.ResolveIssueRequest{
+	resolveReq := versioncontrol.ResolveIssueRequest{
 		IssueID:         issueID,
 		ResolvedBy:      user.ID,
 		ResolutionNotes: req.ResolutionNotes,
@@ -340,7 +341,7 @@ func (h *IssueHandler) HandleResolveIssue(w http.ResponseWriter, r *http.Request
 
 	// Resolve issue
 	issueID := types.FromString(issueIDStr)
-	resolveReq := domain.ResolveIssueRequest{
+	resolveReq := versioncontrol.ResolveIssueRequest{
 		IssueID:         issueID,
 		ResolvedBy:      user.ID,
 		ResolutionNotes: req.ResolutionNotes,

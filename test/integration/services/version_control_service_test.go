@@ -14,7 +14,6 @@ import (
 	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/arx-os/arxos/internal/infrastructure/logging"
 	"github.com/arx-os/arxos/internal/infrastructure/postgis"
-	"github.com/arx-os/arxos/internal/usecase"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"

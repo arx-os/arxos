@@ -3,6 +3,8 @@ package domain
 import (
 	"fmt"
 	"time"
+
+	"github.com/arx-os/arxos/internal/domain/spatial"
 )
 
 // Domain error types for better error categorization and handling
@@ -162,7 +164,7 @@ func NewSpatialCalibrationError(message string, cause error) *DomainError {
 }
 
 // NewSpatialOutOfBoundsError creates an out of bounds error
-func NewSpatialOutOfBoundsError(location *SpatialLocation, bounds any) *DomainError {
+func NewSpatialOutOfBoundsError(location *spatial.SpatialLocation, bounds any) *DomainError {
 	return NewDomainError(ErrorTypeSpatial, "SPATIAL_OUT_OF_BOUNDS", "Spatial location is out of bounds").
 		WithContext("location", location).
 		WithContext("bounds", bounds).
@@ -489,7 +491,7 @@ func AddTimingContext(e *DomainError, startTime time.Time) {
 }
 
 // AddSpatialContext adds spatial information to error context
-func AddSpatialContext(e *DomainError, location *SpatialLocation, bounds any) {
+func AddSpatialContext(e *DomainError, location *spatial.SpatialLocation, bounds any) {
 	if e != nil && e.Context != nil {
 		e.Context["location"] = location
 		e.Context["bounds"] = bounds

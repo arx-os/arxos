@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/bas"
 	"github.com/arx-os/arxos/internal/domain/types"
 )
 
@@ -325,8 +325,8 @@ func (p *CSVParser) parseBool(value string) bool {
 }
 
 // ToBASPoints converts parsed data to domain BASPoint entities
-func (p *CSVParser) ToBASPoints(parsed *ParsedBASData, buildingID, systemID types.ID) []*domain.BASPoint {
-	points := make([]*domain.BASPoint, 0, len(parsed.Points))
+func (p *CSVParser) ToBASPoints(parsed *ParsedBASData, buildingID, systemID types.ID) []*bas.BASPoint {
+	points := make([]*bas.BASPoint, 0, len(parsed.Points))
 	now := time.Now()
 
 	for _, parsed := range parsed.Points {
@@ -335,7 +335,7 @@ func (p *CSVParser) ToBASPoints(parsed *ParsedBASData, buildingID, systemID type
 		// Will be updated to full path when mapped to room
 		basPath := fmt.Sprintf("/B1/BAS/%s", parsed.PointName)
 
-		point := &domain.BASPoint{
+		point := &bas.BASPoint{
 			ID:          types.NewID(),
 			BuildingID:  buildingID,
 			BASSystemID: systemID,
@@ -485,7 +485,7 @@ func (p *CSVParser) extractBuilding(text string) string {
 }
 
 // DetectBASSystemType attempts to detect the BAS system type from CSV content
-func (p *CSVParser) DetectBASSystemType(filePath string) (domain.BASSystemType, error) {
+func (p *CSVParser) DetectBASSystemType(filePath string) (bas.BASSystemType, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return "", err
@@ -496,37 +496,37 @@ func (p *CSVParser) DetectBASSystemType(filePath string) (domain.BASSystemType, 
 	reader := csv.NewReader(file)
 	records, err := reader.ReadAll()
 	if err != nil || len(records) == 0 {
-		return domain.BASSystemTypeOther, nil
+		return bas.BASSystemTypeOther, nil
 	}
 
 	// Check filename
 	filename := strings.ToLower(filePath)
 	if strings.Contains(filename, "metasys") {
-		return domain.BASSystemTypeMetasys, nil
+		return bas.BASSystemTypeMetasys, nil
 	}
 	if strings.Contains(filename, "desigo") || strings.Contains(filename, "siemens") {
-		return domain.BASSystemTypeDesigo, nil
+		return bas.BASSystemTypeDesigo, nil
 	}
 	if strings.Contains(filename, "honeywell") || strings.Contains(filename, "ebi") {
-		return domain.BASSystemTypeHoneywell, nil
+		return bas.BASSystemTypeHoneywell, nil
 	}
 	if strings.Contains(filename, "niagara") || strings.Contains(filename, "tridium") {
-		return domain.BASSystemTypeNiagara, nil
+		return bas.BASSystemTypeNiagara, nil
 	}
 
 	// Check header for clues
 	header := strings.ToLower(strings.Join(records[0], " "))
 	if strings.Contains(header, "metasys") {
-		return domain.BASSystemTypeMetasys, nil
+		return bas.BASSystemTypeMetasys, nil
 	}
 	if strings.Contains(header, "desigo") {
-		return domain.BASSystemTypeDesigo, nil
+		return bas.BASSystemTypeDesigo, nil
 	}
 	if strings.Contains(header, "honeywell") {
-		return domain.BASSystemTypeHoneywell, nil
+		return bas.BASSystemTypeHoneywell, nil
 	}
 
-	return domain.BASSystemTypeOther, nil
+	return bas.BASSystemTypeOther, nil
 }
 
 // ValidateCSV validates a CSV file structure before parsing

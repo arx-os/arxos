@@ -6,18 +6,19 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
-	"github.com/arx-os/arxos/internal/usecase"
+	"github.com/arx-os/arxos/internal/usecase/analytics"
+	usecaseintegration "github.com/arx-os/arxos/internal/usecase/integration"
 )
 
 // IFCProcessor processes IFC import/export jobs
 type IFCProcessor struct {
 	*BaseProcessor
-	ifcUC  *usecase.IFCUseCase
+	ifcUC  *usecaseintegration.IFCUseCase
 	logger domain.Logger
 }
 
 // NewIFCProcessor creates a new IFC processor
-func NewIFCProcessor(ifcUC *usecase.IFCUseCase, logger domain.Logger) *IFCProcessor {
+func NewIFCProcessor(ifcUC *usecaseintegration.IFCUseCase, logger domain.Logger) *IFCProcessor {
 	return &IFCProcessor{
 		BaseProcessor: NewBaseProcessor("ifc_import", logger),
 		ifcUC:         ifcUC,
@@ -129,12 +130,12 @@ func (ip *IFCProcessor) processValidate(ctx context.Context, job Job) (any, erro
 // AnalyticsProcessor processes analytics jobs
 type AnalyticsProcessor struct {
 	*BaseProcessor
-	analyticsUC *usecase.AnalyticsUseCase
+	analyticsUC *analytics.AnalyticsUseCase
 	logger      domain.Logger
 }
 
 // NewAnalyticsProcessor creates a new analytics processor
-func NewAnalyticsProcessor(analyticsUC *usecase.AnalyticsUseCase, logger domain.Logger) *AnalyticsProcessor {
+func NewAnalyticsProcessor(analyticsUC *analytics.AnalyticsUseCase, logger domain.Logger) *AnalyticsProcessor {
 	return &AnalyticsProcessor{
 		BaseProcessor: NewBaseProcessor("analytics", logger),
 		analyticsUC:   analyticsUC,

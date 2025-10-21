@@ -63,7 +63,7 @@ type Room struct {
 	Location  *Location    `json:"location,omitempty"` // Center point (x, y)
 	Width     float64      `json:"width,omitempty"`    // Width in meters
 	Height    float64      `json:"height,omitempty"`   // Height in meters (for 3D)
-	Metadata  interface{}  `json:"metadata,omitempty"` // Additional room properties
+	Metadata  any          `json:"metadata,omitempty"` // Additional room properties
 	Equipment []*Equipment `json:"equipment,omitempty"`
 	CreatedAt time.Time    `json:"created_at"`
 	UpdatedAt time.Time    `json:"updated_at"`

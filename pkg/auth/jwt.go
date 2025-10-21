@@ -8,6 +8,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"os"
 	"time"
 
 	"github.com/arx-os/arxos/pkg/errors"
@@ -32,9 +33,20 @@ type JWTConfig struct {
 }
 
 // DefaultJWTConfig returns a default JWT configuration
+// SECURITY: Always load SecretKey from environment variable ARXOS_JWT_SECRET
+// Never use default values in production
 func DefaultJWTConfig() *JWTConfig {
+	secretKey := os.Getenv("ARXOS_JWT_SECRET")
+	if secretKey == "" {
+		// Only allow empty secret in explicit development mode
+		if os.Getenv("ARXOS_ENV") != "development" {
+			panic("SECURITY ERROR: ARXOS_JWT_SECRET environment variable must be set in production. Generate a secure key with: openssl rand -base64 32")
+		}
+		secretKey = "arxos-dev-secret-only-for-local-development"
+	}
+
 	return &JWTConfig{
-		SecretKey:          "arxos-dev-secret-change-in-production",
+		SecretKey:          secretKey,
 		AccessTokenExpiry:  15 * time.Minute,
 		RefreshTokenExpiry: 7 * 24 * time.Hour, // 7 days
 		Issuer:             "arxos",
@@ -122,24 +134,36 @@ func (m *JWTManager) setupRSAKeys() error {
 	return nil
 }
 
+// TokenGenerationRequest contains all parameters needed to generate a token pair
+type TokenGenerationRequest struct {
+	UserID         string
+	Email          string
+	Username       string
+	Role           string
+	OrganizationID string
+	Permissions    []string
+	SessionID      string
+	DeviceInfo     map[string]any
+}
+
 // GenerateTokenPair creates both access and refresh tokens
-func (m *JWTManager) GenerateTokenPair(userID, email, username, role, organizationID string, permissions []string, sessionID string, deviceInfo map[string]any) (*TokenPair, error) {
+func (m *JWTManager) GenerateTokenPair(req *TokenGenerationRequest) (*TokenPair, error) {
 	now := time.Now()
 
 	// Create access token claims
 	accessClaims := &Claims{
-		UserID:         userID,
-		Email:          email,
-		Username:       username,
-		Role:           role,
-		OrganizationID: organizationID,
-		Permissions:    permissions,
-		SessionID:      sessionID,
-		DeviceInfo:     deviceInfo,
+		UserID:         req.UserID,
+		Email:          req.Email,
+		Username:       req.Username,
+		Role:           req.Role,
+		OrganizationID: req.OrganizationID,
+		Permissions:    req.Permissions,
+		SessionID:      req.SessionID,
+		DeviceInfo:     req.DeviceInfo,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    m.config.Issuer,
 			Audience:  []string{m.config.Audience},
-			Subject:   userID,
+			Subject:   req.UserID,
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(m.config.AccessTokenExpiry)),
 			NotBefore: jwt.NewNumericDate(now),
@@ -148,18 +172,18 @@ func (m *JWTManager) GenerateTokenPair(userID, email, username, role, organizati
 
 	// Create refresh token claims
 	refreshClaims := &Claims{
-		UserID:         userID,
-		Email:          email,
-		Username:       username,
-		Role:           role,
-		OrganizationID: organizationID,
-		Permissions:    permissions,
-		SessionID:      sessionID,
-		DeviceInfo:     deviceInfo,
+		UserID:         req.UserID,
+		Email:          req.Email,
+		Username:       req.Username,
+		Role:           req.Role,
+		OrganizationID: req.OrganizationID,
+		Permissions:    req.Permissions,
+		SessionID:      req.SessionID,
+		DeviceInfo:     req.DeviceInfo,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    m.config.Issuer,
 			Audience:  []string{m.config.Audience},
-			Subject:   userID,
+			Subject:   req.UserID,
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(m.config.RefreshTokenExpiry)),
 			NotBefore: jwt.NewNumericDate(now),
@@ -247,16 +271,16 @@ func (m *JWTManager) RefreshToken(refreshTokenString string) (*TokenPair, error)
 	}
 
 	// Generate new token pair
-	return m.GenerateTokenPair(
-		claims.UserID,
-		claims.Email,
-		claims.Username,
-		claims.Role,
-		claims.OrganizationID,
-		claims.Permissions,
-		claims.SessionID,
-		claims.DeviceInfo,
-	)
+	return m.GenerateTokenPair(&TokenGenerationRequest{
+		UserID:         claims.UserID,
+		Email:          claims.Email,
+		Username:       claims.Username,
+		Role:           claims.Role,
+		OrganizationID: claims.OrganizationID,
+		Permissions:    claims.Permissions,
+		SessionID:      claims.SessionID,
+		DeviceInfo:     claims.DeviceInfo,
+	})
 }
 
 // ExtractTokenFromHeader extracts token from Authorization header

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/arx-os/arxos/internal/domain/versioncontrol"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,22 +11,22 @@ import (
 
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
-	"github.com/arx-os/arxos/internal/usecase"
+	vcuc "github.com/arx-os/arxos/internal/usecase/versioncontrol"
 )
 
 // PRHandler handles Pull Request HTTP requests
 type PRHandler struct {
 	BaseHandler
-	prUC     *usecase.PullRequestUseCase
-	branchUC *usecase.BranchUseCase
+	prUC     *vcuc.PullRequestUseCase
+	branchUC *vcuc.BranchUseCase
 	logger   domain.Logger
 }
 
 // NewPRHandler creates a new PR handler with proper dependency injection
 func NewPRHandler(
 	base BaseHandler,
-	prUC *usecase.PullRequestUseCase,
-	branchUC *usecase.BranchUseCase,
+	prUC *vcuc.PullRequestUseCase,
+	branchUC *vcuc.BranchUseCase,
 	logger domain.Logger,
 ) *PRHandler {
 	return &PRHandler{
@@ -46,7 +47,7 @@ func (h *PRHandler) HandleCreatePR(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Create PR requested")
 
 	// Parse request body
-	var req domain.CreatePRRequest
+	var req versioncontrol.CreatePRRequest
 	if err := h.ParseRequestBody(r, &req); err != nil {
 		h.RespondError(w, http.StatusBadRequest, err)
 		return
@@ -81,13 +82,13 @@ func (h *PRHandler) HandleListPRs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build filter
-	filter := domain.PRFilter{}
+	filter := versioncontrol.PRFilter{}
 
 	rid := types.FromString(repositoryID)
 	filter.RepositoryID = &rid
 
 	if status := r.URL.Query().Get("status"); status != "" {
-		prStatus := domain.PRStatus(status)
+		prStatus := versioncontrol.PRStatus(status)
 		filter.Status = &prStatus
 	}
 
@@ -288,7 +289,7 @@ func (h *PRHandler) HandleMergePR(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Merge PR
-	mergeReq := domain.MergePRRequest{
+	mergeReq := versioncontrol.MergePRRequest{
 		PRID:     pr.ID,
 		MergedBy: user.ID,
 		Message:  req.Message,

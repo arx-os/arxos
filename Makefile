@@ -265,3 +265,34 @@ dev: fmt lint test ## Quick development workflow (format, lint, test)
 # Full development workflow
 full: clean deps fmt lint test build ## Full development workflow
 	@echo "Full development workflow completed!"
+
+# ==============================================================================
+# Phase 3: Mock Generation (Automation)
+# ==============================================================================
+
+.PHONY: install-mockery mocks mocks-clean mocks-verify
+
+install-mockery: ## Install mockery tool for mock generation
+	@echo "Installing mockery v2..."
+	@go install github.com/vektra/mockery/v2@latest
+	@which mockery || echo "Warning: mockery not in PATH"
+
+mocks: ## Generate mocks using mockery (requires: make install-mockery)
+	@echo "Generating mocks from interfaces..."
+	@which mockery > /dev/null || (echo "Error: mockery not installed. Run: make install-mockery" && exit 1)
+	@mockery --config .mockery.yaml
+	@echo "✅ Mocks generated successfully in internal/mocks/"
+
+mocks-clean: ## Remove all generated mocks
+	@echo "Cleaning generated mocks..."
+	@rm -rf internal/mocks/*
+	@echo "✅ Generated mocks removed"
+
+mocks-verify: ## Verify generated mocks compile
+	@echo "Verifying generated mocks..."
+	@go build ./internal/mocks/...
+	@echo "✅ Generated mocks compile successfully"
+
+mocks-all: install-mockery mocks mocks-verify ## Full mock generation workflow
+	@echo "✅ Mock generation workflow complete!"
+

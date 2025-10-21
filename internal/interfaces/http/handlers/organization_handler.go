@@ -11,18 +11,18 @@ import (
 
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
-	"github.com/arx-os/arxos/internal/usecase"
+	"github.com/arx-os/arxos/internal/usecase/auth"
 )
 
 // OrganizationHandler handles organization-related HTTP requests
 type OrganizationHandler struct {
 	BaseHandler
-	organizationUC *usecase.OrganizationUseCase
+	organizationUC *auth.OrganizationUseCase
 	logger         domain.Logger
 }
 
 // NewOrganizationHandler creates a new organization handler
-func NewOrganizationHandler(base BaseHandler, organizationUC *usecase.OrganizationUseCase, logger domain.Logger) *OrganizationHandler {
+func NewOrganizationHandler(base BaseHandler, organizationUC *auth.OrganizationUseCase, logger domain.Logger) *OrganizationHandler {
 	return &OrganizationHandler{
 		BaseHandler:    base,
 		organizationUC: organizationUC,

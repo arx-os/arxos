@@ -11,18 +11,18 @@ import (
 
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
-	"github.com/arx-os/arxos/internal/usecase"
+	"github.com/arx-os/arxos/internal/usecase/building"
 )
 
 // RoomHandler handles room-related HTTP requests
 type RoomHandler struct {
 	BaseHandler
-	roomUC *usecase.RoomUseCase
+	roomUC *building.RoomUseCase
 	logger domain.Logger
 }
 
 // NewRoomHandler creates a new room handler
-func NewRoomHandler(base BaseHandler, roomUC *usecase.RoomUseCase, logger domain.Logger) *RoomHandler {
+func NewRoomHandler(base BaseHandler, roomUC *building.RoomUseCase, logger domain.Logger) *RoomHandler {
 	return &RoomHandler{
 		BaseHandler: base,
 		roomUC:      roomUC,

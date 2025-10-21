@@ -176,12 +176,10 @@ func TestCalculateSnapshotHash(t *testing.T) {
 				FilesTree:      "files-hash-2",
 				OperationsTree: "operations-hash-2",
 				Metadata: SnapshotMetadata{
-					BuildingCount:  1,
-					FloorCount:     5,
-					RoomCount:      50,
-					EquipmentCount: 100,
-					FileCount:      10,
-					TotalSize:      1000000,
+					SpaceCount: 56, // 1 building + 5 floors + 50 rooms
+					ItemCount:  100,
+					FileCount:  10,
+					TotalSize:  1000000,
 				},
 			},
 		},
@@ -221,7 +219,7 @@ func TestCalculateSnapshotHash(t *testing.T) {
 func TestSerializeDeserializeObject(t *testing.T) {
 	tests := []struct {
 		name string
-		obj  interface{}
+		obj  any
 	}{
 		{
 			name: "tree object",
@@ -250,12 +248,10 @@ func TestSerializeDeserializeObject(t *testing.T) {
 				FilesTree:      "files-hash",
 				OperationsTree: "operations-hash",
 				Metadata: SnapshotMetadata{
-					BuildingCount:  1,
-					FloorCount:     3,
-					RoomCount:      30,
-					EquipmentCount: 50,
-					FileCount:      5,
-					TotalSize:      500000,
+					SpaceCount: 34, // 1 building + 3 floors + 30 rooms
+					ItemCount:  50,
+					FileCount:  5,
+					TotalSize:  500000,
 				},
 				CreatedAt: time.Now(),
 			},
@@ -263,12 +259,10 @@ func TestSerializeDeserializeObject(t *testing.T) {
 		{
 			name: "snapshot metadata",
 			obj: &SnapshotMetadata{
-				BuildingCount:  1,
-				FloorCount:     10,
-				RoomCount:      100,
-				EquipmentCount: 500,
-				FileCount:      50,
-				TotalSize:      10000000,
+				SpaceCount: 111, // 1 building + 10 floors + 100 rooms
+				ItemCount:  500,
+				FileCount:  50,
+				TotalSize:  10000000,
 				Checksums: map[string]string{
 					"building":  "hash1",
 					"equipment": "hash2",
@@ -291,7 +285,7 @@ func TestSerializeDeserializeObject(t *testing.T) {
 			}
 
 			// Deserialize based on type
-			var deserialized interface{}
+			var deserialized any
 			switch tt.obj.(type) {
 			case *Tree:
 				deserialized = &Tree{}

@@ -258,7 +258,7 @@ func (h *HealthHandler) checkCriticalServices(ctx context.Context) map[string]Se
 func (h *HealthHandler) checkDatabase(ctx context.Context) ServiceHealth {
 	start := time.Now()
 
-	err := h.database.Health(ctx)
+	err := h.database.Ping()
 	responseTime := time.Since(start)
 
 	status := "healthy"
@@ -280,7 +280,7 @@ func (h *HealthHandler) checkDatabase(ctx context.Context) ServiceHealth {
 func (h *HealthHandler) checkDatabaseDetailed(ctx context.Context) ServiceHealth {
 	start := time.Now()
 
-	err := h.database.Health(ctx)
+	err := h.database.Ping()
 	responseTime := time.Since(start)
 
 	status := "healthy"

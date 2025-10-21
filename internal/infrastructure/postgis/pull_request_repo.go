@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/versioncontrol"
 	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/lib/pq"
 )
@@ -23,7 +23,7 @@ func NewPullRequestRepository(db *sql.DB) *PullRequestRepository {
 }
 
 // Create creates a new pull request
-func (r *PullRequestRepository) Create(pr *domain.PullRequest) error {
+func (r *PullRequestRepository) Create(pr *versioncontrol.PullRequest) error {
 	query := `
 		INSERT INTO pull_requests (
 			id, repository_id, title, description,
@@ -68,7 +68,7 @@ func (r *PullRequestRepository) Create(pr *domain.PullRequest) error {
 }
 
 // GetByID retrieves a pull request by ID
-func (r *PullRequestRepository) GetByID(id types.ID) (*domain.PullRequest, error) {
+func (r *PullRequestRepository) GetByID(id types.ID) (*versioncontrol.PullRequest, error) {
 	query := `
 		SELECT
 			id, repository_id, number, title, description,
@@ -87,7 +87,7 @@ func (r *PullRequestRepository) GetByID(id types.ID) (*domain.PullRequest, error
 }
 
 // GetByNumber retrieves a pull request by number
-func (r *PullRequestRepository) GetByNumber(repositoryID types.ID, number int) (*domain.PullRequest, error) {
+func (r *PullRequestRepository) GetByNumber(repositoryID types.ID, number int) (*versioncontrol.PullRequest, error) {
 	query := `
 		SELECT
 			id, repository_id, number, title, description,
@@ -106,7 +106,7 @@ func (r *PullRequestRepository) GetByNumber(repositoryID types.ID, number int) (
 }
 
 // Update updates an existing pull request
-func (r *PullRequestRepository) Update(pr *domain.PullRequest) error {
+func (r *PullRequestRepository) Update(pr *versioncontrol.PullRequest) error {
 	query := `
 		UPDATE pull_requests SET
 			title = $1,
@@ -166,7 +166,7 @@ func (r *PullRequestRepository) Delete(id types.ID) error {
 }
 
 // List retrieves pull requests with filtering
-func (r *PullRequestRepository) List(filter domain.PRFilter, limit, offset int) ([]*domain.PullRequest, error) {
+func (r *PullRequestRepository) List(filter versioncontrol.PRFilter, limit, offset int) ([]*versioncontrol.PullRequest, error) {
 	query, args := r.buildListQuery(filter, limit, offset)
 
 	rows, err := r.db.Query(query, args...)
@@ -175,7 +175,7 @@ func (r *PullRequestRepository) List(filter domain.PRFilter, limit, offset int) 
 	}
 	defer rows.Close()
 
-	prs := make([]*domain.PullRequest, 0)
+	prs := make([]*versioncontrol.PullRequest, 0)
 	for rows.Next() {
 		pr, err := r.scanPR(rows)
 		if err != nil {
@@ -188,7 +188,7 @@ func (r *PullRequestRepository) List(filter domain.PRFilter, limit, offset int) 
 }
 
 // Count counts pull requests matching filter
-func (r *PullRequestRepository) Count(filter domain.PRFilter) (int, error) {
+func (r *PullRequestRepository) Count(filter versioncontrol.PRFilter) (int, error) {
 	query, args := r.buildCountQuery(filter)
 
 	var count int
@@ -197,31 +197,31 @@ func (r *PullRequestRepository) Count(filter domain.PRFilter) (int, error) {
 }
 
 // ListOpen retrieves all open PRs for a repository
-func (r *PullRequestRepository) ListOpen(repositoryID types.ID) ([]*domain.PullRequest, error) {
-	status := domain.PRStatusOpen
-	return r.List(domain.PRFilter{
+func (r *PullRequestRepository) ListOpen(repositoryID types.ID) ([]*versioncontrol.PullRequest, error) {
+	status := versioncontrol.PRStatusOpen
+	return r.List(versioncontrol.PRFilter{
 		RepositoryID: &repositoryID,
 		Status:       &status,
 	}, 100, 0)
 }
 
 // ListAssigned retrieves all PRs assigned to a user
-func (r *PullRequestRepository) ListAssigned(userID types.ID) ([]*domain.PullRequest, error) {
-	return r.List(domain.PRFilter{
+func (r *PullRequestRepository) ListAssigned(userID types.ID) ([]*versioncontrol.PullRequest, error) {
+	return r.List(versioncontrol.PRFilter{
 		AssignedTo: &userID,
 	}, 100, 0)
 }
 
 // ListOverdue retrieves overdue PRs
-func (r *PullRequestRepository) ListOverdue(repositoryID types.ID) ([]*domain.PullRequest, error) {
-	return r.List(domain.PRFilter{
+func (r *PullRequestRepository) ListOverdue(repositoryID types.ID) ([]*versioncontrol.PullRequest, error) {
+	return r.List(versioncontrol.PRFilter{
 		RepositoryID: &repositoryID,
 		Overdue:      true,
 	}, 100, 0)
 }
 
 // UpdateStatus updates the status of a PR
-func (r *PullRequestRepository) UpdateStatus(id types.ID, status domain.PRStatus) error {
+func (r *PullRequestRepository) UpdateStatus(id types.ID, status versioncontrol.PRStatus) error {
 	query := `
 		UPDATE pull_requests SET
 			status = $1,
@@ -263,7 +263,7 @@ func (r *PullRequestRepository) Close(id types.ID) error {
 }
 
 // buildListQuery builds a dynamic PR list query
-func (r *PullRequestRepository) buildListQuery(filter domain.PRFilter, limit, offset int) (string, []interface{}) {
+func (r *PullRequestRepository) buildListQuery(filter versioncontrol.PRFilter, limit, offset int) (string, []any) {
 	query := `
 		SELECT
 			id, repository_id, number, title, description,
@@ -278,7 +278,7 @@ func (r *PullRequestRepository) buildListQuery(filter domain.PRFilter, limit, of
 		WHERE 1=1
 	`
 
-	args := make([]interface{}, 0)
+	args := make([]any, 0)
 	argCount := 1
 
 	if filter.RepositoryID != nil {
@@ -344,10 +344,10 @@ func (r *PullRequestRepository) buildListQuery(filter domain.PRFilter, limit, of
 }
 
 // buildCountQuery builds a count query
-func (r *PullRequestRepository) buildCountQuery(filter domain.PRFilter) (string, []interface{}) {
+func (r *PullRequestRepository) buildCountQuery(filter versioncontrol.PRFilter) (string, []any) {
 	query := `SELECT COUNT(*) FROM pull_requests WHERE 1=1`
 
-	args := make([]interface{}, 0)
+	args := make([]any, 0)
 	argCount := 1
 
 	if filter.RepositoryID != nil {
@@ -371,9 +371,9 @@ func (r *PullRequestRepository) buildCountQuery(filter domain.PRFilter) (string,
 
 // scanPR scans a row into a PullRequest entity
 func (r *PullRequestRepository) scanPR(scanner interface {
-	Scan(dest ...interface{}) error
-}) (*domain.PullRequest, error) {
-	pr := &domain.PullRequest{}
+	Scan(dest ...any) error
+}) (*versioncontrol.PullRequest, error) {
+	pr := &versioncontrol.PullRequest{}
 	var description, assignedTo, assignedTeam sql.NullString
 	var mergedBy sql.NullString
 	var estimatedHours, actualHours, budgetAmount, actualCost sql.NullFloat64
@@ -405,7 +405,7 @@ func (r *PullRequestRepository) scanPR(scanner interface {
 			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
 		}
 	} else {
-		pr.Metadata = make(map[string]interface{})
+		pr.Metadata = make(map[string]any)
 	}
 
 	// Handle nullable fields

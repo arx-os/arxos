@@ -7,14 +7,14 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
-	"github.com/arx-os/arxos/internal/usecase"
+	authuc "github.com/arx-os/arxos/internal/usecase/auth"
 	"github.com/arx-os/arxos/pkg/auth"
 )
 
 // AuthHandler handles authentication-related HTTP requests following Clean Architecture
 type AuthHandler struct {
 	BaseHandler
-	userUC *usecase.UserUseCase
+	userUC *authuc.UserUseCase
 	jwtMgr *auth.JWTManager
 	logger domain.Logger
 }
@@ -22,7 +22,7 @@ type AuthHandler struct {
 // NewAuthHandler creates a new authentication handler with proper dependency injection
 func NewAuthHandler(
 	base BaseHandler,
-	userUC *usecase.UserUseCase,
+	userUC *authuc.UserUseCase,
 	jwtMgr *auth.JWTManager,
 	logger domain.Logger,
 ) *AuthHandler {
@@ -113,9 +113,18 @@ func (h *AuthHandler) HandleMobileLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	tokenPair, err := jwtMgr.GenerateTokenPair(user.ID.String(), user.Email, user.Name, user.Role, "", []string{"mobile_access"}, "", map[string]any{
-		"platform": "mobile",
-		"app":      "arxos_mobile",
+	tokenPair, err := jwtMgr.GenerateTokenPair(&auth.TokenGenerationRequest{
+		UserID:         user.ID.String(),
+		Email:          user.Email,
+		Username:       user.Name,
+		Role:           user.Role,
+		OrganizationID: "",
+		Permissions:    []string{"mobile_access"},
+		SessionID:      "",
+		DeviceInfo: map[string]any{
+			"platform": "mobile",
+			"app":      "arxos_mobile",
+		},
 	})
 	if err != nil {
 		h.logger.Error("Failed to generate tokens", "error", err)
@@ -217,9 +226,18 @@ func (h *AuthHandler) HandleMobileRegister(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	tokenPair, err := jwtMgr.GenerateTokenPair(user.ID.String(), user.Email, user.Name, user.Role, "", []string{"mobile_access"}, "", map[string]any{
-		"platform": "mobile",
-		"app":      "arxos_mobile",
+	tokenPair, err := jwtMgr.GenerateTokenPair(&auth.TokenGenerationRequest{
+		UserID:         user.ID.String(),
+		Email:          user.Email,
+		Username:       user.Name,
+		Role:           user.Role,
+		OrganizationID: "",
+		Permissions:    []string{"mobile_access"},
+		SessionID:      "",
+		DeviceInfo: map[string]any{
+			"platform": "mobile",
+			"app":      "arxos_mobile",
+		},
 	})
 	if err != nil {
 		h.logger.Error("Failed to generate tokens for new user", "error", err)
@@ -312,9 +330,18 @@ func (h *AuthHandler) HandleMobileRefreshToken(w http.ResponseWriter, r *http.Re
 	}
 
 	// Generate new tokens
-	tokenPair, err := jwtMgr.GenerateTokenPair(user.ID.String(), user.Email, user.Name, user.Role, claims.OrganizationID, claims.Permissions, "", map[string]any{
-		"platform": "mobile",
-		"app":      "arxos_mobile",
+	tokenPair, err := jwtMgr.GenerateTokenPair(&auth.TokenGenerationRequest{
+		UserID:         user.ID.String(),
+		Email:          user.Email,
+		Username:       user.Name,
+		Role:           user.Role,
+		OrganizationID: claims.OrganizationID,
+		Permissions:    claims.Permissions,
+		SessionID:      "",
+		DeviceInfo: map[string]any{
+			"platform": "mobile",
+			"app":      "arxos_mobile",
+		},
 	})
 	if err != nil {
 		h.logger.Error("Failed to generate new tokens", "error", err)

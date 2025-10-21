@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/arx-os/arxos/internal/domain/spatial"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -116,7 +117,7 @@ func TestSpatialErrorConstructors(t *testing.T) {
 			name: "Spatial out of bounds error",
 			creator: func() *DomainError {
 				return NewSpatialOutOfBoundsError(
-					&SpatialLocation{X: 100, Y: 200, Z: 300},
+					&spatial.SpatialLocation{X: 100, Y: 200, Z: 300},
 					map[string]any{"min": 0, "max": 50},
 				)
 			},
@@ -493,7 +494,7 @@ func TestDomainErrorContextUtilities(t *testing.T) {
 	})
 
 	t.Run("AddSpatialContext", func(t *testing.T) {
-		location := &SpatialLocation{X: 100, Y: 200, Z: 300}
+		location := &spatial.SpatialLocation{X: 100, Y: 200, Z: 300}
 		bounds := map[string]any{"min": 0, "max": 1000}
 		AddSpatialContext(err, location, bounds)
 		assert.Equal(t, location, err.Context["location"])
@@ -588,7 +589,7 @@ func TestDomainErrorNilHandling(t *testing.T) {
 	AddEntityContext(nilErr, "Building", "building-123")
 	AddOperationContext(nilErr, "create")
 	AddTimingContext(nilErr, time.Now())
-	AddSpatialContext(nilErr, &SpatialLocation{}, nil)
+	AddSpatialContext(nilErr, &spatial.SpatialLocation{}, nil)
 	AddARContext(nilErr, "session", "ARKit")
 	// These should not panic
 }

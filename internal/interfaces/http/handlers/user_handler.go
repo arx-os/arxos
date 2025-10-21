@@ -11,18 +11,18 @@ import (
 
 	"github.com/arx-os/arxos/internal/domain"
 	domaintypes "github.com/arx-os/arxos/internal/domain/types"
-	"github.com/arx-os/arxos/internal/usecase"
+	"github.com/arx-os/arxos/internal/usecase/auth"
 )
 
 // UserHandler handles user-related HTTP requests
 type UserHandler struct {
 	BaseHandler
-	userUC *usecase.UserUseCase
+	userUC *auth.UserUseCase
 	logger domain.Logger
 }
 
 // NewUserHandler creates a new user handler with proper dependency injection
-func NewUserHandler(base BaseHandler, userUC *usecase.UserUseCase, logger domain.Logger) *UserHandler {
+func NewUserHandler(base BaseHandler, userUC *auth.UserUseCase, logger domain.Logger) *UserHandler {
 	return &UserHandler{
 		BaseHandler: base,
 		userUC:      userUC,

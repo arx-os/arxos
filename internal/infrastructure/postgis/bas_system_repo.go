@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/bas"
 	"github.com/arx-os/arxos/internal/domain/types"
 )
 
@@ -22,7 +22,7 @@ func NewBASSystemRepository(db *sql.DB) *BASSystemRepository {
 }
 
 // Create creates a new BAS system in PostGIS
-func (r *BASSystemRepository) Create(system *domain.BASSystem) error {
+func (r *BASSystemRepository) Create(system *bas.BASSystem) error {
 	query := `
 		INSERT INTO bas_systems (
 			id, building_id, repository_id,
@@ -60,7 +60,7 @@ func (r *BASSystemRepository) Create(system *domain.BASSystem) error {
 }
 
 // GetByID retrieves a BAS system by ID
-func (r *BASSystemRepository) GetByID(id types.ID) (*domain.BASSystem, error) {
+func (r *BASSystemRepository) GetByID(id types.ID) (*bas.BASSystem, error) {
 	query := `
 		SELECT
 			id, building_id, repository_id,
@@ -73,7 +73,7 @@ func (r *BASSystemRepository) GetByID(id types.ID) (*domain.BASSystem, error) {
 		WHERE id = $1
 	`
 
-	system := &domain.BASSystem{}
+	system := &bas.BASSystem{}
 	var repositoryID, createdBy sql.NullString
 	var vendor, version, host, protocol, notes sql.NullString
 	var port, syncInterval sql.NullInt64
@@ -114,7 +114,7 @@ func (r *BASSystemRepository) GetByID(id types.ID) (*domain.BASSystem, error) {
 		system.Port = val
 	}
 	if protocol.Valid {
-		proto := domain.BASProtocol(protocol.String)
+		proto := bas.BASProtocol(protocol.String)
 		system.Protocol = &proto
 	}
 	if syncInterval.Valid {
@@ -136,7 +136,7 @@ func (r *BASSystemRepository) GetByID(id types.ID) (*domain.BASSystem, error) {
 }
 
 // Update updates an existing BAS system
-func (r *BASSystemRepository) Update(system *domain.BASSystem) error {
+func (r *BASSystemRepository) Update(system *bas.BASSystem) error {
 	query := `
 		UPDATE bas_systems SET
 			name = $1,
@@ -194,7 +194,7 @@ func (r *BASSystemRepository) Delete(id types.ID) error {
 }
 
 // List retrieves all BAS systems for a building
-func (r *BASSystemRepository) List(buildingID types.ID) ([]*domain.BASSystem, error) {
+func (r *BASSystemRepository) List(buildingID types.ID) ([]*bas.BASSystem, error) {
 	query := `
 		SELECT
 			id, building_id, repository_id,
@@ -214,9 +214,9 @@ func (r *BASSystemRepository) List(buildingID types.ID) ([]*domain.BASSystem, er
 	}
 	defer rows.Close()
 
-	systems := make([]*domain.BASSystem, 0)
+	systems := make([]*bas.BASSystem, 0)
 	for rows.Next() {
-		system := &domain.BASSystem{}
+		system := &bas.BASSystem{}
 		var repositoryID, createdBy sql.NullString
 		var vendor, version, host, protocol, notes sql.NullString
 		var port, syncInterval sql.NullInt64
@@ -238,13 +238,13 @@ func (r *BASSystemRepository) List(buildingID types.ID) ([]*domain.BASSystem, er
 
 		// Parse metadata JSON
 		if len(metadataJSON) > 0 {
-			system.Metadata = make(map[string]interface{})
+			system.Metadata = make(map[string]any)
 			if err := json.Unmarshal(metadataJSON, &system.Metadata); err != nil {
 				// If unmarshal fails, initialize empty map
-				system.Metadata = make(map[string]interface{})
+				system.Metadata = make(map[string]any)
 			}
 		} else {
-			system.Metadata = make(map[string]interface{})
+			system.Metadata = make(map[string]any)
 		}
 
 		// Handle nullable fields
@@ -266,7 +266,7 @@ func (r *BASSystemRepository) List(buildingID types.ID) ([]*domain.BASSystem, er
 			system.Port = val
 		}
 		if protocol.Valid {
-			proto := domain.BASProtocol(protocol.String)
+			proto := bas.BASProtocol(protocol.String)
 			system.Protocol = &proto
 		}
 		if syncInterval.Valid {
@@ -291,7 +291,7 @@ func (r *BASSystemRepository) List(buildingID types.ID) ([]*domain.BASSystem, er
 }
 
 // GetByName retrieves a BAS system by name within a building
-func (r *BASSystemRepository) GetByName(buildingID types.ID, name string) (*domain.BASSystem, error) {
+func (r *BASSystemRepository) GetByName(buildingID types.ID, name string) (*bas.BASSystem, error) {
 	query := `
 		SELECT
 			id, building_id, repository_id,
@@ -304,7 +304,7 @@ func (r *BASSystemRepository) GetByName(buildingID types.ID, name string) (*doma
 		WHERE building_id = $1 AND name = $2
 	`
 
-	system := &domain.BASSystem{}
+	system := &bas.BASSystem{}
 	var repositoryID, createdBy sql.NullString
 	var vendor, version, host, protocol, notes sql.NullString
 	var port, syncInterval sql.NullInt64
@@ -345,7 +345,7 @@ func (r *BASSystemRepository) GetByName(buildingID types.ID, name string) (*doma
 		system.Port = val
 	}
 	if protocol.Valid {
-		proto := domain.BASProtocol(protocol.String)
+		proto := bas.BASProtocol(protocol.String)
 		system.Protocol = &proto
 	}
 	if syncInterval.Valid {
@@ -367,7 +367,7 @@ func (r *BASSystemRepository) GetByName(buildingID types.ID, name string) (*doma
 }
 
 // nullableProtocol converts a pointer to BASProtocol to sql.NullString
-func nullableProtocol(protocol *domain.BASProtocol) sql.NullString {
+func nullableProtocol(protocol *bas.BASProtocol) sql.NullString {
 	if protocol == nil {
 		return sql.NullString{Valid: false}
 	}

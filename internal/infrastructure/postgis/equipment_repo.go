@@ -414,6 +414,54 @@ func (r *EquipmentRepository) scanEquipmentRows(rows *sql.Rows) ([]*domain.Equip
 	return equipment, nil
 }
 
+// BulkCreate creates multiple equipment records in a transaction
+func (r *EquipmentRepository) BulkCreate(ctx context.Context, equipment []*domain.Equipment) error {
+	if len(equipment) == 0 {
+		return nil
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	query := `
+		INSERT INTO equipment (id, building_id, name, equipment_type, model, status, path, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`
+
+	stmt, err := tx.PrepareContext(ctx, query)
+	if err != nil {
+		return fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer stmt.Close()
+
+	for _, e := range equipment {
+		_, err = stmt.ExecContext(ctx,
+			e.ID.String(),
+			e.BuildingID.String(),
+			e.Name,
+			e.Type,
+			e.Model,
+			e.Status,
+			e.Path,
+			e.CreatedAt,
+			e.UpdatedAt,
+		)
+
+		if err != nil {
+			return fmt.Errorf("failed to insert equipment %s: %w", e.Name, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
 // GetByPath retrieves equipment by exact path match
 func (r *EquipmentRepository) GetByPath(ctx context.Context, exactPath string) (*domain.Equipment, error) {
 	query := `
@@ -504,6 +552,28 @@ func (r *EquipmentRepository) FindByPath(ctx context.Context, pathPattern string
 	rows, err := r.db.QueryContext(ctx, query, sqlPattern)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query equipment by path pattern: %w", err)
+	}
+	defer rows.Close()
+
+	return r.scanEquipmentRows(rows)
+}
+
+// Search searches for equipment by query and filters
+func (r *EquipmentRepository) Search(ctx context.Context, query string, filters map[string]any) ([]*domain.Equipment, error) {
+	// Simple implementation - search by name or type
+	sqlQuery := `
+		SELECT id, building_id, floor_id, room_id, name, equipment_type, model,
+		       location_x, location_y, location_z, path, status, created_at, updated_at
+		FROM equipment
+		WHERE (name ILIKE $1 OR equipment_type ILIKE $1)
+		ORDER BY name ASC
+		LIMIT 100
+	`
+
+	searchPattern := "%" + query + "%"
+	rows, err := r.db.QueryContext(ctx, sqlQuery, searchPattern)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search equipment: %w", err)
 	}
 	defer rows.Close()
 

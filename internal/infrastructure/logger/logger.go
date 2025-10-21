@@ -30,41 +30,41 @@ func New(level string) *Logger {
 }
 
 // Debug logs debug messages
-func (l *Logger) Debug(msg string, keysAndValues ...interface{}) {
+func (l *Logger) Debug(msg string, keysAndValues ...any) {
 	if l.level <= LevelDebug {
 		l.log("DEBUG", msg, keysAndValues...)
 	}
 }
 
 // Info logs info messages
-func (l *Logger) Info(msg string, keysAndValues ...interface{}) {
+func (l *Logger) Info(msg string, keysAndValues ...any) {
 	if l.level <= LevelInfo {
 		l.log("INFO", msg, keysAndValues...)
 	}
 }
 
 // Warn logs warning messages
-func (l *Logger) Warn(msg string, keysAndValues ...interface{}) {
+func (l *Logger) Warn(msg string, keysAndValues ...any) {
 	if l.level <= LevelWarn {
 		l.log("WARN", msg, keysAndValues...)
 	}
 }
 
 // Error logs error messages
-func (l *Logger) Error(msg string, keysAndValues ...interface{}) {
+func (l *Logger) Error(msg string, keysAndValues ...any) {
 	if l.level <= LevelError {
 		l.log("ERROR", msg, keysAndValues...)
 	}
 }
 
 // Fatal logs fatal messages and exits
-func (l *Logger) Fatal(msg string, keysAndValues ...interface{}) {
+func (l *Logger) Fatal(msg string, keysAndValues ...any) {
 	l.log("FATAL", msg, keysAndValues...)
 	os.Exit(1)
 }
 
 // log formats and logs a message
-func (l *Logger) log(level, msg string, keysAndValues ...interface{}) {
+func (l *Logger) log(level, msg string, keysAndValues ...any) {
 	// Format key-value pairs
 	pairs := formatKeyValues(keysAndValues...)
 	
@@ -76,7 +76,7 @@ func (l *Logger) log(level, msg string, keysAndValues ...interface{}) {
 }
 
 // formatKeyValues formats key-value pairs for logging
-func formatKeyValues(keysAndValues ...interface{}) string {
+func formatKeyValues(keysAndValues ...any) string {
 	if len(keysAndValues) == 0 {
 		return ""
 	}

@@ -11,18 +11,18 @@ import (
 
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
-	"github.com/arx-os/arxos/internal/usecase"
+	"github.com/arx-os/arxos/internal/usecase/building"
 )
 
 // FloorHandler handles floor-related HTTP requests
 type FloorHandler struct {
 	BaseHandler
-	floorUC *usecase.FloorUseCase
+	floorUC *building.FloorUseCase
 	logger  domain.Logger
 }
 
 // NewFloorHandler creates a new floor handler
-func NewFloorHandler(base BaseHandler, floorUC *usecase.FloorUseCase, logger domain.Logger) *FloorHandler {
+func NewFloorHandler(base BaseHandler, floorUC *building.FloorUseCase, logger domain.Logger) *FloorHandler {
 	return &FloorHandler{
 		BaseHandler: base,
 		floorUC:     floorUC,

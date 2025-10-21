@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/config"
+	"github.com/arx-os/arxos/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,6 +20,10 @@ func (m *MockLogger) Info(msg string, fields ...any)  {}
 func (m *MockLogger) Warn(msg string, fields ...any)  {}
 func (m *MockLogger) Error(msg string, fields ...any) {}
 func (m *MockLogger) Fatal(msg string, fields ...any) {}
+
+func (m *MockLogger) WithFields(fields map[string]any) domain.Logger {
+	return m
+}
 
 func TestUnifiedCacheBasicOperations(t *testing.T) {
 	// Create temporary directory for testing

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/bas"
 	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/arx-os/arxos/pkg/naming"
 )
@@ -23,7 +23,7 @@ func NewBASPointRepository(db *sql.DB) *BASPointRepository {
 }
 
 // Create creates a new BAS point in PostGIS
-func (r *BASPointRepository) Create(point *domain.BASPoint) error {
+func (r *BASPointRepository) Create(point *bas.BASPoint) error {
 	query := `
 		INSERT INTO bas_points (
 			id, building_id, bas_system_id, room_id, floor_id, equipment_id,
@@ -68,7 +68,7 @@ func (r *BASPointRepository) Create(point *domain.BASPoint) error {
 }
 
 // GetByID retrieves a BAS point by ID
-func (r *BASPointRepository) GetByID(id types.ID) (*domain.BASPoint, error) {
+func (r *BASPointRepository) GetByID(id types.ID) (*bas.BASPoint, error) {
 	query := `
 		SELECT
 			id, building_id, bas_system_id, room_id, floor_id, equipment_id,
@@ -84,7 +84,7 @@ func (r *BASPointRepository) GetByID(id types.ID) (*domain.BASPoint, error) {
 		WHERE id = $1 AND removed_in_version IS NULL
 	`
 
-	point := &domain.BASPoint{}
+	point := &bas.BASPoint{}
 	var roomID, floorID, equipmentID, addedInVersion, removedInVersion, path sql.NullString
 	var objectInstance sql.NullInt64
 	var minValue, maxValue, currentNumeric sql.NullFloat64
@@ -148,7 +148,7 @@ func (r *BASPointRepository) GetByID(id types.ID) (*domain.BASPoint, error) {
 
 	// Unmarshal metadata JSON
 	if len(metadataJSON) > 0 {
-		point.Metadata = make(map[string]interface{})
+		point.Metadata = make(map[string]any)
 		if err := json.Unmarshal(metadataJSON, &point.Metadata); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
 		}
@@ -158,7 +158,7 @@ func (r *BASPointRepository) GetByID(id types.ID) (*domain.BASPoint, error) {
 }
 
 // Update updates an existing BAS point
-func (r *BASPointRepository) Update(point *domain.BASPoint) error {
+func (r *BASPointRepository) Update(point *bas.BASPoint) error {
 	query := `
 		UPDATE bas_points SET
 			point_name = $1,
@@ -221,7 +221,7 @@ func (r *BASPointRepository) Delete(id types.ID) error {
 }
 
 // List retrieves BAS points with filtering
-func (r *BASPointRepository) List(filter domain.BASPointFilter, limit, offset int) ([]*domain.BASPoint, error) {
+func (r *BASPointRepository) List(filter bas.BASPointFilter, limit, offset int) ([]*bas.BASPoint, error) {
 	query, args := r.buildListQuery(filter, limit, offset)
 
 	rows, err := r.db.Query(query, args...)
@@ -230,7 +230,7 @@ func (r *BASPointRepository) List(filter domain.BASPointFilter, limit, offset in
 	}
 	defer rows.Close()
 
-	points := make([]*domain.BASPoint, 0)
+	points := make([]*bas.BASPoint, 0)
 	for rows.Next() {
 		point, err := r.scanBASPoint(rows)
 		if err != nil {
@@ -243,7 +243,7 @@ func (r *BASPointRepository) List(filter domain.BASPointFilter, limit, offset in
 }
 
 // Count counts BAS points matching filter
-func (r *BASPointRepository) Count(filter domain.BASPointFilter) (int, error) {
+func (r *BASPointRepository) Count(filter bas.BASPointFilter) (int, error) {
 	query, args := r.buildCountQuery(filter)
 
 	var count int
@@ -256,44 +256,44 @@ func (r *BASPointRepository) Count(filter domain.BASPointFilter) (int, error) {
 }
 
 // ListByBuilding retrieves all BAS points for a building
-func (r *BASPointRepository) ListByBuilding(buildingID types.ID) ([]*domain.BASPoint, error) {
-	return r.List(domain.BASPointFilter{
+func (r *BASPointRepository) ListByBuilding(buildingID types.ID) ([]*bas.BASPoint, error) {
+	return r.List(bas.BASPointFilter{
 		BuildingID: &buildingID,
 	}, 10000, 0)
 }
 
 // ListByBASSystem retrieves all BAS points for a BAS system
-func (r *BASPointRepository) ListByBASSystem(systemID types.ID) ([]*domain.BASPoint, error) {
-	return r.List(domain.BASPointFilter{
+func (r *BASPointRepository) ListByBASSystem(systemID types.ID) ([]*bas.BASPoint, error) {
+	return r.List(bas.BASPointFilter{
 		BASSystemID: &systemID,
 	}, 10000, 0)
 }
 
 // ListByRoom retrieves all BAS points for a room
-func (r *BASPointRepository) ListByRoom(roomID types.ID) ([]*domain.BASPoint, error) {
-	return r.List(domain.BASPointFilter{
+func (r *BASPointRepository) ListByRoom(roomID types.ID) ([]*bas.BASPoint, error) {
+	return r.List(bas.BASPointFilter{
 		RoomID: &roomID,
 	}, 1000, 0)
 }
 
 // ListByEquipment retrieves all BAS points for equipment
-func (r *BASPointRepository) ListByEquipment(equipmentID types.ID) ([]*domain.BASPoint, error) {
-	return r.List(domain.BASPointFilter{
+func (r *BASPointRepository) ListByEquipment(equipmentID types.ID) ([]*bas.BASPoint, error) {
+	return r.List(bas.BASPointFilter{
 		EquipmentID: &equipmentID,
 	}, 1000, 0)
 }
 
 // ListUnmapped retrieves unmapped BAS points for a building
-func (r *BASPointRepository) ListUnmapped(buildingID types.ID) ([]*domain.BASPoint, error) {
+func (r *BASPointRepository) ListUnmapped(buildingID types.ID) ([]*bas.BASPoint, error) {
 	mapped := false
-	return r.List(domain.BASPointFilter{
+	return r.List(bas.BASPointFilter{
 		BuildingID: &buildingID,
 		Mapped:     &mapped,
 	}, 10000, 0)
 }
 
 // BulkCreate creates multiple BAS points in a single transaction
-func (r *BASPointRepository) BulkCreate(points []*domain.BASPoint) error {
+func (r *BASPointRepository) BulkCreate(points []*bas.BASPoint) error {
 	if len(points) == 0 {
 		return nil
 	}
@@ -350,7 +350,7 @@ func (r *BASPointRepository) BulkCreate(points []*domain.BASPoint) error {
 }
 
 // BulkUpdate updates multiple BAS points in a single transaction
-func (r *BASPointRepository) BulkUpdate(points []*domain.BASPoint) error {
+func (r *BASPointRepository) BulkUpdate(points []*bas.BASPoint) error {
 	if len(points) == 0 {
 		return nil
 	}
@@ -501,7 +501,7 @@ func (r *BASPointRepository) MapToEquipment(pointID, equipmentID types.ID, confi
 }
 
 // buildListQuery builds a dynamic query based on filter
-func (r *BASPointRepository) buildListQuery(filter domain.BASPointFilter, limit, offset int) (string, []interface{}) {
+func (r *BASPointRepository) buildListQuery(filter bas.BASPointFilter, limit, offset int) (string, []any) {
 	query := `
 		SELECT
 			id, building_id, bas_system_id, room_id, floor_id, equipment_id,
@@ -517,7 +517,7 @@ func (r *BASPointRepository) buildListQuery(filter domain.BASPointFilter, limit,
 		WHERE removed_in_version IS NULL
 	`
 
-	args := make([]interface{}, 0)
+	args := make([]any, 0)
 	argCount := 1
 
 	if filter.BuildingID != nil {
@@ -591,10 +591,10 @@ func (r *BASPointRepository) buildListQuery(filter domain.BASPointFilter, limit,
 }
 
 // buildCountQuery builds a count query based on filter
-func (r *BASPointRepository) buildCountQuery(filter domain.BASPointFilter) (string, []interface{}) {
+func (r *BASPointRepository) buildCountQuery(filter bas.BASPointFilter) (string, []any) {
 	query := `SELECT COUNT(*) FROM bas_points WHERE removed_in_version IS NULL`
 
-	args := make([]interface{}, 0)
+	args := make([]any, 0)
 	argCount := 1
 
 	if filter.BuildingID != nil {
@@ -626,9 +626,9 @@ func (r *BASPointRepository) buildCountQuery(filter domain.BASPointFilter) (stri
 
 // scanBASPoint scans a row into a BASPoint entity
 func (r *BASPointRepository) scanBASPoint(scanner interface {
-	Scan(dest ...interface{}) error
-}) (*domain.BASPoint, error) {
-	point := &domain.BASPoint{}
+	Scan(dest ...any) error
+}) (*bas.BASPoint, error) {
+	point := &bas.BASPoint{}
 	var roomID, floorID, equipmentID, addedInVersion, removedInVersion, path sql.NullString
 	var objectInstance sql.NullInt64
 	var minValue, maxValue, currentNumeric sql.NullFloat64
@@ -706,7 +706,7 @@ func (r *BASPointRepository) scanBASPoint(scanner interface {
 
 	// Unmarshal metadata JSON
 	if len(metadataJSON) > 0 {
-		point.Metadata = make(map[string]interface{})
+		point.Metadata = make(map[string]any)
 		if err := json.Unmarshal(metadataJSON, &point.Metadata); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
 		}
@@ -724,7 +724,7 @@ func nullableID(id *types.ID) sql.NullString {
 }
 
 // GetByPath retrieves a BAS point by exact path match
-func (r *BASPointRepository) GetByPath(exactPath string) (*domain.BASPoint, error) {
+func (r *BASPointRepository) GetByPath(exactPath string) (*bas.BASPoint, error) {
 	query := `
 		SELECT
 			id, building_id, bas_system_id, room_id, floor_id, equipment_id,
@@ -740,7 +740,7 @@ func (r *BASPointRepository) GetByPath(exactPath string) (*domain.BASPoint, erro
 		WHERE path = $1 AND removed_in_version IS NULL
 	`
 
-	point := &domain.BASPoint{}
+	point := &bas.BASPoint{}
 	var roomID, floorID, equipmentID, addedInVersion, removedInVersion sql.NullString
 	var objectInstance sql.NullInt64
 	var minValue, maxValue, currentNumeric sql.NullFloat64
@@ -833,7 +833,7 @@ func (r *BASPointRepository) GetByPath(exactPath string) (*domain.BASPoint, erro
 
 // FindByPath retrieves BAS points matching a path pattern (supports wildcards)
 // Pattern examples: /B1/3/*/BAS/*, /B1/*/301/BAS/AI-*
-func (r *BASPointRepository) FindByPath(pathPattern string) ([]*domain.BASPoint, error) {
+func (r *BASPointRepository) FindByPath(pathPattern string) ([]*bas.BASPoint, error) {
 	// Convert path pattern to SQL LIKE pattern
 	sqlPattern := naming.ToSQLPattern(pathPattern)
 
@@ -864,9 +864,9 @@ func (r *BASPointRepository) FindByPath(pathPattern string) ([]*domain.BASPoint,
 	}
 	defer rows.Close()
 
-	var points []*domain.BASPoint
+	var points []*bas.BASPoint
 	for rows.Next() {
-		point := &domain.BASPoint{}
+		point := &bas.BASPoint{}
 		var roomID, floorID, equipmentID, addedInVersion, removedInVersion sql.NullString
 		var objectInstance sql.NullInt64
 		var minValue, maxValue, currentNumeric sql.NullFloat64

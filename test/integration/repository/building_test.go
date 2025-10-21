@@ -11,7 +11,6 @@ import (
 	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/arx-os/arxos/internal/infrastructure"
 	"github.com/arx-os/arxos/internal/infrastructure/postgis"
-	"github.com/arx-os/arxos/internal/usecase"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

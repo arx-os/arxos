@@ -1,11 +1,11 @@
 package postgis
 
 import (
+	"github.com/arx-os/arxos/internal/domain/versioncontrol"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 
-	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/lib/pq"
 )
@@ -23,7 +23,7 @@ func NewBranchRepository(db *sql.DB) *BranchRepository {
 }
 
 // Create creates a new branch
-func (r *BranchRepository) Create(branch *domain.Branch) error {
+func (r *BranchRepository) Create(branch *versioncontrol.Branch) error {
 	query := `
 		INSERT INTO repository_branches (
 			id, repository_id, name, display_name, description,
@@ -55,7 +55,7 @@ func (r *BranchRepository) Create(branch *domain.Branch) error {
 }
 
 // GetByID retrieves a branch by ID
-func (r *BranchRepository) GetByID(id types.ID) (*domain.Branch, error) {
+func (r *BranchRepository) GetByID(id types.ID) (*versioncontrol.Branch, error) {
 	query := `
 		SELECT
 			id, repository_id, name, display_name, description,
@@ -68,7 +68,7 @@ func (r *BranchRepository) GetByID(id types.ID) (*domain.Branch, error) {
 		WHERE id = $1
 	`
 
-	branch := &domain.Branch{}
+	branch := &versioncontrol.Branch{}
 	var baseCommit, headCommit, createdBy, ownedBy, mergedBy sql.NullString
 	var description sql.NullString
 	var mergedAt sql.NullTime
@@ -121,7 +121,7 @@ func (r *BranchRepository) GetByID(id types.ID) (*domain.Branch, error) {
 }
 
 // Update updates an existing branch
-func (r *BranchRepository) Update(branch *domain.Branch) error {
+func (r *BranchRepository) Update(branch *versioncontrol.Branch) error {
 	query := `
 		UPDATE repository_branches SET
 			display_name = $1,
@@ -169,7 +169,7 @@ func (r *BranchRepository) Delete(id types.ID) error {
 }
 
 // List retrieves branches with filtering
-func (r *BranchRepository) List(filter domain.BranchFilter) ([]*domain.Branch, error) {
+func (r *BranchRepository) List(filter versioncontrol.BranchFilter) ([]*versioncontrol.Branch, error) {
 	query, args := r.buildListQuery(filter)
 
 	rows, err := r.db.Query(query, args...)
@@ -178,7 +178,7 @@ func (r *BranchRepository) List(filter domain.BranchFilter) ([]*domain.Branch, e
 	}
 	defer rows.Close()
 
-	branches := make([]*domain.Branch, 0)
+	branches := make([]*versioncontrol.Branch, 0)
 	for rows.Next() {
 		branch, err := r.scanBranch(rows)
 		if err != nil {
@@ -191,7 +191,7 @@ func (r *BranchRepository) List(filter domain.BranchFilter) ([]*domain.Branch, e
 }
 
 // GetByName retrieves a branch by name within a repository
-func (r *BranchRepository) GetByName(repositoryID types.ID, name string) (*domain.Branch, error) {
+func (r *BranchRepository) GetByName(repositoryID types.ID, name string) (*versioncontrol.Branch, error) {
 	query := `
 		SELECT
 			id, repository_id, name, display_name, description,
@@ -204,7 +204,7 @@ func (r *BranchRepository) GetByName(repositoryID types.ID, name string) (*domai
 		WHERE repository_id = $1 AND name = $2
 	`
 
-	branch := &domain.Branch{}
+	branch := &versioncontrol.Branch{}
 	var baseCommit, headCommit, createdBy, ownedBy, mergedBy sql.NullString
 	var description sql.NullString
 	var mergedAt sql.NullTime
@@ -257,7 +257,7 @@ func (r *BranchRepository) GetByName(repositoryID types.ID, name string) (*domai
 }
 
 // GetDefaultBranch retrieves the default branch for a repository
-func (r *BranchRepository) GetDefaultBranch(repositoryID types.ID) (*domain.Branch, error) {
+func (r *BranchRepository) GetDefaultBranch(repositoryID types.ID) (*versioncontrol.Branch, error) {
 	query := `
 		SELECT
 			id, repository_id, name, display_name, description,
@@ -271,7 +271,7 @@ func (r *BranchRepository) GetDefaultBranch(repositoryID types.ID) (*domain.Bran
 		LIMIT 1
 	`
 
-	branch := &domain.Branch{}
+	branch := &versioncontrol.Branch{}
 	var baseCommit, headCommit, createdBy, ownedBy, mergedBy sql.NullString
 	var description sql.NullString
 	var mergedAt sql.NullTime
@@ -324,9 +324,9 @@ func (r *BranchRepository) GetDefaultBranch(repositoryID types.ID) (*domain.Bran
 }
 
 // ListActive retrieves all active branches for a repository
-func (r *BranchRepository) ListActive(repositoryID types.ID) ([]*domain.Branch, error) {
-	status := domain.BranchStatusActive
-	return r.List(domain.BranchFilter{
+func (r *BranchRepository) ListActive(repositoryID types.ID) ([]*versioncontrol.Branch, error) {
+	status := versioncontrol.BranchStatusActive
+	return r.List(versioncontrol.BranchFilter{
 		RepositoryID: &repositoryID,
 		Status:       &status,
 	})
@@ -361,7 +361,7 @@ func (r *BranchRepository) MarkMerged(branchID, mergedBy types.ID) error {
 }
 
 // buildListQuery builds a dynamic list query based on filter
-func (r *BranchRepository) buildListQuery(filter domain.BranchFilter) (string, []interface{}) {
+func (r *BranchRepository) buildListQuery(filter versioncontrol.BranchFilter) (string, []any) {
 	query := `
 		SELECT
 			id, repository_id, name, display_name, description,
@@ -374,7 +374,7 @@ func (r *BranchRepository) buildListQuery(filter domain.BranchFilter) (string, [
 		WHERE 1=1
 	`
 
-	args := make([]interface{}, 0)
+	args := make([]any, 0)
 	argCount := 1
 
 	if filter.RepositoryID != nil {
@@ -420,9 +420,9 @@ func (r *BranchRepository) buildListQuery(filter domain.BranchFilter) (string, [
 
 // scanBranch scans a row into a Branch entity
 func (r *BranchRepository) scanBranch(scanner interface {
-	Scan(dest ...interface{}) error
-}) (*domain.Branch, error) {
-	branch := &domain.Branch{}
+	Scan(dest ...any) error
+}) (*versioncontrol.Branch, error) {
+	branch := &versioncontrol.Branch{}
 	var baseCommit, headCommit, createdBy, ownedBy, mergedBy sql.NullString
 	var description sql.NullString
 	var mergedAt sql.NullTime
@@ -484,7 +484,7 @@ func NewCommitRepository(db *sql.DB) *CommitRepository {
 }
 
 // Create creates a new commit
-func (r *CommitRepository) Create(commit *domain.Commit) error {
+func (r *CommitRepository) Create(commit *versioncontrol.Commit) error {
 	query := `
 		INSERT INTO repository_commits (
 			id, repository_id, branch_id, version_id,
@@ -537,7 +537,7 @@ func (r *CommitRepository) Create(commit *domain.Commit) error {
 }
 
 // GetByID retrieves a commit by ID
-func (r *CommitRepository) GetByID(id types.ID) (*domain.Commit, error) {
+func (r *CommitRepository) GetByID(id types.ID) (*versioncontrol.Commit, error) {
 	query := `
 		SELECT
 			id, repository_id, branch_id, version_id,
@@ -555,7 +555,7 @@ func (r *CommitRepository) GetByID(id types.ID) (*domain.Commit, error) {
 }
 
 // GetByHash retrieves a commit by hash
-func (r *CommitRepository) GetByHash(hash string) (*domain.Commit, error) {
+func (r *CommitRepository) GetByHash(hash string) (*versioncontrol.Commit, error) {
 	query := `
 		SELECT
 			id, repository_id, branch_id, version_id,
@@ -574,7 +574,7 @@ func (r *CommitRepository) GetByHash(hash string) (*domain.Commit, error) {
 }
 
 // List retrieves commits with filtering
-func (r *CommitRepository) List(filter domain.CommitFilter, limit, offset int) ([]*domain.Commit, error) {
+func (r *CommitRepository) List(filter versioncontrol.CommitFilter, limit, offset int) ([]*versioncontrol.Commit, error) {
 	query, args := r.buildCommitListQuery(filter, limit, offset)
 
 	rows, err := r.db.Query(query, args...)
@@ -583,7 +583,7 @@ func (r *CommitRepository) List(filter domain.CommitFilter, limit, offset int) (
 	}
 	defer rows.Close()
 
-	commits := make([]*domain.Commit, 0)
+	commits := make([]*versioncontrol.Commit, 0)
 	for rows.Next() {
 		commit, err := r.scanCommit(rows)
 		if err != nil {
@@ -596,19 +596,19 @@ func (r *CommitRepository) List(filter domain.CommitFilter, limit, offset int) (
 }
 
 // ListByBranch retrieves commits for a branch
-func (r *CommitRepository) ListByBranch(branchID types.ID, limit, offset int) ([]*domain.Commit, error) {
-	return r.List(domain.CommitFilter{
+func (r *CommitRepository) ListByBranch(branchID types.ID, limit, offset int) ([]*versioncontrol.Commit, error) {
+	return r.List(versioncontrol.CommitFilter{
 		BranchID: &branchID,
 	}, limit, offset)
 }
 
 // GetHistory retrieves full commit history for a branch
-func (r *CommitRepository) GetHistory(branchID types.ID) ([]*domain.Commit, error) {
+func (r *CommitRepository) GetHistory(branchID types.ID) ([]*versioncontrol.Commit, error) {
 	return r.ListByBranch(branchID, 10000, 0)
 }
 
 // GetParents retrieves parent commits
-func (r *CommitRepository) GetParents(commitID types.ID) ([]*domain.Commit, error) {
+func (r *CommitRepository) GetParents(commitID types.ID) ([]*versioncontrol.Commit, error) {
 	// Get the commit first to get parent IDs
 	commit, err := r.GetByID(commitID)
 	if err != nil {
@@ -616,11 +616,11 @@ func (r *CommitRepository) GetParents(commitID types.ID) ([]*domain.Commit, erro
 	}
 
 	if len(commit.ParentCommits) == 0 {
-		return []*domain.Commit{}, nil
+		return []*versioncontrol.Commit{}, nil
 	}
 
 	// Query parent commits
-	parents := make([]*domain.Commit, 0, len(commit.ParentCommits))
+	parents := make([]*versioncontrol.Commit, 0, len(commit.ParentCommits))
 	for _, parentID := range commit.ParentCommits {
 		parent, err := r.GetByID(parentID)
 		if err != nil {
@@ -634,7 +634,7 @@ func (r *CommitRepository) GetParents(commitID types.ID) ([]*domain.Commit, erro
 }
 
 // GetChildren retrieves child commits
-func (r *CommitRepository) GetChildren(commitID types.ID) ([]*domain.Commit, error) {
+func (r *CommitRepository) GetChildren(commitID types.ID) ([]*versioncontrol.Commit, error) {
 	query := `
 		SELECT
 			id, repository_id, branch_id, version_id,
@@ -655,7 +655,7 @@ func (r *CommitRepository) GetChildren(commitID types.ID) ([]*domain.Commit, err
 	}
 	defer rows.Close()
 
-	children := make([]*domain.Commit, 0)
+	children := make([]*versioncontrol.Commit, 0)
 	for rows.Next() {
 		commit, err := r.scanCommit(rows)
 		if err != nil {
@@ -702,7 +702,7 @@ func (r *CommitRepository) IsAncestor(ancestor, descendant types.ID) (bool, erro
 }
 
 // buildCommitListQuery builds a dynamic commit query
-func (r *CommitRepository) buildCommitListQuery(filter domain.CommitFilter, limit, offset int) (string, []interface{}) {
+func (r *CommitRepository) buildCommitListQuery(filter versioncontrol.CommitFilter, limit, offset int) (string, []any) {
 	query := `
 		SELECT
 			id, repository_id, branch_id, version_id,
@@ -716,7 +716,7 @@ func (r *CommitRepository) buildCommitListQuery(filter domain.CommitFilter, limi
 		WHERE 1=1
 	`
 
-	args := make([]interface{}, 0)
+	args := make([]any, 0)
 	argCount := 1
 
 	if filter.RepositoryID != nil {
@@ -773,9 +773,9 @@ func (r *CommitRepository) buildCommitListQuery(filter domain.CommitFilter, limi
 
 // scanCommit scans a row into a Commit entity
 func (r *CommitRepository) scanCommit(scanner interface {
-	Scan(dest ...interface{}) error
-}) (*domain.Commit, error) {
-	commit := &domain.Commit{}
+	Scan(dest ...any) error
+}) (*versioncontrol.Commit, error) {
+	commit := &versioncontrol.Commit{}
 	var authorID sql.NullString
 	var description sql.NullString
 	var parentCommitsArray pq.StringArray

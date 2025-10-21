@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/bas"
 	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/arx-os/arxos/internal/infrastructure/postgis"
 	"github.com/arx-os/arxos/test/helpers"
@@ -512,11 +513,11 @@ func TestBASPointRepository(t *testing.T) {
 	err := buildingRepo.Create(ctx, building)
 	require.NoError(t, err)
 
-	basSystem := &domain.BASSystem{
+	basSystem := &bas.BASSystem{
 		ID:         helpers.UniqueTestID(),
 		BuildingID: building.ID,
 		Name:       "Test BAS System",
-		SystemType: domain.BASSystemTypeMetasys,
+		SystemType: bas.BASSystemTypeMetasys,
 		Enabled:    true,
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),
@@ -528,7 +529,7 @@ func TestBASPointRepository(t *testing.T) {
 	require.NoError(t, err, "Failed to create BAS system for test")
 
 	t.Run("Create and Get BAS Point", func(t *testing.T) {
-		point := &domain.BASPoint{
+		point := &bas.BASPoint{
 			ID:          helpers.UniqueTestID(),
 			BuildingID:  building.ID,
 			BASSystemID: basSystem.ID,
@@ -564,7 +565,7 @@ func TestBASPointRepository(t *testing.T) {
 		uniquePath1 := fmt.Sprintf("/test-bldg-%d/1/room1/HVAC/temp1", pathTimestamp)
 		uniquePath2 := fmt.Sprintf("/test-bldg-%d/1/room2/HVAC/temp2", pathTimestamp)
 
-		points := []*domain.BASPoint{
+		points := []*bas.BASPoint{
 			{
 				ID:          helpers.UniqueTestID(),
 				BuildingID:  building.ID,
@@ -621,7 +622,7 @@ func TestBASPointRepository(t *testing.T) {
 	})
 
 	t.Run("Update BAS Point", func(t *testing.T) {
-		point := &domain.BASPoint{
+		point := &bas.BASPoint{
 			ID:          helpers.UniqueTestID(),
 			BuildingID:  building.ID,
 			BASSystemID: basSystem.ID,

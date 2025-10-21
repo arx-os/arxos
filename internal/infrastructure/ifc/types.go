@@ -12,7 +12,7 @@ type IFCBuildingEntity struct {
 	LongName    string                 `json:"long_name,omitempty"`
 	Address     *IFCAddress            `json:"address,omitempty"`
 	Elevation   float64                `json:"elevation"`
-	Properties  map[string]interface{} `json:"properties,omitempty"`
+	Properties  map[string]any `json:"properties,omitempty"`
 }
 
 // IFCFloorEntity represents a parsed IFC BuildingStorey
@@ -23,7 +23,7 @@ type IFCFloorEntity struct {
 	Description string                 `json:"description,omitempty"`
 	Elevation   float64                `json:"elevation"`
 	Height      float64                `json:"height,omitempty"`
-	Properties  map[string]interface{} `json:"properties,omitempty"`
+	Properties  map[string]any `json:"properties,omitempty"`
 }
 
 // IFCSpaceEntity represents a parsed IFC Space (Room)
@@ -35,7 +35,7 @@ type IFCSpaceEntity struct {
 	FloorID     string                 `json:"floor_id"` // Parent floor GlobalID
 	Placement   *IFCPlacement          `json:"placement,omitempty"`
 	BoundingBox *IFCBoundingBox        `json:"bounding_box,omitempty"`
-	Properties  map[string]interface{} `json:"properties,omitempty"`
+	Properties  map[string]any `json:"properties,omitempty"`
 }
 
 // IFCEquipmentEntity represents a parsed IFC Product (Equipment)
@@ -83,7 +83,7 @@ type IFCBoundingBox struct {
 // IFCPropertySet represents a property set (Pset)
 type IFCPropertySet struct {
 	Name       string                 `json:"name"`
-	Properties map[string]interface{} `json:"properties"`
+	Properties map[string]any `json:"properties"`
 }
 
 // IFCRelationship represents relationships between entities

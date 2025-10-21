@@ -9,19 +9,19 @@ import (
 
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/interfaces/http/types"
-	"github.com/arx-os/arxos/internal/usecase"
+	"github.com/arx-os/arxos/internal/usecase/building"
 )
 
 // MobileHandler handles mobile-specific HTTP requests for AR and spatial functionality
 type MobileHandler struct {
 	BaseHandler
-	buildingUC  *usecase.BuildingUseCase
-	equipmentUC *usecase.EquipmentUseCase
+	buildingUC  *building.BuildingUseCase
+	equipmentUC *building.EquipmentUseCase
 	logger      domain.Logger
 }
 
 // NewMobileHandler creates a new mobile handler
-func NewMobileHandler(server *types.Server, buildingUC *usecase.BuildingUseCase, equipmentUC *usecase.EquipmentUseCase, logger domain.Logger) *MobileHandler {
+func NewMobileHandler(server *types.Server, buildingUC *building.BuildingUseCase, equipmentUC *building.EquipmentUseCase, logger domain.Logger) *MobileHandler {
 	return &MobileHandler{
 		BaseHandler: nil, // Will be injected by container
 		buildingUC:  buildingUC,

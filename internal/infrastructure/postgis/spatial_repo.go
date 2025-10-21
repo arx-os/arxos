@@ -3,6 +3,7 @@ package postgis
 // Advanced spatial queries using PostGIS
 
 import (
+	"github.com/arx-os/arxos/internal/domain/spatial"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -120,7 +121,7 @@ func (r *SpatialRepository) CreateSpatialSchema(ctx context.Context) error {
 }
 
 // CreateSpatialAnchor creates a new spatial anchor
-func (r *SpatialRepository) CreateSpatialAnchor(ctx context.Context, req *domain.CreateSpatialAnchorRequest) (*domain.MobileSpatialAnchor, error) {
+func (r *SpatialRepository) CreateSpatialAnchor(ctx context.Context, req *spatial.CreateSpatialAnchorRequest) (*spatial.MobileSpatialAnchor, error) {
 	query := `
 		INSERT INTO spatial_anchors (
 			id, building_id, equipment_id, position,
@@ -134,7 +135,7 @@ func (r *SpatialRepository) CreateSpatialAnchor(ctx context.Context, req *domain
 			confidence, anchor_type, metadata, created_at, updated_at
 	`
 
-	var anchor domain.MobileSpatialAnchor
+	var anchor spatial.MobileSpatialAnchor
 	anchorID := uuid.New().String()
 
 	err := r.db.QueryRowContext(ctx, query,
@@ -170,7 +171,7 @@ func (r *SpatialRepository) CreateSpatialAnchor(ctx context.Context, req *domain
 }
 
 // GetSpatialAnchorsByBuilding retrieves spatial anchors for a building
-func (r *SpatialRepository) GetSpatialAnchorsByBuilding(ctx context.Context, buildingID string, filter *domain.SpatialAnchorFilter) ([]*domain.MobileSpatialAnchor, error) {
+func (r *SpatialRepository) GetSpatialAnchorsByBuilding(ctx context.Context, buildingID string, filter *spatial.SpatialAnchorFilter) ([]*spatial.MobileSpatialAnchor, error) {
 	query := `
 		SELECT
 			id, building_id, equipment_id,
@@ -217,9 +218,9 @@ func (r *SpatialRepository) GetSpatialAnchorsByBuilding(ctx context.Context, bui
 	}
 	defer rows.Close()
 
-	var anchors []*domain.MobileSpatialAnchor
+	var anchors []*spatial.MobileSpatialAnchor
 	for rows.Next() {
-		var anchor domain.MobileSpatialAnchor
+		var anchor spatial.MobileSpatialAnchor
 		err := rows.Scan(
 			&anchor.ID,
 			&anchor.BuildingID,
@@ -242,7 +243,7 @@ func (r *SpatialRepository) GetSpatialAnchorsByBuilding(ctx context.Context, bui
 }
 
 // FindNearbyEquipment finds equipment within a spatial radius
-func (r *SpatialRepository) FindNearbyEquipment(ctx context.Context, req *domain.NearbyEquipmentRequest) ([]*domain.NearbyEquipmentResult, error) {
+func (r *SpatialRepository) FindNearbyEquipment(ctx context.Context, req *spatial.NearbyEquipmentRequest) ([]*spatial.NearbyEquipmentResult, error) {
 	// Use PostGIS spatial functions for real 3D distance calculation
 	// ST_Distance calculates Euclidean distance between two points
 	// ST_MakePoint creates point geometry from X, Y, Z coordinates
@@ -292,9 +293,9 @@ func (r *SpatialRepository) FindNearbyEquipment(ctx context.Context, req *domain
 	}
 	defer rows.Close()
 
-	var results []*domain.NearbyEquipmentResult
+	var results []*spatial.NearbyEquipmentResult
 	for rows.Next() {
-		var result domain.NearbyEquipmentResult
+		var result spatial.NearbyEquipmentResult
 		err := rows.Scan(
 			&result.EquipmentID,
 			&result.EquipmentName,
@@ -314,7 +315,7 @@ func (r *SpatialRepository) FindNearbyEquipment(ctx context.Context, req *domain
 }
 
 // UploadPointCloud uploads point cloud data from AR session
-func (r *SpatialRepository) UploadPointCloud(ctx context.Context, req *domain.PointCloudUploadRequest) error {
+func (r *SpatialRepository) UploadPointCloud(ctx context.Context, req *spatial.PointCloudUploadRequest) error {
 	if len(req.Points) == 0 {
 		return nil
 	}
@@ -367,9 +368,9 @@ func (r *SpatialRepository) UploadPointCloud(ctx context.Context, req *domain.Po
 }
 
 // GetBuildingSpatialSummary gets spatial summary for a building
-func (r *SpatialRepository) GetBuildingSpatialSummary(ctx context.Context, buildingID string) (*domain.BuildingSpatialSummary, error) {
+func (r *SpatialRepository) GetBuildingSpatialSummary(ctx context.Context, buildingID string) (*spatial.BuildingSpatialSummary, error) {
 	// For now, return a mock summary since we don't have real equipment_position data yet
-	return &domain.BuildingSpatialSummary{
+	return &spatial.BuildingSpatialSummary{
 		BuildingID:          buildingID,
 		TotalEquipment:      15,
 		PositionedEquipment: 8,
@@ -379,10 +380,10 @@ func (r *SpatialRepository) GetBuildingSpatialSummary(ctx context.Context, build
 }
 
 // Placeholder methods to implement the interface
-func (r *SpatialRepository) UpdateSpatialAnchor(ctx context.Context, anchorID string, req *domain.UpdateSpatialAnchorRequest) (*domain.MobileSpatialAnchor, error) {
+func (r *SpatialRepository) UpdateSpatialAnchor(ctx context.Context, anchorID string, req *spatial.UpdateSpatialAnchorRequest) (*spatial.MobileSpatialAnchor, error) {
 	// Build dynamic UPDATE query based on provided fields
 	updates := []string{}
-	args := []interface{}{}
+	args := []any{}
 	argCount := 1
 
 	if req.Position != nil {
@@ -438,7 +439,7 @@ func (r *SpatialRepository) UpdateSpatialAnchor(ctx context.Context, anchorID st
 			confidence, anchor_type, metadata, created_at, updated_at
 	`, strings.Join(updates, ", "), argCount)
 
-	var anchor domain.MobileSpatialAnchor
+	var anchor spatial.MobileSpatialAnchor
 	err := r.db.QueryRowContext(ctx, query, args...).Scan(
 		&anchor.ID, &anchor.BuildingID, &anchor.EquipmentID,
 		&anchor.Position.X, &anchor.Position.Y,
@@ -473,7 +474,7 @@ func (r *SpatialRepository) DeleteSpatialAnchor(ctx context.Context, anchorID st
 	return nil
 }
 
-func (r *SpatialRepository) UpdateEquipmentPosition(ctx context.Context, equipmentID string, position *domain.SpatialPosition) error {
+func (r *SpatialRepository) UpdateEquipmentPosition(ctx context.Context, equipmentID string, position *spatial.SpatialPosition) error {
 	query := `
 		UPDATE equipment
 		SET location_x = $1,
@@ -503,7 +504,7 @@ func (r *SpatialRepository) UpdateEquipmentPosition(ctx context.Context, equipme
 
 
 // GetSpatialAnalytics gets spatial analytics for a building
-func (r *SpatialRepository) GetSpatialAnalytics(ctx context.Context, buildingID string) (*domain.SpatialAnalytics, error) {
+func (r *SpatialRepository) GetSpatialAnalytics(ctx context.Context, buildingID string) (*spatial.SpatialAnalytics, error) {
 	// Query for coverage metrics
 	var totalEquipment, positionedEquipment int64
 	coverageQuery := `
@@ -539,28 +540,28 @@ func (r *SpatialRepository) GetSpatialAnalytics(ctx context.Context, buildingID 
 		coveragePercentage = (float64(positionedEquipment) / float64(totalEquipment)) * 100.0
 	}
 
-	analytics := &domain.SpatialAnalytics{
+	analytics := &spatial.SpatialAnalytics{
 		BuildingID: buildingID,
-		CoverageMetrics: domain.CoverageMetrics{
+		CoverageMetrics: spatial.CoverageMetrics{
 			TotalArea:          0.0, // Would need building area data
 			ScannedArea:        0.0, // Would need scan data
 			CoveragePercentage: coveragePercentage,
 			FloorLevels:        0, // Would need floor count
 			LastScanDate:       time.Now(),
 		},
-		AnchorDensityMetrics: domain.AnchorDensityMetrics{
+		AnchorDensityMetrics: spatial.AnchorDensityMetrics{
 			TotalAnchors:          int(totalAnchors),
 			AnchorsPerSquareMeter: 0.0,               // Would need building area data
 			EquipmentAnchors:      int(totalAnchors), // Assume all for now
 			ReferenceAnchors:      0,
 		},
-		EquipmentDistribution: domain.EquipmentDistribution{
+		EquipmentDistribution: spatial.EquipmentDistribution{
 			TotalEquipment:      int(totalEquipment),
 			PositionedEquipment: int(positionedEquipment),
 			PositioningAccuracy: coveragePercentage,
 			DensityMap:          map[string]int{}, // Would need floor grouping
 		},
-		ScanHistory: []domain.ScanHistoryEntry{},
+		ScanHistory: []spatial.ScanHistoryEntry{},
 	}
 
 	return analytics, nil

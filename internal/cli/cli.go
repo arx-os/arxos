@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/pkg/errors"
 	"github.com/arx-os/arxos/pkg/models"
 )
@@ -244,4 +245,10 @@ func (c *CLI) PrintWarning(message string, args ...any) {
 // PrintError prints an error message with emoji
 func (c *CLI) PrintError(message string, args ...any) {
 	fmt.Printf("❌ %s\n", fmt.Sprintf(message, args...))
+}
+
+// WithFields returns a logger with additional fields
+func (l *Logger) WithFields(fields map[string]any) domain.Logger {
+	// Simple logger doesn't support fields, return self
+	return l
 }

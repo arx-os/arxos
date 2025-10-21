@@ -11,22 +11,23 @@ import (
 
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
-	"github.com/arx-os/arxos/internal/usecase"
+	"github.com/arx-os/arxos/internal/usecase/integration"
+	"github.com/arx-os/arxos/internal/usecase/building"
 )
 
 // BuildingHandler handles building-related HTTP requests following Clean Architecture
 type BuildingHandler struct {
 	BaseHandler
-	buildingUC *usecase.BuildingUseCase
-	ifcUC      *usecase.IFCUseCase
+	buildingUC *building.BuildingUseCase
+	ifcUC      *integration.IFCUseCase
 	logger     domain.Logger
 }
 
 // NewBuildingHandler creates a new building handler with proper dependency injection
 func NewBuildingHandler(
 	base BaseHandler,
-	buildingUC *usecase.BuildingUseCase,
-	ifcUC *usecase.IFCUseCase,
+	buildingUC *building.BuildingUseCase,
+	ifcUC *integration.IFCUseCase,
 	logger domain.Logger,
 ) *BuildingHandler {
 	return &BuildingHandler{
@@ -111,11 +112,22 @@ func (h *BuildingHandler) CreateBuilding(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		h.logger.Error("Failed to create building", "error", err)
 
-		// Check for validation errors (handles wrapped errors)
-		errMsg := err.Error()
-		if strings.Contains(errMsg, "required") || strings.Contains(errMsg, "validation") || strings.Contains(errMsg, "invalid") {
-			h.RespondError(w, http.StatusBadRequest, err)
-			return
+		// Use DomainError type system for proper error categorization
+		if domainErr := domain.GetDomainError(err); domainErr != nil {
+			switch domainErr.Type {
+			case domain.ErrorTypeValidation:
+				h.RespondError(w, http.StatusBadRequest, err)
+				return
+			case domain.ErrorTypeNotFound:
+				h.RespondError(w, http.StatusNotFound, err)
+				return
+			case domain.ErrorTypeConflict:
+				h.RespondError(w, http.StatusConflict, err)
+				return
+			case domain.ErrorTypeUnauthorized:
+				h.RespondError(w, http.StatusUnauthorized, err)
+				return
+			}
 		}
 
 		h.RespondError(w, http.StatusInternalServerError, err)

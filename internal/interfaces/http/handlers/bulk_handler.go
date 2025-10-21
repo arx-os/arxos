@@ -8,26 +8,27 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
-	"github.com/arx-os/arxos/internal/usecase"
+	"github.com/arx-os/arxos/internal/usecase/auth"
+	"github.com/arx-os/arxos/internal/usecase/building"
 )
 
 // BulkHandler handles bulk operations for multiple entities
 type BulkHandler struct {
 	BaseHandler
-	buildingUC  *usecase.BuildingUseCase
-	equipmentUC *usecase.EquipmentUseCase
+	buildingUC  *building.BuildingUseCase
+	equipmentUC *building.EquipmentUseCase
 	componentUC any // ComponentService interface
-	userUC      *usecase.UserUseCase
+	userUC      *auth.UserUseCase
 	logger      domain.Logger
 }
 
 // NewBulkHandler creates a new bulk handler with proper dependency injection
 func NewBulkHandler(
 	base BaseHandler,
-	buildingUC *usecase.BuildingUseCase,
-	equipmentUC *usecase.EquipmentUseCase,
+	buildingUC *building.BuildingUseCase,
+	equipmentUC *building.EquipmentUseCase,
 	componentUC any,
-	userUC *usecase.UserUseCase,
+	userUC *auth.UserUseCase,
 	logger domain.Logger,
 ) *BulkHandler {
 	return &BulkHandler{

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/domain"
+	"github.com/arx-os/arxos/internal/domain/spatial"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -62,7 +63,7 @@ func AssertLocationEqual(t *testing.T, expected, actual *domain.Location, msgAnd
 }
 
 // AssertSpatialLocationEqual asserts that two spatial locations are equal
-func AssertSpatialLocationEqual(t *testing.T, expected, actual *domain.SpatialLocation, msgAndArgs ...any) bool {
+func AssertSpatialLocationEqual(t *testing.T, expected, actual *spatial.SpatialLocation, msgAndArgs ...any) bool {
 	if expected == nil && actual == nil {
 		return true
 	}
@@ -76,7 +77,7 @@ func AssertSpatialLocationEqual(t *testing.T, expected, actual *domain.SpatialLo
 }
 
 // AssertSpatialAnchorEqual asserts that two spatial anchors are equal
-func AssertSpatialAnchorEqual(t *testing.T, expected, actual *domain.SpatialAnchor, msgAndArgs ...any) bool {
+func AssertSpatialAnchorEqual(t *testing.T, expected, actual *spatial.SpatialAnchor, msgAndArgs ...any) bool {
 	if expected == nil && actual == nil {
 		return true
 	}
@@ -92,7 +93,7 @@ func AssertSpatialAnchorEqual(t *testing.T, expected, actual *domain.SpatialAnch
 }
 
 // AssertAREquipmentOverlayEqual asserts that two AR equipment overlays are equal
-func AssertAREquipmentOverlayEqual(t *testing.T, expected, actual *domain.EquipmentAROverlay, msgAndArgs ...any) bool {
+func AssertAREquipmentOverlayEqual(t *testing.T, expected, actual *spatial.EquipmentAROverlay, msgAndArgs ...any) bool {
 	if expected == nil && actual == nil {
 		return true
 	}
@@ -107,7 +108,7 @@ func AssertAREquipmentOverlayEqual(t *testing.T, expected, actual *domain.Equipm
 }
 
 // AssertARNavigationPathEqual asserts that two AR navigation paths are equal
-func AssertARNavigationPathEqual(t *testing.T, expected, actual *domain.ARNavigationPath, msgAndArgs ...any) bool {
+func AssertARNavigationPathEqual(t *testing.T, expected, actual *spatial.ARNavigationPath, msgAndArgs ...any) bool {
 	if expected == nil && actual == nil {
 		return true
 	}

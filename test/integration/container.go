@@ -7,11 +7,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/arx-os/arxos/internal/domain/bas"
+	"github.com/arx-os/arxos/internal/domain/versioncontrol"
+
 	"github.com/arx-os/arxos/internal/app"
 	"github.com/arx-os/arxos/internal/domain"
 	"github.com/arx-os/arxos/internal/domain/types"
 	"github.com/arx-os/arxos/internal/infrastructure/postgis"
-	"github.com/arx-os/arxos/internal/usecase"
+	buildinguc "github.com/arx-os/arxos/internal/usecase/building"
+	usecaseintegration "github.com/arx-os/arxos/internal/usecase/integration"
 	"github.com/stretchr/testify/require"
 )
 
@@ -99,32 +103,32 @@ func (tc *TestContainer) GetOrganizationRepository() domain.OrganizationReposito
 	return postgis.NewOrganizationRepository(tc.DB)
 }
 
-func (tc *TestContainer) GetBASPointRepository() domain.BASPointRepository {
+func (tc *TestContainer) GetBASPointRepository() bas.BASPointRepository {
 	return postgis.NewBASPointRepository(tc.DB)
 }
 
-func (tc *TestContainer) GetBASSystemRepository() domain.BASSystemRepository {
+func (tc *TestContainer) GetBASSystemRepository() bas.BASSystemRepository {
 	return postgis.NewBASSystemRepository(tc.DB)
 }
 
-func (tc *TestContainer) GetBranchRepository() domain.BranchRepository {
+func (tc *TestContainer) GetBranchRepository() versioncontrol.BranchRepository {
 	return postgis.NewBranchRepository(tc.DB)
 }
 
-func (tc *TestContainer) GetCommitRepository() domain.CommitRepository {
+func (tc *TestContainer) GetCommitRepository() versioncontrol.CommitRepository {
 	return postgis.NewCommitRepository(tc.DB)
 }
 
-func (tc *TestContainer) GetBuildingUseCase() *usecase.BuildingUseCase {
-	return usecase.NewBuildingUseCase(
+func (tc *TestContainer) GetBuildingUseCase() *buildinguc.BuildingUseCase {
+	return buildinguc.NewBuildingUseCase(
 		tc.GetBuildingRepository(),
 		tc.GetEquipmentRepository(),
 		nil, // logger - tests use t.Log
 	)
 }
 
-func (tc *TestContainer) GetEquipmentUseCase() *usecase.EquipmentUseCase {
-	return usecase.NewEquipmentUseCase(
+func (tc *TestContainer) GetEquipmentUseCase() *buildinguc.EquipmentUseCase {
+	return buildinguc.NewEquipmentUseCase(
 		tc.GetEquipmentRepository(),
 		tc.GetBuildingRepository(),
 		tc.GetFloorRepository(),
@@ -133,12 +137,12 @@ func (tc *TestContainer) GetEquipmentUseCase() *usecase.EquipmentUseCase {
 	)
 }
 
-func (tc *TestContainer) GetIFCUseCase() *usecase.IFCUseCase {
+func (tc *TestContainer) GetIFCUseCase() *usecaseintegration.IFCUseCase {
 	// Note: IFC service initialization simplified for tests
 	// Full IFC import tests will skip if service is not available
 	// TODO: Initialize enhanced IFC service when needed for full IFC import tests
 
-	return usecase.NewIFCUseCase(
+	return usecaseintegration.NewIFCUseCase(
 		nil, // repo repo - not needed for basic tests
 		nil, // ifc repo - not needed for basic tests
 		nil, // validator - not needed for basic tests

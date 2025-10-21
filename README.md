@@ -163,30 +163,6 @@ Just as Git became the standard because it was free and powerful, ArxOS follows 
 
 ## 🚀 Quick Start
 
-### **⚠️ Current Status: Active Development - Not Production Ready**
-
-**Completion: 60-70%**
-
-ArxOS has excellent architecture and solid foundations, but integration work remains. Many CLI commands and API endpoints need wiring to use cases. See [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) for brutally honest assessment of what works vs what's placeholder code.
-
-**What Works:**
-- ✅ Database schema (107 tables, spatial intelligence)
-- ✅ Auth/JWT system
-- ✅ BAS CSV import (fully functional)
-- ✅ Git-like version control (branches, commits, PRs)
-- ✅ Equipment topology with graph queries
-- ✅ Basic building/equipment CRUD
-
-**What Needs Work:**
-- ⚠️ Tests failing (41% of test packages fail - 11 out of 27)
-- ⚠️ IFC import (code exists but tests failing, never tested with real IFC)
-- ⚠️ HTTP API (endpoints exist but not integration tested)
-- ⚠️ CLI commands (many exist but not integration tested)
-- ⚠️ No end-to-end workflows validated
-- ❌ Mobile app (not started - no iOS/Android platforms initialized)
-
-**See [`docs/STATUS.md`](docs/STATUS.md) for detailed status and [`docs/FAILING_TESTS.md`](docs/FAILING_TESTS.md) for test inventory.**
-
 ### **Installation (Development)**
 
 ```bash
@@ -196,6 +172,11 @@ cd arxos
 
 # Install dependencies
 go mod download
+
+# Setup environment variables
+cp .env.example .env
+# IMPORTANT: Edit .env and set ARXOS_JWT_SECRET
+# Generate a secure key with: openssl rand -base64 32
 
 # Setup database
 ./scripts/setup-dev-database.sh
@@ -227,8 +208,6 @@ $ go run cmd/arx/main.go building create --name "Test School" --address "123 Mai
 $ go run cmd/arx/main.go branch list --repo <repo-id>
 $ go run cmd/arx/main.go bas import points.csv --building <building-id>
 ```
-
-**⚠️ Note:** Some CLI commands show placeholder data. See [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) for command-by-command status and [`docs/WIRING_PLAN.md`](docs/WIRING_PLAN.md) for completion plan.
 
 ### **Your First Building**
 
@@ -442,28 +421,6 @@ make test-integration
 go test ./internal/domain/...
 ```
 
-## 📚 Documentation
-
-### System Architecture
-- **[Service Architecture](docs/architecture/SERVICE_ARCHITECTURE.md)** - Complete system overview and module integration
-- **[API Documentation](docs/api/API_DOCUMENTATION.md)** - Comprehensive REST API documentation
-- **[Integration Flow](docs/integration/INTEGRATION_FLOW.md)** - External system integration and internal module communication
-- **[Deployment Guide](docs/deployment/DEPLOYMENT_GUIDE.md)** - Production deployment and monitoring
-
-### Module Documentation
-- **[CLI Integration](docs/integration/CLI_INTEGRATION.md)** - Command-line interface integration
-- **[IFC Integration](docs/integration/IFCOPENSHELL_INTEGRATION.md)** - IFC file processing integration
-- **[CADTUI Workflow](docs/architecture/CADTUI_VISUAL_CONTEXT.md)** - Computer-Aided Design Terminal UI
-
-### Development
-- **[Quick Start](QUICKSTART.md)** - Complete development setup and first steps
-- **[Development Guide](mobile/DEVELOPMENT_GUIDE.md)** - Mobile development guidelines
-- **[Technical Specifications](mobile/TECHNICAL_SPECIFICATIONS.md)** - Technical implementation details
-- **[Implementation Plan](mobile/IMPLEMENTATION_PLAN.md)** - Development roadmap
-
-### Business Documentation
-- **[Automation Examples](docs/automation/AUTOMATION_EXAMPLE.md)** - Workflow automation examples
-- **[Intelligent Automation](docs/automation/INTELLIGENT_AUTOMATION.md)** - AI-powered automation features
 
 ## 📄 License
 

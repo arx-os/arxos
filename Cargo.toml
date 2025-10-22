@@ -1,0 +1,65 @@
+[package]
+name = "arxos"
+version = "0.1.0"
+edition = "2021"
+description = "ArxOS - Git for Buildings"
+authors = ["Joel <joel@arxos.io>"]
+license = "MIT"
+repository = "https://github.com/arx-os/arxos"
+keywords = ["building", "git", "bim", "facilities", "ifc"]
+categories = ["command-line-utilities", "development-tools"]
+
+[dependencies]
+# CLI framework
+clap = { version = "4.0", features = ["derive"] }
+
+# Terminal rendering
+crossterm = "0.27"
+ratatui = "0.24"
+
+# Git operations
+git2 = "0.18"
+reqwest = { version = "0.11", features = ["json"] }
+
+# Spatial data (simplified for now)
+geo = "0.25"
+nalgebra = "0.32"
+# proj = "0.28"  # Commented out - needs SQLite3
+# rstar = "0.10"  # Commented out - can add later
+
+# IFC processing - using custom STEP parser
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+serde_json = "1.0"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+log = "0.4"
+env_logger = "0.10"
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# Date/time
+chrono = { version = "0.4", features = ["serde"] }
+
+# File system
+walkdir = "2.3"
+glob = "0.3"
+
+# UUID generation
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# Path processing
+regex = "1.0"
+
+[dev-dependencies]
+# Testing
+criterion = "0.5"
+proptest = "1.0"
+tempfile = "3.0"

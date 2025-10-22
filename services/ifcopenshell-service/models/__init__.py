@@ -1,1 +1,0 @@
-# IFC Models Package

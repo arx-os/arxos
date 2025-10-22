@@ -189,6 +189,11 @@ func (a *App) wireCommands() {
 	a.rootCmd.AddCommand(integration.CreateExportCommand(serviceContext))
 	a.rootCmd.AddCommand(integration.CreateConvertCommand(serviceContext))
 
+	// Git Import/Export commands
+	a.rootCmd.AddCommand(integration.CreateGitExportCommand(serviceContext))
+	a.rootCmd.AddCommand(integration.CreateGitImportCommand(serviceContext))
+	a.rootCmd.AddCommand(integration.CreateGitSyncCommand(serviceContext))
+
 	// Data operations
 	a.rootCmd.AddCommand(utility.CreateQueryCommand(serviceContext))
 

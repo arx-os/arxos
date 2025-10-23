@@ -1,0 +1,158 @@
+name: 'IFC Processor'
+description: 'Convert IFC files to YAML equipment data and commit to Git'
+author: 'ArxOS Team'
+branding:
+  icon: 'building'
+  color: 'blue'
+
+inputs:
+  ifc-file:
+    description: 'Path to the IFC file to process'
+    required: true
+  output-dir:
+    description: 'Directory to output YAML files'
+    required: false
+    default: 'building-data'
+  commit-message:
+    description: 'Git commit message for the processed data'
+    required: false
+    default: 'Process IFC file: {ifc-file}'
+  git-user-name:
+    description: 'Git user name for commits'
+    required: false
+    default: 'ArxOS Bot'
+  git-user-email:
+    description: 'Git user email for commits'
+    required: false
+    default: 'bot@arxos.io'
+  validate-spatial:
+    description: 'Whether to validate spatial coordinates'
+    required: false
+    default: 'true'
+
+outputs:
+  processed-files:
+    description: 'Number of YAML files created'
+  commit-hash:
+    description: 'Git commit hash of the processed data'
+  processing-time:
+    description: 'Time taken to process the IFC file'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        components: rustfmt, clippy
+        override: true
+
+    - name: Cache Rust dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: Build ArxOS CLI
+      shell: bash
+      run: |
+        cargo build --release --bin arxos
+        echo "ArxOS CLI built successfully"
+
+    - name: Validate IFC file
+      shell: bash
+      run: |
+        echo "Validating IFC file: ${{ inputs.ifc-file }}"
+        ./target/release/arxos validate --path "${{ inputs.ifc-file }}"
+        echo "IFC file validation completed"
+
+    - name: Process IFC file
+      id: process
+      shell: bash
+      run: |
+        echo "Processing IFC file: ${{ inputs.ifc-file }}"
+        start_time=$(date +%s)
+        
+        # Create output directory if it doesn't exist
+        mkdir -p "${{ inputs.output-dir }}"
+        
+        # Process the IFC file
+        ./target/release/arxos import "${{ inputs.ifc-file }}"
+        
+        end_time=$(date +%s)
+        processing_time=$((end_time - start_time))
+        
+        # Count processed files
+        processed_files=$(find "${{ inputs.output-dir }}" -name "*.yaml" -o -name "*.yml" | wc -l)
+        
+        echo "processed-files=$processed_files" >> $GITHUB_OUTPUT
+        echo "processing-time=$processing_time" >> $GITHUB_OUTPUT
+        echo "Processed $processed_files YAML files in ${processing_time}s"
+
+    - name: Configure Git
+      shell: bash
+      run: |
+        git config --local user.name "${{ inputs.git-user-name }}"
+        git config --local user.email "${{ inputs.git-user-email }}"
+
+    - name: Commit processed data
+      id: commit
+      shell: bash
+      run: |
+        # Add all processed files
+        git add "${{ inputs.output-dir }}"
+        
+        # Check if there are changes to commit
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+          echo "commit-hash=" >> $GITHUB_OUTPUT
+        else
+          commit_message="${{ inputs.commit-message }}"
+          commit_message="${commit_message//\{ifc-file\}/${{ inputs.ifc-file }}}"
+          
+          commit_hash=$(git commit -m "$commit_message" | grep -o '[a-f0-9]\{40\}')
+          echo "commit-hash=$commit_hash" >> $GITHUB_OUTPUT
+          echo "Committed changes with hash: $commit_hash"
+        fi
+
+    - name: Push changes
+      if: steps.commit.outputs.commit-hash != ''
+      shell: bash
+      run: |
+        git push origin HEAD:${{ github.ref_name }}
+        echo "Pushed changes to ${{ github.ref_name }}"
+
+    - name: Validate spatial data
+      if: inputs.validate-spatial == 'true'
+      shell: bash
+      run: |
+        echo "Validating spatial data..."
+        ./target/release/arxos spatial validate --path "."
+        echo "Spatial validation completed"
+
+    - name: Generate processing report
+      shell: bash
+      run: |
+        echo "## IFC Processing Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**File Processed:** \`${{ inputs.ifc-file }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Output Directory:** \`${{ inputs.output-dir }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Files Created:** ${{ steps.process.outputs.processed-files }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Processing Time:** ${{ steps.process.outputs.processing-time }}s" >> $GITHUB_STEP_SUMMARY
+        if [ "${{ steps.commit.outputs.commit-hash }}" != "" ]; then
+          echo "**Commit Hash:** \`${{ steps.commit.outputs.commit-hash }}\`" >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ IFC processing completed successfully!" >> $GITHUB_STEP_SUMMARY

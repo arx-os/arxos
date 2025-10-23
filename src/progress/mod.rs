@@ -6,7 +6,6 @@ use std::sync::Arc;
 /// Progress reporter for long-running operations
 pub struct ProgressReporter {
     pb: ProgressBar,
-    operation_name: String,
 }
 
 impl ProgressReporter {
@@ -24,7 +23,6 @@ impl ProgressReporter {
         
         Self {
             pb,
-            operation_name: operation_name.to_string(),
         }
     }
     
@@ -154,7 +152,8 @@ mod tests {
     #[test]
     fn test_progress_reporter_creation() {
         let reporter = ProgressReporter::new("Test Operation", 100);
-        assert_eq!(reporter.operation_name, "Test Operation");
+        // Test that the reporter was created successfully
+        assert_eq!(reporter.pb.length(), Some(100));
     }
     
     #[test]

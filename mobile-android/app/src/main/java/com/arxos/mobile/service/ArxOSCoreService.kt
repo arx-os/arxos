@@ -3,46 +3,32 @@ package com.arxos.mobile.service
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
-import java.io.File
+import com.arxos.mobile.*
 
 class ArxOSCoreService(private val context: Context) {
     
-    companion object {
-        init {
-            System.loadLibrary("arxos_mobile")
-        }
-    }
-    
-    private var instance: Long = 0
+    private var instance: ArxOSMobile? = null
     
     init {
-        instance = createInstance()
+        try {
+            instance = ArxOSMobile()
+        } catch (e: Exception) {
+            android.util.Log.e("ArxOSCoreService", "Failed to initialize ArxOS core: ${e.message}")
+        }
     }
     
     fun destroy() {
-        if (instance != 0L) {
-            freeInstance(instance)
-            instance = 0L
-        }
+        instance = null
     }
     
     suspend fun executeCommand(command: String): CommandResult = withContext(Dispatchers.IO) {
         try {
-            val result = executeCommandNative(instance, command)
-            val json = JSONObject(result)
-            
-            CommandResult(
-                success = json.getBoolean("success"),
-                output = json.getString("output"),
-                error = if (json.has("error") && !json.isNull("error")) json.getString("error") else null,
-                executionTimeMs = json.getLong("execution_time_ms")
-            )
+            instance?.executeCommand(command) ?: throw Exception("ArxOS instance not initialized")
         } catch (e: Exception) {
             CommandResult(
                 success = false,
                 output = "",
-                error = "Failed to execute command: ${e.message}",
+                error = e.message,
                 executionTimeMs = 0
             )
         }
@@ -50,95 +36,166 @@ class ArxOSCoreService(private val context: Context) {
     
     suspend fun getRooms(): List<Room> = withContext(Dispatchers.IO) {
         try {
-            val result = getRoomsNative(instance)
-            val jsonArray = org.json.JSONArray(result)
-            val rooms = mutableListOf<Room>()
-            
-            for (i in 0 until jsonArray.length()) {
-                val roomJson = jsonArray.getJSONObject(i)
-                rooms.add(
-                    Room(
-                        id = roomJson.getString("id"),
-                        name = roomJson.getString("name"),
-                        floor = roomJson.getInt("floor"),
-                        wing = if (roomJson.has("wing") && !roomJson.isNull("wing")) roomJson.getString("wing") else null,
-                        roomType = roomJson.getString("room_type"),
-                        equipmentCount = roomJson.getInt("equipment_count")
-                    )
-                )
-            }
-            rooms
+            instance?.getRooms()?.map { it.toRoom() } ?: emptyList()
         } catch (e: Exception) {
+            android.util.Log.e("ArxOSCoreService", "Failed to get rooms: ${e.message}")
             emptyList()
         }
     }
     
     suspend fun getEquipment(): List<Equipment> = withContext(Dispatchers.IO) {
         try {
-            val result = getEquipmentNative(instance)
-            val jsonArray = org.json.JSONArray(result)
-            val equipment = mutableListOf<Equipment>()
-            
-            for (i in 0 until jsonArray.length()) {
-                val equipmentJson = jsonArray.getJSONObject(i)
-                val position = if (equipmentJson.has("position") && !equipmentJson.isNull("position")) {
-                    val posJson = equipmentJson.getJSONObject("position")
-                    Position(
-                        x = posJson.getDouble("x"),
-                        y = posJson.getDouble("y"),
-                        z = posJson.getDouble("z"),
-                        coordinateSystem = posJson.getString("coordinate_system"),
-                        accuracy = posJson.getDouble("accuracy")
-                    )
-                } else null
-                
-                equipment.add(
-                    Equipment(
-                        id = equipmentJson.getString("id"),
-                        name = equipmentJson.getString("name"),
-                        equipmentType = equipmentJson.getString("equipment_type"),
-                        status = equipmentJson.getString("status"),
-                        location = equipmentJson.getString("location"),
-                        roomId = equipmentJson.getString("room_id"),
-                        position = position,
-                        lastMaintenance = equipmentJson.getString("last_maintenance")
-                    )
-                )
-            }
-            equipment
+            instance?.getEquipment()?.map { it.toEquipment() } ?: emptyList()
         } catch (e: Exception) {
+            android.util.Log.e("ArxOSCoreService", "Failed to get equipment: ${e.message}")
+            emptyList()
+        }
+    }
+    
+    suspend fun getEquipmentByRoom(roomId: String): List<Equipment> = withContext(Dispatchers.IO) {
+        try {
+            instance?.getEquipmentByRoom(roomId)?.map { it.toEquipment() } ?: emptyList()
+        } catch (e: Exception) {
+            android.util.Log.e("ArxOSCoreService", "Failed to get equipment by room: ${e.message}")
             emptyList()
         }
     }
     
     suspend fun getGitStatus(): GitStatus? = withContext(Dispatchers.IO) {
         try {
-            val result = getGitStatusNative(instance)
-            val json = JSONObject(result)
-            
-            GitStatus(
-                branch = json.getString("branch"),
-                commitCount = json.getInt("commit_count"),
-                lastCommit = json.getString("last_commit"),
-                hasChanges = json.getBoolean("has_changes"),
-                syncStatus = json.getString("sync_status")
-            )
+            instance?.getGitStatus()?.toGitStatus()
         } catch (e: Exception) {
+            android.util.Log.e("ArxOSCoreService", "Failed to get git status: ${e.message}")
             null
         }
     }
     
-    // Native method declarations
-    private external fun createInstance(): Long
-    private external fun createInstanceWithPath(path: String): Long
-    private external fun freeInstance(instance: Long)
-    private external fun executeCommandNative(instance: Long, command: String): String
-    private external fun getRoomsNative(instance: Long): String
-    private external fun getEquipmentNative(instance: Long): String
-    private external fun getGitStatusNative(instance: Long): String
+    suspend fun syncGit(): Boolean = withContext(Dispatchers.IO) {
+        try {
+            instance?.syncGit()
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("ArxOSCoreService", "Failed to sync git: ${e.message}")
+            false
+        }
+    }
+    
+    suspend fun getGitHistory(limit: Int): List<String> = withContext(Dispatchers.IO) {
+        try {
+            instance?.getGitHistory(limit) ?: emptyList()
+        } catch (e: Exception) {
+            android.util.Log.e("ArxOSCoreService", "Failed to get git history: ${e.message}")
+            emptyList()
+        }
+    }
+    
+    suspend fun getGitDiff(): String = withContext(Dispatchers.IO) {
+        try {
+            instance?.getGitDiff() ?: "No changes detected"
+        } catch (e: Exception) {
+            android.util.Log.e("ArxOSCoreService", "Failed to get git diff: ${e.message}")
+            "Error retrieving diff"
+        }
+    }
+    
+    suspend fun createRoom(name: String, floor: Int, wing: String?): Room? = withContext(Dispatchers.IO) {
+        try {
+            instance?.createRoom(name, floor, wing)?.toRoom()
+        } catch (e: Exception) {
+            android.util.Log.e("ArxOSCoreService", "Failed to create room: ${e.message}")
+            null
+        }
+    }
+    
+    suspend fun addEquipment(
+        name: String, 
+        equipmentType: String, 
+        roomId: String, 
+        position: Position?
+    ): Equipment? = withContext(Dispatchers.IO) {
+        try {
+            val mobilePosition = position?.let { 
+                MobilePosition(
+                    x = it.x,
+                    y = it.y,
+                    z = it.z,
+                    coordinateSystem = it.coordinateSystem,
+                    accuracy = it.accuracy
+                )
+            }
+            instance?.addEquipment(name, equipmentType, roomId, mobilePosition)?.toEquipment()
+        } catch (e: Exception) {
+            android.util.Log.e("ArxOSCoreService", "Failed to add equipment: ${e.message}")
+            null
+        }
+    }
+    
+    suspend fun updateEquipmentStatus(equipmentId: String, status: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            instance?.updateEquipmentStatus(equipmentId, status)
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("ArxOSCoreService", "Failed to update equipment status: ${e.message}")
+            false
+        }
+    }
+    
+    suspend fun processARScan(scanData: ByteArray, roomName: String): ARScanResult? = withContext(Dispatchers.IO) {
+        try {
+            instance?.processArScan(scanData.toList(), roomName)
+        } catch (e: Exception) {
+            android.util.Log.e("ArxOSCoreService", "Failed to process AR scan: ${e.message}")
+            null
+        }
+    }
 }
 
-// Data classes
+// Extension functions to convert UniFFI types to existing data classes
+fun MobileRoom.toRoom(): Room {
+    return Room(
+        id = this.id,
+        name = this.name,
+        floor = this.floor,
+        wing = this.wing,
+        roomType = this.roomType,
+        equipmentCount = this.equipmentCount
+    )
+}
+
+fun MobileEquipment.toEquipment(): Equipment {
+    return Equipment(
+        id = this.id,
+        name = this.name,
+        equipmentType = this.equipmentType,
+        status = this.status,
+        location = this.location,
+        roomId = this.roomId,
+        position = this.position?.toPosition(),
+        lastMaintenance = this.lastMaintenance
+    )
+}
+
+fun MobilePosition.toPosition(): Position {
+    return Position(
+        x = this.x,
+        y = this.y,
+        z = this.z,
+        coordinateSystem = this.coordinateSystem,
+        accuracy = this.accuracy
+    )
+}
+
+fun GitStatus.toGitStatus(): GitStatus {
+    return GitStatus(
+        branch = this.branch,
+        commitCount = this.commitCount,
+        lastCommit = this.lastCommit,
+        hasChanges = this.hasChanges,
+        syncStatus = this.syncStatus
+    )
+}
+
+// Legacy data classes for backward compatibility
 data class CommandResult(
     val success: Boolean,
     val output: String,

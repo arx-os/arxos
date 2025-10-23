@@ -6,6 +6,7 @@ use chrono::Utc;
 use uuid::Uuid;
 
 /// Room management operations
+#[derive(Debug)]
 pub struct RoomManager {
     rooms: HashMap<String, Room>,
 }

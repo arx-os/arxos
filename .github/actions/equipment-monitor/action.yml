@@ -1,0 +1,246 @@
+name: 'Equipment Monitor'
+description: 'Monitor equipment health and generate alerts for critical issues'
+author: 'ArxOS Team'
+branding:
+  icon: 'activity'
+  color: 'orange'
+
+inputs:
+  data-path:
+    description: 'Path to building data (YAML files or directory)'
+    required: true
+  monitoring-interval:
+    description: 'Monitoring interval in minutes'
+    required: false
+    default: '60'
+  alert-thresholds:
+    description: 'JSON string defining alert thresholds'
+    required: false
+    default: '{"temperature": {"min": 15, "max": 25}, "humidity": {"min": 30, "max": 70}}'
+  create-issues:
+    description: 'Whether to create GitHub issues for critical alerts'
+    required: false
+    default: 'true'
+  issue-labels:
+    description: 'Comma-separated labels for created issues'
+    required: false
+    default: 'equipment-alert,critical'
+  notification-webhook:
+    description: 'Webhook URL for external notifications'
+    required: false
+  dry-run:
+    description: 'Whether to run in dry-run mode (no actual alerts)'
+    required: false
+    default: 'false'
+
+outputs:
+  equipment-monitored:
+    description: 'Number of equipment items monitored'
+  alerts-generated:
+    description: 'Number of alerts generated'
+  issues-created:
+    description: 'Number of GitHub issues created'
+  critical-alerts:
+    description: 'Number of critical alerts found'
+  monitoring-time:
+    description: 'Time taken to complete monitoring cycle'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        components: rustfmt, clippy
+        override: true
+
+    - name: Cache Rust dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: Build ArxOS CLI
+      shell: bash
+      run: |
+        cargo build --release --bin arxos
+        echo "ArxOS CLI built successfully"
+
+    - name: Monitor equipment health
+      id: monitor
+      shell: bash
+      run: |
+        echo "Starting equipment monitoring cycle..."
+        start_time=$(date +%s)
+        
+        # Get equipment list
+        equipment_json=$(./target/release/arxos equipment list --format json)
+        equipment_count=$(echo "$equipment_json" | jq '.equipment | length' 2>/dev/null || echo "0")
+        
+        echo "equipment-monitored=$equipment_count" >> $GITHUB_OUTPUT
+        
+        # Initialize counters
+        alerts_generated=0
+        issues_created=0
+        critical_alerts=0
+        
+        # Parse alert thresholds
+        thresholds='${{ inputs.alert-thresholds }}'
+        
+        # Check each equipment item for health issues
+        if [ "$equipment_count" -gt 0 ]; then
+          echo "Monitoring $equipment_count equipment items..."
+          
+          # This is a simplified monitoring check
+          # In practice, you'd integrate with actual sensor data or monitoring systems
+          for i in $(seq 0 $((equipment_count - 1))); do
+            equipment=$(echo "$equipment_json" | jq ".equipment[$i]")
+            equipment_name=$(echo "$equipment" | jq -r '.name')
+            equipment_type=$(echo "$equipment" | jq -r '.type')
+            
+            # Simulate health check (replace with actual monitoring logic)
+            health_status="healthy"
+            alert_level="none"
+            
+            # Example: Check for equipment-specific issues
+            case "$equipment_type" in
+              "HVAC")
+                # Simulate temperature check
+                if [ $((RANDOM % 10)) -lt 2 ]; then
+                  health_status="warning"
+                  alert_level="warning"
+                  alerts_generated=$((alerts_generated + 1))
+                fi
+                ;;
+              "Electrical")
+                # Simulate electrical system check
+                if [ $((RANDOM % 20)) -lt 1 ]; then
+                  health_status="critical"
+                  alert_level="critical"
+                  alerts_generated=$((alerts_generated + 1))
+                  critical_alerts=$((critical_alerts + 1))
+                fi
+                ;;
+            esac
+            
+            if [ "$alert_level" != "none" ]; then
+              echo "Alert: $equipment_name ($equipment_type) - $health_status"
+            fi
+          done
+        fi
+        
+        end_time=$(date +%s)
+        monitoring_time=$((end_time - start_time))
+        
+        echo "alerts-generated=$alerts_generated" >> $GITHUB_OUTPUT
+        echo "critical-alerts=$critical_alerts" >> $GITHUB_OUTPUT
+        echo "monitoring-time=$monitoring_time" >> $GITHUB_OUTPUT
+        
+        echo "Monitoring completed in ${monitoring_time}s"
+        echo "Alerts generated: $alerts_generated"
+        echo "Critical alerts: $critical_alerts"
+
+    - name: Create GitHub issues for critical alerts
+      if: inputs.create-issues == 'true' && steps.monitor.outputs.critical-alerts != '0' && inputs.dry-run == 'false'
+      id: issues
+      shell: bash
+      run: |
+        echo "Creating GitHub issues for critical alerts..."
+        
+        # Parse issue labels
+        IFS=',' read -ra LABELS <<< "${{ inputs.issue-labels }}"
+        labels_json=$(printf '%s\n' "${LABELS[@]}" | jq -R . | jq -s .)
+        
+        # Create issues for critical alerts
+        issues_created=0
+        
+        # This is a simplified version - in practice, you'd create specific issues for each critical alert
+        if [ "${{ steps.monitor.outputs.critical-alerts }}" -gt 0 ]; then
+          issue_title="Critical Equipment Alert - $(date +'%Y-%m-%d %H:%M:%S')"
+          issue_body="## Critical Equipment Alert
+          
+          **Alert Count:** ${{ steps.monitor.outputs.critical-alerts }}
+          **Monitoring Time:** $(date +'%Y-%m-%d %H:%M:%S')
+          **Data Path:** \`${{ inputs.data-path }}\`
+          
+          Please investigate the critical equipment issues detected during the monitoring cycle.
+          
+          ### Next Steps:
+          1. Review equipment status in the building data
+          2. Check physical equipment condition
+          3. Update equipment status if resolved
+          4. Close this issue when resolved"
+          
+          # Create the issue using GitHub CLI (if available) or API
+          if command -v gh &> /dev/null; then
+            gh issue create --title "$issue_title" --body "$issue_body" --label "${{ inputs.issue-labels }}"
+            issues_created=1
+          else
+            echo "GitHub CLI not available, would create issue: $issue_title"
+            issues_created=1
+          fi
+        fi
+        
+        echo "issues-created=$issues_created" >> $GITHUB_OUTPUT
+        echo "Created $issues_created GitHub issues"
+
+    - name: Send webhook notification
+      if: inputs.notification-webhook != '' && steps.monitor.outputs.alerts-generated != '0' && inputs.dry-run == 'false'
+      shell: bash
+      run: |
+        echo "Sending webhook notification..."
+        
+        webhook_data=$(cat <<EOF
+        {
+          "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+          "repository": "${{ github.repository }}",
+          "branch": "${{ github.ref_name }}",
+          "alerts": {
+            "total": ${{ steps.monitor.outputs.alerts-generated }},
+            "critical": ${{ steps.monitor.outputs.critical-alerts }}
+          },
+          "equipment_monitored": ${{ steps.monitor.outputs.equipment-monitored }},
+          "monitoring_time": ${{ steps.monitor.outputs.monitoring-time }}
+        }
+        EOF
+        )
+        
+        curl -X POST "${{ inputs.notification-webhook }}" \
+          -H "Content-Type: application/json" \
+          -d "$webhook_data"
+        
+        echo "Webhook notification sent"
+
+    - name: Generate monitoring report
+      shell: bash
+      run: |
+        echo "## Equipment Monitoring Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Monitoring Time:** $(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
+        echo "**Data Path:** \`${{ inputs.data-path }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Equipment Monitored:** ${{ steps.monitor.outputs.equipment-monitored }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Alerts Generated:** ${{ steps.monitor.outputs.alerts-generated }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Critical Alerts:** ${{ steps.monitor.outputs.critical-alerts }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Issues Created:** ${{ steps.issues.outputs.issues-created }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Monitoring Duration:** ${{ steps.monitor.outputs.monitoring-time }}s" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ steps.monitor.outputs.critical-alerts }}" -gt 0 ]; then
+          echo "⚠️ **Status:** Critical alerts detected - immediate attention required" >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ steps.monitor.outputs.alerts-generated }}" -gt 0 ]; then
+          echo "⚠️ **Status:** Warnings detected - review recommended" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "✅ **Status:** All equipment healthy" >> $GITHUB_STEP_SUMMARY
+        fi

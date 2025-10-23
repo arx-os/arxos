@@ -1,10 +1,56 @@
 [workspace]
 members = [
+    ".",
     "crates/arxos-core",
     "crates/arxos-mobile", 
     "crates/arxos-cli"
 ]
 resolver = "2"
+
+[package]
+name = "arxos"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description.workspace = true
+
+[dependencies]
+# Re-export all workspace dependencies for integration tests
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+git2 = { workspace = true }
+url = { workspace = true }
+nalgebra = { workspace = true }
+geo = { workspace = true }
+rstar = { workspace = true }
+crossterm = { workspace = true }
+ratatui = { workspace = true }
+rayon = { workspace = true }
+indicatif = { workspace = true }
+toml = { workspace = true }
+notify = { workspace = true }
+num_cpus = { workspace = true }
+tempfile = { workspace = true }
+uniffi = { workspace = true }
+uniffi_build = { workspace = true }
+log = "0.4"
+regex = "1.10"
+clap = { version = "4.4", features = ["derive"] }
+env_logger = "0.10"
+arxos-core = { path = "crates/arxos-core", default-features = false, features = ["git"] }
+
+[dev-dependencies]
+criterion = { workspace = true }
+proptest = { workspace = true }
 
 [workspace.package]
 version = "0.1.0"
@@ -27,7 +73,7 @@ tracing = "0.1"
 tracing-subscriber = "0.3"
 
 # Git dependencies
-git2 = "0.18"
+git2 = { version = "0.18", features = ["vendored-openssl"] }
 url = "2.4"
 
 # Spatial dependencies

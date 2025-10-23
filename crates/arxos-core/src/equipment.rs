@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Equipment management operations
+#[derive(Debug)]
 pub struct EquipmentManager {
     equipment: HashMap<String, Equipment>,
 }

@@ -13,8 +13,8 @@ pub mod path;
 use clap::Parser;
 use cli::Cli;
 use log::info;
-use crate::progress::{ProgressReporter, ProgressContext, utils};
-use arxos_core::{ArxOSCore, RoomType, EquipmentType, parse_room_type, parse_equipment_type};
+use crate::progress::{ProgressContext, utils};
+use arxos_core::{ArxOSCore, parse_room_type, parse_equipment_type};
 
 /// Load building data from YAML files
 fn load_building_data(building_name: &str) -> Result<yaml::BuildingData, Box<dyn std::error::Error>> {
@@ -846,19 +846,19 @@ fn handle_room_command(command: cli::RoomCommands) -> Result<(), Box<dyn std::er
             println!("🏗️ Creating room: {} in {} Floor {} Wing {}", name, building, floor, wing);
             println!("   Type: {}", room_type);
             
-            if let Some(dims) = dimensions {
+            if let Some(ref dims) = dimensions {
                 println!("   Dimensions: {}", dims);
             }
             
-            if let Some(pos) = position {
+            if let Some(ref pos) = position {
                 println!("   Position: {}", pos);
             }
             
-            let parsed_room_type = parse_room_type(room_type);
+            let parsed_room_type = parse_room_type(&room_type);
             let room = core.room_manager().create_room(
                 name.clone(),
                 parsed_room_type,
-                *floor,
+                floor,
                 wing.clone(),
                 dimensions.clone(),
                 position.clone(),
@@ -942,7 +942,7 @@ fn handle_room_command(command: cli::RoomCommands) -> Result<(), Box<dyn std::er
         cli::RoomCommands::Update { room, property } => {
             println!("✏️ Updating room: {}", room);
             
-            for prop in property {
+            for prop in &property {
                 println!("   Property: {}", prop);
             }
             
@@ -978,15 +978,15 @@ fn handle_equipment_command(command: cli::EquipmentCommands) -> Result<(), Box<d
             println!("🔧 Adding equipment: {} to room {}", name, room);
             println!("   Type: {}", equipment_type);
             
-            if let Some(pos) = position {
+            if let Some(ref pos) = position {
                 println!("   Position: {}", pos);
             }
             
-            for prop in property {
+            for prop in &property {
                 println!("   Property: {}", prop);
             }
             
-            let parsed_equipment_type = parse_equipment_type(equipment_type);
+            let parsed_equipment_type = parse_equipment_type(&equipment_type);
             let equipment = core.equipment_manager().add_equipment(
                 name.clone(),
                 parsed_equipment_type,
@@ -1036,11 +1036,11 @@ fn handle_equipment_command(command: cli::EquipmentCommands) -> Result<(), Box<d
         cli::EquipmentCommands::Update { equipment, property, position } => {
             println!("✏️ Updating equipment: {}", equipment);
             
-            for prop in property {
+            for prop in &property {
                 println!("   Property: {}", prop);
             }
             
-            if let Some(pos) = position {
+            if let Some(ref pos) = position {
                 println!("   New position: {}", pos);
             }
             
@@ -1078,7 +1078,7 @@ fn handle_spatial_command(command: cli::SpatialCommands) -> Result<(), Box<dyn s
         cli::SpatialCommands::Query { query_type, entity, params } => {
             println!("🔍 Spatial query: {} for entity {}", query_type, entity);
             
-            for param in params {
+            for param in &params {
                 println!("   Parameter: {}", param);
             }
             
@@ -1109,7 +1109,7 @@ fn handle_spatial_command(command: cli::SpatialCommands) -> Result<(), Box<dyn s
         cli::SpatialCommands::Validate { entity, tolerance } => {
             println!("✅ Validating spatial data");
             
-            if let Some(e) = entity {
+            if let Some(ref e) = entity {
                 println!("   Entity: {}", e);
             }
             

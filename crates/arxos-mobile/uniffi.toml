@@ -7,3 +7,10 @@ swift = { module_name = "ArxOSMobile" }
 
 [uniffi.build]
 library_name = "arxos_mobile"
+
+[uniffi.metadata]
+description = "ArxOS Mobile - Git for Buildings"
+version = "0.1.0"
+authors = ["Joel <joel@arxos.io>"]
+license = "MIT"
+repository = "https://github.com/arx-os/arxos"

@@ -1,0 +1,171 @@
+name: 'Building Reporter'
+description: 'Generate comprehensive building status reports and analytics'
+author: 'ArxOS Team'
+branding:
+  icon: 'file-text'
+  color: 'purple'
+
+inputs:
+  data-path:
+    description: 'Path to building data (YAML files or directory)'
+    required: true
+  report-type:
+    description: 'Type of report to generate (status, energy, equipment, summary)'
+    required: false
+    default: 'summary'
+  output-format:
+    description: 'Output format (markdown, json, html)'
+    required: false
+    default: 'markdown'
+  include-charts:
+    description: 'Whether to include visual charts in the report'
+    required: false
+    default: 'true'
+  time-period:
+    description: 'Time period for analysis (daily, weekly, monthly)'
+    required: false
+    default: 'monthly'
+  commit-report:
+    description: 'Whether to commit the generated report to Git'
+    required: false
+    default: 'true'
+
+outputs:
+  report-path:
+    description: 'Path to the generated report file'
+  report-size:
+    description: 'Size of the generated report in bytes'
+  equipment-count:
+    description: 'Total number of equipment items analyzed'
+  rooms-count:
+    description: 'Total number of rooms analyzed'
+  commit-hash:
+    description: 'Git commit hash if report was committed'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        components: rustfmt, clippy
+        override: true
+
+    - name: Cache Rust dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: Build ArxOS CLI
+      shell: bash
+      run: |
+        cargo build --release --bin arxos
+        echo "ArxOS CLI built successfully"
+
+    - name: Generate building report
+      id: report
+      shell: bash
+      run: |
+        echo "Generating ${{ inputs.report-type }} report..."
+        
+        # Create reports directory
+        mkdir -p reports
+        
+        # Generate timestamp for report filename
+        timestamp=$(date +"%Y%m%d_%H%M%S")
+        report_filename="building_report_${timestamp}.${{ inputs.output-format }}"
+        report_path="reports/$report_filename"
+        
+        # Generate the report based on type
+        case "${{ inputs.report-type }}" in
+          "status")
+            ./target/release/arxos render --building "all" --format "${{ inputs.output-format }}" --output "$report_path"
+            ;;
+          "energy")
+            ./target/release/arxos equipment list --type "HVAC" --format "${{ inputs.output-format }}" --output "$report_path"
+            ;;
+          "equipment")
+            ./target/release/arxos equipment list --format "${{ inputs.output-format }}" --output "$report_path"
+            ;;
+          "summary")
+            ./target/release/arxos render --building "all" --format "${{ inputs.output-format }}" --output "$report_path"
+            ;;
+        esac
+        
+        # Get report statistics
+        report_size=$(wc -c < "$report_path")
+        equipment_count=$(./target/release/arxos equipment list --format json | jq '.equipment | length' 2>/dev/null || echo "0")
+        rooms_count=$(./target/release/arxos room list --format json | jq '.rooms | length' 2>/dev/null || echo "0")
+        
+        echo "report-path=$report_path" >> $GITHUB_OUTPUT
+        echo "report-size=$report_size" >> $GITHUB_OUTPUT
+        echo "equipment-count=$equipment_count" >> $GITHUB_OUTPUT
+        echo "rooms-count=$rooms_count" >> $GITHUB_OUTPUT
+        
+        echo "Report generated: $report_path"
+        echo "Report size: $report_size bytes"
+        echo "Equipment analyzed: $equipment_count"
+        echo "Rooms analyzed: $rooms_count"
+
+    - name: Configure Git
+      if: inputs.commit-report == 'true'
+      shell: bash
+      run: |
+        git config --local user.name "ArxOS Reporter Bot"
+        git config --local user.email "reporter@arxos.io"
+
+    - name: Commit report
+      id: commit
+      if: inputs.commit-report == 'true'
+      shell: bash
+      run: |
+        git add "${{ steps.report.outputs.report-path }}"
+        
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+          echo "commit-hash=" >> $GITHUB_OUTPUT
+        else
+          commit_message="Generate ${{ inputs.report-type }} report - $(date +'%Y-%m-%d %H:%M:%S')"
+          commit_hash=$(git commit -m "$commit_message" | grep -o '[a-f0-9]\{40\}')
+          echo "commit-hash=$commit_hash" >> $GITHUB_OUTPUT
+          echo "Committed report with hash: $commit_hash"
+        fi
+
+    - name: Push report
+      if: inputs.commit-report == 'true' && steps.commit.outputs.commit-hash != ''
+      shell: bash
+      run: |
+        git push origin HEAD:${{ github.ref_name }}
+        echo "Pushed report to ${{ github.ref_name }}"
+
+    - name: Generate report summary
+      shell: bash
+      run: |
+        echo "## Building Report Generated" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Report Type:** ${{ inputs.report-type }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Output Format:** ${{ inputs.output-format }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Report Path:** \`${{ steps.report.outputs.report-path }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Report Size:** ${{ steps.report.outputs.report-size }} bytes" >> $GITHUB_STEP_SUMMARY
+        echo "**Equipment Analyzed:** ${{ steps.report.outputs.equipment-count }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Rooms Analyzed:** ${{ steps.report.outputs.rooms-count }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ inputs.commit-report }}" == "true" ] && [ "${{ steps.commit.outputs.commit-hash }}" != "" ]; then
+          echo "**Commit Hash:** \`${{ steps.commit.outputs.commit-hash }}\`" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "✅ Report generation completed successfully!" >> $GITHUB_STEP_SUMMARY

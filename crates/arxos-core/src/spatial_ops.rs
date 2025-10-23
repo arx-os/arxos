@@ -4,6 +4,7 @@ use crate::{Result, ArxError, Position, BoundingBox, Room, Equipment};
 use std::collections::HashMap;
 
 /// Spatial operations manager
+#[derive(Debug)]
 pub struct SpatialManager {
     rooms: HashMap<String, Room>,
     equipment: HashMap<String, Equipment>,
@@ -198,30 +199,72 @@ impl SpatialManager {
     }
 
     fn transform_to_wgs84(&self, position: &Position) -> Result<String> {
-        // Mock transformation - in real implementation, this would use proper coordinate transformation
-        let lat = position.x * 0.00001 + 40.7128; // Rough conversion
-        let lon = position.z * 0.00001 - 74.0060; // Rough conversion
-        Ok(format!("WGS84: {:.6}, {:.6}", lat, lon))
+        // Convert building local coordinates to WGS84 geographic coordinates
+        // This uses a simplified transformation - in production, you'd use proper geodetic calculations
+        
+        // Assume building origin is at a known geographic location
+        // For this example, we'll use New York City as the origin
+        let building_origin_lat: f64 = 40.7128; // NYC latitude
+        let building_origin_lon: f64 = -74.0060; // NYC longitude
+        
+        // Convert meters to degrees (approximate)
+        // 1 degree latitude ≈ 111,000 meters
+        // 1 degree longitude ≈ 111,000 * cos(latitude) meters
+        let meters_per_degree_lat = 111000.0;
+        let meters_per_degree_lon = 111000.0 * building_origin_lat.to_radians().cos();
+        
+        let lat = building_origin_lat + (position.x / meters_per_degree_lat);
+        let lon = building_origin_lon + (position.z / meters_per_degree_lon);
+        
+        Ok(format!("WGS84: {:.8}, {:.8}, {:.2}m", lat, lon, position.y))
     }
 
     fn transform_to_building_local(&self, position: &Position) -> Result<String> {
-        // Mock transformation - in real implementation, this would use proper coordinate transformation
-        let x = (position.x - 40.7128) * 100000.0;
-        let z = (position.z + 74.0060) * 100000.0;
+        // Convert WGS84 geographic coordinates to building local coordinates
+        // This uses a simplified transformation - in production, you'd use proper geodetic calculations
+        
+        // Assume building origin is at a known geographic location
+        let building_origin_lat: f64 = 40.7128; // NYC latitude
+        let building_origin_lon: f64 = -74.0060; // NYC longitude
+        
+        // Convert degrees to meters (approximate)
+        let meters_per_degree_lat = 111000.0;
+        let meters_per_degree_lon = 111000.0 * building_origin_lat.to_radians().cos();
+        
+        let x = (position.x - building_origin_lat) * meters_per_degree_lat;
+        let z = (position.z - building_origin_lon) * meters_per_degree_lon;
+        
         Ok(format!("Building Local: {:.2}, {:.2}, {:.2}", x, position.y, z))
     }
 
     fn transform_to_utm(&self, position: &Position) -> Result<String> {
-        // Mock transformation - in real implementation, this would use proper UTM conversion
-        let easting = position.x * 1000.0;
-        let northing = position.z * 1000.0;
-        Ok(format!("UTM: {:.2}, {:.2}", easting, northing))
+        // Convert building local coordinates to UTM coordinates
+        // This is a simplified transformation - proper UTM conversion requires zone calculations
+        
+        // Assume we're in UTM Zone 18N (New York area)
+        let utm_zone = 18;
+        let utm_false_easting = 500000.0; // UTM false easting
+        let utm_false_northing = 0.0; // UTM false northing for northern hemisphere
+        
+        // Simplified conversion (in production, use proper UTM formulas)
+        let easting = position.x + utm_false_easting;
+        let northing = position.z + utm_false_northing;
+        
+        Ok(format!("UTM Zone {}N: {:.2}, {:.2}", utm_zone, easting, northing))
     }
 
     fn transform_from_utm(&self, position: &Position) -> Result<String> {
-        // Mock transformation - in real implementation, this would use proper UTM conversion
-        let x = position.x / 1000.0;
-        let z = position.z / 1000.0;
+        // Convert UTM coordinates to building local coordinates
+        // This is a simplified transformation - proper UTM conversion requires zone calculations
+        
+        // Assume we're in UTM Zone 18N (New York area)
+        let utm_false_easting = 500000.0; // UTM false easting
+        let utm_false_northing = 0.0; // UTM false northing for northern hemisphere
+        
+        // Simplified conversion (in production, use proper UTM formulas)
+        let x = position.x - utm_false_easting;
+        let z = position.z - utm_false_northing;
+        
         Ok(format!("Building Local: {:.2}, {:.2}, {:.2}", x, position.y, z))
     }
 

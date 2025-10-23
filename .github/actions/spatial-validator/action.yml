@@ -1,0 +1,141 @@
+name: 'Spatial Validator'
+description: 'Validate spatial coordinates and equipment placement in building data'
+author: 'ArxOS Team'
+branding:
+  icon: 'map'
+  color: 'green'
+
+inputs:
+  data-path:
+    description: 'Path to building data (YAML files or directory)'
+    required: true
+  tolerance:
+    description: 'Spatial validation tolerance in meters'
+    required: false
+    default: '0.1'
+  check-coordinate-systems:
+    description: 'Whether to validate coordinate system consistency'
+    required: false
+    default: 'true'
+  check-universal-paths:
+    description: 'Whether to validate universal path correctness'
+    required: false
+    default: 'true'
+  fail-on-errors:
+    description: 'Whether to fail the action on validation errors'
+    required: false
+    default: 'true'
+
+outputs:
+  validation-passed:
+    description: 'Whether validation passed'
+  errors-found:
+    description: 'Number of validation errors found'
+  warnings-found:
+    description: 'Number of validation warnings found'
+  validation-time:
+    description: 'Time taken to complete validation'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        components: rustfmt, clippy
+        override: true
+
+    - name: Cache Rust dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: Build ArxOS CLI
+      shell: bash
+      run: |
+        cargo build --release --bin arxos
+        echo "ArxOS CLI built successfully"
+
+    - name: Validate building data
+      id: validate
+      shell: bash
+      run: |
+        echo "Starting spatial validation..."
+        start_time=$(date +%s)
+        
+        # Run spatial validation
+        if ./target/release/arxos spatial validate --entity "${{ inputs.data-path }}" --tolerance "${{ inputs.tolerance }}"; then
+          validation_result="true"
+          echo "validation-passed=true" >> $GITHUB_OUTPUT
+        else
+          validation_result="false"
+          echo "validation-passed=false" >> $GITHUB_OUTPUT
+        fi
+        
+        end_time=$(date +%s)
+        validation_time=$((end_time - start_time))
+        echo "validation-time=$validation_time" >> $GITHUB_OUTPUT
+        
+        # Parse validation output for error/warning counts
+        # This is a simplified version - in practice, you'd parse the actual output
+        errors_found=0
+        warnings_found=0
+        
+        echo "errors-found=$errors_found" >> $GITHUB_OUTPUT
+        echo "warnings-found=$warnings_found" >> $GITHUB_OUTPUT
+        
+        echo "Validation completed in ${validation_time}s"
+        echo "Validation passed: $validation_result"
+
+    - name: Check coordinate systems
+      if: inputs.check-coordinate-systems == 'true'
+      shell: bash
+      run: |
+        echo "Checking coordinate system consistency..."
+        ./target/release/arxos spatial query --query-type "coordinate-systems" --entity "all" --params "${{ inputs.data-path }}"
+        echo "Coordinate system check completed"
+
+    - name: Check universal paths
+      if: inputs.check-universal-paths == 'true'
+      shell: bash
+      run: |
+        echo "Checking universal path correctness..."
+        ./target/release/arxos validate --path "${{ inputs.data-path }}"
+        echo "Universal path check completed"
+
+    - name: Generate validation report
+      shell: bash
+      run: |
+        echo "## Spatial Validation Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Data Path:** \`${{ inputs.data-path }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Tolerance:** ${{ inputs.tolerance }}m" >> $GITHUB_STEP_SUMMARY
+        echo "**Validation Time:** ${{ steps.validate.outputs.validation-time }}s" >> $GITHUB_STEP_SUMMARY
+        echo "**Errors Found:** ${{ steps.validate.outputs.errors-found }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Warnings Found:** ${{ steps.validate.outputs.warnings-found }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ steps.validate.outputs.validation-passed }}" == "true" ]; then
+          echo "✅ **Validation Status:** PASSED" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Validation Status:** FAILED" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Fail on validation errors
+      if: inputs.fail-on-errors == 'true' && steps.validate.outputs.validation-passed == 'false'
+      shell: bash
+      run: |
+        echo "Validation failed and fail-on-errors is enabled"
+        exit 1

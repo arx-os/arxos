@@ -2,6 +2,9 @@
 
 use thiserror::Error;
 
+#[cfg(feature = "git")]
+use git2;
+
 /// Result type for ArxOS operations
 pub type Result<T> = std::result::Result<T, ArxError>;
 
@@ -11,8 +14,13 @@ pub enum ArxError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
     
+    #[cfg(feature = "git")]
     #[error("Git error: {0}")]
     Git(#[from] git2::Error),
+    
+    #[cfg(not(feature = "git"))]
+    #[error("Git error: {0}")]
+    Git(String),
     
     #[error("YAML error: {0}")]
     Yaml(#[from] serde_yaml::Error),

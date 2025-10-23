@@ -293,29 +293,115 @@ impl FallbackIFCParser {
     
     /// Generate fallback coordinates when placement parsing fails
     fn generate_fallback_coordinates(&self, entity: &IFCEntity) -> Point3D {
-        // Fallback to the original mock data generation
+        // Generate deterministic coordinates based on entity properties
+        // This provides more realistic spatial distribution than random generation
+        
+        // Use entity ID hash for deterministic positioning
+        let id_hash = self.hash_string(&entity.id);
+        let name_hash = self.hash_string(&entity.name);
+        
+        // Generate coordinates based on entity type and properties
         match entity.entity_type.as_str() {
-            "IFCSPACE" => Point3D::new(
-                (entity.id.parse::<f64>().unwrap_or(0.0) * 10.0) % 100.0,
-                (entity.id.parse::<f64>().unwrap_or(0.0) * 7.0) % 80.0,
-                (entity.id.parse::<f64>().unwrap_or(0.0) * 3.0) % 10.0,
-            ),
-            "IFCFLOWTERMINAL" => Point3D::new(
-                (entity.id.parse::<f64>().unwrap_or(0.0) * 11.0) % 100.0,
-                (entity.id.parse::<f64>().unwrap_or(0.0) * 8.0) % 80.0,
-                (entity.id.parse::<f64>().unwrap_or(0.0) * 2.5) % 10.0,
-            ),
-            "IFCWALL" => Point3D::new(
-                (entity.id.parse::<f64>().unwrap_or(0.0) * 9.0) % 100.0,
-                (entity.id.parse::<f64>().unwrap_or(0.0) * 6.0) % 80.0,
-                (entity.id.parse::<f64>().unwrap_or(0.0) * 4.0) % 10.0,
-            ),
-            _ => Point3D::new(
-                (entity.id.parse::<f64>().unwrap_or(0.0) * 5.0) % 100.0,
-                (entity.id.parse::<f64>().unwrap_or(0.0) * 3.0) % 80.0,
-                (entity.id.parse::<f64>().unwrap_or(0.0) * 2.0) % 10.0,
-            ),
+            "IFCSPACE" => {
+                // Spaces are distributed across floors
+                let floor_height = 3.0; // Standard floor height
+                let floor = (id_hash % 5) as f64; // 0-4 floors
+                Point3D::new(
+                    (id_hash % 1000) as f64 / 10.0, // X: 0-100m
+                    (name_hash % 800) as f64 / 10.0, // Y: 0-80m  
+                    floor * floor_height + 0.1,     // Z: Floor level
+                )
+            },
+            "IFCFLOWTERMINAL" => {
+                // Flow terminals are typically wall-mounted
+                let floor_height = 3.0;
+                let floor = (id_hash % 5) as f64;
+                Point3D::new(
+                    (id_hash % 1000) as f64 / 10.0,
+                    (name_hash % 800) as f64 / 10.0,
+                    floor * floor_height + 1.5, // Wall-mounted height
+                )
+            },
+            "IFCWALL" => {
+                // Walls span across spaces
+                let floor_height = 3.0;
+                let floor = (id_hash % 5) as f64;
+                Point3D::new(
+                    (id_hash % 1000) as f64 / 10.0,
+                    (name_hash % 800) as f64 / 10.0,
+                    floor * floor_height + 1.5, // Wall center height
+                )
+            },
+            "IFCDOOR" => {
+                // Doors are typically at floor level
+                let floor_height = 3.0;
+                let floor = (id_hash % 5) as f64;
+                Point3D::new(
+                    (id_hash % 1000) as f64 / 10.0,
+                    (name_hash % 800) as f64 / 10.0,
+                    floor * floor_height + 0.9, // Door handle height
+                )
+            },
+            "IFCWINDOW" => {
+                // Windows are typically above floor level
+                let floor_height = 3.0;
+                let floor = (id_hash % 5) as f64;
+                Point3D::new(
+                    (id_hash % 1000) as f64 / 10.0,
+                    (name_hash % 800) as f64 / 10.0,
+                    floor * floor_height + 1.2, // Window sill height
+                )
+            },
+            "IFCCOLUMN" => {
+                // Columns span floor to ceiling
+                let floor_height = 3.0;
+                let floor = (id_hash % 5) as f64;
+                Point3D::new(
+                    (id_hash % 1000) as f64 / 10.0,
+                    (name_hash % 800) as f64 / 10.0,
+                    floor * floor_height + 1.5, // Column center height
+                )
+            },
+            "IFCSLAB" => {
+                // Slabs are at floor level
+                let floor_height = 3.0;
+                let floor = (id_hash % 5) as f64;
+                Point3D::new(
+                    (id_hash % 1000) as f64 / 10.0,
+                    (name_hash % 800) as f64 / 10.0,
+                    floor * floor_height, // Floor level
+                )
+            },
+            "IFCBEAM" => {
+                // Beams are typically at ceiling level
+                let floor_height = 3.0;
+                let floor = (id_hash % 5) as f64;
+                Point3D::new(
+                    (id_hash % 1000) as f64 / 10.0,
+                    (name_hash % 800) as f64 / 10.0,
+                    floor * floor_height + 2.7, // Near ceiling
+                )
+            },
+            _ => {
+                // Default positioning for unknown entity types
+                let floor_height = 3.0;
+                let floor = (id_hash % 5) as f64;
+                Point3D::new(
+                    (id_hash % 1000) as f64 / 10.0,
+                    (name_hash % 800) as f64 / 10.0,
+                    floor * floor_height + 1.0, // Default height
+                )
+            }
         }
+    }
+    
+    /// Generate a simple hash from a string for deterministic positioning
+    fn hash_string(&self, s: &str) -> u64 {
+        let mut hash = 5381u64;
+        for byte in s.bytes() {
+            hash = hash.wrapping_mul(33).wrapping_add(byte as u64);
+        }
+        hash
     }
 }
 

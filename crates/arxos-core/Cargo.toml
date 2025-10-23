@@ -18,9 +18,9 @@ thiserror.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
 
-# Git dependencies
-git2.workspace = true
-url.workspace = true
+# Git dependencies (optional)
+git2 = { workspace = true, optional = true }
+url = { workspace = true, optional = true }
 
 # Spatial dependencies
 nalgebra.workspace = true
@@ -35,6 +35,11 @@ toml.workspace = true
 notify.workspace = true
 num_cpus.workspace = true
 tempfile.workspace = true
+
+[features]
+default = ["git"]
+git = ["dep:git2", "dep:url"]
+core-only = []
 
 [dev-dependencies]
 criterion.workspace = true

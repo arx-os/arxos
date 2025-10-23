@@ -30,10 +30,12 @@ pub use room::parse_room_type;
 pub use equipment::parse_equipment_type;
 
 /// Core ArxOS engine
+#[derive(Debug)]
 pub struct ArxOSCore {
     room_manager: room::RoomManager,
     equipment_manager: equipment::EquipmentManager,
     spatial_manager: spatial_ops::SpatialManager,
+    repository_path: std::path::PathBuf,
 }
 
 impl ArxOSCore {
@@ -43,6 +45,7 @@ impl ArxOSCore {
             room_manager: room::RoomManager::new(),
             equipment_manager: equipment::EquipmentManager::new(),
             spatial_manager: spatial_ops::SpatialManager::new(),
+            repository_path: std::env::current_dir()?,
         })
     }
     
@@ -53,7 +56,7 @@ impl ArxOSCore {
     
     /// Sync repository
     pub fn sync_repository(&self) -> Result<()> {
-        git::sync_repository()
+        git::sync_repository(&self.repository_path, None)
     }
 
     /// Get room manager reference

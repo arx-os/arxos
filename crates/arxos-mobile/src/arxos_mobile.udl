@@ -1,0 +1,45 @@
+namespace arxos_mobile {
+    string hello_world();
+    
+    MobileRoom create_room(string name, i32 floor, string wing);
+    
+    sequence<MobileRoom> get_rooms();
+    
+    MobileEquipment add_equipment(string name, string equipment_type, string room_id);
+    
+    sequence<MobileEquipment> get_equipment();
+    
+    GitStatus get_git_status();
+    
+    CommandResult execute_command(string command);
+};
+
+dictionary MobileRoom {
+    string id;
+    string name;
+    i32 floor;
+    string wing;
+    string room_type;
+};
+
+dictionary MobileEquipment {
+    string id;
+    string name;
+    string equipment_type;
+    string status;
+    string location;
+    string room_id;
+};
+
+dictionary GitStatus {
+    string branch;
+    i32 commit_count;
+    string last_commit;
+    boolean has_changes;
+};
+
+dictionary CommandResult {
+    boolean success;
+    string output;
+    string error;
+};

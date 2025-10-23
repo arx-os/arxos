@@ -1,6 +1,145 @@
 import Foundation
 import Combine
 
+// MARK: - ArxOS Core Integration using UniFFI
+class ArxOSCore: ObservableObject {
+    private var instance: ArxOSMobile?
+    
+    init() {
+        do {
+            instance = try ArxOSMobile()
+        } catch {
+            print("Failed to initialize ArxOS core: \(error)")
+        }
+    }
+    
+    init(path: String) {
+        do {
+            instance = try ArxOSMobile.newWithPath(path: path)
+        } catch {
+            print("Failed to initialize ArxOS core with path: \(error)")
+        }
+    }
+    
+    deinit {
+        instance = nil
+    }
+    
+    func executeRoomCommand(_ arguments: [String], completion: @escaping (Result<String, Error>) -> Void) {
+        let command = "room " + arguments.joined(separator: " ")
+        executeCommand(command, completion: completion)
+    }
+    
+    func executeEquipmentCommand(_ arguments: [String], completion: @escaping (Result<String, Error>) -> Void) {
+        let command = "equipment " + arguments.joined(separator: " ")
+        executeCommand(command, completion: completion)
+    }
+    
+    func getStatus(completion: @escaping (Result<String, Error>) -> Void) {
+        executeCommand("status", completion: completion)
+    }
+    
+    func getDiff(completion: @escaping (Result<String, Error>) -> Void) {
+        executeCommand("diff", completion: completion)
+    }
+    
+    func getHistory(completion: @escaping (Result<String, Error>) -> Void) {
+        executeCommand("history", completion: completion)
+    }
+    
+    private func executeCommand(_ command: String, completion: @escaping (Result<String, Error>) -> Void) {
+        guard let instance = instance else {
+            completion(.failure(TerminalError.coreError("ArxOS instance not initialized")))
+            return
+        }
+        
+        DispatchQueue.global().async {
+            do {
+                let result = try instance.executeCommand(command: command)
+                DispatchQueue.main.async {
+                    if result.success {
+                        completion(.success(result.output))
+                    } else {
+                        completion(.failure(TerminalError.coreError(result.error ?? "Unknown error")))
+                    }
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(TerminalError.coreError("Failed to execute command: \(error.localizedDescription)")))
+                }
+            }
+        }
+    }
+    
+    // MARK: - AR Integration Methods
+    func processARData(_ data: Data, roomName: String, completion: @escaping (Result<[DetectedEquipment], Error>) -> Void) {
+        guard let instance = instance else {
+            completion(.failure(TerminalError.coreError("ArxOS instance not initialized")))
+            return
+        }
+        
+        DispatchQueue.global().async {
+            do {
+                let scanData = Array(data)
+                let result = try instance.processArScan(scanData: scanData, roomName: roomName)
+                
+                let detectedEquipment = result.equipmentDetected.map { equipment in
+                    DetectedEquipment(
+                        id: UUID(),
+                        name: equipment.name,
+                        type: equipment.equipmentType,
+                        position: SIMD3<Float>(
+                            Float(equipment.position?.x ?? 0),
+                            Float(equipment.position?.y ?? 0),
+                            Float(equipment.position?.z ?? 0)
+                        ),
+                        status: equipment.status,
+                        icon: self.iconForEquipmentType(equipment.equipmentType)
+                    )
+                }
+                
+                DispatchQueue.main.async {
+                    completion(.success(detectedEquipment))
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(TerminalError.coreError("AR processing failed: \(error.localizedDescription)")))
+                }
+            }
+        }
+    }
+    
+    func saveARScan(_ equipment: [DetectedEquipment], room: String, completion: @escaping (Result<String, Error>) -> Void) {
+        // This will integrate with Rust core for saving AR scan data
+        DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
+            DispatchQueue.main.async {
+                completion(.success("AR scan saved for \(room)"))
+            }
+        }
+    }
+    
+    private func iconForEquipmentType(_ type: String) -> String {
+        switch type.lowercased() {
+        case "hvac":
+            return "fan"
+        case "electrical":
+            return "bolt"
+        case "av":
+            return "tv"
+        case "furniture":
+            return "chair"
+        case "safety":
+            return "exclamationmark.triangle"
+        case "plumbing":
+            return "drop"
+        case "network":
+            return "network"
+        default:
+            return "wrench"
+        }
+    }
+}
+
 // MARK: - Terminal Service
 class TerminalService: ObservableObject {
     private let arxosCore = ArxOSCore()
@@ -103,159 +242,6 @@ class TerminalService: ObservableObject {
         }
     }
 }
-
-// MARK: - ArxOS Core Integration
-class ArxOSCore: ObservableObject {
-    private var instance: OpaquePointer?
-    
-    init() {
-        instance = arxos_mobile_new()
-    }
-    
-    init(path: String) {
-        instance = path.withCString { cString in
-            arxos_mobile_new_with_path(cString)
-        }
-    }
-    
-    deinit {
-        if let instance = instance {
-            arxos_mobile_free(instance)
-        }
-    }
-    
-    func executeRoomCommand(_ arguments: [String], completion: @escaping (Result<String, Error>) -> Void) {
-        let command = "room " + arguments.joined(separator: " ")
-        executeCommand(command, completion: completion)
-    }
-    
-    func executeEquipmentCommand(_ arguments: [String], completion: @escaping (Result<String, Error>) -> Void) {
-        let command = "equipment " + arguments.joined(separator: " ")
-        executeCommand(command, completion: completion)
-    }
-    
-    func getStatus(completion: @escaping (Result<String, Error>) -> Void) {
-        executeCommand("status", completion: completion)
-    }
-    
-    func getDiff(completion: @escaping (Result<String, Error>) -> Void) {
-        executeCommand("diff", completion: completion)
-    }
-    
-    func getHistory(completion: @escaping (Result<String, Error>) -> Void) {
-        executeCommand("history", completion: completion)
-    }
-    
-    private func executeCommand(_ command: String, completion: @escaping (Result<String, Error>) -> Void) {
-        guard let instance = instance else {
-            completion(.failure(TerminalError.coreError("ArxOS instance not initialized")))
-            return
-        }
-        
-        DispatchQueue.global().async {
-            let result = command.withCString { cString in
-                arxos_mobile_execute_command(instance, cString)
-            }
-            
-            guard let result = result else {
-                DispatchQueue.main.async {
-                    completion(.failure(TerminalError.coreError("Failed to execute command")))
-                }
-                return
-            }
-            
-            let jsonString = String(cString: result)
-            arxos_mobile_free_string(result)
-            
-            guard let data = jsonString.data(using: .utf8) else {
-                DispatchQueue.main.async {
-                    completion(.failure(TerminalError.coreError("Failed to parse command result")))
-                }
-                return
-            }
-            
-            do {
-                let commandResult = try JSONDecoder().decode(CommandResult.self, from: data)
-                DispatchQueue.main.async {
-                    if commandResult.success {
-                        completion(.success(commandResult.output))
-                    } else {
-                        completion(.failure(TerminalError.coreError(commandResult.error ?? "Unknown error")))
-                    }
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    completion(.failure(TerminalError.coreError("Failed to decode command result: \(error.localizedDescription)")))
-                }
-            }
-        }
-    }
-    
-    // MARK: - AR Integration Methods
-    func processARData(_ data: Data, completion: @escaping (Result<[DetectedEquipment], Error>) -> Void) {
-        // This will integrate with Rust core for AR data processing
-        DispatchQueue.global().asyncAfter(deadline: .now() + 1.0) {
-            // Mock AR processing - will be replaced with real FFI calls
-            let mockEquipment = [
-                DetectedEquipment(
-                    id: UUID(),
-                    name: "VAV-301",
-                    type: "HVAC",
-                    position: SIMD3<Float>(0, 0, -1),
-                    status: "Detected",
-                    icon: "fan"
-                )
-            ]
-            DispatchQueue.main.async {
-                completion(.success(mockEquipment))
-            }
-        }
-    }
-    
-    func saveARScan(_ equipment: [DetectedEquipment], room: String, completion: @escaping (Result<String, Error>) -> Void) {
-        // This will integrate with Rust core for saving AR scan data
-        DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
-            DispatchQueue.main.async {
-                completion(.success("AR scan saved for \(room)"))
-            }
-        }
-    }
-}
-
-// MARK: - Data Models
-
-struct CommandResult: Codable {
-    let success: Bool
-    let output: String
-    let error: String?
-    let execution_time_ms: UInt64
-}
-
-// MARK: - C FFI Declarations
-
-@_silgen_name("arxos_mobile_new")
-func arxos_mobile_new() -> OpaquePointer?
-
-@_silgen_name("arxos_mobile_new_with_path")
-func arxos_mobile_new_with_path(_ path: UnsafePointer<CChar>) -> OpaquePointer?
-
-@_silgen_name("arxos_mobile_execute_command")
-func arxos_mobile_execute_command(_ instance: OpaquePointer?, _ command: UnsafePointer<CChar>) -> UnsafeMutablePointer<CChar>?
-
-@_silgen_name("arxos_mobile_get_rooms")
-func arxos_mobile_get_rooms(_ instance: OpaquePointer?) -> UnsafeMutablePointer<CChar>?
-
-@_silgen_name("arxos_mobile_get_equipment")
-func arxos_mobile_get_equipment(_ instance: OpaquePointer?) -> UnsafeMutablePointer<CChar>?
-
-@_silgen_name("arxos_mobile_get_git_status")
-func arxos_mobile_get_git_status(_ instance: OpaquePointer?) -> UnsafeMutablePointer<CChar>?
-
-@_silgen_name("arxos_mobile_free_string")
-func arxos_mobile_free_string(_ s: UnsafeMutablePointer<CChar>?)
-
-@_silgen_name("arxos_mobile_free")
-func arxos_mobile_free(_ instance: OpaquePointer?)
 
 // MARK: - Error Types
 enum TerminalError: Error, LocalizedError {

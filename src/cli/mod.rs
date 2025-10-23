@@ -101,6 +101,23 @@ pub enum Commands {
         #[command(subcommand)]
         command: SpatialCommands,
     },
+    /// Live monitoring dashboard
+    Watch {
+        #[arg(long)]
+        building: Option<String>,
+        #[arg(long)]
+        floor: Option<i32>,
+        #[arg(long)]
+        room: Option<String>,
+        #[arg(long, default_value = "5")]
+        refresh_interval: u64,
+        #[arg(long)]
+        sensors_only: bool,
+        #[arg(long)]
+        alerts_only: bool,
+        #[arg(long)]
+        log_level: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]

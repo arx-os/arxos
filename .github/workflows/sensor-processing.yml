@@ -1,0 +1,78 @@
+name: Sensor Data Processing
+
+on:
+  schedule:
+    - cron: '0 */1 * * *'  # Every hour
+  workflow_dispatch:
+    inputs:
+      sensor-types:
+        description: 'Sensor types to process'
+        required: false
+        type: string
+        default: 'temperature,humidity,air-quality,motion'
+      processing-mode:
+        description: 'Processing mode'
+        required: false
+        type: string
+        default: 'real-time'
+
+jobs:
+  process-sensor-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Process sensor data
+        uses: ./.github/actions/sensor-processor
+        with:
+          sensor-types: ${{ github.event.inputs.sensor-types || 'temperature,humidity,air-quality,motion' }}
+          data-path: 'sensor-data/'
+          processing-mode: ${{ github.event.inputs.processing-mode || 'real-time' }}
+          alert-threshold: 'medium'
+      
+      - name: Validate sensor data
+        uses: ./.github/actions/sensor-validator
+        with:
+          sensor-data-path: 'sensor-data/'
+          validation-rules: 'range,consistency,anomaly'
+          tolerance-level: 'medium'
+      
+      - name: Generate sensor report
+        uses: ./.github/actions/sensor-reporter
+        with:
+          report-type: 'sensor-status'
+          output-path: 'reports/sensors/'
+          sensor-data-path: 'sensor-data/'
+          format: 'markdown'
+      
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+      
+      - name: Add sensor files
+        run: |
+          git add sensor-data/
+          if [ -d "reports/sensors/" ]; then
+            git add reports/sensors/
+          fi
+          echo "Added sensor files to Git staging"
+      
+      - name: Commit sensor updates
+        run: |
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Sensor data processing update - $(date)"
+            echo "Committed sensor updates"
+          fi
+      
+      - name: Push sensor updates
+        run: |
+          git push origin HEAD
+          echo "Pushed sensor updates to repository"

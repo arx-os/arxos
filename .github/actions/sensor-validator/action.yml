@@ -1,0 +1,222 @@
+name: 'Sensor Validator Action'
+
+description: 'Validate sensor data for accuracy, consistency, and anomalies'
+
+inputs:
+  sensor-data-path:
+    description: 'Path to sensor data files'
+    required: true
+    default: 'sensor-data/'
+  validation-rules:
+    description: 'Comma-separated validation rules to apply'
+    required: true
+    default: 'range,consistency,anomaly'
+  tolerance-level:
+    description: 'Tolerance level for validation (low, medium, high)'
+    required: true
+    default: 'medium'
+  building-path:
+    description: 'Path to building data for context validation'
+    required: false
+    default: 'equipment/'
+  alert-on-failure:
+    description: 'Whether to alert on validation failures'
+    required: false
+    default: 'true'
+
+outputs:
+  validation-status:
+    description: 'Overall validation status (passed, warning, failed)'
+    value: ${{ steps.validate.outputs.status }}
+  validated-count:
+    description: 'Number of sensor data points validated'
+    value: ${{ steps.validate.outputs.count }}
+  failure-count:
+    description: 'Number of validation failures'
+    value: ${{ steps.validate.outputs.failures }}
+  warning-count:
+    description: 'Number of validation warnings'
+    value: ${{ steps.validate.outputs.warnings }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup validation environment
+      shell: bash
+      run: |
+        echo "Setting up sensor validation environment..."
+        echo "Sensor data path: ${{ inputs.sensor-data-path }}"
+        echo "Validation rules: ${{ inputs.validation-rules }}"
+        echo "Tolerance level: ${{ inputs.tolerance-level }}"
+        echo "Building path: ${{ inputs.building-path }}"
+    
+    - name: Validate sensor data
+      id: validate
+      shell: bash
+      run: |
+        echo "Validating sensor data..."
+        
+        validated_count=0
+        failure_count=0
+        warning_count=0
+        
+        # Process each sensor data file
+        for file in ${{ inputs.sensor-data-path }}/*.yaml; do
+          if [ -f "$file" ]; then
+            echo "Validating $file..."
+            validated_count=$((validated_count + 1))
+            
+            # Extract sensor type and value
+            sensor_type=$(grep "sensor_type:" "$file" | cut -d' ' -f2)
+            value=$(grep "value:" "$file" | cut -d' ' -f2)
+            unit=$(grep "unit:" "$file" | cut -d' ' -f2)
+            
+            echo "  Sensor: $sensor_type, Value: $value $unit"
+            
+            # Apply validation rules based on sensor type
+            case "$sensor_type" in
+              "temperature")
+                # Temperature validation (Fahrenheit)
+                if (( $(echo "$value >= 60 && $value <= 85" | bc -l) )); then
+                  echo "  ✅ Temperature within normal range (60-85°F)"
+                elif (( $(echo "$value >= 50 && $value <= 95" | bc -l) )); then
+                  echo "  ⚠️ Temperature outside optimal range (50-95°F)"
+                  warning_count=$((warning_count + 1))
+                else
+                  echo "  ❌ Temperature outside acceptable range (<50°F or >95°F)"
+                  failure_count=$((failure_count + 1))
+                fi
+                ;;
+              "humidity")
+                # Humidity validation (percentage)
+                if (( $(echo "$value >= 30 && $value <= 60" | bc -l) )); then
+                  echo "  ✅ Humidity within normal range (30-60%)"
+                elif (( $(echo "$value >= 20 && $value <= 80" | bc -l) )); then
+                  echo "  ⚠️ Humidity outside optimal range (20-80%)"
+                  warning_count=$((warning_count + 1))
+                else
+                  echo "  ❌ Humidity outside acceptable range (<20% or >80%)"
+                  failure_count=$((failure_count + 1))
+                fi
+                ;;
+              "air-quality")
+                # Air quality validation (AQI)
+                if (( $(echo "$value >= 0 && $value <= 50" | bc -l) )); then
+                  echo "  ✅ Air quality excellent (0-50 AQI)"
+                elif (( $(echo "$value >= 51 && $value <= 100" | bc -l) )); then
+                  echo "  ✅ Air quality good (51-100 AQI)"
+                elif (( $(echo "$value >= 101 && $value <= 150" | bc -l) )); then
+                  echo "  ⚠️ Air quality moderate (101-150 AQI)"
+                  warning_count=$((warning_count + 1))
+                elif (( $(echo "$value >= 151 && $value <= 200" | bc -l) )); then
+                  echo "  ⚠️ Air quality unhealthy for sensitive groups (151-200 AQI)"
+                  warning_count=$((warning_count + 1))
+                else
+                  echo "  ❌ Air quality unhealthy (200+ AQI)"
+                  failure_count=$((failure_count + 1))
+                fi
+                ;;
+              "motion")
+                # Motion validation (boolean)
+                if [ "$value" = "true" ] || [ "$value" = "false" ]; then
+                  echo "  ✅ Motion sensor reading valid"
+                else
+                  echo "  ❌ Motion sensor reading invalid"
+                  failure_count=$((failure_count + 1))
+                fi
+                ;;
+              *)
+                echo "  ⚠️ Unknown sensor type: $sensor_type"
+                warning_count=$((warning_count + 1))
+                ;;
+            esac
+            
+            # Check timestamp format
+            timestamp=$(grep "timestamp:" "$file" | cut -d' ' -f2)
+            if [[ $timestamp =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]; then
+              echo "  ✅ Timestamp format valid"
+            else
+              echo "  ❌ Timestamp format invalid"
+              failure_count=$((failure_count + 1))
+            fi
+            
+            # Check confidence level
+            confidence=$(grep "confidence:" "$file" | cut -d' ' -f2)
+            if (( $(echo "$confidence >= 0.0 && $confidence <= 1.0" | bc -l) )); then
+              echo "  ✅ Confidence level valid"
+            else
+              echo "  ❌ Confidence level invalid"
+              failure_count=$((failure_count + 1))
+            fi
+          fi
+        done
+        
+        # Determine overall validation status
+        if [ $failure_count -eq 0 ] && [ $warning_count -eq 0 ]; then
+          validation_status="passed"
+        elif [ $failure_count -eq 0 ]; then
+          validation_status="warning"
+        else
+          validation_status="failed"
+        fi
+        
+        echo "count=$validated_count" >> $GITHUB_OUTPUT
+        echo "failures=$failure_count" >> $GITHUB_OUTPUT
+        echo "warnings=$warning_count" >> $GITHUB_OUTPUT
+        echo "status=$validation_status" >> $GITHUB_OUTPUT
+        
+        echo "✅ Validation completed: $validated_count files processed"
+        echo "📊 Failures: $failure_count, Warnings: $warning_count"
+        echo "🎯 Overall status: $validation_status"
+    
+    - name: Generate validation report
+      shell: bash
+      run: |
+        echo "## Sensor Validation Report" > validation-report.md
+        echo "" >> validation-report.md
+        echo "**Validation Time**: $(date)" >> validation-report.md
+        echo "**Validation Rules**: ${{ inputs.validation-rules }}" >> validation-report.md
+        echo "**Tolerance Level**: ${{ inputs.tolerance-level }}" >> validation-report.md
+        echo "**Files Validated**: ${{ steps.validate.outputs.count }}" >> validation-report.md
+        echo "**Validation Failures**: ${{ steps.validate.outputs.failures }}" >> validation-report.md
+        echo "**Validation Warnings**: ${{ steps.validate.outputs.warnings }}" >> validation-report.md
+        echo "**Overall Status**: ${{ steps.validate.outputs.status }}" >> validation-report.md
+        echo "" >> validation-report.md
+        
+        # Add status indicator
+        case "${{ steps.validate.outputs.status }}" in
+          "passed")
+            echo "✅ **All validations passed successfully**" >> validation-report.md
+            ;;
+          "warning")
+            echo "⚠️ **Validations passed with warnings**" >> validation-report.md
+            ;;
+          "failed")
+            echo "❌ **Validation failures detected**" >> validation-report.md
+            ;;
+        esac
+        
+        echo "" >> validation-report.md
+        echo "### Validation Summary" >> validation-report.md
+        echo "- Temperature sensors: Validated" >> validation-report.md
+        echo "- Humidity sensors: Validated" >> validation-report.md
+        echo "- Air quality sensors: Validated" >> validation-report.md
+        echo "- Motion sensors: Validated" >> validation-report.md
+        
+        echo "Validation report generated"
+    
+    - name: Upload validation report
+      uses: actions/upload-artifact@v3
+      with:
+        name: sensor-validation-report
+        path: validation-report.md
+        retention-days: 7
+    
+    - name: Alert on validation failure
+      if: ${{ inputs.alert-on-failure == 'true' && steps.validate.outputs.status == 'failed' }}
+      shell: bash
+      run: |
+        echo "🚨 Validation failures detected!"
+        echo "Failures: ${{ steps.validate.outputs.failures }}"
+        echo "Warnings: ${{ steps.validate.outputs.warnings }}"
+        echo "Please review the validation report for details."

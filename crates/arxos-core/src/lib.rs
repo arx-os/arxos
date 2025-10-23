@@ -16,6 +16,7 @@ pub mod spatial_ops;
 pub mod git;
 pub mod error;
 pub mod types;
+pub mod terminal;
 
 // Include the core data structures from the moved mod.rs
 pub mod core;

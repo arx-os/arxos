@@ -9,12 +9,12 @@
 
 ---
 
-## 🎉 Current Status: Phase 3 - Advanced Features Complete!
+## 🎉 Current Status: Phase 5 - Advanced Terminal Features
 
-**ArxOS v2.0** has achieved **Phase 3 - Advanced Features** with comprehensive building management capabilities:
+**ArxOS v2.0** has achieved **Phase 5 - Advanced Terminal Features** with comprehensive building management, automation, hardware integration, and mobile capabilities.
 
 ### ✅ **COMPLETED - Core Engine (Phase 1)**
-- ✅ **Rust Project Setup** - Complete project structure with modular architecture
+- ✅ **Rust Project Setup** - Complete monorepo structure with modular architecture
 - ✅ **IFC Processing Pipeline** - Custom STEP parser with real coordinate extraction
 - ✅ **Git Integration** - Full Git operations with multiple provider support
 - ✅ **Terminal Rendering** - Dynamic ASCII floor plans with equipment status
@@ -25,6 +25,16 @@
 - ✅ **Configuration System** - Complete `arx.toml` support with CLI management
 - ✅ **Enhanced Error Handling** - Rich context, recovery mechanisms, analytics
 
+### ✅ **COMPLETED - GitHub Actions Ecosystem (Phase 2)**
+- ✅ **IFC Processor Action** (`arxos/ifc-processor@v1`) - Convert IFC files to YAML equipment data
+- ✅ **Spatial Validator Action** (`arxos/spatial-validator@v1`) - Validate spatial coordinates and equipment placement
+- ✅ **Building Reporter Action** (`arxos/building-reporter@v1`) - Generate building status reports
+- ✅ **Equipment Monitor Action** (`arxos/equipment-monitor@v1`) - Monitor equipment health and generate alerts
+- ✅ **Sensor Processor Action** (`arxos/sensor-processor@v1`) - Process sensor data from hardware
+- ✅ **Sensor Validator Action** (`arxos/sensor-validator@v1`) - Validate sensor data quality
+- ✅ **Sensor Reporter Action** (`arxos/sensor-reporter@v1`) - Generate sensor reports
+- ✅ **Complete Workflow Examples** - Automated IFC import, equipment monitoring, building reports
+
 ### ✅ **COMPLETED - Advanced Features (Phase 3)**
 - ✅ **Room Management** - Create, list, show, update, delete rooms
 - ✅ **Equipment Management** - Add, list, update, remove equipment
@@ -32,134 +42,176 @@
 - ✅ **Building Hierarchy** - Complete Building → Floor → Wing → Room structure
 - ✅ **Rich Data Structures** - Room types, Equipment types, Spatial properties
 - ✅ **CLI Command Suite** - Complete Git-like commands (status, diff, history, config)
+- ✅ **Sensor Management** - Add, list, process, show, update, remove, test, configure sensors
 
-### 📊 **Current Test Coverage: 66/66 Tests Passing**
+### ✅ **COMPLETED - Interactive Terminal Features (Phase 4A)**
+- ✅ **Interactive Building Explorer** (`arx explore`) - Arrow key navigation through building
+- ✅ **Live Monitoring** (`arx watch`) - Real-time equipment status changes
+- ✅ **Terminal UI Framework** - `ratatui` + `crossterm` for cross-platform terminal rendering
+- ✅ **Real-time Updates** - Auto-refresh capabilities with configurable intervals
+- ✅ **Interactive Controls** - Keyboard navigation, filtering, help system
+- ✅ **Multiple View Modes** - Overview, Sensors, Alerts, Logs, System, Filters
+
+### ✅ **COMPLETED - Hardware Integration (Phase 4B)**
+- ✅ **ESP32 Temperature Sensor** - DHT22 sensor with GitHub API integration
+- ✅ **RP2040 Air Quality Sensor** - MQ-135 sensor with MQTT broker integration
+- ✅ **Arduino Motion Sensor** - PIR sensor with Webhook endpoint integration
+- ✅ **Hardware Core Abstractions** - Common types, traits, and error handling
+- ✅ **Driver Implementations** - DHT22, MQ-135, PIR sensor drivers
+- ✅ **Protocol Support** - GitHub API, MQTT, Webhook communication methods
+- ✅ **Rust Embedded Implementation** - All examples in Rust using appropriate HALs
+
+### ✅ **COMPLETED - Mobile App Development (Phase 4C)**
+- ✅ **iOS Native App** - SwiftUI + ARKit integration
+- ✅ **Android Native App** - Jetpack Compose + ARCore integration
+- ✅ **Rust Core FFI** - `arxos-mobile` crate with UniFFI bindings
+- ✅ **Terminal Interface** - Full ArxOS CLI functionality on mobile
+- ✅ **AR Scanning** - Equipment detection and tagging with ARKit/ARCore
+- ✅ **Equipment Management** - Mobile equipment inventory and management
+- ✅ **Offline Capabilities** - Local Git repository management
+
+### 📊 **Current Test Coverage: 138 Tests Passing**
 - ✅ **Unit Tests** - All modules comprehensively tested
 - ✅ **Integration Tests** - End-to-end workflows validated
-- ✅ **Performance Tests** - Parallel processing verified
+- ✅ **Live Monitoring Tests** - 14 new tests for monitoring functionality
+- ✅ **Interactive Explorer Tests** - 11 tests for building navigation
+- ✅ **Hardware Tests** - Sensor and driver functionality tested
 - ✅ **Error Handling Tests** - Recovery mechanisms tested
 
 ---
 
-## 🚀 **Next Development Phase: GitHub Actions Ecosystem (Phase 2)**
+## 🚀 **Next Development Phase: Advanced Terminal Rendering (Phase 6)**
 
-### **Priority 1: Core GitHub Actions (2 weeks)**
+### **Priority 1: 3D Building Visualization (2 weeks)**
 
-#### **Week 1: Essential Actions**
-- [ ] **IFC Processor Action** (`arxos/ifc-processor@v1`)
-  - Convert IFC files to YAML equipment data
-  - Automated Git commit and push
-  - Integration with existing `arx import` command
+#### **Week 1: 3D Renderer Foundation**
+- [ ] **3D Building Renderer** (`arx render --3d`)
+  - Multi-floor building visualization in terminal
+  - Equipment placement in 3D space
+  - Cross-floor equipment relationships
+  - ASCII/Unicode 3D rendering
 
-- [ ] **Spatial Validator Action** (`arxos/spatial-validator@v1`)
-  - Validate spatial coordinates and equipment placement
-  - Check coordinate system consistency
-  - Verify universal path correctness
+- [ ] **3D Coordinate System**
+  - Extend spatial data management for 3D
+  - Z-axis equipment positioning
+  - Multi-level building representation
+  - 3D spatial queries
 
-#### **Week 2: Monitoring & Reporting Actions**
-- [ ] **Building Reporter Action** (`arxos/building-reporter@v1`)
-  - Generate building status reports
-  - Energy consumption analysis
-  - Equipment health summaries
+#### **Week 2: Advanced 3D Features**
+- [ ] **3D Navigation Controls**
+  - Rotate, zoom, pan in 3D view
+  - Floor-by-floor navigation
+  - Equipment selection in 3D space
+  - Cross-section views
 
-- [ ] **Equipment Monitor Action** (`arxos/equipment-monitor@v1`)
-  - Monitor equipment health and generate alerts
-  - Create GitHub issues for critical problems
-  - Automated status updates
+- [ ] **3D Equipment Visualization**
+  - Equipment models in 3D space
+  - Status indicators in 3D
+  - Equipment relationships visualization
+  - Maintenance overlays
 
-### **Priority 2: Workflow Examples (1 week)**
+### **Priority 2: Search & Filter System (1 week)**
 
-#### **Week 3: Complete Workflow Integration**
-- [ ] **IFC Import Workflow** (`.github/workflows/ifc-import.yml`)
-  - Automatic processing of uploaded IFC files
-  - Spatial validation pipeline
-  - Import summary reports
+#### **Week 3: Advanced Search Capabilities**
+- [ ] **Search System** (`arx search`)
+  - Equipment search by type, status, location
+  - Fuzzy search with typo tolerance
+  - Regex pattern matching
+  - Search history and saved searches
 
-- [ ] **Equipment Monitoring Workflow** (`.github/workflows/equipment-monitor.yml`)
-  - Scheduled equipment health checks
-  - Alert generation and issue creation
-  - Status reporting
+- [ ] **Filter System** (`arx filter`)
+  - Advanced filtering capabilities
+  - Multiple filter combinations
+  - Filter presets and templates
+  - Quick equipment lookup
 
-- [ ] **Building Report Workflow** (`.github/workflows/building-report.yml`)
-  - Weekly building status reports
-  - Energy and maintenance summaries
-  - Automated issue creation
+### **Priority 3: Advanced Terminal Rendering (2 weeks)**
+
+#### **Week 4: Particle System Architecture**
+- [ ] **Particle System Foundation**
+  - Terminal particle rendering engine
+  - Particle lifecycle management
+  - Performance optimization for terminal
+  - Particle effects for equipment status
+
+- [ ] **Animation Framework**
+  - Terminal animation system
+  - Smooth transitions and effects
+  - Equipment status animations
+  - Building state changes visualization
+
+#### **Week 5: Advanced Visual Effects**
+- [ ] **Terminal Effects Engine**
+  - Advanced ASCII art rendering
+  - Equipment status indicators
+  - Building health visualization
+  - Real-time data streaming effects
+
+- [ ] **Performance Optimization**
+  - Efficient terminal rendering
+  - Memory management for effects
+  - CPU usage optimization
+  - Battery life considerations
 
 ---
 
-## 🎯 **Future Phases: Community & Ecosystem (Phase 4)**
+## 🎯 **Future Phases: Advanced Features (Phase 7)**
 
-### **Phase 4A: Interactive Terminal Features (2 weeks)**
+### **Phase 7A: LiDAR Integration (2 weeks)**
 
-#### **Week 4: Navigation & Real-time Updates**
-- [ ] **Interactive Building Explorer** (`arx explore`)
-  - Arrow key navigation through building
-  - Room selection and equipment details
-  - Real-time status updates
-
-- [ ] **Live Monitoring** (`arx watch`)
-  - Real-time equipment status changes
-  - Live temperature and sensor updates
-  - Alert notifications
-
-#### **Week 5: Advanced Visualization**
-- [ ] **3D Building View** (`arx render --3d`)
-  - Multi-floor building visualization
-  - Equipment placement in 3D space
-  - Cross-floor equipment relationships
-
-- [ ] **Search & Filter** (`arx search`, `arx filter`)
-  - Equipment search by type, status, location
-  - Advanced filtering capabilities
-  - Quick equipment lookup
-
-### **Phase 4B: Advanced Spatial Operations (2 weeks)**
-
-#### **Week 6: Coordinate Transformations**
-- [ ] **Multi-Coordinate System Support**
-  - WGS84, UTM, building local coordinates
-  - Automatic coordinate transformations
-  - LiDAR data integration preparation
-
-- [ ] **Spatial Analysis**
-  - Distance calculations between equipment
-  - Proximity analysis and clustering
-  - Spatial relationship mapping
-
-#### **Week 7: LiDAR Integration Foundation**
+#### **Week 6: LiDAR Data Import**
 - [ ] **LiDAR Data Import** (`arx lidar import`)
   - Point cloud data processing
   - Equipment position validation
   - Spatial accuracy verification
+  - LiDAR data format support
 
 - [ ] **AR Anchor Management**
   - AR anchor creation and management
   - Confidence scoring for spatial data
   - Multi-source data fusion
+  - Spatial accuracy validation
 
-### **Phase 4C: Community & Launch (2 weeks)**
+#### **Week 7: Advanced Spatial Analysis**
+- [ ] **Multi-Coordinate System Support**
+  - WGS84, UTM, building local coordinates
+  - Automatic coordinate transformations
+  - LiDAR data integration preparation
+  - Cross-platform coordinate consistency
 
-#### **Week 8: Documentation & Examples**
-- [ ] **Comprehensive Documentation**
-  - User guides and tutorials
-  - API documentation
-  - Best practices guide
+- [ ] **Spatial Analysis**
+  - Distance calculations between equipment
+  - Proximity analysis and clustering
+  - Spatial relationship mapping
+  - Equipment placement optimization
 
-- [ ] **Example Repositories**
-  - Sample building repositories
-  - Workflow examples
-  - Integration demonstrations
+### **Phase 7B: Real-time Data Streaming (2 weeks)**
 
-#### **Week 9: Community Building**
-- [ ] **GitHub Marketplace**
-  - Publish ArxOS actions
-  - Community action templates
-  - Marketplace integration
+#### **Week 8: Enhanced Live Monitoring**
+- [ ] **Real-time Data Streaming**
+  - WebSocket connections for live data
+  - Real-time sensor data updates
+  - Live equipment status changes
+  - Instant alert notifications
 
-- [ ] **Community Features**
-  - GitHub Discussions setup
-  - Contribution guidelines
-  - Issue templates
+- [ ] **Advanced Monitoring Features**
+  - Custom dashboard creation
+  - Monitoring rule engine
+  - Automated response actions
+  - Integration with external systems
+
+#### **Week 9: Data Analytics**
+- [ ] **Building Analytics**
+  - Energy consumption analysis
+  - Equipment usage patterns
+  - Predictive maintenance
+  - Performance optimization
+
+- [ ] **Reporting System**
+  - Automated report generation
+  - Custom report templates
+  - Scheduled reporting
+  - Export to multiple formats
 
 ---
 
@@ -168,20 +220,20 @@
 ### **Immediate Focus (Next 2-3 weeks)**
 Based on your high school building project, prioritize:
 
-1. **Room Management Enhancement**
-   - Bulk room creation from templates
-   - Classroom-specific equipment templates
-   - Department-based room organization
+1. **3D Building Visualization**
+   - Complete 3D representation of your school
+   - Multi-floor navigation
+   - Equipment placement in 3D space
 
-2. **LiDAR Preparation**
-   - Spatial data structure optimization
-   - Coordinate system preparation
-   - Equipment positioning validation
+2. **Enhanced Search & Filter**
+   - Quick equipment lookup
+   - Department-based filtering
+   - Classroom-specific searches
 
-3. **Workflow Automation**
-   - Automated building updates
-   - Equipment monitoring
-   - Maintenance scheduling
+3. **Advanced Terminal Rendering**
+   - Beautiful ASCII art building plans
+   - Real-time status animations
+   - Equipment health visualization
 
 ### **Strategic Questions (From HIGH_SCHOOL_PROJECT_QUESTIONS.md)**
 - **Building Structure**: How is your high school organized? (Floors, wings, departments?)
@@ -223,9 +275,11 @@ Based on your high school building project, prioritize:
 - **Reliability**: 99.9% uptime for GitHub Actions
 - **Usability**: <5 minutes to import first building
 - **Test Coverage**: Maintain 100% test coverage
+- **Terminal Performance**: 60 FPS terminal rendering
 
 ### **Project Metrics**
 - **High School Building**: Complete digital twin of your school
+- **3D Visualization**: Full 3D building representation
 - **LiDAR Integration**: Ready for point cloud data import
 - **Workflow Automation**: Automated building management
 - **Community Adoption**: 10+ buildings using ArxOS
@@ -235,171 +289,61 @@ Based on your high school building project, prioritize:
 ## 🚀 **Getting Started**
 
 ### **Current Priority**
-1. **GitHub Actions Ecosystem** - Implement automated workflows
-2. **Mobile App Development** - Rust Core + Native UI Shell
-3. **Interactive Features** - Add navigation and real-time updates
-4. **LiDAR Preparation** - Prepare for spatial data integration
+1. **3D Building Renderer** - Implement `arx render --3d` command
+2. **Search & Filter System** - Add `arx search` and `arx filter` commands
+3. **Particle System Architecture** - Design advanced terminal rendering
+4. **Animation Framework** - Create smooth terminal animations
 5. **High School Project** - Focus on your specific building needs
 
 ### **Next Steps**
-1. **Create Feature Branch** - `git checkout -b feature/github-actions`
-2. **Implement Actions** - Start with IFC processor action
-3. **Test Integration** - Ensure actions work with existing code
-4. **Document Usage** - Create workflow examples
-5. **Community Launch** - Publish to GitHub Marketplace
-
-### **Phase 4: Mobile App Development (6 weeks)**
-
-#### **Week 13: Rust Core FFI Library**
-- [ ] **Create arxos-mobile crate**
-  - Set up FFI library structure
-  - Implement core functions (spatial, git, equipment)
-  - Configure UniFFI for cross-platform bindings
-  - Generate Swift/Kotlin bindings
-
-- [ ] **Implement core mobile functions**
-  - Spatial data processing
-  - Git operations using existing CLI
-  - Equipment logic and validation
-  - Error handling and recovery
-
-#### **Week 14: iOS Native Shell**
-- [ ] **Set up iOS project**
-  - Create Xcode project with SwiftUI
-  - Integrate Rust core via FFI
-  - Configure ARKit and LiDAR support
-  - Set up camera permissions
-
-- [ ] **Implement iOS terminal interface**
-  - Native terminal view with SwiftUI
-  - Command input and output display
-  - Touch-friendly keyboard
-  - AR/LiDAR integration
-
-#### **Week 15: Android Native Shell**
-- [ ] **Set up Android project**
-  - Create Android Studio project with Jetpack Compose
-  - Integrate Rust core via FFI
-  - Configure ARCore support
-  - Set up camera permissions
-
-- [ ] **Implement Android terminal interface**
-  - Native terminal view with Compose
-  - Command input and output display
-  - Touch-friendly keyboard
-  - AR integration
-
-#### **Week 16: AR/LiDAR Integration**
-- [ ] **iOS ARKit + LiDAR**
-  - Real-time AR session management
-  - LiDAR depth data processing
-  - Equipment detection and tagging
-  - AR anchor management
-
-- [ ] **Android ARCore**
-  - AR session management
-  - Camera-based AR overlays
-  - Equipment detection and tagging
-  - Touch interaction handling
-
-#### **Week 17: Data Synchronization**
-- [ ] **Implement offline Git operations**
-  - Local Git repository management
-  - Offline commit and branch operations
-  - Background sync capabilities
-  - Conflict resolution system
-
-- [ ] **Test cross-platform consistency**
-  - Verify identical behavior across platforms
-  - Test data integrity and sync
-  - Performance optimization
-  - Error handling validation
-
-#### **Week 18: App Store Preparation**
-- [ ] **iOS App Store submission**
-  - App Store Connect setup
-  - App metadata and descriptions
-  - Screenshots and app previews
-  - TestFlight beta distribution
-
-- [ ] **Google Play Store submission**
-  - Google Play Console setup
-  - App metadata and descriptions
-  - Screenshots and promotional materials
-  - Play Store beta testing
+1. **Create Feature Branch** - `git checkout -b feature/3d-renderer`
+2. **Implement 3D Renderer** - Start with basic 3D building visualization
+3. **Add Search System** - Implement equipment search functionality
+4. **Test Integration** - Ensure all features work together
+5. **Document Usage** - Create examples and tutorials
 
 ---
 
-## 🏗️ **Monorepo Structure**
+## 🏗️ **Current Monorepo Structure**
 
 **Project Organization:**
 ```
 arxos/
-├── rust/                        # Rust CLI backend
-│   ├── src/
-│   │   ├── main.rs              # CLI entry point
-│   │   ├── lib.rs               # Library API
-│   │   ├── core/                # Core data structures
-│   │   ├── cli/                 # CLI command definitions
-│   │   ├── spatial/             # 3D spatial data model
-│   │   ├── ifc/                 # IFC processing
-│   │   ├── yaml/                # YAML serialization
-│   │   ├── git/                 # Git operations
-│   │   ├── path/                # Universal path system
-│   │   ├── render/              # Terminal rendering
-│   │   ├── config/              # Configuration system
-│   │   ├── error/               # Error handling
-│   │   └── progress/            # Progress reporting
-│   ├── Cargo.toml
-│   └── target/
-├── mobile/                      # React Native mobile app
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── TerminalView.tsx      # Terminal interface
-│   │   │   ├── CameraView.tsx        # Camera + AR overlay
-│   │   │   ├── AROverlay.tsx         # AR equipment overlay
-│   │   │   └── EquipmentTag.tsx      # Equipment tagging
-│   │   ├── services/
-│   │   │   ├── TerminalService.ts    # Terminal command handling
-│   │   │   ├── CameraService.ts      # Camera + LiDAR
-│   │   │   ├── ARService.ts          # AR processing
-│   │   │   └── GitService.ts         # Git operations
-│   │   ├── utils/
-│   │   │   ├── CoordinateTransform.ts
-│   │   │   └── EquipmentDetection.ts
-│   │   └── types/
-│   │       ├── Equipment.ts
-│   │       └── SpatialData.ts
-│   ├── ios/
-│   │   ├── ArxOSMobile/
-│   │   ├── ArxOSMobile.xcodeproj
-│   │   └── Podfile
-│   ├── android/
-│   │   ├── app/
-│   │   ├── build.gradle
-│   │   └── settings.gradle
-│   ├── package.json
-│   └── tsconfig.json
+├── src/                         # Rust CLI backend
+│   ├── main.rs                  # CLI entry point
+│   ├── lib.rs                   # Library API
+│   ├── cli/                     # CLI command definitions
+│   ├── spatial/                 # 3D spatial data model
+│   ├── ifc/                     # IFC processing
+│   ├── yaml/                    # YAML serialization
+│   ├── git/                     # Git operations
+│   ├── path/                    # Universal path system
+│   ├── render/                  # Terminal rendering
+│   ├── config/                  # Configuration system
+│   ├── error/                   # Error handling
+│   └── progress/                # Progress reporting
+├── crates/                      # Rust workspace crates
+│   ├── arxos-core/              # Core business logic
+│   ├── arxos-cli/               # CLI implementation
+│   └── arxos-mobile/            # Mobile FFI bindings
+├── mobile-ios/                  # Native iOS app (SwiftUI + ARKit)
+├── mobile-android/              # Native Android app (Jetpack Compose + ARCore)
+├── hardware/                    # Hardware integration
+│   ├── core/                    # Hardware abstractions
+│   ├── drivers/                 # Sensor drivers
+│   ├── protocols/               # Communication protocols
+│   └── examples/                # Complete hardware examples
+├── .github/                     # GitHub Actions ecosystem
+│   ├── actions/                 # Reusable actions
+│   └── workflows/               # Workflow definitions
 ├── shared/                      # Shared types/utilities
-│   ├── types/
-│   │   ├── Equipment.ts
-│   │   ├── SpatialData.ts
-│   │   └── GitData.ts
-│   └── utils/
-│       └── CoordinateUtils.ts
 ├── docs/                        # Documentation
-│   ├── ARCHITECTURE.md
-│   └── ifc_processing.md
 ├── tests/                       # Integration tests
-├── test_data/                   # Test IFC files
-├── ARXOS_ARCHITECTURE_V2.md
-├── DEVELOPMENT_ROADMAP.md
-├── HIGH_SCHOOL_PROJECT_QUESTIONS.md
-└── README.md
+└── test_data/                   # Test IFC files
 ```
 
-**Benefits of Monorepo Structure:**
-- **Shared Types** - Common data structures between Rust and React Native
+**Benefits of Current Structure:**
+- **Shared Types** - Common data structures between Rust and mobile apps
 - **Unified Development** - Single repository for all ArxOS components
 - **Consistent Versioning** - Synchronized releases across platforms
 - **Simplified CI/CD** - Single pipeline for all components
@@ -411,13 +355,14 @@ arxos/
 - **Strategic Questions**: `HIGH_SCHOOL_PROJECT_QUESTIONS.md`
 - **Code Documentation**: All modules have comprehensive inline docs
 - **Test Examples**: Tests serve as usage examples
-- **Community**: GitHub Discussions (coming soon)
+- **Hardware Examples**: Complete working hardware integrations
+- **Mobile Guides**: `MOBILE_BUILD_GUIDE.md` and `MOBILE_IMPLEMENTATION_GUIDE.md`
 
 ---
 
-**Document Version:** 2.0  
+**Document Version:** 3.0  
 **Last Updated:** December 2024  
-**Status:** Phase 3 Complete - Ready for GitHub Actions Ecosystem + Mobile App Development  
-**Next Milestone:** Complete GitHub Actions integration (2 weeks) + Mobile App Foundation (6 weeks)
+**Status:** Phase 5 Complete - Ready for Advanced Terminal Rendering (Phase 6)  
+**Next Milestone:** 3D Building Renderer + Search & Filter System (3 weeks)
 
-**Happy coding!** 🎉 ArxOS is ready for the next phase of development!
+**Happy coding!** 🎉 ArxOS is ready for the next phase of advanced terminal features!

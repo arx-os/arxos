@@ -12,6 +12,7 @@ description = "ArxOS CLI - Command-line interface"
 arxos-core = { path = "../arxos-core" }
 serde.workspace = true
 serde_yaml.workspace = true
+chrono.workspace = true
 thiserror.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
@@ -19,6 +20,8 @@ tracing-subscriber.workspace = true
 
 # CLI dependencies
 clap = { version = "4.4", features = ["derive"] }
+log = "0.4"
+env_logger = "0.10"
 
 # Terminal dependencies
 crossterm.workspace = true

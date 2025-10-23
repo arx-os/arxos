@@ -2,8 +2,7 @@
 members = [
     ".",
     "crates/arxos-core",
-    "crates/arxos-mobile", 
-    "crates/arxos-cli"
+    "crates/arxos-mobile"
 ]
 resolver = "2"
 
@@ -84,6 +83,7 @@ rstar = "0.10"
 # Terminal dependencies
 crossterm = "0.27"
 ratatui = "0.24"
+rand = "0.8"
 
 # Performance dependencies
 rayon = "1.8"

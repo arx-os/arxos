@@ -30,6 +30,11 @@ rstar.workspace = true
 # Performance dependencies
 rayon.workspace = true
 
+# Terminal rendering dependencies
+crossterm = { workspace = true, optional = true }
+ratatui = { workspace = true, optional = true }
+rand = { workspace = true, optional = true }
+
 # Configuration dependencies
 toml.workspace = true
 notify.workspace = true
@@ -37,8 +42,9 @@ num_cpus.workspace = true
 tempfile.workspace = true
 
 [features]
-default = ["git"]
+default = ["git", "terminal"]
 git = ["dep:git2", "dep:url"]
+terminal = ["dep:crossterm", "dep:ratatui", "dep:rand"]
 core-only = []
 
 [dev-dependencies]

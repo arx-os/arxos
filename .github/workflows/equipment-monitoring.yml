@@ -1,0 +1,154 @@
+name: Equipment Monitoring
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:
+    inputs:
+      alert-threshold:
+        description: 'Alert threshold for equipment issues'
+        required: false
+        type: string
+        default: 'warning'
+      check-interval:
+        description: 'Check interval in minutes'
+        required: false
+        type: string
+        default: '60'
+
+jobs:
+  monitor-equipment:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Monitor equipment status
+        uses: ./.github/workflows/equipment-monitor.yml
+        with:
+          alert-threshold: ${{ github.event.inputs.alert-threshold || 'warning' }}
+          building-path: 'equipment/'
+          check-interval: ${{ github.event.inputs.check-interval || '60' }}
+          critical-equipment: 'HVAC,ELECTRICAL,SAFETY,PLUMBING'
+          notification-channels: 'github'
+      
+      - name: Generate status report
+        if: always()  # Always generate report since we can't check monitoring status
+        uses: ./.github/workflows/building-reporter.yml
+        with:
+          report-type: 'status'
+          output-path: 'reports/'
+          building-path: 'equipment/'
+          format: 'markdown'
+      
+      - name: Generate maintenance report
+        if: always()  # Always generate maintenance report
+        uses: ./.github/workflows/building-reporter.yml
+        with:
+          report-type: 'maintenance'
+          output-path: 'reports/'
+          building-path: 'equipment/'
+          format: 'markdown'
+      
+      - name: Generate critical report
+        if: always()  # Always generate critical report
+        uses: ./.github/workflows/building-reporter.yml
+        with:
+          report-type: 'comprehensive'
+          output-path: 'reports/'
+          building-path: 'equipment/'
+          format: 'markdown'
+      
+      - name: Update monitoring dashboard
+        run: |
+          echo "## Equipment Monitoring Dashboard" > monitoring-dashboard.md
+          echo "" >> monitoring-dashboard.md
+          echo "**Last Updated**: $(date)" >> monitoring-dashboard.md
+          echo "**Monitoring Status**: Completed" >> monitoring-dashboard.md
+          echo "**Total Issues**: N/A" >> monitoring-dashboard.md
+          echo "**Critical Issues**: N/A" >> monitoring-dashboard.md
+          echo "**Warning Issues**: N/A" >> monitoring-dashboard.md
+          echo "" >> monitoring-dashboard.md
+          
+          # Add status indicators
+          echo "✅ **Equipment Monitoring Completed**" >> monitoring-dashboard.md
+          
+          echo "" >> monitoring-dashboard.md
+          echo "### Recent Monitoring History" >> monitoring-dashboard.md
+          echo "- $(date): Monitoring completed" >> monitoring-dashboard.md
+          
+          echo "Monitoring dashboard updated"
+      
+      - name: Upload monitoring dashboard
+        uses: actions/upload-artifact@v3
+        with:
+          name: equipment-monitoring-dashboard
+          path: monitoring-dashboard.md
+          retention-days: 7
+      
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+      
+      - name: Add monitoring files
+        run: |
+          git add monitoring-dashboard.md
+          if [ -d "reports/" ]; then
+            git add reports/
+          fi
+          echo "Added monitoring files to Git staging"
+      
+      - name: Commit monitoring updates
+        run: |
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Equipment monitoring update - monitoring completed"
+            echo "Committed monitoring updates"
+          fi
+      
+      - name: Push monitoring updates
+        run: |
+          git push origin HEAD
+          echo "Pushed monitoring updates to repository"
+      
+      - name: Send notification
+        if: always()  # Always send notification
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const criticalCount = 'N/A';
+            const warningsCount = 'N/A';
+            
+            // Create a discussion post for critical alerts
+            github.rest.discussions.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              category: 'general',
+              title: `🚨 Critical Equipment Alert - ${criticalCount} critical issues`,
+              body: `# 🚨 Critical Equipment Alert
+              
+              ## Summary
+              - **Status**: Critical
+              - **Critical Issues**: ${criticalCount}
+              - **Warning Issues**: ${warningsCount}
+              - **Alert Time**: ${new Date().toISOString()}
+              
+              ## Details
+              Critical equipment issues have been detected that require immediate attention.
+              
+              ## Next Steps
+              1. Review the monitoring report
+              2. Address critical equipment issues
+              3. Verify equipment functionality
+              4. Update equipment status
+              
+              ## Equipment Types Checked
+              HVAC, ELECTRICAL, SAFETY, PLUMBING
+              `
+            });

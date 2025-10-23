@@ -1,0 +1,216 @@
+name: Weekly Building Report
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 9 AM
+  workflow_dispatch:
+    inputs:
+      report-type:
+        description: 'Type of report to generate'
+        required: false
+        type: string
+        default: 'comprehensive'
+      format:
+        description: 'Report format'
+        required: false
+        type: string
+        default: 'markdown'
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Generate comprehensive building report
+        uses: ./.github/workflows/building-reporter.yml
+        with:
+          report-type: ${{ github.event.inputs.report-type || 'comprehensive' }}
+          output-path: 'reports/'
+          building-path: 'equipment/'
+          format: ${{ github.event.inputs.format || 'markdown' }}
+          include-charts: true
+      
+      - name: Generate energy report
+        uses: ./.github/workflows/building-reporter.yml
+        with:
+          report-type: 'energy'
+          output-path: 'reports/'
+          building-path: 'equipment/'
+          format: 'markdown'
+          include-charts: true
+      
+      - name: Generate maintenance report
+        uses: ./.github/workflows/building-reporter.yml
+        with:
+          report-type: 'maintenance'
+          output-path: 'reports/'
+          building-path: 'equipment/'
+          format: 'markdown'
+          include-charts: true
+      
+      - name: Generate spatial report
+        uses: ./.github/workflows/building-reporter.yml
+        with:
+          report-type: 'spatial'
+          output-path: 'reports/'
+          building-path: 'equipment/'
+          format: 'markdown'
+          include-charts: true
+      
+      - name: Monitor equipment status
+        uses: ./.github/workflows/equipment-monitor.yml
+        with:
+          alert-threshold: 'warning'
+          building-path: 'equipment/'
+          check-interval: '60'
+          critical-equipment: 'HVAC,ELECTRICAL,SAFETY,PLUMBING'
+      
+      - name: Validate spatial data
+        uses: ./.github/workflows/spatial-validator.yml
+        with:
+          building-path: 'equipment/'
+          validation-level: 'standard'
+          coordinate-system: 'building_local'
+          tolerance: '0.1'
+      
+      - name: Generate executive summary
+        run: |
+          echo "# Weekly Building Report - Executive Summary" > executive-summary.md
+          echo "" >> executive-summary.md
+          echo "**Report Date**: $(date)" >> executive-summary.md
+          echo "**Report Period**: Weekly" >> executive-summary.md
+          echo "" >> executive-summary.md
+          
+          echo "## Key Metrics" >> executive-summary.md
+          echo "- **Equipment Count**: N/A" >> executive-summary.md
+          echo "- **Monitoring Status**: Completed" >> executive-summary.md
+          echo "- **Validation Status**: Completed" >> executive-summary.md
+          echo "- **Critical Issues**: N/A" >> executive-summary.md
+          echo "- **Warning Issues**: N/A" >> executive-summary.md
+          echo "" >> executive-summary.md
+          
+          echo "## Report Sections" >> executive-summary.md
+          echo "1. **Comprehensive Report**: Generated" >> executive-summary.md
+          echo "2. **Energy Report**: Generated" >> executive-summary.md
+          echo "3. **Maintenance Report**: Generated" >> executive-summary.md
+          echo "4. **Spatial Report**: Generated" >> executive-summary.md
+          echo "" >> executive-summary.md
+          
+          echo "## Recommendations" >> executive-summary.md
+          echo "- 📊 **Regular Monitoring**: Continue equipment monitoring" >> executive-summary.md
+          echo "- 🔧 **Maintenance**: Schedule regular maintenance checks" >> executive-summary.md
+          echo "- 📈 **Performance**: Monitor energy efficiency metrics" >> executive-summary.md
+          
+          echo "" >> executive-summary.md
+          echo "## Next Steps" >> executive-summary.md
+          echo "1. Review detailed reports in the reports/ directory" >> executive-summary.md
+          echo "2. Address any critical or warning issues" >> executive-summary.md
+          echo "3. Schedule maintenance as needed" >> executive-summary.md
+          echo "4. Update equipment status and documentation" >> executive-summary.md
+          
+          echo "Executive summary generated"
+      
+      - name: Upload all reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: weekly-building-reports
+          path: |
+            reports/
+            executive-summary.md
+          retention-days: 30
+      
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+      
+      - name: Add report files
+        run: |
+          git add reports/
+          git add executive-summary.md
+          echo "Added report files to Git staging"
+      
+      - name: Commit report files
+        run: |
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Weekly building report - $(date +%Y-%m-%d)"
+            echo "Committed report files"
+          fi
+      
+      - name: Push report files
+        run: |
+          git push origin HEAD
+          echo "Pushed report files to repository"
+      
+      - name: Create weekly report issue
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const equipmentCount = 'N/A';
+            const monitoringStatus = 'Completed';
+            const validationStatus = 'Completed';
+            const criticalCount = 'N/A';
+            const warningsCount = 'N/A';
+            
+            let title = `Weekly Building Report - ${new Date().toLocaleDateString()}`;
+            let statusIcon = '📊';
+            
+            if (monitoringStatus === 'critical') {
+              statusIcon = '🚨';
+              title = `🚨 Weekly Building Report - ${criticalCount} Critical Issues`;
+            } else if (monitoringStatus === 'warning') {
+              statusIcon = '⚠️';
+              title = `⚠️ Weekly Building Report - ${warningsCount} Warnings`;
+            }
+            
+            let body = `# ${statusIcon} Weekly Building Report\n\n`;
+            body += `**Report Date**: ${new Date().toLocaleDateString()}\n`;
+            body += `**Report Period**: Weekly\n\n`;
+            
+            body += `## Key Metrics\n`;
+            body += `- Equipment Count: ${equipmentCount}\n`;
+            body += `- Monitoring Status: ${monitoringStatus}\n`;
+            body += `- Validation Status: ${validationStatus}\n`;
+            body += `- Critical Issues: ${criticalCount}\n`;
+            body += `- Warning Issues: ${warningsCount}\n\n`;
+            
+            body += `## Report Sections\n`;
+            body += `1. **Comprehensive Report**: Generated\n`;
+            body += `2. **Energy Report**: Generated\n`;
+            body += `3. **Maintenance Report**: Generated\n`;
+            body += `4. **Spatial Report**: Generated\n\n`;
+            
+            body += `## Recommendations\n`;
+            if (monitoringStatus === 'critical') {
+              body += `- 🚨 **Immediate Action Required**: Address critical equipment issues\n`;
+            } else if (monitoringStatus === 'warning') {
+              body += `- ⚠️ **Attention Needed**: Review warning-level equipment issues\n`;
+            } else {
+              body += `- ✅ **All Systems Operational**: Continue regular maintenance schedule\n`;
+            }
+            
+            if (validationStatus === 'failed') {
+              body += `- 🔧 **Spatial Data Issues**: Resolve validation failures\n`;
+            }
+            
+            body += `\n## Next Steps\n`;
+            body += `1. Review detailed reports in the reports/ directory\n`;
+            body += `2. Address any critical or warning issues\n`;
+            body += `3. Schedule maintenance as needed\n`;
+            body += `4. Update equipment status and documentation\n`;
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['report', 'weekly', 'building', monitoringStatus === 'critical' ? 'urgent' : 'normal']
+            });

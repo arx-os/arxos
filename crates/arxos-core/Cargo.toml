@@ -1,0 +1,41 @@
+[package]
+name = "arxos-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "ArxOS Core - Business logic and data processing"
+
+[dependencies]
+# Core dependencies
+serde.workspace = true
+serde_yaml.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+
+# Git dependencies
+git2.workspace = true
+url.workspace = true
+
+# Spatial dependencies
+nalgebra.workspace = true
+geo.workspace = true
+rstar.workspace = true
+
+# Performance dependencies
+rayon.workspace = true
+
+# Configuration dependencies
+toml.workspace = true
+notify.workspace = true
+num_cpus.workspace = true
+tempfile.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+proptest.workspace = true

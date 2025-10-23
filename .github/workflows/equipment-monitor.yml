@@ -1,0 +1,374 @@
+name: Equipment Monitor Action
+
+on:
+  workflow_call:
+    inputs:
+      alert-threshold:
+        description: 'Alert threshold for equipment issues'
+        required: false
+        type: string
+        default: 'warning'
+      building-path:
+        description: 'Path to building data directory'
+        required: false
+        type: string
+        default: 'equipment/'
+      check-interval:
+        description: 'Check interval in minutes'
+        required: false
+        type: string
+        default: '60'
+      notification-channels:
+        description: 'Notification channels (github, email, slack)'
+        required: false
+        type: string
+        default: 'github'
+      critical-equipment:
+        description: 'Comma-separated list of critical equipment types'
+        required: false
+        type: string
+        default: 'HVAC,ELECTRICAL,SAFETY'
+
+jobs:
+  monitor-equipment:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      
+      - name: Cache Rust dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
+      - name: Build ArxOS CLI
+        run: |
+          cargo build --release
+          echo "ArxOS CLI built successfully"
+      
+      - name: Verify building data exists
+        run: |
+          if [ ! -d "${{ inputs.building-path }}" ]; then
+            echo "Error: Building data directory '${{ inputs.building-path }}' not found"
+            exit 1
+          fi
+          
+          # Check if there are any YAML files
+          if [ -z "$(find "${{ inputs.building-path }}" -name "*.yml" -o -name "*.yaml")" ]; then
+            echo "Error: No YAML files found in '${{ inputs.building-path }}'"
+            exit 1
+          fi
+          
+          echo "Building data directory verified: ${{ inputs.building-path }}"
+      
+      - name: Check equipment health
+        id: health-check
+        run: |
+          echo "Checking equipment health..."
+          
+          critical_count=0
+          warning_count=0
+          healthy_count=0
+          
+          # Check each equipment file
+          for file in $(find "${{ inputs.building-path }}" -name "*.yml" -o -name "*.yaml"); do
+            echo "Checking health in: $file"
+            
+            # Extract equipment status using ArxOS CLI
+            status=$(./target/release/arxos monitor --check --file "$file" --threshold "${{ inputs.alert-threshold }}")
+            
+            case "$status" in
+              "critical")
+                echo "✗ Critical issue in $file"
+                ((critical_count++))
+                ;;
+              "warning")
+                echo "⚠ Warning in $file"
+                ((warning_count++))
+                ;;
+              "healthy")
+                echo "✓ Healthy in $file"
+                ((healthy_count++))
+                ;;
+              *)
+                echo "? Unknown status in $file: $status"
+                ((warning_count++))
+                ;;
+            esac
+          done
+          
+          echo "critical-count=$critical_count" >> $GITHUB_OUTPUT
+          echo "warning-count=$warning_count" >> $GITHUB_OUTPUT
+          echo "healthy-count=$healthy_count" >> $GITHUB_OUTPUT
+          
+          echo "Health check completed:"
+          echo "- Critical: $critical_count"
+          echo "- Warnings: $warning_count"
+          echo "- Healthy: $healthy_count"
+      
+      - name: Check critical equipment
+        id: critical-check
+        run: |
+          echo "Checking critical equipment..."
+          
+          critical_issues=0
+          critical_types="${{ inputs.critical-equipment }}"
+          
+          # Check each critical equipment type
+          IFS=',' read -ra TYPES <<< "$critical_types"
+          for type in "${TYPES[@]}"; do
+            echo "Checking critical equipment type: $type"
+            
+            # Find equipment of this type
+            for file in $(find "${{ inputs.building-path }}" -name "*.yml" -o -name "*.yaml"); do
+              if grep -q "type: $type" "$file"; then
+                echo "Found $type equipment: $file"
+                
+                # Check if it's operational
+                if ./target/release/arxos monitor --critical --file "$file" --type "$type"; then
+                  echo "✓ $type equipment operational in $file"
+                else
+                  echo "✗ $type equipment issue in $file"
+                  ((critical_issues++))
+                fi
+              fi
+            done
+          done
+          
+          echo "critical-issues=$critical_issues" >> $GITHUB_OUTPUT
+          echo "Critical equipment check completed with $critical_issues issues"
+      
+      - name: Check equipment connectivity
+        id: connectivity-check
+        run: |
+          echo "Checking equipment connectivity..."
+          
+          connectivity_issues=0
+          
+          # Check for offline equipment
+          for file in $(find "${{ inputs.building-path }}" -name "*.yml" -o -name "*.yaml"); do
+            echo "Checking connectivity in: $file"
+            
+            if ./target/release/arxos monitor --connectivity --file "$file"; then
+              echo "✓ Equipment online in $file"
+            else
+              echo "✗ Equipment offline in $file"
+              ((connectivity_issues++))
+            fi
+          done
+          
+          echo "connectivity-issues=$connectivity_issues" >> $GITHUB_OUTPUT
+          echo "Connectivity check completed with $connectivity_issues issues"
+      
+      - name: Check maintenance schedules
+        id: maintenance-check
+        run: |
+          echo "Checking maintenance schedules..."
+          
+          maintenance_issues=0
+          overdue_count=0
+          
+          # Check maintenance schedules
+          for file in $(find "${{ inputs.building-path }}" -name "*.yml" -o -name "*.yaml"); do
+            echo "Checking maintenance in: $file"
+            
+            if ./target/release/arxos monitor --maintenance --file "$file"; then
+              echo "✓ Maintenance up to date in $file"
+            else
+              echo "✗ Maintenance issue in $file"
+              ((maintenance_issues++))
+            fi
+            
+            # Check for overdue maintenance
+            if ./target/release/arxos monitor --overdue --file "$file"; then
+              echo "⚠ Overdue maintenance in $file"
+              ((overdue_count++))
+            fi
+          done
+          
+          echo "maintenance-issues=$maintenance_issues" >> $GITHUB_OUTPUT
+          echo "overdue-count=$overdue_count" >> $GITHUB_OUTPUT
+          echo "Maintenance check completed with $maintenance_issues issues and $overdue_count overdue"
+      
+      - name: Generate monitoring summary
+        id: monitor
+        run: |
+          # Calculate totals
+          total_critical=$(({{ steps.health-check.outputs.critical-count }} + {{ steps.critical-check.outputs.critical-issues }} + {{ steps.connectivity-check.outputs.connectivity-issues }}))
+          total_warnings=$(({{ steps.health-check.outputs.warning-count }} + {{ steps.maintenance-check.outputs.maintenance-issues }} + {{ steps.maintenance-check.outputs.overdue-count }}))
+          total_issues=$((total_critical + total_warnings))
+          
+          # Determine overall status
+          if [ $total_critical -gt 0 ]; then
+            status="critical"
+          elif [ $total_warnings -gt 0 ]; then
+            status="warning"
+          else
+            status="healthy"
+          fi
+          
+          echo "status=$status" >> $GITHUB_OUTPUT
+          echo "issues-count=$total_issues" >> $GITHUB_OUTPUT
+          echo "critical-count=$total_critical" >> $GITHUB_OUTPUT
+          echo "warnings-count=$total_warnings" >> $GITHUB_OUTPUT
+          
+          echo "Monitoring Summary:"
+          echo "- Status: $status"
+          echo "- Total Issues: $total_issues"
+          echo "- Critical: $total_critical"
+          echo "- Warnings: $total_warnings"
+      
+      - name: Generate monitoring report
+        run: |
+          echo "## Equipment Monitoring Report" > monitoring-report.md
+          echo "" >> monitoring-report.md
+          echo "- **Monitoring Time**: $(date)" >> monitoring-report.md
+          echo "- **Alert Threshold**: ${{ inputs.alert-threshold }}" >> monitoring-report.md
+          echo "- **Building Path**: ${{ inputs.building-path }}" >> monitoring-report.md
+          echo "- **Check Interval**: ${{ inputs.check-interval }} minutes" >> monitoring-report.md
+          echo "- **Overall Status**: ${{ steps.monitor.outputs.monitoring-status }}" >> monitoring-report.md
+          echo "- **Total Issues**: ${{ steps.monitor.outputs.issues-count }}" >> monitoring-report.md
+          echo "- **Critical Issues**: ${{ steps.monitor.outputs.critical-count }}" >> monitoring-report.md
+          echo "- **Warning Issues**: ${{ steps.monitor.outputs.warnings-count }}" >> monitoring-report.md
+          echo "" >> monitoring-report.md
+          
+          echo "### Health Check Results:" >> monitoring-report.md
+          echo "- **Critical Equipment**: ${{ steps.health-check.outputs.critical-count }}" >> monitoring-report.md
+          echo "- **Warning Equipment**: ${{ steps.health-check.outputs.warning-count }}" >> monitoring-report.md
+          echo "- **Healthy Equipment**: ${{ steps.health-check.outputs.healthy-count }}" >> monitoring-report.md
+          echo "" >> monitoring-report.md
+          
+          echo "### Critical Equipment Check:" >> monitoring-report.md
+          echo "- **Critical Issues**: ${{ steps.critical-check.outputs.critical-issues }}" >> monitoring-report.md
+          echo "" >> monitoring-report.md
+          
+          echo "### Connectivity Check:" >> monitoring-report.md
+          echo "- **Connectivity Issues**: ${{ steps.connectivity-check.outputs.connectivity-issues }}" >> monitoring-report.md
+          echo "" >> monitoring-report.md
+          
+          echo "### Maintenance Check:" >> monitoring-report.md
+          echo "- **Maintenance Issues**: ${{ steps.maintenance-check.outputs.maintenance-issues }}" >> monitoring-report.md
+          echo "- **Overdue Maintenance**: ${{ steps.maintenance-check.outputs.overdue-count }}" >> monitoring-report.md
+          echo "" >> monitoring-report.md
+          
+          echo "Monitoring report generated"
+      
+      - name: Upload monitoring report
+        uses: actions/upload-artifact@v3
+        with:
+          name: equipment-monitoring-report
+          path: monitoring-report.md
+          retention-days: 30
+      
+      - name: Create critical alert issue
+        if: steps.monitor.outputs.monitoring-status == 'critical'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const criticalCount = ${{ steps.monitor.outputs.critical-count }};
+            const warningsCount = ${{ steps.monitor.outputs.warnings-count }};
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Critical Equipment Alert - ${criticalCount} critical issues`,
+              body: `# 🚨 Critical Equipment Alert
+              
+              ## Summary
+              - **Status**: Critical
+              - **Critical Issues**: ${criticalCount}
+              - **Warning Issues**: ${warningsCount}
+              - **Alert Time**: ${new Date().toISOString()}
+              
+              ## Details
+              Critical equipment issues have been detected that require immediate attention.
+              
+              ## Next Steps
+              1. Review the monitoring report
+              2. Address critical equipment issues
+              3. Verify equipment functionality
+              4. Update equipment status
+              
+              ## Equipment Types Checked
+              ${{ inputs.critical-equipment }}
+              `,
+              labels: ['alert', 'critical', 'equipment', 'urgent']
+            });
+      
+      - name: Create warning issue
+        if: steps.monitor.outputs.monitoring-status == 'warning'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const warningsCount = ${{ steps.monitor.outputs.warnings-count }};
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `⚠️ Equipment Warning - ${warningsCount} warnings`,
+              body: `# ⚠️ Equipment Warning
+              
+              ## Summary
+              - **Status**: Warning
+              - **Warning Issues**: ${warningsCount}
+              - **Alert Time**: ${new Date().toISOString()}
+              
+              ## Details
+              Equipment warnings have been detected that should be addressed.
+              
+              ## Next Steps
+              1. Review the monitoring report
+              2. Address warning issues
+              3. Schedule maintenance if needed
+              `,
+              labels: ['warning', 'equipment', 'maintenance']
+            });
+      
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const status = '${{ steps.monitor.outputs.monitoring-status }}';
+            const issues = ${{ steps.monitor.outputs.issues-count }};
+            const critical = ${{ steps.monitor.outputs.critical-count }};
+            const warnings = ${{ steps.monitor.outputs.warnings-count }}';
+            
+            let comment = `## Equipment Monitoring Results\n\n`;
+            
+            if (status === 'healthy') {
+              comment += `✅ **All Equipment Healthy** - No issues detected\n`;
+            } else if (status === 'warning') {
+              comment += `⚠️ **Equipment Warnings** - ${warnings} warnings found\n`;
+            } else {
+              comment += `🚨 **Critical Equipment Issues** - ${critical} critical issues\n`;
+            }
+            
+            comment += `\n- Total Issues: ${issues}\n`;
+            comment += `- Critical: ${critical}\n`;
+            comment += `- Warnings: ${warnings}\n`;
+            comment += `- Monitoring Time: ${new Date().toISOString()}\n`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

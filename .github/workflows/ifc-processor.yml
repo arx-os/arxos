@@ -1,0 +1,158 @@
+name: IFC Processor Action
+
+on:
+  workflow_call:
+    inputs:
+      ifc-file:
+        description: 'Path to IFC file to process'
+        required: true
+        type: string
+      output-path:
+        description: 'Output directory for YAML files'
+        required: false
+        type: string
+        default: 'equipment/'
+      commit-message:
+        description: 'Custom commit message for processed IFC'
+        required: false
+        type: string
+        default: 'Processed IFC file'
+      repository-url:
+        description: 'Git repository URL for pushing changes'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  process-ifc:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      
+      - name: Cache Rust dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
+      - name: Build ArxOS CLI
+        run: |
+          cargo build --release
+          echo "ArxOS CLI built successfully"
+      
+      - name: Verify IFC file exists
+        run: |
+          if [ ! -f "${{ inputs.ifc-file }}" ]; then
+            echo "Error: IFC file '${{ inputs.ifc-file }}' not found"
+            exit 1
+          fi
+          echo "IFC file verified: ${{ inputs.ifc-file }}"
+      
+      - name: Process IFC file
+        id: process
+        run: |
+          echo "Processing IFC file: ${{ inputs.ifc-file }}"
+          
+          # Create output directory if it doesn't exist
+          mkdir -p "${{ inputs.output-path }}"
+          
+          # Process IFC file with ArxOS
+          ./target/release/arxos import "${{ inputs.ifc-file }}" --output "${{ inputs.output-path }}"
+          
+          # Count processed files
+          files_count=$(find "${{ inputs.output-path }}" -name "*.yml" -o -name "*.yaml" | wc -l)
+          echo "files-count=$files_count" >> $GITHUB_OUTPUT
+          
+          echo "Processed $files_count equipment files"
+      
+      - name: Validate processed files
+        run: |
+          echo "Validating processed YAML files..."
+          
+          # Check if any YAML files were created
+          if [ ! -d "${{ inputs.output-path }}" ] || [ -z "$(find "${{ inputs.output-path }}" -name "*.yml" -o -name "*.yaml")" ]; then
+            echo "Error: No YAML files were generated"
+            exit 1
+          fi
+          
+          # Validate YAML syntax
+          for file in $(find "${{ inputs.output-path }}" -name "*.yml" -o -name "*.yaml"); do
+            echo "Validating: $file"
+            # Basic YAML validation using Python
+            python3 -c "import yaml; yaml.safe_load(open('$file'))" || {
+              echo "Error: Invalid YAML syntax in $file"
+              exit 1
+            }
+          done
+          
+          echo "All YAML files validated successfully"
+      
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+      
+      - name: Add processed files
+        run: |
+          git add "${{ inputs.output-path }}"
+          echo "Added processed files to Git staging"
+      
+      - name: Commit processed files
+        id: commit
+        run: |
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            echo "commit-hash=" >> $GITHUB_OUTPUT
+          else
+            commit_hash=$(git commit -m "${{ inputs.commit-message }}: ${{ inputs.ifc-file }}")
+            echo "commit-hash=$commit_hash" >> $GITHUB_OUTPUT
+            echo "Committed changes: $commit_hash"
+          fi
+      
+      - name: Push changes
+        if: steps.commit.outputs.commit-hash != ''
+        run: |
+          git push origin HEAD
+          echo "Pushed changes to repository"
+      
+      - name: Generate processing report
+        run: |
+          echo "## IFC Processing Report" > processing-report.md
+          echo "" >> processing-report.md
+          echo "- **IFC File**: ${{ inputs.ifc-file }}" >> processing-report.md
+          echo "- **Output Path**: ${{ inputs.output-path }}" >> processing-report.md
+          echo "- **Files Processed**: ${{ steps.process.outputs.files-count }}" >> processing-report.md
+          echo "- **Commit Hash**: ${{ steps.commit.outputs.commit-hash }}" >> processing-report.md
+          echo "- **Processing Time**: $(date)" >> processing-report.md
+          echo "" >> processing-report.md
+          echo "### Processed Files:" >> processing-report.md
+          echo '```' >> processing-report.md
+          find "${{ inputs.output-path }}" -name "*.yml" -o -name "*.yaml" | head -20 >> processing-report.md
+          echo '```' >> processing-report.md
+          
+          echo "Processing report generated"
+      
+      - name: Upload processing report
+        uses: actions/upload-artifact@v3
+        with:
+          name: ifc-processing-report
+          path: processing-report.md
+          retention-days: 30

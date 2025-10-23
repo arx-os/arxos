@@ -105,8 +105,8 @@ Building management is stuck in the stone age:
 ┌─────────────────────────────────────────────────────────────┐
 │                    User Interface Layer                     │
 ├─────────────────────────────────────────────────────────────┤
-│  Terminal CLI  │  GitHub Actions  │  GitHub Web Interface  │
-│  (Rust)        │  (Docker)        │  (GitHub)              │
+│  Terminal CLI  │  Mobile App     │  GitHub Actions  │  Web   │
+│  (Rust)        │  (Native Shell)  │  (Docker)        │  (GitHub)│
 └─────────────────────────────────────────────────────────────┘
                               ↕
 ┌─────────────────────────────────────────────────────────────┐
@@ -146,6 +146,7 @@ Building management is stuck in the stone age:
 
 **4. User Interfaces**
 - Terminal CLI (primary)
+- Mobile App (Native Shell + Rust Core)
 - GitHub web interface (secondary)
 - GitHub mobile app (tertiary)
 
@@ -608,7 +609,203 @@ Floor 1:
 
 ---
 
-## Git Integration Strategy
+## Mobile App Architecture
+
+### Rust Core + Native UI Shell
+
+**Core Concept:** A mobile app that combines native platform UIs with a high-performance Rust core for terminal interface and AR/LiDAR data processing.
+
+**Architecture:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Mobile App Layer                         │
+├─────────────────────────────────────────────────────────────┤
+│  Native UI Shell (Swift/Kotlin)  │  Rust Core (FFI)        │
+│  ├── Terminal View               │  ├── Spatial Processing  │
+│  ├── Camera + AR View           │  ├── Git Operations      │
+│  ├── AR/LiDAR Bridge            │  ├── Equipment Logic      │
+│  └── Touch Controls             │  └── Data Validation     │
+└─────────────────────────────────────────────────────────────┘
+                              ↕
+┌─────────────────────────────────────────────────────────────┐
+│                    Native Platform Layer                    │
+├─────────────────────────────────────────────────────────────┤
+│  iOS LiDAR      │  Android Camera │  Touch Controls │  File System │
+│  (ARKit)        │  (ARCore)       │  (Native)       │  (Native)    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Mobile App Components
+
+**1. Rust Core (FFI Library)**
+- High-performance spatial data processing
+- Git operations using existing CLI
+- Equipment logic and validation
+- Cross-platform consistency
+- UniFFI-generated bindings
+
+**2. Native UI Shell (iOS - Swift/SwiftUI)**
+- Terminal interface with native performance
+- ARKit + LiDAR integration
+- Camera controls and AR overlays
+- Touch-friendly keyboard
+- Native iOS look and feel
+
+**3. Native UI Shell (Android - Kotlin/Jetpack Compose)**
+- Terminal interface with native performance
+- ARCore integration
+- Camera controls and AR overlays
+- Touch-friendly keyboard
+- Native Android look and feel
+
+**4. FFI Bridge**
+- UniFFI-generated Swift/Kotlin bindings
+- Bidirectional data flow
+- Error handling and recovery
+- Performance optimization
+
+### Mobile App Features
+
+**Terminal Commands:**
+```bash
+# Standard ArxOS commands work in mobile terminal
+arx room create --name "Classroom 301" --floor 3
+arx equipment add --name "VAV-301" --type HVAC --room 301
+arx ar-scan --room 301                    # Opens camera + AR
+arx ar-tag --equipment VAV-301 --position 10.5,8.2
+arx ar-save --commit "Mobile AR scan of room 301"
+arx status                                # Shows Git status
+arx diff                                  # Shows changes
+arx history                               # Shows commit history
+```
+
+**AR Scanning Workflow:**
+1. **Start AR Session** - `arx ar-scan --room 301`
+2. **Camera Opens** - Live camera feed with AR overlay
+3. **Detect Equipment** - AI-powered equipment detection
+4. **Tag Equipment** - Tap to tag equipment with AR anchors
+5. **Save to Git** - `arx ar-save --commit "Room 301 scan"`
+6. **Sync Data** - Push changes to remote repository
+
+**Offline Capabilities:**
+- Work without internet connection
+- Cache equipment data locally
+- Queue Git operations for later sync
+- Full terminal functionality offline
+
+### Mobile App Technical Stack
+
+**Core Technologies:**
+- **Rust Core** - High-performance data processing
+- **UniFFI** - Cross-platform FFI bindings
+- **Swift/SwiftUI (iOS)** - Native iOS development
+- **Kotlin/Jetpack Compose (Android)** - Native Android development
+- **ARKit (iOS)** - AR and LiDAR support
+- **ARCore (Android)** - AR support
+
+**Dependencies:**
+```toml
+# Rust Core (Cargo.toml)
+[dependencies]
+uniffi = "0.25"
+# Existing ArxOS dependencies
+```
+
+```swift
+// iOS (Package.swift)
+dependencies: [
+    .package(path: "../arxos-mobile")
+]
+```
+
+```kotlin
+// Android (build.gradle)
+implementation project(':arxos-mobile')
+```
+
+### Mobile App Data Flow
+
+**1. Equipment Detection:**
+```
+Camera Feed → Native AR → Rust Processing → Equipment Positions → AR Overlay → User Tagging
+```
+
+**2. Data Synchronization:**
+```
+Mobile App → Rust Core → Local Git → Background Sync → Remote Repository
+```
+
+**3. AR Anchor Management:**
+```
+LiDAR Data → Native Processing → Rust Core → AR Anchors → Equipment Coordinates → YAML Data
+```
+
+### Mobile App User Experience
+
+**App Interface:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│  ArxOS Mobile - Terminal + AR                               │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Terminal View:                                             │
+│  arx$ arx ar-scan --room 301                               │
+│  Starting AR scan for room 301...                           │
+│  Camera activated. Tap equipment to tag.                   │
+│                                                             │
+│  [Camera + AR View]                                         │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  [Live Camera Feed]                                │   │
+│  │                                                     │   │
+│  │  🌡️ VAV-301    ⚡ Panel-301                         │   │
+│  │  [10.5,8.2]    [15.2,8.1]                          │   │
+│  │                                                     │   │
+│  │  🚰 Sink-301                                        │   │
+│  │  [5.3,12.1]                                         │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  Controls: [Scan] [Tag] [Save] [Sync]                      │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Touch Interactions:**
+- **Tap Equipment** - Tag equipment with AR anchor
+- **Swipe Navigation** - Navigate through rooms
+- **Pinch Zoom** - Zoom camera view
+- **Long Press** - Equipment details
+
+### Mobile App Deployment
+
+**Monorepo Structure:**
+```
+arxos/
+├── rust/                        # Rust CLI backend
+│   ├── src/
+│   ├── Cargo.toml
+│   └── target/
+├── mobile/                      # React Native mobile app
+│   ├── src/
+│   │   ├── components/
+│   │   ├── services/
+│   │   ├── utils/
+│   │   └── types/
+│   ├── ios/
+│   ├── android/
+│   └── package.json
+├── shared/                      # Shared types/utilities
+│   ├── types/
+│   └── utils/
+└── README.md
+```
+
+**App Store Distribution:**
+- **iOS App Store** - Native iOS app with LiDAR support
+- **Google Play Store** - Android app with AR support
+- **Enterprise Distribution** - Internal app distribution
+- **TestFlight/Beta** - Beta testing and feedback
+
+---
 
 ### Git-First Architecture
 
@@ -1199,15 +1396,53 @@ jobs:
 - [ ] Performance optimization
 - [ ] Documentation
 
-### Phase 4: Community & Launch (2 weeks)
+### Phase 4: Mobile App Development (6 weeks)
 
-**Week 11: Community Building**
+**Week 13: Mobile App Foundation**
+- [ ] Set up React Native project in monorepo
+- [ ] Configure TypeScript and dependencies
+- [ ] Implement basic terminal interface
+- [ ] Set up Git integration
+
+**Week 14: Camera + AR Integration**
+- [ ] Implement camera access and controls
+- [ ] Integrate iOS LiDAR via ARKit
+- [ ] Add Android AR support via ARCore
+- [ ] Create AR overlay system
+
+**Week 15: Equipment Detection & Tagging**
+- [ ] Implement equipment detection AI
+- [ ] Add touch-based equipment tagging
+- [ ] Create AR anchor management
+- [ ] Implement spatial data capture
+
+**Week 16: Data Synchronization**
+- [ ] Implement offline Git operations
+- [ ] Add background sync capabilities
+- [ ] Create conflict resolution system
+- [ ] Test data integrity
+
+**Week 17: Mobile App Polish**
+- [ ] Optimize performance and battery usage
+- [ ] Add error handling and recovery
+- [ ] Implement user preferences
+- [ ] Test on multiple devices
+
+**Week 18: App Store Preparation**
+- [ ] Prepare iOS App Store submission
+- [ ] Prepare Google Play Store submission
+- [ ] Create app store assets and descriptions
+- [ ] Set up TestFlight and beta testing
+
+### Phase 5: Community & Launch (2 weeks)
+
+**Week 19: Community Building**
 - [ ] GitHub Discussions
 - [ ] Example repositories
 - [ ] Tutorial videos
 - [ ] Documentation site
 
-**Week 12: Launch**
+**Week 20: Launch**
 - [ ] Publish to GitHub Marketplace
 - [ ] Create example workflows
 - [ ] Launch announcement
@@ -1265,7 +1500,62 @@ walkdir = "2.3"
 glob = "0.3"
 ```
 
-**Development Dependencies:**
+### Mobile App Dependencies
+
+**React Native Dependencies:**
+```json
+{
+  "dependencies": {
+    "react": "18.2.0",
+    "react-native": "0.72.0",
+    "@react-native-async-storage/async-storage": "^1.19.0",
+    "react-native-arkit": "^0.1.0",
+    "react-native-camera": "^4.2.1",
+    "react-native-terminal": "^1.0.0",
+    "react-native-git": "^0.1.0",
+    "react-native-vector-icons": "^10.0.0",
+    "react-native-gesture-handler": "^2.12.0",
+    "react-native-reanimated": "^3.5.0",
+    "react-native-safe-area-context": "^4.7.0",
+    "react-native-screens": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-native": "^0.72.0",
+    "typescript": "^5.0.0",
+    "@babel/core": "^7.22.0",
+    "@babel/preset-env": "^7.22.0",
+    "@babel/runtime": "^7.22.0",
+    "babel-jest": "^29.5.0",
+    "jest": "^29.5.0",
+    "metro-react-native-babel-preset": "0.76.0"
+  }
+}
+```
+
+**iOS Dependencies:**
+```ruby
+# ios/Podfile
+pod 'ARKit', '~> 6.0'
+pod 'React', :path => '../node_modules/react-native'
+pod 'React-Core', :path => '../node_modules/react-native'
+pod 'React-RCTText', :path => '../node_modules/react-native'
+pod 'React-RCTNetwork', :path => '../node_modules/react-native'
+pod 'React-RCTSettings', :path => '../node_modules/react-native'
+```
+
+**Android Dependencies:**
+```gradle
+// android/app/build.gradle
+dependencies {
+    implementation 'com.google.ar:core:1.35.0'
+    implementation 'com.google.ar.sceneform:core:1.17.1'
+    implementation 'com.google.ar.sceneform:animation:1.17.1'
+    implementation 'com.google.ar.sceneform:filament-android:1.17.1'
+}
+```
+
+---
 ```toml
 [dev-dependencies]
 # Testing

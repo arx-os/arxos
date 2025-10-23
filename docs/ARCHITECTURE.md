@@ -175,16 +175,16 @@ ArxOS uses a custom STEP parser for IFC files:
 
 ```bash
 # Import IFC file and generate YAML
-arxos import building.ifc
+arx import building.ifc
 
 # Export to Git repository
-arxos export --repo ./building-repo
+arx export --repo ./building-repo
 
 # Render building in terminal
-arxos render --building "Building Name"
+arx render --building "Building Name"
 
 # Validate building data
-arxos validate --path ./building-repo
+arx validate --path ./building-repo
 ```
 
 ### 2. Library API

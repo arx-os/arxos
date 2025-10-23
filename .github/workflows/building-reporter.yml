@@ -1,0 +1,251 @@
+name: Building Reporter Action
+
+on:
+  workflow_call:
+    inputs:
+      report-type:
+        description: 'Type of report to generate'
+        required: false
+        type: string
+        default: 'status'
+      output-path:
+        description: 'Output directory for reports'
+        required: false
+        type: string
+        default: 'reports/'
+      building-path:
+        description: 'Path to building data directory'
+        required: false
+        type: string
+        default: 'equipment/'
+      format:
+        description: 'Report format (markdown, json, html)'
+        required: false
+        type: string
+        default: 'markdown'
+      include-charts:
+        description: 'Include charts and visualizations'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      
+      - name: Cache Rust dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
+      - name: Build ArxOS CLI
+        run: |
+          cargo build --release
+          echo "ArxOS CLI built successfully"
+      
+      - name: Verify building data exists
+        run: |
+          if [ ! -d "${{ inputs.building-path }}" ]; then
+            echo "Error: Building data directory '${{ inputs.building-path }}' not found"
+            exit 1
+          fi
+          
+          # Check if there are any YAML files
+          if [ -z "$(find "${{ inputs.building-path }}" -name "*.yml" -o -name "*.yaml")" ]; then
+            echo "Error: No YAML files found in '${{ inputs.building-path }}'"
+            exit 1
+          fi
+          
+          echo "Building data directory verified: ${{ inputs.building-path }}"
+      
+      - name: Create output directory
+        run: |
+          mkdir -p "${{ inputs.output-path }}"
+          echo "Output directory created: ${{ inputs.output-path }}"
+      
+      - name: Generate building report
+        id: generate
+        run: |
+          echo "Generating ${{ inputs.report-type }} report..."
+          
+          # Generate report based on type
+          case "${{ inputs.report-type }}" in
+            "status")
+              ./target/release/arxos report --type status --path "${{ inputs.building-path }}" --output "${{ inputs.output-path }}" --format "${{ inputs.format }}"
+              report_file="${{ inputs.output-path }}/building-status.${{ inputs.format }}"
+              ;;
+            "energy")
+              ./target/release/arxos report --type energy --path "${{ inputs.building-path }}" --output "${{ inputs.output-path }}" --format "${{ inputs.format }}"
+              report_file="${{ inputs.output-path }}/energy-report.${{ inputs.format }}"
+              ;;
+            "maintenance")
+              ./target/release/arxos report --type maintenance --path "${{ inputs.building-path }}" --output "${{ inputs.output-path }}" --format "${{ inputs.format }}"
+              report_file="${{ inputs.output-path }}/maintenance-report.${{ inputs.format }}"
+              ;;
+            "spatial")
+              ./target/release/arxos report --type spatial --path "${{ inputs.building-path }}" --output "${{ inputs.output-path }}" --format "${{ inputs.format }}"
+              report_file="${{ inputs.output-path }}/spatial-report.${{ inputs.format }}"
+              ;;
+            "comprehensive")
+              ./target/release/arxos report --type comprehensive --path "${{ inputs.building-path }}" --output "${{ inputs.output-path }}" --format "${{ inputs.format }}"
+              report_file="${{ inputs.output-path }}/comprehensive-report.${{ inputs.format }}"
+              ;;
+            *)
+              echo "Error: Unknown report type '${{ inputs.report-type }}'"
+              exit 1
+              ;;
+          esac
+          
+          # Verify report was generated
+          if [ ! -f "$report_file" ]; then
+            echo "Error: Report file not generated: $report_file"
+            exit 1
+          fi
+          
+          # Get report size
+          report_size=$(wc -c < "$report_file")
+          
+          # Count equipment items
+          equipment_count=$(find "${{ inputs.building-path }}" -name "*.yml" -o -name "*.yaml" | wc -l)
+          
+          echo "report-path=$report_file" >> $GITHUB_OUTPUT
+          echo "report-size=$report_size" >> $GITHUB_OUTPUT
+          echo "equipment-count=$equipment_count" >> $GITHUB_OUTPUT
+          
+          echo "Report generated successfully:"
+          echo "- File: $report_file"
+          echo "- Size: $report_size bytes"
+          echo "- Equipment Count: $equipment_count"
+      
+      - name: Generate report summary
+        run: |
+          echo "## Report Generation Summary" > report-summary.md
+          echo "" >> report-summary.md
+          echo "- **Report Type**: ${{ inputs.report-type }}" >> report-summary.md
+          echo "- **Output Path**: ${{ inputs.output-path }}" >> report-summary.md
+          echo "- **Building Path**: ${{ inputs.building-path }}" >> report-summary.md
+          echo "- **Format**: ${{ inputs.format }}" >> report-summary.md
+          echo "- **Include Charts**: ${{ inputs.include-charts }}" >> report-summary.md
+          echo "- **Report File**: ${{ steps.generate.outputs.report-path }}" >> report-summary.md
+          echo "- **Report Size**: ${{ steps.generate.outputs.report-size }} bytes" >> report-summary.md
+          echo "- **Equipment Count**: ${{ steps.generate.outputs.equipment-count }}" >> report-summary.md
+          echo "- **Generation Time**: $(date)" >> report-summary.md
+          echo "" >> report-summary.md
+          
+          echo "### Report Contents:" >> report-summary.md
+          echo '```' >> report-summary.md
+          head -50 "${{ steps.generate.outputs.report-path }}" >> report-summary.md
+          echo '```' >> report-summary.md
+          
+          echo "Report summary generated"
+      
+      - name: Upload report artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: building-report-${{ inputs.report-type }}
+          path: |
+            ${{ inputs.output-path }}/
+            report-summary.md
+          retention-days: 30
+      
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+      
+      - name: Add report files
+        run: |
+          git add "${{ inputs.output-path }}"
+          git add report-summary.md
+          echo "Added report files to Git staging"
+      
+      - name: Commit report files
+        run: |
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Generated ${{ inputs.report-type }} report - ${{ steps.generate.outputs.equipment-count }} equipment items"
+            echo "Committed report files"
+          fi
+      
+      - name: Push report changes
+        run: |
+          git push origin HEAD
+          echo "Pushed report changes to repository"
+      
+      - name: Create report issue
+        if: inputs.report-type == 'status' && steps.generate.outputs.equipment-count == 0
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Building Status Report - No Equipment Found',
+              body: `# Building Status Report - No Equipment Found
+              
+              ## Summary
+              The building status report was generated but no equipment items were found.
+              
+              ## Details
+              - **Report Type**: ${{ inputs.report-type }}
+              - **Building Path**: ${{ inputs.building-path }}
+              - **Equipment Count**: ${{ steps.generate.outputs.equipment-count }}
+              - **Report Time**: ${new Date().toISOString()}
+              
+              ## Next Steps
+              1. Verify building data exists in the specified path
+              2. Check if equipment files are properly formatted
+              3. Re-run report generation
+              `,
+              labels: ['report', 'status', 'warning']
+            });
+      
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const reportType = '${{ inputs.report-type }}';
+            const equipmentCount = ${{ steps.generate.outputs.equipment-count }};
+            const reportSize = ${{ steps.generate.outputs.report-size }};
+            
+            let comment = `## Building Report Generated\n\n`;
+            comment += `📊 **${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report**\n\n`;
+            comment += `- Equipment Items: ${equipmentCount}\n`;
+            comment += `- Report Size: ${reportSize} bytes\n`;
+            comment += `- Report Time: ${new Date().toISOString()}\n\n`;
+            
+            if (equipmentCount === 0) {
+              comment += `⚠️ **Warning**: No equipment items found in the building data.\n`;
+            } else {
+              comment += `✅ Report generated successfully with ${equipmentCount} equipment items.\n`;
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

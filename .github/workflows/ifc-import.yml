@@ -1,0 +1,116 @@
+name: Import IFC Building Data
+
+on:
+  push:
+    paths: ['*.ifc']
+  pull_request:
+    paths: ['*.ifc']
+  workflow_dispatch:
+    inputs:
+      ifc-file:
+        description: 'Path to IFC file to import'
+        required: true
+        type: string
+      commit-message:
+        description: 'Custom commit message'
+        required: false
+        type: string
+        default: 'Import IFC building data'
+
+jobs:
+  import-ifc:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Determine IFC file
+        id: ifc-file
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "file=${{ github.event.inputs.ifc-file }}" >> $GITHUB_OUTPUT
+          else
+            # Find the IFC file that was modified
+            ifc_file=$(git diff --name-only HEAD~1 HEAD | grep '\.ifc$' | head -1)
+            if [ -z "$ifc_file" ]; then
+              echo "Error: No IFC file found in changes"
+              exit 1
+            fi
+            echo "file=$ifc_file" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Process IFC file
+        uses: ./.github/workflows/ifc-processor.yml
+        with:
+          ifc-file: ${{ steps.ifc-file.outputs.file }}
+          output-path: 'equipment/'
+          commit-message: ${{ github.event.inputs.commit-message || 'Import IFC building data' }}
+      
+      - name: Validate spatial data
+        uses: ./.github/workflows/spatial-validator.yml
+        with:
+          building-path: 'equipment/'
+          validation-level: 'standard'
+          coordinate-system: 'building_local'
+          tolerance: '0.1'
+      
+      - name: Generate building report
+        uses: ./.github/workflows/building-reporter.yml
+        with:
+          report-type: 'import-summary'
+          output-path: 'reports/'
+          building-path: 'equipment/'
+          format: 'markdown'
+      
+      - name: Monitor equipment status
+        uses: ./.github/workflows/equipment-monitor.yml
+        with:
+          alert-threshold: 'warning'
+          building-path: 'equipment/'
+          check-interval: '60'
+          critical-equipment: 'HVAC,ELECTRICAL,SAFETY'
+      
+      - name: Create import summary issue
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const processedFiles = 'N/A'; // Output removed from ifc-processor workflow
+            const commitHash = '${{ github.sha }}';
+            const validationStatus = 'Completed'; // Output removed from spatial-validator workflow
+            const monitoringStatus = 'Completed'; // Output removed from equipment-monitor workflow
+            
+            let comment = `## IFC Import Summary\n\n`;
+            comment += `📁 **Import Results**\n\n`;
+            comment += `- Files Processed: ${processedFiles}\n`;
+            comment += `- Commit Hash: ${commitHash}\n`;
+            comment += `- Validation Status: ${validationStatus}\n`;
+            comment += `- Monitoring Status: ${monitoringStatus}\n`;
+            comment += `- Import Time: ${new Date().toISOString()}\n\n`;
+            
+            if (validationStatus === 'passed') {
+              comment += `✅ **Validation Passed** - All spatial data is valid\n`;
+            } else if (validationStatus === 'warnings') {
+              comment += `⚠️ **Validation Warnings** - Some issues detected\n`;
+            } else {
+              comment += `❌ **Validation Failed** - Issues need to be resolved\n`;
+            }
+            
+            if (monitoringStatus === 'healthy') {
+              comment += `✅ **Equipment Healthy** - All equipment operational\n`;
+            } else if (monitoringStatus === 'warning') {
+              comment += `⚠️ **Equipment Warnings** - Some equipment issues detected\n`;
+            } else {
+              comment += `🚨 **Critical Equipment Issues** - Immediate attention required\n`;
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

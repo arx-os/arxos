@@ -41,4 +41,233 @@ pub enum Commands {
         #[arg(long)]
         path: Option<String>,
     },
+    /// Show repository status and changes
+    Status {
+        /// Show detailed status information
+        #[arg(long)]
+        verbose: bool,
+    },
+    /// Show differences between commits
+    Diff {
+        /// Compare with specific commit hash
+        #[arg(long)]
+        commit: Option<String>,
+        /// Show diff for specific file
+        #[arg(long)]
+        file: Option<String>,
+        /// Show file statistics only
+        #[arg(long)]
+        stat: bool,
+    },
+    /// Show commit history
+    History {
+        /// Number of commits to show
+        #[arg(long, default_value = "10")]
+        limit: usize,
+        /// Show detailed commit information
+        #[arg(long)]
+        verbose: bool,
+        /// Show history for specific file
+        #[arg(long)]
+        file: Option<String>,
+    },
+    /// Manage configuration
+    Config {
+        /// Show current configuration
+        #[arg(long)]
+        show: bool,
+        /// Set configuration value (format: section.key=value)
+        #[arg(long)]
+        set: Option<String>,
+        /// Reset to defaults
+        #[arg(long)]
+        reset: bool,
+        /// Edit configuration file
+        #[arg(long)]
+        edit: bool,
+    },
+    /// Room management commands
+    Room {
+        #[command(subcommand)]
+        command: RoomCommands,
+    },
+    /// Equipment management commands
+    Equipment {
+        #[command(subcommand)]
+        command: EquipmentCommands,
+    },
+    /// Spatial operations and queries
+    Spatial {
+        #[command(subcommand)]
+        command: SpatialCommands,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum RoomCommands {
+    /// Create a new room
+    Create {
+        /// Building name
+        #[arg(long)]
+        building: String,
+        /// Floor level
+        #[arg(long)]
+        floor: i32,
+        /// Wing name
+        #[arg(long)]
+        wing: String,
+        /// Room name
+        #[arg(long)]
+        name: String,
+        /// Room type
+        #[arg(long)]
+        room_type: String,
+        /// Room dimensions (width x depth x height)
+        #[arg(long)]
+        dimensions: Option<String>,
+        /// Room position (x,y,z)
+        #[arg(long)]
+        position: Option<String>,
+    },
+    /// List rooms
+    List {
+        /// Building name
+        #[arg(long)]
+        building: Option<String>,
+        /// Floor level
+        #[arg(long)]
+        floor: Option<i32>,
+        /// Wing name
+        #[arg(long)]
+        wing: Option<String>,
+        /// Show detailed information
+        #[arg(long)]
+        verbose: bool,
+    },
+    /// Show room details
+    Show {
+        /// Room ID or name
+        room: String,
+        /// Show equipment in room
+        #[arg(long)]
+        equipment: bool,
+    },
+    /// Update room properties
+    Update {
+        /// Room ID or name
+        room: String,
+        /// Property to update (key=value)
+        #[arg(long)]
+        property: Vec<String>,
+    },
+    /// Delete a room
+    Delete {
+        /// Room ID or name
+        room: String,
+        /// Confirm deletion
+        #[arg(long)]
+        confirm: bool,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum EquipmentCommands {
+    /// Add equipment to a room
+    Add {
+        /// Room ID or name
+        #[arg(long)]
+        room: String,
+        /// Equipment name
+        #[arg(long)]
+        name: String,
+        /// Equipment type
+        #[arg(long)]
+        equipment_type: String,
+        /// Equipment position (x,y,z)
+        #[arg(long)]
+        position: Option<String>,
+        /// Equipment properties (key=value)
+        #[arg(long)]
+        property: Vec<String>,
+    },
+    /// List equipment
+    List {
+        /// Room ID or name
+        #[arg(long)]
+        room: Option<String>,
+        /// Equipment type filter
+        #[arg(long)]
+        equipment_type: Option<String>,
+        /// Show detailed information
+        #[arg(long)]
+        verbose: bool,
+    },
+    /// Update equipment
+    Update {
+        /// Equipment ID or name
+        equipment: String,
+        /// Property to update (key=value)
+        #[arg(long)]
+        property: Vec<String>,
+        /// New position (x,y,z)
+        #[arg(long)]
+        position: Option<String>,
+    },
+    /// Remove equipment
+    Remove {
+        /// Equipment ID or name
+        equipment: String,
+        /// Confirm removal
+        #[arg(long)]
+        confirm: bool,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum SpatialCommands {
+    /// Query spatial relationships
+    Query {
+        /// Query type
+        #[arg(long)]
+        query_type: String,
+        /// Target entity (room or equipment)
+        #[arg(long)]
+        entity: String,
+        /// Additional parameters
+        #[arg(long)]
+        params: Vec<String>,
+    },
+    /// Set spatial relationships
+    Relate {
+        /// First entity
+        #[arg(long)]
+        entity1: String,
+        /// Second entity
+        #[arg(long)]
+        entity2: String,
+        /// Relationship type
+        #[arg(long)]
+        relationship: String,
+    },
+    /// Transform coordinates
+    Transform {
+        /// Source coordinate system
+        #[arg(long)]
+        from: String,
+        /// Target coordinate system
+        #[arg(long)]
+        to: String,
+        /// Entity to transform
+        #[arg(long)]
+        entity: String,
+    },
+    /// Validate spatial data
+    Validate {
+        /// Entity to validate
+        #[arg(long)]
+        entity: Option<String>,
+        /// Validation tolerance
+        #[arg(long)]
+        tolerance: Option<f64>,
+    },
 }

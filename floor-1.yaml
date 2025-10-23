@@ -1,19 +1,19 @@
 building:
-  id: ae1e19b1-84f8-414b-8f1e-c4fbdd56e144
+  id: 642ec51c-18ab-48fa-a20f-10cc712ed198
   name: Floor-1
   description: 'Building parsed from IFC file: test_data/sample_building.ifc'
-  created_at: 2025-10-22T18:50:46.840372900Z
-  updated_at: 2025-10-22T18:50:46.841649100Z
+  created_at: 2025-10-22T21:37:21.176741Z
+  updated_at: 2025-10-22T21:37:21.176830Z
   version: 1.0.0
   global_bounding_box:
     min:
-      x: 8.5
-      y: 9.0
-      z: 7.25
+      x: 8.0
+      y: 6.199999999999999
+      z: 1.2000000000000002
     max:
-      x: 32.5
-      y: 72.5
-      z: 10.5
+      x: 13.0
+      y: 10.2
+      z: 4.2
 metadata:
   source_file: test_data/sample_building.ifc
   parser_version: ArxOS v2.0
@@ -25,45 +25,10 @@ metadata:
   - ifc
   - building
 floors:
-- id: floor-2
-  name: Floor 2
-  level: 2
-  elevation: 6.0
-  rooms: []
-  equipment:
-  - id: '19'
-    name: VAV-301
-    equipment_type: IFCFLOWTERMINAL
-    system_type: HVAC
-    position:
-      x: 9.0
-      y: 72.0
-      z: 7.5
-    bounding_box:
-      min:
-        x: 8.5
-        y: 71.5
-        z: 7.25
-      max:
-        x: 9.5
-        y: 72.5
-        z: 7.75
-    status: Healthy
-    properties: {}
-    universal_path: /BUILDING/FLOOR-2/HVAC/VAV-301
-  bounding_box:
-    min:
-      x: 8.5
-      y: 71.5
-      z: 7.25
-    max:
-      x: 9.5
-      y: 72.5
-      z: 7.75
-- id: floor-3
-  name: Floor 3
-  level: 3
-  elevation: 9.0
+- id: floor-0
+  name: Floor 0
+  level: 0
+  elevation: 0.0
   rooms:
   - id: '13'
     name: Room-101
@@ -71,30 +36,50 @@ floors:
     area: 20.0
     volume: 60.0
     position:
-      x: 30.0
-      y: 11.0
-      z: 9.0
+      x: 10.5
+      y: 8.2
+      z: 2.7
     bounding_box:
       min:
-        x: 27.5
-        y: 9.0
-        z: 7.5
+        x: 8.0
+        y: 6.199999999999999
+        z: 1.2000000000000002
       max:
-        x: 32.5
-        y: 13.0
-        z: 10.5
+        x: 13.0
+        y: 10.2
+        z: 4.2
     equipment: []
     properties: {}
-  equipment: []
+  equipment:
+  - id: '19'
+    name: VAV-301
+    equipment_type: IFCFLOWTERMINAL
+    system_type: HVAC
+    position:
+      x: 10.5
+      y: 8.2
+      z: 2.7
+    bounding_box:
+      min:
+        x: 10.0
+        y: 7.699999999999999
+        z: 2.45
+      max:
+        x: 11.0
+        y: 8.7
+        z: 2.95
+    status: Healthy
+    properties: {}
+    universal_path: /BUILDING/FLOOR-0/HVAC/VAV-301
   bounding_box:
     min:
-      x: 27.5
-      y: 9.0
-      z: 7.5
+      x: 8.0
+      y: 6.199999999999999
+      z: 1.2000000000000002
     max:
-      x: 32.5
-      y: 13.0
-      z: 10.5
+      x: 13.0
+      y: 10.2
+      z: 4.2
 coordinate_systems:
 - name: World
   origin:

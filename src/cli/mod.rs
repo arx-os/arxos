@@ -34,6 +34,18 @@ pub enum Commands {
         /// Floor number
         #[arg(long)]
         floor: Option<i32>,
+        /// Enable 3D multi-floor visualization
+        #[arg(long)]
+        three_d: bool,
+        /// Show equipment status indicators
+        #[arg(long)]
+        show_status: bool,
+        /// Show room boundaries
+        #[arg(long)]
+        show_rooms: bool,
+        /// Output format (ascii, json, yaml)
+        #[arg(long, default_value = "ascii")]
+        format: String,
     },
     /// Validate building data
     Validate {
@@ -117,6 +129,86 @@ pub enum Commands {
         alerts_only: bool,
         #[arg(long)]
         log_level: Option<String>,
+    },
+    /// Search building data
+    Search {
+        /// Search query
+        query: String,
+        /// Search in equipment names
+        #[arg(long)]
+        equipment: bool,
+        /// Search in room names
+        #[arg(long)]
+        rooms: bool,
+        /// Search in building names
+        #[arg(long)]
+        buildings: bool,
+        /// Case-sensitive search
+        #[arg(long)]
+        case_sensitive: bool,
+        /// Use regex pattern matching
+        #[arg(long)]
+        regex: bool,
+        /// Maximum number of results
+        #[arg(long, default_value = "50")]
+        limit: usize,
+        /// Show detailed results
+        #[arg(long)]
+        verbose: bool,
+    },
+    /// Integrate AR scan data
+    ArIntegrate {
+        /// AR scan data file (JSON)
+        #[arg(long)]
+        scan_file: String,
+        /// Room name for the scan
+        #[arg(long)]
+        room: String,
+        /// Floor level
+        #[arg(long)]
+        floor: i32,
+        /// Building identifier
+        #[arg(long)]
+        building: String,
+        /// Commit changes to Git
+        #[arg(long)]
+        commit: bool,
+        /// Commit message
+        #[arg(long)]
+        message: Option<String>,
+    },
+    /// Filter building data
+    Filter {
+        /// Equipment type filter
+        #[arg(long)]
+        equipment_type: Option<String>,
+        /// Equipment status filter
+        #[arg(long)]
+        status: Option<String>,
+        /// Floor filter
+        #[arg(long)]
+        floor: Option<i32>,
+        /// Room filter
+        #[arg(long)]
+        room: Option<String>,
+        /// Building filter
+        #[arg(long)]
+        building: Option<String>,
+        /// Show only critical equipment
+        #[arg(long)]
+        critical_only: bool,
+        /// Show only healthy equipment
+        #[arg(long)]
+        healthy_only: bool,
+        /// Show only equipment with alerts
+        #[arg(long)]
+        alerts_only: bool,
+        /// Output format (table, json, yaml)
+        #[arg(long, default_value = "table")]
+        format: String,
+        /// Maximum number of results
+        #[arg(long, default_value = "100")]
+        limit: usize,
     },
 }
 

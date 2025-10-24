@@ -8,8 +8,11 @@ pub mod git;
 pub mod ifc;
 pub mod progress;
 pub mod render;
+pub mod render3d;
+pub mod ar_integration;
 pub mod yaml;
 pub mod path;
+pub mod search;
 
 // Re-export commonly used types for easier access
 pub use core::{Building, Equipment};

@@ -10,6 +10,10 @@ impl BuildingRenderer {
         Self { building_data }
     }
     
+    pub fn floors(&self) -> &Vec<FloorData> {
+        &self.building_data.floors
+    }
+    
     pub fn render_floor(&self, floor: i32) -> Result<(), Box<dyn std::error::Error>> {
         // Find the floor data
         let floor_data = self.building_data.floors.iter()

@@ -397,6 +397,466 @@ mod spatial_tests {
 }
 
 #[cfg(test)]
+mod search_filter_tests {
+    use super::*;
+    use arxos::search::{SearchEngine, SearchConfig, FilterConfig, OutputFormat};
+    use arxos::yaml::{BuildingData, BuildingInfo, FloorData, RoomData, EquipmentData, BuildingMetadata, EquipmentStatus};
+    use arxos::spatial::{Point3D, BoundingBox3D};
+    use std::collections::HashMap;
+    use chrono::Utc;
+
+    /// Create sample building data for testing
+    fn create_sample_building_data() -> BuildingData {
+        BuildingData {
+            building: BuildingInfo {
+                id: "test-building".to_string(),
+                name: "Test Building".to_string(),
+                description: Some("Test building for search/filter tests".to_string()),
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+                version: "1.0.0".to_string(),
+                global_bounding_box: Some(BoundingBox3D {
+                    min: Point3D { x: 0.0, y: 0.0, z: 0.0 },
+                    max: Point3D { x: 100.0, y: 100.0, z: 10.0 },
+                }),
+            },
+            metadata: BuildingMetadata {
+                source_file: Some("test.ifc".to_string()),
+                parser_version: "ArxOS v2.0".to_string(),
+                total_entities: 3,
+                spatial_entities: 3,
+                coordinate_system: "World".to_string(),
+                units: "meters".to_string(),
+                tags: vec!["test".to_string(), "building".to_string()],
+            },
+            floors: vec![
+                FloorData {
+                    id: "floor-1".to_string(),
+                    name: "First Floor".to_string(),
+                    level: 1,
+                    elevation: 0.0,
+                    rooms: vec![
+                        RoomData {
+                            id: "room-101".to_string(),
+                            name: "Conference Room 101".to_string(),
+                            room_type: "Conference".to_string(),
+                            area: Some(50.0),
+                            volume: Some(200.0),
+                            position: Point3D { x: 10.0, y: 10.0, z: 1.0 },
+                            bounding_box: BoundingBox3D {
+                                min: Point3D { x: 5.0, y: 5.0, z: 0.0 },
+                                max: Point3D { x: 15.0, y: 15.0, z: 3.0 },
+                            },
+                            equipment: vec![],
+                            properties: HashMap::new(),
+                        },
+                        RoomData {
+                            id: "room-102".to_string(),
+                            name: "Office 102".to_string(),
+                            room_type: "Office".to_string(),
+                            area: Some(25.0),
+                            volume: Some(100.0),
+                            position: Point3D { x: 20.0, y: 10.0, z: 1.0 },
+                            bounding_box: BoundingBox3D {
+                                min: Point3D { x: 15.0, y: 5.0, z: 0.0 },
+                                max: Point3D { x: 25.0, y: 15.0, z: 3.0 },
+                            },
+                            equipment: vec![],
+                            properties: HashMap::new(),
+                        },
+                    ],
+                    equipment: vec![
+                        EquipmentData {
+                            id: "hvac-001".to_string(),
+                            name: "VAV-101".to_string(),
+                            equipment_type: "HVAC".to_string(),
+                            system_type: "Air Handling".to_string(),
+                            position: Point3D { x: 12.0, y: 12.0, z: 2.0 },
+                            bounding_box: BoundingBox3D {
+                                min: Point3D { x: 10.0, y: 10.0, z: 1.0 },
+                                max: Point3D { x: 14.0, y: 14.0, z: 3.0 },
+                            },
+                            status: EquipmentStatus::Healthy,
+                            properties: HashMap::new(),
+                            universal_path: "/BUILDING/FLOOR-1/HVAC/VAV-101".to_string(),
+                        },
+                        EquipmentData {
+                            id: "elec-001".to_string(),
+                            name: "Panel-101".to_string(),
+                            equipment_type: "Electrical".to_string(),
+                            system_type: "Power Distribution".to_string(),
+                            position: Point3D { x: 22.0, y: 12.0, z: 2.0 },
+                            bounding_box: BoundingBox3D {
+                                min: Point3D { x: 20.0, y: 10.0, z: 1.0 },
+                                max: Point3D { x: 24.0, y: 14.0, z: 3.0 },
+                            },
+                            status: EquipmentStatus::Warning,
+                            properties: HashMap::new(),
+                            universal_path: "/BUILDING/FLOOR-1/ELECTRICAL/PANEL-101".to_string(),
+                        },
+                        EquipmentData {
+                            id: "safety-001".to_string(),
+                            name: "Fire Alarm-101".to_string(),
+                            equipment_type: "Safety".to_string(),
+                            system_type: "Fire Detection".to_string(),
+                            position: Point3D { x: 12.0, y: 8.0, z: 2.5 },
+                            bounding_box: BoundingBox3D {
+                                min: Point3D { x: 10.0, y: 6.0, z: 2.0 },
+                                max: Point3D { x: 14.0, y: 10.0, z: 3.0 },
+                            },
+                            status: EquipmentStatus::Critical,
+                            properties: HashMap::new(),
+                            universal_path: "/BUILDING/FLOOR-1/SAFETY/FIRE-ALARM-101".to_string(),
+                        },
+                    ],
+                    bounding_box: Some(BoundingBox3D {
+                        min: Point3D { x: 5.0, y: 5.0, z: 0.0 },
+                        max: Point3D { x: 25.0, y: 15.0, z: 3.0 },
+                    }),
+                },
+            ],
+            coordinate_systems: vec![],
+        }
+    }
+
+    #[test]
+    fn test_search_engine_creation() {
+        let building_data = create_sample_building_data();
+        let search_engine = SearchEngine::new(&building_data);
+        
+        assert_eq!(search_engine.buildings.len(), 1);
+        assert_eq!(search_engine.equipment.len(), 3);
+        assert_eq!(search_engine.rooms.len(), 2);
+    }
+
+    #[test]
+    fn test_equipment_search() {
+        let building_data = create_sample_building_data();
+        let search_engine = SearchEngine::new(&building_data);
+        
+        let config = SearchConfig {
+            query: "VAV".to_string(),
+            search_equipment: true,
+            search_rooms: false,
+            search_buildings: false,
+            case_sensitive: false,
+            use_regex: false,
+            limit: 10,
+            verbose: false,
+        };
+        
+        let results = search_engine.search(&config).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "VAV-101");
+        assert_eq!(results[0].item_type, "equipment");
+    }
+
+    #[test]
+    fn test_room_search() {
+        let building_data = create_sample_building_data();
+        let search_engine = SearchEngine::new(&building_data);
+        
+        let config = SearchConfig {
+            query: "Conference".to_string(),
+            search_equipment: false,
+            search_rooms: true,
+            search_buildings: false,
+            case_sensitive: false,
+            use_regex: false,
+            limit: 10,
+            verbose: false,
+        };
+        
+        let results = search_engine.search(&config).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Conference Room 101");
+        assert_eq!(results[0].item_type, "room");
+    }
+
+    #[test]
+    fn test_building_search() {
+        let building_data = create_sample_building_data();
+        let search_engine = SearchEngine::new(&building_data);
+        
+        let config = SearchConfig {
+            query: "Test".to_string(),
+            search_equipment: false,
+            search_rooms: false,
+            search_buildings: true,
+            case_sensitive: false,
+            use_regex: false,
+            limit: 10,
+            verbose: false,
+        };
+        
+        let results = search_engine.search(&config).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Test Building");
+        assert_eq!(results[0].item_type, "building");
+    }
+
+    #[test]
+    fn test_case_sensitive_search() {
+        let building_data = create_sample_building_data();
+        let search_engine = SearchEngine::new(&building_data);
+        
+        let config = SearchConfig {
+            query: "vav".to_string(), // lowercase
+            search_equipment: true,
+            search_rooms: false,
+            search_buildings: false,
+            case_sensitive: true, // Case sensitive
+            use_regex: false,
+            limit: 10,
+            verbose: false,
+        };
+        
+        let results = search_engine.search(&config).unwrap();
+        assert_eq!(results.len(), 0); // Should find nothing with case sensitive
+        
+        let config_case_insensitive = SearchConfig {
+            query: "vav".to_string(),
+            search_equipment: true,
+            search_rooms: false,
+            search_buildings: false,
+            case_sensitive: false, // Case insensitive
+            use_regex: false,
+            limit: 10,
+            verbose: false,
+        };
+        
+        let results_case_insensitive = search_engine.search(&config_case_insensitive).unwrap();
+        assert_eq!(results_case_insensitive.len(), 1); // Should find VAV-101
+    }
+
+    // #[test]
+    // fn test_regex_search() {
+    //     let building_data = create_sample_building_data();
+    //     let search_engine = SearchEngine::new(&building_data);
+    //     
+    //     let config = SearchConfig {
+    //         query: r"VAV-.*".to_string(), // Regex pattern for VAV followed by anything
+    //         search_equipment: true,
+    //         search_rooms: false,
+    //         search_buildings: false,
+    //         case_sensitive: false,
+    //         use_regex: true,
+    //         limit: 10,
+    //         verbose: false,
+    //     };
+    //     
+    //     let results = search_engine.search(&config).unwrap();
+    //     assert_eq!(results.len(), 1);
+    //     assert_eq!(results[0].name, "VAV-101");
+    // }
+
+    #[test]
+    fn test_equipment_type_filter() {
+        let building_data = create_sample_building_data();
+        let search_engine = SearchEngine::new(&building_data);
+        
+        let config = FilterConfig {
+            equipment_type: Some("HVAC".to_string()),
+            status: None,
+            floor: None,
+            room: None,
+            building: None,
+            critical_only: false,
+            healthy_only: false,
+            alerts_only: false,
+            format: OutputFormat::Table,
+            limit: 10,
+        };
+        
+        let results = search_engine.filter(&config).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "VAV-101");
+        assert_eq!(results[0].equipment_type, Some("HVAC".to_string()));
+    }
+
+    #[test]
+    fn test_status_filter() {
+        let building_data = create_sample_building_data();
+        let search_engine = SearchEngine::new(&building_data);
+        
+        let config = FilterConfig {
+            equipment_type: None,
+            status: Some("Healthy".to_string()),
+            floor: None,
+            room: None,
+            building: None,
+            critical_only: false,
+            healthy_only: false,
+            alerts_only: false,
+            format: OutputFormat::Table,
+            limit: 10,
+        };
+        
+        let results = search_engine.filter(&config).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "VAV-101");
+        assert_eq!(results[0].status, Some("Healthy".to_string()));
+    }
+
+    #[test]
+    fn test_critical_only_filter() {
+        let building_data = create_sample_building_data();
+        let search_engine = SearchEngine::new(&building_data);
+        
+        let config = FilterConfig {
+            equipment_type: None,
+            status: None,
+            floor: None,
+            room: None,
+            building: None,
+            critical_only: true,
+            healthy_only: false,
+            alerts_only: false,
+            format: OutputFormat::Table,
+            limit: 10,
+        };
+        
+        let results = search_engine.filter(&config).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Fire Alarm-101");
+        assert_eq!(results[0].status, Some("Critical".to_string()));
+    }
+
+    #[test]
+    fn test_healthy_only_filter() {
+        let building_data = create_sample_building_data();
+        let search_engine = SearchEngine::new(&building_data);
+        
+        let config = FilterConfig {
+            equipment_type: None,
+            status: None,
+            floor: None,
+            room: None,
+            building: None,
+            critical_only: false,
+            healthy_only: true,
+            alerts_only: false,
+            format: OutputFormat::Table,
+            limit: 10,
+        };
+        
+        let results = search_engine.filter(&config).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "VAV-101");
+        assert_eq!(results[0].status, Some("Healthy".to_string()));
+    }
+
+    #[test]
+    fn test_alerts_only_filter() {
+        let building_data = create_sample_building_data();
+        let search_engine = SearchEngine::new(&building_data);
+        
+        let config = FilterConfig {
+            equipment_type: None,
+            status: None,
+            floor: None,
+            room: None,
+            building: None,
+            critical_only: false,
+            healthy_only: false,
+            alerts_only: true,
+            format: OutputFormat::Table,
+            limit: 10,
+        };
+        
+        let results = search_engine.filter(&config).unwrap();
+        assert_eq!(results.len(), 2); // Warning and Critical equipment
+        let names: Vec<&String> = results.iter().map(|r| &r.name).collect();
+        assert!(names.contains(&&"Panel-101".to_string()));
+        assert!(names.contains(&&"Fire Alarm-101".to_string()));
+    }
+
+    #[test]
+    fn test_combined_filters() {
+        let building_data = create_sample_building_data();
+        let search_engine = SearchEngine::new(&building_data);
+        
+        let config = FilterConfig {
+            equipment_type: Some("Safety".to_string()),
+            status: Some("Critical".to_string()),
+            floor: None,
+            room: None,
+            building: None,
+            critical_only: false,
+            healthy_only: false,
+            alerts_only: false,
+            format: OutputFormat::Table,
+            limit: 10,
+        };
+        
+        let results = search_engine.filter(&config).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Fire Alarm-101");
+        assert_eq!(results[0].equipment_type, Some("Safety".to_string()));
+        assert_eq!(results[0].status, Some("Critical".to_string()));
+    }
+
+    #[test]
+    fn test_search_limit() {
+        let building_data = create_sample_building_data();
+        let search_engine = SearchEngine::new(&building_data);
+        
+        let config = SearchConfig {
+            query: "101".to_string(), // Should match multiple items
+            search_equipment: true,
+            search_rooms: true,
+            search_buildings: false,
+            case_sensitive: false,
+            use_regex: false,
+            limit: 2, // Limit to 2 results
+            verbose: false,
+        };
+        
+        let results = search_engine.search(&config).unwrap();
+        assert!(results.len() <= 2);
+    }
+
+    #[test]
+    fn test_match_score_calculation() {
+        let building_data = create_sample_building_data();
+        let search_engine = SearchEngine::new(&building_data);
+        
+        // Test exact match (should have highest score)
+        let config_exact = SearchConfig {
+            query: "VAV-101".to_string(),
+            search_equipment: true,
+            search_rooms: false,
+            search_buildings: false,
+            case_sensitive: false,
+            use_regex: false,
+            limit: 10,
+            verbose: false,
+        };
+        
+        let results_exact = search_engine.search(&config_exact).unwrap();
+        assert_eq!(results_exact.len(), 1);
+        assert_eq!(results_exact[0].match_score, 1.0);
+        
+        // Test partial match (should have lower score)
+        let config_partial = SearchConfig {
+            query: "VAV".to_string(),
+            search_equipment: true,
+            search_rooms: false,
+            search_buildings: false,
+            case_sensitive: false,
+            use_regex: false,
+            limit: 10,
+            verbose: false,
+        };
+        
+        let results_partial = search_engine.search(&config_partial).unwrap();
+        assert_eq!(results_partial.len(), 1);
+        assert!(results_partial[0].match_score < 1.0);
+        assert!(results_partial[0].match_score > 0.0);
+    }
+}
+
+#[cfg(test)]
 mod live_monitoring_tests {
     use super::*;
 

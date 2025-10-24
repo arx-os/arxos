@@ -7,14 +7,18 @@ pub mod git;
 pub mod ifc;
 pub mod progress;
 pub mod render;
+pub mod render3d;
+pub mod ar_integration;
 pub mod yaml;
 pub mod path;
+pub mod search;
 
 use clap::Parser;
 use cli::Cli;
 use log::info;
 use crate::progress::{ProgressContext, utils};
 use arxos_core::{ArxOSCore, parse_room_type, parse_equipment_type};
+use crate::render3d::{Render3DConfig, ProjectionType, ViewAngle, Building3DRenderer, format_scene_output};
 
 /// Load building data from YAML files
 fn load_building_data(building_name: &str) -> Result<yaml::BuildingData, Box<dyn std::error::Error>> {
@@ -747,16 +751,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
-        cli::Commands::Render { building, floor } => {
-            println!("Rendering building: {}", building);
-            if let Some(floor_num) = floor {
-                println!("Floor: {}", floor_num);
-            }
-            
-            // Load real building data from YAML files
-            let building_data = load_building_data(&building)?;
-            let renderer = render::BuildingRenderer::new(building_data);
-            renderer.render_floor(floor.unwrap_or(1))?;
+        cli::Commands::Render { building, floor, three_d, show_status, show_rooms, format } => {
+            handle_render_command(building, floor, three_d, show_status, show_rooms, format)?;
         }
         cli::Commands::Validate { path } => {
             if let Some(data_path) = path {
@@ -834,6 +830,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         cli::Commands::Watch { building, floor, room, refresh_interval, sensors_only, alerts_only, log_level } => {
             handle_watch_command(building, floor, room, refresh_interval, sensors_only, alerts_only, log_level)?;
+        }
+        cli::Commands::Search { query, equipment, rooms, buildings, case_sensitive, regex, limit, verbose } => {
+            handle_search_command(query, equipment, rooms, buildings, case_sensitive, regex, limit, verbose)?;
+        }
+        cli::Commands::ArIntegrate { scan_file, room, floor, building, commit, message } => {
+            handle_ar_integrate_command(scan_file, room, floor, building, commit, message)?;
+        }
+        cli::Commands::Filter { equipment_type, status, floor, room, building, critical_only, healthy_only, alerts_only, format, limit } => {
+            handle_filter_command(equipment_type, status, floor, room, building, critical_only, healthy_only, alerts_only, format, limit)?;
         }
     }
     
@@ -1243,5 +1248,236 @@ fn handle_spatial_command(command: cli::SpatialCommands) -> Result<(), Box<dyn s
         }
     }
     
+    Ok(())
+}
+
+/// Handle the search command
+fn handle_search_command(
+    query: String,
+    equipment: bool,
+    rooms: bool,
+    buildings: bool,
+    case_sensitive: bool,
+    regex: bool,
+    limit: usize,
+    verbose: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!("🔍 Searching building data for: '{}'", query);
+    
+    // Load building data
+    let building_data = load_building_data("")?;
+    
+    // Create search configuration
+    let search_config = search::SearchConfig {
+        query,
+        search_equipment: equipment || (!equipment && !rooms && !buildings), // Default to equipment if none specified
+        search_rooms: rooms,
+        search_buildings: buildings,
+        case_sensitive,
+        use_regex: regex,
+        limit,
+        verbose,
+    };
+    
+    // Create search engine and perform search
+    let search_engine = search::SearchEngine::new(&building_data);
+    let results = search_engine.search(&search_config)?;
+    
+    // Format and display results
+    let output_format = search::OutputFormat::Table;
+    let formatted_results = search::format_search_results(&results, &output_format, verbose);
+    println!("{}", formatted_results);
+    
+    println!("✅ Search completed");
+    Ok(())
+}
+
+/// Handle the filter command
+fn handle_filter_command(
+    equipment_type: Option<String>,
+    status: Option<String>,
+    floor: Option<i32>,
+    room: Option<String>,
+    building: Option<String>,
+    critical_only: bool,
+    healthy_only: bool,
+    alerts_only: bool,
+    format: String,
+    limit: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!("🔍 Filtering building data...");
+    
+    // Load building data
+    let building_data = load_building_data("")?;
+    
+    // Create filter configuration
+    let filter_config = search::FilterConfig {
+        equipment_type,
+        status,
+        floor,
+        room,
+        building,
+        critical_only,
+        healthy_only,
+        alerts_only,
+        format: search::OutputFormat::from(format),
+        limit,
+    };
+    
+    // Create search engine and perform filtering
+    let search_engine = search::SearchEngine::new(&building_data);
+    let results = search_engine.filter(&filter_config)?;
+    
+    // Format and display results
+    let formatted_results = search::format_search_results(&results, &filter_config.format, true);
+    println!("{}", formatted_results);
+    
+    println!("✅ Filter completed");
+    Ok(())
+}
+
+/// Handle the render command with 3D support
+fn handle_render_command(
+    building: String,
+    floor: Option<i32>,
+    three_d: bool,
+    show_status: bool,
+    show_rooms: bool,
+    format: String,
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!("🏗️ Rendering building: {}", building);
+    
+    // Load building data
+    let building_data = load_building_data(&building)?;
+    
+    if three_d {
+        // 3D rendering
+        println!("🎯 3D Multi-Floor Visualization");
+        
+        let config = Render3DConfig {
+            show_status,
+            show_rooms,
+            show_equipment: true,
+            show_connections: false,
+            projection_type: ProjectionType::Isometric,
+            view_angle: ViewAngle::Isometric,
+            scale_factor: 1.0,
+            max_width: 120,
+            max_height: 40,
+        };
+        
+        let renderer = Building3DRenderer::new(building_data, config);
+        let scene = renderer.render_3d()?;
+        
+        match format.to_lowercase().as_str() {
+            "json" => {
+                let json_output = format_scene_output(&scene, "json")?;
+                println!("{}", json_output);
+            }
+            "yaml" => {
+                let yaml_output = format_scene_output(&scene, "yaml")?;
+                println!("{}", yaml_output);
+            }
+            "ascii" => {
+                let ascii_output = renderer.render_to_ascii(&scene)?;
+                println!("{}", ascii_output);
+            }
+            _ => {
+                return Err(format!("Unsupported format: {}", format).into());
+            }
+        }
+    } else {
+        // Traditional 2D rendering
+        println!("📐 2D Floor Plan Rendering");
+        
+        let renderer = render::BuildingRenderer::new(building_data);
+        
+        if let Some(floor_num) = floor {
+            println!("Floor: {}", floor_num);
+            renderer.render_floor(floor_num)?;
+        } else {
+            // Render all floors
+            for floor_data in renderer.floors() {
+                renderer.render_floor(floor_data.level)?;
+                println!(); // Add spacing between floors
+            }
+        }
+    }
+    
+    println!("✅ Rendering completed");
+    Ok(())
+}
+
+/// Handle the AR integration command
+fn handle_ar_integrate_command(
+    scan_file: String,
+    room: String,
+    floor: i32,
+    building: String,
+    commit: bool,
+    message: Option<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!("📱 Integrating AR scan data for room: {} on floor: {}", room, floor);
+    
+    // Load existing building data
+    let mut building_data = load_building_data(&building)?;
+    
+    // Read AR scan data file
+    println!("📄 Reading AR scan data from: {}", scan_file);
+    let scan_data_bytes = std::fs::read(&scan_file)?;
+    
+    // Convert mobile AR data to ARScanData
+    let ar_scan_data = ar_integration::convert_mobile_ar_data(scan_data_bytes, room.clone(), floor)?;
+    
+    // Integrate AR scan data
+    let mut integrator = ar_integration::ARDataIntegrator::new(building_data);
+    let integration_result = integrator.integrate_ar_scan(ar_scan_data)?;
+    
+    // Display integration results
+    println!("🔄 AR Integration Results:");
+    println!("  📦 Equipment added: {}", integration_result.equipment_added);
+    println!("  🔄 Equipment updated: {}", integration_result.equipment_updated);
+    println!("  🏠 Rooms updated: {}", integration_result.rooms_updated);
+    println!("  ⚠️  Conflicts resolved: {}", integration_result.conflicts_resolved);
+    
+    // Get updated building data
+    let updated_building_data = integrator.get_building_data();
+    
+    // Save updated building data
+    let output_file = format!("{}-updated.yaml", building);
+    let yaml_content = serde_yaml::to_string(&updated_building_data)?;
+    std::fs::write(&output_file, yaml_content)?;
+    println!("💾 Updated building data saved to: {}", output_file);
+    
+    // Commit to Git if requested
+    if commit {
+        let commit_message = message.unwrap_or_else(|| {
+            format!("Integrate AR scan for room {} on floor {}", room, floor)
+        });
+        
+        println!("📝 Committing changes to Git: {}", commit_message);
+        
+        // Add files to Git
+        let output = std::process::Command::new("git")
+            .args(&["add", &output_file])
+            .output()?;
+        
+        if !output.status.success() {
+            return Err(format!("Failed to add files to Git: {}", String::from_utf8_lossy(&output.stderr)).into());
+        }
+        
+        // Commit changes
+        let output = std::process::Command::new("git")
+            .args(&["commit", "-m", &commit_message])
+            .output()?;
+        
+        if !output.status.success() {
+            return Err(format!("Failed to commit changes: {}", String::from_utf8_lossy(&output.stderr)).into());
+        }
+        
+        println!("✅ Changes committed to Git");
+    }
+    
+    println!("✅ AR integration completed");
     Ok(())
 }

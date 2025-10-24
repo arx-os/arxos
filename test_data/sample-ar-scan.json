@@ -1,0 +1,68 @@
+{
+  "detectedEquipment": [
+    {
+      "name": "VAV-301",
+      "type": "HVAC",
+      "position": {
+        "x": 10.5,
+        "y": 8.2,
+        "z": 2.7
+      },
+      "confidence": 0.95,
+      "detectionMethod": "ARKit"
+    },
+    {
+      "name": "Light-Fixture-301",
+      "type": "Lighting",
+      "position": {
+        "x": 10.0,
+        "y": 8.0,
+        "z": 3.2
+      },
+      "confidence": 0.88,
+      "detectionMethod": "ARKit"
+    }
+  ],
+  "roomBoundaries": {
+    "walls": [
+      {
+        "startPoint": {"x": 8.0, "y": 6.2, "z": 1.2},
+        "endPoint": {"x": 13.0, "y": 6.2, "z": 1.2},
+        "height": 3.0,
+        "thickness": 0.2
+      },
+      {
+        "startPoint": {"x": 13.0, "y": 6.2, "z": 1.2},
+        "endPoint": {"x": 13.0, "y": 10.2, "z": 1.2},
+        "height": 3.0,
+        "thickness": 0.2
+      },
+      {
+        "startPoint": {"x": 13.0, "y": 10.2, "z": 1.2},
+        "endPoint": {"x": 8.0, "y": 10.2, "z": 1.2},
+        "height": 3.0,
+        "thickness": 0.2
+      },
+      {
+        "startPoint": {"x": 8.0, "y": 10.2, "z": 1.2},
+        "endPoint": {"x": 8.0, "y": 6.2, "z": 1.2},
+        "height": 3.0,
+        "thickness": 0.2
+      }
+    ],
+    "openings": [
+      {
+        "position": {"x": 10.5, "y": 6.2, "z": 1.2},
+        "width": 1.0,
+        "height": 2.0,
+        "type": "door"
+      }
+    ]
+  },
+  "deviceType": "iPhone 14 Pro",
+  "appVersion": "1.0.0",
+  "scanDurationMs": 5000,
+  "pointCount": 15000,
+  "accuracyEstimate": 0.05,
+  "lightingConditions": "good"
+}

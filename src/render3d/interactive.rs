@@ -4,7 +4,7 @@
 //! adding real-time input handling, state management, and interactive controls.
 
 use crate::yaml::BuildingData;
-use crate::render3d::{Building3DRenderer, Render3DConfig, Scene3D};
+use crate::render3d::{Building3DRenderer, Render3DConfig, Scene3D, VisualEffectsEngine};
 use crate::render3d::state::{InteractiveState, CameraState, ViewMode, Vector3D};
 use crate::render3d::events::{EventHandler, InteractiveEvent, Action, CameraAction, ZoomAction, ViewModeAction};
 use crossterm::event::KeyCode;
@@ -20,6 +20,8 @@ pub struct InteractiveRenderer {
     state: InteractiveState,
     /// Event handling system
     event_handler: EventHandler,
+    /// Visual effects engine
+    effects_engine: VisualEffectsEngine,
     /// Rendering configuration
     config: InteractiveConfig,
     /// Last render time for FPS calculation
@@ -51,12 +53,14 @@ impl InteractiveRenderer {
         let renderer = Building3DRenderer::new(building_data, config);
         let state = InteractiveState::new();
         let event_handler = EventHandler::new();
+        let effects_engine = VisualEffectsEngine::new();
         let interactive_config = InteractiveConfig::default();
         
         Ok(Self {
             renderer,
             state,
             event_handler,
+            effects_engine,
             config: interactive_config,
             last_render_time: Instant::now(),
             frame_count: 0,
@@ -72,11 +76,13 @@ impl InteractiveRenderer {
         let renderer = Building3DRenderer::new(building_data, render_config);
         let state = InteractiveState::new();
         let event_handler = EventHandler::new();
+        let effects_engine = VisualEffectsEngine::new();
         
         Ok(Self {
             renderer,
             state,
             event_handler,
+            effects_engine,
             config: interactive_config,
             last_render_time: Instant::now(),
             frame_count: 0,
@@ -332,11 +338,18 @@ impl InteractiveRenderer {
             self.state.camera_state.target.clone()
         );
         
+        // Update visual effects
+        let delta_time = 1.0 / self.config.target_fps as f64;
+        self.effects_engine.update(delta_time);
+        
         // Render the 3D scene
         let scene = self.renderer.render_3d()?;
         
         // Convert to ASCII output
-        let ascii_output = self.renderer.render_to_ascii(&scene)?;
+        let mut ascii_output = self.renderer.render_to_ascii(&scene)?;
+        
+        // Add particle effects to the output
+        ascii_output = self.add_particle_effects_to_output(ascii_output);
         
         // Display the rendered scene
         print!("{}", ascii_output);
@@ -385,6 +398,57 @@ impl InteractiveRenderer {
         Ok(())
     }
 
+    /// Add particle effects to ASCII output
+    fn add_particle_effects_to_output(&self, mut output: String) -> String {
+        // Get all active particles
+        let particles = self.effects_engine.particle_system().particles();
+        
+        // Convert particles to ASCII characters and add to output
+        for particle in particles {
+            // Simple particle rendering - in a real implementation, this would be more sophisticated
+            let particle_char = particle.character;
+            let intensity = particle.lifetime;
+            
+            // Add particle to output (simplified - would need proper 3D to 2D projection)
+            if intensity > 0.1 {
+                // This is a simplified approach - in reality, we'd need proper 3D projection
+                output.push_str(&format!("{}", particle_char));
+            }
+        }
+        
+        output
+    }
+
+    /// Create equipment status effect
+    pub fn create_equipment_status_effect(&mut self, equipment_id: String, status: crate::render3d::EquipmentStatus, position: crate::spatial::Point3D) -> Result<(), String> {
+        self.effects_engine.create_equipment_status_effect(
+            format!("status_{}", equipment_id),
+            equipment_id,
+            status,
+            position
+        )
+    }
+
+    /// Create maintenance alert effect
+    pub fn create_maintenance_alert_effect(&mut self, equipment_id: String, alert_level: crate::render3d::AlertLevel, position: crate::spatial::Point3D) -> Result<(), String> {
+        self.effects_engine.create_maintenance_alert_effect(
+            format!("alert_{}", equipment_id),
+            equipment_id,
+            alert_level,
+            position
+        )
+    }
+
+    /// Create particle burst effect
+    pub fn create_particle_burst_effect(&mut self, position: crate::spatial::Point3D, particle_type: crate::render3d::ParticleType, count: usize) -> Result<(), String> {
+        self.effects_engine.create_particle_burst_effect(
+            format!("burst_{}", self.frame_count),
+            position,
+            particle_type,
+            count
+        )
+    }
+
     /// Get current interactive state
     pub fn state(&self) -> &InteractiveState {
         &self.state
@@ -414,6 +478,16 @@ impl InteractiveRenderer {
     pub fn update_config(&mut self, config: InteractiveConfig) {
         self.config = config;
     }
+
+    /// Get effects engine
+    pub fn effects_engine(&self) -> &VisualEffectsEngine {
+        &self.effects_engine
+    }
+
+    /// Get mutable effects engine
+    pub fn effects_engine_mut(&mut self) -> &mut VisualEffectsEngine {
+        &mut self.effects_engine
+    }
 }
 
 impl Default for InteractiveConfig {
@@ -433,6 +507,7 @@ impl Default for InteractiveConfig {
 mod tests {
     use super::*;
     use crate::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData};
+    use crate::render3d::{ProjectionType, ViewAngle};
     use chrono::Utc;
 
     fn create_test_building_data() -> BuildingData {

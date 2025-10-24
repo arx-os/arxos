@@ -20,11 +20,48 @@ use crate::progress::{ProgressContext, utils};
 use arxos_core::{ArxOSCore, parse_room_type, parse_equipment_type};
 use crate::render3d::{Render3DConfig, ProjectionType, ViewAngle, Building3DRenderer, format_scene_output, InteractiveRenderer, InteractiveConfig};
 
-/// Load building data from YAML files
+/// Load building data from YAML files with comprehensive error handling.
+///
+/// This function searches for building data files in the current directory and loads
+/// the specified building data. It provides detailed error messages for common issues
+/// and suggests solutions.
+///
+/// # Parameters
+///
+/// * `building_name` - Name of the building to load
+///
+/// # Returns
+///
+/// Returns a `Result` containing:
+/// - `Ok(BuildingData)` - Successfully loaded building data
+/// - `Err(Box<dyn std::error::Error>)` - Error with detailed context and suggestions
+///
+/// # Errors
+///
+/// This function can return various errors:
+/// - **File not found**: Building data file doesn't exist
+/// - **Parse error**: Invalid YAML/JSON format
+/// - **Permission error**: Cannot read file due to permissions
+/// - **IO error**: General file system errors
+///
+/// # Example
+///
+/// ```rust
+/// match load_building_data("My Building") {
+///     Ok(data) => println!("Loaded building: {}", data.building.name),
+///     Err(e) => eprintln!("Failed to load building: {}", e),
+/// }
+/// ```
 fn load_building_data(building_name: &str) -> Result<yaml::BuildingData, Box<dyn std::error::Error>> {
     // Look for YAML files in current directory
     let yaml_files: Vec<String> = std::fs::read_dir(".")
-        .unwrap()
+        .map_err(|e| {
+            format!(
+                "Failed to read current directory: {}. \
+                Please ensure you have read permissions and are in the correct directory.",
+                e
+            )
+        })?
         .filter_map(|entry| {
             let entry = entry.ok()?;
             let path = entry.path();
@@ -37,20 +74,56 @@ fn load_building_data(building_name: &str) -> Result<yaml::BuildingData, Box<dyn
         .collect();
     
     if yaml_files.is_empty() {
-        return Err(format!("No YAML files found. Please run 'import' first to generate building data.").into());
+        return Err(format!(
+            "No YAML files found in current directory. \
+            Available options:\n\
+            1. Run 'arxos import <ifc-file> --building \"{}\"' to import building data\n\
+            2. Check if you're in the correct directory\n\
+            3. Verify that YAML files exist and have .yaml extension",
+            building_name
+        ).into());
     }
     
     // Try to find a YAML file that matches the building name
     let yaml_file = yaml_files.iter()
         .find(|file| file.to_lowercase().contains(&building_name.to_lowercase()))
         .or_else(|| yaml_files.first())
-        .ok_or("No suitable YAML file found")?;
+        .ok_or_else(|| {
+            format!(
+                "No suitable YAML file found for building '{}'. \
+                Available files: {}. \
+                Please check the building name or import the correct building data.",
+                building_name,
+                yaml_files.join(", ")
+            )
+        })?;
     
     println!("📄 Loading building data from: {}", yaml_file);
     
-    // Read and parse the YAML file
-    let yaml_content = std::fs::read_to_string(yaml_file)?;
-    let building_data: yaml::BuildingData = serde_yaml::from_str(&yaml_content)?;
+    // Read and parse the YAML file with detailed error handling
+    let yaml_content = std::fs::read_to_string(yaml_file)
+        .map_err(|e| {
+            format!(
+                "Failed to read file '{}': {}. \
+                Please check file permissions and ensure the file is not corrupted.",
+                yaml_file, e
+            )
+        })?;
+    let building_data: yaml::BuildingData = serde_yaml::from_str(&yaml_content)
+        .map_err(|e| {
+            format!(
+                "Failed to parse YAML file '{}': {}. \
+                The file may be corrupted or have invalid YAML syntax. \
+                Please check the file format and try importing again.",
+                yaml_file, e
+            )
+        })?;
+    
+    // Validate that the loaded data contains the expected building
+    if !building_data.building.name.to_lowercase().contains(&building_name.to_lowercase()) {
+        println!("⚠️  Warning: Building name '{}' doesn't match requested '{}'", 
+                 building_data.building.name, building_name);
+    }
     
     Ok(building_data)
 }
@@ -635,18 +708,67 @@ fn edit_configuration(config_manager: &mut config::ConfigManager) -> Result<(), 
     Ok(())
 }
 
+/// Main entry point for ArxOS CLI application.
+///
+/// This function initializes the application, parses command-line arguments,
+/// and executes the requested command with comprehensive error handling.
+///
+/// # Error Handling
+///
+/// The main function provides detailed error messages for common issues:
+/// - **File not found**: Clear guidance on file locations and permissions
+/// - **Parse errors**: Detailed YAML/JSON parsing error messages
+/// - **Permission errors**: File system permission guidance
+/// - **Command errors**: Specific error messages for each command type
+///
+/// # Returns
+///
+/// Returns a `Result` containing:
+/// - `Ok(())` - Command executed successfully
+/// - `Err(Box<dyn std::error::Error>)` - Error with detailed context and suggestions
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize logging
+    // Initialize logging with error handling
     env_logger::init();
     
     info!("Starting ArxOS v2.0");
+    
+    // Parse CLI arguments with error handling
     let cli = Cli::parse();
     
-    match cli.command {
+    // Execute command with comprehensive error handling
+    match execute_command(cli.command) {
+        Ok(()) => {
+            info!("Command completed successfully");
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("❌ Error: {}", e);
+            eprintln!("\n💡 For help, run: arxos --help");
+            eprintln!("📚 For documentation, see: docs/USER_GUIDE.md");
+            Err(e)
+        }
+    }
+}
+
+/// Execute the specified command with comprehensive error handling.
+///
+/// This function handles the execution of all ArxOS commands with detailed
+/// error messages and recovery suggestions.
+fn execute_command(command: cli::Commands) -> Result<(), Box<dyn std::error::Error>> {
+    match command {
         cli::Commands::Import { ifc_file, repo } => {
             println!("🚀 Importing IFC file: {}", ifc_file);
             if let Some(repo_url) = repo {
                 println!("📦 To repository: {}", repo_url);
+            }
+            
+            // Validate IFC file exists and is readable
+            if !std::path::Path::new(&ifc_file).exists() {
+                return Err(format!(
+                    "IFC file '{}' not found. \
+                    Please check the file path and ensure the file exists.",
+                    ifc_file
+                ).into());
             }
             
             // Create progress reporter
@@ -695,6 +817,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 Err(e) => {
                     progress_reporter.finish_error(&format!("Error processing IFC file: {}", e));
+                    return Err(format!(
+                        "Failed to process IFC file '{}': {}. \
+                        Please check that the file is a valid IFC file and try again. \
+                        Common issues:\n\
+                        - File is corrupted or incomplete\n\
+                        - Unsupported IFC version\n\
+                        - Missing required IFC entities\n\
+                        - File permissions issues",
+                        ifc_file, e
+                    ).into());
                 }
             }
         }

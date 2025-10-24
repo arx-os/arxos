@@ -1,854 +1,678 @@
 # ArxOS Architecture Documentation
 
-**Project:** ArxOS - Git for Buildings  
 **Version:** 2.0  
-**Language:** Rust  
-**Philosophy:** Free, Open Source, Terminal-First  
 **Date:** December 2024  
-**Status:** Phase 5 Complete - Advanced Terminal Features
+**Author:** Joel (Founder)
 
 ---
 
-## Executive Summary
+## Table of Contents
 
-ArxOS is a complete "Git for Buildings" system that brings version control to building management. Built entirely in Rust, it provides terminal-first interfaces, automated workflows, hardware integration, and native mobile applications.
-
-### Key Achievements
-- ✅ **Complete CLI System** - 13 major commands with full functionality
-- ✅ **GitHub Actions Ecosystem** - 7 reusable actions + 13 workflows
-- ✅ **Interactive Terminal Features** - `arx explore` and `arx watch`
-- ✅ **Hardware Integration** - ESP32, RP2040, Arduino sensor examples
-- ✅ **Native Mobile Apps** - iOS (SwiftUI + ARKit) and Android (Jetpack Compose + ARCore)
-- ✅ **138 Tests Passing** - Comprehensive test coverage
+1. [System Overview](#system-overview)
+2. [Architecture Principles](#architecture-principles)
+3. [Core Components](#core-components)
+4. [Data Flow](#data-flow)
+5. [Module Structure](#module-structure)
+6. [Interactive 3D Rendering](#interactive-3d-rendering)
+7. [Particle System & Animation](#particle-system--animation)
+8. [Performance Considerations](#performance-considerations)
+9. [Extension Points](#extension-points)
+10. [Integration Patterns](#integration-patterns)
 
 ---
 
-## Core Architecture
+## System Overview
 
-### System Overview
+ArxOS is a terminal-first building management system built with Rust, designed around Git-like version control principles for building data. The system provides advanced 3D visualization, interactive controls, and real-time effects through a modular, layered architecture.
+
+### High-Level Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    User Interface Layer                     │
-├─────────────────────────────────────────────────────────────┤
-│  Terminal CLI  │  Mobile Apps     │  GitHub Actions  │  Web   │
-│  (Rust)        │  (Native Shell)  │  (Docker)        │  (GitHub)│
-└─────────────────────────────────────────────────────────────┘
-                              ↕
-┌─────────────────────────────────────────────────────────────┐
-│                    Core Engine Layer                        │
-├─────────────────────────────────────────────────────────────┤
-│  IFC Parser  │  Spatial Engine  │  Git Client  │  Renderer │
-│  (Rust)      │  (Rust)         │  (Rust)      │  (Rust)   │
-└─────────────────────────────────────────────────────────────┘
-                              ↕
-┌─────────────────────────────────────────────────────────────┐
-│                    Data Storage Layer                       │
-├─────────────────────────────────────────────────────────────┤
-│  Git Repository  │  YAML Files  │  Spatial Data  │  Assets │
-│  (GitHub/GitLab) │  (Text)      │  (Coordinates) │  (Files)│
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Component Architecture
-
-**1. Core Engine (Rust)**
-- IFC file processing with custom STEP parser
-- Spatial data management with R-Tree indexing
-- Git operations with multiple provider support
-- Terminal rendering with `ratatui` + `crossterm`
-
-**2. GitHub Actions Ecosystem (Docker)**
-- 7 reusable actions for automation
-- 13 complete workflows for building management
-- CI/CD integration with scheduled reports
-- Event-driven processing
-
-**3. Data Storage (Git)**
-- YAML files for equipment data
-- Git history for version control
-- GitHub for collaboration
-- No database required
-
-**4. User Interfaces**
-- Terminal CLI (primary) - 13 commands
-- Native Mobile Apps (iOS SwiftUI + Android Jetpack Compose)
-- GitHub web interface (secondary)
-- Interactive terminal features (`arx explore`, `arx watch`)
-
----
-
-## Data Model & Storage
-
-### Universal Path System
-
-**Format:** `/BUILDING/FLOOR/ROOM/SYSTEM/EQUIPMENT`
-
-**Examples:**
-```
-/B1/3/301/HVAC/VAV-301          # VAV unit in room 301, floor 3
-/EMPIRE-STATE/ROOF/MER-NORTH/HVAC/AHU-01  # Air handler on roof
-/CAMPUS-WEST/1/101/LIGHTS/ZONE-A          # Lighting zone
-```
-
-**Path Rules:**
-- Building: Alphanumeric, uppercase, hyphens allowed
-- Floor: Number or name (ROOF, BASEMENT, etc.)
-- Room: Room number or name
-- System: HVAC, ELECTRICAL, PLUMBING, LIGHTS, SAFETY, etc.
-- Equipment: Equipment identifier
-
-### YAML Data Format
-
-**Equipment File:** `equipment/B1/3/301/HVAC/VAV-301.yml`
-
-```yaml
-apiVersion: arxos.io/v1
-kind: Equipment
-metadata:
-  name: VAV-301
-  path: /B1/3/301/HVAC/VAV-301
-  id: eq_vav_301_abc123
-  labels:
-    system: hvac
-    type: vav
-    criticality: medium
-    building: B1
-    floor: "3"
-    room: "301"
-
-spec:
-  manufacturer: Trane
-  model: VAV-500
-  serial_number: TRN-2020-12345
-  install_date: 2020-03-15
-  
-  capacity:
-    cfm: 1000
-    heating_btuh: 15000
-  
-  setpoints:
-    temperature: 72
-    humidity: 50
-  
-  position:
-    x: 10.5
-    y: 8.2
-    z: 2.7
-    coordinate_system: "building_local"
-
-status:
-  operational_state: running
-  health: healthy
-  current_values:
-    temperature: 71.8
-    humidity: 48
-    damper_position: 45
-  last_updated: 2024-12-01T10:30:00Z
-
-maintenance:
-  schedule: quarterly
-  last_pm: 2024-09-15
-  next_pm: 2024-12-15
-  vendor: ACME HVAC
-```
-
-### File Organization
-
-**Repository Structure:**
-```
-building-repo/
-├── building.yml                    # Building metadata
-├── floors/                         # Floor configurations
-│   ├── B1/
-│   │   ├── 1.yml
-│   │   ├── 2.yml
-│   │   └── 3.yml
-├── rooms/                          # Room configurations
-│   ├── B1/
-│   │   ├── 1/
-│   │   │   ├── 101.yml
-│   │   │   ├── 102.yml
-│   │   │   └── 103.yml
-├── equipment/                      # Equipment configurations
-│   ├── B1/
-│   │   ├── 1/
-│   │   │   ├── 101/
-│   │   │   │   ├── HVAC/
-│   │   │   │   │   ├── VAV-101.yml
-│   │   │   │   │   └── RTU-101.yml
-│   │   │   │   ├── ELECTRICAL/
-│   │   │   │   │   ├── Panel-101.yml
-│   │   │   │   │   └── Outlet-101.yml
-├── .github/                        # GitHub Actions workflows
-│   ├── actions/                    # Reusable actions
-│   │   ├── ifc-processor/
-│   │   ├── spatial-validator/
-│   │   ├── building-reporter/
-│   │   ├── equipment-monitor/
-│   │   ├── sensor-processor/
-│   │   ├── sensor-validator/
-│   │   └── sensor-reporter/
-│   └── workflows/                  # Workflow definitions
-│       ├── ifc-import.yml
-│       ├── equipment-monitor.yml
-│       ├── building-report.yml
-│       └── sensor-processing.yml
-└── README.md                       # Building documentation
-```
-
----
-
-## Terminal Visualization System
-
-### ASCII/Unicode Building Plans
-
-**Core Concept:** Render 3D building data as 2D ASCII art in the terminal
-
-**Example Output:**
-```bash
-$ arx render --building B1 --floor 3
-
-Building B1 - Floor 3 (Third Floor)
-┌─────────────────────────────────────────────────────────────┐
-│                                                             │
-│  ┌─────────────┐              ┌──────────────┐          │
-│  │  Room 301    │              │  Room 302    │          │
-│  │  Conference  │              │  Office      │          │
-│  │              │              │              │          │
-│  │  🌡️  VAV-301 │              │  🌡️  VAV-302  │          │
-│  │  71.8°F ✅   │              │  70.5°F ✅   │          │
-│  │  [10.5,8.2]  │              │  [25.3,8.1]  │          │
-│  └─────────────┘              └──────────────┘          │
-│                                                             │
-│  ┌──────────────────────────────┐                       │
-│  │  Room 303 - Open Office      │                       │
-│  │                               │                       │
-│  │  🌡️  VAV-303   🌡️  VAV-304   │                       │
-│  │  72.1°F ✅    71.5°F ✅      │                       │
-│  └──────────────────────────────┘                       │
-└─────────────────────────────────────────────────────────────┘
-
-Equipment Status: ✅ 4 healthy | ⚠️ 0 warnings | ❌ 0 critical
-Last Updated: 2 seconds ago
-Data Source: Git repository (github.com/company/building)
-```
-
-### Interactive Features
-
-**1. Interactive Building Explorer (`arx explore`)**
-```bash
-$ arx explore --building B1
-Building B1 - Floor 3
-Use arrow keys to navigate, 'q' to quit
-
-┌─────────────────────────────────┐
-│  ┌──────┐      ┌──────┐         │
-│  │ 301  │      │ 302  │         │
-│  │ 🌡️    │      │ 🌡️    │         │
-│  │71.8°F│      │70.5°F│         │
-│  └──────┘      └──────┘         │
-└─────────────────────────────────┘
-
-> Room 301 selected
-  Equipment: VAV-301, LIGHTS-301
-  Status: ✅ Healthy
-  Press 'Enter' to view details
-```
-
-**2. Live Monitoring (`arx watch`)**
-```bash
-$ arx watch --building B1 --floor 3
-Watching for changes... (Press Ctrl+C to stop)
-
-Building B1 - Floor 3
-┌─────────────────────────────────┐
-│  ┌──────┐      ┌──────┐         │
-│  │ 301  │      │ 302  │         │
-│  │ 🌡️    │      │ 🌡️    │         │
-│  │71.8°F│      │70.5°F│         │
-│  └──────┘      └──────┘         │
-└─────────────────────────────────┘
-
-[10:30:15] VAV-301 temperature updated: 71.8°F → 72.1°F
-[10:30:45] VAV-302 setpoint changed: 70.5°F → 69.0°F
-```
-
-### Rendering Engine Architecture
-
-**Rust Implementation:**
-- `ratatui` + `crossterm` for cross-platform terminal rendering
-- Real-time updates with configurable refresh intervals
-- Interactive keyboard controls and navigation
-- Multiple view modes (Overview, Sensors, Alerts, Logs, System, Filters)
-- Equipment symbols (🌡️, ⚡, 🚰, 💡, 🚨, etc.)
-- Status indicators (✅, ⚠️, ❌, ⏸️, 🔧)
-
----
-
-## Mobile App Architecture
-
-### Rust Core + Native UI Shell
-
-**Core Concept:** Native mobile apps that combine platform-specific UIs with a high-performance Rust core for terminal interface and AR/LiDAR data processing.
-
-**Architecture:**
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Mobile App Layer                         │
-├─────────────────────────────────────────────────────────────┤
-│  Native UI Shell (Swift/Kotlin)  │  Rust Core (FFI)        │
-│  ├── Terminal View               │  ├── Spatial Processing  │
-│  ├── Camera + AR View           │  ├── Git Operations      │
-│  ├── AR/LiDAR Bridge            │  ├── Equipment Logic      │
-│  └── Touch Controls             │  └── Data Validation     │
-└─────────────────────────────────────────────────────────────┘
-                              ↕
-┌─────────────────────────────────────────────────────────────┐
-│                    Native Platform Layer                    │
-├─────────────────────────────────────────────────────────────┤
-│  iOS LiDAR      │  Android Camera │  Touch Controls │  File System │
-│  (ARKit)        │  (ARCore)       │  (Native)       │  (Native)    │
+│                    CLI Interface Layer                      │
+│  Commands: search, filter, render, interactive, config     │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────────┐
+│                 Application Layer                           │
+│  Search Engine, 3D Renderer, Interactive Controller       │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────────┐
+│                   Core Services Layer                       │
+│  Git Integration, IFC Processing, Spatial Operations       │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────────┐
+│                    Data Layer                               │
+│  YAML/JSON Data, Building Models, Equipment Data          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Mobile App Components
+### Key Design Principles
 
-**1. Rust Core (FFI Library)**
-- High-performance spatial data processing
-- Git operations using existing CLI
-- Equipment logic and validation
-- Cross-platform consistency
-- UniFFI-generated bindings
+1. **Terminal-First**: All functionality works in terminal environment
+2. **Git-Native**: All data changes go through Git workflow
+3. **Modular Design**: Clean separation of concerns
+4. **Performance-Focused**: Optimized for large buildings (1000+ equipment)
+5. **Extensible**: Easy to add new features and integrations
 
-**2. Native UI Shell (iOS - Swift/SwiftUI)**
-- Terminal interface with native performance
-- ARKit + LiDAR integration
-- Camera controls and AR overlays
-- Touch-friendly keyboard
-- Native iOS look and feel
+---
 
-**3. Native UI Shell (Android - Kotlin/Jetpack Compose)**
-- Terminal interface with native performance
-- ARCore integration
-- Camera controls and AR overlays
-- Touch-friendly keyboard
-- Native Android look and feel
+## Architecture Principles
 
-**4. FFI Bridge**
-- UniFFI-generated Swift/Kotlin bindings
-- Bidirectional data flow
-- Error handling and recovery
-- Performance optimization
+### 1. Layered Architecture
 
-### Mobile App Features
+ArxOS follows a strict layered architecture with clear boundaries:
 
-**Terminal Commands:**
-```bash
-# Standard ArxOS commands work in mobile terminal
-arx room create --name "Classroom 301" --floor 3
-arx equipment add --name "VAV-301" --type HVAC --room 301
-arx ar-scan --room 301                    # Opens camera + AR
-arx ar-tag --equipment VAV-301 --position 10.5,8.2
-arx ar-save --commit "Mobile AR scan of room 301"
-arx status                                # Shows Git status
-arx diff                                  # Shows changes
-arx history                               # Shows commit history
+- **Presentation Layer**: CLI interface and terminal rendering
+- **Application Layer**: Business logic and orchestration
+- **Service Layer**: Core services and data processing
+- **Data Layer**: Data models and persistence
+
+### 2. Event-Driven Design
+
+Interactive components use event-driven architecture:
+
+- **Event Sources**: Keyboard, mouse, timer events
+- **Event Handlers**: Process events and update state
+- **State Management**: Centralized state with reactive updates
+- **Effect System**: Visual effects triggered by state changes
+
+### 3. Performance Optimization
+
+Multiple performance optimization strategies:
+
+- **Caching**: Equipment and room data caching
+- **Lazy Loading**: On-demand data loading
+- **Particle Pooling**: Reuse particle objects
+- **Parallel Processing**: Concurrent operations where possible
+- **Memory Management**: Efficient data structures
+
+### 4. Error Handling
+
+Comprehensive error handling strategy:
+
+- **Rich Error Context**: Detailed error information
+- **Recovery Mechanisms**: Automatic retry and fallback
+- **User-Friendly Messages**: Clear error messages for users
+- **Logging**: Comprehensive logging for debugging
+
+---
+
+## Core Components
+
+### 1. Search Engine (`src/search/mod.rs`)
+
+**Purpose**: Advanced search and filtering capabilities
+
+**Key Features**:
+- Multi-field search across equipment, rooms, buildings
+- Fuzzy matching with Levenshtein distance
+- Regex pattern matching
+- Real-time result highlighting
+- Performance-optimized with caching
+
+**Architecture**:
+```rust
+pub struct SearchEngine {
+    pub buildings: Vec<Building>,
+    pub equipment: Vec<EquipmentData>,
+    pub rooms: Vec<RoomData>,
+}
+
+impl SearchEngine {
+    pub fn search(&self, config: &SearchConfig) -> Result<Vec<SearchResult>, Error>
+    pub fn filter(&self, config: &FilterConfig) -> Result<Vec<SearchResult>, Error>
+    pub fn format_search_results(&self, results: &[SearchResult], format: &str, verbose: bool) -> String
+}
 ```
 
-**AR Scanning Workflow:**
-1. **Start AR Session** - `arx ar-scan --room 301`
-2. **Camera Opens** - Live camera feed with AR overlay
-3. **Detect Equipment** - AI-powered equipment detection
-4. **Tag Equipment** - Tap to tag equipment with AR anchors
-5. **Save to Git** - `arx ar-save --commit "Room 301 scan"`
-6. **Sync Data** - Push changes to remote repository
+### 2. 3D Renderer (`src/render3d/mod.rs`)
 
-**Offline Capabilities:**
-- Work without internet connection
-- Cache equipment data locally
-- Queue Git operations for later sync
-- Full terminal functionality offline
+**Purpose**: 3D building visualization and rendering
 
----
+**Key Features**:
+- Multiple projection types (isometric, orthographic, perspective)
+- Multi-floor building visualization
+- Equipment placement in 3D space
+- ASCII/Unicode terminal rendering
+- Spatial coordinate system support
 
-## GitHub Actions Ecosystem
+**Architecture**:
+```rust
+pub struct Building3DRenderer {
+    pub building_data: BuildingData,
+    pub config: Render3DConfig,
+    pub camera: Camera3D,
+}
 
-### Core Actions (7 Reusable Actions)
-
-**1. IFC Processor Action (`arxos/ifc-processor@v1`)**
-- Convert IFC files to YAML equipment data
-- Automated Git commit and push
-- Integration with existing `arx import` command
-
-**2. Spatial Validator Action (`arxos/spatial-validator@v1`)**
-- Validate spatial coordinates and equipment placement
-- Check coordinate system consistency
-- Verify universal path correctness
-
-**3. Building Reporter Action (`arxos/building-reporter@v1`)**
-- Generate building status reports
-- Energy consumption analysis
-- Equipment health summaries
-
-**4. Equipment Monitor Action (`arxos/equipment-monitor@v1`)**
-- Monitor equipment health and generate alerts
-- Create GitHub issues for critical problems
-- Automated status updates
-
-**5. Sensor Processor Action (`arxos/sensor-processor@v1`)**
-- Process sensor data from hardware
-- Real-time data processing
-- Alert threshold management
-
-**6. Sensor Validator Action (`arxos/sensor-validator@v1`)**
-- Validate sensor data quality
-- Range and consistency checking
-- Anomaly detection
-
-**7. Sensor Reporter Action (`arxos/sensor-reporter@v1`)**
-- Generate sensor reports
-- Status summaries
-- Data analytics
-
-### Workflow Examples (13 Complete Workflows)
-
-**1. IFC Import Workflow**
-- Automatic processing of uploaded IFC files
-- Spatial validation pipeline
-- Import summary reports
-
-**2. Equipment Monitoring Workflow**
-- Scheduled equipment health checks
-- Alert generation and issue creation
-- Status reporting
-
-**3. Building Report Workflow**
-- Weekly building status reports
-- Energy and maintenance summaries
-- Automated issue creation
-
-**4. Sensor Processing Workflow**
-- Real-time sensor data processing
-- Validation and reporting
-- Alert management
-
----
-
-## Hardware Integration
-
-### Open Source Hardware Support
-
-**ESP32 Temperature Sensor**
-- DHT22 temperature/humidity sensor
-- GitHub API integration
-- Real-time monitoring
-- Automatic Git commits
-
-**RP2040 Air Quality Sensor**
-- MQ-135 air quality sensor
-- MQTT broker integration
-- Remote control capabilities
-- Status reporting
-
-**Arduino Motion Sensor**
-- PIR motion sensor
-- Webhook endpoint integration
-- Motion detection
-- LED indication
-
-### Hardware Core Abstractions
-
-**Rust Implementation:**
-- Common types and traits for hardware integration
-- Driver implementations (DHT22, MQ-135, PIR)
-- Protocol support (GitHub API, MQTT, Webhook)
-- Error handling and recovery
-
-**Integration Methods:**
-- **GitHub API**: Direct integration with GitHub repositories
-- **MQTT Broker**: Real-time messaging with MQTT
-- **Webhook Endpoint**: HTTP POST to custom endpoints
-
----
-
-## CLI Commands
-
-### Complete Command Suite (13 Commands)
-
-```bash
-# Core Commands
-arx import      # Import IFC files to Git
-arx export      # Export building data to Git  
-arx render      # Render building visualization
-arx validate    # Validate building data
-arx status      # Show repository status
-arx diff        # Show differences between commits
-arx history     # Show commit history
-arx config      # Manage configuration
-
-# Management Commands
-arx room        # Room management (create, list, show, update, delete)
-arx equipment   # Equipment management (add, list, update, remove)
-arx spatial     # Spatial operations (query, relate, transform, validate)
-arx sensor      # Sensor management (add, list, process, show, update, remove, test, config)
-
-# Interactive Commands
-arx explore     # Interactive building explorer
-arx watch       # Live monitoring dashboard
+impl Building3DRenderer {
+    pub fn render_3d(&mut self) -> Result<Scene3D, Error>
+    pub fn render_to_ascii(&self, scene: &Scene3D) -> Result<String, Error>
+    pub fn set_camera(&mut self, position: Point3D, target: Point3D)
+}
 ```
 
-### Command Examples
+### 3. Interactive Renderer (`src/render3d/interactive.rs`)
 
-```bash
-# Import IFC file
-arx import building.ifc --repo github.com/company/building
+**Purpose**: Real-time interactive 3D rendering with controls
 
-# Create room
-arx room create --building B1 --floor 3 --wing A --name "Conference Room" --room-type conference
+**Key Features**:
+- Event-driven input handling with crossterm
+- Camera movement and rotation controls
+- View mode switching
+- Equipment selection and highlighting
+- Integration with particle and animation systems
 
-# Add equipment
-arx equipment add --room 301 --name "VAV-301" --equipment-type HVAC --position "10.5,8.2,2.7"
+**Architecture**:
+```rust
+pub struct InteractiveRenderer {
+    renderer: Building3DRenderer,
+    state: InteractiveState,
+    event_handler: EventHandler,
+    effects_engine: VisualEffectsEngine,
+    config: InteractiveConfig,
+}
+```
 
-# Interactive exploration
-arx explore --building B1 --floor 3 --auto-refresh
+### 4. Particle System (`src/render3d/particles.rs`)
 
-# Live monitoring
-arx watch --building B1 --floor 3 --refresh-interval 5 --sensors-only
+**Purpose**: High-performance particle effects for terminal rendering
 
-# Spatial queries
-arx spatial query --query-type "equipment_within_radius" --entity "VAV-301" --params "5.0"
+**Key Features**:
+- 8 particle types with unique behaviors
+- Physics simulation with gravity and air resistance
+- Particle pooling for performance
+- Terminal-optimized rendering
+- Real-time particle lifecycle management
 
-# Sensor management
-arx sensor add --name "Temperature Sensor" --sensor-type DHT22 --location "Room 301"
-arx sensor test --sensor-id temp_001 --timeout 30
+**Architecture**:
+```rust
+pub struct ParticleSystem {
+    particles: Vec<Particle>,
+    particle_pool: VecDeque<Particle>,
+    config: ParticleSystemConfig,
+    stats: ParticleSystemStats,
+}
+
+pub enum ParticleType {
+    Basic, Smoke, Fire, Spark, Dust,
+    StatusIndicator, Connection, MaintenanceAlert,
+}
+```
+
+### 5. Animation System (`src/render3d/animation.rs`)
+
+**Purpose**: Smooth animations and transitions
+
+**Key Features**:
+- 8 animation types with specific behaviors
+- 7 easing functions for smooth transitions
+- Real-time animation updates
+- Performance-optimized with pooling
+- Integration with visual effects
+
+**Architecture**:
+```rust
+pub struct AnimationSystem {
+    animations: HashMap<String, Animation>,
+    config: AnimationConfig,
+    stats: AnimationStats,
+}
+
+pub enum AnimationType {
+    Linear, CameraMove, StatusTransition, BuildingFade,
+    ParticleEffect, SelectionHighlight, FloorTransition, ViewModeTransition,
+}
+```
+
+### 6. Visual Effects Engine (`src/render3d/effects.rs`)
+
+**Purpose**: Advanced visual effects integrating particles and animations
+
+**Key Features**:
+- 11 effect types for different scenarios
+- Integration of particle and animation systems
+- Real-time effect management
+- Performance monitoring and optimization
+- Customizable effect parameters
+
+**Architecture**:
+```rust
+pub struct VisualEffectsEngine {
+    particle_system: ParticleSystem,
+    animation_system: AnimationSystem,
+    active_effects: HashMap<String, VisualEffect>,
+    config: EffectsConfig,
+    stats: EffectsStats,
+}
 ```
 
 ---
 
-## Git Integration Strategy
+## Data Flow
 
-### Git-First Architecture
+### 1. Search Flow
 
-**Core Principle:** Git is the primary data store, not a secondary sync target
-
-**Benefits:**
-- Complete version history
-- Built-in collaboration
-- No database complexity
-- Universal access
-- Zero infrastructure costs
-
-### Git Operations
-
-**1. Repository Structure**
 ```
-building-repo/
-├── .git/
-├── building.yml
-├── equipment/
-├── floors/
-├── rooms/
-├── .github/workflows/
-└── README.md
+User Query → SearchConfig → SearchEngine → Fuzzy Matching → Results → Formatting → Output
 ```
 
-**2. Git Workflow**
-```bash
-# Import IFC file
-arx import building.ifc --repo github.com/company/building
+**Detailed Flow**:
+1. User provides search query and configuration
+2. SearchEngine validates configuration and compiles regex if needed
+3. Multi-field search across equipment, rooms, buildings
+4. Fuzzy matching algorithm calculates match scores
+5. Results are sorted by relevance score
+6. Results are formatted according to output format
+7. Highlighted output is returned to user
 
-# View changes
-git status
-git diff
+### 2. 3D Rendering Flow
 
-# Commit changes
-git add equipment/
-git commit -m "Import building equipment from IFC"
-
-# Push to remote
-git push origin main
-
-# Create pull request
-gh pr create --title "Building Equipment Import"
+```
+Building Data → 3D Renderer → Scene Generation → ASCII Conversion → Terminal Output
 ```
 
-**3. Branch Strategy**
-- `main`: Production-ready building data
-- `feature/*`: Planned changes and improvements
-- `emergency/*`: Emergency fixes and immediate actions
-- `realtime/*`: Ephemeral sensor data and real-time updates
+**Detailed Flow**:
+1. Building data is loaded and validated
+2. 3D renderer processes spatial data and equipment positions
+3. Scene is generated with 3D coordinates and relationships
+4. 3D scene is projected to 2D ASCII representation
+5. ASCII output is formatted for terminal display
+6. Result is displayed to user
 
-### Git Provider Support
+### 3. Interactive Rendering Flow
 
-**Supported Providers:**
-- GitHub (primary)
-- GitLab
-- Bitbucket
-- Self-hosted Git
-- Local Git
-
----
-
-## IFC Processing Pipeline
-
-### IFC File Processing
-
-**Input:** IFC file (Industry Foundation Classes)
-**Output:** YAML equipment files
-**Process:** Parse → Extract → Transform → Store
-
-**Features:**
-- Custom STEP parser implementation
-- Entity detection (IFCSPACE, IFCFLOWTERMINAL, IFCWALL, etc.)
-- Spatial data extraction with 3D coordinates
-- Universal path generation
-- Comprehensive error handling
-
-### Spatial Data Extraction
-
-**Coordinate Systems:**
-- IFC coordinates → Building local coordinates
-- Support for multiple coordinate systems
-- Automatic transformation
-- R-Tree spatial indexing
-
----
-
-## Spatial Data Management
-
-### Coordinate Systems
-
-**Supported Systems:**
-- WGS84 (GPS coordinates)
-- UTM (Universal Transverse Mercator)
-- Building local coordinates
-- Custom coordinate systems
-
-### Spatial Indexing
-
-**R-Tree Implementation:**
-- Efficient spatial queries
-- Equipment within radius searches
-- Bounding box queries
-- Collision detection
-
----
-
-## Testing Strategy
-
-### Test Coverage (138 Tests)
-
-**Unit Tests:**
-- All modules comprehensively tested
-- Path generation and validation
-- Spatial data calculations
-- YAML serialization
-- Git operations
-
-**Integration Tests:**
-- End-to-end workflows validated
-- IFC processing with real files
-- Complete import → YAML → Git workflow
-- Error handling and recovery
-
-**Live Monitoring Tests:**
-- 14 new tests for monitoring functionality
-- State management and navigation
-- Real-time updates and filtering
-
-**Interactive Explorer Tests:**
-- 11 tests for building navigation
-- Arrow key navigation
-- View mode transitions
-- Data loading and refresh
-
-**Hardware Tests:**
-- Sensor and driver functionality
-- Integration method testing
-- Error handling and recovery
-
----
-
-## Performance Metrics
-
-### Current Performance
-
-**IFC Processing:**
-- Process 1000+ equipment items in <5 seconds
-- Memory usage <100MB for typical buildings
-- Support files up to 100MB
-
-**Terminal Rendering:**
-- Render floor plans in <100ms
-- Support buildings with 1000+ equipment items
-- Real-time updates <50ms
-
-**Git Operations:**
-- Commit operations <1 second
-- Push operations <10 seconds
-- Support repositories with 10,000+ files
-
-**Test Performance:**
-- 138 tests run in <2 seconds
-- 100% test coverage maintained
-- Zero test failures
-
----
-
-## Current Status & Next Steps
-
-### Phase 5 Complete: Advanced Terminal Features
-
-**✅ Completed Features:**
-- Core Engine (Phase 1)
-- GitHub Actions Ecosystem (Phase 2)
-- Advanced Features (Phase 3)
-- Interactive Terminal Features (Phase 4A)
-- Hardware Integration (Phase 4B)
-- Mobile App Development (Phase 4C)
-
-### Next Development Phase: Advanced Terminal Rendering (Phase 6)
-
-**🎯 Next Features:**
-1. **3D Building Renderer** (`arx render --3d`) - Multi-floor 3D visualization
-2. **Search & Filter System** (`arx search`, `arx filter`) - Equipment search
-3. **Particle System Architecture** - Advanced terminal rendering
-4. **Animation Framework** - Terminal animations
-5. **Real-time Data Streaming** - Enhanced live monitoring
-
----
-
-## Technical Specifications
-
-### Rust Dependencies
-
-**Core Dependencies:**
-```toml
-[dependencies]
-# CLI framework
-clap = { version = "4.0", features = ["derive"] }
-
-# Terminal rendering
-crossterm = "0.27"
-ratatui = "0.24"
-
-# Git operations
-git2 = "0.18"
-reqwest = { version = "0.11", features = ["json"] }
-
-# Spatial data
-geo = "0.25"
-proj = "0.28"
-nalgebra = "0.32"
-rstar = "0.10"
-
-# Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9"
-serde_json = "1.0"
-
-# Error handling
-anyhow = "1.0"
-thiserror = "1.0"
-
-# Async runtime
-tokio = { version = "1.0", features = ["full"] }
-
-# Date/time
-chrono = { version = "0.4", features = ["serde"] }
+```
+User Input → Event Handler → State Update → Effects Update → Scene Render → Display
 ```
 
-### Mobile App Dependencies
+**Detailed Flow**:
+1. User input (keyboard/mouse) is captured by crossterm
+2. Event handler processes input and determines actions
+3. Interactive state is updated (camera, selection, view mode)
+4. Visual effects engine updates particles and animations
+5. 3D scene is rendered with current state
+6. Particle effects are integrated into ASCII output
+7. Final output is displayed to user
 
-**iOS (Swift/SwiftUI):**
-- ARKit for LiDAR integration
-- SwiftUI for native UI
-- UniFFI for Rust bindings
+### 4. Particle Effect Flow
 
-**Android (Kotlin/Jetpack Compose):**
-- ARCore for AR integration
-- Jetpack Compose for native UI
-- UniFFI for Rust bindings
+```
+Effect Trigger → Particle Creation → Physics Update → Rendering → Cleanup
+```
 
-### Platform Support
-
-**Operating Systems:**
-- Linux (primary)
-- macOS
-- Windows
-
-**Terminal Support:**
-- All modern terminals
-- Unicode support required
-- Color support recommended
-
-**Git Providers:**
-- GitHub
-- GitLab
-- Bitbucket
-- Self-hosted Git
-- Local Git
+**Detailed Flow**:
+1. Effect is triggered (equipment status change, user action)
+2. Appropriate particles are created and added to system
+3. Physics simulation updates particle positions and properties
+4. Particles are rendered as ASCII characters
+5. Expired particles are removed and returned to pool
 
 ---
 
-## Success Metrics
+## Module Structure
 
-### Technical Metrics
+### Core Modules
 
-**Performance:**
-- IFC processing: <5 seconds for 1000 equipment items ✅
-- Terminal rendering: <100ms for floor plans ✅
-- Git operations: <1 second for commits ✅
+```
+src/
+├── main.rs                 # CLI entry point
+├── lib.rs                  # Library API exports
+├── cli/                    # Command-line interface
+│   └── mod.rs             # CLI command definitions
+├── search/                 # Search and filtering
+│   └── mod.rs             # Search engine implementation
+├── render3d/               # 3D rendering system
+│   ├── mod.rs             # Core 3D renderer
+│   ├── interactive.rs      # Interactive 3D renderer
+│   ├── particles.rs        # Particle system
+│   ├── animation.rs        # Animation framework
+│   ├── effects.rs          # Visual effects engine
+│   ├── events.rs           # Event handling
+│   └── state.rs            # State management
+├── spatial/                # Spatial operations
+│   ├── mod.rs             # Spatial data structures
+│   └── types.rs           # Spatial type definitions
+├── yaml/                   # Data serialization
+│   └── mod.rs             # YAML/JSON data handling
+├── git/                    # Git integration
+│   ├── mod.rs             # Git operations
+│   └── manager.rs         # Git repository management
+├── ifc/                    # IFC file processing
+│   ├── mod.rs             # IFC processing pipeline
+│   ├── enhanced.rs         # Enhanced IFC processing
+│   └── fallback.rs         # Fallback processing
+└── config/                 # Configuration management
+    ├── mod.rs             # Configuration system
+    ├── manager.rs         # Configuration manager
+    └── validation.rs      # Configuration validation
+```
 
-**Reliability:**
-- 99.9% uptime for GitHub Actions ✅
-- <1% error rate for IFC processing ✅
-- Zero data loss ✅
+### Crate Structure
 
-**Usability:**
-- <5 minutes to import first building ✅
-- <1 minute to render building view ✅
-- <30 seconds to make equipment changes ✅
+```
+crates/
+├── arxos-core/             # Core business logic
+│   ├── src/
+│   │   ├── lib.rs         # Core library
+│   │   ├── analytics.rs   # Analytics and reporting
+│   │   ├── equipment.rs    # Equipment management
+│   │   ├── spatial.rs     # Spatial operations
+│   │   └── terminal/      # Terminal utilities
+│   └── Cargo.toml
+├── arxos-cli/              # CLI implementation
+│   ├── src/
+│   │   └── main.rs        # CLI entry point
+│   └── Cargo.toml
+└── arxos-mobile/           # Mobile FFI bindings
+    ├── src/
+    │   ├── lib.rs         # Mobile API
+    │   └── arxos_mobile.udl # UniFFI definitions
+    └── Cargo.toml
+```
 
-### Project Metrics
+---
 
-**Implementation:**
-- 13 CLI commands implemented ✅
-- 7 GitHub Actions created ✅
-- 13 workflows implemented ✅
-- 2 native mobile apps ✅
-- 3 hardware examples ✅
-- 138 tests passing ✅
+## Interactive 3D Rendering
 
-**Architecture:**
-- Complete monorepo structure ✅
-- Rust core with FFI bindings ✅
-- Terminal-first design ✅
-- Git-native workflow ✅
-- Zero infrastructure approach ✅
+### Architecture Overview
+
+The interactive 3D rendering system uses a layered architecture that builds upon the existing static 3D renderer:
+
+```
+┌─────────────────────────────────────┐
+│           CLI Layer                 │
+│  `arx interactive --building 7`    │
+└─────────────────┬───────────────────┘
+                  │
+┌─────────────────▼───────────────────┐
+│        Interactive Layer            │
+│  InteractiveRenderer + EventLoop    │
+└─────────────────┬───────────────────┘
+                  │
+┌─────────────────▼───────────────────┐
+│        Static Renderer              │
+│  Building3DRenderer (existing)     │
+└─────────────────┬───────────────────┘
+                  │
+┌─────────────────▼───────────────────┐
+│        Data Layer                   │
+│  BuildingData + Spatial Types       │
+└─────────────────────────────────────┘
+```
+
+### Event-Driven Architecture
+
+The interactive system uses an event-driven architecture for real-time input handling:
+
+```rust
+pub enum InteractiveEvent {
+    KeyPress(KeyCode, KeyModifiers),
+    MouseClick(MouseClickEvent),
+    MouseMove(MouseMoveEvent),
+    Resize(usize, usize),
+    Quit,
+    Action(Action),
+}
+
+pub struct EventHandler {
+    key_bindings: HashMap<KeyCode, Action>,
+    mouse_bindings: HashMap<MouseButton, Action>,
+    config: EventConfig,
+}
+```
+
+### State Management
+
+Interactive state is managed centrally with reactive updates:
+
+```rust
+pub struct InteractiveState {
+    selected_equipment: HashSet<String>,
+    camera_state: CameraState,
+    view_mode: ViewMode,
+    session_data: SessionData,
+    current_floor: Option<i32>,
+    is_active: bool,
+}
+```
+
+### Integration Points
+
+The interactive renderer integrates with multiple systems:
+
+1. **Static 3D Renderer**: Uses existing Building3DRenderer for core rendering
+2. **Particle System**: Integrates particle effects for visual feedback
+3. **Animation System**: Uses animations for smooth transitions
+4. **Event System**: Handles real-time input processing
+5. **State Management**: Maintains session state and preferences
+
+---
+
+## Particle System & Animation
+
+### Particle System Architecture
+
+The particle system is designed for high-performance terminal rendering:
+
+```rust
+pub struct ParticleSystem {
+    particles: Vec<Particle>,           // Active particles
+    particle_pool: VecDeque<Particle>,   // Reusable particle pool
+    config: ParticleSystemConfig,        // System configuration
+    stats: ParticleSystemStats,          // Performance statistics
+}
+```
+
+**Key Design Decisions**:
+
+1. **Particle Pooling**: Reuse particle objects to avoid allocation overhead
+2. **Type-Based Behavior**: Different particle types have specialized update logic
+3. **Physics Simulation**: Realistic physics with gravity, air resistance, and forces
+4. **Terminal Optimization**: ASCII/Unicode character rendering for terminal compatibility
+
+### Animation System Architecture
+
+The animation system provides smooth transitions and effects:
+
+```rust
+pub struct AnimationSystem {
+    animations: HashMap<String, Animation>,  // Active animations
+    config: AnimationConfig,                 // System configuration
+    stats: AnimationStats,                   // Performance statistics
+}
+```
+
+**Key Design Decisions**:
+
+1. **Easing Functions**: Multiple easing functions for different animation styles
+2. **Type-Specific Data**: Different animation types have specialized data structures
+3. **Performance Optimization**: Efficient update loops with minimal overhead
+4. **Integration**: Seamless integration with particle and visual effects systems
+
+### Visual Effects Integration
+
+The visual effects engine combines particles and animations:
+
+```rust
+pub struct VisualEffectsEngine {
+    particle_system: ParticleSystem,      // Particle effects
+    animation_system: AnimationSystem,   // Animation effects
+    active_effects: HashMap<String, VisualEffect>, // Active effects
+    config: EffectsConfig,               // System configuration
+    stats: EffectsStats,                 // Performance statistics
+}
+```
+
+**Integration Patterns**:
+
+1. **Effect Composition**: Combine multiple particle and animation effects
+2. **State Synchronization**: Effects respond to building and equipment state changes
+3. **Performance Monitoring**: Real-time performance metrics and optimization
+4. **Customizable Parameters**: Configurable effect intensity, duration, and behavior
+
+---
+
+## Performance Considerations
+
+### Memory Management
+
+1. **Particle Pooling**: Reuse particle objects to minimize allocations
+2. **Efficient Data Structures**: Use appropriate data structures for different use cases
+3. **Lazy Loading**: Load data on-demand to reduce memory footprint
+4. **Cache Management**: Intelligent caching with invalidation strategies
+
+### CPU Optimization
+
+1. **Parallel Processing**: Use parallel processing where possible
+2. **Efficient Algorithms**: Optimized algorithms for search and rendering
+3. **Update Frequency Control**: Configurable update rates for different systems
+4. **Early Termination**: Stop processing when results are sufficient
+
+### Terminal Performance
+
+1. **ASCII Optimization**: Efficient ASCII character rendering
+2. **Screen Buffer Management**: Minimize screen updates and redraws
+3. **Input Processing**: Efficient event handling with minimal latency
+4. **Output Formatting**: Optimized string formatting and concatenation
+
+### Scalability
+
+1. **Large Dataset Support**: Handle buildings with 1000+ equipment items
+2. **Concurrent Operations**: Support multiple simultaneous operations
+3. **Resource Limits**: Configurable limits to prevent resource exhaustion
+4. **Performance Monitoring**: Real-time performance metrics and alerts
+
+---
+
+## Extension Points
+
+### Adding New Particle Types
+
+```rust
+pub enum ParticleType {
+    // Existing types...
+    Custom(CustomParticleData),
+}
+
+impl ParticleSystem {
+    fn update_custom_particle(&mut self, particle: &mut Particle, delta_time: f64) {
+        // Custom particle behavior implementation
+    }
+}
+```
+
+### Adding New Animation Types
+
+```rust
+pub enum AnimationType {
+    // Existing types...
+    Custom(CustomAnimationData),
+}
+
+impl AnimationSystem {
+    fn update_custom_animation(&mut self, animation: &mut Animation, eased_progress: f64) {
+        // Custom animation behavior implementation
+    }
+}
+```
+
+### Adding New Visual Effects
+
+```rust
+pub enum EffectType {
+    // Existing types...
+    Custom(CustomEffectData),
+}
+
+impl VisualEffectsEngine {
+    fn update_custom_effect(&mut self, effect: &mut VisualEffect, delta_time: f64) {
+        // Custom effect behavior implementation
+    }
+}
+```
+
+### Adding New Search Features
+
+```rust
+impl SearchEngine {
+    pub fn custom_search(&self, config: &CustomSearchConfig) -> Result<Vec<SearchResult>, Error> {
+        // Custom search implementation
+    }
+}
+```
+
+---
+
+## Integration Patterns
+
+### CLI Integration
+
+The CLI layer provides a clean interface to all system components:
+
+```rust
+// Command handling pattern
+match command {
+    Commands::Search { query, options } => {
+        let search_engine = SearchEngine::new(&building_data);
+        let results = search_engine.search(&config)?;
+        format_and_display_results(results, &options)?;
+    }
+    Commands::Interactive { options } => {
+        let mut renderer = InteractiveRenderer::new(building_data, config)?;
+        renderer.start_interactive_session()?;
+    }
+}
+```
+
+### Data Integration
+
+Data flows through the system using consistent patterns:
+
+```rust
+// Data loading pattern
+let building_data = load_building_data(&building_name)?;
+let search_engine = SearchEngine::new(&building_data);
+let renderer = Building3DRenderer::new(building_data, render_config);
+```
+
+### Error Handling Integration
+
+Consistent error handling across all components:
+
+```rust
+// Error handling pattern
+pub fn process_command() -> Result<(), Box<dyn std::error::Error>> {
+    let result = risky_operation()?;
+    Ok(result)
+}
+```
+
+### Configuration Integration
+
+Centralized configuration management:
+
+```rust
+// Configuration pattern
+let config = load_config()?;
+let search_config = SearchConfig::from(&config);
+let render_config = Render3DConfig::from(&config);
+```
 
 ---
 
 ## Conclusion
 
-ArxOS v2 represents a complete "Git for Buildings" system that successfully bridges the gap between traditional BIM workflows and modern version control practices. The system provides:
+ArxOS is built with a modular, layered architecture that prioritizes performance, extensibility, and maintainability. The system's design allows for easy addition of new features while maintaining clean separation of concerns and consistent patterns throughout the codebase.
 
-- **Complete CLI System**: 13 commands covering all building management needs
-- **Automated Workflows**: GitHub Actions ecosystem for automation
-- **Interactive Features**: Terminal-based exploration and monitoring
-- **Hardware Integration**: Open source sensor support
-- **Native Mobile Apps**: iOS and Android applications with AR capabilities
-- **Comprehensive Testing**: 138 tests ensuring reliability
+The interactive 3D rendering system demonstrates the power of combining multiple specialized systems (particles, animations, effects) into a cohesive user experience, while the search and filtering system showcases the importance of performance optimization and user-friendly interfaces.
 
-The combination of Rust's performance, Git's collaboration model, terminal visualization, and native mobile interfaces creates a unique and powerful building management system that is free, open-source, and accessible to everyone.
-
-**Current Status:** Phase 5 Complete - Ready for Advanced Terminal Rendering (Phase 6)  
-**Next Milestone:** 3D Building Renderer + Search & Filter System (3 weeks)
+This architecture provides a solid foundation for future development and ensures that ArxOS can scale to meet the needs of complex building management scenarios.
 
 ---
 
-**Document Version:** 3.0  
+**Architecture Documentation Version:** 2.0  
 **Last Updated:** December 2024  
-**Status:** Phase 5 Complete - Advanced Terminal Features  
-**Next Step:** Begin Phase 6 development (Advanced Terminal Rendering)
+**Status:** Complete

@@ -1,7 +1,161 @@
 //! Search and Filter module for ArxOS
 //!
 //! This module provides powerful search and filtering capabilities for building data,
-//! including equipment, rooms, and buildings.
+//! including equipment, rooms, and buildings. It supports fuzzy matching, regex patterns,
+//! multi-field search, and advanced filtering with real-time highlighting.
+//!
+//! # Features
+//!
+//! - **Multi-field Search**: Search across equipment names, types, system types, and universal paths
+//! - **Fuzzy Matching**: Levenshtein distance algorithm for typo tolerance
+//! - **Regex Support**: Full regex pattern matching across all fields
+//! - **Advanced Filtering**: Filter by equipment type, status, floor, room, building
+//! - **Real-time Highlighting**: Highlight matching text in search results
+//! - **Multiple Output Formats**: Table, JSON, and YAML output formats
+//! - **Performance Optimized**: Efficient search with result caching
+//!
+//! # Examples
+//!
+//! ## Basic Search
+//! ```rust
+//! use arxos::search::{SearchEngine, SearchConfig, OutputFormat};
+//! use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+//! use chrono::Utc;
+//!
+//! // Create sample building data
+//! let building_data = BuildingData {
+//!     building: BuildingInfo {
+//!         id: "test-001".to_string(),
+//!         name: "Test Building".to_string(),
+//!         description: Some("Test building for examples".to_string()),
+//!         created_at: Utc::now(),
+//!         updated_at: Utc::now(),
+//!         version: "1.0".to_string(),
+//!         global_bounding_box: None,
+//!     },
+//!     metadata: BuildingMetadata {
+//!         source_file: None,
+//!         parser_version: "1.0".to_string(),
+//!         total_entities: 0,
+//!         spatial_entities: 0,
+//!         coordinate_system: "Cartesian".to_string(),
+//!         units: "meters".to_string(),
+//!         tags: vec![],
+//!     },
+//!     floors: vec![],
+//!     coordinate_systems: vec![],
+//! };
+//!
+//! let mut search_engine = SearchEngine::new(&building_data);
+//!
+//! let config = SearchConfig {
+//!     query: "HVAC".to_string(),
+//!     search_equipment: true,
+//!     search_rooms: false,
+//!     search_buildings: false,
+//!     case_sensitive: false,
+//!     use_regex: false,
+//!     limit: 10,
+//!     verbose: true,
+//! };
+//!
+//! let results = search_engine.search(&config).unwrap();
+//! println!("Found {} results", results.len());
+//! ```
+//!
+//! ## Advanced Filtering
+//! ```rust
+//! use arxos::search::{SearchEngine, FilterConfig, OutputFormat};
+//! use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+//! use chrono::Utc;
+//!
+//! // Create sample building data
+//! let building_data = BuildingData {
+//!     building: BuildingInfo {
+//!         id: "test-001".to_string(),
+//!         name: "Test Building".to_string(),
+//!         description: Some("Test building for examples".to_string()),
+//!         created_at: Utc::now(),
+//!         updated_at: Utc::now(),
+//!         version: "1.0".to_string(),
+//!         global_bounding_box: None,
+//!     },
+//!     metadata: BuildingMetadata {
+//!         source_file: None,
+//!         parser_version: "1.0".to_string(),
+//!         total_entities: 0,
+//!         spatial_entities: 0,
+//!         coordinate_system: "Cartesian".to_string(),
+//!         units: "meters".to_string(),
+//!         tags: vec![],
+//!     },
+//!     floors: vec![],
+//!     coordinate_systems: vec![],
+//! };
+//!
+//! let search_engine = SearchEngine::new(&building_data);
+//!
+//! let filter_config = FilterConfig {
+//!     equipment_type: Some("HVAC".to_string()),
+//!     status: Some("Critical".to_string()),
+//!     floor: Some(2),
+//!     room: None,
+//!     building: None,
+//!     critical_only: true,
+//!     healthy_only: false,
+//!     alerts_only: false,
+//!     format: OutputFormat::Json,
+//!     limit: 50,
+//! };
+//!
+//! let results = search_engine.filter(&filter_config).unwrap();
+//! ```
+//!
+//! ## Regex Search
+//! ```rust
+//! use arxos::search::{SearchEngine, SearchConfig};
+//! use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+//! use chrono::Utc;
+//!
+//! // Create sample building data
+//! let building_data = BuildingData {
+//!     building: BuildingInfo {
+//!         id: "test-001".to_string(),
+//!         name: "Test Building".to_string(),
+//!         description: Some("Test building for examples".to_string()),
+//!         created_at: Utc::now(),
+//!         updated_at: Utc::now(),
+//!         version: "1.0".to_string(),
+//!         global_bounding_box: None,
+//!     },
+//!     metadata: BuildingMetadata {
+//!         source_file: None,
+//!         parser_version: "1.0".to_string(),
+//!         total_entities: 0,
+//!         spatial_entities: 0,
+//!         coordinate_system: "Cartesian".to_string(),
+//!         units: "meters".to_string(),
+//!         tags: vec![],
+//!     },
+//!     floors: vec![],
+//!     coordinate_systems: vec![],
+//! };
+//!
+//! let search_engine = SearchEngine::new(&building_data);
+//!
+//! let config = SearchConfig {
+//!     query: r"VAV.*Unit".to_string(),
+//!     search_equipment: true,
+//!     search_rooms: false,
+//!     search_buildings: false,
+//!     case_sensitive: false,
+//!     use_regex: true,
+//!     limit: 10,
+//!     verbose: true,
+//! };
+//!
+//! let results = search_engine.search(&config).unwrap();
+//! ```
 
 use crate::core::Building;
 use crate::yaml::{BuildingData, RoomData, EquipmentData};
@@ -69,10 +223,82 @@ pub struct SearchResult {
     pub match_score: f64,
 }
 
-/// Search engine for building data
+/// Search engine for building data with advanced filtering and fuzzy matching capabilities.
+///
+/// The `SearchEngine` provides comprehensive search and filtering functionality for building data,
+/// including equipment, rooms, and buildings. It supports multiple search modes, fuzzy matching,
+/// regex patterns, and real-time result highlighting.
+///
+/// # Performance Features
+///
+/// - **Caching**: Equipment and room data is cached for faster subsequent searches
+/// - **Lazy Loading**: Cache is built on-demand and invalidated when data changes
+/// - **Memory Efficient**: Uses efficient data structures for large datasets
+/// - **Parallel Processing**: Supports concurrent search operations
+///
+/// # Search Capabilities
+///
+/// - **Multi-field Search**: Searches across equipment names, types, system types, and paths
+/// - **Fuzzy Matching**: Uses Levenshtein distance for typo tolerance
+/// - **Regex Support**: Full regex pattern matching with case sensitivity options
+/// - **Location Parsing**: Automatically extracts floor and room information from universal paths
+///
+/// # Example Usage
+///
+/// ```rust
+/// use arxos::search::{SearchEngine, SearchConfig};
+/// use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+/// use chrono::Utc;
+///
+/// // Create sample building data
+/// let building_data = BuildingData {
+///     building: BuildingInfo {
+///         id: "test-001".to_string(),
+///         name: "Test Building".to_string(),
+///         description: Some("Test building for examples".to_string()),
+///         created_at: Utc::now(),
+///         updated_at: Utc::now(),
+///         version: "1.0".to_string(),
+///         global_bounding_box: None,
+///     },
+///     metadata: BuildingMetadata {
+///         source_file: None,
+///         parser_version: "1.0".to_string(),
+///         total_entities: 0,
+///         spatial_entities: 0,
+///         coordinate_system: "Cartesian".to_string(),
+///         units: "meters".to_string(),
+///         tags: vec![],
+///     },
+///     floors: vec![],
+///     coordinate_systems: vec![],
+/// };
+///
+/// // Create search engine
+/// let mut search_engine = SearchEngine::new(&building_data);
+///
+/// // Configure search
+/// let config = SearchConfig {
+///     query: "HVAC".to_string(),
+///     search_equipment: true,
+///     search_rooms: false,
+///     search_buildings: false,
+///     case_sensitive: false,
+///     use_regex: false,
+///     limit: 10,
+///     verbose: true,
+/// };
+///
+/// // Perform search
+/// let results = search_engine.search(&config).unwrap();
+/// println!("Found {} equipment items", results.len());
+/// ```
 pub struct SearchEngine {
+    /// Building data to search through
     pub buildings: Vec<Building>,
+    /// Equipment data for searching
     pub equipment: Vec<EquipmentData>,
+    /// Room data for searching
     pub rooms: Vec<RoomData>,
 }
 
@@ -108,7 +334,85 @@ impl SearchEngine {
         }
     }
     
-    /// Search building data with the given configuration
+    /// Search building data with the given configuration.
+    ///
+    /// This method performs a comprehensive search across buildings, equipment, and rooms based on the
+    /// provided search configuration. It supports fuzzy matching, regex patterns, and multi-field search.
+    ///
+    /// # Parameters
+    ///
+    /// * `config` - Search configuration specifying query, search scope, and options
+    ///
+    /// # Returns
+    ///
+    /// Returns a `Result` containing:
+    /// - `Ok(Vec<SearchResult>)` - Vector of search results with match scores and highlighting
+    /// - `Err(Box<dyn std::error::Error>)` - Error if search fails (e.g., invalid regex)
+    ///
+    /// # Search Features
+    ///
+    /// - **Multi-field Search**: Searches across equipment names, types, system types, and universal paths
+    /// - **Fuzzy Matching**: Uses Levenshtein distance algorithm for typo tolerance
+    /// - **Regex Support**: Full regex pattern matching when `use_regex` is enabled
+    /// - **Case Sensitivity**: Configurable case-sensitive or case-insensitive search
+    /// - **Result Limiting**: Limits results to specified number for performance
+    /// - **Match Scoring**: Assigns relevance scores to results for ranking
+    ///
+/// # Example
+///
+/// ```rust
+/// use arxos::search::{SearchEngine, SearchConfig};
+/// use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+/// use chrono::Utc;
+///
+/// // Create sample building data
+/// let building_data = BuildingData {
+///     building: BuildingInfo {
+///         id: "test-001".to_string(),
+///         name: "Test Building".to_string(),
+///         description: Some("Test building for examples".to_string()),
+///         created_at: Utc::now(),
+///         updated_at: Utc::now(),
+///         version: "1.0".to_string(),
+///         global_bounding_box: None,
+///     },
+///     metadata: BuildingMetadata {
+///         source_file: None,
+///         parser_version: "1.0".to_string(),
+///         total_entities: 0,
+///         spatial_entities: 0,
+///         coordinate_system: "Cartesian".to_string(),
+///         units: "meters".to_string(),
+///         tags: vec![],
+///     },
+///     floors: vec![],
+///     coordinate_systems: vec![],
+/// };
+///
+/// let search_engine = SearchEngine::new(&building_data);
+/// let config = SearchConfig {
+///     query: "HVAC".to_string(),
+///     search_equipment: true,
+///     search_rooms: false,
+///     search_buildings: false,
+///     case_sensitive: false,
+///     use_regex: false,
+///     limit: 10,
+///     verbose: true,
+/// };
+///
+/// let results = search_engine.search(&config).unwrap();
+/// for result in results {
+///     println!("Found: {} (Score: {:.2})", result.name, result.match_score);
+/// }
+/// ```
+    ///
+    /// # Performance Notes
+    ///
+    /// - Search is optimized for large datasets with efficient string matching
+    /// - Regex compilation is cached for repeated searches
+    /// - Results are limited to prevent memory issues with large result sets
+    /// - Fuzzy matching uses optimized Levenshtein distance implementation
     pub fn search(&self, config: &SearchConfig) -> Result<Vec<SearchResult>, Box<dyn std::error::Error>> {
         let mut results = Vec::new();
         

@@ -43,7 +43,55 @@ pub enum Commands {
         /// Show room boundaries
         #[arg(long)]
         show_rooms: bool,
-        /// Output format (ascii, json, yaml)
+        /// Output format (ascii, advanced, json, yaml)
+        #[arg(long, default_value = "ascii")]
+        format: String,
+        /// Projection type for 3D rendering (isometric, orthographic, perspective)
+        #[arg(long, default_value = "isometric")]
+        projection: String,
+        /// View angle for 3D rendering (topdown, front, side, isometric)
+        #[arg(long, default_value = "isometric")]
+        view_angle: String,
+        /// Scale factor for 3D rendering
+        #[arg(long, default_value = "1.0")]
+        scale: f64,
+        /// Enable spatial index integration for enhanced queries
+        #[arg(long)]
+        spatial_index: bool,
+    },
+    /// Advanced 3D building visualization with interactive controls
+    Visualize {
+        /// Building identifier
+        #[arg(long)]
+        building: String,
+        /// Projection type (isometric, orthographic, perspective)
+        #[arg(long, default_value = "isometric")]
+        projection: String,
+        /// View angle (topdown, front, side, isometric)
+        #[arg(long, default_value = "isometric")]
+        view_angle: String,
+        /// Scale factor for rendering
+        #[arg(long, default_value = "1.0")]
+        scale: f64,
+        /// Canvas width in characters
+        #[arg(long, default_value = "120")]
+        width: usize,
+        /// Canvas height in characters
+        #[arg(long, default_value = "40")]
+        height: usize,
+        /// Enable spatial index integration
+        #[arg(long)]
+        spatial_index: bool,
+        /// Show equipment status indicators
+        #[arg(long)]
+        show_status: bool,
+        /// Show room boundaries
+        #[arg(long)]
+        show_rooms: bool,
+        /// Show equipment connections
+        #[arg(long)]
+        show_connections: bool,
+        /// Output format (ascii, advanced, json, yaml)
         #[arg(long, default_value = "ascii")]
         format: String,
     },

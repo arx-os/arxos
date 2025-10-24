@@ -408,6 +408,7 @@ impl Default for TerminalConfig {
 
 #[cfg(not(feature = "terminal"))]
 pub struct TerminalRenderer {
+    #[allow(dead_code)] // Future use for rendering configuration
     config: TerminalConfig,
 }
 
@@ -445,7 +446,9 @@ impl TerminalRenderer {
 
 #[cfg(not(feature = "terminal"))]
 pub struct TerminalEngine {
+    #[allow(dead_code)] // Future use for engine configuration
     config: TerminalConfig,
+    #[allow(dead_code)] // Future use for rendering engine
     renderer: TerminalRenderer,
     is_running: bool,
 }

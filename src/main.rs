@@ -751,8 +751,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
-        cli::Commands::Render { building, floor, three_d, show_status, show_rooms, format } => {
-            handle_render_command(building, floor, three_d, show_status, show_rooms, format)?;
+        cli::Commands::Render { building, floor, three_d, show_status, show_rooms, format, projection, view_angle, scale, spatial_index } => {
+            handle_render_command(building, floor, three_d, show_status, show_rooms, format, projection, view_angle, scale, spatial_index)?;
+        }
+        cli::Commands::Visualize { building, projection, view_angle, scale, width, height, spatial_index, show_status, show_rooms, show_connections, format } => {
+            handle_visualize_command(building, projection, view_angle, scale, width, height, spatial_index, show_status, show_rooms, show_connections, format)?;
         }
         cli::Commands::Validate { path } => {
             if let Some(data_path) = path {
@@ -1344,6 +1347,10 @@ fn handle_render_command(
     show_status: bool,
     show_rooms: bool,
     format: String,
+    projection: String,
+    view_angle: String,
+    scale: f64,
+    spatial_index: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("🏗️ Rendering building: {}", building);
     
@@ -1354,20 +1361,51 @@ fn handle_render_command(
         // 3D rendering
         println!("🎯 3D Multi-Floor Visualization");
         
+        // Parse projection type
+        let projection_type = match projection.to_lowercase().as_str() {
+            "isometric" => ProjectionType::Isometric,
+            "orthographic" => ProjectionType::Orthographic,
+            "perspective" => ProjectionType::Perspective,
+            _ => {
+                println!("⚠️ Unknown projection type '{}', using isometric", projection);
+                ProjectionType::Isometric
+            }
+        };
+        
+        // Parse view angle
+        let view_angle_type = match view_angle.to_lowercase().as_str() {
+            "topdown" => ViewAngle::TopDown,
+            "front" => ViewAngle::Front,
+            "side" => ViewAngle::Side,
+            "isometric" => ViewAngle::Isometric,
+            _ => {
+                println!("⚠️ Unknown view angle '{}', using isometric", view_angle);
+                ViewAngle::Isometric
+            }
+        };
+        
         let config = Render3DConfig {
             show_status,
             show_rooms,
             show_equipment: true,
             show_connections: false,
-            projection_type: ProjectionType::Isometric,
-            view_angle: ViewAngle::Isometric,
-            scale_factor: 1.0,
+            projection_type,
+            view_angle: view_angle_type,
+            scale_factor: scale,
             max_width: 120,
             max_height: 40,
         };
         
         let renderer = Building3DRenderer::new(building_data, config);
-        let scene = renderer.render_3d()?;
+        
+        // Apply spatial index if requested
+        if spatial_index {
+            println!("🔍 Building spatial index for enhanced queries...");
+            // TODO: Build spatial index from IFC data when available
+            println!("ℹ️ Spatial index integration will be available when IFC data is loaded");
+        }
+        
+        let scene = renderer.render_3d_advanced()?;
         
         match format.to_lowercase().as_str() {
             "json" => {
@@ -1379,11 +1417,17 @@ fn handle_render_command(
                 println!("{}", yaml_output);
             }
             "ascii" => {
-                let ascii_output = renderer.render_to_ascii(&scene)?;
+                // Use the new advanced ASCII art rendering
+                let ascii_output = renderer.render_3d_ascii_art(&scene)?;
                 println!("{}", ascii_output);
             }
+            "advanced" => {
+                // Use the advanced projection-based rendering
+                let advanced_output = renderer.render_to_ascii_advanced(&scene)?;
+                println!("{}", advanced_output);
+            }
             _ => {
-                return Err(format!("Unsupported format: {}", format).into());
+                return Err(format!("Unsupported format: {}. Supported formats: ascii, advanced, json, yaml", format).into());
             }
         }
     } else {
@@ -1408,6 +1452,115 @@ fn handle_render_command(
     Ok(())
 }
 
+/// Handle the advanced visualize command with full 3D controls
+fn handle_visualize_command(
+    building: String,
+    projection: String,
+    view_angle: String,
+    scale: f64,
+    width: usize,
+    height: usize,
+    spatial_index: bool,
+    show_status: bool,
+    show_rooms: bool,
+    show_connections: bool,
+    format: String,
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!("🎨 Advanced 3D Building Visualization: {}", building);
+    
+    // Load building data
+    let building_data = load_building_data(&building)?;
+    
+    // Parse projection type
+    let projection_type = match projection.to_lowercase().as_str() {
+        "isometric" => ProjectionType::Isometric,
+        "orthographic" => ProjectionType::Orthographic,
+        "perspective" => ProjectionType::Perspective,
+        _ => {
+            println!("⚠️ Unknown projection type '{}', using isometric", projection);
+            ProjectionType::Isometric
+        }
+    };
+    
+    // Parse view angle
+    let view_angle_type = match view_angle.to_lowercase().as_str() {
+        "topdown" => ViewAngle::TopDown,
+        "front" => ViewAngle::Front,
+        "side" => ViewAngle::Side,
+        "isometric" => ViewAngle::Isometric,
+        _ => {
+            println!("⚠️ Unknown view angle '{}', using isometric", view_angle);
+            ViewAngle::Isometric
+        }
+    };
+    
+    let config = Render3DConfig {
+        show_status,
+        show_rooms,
+        show_equipment: true,
+        show_connections,
+        projection_type: projection_type.clone(),
+        view_angle: view_angle_type.clone(),
+        scale_factor: scale,
+        max_width: width,
+        max_height: height,
+    };
+    
+    let renderer = Building3DRenderer::new(building_data, config);
+    
+    // Apply spatial index if requested
+    if spatial_index {
+        println!("🔍 Building spatial index for enhanced queries...");
+        // TODO: Build spatial index from IFC data when available
+        println!("ℹ️ Spatial index integration will be available when IFC data is loaded");
+    }
+    
+    // Use enhanced rendering with spatial queries if spatial index is enabled
+    let scene = if spatial_index {
+        renderer.render_3d_with_spatial_queries()?
+    } else {
+        renderer.render_3d_advanced()?
+    };
+    
+    match format.to_lowercase().as_str() {
+        "json" => {
+            let json_output = format_scene_output(&scene, "json")?;
+            println!("{}", json_output);
+        }
+        "yaml" => {
+            let yaml_output = format_scene_output(&scene, "yaml")?;
+            println!("{}", yaml_output);
+        }
+        "ascii" => {
+            // Use the new advanced ASCII art rendering
+            let ascii_output = renderer.render_3d_ascii_art(&scene)?;
+            println!("{}", ascii_output);
+        }
+        "advanced" => {
+            // Use the advanced projection-based rendering
+            let advanced_output = renderer.render_to_ascii_advanced(&scene)?;
+            println!("{}", advanced_output);
+        }
+        _ => {
+            return Err(format!("Unsupported format: {}. Supported formats: ascii, advanced, json, yaml", format).into());
+        }
+    }
+    
+    // Display rendering statistics
+    println!("\n📊 Rendering Statistics:");
+    println!("   • Projection: {:?}", projection_type);
+    println!("   • View Angle: {:?}", view_angle_type);
+    println!("   • Scale Factor: {:.2}", scale);
+    println!("   • Canvas Size: {}x{}", width, height);
+    println!("   • Spatial Index: {}", if spatial_index { "Enabled" } else { "Disabled" });
+    println!("   • Total Floors: {}", scene.metadata.total_floors);
+    println!("   • Total Rooms: {}", scene.metadata.total_rooms);
+    println!("   • Total Equipment: {}", scene.metadata.total_equipment);
+    println!("   • Render Time: {}ms", scene.metadata.render_time_ms);
+    
+    Ok(())
+}
+
 /// Handle the AR integration command
 fn handle_ar_integrate_command(
     scan_file: String,
@@ -1420,7 +1573,7 @@ fn handle_ar_integrate_command(
     println!("📱 Integrating AR scan data for room: {} on floor: {}", room, floor);
     
     // Load existing building data
-    let mut building_data = load_building_data(&building)?;
+    let building_data = load_building_data(&building)?;
     
     // Read AR scan data file
     println!("📄 Reading AR scan data from: {}", scan_file);

@@ -398,7 +398,7 @@ mod spatial_tests {
 
 #[cfg(test)]
 mod search_filter_tests {
-    use super::*;
+    // use super::*; // Unused import removed
     use arxos::search::{SearchEngine, SearchConfig, FilterConfig, OutputFormat};
     use arxos::yaml::{BuildingData, BuildingInfo, FloorData, RoomData, EquipmentData, BuildingMetadata, EquipmentStatus};
     use arxos::spatial::{Point3D, BoundingBox3D};
@@ -858,13 +858,16 @@ mod search_filter_tests {
 
 #[cfg(test)]
 mod live_monitoring_tests {
-    use super::*;
+    // use super::*; // Unused import removed
 
     // Mock structures for live monitoring testing
     #[derive(Debug, Clone)]
     struct MockLiveMonitorState {
+        #[allow(dead_code)] // Future use for live monitoring
         current_building: Option<String>,
+        #[allow(dead_code)] // Future use for live monitoring
         current_floor: Option<i32>,
+        #[allow(dead_code)] // Future use for live monitoring
         current_room: Option<String>,
         sensors_only: bool,
         alerts_only: bool,
@@ -886,6 +889,7 @@ mod live_monitoring_tests {
         Sensors,
         Alerts,
         Logs,
+        #[allow(dead_code)] // Future use for system monitoring
         System,
         Filters,
     }
@@ -894,10 +898,13 @@ mod live_monitoring_tests {
     struct MockSensorReading {
         id: String,
         name: String,
+        #[allow(dead_code)] // Future use for sensor type filtering
         sensor_type: String,
         value: f64,
         unit: String,
+        #[allow(dead_code)] // Future use for location-based filtering
         location: String,
+        #[allow(dead_code)] // Future use for status monitoring
         status: String,
     }
 
@@ -906,32 +913,42 @@ mod live_monitoring_tests {
         id: String,
         severity: MockAlertSeverity,
         title: String,
+        #[allow(dead_code)] // Future use for alert details
         description: String,
+        #[allow(dead_code)] // Future use for location-based alerts
         location: String,
         acknowledged: bool,
     }
 
     #[derive(Debug, Clone)]
     enum MockAlertSeverity {
+        #[allow(dead_code)] // Future use for info alerts
         Info,
         Warning,
+        #[allow(dead_code)] // Future use for error alerts
         Error,
+        #[allow(dead_code)] // Future use for critical alerts
         Critical,
     }
 
     #[derive(Debug, Clone)]
     struct MockLogEntry {
+        #[allow(dead_code)] // Future use for log timestamp filtering
         timestamp: String,
         level: MockLogLevel,
         source: String,
+        #[allow(dead_code)] // Future use for log message content
         message: String,
     }
 
     #[derive(Debug, Clone)]
     enum MockLogLevel {
+        #[allow(dead_code)] // Future use for debug logging
         Debug,
         Info,
+        #[allow(dead_code)] // Future use for warning logs
         Warning,
+        #[allow(dead_code)] // Future use for error logs
         Error,
     }
 
@@ -1632,7 +1649,7 @@ mod interactive_explorer_tests {
     
     #[test]
     fn test_auto_refresh_logic() {
-        let mut state = MockBuildingExplorerState::new(None, None, None, true, 1);
+        let state = MockBuildingExplorerState::new(None, None, None, true, 1);
         
         // Should not auto-refresh immediately
         assert_eq!(state.should_auto_refresh(), false);

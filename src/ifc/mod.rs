@@ -9,7 +9,7 @@ mod fallback;
 mod enhanced;
 pub use error::{IFCError, IFCResult};
 pub use fallback::FallbackIFCParser;
-pub use enhanced::{EnhancedIFCParser, ParseResult, ParseStats};
+pub use enhanced::{EnhancedIFCParser, ParseResult, ParseStats, SpatialIndex, RTreeNode, SpatialRelationship, SpatialQueryResult};
 
 pub struct IFCProcessor {
     // Custom STEP parser implementation

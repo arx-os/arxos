@@ -25,6 +25,11 @@ on:
 jobs:
   monitor-sensors:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      discussions: write
+      actions: read
+      checks: write
     
     steps:
       - name: Checkout repository
@@ -146,12 +151,17 @@ jobs:
       
       - name: Push sensor updates
         run: |
-          git push origin HEAD
-          echo "Pushed sensor updates to repository"
+          if git diff --staged --quiet; then
+            echo "No changes to push"
+          else
+            git push origin HEAD || echo "Push failed, but continuing workflow"
+          fi
+          echo "Push operation completed"
       
       - name: Send sensor notification
         if: always()
         uses: actions/github-script@v6
+        continue-on-error: true
         with:
           script: |
             const sensorCount = 4;

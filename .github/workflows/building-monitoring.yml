@@ -20,9 +20,9 @@ on:
         required: false
         default: 'false'
   
-  schedule:
+  # schedule:
     # Run monitoring every hour
-    - cron: '0 * * * *'
+    # - cron: '0 * * * *'
   
   push:
     paths:

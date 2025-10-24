@@ -1,8 +1,8 @@
 name: Equipment Monitoring
 
 on:
-  schedule:
-    - cron: '0 */6 * * *'  # Every 6 hours
+  # schedule:
+    # - cron: '0 */6 * * *'  # Every 6 hours
   workflow_dispatch:
     inputs:
       alert-threshold:
@@ -27,8 +27,28 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
       
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+          override: true
+      
+      - name: Cache Rust dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
       - name: Monitor equipment status
-        uses: ./.github/workflows/equipment-monitor.yml
+        uses: ./.github/actions/equipment-monitor
         with:
           alert-threshold: ${{ github.event.inputs.alert-threshold || 'warning' }}
           building-path: 'equipment/'

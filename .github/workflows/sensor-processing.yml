@@ -1,8 +1,9 @@
 name: Sensor Data Processing
 
 on:
-  schedule:
-    - cron: '0 */1 * * *'  # Every hour
+  # Disable automatic scheduling for now
+  # schedule:
+  #   - cron: '0 */1 * * *'  # Every hour
   workflow_dispatch:
     inputs:
       sensor-types:

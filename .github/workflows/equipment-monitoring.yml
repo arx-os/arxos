@@ -58,7 +58,7 @@ jobs:
       
       - name: Generate status report
         if: always()  # Always generate report since we can't check monitoring status
-        uses: ./.github/workflows/building-reporter.yml
+        uses: ./.github/actions/building-reporter
         with:
           report-type: 'status'
           output-path: 'reports/'
@@ -67,7 +67,7 @@ jobs:
       
       - name: Generate maintenance report
         if: always()  # Always generate maintenance report
-        uses: ./.github/workflows/building-reporter.yml
+        uses: ./.github/actions/building-reporter
         with:
           report-type: 'maintenance'
           output-path: 'reports/'
@@ -76,7 +76,7 @@ jobs:
       
       - name: Generate critical report
         if: always()  # Always generate critical report
-        uses: ./.github/workflows/building-reporter.yml
+        uses: ./.github/actions/building-reporter
         with:
           report-type: 'comprehensive'
           output-path: 'reports/'

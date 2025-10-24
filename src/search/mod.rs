@@ -163,16 +163,17 @@ impl SearchEngine {
         if config.search_equipment {
             for equipment in &self.equipment {
                 if self.matches_equipment(equipment, &config.query, &regex_pattern, config.case_sensitive) {
+                    let (floor, room) = self.extract_location_from_path(&equipment.universal_path);
                     results.push(SearchResult {
                         item_type: "equipment".to_string(),
                         name: equipment.name.clone(),
                         path: equipment.universal_path.clone(),
                         building: Some(self.buildings[0].name.clone()),
-                        floor: None, // We'll need to determine this from the data structure
-                        room: None, // EquipmentData doesn't have room_id
+                        floor,
+                        room,
                         equipment_type: Some(equipment.equipment_type.clone()),
                         status: Some(format!("{:?}", equipment.status)),
-                        description: Some(format!("{} equipment", equipment.equipment_type)),
+                        description: Some(format!("{} equipment", equipment.system_type)),
                         match_score: self.calculate_match_score(&equipment.name, &config.query),
                     });
                 }
@@ -192,16 +193,17 @@ impl SearchEngine {
         
         for equipment in &self.equipment {
             if self.matches_filter(equipment, config) {
+                let (floor, room) = self.extract_location_from_path(&equipment.universal_path);
                 results.push(SearchResult {
                     item_type: "equipment".to_string(),
                     name: equipment.name.clone(),
                     path: equipment.universal_path.clone(),
                     building: Some(self.buildings[0].name.clone()),
-                    floor: None, // We'll need to determine this from the data structure
-                    room: None, // EquipmentData doesn't have room_id
+                    floor,
+                    room,
                     equipment_type: Some(equipment.equipment_type.clone()),
                     status: Some(format!("{:?}", equipment.status)),
-                    description: Some(format!("{} equipment", equipment.equipment_type)),
+                    description: Some(format!("{} equipment", equipment.system_type)),
                     match_score: 1.0, // All filtered results have equal relevance
                 });
             }
@@ -215,72 +217,99 @@ impl SearchEngine {
     
     /// Check if a building matches the search query
     fn matches_building(&self, building: &Building, query: &str, regex: &Option<Regex>, case_sensitive: bool) -> bool {
-        let search_text = if case_sensitive {
-            building.name.clone()
-        } else {
-            building.name.to_lowercase()
-        };
-        
-        let search_query = if case_sensitive {
-            query.to_string()
-        } else {
-            query.to_lowercase()
-        };
-        
         if let Some(regex) = regex {
-            regex.is_match(&search_text)
+            // For regex, use the original text without case conversion
+            regex.is_match(&building.name)
         } else {
+            // For regular search, apply case sensitivity
+            let search_text = if case_sensitive {
+                building.name.clone()
+            } else {
+                building.name.to_lowercase()
+            };
+            
+            let search_query = if case_sensitive {
+                query.to_string()
+            } else {
+                query.to_lowercase()
+            };
+            
             search_text.contains(&search_query)
         }
     }
     
     /// Check if a room matches the search query
     fn matches_room(&self, room: &RoomData, query: &str, regex: &Option<Regex>, case_sensitive: bool) -> bool {
-        let search_text = if case_sensitive {
-            room.name.clone()
-        } else {
-            room.name.to_lowercase()
-        };
-        
-        let search_query = if case_sensitive {
-            query.to_string()
-        } else {
-            query.to_lowercase()
-        };
-        
         if let Some(regex) = regex {
-            regex.is_match(&search_text)
+            // For regex, use the original text without case conversion
+            regex.is_match(&room.name)
         } else {
+            // For regular search, apply case sensitivity
+            let search_text = if case_sensitive {
+                room.name.clone()
+            } else {
+                room.name.to_lowercase()
+            };
+            
+            let search_query = if case_sensitive {
+                query.to_string()
+            } else {
+                query.to_lowercase()
+            };
+            
             search_text.contains(&search_query)
         }
     }
     
-    /// Check if equipment matches the search query
+    /// Check if equipment matches the search query (enhanced multi-field search)
     fn matches_equipment(&self, equipment: &EquipmentData, query: &str, regex: &Option<Regex>, case_sensitive: bool) -> bool {
-        let search_text = if case_sensitive {
-            equipment.name.clone()
-        } else {
-            equipment.name.to_lowercase()
-        };
-        
-        let search_query = if case_sensitive {
-            query.to_string()
-        } else {
-            query.to_lowercase()
-        };
-        
         if let Some(regex) = regex {
-            regex.is_match(&search_text)
+            // For regex, search across multiple fields
+            regex.is_match(&equipment.name) ||
+            regex.is_match(&equipment.equipment_type) ||
+            regex.is_match(&equipment.system_type) ||
+            regex.is_match(&equipment.universal_path)
         } else {
-            search_text.contains(&search_query)
+            // For regular search, search across multiple fields
+            let search_query = if case_sensitive {
+                query.to_string()
+            } else {
+                query.to_lowercase()
+            };
+            
+            let name_match = if case_sensitive {
+                equipment.name.contains(&search_query)
+            } else {
+                equipment.name.to_lowercase().contains(&search_query)
+            };
+            
+            let type_match = if case_sensitive {
+                equipment.equipment_type.contains(&search_query) ||
+                equipment.system_type.contains(&search_query)
+            } else {
+                equipment.equipment_type.to_lowercase().contains(&search_query) ||
+                equipment.system_type.to_lowercase().contains(&search_query)
+            };
+            
+            let path_match = if case_sensitive {
+                equipment.universal_path.contains(&search_query)
+            } else {
+                equipment.universal_path.to_lowercase().contains(&search_query)
+            };
+            
+            name_match || type_match || path_match
         }
     }
     
     /// Check if equipment matches the filter criteria
     fn matches_filter(&self, equipment: &EquipmentData, config: &FilterConfig) -> bool {
-        // Equipment type filter
+        // Equipment type filter - check both equipment_type and system_type
         if let Some(ref equipment_type) = config.equipment_type {
-            if !equipment.equipment_type.to_lowercase().contains(&equipment_type.to_lowercase()) {
+            let search_type = equipment_type.to_lowercase();
+            let eq_type = equipment.equipment_type.to_lowercase();
+            let sys_type = equipment.system_type.to_lowercase();
+            
+            if !eq_type.contains(&search_type) && !sys_type.contains(&search_type) {
                 return false;
             }
         }
@@ -293,34 +322,32 @@ impl SearchEngine {
             }
         }
         
-        // Floor filter - we'll skip this for now since we don't have floor info directly
-        // if let Some(floor) = config.floor {
-        //     if equipment.floor != floor {
-        //         return false;
-        //     }
-        // }
+        // Floor filter
+        if let Some(floor) = config.floor {
+            let (equipment_floor, _) = self.extract_location_from_path(&equipment.universal_path);
+            if equipment_floor != Some(floor) {
+                return false;
+            }
+        }
         
-        // Room filter - we'll skip this for now since EquipmentData doesn't have room_id
-        // if let Some(ref room) = config.room {
-        //     if let Some(ref equipment_room) = equipment.room_id {
-        //         if !equipment_room.to_lowercase().contains(&room.to_lowercase()) {
-        //             return false;
-        //         }
-        //     } else {
-        //         return false;
-        //     }
-        // }
+        // Room filter
+        if let Some(ref room) = config.room {
+            let (_, equipment_room) = self.extract_location_from_path(&equipment.universal_path);
+            if let Some(ref eq_room) = equipment_room {
+                if !eq_room.to_lowercase().contains(&room.to_lowercase()) {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
         
-        // Building filter - we'll skip this for now since we don't have building info directly
-        // if let Some(ref building) = config.building {
-        //     if let Some(ref equipment_building) = equipment.building {
-        //         if !equipment_building.eq_ignore_ascii_case(building) {
-        //             return false;
-        //         }
-        //     } else {
-        //         return false;
-        //     }
-        // }
+        // Building filter
+        if let Some(ref building) = config.building {
+            if !self.buildings[0].name.to_lowercase().contains(&building.to_lowercase()) {
+                return false;
+            }
+        }
         
         // Critical only filter
         if config.critical_only {
@@ -349,7 +376,7 @@ impl SearchEngine {
         true
     }
     
-    /// Calculate match score for search results
+    /// Calculate match score for search results with fuzzy matching
     fn calculate_match_score(&self, text: &str, query: &str) -> f64 {
         let text_lower = text.to_lowercase();
         let query_lower = query.to_lowercase();
@@ -364,14 +391,90 @@ impl SearchEngine {
             return 0.9;
         }
         
-        // Contains query gets medium score
+        // Contains query gets medium-high score
         if text_lower.contains(&query_lower) {
-            return 0.7;
+            return 0.8;
         }
         
-        // Partial match gets lower score
-        let query_chars: Vec<char> = query_lower.chars().collect();
-        let text_chars: Vec<char> = text_lower.chars().collect();
+        // Fuzzy matching using edit distance
+        let fuzzy_score = self.calculate_fuzzy_score(&text_lower, &query_lower);
+        if fuzzy_score > 0.0 {
+            return fuzzy_score;
+        }
+        
+        // Partial character matching
+        let partial_score = self.calculate_partial_score(&text_lower, &query_lower);
+        if partial_score > 0.0 {
+            return partial_score * 0.3; // Lower weight for partial matches
+        }
+        
+        0.0
+    }
+    
+    /// Calculate fuzzy matching score using edit distance
+    fn calculate_fuzzy_score(&self, text: &str, query: &str) -> f64 {
+        if query.len() < 3 {
+            return 0.0; // Skip fuzzy matching for very short queries
+        }
+        
+        let edit_distance = self.levenshtein_distance(text, query);
+        let max_len = text.len().max(query.len()) as f64;
+        
+        if max_len == 0.0 {
+            return 0.0;
+        }
+        
+        let similarity = 1.0 - (edit_distance as f64 / max_len);
+        
+        // Only return fuzzy score if similarity is reasonably high
+        if similarity > 0.6 {
+            similarity * 0.6 // Cap fuzzy score at 0.6
+        } else {
+            0.0
+        }
+    }
+    
+    /// Calculate Levenshtein distance between two strings
+    fn levenshtein_distance(&self, s1: &str, s2: &str) -> usize {
+        let s1_chars: Vec<char> = s1.chars().collect();
+        let s2_chars: Vec<char> = s2.chars().collect();
+        
+        let s1_len = s1_chars.len();
+        let s2_len = s2_chars.len();
+        
+        if s1_len == 0 {
+            return s2_len;
+        }
+        if s2_len == 0 {
+            return s1_len;
+        }
+        
+        let mut matrix = vec![vec![0; s2_len + 1]; s1_len + 1];
+        
+        for i in 0..=s1_len {
+            matrix[i][0] = i;
+        }
+        
+        for j in 0..=s2_len {
+            matrix[0][j] = j;
+        }
+        
+        for i in 1..=s1_len {
+            for j in 1..=s2_len {
+                let cost = if s1_chars[i - 1] == s2_chars[j - 1] { 0 } else { 1 };
+                matrix[i][j] = (matrix[i - 1][j] + 1)
+                    .min(matrix[i][j - 1] + 1)
+                    .min(matrix[i - 1][j - 1] + cost);
+            }
+        }
+        
+        matrix[s1_len][s2_len]
+    }
+    
+    /// Calculate partial character matching score
+    fn calculate_partial_score(&self, text: &str, query: &str) -> f64 {
+        let query_chars: Vec<char> = query.chars().collect();
+        let text_chars: Vec<char> = text.chars().collect();
         
         let mut matches = 0;
         let mut query_idx = 0;
@@ -384,17 +487,57 @@ impl SearchEngine {
         }
         
         if matches > 0 {
-            matches as f64 / query_chars.len() as f64 * 0.5
+            matches as f64 / query_chars.len() as f64
         } else {
             0.0
         }
     }
+    
+    /// Extract floor and room information from universal path
+    fn extract_location_from_path(&self, path: &str) -> (Option<i32>, Option<String>) {
+        // Parse universal path: /BUILDING/{building}/FLOOR/{floor}/ROOM/{room}/{system}/{equipment}
+        // or: /BUILDING/{building}/FLOOR/{floor}/{system}/{equipment}
+        
+        let parts: Vec<&str> = path.split('/').collect();
+        
+        let mut floor: Option<i32> = None;
+        let mut room: Option<String> = None;
+        
+        for (i, part) in parts.iter().enumerate() {
+            if *part == "FLOOR" && i + 1 < parts.len() {
+                if let Ok(floor_num) = parts[i + 1].parse::<i32>() {
+                    floor = Some(floor_num);
+                }
+            }
+            // Handle FLOOR-{number} format
+            if part.starts_with("FLOOR-") {
+                let floor_str = &part[6..]; // Remove "FLOOR-" prefix
+                if let Ok(floor_num) = floor_str.parse::<i32>() {
+                    floor = Some(floor_num);
+                }
+            }
+            if *part == "ROOM" && i + 1 < parts.len() {
+                room = Some(parts[i + 1].to_string());
+            }
+        }
+        
+        (floor, room)
+    }
 }
 
-/// Format search results for display
+/// Format search results for display with highlighting
 pub fn format_search_results(results: &[SearchResult], format: &OutputFormat, verbose: bool) -> String {
     match format {
         OutputFormat::Table => format_table_results(results, verbose),
+        OutputFormat::Json => serde_json::to_string_pretty(results).unwrap_or_else(|_| "[]".to_string()),
+        OutputFormat::Yaml => serde_yaml::to_string(results).unwrap_or_else(|_| "[]".to_string()),
+    }
+}
+
+/// Format search results with query highlighting
+pub fn format_search_results_with_highlight(results: &[SearchResult], query: &str, format: &OutputFormat, verbose: bool) -> String {
+    match format {
+        OutputFormat::Table => format_table_results_with_highlight(results, query, verbose),
         OutputFormat::Json => serde_json::to_string_pretty(results).unwrap_or_else(|_| "[]".to_string()),
         OutputFormat::Yaml => serde_yaml::to_string(results).unwrap_or_else(|_| "[]".to_string()),
     }
@@ -442,4 +585,75 @@ fn format_table_results(results: &[SearchResult], verbose: bool) -> String {
     
     output.push_str(&format!("\nFound {} results.\n", results.len()));
     output
+}
+
+/// Format results as a table with highlighting
+fn format_table_results_with_highlight(results: &[SearchResult], query: &str, verbose: bool) -> String {
+    if results.is_empty() {
+        return "No results found.".to_string();
+    }
+    
+    let mut output = String::new();
+    
+    if verbose {
+        // Detailed table format with highlighting
+        output.push_str(&format!("{:<12} {:<20} {:<30} {:<15} {:<10} {:<15} {:<10}\n", 
+            "Type", "Name", "Path", "Building", "Floor", "Room", "Status"));
+        output.push_str(&format!("{:-<12} {:-<20} {:-<30} {:-<15} {:-<10} {:-<15} {:-<10}\n", 
+            "", "", "", "", "", "", ""));
+        
+        for result in results {
+            let highlighted_name = highlight_text(&result.name, query);
+            let highlighted_path = highlight_text(&result.path, query);
+            
+            output.push_str(&format!("{:<12} {:<20} {:<30} {:<15} {:<10} {:<15} {:<10}\n",
+                result.item_type,
+                highlighted_name,
+                highlighted_path,
+                result.building.as_deref().unwrap_or("-"),
+                result.floor.map(|f| f.to_string()).unwrap_or("-".to_string()),
+                result.room.as_deref().unwrap_or("-"),
+                result.status.as_deref().unwrap_or("-")
+            ));
+        }
+    } else {
+        // Simple table format with highlighting
+        output.push_str(&format!("{:<12} {:<20} {:<30}\n", "Type", "Name", "Path"));
+        output.push_str(&format!("{:-<12} {:-<20} {:-<30}\n", "", "", ""));
+        
+        for result in results {
+            let highlighted_name = highlight_text(&result.name, query);
+            let highlighted_path = highlight_text(&result.path, query);
+            
+            output.push_str(&format!("{:<12} {:<20} {:<30}\n",
+                result.item_type,
+                highlighted_name,
+                highlighted_path
+            ));
+        }
+    }
+    
+    output.push_str(&format!("\nFound {} results.\n", results.len()));
+    output
+}
+
+/// Highlight matching text in a string
+fn highlight_text(text: &str, query: &str) -> String {
+    if query.is_empty() {
+        return text.to_string();
+    }
+    
+    let query_lower = query.to_lowercase();
+    let text_lower = text.to_lowercase();
+    
+    if let Some(start) = text_lower.find(&query_lower) {
+        let end = start + query.len();
+        format!("{}{}{}", 
+            &text[..start],
+            &text[start..end],
+            &text[end..]
+        )
+    } else {
+        text.to_string()
+    }
 }

@@ -2,11 +2,21 @@
 //!
 //! This module provides advanced 3D visualization capabilities for building data,
 //! including multi-floor rendering, equipment positioning, and spatial relationships.
+//! It also includes interactive 3D rendering with real-time controls.
 
 use crate::yaml::BuildingData;
 use crate::spatial::{Point3D, BoundingBox3D};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+// Re-export interactive components
+pub mod interactive;
+pub mod events;
+pub mod state;
+
+pub use interactive::{InteractiveRenderer, InteractiveConfig};
+pub use events::{EventHandler, InteractiveEvent, Action, CameraAction, ZoomAction, ViewModeAction};
+pub use state::{InteractiveState, CameraState, ViewMode, Rotation3D, SessionData, RenderPreferences, QualityLevel};
 
 /// 3D rendering configuration
 #[derive(Debug, Clone)]

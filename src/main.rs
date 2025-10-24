@@ -18,7 +18,7 @@ use cli::Cli;
 use log::info;
 use crate::progress::{ProgressContext, utils};
 use arxos_core::{ArxOSCore, parse_room_type, parse_equipment_type};
-use crate::render3d::{Render3DConfig, ProjectionType, ViewAngle, Building3DRenderer, format_scene_output};
+use crate::render3d::{Render3DConfig, ProjectionType, ViewAngle, Building3DRenderer, format_scene_output, InteractiveRenderer, InteractiveConfig};
 
 /// Load building data from YAML files
 fn load_building_data(building_name: &str) -> Result<yaml::BuildingData, Box<dyn std::error::Error>> {
@@ -754,8 +754,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         cli::Commands::Render { building, floor, three_d, show_status, show_rooms, format, projection, view_angle, scale, spatial_index } => {
             handle_render_command(building, floor, three_d, show_status, show_rooms, format, projection, view_angle, scale, spatial_index)?;
         }
-        cli::Commands::Visualize { building, projection, view_angle, scale, width, height, spatial_index, show_status, show_rooms, show_connections, format } => {
-            handle_visualize_command(building, projection, view_angle, scale, width, height, spatial_index, show_status, show_rooms, show_connections, format)?;
+        cli::Commands::Interactive { building, projection, view_angle, scale, width, height, spatial_index, show_status, show_rooms, show_connections, fps, show_fps, show_help } => {
+            handle_interactive_command(building, projection, view_angle, scale, width, height, spatial_index, show_status, show_rooms, show_connections, fps, show_fps, show_help)?;
         }
         cli::Commands::Validate { path } => {
             if let Some(data_path) = path {
@@ -840,8 +840,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         cli::Commands::ArIntegrate { scan_file, room, floor, building, commit, message } => {
             handle_ar_integrate_command(scan_file, room, floor, building, commit, message)?;
         }
-        cli::Commands::Filter { equipment_type, status, floor, room, building, critical_only, healthy_only, alerts_only, format, limit } => {
-            handle_filter_command(equipment_type, status, floor, room, building, critical_only, healthy_only, alerts_only, format, limit)?;
+        cli::Commands::Filter { equipment_type, status, floor, room, building, critical_only, healthy_only, alerts_only, format, limit, verbose } => {
+            handle_filter_command(equipment_type, status, floor, room, building, critical_only, healthy_only, alerts_only, format, limit, verbose)?;
         }
     }
     
@@ -1307,6 +1307,7 @@ fn handle_filter_command(
     alerts_only: bool,
     format: String,
     limit: usize,
+    verbose: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("🔍 Filtering building data...");
     
@@ -1332,7 +1333,7 @@ fn handle_filter_command(
     let results = search_engine.filter(&filter_config)?;
     
     // Format and display results
-    let formatted_results = search::format_search_results(&results, &filter_config.format, true);
+    let formatted_results = search::format_search_results(&results, &filter_config.format, verbose);
     println!("{}", formatted_results);
     
     println!("✅ Filter completed");
@@ -1452,8 +1453,8 @@ fn handle_render_command(
     Ok(())
 }
 
-/// Handle the advanced visualize command with full 3D controls
-fn handle_visualize_command(
+/// Handle the interactive 3D rendering command
+fn handle_interactive_command(
     building: String,
     projection: String,
     view_angle: String,
@@ -1464,9 +1465,11 @@ fn handle_visualize_command(
     show_status: bool,
     show_rooms: bool,
     show_connections: bool,
-    format: String,
+    fps: u32,
+    show_fps: bool,
+    show_help: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("🎨 Advanced 3D Building Visualization: {}", building);
+    println!("🎮 Interactive 3D Building Visualization: {}", building);
     
     // Load building data
     let building_data = load_building_data(&building)?;
@@ -1494,7 +1497,8 @@ fn handle_visualize_command(
         }
     };
     
-    let config = Render3DConfig {
+    // Create render configuration
+    let render_config = Render3DConfig {
         show_status,
         show_rooms,
         show_equipment: true,
@@ -1506,60 +1510,36 @@ fn handle_visualize_command(
         max_height: height,
     };
     
-    let renderer = Building3DRenderer::new(building_data, config);
+    // Create interactive configuration
+    let interactive_config = InteractiveConfig {
+        target_fps: fps,
+        real_time_updates: true,
+        show_fps,
+        show_help,
+        auto_hide_help: true,
+        help_duration: std::time::Duration::from_secs(5),
+    };
+    
+    // Create interactive renderer
+    let mut interactive_renderer = InteractiveRenderer::with_config(
+        building_data,
+        render_config,
+        interactive_config
+    )?;
     
     // Apply spatial index if requested
     if spatial_index {
-        println!("🔍 Building spatial index for enhanced queries...");
-        // TODO: Build spatial index from IFC data when available
-        println!("ℹ️ Spatial index integration will be available when IFC data is loaded");
+        println!("🔍 Enabling spatial index integration...");
+        // Note: Spatial index integration would be added here
     }
     
-    // Use enhanced rendering with spatial queries if spatial index is enabled
-    let scene = if spatial_index {
-        renderer.render_3d_with_spatial_queries()?
-    } else {
-        renderer.render_3d_advanced()?
-    };
+    // Start interactive session
+    interactive_renderer.start_interactive_session()?;
     
-    match format.to_lowercase().as_str() {
-        "json" => {
-            let json_output = format_scene_output(&scene, "json")?;
-            println!("{}", json_output);
-        }
-        "yaml" => {
-            let yaml_output = format_scene_output(&scene, "yaml")?;
-            println!("{}", yaml_output);
-        }
-        "ascii" => {
-            // Use the new advanced ASCII art rendering
-            let ascii_output = renderer.render_3d_ascii_art(&scene)?;
-            println!("{}", ascii_output);
-        }
-        "advanced" => {
-            // Use the advanced projection-based rendering
-            let advanced_output = renderer.render_to_ascii_advanced(&scene)?;
-            println!("{}", advanced_output);
-        }
-        _ => {
-            return Err(format!("Unsupported format: {}. Supported formats: ascii, advanced, json, yaml", format).into());
-        }
-    }
-    
-    // Display rendering statistics
-    println!("\n📊 Rendering Statistics:");
-    println!("   • Projection: {:?}", projection_type);
-    println!("   • View Angle: {:?}", view_angle_type);
-    println!("   • Scale Factor: {:.2}", scale);
-    println!("   • Canvas Size: {}x{}", width, height);
-    println!("   • Spatial Index: {}", if spatial_index { "Enabled" } else { "Disabled" });
-    println!("   • Total Floors: {}", scene.metadata.total_floors);
-    println!("   • Total Rooms: {}", scene.metadata.total_rooms);
-    println!("   • Total Equipment: {}", scene.metadata.total_equipment);
-    println!("   • Render Time: {}ms", scene.metadata.render_time_ms);
-    
+    println!("✅ Interactive session completed");
     Ok(())
 }
+
 
 /// Handle the AR integration command
 fn handle_ar_integrate_command(

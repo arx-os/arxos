@@ -59,8 +59,8 @@ pub enum Commands {
         #[arg(long)]
         spatial_index: bool,
     },
-    /// Advanced 3D building visualization with interactive controls
-    Visualize {
+    /// Interactive 3D building visualization with real-time controls
+    Interactive {
         /// Building identifier
         #[arg(long)]
         building: String,
@@ -91,9 +91,15 @@ pub enum Commands {
         /// Show equipment connections
         #[arg(long)]
         show_connections: bool,
-        /// Output format (ascii, advanced, json, yaml)
-        #[arg(long, default_value = "ascii")]
-        format: String,
+        /// Target FPS for rendering
+        #[arg(long, default_value = "30")]
+        fps: u32,
+        /// Show FPS counter
+        #[arg(long)]
+        show_fps: bool,
+        /// Show help overlay by default
+        #[arg(long)]
+        show_help: bool,
     },
     /// Validate building data
     Validate {
@@ -257,6 +263,9 @@ pub enum Commands {
         /// Maximum number of results
         #[arg(long, default_value = "100")]
         limit: usize,
+        /// Show detailed results
+        #[arg(long)]
+        verbose: bool,
     },
 }
 

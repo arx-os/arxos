@@ -1,0 +1,258 @@
+name: GitHub Actions Test Suite
+
+on:
+  workflow_dispatch:
+    inputs:
+      test-scope:
+        description: 'Scope of tests to run'
+        required: false
+        type: choice
+        options:
+          - all
+          - actions-only
+          - workflows-only
+        default: 'all'
+
+jobs:
+  test-action-syntax:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.test-scope == 'all' || github.event.inputs.test-scope == 'actions-only' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Test action syntax
+        run: |
+          echo "Testing GitHub Actions syntax..."
+          
+          # Test each action file
+          for action_file in .github/actions/*/action.yml; do
+            echo "Testing $action_file"
+            
+            # Check required fields
+            if ! grep -q "name:" "$action_file"; then
+              echo "❌ Missing 'name' field in $action_file"
+              exit 1
+            fi
+            
+            if ! grep -q "description:" "$action_file"; then
+              echo "❌ Missing 'description' field in $action_file"
+              exit 1
+            fi
+            
+            if ! grep -q "runs:" "$action_file"; then
+              echo "❌ Missing 'runs' field in $action_file"
+              exit 1
+            fi
+            
+            echo "✅ $action_file syntax OK"
+          done
+          
+          echo "✅ All action files passed syntax validation"
+
+  test-workflow-syntax:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.test-scope == 'all' || github.event.inputs.test-scope == 'workflows-only' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Test workflow syntax
+        run: |
+          echo "Testing GitHub Workflows syntax..."
+          
+          # Test each workflow file
+          for workflow_file in .github/workflows/*.yml; do
+            echo "Testing $workflow_file"
+            
+            # Check required fields
+            if ! grep -q "name:" "$workflow_file"; then
+              echo "❌ Missing 'name' field in $workflow_file"
+              exit 1
+            fi
+            
+            if ! grep -q "on:" "$workflow_file"; then
+              echo "❌ Missing 'on' field in $workflow_file"
+              exit 1
+            fi
+            
+            if ! grep -q "jobs:" "$workflow_file"; then
+              echo "❌ Missing 'jobs' field in $workflow_file"
+              exit 1
+            fi
+            
+            # Check for incorrect action references
+            if grep -q "uses: \.\./\.github/workflows/" "$workflow_file"; then
+              echo "❌ Incorrect workflow reference found in $workflow_file"
+              exit 1
+            fi
+            
+            echo "✅ $workflow_file syntax OK"
+          done
+          
+          echo "✅ All workflow files passed syntax validation"
+
+  test-action-references:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.test-scope == 'all' || github.event.inputs.test-scope == 'workflows-only' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Test action references
+        run: |
+          echo "Testing action references in workflows..."
+          
+          # Check that all referenced actions exist
+          for workflow_file in .github/workflows/*.yml; do
+            echo "Checking action references in $workflow_file"
+            
+            # Extract all action references
+            grep -o "uses: \.\./\.github/actions/[^[:space:]]*" "$workflow_file" | while read -r action_ref; do
+              action_path=$(echo "$action_ref" | sed 's/uses: //')
+              if [ ! -d "$action_path" ]; then
+                echo "❌ Referenced action does not exist: $action_path"
+                exit 1
+              fi
+              
+              if [ ! -f "$action_path/action.yml" ]; then
+                echo "❌ Action file missing: $action_path/action.yml"
+                exit 1
+              fi
+              
+              echo "✅ Action reference valid: $action_path"
+            done
+          done
+          
+          echo "✅ All action references are valid"
+
+  test-scheduled-workflows:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.test-scope == 'all' || github.event.inputs.test-scope == 'workflows-only' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Test scheduled workflows
+        run: |
+          echo "Testing scheduled workflows..."
+          
+          # Check for workflows with schedules
+          scheduled_workflows=0
+          for workflow_file in .github/workflows/*.yml; do
+            if grep -q "schedule:" "$workflow_file"; then
+              echo "✅ Scheduled workflow found: $workflow_file"
+              scheduled_workflows=$((scheduled_workflows + 1))
+            fi
+          done
+          
+          echo "Found $scheduled_workflows scheduled workflows"
+          
+          # Verify specific workflows have schedules
+          expected_scheduled=("equipment-monitoring.yml" "sensor-processing.yml" "building-report.yml" "spatial-validation.yml")
+          
+          for expected in "${expected_scheduled[@]}"; do
+            if [ -f ".github/workflows/$expected" ]; then
+              if grep -q "schedule:" ".github/workflows/$expected"; then
+                echo "✅ $expected has schedule configured"
+              else
+                echo "❌ $expected missing schedule configuration"
+                exit 1
+              fi
+            fi
+          done
+          
+          echo "✅ All expected workflows have schedules configured"
+
+  test-error-handling:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.test-scope == 'all' || github.event.inputs.test-scope == 'actions-only' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Test error handling
+        run: |
+          echo "Testing error handling in actions..."
+          
+          # Check for retry logic in key actions
+          actions_with_retry=("equipment-monitor" "ifc-processor")
+          
+          for action in "${actions_with_retry[@]}"; do
+            action_file=".github/actions/$action/action.yml"
+            if [ -f "$action_file" ]; then
+              if grep -q "retry" "$action_file"; then
+                echo "✅ $action has retry logic"
+              else
+                echo "❌ $action missing retry logic"
+                exit 1
+              fi
+            fi
+          done
+          
+          echo "✅ Error handling validation passed"
+
+  generate-test-report:
+    runs-on: ubuntu-latest
+    needs: [test-action-syntax, test-workflow-syntax, test-action-references, test-scheduled-workflows, test-error-handling]
+    if: always()
+    
+    steps:
+      - name: Generate test report
+        run: |
+          echo "# GitHub Actions Test Report" > test-report.md
+          echo "" >> test-report.md
+          echo "**Test Date:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> test-report.md
+          echo "**Repository:** \`${{ github.repository }}\`" >> test-report.md
+          echo "**Test Scope:** ${{ github.event.inputs.test-scope || 'all' }}" >> test-report.md
+          echo "" >> test-report.md
+          
+          echo "## Test Results" >> test-report.md
+          echo "" >> test-report.md
+          echo "| Test | Status |" >> test-report.md
+          echo "|------|--------|" >> test-report.md
+          echo "| Action Syntax | ${{ needs.test-action-syntax.result == 'success' && '✅ Pass' || '❌ Fail' }} |" >> test-report.md
+          echo "| Workflow Syntax | ${{ needs.test-workflow-syntax.result == 'success' && '✅ Pass' || '❌ Fail' }} |" >> test-report.md
+          echo "| Action References | ${{ needs.test-action-references.result == 'success' && '✅ Pass' || '❌ Fail' }} |" >> test-report.md
+          echo "| Scheduled Workflows | ${{ needs.test-scheduled-workflows.result == 'success' && '✅ Pass' || '❌ Fail' }} |" >> test-report.md
+          echo "| Error Handling | ${{ needs.test-error-handling.result == 'success' && '✅ Pass' || '❌ Fail' }} |" >> test-report.md
+          echo "" >> test-report.md
+          
+          # Count files
+          action_count=$(find .github/actions -name "action.yml" | wc -l)
+          workflow_count=$(find .github/workflows -name "*.yml" | wc -l)
+          
+          echo "## Summary" >> test-report.md
+          echo "" >> test-report.md
+          echo "- **Actions Tested:** $action_count" >> test-report.md
+          echo "- **Workflows Tested:** $workflow_count" >> test-report.md
+          echo "- **Total Files:** $((action_count + workflow_count))" >> test-report.md
+          echo "" >> test-report.md
+          
+          if [ "${{ needs.test-action-syntax.result }}" == "success" ] && \
+             [ "${{ needs.test-workflow-syntax.result }}" == "success" ] && \
+             [ "${{ needs.test-action-references.result }}" == "success" ] && \
+             [ "${{ needs.test-scheduled-workflows.result }}" == "success" ] && \
+             [ "${{ needs.test-error-handling.result }}" == "success" ]; then
+            echo "## 🎉 All Tests Passed!" >> test-report.md
+            echo "" >> test-report.md
+            echo "The GitHub Actions ecosystem is ready for production use." >> test-report.md
+          else
+            echo "## ❌ Some Tests Failed" >> test-report.md
+            echo "" >> test-report.md
+            echo "Please review the failed tests and fix the issues before deploying." >> test-report.md
+          fi
+          
+          echo "Test report generated"
+      
+      - name: Upload test report
+        uses: actions/upload-artifact@v3
+        with:
+          name: github-actions-test-report
+          path: test-report.md
+          retention-days: 7

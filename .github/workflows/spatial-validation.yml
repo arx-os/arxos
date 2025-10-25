@@ -30,9 +30,8 @@ on:
       - 'test-repo/**/*.yaml'
       - 'test-repo/**/*.yml'
   
-  # schedule:
-    # Run validation daily at 2 AM UTC
-    # - cron: '0 2 * * *'
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
 
 jobs:
   validate-spatial:

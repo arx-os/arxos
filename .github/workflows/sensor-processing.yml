@@ -1,9 +1,8 @@
 name: Sensor Data Processing
 
 on:
-  # Disable automatic scheduling for now
-  # schedule:
-  #   - cron: '0 */1 * * *'  # Every hour
+  schedule:
+    - cron: '0 */1 * * *'  # Every hour
   workflow_dispatch:
     inputs:
       sensor-types:
@@ -20,6 +19,10 @@ on:
 jobs:
   process-sensor-data:
     runs-on: ubuntu-latest
+    env:
+      SENSOR_DATA_PATH: ${{ vars.SENSOR_DATA_PATH || 'sensor-data' }}
+      REPORTS_PATH: ${{ vars.REPORTS_PATH || 'reports' }}
+      DEFAULT_SENSOR_TYPES: ${{ vars.DEFAULT_SENSOR_TYPES || 'temperature,humidity,air-quality,motion' }}
     
     steps:
       - name: Checkout repository
@@ -31,15 +34,15 @@ jobs:
       - name: Process sensor data
         uses: ./.github/actions/sensor-processor
         with:
-          sensor-types: ${{ github.event.inputs.sensor-types || 'temperature,humidity,air-quality,motion' }}
-          data-path: 'sensor-data/'
+          sensor-types: ${{ github.event.inputs.sensor-types || env.DEFAULT_SENSOR_TYPES }}
+          data-path: ${{ env.SENSOR_DATA_PATH }}
           processing-mode: ${{ github.event.inputs.processing-mode || 'real-time' }}
           alert-threshold: 'medium'
       
       - name: Validate sensor data
         uses: ./.github/actions/sensor-validator
         with:
-          sensor-data-path: 'sensor-data/'
+          sensor-data-path: ${{ env.SENSOR_DATA_PATH }}
           validation-rules: 'range,consistency,anomaly'
           tolerance-level: 'medium'
       
@@ -47,8 +50,8 @@ jobs:
         uses: ./.github/actions/sensor-reporter
         with:
           report-type: 'sensor-status'
-          output-path: 'reports/sensors/'
-          sensor-data-path: 'sensor-data/'
+          output-path: ${{ env.REPORTS_PATH }}/sensors/
+          sensor-data-path: ${{ env.SENSOR_DATA_PATH }}
           format: 'markdown'
       
       - name: Configure Git

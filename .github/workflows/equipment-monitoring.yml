@@ -1,8 +1,8 @@
 name: Equipment Monitoring
 
 on:
-  # schedule:
-    # - cron: '0 */6 * * *'  # Every 6 hours
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
   workflow_dispatch:
     inputs:
       alert-threshold:
@@ -137,38 +137,13 @@ jobs:
           git push origin HEAD
           echo "Pushed monitoring updates to repository"
       
-      - name: Send notification
-        if: always()  # Always send notification
-        uses: actions/github-script@v6
+      - name: Monitor workflow status
+        if: always()
+        uses: ./.github/actions/workflow-monitor
         with:
-          script: |
-            const criticalCount = 'N/A';
-            const warningsCount = 'N/A';
-            
-            // Create a discussion post for critical alerts
-            github.rest.discussions.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              category: 'general',
-              title: `🚨 Critical Equipment Alert - ${criticalCount} critical issues`,
-              body: `# 🚨 Critical Equipment Alert
-              
-              ## Summary
-              - **Status**: Critical
-              - **Critical Issues**: ${criticalCount}
-              - **Warning Issues**: ${warningsCount}
-              - **Alert Time**: ${new Date().toISOString()}
-              
-              ## Details
-              Critical equipment issues have been detected that require immediate attention.
-              
-              ## Next Steps
-              1. Review the monitoring report
-              2. Address critical equipment issues
-              3. Verify equipment functionality
-              4. Update equipment status
-              
-              ## Equipment Types Checked
-              HVAC, ELECTRICAL, SAFETY, PLUMBING
-              `
-            });
+          workflow-name: "Equipment Monitoring"
+          workflow-status: ${{ job.status }}
+          failure-reason: ${{ steps.monitor.outputs.error || 'Equipment monitoring workflow failed' }}
+          notification-webhook: ${{ secrets.WORKFLOW_FAILURE_WEBHOOK }}
+          create-issue: 'true'
+          issue-labels: 'equipment-monitoring,workflow-failure'

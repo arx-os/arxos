@@ -1,8 +1,8 @@
 name: Weekly Building Report
 
 on:
-  # schedule:
-    # - cron: '0 9 * * 1'  # Every Monday at 9 AM
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 9 AM UTC
   workflow_dispatch:
     inputs:
       report-type:
@@ -19,6 +19,10 @@ on:
 jobs:
   generate-report:
     runs-on: ubuntu-latest
+    env:
+      BUILDING_DATA_PATH: ${{ vars.BUILDING_DATA_PATH || 'building-data' }}
+      REPORTS_PATH: ${{ vars.REPORTS_PATH || 'reports' }}
+      DEFAULT_FORMAT: ${{ vars.DEFAULT_FORMAT || 'markdown' }}
     
     steps:
       - name: Checkout repository
@@ -28,56 +32,53 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Generate comprehensive building report
-        uses: ./.github/workflows/building-reporter.yml
+        uses: ./.github/actions/building-reporter
         with:
-          report-type: ${{ github.event.inputs.report-type || 'comprehensive' }}
-          output-path: 'reports/'
-          building-path: 'equipment/'
-          format: ${{ github.event.inputs.format || 'markdown' }}
-          include-charts: true
+          data-path: ${{ env.BUILDING_DATA_PATH }}
+          report-type: ${{ github.event.inputs.report-type || 'summary' }}
+          output-format: ${{ github.event.inputs.format || env.DEFAULT_FORMAT }}
+          commit-report: 'false'
       
       - name: Generate energy report
-        uses: ./.github/workflows/building-reporter.yml
+        uses: ./.github/actions/building-reporter
         with:
+          data-path: ${{ env.BUILDING_DATA_PATH }}
           report-type: 'energy'
-          output-path: 'reports/'
-          building-path: 'equipment/'
-          format: 'markdown'
-          include-charts: true
+          output-format: ${{ env.DEFAULT_FORMAT }}
+          commit-report: 'false'
       
-      - name: Generate maintenance report
-        uses: ./.github/workflows/building-reporter.yml
+      - name: Generate equipment report
+        uses: ./.github/actions/building-reporter
         with:
-          report-type: 'maintenance'
-          output-path: 'reports/'
-          building-path: 'equipment/'
-          format: 'markdown'
-          include-charts: true
+          data-path: ${{ env.BUILDING_DATA_PATH }}
+          report-type: 'equipment'
+          output-format: ${{ env.DEFAULT_FORMAT }}
+          commit-report: 'false'
       
-      - name: Generate spatial report
-        uses: ./.github/workflows/building-reporter.yml
+      - name: Generate status report
+        uses: ./.github/actions/building-reporter
         with:
-          report-type: 'spatial'
-          output-path: 'reports/'
-          building-path: 'equipment/'
-          format: 'markdown'
-          include-charts: true
+          data-path: ${{ env.BUILDING_DATA_PATH }}
+          report-type: 'status'
+          output-format: ${{ env.DEFAULT_FORMAT }}
+          commit-report: 'false'
       
       - name: Monitor equipment status
-        uses: ./.github/workflows/equipment-monitor.yml
+        uses: ./.github/actions/equipment-monitor
         with:
-          alert-threshold: 'warning'
-          building-path: 'equipment/'
-          check-interval: '60'
-          critical-equipment: 'HVAC,ELECTRICAL,SAFETY,PLUMBING'
+          data-path: ${{ env.BUILDING_DATA_PATH }}
+          alert-thresholds: '{"temperature": {"min": 15, "max": 25}, "humidity": {"min": 30, "max": 70}}'
+          create-issues: 'true'
+          dry-run: 'false'
       
       - name: Validate spatial data
-        uses: ./.github/workflows/spatial-validator.yml
+        uses: ./.github/actions/spatial-validator
         with:
-          building-path: 'equipment/'
-          validation-level: 'standard'
-          coordinate-system: 'building_local'
+          data-path: ${{ env.BUILDING_DATA_PATH }}
           tolerance: '0.1'
+          check-coordinate-systems: 'true'
+          check-universal-paths: 'true'
+          fail-on-errors: 'false'
       
       - name: Generate executive summary
         run: |
@@ -207,10 +208,13 @@ jobs:
             body += `3. Schedule maintenance as needed\n`;
             body += `4. Update equipment status and documentation\n`;
             
-            github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: title,
-              body: body,
-              labels: ['report', 'weekly', 'building', monitoringStatus === 'critical' ? 'urgent' : 'normal']
-            });
+      - name: Monitor workflow status
+        if: always()
+        uses: ./.github/actions/workflow-monitor
+        with:
+          workflow-name: "Weekly Building Report"
+          workflow-status: ${{ job.status }}
+          failure-reason: ${{ steps.generate-report.outputs.error || 'Building report generation failed' }}
+          notification-webhook: ${{ secrets.WORKFLOW_FAILURE_WEBHOOK }}
+          create-issue: 'true'
+          issue-labels: 'building-report,workflow-failure'

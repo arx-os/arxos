@@ -217,11 +217,32 @@ runs:
         EOF
         )
         
-        curl -X POST "${{ inputs.notification-webhook }}" \
-          -H "Content-Type: application/json" \
-          -d "$webhook_data"
+        # Retry logic for webhook calls
+        max_retries=3
+        retry_count=0
         
-        echo "Webhook notification sent"
+        while [ $retry_count -lt $max_retries ]; do
+          if curl -X POST "${{ inputs.notification-webhook }}" \
+            -H "Content-Type: application/json" \
+            -d "$webhook_data" \
+            --connect-timeout 10 \
+            --max-time 30 \
+            --retry 2 \
+            --retry-delay 1; then
+            echo "Webhook notification sent successfully"
+            break
+          else
+            retry_count=$((retry_count + 1))
+            echo "Webhook notification failed (attempt $retry_count/$max_retries)"
+            if [ $retry_count -lt $max_retries ]; then
+              echo "Retrying in 5 seconds..."
+              sleep 5
+            else
+              echo "Webhook notification failed after $max_retries attempts"
+              exit 1
+            fi
+          fi
+        done
 
     - name: Generate monitoring report
       shell: bash

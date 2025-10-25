@@ -1,0 +1,185 @@
+name: 'Workflow Monitor'
+description: 'Monitor workflow health and send alerts for failures'
+author: 'ArxOS Team'
+branding:
+  icon: 'monitor'
+  color: 'red'
+
+inputs:
+  workflow-name:
+    description: 'Name of the workflow being monitored'
+    required: true
+  workflow-status:
+    description: 'Status of the workflow (success, failure, cancelled)'
+    required: true
+  failure-reason:
+    description: 'Reason for workflow failure (if applicable)'
+    required: false
+  notification-webhook:
+    description: 'Webhook URL for external notifications'
+    required: false
+  create-issue:
+    description: 'Whether to create a GitHub issue for failures'
+    required: false
+    default: 'true'
+  issue-labels:
+    description: 'Comma-separated labels for created issues'
+    required: false
+    default: 'workflow-failure,urgent'
+
+outputs:
+  issue-created:
+    description: 'Whether a GitHub issue was created'
+  notification-sent:
+    description: 'Whether a notification was sent'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Monitor workflow status
+      id: monitor
+      shell: bash
+      run: |
+        echo "Monitoring workflow: ${{ inputs.workflow-name }}"
+        echo "Status: ${{ inputs.workflow-status }}"
+        
+        if [ "${{ inputs.workflow-status }}" == "failure" ]; then
+          echo "workflow-failed=true" >> $GITHUB_OUTPUT
+          echo "❌ Workflow failed: ${{ inputs.workflow-name }}"
+        elif [ "${{ inputs.workflow-status }}" == "success" ]; then
+          echo "workflow-failed=false" >> $GITHUB_OUTPUT
+          echo "✅ Workflow succeeded: ${{ inputs.workflow-name }}"
+        else
+          echo "workflow-failed=false" >> $GITHUB_OUTPUT
+          echo "ℹ️ Workflow status: ${{ inputs.workflow-status }}"
+        fi
+
+    - name: Create GitHub issue for workflow failure
+      if: inputs.create-issue == 'true' && steps.monitor.outputs.workflow-failed == 'true'
+      id: issue
+      shell: bash
+      run: |
+        echo "Creating GitHub issue for workflow failure..."
+        
+        # Parse issue labels
+        IFS=',' read -ra LABELS <<< "${{ inputs.issue-labels }}"
+        labels_json=$(printf '%s\n' "${LABELS[@]}" | jq -R . | jq -s .)
+        
+        issue_title="🚨 Workflow Failure: ${{ inputs.workflow-name }}"
+        issue_body="## Workflow Failure Alert
+
+**Workflow:** \`${{ inputs.workflow-name }}\`
+**Status:** ❌ Failed
+**Time:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+**Repository:** \`${{ github.repository }}\`
+**Branch:** \`${{ github.ref_name }}\`
+**Commit:** \`${{ github.sha }}\`
+
+### Failure Details
+${{ inputs.failure-reason || 'No specific failure reason provided' }}
+
+### Next Steps
+1. Review the workflow logs for detailed error information
+2. Check if this is a recurring issue
+3. Verify that all dependencies and services are available
+4. Update workflow configuration if needed
+5. Close this issue when resolved
+
+### Workflow Information
+- **Run ID:** \`${{ github.run_id }}\`
+- **Run Number:** \`${{ github.run_number }}\`
+- **Actor:** \`${{ github.actor }}\`
+- **Event:** \`${{ github.event_name }}\`
+
+---
+*This issue was automatically created by the Workflow Monitor action.*"
+        
+        # Create the issue using GitHub CLI (if available) or API
+        if command -v gh &> /dev/null; then
+          gh issue create --title "$issue_title" --body "$issue_body" --label "${{ inputs.issue-labels }}"
+          echo "issue-created=true" >> $GITHUB_OUTPUT
+          echo "✅ GitHub issue created successfully"
+        else
+          echo "GitHub CLI not available, would create issue: $issue_title"
+          echo "issue-created=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Send webhook notification
+      if: inputs.notification-webhook != '' && steps.monitor.outputs.workflow-failed == 'true'
+      shell: bash
+      run: |
+        echo "Sending webhook notification for workflow failure..."
+        
+        webhook_data=$(cat <<EOF
+        {
+          "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+          "repository": "${{ github.repository }}",
+          "branch": "${{ github.ref_name }}",
+          "workflow": {
+            "name": "${{ inputs.workflow-name }}",
+            "status": "${{ inputs.workflow-status }}",
+            "run_id": "${{ github.run_id }}",
+            "run_number": "${{ github.run_number }}"
+          },
+          "failure_reason": "${{ inputs.failure-reason || 'Unknown' }}",
+          "commit": "${{ github.sha }}",
+          "actor": "${{ github.actor }}",
+          "event": "${{ github.event_name }}"
+        }
+        EOF
+        )
+        
+        # Retry logic for webhook calls
+        max_retries=3
+        retry_count=0
+        
+        while [ $retry_count -lt $max_retries ]; do
+          if curl -X POST "${{ inputs.notification-webhook }}" \
+            -H "Content-Type: application/json" \
+            -d "$webhook_data" \
+            --connect-timeout 10 \
+            --max-time 30 \
+            --retry 2 \
+            --retry-delay 1; then
+            echo "notification-sent=true" >> $GITHUB_OUTPUT
+            echo "✅ Webhook notification sent successfully"
+            break
+          else
+            retry_count=$((retry_count + 1))
+            echo "❌ Webhook notification failed (attempt $retry_count/$max_retries)"
+            if [ $retry_count -lt $max_retries ]; then
+              echo "Retrying in 5 seconds..."
+              sleep 5
+            else
+              echo "❌ Webhook notification failed after $max_retries attempts"
+              echo "notification-sent=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+        done
+
+    - name: Generate monitoring report
+      shell: bash
+      run: |
+        echo "## Workflow Monitoring Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Workflow:** \`${{ inputs.workflow-name }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Status:** ${{ inputs.workflow-status }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Time:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+        echo "**Repository:** \`${{ github.repository }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ inputs.workflow-status }}" == "failure" ]; then
+          echo "❌ **Workflow Failed** - Monitoring actions triggered" >> $GITHUB_STEP_SUMMARY
+          echo "**Issue Created:** ${{ steps.issue.outputs.issue-created }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Notification Sent:** ${{ steps.webhook.outputs.notification-sent }}" >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ inputs.workflow-status }}" == "success" ]; then
+          echo "✅ **Workflow Succeeded** - No action required" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "ℹ️ **Workflow Status:** ${{ inputs.workflow-status }}" >> $GITHUB_STEP_SUMMARY
+        fi

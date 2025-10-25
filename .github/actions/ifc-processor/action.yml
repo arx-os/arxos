@@ -68,15 +68,29 @@ runs:
     - name: Build ArxOS CLI
       shell: bash
       run: |
-        cargo build --release --bin arxos
-        echo "ArxOS CLI built successfully"
+        echo "Building ArxOS CLI..."
+        if cargo build --release --bin arxos; then
+          echo "ArxOS CLI built successfully"
+        else
+          echo "❌ Failed to build ArxOS CLI"
+          exit 1
+        fi
 
     - name: Validate IFC file
       shell: bash
       run: |
         echo "Validating IFC file: ${{ inputs.ifc-file }}"
-        ./target/release/arxos validate --path "${{ inputs.ifc-file }}"
-        echo "IFC file validation completed"
+        if [ ! -f "${{ inputs.ifc-file }}" ]; then
+          echo "❌ IFC file not found: ${{ inputs.ifc-file }}"
+          exit 1
+        fi
+        
+        if ./target/release/arxos validate --path "${{ inputs.ifc-file }}"; then
+          echo "✅ IFC file validation completed successfully"
+        else
+          echo "❌ IFC file validation failed"
+          exit 1
+        fi
 
     - name: Process IFC file
       id: process
@@ -131,8 +145,28 @@ runs:
       if: steps.commit.outputs.commit-hash != ''
       shell: bash
       run: |
-        git push origin HEAD:${{ github.ref_name }}
-        echo "Pushed changes to ${{ github.ref_name }}"
+        echo "Pushing changes to ${{ github.ref_name }}..."
+        
+        # Retry logic for Git push
+        max_retries=3
+        retry_count=0
+        
+        while [ $retry_count -lt $max_retries ]; do
+          if git push origin HEAD:${{ github.ref_name }}; then
+            echo "✅ Successfully pushed changes to ${{ github.ref_name }}"
+            break
+          else
+            retry_count=$((retry_count + 1))
+            echo "❌ Git push failed (attempt $retry_count/$max_retries)"
+            if [ $retry_count -lt $max_retries ]; then
+              echo "Retrying in 10 seconds..."
+              sleep 10
+            else
+              echo "❌ Git push failed after $max_retries attempts"
+              exit 1
+            fi
+          fi
+        done
 
     - name: Validate spatial data
       if: inputs.validate-spatial == 'true'

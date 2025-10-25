@@ -1,0 +1,78 @@
+# ArxOS GitHub Actions Configuration
+# This file contains centralized configuration for all GitHub Actions workflows
+
+# Default paths and directories
+paths:
+  building_data: "building-data"
+  sensor_data: "sensor-data"
+  reports: "reports"
+  test_data: "test_data"
+  equipment: "equipment"
+
+# Default file patterns
+patterns:
+  yaml_files: "**/*.yaml"
+  yml_files: "**/*.yml"
+  ifc_files: "**/*.ifc"
+  sensor_files: "sensor-data/**/*.yaml"
+
+# Default validation settings
+validation:
+  spatial_tolerance: "0.1"
+  coordinate_systems_check: true
+  universal_paths_check: true
+  fail_on_errors: true
+
+# Default monitoring settings
+monitoring:
+  equipment_interval_minutes: 60
+  sensor_interval_minutes: 60
+  alert_thresholds:
+    temperature:
+      min: 15
+      max: 25
+    humidity:
+      min: 30
+      max: 70
+    air_quality:
+      min: 0
+      max: 100
+
+# Default report settings
+reports:
+  default_format: "markdown"
+  include_charts: true
+  commit_reports: true
+  retention_days: 30
+
+# Default Git settings
+git:
+  user_name: "ArxOS Bot"
+  user_email: "bot@arxos.io"
+  commit_prefix: "ArxOS:"
+
+# Default notification settings
+notifications:
+  webhook_timeout: 30
+  max_retries: 3
+  retry_delay: 5
+
+# Environment-specific overrides
+environments:
+  development:
+    monitoring:
+      equipment_interval_minutes: 5
+      sensor_interval_minutes: 5
+    validation:
+      fail_on_errors: false
+    reports:
+      commit_reports: false
+  
+  production:
+    monitoring:
+      equipment_interval_minutes: 60
+      sensor_interval_minutes: 60
+    validation:
+      fail_on_errors: true
+    reports:
+      commit_reports: true

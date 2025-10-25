@@ -13,6 +13,8 @@ Converts IFC files to YAML equipment data and commits to Git.
 - ✅ Automatic Git commits
 - ✅ Spatial validation
 - ✅ Processing reports
+- ✅ **NEW**: Enhanced error handling with retry logic
+- ✅ **NEW**: File existence validation
 
 **Usage:**
 ```yaml
@@ -70,7 +72,8 @@ Monitors equipment health and generates alerts for critical issues.
 - ✅ Real-time equipment monitoring
 - ✅ Configurable alert thresholds
 - ✅ GitHub issue creation
-- ✅ Webhook notifications
+- ✅ **NEW**: Enhanced webhook notifications with retry logic
+- ✅ **NEW**: Improved error handling
 - ✅ Dry-run mode
 
 **Usage:**
@@ -82,6 +85,28 @@ Monitors equipment health and generates alerts for critical issues.
     alert-thresholds: '{"temperature": {"min": 15, "max": 25}}'
     create-issues: 'true'
     issue-labels: 'equipment-alert,critical'
+```
+
+### 5. **NEW**: Workflow Monitor (`workflow-monitor`)
+Monitors workflow health and sends alerts for failures.
+
+**Features:**
+- ✅ Workflow failure detection
+- ✅ Automatic GitHub issue creation
+- ✅ Webhook notifications with retry logic
+- ✅ Comprehensive failure reporting
+- ✅ Configurable alerting
+
+**Usage:**
+```yaml
+- uses: ./.github/actions/workflow-monitor
+  with:
+    workflow-name: "Equipment Monitoring"
+    workflow-status: ${{ job.status }}
+    failure-reason: "Workflow failed due to network issues"
+    notification-webhook: ${{ secrets.WORKFLOW_FAILURE_WEBHOOK }}
+    create-issue: 'true'
+    issue-labels: 'workflow-failure,urgent'
 ```
 
 ## 📋 Workflow Examples
@@ -125,7 +150,7 @@ name: Equipment Health Monitoring
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Every hour
+    - cron: '0 */6 * * *'  # Every 6 hours
 
 jobs:
   monitor:
@@ -136,6 +161,13 @@ jobs:
         with:
           data-path: 'building-data'
           create-issues: 'true'
+      
+      - name: Monitor workflow status
+        if: always()
+        uses: ./.github/actions/workflow-monitor
+        with:
+          workflow-name: "Equipment Health Monitoring"
+          workflow-status: ${{ job.status }}
 ```
 
 ## 🔧 Configuration
@@ -143,6 +175,17 @@ jobs:
 ### Environment Variables
 - `GITHUB_TOKEN`: Required for Git operations and issue creation
 - `WEBHOOK_URL`: Optional webhook for external notifications
+- `WORKFLOW_FAILURE_WEBHOOK`: **NEW** - Webhook for workflow failure notifications
+
+### **NEW**: Centralized Configuration
+All workflows now support environment variables for flexible configuration:
+
+```yaml
+env:
+  BUILDING_DATA_PATH: ${{ vars.BUILDING_DATA_PATH || 'building-data' }}
+  REPORTS_PATH: ${{ vars.REPORTS_PATH || 'reports' }}
+  DEFAULT_FORMAT: ${{ vars.DEFAULT_FORMAT || 'markdown' }}
+```
 
 ### Input Parameters
 
@@ -180,6 +223,16 @@ jobs:
 | `create-issues` | ❌ | `true` | Create GitHub issues |
 | `dry-run` | ❌ | `false` | Dry-run mode |
 
+#### **NEW**: Workflow Monitor
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `workflow-name` | ✅ | - | Name of the workflow |
+| `workflow-status` | ✅ | - | Status (success, failure, cancelled) |
+| `failure-reason` | ❌ | - | Reason for failure |
+| `notification-webhook` | ❌ | - | Webhook URL for notifications |
+| `create-issue` | ❌ | `true` | Create GitHub issue for failures |
+| `issue-labels` | ❌ | `workflow-failure,urgent` | Labels for issues |
+
 ## 📊 Outputs
 
 Each action provides structured outputs for use in subsequent steps:
@@ -207,6 +260,10 @@ Each action provides structured outputs for use in subsequent steps:
 - `issues-created`: GitHub issues created
 - `critical-alerts`: Critical alerts found
 
+### **NEW**: Workflow Monitor Outputs
+- `issue-created`: Whether a GitHub issue was created
+- `notification-sent`: Whether a notification was sent
+
 ## 🛠️ Development
 
 ### Adding New Actions
@@ -223,22 +280,28 @@ act -j import-ifc
 
 # Test individual action
 act -j validate-spatial
+
+# **NEW**: Run comprehensive test suite
+act -j test-suite
 ```
 
 ## 📚 Best Practices
 
-1. **Error Handling**: Always provide meaningful error messages
+1. **Error Handling**: Always provide meaningful error messages with retry logic
 2. **Logging**: Use structured logging for debugging
 3. **Caching**: Cache Rust dependencies for faster builds
 4. **Security**: Use minimal permissions and validate inputs
 5. **Documentation**: Keep action descriptions up to date
 6. **Testing**: Test actions with various input combinations
+7. ****NEW**: **Monitoring**: Use workflow monitoring for production reliability
+8. ****NEW**: **Configuration**: Use environment variables for flexible deployment
 
 ## 🔗 Related Documentation
 
-- [ArxOS Architecture](../ARXOS_ARCHITECTURE_V2.md)
+- [ArxOS Architecture](../docs/ARCHITECTURE.md)
 - [Development Roadmap](../DEVELOPMENT_ROADMAP.md)
 - [IFC Processing Guide](../docs/ifc_processing.md)
+- [**NEW**: Workflow Health Dashboard](../workflow-dashboard.md)
 
 ## 📄 License
 

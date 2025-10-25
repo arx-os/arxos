@@ -1,0 +1,34 @@
+name: Workflow Failure Monitor
+
+on:
+  workflow_run:
+    workflows: ["*"]
+    types: [completed]
+
+jobs:
+  monitor-workflow-failure:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    
+    steps:
+      - name: Monitor failed workflow
+        uses: ./.github/actions/workflow-monitor
+        with:
+          workflow-name: ${{ github.event.workflow_run.name }}
+          workflow-status: failure
+          failure-reason: "Workflow run failed - check logs for details"
+          notification-webhook: ${{ secrets.WORKFLOW_FAILURE_WEBHOOK }}
+          create-issue: 'true'
+          issue-labels: 'workflow-failure,urgent,automated'
+
+  monitor-workflow-success:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+      - name: Log successful workflow
+        run: |
+          echo "✅ Workflow succeeded: ${{ github.event.workflow_run.name }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Run ID: ${{ github.event.workflow_run.id }}"

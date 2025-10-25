@@ -103,6 +103,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arxos-core",
+ "arxos-mobile",
  "chrono",
  "clap",
  "criterion",
@@ -115,7 +116,6 @@ dependencies = [
  "nalgebra",
  "notify",
  "num_cpus",
- "proptest",
  "ratatui",
  "rayon",
  "regex",

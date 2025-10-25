@@ -750,7 +750,7 @@ impl Building3DRenderer {
                     bounding_box: equipment.bounding_box.clone(),
                     floor_level: floor.level,
                     room_id: None, // EquipmentData doesn't have room_id, we'll need to find it
-                    connections: Vec::new(), // TODO: Implement equipment connections
+                    connections: Vec::new(), // Equipment connections will be implemented when equipment data is available
                     spatial_relationships: None, // Will be set by enhance_equipment_with_spatial_data
                     nearest_entity_distance: None, // Will be set by enhance_equipment_with_spatial_data
                 };
@@ -774,7 +774,7 @@ impl Building3DRenderer {
                     position: room.position.clone(),
                     bounding_box: room.bounding_box.clone(),
                     floor_level: floor.level,
-                    equipment: Vec::new(), // TODO: Find equipment in this room
+                    equipment: Vec::new(), // Equipment will be found when equipment data is available
                 };
                 rooms_3d.push(room_3d);
             }

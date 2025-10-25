@@ -1,0 +1,72 @@
+file_path: test_building.ifc
+building_name: test_building
+total_entities: 7
+entity_types:
+  IfcBuilding: 1
+  IfcSite: 1
+  IfcProject: 1
+  Other("Unknown"): 4
+entities:
+- id: '#1'
+  entity_type: IfcProject
+  name: 0Kj8nYj4X1E8L7vM3Q2R5S
+  description: ','
+  properties:
+    coordinates: '''0Kj8nYj4X1E8L7vM3Q2R5S'',#2,$,$,$,$,$,$,$'
+  geometry: null
+  location: null
+- id: '#2'
+  entity_type: !Other Unknown
+  name: null
+  description: ',.ADDED.,'
+  properties:
+    coordinates: '#3,#4,#5,$,.ADDED.,$,$,$,0'
+  geometry: null
+  location: null
+- id: '#3'
+  entity_type: !Other Unknown
+  name: John Doe
+  description: ',''John Doe'','
+  properties:
+    coordinates: $,'John Doe',$,$,$,$,$,$
+  geometry: null
+  location: null
+- id: '#4'
+  entity_type: !Other Unknown
+  name: Test Organization
+  description: ',''Test Organization'','
+  properties:
+    coordinates: $,'Test Organization',$,$,$
+  geometry: null
+  location: null
+- id: '#5'
+  entity_type: !Other Unknown
+  name: null
+  description: null
+  properties:
+    coordinates: '#3,#4,$'
+  geometry: null
+  location: null
+- id: '#6'
+  entity_type: IfcSite
+  name: 0Kj8nYj4X1E8L7vM3Q2R5T
+  description: ',''Test Site'','
+  properties:
+    coordinates: '''0Kj8nYj4X1E8L7vM3Q2R5T'',$,''Test Site'',$,$,$,$,$,$,$,$,$,$,$,$,$,$'
+  geometry: null
+  location: null
+- id: '#7'
+  entity_type: IfcBuilding
+  name: 0Kj8nYj4X1E8L7vM3Q2R5U
+  description: ',''Test Building'','
+  properties:
+    coordinates: '''0Kj8nYj4X1E8L7vM3Q2R5U'',$,''Test Building'',$,$,$,$,$,$,$,$,$,$,$,$,$,$'
+  geometry: null
+  location:
+    building: Building
+    storey: null
+    space: null
+    zone: null
+parsing_time_ms: 0
+warnings: []
+errors: []

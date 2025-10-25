@@ -46,10 +46,12 @@ regex = "1.10"
 clap = { version = "4.4", features = ["derive"] }
 env_logger = "0.10"
 arxos-core = { path = "crates/arxos-core", default-features = false, features = ["git"] }
-
-[dev-dependencies]
+arxos-mobile = { path = "crates/arxos-mobile" }
 criterion = { workspace = true }
-proptest = { workspace = true }
+
+[[bench]]
+name = "core_benchmarks"
+harness = false
 
 [workspace.package]
 version = "0.1.0"
@@ -102,3 +104,4 @@ uniffi_build = "0.25"
 # Development dependencies
 criterion = "0.5"
 proptest = "1.4"
+serial_test = "3.0"

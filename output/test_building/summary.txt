@@ -1,0 +1,14 @@
+IFC Processing Summary
+=====================
+File: test_building.ifc
+Building: test_building
+Total Entities: 7
+Parsing Time: 0ms
+Warnings: 0
+Errors: 0
+
+Entity Types:
+  IfcBuilding: 1
+  IfcSite: 1
+  IfcProject: 1
+  Other("Unknown"): 4

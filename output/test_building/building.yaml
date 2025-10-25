@@ -1,0 +1,17 @@
+building:
+  id: test_building
+  name: test_building
+  path: test_building.ifc
+  created_at: 2025-10-25T01:42:47.313348Z
+  updated_at: 2025-10-25T01:42:47.313350Z
+  floors: []
+  equipment: []
+floors: []
+metadata:
+  source_file: unknown
+  parser_version: 1.0.0
+  total_entities: 0
+  spatial_entities: 0
+  coordinate_system: building_local
+  units: meters
+  tags: []

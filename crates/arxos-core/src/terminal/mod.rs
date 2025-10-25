@@ -53,9 +53,12 @@ mod terminal_impl {
 
     /// Terminal renderer with layer management
     pub struct TerminalRenderer {
-        config: TerminalConfig,
+        _config: TerminalConfig,
         terminal: Option<Terminal<CrosstermBackend<io::Stdout>>>,
         is_initialized: bool,
+        buffer: Vec<Vec<(char, Color)>>,
+        width: u16,
+        height: u16,
     }
 
     /// Render layer for organizing rendering order
@@ -85,6 +88,7 @@ mod terminal_impl {
     /// Color representation for terminal
     #[derive(Debug, Clone, Copy, PartialEq)]
     pub enum Color {
+        Reset,
         Black,
         Red,
         Green,
@@ -117,9 +121,12 @@ mod terminal_impl {
         /// Creates a new terminal renderer
         pub fn new(config: TerminalConfig) -> Self {
             Self {
-                config,
+                _config: config,
                 terminal: None,
                 is_initialized: false,
+                buffer: Vec::new(),
+                width: 80,
+                height: 24,
             }
         }
 
@@ -131,9 +138,18 @@ mod terminal_impl {
                 EnterAlternateScreen,
                 Hide
             ).map_err(|e| TerminalError::TerminalError(e.to_string()))?;
-            
+
             let backend = CrosstermBackend::new(stdout());
             let terminal = Terminal::new(backend).map_err(|e| TerminalError::TerminalError(e.to_string()))?;
+            
+            // Get terminal size and initialize buffer
+            let size = terminal.size().map_err(|e| TerminalError::TerminalError(e.to_string()))?;
+            self.width = size.width;
+            self.height = size.height;
+            
+            // Initialize buffer with spaces
+            self.buffer = vec![vec![(' ', Color::Reset); self.width as usize]; self.height as usize];
+            
             self.terminal = Some(terminal);
             self.is_initialized = true;
             Ok(())
@@ -175,33 +191,117 @@ mod terminal_impl {
         }
 
         /// Sets a character at the specified position
-        pub fn set_char(&mut self, _x: u16, _y: u16, _character: char, _color: Color) {
-            // This would implement actual character setting
-            // For now, it's a placeholder
+        pub fn set_char(&mut self, x: u16, y: u16, character: char, color: Color) {
+            if x < self.width && y < self.height {
+                self.buffer[y as usize][x as usize] = (character, color);
+            }
         }
 
-        /// Draws a line between two points
-        pub fn draw_line(&mut self, _x1: u16, _y1: u16, _x2: u16, _y2: u16, _character: char, _color: Color) {
-            // This would implement line drawing
-            // For now, it's a placeholder
+        /// Draws a line between two points using Bresenham's line algorithm
+        pub fn draw_line(&mut self, x1: u16, y1: u16, x2: u16, y2: u16, character: char, color: Color) {
+            let dx = (x2 as i32 - x1 as i32).abs();
+            let dy = (y2 as i32 - y1 as i32).abs();
+            let sx = if x1 < x2 { 1 } else { -1 };
+            let sy = if y1 < y2 { 1 } else { -1 };
+            let mut err = dx - dy;
+            
+            let mut x = x1 as i32;
+            let mut y = y1 as i32;
+            
+            loop {
+                if x >= 0 && y >= 0 && x < self.width as i32 && y < self.height as i32 {
+                    self.set_char(x as u16, y as u16, character, color);
+                }
+                
+                if x == x2 as i32 && y == y2 as i32 {
+                    break;
+                }
+                
+                let e2 = 2 * err;
+                if e2 > -dy {
+                    err -= dy;
+                    x += sx;
+                }
+                if e2 < dx {
+                    err += dx;
+                    y += sy;
+                }
+            }
         }
 
-        /// Draws a rectangle
-        pub fn draw_rect(&mut self, _x: u16, _y: u16, _width: u16, _height: u16, _character: char, _color: Color) {
-            // This would implement rectangle drawing
-            // For now, it's a placeholder
+        /// Draws a rectangle outline
+        pub fn draw_rect(&mut self, x: u16, y: u16, width: u16, height: u16, character: char, color: Color) {
+            if x + width > self.width || y + height > self.height {
+                return; // Rectangle is out of bounds
+            }
+            
+            // Draw horizontal lines (top and bottom)
+            for i in x..x + width {
+                self.set_char(i, y, character, color);
+                self.set_char(i, y + height - 1, character, color);
+            }
+            
+            // Draw vertical lines (left and right)
+            for i in y..y + height {
+                self.set_char(x, i, character, color);
+                self.set_char(x + width - 1, i, character, color);
+            }
         }
 
-        /// Fills a rectangle
-        pub fn fill_rect(&mut self, _x: u16, _y: u16, _width: u16, _height: u16, _character: char, _color: Color) {
-            // This would implement rectangle filling
-            // For now, it's a placeholder
+        /// Fills a rectangle with a character
+        pub fn fill_rect(&mut self, x: u16, y: u16, width: u16, height: u16, character: char, color: Color) {
+            if x + width > self.width || y + height > self.height {
+                return; // Rectangle is out of bounds
+            }
+            
+            for row in y..y + height {
+                for col in x..x + width {
+                    self.set_char(col, row, character, color);
+                }
+            }
         }
 
         /// Draws text at the specified position
-        pub fn draw_text(&mut self, _x: u16, _y: u16, _text: &str, _color: Color) {
-            // This would implement text drawing
-            // For now, it's a placeholder
+        pub fn draw_text(&mut self, x: u16, y: u16, text: &str, color: Color) {
+            let mut current_x = x;
+            for ch in text.chars() {
+                if current_x < self.width && y < self.height {
+                    self.set_char(current_x, y, ch, color);
+                    current_x += 1;
+                }
+            }
+        }
+        
+        /// Renders the current buffer to the terminal
+        pub fn render(&mut self) -> Result<(), TerminalError> {
+            if let Some(terminal) = &mut self.terminal {
+                terminal.draw(|f| {
+                    use ratatui::widgets::{Block, Borders, Paragraph};
+                    use ratatui::layout::{Layout, Direction, Constraint};
+                    use ratatui::style::{Style, Color as RatatuiColor};
+                    
+                    let chunks = Layout::default()
+                        .direction(Direction::Vertical)
+                        .constraints([Constraint::Percentage(100)])
+                        .split(f.size());
+                    
+                    // Convert our buffer to a string
+                    let mut buffer_text = String::new();
+                    for row in &self.buffer {
+                        for (ch, _) in row {
+                            buffer_text.push(*ch);
+                        }
+                        buffer_text.push('\n');
+                    }
+                    
+                    let paragraph = Paragraph::new(buffer_text)
+                        .block(Block::default().borders(Borders::ALL).title("ArxOS Terminal"))
+                        .style(Style::default().fg(RatatuiColor::White));
+                    
+                    f.render_widget(paragraph, chunks[0]);
+                }).map_err(|e| TerminalError::TerminalError(e.to_string()))?;
+            }
+            Ok(())
         }
     }
 

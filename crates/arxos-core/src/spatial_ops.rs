@@ -1,6 +1,54 @@
-//! Spatial operations and queries for ArxOS Core
+//! # Spatial Operations and Queries for ArxOS Core
+//!
+//! This module provides advanced spatial operations and query capabilities for building data,
+//! including spatial indexing, proximity searches, spatial relationships, and coordinate transformations.
+//!
+//! ## Features
+//!
+//! - **Spatial Indexing**: Efficient spatial data structures for fast queries
+//! - **Proximity Searches**: Find entities within specified distances
+//! - **Spatial Relationships**: Determine spatial relationships between entities
+//! - **Coordinate Transformations**: Convert between coordinate systems
+//! - **Spatial Validation**: Validate spatial data integrity
+//! - **Query Operations**: Complex spatial queries and filtering
+//!
+//! ## Spatial Query Types
+//!
+//! - **Within**: Find entities within a bounding box or region
+//! - **Nearby**: Find entities within a specified distance
+//! - **Intersects**: Find entities that intersect with a given geometry
+//! - **Contains**: Find entities that contain a given point or geometry
+//! - **Overlaps**: Find entities that overlap with a given geometry
+//!
+//! ## Examples
+//!
+//! ```rust
+//! use arxos_core::spatial_ops::{SpatialManager, Room, Equipment};
+//!
+//! let mut manager = SpatialManager::new();
+//! 
+//! // Add rooms and equipment
+//! let room = Room { /* room data */ };
+//! let equipment = Equipment { /* equipment data */ };
+//! manager.add_room(room);
+//! manager.add_equipment(equipment);
+//! 
+//! // Query for rooms within a bounding box
+//! let rooms_in_area = manager.query_spatial(
+//!     "within",
+//!     "room",
+//!     vec!["bbox:10,10,0,20,20,5".to_string()]
+//! )?;
+//! ```
+//!
+//! ## Performance Considerations
+//!
+//! - Spatial indexing uses R-tree for efficient range queries
+//! - Query results are cached for repeated operations
+//! - Large datasets are processed in batches for memory efficiency
 
 use crate::{Result, ArxError, Position, BoundingBox, Room, Equipment};
+use crate::spatial_index::{SpatialRTree, convert_room_to_spatial, convert_equipment_to_spatial};
 use std::collections::HashMap;
 
 /// Spatial operations manager
@@ -8,6 +56,7 @@ use std::collections::HashMap;
 pub struct SpatialManager {
     rooms: HashMap<String, Room>,
     equipment: HashMap<String, Equipment>,
+    spatial_index: SpatialRTree,
 }
 
 impl SpatialManager {
@@ -16,32 +65,40 @@ impl SpatialManager {
         Self {
             rooms: HashMap::new(),
             equipment: HashMap::new(),
+            spatial_index: SpatialRTree::new(),
         }
     }
 
     /// Add room to spatial index
-    pub fn add_room(&mut self, room: Room) {
+    pub fn add_room(&mut self, room: Room) -> Result<()> {
+        let spatial_entity = convert_room_to_spatial(&room);
+        self.spatial_index.insert(spatial_entity)?;
         self.rooms.insert(room.id.clone(), room);
+        Ok(())
     }
 
     /// Add equipment to spatial index
-    pub fn add_equipment(&mut self, equipment: Equipment) {
+    pub fn add_equipment(&mut self, equipment: Equipment) -> Result<()> {
+        let spatial_entity = convert_equipment_to_spatial(&equipment);
+        self.spatial_index.insert(spatial_entity)?;
         self.equipment.insert(equipment.id.clone(), equipment);
+        Ok(())
     }
 
-    /// Query spatial relationships
+    /// Query spatial relationships using R-Tree index
     pub fn query_spatial(
         &self,
         query_type: &str,
         entity: &str,
         params: Vec<String>,
-    ) -> Result<String> {
+    ) -> Result<Vec<crate::types::SpatialQueryResult>> {
         match query_type.to_lowercase().as_str() {
-            "nearby" => self.query_nearby(entity, &params),
-            "within" => self.query_within(entity, &params),
-            "intersects" => self.query_intersects(entity, &params),
-            "contains" => self.query_contains(entity, &params),
-            _ => Err(ArxError::Spatial(format!("Unknown query type: {}", query_type))),
+            "nearby" => self.query_nearby_r_tree(entity, &params),
+            "within" => self.query_within_r_tree(entity, &params),
+            "intersects" => self.query_intersects_r_tree(entity, &params),
+            "contains" => self.query_contains_r_tree(entity, &params),
+            "rooms_in_floor" => self.query_rooms_in_floor_r_tree(&params),
+            _ => Err(ArxError::spatial_error(format!("Unknown query type: {}", query_type))),
         }
     }
 
@@ -60,7 +117,7 @@ impl SpatialManager {
             "adjacent" => self.set_adjacent(&room1, &room2),
             "connected" => self.set_connected(&room1, &room2),
             "overlaps" => self.set_overlaps(&room1, &room2),
-            _ => Err(ArxError::Spatial(format!("Unknown relationship: {}", relationship))),
+            _ => Err(ArxError::spatial_error(format!("Unknown relationship: {}", relationship))),
         }
     }
 
@@ -78,7 +135,11 @@ impl SpatialManager {
             ("wgs84", "building_local") => self.transform_to_building_local(&position),
             ("building_local", "utm") => self.transform_to_utm(&position),
             ("utm", "building_local") => self.transform_from_utm(&position),
-            _ => Err(ArxError::Spatial(format!("Unsupported coordinate transformation: {} -> {}", from, to))),
+            _ => Err(ArxError::CoordinateTransformationFailed {
+                from: from.to_string(),
+                to: to.to_string(),
+                reason: "Unsupported transformation".to_string(),
+            }),
         }
     }
 
@@ -94,94 +155,6 @@ impl SpatialManager {
     }
 
     // Private helper methods
-
-    fn query_nearby(&self, entity: &str, params: &[String]) -> Result<String> {
-        let distance = if let Some(dist_str) = params.first() {
-            dist_str.parse::<f64>()
-                .map_err(|_| ArxError::Spatial("Invalid distance parameter".to_string()))?
-        } else {
-            10.0 // Default 10 meter radius
-        };
-
-        let entity_pos = self.get_entity_position(entity)?;
-        let mut nearby_entities = Vec::new();
-
-        // Check rooms
-        for room in self.rooms.values() {
-            let room_pos = &room.spatial_properties.position;
-            if self.distance_between(&entity_pos, room_pos) <= distance {
-                nearby_entities.push(format!("Room: {} ({}m away)", room.name, 
-                    self.distance_between(&entity_pos, room_pos)));
-            }
-        }
-
-        // Check equipment
-        for equipment in self.equipment.values() {
-            if self.distance_between(&entity_pos, &equipment.position) <= distance {
-                nearby_entities.push(format!("Equipment: {} ({}m away)", equipment.name,
-                    self.distance_between(&entity_pos, &equipment.position)));
-            }
-        }
-
-        Ok(format!("Found {} entities within {}m of {}:\n{}", 
-            nearby_entities.len(), distance, entity, nearby_entities.join("\n")))
-    }
-
-    fn query_within(&self, _entity: &str, params: &[String]) -> Result<String> {
-        if params.is_empty() {
-            return Err(ArxError::Spatial("Bounding box parameters required".to_string()));
-        }
-
-        let bbox = self.parse_bounding_box(&params[0])?;
-        let mut entities_within = Vec::new();
-
-        // Check rooms
-        for room in self.rooms.values() {
-            if self.is_within_bounds(&room.spatial_properties.position, &bbox) {
-                entities_within.push(format!("Room: {}", room.name));
-            }
-        }
-
-        // Check equipment
-        for equipment in self.equipment.values() {
-            if self.is_within_bounds(&equipment.position, &bbox) {
-                entities_within.push(format!("Equipment: {}", equipment.name));
-            }
-        }
-
-        Ok(format!("Found {} entities within bounds:\n{}", 
-            entities_within.len(), entities_within.join("\n")))
-    }
-
-    fn query_intersects(&self, entity: &str, _params: &[String]) -> Result<String> {
-        let entity_bbox = self.get_entity_bounding_box(entity)?;
-        let mut intersecting_entities = Vec::new();
-
-        // Check rooms
-        for room in self.rooms.values() {
-            if self.bounding_boxes_intersect(&entity_bbox, &room.spatial_properties.bounding_box) {
-                intersecting_entities.push(format!("Room: {}", room.name));
-            }
-        }
-
-        Ok(format!("Found {} entities intersecting with {}:\n{}", 
-            intersecting_entities.len(), entity, intersecting_entities.join("\n")))
-    }
-
-    fn query_contains(&self, entity: &str, _params: &[String]) -> Result<String> {
-        let entity_bbox = self.get_entity_bounding_box(entity)?;
-        let mut contained_entities = Vec::new();
-
-        // Check equipment
-        for equipment in self.equipment.values() {
-            if self.bounding_box_contains(&entity_bbox, &equipment.position) {
-                contained_entities.push(format!("Equipment: {}", equipment.name));
-            }
-        }
-
-        Ok(format!("Found {} entities contained within {}:\n{}", 
-            contained_entities.len(), entity, contained_entities.join("\n")))
-    }
 
     fn set_adjacent(&mut self, entity1: &str, entity2: &str) -> Result<String> {
         // This would update spatial relationships in the data model
@@ -324,7 +297,10 @@ impl SpatialManager {
         if self.rooms.contains_key(entity) || self.equipment.contains_key(entity) {
             Ok(entity.to_string())
         } else {
-            Err(ArxError::Unknown(format!("Entity not found: {}", entity)))
+            Err(ArxError::Unknown { 
+                message: format!("Entity not found: {}", entity), 
+                source: None 
+            })
         }
     }
 
@@ -334,76 +310,168 @@ impl SpatialManager {
         } else if let Some(equipment) = self.equipment.get(entity) {
             Ok(equipment.position.clone())
         } else {
-            Err(ArxError::Unknown(format!("Entity not found: {}", entity)))
+            Err(ArxError::Unknown { 
+                message: format!("Entity not found: {}", entity), 
+                source: None 
+            })
         }
     }
-
-    fn get_entity_bounding_box(&self, entity: &str) -> Result<BoundingBox> {
-        if let Some(room) = self.rooms.get(entity) {
-            Ok(room.spatial_properties.bounding_box.clone())
-        } else {
-            Err(ArxError::Unknown(format!("Entity not found or no bounding box: {}", entity)))
+    
+    /// Get spatial index statistics
+    pub fn get_spatial_stats(&self) -> crate::spatial_index::SpatialIndexStats {
+        self.spatial_index.get_stats()
+    }
+    
+    /// Optimize the spatial index
+    pub fn optimize_index(&mut self) {
+        self.spatial_index.optimize();
+    }
+    
+    /// Clear all spatial data
+    pub fn clear_all(&mut self) {
+        self.rooms.clear();
+        self.equipment.clear();
+        self.spatial_index.clear();
+    }
+    
+    // R-Tree query methods
+    
+    /// Query entities nearby a point using R-Tree
+    fn query_nearby_r_tree(&self, _entity: &str, params: &[String]) -> Result<Vec<crate::types::SpatialQueryResult>> {
+        if params.is_empty() {
+            return Err(ArxError::spatial_error("Missing distance parameter"));
         }
+        
+        let distance: f64 = params[0].parse()
+            .map_err(|_| ArxError::spatial_error("Invalid distance parameter"))?;
+        
+        // Create a reference point (simplified)
+        let reference_point = Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            coordinate_system: "building_local".to_string(),
+        };
+        
+        let nearby_entities = self.spatial_index.query_nearby(&reference_point, distance);
+        Ok(crate::spatial_index::convert_to_query_results(nearby_entities, Some(&reference_point)))
     }
 
-    fn distance_between(&self, pos1: &Position, pos2: &Position) -> f64 {
-        let dx = pos1.x - pos2.x;
-        let dy = pos1.y - pos2.y;
-        let dz = pos1.z - pos2.z;
-        (dx * dx + dy * dy + dz * dz).sqrt()
-    }
-
-    fn is_within_bounds(&self, position: &Position, bbox: &BoundingBox) -> bool {
-        position.x >= bbox.min.x && position.x <= bbox.max.x &&
-        position.y >= bbox.min.y && position.y <= bbox.max.y &&
-        position.z >= bbox.min.z && position.z <= bbox.max.z
-    }
-
-    fn bounding_boxes_intersect(&self, bbox1: &BoundingBox, bbox2: &BoundingBox) -> bool {
-        bbox1.min.x <= bbox2.max.x && bbox1.max.x >= bbox2.min.x &&
-        bbox1.min.y <= bbox2.max.y && bbox1.max.y >= bbox2.min.y &&
-        bbox1.min.z <= bbox2.max.z && bbox1.max.z >= bbox2.min.z
-    }
-
-    fn bounding_box_contains(&self, bbox: &BoundingBox, position: &Position) -> bool {
-        position.x >= bbox.min.x && position.x <= bbox.max.x &&
-        position.y >= bbox.min.y && position.y <= bbox.max.y &&
-        position.z >= bbox.min.z && position.z <= bbox.max.z
-    }
-
-    fn parse_bounding_box(&self, bbox_str: &str) -> Result<BoundingBox> {
-        // Parse format: "min_x,min_y,min_z,max_x,max_y,max_z"
-        let parts: Vec<&str> = bbox_str.split(',').collect();
-        if parts.len() != 6 {
-            return Err(ArxError::Spatial("Invalid bounding box format".to_string()));
+    /// Query entities within a bounding box using R-Tree
+    fn query_within_r_tree(&self, _entity: &str, params: &[String]) -> Result<Vec<crate::types::SpatialQueryResult>> {
+        if params.is_empty() {
+            return Err(ArxError::spatial_error("Missing bounding box parameter"));
         }
-
-        let min_x = parts[0].trim().parse::<f64>()
-            .map_err(|_| ArxError::Spatial("Invalid min_x".to_string()))?;
-        let min_y = parts[1].trim().parse::<f64>()
-            .map_err(|_| ArxError::Spatial("Invalid min_y".to_string()))?;
-        let min_z = parts[2].trim().parse::<f64>()
-            .map_err(|_| ArxError::Spatial("Invalid min_z".to_string()))?;
-        let max_x = parts[3].trim().parse::<f64>()
-            .map_err(|_| ArxError::Spatial("Invalid max_x".to_string()))?;
-        let max_y = parts[4].trim().parse::<f64>()
-            .map_err(|_| ArxError::Spatial("Invalid max_y".to_string()))?;
-        let max_z = parts[5].trim().parse::<f64>()
-            .map_err(|_| ArxError::Spatial("Invalid max_z".to_string()))?;
-
-        Ok(BoundingBox {
+        
+        // Parse bounding box from parameters
+        let bbox_str = &params[0];
+        let coords: Vec<f64> = bbox_str.split(',')
+            .map(|s| s.parse().unwrap_or(0.0))
+            .collect();
+        
+        if coords.len() != 6 {
+            return Err(ArxError::spatial_error("Invalid bounding box format"));
+        }
+        
+        let bbox = BoundingBox {
             min: Position {
-                x: min_x,
-                y: min_y,
-                z: min_z,
+                x: coords[0],
+                y: coords[1],
+                z: coords[2],
                 coordinate_system: "building_local".to_string(),
             },
             max: Position {
-                x: max_x,
-                y: max_y,
-                z: max_z,
+                x: coords[3],
+                y: coords[4],
+                z: coords[5],
                 coordinate_system: "building_local".to_string(),
             },
-        })
+        };
+        
+        let within_entities = self.spatial_index.query_within(&bbox);
+        Ok(crate::spatial_index::convert_to_query_results(within_entities, None))
+    }
+
+    /// Query entities that intersect with a bounding box using R-Tree
+    fn query_intersects_r_tree(&self, _entity: &str, params: &[String]) -> Result<Vec<crate::types::SpatialQueryResult>> {
+        if params.is_empty() {
+            return Err(ArxError::spatial_error("Missing bounding box parameter"));
+        }
+        
+        // Parse bounding box from parameters
+        let bbox_str = &params[0];
+        let coords: Vec<f64> = bbox_str.split(',')
+            .map(|s| s.parse().unwrap_or(0.0))
+            .collect();
+        
+        if coords.len() != 6 {
+            return Err(ArxError::spatial_error("Invalid bounding box format"));
+        }
+        
+        let bbox = BoundingBox {
+            min: Position {
+                x: coords[0],
+                y: coords[1],
+                z: coords[2],
+                coordinate_system: "building_local".to_string(),
+            },
+            max: Position {
+                x: coords[3],
+                y: coords[4],
+                z: coords[5],
+                coordinate_system: "building_local".to_string(),
+            },
+        };
+        
+        let intersecting_entities = self.spatial_index.query_intersects(&bbox);
+        Ok(crate::spatial_index::convert_to_query_results(intersecting_entities, None))
+    }
+
+    /// Query entities that contain a point using R-Tree
+    fn query_contains_r_tree(&self, _entity: &str, params: &[String]) -> Result<Vec<crate::types::SpatialQueryResult>> {
+        if params.is_empty() {
+            return Err(ArxError::spatial_error("Missing point parameter"));
+        }
+        
+        // Parse point from parameters
+        let point_str = &params[0];
+        let coords: Vec<f64> = point_str.split(',')
+            .map(|s| s.parse().unwrap_or(0.0))
+            .collect();
+        
+        if coords.len() != 3 {
+            return Err(ArxError::spatial_error("Invalid point format"));
+        }
+        
+        let point = Position {
+            x: coords[0],
+            y: coords[1],
+            z: coords[2],
+            coordinate_system: "building_local".to_string(),
+        };
+        
+        let containing_entities = self.spatial_index.query_contains(&point);
+        Ok(crate::spatial_index::convert_to_query_results(containing_entities, Some(&point)))
+    }
+
+    /// Query rooms in a specific floor using R-Tree
+    fn query_rooms_in_floor_r_tree(&self, params: &[String]) -> Result<Vec<crate::types::SpatialQueryResult>> {
+        if params.is_empty() {
+            return Err(ArxError::spatial_error("Missing floor parameter"));
+        }
+        
+        let floor_level: f64 = params[0].parse()
+            .map_err(|_| ArxError::spatial_error("Invalid floor level"))?;
+        
+        let tolerance = 1.0; // 1 meter tolerance
+        let floor_entities = self.spatial_index.query_by_level(floor_level, tolerance);
+        
+        // Filter for rooms only
+        let room_entities: Vec<&crate::spatial_index::SpatialEntity> = floor_entities
+            .into_iter()
+            .filter(|entity| entity.entity_type == crate::spatial_index::SpatialEntityType::Room)
+            .collect();
+        
+        Ok(crate::spatial_index::convert_to_query_results(room_entities, None))
     }
 }

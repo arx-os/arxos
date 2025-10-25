@@ -46,7 +46,7 @@ pub struct Room {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum RoomType {
     Classroom,
     Laboratory,
@@ -78,7 +78,7 @@ pub struct Dimensions {
     pub depth: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BoundingBox {
     pub min: Position,
     pub max: Position,
@@ -96,7 +96,7 @@ pub struct Equipment {
     pub room_id: Option<String>, // Reference to parent room
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum EquipmentType {
     HVAC,
     Electrical,
@@ -117,7 +117,7 @@ pub enum EquipmentStatus {
     Unknown,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Position {
     pub x: f64,
     pub y: f64,
@@ -339,6 +339,44 @@ impl Equipment {
     /// Add a property to the equipment
     pub fn add_property(&mut self, key: String, value: String) {
         self.properties.insert(key, value);
+    }
+}
+
+/// Building data container
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BuildingData {
+    pub building: Building,
+    pub floors: Vec<Floor>,
+    pub metadata: BuildingMetadata,
+}
+
+/// Building metadata
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BuildingMetadata {
+    pub source_file: String,
+    pub parser_version: String,
+    pub total_entities: usize,
+    pub spatial_entities: usize,
+    pub coordinate_system: String,
+    pub units: String,
+    pub tags: Vec<String>,
+}
+
+impl BuildingData {
+    pub fn new(building: Building) -> Self {
+        Self {
+            floors: building.floors.clone(),
+            metadata: BuildingMetadata {
+                source_file: "unknown".to_string(),
+                parser_version: "1.0.0".to_string(),
+                total_entities: 0,
+                spatial_entities: 0,
+                coordinate_system: "building_local".to_string(),
+                units: "meters".to_string(),
+                tags: vec![],
+            },
+            building,
+        }
     }
 }
 

@@ -197,3 +197,107 @@ mod tests {
         assert_eq!(entity.position, Point3D::new(10.0, 20.0, 30.0));
     }
 }
+
+/// Result types for ArxOS operations
+
+/// IFC processing result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IfcProcessingResult {
+    pub total_entities: usize,
+    pub building_name: String,
+    pub output_directory: String,
+    pub processing_time_ms: u64,
+    pub warnings: Vec<String>,
+}
+
+/// Export result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExportResult {
+    pub files_exported: usize,
+    pub repository_path: String,
+    pub export_time_ms: u64,
+    pub commit_hash: String,
+}
+
+/// Render result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RenderResult {
+    pub floors_rendered: usize,
+    pub output_path: String,
+    pub render_time_ms: u64,
+    pub entities_rendered: usize,
+}
+
+/// Interactive renderer result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InteractiveResult {
+    pub frames_rendered: usize,
+    pub session_duration_ms: u64,
+    pub user_interactions: usize,
+    pub average_fps: f64,
+}
+
+/// Configuration structure
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Configuration {
+    pub config_file_path: String,
+    pub user_name: String,
+    pub user_email: String,
+    pub building_name: String,
+    pub coordinate_system: String,
+    pub auto_commit: bool,
+    pub max_parallel_threads: usize,
+    pub memory_limit_mb: usize,
+}
+
+/// Spatial query result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpatialQueryResult {
+    pub entity_type: String,
+    pub entity_name: String,
+    pub distance: f64,
+    pub position: Point3D,
+}
+
+/// Spatial relationship
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpatialRelationship {
+    pub distance: f64,
+    pub angle: f64,
+    pub relationship_type: SpatialRelationshipType,
+}
+
+/// Spatial relationship types
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum SpatialRelationshipType {
+    Adjacent,
+    Overlapping,
+    Contained,
+    Intersecting,
+    Disjoint,
+}
+
+/// Transformation result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransformationResult {
+    pub new_position: Point3D,
+    pub new_orientation: Point3D,
+}
+
+/// Spatial validation result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpatialValidation {
+    pub total_entities: usize,
+    pub valid_entities: usize,
+    pub invalid_entities: usize,
+    pub errors: Vec<String>,
+}
+
+/// Monitoring result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MonitoringResult {
+    pub total_updates: usize,
+    pub session_duration_ms: u64,
+    pub alerts_generated: usize,
+    pub data_points_collected: usize,
+}

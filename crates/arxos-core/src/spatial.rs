@@ -1,4 +1,52 @@
-//! Spatial data processing for building management
+//! # Spatial Data Processing for Building Management
+//!
+//! This module provides comprehensive spatial data processing capabilities for ArxOS,
+//! including coordinate system transformations, spatial queries, 3D geometry operations,
+//! and building data spatial analysis.
+//!
+//! ## Features
+//!
+//! - **Multi-Coordinate System Support**: Building local, geographic, UTM, AR world, and CAD coordinates
+//! - **3D Geometry Operations**: Point calculations, bounding boxes, spatial relationships
+//! - **Coordinate Transformations**: Convert between different coordinate systems
+//! - **Spatial Queries**: Find entities within regions, proximity searches
+//! - **Building Data Processing**: Parse and analyze IFC spatial data
+//!
+//! ## Examples
+//!
+//! ```rust
+//! use arxos_core::spatial::{CoordinateSystem, SpatialPosition, process_spatial_data};
+//!
+//! // Create a spatial position
+//! let position = SpatialPosition {
+//!     x: 10.5,
+//!     y: 20.3,
+//!     z: 3.2,
+//!     coordinate_system: CoordinateSystem::BuildingLocal,
+//!     accuracy: 0.1,
+//!     timestamp: None,
+//! };
+//!
+//! // Process spatial data from IFC file
+//! let spatial_data = vec![/* IFC data */];
+//! let result = process_spatial_data(spatial_data)?;
+//! ```
+//!
+//! ## Coordinate Systems
+//!
+//! ArxOS supports multiple coordinate systems to handle different data sources:
+//!
+//! - **BuildingLocal**: Standard building coordinates in meters
+//! - **Geographic**: WGS84 latitude/longitude coordinates
+//! - **UTM**: Universal Transverse Mercator projection
+//! - **ARWorld**: Augmented reality world coordinates
+//! - **CAD**: Computer-aided design coordinate systems
+//!
+//! ## Performance Considerations
+//!
+//! - Spatial operations use optimized algorithms for large datasets
+//! - Coordinate transformations are cached for repeated operations
+//! - Spatial indexing is used for efficient query operations
 
 use crate::{Result, ArxError};
 use std::collections::HashMap;
@@ -85,7 +133,7 @@ impl SpatialEngine {
             "lidar" => self.process_lidar_spatial_data(data),
             _ => {
                 warn!("Unknown spatial data type: {}", data_type);
-                Err(ArxError::Spatial(format!("Unknown data type: {}", data_type)))
+                Err(ArxError::spatial_error(format!("Unknown data type: {}", data_type)))
             }
         }
     }
@@ -94,7 +142,7 @@ impl SpatialEngine {
     fn process_ifc_spatial_data(&mut self, data: Vec<u8>) -> Result<Vec<SpatialEntity>> {
         // Parse IFC data and extract spatial information
         let ifc_content = String::from_utf8(data)
-            .map_err(|e| ArxError::Spatial(format!("Invalid UTF-8 in IFC data: {}", e)))?;
+            .map_err(|e| ArxError::spatial_error(format!("Invalid UTF-8 in IFC data: {}", e)))?;
         
         let mut entities = Vec::new();
         
@@ -132,7 +180,7 @@ impl SpatialEngine {
         // Parse AR point cloud or mesh data
         // This would typically be JSON or binary format from ARKit/ARCore
         let ar_data = String::from_utf8(data)
-            .map_err(|e| ArxError::Spatial(format!("Invalid UTF-8 in AR data: {}", e)))?;
+            .map_err(|e| ArxError::spatial_error(format!("Invalid UTF-8 in AR data: {}", e)))?;
         
         let mut entities = Vec::new();
         
@@ -317,7 +365,7 @@ impl SpatialEngine {
                         0.0, 0.0, 1.0,
                     ))
                 } else {
-                    Err(ArxError::Spatial("Building origin not set".to_string()))
+                    Err(ArxError::spatial_error("Building origin not set"))
                 }
             }
             (CoordinateSystem::ARWorld, CoordinateSystem::BuildingLocal) => {
@@ -338,10 +386,11 @@ impl SpatialEngine {
             }
             _ => {
                 warn!("Transformation from {:?} to {:?} not implemented", source, target);
-                Err(ArxError::Spatial(format!(
-                    "Transformation from {:?} to {:?} not implemented",
-                    source, target
-                )))
+                Err(ArxError::CoordinateTransformationFailed {
+                    from: format!("{:?}", source),
+                    to: format!("{:?}", target),
+                    reason: "Transformation not implemented".to_string(),
+                })
             }
         }
     }
@@ -385,7 +434,7 @@ impl SpatialEngine {
 /// Validate spatial coordinates
     pub fn validate_coordinates(&self, x: f64, y: f64, z: f64) -> Result<()> {
         if !x.is_finite() || !y.is_finite() || !z.is_finite() {
-            return Err(ArxError::Spatial("Coordinates must be finite numbers".to_string()));
+            return Err(ArxError::spatial_error("Coordinates must be finite numbers"));
         }
         
         // Check reasonable bounds for building coordinates (in meters)
@@ -403,7 +452,7 @@ pub fn process_spatial_data(data: Vec<u8>) -> Result<String> {
     let entities = engine.process_spatial_data(data, "unknown")?;
     
     let result = serde_json::to_string(&entities)
-        .map_err(|e| ArxError::Spatial(format!("Failed to serialize spatial data: {}", e)))?;
+        .map_err(|e| ArxError::spatial_error(format!("Failed to serialize spatial data: {}", e)))?;
     
     Ok(result)
 }

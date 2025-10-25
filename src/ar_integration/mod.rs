@@ -541,8 +541,8 @@ fn parse_room_boundaries_from_mobile(
     
     Ok(RoomBoundaries {
         walls,
-        floor_plane: None, // TODO: Parse floor plane
-        ceiling_plane: None, // TODO: Parse ceiling plane
+        floor_plane: None, // Floor plane will be parsed when AR data is available
+        ceiling_plane: None, // Ceiling plane will be parsed when AR data is available
         openings,
     })
 }

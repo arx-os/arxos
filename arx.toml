@@ -1,29 +1,12 @@
 [user]
-name = "ArxOS User"
-email = "user@arxos.com"
-commit_template = "feat: {operation} {building_name}"
-
-[paths]
-default_import_path = "./buildings"
-backup_path = "./backups"
-template_path = "./templates"
-temp_path = "./temp"
+name = "Default User"
+email = "user@example.com"
 
 [building]
-default_coordinate_system = "WGS84"
-auto_commit = true
-naming_pattern = "{building_name}-{timestamp}"
-validate_on_import = true
+name = "Default Building"
+coordinate_system = "building_local"
 
 [performance]
-max_parallel_threads = 10
+auto_commit = true
+max_parallel_threads = 4
 memory_limit_mb = 1024
-cache_enabled = true
-cache_path = "./cache"
-show_progress = true
-
-[ui]
-use_emoji = true
-verbosity = "Normal"
-color_scheme = "Auto"
-detailed_help = false

@@ -45,7 +45,7 @@ This iOS app follows the **Rust Core + Native UI Shell** architecture:
 
 1. **Open in Xcode**:
    ```bash
-   open mobile-ios/ArxOSMobile.xcodeproj
+   open ios/ArxOSMobile.xcodeproj
    ```
 
 2. **Build Rust Core** (if not already built):
@@ -62,7 +62,7 @@ This iOS app follows the **Rust Core + Native UI Shell** architecture:
 ## Project Structure
 
 ```
-mobile-ios/
+ios/
 ├── ArxOSMobile.xcodeproj/          # Xcode project
 ├── ArxOSMobile/                    # Main app source
 │   ├── ArxOSMobileApp.swift       # App entry point

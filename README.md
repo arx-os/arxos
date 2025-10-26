@@ -12,9 +12,8 @@ arxos/
 │   ├── arxos-core/              # Core business logic
 │   ├── arxos-mobile/             # Mobile FFI wrapper
 │   └── arxos-cli/                # CLI application
-├── mobile-ios/                  # iOS Native Shell
-├── mobile-android/              # Android Native Shell
-├── shared/                      # Shared types/utilities
+├── ios/                         # iOS Native Shell
+├── android/                     # Android Native Shell
 └── docs/                        # Documentation
 ```
 
@@ -65,13 +64,13 @@ cargo run --bin arxos-cli -- equipment add --name "VAV-301" --equipment-type HVA
 
 ### **iOS Development:**
 ```bash
-cd mobile-ios
+cd ios
 # iOS project setup will be added here
 ```
 
 ### **Android Development:**
 ```bash
-cd mobile-android
+cd android
 # Android project setup will be added here
 ```
 

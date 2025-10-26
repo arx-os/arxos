@@ -45,7 +45,7 @@ This Android app follows the **Rust Core + Native UI Shell** architecture:
 
 1. **Open in Android Studio**:
    ```bash
-   # Open the mobile-android directory in Android Studio
+   # Open the android directory in Android Studio
    ```
 
 2. **Build Rust Core** (if not already built):
@@ -62,7 +62,7 @@ This Android app follows the **Rust Core + Native UI Shell** architecture:
 ## Project Structure
 
 ```
-mobile-android/
+android/
 ├── app/
 │   ├── src/main/
 │   │   ├── java/com/arxos/mobile/

@@ -141,7 +141,7 @@ pub struct CommandResult {
 
 2. **Generate Swift bindings**:
    ```bash
-   uniffi-bindgen generate src/arxos_mobile.udl --language swift --out-dir mobile-ios/
+   uniffi-bindgen generate src/arxos_mobile.udl --language swift --out-dir ios/
    ```
 
 3. **Add to Xcode project**:
@@ -158,7 +158,7 @@ pub struct CommandResult {
 
 2. **Generate Kotlin bindings**:
    ```bash
-   uniffi-bindgen generate src/arxos_mobile.udl --language kotlin --out-dir mobile-android/
+   uniffi-bindgen generate src/arxos_mobile.udl --language kotlin --out-dir android/
    ```
 
 3. **Add to Android project**:

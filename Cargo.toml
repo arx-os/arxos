@@ -1,11 +1,3 @@
-[workspace]
-members = [
-    ".",
-    "crates/arxos-core",
-    "crates/arxos-mobile"
-]
-resolver = "2"
-
 [package]
 name = "arxos"
 version.workspace = true
@@ -45,8 +37,6 @@ log = "0.4"
 regex = "1.10"
 clap = { version = "4.4", features = ["derive"] }
 env_logger = "0.10"
-arxos-core = { path = "crates/arxos-core", default-features = false, features = ["git"] }
-arxos-mobile = { path = "crates/arxos-mobile" }
 criterion = { workspace = true }
 
 [[bench]]

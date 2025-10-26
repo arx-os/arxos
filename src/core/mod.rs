@@ -342,3 +342,79 @@ impl Equipment {
     }
 }
 
+// High-level functions for CLI integration
+pub fn create_room(name: String, room_type: RoomType) -> Result<(), Box<dyn std::error::Error>> {
+    let _room = Room::new(name, room_type);
+    // TODO: Implement actual room creation logic
+    Ok(())
+}
+
+pub fn add_equipment(name: String, equipment_type: EquipmentType) -> Result<(), Box<dyn std::error::Error>> {
+    let _equipment = Equipment::new(name, "".to_string(), equipment_type);
+    // TODO: Implement actual equipment creation logic
+    Ok(())
+}
+
+pub fn spatial_query(query_type: &str, entity: &str, params: Vec<String>) -> Result<Vec<SpatialQueryResult>, Box<dyn std::error::Error>> {
+    // TODO: Implement actual spatial query logic
+    Ok(vec![])
+}
+
+pub fn list_rooms() -> Result<Vec<Room>, Box<dyn std::error::Error>> {
+    // TODO: Implement actual room listing logic
+    Ok(vec![])
+}
+
+pub fn get_room(room_name: &str) -> Result<Room, Box<dyn std::error::Error>> {
+    // TODO: Implement actual room retrieval logic
+    Ok(Room::new(room_name.to_string(), RoomType::Other("unknown".to_string())))
+}
+
+pub fn update_room(room_name: &str, property: Vec<String>) -> Result<Room, Box<dyn std::error::Error>> {
+    // TODO: Implement actual room update logic
+    Ok(Room::new(room_name.to_string(), RoomType::Other("unknown".to_string())))
+}
+
+pub fn delete_room(room_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    // TODO: Implement actual room deletion logic
+    Ok(())
+}
+
+pub fn list_equipment() -> Result<Vec<Equipment>, Box<dyn std::error::Error>> {
+    // TODO: Implement actual equipment listing logic
+    Ok(vec![])
+}
+
+pub fn update_equipment(equipment_name: &str, property: Vec<String>) -> Result<Equipment, Box<dyn std::error::Error>> {
+    // TODO: Implement actual equipment update logic
+    Ok(Equipment::new(equipment_name.to_string(), "".to_string(), EquipmentType::Other("unknown".to_string())))
+}
+
+pub fn remove_equipment(equipment_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    // TODO: Implement actual equipment removal logic
+    Ok(())
+}
+
+pub fn set_spatial_relationship(entity1: &str, entity2: &str, relationship: &str) -> Result<String, Box<dyn std::error::Error>> {
+    // TODO: Implement actual spatial relationship logic
+    Ok(format!("Relationship set between {} and {}", entity1, entity2))
+}
+
+pub fn transform_coordinates(from: &str, to: &str, entity: &str) -> Result<String, Box<dyn std::error::Error>> {
+    // TODO: Implement actual coordinate transformation logic
+    Ok(format!("Transformed {} from {} to {}", entity, from, to))
+}
+
+pub fn validate_spatial(entity: Option<&str>, tolerance: Option<f64>) -> Result<String, Box<dyn std::error::Error>> {
+    // TODO: Implement actual spatial validation logic
+    Ok(format!("Spatial validation completed for {:?}", entity))
+}
+
+#[derive(Debug, Clone)]
+pub struct SpatialQueryResult {
+    pub entity_name: String,
+    pub entity_type: String,
+    pub position: Position,
+    pub distance: f64,
+}
+

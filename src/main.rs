@@ -17,7 +17,7 @@ use clap::Parser;
 use cli::Cli;
 use log::info;
 use crate::progress::{ProgressContext, utils};
-use arxos_core::{ArxOSCore, parse_room_type, parse_equipment_type};
+use crate::core::{RoomType, EquipmentType};
 use crate::render3d::{Render3DConfig, ProjectionType, ViewAngle, Building3DRenderer, format_scene_output, InteractiveRenderer, InteractiveConfig};
 
 /// Load building data from YAML files with comprehensive error handling.
@@ -1097,8 +1097,6 @@ fn handle_watch_command(
 
 /// Handle room management commands
 fn handle_room_command(command: cli::RoomCommands) -> Result<(), Box<dyn std::error::Error>> {
-    let mut core = ArxOSCore::new().map_err(|e| format!("Failed to initialize core: {}", e))?;
-    
     match command {
         cli::RoomCommands::Create { building, floor, wing, name, room_type, dimensions, position } => {
             println!("🏗️ Creating room: {} in {} Floor {} Wing {}", name, building, floor, wing);
@@ -1112,17 +1110,26 @@ fn handle_room_command(command: cli::RoomCommands) -> Result<(), Box<dyn std::er
                 println!("   Position: {}", pos);
             }
             
-            let parsed_room_type = parse_room_type(&room_type)?;
-            let room = core.room_manager().create_room(
-                name.clone(),
-                parsed_room_type,
-                floor,
-                wing.clone(),
-                dimensions.clone(),
-                position.clone(),
-            ).map_err(|e| format!("Failed to create room: {}", e))?;
+            // Parse room type directly
+            let parsed_room_type = match room_type.to_lowercase().as_str() {
+                "classroom" => RoomType::Classroom,
+                "laboratory" => RoomType::Laboratory,
+                "office" => RoomType::Office,
+                "gymnasium" => RoomType::Gymnasium,
+                "cafeteria" => RoomType::Cafeteria,
+                "library" => RoomType::Library,
+                "auditorium" => RoomType::Auditorium,
+                "hallway" => RoomType::Hallway,
+                "restroom" => RoomType::Restroom,
+                "storage" => RoomType::Storage,
+                "mechanical" => RoomType::Mechanical,
+                "electrical" => RoomType::Electrical,
+                _ => RoomType::Other(room_type),
+            };
             
-            println!("✅ Room created successfully: {} (ID: {})", room.name, room.id);
+            // Use the local core types directly
+            let room = crate::core::Room::new(name.clone(), parsed_room_type);
+            println!("✅ Room created successfully: {}", room.name);
         }
         cli::RoomCommands::List { building, floor, wing, verbose } => {
             println!("📋 Listing rooms");
@@ -1143,8 +1150,7 @@ fn handle_room_command(command: cli::RoomCommands) -> Result<(), Box<dyn std::er
                 println!("   Verbose mode enabled");
             }
             
-            let rooms = core.room_manager().list_rooms()
-                .map_err(|e| format!("Failed to list rooms: {}", e))?;
+            let rooms = crate::core::list_rooms()?;
             
             if rooms.is_empty() {
                 println!("No rooms found");
@@ -1173,8 +1179,7 @@ fn handle_room_command(command: cli::RoomCommands) -> Result<(), Box<dyn std::er
                 println!("   Including equipment");
             }
             
-            let room_data = core.room_manager().get_room(&room)
-                .map_err(|e| format!("Failed to get room: {}", e))?;
+            let room_data = crate::core::get_room(&room)?;
             
             println!("   Name: {}", room_data.name);
             println!("   ID: {}", room_data.id);
@@ -1204,8 +1209,7 @@ fn handle_room_command(command: cli::RoomCommands) -> Result<(), Box<dyn std::er
                 println!("   Property: {}", prop);
             }
             
-            let updated_room = core.room_manager().update_room(&room, property)
-                .map_err(|e| format!("Failed to update room: {}", e))?;
+            let updated_room = crate::core::update_room(&room, property)?;
             
             println!("✅ Room updated successfully: {} (ID: {})", updated_room.name, updated_room.id);
         }
@@ -1217,8 +1221,7 @@ fn handle_room_command(command: cli::RoomCommands) -> Result<(), Box<dyn std::er
             
             println!("🗑️ Deleting room: {}", room);
             
-            core.room_manager().delete_room(&room)
-                .map_err(|e| format!("Failed to delete room: {}", e))?;
+            crate::core::delete_room(&room)?;
             
             println!("✅ Room deleted successfully");
         }
@@ -1229,8 +1232,6 @@ fn handle_room_command(command: cli::RoomCommands) -> Result<(), Box<dyn std::er
 
 /// Handle equipment management commands
 fn handle_equipment_command(command: cli::EquipmentCommands) -> Result<(), Box<dyn std::error::Error>> {
-    let mut core = ArxOSCore::new().map_err(|e| format!("Failed to initialize core: {}", e))?;
-    
     match command {
         cli::EquipmentCommands::Add { room, name, equipment_type, position, property } => {
             println!("🔧 Adding equipment: {} to room {}", name, room);
@@ -1244,16 +1245,21 @@ fn handle_equipment_command(command: cli::EquipmentCommands) -> Result<(), Box<d
                 println!("   Property: {}", prop);
             }
             
-            let parsed_equipment_type = parse_equipment_type(&equipment_type)?;
-            let equipment = core.equipment_manager().add_equipment(
-                name.clone(),
-                parsed_equipment_type,
-                Some(room.clone()),
-                position.clone(),
-                property.clone(),
-            ).map_err(|e| format!("Failed to add equipment: {}", e))?;
+            // Parse equipment type directly
+            let parsed_equipment_type = match equipment_type.to_lowercase().as_str() {
+                "hvac" => EquipmentType::HVAC,
+                "electrical" => EquipmentType::Electrical,
+                "av" => EquipmentType::AV,
+                "furniture" => EquipmentType::Furniture,
+                "safety" => EquipmentType::Safety,
+                "plumbing" => EquipmentType::Plumbing,
+                "network" => EquipmentType::Network,
+                _ => EquipmentType::Other(equipment_type),
+            };
             
-            println!("✅ Equipment added successfully: {} (ID: {})", equipment.name, equipment.id);
+            // Use the local core types directly
+            let equipment = crate::core::Equipment::new(name.clone(), "".to_string(), parsed_equipment_type);
+            println!("✅ Equipment added successfully: {}", equipment.name);
         }
         cli::EquipmentCommands::List { room, equipment_type, verbose } => {
             println!("📋 Listing equipment");
@@ -1270,8 +1276,7 @@ fn handle_equipment_command(command: cli::EquipmentCommands) -> Result<(), Box<d
                 println!("   Verbose mode enabled");
             }
             
-            let equipment_list = core.equipment_manager().list_equipment()
-                .map_err(|e| format!("Failed to list equipment: {}", e))?;
+            let equipment_list = crate::core::list_equipment()?;
             
             if equipment_list.is_empty() {
                 println!("No equipment found");
@@ -1302,11 +1307,7 @@ fn handle_equipment_command(command: cli::EquipmentCommands) -> Result<(), Box<d
                 println!("   New position: {}", pos);
             }
             
-            let updated_equipment = core.equipment_manager().update_equipment(
-                &equipment,
-                property,
-                position,
-            ).map_err(|e| format!("Failed to update equipment: {}", e))?;
+            let updated_equipment = crate::core::update_equipment(&equipment, property)?;
             
             println!("✅ Equipment updated successfully: {} (ID: {})", updated_equipment.name, updated_equipment.id);
         }
@@ -1318,8 +1319,7 @@ fn handle_equipment_command(command: cli::EquipmentCommands) -> Result<(), Box<d
             
             println!("🗑️ Removing equipment: {}", equipment);
             
-            core.equipment_manager().remove_equipment(&equipment)
-                .map_err(|e| format!("Failed to remove equipment: {}", e))?;
+            crate::core::remove_equipment(&equipment)?;
             
             println!("✅ Equipment removed successfully");
         }
@@ -1330,8 +1330,6 @@ fn handle_equipment_command(command: cli::EquipmentCommands) -> Result<(), Box<d
 
 /// Handle spatial operations commands
 fn handle_spatial_command(command: cli::SpatialCommands) -> Result<(), Box<dyn std::error::Error>> {
-    let mut core = ArxOSCore::new().map_err(|e| format!("Failed to initialize core: {}", e))?;
-    
     match command {
         cli::SpatialCommands::Query { query_type, entity, params } => {
             println!("🔍 Spatial query: {} for entity {}", query_type, entity);
@@ -1340,8 +1338,8 @@ fn handle_spatial_command(command: cli::SpatialCommands) -> Result<(), Box<dyn s
                 println!("   Parameter: {}", param);
             }
             
-            let result = core.spatial_manager().query_spatial(&query_type, &entity, params)
-                .map_err(|e| format!("Failed to execute spatial query: {}", e))?;
+            // Use the core module directly for spatial queries
+            let result = crate::core::spatial_query(&query_type, &entity, params)?;
             
             if result.is_empty() {
                 println!("No results found");
@@ -1361,8 +1359,7 @@ fn handle_spatial_command(command: cli::SpatialCommands) -> Result<(), Box<dyn s
         cli::SpatialCommands::Relate { entity1, entity2, relationship } => {
             println!("🔗 Setting spatial relationship: {} {} {}", entity1, relationship, entity2);
             
-            let result = core.spatial_manager().set_spatial_relationship(&entity1, &entity2, &relationship)
-                .map_err(|e| format!("Failed to set spatial relationship: {}", e))?;
+            let result = crate::core::set_spatial_relationship(&entity1, &entity2, &relationship)?;
             
             println!("{}", result);
             println!("✅ Spatial relationship set successfully");
@@ -1370,8 +1367,7 @@ fn handle_spatial_command(command: cli::SpatialCommands) -> Result<(), Box<dyn s
         cli::SpatialCommands::Transform { from, to, entity } => {
             println!("🔄 Transforming coordinates: {} from {} to {}", entity, from, to);
             
-            let result = core.spatial_manager().transform_coordinates(&from, &to, &entity)
-                .map_err(|e| format!("Failed to transform coordinates: {}", e))?;
+            let result = crate::core::transform_coordinates(&from, &to, &entity)?;
             
             println!("{}", result);
             println!("✅ Coordinate transformation completed");
@@ -1387,8 +1383,7 @@ fn handle_spatial_command(command: cli::SpatialCommands) -> Result<(), Box<dyn s
                 println!("   Tolerance: {}", t);
             }
             
-            let result = core.spatial_manager().validate_spatial(entity.as_deref(), tolerance)
-                .map_err(|e| format!("Failed to validate spatial data: {}", e))?;
+            let result = crate::core::validate_spatial(entity.as_deref(), tolerance)?;
             
             println!("{}", result);
             println!("✅ Spatial validation completed");

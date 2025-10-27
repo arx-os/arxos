@@ -18,6 +18,7 @@ pub struct ParticleSystem {
     /// Performance statistics
     stats: ParticleSystemStats,
     /// Last update time
+    #[allow(dead_code)] // Will be used in future animation features
     last_update: Instant,
 }
 

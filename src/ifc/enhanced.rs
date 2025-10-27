@@ -574,6 +574,7 @@ impl EnhancedIFCParser {
     }
     
     /// Check if entity type represents a building storey (floor)
+    #[allow(dead_code)] // Reserved for future use
     fn is_storey_entity(&self, entity_type: &str) -> bool {
         matches!(entity_type.to_uppercase().as_str(),
             "IFCBUILDINGSTOREY" | "IFCBUILDINGFLOOR" | "IFCLEVEL"
@@ -581,6 +582,7 @@ impl EnhancedIFCParser {
     }
     
     /// Check if entity type represents equipment (non-structural)
+    #[allow(dead_code)] // Reserved for future use
     fn is_equipment_entity(&self, entity_type: &str) -> bool {
         matches!(entity_type.to_uppercase().as_str(),
             "IFCFLOWTERMINAL" | "IFCAIRTERMINAL" | "IFCLIGHTFIXTURE" |

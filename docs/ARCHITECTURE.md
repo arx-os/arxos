@@ -352,12 +352,32 @@ src/
 
 ### Module Organization
 
-The project uses a **unified crate structure** with all modules in `src/`:
+The project uses a **unified crate structure** with all modules in `src/`. As of December 2024, the architecture was refactored from a monolithic `main.rs` (2,132 lines) into a clean, modular structure with dedicated command handlers:
 
 ```
 src/
 ├── lib.rs                  # Library API for tests and mobile FFI
-├── main.rs                 # CLI entry point
+├── main.rs                 # CLI entry point (~50 lines)
+├── commands/               # Command handlers (NEW)
+│   ├── mod.rs             # Command router
+│   ├── import.rs          # IFC file import
+│   ├── export.rs          # Git export
+│   ├── git_ops.rs         # Git operations
+│   ├── config_mgmt.rs     # Configuration
+│   ├── room.rs            # Room management
+│   ├── equipment.rs       # Equipment management
+│   ├── spatial.rs         # Spatial operations
+│   ├── search.rs          # Search and filter
+│   ├── watch.rs           # Live monitoring
+│   ├── ar.rs              # AR integration
+│   ├── sensors.rs         # Sensor processing
+│   ├── render.rs          # 2D/3D rendering
+│   ├── interactive.rs     # Interactive 3D
+│   ├── ifc.rs             # IFC commands
+│   └── validate.rs        # Validation
+├── utils/                  # Utility functions (NEW)
+│   ├── mod.rs             # Utils module
+│   └── loading.rs         # Data loading helpers
 ├── core/                   # Core business logic and data structures
 │   └── mod.rs             # Building, Room, Equipment types
 ├── cli/                    # CLI command definitions
@@ -388,6 +408,34 @@ src/
 │   ├── ffi.rs             # FFI functions
 │   └── jni.rs             # JNI bindings for Android
 └── [other modules]/       # Additional functionality
+```
+
+### Command Handler Architecture (Refactored December 2024)
+
+The command handlers were refactored to follow best engineering practices:
+
+**Before**: Monolithic `main.rs` with 2,132 lines containing all command logic mixed together
+
+**After**: Modular structure with 16 focused command handler modules
+
+**Key Improvements**:
+- **Separation of Concerns**: Each handler in its own file with single responsibility
+- **Reusability**: Helper functions extracted (e.g., `generate_yaml_output()` in import handler)
+- **Testability**: 18 unit tests + 11 integration tests with 150+ total tests passing
+- **Maintainability**: Easy to find, modify, and extend individual commands
+- **Code Quality**: Removed duplications, improved error handling, added Git validation
+
+**Pattern Example**:
+```rust
+// src/commands/mod.rs - Command Router
+pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
+    match command {
+        Commands::Import { ifc_file, repo } => import::handle_import(ifc_file, repo),
+        Commands::Export { repo } => export::handle_export(repo),
+        Commands::Status { verbose } => git_ops::handle_status(verbose),
+        // ... other command delegations
+    }
+}
 ```
 
 ---

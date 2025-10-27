@@ -57,6 +57,7 @@ pub enum DetectionMethod {
 /// Pending equipment manager
 pub struct PendingEquipmentManager {
     pending_items: Vec<PendingEquipment>,
+    #[allow(dead_code)] // Reserved for future filtering features
     building_name: String,
 }
 

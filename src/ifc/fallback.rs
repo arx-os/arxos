@@ -234,6 +234,7 @@ impl FallbackIFCParser {
     }
     
     /// Check if entity is a building storey (floor)
+    #[allow(dead_code)] // Reserved for future use
     fn is_storey_entity(&self, entity_type: &str) -> bool {
         matches!(entity_type, "IFCBUILDINGSTOREY" | "IFCBUILDINGFLOOR")
     }

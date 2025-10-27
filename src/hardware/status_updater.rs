@@ -27,6 +27,7 @@ pub struct EquipmentStatusUpdater {
 struct SensorEquipmentMapping {
     sensor_id: String,
     equipment_id: String,
+    #[allow(dead_code)] // Reserved for future type-specific processing
     sensor_type: String,
     thresholds: HashMap<String, ThresholdConfig>,
 }

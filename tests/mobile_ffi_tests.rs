@@ -5,14 +5,15 @@ use std::ffi::{CString, CStr};
 use std::os::raw::c_char;
 
 /// Helper to convert Rust string to C string
+/// Returns a pointer that can be passed to FFI functions expecting *const c_char
 fn to_c_string(s: &str) -> *const c_char {
-    CString::new(s).unwrap().into_raw()
+    CString::new(s).unwrap().into_raw() as *const c_char
 }
 
-/// Helper to free C string
-unsafe fn free_c_string(ptr: *mut c_char) {
+/// Helper to free C string (can handle both const and mut pointers)
+unsafe fn free_c_string(ptr: *const c_char) {
     if !ptr.is_null() {
-        let _ = CString::from_raw(ptr);
+        let _ = CString::from_raw(ptr as *mut c_char);
     }
 }
 
@@ -164,8 +165,10 @@ mod tests {
     
     #[test]
     fn test_arxos_last_error_message() {
-        let msg = ffi::arxos_last_error_message();
-        assert!(!msg.is_null());
-        ffi::arxos_free_string(msg);
+        unsafe {
+            let msg = ffi::arxos_last_error_message();
+            assert!(!msg.is_null());
+            ffi::arxos_free_string(msg);
+        }
     }
 }

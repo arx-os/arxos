@@ -15,6 +15,7 @@ pub struct AnimationSystem {
     /// System statistics
     stats: AnimationStats,
     /// Last update time
+    #[allow(dead_code)] // Will be used in future animation features
     last_update: Instant,
 }
 

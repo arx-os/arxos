@@ -7,7 +7,7 @@ use std::os::raw::c_char;
 use serde_json;
 use log::warn;
 
-use crate::mobile_ffi::{MobileError, RoomInfo, EquipmentInfo, ARScanData};
+use crate::mobile_ffi::MobileError;
 
 /// FFI error code enumeration
 #[repr(C)]

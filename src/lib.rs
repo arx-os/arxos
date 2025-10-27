@@ -20,6 +20,8 @@ pub mod search;
 pub mod hardware;
 pub mod persistence;
 pub mod mobile_ffi;
+pub mod commands;
+pub mod utils;
 
 // Re-export commonly used types for easier access
 pub use core::{Building, Equipment};
@@ -29,7 +31,8 @@ pub use git::{GitClient, BuildingGitManager, GitConfig, GitConfigManager, GitErr
 pub use render::BuildingRenderer;
 pub use yaml::{BuildingYamlSerializer, BuildingData, BuildingInfo, BuildingMetadata, FloorData, RoomData, EquipmentData, SensorMapping, ThresholdConfig};
 pub use path::{PathGenerator, UniversalPath, PathComponents, PathError, PathValidator};
-pub use progress::{ProgressReporter, ProgressContext, utils};
+pub use progress::{ProgressReporter, ProgressContext};
+pub use progress::utils as progress_utils;
 pub use config::{ArxConfig, ConfigManager, ConfigError, ConfigResult};
 
 // Re-export error types

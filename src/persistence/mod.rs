@@ -179,7 +179,7 @@ fn find_git_repository() -> Option<PathBuf> {
 mod tests {
     use super::*;
     use tempfile::TempDir;
-    use crate::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData};
+    use crate::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
     use chrono::Utc;
     
     #[test]

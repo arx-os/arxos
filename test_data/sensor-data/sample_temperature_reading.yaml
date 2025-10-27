@@ -1,0 +1,33 @@
+apiVersion: arxos.io/v1
+kind: SensorData
+metadata:
+  sensor_id: esp32_temp_001
+  sensor_type: temperature_humidity
+  room_path: /building-1/floor-1/room-301/HVAC
+  timestamp: 2025-01-15T10:30:00Z
+  source: github-api
+  building_id: building-1
+  equipment_id: HVAC-301
+
+data:
+  temperature:
+    value: 72.5
+    unit: fahrenheit
+    status: normal
+    confidence: 0.95
+  humidity:
+    value: 45.2
+    unit: percent
+    status: normal
+    confidence: 0.92
+
+alerts:
+  - level: info
+    message: "Temperature within normal range"
+    timestamp: 2025-01-15T10:30:00Z
+
+_arxos:
+  processed: true
+  validated: true
+  device_id: esp32_001
+

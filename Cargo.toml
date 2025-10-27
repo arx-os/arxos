@@ -7,6 +7,10 @@ license.workspace = true
 repository.workspace = true
 description.workspace = true
 
+[lib]
+name = "arxos"
+path = "src/lib.rs"
+
 [dependencies]
 # Re-export all workspace dependencies for integration tests
 serde = { workspace = true }

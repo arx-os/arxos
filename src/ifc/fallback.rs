@@ -185,8 +185,10 @@ impl FallbackIFCParser {
         let id = parts[0].trim_start_matches('#').to_string();
         let entity_def = parts[1];
         
-        // Extract entity type
-        let entity_type = if entity_def.contains("IFCBUILDING") {
+        // Extract entity type (check more specific types first)
+        let entity_type = if entity_def.contains("IFCBUILDINGSTOREY") {
+            "IFCBUILDINGSTOREY"
+        } else if entity_def.contains("IFCBUILDING") {
             "IFCBUILDING"
         } else if entity_def.contains("IFCSPACE") {
             "IFCSPACE"
@@ -226,9 +228,14 @@ impl FallbackIFCParser {
     /// Check if an entity type has spatial information
     fn is_spatial_entity(&self, entity_type: &str) -> bool {
         matches!(entity_type, 
-            "IFCSPACE" | "IFCFLOWTERMINAL" | "IFCBUILDINGELEMENT" | 
+            "IFCBUILDINGSTOREY" | "IFCSPACE" | "IFCFLOWTERMINAL" | "IFCBUILDINGELEMENT" | 
             "IFCWALL" | "IFCDOOR" | "IFCWINDOW"
         )
+    }
+    
+    /// Check if entity is a building storey (floor)
+    fn is_storey_entity(&self, entity_type: &str) -> bool {
+        matches!(entity_type, "IFCBUILDINGSTOREY" | "IFCBUILDINGFLOOR")
     }
 
     /// Extract spatial data from an IFC entity

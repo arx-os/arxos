@@ -1,0 +1,40 @@
+{
+  "apiVersion": "arxos.io/v1",
+  "kind": "SensorData",
+  "metadata": {
+    "sensor_id": "rp2040_air_001",
+    "sensor_type": "air_quality",
+    "room_path": "/building-1/floor-2/room-205/HVAC",
+    "timestamp": "2025-01-15T11:00:00Z",
+    "source": "mqtt-broker",
+    "building_id": "building-1",
+    "equipment_id": "HVAC-205"
+  },
+  "data": {
+    "co2": {
+      "value": 420,
+      "unit": "ppm",
+      "status": "normal",
+      "confidence": 0.90
+    },
+    "tvoc": {
+      "value": 150,
+      "unit": "ppb",
+      "status": "normal",
+      "confidence": 0.85
+    }
+  },
+  "alerts": [
+    {
+      "level": "info",
+      "message": "Air quality within normal range",
+      "timestamp": "2025-01-15T11:00:00Z"
+    }
+  ],
+  "_arxos": {
+    "processed": true,
+    "validated": true,
+    "device_id": "rp2040_001"
+  }
+}
+

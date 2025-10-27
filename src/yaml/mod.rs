@@ -76,6 +76,26 @@ pub struct EquipmentData {
     pub status: EquipmentStatus,
     pub properties: HashMap<String, String>,
     pub universal_path: String,
+    pub sensor_mappings: Option<Vec<SensorMapping>>, // Sensor-to-equipment mapping
+}
+
+/// Sensor mapping structure for equipment
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SensorMapping {
+    pub sensor_id: String,
+    pub sensor_type: String,
+    pub thresholds: HashMap<String, ThresholdConfig>,
+}
+
+/// Threshold configuration for sensor values
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ThresholdConfig {
+    pub min: Option<f64>,
+    pub max: Option<f64>,
+    pub warning_min: Option<f64>,
+    pub warning_max: Option<f64>,
+    pub critical_min: Option<f64>,
+    pub critical_max: Option<f64>,
 }
 
 /// Equipment status
@@ -217,6 +237,7 @@ impl BuildingYamlSerializer {
                     id: entity.id.clone(),
                     name: entity.name.clone(),
                     equipment_type: entity.entity_type.clone(),
+                    sensor_mappings: None,
                     system_type: self.determine_system_type(&entity.entity_type),
                     position: entity.position.clone(),
                     bounding_box: entity.bounding_box.clone(),

@@ -3,12 +3,18 @@
 //! This module handles the integration of AR and LiDAR scan data from mobile applications
 //! into the building data structure, enabling real-time updates to the 3D renderer.
 
+pub mod pending;
+pub mod processing;
+
 use crate::yaml::{BuildingData, FloorData, RoomData, EquipmentData, EquipmentStatus};
 use crate::spatial::{Point3D, BoundingBox3D};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use log::{info, warn};
+
+pub use pending::{PendingEquipment, PendingStatus, PendingEquipmentManager, DetectedEquipmentInfo};
+pub use processing::{process_ar_scan_to_pending, validate_ar_scan_data, pending_equipment_to_json, pending_equipment_from_json, process_ar_scan_and_save_pending};
 
 /// AR scan data structure from mobile applications
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -269,6 +275,7 @@ impl ARDataIntegrator {
                 bounding_box: detected_equipment.bounding_box,
                 status: EquipmentStatus::Healthy,
                 properties: detected_equipment.properties,
+                sensor_mappings: None,
             };
             
             floor.equipment.push(new_equipment);

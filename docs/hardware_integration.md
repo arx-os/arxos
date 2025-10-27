@@ -164,6 +164,99 @@ jobs:
           create-issues: 'true'
 ```
 
+## Software Integration Architecture
+
+### Current State
+
+**Working ✅**
+- Hardware examples compile and run (Arduino, ESP32, RP2040)
+- Sensor data format defined
+- Git integration from hardware examples (ESP32 posts directly to GitHub)
+
+**Missing ⚠️**
+- Integration layer between hardware sensors and main ArxOS application
+- Real-time sensor data processing in ArxOS
+- Equipment status updates based on sensor readings
+- Automated sensor data ingestion pipeline
+
+### Planned Integration Layers
+
+**Phase 1: File-Based Sensor Data Ingestion**
+
+**Architecture:**
+```
+Hardware Sensor → HTTP/MQTT/Webhook → Git Repository
+  ↓
+Sensor Data Files (YAML/JSON)
+  ↓
+Sensor Data Ingestion Service (src/hardware/ingestion.rs - NEW)
+  ↓
+Sensor Data Normalizer (src/hardware/normalizer.rs - NEW)
+  ↓
+Equipment Status Updater (src/hardware/updater.rs - NEW)
+  ↓
+Building Data Update → Git Commit
+```
+
+**New Components:**
+1. **`SensorIngestionService`** - Read and process sensor data files
+2. **`SensorDataNormalizer`** - Normalize diverse sensor formats
+3. **`EquipmentMapper`** - Map sensors to equipment in building data
+4. **`EquipmentStatusUpdater`** - Update equipment status from sensor data
+
+**Data Flow Example:**
+```yaml
+# Sensor sends: hardware/examples/esp32-temperature/ sends via GitHub API
+metadata:
+  device_id: ESP32-001
+  sensor_type: temperature
+  timestamp: 2025-01-15T10:30:00Z
+data:
+  temperature: 25.3
+  humidity: 45.2
+
+  ↓ (Ingestion Service reads from Git)
+
+# Equipment gets updated in building data:
+equipment:
+  - id: HVAC-301
+    status: Active  # Updated from sensor reading
+    sensor_data:
+      last_update: 2025-01-15T10:30:00Z
+      temperature: 25.3
+```
+
+**Phase 2: Real-Time Integration**
+- HTTP endpoint listener for sensor data
+- MQTT subscriber for real-time updates
+- WebSocket updates for live equipment status
+
+**Phase 3: Advanced Features**
+- Alert thresholds and notifications
+- Trend analysis and prediction
+- Predictive maintenance alerts
+
+### Equipment-Sensor Mapping
+
+**Concept:** Assign sensors to specific equipment in building data
+
+```rust
+// Future implementation in src/core/equipment.rs
+pub struct EquipmentSensorMapping {
+    pub equipment_id: String,
+    pub sensor_id: String,
+    pub sensor_type: SensorType,
+    pub thresholds: AlertThresholds,
+}
+
+// Update equipment status from sensor
+fn update_equipment_from_sensor(
+    &mut self,
+    equipment_id: &str,
+    sensor_data: &SensorData,
+) -> Result<(), HardwareError>;
+```
+
 ## Getting Started
 
 ### 1. Choose Integration Method
@@ -185,6 +278,11 @@ jobs:
 - Set up GitHub Actions workflows
 - Configure alert thresholds
 - Test sensor data processing
+
+### 5. Integration Layer (Future)
+- Install sensor data ingestion service
+- Configure sensor-to-equipment mapping
+- Enable automatic equipment status updates
 
 ## Community Resources
 

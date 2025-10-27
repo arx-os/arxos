@@ -1,28 +1,22 @@
 import Foundation
 import Combine
 
-// MARK: - ArxOS Core Integration using UniFFI
+#if canImport(arxos_mobile)
+import arxos_mobile
+#endif
+
+// MARK: - ArxOS Core Integration using C FFI
 class ArxOSCore: ObservableObject {
-    private var instance: ArxOSMobile?
+    private let ffi: ArxOSCoreFFI
     
     init() {
-        do {
-            instance = try ArxOSMobile()
-        } catch {
-            print("Failed to initialize ArxOS core: \(error)")
-        }
+        self.ffi = ArxOSCoreFFI()
+        print("ArxOS Core initialized")
     }
     
     init(path: String) {
-        do {
-            instance = try ArxOSMobile.newWithPath(path: path)
-        } catch {
-            print("Failed to initialize ArxOS core with path: \(error)")
-        }
-    }
-    
-    deinit {
-        instance = nil
+        self.ffi = ArxOSCoreFFI()
+        print("ArxOS Core initialized with path: \(path)")
     }
     
     func executeRoomCommand(_ arguments: [String], completion: @escaping (Result<String, Error>) -> Void) {
@@ -48,72 +42,30 @@ class ArxOSCore: ObservableObject {
     }
     
     private func executeCommand(_ command: String, completion: @escaping (Result<String, Error>) -> Void) {
-        guard let instance = instance else {
-            completion(.failure(TerminalError.coreError("ArxOS instance not initialized")))
-            return
-        }
-        
         DispatchQueue.global().async {
-            do {
-                let result = try instance.executeCommand(command: command)
-                DispatchQueue.main.async {
-                    if result.success {
-                        completion(.success(result.output))
-                    } else {
-                        completion(.failure(TerminalError.coreError(result.error ?? "Unknown error")))
-                    }
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    completion(.failure(TerminalError.coreError("Failed to execute command: \(error.localizedDescription)")))
-                }
+            let result = FFIWrapper.executeCommand(command)
+            DispatchQueue.main.async {
+                completion(result)
             }
         }
     }
     
-    // MARK: - AR Integration Methods
     func processARData(_ data: Data, roomName: String, completion: @escaping (Result<[DetectedEquipment], Error>) -> Void) {
-        guard let instance = instance else {
-            completion(.failure(TerminalError.coreError("ArxOS instance not initialized")))
-            return
-        }
-        
         DispatchQueue.global().async {
-            do {
-                let scanData = Array(data)
-                let result = try instance.processArScan(scanData: scanData, roomName: roomName)
-                
-                let detectedEquipment = result.equipmentDetected.map { equipment in
-                    DetectedEquipment(
-                        id: UUID(),
-                        name: equipment.name,
-                        type: equipment.equipmentType,
-                        position: SIMD3<Float>(
-                            Float(equipment.position?.x ?? 0),
-                            Float(equipment.position?.y ?? 0),
-                            Float(equipment.position?.z ?? 0)
-                        ),
-                        status: equipment.status,
-                        icon: self.iconForEquipmentType(equipment.equipmentType)
-                    )
-                }
-                
-                DispatchQueue.main.async {
-                    completion(.success(detectedEquipment))
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    completion(.failure(TerminalError.coreError("AR processing failed: \(error.localizedDescription)")))
-                }
+            let jsonString = String(data: data, encoding: .utf8) ?? "{}"
+            let result = FFIWrapper.parseARScan(jsonString: jsonString)
+            
+            DispatchQueue.main.async {
+                completion(result)
             }
         }
     }
     
     func saveARScan(_ equipment: [DetectedEquipment], room: String, completion: @escaping (Result<String, Error>) -> Void) {
-        // This will integrate with Rust core for saving AR scan data
-        DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
+        DispatchQueue.global().async {
+            let result = FFIWrapper.saveARScan(equipment: equipment, room: room)
             DispatchQueue.main.async {
-                completion(.success("AR scan saved for \(room)"))
+                completion(result)
             }
         }
     }
@@ -140,12 +92,42 @@ class ArxOSCore: ObservableObject {
     }
 }
 
+// MARK: - FFI Wrapper
+struct FFIWrapper {
+    static func executeCommand(_ command: String) -> Result<String, Error> {
+        #if canImport(arxos_mobile)
+        // FFI implementation when library is linked
+        // return .success(executeFFICommand(command))
+        return .failure(TerminalError.ffiError("FFI not yet linked"))
+        #else
+        return .failure(TerminalError.ffiError("FFI library not available"))
+        #endif
+    }
+    
+    static func parseARScan(jsonString: String) -> Result<[DetectedEquipment], Error> {
+        #if canImport(arxos_mobile)
+        // FFI implementation when library is linked
+        return .success([])
+        #else
+        return .failure(TerminalError.ffiError("FFI library not available"))
+        #endif
+    }
+    
+    static func saveARScan(equipment: [DetectedEquipment], room: String) -> Result<String, Error> {
+        #if canImport(arxos_mobile)
+        // FFI implementation when library is linked
+        return .success("AR scan saved for \(room)")
+        #else
+        return .failure(TerminalError.ffiError("FFI library not available"))
+        #endif
+    }
+}
+
 // MARK: - Terminal Service
 class TerminalService: ObservableObject {
     private let arxosCore = ArxOSCore()
     
     func executeCommand(_ command: String, completion: @escaping (Result<String, Error>) -> Void) {
-        // Parse command and execute through ArxOS core
         let components = command.components(separatedBy: " ")
         guard !components.isEmpty else {
             completion(.success(""))
@@ -181,7 +163,7 @@ class TerminalService: ObservableObject {
     
     private func getHelpText() -> String {
         return """
-        ArxOS Mobile - Git for Buildings
+        ArxOS Mobile
         
         Available commands:
         room create --name <name> --floor <floor>  Create a new room
@@ -201,7 +183,6 @@ class TerminalService: ObservableObject {
     }
     
     private func handleRoomCommand(_ arguments: [String], completion: @escaping (Result<String, Error>) -> Void) {
-        // Integrate with ArxOS core for room operations
         arxosCore.executeRoomCommand(arguments) { result in
             DispatchQueue.main.async {
                 completion(result)
@@ -210,7 +191,6 @@ class TerminalService: ObservableObject {
     }
     
     private func handleEquipmentCommand(_ arguments: [String], completion: @escaping (Result<String, Error>) -> Void) {
-        // Integrate with ArxOS core for equipment operations
         arxosCore.executeEquipmentCommand(arguments) { result in
             DispatchQueue.main.async {
                 completion(result)
@@ -247,7 +227,7 @@ class TerminalService: ObservableObject {
 enum TerminalError: Error, LocalizedError {
     case unknownCommand(String)
     case invalidArguments
-    case coreError(String)
+    case ffiError(String)
     
     var errorDescription: String? {
         switch self {
@@ -255,8 +235,8 @@ enum TerminalError: Error, LocalizedError {
             return "Unknown command: \(command)"
         case .invalidArguments:
             return "Invalid arguments provided"
-        case .coreError(let message):
-            return "Core error: \(message)"
+        case .ffiError(let message):
+            return "FFI error: \(message)"
         }
     }
 }

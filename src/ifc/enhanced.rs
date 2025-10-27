@@ -1,7 +1,7 @@
 //! Enhanced IFC parser with partial parsing and error recovery
 
 use crate::core::Building;
-use crate::spatial::{Point3D, BoundingBox3D, SpatialEntity, CoordinateSystem};
+use crate::spatial::{SpatialEntity, CoordinateSystem, Point3D, BoundingBox3D};
 use crate::progress::ProgressContext;
 use crate::error::{ArxError, ArxResult};
 use log::{info, warn};
@@ -571,6 +571,22 @@ impl EnhancedIFCParser {
                  "IFCSECURITYDEVICE" | "IFCCAMERA" | "IFCACCESSDEVICE" |
                  // Other building equipment
                  "IFCELEVATOR" | "IFCESCALATOR" | "IFCMOVINGWALKWAY" | "IFCCRANE" | "IFCLIFTINGDEVICE")
+    }
+    
+    /// Check if entity type represents a building storey (floor)
+    fn is_storey_entity(&self, entity_type: &str) -> bool {
+        matches!(entity_type.to_uppercase().as_str(),
+            "IFCBUILDINGSTOREY" | "IFCBUILDINGFLOOR" | "IFCLEVEL"
+        )
+    }
+    
+    /// Check if entity type represents equipment (non-structural)
+    fn is_equipment_entity(&self, entity_type: &str) -> bool {
+        matches!(entity_type.to_uppercase().as_str(),
+            "IFCFLOWTERMINAL" | "IFCAIRTERMINAL" | "IFCLIGHTFIXTURE" |
+            "IFCDISTRIBUTIONELEMENT" | "IFCFAN" | "IFCPUMP" | "IFCFIREALARM" |
+            "IFCFIREDETECTOR" | "IFCSWITCHINGDEVICE" | "IFCELEVATOR" | "IFCESCALATOR"
+        )
     }
     
     /// Extract building name from entity

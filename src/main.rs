@@ -12,10 +12,12 @@ pub mod ar_integration;
 pub mod yaml;
 pub mod path;
 pub mod search;
+pub mod persistence;
+pub mod hardware;
 
 use clap::Parser;
 use cli::Cli;
-use log::info;
+use log::{info, warn};
 use crate::progress::{ProgressContext, utils};
 use crate::core::{RoomType, EquipmentType};
 use crate::render3d::{Render3DConfig, ProjectionType, ViewAngle, Building3DRenderer, format_scene_output, InteractiveRenderer, InteractiveConfig};
@@ -775,24 +777,29 @@ fn execute_command(command: cli::Commands) -> Result<(), Box<dyn std::error::Err
             let progress_reporter = utils::create_ifc_progress(100);
             let progress_context = ProgressContext::with_reporter(progress_reporter.clone());
             
-            // Use real IFC processor with progress
+            // Use IFC processor to extract hierarchy
             let processor = ifc::IFCProcessor::new();
-            match processor.process_file_with_progress(&ifc_file, progress_context) {
-                Ok((building, spatial_entities)) => {
-                    progress_reporter.finish_success(&format!("Successfully parsed building: {}", building.name));
+            
+            // Try to extract hierarchy first (new approach)
+            match processor.extract_hierarchy(&ifc_file) {
+                Ok((building, floors)) => {
+                    progress_reporter.finish_success(&format!("Successfully extracted building hierarchy: {}", building.name));
                     println!("✅ Building: {}", building.name);
                     println!("   Building ID: {}", building.id);
                     println!("   Created: {}", building.created_at.format("%Y-%m-%d %H:%M:%S"));
-                    println!("   Spatial entities found: {}", spatial_entities.len());
+                    println!("   Floors found: {}", floors.len());
                     
-                    // Display spatial information
-                    for entity in spatial_entities.iter().take(5) { // Show first 5 entities
-                        println!("   - {}: {} at {}", entity.entity_type, entity.name, entity.position);
+                    // Display floor information
+                    for floor in floors.iter().take(5) { // Show first 5 floors
+                        println!("   - {}: level {}", floor.name, floor.level);
                     }
-                    if spatial_entities.len() > 5 {
-                        println!("   ... and {} more entities", spatial_entities.len() - 5);
+                    if floors.len() > 5 {
+                        println!("   ... and {} more floors", floors.len() - 5);
                     }
-
+                    
+                    // Convert to spatial entities for compatibility
+                    let spatial_entities = Vec::new(); // Will be populated from hierarchy
+                    
                     // Generate YAML output
                     let serializer = yaml::BuildingYamlSerializer::new();
                     match serializer.serialize_building(&building, &spatial_entities, Some(&ifc_file)) {
@@ -812,6 +819,62 @@ fn execute_command(command: cli::Commands) -> Result<(), Box<dyn std::error::Err
                         }
                         Err(e) => {
                             println!("❌ Error serializing building data: {}", e);
+                        }
+                    }
+                }
+                Err(_e) => {
+                    // Fallback to old parsing method if hierarchy extraction fails
+                    warn!("Hierarchy extraction failed, falling back to spatial entity parsing");
+                    match processor.process_file_with_progress(&ifc_file, progress_context) {
+                        Ok((building, spatial_entities)) => {
+                            progress_reporter.finish_success(&format!("Successfully parsed building: {}", building.name));
+                            println!("✅ Building: {}", building.name);
+                            println!("   Building ID: {}", building.id);
+                            println!("   Created: {}", building.created_at.format("%Y-%m-%d %H:%M:%S"));
+                            println!("   Spatial entities found: {}", spatial_entities.len());
+                    
+                            // Display spatial information
+                            for entity in spatial_entities.iter().take(5) { // Show first 5 entities
+                                println!("   - {}: {} at {}", entity.entity_type, entity.name, entity.position);
+                            }
+                            if spatial_entities.len() > 5 {
+                                println!("   ... and {} more entities", spatial_entities.len() - 5);
+                            }
+
+                            // Generate YAML output
+                            let serializer = yaml::BuildingYamlSerializer::new();
+                            match serializer.serialize_building(&building, &spatial_entities, Some(&ifc_file)) {
+                                Ok(building_data) => {
+                                    let yaml_file = format!("{}.yaml", building.name.to_lowercase().replace(" ", "_"));
+                                    match serializer.write_to_file(&building_data, &yaml_file) {
+                                        Ok(_) => {
+                                            println!("📄 Generated YAML file: {}", yaml_file);
+                                            println!("   Floors: {}", building_data.floors.len());
+                                            println!("   Total rooms: {}", building_data.floors.iter().map(|f| f.rooms.len()).sum::<usize>());
+                                            println!("   Total equipment: {}", building_data.floors.iter().map(|f| f.equipment.len()).sum::<usize>());
+                                        }
+                                        Err(e) => {
+                                            println!("❌ Error writing YAML file: {}", e);
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    println!("❌ Error serializing building data: {}", e);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            progress_reporter.finish_error(&format!("Error processing IFC file: {}", e));
+                            return Err(format!(
+                                "Failed to process IFC file '{}': {}. \
+                                Please check that the file is a valid IFC file and try again. \
+                                Common issues:\n\
+                                - File is corrupted or incomplete\n\
+                                - Unsupported IFC version\n\
+                                - Missing required IFC entities\n\
+                                - File permissions issues",
+                                ifc_file, e
+                            ).into());
                         }
                     }
                 }
@@ -972,6 +1035,15 @@ fn execute_command(command: cli::Commands) -> Result<(), Box<dyn std::error::Err
         cli::Commands::ArIntegrate { scan_file, room, floor, building, commit, message } => {
             handle_ar_integrate_command(scan_file, room, floor, building, commit, message)?;
         }
+        cli::Commands::IFC { subcommand } => {
+            handle_ifc_command(subcommand)?;
+        }
+        cli::Commands::Ar { subcommand } => {
+            handle_ar_command(subcommand)?;
+        }
+        cli::Commands::ProcessSensors { sensor_dir, building, commit, watch } => {
+            handle_process_sensors_command(&sensor_dir, &building, commit, watch)?;
+        }
         cli::Commands::Filter { equipment_type, status, floor, room, building, critical_only, healthy_only, alerts_only, format, limit, verbose } => {
             handle_filter_command(equipment_type, status, floor, room, building, critical_only, healthy_only, alerts_only, format, limit, verbose)?;
         }
@@ -1098,7 +1170,7 @@ fn handle_watch_command(
 /// Handle room management commands
 fn handle_room_command(command: cli::RoomCommands) -> Result<(), Box<dyn std::error::Error>> {
     match command {
-        cli::RoomCommands::Create { building, floor, wing, name, room_type, dimensions, position } => {
+        cli::RoomCommands::Create { building, floor, wing, name, room_type, dimensions, position, commit: _commit } => {
             println!("🏗️ Creating room: {} in {} Floor {} Wing {}", name, building, floor, wing);
             println!("   Type: {}", room_type);
             
@@ -1202,7 +1274,7 @@ fn handle_room_command(command: cli::RoomCommands) -> Result<(), Box<dyn std::er
             
             println!("✅ Room details displayed");
         }
-        cli::RoomCommands::Update { room, property } => {
+        cli::RoomCommands::Update { room, property, commit: _commit } => {
             println!("✏️ Updating room: {}", room);
             
             for prop in &property {
@@ -1213,7 +1285,7 @@ fn handle_room_command(command: cli::RoomCommands) -> Result<(), Box<dyn std::er
             
             println!("✅ Room updated successfully: {} (ID: {})", updated_room.name, updated_room.id);
         }
-        cli::RoomCommands::Delete { room, confirm } => {
+        cli::RoomCommands::Delete { room, confirm, commit: _commit } => {
             if !confirm {
                 println!("❌ Room deletion requires confirmation. Use --confirm flag.");
                 return Ok(());
@@ -1233,7 +1305,7 @@ fn handle_room_command(command: cli::RoomCommands) -> Result<(), Box<dyn std::er
 /// Handle equipment management commands
 fn handle_equipment_command(command: cli::EquipmentCommands) -> Result<(), Box<dyn std::error::Error>> {
     match command {
-        cli::EquipmentCommands::Add { room, name, equipment_type, position, property } => {
+        cli::EquipmentCommands::Add { room, name, equipment_type, position, property, commit: _commit } => {
             println!("🔧 Adding equipment: {} to room {}", name, room);
             println!("   Type: {}", equipment_type);
             
@@ -1296,7 +1368,7 @@ fn handle_equipment_command(command: cli::EquipmentCommands) -> Result<(), Box<d
             
             println!("✅ Equipment listing completed");
         }
-        cli::EquipmentCommands::Update { equipment, property, position } => {
+        cli::EquipmentCommands::Update { equipment, property, position, commit: _commit } => {
             println!("✏️ Updating equipment: {}", equipment);
             
             for prop in &property {
@@ -1311,7 +1383,7 @@ fn handle_equipment_command(command: cli::EquipmentCommands) -> Result<(), Box<d
             
             println!("✅ Equipment updated successfully: {} (ID: {})", updated_equipment.name, updated_equipment.id);
         }
-        cli::EquipmentCommands::Remove { equipment, confirm } => {
+        cli::EquipmentCommands::Remove { equipment, confirm, commit: _commit } => {
             if !confirm {
                 println!("❌ Equipment removal requires confirmation. Use --confirm flag.");
                 return Ok(());
@@ -1322,6 +1394,68 @@ fn handle_equipment_command(command: cli::EquipmentCommands) -> Result<(), Box<d
             crate::core::remove_equipment(&equipment)?;
             
             println!("✅ Equipment removed successfully");
+        }
+    }
+    
+    Ok(())
+}
+
+/// Handle IFC processing commands
+fn handle_ifc_command(command: cli::IFCCommands) -> Result<(), Box<dyn std::error::Error>> {
+    match command {
+        cli::IFCCommands::ExtractHierarchy { file, output } => {
+            println!("🔧 Extracting building hierarchy from: {}", file);
+            
+            // Validate IFC file exists
+            if !std::path::Path::new(&file).exists() {
+                return Err(format!(
+                    "IFC file '{}' not found. \
+                    Please check the file path and ensure the file exists.",
+                    file
+                ).into());
+            }
+            
+            // Extract hierarchy
+            let processor = ifc::IFCProcessor::new();
+            match processor.extract_hierarchy(&file) {
+                Ok((building, floors)) => {
+                    println!("✅ Successfully extracted building hierarchy");
+                    println!("   Building: {}", building.name);
+                    println!("   Building ID: {}", building.id);
+                    println!("   Floors: {}", floors.len());
+                    
+                    // Display floor information
+                    for floor in floors.iter() {
+                        println!("   - {}: level {}", floor.name, floor.level);
+                        
+                        // Count rooms and equipment on this floor
+                        let room_count: usize = floor.wings.iter().map(|w| w.rooms.len()).sum();
+                        let equipment_count = floor.equipment.len();
+                        println!("      Rooms: {}, Equipment: {}", room_count, equipment_count);
+                    }
+                    
+                    // Generate YAML output if requested
+                    if let Some(output_file) = output {
+                        let serializer = yaml::BuildingYamlSerializer::new();
+                        let building_data = serializer.serialize_building(&building, &[], Some(&file))
+                            .map_err(|e| format!("Failed to serialize building: {}", e))?;
+                        
+                        serializer.write_to_file(&building_data, &output_file)
+                            .map_err(|e| format!("Failed to write YAML file: {}", e))?;
+                        
+                        println!("📄 Hierarchy written to: {}", output_file);
+                    }
+                    
+                    println!("✅ Hierarchy extraction completed");
+                }
+                Err(e) => {
+                    return Err(format!(
+                        "Failed to extract hierarchy from '{}': {}. \
+                        Please check that the file is a valid IFC file.",
+                        file, e
+                    ).into());
+                }
+            }
         }
     }
     
@@ -1755,5 +1889,243 @@ fn handle_ar_integrate_command(
     }
     
     println!("✅ AR integration completed");
+    Ok(())
+}
+
+/// Handle the process sensors command
+fn handle_process_sensors_command(
+    sensor_dir: &str,
+    building: &str,
+    commit: bool,
+    _watch: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use std::path::PathBuf;
+    use log::{info, warn};
+    
+    info!("📡 Processing sensor data from: {}", sensor_dir);
+    println!("📡 Processing sensor data from: {}", sensor_dir);
+    println!("   Building: {}", building);
+    
+    let config = hardware::SensorIngestionConfig {
+        data_directory: PathBuf::from(sensor_dir),
+        ..hardware::SensorIngestionConfig::default()
+    };
+    
+    let ingestion = hardware::SensorIngestionService::new(config);
+    let mut updater = hardware::EquipmentStatusUpdater::new(building)?;
+    
+    // Process once
+    match ingestion.process_all_sensor_files() {
+        Ok(sensor_data_list) => {
+            info!("Processing {} sensor data files...", sensor_data_list.len());
+            println!("   Processing {} sensor data files...", sensor_data_list.len());
+            
+            let mut success_count = 0;
+            let mut error_count = 0;
+            
+            for sensor_data in sensor_data_list {
+                match updater.process_sensor_data(&sensor_data) {
+                    Ok(result) => {
+                        info!("Updated equipment {}: {} → {}", 
+                             result.equipment_id, result.old_status, result.new_status);
+                        println!("   ✅ Updated {}: {} → {}", 
+                                 result.equipment_id, result.old_status, result.new_status);
+                        success_count += 1;
+                    }
+                    Err(e) => {
+                        warn!("Error processing sensor {}: {}", 
+                             sensor_data.metadata.sensor_id, e);
+                        println!("   ⚠️  Error processing {}: {}", 
+                                 sensor_data.metadata.sensor_id, e);
+                        error_count += 1;
+                    }
+                }
+            }
+            
+            println!("\n📊 Processing Summary:");
+            println!("   ✅ Successful: {}", success_count);
+            println!("   ⚠️  Errors: {}", error_count);
+            
+            // Save updated building data
+            info!("Saving updated building data to YAML");
+            println!("\n💾 Saving updated building data...");
+            
+            // The EquipmentStatusUpdater already saves in process_sensor_data,
+            // but we also want to ensure the final state is committed
+            if commit {
+                let commit_message = format!("Update equipment status from sensor data: {} successful, {} errors", 
+                    success_count, error_count);
+                updater.commit_changes(&commit_message)?;
+                info!("Changes committed to Git with message: {}", commit_message);
+                println!("✅ Changes committed to Git");
+            } else {
+                println!("💡 Use --commit flag to commit changes to Git");
+            }
+        }
+        Err(e) => {
+            warn!("Error processing sensor files: {}", e);
+            println!("⚠️  Error processing sensor files: {}", e);
+            return Err(format!("Sensor processing failed: {}", e).into());
+        }
+    }
+    
+    info!("Sensor processing completed successfully");
+    println!("✅ Sensor processing completed");
+    Ok(())
+}
+
+/// Handle AR integration commands
+fn handle_ar_command(command: cli::ArCommands) -> Result<(), Box<dyn std::error::Error>> {
+    match command {
+        cli::ArCommands::Pending { subcommand } => {
+            handle_pending_command(subcommand)?;
+        }
+    }
+    Ok(())
+}
+
+/// Handle pending equipment commands
+fn handle_pending_command(command: cli::PendingCommands) -> Result<(), Box<dyn std::error::Error>> {
+    match command {
+        cli::PendingCommands::List { building, floor, verbose } => {
+            handle_pending_list_command(&building, floor, verbose)?;
+        }
+        cli::PendingCommands::Confirm { pending_id, building, commit } => {
+            handle_pending_confirm_command(&pending_id, &building, commit)?;
+        }
+        cli::PendingCommands::Reject { pending_id } => {
+            handle_pending_reject_command(&pending_id)?;
+        }
+        cli::PendingCommands::BatchConfirm { pending_ids, building, commit } => {
+            handle_pending_batch_confirm_command(pending_ids, &building, commit)?;
+        }
+    }
+    Ok(())
+}
+
+/// Handle list pending equipment command
+fn handle_pending_list_command(building: &str, floor: Option<i32>, verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
+    use crate::ar_integration::PendingEquipmentManager;
+    
+    println!("📋 Listing pending equipment for building: {}", building);
+    
+    let manager = PendingEquipmentManager::new(building.to_string());
+    let pending_items = manager.list_pending();
+    
+    if pending_items.is_empty() {
+        println!("   No pending equipment found");
+        return Ok(());
+    }
+    
+    println!("\n   Found {} pending equipment item(s):\n", pending_items.len());
+    
+    for (i, item) in pending_items.iter().enumerate() {
+        if let Some(floor_filter) = floor {
+            if item.floor_level != floor_filter {
+                continue;
+            }
+        }
+        
+        println!("   {}. {}", i + 1, item.name);
+        if verbose {
+            println!("      ID: {}", item.id);
+            println!("      Type: {}", item.equipment_type);
+            println!("      Position: ({:.2}, {:.2}, {:.2})", item.position.x, item.position.y, item.position.z);
+            println!("      Floor: {}", item.floor_level);
+            if let Some(ref room) = item.room_name {
+                println!("      Room: {}", room);
+            }
+            println!("      Confidence: {:.2}", item.confidence);
+            println!("      Detected: {}", item.detected_at.format("%Y-%m-%d %H:%M:%S"));
+        } else {
+            println!("      Floor: {} | Confidence: {:.2}", item.floor_level, item.confidence);
+        }
+    }
+    
+    println!("\n✅ Listing completed");
+    Ok(())
+}
+
+/// Handle confirm pending equipment command
+fn handle_pending_confirm_command(pending_id: &str, building: &str, commit: bool) -> Result<(), Box<dyn std::error::Error>> {
+    use crate::ar_integration::PendingEquipmentManager;
+    use crate::persistence::PersistenceManager;
+    use log::info;
+    
+    info!("Confirming pending equipment: {} for building: {}", pending_id, building);
+    println!("✅ Confirming pending equipment: {}", pending_id);
+    
+    let mut manager = PendingEquipmentManager::new(building.to_string());
+    let persistence = PersistenceManager::new(building)?;
+    
+    // Load current building data
+    let mut building_data = persistence.load_building_data()?;
+    
+    // Confirm the pending equipment
+    let equipment_id = manager.confirm_pending(pending_id, &mut building_data)?;
+    
+    println!("   Created equipment: {}", equipment_id);
+    
+    // Save and commit if requested
+    if commit {
+        let commit_message = format!("Confirm pending equipment: {}", pending_id);
+        persistence.save_and_commit(&building_data, Some(&commit_message))?;
+        info!("Changes committed to Git");
+        println!("✅ Changes committed to Git");
+    } else {
+        persistence.save_building_data(&building_data)?;
+        println!("💡 Use --commit flag to commit changes to Git");
+    }
+    
+    Ok(())
+}
+
+/// Handle reject pending equipment command
+fn handle_pending_reject_command(pending_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    use crate::ar_integration::PendingEquipmentManager;
+    use log::info;
+    
+    info!("Rejecting pending equipment: {}", pending_id);
+    println!("❌ Rejecting pending equipment: {}", pending_id);
+    
+    let mut manager = PendingEquipmentManager::new("default".to_string());
+    manager.reject_pending(pending_id)?;
+    
+    println!("✅ Pending equipment rejected");
+    Ok(())
+}
+
+/// Handle batch confirm pending equipment command
+fn handle_pending_batch_confirm_command(pending_ids: Vec<String>, building: &str, commit: bool) -> Result<(), Box<dyn std::error::Error>> {
+    use crate::ar_integration::PendingEquipmentManager;
+    use crate::persistence::PersistenceManager;
+    use log::info;
+    
+    info!("Batch confirming {} pending equipment items", pending_ids.len());
+    println!("✅ Batch confirming {} pending equipment items", pending_ids.len());
+    
+    let mut manager = PendingEquipmentManager::new(building.to_string());
+    let persistence = PersistenceManager::new(building)?;
+    
+    // Load current building data
+    let mut building_data = persistence.load_building_data()?;
+    
+    // Batch confirm the pending equipment
+    let pending_id_refs: Vec<&str> = pending_ids.iter().map(|s| s.as_str()).collect();
+    let equipment_ids = manager.batch_confirm(pending_id_refs, &mut building_data)?;
+    
+    println!("   Created {} equipment item(s)", equipment_ids.len());
+    
+    // Save and commit if requested
+    if commit {
+        let commit_message = format!("Batch confirm {} pending equipment items", equipment_ids.len());
+        persistence.save_and_commit(&building_data, Some(&commit_message))?;
+        info!("Changes committed to Git");
+        println!("✅ Changes committed to Git");
+    } else {
+        persistence.save_building_data(&building_data)?;
+        println!("💡 Use --commit flag to commit changes to Git");
+    }
+    
     Ok(())
 }

@@ -231,6 +231,34 @@ pub enum Commands {
         #[arg(long)]
         message: Option<String>,
     },
+    /// AR integration commands
+    Ar {
+        #[command(subcommand)]
+        subcommand: ArCommands,
+    },
+    /// Process sensor data and update equipment status
+    ProcessSensors {
+        /// Directory containing sensor data files
+        #[arg(long, default_value = "./sensor-data")]
+        sensor_dir: String,
+        
+        /// Building name to update
+        #[arg(long)]
+        building: String,
+        
+        /// Commit changes to Git
+        #[arg(long)]
+        commit: bool,
+        
+        /// Watch mode: continuously monitor for new sensor data
+        #[arg(long)]
+        watch: bool,
+    },
+    /// IFC file processing commands
+    IFC {
+        #[command(subcommand)]
+        subcommand: IFCCommands,
+    },
     /// Filter building data
     Filter {
         /// Equipment type filter
@@ -270,6 +298,71 @@ pub enum Commands {
 }
 
 #[derive(Subcommand)]
+pub enum IFCCommands {
+    /// Extract building hierarchy from IFC file
+    ExtractHierarchy {
+        /// IFC file path
+        #[arg(long)]
+        file: String,
+        /// Output YAML file path (optional)
+        #[arg(long)]
+        output: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum ArCommands {
+    /// Pending equipment management
+    Pending {
+        #[command(subcommand)]
+        subcommand: PendingCommands,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum PendingCommands {
+    /// List all pending equipment
+    List {
+        /// Building name
+        #[arg(long)]
+        building: String,
+        /// Filter by floor level
+        #[arg(long)]
+        floor: Option<i32>,
+        /// Show detailed information
+        #[arg(long)]
+        verbose: bool,
+    },
+    /// Confirm pending equipment
+    Confirm {
+        /// Pending equipment ID
+        pending_id: String,
+        /// Building name
+        #[arg(long)]
+        building: String,
+        /// Commit changes to Git
+        #[arg(long)]
+        commit: bool,
+    },
+    /// Reject pending equipment
+    Reject {
+        /// Pending equipment ID
+        pending_id: String,
+    },
+    /// Batch confirm multiple pending items
+    BatchConfirm {
+        /// Comma-separated list of pending IDs
+        pending_ids: Vec<String>,
+        /// Building name
+        #[arg(long)]
+        building: String,
+        /// Commit changes to Git
+        #[arg(long)]
+        commit: bool,
+    },
+}
+
+#[derive(Subcommand)]
 pub enum RoomCommands {
     /// Create a new room
     Create {
@@ -294,6 +387,9 @@ pub enum RoomCommands {
         /// Room position (x,y,z)
         #[arg(long)]
         position: Option<String>,
+        /// Commit changes to Git
+        #[arg(long)]
+        commit: bool,
     },
     /// List rooms
     List {
@@ -325,6 +421,9 @@ pub enum RoomCommands {
         /// Property to update (key=value)
         #[arg(long)]
         property: Vec<String>,
+        /// Commit changes to Git
+        #[arg(long)]
+        commit: bool,
     },
     /// Delete a room
     Delete {
@@ -333,6 +432,9 @@ pub enum RoomCommands {
         /// Confirm deletion
         #[arg(long)]
         confirm: bool,
+        /// Commit changes to Git
+        #[arg(long)]
+        commit: bool,
     },
 }
 
@@ -355,6 +457,9 @@ pub enum EquipmentCommands {
         /// Equipment properties (key=value)
         #[arg(long)]
         property: Vec<String>,
+        /// Commit changes to Git
+        #[arg(long)]
+        commit: bool,
     },
     /// List equipment
     List {
@@ -378,6 +483,9 @@ pub enum EquipmentCommands {
         /// New position (x,y,z)
         #[arg(long)]
         position: Option<String>,
+        /// Commit changes to Git
+        #[arg(long)]
+        commit: bool,
     },
     /// Remove equipment
     Remove {
@@ -386,6 +494,9 @@ pub enum EquipmentCommands {
         /// Confirm removal
         #[arg(long)]
         confirm: bool,
+        /// Commit changes to Git
+        #[arg(long)]
+        commit: bool,
     },
 }
 

@@ -1404,6 +1404,7 @@ mod tests {
                             status: crate::yaml::EquipmentStatus::Healthy,
                             properties: HashMap::new(),
                             universal_path: "/TEST_BUILDING/FLOOR_1/ROOM_1/EQUIP_1".to_string(),
+                            sensor_mappings: None,
                         }
                     ],
                 },
@@ -1431,6 +1432,7 @@ mod tests {
                             status: crate::yaml::EquipmentStatus::Warning,
                             properties: HashMap::new(),
                             universal_path: "/TEST_BUILDING/FLOOR_2/EQUIP_2".to_string(),
+                            sensor_mappings: None,
                         }
                     ],
                 },

@@ -48,6 +48,12 @@ impl IFCProcessor {
         
         let hierarchy_builder = HierarchyBuilder::new(hierarchy_entities);
         
+        // Log entities for debugging
+        info!("Total entities extracted: {}", hierarchy_builder.entities.len());
+        for entity in &hierarchy_builder.entities {
+            info!("Entity: {} - {}", entity.entity_type, entity.name);
+        }
+        
         // Build hierarchy
         let building = hierarchy_builder.build_hierarchy("Building".to_string()).map_err(|e| IFCError::ParsingError {
             message: e.to_string()

@@ -77,9 +77,98 @@ Run tests with:
 cargo test
 ```
 
-## Future Enhancements
+## Current Implementation Status
 
-- Custom STEP parser implementation
-- Coordinate system transformations
-- Advanced spatial queries
-- Performance optimizations
+### Working Features ✅
+- Basic STEP file parsing
+- Entity extraction (IFCSPACE, IFCFLOWTERMINAL, IFCBUILDINGSTOREY recognized)
+- Spatial entity detection
+- YAML serialization
+- **Hierarchical extraction**: Building → Floor → Room → Equipment structure
+- **Floor entities (IFCBUILDINGSTOREY)**: Properly extracted into Floor objects
+- **Separate hierarchy extraction command**: `arx ifc extract-hierarchy`
+
+### Recent Updates (December 2024) ✅
+- Implemented `HierarchyBuilder` for proper building structure
+- Fixed `IFCBUILDINGSTOREY` entity classification
+- Added `extract_hierarchy()` method for structured data extraction
+- Integrated hierarchy extraction into import workflow
+- Added fallback to spatial entity parsing if hierarchy fails
+
+### Usage Example
+
+```bash
+# Import IFC with automatic hierarchy extraction
+arx import building.ifc
+
+# Extract hierarchy separately
+arx ifc extract-hierarchy --file building.ifc --output building.yml
+```
+- Equipment not properly categorized and assigned to rooms
+
+## Planned Enhancements
+
+### Phase 1: Entity Classification Enhancement
+
+**Goal:** Recognize and categorize all IFC entity types
+
+**New Entity Type Recognition:**
+- `IFCBUILDINGSTOREY` → Floor extraction
+- `IFCSPACE` → Room extraction (with room type classification)
+- `IFCFLOWTERMINAL` → HVAC Equipment
+- `IFCLIGHTFIXTURE` → Electrical Equipment
+- `IFCFLOWFITTING` → Plumbing Equipment
+
+**Implementation:**
+```rust
+// Add to src/ifc/enhanced.rs
+fn is_storey_entity(&self, entity_type: &str) -> bool {
+    matches!(entity_type.to_uppercase().as_str(),
+        "IFCBUILDINGSTOREY" | "IFCBUILDINGFLOOR" | "IFCLEVEL"
+    )
+}
+```
+
+### Phase 2: Hierarchy Building
+
+**Goal:** Reconstruct complete building hierarchy
+
+**New Components:**
+- `EntityClassifier` - Classify entities by type
+- `HierarchyBuilder` - Build Building → Floor → Room → Equipment tree
+- `ReferenceResolver` - Resolve entity references and placement
+
+**Architecture:**
+```
+IFC File
+  ↓
+EnhancedIFCParser (existing)
+  ↓
+Entity Classification Layer (NEW)
+  ↓
+Hierarchy Builder (NEW)
+  ↓
+Building Data Structure
+```
+
+### Phase 3: Reference Resolution
+
+**Goal:** Handle entity references and spatial placement
+
+- Resolve IFC reference syntax (#14 = placement reference)
+- Infer spatial relationships from coordinates
+- Map equipment to rooms based on Z-coordinate (floor level)
+
+**Success Criteria:**
+1. ✅ IFCBUILDINGSTOREY entities extracted as Floor objects
+2. ✅ IFCSPACE entities extracted as Room objects with room types
+3. ✅ IFCFLOWTERMINAL entities extracted as Equipment
+4. ✅ Full hierarchy: Building → Floor → Room → Equipment
+5. ✅ Spatial relationships preserved
+
+### Testing Strategy
+
+- Test with `test_data/sample_building.ifc`
+- Verify floor/room/equipment extraction
+- Test with real-world IFC files
+- Handle edge cases (no floors, no rooms, malformed files)

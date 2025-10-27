@@ -8,8 +8,8 @@ This document outlines the complete implementation of ArxOS mobile applications 
 
 ### Core Components
 
-1. **Rust Core (`arxos-core`)**: High-performance building data processing
-2. **Mobile FFI Wrapper (`arxos-mobile`)**: UniFFI-based bindings for mobile platforms
+1. **Rust Core**: High-performance building data processing (main crate)
+2. **Mobile FFI Bindings**: UniFFI-based bindings from `src/mobile_ffi/`
 3. **iOS App**: Native SwiftUI interface with ARKit integration
 4. **Android App**: Native Jetpack Compose interface with ARCore integration
 
@@ -135,7 +135,7 @@ let package = Package(
         .library(name: "ArxOSMobile", targets: ["ArxOSMobile"])
     ],
     dependencies: [
-        .package(path: "../crates/arxos-mobile")
+        // Rust library will be linked directly
     ],
     targets: [
         .target(
@@ -145,7 +145,7 @@ let package = Package(
         ),
         .binaryTarget(
             name: "ArxOSMobileFFI",
-            path: "../crates/arxos-mobile/target/universal/ios/libarxos_mobile.a"
+            path: "../target/aarch64-apple-ios/release/libarxos.a"
         )
     ]
 )
@@ -187,7 +187,7 @@ android {
     
     sourceSets {
         main {
-            jniLibs.srcDirs = ['../crates/arxos-mobile/target/universal/android/jni']
+            jniLibs.srcDirs = ['../target/aarch64-linux-android/release']
         }
     }
 }

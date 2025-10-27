@@ -4,28 +4,40 @@
 
 ## 🏗️ Architecture
 
-ArxOS uses a **monorepo structure** with clear separation of concerns:
+ArxOS uses a **unified crate structure** with clear module separation:
 
 ```
 arxos/
-├── crates/                      # Shared Rust crates
-│   ├── arxos-core/              # Core business logic
-│   ├── arxos-mobile/             # Mobile FFI wrapper
-│   └── arxos-cli/                # CLI application
-├── ios/                         # iOS Native Shell
-├── android/                     # Android Native Shell
-└── docs/                        # Documentation
+├── src/                         # All Rust source code
+│   ├── lib.rs                  # Library API (for tests/mobile FFI)
+│   ├── main.rs                 # CLI entry point
+│   ├── core/                   # Core business logic
+│   ├── cli/                    # CLI command definitions
+│   ├── ifc/                    # IFC file processing
+│   ├── render3d/               # 3D rendering system
+│   ├── git/                    # Git integration
+│   ├── spatial/                # Spatial operations
+│   ├── search/                 # Search & filtering
+│   └── [other modules]/
+├── ios/                        # iOS Native Shell (SwiftUI)
+├── android/                    # Android Native Shell (Jetpack Compose)
+└── docs/                       # Documentation
 ```
 
-### **Crate Responsibilities:**
+### **Module Responsibilities:**
 
-- **`arxos-core`** - Pure business logic (spatial processing, equipment management, Git operations)
-- **`arxos-mobile`** - FFI wrapper for mobile applications (iOS/Android)
-- **`arxos-cli`** - Command-line interface using arxos-core
+- **`core/`** - Pure business logic (buildings, rooms, equipment data structures)
+- **`cli/`** - Command-line interface definitions and parsing
+- **`ifc/`** - IFC file processing and parsing
+- **`render3d/`** - 3D visualization engine
+- **`git/`** - Git repository operations
+- **`mobile_ffi/`** - FFI bindings for mobile apps
+- **`search/`** - Advanced search and filtering
+- **`spatial/`** - 3D coordinate systems and spatial operations
 
 ### **Mobile Architecture:**
 
-- **Rust Core** - High-performance data processing via FFI
+- **Rust Core** - Single unified crate compiled to FFI library
 - **Native UI Shells** - iOS (Swift/SwiftUI) and Android (Kotlin/Jetpack Compose)
 - **Git-First** - No database required, uses Git for all data storage
 
@@ -39,25 +51,32 @@ arxos/
 
 ### **Build:**
 ```bash
-# Build all crates
-cargo build --workspace
+# Build the project
+cargo build
 
-# Build specific crate
-cargo build -p arxos-cli
-cargo build -p arxos-core
-cargo build -p arxos-mobile
+# Build in release mode
+cargo build --release
+
+# Build for mobile (iOS)
+cargo build --target aarch64-apple-ios --release
+
+# Build for mobile (Android)
+cargo build --target aarch64-linux-android --release
 ```
 
 ### **Run CLI:**
 ```bash
 # Run the CLI
-cargo run --bin arxos-cli -- --help
+cargo run -- --help
+
+# Or if installed via cargo install
+arxos --help
 
 # Room management
-cargo run --bin arxos-cli -- room create --name "Classroom 301" --floor 3
+cargo run -- room create --name "Classroom 301" --floor 3
 
 # Equipment management
-cargo run --bin arxos-cli -- equipment add --name "VAV-301" --equipment-type HVAC
+cargo run -- equipment add --name "VAV-301" --equipment-type HVAC
 ```
 
 ## 📱 Mobile Development
@@ -65,32 +84,41 @@ cargo run --bin arxos-cli -- equipment add --name "VAV-301" --equipment-type HVA
 ### **iOS Development:**
 ```bash
 cd ios
-# iOS project setup will be added here
+# Build Rust library for iOS
+cargo build --target aarch64-apple-ios --release
+# Then open the Xcode project
+open ArxOSMobile.xcodeproj
 ```
 
 ### **Android Development:**
 ```bash
 cd android
-# Android project setup will be added here
+# Build Rust library for Android
+cargo build --target aarch64-linux-android --release
+# Then build the Android app
+./gradlew build
 ```
 
 ## 🧪 Testing
 
 ```bash
 # Run all tests
-cargo test --workspace
+cargo test
 
-# Run specific crate tests
-cargo test -p arxos-core
-cargo test -p arxos-mobile
-cargo test -p arxos-cli
+# Run with output
+cargo test -- --nocapture
+
+# Run specific test file
+cargo test --test integration_tests
 ```
 
 ## 📚 Documentation
 
-- [Architecture Overview](ARXOS_ARCHITECTURE_V2.md)
-- [Development Roadmap](DEVELOPMENT_ROADMAP.md)
-- [High School Project Questions](HIGH_SCHOOL_PROJECT_QUESTIONS.md)
+- [Architecture Overview](docs/ARCHITECTURE.md)
+- [User Guide](docs/USER_GUIDE.md)
+- [Mobile Build Guide](docs/MOBILE_BUILD_GUIDE.md)
+- [Hardware Integration](docs/hardware_integration.md)
+- [IFC Processing](docs/ifc_processing.md)
 
 ## 🎯 Key Features
 

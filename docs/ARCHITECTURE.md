@@ -350,27 +350,44 @@ src/
     └── validation.rs      # Configuration validation
 ```
 
-### Crate Structure
+### Module Organization
+
+The project uses a **unified crate structure** with all modules in `src/`:
 
 ```
-crates/
-├── arxos-core/             # Core business logic
-│   ├── src/
-│   │   ├── lib.rs         # Core library
-│   │   ├── analytics.rs   # Analytics and reporting
-│   │   ├── equipment.rs    # Equipment management
-│   │   ├── spatial.rs     # Spatial operations
-│   │   └── terminal/      # Terminal utilities
-│   └── Cargo.toml
-├── arxos-cli/              # CLI implementation
-│   ├── src/
-│   │   └── main.rs        # CLI entry point
-│   └── Cargo.toml
-└── arxos-mobile/           # Mobile FFI bindings
-    ├── src/
-    │   ├── lib.rs         # Mobile API
-    │   └── arxos_mobile.udl # UniFFI definitions
-    └── Cargo.toml
+src/
+├── lib.rs                  # Library API for tests and mobile FFI
+├── main.rs                 # CLI entry point
+├── core/                   # Core business logic and data structures
+│   └── mod.rs             # Building, Room, Equipment types
+├── cli/                    # CLI command definitions
+│   └── mod.rs             # Command parsing with clap
+├── ifc/                    # IFC file processing
+│   ├── mod.rs             # Main IFC processor
+│   ├── enhanced.rs         # Enhanced parsing
+│   ├── fallback.rs        # Fallback parsing
+│   └── hierarchy.rs       # Building hierarchy extraction
+├── render3d/               # 3D rendering system
+│   ├── mod.rs             # 3D renderer
+│   ├── interactive.rs     # Interactive rendering
+│   ├── particles.rs       # Particle system
+│   ├── animation.rs       # Animation framework
+│   ├── effects.rs         # Visual effects
+│   ├── events.rs          # Event handling
+│   └── state.rs           # State management
+├── git/                    # Git integration
+│   ├── mod.rs             # Git operations
+│   └── manager.rs         # Git repository management
+├── spatial/                # Spatial operations
+│   ├── mod.rs             # Spatial engine
+│   └── types.rs           # Spatial types
+├── search/                 # Search and filtering
+│   └── mod.rs             # Search engine
+├── mobile_ffi/             # Mobile FFI bindings
+│   ├── mod.rs             # FFI definitions
+│   ├── ffi.rs             # FFI functions
+│   └── jni.rs             # JNI bindings for Android
+└── [other modules]/       # Additional functionality
 ```
 
 ---

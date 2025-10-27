@@ -50,8 +50,8 @@ This Android app follows the **Rust Core + Native UI Shell** architecture:
 
 2. **Build Rust Core** (if not already built):
    ```bash
-   cd crates/arxos-mobile
-   cargo build --release
+   # From the project root
+   cargo build --target aarch64-linux-android --release
    ```
 
 3. **Run on Device**:
@@ -151,7 +151,7 @@ arx history
 
 1. **UI Components**: Add Compose screens in `ui/screens/`
 2. **Business Logic**: Extend service classes
-3. **Rust Integration**: Update FFI bindings in `crates/arxos-mobile`
+3. **Rust Integration**: Update FFI bindings in `src/mobile_ffi/`
 
 ### Testing
 

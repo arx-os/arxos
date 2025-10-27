@@ -50,8 +50,8 @@ This iOS app follows the **Rust Core + Native UI Shell** architecture:
 
 2. **Build Rust Core** (if not already built):
    ```bash
-   cd crates/arxos-mobile
-   cargo build --release
+   # From the project root
+   cargo build --target aarch64-apple-ios --release
    ```
 
 3. **Run on Device**:
@@ -141,7 +141,7 @@ arx history
 
 1. **UI Components**: Add SwiftUI views in `Views/`
 2. **Business Logic**: Extend `ArxOSCore.swift` service
-3. **Rust Integration**: Update FFI bindings in `crates/arxos-mobile`
+3. **Rust Integration**: Update FFI bindings in `src/mobile_ffi/`
 
 ### Testing
 

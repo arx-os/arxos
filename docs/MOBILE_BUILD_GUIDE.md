@@ -6,7 +6,7 @@ ArxOS Mobile provides cross-platform mobile applications for iOS and Android usi
 
 ## Architecture
 
-- **Rust Core**: `arxos-mobile` crate with UniFFI bindings
+- **Rust Core**: Main crate with UniFFI bindings (from `src/mobile_ffi/`)
 - **iOS**: SwiftUI app with Swift bindings
 - **Android**: Jetpack Compose app with Kotlin bindings
 - **FFI**: UniFFI generates native language bindings automatically
@@ -35,30 +35,30 @@ export ANDROID_HOME=/path/to/android/sdk
 export NDK_HOME=$ANDROID_HOME/ndk/25.1.8937393
 ```
 
-## Building the Mobile Crate
+## Building the Mobile Library
 
 ### Windows (Development)
 ```bash
 # Build for Windows development
-cargo build -p arxos-mobile --no-default-features --features core-only
+cargo build --lib
 ```
 
 ### iOS (macOS only)
 ```bash
 # Build for iOS device
-cargo build -p arxos-mobile --no-default-features --features core-only --target aarch64-apple-ios --release
+cargo build --target aarch64-apple-ios --release
 
 # Build for iOS simulator
-cargo build -p arxos-mobile --no-default-features --features core-only --target x86_64-apple-ios --release
+cargo build --target x86_64-apple-ios --release
 ```
 
 ### Android (Cross-platform)
 ```bash
 # Build for Android ARM64
-cargo build -p arxos-mobile --no-default-features --features core-only --target aarch64-linux-android --release
+cargo build --target aarch64-linux-android --release
 
 # Build for Android x86_64
-cargo build -p arxos-mobile --no-default-features --features core-only --target x86_64-linux-android --release
+cargo build --target x86_64-linux-android --release
 ```
 
 ## Mobile API Reference
@@ -136,7 +136,7 @@ pub struct CommandResult {
 
 1. **Build the Rust library**:
    ```bash
-   cargo build -p arxos-mobile --target aarch64-apple-ios --release
+   cargo build --target aarch64-apple-ios --release
    ```
 
 2. **Generate Swift bindings**:
@@ -153,7 +153,7 @@ pub struct CommandResult {
 
 1. **Build the Rust library**:
    ```bash
-   cargo build -p arxos-mobile --target aarch64-linux-android --release
+   cargo build --target aarch64-linux-android --release
    ```
 
 2. **Generate Kotlin bindings**:

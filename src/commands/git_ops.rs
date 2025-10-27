@@ -274,6 +274,85 @@ pub fn handle_diff(commit: Option<String>, file: Option<String>, stat: bool) -> 
     Ok(())
 }
 
+/// Handle stage command - stage changes for commit
+pub fn handle_stage(_all: bool, file: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+    println!("📦 Staging changes");
+    println!("{}", "=".repeat(50));
+    
+    let repo_path = find_git_repository()?;
+    
+    if let Some(repo_path) = repo_path {
+        let config = GitConfigManager::default_config();
+        let mut manager = BuildingGitManager::new(&repo_path, "Building", config)?;
+        
+        if let Some(file_path) = file {
+            println!("📄 Staging file: {}", file_path);
+            manager.stage_file(&file_path)?;
+            println!("✅ Staged: {}", file_path);
+        } else {
+            println!("📁 Staging all changes");
+            let staged_files = manager.stage_all()?;
+            println!("✅ Staged {} files", staged_files);
+        }
+    } else {
+        println!("❌ Not in a Git repository");
+        println!("💡 Run 'arx import <file.ifc>' to initialize a repository");
+    }
+    
+    Ok(())
+}
+
+/// Handle commit command - commit staged changes
+pub fn handle_commit(message: String) -> Result<(), Box<dyn std::error::Error>> {
+    println!("💾 Committing changes");
+    println!("{}", "=".repeat(50));
+    
+    let repo_path = find_git_repository()?;
+    
+    if let Some(repo_path) = repo_path {
+        let config = GitConfigManager::default_config();
+        let mut manager = BuildingGitManager::new(&repo_path, "Building", config)?;
+        
+        println!("📝 Message: {}", message);
+        let commit_id = manager.commit_staged(&message)?;
+        println!("✅ Committed: {}", &commit_id[..8]);
+        println!("💬 {}", message);
+    } else {
+        println!("❌ Not in a Git repository");
+        println!("💡 Run 'arx import <file.ifc>' to initialize a repository");
+    }
+    
+    Ok(())
+}
+
+/// Handle unstage command - unstage changes
+pub fn handle_unstage(_all: bool, file: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+    println!("📤 Unstaging changes");
+    println!("{}", "=".repeat(50));
+    
+    let repo_path = find_git_repository()?;
+    
+    if let Some(repo_path) = repo_path {
+        let config = GitConfigManager::default_config();
+        let mut manager = BuildingGitManager::new(&repo_path, "Building", config)?;
+        
+        if let Some(file_path) = file {
+            println!("📄 Unstaging file: {}", file_path);
+            manager.unstage_file(&file_path)?;
+            println!("✅ Unstaged: {}", file_path);
+        } else {
+            println!("📁 Unstaging all changes");
+            let unstaged_files = manager.unstage_all()?;
+            println!("✅ Unstaged {} files", unstaged_files);
+        }
+    } else {
+        println!("❌ Not in a Git repository");
+        println!("💡 Run 'arx import <file.ifc>' to initialize a repository");
+    }
+    
+    Ok(())
+}
+
 /// Handle history command - show commit history
 pub fn handle_history(limit: usize, verbose: bool, file: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
     println!("📚 ArxOS History");

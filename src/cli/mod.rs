@@ -113,6 +113,27 @@ pub enum Commands {
         #[arg(long)]
         verbose: bool,
     },
+    /// Stage changes in the working directory
+    Stage {
+        /// Stage all modified files (default behavior)
+        #[arg(long)]
+        all: bool,
+        /// Specific file to stage
+        file: Option<String>,
+    },
+    /// Commit staged changes
+    Commit {
+        /// Commit message
+        message: String,
+    },
+    /// Unstage changes
+    Unstage {
+        /// Unstage all files
+        #[arg(long)]
+        all: bool,
+        /// Specific file to unstage
+        file: Option<String>,
+    },
     /// Show differences between commits
     Diff {
         /// Compare with specific commit hash

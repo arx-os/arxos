@@ -374,6 +374,90 @@ impl BuildingGitManager {
             deletions: diff_result.deletions,
         })
     }
+
+    /// Stage a single file for commit
+    pub fn stage_file(&mut self, file_path: &str) -> Result<(), GitError> {
+        let mut index = self.repo.index()?;
+        index.add_path(Path::new(file_path))?;
+        index.write()?;
+        Ok(())
+    }
+
+    /// Stage all modified files
+    pub fn stage_all(&mut self) -> Result<usize, GitError> {
+        let mut index = self.repo.index()?;
+        index.add_all(&["*"], git2::IndexAddOption::DEFAULT, None)?;
+        let count = index.len();
+        index.write()?;
+        Ok(count)
+    }
+
+    /// Unstage a single file
+    pub fn unstage_file(&mut self, file_path: &str) -> Result<(), GitError> {
+        let mut index = self.repo.index()?;
+        index.remove_path(Path::new(file_path))?;
+        index.write()?;
+        Ok(())
+    }
+
+    /// Unstage all files
+    pub fn unstage_all(&mut self) -> Result<usize, GitError> {
+        let mut index = self.repo.index()?;
+        // Reset the index to HEAD
+        let tree_id = match self.repo.head() {
+            Ok(head) => {
+                let commit = head.peel_to_commit()?;
+                commit.tree_id()
+            }
+            Err(_) => {
+                // No HEAD, clear the index
+                let count = index.len();
+                index.clear()?;
+                index.write()?;
+                return Ok(count);
+            }
+        };
+        
+        let tree = self.repo.find_tree(tree_id)?;
+        index.read_tree(&tree)?;
+        let count = index.len();
+        index.write()?;
+        Ok(count)
+    }
+
+    /// Commit staged changes
+    pub fn commit_staged(&mut self, message: &str) -> Result<String, GitError> {
+        let mut index = self.repo.index()?;
+        let tree_id = index.write_tree()?;
+        let tree = self.repo.find_tree(tree_id)?;
+
+        // Get parent commit (if exists)
+        let parent_commit = match self.repo.head() {
+            Ok(head) => {
+                if head.is_branch() {
+                    Some(head.peel_to_commit()?)
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        };
+
+        // Create signature
+        let signature = Signature::now("ArxOS", "arxos@arxos.io")?;
+
+        // Create commit
+        let commit_id = self.repo.commit(
+            Some("HEAD"),
+            &signature,
+            &signature,
+            message,
+            &tree,
+            &parent_commit.iter().collect::<Vec<_>>(),
+        )?;
+
+        Ok(commit_id.to_string())
+    }
 }
 
 /// Git repository status

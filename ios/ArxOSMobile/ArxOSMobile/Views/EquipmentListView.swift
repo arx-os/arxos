@@ -83,43 +83,20 @@ struct EquipmentListView: View {
     private func loadEquipment() {
         isLoading = true
         
-        // Simulate loading equipment from ArxOS core
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            equipmentList = [
-                Equipment(
-                    id: "1",
-                    name: "VAV-301",
-                    type: "HVAC",
-                    status: "Active",
-                    location: "Room 301",
-                    lastMaintenance: "2024-01-15"
-                ),
-                Equipment(
-                    id: "2",
-                    name: "Panel-301",
-                    type: "Electrical",
-                    status: "Active",
-                    location: "Room 301",
-                    lastMaintenance: "2024-01-10"
-                ),
-                Equipment(
-                    id: "3",
-                    name: "Sink-301",
-                    type: "Plumbing",
-                    status: "Maintenance",
-                    location: "Room 301",
-                    lastMaintenance: "2024-01-20"
-                ),
-                Equipment(
-                    id: "4",
-                    name: "Fire Alarm-301",
-                    type: "Safety",
-                    status: "Active",
-                    location: "Room 301",
-                    lastMaintenance: "2024-01-05"
-                )
-            ]
-            isLoading = false
+        // Load equipment from ArxOS FFI
+        let ffi = ArxOSCoreFFI()
+        ffi.listEquipment(buildingName: "Default Building") { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let equipment):
+                    self.equipmentList = equipment
+                case .failure(let error):
+                    print("Error loading equipment: \(error.localizedDescription)")
+                    // Fall back to empty list
+                    self.equipmentList = []
+                }
+                self.isLoading = false
+            }
         }
     }
     

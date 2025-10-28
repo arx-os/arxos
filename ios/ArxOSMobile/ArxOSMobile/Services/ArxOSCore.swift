@@ -223,20 +223,5 @@ class TerminalService: ObservableObject {
     }
 }
 
-// MARK: - Error Types
-enum TerminalError: Error, LocalizedError {
-    case unknownCommand(String)
-    case invalidArguments
-    case ffiError(String)
-    
-    var errorDescription: String? {
-        switch self {
-        case .unknownCommand(let command):
-            return "Unknown command: \(command)"
-        case .invalidArguments:
-            return "Invalid arguments provided"
-        case .ffiError(let message):
-            return "FFI error: \(message)"
-        }
-    }
-}
+// MARK: - Error handling
+// TerminalError is defined in ArxOSCoreFFI.swift

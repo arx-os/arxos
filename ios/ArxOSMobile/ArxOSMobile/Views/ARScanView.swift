@@ -166,10 +166,9 @@ struct ARScanView: View {
     private func addEquipmentManually() {
         // Add manual equipment entry
         let newEquipment = DetectedEquipment(
-            id: UUID(),
             name: "Manual Equipment",
             type: "Manual",
-            position: SIMD3<Float>(0, 0, 0),
+            position: Position3D(x: 0, y: 0, z: 0),
             status: "Detected",
             icon: "wrench"
         )
@@ -181,15 +180,6 @@ struct ARScanView: View {
         // This would integrate with the Rust core
         isScanning = false
     }
-}
-
-struct DetectedEquipment: Identifiable {
-    let id: UUID
-    let name: String
-    let type: String
-    let position: SIMD3<Float>
-    let status: String
-    let icon: String
 }
 
 struct EquipmentTagView: View {

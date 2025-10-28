@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		49819A322EB030FA00B93E8B /* ArxOS.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 49819A312EB030FA00B93E8B /* ArxOS.xcframework */; };
 		A1234567890123456789012A /* ArxOSMobileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789012B /* ArxOSMobileApp.swift */; };
 		A1234567890123456789012C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789012D /* ContentView.swift */; };
 		A1234567890123456789012E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789012F /* Assets.xcassets */; };
@@ -14,18 +15,25 @@
 		A1234567890123456789013C /* TerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789013D /* TerminalView.swift */; };
 		A1234567890123456789013E /* ARScanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789013F /* ARScanView.swift */; };
 		A1234567890123456789014A /* EquipmentListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789014B /* EquipmentListView.swift */; };
+		A1234567890123456789014M /* ARViewContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789014L /* ARViewContainer.swift */; };
 		A1234567890123456789014C /* ArxOSCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789014D /* ArxOSCore.swift */; };
+		A1234567890123456789015G /* ArxOSCoreFFI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789015H /* ArxOSCoreFFI.swift */; };
+		A1234567890123456789015K /* ArxOSModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789015J /* ArxOSModels.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		49819A312EB030FA00B93E8B /* ArxOS.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = ArxOS.xcframework; path = /Users/joelpate/repos/arxos/ios/build/ArxOS.xcframework; sourceTree = "<absolute>"; };
 		A1234567890123456789012B /* ArxOSMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArxOSMobileApp.swift; sourceTree = "<group>"; };
 		A1234567890123456789012D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		A1234567890123456789012F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		A1234567890123456789013B /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		A1234567890123456789012F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "../Assets.xcassets"; sourceTree = "<group>"; };
+		A1234567890123456789013B /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "../Preview Content/Preview Assets.xcassets"; sourceTree = "<group>"; };
 		A1234567890123456789013D /* TerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalView.swift; sourceTree = "<group>"; };
 		A1234567890123456789013F /* ARScanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARScanView.swift; sourceTree = "<group>"; };
 		A1234567890123456789014B /* EquipmentListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentListView.swift; sourceTree = "<group>"; };
+		A1234567890123456789014L /* ARViewContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARViewContainer.swift; sourceTree = "<group>"; };
 		A1234567890123456789014D /* ArxOSCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArxOSCore.swift; sourceTree = "<group>"; };
+		A1234567890123456789015H /* ArxOSCoreFFI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArxOSCoreFFI.swift; sourceTree = "<group>"; };
+		A1234567890123456789015J /* ArxOSModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArxOSModels.swift; sourceTree = "<group>"; };
 		A1234567890123456789014E /* ArxOSMobile.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ArxOSMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -34,12 +42,21 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				49819A322EB030FA00B93E8B /* ArxOS.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		49819A302EB030FA00B93E8B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				49819A312EB030FA00B93E8B /* ArxOS.xcframework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		A1234567890123456789015A /* ArxOSMobile */ = {
 			isa = PBXGroup;
 			children = (
@@ -47,10 +64,11 @@
 				A1234567890123456789012D /* ContentView.swift */,
 				A1234567890123456789015B /* Views */,
 				A1234567890123456789015C /* Services */,
+				A1234567890123456789015I /* Models */,
 				A1234567890123456789012F /* Assets.xcassets */,
 				A1234567890123456789015D /* Preview Content */,
 			);
-			path = ArxOSMobile;
+			path = "ArxOSMobile/ArxOSMobile";
 			sourceTree = "<group>";
 		};
 		A1234567890123456789015B /* Views */ = {
@@ -58,6 +76,7 @@
 			children = (
 				A1234567890123456789013D /* TerminalView.swift */,
 				A1234567890123456789013F /* ARScanView.swift */,
+				A1234567890123456789014L /* ARViewContainer.swift */,
 				A1234567890123456789014B /* EquipmentListView.swift */,
 			);
 			path = Views;
@@ -67,8 +86,17 @@
 			isa = PBXGroup;
 			children = (
 				A1234567890123456789014D /* ArxOSCore.swift */,
+				A1234567890123456789015H /* ArxOSCoreFFI.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		A1234567890123456789015I /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A1234567890123456789015J /* ArxOSModels.swift */,
+			);
+			path = Models;
 			sourceTree = "<group>";
 		};
 		A1234567890123456789015D /* Preview Content */ = {
@@ -76,13 +104,14 @@
 			children = (
 				A1234567890123456789013B /* Preview Assets.xcassets */,
 			);
-			path = "Preview Content";
+			path = "../Preview Content";
 			sourceTree = "<group>";
 		};
 		A1234567890123456789015E = {
 			isa = PBXGroup;
 			children = (
 				A1234567890123456789015A /* ArxOSMobile */,
+				49819A302EB030FA00B93E8B /* Frameworks */,
 				A1234567890123456789015F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -169,8 +198,11 @@
 				A1234567890123456789012A /* ArxOSMobileApp.swift in Sources */,
 				A1234567890123456789013C /* TerminalView.swift in Sources */,
 				A1234567890123456789013E /* ARScanView.swift in Sources */,
+				A1234567890123456789014M /* ARViewContainer.swift in Sources */,
 				A1234567890123456789014A /* EquipmentListView.swift in Sources */,
 				A1234567890123456789014C /* ArxOSCore.swift in Sources */,
+				A1234567890123456789015G /* ArxOSCoreFFI.swift in Sources */,
+				A1234567890123456789015K /* ArxOSModels.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -304,10 +336,11 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"ArxOSMobile/Preview Content\"";
+				DEVELOPMENT_TEAM = B79V6MB46Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ArxOS needs location access for spatial data processing";
 				INFOPLIST_KEY_NSCameraUsageDescription = "ArxOS needs camera access for AR scanning and equipment capture";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ArxOS needs location access for spatial data processing";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -318,6 +351,11 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lz",
+					"-liconv",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.arxos.mobile;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -334,10 +372,11 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"ArxOSMobile/Preview Content\"";
+				DEVELOPMENT_TEAM = B79V6MB46Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ArxOS needs location access for spatial data processing";
 				INFOPLIST_KEY_NSCameraUsageDescription = "ArxOS needs camera access for AR scanning and equipment capture";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ArxOS needs location access for spatial data processing";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -348,6 +387,11 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lz",
+					"-liconv",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.arxos.mobile;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

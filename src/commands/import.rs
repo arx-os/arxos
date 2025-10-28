@@ -2,14 +2,15 @@
 // Handles IFC file importing and building data generation
 
 use crate::ifc;
-use crate::yaml;
 use crate::progress;
 use crate::core::Building;
 use log::warn;
 
 /// Helper function to generate YAML output from building data
 fn generate_yaml_output(building: &Building, building_name: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let serializer = yaml::BuildingYamlSerializer::new();
+    use crate::yaml::BuildingYamlSerializer;
+    
+    let serializer = BuildingYamlSerializer::new();
     
     // Try to serialize with hierarchical data first (empty spatial entities)
     let building_data = match serializer.serialize_building(building, &[], None) {
@@ -35,8 +36,8 @@ fn generate_yaml_output(building: &Building, building_name: &str) -> Result<Stri
 /// Handle the import command
 pub fn handle_import(ifc_file: String, repo: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Importing IFC file: {}", ifc_file);
-    if let Some(repo_url) = repo {
-        println!("📦 To repository: {}", repo_url);
+    if let Some(ref repo_path) = repo {
+        println!("📦 To repository: {}", repo_path);
     }
     
     // Validate IFC file exists
@@ -73,7 +74,15 @@ pub fn handle_import(ifc_file: String, repo: Option<String>) -> Result<(), Box<d
             
             // Generate YAML output using helper function
             match generate_yaml_output(&building, &building.name) {
-                Ok(_) => {},
+                Ok(yaml_file) => {
+                    // Initialize Git repo if requested
+                    if let Some(ref repo_path) = repo {
+                        match initialize_git_repo(repo_path, &yaml_file, &building.name) {
+                            Ok(_) => println!("✅ Initialized Git repository at: {}", repo_path),
+                            Err(e) => println!("⚠️  Git initialization failed: {}", e),
+                        }
+                    }
+                },
                 Err(e) => {
                     println!("❌ Error generating YAML file: {}", e);
                 }
@@ -102,7 +111,15 @@ pub fn handle_import(ifc_file: String, repo: Option<String>) -> Result<(), Box<d
 
                     // Generate YAML output using helper function
                     match generate_yaml_output(&building, &building.name) {
-                        Ok(_) => {},
+                        Ok(yaml_file) => {
+                            // Initialize Git repo if requested
+                            if let Some(ref repo_path) = repo {
+                                match initialize_git_repo(repo_path, &yaml_file, &building.name) {
+                                    Ok(_) => println!("✅ Initialized Git repository at: {}", repo_path),
+                                    Err(e) => println!("⚠️  Git initialization failed: {}", e),
+                                }
+                            }
+                        },
                         Err(e) => {
                             println!("❌ Error generating YAML file: {}", e);
                         }
@@ -124,6 +141,35 @@ pub fn handle_import(ifc_file: String, repo: Option<String>) -> Result<(), Box<d
             }
         }
     }
+    
+    Ok(())
+}
+
+/// Initialize Git repository and commit YAML file
+fn initialize_git_repo(repo_path: &str, yaml_file: &str, building_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    use crate::git::manager::{BuildingGitManager, GitConfig};
+    use crate::yaml::BuildingData;
+    
+    // Create Git config with default values
+    let git_config = GitConfig {
+        author_name: std::env::var("GIT_AUTHOR_NAME").unwrap_or_else(|_| "ArxOS System".to_string()),
+        author_email: std::env::var("GIT_AUTHOR_EMAIL").unwrap_or_else(|_| "system@arxos.dev".to_string()),
+        branch: "main".to_string(),
+        remote_url: None,
+    };
+    
+    // Initialize Git manager
+    let mut git_manager = BuildingGitManager::new(repo_path, building_name, git_config.clone())?;
+    
+    // Load the YAML file directly
+    let content = std::fs::read_to_string(yaml_file)?;
+    let building_data: BuildingData = serde_yaml::from_str(&content)?;
+    
+    // Export to Git and commit
+    let result = git_manager.export_building(&building_data, Some(&format!("Initial import from IFC: {}", building_name)))?;
+    
+    println!("   Committed: {}", result.commit_id);
+    println!("   Files changed: {}", result.files_changed);
     
     Ok(())
 }

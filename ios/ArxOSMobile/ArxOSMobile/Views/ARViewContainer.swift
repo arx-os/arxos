@@ -76,10 +76,9 @@ extension ARCoordinator {
         DispatchQueue.main.async {
             // Simulate equipment detection
             let simulatedEquipment = DetectedEquipment(
-                id: UUID(),
                 name: "VAV-301",
                 type: "HVAC",
-                position: SIMD3<Float>(0, 0, -1),
+                position: Position3D(x: Double(0), y: Double(0), z: Double(-1)),
                 status: "Detected",
                 icon: "fan"
             )

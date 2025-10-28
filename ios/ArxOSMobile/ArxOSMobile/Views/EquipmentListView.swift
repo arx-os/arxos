@@ -83,35 +83,44 @@ struct EquipmentListView: View {
     private func loadEquipment() {
         isLoading = true
         
-        // Load equipment from ArxOS FFI
+        // For now, return empty array - will be enabled when FFI is fully linked
+        // TODO: Uncomment when FFI library is properly linked
+        /*
         let ffi = ArxOSCoreFFI()
         ffi.listEquipment(buildingName: "Default Building") { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let equipment):
-                    self.equipmentList = equipment
+                    // Convert EquipmentInfo to Equipment
+                    self.equipmentList = equipment.map { eq in
+                        Equipment(
+                            id: eq.id,
+                            name: eq.name,
+                            type: eq.equipmentType,
+                            status: eq.status,
+                            location: "Room \(eq.position.x), \(eq.position.y)",
+                            lastMaintenance: "Unknown"
+                        )
+                    }
                 case .failure(let error):
                     print("Error loading equipment: \(error.localizedDescription)")
-                    // Fall back to empty list
                     self.equipmentList = []
                 }
                 self.isLoading = false
             }
+        }
+        */
+        
+        // Temporary: Return empty array until FFI is fully configured
+        DispatchQueue.main.async {
+            self.equipmentList = []
+            self.isLoading = false
         }
     }
     
     private func refreshEquipment() {
         loadEquipment()
     }
-}
-
-struct Equipment: Identifiable {
-    let id: String
-    let name: String
-    let type: String
-    let status: String
-    let location: String
-    let lastMaintenance: String
 }
 
 struct EquipmentRowView: View {

@@ -303,6 +303,34 @@ mod tests {
         assert!(ifc_data.contains("END-ISO-10303-21"));
     }
     
+    #[test]
+    fn test_end_to_end_workflow() {
+        // This is a placeholder for end-to-end workflow testing
+        // Tests would include:
+        // 1. IFC import
+        // 2. Equipment management
+        // 3. Sensor processing
+        // 4. AR integration
+        // 5. Rendering
+        // 6. Git operations
+        
+        // For now, just verify test structure
+        assert!(true);
+    }
+
+    #[test]
+    fn test_complete_import_to_export_workflow() {
+        // Placeholder for complete workflow:
+        // 1. Import IFC file
+        // 2. Generate YAML output
+        // 3. Initialize Git repo
+        // 4. Commit changes
+        // 5. Export building data
+        
+        // For now, just verify test structure exists
+        assert!(true);
+    }
+    
     // ==========================================
     // Phase 5: End-to-End Data Flow Tests
     // ==========================================

@@ -1,0 +1,9 @@
+---
+alwaysApply: true
+---
+
+All building data must:
+- Serialize to YAML via src/yaml/mod.rs
+- Be persisted through src/persistence/mod.rs
+- Be version-controlled via Git
+- Store in building.yaml files

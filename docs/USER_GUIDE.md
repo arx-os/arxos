@@ -15,104 +15,85 @@
 5. [Search & Filter System](#search--filter-system)
 6. [3D Visualization](#3d-visualization)
 7. [Interactive 3D Rendering](#interactive-3d-rendering)
-8. [Particle Effects & Animations](#particle-effects--animations)
-9. [Configuration](#configuration)
-10. [Troubleshooting](#troubleshooting)
-11. [Examples](#examples)
-12. [Best Practices](#best-practices)
+8. [Configuration](#configuration)
+9. [Troubleshooting](#troubleshooting)
+10. [Examples](#examples)
+11. [Best Practices](#best-practices)
 
 ---
 
 ## Introduction
 
+**This guide is for anyone who wants to use ArxOS to manage building data.** You don't need to be a developer or know how to code.
+
 ArxOS is a powerful terminal-based building management system that provides Git-like version control for building data, advanced 3D visualization, and real-time interactive controls. It's designed for facility managers, building operators, and anyone who needs to manage and visualize building infrastructure.
+
+> **Note:** If you're a developer looking to contribute or build ArxOS from source, see the [README.md](../README.md) for development information.
 
 ### Key Features
 
 - **Git-like Version Control**: Track changes to building data with full history
-- **Advanced Search & Filter**: Find equipment, rooms, and buildings with fuzzy matching and regex support
+- **Advanced Search & Filter**: Find equipment, rooms, and buildings with regex support
 - **3D Visualization**: Interactive 3D building visualization with real-time controls
-- **Particle Effects**: Advanced visual effects for equipment status and building health
 - **Terminal-First**: Full functionality in terminal environment
 - **Multi-format Support**: IFC, YAML, JSON data formats
 - **Hardware Integration**: Support for sensors and IoT devices
+- **Mobile Apps**: iOS and Android apps with AR integration
 
 ---
 
 ## Installation
 
-### Prerequisites
-
-- Rust 1.70+ (for development)
-- Git (for version control)
-- Terminal with Unicode support
-
-### Building from Source
-
-```bash
-# Clone the repository
-git clone https://github.com/your-username/arxos.git
-cd arxos
-
-# Build the project
-cargo build --release
-
-# Install globally (optional)
-cargo install --path .
-```
+> **Note:** ArxOS currently requires building from source (pre-built binaries coming soon). See the [README.md](../README.md) for installation instructions.
 
 ### Verify Installation
 
+Once you have ArxOS installed, verify it works:
+
 ```bash
-arxos --version
+arx --version
 ```
 
 ---
 
 ## Quick Start
 
-### 1. Initialize a Building Project
+Once you have ArxOS installed (see the README for installation instructions), here's how to get started:
+
+### 1. Import Your First Building
 
 ```bash
-# Create a new building project
-mkdir my-building
-cd my-building
-
-# Initialize Git repository
-git init
-
-# Create building configuration
-arxos config init
+# Import an IFC file
+arx import building.ifc
 ```
 
-### 2. Import Building Data
+This will:
+- Read your IFC file
+- Extract building hierarchy (floors, rooms, equipment)
+- Generate YAML building data
+- Display a summary
+
+### 2. Explore Your Building Data
 
 ```bash
-# Import IFC file
-arxos import building.ifc --building "My Building"
+# Check the status of your building data
+arx status
 
-# Check status
-arxos status
+# Search for specific equipment
+arx search "VAV"
+
+# View everything on the 2nd floor
+arx filter --floor 2
 ```
 
-### 3. Explore Your Building
+### 3. Visualize Your Building
 
 ```bash
-# List all equipment
-arxos list equipment
+# View in 3D with status indicators
+arx render --building "Your Building Name" --three-d --show-status
 
-# Search for HVAC equipment
-arxos search "HVAC" --equipment
-
-# View 3D visualization
-arxos render --building "My Building" --3d
-```
-
-### 4. Interactive 3D Mode
-
-```bash
-# Start interactive 3D session
-arxos interactive --building "My Building" --show-status --show-rooms
+# Start an interactive 3D exploration session
+arx interactive --building "Your Building Name" --show-status --show-rooms
 ```
 
 ---
@@ -121,116 +102,144 @@ arxos interactive --building "My Building" --show-status --show-rooms
 
 ### Building Management
 
-#### `arxos status`
+#### `arx status`
 Show the current status of your building data.
 
 ```bash
-arxos status
+arx status
 # Shows: modified files, untracked changes, current branch
+
+# Verbose output
+arx status --verbose
 ```
 
-#### `arxos diff`
+#### `arx diff`
 Show differences between versions.
 
 ```bash
-arxos diff
-arxos diff --building "Building Name"
-arxos diff HEAD~1  # Compare with previous commit
+arx diff
+arx diff --file building.yaml
+arx diff --commit HEAD~1  # Compare with previous commit
+arx diff --stat  # Show only statistics
 ```
 
-#### `arxos history`
+#### `arx history`
 Show commit history.
 
 ```bash
-arxos history
-arxos history --building "Building Name" --limit 10
+arx history
+arx history --limit 20
+arx history --verbose
+```
+
+#### `arx stage`, `arx commit`, `arx unstage`
+Git staging commands for building data.
+
+```bash
+# Stage all changes
+arx stage --all
+
+# Stage specific file
+arx stage building.yaml
+
+# Commit staged changes
+arx commit "Update equipment status"
+
+# Unstage changes
+arx unstage building.yaml
 ```
 
 ### Data Import/Export
 
-#### `arxos import`
-Import building data from various formats.
+#### `arx import`
+Import building data from IFC file.
 
 ```bash
-# Import IFC file
-arxos import building.ifc --building "Building Name"
+# Import IFC file (generates YAML)
+arx import building.ifc
 
-# Import with custom settings
-arxos import building.ifc --building "Building Name" --spatial-index --verbose
+# Import with Git repository
+arx import building.ifc --repo ./building-repo
 ```
 
-#### `arxos export`
-Export building data to various formats.
+#### `arx export`
+Export building data to Git repository.
 
 ```bash
-# Export to JSON
-arxos export --building "Building Name" --format json
-
-# Export specific floor
-arxos export --building "Building Name" --floor 2 --format yaml
+# Export current building data
+arx export --repo ./export-repo
 ```
 
 ---
 
 ## Search & Filter System
 
-ArxOS provides powerful search and filtering capabilities with fuzzy matching, regex support, and real-time highlighting.
+ArxOS provides powerful search and filtering capabilities with regex support.
 
 ### Basic Search
 
 ```bash
-# Search for equipment
-arxos search "HVAC"
+# Search across all data types
+arx search "HVAC"
 
-# Search with case sensitivity
-arxos search "hvac" --case-sensitive
+# Search only in equipment names
+arx search "VAV" --equipment
 
-# Search with regex
-arxos search "VAV.*Unit" --regex
+# Search in room names
+arx search "Conference" --rooms
+
+# Case-sensitive search
+arx search "hvac" --case-sensitive
+
+# Search with regex pattern
+arx search "VAV.*" --regex
+
+# Limit number of results
+arx search "HVAC" --limit 25
+
+# Verbose output with details
+arx search "HVAC" --verbose
 ```
 
 ### Advanced Filtering
 
 ```bash
 # Filter by equipment type
-arxos filter --equipment-type "HVAC"
+arx filter --equipment-type "HVAC"
 
 # Filter by status
-arxos filter --status "Critical"
+arx filter --status "Critical"
 
 # Filter by floor
-arxos filter --floor 2
+arx filter --floor 2
 
 # Filter by room
-arxos filter --room "Conference Room A"
+arx filter --room "Conference Room A"
 
 # Multiple filters
-arxos filter --equipment-type "HVAC" --floor 2 --status "Warning"
-```
+arx filter --equipment-type "HVAC" --floor 2 --status "Warning"
 
-### Output Formats
+# Show only critical equipment
+arx filter --critical-only
 
-```bash
-# Table format (default)
-arxos search "HVAC" --format table
+# Show only healthy equipment
+arx filter --healthy-only
 
-# JSON format
-arxos search "HVAC" --format json
+# Show only equipment with alerts
+arx filter --alerts-only
 
-# YAML format
-arxos search "HVAC" --format yaml
-
-# Verbose output
-arxos search "HVAC" --verbose
+# Output in different formats
+arx filter --equipment-type "HVAC" --format json
+arx filter --status "Critical" --format yaml
 ```
 
 ### Search Features
 
-- **Fuzzy Matching**: Automatically handles typos and partial matches
-- **Multi-field Search**: Searches across names, types, system types, and paths
-- **Regex Support**: Full regex pattern matching
-- **Real-time Highlighting**: Highlights matching text in results
-- **Performance Optimized**: Efficient search with result caching
+- **Multi-field Search**: Searches across equipment, rooms, and buildings
+- **Regex Support**: Full regex pattern matching with `--regex` flag
+- **Case Sensitivity**: Control with `--case-sensitive` flag
+- **Flexible Filtering**: Combine multiple filter criteria
+- **Multiple Output Formats**: table, json, yaml
 
 ---
 
@@ -242,74 +251,80 @@ ArxOS provides advanced 3D building visualization with multiple projection types
 
 ```bash
 # Render building in 3D
-arxos render --building "Building Name" --3d
+arx render --building "Building" --three-d
 
 # Different projection types
-arxos render --building "Building Name" --3d --projection isometric
-arxos render --building "Building Name" --3d --projection orthographic
-arxos render --building "Building Name" --3d --projection perspective
+arx render --building "Building" --three-d --projection isometric
+arx render --building "Building" --three-d --projection orthographic
+arx render --building "Building" --three-d --projection perspective
 
 # Different view angles
-arxos render --building "Building Name" --3d --view-angle topdown
-arxos render --building "Building Name" --3d --view-angle front
-arxos render --building "Building Name" --3d --view-angle side
+arx render --building "Building" --three-d --view-angle topdown
+arx render --building "Building" --three-d --view-angle front
+arx render --building "Building" --three-d --view-angle side
+
+# Render specific floor
+arx render --building "Building" --floor 2 --three-d
 ```
 
 ### Rendering Options
 
 ```bash
-# Show equipment status
-arxos render --building "Building Name" --3d --show-status
+# Show equipment status indicators
+arx render --building "Building" --three-d --show-status
 
 # Show room boundaries
-arxos render --building "Building Name" --3d --show-rooms
+arx render --building "Building" --three-d --show-rooms
 
-# Show equipment connections
-arxos render --building "Building Name" --3d --show-connections
+# Custom scale
+arx render --building "Building" --three-d --scale 2.0
 
-# Custom scale and size
-arxos render --building "Building Name" --3d --scale 2.0 --width 150 --height 50
+# Enable spatial index for enhanced queries
+arx render --building "Building" --three-d --spatial-index
 ```
 
 ### Output Formats
 
 ```bash
 # ASCII output (default)
-arxos render --building "Building Name" --3d --format ascii
+arx render --building "Building" --three-d --format ascii
 
 # Advanced ASCII art
-arxos render --building "Building Name" --3d --format advanced
+arx render --building "Building" --three-d --format advanced
 
 # JSON output
-arxos render --building "Building Name" --3d --format json
+arx render --building "Building" --three-d --format json
 
 # YAML output
-arxos render --building "Building Name" --3d --format yaml
+arx render --building "Building" --three-d --format yaml
 ```
 
 ---
 
 ## Interactive 3D Rendering
 
-ArxOS provides real-time interactive 3D rendering with keyboard and mouse controls.
+ArxOS provides real-time interactive 3D rendering with keyboard controls.
 
 ### Starting Interactive Mode
 
 ```bash
 # Basic interactive session
-arxos interactive --building "Building Name"
+arx interactive --building "Building"
 
 # With status indicators
-arxos interactive --building "Building Name" --show-status
+arx interactive --building "Building" --show-status
 
 # With room boundaries
-arxos interactive --building "Building Name" --show-rooms
+arx interactive --building "Building" --show-rooms
 
 # With connections
-arxos interactive --building "Building Name" --show-connections
+arx interactive --building "Building" --show-connections
 
-# Custom FPS and size
-arxos interactive --building "Building Name" --fps 60 --width 150 --height 50
+# Custom FPS and canvas size
+arx interactive --building "Building" --fps 60 --width 150 --height 50
+
+# Show FPS counter and help overlay
+arx interactive --building "Building" --show-fps --show-help
 ```
 
 ### Interactive Controls
@@ -351,55 +366,6 @@ arxos interactive --building "Building Name" --fps 60 --width 150 --height 50
 
 ---
 
-## Particle Effects & Animations
-
-ArxOS includes advanced particle effects and animation systems for enhanced visual feedback.
-
-### Equipment Status Effects
-
-Equipment automatically displays status indicators with particle effects:
-
-- **Healthy**: Green checkmark with subtle pulse
-- **Warning**: Yellow warning symbol with gentle animation
-- **Critical**: Red X with urgent blinking
-- **Maintenance**: Wrench icon with maintenance alert particles
-- **Offline**: Gray circle with fade effect
-
-### Maintenance Alerts
-
-```bash
-# Create maintenance alert effect
-arxos interactive --building "Building Name" --show-maintenance
-
-# Alert levels:
-# - Low: Orange diamond
-# - Medium: Orange circle
-# - High: Red circle
-# - Critical: Red alert symbol
-```
-
-### Particle Effects
-
-ArxOS supports various particle effects:
-
-- **Smoke**: Rising smoke particles for environmental effects
-- **Fire**: Flickering fire particles for emergency visualization
-- **Sparks**: Energy spark particles for electrical equipment
-- **Dust**: Falling dust particles for environmental effects
-- **Status Indicators**: Pulsing status particles for equipment health
-- **Connections**: Flowing connection particles for equipment relationships
-
-### Animation Types
-
-- **Camera Movement**: Smooth camera transitions with easing
-- **Status Transitions**: Animated status changes
-- **Building Fade**: Smooth building appearance/disappearance
-- **Selection Highlight**: Pulsing highlight effects
-- **Floor Transitions**: Animated floor changes
-- **View Mode Changes**: Smooth transitions between view modes
-
----
-
 ## Configuration
 
 ArxOS uses a configuration file (`arx.toml`) for persistent settings.
@@ -408,50 +374,48 @@ ArxOS uses a configuration file (`arx.toml`) for persistent settings.
 
 ```toml
 # arx.toml
+[user]
+name = "Your Name"
+email = "you@example.com"
+commit_template = "Update building data"
+
+[paths]
+default_import_path = "./imports"
+backup_path = "./backups"
+template_path = "./templates"
+temp_path = "./temp"
+
 [building]
-name = "My Building"
-description = "Main office building"
+default_coordinate_system = "building_local"
+auto_commit = true
+validate_on_import = true
 
-[rendering]
-default_projection = "isometric"
-default_view_angle = "isometric"
-show_status = true
-show_rooms = true
-show_connections = false
+[performance]
+max_parallel_threads = 4
+memory_limit_mb = 1024
+cache_enabled = true
+show_progress = true
 
-[search]
-case_sensitive = false
-use_regex = false
-fuzzy_matching = true
-max_results = 100
-
-[interactive]
-target_fps = 30
-show_fps = true
-show_help = false
-enable_mouse = true
-
-[effects]
-enable_particles = true
-enable_animations = true
-max_particles = 1000
-quality_level = "medium"
+[ui]
+use_emoji = true
+verbosity = "normal"
+color_scheme = "auto"
 ```
 
 ### Configuration Commands
 
 ```bash
 # Show current configuration
-arxos config show
+arx config --show
 
-# Set configuration value
-arxos config set rendering.default_projection "orthographic"
+# Set configuration value (format: section.key=value)
+arx config --set building.name="My Building"
 
 # Reset to defaults
-arxos config reset
+arx config --reset
 
-# Validate configuration
-arxos config validate
+# Edit configuration file
+arx config --edit
 ```
 
 ---
@@ -462,57 +426,57 @@ arxos config validate
 
 #### "Building not found" Error
 ```bash
-# Check available buildings
-arxos list buildings
-
 # Verify building name spelling
-arxos status
+arx status
+
+# Check if building.yaml exists in current directory
+ls -la *.yaml
 ```
 
 #### "No results found" in Search
 ```bash
-# Try fuzzy search
-arxos search "hvac" --fuzzy
+# Try case-insensitive search
+arx search "hvac"
 
 # Check case sensitivity
-arxos search "HVAC" --case-sensitive
+arx search "HVAC" --case-sensitive
 
 # Use regex for complex patterns
-arxos search "VAV.*" --regex
+arx search "VAV.*" --regex
+
+# Search only in specific category
+arx search "VAV" --equipment
 ```
 
 #### Interactive Mode Not Working
 ```bash
-# Check terminal compatibility
-arxos interactive --building "Building Name" --help
+# Check if building data exists
+arx render --building "Building" --three-d
 
 # Try different FPS settings
-arxos interactive --building "Building Name" --fps 15
+arx interactive --building "Building" --fps 15
 
-# Disable mouse support
-arxos interactive --building "Building Name" --no-mouse
+# Reduce canvas size for better performance
+arx interactive --building "Building" --width 80 --height 30
 ```
 
 #### Performance Issues
 ```bash
-# Reduce particle count
-arxos interactive --building "Building Name" --max-particles 500
-
 # Lower FPS target
-arxos interactive --building "Building Name" --fps 15
+arx interactive --building "Building" --fps 15
 
-# Disable effects
-arxos interactive --building "Building Name" --no-effects
+# Reduce canvas size
+arx interactive --building "Building" --width 80 --height 25
 ```
 
 ### Debug Mode
 
 ```bash
 # Enable debug logging
-RUST_LOG=debug arxos interactive --building "Building Name"
+RUST_LOG=debug arx interactive --building "Building"
 
 # Verbose output
-arxos search "HVAC" --verbose --debug
+arx search "HVAC" --verbose
 ```
 
 ---
@@ -522,54 +486,54 @@ arxos search "HVAC" --verbose --debug
 ### Example 1: Building Health Check
 
 ```bash
-# Search for critical equipment
-arxos search "critical" --status
+# Filter for critical equipment
+arx filter --critical-only
 
-# Filter by floor
-arxos filter --floor 2 --status "Critical"
+# Filter by floor and status
+arx filter --floor 2 --status "Critical"
 
 # Visualize in 3D with status indicators
-arxos interactive --building "Building Name" --show-status --show-maintenance
+arx interactive --building "Building" --show-status --show-rooms
 ```
 
 ### Example 2: Equipment Inventory
 
 ```bash
-# List all HVAC equipment
-arxos filter --equipment-type "HVAC" --format json > hvac_equipment.json
+# Filter all HVAC equipment and export to JSON
+arx filter --equipment-type "HVAC" --format json > hvac_equipment.json
 
-# Search for specific equipment
-arxos search "VAV" --equipment --regex
+# Search for specific equipment with regex
+arx search "VAV" --equipment --regex
 
-# Export equipment data
-arxos export --building "Building Name" --equipment-type "HVAC" --format yaml
+# Export building data
+arx export --repo ./backup-repo
 ```
 
 ### Example 3: Building Comparison
 
 ```bash
 # Compare current state with previous version
-arxos diff HEAD~1
+arx diff --commit HEAD~1
 
 # Show history of changes
-arxos history --building "Building Name" --limit 10
+arx history --limit 10
 
-# Export differences
-arxos diff --format json > changes.json
+# Show diff statistics only
+arx diff --stat
 ```
 
 ### Example 4: Interactive Building Tour
 
 ```bash
-# Start interactive session
-arxos interactive --building "Building Name" --show-status --show-rooms --show-connections
+# Start interactive session with all features
+arx interactive --building "Building" --show-status --show-rooms --show-connections
 
-# Use controls:
-# - Arrow keys to move around
+# Use keyboard controls:
+# - Arrow keys to move camera
 # - Page Up/Down to change floors
-# - 1-4 to switch view modes
-# - T/I/C to toggle overlays
-# - H for help
+# - Scale with +/-
+# - Show help with H
+# - Quit with Q
 ```
 
 ---
@@ -618,7 +582,8 @@ arxos interactive --building "Building Name" --show-status --show-rooms --show-c
 For additional help and support:
 
 - **Documentation**: Check the `docs/` directory for detailed guides
-- **Examples**: See `examples/` directory for usage examples
+- **Architecture**: See [ARCHITECTURE.md](ARCHITECTURE.md) for system design
+- **Mobile Development**: See [MOBILE_FFI_INTEGRATION.md](MOBILE_FFI_INTEGRATION.md)
 - **Issues**: Report issues on GitHub
 - **Community**: Join the ArxOS community discussions
 

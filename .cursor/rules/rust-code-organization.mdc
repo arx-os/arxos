@@ -1,0 +1,9 @@
+---
+alwaysApply: true
+---
+
+When adding new command handlers, place them in src/commands/ following the existing pattern:
+- Use the command router pattern in src/commands/mod.rs
+- Implement in dedicated files (e.g., src/commands/sensors.rs)
+- Return Result<(), Box<dyn std::error::Error>>
+- Use existing error types from src/error/mod.rs

@@ -1,8 +1,68 @@
 # ArxOS - Git for Buildings
 
-**ArxOS** is a free, open-source tool that brings version control to building management. It's designed with a **terminal-first philosophy** and uses **Git as the primary data store**.
+**ArxOS** brings version control to building management. Import IFC files, manage equipment and rooms, track changes with Git, and visualize buildings in 3D—all from your terminal.
 
-## 🏗️ Architecture
+### What Makes ArxOS Different?
+
+- 📦 **Git-Based Storage** - Your building data IS your version control. No databases needed.
+- 🏗️ **IFC Import** - Import building models and extract hierarchy automatically
+- 🔍 **Smart Search** - Find equipment and rooms with regex and filtering
+- 🎨 **3D Visualization** - Interactive terminal-based 3D building visualization
+- 📱 **Mobile Support** - Native iOS/Android apps with AR capabilities
+- ⚡ **Terminal-First** - Designed for efficiency and automation
+
+---
+
+## 🚀 Quick Start
+
+### What You Can Do
+
+```bash
+# Import an IFC building file
+arx import office-building.ifc
+
+# Search for HVAC equipment
+arx search "VAV"
+
+# Filter by floor
+arx filter --floor 2
+
+# Visualize in 3D
+arx render --building "Building Name" --three-d --show-status
+```
+
+---
+
+## Installation
+
+**Currently requires building from source:**
+
+```bash
+# Install Rust (one-time setup)
+# https://www.rust-lang.org/tools/install
+
+# Clone and build
+git clone https://github.com/arx-os/arxos.git
+cd arxos
+cargo build --release
+
+# Windows: Binary at target/release/arx.exe
+# macOS/Linux: Binary at target/release/arx
+```
+
+📖 **[Complete User Guide](docs/USER_GUIDE.md)** - Learn all the commands and features
+
+---
+
+## 📚 Documentation
+
+- **[User Guide](docs/USER_GUIDE.md)** - Complete usage instructions for end users
+- **[Architecture](docs/ARCHITECTURE.md)** - System design and technical details  
+- **[Mobile FFI Integration](docs/MOBILE_FFI_INTEGRATION.md)** - Mobile app development
+
+---
+
+## 🏗️ Project Structure
 
 ArxOS uses a **unified crate structure** with clear module separation:
 
@@ -35,71 +95,26 @@ arxos/
 - **`search/`** - Advanced search and filtering
 - **`spatial/`** - 3D coordinate systems and spatial operations
 
-### **Mobile Architecture:**
+---
 
-- **Rust Core** - Single unified crate compiled to FFI library
-- **Native UI Shells** - iOS (Swift/SwiftUI) and Android (Kotlin/Jetpack Compose)
+### **Architecture Philosophy:**
+
+- **Rust Core** - Single unified crate compiled to static library
+- **Native UI Shells** - iOS (Swift/SwiftUI) and Android (Jetpack Compose)
 - **Git-First** - No database required, uses Git for all data storage
+- **FFI Integration** - Mobile apps call Rust via C FFI bindings
 
-## 🚀 Getting Started
+---
 
-### **Prerequisites:**
-- Rust 1.70+
-- Git
-- iOS: Xcode 14+ (for mobile development)
-- Android: Android Studio (for mobile development)
+## 👨‍💻 For Developers
 
-### **Build:**
+### Build for Development
+
 ```bash
-# Build the project
-cargo build
-
-# Build in release mode
 cargo build --release
-
-# Build for mobile (iOS)
-cargo build --target aarch64-apple-ios --release
-
-# Build for mobile (Android)
-cargo build --target aarch64-linux-android --release
 ```
 
-### **Run CLI:**
-```bash
-# Run the CLI
-cargo run -- --help
-
-# Or if installed via cargo install
-arxos --help
-
-# Room management
-cargo run -- room create --name "Classroom 301" --floor 3
-
-# Equipment management
-cargo run -- equipment add --name "VAV-301" --equipment-type HVAC
-```
-
-## 📱 Mobile Development
-
-### **iOS Development:**
-```bash
-cd ios
-# Build Rust library for iOS
-cargo build --target aarch64-apple-ios --release
-# Then open the Xcode project
-open ArxOSMobile.xcodeproj
-```
-
-### **Android Development:**
-```bash
-cd android
-# Build Rust library for Android
-cargo build --target aarch64-linux-android --release
-# Then build the Android app
-./gradlew build
-```
-
-## 🧪 Testing
+### Test
 
 ```bash
 # Run all tests
@@ -107,31 +122,29 @@ cargo test
 
 # Run with output
 cargo test -- --nocapture
-
-# Run specific test file
-cargo test --test integration_tests
 ```
 
-## 📚 Documentation
+### Mobile Development
 
-- [Architecture Overview](docs/ARCHITECTURE.md)
-- [User Guide](docs/USER_GUIDE.md)
-- [Mobile Build Guide](docs/MOBILE_BUILD_GUIDE.md)
-- [Hardware Integration](docs/hardware_integration.md)
-- [IFC Processing](docs/ifc_processing.md)
+**iOS:**
+```bash
+cargo build --target aarch64-apple-ios --release
+open ios/ArxOSMobile.xcodeproj
+```
 
-## 🎯 Key Features
+**Android:**
+```bash
+cargo build --target aarch64-linux-android --release
+cd android && ./gradlew build
+```
 
-- **Git-First Architecture** - No database required
-- **Terminal-First** - Optimized for command-line usage
-- **Cross-Platform** - CLI + Native mobile apps
-- **High Performance** - Rust core with native UI shells
-- **AR/LiDAR Support** - Mobile AR scanning capabilities
-- **Spatial Data Processing** - 3D coordinate systems
-- **Equipment Management** - YAML-based equipment data
-- **Version Control** - Git-based change tracking
+See [docs/MOBILE_FFI_INTEGRATION.md](docs/MOBILE_FFI_INTEGRATION.md) for details.
+
+---
 
 ## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](docs/CONTRIBUTING.md).
 
 1. Fork the repository
 2. Create a feature branch
@@ -139,13 +152,8 @@ cargo test --test integration_tests
 4. Add tests
 5. Submit a pull request
 
+---
+
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Built with Rust for performance and safety
-- Uses Git for version control and collaboration
-- Inspired by the terminal-first philosophy
-- Designed for building management professionals

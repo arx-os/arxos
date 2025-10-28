@@ -1,1 +1,7 @@
 /target
+
+test-*.ifc.yaml
+test-repo/
+test-office-repo/
+building.yaml
+.DS_Store

@@ -17,7 +17,7 @@ use tempfile::TempDir;
 #[cfg(test)]
 mod path_traversal_tests {
     use super::*;
-    use arxos::utils::path_safety::PathSafety;
+    use arxos::utils::path_safety;
     
     /// Test that path traversal attempts are detected and blocked
     #[test]
@@ -36,12 +36,12 @@ mod path_traversal_tests {
         
         for path_str in traversal_paths {
             let path = Path::new(path_str);
-            let result = PathSafety::canonicalize_and_validate(path, base);
+            let result = path_safety::PathSafety::canonicalize_and_validate(path, base);
             assert!(result.is_err(), "Path traversal should be blocked: {}", path_str);
             
             // Verify it's blocked (error should be PathTraversal type)
             match result {
-                Err(arxos::utils::path_safety::PathSafetyError::PathTraversal { .. }) => {
+                Err(path_safety::PathSafetyError::PathTraversal { .. }) => {
                     // Correct - path traversal was detected
                 }
                 Err(e) => {
@@ -65,7 +65,7 @@ mod path_traversal_tests {
         // Try to access parent directory
         if let Some(parent) = base.parent() {
             let parent_file = parent.join("sensitive_file.txt");
-            let result = PathSafety::canonicalize_and_validate(&parent_file, base);
+            let result = path_safety::PathSafety::canonicalize_and_validate(&parent_file, base);
             assert!(result.is_err(), "Absolute path outside base should be blocked");
         }
     }
@@ -84,11 +84,11 @@ mod path_traversal_tests {
         
         // Test relative paths
         let relative_path = Path::new("data/test.yaml");
-        let result = PathSafety::canonicalize_and_validate(relative_path, base);
+        let result = path_safety::PathSafety::canonicalize_and_validate(relative_path, base);
         assert!(result.is_ok(), "Legitimate relative path should be allowed");
         
         // Test absolute paths within base
-        let result = PathSafety::canonicalize_and_validate(&test_file, base);
+        let result = path_safety::PathSafety::canonicalize_and_validate(&test_file, base);
         assert!(result.is_ok(), "Legitimate absolute path should be allowed");
     }
     
@@ -111,7 +111,7 @@ mod path_traversal_tests {
             let symlink_path = base.join("link");
             if symlink(&safe_file, &symlink_path).is_ok() {
                 // Symlink created, test that it's handled safely
-                let result = PathSafety::canonicalize_and_validate(&symlink_path, base);
+                let result = path_safety::PathSafety::canonicalize_and_validate(&symlink_path, base);
                 // Should resolve to canonical path (safe file)
                 assert!(result.is_ok(), "Symlink should resolve to safe path");
             }
@@ -132,7 +132,7 @@ mod path_traversal_tests {
         
         for path_str in invalid_paths {
             let path = Path::new(path_str);
-            let result = PathSafety::validate_path_format(path);
+            let result = path_safety::PathSafety::validate_path_format(path);
             assert!(result.is_err(), "Invalid characters should be rejected: {}", path_str);
         }
     }
@@ -141,13 +141,13 @@ mod path_traversal_tests {
     #[test]
     fn test_path_length_limits() {
         let temp_dir = TempDir::new().unwrap();
-        let base = temp_dir.path();
+        let _base = temp_dir.path();
         
         // Create a path that exceeds reasonable limits
         let long_path = "a/".repeat(3000);
         let path = Path::new(&long_path);
         
-        let result = PathSafety::validate_path_format(path);
+        let result = path_safety::PathSafety::validate_path_format(path);
         assert!(result.is_err(), "Very long paths should be rejected");
     }
     
@@ -158,7 +158,7 @@ mod path_traversal_tests {
         let base = temp_dir.path();
         
         // Try to read file using traversal
-        let result = PathSafety::read_file_safely(
+        let result = path_safety::PathSafety::read_file_safely(
             Path::new("../etc/passwd"),
             base
         );
@@ -172,7 +172,7 @@ mod path_traversal_tests {
         let base = temp_dir.path();
         
         // Try to read directory using traversal
-        let result = PathSafety::read_dir_safely(
+        let result = path_safety::PathSafety::read_dir_safely(
             Path::new("../"),
             base
         );
@@ -203,7 +203,7 @@ mod ffi_safety_tests {
         // Create a C string with potentially invalid UTF-8
         // Note: Rust's CStr should handle this, but we verify error paths exist
         let bytes = b"valid\0";
-        let c_str = unsafe { CStr::from_bytes_with_nul(bytes) };
+        let c_str = CStr::from_bytes_with_nul(bytes);
         assert!(c_str.is_ok(), "Valid C string should parse");
     }
     
@@ -239,15 +239,16 @@ mod input_validation_tests {
     /// Test that building names are sanitized correctly
     #[test]
     fn test_building_name_sanitization() {
-        let malicious_names = vec![
+        let long_name = "very long name that exceeds reasonable limits ".repeat(100);
+        let malicious_names: Vec<&str> = vec![
             "../../etc/passwd",
             "name<script>alert('xss')</script>",
             "name\u{0000}null",
-            "very long name that exceeds reasonable limits ".repeat(100),
+            &long_name,
         ];
         
         for name in malicious_names {
-            let mut generator = PathGenerator::new(&name);
+            let mut generator = PathGenerator::new(name);
             let path = generator.generate_building_path();
             
             // Verify path doesn't contain dangerous characters
@@ -262,13 +263,13 @@ mod input_validation_tests {
     fn test_equipment_path_sanitization() {
         let mut generator = PathGenerator::new("Test Building");
         
-        let malicious_names = vec![
+        let malicious_names: Vec<&str> = vec![
             "../../etc",
             "name; rm -rf /",
             "name\x00null",
         ];
         
-        for name in malicious_names {
+        for name in malicious_names.iter() {
             let result = generator.generate_equipment_path(name, 1, "HVAC", None);
             // Should either succeed with sanitized name or fail gracefully
             if let Ok(path) = result {
@@ -358,7 +359,7 @@ mod input_validation_tests {
         let large_string = "a".repeat(10000);
         
         // Should be able to handle large inputs without crashing
-        let mut generator = PathGenerator::new(&large_string);
+        let generator = PathGenerator::new(&large_string);
         let result = generator.generate_building_path();
         
         // Should either succeed or fail gracefully
@@ -388,6 +389,8 @@ mod memory_safety_tests {
     /// Test that path operations don't create cycles
     #[test]
     fn test_path_operation_cycles() {
+        use arxos::utils::path_safety;
+        
         let temp_dir = TempDir::new().unwrap();
         let base = temp_dir.path();
         
@@ -396,7 +399,7 @@ mod memory_safety_tests {
         std::fs::create_dir_all(&nested).unwrap();
         
         // Verify we can navigate without issues
-        let result = PathSafety::canonicalize_and_validate(&nested, base);
+        let result = path_safety::PathSafety::canonicalize_and_validate(&nested, base);
         assert!(result.is_ok(), "Nested paths should work correctly");
     }
 }

@@ -1,5 +1,8 @@
 /target
 
+# Output directories
+output/
+
 # Test data directories
 test-data/
 test_data/

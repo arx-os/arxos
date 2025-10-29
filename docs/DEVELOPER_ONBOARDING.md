@@ -282,20 +282,25 @@ pub fn handle_my_command(cmd: MyCommand) -> Result<(), Box<dyn std::error::Error
 ### 2. Error Handling Pattern
 
 ```rust
+use crate::error::ArxError;
+
 // Use ? operator for error propagation
 let result = risky_operation()?;
 
 // Return Box<dyn std::error::Error> from handlers
 pub fn my_function() -> Result<(), Box<dyn std::error::Error>> {
-    let data = std::fs::read_to_string("file.txt")?;
+    let data = std::fs::read_to_string("file.txt")
+        .map_err(|e| ArxError::io_error(format!("Failed to read file: {}", e)))?;
     Ok(())
 }
 
 // Never use unwrap() in production code
 // Bad: let value = input.parse().unwrap();
 // Good: let value = input.parse()
-//         .map_err(|e| format!("Failed to parse: {}", e))?;
+//         .map_err(|e| ArxError::validation(format!("Failed to parse: {}", e)))?;
 ```
+
+**See [Error Handling Guide](ERROR_HANDLING_GUIDE.md) for complete patterns and best practices.**
 
 ### 3. Git Integration Pattern
 

@@ -150,6 +150,23 @@ class ArxOSCoreFFI {
             }
         }
     }
+    
+    /// Configure Git credentials for commits
+    func configureGitCredentials(name: String, email: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        DispatchQueue.global().async {
+            // TODO: Uncomment when FFI function is implemented
+            // let result = self.callFFI(function: arxos_set_git_credentials, input: "\(name),\(email)", errorMessage: "Failed to configure Git credentials")
+            // DispatchQueue.main.async {
+            //     completion(result.map { _ in })
+            // }
+            
+            // For now, simulate success
+            print("Configuring Git: \(name) <\(email)>")
+            DispatchQueue.main.async {
+                completion(.success(()))
+            }
+        }
+    }
 }
 
 /// Helper struct for parsing FFI responses

@@ -83,9 +83,7 @@ struct EquipmentListView: View {
     private func loadEquipment() {
         isLoading = true
         
-        // For now, return empty array - will be enabled when FFI is fully linked
-        // TODO: Uncomment when FFI library is properly linked
-        /*
+        // FFI calls enabled - ready for testing
         let ffi = ArxOSCoreFFI()
         ffi.listEquipment(buildingName: "Default Building") { result in
             DispatchQueue.main.async {
@@ -108,13 +106,6 @@ struct EquipmentListView: View {
                 }
                 self.isLoading = false
             }
-        }
-        */
-        
-        // Temporary: Return empty array until FFI is fully configured
-        DispatchQueue.main.async {
-            self.equipmentList = []
-            self.isLoading = false
         }
     }
     

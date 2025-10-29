@@ -37,16 +37,18 @@ impl SensorIngestionService {
     
     /// Read and parse sensor data from a file
     pub fn read_sensor_data_file<P: AsRef<Path>>(&self, file_path: P) -> HardwareResult<SensorData> {
+        use crate::utils::path_safety::PathSafety;
+        
         let path = file_path.as_ref();
         info!("Reading sensor data from: {}", path.display());
         
-        if !path.exists() {
-            return Err(HardwareError::FileNotFound {
-                path: path.display().to_string(),
-            });
-        }
+        // Use path-safe file reading - restrict to configured data directory
+        let base_dir = &self.config.data_directory;
         
-        let content = std::fs::read_to_string(path)?;
+        let content = PathSafety::read_file_safely(path, base_dir)
+            .map_err(|e| HardwareError::FileNotFound {
+                path: format!("{} (path safety check failed: {})", path.display(), e),
+            })?;
         
         // Determine format from extension
         let ext = path.extension()
@@ -71,27 +73,34 @@ impl SensorIngestionService {
     
     /// Scan directory for sensor data files
     pub fn scan_directory<P: AsRef<Path>>(&self, dir_path: P) -> HardwareResult<Vec<PathBuf>> {
+        use crate::utils::path_safety::PathSafety;
+        
         let dir_path = dir_path.as_ref();
         info!("Scanning directory for sensor data: {}", dir_path.display());
         
+        // Use path-safe directory reading - restrict to configured data directory
+        let base_dir = &self.config.data_directory;
+        
+        // If directory doesn't exist, return empty (not an error)
         if !dir_path.exists() {
             return Ok(Vec::new());
         }
         
-        if !dir_path.is_dir() {
-            return Err(HardwareError::InvalidFormat {
-                reason: "Path is not a directory".to_string(),
-            });
-        }
+        // Validate directory is within base
+        let canonical_dir = PathSafety::canonicalize_and_validate(dir_path, base_dir)
+            .map_err(|e| HardwareError::InvalidFormat {
+                reason: format!("Directory path validation failed: {}", e),
+            })?;
         
+        // Use path-safe directory reading
+        let paths = PathSafety::read_dir_safely(&canonical_dir, base_dir)
+            .map_err(|e| HardwareError::InvalidFormat {
+                reason: format!("Cannot read directory: {}", e),
+            })?;
+        
+        // Filter for supported file formats
         let mut sensor_files = Vec::new();
-        
-        let entries = std::fs::read_dir(dir_path)?;
-        for entry in entries {
-            let entry = entry?;
-            let path = entry.path();
-            
-            // Check if file has supported extension
+        for path in paths {
             if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
                 if self.config.supported_formats.contains(&ext.to_lowercase()) {
                     sensor_files.push(path);

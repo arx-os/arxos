@@ -168,10 +168,14 @@ impl ErrorAnalytics {
         // Group errors by hour (simplified)
         for report in &self.error_reports {
             let error_type = &report.error_type;
-            let hour = report.timestamp
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs() / 3600; // Hours since epoch
+            // Handle timestamps before UNIX_EPOCH gracefully
+            let hour = match report.timestamp.duration_since(SystemTime::UNIX_EPOCH) {
+                Ok(duration) => duration.as_secs() / 3600, // Hours since epoch
+                Err(_) => {
+                    // Timestamp is before UNIX_EPOCH, skip this entry
+                    continue;
+                }
+            };
             
             let trend = trends.entry(error_type.clone()).or_insert_with(Vec::new);
             if trend.len() <= hour as usize {

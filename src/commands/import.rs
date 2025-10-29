@@ -40,13 +40,17 @@ pub fn handle_import(ifc_file: String, repo: Option<String>) -> Result<(), Box<d
         println!("📦 To repository: {}", repo_path);
     }
     
-    // Validate IFC file exists
-    if !std::path::Path::new(&ifc_file).exists() {
-        return Err(format!(
-            "IFC file '{}' not found. Please check the file path and ensure the file exists.",
-            ifc_file
-        ).into());
-    }
+    // Validate IFC file exists and is within allowed directory
+    use crate::utils::path_safety::PathSafety;
+    let base_dir = std::env::current_dir()
+        .map_err(|e| format!("Failed to get current directory: {}", e))?;
+    
+    let ifc_path = std::path::Path::new(&ifc_file);
+    let _validated_path = PathSafety::canonicalize_and_validate(ifc_path, &base_dir)
+        .map_err(|e| format!(
+            "IFC file '{}' validation failed: {}. Please check the file path and ensure the file exists.",
+            ifc_file, e
+        ))?;
     
     // Create progress reporter
     let progress_reporter = progress::utils::create_ifc_progress(100);
@@ -161,8 +165,17 @@ fn initialize_git_repo(repo_path: &str, yaml_file: &str, building_name: &str) ->
     // Initialize Git manager
     let mut git_manager = BuildingGitManager::new(repo_path, building_name, git_config.clone())?;
     
-    // Load the YAML file directly
-    let content = std::fs::read_to_string(yaml_file)?;
+    // Load the YAML file with path safety
+    use crate::utils::path_safety::PathSafety;
+    let base_dir = std::env::current_dir()
+        .map_err(|e| format!("Failed to get current directory: {}", e))?;
+    
+    let content = PathSafety::read_file_safely(
+        std::path::Path::new(yaml_file),
+        &base_dir
+    )
+    .map_err(|e| format!("Failed to read YAML file '{}': {}", yaml_file, e))?;
+    
     let building_data: BuildingData = serde_yaml::from_str(&content)?;
     
     // Export to Git and commit

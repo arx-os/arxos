@@ -27,8 +27,19 @@ impl IFCProcessor {
     pub fn extract_hierarchy(&self, file_path: &str) -> IFCResult<(Building, Vec<Floor>)> {
         info!("Extracting building hierarchy from: {}", file_path);
         
-        let content = std::fs::read_to_string(file_path).map_err(|e| IFCError::FileNotFound {
-            path: e.to_string()
+        // Use path-safe file reading
+        use crate::utils::path_safety::PathSafety;
+        let base_dir = std::env::current_dir()
+            .map_err(|e| IFCError::FileNotFound {
+                path: format!("Failed to get current directory: {}", e)
+            })?;
+        
+        let content = PathSafety::read_file_safely(
+            std::path::Path::new(file_path),
+            &base_dir
+        )
+        .map_err(|e| IFCError::FileNotFound {
+            path: format!("Failed to read IFC file '{}': {}", file_path, e)
         })?;
         let parser = FallbackIFCParser::new();
         let entities = parser.extract_entities(&content).map_err(|e| IFCError::ParsingError {
@@ -215,8 +226,20 @@ impl IFCProcessor {
             });
         }
         
-        // Read file content for format validation
-        let content = std::fs::read_to_string(file_path)?;
+        // Read file content for format validation with path safety
+        use crate::utils::path_safety::PathSafety;
+        let base_dir = std::env::current_dir()
+            .map_err(|e| IFCError::FileNotFound {
+                path: format!("Failed to get current directory: {}", e)
+            })?;
+        
+        let content = PathSafety::read_file_safely(
+            std::path::Path::new(file_path),
+            &base_dir
+        )
+        .map_err(|e| IFCError::FileNotFound {
+            path: format!("Failed to read IFC file '{}': {}", file_path, e)
+        })?;
         
         // Validate IFC file structure
         self.validate_ifc_structure(&content)?;

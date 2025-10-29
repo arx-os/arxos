@@ -3,6 +3,7 @@
 
 use crate::yaml::BuildingData;
 use crate::persistence::PersistenceManager;
+use crate::error::ArxError;
 use std::path::Path;
 
 /// Load building data from current directory using PersistenceManager
@@ -40,19 +41,25 @@ pub fn load_building_data(building_name: &str) -> Result<BuildingData, Box<dyn s
 
 /// Find and load first YAML file in current directory
 fn find_and_load_yaml_file() -> Result<BuildingData, Box<dyn std::error::Error>> {
-    let yaml_files: Vec<String> = std::fs::read_dir(".")
-        .map_err(|e| {
-            format!(
-                "Failed to read current directory: {}. \
-                Please ensure you have read permissions and are in the correct directory.",
-                e
-            )
-        })?
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-            if path.extension()? == "yaml" {
-                path.to_str().map(|s| s.to_string())
+    use crate::utils::path_safety::PathSafety;
+    
+    let base_dir = std::env::current_dir()
+        .map_err(|e| format!("Failed to get current directory: {}", e))?;
+    
+    // Use path-safe directory reading
+    let paths = PathSafety::read_dir_safely(Path::new("."), &base_dir)
+        .map_err(|e| ArxError::from(e).to_string())?;
+    
+    // Filter for YAML files
+    let yaml_files: Vec<String> = paths
+        .into_iter()
+        .filter_map(|path| {
+            if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
+                if ext == "yaml" || ext == "yml" {
+                    path.to_str().map(|s| s.to_string())
+                } else {
+                    None
+                }
             } else {
                 None
             }
@@ -70,19 +77,15 @@ fn find_and_load_yaml_file() -> Result<BuildingData, Box<dyn std::error::Error>>
     }
     
     // Use the first YAML file found
-    let yaml_file = yaml_files.first().unwrap();
+    let yaml_file = yaml_files.first()
+        .ok_or("No YAML files found")?;
     
     println!("📄 Loading building data from: {}", yaml_file);
     
-    // Read and parse the YAML file with detailed error handling
-    let yaml_content = std::fs::read_to_string(yaml_file)
-        .map_err(|e| {
-            format!(
-                "Failed to read file '{}': {}. \
-                Please check file permissions and ensure the file is not corrupted.",
-                yaml_file, e
-            )
-        })?;
+    // Read and parse the YAML file with path safety
+    let yaml_content = PathSafety::read_file_safely(Path::new(yaml_file), &base_dir)
+        .map_err(|e| ArxError::from(e).to_string())?;
+    
     let building_data: BuildingData = serde_yaml::from_str(&yaml_content)
         .map_err(|e| {
             format!(
@@ -119,13 +122,15 @@ fn find_and_load_yaml_file() -> Result<BuildingData, Box<dyn std::error::Error>>
 /// - Empty floor names
 /// - Duplicate floor levels
 pub fn validate_yaml_file(file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    // Validate file exists
-    if !Path::new(file_path).exists() {
-        return Err(format!("File not found: {}", file_path).into());
-    }
+    use crate::utils::path_safety::PathSafety;
     
-    // Read and parse the YAML file
-    let yaml_content = std::fs::read_to_string(file_path)?;
+    let base_dir = std::env::current_dir()
+        .map_err(|e| format!("Failed to get current directory: {}", e))?;
+    
+    // Use path-safe file reading
+    let yaml_content = PathSafety::read_file_safely(Path::new(file_path), &base_dir)
+        .map_err(|e| ArxError::from(e).to_string())?;
+    
     let building_data: BuildingData = serde_yaml::from_str(&yaml_content)?;
     
     // Validate building data structure
@@ -159,14 +164,25 @@ pub fn validate_yaml_file(file_path: &str) -> Result<(), Box<dyn std::error::Err
 /// 
 /// Returns a list of all .yaml and .yml files found in the current directory.
 pub fn find_yaml_files() -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    let yaml_files: Vec<String> = std::fs::read_dir(".")
-        .map_err(|e| format!("Failed to read current directory: {}", e))?
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-            let ext = path.extension()?.to_str()?;
-            if ext == "yaml" || ext == "yml" {
-                path.to_str().map(|s| s.to_string())
+    use crate::utils::path_safety::PathSafety;
+    
+    let base_dir = std::env::current_dir()
+        .map_err(|e| format!("Failed to get current directory: {}", e))?;
+    
+    // Use path-safe directory reading
+    let paths = PathSafety::read_dir_safely(Path::new("."), &base_dir)
+        .map_err(|e| ArxError::from(e).to_string())?;
+    
+    // Filter for YAML files
+    let yaml_files: Vec<String> = paths
+        .into_iter()
+        .filter_map(|path| {
+            if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
+                if ext == "yaml" || ext == "yml" {
+                    path.to_str().map(|s| s.to_string())
+                } else {
+                    None
+                }
             } else {
                 None
             }
@@ -180,13 +196,25 @@ pub fn find_yaml_files() -> Result<Vec<String>, Box<dyn std::error::Error>> {
 /// 
 /// Returns a list of all .ifc files found in the current directory.
 pub fn find_ifc_files() -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    let ifc_files: Vec<String> = std::fs::read_dir(".")
-        .map_err(|e| format!("Failed to read current directory: {}", e))?
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-            if path.extension()?.to_str()?.to_lowercase() == "ifc" {
-                path.to_str().map(|s| s.to_string())
+    use crate::utils::path_safety::PathSafety;
+    
+    let base_dir = std::env::current_dir()
+        .map_err(|e| format!("Failed to get current directory: {}", e))?;
+    
+    // Use path-safe directory reading
+    let paths = PathSafety::read_dir_safely(Path::new("."), &base_dir)
+        .map_err(|e| ArxError::from(e).to_string())?;
+    
+    // Filter for IFC files
+    let ifc_files: Vec<String> = paths
+        .into_iter()
+        .filter_map(|path| {
+            if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
+                if ext.to_lowercase() == "ifc" {
+                    path.to_str().map(|s| s.to_string())
+                } else {
+                    None
+                }
             } else {
                 None
             }

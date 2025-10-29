@@ -96,7 +96,7 @@ fn handle_create_room(
         floor
     } else {
         // Floor doesn't exist, create it
-        building_data.floors.push(FloorData {
+        let new_floor = FloorData {
             id: format!("floor-{}", floor),
             name: format!("Floor {}", floor),
             level: floor,
@@ -104,8 +104,10 @@ fn handle_create_room(
             rooms: vec![],
             equipment: vec![],
             bounding_box: None,
-        });
-        building_data.floors.last_mut().unwrap()
+        };
+        building_data.floors.push(new_floor);
+        building_data.floors.last_mut()
+            .ok_or_else(|| "Failed to access newly created floor".to_string())?
     };
     
     // Create room data

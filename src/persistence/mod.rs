@@ -37,9 +37,15 @@ impl PersistenceManager {
     
     /// Load building data from YAML file
     pub fn load_building_data(&self) -> PersistenceResult<BuildingData> {
+        use crate::utils::path_safety::PathSafety;
+        
         info!("Loading building data from: {:?}", self.working_file);
         
-        let content = std::fs::read_to_string(&self.working_file)
+        // Use path-safe file reading
+        let base_dir = self.working_file.parent()
+            .unwrap_or_else(|| Path::new("."));
+        
+        let content = PathSafety::read_file_safely(&self.working_file, base_dir)
             .map_err(|e| PersistenceError::ReadError {
                 reason: format!("Failed to read file {:?}: {}", self.working_file, e),
             })?;
@@ -65,9 +71,28 @@ impl PersistenceManager {
                 reason: format!("Failed to serialize building data: {}", e) 
             })?;
         
+        // Use path-safe operations for file writes
+        let base_dir = self.working_file.parent()
+            .unwrap_or_else(|| Path::new("."));
+        
+        // Validate working file path before writing
+        let _validated_path = crate::utils::path_safety::PathSafety::canonicalize_and_validate(
+            &self.working_file,
+            base_dir
+        ).map_err(|e| PersistenceError::WriteError {
+            reason: format!("Path validation failed: {}", e),
+        })?;
+        
         // Create backup of current file if it exists
         if self.working_file.exists() {
             let backup_path = self.working_file.with_extension("yaml.bak");
+            // Validate backup path is within base
+            let _validated_backup = crate::utils::path_safety::PathSafety::canonicalize_and_validate(
+                &backup_path,
+                base_dir
+            ).map_err(|e| PersistenceError::WriteError {
+                reason: format!("Backup path validation failed: {}", e),
+            })?;
             std::fs::copy(&self.working_file, &backup_path)?;
             debug!("Created backup: {:?}", backup_path);
         }
@@ -122,22 +147,22 @@ impl PersistenceManager {
 
 /// Find building YAML file in current directory
 fn find_building_file(building_name: &str) -> PersistenceResult<PathBuf> {
+    use crate::utils::path_safety::PathSafety;
+    
     let current_dir = std::env::current_dir()
         .map_err(|e| PersistenceError::IoError(e))?;
     
-    // Look for YAML files in current directory
-    let yaml_files: Vec<PathBuf> = std::fs::read_dir(&current_dir)
+    // Look for YAML files in current directory with path safety
+    let yaml_files: Vec<PathBuf> = PathSafety::read_dir_safely(std::path::Path::new("."), &current_dir)
         .map_err(|e| PersistenceError::ReadError {
             reason: format!("Failed to read directory: {}", e),
         })?
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-            if path.extension()? == "yaml" || path.extension()? == "yml" {
-                Some(path)
-            } else {
-                None
-            }
+        .into_iter()
+        .filter(|path| {
+            path.extension()
+                .and_then(|s| s.to_str())
+                .map(|ext| ext == "yaml" || ext == "yml")
+                .unwrap_or(false)
         })
         .collect();
     

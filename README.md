@@ -2,13 +2,17 @@
 
 **ArxOS** brings version control to building management. Import IFC files, manage equipment and rooms, track changes with Git, and visualize buildings in 3D—all from your terminal.
 
+**A Decentralized Physical Infrastructure Network (DePIN)** powered by Git—no blockchain complexity, just distributed sensors, crowd-sourced verification, and network effects that grow with participation.
+
 ### What Makes ArxOS Different?
 
+- 🌐 **DePIN Architecture** - Decentralized Physical Infrastructure Network with distributed sensors and crowd-sourced building data
 - 📦 **Git-Based Storage** - Your building data IS your version control. No databases needed.
+- 🔧 **Open Hardware Integration** - Deploy ESP32, RP2040, or Arduino sensors to monitor buildings and earn rewards
 - 🏗️ **IFC Import** - Import building models and extract hierarchy automatically
 - 🔍 **Smart Search** - Find equipment and rooms with regex and filtering
 - 🎨 **3D Visualization** - Interactive terminal-based 3D building visualization
-- 📱 **Mobile Support** - Native iOS/Android apps with AR capabilities
+- 📱 **Mobile Support** - Native iOS/Android apps with AR capabilities for field verification
 - ⚡ **Terminal-First** - Designed for efficiency and automation
 
 ---
@@ -59,6 +63,8 @@ cargo build --release
 - **[User Guide](docs/USER_GUIDE.md)** - Complete usage instructions for end users
 - **[Architecture](docs/ARCHITECTURE.md)** - System design and technical details  
 - **[Mobile FFI Integration](docs/MOBILE_FFI_INTEGRATION.md)** - Mobile app development
+- **[Hardware Integration](docs/hardware_integration.md)** - Deploy sensors and contribute to the DePIN network
+- **[Reward System](docs/reward_system.md)** - How contributors earn rewards for building data (USD-based, no crypto complexity)
 
 ---
 
@@ -101,7 +107,8 @@ arxos/
 
 - **Rust Core** - Single unified crate compiled to static library
 - **Native UI Shells** - iOS (Swift/SwiftUI) and Android (Jetpack Compose)
-- **Git-First** - No database required, uses Git for all data storage
+- **Git-First DePIN** - No database required, uses Git for distributed data storage and contribution tracking
+- **Decentralized Network** - Building owners, sensor operators, and field technicians contribute to a distributed building data network
 - **FFI Integration** - Mobile apps call Rust via C FFI bindings
 
 ---
@@ -151,6 +158,17 @@ We welcome contributions! Please see our [Contributing Guidelines](docs/CONTRIBU
 3. Make your changes
 4. Add tests
 5. Submit a pull request
+
+### Contributing to the DePIN Network
+
+ArxOS operates as a **Decentralized Physical Infrastructure Network** where you can:
+
+- **Deploy Sensors**: Install ESP32, RP2040, or Arduino sensors to monitor buildings
+- **Verify Buildings**: Use mobile AR apps to scan and verify building equipment
+- **Contribute Data**: Share anonymized building metadata (privacy-preserving)
+- **Earn Rewards**: Get paid in USD based on your contributions (see [Reward System](docs/reward_system.md))
+
+All contributions are tracked via Git—no blockchain or cryptocurrency required. Just Git commits and USD payments.
 
 ---
 

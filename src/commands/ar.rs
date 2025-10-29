@@ -66,10 +66,21 @@ pub fn handle_ar_integrate_command(
     // Get updated building data
     let updated_building_data = integrator.get_building_data();
     
-    // Save updated building data
+    // Save updated building data with path safety
+    use crate::utils::path_safety::PathSafety;
+    let base_dir = std::env::current_dir()
+        .map_err(|e| format!("Failed to get current directory: {}", e))?;
+    
     let output_file = format!("{}-updated.yaml", building);
+    let output_path = std::path::Path::new(&output_file);
+    
+    // Validate output path before writing
+    let _validated_path = PathSafety::canonicalize_and_validate(output_path, &base_dir)
+        .map_err(|e| format!("Output path validation failed for '{}': {}", output_file, e))?;
+    
     let yaml_content = serde_yaml::to_string(&updated_building_data)?;
-    std::fs::write(&output_file, yaml_content)?;
+    std::fs::write(output_path, yaml_content)
+        .map_err(|e| format!("Failed to write file '{}': {}", output_file, e))?;
     println!("💾 Updated building data saved to: {}", output_file);
     
     // Commit to Git if requested

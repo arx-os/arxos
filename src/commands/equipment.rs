@@ -74,10 +74,11 @@ fn handle_add_equipment(
     
     // Use PersistenceManager to add equipment
     // First, we need to find the building name - for now, try loading from current dir
+    use crate::utils::path_safety::PathSafety;
     let current_dir = std::env::current_dir()?;
-    let yaml_files: Vec<_> = std::fs::read_dir(&current_dir)?
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
+    let yaml_files: Vec<_> = PathSafety::read_dir_safely(std::path::Path::new("."), &current_dir)
+        .map_err(|e| format!("Failed to read directory: {}", e))?
+        .into_iter()
         .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("yaml"))
         .collect();
     
@@ -195,11 +196,12 @@ fn handle_update_equipment(equipment: String, property: Vec<String>, position: O
         println!("   New position: {}", pos);
     }
     
-    // Load building data
+    // Load building data with path safety
+    use crate::utils::path_safety::PathSafety;
     let current_dir = std::env::current_dir()?;
-    let yaml_files: Vec<_> = std::fs::read_dir(&current_dir)?
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
+    let yaml_files: Vec<_> = PathSafety::read_dir_safely(std::path::Path::new("."), &current_dir)
+        .map_err(|e| format!("Failed to read directory: {}", e))?
+        .into_iter()
         .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("yaml"))
         .collect();
     
@@ -208,10 +210,10 @@ fn handle_update_equipment(equipment: String, property: Vec<String>, position: O
     } else {
         "Default Building".to_string()
     };
-    
+
     let persistence = PersistenceManager::new(&building_name)?;
     let mut building_data = persistence.load_building_data()?;
-    
+
     // Find and update equipment
     let mut equipment_found = false;
     for floor in &mut building_data.floors {
@@ -273,11 +275,12 @@ fn handle_remove_equipment(equipment: String, confirm: bool, commit: bool) -> Re
     
     println!("🗑️ Removing equipment: {}", equipment);
     
-    // Load building data
+    // Load building data with path safety
+    use crate::utils::path_safety::PathSafety;
     let current_dir = std::env::current_dir()?;
-    let yaml_files: Vec<_> = std::fs::read_dir(&current_dir)?
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
+    let yaml_files: Vec<_> = PathSafety::read_dir_safely(std::path::Path::new("."), &current_dir)
+        .map_err(|e| format!("Failed to read directory: {}", e))?
+        .into_iter()
         .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("yaml"))
         .collect();
     
@@ -286,10 +289,10 @@ fn handle_remove_equipment(equipment: String, confirm: bool, commit: bool) -> Re
     } else {
         "Default Building".to_string()
     };
-    
+
     let persistence = PersistenceManager::new(&building_name)?;
     let mut building_data = persistence.load_building_data()?;
-    
+
     // Find and remove equipment
     let mut equipment_removed = false;
     for floor in &mut building_data.floors {

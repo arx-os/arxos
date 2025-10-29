@@ -571,6 +571,43 @@ cargo update git2
    - Add integration tests for FFI
    - Implement property-based testing
 
+### Optional DePIN Enhancements (Future)
+
+ArxOS already functions as a DePIN (Decentralized Physical Infrastructure Network) using Git-native architecture with USD-based rewards. The following enhancements would formalize and extend the DePIN capabilities:
+
+1. **Contribution Metrics API**
+   - Git-based API to calculate contributions from commit history
+   - Metrics: sensor uptime, AR scan quality, data freshness, geographic coverage
+   - Provides programmatic access to contribution data without database dependency
+   - **File location:** `src/depin/metrics.rs` (new module)
+
+2. **Reward Calculator Service**
+   - Takes Git commits as input, outputs contribution values in USD
+   - Calculates: sensor node uptime, scan verification quality, data validation accuracy
+   - Integrates with payment systems (Stripe, PayPal, ACH)
+   - **File location:** `src/depin/rewards.rs` (new module)
+
+3. **Contributor Dashboard**
+   - CLI/web interface showing contribution history
+   - Reward calculations and payment status
+   - Network participation statistics
+   - All data derived from Git commit analysis
+   - **File location:** `src/commands/depin.rs` (new command handler)
+
+4. **Network Statistics & Registry**
+   - Registry of active sensor nodes (Git repo discovery)
+   - Building coverage maps (geographic distribution)
+   - Contributor reputation system (reliability scoring)
+   - Network health metrics (uptime, data quality trends)
+   - **File location:** `src/depin/registry.rs` (new module)
+
+**Implementation Notes:**
+- All enhancements leverage existing Git infrastructure
+- No blockchain/cryptocurrency integration required
+- USD-based rewards via standard payment processors
+- Maintains privacy-first approach from `docs/reward_system.md`
+- Extends existing sensor network and AR verification capabilities
+
 ---
 
 ## Appendix A: File Size Analysis

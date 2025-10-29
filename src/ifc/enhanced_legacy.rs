@@ -490,8 +490,20 @@ impl EnhancedIFCParser {
         
         // Parse parameters (everything inside parentheses)
         let parameters = if param_str.contains('(') && param_str.contains(')') {
-            let start = param_str.find('(').unwrap() + 1;
-            let end = param_str.rfind(')').unwrap();
+            let start = match param_str.find('(') {
+                Some(pos) => pos + 1,
+                None => {
+                    warn!("Missing opening parenthesis in parameter: {}", param_str);
+                    return None;
+                }
+            };
+            let end = match param_str.rfind(')') {
+                Some(pos) => pos,
+                None => {
+                    warn!("Missing closing parenthesis in parameter: {}", param_str);
+                    return None;
+                }
+            };
             let param_content = &param_str[start..end];
             
             // Split by comma, but be careful with quoted strings
@@ -1982,7 +1994,10 @@ impl SpatialIndex {
         }
         
         // Sort by distance
-        results.sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
+        results.sort_by(|a, b| {
+            a.distance.partial_cmp(&b.distance)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         results
     }
     

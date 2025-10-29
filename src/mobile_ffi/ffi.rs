@@ -19,21 +19,45 @@ pub enum ArxOSErrorCode {
     Unknown = 99,
 }
 
+/// Create a safe C string from a Rust string, with fallback on null bytes
+fn create_safe_c_string(s: String) -> *mut c_char {
+    match CString::new(s.clone()) {
+        Ok(cstr) => cstr.into_raw(),
+        Err(_) => {
+            warn!("CString creation failed (null byte detected), sanitizing string");
+            // Replace null bytes and try again
+            let sanitized: Vec<u8> = s.into_bytes().into_iter()
+                .filter(|&b| b != 0)
+                .collect();
+            match CString::new(sanitized) {
+                Ok(cstr) => cstr.into_raw(),
+                Err(_) => {
+                    // Final fallback - static error string
+                    warn!("Failed to sanitize string even after removing null bytes, using fallback");
+                    CString::new(r#"{"error":"internal encoding error"}"#)
+                        .expect("Fallback error string must be valid")
+                        .into_raw()
+                }
+            }
+        }
+    }
+}
+
 /// Create a C-compatible JSON string from a result
 fn create_json_response<T: serde::Serialize>(result: Result<T, MobileError>) -> *mut c_char {
     match result {
         Ok(data) => {
             match serde_json::to_string(&data) {
-                Ok(json) => CString::new(json).unwrap_or_else(|_| CString::new("{}").unwrap()).into_raw(),
+                Ok(json) => create_safe_c_string(json),
                 Err(e) => {
                     warn!("Failed to serialize response: {}", e);
-                    return CString::new(r#"{"error":"serialization failed"}"#).unwrap().into_raw();
+                    create_safe_c_string(r#"{"error":"serialization failed"}"#.to_string())
                 }
             }
         }
         Err(e) => {
             warn!("FFI error: {:?}", e);
-            return CString::new(format!(r#"{{"error":"{}"}}"#, e)).unwrap().into_raw();
+            create_safe_c_string(format!(r#"{{"error":"{}"}}"#, e))
         }
     }
 }
@@ -41,7 +65,7 @@ fn create_json_response<T: serde::Serialize>(result: Result<T, MobileError>) -> 
 /// Create an error response string
 fn create_error_response(error: MobileError) -> *mut c_char {
     warn!("FFI error: {:?}", error);
-    CString::new(format!(r#"{{"error":"{}"}}"#, error)).unwrap().into_raw()
+    create_safe_c_string(format!(r#"{{"error":"{}"}}"#, error))
 }
 
 /// Free a C string allocated by ArxOS
@@ -66,7 +90,10 @@ pub extern "C" fn arxos_last_error() -> i32 {
 #[no_mangle]
 pub extern "C" fn arxos_last_error_message() -> *mut c_char {
     // Returns empty string as error details are in JSON response
-    CString::new("").unwrap().into_raw()
+    // Empty string is always safe for CString
+    CString::new("")
+        .expect("Empty string must always be valid for CString")
+        .into_raw()
 }
 
 /// List all rooms in a building
@@ -93,35 +120,101 @@ pub unsafe extern "C" fn arxos_list_rooms(building_name: *const c_char) -> *mut 
 }
 
 /// Get a specific room by ID
+///
+/// # Safety
+/// The building_name and room_id parameters must be valid UTF-8 null-terminated strings
 #[no_mangle]
 pub unsafe extern "C" fn arxos_get_room(
     building_name: *const c_char,
     room_id: *const c_char
 ) -> *mut c_char {
-    let building_str = CStr::from_ptr(building_name).to_str().unwrap_or("");
-    let room_id_str = CStr::from_ptr(room_id).to_str().unwrap_or("");
+    if building_name.is_null() {
+        warn!("arxos_get_room: null building_name");
+        return create_error_response(MobileError::InvalidData("Null building_name".to_string()));
+    }
+    
+    if room_id.is_null() {
+        warn!("arxos_get_room: null room_id");
+        return create_error_response(MobileError::InvalidData("Null room_id".to_string()));
+    }
+    
+    let building_str = match CStr::from_ptr(building_name).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_get_room: invalid UTF-8 in building_name");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in building_name".to_string()));
+        }
+    };
+    
+    let room_id_str = match CStr::from_ptr(room_id).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_get_room: invalid UTF-8 in room_id");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in room_id".to_string()));
+        }
+    };
     
     let result = crate::mobile_ffi::get_room(building_str.to_string(), room_id_str.to_string());
     create_json_response(result)
 }
 
 /// List all equipment in a building
+///
+/// # Safety
+/// The building_name parameter must be a valid UTF-8 null-terminated string
 #[no_mangle]
 pub unsafe extern "C" fn arxos_list_equipment(building_name: *const c_char) -> *mut c_char {
-    let building_str = CStr::from_ptr(building_name).to_str().unwrap_or("");
+    if building_name.is_null() {
+        warn!("arxos_list_equipment: null building_name");
+        return create_error_response(MobileError::InvalidData("Null building_name".to_string()));
+    }
+    
+    let building_str = match CStr::from_ptr(building_name).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_list_equipment: invalid UTF-8 in building_name");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8".to_string()));
+        }
+    };
     
     let result = crate::mobile_ffi::list_equipment(building_str.to_string());
     create_json_response(result)
 }
 
 /// Get a specific equipment item by ID
+///
+/// # Safety
+/// The building_name and equipment_id parameters must be valid UTF-8 null-terminated strings
 #[no_mangle]
 pub unsafe extern "C" fn arxos_get_equipment(
     building_name: *const c_char,
     equipment_id: *const c_char
 ) -> *mut c_char {
-    let building_str = CStr::from_ptr(building_name).to_str().unwrap_or("");
-    let equipment_id_str = CStr::from_ptr(equipment_id).to_str().unwrap_or("");
+    if building_name.is_null() {
+        warn!("arxos_get_equipment: null building_name");
+        return create_error_response(MobileError::InvalidData("Null building_name".to_string()));
+    }
+    
+    if equipment_id.is_null() {
+        warn!("arxos_get_equipment: null equipment_id");
+        return create_error_response(MobileError::InvalidData("Null equipment_id".to_string()));
+    }
+    
+    let building_str = match CStr::from_ptr(building_name).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_get_equipment: invalid UTF-8 in building_name");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in building_name".to_string()));
+        }
+    };
+    
+    let equipment_id_str = match CStr::from_ptr(equipment_id).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_get_equipment: invalid UTF-8 in equipment_id");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in equipment_id".to_string()));
+        }
+    };
     
     let result = crate::mobile_ffi::get_equipment(building_str.to_string(), equipment_id_str.to_string());
     create_json_response(result)
@@ -175,10 +268,10 @@ pub unsafe extern "C" fn arxos_extract_equipment(json_data: *const c_char) -> *m
             
             // Return as JSON
             match serde_json::to_string(&equipment) {
-                Ok(json) => CString::new(json).unwrap().into_raw(),
+                Ok(json) => create_safe_c_string(json),
                 Err(e) => {
                     warn!("Failed to serialize equipment: {}", e);
-                    CString::new(r#"{"error":"serialization failed"}"#).unwrap().into_raw()
+                    create_safe_c_string(r#"{"error":"serialization failed"}"#.to_string())
                 }
             }
         }

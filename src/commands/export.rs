@@ -69,11 +69,20 @@ pub fn handle_export(repo: String) -> Result<(), Box<dyn std::error::Error>> {
     }
     
     // Use the first YAML file found
-    let yaml_file = &yaml_files[0];
+    let yaml_file = yaml_files.first()
+        .ok_or("No YAML files found to export")?;
     println!("📄 Using YAML file: {}", yaml_file);
     
-    // Read and parse the YAML file
-    let yaml_content = std::fs::read_to_string(yaml_file)?;
+    // Read and parse the YAML file with path safety
+    use crate::utils::path_safety::PathSafety;
+    let base_dir = std::env::current_dir()
+        .map_err(|e| format!("Failed to get current directory: {}", e))?;
+    
+    let yaml_content = PathSafety::read_file_safely(
+        std::path::Path::new(yaml_file),
+        &base_dir
+    )
+    .map_err(|e| format!("Failed to read YAML file '{}': {}", yaml_file, e))?;
     let building_data: yaml::BuildingData = match serde_yaml::from_str(&yaml_content) {
         Ok(data) => data,
         Err(e) => {

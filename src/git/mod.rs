@@ -30,8 +30,23 @@ impl GitClient {
         let tree = self.repository.find_tree(tree_id)?;
         
         let signature = git2::Signature::now("ArxOS", "arxos@example.com")?;
-        let head = self.repository.head()?;
-        let parent = self.repository.find_commit(head.target().unwrap())?;
+        
+        // Handle initial commit (no HEAD) or detached HEAD gracefully
+        let parents: Vec<git2::Commit> = match self.repository.head() {
+            Ok(head) => {
+                if let Some(target) = head.target() {
+                    match self.repository.find_commit(target) {
+                        Ok(parent) => vec![parent],
+                        Err(_) => vec![], // Invalid commit reference, treat as initial commit
+                    }
+                } else {
+                    vec![] // No target, treat as initial commit
+                }
+            }
+            Err(_) => vec![], // No HEAD, initial commit
+        };
+        
+        let parent_refs: Vec<&git2::Commit> = parents.iter().collect();
         
         self.repository.commit(
             Some("HEAD"),
@@ -39,7 +54,7 @@ impl GitClient {
             &signature,
             message,
             &tree,
-            &[&parent],
+            &parent_refs,
         )?;
         
         Ok(())

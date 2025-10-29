@@ -186,12 +186,15 @@ impl PathGenerator {
 
     /// Sanitize name for Git-safe paths
     fn sanitize_name(name: &str) -> String {
-        // Remove or replace problematic characters
-        let re = Regex::new(r"[^a-zA-Z0-9\-_]").unwrap();
+        // Compile regex patterns (these are static patterns, compilation should never fail)
+        // Use expect with clear message since these are hardcoded patterns
+        let re = Regex::new(r"[^a-zA-Z0-9\-_]")
+            .expect("Internal error: Failed to compile sanitization regex");
         let sanitized = re.replace_all(name, "-");
         
         // Remove multiple consecutive dashes
-        let re_dashes = Regex::new(r"-+").unwrap();
+        let re_dashes = Regex::new(r"-+")
+            .expect("Internal error: Failed to compile dash regex");
         let cleaned = re_dashes.replace_all(&sanitized, "-");
         
         // Remove leading/trailing dashes
@@ -221,13 +224,33 @@ impl PathGenerator {
 
     /// Parse existing universal path
     pub fn parse_path(path: &str) -> Result<UniversalPath, PathError> {
-        let re = Regex::new(r"^/BUILDING/([^/]+)/FLOOR/(\d+)(?:/ROOM/([^/]+))?(?:/([^/]+)/([^/]+))?$").unwrap();
+        let re = Regex::new(r"^/BUILDING/([^/]+)/FLOOR/(\d+)(?:/ROOM/([^/]+))?(?:/([^/]+)/([^/]+))?$")
+            .map_err(|e| PathError::ValidationFailed {
+                reason: format!("Failed to compile path regex: {}", e),
+            })?;
         
         if let Some(caps) = re.captures(path) {
-            let building_name = caps.get(1).unwrap().as_str().to_string();
-            let floor_level = caps.get(2).unwrap().as_str().parse::<i32>().unwrap();
+            let building_name = caps.get(1)
+                .ok_or_else(|| PathError::InvalidFormat {
+                    path: path.to_string(),
+                })?
+                .as_str()
+                .to_string();
+            
+            let floor_level = caps.get(2)
+                .ok_or_else(|| PathError::InvalidFormat {
+                    path: path.to_string(),
+                })?
+                .as_str()
+                .parse::<i32>()
+                .map_err(|e| PathError::InvalidFormat {
+                    path: format!("{} (parse error: {})", path, e),
+                })?;
+            
             let room_name = caps.get(3).map(|m| m.as_str().to_string());
-            let system_type = caps.get(4).map(|m| m.as_str().to_string()).unwrap_or_else(|| "FLOOR".to_string());
+            let system_type = caps.get(4)
+                .map(|m| m.as_str().to_string())
+                .unwrap_or_else(|| "FLOOR".to_string());
             let equipment_name = caps.get(5).map(|m| m.as_str().to_string());
 
             let components = PathComponents {

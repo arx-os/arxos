@@ -12,12 +12,15 @@ impl ProgressReporter {
     /// Create a new progress reporter
     pub fn new(operation_name: &str, total_items: u64) -> Self {
         let pb = ProgressBar::new(total_items);
-        pb.set_style(
-            ProgressStyle::default_bar()
-                .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}")
-                .unwrap()
-                .progress_chars("#>-"),
-        );
+        // Template string is a compile-time constant, but handle potential errors gracefully
+        let style = ProgressStyle::default_bar()
+            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}")
+            .unwrap_or_else(|_| {
+                // Fallback to a simpler style if template parsing fails (should never happen with this constant)
+                ProgressStyle::default_bar()
+            })
+            .progress_chars("#>-");
+        pb.set_style(style);
         
         pb.set_message(format!("Starting {}", operation_name));
         

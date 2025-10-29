@@ -11,18 +11,36 @@ use std::os::raw::c_char;
 use crate::mobile_ffi::{MobileError, RoomInfo, EquipmentInfo};
 
 /// Convert Rust string to Java string
+/// Returns null if conversion fails
 fn rust_string_to_java(env: &JNIEnv, s: &str) -> jstring {
-    env.new_string(s)
-        .expect("Failed to create Java string")
-        .into_raw()
+    match env.new_string(s) {
+        Ok(jstr) => jstr.into_raw(),
+        Err(_) => {
+            // If we can't create a string, throw an exception
+            env.throw_new("java/lang/RuntimeException", "Failed to create Java string")
+                .ok();
+            std::ptr::null_mut()
+        }
+    }
 }
 
 /// Convert Java string to Rust string
+/// Returns empty string and logs error if conversion fails
 fn java_string_to_rust(env: &JNIEnv, j_str: JString) -> String {
-    env.get_string(j_str)
-        .expect("Failed to get Java string")
-        .to_string_lossy()
-        .to_string()
+    if j_str.is_null() {
+        env.throw_new("java/lang/IllegalArgumentException", "Null string parameter")
+            .ok();
+        return String::new();
+    }
+    
+    match env.get_string(j_str) {
+        Ok(jstr) => jstr.to_string_lossy().to_string(),
+        Err(e) => {
+            env.throw_new("java/lang/RuntimeException", &format!("Failed to get Java string: {}", e))
+                .ok();
+            String::new()
+        }
+    }
 }
 
 /// List all rooms - JNI implementation
@@ -35,16 +53,13 @@ pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeL
     _class: JClass,
     building_name: JString
 ) -> jstring {
-    let result = env.call_method(
-        env.get_object_class(building_name.into_raw().unwrap()).unwrap(),
-        "toString",
-        "()Ljava/lang/String;",
-        &[]
-    );
+    // Extract building name safely
+    let building_str = java_string_to_rust(&env, building_name);
     
     // For now, return JSON error indicating JNI implementation is pending
-    let error_json = r#"{"error":"JNI implementation pending"}"#;
-    rust_string_to_java(&env, error_json)
+    // TODO: Implement actual room listing once JNI integration is complete
+    let error_json = format!(r#"{{"error":"JNI implementation pending","building":"{}"}}"#, building_str);
+    rust_string_to_java(&env, &error_json)
 }
 
 /// Get a specific room - JNI implementation

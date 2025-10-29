@@ -74,7 +74,13 @@ impl BuildingGitManager {
         let file_paths: Vec<String> = file_structure.keys().cloned().collect();
         
         for (file_path, content) in file_structure {
-            let full_path = self.repo.path().parent().unwrap().join(&file_path);
+            let repo_workdir = self.repo.workdir()
+                .ok_or_else(|| GitError::OperationFailed {
+                    operation: "access repository workdir".to_string(),
+                    reason: "Git repository has no working directory".to_string(),
+                })?
+                .to_path_buf();
+            let full_path = repo_workdir.join(&file_path);
             
             // Create parent directories if they don't exist
             if let Some(parent) = full_path.parent() {
@@ -534,6 +540,9 @@ pub enum GitError {
     
     #[error("Invalid configuration: {reason}")]
     InvalidConfig { reason: String },
+    
+    #[error("Git operation failed: {operation} - {reason}")]
+    OperationFailed { operation: String, reason: String },
 }
 
 /// Git configuration utilities

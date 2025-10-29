@@ -57,8 +57,8 @@ pub enum DetectionMethod {
 /// Pending equipment manager
 pub struct PendingEquipmentManager {
     pending_items: Vec<PendingEquipment>,
-    #[allow(dead_code)] // Reserved for future filtering features
     building_name: String,
+    storage_path: Option<std::path::PathBuf>,
 }
 
 impl PendingEquipmentManager {
@@ -67,7 +67,77 @@ impl PendingEquipmentManager {
         Self {
             pending_items: Vec::new(),
             building_name,
+            storage_path: None,
         }
+    }
+
+    /// Load pending equipment from storage
+    pub fn load_from_storage(&mut self, storage_file: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+        use std::fs;
+        use std::io::Read;
+        
+        if !storage_file.exists() {
+            info!("No pending equipment storage file found at: {:?}", storage_file);
+            return Ok(());
+        }
+        
+        let mut file = fs::File::open(storage_file)?;
+        let mut content = String::new();
+        file.read_to_string(&mut content)?;
+        
+        let pending_list: serde_json::Value = serde_json::from_str(&content)?;
+        
+        if let Some(items) = pending_list.get("items").and_then(|v| v.as_array()) {
+            for item_json in items {
+                if let Ok(pending) = serde_json::from_value::<PendingEquipment>(item_json.clone()) {
+                    self.pending_items.push(pending);
+                }
+            }
+        }
+        
+        self.storage_path = Some(storage_file.to_path_buf());
+        info!("Loaded {} pending equipment items from storage", self.pending_items.len());
+        Ok(())
+    }
+
+    /// Save pending equipment to storage
+    pub fn save_to_storage(&self) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(ref storage_path) = self.storage_path {
+            self.save_to_storage_path(storage_path)?;
+        }
+        Ok(())
+    }
+
+    /// Save to specific storage path
+    pub fn save_to_storage_path(&self, storage_file: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+        use std::fs;
+        use std::io::Write;
+        
+        #[derive(serde::Serialize)]
+        struct PendingEquipmentStorage {
+            building: String,
+            items: Vec<PendingEquipment>,
+            updated_at: String,
+        }
+        
+        let storage = PendingEquipmentStorage {
+            building: self.building_name.clone(),
+            items: self.pending_items.clone(),
+            updated_at: Utc::now().to_rfc3339(),
+        };
+        
+        let json_content = serde_json::to_string_pretty(&storage)?;
+        
+        // Create parent directories if they don't exist
+        if let Some(parent) = storage_file.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        
+        let mut file = fs::File::create(storage_file)?;
+        file.write_all(json_content.as_bytes())?;
+        
+        info!("Saved {} pending equipment items to storage", self.pending_items.len());
+        Ok(())
     }
 
     /// Add pending equipment from AR scan

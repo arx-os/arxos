@@ -120,7 +120,12 @@ pub fn handle_ar_integrate_command(
 fn handle_pending_list_command(building: &str, floor: Option<i32>, verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
     println!("📋 Listing pending equipment for building: {}", building);
     
-    let manager = PendingEquipmentManager::new(building.to_string());
+    let mut manager = PendingEquipmentManager::new(building.to_string());
+    
+    // Load pending equipment from storage
+    let storage_file = std::path::PathBuf::from(format!("pending-equipment-{}.json", building));
+    manager.load_from_storage(&storage_file)?;
+    
     let pending_items = manager.list_pending();
     
     if pending_items.is_empty() {
@@ -163,6 +168,11 @@ fn handle_pending_confirm_command(pending_id: &str, building: &str, commit: bool
     println!("✅ Confirming pending equipment: {}", pending_id);
     
     let mut manager = PendingEquipmentManager::new(building.to_string());
+    
+    // Load pending equipment from storage
+    let storage_file = std::path::PathBuf::from(format!("pending-equipment-{}.json", building));
+    manager.load_from_storage(&storage_file)?;
+    
     let persistence = PersistenceManager::new(building)?;
     
     // Load current building data
@@ -172,6 +182,9 @@ fn handle_pending_confirm_command(pending_id: &str, building: &str, commit: bool
     let equipment_id = manager.confirm_pending(pending_id, &mut building_data)?;
     
     println!("   Created equipment: {}", equipment_id);
+    
+    // Save pending equipment state (confirmed items are marked)
+    manager.save_to_storage()?;
     
     // Save and commit if requested
     if commit {
@@ -192,8 +205,18 @@ fn handle_pending_reject_command(pending_id: &str) -> Result<(), Box<dyn std::er
     info!("Rejecting pending equipment: {}", pending_id);
     println!("❌ Rejecting pending equipment: {}", pending_id);
     
-    let mut manager = PendingEquipmentManager::new("default".to_string());
+    // Extract building name from pending ID or use default
+    let building = "default"; // TODO: Extract from pending ID or context
+    let mut manager = PendingEquipmentManager::new(building.to_string());
+    
+    // Load pending equipment from storage
+    let storage_file = std::path::PathBuf::from(format!("pending-equipment-{}.json", building));
+    manager.load_from_storage(&storage_file)?;
+    
     manager.reject_pending(pending_id)?;
+    
+    // Save updated pending equipment state
+    manager.save_to_storage()?;
     
     println!("✅ Pending equipment rejected");
     Ok(())
@@ -205,6 +228,11 @@ fn handle_pending_batch_confirm_command(pending_ids: Vec<String>, building: &str
     println!("✅ Batch confirming {} pending equipment items", pending_ids.len());
     
     let mut manager = PendingEquipmentManager::new(building.to_string());
+    
+    // Load pending equipment from storage
+    let storage_file = std::path::PathBuf::from(format!("pending-equipment-{}.json", building));
+    manager.load_from_storage(&storage_file)?;
+    
     let persistence = PersistenceManager::new(building)?;
     
     // Load current building data
@@ -215,6 +243,9 @@ fn handle_pending_batch_confirm_command(pending_ids: Vec<String>, building: &str
     let equipment_ids = manager.batch_confirm(pending_id_refs, &mut building_data)?;
     
     println!("   Created {} equipment item(s)", equipment_ids.len());
+    
+    // Save pending equipment state (confirmed items are marked)
+    manager.save_to_storage()?;
     
     // Save and commit if requested
     if commit {

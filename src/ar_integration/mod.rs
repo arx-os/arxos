@@ -2,6 +2,76 @@
 //!
 //! This module handles the integration of AR and LiDAR scan data from mobile applications
 //! into the building data structure, enabling real-time updates to the 3D renderer.
+//!
+//! # Overview
+//!
+//! The AR integration module provides a complete workflow for processing AR scans from mobile
+//! devices and integrating them into building data:
+//!
+//! 1. **AR Scan Processing**: Parse AR scan data from mobile apps (ARKit/ARCore)
+//! 2. **Pending Equipment**: Create pending equipment items for review
+//! 3. **Validation**: Validate detected equipment positions and properties
+//! 4. **Integration**: Confirm pending items and add them to building data
+//! 5. **Persistence**: Store pending equipment state for review
+//!
+//! # Usage Examples
+//!
+//! ## Basic AR Integration Workflow
+//!
+//! ```rust,no_run
+//! use arxos::ar_integration::{ARDataIntegrator, ARScanData, DetectedEquipment};
+//! use arxos::yaml::BuildingData;
+//!
+//! // Load building data
+//! let building_data = load_building_data()?;
+//!
+//! // Create AR scan data from mobile app
+//! let ar_scan = ARScanData {
+//!     scan_id: "scan_001".to_string(),
+//!     room_name: "Conference Room A".to_string(),
+//!     floor_level: 3,
+//!     detected_equipment: vec![
+//!         DetectedEquipment {
+//!             id: "HVAC-301".to_string(),
+//!             name: "VAV Unit".to_string(),
+//!             equipment_type: "VAV".to_string(),
+//!             position: Point3D { x: 10.0, y: 20.0, z: 3.0 },
+//!             confidence: 0.95,
+//!             // ... other fields
+//!         }
+//!     ],
+//!     // ... other fields
+//! };
+//!
+//! // Integrate AR scan
+//! let mut integrator = ARDataIntegrator::new(building_data);
+//! let result = integrator.integrate_ar_scan(ar_scan)?;
+//!
+//! println!("Added: {} equipment", result.equipment_added);
+//! ```
+//!
+//! ## Pending Equipment Workflow
+//!
+//! ```rust,no_run
+//! use arxos::ar_integration::pending::PendingEquipmentManager;
+//! use arxos::ar_integration::processing::process_ar_scan_to_pending;
+//!
+//! // Process AR scan to pending items
+//! let pending_ids = process_ar_scan_to_pending(&ar_scan, "my_building", 0.7)?;
+//!
+//! // Create manager and load from storage
+//! let mut manager = PendingEquipmentManager::new("my_building".to_string());
+//! manager.load_from_storage(&"pending-equipment-my_building.json".into())?;
+//!
+//! // List pending items
+//! let pending = manager.list_pending();
+//! for item in pending {
+//!     println!("Pending: {} ({:.2} confidence)", item.name, item.confidence);
+//! }
+//!
+//! // Confirm selected items
+//! manager.confirm_pending(&pending_ids[0], &mut building_data)?;
+//! ```
 
 pub mod pending;
 pub mod processing;

@@ -1,7 +1,14 @@
 /target
 
+# Test data directories
+test-data/
+test_data/
+
+# Test generated files
 test-*.ifc.yaml
 test-repo/
 test-office-repo/
 building.yaml
+
+# OS files
 .DS_Store

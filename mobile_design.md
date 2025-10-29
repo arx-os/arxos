@@ -964,6 +964,924 @@ class ARTerminalViewModel(
 
 ---
 
+## Field User Workflow: Simple Commands in AR+Terminal View
+
+### Problem Statement
+
+**Field User (Non-Technical):**
+- Performs AR scans and equipment markup in buildings
+- Doesn't know complex CLI commands
+- Needs simple, intuitive commands
+- Just wants to scan equipment and add notes
+
+**Power User (Technical):**
+- Reviews field user submissions
+- Uses full CLI command set for integration
+- Has full technical control
+- Integrates approved markups into building repo
+
+### Solution: Single AR+Terminal Interface with Simple Commands
+
+**One app for everyone!** The AR+Terminal hybrid view supports both:
+- **Simple commands** for field users (displayed prominently, with autocomplete)
+- **Full CLI** for power users (all commands available)
+
+Field users type simple commands like `add note` or `submit`, power users use full syntax. Both work in the same terminal overlay.
+
+---
+
+## Enhanced AR+Terminal View for Field Users
+
+### Design Philosophy
+
+**One Interface, Two User Levels:**
+
+Field users see:
+- Simple command suggestions at bottom of terminal
+- Command autocomplete with explanations
+- AR tags are tappable → auto-fills commands
+- Visual feedback for each step
+
+Power users see:
+- Full terminal with all commands
+- Can type any CLI command
+- Advanced options available
+
+**Same view, smart command assistance for non-technical users.**
+
+### Enhanced Terminal Input Component
+
+#### 1. Smart Command Input with Suggestions
+
+**Enhancement to existing `ARTerminalView`:**
+
+```swift
+// Enhanced Terminal Input with Smart Suggestions
+struct SmartTerminalInput: View {
+    @Binding var commandText: String
+    @Binding var detectedEquipment: [DetectedEquipment]
+    @Binding var selectedEquipment: DetectedEquipment?
+    let onExecute: (String) -> Void
+    let opacity: Double
+    
+    @State private var suggestions: [CommandSuggestion] = []
+    @State private var showSuggestions = true
+    @FocusState private var isFocused: Bool
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Command Input Field
+            HStack {
+                Text("arx$")
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundColor(.green)
+                
+                TextField("Type command...", text: $commandText)
+                    .font(.system(.body, design: .monospaced))
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .autocorrectionDisabled()
+                    .onChange(of: commandText) { newValue in
+                        updateSuggestions(for: newValue)
+                    }
+                    .onSubmit {
+                        executeCommand()
+                    }
+                    .focused($isFocused)
+                
+                Button(action: executeCommand) {
+                    Image(systemName: "play.fill")
+                        .foregroundColor(.blue)
+                }
+                .disabled(commandText.isEmpty)
+            }
+            .padding()
+            .background(Color.black.opacity(opacity))
+            
+            // Smart Suggestions Bar (for field users)
+            if showSuggestions && suggestions.isEmpty && commandText.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(FieldUserCommands.allCases, id: \.self) { cmd in
+                            SuggestionButton(cmd) {
+                                commandText = cmd.terminalCommand
+                                updateSuggestions(for: cmd.terminalCommand)
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                .padding(.vertical, 8)
+                .background(Color.black.opacity(opacity * 0.8))
+            }
+            
+            // Command Autocomplete (when typing)
+            if !suggestions.isEmpty && !commandText.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(suggestions.prefix(3)) { suggestion in
+                        AutocompleteRow(suggestion) {
+                            commandText = suggestion.fullCommand
+                            suggestions = []
+                        }
+                    }
+                }
+                .padding()
+                .background(Color.black.opacity(opacity * 0.9))
+                .cornerRadius(8)
+            }
+        }
+        .cornerRadius(12)
+        .padding()
+    }
+    
+    private func updateSuggestions(for input: String) {
+        if input.isEmpty {
+            suggestions = []
+            return
+        }
+        
+        // Simple command matching for field users
+        let simpleCommands = FieldUserCommands.allCases.filter { cmd in
+            cmd.terminalCommand.localizedCaseInsensitiveContains(input) ||
+            cmd.description.localizedCaseInsensitiveContains(input)
+        }
+        
+        suggestions = simpleCommands.map { cmd in
+            CommandSuggestion(
+                command: cmd.terminalCommand,
+                description: cmd.description,
+                fullCommand: cmd.terminalCommand
+            )
+        }
+        
+        // Also check if user typed partial of AR tag name
+        if let matchingEquipment = detectedEquipment.first(where: { eq in
+            eq.name.localizedCaseInsensitiveContains(input)
+        }) {
+            suggestions.append(CommandSuggestion(
+                command: "note \(matchingEquipment.name)",
+                description: "Add note for \(matchingEquipment.name)",
+                fullCommand: "note \(matchingEquipment.name) "
+            ))
+        }
+    }
+    
+    private func executeCommand() {
+        guard !commandText.isEmpty else { return }
+        onExecute(commandText)
+        commandText = ""
+        suggestions = []
+    }
+}
+
+// Simple commands for field users
+enum FieldUserCommands: String, CaseIterable {
+    case listEquipment = "list"
+    case addNote = "note"
+    case submit = "submit"
+    case help = "help"
+    
+    var terminalCommand: String {
+        switch self {
+        case .listEquipment: return "equipment list"
+        case .addNote: return "note"
+        case .submit: return "pr submit"
+        case .help: return "help"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .listEquipment: return "List detected equipment"
+        case .addNote: return "Add note to equipment"
+        case .submit: return "Submit for review"
+        case .help: return "Show help"
+        }
+    }
+}
+
+struct CommandSuggestion: Identifiable {
+    let id = UUID()
+    let command: String
+    let description: String
+    let fullCommand: String
+}
+
+struct SuggestionButton: View {
+    let cmd: FieldUserCommands
+    let action: () -> Void
+    
+    init(_ cmd: FieldUserCommands, action: @escaping () -> Void) {
+        self.cmd = cmd
+        self.action = action
+    }
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Text(cmd.description)
+                    .font(.caption)
+                    .foregroundColor(.white)
+                Text(cmd.terminalCommand)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(.green.opacity(0.8))
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color.blue.opacity(0.3))
+            .cornerRadius(8)
+        }
+    }
+}
+
+struct AutocompleteRow: View {
+    let suggestion: CommandSuggestion
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack {
+                Text(suggestion.command)
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundColor(.green)
+                
+                Text("→ \(suggestion.description)")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                
+                Spacer()
+            }
+            .padding(.vertical, 4)
+        }
+    }
+}
+```
+
+#### 2. Tap AR Tags to Auto-Fill Commands
+
+```swift
+struct NoteInputSheet: View {
+    let equipment: DetectedEquipment
+    let existingNote: String?
+    let onSave: (String) -> Void
+    let onCancel: () -> Void
+    
+    @State private var noteText: String
+    @FocusState private var isFocused: Bool
+    
+    init(equipment: DetectedEquipment, existingNote: String?, onSave: @escaping (String) -> Void, onCancel: @escaping () -> Void) {
+        self.equipment = equipment
+        self.existingNote = existingNote
+        self.onSave = onSave
+        self.onCancel = onCancel
+        _noteText = State(initialValue: existingNote ?? "")
+    }
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            // Equipment Info
+            HStack {
+                Image(systemName: equipment.icon)
+                    .font(.title2)
+                VStack(alignment: .leading) {
+                    Text(equipment.name)
+                        .font(.headline)
+                    Text(equipment.type)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+            }
+            .padding()
+            .background(Color(.systemGray6))
+            .cornerRadius(8)
+            
+            // Text Input
+            TextEditor(text: $noteText)
+                .frame(height: 150)
+                .padding(8)
+                .background(Color(.systemBackground))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color(.systemGray4), lineWidth: 1)
+                )
+                .focused($isFocused)
+            
+            // Placeholder if empty
+            if noteText.isEmpty {
+                VStack {
+                    HStack {
+                        Text("Add a note about this equipment...")
+                            .foregroundColor(.secondary)
+                            .padding(.leading, 12)
+                            .padding(.top, 8)
+                        Spacer()
+                    }
+                    Spacer()
+                }
+                .allowsHitTesting(false)
+            }
+            
+            // Quick Suggestions (Optional - for non-technical users)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    SuggestionChip("Needs repair") {
+                        noteText = "Needs repair"
+                    }
+                    SuggestionChip("Working fine") {
+                        noteText = "Working fine"
+                    }
+                    SuggestionChip("Check later") {
+                        noteText = "Check later"
+                    }
+                    SuggestionChip("Missing parts") {
+                        noteText = "Missing parts"
+                    }
+                }
+            }
+            
+            // Action Buttons
+            HStack(spacing: 12) {
+                Button("Cancel") {
+                    onCancel()
+                }
+                .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                Button("Save") {
+                    onSave(noteText.trimmingCharacters(in: .whitespacesAndNewlines))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(noteText.isEmpty ? Color.gray : Color.blue)
+                .cornerRadius(8)
+                .disabled(noteText.isEmpty)
+            }
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(16)
+        .shadow(radius: 10)
+        .onAppear {
+            isFocused = true
+        }
+    }
+}
+
+struct SuggestionChip: View {
+    let text: String
+    let action: () -> Void
+    
+    init(_ text: String, action: @escaping () -> Void) {
+        self.text = text
+        self.action = action
+    }
+    
+    var body: some View {
+        Button(action: action) {
+            Text(text)
+                .font(.caption)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color(.systemGray5))
+                .cornerRadius(16)
+        }
+    }
+}
+```
+
+#### 3. AR Tag Integration with Terminal
+
+When user taps an AR equipment tag, auto-fill terminal command:
+
+```swift
+// Enhanced EquipmentTagView with tap-to-command
+struct EquipmentTagView: View {
+    let equipment: DetectedEquipment
+    let onTap: (DetectedEquipment) -> Void
+    let onCommandFill: (String) -> Void  // New: fills terminal
+    
+    var body: some View {
+        Button(action: {
+            // Fill terminal with note command for this equipment
+            onCommandFill("note \(equipment.name) ")
+        }) {
+            HStack {
+                Image(systemName: equipment.icon)
+                Text(equipment.name)
+                    .font(.caption)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Color.blue.opacity(0.8))
+            .foregroundColor(.white)
+            .cornerRadius(16)
+        }
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.5)
+                .onEnded { _ in
+                    // Long press for more options
+                    onTap(equipment)
+                }
+        )
+    }
+}
+```
+
+**Workflow:**
+1. AR detects equipment → tag appears in AR view
+2. User taps tag → terminal auto-fills: `note VAV-301 `
+3. User completes note in terminal: `note VAV-301 needs filter replacement`
+4. User presses Enter → command executes in terminal
+5. Terminal shows: `✓ Note added for VAV-301: needs filter replacement`
+
+**No separate UI sheets or dialogs - everything stays in terminal!**
+
+#### 4. Simple Command Parsing (Rust Side)
+
+```rust
+// src/commands/simple.rs (new module for field user commands)
+
+/// Handle simple field user commands
+/// These are shortcuts that map to full CLI commands
+pub fn handle_simple_command(input: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let parts: Vec<&str> = input.trim().split_whitespace().collect();
+    
+    if parts.is_empty() {
+        return Ok(help_text());
+    }
+    
+    match parts[0] {
+        "note" | "n" => {
+            // Simple: "note VAV-301 needs repair"
+            // Maps to: "ar pending note --equipment VAV-301 --note 'needs repair'"
+            
+            if parts.len() < 3 {
+                return Ok("Usage: note <equipment-name> <your note here>".to_string());
+            }
+            
+            let equipment_name = parts[1];
+            let note = parts[2..].join(" ");
+            
+            // Find equipment in AR detected list
+            // Add note via pending equipment manager
+            add_equipment_note(equipment_name, &note)?;
+            
+            Ok(format!("✓ Note added for {}: {}", equipment_name, note))
+        }
+        
+        "list" | "ls" => {
+            // Simple: "list"
+            // Maps to: "ar pending list"
+            handle_ar_pending_list()
+        }
+        
+        "submit" | "send" => {
+            // Simple: "submit"
+            // Maps to: "pr submit" - creates PR from all pending items
+            handle_pr_submit()
+        }
+        
+        "help" | "h" | "?" => {
+            Ok(help_text())
+        }
+        
+        _ => {
+            // Not a simple command, pass through to full CLI parser
+            // This allows power users to use full commands
+            Err(format!("Unknown simple command: {}. Type 'help' for simple commands, or use full CLI syntax.", parts[0]).into())
+        }
+    }
+}
+
+fn add_equipment_note(equipment_name: &str, note: &str) -> Result<(), Box<dyn std::error::Error>> {
+    // Implementation: Add note to pending equipment
+    // This would integrate with PendingEquipmentManager
+    Ok(())
+}
+
+fn handle_ar_pending_list() -> Result<String, Box<dyn std::error::Error>> {
+    // Call existing ar pending list command
+    // Return formatted list
+    Ok("Pending equipment list...".to_string())
+}
+
+fn handle_pr_submit() -> Result<String, Box<dyn std::error::Error>> {
+    // Package all pending items into PR
+    // Call PR creation
+    Ok("PR submitted successfully!".to_string())
+}
+
+fn help_text() -> String {
+    r#"Simple Commands (Field Users):
+  note <name> <text>    Add note to equipment
+  list                  List detected equipment
+  submit                Submit for review
+  
+Full CLI commands also available for power users.
+Type command name (e.g., "equipment") for more options."#.to_string()
+}
+```
+
+**Integration in Command Router:**
+
+```rust
+// src/commands/mod.rs
+pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
+    match command {
+        // ... existing commands ...
+        
+        // New: Check if it's a simple field user command first
+        Commands::Simple { input } => simple::handle_simple_command(&input),
+    }
+}
+```
+
+---
+
+## PR Data Structure
+
+### Pull Request Package Format
+
+When field user submits, create a PR branch with:
+
+```
+prs/
+  └── pr_<timestamp>_<user_id>/
+      ├── metadata.yaml          # PR metadata
+      ├── markup.json            # AR scan data + notes
+      └── README.md              # Human-readable summary
+```
+
+**metadata.yaml:**
+```yaml
+pr_id: "pr_1703123456_john_doe"
+author: "john.doe"
+building: "Main Office Building"
+floor: 2
+room: "Conference Room A"
+submitted_at: "2024-12-20T14:30:00Z"
+status: "pending"
+equipment_count: 5
+notes_count: 3
+```
+
+**markup.json:**
+```json
+{
+  "session_id": "session_abc123",
+  "building": "Main Office Building",
+  "floor": 2,
+  "room": "Conference Room A",
+  "equipment": [
+    {
+      "id": "pending_1703123456",
+      "name": "VAV-301",
+      "type": "HVAC",
+      "position": { "x": 10.5, "y": 8.2, "z": 2.1 },
+      "confidence": 0.92,
+      "detection_method": "ARKit",
+      "note": "Needs filter replacement - check next maintenance cycle",
+      "marked_at": "2024-12-20T14:25:00Z"
+    },
+    {
+      "id": "pending_1703123457",
+      "name": "Light Fixture L-205",
+      "type": "Electrical",
+      "position": { "x": 12.3, "y": 8.5, "z": 3.0 },
+      "confidence": 0.88,
+      "detection_method": "Manual",
+      "note": "Flickering when dimmed - may need new ballast",
+      "marked_at": "2024-12-20T14:27:00Z"
+    }
+  ]
+}
+```
+
+**README.md:**
+```markdown
+# AR Markup Submission
+
+**Submitted by:** john.doe  
+**Date:** December 20, 2024  
+**Location:** Main Office Building, Floor 2, Conference Room A
+
+## Equipment Marked
+
+1. **VAV-301** (HVAC)
+   - Note: Needs filter replacement - check next maintenance cycle
+   - Position: (10.5, 8.2, 2.1)
+
+2. **Light Fixture L-205** (Electrical)
+   - Note: Flickering when dimmed - may need new ballast
+   - Position: (12.3, 8.5, 3.0)
+
+## Review Instructions
+
+1. Review AR scan accuracy
+2. Verify equipment identification
+3. Validate notes make sense
+4. Confirm spatial positioning
+5. Approve or request changes
+
+## CLI Review Commands
+
+\`\`\`bash
+# View PR details
+arx pr view pr_1703123456_john_doe
+
+# Review pending equipment
+arx ar pending list --pr pr_1703123456_john_doe
+
+# Approve and merge
+arx pr approve pr_1703123456_john_doe --merge
+
+# Request changes
+arx pr request-changes pr_1703123456_john_doe --comment "Please clarify equipment ID"
+\`\`\`
+```
+
+---
+
+## Power User CLI Commands
+
+### New PR Management Commands
+
+```bash
+# List all pending PRs
+arx pr list [--status pending|approved|rejected]
+
+# View specific PR details
+arx pr view <pr_id>
+
+# Review equipment in a PR
+arx pr equipment <pr_id>
+
+# Approve PR (with optional auto-merge)
+arx pr approve <pr_id> [--merge] [--commit]
+
+# Reject PR with comment
+arx pr reject <pr_id> --comment "Reason for rejection"
+
+# Request changes on PR
+arx pr request-changes <pr_id> --comment "Please clarify..."
+
+# Merge approved PR into main building repo
+arx pr merge <pr_id>
+
+# Diff PR changes before merging
+arx pr diff <pr_id>
+```
+
+### Integration with Existing Commands
+
+```bash
+# List pending equipment with PR context
+arx ar pending list --pr <pr_id>
+
+# Confirm equipment from a PR
+arx ar pending confirm <pending_id> --pr <pr_id> --commit
+```
+
+---
+
+## Android Implementation (Same Terminal Interface)
+
+Same concept applies to Android - enhance the existing `ARTerminalScreen`:
+
+```kotlin
+// Enhanced terminal input with suggestions
+@Composable
+fun SmartTerminalInput(
+    commandText: String,
+    onCommandChange: (String) -> Void,
+    onExecute: (String) -> Void,
+    detectedEquipment: List<DetectedEquipment>,
+    onEquipmentTap: (DetectedEquipment) -> Void,
+    opacity: Float
+) {
+    var suggestions by remember { mutableStateOf<List<CommandSuggestion>>(emptyList()) }
+    
+    Column {
+        // Command suggestions bar (when input is empty)
+        if (commandText.isEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FieldUserCommand.values().forEach { cmd ->
+                    SuggestionChip(
+                        label = cmd.description,
+                        command = cmd.terminalCommand,
+                        onClick = { onCommandChange(cmd.terminalCommand) }
+                    )
+                }
+            }
+        }
+        
+        // Terminal input with autocomplete
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("arx$", color = Color.Green, fontFamily = FontFamily.Monospace)
+            
+            OutlinedTextField(
+                value = commandText,
+                onValueChange = { text ->
+                    onCommandChange(text)
+                    suggestions = getSuggestions(text, detectedEquipment)
+                },
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Type command...") },
+                singleLine = true
+            )
+            
+            FloatingActionButton(
+                onClick = { onExecute(commandText) },
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(Icons.Default.PlayArrow, null)
+            }
+        }
+        
+        // Autocomplete suggestions
+        if (suggestions.isNotEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                suggestions.take(3).forEach { suggestion ->
+                    AutocompleteRow(suggestion) {
+                        onCommandChange(suggestion.fullCommand)
+                    }
+                }
+            }
+        }
+    }
+}
+
+enum class FieldUserCommand(val terminalCommand: String, val description: String) {
+    LIST("equipment list", "List equipment"),
+    NOTE("note", "Add note"),
+    SUBMIT("pr submit", "Submit for review"),
+    HELP("help", "Show help")
+}
+```
+
+---
+
+## Rust FFI Extensions for PR
+
+### New FFI Functions
+
+```rust
+// src/mobile_ffi/ffi.rs
+
+/// Create a pull request from AR markup data
+#[no_mangle]
+pub unsafe extern "C" fn arxos_create_pr(
+    markup_json: *const c_char,
+    building_name: *const c_char
+) -> *mut c_char {
+    // Parse markup JSON
+    // Create PR branch
+    // Save PR files
+    // Return PR info as JSON
+}
+
+/// Get PR status
+#[no_mangle]
+pub unsafe extern "C" fn arxos_get_pr_status(
+    pr_id: *const c_char
+) -> *mut c_char {
+    // Return PR status JSON
+}
+```
+
+### PR Service Implementation
+
+```rust
+// src/pr/mod.rs (new module)
+
+pub struct PRService {
+    repo: Repository,
+}
+
+impl PRService {
+    pub fn create_pr(&self, markup: MarkupData) -> Result<PRInfo, Box<dyn std::error::Error>> {
+        let pr_id = format!("pr_{}_{}", 
+            Utc::now().timestamp(),
+            markup.author.replace(" ", "_")
+        );
+        
+        // Create PR branch
+        let branch_name = format!("pr/{}", pr_id);
+        self.create_pr_branch(&branch_name)?;
+        
+        // Write PR files
+        self.write_pr_files(&pr_id, &markup)?;
+        
+        // Commit PR files
+        self.commit_pr(&pr_id, &markup)?;
+        
+        Ok(PRInfo {
+            pr_id: pr_id.clone(),
+            branch: branch_name,
+            status: PRStatus::Pending,
+        })
+    }
+    
+    fn write_pr_files(&self, pr_id: &str, markup: &MarkupData) -> Result<(), Box<dyn std::error::Error>> {
+        let pr_dir = format!("prs/{}", pr_id);
+        
+        // Write metadata.yaml
+        self.write_metadata(&pr_dir, markup)?;
+        
+        // Write markup.json
+        self.write_markup_json(&pr_dir, markup)?;
+        
+        // Write README.md
+        self.write_readme(&pr_dir, markup)?;
+        
+        Ok(())
+    }
+}
+```
+
+---
+
+## Workflow Summary
+
+### Field User Workflow (All in Terminal)
+
+1. **Open AR+Terminal View**
+   - AR camera starts automatically
+   - Terminal overlay appears with suggestions
+
+2. **Scan Equipment**
+   - Point camera at equipment
+   - AR auto-detects and shows tag in AR view
+   - Terminal auto-updates: "🔍 AR Detected: VAV-301 (HVAC)"
+
+3. **Add Note (Option A: Tap Tag)**
+   - Tap AR equipment tag
+   - Terminal auto-fills: `note VAV-301 `
+   - User types note: `needs filter replacement`
+   - Press Enter → Command executes
+
+4. **Add Note (Option B: Type Command)**
+   - User types: `note` or `n`
+   - Autocomplete shows: `note <equipment-name> <text>`
+   - User completes: `note VAV-301 needs filter replacement`
+   - Press Enter → Command executes
+
+5. **Check What's Pending**
+   - User types: `list` or `ls`
+   - Terminal shows all pending equipment with notes
+
+6. **Submit PR**
+   - User types: `submit` or `send`
+   - Terminal shows: "Creating PR..."
+   - Success: "✓ PR submitted! PR ID: pr_123456"
+   - User is done!
+
+### Power User Workflow
+
+1. **List PRs**
+   ```bash
+   arx pr list
+   ```
+
+2. **Review PR**
+   ```bash
+   arx pr view pr_1703123456_john_doe
+   arx pr equipment pr_1703123456_john_doe
+   ```
+
+3. **Approve/Reject**
+   ```bash
+   # Approve
+   arx pr approve pr_1703123456_john_doe --merge
+   
+   # Or reject
+   arx pr reject pr_1703123456_john_doe --comment "Invalid equipment ID"
+   ```
+
+4. **Merge** (if not auto-merged)
+   ```bash
+   arx pr merge pr_1703123456_john_doe
+   ```
+
+---
+
 ## Open Questions
 
 1. **Terminal Scroll Behavior**: Should terminal auto-scroll pause when user manually scrolls?
@@ -971,12 +1889,52 @@ class ARTerminalViewModel(
 3. **Command Suggestions**: Should terminal suggest commands based on AR context?
 4. **Multi-Device Sync**: If using on multiple devices, sync AR + Terminal state?
 5. **Accessibility**: How to make hybrid view accessible (screen readers, etc.)?
+6. **PR Review UI**: Should power users have GUI option or CLI-only?
+7. **PR Notifications**: How do power users get notified of new PRs?
+8. **Offline PR Submission**: Queue PRs when offline, submit when online?
+
+---
+
+## Summary: Terminal-First Design
+
+**Key Principle: ONE INTERFACE FOR ALL USERS**
+
+The AR+Terminal hybrid view is the single interface for:
+- **Field Users**: Simple commands with smart suggestions
+- **Power Users**: Full CLI command set
+- **Both**: Same view, same AR overlay, same terminal
+
+**No mode switching, no separate UIs, no complexity.**
+
+### Simple Commands for Field Users
+
+Instead of learning full CLI syntax, field users type:
+- `note VAV-301 needs repair` (instead of `ar pending note --equipment VAV-301 --note "needs repair"`)
+- `list` (instead of `ar pending list`)
+- `submit` (instead of `pr submit --all`)
+
+**Smart assistance:**
+- Command suggestions appear when terminal is empty
+- Autocomplete while typing
+- Tap AR tags to auto-fill commands
+- All feedback in terminal output
+
+### Power Users Unaffected
+
+Power users can still use full CLI:
+- `ar pending list --floor 2 --verbose`
+- `equipment update VAV-301 --status critical --commit`
+- `pr approve pr_123 --merge --commit`
+
+**No restrictions - everything works as before.**
 
 ---
 
 ## Conclusion
 
 The AR + Terminal hybrid view provides a powerful unified interface for building management. By combining real-time AR detection with terminal command execution, users can efficiently work with building data in a single, contextually-aware interface.
+
+**The Field User Workflow** enables non-technical users to contribute building data through simple terminal commands with smart assistance, while power users retain full CLI capabilities - all in the same interface.
 
 **Next Steps:**
 1. Review this specification with engineering team

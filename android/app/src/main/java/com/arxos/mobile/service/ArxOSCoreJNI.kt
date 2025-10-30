@@ -11,10 +11,16 @@ class ArxOSCoreJNI(private val context: Context) {
     private var nativeLibraryLoaded = false
     
     init {
-        // System.loadLibrary("arxos_mobile") when library is compiled
-        nativeLibraryLoaded = false
-        if (!nativeLibraryLoaded) {
-            Log.i("ArxOSCoreJNI", "Native library not loaded")
+        try {
+            System.loadLibrary("arxos")
+            nativeLibraryLoaded = true
+            Log.i(TAG, "Native library loaded successfully")
+        } catch (e: UnsatisfiedLinkError) {
+            nativeLibraryLoaded = false
+            Log.w(TAG, "Native library not found - will work in simulation mode", e)
+        } catch (e: Exception) {
+            nativeLibraryLoaded = false
+            Log.e(TAG, "Error loading native library", e)
         }
     }
     
@@ -72,15 +78,18 @@ class ArxOSCoreJNIWrapper(private val jni: ArxOSCoreJNI) {
     
     suspend fun listRooms(buildingName: String): List<Room> {
         if (!jni.isNativeLibraryLoaded()) {
-            Log.w("ArxOSCoreJNI", "Native library not loaded")
+            Log.w(TAG, "Native library not loaded - returning empty list")
             return emptyList()
         }
         
         return try {
             val json = jni.nativeListRooms(buildingName)
+            // TODO: Parse JSON response when library is linked
+            // val rooms = Json.decodeFromString<List<Room>>(json)
+            // rooms
             emptyList()
         } catch (e: Exception) {
-            Log.e("ArxOSCoreJNI", "Failed to list rooms: ${e.message}")
+            Log.e(TAG, "Failed to list rooms: ${e.message}", e)
             emptyList()
         }
     }

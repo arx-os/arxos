@@ -23,3 +23,10 @@ building.yaml
 
 # OS files
 .DS_Store
+
+# iOS build artifacts
+ios/build/
+ios/Pods/
+ios/*.xcworkspace
+**/xcuserdata/
+DerivedData/

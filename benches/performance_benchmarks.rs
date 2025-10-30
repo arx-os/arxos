@@ -14,7 +14,6 @@ use arxos::{
     yaml::{BuildingData, BuildingYamlSerializer},
 };
 use tempfile::TempDir;
-use std::fs;
 
 /// Benchmark IFC parser initialization
 fn benchmark_ifc_processor_init(c: &mut Criterion) {
@@ -80,19 +79,14 @@ fn benchmark_spatial_point_ops(c: &mut Criterion) {
     
     group.bench_function("distance", |b| {
         b.iter(|| {
-            black_box(p1.distance(&p2));
+            black_box(p1.distance_to(&p2));
         });
     });
     
-    group.bench_function("squared_distance", |b| {
+    group.bench_function("center", |b| {
+        let bbox = BoundingBox3D::new(p1, p3.clone());
         b.iter(|| {
-            black_box(p1.squared_distance(&p2));
-        });
-    });
-    
-    group.bench_function("midpoint", |b| {
-        b.iter(|| {
-            black_box(p1.midpoint(&p2));
+            black_box(bbox.center());
         });
     });
     
@@ -108,33 +102,27 @@ fn benchmark_spatial_bbox_ops(c: &mut Criterion) {
         max: Point3D::new(10.0, 10.0, 4.0),
     };
     
-    let bbox2 = BoundingBox3D {
-        min: Point3D::new(5.0, 5.0, 2.0),
-        max: Point3D::new(15.0, 15.0, 6.0),
-    };
-    
     group.bench_function("volume", |b| {
         b.iter(|| {
             black_box(bbox1.volume());
         });
     });
     
-    group.bench_function("surface_area", |b| {
+    group.bench_function("center", |b| {
         b.iter(|| {
-            black_box(bbox1.surface_area());
+            black_box(bbox1.center());
         });
     });
     
-    group.bench_function("intersects", |b| {
+    group.bench_function("from_points", |b| {
+        let points = vec![
+            Point3D::new(0.0, 0.0, 0.0),
+            Point3D::new(1.0, 1.0, 1.0),
+            Point3D::new(2.0, 2.0, 2.0),
+            Point3D::new(-1.0, -1.0, -1.0),
+        ];
         b.iter(|| {
-            black_box(bbox1.intersects(&bbox2));
-        });
-    });
-    
-    group.bench_function("contains_point", |b| {
-        let point = Point3D::new(5.0, 5.0, 2.0);
-        b.iter(|| {
-            black_box(bbox1.contains_point(&point));
+            black_box(BoundingBox3D::from_points(&points));
         });
     });
     
@@ -148,10 +136,16 @@ fn benchmark_git_manager_init(c: &mut Criterion) {
     
     c.bench_function("git_manager_init", |b| {
         b.iter(|| {
+            let config = arxos::git::GitConfig {
+                author_name: "Test User".to_string(),
+                author_email: "test@example.com".to_string(),
+                branch: "main".to_string(),
+                remote_url: None,
+            };
             let _manager = black_box(BuildingGitManager::new(
                 &repo_path.to_string_lossy(),
                 "test_building",
-                Default::default(),
+                config,
             ));
         });
     });
@@ -164,7 +158,7 @@ fn create_test_building_data(entity_count: usize) -> BuildingData {
     
     use arxos::yaml::{
         BuildingInfo, BuildingMetadata, FloorData, RoomData, EquipmentData, 
-        EquipmentStatus, CoordinateSystemInfo
+        EquipmentStatus
     };
     
     let mut rooms = Vec::new();

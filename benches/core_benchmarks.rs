@@ -5,20 +5,16 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
 use arxos::{core::{Room, Equipment, RoomType, EquipmentType}, spatial::Point3D};
-use std::fs;
-use std::path::Path;
 use tempfile::TempDir;
 
 /// Benchmark helper to create a temporary test environment
 fn setup_benchmark_environment() -> TempDir {
-    let temp_dir = tempfile::tempdir().expect("Failed to create temp directory");
-    fs::create_dir_all("./data").expect("Failed to create data directory");
-    temp_dir
+    tempfile::tempdir().expect("Failed to create temp directory")
 }
 
 /// Benchmark helper to clean up test environment
 fn cleanup_benchmark_environment(temp_dir: TempDir) {
-    temp_dir.close().expect("Failed to close temp directory");
+    temp_dir.close().expect("Failed to close temp directory")
 }
 
 /// Benchmark room creation performance
@@ -95,15 +91,7 @@ fn benchmark_spatial_operations(c: &mut Criterion) {
         let p1 = Point3D::new(0.0, 0.0, 0.0);
         let p2 = Point3D::new(1.0, 1.0, 1.0);
         b.iter(|| {
-            let _distance = p1.distance(&p2);
-        });
-    });
-    
-    group.bench_function("point_squared_distance", |b| {
-        let p1 = Point3D::new(0.0, 0.0, 0.0);
-        let p2 = Point3D::new(1.0, 1.0, 1.0);
-        b.iter(|| {
-            let _distance = p1.squared_distance(&p2);
+            let _distance = p1.distance_to(&p2);
         });
     });
     

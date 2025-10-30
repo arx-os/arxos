@@ -302,7 +302,7 @@ impl ARDataIntegrator {
         // Check if equipment already exists
         if let Some(existing_index) = floor.equipment.iter().position(|e| e.name == detected_equipment.name) {
             // Get existing position before mutable borrow
-            let existing_position = floor.equipment[existing_index].position.clone();
+            let existing_position = floor.equipment[existing_index].position;
             
             // Calculate position difference before mutable borrow
             let position_diff = Self::calculate_position_difference(&existing_position, &detected_equipment.position);

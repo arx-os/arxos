@@ -27,7 +27,7 @@ pub fn extract_spatial_data(parser: &EnhancedIFCParser, entity: &IFCEntity) -> R
 /// Parse entity placement from IFC data
 fn parse_entity_placement(parser: &EnhancedIFCParser, entity: &IFCEntity) -> Result<Point3D, Box<dyn std::error::Error>> {
     // Try to extract placement information from entity parameters
-    if let Some(placement_data) = entity.parameters.get(0) {
+    if let Some(placement_data) = entity.parameters.first() {
         return parse_placement_data(parser, placement_data);
     }
     
@@ -99,7 +99,7 @@ fn parse_local_placement(placement_str: &str) -> Result<Point3D, Box<dyn std::er
             let params_str = &placement_str[start+1..end];
             let params: Vec<&str> = params_str.split(',').collect();
             
-            if let Some(location_ref) = params.get(0) {
+            if let Some(location_ref) = params.first() {
                 return parse_placement_reference(location_ref.trim());
             }
         }
@@ -115,7 +115,7 @@ fn parse_axis2_placement_3d(placement_str: &str) -> Result<Point3D, Box<dyn std:
             let params_str = &placement_str[start+1..end];
             let params: Vec<&str> = params_str.split(',').collect();
             
-            if let Some(location_ref) = params.get(0) {
+            if let Some(location_ref) = params.first() {
                 return parse_placement_reference(location_ref.trim());
             }
         }
@@ -200,7 +200,7 @@ fn parse_shape_representation(shape_data: &str) -> Result<Point3D, Box<dyn std::
 fn extract_coordinates_from_geometry(geometry_data: &str) -> Result<Vec<Point3D>, Box<dyn std::error::Error>> {
     let mut coordinates = Vec::new();
     
-    let tokens: Vec<&str> = geometry_data.split(|c| c == ',' || c == ' ' || c == '\t' || c == '\n')
+    let tokens: Vec<&str> = geometry_data.split([',', ' ', '\t', '\n'])
         .filter(|s| !s.is_empty())
         .collect();
     

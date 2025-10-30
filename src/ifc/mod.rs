@@ -18,6 +18,12 @@ pub struct IFCProcessor {
     // Custom STEP parser implementation
 }
 
+impl Default for IFCProcessor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IFCProcessor {
     pub fn new() -> Self {
         Self {}

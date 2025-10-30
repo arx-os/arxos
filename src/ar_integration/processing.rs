@@ -53,7 +53,7 @@ pub fn process_ar_scan_to_pending(
             continue;
         }
         
-        let position = detected_eq.position.clone();
+        let position = detected_eq.position;
         
         let bounding_box = create_bounding_box_from_position(&position);
         

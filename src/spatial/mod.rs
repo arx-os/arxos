@@ -9,6 +9,12 @@ pub struct SpatialEngine {
     // Spatial processing engine
 }
 
+impl Default for SpatialEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SpatialEngine {
     pub fn new() -> Self {
         Self {}
@@ -60,7 +66,7 @@ impl SpatialEngine {
         }
 
         let points: Vec<Point3D> = entities.iter()
-            .flat_map(|entity| vec![entity.bounding_box.min.clone(), entity.bounding_box.max.clone()])
+            .flat_map(|entity| vec![entity.bounding_box.min, entity.bounding_box.max])
             .collect();
 
         BoundingBox3D::from_points(&points)

@@ -151,13 +151,13 @@ impl BuildingGitManager {
         let mut index = serde_yaml::to_string(&serde_yaml::Value::Mapping(serde_yaml::Mapping::new()))?;
         
         // Add building metadata
-        index.push_str(&format!("building:\n"));
+        index.push_str("building:\n");
         index.push_str(&format!("  name: {}\n", building_data.building.name));
         index.push_str(&format!("  id: {}\n", building_data.building.id));
         index.push_str(&format!("  floors: {}\n", building_data.floors.len()));
         
         // Add floor information
-        index.push_str(&format!("floors:\n"));
+        index.push_str("floors:\n");
         for floor in &building_data.floors {
             index.push_str(&format!("  - level: {}\n", floor.level));
             index.push_str(&format!("    name: {}\n", floor.name));
@@ -392,7 +392,7 @@ impl BuildingGitManager {
     /// Stage all modified files
     pub fn stage_all(&mut self) -> Result<usize, GitError> {
         let mut index = self.repo.index()?;
-        index.add_all(&["*"], git2::IndexAddOption::DEFAULT, None)?;
+        index.add_all(["*"], git2::IndexAddOption::DEFAULT, None)?;
         let count = index.len();
         index.write()?;
         Ok(count)

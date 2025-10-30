@@ -93,7 +93,7 @@ pub fn handle_ar_integrate_command(
         
         // Add files to Git
         let output = std::process::Command::new("git")
-            .args(&["add", &output_file])
+            .args(["add", &output_file])
             .output()?;
         
         if !output.status.success() {
@@ -102,7 +102,7 @@ pub fn handle_ar_integrate_command(
         
         // Commit changes
         let output = std::process::Command::new("git")
-            .args(&["commit", "-m", &commit_message])
+            .args(["commit", "-m", &commit_message])
             .output()?;
         
         if !output.status.success() {

@@ -19,6 +19,7 @@ pub use validation::ConfigValidator;
 
 /// Main configuration structure for ArxOS
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct ArxConfig {
     /// User information and preferences
     pub user: UserConfig,
@@ -157,17 +158,6 @@ pub enum ConfigError {
 /// Configuration result type
 pub type ConfigResult<T> = Result<T, ConfigError>;
 
-impl Default for ArxConfig {
-    fn default() -> Self {
-        Self {
-            user: UserConfig::default(),
-            paths: PathConfig::default(),
-            building: BuildingConfig::default(),
-            performance: PerformanceConfig::default(),
-            ui: UiConfig::default(),
-        }
-    }
-}
 
 impl Default for UserConfig {
     fn default() -> Self {
@@ -233,8 +223,8 @@ mod tests {
     fn test_default_config_creation() {
         let config = ArxConfig::default();
         assert_eq!(config.user.name, "ArxOS User");
-        assert_eq!(config.building.auto_commit, true);
-        assert_eq!(config.performance.show_progress, true);
+        assert!(config.building.auto_commit);
+        assert!(config.performance.show_progress);
     }
     
     #[test]
@@ -281,6 +271,6 @@ mod tests {
         
         let config: ArxConfig = toml::from_str(toml).unwrap();
         assert_eq!(config.user.name, "Test User");
-        assert_eq!(config.building.auto_commit, false);
+        assert!(!config.building.auto_commit);
     }
 }

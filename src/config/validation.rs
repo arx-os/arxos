@@ -75,12 +75,10 @@ impl ConfigValidator {
         Self::validate_path_exists(&paths.temp_path, "paths.temp_path")?;
         
         // Check for path conflicts
-        let path_vec = vec![
-            &paths.default_import_path,
+        let path_vec = [&paths.default_import_path,
             &paths.backup_path,
             &paths.template_path,
-            &paths.temp_path,
-        ];
+            &paths.temp_path];
         
         for (i, path1) in path_vec.iter().enumerate() {
             for (j, path2) in path_vec.iter().enumerate() {

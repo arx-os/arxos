@@ -21,9 +21,11 @@ pub struct Room {
 
 /// Types of rooms in a building
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub enum RoomType {
     Classroom,
     Laboratory,
+    #[default]
     Office,
     Gymnasium,
     Cafeteria,
@@ -75,11 +77,6 @@ impl RoomType {
     }
 }
 
-impl Default for RoomType {
-    fn default() -> Self {
-        RoomType::Office
-    }
-}
 
 impl Room {
     pub fn new(name: String, room_type: RoomType) -> Self {

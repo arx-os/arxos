@@ -195,11 +195,10 @@ fn display_commit_history(commits: &[CommitInfo], verbose: bool) -> Result<(), B
                 commit.message.clone()
             };
             
-            println!("{} {} {} {} {}", 
+            println!("{} {} {} 📝 {}", 
                 short_hash,
                 timestamp,
                 commit.author,
-                "📝",
                 message_preview
             );
         }

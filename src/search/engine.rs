@@ -456,8 +456,8 @@ impl SearchEngine {
                 }
             }
             // Handle FLOOR-{number} format
-            if part.starts_with("FLOOR-") {
-                let floor_str = &part[6..]; // Remove "FLOOR-" prefix
+            if let Some(floor_str) = part.strip_prefix("FLOOR-") {
+                // Remove "FLOOR-" prefix
                 if let Ok(floor_num) = floor_str.parse::<i32>() {
                     floor = Some(floor_num);
                 }

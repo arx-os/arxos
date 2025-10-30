@@ -16,7 +16,7 @@ pub fn handle_config(show: bool, set: Option<String>, reset: bool, edit: bool) -
         });
     
     if show {
-        display_configuration(&config_manager.get_config())?;
+        display_configuration(config_manager.get_config())?;
     } else if let Some(set_value) = set {
         set_configuration_value(&mut config_manager, &set_value)?;
     } else if reset {
@@ -25,7 +25,7 @@ pub fn handle_config(show: bool, set: Option<String>, reset: bool, edit: bool) -
         edit_configuration(&mut config_manager)?;
     } else {
         // Default: show configuration
-        display_configuration(&config_manager.get_config())?;
+        display_configuration(config_manager.get_config())?;
     }
     
     Ok(())

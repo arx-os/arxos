@@ -234,6 +234,12 @@ pub struct AnimationStats {
     pub fps: f64,
 }
 
+impl Default for AnimationSystem {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AnimationSystem {
     /// Create a new animation system
     pub fn new() -> Self {
@@ -677,7 +683,7 @@ mod tests {
         ).unwrap();
         
         assert!(system.cancel_animation("test"));
-        assert!(system.cancel_animation("nonexistent") == false);
+        assert!(!system.cancel_animation("nonexistent"));
     }
 
     #[test]

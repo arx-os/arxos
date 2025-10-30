@@ -84,7 +84,7 @@ fn benchmark_spatial_point_ops(c: &mut Criterion) {
     });
     
     group.bench_function("center", |b| {
-        let bbox = BoundingBox3D::new(p1, p3.clone());
+        let bbox = BoundingBox3D::new(p1, p3);
         b.iter(|| {
             black_box(bbox.center());
         });

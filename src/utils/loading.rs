@@ -67,13 +67,11 @@ fn find_and_load_yaml_file() -> Result<BuildingData, Box<dyn std::error::Error>>
         .collect();
     
     if yaml_files.is_empty() {
-        return Err(format!(
-            "No YAML files found in current directory. \
+        return Err("No YAML files found in current directory. \
             Available options:\n\
             1. Run 'arxos import <ifc-file>' to import building data\n\
             2. Check if you're in the correct directory\n\
-            3. Verify that YAML files exist and have .yaml extension"
-        ).into());
+            3. Verify that YAML files exist and have .yaml extension".to_string().into());
     }
     
     // Use the first YAML file found

@@ -9,7 +9,7 @@
 //! These tests follow security best practices and should be run
 //! as part of the CI/CD pipeline.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::ffi::{CString, CStr};
 use std::os::raw::c_char;
 use tempfile::TempDir;
@@ -233,7 +233,7 @@ mod ffi_safety_tests {
 
 #[cfg(test)]
 mod input_validation_tests {
-    use super::*;
+    
     use arxos::path::PathGenerator;
     
     /// Test that building names are sanitized correctly
@@ -248,7 +248,7 @@ mod input_validation_tests {
         ];
         
         for name in malicious_names {
-            let mut generator = PathGenerator::new(name);
+            let generator = PathGenerator::new(name);
             let path = generator.generate_building_path();
             
             // Verify path doesn't contain dangerous characters

@@ -201,6 +201,12 @@ pub struct EffectsStats {
     pub fps: f64,
 }
 
+impl Default for VisualEffectsEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VisualEffectsEngine {
     /// Create a new visual effects engine
     pub fn new() -> Self {
@@ -297,7 +303,7 @@ impl VisualEffectsEngine {
             // Emit status indicator particles
             if self.config.enable_particles {
                 let particle = Particle {
-                    position: effect.position.clone(),
+                    position: effect.position,
                     velocity: Vector3D::new(0.0, 0.1, 0.0),
                     acceleration: Vector3D::zero(),
                     lifetime: 1.0,
@@ -390,7 +396,7 @@ impl VisualEffectsEngine {
             // Emit alert particles
             if self.config.enable_particles {
                 let particle = Particle {
-                    position: effect.position.clone(),
+                    position: effect.position,
                     velocity: Vector3D::new(0.0, 0.2, 0.0),
                     acceleration: Vector3D::zero(),
                     lifetime: 1.0,
@@ -418,7 +424,7 @@ impl VisualEffectsEngine {
             // Emit connection particles
             if self.config.enable_particles {
                 let particle = Particle {
-                    position: effect.position.clone(),
+                    position: effect.position,
                     velocity: Vector3D::new(flow_intensity, 0.0, 0.0),
                     acceleration: Vector3D::zero(),
                     lifetime: 1.0,
@@ -447,7 +453,7 @@ impl VisualEffectsEngine {
             // Emit highlight particles
             if self.config.enable_particles {
                 let particle = Particle {
-                    position: effect.position.clone(),
+                    position: effect.position,
                     velocity: Vector3D::zero(),
                     acceleration: Vector3D::zero(),
                     lifetime: 1.0,
@@ -499,7 +505,7 @@ impl VisualEffectsEngine {
         // Create view mode transition particles
         if self.config.enable_particles {
             let particle = Particle {
-                position: effect.position.clone(),
+                position: effect.position,
                 velocity: Vector3D::zero(),
                 acceleration: Vector3D::zero(),
                 lifetime: 1.0,
@@ -519,7 +525,7 @@ impl VisualEffectsEngine {
         if let EffectData::ParticleBurst { particle_count, burst_radius: _, particle_type } = &mut effect.data {
             // Create burst effect
             self.particle_system.create_burst(
-                effect.position.clone(),
+                effect.position,
                 *particle_count,
                 particle_type.clone()
             );
@@ -534,7 +540,7 @@ impl VisualEffectsEngine {
             // Create smoke particles
             if self.config.enable_particles {
                 let particle = Particle {
-                    position: effect.position.clone(),
+                    position: effect.position,
                     velocity: Vector3D::new(
                         wind_direction.x * *smoke_intensity,
                         wind_direction.y * *smoke_intensity + 0.5,
@@ -563,7 +569,7 @@ impl VisualEffectsEngine {
             // Create fire particles
             if self.config.enable_particles {
                 let particle = Particle {
-                    position: effect.position.clone(),
+                    position: effect.position,
                     velocity: Vector3D::new(0.0, 0.3, 0.0),
                     acceleration: Vector3D::zero(),
                     lifetime: 1.0,
@@ -592,7 +598,7 @@ impl VisualEffectsEngine {
                     let speed = *energy_level * 2.0;
                     
                     let particle = Particle {
-                        position: effect.position.clone(),
+                        position: effect.position,
                         velocity: Vector3D::new(
                             angle.cos() * speed,
                             0.0,

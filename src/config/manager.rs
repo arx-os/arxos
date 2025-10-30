@@ -104,14 +104,12 @@ impl ConfigManager {
         if self.config_path.exists() {
             let (tx, rx) = mpsc::channel();
             let mut watcher = notify::recommended_watcher(tx)
-                .map_err(|e| ConfigError::IoError(std::io::Error::new(
-                    std::io::ErrorKind::Other,
+                .map_err(|e| ConfigError::IoError(std::io::Error::other(
                     format!("Failed to create file watcher: {}", e)
                 )))?;
             
             watcher.watch(&self.config_path, RecursiveMode::NonRecursive)
-                .map_err(|e| ConfigError::IoError(std::io::Error::new(
-                    std::io::ErrorKind::Other,
+                .map_err(|e| ConfigError::IoError(std::io::Error::other(
                     format!("Failed to watch file: {}", e)
                 )))?;
             
@@ -333,7 +331,7 @@ mod tests {
         
         let config = ConfigManager::load_from_file(&config_file).unwrap();
         assert_eq!(config.user.name, "Test User");
-        assert_eq!(config.building.auto_commit, false);
+        assert!(!config.building.auto_commit);
     }
     
     #[test]
@@ -356,7 +354,7 @@ mod tests {
         
         let config = ConfigManager::apply_environment_overrides(ArxConfig::default()).unwrap();
         assert_eq!(config.user.name, "Environment User");
-        assert_eq!(config.building.auto_commit, false);
+        assert!(!config.building.auto_commit);
         
         env::remove_var("ARX_USER_NAME");
         env::remove_var("ARX_AUTO_COMMIT");

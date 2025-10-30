@@ -124,6 +124,12 @@ pub struct SessionStats {
     pub view_change_count: u32,
 }
 
+impl Default for InteractiveState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InteractiveState {
     /// Create a new interactive state with default values
     pub fn new() -> Self {

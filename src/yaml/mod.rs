@@ -123,6 +123,12 @@ pub struct BuildingYamlSerializer {
     // YAML serialization configuration
 }
 
+impl Default for BuildingYamlSerializer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BuildingYamlSerializer {
     pub fn new() -> Self {
         Self {}
@@ -206,12 +212,12 @@ impl BuildingYamlSerializer {
         
         for room in rooms {
             let floor_level = (room.position.z / 3.0).floor() as i32; // Assume 3m floor height
-            floor_groups.entry(floor_level).or_insert_with(Vec::new).push(room.clone());
+            floor_groups.entry(floor_level).or_default().push(room.clone());
         }
         
         for eq in equipment {
             let floor_level = (eq.position.z / 3.0).floor() as i32;
-            floor_groups.entry(floor_level).or_insert_with(Vec::new).push(eq.clone());
+            floor_groups.entry(floor_level).or_default().push(eq.clone());
         }
 
         let mut floors = Vec::new();
@@ -225,7 +231,7 @@ impl BuildingYamlSerializer {
                     room_type: entity.entity_type.clone(),
                     area: Some(self.calculate_area(&entity.bounding_box)),
                     volume: Some(self.calculate_volume(&entity.bounding_box)),
-                    position: entity.position.clone(),
+                    position: entity.position,
                     bounding_box: entity.bounding_box.clone(),
                     equipment: vec![], // Will be populated later
                     properties: HashMap::new(),
@@ -239,7 +245,7 @@ impl BuildingYamlSerializer {
                     equipment_type: entity.entity_type.clone(),
                     sensor_mappings: None,
                     system_type: self.determine_system_type(&entity.entity_type),
-                    position: entity.position.clone(),
+                    position: entity.position,
                     bounding_box: entity.bounding_box.clone(),
                     status: EquipmentStatus::Healthy,
                     properties: HashMap::new(),
@@ -301,7 +307,7 @@ impl BuildingYamlSerializer {
         }
 
         let points: Vec<Point3D> = entities.iter()
-            .flat_map(|entity| vec![entity.bounding_box.min.clone(), entity.bounding_box.max.clone()])
+            .flat_map(|entity| vec![entity.bounding_box.min, entity.bounding_box.max])
             .collect();
 
         BoundingBox3D::from_points(&points)

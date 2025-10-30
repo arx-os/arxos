@@ -150,7 +150,7 @@ fn find_building_file(building_name: &str) -> PersistenceResult<PathBuf> {
     use crate::utils::path_safety::PathSafety;
     
     let current_dir = std::env::current_dir()
-        .map_err(|e| PersistenceError::IoError(e))?;
+        .map_err(PersistenceError::IoError)?;
     
     // Look for YAML files in current directory with path safety
     let yaml_files: Vec<PathBuf> = PathSafety::read_dir_safely(std::path::Path::new("."), &current_dir)

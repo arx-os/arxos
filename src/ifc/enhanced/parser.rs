@@ -7,6 +7,12 @@ use crate::progress::ProgressContext;
 use crate::error::{ArxError, ArxResult};
 use log::{info, warn};
 
+impl Default for EnhancedIFCParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EnhancedIFCParser {
     /// Create a new enhanced IFC parser
     pub fn new() -> Self {

@@ -177,7 +177,7 @@ impl ErrorAnalytics {
                 }
             };
             
-            let trend = trends.entry(error_type.clone()).or_insert_with(Vec::new);
+            let trend = trends.entry(error_type.clone()).or_default();
             if trend.len() <= hour as usize {
                 trend.resize(hour as usize + 1, 0);
             }

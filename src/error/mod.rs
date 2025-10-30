@@ -17,6 +17,7 @@ pub use analytics::ErrorAnalytics;
 
 /// Rich error context with suggestions and recovery
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct ErrorContext {
     /// Helpful suggestions for resolving the error
     pub suggestions: Vec<String>,
@@ -270,18 +271,6 @@ impl ArxError {
     }
 }
 
-impl Default for ErrorContext {
-    fn default() -> Self {
-        Self {
-            suggestions: Vec::new(),
-            recovery_steps: Vec::new(),
-            debug_info: None,
-            help_url: None,
-            file_path: None,
-            line_number: None,
-        }
-    }
-}
 
 /// Result type alias for ArxOS operations
 pub type ArxResult<T> = Result<T, ArxError>;

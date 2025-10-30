@@ -9,6 +9,12 @@ pub struct FallbackIFCParser {
     // Custom STEP parser implementation
 }
 
+impl Default for FallbackIFCParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FallbackIFCParser {
     pub fn new() -> Self {
         Self {}

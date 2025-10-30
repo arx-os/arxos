@@ -80,7 +80,7 @@ impl Building3DRenderer {
     /// Get entities within a radius of a point using spatial index
     pub fn query_entities_within_radius(&self, center: &Point3D, radius: f64) -> Vec<crate::ifc::SpatialQueryResult> {
         if let Some(ref spatial_index) = self.spatial_index {
-            spatial_index.find_within_radius(center.clone(), radius)
+            spatial_index.find_within_radius(*center, radius)
         } else {
             vec![]
         }
@@ -123,7 +123,7 @@ impl Building3DRenderer {
     /// Find the nearest entity to a point using spatial index
     pub fn find_nearest_entity(&self, point: &Point3D) -> Option<crate::ifc::SpatialQueryResult> {
         if let Some(ref spatial_index) = self.spatial_index {
-            spatial_index.find_nearest(point.clone())
+            spatial_index.find_nearest(*point)
         } else {
             None
         }
@@ -308,7 +308,7 @@ impl Building3DRenderer {
             output.push_str(&self.render_equipment_status_summary(scene)?);
         }
         
-        return Ok(output);
+        Ok(output)
     }
     
     /// Render 3D building as ASCII art with depth and perspective
@@ -534,7 +534,7 @@ impl Building3DRenderer {
             output.push_str(&self.render_equipment_status_summary(scene)?);
         }
         
-        return Ok(output);
+        Ok(output)
     }
 
     /// Extract floors as 3D objects
@@ -547,7 +547,7 @@ impl Building3DRenderer {
                 name: floor.name.clone(),
                 level: floor.level,
                 elevation: floor.elevation,
-                bounding_box: floor.bounding_box.clone().unwrap_or_else(|| BoundingBox3D {
+                bounding_box: floor.bounding_box.clone().unwrap_or(BoundingBox3D {
                     min: Point3D { x: 0.0, y: 0.0, z: floor.elevation },
                     max: Point3D { x: 100.0, y: 100.0, z: floor.elevation + 3.0 },
                 }),
@@ -571,7 +571,7 @@ impl Building3DRenderer {
                     name: equipment.name.clone(),
                     equipment_type: equipment.equipment_type.clone(),
                     status: format!("{:?}", equipment.status),
-                    position: equipment.position.clone(),
+                    position: equipment.position,
                     bounding_box: equipment.bounding_box.clone(),
                     floor_level: floor.level,
                     room_id: None, // EquipmentData doesn't have room_id, we'll need to find it
@@ -596,7 +596,7 @@ impl Building3DRenderer {
                     id: room.id.clone(),
                     name: room.name.clone(),
                     room_type: room.room_type.clone(),
-                    position: room.position.clone(),
+                    position: room.position,
                     bounding_box: room.bounding_box.clone(),
                     floor_level: floor.level,
                     equipment: Vec::new(), // Equipment will be found when equipment data is available
@@ -845,7 +845,7 @@ impl Building3DRenderer {
         // Simple perspective projection
         let distance = self.camera.position.z - point.z;
         if distance <= 0.0 {
-            return point.clone(); // Behind camera
+            return *point; // Behind camera
         }
         
         let x = (point.x - self.camera.position.x) * self.camera.fov / distance;
@@ -1011,7 +1011,7 @@ impl Building3DRenderer {
         // Group equipment by floor level
         let mut floor_equipment: std::collections::HashMap<i32, Vec<&Equipment3D>> = std::collections::HashMap::new();
         for equipment in &scene.equipment {
-            floor_equipment.entry(equipment.floor_level).or_insert_with(Vec::new).push(equipment);
+            floor_equipment.entry(equipment.floor_level).or_default().push(equipment);
         }
         
         let mut floors: Vec<_> = floor_equipment.keys().collect();
@@ -1019,7 +1019,7 @@ impl Building3DRenderer {
         
         for &floor_level in &floors {
             output.push_str(&format!("│   Floor {}: ", floor_level));
-            if let Some(equipment) = floor_equipment.get(&floor_level) {
+            if let Some(equipment) = floor_equipment.get(floor_level) {
                 for (i, eq) in equipment.iter().enumerate() {
                     if i > 0 { output.push_str(", "); }
                     output.push_str(&eq.name);

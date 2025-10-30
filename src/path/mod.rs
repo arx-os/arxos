@@ -69,7 +69,7 @@ impl PathGenerator {
             floor_level,
             system_type: sanitized_system,
             equipment_name: Some(sanitized_equipment),
-            room_name: room_name.map(|r| Self::sanitize_name(r)),
+            room_name: room_name.map(Self::sanitize_name),
         };
 
         Ok(UniversalPath {

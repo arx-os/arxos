@@ -176,6 +176,12 @@ pub struct ParticleSystemStats {
     pub fps: f64,
 }
 
+impl Default for ParticleSystem {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ParticleSystem {
     /// Create a new particle system with default configuration
     pub fn new() -> Self {
@@ -403,7 +409,7 @@ impl ParticleSystem {
             let speed = 2.0 + (i as f64 * 0.1);
             
             let particle = Particle {
-                position: position.clone(),
+                position,
                 velocity: Vector3D {
                     x: angle.cos() * speed,
                     y: 0.0,

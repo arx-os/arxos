@@ -180,7 +180,7 @@ fn test_error_handling_across_commands() {
 #[test]
 #[ignore] // Requires Git repository setup
 fn test_git_operations_with_safe_mocks() {
-    use arxos::commands::git_ops::{handle_status, handle_diff, handle_history};
+    
     
     // These tests would require a proper Git repository
     // They're marked ignore to avoid failures in CI/CD

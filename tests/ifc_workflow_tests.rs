@@ -2,7 +2,7 @@
 //!
 //! These tests verify the complete IFC import and hierarchy extraction workflow.
 
-use arxos::ifc::{IFCProcessor, IFCError};
+use arxos::ifc::IFCProcessor;
 use std::path::PathBuf;
 
 #[test]

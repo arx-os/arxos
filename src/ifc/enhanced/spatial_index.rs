@@ -116,6 +116,12 @@ impl RTreeNode {
     }
 }
 
+impl Default for SpatialIndex {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SpatialIndex {
     /// Create a new spatial index
     pub fn new() -> Self {
@@ -276,7 +282,7 @@ impl SpatialIndex {
                     entity: entity.clone(),
                     distance: self.calculate_distance(&point, &entity.position),
                     relationship_type: SpatialRelationship::Contains,
-                    intersection_points: vec![point.clone()],
+                    intersection_points: vec![point],
                 });
             }
         }
@@ -341,7 +347,7 @@ impl SpatialIndex {
             }
             
             // Find all entities within cluster radius
-            let nearby_entities = self.find_within_radius(entity.position.clone(), cluster_radius);
+            let nearby_entities = self.find_within_radius(entity.position, cluster_radius);
             let cluster: Vec<SpatialEntity> = nearby_entities
                 .into_iter()
                 .map(|result| result.entity)
@@ -382,8 +388,8 @@ impl SpatialIndex {
            intersection_min.z <= intersection_max.z {
             
             // Add corner points of intersection
-            points.push(intersection_min.clone());
-            points.push(intersection_max.clone());
+            points.push(intersection_min);
+            points.push(intersection_max);
             points.push(Point3D {
                 x: intersection_min.x,
                 y: intersection_min.y,
@@ -615,12 +621,12 @@ impl SpatialIndex {
         for entity in &entities {
             let room_id = format!("ROOM_{}", entity.name.replace(" ", "_"));
             self.room_index.entry(room_id.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(entity.id.clone());
             
             let floor = (entity.position.z / 10.0) as i32;
             self.floor_index.entry(floor)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(entity.id.clone());
         }
         

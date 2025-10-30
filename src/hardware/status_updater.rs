@@ -221,21 +221,21 @@ impl EquipmentStatusUpdater {
         // Fallback to default thresholds based on sensor type
         if sensor_type.contains("temperature") || sensor_type.contains("temp") {
             // Temperature-specific thresholds (in Fahrenheit for HVAC)
-            if value < 50.0 || value > 100.0 {
+            if !(50.0..=100.0).contains(&value) {
                 info!("Temperature {}°F is in critical range", value);
                 return ThresholdCheck::Critical;
             }
-            if value < 60.0 || value > 85.0 {
+            if !(60.0..=85.0).contains(&value) {
                 info!("Temperature {}°F is in warning range", value);
                 return ThresholdCheck::OutOfRange;
             }
         } else if sensor_type.contains("humidity") {
             // Humidity thresholds (percentage)
-            if value < 20.0 || value > 80.0 {
+            if !(20.0..=80.0).contains(&value) {
                 info!("Humidity {}% is in critical range", value);
                 return ThresholdCheck::Critical;
             }
-            if value < 30.0 || value > 70.0 {
+            if !(30.0..=70.0).contains(&value) {
                 info!("Humidity {}% is in warning range", value);
                 return ThresholdCheck::OutOfRange;
             }

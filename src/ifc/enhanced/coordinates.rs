@@ -95,7 +95,7 @@ impl EnhancedIFCParser {
                 let params: Vec<&str> = params_str.split(',').collect();
                 
                 // First parameter is the location reference
-                if let Some(_location_ref) = params.get(0) {
+                if let Some(_location_ref) = params.first() {
                     // For now, return a coordinate system with origin
                     // In a full implementation, we would resolve the reference
                     return Ok(CoordinateSystem::new(

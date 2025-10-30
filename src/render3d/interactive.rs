@@ -334,8 +334,8 @@ impl InteractiveRenderer {
         
         // Update camera in renderer
         self.renderer.set_camera(
-            self.state.camera_state.position.clone(),
-            self.state.camera_state.target.clone()
+            self.state.camera_state.position,
+            self.state.camera_state.target
         );
         
         // Update visual effects

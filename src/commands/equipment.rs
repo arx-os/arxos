@@ -105,7 +105,7 @@ fn handle_add_equipment(
                     name: equipment.name.clone(),
                     equipment_type: equipment_type_to_string(&equipment.equipment_type),
                     system_type: equipment_type_to_string(&equipment.equipment_type),
-                    position: pos_3d.clone(),
+                    position: pos_3d,
                     bounding_box: crate::spatial::BoundingBox3D {
                         min: Point3D { x: pos_3d.x - 0.5, y: pos_3d.y - 0.5, z: pos_3d.z - 0.5 },
                         max: Point3D { x: pos_3d.x + 0.5, y: pos_3d.y + 0.5, z: pos_3d.z + 0.5 },

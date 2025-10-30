@@ -152,6 +152,11 @@ impl SensorIngestionService {
         
         true
     }
+    
+    /// Get the configured sensor data directory
+    pub fn sensor_data_dir(&self) -> &std::path::Path {
+        &self.config.data_directory
+    }
 }
 
 #[cfg(test)]

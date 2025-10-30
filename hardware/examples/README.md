@@ -1,6 +1,8 @@
 # ArxOS Hardware Examples
 
-This directory contains complete working examples for integrating open-source hardware sensors with ArxOS using Rust. Each example demonstrates a different integration method and hardware platform.
+**⚠️ Reference Only**: These examples are provided for reference to demonstrate hardware integration patterns with ArxOS. They are not part of the main build and may not compile with the current workspace configuration.
+
+This directory contains reference examples for integrating open-source hardware sensors with ArxOS using Rust. Each example demonstrates a different integration method and hardware platform.
 
 ## 📁 Examples Overview
 

@@ -1,45 +1,50 @@
 # ArxOS Hardware Integration
 
-This directory contains the hardware integration components for ArxOS, organized into logical modules for sensor management, protocol handling, and example implementations.
+This directory contains reference examples for hardware integration with ArxOS. The actual hardware integration implementation is in `src/hardware/` in the main codebase.
+
+## ⚠️ Reference Only
+
+**These examples are provided for reference only** and demonstrate how to integrate various hardware platforms (ESP32, RP2040, Arduino) with ArxOS. They are not part of the main build and may not compile with the current workspace configuration.
 
 ## 📁 Directory Structure
 
 ```
 hardware/
-├── core/           # Core hardware abstractions and types
-├── drivers/        # Hardware driver implementations
-├── protocols/      # Communication protocol implementations
-└── examples/       # Complete hardware integration examples
+└── examples/       # Reference examples for hardware integration
+    ├── arduino-motion/     # Arduino + PIR motion sensor
+    ├── esp32-temperature/  # ESP32 + DHT22 temperature/humidity
+    └── rp2040-air-quality/ # RP2040 + MQ-135 air quality
 ```
 
-## 🦀 Rust Implementation
+## 🦀 Active Implementation
 
-All hardware components are implemented in Rust using embedded HAL abstractions:
+The actual hardware integration code is in `src/hardware/`:
+- **Sensor Data Ingestion**: `src/hardware/ingestion.rs`
+- **Data Types**: `src/hardware/data_types.rs`
+- **Status Updates**: `src/hardware/status_updater.rs`
 
-- **Core**: Common types and traits for hardware integration
-- **Drivers**: Platform-specific sensor drivers
-- **Protocols**: Communication protocol implementations (GitHub API, MQTT, Webhook)
-- **Examples**: Complete working examples for different platforms
+These modules handle sensor data from local files and integrate with the main ArxOS building data system.
 
-## 🚀 Quick Start
+## 🚀 Using Hardware Integration
 
-1. **Browse examples** in `examples/` for complete implementations
-2. **Use core types** from `core/` for your own implementations
-3. **Implement drivers** in `drivers/` for new sensors
-4. **Add protocols** in `protocols/` for new communication methods
+The hardware integration is handled through the main ArxOS codebase:
+
+1. **Sensor Data Format**: Sensors should output data in the ArxOS format (see `examples/README.md`)
+2. **File-based Ingestion**: Place sensor data files in `./sensor-data/` directory
+3. **Command Handler**: Use `arxos sensor ingest` to process sensor data files
+4. **Automatic Status Updates**: Equipment status is automatically updated based on sensor readings
 
 ## 📚 Documentation
 
-- **Examples**: See `examples/README.md` for complete hardware examples
-- **Core API**: See `core/README.md` for hardware abstraction documentation
-- **Drivers**: See `drivers/README.md` for sensor driver documentation
-- **Protocols**: See `protocols/README.md` for communication protocol documentation
+- **Examples**: See `examples/README.md` for hardware integration examples
+- **Active Code**: See `src/hardware/` for the actual implementation
+- **Command Reference**: See `docs/COMMAND_REFERENCE.md` for sensor commands
 
 ## 🔧 Development
 
-All hardware components follow Rust best practices:
+The main hardware integration follows Rust best practices:
 - Memory-safe implementations
 - Proper error handling
-- Embedded HAL abstractions
-- No unsafe code blocks
+- Path safety for file operations
 - Comprehensive documentation
+- Type-safe sensor data structures

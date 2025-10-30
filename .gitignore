@@ -1,3 +1,4 @@
+# Rust build artifacts
 /target
 
 # Output directories
@@ -13,7 +14,7 @@ test-repo/
 test-office-repo/
 building.yaml
 
-# IDE directories
+# IDE directories and editor files
 .vs/
 .vscode/
 .idea/
@@ -23,6 +24,7 @@ building.yaml
 
 # OS files
 .DS_Store
+Thumbs.db
 
 # iOS build artifacts
 ios/build/
@@ -30,3 +32,14 @@ ios/Pods/
 ios/*.xcworkspace
 **/xcuserdata/
 DerivedData/
+
+# Android build artifacts
+android/.gradle/
+android/local.properties
+android/app/build/
+android/.idea/
+
+# Temporary files
+*.log
+*.tmp
+*.temp

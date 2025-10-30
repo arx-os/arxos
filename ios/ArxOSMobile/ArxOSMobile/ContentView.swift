@@ -5,26 +5,33 @@ struct ContentView: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
+            ARTerminalView()
+                .tabItem {
+                    Image(systemName: "square.split.diagonal")
+                    Text("AR Terminal")
+                }
+                .tag(0)
+            
             TerminalView()
                 .tabItem {
                     Image(systemName: "terminal")
                     Text("Terminal")
                 }
-                .tag(0)
+                .tag(1)
             
             ARScanView()
                 .tabItem {
                     Image(systemName: "camera.viewfinder")
                     Text("AR Scan")
                 }
-                .tag(1)
+                .tag(2)
             
             EquipmentListView()
                 .tabItem {
                     Image(systemName: "list.bullet")
                     Text("Equipment")
                 }
-                .tag(2)
+                .tag(3)
         }
         .accentColor(.blue)
     }

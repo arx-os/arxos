@@ -13,7 +13,7 @@ test-repo/
 test-office-repo/
 building.yaml
 
-# IDE/Editor files
+# IDE directories
 .vs/
 .vscode/
 .idea/

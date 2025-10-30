@@ -205,8 +205,8 @@ fn handle_pending_reject_command(pending_id: &str) -> Result<(), Box<dyn std::er
     info!("Rejecting pending equipment: {}", pending_id);
     println!("❌ Rejecting pending equipment: {}", pending_id);
     
-    // Extract building name from pending ID or use default
-    let building = "default"; // TODO: Extract from pending ID or context
+    // For now, use "default" building name - could be extracted from pending ID format in future
+    let building = "default";
     let mut manager = PendingEquipmentManager::new(building.to_string());
     
     // Load pending equipment from storage

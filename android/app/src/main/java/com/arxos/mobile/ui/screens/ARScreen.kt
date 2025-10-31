@@ -1,5 +1,6 @@
 package com.arxos.mobile.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -13,6 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.arxos.mobile.data.DetectedEquipment
+import com.arxos.mobile.data.Vector3
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,7 +119,9 @@ fun ARScreen() {
                                 id = "manual_${System.currentTimeMillis()}",
                                 name = "Manual Equipment",
                                 type = "Manual",
-                                status = "Detected"
+                                position = Vector3(0f, 0f, 0f),
+                                status = "Detected",
+                                icon = "wrench"
                             )
                             detectedEquipment = detectedEquipment + newEquipment
                         }
@@ -251,13 +256,6 @@ fun ControlButton(
         )
     }
 }
-
-data class DetectedEquipment(
-    val id: String,
-    val name: String,
-    val type: String,
-    val status: String
-)
 
 @Composable
 fun EquipmentTag(

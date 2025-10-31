@@ -1,6 +1,9 @@
 # Rust build artifacts
 /target
 
+# Rust cargo config (local per-project settings)
+.cargo/
+
 # Output directories
 output/
 
@@ -35,11 +38,32 @@ DerivedData/
 
 # Android build artifacts
 android/.gradle/
+android/build/
 android/local.properties
 android/app/build/
 android/.idea/
+
+# Note: android/gradle.properties should be committed
+# Note: android/gradlew wrapper scripts should be committed (in android/ only)
+gradlew
+gradlew.bat
 
 # Temporary files
 *.log
 *.tmp
 *.temp
+
+# Security and secrets
+.env
+.env.local
+.env.*.local
+*.secret
+*.key
+*.pem
+*.p12
+
+# Note: .secrets.baseline should be committed to track false positives
+# secrets.baseline
+
+# Pre-commit hooks cache
+.pre-commit-cache/

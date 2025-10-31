@@ -1,0 +1,58 @@
+# Pre-commit hooks configuration for ArxOS
+# Run: pip install pre-commit && pre-commit install
+
+repos:
+  # Rust-specific hooks
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
+    hooks:
+      - id: fmt
+        args: [--all, --]
+      - id: clippy
+        args: [--all-targets, --all-features, --, -D, warnings]
+      - id: test
+        args: [--all-targets, --all-features, --release]
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=10240']  # 10MB max
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: detect-private-key
+      - id: check-docstring-first
+
+  # Secret scanning using truffleHog regex
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: |
+          (?x)^(
+            target/.*|
+            .*\\.lock$|
+            android/local\\.properties$|
+            android/app/build/.*|
+            ios/build/.*|
+            .git/.*|
+            docs/archive/.*
+          )$
+
+# Configuration for detect-secrets
+default_language_version:
+  python: python3
+
+# Fail fast on first hook failure
+fail_fast: false
+
+# Run hooks on all files first time
+# Run: pre-commit run --all-files
+

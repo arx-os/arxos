@@ -24,6 +24,9 @@
 ### Getting Started
 - **[Developer Onboarding](DEVELOPER_ONBOARDING.md)** - Complete setup and contribution guide
 - **[Error Handling Guide](ERROR_HANDLING_GUIDE.md)** - Standard error handling patterns
+- **[Security Guide](SECURITY.md)** - Security practices and automated scanning
+- **[Codebase Overview](CODEBASE_OVERVIEW.md)** - Technical reference and module breakdown
+- **[Security Audit Report](SECURITY_AUDIT_REPORT.md)** - Comprehensive security analysis
 
 ### Mobile Development
 - **[Mobile FFI Integration](MOBILE_FFI_INTEGRATION.md)** - Complete guide for iOS/Android development
@@ -78,6 +81,7 @@ Historical and outdated documentation is preserved in the [`archive/`](archive/)
 
 **New to ArxOS?** → Start with [User Guide](USER_GUIDE.md)  
 **Contributing?** → See [Developer Onboarding](DEVELOPER_ONBOARDING.md)  
+**Security?** → Review [Security Guide](SECURITY.md)  
 **Adding features?** → See [Architecture](ARCHITECTURE.md)  
 **Building mobile apps?** → See [Mobile FFI Integration](MOBILE_FFI_INTEGRATION.md)  
 **Deploying at scale?** → See [Enterprise Deployment](ENTERPRISE_DEPLOYMENT.md)  

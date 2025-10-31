@@ -3,9 +3,8 @@
 //! This module provides Java Native Interface (JNI) bindings for Android.
 
 use jni::JNIEnv;
-use jni::objects::{JClass, JString, JObject};
-use jni::sys::{jstring, jobject, jobjectArray};
-use std::ffi::{CString, CStr};
+use jni::objects::{JClass, JString};
+use jni::sys::jstring;
 use std::os::raw::c_char;
 
 use crate::mobile_ffi::{MobileError, RoomInfo, EquipmentInfo};

@@ -1,24 +1,26 @@
 package com.arxos.mobile.ui.viewmodel
 
+import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.arxos.mobile.data.DetectedEquipment
 import com.arxos.mobile.data.Equipment
 import com.arxos.mobile.data.EquipmentFilter
-import com.arxos.mobile.service.ArxOSCoreService
+import com.arxos.mobile.data.Vector3
+import com.arxos.mobile.service.ArxOSCoreServiceFactory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class TerminalViewModel : ViewModel() {
+class TerminalViewModel(application: Application) : AndroidViewModel(application) {
     private val _terminalState = MutableStateFlow(TerminalState())
     val terminalState: StateFlow<TerminalState> = _terminalState.asStateFlow()
     
-    private val arxosCoreService = ArxOSCoreService()
+    private val arxosCoreService = ArxOSCoreServiceFactory.getInstance(application)
     
     fun updateCommandText(text: String) {
         _terminalState.value = _terminalState.value.copy(commandText = text)
@@ -31,19 +33,19 @@ class TerminalViewModel : ViewModel() {
         _terminalState.value = _terminalState.value.copy(
             commandText = "",
             isExecuting = true,
-            outputLines = _terminalState.value.outputLines + "arx$ $command"
+            outputLines = _terminalState.value.outputLines + listOf("arx$ $command")
         )
         
         viewModelScope.launch {
             try {
                 val result = arxosCoreService.executeCommand(command)
                 _terminalState.value = _terminalState.value.copy(
-                    outputLines = _terminalState.value.outputLines + result,
+                    outputLines = _terminalState.value.outputLines + listOf(result.output),
                     isExecuting = false
                 )
             } catch (e: Exception) {
                 _terminalState.value = _terminalState.value.copy(
-                    outputLines = _terminalState.value.outputLines + "Error: ${e.message}",
+                    outputLines = _terminalState.value.outputLines + listOf("Error: ${e.message}"),
                     isExecuting = false
                 )
             }
@@ -51,11 +53,11 @@ class TerminalViewModel : ViewModel() {
     }
 }
 
-class ARViewModel : ViewModel() {
+class ARViewModel(application: Application) : AndroidViewModel(application) {
     private val _arState = MutableStateFlow(ARState())
     val arState: StateFlow<ARState> = _arState.asStateFlow()
     
-    private val arxosCoreService = ArxOSCoreService()
+    private val arxosCoreService = ArxOSCoreServiceFactory.getInstance(application)
     
     fun startScanning() {
         _arState.value = _arState.value.copy(
@@ -85,7 +87,7 @@ class ARViewModel : ViewModel() {
             id = "manual_${System.currentTimeMillis()}",
             name = "Manual Equipment",
             type = "Manual",
-            position = com.google.ar.sceneform.math.Vector3(0f, 0f, 0f),
+            position = Vector3(0f, 0f, 0f),
             status = "Detected",
             icon = "wrench"
         )
@@ -107,11 +109,11 @@ class ARViewModel : ViewModel() {
     }
 }
 
-class EquipmentViewModel : ViewModel() {
+class EquipmentViewModel(application: Application) : AndroidViewModel(application) {
     private val _equipmentState = MutableStateFlow(EquipmentState())
     val equipmentState: StateFlow<EquipmentState> = _equipmentState.asStateFlow()
     
-    private val arxosCoreService = ArxOSCoreService()
+    private val arxosCoreService = ArxOSCoreServiceFactory.getInstance(application)
     
     init {
         loadEquipment()
@@ -170,11 +172,3 @@ data class EquipmentState(
     val isLoading: Boolean = false,
     val filters: List<EquipmentFilter> = EquipmentFilter.values().toList()
 )
-
-enum class EquipmentFilter(val name: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    ALL("All", androidx.compose.material.icons.Icons.Default.List),
-    HVAC("HVAC", androidx.compose.material.icons.Icons.Default.Air),
-    ELECTRICAL("Electrical", androidx.compose.material.icons.Icons.Default.Bolt),
-    PLUMBING("Plumbing", androidx.compose.material.icons.Icons.Default.WaterDrop),
-    SAFETY("Safety", androidx.compose.material.icons.Icons.Default.Security)
-}

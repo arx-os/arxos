@@ -1,6 +1,17 @@
 /*
  * ArxOS ESP32 Temperature & Humidity Sensor
  * 
+ * ⚠️  SECURITY WARNING: EXAMPLE FILE ONLY ⚠️
+ * 
+ * This is an EXAMPLE file for demonstration purposes only.
+ * DO NOT use this code in production without proper security measures.
+ * 
+ * SECURITY NOTES:
+ * - Replace ALL placeholder values below with your actual credentials
+ * - Use environment variables or secure configuration management
+ * - NEVER commit real credentials to version control
+ * - Use encrypted storage for sensitive data
+ * 
  * This example demonstrates how to connect an ESP32 with DHT22 sensor
  * to ArxOS using Rust and the esp-rs ecosystem.
  * 
@@ -31,7 +42,9 @@ use chrono::{DateTime, Utc};
 use base64::{Engine as _, engine::general_purpose};
 use dht_sensor::*;
 
-// Configuration
+// ⚠️  CONFIGURATION - REPLACE WITH YOUR ACTUAL VALUES
+// ⚠️  NEVER commit these values to version control!
+
 const WIFI_SSID: &str = "YOUR_WIFI_SSID";
 const WIFI_PASSWORD: &str = "YOUR_WIFI_PASSWORD";
 const GITHUB_TOKEN: &str = "YOUR_GITHUB_TOKEN";

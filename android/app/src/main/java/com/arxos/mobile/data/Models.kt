@@ -1,6 +1,7 @@
 package com.arxos.mobile.data
 
-import com.google.ar.sceneform.math.Vector3
+// Simple vector class to replace ARCore dependency
+data class Vector3(val x: Float, val y: Float, val z: Float)
 
 data class DetectedEquipment(
     val id: String,
@@ -19,6 +20,15 @@ data class Equipment(
     val location: String,
     val lastMaintenance: String
 )
+
+// Equipment filter enum for UI
+enum class EquipmentFilter(val displayName: String) {
+    ALL("All"),
+    HVAC("HVAC"),
+    ELECTRICAL("Electrical"),
+    PLUMBING("Plumbing"),
+    SAFETY("Safety")
+}
 
 data class Room(
     val id: String,

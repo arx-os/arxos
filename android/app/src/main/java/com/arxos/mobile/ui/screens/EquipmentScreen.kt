@@ -2,6 +2,7 @@ package com.arxos.mobile.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -13,6 +14,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.arxos.mobile.data.Equipment
+import com.arxos.mobile.data.EquipmentFilter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,7 +39,7 @@ fun EquipmentScreen() {
         } else true
     }.filter { equipment ->
         if (selectedFilter != EquipmentFilter.ALL) {
-            equipment.type.equals(selectedFilter.name, ignoreCase = true)
+            equipment.type.equals(selectedFilter.displayName, ignoreCase = true)
         } else true
     }
     
@@ -72,11 +75,11 @@ fun EquipmentScreen() {
             items(EquipmentFilter.values()) { filter ->
                 FilterChip(
                     onClick = { selectedFilter = filter },
-                    label = { Text(filter.name) },
+                    label = { Text(filter.displayName) },
                     selected = selectedFilter == filter,
                     leadingIcon = {
                         Icon(
-                            getEquipmentIcon(filter.name),
+                            getEquipmentIcon(filter.displayName),
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
@@ -221,25 +224,8 @@ fun getEquipmentIcon(type: String): ImageVector {
 fun getStatusColor(status: String): Color {
     return when (status.lowercase()) {
         "active" -> Color.Green
-        "maintenance" -> Color.Orange
+        "maintenance" -> android.graphics.Color.rgb(255, 165, 0).let { Color(it) } // Orange
         "inactive" -> Color.Red
         else -> Color.Gray
     }
-}
-
-data class Equipment(
-    val id: String,
-    val name: String,
-    val type: String,
-    val status: String,
-    val location: String,
-    val lastMaintenance: String
-)
-
-enum class EquipmentFilter(val name: String) {
-    ALL("All"),
-    HVAC("HVAC"),
-    ELECTRICAL("Electrical"),
-    PLUMBING("Plumbing"),
-    SAFETY("Safety")
 }

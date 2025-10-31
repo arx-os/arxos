@@ -56,6 +56,18 @@ cargo build --release
 
 📖 **[Complete User Guide](docs/USER_GUIDE.md)** - Learn all the commands and features
 
+### Security
+
+ArxOS follows security best practices with automated scanning and comprehensive protections:
+
+- 🔒 Pre-commit hooks for secret detection
+- 🔍 CI/CD security scanning on every push
+- 🛡️ Path traversal protection
+- ✅ FFI safety hardening
+- 🧪 20+ security tests
+
+📋 **[Security Audit Report](docs/SECURITY_AUDIT_REPORT.md)** | **[Security Guide](docs/SECURITY.md)**
+
 ---
 
 ## 📚 Documentation

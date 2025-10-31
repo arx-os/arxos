@@ -2,6 +2,7 @@ package com.arxos.mobile.service
 
 import android.content.Context
 import android.util.Log
+import com.arxos.mobile.data.Equipment
 
 /**
  * JNI wrapper for ArxOS FFI functions
@@ -75,6 +76,7 @@ class ArxOSCoreJNI(private val context: Context) {
  * Wrapper class to call JNI functions with error handling
  */
 class ArxOSCoreJNIWrapper(private val jni: ArxOSCoreJNI) {
+    private val TAG = "ArxOSCoreJNIWrapper"
     
     suspend fun listRooms(buildingName: String): List<Room> {
         if (!jni.isNativeLibraryLoaded()) {

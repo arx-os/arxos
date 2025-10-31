@@ -1,6 +1,17 @@
 /*
  * ArxOS RP2040 Air Quality Sensor
  * 
+ * ⚠️  SECURITY WARNING: EXAMPLE FILE ONLY ⚠️
+ * 
+ * This is an EXAMPLE file for demonstration purposes only.
+ * DO NOT use this code in production without proper security measures.
+ * 
+ * SECURITY NOTES:
+ * - Replace ALL placeholder values below with your actual credentials
+ * - Use environment variables or secure configuration management
+ * - NEVER commit real credentials to version control
+ * - Use encrypted storage for sensitive data
+ * 
  * This example demonstrates how to connect an RP2040 with MQ-135 sensor
  * to ArxOS using Rust and the rp-hal ecosystem.
  * 
@@ -36,7 +47,9 @@ use rp2040_hal::gpio::{bank0::Gpio26, bank0::Gpio27, FunctionSio, SioOutput};
 use serde_json_core::{heapless::String, ser, Deserializer, Serializer};
 use chrono::{DateTime, Utc};
 
-// Configuration
+// ⚠️  CONFIGURATION - REPLACE WITH YOUR ACTUAL VALUES
+// ⚠️  NEVER commit these values to version control!
+
 const MQTT_BROKER: &str = "YOUR_MQTT_BROKER_IP";
 const MQTT_PORT: u16 = 1883;
 const MQTT_USER: &str = "YOUR_MQTT_USERNAME";

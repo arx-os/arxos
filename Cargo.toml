@@ -12,6 +12,10 @@ name = "arxos"
 path = "src/lib.rs"
 crate-type = ["cdylib", "rlib", "staticlib"]
 
+[features]
+default = []
+android = ["jni"]
+
 [dependencies]
 # Re-export all workspace dependencies for integration tests
 serde = { workspace = true }
@@ -38,6 +42,7 @@ num_cpus = { workspace = true }
 tempfile = { workspace = true }
 uniffi = { workspace = true }
 uniffi_build = { workspace = true }
+jni = { workspace = true, optional = true }
 log = "0.4"
 regex = "1.10"
 clap = { version = "4.4", features = ["derive"] }
@@ -99,6 +104,7 @@ tempfile = "3.8"
 # Mobile FFI dependencies
 uniffi = "0.25"
 uniffi_build = "0.25"
+jni = "0.21"
 
 # Development dependencies
 criterion = "0.5"

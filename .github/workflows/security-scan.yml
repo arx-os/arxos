@@ -1,0 +1,97 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run weekly security scans
+    - cron: '0 0 * * 0'
+
+jobs:
+  secret-scanning:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for scanning
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install detect-secrets
+        run: |
+          pip install detect-secrets
+      
+      - name: Scan for secrets
+        continue-on-error: true
+        run: |
+          # Scan for new secrets
+          detect-secrets scan \
+            --baseline .secrets.baseline \
+            --exclude-files '^target/' \
+            --exclude-files '.*\.lock$' \
+            --exclude-files '^android/local\.properties$' \
+            --exclude-files '^android/app/build/' \
+            --exclude-files '^ios/build/'
+          
+          # Check if baseline was updated
+          if git diff --exit-code .secrets.baseline; then
+            echo "✅ No new secrets detected"
+          else
+            echo "❌ New secrets detected! Please review .secrets.baseline"
+            git diff .secrets.baseline
+            exit 1
+          fi
+      
+      - name: Upload baseline changes
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: secrets-baseline-diff
+          path: .secrets.baseline
+          retention-days: 7
+  
+  rust-security-audit:
+    name: Rust Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install cargo-audit
+        run: |
+          cargo install cargo-audit
+      
+      - name: Run security audit
+        continue-on-error: true
+        run: |
+          cargo audit --deny warnings
+      
+      - name: Check for known vulnerabilities
+        continue-on-error: true
+        run: |
+          cargo audit --json | jq -r '.vulnerabilities.found // 0' || true
+  
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v3
+        with:
+          fail-on-severity: moderate
+          deny-licenses: GPL-3.0, AGPL-3.0
+

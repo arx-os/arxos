@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -56,17 +57,17 @@ fun EquipmentStatusBadge(
     modifier: Modifier = Modifier
 ) {
     val backgroundColor = when (status.lowercase()) {
-        "detected" -> Color.Green.copy(alpha = 0.2f)
-        "tagged" -> Color.Blue.copy(alpha = 0.2f)
-        "saved" -> Color.Purple.copy(alpha = 0.2f)
-        else -> Color.Gray.copy(alpha = 0.2f)
+        "detected" -> ComposeColor.Green.copy(alpha = 0.2f)
+        "tagged" -> ComposeColor.Blue.copy(alpha = 0.2f)
+        "saved" -> ComposeColor(0xFF9C27B0).copy(alpha = 0.2f) // Purple
+        else -> ComposeColor.Gray.copy(alpha = 0.2f)
     }
     
     val textColor = when (status.lowercase()) {
-        "detected" -> Color.Green
-        "tagged" -> Color.Blue
-        "saved" -> Color.Purple
-        else -> Color.Gray
+        "detected" -> ComposeColor.Green
+        "tagged" -> ComposeColor.Blue
+        "saved" -> ComposeColor(0xFF9C27B0) // Purple
+        else -> ComposeColor.Gray
     }
     
     Card(

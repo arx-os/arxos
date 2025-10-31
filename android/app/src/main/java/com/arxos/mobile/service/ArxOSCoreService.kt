@@ -1,12 +1,31 @@
 package com.arxos.mobile.service
 
 import android.content.Context
+import com.arxos.mobile.data.Equipment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/**
+ * Singleton factory for ArxOSCoreService
+ * Use Application context for long-lived service
+ */
+object ArxOSCoreServiceFactory {
+    @Volatile
+    private var instance: ArxOSCoreService? = null
+    
+    fun getInstance(context: Context): ArxOSCoreService {
+        return instance ?: synchronized(this) {
+            instance ?: ArxOSCoreService(context.applicationContext).also { instance = it }
+        }
+    }
+    
+    fun destroy() {
+        instance = null
+    }
+}
+
 class ArxOSCoreService(private val context: Context) {
     
-    private var instance: Any? = null
     private val jni = ArxOSCoreJNI(context)
     
     init {
@@ -14,7 +33,7 @@ class ArxOSCoreService(private val context: Context) {
     }
     
     fun destroy() {
-        instance = null
+        // Service cleanup
     }
     
     suspend fun executeCommand(command: String): CommandResult = withContext(Dispatchers.IO) {
@@ -37,11 +56,13 @@ class ArxOSCoreService(private val context: Context) {
     }
     
     suspend fun getRooms(): List<Room> = withContext(Dispatchers.IO) {
-        return@withContext jni.listRooms(buildingName = "main")
+        val wrapper = ArxOSCoreJNIWrapper(jni)
+        return@withContext wrapper.listRooms(buildingName = "main")
     }
     
     suspend fun getEquipment(): List<Equipment> = withContext(Dispatchers.IO) {
-        return@withContext jni.listEquipment(buildingName = "main")
+        val wrapper = ArxOSCoreJNIWrapper(jni)
+        return@withContext wrapper.listEquipment(buildingName = "main")
     }
     
     suspend fun getEquipmentByRoom(roomId: String): List<Equipment> = withContext(Dispatchers.IO) {
@@ -83,6 +104,12 @@ class ArxOSCoreService(private val context: Context) {
             message = "AR scan processing not yet implemented"
         )
     }
+    
+    suspend fun saveARScan(equipment: List<com.arxos.mobile.data.DetectedEquipment>, roomName: String): Boolean = withContext(Dispatchers.IO) {
+        // TODO: Implement AR scan saving
+        android.util.Log.d("ArxOSCoreService", "Save AR scan: $equipment in $roomName")
+        false
+    }
 }
 
 // MARK: - FFI Wrapper
@@ -106,14 +133,6 @@ data class Room(
     val name: String,
     val floor: String,
     val coordinates: String
-)
-
-data class Equipment(
-    val id: String,
-    val name: String,
-    val type: String,
-    val status: String,
-    val roomId: String? = null
 )
 
 data class GitStatus(

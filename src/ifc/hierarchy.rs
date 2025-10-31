@@ -262,7 +262,7 @@ impl HierarchyBuilder {
             let numbers: Vec<i32> = storey.name
                 .chars()
                 .filter(|c| c.is_ascii_digit())
-                .map(|c| c.to_digit(10).unwrap() as i32)
+                .filter_map(|c| c.to_digit(10).map(|d| d as i32))
                 .collect();
             if !numbers.is_empty() {
                 Ok(numbers[0])

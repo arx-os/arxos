@@ -202,13 +202,67 @@ impl EnhancedIFCParser {
         Ok(result)
     }
     
+    /// Validate IFC file size before processing
+    fn validate_file_size(&self, file_path: &str) -> ArxResult<()> {
+        use std::fs::metadata;
+        
+        let metadata = metadata(file_path)
+            .map_err(|e| ArxError::io_error(format!("Cannot read file metadata: {}", e))
+                .with_file_path(file_path))?;
+        
+        let file_size_bytes = metadata.len();
+        let file_size_mb = file_size_bytes / (1024 * 1024);
+        
+        const MAX_FILE_SIZE_MB: u64 = 500;
+        const WARNING_THRESHOLD_MB: u64 = 100;
+        
+        if file_size_mb > MAX_FILE_SIZE_MB {
+            return Err(ArxError::ifc_processing(format!(
+                "IFC file too large: {}MB exceeds maximum of {}MB",
+                file_size_mb, MAX_FILE_SIZE_MB
+            ))
+            .with_file_path(file_path)
+            .with_suggestions(vec![
+                format!("File size: {}MB (max: {}MB)", file_size_mb, MAX_FILE_SIZE_MB),
+                "Consider using a streaming parser for large files".to_string(),
+                "Reduce file size by exporting fewer elements from BIM software".to_string(),
+            ])
+            .with_recovery(vec![
+                "Use IFC file optimization tools".to_string(),
+                "Export only required building elements".to_string(),
+                "Contact support for streaming parser feature (future)".to_string(),
+            ]));
+        }
+        
+        if file_size_mb > WARNING_THRESHOLD_MB {
+            info!("Warning: Large IFC file detected ({}MB). Processing may take longer.", file_size_mb);
+        }
+        
+        Ok(())
+    }
+    
     /// Safely read file content with comprehensive error handling
     fn read_file_safely(&self, file_path: &str) -> ArxResult<String> {
-        use std::fs;
+        use crate::utils::path_safety::PathSafety;
         use std::path::Path;
         
+        // Validate file path with path safety first
+        let current_dir = std::env::current_dir()
+            .map_err(|e| ArxError::io_error(format!("Cannot get current directory: {}", e)))?;
+        let file_path_buf = Path::new(file_path);
+        let validated_path = if file_path_buf.is_absolute() {
+            PathSafety::canonicalize_and_validate(file_path_buf, &current_dir)
+                .map_err(|e| ArxError::io_error(format!("Path validation failed: {}", e))
+                    .with_file_path(file_path))?
+        } else {
+            let joined = current_dir.join(file_path_buf);
+            PathSafety::canonicalize_and_validate(&joined, &current_dir)
+                .map_err(|e| ArxError::io_error(format!("Path validation failed: {}", e))
+                    .with_file_path(file_path))?
+        };
+        
         // Check if file exists
-        if !Path::new(file_path).exists() {
+        if !validated_path.exists() {
             return Err(ArxError::io_error("IFC file not found")
                 .with_file_path(file_path)
                 .with_suggestions(vec![
@@ -222,12 +276,17 @@ impl EnhancedIFCParser {
         }
         
         // Check file extension
-        if !file_path.to_lowercase().ends_with(".ifc") {
-            warn!("File does not have .ifc extension: {}", file_path);
+        if !validated_path.to_string_lossy().to_lowercase().ends_with(".ifc") {
+            warn!("File does not have .ifc extension: {}", validated_path.display());
         }
         
-        // Read file content
-        match fs::read_to_string(file_path) {
+        // Validate file size before reading
+        self.validate_file_size(validated_path.to_str()
+            .ok_or_else(|| ArxError::io_error("Invalid file path encoding")
+                .with_file_path(file_path))?)?;
+        
+        // Read file content using path-safe method
+        match PathSafety::read_file_safely(&validated_path, &current_dir) {
             Ok(content) => {
                 if content.is_empty() {
                     return Err(ArxError::io_error("IFC file is empty")
@@ -244,9 +303,8 @@ impl EnhancedIFCParser {
                 Ok(content)
             }
             Err(e) => {
-                Err(ArxError::io_error("Failed to read IFC file")
+                Err(ArxError::io_error(format!("Failed to read IFC file: {}", e))
                     .with_file_path(file_path)
-                    .with_debug_info(format!("IO Error: {}", e))
                     .with_suggestions(vec![
                         "Check file permissions".to_string(),
                         "Verify the file is not locked by another process".to_string(),

@@ -13,6 +13,7 @@ pub struct BuildingGitManager {
     serializer: BuildingYamlSerializer,
     #[allow(dead_code)]
     path_generator: PathGenerator,
+    git_config: GitConfig,
 }
 
 /// Git operation results
@@ -34,18 +35,58 @@ pub struct GitConfig {
 
 impl BuildingGitManager {
     /// Initialize or open a Git repository for building data
-    pub fn new(repo_path: &str, building_name: &str, _config: GitConfig) -> Result<Self, GitError> {
+    pub fn new(repo_path: &str, building_name: &str, config: GitConfig) -> Result<Self, GitError> {
+        use crate::utils::path_safety::PathSafety;
+        
         let repo_path_buf = Path::new(repo_path);
         
-        // Ensure the directory exists
-        if !repo_path_buf.exists() {
-            std::fs::create_dir_all(repo_path_buf)?;
+        // Validate repository path format (no traversal, no null bytes)
+        // For Git repositories, we allow absolute paths outside the current directory
+        // but we still need to validate format and prevent traversal attempts
+        PathSafety::validate_path_format(repo_path_buf)
+            .map_err(|e| GitError::OperationFailed {
+                operation: "validate repository path".to_string(),
+                reason: format!("Path validation failed: {}", e),
+            })?;
+        
+        // Detect path traversal attempts in relative paths
+        if !repo_path_buf.is_absolute() {
+            PathSafety::detect_path_traversal(repo_path_buf)
+                .map_err(|e| GitError::OperationFailed {
+                    operation: "validate repository path".to_string(),
+                    reason: format!("Path traversal detected: {}", e),
+                })?;
         }
         
-        let repo = if repo_path_buf.join(".git").exists() {
-            Repository::open(repo_path)?
+        // Canonicalize the path (but don't restrict it to current_dir)
+        let validated_repo_path = if repo_path_buf.is_absolute() {
+            repo_path_buf.canonicalize()
+                .map_err(|e| GitError::IoError(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    format!("Cannot canonicalize repository path: {}", e)
+                )))?
         } else {
-            Repository::init(repo_path)?
+            let current_dir = std::env::current_dir()
+                .map_err(|e| GitError::IoError(e))?;
+            let joined = current_dir.join(repo_path_buf);
+            joined.canonicalize()
+                .map_err(|e| GitError::IoError(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    format!("Cannot canonicalize repository path: {}", e)
+                )))?
+        };
+        
+        // Ensure the directory exists
+        if !validated_repo_path.exists() {
+            std::fs::create_dir_all(&validated_repo_path)?;
+        }
+        
+        let repo = if validated_repo_path.join(".git").exists() {
+            Repository::open(&validated_repo_path)
+                .map_err(|e| GitError::GitError(e))?
+        } else {
+            Repository::init(&validated_repo_path)
+                .map_err(|e| GitError::GitError(e))?
         };
 
         let serializer = BuildingYamlSerializer::new();
@@ -55,6 +96,7 @@ impl BuildingGitManager {
             repo,
             serializer,
             path_generator,
+            git_config: config,
         })
     }
 
@@ -66,6 +108,34 @@ impl BuildingGitManager {
     ) -> Result<GitOperationResult, GitError> {
         info!("Exporting building data to Git repository");
 
+        // Check total size before exporting
+        let serializer = BuildingYamlSerializer::new();
+        let total_size: usize = {
+            let main_yaml = serializer.to_yaml(building_data)?;
+            let mut size = main_yaml.len();
+            // Estimate size of all floor/room/equipment files
+            for floor in &building_data.floors {
+                let floor_yaml = serializer.to_yaml(floor)?;
+                size += floor_yaml.len();
+                for room in &floor.rooms {
+                    let room_yaml = serializer.to_yaml(room)?;
+                    size += room_yaml.len();
+                }
+                for equipment in &floor.equipment {
+                    let equipment_yaml = serializer.to_yaml(equipment)?;
+                    size += equipment_yaml.len();
+                }
+            }
+            size
+        };
+        
+        let total_size_mb = total_size / (1024 * 1024);
+        const WARNING_SIZE_MB: usize = 50; // Warn if building data exceeds 50MB
+        
+        if total_size_mb > WARNING_SIZE_MB {
+            info!("Warning: Large building dataset ({}MB). Git operations may be slow.", total_size_mb);
+        }
+
         // Create directory structure
         let file_structure = self.create_file_structure(building_data)?;
         
@@ -74,20 +144,32 @@ impl BuildingGitManager {
         let file_paths: Vec<String> = file_structure.keys().cloned().collect();
         
         for (file_path, content) in file_structure {
+            use crate::utils::path_safety::PathSafety;
+            
             let repo_workdir = self.repo.workdir()
                 .ok_or_else(|| GitError::OperationFailed {
                     operation: "access repository workdir".to_string(),
                     reason: "Git repository has no working directory".to_string(),
                 })?
                 .to_path_buf();
-            let full_path = repo_workdir.join(&file_path);
+            
+            // Validate file path to prevent path traversal
+            // Use validate_path_for_write since the file may not exist yet
+            let file_path_buf = Path::new(&file_path);
+            let validated_full_path = PathSafety::validate_path_for_write(
+                &repo_workdir.join(file_path_buf),
+                &repo_workdir
+            ).map_err(|e| GitError::OperationFailed {
+                operation: format!("validate file path: {}", file_path),
+                reason: format!("Path validation failed: {}", e),
+            })?;
             
             // Create parent directories if they don't exist
-            if let Some(parent) = full_path.parent() {
+            if let Some(parent) = validated_full_path.parent() {
                 std::fs::create_dir_all(parent)?;
             }
             
-            std::fs::write(&full_path, content)?;
+            std::fs::write(&validated_full_path, content)?;
             files_changed += 1;
         }
 
@@ -195,8 +277,11 @@ impl BuildingGitManager {
             }
         };
 
-        // Create signature
-        let signature = Signature::now("ArxOS", "arxos@arxos.io")?;
+        // Create signature using configured Git author
+        let signature = Signature::now(
+            &self.git_config.author_name,
+            &self.git_config.author_email,
+        )?;
 
         // Create commit
         let commit_id = self.repo.commit(
@@ -449,8 +534,11 @@ impl BuildingGitManager {
             Err(_) => None,
         };
 
-        // Create signature
-        let signature = Signature::now("ArxOS", "arxos@arxos.io")?;
+        // Create signature using configured Git author
+        let signature = Signature::now(
+            &self.git_config.author_name,
+            &self.git_config.author_email,
+        )?;
 
         // Create commit
         let commit_id = self.repo.commit(
@@ -559,6 +647,46 @@ impl GitConfigManager {
         }
     }
 
+    /// Load Git configuration from ArxConfig or environment variables
+    /// 
+    /// Priority order:
+    /// 1. Environment variables (GIT_AUTHOR_NAME, GIT_AUTHOR_EMAIL)
+    /// 2. ArxConfig user settings
+    /// 3. Default config
+    pub fn load_from_arx_config_or_env() -> GitConfig {
+        use std::env;
+        
+        // Check environment variables first
+        let author_name = env::var("GIT_AUTHOR_NAME")
+            .or_else(|_| env::var("ARX_USER_NAME"))
+            .unwrap_or_else(|_| {
+                // Try to load from ArxConfig
+                if let Ok(config_manager) = crate::config::ConfigManager::new() {
+                    config_manager.get_config().user.name.clone()
+                } else {
+                    "ArxOS".to_string()
+                }
+            });
+        
+        let author_email = env::var("GIT_AUTHOR_EMAIL")
+            .or_else(|_| env::var("ARX_USER_EMAIL"))
+            .unwrap_or_else(|_| {
+                // Try to load from ArxConfig
+                if let Ok(config_manager) = crate::config::ConfigManager::new() {
+                    config_manager.get_config().user.email.clone()
+                } else {
+                    "arxos@arxos.io".to_string()
+                }
+            });
+        
+        GitConfig {
+            author_name,
+            author_email,
+            branch: "main".to_string(),
+            remote_url: env::var("GIT_REMOTE_URL").ok(),
+        }
+    }
+
     /// Load configuration from file
     pub fn load_config(config_path: &str) -> Result<GitConfig, GitError> {
         let content = std::fs::read_to_string(config_path)?;
@@ -607,5 +735,65 @@ mod tests {
         let config = GitConfigManager::default_config();
         assert_eq!(config.author_name, "ArxOS");
         assert_eq!(config.branch, "main");
+    }
+
+    #[test]
+    fn test_git_manager_uses_config_for_commits() {
+        let temp_dir = TempDir::new().unwrap();
+        let custom_config = GitConfig {
+            author_name: "Test User".to_string(),
+            author_email: "test@example.com".to_string(),
+            branch: "main".to_string(),
+            remote_url: None,
+        };
+        
+        let mut manager = BuildingGitManager::new(
+            temp_dir.path().to_str().unwrap(),
+            "Test Building",
+            custom_config.clone(),
+        ).unwrap();
+        
+        // Create a minimal building data for testing
+        use crate::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+        use chrono::Utc;
+        
+        let building_data = BuildingData {
+            building: BuildingInfo {
+                id: "test-1".to_string(),
+                name: "Test Building".to_string(),
+                description: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+                version: "1.0".to_string(),
+                global_bounding_box: None,
+            },
+            metadata: BuildingMetadata {
+                source_file: None,
+                parser_version: "1.0".to_string(),
+                total_entities: 0,
+                spatial_entities: 0,
+                coordinate_system: "World".to_string(),
+                units: "meters".to_string(),
+                tags: vec![],
+            },
+            floors: vec![],
+            coordinate_systems: vec![],
+        };
+        
+        // Export building (this will create a commit)
+        let result = manager.export_building(&building_data, Some("Test commit")).unwrap();
+        
+        // Verify commit was created
+        assert!(!result.commit_id.is_empty());
+        
+        // Get the commit and verify it uses the configured author
+        let status = manager.get_status().unwrap();
+        assert_eq!(status.last_commit_message, "Test commit");
+        
+        // Verify commit author matches config
+        let commits = manager.list_commits(1).unwrap();
+        if let Some(commit) = commits.first() {
+            assert_eq!(commit.author, custom_config.author_name);
+        }
     }
 }

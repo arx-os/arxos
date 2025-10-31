@@ -1,6 +1,8 @@
 //! Building3DRenderer implementation for 3D building visualization
 
 use super::types::*;
+use super::projections;
+use super::canvas_operations;
 use crate::yaml::BuildingData;
 use crate::spatial::{Point3D, BoundingBox3D};
 use std::collections::HashMap;
@@ -347,103 +349,22 @@ impl Building3DRenderer {
         Ok(output)
     }
     
-    /// Render floors to ASCII canvas
+    /// Render floors to ASCII canvas (delegates to canvas_operations module)
     pub fn render_floors_to_canvas(&self, floors: &[Floor3D], canvas: &mut Vec<Vec<char>>, depth_buffer: &mut Vec<Vec<f64>>, width: usize, height: usize) {
-        for floor in floors {
-            // Project floor bounding box to screen coordinates
-            let min_screen = self.project_to_screen(&floor.bounding_box.min, width, height);
-            let max_screen = self.project_to_screen(&floor.bounding_box.max, width, height);
-            
-            // Draw floor outline
-            let start_x = min_screen.x.max(0.0) as usize;
-            let end_x = max_screen.x.min(width as f64) as usize;
-            let start_y = min_screen.y.max(0.0) as usize;
-            let end_y = max_screen.y.min(height as f64) as usize;
-            
-            // Draw horizontal lines for floor
-            for y in start_y..end_y {
-                for x in start_x..end_x {
-                    if x < width && y < height {
-                        let depth = floor.bounding_box.min.z;
-                        if depth > depth_buffer[y][x] {
-                            depth_buffer[y][x] = depth;
-                            canvas[y][x] = '─';
-                        }
-                    }
-                }
-            }
-            
-            // Draw floor label
-            let label_x = ((min_screen.x + max_screen.x) / 2.0) as usize;
-            let label_y = ((min_screen.y + max_screen.y) / 2.0) as usize;
-            if label_x < width && label_y < height {
-                let floor_label = format!("F{}", floor.level);
-                for (i, ch) in floor_label.chars().enumerate() {
-                    if label_x + i < width {
-                        canvas[label_y][label_x + i] = ch;
-                    }
-                }
-            }
-        }
+        let project = |p: &Point3D| self.project_to_screen(p, width, height);
+        canvas_operations::render_floors_to_canvas(floors, canvas, depth_buffer, width, height, project);
     }
     
-    /// Render equipment to ASCII canvas
+    /// Render equipment to ASCII canvas (delegates to canvas_operations module)
     pub fn render_equipment_to_canvas(&self, equipment: &[Equipment3D], canvas: &mut Vec<Vec<char>>, depth_buffer: &mut Vec<Vec<f64>>, width: usize, height: usize) {
-        for eq in equipment {
-            let screen_pos = self.project_to_screen(&eq.position, width, height);
-            let x = screen_pos.x as usize;
-            let y = screen_pos.y as usize;
-            
-            if x < width && y < height {
-                let depth = eq.position.z;
-                if depth > depth_buffer[y][x] {
-                    depth_buffer[y][x] = depth;
-                    
-                    // Choose symbol based on equipment type
-                    let symbol = match eq.equipment_type.as_str() {
-                        s if s.contains("AIR") => '▲',  // HVAC
-                        s if s.contains("LIGHT") => '●', // Electrical
-                        s if s.contains("PUMP") => '◊',  // Plumbing
-                        s if s.contains("FAN") => '◈',   // Mechanical
-                        _ => '╬', // Generic equipment
-                    };
-                    
-                    canvas[y][x] = symbol;
-                }
-            }
-        }
+        let project = |p: &Point3D| self.project_to_screen(p, width, height);
+        canvas_operations::render_equipment_to_canvas(equipment, canvas, depth_buffer, width, height, project);
     }
     
-    /// Render rooms to ASCII canvas
+    /// Render rooms to ASCII canvas (delegates to canvas_operations module)
     pub fn render_rooms_to_canvas(&self, rooms: &[Room3D], canvas: &mut Vec<Vec<char>>, depth_buffer: &mut Vec<Vec<f64>>, width: usize, height: usize) {
-        for room in rooms {
-            let min_screen = self.project_to_screen(&room.bounding_box.min, width, height);
-            let max_screen = self.project_to_screen(&room.bounding_box.max, width, height);
-            
-            let start_x = min_screen.x.max(0.0) as usize;
-            let end_x = max_screen.x.min(width as f64) as usize;
-            let start_y = min_screen.y.max(0.0) as usize;
-            let end_y = max_screen.y.min(height as f64) as usize;
-            
-            // Draw room outline
-            for y in start_y..end_y {
-                for x in start_x..end_x {
-                    if x < width && y < height {
-                        let depth = room.bounding_box.min.z;
-                        if depth > depth_buffer[y][x] {
-                            depth_buffer[y][x] = depth;
-                            
-                            // Draw room boundary
-                            if x == start_x || x == end_x - 1 || y == start_y || y == end_y - 1 {
-                                canvas[y][x] = '█';
-                            } else {
-                                canvas[y][x] = '○';
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        let project = |p: &Point3D| self.project_to_screen(p, width, height);
+        canvas_operations::render_rooms_to_canvas(rooms, canvas, depth_buffer, width, height, project);
     }
     
     /// Project 3D point to 2D screen coordinates
@@ -820,39 +741,19 @@ impl Building3DRenderer {
         }
     }
     
-    /// Isometric projection
+    /// Isometric projection (delegates to projections module)
     pub fn isometric_projection(&self, point: &Point3D) -> Point3D {
-        // Isometric projection matrix
-        let x = (point.x - point.z) * self.projection.scale;
-        let y = (point.x + point.z) * 0.5 * self.projection.scale + point.y * self.projection.scale;
-        let z = point.z; // Keep original Z for depth sorting
-        
-        Point3D { x, y, z }
+        projections::isometric_projection(point, self.projection.scale)
     }
     
-    /// Orthographic projection
+    /// Orthographic projection (delegates to projections module)
     pub fn orthographic_projection(&self, point: &Point3D) -> Point3D {
-        match self.projection.view_angle {
-            ViewAngle::TopDown => Point3D { x: point.x * self.projection.scale, y: point.y * self.projection.scale, z: point.z },
-            ViewAngle::Front => Point3D { x: point.x * self.projection.scale, y: point.z * self.projection.scale, z: point.y },
-            ViewAngle::Side => Point3D { x: point.y * self.projection.scale, y: point.z * self.projection.scale, z: point.x },
-            ViewAngle::Isometric => self.isometric_projection(point),
-        }
+        projections::orthographic_projection(point, &self.projection)
     }
     
-    /// Perspective projection
+    /// Perspective projection (delegates to projections module)
     fn perspective_projection(&self, point: &Point3D) -> Point3D {
-        // Simple perspective projection
-        let distance = self.camera.position.z - point.z;
-        if distance <= 0.0 {
-            return *point; // Behind camera
-        }
-        
-        let x = (point.x - self.camera.position.x) * self.camera.fov / distance;
-        let y = (point.y - self.camera.position.y) * self.camera.fov / distance;
-        let z = distance; // Use distance for depth sorting
-        
-        Point3D { x, y, z }
+        projections::perspective_projection(point, &self.camera)
     }
     
     /// Render isometric view

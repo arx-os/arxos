@@ -38,8 +38,26 @@ impl PersistenceManager {
     /// Load building data from YAML file
     pub fn load_building_data(&self) -> PersistenceResult<BuildingData> {
         use crate::utils::path_safety::PathSafety;
+        use std::fs::metadata;
         
         info!("Loading building data from: {:?}", self.working_file);
+        
+        // Check file size before reading
+        if self.working_file.exists() {
+            let metadata = metadata(&self.working_file)
+                .map_err(|e| PersistenceError::ReadError {
+                    reason: format!("Cannot read file metadata: {}", e),
+                })?;
+            let file_size_mb = metadata.len() / (1024 * 1024);
+            const MAX_YAML_SIZE_MB: u64 = 10;
+            
+            if file_size_mb > MAX_YAML_SIZE_MB {
+                return Err(PersistenceError::FileTooLarge {
+                    size: file_size_mb,
+                    max: MAX_YAML_SIZE_MB,
+                });
+            }
+        }
         
         // Use path-safe file reading
         let base_dir = self.working_file.parent()
@@ -70,6 +88,17 @@ impl PersistenceManager {
             .map_err(|e| PersistenceError::WriteError { 
                 reason: format!("Failed to serialize building data: {}", e) 
             })?;
+        
+        // Check serialized size before writing
+        let content_size_mb = yaml_content.len() / (1024 * 1024);
+        const MAX_YAML_SIZE_MB: u64 = 10;
+        
+        if content_size_mb as u64 > MAX_YAML_SIZE_MB {
+            return Err(PersistenceError::FileTooLarge {
+                size: content_size_mb as u64,
+                max: MAX_YAML_SIZE_MB,
+            });
+        }
         
         // Use path-safe operations for file writes
         let base_dir = self.working_file.parent()
@@ -116,7 +145,8 @@ impl PersistenceManager {
         if let Some(ref repo_path) = self.git_repo {
             info!("Committing changes to Git repository: {:?}", repo_path);
             
-            let config = GitConfigManager::default_config();
+            // Load Git config from ArxConfig or environment, fallback to default
+            let config = GitConfigManager::load_from_arx_config_or_env();
             let mut git_manager = BuildingGitManager::new(
                 &repo_path.to_string_lossy(),
                 &self.building_name,

@@ -30,6 +30,9 @@ pub enum PersistenceError {
     
     #[error("Entity not found: {entity_type} with id {id}")]
     EntityNotFound { entity_type: String, id: String },
+    
+    #[error("File too large: {size}MB exceeds maximum of {max}MB")]
+    FileTooLarge { size: u64, max: u64 },
 }
 
 pub type PersistenceResult<T> = Result<T, PersistenceError>;

@@ -188,7 +188,7 @@ fn handle_list_rooms(building: Option<String>, floor: Option<i32>, wing: Option<
         println!("   Verbose mode enabled");
     }
     
-    let rooms = crate::core::list_rooms()?;
+    let rooms = crate::core::list_rooms(None)?;
     
     if rooms.is_empty() {
         println!("No rooms found");
@@ -220,7 +220,7 @@ fn handle_show_room(room: String, equipment: bool) -> Result<(), Box<dyn std::er
         println!("   Including equipment");
     }
     
-    let room_data = crate::core::get_room(&room)?;
+    let room_data = crate::core::get_room(None, &room)?;
     
     println!("   Name: {}", room_data.name);
     println!("   ID: {}", room_data.id);

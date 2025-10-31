@@ -4,6 +4,7 @@ use crate::spatial::{Point3D, BoundingBox3D};
 use crate::progress::ProgressContext;
 use rayon::prelude::*;
 use log::info;
+use std::path::Path;
 
 pub struct FallbackIFCParser {
     // Custom STEP parser implementation
@@ -23,18 +24,80 @@ impl FallbackIFCParser {
     pub fn parse_ifc_file(&self, file_path: &str) -> Result<(Building, Vec<crate::spatial::SpatialEntity>), Box<dyn std::error::Error>> {
         info!("Using custom STEP parser for: {}", file_path);
         
-        let content = std::fs::read_to_string(file_path)?;
+        use crate::utils::path_safety::PathSafety;
+        
+        // Validate file path with path safety
+        let current_dir = std::env::current_dir()?;
+        let file_path_buf = Path::new(file_path);
+        let validated_path = if file_path_buf.is_absolute() {
+            PathSafety::canonicalize_and_validate(file_path_buf, &current_dir)?
+        } else {
+            let joined = current_dir.join(file_path_buf);
+            PathSafety::canonicalize_and_validate(&joined, &current_dir)?
+        };
+        
+        // Check file size before reading
+        let validated_path_str = validated_path.to_str()
+            .ok_or_else(|| format!("Invalid file path encoding: {}", validated_path.display()))?;
+        self.validate_file_size(validated_path_str)?;
+        
+        // Use path-safe file reading
+        let content = PathSafety::read_file_safely(&validated_path, &current_dir)?;
         let (building, spatial_entities) = self.parse_step_content(&content)?;
         
         info!("Parsed building: {} with {} spatial entities", building.name, spatial_entities.len());
         Ok((building, spatial_entities))
     }
     
+    /// Validate IFC file size before processing
+    fn validate_file_size(&self, file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+        use std::fs::metadata;
+        use crate::ifc::IFCError;
+        
+        let metadata = metadata(file_path)?;
+        let file_size_bytes = metadata.len();
+        let file_size_mb = file_size_bytes / (1024 * 1024);
+        
+        const MAX_FILE_SIZE_MB: u64 = 500;
+        const WARNING_THRESHOLD_MB: u64 = 100;
+        
+        if file_size_mb > MAX_FILE_SIZE_MB {
+            return Err(Box::new(IFCError::FileTooLarge {
+                size: file_size_mb,
+                max: MAX_FILE_SIZE_MB,
+            }));
+        }
+        
+        if file_size_mb > WARNING_THRESHOLD_MB {
+            info!("Warning: Large IFC file detected ({}MB). Processing may take longer.", file_size_mb);
+        }
+        
+        Ok(())
+    }
+    
     /// Parse IFC file with parallel processing
     pub fn parse_ifc_file_parallel(&self, file_path: &str) -> Result<(Building, Vec<crate::spatial::SpatialEntity>), Box<dyn std::error::Error>> {
         info!("Using parallel custom STEP parser for: {}", file_path);
         
-        let content = std::fs::read_to_string(file_path)?;
+        use crate::utils::path_safety::PathSafety;
+        
+        // Validate file path with path safety
+        let current_dir = std::env::current_dir()?;
+        let file_path_buf = Path::new(file_path);
+        let validated_path = if file_path_buf.is_absolute() {
+            PathSafety::canonicalize_and_validate(file_path_buf, &current_dir)?
+        } else {
+            let joined = current_dir.join(file_path_buf);
+            PathSafety::canonicalize_and_validate(&joined, &current_dir)?
+        };
+        
+        // Check file size before reading
+        let validated_path_str = validated_path.to_str()
+            .ok_or_else(|| format!("Invalid file path encoding: {}", validated_path.display()))?;
+        self.validate_file_size(validated_path_str)?;
+        
+        // Use path-safe file reading
+        let content = PathSafety::read_file_safely(&validated_path, &current_dir)?;
         let (building, spatial_entities) = self.parse_step_content_parallel(&content)?;
         
         info!("Parsed building: {} with {} spatial entities (parallel)", building.name, spatial_entities.len());
@@ -45,8 +108,24 @@ impl FallbackIFCParser {
     pub fn parse_ifc_file_with_progress(&self, file_path: &str, progress: ProgressContext) -> Result<(Building, Vec<crate::spatial::SpatialEntity>), Box<dyn std::error::Error>> {
         info!("Using custom STEP parser with progress for: {}", file_path);
         
+        use crate::utils::path_safety::PathSafety;
+        
+        // Validate file path with path safety
+        progress.update(25, "Validating file path...");
+        let current_dir = std::env::current_dir()?;
+        let file_path_buf = Path::new(file_path);
+        let validated_path = if file_path_buf.is_absolute() {
+            PathSafety::canonicalize_and_validate(file_path_buf, &current_dir)?
+        } else {
+            let joined = current_dir.join(file_path_buf);
+            PathSafety::canonicalize_and_validate(&joined, &current_dir)?
+        };
+        
+        progress.update(30, "Validating file size...");
+        self.validate_file_size(validated_path.to_str().unwrap())?;
+        
         progress.update(40, "Reading file content...");
-        let content = std::fs::read_to_string(file_path)?;
+        let content = PathSafety::read_file_safely(&validated_path, &current_dir)?;
         
         progress.update(50, "Parsing STEP entities...");
         let (building, spatial_entities) = self.parse_step_content_with_progress(&content, progress)?;

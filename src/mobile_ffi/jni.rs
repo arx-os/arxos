@@ -55,10 +55,30 @@ pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeL
     // Extract building name safely
     let building_str = java_string_to_rust(&env, building_name);
     
-    // For now, return JSON error indicating JNI implementation is pending
-    // TODO: Implement actual room listing once JNI integration is complete
-    let error_json = format!(r#"{{"error":"JNI implementation pending","building":"{}"}}"#, building_str);
-    rust_string_to_java(&env, &error_json)
+    // Check if building name extraction failed (empty string and exception thrown)
+    if building_str.is_empty() && env.exception_check().unwrap_or(false) {
+        return std::ptr::null_mut();
+    }
+    
+    // Call the mobile FFI function
+    match crate::mobile_ffi::list_rooms(building_str) {
+        Ok(rooms) => {
+            // Serialize to JSON
+            match serde_json::to_string(&rooms) {
+                Ok(json) => rust_string_to_java(&env, &json),
+                Err(e) => {
+                    env.throw_new("java/lang/RuntimeException", &format!("Serialization failed: {}", e))
+                        .ok();
+                    std::ptr::null_mut()
+                }
+            }
+        }
+        Err(e) => {
+            // Return error as JSON
+            let error_json = format!(r#"{{"error":"{}"}}"#, e);
+            rust_string_to_java(&env, &error_json)
+        }
+    }
 }
 
 /// Get a specific room - JNI implementation
@@ -72,8 +92,34 @@ pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeG
     building_name: JString,
     room_id: JString
 ) -> jstring {
-    let error_json = r#"{"error":"JNI implementation pending"}"#;
-    rust_string_to_java(&env, error_json)
+    // Extract building name and room ID safely
+    let building_str = java_string_to_rust(&env, building_name);
+    let room_id_str = java_string_to_rust(&env, room_id);
+    
+    // Check if extraction failed (empty string and exception thrown)
+    if (building_str.is_empty() || room_id_str.is_empty()) && env.exception_check().unwrap_or(false) {
+        return std::ptr::null_mut();
+    }
+    
+    // Call the mobile FFI function
+    match crate::mobile_ffi::get_room(building_str, room_id_str) {
+        Ok(room) => {
+            // Serialize to JSON
+            match serde_json::to_string(&room) {
+                Ok(json) => rust_string_to_java(&env, &json),
+                Err(e) => {
+                    env.throw_new("java/lang/RuntimeException", &format!("Serialization failed: {}", e))
+                        .ok();
+                    std::ptr::null_mut()
+                }
+            }
+        }
+        Err(e) => {
+            // Return error as JSON
+            let error_json = format!(r#"{{"error":"{}"}}"#, e);
+            rust_string_to_java(&env, &error_json)
+        }
+    }
 }
 
 /// List all equipment - JNI implementation
@@ -86,8 +132,33 @@ pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeL
     _class: JClass,
     building_name: JString
 ) -> jstring {
-    let error_json = r#"{"error":"JNI implementation pending"}"#;
-    rust_string_to_java(&env, error_json)
+    // Extract building name safely
+    let building_str = java_string_to_rust(&env, building_name);
+    
+    // Check if building name extraction failed (empty string and exception thrown)
+    if building_str.is_empty() && env.exception_check().unwrap_or(false) {
+        return std::ptr::null_mut();
+    }
+    
+    // Call the mobile FFI function
+    match crate::mobile_ffi::list_equipment(building_str) {
+        Ok(equipment) => {
+            // Serialize to JSON
+            match serde_json::to_string(&equipment) {
+                Ok(json) => rust_string_to_java(&env, &json),
+                Err(e) => {
+                    env.throw_new("java/lang/RuntimeException", &format!("Serialization failed: {}", e))
+                        .ok();
+                    std::ptr::null_mut()
+                }
+            }
+        }
+        Err(e) => {
+            // Return error as JSON
+            let error_json = format!(r#"{{"error":"{}"}}"#, e);
+            rust_string_to_java(&env, &error_json)
+        }
+    }
 }
 
 /// Get specific equipment - JNI implementation
@@ -101,8 +172,34 @@ pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeG
     building_name: JString,
     equipment_id: JString
 ) -> jstring {
-    let error_json = r#"{"error":"JNI implementation pending"}"#;
-    rust_string_to_java(&env, error_json)
+    // Extract building name and equipment ID safely
+    let building_str = java_string_to_rust(&env, building_name);
+    let equipment_id_str = java_string_to_rust(&env, equipment_id);
+    
+    // Check if extraction failed (empty string and exception thrown)
+    if (building_str.is_empty() || equipment_id_str.is_empty()) && env.exception_check().unwrap_or(false) {
+        return std::ptr::null_mut();
+    }
+    
+    // Call the mobile FFI function
+    match crate::mobile_ffi::get_equipment(building_str, equipment_id_str) {
+        Ok(equipment) => {
+            // Serialize to JSON
+            match serde_json::to_string(&equipment) {
+                Ok(json) => rust_string_to_java(&env, &json),
+                Err(e) => {
+                    env.throw_new("java/lang/RuntimeException", &format!("Serialization failed: {}", e))
+                        .ok();
+                    std::ptr::null_mut()
+                }
+            }
+        }
+        Err(e) => {
+            // Return error as JSON
+            let error_json = format!(r#"{{"error":"{}"}}"#, e);
+            rust_string_to_java(&env, &error_json)
+        }
+    }
 }
 
 /// Parse AR scan data - JNI implementation
@@ -115,8 +212,33 @@ pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeP
     _class: JClass,
     json_data: JString
 ) -> jstring {
-    let error_json = r#"{"error":"JNI implementation pending"}"#;
-    rust_string_to_java(&env, error_json)
+    // Extract JSON string safely
+    let json_str = java_string_to_rust(&env, json_data);
+    
+    // Check if extraction failed (empty string and exception thrown)
+    if json_str.is_empty() && env.exception_check().unwrap_or(false) {
+        return std::ptr::null_mut();
+    }
+    
+    // Call the mobile FFI function to parse AR scan
+    match crate::mobile_ffi::parse_ar_scan(&json_str) {
+        Ok(scan_data) => {
+            // Serialize to JSON
+            match serde_json::to_string(&scan_data) {
+                Ok(json) => rust_string_to_java(&env, &json),
+                Err(e) => {
+                    env.throw_new("java/lang/RuntimeException", &format!("Serialization failed: {}", e))
+                        .ok();
+                    std::ptr::null_mut()
+                }
+            }
+        }
+        Err(e) => {
+            // Return error as JSON
+            let error_json = format!(r#"{{"error":"{}"}}"#, e);
+            rust_string_to_java(&env, &error_json)
+        }
+    }
 }
 
 /// Extract equipment from AR scan - JNI implementation
@@ -129,7 +251,35 @@ pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeE
     _class: JClass,
     json_data: JString
 ) -> jstring {
-    let error_json = r#"{"error":"JNI implementation pending"}"#;
-    rust_string_to_java(&env, error_json)
+    // Extract JSON string safely
+    let json_str = java_string_to_rust(&env, json_data);
+    
+    // Check if extraction failed (empty string and exception thrown)
+    if json_str.is_empty() && env.exception_check().unwrap_or(false) {
+        return std::ptr::null_mut();
+    }
+    
+    // Parse AR scan first
+    match crate::mobile_ffi::parse_ar_scan(&json_str) {
+        Ok(scan_data) => {
+            // Extract equipment from scan data
+            let equipment = crate::mobile_ffi::extract_equipment_from_ar_scan(&scan_data);
+            
+            // Serialize equipment list to JSON
+            match serde_json::to_string(&equipment) {
+                Ok(json) => rust_string_to_java(&env, &json),
+                Err(e) => {
+                    env.throw_new("java/lang/RuntimeException", &format!("Serialization failed: {}", e))
+                        .ok();
+                    std::ptr::null_mut()
+                }
+            }
+        }
+        Err(e) => {
+            // Return error as JSON
+            let error_json = format!(r#"{{"error":"{}"}}"#, e);
+            rust_string_to_java(&env, &error_json)
+        }
+    }
 }
 

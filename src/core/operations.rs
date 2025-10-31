@@ -149,8 +149,18 @@ pub fn spatial_query(_query_type: &str, _entity: &str, _params: Vec<String>) -> 
 }
 
 /// List all rooms in the building
-pub fn list_rooms() -> Result<Vec<Room>, Box<dyn std::error::Error>> {
-    let building_data = load_building_data_from_dir()?;
+/// 
+/// # Arguments
+/// * `building_name` - Optional building name to filter by. If None, loads from current directory.
+pub fn list_rooms(building_name: Option<&str>) -> Result<Vec<Room>, Box<dyn std::error::Error>> {
+    let building_data = if let Some(building) = building_name {
+        use crate::persistence::PersistenceManager;
+        let persistence = PersistenceManager::new(building)?;
+        persistence.load_building_data()?
+    } else {
+        load_building_data_from_dir()?
+    };
+    
     let mut rooms = Vec::new();
     
     for floor in &building_data.floors {
@@ -163,12 +173,23 @@ pub fn list_rooms() -> Result<Vec<Room>, Box<dyn std::error::Error>> {
 }
 
 /// Get a specific room by name
-pub fn get_room(room_name: &str) -> Result<Room, Box<dyn std::error::Error>> {
-    let building_data = load_building_data_from_dir()?;
+/// 
+/// # Arguments
+/// * `building_name` - Optional building name to filter by. If None, loads from current directory.
+/// * `room_name` - Name or ID of the room to retrieve.
+pub fn get_room(building_name: Option<&str>, room_name: &str) -> Result<Room, Box<dyn std::error::Error>> {
+    let building_data = if let Some(building) = building_name {
+        use crate::persistence::PersistenceManager;
+        let persistence = PersistenceManager::new(building)?;
+        persistence.load_building_data()?
+    } else {
+        load_building_data_from_dir()?
+    };
     
     for floor in &building_data.floors {
         for room_data in &floor.rooms {
-            if room_data.name.to_lowercase() == room_name.to_lowercase() {
+            if room_data.name.to_lowercase() == room_name.to_lowercase() || 
+               room_data.id.to_lowercase() == room_name.to_lowercase() {
                 return Ok(room_data_to_room(room_data));
             }
         }
@@ -242,8 +263,18 @@ pub fn delete_room_impl(building_name: &str, room_id: &str, commit: bool) -> Res
 }
 
 /// List all equipment in the building
-pub fn list_equipment() -> Result<Vec<Equipment>, Box<dyn std::error::Error>> {
-    let building_data = load_building_data_from_dir()?;
+/// 
+/// # Arguments
+/// * `building_name` - Optional building name to filter by. If None, loads from current directory.
+pub fn list_equipment(building_name: Option<&str>) -> Result<Vec<Equipment>, Box<dyn std::error::Error>> {
+    let building_data = if let Some(building) = building_name {
+        use crate::persistence::PersistenceManager;
+        let persistence = PersistenceManager::new(building)?;
+        persistence.load_building_data()?
+    } else {
+        load_building_data_from_dir()?
+    };
+    
     let mut equipment = Vec::new();
     
     for floor in &building_data.floors {
@@ -343,9 +374,9 @@ pub fn validate_spatial(entity: Option<&str>, tolerance: Option<f64>) -> Result<
     let validation_result = match entity {
         Some(entity_name) => {
             // Validate specific entity's spatial data
-            match get_room(entity_name) {
+            match get_room(None, entity_name) {
                 Ok(room) => format!("Spatial validation passed for '{}' with tolerance {:.3}", room.name, tol),
-                Err(_) => match list_equipment() {
+                Err(_) => match list_equipment(None) {
                     Ok(equipment_list) => {
                         let eq = equipment_list.iter().find(|e| e.name == entity_name);
                         if eq.is_some() {

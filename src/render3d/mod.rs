@@ -8,6 +8,8 @@
 mod types;
 mod camera;
 mod projection;
+mod projections;
+mod canvas_operations;
 mod renderer;
 mod utils;
 

@@ -42,14 +42,18 @@ fn handle_add_equipment(
     let pos_3d = if let Some(ref pos_str) = position {
         let coords: Vec<&str> = pos_str.split(',').map(|s| s.trim()).collect();
         if coords.len() == 3 {
-            Point3D {
-                x: coords[0].parse().unwrap_or(0.0),
-                y: coords[1].parse().unwrap_or(0.0),
-                z: coords[2].parse().unwrap_or(0.0),
-            }
+            let x = coords[0].parse()
+                .map_err(|e| format!("Invalid X coordinate '{}': {}. Expected a number.", coords[0], e))?;
+            let y = coords[1].parse()
+                .map_err(|e| format!("Invalid Y coordinate '{}': {}. Expected a number.", coords[1], e))?;
+            let z = coords[2].parse()
+                .map_err(|e| format!("Invalid Z coordinate '{}': {}. Expected a number.", coords[2], e))?;
+            Point3D { x, y, z }
         } else {
-            println!("⚠️ Invalid position format, using default (0,0,0)");
-            Point3D { x: 0.0, y: 0.0, z: 0.0 }
+            return Err(format!(
+                "Invalid position format '{}'. Expected format: x,y,z (e.g., '10.0,20.0,5.0')",
+                pos_str
+            ).into());
         }
     } else {
         Point3D { x: 0.0, y: 0.0, z: 0.0 }
@@ -162,7 +166,7 @@ fn handle_list_equipment(room: Option<String>, equipment_type: Option<String>, v
         println!("   Verbose mode enabled");
     }
     
-    let equipment_list = crate::core::list_equipment()?;
+    let equipment_list = crate::core::list_equipment(None)?;
     
     if equipment_list.is_empty() {
         println!("No equipment found");

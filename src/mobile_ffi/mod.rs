@@ -135,8 +135,8 @@ pub struct Position {
 /// # Returns
 /// 
 /// A vector of RoomInfo objects representing all rooms in the building
-pub fn list_rooms(_building_name: String) -> Result<Vec<RoomInfo>, MobileError> {
-    match crate::core::list_rooms() {
+pub fn list_rooms(building_name: String) -> Result<Vec<RoomInfo>, MobileError> {
+    match crate::core::list_rooms(Some(&building_name)) {
         Ok(rooms) => Ok(rooms.into_iter().map(room_to_room_info).collect()),
         Err(e) => Err(MobileError::IoError(e.to_string())),
     }
@@ -152,8 +152,8 @@ pub fn list_rooms(_building_name: String) -> Result<Vec<RoomInfo>, MobileError> 
 /// # Returns
 /// 
 /// RoomInfo for the requested room
-pub fn get_room(_building_name: String, room_id: String) -> Result<RoomInfo, MobileError> {
-    match crate::core::get_room(&room_id) {
+pub fn get_room(building_name: String, room_id: String) -> Result<RoomInfo, MobileError> {
+    match crate::core::get_room(Some(&building_name), &room_id) {
         Ok(room) => Ok(room_to_room_info(room)),
         Err(e) => Err(MobileError::NotFound(format!("Room '{}' not found: {}", room_id, e))),
     }
@@ -168,8 +168,8 @@ pub fn get_room(_building_name: String, room_id: String) -> Result<RoomInfo, Mob
 /// # Returns
 /// 
 /// A vector of EquipmentInfo objects representing all equipment in the building
-pub fn list_equipment(_building_name: String) -> Result<Vec<EquipmentInfo>, MobileError> {
-    match crate::core::list_equipment() {
+pub fn list_equipment(building_name: String) -> Result<Vec<EquipmentInfo>, MobileError> {
+    match crate::core::list_equipment(Some(&building_name)) {
         Ok(equipment) => Ok(equipment.into_iter().map(equipment_to_equipment_info).collect()),
         Err(e) => Err(MobileError::IoError(e.to_string())),
     }
@@ -185,8 +185,8 @@ pub fn list_equipment(_building_name: String) -> Result<Vec<EquipmentInfo>, Mobi
 /// # Returns
 /// 
 /// EquipmentInfo for the requested equipment
-pub fn get_equipment(_building_name: String, equipment_id: String) -> Result<EquipmentInfo, MobileError> {
-    match crate::core::list_equipment() {
+pub fn get_equipment(building_name: String, equipment_id: String) -> Result<EquipmentInfo, MobileError> {
+    match crate::core::list_equipment(Some(&building_name)) {
         Ok(equipment) => {
             equipment.into_iter()
                 .find(|e| e.id == equipment_id || e.name == equipment_id)

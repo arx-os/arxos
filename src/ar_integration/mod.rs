@@ -75,6 +75,7 @@
 
 pub mod pending;
 pub mod processing;
+pub mod json_helpers;
 
 use crate::yaml::{BuildingData, FloorData, RoomData, EquipmentData, EquipmentStatus};
 use crate::spatial::{Point3D, BoundingBox3D};
@@ -460,29 +461,19 @@ pub fn convert_mobile_ar_data(
         None
     };
     
-    // Parse scan metadata
+    // Parse scan metadata using JSON helpers
+    use crate::ar_integration::json_helpers;
     let scan_metadata = ScanMetadata {
-        device_type: ar_json.get("deviceType")
-            .and_then(|v| v.as_str())
-            .unwrap_or("unknown")
-            .to_string(),
-        app_version: ar_json.get("appVersion")
-            .and_then(|v| v.as_str())
-            .unwrap_or("1.0.0")
-            .to_string(),
+        device_type: json_helpers::parse_optional_string(&ar_json, "deviceType", "unknown"),
+        app_version: json_helpers::parse_optional_string(&ar_json, "appVersion", "1.0.0"),
         scan_duration_ms: ar_json.get("scanDurationMs")
             .and_then(|v| v.as_u64())
             .unwrap_or(0),
         point_count: ar_json.get("pointCount")
             .and_then(|v| v.as_u64())
             .unwrap_or(0) as usize,
-        accuracy_estimate: ar_json.get("accuracyEstimate")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.1),
-        lighting_conditions: ar_json.get("lightingConditions")
-            .and_then(|v| v.as_str())
-            .unwrap_or("unknown")
-            .to_string(),
+        accuracy_estimate: json_helpers::parse_optional_f64(&ar_json, "accuracyEstimate", 0.1),
+        lighting_conditions: json_helpers::parse_optional_string(&ar_json, "lightingConditions", "unknown"),
     };
     
     Ok(ARScanData {
@@ -506,48 +497,20 @@ fn parse_equipment_from_mobile(
         .and_then(|v| v.as_str())
         .ok_or("Missing equipment name")?;
     
-    let equipment_type = equipment_json.get("type")
-        .and_then(|v| v.as_str())
-        .unwrap_or("Unknown");
+    use crate::ar_integration::json_helpers;
+    let equipment_type = json_helpers::parse_optional_string(equipment_json, "type", "Unknown");
     
     let position = if let Some(pos) = equipment_json.get("position") {
-        Point3D {
-            x: pos.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0),
-            y: pos.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0),
-            z: pos.get("z").and_then(|v| v.as_f64()).unwrap_or(0.0),
-        }
+        json_helpers::parse_position(pos)
     } else {
         return Ok(None); // Skip equipment without position
     };
     
-    let confidence = equipment_json.get("confidence")
-        .and_then(|v| v.as_f64())
-        .unwrap_or(0.5);
+    let confidence = json_helpers::parse_optional_f64(equipment_json, "confidence", 0.5);
+    let detection_method = json_helpers::parse_detection_method(equipment_json);
     
-    let detection_method = match equipment_json.get("detectionMethod")
-        .and_then(|v| v.as_str())
-        .unwrap_or("unknown") {
-        "ARKit" => DetectionMethod::ARKit,
-        "ARCore" => DetectionMethod::ARCore,
-        "LiDAR" => DetectionMethod::LiDAR,
-        "Manual" => DetectionMethod::Manual,
-        "AI" => DetectionMethod::AI,
-        _ => DetectionMethod::Manual,
-    };
-    
-    // Create bounding box (simplified)
-    let bounding_box = BoundingBox3D {
-        min: Point3D {
-            x: position.x - 0.5,
-            y: position.y - 0.5,
-            z: position.z - 0.5,
-        },
-        max: Point3D {
-            x: position.x + 0.5,
-            y: position.y + 0.5,
-            z: position.z + 0.5,
-        },
-    };
+    // Create bounding box using helper
+    let bounding_box = json_helpers::parse_bounding_box(&position, 0.5);
     
     Ok(Some(DetectedEquipment {
         id: format!("ar_equipment_{}", index),
@@ -565,6 +528,7 @@ fn parse_equipment_from_mobile(
 fn parse_room_boundaries_from_mobile(
     boundaries_json: &serde_json::Value,
 ) -> Result<RoomBoundaries, Box<dyn std::error::Error>> {
+    use crate::ar_integration::json_helpers;
     let mut walls = Vec::new();
     let mut openings = Vec::new();
     
@@ -576,18 +540,10 @@ fn parse_room_boundaries_from_mobile(
                 wall_json.get("endPoint"),
             ) {
                 let wall = Wall {
-                    start_point: Point3D {
-                        x: start.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                        y: start.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                        z: start.get("z").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                    },
-                    end_point: Point3D {
-                        x: end.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                        y: end.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                        z: end.get("z").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                    },
-                    height: wall_json.get("height").and_then(|v| v.as_f64()).unwrap_or(3.0),
-                    thickness: wall_json.get("thickness").and_then(|v| v.as_f64()).unwrap_or(0.2),
+                    start_point: json_helpers::parse_position(start),
+                    end_point: json_helpers::parse_position(end),
+                    height: json_helpers::parse_optional_f64(wall_json, "height", 3.0),
+                    thickness: json_helpers::parse_optional_f64(wall_json, "thickness", 0.2),
                 };
                 walls.push(wall);
             }
@@ -599,17 +555,10 @@ fn parse_room_boundaries_from_mobile(
         for opening_json in openings_array {
             if let Some(pos) = opening_json.get("position") {
                 let opening = Opening {
-                    position: Point3D {
-                        x: pos.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                        y: pos.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                        z: pos.get("z").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                    },
-                    width: opening_json.get("width").and_then(|v| v.as_f64()).unwrap_or(1.0),
-                    height: opening_json.get("height").and_then(|v| v.as_f64()).unwrap_or(2.0),
-                    opening_type: opening_json.get("type")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("door")
-                        .to_string(),
+                    position: json_helpers::parse_position(pos),
+                    width: json_helpers::parse_optional_f64(opening_json, "width", 1.0),
+                    height: json_helpers::parse_optional_f64(opening_json, "height", 2.0),
+                    opening_type: json_helpers::parse_optional_string(opening_json, "type", "door"),
                 };
                 openings.push(opening);
             }

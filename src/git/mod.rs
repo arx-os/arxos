@@ -29,7 +29,10 @@ impl GitClient {
         let tree_id = index.write_tree()?;
         let tree = self.repository.find_tree(tree_id)?;
         
-        let signature = git2::Signature::now("ArxOS", "arxos@example.com")?;
+        // Use default Git config for consistency
+        use crate::git::GitConfigManager;
+        let config = GitConfigManager::default_config();
+        let signature = git2::Signature::now(&config.author_name, &config.author_email)?;
         
         // Handle initial commit (no HEAD) or detached HEAD gracefully
         let parents: Vec<git2::Commit> = match self.repository.head() {

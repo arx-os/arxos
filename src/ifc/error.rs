@@ -18,6 +18,9 @@ pub enum IFCError {
     #[error("Coordinate transformation failed: {reason}")]
     CoordinateTransformError { reason: String },
     
+    #[error("IFC file too large: {size}MB exceeds maximum of {max}MB")]
+    FileTooLarge { size: u64, max: u64 },
+    
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
     

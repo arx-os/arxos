@@ -16,6 +16,7 @@ pub mod persistence;
 pub mod hardware;
 pub mod commands;
 pub mod utils;
+pub mod docs;
 
 use clap::Parser;
 use cli::Cli;

@@ -13,19 +13,28 @@ use crate::core::{Room, Equipment};
 use std::collections::HashMap;
 
 /// Error type for FFI operations
+///
+/// All errors are serialized to JSON for cross-platform compatibility.
 #[derive(Debug, Clone)]
 pub enum MobileError {
+    /// Resource not found error
     NotFound(String),
+    /// Invalid data format or content
     InvalidData(String),
+    /// I/O or file system error
     IoError(String),
 }
 
-/// AR scan data structures
+/// AR scan data from mobile devices (iOS/Android)
+///
+/// This struct represents augmented reality scan data received from mobile apps,
+/// including detected equipment, room boundaries, and scan metadata.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ARScanData {
     #[serde(rename = "detectedEquipment")]
     pub detected_equipment: Vec<DetectedEquipment>,
     #[serde(rename = "roomBoundaries")]
+    #[serde(default)]
     pub room_boundaries: RoomBoundaries,
     #[serde(rename = "deviceType")]
     pub device_type: Option<String>,
@@ -39,8 +48,13 @@ pub struct ARScanData {
     pub accuracy_estimate: Option<f64>,
     #[serde(rename = "lightingConditions")]
     pub lighting_conditions: Option<String>,
+    #[serde(rename = "roomName")]
+    pub room_name: String,
+    #[serde(rename = "floorLevel")]
+    pub floor_level: i32,
 }
 
+/// Equipment detected during an AR scan
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DetectedEquipment {
     pub name: String,
@@ -59,7 +73,7 @@ pub struct Position3D {
     pub z: f64,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
 pub struct RoomBoundaries {
     pub walls: Vec<Wall>,
     pub openings: Vec<Opening>,

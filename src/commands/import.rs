@@ -34,8 +34,12 @@ fn generate_yaml_output(building: &Building, building_name: &str) -> Result<Stri
 }
 
 /// Handle the import command
-pub fn handle_import(ifc_file: String, repo: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚀 Importing IFC file: {}", ifc_file);
+pub fn handle_import(ifc_file: String, repo: Option<String>, dry_run: bool) -> Result<(), Box<dyn std::error::Error>> {
+    if dry_run {
+        println!("🔍 DRY RUN: Would import IFC file: {}", ifc_file);
+    } else {
+        println!("🚀 Importing IFC file: {}", ifc_file);
+    }
     if let Some(ref repo_path) = repo {
         println!("📦 To repository: {}", repo_path);
     }
@@ -74,6 +78,14 @@ pub fn handle_import(ifc_file: String, repo: Option<String>) -> Result<(), Box<d
             }
             if floors.len() > 5 {
                 println!("   ... and {} more floors", floors.len() - 5);
+            }
+            
+            if dry_run {
+                println!("🔍 DRY RUN: Would generate YAML file for building: {}", building.name);
+                if let Some(ref repo_path) = repo {
+                    println!("🔍 DRY RUN: Would initialize Git repository at: {}", repo_path);
+                }
+                return Ok(());
             }
             
             // Generate YAML output using helper function

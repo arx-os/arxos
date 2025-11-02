@@ -11,6 +11,7 @@ use crossterm::event::KeyCode;
 use crossterm::terminal::{enable_raw_mode, disable_raw_mode};
 use std::io::{self, Write};
 use std::time::{Duration, Instant};
+use log::info;
 
 /// Interactive 3D building renderer with real-time controls
 pub struct InteractiveRenderer {
@@ -28,6 +29,8 @@ pub struct InteractiveRenderer {
     last_render_time: Instant,
     /// Frame count for statistics
     frame_count: u32,
+    /// Optional game state for game overlay
+    game_state: Option<crate::game::state::GameState>,
 }
 
 /// Configuration for interactive rendering
@@ -64,6 +67,7 @@ impl InteractiveRenderer {
             config: interactive_config,
             last_render_time: Instant::now(),
             frame_count: 0,
+            game_state: None,
         })
     }
 
@@ -86,6 +90,7 @@ impl InteractiveRenderer {
             config: interactive_config,
             last_render_time: Instant::now(),
             frame_count: 0,
+            game_state: None,
         })
     }
 
@@ -194,6 +199,11 @@ impl InteractiveRenderer {
             }
             Action::EquipmentSelect(equipment_id) => {
                 self.state.select_equipment(equipment_id);
+            }
+            Action::GameAction(game_action) => {
+                // Game actions will be handled by game overlay system
+                // This is a placeholder - game overlay will process these
+                log::debug!("Game action received: {:?}", game_action);
             }
         }
         
@@ -381,6 +391,38 @@ impl InteractiveRenderer {
     fn render_overlay(&self, _scene: &Scene3D) -> Result<(), Box<dyn std::error::Error>> {
         let mut overlay = String::new();
         
+        // Game overlay (if in game mode)
+        if let Some(ref game_state) = self.game_state {
+            overlay.push_str("\n");
+            overlay.push_str("╔════════════════════════════════════════════════════════════╗\n");
+            overlay.push_str("║                    GAME OVERLAY                           ║\n");
+            overlay.push_str("╠════════════════════════════════════════════════════════════╣\n");
+            
+            // Objective
+            if let Some(ref scenario) = game_state.scenario {
+                overlay.push_str(&format!("║ Objective: {:<55} ║\n", 
+                    scenario.objective.chars().take(55).collect::<String>()));
+            }
+            
+            // Progress bar
+            let progress_width: usize = 50;
+            let filled = (game_state.progress * progress_width as f32) as usize;
+            let bar = format!("[{}{}]", 
+                "=".repeat(filled),
+                " ".repeat(progress_width.saturating_sub(filled))
+            );
+            overlay.push_str(&format!("║ Progress: {:<55} ║\n", bar));
+            overlay.push_str(&format!("║ Score: {:<57} ║\n", game_state.score));
+            
+            // Validation status
+            let stats = game_state.get_stats();
+            overlay.push_str(&format!("║ Valid: {} / {} | Violations: {:<42} ║\n", 
+                stats.valid_placements, stats.total_placements, stats.violations));
+            
+            overlay.push_str("╚════════════════════════════════════════════════════════════╝\n");
+            overlay.push_str("\n");
+        }
+        
         // Session information
         overlay.push_str(&format!("Session: {}s | ", self.state.session_duration().as_secs()));
         overlay.push_str(&format!("Floor: {} | ", 
@@ -396,6 +438,28 @@ impl InteractiveRenderer {
         
         print!("{}", overlay);
         Ok(())
+    }
+    
+    /// Start game mode with a scenario
+    pub fn start_game_mode(&mut self, game_state: crate::game::state::GameState) {
+        self.game_state = Some(game_state);
+        info!("Game mode activated");
+    }
+    
+    /// Stop game mode
+    pub fn stop_game_mode(&mut self) {
+        self.game_state = None;
+        info!("Game mode deactivated");
+    }
+    
+    /// Get game state (mutable)
+    pub fn game_state_mut(&mut self) -> Option<&mut crate::game::state::GameState> {
+        self.game_state.as_mut()
+    }
+    
+    /// Get game state
+    pub fn game_state(&self) -> Option<&crate::game::state::GameState> {
+        self.game_state.as_ref()
     }
 
     /// Add particle effects to ASCII output

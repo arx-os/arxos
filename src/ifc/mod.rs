@@ -14,6 +14,10 @@ pub use fallback::FallbackIFCParser;
 pub use enhanced::{EnhancedIFCParser, ParseResult, ParseStats, SpatialIndex, RTreeNode, SpatialRelationship, SpatialQueryResult};
 pub use hierarchy::HierarchyBuilder;
 
+/// IFC (Industry Foundation Classes) file processor
+///
+/// Handles parsing and processing of IFC files to extract building data.
+/// Uses a custom STEP parser to convert IFC entities into ArxOS building models.
 pub struct IFCProcessor {
     // Custom STEP parser implementation
 }
@@ -53,17 +57,53 @@ impl IFCProcessor {
         })?;
         
         // Convert entities to hierarchy builder format
-        let hierarchy_entities: Vec<hierarchy::IFCEntity> = entities
-            .into_iter()
-            .map(|e| hierarchy::IFCEntity {
-                id: e.id,
-                entity_type: e.entity_type,
-                name: e.name,
-                definition: e.definition,
+        // Parse entity types properly from definitions
+        let hierarchy_entities_mapped: Vec<hierarchy::IFCEntity> = entities
+            .iter()
+            .map(|e| {
+                // Determine entity type from definition (more accurate, preserving TYPE distinction)
+                let entity_type = if e.definition.contains("IFCBUILDINGSTOREY") {
+                    "IFCBUILDINGSTOREY"
+                } else if e.definition.contains("IFCSPACE") {
+                    "IFCSPACE"
+                } else if e.definition.contains("IFCAIRTERMINALTYPE") {
+                    "IFCAIRTERMINALTYPE"
+                } else if e.definition.contains("IFCAIRTERMINAL") {
+                    "IFCAIRTERMINAL"
+                } else if e.definition.contains("IFCFLOWTERMINALTYPE") {
+                    "IFCFLOWTERMINALTYPE"
+                } else if e.definition.contains("IFCFLOWTERMINAL") {
+                    "IFCFLOWTERMINAL"
+                } else if e.definition.contains("IFCPRODUCTDEFINITIONSHAPE") {
+                    "IFCPRODUCTDEFINITIONSHAPE"
+                } else if e.definition.contains("IFCSHAPEREPRESENTATION") {
+                    "IFCSHAPEREPRESENTATION"
+                } else if e.definition.contains("IFCEXTRUDEDAREASOLID") {
+                    "IFCEXTRUDEDAREASOLID"
+                } else if e.definition.contains("IFCARBITRARYCLOSEDPROFILEDEF") {
+                    "IFCARBITRARYCLOSEDPROFILEDEF"
+                } else if e.definition.contains("IFCPOLYLINE") {
+                    "IFCPOLYLINE"
+                } else if e.definition.contains("IFCLOCALPLACEMENT") {
+                    "IFCLOCALPLACEMENT"
+                } else if e.definition.contains("IFCAXIS2PLACEMENT3D") {
+                    "IFCAXIS2PLACEMENT3D"
+                } else if e.definition.contains("IFCCARTESIANPOINT") {
+                    "IFCCARTESIANPOINT"
+                } else {
+                    &e.entity_type
+                };
+                
+                hierarchy::IFCEntity {
+                    id: e.id.clone(),
+                    entity_type: entity_type.to_string(),
+                    name: e.name.clone(),
+                    definition: e.definition.clone(),
+                }
             })
             .collect();
         
-        let hierarchy_builder = HierarchyBuilder::new(hierarchy_entities);
+        let hierarchy_builder = HierarchyBuilder::new(hierarchy_entities_mapped);
         
         // Build hierarchy
         let building = hierarchy_builder.build_hierarchy("Building".to_string()).map_err(|e| IFCError::ParsingError {

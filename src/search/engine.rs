@@ -41,7 +41,6 @@ impl SearchEngine {
             created_at: building_data.building.created_at,
             updated_at: building_data.building.updated_at,
             floors: Vec::new(), // We'll extract this from floors data
-            equipment: Vec::new(),
         };
         
         Self {

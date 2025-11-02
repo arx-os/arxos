@@ -143,11 +143,16 @@ impl BuildingYamlSerializer {
     ) -> Result<BuildingData, Box<dyn std::error::Error>> {
         let now = Utc::now();
         
-        // Group spatial entities by type
-        let (rooms, equipment) = self.group_spatial_entities(spatial_entities);
-        
-        // Create floors (simplified - in real implementation, would parse floor information)
-        let floors = self.create_floors_from_entities(&rooms, &equipment);
+        // Convert building.floors to FloorData if available (from IFC hierarchy)
+        // Otherwise, create floors from spatial entities
+        let floors = if !building.floors.is_empty() {
+            self.convert_floors_from_building(building)?
+        } else {
+            // Group spatial entities by type
+            let (rooms, equipment) = self.group_spatial_entities(spatial_entities);
+            // Create floors from spatial entities
+            self.create_floors_from_entities(&rooms, &equipment)
+        };
         
         // Calculate global bounding box
         let global_bounding_box = self.calculate_global_bounding_box(spatial_entities);
@@ -316,6 +321,144 @@ impl BuildingYamlSerializer {
     /// Calculate floor bounding box
     fn calculate_floor_bounding_box(&self, entities: &[SpatialEntity]) -> Option<BoundingBox3D> {
         self.calculate_global_bounding_box(entities)
+    }
+    
+    /// Convert Building.floors (from IFC hierarchy) to FloorData
+    fn convert_floors_from_building(&self, building: &Building) -> Result<Vec<FloorData>, Box<dyn std::error::Error>> {
+        
+        let mut floor_data = Vec::new();
+        
+        for floor in &building.floors {
+            // Convert rooms from all wings
+            let mut rooms: Vec<RoomData> = Vec::new();
+            for wing in &floor.wings {
+                for room in &wing.rooms {
+                    let room_data = RoomData {
+                        id: room.id.clone(),
+                        name: room.name.clone(),
+                        room_type: format!("{:?}", room.room_type),
+                        area: Some(room.spatial_properties.dimensions.width * room.spatial_properties.dimensions.depth),
+                        volume: Some(room.spatial_properties.dimensions.width * room.spatial_properties.dimensions.depth * room.spatial_properties.dimensions.height),
+                        position: Point3D::new(
+                            room.spatial_properties.position.x,
+                            room.spatial_properties.position.y,
+                            room.spatial_properties.position.z,
+                        ),
+                        bounding_box: BoundingBox3D::new(
+                            Point3D::new(
+                                room.spatial_properties.bounding_box.min.x,
+                                room.spatial_properties.bounding_box.min.y,
+                                room.spatial_properties.bounding_box.min.z,
+                            ),
+                            Point3D::new(
+                                room.spatial_properties.bounding_box.max.x,
+                                room.spatial_properties.bounding_box.max.y,
+                                room.spatial_properties.bounding_box.max.z,
+                            ),
+                        ),
+                        equipment: room.equipment.iter().map(|e| e.id.clone()).collect(),
+                        properties: room.properties.clone(),
+                    };
+                    rooms.push(room_data);
+                }
+            }
+            
+            // Convert equipment from floor and wings
+            let mut equipment: Vec<EquipmentData> = Vec::new();
+            
+            // Floor-level equipment
+            for eq in &floor.equipment {
+                let eq_data = EquipmentData {
+                    id: eq.id.clone(),
+                    name: eq.name.clone(),
+                    equipment_type: format!("{:?}", eq.equipment_type),
+                    system_type: self.determine_equipment_system_type(&eq.equipment_type),
+                    position: Point3D::new(eq.position.x, eq.position.y, eq.position.z),
+                    bounding_box: BoundingBox3D::new(
+                        Point3D::new(-0.5, -0.5, -0.5),
+                        Point3D::new(0.5, 0.5, 0.5),
+                    ),
+                    status: match eq.status {
+                        crate::core::EquipmentStatus::Active => EquipmentStatus::Healthy,
+                        crate::core::EquipmentStatus::Maintenance => EquipmentStatus::Warning,
+                        crate::core::EquipmentStatus::Inactive => EquipmentStatus::Critical,
+                        crate::core::EquipmentStatus::OutOfOrder => EquipmentStatus::Critical,
+                        crate::core::EquipmentStatus::Unknown => EquipmentStatus::Unknown,
+                    },
+                    properties: eq.properties.clone(),
+                    universal_path: eq.path.clone(),
+                    sensor_mappings: None,
+                };
+                equipment.push(eq_data);
+            }
+            
+            // Wing-level equipment
+            for wing in &floor.wings {
+                for eq in &wing.equipment {
+                    let eq_data = EquipmentData {
+                        id: eq.id.clone(),
+                        name: eq.name.clone(),
+                        equipment_type: format!("{:?}", eq.equipment_type),
+                        system_type: self.determine_equipment_system_type(&eq.equipment_type),
+                        position: Point3D::new(eq.position.x, eq.position.y, eq.position.z),
+                        bounding_box: BoundingBox3D::new(
+                            Point3D::new(-0.5, -0.5, -0.5),
+                            Point3D::new(0.5, 0.5, 0.5),
+                        ),
+                        status: match eq.status {
+                            crate::core::EquipmentStatus::Active => EquipmentStatus::Healthy,
+                            crate::core::EquipmentStatus::Maintenance => EquipmentStatus::Warning,
+                            crate::core::EquipmentStatus::Inactive => EquipmentStatus::Critical,
+                            crate::core::EquipmentStatus::OutOfOrder => EquipmentStatus::Critical,
+                            crate::core::EquipmentStatus::Unknown => EquipmentStatus::Unknown,
+                        },
+                        properties: eq.properties.clone(),
+                        universal_path: eq.path.clone(),
+                        sensor_mappings: None,
+                    };
+                    equipment.push(eq_data);
+                }
+            }
+            
+            // Calculate floor bounding box from rooms and equipment
+            let mut floor_bbox: Option<BoundingBox3D> = None;
+            for room in &rooms {
+                floor_bbox = if let Some(bbox) = floor_bbox {
+                    BoundingBox3D::from_points(&[
+                        bbox.min, bbox.max,
+                        room.bounding_box.min, room.bounding_box.max,
+                    ])
+                } else {
+                    Some(room.bounding_box.clone())
+                };
+            }
+            
+            floor_data.push(FloorData {
+                id: floor.id.clone(),
+                name: floor.name.clone(),
+                level: floor.level,
+                elevation: floor.level as f64 * 3.0, // Estimate based on level
+                rooms,
+                equipment,
+                bounding_box: floor_bbox,
+            });
+        }
+        
+        Ok(floor_data)
+    }
+    
+    /// Determine system type from EquipmentType
+    fn determine_equipment_system_type(&self, eq_type: &crate::core::EquipmentType) -> String {
+        match eq_type {
+            crate::core::EquipmentType::HVAC => "HVAC".to_string(),
+            crate::core::EquipmentType::Electrical => "ELECTRICAL".to_string(),
+            crate::core::EquipmentType::Plumbing => "PLUMBING".to_string(),
+            crate::core::EquipmentType::Safety => "SAFETY".to_string(),
+            crate::core::EquipmentType::Network => "NETWORK".to_string(),
+            crate::core::EquipmentType::AV => "AV".to_string(),
+            crate::core::EquipmentType::Furniture => "FURNITURE".to_string(),
+            crate::core::EquipmentType::Other(_) => "OTHER".to_string(),
+        }
     }
 
     /// Serialize any serializable type to YAML string

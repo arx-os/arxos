@@ -115,7 +115,7 @@ pub fn spatial_query(_query_type: &str, _entity: &str, _params: Vec<String>) -> 
     // Query rooms and equipment based on spatial criteria
     for floor in &building_data.floors {
         for room in &floor.rooms {
-            let distance = ((room.position.x.powi(2) + room.position.y.powi(2) + room.position.z.powi(2))).sqrt();
+            let distance = (room.position.x.powi(2) + room.position.y.powi(2) + room.position.z.powi(2)).sqrt();
             results.push(SpatialQueryResult {
                 entity_name: room.name.clone(),
                 entity_type: format!("Room ({})", room.room_type),
@@ -130,7 +130,7 @@ pub fn spatial_query(_query_type: &str, _entity: &str, _params: Vec<String>) -> 
         }
         
         for equipment in &floor.equipment {
-            let distance = ((equipment.position.x.powi(2) + equipment.position.y.powi(2) + equipment.position.z.powi(2))).sqrt();
+            let distance = (equipment.position.x.powi(2) + equipment.position.y.powi(2) + equipment.position.z.powi(2)).sqrt();
             results.push(SpatialQueryResult {
                 entity_name: equipment.name.clone(),
                 entity_type: format!("Equipment ({})", equipment.equipment_type),

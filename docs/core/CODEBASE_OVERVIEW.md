@@ -1,7 +1,7 @@
 # ArxOS Codebase Overview
 
 **Version:** 2.0  
-**Date:** January 2025  
+**Date:** November 2025  
 **Language:** Rust (2021 Edition)  
 **Size:** ~34,000 lines  
 **Architecture:** Terminal-First Layered Monolith with Git-Native Storage
@@ -103,6 +103,7 @@ Central routing layer mapping CLI commands to business logic:
 - **`ar.rs`**: AR scan integration and pending equipment management
 - **`sensors.rs`**: Sensor data processing
 - **`watch.rs`**: Live monitoring dashboard
+- **`game.rs`**: Gamified PR review and planning commands
 
 ### IFC Processing (`src/ifc/`)
 
@@ -173,6 +174,24 @@ Mobile AR scan processing:
 - **`pending.rs`**: `PendingEquipmentManager` for pending equipment verification
 - **`processing.rs`**: AR scan data processing and validation
 - **`mod.rs`**: AR integration workflow coordination
+
+### Game System (`src/game/`)
+
+Gamified PR review and planning system:
+
+- **`mod.rs`**: Public API and type re-exports
+- **`types.rs`**: Core game types (GameMode, GameScenario, Constraint, etc.)
+- **`scenario.rs`**: Scenario loading from PRs and buildings
+- **`state.rs`**: Game state management (score, progress, stats)
+- **`constraints.rs`**: Constraint validation system
+- **`pr_game.rs`**: PR review game mode
+- **`planning.rs`**: Planning game mode with interactive placement
+- **`learning.rs`**: Educational mode with expert commentary and tutorials
+- **`ifc_sync.rs`**: IFC metadata preservation
+- **`ifc_mapping.rs`**: EquipmentType ↔ IFC entity type mapping
+- **`export.rs`**: IFC export from game state
+
+**Key Types**: `GameState`, `GameScenario`, `PRReviewGame`, `PlanningGame`, `LearningMode`, `ConstraintSystem`, `IFCSyncManager`
 
 ### Mobile FFI (`src/mobile_ffi/`)
 

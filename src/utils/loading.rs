@@ -29,6 +29,21 @@ use std::path::Path;
 /// - **Permission error**: Cannot read file due to permissions
 /// - **IO error**: General file system errors
 pub fn load_building_data(building_name: &str) -> Result<BuildingData, Box<dyn std::error::Error>> {
+    use std::path::Path;
+    
+    // Check if building_name is an exact file path (contains .yaml or .yml)
+    if building_name.ends_with(".yaml") || building_name.ends_with(".yml") {
+        // Treat as direct file path
+        let path = Path::new(building_name);
+        if path.exists() {
+            let content = std::fs::read_to_string(path)
+                .map_err(|e| format!("Failed to read file {}: {}", building_name, e))?;
+            let building_data: BuildingData = serde_yaml::from_str(&content)
+                .map_err(|e| format!("Failed to parse YAML file {}: {}", building_name, e))?;
+            return Ok(building_data);
+        }
+    }
+    
     // Use PersistenceManager if we have a building name
     if !building_name.is_empty() {
         let persistence = PersistenceManager::new(building_name)?;

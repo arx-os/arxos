@@ -10,6 +10,10 @@ pub mod progress;
 pub mod render;
 pub mod render3d;
 pub mod ar_integration;
+pub mod docs;
+
+// Re-export docs for external use
+pub use docs::generate_building_docs;
 
 // AR integration submodules
 pub use ar_integration::pending::{PendingEquipment, PendingStatus, PendingEquipmentManager, DetectedEquipmentInfo};
@@ -22,6 +26,7 @@ pub mod persistence;
 pub mod mobile_ffi;
 pub mod commands;
 pub mod utils;
+pub mod game;
 
 // Re-export commonly used types for easier access
 pub use core::{Building, Equipment};

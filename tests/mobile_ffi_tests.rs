@@ -173,10 +173,10 @@ mod tests {
     }
 }
 
-//! FFI Error Tracking Tests
-//!
-//! Tests verify that FFI error tracking properly captures and reports errors
-//! using thread-local storage, enabling mobile apps to retrieve detailed error information.
+// FFI Error Tracking Tests
+//
+// Tests verify that FFI error tracking properly captures and reports errors
+// using thread-local storage, enabling mobile apps to retrieve detailed error information.
 
 mod ffi_error_tracking_tests {
     use super::*;
@@ -319,15 +319,14 @@ mod ffi_error_tracking_tests {
     }
 }
 
-//! JNI Implementation Tests
-//!
-//! Note: Full JNI testing requires Android environment. These tests verify
-//! the underlying mobile_ffi functions that JNI calls, ensuring the integration
-//! layer works correctly.
+// JNI Implementation Tests
+//
+// Note: Full JNI testing requires Android environment. These tests verify
+// the underlying mobile_ffi functions that JNI calls, ensuring the integration
+// layer works correctly.
 
 #[cfg(test)]
 mod jni_tests {
-    use super::*;
     use arxos::mobile_ffi;
 
     #[test]
@@ -421,13 +420,19 @@ mod jni_tests {
     #[test]
     fn test_jni_json_serialization() {
         // Verify that mobile_ffi types can be serialized to JSON (required for JNI)
-        use arxos::mobile_ffi::{RoomInfo, EquipmentInfo};
+        use arxos::mobile_ffi::{RoomInfo, Position};
         
         let room = RoomInfo {
             id: "room_1".to_string(),
             name: "Test Room".to_string(),
-            floor_level: 1,
             room_type: "Office".to_string(),
+            position: Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                coordinate_system: "building_local".to_string(),
+            },
+            properties: std::collections::HashMap::new(),
         };
         
         let json_result = serde_json::to_string(&room);

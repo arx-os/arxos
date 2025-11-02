@@ -7,15 +7,36 @@ use std::collections::HashMap;
 use super::{Equipment, SpatialProperties};
 
 /// Represents a room in a building
+///
+/// Rooms are containers for equipment within wings on floors.
+///
+/// # Fields
+///
+/// * `id` - Unique identifier (UUID)
+/// * `name` - Human-readable room name
+/// * `room_type` - Type categorization
+/// * `equipment` - Collection of equipment in the room
+/// * `spatial_properties` - Position, dimensions, and bounding box
+/// * `properties` - Key-value metadata
+/// * `created_at` - Creation timestamp
+/// * `updated_at` - Last modification timestamp
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Room {
+    /// Unique identifier for the room
     pub id: String,
+    /// Human-readable room name
     pub name: String,
+    /// Type categorization of the room
     pub room_type: RoomType,
+    /// Collection of equipment in the room
     pub equipment: Vec<Equipment>,
+    /// Position, dimensions, and bounding box
     pub spatial_properties: SpatialProperties,
+    /// Key-value metadata
     pub properties: HashMap<String, String>,
+    /// Creation timestamp
     pub created_at: DateTime<Utc>,
+    /// Last modification timestamp
     pub updated_at: DateTime<Utc>,
 }
 

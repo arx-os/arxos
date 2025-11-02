@@ -1,0 +1,69 @@
+name: Release Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            binary_name: arxos
+            archive_format: tar.gz
+          - os: macos-latest
+            binary_name: arxos
+            archive_format: tar.gz
+          - os: windows-latest
+            binary_name: arxos.exe
+            archive_format: zip
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Build release binary
+        run: cargo build --release --verbose
+      
+      - name: Strip binary (Unix)
+        if: matrix.os != 'windows-latest'
+        run: strip target/release/${{ matrix.binary_name }}
+      
+      - name: Create archive
+        shell: bash
+        run: |
+          if [ "${{ matrix.archive_format }}" == "tar.gz" ]; then
+            tar -czf arxos-${{ github.ref_name }}-${{ matrix.os }}.tar.gz -C target/release ${{ matrix.binary_name }}
+          else
+            cd target/release
+            zip -r ../../arxos-${{ github.ref_name }}-${{ matrix.os }}.zip ${{ matrix.binary_name }}
+          fi
+      
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: arxos-${{ matrix.os }}
+          path: arxos-${{ github.ref_name }}-${{ matrix.os }}.*
+          retention-days: 30
+

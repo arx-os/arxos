@@ -67,14 +67,24 @@ impl ConfigValidator {
     }
     
     /// Validate path configuration
+    /// Paths don't need to exist at validation time (relaxed validation)
     fn validate_path_config(paths: &PathConfig) -> ConfigResult<()> {
-        // Check if paths are absolute or relative
-        Self::validate_path_exists(&paths.default_import_path, "paths.default_import_path")?;
-        Self::validate_path_exists(&paths.backup_path, "paths.backup_path")?;
-        Self::validate_path_exists(&paths.template_path, "paths.template_path")?;
-        Self::validate_path_exists(&paths.temp_path, "paths.temp_path")?;
+        // Check if paths exist and are valid directories (if they exist)
+        // Don't require paths to exist - they may be created later
+        if paths.default_import_path.exists() {
+            Self::validate_path_exists(&paths.default_import_path, "paths.default_import_path")?;
+        }
+        if paths.backup_path.exists() {
+            Self::validate_path_exists(&paths.backup_path, "paths.backup_path")?;
+        }
+        if paths.template_path.exists() {
+            Self::validate_path_exists(&paths.template_path, "paths.template_path")?;
+        }
+        if paths.temp_path.exists() {
+            Self::validate_path_exists(&paths.temp_path, "paths.temp_path")?;
+        }
         
-        // Check for path conflicts
+        // Check for path conflicts (only if paths resolve to the same location)
         let path_vec = [&paths.default_import_path,
             &paths.backup_path,
             &paths.template_path,
@@ -82,11 +92,16 @@ impl ConfigValidator {
         
         for (i, path1) in path_vec.iter().enumerate() {
             for (j, path2) in path_vec.iter().enumerate() {
-                if i != j && path1 == path2 {
-                    return Err(ConfigError::ValidationFailed {
-                        field: "paths".to_string(),
-                        message: format!("Duplicate paths found: {:?}", path1),
-                    });
+                if i != j {
+                    // Normalize paths for comparison
+                    let p1 = path1.canonicalize().unwrap_or_else(|_| path1.to_path_buf());
+                    let p2 = path2.canonicalize().unwrap_or_else(|_| path2.to_path_buf());
+                    if p1 == p2 {
+                        return Err(ConfigError::ValidationFailed {
+                            field: "paths".to_string(),
+                            message: format!("Duplicate paths found: {:?}", path1),
+                        });
+                    }
                 }
             }
         }
@@ -152,7 +167,7 @@ impl ConfigValidator {
             });
         }
         
-        if performance.cache_enabled {
+        if performance.cache_enabled && performance.cache_path.exists() {
             Self::validate_path_exists(&performance.cache_path, "performance.cache_path")?;
         }
         

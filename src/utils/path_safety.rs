@@ -188,7 +188,7 @@ impl PathSafety {
 
         // Canonicalize the parent directory (which should exist) to validate structure
         let parent = full_path.parent()
-            .unwrap_or_else(|| base_dir.as_ref());
+            .unwrap_or(base_dir);
         
         let canonical_parent = parent
             .canonicalize()

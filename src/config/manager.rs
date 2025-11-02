@@ -13,6 +13,8 @@ use std::fs;
 use std::env;
 use notify::{Watcher, RecursiveMode, EventKind};
 use std::sync::mpsc;
+#[cfg(test)]
+use toml;
 
 /// Configuration manager for ArxOS
 pub struct ConfigManager {
@@ -27,34 +29,145 @@ impl ConfigManager {
         Self::load_from_default_locations()
     }
     
-    /// Load configuration from default locations
+    /// Load configuration from default locations with proper precedence
+    /// 
+    /// Precedence order (highest to lowest):
+    /// 1. Environment variables (highest priority)
+    /// 2. Project config (arx.toml in current directory)
+    /// 3. User config (~/.arx/config.toml)
+    /// 4. Global config (/etc/arx/config.toml)
+    /// 5. Default values (lowest priority)
     pub fn load_from_default_locations() -> ConfigResult<Self> {
-        // Try to find configuration file in order of priority
-        let config_paths = Self::get_config_paths();
-        
+        // Start with defaults (lowest priority)
         let mut config = ArxConfig::default();
         let mut config_path = PathBuf::new();
         
-        // Load from the first existing config file
-        for path in config_paths {
+        // Merge from all config files in order of priority (lowest to highest)
+        // This way, higher priority configs override lower priority ones
+        let config_paths = Self::get_config_paths();
+        
+        // Merge from global config (lowest file priority)
+        if let Some(path) = config_paths.last() {
             if path.exists() {
-                config = Self::load_from_file(&path)?;
-                config_path = path;
-                break;
+                let global_config = Self::load_from_file(path)?;
+                config = Self::merge_config(config, global_config);
             }
         }
         
-        // Apply environment variable overrides
+        // Merge from user config (medium priority)
+        if config_paths.len() >= 2 {
+            let user_path = &config_paths[config_paths.len() - 2];
+            if user_path.exists() {
+                let user_config = Self::load_from_file(user_path)?;
+                config = Self::merge_config(config, user_config);
+                config_path = user_path.clone();
+            }
+        }
+        
+        // Merge from project config (highest file priority)
+        if let Some(project_path) = config_paths.first() {
+            if project_path.exists() {
+                let project_config = Self::load_from_file(project_path)?;
+                config = Self::merge_config(config, project_config);
+                config_path = project_path.clone(); // Project config is primary
+            }
+        }
+        
+        // Apply environment variable overrides (highest priority overall)
         config = Self::apply_environment_overrides(config)?;
         
-        // Validate configuration
-        Self::validate_config(&config)?;
+        // Validate configuration (with relaxed path validation)
+        Self::validate_config_relaxed(&config)?;
         
         Ok(Self {
             config,
             config_path,
             watcher: None,
         })
+    }
+    
+    /// Merge two configurations, with `other` taking precedence over `base`
+    fn merge_config(base: ArxConfig, other: ArxConfig) -> ArxConfig {
+        // Use serde_json to perform deep merge by serializing and deserializing
+        // This is a simple approach - for production, consider a proper merge strategy
+        let mut merged = base;
+        
+        // User config - merge selectively (keep base if other is default/empty)
+        if !other.user.name.is_empty() && other.user.name != "ArxOS User" {
+            merged.user.name = other.user.name;
+        }
+        if !other.user.email.is_empty() && other.user.email != "user@arxos.com" {
+            merged.user.email = other.user.email;
+        }
+        if other.user.organization.is_some() {
+            merged.user.organization = other.user.organization;
+        }
+        if !other.user.commit_template.is_empty() {
+            merged.user.commit_template = other.user.commit_template;
+        }
+        
+        // Paths - merge if not default (always take other if it's different from default)
+        if other.paths.default_import_path != PathBuf::from("./buildings") {
+            merged.paths.default_import_path = other.paths.default_import_path;
+        }
+        if other.paths.backup_path != PathBuf::from("./backups") {
+            merged.paths.backup_path = other.paths.backup_path;
+        }
+        if other.paths.template_path != PathBuf::from("./templates") {
+            merged.paths.template_path = other.paths.template_path;
+        }
+        if other.paths.temp_path != PathBuf::from("./temp") {
+            merged.paths.temp_path = other.paths.temp_path;
+        }
+        
+        // Building config
+        if other.building.default_coordinate_system != "WGS84" {
+            merged.building.default_coordinate_system = other.building.default_coordinate_system;
+        }
+        // For boolean values, check if other differs from default before overriding
+        // This ensures that if a config doesn't set a boolean, it doesn't override previous configs
+        if other.building.auto_commit != ArxConfig::default().building.auto_commit {
+            merged.building.auto_commit = other.building.auto_commit;
+        }
+        if !other.building.naming_pattern.is_empty() {
+            merged.building.naming_pattern = other.building.naming_pattern;
+        }
+        // For validate_on_import, check against default
+        if other.building.validate_on_import != ArxConfig::default().building.validate_on_import {
+            merged.building.validate_on_import = other.building.validate_on_import;
+        }
+        
+        // Performance config
+        if other.performance.max_parallel_threads != num_cpus::get() {
+            merged.performance.max_parallel_threads = other.performance.max_parallel_threads;
+        }
+        if other.performance.memory_limit_mb != 1024 {
+            merged.performance.memory_limit_mb = other.performance.memory_limit_mb;
+        }
+        // Performance config - check against defaults
+        let default_perf = ArxConfig::default().performance;
+        if other.performance.cache_enabled != default_perf.cache_enabled {
+            merged.performance.cache_enabled = other.performance.cache_enabled;
+        }
+        if other.performance.cache_path != default_perf.cache_path {
+            merged.performance.cache_path = other.performance.cache_path;
+        }
+        if other.performance.show_progress != default_perf.show_progress {
+            merged.performance.show_progress = other.performance.show_progress;
+        }
+        
+        // UI config - only override if different from defaults
+        let default_ui = ArxConfig::default().ui;
+        if other.ui.use_emoji != default_ui.use_emoji {
+            merged.ui.use_emoji = other.ui.use_emoji;
+        }
+        merged.ui.verbosity = other.ui.verbosity; // Enum, always take
+        merged.ui.color_scheme = other.ui.color_scheme; // Enum, always take
+        if other.ui.detailed_help != default_ui.detailed_help {
+            merged.ui.detailed_help = other.ui.detailed_help;
+        }
+        
+        merged
     }
     
     /// Load configuration from a specific file
@@ -94,8 +207,21 @@ impl ConfigManager {
     pub fn update_config<F>(&mut self, updater: F) -> ConfigResult<()>
     where F: FnOnce(&mut ArxConfig) -> ConfigResult<()> {
         updater(&mut self.config)?;
+        // Use strict validation when updating
         Self::validate_config(&self.config)?;
         Ok(())
+    }
+    
+    /// Save configuration to file with strict validation
+    pub fn save(&self) -> ConfigResult<()> {
+        if self.config_path.as_os_str().is_empty() {
+            return Err(ConfigError::FileNotFound {
+                path: "No config path set".to_string(),
+            });
+        }
+        // Use strict validation before saving
+        Self::validate_config(&self.config)?;
+        self.save_to_file(&self.config_path)
     }
     
     /// Start watching for configuration changes
@@ -138,11 +264,16 @@ impl ConfigManager {
         self.watcher = None;
     }
     
-    /// Get configuration file paths in order of priority
+    /// Get configuration file paths in order of priority (highest to lowest)
+    /// 
+    /// Returns paths in order:
+    /// 1. Project config (arx.toml in current directory) - highest file priority
+    /// 2. User config (~/.arx/config.toml)
+    /// 3. Global config (/etc/arx/config.toml) - lowest file priority
     fn get_config_paths() -> Vec<PathBuf> {
         let mut paths = Vec::new();
         
-        // 1. Project-specific config (arx.toml in current directory)
+        // 1. Project-specific config (arx.toml in current directory) - highest priority
         if let Ok(current_dir) = env::current_dir() {
             paths.push(current_dir.join("arx.toml"));
         }
@@ -152,7 +283,7 @@ impl ConfigManager {
             paths.push(PathBuf::from(home).join(".arx").join("config.toml"));
         }
         
-        // 3. Global config (/etc/arx/config.toml)
+        // 3. Global config (/etc/arx/config.toml) - lowest file priority
         paths.push(PathBuf::from("/etc/arx/config.toml"));
         
         paths
@@ -221,10 +352,11 @@ impl ConfigManager {
         Ok(config)
     }
     
-    /// Validate configuration
-    fn validate_config(config: &ArxConfig) -> ConfigResult<()> {
-        // Validate user configuration (allow empty for defaults)
-        if !config.user.name.is_empty() && config.user.name.len() > 100 {
+    /// Validate configuration with relaxed path validation
+    /// Paths don't need to exist at load time (they may be created later)
+    fn validate_config_relaxed(config: &ArxConfig) -> ConfigResult<()> {
+        // Validate user configuration
+        if config.user.name.len() > 100 {
             return Err(ConfigError::ValidationFailed {
                 field: "user.name".to_string(),
                 message: "User name cannot exceed 100 characters".to_string(),
@@ -238,19 +370,33 @@ impl ConfigManager {
             });
         }
         
-        // Validate paths - only check if they exist and are directories when they do exist
+        // Validate paths only if they exist - don't require them to exist
         if config.paths.default_import_path.exists() && !config.paths.default_import_path.is_dir() {
             return Err(ConfigError::ValidationFailed {
                 field: "paths.default_import_path".to_string(),
-                message: "Path must be a directory".to_string(),
+                message: "Path must be a directory if it exists".to_string(),
             });
         }
         
-        // Validate performance settings (allow defaults)
+        // Validate performance settings
+        if config.performance.max_parallel_threads == 0 {
+            return Err(ConfigError::ValidationFailed {
+                field: "performance.max_parallel_threads".to_string(),
+                message: "Must be greater than 0".to_string(),
+            });
+        }
+        
         if config.performance.max_parallel_threads > 64 {
             return Err(ConfigError::ValidationFailed {
                 field: "performance.max_parallel_threads".to_string(),
                 message: "Cannot exceed 64 threads".to_string(),
+            });
+        }
+        
+        if config.performance.memory_limit_mb == 0 {
+            return Err(ConfigError::ValidationFailed {
+                field: "performance.memory_limit_mb".to_string(),
+                message: "Must be greater than 0".to_string(),
             });
         }
         
@@ -261,7 +407,22 @@ impl ConfigManager {
             });
         }
         
+        // Validate building configuration
+        let valid_coordinate_systems = ["WGS84", "UTM", "LOCAL"];
+        if !valid_coordinate_systems.contains(&config.building.default_coordinate_system.as_str()) {
+            return Err(ConfigError::ValidationFailed {
+                field: "building.default_coordinate_system".to_string(),
+                message: format!("Must be one of: {}", valid_coordinate_systems.join(", ")),
+            });
+        }
+        
         Ok(())
+    }
+    
+    /// Validate configuration strictly (for when config is saved/applied)
+    fn validate_config(config: &ArxConfig) -> ConfigResult<()> {
+        // Use the validation module for strict validation
+        super::validation::ConfigValidator::validate(config)
     }
 }
 
@@ -358,5 +519,59 @@ mod tests {
         
         env::remove_var("ARX_USER_NAME");
         env::remove_var("ARX_AUTO_COMMIT");
+    }
+    
+    #[test]
+    fn test_config_precedence_merging() {
+        // Create a temporary directory structure
+        let temp_dir = tempdir().unwrap();
+        
+        // Create global config (lowest file priority)
+        let global_path = temp_dir.path().join("global.toml");
+        let global_config_content = toml::to_string(&{
+            let mut c = ArxConfig::default();
+            c.user.name = "Global User".to_string();
+            c.user.email = "global@example.com".to_string();
+            c.performance.max_parallel_threads = 2;
+            c
+        }).unwrap();
+        fs::write(&global_path, global_config_content).unwrap();
+        
+        // Create user config (medium priority)
+        let user_path = temp_dir.path().join("user.toml");
+        let user_config_content = toml::to_string(&{
+            let mut c = ArxConfig::default();
+            c.user.name = "User Config User".to_string();
+            c.building.auto_commit = false;
+            c
+        }).unwrap();
+        fs::write(&user_path, user_config_content).unwrap();
+        
+        // Create project config (highest file priority)
+        let project_path = temp_dir.path().join("arx.toml");
+        let project_config_content = toml::to_string(&{
+            let mut c = ArxConfig::default();
+            c.user.name = "Project User".to_string();
+            c.performance.max_parallel_threads = 4;
+            c
+        }).unwrap();
+        fs::write(&project_path, project_config_content).unwrap();
+        
+        // Simulate merging (global -> user -> project)
+        let mut config = ArxConfig::default();
+        let global_config = ConfigManager::load_from_file(&global_path).unwrap();
+        config = ConfigManager::merge_config(config, global_config);
+        
+        let user_config = ConfigManager::load_from_file(&user_path).unwrap();
+        config = ConfigManager::merge_config(config, user_config);
+        
+        let project_config = ConfigManager::load_from_file(&project_path).unwrap();
+        config = ConfigManager::merge_config(config, project_config);
+        
+        // Verify precedence: project overrides user, user overrides global
+        assert_eq!(config.user.name, "Project User", "Project config should override user config"); // From project config
+        assert_eq!(config.user.email, "global@example.com", "Global config should be preserved when not overridden"); // From global (not overridden)
+        assert_eq!(config.performance.max_parallel_threads, 4, "Project config should override global config"); // From project (overrides global)
+        assert_eq!(config.building.auto_commit, false, "User config should override default value (user set to false, should be false after all merges)"); // From user config
     }
 }

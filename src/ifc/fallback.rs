@@ -270,15 +270,31 @@ impl FallbackIFCParser {
         let id = parts[0].trim_start_matches('#').to_string();
         let entity_def = parts[1];
         
-        // Extract entity type (check more specific types first)
+        // Extract entity type (check more specific types first, excluding TYPE definitions)
         let entity_type = if entity_def.contains("IFCBUILDINGSTOREY") {
             "IFCBUILDINGSTOREY"
-        } else if entity_def.contains("IFCBUILDING") {
+        } else if entity_def.contains("IFCBUILDING") && !entity_def.contains("IFCBUILDINGTYPE") {
             "IFCBUILDING"
         } else if entity_def.contains("IFCSPACE") {
             "IFCSPACE"
+        } else if entity_def.contains("IFCAIRTERMINALTYPE") {
+            "IFCAIRTERMINALTYPE" // Mark TYPE separately
+        } else if entity_def.contains("IFCAIRTERMINAL") {
+            "IFCAIRTERMINAL"
+        } else if entity_def.contains("IFCFLOWTERMINALTYPE") {
+            "IFCFLOWTERMINALTYPE" // Mark TYPE separately
         } else if entity_def.contains("IFCFLOWTERMINAL") {
             "IFCFLOWTERMINAL"
+        } else if entity_def.contains("IFCPRODUCTDEFINITIONSHAPE") {
+            "IFCPRODUCTDEFINITIONSHAPE"
+        } else if entity_def.contains("IFCSHAPEREPRESENTATION") {
+            "IFCSHAPEREPRESENTATION"
+        } else if entity_def.contains("IFCEXTRUDEDAREASOLID") {
+            "IFCEXTRUDEDAREASOLID"
+        } else if entity_def.contains("IFCARBITRARYCLOSEDPROFILEDEF") {
+            "IFCARBITRARYCLOSEDPROFILEDEF"
+        } else if entity_def.contains("IFCPOLYLINE") {
+            "IFCPOLYLINE"
         } else if entity_def.contains("IFCBUILDINGELEMENT") {
             "IFCBUILDINGELEMENT"
         } else if entity_def.contains("IFCWALL") {

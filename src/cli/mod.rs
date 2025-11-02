@@ -12,6 +12,30 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
+    /// Initialize a new building from scratch
+    Init {
+        /// Building name (required)
+        #[arg(long)]
+        name: String,
+        /// Building description
+        #[arg(long)]
+        description: Option<String>,
+        /// Location/address
+        #[arg(long)]
+        location: Option<String>,
+        /// Initialize Git repository
+        #[arg(long = "git-init")]
+        git_init: bool,
+        /// Commit initial building.yaml
+        #[arg(long)]
+        commit: bool,
+        /// Coordinate system (default: World)
+        #[arg(long, default_value = "World")]
+        coordinate_system: String,
+        /// Units (default: meters)
+        #[arg(long, default_value = "meters")]
+        units: String,
+    },
     /// Import IFC file to Git repository
     Import {
         /// Path to IFC file
@@ -19,6 +43,9 @@ pub enum Commands {
         /// Git repository URL
         #[arg(long)]
         repo: Option<String>,
+        /// Dry run - show what would be done without making changes
+        #[arg(long)]
+        dry_run: bool,
     },
     /// Export building data to Git repository
     Export {
@@ -280,6 +307,29 @@ pub enum Commands {
         #[command(subcommand)]
         subcommand: IFCCommands,
     },
+    /// Run system health diagnostics
+    Health {
+        /// Check specific component (all, git, config, persistence, yaml)
+        #[arg(long)]
+        component: Option<String>,
+        /// Show detailed diagnostics
+        #[arg(long)]
+        verbose: bool,
+    },
+    /// Generate HTML documentation for a building
+    Doc {
+        /// Building name to document
+        #[arg(long)]
+        building: String,
+        /// Output file path (default: ./docs/{building}.html)
+        #[arg(long)]
+        output: Option<String>,
+    },
+    /// Gamified PR review and planning commands
+    Game {
+        #[command(subcommand)]
+        subcommand: GameCommands,
+    },
     /// Filter building data
     Filter {
         /// Equipment type filter
@@ -315,6 +365,53 @@ pub enum Commands {
         /// Show detailed results
         #[arg(long)]
         verbose: bool,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum GameCommands {
+    /// Review a PR in game mode
+    Review {
+        /// PR ID to review
+        pr_id: String,
+        /// PR directory path (default: ./prs/pr_{pr_id})
+        #[arg(long)]
+        pr_dir: Option<String>,
+        /// Building name
+        #[arg(long)]
+        building: String,
+        /// Interactive mode with 3D visualization
+        #[arg(long)]
+        interactive: bool,
+        /// Export review results to IFC file
+        #[arg(long)]
+        export_ifc: Option<String>,
+    },
+    /// Plan equipment placement in game mode
+    Plan {
+        /// Building name
+        #[arg(long)]
+        building: String,
+        /// Interactive mode with 3D visualization
+        #[arg(long)]
+        interactive: bool,
+        /// Export plan as PR to directory
+        #[arg(long)]
+        export_pr: Option<String>,
+        /// Export plan to IFC file
+        #[arg(long)]
+        export_ifc: Option<String>,
+    },
+    /// Learn from historical PRs
+    Learn {
+        /// PR ID to learn from
+        pr_id: String,
+        /// PR directory path (default: ./prs/pr_{pr_id})
+        #[arg(long)]
+        pr_dir: Option<String>,
+        /// Building name
+        #[arg(long)]
+        building: String,
     },
 }
 

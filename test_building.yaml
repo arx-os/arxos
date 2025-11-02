@@ -1,0 +1,25 @@
+building:
+  id: test-1
+  name: Modified Building
+  description: Test building
+  created_at: 2025-11-01T10:57:32.212048Z
+  updated_at: 2025-11-01T10:57:32.212077Z
+  version: '1.0'
+  global_bounding_box: null
+metadata:
+  source_file: test.ifc
+  parser_version: '1.0'
+  total_entities: 10
+  spatial_entities: 5
+  coordinate_system: World
+  units: meters
+  tags: []
+floors:
+- id: floor-0
+  name: Ground Floor
+  level: 0
+  elevation: 0.0
+  rooms: []
+  equipment: []
+  bounding_box: null
+coordinate_systems: []

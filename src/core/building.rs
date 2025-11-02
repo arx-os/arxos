@@ -3,21 +3,49 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
-use super::{Floor, Room, Equipment};
+use super::{Floor, Room};
 
 /// Represents a building in ArxOS
+///
+/// The `Building` struct is the root entity in the ArxOS hierarchy:
+/// Building → Floor → Wing → Room → Equipment
+///
+/// # Fields
+///
+/// * `id` - Unique identifier (UUID)
+/// * `name` - Human-readable building name
+/// * `path` - Universal path identifier for the building
+/// * `created_at` - Timestamp when the building was created
+/// * `updated_at` - Timestamp of last modification
+/// * `floors` - Collection of floors in the building
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Building {
+    /// Unique identifier for the building
     pub id: String,
+    /// Human-readable building name
     pub name: String,
+    /// Universal path identifier
     pub path: String,
+    /// Creation timestamp
     pub created_at: DateTime<Utc>,
+    /// Last modification timestamp
     pub updated_at: DateTime<Utc>,
+    /// Collection of floors in the building
     pub floors: Vec<Floor>,
-    pub equipment: Vec<Equipment>, // Legacy - will be moved to floors
+    // Equipment lives in floors -> wings -> rooms hierarchy
 }
 
 impl Building {
+    /// Create a new building with a unique ID and timestamps
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - Human-readable building name
+    /// * `path` - Universal path identifier
+    ///
+    /// # Returns
+    ///
+    /// A new `Building` instance with empty floors collection
     pub fn new(name: String, path: String) -> Self {
         let now = Utc::now();
         Self {
@@ -27,7 +55,6 @@ impl Building {
             created_at: now,
             updated_at: now,
             floors: Vec::new(),
-            equipment: Vec::new(), // Legacy
         }
     }
     

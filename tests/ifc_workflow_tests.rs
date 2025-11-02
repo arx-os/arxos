@@ -8,7 +8,7 @@ use std::path::PathBuf;
 #[test]
 fn test_ifc_processor_creation() {
     // Test creating IFC processor
-    let processor = IFCProcessor::new();
+    let _processor = IFCProcessor::new();
     assert!(true, "IFC processor created successfully");
 }
 
@@ -23,7 +23,7 @@ fn test_hierarchy_extraction_with_sample_file() {
         return;
     }
     
-    let result = processor.extract_hierarchy(sample_file.to_str().unwrap());
+    let _result = processor.extract_hierarchy(sample_file.to_str().unwrap());
     
     // Test should not panic, result may be Ok or Err
     assert!(true, "Hierarchy extraction attempted");
@@ -45,7 +45,7 @@ fn test_entity_classification() {
     // Note: The specific methods are private, so we test the public API
     use arxos::ifc::IFCProcessor;
     
-    let processor = IFCProcessor::new();
+    let _processor = IFCProcessor::new();
     
     // Test processor creation
     assert!(true, "IFC processor created successfully");

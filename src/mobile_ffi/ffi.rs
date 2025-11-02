@@ -22,7 +22,7 @@ pub enum ArxOSErrorCode {
 }
 
 thread_local! {
-    static LAST_ERROR: RefCell<Option<(ArxOSErrorCode, String)>> = RefCell::new(None);
+    static LAST_ERROR: RefCell<Option<(ArxOSErrorCode, String)>> = const { RefCell::new(None) };
 }
 
 /// Set the last error in thread-local storage
@@ -93,6 +93,324 @@ fn create_json_response<T: serde::Serialize>(result: Result<T, MobileError>) -> 
             let error_code = mobile_error_to_code(&e);
             set_last_error(error_code, error_msg.clone());
             create_safe_c_string(format!(r#"{{"error":"{}"}}"#, e))
+        }
+    }
+}
+
+// Game system FFI functions
+
+/// Load a PR for review (game mode)
+///
+/// Returns JSON with PR summary including validation results
+#[no_mangle]
+pub unsafe extern "C" fn arxos_load_pr(
+    pr_id: *const c_char,
+    pr_dir: *const c_char,
+    building_name: *const c_char,
+) -> *mut c_char {
+    use crate::game::pr_game::PRReviewGame;
+    use std::path::Path;
+    
+    if pr_id.is_null() || building_name.is_null() {
+        set_last_error(ArxOSErrorCode::InvalidData, "Null pointer provided".to_string());
+        return create_safe_c_string(r#"{"error":"null pointer"}"#.to_string());
+    }
+
+    let pr_id_str = match CStr::from_ptr(pr_id).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            set_last_error(ArxOSErrorCode::InvalidData, "Invalid PR ID string".to_string());
+            return create_safe_c_string(r#"{"error":"invalid pr_id"}"#.to_string());
+        }
+    };
+
+    let building_str = match CStr::from_ptr(building_name).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            set_last_error(ArxOSErrorCode::InvalidData, "Invalid building name string".to_string());
+            return create_safe_c_string(r#"{"error":"invalid building_name"}"#.to_string());
+        }
+    };
+
+    // Determine PR directory
+    let pr_dir_path = if pr_dir.is_null() {
+        Path::new("prs").join(format!("pr_{}", pr_id_str))
+    } else {
+        match CStr::from_ptr(pr_dir).to_str() {
+            Ok(s) => Path::new(s).to_path_buf(),
+            Err(_) => {
+                set_last_error(ArxOSErrorCode::InvalidData, "Invalid PR directory string".to_string());
+                return create_safe_c_string(r#"{"error":"invalid pr_dir"}"#.to_string());
+            }
+        }
+    };
+
+    // Load PR review game
+    match PRReviewGame::new(pr_id_str, &pr_dir_path) {
+        Ok(mut review_game) => {
+            // Validate PR
+            review_game.validate_pr();
+            let summary = review_game.get_validation_summary();
+
+            // Get game state for equipment list
+            let game_state = review_game.game_state();
+            let equipment: Vec<serde_json::Value> = game_state.placements.iter().map(|p| {
+                serde_json::json!({
+                    "id": p.equipment.id,
+                    "name": p.equipment.name,
+                    "type": format!("{:?}", p.equipment.equipment_type),
+                    "position": {
+                        "x": p.equipment.position.x,
+                        "y": p.equipment.position.y,
+                        "z": p.equipment.position.z,
+                    },
+                    "validation": {
+                        "is_valid": p.constraint_validation.is_valid,
+                        "violations": p.constraint_validation.violations.len(),
+                    }
+                })
+            }).collect();
+
+            let response = serde_json::json!({
+                "pr_id": pr_id_str,
+                "building": building_str,
+                "total_items": summary.total_items,
+                "valid_items": summary.valid_items,
+                "items_with_violations": summary.items_with_violations,
+                "total_violations": summary.total_violations,
+                "critical_violations": summary.critical_violations,
+                "warnings": summary.warnings,
+                "equipment": equipment,
+            });
+
+            clear_last_error();
+            create_safe_c_string(serde_json::to_string(&response).unwrap_or_else(|_| r#"{"error":"serialization failed"}"#.to_string()))
+        }
+        Err(e) => {
+            warn!("Failed to load PR: {}", e);
+            set_last_error(ArxOSErrorCode::NotFound, format!("PR not found: {}", e));
+            create_safe_c_string(format!(r#"{{"error":"failed to load pr: {}"}}"#, e))
+        }
+    }
+}
+
+/// Validate equipment placement against constraints
+///
+/// Returns JSON validation result with violations and suggestions
+#[no_mangle]
+pub unsafe extern "C" fn arxos_validate_constraints(
+    equipment_json: *const c_char,
+    constraints_json: *const c_char,
+) -> *mut c_char {
+    use crate::game::{ConstraintSystem, GameState, GameMode};
+    use crate::game::types::GameEquipmentPlacement;
+    use crate::core::{Equipment, EquipmentType, Position};
+    use std::collections::HashMap;
+
+    if equipment_json.is_null() {
+        set_last_error(ArxOSErrorCode::InvalidData, "Null equipment_json".to_string());
+        return create_safe_c_string(r#"{"error":"null equipment_json"}"#.to_string());
+    }
+
+    let equipment_str = match CStr::from_ptr(equipment_json).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            set_last_error(ArxOSErrorCode::InvalidData, "Invalid equipment JSON".to_string());
+            return create_safe_c_string(r#"{"error":"invalid equipment_json"}"#.to_string());
+        }
+    };
+
+    // Parse equipment JSON
+    let equipment_data: serde_json::Value = match serde_json::from_str(equipment_str) {
+        Ok(d) => d,
+        Err(e) => {
+            set_last_error(ArxOSErrorCode::InvalidData, format!("Failed to parse equipment JSON: {}", e));
+            return create_safe_c_string(format!(r#"{{"error":"parse error: {}"}}"#, e));
+        }
+    };
+
+    // Create equipment from JSON
+    let name = equipment_data.get("name")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Unknown")
+        .to_string();
+
+    let eq_type_str = equipment_data.get("type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Other");
+
+    let equipment_type = match eq_type_str {
+        "HVAC" => EquipmentType::HVAC,
+        "Electrical" => EquipmentType::Electrical,
+        "AV" => EquipmentType::AV,
+        "Plumbing" => EquipmentType::Plumbing,
+        "Network" => EquipmentType::Network,
+        _ => EquipmentType::Other(eq_type_str.to_string()),
+    };
+
+    let pos_data = match equipment_data.get("position") {
+        Some(p) => p,
+        None => {
+            set_last_error(ArxOSErrorCode::InvalidData, "Missing position in equipment JSON".to_string());
+            return create_safe_c_string(r#"{"error":"missing position"}"#.to_string());
+        }
+    };
+    let x = pos_data.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    let y = pos_data.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    let z = pos_data.get("z").and_then(|v| v.as_f64()).unwrap_or(0.0);
+
+    let name_clone = name.clone();
+    let equipment = Equipment {
+        id: equipment_data.get("id")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
+        name: name_clone.clone(),
+        path: format!("/equipment/{}", name_clone.to_lowercase().replace(" ", "-")),
+        equipment_type,
+        position: Position {
+            x,
+            y,
+            z,
+            coordinate_system: "building_local".to_string(),
+        },
+        properties: HashMap::new(),
+        status: crate::core::EquipmentStatus::Active,
+        room_id: None,
+    };
+
+    // Create placement
+    let placement = GameEquipmentPlacement {
+        equipment,
+        ifc_entity_id: None,
+        ifc_entity_type: None,
+        ifc_placement_chain: None,
+        ifc_original_properties: HashMap::new(),
+        game_action: crate::game::types::GameAction::Placed,
+        constraint_validation: crate::game::types::ValidationResult::default(),
+    };
+
+    // Load constraints if provided
+    let constraint_system = if !constraints_json.is_null() {
+        match CStr::from_ptr(constraints_json).to_str() {
+            Ok(_json_str) => {
+                // TODO: Parse constraints JSON and load into ConstraintSystem
+                // This would require implementing JSON-to-ConstraintSystem conversion
+                // For now, create empty system - full constraint loading from JSON would be more complex
+                // In a real implementation, would parse constraints JSON and load into ConstraintSystem
+                warn!("Constraint JSON provided but not yet parsed - using empty constraint system");
+                ConstraintSystem::new()
+            }
+            Err(_) => ConstraintSystem::new(),
+        }
+    } else {
+        ConstraintSystem::new()
+    };
+
+    // Validate
+    let game_state = GameState::new(GameMode::Planning);
+    let validation_result = constraint_system.validate_placement(&placement, &game_state);
+
+    // Build response
+    let violations: Vec<serde_json::Value> = validation_result.violations.iter().map(|v| {
+        serde_json::json!({
+            "constraint_id": v.constraint_id,
+            "type": format!("{:?}", v.constraint_type),
+            "severity": format!("{:?}", v.severity),
+            "message": v.message,
+            "suggestion": v.suggestion,
+        })
+    }).collect();
+
+    let response = serde_json::json!({
+        "is_valid": validation_result.is_valid,
+        "violations": violations,
+        "warnings": validation_result.warnings,
+    });
+
+    clear_last_error();
+    create_safe_c_string(serde_json::to_string(&response).unwrap_or_else(|_| r#"{"error":"serialization failed"}"#.to_string()))
+}
+
+/// Get game plan from planning session
+///
+/// Returns JSON with plan data, placements, and validation summary
+#[no_mangle]
+pub unsafe extern "C" fn arxos_get_game_plan(
+    session_id: *const c_char,
+    building_name: *const c_char,
+) -> *mut c_char {
+    use crate::game::planning::PlanningGame;
+
+    if building_name.is_null() {
+        set_last_error(ArxOSErrorCode::InvalidData, "Null pointer provided".to_string());
+        return create_safe_c_string(r#"{"error":"null pointer"}"#.to_string());
+    }
+
+    let building_str = match CStr::from_ptr(building_name).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            set_last_error(ArxOSErrorCode::InvalidData, "Invalid building name".to_string());
+            return create_safe_c_string(r#"{"error":"invalid building_name"}"#.to_string());
+        }
+    };
+
+    // Parse session_id if provided (for future session persistence)
+    let _session_id_str = if !session_id.is_null() {
+        match CStr::from_ptr(session_id).to_str() {
+            Ok(s) => Some(s),
+            Err(_) => None,
+        }
+    } else {
+        None
+    };
+
+    // TODO: In a future implementation, load existing session by session_id
+    // For now, create a new planning game - this would require session persistence/loading functionality
+    match PlanningGame::new(building_str) {
+        Ok(planning_game) => {
+            let game_state = planning_game.game_state();
+            let summary = planning_game.get_validation_summary();
+
+            let placements: Vec<serde_json::Value> = game_state.placements.iter().map(|p| {
+                serde_json::json!({
+                    "id": p.equipment.id,
+                    "name": p.equipment.name,
+                    "type": format!("{:?}", p.equipment.equipment_type),
+                    "position": {
+                        "x": p.equipment.position.x,
+                        "y": p.equipment.position.y,
+                        "z": p.equipment.position.z,
+                    },
+                    "validation": {
+                        "is_valid": p.constraint_validation.is_valid,
+                        "violations": p.constraint_validation.violations.len(),
+                    }
+                })
+            }).collect();
+
+            let response = serde_json::json!({
+                "session_id": planning_game.session_id(),
+                "building": building_str,
+                "placements": placements,
+                "validation_summary": {
+                    "total_placements": summary.total_placements,
+                    "valid_placements": summary.valid_placements,
+                    "invalid_placements": summary.invalid_placements,
+                    "total_violations": summary.total_violations,
+                    "critical_violations": summary.critical_violations,
+                    "warnings": summary.warnings,
+                    "score": summary.score,
+                }
+            });
+
+            clear_last_error();
+            create_safe_c_string(serde_json::to_string(&response).unwrap_or_else(|_| r#"{"error":"serialization failed"}"#.to_string()))
+        }
+        Err(e) => {
+            warn!("Failed to get game plan: {}", e);
+            set_last_error(ArxOSErrorCode::NotFound, format!("Failed to load plan: {}", e));
+            create_safe_c_string(format!(r#"{{"error":"failed to load plan: {}"}}"#, e))
         }
     }
 }

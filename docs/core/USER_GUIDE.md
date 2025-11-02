@@ -1,7 +1,7 @@
 # ArxOS User Guide
 
 **Version:** 2.0  
-**Date:** December 2024  
+**Date:** November 2025  
 **Author:** Joel (Founder)
 
 ---
@@ -15,10 +15,11 @@
 5. [Search & Filter System](#search--filter-system)
 6. [3D Visualization](#3d-visualization)
 7. [Interactive 3D Rendering](#interactive-3d-rendering)
-8. [Configuration](#configuration)
-9. [Troubleshooting](#troubleshooting)
-10. [Examples](#examples)
-11. [Best Practices](#best-practices)
+8. [Gamified PR Review & Planning](#gamified-pr-review--planning)
+9. [Configuration](#configuration)
+10. [Troubleshooting](#troubleshooting)
+11. [Examples](#examples)
+12. [Best Practices](#best-practices)
 
 ---
 
@@ -35,6 +36,7 @@ ArxOS is a powerful terminal-based building management system that provides Git-
 - **Git-like Version Control**: Track changes to building data with full history
 - **Advanced Search & Filter**: Find equipment, rooms, and buildings with regex support
 - **3D Visualization**: Interactive 3D building visualization with real-time controls
+- **Gamified Planning**: Interactive PR review and equipment placement with constraint validation
 - **Terminal-First**: Full functionality in terminal environment
 - **Multi-format Support**: IFC, YAML, JSON data formats
 - **Hardware Integration**: Support for sensors and IoT devices
@@ -60,7 +62,23 @@ arx --version
 
 Once you have ArxOS installed (see the README for installation instructions), here's how to get started:
 
-### 1. Import Your First Building
+### 1. Initialize Your First Building
+
+You have two options to get started:
+
+**Option A: Create from Scratch**
+
+```bash
+# Initialize a new building
+arx init --name "High School Main" --location "123 Main St"
+```
+
+This will:
+- Create a minimal `high_school_main.yaml` building file
+- Set up default coordinate system and metadata
+- Prepare the building for adding rooms and equipment
+
+**Option B: Import from IFC File**
 
 ```bash
 # Import an IFC file
@@ -147,6 +165,25 @@ arx commit "Update equipment status"
 
 # Unstage changes
 arx unstage building.yaml
+```
+
+### Building Initialization
+
+#### `arx init`
+Initialize a new building from scratch.
+
+```bash
+# Basic initialization
+arx init --name "My Building"
+
+# With location and description
+arx init --name "High School Main" --location "123 Main St" --description "Main campus building"
+
+# Initialize with Git support
+arx init --name "My Building" --git-init --commit
+
+# Custom coordinate system
+arx init --name "My Building" --coordinate-system "Local" --units "feet"
 ```
 
 ### Data Import/Export
@@ -363,6 +400,47 @@ arx interactive --building "Building" --show-fps --show-help
 - **Floor Navigation**: Seamless multi-floor building exploration
 - **View Mode Switching**: Different visualization modes for different needs
 - **Performance Monitoring**: FPS counter and session statistics
+
+---
+
+## Gamified PR Review & Planning
+
+ArxOS includes a gamified system for reviewing contractor PRs and planning equipment placement with real-time constraint validation.
+
+### Review a PR
+
+```bash
+# Basic review
+arx game review --pr-id pr_001 --building "My Building"
+
+# Interactive review with 3D visualization
+arx game review --pr-id pr_001 --building "My Building" --interactive
+
+# Review and export to IFC
+arx game review --pr-id pr_001 --building "My Building" --export-ifc output.ifc
+```
+
+### Plan Equipment Placement
+
+```bash
+# Interactive planning session
+arx game plan --building "My Building" --interactive
+
+# Plan and export as PR
+arx game plan --building "My Building" --interactive --export-pr ./prs/my_plan
+
+# Plan and export to IFC
+arx game plan --building "My Building" --interactive --export-ifc plan.ifc
+```
+
+### Learn from Historical PRs
+
+```bash
+# Load and study a historical PR
+arx game learn --pr-id pr_approved_001 --building "My Building"
+```
+
+For complete details on the game system, see [Game System Documentation](../features/GAME_SYSTEM.md).
 
 ---
 
@@ -583,7 +661,8 @@ For additional help and support:
 
 - **Documentation**: Check the `docs/` directory for detailed guides
 - **Architecture**: See [ARCHITECTURE.md](ARCHITECTURE.md) for system design
-- **Mobile Development**: See [MOBILE_FFI_INTEGRATION.md](MOBILE_FFI_INTEGRATION.md)
+- **Game System**: See [Game System](../features/GAME_SYSTEM.md) for PR review and planning
+- **Mobile Development**: See [Mobile FFI Integration](../mobile/MOBILE_FFI_INTEGRATION.md)
 - **Issues**: Report issues on GitHub
 - **Community**: Join the ArxOS community discussions
 

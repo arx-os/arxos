@@ -49,6 +49,9 @@ clap = { version = "4.4", features = ["derive"] }
 env_logger = "0.10"
 criterion = { workspace = true }
 
+[dev-dependencies]
+serial_test = { workspace = true }
+
 [[bench]]
 name = "core_benchmarks"
 harness = false
@@ -56,6 +59,10 @@ harness = false
 [[bench]]
 name = "performance_benchmarks"
 harness = false
+
+[[bin]]
+name = "convert_3d_scanner_scan"
+path = "src/bin/convert_3d_scanner_scan.rs"
 
 [workspace.package]
 version = "0.1.0"

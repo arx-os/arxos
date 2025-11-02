@@ -115,8 +115,8 @@ impl PersistenceManager {
         // Create backup of current file if it exists
         if self.working_file.exists() {
             let backup_path = self.working_file.with_extension("yaml.bak");
-            // Validate backup path is within base
-            let _validated_backup = crate::utils::path_safety::PathSafety::canonicalize_and_validate(
+            // Validate backup path is within base (file may not exist yet, use validate_for_write)
+            let _validated_backup = crate::utils::path_safety::PathSafety::validate_path_for_write(
                 &backup_path,
                 base_dir
             ).map_err(|e| PersistenceError::WriteError {

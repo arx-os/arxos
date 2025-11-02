@@ -6,16 +6,38 @@ use std::collections::HashMap;
 use super::types::Position;
 
 /// Represents equipment in a building
+///
+/// Equipment is the leaf entity in the ArxOS hierarchy:
+/// Building → Floor → Wing → Room → **Equipment**
+///
+/// # Fields
+///
+/// * `id` - Unique identifier (UUID)
+/// * `name` - Human-readable equipment name
+/// * `path` - Universal path identifier
+/// * `equipment_type` - Type categorization
+/// * `position` - 3D spatial position with coordinate system
+/// * `properties` - Key-value metadata
+/// * `status` - Operational status
+/// * `room_id` - Reference to parent room (if assigned)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Equipment {
+    /// Unique identifier for the equipment
     pub id: String,
+    /// Human-readable equipment name
     pub name: String,
+    /// Universal path identifier
     pub path: String,
+    /// Type categorization of the equipment
     pub equipment_type: EquipmentType,
+    /// 3D spatial position with coordinate system
     pub position: Position,
+    /// Key-value metadata
     pub properties: HashMap<String, String>,
+    /// Operational status
     pub status: EquipmentStatus,
-    pub room_id: Option<String>, // Reference to parent room
+    /// Reference to parent room (if assigned)
+    pub room_id: Option<String>,
 }
 
 /// Types of equipment

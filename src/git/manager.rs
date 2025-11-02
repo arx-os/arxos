@@ -7,7 +7,10 @@ use log::info;
 use crate::path::PathGenerator;
 use crate::yaml::{BuildingData, BuildingYamlSerializer};
 
-/// Git repository manager for building data
+/// Git repository manager for building data version control
+///
+/// Manages all Git operations for building data, including commits, diffs, history,
+/// and branch management. Follows Git-native philosophy for data persistence.
 pub struct BuildingGitManager {
     repo: Repository,
     serializer: BuildingYamlSerializer,
@@ -67,7 +70,7 @@ impl BuildingGitManager {
                 )))?
         } else {
             let current_dir = std::env::current_dir()
-                .map_err(|e| GitError::IoError(e))?;
+                .map_err(GitError::IoError)?;
             let joined = current_dir.join(repo_path_buf);
             joined.canonicalize()
                 .map_err(|e| GitError::IoError(std::io::Error::new(
@@ -83,10 +86,10 @@ impl BuildingGitManager {
         
         let repo = if validated_repo_path.join(".git").exists() {
             Repository::open(&validated_repo_path)
-                .map_err(|e| GitError::GitError(e))?
+                .map_err(GitError::GitError)?
         } else {
             Repository::init(&validated_repo_path)
-                .map_err(|e| GitError::GitError(e))?
+                .map_err(GitError::GitError)?
         };
 
         let serializer = BuildingYamlSerializer::new();

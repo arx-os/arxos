@@ -54,6 +54,25 @@ pub enum Action {
     FloorChange(i32),
     /// Zoom operations
     Zoom(ZoomAction),
+    /// Game-specific actions
+    GameAction(GameAction),
+}
+
+/// Game-specific actions for PR review and planning
+#[derive(Debug, Clone, PartialEq)]
+pub enum GameAction {
+    /// Place equipment at position
+    PlaceEquipment { position: crate::spatial::Point3D, equipment_id: String },
+    /// Validate equipment placement
+    ValidatePlacement { equipment_id: String },
+    /// Check specific constraint
+    CheckConstraint { constraint_id: String },
+    /// Request alternative solution
+    RequestAlternative { equipment_id: String },
+    /// Approve PR
+    ApprovePR { pr_id: String },
+    /// Reject PR with reason
+    RejectPR { pr_id: String, reason: String },
 }
 
 /// Camera movement actions

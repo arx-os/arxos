@@ -5,6 +5,7 @@
 
 use arxos::commands::import;
 use arxos::commands::export;
+use arxos::commands::init;
 use arxos::commands::room;
 use arxos::commands::equipment;
 use tempfile::TempDir;
@@ -12,6 +13,7 @@ use std::fs::{create_dir_all, write, File};
 use std::io::Write;
 
 /// Helper to create a temporary test building environment
+#[allow(dead_code)]
 fn setup_test_building(temp_dir: &TempDir) -> Result<(String, String), Box<dyn std::error::Error>> {
     // Create building directory structure
     let building_dir = temp_dir.path().join("test_building");
@@ -76,6 +78,7 @@ fn test_import_command_handles_nonexistent_file() {
     let result = import::handle_import(
         nonexistent_ifc.to_string_lossy().to_string(),
         None,
+        false, // dry_run
     );
     
     // Should return an error for file not found
@@ -170,7 +173,7 @@ fn test_error_handling_across_commands() {
     // and provide helpful error messages
     
     // Import with invalid file
-    let result = import::handle_import("/nonexistent/path/file.ifc".to_string(), None);
+    let result = import::handle_import("/nonexistent/path/file.ifc".to_string(), None, false);
     assert!(result.is_err());
     
     // Export with invalid directory (if it returns error)
@@ -219,5 +222,48 @@ fn test_equipment_type_parsing_variations() {
     assert!(matches!(equipment::parse_equipment_type("SAFETY"), EquipmentType::Safety));
     assert!(matches!(equipment::parse_equipment_type("PLUMBING"), EquipmentType::Plumbing));
     assert!(matches!(equipment::parse_equipment_type("NETWORK"), EquipmentType::Network));
+}
+
+#[test]
+fn test_init_then_room_create_workflow() {
+    use arxos::commands::init::InitConfig;
+    use std::path::Path;
+    
+    // Create a temporary directory for this test
+    let temp_dir = tempfile::tempdir().unwrap();
+    let original_dir = std::env::current_dir().unwrap();
+    
+    // Change to temp directory
+    std::env::set_current_dir(temp_dir.path()).unwrap();
+    
+    // Initialize a new building
+    let config = InitConfig {
+        name: "Test Init Building".to_string(),
+        description: None,
+        location: Some("123 Test St".to_string()),
+        git_init: false,
+        commit: false,
+        coordinate_system: "World".to_string(),
+        units: "meters".to_string(),
+    };
+    
+    let result = init::handle_init(config);
+    assert!(result.is_ok());
+    
+    // Verify building file was created
+    let building_file = Path::new("test_init_building.yaml");
+    assert!(building_file.exists(), "Building YAML file should exist");
+    
+    // Verify we can read the created YAML
+    let content = std::fs::read_to_string(building_file).unwrap();
+    assert!(content.contains("Test Init Building"));
+    assert!(content.contains("Building at 123 Test St"));
+    assert!(content.contains("floors: []"));
+    assert!(content.contains("ArxOS v2.0"));
+    
+    // Restore original directory
+    std::env::set_current_dir(original_dir).unwrap();
+    
+    // Cleanup - temp_dir will be deleted when dropped
 }
 

@@ -60,7 +60,7 @@ fn test_sensor_service_creation() {
 fn test_equipment_status_updater_creation() {
     // Test creating equipment status updater
     // Note: This will fail if building data doesn't exist, which is expected in tests
-    let updater = EquipmentStatusUpdater::new("test_building");
+    let _updater = EquipmentStatusUpdater::new("test_building");
     
     // The updater might fail to create if building data doesn't exist
     // That's okay for this test

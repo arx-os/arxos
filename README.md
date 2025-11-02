@@ -12,6 +12,7 @@
 - 🏗️ **IFC Import** - Import building models and extract hierarchy automatically
 - 🔍 **Smart Search** - Find equipment and rooms with regex and filtering
 - 🎨 **3D Visualization** - Interactive terminal-based 3D building visualization
+- 🎮 **Gamified Planning** - Interactive PR review and equipment placement with constraint validation
 - 📱 **Mobile Support** - Native iOS/Android apps with AR capabilities for field verification
 - ⚡ **Terminal-First** - Designed for efficiency and automation
 
@@ -33,6 +34,12 @@ arx filter --floor 2
 
 # Visualize in 3D
 arx render --building "Building Name" --three-d --show-status
+
+# Review contractor PRs (game mode)
+arx game review --pr-id pr_001 --building "Building Name" --interactive
+
+# Plan equipment placement with real-time validation
+arx game plan --building "Building Name" --interactive
 ```
 
 ---
@@ -54,7 +61,7 @@ cargo build --release
 # macOS/Linux: Binary at target/release/arx
 ```
 
-📖 **[Complete User Guide](docs/USER_GUIDE.md)** - Learn all the commands and features
+📖 **[Complete User Guide](docs/core/USER_GUIDE.md)** - Learn all the commands and features
 
 ### Security
 
@@ -66,17 +73,18 @@ ArxOS follows security best practices with automated scanning and comprehensive 
 - ✅ FFI safety hardening
 - 🧪 20+ security tests
 
-📋 **[Security Audit Report](docs/SECURITY_AUDIT_REPORT.md)** | **[Security Guide](docs/SECURITY.md)**
+📋 **[Security Guide](docs/development/SECURITY.md)**
 
 ---
 
 ## 📚 Documentation
 
-- **[User Guide](docs/USER_GUIDE.md)** - Complete usage instructions for end users
-- **[Architecture](docs/ARCHITECTURE.md)** - System design and technical details  
-- **[Mobile FFI Integration](docs/MOBILE_FFI_INTEGRATION.md)** - Mobile app development
-- **[Hardware Integration](docs/hardware_integration.md)** - Deploy sensors and contribute to the DePIN network
-- **[Reward System](docs/reward_system.md)** - How contributors earn rewards for building data (USD-based, no crypto complexity)
+- **[User Guide](docs/core/USER_GUIDE.md)** - Complete usage instructions for end users
+- **[Game System](docs/features/GAME_SYSTEM.md)** - Gamified PR review and planning system
+- **[Architecture](docs/core/ARCHITECTURE.md)** - System design and technical details  
+- **[Mobile FFI Integration](docs/mobile/MOBILE_FFI_INTEGRATION.md)** - Mobile app development
+- **[Hardware Integration](docs/features/HARDWARE_INTEGRATION.md)** - Deploy sensors and contribute to the DePIN network
+- **[Reward System](docs/business/REWARD_SYSTEM.md)** - How contributors earn rewards for building data (USD-based, no crypto complexity)
 
 ---
 
@@ -96,6 +104,7 @@ arxos/
 │   ├── git/                    # Git integration
 │   ├── spatial/                # Spatial operations
 │   ├── search/                 # Search & filtering
+│   ├── game/                   # Gamified PR review and planning
 │   └── [other modules]/
 ├── ios/                        # iOS Native Shell (SwiftUI)
 ├── android/                    # Android Native Shell (Jetpack Compose)
@@ -112,6 +121,7 @@ arxos/
 - **`mobile_ffi/`** - FFI bindings for mobile apps
 - **`search/`** - Advanced search and filtering
 - **`spatial/`** - 3D coordinate systems and spatial operations
+- **`game/`** - Gamified PR review and planning system
 
 ---
 

@@ -11,7 +11,17 @@ use std::collections::HashMap;
 pub fn handle_room_command(command: RoomCommands) -> Result<(), Box<dyn std::error::Error>> {
     match command {
         RoomCommands::Create { building, floor, wing, name, room_type, dimensions, position, commit } => {
-            handle_create_room(building, floor, wing, name, room_type, dimensions, position, commit)
+            use crate::commands::room::CreateRoomConfig;
+            handle_create_room(CreateRoomConfig {
+                building,
+                floor,
+                wing,
+                name,
+                room_type,
+                dimensions,
+                position,
+                commit,
+            })
         }
         RoomCommands::List { building, floor, wing, verbose } => {
             handle_list_rooms(building, floor, wing, verbose)
@@ -28,30 +38,44 @@ pub fn handle_room_command(command: RoomCommands) -> Result<(), Box<dyn std::err
     }
 }
 
+/// Configuration for creating a room
+///
+/// Defines all parameters needed to create a new room in a building.
+#[derive(Debug, Clone)]
+pub struct CreateRoomConfig {
+    /// Building name where room will be created
+    pub building: String,
+    /// Floor level for the room
+    pub floor: i32,
+    /// Wing identifier
+    pub wing: String,
+    /// Room name
+    pub name: String,
+    /// Room type (classroom, office, etc.)
+    pub room_type: String,
+    /// Dimensions in "width x depth x height" format
+    pub dimensions: Option<String>,
+    /// Position in "x,y,z" format
+    pub position: Option<String>,
+    /// Commit changes to Git
+    pub commit: bool,
+}
+
 /// Create a new room
-fn handle_create_room(
-    building: String,
-    floor: i32,
-    wing: String,
-    name: String,
-    room_type: String,
-    dimensions: Option<String>,
-    position: Option<String>,
-    commit: bool,
-) -> Result<(), Box<dyn std::error::Error>> {
-    println!("🏗️ Creating room: {} in {} Floor {} Wing {}", name, building, floor, wing);
-    println!("   Type: {}", room_type);
+fn handle_create_room(config: CreateRoomConfig) -> Result<(), Box<dyn std::error::Error>> {
+    println!("🏗️ Creating room: {} in {} Floor {} Wing {}", config.name, config.building, config.floor, config.wing);
+    println!("   Type: {}", config.room_type);
     
-    if let Some(ref dims) = dimensions {
+    if let Some(ref dims) = config.dimensions {
         println!("   Dimensions: {}", dims);
     }
     
-    if let Some(ref pos) = position {
+    if let Some(ref pos) = config.position {
         println!("   Position: {}", pos);
     }
     
     // Parse room type directly
-    let parsed_room_type = match room_type.to_lowercase().as_str() {
+    let parsed_room_type = match config.room_type.to_lowercase().as_str() {
         "classroom" => RoomType::Classroom,
         "laboratory" => RoomType::Laboratory,
         "office" => RoomType::Office,
@@ -64,43 +88,43 @@ fn handle_create_room(
         "storage" => RoomType::Storage,
         "mechanical" => RoomType::Mechanical,
         "electrical" => RoomType::Electrical,
-        _ => RoomType::Other(room_type),
+        _ => RoomType::Other(config.room_type.clone()),
     };
     
     // Use the local core types directly
-    let room = crate::core::Room::new(name.clone(), parsed_room_type);
+    let room = crate::core::Room::new(config.name.clone(), parsed_room_type);
     
     // Parse dimensions if provided
-    let (width, height, depth) = if let Some(dims) = dimensions {
-        parse_dimensions(&dims)?
+    let (width, height, depth) = if let Some(dims) = config.dimensions.as_ref() {
+        parse_dimensions(dims)?
     } else {
         (10.0, 3.0, 10.0) // Default dimensions
     };
     
     // Parse position if provided
-    let (x, y, z) = if let Some(pos) = position {
-        parse_position(&pos)?
+    let (x, y, z) = if let Some(pos) = config.position.as_ref() {
+        parse_position(pos)?
     } else {
         (0.0, 0.0, 0.0) // Default position
     };
     
     // Add room using PersistenceManager
-    let persistence = PersistenceManager::new(&building)?;
+    let persistence = PersistenceManager::new(&config.building)?;
     let mut building_data = persistence.load_building_data()?;
     
     // Find or create the floor
     let floor_data = building_data.floors.iter_mut()
-        .find(|f| f.level == floor);
+        .find(|f| f.level == config.floor);
     
     let floor_data = if let Some(floor) = floor_data {
         floor
     } else {
         // Floor doesn't exist, create it
         let new_floor = FloorData {
-            id: format!("floor-{}", floor),
-            name: format!("Floor {}", floor),
-            level: floor,
-            elevation: floor as f64 * 3.0,
+            id: format!("floor-{}", config.floor),
+            name: format!("Floor {}", config.floor),
+            level: config.floor,
+            elevation: config.floor as f64 * 3.0,
             rooms: vec![],
             equipment: vec![],
             bounding_box: None,
@@ -131,7 +155,7 @@ fn handle_create_room(
     floor_data.rooms.push(room_data);
     
     // Save
-    if commit {
+    if config.commit {
         persistence.save_and_commit(&building_data, Some(&format!("Add room: {}", room.name)))?;
         println!("✅ Changes committed to Git");
     } else {

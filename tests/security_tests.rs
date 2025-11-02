@@ -122,7 +122,7 @@ mod path_traversal_tests {
     #[test]
     fn test_path_invalid_characters() {
         let temp_dir = TempDir::new().unwrap();
-        let base = temp_dir.path();
+        let _base = temp_dir.path();
         
         let invalid_paths = vec![
             "file\0name.txt",  // Null byte

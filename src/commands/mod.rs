@@ -124,6 +124,12 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
         Commands::ProcessSensors { sensor_dir, building, commit, watch } => {
             sensors::handle_process_sensors_command(&sensor_dir, &building, commit, watch)
         },
+        Commands::SensorsHttp { building, host, port } => {
+            sensors::handle_sensors_http_command(&building, &host, port)
+        },
+        Commands::SensorsMqtt { building, broker, port, username, password, topics } => {
+            sensors::handle_sensors_mqtt_command(&building, &broker, port, username.as_deref(), password.as_deref(), &topics)
+        },
         Commands::IFC { subcommand } => ifc::handle_ifc_command(subcommand),
         Commands::Health { component, verbose } => health::handle_health(component, verbose),
         Commands::Doc { building, output } => doc::handle_doc(building, output),

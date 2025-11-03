@@ -65,8 +65,10 @@ struct ARScanData: Codable {
     let pointCount: Int64?
     let accuracyEstimate: Double?
     let lightingConditions: String?
+    let roomName: String
+    let floorLevel: Int32
     
-    init(detectedEquipment: [DetectedEquipment], roomBoundaries: RoomBoundaries, deviceType: String? = nil, appVersion: String? = nil, scanDurationMs: Int64? = nil, pointCount: Int64? = nil, accuracyEstimate: Double? = nil, lightingConditions: String? = nil) {
+    init(detectedEquipment: [DetectedEquipment], roomBoundaries: RoomBoundaries, deviceType: String? = nil, appVersion: String? = nil, scanDurationMs: Int64? = nil, pointCount: Int64? = nil, accuracyEstimate: Double? = nil, lightingConditions: String? = nil, roomName: String = "", floorLevel: Int32 = 0) {
         self.detectedEquipment = detectedEquipment
         self.roomBoundaries = roomBoundaries
         self.deviceType = deviceType
@@ -75,6 +77,8 @@ struct ARScanData: Codable {
         self.pointCount = pointCount
         self.accuracyEstimate = accuracyEstimate
         self.lightingConditions = lightingConditions
+        self.roomName = roomName
+        self.floorLevel = floorLevel
     }
     
     enum CodingKeys: String, CodingKey {
@@ -86,6 +90,8 @@ struct ARScanData: Codable {
         case pointCount = "point_count"
         case accuracyEstimate = "accuracy_estimate"
         case lightingConditions = "lighting_conditions"
+        case roomName = "roomName"
+        case floorLevel = "floorLevel"
     }
 }
 

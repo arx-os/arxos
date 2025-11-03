@@ -650,3 +650,182 @@ pub unsafe extern "C" fn arxos_extract_equipment(json_data: *const c_char) -> *m
     }
 }
 
+/// Process AR scan and create pending equipment items
+///
+/// # Arguments
+/// * `json_data` - JSON string of AR scan data from mobile
+/// * `building_name` - Name of building for context
+/// * `confidence_threshold` - Minimum confidence (0.0-1.0) to create pending items
+///
+/// Returns JSON with pending equipment IDs and details
+#[no_mangle]
+pub unsafe extern "C" fn arxos_process_ar_scan_to_pending(
+    json_data: *const c_char,
+    building_name: *const c_char,
+    confidence_threshold: f64,
+) -> *mut c_char {
+    use crate::ar_integration::processing;
+    use crate::spatial::Point3D;
+    
+    if json_data.is_null() || building_name.is_null() {
+        warn!("arxos_process_ar_scan_to_pending: null parameter");
+        return create_error_response(MobileError::InvalidData("Null parameter".to_string()));
+    }
+    
+    let json_str = match CStr::from_ptr(json_data).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_process_ar_scan_to_pending: invalid UTF-8 in JSON");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in JSON".to_string()));
+        }
+    };
+    
+    let building_str = match CStr::from_ptr(building_name).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_process_ar_scan_to_pending: invalid UTF-8 in building name");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in building name".to_string()));
+        }
+    };
+    
+    // Parse AR scan from mobile FFI format
+    match crate::mobile_ffi::parse_ar_scan(json_str) {
+        Ok(mobile_scan) => {
+            // Convert mobile ARScanData to processing ARScanData
+            let detected_equipment: Vec<_> = mobile_scan.detected_equipment.into_iter().map(|eq| {
+                processing::DetectedEquipmentData {
+                    name: eq.name,
+                    equipment_type: eq.equipment_type,
+                    position: Point3D::new(eq.position.x, eq.position.y, eq.position.z),
+                    confidence: eq.confidence,
+                    detection_method: eq.detection_method,
+                }
+            }).collect();
+            
+            let processing_scan = processing::ARScanData {
+                detected_equipment,
+            };
+            
+            // Process to pending
+            match processing::process_ar_scan_to_pending(&processing_scan, building_str, confidence_threshold) {
+                Ok(pending_ids) => {
+                    let response = serde_json::json!({
+                        "success": true,
+                        "pending_count": pending_ids.len(),
+                        "pending_ids": pending_ids,
+                        "building": building_str,
+                        "confidence_threshold": confidence_threshold,
+                    });
+                    
+                    clear_last_error();
+                    match serde_json::to_string(&response) {
+                        Ok(json) => create_safe_c_string(json),
+                        Err(e) => {
+                            warn!("Failed to serialize response: {}", e);
+                            create_error_response(MobileError::IoError(format!("Serialization error: {}", e)))
+                        }
+                    }
+                }
+                Err(e) => {
+                    warn!("Failed to process AR scan: {}", e);
+                    create_error_response(MobileError::IoError(format!("Processing failed: {}", e)))
+                }
+            }
+        }
+        Err(e) => {
+            warn!("Failed to parse AR scan: {}", e);
+            create_error_response(e)
+        }
+    }
+}
+
+/// Export building to AR-compatible format
+///
+/// # Arguments
+/// * `building_name` - Name of building to export
+/// * `format` - Export format: "gltf" or "usdz"
+///
+/// Returns JSON with export status and file path
+#[no_mangle]
+pub unsafe extern "C" fn arxos_export_for_ar(
+    building_name: *const c_char,
+    format: *const c_char,
+) -> *mut c_char {
+    use crate::export::ar::{ARExporter, ARFormat};
+    use std::path::Path;
+    
+    if building_name.is_null() || format.is_null() {
+        warn!("arxos_export_for_ar: null parameter");
+        return create_error_response(MobileError::InvalidData("Null parameter".to_string()));
+    }
+    
+    let building_str = match CStr::from_ptr(building_name).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_export_for_ar: invalid UTF-8 in building name");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8".to_string()));
+        }
+    };
+    
+    let format_str = match CStr::from_ptr(format).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_export_for_ar: invalid UTF-8 in format");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in format".to_string()));
+        }
+    };
+    
+    // Load building data
+    let building_data = match crate::utils::loading::load_building_data(building_str) {
+        Ok(data) => data,
+        Err(e) => {
+            warn!("Failed to load building data: {}", e);
+            return create_error_response(MobileError::NotFound(format!("Building not found: {}", e)));
+        }
+    };
+    
+    // Parse format
+    let ar_format = match format_str.parse::<ARFormat>() {
+        Ok(fmt) => fmt,
+        Err(e) => {
+            warn!("Invalid AR format: {}", e);
+            return create_error_response(MobileError::InvalidData(format!("Invalid format: {}", e)));
+        }
+    };
+    
+    // Create exporter and determine output path
+    let output_filename = match ar_format {
+        ARFormat::GLTF => format!("{}.gltf", building_str),
+        ARFormat::USDZ => format!("{}.usdz", building_str),
+    };
+    
+    let output_path = Path::new(&output_filename);
+    let exporter = ARExporter::new(building_data);
+    
+    // Export
+    match exporter.export(ar_format, output_path) {
+        Ok(_) => {
+            let response = serde_json::json!({
+                "success": true,
+                "building": building_str,
+                "format": format_str,
+                "output_file": output_filename,
+                "message": "Building exported successfully for AR",
+            });
+            
+            clear_last_error();
+            match serde_json::to_string(&response) {
+                Ok(json) => create_safe_c_string(json),
+                Err(e) => {
+                    warn!("Failed to serialize response: {}", e);
+                    create_error_response(MobileError::IoError(format!("Serialization error: {}", e)))
+                }
+            }
+        }
+        Err(e) => {
+            warn!("Failed to export building: {}", e);
+            create_error_response(MobileError::IoError(format!("Export failed: {}", e)))
+        }
+    }
+}
+

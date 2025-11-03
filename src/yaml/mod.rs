@@ -14,6 +14,41 @@ pub struct BuildingData {
     pub coordinate_systems: Vec<CoordinateSystemInfo>,
 }
 
+impl Default for BuildingData {
+    fn default() -> Self {
+        let now = chrono::Utc::now();
+        BuildingData {
+            building: BuildingInfo {
+                id: "default-building".to_string(),
+                name: "Default Building".to_string(),
+                description: Some("Default building for testing".to_string()),
+                created_at: now,
+                updated_at: now,
+                version: "1.0.0".to_string(),
+                global_bounding_box: None,
+            },
+            metadata: BuildingMetadata {
+                source_file: None,
+                parser_version: "ArxOS v2.0".to_string(),
+                total_entities: 0,
+                spatial_entities: 0,
+                coordinate_system: "LOCAL".to_string(),
+                units: "meters".to_string(),
+                tags: vec![],
+            },
+            floors: vec![],
+            coordinate_systems: vec![CoordinateSystemInfo {
+                name: "World".to_string(),
+                origin: Point3D::origin(),
+                x_axis: Point3D::new(1.0, 0.0, 0.0),
+                y_axis: Point3D::new(0.0, 1.0, 0.0),
+                z_axis: Point3D::new(0.0, 0.0, 1.0),
+                description: Some("Default world coordinate system".to_string()),
+            }],
+        }
+    }
+}
+
 /// Building information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuildingInfo {

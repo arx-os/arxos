@@ -53,7 +53,7 @@ pub fn handle_game_review(
     let mut review_game = PRReviewGame::new(&pr_id, &pr_dir_path)?;
 
     // Validate PR
-    let validation_results = review_game.validate_pr();
+    let _validation_results = review_game.validate_pr();
     let summary = review_game.get_validation_summary();
 
     // Display summary
@@ -120,7 +120,7 @@ pub fn handle_game_plan(
     info!("Starting planning game mode for building: {}", building);
 
     // Create planning game
-    let mut planning_game = PlanningGame::new(&building)?;
+    let planning_game = PlanningGame::new(&building)?;
 
     println!("╔════════════════════════════════════════════════════════════╗");
     println!("║            Planning Game Mode Activated                     ║");

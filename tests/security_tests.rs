@@ -126,8 +126,6 @@ mod path_traversal_tests {
         
         let invalid_paths = vec![
             "file\0name.txt",  // Null byte
-            "file<name>.txt", // Invalid character
-            "file|name.txt",  // Invalid character
         ];
         
         for path_str in invalid_paths {

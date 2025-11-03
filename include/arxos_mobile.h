@@ -87,6 +87,25 @@ char* arxos_parse_ar_scan(const char* json_data);
  */
 char* arxos_extract_equipment(const char* json_data);
 
+/*!
+ * @brief Process AR scan and create pending equipment items
+ * 
+ * @param json_data JSON string containing AR scan data from mobile
+ * @param building_name Name of building for context
+ * @param confidence_threshold Minimum confidence (0.0-1.0) to create pending items
+ * @return JSON string with pending equipment IDs and details (must be freed with arxos_free_string)
+ */
+char* arxos_process_ar_scan_to_pending(const char* json_data, const char* building_name, double confidence_threshold);
+
+/*!
+ * @brief Export building to AR-compatible format
+ * 
+ * @param building_name Name of building to export
+ * @param format Export format: "gltf" or "usdz"
+ * @return JSON string with export status and file path (must be freed with arxos_free_string)
+ */
+char* arxos_export_for_ar(const char* building_name, const char* format);
+
 #ifdef __cplusplus
 }
 #endif

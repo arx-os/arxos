@@ -6,10 +6,26 @@
 mod ingestion;
 mod data_types;
 mod status_updater;
+mod mapping;
+
+#[cfg(feature = "async-sensors")]
+mod http_server;
+#[cfg(feature = "async-sensors")]
+mod mqtt_client;
+#[cfg(feature = "async-sensors")]
+mod websocket_server;
 
 pub use ingestion::{SensorIngestionService, SensorIngestionConfig};
-pub use data_types::{SensorData, SensorType, EquipmentSensorMapping, SensorMetadata, SensorDataValues};
+pub use data_types::{SensorData, SensorType, EquipmentSensorMapping, SensorMetadata, SensorDataValues, ThresholdCheck, SensorAlert, ArxosMetadata};
 pub use status_updater::{EquipmentStatusUpdater, UpdateResult};
+pub use mapping::MappingManager;
+
+#[cfg(feature = "async-sensors")]
+pub use http_server::{start_sensor_http_server, SensorHttpService};
+#[cfg(feature = "async-sensors")]
+pub use mqtt_client::{MqttSensorClient, MqttClientConfig, start_mqtt_subscriber};
+#[cfg(feature = "async-sensors")]
+pub use websocket_server::{WebSocketSensorServer, start_websocket_server};
 
 // Hardware integration types exported from this module
 

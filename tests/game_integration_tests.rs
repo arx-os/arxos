@@ -5,14 +5,14 @@
 
 use arxos::game::{
     GameScenarioLoader, PRReviewGame, PlanningGame, IFCGameExporter,
-    ConstraintSystem, IFCSyncManager, GameState, GameMode, GameEquipmentPlacement,
-    GameAction, ValidationResult, ConstraintType, ConstraintSeverity,
+    ConstraintSystem, GameState, GameMode, GameEquipmentPlacement,
+    GameAction, ValidationResult, ConstraintSeverity,
 };
 use arxos::core::{Equipment, EquipmentType, Position};
 use arxos::spatial::Point3D;
 use tempfile::TempDir;
 use std::fs::{create_dir_all, write, read_to_string};
-use std::path::Path;
+use serial_test::serial;
 
 /// Setup test building with YAML file
 fn setup_test_building(temp_dir: &TempDir, building_name: &str) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
@@ -27,12 +27,13 @@ building:
   created_at: "2024-01-01T00:00:00Z"
   updated_at: "2024-01-01T00:00:00Z"
   version: "1.0.0"
+  global_bounding_box: null
 metadata:
-  version: "1.0.0"
+  source_file: null
   parser_version: "1.0.0"
   total_entities: 0
   spatial_entities: 0
-  coordinate_system: "WGS84"
+  coordinate_system: "LOCAL"
   units: "meters"
   tags: []
 floors:
@@ -62,6 +63,26 @@ floors:
         equipment: []
         properties: {}
     equipment: []
+    bounding_box: null
+coordinate_systems:
+  - name: World
+    origin:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    x_axis:
+      x: 1.0
+      y: 0.0
+      z: 0.0
+    y_axis:
+      x: 0.0
+      y: 1.0
+      z: 0.0
+    z_axis:
+      x: 0.0
+      y: 0.0
+      z: 1.0
+    description: Default world coordinate system
 "#;
     write(building_dir.join("building.yaml"), building_yaml)?;
     
@@ -121,6 +142,7 @@ total_items: 2
     Ok(pr_dir)
 }
 
+#[serial]
 #[test]
 fn test_pr_review_workflow() {
     let temp_dir = tempfile::tempdir().unwrap();
@@ -135,7 +157,7 @@ fn test_pr_review_workflow() {
     let mut review_game = PRReviewGame::new("test_review_001", &pr_dir).unwrap();
 
     // Validate PR
-    let results = review_game.validate_pr();
+    let _results = review_game.validate_pr();
     let summary = review_game.get_validation_summary();
 
     assert_eq!(summary.total_items, 2);
@@ -145,6 +167,7 @@ fn test_pr_review_workflow() {
     std::env::set_current_dir(&original_dir).unwrap();
 }
 
+#[serial]
 #[test]
 fn test_planning_workflow() {
     let temp_dir = tempfile::tempdir().unwrap();
@@ -188,6 +211,7 @@ fn test_planning_workflow() {
     std::env::set_current_dir(&original_dir).unwrap();
 }
 
+#[serial]
 #[test]
 fn test_ifc_round_trip() {
     let temp_dir = tempfile::tempdir().unwrap();
@@ -200,7 +224,7 @@ fn test_ifc_round_trip() {
     // Create planning game and place equipment
     let mut planning_game = PlanningGame::new("Test Building").unwrap();
 
-    let equip_id = planning_game.place_equipment(
+    let _equip_id2 = planning_game.place_equipment(
         EquipmentType::Electrical,
         "Test Light".to_string(),
         Point3D::new(10.0, 20.0, 3.0),
@@ -226,6 +250,7 @@ fn test_ifc_round_trip() {
     std::env::set_current_dir(&original_dir).unwrap();
 }
 
+#[serial]
 #[test]
 fn test_constraint_validation_workflow() {
     
@@ -261,7 +286,7 @@ constraints:
     let constraint_system = ConstraintSystem::load_from_file(&constraints_path).unwrap();
     
     // Create game state with equipment
-    let mut game_state = GameState::new(GameMode::Planning);
+    let game_state = GameState::new(GameMode::Planning);
 
     let mut equipment = Equipment::new(
         "Test Equipment".to_string(),
@@ -294,6 +319,7 @@ constraints:
     }));
 }
 
+#[serial]
 #[test]
 fn test_scenario_loading_workflow() {
     let temp_dir = tempfile::tempdir().unwrap();

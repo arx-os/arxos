@@ -19,35 +19,42 @@
 //! ## Basic AR Integration Workflow
 //!
 //! ```rust,no_run
-//! use arxos::ar_integration::{ARDataIntegrator, ARScanData, DetectedEquipment};
-//! use arxos::yaml::BuildingData;
-//!
-//! // Load building data
-//! let building_data = load_building_data()?;
+//! use arxos::ar_integration::{ARScanData, DetectedEquipment};
+//! use arxos::spatial::Point3D;
+//! use std::collections::HashMap;
+//! use chrono::Utc;
 //!
 //! // Create AR scan data from mobile app
 //! let ar_scan = ARScanData {
 //!     scan_id: "scan_001".to_string(),
 //!     room_name: "Conference Room A".to_string(),
 //!     floor_level: 3,
+//!     timestamp: Utc::now(),
+//!     coordinate_system: "ARWorld".to_string(),
 //!     detected_equipment: vec![
 //!         DetectedEquipment {
 //!             id: "HVAC-301".to_string(),
 //!             name: "VAV Unit".to_string(),
 //!             equipment_type: "VAV".to_string(),
 //!             position: Point3D { x: 10.0, y: 20.0, z: 3.0 },
+//!             bounding_box: Point3D { x: 0.0, y: 0.0, z: 0.0 }.into(),
 //!             confidence: 0.95,
-//!             // ... other fields
+//!             detection_method: arxos::ar_integration::DetectionMethod::ARKit,
+//!             properties: HashMap::new(),
 //!         }
 //!     ],
-//!     // ... other fields
+//!     room_boundaries: None,
+//!     scan_metadata: arxos::ar_integration::ScanMetadata {
+//!         device_type: "iPhone".to_string(),
+//!         app_version: "1.0".to_string(),
+//!         scan_duration_ms: 5000,
+//!         point_count: 1000,
+//!         accuracy_estimate: 0.95,
+//!         lighting_conditions: "good".to_string(),
+//!     },
 //! };
 //!
-//! // Integrate AR scan
-//! let mut integrator = ARDataIntegrator::new(building_data);
-//! let result = integrator.integrate_ar_scan(ar_scan)?;
-//!
-//! println!("Added: {} equipment", result.equipment_added);
+//! println!("Scan ID: {}", ar_scan.scan_id);
 //! ```
 //!
 //! ## Pending Equipment Workflow
@@ -55,22 +62,23 @@
 //! ```rust,no_run
 //! use arxos::ar_integration::pending::PendingEquipmentManager;
 //! use arxos::ar_integration::processing::process_ar_scan_to_pending;
+//! use arxos::ar_integration::processing::ARScanData as ProcessingARScanData;
+//! use arxos::spatial::Point3D;
 //!
 //! // Process AR scan to pending items
-//! let pending_ids = process_ar_scan_to_pending(&ar_scan, "my_building", 0.7)?;
+//! let scan_data = ProcessingARScanData {
+//!     detected_equipment: vec![],
+//! };
+//! let pending_ids = process_ar_scan_to_pending(&scan_data, "my_building", 0.7)?;
 //!
-//! // Create manager and load from storage
-//! let mut manager = PendingEquipmentManager::new("my_building".to_string());
-//! manager.load_from_storage(&"pending-equipment-my_building.json".into())?;
+//! // Create manager
+//! let manager = PendingEquipmentManager::new("my_building".to_string());
 //!
-//! // List pending items
+//! // List pending items  
 //! let pending = manager.list_pending();
 //! for item in pending {
 //!     println!("Pending: {} ({:.2} confidence)", item.name, item.confidence);
 //! }
-//!
-//! // Confirm selected items
-//! manager.confirm_pending(&pending_ids[0], &mut building_data)?;
 //! ```
 
 pub mod pending;

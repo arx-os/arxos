@@ -81,3 +81,131 @@ pub fn handle_process_sensors_command(
     println!("✅ Sensor processing completed");
     Ok(())
 }
+
+/// Handle the sensors HTTP server command
+#[cfg(feature = "async-sensors")]
+pub fn handle_sensors_http_command(
+    building: &str,
+    host: &str,
+    port: u16,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+    use std::path::PathBuf;
+    
+    info!("🌐 Starting sensor HTTP ingestion server");
+    println!("🌐 Starting sensor HTTP ingestion server");
+    println!("   Building: {}", building);
+    println!("   Listening on: http://{}:{}", host, port);
+    
+    let config = crate::hardware::SensorIngestionConfig {
+        data_directory: PathBuf::from("./sensor-data"),
+        ..crate::hardware::SensorIngestionConfig::default()
+    };
+    
+    let ingestion_service = Arc::new(RwLock::new(crate::hardware::SensorIngestionService::new(config)));
+    
+    println!("\n✅ Server started! Waiting for sensor data...");
+    println!("   POST sensor data to: http://{}:{}/sensors/ingest", host, port);
+    println!("   Health check: http://{}:{}/sensors/health\n", host, port);
+    
+    // Start server (this blocks until server stops)
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(crate::hardware::start_sensor_http_server(host, port, building.to_string(), ingestion_service))?;
+    
+    Ok(())
+}
+
+#[cfg(not(feature = "async-sensors"))]
+pub fn handle_sensors_http_command(
+    _building: &str,
+    _host: &str,
+    _port: u16,
+) -> Result<(), Box<dyn std::error::Error>> {
+    eprintln!("❌ Error: HTTP sensor server requires async-sensors feature");
+    eprintln!("💡 Compile with: cargo build --features async-sensors");
+    Err("HTTP server not available without async-sensors feature".into())
+}
+
+/// Handle the sensors MQTT subscriber command
+#[cfg(feature = "async-sensors")]
+pub fn handle_sensors_mqtt_command(
+    building: &str,
+    broker: &str,
+    port: u16,
+    username: Option<&str>,
+    password: Option<&str>,
+    topics: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use crate::hardware::{MqttClientConfig, EquipmentStatusUpdater};
+    
+    info!("🔌 Starting sensor MQTT subscriber");
+    println!("🔌 Starting sensor MQTT subscriber");
+    println!("   Building: {}", building);
+    println!("   Broker: {}:{}", broker, port);
+    
+    // Parse topics from comma-separated string
+    let topic_list: Vec<String> = topics.split(',').map(|s| s.trim().to_string()).collect();
+    
+    // Create MQTT config
+    let mqtt_config = MqttClientConfig {
+        broker_url: broker.to_string(),
+        broker_port: port,
+        client_id: format!("arxos_sensor_client_{}", uuid::Uuid::new_v4()),
+        username: username.map(|s| s.to_string()),
+        password: password.map(|s| s.to_string()),
+        topics: topic_list.clone(),
+    };
+    
+    println!("   Subscribing to topics: {:?}", topic_list);
+    println!("\n✅ MQTT subscriber started! Waiting for sensor data...");
+    
+    // Create equipment status updater wrapped in Arc<RwLock> for shared mutable access
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+    
+    let updater = Arc::new(RwLock::new(EquipmentStatusUpdater::new(building)?));
+    
+    // Define callback for processing incoming sensor data
+    let callback_updater = Arc::clone(&updater);
+    let callback = move |sensor_data: crate::hardware::SensorData| -> Result<(), String> {
+        // Process sensor data and update equipment status
+        let rt = tokio::runtime::Handle::current();
+        rt.block_on(async {
+            let mut updater = callback_updater.write().await;
+            match updater.process_sensor_data(&sensor_data) {
+                Ok(result) => {
+                    info!("Updated equipment {}: {} → {}", 
+                         result.equipment_id, result.old_status, result.new_status);
+                    println!("   ✅ Updated {}: {} → {}", 
+                             result.equipment_id, result.old_status, result.new_status);
+                    Ok(())
+                }
+                Err(e) => {
+                    warn!("Error processing sensor {}: {}", sensor_data.metadata.sensor_id, e);
+                    Err(format!("Error processing sensor data: {}", e))
+                }
+            }
+        })
+    };
+    
+    // Start MQTT subscriber (this blocks)
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(crate::hardware::start_mqtt_subscriber(mqtt_config, callback))?;
+    
+    Ok(())
+}
+
+#[cfg(not(feature = "async-sensors"))]
+pub fn handle_sensors_mqtt_command(
+    _building: &str,
+    _broker: &str,
+    _port: u16,
+    _username: Option<&str>,
+    _password: Option<&str>,
+    _topics: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    eprintln!("❌ Error: MQTT sensor subscriber requires async-sensors feature");
+    eprintln!("💡 Compile with: cargo build --features async-sensors");
+    Err("MQTT subscriber not available without async-sensors feature".into())
+}

@@ -27,6 +27,12 @@ func arxos_parse_ar_scan(_ jsonData: UnsafePointer<CChar>?) -> UnsafeMutablePoin
 @_silgen_name("arxos_extract_equipment")
 func arxos_extract_equipment(_ jsonData: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>?
 
+@_silgen_name("arxos_process_ar_scan_to_pending")
+func arxos_process_ar_scan_to_pending(_ jsonData: UnsafePointer<CChar>?, _ buildingName: UnsafePointer<CChar>?, _ confidenceThreshold: Double) -> UnsafeMutablePointer<CChar>?
+
+@_silgen_name("arxos_export_for_ar")
+func arxos_export_for_ar(_ buildingName: UnsafePointer<CChar>?, _ format: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>?
+
 @_silgen_name("arxos_free_string")
 func arxos_free_string(_ ptr: UnsafeMutablePointer<CChar>?)
 
@@ -151,6 +157,102 @@ class ArxOSCoreFFI {
         }
     }
     
+    /// Process AR scan and create pending equipment
+    func processARScanToPending(jsonData: String, buildingName: String, confidenceThreshold: Double, completion: @escaping (Result<PendingARScanResult, Error>) -> Void) {
+        DispatchQueue.global().async {
+            guard let jsonCString = jsonData.cString(using: .utf8),
+                  let buildingCString = buildingName.cString(using: .utf8) else {
+                DispatchQueue.main.async {
+                    completion(.failure(TerminalError.ffiError("Failed to convert input to C string")))
+                }
+                return
+            }
+            
+            let resultPtr = jsonCString.withUnsafeBufferPointer { jsonBuffer in
+                buildingCString.withUnsafeBufferPointer { buildingBuffer in
+                    arxos_process_ar_scan_to_pending(jsonBuffer.baseAddress, buildingBuffer.baseAddress, confidenceThreshold)
+                }
+            }
+            
+            guard let resultPtr = resultPtr else {
+                DispatchQueue.main.async {
+                    completion(.failure(TerminalError.ffiError("FFI call returned null pointer")))
+                }
+                return
+            }
+            
+            let resultString = String(cString: resultPtr)
+            arxos_free_string(resultPtr)
+            
+            guard let data = resultString.data(using: .utf8) else {
+                DispatchQueue.main.async {
+                    completion(.failure(TerminalError.ffiError("Failed to convert result to data")))
+                }
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                let result = try decoder.decode(PendingARScanResult.self, from: data)
+                DispatchQueue.main.async {
+                    completion(.success(result))
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(TerminalError.parseError("Failed to parse pending scan result: \(error.localizedDescription)")))
+                }
+            }
+        }
+    }
+    
+    /// Export building to AR format
+    func exportForAR(buildingName: String, format: String, completion: @escaping (Result<ARExportResult, Error>) -> Void) {
+        DispatchQueue.global().async {
+            guard let buildingCString = buildingName.cString(using: .utf8),
+                  let formatCString = format.cString(using: .utf8) else {
+                DispatchQueue.main.async {
+                    completion(.failure(TerminalError.ffiError("Failed to convert input to C string")))
+                }
+                return
+            }
+            
+            let resultPtr = buildingCString.withUnsafeBufferPointer { buildingBuffer in
+                formatCString.withUnsafeBufferPointer { formatBuffer in
+                    arxos_export_for_ar(buildingBuffer.baseAddress, formatBuffer.baseAddress)
+                }
+            }
+            
+            guard let resultPtr = resultPtr else {
+                DispatchQueue.main.async {
+                    completion(.failure(TerminalError.ffiError("FFI call returned null pointer")))
+                }
+                return
+            }
+            
+            let resultString = String(cString: resultPtr)
+            arxos_free_string(resultPtr)
+            
+            guard let data = resultString.data(using: .utf8) else {
+                DispatchQueue.main.async {
+                    completion(.failure(TerminalError.ffiError("Failed to convert result to data")))
+                }
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                let result = try decoder.decode(ARExportResult.self, from: data)
+                DispatchQueue.main.async {
+                    completion(.success(result))
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(TerminalError.parseError("Failed to parse export result: \(error.localizedDescription)")))
+                }
+            }
+        }
+    }
+    
     /// Configure Git credentials for commits
     func configureGitCredentials(name: String, email: String, completion: @escaping (Result<Void, Error>) -> Void) {
         DispatchQueue.global().async {
@@ -166,6 +268,40 @@ class ArxOSCoreFFI {
                 completion(.success(()))
             }
         }
+    }
+}
+
+/// Result from processing AR scan to pending
+struct PendingARScanResult: Codable {
+    let success: Bool
+    let pendingCount: Int
+    let pendingIds: [String]
+    let building: String
+    let confidenceThreshold: Double
+    
+    enum CodingKeys: String, CodingKey {
+        case success
+        case pendingCount = "pending_count"
+        case pendingIds = "pending_ids"
+        case building
+        case confidenceThreshold = "confidence_threshold"
+    }
+}
+
+/// Result from exporting for AR
+struct ARExportResult: Codable {
+    let success: Bool
+    let building: String
+    let format: String
+    let outputFile: String
+    let message: String
+    
+    enum CodingKeys: String, CodingKey {
+        case success
+        case building
+        case format
+        case outputFile = "output_file"
+        case message
     }
 }
 

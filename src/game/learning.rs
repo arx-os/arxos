@@ -139,7 +139,7 @@ impl LearningMode {
     }
 
     /// Generate default commentary based on scenario
-    fn generate_default_commentary(scenario: &GameScenario) -> Vec<ExpertCommentary> {
+    fn generate_default_commentary(_scenario: &GameScenario) -> Vec<ExpertCommentary> {
         let mut commentary = Vec::new();
 
         // Add general tips
@@ -152,7 +152,7 @@ impl LearningMode {
         });
 
         // Add commentary for each equipment item
-        for placement in scenario.equipment_items.iter() {
+        for placement in _scenario.equipment_items.iter() {
             if placement.constraint_validation.is_valid {
                 commentary.push(ExpertCommentary {
                     equipment_id: Some(placement.equipment.id.clone()),
@@ -214,7 +214,7 @@ impl LearningMode {
     }
 
     /// Generate default tutorial based on scenario
-    fn generate_default_tutorial(scenario: &GameScenario) -> Vec<TutorialStep> {
+    fn generate_default_tutorial(_scenario: &GameScenario) -> Vec<TutorialStep> {
         vec![
             TutorialStep {
                 step_number: 1,

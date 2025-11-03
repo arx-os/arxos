@@ -1,0 +1,130 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ArxOS Configuration Schema",
+  "type": "object",
+  "properties": {
+    "user": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "default": "ArxOS User",
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "default": "user@arxos.com"
+        },
+        "organization": {
+          "type": "string",
+          "nullable": true
+        },
+        "commit_template": {
+          "type": "string",
+          "default": "feat: {operation} {building_name}"
+        }
+      },
+      "required": ["name", "email", "commit_template"]
+    },
+    "paths": {
+      "type": "object",
+      "properties": {
+        "default_import_path": {
+          "type": "string",
+          "default": "./buildings"
+        },
+        "backup_path": {
+          "type": "string",
+          "default": "./backups"
+        },
+        "template_path": {
+          "type": "string",
+          "default": "./templates"
+        },
+        "temp_path": {
+          "type": "string",
+          "default": "./temp"
+        }
+      },
+      "required": ["default_import_path", "backup_path", "template_path", "temp_path"]
+    },
+    "building": {
+      "type": "object",
+      "properties": {
+        "default_coordinate_system": {
+          "type": "string",
+          "enum": ["WGS84", "UTM", "LOCAL"],
+          "default": "WGS84"
+        },
+        "auto_commit": {
+          "type": "boolean",
+          "default": true
+        },
+        "naming_pattern": {
+          "type": "string",
+          "default": "{building_name}-{timestamp}"
+        },
+        "validate_on_import": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "required": ["default_coordinate_system", "auto_commit", "naming_pattern", "validate_on_import"]
+    },
+    "performance": {
+      "type": "object",
+      "properties": {
+        "max_parallel_threads": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "memory_limit_mb": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16384
+        },
+        "cache_enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "cache_path": {
+          "type": "string",
+          "default": "./cache"
+        },
+        "show_progress": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "required": ["max_parallel_threads", "memory_limit_mb", "cache_enabled", "cache_path", "show_progress"]
+    },
+    "ui": {
+      "type": "object",
+      "properties": {
+        "use_emoji": {
+          "type": "boolean",
+          "default": true
+        },
+        "verbosity": {
+          "type": "string",
+          "enum": ["Silent", "Normal", "Verbose", "Debug"],
+          "default": "Normal"
+        },
+        "color_scheme": {
+          "type": "string",
+          "enum": ["Auto", "Always", "Never"],
+          "default": "Auto"
+        },
+        "detailed_help": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": ["use_emoji", "verbosity", "color_scheme", "detailed_help"]
+    }
+  },
+  "required": ["user", "paths", "building", "performance", "ui"]
+}
+

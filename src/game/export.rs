@@ -10,7 +10,7 @@ use crate::game::ifc_mapping::IFCTypeMapper;
 use crate::game::types::GameEquipmentPlacement;
 use crate::spatial::{SpatialEntity, Point3D, BoundingBox3D};
 use crate::ifc::EnhancedIFCParser;
-use log::{info, warn};
+use log::info;
 
 /// Export game state to IFC file with full metadata preservation
 pub struct IFCGameExporter {

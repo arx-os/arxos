@@ -283,3 +283,155 @@ pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeE
     }
 }
 
+/// Process AR scan and create pending equipment - JNI implementation
+///
+/// # Safety
+/// This function is called from JNI and must follow JNI conventions
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeProcessARScanToPending(
+    mut env: JNIEnv,
+    _class: JClass,
+    json_data: JString,
+    building_name: JString,
+    confidence_threshold: f64
+) -> jstring {
+    use crate::ar_integration::processing;
+    use crate::spatial::Point3D;
+    
+    // Extract JSON and building name safely
+    let json_str = java_string_to_rust(&env, json_data);
+    let building_str = java_string_to_rust(&env, building_name);
+    
+    // Check if extraction failed
+    if (json_str.is_empty() || building_str.is_empty()) && env.exception_check().unwrap_or(false) {
+        return std::ptr::null_mut();
+    }
+    
+    // Parse AR scan from mobile FFI format
+    match crate::mobile_ffi::parse_ar_scan(&json_str) {
+        Ok(mobile_scan) => {
+            // Convert mobile ARScanData to processing ARScanData
+            let detected_equipment: Vec<_> = mobile_scan.detected_equipment.into_iter().map(|eq| {
+                processing::DetectedEquipmentData {
+                    name: eq.name,
+                    equipment_type: eq.equipment_type,
+                    position: Point3D::new(eq.position.x, eq.position.y, eq.position.z),
+                    confidence: eq.confidence,
+                    detection_method: eq.detection_method,
+                }
+            }).collect();
+            
+            let processing_scan = processing::ARScanData {
+                detected_equipment,
+            };
+            
+            // Process to pending
+            match processing::process_ar_scan_to_pending(&processing_scan, &building_str, confidence_threshold) {
+                Ok(pending_ids) => {
+                    let response = serde_json::json!({
+                        "success": true,
+                        "pending_count": pending_ids.len(),
+                        "pending_ids": pending_ids,
+                        "building": building_str,
+                        "confidence_threshold": confidence_threshold,
+                    });
+                    
+                    match serde_json::to_string(&response) {
+                        Ok(json) => rust_string_to_java(&env, &json),
+                        Err(e) => {
+                            env.throw_new("java/lang/RuntimeException", &format!("Serialization failed: {}", e))
+                                .ok();
+                            std::ptr::null_mut()
+                        }
+                    }
+                }
+                Err(e) => {
+                    let error_json = format!(r#"{{"success":false,"error":"{}"}}"#, e);
+                    rust_string_to_java(&env, &error_json)
+                }
+            }
+        }
+        Err(e) => {
+            let error_json = format!(r#"{{"success":false,"error":"{}"}}"#, e);
+            rust_string_to_java(&env, &error_json)
+        }
+    }
+}
+
+/// Export building to AR format - JNI implementation
+///
+/// # Safety
+/// This function is called from JNI and must follow JNI conventions
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeExportForAR(
+    mut env: JNIEnv,
+    _class: JClass,
+    building_name: JString,
+    format: JString
+) -> jstring {
+    use crate::export::ar::{ARExporter, ARFormat};
+    use std::path::Path;
+    
+    // Extract building name and format safely
+    let building_str = java_string_to_rust(&env, building_name);
+    let format_str = java_string_to_rust(&env, format);
+    
+    // Check if extraction failed
+    if (building_str.is_empty() || format_str.is_empty()) && env.exception_check().unwrap_or(false) {
+        return std::ptr::null_mut();
+    }
+    
+    // Load building data
+    let building_data = match crate::utils::loading::load_building_data(&building_str) {
+        Ok(data) => data,
+        Err(e) => {
+            let error_json = format!(r#"{{"success":false,"error":"Building not found: {}"}}"#, e);
+            return rust_string_to_java(&env, &error_json);
+        }
+    };
+    
+    // Parse format
+    let ar_format = match format_str.parse::<ARFormat>() {
+        Ok(fmt) => fmt,
+        Err(e) => {
+            let error_json = format!(r#"{{"success":false,"error":"Invalid format: {}"}}"#, e);
+            return rust_string_to_java(&env, &error_json);
+        }
+    };
+    
+    // Create exporter and determine output path
+    let output_filename = match ar_format {
+        ARFormat::GLTF => format!("{}.gltf", building_str),
+        ARFormat::USDZ => format!("{}.usdz", building_str),
+    };
+    
+    let output_path = Path::new(&output_filename);
+    let exporter = ARExporter::new(building_data);
+    
+    // Export
+    match exporter.export(ar_format, output_path) {
+        Ok(_) => {
+            let response = serde_json::json!({
+                "success": true,
+                "building": building_str,
+                "format": format_str,
+                "output_file": output_filename,
+                "message": "Building exported successfully for AR",
+            });
+            
+            match serde_json::to_string(&response) {
+                Ok(json) => rust_string_to_java(&env, &json),
+                Err(e) => {
+                    env.throw_new("java/lang/RuntimeException", &format!("Serialization failed: {}", e))
+                        .ok();
+                    std::ptr::null_mut()
+                }
+            }
+        }
+        Err(e) => {
+            let error_json = format!(r#"{{"success":false,"error":"Export failed: {}"}}"#, e);
+            rust_string_to_java(&env, &error_json)
+        }
+    }
+}
+

@@ -302,6 +302,46 @@ pub enum Commands {
         #[arg(long)]
         watch: bool,
     },
+    /// Start HTTP server for real-time sensor data ingestion
+    SensorsHttp {
+        /// Building name to update
+        #[arg(long)]
+        building: String,
+        
+        /// Host address to bind to
+        #[arg(long, default_value = "127.0.0.1")]
+        host: String,
+        
+        /// Port to listen on
+        #[arg(long, default_value = "3000")]
+        port: u16,
+    },
+    /// Start MQTT subscriber for real-time sensor data ingestion
+    SensorsMqtt {
+        /// Building name to update
+        #[arg(long)]
+        building: String,
+        
+        /// MQTT broker URL
+        #[arg(long, default_value = "localhost")]
+        broker: String,
+        
+        /// MQTT broker port
+        #[arg(long, default_value = "1883")]
+        port: u16,
+        
+        /// MQTT username (optional)
+        #[arg(long)]
+        username: Option<String>,
+        
+        /// MQTT password (optional)
+        #[arg(long)]
+        password: Option<String>,
+        
+        /// MQTT topics to subscribe to (comma-separated)
+        #[arg(long, default_value = "arxos/sensors/#")]
+        topics: String,
+    },
     /// IFC file processing commands
     IFC {
         #[command(subcommand)]
@@ -434,6 +474,21 @@ pub enum ArCommands {
     Pending {
         #[command(subcommand)]
         subcommand: PendingCommands,
+    },
+    /// Export building to AR format (glTF/USDZ)
+    Export {
+        /// Building name
+        #[arg(long)]
+        building: String,
+        /// AR format (gltf, usdz)
+        #[arg(long, default_value = "gltf")]
+        format: String,
+        /// Output file path
+        #[arg(long, default_value = "output.gltf")]
+        output: String,
+        /// Include spatial anchors
+        #[arg(long)]
+        anchors: bool,
     },
 }
 

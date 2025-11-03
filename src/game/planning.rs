@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 use std::path::Path;
-use crate::game::types::{GameScenario, GameMode, GameEquipmentPlacement, GameAction, ValidationResult};
+use crate::game::types::{GameMode, GameEquipmentPlacement, GameAction, ValidationResult};
 use crate::game::scenario::GameScenarioLoader;
 use crate::game::constraints::ConstraintSystem;
 use crate::game::state::GameState;

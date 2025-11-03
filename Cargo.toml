@@ -14,6 +14,7 @@ crate-type = ["cdylib", "rlib", "staticlib"]
 
 [features]
 default = []
+async-sensors = ["dep:axum", "dep:tokio", "dep:tower", "dep:tower-http", "dep:tokio-tungstenite", "dep:futures-util", "dep:rumqttc"]
 android = ["jni"]
 
 [dependencies]
@@ -48,6 +49,17 @@ regex = "1.10"
 clap = { version = "4.4", features = ["derive"] }
 env_logger = "0.10"
 criterion = { workspace = true }
+gltf = { version = "1.4.1", default-features = false }
+gltf-json = { version = "1.4.1", default-features = false }
+
+# Hardware sensor dependencies (feature-gated for async operations)
+axum = { version = "0.7", features = ["macros"], optional = true }
+tokio = { version = "1.35", features = ["full"], optional = true }
+tower = { version = "0.4", optional = true }
+tower-http = { version = "0.5", features = ["cors", "trace"], optional = true }
+tokio-tungstenite = { version = "0.24", optional = true }
+futures-util = { version = "0.3", features = ["sink"], optional = true }
+rumqttc = { version = "0.20", optional = true }
 
 [dev-dependencies]
 serial_test = { workspace = true }

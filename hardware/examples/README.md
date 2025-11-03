@@ -6,6 +6,13 @@ This directory contains reference examples for integrating open-source hardware 
 
 ## 📁 Examples Overview
 
+### ESP32 HTTP Temperature & Humidity Sensor ⭐ **NEW**
+- **Hardware**: ESP32 + DHT22 sensor
+- **Integration**: **HTTP POST to ArxOS** (Recommended)
+- **Data Format**: JSON
+- **Features**: Real-time ingestion, automatic validation, live updates
+- **Directory**: `esp32-http-temperature/`
+
 ### ESP32 Temperature & Humidity Sensor
 - **Hardware**: ESP32 + DHT22 sensor
 - **Integration**: GitHub API
@@ -30,6 +37,7 @@ This directory contains reference examples for integrating open-source hardware 
 ## 🚀 Quick Start
 
 1. **Choose your integration method**:
+   - **HTTP POST to ArxOS** ⭐ **Recommended**: Direct integration with ArxOS server
    - **GitHub API**: Direct integration with GitHub repositories
    - **MQTT Broker**: Real-time messaging with MQTT
    - **Webhook Endpoint**: HTTP POST to custom endpoints
@@ -73,7 +81,16 @@ All examples are implemented in Rust using the appropriate embedded HAL:
 
 ## 🔧 Integration Methods
 
-### 1. GitHub API Integration
+### 1. HTTP POST to ArxOS Server ⭐ **Recommended**
+**Best for**: Modern ArxOS deployments, real-time processing
+- ✅ Direct integration with ArxOS server
+- ✅ Real-time validation and processing
+- ✅ Automatic equipment status updates
+- ✅ WebSocket support for live monitoring
+- ✅ No external dependencies (no GitHub, no MQTT broker)
+- ❌ Requires ArxOS HTTP server running
+
+### 2. GitHub API Integration
 **Best for**: Direct repository integration, version control
 - ✅ Automatic Git commits
 - ✅ Version history
@@ -81,15 +98,15 @@ All examples are implemented in Rust using the appropriate embedded HAL:
 - ❌ Rate limiting
 - ❌ Requires GitHub token
 
-### 2. MQTT Broker Integration
-**Best for**: Real-time data, multiple sensors
+### 3. MQTT Broker Integration
+**Best for**: Real-time data, multiple sensors, IoT deployments
 - ✅ Real-time messaging
 - ✅ Remote control
 - ✅ Scalable
 - ❌ Requires MQTT broker
 - ❌ Network dependency
 
-### 3. Webhook Endpoint Integration
+### 4. Webhook Endpoint Integration
 **Best for**: Custom processing, existing systems
 - ✅ Flexible processing
 - ✅ Custom endpoints

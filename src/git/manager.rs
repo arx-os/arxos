@@ -156,21 +156,23 @@ impl BuildingGitManager {
                 })?
                 .to_path_buf();
             
-            // Validate file path to prevent path traversal
-            // Use validate_path_for_write since the file may not exist yet
+            // Build full path
             let file_path_buf = Path::new(&file_path);
+            let full_path = repo_workdir.join(file_path_buf);
+            
+            // Create parent directories first (before validation)
+            if let Some(parent) = full_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            
+            // Now validate the path
             let validated_full_path = PathSafety::validate_path_for_write(
-                &repo_workdir.join(file_path_buf),
+                &full_path,
                 &repo_workdir
             ).map_err(|e| GitError::OperationFailed {
                 operation: format!("validate file path: {}", file_path),
                 reason: format!("Path validation failed: {}", e),
             })?;
-            
-            // Create parent directories if they don't exist
-            if let Some(parent) = validated_full_path.parent() {
-                std::fs::create_dir_all(parent)?;
-            }
             
             std::fs::write(&validated_full_path, content)?;
             files_changed += 1;

@@ -13,9 +13,11 @@ use thiserror::Error;
 
 pub mod manager;
 pub mod validation;
+pub mod schema;
 
 pub use manager::ConfigManager;
 pub use validation::ConfigValidator;
+pub use schema::{ConfigSchema, ConfigField, precedence_documentation};
 
 /// Main configuration structure for ArxOS
 #[derive(Debug, Clone, Serialize, Deserialize)]

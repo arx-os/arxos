@@ -4,13 +4,46 @@ use crate::cli::{ArCommands, PendingCommands};
 use crate::ar_integration::pending::PendingEquipmentManager;
 use crate::persistence::PersistenceManager;
 use crate::utils::loading;
+use crate::export::ar::{ARExporter, ARFormat};
 use log::info;
 
 /// Handle AR integration commands
 pub fn handle_ar_command(subcommand: ArCommands) -> Result<(), Box<dyn std::error::Error>> {
     match subcommand {
         ArCommands::Pending { subcommand } => handle_pending_command(subcommand),
+        ArCommands::Export { building, format, output, anchors } => {
+            handle_ar_export_command(&building, &format, &output, anchors)
+        }
     }
+}
+
+/// Handle AR export command
+fn handle_ar_export_command(
+    building: &str,
+    format: &str,
+    output: &str,
+    _anchors: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!("📤 Exporting building '{}' to AR format: {}", building, format);
+    
+    // Load building data
+    let building_data = loading::load_building_data(building)?;
+    
+    // Parse format
+    let ar_format = format.parse::<ARFormat>()
+        .map_err(|e| format!("Invalid AR format '{}': {}", format, e))?;
+    
+    // Create exporter
+    let exporter = ARExporter::new(building_data);
+    
+    // Export to file
+    let output_path = std::path::Path::new(output);
+    exporter.export(ar_format, output_path)?;
+    
+    println!("✅ Successfully exported to: {}", output);
+    println!("💡 Use AR-compatible viewer or load in AR apps");
+    
+    Ok(())
 }
 
 /// Handle pending equipment commands

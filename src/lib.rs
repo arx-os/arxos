@@ -11,6 +11,7 @@ pub mod render;
 pub mod render3d;
 pub mod ar_integration;
 pub mod docs;
+pub mod export;
 
 // Re-export docs for external use
 pub use docs::generate_building_docs;
@@ -39,6 +40,7 @@ pub use path::{PathGenerator, UniversalPath, PathComponents, PathError, PathVali
 pub use progress::{ProgressReporter, ProgressContext};
 pub use progress::utils as progress_utils;
 pub use config::{ArxConfig, ConfigManager, ConfigError, ConfigResult};
+pub use export::ar::{ARExporter, ARFormat, GLTFExporter};
 
 // Re-export error types
 pub use error::{ArxError, ArxResult, ErrorContext, ErrorAnalytics};

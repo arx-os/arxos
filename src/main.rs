@@ -17,6 +17,8 @@ pub mod hardware;
 pub mod commands;
 pub mod utils;
 pub mod docs;
+pub mod game;
+pub mod export;
 
 use clap::Parser;
 use cli::Cli;

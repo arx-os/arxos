@@ -5,6 +5,8 @@
 //! - Spatial query performance
 //! - Git operations
 //! - 3D rendering performance
+//! - AR export performance
+//! - Sensor processing performance
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
 use arxos::{
@@ -12,6 +14,8 @@ use arxos::{
     spatial::{Point3D, BoundingBox3D},
     git::BuildingGitManager,
     yaml::{BuildingData, BuildingYamlSerializer},
+    export::ar::{GLTFExporter, ARFormat, ARExporter},
+    hardware::{SensorData, SensorMetadata, SensorDataValues},
 };
 use tempfile::TempDir;
 
@@ -151,6 +155,150 @@ fn benchmark_git_manager_init(c: &mut Criterion) {
     });
 }
 
+/// Benchmark glTF export performance with varying data sizes
+#[cfg(feature = "async-sensors")]
+fn benchmark_gltf_export(c: &mut Criterion) {
+    let mut group = c.benchmark_group("gltf_export");
+    
+    let temp_dir = TempDir::new().unwrap();
+    
+    for entity_count in [10, 100, 500].iter() {
+        let building_data = create_test_building_data(*entity_count);
+        
+        group.bench_with_input(
+            BenchmarkId::new("export", entity_count),
+            entity_count,
+            |b, _count| {
+                let output_path = temp_dir.path().join(format!("output_{}.gltf", entity_count));
+                b.iter(|| {
+                    let exporter = GLTFExporter::new(&building_data);
+                    black_box(exporter.export(&output_path)).ok();
+                });
+            }
+        );
+    }
+    
+    group.finish();
+}
+
+/// Benchmark AR export performance
+#[cfg(feature = "async-sensors")]
+fn benchmark_ar_export(c: &mut Criterion) {
+    let mut group = c.benchmark_group("ar_export");
+    
+    let temp_dir = TempDir::new().unwrap();
+    
+    group.bench_function("export_gltf", |b| {
+        let building_data = create_test_building_data(100);
+        let output_path = temp_dir.path().join("output.gltf");
+        b.iter(|| {
+            let exporter = ARExporter::new(building_data.clone());
+            black_box(exporter.export(ARFormat::GLTF, &output_path)).ok();
+        });
+    });
+    
+    group.finish();
+}
+
+/// Benchmark sensor data JSON serialization
+#[cfg(feature = "async-sensors")]
+fn benchmark_sensor_json_serialization(c: &mut Criterion) {
+    let mut group = c.benchmark_group("sensor_json_serialization");
+    
+    let sensor_data = create_test_sensor_data();
+    
+    group.bench_function("serialize", |b| {
+        b.iter(|| {
+            black_box(serde_json::to_string(&sensor_data).unwrap());
+        });
+    });
+    
+    group.bench_function("deserialize", |b| {
+        let json = serde_json::to_string(&sensor_data).unwrap();
+        b.iter(|| {
+            black_box(serde_json::from_str::<SensorData>(&json).unwrap());
+        });
+    });
+    
+    group.finish();
+}
+
+/// Benchmark sensor data validation
+#[cfg(feature = "async-sensors")]
+fn benchmark_sensor_validation(c: &mut Criterion) {
+    let mut group = c.benchmark_group("sensor_validation");
+    
+    let sensor_data = create_test_sensor_data();
+    
+    group.bench_function("validate_valid", |b| {
+        b.iter(|| {
+            black_box(validate_sensor_data(&sensor_data));
+        });
+    });
+    
+    group.finish();
+}
+
+/// Helper function to create test sensor data
+#[cfg(feature = "async-sensors")]
+fn create_test_sensor_data() -> SensorData {
+    use std::collections::HashMap;
+    use arxos::hardware::{SensorAlert, ArxosMetadata};
+    
+    SensorData {
+        api_version: "arxos.io/v1".to_string(),
+        kind: "SensorData".to_string(),
+        metadata: SensorMetadata {
+            sensor_id: "sensor_001".to_string(),
+            sensor_type: "Temperature".to_string(),
+            room_path: Some("/B1/3/301".to_string()),
+            timestamp: "2024-01-01T12:00:00Z".to_string(),
+            source: "HTTP".to_string(),
+            building_id: Some("B1".to_string()),
+            equipment_id: Some("HVAC-301".to_string()),
+            extra: HashMap::new(),
+        },
+        data: SensorDataValues {
+            values: {
+                let mut map = HashMap::new();
+                map.insert("temperature".to_string(), serde_yaml::Value::Number(serde_yaml::Number::from(72)));
+                map.insert("humidity".to_string(), serde_yaml::Value::Number(serde_yaml::Number::from(45)));
+                map
+            },
+        },
+        alerts: vec![SensorAlert {
+            level: "info".to_string(),
+            message: "All readings normal".to_string(),
+            timestamp: "2024-01-01T12:00:00Z".to_string(),
+        }],
+        arxos: Some(ArxosMetadata {
+            processed: false,
+            validated: false,
+            device_id: "esp32_001".to_string(),
+        }),
+    }
+}
+
+/// Helper function to validate sensor data
+#[cfg(feature = "async-sensors")]
+fn validate_sensor_data(data: &SensorData) -> bool {
+    !data.api_version.is_empty() 
+        && !data.kind.is_empty()
+        && !data.metadata.sensor_id.is_empty()
+        && !data.metadata.sensor_type.is_empty()
+        && !data.data.values.is_empty()
+}
+
+/// No-op benchmarks when async-sensors feature is disabled
+#[cfg(not(feature = "async-sensors"))]
+fn benchmark_gltf_export(_c: &mut Criterion) {}
+#[cfg(not(feature = "async-sensors"))]
+fn benchmark_ar_export(_c: &mut Criterion) {}
+#[cfg(not(feature = "async-sensors"))]
+fn benchmark_sensor_json_serialization(_c: &mut Criterion) {}
+#[cfg(not(feature = "async-sensors"))]
+fn benchmark_sensor_validation(_c: &mut Criterion) {}
+
 /// Helper function to create test building data
 fn create_test_building_data(entity_count: usize) -> BuildingData {
     use chrono::Utc;
@@ -242,7 +390,11 @@ criterion_group!(
     benchmark_yaml_deserialization,
     benchmark_spatial_point_ops,
     benchmark_spatial_bbox_ops,
-    benchmark_git_manager_init
+    benchmark_git_manager_init,
+    benchmark_gltf_export,
+    benchmark_ar_export,
+    benchmark_sensor_json_serialization,
+    benchmark_sensor_validation
 );
 
 criterion_main!(benches);

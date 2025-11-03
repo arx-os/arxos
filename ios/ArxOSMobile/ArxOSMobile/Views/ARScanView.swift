@@ -177,7 +177,9 @@ struct ARScanView: View {
     
     private func saveScan() {
         // Save scan results to ArxOS
-        // This would integrate with the Rust core
+        // TODO: Integrate with FFI when library is linked
+        print("📤 Saving AR scan for room: \(currentRoom)")
+        print("   Equipment detected: \(detectedEquipment.count)")
         isScanning = false
     }
 }

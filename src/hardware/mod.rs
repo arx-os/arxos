@@ -7,6 +7,7 @@ mod ingestion;
 mod data_types;
 mod status_updater;
 mod mapping;
+mod alert;
 
 #[cfg(feature = "async-sensors")]
 mod http_server;
@@ -19,6 +20,7 @@ pub use ingestion::{SensorIngestionService, SensorIngestionConfig};
 pub use data_types::{SensorData, SensorType, EquipmentSensorMapping, SensorMetadata, SensorDataValues, ThresholdCheck, SensorAlert, ArxosMetadata};
 pub use status_updater::{EquipmentStatusUpdater, UpdateResult};
 pub use mapping::MappingManager;
+pub use alert::AlertGenerator;
 
 #[cfg(feature = "async-sensors")]
 pub use http_server::{start_sensor_http_server, SensorHttpService};

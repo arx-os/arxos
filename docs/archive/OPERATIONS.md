@@ -19,17 +19,17 @@ Download the latest release binary for your platform:
 
 ```bash
 # Linux
-wget https://github.com/arx-os/arxos/releases/latest/download/arxos-v0.1.0-linux.tar.gz
-tar -xzf arxos-v0.1.0-linux.tar.gz
-sudo mv arxos /usr/local/bin/
+wget https://github.com/arx-os/arxos/releases/latest/download/arx-v0.1.0-linux.tar.gz
+tar -xzf arx-v0.1.0-linux.tar.gz
+sudo mv arx /usr/local/bin/
 
 # macOS
-wget https://github.com/arx-os/arxos/releases/latest/download/arxos-v0.1.0-macos.tar.gz
-tar -xzf arxos-v0.1.0-macos.tar.gz
-sudo mv arxos /usr/local/bin/
+wget https://github.com/arx-os/arxos/releases/latest/download/arx-v0.1.0-macos.tar.gz
+tar -xzf arx-v0.1.0-macos.tar.gz
+sudo mv arx /usr/local/bin/
 
 # Windows
-# Download and extract arxos-v0.1.0-windows.zip
+# Download and extract arx-v0.1.0-windows.zip
 # Add to PATH or use directly
 ```
 
@@ -39,13 +39,13 @@ sudo mv arxos /usr/local/bin/
 git clone https://github.com/arx-os/arxos.git
 cd arxos
 cargo build --release
-sudo cp target/release/arxos /usr/local/bin/
+sudo cp target/release/arx /usr/local/bin/
 ```
 
 ### Verify Installation
 
 ```bash
-arxos health
+arx health
 ```
 
 ## Configuration
@@ -88,26 +88,26 @@ show_progress = true
 
 ```bash
 # Dry run to preview changes
-arxos import building.ifc --dry-run
+arx import building.ifc --dry-run
 
 # Actual import
-arxos import building.ifc --repo ./buildings/building-name
+arx import building.ifc --repo ./buildings/building-name
 ```
 
 ### Git Operations
 
 ```bash
 # Check status
-arxos status --verbose
+arx status --verbose
 
 # Stage changes
-arxos stage --all
+arx stage --all
 
 # Commit changes
-arxos commit "Add new equipment"
+arx commit "Add new equipment"
 
 # View history
-arxos history --limit 20
+arx history --limit 20
 
 # Rollback to previous commit
 git reset --hard HEAD~1  # Use native Git commands
@@ -117,23 +117,23 @@ git reset --hard HEAD~1  # Use native Git commands
 
 ```bash
 # Search equipment
-arxos search "VAV" --equipment
+arx search "VAV" --equipment
 
 # Filter by floor
-arxos filter --floor 2 --format json
+arx filter --floor 2 --format json
 
 # Complex search
-arxos search "HVAC" --regex --case-sensitive --limit 100
+arx search "HVAC" --regex --case-sensitive --limit 100
 ```
 
 ### Render Visualization
 
 ```bash
 # 3D visualization
-arxos render --building "Main Building" --three-d --show-status
+arx render --building "Main Building" --three-d --show-status
 
 # Interactive mode
-arxos interactive --building "Main Building" --show-rooms
+arx interactive --building "Main Building" --show-rooms
 ```
 
 ## Error Recovery
@@ -146,10 +146,10 @@ Use `--dry-run` on destructive operations to preview changes:
 
 ```bash
 # Preview import
-arxos import building.ifc --dry-run
+arx import building.ifc --dry-run
 
 # Preview room creation
-arxos room create --building "Main" --floor 1 --name "Room 101" --dry-run
+arx room create --building "Main" --floor 1 --name "Room 101" --dry-run
 ```
 
 ### Retry Logic
@@ -166,7 +166,7 @@ ArxOS includes automatic retry logic for transient failures:
 
 ```bash
 # View what will be undone
-arxos diff HEAD~1
+arx diff HEAD~1
 
 # Soft reset (keeps changes staged)
 git reset --soft HEAD~1
@@ -179,17 +179,17 @@ git reset --hard HEAD~1
 
 ```bash
 # Unstage specific file
-arxos unstage building.yaml
+arx unstage building.yaml
 
 # Unstage all files
-arxos unstage --all
+arx unstage --all
 ```
 
 #### Restore Previous Version
 
 ```bash
 # View commit history
-arxos history --limit 20
+arx history --limit 20
 
 # Checkout specific commit
 git checkout <commit-hash> building.yaml
@@ -204,7 +204,7 @@ If you've made a catastrophic change:
 
 ```bash
 # Find last good commit
-arxos history --verbose
+arx history --verbose
 
 # Hard reset to that commit
 git reset --hard <commit-hash>
@@ -253,10 +253,10 @@ Run diagnostics:
 
 ```bash
 # Full system check
-arxos health
+arx health
 
 # Specific component
-arxos health --component git --verbose
+arx health --component git --verbose
 ```
 
 ### Common Issues
@@ -290,10 +290,10 @@ chown -R $(whoami) buildings/
 **Solution**:
 ```bash
 # Use absolute paths or files in current directory
-arxos import /absolute/path/to/building.ifc
+arx import /absolute/path/to/building.ifc
 # or
 cd /path/to/ifc/files
-arxos import building.ifc
+arx import building.ifc
 ```
 
 #### "Out of memory"
@@ -303,7 +303,7 @@ arxos import building.ifc
 **Solution**:
 ```bash
 # Use spatial indexing
-arxos import building.ifc --spatial-index
+arx import building.ifc --spatial-index
 
 # Process in chunks (use smaller IFC file segments)
 # Or increase system memory
@@ -316,7 +316,7 @@ arxos import building.ifc --spatial-index
 **Solution**:
 ```bash
 # Validate YAML syntax
-arxos validate --path building.yaml
+arx validate --path building.yaml
 
 # Restore from Git history
 git checkout HEAD~1 building.yaml
@@ -328,7 +328,7 @@ Enable debug logging:
 
 ```bash
 export RUST_LOG=debug
-arxos import building.ifc
+arx import building.ifc
 
 # Or configure in config.toml
 ```
@@ -341,13 +341,13 @@ Monitor building data in real-time:
 
 ```bash
 # Watch all buildings
-arxos watch
+arx watch
 
 # Watch specific floor
-arxos watch --building "Main" --floor 2
+arx watch --building "Main" --floor 2
 
 # Watch for sensor alerts only
-arxos watch --building "Main" --alerts-only
+arx watch --building "Main" --alerts-only
 ```
 
 ### Performance Monitoring
@@ -375,13 +375,13 @@ See [BENCHMARKS.md](BENCHMARKS.md) for performance characteristics and capacity 
 - **Documentation**: See `docs/` directory
 - **Issues**: GitHub Issues
 - **Discussions**: GitHub Discussions
-- **Health check**: `arxos health --verbose`
+- **Health check**: `arx health --verbose`
 
 ## Emergency Contacts
 
 For production-critical issues:
-1. Run `arxos health --verbose`
-2. Check Git history: `arxos history --limit 10`
+1. Run `arx health --verbose`
+2. Check Git history: `arx history --limit 10`
 3. Review logs: `export RUST_LOG=debug`
 4. Create backup: See backup procedures above
 5. Open GitHub issue with diagnostic output

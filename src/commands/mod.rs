@@ -20,6 +20,7 @@ pub mod validate;
 pub mod health;
 pub mod doc;
 pub mod game;
+pub mod sync;
 
 use crate::cli::Commands;
 
@@ -39,7 +40,10 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
             })
         },
         Commands::Import { ifc_file, repo, dry_run } => import::handle_import(ifc_file, repo, dry_run),
-        Commands::Export { repo } => export::handle_export(repo),
+        Commands::Export { format, output, repo, delta } => {
+            export::handle_export_with_format(format, output, repo, delta)
+        },
+        Commands::Sync { ifc, watch, delta } => sync::handle_sync(ifc, watch, delta),
         Commands::Status { verbose } => git_ops::handle_status(verbose),
         Commands::Stage { all, file } => git_ops::handle_stage(all, file),
         Commands::Commit { message } => git_ops::handle_commit(message),

@@ -1,17 +1,36 @@
 // ArxOS Library - Public API for integration tests and external use
+
+// Core modules (foundational)
 pub mod core;
 pub mod cli;
 pub mod config;
 pub mod error;
+
+// Domain modules (business logic)
 pub mod spatial;
 pub mod git;
 pub mod ifc;
 pub mod progress;
 pub mod render;
 pub mod render3d;
+
+// Integration modules (external systems)
 pub mod ar_integration;
-pub mod docs;
+pub mod mobile_ffi;
+pub mod hardware;
+
+// Data modules (serialization/persistence)
+pub mod yaml;
+pub mod path;
+pub mod persistence;
 pub mod export;
+
+// Application modules (commands, utilities, features)
+pub mod commands;
+pub mod search;
+pub mod utils;
+pub mod docs;
+pub mod game;
 
 // Re-export docs for external use
 pub use docs::generate_building_docs;
@@ -19,15 +38,6 @@ pub use docs::generate_building_docs;
 // AR integration submodules
 pub use ar_integration::pending::{PendingEquipment, PendingStatus, PendingEquipmentManager, DetectedEquipmentInfo};
 pub use ar_integration::processing::{process_ar_scan_to_pending, validate_ar_scan_data, process_ar_scan_and_save_pending};
-pub mod yaml;
-pub mod path;
-pub mod search;
-pub mod hardware;
-pub mod persistence;
-pub mod mobile_ffi;
-pub mod commands;
-pub mod utils;
-pub mod game;
 
 // Re-export commonly used types for easier access
 pub use core::{Building, Equipment};

@@ -277,10 +277,37 @@ fn handle_update_room(room: String, property: Vec<String>, commit: bool) -> Resu
         println!("   Property: {}", prop);
     }
     
-    let updated_room = crate::core::update_room(&room, property)?;
+    // Load building data with path safety
+    use crate::utils::path_safety::PathSafety;
+    let current_dir = std::env::current_dir()?;
+    let yaml_files: Vec<_> = PathSafety::read_dir_safely(std::path::Path::new("."), &current_dir)
+        .map_err(|e| format!("Failed to read directory: {}", e))?
+        .into_iter()
+        .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("yaml"))
+        .collect();
+    
+    let building_name = if let Some(yaml_file) = yaml_files.first() {
+        yaml_file.file_stem().and_then(|s| s.to_str()).unwrap_or("Default Building").to_string()
+    } else {
+        "Default Building".to_string()
+    };
+
+    // Parse properties into HashMap
+    let mut updates = HashMap::new();
+    for prop in &property {
+        let parts: Vec<&str> = prop.split('=').map(|s| s.trim()).collect();
+        if parts.len() == 2 {
+            updates.insert(parts[0].to_string(), parts[1].to_string());
+        }
+    }
+    
+    // Update room using impl function which handles persistence and commits
+    let updated_room = crate::core::update_room_impl(&building_name, &room, updates, commit)?;
     
     if commit {
-        println!("💡 Changes saved but not committed (commit not yet implemented for update)");
+        println!("💡 Changes committed to Git");
+    } else {
+        println!("💡 Changes saved (staged). Use --commit to commit to Git");
     }
     
     println!("✅ Room updated successfully: {} (ID: {})", updated_room.name, updated_room.id);
@@ -296,10 +323,28 @@ fn handle_delete_room(room: String, confirm: bool, commit: bool) -> Result<(), B
     
     println!("🗑️ Deleting room: {}", room);
     
-    crate::core::delete_room(&room)?;
+    // Load building data with path safety
+    use crate::utils::path_safety::PathSafety;
+    let current_dir = std::env::current_dir()?;
+    let yaml_files: Vec<_> = PathSafety::read_dir_safely(std::path::Path::new("."), &current_dir)
+        .map_err(|e| format!("Failed to read directory: {}", e))?
+        .into_iter()
+        .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("yaml"))
+        .collect();
+    
+    let building_name = if let Some(yaml_file) = yaml_files.first() {
+        yaml_file.file_stem().and_then(|s| s.to_str()).unwrap_or("Default Building").to_string()
+    } else {
+        "Default Building".to_string()
+    };
+
+    // Delete room using impl function which handles persistence and commits
+    crate::core::delete_room_impl(&building_name, &room, commit)?;
     
     if commit {
-        println!("💡 Changes saved but not committed (commit not yet implemented for delete)");
+        println!("💡 Changes committed to Git");
+    } else {
+        println!("💡 Changes saved (staged). Use --commit to commit to Git");
     }
     
     println!("✅ Room deleted successfully");

@@ -51,6 +51,7 @@ env_logger = "0.10"
 criterion = { workspace = true }
 gltf = { version = "1.4.1", default-features = false }
 gltf-json = { version = "1.4.1", default-features = false }
+zip = "0.6"
 
 # Hardware sensor dependencies (feature-gated for async operations)
 axum = { version = "0.7", features = ["macros"], optional = true }
@@ -71,6 +72,10 @@ harness = false
 [[bench]]
 name = "performance_benchmarks"
 harness = false
+
+[[bin]]
+name = "arx"
+path = "src/main.rs"
 
 [[bin]]
 name = "convert_3d_scanner_scan"

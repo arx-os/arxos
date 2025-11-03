@@ -2,7 +2,7 @@
 //! 
 //! This module processes sensor data and updates equipment status in building data.
 
-use super::{SensorData, HardwareError, HardwareResult};
+use super::{SensorData, HardwareError, HardwareResult, AlertGenerator, ThresholdCheck};
 use crate::persistence::PersistenceManager;
 use std::collections::HashMap;
 use log::info;
@@ -14,6 +14,7 @@ pub struct UpdateResult {
     pub old_status: String,
     pub new_status: String,
     pub timestamp: String,
+    pub alerts: Vec<super::SensorAlert>,
 }
 
 /// Equipment status updater
@@ -107,14 +108,27 @@ impl EquipmentStatusUpdater {
         let mut found = false;
         let mut old_status = String::new();
         let mut equipment_name = String::new();
+        let mut alerts = Vec::new();
         
         for floor in &mut building_data.floors {
             if let Some(equipment) = floor.equipment.iter_mut().find(|e| e.id == equipment_id || e.name == equipment_id) {
                 old_status = format!("{:?}", equipment.status);
                 equipment_name = equipment.name.clone();
                 
-                // Update status based on sensor readings (simplified)
-                match self.check_sensor_thresholds(sensor_data) {
+                // Check sensor thresholds and update status
+                let threshold_check = self.check_sensor_thresholds(sensor_data);
+                let sensor_value = self.extract_main_value(sensor_data).unwrap_or(0.0);
+                
+                // Generate alerts based on threshold check
+                alerts = AlertGenerator::generate_alerts(
+                    sensor_data,
+                    &threshold_check,
+                    &equipment_id,
+                    sensor_value,
+                );
+                
+                // Update status based on sensor readings
+                match threshold_check {
                     ThresholdCheck::Critical => {
                         equipment.status = crate::yaml::EquipmentStatus::Critical;
                     }
@@ -124,6 +138,16 @@ impl EquipmentStatusUpdater {
                     ThresholdCheck::Normal => {
                         equipment.status = crate::yaml::EquipmentStatus::Healthy;
                     }
+                }
+                
+                // Generate status change alert if status degraded
+                let new_status_str = format!("{:?}", equipment.status);
+                if let Some(status_alert) = AlertGenerator::generate_status_change_alert(
+                    &equipment_id,
+                    &old_status,
+                    &new_status_str,
+                ) {
+                    alerts.push(status_alert);
                 }
                 
                 // Update last sensor reading timestamp
@@ -154,13 +178,14 @@ impl EquipmentStatusUpdater {
             .map(|e| format!("{:?}", e.status))
             .unwrap_or_else(|| "Unknown".to_string());
         
-        info!("Updated {}: {} → {}", equipment_name, old_status, new_status);
+        info!("Updated {}: {} → {} ({} alerts)", equipment_name, old_status, new_status, alerts.len());
         
         Ok(UpdateResult {
             equipment_id,
             old_status,
             new_status,
             timestamp: sensor_data.metadata.timestamp.clone(),
+            alerts,
         })
     }
     
@@ -279,12 +304,5 @@ impl EquipmentStatusUpdater {
         self.persistence.save_and_commit(&building_data, Some(message))
             .map_err(|e| HardwareError::IoError(std::io::Error::other(e.to_string())))
     }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-enum ThresholdCheck {
-    Normal,
-    OutOfRange,
-    Critical,
 }
 

@@ -6,7 +6,7 @@ use std::ffi::{CString, CStr};
 use std::os::raw::c_char;
 use std::cell::RefCell;
 use serde_json;
-use log::warn;
+use log::{warn, info};
 
 use crate::mobile_ffi::MobileError;
 
@@ -293,15 +293,22 @@ pub unsafe extern "C" fn arxos_validate_constraints(
     // Load constraints if provided
     let constraint_system = if !constraints_json.is_null() {
         match CStr::from_ptr(constraints_json).to_str() {
-            Ok(_json_str) => {
-                // TODO: Parse constraints JSON and load into ConstraintSystem
-                // This would require implementing JSON-to-ConstraintSystem conversion
-                // For now, create empty system - full constraint loading from JSON would be more complex
-                // In a real implementation, would parse constraints JSON and load into ConstraintSystem
-                warn!("Constraint JSON provided but not yet parsed - using empty constraint system");
+            Ok(json_str) => {
+                match ConstraintSystem::load_from_json(json_str) {
+                    Ok(system) => {
+                        info!("Successfully loaded constraints from JSON");
+                        system
+                    }
+                    Err(e) => {
+                        warn!("Failed to parse constraints JSON: {} - using empty constraint system", e);
+                        ConstraintSystem::new()
+                    }
+                }
+            }
+            Err(_) => {
+                warn!("Failed to convert constraints JSON C string to Rust string - using empty constraint system");
                 ConstraintSystem::new()
             }
-            Err(_) => ConstraintSystem::new(),
         }
     } else {
         ConstraintSystem::new()

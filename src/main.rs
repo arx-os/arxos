@@ -1,24 +1,36 @@
+// Module declarations - aligned with lib.rs for consistency
+
+// Core modules (foundational)
 pub mod core;
 pub mod cli;
 pub mod config;
 pub mod error;
+
+// Domain modules (business logic)
 pub mod spatial;
 pub mod git;
 pub mod ifc;
 pub mod progress;
 pub mod render;
 pub mod render3d;
+
+// Integration modules (external systems)
 pub mod ar_integration;
+pub mod mobile_ffi;
+pub mod hardware;
+
+// Data modules (serialization/persistence)
 pub mod yaml;
 pub mod path;
-pub mod search;
 pub mod persistence;
-pub mod hardware;
+pub mod export;
+
+// Application modules (commands, utilities, features)
 pub mod commands;
+pub mod search;
 pub mod utils;
 pub mod docs;
 pub mod game;
-pub mod export;
 
 use clap::Parser;
 use cli::Cli;
@@ -44,7 +56,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Err(e) => {
             eprintln!("❌ Error: {}", e);
-            eprintln!("\n💡 For help, run: arxos --help");
+            eprintln!("\n💡 For help, run: arx --help");
             eprintln!("📚 For documentation, see: docs/USER_GUIDE.md");
             Err(e)
         }

@@ -15,13 +15,13 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         include:
           - os: ubuntu-latest
-            binary_name: arxos
+            binary_name: arx
             archive_format: tar.gz
           - os: macos-latest
-            binary_name: arxos
+            binary_name: arx
             archive_format: tar.gz
           - os: windows-latest
-            binary_name: arxos.exe
+            binary_name: arx.exe
             archive_format: zip
     
     steps:
@@ -54,10 +54,10 @@ jobs:
         shell: bash
         run: |
           if [ "${{ matrix.archive_format }}" == "tar.gz" ]; then
-            tar -czf arxos-${{ github.ref_name }}-${{ matrix.os }}.tar.gz -C target/release ${{ matrix.binary_name }}
+            tar -czf arx-${{ github.ref_name }}-${{ matrix.os }}.tar.gz -C target/release ${{ matrix.binary_name }}
           else
             cd target/release
-            zip -r ../../arxos-${{ github.ref_name }}-${{ matrix.os }}.zip ${{ matrix.binary_name }}
+            zip -r ../../arx-${{ github.ref_name }}-${{ matrix.os }}.zip ${{ matrix.binary_name }}
           fi
       
       - name: Upload release artifact

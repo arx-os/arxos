@@ -3,7 +3,7 @@
 //! This module provides an HTTP REST API endpoint for receiving sensor data
 //! from IoT devices via POST requests.
 
-use super::{SensorData, HardwareError};
+use super::{SensorData, HardwareError, EquipmentStatusUpdater};
 use axum::{
     extract::State,
     http::StatusCode,
@@ -14,7 +14,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use log::{info, warn};
+use log::{info, warn, error};
 
 /// HTTP response for sensor data ingestion
 #[derive(Debug, Serialize, Deserialize)]
@@ -63,18 +63,63 @@ async fn ingest_sensor_data(
         warn!("Invalid sensor data received from: {}", sensor_data.metadata.sensor_id);
         return Err(StatusCode::BAD_REQUEST);
     }
+    drop(ingestion_service); // Release lock before potentially long-running operation
     
-    // TODO: Process sensor data and update equipment status
-    // This would call EquipmentStatusUpdater here
+    // Process sensor data and update equipment status
+    // Create equipment status updater for this building
+    let mut status_updater = match EquipmentStatusUpdater::new(&service.building_name) {
+        Ok(updater) => updater,
+        Err(e) => {
+            error!("Failed to create equipment status updater for building '{}': {}", 
+                   service.building_name, e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
     
-    info!("Successfully ingested sensor data from: {}", sensor_data.metadata.sensor_id);
-    
-    Ok(Json(SensorIngestionResponse {
-        success: true,
-        message: format!("Successfully ingested sensor data from {}", sensor_data.metadata.sensor_id),
-        sensor_id: Some(sensor_data.metadata.sensor_id),
-        timestamp: Some(sensor_data.metadata.timestamp),
-    }))
+    // Process sensor data and update equipment status
+    match status_updater.process_sensor_data(&sensor_data) {
+        Ok(update_result) => {
+            info!("Successfully processed sensor data and updated equipment status: {} → {} (equipment: {})", 
+                  update_result.old_status, update_result.new_status, update_result.equipment_id);
+            
+            let message = if update_result.alerts.is_empty() {
+                format!(
+                    "Successfully ingested sensor data and updated equipment '{}': {} → {}", 
+                    update_result.equipment_id, 
+                    update_result.old_status,
+                    update_result.new_status
+                )
+            } else {
+                format!(
+                    "Successfully ingested sensor data and updated equipment '{}': {} → {} ({} alerts generated)", 
+                    update_result.equipment_id, 
+                    update_result.old_status,
+                    update_result.new_status,
+                    update_result.alerts.len()
+                )
+            };
+            
+            Ok(Json(SensorIngestionResponse {
+                success: true,
+                message,
+                sensor_id: Some(sensor_data.metadata.sensor_id),
+                timestamp: Some(update_result.timestamp),
+            }))
+        }
+        Err(e) => {
+            error!("Failed to process sensor data from '{}': {}", 
+                   sensor_data.metadata.sensor_id, e);
+            
+            // Return appropriate error code based on error type
+            let status_code = match e {
+                HardwareError::MappingError { .. } => StatusCode::NOT_FOUND,
+                HardwareError::InvalidFormat { .. } => StatusCode::BAD_REQUEST,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            };
+            
+            Err(status_code)
+        }
+    }
 }
 
 /// Start the HTTP server for sensor data ingestion

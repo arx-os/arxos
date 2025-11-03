@@ -42,6 +42,7 @@ impl EquipmentSensorMapping {
 pub enum ThresholdCheck {
     Normal,
     OutOfRange,
+    Critical,
 }
 
 /// Sensor data container

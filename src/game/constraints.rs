@@ -158,6 +158,149 @@ impl ConstraintSystem {
         Ok(system)
     }
 
+    /// Load constraints from JSON string
+    pub fn load_from_json(json_str: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        info!("Loading constraints from JSON string");
+        
+        let mut system = Self::new();
+        
+        if json_str.trim().is_empty() {
+            warn!("Empty constraints JSON provided, using empty constraint system");
+            return Ok(system);
+        }
+
+        // Parse JSON string
+        let data: serde_json::Value = serde_json::from_str(json_str)
+            .map_err(|e| format!("Failed to parse constraints JSON: {}", e))?;
+
+        // Process constraints (reuse parsing logic from load_from_file)
+        if let Some(constraints_obj) = data.get("constraints") {
+            // Load structural constraints
+            if let Some(structural_seq) = constraints_obj.get("structural").and_then(|s| s.as_array()) {
+                for (idx, item) in structural_seq.iter().enumerate() {
+                    if let Some(constraint) = Self::parse_structural_constraint_from_value(item, idx) {
+                        system.constraint_data.structural.push(constraint.clone());
+                        system.constraints.push(Constraint {
+                            id: constraint.id.clone(),
+                            constraint_type: ConstraintType::Structural,
+                            description: constraint.notes.clone().unwrap_or_else(|| "Structural constraint".to_string()),
+                            severity: ConstraintSeverity::Error,
+                        });
+                    }
+                }
+            }
+
+            // Load spatial constraints
+            if let Some(spatial_seq) = constraints_obj.get("spatial").and_then(|s| s.as_array()) {
+                for (idx, item) in spatial_seq.iter().enumerate() {
+                    if let Some(constraint) = Self::parse_spatial_constraint_from_value(item, idx) {
+                        system.constraint_data.spatial.push(constraint.clone());
+                        system.constraints.push(Constraint {
+                            id: constraint.id.clone(),
+                            constraint_type: ConstraintType::Spatial,
+                            description: format!("Minimum clearance: {}m", constraint.min_clearance),
+                            severity: ConstraintSeverity::Warning,
+                        });
+                    }
+                }
+            }
+
+            // Load code constraints
+            if let Some(code_seq) = constraints_obj.get("code").and_then(|c| c.as_array()) {
+                for (idx, item) in code_seq.iter().enumerate() {
+                    if let Some(constraint) = Self::parse_code_constraint_from_value(item, idx) {
+                        system.constraint_data.code.push(constraint.clone());
+                        system.constraints.push(Constraint {
+                            id: constraint.id.clone(),
+                            constraint_type: ConstraintType::Code,
+                            description: constraint.requirement.clone(),
+                            severity: if constraint.is_mandatory {
+                                ConstraintSeverity::Critical
+                            } else {
+                                ConstraintSeverity::Warning
+                            },
+                        });
+                    }
+                }
+            }
+        }
+
+        info!("Loaded {} constraints from JSON", system.constraints.len());
+        Ok(system)
+    }
+
+    /// Parse structural constraint from JSON Value
+    fn parse_structural_constraint_from_value(item: &serde_json::Value, idx: usize) -> Option<StructuralConstraint> {
+        let constraint_type = item.get("type")?.as_str()?;
+        
+        if constraint_type != "wall_support" {
+            return None;
+        }
+
+        let floor = item.get("floor")?.as_i64()? as i32;
+        
+        let mut valid_areas = Vec::new();
+        if let Some(areas) = item.get("valid_areas").and_then(|a| a.as_array()) {
+            for area in areas {
+                if let Some(bbox_data) = area.get("bbox") {
+                    let min_data = bbox_data.get("min")?;
+                    let max_data = bbox_data.get("max")?;
+                    
+                    let bbox = BoundingBox3D {
+                        min: Point3D::new(
+                            min_data.get("x")?.as_f64()?,
+                            min_data.get("y")?.as_f64()?,
+                            min_data.get("z")?.as_f64().unwrap_or(0.0),
+                        ),
+                        max: Point3D::new(
+                            max_data.get("x")?.as_f64()?,
+                            max_data.get("y")?.as_f64()?,
+                            max_data.get("z")?.as_f64().unwrap_or(3.0),
+                        ),
+                    };
+                    
+                    let load_capacity = area.get("load_capacity").and_then(|v| v.as_f64());
+                    valid_areas.push(ValidArea { bbox, load_capacity });
+                }
+            }
+        }
+
+        let notes = item.get("notes").and_then(|v| v.as_str()).map(|s| s.to_string());
+
+        Some(StructuralConstraint {
+            id: item.get("id").and_then(|v| v.as_str()).map(|s| s.to_string())
+                .unwrap_or_else(|| format!("structural_{}", idx)),
+            floor,
+            valid_areas,
+            notes,
+        })
+    }
+
+    /// Parse spatial constraint from JSON Value
+    fn parse_spatial_constraint_from_value(item: &serde_json::Value, idx: usize) -> Option<SpatialConstraint> {
+        Some(SpatialConstraint {
+            id: item.get("id").and_then(|v| v.as_str()).map(|s| s.to_string())
+                .unwrap_or_else(|| format!("spatial_{}", idx)),
+            equipment_type: item.get("equipment_type").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            min_clearance: item.get("min_clearance").and_then(|v| v.as_f64()).unwrap_or(1.0),
+            max_proximity: item.get("max_proximity").and_then(|v| v.as_f64()),
+        })
+    }
+
+    /// Parse code constraint from JSON Value
+    fn parse_code_constraint_from_value(item: &serde_json::Value, idx: usize) -> Option<CodeConstraint> {
+        Some(CodeConstraint {
+            id: item.get("id").and_then(|v| v.as_str()).map(|s| s.to_string())
+                .unwrap_or_else(|| format!("code_{}", idx)),
+            code_type: item.get("code_type").and_then(|v| v.as_str()).map(|s| s.to_string())
+                .unwrap_or_else(|| "general".to_string()),
+            equipment_type: item.get("equipment_type").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            requirement: item.get("requirement").and_then(|v| v.as_str()).map(|s| s.to_string())
+                .unwrap_or_else(|| "Code requirement".to_string()),
+            is_mandatory: item.get("is_mandatory").and_then(|v| v.as_bool()).unwrap_or(true),
+        })
+    }
+
     /// Parse structural constraint from YAML
     fn parse_structural_constraint(item: &serde_yaml::Value, idx: usize) -> Option<StructuralConstraint> {
         let constraint_type = item.get("type")?.as_str()?;
@@ -291,9 +434,22 @@ impl ConstraintSystem {
         for area in &constraint.valid_areas {
             if area.bbox.contains_point(&Point3D::new(pos.x, pos.y, pos.z)) {
                 // Check load capacity if specified
-                if let Some(_capacity) = area.load_capacity {
-                    // TODO: Get equipment weight from properties
-                    // For now, assume valid if in valid area
+                if let Some(capacity) = area.load_capacity {
+                    // Get equipment weight from properties
+                    let equipment_weight = self.get_equipment_weight(&placement.equipment);
+                    
+                    if equipment_weight > capacity {
+                        return Some(ConstraintViolation {
+                            constraint_id: constraint.id.clone(),
+                            constraint_type: ConstraintType::Structural,
+                            severity: ConstraintSeverity::Error,
+                            message: format!(
+                                "Equipment weight ({:.2} kg) exceeds load capacity ({:.2} kg) for this area",
+                                equipment_weight, capacity
+                            ),
+                            suggestion: Some("Move equipment to area with higher load capacity or reduce equipment weight".to_string()),
+                        });
+                    }
                 }
                 return None; // Valid position
             }
@@ -401,6 +557,33 @@ impl ConstraintSystem {
     /// Get constraint by ID
     pub fn get_constraint(&self, id: &str) -> Option<&Constraint> {
         self.constraints.iter().find(|c| c.id == id)
+    }
+
+    /// Get equipment weight from properties
+    /// 
+    /// Looks for weight in equipment properties with various key names and units.
+    /// Returns weight in kilograms (converts from pounds/lbs if needed).
+    /// Defaults to 0.0 if weight not found.
+    fn get_equipment_weight(&self, equipment: &crate::core::Equipment) -> f64 {
+        // Try various property keys for weight
+        let weight_keys = ["weight", "weight_kg", "weight_lbs", "mass", "mass_kg"];
+        
+        for key in &weight_keys {
+            if let Some(weight_str) = equipment.properties.get(*key) {
+                // Parse weight value
+                if let Ok(weight) = weight_str.parse::<f64>() {
+                    // Convert from pounds to kg if needed
+                    if key.contains("lbs") || key.contains("pound") {
+                        return weight * 0.453592; // lbs to kg
+                    }
+                    return weight;
+                }
+            }
+        }
+        
+        // Default weight if not specified (0 kg means weight check will pass)
+        // In production, you might want to use equipment type defaults
+        0.0
     }
 }
 

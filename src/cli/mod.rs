@@ -47,11 +47,32 @@ pub enum Commands {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Export building data to Git repository
+    /// Export building data to Git repository or other formats
     Export {
-        /// Git repository URL
+        /// Export format (git, ifc, gltf, usdz)
+        #[arg(long, default_value = "git")]
+        format: String,
+        /// Output file path (required for non-git formats)
         #[arg(long)]
-        repo: String,
+        output: Option<String>,
+        /// Git repository URL (required for git format)
+        #[arg(long)]
+        repo: Option<String>,
+        /// Export only changes (delta mode)
+        #[arg(long)]
+        delta: bool,
+    },
+    /// Sync building data to IFC file (continuous or one-time)
+    Sync {
+        /// Path to IFC file
+        #[arg(long)]
+        ifc: Option<String>,
+        /// Enable watch mode (daemon) for continuous sync
+        #[arg(long)]
+        watch: bool,
+        /// Export only changes (delta mode)
+        #[arg(long)]
+        delta: bool,
     },
     /// Render building visualization
     Render {

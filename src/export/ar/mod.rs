@@ -3,10 +3,12 @@
 //! This module provides AR format export capabilities including glTF and USDZ.
 
 pub mod gltf;
+pub mod usdz;
 pub mod anchor;
 
 // Re-export types
 pub use gltf::GLTFExporter;
+pub use usdz::USDZExporter;
 pub use anchor::{SpatialAnchor, export_anchors_to_json, import_anchors_from_json};
 
 use crate::yaml::BuildingData;
@@ -61,14 +63,8 @@ impl ARExporter {
                 exporter.export(output)
             }
             ARFormat::USDZ => {
-                // USDZ export will be implemented
-                // For now, export as glTF then convert
-                let exporter = GLTFExporter::new(&self.building_data);
-                exporter.export(output)?;
-                
-                // Convert glTF to USDZ using external tool
-                // TODO: Implement native USDZ export
-                Err("USDZ export not yet implemented. Please use glTF format.".into())
+                let exporter = USDZExporter::new(&self.building_data);
+                exporter.export(output)
             }
         }
     }

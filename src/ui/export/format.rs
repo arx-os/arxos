@@ -47,3 +47,42 @@ impl ExportFormat {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_export_format_all() {
+        let formats = ExportFormat::all();
+        assert_eq!(formats.len(), 4, "Should have 4 formats");
+        assert!(formats.contains(&ExportFormat::Text));
+        assert!(formats.contains(&ExportFormat::Ansi));
+        assert!(formats.contains(&ExportFormat::Html));
+        assert!(formats.contains(&ExportFormat::Markdown));
+    }
+
+    #[test]
+    fn test_export_format_names() {
+        assert_eq!(ExportFormat::Text.name(), "Text");
+        assert_eq!(ExportFormat::Ansi.name(), "ANSI");
+        assert_eq!(ExportFormat::Html.name(), "HTML");
+        assert_eq!(ExportFormat::Markdown.name(), "Markdown");
+    }
+
+    #[test]
+    fn test_export_format_extensions() {
+        assert_eq!(ExportFormat::Text.extension(), "txt");
+        assert_eq!(ExportFormat::Ansi.extension(), "ansi");
+        assert_eq!(ExportFormat::Html.extension(), "html");
+        assert_eq!(ExportFormat::Markdown.extension(), "md");
+    }
+
+    #[test]
+    fn test_export_format_equality() {
+        assert_eq!(ExportFormat::Text, ExportFormat::Text);
+        assert_eq!(ExportFormat::Ansi, ExportFormat::Ansi);
+        assert_ne!(ExportFormat::Text, ExportFormat::Ansi);
+        assert_ne!(ExportFormat::Html, ExportFormat::Markdown);
+    }
+}
+

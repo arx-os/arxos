@@ -91,3 +91,84 @@ impl Widget for SummaryCard {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ratatui::layout::Rect;
+    use ratatui::widgets::Widget;
+
+    #[test]
+    fn test_summary_card_creation() {
+        let card = SummaryCard::new("Title", "100");
+        assert_eq!(card.title, "Title");
+        assert_eq!(card.value, "100");
+        assert!(card.subtitle.is_none());
+    }
+
+    #[test]
+    fn test_summary_card_with_subtitle() {
+        let card = SummaryCard::new("Title", "100")
+            .with_subtitle("Subtitle");
+        assert_eq!(card.subtitle, Some("Subtitle".to_string()));
+    }
+
+    #[test]
+    fn test_summary_card_with_theme() {
+        let mut theme = Theme::default();
+        theme.primary = Color::Blue;
+        
+        let card = SummaryCard::new("Title", "100")
+            .with_theme(theme.clone());
+        
+        assert_eq!(card.theme.primary, Color::Blue);
+    }
+
+    #[test]
+    fn test_summary_card_with_color() {
+        let card = SummaryCard::new("Title", "100")
+            .with_color(Color::Red);
+        
+        assert_eq!(card.color, Some(Color::Red));
+    }
+
+    #[test]
+    fn test_summary_card_rendering() {
+        let card = SummaryCard::new("Equipment Count", "42");
+        let area = Rect::new(0, 0, 30, 10);
+        let mut buffer = ratatui::buffer::Buffer::empty(area);
+        
+        card.render(area, &mut buffer);
+        
+        // Verify content was rendered
+        let has_content = (0..area.height).any(|y| {
+            (0..area.width).any(|x| {
+                buffer.get(x, y).symbol != " "
+            })
+        });
+        assert!(has_content, "Card should render content");
+    }
+
+    #[test]
+    fn test_summary_card_data() {
+        let card = SummaryCard::new("Total Equipment", "150")
+            .with_subtitle("Active systems");
+        
+        assert_eq!(card.title, "Total Equipment");
+        assert_eq!(card.value, "150");
+        assert_eq!(card.subtitle, Some("Active systems".to_string()));
+    }
+
+    #[test]
+    fn test_summary_card_with_all_options() {
+        let card = SummaryCard::new("Status", "OK")
+            .with_subtitle("All systems operational")
+            .with_theme(Theme::default())
+            .with_color(Color::Green);
+        
+        assert_eq!(card.title, "Status");
+        assert_eq!(card.value, "OK");
+        assert_eq!(card.subtitle, Some("All systems operational".to_string()));
+        assert_eq!(card.color, Some(Color::Green));
+    }
+}
+

@@ -339,5 +339,211 @@ mod tests {
         assert!(MouseAction::RightClick { x: 0, y: 0 }.is_click());
         assert!(!MouseAction::ScrollUp.is_click());
     }
+
+    #[test]
+    fn test_mouse_action_is_scroll() {
+        assert!(MouseAction::ScrollUp.is_scroll());
+        assert!(MouseAction::ScrollDown.is_scroll());
+        assert!(MouseAction::ScrollLeft.is_scroll());
+        assert!(MouseAction::ScrollRight.is_scroll());
+        assert!(!MouseAction::LeftClick { x: 0, y: 0 }.is_scroll());
+    }
+
+    #[test]
+    fn test_find_clicked_table_cell() {
+        let table_area = Rect::new(0, 0, 100, 50);
+        let column_widths = vec![20, 30, 50];
+        let row_height = 2;
+        let header_height = 1;
+        let row_offset = 0;
+        
+        // Click in header (first row) - first column
+        let result = find_clicked_table_cell(10, 0, table_area, &column_widths, row_height, header_height, row_offset);
+        assert_eq!(result, Some((0, 0)), "Should find first column in header");
+        
+        // Click in header - second column (x=25 is in second column: 20 <= x < 50)
+        let result = find_clicked_table_cell(25, 0, table_area, &column_widths, row_height, header_height, row_offset);
+        assert_eq!(result, Some((0, 1)), "Should find second column in header");
+        
+        // Click in first data row (after header, which is 1 row high)
+        // y=2 means we're in the first data row (row_index = (2-1)/2 = 0, + offset = 0)
+        // x=25 is in second column (20 <= 25 < 50)
+        let result = find_clicked_table_cell(25, 2, table_area, &column_widths, row_height, header_height, row_offset);
+        // Row should be calculated: (2 - 0 - 1) / 2 = 0, column should be 1
+        assert_eq!(result, Some((0, 1)), "Should find second column in first data row");
+        
+        // Click outside table
+        let result = find_clicked_table_cell(150, 50, table_area, &column_widths, row_height, header_height, row_offset);
+        assert_eq!(result, None, "Should return None for clicks outside");
+    }
+
+    #[test]
+    fn test_parse_mouse_event_right_click() {
+        let config = MouseConfig::default();
+        
+        let mouse_event = MouseEvent {
+            kind: MouseEventKind::Down(MouseButton::Right),
+            column: 15,
+            row: 20,
+            modifiers: KeyModifiers::empty(),
+        };
+        let event = Event::Mouse(mouse_event);
+        
+        let action = parse_mouse_event(&event, &config);
+        assert!(action.is_some());
+        if let Some(MouseAction::RightClick { x, y }) = action {
+            assert_eq!(x, 15);
+            assert_eq!(y, 20);
+        } else {
+            panic!("Expected RightClick");
+        }
+    }
+
+    #[test]
+    fn test_parse_mouse_event_scroll() {
+        let config = MouseConfig::default();
+        
+        let mouse_event = MouseEvent {
+            kind: MouseEventKind::ScrollDown,
+            column: 0,
+            row: 0,
+            modifiers: KeyModifiers::empty(),
+        };
+        let event = Event::Mouse(mouse_event);
+        
+        let action = parse_mouse_event(&event, &config);
+        assert_eq!(action, Some(MouseAction::ScrollDown));
+    }
+
+    #[test]
+    fn test_parse_mouse_event_disabled() {
+        let config = MouseConfig::disabled();
+        
+        let mouse_event = MouseEvent {
+            kind: MouseEventKind::Down(MouseButton::Left),
+            column: 10,
+            row: 5,
+            modifiers: KeyModifiers::empty(),
+        };
+        let event = Event::Mouse(mouse_event);
+        
+        let action = parse_mouse_event(&event, &config);
+        assert!(action.is_none(), "Should return None when mouse disabled");
+    }
+
+    #[test]
+    fn test_mouse_config() {
+        let config = MouseConfig::new();
+        assert!(config.enabled);
+        assert!(config.click_to_select);
+        assert!(config.scroll_enabled);
+        assert!(!config.drag_enabled);
+        
+        let disabled = MouseConfig::disabled();
+        assert!(!disabled.enabled);
+        assert!(!disabled.click_to_select);
+        assert!(!disabled.scroll_enabled);
+        assert!(!disabled.drag_enabled);
+        
+        let full = MouseConfig::full();
+        assert!(full.enabled);
+        assert!(full.click_to_select);
+        assert!(full.scroll_enabled);
+        assert!(full.drag_enabled);
+    }
+
+    #[test]
+    fn test_mouse_action_parsing() {
+        let config = MouseConfig::default();
+        
+        // Test all mouse button types
+        let buttons = vec![
+            (MouseButton::Left, MouseAction::LeftClick { x: 5, y: 10 }),
+            (MouseButton::Right, MouseAction::RightClick { x: 5, y: 10 }),
+            (MouseButton::Middle, MouseAction::MiddleClick { x: 5, y: 10 }),
+        ];
+        
+        for (button, expected_action) in buttons {
+            let mouse_event = MouseEvent {
+                kind: MouseEventKind::Down(button),
+                column: 5,
+                row: 10,
+                modifiers: KeyModifiers::empty(),
+            };
+            let event = Event::Mouse(mouse_event);
+            let action = parse_mouse_event(&event, &config);
+            assert!(action.is_some(), "Should parse {:?} click", button);
+        }
+    }
+
+    #[test]
+    fn test_mouse_scroll_directions() {
+        let config = MouseConfig::default();
+        
+        let scrolls = vec![
+            (MouseEventKind::ScrollUp, MouseAction::ScrollUp),
+            (MouseEventKind::ScrollDown, MouseAction::ScrollDown),
+            (MouseEventKind::ScrollLeft, MouseAction::ScrollLeft),
+            (MouseEventKind::ScrollRight, MouseAction::ScrollRight),
+        ];
+        
+        for (kind, expected_action) in scrolls {
+            let mouse_event = MouseEvent {
+                kind,
+                column: 0,
+                row: 0,
+                modifiers: KeyModifiers::empty(),
+            };
+            let event = Event::Mouse(mouse_event);
+            let action = parse_mouse_event(&event, &config);
+            assert_eq!(action, Some(expected_action), "Should parse {:?}", kind);
+        }
+    }
+
+    #[test]
+    fn test_mouse_drag() {
+        let mut config = MouseConfig::default();
+        config.drag_enabled = true;
+        
+        let mouse_event = MouseEvent {
+            kind: MouseEventKind::Drag(MouseButton::Left),
+            column: 20,
+            row: 30,
+            modifiers: KeyModifiers::empty(),
+        };
+        let event = Event::Mouse(mouse_event);
+        
+        let action = parse_mouse_event(&event, &config);
+        assert!(action.is_some());
+        if let Some(MouseAction::Drag { x, y, button }) = action {
+            assert_eq!(x, 20);
+            assert_eq!(y, 30);
+            assert_eq!(button, MouseButton::Left);
+        } else {
+            panic!("Expected Drag action");
+        }
+    }
+
+    #[test]
+    fn test_mouse_move() {
+        let config = MouseConfig::default();
+        
+        let mouse_event = MouseEvent {
+            kind: MouseEventKind::Moved,
+            column: 15,
+            row: 25,
+            modifiers: KeyModifiers::empty(),
+        };
+        let event = Event::Mouse(mouse_event);
+        
+        let action = parse_mouse_event(&event, &config);
+        assert!(action.is_some());
+        if let Some(MouseAction::Move { x, y }) = action {
+            assert_eq!(x, 15);
+            assert_eq!(y, 25);
+        } else {
+            panic!("Expected Move action");
+        }
+    }
 }
 

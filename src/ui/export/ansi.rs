@@ -70,3 +70,79 @@ pub fn export_as_ansi(buffer: &Buffer) -> String {
     output
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ratatui::layout::Rect;
+    use ratatui::style::{Color, Modifier, Style};
+
+    #[test]
+    fn test_export_as_ansi() {
+        let area = Rect::new(0, 0, 10, 2);
+        let mut buffer = Buffer::empty(area);
+        buffer.set_string(0, 0, "Hello", Style::default());
+        buffer.set_string(0, 1, "World", Style::default());
+        
+        let ansi = export_as_ansi(&buffer);
+        assert!(ansi.contains("Hello"), "Should contain Hello");
+        assert!(ansi.contains("World"), "Should contain World");
+    }
+
+    #[test]
+    fn test_export_as_ansi_colors() {
+        let area = Rect::new(0, 0, 5, 1);
+        let mut buffer = Buffer::empty(area);
+        let red_style = Style::default().fg(Color::Red);
+        buffer.set_string(0, 0, "Test", red_style);
+        
+        let ansi = export_as_ansi(&buffer);
+        assert!(ansi.contains("\x1b["), "Should contain ANSI escape codes");
+        assert!(ansi.contains("31"), "Red should use code 31");
+    }
+
+    #[test]
+    fn test_export_as_ansi_reset_codes() {
+        let area = Rect::new(0, 0, 5, 1);
+        let mut buffer = Buffer::empty(area);
+        let styled = Style::default().fg(Color::Green);
+        buffer.set_string(0, 0, "Test", styled);
+        
+        let ansi = export_as_ansi(&buffer);
+        assert!(ansi.contains("\x1b[0m"), "Should contain reset code at end");
+    }
+
+    #[test]
+    fn test_export_as_ansi_modifiers() {
+        let area = Rect::new(0, 0, 5, 1);
+        let mut buffer = Buffer::empty(area);
+        let bold_style = Style::default().add_modifier(Modifier::BOLD);
+        buffer.set_string(0, 0, "Test", bold_style);
+        
+        let ansi = export_as_ansi(&buffer);
+        assert!(ansi.contains("1"), "Bold should use code 1");
+    }
+
+    #[test]
+    fn test_export_as_ansi_style_changes() {
+        let area = Rect::new(0, 0, 10, 1);
+        let mut buffer = Buffer::empty(area);
+        buffer.set_string(0, 0, "Red", Style::default().fg(Color::Red));
+        buffer.set_string(3, 0, "Green", Style::default().fg(Color::Green));
+        
+        let ansi = export_as_ansi(&buffer);
+        assert!(ansi.contains("31"), "Should contain red code");
+        assert!(ansi.contains("32"), "Should contain green code");
+        assert!(ansi.contains("\x1b[0m"), "Should reset between changes");
+    }
+
+    #[test]
+    fn test_export_as_ansi_empty_buffer() {
+        let area = Rect::new(0, 0, 10, 2);
+        let buffer = Buffer::empty(area);
+        
+        let ansi = export_as_ansi(&buffer);
+        // Should still have newlines
+        assert!(ansi.contains('\n'), "Should contain newlines");
+    }
+}
+

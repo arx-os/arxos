@@ -127,3 +127,186 @@ pub fn render_shortcut_cheat_sheet<'a>(
         .style(Style::default().fg(theme.text))
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ratatui::layout::Rect;
+    use ratatui::widgets::Widget;
+    use crate::ui::Theme;
+
+    fn create_test_theme() -> Theme {
+        Theme::default()
+    }
+
+    #[test]
+    fn test_render_help_overlay() {
+        let theme = create_test_theme();
+        let area = Rect::new(0, 0, 50, 20);
+        let overlay = render_help_overlay(HelpContext::General, area, &theme);
+        
+        // Should create a Paragraph widget - test by rendering to buffer
+        let mut buffer = ratatui::buffer::Buffer::empty(area);
+        overlay.render(area, &mut buffer);
+        // Check that buffer has content
+        let has_content = (0..area.height).any(|y| {
+            (0..area.width).any(|x| {
+                buffer.get(x, y).symbol != " "
+            })
+        });
+        assert!(has_content, "Overlay should render content");
+    }
+
+    #[test]
+    fn test_render_help_overlay_all_contexts() {
+        let theme = create_test_theme();
+        let area = Rect::new(0, 0, 50, 20);
+        let contexts = vec![
+            HelpContext::EquipmentBrowser,
+            HelpContext::RoomExplorer,
+            HelpContext::StatusDashboard,
+            HelpContext::SearchBrowser,
+            HelpContext::WatchDashboard,
+            HelpContext::ConfigWizard,
+            HelpContext::ArPendingManager,
+            HelpContext::DiffViewer,
+            HelpContext::HealthDashboard,
+            HelpContext::CommandPalette,
+            HelpContext::Interactive3D,
+            HelpContext::General,
+        ];
+        
+        for context in contexts {
+            let overlay = render_help_overlay(context, area, &theme);
+            // Test by rendering to buffer
+            let mut buffer = ratatui::buffer::Buffer::empty(area);
+            overlay.render(area, &mut buffer);
+            let has_content = (0..area.height).any(|y| {
+                (0..area.width).any(|x| {
+                    buffer.get(x, y).symbol != " "
+                })
+            });
+            assert!(has_content, "Overlay should have content for {:?}", context);
+        }
+    }
+
+    #[test]
+    fn test_render_shortcut_cheat_sheet() {
+        let theme = create_test_theme();
+        let shortcuts = super::super::shortcuts::get_all_shortcuts();
+        let cheat_sheet = render_shortcut_cheat_sheet(&shortcuts, "", None, &theme);
+        
+        // Test by rendering to buffer
+        let area = Rect::new(0, 0, 50, 30);
+        let mut buffer = ratatui::buffer::Buffer::empty(area);
+        cheat_sheet.render(area, &mut buffer);
+        let has_content = (0..area.height).any(|y| {
+            (0..area.width).any(|x| {
+                buffer.get(x, y).symbol != " "
+            })
+        });
+        assert!(has_content, "Cheat sheet should have content");
+    }
+
+    #[test]
+    fn test_render_shortcut_cheat_sheet_filtered() {
+        let theme = create_test_theme();
+        let shortcuts = super::super::shortcuts::get_all_shortcuts();
+        
+        // Filter by search query
+        let cheat_sheet = render_shortcut_cheat_sheet(&shortcuts, "navigate", None, &theme);
+        let area = Rect::new(0, 0, 50, 30);
+        let mut buffer = ratatui::buffer::Buffer::empty(area);
+        cheat_sheet.render(area, &mut buffer);
+        let has_content = (0..area.height).any(|y| {
+            (0..area.width).any(|x| {
+                buffer.get(x, y).symbol != " "
+            })
+        });
+        assert!(has_content, "Filtered cheat sheet should have content");
+        
+        // Filter with no matches
+        let cheat_sheet_empty = render_shortcut_cheat_sheet(&shortcuts, "nonexistentxyz", None, &theme);
+        let mut buffer2 = ratatui::buffer::Buffer::empty(area);
+        cheat_sheet_empty.render(area, &mut buffer2);
+        let has_title = (0..area.height).any(|y| {
+            (0..area.width).any(|x| {
+                buffer2.get(x, y).symbol != " "
+            })
+        });
+        assert!(has_title, "Empty filtered cheat sheet should have title");
+    }
+
+    #[test]
+    fn test_render_shortcut_cheat_sheet_by_category() {
+        let theme = create_test_theme();
+        let shortcuts = super::super::shortcuts::get_all_shortcuts();
+        
+        // Filter by category
+        let cheat_sheet = render_shortcut_cheat_sheet(
+            &shortcuts,
+            "",
+            Some(ShortcutCategory::Navigation),
+            &theme
+        );
+        let area = Rect::new(0, 0, 50, 30);
+        let mut buffer = ratatui::buffer::Buffer::empty(area);
+        cheat_sheet.render(area, &mut buffer);
+        let has_content = (0..area.height).any(|y| {
+            (0..area.width).any(|x| {
+                buffer.get(x, y).symbol != " "
+            })
+        });
+        assert!(has_content, "Category-filtered cheat sheet should have content");
+    }
+
+    #[test]
+    fn test_render_shortcut_cheat_sheet_empty() {
+        let theme = create_test_theme();
+        let shortcuts = vec![];
+        let cheat_sheet = render_shortcut_cheat_sheet(&shortcuts, "", None, &theme);
+        
+        // Should still have title - test by rendering
+        let area = Rect::new(0, 0, 50, 10);
+        let mut buffer = ratatui::buffer::Buffer::empty(area);
+        cheat_sheet.render(area, &mut buffer);
+        let has_title = (0..area.height).any(|y| {
+            (0..area.width).any(|x| {
+                buffer.get(x, y).symbol != " "
+            })
+        });
+        assert!(has_title, "Empty cheat sheet should have title");
+    }
+
+    #[test]
+    fn test_help_overlay_styling() {
+        let theme = create_test_theme();
+        let area = Rect::new(0, 0, 50, 20);
+        let overlay = render_help_overlay(HelpContext::General, area, &theme);
+        
+        // Test by rendering to buffer and checking borders are rendered
+        let mut buffer = ratatui::buffer::Buffer::empty(area);
+        overlay.render(area, &mut buffer);
+        // Check that borders are rendered (corners or sides)
+        let has_borders = buffer.get(0, 0).symbol != " " || // top-left corner
+                         buffer.get(area.width - 1, 0).symbol != " " || // top-right
+                         buffer.get(0, area.height - 1).symbol != " "; // bottom-left
+        assert!(has_borders, "Overlay should render borders");
+    }
+
+    #[test]
+    fn test_cheat_sheet_styling() {
+        let theme = create_test_theme();
+        let shortcuts = super::super::shortcuts::get_all_shortcuts();
+        let cheat_sheet = render_shortcut_cheat_sheet(&shortcuts, "", None, &theme);
+        
+        // Test by rendering to buffer and checking borders
+        let area = Rect::new(0, 0, 50, 30);
+        let mut buffer = ratatui::buffer::Buffer::empty(area);
+        cheat_sheet.render(area, &mut buffer);
+        let has_borders = buffer.get(0, 0).symbol != " " ||
+                         buffer.get(area.width - 1, 0).symbol != " " ||
+                         buffer.get(0, area.height - 1).symbol != " ";
+        assert!(has_borders, "Cheat sheet should render borders");
+    }
+}
+

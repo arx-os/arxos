@@ -147,6 +147,23 @@ path = "tests/ifc/ifc_workflow_tests.rs"
 name = "ifc_sync_integration_tests"
 path = "tests/ifc/ifc_sync_integration_tests.rs"
 
+# TUI Tests
+[[test]]
+name = "tui_workflow_integration_tests"
+path = "tests/tui/tui_workflow_integration_tests.rs"
+
+[[test]]
+name = "tui_component_interaction_tests"
+path = "tests/tui/tui_component_interaction_tests.rs"
+
+[[test]]
+name = "tui_event_flow_tests"
+path = "tests/tui/tui_event_flow_tests.rs"
+
+[[test]]
+name = "tui_terminal_integration_tests"
+path = "tests/tui/tui_terminal_integration_tests.rs"
+
 [workspace.package]
 version = "0.1.0"
 edition = "2021"

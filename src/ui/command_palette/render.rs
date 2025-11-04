@@ -133,3 +133,138 @@ pub fn render_command_palette(
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ratatui::backend::TestBackend;
+    use ratatui::layout::Rect;
+
+    #[test]
+    fn test_render_command_palette() {
+        let area = Rect::new(0, 0, 80, 24);
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = ratatui::Terminal::new(backend).unwrap();
+        let mut palette = CommandPalette::new();
+        let theme = Theme::default();
+        
+        terminal.draw(|frame| {
+            render_command_palette(frame, area, &mut palette, &theme, false);
+        }).unwrap();
+        // If no panic, rendering succeeded
+    }
+
+    #[test]
+    fn test_render_empty_search() {
+        let area = Rect::new(0, 0, 80, 24);
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = ratatui::Terminal::new(backend).unwrap();
+        let mut palette = CommandPalette::new();
+        let theme = Theme::default();
+        
+        assert!(palette.query().is_empty(), "Query should be empty");
+        terminal.draw(|frame| {
+            render_command_palette(frame, area, &mut palette, &theme, false);
+        }).unwrap();
+        // Should render placeholder text
+    }
+
+    #[test]
+    fn test_render_with_query() {
+        let area = Rect::new(0, 0, 80, 24);
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = ratatui::Terminal::new(backend).unwrap();
+        let mut palette = CommandPalette::new();
+        palette.update_query("test".to_string());
+        let theme = Theme::default();
+        
+        terminal.draw(|frame| {
+            render_command_palette(frame, area, &mut palette, &theme, false);
+        }).unwrap();
+        // Should render with query
+    }
+
+    #[test]
+    fn test_render_filtered_commands() {
+        let area = Rect::new(0, 0, 80, 24);
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = ratatui::Terminal::new(backend).unwrap();
+        let mut palette = CommandPalette::new();
+        palette.update_query("equipment".to_string());
+        let theme = Theme::default();
+        
+        let filtered_count = palette.filtered_commands().len();
+        assert!(filtered_count > 0, "Should have filtered commands");
+        
+        terminal.draw(|frame| {
+            render_command_palette(frame, area, &mut palette, &theme, false);
+        }).unwrap();
+        // Should render filtered list
+    }
+
+    #[test]
+    fn test_render_no_results() {
+        let area = Rect::new(0, 0, 80, 24);
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = ratatui::Terminal::new(backend).unwrap();
+        let mut palette = CommandPalette::new();
+        palette.update_query("nonexistentxyz123".to_string());
+        let theme = Theme::default();
+        
+        assert_eq!(palette.filtered_commands().len(), 0, "Should have no results");
+        terminal.draw(|frame| {
+            render_command_palette(frame, area, &mut palette, &theme, false);
+        }).unwrap();
+        // Should render "No commands found" message
+    }
+
+    #[test]
+    fn test_render_command_items() {
+        let area = Rect::new(0, 0, 80, 24);
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = ratatui::Terminal::new(backend).unwrap();
+        let mut palette = CommandPalette::new();
+        let theme = Theme::default();
+        
+        terminal.draw(|frame| {
+            render_command_palette(frame, area, &mut palette, &theme, false);
+        }).unwrap();
+        // Command items should be formatted correctly (no panic means success)
+    }
+
+    #[test]
+    fn test_render_command_categories() {
+        let area = Rect::new(0, 0, 80, 24);
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = ratatui::Terminal::new(backend).unwrap();
+        let mut palette = CommandPalette::new();
+        let theme = Theme::default();
+        
+        // Verify categories exist
+        let commands = palette.commands();
+        assert!(commands.iter().any(|c| c.category.icon() != ""), 
+            "Commands should have category icons");
+        
+        terminal.draw(|frame| {
+            render_command_palette(frame, area, &mut palette, &theme, false);
+        }).unwrap();
+        // Categories should be displayed
+    }
+
+    #[test]
+    fn test_render_footer_info() {
+        let area = Rect::new(0, 0, 80, 24);
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = ratatui::Terminal::new(backend).unwrap();
+        let mut palette = CommandPalette::new();
+        let theme = Theme::default();
+        
+        let filtered_count = palette.filtered_commands().len();
+        assert!(filtered_count > 0, "Should have commands");
+        
+        terminal.draw(|frame| {
+            render_command_palette(frame, area, &mut palette, &theme, false);
+        }).unwrap();
+        // Footer should show command count
+    }
+}
+

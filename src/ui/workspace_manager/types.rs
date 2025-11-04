@@ -17,3 +17,39 @@ pub struct Workspace {
     pub description: Option<String>,
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_workspace_structure() {
+        let workspace = Workspace {
+            name: "Test Building".to_string(),
+            path: PathBuf::from("/test/building.yaml"),
+            git_repo: Some(PathBuf::from("/test")),
+            description: Some("Test description".to_string()),
+        };
+        
+        assert_eq!(workspace.name, "Test Building");
+        assert_eq!(workspace.path, PathBuf::from("/test/building.yaml"));
+        assert_eq!(workspace.git_repo, Some(PathBuf::from("/test")));
+        assert_eq!(workspace.description, Some("Test description".to_string()));
+    }
+
+    #[test]
+    fn test_workspace_clone() {
+        let workspace = Workspace {
+            name: "Test Building".to_string(),
+            path: PathBuf::from("/test/building.yaml"),
+            git_repo: Some(PathBuf::from("/test")),
+            description: Some("Test description".to_string()),
+        };
+        
+        let cloned = workspace.clone();
+        assert_eq!(workspace.name, cloned.name);
+        assert_eq!(workspace.path, cloned.path);
+        assert_eq!(workspace.git_repo, cloned.git_repo);
+        assert_eq!(workspace.description, cloned.description);
+    }
+}
+

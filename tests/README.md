@@ -4,15 +4,15 @@
 
 ## Overview
 
-This directory contains all integration tests for ArxOS. Tests are organized by feature category using descriptive prefixes for easy identification and navigation.
+This directory contains all integration tests for ArxOS. Tests are organized by feature category in subdirectories for better organization and scalability.
 
 ## Test Organization Strategy
 
-Since Rust's `cargo test` only discovers tests directly in the `tests/` directory (not subdirectories), we use **descriptive prefixes** to organize tests by category while maintaining a flat structure that Cargo can discover.
+Tests are organized in **subdirectories by category**. Each subdirectory contains related integration tests. Tests in subdirectories are explicitly registered in `Cargo.toml` using `[[test]]` entries to ensure Cargo can discover them.
 
 ### Test Categories
 
-#### AR Tests (`ar_*`)
+#### AR Tests (`tests/ar/`)
 AR integration and workflow tests:
 - `ar_complete_workflow_test.rs` - Complete AR workflow end-to-end
 - `ar_gltf_integration_tests.rs` - glTF export integration tests
@@ -21,37 +21,46 @@ AR integration and workflow tests:
 - `ar_ios_workflow_integration_tests.rs` - iOS AR workflow integration
 - `ar_json_helpers_tests.rs` - AR JSON parsing helper tests
 
-#### Mobile/FFI Tests (`mobile_*`)
+#### Mobile/FFI Tests (`tests/mobile/`)
 Mobile FFI and cross-platform tests:
 - `mobile_ffi_tests.rs` - Core FFI function tests (JNI, iOS, error handling)
 
-#### Hardware Tests (`hardware_*`)
+#### Hardware Tests (`tests/hardware/`)
 Hardware sensor integration tests:
 - `hardware_integration_tests.rs` - Core hardware integration
 - `hardware_http_integration_tests.rs` - HTTP sensor integration
 - `hardware_workflow_tests.rs` - Hardware workflow tests
 
-#### Persistence Tests (`persistence_*`)
+#### Persistence Tests (`tests/persistence/`)
 Data persistence and Git integration tests:
 - `persistence_tests.rs` - Building data persistence, save/load, Git operations
 
-#### E2E Tests (`e2e_*`)
+#### E2E Tests (`tests/e2e/`)
 End-to-end workflow tests:
 - `e2e_workflow_tests.rs` - Complete end-to-end workflows
 - `e2e_command_integration_tests.rs` - Command integration tests
 
-#### IFC Tests (`ifc_*`)
+#### IFC Tests (`tests/ifc/`)
 IFC file processing tests:
 - `ifc_workflow_tests.rs` - IFC processing workflows
 - `ifc_sync_integration_tests.rs` - IFC bidirectional sync
 
-#### Command Tests (`commands/`)
+#### TUI Tests (`tests/tui/`) ⭐ NEW
+Terminal User Interface integration tests:
+- `tui_workflow_integration_tests.rs` - Complete TUI workflows
+- `tui_component_interaction_tests.rs` - Component interaction tests
+- `tui_event_flow_tests.rs` - Event flow and propagation tests
+- `tui_terminal_integration_tests.rs` - Terminal manager integration
+- `test_utils.rs` - Shared test utilities and helpers
+
+#### Command Tests (`tests/commands/`)
 Unit tests for individual command handlers:
 - Located in `tests/commands/` subdirectory
 - One test file per command module
 - See `tests/commands/README.md` for details
 
-#### Other Tests
+#### Other Tests (Root Level)
+Tests that don't fit into specific categories:
 - `docs_integration_tests.rs` - Documentation generation tests
 - `game_integration_tests.rs` - Gamified PR review tests
 - `integration_tests.rs` - General integration tests
@@ -67,29 +76,46 @@ cargo test
 ### Run Tests by Category
 ```bash
 # AR tests
-cargo test --test ar_
+cargo test --test ar_workflow_integration_test
+cargo test --test ar_complete_workflow_test
+# etc.
 
 # Mobile/FFI tests
-cargo test --test mobile_
+cargo test --test mobile_ffi_tests
 
 # Hardware tests
-cargo test --test hardware_
+cargo test --test hardware_integration_tests
+cargo test --test hardware_http_integration_tests
+cargo test --test hardware_workflow_tests
 
 # Persistence tests
-cargo test --test persistence_
+cargo test --test persistence_tests
 
 # E2E tests
-cargo test --test e2e_
+cargo test --test e2e_workflow_tests
+cargo test --test e2e_command_integration_tests
 
 # IFC tests
-cargo test --test ifc_
+cargo test --test ifc_workflow_tests
+cargo test --test ifc_sync_integration_tests
+
+# TUI tests
+cargo test --test tui_workflow_integration_tests
+cargo test --test tui_component_interaction_tests
+cargo test --test tui_event_flow_tests
+cargo test --test tui_terminal_integration_tests
 ```
 
-### Run Specific Test File
+### Run All Tests in a Category
 ```bash
-cargo test --test ar_workflow_integration_test
-cargo test --test mobile_ffi_tests
-cargo test --test hardware_integration_tests
+# Run all AR tests
+cargo test --test ar_
+
+# Run all hardware tests  
+cargo test --test hardware_
+
+# Run all TUI tests
+cargo test --test tui_
 ```
 
 ### Run Command Tests
@@ -102,28 +128,37 @@ cargo test --test commands/export_tests
 ## Test File Naming Convention
 
 Tests use the following naming pattern:
-- **Category prefix** (e.g., `ar_`, `mobile_`, `hardware_`)
-- **Feature name** (e.g., `workflow`, `integration`, `gltf`)
+- **Category subdirectory** (e.g., `ar/`, `mobile/`, `hardware/`, `tui/`)
+- **Feature name** (e.g., `workflow`, `integration`, `component`)
 - **Test type suffix** (e.g., `_tests.rs`, `_test.rs`)
 
 Examples:
-- `ar_workflow_integration_test.rs` - AR workflow integration test
-- `mobile_ffi_tests.rs` - Mobile FFI tests
-- `hardware_http_integration_tests.rs` - Hardware HTTP integration tests
+- `tests/ar/ar_workflow_integration_test.rs` - AR workflow integration test
+- `tests/mobile/mobile_ffi_tests.rs` - Mobile FFI tests
+- `tests/hardware/hardware_http_integration_tests.rs` - Hardware HTTP integration tests
+- `tests/tui/tui_workflow_integration_tests.rs` - TUI workflow integration tests
 
 ## Benefits of This Organization
 
-1. **Easy Discovery**: Files grouped by prefix make it easy to find related tests
-2. **Cargo Compatible**: Flat structure works with Cargo's test discovery
-3. **Scalable**: Easy to add new tests in appropriate categories
-4. **Clear Intent**: Descriptive names make test purpose obvious
-5. **IDE Friendly**: Most IDEs group files by prefix automatically
+1. **Easy Discovery**: Files grouped in subdirectories make it easy to find related tests
+2. **Cargo Compatible**: Tests registered in `Cargo.toml` ensure Cargo can discover them
+3. **Scalable**: Easy to add new tests in appropriate subdirectories
+4. **Clear Intent**: Directory structure and descriptive names make test purpose obvious
+5. **IDE Friendly**: Most IDEs group files by directory automatically
+6. **Better Organization**: Subdirectories prevent test directory from becoming cluttered
 
 ## Test Statistics
 
-- **Total Test Files**: ~36
+- **Total Test Files**: ~40+
+- **AR Tests**: 6 files in `tests/ar/`
 - **Command Tests**: 17 files in `tests/commands/`
-- **Integration Tests**: 19 files in `tests/` root
+- **Mobile Tests**: 1 file in `tests/mobile/`
+- **Hardware Tests**: 3 files in `tests/hardware/`
+- **E2E Tests**: 2 files in `tests/e2e/`
+- **IFC Tests**: 2 files in `tests/ifc/`
+- **Persistence Tests**: 1 file in `tests/persistence/`
+- **TUI Tests**: 4+ files in `tests/tui/` ⭐ NEW
+- **Other Tests**: 4 files in `tests/` root
 - **Test Coverage**: >90% (as per project standards)
 
 ## Related Documentation

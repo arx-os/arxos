@@ -332,3 +332,240 @@ pub fn handle_error_modal_event(
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::error::ErrorContext;
+    use ratatui::layout::Rect;
+
+    fn create_test_error() -> ArxError {
+        ArxError::IoError {
+            message: "Test error message".to_string(),
+            context: ErrorContext::default(),
+            path: Some("/test/path".to_string()),
+        }
+    }
+
+    fn create_git_error() -> ArxError {
+        ArxError::GitOperation {
+            message: "Git operation failed".to_string(),
+            context: ErrorContext::default(),
+            operation: "commit".to_string(),
+        }
+    }
+
+    fn create_config_error() -> ArxError {
+        ArxError::Configuration {
+            message: "Configuration error".to_string(),
+            context: ErrorContext::default(),
+            field: Some("test_field".to_string()),
+        }
+    }
+
+    #[test]
+    fn test_error_modal_new() {
+        let modal = ErrorModal::new();
+        assert!(!modal.show, "Should not be shown initially");
+        assert!(modal.error.is_none(), "Should have no error initially");
+        assert_eq!(modal.selected_action, 0, "Should start at first action");
+        assert!(!modal.actions.is_empty(), "Should have default actions");
+    }
+
+    #[test]
+    fn test_error_modal_show_error() {
+        let mut modal = ErrorModal::new();
+        let error = create_test_error();
+        
+        modal.show_error(error);
+        assert!(modal.show, "Should be shown");
+        assert!(modal.error.is_some(), "Should have error");
+        assert_eq!(modal.selected_action, 0, "Should reset selection");
+    }
+
+    #[test]
+    fn test_error_modal_dismiss() {
+        let mut modal = ErrorModal::new();
+        modal.show_error(create_test_error());
+        assert!(modal.show, "Should be shown");
+        
+        modal.dismiss();
+        assert!(!modal.show, "Should be dismissed");
+        assert!(modal.error.is_none(), "Should clear error");
+    }
+
+    #[test]
+    fn test_error_modal_next_action() {
+        let mut modal = ErrorModal::new();
+        modal.show_error(create_test_error());
+        let initial_action = modal.selected_action;
+        
+        modal.next_action();
+        if modal.actions.len() > 1 {
+            assert_ne!(modal.selected_action, initial_action, "Selection should change");
+        }
+    }
+
+    #[test]
+    fn test_error_modal_previous_action() {
+        let mut modal = ErrorModal::new();
+        modal.show_error(create_test_error());
+        modal.next_action();
+        let after_next = modal.selected_action;
+        
+        modal.previous_action();
+        assert_eq!(modal.selected_action, 0, "Should wrap to first action");
+    }
+
+    #[test]
+    fn test_error_modal_select_action() {
+        let mut modal = ErrorModal::new();
+        modal.show_error(create_test_error());
+        
+        let action = modal.select_action();
+        assert!(action.is_some(), "Should return an action");
+        assert_eq!(action.unwrap(), modal.actions[0], "Should return first action");
+    }
+
+    #[test]
+    fn test_error_modal_actions_by_type() {
+        let mut modal = ErrorModal::new();
+        
+        // Git error should have Retry action
+        modal.show_error(create_git_error());
+        assert!(modal.actions.contains(&ErrorAction::Retry), 
+            "Git error should have Retry action");
+        
+        // Config error should not have Retry
+        modal.show_error(create_config_error());
+        assert!(!modal.actions.contains(&ErrorAction::Retry), 
+            "Config error should not have Retry action");
+    }
+
+    #[test]
+    fn test_error_action_labels() {
+        assert_eq!(ErrorAction::Retry.label(), "Retry");
+        assert_eq!(ErrorAction::Ignore.label(), "Ignore");
+        assert_eq!(ErrorAction::ViewDetails.label(), "View Details");
+        assert_eq!(ErrorAction::ShowHelp.label(), "Show Help");
+        assert_eq!(ErrorAction::Dismiss.label(), "Dismiss");
+    }
+
+    #[test]
+    fn test_error_action_keys() {
+        assert_eq!(ErrorAction::Retry.key(), "r");
+        assert_eq!(ErrorAction::Ignore.key(), "i");
+        assert_eq!(ErrorAction::ViewDetails.key(), "d");
+        assert_eq!(ErrorAction::ShowHelp.key(), "h");
+        assert_eq!(ErrorAction::Dismiss.key(), "Esc");
+    }
+
+    #[test]
+    fn test_calculate_modal_area() {
+        let area = Rect::new(0, 0, 100, 50);
+        let modal_area = calculate_modal_area(area);
+        
+        assert_eq!(modal_area.width, 80, "Should be 80% of width");
+        assert_eq!(modal_area.height, 35, "Should be 70% of height");
+        assert!(modal_area.x > 0, "Should be centered horizontally");
+        assert!(modal_area.y > 0, "Should be centered vertically");
+    }
+
+    #[test]
+    fn test_render_error_modal() {
+        let mut modal = ErrorModal::new();
+        modal.show_error(create_test_error());
+        let theme = Theme::default();
+        let area = Rect::new(0, 0, 80, 24);
+        
+        let paragraph = render_error_modal(&modal, area, &theme);
+        assert!(paragraph.is_some(), "Should render error modal");
+    }
+
+    #[test]
+    fn test_render_error_modal_not_shown() {
+        let modal = ErrorModal::new();
+        let theme = Theme::default();
+        let area = Rect::new(0, 0, 80, 24);
+        
+        let paragraph = render_error_modal(&modal, area, &theme);
+        assert!(paragraph.is_none(), "Should not render when not shown");
+    }
+
+    #[test]
+    fn test_handle_error_modal_event_esc() {
+        use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
+        
+        let mut modal = ErrorModal::new();
+        modal.show_error(create_test_error());
+        
+        let event = Event::Key(KeyEvent {
+            code: KeyCode::Esc,
+            modifiers: KeyModifiers::empty(),
+            kind: KeyEventKind::Press,
+            state: KeyEventState::empty(),
+        });
+        
+        let action = handle_error_modal_event(event, &mut modal);
+        assert!(!modal.show, "Should dismiss on Esc");
+        assert!(action.is_none());
+    }
+
+    #[test]
+    fn test_handle_error_modal_event_arrow_keys() {
+        use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
+        
+        let mut modal = ErrorModal::new();
+        modal.show_error(create_test_error());
+        let initial = modal.selected_action;
+        
+        let event = Event::Key(KeyEvent {
+            code: KeyCode::Down,
+            modifiers: KeyModifiers::empty(),
+            kind: KeyEventKind::Press,
+            state: KeyEventState::empty(),
+        });
+        
+        handle_error_modal_event(event, &mut modal);
+        if modal.actions.len() > 1 {
+            assert_ne!(modal.selected_action, initial, "Should move selection down");
+        }
+    }
+
+    #[test]
+    fn test_handle_error_modal_event_enter() {
+        use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
+        
+        let mut modal = ErrorModal::new();
+        modal.show_error(create_test_error());
+        
+        let event = Event::Key(KeyEvent {
+            code: KeyCode::Enter,
+            modifiers: KeyModifiers::empty(),
+            kind: KeyEventKind::Press,
+            state: KeyEventState::empty(),
+        });
+        
+        let action = handle_error_modal_event(event, &mut modal);
+        assert!(action.is_some(), "Should return action on Enter");
+    }
+
+    #[test]
+    fn test_handle_error_modal_event_shortcut_keys() {
+        use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
+        
+        let mut modal = ErrorModal::new();
+        modal.show_error(create_git_error()); // Has Retry action
+        
+        // Test 'r' key for Retry
+        let event = Event::Key(KeyEvent {
+            code: KeyCode::Char('r'),
+            modifiers: KeyModifiers::empty(),
+            kind: KeyEventKind::Press,
+            state: KeyEventState::empty(),
+        });
+        
+        let action = handle_error_modal_event(event, &mut modal);
+        assert_eq!(action, Some(ErrorAction::Retry), "Should return Retry action");
+    }
+}
+

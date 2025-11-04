@@ -391,5 +391,296 @@ mod tests {
         assert_eq!(theme.background, Color::Black);
         assert_eq!(theme.text, Color::White);
     }
+
+    #[test]
+    fn test_theme_manager_new() {
+        let manager = ThemeManager::new();
+        assert!(manager.is_ok(), "Should create theme manager");
+        let manager = manager.unwrap();
+        assert_eq!(manager.theme_name(), "default");
+    }
+
+    #[test]
+    fn test_theme_manager_set_theme() {
+        let mut manager = ThemeManager::default();
+        manager.set_preset(ThemePreset::Dark);
+        assert_eq!(manager.theme_name(), "dark");
+        assert_eq!(manager.current_theme().background, Color::Black);
+        
+        manager.set_preset(ThemePreset::Light);
+        assert_eq!(manager.theme_name(), "light");
+        assert_eq!(manager.current_theme().background, Color::White);
+    }
+
+    #[test]
+    fn test_theme_manager_set_custom_theme() {
+        let mut manager = ThemeManager::default();
+        let custom_theme = Theme {
+            primary: Color::Red,
+            secondary: Color::Green,
+            accent: Color::Blue,
+            background: Color::Black,
+            text: Color::White,
+            muted: Color::Gray,
+        };
+        
+        manager.set_custom_theme("custom".to_string(), custom_theme.clone());
+        assert_eq!(manager.theme_name(), "custom");
+        assert_eq!(manager.current_theme().primary, Color::Red);
+        assert!(manager.custom_themes().contains_key("custom"));
+    }
+
+    #[test]
+    fn test_theme_manager_save_theme() {
+        let mut manager = ThemeManager::default();
+        manager.set_preset(ThemePreset::Blue);
+        
+        // Use temp directory for testing
+        let temp_dir = std::env::temp_dir().join("arxos_test_themes");
+        let _ = std::fs::remove_dir_all(&temp_dir);
+        std::fs::create_dir_all(&temp_dir).unwrap();
+        
+        // Override HOME for test
+        let original_home = std::env::var("HOME");
+        std::env::set_var("HOME", temp_dir.parent().unwrap());
+        
+        // Create .arx/themes directory
+        let themes_dir = temp_dir.parent().unwrap().join(".arx").join("themes");
+        std::fs::create_dir_all(&themes_dir).unwrap();
+        
+        // Modify save_theme to use test directory (we can't easily mock this)
+        // So we'll test the serialization instead
+        let theme_config = ThemeConfig::from_theme(manager.current_theme(), "test_theme".to_string());
+        let toml_str = toml::to_string_pretty(&theme_config);
+        assert!(toml_str.is_ok(), "Should serialize theme config");
+        
+        // Restore HOME
+        if let Ok(home) = original_home {
+            std::env::set_var("HOME", home);
+        }
+        
+        // Cleanup
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_theme_manager_load_theme() {
+        // Create a test theme file with correct directory structure
+        let temp_dir = std::env::temp_dir().join("arxos_test_themes_load");
+        let _ = std::fs::remove_dir_all(&temp_dir);
+        let themes_dir = temp_dir.join(".arx").join("themes");
+        std::fs::create_dir_all(&themes_dir).unwrap();
+        
+        let theme_file = themes_dir.join("test_theme.toml");
+        let theme_config = ThemeConfig {
+            name: "test_theme".to_string(),
+            primary: "cyan".to_string(),
+            secondary: "blue".to_string(),
+            accent: "magenta".to_string(),
+            background: "black".to_string(),
+            text: "white".to_string(),
+            muted: "darkgray".to_string(),
+        };
+        
+        let toml_content = toml::to_string_pretty(&theme_config).unwrap();
+        std::fs::write(&theme_file, toml_content).unwrap();
+        
+        // Test loading
+        let original_home = std::env::var("HOME");
+        std::env::set_var("HOME", &temp_dir);
+        
+        let result = ThemeManager::load_theme("test_theme");
+        assert!(result.is_ok(), "Should load theme");
+        let theme = result.unwrap();
+        assert_eq!(theme.primary, Color::Cyan);
+        
+        // Restore HOME
+        if let Ok(home) = original_home {
+            std::env::set_var("HOME", home);
+        }
+        
+        // Cleanup
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_theme_manager_list_saved_themes() {
+        // Create test theme files with correct directory structure
+        let temp_dir = std::env::temp_dir().join("arxos_test_themes_list");
+        let _ = std::fs::remove_dir_all(&temp_dir);
+        let themes_dir = temp_dir.join(".arx").join("themes");
+        std::fs::create_dir_all(&themes_dir).unwrap();
+        
+        // Create test theme files with valid TOML
+        let theme1_config = ThemeConfig {
+            name: "theme1".to_string(),
+            primary: "cyan".to_string(),
+            secondary: "blue".to_string(),
+            accent: "magenta".to_string(),
+            background: "black".to_string(),
+            text: "white".to_string(),
+            muted: "darkgray".to_string(),
+        };
+        let theme2_config = ThemeConfig {
+            name: "theme2".to_string(),
+            primary: "red".to_string(),
+            secondary: "green".to_string(),
+            accent: "blue".to_string(),
+            background: "black".to_string(),
+            text: "white".to_string(),
+            muted: "darkgray".to_string(),
+        };
+        
+        std::fs::write(
+            themes_dir.join("theme1.toml"), 
+            toml::to_string_pretty(&theme1_config).unwrap()
+        ).unwrap();
+        std::fs::write(
+            themes_dir.join("theme2.toml"), 
+            toml::to_string_pretty(&theme2_config).unwrap()
+        ).unwrap();
+        
+        let original_home = std::env::var("HOME");
+        std::env::set_var("HOME", &temp_dir);
+        
+        let result = ThemeManager::list_saved_themes();
+        assert!(result.is_ok(), "Should list themes");
+        let themes = result.unwrap();
+        assert!(themes.contains(&"theme1".to_string()), "Should contain theme1");
+        assert!(themes.contains(&"theme2".to_string()), "Should contain theme2");
+        
+        // Restore HOME
+        if let Ok(home) = original_home {
+            std::env::set_var("HOME", home);
+        }
+        
+        // Cleanup
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_theme_manager_theme_presets() {
+        let presets = ThemeManager::available_presets();
+        assert!(presets.len() >= 7, "Should have at least 7 presets");
+        assert!(presets.contains(&ThemePreset::Default));
+        assert!(presets.contains(&ThemePreset::Dark));
+        assert!(presets.contains(&ThemePreset::Light));
+        assert!(presets.contains(&ThemePreset::HighContrast));
+    }
+
+    #[test]
+    fn test_theme_config_serialization() {
+        let theme = Theme::default();
+        let config = ThemeConfig::from_theme(&theme, "test".to_string());
+        
+        let toml_str = toml::to_string_pretty(&config);
+        assert!(toml_str.is_ok(), "Should serialize to TOML");
+        let toml_content = toml_str.unwrap();
+        assert!(toml_content.contains("name = \"test\""), "Should contain name");
+        assert!(toml_content.contains("primary"), "Should contain primary color");
+    }
+
+    #[test]
+    fn test_theme_config_deserialization() {
+        let toml_content = r#"
+name = "test_theme"
+primary = "cyan"
+secondary = "blue"
+accent = "magenta"
+background = "black"
+text = "white"
+muted = "darkgray"
+"#;
+        
+        let config: Result<ThemeConfig, _> = toml::from_str(toml_content);
+        assert!(config.is_ok(), "Should deserialize from TOML");
+        let config = config.unwrap();
+        assert_eq!(config.name, "test_theme");
+        assert_eq!(config.primary, "cyan");
+        
+        let theme = config.to_theme();
+        assert!(theme.is_ok(), "Should convert to Theme");
+        let theme = theme.unwrap();
+        assert_eq!(theme.primary, Color::Cyan);
+    }
+
+    #[test]
+    fn test_theme_manager_color_parsing() {
+        // Test basic colors
+        assert_eq!(parse_color("red").unwrap(), Color::Red);
+        assert_eq!(parse_color("GREEN").unwrap(), Color::Green);
+        assert_eq!(parse_color("blue").unwrap(), Color::Blue);
+        
+        // Test light colors
+        assert_eq!(parse_color("light_blue").unwrap(), Color::LightBlue);
+        assert_eq!(parse_color("lightblue").unwrap(), Color::LightBlue);
+        assert_eq!(parse_color("light_red").unwrap(), Color::LightRed);
+        
+        // Test dark gray variations
+        assert_eq!(parse_color("darkgray").unwrap(), Color::DarkGray);
+        assert_eq!(parse_color("dark_gray").unwrap(), Color::DarkGray);
+    }
+
+    #[test]
+    fn test_theme_manager_invalid_theme() {
+        // Test invalid color
+        assert!(parse_color("invalid_color").is_err(), "Should reject invalid color");
+        
+        // Test loading non-existent theme
+        let original_home = std::env::var("HOME");
+        let temp_dir = std::env::temp_dir().join("arxos_test_themes_nonexistent");
+        let _ = std::fs::remove_dir_all(&temp_dir);
+        std::env::set_var("HOME", &temp_dir);
+        
+        let result = ThemeManager::load_theme("nonexistent_theme");
+        assert!(result.is_err(), "Should return error for non-existent theme");
+        
+        // Restore HOME
+        if let Ok(home) = original_home {
+            std::env::set_var("HOME", home);
+        }
+    }
+
+    #[test]
+    fn test_color_to_string() {
+        assert_eq!(color_to_string(&Color::Red), "red");
+        assert_eq!(color_to_string(&Color::Green), "green");
+        assert_eq!(color_to_string(&Color::LightBlue), "lightblue");
+        assert_eq!(color_to_string(&Color::DarkGray), "darkgray");
+        
+        // Test RGB
+        let rgb_str = color_to_string(&Color::Rgb(255, 128, 64));
+        assert!(rgb_str.contains("rgb(255,128,64)"), "Should format RGB");
+        
+        // Test indexed
+        let indexed_str = color_to_string(&Color::Indexed(42));
+        assert!(indexed_str.contains("indexed(42)"), "Should format indexed");
+    }
+
+    #[test]
+    fn test_all_theme_presets() {
+        let presets = ThemePreset::all();
+        assert_eq!(presets.len(), 7, "Should have 7 presets");
+        
+        for preset in presets {
+            let theme = preset.theme();
+            // Verify theme has all required fields set
+            assert!(matches!(theme.primary, Color::Cyan | Color::Blue | Color::LightBlue | Color::LightGreen | Color::LightMagenta | Color::Yellow), 
+                "Primary should be valid color");
+            assert!(matches!(theme.background, Color::Black | Color::White), 
+                "Background should be Black or White");
+        }
+    }
+
+    #[test]
+    fn test_theme_preset_names_all() {
+        assert_eq!(ThemePreset::Default.name(), "Default");
+        assert_eq!(ThemePreset::Dark.name(), "Dark");
+        assert_eq!(ThemePreset::Light.name(), "Light");
+        assert_eq!(ThemePreset::HighContrast.name(), "High Contrast");
+        assert_eq!(ThemePreset::Blue.name(), "Blue");
+        assert_eq!(ThemePreset::Green.name(), "Green");
+        assert_eq!(ThemePreset::Purple.name(), "Purple");
+    }
 }
 

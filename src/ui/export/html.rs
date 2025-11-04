@@ -89,3 +89,95 @@ pub fn export_as_html(buffer: &Buffer) -> String {
     output
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ratatui::layout::Rect;
+    use ratatui::style::{Color, Modifier, Style};
+
+    #[test]
+    fn test_export_as_html() {
+        let area = Rect::new(0, 0, 10, 2);
+        let mut buffer = Buffer::empty(area);
+        buffer.set_string(0, 0, "Hello", Style::default());
+        buffer.set_string(0, 1, "World", Style::default());
+        
+        let html = export_as_html(&buffer);
+        assert!(html.contains("<!DOCTYPE html>"), "Should contain DOCTYPE");
+        assert!(html.contains("<html>"), "Should contain html tag");
+        assert!(html.contains("Hello"), "Should contain content");
+        assert!(html.contains("World"), "Should contain content");
+    }
+
+    #[test]
+    fn test_export_as_html_structure() {
+        let area = Rect::new(0, 0, 5, 1);
+        let buffer = Buffer::empty(area);
+        
+        let html = export_as_html(&buffer);
+        assert!(html.contains("<head>"), "Should have head section");
+        assert!(html.contains("<body>"), "Should have body section");
+        assert!(html.contains("<pre>"), "Should use pre tag");
+        assert!(html.contains("</html>"), "Should close html tag");
+    }
+
+    #[test]
+    fn test_export_as_html_colors() {
+        let area = Rect::new(0, 0, 5, 1);
+        let mut buffer = Buffer::empty(area);
+        let red_style = Style::default().fg(Color::Red);
+        buffer.set_string(0, 0, "Test", red_style);
+        
+        let html = export_as_html(&buffer);
+        assert!(html.contains("color:"), "Should contain color style");
+        assert!(html.contains("#cc0000"), "Red should be #cc0000");
+        assert!(html.contains("<span"), "Should use span tags");
+    }
+
+    #[test]
+    fn test_export_as_html_modifiers() {
+        let area = Rect::new(0, 0, 5, 1);
+        let mut buffer = Buffer::empty(area);
+        let bold_style = Style::default().add_modifier(Modifier::BOLD);
+        buffer.set_string(0, 0, "Test", bold_style);
+        
+        let html = export_as_html(&buffer);
+        assert!(html.contains("font-weight: bold"), "Should contain bold style");
+    }
+
+    #[test]
+    fn test_export_as_html_escape_chars() {
+        let area = Rect::new(0, 0, 10, 1);
+        let mut buffer = Buffer::empty(area);
+        buffer.set_string(0, 0, "<>&\"", Style::default());
+        
+        let html = export_as_html(&buffer);
+        assert!(html.contains("&lt;"), "Should escape <");
+        assert!(html.contains("&gt;"), "Should escape >");
+        assert!(html.contains("&amp;"), "Should escape &");
+        assert!(html.contains("&quot;"), "Should escape \"");
+    }
+
+    #[test]
+    fn test_export_as_html_spans() {
+        let area = Rect::new(0, 0, 10, 1);
+        let mut buffer = Buffer::empty(area);
+        buffer.set_string(0, 0, "Red", Style::default().fg(Color::Red));
+        buffer.set_string(3, 0, "Green", Style::default().fg(Color::Green));
+        
+        let html = export_as_html(&buffer);
+        assert!(html.contains("</span>"), "Should close spans");
+        assert!(html.matches("<span").count() >= 2, "Should have multiple spans");
+    }
+
+    #[test]
+    fn test_export_as_html_empty_buffer() {
+        let area = Rect::new(0, 0, 10, 2);
+        let buffer = Buffer::empty(area);
+        
+        let html = export_as_html(&buffer);
+        assert!(html.contains("<!DOCTYPE html>"), "Should have structure");
+        assert!(html.contains("</html>"), "Should close properly");
+    }
+}
+

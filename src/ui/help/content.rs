@@ -260,3 +260,177 @@ fn general_help() -> Vec<Line<'static>> {
     ]
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_context_help_all_contexts() {
+        // Test all 12 help contexts
+        let contexts = vec![
+            HelpContext::EquipmentBrowser,
+            HelpContext::RoomExplorer,
+            HelpContext::StatusDashboard,
+            HelpContext::SearchBrowser,
+            HelpContext::WatchDashboard,
+            HelpContext::ConfigWizard,
+            HelpContext::ArPendingManager,
+            HelpContext::DiffViewer,
+            HelpContext::HealthDashboard,
+            HelpContext::CommandPalette,
+            HelpContext::Interactive3D,
+            HelpContext::General,
+        ];
+        
+        for context in contexts {
+            let help = get_context_help(context);
+            assert!(!help.is_empty(), "Help content should not be empty for {:?}", context);
+            // First line should be a styled title
+            assert!(!help[0].spans.is_empty(), "Help should have at least one line for {:?}", context);
+        }
+    }
+
+    #[test]
+    fn test_equipment_browser_help() {
+        let help = get_context_help(HelpContext::EquipmentBrowser);
+        assert!(!help.is_empty());
+        // Check that it contains expected sections
+        let text: String = help.iter()
+            .flat_map(|line| line.spans.iter().map(|s| s.content.to_string()))
+            .collect();
+        assert!(text.contains("Equipment Browser"), "Should contain Equipment Browser title");
+        assert!(text.contains("Navigation"), "Should contain Navigation section");
+        assert!(text.contains("Actions"), "Should contain Actions section");
+    }
+
+    #[test]
+    fn test_room_explorer_help() {
+        let help = get_context_help(HelpContext::RoomExplorer);
+        assert!(!help.is_empty());
+        let text: String = help.iter()
+            .flat_map(|line| line.spans.iter().map(|s| s.content.to_string()))
+            .collect();
+        assert!(text.contains("Room Explorer"), "Should contain Room Explorer title");
+    }
+
+    #[test]
+    fn test_status_dashboard_help() {
+        let help = get_context_help(HelpContext::StatusDashboard);
+        assert!(!help.is_empty());
+        let text: String = help.iter()
+            .flat_map(|line| line.spans.iter().map(|s| s.content.to_string()))
+            .collect();
+        assert!(text.contains("Status Dashboard"), "Should contain Status Dashboard title");
+    }
+
+    #[test]
+    fn test_search_browser_help() {
+        let help = get_context_help(HelpContext::SearchBrowser);
+        assert!(!help.is_empty());
+        let text: String = help.iter()
+            .flat_map(|line| line.spans.iter().map(|s| s.content.to_string()))
+            .collect();
+        assert!(text.contains("Search Browser"), "Should contain Search Browser title");
+    }
+
+    #[test]
+    fn test_watch_dashboard_help() {
+        let help = get_context_help(HelpContext::WatchDashboard);
+        assert!(!help.is_empty());
+        let text: String = help.iter()
+            .flat_map(|line| line.spans.iter().map(|s| s.content.to_string()))
+            .collect();
+        assert!(text.contains("Watch Dashboard"), "Should contain Watch Dashboard title");
+    }
+
+    #[test]
+    fn test_config_wizard_help() {
+        let help = get_context_help(HelpContext::ConfigWizard);
+        assert!(!help.is_empty());
+        let text: String = help.iter()
+            .flat_map(|line| line.spans.iter().map(|s| s.content.to_string()))
+            .collect();
+        assert!(text.contains("Configuration Wizard"), "Should contain Configuration Wizard title");
+    }
+
+    #[test]
+    fn test_ar_pending_manager_help() {
+        let help = get_context_help(HelpContext::ArPendingManager);
+        assert!(!help.is_empty());
+        let text: String = help.iter()
+            .flat_map(|line| line.spans.iter().map(|s| s.content.to_string()))
+            .collect();
+        assert!(text.contains("AR Pending Manager"), "Should contain AR Pending Manager title");
+    }
+
+    #[test]
+    fn test_diff_viewer_help() {
+        let help = get_context_help(HelpContext::DiffViewer);
+        assert!(!help.is_empty());
+        let text: String = help.iter()
+            .flat_map(|line| line.spans.iter().map(|s| s.content.to_string()))
+            .collect();
+        assert!(text.contains("Diff Viewer"), "Should contain Diff Viewer title");
+    }
+
+    #[test]
+    fn test_health_dashboard_help() {
+        let help = get_context_help(HelpContext::HealthDashboard);
+        assert!(!help.is_empty());
+        let text: String = help.iter()
+            .flat_map(|line| line.spans.iter().map(|s| s.content.to_string()))
+            .collect();
+        assert!(text.contains("Health Dashboard"), "Should contain Health Dashboard title");
+    }
+
+    #[test]
+    fn test_command_palette_help() {
+        let help = get_context_help(HelpContext::CommandPalette);
+        assert!(!help.is_empty());
+        let text: String = help.iter()
+            .flat_map(|line| line.spans.iter().map(|s| s.content.to_string()))
+            .collect();
+        assert!(text.contains("Command Palette"), "Should contain Command Palette title");
+    }
+
+    #[test]
+    fn test_interactive_3d_help() {
+        let help = get_context_help(HelpContext::Interactive3D);
+        assert!(!help.is_empty());
+        let text: String = help.iter()
+            .flat_map(|line| line.spans.iter().map(|s| s.content.to_string()))
+            .collect();
+        assert!(text.contains("3D Renderer"), "Should contain 3D Renderer title");
+    }
+
+    #[test]
+    fn test_general_help() {
+        let help = get_context_help(HelpContext::General);
+        assert!(!help.is_empty());
+        let text: String = help.iter()
+            .flat_map(|line| line.spans.iter().map(|s| s.content.to_string()))
+            .collect();
+        assert!(text.contains("ArxOS General Help"), "Should contain ArxOS General Help title");
+        assert!(text.contains("Universal Shortcuts"), "Should contain Universal Shortcuts section");
+    }
+
+    #[test]
+    fn test_help_content_structure() {
+        // Test that help content has proper structure (title, sections, etc.)
+        let help = get_context_help(HelpContext::EquipmentBrowser);
+        assert!(!help.is_empty(), "Help should not be empty");
+        
+        // First line should be a styled title
+        assert!(!help[0].spans.is_empty(), "First line should have spans");
+        // Should have at least one section header
+        let has_section = help.iter().any(|line| {
+            line.spans.iter().any(|span| {
+                span.content.contains("Navigation") ||
+                span.content.contains("Actions") ||
+                span.content.contains("General")
+            })
+        });
+        assert!(has_section, "Help should contain section headers");
+    }
+}
+

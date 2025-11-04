@@ -77,3 +77,89 @@ impl Widget for StatusBadge {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ratatui::layout::Rect;
+    use ratatui::widgets::Widget;
+    use ratatui::style::Color;
+
+    #[test]
+    fn test_status_badge_creation() {
+        let badge = StatusBadge::new(StatusColor::Healthy, "Active");
+        assert_eq!(badge.status, StatusColor::Healthy);
+        assert_eq!(badge.label, "Active");
+    }
+
+    #[test]
+    fn test_status_badge_colors() {
+        let healthy = StatusBadge::new(StatusColor::Healthy, "Healthy");
+        assert_eq!(healthy.status.color(), Color::Green);
+        
+        let warning = StatusBadge::new(StatusColor::Warning, "Warning");
+        assert_eq!(warning.status.color(), Color::Yellow);
+        
+        let critical = StatusBadge::new(StatusColor::Critical, "Critical");
+        assert_eq!(critical.status.color(), Color::Red);
+        
+        let unknown = StatusBadge::new(StatusColor::Unknown, "Unknown");
+        assert_eq!(unknown.status.color(), Color::Gray);
+    }
+
+    #[test]
+    fn test_status_badge_rendering() {
+        let badge = StatusBadge::new(StatusColor::Healthy, "Test");
+        let area = Rect::new(0, 0, 20, 1);
+        let mut buffer = ratatui::buffer::Buffer::empty(area);
+        
+        badge.render(area, &mut buffer);
+        
+        // Verify content was rendered
+        let has_content = (0..area.height).any(|y| {
+            (0..area.width).any(|x| {
+                buffer.get(x, y).symbol != " "
+            })
+        });
+        assert!(has_content, "Badge should render content");
+    }
+
+    #[test]
+    fn test_status_badge_with_theme() {
+        let mut theme = Theme::default();
+        theme.primary = Color::Blue;
+        
+        let badge = StatusBadge::new(StatusColor::Warning, "Test")
+            .with_theme(theme.clone());
+        
+        assert_eq!(badge.theme.primary, Color::Blue);
+    }
+
+    #[test]
+    fn test_status_badge_icon_yaml() {
+        use crate::yaml::EquipmentStatus;
+        
+        let icon = StatusBadge::icon_yaml(&EquipmentStatus::Healthy);
+        assert_eq!(icon, "🟢");
+        
+        let icon = StatusBadge::icon_yaml(&EquipmentStatus::Warning);
+        assert_eq!(icon, "🟡");
+        
+        let icon = StatusBadge::icon_yaml(&EquipmentStatus::Critical);
+        assert_eq!(icon, "🔴");
+    }
+
+    #[test]
+    fn test_status_badge_icon_core() {
+        use crate::core::EquipmentStatus;
+        
+        let icon = StatusBadge::icon_core(&EquipmentStatus::Active);
+        assert_eq!(icon, "🟢");
+        
+        let icon = StatusBadge::icon_core(&EquipmentStatus::Maintenance);
+        assert_eq!(icon, "🟡");
+        
+        let icon = StatusBadge::icon_core(&EquipmentStatus::OutOfOrder);
+        assert_eq!(icon, "🔴");
+    }
+}
+

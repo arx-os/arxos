@@ -86,15 +86,113 @@ mod tests {
     use ratatui::layout::Rect;
     
     #[test]
-    fn test_export_as_text() {
-        let area = Rect::new(0, 0, 5, 2);
+    fn test_export_buffer_text() {
+        let area = Rect::new(0, 0, 10, 2);
         let mut buffer = Buffer::empty(area);
         buffer.set_string(0, 0, "Hello", ratatui::style::Style::default());
         buffer.set_string(0, 1, "World", ratatui::style::Style::default());
         
-        let text = export_as_text(&buffer);
-        assert!(text.contains('H'));
-        assert!(text.contains('W'));
+        let temp_file = std::env::temp_dir().join("test_export_text.txt");
+        let result = export_buffer(&buffer, ExportFormat::Text, temp_file.clone());
+        assert!(result.is_ok(), "Should export successfully");
+        
+        let content = std::fs::read_to_string(&temp_file).unwrap();
+        assert!(content.contains("Hello"), "File should contain content");
+        assert!(content.contains("World"), "File should contain content");
+        
+        // Cleanup
+        let _ = std::fs::remove_file(&temp_file);
+    }
+
+    #[test]
+    fn test_export_buffer_ansi() {
+        let area = Rect::new(0, 0, 10, 1);
+        let mut buffer = Buffer::empty(area);
+        buffer.set_string(0, 0, "Test", ratatui::style::Style::default());
+        
+        let temp_file = std::env::temp_dir().join("test_export_ansi.ansi");
+        let result = export_buffer(&buffer, ExportFormat::Ansi, temp_file.clone());
+        assert!(result.is_ok(), "Should export ANSI successfully");
+        
+        let content = std::fs::read_to_string(&temp_file).unwrap();
+        assert!(content.contains("Test"), "File should contain content");
+        
+        // Cleanup
+        let _ = std::fs::remove_file(&temp_file);
+    }
+
+    #[test]
+    fn test_export_buffer_html() {
+        let area = Rect::new(0, 0, 10, 1);
+        let mut buffer = Buffer::empty(area);
+        buffer.set_string(0, 0, "Test", ratatui::style::Style::default());
+        
+        let temp_file = std::env::temp_dir().join("test_export_html.html");
+        let result = export_buffer(&buffer, ExportFormat::Html, temp_file.clone());
+        assert!(result.is_ok(), "Should export HTML successfully");
+        
+        let content = std::fs::read_to_string(&temp_file).unwrap();
+        assert!(content.contains("<!DOCTYPE html>"), "File should be HTML");
+        assert!(content.contains("Test"), "File should contain content");
+        
+        // Cleanup
+        let _ = std::fs::remove_file(&temp_file);
+    }
+
+    #[test]
+    fn test_export_buffer_markdown() {
+        let area = Rect::new(0, 0, 10, 1);
+        let mut buffer = Buffer::empty(area);
+        buffer.set_string(0, 0, "Test", ratatui::style::Style::default());
+        
+        let temp_file = std::env::temp_dir().join("test_export_md.md");
+        let result = export_buffer(&buffer, ExportFormat::Markdown, temp_file.clone());
+        assert!(result.is_ok(), "Should export Markdown successfully");
+        
+        let content = std::fs::read_to_string(&temp_file).unwrap();
+        assert!(content.starts_with("```"), "File should start with code block");
+        assert!(content.contains("Test"), "File should contain content");
+        
+        // Cleanup
+        let _ = std::fs::remove_file(&temp_file);
+    }
+
+    #[test]
+    fn test_export_buffer_file_write() {
+        let area = Rect::new(0, 0, 15, 1);
+        let mut buffer = Buffer::empty(area);
+        buffer.set_string(0, 0, "Test Content", ratatui::style::Style::default());
+        
+        let temp_file = std::env::temp_dir().join("test_export_write.txt");
+        let result = export_buffer(&buffer, ExportFormat::Text, temp_file.clone());
+        
+        assert!(result.is_ok(), "Should write file successfully");
+        assert!(temp_file.exists(), "File should exist");
+        
+        let content = std::fs::read_to_string(&temp_file).unwrap();
+        assert!(content.contains("Test"), "Content should contain 'Test'");
+        assert!(content.contains("Content"), "Content should contain 'Content'");
+        
+        // Cleanup
+        let _ = std::fs::remove_file(&temp_file);
+    }
+
+    #[test]
+    fn test_export_current_view_error() {
+        use ratatui::backend::CrosstermBackend;
+        let mut terminal = ratatui::Terminal::new(CrosstermBackend::new(std::io::stdout()))
+            .unwrap();
+        
+        let result = export_current_view(
+            &mut terminal,
+            ExportFormat::Text,
+            std::path::PathBuf::from("test.txt"),
+        );
+        
+        assert!(result.is_err(), "Should return error for Ratatui limitation");
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("draw() closure"), "Error should mention draw() closure");
+        assert!(error_msg.contains("export_buffer"), "Error should mention export_buffer");
     }
 }
 

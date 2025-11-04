@@ -71,3 +71,50 @@ pub fn handle_command_palette(
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use crate::ui::command_palette::palette::CommandPalette;
+    
+    // Note: Full handler tests require TerminalManager which is complex to mock
+    // These tests focus on the logic that can be tested without full terminal setup
+    
+    #[test]
+    fn test_command_palette_creation_in_handler() {
+        // Test that CommandPalette can be created (basic smoke test)
+        let palette = CommandPalette::new();
+        assert!(!palette.commands().is_empty(), "Palette should have commands");
+    }
+    
+    #[test]
+    fn test_palette_query_handling() {
+        // Test query update logic
+        let mut palette = CommandPalette::new();
+        palette.update_query("test".to_string());
+        assert_eq!(palette.query(), "test");
+        
+        palette.update_query("".to_string());
+        assert_eq!(palette.query(), "");
+    }
+    
+    #[test]
+    fn test_palette_selection_logic() {
+        // Test selection navigation logic
+        let mut palette = CommandPalette::new();
+        // Access selected field through public API indirectly
+        let initial = palette.selected_command();
+        assert!(initial.is_some(), "Should have selected command");
+        
+        palette.next();
+        let after_next = palette.selected_command();
+        assert!(after_next.is_some(), "Should still have selected command");
+        
+        palette.previous();
+        let after_prev = palette.selected_command();
+        assert!(after_prev.is_some(), "Should still have selected command");
+    }
+    
+    // Integration-level tests for handle_command_palette would require
+    // mocking TerminalManager or using a test terminal, which is better
+    // suited for integration tests in tests/ directory
+}
+

@@ -53,3 +53,112 @@ pub fn process_error_modal_event(
     handle_error_modal_event(event, modal)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::error::ErrorContext;
+    use ratatui::backend::TestBackend;
+    use ratatui::layout::Rect;
+
+    #[test]
+    fn test_render_error_modal_in_frame() {
+        let area = Rect::new(0, 0, 80, 24);
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = ratatui::Terminal::new(backend).unwrap();
+        
+        let mut modal = ErrorModal::new();
+        modal.show_error(ArxError::IoError {
+            message: "Test error".to_string(),
+            context: ErrorContext::default(),
+            path: None,
+        });
+        
+        let theme = crate::ui::Theme::default();
+        
+        terminal.draw(|frame| {
+            render_error_modal_in_frame(frame, &modal, &theme);
+        }).unwrap();
+        // If no panic, rendering succeeded
+    }
+
+    #[test]
+    fn test_handle_error_with_modal() {
+        let mut modal = ErrorModal::new();
+        let error = Box::new(ArxError::IoError {
+            message: "Test error".to_string(),
+            context: ErrorContext::default(),
+            path: None,
+        }) as Box<dyn std::error::Error>;
+        
+        let result = handle_error_with_modal(error, &mut modal);
+        assert!(result.is_ok(), "Should handle error successfully");
+        assert!(modal.show, "Modal should be shown");
+        assert!(modal.error.is_some(), "Should have error");
+    }
+
+    #[test]
+    fn test_handle_error_with_modal_arx_error() {
+        let mut modal = ErrorModal::new();
+        let error = Box::new(ArxError::Configuration {
+            message: "Config error".to_string(),
+            context: ErrorContext::default(),
+            field: None,
+        }) as Box<dyn std::error::Error>;
+        
+        let result = handle_error_with_modal(error, &mut modal);
+        assert!(result.is_ok());
+        assert!(modal.show, "Modal should be shown");
+        assert!(modal.error.is_some(), "Should have error");
+        
+        // Verify it's a Configuration error
+        if let Some(ArxError::Configuration { .. }) = modal.error {
+            // Correct type
+        } else {
+            panic!("Should preserve error type");
+        }
+    }
+
+    #[test]
+    fn test_handle_error_with_modal_generic_error() {
+        let mut modal = ErrorModal::new();
+        let error = Box::new(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "File not found"
+        )) as Box<dyn std::error::Error>;
+        
+        let result = handle_error_with_modal(error, &mut modal);
+        assert!(result.is_ok(), "Should handle generic error");
+        assert!(modal.show, "Modal should be shown");
+        assert!(modal.error.is_some(), "Should convert to ArxError");
+        
+        // Generic errors should become IoError
+        if let Some(ArxError::IoError { .. }) = modal.error {
+            // Correct conversion
+        } else {
+            panic!("Generic error should be converted to IoError");
+        }
+    }
+
+    #[test]
+    fn test_process_error_modal_event() {
+        use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
+        
+        let mut modal = ErrorModal::new();
+        modal.show_error(ArxError::IoError {
+            message: "Test".to_string(),
+            context: ErrorContext::default(),
+            path: None,
+        });
+        
+        let event = Event::Key(KeyEvent {
+            code: KeyCode::Enter,
+            modifiers: KeyModifiers::empty(),
+            kind: KeyEventKind::Press,
+            state: KeyEventState::empty(),
+        });
+        
+        let action = process_error_modal_event(event, &mut modal);
+        assert!(action.is_some(), "Should return action");
+    }
+}
+

@@ -18,7 +18,7 @@ pub struct CommandEntry {
 }
 
 /// Command categories
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CommandCategory {
     /// Building management commands
     Building,
@@ -85,6 +85,85 @@ impl CommandCategory {
             CommandCategory::Documentation => "📚",
             CommandCategory::Other => "📋",
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_command_category_names() {
+        let categories = vec![
+            CommandCategory::Building,
+            CommandCategory::Equipment,
+            CommandCategory::Room,
+            CommandCategory::Git,
+            CommandCategory::ImportExport,
+            CommandCategory::AR,
+            CommandCategory::Render,
+            CommandCategory::Search,
+            CommandCategory::Config,
+            CommandCategory::Sensors,
+            CommandCategory::Health,
+            CommandCategory::Documentation,
+            CommandCategory::Other,
+        ];
+        
+        for category in categories {
+            let name = category.name();
+            assert!(!name.is_empty(), "Category {:?} should have a name", category);
+            assert!(name.len() > 0, "Category name should not be empty");
+        }
+    }
+
+    #[test]
+    fn test_command_category_icons() {
+        let categories = vec![
+            CommandCategory::Building,
+            CommandCategory::Equipment,
+            CommandCategory::Room,
+            CommandCategory::Git,
+            CommandCategory::ImportExport,
+            CommandCategory::AR,
+            CommandCategory::Render,
+            CommandCategory::Search,
+            CommandCategory::Config,
+            CommandCategory::Sensors,
+            CommandCategory::Health,
+            CommandCategory::Documentation,
+            CommandCategory::Other,
+        ];
+        
+        for category in categories {
+            let icon = category.icon();
+            assert!(!icon.is_empty(), "Category {:?} should have an icon", category);
+        }
+    }
+
+    #[test]
+    fn test_command_entry_structure() {
+        let entry = CommandEntry {
+            name: "test".to_string(),
+            full_command: "arxos test".to_string(),
+            description: "Test command".to_string(),
+            category: CommandCategory::Other,
+            shortcut: Some("Ctrl+T".to_string()),
+        };
+        
+        assert_eq!(entry.name, "test");
+        assert_eq!(entry.full_command, "arxos test");
+        assert_eq!(entry.description, "Test command");
+        assert_eq!(entry.category, CommandCategory::Other);
+        assert_eq!(entry.shortcut, Some("Ctrl+T".to_string()));
+    }
+
+    #[test]
+    fn test_command_category_equality() {
+        assert_eq!(CommandCategory::Building, CommandCategory::Building);
+        assert_eq!(CommandCategory::Equipment, CommandCategory::Equipment);
+        assert_ne!(CommandCategory::Building, CommandCategory::Equipment);
+        assert_ne!(CommandCategory::Git, CommandCategory::Room);
     }
 }
 

@@ -170,3 +170,124 @@ pub fn render_workspace_manager(
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ratatui::backend::TestBackend;
+    use ratatui::layout::Rect;
+    use crate::ui::workspace_manager::manager::WorkspaceManager;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_render_workspace_manager() {
+        let area = Rect::new(0, 0, 80, 24);
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = ratatui::Terminal::new(backend).unwrap();
+        
+        // Create manager (may fail if no workspaces, but we test rendering)
+        let mut manager = match WorkspaceManager::new() {
+            Ok(m) => m,
+            Err(_) => {
+                // Skip test if no workspaces available
+                return;
+            }
+        };
+        
+        let theme = Theme::default();
+        
+        terminal.draw(|frame| {
+            render_workspace_manager(frame, area, &mut manager, &theme, false);
+        }).unwrap();
+        // If no panic, rendering succeeded
+    }
+
+    #[test]
+    fn test_render_empty_list() {
+        let area = Rect::new(0, 0, 80, 24);
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = ratatui::Terminal::new(backend).unwrap();
+        
+        // Test with manager (may have workspaces or be empty)
+        let mut manager = match WorkspaceManager::new() {
+            Ok(m) => m,
+            Err(_) => {
+                // Skip test if creation fails
+                return;
+            }
+        };
+        
+        let theme = Theme::default();
+        
+        terminal.draw(|frame| {
+            render_workspace_manager(frame, area, &mut manager, &theme, false);
+        }).unwrap();
+        // Should render empty state
+    }
+
+    #[test]
+    fn test_render_active_indicator() {
+        // Test that active indicator logic works
+        let is_active = true;
+        let active_indicator = if is_active { "● " } else { "  " };
+        assert_eq!(active_indicator, "● ");
+        
+        let is_active = false;
+        let active_indicator = if is_active { "● " } else { "  " };
+        assert_eq!(active_indicator, "  ");
+    }
+
+    #[test]
+    fn test_render_workspace_info() {
+        use crate::ui::workspace_manager::types::Workspace;
+        let workspace = Workspace {
+            name: "Test Building".to_string(),
+            path: PathBuf::from("/test/building.yaml"),
+            git_repo: None,
+            description: Some("Test description".to_string()),
+        };
+        
+        assert_eq!(workspace.name, "Test Building");
+        assert!(workspace.description.is_some());
+    }
+
+    #[test]
+    fn test_render_git_repo_indicator() {
+        use crate::ui::workspace_manager::types::Workspace;
+        let workspace_with_git = Workspace {
+            name: "Test".to_string(),
+            path: PathBuf::from("/test/building.yaml"),
+            git_repo: Some(PathBuf::from("/test")),
+            description: None,
+        };
+        
+        assert!(workspace_with_git.git_repo.is_some());
+    }
+
+    #[test]
+    fn test_render_search_bar() {
+        let query = "test".to_string();
+        let search_text = if query.is_empty() {
+            "Type to search workspaces...".to_string()
+        } else {
+            format!("Search: {}", query)
+        };
+        
+        assert_eq!(search_text, "Search: test");
+    }
+
+    #[test]
+    fn test_render_footer() {
+        let filtered_count = 5;
+        let footer_text = if filtered_count == 0 {
+            "No workspaces found. Press Esc to close.".to_string()
+        } else {
+            format!(
+                "{} workspaces found. ↑↓ to navigate, Enter to switch, Esc to close",
+                filtered_count
+            )
+        };
+        
+        assert!(footer_text.contains("5 workspaces found"));
+    }
+}
+

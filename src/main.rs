@@ -32,6 +32,9 @@ pub mod utils;
 pub mod docs;
 pub mod game;
 
+// UI module (terminal user interface)
+pub mod ui;
+
 use clap::Parser;
 use cli::Cli;
 use log::info;

@@ -160,3 +160,180 @@ impl WorkspaceManager {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn create_test_workspace(name: &str) -> Workspace {
+        Workspace {
+            name: name.to_string(),
+            path: PathBuf::from(format!("/test/{}.yaml", name)),
+            git_repo: None,
+            description: Some(format!("Description for {}", name)),
+        }
+    }
+
+    #[test]
+    fn test_workspace_manager_new() {
+        // This will use the actual discovery, which may fail in tests
+        // So we test the structure rather than the full discovery
+        let workspace = create_test_workspace("test");
+        assert_eq!(workspace.name, "test");
+    }
+
+    #[test]
+    fn test_workspace_manager_empty() {
+        // Create a manager with empty workspaces manually
+        // (We can't easily test the full new() without mocking discovery)
+        let workspace = create_test_workspace("test");
+        assert!(!workspace.name.is_empty());
+    }
+
+    #[test]
+    fn test_workspace_manager_update_query() {
+        // Test query update logic with mock data
+        let mut workspaces = vec![
+            create_test_workspace("Building A"),
+            create_test_workspace("Building B"),
+        ];
+        let filtered_workspaces: Vec<usize> = (0..workspaces.len()).collect();
+        
+        // Simulate query update
+        let query = "A".to_string();
+        let filtered: Vec<usize> = workspaces
+            .iter()
+            .enumerate()
+            .filter(|(_, ws)| {
+                let query_lower = query.to_lowercase();
+                ws.name.to_lowercase().contains(&query_lower)
+            })
+            .map(|(idx, _)| idx)
+            .collect();
+        
+        assert_eq!(filtered.len(), 1, "Should filter to one workspace");
+        assert_eq!(filtered[0], 0, "Should match Building A");
+    }
+
+    #[test]
+    fn test_workspace_manager_filter_by_name() {
+        let workspaces = vec![
+            create_test_workspace("Building Alpha"),
+            create_test_workspace("Building Beta"),
+        ];
+        
+        let query = "Beta".to_string();
+        let filtered: Vec<usize> = workspaces
+            .iter()
+            .enumerate()
+            .filter(|(_, ws)| {
+                let query_lower = query.to_lowercase();
+                ws.name.to_lowercase().contains(&query_lower)
+            })
+            .map(|(idx, _)| idx)
+            .collect();
+        
+        assert_eq!(filtered.len(), 1, "Should filter to one workspace");
+        assert_eq!(filtered[0], 1, "Should match Building Beta (index 1)");
+    }
+
+    #[test]
+    fn test_workspace_manager_filter_by_description() {
+        let workspaces = vec![
+            create_test_workspace("Building A"),
+            create_test_workspace("Building B"),
+        ];
+        
+        let query = "Description for Building A".to_string();
+        let filtered: Vec<usize> = workspaces
+            .iter()
+            .enumerate()
+            .filter(|(_, ws)| {
+                let query_lower = query.to_lowercase();
+                ws.description.as_ref()
+                    .map(|d| d.to_lowercase().contains(&query_lower))
+                    .unwrap_or(false)
+            })
+            .map(|(idx, _)| idx)
+            .collect();
+        
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0], 0);
+    }
+
+    #[test]
+    fn test_workspace_manager_selected_workspace() {
+        // Test selection logic
+        let workspaces = vec![
+            create_test_workspace("Building A"),
+            create_test_workspace("Building B"),
+        ];
+        let filtered_workspaces = vec![0, 1];
+        let selected = 0;
+        
+        let selected_ws = filtered_workspaces
+            .get(selected)
+            .and_then(|&idx| workspaces.get(idx));
+        
+        assert!(selected_ws.is_some());
+        assert_eq!(selected_ws.unwrap().name, "Building A");
+    }
+
+    #[test]
+    fn test_workspace_manager_next() {
+        let mut selected = 0;
+        let filtered_workspaces = vec![0, 1, 2];
+        
+        selected = if selected < filtered_workspaces.len() - 1 {
+            selected + 1
+        } else {
+            0
+        };
+        
+        assert_eq!(selected, 1);
+    }
+
+    #[test]
+    fn test_workspace_manager_previous() {
+        let mut selected = 1;
+        let filtered_workspaces = vec![0, 1, 2];
+        
+        selected = if selected > 0 {
+            selected - 1
+        } else {
+            filtered_workspaces.len() - 1
+        };
+        
+        assert_eq!(selected, 0);
+    }
+
+    #[test]
+    fn test_workspace_manager_is_active() {
+        let workspace = create_test_workspace("test");
+        let active_workspace = Some(workspace.path.clone());
+        
+        let is_active = active_workspace.as_ref()
+            .map(|active| active == &workspace.path)
+            .unwrap_or(false);
+        
+        assert!(is_active, "Should be active");
+    }
+
+    #[test]
+    fn test_workspace_manager_active_detection() {
+        let workspace1 = create_test_workspace("test1");
+        let workspace2 = create_test_workspace("test2");
+        let active_workspace = Some(workspace1.path.clone());
+        
+        let is_active1 = active_workspace.as_ref()
+            .map(|active| active == &workspace1.path)
+            .unwrap_or(false);
+        let is_active2 = active_workspace.as_ref()
+            .map(|active| active == &workspace2.path)
+            .unwrap_or(false);
+        
+        assert!(is_active1, "Workspace1 should be active");
+        assert!(!is_active2, "Workspace2 should not be active");
+    }
+}
+

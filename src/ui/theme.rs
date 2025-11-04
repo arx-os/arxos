@@ -92,3 +92,57 @@ impl Theme {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_theme_new() {
+        let theme = Theme::new();
+        assert_eq!(theme.primary, Color::Cyan);
+        assert_eq!(theme.background, Color::Black);
+    }
+
+    #[test]
+    fn test_theme_default() {
+        let theme = Theme::default();
+        assert_eq!(theme.primary, Color::Cyan);
+        assert_eq!(theme.secondary, Color::Blue);
+        assert_eq!(theme.accent, Color::Magenta);
+        assert_eq!(theme.background, Color::Black);
+        assert_eq!(theme.text, Color::White);
+        assert_eq!(theme.muted, Color::DarkGray);
+    }
+
+    #[test]
+    fn test_theme_from_config() {
+        // This should work even if config loading fails
+        let theme = Theme::from_config();
+        // Should have valid colors
+        assert!(matches!(theme.primary, Color::Cyan | Color::Blue | Color::LightBlue | Color::LightGreen | Color::LightMagenta | Color::Yellow));
+    }
+
+    #[test]
+    fn test_status_color() {
+        assert_eq!(StatusColor::Healthy.color(), Color::Green);
+        assert_eq!(StatusColor::Warning.color(), Color::Yellow);
+        assert_eq!(StatusColor::Critical.color(), Color::Red);
+        assert_eq!(StatusColor::Unknown.color(), Color::Gray);
+    }
+
+    #[test]
+    fn test_status_color_icons() {
+        assert_eq!(StatusColor::Healthy.icon(), "🟢");
+        assert_eq!(StatusColor::Warning.icon(), "🟡");
+        assert_eq!(StatusColor::Critical.icon(), "🔴");
+        assert_eq!(StatusColor::Unknown.icon(), "⚪");
+    }
+
+    #[test]
+    fn test_status_color_equality() {
+        assert_eq!(StatusColor::Healthy, StatusColor::Healthy);
+        assert_ne!(StatusColor::Healthy, StatusColor::Warning);
+        assert_ne!(StatusColor::Critical, StatusColor::Unknown);
+    }
+}
+

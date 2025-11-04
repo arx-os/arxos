@@ -4,6 +4,7 @@ use std::path::Path;
 
 pub mod manager;
 pub use manager::*;
+pub use manager::CommitMetadata;
 
 pub struct GitClient {
     repository: Repository,

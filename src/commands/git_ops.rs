@@ -2,6 +2,7 @@
 // Handles status, diff, and history commands
 
 use crate::git::manager::{BuildingGitManager, GitConfigManager, GitStatus, CommitInfo, DiffStats, DiffResult, DiffLineType};
+use crate::identity::UserRegistry;
 use crate::utils::loading;
 
 /// Find Git repository in current directory or parent directories
@@ -170,8 +171,37 @@ fn display_diff_result(diff_result: &DiffResult, single_file: bool) -> Result<()
     Ok(())
 }
 
-/// Display commit history
+/// Extract user_id from commit message (Git trailers)
+pub fn extract_user_id_from_commit(message: &str) -> Option<String> {
+    // Parse Git trailers: "ArxOS-User-ID: usr_..."
+    for line in message.lines() {
+        if line.starts_with("ArxOS-User-ID:") {
+            return Some(line[15..].trim().to_string());
+        }
+    }
+    None
+}
+
+/// Extract email from Git author string (format: "Name <email@example.com>")
+pub fn extract_email_from_author(author: &str) -> Option<String> {
+    if let Some(start) = author.find('<') {
+        if let Some(end) = author.find('>') {
+            return Some(author[start + 1..end].to_string());
+        }
+    }
+    None
+}
+
 fn display_commit_history(commits: &[CommitInfo], verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
+    display_commit_history_with_users(commits, verbose, None)
+}
+
+/// Display commit history with user info from registry
+fn display_commit_history_with_users(
+    commits: &[CommitInfo],
+    verbose: bool,
+    registry: Option<&UserRegistry>,
+) -> Result<(), Box<dyn std::error::Error>> {
     for (i, commit) in commits.iter().enumerate() {
         let short_hash = &commit.id[..8];
         let timestamp = chrono::DateTime::from_timestamp(commit.time, 0)
@@ -179,11 +209,46 @@ fn display_commit_history(commits: &[CommitInfo], verbose: bool) -> Result<(), B
             .format("%Y-%m-%d %H:%M:%S")
             .to_string();
         
+        // Extract user_id from commit message
+        let user_id = extract_user_id_from_commit(&commit.message);
+        
+        // Look up user info
+        let user_info = if let Some(registry) = registry {
+            if let Some(user_id) = user_id {
+                registry.find_by_id(&user_id)
+            } else {
+                // Try to find by email from author
+                extract_email_from_author(&commit.author)
+                    .and_then(|email| registry.find_by_email(&email))
+            }
+        } else {
+            None
+        };
+        
         if verbose {
             // Detailed format
             println!("{} 📝 Commit #{}", "=".repeat(20), i + 1);
             println!("🆔 Hash: {}", commit.id);
             println!("👤 Author: {}", commit.author);
+            
+            // Display user info if available
+            if let Some(user) = user_info {
+                println!("   👤 User: {} ({})", user.name, user.email);
+                if let Some(ref org) = user.organization {
+                    println!("   🏢 Organization: {}", org);
+                }
+                if user.verified {
+                    println!("   ✅ Verified");
+                } else {
+                    println!("   ⚠️  Unverified");
+                }
+            } else {
+                // Unknown user - show email only
+                if let Some(email) = extract_email_from_author(&commit.author) {
+                    println!("   ❓ Unknown User: {}", email);
+                }
+            }
+            
             println!("⏰ Date: {}", timestamp);
             println!("💬 Message: {}", commit.message);
             println!();
@@ -195,10 +260,28 @@ fn display_commit_history(commits: &[CommitInfo], verbose: bool) -> Result<(), B
                 commit.message.clone()
             };
             
+            // Build user display
+            let user_display = if let Some(user) = user_info {
+                if user.verified {
+                    format!("✅ {} ({})", user.name, 
+                        user.organization.as_ref().unwrap_or(&"Unknown".to_string()))
+                } else {
+                    format!("⚠️  {} ({})", user.name,
+                        user.organization.as_ref().unwrap_or(&"Unknown".to_string()))
+                }
+            } else {
+                // Unknown user
+                if let Some(email) = extract_email_from_author(&commit.author) {
+                    format!("❓ Unknown: {}", email)
+                } else {
+                    commit.author.clone()
+                }
+            };
+            
             println!("{} {} {} 📝 {}", 
                 short_hash,
                 timestamp,
-                commit.author,
+                user_display,
                 message_preview
             );
         }
@@ -370,6 +453,9 @@ pub fn handle_history(limit: usize, verbose: bool, file: Option<String>) -> Resu
     let repo_path = find_git_repository()?;
     
     if let Some(repo_path) = repo_path {
+        // Load user registry (optional - if it doesn't exist, we'll show email only)
+        let registry = UserRegistry::load(&std::path::Path::new(&repo_path)).ok();
+        
         // Initialize Git manager
         let config = GitConfigManager::default_config();
         let manager = BuildingGitManager::new(&repo_path, "Building", config)?;
@@ -392,8 +478,8 @@ pub fn handle_history(limit: usize, verbose: bool, file: Option<String>) -> Resu
             return Ok(());
         }
         
-        // Display commits
-        display_commit_history(&commits, verbose)?;
+        // Display commits with user info
+        display_commit_history_with_users(&commits, verbose, registry.as_ref())?;
         
     } else {
         println!("❌ Not in a Git repository");

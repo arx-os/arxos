@@ -12,6 +12,10 @@ use crate::ui::layouts::{dashboard_layout, split_horizontal};
 use crate::utils::loading;
 use crate::hardware::{SensorData, SensorAlert, AlertGenerator};
 use crate::yaml::{BuildingData, EquipmentData};
+use crate::identity::{UserRegistry, User};
+use crate::git::{BuildingGitManager, GitConfigManager};
+use crate::commands::git_ops::{find_git_repository, extract_user_id_from_commit, extract_email_from_author};
+use chrono::{DateTime, Utc};
 use crossterm::event::{Event, KeyCode};
 use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
@@ -45,12 +49,34 @@ struct AlertItem {
     sensor_id: Option<String>,
 }
 
+/// User activity item for recent changes
+#[derive(Debug, Clone)]
+struct UserActivityItem {
+    timestamp: String,
+    relative_time: String,
+    commit_hash: String,
+    commit_message: String,
+    user: Option<UserInfo>,
+    email: String,
+}
+
+/// User info for display
+#[derive(Debug, Clone)]
+struct UserInfo {
+    name: String,
+    email: String,
+    organization: Option<String>,
+    verified: bool,
+}
+
 /// Dashboard state
 struct WatchDashboardState {
     building_data: BuildingData,
     sensor_readings: Vec<SensorReading>,
     alerts: Vec<AlertItem>,
     equipment_status: HashMap<String, StatusColor>,
+    recent_changes: Vec<UserActivityItem>,
+    user_registry: Option<UserRegistry>,
     selected_tab: usize,
     tabs: Vec<String>,
     refresh_interval: Duration,
@@ -86,13 +112,24 @@ impl WatchDashboardState {
             "Sensors".to_string(),
             "Alerts".to_string(),
             "Equipment".to_string(),
+            "Activity".to_string(),
         ];
+        
+        // Try to load user registry (optional)
+        let user_registry = find_git_repository()
+            .ok()
+            .flatten()
+            .and_then(|repo_path| {
+                UserRegistry::load(std::path::Path::new(&repo_path)).ok()
+            });
         
         Ok(Self {
             building_data,
             sensor_readings: Vec::new(),
             alerts: Vec::new(),
             equipment_status: HashMap::new(),
+            recent_changes: Vec::new(),
+            user_registry,
             selected_tab: 0,
             tabs,
             refresh_interval: Duration::from_secs(5),
@@ -109,6 +146,7 @@ impl WatchDashboardState {
         self.load_sensor_data()?;
         self.load_alerts()?;
         self.load_equipment_status()?;
+        self.load_recent_changes()?;
         Ok(())
     }
     
@@ -231,6 +269,77 @@ impl WatchDashboardState {
             })
             .collect()
     }
+    
+    fn load_recent_changes(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        // Find Git repository
+        let repo_path_str = find_git_repository()?
+            .ok_or("Not in a Git repository")?;
+        
+        // Load commit history
+        let config = GitConfigManager::default_config();
+        let manager = BuildingGitManager::new(&repo_path_str, "Building", config)?;
+        let commits = manager.list_commits(10)?; // Last 10 commits
+        
+        // Build activity items with user info
+        let mut activities = Vec::new();
+        for commit in commits {
+            // Extract user_id from commit message
+            let user_id = extract_user_id_from_commit(&commit.message);
+            let email = extract_email_from_author(&commit.author)
+                .unwrap_or_else(|| commit.author.clone());
+            
+            // Look up user in registry
+            let user_info = if let Some(registry) = &self.user_registry {
+                if let Some(uid) = user_id {
+                    registry.find_by_id(&uid)
+                } else {
+                    registry.find_by_email(&email)
+                }
+                .map(|user| UserInfo {
+                    name: user.name.clone(),
+                    email: user.email.clone(),
+                    organization: user.organization.clone(),
+                    verified: user.verified,
+                })
+            } else {
+                None
+            };
+            
+            let timestamp = chrono::DateTime::from_timestamp(commit.time, 0)
+                .unwrap_or_else(|| Utc::now());
+            let relative_time = format_relative_time(&timestamp);
+            
+            activities.push(UserActivityItem {
+                timestamp: timestamp.format("%Y-%m-%d %H:%M:%S").to_string(),
+                relative_time,
+                commit_hash: commit.id[..8].to_string(),
+                commit_message: commit.message.clone(),
+                user: user_info,
+                email,
+            });
+        }
+        
+        self.recent_changes = activities;
+        Ok(())
+    }
+}
+
+/// Format relative time (e.g., "2 hours ago")
+fn format_relative_time(timestamp: &DateTime<Utc>) -> String {
+    let now = Utc::now();
+    let duration = now.signed_duration_since(*timestamp);
+    
+    if duration.num_seconds() < 60 {
+        "Just now".to_string()
+    } else if duration.num_minutes() < 60 {
+        format!("{} minutes ago", duration.num_minutes())
+    } else if duration.num_hours() < 24 {
+        format!("{} hours ago", duration.num_hours())
+    } else if duration.num_days() < 7 {
+        format!("{} days ago", duration.num_days())
+    } else {
+        timestamp.format("%Y-%m-%d").to_string()
+    }
 }
 
 /// Render header with tabs
@@ -345,6 +454,82 @@ fn render_overview_cards<'a>(
     ];
     
     vec![cards[0].clone(), cards[1].clone(), cards[2].clone(), cards[3].clone()]
+}
+
+/// Render recent changes with user attribution
+fn render_recent_changes<'a>(
+    state: &'a WatchDashboardState,
+    theme: &'a Theme,
+) -> Paragraph<'a> {
+    let mut lines = Vec::new();
+    
+    lines.push(Line::from(vec![
+        Span::styled("📝 Recent Changes", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
+    ]));
+    lines.push(Line::from(""));
+    
+    if state.recent_changes.is_empty() {
+        lines.push(Line::from(vec![
+            Span::styled("No recent changes", Style::default().fg(theme.muted)),
+        ]));
+    } else {
+        for activity in state.recent_changes.iter().take(8) {
+            // Commit message (truncated)
+            let message_preview = if activity.commit_message.len() > 40 {
+                format!("{}...", &activity.commit_message[..37])
+            } else {
+                activity.commit_message.clone()
+            };
+            
+            lines.push(Line::from(vec![
+                Span::styled("🔵 ", Style::default().fg(Color::Blue)),
+                Span::styled(message_preview, Style::default().fg(theme.text)),
+            ]));
+            
+            // User info
+            if let Some(ref user) = activity.user {
+                let badge = if user.verified { "✅" } else { "⚠️" };
+                lines.push(Line::from(vec![
+                    Span::styled("   By: ", Style::default().fg(theme.muted)),
+                    Span::styled(badge, Style::default()),
+                    Span::styled(" ", Style::default()),
+                    Span::styled(&user.name, Style::default().fg(theme.text)),
+                ]));
+                
+                if let Some(ref org) = user.organization {
+                    lines.push(Line::from(vec![
+                        Span::styled("   🏢 ", Style::default().fg(theme.muted)),
+                        Span::styled(org, Style::default().fg(theme.text)),
+                    ]));
+                }
+                
+                lines.push(Line::from(vec![
+                    Span::styled("   📧 ", Style::default().fg(theme.muted)),
+                    Span::styled(&user.email, Style::default().fg(theme.muted)),
+                ]));
+            } else {
+                // Unknown user
+                lines.push(Line::from(vec![
+                    Span::styled("   By: ", Style::default().fg(theme.muted)),
+                    Span::styled("❓ ", Style::default().fg(Color::Yellow)),
+                    Span::styled("Unknown: ", Style::default().fg(theme.muted)),
+                    Span::styled(&activity.email, Style::default().fg(theme.muted)),
+                ]));
+            }
+            
+            // Timestamp
+            lines.push(Line::from(vec![
+                Span::styled("   ⏰ ", Style::default().fg(theme.muted)),
+                Span::styled(&activity.relative_time, Style::default().fg(theme.muted)),
+            ]));
+            
+            lines.push(Line::from(""));
+        }
+    }
+    
+    Paragraph::new(lines)
+        .block(Block::default().borders(Borders::ALL).title("Recent Changes"))
+        .alignment(Alignment::Left)
 }
 
 /// Render alerts paragraph for overview
@@ -539,9 +724,21 @@ pub fn handle_watch_dashboard(
                         }
                     }
                     
-                    // Alerts in remaining space
+                    // Split remaining space between alerts and recent changes
+                    let bottom_chunks = Layout::default()
+                        .direction(ratatui::layout::Direction::Horizontal)
+                        .constraints([
+                            Constraint::Percentage(50),
+                            Constraint::Percentage(50),
+                        ])
+                        .split(overview_chunks[1])
+                        .to_vec();
+                    
                     let alerts_widget = render_overview_alerts(&state, &theme);
-                    frame.render_widget(alerts_widget, overview_chunks[1]);
+                    frame.render_widget(alerts_widget, bottom_chunks[0]);
+                    
+                    let changes_widget = render_recent_changes(&state, &theme);
+                    frame.render_widget(changes_widget, bottom_chunks[1]);
                 }
                 1 => {
                     // Sensors tab
@@ -557,6 +754,11 @@ pub fn handle_watch_dashboard(
                     // Equipment tab
                     let equipment_paragraph = render_equipment(&state, chunks[1], &theme);
                     frame.render_widget(equipment_paragraph, chunks[1]);
+                }
+                4 => {
+                    // Activity tab
+                    let activity_widget = render_recent_changes(&state, &theme);
+                    frame.render_widget(activity_widget, chunks[1]);
                 }
                 _ => {}
             }

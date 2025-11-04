@@ -36,6 +36,21 @@ pub struct GitConfig {
     pub remote_url: Option<String>,
 }
 
+/// Enhanced commit metadata with user attribution
+#[derive(Debug, Clone)]
+pub struct CommitMetadata {
+    /// Commit message
+    pub message: String,
+    /// User ID from registry (UUID format: "usr_...")
+    pub user_id: Option<String>,
+    /// Device ID from mobile device (Phase 3)
+    pub device_id: Option<String>,
+    /// AR scan ID if from AR scan
+    pub ar_scan_id: Option<String>,
+    /// GPG signature (Phase 3)
+    pub signature: Option<String>,
+}
+
 impl BuildingGitManager {
     /// Initialize or open a Git repository for building data
     pub fn new(repo_path: &str, building_name: &str, config: GitConfig) -> Result<Self, GitError> {
@@ -109,6 +124,24 @@ impl BuildingGitManager {
         building_data: &BuildingData,
         commit_message: Option<&str>,
     ) -> Result<GitOperationResult, GitError> {
+        // For backward compatibility, create simple metadata
+        let msg = commit_message.unwrap_or("Update building data");
+        let metadata = CommitMetadata {
+            message: msg.to_string(),
+            user_id: None,
+            device_id: None,
+            ar_scan_id: None,
+            signature: None,
+        };
+        self.export_building_with_metadata(building_data, &metadata)
+    }
+
+    /// Export building data with user attribution metadata
+    pub fn export_building_with_metadata(
+        &mut self,
+        building_data: &BuildingData,
+        metadata: &CommitMetadata,
+    ) -> Result<GitOperationResult, GitError> {
         info!("Exporting building data to Git repository");
 
         // Check total size before exporting
@@ -178,18 +211,15 @@ impl BuildingGitManager {
             files_changed += 1;
         }
 
-        // Commit changes
-        let commit_id = self.commit_changes(
-            commit_message.unwrap_or("Update building data"),
-            &file_paths,
-        )?;
+        // Commit changes with metadata
+        let commit_id = self.commit_changes_with_metadata(metadata, &file_paths)?;
 
         info!("Successfully exported building data: {} files changed", files_changed);
 
         Ok(GitOperationResult {
             commit_id,
             files_changed,
-            message: commit_message.unwrap_or("Update building data").to_string(),
+            message: metadata.message.clone(),
         })
     }
 
@@ -257,6 +287,19 @@ impl BuildingGitManager {
 
     /// Commit changes to Git repository
     fn commit_changes(&self, message: &str, file_paths: &[String]) -> Result<String, GitError> {
+        // For backward compatibility, create simple metadata
+        let metadata = CommitMetadata {
+            message: message.to_string(),
+            user_id: None,
+            device_id: None,
+            ar_scan_id: None,
+            signature: None,
+        };
+        self.commit_changes_with_metadata(&metadata, file_paths)
+    }
+
+    /// Commit changes to Git repository with metadata
+    fn commit_changes_with_metadata(&self, metadata: &CommitMetadata, file_paths: &[String]) -> Result<String, GitError> {
         let mut index = self.repo.index()?;
         
         // Add all files to index
@@ -288,12 +331,15 @@ impl BuildingGitManager {
             &self.git_config.author_email,
         )?;
 
+        // Build enhanced commit message with Git trailers
+        let enhanced_message = self.build_commit_message(metadata);
+
         // Create commit
         let commit_id = self.repo.commit(
             Some("HEAD"),
             &signature,
             &signature,
-            message,
+            &enhanced_message,
             &tree,
             &parent_commit.iter().collect::<Vec<_>>(),
         )?;
@@ -521,8 +567,43 @@ impl BuildingGitManager {
         Ok(count)
     }
 
+    /// Build commit message with Git trailers (standard Git practice)
+    ///
+    /// Adds ArxOS-User-ID and other metadata as Git trailers.
+    fn build_commit_message(&self, metadata: &CommitMetadata) -> String {
+        let mut message = metadata.message.clone();
+        
+        // Add Git trailers (standard practice like Signed-off-by:)
+        if let Some(ref user_id) = metadata.user_id {
+            message.push_str(&format!("\n\nArxOS-User-ID: {}", user_id));
+        }
+        
+        if let Some(ref device_id) = metadata.device_id {
+            message.push_str(&format!("\nArxOS-Device-ID: {}", device_id));
+        }
+        
+        if let Some(ref ar_scan_id) = metadata.ar_scan_id {
+            message.push_str(&format!("\nArxOS-Scan-ID: {}", ar_scan_id));
+        }
+        
+        message
+    }
+
     /// Commit staged changes
     pub fn commit_staged(&mut self, message: &str) -> Result<String, GitError> {
+        // For backward compatibility, create simple metadata
+        let metadata = CommitMetadata {
+            message: message.to_string(),
+            user_id: None,
+            device_id: None,
+            ar_scan_id: None,
+            signature: None,
+        };
+        self.commit_staged_with_user(&metadata)
+    }
+
+    /// Commit staged changes with user attribution
+    pub fn commit_staged_with_user(&mut self, metadata: &CommitMetadata) -> Result<String, GitError> {
         let mut index = self.repo.index()?;
         let tree_id = index.write_tree()?;
         let tree = self.repo.find_tree(tree_id)?;
@@ -545,12 +626,15 @@ impl BuildingGitManager {
             &self.git_config.author_email,
         )?;
 
+        // Build enhanced commit message with Git trailers
+        let enhanced_message = self.build_commit_message(metadata);
+
         // Create commit
         let commit_id = self.repo.commit(
             Some("HEAD"),
             &signature,
             &signature,
-            message,
+            &enhanced_message,
             &tree,
             &parent_commit.iter().collect::<Vec<_>>(),
         )?;

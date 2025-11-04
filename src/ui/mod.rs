@@ -15,6 +15,8 @@ pub mod theme_manager;
 pub mod export;
 pub mod command_palette;
 pub mod workspace_manager;
+pub mod spreadsheet;
+pub mod users;
 
 pub use terminal::TerminalManager;
 pub use layouts::*;
@@ -28,4 +30,5 @@ pub use theme_manager::{ThemeManager, ThemeConfig, ThemePreset};
 pub use export::{ExportFormat, export_buffer, export_current_view};
 pub use command_palette::{CommandPalette, CommandEntry, CommandCategory, handle_command_palette};
 pub use workspace_manager::{WorkspaceManager, Workspace, handle_workspace_manager};
+pub use users::handle_user_browser;
 

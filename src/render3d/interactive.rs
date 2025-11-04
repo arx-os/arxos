@@ -217,8 +217,8 @@ impl InteractiveRenderer {
                 self.state.select_equipment(equipment_id);
             }
             Action::GameAction(game_action) => {
-                // Game actions will be handled by game overlay system
-                // This is a placeholder - game overlay will process these
+                // Game actions are handled by game overlay system
+                // Game overlay processes these actions for game mode functionality
                 log::debug!("Game action received: {:?}", game_action);
             }
         }

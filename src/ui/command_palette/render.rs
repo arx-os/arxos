@@ -165,7 +165,7 @@ mod tests {
         terminal.draw(|frame| {
             render_command_palette(frame, area, &mut palette, &theme, false);
         }).unwrap();
-        // Should render placeholder text
+        // Command palette renders with empty query state
     }
 
     #[test]

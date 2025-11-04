@@ -7,9 +7,10 @@ mod error;
 pub use error::{PersistenceError, PersistenceResult};
 
 use crate::yaml::{BuildingData, BuildingYamlSerializer};
-use crate::git::{BuildingGitManager, GitConfigManager};
+use crate::git::{BuildingGitManager, GitConfigManager, CommitMetadata};
+use crate::identity::UserRegistry;
 use std::path::{Path, PathBuf};
-use log::{info, debug};
+use log::{info, debug, warn};
 
 /// Manages persistence of building data to YAML files and Git
 pub struct PersistenceManager {
@@ -137,13 +138,57 @@ impl PersistenceManager {
     }
     
     /// Save building data and commit to Git (if repository exists)
+    ///
+    /// For backward compatibility, uses config email to look up user.
     pub fn save_and_commit(&self, data: &BuildingData, message: Option<&str>) -> PersistenceResult<String> {
+        // Get user email from config
+        let user_email = crate::config::get_config_or_default().user.email.clone();
+        let user_email = if user_email.is_empty() { None } else { Some(user_email.as_str()) };
+        
+        self.save_and_commit_with_user(data, message, user_email)
+    }
+
+    /// Save building data and commit to Git with user attribution
+    ///
+    /// Looks up user in registry by email and includes user_id in commit metadata.
+    pub fn save_and_commit_with_user(
+        &self,
+        data: &BuildingData,
+        message: Option<&str>,
+        user_email: Option<&str>,
+    ) -> PersistenceResult<String> {
         // First save to YAML file
         self.save_building_data(data)?;
         
         // Commit to Git if repository exists
         if let Some(ref repo_path) = self.git_repo {
             info!("Committing changes to Git repository: {:?}", repo_path);
+            
+            // Load user registry and look up user
+            let user_id = match UserRegistry::load(repo_path) {
+                Ok(registry) => {
+                    user_email.and_then(|email| {
+                        registry.find_by_email(email).map(|u| {
+                            info!("Found user in registry: {} ({})", u.name, u.email);
+                            u.id.clone()
+                        })
+                    })
+                }
+                Err(e) => {
+                    warn!("Failed to load user registry: {}", e);
+                    None
+                }
+            };
+            
+            // Build commit metadata
+            let commit_message = message.unwrap_or("Update building data");
+            let metadata = CommitMetadata {
+                message: commit_message.to_string(),
+                user_id,
+                device_id: None,  // Phase 3
+                ar_scan_id: None,
+                signature: None,  // Phase 3
+            };
             
             // Load Git config from ArxConfig or environment, fallback to default
             let config = GitConfigManager::load_from_arx_config_or_env();
@@ -153,7 +198,8 @@ impl PersistenceManager {
                 config
             ).map_err(|e| PersistenceError::GitError(e.to_string()))?;
             
-            let result = git_manager.export_building(data, message)
+            // Use export_building_with_metadata to include user attribution
+            let result = git_manager.export_building_with_metadata(data, &metadata)
                 .map_err(|e| PersistenceError::GitError(e.to_string()))?;
             
             info!("Changes committed to Git: {}", &result.commit_id[..8]);

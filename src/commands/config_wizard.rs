@@ -8,13 +8,13 @@
 //! - Smart defaults with explanations
 
 use crate::ui::{TerminalManager, Theme};
-use crate::config::{ArxConfig, ConfigManager, ConfigResult};
+use crate::config::{ArxConfig, ConfigManager};
 use crossterm::event::{Event, KeyCode};
 use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Tabs},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
 };
 use std::time::Duration;
 

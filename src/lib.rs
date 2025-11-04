@@ -32,6 +32,9 @@ pub mod utils;
 pub mod docs;
 pub mod game;
 
+// Identity module (user registry and attribution)
+pub mod identity;
+
 // UI module (terminal user interface)
 pub mod ui;
 
@@ -46,7 +49,7 @@ pub use ar_integration::processing::{process_ar_scan_to_pending, validate_ar_sca
 pub use core::{Building, Equipment};
 pub use ifc::{IFCProcessor, BoundingBox, IFCError, IFCResult, EnhancedIFCParser, ParseResult, ParseStats};
 pub use spatial::{SpatialEngine, Point3D, BoundingBox3D, CoordinateSystem, SpatialEntity};
-pub use git::{GitClient, BuildingGitManager, GitConfig, GitConfigManager, GitError};
+pub use git::{GitClient, BuildingGitManager, GitConfig, GitConfigManager, GitError, CommitMetadata};
 pub use render::BuildingRenderer;
 pub use yaml::{BuildingYamlSerializer, BuildingData, BuildingInfo, BuildingMetadata, FloorData, RoomData, EquipmentData, SensorMapping, ThresholdConfig};
 pub use path::{PathGenerator, UniversalPath, PathComponents, PathError, PathValidator};
@@ -54,6 +57,7 @@ pub use progress::{ProgressReporter, ProgressContext};
 pub use progress::utils as progress_utils;
 pub use config::{ArxConfig, ConfigManager, ConfigError, ConfigResult};
 pub use export::ar::{ARExporter, ARFormat, GLTFExporter};
+pub use identity::{User, UserStatus, UserRegistry, RegistryError, PendingUserRequest, PendingUserRegistry, PendingRequestStatus, PendingRegistryError};
 
 // Re-export error types
 pub use error::{ArxError, ArxResult, ErrorContext, ErrorAnalytics};

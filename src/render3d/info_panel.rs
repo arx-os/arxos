@@ -8,13 +8,12 @@
 
 use crate::ui::{Theme, StatusColor};
 use crate::render3d::state::{InteractiveState, CameraState, ViewMode};
-use crate::render3d::Scene3D;
 use crate::yaml::BuildingData;
 use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph, Table, Row, Cell},
+    widgets::{Block, Borders, Paragraph},
 };
 
 /// Information panel state

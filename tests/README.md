@@ -45,13 +45,20 @@ IFC file processing tests:
 - `ifc_workflow_tests.rs` - IFC processing workflows
 - `ifc_sync_integration_tests.rs` - IFC bidirectional sync
 
-#### TUI Tests (`tests/tui/`) ⭐ NEW
+#### TUI Tests (`tests/tui/`)
 Terminal User Interface integration tests:
 - `tui_workflow_integration_tests.rs` - Complete TUI workflows
 - `tui_component_interaction_tests.rs` - Component interaction tests
 - `tui_event_flow_tests.rs` - Event flow and propagation tests
 - `tui_terminal_integration_tests.rs` - Terminal manager integration
 - `test_utils.rs` - Shared test utilities and helpers
+
+#### Spreadsheet Tests (`tests/spreadsheet/`) ⭐ NEW
+Spreadsheet TUI integration tests:
+- `spreadsheet_component_integration_tests.rs` - Component interaction tests (Grid + Editor + Validation)
+- `spreadsheet_data_source_integration_tests.rs` - Data source workflow tests (Load → Edit → Save → Reload)
+- `spreadsheet_filesystem_integration_tests.rs` - File system operations (YAML persistence, Git, file locking)
+- `spreadsheet_command_integration_tests.rs` - CLI command handler integration tests
 
 #### Command Tests (`tests/commands/`)
 Unit tests for individual command handlers:
@@ -104,6 +111,12 @@ cargo test --test tui_workflow_integration_tests
 cargo test --test tui_component_interaction_tests
 cargo test --test tui_event_flow_tests
 cargo test --test tui_terminal_integration_tests
+
+# Spreadsheet tests
+cargo test --test spreadsheet_component_integration_tests
+cargo test --test spreadsheet_data_source_integration_tests
+cargo test --test spreadsheet_filesystem_integration_tests
+cargo test --test spreadsheet_command_integration_tests
 ```
 
 ### Run All Tests in a Category
@@ -116,6 +129,9 @@ cargo test --test hardware_
 
 # Run all TUI tests
 cargo test --test tui_
+
+# Run all spreadsheet tests
+cargo test --test spreadsheet_
 ```
 
 ### Run Command Tests
@@ -137,6 +153,7 @@ Examples:
 - `tests/mobile/mobile_ffi_tests.rs` - Mobile FFI tests
 - `tests/hardware/hardware_http_integration_tests.rs` - Hardware HTTP integration tests
 - `tests/tui/tui_workflow_integration_tests.rs` - TUI workflow integration tests
+- `tests/spreadsheet/spreadsheet_component_integration_tests.rs` - Spreadsheet component integration tests
 
 ## Benefits of This Organization
 
@@ -149,7 +166,7 @@ Examples:
 
 ## Test Statistics
 
-- **Total Test Files**: ~40+
+- **Total Test Files**: 45 Rust test files
 - **AR Tests**: 6 files in `tests/ar/`
 - **Command Tests**: 17 files in `tests/commands/`
 - **Mobile Tests**: 1 file in `tests/mobile/`
@@ -157,7 +174,8 @@ Examples:
 - **E2E Tests**: 2 files in `tests/e2e/`
 - **IFC Tests**: 2 files in `tests/ifc/`
 - **Persistence Tests**: 1 file in `tests/persistence/`
-- **TUI Tests**: 4+ files in `tests/tui/` ⭐ NEW
+- **TUI Tests**: 5 files in `tests/tui/` (including `test_utils.rs`)
+- **Spreadsheet Tests**: 4 files in `tests/spreadsheet/` ⭐ NEW
 - **Other Tests**: 4 files in `tests/` root
 - **Test Coverage**: >90% (as per project standards)
 
@@ -168,4 +186,5 @@ Examples:
 - `tests/README_ANDROID_AR_TESTS.md` - Android AR test details
 - `tests/TEST_COVERAGE_SUMMARY.md` - Overall test coverage summary
 - `tests/IMPLEMENTATION_SUMMARY.md` - Implementation details
+- `tests/TESTS_DIRECTORY_REVIEW.md` - Structure review and best practices
 

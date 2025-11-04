@@ -29,6 +29,9 @@ pub mod health;
 pub mod doc;
 pub mod game;
 pub mod sync;
+pub mod spreadsheet;
+pub mod users;
+pub mod verify;
 
 use crate::cli::Commands;
 
@@ -158,6 +161,15 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
                     game::handle_game_learn(pr_id, pr_dir, building)
                 },
             }
+        },
+        Commands::Spreadsheet { subcommand } => {
+            spreadsheet::handle_spreadsheet_command(subcommand)
+        },
+        Commands::Users { subcommand } => {
+            users::handle_users_command(subcommand)
+        },
+        Commands::Verify { commit, all, verbose } => {
+            verify::handle_verify(commit, all, verbose)
         },
     }
 }

@@ -7,7 +7,6 @@ use crate::utils::loading;
 use crate::export::{IFCExporter, ARExporter, ARFormat};
 use crate::export::ifc::IFCSyncState;
 use std::path::{Path, PathBuf};
-use std::fs;
 
 /// Check if a path is a valid Git repository
 fn is_git_repository(path: &str) -> bool {

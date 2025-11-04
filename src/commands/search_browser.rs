@@ -7,7 +7,7 @@
 //! - Navigate to related items
 //! - Search history
 
-use crate::ui::{TerminalManager, Theme, StatusColor};
+use crate::ui::{TerminalManager, Theme};
 use crate::ui::layouts::list_detail_layout;
 use crate::utils::loading;
 use crate::search::{SearchEngine, SearchConfig, SearchResult};

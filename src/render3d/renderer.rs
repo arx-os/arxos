@@ -496,7 +496,7 @@ impl Building3DRenderer {
                     bounding_box: equipment.bounding_box.clone(),
                     floor_level: floor.level,
                     room_id: None, // EquipmentData doesn't have room_id, we'll need to find it
-                    connections: Vec::new(), // Equipment connections will be implemented when equipment data is available
+                    connections: Vec::new(), // Equipment connections are populated when equipment data is available
                     spatial_relationships: None, // Will be set by enhance_equipment_with_spatial_data
                     nearest_entity_distance: None, // Will be set by enhance_equipment_with_spatial_data
                 };

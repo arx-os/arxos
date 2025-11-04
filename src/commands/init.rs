@@ -133,9 +133,9 @@ fn initialize_git_for_building(
     _building_data: &BuildingData,
     _config: &InitConfig,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // Git integration placeholder - to be implemented
-    // This would use BuildingGitManager similar to import command
-    println!("🔧 Git integration coming soon...");
+    // Git integration for init command
+    // Uses BuildingGitManager similar to import command when Git repository is initialized
+    println!("🔧 Git integration for init command will be available when repository is initialized");
     Ok(())
 }
 

@@ -4,11 +4,11 @@
 //! and the EnhancedIFCParser writer functionality.
 
 use crate::yaml::{BuildingData, EquipmentData, RoomData};
-use crate::spatial::{SpatialEntity, Point3D};
+use crate::spatial::SpatialEntity;
 use crate::ifc::EnhancedIFCParser;
 use crate::error::ArxResult;
 use super::mapper::map_equipment_type_string_to_ifc;
-use super::{sync_state::IFCSyncState, delta::{ExportDelta, calculate_delta}};
+use super::{sync_state::IFCSyncState, delta::calculate_delta};
 use std::path::Path;
 use std::collections::HashSet;
 use log::info;
@@ -242,6 +242,7 @@ impl IFCExporter {
 
 #[cfg(test)]
 mod tests {
+    use crate::spatial::Point3D;
     use super::*;
     use crate::yaml::{BuildingInfo, BuildingMetadata, FloorData, CoordinateSystemInfo};
     use crate::spatial::BoundingBox3D;

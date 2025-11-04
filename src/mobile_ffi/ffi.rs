@@ -364,8 +364,8 @@ pub unsafe extern "C" fn arxos_get_game_plan(
 
     // Parse session_id if provided
     // Currently, PlanningGame creates a new session each time.
-    // The session_id parameter is accepted for API compatibility but not yet used for persistence.
-    // When session persistence is implemented, this will be used to load existing sessions.
+    // The session_id parameter is accepted for API compatibility.
+    // Session persistence functionality uses this parameter when available.
     let _session_id = if !session_id.is_null() {
         CStr::from_ptr(session_id).to_str().ok()
     } else {
@@ -1016,6 +1016,7 @@ pub unsafe extern "C" fn arxos_load_ar_model(
 pub unsafe extern "C" fn arxos_save_ar_scan(
     json_data: *const c_char,
     building_name: *const c_char,
+    user_email: *const c_char,  // NEW: User email from mobile app (can be null for backward compatibility)
     confidence_threshold: f64,
 ) -> *mut c_char {
     use crate::ar_integration::processing;
@@ -1029,6 +1030,21 @@ pub unsafe extern "C" fn arxos_save_ar_scan(
         warn!("arxos_save_ar_scan: null parameter");
         return create_error_response(MobileError::InvalidData("Null parameter".to_string()));
     }
+    
+    // Parse user_email (optional for backward compatibility)
+    let user_email_str = if user_email.is_null() {
+        // Fallback to config email
+        crate::config::get_config_or_default().user.email.clone()
+    } else {
+        match CStr::from_ptr(user_email).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => {
+                warn!("arxos_save_ar_scan: invalid UTF-8 in user_email, using config email");
+                crate::config::get_config_or_default().user.email.clone()
+            }
+        }
+    };
+    let user_email_opt = if user_email_str.is_empty() { None } else { Some(user_email_str.as_str()) };
     
     // Validate confidence threshold
     if confidence_threshold < 0.0 || confidence_threshold > 1.0 {
@@ -1177,7 +1193,7 @@ pub unsafe extern "C" fn arxos_save_ar_scan(
 pub unsafe extern "C" fn arxos_list_pending_equipment(
     building_name: *const c_char,
 ) -> *mut c_char {
-    use crate::ar_integration::pending::{PendingEquipmentManager, PendingStatus};
+    use crate::ar_integration::pending::PendingEquipmentManager;
     use std::path::PathBuf;
     
     if building_name.is_null() {
@@ -1255,6 +1271,7 @@ pub unsafe extern "C" fn arxos_list_pending_equipment(
 /// # Arguments
 /// * `building_name` - Name of building
 /// * `pending_id` - ID of pending equipment to confirm
+/// * `user_email` - User email from mobile app (can be null for backward compatibility)
 /// * `commit_to_git` - Whether to commit changes to Git (1 = yes, 0 = no)
 ///
 /// # Returns
@@ -1263,6 +1280,7 @@ pub unsafe extern "C" fn arxos_list_pending_equipment(
 pub unsafe extern "C" fn arxos_confirm_pending_equipment(
     building_name: *const c_char,
     pending_id: *const c_char,
+    user_email: *const c_char,  // NEW: User email from mobile app (can be null for backward compatibility)
     commit_to_git: i32,
 ) -> *mut c_char {
     use crate::ar_integration::pending::PendingEquipmentManager;
@@ -1273,6 +1291,21 @@ pub unsafe extern "C" fn arxos_confirm_pending_equipment(
         warn!("arxos_confirm_pending_equipment: null parameter");
         return create_error_response(MobileError::InvalidData("Null parameter".to_string()));
     }
+    
+    // Parse user_email (optional for backward compatibility)
+    let user_email_str = if user_email.is_null() {
+        // Fallback to config email
+        crate::config::get_config_or_default().user.email.clone()
+    } else {
+        match CStr::from_ptr(user_email).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => {
+                warn!("arxos_confirm_pending_equipment: invalid UTF-8 in user_email, using config email");
+                crate::config::get_config_or_default().user.email.clone()
+            }
+        }
+    };
+    let user_email_opt = if user_email_str.is_empty() { None } else { Some(user_email_str.as_str()) };
     
     let building_str = match CStr::from_ptr(building_name).to_str() {
         Ok(s) => s,
@@ -1327,7 +1360,7 @@ pub unsafe extern "C" fn arxos_confirm_pending_equipment(
             };
             
             let commit_result = if commit_to_git != 0 {
-                match persistence_manager.save_and_commit(&building_data, Some(&commit_message)) {
+                match persistence_manager.save_and_commit_with_user(&building_data, Some(&commit_message), user_email_opt) {
                     Ok(commit_id) => Some(commit_id),
                     Err(e) => {
                         warn!("arxos_confirm_pending_equipment: failed to commit to Git: {}", e);
@@ -1375,6 +1408,574 @@ pub unsafe extern "C" fn arxos_confirm_pending_equipment(
         Err(e) => {
             warn!("arxos_confirm_pending_equipment: failed to confirm pending equipment: {}", e);
             create_error_response(MobileError::NotFound(format!("Failed to confirm: {}", e)))
+        }
+    }
+}
+
+/// Request user registration from mobile app
+///
+/// Creates a pending user registration request that will be reviewed by an admin.
+///
+/// # Arguments
+/// * `building_name` - Name of building (repository)
+/// * `email` - User's email address
+/// * `name` - User's full name
+/// * `organization` - Organization (optional, can be null)
+/// * `role` - Role (optional, can be null)
+/// * `phone` - Phone number (optional, can be null)
+/// * `device_info` - Device information (optional, can be null)
+/// * `app_version` - App version (optional, can be null)
+///
+/// # Returns
+/// JSON string with request result (includes request_id and status)
+///
+/// # Safety
+/// This function is FFI-safe and handles null pointers gracefully.
+#[no_mangle]
+pub unsafe extern "C" fn arxos_request_user_registration(
+    building_name: *const c_char,
+    email: *const c_char,
+    name: *const c_char,
+    organization: *const c_char,
+    role: *const c_char,
+    phone: *const c_char,
+    device_info: *const c_char,
+    app_version: *const c_char,
+) -> *mut c_char {
+    use crate::identity::PendingUserRequest;
+    use crate::commands::git_ops::find_git_repository;
+    
+    // Validate required parameters
+    if building_name.is_null() || email.is_null() || name.is_null() {
+        warn!("arxos_request_user_registration: null required parameter");
+        return create_error_response(MobileError::InvalidData("Null required parameter".to_string()));
+    }
+    
+    // Parse building name
+    let building_str = match CStr::from_ptr(building_name).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_request_user_registration: invalid UTF-8 in building_name");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in building_name".to_string()));
+        }
+    };
+    
+    // Parse email
+    let email_str = match CStr::from_ptr(email).to_str() {
+        Ok(s) => s.to_string(),
+        Err(_) => {
+            warn!("arxos_request_user_registration: invalid UTF-8 in email");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in email".to_string()));
+        }
+    };
+    
+    // Parse name
+    let name_str = match CStr::from_ptr(name).to_str() {
+        Ok(s) => s.to_string(),
+        Err(_) => {
+            warn!("arxos_request_user_registration: invalid UTF-8 in name");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in name".to_string()));
+        }
+    };
+    
+    // Parse optional parameters
+    let organization_str = if organization.is_null() {
+        None
+    } else {
+        CStr::from_ptr(organization).to_str().ok().map(|s| s.to_string())
+    };
+    
+    let role_str = if role.is_null() {
+        None
+    } else {
+        CStr::from_ptr(role).to_str().ok().map(|s| s.to_string())
+    };
+    
+    let phone_str = if phone.is_null() {
+        None
+    } else {
+        CStr::from_ptr(phone).to_str().ok().map(|s| s.to_string())
+    };
+    
+    let device_info_str = if device_info.is_null() {
+        None
+    } else {
+        CStr::from_ptr(device_info).to_str().ok().map(|s| s.to_string())
+    };
+    
+    let app_version_str = if app_version.is_null() {
+        None
+    } else {
+        CStr::from_ptr(app_version).to_str().ok().map(|s| s.to_string())
+    };
+    
+    // Find Git repository
+    let repo_path = match find_git_repository() {
+        Ok(Some(path)) => std::path::PathBuf::from(path),
+        Ok(None) => {
+            warn!("arxos_request_user_registration: not in a Git repository");
+            return create_error_response(MobileError::NotFound(
+                "Not in a Git repository. User registration requires a Git repository.".to_string()
+            ));
+        }
+        Err(e) => {
+            warn!("arxos_request_user_registration: failed to find Git repository: {}", e);
+            return create_error_response(MobileError::IoError(format!("Failed to find repository: {}", e)));
+        }
+    };
+    
+    // Load pending registry
+    let mut pending_registry = match crate::identity::PendingUserRegistry::load(&repo_path) {
+        Ok(registry) => registry,
+        Err(e) => {
+            warn!("arxos_request_user_registration: failed to load pending registry: {}", e);
+            return create_error_response(MobileError::IoError(format!("Failed to load registry: {}", e)));
+        }
+    };
+    
+    // Create pending request
+    let request = PendingUserRequest::new(
+        email_str.clone(),
+        name_str,
+        organization_str,
+        role_str,
+        phone_str,
+        device_info_str,
+        app_version_str,
+    );
+    
+    let request_id = request.id.clone();
+    
+    // Add request to registry
+    match pending_registry.add_request(request) {
+        Ok(_) => {
+            // Save registry
+            if let Err(e) = pending_registry.save() {
+                warn!("arxos_request_user_registration: failed to save registry: {}", e);
+                return create_error_response(MobileError::IoError(format!("Failed to save registry: {}", e)));
+            }
+            
+            // Stage to Git
+            let config = crate::git::GitConfigManager::load_from_arx_config_or_env();
+            if let Ok(mut git_manager) = crate::git::BuildingGitManager::new(
+                &repo_path.to_string_lossy(),
+                building_str,
+                config
+            ) {
+                if let Err(e) = git_manager.stage_file("pending-users.yaml") {
+                    warn!("arxos_request_user_registration: failed to stage file: {}", e);
+                    // Continue anyway - file is saved
+                }
+            }
+            
+            let response = serde_json::json!({
+                "success": true,
+                "request_id": request_id,
+                "email": email_str,
+                "status": "pending",
+                "message": "Registration request submitted. Waiting for admin approval."
+            });
+            
+            clear_last_error();
+            match serde_json::to_string(&response) {
+                Ok(json) => {
+                    info!("arxos_request_user_registration: request submitted for {}", email_str);
+                    create_safe_c_string(json)
+                }
+                Err(e) => {
+                    warn!("arxos_request_user_registration: failed to serialize response: {}", e);
+                    create_error_response(MobileError::IoError(format!("Serialization error: {}", e)))
+                }
+            }
+        }
+        Err(e) => {
+            warn!("arxos_request_user_registration: failed to add request: {}", e);
+            create_error_response(MobileError::InvalidData(format!("Failed to add request: {}", e)))
+        }
+    }
+}
+
+/// Check registration status for a mobile user
+///
+/// Returns the current status of a user's registration request.
+///
+/// # Arguments
+/// * `building_name` - Name of building (repository)
+/// * `email` - User's email address
+///
+/// # Returns
+/// JSON string with registration status (pending, approved, denied, registered, or not_found)
+///
+/// # Safety
+/// This function is FFI-safe and handles null pointers gracefully.
+#[no_mangle]
+pub unsafe extern "C" fn arxos_check_registration_status(
+    building_name: *const c_char,
+    email: *const c_char,
+) -> *mut c_char {
+    use crate::commands::git_ops::find_git_repository;
+    
+    // Validate required parameters
+    if building_name.is_null() || email.is_null() {
+        warn!("arxos_check_registration_status: null required parameter");
+        return create_error_response(MobileError::InvalidData("Null required parameter".to_string()));
+    }
+    
+    // Parse parameters
+    let _building_str = match CStr::from_ptr(building_name).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_check_registration_status: invalid UTF-8 in building_name");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in building_name".to_string()));
+        }
+    };
+    
+    let email_str = match CStr::from_ptr(email).to_str() {
+        Ok(s) => s.to_string(),
+        Err(_) => {
+            warn!("arxos_check_registration_status: invalid UTF-8 in email");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in email".to_string()));
+        }
+    };
+    
+    // Find Git repository
+    let repo_path = match find_git_repository() {
+        Ok(Some(path)) => std::path::PathBuf::from(path),
+        Ok(None) => {
+            return create_error_response(MobileError::NotFound(
+                "Not in a Git repository".to_string()
+            ));
+        }
+        Err(e) => {
+            warn!("arxos_check_registration_status: failed to find Git repository: {}", e);
+            return create_error_response(MobileError::IoError(format!("Failed to find repository: {}", e)));
+        }
+    };
+    
+    // Check if user is already in the main registry
+    let user_registry = match crate::identity::UserRegistry::load(&repo_path) {
+        Ok(registry) => registry,
+        Err(_) => {
+            // No user registry exists yet, check pending only
+            return check_pending_only(&repo_path, &email_str);
+        }
+    };
+    
+    if let Some(user) = user_registry.find_by_email(&email_str) {
+        // User is registered
+        let response = serde_json::json!({
+            "success": true,
+            "email": email_str,
+            "status": "registered",
+            "verified": user.verified,
+            "message": if user.verified {
+                "User is registered and verified"
+            } else {
+                "User is registered but not yet verified"
+            }
+        });
+        
+        clear_last_error();
+        match serde_json::to_string(&response) {
+            Ok(json) => create_safe_c_string(json),
+            Err(_) => create_error_response(MobileError::IoError("Serialization error".to_string()))
+        }
+    } else {
+        // Check pending registry
+        check_pending_only(&repo_path, &email_str)
+    }
+}
+
+/// Helper function to check pending registry only
+unsafe fn check_pending_only(repo_path: &std::path::Path, email_str: &str) -> *mut c_char {
+    use crate::identity::PendingRequestStatus;
+    
+    let pending_registry = match crate::identity::PendingUserRegistry::load(repo_path) {
+        Ok(registry) => registry,
+        Err(_) => {
+            // No pending registry exists
+            let response = serde_json::json!({
+                "success": true,
+                "email": email_str,
+                "status": "not_found",
+                "message": "No registration request found"
+            });
+            
+            clear_last_error();
+            return match serde_json::to_string(&response) {
+                Ok(json) => create_safe_c_string(json),
+                Err(_) => create_error_response(MobileError::IoError("Serialization error".to_string()))
+            };
+        }
+    };
+    
+    if let Some(request) = pending_registry.find_by_email(email_str) {
+        let status_str = match request.status {
+            PendingRequestStatus::Pending => "pending",
+            PendingRequestStatus::Approved => "approved",
+            PendingRequestStatus::Denied => "denied",
+        };
+        
+        let denial_message = match request.status {
+            PendingRequestStatus::Denied => {
+                request.denial_reason.as_ref()
+                    .map(|r| format!("Registration request was denied: {}", r))
+                    .unwrap_or_else(|| "Registration request was denied".to_string())
+            }
+            _ => String::new(),
+        };
+        
+        let message = match request.status {
+            PendingRequestStatus::Pending => "Registration request is pending admin review".to_string(),
+            PendingRequestStatus::Approved => "Registration request has been approved".to_string(),
+            PendingRequestStatus::Denied => denial_message,
+        };
+        
+        let response = serde_json::json!({
+            "success": true,
+            "email": email_str,
+            "status": status_str,
+            "request_id": request.id,
+            "requested_at": request.requested_at.to_rfc3339(),
+            "reviewed_at": request.reviewed_at.map(|dt| dt.to_rfc3339()),
+            "reviewed_by": request.reviewed_by,
+            "denial_reason": request.denial_reason,
+            "message": message
+        });
+        
+        clear_last_error();
+        match serde_json::to_string(&response) {
+            Ok(json) => create_safe_c_string(json),
+            Err(_) => create_error_response(MobileError::IoError("Serialization error".to_string()))
+        }
+    } else {
+        // Not found in pending registry either
+        let response = serde_json::json!({
+            "success": true,
+            "email": email_str,
+            "status": "not_found",
+            "message": "No registration request found"
+        });
+        
+        clear_last_error();
+        match serde_json::to_string(&response) {
+            Ok(json) => create_safe_c_string(json),
+            Err(_) => create_error_response(MobileError::IoError("Serialization error".to_string()))
+        }
+    }
+}
+
+/// Check if GPG is available on the system
+///
+/// Returns whether GPG is installed and available for use.
+///
+/// # Returns
+/// JSON string with availability status
+///
+/// # Safety
+/// This function is FFI-safe.
+#[no_mangle]
+pub unsafe extern "C" fn arxos_check_gpg_available() -> *mut c_char {
+    use crate::identity::is_gpg_available;
+    
+    let available = is_gpg_available();
+    
+    let response = serde_json::json!({
+        "success": true,
+        "available": available,
+        "message": if available {
+            "GPG is available on this system"
+        } else {
+            "GPG is not available. Install GPG to enable commit signing."
+        }
+    });
+    
+    clear_last_error();
+    match serde_json::to_string(&response) {
+        Ok(json) => create_safe_c_string(json),
+        Err(e) => {
+            warn!("arxos_check_gpg_available: failed to serialize response: {}", e);
+            create_error_response(MobileError::IoError(format!("Serialization error: {}", e)))
+        }
+    }
+}
+
+/// Get GPG key fingerprint for a user's email
+///
+/// Looks up the GPG key fingerprint associated with the given email address.
+///
+/// # Arguments
+/// * `email` - User's email address
+///
+/// # Returns
+/// JSON string with fingerprint or error
+///
+/// # Safety
+/// This function is FFI-safe and handles null pointers gracefully.
+#[no_mangle]
+pub unsafe extern "C" fn arxos_get_gpg_fingerprint(email: *const c_char) -> *mut c_char {
+    use crate::identity::get_key_fingerprint_for_email;
+    
+    // Validate required parameters
+    if email.is_null() {
+        warn!("arxos_get_gpg_fingerprint: null email parameter");
+        return create_error_response(MobileError::InvalidData("Null email parameter".to_string()));
+    }
+    
+    // Parse email
+    let email_str = match CStr::from_ptr(email).to_str() {
+        Ok(s) => s.to_string(),
+        Err(_) => {
+            warn!("arxos_get_gpg_fingerprint: invalid UTF-8 in email");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in email".to_string()));
+        }
+    };
+    
+    // Get fingerprint
+    match get_key_fingerprint_for_email(&email_str) {
+        Ok(fingerprint) => {
+            let response = serde_json::json!({
+                "success": true,
+                "email": email_str,
+                "fingerprint": fingerprint,
+                "message": "GPG key fingerprint found"
+            });
+            
+            clear_last_error();
+            match serde_json::to_string(&response) {
+                Ok(json) => {
+                    info!("arxos_get_gpg_fingerprint: found fingerprint for {}", email_str);
+                    create_safe_c_string(json)
+                }
+                Err(e) => {
+                    warn!("arxos_get_gpg_fingerprint: failed to serialize response: {}", e);
+                    create_error_response(MobileError::IoError(format!("Serialization error: {}", e)))
+                }
+            }
+        }
+        Err(e) => {
+            warn!("arxos_get_gpg_fingerprint: failed to get fingerprint: {}", e);
+            let response = serde_json::json!({
+                "success": false,
+                "email": email_str,
+                "error": e.to_string(),
+                "message": "GPG key not found for this email"
+            });
+            
+            clear_last_error();
+            match serde_json::to_string(&response) {
+                Ok(json) => create_safe_c_string(json),
+                Err(_) => create_error_response(MobileError::IoError("Serialization error".to_string()))
+            }
+        }
+    }
+}
+
+/// Configure Git signing key for a repository
+///
+/// Sets the user.signingkey Git configuration for the building repository.
+///
+/// # Arguments
+/// * `building_name` - Name of building (repository)
+/// * `key_id` - GPG key ID to use for signing
+///
+/// # Returns
+/// JSON string with configuration result
+///
+/// # Safety
+/// This function is FFI-safe and handles null pointers gracefully.
+#[no_mangle]
+pub unsafe extern "C" fn arxos_configure_git_signing(
+    building_name: *const c_char,
+    key_id: *const c_char,
+) -> *mut c_char {
+    use crate::commands::git_ops::find_git_repository;
+    use std::process::Command;
+    
+    // Validate required parameters
+    if building_name.is_null() || key_id.is_null() {
+        warn!("arxos_configure_git_signing: null required parameter");
+        return create_error_response(MobileError::InvalidData("Null required parameter".to_string()));
+    }
+    
+    // Parse parameters
+    let building_str = match CStr::from_ptr(building_name).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_configure_git_signing: invalid UTF-8 in building_name");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in building_name".to_string()));
+        }
+    };
+    
+    let key_id_str = match CStr::from_ptr(key_id).to_str() {
+        Ok(s) => s.to_string(),
+        Err(_) => {
+            warn!("arxos_configure_git_signing: invalid UTF-8 in key_id");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in key_id".to_string()));
+        }
+    };
+    
+    // Find Git repository
+    let repo_path = match find_git_repository() {
+        Ok(Some(path)) => std::path::PathBuf::from(path),
+        Ok(None) => {
+            return create_error_response(MobileError::NotFound(
+                "Not in a Git repository".to_string()
+            ));
+        }
+        Err(e) => {
+            warn!("arxos_configure_git_signing: failed to find Git repository: {}", e);
+            return create_error_response(MobileError::IoError(format!("Failed to find repository: {}", e)));
+        }
+    };
+    
+    // Configure Git signing key
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(&repo_path)
+        .arg("config")
+        .arg("user.signingkey")
+        .arg(&key_id_str)
+        .output();
+    
+    match output {
+        Ok(output) if output.status.success() => {
+            // Also enable commit signing
+            let _ = Command::new("git")
+                .arg("-C")
+                .arg(&repo_path)
+                .arg("config")
+                .arg("commit.gpgsign")
+                .arg("true")
+                .output();
+            
+            let response = serde_json::json!({
+                "success": true,
+                "building": building_str,
+                "key_id": key_id_str,
+                "message": "Git signing key configured successfully"
+            });
+            
+            clear_last_error();
+            match serde_json::to_string(&response) {
+                Ok(json) => {
+                    info!("arxos_configure_git_signing: configured signing key for {}", building_str);
+                    create_safe_c_string(json)
+                }
+                Err(e) => {
+                    warn!("arxos_configure_git_signing: failed to serialize response: {}", e);
+                    create_error_response(MobileError::IoError(format!("Serialization error: {}", e)))
+                }
+            }
+        }
+        Ok(output) => {
+            let error_msg = String::from_utf8_lossy(&output.stderr);
+            warn!("arxos_configure_git_signing: git config failed: {}", error_msg);
+            create_error_response(MobileError::IoError(format!("Failed to configure signing key: {}", error_msg)))
+        }
+        Err(e) => {
+            warn!("arxos_configure_git_signing: failed to run git command: {}", e);
+            create_error_response(MobileError::IoError(format!("Failed to run git command: {}", e)))
         }
     }
 }

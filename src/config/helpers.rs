@@ -32,9 +32,9 @@ pub fn get_config_or_default() -> ArxConfig {
         .unwrap_or_else(|_| ArxConfig::default())
 }
 
-/// Reload configuration (placeholder for future hot-reload functionality)
+/// Reload configuration
 /// 
-/// Currently, this validates that configuration can be loaded.
+/// Validates that configuration can be loaded successfully.
 /// Future versions may support hot-reloading of configuration changes.
 /// 
 /// # Returns

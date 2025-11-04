@@ -52,6 +52,9 @@ criterion = { workspace = true }
 gltf = { version = "1.4.1", default-features = false }
 gltf-json = { version = "1.4.1", default-features = false }
 zip = "0.6"
+csv = "1.3"
+# GPG/PGP support (Phase 3: User Identity)
+# Note: Using Git's native GPG support via git2, no additional dependencies needed
 
 # Hardware sensor dependencies (feature-gated for async operations)
 axum = { version = "0.7", features = ["macros"], optional = true }
@@ -163,6 +166,23 @@ path = "tests/tui/tui_event_flow_tests.rs"
 [[test]]
 name = "tui_terminal_integration_tests"
 path = "tests/tui/tui_terminal_integration_tests.rs"
+
+# Spreadsheet Tests
+[[test]]
+name = "spreadsheet_component_integration_tests"
+path = "tests/spreadsheet/spreadsheet_component_integration_tests.rs"
+
+[[test]]
+name = "spreadsheet_data_source_integration_tests"
+path = "tests/spreadsheet/spreadsheet_data_source_integration_tests.rs"
+
+[[test]]
+name = "spreadsheet_filesystem_integration_tests"
+path = "tests/spreadsheet/spreadsheet_filesystem_integration_tests.rs"
+
+[[test]]
+name = "spreadsheet_command_integration_tests"
+path = "tests/spreadsheet/spreadsheet_command_integration_tests.rs"
 
 [workspace.package]
 version = "0.1.0"

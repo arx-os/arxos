@@ -6,8 +6,39 @@ use jni::JNIEnv;
 use jni::objects::{JClass, JString};
 use jni::sys::{jstring, jboolean};
 use std::os::raw::c_char;
+use std::ffi::{CStr, CString};
 
 use crate::mobile_ffi::{MobileError, RoomInfo, EquipmentInfo};
+
+// External C FFI function declarations
+extern "C" {
+    fn arxos_request_user_registration(
+        building_name: *const c_char,
+        email: *const c_char,
+        name: *const c_char,
+        organization: *const c_char,
+        role: *const c_char,
+        phone: *const c_char,
+        device_info: *const c_char,
+        app_version: *const c_char,
+    ) -> *mut c_char;
+    
+    fn arxos_check_registration_status(
+        building_name: *const c_char,
+        email: *const c_char,
+    ) -> *mut c_char;
+    
+    fn arxos_check_gpg_available() -> *mut c_char;
+    
+    fn arxos_get_gpg_fingerprint(email: *const c_char) -> *mut c_char;
+    
+    fn arxos_configure_git_signing(
+        building_name: *const c_char,
+        key_id: *const c_char,
+    ) -> *mut c_char;
+    
+    fn arxos_free_string(ptr: *mut c_char);
+}
 
 /// Convert Rust string to Java string
 /// Returns null if conversion fails
@@ -940,5 +971,348 @@ pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeR
             rust_string_to_java(&env, &error_json)
         }
     }
+}
+
+/// Request user registration from mobile app - JNI implementation
+///
+/// Creates a pending user registration request that will be reviewed by an admin.
+///
+/// # Safety
+/// This function is called from JNI and must follow JNI conventions
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeRequestUserRegistration(
+    mut env: JNIEnv,
+    _class: JClass,
+    building_name: JString,
+    email: JString,
+    name: JString,
+    organization: JString,
+    role: JString,
+    phone: JString,
+    device_info: JString,
+    app_version: JString,
+) -> jstring {
+    // Extract parameters safely
+    let building_str = java_string_to_rust(&env, building_name);
+    let email_str = java_string_to_rust(&env, email);
+    let name_str = java_string_to_rust(&env, name);
+    let organization_str = java_string_to_rust(&env, organization);
+    let role_str = java_string_to_rust(&env, role);
+    let phone_str = java_string_to_rust(&env, phone);
+    let device_info_str = java_string_to_rust(&env, device_info);
+    let app_version_str = java_string_to_rust(&env, app_version);
+    
+    // Check if extraction failed
+    if (building_str.is_empty() || email_str.is_empty() || name_str.is_empty()) && env.exception_check().unwrap_or(false) {
+        return std::ptr::null_mut();
+    }
+    
+    // Convert to C strings for FFI call
+    let building_cstr = match CString::new(building_str) {
+        Ok(s) => s,
+        Err(_) => {
+            env.throw_new("java/lang/IllegalArgumentException", "Invalid building name")
+                .ok();
+            return std::ptr::null_mut();
+        }
+    };
+    
+    let email_cstr = match CString::new(email_str) {
+        Ok(s) => s,
+        Err(_) => {
+            env.throw_new("java/lang/IllegalArgumentException", "Invalid email")
+                .ok();
+            return std::ptr::null_mut();
+        }
+    };
+    
+    let name_cstr = match CString::new(name_str) {
+        Ok(s) => s,
+        Err(_) => {
+            env.throw_new("java/lang/IllegalArgumentException", "Invalid name")
+                .ok();
+            return std::ptr::null_mut();
+        }
+    };
+    
+    // Optional parameters - can be null if empty
+    let organization_cstr = if organization_str.is_empty() {
+        std::ptr::null()
+    } else {
+        match CString::new(organization_str) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null(),
+        }
+    };
+    
+    let role_cstr = if role_str.is_empty() {
+        std::ptr::null()
+    } else {
+        match CString::new(role_str) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null(),
+        }
+    };
+    
+    let phone_cstr = if phone_str.is_empty() {
+        std::ptr::null()
+    } else {
+        match CString::new(phone_str) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null(),
+        }
+    };
+    
+    let device_info_cstr = if device_info_str.is_empty() {
+        std::ptr::null()
+    } else {
+        match CString::new(device_info_str) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null(),
+        }
+    };
+    
+    let app_version_cstr = if app_version_str.is_empty() {
+        std::ptr::null()
+    } else {
+        match CString::new(app_version_str) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null(),
+        }
+    };
+    
+    // Call C FFI function
+    let result_ptr = unsafe {
+        arxos_request_user_registration(
+            building_cstr.as_ptr(),
+            email_cstr.as_ptr(),
+            name_cstr.as_ptr(),
+            organization_cstr,
+            role_cstr,
+            phone_cstr,
+            device_info_cstr,
+            app_version_cstr,
+        )
+    };
+    
+    // Free optional CStrings if we created them
+    if !organization_cstr.is_null() {
+        let _ = unsafe { CString::from_raw(organization_cstr) };
+    }
+    if !role_cstr.is_null() {
+        let _ = unsafe { CString::from_raw(role_cstr) };
+    }
+    if !phone_cstr.is_null() {
+        let _ = unsafe { CString::from_raw(phone_cstr) };
+    }
+    if !device_info_cstr.is_null() {
+        let _ = unsafe { CString::from_raw(device_info_cstr) };
+    }
+    if !app_version_cstr.is_null() {
+        let _ = unsafe { CString::from_raw(app_version_cstr) };
+    }
+    
+    if result_ptr.is_null() {
+        let error_json = r#"{"success":false,"error":"FFI call returned null pointer"}"#;
+        return rust_string_to_java(&env, error_json);
+    }
+    
+    let result_string = unsafe { CStr::from_ptr(result_ptr).to_string_lossy().to_string() };
+    unsafe { arxos_free_string(result_ptr) };
+    
+    rust_string_to_java(&env, &result_string)
+}
+
+/// Check registration status for a mobile user - JNI implementation
+///
+/// Returns the current status of a user's registration request.
+///
+/// # Safety
+/// This function is called from JNI and must follow JNI conventions
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeCheckRegistrationStatus(
+    mut env: JNIEnv,
+    _class: JClass,
+    building_name: JString,
+    email: JString,
+) -> jstring {
+    // Extract parameters safely
+    let building_str = java_string_to_rust(&env, building_name);
+    let email_str = java_string_to_rust(&env, email);
+    
+    // Check if extraction failed
+    if (building_str.is_empty() || email_str.is_empty()) && env.exception_check().unwrap_or(false) {
+        return std::ptr::null_mut();
+    }
+    
+    // Convert to C strings for FFI call
+    let building_cstr = match CString::new(building_str) {
+        Ok(s) => s,
+        Err(_) => {
+            env.throw_new("java/lang/IllegalArgumentException", "Invalid building name")
+                .ok();
+            return std::ptr::null_mut();
+        }
+    };
+    
+    let email_cstr = match CString::new(email_str) {
+        Ok(s) => s,
+        Err(_) => {
+            env.throw_new("java/lang/IllegalArgumentException", "Invalid email")
+                .ok();
+            return std::ptr::null_mut();
+        }
+    };
+    
+    // Call C FFI function
+    let result_ptr = unsafe {
+        arxos_check_registration_status(
+            building_cstr.as_ptr(),
+            email_cstr.as_ptr(),
+        )
+    };
+    
+    if result_ptr.is_null() {
+        let error_json = r#"{"success":false,"error":"FFI call returned null pointer"}"#;
+        return rust_string_to_java(&env, error_json);
+    }
+    
+    let result_string = unsafe { CStr::from_ptr(result_ptr).to_string_lossy().to_string() };
+    unsafe { arxos_free_string(result_ptr) };
+    
+    rust_string_to_java(&env, &result_string)
+}
+
+/// Check if GPG is available on the system - JNI implementation
+///
+/// Returns whether GPG is installed and available for use.
+///
+/// # Safety
+/// This function is called from JNI and must follow JNI conventions
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeCheckGpgAvailable(
+    mut env: JNIEnv,
+    _class: JClass,
+) -> jstring {
+    // Call C FFI function
+    let result_ptr = unsafe {
+        arxos_check_gpg_available()
+    };
+    
+    if result_ptr.is_null() {
+        let error_json = r#"{"success":false,"error":"FFI call returned null pointer"}"#;
+        return rust_string_to_java(&env, error_json);
+    }
+    
+    let result_string = unsafe { CStr::from_ptr(result_ptr).to_string_lossy().to_string() };
+    unsafe { arxos_free_string(result_ptr) };
+    
+    rust_string_to_java(&env, &result_string)
+}
+
+/// Get GPG key fingerprint for a user's email - JNI implementation
+///
+/// Looks up the GPG key fingerprint associated with the given email address.
+///
+/// # Safety
+/// This function is called from JNI and must follow JNI conventions
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeGetGpgFingerprint(
+    mut env: JNIEnv,
+    _class: JClass,
+    email: JString,
+) -> jstring {
+    // Extract parameters safely
+    let email_str = java_string_to_rust(&env, email);
+    
+    // Check if extraction failed
+    if email_str.is_empty() && env.exception_check().unwrap_or(false) {
+        return std::ptr::null_mut();
+    }
+    
+    // Convert to C string for FFI call
+    let email_cstr = match CString::new(email_str) {
+        Ok(s) => s,
+        Err(_) => {
+            env.throw_new("java/lang/IllegalArgumentException", "Invalid email")
+                .ok();
+            return std::ptr::null_mut();
+        }
+    };
+    
+    // Call C FFI function
+    let result_ptr = unsafe {
+        arxos_get_gpg_fingerprint(email_cstr.as_ptr())
+    };
+    
+    if result_ptr.is_null() {
+        let error_json = r#"{"success":false,"error":"FFI call returned null pointer"}"#;
+        return rust_string_to_java(&env, error_json);
+    }
+    
+    let result_string = unsafe { CStr::from_ptr(result_ptr).to_string_lossy().to_string() };
+    unsafe { arxos_free_string(result_ptr) };
+    
+    rust_string_to_java(&env, &result_string)
+}
+
+/// Configure Git signing key for a repository - JNI implementation
+///
+/// Sets the user.signingkey Git configuration for the building repository.
+///
+/// # Safety
+/// This function is called from JNI and must follow JNI conventions
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeConfigureGitSigning(
+    mut env: JNIEnv,
+    _class: JClass,
+    building_name: JString,
+    key_id: JString,
+) -> jstring {
+    // Extract parameters safely
+    let building_str = java_string_to_rust(&env, building_name);
+    let key_id_str = java_string_to_rust(&env, key_id);
+    
+    // Check if extraction failed
+    if (building_str.is_empty() || key_id_str.is_empty()) && env.exception_check().unwrap_or(false) {
+        return std::ptr::null_mut();
+    }
+    
+    // Convert to C strings for FFI call
+    let building_cstr = match CString::new(building_str) {
+        Ok(s) => s,
+        Err(_) => {
+            env.throw_new("java/lang/IllegalArgumentException", "Invalid building name")
+                .ok();
+            return std::ptr::null_mut();
+        }
+    };
+    
+    let key_id_cstr = match CString::new(key_id_str) {
+        Ok(s) => s,
+        Err(_) => {
+            env.throw_new("java/lang/IllegalArgumentException", "Invalid key ID")
+                .ok();
+            return std::ptr::null_mut();
+        }
+    };
+    
+    // Call C FFI function
+    let result_ptr = unsafe {
+        arxos_configure_git_signing(
+            building_cstr.as_ptr(),
+            key_id_cstr.as_ptr(),
+        )
+    };
+    
+    if result_ptr.is_null() {
+        let error_json = r#"{"success":false,"error":"FFI call returned null pointer"}"#;
+        return rust_string_to_java(&env, error_json);
+    }
+    
+    let result_string = unsafe { CStr::from_ptr(result_ptr).to_string_lossy().to_string() };
+    unsafe { arxos_free_string(result_ptr) };
+    
+    rust_string_to_java(&env, &result_string)
 }
 

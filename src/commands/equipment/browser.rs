@@ -6,7 +6,7 @@
 //! - Detail panel on selection
 //! - Filtering capabilities
 
-use crate::ui::{TerminalManager, Theme, StatusColor, HelpSystem, HelpContext, render_help_overlay, handle_help_event, MouseAction, MouseConfig, parse_mouse_event, find_clicked_list_item};
+use crate::ui::{TerminalManager, Theme, StatusColor, HelpSystem, HelpContext, render_help_overlay, handle_help_event, MouseConfig};
 use crate::ui::layouts::list_detail_layout;
 use crate::utils::loading;
 use crossterm::event::{Event, KeyCode, KeyModifiers};

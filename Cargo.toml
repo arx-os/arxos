@@ -81,6 +81,72 @@ path = "src/main.rs"
 name = "convert_3d_scanner_scan"
 path = "src/bin/convert_3d_scanner_scan.rs"
 
+# AR Integration Tests
+[[test]]
+name = "ar_workflow_integration_test"
+path = "tests/ar/ar_workflow_integration_test.rs"
+
+[[test]]
+name = "ar_complete_workflow_test"
+path = "tests/ar/ar_complete_workflow_test.rs"
+
+[[test]]
+name = "ar_gltf_integration_tests"
+path = "tests/ar/ar_gltf_integration_tests.rs"
+
+[[test]]
+name = "ar_usdz_integration_tests"
+path = "tests/ar/ar_usdz_integration_tests.rs"
+
+[[test]]
+name = "ar_ios_workflow_integration_tests"
+path = "tests/ar/ar_ios_workflow_integration_tests.rs"
+
+[[test]]
+name = "ar_json_helpers_tests"
+path = "tests/ar/ar_json_helpers_tests.rs"
+
+# Mobile/FFI Tests
+[[test]]
+name = "mobile_ffi_tests"
+path = "tests/mobile/mobile_ffi_tests.rs"
+
+# Hardware Tests
+[[test]]
+name = "hardware_integration_tests"
+path = "tests/hardware/hardware_integration_tests.rs"
+
+[[test]]
+name = "hardware_http_integration_tests"
+path = "tests/hardware/hardware_http_integration_tests.rs"
+
+[[test]]
+name = "hardware_workflow_tests"
+path = "tests/hardware/hardware_workflow_tests.rs"
+
+# Persistence Tests
+[[test]]
+name = "persistence_tests"
+path = "tests/persistence/persistence_tests.rs"
+
+# E2E Tests
+[[test]]
+name = "e2e_workflow_tests"
+path = "tests/e2e/e2e_workflow_tests.rs"
+
+[[test]]
+name = "e2e_command_integration_tests"
+path = "tests/e2e/e2e_command_integration_tests.rs"
+
+# IFC Tests
+[[test]]
+name = "ifc_workflow_tests"
+path = "tests/ifc/ifc_workflow_tests.rs"
+
+[[test]]
+name = "ifc_sync_integration_tests"
+path = "tests/ifc/ifc_sync_integration_tests.rs"
+
 [workspace.package]
 version = "0.1.0"
 edition = "2021"

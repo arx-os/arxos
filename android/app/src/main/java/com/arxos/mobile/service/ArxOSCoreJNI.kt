@@ -55,6 +55,46 @@ class ArxOSCoreJNI(private val context: Context) {
      */
     external fun nativeExtractEquipment(jsonData: String): String
     
+    /**
+     * Load/export building model for AR viewing
+     */
+    external fun nativeLoadARModel(
+        buildingName: String,
+        format: String,
+        outputPath: String?
+    ): String
+    
+    /**
+     * Save AR scan data and process to pending equipment
+     */
+    external fun nativeSaveARScan(
+        jsonData: String,
+        buildingName: String,
+        confidenceThreshold: Double
+    ): String
+    
+    /**
+     * List all pending equipment for a building
+     */
+    external fun nativeListPendingEquipment(buildingName: String): String
+    
+    /**
+     * Confirm a pending equipment item
+     */
+    external fun nativeConfirmPendingEquipment(
+        buildingName: String,
+        pendingId: String,
+        commitToGit: Boolean
+    ): String
+    
+    /**
+     * Reject a pending equipment item
+     */
+    external fun nativeRejectPendingEquipment(
+        buildingName: String,
+        pendingId: String
+    ): String
+    
     companion object {
         private const val TAG = "ArxOSCoreJNI"
         
@@ -405,6 +445,420 @@ class ArxOSCoreJNIWrapper(private val jni: ArxOSCoreJNI) {
         return ARScanData(equipment = equipmentList)
     }
     
+    /**
+     * Load/export building model for AR viewing
+     */
+    suspend fun loadARModel(
+        buildingName: String,
+        format: String = "gltf",
+        outputPath: String? = null
+    ): ARModelLoadResult {
+        if (!jni.isNativeLibraryLoaded()) {
+            Log.w(TAG, "Native library not loaded")
+            return ARModelLoadResult(
+                success = false,
+                building = buildingName,
+                format = format,
+                filePath = null,
+                fileSize = 0,
+                error = "Native library not loaded"
+            )
+        }
+        
+        return try {
+            val json = jni.nativeLoadARModel(buildingName, format, outputPath)
+            if (json.isEmpty()) {
+                Log.w(TAG, "Empty JSON response from nativeLoadARModel")
+                return ARModelLoadResult(
+                    success = false,
+                    building = buildingName,
+                    format = format,
+                    filePath = null,
+                    fileSize = 0,
+                    error = "Empty response from native function"
+                )
+            }
+            
+            val obj = org.json.JSONObject(json)
+            if (!obj.optBoolean("success", false)) {
+                val error = obj.optString("error", "Unknown error")
+                Log.e(TAG, "Error from nativeLoadARModel: $error")
+                return ARModelLoadResult(
+                    success = false,
+                    building = buildingName,
+                    format = format,
+                    filePath = null,
+                    fileSize = 0,
+                    error = error
+                )
+            }
+            
+            ARModelLoadResult(
+                success = true,
+                building = obj.getString("building"),
+                format = obj.getString("format"),
+                filePath = obj.optString("file_path", null),
+                fileSize = obj.optLong("file_size", 0),
+                error = null
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load AR model: ${e.message}", e)
+            ARModelLoadResult(
+                success = false,
+                building = buildingName,
+                format = format,
+                filePath = null,
+                fileSize = 0,
+                error = e.message ?: "Unknown error"
+            )
+        }
+    }
+    
+    /**
+     * Save AR scan data and process to pending equipment
+     */
+    suspend fun saveARScan(
+        scanData: ARScanData,
+        buildingName: String,
+        confidenceThreshold: Double = 0.7
+    ): ARScanSaveResult {
+        if (!jni.isNativeLibraryLoaded()) {
+            Log.w(TAG, "Native library not loaded")
+            return ARScanSaveResult(
+                success = false,
+                building = buildingName,
+                pendingCount = 0,
+                pendingIds = emptyList(),
+                confidenceThreshold = confidenceThreshold,
+                error = "Native library not loaded"
+            )
+        }
+        
+        return try {
+            val json = scanDataToJson(scanData)
+            val responseJson = jni.nativeSaveARScan(json, buildingName, confidenceThreshold)
+            if (responseJson.isEmpty()) {
+                Log.w(TAG, "Empty JSON response from nativeSaveARScan")
+                return ARScanSaveResult(
+                    success = false,
+                    building = buildingName,
+                    pendingCount = 0,
+                    pendingIds = emptyList(),
+                    confidenceThreshold = confidenceThreshold,
+                    error = "Empty response from native function"
+                )
+            }
+            
+            val obj = org.json.JSONObject(responseJson)
+            if (!obj.optBoolean("success", false)) {
+                val error = obj.optString("error", "Unknown error")
+                Log.e(TAG, "Error from nativeSaveARScan: $error")
+                return ARScanSaveResult(
+                    success = false,
+                    building = buildingName,
+                    pendingCount = 0,
+                    pendingIds = emptyList(),
+                    confidenceThreshold = confidenceThreshold,
+                    error = error
+                )
+            }
+            
+            val pendingIdsArray = obj.optJSONArray("pending_ids")
+            val pendingIds = if (pendingIdsArray != null) {
+                (0 until pendingIdsArray.length()).map { i ->
+                    pendingIdsArray.getString(i)
+                }
+            } else {
+                emptyList()
+            }
+            
+            ARScanSaveResult(
+                success = true,
+                building = obj.getString("building"),
+                pendingCount = obj.optInt("pending_count", 0),
+                pendingIds = pendingIds,
+                confidenceThreshold = obj.optDouble("confidence_threshold", confidenceThreshold),
+                error = null
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save AR scan: ${e.message}", e)
+            ARScanSaveResult(
+                success = false,
+                building = buildingName,
+                pendingCount = 0,
+                pendingIds = emptyList(),
+                confidenceThreshold = confidenceThreshold,
+                error = e.message ?: "Unknown error"
+            )
+        }
+    }
+    
+    /**
+     * List all pending equipment for a building
+     */
+    suspend fun listPendingEquipment(buildingName: String): PendingEquipmentListResult {
+        if (!jni.isNativeLibraryLoaded()) {
+            Log.w(TAG, "Native library not loaded")
+            return PendingEquipmentListResult(
+                success = false,
+                building = buildingName,
+                pendingCount = 0,
+                items = emptyList(),
+                error = "Native library not loaded"
+            )
+        }
+        
+        return try {
+            val json = jni.nativeListPendingEquipment(buildingName)
+            if (json.isEmpty()) {
+                Log.w(TAG, "Empty JSON response from nativeListPendingEquipment")
+                return PendingEquipmentListResult(
+                    success = false,
+                    building = buildingName,
+                    pendingCount = 0,
+                    items = emptyList(),
+                    error = "Empty response from native function"
+                )
+            }
+            
+            val obj = org.json.JSONObject(json)
+            if (!obj.optBoolean("success", false)) {
+                val error = obj.optString("error", "Unknown error")
+                Log.e(TAG, "Error from nativeListPendingEquipment: $error")
+                return PendingEquipmentListResult(
+                    success = false,
+                    building = buildingName,
+                    pendingCount = 0,
+                    items = emptyList(),
+                    error = error
+                )
+            }
+            
+            val itemsArray = obj.optJSONArray("items")
+            val items = if (itemsArray != null) {
+                (0 until itemsArray.length()).map { i ->
+                    parsePendingEquipmentItem(itemsArray.getJSONObject(i).toString())
+                }
+            } else {
+                emptyList()
+            }
+            
+            PendingEquipmentListResult(
+                success = true,
+                building = obj.getString("building"),
+                pendingCount = obj.optInt("pending_count", 0),
+                items = items,
+                error = null
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to list pending equipment: ${e.message}", e)
+            PendingEquipmentListResult(
+                success = false,
+                building = buildingName,
+                pendingCount = 0,
+                items = emptyList(),
+                error = e.message ?: "Unknown error"
+            )
+        }
+    }
+    
+    /**
+     * Confirm a pending equipment item
+     */
+    suspend fun confirmPendingEquipment(
+        buildingName: String,
+        pendingId: String,
+        commitToGit: Boolean = true
+    ): PendingEquipmentConfirmResult {
+        if (!jni.isNativeLibraryLoaded()) {
+            Log.w(TAG, "Native library not loaded")
+            return PendingEquipmentConfirmResult(
+                success = false,
+                building = buildingName,
+                pendingId = pendingId,
+                equipmentId = null,
+                committed = false,
+                commitId = null,
+                error = "Native library not loaded"
+            )
+        }
+        
+        return try {
+            val json = jni.nativeConfirmPendingEquipment(buildingName, pendingId, commitToGit)
+            if (json.isEmpty()) {
+                Log.w(TAG, "Empty JSON response from nativeConfirmPendingEquipment")
+                return PendingEquipmentConfirmResult(
+                    success = false,
+                    building = buildingName,
+                    pendingId = pendingId,
+                    equipmentId = null,
+                    committed = false,
+                    commitId = null,
+                    error = "Empty response from native function"
+                )
+            }
+            
+            val obj = org.json.JSONObject(json)
+            if (!obj.optBoolean("success", false)) {
+                val error = obj.optString("error", "Unknown error")
+                Log.e(TAG, "Error from nativeConfirmPendingEquipment: $error")
+                return PendingEquipmentConfirmResult(
+                    success = false,
+                    building = buildingName,
+                    pendingId = pendingId,
+                    equipmentId = null,
+                    committed = false,
+                    commitId = null,
+                    error = error
+                )
+            }
+            
+            PendingEquipmentConfirmResult(
+                success = true,
+                building = obj.getString("building"),
+                pendingId = obj.getString("pending_id"),
+                equipmentId = obj.optString("equipment_id", null),
+                committed = obj.optBoolean("committed", false),
+                commitId = obj.optString("commit_id", null),
+                error = null
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to confirm pending equipment: ${e.message}", e)
+            PendingEquipmentConfirmResult(
+                success = false,
+                building = buildingName,
+                pendingId = pendingId,
+                equipmentId = null,
+                committed = false,
+                commitId = null,
+                error = e.message ?: "Unknown error"
+            )
+        }
+    }
+    
+    /**
+     * Reject a pending equipment item
+     */
+    suspend fun rejectPendingEquipment(
+        buildingName: String,
+        pendingId: String
+    ): PendingEquipmentRejectResult {
+        if (!jni.isNativeLibraryLoaded()) {
+            Log.w(TAG, "Native library not loaded")
+            return PendingEquipmentRejectResult(
+                success = false,
+                building = buildingName,
+                pendingId = pendingId,
+                error = "Native library not loaded"
+            )
+        }
+        
+        return try {
+            val json = jni.nativeRejectPendingEquipment(buildingName, pendingId)
+            if (json.isEmpty()) {
+                Log.w(TAG, "Empty JSON response from nativeRejectPendingEquipment")
+                return PendingEquipmentRejectResult(
+                    success = false,
+                    building = buildingName,
+                    pendingId = pendingId,
+                    error = "Empty response from native function"
+                )
+            }
+            
+            val obj = org.json.JSONObject(json)
+            if (!obj.optBoolean("success", false)) {
+                val error = obj.optString("error", "Unknown error")
+                Log.e(TAG, "Error from nativeRejectPendingEquipment: $error")
+                return PendingEquipmentRejectResult(
+                    success = false,
+                    building = buildingName,
+                    pendingId = pendingId,
+                    error = error
+                )
+            }
+            
+            PendingEquipmentRejectResult(
+                success = true,
+                building = obj.getString("building"),
+                pendingId = obj.getString("pending_id"),
+                error = null
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to reject pending equipment: ${e.message}", e)
+            PendingEquipmentRejectResult(
+                success = false,
+                building = buildingName,
+                pendingId = pendingId,
+                error = e.message ?: "Unknown error"
+            )
+        }
+    }
+    
+    private fun scanDataToJson(scanData: ARScanData): String {
+        val obj = org.json.JSONObject()
+        val equipmentArray = org.json.JSONArray()
+        
+        scanData.detectedEquipment.forEach { eq ->
+            val eqObj = org.json.JSONObject()
+            eqObj.put("name", eq.name)
+            eqObj.put("type", eq.equipment_type)
+            
+            // Convert Vector3 position to Position3D format
+            val posObj = org.json.JSONObject()
+            posObj.put("x", eq.position.x.toDouble())
+            posObj.put("y", eq.position.y.toDouble())
+            posObj.put("z", eq.position.z.toDouble())
+            eqObj.put("position", posObj)
+            
+            // Add confidence and detection method (default values if not present)
+            eqObj.put("confidence", 0.9)
+            eqObj.put("detectionMethod", "ARCore")
+            equipmentArray.put(eqObj)
+        }
+        
+        obj.put("detectedEquipment", equipmentArray)
+        
+        // Add room boundaries
+        val boundariesObj = org.json.JSONObject()
+        boundariesObj.put("walls", org.json.JSONArray())
+        boundariesObj.put("openings", org.json.JSONArray())
+        obj.put("roomBoundaries", boundariesObj)
+        
+        // Add metadata fields
+        scanData.deviceType?.let { obj.put("deviceType", it) }
+        scanData.appVersion?.let { obj.put("appVersion", it) }
+        scanData.scanDurationMs?.let { obj.put("scanDurationMs", it) }
+        scanData.pointCount?.let { obj.put("pointCount", it) }
+        scanData.accuracyEstimate?.let { obj.put("accuracyEstimate", it) }
+        scanData.lightingConditions?.let { obj.put("lightingConditions", it) }
+        obj.put("roomName", scanData.roomName)
+        obj.put("floorLevel", scanData.floorLevel)
+        
+        return obj.toString()
+    }
+    
+    private fun parsePendingEquipmentItem(json: String): PendingEquipmentItem {
+        val obj = org.json.JSONObject(json)
+        val positionObj = obj.getJSONObject("position")
+        
+        return PendingEquipmentItem(
+            id = obj.getString("id"),
+            name = obj.getString("name"),
+            equipmentType = obj.getString("equipment_type"),
+            position = Position(
+                x = positionObj.getDouble("x"),
+                y = positionObj.getDouble("y"),
+                z = positionObj.getDouble("z")
+            ),
+            confidence = obj.optDouble("confidence", 0.0),
+            detectionMethod = obj.optString("detection_method", ""),
+            detectedAt = obj.optString("detected_at", ""),
+            floorLevel = obj.optInt("floor_level", 0),
+            roomName = obj.optString("room_name", ""),
+            status = obj.optString("status", "pending")
+        )
+    }
+    
     // Data classes matching Rust structures
     private data class RoomInfo(
         val id: String,
@@ -428,4 +882,80 @@ class ArxOSCoreJNIWrapper(private val jni: ArxOSCoreJNI) {
         val y: Double,
         val z: Double
     )
+    
+    private data class PendingEquipmentItem(
+        val id: String,
+        val name: String,
+        val equipmentType: String,
+        val position: Position,
+        val confidence: Double,
+        val detectionMethod: String,
+        val detectedAt: String,
+        val floorLevel: Int,
+        val roomName: String,
+        val status: String
+    )
 }
+
+// Data classes for AR integration results
+data class ARModelLoadResult(
+    val success: Boolean,
+    val building: String,
+    val format: String,
+    val filePath: String?,
+    val fileSize: Long,
+    val error: String?
+)
+
+data class ARScanSaveResult(
+    val success: Boolean,
+    val building: String,
+    val pendingCount: Int,
+    val pendingIds: List<String>,
+    val confidenceThreshold: Double,
+    val error: String?
+)
+
+data class PendingEquipmentListResult(
+    val success: Boolean,
+    val building: String,
+    val pendingCount: Int,
+    val items: List<PendingEquipmentItem>,
+    val error: String?
+)
+
+data class PendingEquipmentItem(
+    val id: String,
+    val name: String,
+    val equipmentType: String,
+    val position: Position,
+    val confidence: Double,
+    val detectionMethod: String,
+    val detectedAt: String,
+    val floorLevel: Int,
+    val roomName: String,
+    val status: String
+)
+
+data class Position(
+    val x: Double,
+    val y: Double,
+    val z: Double
+)
+
+data class PendingEquipmentConfirmResult(
+    val success: Boolean,
+    val building: String,
+    val pendingId: String,
+    val equipmentId: String?,
+    val committed: Boolean,
+    val commitId: String?,
+    val error: String?
+)
+
+data class PendingEquipmentRejectResult(
+    val success: Boolean,
+    val building: String,
+    val pendingId: String,
+    val error: String?
+)

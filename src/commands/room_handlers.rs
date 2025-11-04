@@ -11,7 +11,7 @@ use std::collections::HashMap;
 pub fn handle_room_command(command: RoomCommands) -> Result<(), Box<dyn std::error::Error>> {
     match command {
         RoomCommands::Create { building, floor, wing, name, room_type, dimensions, position, commit } => {
-            use crate::commands::room::CreateRoomConfig;
+            use crate::commands::room_handlers::CreateRoomConfig;
             handle_create_room(CreateRoomConfig {
                 building,
                 floor,
@@ -23,8 +23,12 @@ pub fn handle_room_command(command: RoomCommands) -> Result<(), Box<dyn std::err
                 commit,
             })
         }
-        RoomCommands::List { building, floor, wing, verbose } => {
-            handle_list_rooms(building, floor, wing, verbose)
+        RoomCommands::List { building, floor, wing, verbose, interactive } => {
+            if interactive {
+                crate::commands::room::explorer::handle_room_explorer(building)
+            } else {
+                handle_list_rooms(building, floor, wing, verbose)
+            }
         }
         RoomCommands::Show { room, equipment } => {
             handle_show_room(room, equipment)

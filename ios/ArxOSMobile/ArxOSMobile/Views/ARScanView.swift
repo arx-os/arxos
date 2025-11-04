@@ -1,12 +1,25 @@
 import SwiftUI
 import ARKit
 import RealityKit
+import UIKit
 
 struct ARScanView: View {
     @State private var isScanning = false
     @State private var detectedEquipment: [DetectedEquipment] = []
     @State private var showEquipmentList = false
     @State private var currentRoom = "Room 301"
+    @State private var buildingName = "Default Building"
+    @State private var floorLevel: Int32 = 0
+    @State private var scanStartTime: Date?
+    @State private var isSavingScan = false
+    @State private var showSaveSuccess = false
+    @State private var saveErrorMessage: String?
+    @State private var pendingEquipmentIds: [String] = []
+    @State private var showEquipmentDialog = false
+    @State private var showPendingConfirmation = false
+    @State private var pendingEquipment: DetectedEquipment?
+    @State private var equipmentName = ""
+    @State private var equipmentType = "Unknown"
     
     var body: some View {
         NavigationView {
@@ -14,7 +27,11 @@ struct ARScanView: View {
                 if isScanning {
                     ARViewContainer(
                         detectedEquipment: $detectedEquipment,
-                        isScanning: $isScanning
+                        isScanning: $isScanning,
+                        onEquipmentPlaced: { equipment in
+                            // Show equipment placement dialog
+                            showEquipmentPlacementDialog(for: equipment)
+                        }
                     )
                     .ignoresSafeArea()
                     
@@ -75,12 +92,18 @@ struct ARScanView: View {
                             
                             Button(action: saveScan) {
                                 VStack {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.title2)
+                                    if isSavingScan {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .green))
+                                    } else {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.title2)
+                                    }
                                     Text("Save")
                                         .font(.caption)
                                 }
                                 .foregroundColor(.green)
+                                .disabled(isSavingScan)
                             }
                         }
                         .padding()
@@ -105,9 +128,22 @@ struct ARScanView: View {
                             .multilineTextAlignment(.center)
                         
                         VStack(spacing: 16) {
+                            TextField("Building Name", text: $buildingName)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .padding(.horizontal)
+                            
                             TextField("Room Name", text: $currentRoom)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
                                 .padding(.horizontal)
+                            
+                            HStack {
+                                Text("Floor Level:")
+                                Stepper(value: $floorLevel, in: -5...50) {
+                                    Text("\(floorLevel)")
+                                        .frame(width: 50, alignment: .trailing)
+                                }
+                            }
+                            .padding(.horizontal)
                             
                             Button(action: startScanning) {
                                 HStack {
@@ -151,12 +187,54 @@ struct ARScanView: View {
             .sheet(isPresented: $showEquipmentList) {
                 EquipmentListView()
             }
+            .sheet(isPresented: $showPendingConfirmation) {
+                PendingEquipmentConfirmationView(
+                    pendingIds: pendingEquipmentIds,
+                    buildingName: buildingName
+                )
+            }
+            .sheet(isPresented: $showEquipmentDialog) {
+                EquipmentPlacementDialog(
+                    equipmentName: $equipmentName,
+                    equipmentType: $equipmentType,
+                    onSave: {
+                        savePlacedEquipment()
+                    },
+                    onCancel: {
+                        showEquipmentDialog = false
+                        pendingEquipment = nil
+                    }
+                )
+            }
+            .alert("Scan Saved", isPresented: $showSaveSuccess) {
+                Button("OK") {
+                    // Reset scan state
+                    detectedEquipment = []
+                    isScanning = false
+                }
+            } message: {
+                if !pendingEquipmentIds.isEmpty {
+                    Text("Successfully saved scan. \(pendingEquipmentIds.count) pending equipment items created.")
+                } else {
+                    Text("Scan saved successfully.")
+                }
+            }
+            .alert("Save Error", isPresented: .constant(saveErrorMessage != nil)) {
+                Button("OK") {
+                    saveErrorMessage = nil
+                }
+            } message: {
+                if let error = saveErrorMessage {
+                    Text(error)
+                }
+            }
         }
     }
     
     private func startScanning() {
         isScanning = true
         detectedEquipment = []
+        scanStartTime = Date() // Track scan start time for duration
     }
     
     private func stopScanning() {
@@ -164,23 +242,126 @@ struct ARScanView: View {
     }
     
     private func addEquipmentManually() {
-        // Add manual equipment entry
+        // Add manual equipment entry at origin (0,0,0)
         let newEquipment = DetectedEquipment(
             name: "Manual Equipment",
             type: "Manual",
             position: Position3D(x: 0, y: 0, z: 0),
+            confidence: 1.0,
+            detectionMethod: "Manual",
             status: "Detected",
             icon: "wrench"
         )
         detectedEquipment.append(newEquipment)
     }
     
+    private func showEquipmentPlacementDialog(for equipment: DetectedEquipment) {
+        // Store pending equipment
+        pendingEquipment = equipment
+        equipmentName = equipment.name
+        equipmentType = equipment.type
+        
+        // Show dialog
+        showEquipmentDialog = true
+    }
+    
+    private func savePlacedEquipment() {
+        guard let equipment = pendingEquipment else { return }
+        
+        // Create new equipment with user-provided details
+        let newEquipment = DetectedEquipment(
+            name: equipmentName.isEmpty ? "Equipment \(detectedEquipment.count + 1)" : equipmentName,
+            type: equipmentType,
+            position: equipment.position,
+            confidence: equipment.confidence ?? 0.9,
+            detectionMethod: equipment.detectionMethod ?? "Tap-to-Place",
+            status: "Placed",
+            icon: iconForEquipmentType(equipmentType)
+        )
+        
+        // Add to detected equipment list
+        detectedEquipment.append(newEquipment)
+        
+        // Reset dialog state
+        showEquipmentDialog = false
+        pendingEquipment = nil
+        equipmentName = ""
+        equipmentType = "Unknown"
+        
+        print("✅ Equipment placed: \(newEquipment.name) at (\(newEquipment.position.x), \(newEquipment.position.y), \(newEquipment.position.z))")
+    }
+    
+    private func iconForEquipmentType(_ type: String) -> String {
+        switch type.lowercased() {
+        case "hvac", "air conditioning", "heating":
+            return "fan"
+        case "electrical", "electrical panel":
+            return "bolt"
+        case "plumbing", "water", "piping":
+            return "drop"
+        case "safety", "fire", "sprinkler":
+            return "shield"
+        case "lighting", "light":
+            return "lightbulb"
+        default:
+            return "gear"
+        }
+    }
+    
     private func saveScan() {
-        // Save scan results to ArxOS
-        // TODO: Integrate with FFI when library is linked
-        print("📤 Saving AR scan for room: \(currentRoom)")
-        print("   Equipment detected: \(detectedEquipment.count)")
-        isScanning = false
+        guard !isSavingScan else { return }
+        
+        isSavingScan = true
+        saveErrorMessage = nil
+        
+        // Convert detected equipment to ARScanData format
+        // Swift DetectedEquipment has custom encoding that matches Rust expectations
+        // Rust backend expects: name, type, position, confidence (required), detectionMethod
+        // The custom encode() method ensures confidence is always provided
+        let scanData = ARScanData(
+            detectedEquipment: detectedEquipment,
+            roomBoundaries: RoomBoundaries(walls: [], openings: []),
+            deviceType: UIDevice.current.model,
+            appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
+            scanDurationMs: scanStartTime.map { Int64(Date().timeIntervalSince($0) * 1000) },
+            pointCount: nil, // Could be enhanced with ARKit point cloud data
+            accuracyEstimate: nil, // Could be enhanced with ARKit tracking quality
+            lightingConditions: nil, // Could be enhanced with ARKit light estimation
+            roomName: currentRoom,
+            floorLevel: floorLevel
+        )
+        
+        // Call FFI to save and process scan
+        let ffi = ArxOSCoreFFI()
+        ffi.saveARScan(
+            scanData: scanData,
+            buildingName: buildingName,
+            confidenceThreshold: 0.7 // Default confidence threshold
+        ) { result in
+            DispatchQueue.main.async {
+                self.isSavingScan = false
+                
+                switch result {
+                case .success(let saveResult):
+                    print("✅ Scan saved successfully: \(saveResult.message)")
+                    print("   Pending items: \(saveResult.pendingCount)")
+                    print("   Pending IDs: \(saveResult.pendingIds)")
+                    
+                    self.pendingEquipmentIds = saveResult.pendingIds
+                    
+                    // Show pending confirmation if there are pending items
+                    if !saveResult.pendingIds.isEmpty {
+                        self.showPendingConfirmation = true
+                    } else {
+                        self.showSaveSuccess = true
+                    }
+                    
+                case .failure(let error):
+                    print("❌ Failed to save AR scan: \(error.localizedDescription)")
+                    self.saveErrorMessage = "Failed to save scan: \(error.localizedDescription)"
+                }
+            }
+        }
     }
 }
 

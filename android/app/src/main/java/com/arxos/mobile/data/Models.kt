@@ -10,7 +10,13 @@ data class DetectedEquipment(
     val position: Vector3,
     val status: String,
     val icon: String
-)
+) {
+    /**
+     * Equipment type property for FFI compatibility
+     */
+    val equipment_type: String
+        get() = type
+}
 
 data class Equipment(
     val id: String,
@@ -46,4 +52,48 @@ data class ARScanResult(
     val room: String,
     val equipment: List<DetectedEquipment>,
     val timestamp: Long = System.currentTimeMillis()
+)
+
+/**
+ * AR Scan Data - matches Rust ARScanData structure
+ * Used for serialization to FFI
+ */
+data class ARScanData(
+    val detectedEquipment: List<DetectedEquipment>,
+    val roomBoundaries: RoomBoundaries = RoomBoundaries(),
+    val deviceType: String? = null,
+    val appVersion: String? = null,
+    val scanDurationMs: Long? = null,
+    val pointCount: Long? = null,
+    val accuracyEstimate: Double? = null,
+    val lightingConditions: String? = null,
+    val roomName: String = "",
+    val floorLevel: Int = 0
+)
+
+/**
+ * Room boundaries for AR scan
+ */
+data class RoomBoundaries(
+    val walls: List<Wall> = emptyList(),
+    val openings: List<Opening> = emptyList()
+)
+
+/**
+ * Wall definition
+ */
+data class Wall(
+    val start: Vector3,
+    val end: Vector3,
+    val height: Float
+)
+
+/**
+ * Opening definition (doors, windows)
+ */
+data class Opening(
+    val position: Vector3,
+    val width: Float,
+    val height: Float,
+    val type: String
 )

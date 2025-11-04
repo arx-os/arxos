@@ -5,7 +5,7 @@ use crate::git::manager::{BuildingGitManager, GitConfigManager, GitStatus, Commi
 use crate::utils::loading;
 
 /// Find Git repository in current directory or parent directories
-fn find_git_repository() -> Result<Option<String>, Box<dyn std::error::Error>> {
+pub fn find_git_repository() -> Result<Option<String>, Box<dyn std::error::Error>> {
     let mut current_path = std::env::current_dir()?;
     
     loop {
@@ -208,7 +208,11 @@ fn display_commit_history(commits: &[CommitInfo], verbose: bool) -> Result<(), B
 }
 
 /// Handle status command - show repository status and changes
-pub fn handle_status(verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
+pub fn handle_status(verbose: bool, interactive: bool) -> Result<(), Box<dyn std::error::Error>> {
+    if interactive {
+        return crate::commands::status_dashboard::handle_status_dashboard(None);
+    }
+    
     println!("📊 ArxOS Repository Status");
     println!("{}", "=".repeat(50));
     
@@ -242,8 +246,13 @@ pub fn handle_status(verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+
 /// Handle diff command - show differences between commits
-pub fn handle_diff(commit: Option<String>, file: Option<String>, stat: bool) -> Result<(), Box<dyn std::error::Error>> {
+pub fn handle_diff(commit: Option<String>, file: Option<String>, stat: bool, interactive: bool) -> Result<(), Box<dyn std::error::Error>> {
+    if interactive && !stat {
+        return crate::commands::diff_viewer::handle_diff_viewer(commit, file);
+    }
+    
     println!("🔍 ArxOS Diff");
     println!("{}", "=".repeat(50));
     

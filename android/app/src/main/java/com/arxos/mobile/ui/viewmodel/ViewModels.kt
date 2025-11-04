@@ -59,19 +59,35 @@ class ARViewModel(application: Application) : AndroidViewModel(application) {
     
     private val arxosCoreService = ArxOSCoreServiceFactory.getInstance(application)
     
+    fun updateARState(update: (ARState) -> ARState) {
+        _arState.value = update(_arState.value)
+    }
+    
     fun startScanning() {
         _arState.value = _arState.value.copy(
             isScanning = true,
-            detectedEquipment = emptyList()
+            detectedEquipment = emptyList(),
+            scanStartTime = System.currentTimeMillis()
         )
     }
     
     fun stopScanning() {
-        _arState.value = _arState.value.copy(isScanning = false)
+        _arState.value = _arState.value.copy(
+            isScanning = false,
+            scanStartTime = null
+        )
+    }
+    
+    fun updateFloorLevel(level: Int) {
+        _arState.value = _arState.value.copy(floorLevel = level)
     }
     
     fun updateCurrentRoom(room: String) {
         _arState.value = _arState.value.copy(currentRoom = room)
+    }
+    
+    fun updateBuildingName(building: String) {
+        _arState.value = _arState.value.copy(buildingName = building)
     }
     
     fun addDetectedEquipment(equipment: DetectedEquipment) {
@@ -95,17 +111,151 @@ class ARViewModel(application: Application) : AndroidViewModel(application) {
     }
     
     fun saveScan() {
+        if (_arState.value.isSavingScan) {
+            return
+        }
+        
+        _arState.value = _arState.value.copy(
+            isSavingScan = true,
+            saveScanError = null,
+            pendingEquipmentIds = emptyList()
+        )
+        
         viewModelScope.launch {
             try {
-                val result = arxosCoreService.saveARScan(
-                    _arState.value.detectedEquipment,
-                    _arState.value.currentRoom
+                // Calculate scan duration
+                val scanDurationMs = _arState.value.scanStartTime?.let {
+                    System.currentTimeMillis() - it
+                }
+                
+                // Build ARScanData matching Rust FFI structure
+                val scanData = com.arxos.mobile.data.ARScanData(
+                    detectedEquipment = _arState.value.detectedEquipment,
+                    roomBoundaries = com.arxos.mobile.data.RoomBoundaries(),
+                    deviceType = android.os.Build.MODEL,
+                    appVersion = null,
+                    scanDurationMs = scanDurationMs,
+                    pointCount = null,
+                    accuracyEstimate = null,
+                    lightingConditions = null,
+                    roomName = _arState.value.currentRoom,
+                    floorLevel = _arState.value.floorLevel
                 )
-                _arState.value = _arState.value.copy(isScanning = false)
+                
+                // Use building name from state, or fallback to current room
+                val buildingName = if (_arState.value.buildingName.isNotEmpty()) {
+                    _arState.value.buildingName
+                } else {
+                    _arState.value.currentRoom
+                }
+                
+                // Call FFI service directly via wrapper
+                val wrapper = com.arxos.mobile.service.ArxOSCoreJNIWrapper(
+                    com.arxos.mobile.service.ArxOSCoreJNI(application)
+                )
+                
+                val saveResult = wrapper.saveARScan(
+                    scanData = scanData,
+                    buildingName = buildingName,
+                    confidenceThreshold = 0.7
+                )
+                
+                if (saveResult.success) {
+                    _arState.value = _arState.value.copy(
+                        isScanning = false,
+                        isSavingScan = false,
+                        pendingEquipmentIds = saveResult.pendingIds,
+                        scanStartTime = null
+                    )
+                } else {
+                    _arState.value = _arState.value.copy(
+                        isSavingScan = false,
+                        saveScanError = saveResult.error ?: "Failed to save scan"
+                    )
+                }
             } catch (e: Exception) {
-                // Handle error
+                _arState.value = _arState.value.copy(
+                    isSavingScan = false,
+                    saveScanError = e.message ?: "Unknown error saving scan"
+                )
             }
         }
+    }
+    
+    fun loadARModel(buildingName: String, format: String = "gltf") {
+        if (_arState.value.isLoadingModel) {
+            return
+        }
+        
+        _arState.value = _arState.value.copy(
+            isLoadingModel = true,
+            modelLoadError = null,
+            loadedModel = buildingName,
+            modelFilePath = null
+        )
+        
+        viewModelScope.launch {
+            try {
+                val result = arxosCoreService.loadARModel(buildingName, format)
+                
+                if (result.success && result.filePath != null) {
+                    _arState.value = _arState.value.copy(
+                        isLoadingModel = false,
+                        modelFilePath = result.filePath,
+                        modelLoadError = null
+                    )
+                } else {
+                    _arState.value = _arState.value.copy(
+                        isLoadingModel = false,
+                        modelLoadError = result.error ?: "Failed to load AR model",
+                        modelFilePath = null
+                    )
+                }
+            } catch (e: Exception) {
+                _arState.value = _arState.value.copy(
+                    isLoadingModel = false,
+                    modelLoadError = e.message ?: "Unknown error loading model",
+                    modelFilePath = null
+                )
+            }
+        }
+    }
+    
+    fun clearLoadedModel() {
+        _arState.value = _arState.value.copy(
+            loadedModel = null,
+            modelFilePath = null,
+            modelLoadError = null,
+            isLoadingModel = false
+        )
+    }
+    
+    /**
+     * List pending equipment for a building
+     */
+    suspend fun listPendingEquipment(buildingName: String): com.arxos.mobile.service.PendingEquipmentListResult {
+        return arxosCoreService.listPendingEquipment(buildingName)
+    }
+    
+    /**
+     * Confirm pending equipment
+     */
+    suspend fun confirmPendingEquipment(
+        buildingName: String,
+        pendingId: String,
+        commitToGit: Boolean = true
+    ): com.arxos.mobile.service.PendingEquipmentConfirmResult {
+        return arxosCoreService.confirmPendingEquipment(buildingName, pendingId, commitToGit)
+    }
+    
+    /**
+     * Reject pending equipment
+     */
+    suspend fun rejectPendingEquipment(
+        buildingName: String,
+        pendingId: String
+    ): com.arxos.mobile.service.PendingEquipmentRejectResult {
+        return arxosCoreService.rejectPendingEquipment(buildingName, pendingId)
     }
 }
 
@@ -161,7 +311,17 @@ data class TerminalState(
 data class ARState(
     val isScanning: Boolean = false,
     val currentRoom: String = "Room 301",
-    val detectedEquipment: List<DetectedEquipment> = emptyList()
+    val buildingName: String = "",
+    val detectedEquipment: List<DetectedEquipment> = emptyList(),
+    val loadedModel: String? = null,
+    val isLoadingModel: Boolean = false,
+    val modelFilePath: String? = null,
+    val modelLoadError: String? = null,
+    val scanStartTime: Long? = null,
+    val floorLevel: Int = 0,
+    val isSavingScan: Boolean = false,
+    val saveScanError: String? = null,
+    val pendingEquipmentIds: List<String> = emptyList()
 )
 
 data class EquipmentState(

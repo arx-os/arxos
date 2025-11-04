@@ -3,7 +3,11 @@
 use crate::config::{ConfigManager, ArxConfig, ConfigError};
 
 /// Handle configuration command
-pub fn handle_config(show: bool, set: Option<String>, reset: bool, edit: bool) -> Result<(), Box<dyn std::error::Error>> {
+pub fn handle_config(show: bool, set: Option<String>, reset: bool, edit: bool, interactive: bool) -> Result<(), Box<dyn std::error::Error>> {
+    if interactive {
+        return crate::commands::config_wizard::handle_config_wizard();
+    }
+    
     println!("⚙️ ArxOS Configuration");
     println!("{}", "=".repeat(50));
     

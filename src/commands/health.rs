@@ -1,9 +1,15 @@
 //! Health check command for ArxOS diagnostics
 
+#[path = "health_dashboard.rs"]
+mod health_dashboard;
+
 use std::time::Instant;
 
 /// Handle health diagnostics for the ArxOS system
-pub fn handle_health(component: Option<String>, verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
+pub fn handle_health(component: Option<String>, verbose: bool, interactive: bool) -> Result<(), Box<dyn std::error::Error>> {
+    if interactive {
+        return health_dashboard::handle_health_dashboard();
+    }
     println!("🏥 ArxOS Health Check");
     println!("====================");
     

@@ -2,6 +2,10 @@
 //! 
 //! This module provides configuration validation utilities to ensure
 //! that configuration values are valid and consistent.
+//! 
+//! Validation is performed using:
+//! - Rule-based validation (fast, compile-time checked)
+//! - Schema-based validation (comprehensive, runtime schema validation - optional)
 
 use super::{ArxConfig, ConfigError, ConfigResult, PathConfig, UserConfig, BuildingConfig, PerformanceConfig, UiConfig};
 use std::path::PathBuf;

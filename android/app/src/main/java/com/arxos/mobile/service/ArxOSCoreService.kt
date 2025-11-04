@@ -98,17 +98,63 @@ class ArxOSCoreService(private val context: Context) {
     }
     
     suspend fun processARScan(scanData: ARScanData): ARScanResult = withContext(Dispatchers.IO) {
-        return@withContext ARScanResult(
-            success = false,
-            detectedEquipment = emptyList(),
-            message = "AR scan processing not yet implemented"
-        )
+        val wrapper = ArxOSCoreJNIWrapper(jni)
+        val result = wrapper.saveARScan(scanData, "main", 0.7)
+        
+        if (result.success) {
+            ARScanResult(
+                success = true,
+                detectedEquipment = emptyList(),
+                message = "AR scan processed: ${result.pendingCount} pending items created"
+            )
+        } else {
+            ARScanResult(
+                success = false,
+                detectedEquipment = emptyList(),
+                message = result.error ?: "Failed to process AR scan"
+            )
+        }
     }
     
     suspend fun saveARScan(equipment: List<com.arxos.mobile.data.DetectedEquipment>, roomName: String): Boolean = withContext(Dispatchers.IO) {
-        // TODO: Implement AR scan saving
-        android.util.Log.d("ArxOSCoreService", "Save AR scan: $equipment in $roomName")
-        false
+        val scanData = ARScanData(equipment = equipment.map { eq ->
+            DetectedEquipment(
+                id = eq.id,
+                name = eq.name,
+                type = eq.type,
+                position = eq.position.toString()
+            )
+        })
+        val wrapper = ArxOSCoreJNIWrapper(jni)
+        val result = wrapper.saveARScan(scanData, "main", 0.7)
+        result.success
+    }
+    
+    suspend fun loadARModel(buildingName: String, format: String = "gltf"): ARModelLoadResult = withContext(Dispatchers.IO) {
+        val wrapper = ArxOSCoreJNIWrapper(jni)
+        wrapper.loadARModel(buildingName, format, null)
+    }
+    
+    suspend fun listPendingEquipment(buildingName: String): PendingEquipmentListResult = withContext(Dispatchers.IO) {
+        val wrapper = ArxOSCoreJNIWrapper(jni)
+        wrapper.listPendingEquipment(buildingName)
+    }
+    
+    suspend fun confirmPendingEquipment(
+        buildingName: String,
+        pendingId: String,
+        commitToGit: Boolean = true
+    ): PendingEquipmentConfirmResult = withContext(Dispatchers.IO) {
+        val wrapper = ArxOSCoreJNIWrapper(jni)
+        wrapper.confirmPendingEquipment(buildingName, pendingId, commitToGit)
+    }
+    
+    suspend fun rejectPendingEquipment(
+        buildingName: String,
+        pendingId: String
+    ): PendingEquipmentRejectResult = withContext(Dispatchers.IO) {
+        val wrapper = ArxOSCoreJNIWrapper(jni)
+        wrapper.rejectPendingEquipment(buildingName, pendingId)
     }
 }
 

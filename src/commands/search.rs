@@ -4,7 +4,11 @@ use crate::utils::loading;
 use crate::search::{SearchEngine, SearchConfig, FilterConfig, OutputFormat, format_search_results};
 
 /// Handle the search command
-pub fn handle_search_command(config: SearchConfig) -> Result<(), Box<dyn std::error::Error>> {
+pub fn handle_search_command(config: SearchConfig, interactive: bool) -> Result<(), Box<dyn std::error::Error>> {
+    if interactive {
+        return crate::commands::search_browser::handle_search_browser(Some(config.query.clone()));
+    }
+    
     println!("🔍 Searching building data for: '{}'", config.query);
     
     // Load building data

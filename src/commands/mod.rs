@@ -5,15 +5,23 @@ pub mod import;
 pub mod export;
 pub mod init;
 pub mod git_ops;
+pub mod diff_viewer;
 pub mod config_mgmt;
+pub mod config_wizard;
 pub mod render;
 pub mod interactive;
 pub mod room;
+pub mod room_handlers;
+pub mod equipment_handlers;
 pub mod equipment;
+pub mod status_dashboard;
 pub mod spatial;
 pub mod search;
+pub mod search_browser;
+pub mod watch_dashboard;
 pub mod watch;
 pub mod ar;
+pub mod ar_pending_manager;
 pub mod sensors;
 pub mod ifc;
 pub mod validate;
@@ -44,13 +52,13 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
             export::handle_export_with_format(format, output, repo, delta)
         },
         Commands::Sync { ifc, watch, delta } => sync::handle_sync(ifc, watch, delta),
-        Commands::Status { verbose } => git_ops::handle_status(verbose),
+        Commands::Status { verbose, interactive } => git_ops::handle_status(verbose, interactive),
         Commands::Stage { all, file } => git_ops::handle_stage(all, file),
         Commands::Commit { message } => git_ops::handle_commit(message),
         Commands::Unstage { all, file } => git_ops::handle_unstage(all, file),
-        Commands::Diff { commit, file, stat } => git_ops::handle_diff(commit, file, stat),
+        Commands::Diff { commit, file, stat, interactive } => git_ops::handle_diff(commit, file, stat, interactive),
         Commands::History { limit, verbose, file } => git_ops::handle_history(limit, verbose, file),
-        Commands::Config { show, set, reset, edit } => config_mgmt::handle_config(show, set, reset, edit),
+        Commands::Config { show, set, reset, edit, interactive } => config_mgmt::handle_config(show, set, reset, edit, interactive),
         Commands::Render { building, floor, three_d, show_status, show_rooms, format, projection, view_angle, scale, spatial_index } => {
             use render::RenderCommandConfig;
             render::handle_render(RenderCommandConfig {
@@ -85,13 +93,13 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
             })
         },
         Commands::Validate { path } => validate::handle_validate(path),
-        Commands::Room { command } => room::handle_room_command(command),
-        Commands::Equipment { command } => equipment::handle_equipment_command(command),
+        Commands::Room { command } => room_handlers::handle_room_command(command),
+        Commands::Equipment { command } => equipment_handlers::handle_equipment_command(command),
         Commands::Spatial { command } => spatial::handle_spatial_command(command),
         Commands::Watch { building, floor, room, refresh_interval, sensors_only, alerts_only, log_level } => {
             watch::handle_watch_command(building, floor, room, refresh_interval, sensors_only, alerts_only, log_level)
         },
-        Commands::Search { query, equipment, rooms, buildings, case_sensitive, regex, limit, verbose } => {
+        Commands::Search { query, equipment, rooms, buildings, case_sensitive, regex, limit, verbose, interactive } => {
             use crate::search::SearchConfig;
             let config = SearchConfig {
                 query,
@@ -103,7 +111,7 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
                 limit,
                 verbose,
             };
-            search::handle_search_command(config)
+            search::handle_search_command(config, interactive)
         },
         Commands::Filter { equipment_type, status, floor, room, building, critical_only, healthy_only, alerts_only, format, limit, verbose } => {
             use crate::search::{FilterConfig, OutputFormat};
@@ -135,7 +143,7 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
             sensors::handle_sensors_mqtt_command(&building, &broker, port, username.as_deref(), password.as_deref(), &topics)
         },
         Commands::IFC { subcommand } => ifc::handle_ifc_command(subcommand),
-        Commands::Health { component, verbose } => health::handle_health(component, verbose),
+        Commands::Health { component, verbose, interactive } => health::handle_health(component, verbose, interactive),
         Commands::Doc { building, output } => doc::handle_doc(building, output),
         Commands::Game { subcommand } => {
             use crate::cli::GameCommands;

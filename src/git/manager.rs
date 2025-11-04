@@ -598,7 +598,7 @@ pub struct FileDiff {
 }
 
 /// Type of diff line
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum DiffLineType {
     Addition,
     Deletion,
@@ -666,22 +666,17 @@ impl GitConfigManager {
             .or_else(|_| env::var("ARX_USER_NAME"))
             .unwrap_or_else(|_| {
                 // Try to load from ArxConfig
-                if let Ok(config_manager) = crate::config::ConfigManager::new() {
-                    config_manager.get_config().user.name.clone()
-                } else {
-                    "ArxOS".to_string()
-                }
+                // Use helper function for consistent config access
+                crate::config::get_config_or_default().user.name.clone()
             });
         
         let author_email = env::var("GIT_AUTHOR_EMAIL")
             .or_else(|_| env::var("ARX_USER_EMAIL"))
             .unwrap_or_else(|_| {
                 // Try to load from ArxConfig
-                if let Ok(config_manager) = crate::config::ConfigManager::new() {
-                    config_manager.get_config().user.email.clone()
-                } else {
-                    "arxos@arxos.io".to_string()
-                }
+                // Load config with fallback to default
+                // Use helper function for consistent config access
+                crate::config::get_config_or_default().user.email.clone()
             });
         
         GitConfig {

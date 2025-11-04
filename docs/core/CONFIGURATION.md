@@ -282,8 +282,13 @@ If you see path validation errors, you can:
 4. **Keep Configs Simple** - only override what you need
 5. **Validate Early** - use `arx config show` to verify your configuration
 
+## IDE Autocomplete
+
+ArxOS provides JSON schema for IDE autocomplete and validation. See [IDE Autocomplete Setup](../development/IDE_AUTOCOMPLETE_SETUP.md) for instructions on configuring your IDE.
+
 ## See Also
 
+- [IDE Autocomplete Setup](../development/IDE_AUTOCOMPLETE_SETUP.md) - Configure IDE autocomplete
 - [API Reference](./API_REFERENCE.md) - Complete configuration API
 - [Operations Guide](./OPERATIONS.md) - Operational procedures
 - [Troubleshooting Guide](./TROUBLESHOOTING.md) - Common issues and solutions

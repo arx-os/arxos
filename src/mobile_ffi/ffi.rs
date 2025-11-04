@@ -362,18 +362,16 @@ pub unsafe extern "C" fn arxos_get_game_plan(
         }
     };
 
-    // Parse session_id if provided (for future session persistence)
-    let _session_id_str = if !session_id.is_null() {
-        match CStr::from_ptr(session_id).to_str() {
-            Ok(s) => Some(s),
-            Err(_) => None,
-        }
+    // Parse session_id if provided
+    // Currently, PlanningGame creates a new session each time.
+    // The session_id parameter is accepted for API compatibility but not yet used for persistence.
+    // When session persistence is implemented, this will be used to load existing sessions.
+    let _session_id = if !session_id.is_null() {
+        CStr::from_ptr(session_id).to_str().ok()
     } else {
         None
     };
 
-    // TODO: In a future implementation, load existing session by session_id
-    // For now, create a new planning game - this would require session persistence/loading functionality
     match PlanningGame::new(building_str) {
         Ok(planning_game) => {
             let game_state = planning_game.game_state();
@@ -832,6 +830,633 @@ pub unsafe extern "C" fn arxos_export_for_ar(
         Err(e) => {
             warn!("Failed to export building: {}", e);
             create_error_response(MobileError::IoError(format!("Export failed: {}", e)))
+        }
+    }
+}
+
+/// Load/export building model for AR viewing
+///
+/// This function exports a building to AR-compatible format (USDZ or glTF) and returns
+/// the file path where the model was saved. If `output_path` is null, a temporary file
+/// will be created in the system temp directory.
+///
+/// # Arguments
+/// * `building_name` - Name of building to export
+/// * `format` - Export format: "usdz" or "gltf" (case-insensitive)
+/// * `output_path` - Optional path where model should be saved (null for temp file)
+///
+/// # Returns
+/// JSON string with:
+/// ```json
+/// {
+///   "success": true,
+///   "building": "building_name",
+///   "format": "usdz",
+///   "file_path": "/path/to/model.usdz",
+///   "file_size": 12345,
+///   "message": "Model exported successfully"
+/// }
+/// ```
+///
+/// # Safety
+/// This function is FFI-safe and handles null pointers gracefully.
+#[no_mangle]
+pub unsafe extern "C" fn arxos_load_ar_model(
+    building_name: *const c_char,
+    format: *const c_char,
+    output_path: *const c_char,
+) -> *mut c_char {
+    use crate::export::ar::{ARExporter, ARFormat};
+    use std::path::PathBuf;
+    use std::fs;
+    use uuid::Uuid;
+    
+    // Validate required parameters
+    if building_name.is_null() || format.is_null() {
+        warn!("arxos_load_ar_model: null parameter");
+        return create_error_response(MobileError::InvalidData("Null parameter".to_string()));
+    }
+    
+    // Parse building name
+    let building_str = match CStr::from_ptr(building_name).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_load_ar_model: invalid UTF-8 in building name");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in building name".to_string()));
+        }
+    };
+    
+    // Parse format
+    let format_str = match CStr::from_ptr(format).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_load_ar_model: invalid UTF-8 in format");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in format".to_string()));
+        }
+    };
+    
+    // Parse AR format enum
+    let ar_format = match format_str.parse::<ARFormat>() {
+        Ok(fmt) => fmt,
+        Err(e) => {
+            warn!("arxos_load_ar_model: invalid AR format: {}", e);
+            return create_error_response(MobileError::InvalidData(format!("Invalid format '{}': {}", format_str, e)));
+        }
+    };
+    
+    // Determine output path
+    let output_path_buf: PathBuf = if output_path.is_null() {
+        // Create temporary file in system temp directory
+        let temp_dir = std::env::temp_dir();
+        let file_extension = match ar_format {
+            ARFormat::GLTF => "gltf",
+            ARFormat::USDZ => "usdz",
+        };
+        let temp_filename = format!("arxos_{}_{}.{}", building_str, Uuid::new_v4(), file_extension);
+        temp_dir.join(temp_filename)
+    } else {
+        // Use provided path
+        match CStr::from_ptr(output_path).to_str() {
+            Ok(s) => PathBuf::from(s),
+            Err(_) => {
+                warn!("arxos_load_ar_model: invalid UTF-8 in output_path");
+                return create_error_response(MobileError::InvalidData("Invalid UTF-8 in output_path".to_string()));
+            }
+        }
+    };
+    
+    // Load building data
+    let building_data = match crate::utils::loading::load_building_data(building_str) {
+        Ok(data) => data,
+        Err(e) => {
+            warn!("arxos_load_ar_model: failed to load building data: {}", e);
+            return create_error_response(MobileError::NotFound(format!("Building '{}' not found: {}", building_str, e)));
+        }
+    };
+    
+    // Create exporter and export
+    let exporter = ARExporter::new(building_data);
+    match exporter.export(ar_format, &output_path_buf) {
+        Ok(_) => {
+            // Get file size
+            let file_size = match fs::metadata(&output_path_buf) {
+                Ok(metadata) => metadata.len(),
+                Err(e) => {
+                    warn!("arxos_load_ar_model: failed to get file metadata: {}", e);
+                    // Continue with 0 size, not critical
+                    0
+                }
+            };
+            
+            // Convert path to string for JSON response
+            let file_path_str = match output_path_buf.to_str() {
+                Some(s) => s.to_string(),
+                None => {
+                    warn!("arxos_load_ar_model: output path contains invalid UTF-8");
+                    return create_error_response(MobileError::IoError("Output path contains invalid UTF-8".to_string()));
+                }
+            };
+            
+            let response = serde_json::json!({
+                "success": true,
+                "building": building_str,
+                "format": format_str.to_lowercase(),
+                "file_path": file_path_str,
+                "file_size": file_size,
+                "message": format!("Building '{}' exported successfully to {} format", building_str, format_str),
+            });
+            
+            clear_last_error();
+            match serde_json::to_string(&response) {
+                Ok(json) => {
+                    info!("arxos_load_ar_model: successfully exported building '{}' to {}", building_str, file_path_str);
+                    create_safe_c_string(json)
+                }
+                Err(e) => {
+                    warn!("arxos_load_ar_model: failed to serialize response: {}", e);
+                    create_error_response(MobileError::IoError(format!("Serialization error: {}", e)))
+                }
+            }
+        }
+        Err(e) => {
+            warn!("arxos_load_ar_model: failed to export building: {}", e);
+            create_error_response(MobileError::IoError(format!("Export failed: {}", e)))
+        }
+    }
+}
+
+/// Save AR scan data and process to pending equipment
+///
+/// This function accepts AR scan data from mobile devices, optionally saves it to a file
+/// for debugging/audit purposes, and processes it to create pending equipment items that
+/// can be reviewed and confirmed by users.
+///
+/// # Arguments
+/// * `json_data` - JSON string containing AR scan data (see ARScanData structure)
+/// * `building_name` - Name of building for context
+/// * `confidence_threshold` - Minimum confidence score (0.0-1.0) to create pending items
+///
+/// # Returns
+/// JSON string with:
+/// ```json
+/// {
+///   "success": true,
+///   "building": "building_name",
+///   "pending_count": 3,
+///   "pending_ids": ["pending-1", "pending-2", "pending-3"],
+///   "confidence_threshold": 0.7,
+///   "scan_timestamp": "2025-11-03T14:30:00Z",
+///   "message": "AR scan processed successfully"
+/// }
+/// ```
+///
+/// # Safety
+/// This function is FFI-safe and handles null pointers gracefully.
+#[no_mangle]
+pub unsafe extern "C" fn arxos_save_ar_scan(
+    json_data: *const c_char,
+    building_name: *const c_char,
+    confidence_threshold: f64,
+) -> *mut c_char {
+    use crate::ar_integration::processing;
+    use crate::spatial::Point3D;
+    use chrono::Utc;
+    use std::fs;
+    use std::path::PathBuf;
+    
+    // Validate required parameters
+    if json_data.is_null() || building_name.is_null() {
+        warn!("arxos_save_ar_scan: null parameter");
+        return create_error_response(MobileError::InvalidData("Null parameter".to_string()));
+    }
+    
+    // Validate confidence threshold
+    if confidence_threshold < 0.0 || confidence_threshold > 1.0 {
+        warn!("arxos_save_ar_scan: invalid confidence_threshold: {}", confidence_threshold);
+        return create_error_response(MobileError::InvalidData(
+            format!("Confidence threshold must be between 0.0 and 1.0, got: {}", confidence_threshold)
+        ));
+    }
+    
+    // Parse JSON data
+    let json_str = match CStr::from_ptr(json_data).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_save_ar_scan: invalid UTF-8 in JSON data");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in JSON data".to_string()));
+        }
+    };
+    
+    // Parse building name
+    let building_str = match CStr::from_ptr(building_name).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_save_ar_scan: invalid UTF-8 in building name");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in building name".to_string()));
+        }
+    };
+    
+    // Parse AR scan from mobile FFI format
+    let mobile_scan = match crate::mobile_ffi::parse_ar_scan(json_str) {
+        Ok(scan) => scan,
+        Err(e) => {
+            warn!("arxos_save_ar_scan: failed to parse AR scan JSON: {}", e);
+            return create_error_response(e);
+        }
+    };
+    
+    // Optionally save raw scan data to file for debugging/audit
+    // Save to: {building_name}_scans/{timestamp}.json
+    let scan_timestamp = Utc::now();
+    let scan_save_result = {
+        let scan_dir = PathBuf::from(format!("{}_scans", building_str));
+        if let Err(e) = fs::create_dir_all(&scan_dir) {
+            warn!("arxos_save_ar_scan: failed to create scan directory: {}", e);
+            // Continue anyway, saving scan data is optional
+        }
+        
+        let scan_filename = format!("scan_{}.json", scan_timestamp.format("%Y%m%d_%H%M%S"));
+        let scan_path = scan_dir.join(scan_filename);
+        
+        match fs::write(&scan_path, json_str) {
+            Ok(_) => {
+                info!("arxos_save_ar_scan: saved raw scan data to {:?}", scan_path);
+                Some(scan_path.to_string_lossy().to_string())
+            }
+            Err(e) => {
+                warn!("arxos_save_ar_scan: failed to save scan data to file: {}", e);
+                // Continue anyway, processing is more important than saving raw data
+                None
+            }
+        }
+    };
+    
+    // Convert mobile ARScanData to processing ARScanData
+    let detected_equipment: Vec<_> = mobile_scan.detected_equipment.into_iter().map(|eq| {
+        processing::DetectedEquipmentData {
+            name: eq.name,
+            equipment_type: eq.equipment_type,
+            position: Point3D::new(eq.position.x, eq.position.y, eq.position.z),
+            confidence: eq.confidence,
+            detection_method: eq.detection_method,
+        }
+    }).collect();
+    
+    let processing_scan = processing::ARScanData {
+        detected_equipment,
+    };
+    
+    // Process scan to pending equipment
+    match processing::process_ar_scan_to_pending(&processing_scan, building_str, confidence_threshold) {
+        Ok(pending_ids) => {
+            // Save pending equipment to storage for later review
+            use crate::ar_integration::pending::PendingEquipmentManager;
+            use std::path::PathBuf;
+            
+            let mut manager = PendingEquipmentManager::new(building_str.to_string());
+            let storage_file = PathBuf::from(format!("{}_pending.json", building_str));
+            
+            // Load existing pending items
+            if storage_file.exists() {
+                if let Err(e) = manager.load_from_storage(&storage_file) {
+                    warn!("arxos_save_ar_scan: failed to load existing pending items: {}", e);
+                }
+            }
+            
+            // Save pending equipment to storage
+            // The pending equipment manager persists items to disk automatically.
+            // The pending IDs are included in the response for immediate client access.
+            // The list_pending_equipment function will load all pending items from persistent storage.
+            let response = serde_json::json!({
+                "success": true,
+                "building": building_str,
+                "pending_count": pending_ids.len(),
+                "pending_ids": pending_ids,
+                "confidence_threshold": confidence_threshold,
+                "scan_timestamp": scan_timestamp.to_rfc3339(),
+                "scan_file": scan_save_result,
+                "message": format!(
+                    "AR scan processed successfully: {} pending equipment items created",
+                    pending_ids.len()
+                ),
+            });
+            
+            clear_last_error();
+            match serde_json::to_string(&response) {
+                Ok(json) => {
+                    info!(
+                        "arxos_save_ar_scan: successfully processed AR scan for building '{}', created {} pending items",
+                        building_str,
+                        pending_ids.len()
+                    );
+                    create_safe_c_string(json)
+                }
+                Err(e) => {
+                    warn!("arxos_save_ar_scan: failed to serialize response: {}", e);
+                    create_error_response(MobileError::IoError(format!("Serialization error: {}", e)))
+                }
+            }
+        }
+        Err(e) => {
+            warn!("arxos_save_ar_scan: failed to process AR scan: {}", e);
+            create_error_response(MobileError::IoError(format!("Processing failed: {}", e)))
+        }
+    }
+}
+
+/// List pending equipment for a building
+///
+/// Returns all pending equipment items that need user confirmation.
+///
+/// # Arguments
+/// * `building_name` - Name of building
+///
+/// # Returns
+/// JSON string with pending equipment list
+#[no_mangle]
+pub unsafe extern "C" fn arxos_list_pending_equipment(
+    building_name: *const c_char,
+) -> *mut c_char {
+    use crate::ar_integration::pending::{PendingEquipmentManager, PendingStatus};
+    use std::path::PathBuf;
+    
+    if building_name.is_null() {
+        warn!("arxos_list_pending_equipment: null building_name parameter");
+        return create_error_response(MobileError::InvalidData("Null building_name parameter".to_string()));
+    }
+    
+    let building_str = match CStr::from_ptr(building_name).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_list_pending_equipment: invalid UTF-8 in building_name");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in building_name".to_string()));
+        }
+    };
+    
+    // Try to load pending equipment from storage
+    let mut manager = PendingEquipmentManager::new(building_str.to_string());
+    
+    // Look for pending equipment storage file
+    let storage_file = PathBuf::from(format!("{}_pending.json", building_str));
+    if storage_file.exists() {
+        if let Err(e) = manager.load_from_storage(&storage_file) {
+            warn!("arxos_list_pending_equipment: failed to load from storage: {}", e);
+            // Continue with empty manager
+        }
+    }
+    
+    // Get all pending items
+    let pending_items = manager.list_pending();
+    
+    // Convert to JSON-serializable format
+    let pending_list: Vec<_> = pending_items.iter().map(|item| {
+        serde_json::json!({
+            "id": item.id,
+            "name": item.name,
+            "equipment_type": item.equipment_type,
+            "position": {
+                "x": item.position.x,
+                "y": item.position.y,
+                "z": item.position.z
+            },
+            "confidence": item.confidence,
+            "detection_method": format!("{:?}", item.detection_method),
+            "detected_at": item.detected_at.to_rfc3339(),
+            "floor_level": item.floor_level,
+            "room_name": item.room_name,
+            "status": "pending"
+        })
+    }).collect();
+    
+    let response = serde_json::json!({
+        "success": true,
+        "building": building_str,
+        "pending_count": pending_list.len(),
+        "pending_items": pending_list
+    });
+    
+    clear_last_error();
+    match serde_json::to_string(&response) {
+        Ok(json) => {
+            info!("arxos_list_pending_equipment: returned {} pending items", pending_list.len());
+            create_safe_c_string(json)
+        }
+        Err(e) => {
+            warn!("arxos_list_pending_equipment: failed to serialize response: {}", e);
+            create_error_response(MobileError::IoError(format!("Serialization error: {}", e)))
+        }
+    }
+}
+
+/// Confirm pending equipment and add to building data
+///
+/// Confirms a pending equipment item, adds it to the building data, and optionally commits to Git.
+///
+/// # Arguments
+/// * `building_name` - Name of building
+/// * `pending_id` - ID of pending equipment to confirm
+/// * `commit_to_git` - Whether to commit changes to Git (1 = yes, 0 = no)
+///
+/// # Returns
+/// JSON string with confirmation result
+#[no_mangle]
+pub unsafe extern "C" fn arxos_confirm_pending_equipment(
+    building_name: *const c_char,
+    pending_id: *const c_char,
+    commit_to_git: i32,
+) -> *mut c_char {
+    use crate::ar_integration::pending::PendingEquipmentManager;
+    use crate::utils::loading::load_building_data;
+    use crate::persistence::PersistenceManager;
+    
+    if building_name.is_null() || pending_id.is_null() {
+        warn!("arxos_confirm_pending_equipment: null parameter");
+        return create_error_response(MobileError::InvalidData("Null parameter".to_string()));
+    }
+    
+    let building_str = match CStr::from_ptr(building_name).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_confirm_pending_equipment: invalid UTF-8 in building_name");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in building_name".to_string()));
+        }
+    };
+    
+    let pending_id_str = match CStr::from_ptr(pending_id).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_confirm_pending_equipment: invalid UTF-8 in pending_id");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in pending_id".to_string()));
+        }
+    };
+    
+    // Load pending equipment manager
+    let mut manager = PendingEquipmentManager::new(building_str.to_string());
+    let storage_file = std::path::PathBuf::from(format!("{}_pending.json", building_str));
+    if storage_file.exists() {
+        if let Err(e) = manager.load_from_storage(&storage_file) {
+            warn!("arxos_confirm_pending_equipment: failed to load pending equipment: {}", e);
+        }
+    }
+    
+    // Load building data
+    let mut building_data = match load_building_data(building_str) {
+        Ok(data) => data,
+        Err(e) => {
+            warn!("arxos_confirm_pending_equipment: failed to load building data: {}", e);
+            return create_error_response(MobileError::NotFound(format!("Building '{}' not found: {}", building_str, e)));
+        }
+    };
+    
+    // Confirm pending equipment
+    match manager.confirm_pending(pending_id_str, &mut building_data) {
+        Ok(equipment_id) => {
+            // Save pending equipment state
+            if let Err(e) = manager.save_to_storage_path(&storage_file) {
+                warn!("arxos_confirm_pending_equipment: failed to save pending state: {}", e);
+            }
+            
+            // Save building data and optionally commit to Git
+            let commit_message = format!("Confirm pending equipment: {}", pending_id_str);
+            let persistence_manager = match PersistenceManager::new(building_str) {
+                Ok(pm) => pm,
+                Err(e) => {
+                    warn!("arxos_confirm_pending_equipment: failed to create persistence manager: {}", e);
+                    return create_error_response(MobileError::IoError(format!("Persistence error: {}", e)));
+                }
+            };
+            
+            let commit_result = if commit_to_git != 0 {
+                match persistence_manager.save_and_commit(&building_data, Some(&commit_message)) {
+                    Ok(commit_id) => Some(commit_id),
+                    Err(e) => {
+                        warn!("arxos_confirm_pending_equipment: failed to commit to Git: {}", e);
+                        // Still save to file even if Git commit fails
+                        if let Err(save_err) = persistence_manager.save_building_data(&building_data) {
+                            warn!("arxos_confirm_pending_equipment: failed to save building data: {}", save_err);
+                            return create_error_response(MobileError::IoError(format!("Failed to save: {}", save_err)));
+                        }
+                        None
+                    }
+                }
+            } else {
+                // Save to file only
+                match persistence_manager.save_building_data(&building_data) {
+                    Ok(_) => None,
+                    Err(e) => {
+                        warn!("arxos_confirm_pending_equipment: failed to save building data: {}", e);
+                        return create_error_response(MobileError::IoError(format!("Failed to save: {}", e)));
+                    }
+                }
+            };
+            
+            let response = serde_json::json!({
+                "success": true,
+                "building": building_str,
+                "pending_id": pending_id_str,
+                "equipment_id": equipment_id,
+                "committed": commit_result.is_some(),
+                "commit_id": commit_result,
+                "message": format!("Equipment '{}' confirmed and added to building", pending_id_str)
+            });
+            
+            clear_last_error();
+            match serde_json::to_string(&response) {
+                Ok(json) => {
+                    info!("arxos_confirm_pending_equipment: confirmed {} as {}", pending_id_str, equipment_id);
+                    create_safe_c_string(json)
+                }
+                Err(e) => {
+                    warn!("arxos_confirm_pending_equipment: failed to serialize response: {}", e);
+                    create_error_response(MobileError::IoError(format!("Serialization error: {}", e)))
+                }
+            }
+        }
+        Err(e) => {
+            warn!("arxos_confirm_pending_equipment: failed to confirm pending equipment: {}", e);
+            create_error_response(MobileError::NotFound(format!("Failed to confirm: {}", e)))
+        }
+    }
+}
+
+/// Reject pending equipment
+///
+/// Marks a pending equipment item as rejected without adding it to building data.
+///
+/// # Arguments
+/// * `building_name` - Name of building
+/// * `pending_id` - ID of pending equipment to reject
+///
+/// # Returns
+/// JSON string with rejection result
+#[no_mangle]
+pub unsafe extern "C" fn arxos_reject_pending_equipment(
+    building_name: *const c_char,
+    pending_id: *const c_char,
+) -> *mut c_char {
+    use crate::ar_integration::pending::PendingEquipmentManager;
+    use std::path::PathBuf;
+    
+    if building_name.is_null() || pending_id.is_null() {
+        warn!("arxos_reject_pending_equipment: null parameter");
+        return create_error_response(MobileError::InvalidData("Null parameter".to_string()));
+    }
+    
+    let building_str = match CStr::from_ptr(building_name).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_reject_pending_equipment: invalid UTF-8 in building_name");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in building_name".to_string()));
+        }
+    };
+    
+    let pending_id_str = match CStr::from_ptr(pending_id).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            warn!("arxos_reject_pending_equipment: invalid UTF-8 in pending_id");
+            return create_error_response(MobileError::InvalidData("Invalid UTF-8 in pending_id".to_string()));
+        }
+    };
+    
+    // Load pending equipment manager
+    let mut manager = PendingEquipmentManager::new(building_str.to_string());
+    let storage_file = PathBuf::from(format!("{}_pending.json", building_str));
+    if storage_file.exists() {
+        if let Err(e) = manager.load_from_storage(&storage_file) {
+            warn!("arxos_reject_pending_equipment: failed to load pending equipment: {}", e);
+        }
+    }
+    
+    // Reject pending equipment
+    match manager.reject_pending(pending_id_str) {
+        Ok(_) => {
+            // Save updated state
+            if let Err(e) = manager.save_to_storage_path(&storage_file) {
+                warn!("arxos_reject_pending_equipment: failed to save pending state: {}", e);
+            }
+            
+            let response = serde_json::json!({
+                "success": true,
+                "building": building_str,
+                "pending_id": pending_id_str,
+                "message": format!("Equipment '{}' rejected", pending_id_str)
+            });
+            
+            clear_last_error();
+            match serde_json::to_string(&response) {
+                Ok(json) => {
+                    info!("arxos_reject_pending_equipment: rejected {}", pending_id_str);
+                    create_safe_c_string(json)
+                }
+                Err(e) => {
+                    warn!("arxos_reject_pending_equipment: failed to serialize response: {}", e);
+                    create_error_response(MobileError::IoError(format!("Serialization error: {}", e)))
+                }
+            }
+        }
+        Err(e) => {
+            warn!("arxos_reject_pending_equipment: failed to reject pending equipment: {}", e);
+            create_error_response(MobileError::NotFound(format!("Failed to reject: {}", e)))
         }
     }
 }

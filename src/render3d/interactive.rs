@@ -4,7 +4,7 @@
 //! adding real-time input handling, state management, and interactive controls.
 
 use crate::yaml::BuildingData;
-use crate::render3d::{Building3DRenderer, Render3DConfig, Scene3D, VisualEffectsEngine};
+use crate::render3d::{Building3DRenderer, Render3DConfig, Scene3D, VisualEffectsEngine, InfoPanelState};
 use crate::render3d::state::{InteractiveState, CameraState, ViewMode, Vector3D};
 use crate::render3d::events::{EventHandler, InteractiveEvent, Action, CameraAction, ZoomAction, ViewModeAction};
 use crossterm::event::KeyCode;
@@ -31,6 +31,10 @@ pub struct InteractiveRenderer {
     frame_count: u32,
     /// Optional game state for game overlay
     game_state: Option<crate::game::state::GameState>,
+    /// Info panel state
+    info_panel: InfoPanelState,
+    /// Building data reference for info panel
+    building_data: BuildingData,
 }
 
 /// Configuration for interactive rendering
@@ -53,11 +57,13 @@ pub struct InteractiveConfig {
 impl InteractiveRenderer {
     /// Create a new interactive renderer
     pub fn new(building_data: BuildingData, config: Render3DConfig) -> Result<Self, Box<dyn std::error::Error>> {
+        let building_data_clone = building_data.clone();
         let renderer = Building3DRenderer::new(building_data, config);
         let state = InteractiveState::new();
         let event_handler = EventHandler::new();
         let effects_engine = VisualEffectsEngine::new();
         let interactive_config = InteractiveConfig::default();
+        let info_panel = InfoPanelState::new();
         
         Ok(Self {
             renderer,
@@ -68,6 +74,8 @@ impl InteractiveRenderer {
             last_render_time: Instant::now(),
             frame_count: 0,
             game_state: None,
+            info_panel,
+            building_data: building_data_clone,
         })
     }
 
@@ -77,10 +85,12 @@ impl InteractiveRenderer {
         render_config: Render3DConfig,
         interactive_config: InteractiveConfig
     ) -> Result<Self, Box<dyn std::error::Error>> {
+        let building_data_clone = building_data.clone();
         let renderer = Building3DRenderer::new(building_data, render_config);
         let state = InteractiveState::new();
         let event_handler = EventHandler::new();
         let effects_engine = VisualEffectsEngine::new();
+        let info_panel = InfoPanelState::new();
         
         Ok(Self {
             renderer,
@@ -91,6 +101,8 @@ impl InteractiveRenderer {
             last_render_time: Instant::now(),
             frame_count: 0,
             game_state: None,
+            info_panel,
+            building_data: building_data_clone,
         })
     }
 
@@ -170,6 +182,10 @@ impl InteractiveRenderer {
             }
             InteractiveEvent::KeyPress(KeyCode::Char('h'), _) => {
                 self.toggle_help();
+            }
+            InteractiveEvent::KeyPress(KeyCode::Char('i'), _) | 
+            InteractiveEvent::KeyPress(KeyCode::Char('I'), _) => {
+                self.info_panel.toggle();
             }
             InteractiveEvent::Resize(width, height) => {
                 self.handle_resize(width, height)?;
@@ -429,11 +445,62 @@ impl InteractiveRenderer {
             self.state.current_floor.map(|f| f.to_string()).unwrap_or("All".to_string())));
         overlay.push_str(&format!("Selected: {} | ", self.state.selected_equipment.len()));
         overlay.push_str(&format!("Mode: {:?}", self.state.view_mode));
+        if self.info_panel.show_panel {
+            overlay.push_str(" | Info Panel: ON");
+        }
         
         // Help overlay
         if self.config.show_help {
             overlay.push_str("\n\n");
             overlay.push_str(&self.event_handler.get_help_text());
+        }
+        
+        // Info panel overlay (if enabled)
+        if self.info_panel.show_panel {
+            overlay.push_str("\n\n");
+            overlay.push_str("╔════════════════════════════════════════════════════════════╗\n");
+            overlay.push_str("║                    INFO PANEL                             ║\n");
+            overlay.push_str("╠════════════════════════════════════════════════════════════╣\n");
+            
+            // Equipment info
+            if !self.state.selected_equipment.is_empty() {
+                overlay.push_str("║ Equipment:\n");
+                for equipment_id in &self.state.selected_equipment {
+                    for floor in &self.building_data.floors {
+                        if let Some(equipment) = floor.equipment.iter().find(|e| e.id == *equipment_id) {
+                            overlay.push_str(&format!("║   • {} ({:?})\n", equipment.name, equipment.status));
+                        }
+                    }
+                }
+            } else {
+                overlay.push_str("║ Equipment: None selected\n");
+            }
+            
+            // Camera info
+            let camera = &self.state.camera_state;
+            overlay.push_str(&format!("║ Camera: Pos({:.1},{:.1},{:.1}) Zoom:{:.2}x\n", 
+                camera.position.x, camera.position.y, camera.position.z, camera.zoom));
+            
+            // View mode
+            let mode_text = match self.state.view_mode {
+                ViewMode::Standard => "Standard",
+                ViewMode::CrossSection => "Cross-Section",
+                ViewMode::Connections => "Connections",
+                ViewMode::Maintenance => "Maintenance",
+            };
+            overlay.push_str(&format!("║ View: {}\n", mode_text));
+            
+            // Stats
+            let current_time = Instant::now();
+            let elapsed = current_time.duration_since(self.last_render_time);
+            let fps = if elapsed.as_secs() > 0 {
+                self.frame_count as f64 / elapsed.as_secs_f64()
+            } else {
+                0.0
+            };
+            overlay.push_str(&format!("║ FPS: {:.1} | Frames: {}\n", fps, self.frame_count));
+            
+            overlay.push_str("╚════════════════════════════════════════════════════════════╝\n");
         }
         
         print!("{}", overlay);

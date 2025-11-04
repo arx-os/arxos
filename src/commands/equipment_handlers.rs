@@ -11,8 +11,12 @@ pub fn handle_equipment_command(command: EquipmentCommands) -> Result<(), Box<dy
         EquipmentCommands::Add { room, name, equipment_type, position, property, commit } => {
             handle_add_equipment(room, name, equipment_type, position, property, commit)
         }
-        EquipmentCommands::List { room, equipment_type, verbose } => {
-            handle_list_equipment(room, equipment_type, verbose)
+        EquipmentCommands::List { room, equipment_type, verbose, interactive } => {
+            if interactive {
+                crate::commands::equipment::browser::handle_equipment_browser(room, equipment_type)
+            } else {
+                handle_list_equipment(room, equipment_type, verbose)
+            }
         }
         EquipmentCommands::Update { equipment, property, position, commit } => {
             handle_update_equipment(equipment, property, position, commit)

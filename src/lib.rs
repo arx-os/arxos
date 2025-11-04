@@ -32,6 +32,9 @@ pub mod utils;
 pub mod docs;
 pub mod game;
 
+// UI module (terminal user interface)
+pub mod ui;
+
 // Re-export docs for external use
 pub use docs::generate_building_docs;
 

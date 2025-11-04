@@ -160,6 +160,9 @@ pub enum Commands {
         /// Show detailed status information
         #[arg(long)]
         verbose: bool,
+        /// Open interactive dashboard
+        #[arg(long)]
+        interactive: bool,
     },
     /// Stage changes in the working directory
     Stage {
@@ -193,6 +196,9 @@ pub enum Commands {
         /// Show file statistics only
         #[arg(long)]
         stat: bool,
+        /// Open interactive viewer
+        #[arg(long)]
+        interactive: bool,
     },
     /// Show commit history
     History {
@@ -220,6 +226,9 @@ pub enum Commands {
         /// Edit configuration file
         #[arg(long)]
         edit: bool,
+        /// Open interactive wizard
+        #[arg(long)]
+        interactive: bool,
     },
     /// Room management commands
     Room {
@@ -278,6 +287,9 @@ pub enum Commands {
         /// Show detailed results
         #[arg(long)]
         verbose: bool,
+        /// Open interactive browser
+        #[arg(long)]
+        interactive: bool,
     },
     /// Integrate AR scan data
     ArIntegrate {
@@ -376,6 +388,9 @@ pub enum Commands {
         /// Show detailed diagnostics
         #[arg(long)]
         verbose: bool,
+        /// Open interactive dashboard
+        #[arg(long)]
+        interactive: bool,
     },
     /// Generate HTML documentation for a building
     Doc {
@@ -526,6 +541,9 @@ pub enum PendingCommands {
         /// Show detailed information
         #[arg(long)]
         verbose: bool,
+        /// Open interactive manager
+        #[arg(long)]
+        interactive: bool,
     },
     /// Confirm pending equipment
     Confirm {
@@ -599,6 +617,9 @@ pub enum RoomCommands {
         /// Show detailed information
         #[arg(long)]
         verbose: bool,
+        /// Open interactive explorer
+        #[arg(long)]
+        interactive: bool,
     },
     /// Show room details
     Show {
@@ -666,6 +687,9 @@ pub enum EquipmentCommands {
         /// Show detailed information
         #[arg(long)]
         verbose: bool,
+        /// Open interactive browser
+        #[arg(long)]
+        interactive: bool,
     },
     /// Update equipment
     Update {

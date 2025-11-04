@@ -116,6 +116,31 @@ struct DetectedEquipment: Identifiable, Codable {
         self.status = status
         self.icon = icon
     }
+    
+    // Custom encoding to ensure Rust-compatible format
+    // Rust expects: name, type, position, confidence (required), detectionMethod
+    // Extra fields (id, status, icon) will be ignored by Rust deserializer
+    enum CodingKeys: String, CodingKey {
+        case name
+        case type
+        case position
+        case confidence
+        case detectionMethod
+        // Note: id, status, icon are not encoded for Rust compatibility
+        // They're only used for SwiftUI display
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(name, forKey: .name)
+        try container.encode(type, forKey: .type)
+        try container.encode(position, forKey: .position)
+        // Rust requires confidence as f64, so always encode it
+        try container.encode(confidence ?? 0.7, forKey: .confidence)
+        if let method = detectionMethod {
+            try container.encode(method, forKey: .detectionMethod)
+        }
+    }
 }
 
 /// 3D Position

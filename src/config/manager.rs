@@ -77,7 +77,11 @@ impl ConfigManager {
         config = Self::apply_environment_overrides(config)?;
         
         // Validate configuration (with relaxed path validation)
+        // Uses rule-based validation for performance and correctness
         Self::validate_config_relaxed(&config)?;
+        
+        // Note: Schema-based validation is available via ConfigSchema::json_schema()
+        // but rule-based validation is preferred for performance and clearer error messages
         
         Ok(Self {
             config,

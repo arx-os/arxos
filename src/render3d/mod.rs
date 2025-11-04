@@ -17,6 +17,7 @@ mod utils;
 pub mod interactive;
 pub mod events;
 pub mod state;
+pub mod info_panel;
 
 // Re-export particle and animation components
 pub mod particles;
@@ -32,6 +33,7 @@ pub use utils::format_scene_output;
 
 // Re-export interactive components
 pub use interactive::{InteractiveRenderer, InteractiveConfig};
+pub use info_panel::{InfoPanelState, render_info_panel};
 pub use events::{EventHandler, InteractiveEvent, Action, CameraAction, ZoomAction, ViewModeAction};
 pub use state::{InteractiveState, CameraState, ViewMode, Rotation3D, SessionData, RenderPreferences, QualityLevel};
 pub use particles::{ParticleSystem, Particle, ParticleType, ParticleData, Vector3D as ParticleVector3D, StatusType, AlertLevel};

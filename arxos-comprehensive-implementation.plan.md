@@ -546,9 +546,9 @@ futures = "0.3"
 - [x] Create configuration schema documentation and JSON schema export ✅
 - [x] Create src/export/ module structure with AR export foundation ✅
 - [x] Implement glTF export from BuildingData with materials and spatial coordinates ✅ (Nov 2025 - Complete using gltf-json crate API)
-- [ ] Implement USDZ export (native or via glTF conversion)
+- [x] Implement USDZ export (native or via glTF conversion) ✅ (Nov 2025 - glTF→USDZ pipeline)
 - [x] Implement spatial anchor management and JSON serialization ✅
-- [ ] Add CLI commands for AR export (arx export --format usdz|gltf)
+- [x] Add CLI commands for AR export (arx export --format usdz|gltf) ✅ (Nov 2025)
 - [ ] Implement ARKit integration in iOS app with model loading and placement
 - [ ] Create AR-specific FFI functions for iOS (load model, save scan)
 - [ ] Implement ARCore integration in Android app with glTF loading
@@ -557,11 +557,11 @@ futures = "0.3"
 - [x] Add HTTP endpoint listener for real-time sensor data ingestion ✅
 - [x] Add MQTT subscriber for sensor data ingestion ✅
 - [x] Add WebSocket server for real-time sensor updates ✅
-- [x] Enhance equipment status updater with real-time processing ✅ (connected, alert objects pending)
+- [x] Enhance equipment status updater with real-time processing ✅ (connected, alert generation complete)
 - [x] Create sensor-equipment mapping system with persistence ✅
 - [x] Add CLI commands for sensor operations (listen, status, map) ✅
 - [ ] Update hardware examples with HTTP/MQTT/WebSocket integration
-- [ ] Create end-to-end workflow tests for all three pillars
+- [x] Create end-to-end workflow tests for all three pillars ✅ (Nov 2025 - comprehensive E2E tests)
 - [ ] Create mobile AR integration tests
 - [ ] Create hardware real-time integration tests
 - [ ] Add benchmarks for AR export and sensor processing

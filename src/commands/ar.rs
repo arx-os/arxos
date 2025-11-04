@@ -46,11 +46,16 @@ fn handle_ar_export_command(
     Ok(())
 }
 
+
 /// Handle pending equipment commands
 fn handle_pending_command(command: PendingCommands) -> Result<(), Box<dyn std::error::Error>> {
     match command {
-        PendingCommands::List { building, floor, verbose } => {
-            handle_pending_list_command(&building, floor, verbose)
+        PendingCommands::List { building, floor, verbose, interactive } => {
+            if interactive {
+                crate::commands::ar_pending_manager::handle_ar_pending_manager(building)
+            } else {
+                handle_pending_list_command(&building, floor, verbose)
+            }
         }
         PendingCommands::Confirm { pending_id, building, commit } => {
             handle_pending_confirm_command(&pending_id, &building, commit)

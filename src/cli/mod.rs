@@ -923,6 +923,24 @@ pub enum UsersCommands {
 
 #[derive(Subcommand)]
 pub enum SpatialCommands {
+    /// Convert grid coordinates to real coordinates
+    GridToReal {
+        /// Grid coordinate (e.g., "D-4")
+        grid: String,
+        /// Building name
+        building: Option<String>,
+    },
+    /// Convert real coordinates to grid coordinates
+    RealToGrid {
+        /// X coordinate
+        x: f64,
+        /// Y coordinate
+        y: f64,
+        /// Z coordinate (optional)
+        z: Option<f64>,
+        /// Building name
+        building: Option<String>,
+    },
     /// Query spatial relationships
     Query {
         /// Query type

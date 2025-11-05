@@ -6,6 +6,7 @@
 //! All functions are FFI-safe and compatible with C-compatible calling conventions.
 
 pub mod ffi;
+pub mod offline_queue;
 // Note: JNI module is conditionally compiled for Android targets
 // The module file will be added when Android JNI integration is implemented
 

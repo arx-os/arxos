@@ -17,6 +17,12 @@ use crate::cli::SpatialCommands;
 /// Returns `Ok(())` if the command executes successfully, or an error if it fails.
 pub fn handle_spatial_command(command: SpatialCommands) -> Result<(), Box<dyn std::error::Error>> {
     match command {
+        SpatialCommands::GridToReal { grid, building } => {
+            handle_grid_to_real(grid, building)
+        }
+        SpatialCommands::RealToGrid { x, y, z, building } => {
+            handle_real_to_grid(x, y, z, building)
+        }
         SpatialCommands::Query { query_type, entity, params } => {
             handle_spatial_query(query_type, entity, params)
         }
@@ -30,6 +36,85 @@ pub fn handle_spatial_command(command: SpatialCommands) -> Result<(), Box<dyn st
             handle_spatial_validate(entity, tolerance)
         }
     }
+}
+
+/// Handle grid to real coordinate conversion
+fn handle_grid_to_real(grid: String, building: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+    use crate::spatial::{GridCoordinate, GridSystem};
+    use crate::persistence::load_building_data_from_dir;
+    
+    println!("🔢 Converting grid coordinate to real coordinates: {}", grid);
+    
+    let grid_coord = GridCoordinate::parse(&grid)?;
+    println!("   Parsed grid: Column {}, Row {}", grid_coord.column, grid_coord.row);
+    
+    // Try to load grid system from building data, or use default
+    // Note: Grid system configuration can be added to building metadata in the future
+    let grid_system = if let Some(building_name) = building {
+        match load_building_data_from_dir() {
+            Ok(building_data) => {
+                if building_data.building.name == building_name {
+                    println!("   📐 Building '{}' found, using default grid system", building_name);
+                    println!("   💡 Tip: Grid system configuration will be stored in building metadata in a future release");
+                    GridSystem::default()
+                } else {
+                    println!("   ⚠️  Building '{}' not found, using default grid system", building_name);
+                    GridSystem::default()
+                }
+            }
+            Err(_) => {
+                println!("   ⚠️  Could not load building data, using default grid system");
+                GridSystem::default()
+            }
+        }
+    } else {
+        GridSystem::default()
+    };
+    
+    let real_coords = grid_system.grid_to_real(&grid_coord);
+    println!("   Real coordinates: ({:.2}, {:.2}, {:.2})", real_coords.x, real_coords.y, real_coords.z);
+    println!("✅ Conversion completed");
+    
+    Ok(())
+}
+
+/// Handle real to grid coordinate conversion
+fn handle_real_to_grid(x: f64, y: f64, z: Option<f64>, building: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+    use crate::spatial::{GridSystem, Point3D};
+    use crate::persistence::load_building_data_from_dir;
+    
+    let z_coord = z.unwrap_or(0.0);
+    println!("🔢 Converting real coordinates to grid: ({:.2}, {:.2}, {:.2})", x, y, z_coord);
+    
+    // Try to load grid system from building data, or use default
+    // Note: Grid system configuration can be added to building metadata in the future
+    let grid_system = if let Some(building_name) = building {
+        match load_building_data_from_dir() {
+            Ok(building_data) => {
+                if building_data.building.name == building_name {
+                    println!("   📐 Building '{}' found, using default grid system", building_name);
+                    println!("   💡 Tip: Grid system configuration will be stored in building metadata in a future release");
+                    GridSystem::default()
+                } else {
+                    println!("   ⚠️  Building '{}' not found, using default grid system", building_name);
+                    GridSystem::default()
+                }
+            }
+            Err(_) => {
+                println!("   ⚠️  Could not load building data, using default grid system");
+                GridSystem::default()
+            }
+        }
+    } else {
+        GridSystem::default()
+    };
+    
+    let point = Point3D::new(x, y, z_coord);
+    let grid_coord = grid_system.real_to_grid(&point);
+    println!("   Grid coordinate: {}", grid_coord);
+    println!("✅ Conversion completed");
+    
+    Ok(())
 }
 
 /// Handle spatial query command

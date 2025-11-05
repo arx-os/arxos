@@ -14,6 +14,7 @@ mod operations;
 
 // Re-export all public types and functions
 pub use types::{Position, Dimensions, BoundingBox, SpatialProperties, SpatialQueryResult};
+pub use crate::spatial::{GridCoordinate, GridSystem};
 pub use building::Building;
 pub use floor::Floor;
 pub use wing::Wing;

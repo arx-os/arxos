@@ -2,7 +2,9 @@
 use nalgebra::Point3;
 
 pub mod types;
+pub mod grid;
 pub use types::*;
+pub use grid::{GridCoordinate, GridSystem};
 
 /// Spatial engine for geometric operations
 pub struct SpatialEngine {

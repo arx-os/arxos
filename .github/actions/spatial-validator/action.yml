@@ -45,11 +45,9 @@ runs:
         token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Setup Rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@stable
       with:
-        toolchain: stable
         components: rustfmt, clippy
-        override: true
 
     - name: Cache Rust dependencies
       uses: actions/cache@v3
@@ -65,7 +63,7 @@ runs:
     - name: Build ArxOS CLI
       shell: bash
       run: |
-        cargo build --release --bin arxos
+        cargo build --release --bin arx
         echo "ArxOS CLI built successfully"
 
     - name: Validate building data
@@ -76,7 +74,7 @@ runs:
         start_time=$(date +%s)
         
         # Run spatial validation
-        if ./target/release/arxos spatial validate --entity "${{ inputs.data-path }}" --tolerance "${{ inputs.tolerance }}"; then
+        if ./target/release/arx spatial validate --entity "${{ inputs.data-path }}" --tolerance "${{ inputs.tolerance }}"; then
           validation_result="true"
           echo "validation-passed=true" >> $GITHUB_OUTPUT
         else
@@ -104,7 +102,7 @@ runs:
       shell: bash
       run: |
         echo "Checking coordinate system consistency..."
-        ./target/release/arxos spatial query --query-type "coordinate-systems" --entity "all" --params "${{ inputs.data-path }}"
+        ./target/release/arx spatial query --query-type "coordinate-systems" --entity "all" --params "${{ inputs.data-path }}"
         echo "Coordinate system check completed"
 
     - name: Check universal paths
@@ -112,7 +110,7 @@ runs:
       shell: bash
       run: |
         echo "Checking universal path correctness..."
-        ./target/release/arxos validate --path "${{ inputs.data-path }}"
+        ./target/release/arx validate --path "${{ inputs.data-path }}"
         echo "Universal path check completed"
 
     - name: Generate validation report

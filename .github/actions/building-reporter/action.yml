@@ -52,11 +52,9 @@ runs:
         token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Setup Rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@stable
       with:
-        toolchain: stable
         components: rustfmt, clippy
-        override: true
 
     - name: Cache Rust dependencies
       uses: actions/cache@v3
@@ -69,10 +67,18 @@ runs:
         restore-keys: |
           ${{ runner.os }}-cargo-
 
+    - name: Install dependencies
+      shell: bash
+      run: |
+        # Install jq if not available
+        if ! command -v jq &> /dev/null; then
+          apt-get update && apt-get install -y jq || (brew install jq || echo "jq installation failed, but continuing")
+        fi
+
     - name: Build ArxOS CLI
       shell: bash
       run: |
-        cargo build --release --bin arxos
+        cargo build --release --bin arx
         echo "ArxOS CLI built successfully"
 
     - name: Generate building report
@@ -92,23 +98,23 @@ runs:
         # Generate the report based on type
         case "${{ inputs.report-type }}" in
           "status")
-            ./target/release/arxos render --building "all" --format "${{ inputs.output-format }}" --output "$report_path"
+            ./target/release/arx render --building "all" --format "${{ inputs.output-format }}" --output "$report_path"
             ;;
           "energy")
-            ./target/release/arxos equipment list --type "HVAC" --format "${{ inputs.output-format }}" --output "$report_path"
+            ./target/release/arx equipment list --type "HVAC" --format "${{ inputs.output-format }}" --output "$report_path"
             ;;
           "equipment")
-            ./target/release/arxos equipment list --format "${{ inputs.output-format }}" --output "$report_path"
+            ./target/release/arx equipment list --format "${{ inputs.output-format }}" --output "$report_path"
             ;;
           "summary")
-            ./target/release/arxos render --building "all" --format "${{ inputs.output-format }}" --output "$report_path"
+            ./target/release/arx render --building "all" --format "${{ inputs.output-format }}" --output "$report_path"
             ;;
         esac
         
         # Get report statistics
         report_size=$(wc -c < "$report_path")
-        equipment_count=$(./target/release/arxos equipment list --format json | jq '.equipment | length' 2>/dev/null || echo "0")
-        rooms_count=$(./target/release/arxos room list --format json | jq '.rooms | length' 2>/dev/null || echo "0")
+        equipment_count=$(./target/release/arx equipment list --format json | jq '.equipment | length' 2>/dev/null || echo "0")
+        rooms_count=$(./target/release/arx room list --format json | jq '.rooms | length' 2>/dev/null || echo "0")
         
         echo "report-path=$report_path" >> $GITHUB_OUTPUT
         echo "report-size=$report_size" >> $GITHUB_OUTPUT

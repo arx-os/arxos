@@ -1,0 +1,228 @@
+building:
+  id: multi-floor-example-001
+  name: Multi-Floor Office Building
+  description: 'Example building with multiple floors demonstrating hierarchical structure'
+  created_at: 2025-01-15T10:00:00Z
+  updated_at: 2025-01-15T10:00:00Z
+  version: 1.0.0
+  global_bounding_box:
+    min:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    max:
+      x: 100.0
+      y: 50.0
+      z: 30.0
+metadata:
+  source_file: examples/multi-floor-building.ifc
+  parser_version: ArxOS v2.0
+  total_entities: 15
+  spatial_entities: 15
+  coordinate_system: World
+  units: meters
+  tags:
+  - example
+  - multi-floor
+  - office
+floors:
+- id: floor-basement
+  name: Basement
+  level: -1
+  elevation: -3.0
+  rooms:
+  - id: room-b-101
+    name: Mechanical Room
+    room_type: Mechanical
+    area: 200.0
+    volume: 600.0
+    position:
+      x: 20.0
+      y: 10.0
+      z: -1.5
+    bounding_box:
+      min:
+        x: 10.0
+        y: 5.0
+        z: -3.0
+      max:
+        x: 30.0
+        y: 15.0
+        z: 0.0
+    equipment: []
+    properties: {}
+  equipment: []
+  bounding_box:
+    min:
+      x: 0.0
+      y: 0.0
+      z: -3.0
+    max:
+      x: 100.0
+      y: 50.0
+      z: 0.0
+- id: floor-ground
+  name: Ground Floor
+  level: 0
+  elevation: 0.0
+  rooms:
+  - id: room-101
+    name: Main Entrance
+    room_type: Lobby
+    area: 200.0
+    volume: 600.0
+    position:
+      x: 10.0
+      y: 5.0
+      z: 2.0
+    bounding_box:
+      min:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      max:
+        x: 20.0
+        y: 10.0
+        z: 4.0
+    equipment: []
+    properties: {}
+  - id: room-102
+    name: Reception
+    room_type: Office
+    area: 60.0
+    volume: 180.0
+    position:
+      x: 30.0
+      y: 10.0
+      z: 2.0
+    bounding_box:
+      min:
+        x: 25.0
+        y: 5.0
+        z: 0.0
+      max:
+        x: 35.0
+        y: 15.0
+        z: 4.0
+    equipment: []
+    properties: {}
+  equipment: []
+  bounding_box:
+    min:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    max:
+      x: 100.0
+      y: 50.0
+      z: 4.0
+- id: floor-first
+  name: First Floor
+  level: 1
+  elevation: 4.0
+  rooms:
+  - id: room-201
+    name: Office Suite 201
+    room_type: Office
+    area: 120.0
+    volume: 360.0
+    position:
+      x: 20.0
+      y: 15.0
+      z: 6.0
+    bounding_box:
+      min:
+        x: 10.0
+        y: 10.0
+        z: 4.0
+      max:
+        x: 30.0
+        y: 20.0
+        z: 8.0
+    equipment: []
+    properties: {}
+  - id: room-202
+    name: Office Suite 202
+    room_type: Office
+    area: 120.0
+    volume: 360.0
+    position:
+      x: 50.0
+      y: 15.0
+      z: 6.0
+    bounding_box:
+      min:
+        x: 40.0
+        y: 10.0
+        z: 4.0
+      max:
+        x: 60.0
+        y: 20.0
+        z: 8.0
+    equipment: []
+    properties: {}
+  equipment: []
+  bounding_box:
+    min:
+      x: 0.0
+      y: 0.0
+      z: 4.0
+    max:
+      x: 100.0
+      y: 50.0
+      z: 8.0
+- id: floor-second
+  name: Second Floor
+  level: 2
+  elevation: 8.0
+  rooms:
+  - id: room-301
+    name: Conference Center
+    room_type: Conference
+    area: 300.0
+    volume: 900.0
+    position:
+      x: 50.0
+      y: 25.0
+      z: 10.0
+    bounding_box:
+      min:
+        x: 30.0
+        y: 15.0
+        z: 8.0
+      max:
+        x: 70.0
+        y: 35.0
+        z: 12.0
+    equipment: []
+    properties: {}
+  equipment: []
+  bounding_box:
+    min:
+      x: 0.0
+      y: 0.0
+      z: 8.0
+    max:
+      x: 100.0
+      y: 50.0
+      z: 12.0
+coordinate_systems:
+- name: World
+  origin:
+    x: 0.0
+    y: 0.0
+    z: 0.0
+  x_axis:
+    x: 1.0
+    y: 0.0
+    z: 0.0
+  y_axis:
+    x: 0.0
+    y: 1.0
+    z: 0.0
+  z_axis:
+    x: 0.0
+    y: 0.0
+    z: 1.0
+  description: Default world coordinate system
+

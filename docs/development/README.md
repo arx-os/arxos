@@ -4,6 +4,7 @@ Documentation for contributing to ArxOS development.
 
 ## Contents
 
+### Essential Guides
 - **[DEVELOPER_ONBOARDING.md](./DEVELOPER_ONBOARDING.md)** - Setup guide for new developers
 - **[ERROR_HANDLING_GUIDE.md](./ERROR_HANDLING_GUIDE.md)** - Standard error handling patterns
 - **[SECURITY.md](./SECURITY.md)** - Security practices and automated scanning
@@ -11,7 +12,11 @@ Documentation for contributing to ArxOS development.
 - **[BENCHMARKS.md](./BENCHMARKS.md)** - Performance benchmark data
 - **[RUSTDOC_GUIDE.md](./RUSTDOC_GUIDE.md)** - Documentation generation guide
 - **[TODO_REMAINING.md](./TODO_REMAINING.md)** - Pending development tasks
+
+### Technical Documentation
 - **[render/](./render/)** - Rendering system documentation
+- **[codebase-reviews/](./codebase-reviews/)** - In-depth module reviews and architecture analysis
+- **[improvement-summaries/](./improvement-summaries/)** - Summaries of completed improvements and refactoring
 
 ## Quick Links
 

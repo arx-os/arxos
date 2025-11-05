@@ -19,6 +19,7 @@ on:
 jobs:
   process-sensor-data:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     env:
       SENSOR_DATA_PATH: ${{ vars.SENSOR_DATA_PATH || 'sensor-data' }}
       REPORTS_PATH: ${{ vars.REPORTS_PATH || 'reports' }}

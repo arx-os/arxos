@@ -1,119 +1,214 @@
 building:
-  id: 1d04167f-3b47-4bad-bbc5-e670957a48ea
-  name: Building
-  description: 'Building parsed from IFC file: unknown'
-  created_at: 2025-11-01T20:28:20.779155Z
-  updated_at: 2025-11-01T20:28:20.779590Z
+  id: example-office-building-001
+  name: Example Office Building
+  description: 'A sample office building demonstrating the ArxOS building data structure'
+  created_at: 2025-01-15T10:00:00Z
+  updated_at: 2025-01-15T10:00:00Z
   version: 1.0.0
-  global_bounding_box: null
+  global_bounding_box:
+    min:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    max:
+      x: 50.0
+      y: 30.0
+      z: 12.0
 metadata:
-  source_file: null
+  source_file: examples/office-building.ifc
   parser_version: ArxOS v2.0
-  total_entities: 0
-  spatial_entities: 0
+  total_entities: 9
+  spatial_entities: 9
   coordinate_system: World
   units: meters
   tags:
-  - ifc
+  - example
+  - office
   - building
 floors:
-- id: '43'
-  name: 1Ano2ZUxnEIvVQ_beukl8b
+- id: floor-ground
+  name: Ground Floor
+  level: 0
+  elevation: 0.0
+  rooms:
+  - id: room-101
+    name: Main Lobby
+    room_type: Lobby
+    area: 150.0
+    volume: 450.0
+    position:
+      x: 10.0
+      y: 5.0
+      z: 2.0
+    bounding_box:
+      min:
+        x: 5.0
+        y: 0.0
+        z: 0.0
+      max:
+        x: 15.0
+        y: 10.0
+        z: 3.0
+    equipment:
+    - equipment-hvac-001
+    - equipment-electrical-001
+    properties: {}
+  - id: room-102
+    name: Conference Room A
+    room_type: Conference
+    area: 80.0
+    volume: 240.0
+    position:
+      x: 25.0
+      y: 10.0
+      z: 2.0
+    bounding_box:
+      min:
+        x: 20.0
+        y: 5.0
+        z: 0.0
+      max:
+        x: 30.0
+        y: 15.0
+        z: 3.0
+    equipment:
+    - equipment-av-001
+    properties: {}
+  equipment:
+  - id: equipment-hvac-001
+    name: Main HVAC Unit
+    equipment_type: HVAC
+    system_type: HVAC
+    position:
+      x: 10.0
+      y: 2.0
+      z: 1.5
+    bounding_box:
+      min:
+        x: 8.0
+        y: 0.0
+        z: 0.0
+      max:
+        x: 12.0
+        y: 4.0
+        z: 3.0
+    status: Healthy
+    properties:
+      manufacturer: ACME HVAC
+      model: AHU-5000
+      capacity: "5000 CFM"
+    universal_path: /BUILDING/Example-Office-Building/FLOOR-0/ROOM-Main-Lobby/EQUIPMENT/Main-HVAC-Unit
+    sensor_mappings: null
+  - id: equipment-electrical-001
+    name: Main Electrical Panel
+    equipment_type: Electrical
+    system_type: ELECTRICAL
+    position:
+      x: 12.0
+      y: 8.0
+      z: 1.0
+    bounding_box:
+      min:
+        x: 11.0
+        y: 7.0
+        z: 0.0
+      max:
+        x: 13.0
+        y: 9.0
+        z: 2.0
+    status: Healthy
+    properties:
+      amperage: "200A"
+      voltage: "240V"
+    universal_path: /BUILDING/Example-Office-Building/FLOOR-0/ROOM-Main-Lobby/EQUIPMENT/Main-Electrical-Panel
+    sensor_mappings: null
+  - id: equipment-av-001
+    name: Conference Room AV System
+    equipment_type: AV
+    system_type: AV
+    position:
+      x: 25.0
+      y: 10.0
+      z: 2.5
+    bounding_box:
+      min:
+        x: 24.0
+        y: 9.0
+        z: 1.5
+      max:
+        x: 26.0
+        y: 11.0
+        z: 3.5
+    status: Healthy
+    properties:
+      display_type: "4K Projector"
+      audio_system: "5.1 Surround"
+    universal_path: /BUILDING/Example-Office-Building/FLOOR-0/ROOM-Conference-Room-A/EQUIPMENT/Conference-Room-AV-System
+    sensor_mappings: null
+  bounding_box:
+    min:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    max:
+      x: 50.0
+      y: 30.0
+      z: 3.0
+- id: floor-first
+  name: First Floor
   level: 1
   elevation: 3.0
   rooms:
-  - id: '87'
-    name: 1hq0sM3Q5Cq9DOc93a74pc
+  - id: room-201
+    name: Office 201
     room_type: Office
-    area: 80.0
-    volume: 240.0
+    area: 60.0
+    volume: 180.0
     position:
-      x: 0.0
-      y: 0.0
-      z: 0.0
+      x: 10.0
+      y: 15.0
+      z: 5.0
     bounding_box:
       min:
-        x: -5.0
-        y: -4.0
-        z: 0.0
-      max:
         x: 5.0
-        y: 4.0
+        y: 10.0
         z: 3.0
+      max:
+        x: 15.0
+        y: 20.0
+        z: 6.0
     equipment: []
     properties: {}
-  - id: '89'
-    name: 0xY$LvXaDEswJDk_VU74C_
+  - id: room-202
+    name: Office 202
     room_type: Office
-    area: 80.0
-    volume: 240.0
+    area: 60.0
+    volume: 180.0
     position:
-      x: 3200.000000000006
-      y: 4999.99999999983
-      z: 1.9491608327371067e-11
+      x: 25.0
+      y: 15.0
+      z: 5.0
     bounding_box:
       min:
-        x: 3195.000000000006
-        y: 4995.99999999983
-        z: 1.9491608327371067e-11
-      max:
-        x: 3205.000000000006
-        y: 5003.99999999983
-        z: 3.0000000000194915
-    equipment: []
-    properties:
-      floor_polygon: 4950.000000000066,2600.000000000148;4950.000000000142,0.00000000010792575722007313;0.000000000025988811103161424,0.00000000010828671292983927;0.000000000025988811103161424,3800.000000000269;4950.000000000142,3800.000000000268;4950.000000000066,3300.0000000001482;4500.000000000115,3300.0000000001482;4500.000000000115,2600.000000000148
-  - id: '201'
-    name: 30wkH7SyH7gvhogulgnDi9
-    room_type: Office
-    area: 80.0
-    volume: 240.0
-    position:
-      x: 0.0
-      y: 0.0
-      z: 0.0
-    bounding_box:
-      min:
-        x: -5.0
-        y: -4.0
-        z: 0.0
-      max:
-        x: 5.0
-        y: 4.0
+        x: 20.0
+        y: 10.0
         z: 3.0
+      max:
+        x: 30.0
+        y: 20.0
+        z: 6.0
     equipment: []
     properties: {}
-  - id: '203'
-    name: 18QhMtUIXBvQktPHXXxs7H
-    room_type: Office
-    area: 80.0
-    volume: 240.0
-    position:
-      x: 3200.0000000000578
-      y: 3199.9999999999304
-      z: -1.0828671292983925e-12
-    bounding_box:
-      min:
-        x: 3195.0000000000578
-        y: 3195.9999999999304
-        z: -1.0828671292983925e-12
-      max:
-        x: 3205.0000000000578
-        y: 3203.9999999999304
-        z: 2.9999999999989173
-    equipment: []
-    properties:
-      floor_polygon: 3800.000000000069,1600.0000000000086;3800.000000000069,0.00000000008085407898761331;0.000000000026710722522693685,0.00000000008085407898761331;0.000000000026710722522693685,1600.0000000000086
   equipment: []
   bounding_box:
     min:
-      x: -5.0
-      y: -4.0
-      z: -1.0828671292983925e-12
+      x: 0.0
+      y: 0.0
+      z: 3.0
     max:
-      x: 3205.0000000000578
-      y: 5003.99999999983
-      z: 3.0000000000194915
+      x: 50.0
+      y: 30.0
+      z: 6.0
 coordinate_systems:
 - name: World
   origin:

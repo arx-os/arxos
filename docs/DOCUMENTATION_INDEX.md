@@ -38,6 +38,8 @@ Documentation for contributing to ArxOS development.
 - **[TODO_REMAINING.md](./development/TODO_REMAINING.md)** - Pending development tasks
 - **[render/](./development/render/)** - Rendering system documentation
   - [2D_FLOOR_PLANS.md](./development/render/2D_FLOOR_PLANS.md) - 2D ASCII rendering
+- **[codebase-reviews/](./development/codebase-reviews/)** - In-depth module reviews and architecture analysis
+- **[improvement-summaries/](./development/improvement-summaries/)** - Summaries of completed improvements
 
 ### [Mobile](./mobile/)
 
@@ -83,6 +85,20 @@ Business and enterprise features.
 Future feature exploration and brainstorming.
 
 - **[DAILY_MOVEMENT_REPLAY.md](./ideas/DAILY_MOVEMENT_REPLAY.md)** - Movement tracking and ASCII replay
+
+---
+
+## 📦 Examples & Reference
+
+### [Examples](../examples/)
+
+Example building data files and usage patterns.
+
+- **[Examples Index](../examples/README.md)** - Main examples directory
+- **[Building Examples](../examples/buildings/)** - Building data examples
+  - [Complete Office Building](../examples/buildings/building.yaml) - Full example with equipment
+  - [Minimal Building](../examples/buildings/minimal-building.yaml) - Minimal valid structure
+  - [Multi-Floor Building](../examples/buildings/multi-floor-building.yaml) - Multi-story example
 
 ---
 

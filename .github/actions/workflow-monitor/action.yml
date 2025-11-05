@@ -41,6 +41,25 @@ runs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Install dependencies
+      shell: bash
+      run: |
+        # Install GitHub CLI if not available
+        if ! command -v gh &> /dev/null; then
+          type -p curl >/dev/null || (apt-get update && apt-get install curl -y)
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          apt-get update && apt-get install gh -y
+        fi
+        # Install jq if not available
+        if ! command -v jq &> /dev/null; then
+          apt-get update && apt-get install -y jq || (brew install jq || echo "jq installation failed, but continuing")
+        fi
+        # curl should be available by default, but verify
+        if ! command -v curl &> /dev/null; then
+          apt-get update && apt-get install -y curl || (brew install curl || echo "curl installation failed")
+        fi
+
     - name: Monitor workflow status
       id: monitor
       shell: bash

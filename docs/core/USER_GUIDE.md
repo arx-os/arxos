@@ -561,6 +561,20 @@ arx search "HVAC" --verbose
 
 ## Examples
 
+ArxOS includes example building data files to help you understand the data structure and get started quickly.
+
+### Example Files
+
+Example files are located in the [`examples/`](../../examples/) directory:
+
+- **[Complete Office Building](../../examples/buildings/building.yaml)** - Full example with multiple floors, rooms, and equipment
+- **[Minimal Building](../../examples/buildings/minimal-building.yaml)** - Minimal valid building structure
+- **[Multi-Floor Building](../../examples/buildings/multi-floor-building.yaml)** - Multi-story building example
+
+See the [Examples Documentation](../../examples/README.md) for detailed information about using example files.
+
+### Using Examples
+
 ### Example 1: Building Health Check
 
 ```bash

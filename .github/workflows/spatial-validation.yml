@@ -36,6 +36,7 @@ on:
 jobs:
   validate-spatial:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     name: Validate Spatial Data
     
     steps:

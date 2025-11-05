@@ -57,7 +57,8 @@ Historical and outdated documentation.
 **Building mobile apps?** → See [Mobile FFI](./mobile/MOBILE_FFI_INTEGRATION.md)  
 **Deploying at scale?** → See [Enterprise Deployment](./business/ENTERPRISE_DEPLOYMENT.md)  
 **Need performance tips?** → See [Performance Guide](./development/PERFORMANCE_GUIDE.md)  
-**Looking for API details?** → See [API Reference](./core/API_REFERENCE.md)
+**Looking for API details?** → See [API Reference](./core/API_REFERENCE.md)  
+**Need example files?** → See [Examples](../examples/)
 
 ---
 

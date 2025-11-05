@@ -55,11 +55,9 @@ runs:
         token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Setup Rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@stable
       with:
-        toolchain: stable
         components: rustfmt, clippy
-        override: true
 
     - name: Cache Rust dependencies
       uses: actions/cache@v3
@@ -75,7 +73,7 @@ runs:
     - name: Build ArxOS CLI
       shell: bash
       run: |
-        cargo build --release --bin arxos
+        cargo build --release --bin arx
         echo "ArxOS CLI built successfully"
 
     - name: Monitor equipment health
@@ -86,7 +84,7 @@ runs:
         start_time=$(date +%s)
         
         # Get equipment list
-        equipment_json=$(./target/release/arxos equipment list --format json)
+        equipment_json=$(./target/release/arx equipment list --format json)
         equipment_count=$(echo "$equipment_json" | jq '.equipment | length' 2>/dev/null || echo "0")
         
         echo "equipment-monitored=$equipment_count" >> $GITHUB_OUTPUT

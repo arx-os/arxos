@@ -8,6 +8,7 @@ on:
 jobs:
   monitor-workflow-failure:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: ${{ github.event.workflow_run.conclusion == 'failure' }}
     
     steps:
@@ -23,6 +24,7 @@ jobs:
 
   monitor-workflow-success:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     
     steps:

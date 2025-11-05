@@ -80,6 +80,7 @@ ArxOS follows security best practices with automated scanning and comprehensive 
 ## 📚 Documentation
 
 - **[User Guide](docs/core/USER_GUIDE.md)** - Complete usage instructions for end users
+- **[Examples](examples/)** - Example building data files and usage patterns
 - **[Game System](docs/features/GAME_SYSTEM.md)** - Gamified PR review and planning system
 - **[Architecture](docs/core/ARCHITECTURE.md)** - System design and technical details  
 - **[Mobile FFI Integration](docs/mobile/MOBILE_FFI_INTEGRATION.md)** - Mobile app development
@@ -219,7 +220,7 @@ cargo build --target aarch64-linux-android --release
 cd android && ./gradlew build
 ```
 
-See [docs/MOBILE_FFI_INTEGRATION.md](docs/MOBILE_FFI_INTEGRATION.md) for details.
+See [Mobile FFI Integration](docs/mobile/MOBILE_FFI_INTEGRATION.md) for details.
 
 ---
 
@@ -262,7 +263,7 @@ See [docs/MOBILE_FFI_INTEGRATION.md](docs/MOBILE_FFI_INTEGRATION.md) for details
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](docs/CONTRIBUTING.md).
+We welcome contributions! Please see [Developer Onboarding](docs/development/DEVELOPER_ONBOARDING.md) for setup and contribution guidelines.
 
 1. Fork the repository
 2. Create a feature branch
@@ -277,7 +278,7 @@ ArxOS operates as a **Decentralized Physical Infrastructure Network** where you 
 - **Deploy Sensors**: Install ESP32, RP2040, or Arduino sensors to monitor buildings
 - **Verify Buildings**: Use mobile AR apps to scan and verify building equipment
 - **Contribute Data**: Share anonymized building metadata (privacy-preserving)
-- **Earn Rewards**: Get paid in USD based on your contributions (see [Reward System](docs/reward_system.md))
+- **Earn Rewards**: Get paid in USD based on your contributions (see [Reward System](docs/business/REWARD_SYSTEM.md))
 
 All contributions are tracked via Git—no blockchain or cryptocurrency required. Just Git commits and USD payments.
 

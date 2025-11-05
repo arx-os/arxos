@@ -41,11 +41,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
+        uses: dtolnay/rust-toolchain@stable
       
       - name: Cache Rust dependencies
         uses: actions/cache@v3
@@ -91,23 +87,23 @@ jobs:
           # Generate report based on type
           case "${{ inputs.report-type }}" in
             "status")
-              ./target/release/arxos report --type status --path "${{ inputs.building-path }}" --output "${{ inputs.output-path }}" --format "${{ inputs.format }}"
+              ./target/release/arx report --type status --path "${{ inputs.building-path }}" --output "${{ inputs.output-path }}" --format "${{ inputs.format }}"
               report_file="${{ inputs.output-path }}/building-status.${{ inputs.format }}"
               ;;
             "energy")
-              ./target/release/arxos report --type energy --path "${{ inputs.building-path }}" --output "${{ inputs.output-path }}" --format "${{ inputs.format }}"
+              ./target/release/arx report --type energy --path "${{ inputs.building-path }}" --output "${{ inputs.output-path }}" --format "${{ inputs.format }}"
               report_file="${{ inputs.output-path }}/energy-report.${{ inputs.format }}"
               ;;
             "maintenance")
-              ./target/release/arxos report --type maintenance --path "${{ inputs.building-path }}" --output "${{ inputs.output-path }}" --format "${{ inputs.format }}"
+              ./target/release/arx report --type maintenance --path "${{ inputs.building-path }}" --output "${{ inputs.output-path }}" --format "${{ inputs.format }}"
               report_file="${{ inputs.output-path }}/maintenance-report.${{ inputs.format }}"
               ;;
             "spatial")
-              ./target/release/arxos report --type spatial --path "${{ inputs.building-path }}" --output "${{ inputs.output-path }}" --format "${{ inputs.format }}"
+              ./target/release/arx report --type spatial --path "${{ inputs.building-path }}" --output "${{ inputs.output-path }}" --format "${{ inputs.format }}"
               report_file="${{ inputs.output-path }}/spatial-report.${{ inputs.format }}"
               ;;
             "comprehensive")
-              ./target/release/arxos report --type comprehensive --path "${{ inputs.building-path }}" --output "${{ inputs.output-path }}" --format "${{ inputs.format }}"
+              ./target/release/arx report --type comprehensive --path "${{ inputs.building-path }}" --output "${{ inputs.output-path }}" --format "${{ inputs.format }}"
               report_file="${{ inputs.output-path }}/comprehensive-report.${{ inputs.format }}"
               ;;
             *)

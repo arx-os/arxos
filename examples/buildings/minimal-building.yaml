@@ -1,0 +1,37 @@
+building:
+  id: minimal-example-001
+  name: Minimal Building Example
+  description: 'Minimal example showing the required fields for a valid building'
+  created_at: 2025-01-15T10:00:00Z
+  updated_at: 2025-01-15T10:00:00Z
+  version: 1.0.0
+  global_bounding_box: null
+metadata:
+  source_file: null
+  parser_version: ArxOS v2.0
+  total_entities: 0
+  spatial_entities: 0
+  coordinate_system: World
+  units: meters
+  tags: []
+floors: []
+coordinate_systems:
+- name: World
+  origin:
+    x: 0.0
+    y: 0.0
+    z: 0.0
+  x_axis:
+    x: 1.0
+    y: 0.0
+    z: 0.0
+  y_axis:
+    x: 0.0
+    y: 1.0
+    z: 0.0
+  z_axis:
+    x: 0.0
+    y: 0.0
+    z: 1.0
+  description: Default world coordinate system
+

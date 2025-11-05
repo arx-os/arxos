@@ -1,5 +1,15 @@
 # ArxOS GitHub Actions Configuration
-# This file contains centralized configuration for all GitHub Actions workflows
+# 
+# NOTE: This file is currently a reference document and is NOT actively used by workflows.
+# Workflows use GitHub repository variables (vars.*) for configuration instead.
+# 
+# This file serves as:
+# - Documentation of expected configuration values
+# - Reference for setting up repository variables
+# - Future integration point for centralized config
+# 
+# To use these values, set them as GitHub repository variables:
+# Settings > Secrets and variables > Actions > Variables
 
 # Default paths and directories
 paths:

@@ -35,11 +35,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
+        uses: dtolnay/rust-toolchain@stable
       
       - name: Cache Rust dependencies
         uses: actions/cache@v3
@@ -74,7 +70,7 @@ jobs:
           mkdir -p "${{ inputs.output-path }}"
           
           # Process IFC file with ArxOS
-          ./target/release/arxos import "${{ inputs.ifc-file }}" --output "${{ inputs.output-path }}"
+          ./target/release/arx import "${{ inputs.ifc-file }}" --output "${{ inputs.output-path }}"
           
           # Count processed files
           files_count=$(find "${{ inputs.output-path }}" -name "*.yml" -o -name "*.yaml" | wc -l)

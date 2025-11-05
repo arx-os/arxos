@@ -48,11 +48,9 @@ runs:
         token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Setup Rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@stable
       with:
-        toolchain: stable
         components: rustfmt, clippy
-        override: true
 
     - name: Cache Rust dependencies
       uses: actions/cache@v3
@@ -69,7 +67,7 @@ runs:
       shell: bash
       run: |
         echo "Building ArxOS CLI..."
-        if cargo build --release --bin arxos; then
+        if cargo build --release --bin arx; then
           echo "ArxOS CLI built successfully"
         else
           echo "❌ Failed to build ArxOS CLI"
@@ -85,7 +83,7 @@ runs:
           exit 1
         fi
         
-        if ./target/release/arxos validate --path "${{ inputs.ifc-file }}"; then
+        if ./target/release/arx validate --path "${{ inputs.ifc-file }}"; then
           echo "✅ IFC file validation completed successfully"
         else
           echo "❌ IFC file validation failed"
@@ -103,7 +101,7 @@ runs:
         mkdir -p "${{ inputs.output-dir }}"
         
         # Process the IFC file
-        ./target/release/arxos import "${{ inputs.ifc-file }}"
+        ./target/release/arx import "${{ inputs.ifc-file }}"
         
         end_time=$(date +%s)
         processing_time=$((end_time - start_time))
@@ -173,7 +171,7 @@ runs:
       shell: bash
       run: |
         echo "Validating spatial data..."
-        ./target/release/arxos spatial validate --path "."
+        ./target/release/arx spatial validate --path "."
         echo "Spatial validation completed"
 
     - name: Generate processing report

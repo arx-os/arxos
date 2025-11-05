@@ -207,6 +207,10 @@ path = "tests/build_script_tests.rs"
 name = "convert_3d_scanner_scan_tests"
 path = "tests/bin/convert_3d_scanner_scan_tests.rs"
 
+[[test]]
+name = "example_validation_tests"
+path = "tests/examples/example_validation_tests.rs"
+
 [workspace.package]
 version = "0.1.0"
 edition = "2021"

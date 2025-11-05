@@ -8,6 +8,9 @@ use crate::core::{Room, Equipment, RoomType, EquipmentType, EquipmentStatus};
 use crate::core::{Position, Dimensions, BoundingBox, SpatialProperties};
 use super::{RoomData, EquipmentData, EquipmentStatus as YamlEquipmentStatus};
 
+/// Coordinate system constant to avoid repeated string allocations
+const COORD_SYSTEM_BUILDING_LOCAL: &str = "building_local";
+
 /// Convert RoomData to Room
 pub(crate) fn room_data_to_room(room_data: &RoomData) -> Room {
     // Use FromStr trait for parsing
@@ -23,7 +26,7 @@ pub(crate) fn room_data_to_room(room_data: &RoomData) -> Room {
                 x: room_data.position.x,
                 y: room_data.position.y,
                 z: room_data.position.z,
-                coordinate_system: "building_local".to_string(),
+                coordinate_system: COORD_SYSTEM_BUILDING_LOCAL.to_string(),
             },
             dimensions: Dimensions {
                 width: room_data.bounding_box.max.x - room_data.bounding_box.min.x,
@@ -35,16 +38,16 @@ pub(crate) fn room_data_to_room(room_data: &RoomData) -> Room {
                     x: room_data.bounding_box.min.x,
                     y: room_data.bounding_box.min.y,
                     z: room_data.bounding_box.min.z,
-                    coordinate_system: "building_local".to_string(),
+                    coordinate_system: COORD_SYSTEM_BUILDING_LOCAL.to_string(),
                 },
                 max: Position {
                     x: room_data.bounding_box.max.x,
                     y: room_data.bounding_box.max.y,
                     z: room_data.bounding_box.max.z,
-                    coordinate_system: "building_local".to_string(),
+                    coordinate_system: COORD_SYSTEM_BUILDING_LOCAL.to_string(),
                 },
             },
-            coordinate_system: "building_local".to_string(),
+            coordinate_system: COORD_SYSTEM_BUILDING_LOCAL.to_string(),
         },
         properties: room_data.properties.clone(),
         created_at: chrono::Utc::now(),
@@ -55,17 +58,17 @@ pub(crate) fn room_data_to_room(room_data: &RoomData) -> Room {
 /// Convert Equipment to EquipmentData
 pub(crate) fn equipment_to_equipment_data(equipment: &Equipment) -> EquipmentData {
     
-    // Derive system_type from equipment_type
-    let system_type = match equipment.equipment_type {
-        EquipmentType::HVAC => "HVAC".to_string(),
-        EquipmentType::Electrical => "ELECTRICAL".to_string(),
-        EquipmentType::Plumbing => "PLUMBING".to_string(),
-        EquipmentType::Safety => "SAFETY".to_string(),
-        EquipmentType::Network => "NETWORK".to_string(),
-        EquipmentType::AV => "AV".to_string(),
-        EquipmentType::Furniture => "FURNITURE".to_string(),
-        EquipmentType::Other(_) => "OTHER".to_string(),
-    };
+    // Derive system_type from equipment_type (pre-allocated strings)
+    let system_type = match &equipment.equipment_type {
+        EquipmentType::HVAC => "HVAC",
+        EquipmentType::Electrical => "ELECTRICAL",
+        EquipmentType::Plumbing => "PLUMBING",
+        EquipmentType::Safety => "SAFETY",
+        EquipmentType::Network => "NETWORK",
+        EquipmentType::AV => "AV",
+        EquipmentType::Furniture => "FURNITURE",
+        EquipmentType::Other(_) => "OTHER",
+    }.to_string();
     
     EquipmentData {
         id: equipment.id.clone(),
@@ -124,7 +127,7 @@ pub(crate) fn equipment_data_to_equipment(equipment_data: &EquipmentData) -> Equ
             x: equipment_data.position.x,
             y: equipment_data.position.y,
             z: equipment_data.position.z,
-            coordinate_system: "building_local".to_string(),
+            coordinate_system: COORD_SYSTEM_BUILDING_LOCAL.to_string(),
         },
         properties: equipment_data.properties.clone(),
         status: match equipment_data.status {

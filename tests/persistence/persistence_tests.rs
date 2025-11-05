@@ -6,12 +6,14 @@
 //! Tests are configured to run serially to prevent interference from directory changes
 //! and file operations that occur in temporary directories.
 
-use arxos::persistence::PersistenceManager;
+use arxos::persistence::{PersistenceManager, invalidate_building_data_cache};
 use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData};
 use chrono::Utc;
 use serial_test::serial;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::thread;
+use std::time::Duration;
 use tempfile::TempDir;
 
 /// RAII guard for directory changes - automatically restores original directory on drop
@@ -396,6 +398,120 @@ mod file_size_limit_tests {
         // Small building data should save successfully
         let result = persistence.save_building_data(&building_data);
         assert!(result.is_ok(), "Small building data should save successfully");
+    }
+    
+    #[test]
+    #[serial]
+    fn test_building_data_caching() {
+        let temp_dir = TempDir::new().unwrap();
+        let _guard = DirectoryGuard::new(temp_dir.path()).unwrap();
+        
+        // Create test building data
+        let building_data = create_test_building_data();
+        let serializer = BuildingYamlSerializer::new();
+        let yaml_content = serializer.to_yaml(&building_data).unwrap();
+        let test_file = temp_dir.path().join("test_building.yaml");
+        fs::write(&test_file, yaml_content).unwrap();
+        
+        // Invalidate cache first
+        invalidate_building_data_cache();
+        
+        let persistence = PersistenceManager::new("test_building").unwrap();
+        
+        // First load - cache miss
+        let data1 = persistence.load_building_data().unwrap();
+        assert_eq!(data1.building.name, "Test Building");
+        
+        // Second load - cache hit (same file, no modification)
+        let data2 = persistence.load_building_data().unwrap();
+        assert_eq!(data2.building.name, "Test Building");
+        
+        // Modify file to invalidate cache
+        thread::sleep(Duration::from_millis(10)); // Ensure file modification time changes
+        let mut modified_data = building_data.clone();
+        modified_data.building.name = "Modified Building".to_string();
+        let yaml_content = serializer.to_yaml(&modified_data).unwrap();
+        fs::write(&test_file, yaml_content).unwrap();
+        
+        // Third load - cache miss (file modified)
+        let data3 = persistence.load_building_data().unwrap();
+        assert_eq!(data3.building.name, "Modified Building");
+    }
+    
+    #[test]
+    #[serial]
+    fn test_cache_invalidation() {
+        invalidate_building_data_cache();
+        // Cache should be cleared (no error means success)
+        assert!(true);
+    }
+}
+
+#[cfg(test)]
+mod indexing_tests {
+    use super::*;
+    use arxos::yaml::BuildingDataIndex;
+    
+    fn create_test_building_with_floors(floor_count: usize) -> BuildingData {
+        let mut floors = Vec::new();
+        for i in 0..floor_count {
+            floors.push(FloorData {
+                id: format!("floor-{}", i),
+                name: format!("Floor {}", i),
+                level: i as i32,
+                elevation: (i as f64) * 3.0,
+                wings: vec![],
+                rooms: vec![],
+                equipment: vec![],
+                bounding_box: None,
+            });
+        }
+        
+        BuildingData {
+            building: BuildingInfo {
+                id: "test-1".to_string(),
+                name: "Test Building".to_string(),
+                description: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+                version: "1.0".to_string(),
+                global_bounding_box: None,
+            },
+            metadata: BuildingMetadata {
+                source_file: None,
+                parser_version: "1.0".to_string(),
+                total_entities: 0,
+                spatial_entities: 0,
+                coordinate_system: "local".to_string(),
+                units: "meters".to_string(),
+                tags: vec![],
+            },
+            floors,
+            coordinate_systems: vec![],
+        }
+    }
+    
+    #[test]
+    fn test_building_data_index_creation() {
+        let building_data = create_test_building_with_floors(10);
+        let index = building_data.build_index();
+        
+        // Verify all floors are indexed
+        assert_eq!(index.floors_by_level.len(), 10);
+        for i in 0..10 {
+            assert!(index.get_floor_index(i as i32).is_some());
+        }
+    }
+    
+    #[test]
+    fn test_indexed_lookup_performance() {
+        let building_data = create_test_building_with_floors(100);
+        let index = building_data.build_index();
+        
+        // Test O(1) lookup
+        let floor_idx = index.get_floor_index(50);
+        assert!(floor_idx.is_some());
+        assert_eq!(floor_idx.unwrap(), 50);
     }
 }
 

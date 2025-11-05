@@ -504,26 +504,33 @@ impl EnhancedIFCParser {
     pub fn build_spatial_index(&self, entities: &[SpatialEntity]) -> super::types::SpatialIndex {
         use std::collections::HashMap;
         
-        let mut room_index = HashMap::new();
-        let mut floor_index = HashMap::new();
-        let mut entity_cache = HashMap::new();
+        // Pre-allocate HashMaps with estimated capacity for better performance
+        let entity_count = entities.len();
+        let mut entity_cache = HashMap::with_capacity(entity_count);
+        let mut room_index = HashMap::with_capacity(entity_count / 10); // Estimate: ~10 entities per room
+        let mut floor_index = HashMap::with_capacity(10); // Estimate: few floors
         
         // Build room and floor indices
         for entity in entities {
-            entity_cache.insert(entity.id.clone(), entity.clone());
+            // Clone entity once (needed for cache)
+            let entity_id = entity.id.clone();
+            entity_cache.insert(entity_id.clone(), entity.clone());
             
-            // For now, we'll use the entity name as room identifier
-            // This will be enhanced when we have proper room/floor data
-            let room_id = format!("ROOM_{}", entity.name.replace(" ", "_"));
-            room_index.entry(room_id.clone())
+            // Build room_id efficiently - pre-allocate capacity
+            let mut room_id = String::with_capacity(entity.name.len() + 6); // "ROOM_" + name
+            room_id.push_str("ROOM_");
+            room_id.push_str(&entity.name.replace(" ", "_"));
+            
+            // Use entry API efficiently - move room_id instead of cloning
+            room_index.entry(room_id)
                 .or_insert_with(Vec::new)
-                .push(entity.id.clone());
+                .push(entity_id.clone());
             
             // For now, use a default floor based on Z coordinate
             let floor = (entity.position.z / 10.0) as i32;
             floor_index.entry(floor)
                 .or_insert_with(Vec::new)
-                .push(entity.id.clone());
+                .push(entity_id); // Single clone per entity
         }
         
         // Build R-Tree

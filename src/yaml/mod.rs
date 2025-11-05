@@ -10,6 +10,49 @@ use crate::spatial::{SpatialEntity, Point3D, BoundingBox3D};
 // Conversion functions are available via crate::yaml::conversions::
 // They are used by core::operations but accessed directly via the module path
 
+/// Index structure for efficient O(1) lookups in BuildingData
+/// 
+/// This index maps floor levels and wing names to their positions in the floors vector,
+/// enabling fast lookups without linear searches.
+#[derive(Debug, Clone)]
+pub struct BuildingDataIndex {
+    /// Map from floor level to index in floors vector
+    pub floors_by_level: std::collections::HashMap<i32, usize>,
+    /// Map from (floor_level, wing_name) to (floor_index, wing_index)
+    pub wings_by_key: std::collections::HashMap<(i32, String), (usize, usize)>,
+}
+
+impl BuildingDataIndex {
+    /// Build an index from BuildingData
+    pub fn build(data: &BuildingData) -> Self {
+        let mut floors_by_level = std::collections::HashMap::with_capacity(data.floors.len());
+        let mut wings_by_key = std::collections::HashMap::new();
+        
+        for (floor_idx, floor) in data.floors.iter().enumerate() {
+            floors_by_level.insert(floor.level, floor_idx);
+            
+            for (wing_idx, wing) in floor.wings.iter().enumerate() {
+                wings_by_key.insert((floor.level, wing.name.clone()), (floor_idx, wing_idx));
+            }
+        }
+        
+        Self {
+            floors_by_level,
+            wings_by_key,
+        }
+    }
+    
+    /// Get floor index by level
+    pub fn get_floor_index(&self, level: i32) -> Option<usize> {
+        self.floors_by_level.get(&level).copied()
+    }
+    
+    /// Get wing indices by floor level and wing name
+    pub fn get_wing_indices(&self, level: i32, wing_name: &str) -> Option<(usize, usize)> {
+        self.wings_by_key.get(&(level, wing_name.to_string())).copied()
+    }
+}
+
 /// Top-level building data structure for YAML serialization
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuildingData {
@@ -17,6 +60,83 @@ pub struct BuildingData {
     pub metadata: BuildingMetadata,
     pub floors: Vec<FloorData>,
     pub coordinate_systems: Vec<CoordinateSystemInfo>,
+}
+
+impl BuildingData {
+    /// Build an index for efficient lookups
+    pub fn build_index(&self) -> BuildingDataIndex {
+        BuildingDataIndex::build(self)
+    }
+    
+    /// Get floor by level using index (O(1) lookup)
+    pub fn get_floor_mut(&mut self, level: i32, index: &BuildingDataIndex) -> Option<&mut FloorData> {
+        index.get_floor_index(level)
+            .and_then(|idx| self.floors.get_mut(idx))
+    }
+    
+    /// Get wing by floor level and name using index (O(1) lookup)
+    pub fn get_wing_mut(&mut self, level: i32, wing_name: &str, index: &BuildingDataIndex) -> Option<&mut WingData> {
+        index.get_wing_indices(level, wing_name)
+            .and_then(|(floor_idx, wing_idx)| {
+                self.floors.get_mut(floor_idx)
+                    .and_then(|floor| floor.wings.get_mut(wing_idx))
+            })
+    }
+    
+    /// Get or create floor by level, updating index if new floor is created
+    pub fn get_or_create_floor_mut(&mut self, level: i32, index: &mut BuildingDataIndex) -> Result<&mut FloorData, Box<dyn std::error::Error>> {
+        if let Some(floor_idx) = index.get_floor_index(level) {
+            Ok(&mut self.floors[floor_idx])
+        } else {
+            // Create new floor
+            let new_floor = FloorData {
+                id: format!("floor-{}", level),
+                name: format!("Floor {}", level),
+                level,
+                elevation: level as f64 * 3.0,
+                wings: vec![],
+                rooms: vec![],
+                equipment: vec![],
+                bounding_box: None,
+            };
+            
+            let floor_idx = self.floors.len();
+            self.floors.push(new_floor);
+            
+            // Update index
+            index.floors_by_level.insert(level, floor_idx);
+            
+            Ok(&mut self.floors[floor_idx])
+        }
+    }
+    
+    /// Get or create wing by floor level and name, updating index if new wing is created
+    pub fn get_or_create_wing_mut(&mut self, level: i32, wing_name: &str, index: &mut BuildingDataIndex) -> Result<&mut WingData, Box<dyn std::error::Error>> {
+        if let Some((floor_idx, wing_idx)) = index.get_wing_indices(level, wing_name) {
+            Ok(&mut self.floors[floor_idx].wings[wing_idx])
+        } else {
+            // Need to get or create floor first
+            let floor = self.get_or_create_floor_mut(level, index)?;
+            
+            // Create new wing
+            let new_wing = WingData {
+                id: format!("wing-{}-{}", level, wing_name),
+                name: wing_name.to_string(),
+                rooms: vec![],
+                equipment: vec![],
+                properties: std::collections::HashMap::new(),
+            };
+            
+            let wing_idx = floor.wings.len();
+            floor.wings.push(new_wing);
+            
+            // Update index
+            let floor_idx = index.get_floor_index(level).unwrap();
+            index.wings_by_key.insert((level, wing_name.to_string()), (floor_idx, wing_idx));
+            
+            Ok(&mut self.floors[floor_idx].wings[wing_idx])
+        }
+    }
 }
 
 impl Default for BuildingData {

@@ -16,63 +16,25 @@ use crate::yaml::conversions::{room_data_to_room, equipment_to_equipment_data, e
 ///                 If not provided or wing doesn't exist, room will be added to a default wing.
 /// * `commit` - Whether to commit changes to Git
 pub fn create_room(building_name: &str, floor_level: i32, room: Room, wing_name: Option<&str>, commit: bool) -> Result<(), Box<dyn std::error::Error>> {
-    use crate::yaml::{FloorData, RoomData, WingData};
+    use crate::yaml::RoomData;
     use crate::persistence::PersistenceManager;
-    use std::collections::HashMap;
     
     let persistence = PersistenceManager::new(building_name)?;
     let mut building_data = persistence.load_building_data()?;
     
-    // Find or create floor
-    let floor_data = building_data.floors.iter_mut()
-        .find(|f| f.level == floor_level);
-    
-    let floor_data = if let Some(floor) = floor_data {
-        floor
-    } else {
-        // Floor doesn't exist, create it
-        let new_floor = FloorData {
-            id: format!("floor-{}", floor_level),
-            name: format!("Floor {}", floor_level),
-            level: floor_level,
-            elevation: floor_level as f64 * 3.0,
-            wings: vec![],
-            rooms: vec![],
-            equipment: vec![],
-            bounding_box: None,
-        };
-        building_data.floors.push(new_floor);
-        building_data.floors.last_mut()
-            .ok_or_else(|| "Failed to access newly created floor".to_string())?
-    };
+    // Build index for efficient lookups
+    let mut index = building_data.build_index();
     
     // Determine wing name (use provided or default to "Default")
     let wing_name = wing_name.unwrap_or("Default");
     
-    // Find or create the wing
-    let wing_data = floor_data.wings.iter_mut()
-        .find(|w| w.name == wing_name);
+    // Store room name for commit message before moving room
+    let room_name = room.name.clone();
     
-    let wing_data = if let Some(wing) = wing_data {
-        wing
-    } else {
-        // Wing doesn't exist, create it
-        let new_wing = WingData {
-            id: format!("wing-{}-{}", floor_level, wing_name),
-            name: wing_name.to_string(),
-            rooms: vec![],
-            equipment: vec![],
-            properties: HashMap::new(),
-        };
-        floor_data.wings.push(new_wing);
-        floor_data.wings.last_mut()
-            .ok_or_else(|| "Failed to access newly created wing".to_string())?
-    };
-    
-    // Convert Room to RoomData
+    // Convert Room to RoomData (moves ownership from room)
     let room_data = RoomData {
-        id: room.id.clone(),
-        name: room.name.clone(),
+        id: room.id,
+        name: room.name,
         room_type: format!("{}", room.room_type),
         area: Some(room.spatial_properties.dimensions.width * room.spatial_properties.dimensions.depth),
         volume: Some(room.spatial_properties.dimensions.width * room.spatial_properties.dimensions.depth * room.spatial_properties.dimensions.height),
@@ -94,18 +56,26 @@ pub fn create_room(building_name: &str, floor_level: i32, room: Room, wing_name:
             },
         },
         equipment: vec![],
-        properties: room.properties.clone(),
+        properties: room.properties,
     };
     
-    // Add room to wing
-    wing_data.rooms.push(room_data.clone());
+    // Get or create wing using index (O(1) lookup)
+    // Note: get_or_create_wing_mut will handle floor creation if needed
+    {
+        let wing_data = building_data.get_or_create_wing_mut(floor_level, wing_name, &mut index)?;
+        wing_data.rooms.push(room_data.clone());
+    }
     
-    // Also add to floor's rooms list for backward compatibility
-    floor_data.rooms.push(room_data);
+    // Get floor_data reference separately (after wing_data is dropped)
+    {
+        let floor_data = building_data.get_or_create_floor_mut(floor_level, &mut index)?;
+        // Also add to floor's rooms list for backward compatibility
+        floor_data.rooms.push(room_data);
+    }
     
     // Save
     if commit {
-        persistence.save_and_commit(&building_data, Some(&format!("Add room: {}", room.name)))?;
+        persistence.save_and_commit(&building_data, Some(&format!("Add room: {}", room_name)))?;
     } else {
         persistence.save_building_data(&building_data)?;
     }

@@ -10,7 +10,37 @@ use crate::yaml::{BuildingData, BuildingYamlSerializer};
 use crate::git::{BuildingGitManager, GitConfigManager, CommitMetadata};
 use crate::identity::UserRegistry;
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
+use std::time::SystemTime;
 use log::{info, debug, warn};
+
+/// Cache entry for building data
+struct BuildingDataCache {
+    data: BuildingData,
+    file_path: PathBuf,
+    last_modified: SystemTime,
+}
+
+/// Global cache for building data
+/// 
+/// Uses OnceLock for thread-safe lazy initialization and Mutex for interior mutability.
+/// Cache is invalidated automatically when file modification time changes.
+static BUILDING_DATA_CACHE: OnceLock<Mutex<Option<BuildingDataCache>>> = OnceLock::new();
+
+/// Get the building data cache
+fn get_cache() -> &'static Mutex<Option<BuildingDataCache>> {
+    BUILDING_DATA_CACHE.get_or_init(|| Mutex::new(None))
+}
+
+/// Invalidate the building data cache
+/// 
+/// This is useful when you know the file has been modified externally
+/// and want to force a reload on the next access.
+pub fn invalidate_building_data_cache() {
+    let mut cache = get_cache().lock().unwrap();
+    *cache = None;
+    debug!("Building data cache invalidated");
+}
 
 /// Manages persistence of building data to YAML files and Git
 pub struct PersistenceManager {
@@ -36,8 +66,11 @@ impl PersistenceManager {
         })
     }
     
-    /// Load building data from YAML file
-    pub fn load_building_data(&self) -> PersistenceResult<BuildingData> {
+    /// Load building data from YAML file (uncached version)
+    /// 
+    /// This is the internal implementation that always reads from disk.
+    /// Use `load_building_data_cached()` for better performance.
+    fn load_building_data_uncached(&self) -> PersistenceResult<BuildingData> {
         use crate::utils::path_safety::PathSafety;
         use std::fs::metadata;
         
@@ -76,6 +109,59 @@ impl PersistenceManager {
         
         debug!("Loaded building: {} with {} floors", 
                building_data.building.name, building_data.floors.len());
+        
+        Ok(building_data)
+    }
+    
+    /// Load building data from YAML file with caching
+    /// 
+    /// This method checks the file modification time and returns cached data
+    /// if the file hasn't changed. This provides significant performance improvements
+    /// for operations that load building data multiple times.
+    /// 
+    /// The cache is automatically invalidated when:
+    /// - The file modification time changes
+    /// - A different file is requested
+    /// - `invalidate_building_data_cache()` is called
+    pub fn load_building_data(&self) -> PersistenceResult<BuildingData> {
+        let mut cache = get_cache().lock().unwrap();
+        
+        // Check if we have a valid cache entry
+        if let Some(ref cached) = *cache {
+            // Check if cache is for the same file
+            if cached.file_path == self.working_file {
+                // Check file modification time
+                if let Ok(metadata) = std::fs::metadata(&self.working_file) {
+                    if let Ok(modified) = metadata.modified() {
+                        if modified == cached.last_modified {
+                            debug!("Building data cache hit for: {:?}", self.working_file);
+                            return Ok(cached.data.clone());
+                        } else {
+                            debug!("Building data cache invalidated (file modified): {:?}", self.working_file);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Cache miss or invalid - load from disk
+        debug!("Building data cache miss, loading from disk: {:?}", self.working_file);
+        let building_data = self.load_building_data_uncached()?;
+        
+        // Update cache
+        let file_modified = if self.working_file.exists() {
+            std::fs::metadata(&self.working_file)
+                .and_then(|m| m.modified())
+                .unwrap_or_else(|_| SystemTime::now())
+        } else {
+            SystemTime::now()
+        };
+        
+        *cache = Some(BuildingDataCache {
+            data: building_data.clone(),
+            file_path: self.working_file.clone(),
+            last_modified: file_modified,
+        });
         
         Ok(building_data)
     }
@@ -132,6 +218,9 @@ impl PersistenceManager {
             .map_err(|e| PersistenceError::WriteError {
                 reason: format!("Failed to write file {:?}: {}", self.working_file, e),
             })?;
+        
+        // Invalidate cache after save
+        invalidate_building_data_cache();
         
         info!("Building data saved successfully");
         Ok(())
@@ -225,7 +314,7 @@ impl PersistenceManager {
 /// 
 /// This is a convenience function for operations that need to load building data
 /// without a specific building name. It searches the current directory for YAML files
-/// and loads the first one found.
+/// and loads the first one found. Uses caching for performance.
 /// 
 /// **Note**: This function is less robust than `PersistenceManager::load_building_data()`
 /// as it doesn't use path safety checks. For production code, prefer using
@@ -246,40 +335,34 @@ pub fn load_building_data_from_dir() -> PersistenceResult<BuildingData> {
     let current_dir = std::env::current_dir()
         .map_err(|e| PersistenceError::IoError(e))?;
     
-    // Use path-safe directory reading
-    let yaml_files: Vec<PathBuf> = PathSafety::read_dir_safely(std::path::Path::new("."), &current_dir)
+    // Pre-allocate with estimated capacity for better performance
+    let entries = PathSafety::read_dir_safely(std::path::Path::new("."), &current_dir)
         .map_err(|e| PersistenceError::ReadError {
             reason: format!("Failed to read directory: {}", e),
-        })?
-        .into_iter()
-        .filter(|path| {
-            path.extension()
-                .and_then(|s| s.to_str())
-                .map(|ext| ext == "yaml" || ext == "yml")
-                .unwrap_or(false)
-        })
-        .collect();
+        })?;
+    
+    let mut yaml_files = Vec::with_capacity(entries.len() / 2);
+    for path in entries {
+        if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
+            if ext == "yaml" || ext == "yml" {
+                yaml_files.push(path);
+            }
+        }
+    }
     
     let yaml_file = yaml_files.first()
         .ok_or_else(|| PersistenceError::FileNotFound {
             path: "No YAML files found in current directory. Run 'arx import <ifc-file>' first.".to_string(),
         })?;
     
-    // Use path-safe file reading
-    let base_dir = yaml_file.parent()
-        .unwrap_or_else(|| Path::new("."));
+    // Use PersistenceManager for caching
+    // Extract building name from file stem for better cache matching
+    let building_name = yaml_file.file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("default");
     
-    let content = PathSafety::read_file_safely(yaml_file, base_dir)
-        .map_err(|e| PersistenceError::ReadError {
-            reason: format!("Failed to read file {:?}: {}", yaml_file, e),
-        })?;
-    
-    let building_data: BuildingData = serde_yaml::from_str(&content)
-        .map_err(|e| PersistenceError::DeserializationError {
-            reason: format!("Failed to parse YAML: {}", e),
-        })?;
-    
-    Ok(building_data)
+    let persistence = PersistenceManager::new(building_name)?;
+    persistence.load_building_data()
 }
 
 /// Find building YAML file in current directory
@@ -290,18 +373,20 @@ fn find_building_file(building_name: &str) -> PersistenceResult<PathBuf> {
         .map_err(PersistenceError::IoError)?;
     
     // Look for YAML files in current directory with path safety
-    let yaml_files: Vec<PathBuf> = PathSafety::read_dir_safely(std::path::Path::new("."), &current_dir)
+    let entries = PathSafety::read_dir_safely(std::path::Path::new("."), &current_dir)
         .map_err(|e| PersistenceError::ReadError {
             reason: format!("Failed to read directory: {}", e),
-        })?
-        .into_iter()
-        .filter(|path| {
-            path.extension()
-                .and_then(|s| s.to_str())
-                .map(|ext| ext == "yaml" || ext == "yml")
-                .unwrap_or(false)
-        })
-        .collect();
+        })?;
+    
+    // Pre-allocate with estimated capacity for better performance
+    let mut yaml_files = Vec::with_capacity(entries.len() / 2);
+    for path in entries {
+        if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
+            if ext == "yaml" || ext == "yml" {
+                yaml_files.push(path);
+            }
+        }
+    }
     
     // Try to find a file that matches the building name
     let matching_file = yaml_files.iter()

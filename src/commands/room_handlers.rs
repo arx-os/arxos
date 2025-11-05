@@ -143,7 +143,7 @@ fn handle_create_room(config: CreateRoomConfig) -> Result<(), Box<dyn std::error
     let room_data = RoomData {
         id: room.id.clone(),
         name: room.name.clone(),
-        room_type: room.room_type.to_string(),
+        room_type: format!("{}", room.room_type),
         area: Some(width * depth),
         volume: Some(width * depth * height),
         position: position_3d,

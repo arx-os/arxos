@@ -173,3 +173,4 @@ mod tests {
         assert!(context.reporter.is_some());
     }
 }
+

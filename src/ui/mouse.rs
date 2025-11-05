@@ -6,7 +6,7 @@
 //! - Scroll support for lists
 //! - Mouse coordinate helpers
 
-use crossterm::event::{Event, MouseButton, MouseEvent, MouseEventKind, KeyModifiers};
+use crossterm::event::{Event, MouseButton, MouseEventKind};
 use ratatui::layout::Rect;
 
 /// Mouse event types for TUI components
@@ -245,8 +245,8 @@ pub fn find_clicked_table_cell(
 /// Enable mouse support in terminal (call this once at startup)
 pub fn enable_mouse_support() -> Result<(), Box<dyn std::error::Error>> {
     use crossterm::execute;
-    use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
-    use crossterm::event::{EnableMouseCapture, DisableMouseCapture};
+    
+    use crossterm::event::EnableMouseCapture;
     use std::io::stdout;
     
     execute!(stdout(), EnableMouseCapture)?;
@@ -266,7 +266,7 @@ pub fn disable_mouse_support() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crossterm::event::{Event, MouseButton, MouseEvent, MouseEventKind};
+    use crossterm::event::{Event, MouseButton, MouseEvent, MouseEventKind, KeyModifiers};
     
     #[test]
     fn test_is_point_in_rect() {
@@ -304,6 +304,8 @@ mod tests {
     
     #[test]
     fn test_parse_mouse_event() {
+        use crossterm::event::{KeyModifiers, MouseEvent};
+        
         let config = MouseConfig::default();
         
         let mouse_event = MouseEvent {
@@ -454,6 +456,8 @@ mod tests {
 
     #[test]
     fn test_mouse_action_parsing() {
+        use crossterm::event::{KeyModifiers, MouseEvent};
+        
         let config = MouseConfig::default();
         
         // Test all mouse button types
@@ -463,7 +467,7 @@ mod tests {
             (MouseButton::Middle, MouseAction::MiddleClick { x: 5, y: 10 }),
         ];
         
-        for (button, expected_action) in buttons {
+        for (button, _expected_action) in buttons {
             let mouse_event = MouseEvent {
                 kind: MouseEventKind::Down(button),
                 column: 5,
@@ -526,6 +530,8 @@ mod tests {
 
     #[test]
     fn test_mouse_move() {
+        use crossterm::event::{KeyModifiers, MouseEvent};
+        
         let config = MouseConfig::default();
         
         let mouse_event = MouseEvent {

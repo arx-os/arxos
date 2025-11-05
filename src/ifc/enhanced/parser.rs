@@ -3,7 +3,7 @@
 use super::types::{EnhancedIFCParser, ParseStats, ParseResult, IFCEntity};
 use crate::core::Building;
 use crate::spatial::SpatialEntity;
-use crate::progress::ProgressContext;
+use crate::utils::progress::ProgressContext;
 use crate::error::{ArxError, ArxResult};
 use log::{info, warn};
 

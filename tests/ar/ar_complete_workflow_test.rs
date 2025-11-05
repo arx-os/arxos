@@ -132,7 +132,7 @@ fn test_complete_ar_workflow_with_git() -> Result<(), Box<dyn std::error::Error>
     assert!(validation_result.is_ok(), "AR scan validation should pass");
     
     // Phase 4: Process AR scan to pending equipment
-    let pending_ids = process_ar_scan_to_pending(&ar_scan, "Test Building", 0.7)?;
+    let pending_ids = process_ar_scan_to_pending(&ar_scan, "Test Building", 0.7, None)?;
     assert_eq!(pending_ids.len(), 2, "Should create 2 pending items");
     
     // Phase 5: Setup pending equipment manager
@@ -152,7 +152,7 @@ fn test_complete_ar_workflow_with_git() -> Result<(), Box<dyn std::error::Error>
         properties: HashMap::new(),
     };
     
-    let pending_id = pending_manager.add_pending_equipment(&detected_info, "scan_1", 3, Some("Room 301"), 0.7)?
+    let pending_id = pending_manager.add_pending_equipment(&detected_info, "scan_1", 3, Some("Room 301"), 0.7, None)?
         .expect("Should return pending ID");
     
     // Phase 6: Load building data from filesystem (after export)
@@ -231,7 +231,7 @@ fn test_ar_workflow_reject_pending() -> Result<(), Box<dyn std::error::Error>> {
         properties: HashMap::new(),
     };
     
-    let pending_id = pending_manager.add_pending_equipment(&detected, "scan_1", 3, None, 0.7)?
+    let pending_id = pending_manager.add_pending_equipment(&detected, "scan_1", 3, None, 0.7, None)?
         .expect("Should return ID");
     
     // Reject the pending equipment

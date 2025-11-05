@@ -1,0 +1,93 @@
+---
+alwaysApply: true
+---
+
+**CRITICAL RULE:** We do not introduce TODO comments, placeholders, or incomplete implementations into the codebase.
+
+## What This Means
+
+- **Never add TODO comments** - If functionality is needed, implement it completely
+- **Never add placeholder code** - Write complete, working implementations
+- **Never add "simplified for now" comments** - Implement the full functionality
+- **Never add "not yet implemented" notes** - Either implement it or don't include it
+- **Never add FIXME, XXX, HACK, or STUB comments** - Fix issues properly or remove the code
+
+## Acceptable Alternatives
+
+1. **Remove unused code** - If functionality isn't needed, remove it entirely
+2. **Use `#[allow(dead_code)]`** - For code reserved for future use (must have clear purpose)
+3. **Use feature flags** - For incomplete features that are intentionally disabled
+4. **Create an issue/ticket** - Document future work in project management, not in code
+5. **Implement completely** - Write the full implementation, even if it's a simple version
+
+## When Fixing Warnings
+
+- **Do not** add TODOs to suppress warnings
+- **Do not** add placeholder implementations to fix compile errors
+- **Do** fix the actual issue or remove the code if it's not needed
+- **Do** use `#[allow(dead_code)]` only when code is intentionally reserved
+
+## Examples of What NOT to Do
+
+```rust
+// ❌ BAD - TODO comment
+// TODO: Implement room-based filtering
+fn filtered_alerts() -> Vec<&AlertItem> {
+    true // Simplified for now
+}
+
+// ❌ BAD - Placeholder
+let _user_email = parse_email(); // TODO: Store user_email with pending equipment
+
+// ❌ BAD - Incomplete implementation
+fn process_data() {
+    // Not yet implemented
+    unimplemented!()
+}
+```
+
+## Examples of What TO Do
+
+```rust
+// ✅ GOOD - Complete implementation
+fn filtered_alerts(&self) -> Vec<&AlertItem> {
+    self.alerts.iter()
+        .filter(|alert| {
+            if let Some(filter_room) = &self.filter_room {
+                // Find which room contains this equipment
+                // ... full implementation ...
+            } else {
+                true
+            }
+        })
+        .collect()
+}
+
+// ✅ GOOD - Remove if not needed
+// Code removed entirely if functionality isn't required
+
+// ✅ GOOD - Feature flag for intentional incomplete feature
+#[cfg(feature = "experimental")]
+fn new_feature() {
+    // Complete implementation
+}
+
+// ✅ GOOD - Allow dead code for intentionally reserved API
+#[allow(dead_code)]
+fn reserved_for_future_api() {
+    // Reserved for future use - clearly documented
+}
+```
+
+## Rationale
+
+- TODOs accumulate and become technical debt
+- Placeholders create false confidence in incomplete code
+- Incomplete implementations lead to bugs and maintenance issues
+- Complete implementations are easier to test, document, and maintain
+
+## Enforcement
+
+- Pre-commit hooks automatically check for TODO/placeholder comments
+- Code reviews should reject any PRs containing TODO/placeholder comments
+- All code changes must be reviewed for TODOs/placeholders

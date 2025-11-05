@@ -10,7 +10,6 @@ pub mod error;
 pub mod spatial;
 pub mod git;
 pub mod ifc;
-pub mod progress;
 pub mod render;
 pub mod render3d;
 
@@ -31,6 +30,7 @@ pub mod search;
 pub mod utils;
 pub mod docs;
 pub mod game;
+pub mod identity;
 
 // UI module (terminal user interface)
 pub mod ui;

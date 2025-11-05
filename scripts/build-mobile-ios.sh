@@ -35,11 +35,21 @@ export IPHONEOS_DEPLOYMENT_TARGET=${IPHONEOS_DEPLOYMENT_TARGET:-17.0}
 mkdir -p ios/build
 mkdir -p ios/build/lib
 
-# Install iOS targets if not already installed
-if ! rustup target list --installed | grep -q "aarch64-apple-ios"; then
-    echo -e "${BLUE}Installing iOS targets...${NC}"
-    rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+# Check for rustup
+if ! command -v rustup &> /dev/null; then
+    echo -e "${RED}❌ rustup not found. Please install Rust toolchain.${NC}"
+    exit 1
 fi
+
+# Install iOS targets if not already installed
+echo -e "${BLUE}📦 Checking iOS targets...${NC}"
+IOS_TARGETS=("aarch64-apple-ios" "aarch64-apple-ios-sim" "x86_64-apple-ios")
+for target in "${IOS_TARGETS[@]}"; do
+    if ! rustup target list --installed | grep -q "$target"; then
+        echo -e "${BLUE}Installing target: $target${NC}"
+        rustup target add "$target"
+    fi
+done
 
 # Build for iOS architectures
 echo -e "${BLUE}📱 Building for iOS devices (arm64)...${NC}"
@@ -59,6 +69,11 @@ cp target/aarch64-apple-ios-sim/release/libarxos.a ios/build/lib/libarxos-simula
 
 # Create universal library for simulator by combining architectures
 echo -e "${BLUE}📦 Creating universal simulator library...${NC}"
+if ! command -v lipo &> /dev/null; then
+    echo -e "${YELLOW}❌ lipo not found. Xcode Command Line Tools required.${NC}"
+    echo "Install with: xcode-select --install"
+    exit 1
+fi
 lipo -create ios/build/lib/libarxos-simulator-x86_64.a ios/build/lib/libarxos-simulator-aarch64.a -output ios/build/lib/libarxos-simulator.a
 
 # Create XCFramework structure

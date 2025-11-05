@@ -7,15 +7,28 @@
 # Output directories
 output/
 
-# Test data directories
-test-data/
-test_data/
+# Test data directories (ignore build artifacts, but track fixtures)
+# test_data/ contains tracked test fixtures (IFC files, samples, etc.)
+test_data/*.tmp
+test_data/*.bak
+test_data/*~
+# Allow all fixture files in test_data/ to be tracked
 
 # Test generated files
 test-*.ifc.yaml
 test-repo/
 test-office-repo/
-building.yaml
+
+# User-generated building files in root (privacy)
+/building.yaml
+/* House.yaml
+/* Scan.yaml
+/*-scan-*.yaml
+# But allow building.yaml in test/example directories
+!tests/**/building.yaml
+!examples/**/building.yaml
+!docs/**/building.yaml
+!test-data/**/building.yaml
 
 # IDE directories and editor files
 .vs/

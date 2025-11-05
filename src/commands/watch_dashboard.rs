@@ -8,11 +8,10 @@
 //! - Filtering capabilities
 
 use crate::ui::{TerminalManager, Theme, StatusColor};
-use crate::ui::layouts::{dashboard_layout, split_horizontal};
+use crate::ui::layouts::dashboard_layout;
 use crate::utils::loading;
-use crate::hardware::{SensorData, SensorAlert, AlertGenerator};
-use crate::yaml::{BuildingData, EquipmentData};
-use crate::identity::{UserRegistry, User};
+use crate::yaml::BuildingData;
+use crate::identity::UserRegistry;
 use crate::git::{BuildingGitManager, GitConfigManager};
 use crate::commands::git_ops::{find_git_repository, extract_user_id_from_commit, extract_email_from_author};
 use chrono::{DateTime, Utc};
@@ -21,7 +20,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Table, TableState, Row, Cell},
+    widgets::{Block, Borders, List, ListItem, Paragraph, Table, Row, Cell},
 };
 use std::time::Duration;
 use std::collections::HashMap;
@@ -34,6 +33,8 @@ struct SensorReading {
     value: f64,
     unit: String,
     timestamp: String,
+    // Reserved for future features (e.g., equipment linking, navigation)
+    #[allow(dead_code)]
     equipment_id: Option<String>,
     room: Option<String>,
     status: StatusColor,
@@ -45,15 +46,21 @@ struct AlertItem {
     timestamp: String,
     severity: StatusColor,
     message: String,
-    equipment_id: Option<String>,
+    equipment_id: Option<String>, // Used for room-based filtering (line 271)
+    // Reserved for future features (e.g., sensor linking, navigation)
+    #[allow(dead_code)]
     sensor_id: Option<String>,
 }
 
 /// User activity item for recent changes
 #[derive(Debug, Clone)]
 struct UserActivityItem {
+    // Reserved for future features (e.g., full timestamp display, commit navigation)
+    #[allow(dead_code)]
     timestamp: String,
     relative_time: String,
+    // Reserved for future features (e.g., commit navigation, diff viewing)
+    #[allow(dead_code)]
     commit_hash: String,
     commit_message: String,
     user: Option<UserInfo>,
@@ -82,9 +89,13 @@ struct WatchDashboardState {
     refresh_interval: Duration,
     runtime: Duration,
     start_time: std::time::Instant,
+    // Reserved for future multi-building filtering
+    #[allow(dead_code)]
     filter_building: Option<String>,
+    // Reserved for future floor-based filtering
+    #[allow(dead_code)]
     filter_floor: Option<i32>,
-    filter_room: Option<String>,
+    filter_room: Option<String>, // Used for room-based filtering (line 269)
 }
 
 impl WatchDashboardState {
@@ -260,10 +271,26 @@ impl WatchDashboardState {
     fn filtered_alerts(&self) -> Vec<&AlertItem> {
         self.alerts.iter()
             .filter(|alert| {
-                if let Some(ref filter_room) = self.filter_room {
+                if let Some(filter_room) = &self.filter_room {
                     // Filter by room if equipment is in that room
-                    true // Simplified for now
+                    if let Some(equipment_id) = &alert.equipment_id {
+                        // Find which room contains this equipment
+                        for floor in &self.building_data.floors {
+                            for room in &floor.rooms {
+                                if room.equipment.contains(equipment_id) {
+                                    // Check if room name matches filter (case-insensitive partial match)
+                                    return room.name.to_lowercase().contains(&filter_room.to_lowercase());
+                                }
+                            }
+                        }
+                        // Equipment not found in any room, exclude from filtered results
+                        false
+                    } else {
+                        // No equipment_id, exclude from filtered results
+                        false
+                    }
                 } else {
+                    // No filter applied, include all alerts
                     true
                 }
             })
@@ -567,7 +594,7 @@ fn render_overview_alerts<'a>(
 /// Render sensors tab
 fn render_sensors<'a>(
     state: &'a WatchDashboardState,
-    area: Rect,
+    _area: Rect,
     theme: &'a Theme,
 ) -> Table<'a> {
     let readings = state.filtered_sensor_readings();
@@ -608,7 +635,7 @@ fn render_sensors<'a>(
 /// Render alerts tab
 fn render_alerts<'a>(
     state: &'a WatchDashboardState,
-    area: Rect,
+    _area: Rect,
     theme: &'a Theme,
 ) -> List<'a> {
     let alerts = state.filtered_alerts();
@@ -631,7 +658,7 @@ fn render_alerts<'a>(
 /// Render equipment tab
 fn render_equipment<'a>(
     state: &'a WatchDashboardState,
-    area: Rect,
+    _area: Rect,
     theme: &'a Theme,
 ) -> Paragraph<'a> {
     let equipment_list: Vec<Line> = state.building_data.floors.iter()

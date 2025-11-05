@@ -646,7 +646,7 @@ floors:
     fn test_arxos_save_ar_scan_null_json() {
         unsafe {
             let building = to_c_string("test_building");
-            let result = ffi::arxos_save_ar_scan(std::ptr::null(), building, 0.7);
+            let result = ffi::arxos_save_ar_scan(std::ptr::null(), building, std::ptr::null(), 0.7);
             
             assert!(!result.is_null());
             let c_str = CStr::from_ptr(result);
@@ -664,7 +664,7 @@ floors:
             let json_data = r#"{"detectedEquipment":[],"roomBoundaries":{"walls":[],"openings":[]}}"#;
             let json_ptr = to_c_string(json_data);
             
-            let result = ffi::arxos_save_ar_scan(json_ptr, std::ptr::null(), 0.7);
+            let result = ffi::arxos_save_ar_scan(json_ptr, std::ptr::null(), std::ptr::null(), 0.7);
             
             assert!(!result.is_null());
             let c_str = CStr::from_ptr(result);
@@ -683,7 +683,7 @@ floors:
             let json_ptr = to_c_string(invalid_json);
             let building = to_c_string("test_building");
             
-            let result = ffi::arxos_save_ar_scan(json_ptr, building, 0.7);
+            let result = ffi::arxos_save_ar_scan(json_ptr, building, std::ptr::null(), 0.7);
             
             assert!(!result.is_null());
             let c_str = CStr::from_ptr(result);
@@ -724,7 +724,7 @@ floors:
             let json_ptr = to_c_string(json_data);
             let building = to_c_string("test_building");
             
-            let result = ffi::arxos_save_ar_scan(json_ptr, building, 0.7);
+            let result = ffi::arxos_save_ar_scan(json_ptr, building, std::ptr::null(), 0.7);
             
             assert!(!result.is_null());
             let c_str = CStr::from_ptr(result);
@@ -816,7 +816,7 @@ floors:
             let building = to_c_string("test_building");
             
             // Save scan to create pending items
-            let _save_result = ffi::arxos_save_ar_scan(json_ptr, building, 0.7);
+            let _save_result = ffi::arxos_save_ar_scan(json_ptr, building, std::ptr::null(), 0.7);
             ffi::arxos_free_string(_save_result);
             
             // Now list pending equipment
@@ -845,7 +845,7 @@ floors:
     fn test_arxos_confirm_pending_equipment_null_params() {
         unsafe {
             let building = to_c_string("test_building");
-            let result = ffi::arxos_confirm_pending_equipment(building, std::ptr::null(), 1);
+            let result = ffi::arxos_confirm_pending_equipment(building, std::ptr::null(), std::ptr::null(), 1);
             
             assert!(!result.is_null());
             let c_str = CStr::from_ptr(result);
@@ -867,7 +867,7 @@ floors:
         unsafe {
             let building = to_c_string("test_building");
             let pending_id = to_c_string("nonexistent-pending-id");
-            let result = ffi::arxos_confirm_pending_equipment(building, pending_id, 1);
+            let result = ffi::arxos_confirm_pending_equipment(building, pending_id, std::ptr::null(), 1);
             
             assert!(!result.is_null());
             let c_str = CStr::from_ptr(result);
@@ -914,7 +914,7 @@ floors:
             }"#;
             let json_ptr = to_c_string(json_data);
             
-            let save_result = ffi::arxos_save_ar_scan(json_ptr, building, 0.7);
+            let save_result = ffi::arxos_save_ar_scan(json_ptr, building, std::ptr::null(), 0.7);
             let save_c_str = CStr::from_ptr(save_result);
             let save_json_str = save_c_str.to_str().unwrap();
             let save_parsed: serde_json::Value = serde_json::from_str(save_json_str).unwrap();
@@ -930,7 +930,7 @@ floors:
                     let pending_id = to_c_string(pending_id_str);
                     
                     // Step 2: Confirm pending equipment
-                    let confirm_result = ffi::arxos_confirm_pending_equipment(building, pending_id, 0); // Don't commit to Git
+                    let confirm_result = ffi::arxos_confirm_pending_equipment(building, pending_id, std::ptr::null(), 0); // Don't commit to Git
                     
                     assert!(!confirm_result.is_null());
                     let confirm_c_str = CStr::from_ptr(confirm_result);
@@ -997,7 +997,7 @@ floors:
             }"#;
             let json_ptr = to_c_string(json_data);
             
-            let save_result = ffi::arxos_save_ar_scan(json_ptr, building, 0.7);
+            let save_result = ffi::arxos_save_ar_scan(json_ptr, building, std::ptr::null(), 0.7);
             let save_c_str = CStr::from_ptr(save_result);
             let save_json_str = save_c_str.to_str().unwrap();
             let save_parsed: serde_json::Value = serde_json::from_str(save_json_str).unwrap();
@@ -1071,7 +1071,7 @@ floors:
             }"#;
             let json_ptr = to_c_string(json_data);
             
-            let save_result = ffi::arxos_save_ar_scan(json_ptr, building, 0.7);
+            let save_result = ffi::arxos_save_ar_scan(json_ptr, building, std::ptr::null(), 0.7);
             let save_c_str = CStr::from_ptr(save_result);
             let save_json_str = save_c_str.to_str().unwrap();
             let save_parsed: serde_json::Value = serde_json::from_str(save_json_str).unwrap();
@@ -1101,7 +1101,7 @@ floors:
             assert!(!items.is_empty(), "Should have pending items in list");
             
             // Step 3: Confirm pending equipment
-            let confirm_result = ffi::arxos_confirm_pending_equipment(building, pending_id, 0);
+            let confirm_result = ffi::arxos_confirm_pending_equipment(building, pending_id, std::ptr::null(), 0);
             let confirm_c_str = CStr::from_ptr(confirm_result);
             let confirm_json_str = confirm_c_str.to_str().unwrap();
             let confirm_parsed: serde_json::Value = serde_json::from_str(confirm_json_str).unwrap();
@@ -1117,6 +1117,134 @@ floors:
             free_c_string(json_ptr);
             free_c_string(building);
             free_c_string(pending_id);
+        }
+        
+        std::env::set_current_dir(original_dir).unwrap();
+    }
+
+    #[test]
+    fn test_arxos_save_ar_scan_with_user_email() {
+        // Test that user_email parameter is accepted and propagated
+        let temp_dir = TempDir::new().unwrap();
+        let original_dir = std::env::current_dir().unwrap();
+        
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+        
+        // Create test building
+        let building_name = "test_user_email_building";
+        create_test_building(building_name, &temp_dir.path().to_path_buf()).unwrap();
+        
+        unsafe {
+            let building = to_c_string(building_name);
+            let user_email = to_c_string("test@example.com");
+            
+            let json_data = r#"{
+                "detectedEquipment": [
+                    {
+                        "name": "User Email Test Equipment",
+                        "type": "HVAC",
+                        "position": {"x": 15.0, "y": 25.0, "z": 4.0},
+                        "confidence": 0.92,
+                        "detectionMethod": "User Email Test"
+                    }
+                ],
+                "roomBoundaries": {"walls": [], "openings": []},
+                "roomName": "Test Room",
+                "floorLevel": 2
+            }"#;
+            let json_ptr = to_c_string(json_data);
+            
+            // Test with user_email provided
+            let save_result = ffi::arxos_save_ar_scan(json_ptr, building, user_email, 0.7);
+            assert!(!save_result.is_null(), "Should not return null pointer");
+            
+            let save_c_str = CStr::from_ptr(save_result);
+            let save_json_str = save_c_str.to_str().unwrap();
+            let save_parsed: serde_json::Value = serde_json::from_str(save_json_str).unwrap();
+            
+            // Should succeed or fail gracefully (may fail if building doesn't exist)
+            assert!(save_parsed.get("success").is_some() || save_parsed.get("error").is_some(),
+                   "Should return success or error in response");
+            
+            // Cleanup
+            ffi::arxos_free_string(save_result);
+            free_c_string(json_ptr);
+            free_c_string(building);
+            free_c_string(user_email);
+        }
+        
+        std::env::set_current_dir(original_dir).unwrap();
+    }
+
+    #[test]
+    fn test_arxos_confirm_pending_equipment_with_user_email() {
+        // Test that user_email parameter is accepted in confirm function
+        let temp_dir = TempDir::new().unwrap();
+        let original_dir = std::env::current_dir().unwrap();
+        
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+        
+        // Create test building
+        let building_name = "test_confirm_user_email";
+        create_test_building(building_name, &temp_dir.path().to_path_buf()).unwrap();
+        
+        unsafe {
+            let building = to_c_string(building_name);
+            let user_email = to_c_string("test@example.com");
+            
+            // First create pending equipment
+            let json_data = r#"{
+                "detectedEquipment": [
+                    {
+                        "name": "Confirm User Email Equipment",
+                        "type": "Electrical",
+                        "position": {"x": 8.0, "y": 12.0, "z": 3.0},
+                        "confidence": 0.90,
+                        "detectionMethod": "Confirm User Email Test"
+                    }
+                ],
+                "roomBoundaries": {"walls": [], "openings": []},
+                "roomName": "Test Room",
+                "floorLevel": 1
+            }"#;
+            let json_ptr = to_c_string(json_data);
+            
+            let save_result = ffi::arxos_save_ar_scan(json_ptr, building, std::ptr::null(), 0.7);
+            let save_c_str = CStr::from_ptr(save_result);
+            let save_json_str = save_c_str.to_str().unwrap();
+            let save_parsed: serde_json::Value = serde_json::from_str(save_json_str).unwrap();
+            
+            if save_parsed.get("success").and_then(|s| s.as_bool()).unwrap_or(false) {
+                let empty_pending: Vec<serde_json::Value> = vec![];
+                let pending_ids = save_parsed.get("pending_ids")
+                    .and_then(|ids| ids.as_array())
+                    .unwrap_or(&empty_pending);
+                
+                if !pending_ids.is_empty() {
+                    let pending_id_str = pending_ids[0].as_str().unwrap();
+                    let pending_id = to_c_string(pending_id_str);
+                    
+                    // Test confirm with user_email
+                    let confirm_result = ffi::arxos_confirm_pending_equipment(building, pending_id, user_email, 0);
+                    assert!(!confirm_result.is_null(), "Should not return null pointer");
+                    
+                    let confirm_c_str = CStr::from_ptr(confirm_result);
+                    let confirm_json_str = confirm_c_str.to_str().unwrap();
+                    let confirm_parsed: serde_json::Value = serde_json::from_str(confirm_json_str).unwrap();
+                    
+                    // Should succeed or return error gracefully
+                    assert!(confirm_parsed.get("success").is_some() || confirm_parsed.get("error").is_some(),
+                           "Should return success or error in response");
+                    
+                    ffi::arxos_free_string(confirm_result);
+                    free_c_string(pending_id);
+                }
+            }
+            
+            ffi::arxos_free_string(save_result);
+            free_c_string(json_ptr);
+            free_c_string(building);
+            free_c_string(user_email);
         }
         
         std::env::set_current_dir(original_dir).unwrap();

@@ -23,8 +23,8 @@ pub use buffer::{export_buffer, export_current_view};
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ratatui::buffer::Buffer;
-    use ratatui::layout::Rect;
+    
+    
     
     #[test]
     fn test_export_format_names() {

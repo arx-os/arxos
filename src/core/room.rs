@@ -60,27 +60,31 @@ pub enum RoomType {
     Other(String),
 }
 
-impl RoomType {
-    pub fn to_string(&self) -> String {
+impl std::fmt::Display for RoomType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RoomType::Classroom => "Classroom".to_string(),
-            RoomType::Laboratory => "Laboratory".to_string(),
-            RoomType::Office => "Office".to_string(),
-            RoomType::Gymnasium => "Gymnasium".to_string(),
-            RoomType::Cafeteria => "Cafeteria".to_string(),
-            RoomType::Library => "Library".to_string(),
-            RoomType::Auditorium => "Auditorium".to_string(),
-            RoomType::Hallway => "Hallway".to_string(),
-            RoomType::Restroom => "Restroom".to_string(),
-            RoomType::Storage => "Storage".to_string(),
-            RoomType::Mechanical => "Mechanical".to_string(),
-            RoomType::Electrical => "Electrical".to_string(),
-            RoomType::Other(name) => name.clone(),
+            RoomType::Classroom => write!(f, "Classroom"),
+            RoomType::Laboratory => write!(f, "Laboratory"),
+            RoomType::Office => write!(f, "Office"),
+            RoomType::Gymnasium => write!(f, "Gymnasium"),
+            RoomType::Cafeteria => write!(f, "Cafeteria"),
+            RoomType::Library => write!(f, "Library"),
+            RoomType::Auditorium => write!(f, "Auditorium"),
+            RoomType::Hallway => write!(f, "Hallway"),
+            RoomType::Restroom => write!(f, "Restroom"),
+            RoomType::Storage => write!(f, "Storage"),
+            RoomType::Mechanical => write!(f, "Mechanical"),
+            RoomType::Electrical => write!(f, "Electrical"),
+            RoomType::Other(name) => write!(f, "{}", name),
         }
     }
+}
+
+impl std::str::FromStr for RoomType {
+    type Err = std::convert::Infallible;
     
-    pub fn from_string(s: &str) -> Self {
-        match s {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
             "Classroom" => RoomType::Classroom,
             "Laboratory" => RoomType::Laboratory,
             "Office" => RoomType::Office,
@@ -94,7 +98,25 @@ impl RoomType {
             "Mechanical" => RoomType::Mechanical,
             "Electrical" => RoomType::Electrical,
             _ => RoomType::Other(s.to_string()),
-        }
+        })
+    }
+}
+
+impl RoomType {
+    /// Convert to string (for backward compatibility)
+    /// 
+    /// **Note:** Prefer using `Display` trait (`format!("{}", room_type)`) instead.
+    #[deprecated(note = "Use Display trait instead: format!(\"{}\", room_type)")]
+    pub fn to_string(&self) -> String {
+        format!("{}", self)
+    }
+    
+    /// Parse from string (for backward compatibility)
+    /// 
+    /// **Note:** Prefer using `FromStr` trait (`room_type.parse()`) instead.
+    #[deprecated(note = "Use FromStr trait instead: room_type.parse()")]
+    pub fn from_string(s: &str) -> Self {
+        s.parse().unwrap_or_else(|_| RoomType::Other(s.to_string()))
     }
 }
 

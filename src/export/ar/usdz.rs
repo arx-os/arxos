@@ -234,7 +234,7 @@ mod tests {
     use crate::yaml::{BuildingInfo, BuildingMetadata};
     use chrono::Utc;
     use tempfile::TempDir;
-    use zip::{ZipArchive, ZipWriter};
+    
 
     fn create_test_building_data() -> BuildingData {
         BuildingData {
@@ -281,7 +281,7 @@ mod tests {
     #[test]
     fn test_usdz_exporter_creation() {
         let building_data = create_test_building_data();
-        let exporter = USDZExporter::new(&building_data);
+        let _exporter = USDZExporter::new(&building_data);
         
         // Exporter should be created successfully
         // (no panic or error)

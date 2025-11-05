@@ -1,10 +1,22 @@
-// IFC file processing command handlers
+//! IFC file processing command handlers
+//!
+//! Handles IFC file processing operations such as hierarchy extraction.
 
 use crate::cli::IFCCommands;
 use crate::ifc;
 use crate::yaml;
 
 /// Handle IFC processing commands
+///
+/// Routes IFC subcommands to their respective handlers.
+///
+/// # Arguments
+///
+/// * `subcommand` - The IFC command variant to execute
+///
+/// # Returns
+///
+/// Returns `Ok(())` if the command executes successfully, or an error if it fails.
 pub fn handle_ifc_command(subcommand: IFCCommands) -> Result<(), Box<dyn std::error::Error>> {
     match subcommand {
         IFCCommands::ExtractHierarchy { file, output } => {

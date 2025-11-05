@@ -11,7 +11,6 @@ use arxos::ui::spreadsheet::workflow::{FileLock, ConflictDetector};
 use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentData, EquipmentStatus};
 use arxos::persistence::PersistenceManager;
 use arxos::BuildingYamlSerializer;
-use arxos::git::manager::GitConfigManager;
 use arxos::spatial::{Point3D, BoundingBox3D};
 use chrono::Utc;
 use serial_test::serial;
@@ -235,7 +234,7 @@ fn test_conflict_detection() {
     let building_name = "Test Building";
     let persistence = PersistenceManager::new(building_name).unwrap();
     let loaded_data = persistence.load_building_data().unwrap();
-    let mut data_source = EquipmentDataSource::new(loaded_data, building_name.to_string());
+    let _data_source = EquipmentDataSource::new(loaded_data, building_name.to_string());
     
     // Create conflict detector (this captures the initial modification time)
     let conflict_detector = ConflictDetector::new(&file_path).unwrap();

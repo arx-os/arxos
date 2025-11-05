@@ -1,14 +1,16 @@
 //! Error reporting and analytics for ArxOS
 
 use crate::error::ArxError;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::time::SystemTime;
+use std::sync::{Mutex, OnceLock};
 
 /// Detailed error report for analytics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ErrorReport {
-    pub timestamp: SystemTime,
+    #[serde(with = "chrono::serde::ts_seconds_option")]
+    pub timestamp: Option<DateTime<Utc>>,
     pub error_type: String,
     pub message: String,
     pub context: String,
@@ -20,10 +22,15 @@ pub struct ErrorReport {
 }
 
 /// Error analytics and statistics
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Default, Serialize, Clone)]
 pub struct ErrorAnalytics {
     pub error_counts: HashMap<String, usize>,
     pub common_suggestions: HashMap<String, usize>,
+    /// Track errors and recoveries per error type for accurate rate calculation
+    pub error_type_totals: HashMap<String, usize>,
+    pub error_type_recoveries: HashMap<String, usize>,
+    /// Deprecated: Use error_type_totals and error_type_recoveries to calculate rates
+    #[serde(skip)]
     pub recovery_success_rate: HashMap<String, f64>,
     pub error_reports: Vec<ErrorReport>,
     pub total_errors: usize,
@@ -58,9 +65,12 @@ impl ErrorAnalytics {
             *self.common_suggestions.entry(suggestion.clone()).or_insert(0) += 1;
         }
         
+        // Update error type totals
+        *self.error_type_totals.entry(error_type.to_string()).or_insert(0) += 1;
+        
         // Create detailed error report
         let report = ErrorReport {
-            timestamp: SystemTime::now(),
+            timestamp: Some(Utc::now()),
             error_type: error_type.to_string(),
             message: error.to_string(),
             context: format!("{:?}", error.context()),
@@ -78,14 +88,32 @@ impl ErrorAnalytics {
     pub fn record_recovery(&mut self, error_type: &str) {
         self.successful_recoveries += 1;
         
-        // Update recovery success rate
-        let current_rate = self.recovery_success_rate
-            .get(error_type)
-            .copied()
-            .unwrap_or(0.0);
+        // Update recovery count for this error type
+        *self.error_type_recoveries.entry(error_type.to_string()).or_insert(0) += 1;
         
-        let new_rate = (current_rate + 1.0) / 2.0; // Simple moving average
-        self.recovery_success_rate.insert(error_type.to_string(), new_rate);
+        // Calculate accurate recovery rate: recoveries / total_errors for this type
+        let total_errors_for_type = self.error_type_totals.get(error_type).copied().unwrap_or(0);
+        let recoveries_for_type = self.error_type_recoveries.get(error_type).copied().unwrap_or(0);
+        
+        let rate = if total_errors_for_type > 0 {
+            recoveries_for_type as f64 / total_errors_for_type as f64
+        } else {
+            0.0
+        };
+        
+        self.recovery_success_rate.insert(error_type.to_string(), rate);
+    }
+    
+    /// Get the recovery rate for a specific error type
+    pub fn get_recovery_rate(&self, error_type: &str) -> f64 {
+        let total_errors = self.error_type_totals.get(error_type).copied().unwrap_or(0);
+        let recoveries = self.error_type_recoveries.get(error_type).copied().unwrap_or(0);
+        
+        if total_errors > 0 {
+            (recoveries as f64 / total_errors as f64) * 100.0
+        } else {
+            0.0
+        }
     }
     
     /// Generate a comprehensive analytics report
@@ -162,26 +190,57 @@ impl ErrorAnalytics {
     }
     
     /// Get error trends over time
-    pub fn get_error_trends(&self) -> HashMap<String, Vec<usize>> {
-        let mut trends: HashMap<String, Vec<usize>> = HashMap::new();
+    /// 
+    /// Returns a HashMap where keys are error types and values are HashMaps of hour -> count.
+    /// This is more memory-efficient than using Vec<usize> for sparse data.
+    pub fn get_error_trends(&self) -> HashMap<String, HashMap<u64, usize>> {
+        let mut trends: HashMap<String, HashMap<u64, usize>> = HashMap::new();
         
-        // Group errors by hour (simplified)
+        // Group errors by hour, using HashMap for efficient sparse storage
         for report in &self.error_reports {
             let error_type = &report.error_type;
-            // Handle timestamps before UNIX_EPOCH gracefully
-            let hour = match report.timestamp.duration_since(SystemTime::UNIX_EPOCH) {
-                Ok(duration) => duration.as_secs() / 3600, // Hours since epoch
-                Err(_) => {
-                    // Timestamp is before UNIX_EPOCH, skip this entry
-                    continue;
-                }
+            
+            // Extract hour from timestamp
+            let hour = if let Some(timestamp) = &report.timestamp {
+                timestamp.timestamp() as u64 / 3600 // Hours since epoch
+            } else {
+                // Skip reports without valid timestamps
+                continue;
             };
             
+            // Use HashMap for sparse hour-based storage (more memory efficient)
             let trend = trends.entry(error_type.clone()).or_default();
-            if trend.len() <= hour as usize {
-                trend.resize(hour as usize + 1, 0);
+            *trend.entry(hour).or_insert(0) += 1;
+        }
+        
+        trends
+    }
+    
+    /// Get error trends for a specific time window (last N hours)
+    /// 
+    /// This is more useful than get_error_trends() as it limits memory usage
+    /// and focuses on recent errors.
+    pub fn get_error_trends_window(&self, hours: u64) -> HashMap<String, HashMap<u64, usize>> {
+        let mut trends: HashMap<String, HashMap<u64, usize>> = HashMap::new();
+        let now_hour = Utc::now().timestamp() as u64 / 3600;
+        let cutoff_hour = now_hour.saturating_sub(hours);
+        
+        for report in &self.error_reports {
+            let error_type = &report.error_type;
+            
+            let hour = if let Some(timestamp) = &report.timestamp {
+                timestamp.timestamp() as u64 / 3600
+            } else {
+                continue;
+            };
+            
+            // Only include errors within the time window
+            if hour < cutoff_hour {
+                continue;
             }
-            trend[hour as usize] += 1;
+            
+            let trend = trends.entry(error_type.clone()).or_default();
+            *trend.entry(hour).or_insert(0) += 1;
         }
         
         trends
@@ -196,6 +255,8 @@ impl ErrorAnalytics {
     pub fn clear(&mut self) {
         self.error_counts.clear();
         self.common_suggestions.clear();
+        self.error_type_totals.clear();
+        self.error_type_recoveries.clear();
         self.recovery_success_rate.clear();
         self.error_reports.clear();
         self.total_errors = 0;
@@ -259,6 +320,38 @@ impl Default for ErrorAnalyticsManager {
     }
 }
 
+/// Global error analytics manager singleton
+static GLOBAL_ERROR_ANALYTICS: OnceLock<Mutex<ErrorAnalyticsManager>> = OnceLock::new();
+
+impl ErrorAnalyticsManager {
+    /// Get or initialize the global error analytics manager
+    pub fn global() -> &'static Mutex<ErrorAnalyticsManager> {
+        GLOBAL_ERROR_ANALYTICS.get_or_init(|| Mutex::new(ErrorAnalyticsManager::new()))
+    }
+    
+    /// Record an error to the global analytics manager
+    pub fn record_global_error(error: &ArxError, operation: Option<String>) {
+        if let Ok(mut manager) = Self::global().lock() {
+            manager.record_error(error, operation);
+        }
+    }
+    
+    /// Record a recovery to the global analytics manager
+    pub fn record_global_recovery(error_type: &str) {
+        if let Ok(mut manager) = Self::global().lock() {
+            manager.record_recovery(error_type);
+        }
+    }
+    
+    /// Get a snapshot of global analytics (for reporting)
+    pub fn get_global_analytics() -> Option<ErrorAnalytics> {
+        Self::global().lock().ok().map(|manager| {
+            // Clone the analytics data for reporting
+            manager.get_analytics().clone()
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -281,10 +374,20 @@ mod tests {
     fn test_recovery_recording() {
         let mut analytics = ErrorAnalytics::new();
         
+        // Record an error first
+        let error = ArxError::ifc_processing("Test error");
+        analytics.record_error(&error, None);
+        
+        // Record a recovery
         analytics.record_recovery("IFC Processing");
         
         assert_eq!(analytics.successful_recoveries, 1);
-        assert!(analytics.recovery_success_rate.get("IFC Processing").is_some());
+        assert_eq!(analytics.error_type_totals.get("IFC Processing"), Some(&1));
+        assert_eq!(analytics.error_type_recoveries.get("IFC Processing"), Some(&1));
+        
+        // Check recovery rate calculation
+        let rate = analytics.get_recovery_rate("IFC Processing");
+        assert_eq!(rate, 100.0); // 1 recovery / 1 error = 100%
     }
     
     #[test]
@@ -313,5 +416,29 @@ mod tests {
         
         // Should not record when disabled
         assert_eq!(manager.get_analytics().total_errors, 1);
+    }
+    
+    #[test]
+    fn test_global_analytics() {
+        let error = ArxError::io_error("Test error");
+        ErrorAnalyticsManager::record_global_error(&error, Some("test_op".to_string()));
+        
+        if let Some(analytics) = ErrorAnalyticsManager::get_global_analytics() {
+            assert_eq!(analytics.total_errors, 1);
+        }
+    }
+    
+    #[test]
+    fn test_error_trends_window() {
+        let mut analytics = ErrorAnalytics::new();
+        
+        let error = ArxError::ifc_processing("Test error");
+        analytics.record_error(&error, None);
+        
+        // Get trends for last 24 hours
+        let trends = analytics.get_error_trends_window(24);
+        
+        // Should have at least one error type
+        assert!(!trends.is_empty());
     }
 }

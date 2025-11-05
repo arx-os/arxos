@@ -26,6 +26,34 @@ pub struct BoundingBox {
     pub max: Position,
 }
 
+impl BoundingBox {
+    /// Create a new bounding box with validation
+    /// 
+    /// # Arguments
+    /// 
+    /// * `min` - Minimum position (should be less than max in all dimensions)
+    /// * `max` - Maximum position (should be greater than min in all dimensions)
+    /// 
+    /// # Panics
+    /// 
+    /// Panics if `min` is not less than `max` in any dimension (debug builds only).
+    /// In release builds, invalid bounding boxes are allowed but may cause issues.
+    pub fn new(min: Position, max: Position) -> Self {
+        debug_assert!(
+            min.x <= max.x && min.y <= max.y && min.z <= max.z,
+            "BoundingBox min must be <= max in all dimensions"
+        );
+        Self { min, max }
+    }
+    
+    /// Validate that the bounding box is well-formed
+    /// 
+    /// Returns `true` if `min <= max` in all dimensions, `false` otherwise.
+    pub fn is_valid(&self) -> bool {
+        self.min.x <= self.max.x && self.min.y <= self.max.y && self.min.z <= self.max.z
+    }
+}
+
 /// Spatial properties of an entity
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpatialProperties {

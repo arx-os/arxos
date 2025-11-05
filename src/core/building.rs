@@ -59,9 +59,31 @@ impl Building {
     }
     
     /// Add a floor to the building
+    /// 
+    /// # Panics
+    /// 
+    /// Panics in debug builds if a floor with the same level already exists.
+    /// In release builds, duplicate floors are allowed but may cause issues.
     pub fn add_floor(&mut self, floor: Floor) {
+        debug_assert!(
+            !self.floors.iter().any(|f| f.level == floor.level),
+            "Floor with level {} already exists in building",
+            floor.level
+        );
         self.floors.push(floor);
         self.updated_at = Utc::now();
+    }
+    
+    /// Add a floor to the building with validation
+    /// 
+    /// Returns `Err` if a floor with the same level already exists.
+    pub fn try_add_floor(&mut self, floor: Floor) -> Result<(), String> {
+        if self.floors.iter().any(|f| f.level == floor.level) {
+            return Err(format!("Floor with level {} already exists", floor.level));
+        }
+        self.floors.push(floor);
+        self.updated_at = Utc::now();
+        Ok(())
     }
     
     /// Find a floor by level

@@ -38,6 +38,8 @@ struct BrowserState {
     filter: String,
     show_details: bool,
     help_system: HelpSystem,
+    // Reserved for future mouse interaction support
+    #[allow(dead_code)]
     mouse_config: MouseConfig,
 }
 

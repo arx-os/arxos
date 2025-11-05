@@ -192,9 +192,6 @@ pub fn extract_email_from_author(author: &str) -> Option<String> {
     None
 }
 
-fn display_commit_history(commits: &[CommitInfo], verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
-    display_commit_history_with_users(commits, verbose, None)
-}
 
 /// Display commit history with user info from registry
 fn display_commit_history_with_users(

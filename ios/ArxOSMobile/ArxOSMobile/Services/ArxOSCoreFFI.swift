@@ -599,14 +599,19 @@ class ArxOSCoreFFI {
     ///   - scanData: AR scan data to save and process
     ///   - buildingName: Name of building for context
     ///   - confidenceThreshold: Minimum confidence score (0.0-1.0) to create pending items
+    ///   - userEmail: Optional user email from UserProfile (can be nil for backward compatibility)
     ///   - completion: Completion handler with ARScanSaveResult or Error
     func saveARScan(
         scanData: ARScanData,
         buildingName: String,
         confidenceThreshold: Double = 0.7,
+        userEmail: String? = nil,
         completion: @escaping (Result<ARScanSaveResult, Error>) -> Void
     ) {
         DispatchQueue.global().async {
+            // Get user email from UserProfile if not provided (optional for backward compatibility)
+            let finalUserEmail = userEmail ?? UserProfile.load()?.email
+            
             // Convert ARScanData to JSON
             guard let jsonData = try? JSONEncoder().encode(scanData),
                   let jsonString = String(data: jsonData, encoding: .utf8),
@@ -618,9 +623,14 @@ class ArxOSCoreFFI {
                 return
             }
             
+            // Convert user email to C string (can be nil for backward compatibility)
+            let userEmailCString = finalUserEmail?.cString(using: .utf8)
+            
             let resultPtr = jsonCString.withUnsafeBufferPointer { jsonBuffer in
                 buildingCString.withUnsafeBufferPointer { buildingBuffer in
-                    arxos_save_ar_scan(jsonBuffer.baseAddress, buildingBuffer.baseAddress, confidenceThreshold)
+                    userEmailCString?.withUnsafeBufferPointer { emailBuffer in
+                        arxos_save_ar_scan(jsonBuffer.baseAddress, buildingBuffer.baseAddress, emailBuffer.baseAddress, confidenceThreshold)
+                    } ?? arxos_save_ar_scan(jsonBuffer.baseAddress, buildingBuffer.baseAddress, nil, confidenceThreshold)
                 }
             }
             
@@ -713,14 +723,19 @@ class ArxOSCoreFFI {
     ///   - buildingName: Name of building
     ///   - pendingId: ID of pending equipment to confirm
     ///   - commitToGit: Whether to commit changes to Git
+    ///   - userEmail: Optional user email from UserProfile (can be nil for backward compatibility)
     ///   - completion: Completion handler with PendingEquipmentConfirmResult or Error
     func confirmPendingEquipment(
         buildingName: String,
         pendingId: String,
         commitToGit: Bool = true,
+        userEmail: String? = nil,
         completion: @escaping (Result<PendingEquipmentConfirmResult, Error>) -> Void
     ) {
         DispatchQueue.global().async {
+            // Get user email from UserProfile if not provided (optional for backward compatibility)
+            let finalUserEmail = userEmail ?? UserProfile.load()?.email
+            
             guard let buildingCString = buildingName.cString(using: .utf8),
                   let pendingIdCString = pendingId.cString(using: .utf8) else {
                 DispatchQueue.main.async {
@@ -729,9 +744,14 @@ class ArxOSCoreFFI {
                 return
             }
             
+            // Convert user email to C string (can be nil for backward compatibility)
+            let userEmailCString = finalUserEmail?.cString(using: .utf8)
+            
             let resultPtr = buildingCString.withUnsafeBufferPointer { buildingBuffer in
                 pendingIdCString.withUnsafeBufferPointer { pendingBuffer in
-                    arxos_confirm_pending_equipment(buildingBuffer.baseAddress, pendingBuffer.baseAddress, commitToGit ? 1 : 0)
+                    userEmailCString?.withUnsafeBufferPointer { emailBuffer in
+                        arxos_confirm_pending_equipment(buildingBuffer.baseAddress, pendingBuffer.baseAddress, emailBuffer.baseAddress, commitToGit ? 1 : 0)
+                    } ?? arxos_confirm_pending_equipment(buildingBuffer.baseAddress, pendingBuffer.baseAddress, nil, commitToGit ? 1 : 0)
                 }
             }
             

@@ -26,7 +26,7 @@ fn test_pending_equipment_creation() {
     };
     
     let mut manager = PendingEquipmentManager::new("test".to_string());
-    let result = manager.add_pending_equipment(&detected, "scan_1", 1, Some("Room 101"), 0.8);
+    let result = manager.add_pending_equipment(&detected, "scan_1", 1, Some("Room 101"), 0.8, None);
     
     assert!(result.is_ok());
     let pending_list = manager.list_pending();
@@ -50,7 +50,7 @@ fn test_confidence_filtering() {
     };
     
     let mut manager = PendingEquipmentManager::new("test".to_string());
-    let result = manager.add_pending_equipment(&low_confidence, "scan_1", 1, None, 0.8);
+    let result = manager.add_pending_equipment(&low_confidence, "scan_1", 1, None, 0.8, None);
     
     // Should return None for low confidence
     if let Ok(Some(_)) = result {
@@ -91,8 +91,8 @@ fn test_batch_operations() {
     
     let mut manager = PendingEquipmentManager::new("test".to_string());
     
-    let id1 = manager.add_pending_equipment(&detected1, "scan_1", 1, None, 0.8).unwrap().unwrap();
-    let id2 = manager.add_pending_equipment(&detected2, "scan_1", 1, None, 0.8).unwrap().unwrap();
+    let id1 = manager.add_pending_equipment(&detected1, "scan_1", 1, None, 0.8, None).unwrap().unwrap();
+    let id2 = manager.add_pending_equipment(&detected2, "scan_1", 1, None, 0.8, None).unwrap().unwrap();
     
     assert_eq!(manager.list_pending().len(), 2);
     

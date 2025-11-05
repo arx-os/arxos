@@ -5,7 +5,6 @@
 use crate::yaml::{BuildingData, EquipmentData, RoomData};
 use crate::hardware::SensorData;
 use super::types::{ColumnDefinition, CellValue, CellType, ValidationRule};
-use std::collections::HashMap;
 
 /// Trait for data sources that provide spreadsheet data
 pub trait SpreadsheetDataSource: Send + Sync {
@@ -538,6 +537,7 @@ impl SpreadsheetDataSource for RoomDataSource {
 /// of the basic spreadsheet interface.
 pub struct SensorDataSource {
     sensor_data: Vec<SensorData>,
+    #[allow(dead_code)]
     building_name: String,
 }
 

@@ -2,7 +2,7 @@
 //!
 //! Handles importing CSV files into spreadsheet
 
-use crate::ui::spreadsheet::types::{CellValue, ColumnDefinition, CellType};
+use crate::ui::spreadsheet::types::{CellValue, ColumnDefinition};
 use crate::ui::spreadsheet::validation::validate_cell;
 use std::path::Path;
 use std::fs::File;

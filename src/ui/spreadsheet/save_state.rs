@@ -3,7 +3,6 @@
 //! Handles save status, auto-save debouncing, and save operations
 
 use std::time::{Instant, Duration};
-use crate::ui::spreadsheet::data_source::SpreadsheetDataSource;
 
 /// Save state
 #[derive(Debug, Clone, PartialEq)]

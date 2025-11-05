@@ -6,13 +6,13 @@
 //! - Action buttons for error handling
 
 use crate::ui::Theme;
-use crate::error::{ArxError, ErrorDisplay};
+use crate::error::ArxError;
 use crossterm::event::{Event, KeyCode};
 use ratatui::{
-    layout::{Alignment, Constraint, Layout, Rect},
+    layout::{Alignment, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{Block, Borders, Paragraph},
 };
 
 /// Error modal state
@@ -153,7 +153,7 @@ pub fn calculate_modal_area(area: Rect) -> Rect {
 /// Render error modal
 pub fn render_error_modal<'a>(
     modal: &'a ErrorModal,
-    area: Rect,
+    _area: Rect,
     theme: &'a Theme,
 ) -> Option<Paragraph<'a>> {
     if !modal.show || modal.error.is_none() {
@@ -410,7 +410,7 @@ mod tests {
         let mut modal = ErrorModal::new();
         modal.show_error(create_test_error());
         modal.next_action();
-        let after_next = modal.selected_action;
+        let _after_next = modal.selected_action;
         
         modal.previous_action();
         assert_eq!(modal.selected_action, 0, "Should wrap to first action");

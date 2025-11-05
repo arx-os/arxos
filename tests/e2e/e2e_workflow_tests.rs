@@ -8,10 +8,10 @@
 use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, RoomData, EquipmentData, EquipmentStatus, CoordinateSystemInfo};
 use arxos::export::ifc::{IFCExporter, IFCSyncState};
 use arxos::export::ar::{ARExporter, ARFormat};
-use arxos::hardware::{EquipmentStatusUpdater, SensorData, SensorMetadata, SensorDataValues, SensorAlert};
+use arxos::hardware::{EquipmentStatusUpdater, SensorData, SensorMetadata, SensorDataValues};
 use arxos::spatial::{Point3D, BoundingBox3D};
+use serial_test::serial;
 use std::fs;
-use std::path::PathBuf;
 use std::collections::HashMap;
 use tempfile::TempDir;
 use chrono::Utc;
@@ -168,8 +168,8 @@ fn test_yaml_to_ifc_export_workflow() {
     assert!(content.contains("IFCAIRTERMINAL") || content.contains("IFCDISTRIBUTIONELEMENT"), "Should contain HVAC equipment");
 }
 
+#[serial]
 #[test]
-#[cfg_attr(feature = "serial", ignore)] // Run sequentially to avoid file locking
 fn test_sensor_ingestion_to_equipment_update_workflow() {
     // Test: Sensor data ingestion → Equipment status update → Alerts
     let temp_dir = TempDir::new().unwrap();
@@ -238,8 +238,8 @@ fn test_sensor_ingestion_to_equipment_update_workflow() {
     std::env::set_current_dir(original_dir).unwrap();
 }
 
+#[serial]
 #[test]
-#[cfg_attr(feature = "serial", ignore)] // Run sequentially to avoid file locking
 fn test_complete_workflow_yaml_ifc_ar_hardware() {
     // Test: Complete workflow combining all subsystems
     let temp_dir = TempDir::new().unwrap();

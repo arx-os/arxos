@@ -3,47 +3,10 @@
 use super::{Room, Equipment, RoomType, EquipmentType, EquipmentStatus};
 use super::types::{Position, Dimensions, BoundingBox, SpatialProperties};
 
-/// Helper function to load building data from current directory
-pub(crate) fn load_building_data_from_dir() -> Result<crate::yaml::BuildingData, Box<dyn std::error::Error>> {
-    // Find YAML files in current directory
-    let yaml_files: Vec<String> = std::fs::read_dir(".")
-        .map_err(|e| format!("Failed to read current directory: {}", e))?
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-            if path.extension()? == "yaml" {
-                path.to_str().map(|s| s.to_string())
-            } else {
-                None
-            }
-        })
-        .collect();
-    
-    let yaml_file = yaml_files.first()
-        .ok_or("No YAML files found in current directory. Run 'arx import <ifc-file>' first.")?;
-    let yaml_content = std::fs::read_to_string(yaml_file)?;
-    let building_data: crate::yaml::BuildingData = serde_yaml::from_str(&yaml_content)?;
-    
-    Ok(building_data)
-}
-
 /// Convert RoomData to Room
 pub(crate) fn room_data_to_room(room_data: &crate::yaml::RoomData) -> Room {
-    let room_type = match room_data.room_type.as_str() {
-        "Classroom" => RoomType::Classroom,
-        "Laboratory" => RoomType::Laboratory,
-        "Office" => RoomType::Office,
-        "Gymnasium" => RoomType::Gymnasium,
-        "Cafeteria" => RoomType::Cafeteria,
-        "Library" => RoomType::Library,
-        "Auditorium" => RoomType::Auditorium,
-        "Hallway" => RoomType::Hallway,
-        "Restroom" => RoomType::Restroom,
-        "Storage" => RoomType::Storage,
-        "Mechanical" => RoomType::Mechanical,
-        "Electrical" => RoomType::Electrical,
-        _ => RoomType::Other(room_data.room_type.clone()),
-    };
+    // Use FromStr trait for parsing
+    let room_type = room_data.room_type.parse().unwrap_or_else(|_| RoomType::Other(room_data.room_type.clone()));
     
     Room {
         id: room_data.id.clone(),
@@ -88,11 +51,23 @@ pub(crate) fn room_data_to_room(room_data: &crate::yaml::RoomData) -> Room {
 pub(crate) fn equipment_to_equipment_data(equipment: &Equipment) -> crate::yaml::EquipmentData {
     use crate::yaml::EquipmentStatus as YamlEquipmentStatus;
     
+    // Derive system_type from equipment_type
+    let system_type = match equipment.equipment_type {
+        EquipmentType::HVAC => "HVAC".to_string(),
+        EquipmentType::Electrical => "ELECTRICAL".to_string(),
+        EquipmentType::Plumbing => "PLUMBING".to_string(),
+        EquipmentType::Safety => "SAFETY".to_string(),
+        EquipmentType::Network => "NETWORK".to_string(),
+        EquipmentType::AV => "AV".to_string(),
+        EquipmentType::Furniture => "FURNITURE".to_string(),
+        EquipmentType::Other(_) => "OTHER".to_string(),
+    };
+    
     crate::yaml::EquipmentData {
         id: equipment.id.clone(),
         name: equipment.name.clone(),
         equipment_type: format!("{:?}", equipment.equipment_type),
-        system_type: "HVAC".to_string(), // Default system type
+        system_type,
         position: crate::spatial::Point3D {
             x: equipment.position.x,
             y: equipment.position.y,

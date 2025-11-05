@@ -3,7 +3,7 @@
 use crate::identity::user::{User, UserRegistryData};
 use std::path::{Path, PathBuf};
 use serde_yaml;
-use log::{info, warn};
+use log::info;
 use thiserror::Error;
 
 /// User registry loaded from Git repository

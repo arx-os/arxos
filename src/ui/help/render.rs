@@ -14,7 +14,7 @@ use ratatui::{
 /// Render help overlay (centered modal)
 pub fn render_help_overlay<'a>(
     context: HelpContext,
-    area: ratatui::layout::Rect,
+    _area: ratatui::layout::Rect,
     theme: &'a Theme,
 ) -> Paragraph<'a> {
     use super::content::get_context_help;

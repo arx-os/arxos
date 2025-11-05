@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use super::{Room, Equipment};
 use super::types::{Position, SpatialQueryResult};
-use super::conversions::{load_building_data_from_dir, room_data_to_room, equipment_to_equipment_data, equipment_data_to_equipment};
+use super::conversions::{room_data_to_room, equipment_to_equipment_data, equipment_data_to_equipment};
 
 /// Create a room in a building
 pub fn create_room(building_name: &str, floor_level: i32, room: Room, commit: bool) -> Result<(), Box<dyn std::error::Error>> {
@@ -40,7 +40,7 @@ pub fn create_room(building_name: &str, floor_level: i32, room: Room, commit: bo
     let room_data = RoomData {
         id: room.id.clone(),
         name: room.name.clone(),
-        room_type: room.room_type.to_string(),
+        room_type: format!("{}", room.room_type),
         area: Some(room.spatial_properties.dimensions.width * room.spatial_properties.dimensions.depth),
         volume: Some(room.spatial_properties.dimensions.width * room.spatial_properties.dimensions.depth * room.spatial_properties.dimensions.height),
         position: crate::spatial::Point3D {
@@ -108,7 +108,29 @@ pub fn add_equipment(building_name: &str, room_name: Option<&str>, equipment: Eq
 }
 
 /// Perform a spatial query
+/// 
+/// **Note:** This function is reserved for future use. Currently, it returns all rooms
+/// and equipment with distance from origin. Full spatial query functionality will be
+/// implemented in a future release.
+/// 
+/// When implemented, this will support queries like:
+/// - Find entities within a bounding box
+/// - Find entities within distance of a point
+/// - Find entities by spatial relationship (contains, intersects, etc.)
+/// 
+/// # Arguments
+/// 
+/// * `_query_type` - Reserved for future query type specification
+/// * `_entity` - Reserved for future entity filtering
+/// * `_params` - Reserved for future query parameters
+/// 
+/// # Returns
+/// 
+/// Currently returns all rooms and equipment with distance from origin.
+#[allow(dead_code)] // Reserved for future spatial query implementation
 pub fn spatial_query(_query_type: &str, _entity: &str, _params: Vec<String>) -> Result<Vec<SpatialQueryResult>, Box<dyn std::error::Error>> {
+    use crate::persistence::load_building_data_from_dir;
+    
     let building_data = load_building_data_from_dir()?;
     let mut results = Vec::new();
     
@@ -153,8 +175,9 @@ pub fn spatial_query(_query_type: &str, _entity: &str, _params: Vec<String>) -> 
 /// # Arguments
 /// * `building_name` - Optional building name to filter by. If None, loads from current directory.
 pub fn list_rooms(building_name: Option<&str>) -> Result<Vec<Room>, Box<dyn std::error::Error>> {
+    use crate::persistence::{PersistenceManager, load_building_data_from_dir};
+    
     let building_data = if let Some(building) = building_name {
-        use crate::persistence::PersistenceManager;
         let persistence = PersistenceManager::new(building)?;
         persistence.load_building_data()?
     } else {
@@ -178,8 +201,9 @@ pub fn list_rooms(building_name: Option<&str>) -> Result<Vec<Room>, Box<dyn std:
 /// * `building_name` - Optional building name to filter by. If None, loads from current directory.
 /// * `room_name` - Name or ID of the room to retrieve.
 pub fn get_room(building_name: Option<&str>, room_name: &str) -> Result<Room, Box<dyn std::error::Error>> {
+    use crate::persistence::{PersistenceManager, load_building_data_from_dir};
+    
     let building_data = if let Some(building) = building_name {
-        use crate::persistence::PersistenceManager;
         let persistence = PersistenceManager::new(building)?;
         persistence.load_building_data()?
     } else {
@@ -267,8 +291,9 @@ pub fn delete_room_impl(building_name: &str, room_id: &str, commit: bool) -> Res
 /// # Arguments
 /// * `building_name` - Optional building name to filter by. If None, loads from current directory.
 pub fn list_equipment(building_name: Option<&str>) -> Result<Vec<Equipment>, Box<dyn std::error::Error>> {
+    use crate::persistence::{PersistenceManager, load_building_data_from_dir};
+    
     let building_data = if let Some(building) = building_name {
-        use crate::persistence::PersistenceManager;
         let persistence = PersistenceManager::new(building)?;
         persistence.load_building_data()?
     } else {
@@ -309,6 +334,18 @@ pub fn update_equipment_impl(building_name: &str, equipment_id: &str, updates: H
         return Err(format!("Equipment '{}' not found", equipment_id).into());
     }
     
+    // Get the updated equipment data before saving
+    let equipment_data = {
+        let mut found_equipment = None;
+        for floor in &building_data.floors {
+            if let Some(equipment) = floor.equipment.iter().find(|e| e.id == equipment_id || e.name == equipment_id) {
+                found_equipment = Some(equipment.clone());
+                break;
+            }
+        }
+        found_equipment.ok_or_else(|| format!("Equipment '{}' not found", equipment_id))?
+    };
+    
     // Save
     if commit {
         persistence.save_and_commit(&building_data, Some(&format!("Update equipment: {}", equipment_id)))?;
@@ -316,15 +353,8 @@ pub fn update_equipment_impl(building_name: &str, equipment_id: &str, updates: H
         persistence.save_building_data(&building_data)?;
     }
     
-    // Return updated equipment
-    let building_data_final = persistence.load_building_data()?;
-    for floor in &building_data_final.floors {
-        if let Some(equipment_data) = floor.equipment.iter().find(|e| e.id == equipment_id || e.name == equipment_id) {
-            return Ok(equipment_data_to_equipment(equipment_data));
-        }
-    }
-    
-    Err(format!("Equipment '{}' not found", equipment_id).into())
+    // Convert the updated equipment data directly (no need to reload)
+    Ok(equipment_data_to_equipment(&equipment_data))
 }
 
 /// Remove equipment from a building
@@ -359,16 +389,76 @@ pub fn remove_equipment_impl(building_name: &str, equipment_id: &str, commit: bo
 }
 
 /// Set spatial relationship between entities
+/// 
+/// **Note:** This function is reserved for future use. Currently, spatial relationships
+/// are tracked implicitly through bounding boxes. Full relationship management will be
+/// implemented in a future release.
+/// 
+/// When implemented, this will allow explicit relationships like:
+/// - Adjacency (rooms next to each other)
+/// - Containment (equipment within rooms)
+/// - Connectivity (equipment connected to other equipment)
+/// 
+/// # Arguments
+/// 
+/// * `entity1` - First entity identifier
+/// * `entity2` - Second entity identifier
+/// * `relationship` - Type of relationship to establish
+/// 
+/// # Returns
+/// 
+/// Currently returns a formatted message indicating the relationship would be set.
+#[allow(dead_code)] // Reserved for future spatial relationship implementation
 pub fn set_spatial_relationship(entity1: &str, entity2: &str, relationship: &str) -> Result<String, Box<dyn std::error::Error>> {
     Ok(format!("Relationship '{}' set between '{}' and '{}' (spatial relationships tracked in bounding boxes)", relationship, entity1, entity2))
 }
 
 /// Transform coordinates between coordinate systems
+/// 
+/// **Note:** This function is reserved for future use. Currently, all coordinates
+/// are in the "building_local" system. Full coordinate transformation support will
+/// be implemented in a future release.
+/// 
+/// When implemented, this will support transformations between:
+/// - Building local coordinates
+/// - World coordinates (GPS/lat-lon)
+/// - UTM coordinates
+/// - Custom coordinate systems
+/// 
+/// # Arguments
+/// 
+/// * `from` - Source coordinate system
+/// * `to` - Target coordinate system
+/// * `entity` - Entity identifier to transform
+/// 
+/// # Returns
+/// 
+/// Currently returns a formatted message indicating the transformation would be completed.
+#[allow(dead_code)] // Reserved for future coordinate transformation implementation
 pub fn transform_coordinates(from: &str, to: &str, entity: &str) -> Result<String, Box<dyn std::error::Error>> {
     Ok(format!("Coordinate transformation '{}' to '{}' for entity '{}' completed (all coordinates in building_local system)", from, to, entity))
 }
 
 /// Validate spatial data for entities
+/// 
+/// **Note:** This function is reserved for future use. Currently, it performs basic
+/// existence checks. Full spatial validation will be implemented in a future release.
+/// 
+/// When implemented, this will validate:
+/// - Bounding box integrity (min < max in all dimensions)
+/// - Spatial consistency (entities within parent bounds)
+/// - Overlap detection
+/// - Coordinate system validity
+/// 
+/// # Arguments
+/// 
+/// * `entity` - Optional entity name to validate. If None, validates all entities.
+/// * `tolerance` - Optional tolerance for floating-point comparisons.
+/// 
+/// # Returns
+/// 
+/// Currently returns a formatted message indicating validation status.
+#[allow(dead_code)] // Reserved for future spatial validation implementation
 pub fn validate_spatial(entity: Option<&str>, tolerance: Option<f64>) -> Result<String, Box<dyn std::error::Error>> {
     let tol = tolerance.unwrap_or(0.001);
     let validation_result = match entity {
@@ -431,12 +521,29 @@ pub fn update_room(room_id: &str, property: Vec<String>) -> Result<Room, Box<dyn
 }
 
 /// Delete a room (compatibility wrapper - uses first building found in current directory)
+/// 
+/// This function attempts to determine the building name from YAML files in the
+/// current directory. For better reliability, use `delete_room_impl` with an explicit
+/// building name.
 pub fn delete_room(room_id: &str) -> Result<(), Box<dyn std::error::Error>> {
-    delete_room_impl("", room_id, false)
+    use crate::persistence::load_building_data_from_dir;
+    
+    // Determine building name from YAML file in current directory
+    let building_data = load_building_data_from_dir()
+        .map_err(|e| format!("Failed to load building data: {}", e))?;
+    
+    let building_name = &building_data.building.name;
+    delete_room_impl(building_name, room_id, false)
 }
 
 /// Update equipment (compatibility wrapper)
+/// 
+/// This function attempts to determine the building name from YAML files in the
+/// current directory. For better reliability, use `update_equipment_impl` with an explicit
+/// building name.
 pub fn update_equipment(equipment_id: &str, property: Vec<String>) -> Result<Equipment, Box<dyn std::error::Error>> {
+    use crate::persistence::load_building_data_from_dir;
+    
     // Parse properties into HashMap
     let mut updates = HashMap::new();
     for prop in property {
@@ -445,12 +552,27 @@ pub fn update_equipment(equipment_id: &str, property: Vec<String>) -> Result<Equ
         }
     }
     
-    // Use first building file found
-    update_equipment_impl("", equipment_id, updates, false)
+    // Determine building name from YAML file in current directory
+    let building_data = load_building_data_from_dir()
+        .map_err(|e| format!("Failed to load building data: {}", e))?;
+    
+    let building_name = &building_data.building.name;
+    update_equipment_impl(building_name, equipment_id, updates, false)
 }
 
 /// Remove equipment (compatibility wrapper)
+/// 
+/// This function attempts to determine the building name from YAML files in the
+/// current directory. For better reliability, use `remove_equipment_impl` with an explicit
+/// building name.
 pub fn remove_equipment(equipment_id: &str) -> Result<(), Box<dyn std::error::Error>> {
-    remove_equipment_impl("", equipment_id, false)
+    use crate::persistence::load_building_data_from_dir;
+    
+    // Determine building name from YAML file in current directory
+    let building_data = load_building_data_from_dir()
+        .map_err(|e| format!("Failed to load building data: {}", e))?;
+    
+    let building_name = &building_data.building.name;
+    remove_equipment_impl(building_name, equipment_id, false)
 }
 

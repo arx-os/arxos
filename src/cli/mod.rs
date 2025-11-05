@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 #[derive(Parser)]
 #[command(name = "arx")]
 #[command(about = "ArxOS - Git for Buildings")]
-#[command(version = "0.1.0")]
+#[command(version = env!("CARGO_PKG_VERSION"))]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -139,8 +139,15 @@ pub enum Commands {
         /// Show equipment connections
         #[arg(long)]
         show_connections: bool,
-        /// Target FPS for rendering
-        #[arg(long, default_value = "30")]
+        /// Target FPS for rendering (1-240)
+        #[arg(long, default_value = "30", value_parser = |s: &str| -> Result<u32, String> {
+            let val: u32 = s.parse().map_err(|_| format!("must be a number between 1 and 240"))?;
+            if val < 1 || val > 240 {
+                Err(format!("FPS must be between 1 and 240, got {}", val))
+            } else {
+                Ok(val)
+            }
+        })]
         fps: u32,
         /// Show FPS counter
         #[arg(long)]
@@ -202,8 +209,15 @@ pub enum Commands {
     },
     /// Show commit history
     History {
-        /// Number of commits to show
-        #[arg(long, default_value = "10")]
+        /// Number of commits to show (1-1000)
+        #[arg(long, default_value = "10", value_parser = |s: &str| -> Result<usize, String> {
+            let val: usize = s.parse().map_err(|_| format!("must be a number between 1 and 1000"))?;
+            if val < 1 || val > 1000 {
+                Err(format!("Limit must be between 1 and 1000, got {}", val))
+            } else {
+                Ok(val)
+            }
+        })]
         limit: usize,
         /// Show detailed commit information
         #[arg(long)]
@@ -253,7 +267,15 @@ pub enum Commands {
         floor: Option<i32>,
         #[arg(long)]
         room: Option<String>,
-        #[arg(long, default_value = "5")]
+        /// Refresh interval in seconds (1-3600)
+        #[arg(long, default_value = "5", value_parser = |s: &str| -> Result<u64, String> {
+            let val: u64 = s.parse().map_err(|_| format!("must be a number between 1 and 3600"))?;
+            if val < 1 || val > 3600 {
+                Err(format!("Refresh interval must be between 1 and 3600 seconds, got {}", val))
+            } else {
+                Ok(val)
+            }
+        })]
         refresh_interval: u64,
         #[arg(long)]
         sensors_only: bool,
@@ -281,8 +303,15 @@ pub enum Commands {
         /// Use regex pattern matching
         #[arg(long)]
         regex: bool,
-        /// Maximum number of results
-        #[arg(long, default_value = "50")]
+        /// Maximum number of results (1-10000)
+        #[arg(long, default_value = "50", value_parser = |s: &str| -> Result<usize, String> {
+            let val: usize = s.parse().map_err(|_| format!("must be a number between 1 and 10000"))?;
+            if val < 1 || val > 10000 {
+                Err(format!("Limit must be between 1 and 10000, got {}", val))
+            } else {
+                Ok(val)
+            }
+        })]
         limit: usize,
         /// Show detailed results
         #[arg(long)]
@@ -292,6 +321,9 @@ pub enum Commands {
         interactive: bool,
     },
     /// Integrate AR scan data
+    /// 
+    /// **Note:** This command directly integrates AR scans without user review.
+    /// For mobile apps, consider using `ar pending` workflow instead.
     ArIntegrate {
         /// AR scan data file (JSON)
         #[arg(long)]
@@ -345,8 +377,15 @@ pub enum Commands {
         #[arg(long, default_value = "127.0.0.1")]
         host: String,
         
-        /// Port to listen on
-        #[arg(long, default_value = "3000")]
+        /// Port to listen on (1-65535)
+        #[arg(long, default_value = "3000", value_parser = |s: &str| -> Result<u16, String> {
+            let val: u16 = s.parse().map_err(|_| format!("must be a number between 1 and 65535"))?;
+            if val == 0 {
+                Err(format!("Port must be between 1 and 65535, got 0"))
+            } else {
+                Ok(val)
+            }
+        })]
         port: u16,
     },
     /// Start MQTT subscriber for real-time sensor data ingestion

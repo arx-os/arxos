@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
-use log::{info, warn};
+use log::info;
 use thiserror::Error;
 
 /// Status of a pending user request

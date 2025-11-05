@@ -175,7 +175,7 @@ mod tests {
     #[test]
     fn test_sync_state_timestamp_updates() {
         let temp_dir = TempDir::new().unwrap();
-        let state_path = temp_dir.path().join("test-sync-state.json");
+        let _state_path = temp_dir.path().join("test-sync-state.json");
         
         let mut state = IFCSyncState::new(PathBuf::from("test.ifc"));
         let initial_timestamp = state.last_export_timestamp;

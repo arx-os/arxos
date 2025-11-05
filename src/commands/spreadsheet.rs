@@ -445,7 +445,7 @@ fn perform_reload(
 /// Perform CSV export (generic for any data source)
 fn perform_export(
     grid: &Grid,
-    data_source: &dyn SpreadsheetDataSource,
+    _data_source: &dyn SpreadsheetDataSource,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use std::path::PathBuf;
     use std::time::SystemTime;
@@ -542,7 +542,7 @@ fn handle_spreadsheet_rooms(
     };
     let mut auto_save = AutoSaveManager::new(debounce_ms);
     let mut last_auto_save_check = Instant::now();
-    let mut clipboard = Clipboard::new();
+    let _clipboard = Clipboard::new();
     
     while !should_quit {
         let terminal_size = terminal_manager.terminal().size()?;
@@ -712,7 +712,7 @@ fn handle_spreadsheet_sensors(
     let file_lock = FileLock::acquire(building_file)?;
     
     // Initialize conflict detector
-    let mut conflict_detector = ConflictDetector::new(building_file)?;
+    let _conflict_detector = ConflictDetector::new(building_file)?;
     
     // Check for active workflows
     let workflow_status = WorkflowStatus::detect();

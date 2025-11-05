@@ -7,7 +7,6 @@ use arxos::export::ar::{ARExporter, ARFormat};
 use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentData, EquipmentStatus, CoordinateSystemInfo};
 use arxos::spatial::{Point3D, BoundingBox3D};
 use std::fs;
-use std::path::PathBuf;
 use std::collections::HashMap;
 use tempfile::TempDir;
 use chrono::Utc;

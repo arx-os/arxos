@@ -1,7 +1,7 @@
 // Fallback IFC parser using custom STEP parsing
 use crate::core::Building;
 use crate::spatial::{Point3D, BoundingBox3D};
-use crate::progress::ProgressContext;
+use crate::utils::progress::ProgressContext;
 use rayon::prelude::*;
 use log::info;
 use std::path::Path;

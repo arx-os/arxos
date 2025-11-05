@@ -227,7 +227,7 @@ pub fn create_room(building_name: String, floor_level: i32, room: RoomInfo, comm
     use crate::core::{Room, RoomType, SpatialProperties, Position as CorePosition, Dimensions, BoundingBox};
     use chrono::Utc;
     
-    let room_type = RoomType::from_string(&room.room_type);
+    let room_type = room.room_type.parse().unwrap_or(RoomType::Other(room.room_type.clone()));
     let spatial_props = SpatialProperties {
         position: CorePosition {
             x: room.position.x,
@@ -450,7 +450,7 @@ pub fn room_to_room_info(room: Room) -> RoomInfo {
     RoomInfo {
         id: room.id.clone(),
         name: room.name.clone(),
-        room_type: room.room_type.to_string(),
+        room_type: format!("{}", room.room_type),
         position: Position {
             x: room.spatial_properties.position.x,
             y: room.spatial_properties.position.y,

@@ -254,3 +254,35 @@ All newly implemented iOS AR integration functionality has comprehensive test co
 
 The codebase maintains high test quality standards with proper organization and documentation.
 
+## User Identity & Attribution Tests
+
+### End-to-End Tests
+- **`tests/integration/user_attribution_e2e_test.rs`** (NEW)
+  - ✅ `test_user_attribution_e2e_ar_scan` - Complete AR scan → Git commit → User attribution flow
+  - ✅ `test_user_attribution_e2e_confirm_equipment` - Equipment confirmation with user attribution
+  - ✅ `test_user_attribution_fallback_to_config` - Backward compatibility testing
+
+### TUI Integration Tests
+- **`tests/tui/users_browser_integration_tests.rs`** (EXPANDED)
+  - ✅ `test_user_registry_creation` - Registry initialization
+  - ✅ `test_user_registry_add_users` - User addition
+  - ✅ `test_registry_case_insensitive_email_lookup` - Email lookup
+  - ✅ `test_user_filtering_by_query` - Search/filter functionality
+  - ✅ `test_organization_grouping` - Organization grouping logic
+  - ✅ `test_user_activity_with_git_commits` - Git commit attribution (NEW)
+  - ✅ `test_user_activity_filtering` - Activity filtering by user_id (NEW)
+  - ✅ `test_user_browser_workflow` - End-to-end browser workflow (NEW)
+  - ✅ `test_user_search_functionality` - Multi-field search (NEW)
+  - ✅ `test_user_verification_status` - Verification status display (NEW)
+
+### FFI Integration Tests
+- **`tests/mobile/mobile_ffi_tests.rs`**
+  - ✅ `test_arxos_save_ar_scan_with_user_email` - User email propagation in AR scans
+  - ✅ `test_arxos_confirm_pending_equipment_with_user_email` - User email in confirmations
+  - ✅ All existing FFI tests updated to include `user_email` parameter
+
+### Android Unit Tests
+- **`android/app/src/test/java/com/arxos/mobile/service/ArxOSCoreJNIWrapperARTest.kt`**
+  - ✅ All mocks updated to include `userEmail` parameter
+  - ✅ Backward compatibility verified (null userEmail supported)
+

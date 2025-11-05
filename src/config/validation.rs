@@ -28,6 +28,67 @@ impl ConfigValidator {
         Ok(())
     }
     
+    /// Validate common configuration rules (shared between relaxed and strict validation)
+    /// 
+    /// This performs validation checks that are common to both relaxed and strict
+    /// validation modes, reducing code duplication.
+    pub fn validate_common(config: &ArxConfig) -> ConfigResult<()> {
+        // Validate user configuration
+        if config.user.name.len() > 100 {
+            return Err(super::ConfigError::ValidationFailed {
+                field: "user.name".to_string(),
+                message: "User name cannot exceed 100 characters".to_string(),
+            });
+        }
+        
+        if !config.user.email.is_empty() && !Self::is_valid_email(&config.user.email) {
+            return Err(super::ConfigError::ValidationFailed {
+                field: "user.email".to_string(),
+                message: "Email must be valid format".to_string(),
+            });
+        }
+        
+        // Validate performance settings
+        if config.performance.max_parallel_threads == 0 {
+            return Err(super::ConfigError::ValidationFailed {
+                field: "performance.max_parallel_threads".to_string(),
+                message: "Must be greater than 0".to_string(),
+            });
+        }
+        
+        if config.performance.max_parallel_threads > 64 {
+            return Err(super::ConfigError::ValidationFailed {
+                field: "performance.max_parallel_threads".to_string(),
+                message: "Cannot exceed 64 threads".to_string(),
+            });
+        }
+        
+        if config.performance.memory_limit_mb == 0 {
+            return Err(super::ConfigError::ValidationFailed {
+                field: "performance.memory_limit_mb".to_string(),
+                message: "Must be greater than 0".to_string(),
+            });
+        }
+        
+        if config.performance.memory_limit_mb > 16384 {
+            return Err(super::ConfigError::ValidationFailed {
+                field: "performance.memory_limit_mb".to_string(),
+                message: "Cannot exceed 16GB (16384 MB)".to_string(),
+            });
+        }
+        
+        // Validate building configuration
+        let valid_coordinate_systems = ["WGS84", "UTM", "LOCAL"];
+        if !valid_coordinate_systems.contains(&config.building.default_coordinate_system.as_str()) {
+            return Err(super::ConfigError::ValidationFailed {
+                field: "building.default_coordinate_system".to_string(),
+                message: format!("Must be one of: {}", valid_coordinate_systems.join(", ")),
+            });
+        }
+        
+        Ok(())
+    }
+    
     /// Validate user configuration
     fn validate_user_config(user: &UserConfig) -> ConfigResult<()> {
         if user.name.trim().is_empty() {

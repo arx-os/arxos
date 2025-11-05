@@ -1,7 +1,7 @@
 //! User management commands for identity registry
 
 use crate::cli::UsersCommands;
-use crate::identity::{User, UserRegistry, PendingUserRequest, PendingUserRegistry};
+use crate::identity::{User, UserRegistry, PendingUserRegistry};
 use crate::git::{GitConfigManager, BuildingGitManager};
 use crate::commands::git_ops::find_git_repository;
 use crate::identity::{is_gpg_available, get_key_fingerprint_for_email};
@@ -336,7 +336,7 @@ fn handle_users_approve(email: String) -> Result<(), Box<dyn std::error::Error>>
     }
     
     // Find pending request
-    let pending_request = pending_registry.find_pending_by_email(&email)
+    let _pending_request = pending_registry.find_pending_by_email(&email)
         .ok_or_else(|| format!("Pending request not found for email: {}", email))?;
     
     // Approve the request

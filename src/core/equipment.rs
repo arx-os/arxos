@@ -63,6 +63,26 @@ pub enum EquipmentStatus {
     Unknown,
 }
 
+impl Default for Equipment {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4().to_string(),
+            name: "Unnamed Equipment".to_string(),
+            path: "/".to_string(),
+            equipment_type: EquipmentType::Other("Unknown".to_string()),
+            position: Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                coordinate_system: "building_local".to_string(),
+            },
+            properties: HashMap::new(),
+            status: EquipmentStatus::Unknown,
+            room_id: None,
+        }
+    }
+}
+
 impl Equipment {
     pub fn new(name: String, path: String, equipment_type: EquipmentType) -> Self {
         Self {

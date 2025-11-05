@@ -221,6 +221,67 @@ impl PersistenceManager {
     }
 }
 
+/// Load building data from the first YAML file found in the current directory
+/// 
+/// This is a convenience function for operations that need to load building data
+/// without a specific building name. It searches the current directory for YAML files
+/// and loads the first one found.
+/// 
+/// **Note**: This function is less robust than `PersistenceManager::load_building_data()`
+/// as it doesn't use path safety checks. For production code, prefer using
+/// `PersistenceManager` with a specific building name.
+/// 
+/// # Returns
+/// 
+/// - `Ok(BuildingData)` if a YAML file is found and loaded successfully
+/// - `Err` if no YAML files are found or if loading fails
+/// 
+/// # Errors
+/// 
+/// - Returns an error if no YAML files are found in the current directory
+/// - Returns an error if file reading or parsing fails
+pub fn load_building_data_from_dir() -> PersistenceResult<BuildingData> {
+    use crate::utils::path_safety::PathSafety;
+    
+    let current_dir = std::env::current_dir()
+        .map_err(|e| PersistenceError::IoError(e))?;
+    
+    // Use path-safe directory reading
+    let yaml_files: Vec<PathBuf> = PathSafety::read_dir_safely(std::path::Path::new("."), &current_dir)
+        .map_err(|e| PersistenceError::ReadError {
+            reason: format!("Failed to read directory: {}", e),
+        })?
+        .into_iter()
+        .filter(|path| {
+            path.extension()
+                .and_then(|s| s.to_str())
+                .map(|ext| ext == "yaml" || ext == "yml")
+                .unwrap_or(false)
+        })
+        .collect();
+    
+    let yaml_file = yaml_files.first()
+        .ok_or_else(|| PersistenceError::FileNotFound {
+            path: "No YAML files found in current directory. Run 'arx import <ifc-file>' first.".to_string(),
+        })?;
+    
+    // Use path-safe file reading
+    let base_dir = yaml_file.parent()
+        .unwrap_or_else(|| Path::new("."));
+    
+    let content = PathSafety::read_file_safely(yaml_file, base_dir)
+        .map_err(|e| PersistenceError::ReadError {
+            reason: format!("Failed to read file {:?}: {}", yaml_file, e),
+        })?;
+    
+    let building_data: BuildingData = serde_yaml::from_str(&content)
+        .map_err(|e| PersistenceError::DeserializationError {
+            reason: format!("Failed to parse YAML: {}", e),
+        })?;
+    
+    Ok(building_data)
+}
+
 /// Find building YAML file in current directory
 fn find_building_file(building_name: &str) -> PersistenceResult<PathBuf> {
     use crate::utils::path_safety::PathSafety;

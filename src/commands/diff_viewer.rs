@@ -225,14 +225,14 @@ fn render_header<'a>(
 /// Render file tree
 fn render_file_tree<'a>(
     state: &'a DiffViewerState,
-    area: Rect,
+    _area: Rect,
     theme: &'a Theme,
 ) -> List<'a> {
     let files = state.get_file_list();
     
     let items: Vec<ListItem> = files.iter()
         .enumerate()
-        .map(|(idx, file)| {
+        .map(|(_idx, file)| {
             let is_selected = state.selected_file.as_ref().map_or(false, |f| f == file);
             let prefix = if is_selected { ">" } else { " " };
             
@@ -280,7 +280,7 @@ fn render_side_by_side_diff<'a>(
             Paragraph::new(vec![
                 Line::from(vec![
                     Span::styled("▶ ", Style::default().fg(theme.accent)),
-                    Span::styled(format!("Hunk {} ({} lines)", state.selected_hunk + 1, hunk.old_lines.len() + hunk.new_lines.len()), Style::default().fg(theme.text)),
+                    Span::styled(format!("Hunk {} (lines {}-{}, {} context)", state.selected_hunk + 1, hunk.start_line, hunk.end_line, hunk.context_lines), Style::default().fg(theme.text)),
                 ]),
             ])
             .block(Block::default().borders(Borders::ALL).title("Diff (Collapsed)"))
@@ -289,7 +289,7 @@ fn render_side_by_side_diff<'a>(
     }
     
     // Split area for old and new
-    let chunks = Layout::default()
+    let _chunks = Layout::default()
         .direction(ratatui::layout::Direction::Horizontal)
         .constraints([
             Constraint::Percentage(50),
@@ -331,7 +331,7 @@ fn render_side_by_side_diff<'a>(
 /// Render unified diff
 fn render_unified_diff<'a>(
     state: &'a DiffViewerState,
-    area: Rect,
+    _area: Rect,
     theme: &'a Theme,
 ) -> Paragraph<'a> {
     if state.hunks.is_empty() || state.selected_hunk >= state.hunks.len() {
@@ -347,7 +347,7 @@ fn render_unified_diff<'a>(
         return Paragraph::new(vec![
             Line::from(vec![
                 Span::styled("▶ ", Style::default().fg(theme.accent)),
-                Span::styled(format!("Hunk {} ({} lines)", state.selected_hunk + 1, hunk.old_lines.len() + hunk.new_lines.len()), Style::default().fg(theme.text)),
+                Span::styled(format!("Hunk {} (lines {}-{}, {} context)", state.selected_hunk + 1, hunk.start_line, hunk.end_line, hunk.context_lines), Style::default().fg(theme.text)),
             ]),
         ])
         .block(Block::default().borders(Borders::ALL).title("Diff (Collapsed)"))

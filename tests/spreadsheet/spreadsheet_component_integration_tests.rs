@@ -7,15 +7,12 @@
 //! - Filter/Sort integration with grid navigation
 
 use arxos::ui::spreadsheet::{
-    Grid, Cell, CellValue, CellType, ColumnDefinition, ValidationRule,
-    FilterCondition, SortOrder,
+    Grid, CellValue, CellType, ColumnDefinition, ValidationRule,
+    FilterCondition,
     validation::validate_cell,
-    editor::{CellEditor, EditorAction, EditState},
+    editor::{CellEditor, EditState},
     undo_redo::UndoRedoManager,
-    filter_sort,
-    types::{ColumnFilter, ColumnSort},
 };
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 /// Helper to create a test grid with equipment columns
 fn create_test_grid() -> Grid {
@@ -65,7 +62,7 @@ fn create_test_grid() -> Grid {
 
 #[test]
 fn test_grid_editor_validation_integration() {
-    let mut grid = create_test_grid();
+    let grid = create_test_grid();
     
     // Start editing a cell
     let column = &grid.columns[1]; // Name column
@@ -164,7 +161,7 @@ fn test_edit_workflow_cancel() {
 
 #[test]
 fn test_validation_error_integration() {
-    let mut grid = create_test_grid();
+    let grid = create_test_grid();
     
     // Try to edit with invalid value (empty for required field)
     let column = &grid.columns[1]; // Required name field
@@ -172,7 +169,7 @@ fn test_validation_error_integration() {
     let mut editor = CellEditor::new(column.clone(), cell.value);
     
     // Clear the value (simulate backspace)
-    let current = editor.get_current_value();
+    let _current = editor.get_current_value();
     // For required field, empty should fail
     let validation_result = validate_cell(&"".to_string(), column);
     

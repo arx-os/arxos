@@ -357,7 +357,7 @@ pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeP
             };
             
             // Process to pending
-            match processing::process_ar_scan_to_pending(&processing_scan, &building_str, confidence_threshold) {
+            match processing::process_ar_scan_to_pending(&processing_scan, &building_str, confidence_threshold, None) {
                 Ok(pending_ids) => {
                     let response = serde_json::json!({
                         "success": true,
@@ -604,17 +604,22 @@ pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeS
     _class: JClass,
     json_data: JString,
     building_name: JString,
+    user_email: JString,  // NEW: User email from mobile app (can be null for backward compatibility)
     confidence_threshold: f64
 ) -> jstring {
-    use crate::ar_integration::processing;
-    use crate::spatial::Point3D;
-    use chrono::Utc;
-    use std::fs;
-    use std::path::PathBuf;
+    use std::ffi::CString;
+    use crate::mobile_ffi::ffi::arxos_save_ar_scan;
     
     // Extract parameters safely
     let json_str = java_string_to_rust(&env, json_data);
     let building_str = java_string_to_rust(&env, building_name);
+    
+    // Extract user_email (optional - can be null)
+    let user_email_str = if user_email.is_null() {
+        String::new()
+    } else {
+        java_string_to_rust(&env, user_email)
+    };
     
     // Check if extraction failed
     if json_str.is_empty() || building_str.is_empty() {
@@ -623,103 +628,63 @@ pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeS
         }
     }
     
-    // Validate confidence threshold
-    if confidence_threshold < 0.0 || confidence_threshold > 1.0 {
-        let error_json = format!(
-            r#"{{"success":false,"error":"Confidence threshold must be between 0.0 and 1.0, got: {}"}}"#,
-            confidence_threshold
-        );
-        return rust_string_to_java(&env, &error_json);
-    }
-    
-    // Parse AR scan from mobile FFI format
-    let mobile_scan = match crate::mobile_ffi::parse_ar_scan(&json_str) {
-        Ok(scan) => scan,
+    // Convert to C strings for FFI call
+    let json_cstr = match CString::new(json_str) {
+        Ok(s) => s,
         Err(e) => {
-            let error_json = format!(r#"{{"success":false,"error":"Failed to parse AR scan JSON: {}"}}"#, e);
+            let error_json = format!(r#"{{"success":false,"error":"Failed to create C string from JSON: {}"}}"#, e);
             return rust_string_to_java(&env, &error_json);
         }
     };
     
-    // Optionally save raw scan data to file for debugging/audit
-    let scan_timestamp = Utc::now();
-    let scan_save_result = {
-        let scan_dir = PathBuf::from(format!("{}_scans", building_str));
-        if let Err(_) = fs::create_dir_all(&scan_dir) {
-            // Continue anyway, saving scan data is optional
-        }
-        
-        let scan_filename = format!("scan_{}.json", scan_timestamp.format("%Y%m%d_%H%M%S"));
-        let scan_path = scan_dir.join(scan_filename);
-        
-        match fs::write(&scan_path, &json_str) {
-            Ok(_) => Some(scan_path.to_string_lossy().to_string()),
-            Err(_) => {
-                // Continue anyway, processing is more important than saving raw data
-                None
-            }
-        }
-    };
-    
-    // Convert mobile ARScanData to processing ARScanData
-    let detected_equipment: Vec<_> = mobile_scan.detected_equipment.into_iter().map(|eq| {
-        processing::DetectedEquipmentData {
-            name: eq.name,
-            equipment_type: eq.equipment_type,
-            position: Point3D::new(eq.position.x, eq.position.y, eq.position.z),
-            confidence: eq.confidence,
-            detection_method: eq.detection_method,
-        }
-    }).collect();
-    
-    let processing_scan = processing::ARScanData {
-        detected_equipment,
-    };
-    
-    // Process scan to pending equipment
-    match processing::process_ar_scan_to_pending(&processing_scan, &building_str, confidence_threshold) {
-        Ok(pending_ids) => {
-            // Save pending equipment to storage
-            use crate::ar_integration::pending::PendingEquipmentManager;
-            
-            let mut manager = PendingEquipmentManager::new(building_str.to_string());
-            let storage_file = PathBuf::from(format!("{}_pending.json", building_str));
-            
-            // Load existing pending items
-            if storage_file.exists() {
-                if let Err(_) = manager.load_from_storage(&storage_file) {
-                    // Continue with empty manager
-                }
-            }
-            
-            let response = serde_json::json!({
-                "success": true,
-                "building": building_str,
-                "pending_count": pending_ids.len(),
-                "pending_ids": pending_ids,
-                "confidence_threshold": confidence_threshold,
-                "scan_timestamp": scan_timestamp.to_rfc3339(),
-                "scan_file": scan_save_result,
-                "message": format!(
-                    "AR scan processed successfully: {} pending equipment items created",
-                    pending_ids.len()
-                ),
-            });
-            
-            match serde_json::to_string(&response) {
-                Ok(json) => rust_string_to_java(&env, &json),
-                Err(e) => {
-                    env.throw_new("java/lang/RuntimeException", &format!("Serialization failed: {}", e))
-                        .ok();
-                    std::ptr::null_mut()
-                }
-            }
-        }
+    let building_cstr = match CString::new(building_str) {
+        Ok(s) => s,
         Err(e) => {
-            let error_json = format!(r#"{{"success":false,"error":"Processing failed: {}"}}"#, e);
-            rust_string_to_java(&env, &error_json)
+            let error_json = format!(r#"{{"success":false,"error":"Failed to create C string from building name: {}"}}"#, e);
+            return rust_string_to_java(&env, &error_json);
         }
+    };
+    
+    // Create user_email C string (can be null for backward compatibility)
+    let user_email_cstr = if user_email_str.is_empty() {
+        None
+    } else {
+        match CString::new(user_email_str) {
+            Ok(s) => Some(s),
+            Err(_) => None, // If conversion fails, pass null (backward compatible)
+        }
+    };
+    
+    // Call C FFI function
+    let result_ptr = arxos_save_ar_scan(
+        json_cstr.as_ptr(),
+        building_cstr.as_ptr(),
+        user_email_cstr.as_ref().map(|s| s.as_ptr()).unwrap_or(std::ptr::null()),
+        confidence_threshold
+    );
+    
+    // Handle result
+    if result_ptr.is_null() {
+        let error_json = r#"{"success":false,"error":"FFI call returned null pointer"}"#;
+        return rust_string_to_java(&env, error_json);
     }
+    
+    // Convert C string result to Rust string
+    let result_str = match std::ffi::CStr::from_ptr(result_ptr).to_str() {
+        Ok(s) => s.to_string(),
+        Err(_) => {
+            // Free the string even if conversion failed
+            crate::mobile_ffi::ffi::arxos_free_string(result_ptr);
+            let error_json = r#"{"success":false,"error":"Failed to convert result to string"}"#;
+            return rust_string_to_java(&env, error_json);
+        }
+    };
+    
+    // Free the C string
+    crate::mobile_ffi::ffi::arxos_free_string(result_ptr);
+    
+    // Return result to Java
+    rust_string_to_java(&env, &result_str)
 }
 
 /// List pending equipment for a building - JNI implementation
@@ -808,104 +773,85 @@ pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeC
     _class: JClass,
     building_name: JString,
     pending_id: JString,
+    user_email: JString,  // NEW: User email from mobile app (can be null for backward compatibility)
     commit_to_git: jboolean
 ) -> jstring {
-    use crate::ar_integration::pending::PendingEquipmentManager;
-    use crate::utils::loading::load_building_data;
-    use crate::persistence::PersistenceManager;
+    use std::ffi::CString;
+    use crate::mobile_ffi::ffi::arxos_confirm_pending_equipment;
     
     // Extract parameters safely
     let building_str = java_string_to_rust(&env, building_name);
     let pending_id_str = java_string_to_rust(&env, pending_id);
+    
+    // Extract user_email (optional - can be null)
+    let user_email_str = if user_email.is_null() {
+        String::new()
+    } else {
+        java_string_to_rust(&env, user_email)
+    };
     
     // Check if extraction failed
     if (building_str.is_empty() || pending_id_str.is_empty()) && env.exception_check().unwrap_or(false) {
         return std::ptr::null_mut();
     }
     
-    // Load pending equipment manager
-    let mut manager = PendingEquipmentManager::new(building_str.to_string());
-    let storage_file = std::path::PathBuf::from(format!("{}_pending.json", building_str));
-    if storage_file.exists() {
-        if let Err(_) = manager.load_from_storage(&storage_file) {
-            // Continue anyway
-        }
-    }
-    
-    // Load building data
-    let mut building_data = match load_building_data(&building_str) {
-        Ok(data) => data,
+    // Convert to C strings for FFI call
+    let building_cstr = match CString::new(building_str) {
+        Ok(s) => s,
         Err(e) => {
-            let error_json = format!(r#"{{"success":false,"error":"Building not found: {}"}}"#, e);
+            let error_json = format!(r#"{{"success":false,"error":"Failed to create C string from building name: {}"}}"#, e);
             return rust_string_to_java(&env, &error_json);
         }
     };
     
-    // Confirm pending equipment
-    match manager.confirm_pending(&pending_id_str, &mut building_data) {
-        Ok(equipment_id) => {
-            // Save pending equipment state
-            if let Err(_) = manager.save_to_storage_path(&storage_file) {
-                // Continue anyway
-            }
-            
-            // Save building data and optionally commit to Git
-            let commit_message = format!("Confirm pending equipment: {}", pending_id_str);
-            let persistence_manager = match PersistenceManager::new(&building_str) {
-                Ok(pm) => pm,
-                Err(e) => {
-                    let error_json = format!(r#"{{"success":false,"error":"Persistence error: {}"}}"#, e);
-                    return rust_string_to_java(&env, &error_json);
-                }
-            };
-            
-            let commit_result = if commit_to_git != 0 {
-                match persistence_manager.save_and_commit(&building_data, Some(&commit_message)) {
-                    Ok(commit_id) => Some(commit_id),
-                    Err(e) => {
-                        // Still save to file even if Git commit fails
-                        if let Err(save_err) = persistence_manager.save_building_data(&building_data) {
-                            let error_json = format!(r#"{{"success":false,"error":"Failed to save: {}"}}"#, save_err);
-                            return rust_string_to_java(&env, &error_json);
-                        }
-                        None
-                    }
-                }
-            } else {
-                // Save to file only
-                match persistence_manager.save_building_data(&building_data) {
-                    Ok(_) => None,
-                    Err(e) => {
-                        let error_json = format!(r#"{{"success":false,"error":"Failed to save: {}"}}"#, e);
-                        return rust_string_to_java(&env, &error_json);
-                    }
-                }
-            };
-            
-            let response = serde_json::json!({
-                "success": true,
-                "building": building_str,
-                "pending_id": pending_id_str,
-                "equipment_id": equipment_id,
-                "committed": commit_result.is_some(),
-                "commit_id": commit_result,
-                "message": format!("Equipment '{}' confirmed and added to building", pending_id_str)
-            });
-            
-            match serde_json::to_string(&response) {
-                Ok(json) => rust_string_to_java(&env, &json),
-                Err(e) => {
-                    env.throw_new("java/lang/RuntimeException", &format!("Serialization failed: {}", e))
-                        .ok();
-                    std::ptr::null_mut()
-                }
-            }
-        }
+    let pending_id_cstr = match CString::new(pending_id_str) {
+        Ok(s) => s,
         Err(e) => {
-            let error_json = format!(r#"{{"success":false,"error":"Failed to confirm: {}"}}"#, e);
-            rust_string_to_java(&env, &error_json)
+            let error_json = format!(r#"{{"success":false,"error":"Failed to create C string from pending ID: {}"}}"#, e);
+            return rust_string_to_java(&env, &error_json);
         }
+    };
+    
+    // Create user_email C string (can be null for backward compatibility)
+    let user_email_cstr = if user_email_str.is_empty() {
+        None
+    } else {
+        match CString::new(user_email_str) {
+            Ok(s) => Some(s),
+            Err(_) => None, // If conversion fails, pass null (backward compatible)
+        }
+    };
+    
+    // Call C FFI function
+    let result_ptr = arxos_confirm_pending_equipment(
+        building_cstr.as_ptr(),
+        pending_id_cstr.as_ptr(),
+        user_email_cstr.as_ref().map(|s| s.as_ptr()).unwrap_or(std::ptr::null()),
+        commit_to_git as i32
+    );
+    
+    // Handle result
+    if result_ptr.is_null() {
+        let error_json = r#"{"success":false,"error":"FFI call returned null pointer"}"#;
+        return rust_string_to_java(&env, error_json);
     }
+    
+    // Convert C string result to Rust string
+    let result_str = match std::ffi::CStr::from_ptr(result_ptr).to_str() {
+        Ok(s) => s.to_string(),
+        Err(_) => {
+            // Free the string even if conversion failed
+            crate::mobile_ffi::ffi::arxos_free_string(result_ptr);
+            let error_json = r#"{"success":false,"error":"Failed to convert result to string"}"#;
+            return rust_string_to_java(&env, error_json);
+        }
+    };
+    
+    // Free the C string
+    crate::mobile_ffi::ffi::arxos_free_string(result_ptr);
+    
+    // Return result to Java
+    rust_string_to_java(&env, &result_str)
 }
 
 /// Reject pending equipment - JNI implementation

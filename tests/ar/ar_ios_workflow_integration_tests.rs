@@ -10,8 +10,8 @@
 //! This ensures all FFI functions work together correctly.
 
 use arxos::mobile_ffi::ffi;
-use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentStatus, CoordinateSystemInfo};
-use arxos::spatial::{Point3D, BoundingBox3D};
+use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, CoordinateSystemInfo};
+use arxos::spatial::Point3D;
 use std::ffi::{CString, CStr};
 use std::os::raw::c_char;
 use std::fs;
@@ -130,7 +130,7 @@ fn test_complete_ios_ar_workflow() -> Result<(), Box<dyn std::error::Error>> {
         }"#;
         let scan_json_ptr = to_c_string(scan_json);
         
-        let save_result = ffi::arxos_save_ar_scan(scan_json_ptr, building, 0.7);
+        let save_result = ffi::arxos_save_ar_scan(scan_json_ptr, building, std::ptr::null(), 0.7);
         
         assert!(!save_result.is_null());
         let save_c_str = CStr::from_ptr(save_result);
@@ -182,7 +182,7 @@ fn test_complete_ios_ar_workflow() -> Result<(), Box<dyn std::error::Error>> {
         
         // Step 4: Confirm pending equipment
         let pending_id = to_c_string(pending_id_str);
-        let confirm_result = ffi::arxos_confirm_pending_equipment(building, pending_id, 0); // Don't commit to Git
+        let confirm_result = ffi::arxos_confirm_pending_equipment(building, pending_id, std::ptr::null(), 0); // Don't commit to Git
         
         assert!(!confirm_result.is_null());
         let confirm_c_str = CStr::from_ptr(confirm_result);
@@ -253,7 +253,7 @@ fn test_ios_ar_workflow_with_rejection() -> Result<(), Box<dyn std::error::Error
         }"#;
         let scan_json_ptr = to_c_string(scan_json);
         
-        let save_result = ffi::arxos_save_ar_scan(scan_json_ptr, building, 0.7);
+        let save_result = ffi::arxos_save_ar_scan(scan_json_ptr, building, std::ptr::null(), 0.7);
         let save_c_str = CStr::from_ptr(save_result);
         let save_json_str = save_c_str.to_str()?;
         let save_parsed: serde_json::Value = serde_json::from_str(save_json_str)?;

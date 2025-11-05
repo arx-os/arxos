@@ -34,7 +34,7 @@ fn test_ar_workflow_complete() {
     assert!(validation_result.is_ok(), "AR scan validation should pass");
 
     // Phase 3: Process AR scan to pending equipment
-    let pending_ids = process_ar_scan_to_pending(&ar_scan, "test_building", 0.7)
+    let pending_ids = process_ar_scan_to_pending(&ar_scan, "test_building", 0.7, None)
         .expect("Should create pending equipment");
 
     assert_eq!(pending_ids.len(), 2, "Should create 2 pending equipment items");
@@ -60,7 +60,7 @@ fn test_ar_workflow_complete() {
         properties: HashMap::new(),
     };
 
-    let pending_id = manager.add_pending_equipment(&detected_info, "scan_1", 3, Some("Room 301"), 0.7)
+    let pending_id = manager.add_pending_equipment(&detected_info, "scan_1", 3, Some("Room 301"), 0.7, None)
         .expect("Should add pending equipment")
         .expect("Should return pending ID");
 
@@ -126,7 +126,7 @@ fn test_ar_workflow_with_low_confidence() {
         ],
     };
 
-    let pending_ids = process_ar_scan_to_pending(&ar_scan, "test_building", 0.7)
+    let pending_ids = process_ar_scan_to_pending(&ar_scan, "test_building", 0.7, None)
         .expect("Should process AR scan");
 
     assert_eq!(pending_ids.len(), 1, "Should only create 1 pending item (high confidence)");
@@ -149,7 +149,7 @@ fn test_ar_workflow_rejection() {
         properties: HashMap::new(),
     };
 
-    let pending_id = manager.add_pending_equipment(&detected_info, "scan_1", 3, None, 0.7)
+    let pending_id = manager.add_pending_equipment(&detected_info, "scan_1", 3, None, 0.7, None)
         .expect("Should add pending equipment")
         .expect("Should return pending ID");
 

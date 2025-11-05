@@ -8,11 +8,11 @@
 
 use arxos::ui::{
     HelpSystem, HelpContext,
-    CommandPalette, CommandEntry,
+    CommandPalette,
     WorkspaceManager,
     ErrorModal, ErrorAction,
     Theme, ThemeManager,
-    MouseConfig, MouseAction, parse_mouse_event,
+    MouseConfig, parse_mouse_event,
 };
 use arxos::error::ArxError;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
@@ -190,7 +190,7 @@ fn test_help_system_state_persistence() {
 /// Test that components can handle events without interference
 #[test]
 fn test_component_event_isolation() {
-    let mut palette = CommandPalette::new();
+    let palette = CommandPalette::new();
     let mut help_system = HelpSystem::new(HelpContext::CommandPalette);
     
     // Test that help events don't interfere with palette

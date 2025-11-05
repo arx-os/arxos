@@ -69,7 +69,7 @@ pub fn render_spreadsheet_with_editor_and_save(
 }
 
 /// Render header
-fn render_header(frame: &mut Frame, area: Rect, grid: &Grid, theme: &Theme) {
+fn render_header(frame: &mut Frame, area: Rect, _grid: &Grid, theme: &Theme) {
     let header_text = format!("Spreadsheet: Equipment List");
     let block = Block::default()
         .title(header_text)
@@ -116,7 +116,7 @@ fn render_grid_body(frame: &mut Frame, area: Rect, grid: &Grid, theme: &Theme, e
         let cells: Vec<TableCell> = grid.columns
             .iter()
             .enumerate()
-            .map(|(col_idx, col)| {
+            .map(|(col_idx, _col)| {
                 let cell = grid.get_cell(row_idx, col_idx);
                 let is_editing = grid.editing_cell == Some((row_idx, col_idx));
                 

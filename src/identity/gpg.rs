@@ -176,6 +176,7 @@ fn get_fingerprint_from_key_id(key_id: &str) -> GpgResult<String> {
 /// Sanitize email address for use in filename
 ///
 /// Replaces invalid filename characters with underscores.
+#[allow(dead_code)]
 pub(crate) fn sanitize_email_for_filename(email: &str) -> String {
     let mut result = String::new();
     for c in email.to_lowercase().chars() {
@@ -270,7 +271,7 @@ pub fn store_gpg_fingerprint_for_user(email: &str, repo_path: &Path) -> GpgResul
     
     // Update user registry with fingerprint
     use crate::identity::UserRegistry;
-    let mut registry = UserRegistry::load(repo_path)
+    let registry = UserRegistry::load(repo_path)
         .map_err(|e| GpgError::CommandFailed(format!("Failed to load user registry: {}", e)))?;
     
     if let Some(user) = registry.find_by_email(email) {

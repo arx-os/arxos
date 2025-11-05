@@ -6,8 +6,8 @@
 //! - Terminal state management
 
 use arxos::ui::terminal::TerminalManager;
-use arxos::ui::mouse::{MouseConfig, parse_mouse_event};
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+use arxos::ui::mouse::MouseConfig;
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
 use std::time::Duration;
 
 /// Test terminal manager key detection helpers

@@ -14,9 +14,11 @@ use arxos::{
     spatial::{Point3D, BoundingBox3D},
     git::BuildingGitManager,
     yaml::{BuildingData, BuildingYamlSerializer},
-    export::ar::{GLTFExporter, ARFormat, ARExporter},
-    hardware::{SensorData, SensorMetadata, SensorDataValues},
 };
+#[cfg(feature = "async-sensors")]
+use arxos::export::ar::{GLTFExporter, ARFormat, ARExporter};
+#[cfg(feature = "async-sensors")]
+use arxos::hardware::{SensorData, SensorMetadata, SensorDataValues};
 use tempfile::TempDir;
 
 /// Benchmark IFC parser initialization
@@ -289,15 +291,6 @@ fn validate_sensor_data(data: &SensorData) -> bool {
         && !data.data.values.is_empty()
 }
 
-/// No-op benchmarks when async-sensors feature is disabled
-#[cfg(not(feature = "async-sensors"))]
-fn benchmark_gltf_export(_c: &mut Criterion) {}
-#[cfg(not(feature = "async-sensors"))]
-fn benchmark_ar_export(_c: &mut Criterion) {}
-#[cfg(not(feature = "async-sensors"))]
-fn benchmark_sensor_json_serialization(_c: &mut Criterion) {}
-#[cfg(not(feature = "async-sensors"))]
-fn benchmark_sensor_validation(_c: &mut Criterion) {}
 
 /// Helper function to create test building data
 fn create_test_building_data(entity_count: usize) -> BuildingData {
@@ -382,7 +375,8 @@ fn create_test_building_data(entity_count: usize) -> BuildingData {
     }
 }
 
-/// Configure and run all benchmarks
+// Conditionally include async-sensors benchmarks
+#[cfg(feature = "async-sensors")]
 criterion_group!(
     benches,
     benchmark_ifc_processor_init,
@@ -395,6 +389,17 @@ criterion_group!(
     benchmark_ar_export,
     benchmark_sensor_json_serialization,
     benchmark_sensor_validation
+);
+
+#[cfg(not(feature = "async-sensors"))]
+criterion_group!(
+    benches,
+    benchmark_ifc_processor_init,
+    benchmark_yaml_serialization,
+    benchmark_yaml_deserialization,
+    benchmark_spatial_point_ops,
+    benchmark_spatial_bbox_ops,
+    benchmark_git_manager_init
 );
 
 criterion_main!(benches);

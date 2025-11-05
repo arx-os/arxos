@@ -33,20 +33,13 @@ enum TreeNode {
         rooms: Vec<RoomNode>,
         equipment_count: usize,
     },
-    Room {
-        id: String,
-        name: String,
-        room_type: String,
-        floor: i32,
-        equipment_count: usize,
-        area: Option<f64>,
-        volume: Option<f64>,
-    },
 }
 
 /// Room node for tree structure
 #[derive(Debug, Clone)]
 struct RoomNode {
+    // Reserved for future features (e.g., room linking, navigation)
+    #[allow(dead_code)]
     id: String,
     name: String,
     room_type: String,
@@ -85,6 +78,19 @@ impl ExplorerState {
             }
         }
         current.get(*self.selected_path.last()?).cloned()
+    }
+    
+    fn get_selected_room(&self) -> Option<&RoomNode> {
+        // If selected path points to a room, extract it from the floor
+        if self.selected_path.len() >= 3 {
+            // Path format: [building_idx, floor_idx, room_idx]
+            if let Some(TreeNode::Building { floors, .. }) = self.tree.get(self.selected_path[0]) {
+                if let Some(TreeNode::Floor { rooms, .. }) = floors.get(self.selected_path[1]) {
+                    return rooms.get(self.selected_path[2]);
+                }
+            }
+        }
+        None
     }
     
     fn is_expanded(&self, path: &[usize]) -> bool {
@@ -177,16 +183,6 @@ impl ExplorerState {
                         }
                     }
                 }
-                TreeNode::Room { name, room_type, equipment_count, .. } => {
-                    items.push(FlatItem {
-                        path: current_path.clone(),
-                        depth,
-                        label: name.clone(),
-                        node_type: "room",
-                        equipment_count: Some(*equipment_count),
-                        room_type: Some(room_type.clone()),
-                    });
-                }
             }
         }
     }
@@ -265,14 +261,14 @@ fn build_room_tree(building_name: &str) -> Result<Vec<TreeNode>, Box<dyn std::er
 /// Render tree view
 fn render_tree_view<'a>(
     state: &'a ExplorerState,
-    area: Rect,
+    _area: Rect,
     theme: &'a Theme,
 ) -> List<'a> {
     let items: Vec<ListItem> = state.get_flat_items()
         .unwrap_or_default()
         .iter()
         .enumerate()
-        .map(|(display_idx, item)| {
+        .map(|(_display_idx, item)| {
             let is_selected = item.path == state.selected_path;
             let prefix = if is_selected { ">" } else { " " };
             
@@ -343,7 +339,7 @@ fn render_tree_view<'a>(
 /// Render room details
 fn render_room_details<'a>(
     node: &'a TreeNode,
-    area: Rect,
+    _area: Rect,
     theme: &'a Theme,
 ) -> Paragraph<'a> {
     let lines = match node {
@@ -375,42 +371,50 @@ fn render_room_details<'a>(
                 ]),
             ]
         }
-        TreeNode::Room { name, room_type, equipment_count, area, volume, .. } => {
-            let mut room_lines = vec![
-                Line::from(vec![
-                    Span::styled("Room: ", Style::default().fg(theme.muted)),
-                    Span::styled(name.clone(), Style::default().fg(theme.text).add_modifier(Modifier::BOLD)),
-                ]),
-                Line::from(vec![
-                    Span::styled("Type: ", Style::default().fg(theme.muted)),
-                    Span::styled(room_type.clone(), Style::default().fg(theme.text)),
-                ]),
-                Line::from(vec![
-                    Span::styled("Equipment: ", Style::default().fg(theme.muted)),
-                    Span::styled(equipment_count.to_string(), Style::default().fg(theme.text)),
-                ]),
-            ];
-            
-            if let Some(area) = area {
-                room_lines.push(Line::from(vec![
-                    Span::styled("Area: ", Style::default().fg(theme.muted)),
-                    Span::styled(format!("{:.1} m²", area), Style::default().fg(theme.text)),
-                ]));
-            }
-            
-            if let Some(volume) = volume {
-                room_lines.push(Line::from(vec![
-                    Span::styled("Volume: ", Style::default().fg(theme.muted)),
-                    Span::styled(format!("{:.1} m³", volume), Style::default().fg(theme.text)),
-                ]));
-            }
-            
-            room_lines
-        }
     };
     
     Paragraph::new(lines)
         .block(Block::default().borders(Borders::ALL).title("Details"))
+        .alignment(Alignment::Left)
+}
+
+/// Render room details from RoomNode
+fn render_room_node_details<'a>(
+    room: &'a RoomNode,
+    _area: Rect,
+    theme: &'a Theme,
+) -> Paragraph<'a> {
+    let mut room_lines = vec![
+        Line::from(vec![
+            Span::styled("Room: ", Style::default().fg(theme.muted)),
+            Span::styled(room.name.clone(), Style::default().fg(theme.text).add_modifier(Modifier::BOLD)),
+        ]),
+        Line::from(vec![
+            Span::styled("Type: ", Style::default().fg(theme.muted)),
+            Span::styled(room.room_type.clone(), Style::default().fg(theme.text)),
+        ]),
+        Line::from(vec![
+            Span::styled("Equipment: ", Style::default().fg(theme.muted)),
+            Span::styled(room.equipment_count.to_string(), Style::default().fg(theme.text)),
+        ]),
+    ];
+    
+    if let Some(area) = room.area {
+        room_lines.push(Line::from(vec![
+            Span::styled("Area: ", Style::default().fg(theme.muted)),
+            Span::styled(format!("{:.1} m²", area), Style::default().fg(theme.text)),
+        ]));
+    }
+    
+    if let Some(volume) = room.volume {
+        room_lines.push(Line::from(vec![
+            Span::styled("Volume: ", Style::default().fg(theme.muted)),
+            Span::styled(format!("{:.1} m³", volume), Style::default().fg(theme.text)),
+        ]));
+    }
+    
+    Paragraph::new(room_lines)
+        .block(Block::default().borders(Borders::ALL).title("Room Details"))
         .alignment(Alignment::Left)
 }
 
@@ -481,6 +485,9 @@ pub fn handle_room_explorer(building_name: Option<String>) -> Result<(), Box<dyn
             if state.show_details {
                 if let Some(node) = &selected_node {
                     let details = render_room_details(node, chunks[1], &theme);
+                    frame.render_widget(details, chunks[1]);
+                } else if let Some(room) = state.get_selected_room() {
+                    let details = render_room_node_details(room, chunks[1], &theme);
                     frame.render_widget(details, chunks[1]);
                 } else {
                     let no_selection = Paragraph::new("No item selected")

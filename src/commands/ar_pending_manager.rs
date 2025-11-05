@@ -8,14 +8,14 @@
 //! - Preview changes before confirming
 
 use crate::ui::{TerminalManager, Theme};
-use crate::ar_integration::pending::{PendingEquipmentManager, PendingEquipment, PendingStatus};
+use crate::ar_integration::pending::{PendingEquipmentManager, PendingEquipment};
 use crate::persistence::PersistenceManager;
 use crossterm::event::{Event, KeyCode};
 use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Table, Row, Cell},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
 };
 use std::time::Duration;
 use std::collections::HashSet;
@@ -29,6 +29,8 @@ struct PendingManagerState {
     building_name: String,
     storage_file: std::path::PathBuf,
     show_preview: bool,
+    // Reserved for future inline editing feature
+    #[allow(dead_code)]
     editing_item: Option<usize>,
 }
 
@@ -204,7 +206,7 @@ fn render_header<'a>(
 /// Render pending items list
 fn render_pending_list<'a>(
     state: &'a PendingManagerState,
-    area: Rect,
+    _area: Rect,
     theme: &'a Theme,
 ) -> List<'a> {
     let items: Vec<ListItem> = state.pending_items.iter()
@@ -236,7 +238,7 @@ fn render_pending_list<'a>(
                 crate::ar_integration::pending::DetectionMethod::AI => "🧠",
             };
             
-            let mut line_parts = vec![
+            let line_parts = vec![
                 Span::styled(prefix, Style::default().fg(theme.accent)),
                 Span::styled(" ", Style::default()),
                 Span::styled(selection_indicator, Style::default().fg(if is_multi_selected { Color::Green } else { theme.muted })),
@@ -270,7 +272,7 @@ fn render_pending_list<'a>(
 /// Render item details
 fn render_item_details<'a>(
     state: &'a PendingManagerState,
-    area: Rect,
+    _area: Rect,
     theme: &'a Theme,
 ) -> Paragraph<'a> {
     if state.pending_items.is_empty() {
@@ -370,7 +372,7 @@ fn render_item_details<'a>(
 /// Render preview panel
 fn render_preview<'a>(
     state: &'a PendingManagerState,
-    area: Rect,
+    _area: Rect,
     theme: &'a Theme,
 ) -> Paragraph<'a> {
     if !state.show_preview {

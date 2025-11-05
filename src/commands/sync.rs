@@ -8,7 +8,6 @@ use crate::export::ifc::{IFCExporter, IFCSyncState};
 use crate::utils::loading;
 use crate::utils::path_safety::PathSafety;
 use std::path::{Path, PathBuf};
-use std::fs;
 use log::{info, warn};
 
 /// Handle the sync command
@@ -187,7 +186,7 @@ fn handle_watch_mode(
 
 /// Process a single sync cycle
 fn process_sync_cycle(
-    exporter: &IFCExporter,
+    _exporter: &IFCExporter,
     ifc_path: &Path,
     sync_state: &mut IFCSyncState,
     sync_state_path: &Path,

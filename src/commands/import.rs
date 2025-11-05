@@ -2,7 +2,7 @@
 // Handles IFC file importing and building data generation
 
 use crate::ifc;
-use crate::progress;
+use crate::utils::progress;
 use crate::core::Building;
 use log::warn;
 

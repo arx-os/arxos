@@ -1,0 +1,18 @@
+{
+  "sensor_id": "rp2040_air_001",
+  "sensor_type": "air_quality",
+  "building": "Main Building",
+  "equipment": "HVAC-205",
+  "floor": 2,
+  "room": "Room 205",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "readings": {
+    "co2_ppm": 420,
+    "pm25_ug_m3": 15,
+    "pm10_ug_m3": 25,
+    "voc_ppb": 150
+  },
+  "status": "active",
+  "calibration_date": "2024-01-01"
+}
+

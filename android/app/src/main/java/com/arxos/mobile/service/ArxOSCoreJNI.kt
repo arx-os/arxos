@@ -7,7 +7,7 @@ import com.arxos.mobile.data.Equipment
 /**
  * JNI wrapper for ArxOS FFI functions
  */
-class ArxOSCoreJNI(private val context: Context) {
+class ArxOSCoreJNI(val context: Context) {  // Changed from private to public for UserProfile access
     
     private var nativeLibraryLoaded = false
     
@@ -70,6 +70,7 @@ class ArxOSCoreJNI(private val context: Context) {
     external fun nativeSaveARScan(
         jsonData: String,
         buildingName: String,
+        userEmail: String?,  // NEW: User email from mobile app (can be null for backward compatibility)
         confidenceThreshold: Double
     ): String
     
@@ -84,6 +85,7 @@ class ArxOSCoreJNI(private val context: Context) {
     external fun nativeConfirmPendingEquipment(
         buildingName: String,
         pendingId: String,
+        userEmail: String?,  // NEW: User email from mobile app (can be null for backward compatibility)
         commitToGit: Boolean
     ): String
     
@@ -536,7 +538,9 @@ class ArxOSCoreJNIWrapper(private val jni: ArxOSCoreJNI) {
         
         return try {
             val json = scanDataToJson(scanData)
-            val responseJson = jni.nativeSaveARScan(json, buildingName, confidenceThreshold)
+            // Get user email from UserProfile (optional - can be null for backward compatibility)
+            val userEmail = com.arxos.mobile.data.UserProfile.load(jni.context)?.email
+            val responseJson = jni.nativeSaveARScan(json, buildingName, userEmail, confidenceThreshold)
             if (responseJson.isEmpty()) {
                 Log.w(TAG, "Empty JSON response from nativeSaveARScan")
                 return ARScanSaveResult(
@@ -684,7 +688,9 @@ class ArxOSCoreJNIWrapper(private val jni: ArxOSCoreJNI) {
         }
         
         return try {
-            val json = jni.nativeConfirmPendingEquipment(buildingName, pendingId, commitToGit)
+            // Get user email from UserProfile (optional - can be null for backward compatibility)
+            val userEmail = com.arxos.mobile.data.UserProfile.load(jni.context)?.email
+            val json = jni.nativeConfirmPendingEquipment(buildingName, pendingId, userEmail, commitToGit)
             if (json.isEmpty()) {
                 Log.w(TAG, "Empty JSON response from nativeConfirmPendingEquipment")
                 return PendingEquipmentConfirmResult(

@@ -5,22 +5,9 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
 use arxos::{core::{Room, Equipment, RoomType, EquipmentType}, spatial::Point3D};
-use tempfile::TempDir;
-
-/// Benchmark helper to create a temporary test environment
-fn setup_benchmark_environment() -> TempDir {
-    tempfile::tempdir().expect("Failed to create temp directory")
-}
-
-/// Benchmark helper to clean up test environment
-fn cleanup_benchmark_environment(temp_dir: TempDir) {
-    temp_dir.close().expect("Failed to close temp directory")
-}
 
 /// Benchmark room creation performance
 fn benchmark_room_creation(c: &mut Criterion) {
-    let temp_dir = setup_benchmark_environment();
-    
     c.bench_function("room_creation", |b| {
         b.iter(|| {
             let _room = Room::new(
@@ -29,14 +16,10 @@ fn benchmark_room_creation(c: &mut Criterion) {
             );
         });
     });
-    
-    cleanup_benchmark_environment(temp_dir);
 }
 
 /// Benchmark room listing performance with varying numbers of rooms
 fn benchmark_room_listing(c: &mut Criterion) {
-    let temp_dir = setup_benchmark_environment();
-    
     let mut group = c.benchmark_group("room_listing");
     
     for room_count in [1, 10, 50, 100].iter() {
@@ -54,20 +37,24 @@ fn benchmark_room_listing(c: &mut Criterion) {
             &rooms,
             |b, rooms| {
                 b.iter(|| {
-                    black_box(rooms.len());
+                    // Actually iterate through and access room data (simulating listing operation)
+                    let mut count = 0;
+                    for room in rooms.iter() {
+                        black_box(&room.name);
+                        black_box(&room.room_type);
+                        count += 1;
+                    }
+                    black_box(count);
                 });
             }
         );
     }
     
     group.finish();
-    cleanup_benchmark_environment(temp_dir);
 }
 
 /// Benchmark equipment management operations
 fn benchmark_equipment_management(c: &mut Criterion) {
-    let temp_dir = setup_benchmark_environment();
-    
     c.bench_function("equipment_creation", |b| {
         b.iter(|| {
             let _equipment = Equipment::new(
@@ -77,29 +64,23 @@ fn benchmark_equipment_management(c: &mut Criterion) {
             );
         });
     });
-    
-    cleanup_benchmark_environment(temp_dir);
 }
 
 /// Benchmark spatial operations
 fn benchmark_spatial_operations(c: &mut Criterion) {
-    let temp_dir = setup_benchmark_environment();
-    
     let mut group = c.benchmark_group("spatial_operations");
     
     group.bench_function("point_distance", |b| {
         let p1 = Point3D::new(0.0, 0.0, 0.0);
         let p2 = Point3D::new(1.0, 1.0, 1.0);
         b.iter(|| {
-            let _distance = p1.distance_to(&p2);
+            black_box(p1.distance_to(&p2));
         });
     });
     
     group.finish();
-    cleanup_benchmark_environment(temp_dir);
 }
 
-/// Configure and run all benchmarks
 criterion_group!(
     benches,
     benchmark_room_creation,

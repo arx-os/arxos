@@ -455,6 +455,7 @@ mod tests {
             1,
             Some("Conference Room"),
             0.8, // Confidence threshold
+            None, // user_email
         );
         
         if let Ok(Some(pending_id)) = result {
@@ -565,7 +566,7 @@ mod tests {
         };
         
         let mut manager = PendingEquipmentManager::new("test_building".to_string());
-        let result = manager.add_pending_equipment(&detected_info, "scan_001", 2, Some("Room 201"), 0.8);
+        let result = manager.add_pending_equipment(&detected_info, "scan_001", 2, Some("Room 201"), 0.8, None);
         
         assert!(result.is_ok());
         let pending_list = manager.list_pending();

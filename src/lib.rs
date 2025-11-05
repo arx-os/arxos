@@ -10,7 +10,6 @@ pub mod error;
 pub mod spatial;
 pub mod git;
 pub mod ifc;
-pub mod progress;
 pub mod render;
 pub mod render3d;
 
@@ -53,8 +52,8 @@ pub use git::{GitClient, BuildingGitManager, GitConfig, GitConfigManager, GitErr
 pub use render::BuildingRenderer;
 pub use yaml::{BuildingYamlSerializer, BuildingData, BuildingInfo, BuildingMetadata, FloorData, RoomData, EquipmentData, SensorMapping, ThresholdConfig};
 pub use path::{PathGenerator, UniversalPath, PathComponents, PathError, PathValidator};
-pub use progress::{ProgressReporter, ProgressContext};
-pub use progress::utils as progress_utils;
+pub use utils::progress::{ProgressReporter, ProgressContext};
+pub use utils::progress::utils as progress_utils;
 pub use config::{ArxConfig, ConfigManager, ConfigError, ConfigResult};
 pub use export::ar::{ARExporter, ARFormat, GLTFExporter};
 pub use identity::{User, UserStatus, UserRegistry, RegistryError, PendingUserRequest, PendingUserRegistry, PendingRequestStatus, PendingRegistryError};
@@ -62,4 +61,4 @@ pub use identity::{User, UserStatus, UserRegistry, RegistryError, PendingUserReq
 // Re-export error types
 pub use error::{ArxError, ArxResult, ErrorContext, ErrorAnalytics};
 pub use error::analytics::ErrorAnalyticsManager;
-pub use error::display::{ErrorDisplay, utils as error_utils};
+pub use error::display::{ErrorDisplay, DisplayStyle, set_display_style, get_display_style, utils as error_utils};

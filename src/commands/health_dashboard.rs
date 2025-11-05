@@ -7,13 +7,13 @@
 //! - Detailed diagnostics on demand
 
 use crate::ui::{TerminalManager, Theme, StatusColor};
-use crate::ui::layouts::{dashboard_layout, split_horizontal};
+use crate::ui::layouts::dashboard_layout;
 use crossterm::event::{Event, KeyCode};
 use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Table, TableState, Row, Cell},
+    widgets::{Block, Borders, Paragraph},
 };
 use std::time::Duration;
 
@@ -23,6 +23,8 @@ enum ComponentStatus {
     Healthy,
     Warning,
     Critical,
+    // Reserved for future unknown/indeterminate status handling
+    #[allow(dead_code)]
     Unknown,
 }
 
@@ -101,7 +103,7 @@ impl HealthDashboardState {
 /// Check Git component health
 fn check_git_component() -> ComponentHealth {
     let mut status = ComponentStatus::Healthy;
-    let mut message = String::new();
+    let message;
     let mut details = Vec::new();
     let mut quick_fix = None;
     
@@ -140,7 +142,7 @@ fn check_git_component() -> ComponentHealth {
                 if status == ComponentStatus::Healthy {
                     status = ComponentStatus::Warning;
                 }
-                message = format!("Git2 integration warning: {}", e);
+                // Keep original message, add git2 issue as detail
                 details.push(format!("Git2 error: {}", e));
             } else {
                 details.push("Not currently in a git repository (OK)".to_string());
@@ -160,7 +162,7 @@ fn check_git_component() -> ComponentHealth {
 /// Check configuration component health
 fn check_config_component() -> ComponentHealth {
     let mut status = ComponentStatus::Healthy;
-    let mut message = String::new();
+    let message;
     let mut details = Vec::new();
     let mut quick_fix = None;
     
@@ -206,7 +208,7 @@ fn check_config_component() -> ComponentHealth {
 /// Check persistence component health
 fn check_persistence_component() -> ComponentHealth {
     let mut status = ComponentStatus::Healthy;
-    let mut message = String::new();
+    let mut message;
     let mut details = Vec::new();
     let mut quick_fix = None;
     
@@ -279,7 +281,7 @@ fn check_persistence_component() -> ComponentHealth {
 /// Check YAML component health
 fn check_yaml_component() -> ComponentHealth {
     let mut status = ComponentStatus::Healthy;
-    let mut message = String::new();
+    let message;
     let mut details = Vec::new();
     let mut quick_fix = None;
     
@@ -392,7 +394,7 @@ fn render_component_cards<'a>(
     theme: &'a Theme,
     area: Rect,
 ) -> Vec<Paragraph<'a>> {
-    let chunks = Layout::default()
+    let _chunks = Layout::default()
         .direction(ratatui::layout::Direction::Horizontal)
         .constraints(
             state.components.iter().map(|_| Constraint::Percentage(25)).collect::<Vec<_>>()

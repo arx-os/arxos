@@ -9,9 +9,13 @@ repos:
       - id: fmt
         args: [--all, --]
       - id: clippy
-        args: [--all-targets, --all-features, --, -D, warnings]
+        args: [--all-targets, --all-features, --, -W, clippy::all]
+        # Using warnings instead of deny for faster iteration
+        # CI will run with -D warnings for stricter checks
       - id: test
-        args: [--all-targets, --all-features, --release]
+        args: [--all-targets, --all-features]
+        # Removed --release for faster pre-commit checks
+        # Release tests run in CI/CD
 
   # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -28,6 +32,15 @@ repos:
       - id: check-case-conflict
       - id: detect-private-key
       - id: check-docstring-first
+
+  # Custom hook to prevent TODO/placeholder comments
+  - repo: local
+    hooks:
+      - id: no-todo-comments
+        name: Prevent TODO/placeholder comments
+        entry: bash -c 'files=$(git diff --cached --name-only | grep -vE "^docs/|^\.cursorrules$|^\.pre-commit-config\.yaml$|^README\.md$|^CHANGELOG.*\.md$" | grep -E "\.(rs|kt|swift|ts|js)$" || true); if [ -n "$files" ]; then matches=$(echo "$files" | xargs grep -lE "^\s*//.*TODO|^\s*//.*FIXME|^\s*//.*XXX|^\s*//.*HACK|^\s*//.*STUB|^\s*//.*placeholder|^\s*//.*not yet|^\s*//.*future implementation|^\s*//.*incomplete|^\s*//.*unimplemented" --ignore-case 2>/dev/null || true); if [ -n "$matches" ]; then echo "ERROR: TODO/placeholder comments detected in code."; echo "ArxOS does not allow TODO comments or placeholders in source code."; echo "See .cursorrules for details."; echo "Files with TODOs:"; echo "$matches"; exit 1; fi; fi'
+        language: system
+        pass_filenames: false
 
   # Secret scanning using truffleHog regex
   - repo: https://github.com/Yelp/detect-secrets

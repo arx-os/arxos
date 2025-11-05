@@ -53,7 +53,7 @@ impl UndoRedoManager {
     pub fn undo(&mut self, grid: &mut Grid) -> bool {
         if let Some(op) = self.undo_stack.pop() {
             // Get current value before undo (should match op.new_value)
-            let current_value = grid.get_cell(op.row, op.col)
+            let _current_value = grid.get_cell(op.row, op.col)
                 .map(|c| c.value.clone())
                 .unwrap_or(CellValue::Empty);
             

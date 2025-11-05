@@ -481,7 +481,7 @@ fn render_header<'a>(
 /// Render fields list
 fn render_fields<'a>(
     state: &'a ConfigWizardState,
-    area: Rect,
+    _area: Rect,
     theme: &'a Theme,
 ) -> List<'a> {
     let items: Vec<ListItem> = state.fields.iter()
@@ -543,7 +543,7 @@ fn render_fields<'a>(
 /// Render field details and help
 fn render_field_details<'a>(
     state: &'a ConfigWizardState,
-    area: Rect,
+    _area: Rect,
     theme: &'a Theme,
 ) -> Paragraph<'a> {
     if state.fields.is_empty() {
@@ -596,7 +596,7 @@ fn render_field_details<'a>(
 /// Render preview panel
 fn render_preview<'a>(
     state: &'a ConfigWizardState,
-    area: Rect,
+    _area: Rect,
     theme: &'a Theme,
 ) -> Paragraph<'a> {
     if !state.show_preview {

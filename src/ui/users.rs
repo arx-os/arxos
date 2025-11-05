@@ -6,7 +6,7 @@
 //! - Organization grouping
 //! - Contact information display
 
-use crate::ui::{TerminalManager, Theme, StatusColor};
+use crate::ui::{TerminalManager, Theme};
 use crate::ui::layouts::{dashboard_layout, list_detail_layout};
 use crate::identity::{User, UserRegistry};
 use crate::git::{BuildingGitManager, GitConfigManager};
@@ -21,6 +21,7 @@ use ratatui::{
 use std::collections::HashMap;
 use std::time::Duration;
 use chrono::{DateTime, Utc};
+use arboard::Clipboard;
 
 /// User activity item for timeline
 #[derive(Debug, Clone)]
@@ -29,6 +30,7 @@ struct UserActivityItem {
     relative_time: String,
     commit_hash: String,
     commit_message: String,
+    #[allow(dead_code)] // Reserved for future enhancement
     files_changed: Vec<String>,
 }
 
@@ -38,9 +40,9 @@ struct UserBrowserState {
     users: Vec<User>,
     filtered_users: Vec<usize>, // Indices into users vector
     selected_index: usize,
-    list_state: ListState,
     view_mode: ViewMode,
     search_query: String,
+    search_mode: bool,
     selected_user_activity: Vec<UserActivityItem>,
     organization_groups: HashMap<String, Vec<usize>>,
     show_details: bool,
@@ -58,10 +60,6 @@ impl UserBrowserState {
     fn new(registry: UserRegistry) -> Self {
         let users = registry.all_users().to_vec();
         let filtered_users: Vec<usize> = (0..users.len()).collect();
-        let mut list_state = ListState::default();
-        if !filtered_users.is_empty() {
-            list_state.select(Some(0));
-        }
         
         // Group users by organization
         let mut organization_groups: HashMap<String, Vec<usize>> = HashMap::new();
@@ -77,9 +75,9 @@ impl UserBrowserState {
             users,
             filtered_users,
             selected_index: 0,
-            list_state,
             view_mode: ViewMode::List,
             search_query: String::new(),
+            search_mode: false,
             selected_user_activity: Vec::new(),
             organization_groups,
             show_details: true,
@@ -115,11 +113,6 @@ impl UserBrowserState {
         // Update selection
         if self.selected_index >= self.filtered_users.len() {
             self.selected_index = self.filtered_users.len().saturating_sub(1);
-        }
-        if !self.filtered_users.is_empty() {
-            self.list_state.select(Some(self.selected_index));
-        } else {
-            self.list_state.select(None);
         }
     }
     
@@ -181,14 +174,12 @@ impl UserBrowserState {
     fn move_up(&mut self) {
         if self.selected_index > 0 {
             self.selected_index -= 1;
-            self.list_state.select(Some(self.selected_index));
         }
     }
     
     fn move_down(&mut self) {
         if self.selected_index < self.filtered_users.len().saturating_sub(1) {
             self.selected_index += 1;
-            self.list_state.select(Some(self.selected_index));
         }
     }
 }
@@ -267,6 +258,7 @@ fn render_user_details<'a>(user: &'a User, theme: &'a Theme, _area: Rect) -> Par
     lines.push(Line::from(vec![
         Span::styled("Email: ", Style::default().fg(theme.muted)),
         Span::styled(&user.email, Style::default().fg(theme.text)),
+        Span::styled("  [C] Copy", Style::default().fg(theme.muted)),
     ]));
     lines.push(Line::from(vec![
         Span::styled("ID: ", Style::default().fg(theme.muted)),
@@ -449,15 +441,21 @@ fn render_organization_view<'a>(
         .alignment(Alignment::Left)
 }
 
-/// Render footer with keyboard shortcuts
-fn render_footer<'a>(view_mode: ViewMode, theme: &'a Theme) -> Paragraph<'a> {
-    let shortcuts = match view_mode {
-        ViewMode::List => "[Q] Quit  [Enter] Details  [O] Organizations  [A] Activity  [S] Search  [C] Copy Email",
-        ViewMode::Organizations => "[Q] Back  [Enter] Select User",
-        ViewMode::Activity => "[Q] Back",
+/// Render footer with keyboard shortcuts or status message
+fn render_footer<'a>(view_mode: ViewMode, search_mode: bool, theme: &'a Theme, status_message: Option<&'a str>) -> Paragraph<'a> {
+    let text = if let Some(msg) = status_message {
+        msg
+    } else if search_mode {
+        "Type to search | Enter: Apply | Esc: Cancel"
+    } else {
+        match view_mode {
+            ViewMode::List => "[Q] Quit  [Enter] Details  [O] Organizations  [A] Activity  [S] Search  [C] Copy Email  [P] Copy Phone",
+            ViewMode::Organizations => "[Q] Back  [Enter] Select User",
+            ViewMode::Activity => "[Q] Back",
+        }
     };
     
-    Paragraph::new(shortcuts)
+    Paragraph::new(text)
         .style(Style::default().fg(theme.muted))
         .alignment(Alignment::Center)
         .block(Block::default().borders(Borders::TOP))
@@ -477,10 +475,21 @@ pub fn handle_user_browser() -> Result<(), Box<dyn std::error::Error>> {
     let theme = Theme::default();
     
     let mut state = UserBrowserState::new(registry);
+    let mut list_state = ListState::default();
+    let mut clipboard = Clipboard::new().ok(); // Initialize clipboard (may fail on some systems)
+    let mut status_message: Option<String> = None;
+    let mut status_message_timeout: Option<chrono::DateTime<Utc>> = None;
+    let mut search_input = String::new();
+    
+    // Initialize list_state
+    if !state.filtered_users.is_empty() {
+        list_state.select(Some(0));
+    }
     
     // Load activity for first user if available
     if let Some(user) = state.selected_user() {
-        if let Err(e) = state.load_user_activity(&user.email) {
+        let user_email = user.email.clone();
+        if let Err(e) = state.load_user_activity(&user_email) {
             eprintln!("Warning: Could not load user activity: {}", e);
         }
     }
@@ -501,9 +510,26 @@ pub fn handle_user_browser() -> Result<(), Box<dyn std::error::Error>> {
                 ViewMode::List => {
                     let content_chunks = list_detail_layout(chunks[1], 40);
                     
-                    // User list (clone list_state to avoid borrow issues)
+                    // Extract data before rendering to avoid borrow conflicts
+                    let selected_activity = state.selected_user_activity.clone();
+                    
+                    // User list
                     let user_list = render_user_list(&state, &theme, content_chunks[0]);
-                    frame.render_stateful_widget(user_list, content_chunks[0], &mut state.list_state);
+                    list_state.select(Some(state.selected_index)); // Sync before render
+                    frame.render_stateful_widget(user_list, content_chunks[0], &mut list_state);
+                    
+                    // Search input overlay
+                    if state.search_mode {
+                        let search_text = if search_input.is_empty() {
+                            "Enter search query: _".to_string()
+                        } else {
+                            format!("Search: {}_", search_input)
+                        };
+                        let search_paragraph = Paragraph::new(search_text)
+                            .style(Style::default().fg(theme.primary))
+                            .block(Block::default().borders(Borders::ALL).title("Search Users"));
+                        frame.render_widget(search_paragraph, content_chunks[0]);
+                    }
                     
                     // Details panel
                     if state.show_details {
@@ -520,7 +546,7 @@ pub fn handle_user_browser() -> Result<(), Box<dyn std::error::Error>> {
                             let details = render_user_details(user, &theme, detail_chunks[0]);
                             frame.render_widget(details, detail_chunks[0]);
                             
-                            let activity = render_user_activity(&state.selected_user_activity, &theme, detail_chunks[1]);
+                            let activity = render_user_activity(&selected_activity, &theme, detail_chunks[1]);
                             frame.render_widget(activity, detail_chunks[1]);
                         }
                     }
@@ -530,21 +556,56 @@ pub fn handle_user_browser() -> Result<(), Box<dyn std::error::Error>> {
                     frame.render_widget(org_view, chunks[1]);
                 }
                 ViewMode::Activity => {
-                    if let Some(user) = state.selected_user() {
+                    if let Some(_user) = state.selected_user() {
                         let activity = render_user_activity(&state.selected_user_activity, &theme, chunks[1]);
                         frame.render_widget(activity, chunks[1]);
                     }
                 }
             }
             
-            // Footer
-            let footer = render_footer(state.view_mode, &theme);
+            // Footer with status message overlay
+            let footer = render_footer(state.view_mode, state.search_mode, &theme, status_message.as_deref());
             frame.render_widget(footer, chunks[2]);
         })?;
         
         // Handle events
         if let Some(event) = terminal.poll_event(Duration::from_millis(100))? {
             match event {
+                // Handle search mode input
+                Event::Key(key_event) if state.search_mode => {
+                    match key_event.code {
+                        KeyCode::Char(c) => {
+                            search_input.push(c);
+                        }
+                        KeyCode::Backspace => {
+                            search_input.pop();
+                        }
+                        KeyCode::Enter => {
+                            if !search_input.is_empty() {
+                                state.filter_users(&search_input);
+                                state.selected_index = 0;
+                                list_state.select(Some(0));
+                                // Reload activity for first filtered user
+                                if let Some(ref user) = state.selected_user() {
+                                    let user_email = user.email.clone();
+                                    if let Err(e) = state.load_user_activity(&user_email) {
+                                        eprintln!("Warning: Could not load user activity: {}", e);
+                                    }
+                                }
+                            }
+                            state.search_mode = false;
+                        }
+                        KeyCode::Esc => {
+                            state.search_mode = false;
+                            if state.search_query.is_empty() {
+                                search_input.clear();
+                            } else {
+                                search_input = state.search_query.clone();
+                            }
+                        }
+                        _ => {}
+                    }
+                }
                 Event::Key(key_event) => {
                     match key_event.code {
                         KeyCode::Char('q') | KeyCode::Esc => {
@@ -554,8 +615,14 @@ pub fn handle_user_browser() -> Result<(), Box<dyn std::error::Error>> {
                                 state.view_mode = ViewMode::List;
                             }
                         }
-                        KeyCode::Up => state.move_up(),
-                        KeyCode::Down => state.move_down(),
+                        KeyCode::Up => {
+                            state.move_up();
+                            list_state.select(Some(state.selected_index));
+                        }
+                        KeyCode::Down => {
+                            state.move_down();
+                            list_state.select(Some(state.selected_index));
+                        }
                         KeyCode::Char('o') => {
                             if state.view_mode == ViewMode::List {
                                 state.view_mode = ViewMode::Organizations;
@@ -566,10 +633,10 @@ pub fn handle_user_browser() -> Result<(), Box<dyn std::error::Error>> {
                                 state.view_mode = ViewMode::Activity;
                             }
                         }
-                        KeyCode::Char('s') => {
-                            if state.view_mode == ViewMode::List {
-                                // Simple search - in a real implementation, you'd want a modal
-                                // For now, we'll just toggle search mode
+                        KeyCode::Char('s') | KeyCode::Char('S') => {
+                            if state.view_mode == ViewMode::List && !state.search_mode {
+                                state.search_mode = true;
+                                search_input.clear();
                             }
                         }
                         KeyCode::Enter => {
@@ -583,11 +650,69 @@ pub fn handle_user_browser() -> Result<(), Box<dyn std::error::Error>> {
                                 }
                             }
                         }
+                        KeyCode::Char('c') | KeyCode::Char('C') => {
+                            // Copy email to clipboard
+                            if let Some(user) = state.selected_user() {
+                                if let Some(ref mut cb) = clipboard {
+                                    match cb.set_text(&user.email) {
+                                        Ok(_) => {
+                                            status_message = Some(format!("✓ Copied email: {}", user.email));
+                                            status_message_timeout = Some(Utc::now() + chrono::Duration::seconds(2));
+                                        }
+                                        Err(e) => {
+                                            status_message = Some(format!("✗ Failed to copy: {}", e));
+                                            status_message_timeout = Some(Utc::now() + chrono::Duration::seconds(2));
+                                        }
+                                    }
+                                } else {
+                                    status_message = Some("✗ Clipboard not available".to_string());
+                                    status_message_timeout = Some(Utc::now() + chrono::Duration::seconds(2));
+                                }
+                            }
+                        }
+                        KeyCode::Char('p') | KeyCode::Char('P') => {
+                            // Copy phone to clipboard
+                            if let Some(user) = state.selected_user() {
+                                if let Some(ref phone) = user.phone {
+                                    if let Some(ref mut cb) = clipboard {
+                                        match cb.set_text(phone) {
+                                            Ok(_) => {
+                                                status_message = Some(format!("✓ Copied phone: {}", phone));
+                                                status_message_timeout = Some(Utc::now() + chrono::Duration::seconds(2));
+                                            }
+                                            Err(e) => {
+                                                status_message = Some(format!("✗ Failed to copy: {}", e));
+                                                status_message_timeout = Some(Utc::now() + chrono::Duration::seconds(2));
+                                            }
+                                        }
+                                    } else {
+                                        status_message = Some("✗ Clipboard not available".to_string());
+                                        status_message_timeout = Some(Utc::now() + chrono::Duration::seconds(2));
+                                    }
+                                } else {
+                                    status_message = Some("✗ No phone number available".to_string());
+                                    status_message_timeout = Some(Utc::now() + chrono::Duration::seconds(2));
+                                }
+                            }
+                        }
                         _ => {}
                     }
                 }
                 _ => {}
             }
+        }
+        
+        // Clear status message after timeout
+        if let Some(timeout) = status_message_timeout {
+            if Utc::now() > timeout {
+                status_message = None;
+                status_message_timeout = None;
+            }
+        }
+        
+        // Display status message if present
+        if let Some(ref _msg) = status_message {
+            // Status message is displayed in the next render cycle
         }
     }
     

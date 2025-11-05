@@ -1,6 +1,6 @@
 // IFC processing for ArxOS using custom STEP parser
 use crate::core::{Building, Floor};
-use crate::progress::ProgressContext;
+use crate::utils::progress::ProgressContext;
 use std::path::Path;
 use log::{info, warn};
 

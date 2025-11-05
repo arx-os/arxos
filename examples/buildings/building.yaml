@@ -1,0 +1,135 @@
+building:
+  id: 1d04167f-3b47-4bad-bbc5-e670957a48ea
+  name: Building
+  description: 'Building parsed from IFC file: unknown'
+  created_at: 2025-11-01T20:28:20.779155Z
+  updated_at: 2025-11-01T20:28:20.779590Z
+  version: 1.0.0
+  global_bounding_box: null
+metadata:
+  source_file: null
+  parser_version: ArxOS v2.0
+  total_entities: 0
+  spatial_entities: 0
+  coordinate_system: World
+  units: meters
+  tags:
+  - ifc
+  - building
+floors:
+- id: '43'
+  name: 1Ano2ZUxnEIvVQ_beukl8b
+  level: 1
+  elevation: 3.0
+  rooms:
+  - id: '87'
+    name: 1hq0sM3Q5Cq9DOc93a74pc
+    room_type: Office
+    area: 80.0
+    volume: 240.0
+    position:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    bounding_box:
+      min:
+        x: -5.0
+        y: -4.0
+        z: 0.0
+      max:
+        x: 5.0
+        y: 4.0
+        z: 3.0
+    equipment: []
+    properties: {}
+  - id: '89'
+    name: 0xY$LvXaDEswJDk_VU74C_
+    room_type: Office
+    area: 80.0
+    volume: 240.0
+    position:
+      x: 3200.000000000006
+      y: 4999.99999999983
+      z: 1.9491608327371067e-11
+    bounding_box:
+      min:
+        x: 3195.000000000006
+        y: 4995.99999999983
+        z: 1.9491608327371067e-11
+      max:
+        x: 3205.000000000006
+        y: 5003.99999999983
+        z: 3.0000000000194915
+    equipment: []
+    properties:
+      floor_polygon: 4950.000000000066,2600.000000000148;4950.000000000142,0.00000000010792575722007313;0.000000000025988811103161424,0.00000000010828671292983927;0.000000000025988811103161424,3800.000000000269;4950.000000000142,3800.000000000268;4950.000000000066,3300.0000000001482;4500.000000000115,3300.0000000001482;4500.000000000115,2600.000000000148
+  - id: '201'
+    name: 30wkH7SyH7gvhogulgnDi9
+    room_type: Office
+    area: 80.0
+    volume: 240.0
+    position:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    bounding_box:
+      min:
+        x: -5.0
+        y: -4.0
+        z: 0.0
+      max:
+        x: 5.0
+        y: 4.0
+        z: 3.0
+    equipment: []
+    properties: {}
+  - id: '203'
+    name: 18QhMtUIXBvQktPHXXxs7H
+    room_type: Office
+    area: 80.0
+    volume: 240.0
+    position:
+      x: 3200.0000000000578
+      y: 3199.9999999999304
+      z: -1.0828671292983925e-12
+    bounding_box:
+      min:
+        x: 3195.0000000000578
+        y: 3195.9999999999304
+        z: -1.0828671292983925e-12
+      max:
+        x: 3205.0000000000578
+        y: 3203.9999999999304
+        z: 2.9999999999989173
+    equipment: []
+    properties:
+      floor_polygon: 3800.000000000069,1600.0000000000086;3800.000000000069,0.00000000008085407898761331;0.000000000026710722522693685,0.00000000008085407898761331;0.000000000026710722522693685,1600.0000000000086
+  equipment: []
+  bounding_box:
+    min:
+      x: -5.0
+      y: -4.0
+      z: -1.0828671292983925e-12
+    max:
+      x: 3205.0000000000578
+      y: 5003.99999999983
+      z: 3.0000000000194915
+coordinate_systems:
+- name: World
+  origin:
+    x: 0.0
+    y: 0.0
+    z: 0.0
+  x_axis:
+    x: 1.0
+    y: 0.0
+    z: 0.0
+  y_axis:
+    x: 0.0
+    y: 1.0
+    z: 0.0
+  z_axis:
+    x: 0.0
+    y: 0.0
+    z: 1.0
+  description: Default world coordinate system

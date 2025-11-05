@@ -12,7 +12,7 @@
 //! - Mouse interaction workflows
 
 use arxos::ui::{
-    CommandPalette, CommandEntry,
+    CommandPalette,
     WorkspaceManager,
     HelpSystem, HelpContext, handle_help_event, get_context_help,
     ErrorModal, ErrorAction,
@@ -25,8 +25,6 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, Ke
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use tempfile::TempDir;
-use std::fs;
-use std::path::PathBuf;
 
 /// Test complete command palette workflow
 #[test]
@@ -46,10 +44,10 @@ fn test_command_palette_workflow() {
     assert!(filtered_count <= palette.commands().len(), "Filtered should be <= total");
     
     // Step 3: User navigates through filtered results
-    let initial_selected = palette.selected_command();
+    let _initial_selected = palette.selected_command();
     palette.next();
-    let after_next = palette.selected_command();
-    assert!(after_next.is_some(), "Should still have selection after navigation");
+    let _after_next = palette.selected_command();
+    assert!(_after_next.is_some(), "Should still have selection after navigation");
     
     // Step 4: User clears search
     palette.update_query("".to_string());
@@ -70,7 +68,7 @@ fn test_workspace_manager_workflow() {
     // This is acceptable - we test the workflow when it succeeds
     if let Ok(mut manager) = WorkspaceManager::new() {
         // Step 1: Initial state
-        let initial_count = manager.workspaces().len();
+        let _initial_count = manager.workspaces().len();
         
         // Step 2: User searches for workspace
         manager.update_query("test".to_string());
@@ -147,7 +145,7 @@ fn test_error_handling_workflow() {
     assert!(!error_modal.actions.is_empty(), "Should have actions");
     
     // Step 2: User navigates actions
-    let initial_action = error_modal.actions[error_modal.selected_action].clone();
+    let _initial_action = error_modal.actions[error_modal.selected_action].clone();
     error_modal.next_action();
     assert_ne!(error_modal.selected_action, 0, "Selection should change");
     

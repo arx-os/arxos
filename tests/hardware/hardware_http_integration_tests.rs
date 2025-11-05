@@ -30,8 +30,8 @@ fn create_test_sensor_data() -> arxos::hardware::SensorData {
     }
 }
 
-#[tokio::test]
-async fn test_sensor_data_structure_validation() {
+#[test]
+fn test_sensor_data_structure_validation() {
     let sensor_data = create_test_sensor_data();
     
     // Verify all required fields
@@ -41,8 +41,8 @@ async fn test_sensor_data_structure_validation() {
 }
 
 #[cfg(feature = "async-sensors")]
-#[tokio::test]
-async fn test_sensor_http_response_serialization() {
+#[test]
+fn test_sensor_http_response_serialization() {
     // Test HTTP response serialization
     use serde::{Serialize, Deserialize};
     
@@ -67,8 +67,8 @@ async fn test_sensor_http_response_serialization() {
     assert!(json.contains("Test message"));
 }
 
-#[tokio::test]
-async fn test_equipment_sensor_mapping_structure() {
+#[test]
+fn test_equipment_sensor_mapping_structure() {
     use arxos::hardware::{EquipmentSensorMapping, SensorType, ThresholdCheck};
     
     let mapping = EquipmentSensorMapping {
@@ -86,8 +86,8 @@ async fn test_equipment_sensor_mapping_structure() {
     assert_eq!(mapping.check_thresholds(80.0), ThresholdCheck::OutOfRange);
 }
 
-#[tokio::test]
-async fn test_sensor_ingestion_service_config() {
+#[test]
+fn test_sensor_ingestion_service_config() {
     let temp_dir = TempDir::new().unwrap();
     let config = arxos::hardware::SensorIngestionConfig {
         data_directory: temp_dir.path().to_path_buf(),

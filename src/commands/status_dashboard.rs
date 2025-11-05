@@ -26,8 +26,12 @@ struct DashboardStats {
     warning_count: usize,
     critical_count: usize,
     unknown_count: usize,
+    // Reserved for future activity feed display
+    #[allow(dead_code)]
     recent_changes: usize,
     total_rooms: usize,
+    // Reserved for future floor summary display
+    #[allow(dead_code)]
     total_floors: usize,
 }
 
@@ -250,7 +254,7 @@ fn render_summary_cards<'a>(stats: &DashboardStats, area: Rect, theme: &'a Theme
 }
 
 /// Render equipment status breakdown
-fn render_status_breakdown<'a>(stats: &DashboardStats, area: Rect, theme: &'a Theme) -> Paragraph<'a> {
+fn render_status_breakdown<'a>(stats: &DashboardStats, _area: Rect, theme: &'a Theme) -> Paragraph<'a> {
     let lines = vec![
         Line::from(vec![
             Span::styled("Equipment Status", Style::default().fg(theme.text).add_modifier(Modifier::BOLD)),
@@ -283,7 +287,7 @@ fn render_status_breakdown<'a>(stats: &DashboardStats, area: Rect, theme: &'a Th
 }
 
 /// Render recent activity list
-fn render_activity_list<'a>(activities: &[ActivityItem], area: Rect, theme: &'a Theme) -> Paragraph<'a> {
+fn render_activity_list<'a>(activities: &[ActivityItem], _area: Rect, theme: &'a Theme) -> Paragraph<'a> {
     let lines: Vec<Line> = activities.iter().take(10).map(|activity| {
         let commit_info = if let Some(ref hash) = activity.commit_hash {
             format!("[{}] ", hash)

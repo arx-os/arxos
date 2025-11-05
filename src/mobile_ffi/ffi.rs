@@ -712,7 +712,7 @@ pub unsafe extern "C" fn arxos_process_ar_scan_to_pending(
             };
             
             // Process to pending
-            match processing::process_ar_scan_to_pending(&processing_scan, building_str, confidence_threshold) {
+            match processing::process_ar_scan_to_pending(&processing_scan, building_str, confidence_threshold, None) {
                 Ok(pending_ids) => {
                     let response = serde_json::json!({
                         "success": true,
@@ -1044,8 +1044,7 @@ pub unsafe extern "C" fn arxos_save_ar_scan(
             }
         }
     };
-    let user_email_opt = if user_email_str.is_empty() { None } else { Some(user_email_str.as_str()) };
-    
+    let user_email_opt = if user_email_str.is_empty() { None } else { Some(user_email_str) };
     // Validate confidence threshold
     if confidence_threshold < 0.0 || confidence_threshold > 1.0 {
         warn!("arxos_save_ar_scan: invalid confidence_threshold: {}", confidence_threshold);
@@ -1123,7 +1122,7 @@ pub unsafe extern "C" fn arxos_save_ar_scan(
     };
     
     // Process scan to pending equipment
-    match processing::process_ar_scan_to_pending(&processing_scan, building_str, confidence_threshold) {
+    match processing::process_ar_scan_to_pending(&processing_scan, building_str, confidence_threshold, user_email_opt.clone()) {
         Ok(pending_ids) => {
             // Save pending equipment to storage for later review
             use crate::ar_integration::pending::PendingEquipmentManager;
@@ -1341,6 +1340,14 @@ pub unsafe extern "C" fn arxos_confirm_pending_equipment(
         }
     };
     
+    // Get pending equipment to retrieve stored user_email (for attribution fallback)
+    // Clone the user_email before calling confirm_pending (which borrows manager mutably)
+    let stored_user_email = manager.get_pending(pending_id_str)
+        .and_then(|p| p.user_email.clone());
+    
+    // Prefer provided user_email, fall back to stored user_email from scan
+    let attribution_email = user_email_opt.or_else(|| stored_user_email.as_ref().map(|e| e.as_str()));
+    
     // Confirm pending equipment
     match manager.confirm_pending(pending_id_str, &mut building_data) {
         Ok(equipment_id) => {
@@ -1360,7 +1367,7 @@ pub unsafe extern "C" fn arxos_confirm_pending_equipment(
             };
             
             let commit_result = if commit_to_git != 0 {
-                match persistence_manager.save_and_commit_with_user(&building_data, Some(&commit_message), user_email_opt) {
+                match persistence_manager.save_and_commit_with_user(&building_data, Some(&commit_message), attribution_email) {
                     Ok(commit_id) => Some(commit_id),
                     Err(e) => {
                         warn!("arxos_confirm_pending_equipment: failed to commit to Git: {}", e);

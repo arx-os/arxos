@@ -31,6 +31,7 @@ pub struct DetectedEquipmentData {
 /// * `scan_data` - Parsed AR scan data
 /// * `building_name` - Name of the building
 /// * `confidence_threshold` - Minimum confidence score to create pending item
+/// * `user_email` - Optional user email for attribution when confirming equipment
 /// 
 /// # Returns
 /// 
@@ -39,6 +40,7 @@ pub fn process_ar_scan_to_pending(
     scan_data: &ARScanData,
     building_name: &str,
     confidence_threshold: f64,
+    user_email: Option<String>,
 ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     info!("Processing AR scan for building: {}", building_name);
     
@@ -75,6 +77,7 @@ pub fn process_ar_scan_to_pending(
             0, // Floor level will be determined during confirmation
             None, // Room name will be determined during confirmation
             confidence_threshold,
+            user_email.clone(),
         )? {
             pending_ids.push(pending_id);
             info!("Created pending equipment: {} (confidence: {:.2})", 
@@ -235,7 +238,7 @@ pub fn process_ar_scan_and_save_pending(
     }
     
     // Process to pending
-    let pending_ids = process_ar_scan_to_pending(scan_data, building_name, confidence_threshold)?;
+    let pending_ids = process_ar_scan_to_pending(scan_data, building_name, confidence_threshold, None)?;
     
     // Save pending equipment to file if output path provided
     if let Some(file) = output_file {

@@ -10,11 +10,11 @@
 use crate::ui::{TerminalManager, Theme};
 use crate::ui::layouts::list_detail_layout;
 use crate::utils::loading;
-use crate::search::{SearchEngine, SearchConfig, SearchResult};
+use crate::search::{SearchEngine, SearchConfig};
 use crossterm::event::{Event, KeyCode};
 use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
 };
@@ -109,7 +109,7 @@ impl SearchBrowserState {
                 "room" => {
                     let mut floor_level = None;
                     for floor in &building_data.floors {
-                        if let Some(room) = floor.rooms.iter().find(|r| r.name == result.name) {
+                        if let Some(_room) = floor.rooms.iter().find(|r| r.name == result.name) {
                             floor_level = Some(floor.level);
                             break;
                         }
@@ -195,7 +195,7 @@ impl SearchBrowserState {
 /// Render search results list
 fn render_results_list<'a>(
     state: &'a SearchBrowserState,
-    area: Rect,
+    _area: Rect,
     theme: &'a Theme,
 ) -> List<'a> {
     let items: Vec<ListItem> = state.filtered_results
@@ -252,7 +252,7 @@ fn render_results_list<'a>(
 /// Render result details
 fn render_result_details<'a>(
     item: &'a SearchResultItem,
-    area: Rect,
+    _area: Rect,
     theme: &'a Theme,
 ) -> Paragraph<'a> {
     let mut lines = vec![

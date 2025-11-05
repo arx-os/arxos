@@ -193,11 +193,11 @@ mod tests {
     #[test]
     fn test_workspace_manager_update_query() {
         // Test query update logic with mock data
-        let mut workspaces = vec![
+        let workspaces = vec![
             create_test_workspace("Building A"),
             create_test_workspace("Building B"),
         ];
-        let filtered_workspaces: Vec<usize> = (0..workspaces.len()).collect();
+        let _filtered_workspaces: Vec<usize> = (0..workspaces.len()).collect();
         
         // Simulate query update
         let query = "A".to_string();

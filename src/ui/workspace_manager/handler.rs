@@ -109,8 +109,8 @@ pub fn handle_workspace_manager(
 #[cfg(test)]
 mod tests {
     use super::super::manager::WorkspaceManager;
-    use crate::ui::workspace_manager::types::Workspace;
-    use std::path::PathBuf;
+    
+    
 
     #[test]
     fn test_handle_workspace_manager_empty() {

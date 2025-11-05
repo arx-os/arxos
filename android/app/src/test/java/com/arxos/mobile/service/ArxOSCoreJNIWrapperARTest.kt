@@ -203,7 +203,7 @@ class ArxOSCoreJNIWrapperARTest {
         )
         
         // Mock the JSON serialization (in real code, this is done in scanDataToJson)
-        `when`(mockJNI.nativeSaveARScan(anyString(), eq("Test Building"), eq(0.7)))
+        `when`(mockJNI.nativeSaveARScan(anyString(), eq("Test Building"), anyOrNull(), eq(0.7)))
             .thenReturn(jsonResponse)
         
         // When: Calling saveARScan
@@ -236,7 +236,7 @@ class ArxOSCoreJNIWrapperARTest {
             roomName = "Room 301"
         )
         
-        `when`(mockJNI.nativeSaveARScan(anyString(), eq("Test Building"), eq(0.8)))
+        `when`(mockJNI.nativeSaveARScan(anyString(), eq("Test Building"), anyOrNull(), eq(0.8)))
             .thenReturn(jsonResponse)
         
         // When: Calling saveARScan
@@ -263,7 +263,7 @@ class ArxOSCoreJNIWrapperARTest {
             roomName = "Room 301"
         )
         
-        `when`(mockJNI.nativeSaveARScan(anyString(), eq("Test Building"), eq(0.7)))
+        `when`(mockJNI.nativeSaveARScan(anyString(), eq("Test Building"), anyOrNull(), eq(0.7)))
             .thenReturn(errorJson)
         
         // When: Calling saveARScan
@@ -284,7 +284,7 @@ class ArxOSCoreJNIWrapperARTest {
             roomName = "Room 301"
         )
         
-        `when`(mockJNI.nativeSaveARScan(anyString(), eq("Test Building"), eq(0.7)))
+        `when`(mockJNI.nativeSaveARScan(anyString(), eq("Test Building"), anyOrNull(), eq(0.7)))
             .thenReturn("")
         
         // When: Calling saveARScan
@@ -312,7 +312,7 @@ class ArxOSCoreJNIWrapperARTest {
         // Then: Should return safe default
         assertFalse(result.success)
         assertEquals("Native library not loaded", result.error)
-        verify(mockJNI, never()).nativeSaveARScan(anyString(), anyString(), anyDouble())
+        verify(mockJNI, never()).nativeSaveARScan(anyString(), anyString(), anyOrNull(), anyDouble())
     }
     
     // ============================================================================
@@ -471,7 +471,7 @@ class ArxOSCoreJNIWrapperARTest {
             }
         """.trimIndent()
         
-        `when`(mockJNI.nativeConfirmPendingEquipment("Test Building", "pending-1", true))
+        `when`(mockJNI.nativeConfirmPendingEquipment("Test Building", "pending-1", anyOrNull(), true))
             .thenReturn(jsonResponse)
         
         // When: Calling confirmPendingEquipment
@@ -501,7 +501,7 @@ class ArxOSCoreJNIWrapperARTest {
             }
         """.trimIndent()
         
-        `when`(mockJNI.nativeConfirmPendingEquipment("Test Building", "pending-1", false))
+        `when`(mockJNI.nativeConfirmPendingEquipment("Test Building", "pending-1", anyOrNull(), false))
             .thenReturn(jsonResponse)
         
         // When: Calling confirmPendingEquipment
@@ -523,7 +523,7 @@ class ArxOSCoreJNIWrapperARTest {
             }
         """.trimIndent()
         
-        `when`(mockJNI.nativeConfirmPendingEquipment("Test Building", "pending-999", true))
+        `when`(mockJNI.nativeConfirmPendingEquipment("Test Building", "pending-999", anyOrNull(), true))
             .thenReturn(errorJson)
         
         // When: Calling confirmPendingEquipment
@@ -548,7 +548,7 @@ class ArxOSCoreJNIWrapperARTest {
         // Then: Should return safe default
         assertFalse(result.success)
         assertEquals("Native library not loaded", result.error)
-        verify(mockJNI, never()).nativeConfirmPendingEquipment(anyString(), anyString(), anyBoolean())
+        verify(mockJNI, never()).nativeConfirmPendingEquipment(anyString(), anyString(), anyOrNull(), anyBoolean())
     }
     
     // ============================================================================
@@ -625,11 +625,11 @@ class ArxOSCoreJNIWrapperARTest {
         // Given: Invalid JSON responses
         `when`(mockJNI.nativeLoadARModel(anyString(), anyString(), anyOrNull()))
             .thenReturn("invalid json")
-        `when`(mockJNI.nativeSaveARScan(anyString(), anyString(), anyDouble()))
+        `when`(mockJNI.nativeSaveARScan(anyString(), anyString(), anyOrNull(), anyDouble()))
             .thenReturn("invalid json")
         `when`(mockJNI.nativeListPendingEquipment(anyString()))
             .thenReturn("invalid json")
-        `when`(mockJNI.nativeConfirmPendingEquipment(anyString(), anyString(), anyBoolean()))
+        `when`(mockJNI.nativeConfirmPendingEquipment(anyString(), anyString(), anyOrNull(), anyBoolean()))
             .thenReturn("invalid json")
         `when`(mockJNI.nativeRejectPendingEquipment(anyString(), anyString()))
             .thenReturn("invalid json")
@@ -660,7 +660,7 @@ class ArxOSCoreJNIWrapperARTest {
         // Given: Empty responses
         `when`(mockJNI.nativeLoadARModel(anyString(), anyString(), anyOrNull()))
             .thenReturn("")
-        `when`(mockJNI.nativeSaveARScan(anyString(), anyString(), anyDouble()))
+        `when`(mockJNI.nativeSaveARScan(anyString(), anyString(), anyOrNull(), anyDouble()))
             .thenReturn("")
         `when`(mockJNI.nativeListPendingEquipment(anyString()))
             .thenReturn("")

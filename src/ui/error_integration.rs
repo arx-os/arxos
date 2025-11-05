@@ -5,11 +5,7 @@
 use crate::ui::{ErrorModal, ErrorAction, render_error_modal, handle_error_modal_event};
 use crate::error::ArxError;
 use crossterm::event::Event;
-use ratatui::{
-    layout::Rect,
-    widgets::Paragraph,
-    Frame,
-};
+use ratatui::Frame;
 
 /// Helper to render error modal in a frame
 pub fn render_error_modal_in_frame(
@@ -62,7 +58,7 @@ mod tests {
 
     #[test]
     fn test_render_error_modal_in_frame() {
-        let area = Rect::new(0, 0, 80, 24);
+        let _area = Rect::new(0, 0, 80, 24);
         let backend = TestBackend::new(80, 24);
         let mut terminal = ratatui::Terminal::new(backend).unwrap();
         

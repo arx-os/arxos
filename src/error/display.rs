@@ -2,6 +2,33 @@
 
 use crate::error::{ArxError, ErrorContext};
 
+/// Configuration for error display formatting
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DisplayStyle {
+    /// Use emojis for visual indicators (default)
+    Emoji,
+    /// Use plain text prefixes instead of emojis
+    PlainText,
+}
+
+/// Global display style setting (defaults to Emoji)
+static DISPLAY_STYLE: std::sync::OnceLock<std::sync::Mutex<DisplayStyle>> = 
+    std::sync::OnceLock::new();
+
+/// Set the global display style for error messages
+pub fn set_display_style(style: DisplayStyle) {
+    let style_mutex = DISPLAY_STYLE.get_or_init(|| std::sync::Mutex::new(DisplayStyle::Emoji));
+    if let Ok(mut s) = style_mutex.lock() {
+        *s = style;
+    }
+}
+
+/// Get the current global display style
+pub fn get_display_style() -> DisplayStyle {
+    let style_mutex = DISPLAY_STYLE.get_or_init(|| std::sync::Mutex::new(DisplayStyle::Emoji));
+    style_mutex.lock().map(|s| *s).unwrap_or(DisplayStyle::Emoji)
+}
+
 /// Trait for enhanced error display
 pub trait ErrorDisplay {
     /// Display error with full context in a user-friendly format
@@ -12,56 +39,85 @@ pub trait ErrorDisplay {
     
     /// Display error summary for logging
     fn display_summary(&self) -> String;
+    
+    /// Display error with a specific style (emoji or plain text)
+    fn display_user_friendly_with_style(&self, style: DisplayStyle) -> String;
 }
 
 impl ErrorDisplay for ArxError {
     fn display_user_friendly(&self) -> String {
+        self.display_user_friendly_with_style(get_display_style())
+    }
+    
+    fn display_user_friendly_with_style(&self, style: DisplayStyle) -> String {
         let mut output = String::new();
+        
+        let (ifc_prefix, config_prefix, git_prefix, validation_prefix, io_prefix, yaml_prefix, spatial_prefix) = 
+            match style {
+                DisplayStyle::Emoji => (
+                    "❌ IFC Processing Error:",
+                    "⚙️ Configuration Error:",
+                    "📦 Git Operation Error:",
+                    "✅ Validation Error:",
+                    "💾 IO Error:",
+                    "📄 YAML Processing Error:",
+                    "🗺️ Spatial Data Error:",
+                ),
+                DisplayStyle::PlainText => (
+                    "[ERROR] IFC Processing Error:",
+                    "[CONFIG] Configuration Error:",
+                    "[GIT] Git Operation Error:",
+                    "[VALIDATION] Validation Error:",
+                    "[IO] IO Error:",
+                    "[YAML] YAML Processing Error:",
+                    "[SPATIAL] Spatial Data Error:",
+                ),
+            };
         
         match self {
             ArxError::IfcProcessing { message, context, .. } => {
-                output.push_str(&format!("❌ IFC Processing Error: {}\n", message));
-                Self::display_context(&mut output, context);
+                output.push_str(&format!("{} {}\n", ifc_prefix, message));
+                Self::display_context(&mut output, context, style);
             }
             ArxError::Configuration { message, context, field } => {
-                output.push_str(&format!("⚙️ Configuration Error: {}\n", message));
+                output.push_str(&format!("{} {}\n", config_prefix, message));
                 if let Some(field) = field {
                     output.push_str(&format!("   Field: {}\n", field));
                 }
-                Self::display_context(&mut output, context);
+                Self::display_context(&mut output, context, style);
             }
             ArxError::GitOperation { message, context, operation } => {
-                output.push_str(&format!("📦 Git Operation Error: {}\n", message));
+                output.push_str(&format!("{} {}\n", git_prefix, message));
                 output.push_str(&format!("   Operation: {}\n", operation));
-                Self::display_context(&mut output, context);
+                Self::display_context(&mut output, context, style);
             }
             ArxError::Validation { message, context, file_path } => {
-                output.push_str(&format!("✅ Validation Error: {}\n", message));
+                output.push_str(&format!("{} {}\n", validation_prefix, message));
                 if let Some(file_path) = file_path {
                     output.push_str(&format!("   File: {}\n", file_path));
                 }
-                Self::display_context(&mut output, context);
+                Self::display_context(&mut output, context, style);
             }
             ArxError::IoError { message, context, path } => {
-                output.push_str(&format!("💾 IO Error: {}\n", message));
+                output.push_str(&format!("{} {}\n", io_prefix, message));
                 if let Some(path) = path {
                     output.push_str(&format!("   Path: {}\n", path));
                 }
-                Self::display_context(&mut output, context);
+                Self::display_context(&mut output, context, style);
             }
             ArxError::YamlProcessing { message, context, file_path } => {
-                output.push_str(&format!("📄 YAML Processing Error: {}\n", message));
+                output.push_str(&format!("{} {}\n", yaml_prefix, message));
                 if let Some(file_path) = file_path {
                     output.push_str(&format!("   File: {}\n", file_path));
                 }
-                Self::display_context(&mut output, context);
+                Self::display_context(&mut output, context, style);
             }
             ArxError::SpatialData { message, context, entity_type } => {
-                output.push_str(&format!("🗺️ Spatial Data Error: {}\n", message));
+                output.push_str(&format!("{} {}\n", spatial_prefix, message));
                 if let Some(entity_type) = entity_type {
                     output.push_str(&format!("   Entity Type: {}\n", entity_type));
                 }
-                Self::display_context(&mut output, context);
+                Self::display_context(&mut output, context, style);
             }
         }
         
@@ -103,35 +159,55 @@ impl ErrorDisplay for ArxError {
 }
 
 impl ArxError {
-    fn display_context(output: &mut String, context: &ErrorContext) {
+    fn display_context(output: &mut String, context: &ErrorContext, style: DisplayStyle) {
+        let (suggestions_label, recovery_label, debug_label, help_label, file_label, line_label) = 
+            match style {
+                DisplayStyle::Emoji => (
+                    "   💡 Suggestions:",
+                    "   🔧 Recovery Steps:",
+                    "   🐛 Debug Info:",
+                    "   📖 Help:",
+                    "   📁 File:",
+                    "   📍 Line:",
+                ),
+                DisplayStyle::PlainText => (
+                    "   [SUGGESTIONS]",
+                    "   [RECOVERY STEPS]",
+                    "   [DEBUG]",
+                    "   [HELP]",
+                    "   [FILE]",
+                    "   [LINE]",
+                ),
+            };
+        
         if !context.suggestions.is_empty() {
-            output.push_str("   💡 Suggestions:\n");
+            output.push_str(&format!("{}\n", suggestions_label));
             for suggestion in &context.suggestions {
                 output.push_str(&format!("      • {}\n", suggestion));
             }
         }
         
         if !context.recovery_steps.is_empty() {
-            output.push_str("   🔧 Recovery Steps:\n");
+            output.push_str(&format!("{}\n", recovery_label));
             for (i, step) in context.recovery_steps.iter().enumerate() {
                 output.push_str(&format!("      {}. {}\n", i + 1, step));
             }
         }
         
         if let Some(debug_info) = &context.debug_info {
-            output.push_str(&format!("   🐛 Debug Info: {}\n", debug_info));
+            output.push_str(&format!("{} {}\n", debug_label, debug_info));
         }
         
         if let Some(help_url) = &context.help_url {
-            output.push_str(&format!("   📖 Help: {}\n", help_url));
+            output.push_str(&format!("{} {}\n", help_label, help_url));
         }
         
         if let Some(file_path) = &context.file_path {
-            output.push_str(&format!("   📁 File: {}\n", file_path));
+            output.push_str(&format!("{} {}\n", file_label, file_path));
         }
         
         if let Some(line_number) = context.line_number {
-            output.push_str(&format!("   📍 Line: {}\n", line_number));
+            output.push_str(&format!("{} {}\n", line_label, line_number));
         }
     }
 }

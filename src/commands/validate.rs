@@ -1,9 +1,37 @@
-// Validation command handlers
+//! Validation command handlers
+//!
+//! Handles validation of building data files (YAML) and IFC files.
 
 use crate::ifc;
 use crate::utils::loading;
 
 /// Handle the validate command
+///
+/// Validates building data files or IFC files for correctness and structure.
+///
+/// # Arguments
+///
+/// * `path` - Optional path to file or directory to validate
+///   - If `None`: Validates all YAML files in current directory
+///   - If path ends with `.ifc`: Validates as IFC file
+///   - Otherwise: Validates as YAML file
+///
+/// # Returns
+///
+/// Returns `Ok(())` if validation succeeds, or an error if validation fails.
+///
+/// # Examples
+///
+/// ```no_run
+/// // Validate all YAML files in current directory
+/// handle_validate(None)?;
+///
+/// // Validate specific IFC file
+/// handle_validate(Some("building.ifc".to_string()))?;
+///
+/// // Validate specific YAML file
+/// handle_validate(Some("building.yaml".to_string()))?;
+/// ```
 pub fn handle_validate(path: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(data_path) = path {
         println!("Validating data at: {}", data_path);

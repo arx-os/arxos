@@ -137,13 +137,44 @@ arxos/
 
 ## 👨‍💻 For Developers
 
+### Development Setup
+
+**Prerequisites:**
+- Rust (latest stable): https://rustup.rs/
+- Git
+- Optional: `cbindgen` for FFI header generation (`cargo install cbindgen`)
+
+**Initial Setup:**
+```bash
+# Clone the repository
+git clone https://github.com/arx-os/arxos.git
+cd arxos
+
+# Install pre-commit hooks (optional but recommended)
+pip install pre-commit
+pre-commit install
+
+# Build the project
+cargo build
+
+# Run tests
+cargo test
+```
+
 ### Build for Development
 
 ```bash
+# Debug build (faster iteration)
+cargo build
+
+# Release build (optimized)
 cargo build --release
+
+# With specific features
+cargo build --features android  # For Android JNI support
 ```
 
-### Test
+### Testing
 
 ```bash
 # Run all tests
@@ -151,7 +182,28 @@ cargo test
 
 # Run with output
 cargo test -- --nocapture
+
+# Run specific test suite
+cargo test ar_workflow
+
+# Run tests in release mode
+cargo test --release
 ```
+
+### Code Quality
+
+```bash
+# Format code
+cargo fmt
+
+# Lint with clippy
+cargo clippy
+
+# Check for warnings
+cargo clippy -- -W clippy::all
+```
+
+**Note:** Pre-commit hooks automatically run `fmt`, `clippy`, and tests before commits. CI/CD runs stricter checks with `-D warnings`.
 
 ### Mobile Development
 
@@ -170,6 +222,43 @@ cd android && ./gradlew build
 See [docs/MOBILE_FFI_INTEGRATION.md](docs/MOBILE_FFI_INTEGRATION.md) for details.
 
 ---
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+**Build Errors:**
+- Ensure you have the latest Rust toolchain: `rustup update`
+- Clean build artifacts: `cargo clean && cargo build`
+- Check platform-specific dependencies (see mobile development sections)
+
+**Test Failures:**
+- Some tests require Git repository: Initialize with `git init` in test directory
+- Serial tests may conflict: Run with `cargo test --test-threads=1`
+- Platform-specific tests: See [Mobile FFI Integration](docs/mobile/MOBILE_FFI_INTEGRATION.md)
+
+**FFI Header Generation:**
+- Install cbindgen: `cargo install cbindgen`
+- Headers auto-generate during build if cbindgen is available
+- Falls back to validation-only if cbindgen is not installed
+
+**Mobile Build Issues:**
+- iOS: Ensure Xcode Command Line Tools installed: `xcode-select --install`
+- Android: Install Android NDK and set `ANDROID_NDK_HOME`
+- See platform-specific guides in `docs/mobile/`
+
+**Performance Issues:**
+- Use release builds: `cargo build --release`
+- Enable parallel processing in config
+- See [Performance Guide](docs/development/PERFORMANCE_GUIDE.md)
+
+### Getting Help
+
+- **Documentation**: Check [Documentation Index](docs/DOCUMENTATION_INDEX.md)
+- **Issues**: Open an issue on GitHub with:
+  - Platform and Rust version (`rustc --version`)
+  - Error messages and logs
+  - Steps to reproduce
 
 ## 🤝 Contributing
 

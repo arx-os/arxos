@@ -4,6 +4,8 @@
 //! Grid coordinates are commonly used in architectural drawings where the building
 //! is divided into a grid system (columns A-Z, rows 1-n).
 
+pub mod to_address;
+
 use crate::spatial::Point3D;
 use serde::{Deserialize, Serialize};
 use std::fmt;

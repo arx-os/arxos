@@ -130,6 +130,7 @@ impl GameScenarioLoader {
             id: equipment_id,
             name: name.clone(),
             path: format!("/equipment/{}", name.to_lowercase().replace(" ", "-")),
+            address: None,
             equipment_type,
             position: Position {
                 x,
@@ -255,6 +256,7 @@ impl GameScenarioLoader {
                     id: equipment_data.id.clone(),
                     name: equipment_data.name.clone(),
                     path: equipment_data.universal_path.clone(),
+                    address: equipment_data.address.clone(),
                     equipment_type,
                     position: Position {
                         x: equipment_data.position.x,

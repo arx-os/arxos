@@ -417,6 +417,7 @@ fn generate_building_data(
         name: "Ground Floor".to_string(),
         level: 0,
         elevation: floor_elevation,
+        wings: vec![],
         rooms: vec![room],
         equipment: vec![],
         bounding_box: Some(bounding_box.clone()),

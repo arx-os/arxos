@@ -10,7 +10,7 @@ pub mod delta;
 
 // Re-export public types
 pub use exporter::IFCExporter;
-pub use mapper::universal_path_to_ifc_entity_id;
+pub use mapper::{universal_path_to_ifc_entity_id, address_to_ifc_entity_id};
 pub use sync_state::IFCSyncState;
 pub use delta::ExportDelta;
 

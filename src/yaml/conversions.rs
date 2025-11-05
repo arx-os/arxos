@@ -101,6 +101,7 @@ pub(crate) fn equipment_to_equipment_data(equipment: &Equipment) -> EquipmentDat
         },
         properties: equipment.properties.clone(),
         universal_path: equipment.path.clone(),
+        address: equipment.address.clone(),
         sensor_mappings: None,
     }
 }
@@ -122,6 +123,7 @@ pub(crate) fn equipment_data_to_equipment(equipment_data: &EquipmentData) -> Equ
         id: equipment_data.id.clone(),
         name: equipment_data.name.clone(),
         path: equipment_data.universal_path.clone(),
+        address: equipment_data.address.clone(),
         equipment_type,
         position: Position {
             x: equipment_data.position.x,

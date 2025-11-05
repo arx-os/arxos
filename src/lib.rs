@@ -7,6 +7,7 @@ pub mod config;
 pub mod error;
 
 // Domain modules (business logic)
+pub mod domain;
 pub mod spatial;
 pub mod git;
 pub mod ifc;
@@ -48,10 +49,13 @@ pub use ar_integration::processing::{process_ar_scan_to_pending, validate_ar_sca
 pub use core::{Building, Equipment};
 pub use ifc::{IFCProcessor, BoundingBox, IFCError, IFCResult, EnhancedIFCParser, ParseResult, ParseStats};
 pub use spatial::{SpatialEngine, Point3D, BoundingBox3D, CoordinateSystem, SpatialEntity};
-pub use git::{GitClient, BuildingGitManager, GitConfig, GitConfigManager, GitError, CommitMetadata};
+// Re-export Git types
+pub use git::{BuildingGitManager, GitConfig, GitConfigManager, GitError, CommitMetadata};
 pub use render::BuildingRenderer;
 pub use yaml::{BuildingYamlSerializer, BuildingData, BuildingInfo, BuildingMetadata, FloorData, RoomData, EquipmentData, SensorMapping, ThresholdConfig};
-pub use path::{PathGenerator, UniversalPath, PathComponents, PathError, PathValidator};
+// Re-export path types
+pub use path::{PathComponents, PathError, PathValidator};
+pub use domain::{ArxAddress, RESERVED_SYSTEMS};
 pub use utils::progress::{ProgressReporter, ProgressContext};
 pub use utils::progress::utils as progress_utils;
 pub use config::{ArxConfig, ConfigManager, ConfigError, ConfigResult};

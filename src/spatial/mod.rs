@@ -6,6 +6,9 @@ pub mod grid;
 pub use types::*;
 pub use grid::{GridCoordinate, GridSystem};
 
+// Re-export grid address utilities
+pub use grid::to_address;
+
 /// Spatial engine for geometric operations
 pub struct SpatialEngine {
     // Spatial processing engine

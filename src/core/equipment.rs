@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use std::collections::HashMap;
 use super::types::Position;
+use crate::domain::ArxAddress;
 
 /// Represents equipment in a building
 ///
@@ -26,8 +27,11 @@ pub struct Equipment {
     pub id: String,
     /// Human-readable equipment name
     pub name: String,
-    /// Universal path identifier
+    /// Universal path identifier (legacy, kept for backward compatibility)
     pub path: String,
+    /// ArxOS Address (new hierarchical addressing system)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub address: Option<ArxAddress>,
     /// Type categorization of the equipment
     pub equipment_type: EquipmentType,
     /// 3D spatial position with coordinate system
@@ -69,6 +73,7 @@ impl Default for Equipment {
             id: Uuid::new_v4().to_string(),
             name: "Unnamed Equipment".to_string(),
             path: "/".to_string(),
+            address: None,
             equipment_type: EquipmentType::Other("Unknown".to_string()),
             position: Position {
                 x: 0.0,
@@ -89,6 +94,7 @@ impl Equipment {
             id: Uuid::new_v4().to_string(),
             name,
             path,
+            address: None,
             equipment_type,
             position: Position {
                 x: 0.0,

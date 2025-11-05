@@ -399,6 +399,7 @@ pub fn add_equipment(building_name: String, equipment: EquipmentInfo, room_id: O
         id: equipment.id.clone(),
         name: equipment.name.clone(),
         path: format!("/equipment/{}", equipment.id),
+        address: None,
         equipment_type,
         position: CorePosition {
             x: equipment.position.x,

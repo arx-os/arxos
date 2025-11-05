@@ -149,20 +149,29 @@ impl IFCExporter {
         Ok(())
     }
 
-    /// Collect Universal Paths from building data
+    /// Collect address paths from building data
     /// 
-    /// Returns HashSet of Universal Paths for equipment and rooms.
+    /// Returns HashSet of address paths for equipment and rooms.
+    /// Prefers ArxAddress when available, falls back to universal_path for backward compatibility.
     pub fn collect_universal_paths(&self) -> (HashSet<String>, HashSet<String>) {
         let mut equipment_paths = HashSet::new();
         let mut rooms_paths = HashSet::new();
         
         for floor in &self.building_data.floors {
             for equipment in &floor.equipment {
-                let path = if equipment.universal_path.is_empty() {
-                    format!("building/floor-{}/equipment-{}", floor.level, equipment.id)
-                } else {
-                    equipment.universal_path.clone()
-                };
+                let path = equipment.address.as_ref()
+                    .map(|addr| addr.path.clone())
+                    .filter(|p| !p.is_empty())
+                    .or_else(|| {
+                        if !equipment.universal_path.is_empty() {
+                            Some(equipment.universal_path.clone())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or_else(|| {
+                        format!("building/floor-{}/equipment-{}", floor.level, equipment.id)
+                    });
                 equipment_paths.insert(path);
             }
             
@@ -186,16 +195,21 @@ impl IFCExporter {
 
     /// Convert EquipmentData to SpatialEntity
     /// 
-    /// Uses Universal Path as the stable identifier and preserves
-    /// equipment properties for round-trip compatibility.
+    /// Uses ArxAddress when available, falls back to universal_path or equipment ID.
+    /// Preserves equipment properties for round-trip compatibility.
     fn convert_equipment_to_spatial_entity(&self, equipment: &EquipmentData) -> SpatialEntity {
-        // Use Universal Path as the stable ID
-        let entity_id = if !equipment.universal_path.is_empty() {
-            equipment.universal_path.clone()
-        } else {
-            // Fallback to equipment ID if Universal Path not set
-            equipment.id.clone()
-        };
+        // Prefer ArxAddress, then universal_path, then equipment ID
+        let entity_id = equipment.address.as_ref()
+            .map(|addr| addr.path.clone())
+            .filter(|p| !p.is_empty())
+            .or_else(|| {
+                if !equipment.universal_path.is_empty() {
+                    Some(equipment.universal_path.clone())
+                } else {
+                    None
+                }
+            })
+            .unwrap_or_else(|| equipment.id.clone());
         
         // Map equipment type to IFC entity type
         let ifc_entity_type = map_equipment_type_string_to_ifc(&equipment.equipment_type);

@@ -351,6 +351,7 @@ impl ARDataIntegrator {
                 system_type: equipment_type,
                 universal_path: format!("/BUILDING/FLOOR-{}/ROOM-{}/EQUIPMENT/{}", 
                     floor.level, room_index, equipment_name),
+                address: None,
                 position: detected_equipment.position,
                 bounding_box: detected_equipment.bounding_box,
                 status: EquipmentStatus::Healthy,

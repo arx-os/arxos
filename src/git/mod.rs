@@ -38,11 +38,12 @@ pub use manager::CommitMetadata;
 /// // ... use manager methods ...
 /// ```
 #[deprecated(note = "Use BuildingGitManager instead. This type will be removed in a future version.")]
-pub struct GitClient {
+#[allow(dead_code)]
+pub(crate) struct GitClient {
     repository: git2::Repository,
 }
 
-#[allow(deprecated)]
+#[allow(deprecated, dead_code)]
 impl GitClient {
     /// Create a new Git client for an existing repository
     ///

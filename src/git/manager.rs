@@ -4,7 +4,6 @@ use std::path::Path;
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use log::info;
-use crate::path::PathGenerator;
 use crate::yaml::{BuildingData, BuildingYamlSerializer};
 
 /// Git repository manager for building data version control
@@ -14,11 +13,6 @@ use crate::yaml::{BuildingData, BuildingYamlSerializer};
 pub struct BuildingGitManager {
     repo: Repository,
     serializer: BuildingYamlSerializer,
-    /// Path generator for building universal paths (reserved for future use)
-    /// Currently, file paths are generated manually, but this will be used
-    /// for consistent path generation in future versions.
-    #[allow(dead_code)]
-    path_generator: PathGenerator,
     git_config: GitConfig,
 }
 
@@ -56,7 +50,7 @@ pub struct CommitMetadata {
 
 impl BuildingGitManager {
     /// Initialize or open a Git repository for building data
-    pub fn new(repo_path: &str, building_name: &str, config: GitConfig) -> Result<Self, GitError> {
+    pub fn new(repo_path: &str, _building_name: &str, config: GitConfig) -> Result<Self, GitError> {
         use crate::utils::path_safety::PathSafety;
         
         let repo_path_buf = Path::new(repo_path);
@@ -105,12 +99,10 @@ impl BuildingGitManager {
         };
 
         let serializer = BuildingYamlSerializer::new();
-        let path_generator = PathGenerator::new(building_name);
 
         Ok(Self {
             repo,
             serializer,
-            path_generator,
             git_config: config,
         })
     }

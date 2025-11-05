@@ -737,6 +737,10 @@ pub enum EquipmentCommands {
         /// Equipment position (x,y,z)
         #[arg(long)]
         position: Option<String>,
+        /// ArxOS Address path (e.g., /usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01)
+        /// If not provided, address will be auto-generated from context
+        #[arg(long)]
+        at: Option<String>,
         /// Equipment properties (key=value)
         #[arg(long)]
         property: Vec<String>,

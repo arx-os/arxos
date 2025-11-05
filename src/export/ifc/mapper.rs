@@ -1,7 +1,9 @@
-//! Universal Path → IFC Entity ID Mapper
+//! Universal Path / ArxAddress → IFC Entity ID Mapper
 //! 
-//! Provides deterministic mapping from ArxOS Universal Path to IFC entity IDs.
+//! Provides deterministic mapping from ArxOS Universal Path or ArxAddress to IFC entity IDs.
 //! Ensures consistent entity IDs across exports for round-trip compatibility.
+//! 
+//! Prefers ArxAddress GUIDs when available, falls back to Universal Path hashing.
 
 /// Deterministic hash function for Universal Path → IFC entity ID mapping
 /// Uses DJB2 hash algorithm (same as EnhancedIFCParser.hash_string)
@@ -26,6 +28,23 @@ fn hash_universal_path(path: &str) -> u64 {
 pub fn universal_path_to_ifc_entity_id(path: &str) -> u32 {
     let hash = hash_universal_path(path);
     // Map to range 10000-910000 to avoid conflicts with synthetic IDs (1000-9999)
+    ((hash % 900000) as u32) + 10000
+}
+
+/// Map ArxAddress to IFC entity ID using GUID
+/// 
+/// Uses the SHA-256 hash from ArxAddress::guid() and converts to IFC entity ID.
+/// Returns a deterministic entity ID in the range 10000-910000.
+/// 
+/// # Arguments
+/// * `address` - ArxAddress instance
+/// 
+/// # Returns
+/// * Deterministic u32 entity ID
+pub fn address_to_ifc_entity_id(address: &crate::domain::ArxAddress) -> u32 {
+    let guid = address.guid();
+    // Convert first 8 hex chars of GUID to u32 and map to range
+    let hash = u64::from_str_radix(&guid[..8.min(guid.len())], 16).unwrap_or(0);
     ((hash % 900000) as u32) + 10000
 }
 

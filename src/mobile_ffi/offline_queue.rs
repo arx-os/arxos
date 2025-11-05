@@ -363,6 +363,7 @@ pub fn execute_operation(item: &QueuedOperationItem) -> Result<(), Box<dyn std::
                 id: equipment_id.clone(),
                 name: equipment_name.clone(),
                 path: format!("/equipment/{}", equipment_id),
+                address: None,
                 equipment_type,
                 position: Position {
                     x: position.0,

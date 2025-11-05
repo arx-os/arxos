@@ -1,5 +1,13 @@
 // Universal Path System for ArxOS
 // Implements hierarchical addressing for building components
+//
+// DEPRECATED: This module is deprecated in favor of the new ArxAddress system (src/domain/address.rs).
+// UniversalPath is kept for backward compatibility but should not be used in new code.
+// Use ArxAddress for all new implementations.
+//
+// Suppress deprecation warnings within this module since we're maintaining backward compatibility.
+#![allow(deprecated)]
+
 use std::collections::HashMap;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -7,8 +15,12 @@ use serde::{Deserialize, Serialize};
 /// Universal path for building components
 /// Format: /BUILDING/{building-name}/FLOOR/{floor-level}/{system-type}/{equipment-name}
 /// Example: /BUILDING/Office-Building/FLOOR/2/HVAC/VAV-301
+///
+/// **DEPRECATED**: Use `ArxAddress` from `crate::domain::address` instead.
+/// This type is kept for backward compatibility only.
+#[deprecated(note = "Use ArxAddress from crate::domain::address instead")]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct UniversalPath {
+pub(crate) struct UniversalPath {
     pub path: String,
     pub components: PathComponents,
 }
@@ -24,13 +36,16 @@ pub struct PathComponents {
 }
 
 /// Path generator with validation and conflict resolution
-pub struct PathGenerator {
+/// DEPRECATED: This is kept for backward compatibility only. Use ArxAddress instead.
+#[allow(dead_code)]
+pub(crate) struct PathGenerator {
     used_paths: HashMap<String, String>, // path -> entity_id mapping
     building_name: String,
 }
 
+#[allow(dead_code)]
 impl PathGenerator {
-    pub fn new(building_name: &str) -> Self {
+    pub(crate) fn new(building_name: &str) -> Self {
         Self {
             used_paths: HashMap::new(),
             building_name: Self::sanitize_name(building_name),
@@ -38,7 +53,7 @@ impl PathGenerator {
     }
 
     /// Generate universal path for equipment
-    pub fn generate_equipment_path(
+    pub(crate) fn generate_equipment_path(
         &mut self,
         equipment_name: &str,
         floor_level: i32,
@@ -79,7 +94,7 @@ impl PathGenerator {
     }
 
     /// Generate universal path for room
-    pub fn generate_room_path(
+    pub(crate) fn generate_room_path(
         &mut self,
         room_name: &str,
         floor_level: i32,
@@ -109,7 +124,7 @@ impl PathGenerator {
     }
 
     /// Generate universal path for floor
-    pub fn generate_floor_path(&self, floor_level: i32) -> UniversalPath {
+    pub(crate) fn generate_floor_path(&self, floor_level: i32) -> UniversalPath {
         let path = format!(
             "/BUILDING/{}/FLOOR/{}",
             self.building_name, floor_level
@@ -127,7 +142,7 @@ impl PathGenerator {
     }
 
     /// Generate universal path for building
-    pub fn generate_building_path(&self) -> UniversalPath {
+    pub(crate) fn generate_building_path(&self) -> UniversalPath {
         let path = format!("/BUILDING/{}", self.building_name);
 
         let components = PathComponents {
@@ -142,7 +157,7 @@ impl PathGenerator {
     }
 
     /// Convert universal path to file system path
-    pub fn to_file_path(&self, universal_path: &UniversalPath) -> String {
+    pub(crate) fn to_file_path(&self, universal_path: &UniversalPath) -> String {
         let path = &universal_path.path;
         
         // Remove leading /BUILDING/ and convert to file path
@@ -156,7 +171,7 @@ impl PathGenerator {
     }
 
     /// Convert universal path to directory structure
-    pub fn to_directory_structure(&self, universal_path: &UniversalPath) -> Vec<String> {
+    pub(crate) fn to_directory_structure(&self, universal_path: &UniversalPath) -> Vec<String> {
         let components = &universal_path.components;
         let mut dirs = vec![
             "buildings".to_string(),
@@ -223,7 +238,7 @@ impl PathGenerator {
     }
 
     /// Parse existing universal path
-    pub fn parse_path(path: &str) -> Result<UniversalPath, PathError> {
+    pub(crate) fn parse_path(path: &str) -> Result<UniversalPath, PathError> {
         let re = Regex::new(r"^/BUILDING/([^/]+)/FLOOR/(\d+)(?:/ROOM/([^/]+))?(?:/([^/]+)/([^/]+))?$")
             .map_err(|e| PathError::ValidationFailed {
                 reason: format!("Failed to compile path regex: {}", e),
@@ -273,12 +288,12 @@ impl PathGenerator {
     }
 
     /// Get all used paths
-    pub fn get_used_paths(&self) -> &HashMap<String, String> {
+    pub(crate) fn get_used_paths(&self) -> &HashMap<String, String> {
         &self.used_paths
     }
 
     /// Clear used paths (for testing)
-    pub fn clear_paths(&mut self) {
+    pub(crate) fn clear_paths(&mut self) {
         self.used_paths.clear();
     }
 }

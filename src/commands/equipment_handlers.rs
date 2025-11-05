@@ -8,8 +8,8 @@ use crate::spatial::Point3D;
 /// Handle equipment management commands
 pub fn handle_equipment_command(command: EquipmentCommands) -> Result<(), Box<dyn std::error::Error>> {
     match command {
-        EquipmentCommands::Add { room, name, equipment_type, position, property, commit } => {
-            handle_add_equipment(room, name, equipment_type, position, property, commit)
+        EquipmentCommands::Add { room, name, equipment_type, position, at, property, commit } => {
+            handle_add_equipment(room, name, equipment_type, position, at, property, commit)
         }
         EquipmentCommands::List { room, equipment_type, verbose, interactive } => {
             if interactive {
@@ -33,6 +33,7 @@ fn handle_add_equipment(
     name: String,
     equipment_type: String,
     position: Option<String>,
+    at: Option<String>,
     property: Vec<String>,
     commit: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -71,15 +72,6 @@ fn handle_add_equipment(
         println!("   Property: {}", prop);
     }
     
-    // Create equipment with position
-    let mut equipment = crate::core::Equipment::new(name.clone(), "".to_string(), parsed_equipment_type);
-    equipment.position = crate::core::Position {
-        x: pos_3d.x,
-        y: pos_3d.y,
-        z: pos_3d.z,
-        coordinate_system: "building_local".to_string(),
-    };
-    
     // Use PersistenceManager to add equipment
     // First, we need to find the building name - for now, try loading from current dir
     use crate::utils::path_safety::PathSafety;
@@ -99,6 +91,61 @@ fn handle_add_equipment(
     let persistence = PersistenceManager::new(&building_name)?;
     let mut building_data = persistence.load_building_data()?;
     
+    // Handle address: parse from --at flag or auto-generate
+    let address = if let Some(path_str) = at {
+        let addr = crate::domain::ArxAddress::from_path(&path_str)?;
+        addr.validate()?;
+        Some(addr)
+    } else {
+        // Auto-generate address from context
+        // Find the room and floor level
+        let mut found_floor_level: Option<i32> = None;
+        let mut found_room_name: Option<String> = None;
+        for floor in &building_data.floors {
+            for room_data in &floor.rooms {
+                if room_data.name == room {
+                    found_floor_level = Some(floor.level);
+                    found_room_name = Some(room_data.name.clone());
+                    break;
+                }
+            }
+            if found_floor_level.is_some() {
+                break;
+            }
+        }
+        
+        if let (Some(floor_level), Some(room_name)) = (found_floor_level, found_room_name) {
+            // Generate address from grid if available, otherwise use room name
+            // Grid inference would go here - simplified for now
+            
+            let room_system = room_name.to_lowercase().replace(" ", "-");
+            let floor_str = format!("floor-{:02}", floor_level);
+            let fixture_type = equipment_type.to_lowercase();
+            let fixture_id = format!("{}-01", fixture_type);
+            
+            let addr = crate::domain::ArxAddress::new(
+                "usa", "ny", "brooklyn", // Defaults - could come from config
+                &building_name.to_lowercase().replace(" ", "-"),
+                &floor_str,
+                &room_system,
+                &fixture_id,
+            );
+            Some(addr)
+        } else {
+            None
+        }
+    };
+    
+    // Create equipment with position and address
+    let mut equipment = crate::core::Equipment::new(name.clone(), "".to_string(), parsed_equipment_type);
+    equipment.position = crate::core::Position {
+        x: pos_3d.x,
+        y: pos_3d.y,
+        z: pos_3d.z,
+        coordinate_system: "building_local".to_string(),
+    };
+    equipment.address = address.clone();
+    
     // Find the room and add equipment to it
     let mut equipment_added = false;
     for floor in &mut building_data.floors {
@@ -106,6 +153,14 @@ fn handle_add_equipment(
             if room_data.name == room {
                 // Add equipment ID to room's equipment list
                 room_data.equipment.push(equipment.id.clone());
+                
+                // Generate universal path for backward compatibility (from address if available)
+                let universal_path = address.as_ref()
+                    .map(|addr| addr.path.clone())
+                    .unwrap_or_else(|| {
+                        format!("/buildings/{}/floors/{}/rooms/{}/equipment/{}", 
+                            building_name, floor.level, room, equipment.id)
+                    });
                 
                 // Add to floor equipment list
                 let equipment_data = crate::yaml::EquipmentData {
@@ -122,12 +177,16 @@ fn handle_add_equipment(
                     properties: property.iter().enumerate().map(|(i, p)| {
                         (format!("property_{}", i), p.clone())
                     }).collect(),
-                    universal_path: format!("/buildings/{}/floors/{}/rooms/{}/equipment/{}", 
-                        building_name, floor.level, room, equipment.id),
+                    universal_path,
+                    address: address.clone(),
                     sensor_mappings: None,
                 };
                 floor.equipment.push(equipment_data);
                 equipment_added = true;
+                
+                if let Some(ref addr) = address {
+                    println!("   Address: {}", addr.path);
+                }
                 break;
             }
         }

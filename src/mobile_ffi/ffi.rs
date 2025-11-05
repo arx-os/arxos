@@ -267,6 +267,7 @@ pub unsafe extern "C" fn arxos_validate_constraints(
             .unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
         name: name_clone.clone(),
         path: format!("/equipment/{}", name_clone.to_lowercase().replace(" ", "-")),
+        address: None,
         equipment_type,
         position: Position {
             x,

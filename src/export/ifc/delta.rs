@@ -97,12 +97,19 @@ pub fn calculate_delta(current: &BuildingData, last_state: Option<&IFCSyncState>
 
     for floor in &current.floors {
         for equipment in &floor.equipment {
-            let path = if equipment.universal_path.is_empty() {
-                // Generate path if not set
-                format!("building/floor-{}/equipment-{}", floor.level, equipment.id)
-            } else {
-                equipment.universal_path.clone()
-            };
+            let path = equipment.address.as_ref()
+                .map(|addr| addr.path.clone())
+                .filter(|p| !p.is_empty())
+                .or_else(|| {
+                    if !equipment.universal_path.is_empty() {
+                        Some(equipment.universal_path.clone())
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or_else(|| {
+                    format!("building/floor-{}/equipment-{}", floor.level, equipment.id)
+                });
             
             current_equipment_paths.insert(path.clone());
             equipment_by_path.insert(path.clone(), equipment.clone());

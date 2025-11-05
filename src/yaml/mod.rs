@@ -248,7 +248,12 @@ pub struct EquipmentData {
     pub bounding_box: BoundingBox3D,
     pub status: EquipmentStatus,
     pub properties: HashMap<String, String>,
+    /// Universal path identifier (legacy, kept for backward compatibility)
+    #[serde(default)]
     pub universal_path: String,
+    /// ArxOS Address (new hierarchical addressing system)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub address: Option<crate::domain::ArxAddress>,
     pub sensor_mappings: Option<Vec<SensorMapping>>, // Sensor-to-equipment mapping
 }
 
@@ -428,6 +433,7 @@ impl BuildingYamlSerializer {
                     status: EquipmentStatus::Healthy,
                     properties: HashMap::new(),
                     universal_path: self.generate_universal_path(&entity),
+                    address: None, // Address can be generated later if needed
                 }
             }).collect();
 
@@ -563,6 +569,7 @@ impl BuildingYamlSerializer {
                         },
                         properties: eq.properties.clone(),
                         universal_path: eq.path.clone(),
+                        address: eq.address.clone(),
                         sensor_mappings: None,
                     };
                     wing_equipment.push(eq_data);
@@ -599,6 +606,7 @@ impl BuildingYamlSerializer {
                     },
                     properties: eq.properties.clone(),
                     universal_path: eq.path.clone(),
+                    address: eq.address.clone(),
                     sensor_mappings: None,
                 };
                 equipment.push(eq_data);

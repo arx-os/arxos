@@ -470,6 +470,7 @@ impl HierarchyBuilder {
                 id: eq.id.clone(),
                 name: eq.name.clone(),
                 path: format!("/equipment/{}", eq.name.to_lowercase().replace(" ", "-")),
+                address: None,
                 equipment_type: self.extract_equipment_type(&eq.entity_type)?,
                 position: Position {
                     x,

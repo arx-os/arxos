@@ -7,6 +7,7 @@ pub mod config;
 pub mod error;
 
 // Domain modules (business logic)
+pub mod domain;
 pub mod spatial;
 pub mod git;
 pub mod ifc;

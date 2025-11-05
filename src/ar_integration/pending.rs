@@ -402,6 +402,7 @@ impl PendingEquipmentManager {
             } else {
                 format!("/BUILDING/FLOOR-{}/EQUIPMENT/{}", pending.floor_level, pending.name)
             },
+            address: None,
             position: pending.position,
             bounding_box: pending.bounding_box.clone(),
             status: EquipmentStatus::Healthy,

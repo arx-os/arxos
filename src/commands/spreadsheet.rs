@@ -230,8 +230,9 @@ fn handle_spreadsheet_equipment(
                                 // Allow editing for now - sensor locking will be added in workflow integration
                             }
                             
-                            editor = Some(CellEditor::new(column.clone(), cell.value));
-                            editor.as_mut().unwrap().reset_cursor();
+                            let mut new_editor = CellEditor::new(column.clone(), cell.value);
+                            new_editor.reset_cursor();
+                            editor = Some(new_editor);
                             grid.editing_cell = Some((grid.selected_row, grid.selected_col));
                         }
                     }
@@ -453,7 +454,7 @@ fn perform_export(
     // Generate default filename with timestamp
     let timestamp = SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
+        .expect("System time should be after UNIX epoch")
         .as_secs();
     let filename = format!("equipment_export_{}.csv", timestamp);
     let file_path = PathBuf::from(&filename);
@@ -624,8 +625,9 @@ fn handle_spreadsheet_rooms(
                                 .unwrap_or_else(|| crate::ui::spreadsheet::types::Cell::new(
                                     crate::ui::spreadsheet::types::CellValue::Empty
                                 ));
-                            editor = Some(CellEditor::new(column.clone(), cell.value));
-                            editor.as_mut().unwrap().reset_cursor();
+                            let mut new_editor = CellEditor::new(column.clone(), cell.value);
+                            new_editor.reset_cursor();
+                            editor = Some(new_editor);
                             grid.editing_cell = Some((grid.selected_row, grid.selected_col));
                         }
                     }

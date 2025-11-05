@@ -261,6 +261,7 @@ impl ARDataIntegrator {
             name: format!("Floor {}", floor_level),
             level: floor_level,
             elevation: (floor_level as f64) * 3.0, // Assume 3m per floor
+            wings: Vec::new(),
             rooms: Vec::new(),
             equipment: Vec::new(),
             bounding_box: None,

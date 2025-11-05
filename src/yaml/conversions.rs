@@ -1,10 +1,15 @@
 //! Conversion functions between core types and YAML types
+//!
+//! This module provides conversion functions between core domain types (Room, Equipment)
+//! and YAML serialization types (RoomData, EquipmentData). These conversions are
+//! YAML-specific, so they belong in the yaml module rather than core.
 
-use super::{Room, Equipment, RoomType, EquipmentType, EquipmentStatus};
-use super::types::{Position, Dimensions, BoundingBox, SpatialProperties};
+use crate::core::{Room, Equipment, RoomType, EquipmentType, EquipmentStatus};
+use crate::core::{Position, Dimensions, BoundingBox, SpatialProperties};
+use super::{RoomData, EquipmentData, EquipmentStatus as YamlEquipmentStatus};
 
 /// Convert RoomData to Room
-pub(crate) fn room_data_to_room(room_data: &crate::yaml::RoomData) -> Room {
+pub(crate) fn room_data_to_room(room_data: &RoomData) -> Room {
     // Use FromStr trait for parsing
     let room_type = room_data.room_type.parse().unwrap_or_else(|_| RoomType::Other(room_data.room_type.clone()));
     
@@ -48,8 +53,7 @@ pub(crate) fn room_data_to_room(room_data: &crate::yaml::RoomData) -> Room {
 }
 
 /// Convert Equipment to EquipmentData
-pub(crate) fn equipment_to_equipment_data(equipment: &Equipment) -> crate::yaml::EquipmentData {
-    use crate::yaml::EquipmentStatus as YamlEquipmentStatus;
+pub(crate) fn equipment_to_equipment_data(equipment: &Equipment) -> EquipmentData {
     
     // Derive system_type from equipment_type
     let system_type = match equipment.equipment_type {
@@ -63,7 +67,7 @@ pub(crate) fn equipment_to_equipment_data(equipment: &Equipment) -> crate::yaml:
         EquipmentType::Other(_) => "OTHER".to_string(),
     };
     
-    crate::yaml::EquipmentData {
+    EquipmentData {
         id: equipment.id.clone(),
         name: equipment.name.clone(),
         equipment_type: format!("{:?}", equipment.equipment_type),
@@ -99,7 +103,7 @@ pub(crate) fn equipment_to_equipment_data(equipment: &Equipment) -> crate::yaml:
 }
 
 /// Convert EquipmentData to Equipment
-pub(crate) fn equipment_data_to_equipment(equipment_data: &crate::yaml::EquipmentData) -> Equipment {
+pub(crate) fn equipment_data_to_equipment(equipment_data: &EquipmentData) -> Equipment {
     let equipment_type = match equipment_data.equipment_type.as_str() {
         "HVAC" => EquipmentType::HVAC,
         "Electrical" => EquipmentType::Electrical,
@@ -124,10 +128,10 @@ pub(crate) fn equipment_data_to_equipment(equipment_data: &crate::yaml::Equipmen
         },
         properties: equipment_data.properties.clone(),
         status: match equipment_data.status {
-            crate::yaml::EquipmentStatus::Healthy => EquipmentStatus::Active,
-            crate::yaml::EquipmentStatus::Warning => EquipmentStatus::Maintenance,
-            crate::yaml::EquipmentStatus::Critical => EquipmentStatus::Inactive,
-            crate::yaml::EquipmentStatus::Unknown => EquipmentStatus::Unknown,
+            YamlEquipmentStatus::Healthy => EquipmentStatus::Active,
+            YamlEquipmentStatus::Warning => EquipmentStatus::Maintenance,
+            YamlEquipmentStatus::Critical => EquipmentStatus::Inactive,
+            YamlEquipmentStatus::Unknown => EquipmentStatus::Unknown,
         },
         room_id: None,
     }

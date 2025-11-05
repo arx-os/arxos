@@ -1,0 +1,6 @@
+Contact: security@arxos.io
+Expires: 2026-12-31T23:59:59.000Z
+Encryption: https://arxos.io/.well-known/pgp-key.txt
+Preferred-Languages: en
+Canonical: https://github.com/arx-os/arxos/security.txt
+

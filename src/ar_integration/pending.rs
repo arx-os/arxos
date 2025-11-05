@@ -303,6 +303,7 @@ impl PendingEquipmentManager {
             name: format!("Floor {}", floor_level),
             level: floor_level,
             elevation: (floor_level as f64) * 3.0,
+            wings: Vec::new(),
             rooms: Vec::new(),
             equipment: Vec::new(),
             bounding_box: None,
@@ -320,13 +321,14 @@ impl PendingEquipmentManager {
     ) -> Result<usize, Box<dyn std::error::Error>> {
         let floor = &mut building_data.floors[floor_index];
         
-        // Look for existing room
+        // Look for existing room in flat list (for backward compatibility)
         if let Some(index) = floor.rooms.iter().position(|r| r.name == room_name) {
             return Ok(index);
         }
         
         // Create new room
         use crate::spatial::BoundingBox3D;
+        use crate::yaml::WingData;
         let new_room = RoomData {
             id: format!("room-{}", room_name.to_lowercase().replace(" ", "-")),
             name: room_name.to_string(),
@@ -342,6 +344,31 @@ impl PendingEquipmentManager {
             properties: HashMap::new(),
         };
         
+        // Find or create default wing for AR-detected rooms
+        let default_wing_name = "Default";
+        let wing_data = floor.wings.iter_mut()
+            .find(|w| w.name == default_wing_name);
+        
+        let wing_data = if let Some(wing) = wing_data {
+            wing
+        } else {
+            // Create default wing
+            let new_wing = WingData {
+                id: format!("wing-{}-{}", floor.level, default_wing_name),
+                name: default_wing_name.to_string(),
+                rooms: vec![],
+                equipment: vec![],
+                properties: HashMap::new(),
+            };
+            floor.wings.push(new_wing);
+            floor.wings.last_mut()
+                .ok_or_else(|| "Failed to access newly created wing".to_string())?
+        };
+        
+        // Add room to wing
+        wing_data.rooms.push(new_room.clone());
+        
+        // Also add to floor's rooms list for backward compatibility
         floor.rooms.push(new_room);
         Ok(floor.rooms.len() - 1)
     }

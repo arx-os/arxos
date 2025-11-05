@@ -211,6 +211,18 @@ path = "tests/bin/convert_3d_scanner_scan_tests.rs"
 name = "example_validation_tests"
 path = "tests/examples/example_validation_tests.rs"
 
+[[test]]
+name = "spatial_tests"
+path = "tests/commands/spatial_tests.rs"
+
+[[test]]
+name = "error_path_tests"
+path = "tests/commands/error_path_tests.rs"
+
+[[test]]
+name = "wing_tests"
+path = "tests/commands/wing_tests.rs"
+
 [workspace.package]
 version = "0.1.0"
 edition = "2021"

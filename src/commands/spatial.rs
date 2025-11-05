@@ -143,7 +143,24 @@ fn handle_spatial_validate(entity: Option<String>, tolerance: Option<f64>) -> Re
     
     let result = crate::core::validate_spatial(entity.as_deref(), tolerance)?;
     
-    println!("{}", result);
+    println!("   Entities checked: {}", result.entities_checked);
+    println!("   Issues found: {}", result.issues_found);
+    
+    if result.is_valid {
+        println!("✅ Spatial validation passed - all entities valid");
+    } else {
+        println!("⚠️  Spatial validation found {} issues:", result.issues_found);
+        for (i, issue) in result.issues.iter().enumerate() {
+            println!("   {}. {} [{}] - {}: {}", 
+                i + 1,
+                issue.entity_name,
+                issue.entity_type,
+                issue.issue_type,
+                issue.message
+            );
+        }
+    }
+    
     println!("✅ Spatial validation completed");
     Ok(())
 }

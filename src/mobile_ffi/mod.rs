@@ -268,7 +268,11 @@ pub fn create_room(building_name: String, floor_level: i32, room: RoomInfo, comm
         updated_at: Utc::now(),
     };
     
-    crate::core::create_room(&building_name, floor_level, core_room, commit)
+    // Extract wing from room properties if available
+    let wing_name = room.properties.get("wing")
+        .map(|s| s.as_str());
+    
+    crate::core::create_room(&building_name, floor_level, core_room, wing_name, commit)
         .map_err(|e| MobileError::IoError(e.to_string()))
 }
 

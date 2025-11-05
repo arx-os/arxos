@@ -1,9 +1,14 @@
 // YAML serialization for ArxOS building data
+pub(crate) mod conversions;
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use crate::core::Building;
 use crate::spatial::{SpatialEntity, Point3D, BoundingBox3D};
+
+// Conversion functions are available via crate::yaml::conversions::
+// They are used by core::operations but accessed directly via the module path
 
 /// Top-level building data structure for YAML serialization
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,6 +78,16 @@ pub struct BuildingMetadata {
     pub tags: Vec<String>,
 }
 
+/// Wing data structure for YAML serialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WingData {
+    pub id: String,
+    pub name: String,
+    pub rooms: Vec<RoomData>,
+    pub equipment: Vec<EquipmentData>,
+    pub properties: HashMap<String, String>,
+}
+
 /// Floor data structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FloorData {
@@ -80,7 +95,10 @@ pub struct FloorData {
     pub name: String,
     pub level: i32,
     pub elevation: f64,
-    pub rooms: Vec<RoomData>,
+    #[serde(default)]
+    pub wings: Vec<WingData>,
+    #[serde(default)]
+    pub rooms: Vec<RoomData>, // Legacy: kept for backward compatibility
     pub equipment: Vec<EquipmentData>,
     pub bounding_box: Option<BoundingBox3D>,
 }
@@ -300,6 +318,7 @@ impl BuildingYamlSerializer {
                 name: format!("Floor {}", level),
                 level,
                 elevation: level as f64 * 3.0, // Assume 3m floor height
+                wings: Vec::new(), // Rooms will be organized into wings when converting from core model
                 rooms: room_data,
                 equipment: equipment_data,
                 bounding_box: floor_bounding_box,
@@ -364,9 +383,13 @@ impl BuildingYamlSerializer {
         let mut floor_data = Vec::new();
         
         for floor in &building.floors {
-            // Convert rooms from all wings
-            let mut rooms: Vec<RoomData> = Vec::new();
+            // Convert wings with their rooms and equipment
+            let mut wings: Vec<WingData> = Vec::new();
+            let mut all_rooms: Vec<RoomData> = Vec::new(); // For backward compatibility
+            
             for wing in &floor.wings {
+                // Convert rooms in this wing
+                let mut wing_rooms: Vec<RoomData> = Vec::new();
                 for room in &wing.rooms {
                     let room_data = RoomData {
                         id: room.id.clone(),
@@ -394,14 +417,48 @@ impl BuildingYamlSerializer {
                         equipment: room.equipment.iter().map(|e| e.id.clone()).collect(),
                         properties: room.properties.clone(),
                     };
-                    rooms.push(room_data);
+                    wing_rooms.push(room_data.clone());
+                    all_rooms.push(room_data); // Also add to flat list for backward compatibility
                 }
+                
+                // Convert equipment in this wing
+                let mut wing_equipment: Vec<EquipmentData> = Vec::new();
+                for eq in &wing.equipment {
+                    let eq_data = EquipmentData {
+                        id: eq.id.clone(),
+                        name: eq.name.clone(),
+                        equipment_type: format!("{:?}", eq.equipment_type),
+                        system_type: self.determine_equipment_system_type(&eq.equipment_type),
+                        position: Point3D::new(eq.position.x, eq.position.y, eq.position.z),
+                        bounding_box: BoundingBox3D::new(
+                            Point3D::new(-0.5, -0.5, -0.5),
+                            Point3D::new(0.5, 0.5, 0.5),
+                        ),
+                        status: match eq.status {
+                            crate::core::EquipmentStatus::Active => EquipmentStatus::Healthy,
+                            crate::core::EquipmentStatus::Maintenance => EquipmentStatus::Warning,
+                            crate::core::EquipmentStatus::Inactive => EquipmentStatus::Critical,
+                            crate::core::EquipmentStatus::OutOfOrder => EquipmentStatus::Critical,
+                            crate::core::EquipmentStatus::Unknown => EquipmentStatus::Unknown,
+                        },
+                        properties: eq.properties.clone(),
+                        universal_path: eq.path.clone(),
+                        sensor_mappings: None,
+                    };
+                    wing_equipment.push(eq_data);
+                }
+                
+                wings.push(WingData {
+                    id: wing.id.clone(),
+                    name: wing.name.clone(),
+                    rooms: wing_rooms,
+                    equipment: wing_equipment,
+                    properties: wing.properties.clone(),
+                });
             }
             
-            // Convert equipment from floor and wings
+            // Convert floor-level equipment
             let mut equipment: Vec<EquipmentData> = Vec::new();
-            
-            // Floor-level equipment
             for eq in &floor.equipment {
                 let eq_data = EquipmentData {
                     id: eq.id.clone(),
@@ -427,37 +484,9 @@ impl BuildingYamlSerializer {
                 equipment.push(eq_data);
             }
             
-            // Wing-level equipment
-            for wing in &floor.wings {
-                for eq in &wing.equipment {
-                    let eq_data = EquipmentData {
-                        id: eq.id.clone(),
-                        name: eq.name.clone(),
-                        equipment_type: format!("{:?}", eq.equipment_type),
-                        system_type: self.determine_equipment_system_type(&eq.equipment_type),
-                        position: Point3D::new(eq.position.x, eq.position.y, eq.position.z),
-                        bounding_box: BoundingBox3D::new(
-                            Point3D::new(-0.5, -0.5, -0.5),
-                            Point3D::new(0.5, 0.5, 0.5),
-                        ),
-                        status: match eq.status {
-                            crate::core::EquipmentStatus::Active => EquipmentStatus::Healthy,
-                            crate::core::EquipmentStatus::Maintenance => EquipmentStatus::Warning,
-                            crate::core::EquipmentStatus::Inactive => EquipmentStatus::Critical,
-                            crate::core::EquipmentStatus::OutOfOrder => EquipmentStatus::Critical,
-                            crate::core::EquipmentStatus::Unknown => EquipmentStatus::Unknown,
-                        },
-                        properties: eq.properties.clone(),
-                        universal_path: eq.path.clone(),
-                        sensor_mappings: None,
-                    };
-                    equipment.push(eq_data);
-                }
-            }
-            
             // Calculate floor bounding box from rooms and equipment
             let mut floor_bbox: Option<BoundingBox3D> = None;
-            for room in &rooms {
+            for room in &all_rooms {
                 floor_bbox = if let Some(bbox) = floor_bbox {
                     BoundingBox3D::from_points(&[
                         bbox.min, bbox.max,
@@ -473,7 +502,8 @@ impl BuildingYamlSerializer {
                 name: floor.name.clone(),
                 level: floor.level,
                 elevation: floor.level as f64 * 3.0, // Estimate based on level
-                rooms,
+                wings,
+                rooms: all_rooms, // Legacy: kept for backward compatibility
                 equipment,
                 bounding_box: floor_bbox,
             });

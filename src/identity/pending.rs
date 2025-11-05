@@ -193,8 +193,9 @@ impl PendingUserRegistry {
             return Err(PendingRegistryError::InvalidRequestId(request.id));
         }
         
+        let email = request.email.clone();
         self.requests.push(request);
-        info!("Added pending user request: {}", self.requests.last().unwrap().email);
+        info!("Added pending user request: {}", email);
         
         Ok(())
     }

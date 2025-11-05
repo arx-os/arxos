@@ -122,7 +122,9 @@ impl FallbackIFCParser {
         };
         
         progress.update(30, "Validating file size...");
-        self.validate_file_size(validated_path.to_str().unwrap())?;
+        let path_str = validated_path.to_str()
+            .ok_or_else(|| format!("Invalid UTF-8 in file path: {:?}", validated_path))?;
+        self.validate_file_size(path_str)?;
         
         progress.update(40, "Reading file content...");
         let content = PathSafety::read_file_safely(&validated_path, &current_dir)?;

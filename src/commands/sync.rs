@@ -28,7 +28,8 @@ pub fn handle_sync(ifc_file: Option<String>, watch: bool, delta: bool) -> Result
         }
         
         // Infer IFC path from YAML filename
-        let yaml_file = yaml_files.first().unwrap();
+        let yaml_file = yaml_files.first()
+            .ok_or("No YAML files found to sync")?;
         let ifc_name = yaml_file
             .replace(".yaml", ".ifc")
             .replace(".yml", ".ifc");

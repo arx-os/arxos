@@ -129,6 +129,7 @@ fn handle_create_room(config: CreateRoomConfig) -> Result<(), Box<dyn std::error
             name: format!("Floor {}", config.floor),
             level: config.floor,
             elevation: config.floor as f64 * 3.0,
+            wings: vec![],
             rooms: vec![],
             equipment: vec![],
             bounding_box: None,
@@ -136,6 +137,27 @@ fn handle_create_room(config: CreateRoomConfig) -> Result<(), Box<dyn std::error
         building_data.floors.push(new_floor);
         building_data.floors.last_mut()
             .ok_or_else(|| "Failed to access newly created floor".to_string())?
+    };
+    
+    // Find or create the wing
+    use crate::yaml::WingData;
+    let wing_data = floor_data.wings.iter_mut()
+        .find(|w| w.name == config.wing);
+    
+    let wing_data = if let Some(wing) = wing_data {
+        wing
+    } else {
+        // Wing doesn't exist, create it
+        let new_wing = WingData {
+            id: format!("wing-{}-{}", config.floor, config.wing),
+            name: config.wing.clone(),
+            rooms: vec![],
+            equipment: vec![],
+            properties: HashMap::new(),
+        };
+        floor_data.wings.push(new_wing);
+        floor_data.wings.last_mut()
+            .ok_or_else(|| "Failed to access newly created wing".to_string())?
     };
     
     // Create room data
@@ -155,7 +177,10 @@ fn handle_create_room(config: CreateRoomConfig) -> Result<(), Box<dyn std::error
         properties: HashMap::new(),
     };
     
-    // Add room to floor
+    // Add room to wing
+    wing_data.rooms.push(room_data.clone());
+    
+    // Also add to floor's rooms list for backward compatibility
     floor_data.rooms.push(room_data);
     
     // Save

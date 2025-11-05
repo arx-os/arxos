@@ -10,7 +10,6 @@ mod floor;
 mod wing;
 mod room;
 mod equipment;
-mod conversions;
 mod operations;
 
 // Re-export all public types and functions
@@ -36,6 +35,8 @@ pub use operations::{
     set_spatial_relationship,
     transform_coordinates,
     validate_spatial,
+    SpatialValidationResult,
+    SpatialValidationIssue,
     update_room,
     delete_room,
     update_equipment,

@@ -28,6 +28,7 @@ pub mod export;
 // Application modules (commands, utilities, features)
 pub mod commands;
 pub mod search;
+pub mod query;
 pub mod utils;
 pub mod docs;
 pub mod game;

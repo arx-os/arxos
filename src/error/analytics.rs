@@ -55,6 +55,9 @@ impl ErrorAnalytics {
             ArxError::IoError { .. } => "IO Error",
             ArxError::YamlProcessing { .. } => "YAML Processing",
             ArxError::SpatialData { .. } => "Spatial Data",
+            ArxError::AddressValidation { .. } => "Address Validation",
+            ArxError::CounterOverflow { .. } => "Counter Overflow",
+            ArxError::PathInvalid { .. } => "Path Invalid",
         };
         
         // Update error counts

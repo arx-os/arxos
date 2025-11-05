@@ -15,6 +15,7 @@ pub mod manager;
 pub mod validation;
 pub mod schema;
 pub mod helpers;
+pub mod counters;
 
 pub use manager::ConfigManager;
 pub use validation::ConfigValidator;

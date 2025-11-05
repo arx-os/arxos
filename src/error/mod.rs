@@ -84,6 +84,31 @@ pub enum ArxError {
         context: ErrorContext,
         entity_type: Option<String>,
     },
+    
+    #[error("Address Validation Error: {message}")]
+    AddressValidation {
+        message: String,
+        context: ErrorContext,
+        path: String,
+        #[source]
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    },
+    
+    #[error("Counter Overflow Error: {message}")]
+    CounterOverflow {
+        message: String,
+        context: ErrorContext,
+        room: String,
+        equipment_type: String,
+    },
+    
+    #[error("Path Invalid Error: {message}")]
+    PathInvalid {
+        message: String,
+        context: ErrorContext,
+        path: String,
+        expected_format: String,
+    },
 }
 
 impl ArxError {
@@ -150,6 +175,62 @@ impl ArxError {
         }
     }
     
+    /// Create a new address validation error
+    pub fn address_validation(path: impl Into<String>, message: impl Into<String>) -> Self {
+        Self::AddressValidation {
+            message: message.into(),
+            context: ErrorContext::default(),
+            path: path.into(),
+            source: None,
+        }
+    }
+    
+    /// Create a new counter overflow error
+    pub fn counter_overflow(room: impl Into<String>, equipment_type: impl Into<String>) -> Self {
+        let room = room.into();
+        let equipment_type = equipment_type.into();
+        Self::CounterOverflow {
+            message: format!("Counter overflow for room '{}' and equipment type '{}'", room, equipment_type),
+            context: ErrorContext {
+                suggestions: vec![
+                    "Check if counter file is corrupted".to_string(),
+                    "Manually reset counter in .arxos/counters.toml".to_string(),
+                ],
+                recovery_steps: vec![
+                    "Open .arxos/counters.toml".to_string(),
+                    format!("Find entry for '{}:{}'", room, equipment_type),
+                    "Reset counter value to a reasonable number".to_string(),
+                ],
+                ..Default::default()
+            },
+            room,
+            equipment_type,
+        }
+    }
+    
+    /// Create a new path invalid error
+    pub fn path_invalid(path: impl Into<String>, expected_format: impl Into<String>) -> Self {
+        let path = path.into();
+        let expected_format = expected_format.into();
+        Self::PathInvalid {
+            message: format!("Invalid path format: '{}'", path),
+            context: ErrorContext {
+                suggestions: vec![
+                    format!("Expected format: {}", expected_format),
+                    "Ensure path has exactly 7 segments: /country/state/city/building/floor/room/fixture".to_string(),
+                ],
+                recovery_steps: vec![
+                    "Check path format".to_string(),
+                    "Ensure all segments are present".to_string(),
+                    "Verify no invalid characters".to_string(),
+                ],
+                ..Default::default()
+            },
+            path,
+            expected_format,
+        }
+    }
+    
     /// Add suggestions to an error
     pub fn with_suggestions(mut self, suggestions: Vec<String>) -> Self {
         match &mut self {
@@ -159,7 +240,10 @@ impl ArxError {
             ArxError::Validation { context, .. } |
             ArxError::IoError { context, .. } |
             ArxError::YamlProcessing { context, .. } |
-            ArxError::SpatialData { context, .. } => {
+            ArxError::SpatialData { context, .. } |
+            ArxError::AddressValidation { context, .. } |
+            ArxError::CounterOverflow { context, .. } |
+            ArxError::PathInvalid { context, .. } => {
                 context.suggestions = suggestions;
             }
         }
@@ -175,7 +259,10 @@ impl ArxError {
             ArxError::Validation { context, .. } |
             ArxError::IoError { context, .. } |
             ArxError::YamlProcessing { context, .. } |
-            ArxError::SpatialData { context, .. } => {
+            ArxError::SpatialData { context, .. } |
+            ArxError::AddressValidation { context, .. } |
+            ArxError::CounterOverflow { context, .. } |
+            ArxError::PathInvalid { context, .. } => {
                 context.recovery_steps = recovery_steps;
             }
         }
@@ -191,7 +278,10 @@ impl ArxError {
             ArxError::Validation { context, .. } |
             ArxError::IoError { context, .. } |
             ArxError::YamlProcessing { context, .. } |
-            ArxError::SpatialData { context, .. } => {
+            ArxError::SpatialData { context, .. } |
+            ArxError::AddressValidation { context, .. } |
+            ArxError::CounterOverflow { context, .. } |
+            ArxError::PathInvalid { context, .. } => {
                 context.debug_info = Some(debug_info.into());
             }
         }
@@ -207,7 +297,10 @@ impl ArxError {
             ArxError::Validation { context, .. } |
             ArxError::IoError { context, .. } |
             ArxError::YamlProcessing { context, .. } |
-            ArxError::SpatialData { context, .. } => {
+            ArxError::SpatialData { context, .. } |
+            ArxError::AddressValidation { context, .. } |
+            ArxError::CounterOverflow { context, .. } |
+            ArxError::PathInvalid { context, .. } => {
                 context.file_path = Some(file_path.into());
             }
         }
@@ -223,7 +316,10 @@ impl ArxError {
             ArxError::Validation { context, .. } |
             ArxError::IoError { context, .. } |
             ArxError::YamlProcessing { context, .. } |
-            ArxError::SpatialData { context, .. } => {
+            ArxError::SpatialData { context, .. } |
+            ArxError::AddressValidation { context, .. } |
+            ArxError::CounterOverflow { context, .. } |
+            ArxError::PathInvalid { context, .. } => {
                 context.line_number = Some(line_number);
             }
         }
@@ -239,7 +335,10 @@ impl ArxError {
             ArxError::Validation { context, .. } |
             ArxError::IoError { context, .. } |
             ArxError::YamlProcessing { context, .. } |
-            ArxError::SpatialData { context, .. } => {
+            ArxError::SpatialData { context, .. } |
+            ArxError::AddressValidation { context, .. } |
+            ArxError::CounterOverflow { context, .. } |
+            ArxError::PathInvalid { context, .. } => {
                 context.help_url = Some(help_url.into());
             }
         }
@@ -255,7 +354,10 @@ impl ArxError {
             ArxError::Validation { context, .. } |
             ArxError::IoError { context, .. } |
             ArxError::YamlProcessing { context, .. } |
-            ArxError::SpatialData { context, .. } => context,
+            ArxError::SpatialData { context, .. } |
+            ArxError::AddressValidation { context, .. } |
+            ArxError::CounterOverflow { context, .. } |
+            ArxError::PathInvalid { context, .. } => context,
         }
     }
     

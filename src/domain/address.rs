@@ -5,10 +5,11 @@
 //!
 //! Supports both standardized engineering systems (14 reserved) and custom items.
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use sha2::{Sha256, Digest};
+use crate::error::ArxError;
 
 /// Reserved system names for standardized engineering components
 pub const RESERVED_SYSTEMS: [&str; 14] = [
@@ -83,7 +84,10 @@ impl ArxAddress {
         let clean = path.trim_start_matches('/');
         let parts: Vec<&str> = clean.split('/').collect();
         if parts.len() != 7 {
-            bail!("ArxAddress must have exactly 7 segments, got {}", parts.len());
+            return Err(ArxError::path_invalid(
+                path,
+                "/country/state/city/building/floor/room/fixture"
+            ).into());
         }
         Ok(Self {
             path: format!("/{}", clean),
@@ -100,7 +104,10 @@ impl ArxAddress {
     pub fn validate(&self) -> Result<()> {
         let parts: Vec<&str> = self.path.trim_start_matches('/').split('/').collect();
         if parts.len() != 7 {
-            bail!("ArxAddress must have exactly 7 segments");
+            return Err(ArxError::path_invalid(
+                self.path.clone(),
+                "/country/state/city/building/floor/room/fixture"
+            ).into());
         }
 
         let system = parts[5]; // room / system (6th part, 0-indexed)
@@ -111,72 +118,114 @@ impl ArxAddress {
             match system {
                 "hvac" => {
                     if !fixture.starts_with("boiler-") && !fixture.starts_with("ahu-") {
-                        bail!("HVAC fixture must start with boiler- or ahu-");
+                        return Err(ArxError::address_validation(
+                            self.path.clone(),
+                            "HVAC fixture must start with boiler- or ahu-"
+                        ).into());
                     }
                 }
                 "plumbing" => {
                     if !fixture.starts_with("valve-") && !fixture.starts_with("pump-") {
-                        bail!("Plumbing fixture must start with valve- or pump-");
+                        return Err(ArxError::address_validation(
+                            self.path.clone(),
+                            "Plumbing fixture must start with valve- or pump-"
+                        ).into());
                     }
                 }
                 "electrical" => {
                     if !fixture.starts_with("panel-") && !fixture.starts_with("breaker-") {
-                        bail!("Electrical fixture must start with panel- or breaker-");
+                        return Err(ArxError::address_validation(
+                            self.path.clone(),
+                            "Electrical fixture must start with panel- or breaker-"
+                        ).into());
                     }
                 }
                 "fire" => {
                     if !fixture.starts_with("sprinkler-") && !fixture.starts_with("alarm-") {
-                        bail!("Fire fixture must start with sprinkler- or alarm-");
+                        return Err(ArxError::address_validation(
+                            self.path.clone(),
+                            "Fire fixture must start with sprinkler- or alarm-"
+                        ).into());
                     }
                 }
                 "lighting" => {
                     if !fixture.starts_with("fixture-") && !fixture.starts_with("control-") {
-                        bail!("Lighting fixture must start with fixture- or control-");
+                        return Err(ArxError::address_validation(
+                            self.path.clone(),
+                            "Lighting fixture must start with fixture- or control-"
+                        ).into());
                     }
                 }
                 "security" => {
                     if !fixture.starts_with("camera-") && !fixture.starts_with("access-") {
-                        bail!("Security fixture must start with camera- or access-");
+                        return Err(ArxError::address_validation(
+                            self.path.clone(),
+                            "Security fixture must start with camera- or access-"
+                        ).into());
                     }
                 }
                 "elevators" => {
                     if !fixture.starts_with("car-") && !fixture.starts_with("control-") {
-                        bail!("Elevator fixture must start with car- or control-");
+                        return Err(ArxError::address_validation(
+                            self.path.clone(),
+                            "Elevator fixture must start with car- or control-"
+                        ).into());
                     }
                 }
                 "roof" => {
                     if !fixture.starts_with("unit-") && !fixture.starts_with("drain-") {
-                        bail!("Roof fixture must start with unit- or drain-");
+                        return Err(ArxError::address_validation(
+                            self.path.clone(),
+                            "Roof fixture must start with unit- or drain-"
+                        ).into());
                     }
                 }
                 "windows" => {
                     if !fixture.starts_with("frame-") && !fixture.starts_with("glass-") {
-                        bail!("Window fixture must start with frame- or glass-");
+                        return Err(ArxError::address_validation(
+                            self.path.clone(),
+                            "Window fixture must start with frame- or glass-"
+                        ).into());
                     }
                 }
                 "doors" => {
                     if !fixture.starts_with("hinge-") && !fixture.starts_with("lock-") {
-                        bail!("Door fixture must start with hinge- or lock-");
+                        return Err(ArxError::address_validation(
+                            self.path.clone(),
+                            "Door fixture must start with hinge- or lock-"
+                        ).into());
                     }
                 }
                 "structure" => {
                     if !fixture.starts_with("column-") && !fixture.starts_with("beam-") {
-                        bail!("Structure fixture must start with column- or beam-");
+                        return Err(ArxError::address_validation(
+                            self.path.clone(),
+                            "Structure fixture must start with column- or beam-"
+                        ).into());
                     }
                 }
                 "envelope" => {
                     if !fixture.starts_with("wall-") && !fixture.starts_with("insulation-") {
-                        bail!("Envelope fixture must start with wall- or insulation-");
+                        return Err(ArxError::address_validation(
+                            self.path.clone(),
+                            "Envelope fixture must start with wall- or insulation-"
+                        ).into());
                     }
                 }
                 "it" => {
                     if !fixture.starts_with("switch-") && !fixture.starts_with("ap-") {
-                        bail!("IT fixture must start with switch- or ap-");
+                        return Err(ArxError::address_validation(
+                            self.path.clone(),
+                            "IT fixture must start with switch- or ap-"
+                        ).into());
                     }
                 }
                 "furniture" => {
                     if !fixture.starts_with("desk-") && !fixture.starts_with("chair-") {
-                        bail!("Furniture fixture must start with desk- or chair-");
+                        return Err(ArxError::address_validation(
+                            self.path.clone(),
+                            "Furniture fixture must start with desk- or chair-"
+                        ).into());
                     }
                 }
                 _ => {}
@@ -216,7 +265,10 @@ impl ArxAddress {
     pub fn parts(&self) -> Result<(String, String, String, String, String, String, String)> {
         let parts: Vec<&str> = self.path.trim_start_matches('/').split('/').collect();
         if parts.len() != 7 {
-            bail!("ArxAddress must have exactly 7 segments");
+            return Err(ArxError::path_invalid(
+                self.path.clone(),
+                "/country/state/city/building/floor/room/fixture"
+            ).into());
         }
         Ok((
             parts[0].to_string(),
@@ -327,6 +379,120 @@ mod tests {
         // Sanitization is private, but we can test it through new()
         let addr = ArxAddress::new("USA", "NY", "New York", "PS 118", "Floor 02", "Mech Room", "Boiler 01");
         assert_eq!(addr.path, "/usa/ny/new-york/ps-118/floor-02/mech-room/boiler-01");
+    }
+
+    #[test]
+    fn test_validate_all_reserved_systems() {
+        // Test all 14 reserved systems with valid prefixes
+        let valid_cases = vec![
+            ("hvac", "boiler-01"),
+            ("hvac", "ahu-02"),
+            ("plumbing", "valve-01"),
+            ("plumbing", "pump-02"),
+            ("electrical", "panel-01"),
+            ("electrical", "breaker-02"),
+            ("fire", "sprinkler-01"),
+            ("fire", "alarm-02"),
+            ("lighting", "fixture-01"),
+            ("lighting", "control-02"),
+            ("security", "camera-01"),
+            ("security", "access-02"),
+            ("elevators", "car-01"),
+            ("elevators", "control-02"),
+            ("roof", "unit-01"),
+            ("roof", "drain-02"),
+            ("windows", "frame-01"),
+            ("windows", "glass-02"),
+            ("doors", "hinge-01"),
+            ("doors", "lock-02"),
+            ("structure", "column-01"),
+            ("structure", "beam-02"),
+            ("envelope", "wall-01"),
+            ("envelope", "insulation-02"),
+            ("it", "switch-01"),
+            ("it", "ap-02"),
+            ("furniture", "desk-01"),
+            ("furniture", "chair-02"),
+        ];
+
+        for (system, fixture) in valid_cases {
+            let addr = ArxAddress::from_path(&format!(
+                "/usa/ny/brooklyn/ps-118/floor-02/{}/{}",
+                system, fixture
+            )).unwrap();
+            assert!(addr.validate().is_ok(), "Failed validation for {}/{}", system, fixture);
+        }
+    }
+
+    #[test]
+    fn test_validate_invalid_prefixes() {
+        // Test invalid prefixes for reserved systems
+        let invalid_cases = vec![
+            ("hvac", "invalid-01"),
+            ("plumbing", "wrong-01"),
+            ("electrical", "bad-01"),
+        ];
+
+        for (system, fixture) in invalid_cases {
+            let addr = ArxAddress::from_path(&format!(
+                "/usa/ny/brooklyn/ps-118/floor-02/{}/{}",
+                system, fixture
+            )).unwrap();
+            assert!(addr.validate().is_err(), "Should fail validation for {}/{}", system, fixture);
+        }
+    }
+
+    #[test]
+    fn test_guid_stability() {
+        // Test that same path produces same GUID
+        let addr1 = ArxAddress::from_path("/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01").unwrap();
+        let addr2 = ArxAddress::from_path("/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01").unwrap();
+        assert_eq!(addr1.guid(), addr2.guid());
+    }
+
+    #[test]
+    fn test_guid_uniqueness() {
+        // Test that different paths produce different GUIDs
+        let addr1 = ArxAddress::from_path("/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01").unwrap();
+        let addr2 = ArxAddress::from_path("/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-02").unwrap();
+        assert_ne!(addr1.guid(), addr2.guid());
+    }
+
+    #[test]
+    fn test_guid_collision_guard() {
+        // Verify that GUID generation is deterministic and unique per path
+        // SHA-256 has extremely low collision probability, but we verify determinism
+        let paths = vec![
+            "/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01",
+            "/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-02",
+            "/usa/ny/brooklyn/ps-118/floor-02/kitchen/fridge/pbj-sandwich",
+            "/usa/ca/san-francisco/office-building/floor-01/hvac/ahu-01",
+        ];
+
+        let mut guids = std::collections::HashSet::new();
+        for path in &paths {
+            let addr = ArxAddress::from_path(path).unwrap();
+            let guid = addr.guid();
+            
+            // Verify determinism - same path should produce same GUID
+            let addr2 = ArxAddress::from_path(path).unwrap();
+            assert_eq!(addr.guid(), addr2.guid(), "GUID should be deterministic for path: {}", path);
+            
+            // Verify uniqueness - different paths should produce different GUIDs
+            assert!(guids.insert(guid.clone()), "GUID collision detected for path: {}", path);
+        }
+    }
+
+    #[test]
+    fn test_invalid_path_rejected() {
+        // Test that invalid paths are rejected
+        assert!(ArxAddress::from_path("").is_err());
+        assert!(ArxAddress::from_path("/usa").is_err());
+        assert!(ArxAddress::from_path("/usa/ny").is_err());
+        assert!(ArxAddress::from_path("/usa/ny/brooklyn").is_err());
+        assert!(ArxAddress::from_path("/usa/ny/brooklyn/ps-118").is_err());
+        assert!(ArxAddress::from_path("/usa/ny/brooklyn/ps-118/floor-02").is_err());
+        assert!(ArxAddress::from_path("/usa/ny/brooklyn/ps-118/floor-02/mech").is_err());
     }
 }
 

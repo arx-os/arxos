@@ -130,6 +130,10 @@ pub struct EquipmentInfo {
     pub status: String,
     pub position: Position,
     pub properties: HashMap<String, String>,
+    /// ArxAddress path (e.g., "/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01")
+    /// Returns empty string if address is not set
+    #[serde(rename = "addressPath")]
+    pub address_path: String,
 }
 
 /// Position data
@@ -356,6 +360,7 @@ pub fn extract_equipment_from_ar_scan(scan_data: &ARScanData) -> Vec<EquipmentIn
                 }
                 props
             },
+            address_path: String::new(), // AR scan doesn't have address yet
         }
     }).collect()
 }
@@ -481,6 +486,9 @@ pub fn equipment_to_equipment_info(equipment: Equipment) -> EquipmentInfo {
             coordinate_system: equipment.position.coordinate_system.clone(),
         },
         properties: equipment.properties.clone(),
+        address_path: equipment.address.as_ref()
+            .map(|addr| addr.path.clone())
+            .unwrap_or_else(String::new),
     }
 }
 

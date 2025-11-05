@@ -47,6 +47,7 @@ jni = { workspace = true, optional = true }
 log = "0.4"
 regex = "1.10"
 sha2 = "0.10"
+glob = "0.3"
 clap = { version = "4.4", features = ["derive"] }
 env_logger = "0.10"
 criterion = { workspace = true }
@@ -225,7 +226,7 @@ name = "wing_tests"
 path = "tests/commands/wing_tests.rs"
 
 [workspace.package]
-version = "0.1.0"
+version = "2.0.0"
 edition = "2021"
 authors = ["Joel <joel@arxos.io>"]
 license = "MIT"

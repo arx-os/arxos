@@ -41,9 +41,9 @@ pub fn infer_room_from_grid(grid: &str) -> Result<String> {
 
 /// Get next available ID for a fixture in a room
 ///
-/// Returns a simple incremental ID. In production, this would load from
-/// persistent counter file (.arxos/counters.toml) and track counters per
-/// room/type combination.
+/// Loads from persistent counter file (.arxos/counters.toml) and tracks
+/// counters per room/type combination. IDs survive restarts and work across
+/// concurrent users.
 ///
 /// # Arguments
 /// * `room` - Room name
@@ -51,10 +51,21 @@ pub fn infer_room_from_grid(grid: &str) -> Result<String> {
 ///
 /// # Returns
 /// * Next available ID number
-pub fn next_id(_room: &str, _typ: &str) -> Result<u32> {
-    // Simple implementation: returns 1 for now
-    // Future enhancement: load from persistent counter storage
-    Ok(1)
+pub fn next_id(room: &str, typ: &str) -> Result<u32> {
+    use crate::config::counters::CounterStorage;
+    
+    let mut storage = CounterStorage::load()
+        .unwrap_or_else(|_| CounterStorage::default());
+    
+    let id = storage.next_id(room, typ)?;
+    
+    // Save after incrementing
+    storage.save()
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: Failed to save counters: {}", e);
+        });
+    
+    Ok(id)
 }
 
 /// Generate address from building context and grid
@@ -96,7 +107,9 @@ pub fn generate_address_from_context(
     let id = next_id(&room, equipment_type)?;
     let fixture = format!("{}-{:02}", equipment_type.to_lowercase(), id);
 
-    Ok(ArxAddress::new(country, state, city, building, floor, &room, &fixture))
+    let addr = ArxAddress::new(country, state, city, building, floor, &room, &fixture);
+    addr.validate()?;
+    Ok(addr)
 }
 
 #[cfg(test)]

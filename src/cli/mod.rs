@@ -320,6 +320,33 @@ pub enum Commands {
         #[arg(long)]
         interactive: bool,
     },
+    /// Query equipment by ArxAddress glob pattern
+    /// 
+    /// Query equipment matching an ArxAddress path pattern using glob wildcards (*).
+    /// Supports hierarchical path queries: /country/state/city/building/floor/room/fixture
+    /// 
+    /// # Examples
+    /// 
+    /// ```bash
+    /// # Find all boilers in mech rooms on any floor
+    /// arx query "/usa/ny/*/floor-*/mech/boiler-*"
+    /// 
+    /// # Find all equipment in kitchen on floor 02
+    /// arx query "/usa/ny/brooklyn/ps-118/floor-02/kitchen/*"
+    /// 
+    /// # Find all HVAC equipment in any city
+    /// arx query "/usa/ny/*/ps-118/floor-*/hvac/*"
+    /// ```
+    Query {
+        /// ArxAddress glob pattern with wildcards (e.g., "/usa/ny/*/floor-*/mech/boiler-*")
+        pattern: String,
+        /// Output format (table, json, yaml)
+        #[arg(long, default_value = "table")]
+        format: String,
+        /// Show detailed results
+        #[arg(long)]
+        verbose: bool,
+    },
     /// Integrate AR scan data
     /// 
     /// **Note:** This command directly integrates AR scans without user review.
@@ -509,6 +536,16 @@ pub enum Commands {
         /// Show detailed verification information
         #[arg(long)]
         verbose: bool,
+    },
+    /// Migrate existing fixtures to ArxAddress format
+    /// 
+    /// One-shot migration that fills address: for every existing fixture
+    /// in building YAML files by inferring from grid/floor/room data.
+    /// Old data becomes instantly searchable with the new address system.
+    Migrate {
+        /// Show what would be migrated without making changes
+        #[arg(long)]
+        dry_run: bool,
     },
 }
 
@@ -738,7 +775,8 @@ pub enum EquipmentCommands {
         #[arg(long)]
         position: Option<String>,
         /// ArxOS Address path (e.g., /usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01)
-        /// If not provided, address will be auto-generated from context
+        /// If not provided, address will be auto-generated from context.
+        /// Supports 7-part hierarchical format: /country/state/city/building/floor/room/fixture
         #[arg(long)]
         at: Option<String>,
         /// Equipment properties (key=value)

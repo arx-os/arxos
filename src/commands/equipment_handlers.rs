@@ -115,9 +115,8 @@ fn handle_add_equipment(
         }
         
         if let (Some(floor_level), Some(room_name)) = (found_floor_level, found_room_name) {
-            // Generate address from grid if available, otherwise use room name
-            // Grid inference would go here - simplified for now
-            
+            // Generate address from room name
+            // If grid coordinates are needed, they can be extracted from equipment properties
             let room_system = room_name.to_lowercase().replace(" ", "-");
             let floor_str = format!("floor-{:02}", floor_level);
             let fixture_type = equipment_type.to_lowercase();
@@ -130,6 +129,7 @@ fn handle_add_equipment(
                 &room_system,
                 &fixture_id,
             );
+            addr.validate()?;
             Some(addr)
         } else {
             None

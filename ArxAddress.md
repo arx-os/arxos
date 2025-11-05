@@ -150,8 +150,9 @@ pub fn grid_to_address(grid: &str, floor: &str, building: &str) -> ArxAddress {
 ---
 
 ## 8. IFC Sync: Path → GUID
-// src/adapters/ifc/sync.rs
-let guid = blake3::hash(address.path.as_bytes()).to_hex().to_string();
+// src/export/ifc/mapper.rs
+// Uses SHA-256 hash of address path for stable GUID generation
+let guid = address.guid(); // Returns SHA-256 hash as hex string
 model.create_entity("IfcBoiler", &guid, &fixture.model, coords)?;
 
 ---

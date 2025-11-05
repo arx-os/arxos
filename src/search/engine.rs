@@ -105,11 +105,12 @@ impl SearchEngine {
         if config.search_equipment {
             for equipment in &self.equipment {
                 if self.matches_equipment(equipment, &config.query, &regex_pattern, config.case_sensitive) {
-                    let (floor, room) = self.extract_location_from_path(&equipment.universal_path);
+                    let path = self.get_equipment_path(equipment);
+                    let (floor, room) = self.extract_location_from_path(&path);
                     results.push(SearchResult {
                         item_type: "equipment".to_string(),
                         name: equipment.name.clone(),
-                        path: equipment.universal_path.clone(),
+                        path,
                         building: Some(self.buildings[0].name.clone()),
                         floor,
                         room,
@@ -206,14 +207,24 @@ impl SearchEngine {
         }
     }
     
+    /// Get equipment path, preferring ArxAddress over universal_path
+    fn get_equipment_path(&self, equipment: &EquipmentData) -> String {
+        equipment.address.as_ref()
+            .map(|addr| addr.path.clone())
+            .filter(|p| !p.is_empty())
+            .unwrap_or_else(|| equipment.universal_path.clone())
+    }
+
     /// Check if equipment matches the search query (enhanced multi-field search)
     fn matches_equipment(&self, equipment: &EquipmentData, query: &str, regex: &Option<Regex>, case_sensitive: bool) -> bool {
+        let path = self.get_equipment_path(equipment);
+        
         if let Some(regex) = regex {
             // For regex, search across multiple fields
             regex.is_match(&equipment.name) ||
             regex.is_match(&equipment.equipment_type) ||
             regex.is_match(&equipment.system_type) ||
-            regex.is_match(&equipment.universal_path)
+            regex.is_match(&path)
         } else {
             // For regular search, search across multiple fields
             let search_query = if case_sensitive {
@@ -237,9 +248,9 @@ impl SearchEngine {
             };
             
             let path_match = if case_sensitive {
-                equipment.universal_path.contains(&search_query)
+                path.contains(&search_query)
             } else {
-                equipment.universal_path.to_lowercase().contains(&search_query)
+                path.to_lowercase().contains(&search_query)
             };
             
             name_match || type_match || path_match
@@ -269,7 +280,8 @@ impl SearchEngine {
         
         // Floor filter
         if let Some(floor) = config.floor {
-            let (equipment_floor, _) = self.extract_location_from_path(&equipment.universal_path);
+            let path = self.get_equipment_path(equipment);
+            let (equipment_floor, _) = self.extract_location_from_path(&path);
             if equipment_floor != Some(floor) {
                 return false;
             }
@@ -277,7 +289,8 @@ impl SearchEngine {
         
         // Room filter
         if let Some(ref room) = config.room {
-            let (_, equipment_room) = self.extract_location_from_path(&equipment.universal_path);
+            let path = self.get_equipment_path(equipment);
+            let (_, equipment_room) = self.extract_location_from_path(&path);
             if let Some(ref eq_room) = equipment_room {
                 if !eq_room.to_lowercase().contains(&room.to_lowercase()) {
                     return false;
@@ -438,13 +451,29 @@ impl SearchEngine {
         }
     }
     
-    /// Extract floor and room information from universal path
+    /// Extract floor and room information from path (supports both ArxAddress and universal_path formats)
     fn extract_location_from_path(&self, path: &str) -> (Option<i32>, Option<String>) {
-        // Parse universal path: /BUILDING/{building}/FLOOR/{floor}/ROOM/{room}/{system}/{equipment}
+        let parts: Vec<&str> = path.split('/').filter(|p| !p.is_empty()).collect();
+        
+        // Try ArxAddress format first: /country/state/city/building/floor/room/fixture
+        if parts.len() == 7 {
+            let floor_str = parts[4]; // 5th part (0-indexed)
+            let room = parts[5].to_string(); // 6th part
+            
+            // Extract floor number from "floor-02" format
+            let floor = if let Some(floor_num_str) = floor_str.strip_prefix("floor-") {
+                floor_num_str.parse::<i32>().ok()
+            } else if let Ok(floor_num) = floor_str.parse::<i32>() {
+                Some(floor_num)
+            } else {
+                None
+            };
+            
+            return (floor, Some(room));
+        }
+        
+        // Fall back to universal path format: /BUILDING/{building}/FLOOR/{floor}/ROOM/{room}/{system}/{equipment}
         // or: /BUILDING/{building}/FLOOR/{floor}/{system}/{equipment}
-        
-        let parts: Vec<&str> = path.split('/').collect();
-        
         let mut floor: Option<i32> = None;
         let mut room: Option<String> = None;
         
@@ -456,7 +485,6 @@ impl SearchEngine {
             }
             // Handle FLOOR-{number} format
             if let Some(floor_str) = part.strip_prefix("FLOOR-") {
-                // Remove "FLOOR-" prefix
                 if let Ok(floor_num) = floor_str.parse::<i32>() {
                     floor = Some(floor_num);
                 }

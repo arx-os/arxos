@@ -1,0 +1,200 @@
+building:
+  id: ps-118-school-001
+  name: PS 118
+  description: 'Public School 118 in Brooklyn, NY - Example building with full ArxAddress system'
+  created_at: 2025-01-15T10:00:00Z
+  updated_at: 2025-01-15T10:00:00Z
+  version: 2.0.0
+  global_bounding_box:
+    min:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    max:
+      x: 80.0
+      y: 60.0
+      z: 15.0
+
+metadata:
+  source_file: examples/ps-118.ifc
+  parser_version: ArxOS v2.0
+  total_entities: 15
+  spatial_entities: 15
+  coordinate_system: World
+  units: meters
+  tags:
+    - school
+    - education
+    - brooklyn
+    - example
+
+floors:
+  - id: floor-02
+    name: Second Floor
+    level: 2
+    elevation: 6.0
+    rooms:
+      - id: room-mech-201
+        name: Mechanical Room 201
+        room_type: Mechanical
+        area: 120.0
+        volume: 360.0
+        position:
+          x: 40.0
+          y: 30.0
+          z: 7.5
+        bounding_box:
+          min:
+            x: 30.0
+            y: 20.0
+            z: 6.0
+          max:
+            x: 50.0
+            y: 40.0
+            z: 9.0
+        equipment: [equipment-boiler-01, equipment-ahu-01]
+        properties: {}
+      
+      - id: room-kitchen-202
+        name: Kitchen 202
+        room_type: Kitchen
+        area: 200.0
+        volume: 600.0
+        position:
+          x: 20.0
+          y: 15.0
+          z: 7.5
+        bounding_box:
+          min:
+            x: 10.0
+            y: 5.0
+            z: 6.0
+          max:
+            x: 30.0
+            y: 25.0
+            z: 9.0
+        equipment: [equipment-fridge-01, equipment-pbj-sandwich-01]
+        properties: {}
+    
+    equipment:
+      - id: equipment-boiler-01
+        name: Boiler 01
+        equipment_type: HVAC
+        system_type: HVAC
+        status: Healthy
+        position:
+          x: 42.0
+          y: 32.0
+          z: 7.0
+        bounding_box:
+          min:
+            x: 40.0
+            y: 30.0
+            z: 6.5
+          max:
+            x: 44.0
+            y: 34.0
+            z: 7.5
+        universal_path: /BUILDING/PS-118/FLOOR-2/ROOM/mech-201/HVAC/boiler-01
+        address:
+          path: /usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01
+        properties:
+          capacity: "500 kW"
+          fuel_type: "natural gas"
+      
+      - id: equipment-ahu-01
+        name: AHU 01
+        equipment_type: HVAC
+        system_type: HVAC
+        status: Healthy
+        position:
+          x: 38.0
+          y: 28.0
+          z: 8.0
+        bounding_box:
+          min:
+            x: 36.0
+            y: 26.0
+            z: 7.0
+          max:
+            x: 40.0
+            y: 30.0
+            z: 9.0
+        universal_path: /BUILDING/PS-118/FLOOR-2/ROOM/mech-201/HVAC/ahu-01
+        address:
+          path: /usa/ny/brooklyn/ps-118/floor-02/mech/ahu-01
+        properties:
+          cfm: "5000"
+          filter_type: "MERV 13"
+      
+      - id: equipment-fridge-01
+        name: Kitchen Refrigerator
+        equipment_type: Furniture
+        system_type: FURNITURE
+        status: Healthy
+        position:
+          x: 22.0
+          y: 18.0
+          z: 7.2
+        bounding_box:
+          min:
+            x: 20.0
+            y: 16.0
+            z: 6.5
+          max:
+            x: 24.0
+            y: 20.0
+            z: 8.0
+        universal_path: /BUILDING/PS-118/FLOOR-2/ROOM/kitchen-202/FURNITURE/fridge-01
+        address:
+          path: /usa/ny/brooklyn/ps-118/floor-02/kitchen/fridge/kitchen-refrigerator
+        properties:
+          capacity: "20 cu ft"
+          temperature: "38°F"
+      
+      - id: equipment-pbj-sandwich-01
+        name: PB&J Sandwich
+        equipment_type: Other
+        system_type: OTHER
+        status: Healthy
+        position:
+          x: 23.0
+          y: 19.0
+          z: 7.5
+        bounding_box:
+          min:
+            x: 22.5
+            y: 18.5
+            z: 7.3
+          max:
+            x: 23.5
+            y: 19.5
+            z: 7.7
+        universal_path: /BUILDING/PS-118/FLOOR-2/ROOM/kitchen-202/OTHER/pbj-sandwich-01
+        address:
+          path: /usa/ny/brooklyn/ps-118/floor-02/kitchen/fridge/pbj-sandwich
+        properties:
+          bread_type: "white"
+          jelly_flavor: "grape"
+          created_at: "2025-01-15T10:30:00Z"
+
+coordinate_systems:
+  - name: World
+    origin:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    x_axis:
+      x: 1.0
+      y: 0.0
+      z: 0.0
+    y_axis:
+      x: 0.0
+      y: 1.0
+      z: 0.0
+    z_axis:
+      x: 0.0
+      y: 0.0
+      z: 1.0
+    description: "World coordinate system (meters)"
+

@@ -181,6 +181,9 @@ pub fn render_error_modal<'a>(
         ArxError::IoError { message, .. } => format!("IO Error: {}", message),
         ArxError::YamlProcessing { message, .. } => format!("YAML Processing Error: {}", message),
         ArxError::SpatialData { message, .. } => format!("Spatial Data Error: {}", message),
+        ArxError::AddressValidation { message, .. } => format!("Address Validation Error: {}", message),
+        ArxError::CounterOverflow { message, .. } => format!("Counter Overflow Error: {}", message),
+        ArxError::PathInvalid { message, .. } => format!("Path Invalid Error: {}", message),
     };
 
     lines.push(Line::from(vec![

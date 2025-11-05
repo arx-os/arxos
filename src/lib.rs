@@ -28,6 +28,7 @@ pub mod export;
 // Application modules (commands, utilities, features)
 pub mod commands;
 pub mod search;
+pub mod query;
 pub mod utils;
 pub mod docs;
 pub mod game;
@@ -56,9 +57,11 @@ pub use yaml::{BuildingYamlSerializer, BuildingData, BuildingInfo, BuildingMetad
 // Re-export path types
 pub use path::{PathComponents, PathError, PathValidator};
 pub use domain::{ArxAddress, RESERVED_SYSTEMS};
+pub use query::{query_addresses, QueryResult};
 pub use utils::progress::{ProgressReporter, ProgressContext};
 pub use utils::progress::utils as progress_utils;
 pub use config::{ArxConfig, ConfigManager, ConfigError, ConfigResult};
+pub use config::counters::CounterStorage;
 pub use export::ar::{ARExporter, ARFormat, GLTFExporter};
 pub use identity::{User, UserStatus, UserRegistry, RegistryError, PendingUserRequest, PendingUserRegistry, PendingRequestStatus, PendingRegistryError};
 

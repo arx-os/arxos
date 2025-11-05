@@ -239,8 +239,13 @@ impl BuildingGitManager {
             let full_path = repo_workdir.join(file_path_buf);
             
             // Create parent directories first (before validation)
+            // This enforces Git repo directory layout matching address segments
             if let Some(parent) = full_path.parent() {
-                std::fs::create_dir_all(parent)?;
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| GitError::OperationFailed {
+                        operation: format!("create directory: {}", parent.display()),
+                        reason: format!("Failed to create directory structure: {}", e),
+                    })?;
             }
             
             // Now validate the path
@@ -285,11 +290,39 @@ impl BuildingGitManager {
 
             // Equipment files
             for equipment in &floor.equipment {
-                let equipment_path = format!("floors/floor-{}/equipment/{}/{}.yml", 
-                    floor.level, 
-                    equipment.system_type.to_lowercase(), 
-                    equipment.name.to_lowercase().replace(" ", "-")
-                );
+                // Use ArxAddress path for directory structure if available, otherwise fall back to old format
+                let equipment_path = if let Some(ref addr) = equipment.address {
+                    // Create directory structure from ArxAddress: /country/state/city/building/floor/room/fixture
+                    // Git repo layout: country/state/city/building/floor/room/fixture.yml
+                    let path_parts: Vec<&str> = addr.path.trim_start_matches('/').split('/').collect();
+                    if path_parts.len() == 7 {
+                        // Ensure all parent directories exist in the file structure
+                        let dir_path = format!("{}/{}/{}/{}/{}/{}/{}.yml",
+                            path_parts[0], // country
+                            path_parts[1], // state
+                            path_parts[2], // city
+                            path_parts[3], // building
+                            path_parts[4], // floor
+                            path_parts[5], // room
+                            path_parts[6]  // fixture
+                        );
+                        dir_path
+                    } else {
+                        // Fallback to old format if address format is unexpected
+                        format!("floors/floor-{}/equipment/{}/{}.yml", 
+                            floor.level, 
+                            equipment.system_type.to_lowercase(), 
+                            equipment.name.to_lowercase().replace(" ", "-")
+                        )
+                    }
+                } else {
+                    // Fallback to old format if no address
+                    format!("floors/floor-{}/equipment/{}/{}.yml", 
+                        floor.level, 
+                        equipment.system_type.to_lowercase(), 
+                        equipment.name.to_lowercase().replace(" ", "-")
+                    )
+                };
                 let equipment_yaml = self.serializer.to_yaml(equipment)
                     .map_err(|e| GitError::Generic(e.to_string()))?;
                 files.insert(equipment_path, equipment_yaml);

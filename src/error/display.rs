@@ -52,7 +52,7 @@ impl ErrorDisplay for ArxError {
     fn display_user_friendly_with_style(&self, style: DisplayStyle) -> String {
         let mut output = String::new();
         
-        let (ifc_prefix, config_prefix, git_prefix, validation_prefix, io_prefix, yaml_prefix, spatial_prefix) = 
+        let (ifc_prefix, config_prefix, git_prefix, validation_prefix, io_prefix, yaml_prefix, spatial_prefix, address_prefix, counter_prefix, path_prefix) = 
             match style {
                 DisplayStyle::Emoji => (
                     "❌ IFC Processing Error:",
@@ -62,6 +62,9 @@ impl ErrorDisplay for ArxError {
                     "💾 IO Error:",
                     "📄 YAML Processing Error:",
                     "🗺️ Spatial Data Error:",
+                    "📍 Address Validation Error:",
+                    "🔢 Counter Overflow Error:",
+                    "🛤️ Path Invalid Error:",
                 ),
                 DisplayStyle::PlainText => (
                     "[ERROR] IFC Processing Error:",
@@ -71,6 +74,9 @@ impl ErrorDisplay for ArxError {
                     "[IO] IO Error:",
                     "[YAML] YAML Processing Error:",
                     "[SPATIAL] Spatial Data Error:",
+                    "[ADDRESS] Address Validation Error:",
+                    "[COUNTER] Counter Overflow Error:",
+                    "[PATH] Path Invalid Error:",
                 ),
             };
         
@@ -119,6 +125,23 @@ impl ErrorDisplay for ArxError {
                 }
                 Self::display_context(&mut output, context, style);
             }
+            ArxError::AddressValidation { message, context, path, .. } => {
+                output.push_str(&format!("{} {}\n", address_prefix, message));
+                output.push_str(&format!("   Path: {}\n", path));
+                Self::display_context(&mut output, context, style);
+            }
+            ArxError::CounterOverflow { message, context, room, equipment_type } => {
+                output.push_str(&format!("{} {}\n", counter_prefix, message));
+                output.push_str(&format!("   Room: {}\n", room));
+                output.push_str(&format!("   Equipment Type: {}\n", equipment_type));
+                Self::display_context(&mut output, context, style);
+            }
+            ArxError::PathInvalid { message, context, path, expected_format } => {
+                output.push_str(&format!("{} {}\n", path_prefix, message));
+                output.push_str(&format!("   Path: {}\n", path));
+                output.push_str(&format!("   Expected Format: {}\n", expected_format));
+                Self::display_context(&mut output, context, style);
+            }
         }
         
         output
@@ -154,6 +177,9 @@ impl ErrorDisplay for ArxError {
             ArxError::IoError { message, .. } => format!("IO: {}", message),
             ArxError::YamlProcessing { message, .. } => format!("YAML: {}", message),
             ArxError::SpatialData { message, .. } => format!("Spatial: {}", message),
+            ArxError::AddressValidation { message, .. } => format!("Address: {}", message),
+            ArxError::CounterOverflow { message, .. } => format!("Counter: {}", message),
+            ArxError::PathInvalid { message, .. } => format!("Path: {}", message),
         }
     }
 }
@@ -254,6 +280,9 @@ pub mod utils {
                 ArxError::IoError { .. } => "IO Error",
                 ArxError::YamlProcessing { .. } => "YAML Processing",
                 ArxError::SpatialData { .. } => "Spatial Data",
+                ArxError::AddressValidation { .. } => "Address Validation",
+                ArxError::CounterOverflow { .. } => "Counter Overflow",
+                ArxError::PathInvalid { .. } => "Path Invalid",
             };
             
             *counts.entry(error_type.to_string()).or_insert(0) += 1;

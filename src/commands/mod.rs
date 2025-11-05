@@ -18,6 +18,7 @@ pub mod status_dashboard;
 pub mod spatial;
 pub mod search;
 pub mod search_browser;
+pub mod query;
 pub mod watch_dashboard;
 pub mod watch;
 pub mod ar;
@@ -32,6 +33,7 @@ pub mod sync;
 pub mod spreadsheet;
 pub mod users;
 pub mod verify;
+pub mod migrate;
 
 use crate::cli::Commands;
 
@@ -116,6 +118,9 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
             };
             search::handle_search_command(config, interactive)
         },
+        Commands::Query { pattern, format, verbose } => {
+            query::handle_query_command(pattern, format, verbose)
+        },
         Commands::Filter { equipment_type, status, floor, room, building, critical_only, healthy_only, alerts_only, format, limit, verbose } => {
             use crate::search::{FilterConfig, OutputFormat};
             let config = FilterConfig {
@@ -170,6 +175,9 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
         },
         Commands::Verify { commit, all, verbose } => {
             verify::handle_verify(commit, all, verbose)
+        },
+        Commands::Migrate { dry_run } => {
+            migrate::handle_migrate_address(dry_run)
         },
     }
 }

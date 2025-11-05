@@ -45,6 +45,18 @@ jobs:
       
       - name: Check formatting
         run: cargo fmt -- --check
+      
+      - name: Install Tarpaulin
+        run: cargo install cargo-tarpaulin --locked
+      
+      - name: Test Coverage (Tarpaulin)
+        run: cargo tarpaulin --workspace --timeout 120 --out Xml --output-dir coverage --fail-under 85
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/cobertura.xml
+          fail_ci_if_error: false
 
   build-release:
     name: Build Release

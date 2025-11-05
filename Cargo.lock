@@ -136,7 +136,7 @@ dependencies = [
 
 [[package]]
 name = "arxos"
-version = "0.1.0"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "arboard",
@@ -150,6 +150,7 @@ dependencies = [
  "futures-util",
  "geo",
  "git2",
+ "glob",
  "gltf",
  "gltf-json",
  "indicatif",

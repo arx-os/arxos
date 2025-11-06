@@ -219,14 +219,18 @@ fn create_test_building_data() -> BuildingData {
             units: "meters".to_string(),
             tags: vec![],
         },
-        floors: vec![FloorData {
-            id: "floor-0".to_string(),
-            name: "Ground Floor".to_string(),
-            level: 0,
-            elevation: 0.0,
-            rooms: vec![],
-            equipment: vec![],
-            bounding_box: None,
+        floors: vec![{
+            use arxos::core::Floor;
+            Floor {
+                id: "floor-0".to_string(),
+                name: "Ground Floor".to_string(),
+                level: 0,
+                elevation: Some(0.0),
+                bounding_box: None,
+                wings: vec![],
+                equipment: vec![],
+                properties: std::collections::HashMap::new(),
+            }
         }],
         coordinate_systems: vec![],
     }
@@ -453,17 +457,18 @@ mod indexing_tests {
     use arxos::yaml::BuildingDataIndex;
     
     fn create_test_building_with_floors(floor_count: usize) -> BuildingData {
+        use arxos::core::Floor;
         let mut floors = Vec::new();
         for i in 0..floor_count {
-            floors.push(FloorData {
+            floors.push(Floor {
                 id: format!("floor-{}", i),
                 name: format!("Floor {}", i),
                 level: i as i32,
-                elevation: (i as f64) * 3.0,
-                wings: vec![],
-                rooms: vec![],
-                equipment: vec![],
+                elevation: Some((i as f64) * 3.0),
                 bounding_box: None,
+                wings: vec![],
+                equipment: vec![],
+                properties: std::collections::HashMap::new(),
             });
         }
         

@@ -269,8 +269,8 @@ pub fn create_room(building_name: String, floor_level: i32, room: RoomInfo, comm
         equipment: vec![],
         spatial_properties: spatial_props,
         properties: room.properties.clone(),
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
+        created_at: Some(Utc::now()),
+        updated_at: Some(Utc::now()),
     };
     
     // Extract wing from room properties if available
@@ -414,7 +414,9 @@ pub fn add_equipment(building_name: String, equipment: EquipmentInfo, room_id: O
         },
         properties: equipment.properties.clone(),
         status,
+        health_status: None,
         room_id: equipment_room_id.clone(),
+        sensor_mappings: None,
     };
     
     crate::core::add_equipment(&building_name, room_id.as_deref(), core_equipment, commit)
@@ -515,8 +517,8 @@ mod tests {
                 coordinate_system: "local".to_string(),
             },
             properties: HashMap::new(),
-            created_at: chrono::Utc::now(),
-            updated_at: chrono::Utc::now(),
+            created_at: Some(chrono::Utc::now()),
+            updated_at: Some(chrono::Utc::now()),
         };
         
         let info = room_to_room_info(room);

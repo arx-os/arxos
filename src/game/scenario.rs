@@ -147,7 +147,9 @@ impl GameScenarioLoader {
                 props
             },
             status: EquipmentStatus::Active,
+            health_status: None,
             room_id: None,
+            sensor_mappings: None,
         };
 
         Ok(GameEquipmentPlacement {
@@ -231,43 +233,27 @@ impl GameScenarioLoader {
         let mut equipment_items = Vec::new();
         for floor in &building_data.floors {
             for equipment_data in &floor.equipment {
-                use crate::core::{Equipment, EquipmentType, EquipmentStatus, Position};
+                use crate::core::Equipment;
                 
-                // Convert EquipmentData to Equipment manually
-                let equipment_type = match equipment_data.equipment_type.as_str() {
-                    "HVAC" => EquipmentType::HVAC,
-                    "Electrical" => EquipmentType::Electrical,
-                    "AV" => EquipmentType::AV,
-                    "Furniture" => EquipmentType::Furniture,
-                    "Safety" => EquipmentType::Safety,
-                    "Plumbing" => EquipmentType::Plumbing,
-                    "Network" => EquipmentType::Network,
-                    _ => EquipmentType::Other(equipment_data.equipment_type.clone()),
-                };
+                // equipment_data is now core::Equipment, so equipment_type and status are already enums
+                let equipment_type = equipment_data.equipment_type.clone();
+                let status = equipment_data.status.clone();
                 
-                let status = match equipment_data.status {
-                    crate::yaml::EquipmentStatus::Healthy => EquipmentStatus::Active,
-                    crate::yaml::EquipmentStatus::Warning => EquipmentStatus::Maintenance,
-                    crate::yaml::EquipmentStatus::Critical => EquipmentStatus::Inactive,
-                    crate::yaml::EquipmentStatus::Unknown => EquipmentStatus::Unknown,
-                };
-                
+                // equipment_data is already core::Equipment, so we can use it directly
+                // Just clone it and ensure all fields are set
                 let equipment = Equipment {
                     id: equipment_data.id.clone(),
                     name: equipment_data.name.clone(),
-                    path: equipment_data.universal_path.clone(),
+                    path: equipment_data.path.clone(),
                     address: equipment_data.address.clone(),
-                    equipment_type,
-                    position: Position {
-                        x: equipment_data.position.x,
-                        y: equipment_data.position.y,
-                        z: equipment_data.position.z,
-                        coordinate_system: "building_local".to_string(),
-                    },
+                    equipment_type: equipment_data.equipment_type.clone(),
+                    position: equipment_data.position.clone(),
                     properties: equipment_data.properties.clone(),
-                    status,
-                    room_id: None,
-                };
+                    status: equipment_data.status.clone(),
+                    health_status: equipment_data.health_status.clone(),
+                    room_id: equipment_data.room_id.clone(),
+                    sensor_mappings: equipment_data.sensor_mappings.clone(),
+            };
                 
                 let placement = GameEquipmentPlacement {
                     equipment,

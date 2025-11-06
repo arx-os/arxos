@@ -60,10 +60,13 @@ fn estimate_building_size(
         let floor_yaml = serializer.to_yaml(floor)
             .map_err(|e| GitError::Generic(e.to_string()))?;
         size += floor_yaml.len();
-        for room in &floor.rooms {
-            let room_yaml = serializer.to_yaml(room)
-                .map_err(|e| GitError::Generic(e.to_string()))?;
-            size += room_yaml.len();
+        // Rooms are in wings
+        for wing in &floor.wings {
+            for room in &wing.rooms {
+                let room_yaml = serializer.to_yaml(room)
+                    .map_err(|e| GitError::Generic(e.to_string()))?;
+                size += room_yaml.len();
+            }
         }
         for equipment in &floor.equipment {
             let equipment_yaml = serializer.to_yaml(equipment)
@@ -137,12 +140,14 @@ pub fn create_file_structure(
             .map_err(|e| GitError::Generic(e.to_string()))?;
         files.insert(floor_path, floor_yaml);
 
-        // Room files
-        for room in &floor.rooms {
-            let room_path = format!("floors/floor-{}/rooms/{}.yml", floor.level, room.name.to_lowercase().replace(" ", "-"));
-            let room_yaml = serializer.to_yaml(room)
-                .map_err(|e| GitError::Generic(e.to_string()))?;
-            files.insert(room_path, room_yaml);
+        // Room files (rooms are in wings)
+        for wing in &floor.wings {
+            for room in &wing.rooms {
+                let room_path = format!("floors/floor-{}/rooms/{}.yml", floor.level, room.name.to_lowercase().replace(" ", "-"));
+                let room_yaml = serializer.to_yaml(room)
+                    .map_err(|e| GitError::Generic(e.to_string()))?;
+                files.insert(room_path, room_yaml);
+            }
         }
 
         // Equipment files
@@ -164,7 +169,7 @@ pub fn create_file_structure(
                     // Fallback to old format
                     format!("floors/floor-{}/equipment/{}/{}.yml", 
                         floor.level, 
-                        equipment.system_type.to_lowercase(), 
+                        equipment.system_type().to_lowercase(), 
                         equipment.name.to_lowercase().replace(" ", "-")
                     )
                 }
@@ -172,7 +177,7 @@ pub fn create_file_structure(
                 // Fallback to old format if no address
                 format!("floors/floor-{}/equipment/{}/{}.yml", 
                     floor.level, 
-                    equipment.system_type.to_lowercase(), 
+                    equipment.system_type().to_lowercase(), 
                     equipment.name.to_lowercase().replace(" ", "-")
                 )
             };

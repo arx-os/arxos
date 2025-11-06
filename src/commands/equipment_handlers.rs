@@ -102,10 +102,11 @@ fn handle_add_equipment(
         let mut found_floor_level: Option<i32> = None;
         let mut found_room_name: Option<String> = None;
         for floor in &building_data.floors {
-            for room_data in &floor.rooms {
-                if room_data.name == room {
+            // Search in wings (primary location)
+            for wing in &floor.wings {
+                if let Some(room) = wing.rooms.iter().find(|r| r.name == room) {
                     found_floor_level = Some(floor.level);
-                    found_room_name = Some(room_data.name.clone());
+                    found_room_name = Some(room.name.clone());
                     break;
                 }
             }
@@ -149,39 +150,14 @@ fn handle_add_equipment(
     // Find the room and add equipment to it
     let mut equipment_added = false;
     for floor in &mut building_data.floors {
-        for room_data in &mut floor.rooms {
-            if room_data.name == room {
-                // Add equipment ID to room's equipment list
-                room_data.equipment.push(equipment.id.clone());
-                
-                // Generate universal path for backward compatibility (from address if available)
-                let universal_path = address.as_ref()
-                    .map(|addr| addr.path.clone())
-                    .unwrap_or_else(|| {
-                        format!("/buildings/{}/floors/{}/rooms/{}/equipment/{}", 
-                            building_name, floor.level, room, equipment.id)
-                    });
+        // Search in wings (primary location)
+        for wing in &mut floor.wings {
+            if let Some(room) = wing.rooms.iter_mut().find(|r| r.name == room) {
+                // Add equipment to room's equipment list
+                room.equipment.push(equipment.clone());
                 
                 // Add to floor equipment list
-                let equipment_data = crate::yaml::EquipmentData {
-                    id: equipment.id.clone(),
-                    name: equipment.name.clone(),
-                    equipment_type: equipment_type_to_string(&equipment.equipment_type),
-                    system_type: equipment_type_to_string(&equipment.equipment_type),
-                    position: pos_3d,
-                    bounding_box: crate::spatial::BoundingBox3D {
-                        min: Point3D { x: pos_3d.x - 0.5, y: pos_3d.y - 0.5, z: pos_3d.z - 0.5 },
-                        max: Point3D { x: pos_3d.x + 0.5, y: pos_3d.y + 0.5, z: pos_3d.z + 0.5 },
-                    },
-                    status: crate::yaml::EquipmentStatus::Unknown,
-                    properties: property.iter().enumerate().map(|(i, p)| {
-                        (format!("property_{}", i), p.clone())
-                    }).collect(),
-                    universal_path,
-                    address: address.clone(),
-                    sensor_mappings: None,
-                };
-                floor.equipment.push(equipment_data);
+                floor.equipment.push(equipment.clone());
                 equipment_added = true;
                 
                 if let Some(ref addr) = address {
@@ -290,10 +266,12 @@ fn handle_update_equipment(equipment: String, property: Vec<String>, position: O
                 if let Some(pos_str) = &position {
                     let coords: Vec<&str> = pos_str.split(',').map(|s| s.trim()).collect();
                     if coords.len() == 3 {
-                        equipment_data.position = Point3D {
+                        use crate::core::Position;
+                        equipment_data.position = Position {
                             x: coords[0].parse().unwrap_or(equipment_data.position.x),
                             y: coords[1].parse().unwrap_or(equipment_data.position.y),
                             z: coords[2].parse().unwrap_or(equipment_data.position.z),
+                            coordinate_system: equipment_data.position.coordinate_system.clone(),
                         };
                     }
                 }
@@ -372,11 +350,14 @@ fn handle_remove_equipment(equipment: String, confirm: bool, commit: bool) -> Re
             equipment_removed = true;
         }
         
-        // Remove from room equipment lists
-        for room_data in &mut floor.rooms {
-            room_data.equipment.retain(|eq_id| {
-                floor.equipment.iter().any(|eq| eq.id == *eq_id)
-            });
+        // Remove from room equipment lists (search in wings)
+        for wing in &mut floor.wings {
+            for room in &mut wing.rooms {
+                room.equipment.retain(|eq| {
+                    // Keep equipment that is still in the floor's equipment list
+                    floor.equipment.iter().any(|floor_eq| floor_eq.id == eq.id)
+                });
+            }
         }
     }
     

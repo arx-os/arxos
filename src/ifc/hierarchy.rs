@@ -199,6 +199,8 @@ impl HierarchyBuilder {
                 id: storey.id.clone(),
                 name: self.extract_storey_name(storey)?,
                 level: self.extract_storey_level(storey)?,
+                elevation: None,
+                bounding_box: None,
                 wings: Vec::new(),
                 equipment: Vec::new(),
                 properties: HashMap::new(),
@@ -269,8 +271,8 @@ impl HierarchyBuilder {
                     coordinate_system: "building_local".to_string(),
                 },
                 properties,
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
+                created_at: Some(Utc::now()),
+                updated_at: Some(Utc::now()),
             };
             rooms.push(room);
         }
@@ -480,7 +482,9 @@ impl HierarchyBuilder {
                 },
                 properties: HashMap::new(),
                 status: crate::core::EquipmentStatus::Active,
+                health_status: None,
                 room_id: None, // Will be assigned based on spatial data
+                sensor_mappings: None,
             };
             equipment_list.push(equipment);
         }

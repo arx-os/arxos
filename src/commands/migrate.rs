@@ -87,15 +87,15 @@ fn migrate_file(file_path: &Path, dry_run: bool) -> Result<(), Box<dyn std::erro
 
             // Try to infer address from existing data
             // Extract needed data before mutable borrow
-            let equipment_universal_path = equipment.universal_path.clone();
+            let equipment_path = equipment.path.clone();
             let equipment_properties = equipment.properties.clone();
-            let equipment_type = equipment.equipment_type.clone();
+            let equipment_type_str = format!("{:?}", equipment.equipment_type);
             let equipment_id = equipment.id.clone();
             
             if let Some(addr) = infer_address_from_equipment_data(
-                &equipment_universal_path,
+                &equipment_path,
                 &equipment_properties,
-                &equipment_type,
+                &equipment_type_str,
                 &equipment_id,
                 &building_name,
                 floor_level,

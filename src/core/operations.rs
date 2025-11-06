@@ -3,7 +3,6 @@
 use std::collections::HashMap;
 use super::{Room, Equipment};
 use super::types::{Position, SpatialQueryResult};
-use crate::yaml::conversions::{room_data_to_room, equipment_to_equipment_data, equipment_data_to_equipment};
 
 /// Create a room in a building
 /// 
@@ -16,7 +15,6 @@ use crate::yaml::conversions::{room_data_to_room, equipment_to_equipment_data, e
 ///                 If not provided or wing doesn't exist, room will be added to a default wing.
 /// * `commit` - Whether to commit changes to Git
 pub fn create_room(building_name: &str, floor_level: i32, room: Room, wing_name: Option<&str>, commit: bool) -> Result<(), Box<dyn std::error::Error>> {
-    use crate::yaml::RoomData;
     use crate::persistence::PersistenceManager;
     
     let persistence = PersistenceManager::new(building_name)?;
@@ -31,47 +29,15 @@ pub fn create_room(building_name: &str, floor_level: i32, room: Room, wing_name:
     // Store room name for commit message before moving room
     let room_name = room.name.clone();
     
-    // Convert Room to RoomData (moves ownership from room)
-    let room_data = RoomData {
-        id: room.id,
-        name: room.name,
-        room_type: format!("{}", room.room_type),
-        area: Some(room.spatial_properties.dimensions.width * room.spatial_properties.dimensions.depth),
-        volume: Some(room.spatial_properties.dimensions.width * room.spatial_properties.dimensions.depth * room.spatial_properties.dimensions.height),
-        position: crate::spatial::Point3D {
-            x: room.spatial_properties.position.x,
-            y: room.spatial_properties.position.y,
-            z: room.spatial_properties.position.z,
-        },
-        bounding_box: crate::spatial::BoundingBox3D {
-            min: crate::spatial::Point3D {
-                x: room.spatial_properties.bounding_box.min.x,
-                y: room.spatial_properties.bounding_box.min.y,
-                z: room.spatial_properties.bounding_box.min.z,
-            },
-            max: crate::spatial::Point3D {
-                x: room.spatial_properties.bounding_box.max.x,
-                y: room.spatial_properties.bounding_box.max.y,
-                z: room.spatial_properties.bounding_box.max.z,
-            },
-        },
-        equipment: vec![],
-        properties: room.properties,
-    };
-    
     // Get or create wing using index (O(1) lookup)
     // Note: get_or_create_wing_mut will handle floor creation if needed
     {
-        let wing_data = building_data.get_or_create_wing_mut(floor_level, wing_name, &mut index)?;
-        wing_data.rooms.push(room_data.clone());
+        let wing = building_data.get_or_create_wing_mut(floor_level, wing_name, &mut index)?;
+        wing.rooms.push(room.clone());
     }
     
-    // Get floor_data reference separately (after wing_data is dropped)
-    {
-        let floor_data = building_data.get_or_create_floor_mut(floor_level, &mut index)?;
-        // Also add to floor's rooms list for backward compatibility
-        floor_data.rooms.push(room_data);
-    }
+    // Note: Rooms are stored in wings, not directly on floors
+    // The room has already been added to the wing above
     
     // Save
     if commit {
@@ -93,13 +59,23 @@ pub fn add_equipment(building_name: &str, room_name: Option<&str>, equipment: Eq
     // Find room if specified
     if let Some(room_name) = room_name {
         for floor in &mut building_data.floors {
-            if let Some(room) = floor.rooms.iter_mut().find(|r| r.name == room_name) {
-                // Convert Equipment to EquipmentData and add to room's equipment list
-                room.equipment.push(equipment.id.clone());
-                // Also add to floor's equipment list
-                floor.equipment.push(equipment_to_equipment_data(&equipment));
-                break;
+            // Search in wings first (primary location)
+            for wing in &mut floor.wings {
+                if let Some(room) = wing.rooms.iter_mut().find(|r| r.name == room_name) {
+                    // Add equipment to room
+                    room.equipment.push(equipment.clone());
+                    // Also add to floor's equipment list
+                    floor.equipment.push(equipment.clone());
+                    break;
+                }
             }
+            // Note: Legacy rooms list removed - rooms are only in wings now
+        }
+    } else {
+        // Add to floor-level equipment if no room specified
+        for floor in &mut building_data.floors {
+            floor.equipment.push(equipment);
+            break; // Add to first floor found
         }
     }
     
@@ -169,22 +145,34 @@ pub fn spatial_query(query_type: &str, entity: &str, params: Vec<String>) -> Res
         let include_equipment = entity.is_empty() || entity.to_lowercase() == "equipment";
         
         if include_rooms {
-            for room in &floor.rooms {
-                all_entities.push((
-                    room.name.clone(),
-                    format!("Room ({})", room.room_type),
-                    room.position,
-                    true,
-                ));
+            // Collect rooms from wings (primary location)
+            for wing in &floor.wings {
+                for room in &wing.rooms {
+                    all_entities.push((
+                        room.name.clone(),
+                        format!("Room ({:?})", room.room_type),
+                        crate::spatial::Point3D::new(
+                            room.spatial_properties.position.x,
+                            room.spatial_properties.position.y,
+                            room.spatial_properties.position.z,
+                        ),
+                        true,
+                    ));
+                }
             }
+            // Note: Legacy rooms list removed - rooms are only in wings now
         }
         
         if include_equipment {
             for equipment in &floor.equipment {
                 all_entities.push((
                     equipment.name.clone(),
-                    format!("Equipment ({})", equipment.equipment_type),
-                    equipment.position,
+                    format!("Equipment ({:?})", equipment.equipment_type),
+                    crate::spatial::Point3D::new(
+                        equipment.position.x,
+                        equipment.position.y,
+                        equipment.position.z,
+                    ),
                     false,
                 ));
             }
@@ -373,9 +361,12 @@ pub fn list_rooms(building_name: Option<&str>) -> Result<Vec<Room>, Box<dyn std:
     let mut rooms = Vec::new();
     
     for floor in &building_data.floors {
-        for room_data in &floor.rooms {
-            rooms.push(room_data_to_room(room_data));
+        // Collect rooms from wings (primary location)
+        for wing in &floor.wings {
+            rooms.extend(wing.rooms.iter().cloned());
         }
+        // Also collect from legacy rooms list
+        // Note: Legacy rooms list removed - rooms are only in wings now
     }
     
     Ok(rooms)
@@ -397,12 +388,16 @@ pub fn get_room(building_name: Option<&str>, room_name: &str) -> Result<Room, Bo
     };
     
     for floor in &building_data.floors {
-        for room_data in &floor.rooms {
-            if room_data.name.to_lowercase() == room_name.to_lowercase() || 
-               room_data.id.to_lowercase() == room_name.to_lowercase() {
-                return Ok(room_data_to_room(room_data));
+        // Search in wings first (primary location)
+        for wing in &floor.wings {
+            for room in &wing.rooms {
+                if room.name.to_lowercase() == room_name.to_lowercase() || 
+                   room.id.to_lowercase() == room_name.to_lowercase() {
+                    return Ok(room.clone());
+                }
             }
         }
+        // Note: Legacy rooms list removed - rooms are only in wings now
     }
     
     Err(format!("Room '{}' not found", room_name).into())
@@ -416,19 +411,26 @@ pub fn update_room_impl(building_name: &str, room_id: &str, updates: HashMap<Str
     let mut building_data = persistence.load_building_data()?;
     
     // Find and update room
-    let mut room_data = None;
+    let mut updated_room = None;
     for floor in &mut building_data.floors {
-        if let Some(room) = floor.rooms.iter_mut().find(|r| r.id == room_id || r.name == room_id) {
-            // Update properties
-            for (key, value) in updates.iter() {
-                room.properties.insert(key.clone(), value.clone());
+        // Search in wings first (primary location)
+        for wing in &mut floor.wings {
+            if let Some(room) = wing.rooms.iter_mut().find(|r| r.id == room_id || r.name == room_id) {
+                // Update properties
+                for (key, value) in updates.iter() {
+                    room.properties.insert(key.clone(), value.clone());
+                }
+                updated_room = Some(room.clone());
+                break;
             }
-            room_data = Some(room.clone());
+        }
+        if updated_room.is_some() {
             break;
         }
+        // Note: Legacy rooms list removed - rooms are only in wings now
     }
     
-    let room = room_data.ok_or_else(|| format!("Room '{}' not found", room_id))?;
+    let room = updated_room.ok_or_else(|| format!("Room '{}' not found", room_id))?;
     
     // Save
     if commit {
@@ -437,17 +439,7 @@ pub fn update_room_impl(building_name: &str, room_id: &str, updates: HashMap<Str
         persistence.save_building_data(&building_data)?;
     }
     
-    // Convert back to Room - reuse get_room logic
-    let building_data_final = persistence.load_building_data()?;
-    for floor in &building_data_final.floors {
-        for room_data in &floor.rooms {
-            if room_data.id == room_id || room_data.name == room_id {
-                return Ok(room_data_to_room(room_data));
-            }
-        }
-    }
-    
-    Err(format!("Room '{}' not found", room_id).into())
+    Ok(room)
 }
 
 /// Delete a room from a building
@@ -459,7 +451,11 @@ pub fn delete_room_impl(building_name: &str, room_id: &str, commit: bool) -> Res
     
     // Find and remove room
     for floor in &mut building_data.floors {
-        floor.rooms.retain(|r| r.id != room_id && r.name != room_id);
+        // Remove from wings (primary location)
+        for wing in &mut floor.wings {
+            wing.rooms.retain(|r| r.id != room_id && r.name != room_id);
+        }
+        // Note: Legacy rooms list removed - rooms are only in wings now
     }
     
     // Save
@@ -489,9 +485,7 @@ pub fn list_equipment(building_name: Option<&str>) -> Result<Vec<Equipment>, Box
     let mut equipment = Vec::new();
     
     for floor in &building_data.floors {
-        for equipment_data in &floor.equipment {
-            equipment.push(equipment_data_to_equipment(equipment_data));
-        }
+        equipment.extend(floor.equipment.iter().cloned());
     }
     
     Ok(equipment)
@@ -520,8 +514,8 @@ pub fn update_equipment_impl(building_name: &str, equipment_id: &str, updates: H
         return Err(format!("Equipment '{}' not found", equipment_id).into());
     }
     
-    // Get the updated equipment data before saving
-    let equipment_data = {
+    // Get the updated equipment before saving
+    let updated_equipment = {
         let mut found_equipment = None;
         for floor in &building_data.floors {
             if let Some(equipment) = floor.equipment.iter().find(|e| e.id == equipment_id || e.name == equipment_id) {
@@ -539,8 +533,7 @@ pub fn update_equipment_impl(building_name: &str, equipment_id: &str, updates: H
         persistence.save_building_data(&building_data)?;
     }
     
-    // Convert the updated equipment data directly (no need to reload)
-    Ok(equipment_data_to_equipment(&equipment_data))
+    Ok(updated_equipment)
 }
 
 /// Remove equipment from a building
@@ -774,14 +767,28 @@ pub fn validate_spatial(entity: Option<&str>, tolerance: Option<f64>) -> Result<
             
             // Check rooms
             for floor in &building_data.floors {
-                for room in &floor.rooms {
-                    if room.name == entity_name || room.id == entity_name {
-                        entities_checked = 1;
-                        found = true;
-                        issues.extend(validate_bounding_box(&room.name, "Room", &room.bounding_box));
+                // Check wings first (primary location)
+                for wing in &floor.wings {
+                    for room in &wing.rooms {
+                        if room.name == entity_name || room.id == entity_name {
+                            entities_checked = 1;
+                            found = true;
+                            let bbox = &room.spatial_properties.bounding_box;
+                            issues.extend(validate_bounding_box(&room.name, "Room", &crate::spatial::BoundingBox3D::new(
+                                crate::spatial::Point3D::new(bbox.min.x, bbox.min.y, bbox.min.z),
+                                crate::spatial::Point3D::new(bbox.max.x, bbox.max.y, bbox.max.z),
+                            )));
+                            break;
+                        }
+                    }
+                    if found {
                         break;
                     }
                 }
+                if found {
+                    break;
+                }
+                // Note: Legacy rooms list removed - rooms are only in wings now
                 if found {
                     break;
                 }
@@ -794,7 +801,13 @@ pub fn validate_spatial(entity: Option<&str>, tolerance: Option<f64>) -> Result<
                         if equipment.name == entity_name || equipment.id == entity_name {
                             entities_checked = 1;
                             found = true;
-                            issues.extend(validate_bounding_box(&equipment.name, "Equipment", &equipment.bounding_box));
+                            // Equipment doesn't have a bounding_box field directly, use position-based bbox
+                            let pos = &equipment.position;
+                            let bbox = crate::spatial::BoundingBox3D::new(
+                                crate::spatial::Point3D::new(pos.x - 0.5, pos.y - 0.5, pos.z - 0.5),
+                                crate::spatial::Point3D::new(pos.x + 0.5, pos.y + 0.5, pos.z + 0.5),
+                            );
+                            issues.extend(validate_bounding_box(&equipment.name, "Equipment", &bbox));
                             break;
                         }
                     }
@@ -811,14 +824,30 @@ pub fn validate_spatial(entity: Option<&str>, tolerance: Option<f64>) -> Result<
         None => {
             // Validate all entities
             for floor in &building_data.floors {
-                for room in &floor.rooms {
-                    entities_checked += 1;
-                    issues.extend(validate_bounding_box(&room.name, "Room", &room.bounding_box));
+                // Validate rooms in wings (primary location)
+                for wing in &floor.wings {
+                    for room in &wing.rooms {
+                        entities_checked += 1;
+                        let bbox = &room.spatial_properties.bounding_box;
+                        issues.extend(validate_bounding_box(&room.name, "Room", &crate::spatial::BoundingBox3D::new(
+                            crate::spatial::Point3D::new(bbox.min.x, bbox.min.y, bbox.min.z),
+                            crate::spatial::Point3D::new(bbox.max.x, bbox.max.y, bbox.max.z),
+                        )));
+                    }
                 }
+                // Also validate legacy rooms list
+                // Note: Legacy rooms list removed - rooms are only in wings now
+                // Rooms are validated through wings above
                 
                 for equipment in &floor.equipment {
                     entities_checked += 1;
-                    issues.extend(validate_bounding_box(&equipment.name, "Equipment", &equipment.bounding_box));
+                    // Equipment doesn't have a bounding_box field directly, use position-based bbox
+                    let pos = &equipment.position;
+                    let bbox = crate::spatial::BoundingBox3D::new(
+                        crate::spatial::Point3D::new(pos.x - 0.5, pos.y - 0.5, pos.z - 0.5),
+                        crate::spatial::Point3D::new(pos.x + 0.5, pos.y + 0.5, pos.z + 0.5),
+                    );
+                    issues.extend(validate_bounding_box(&equipment.name, "Equipment", &bbox));
                 }
             }
         }

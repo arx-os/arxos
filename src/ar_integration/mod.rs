@@ -85,7 +85,8 @@ pub mod pending;
 pub mod processing;
 pub mod json_helpers;
 
-use crate::yaml::{BuildingData, FloorData, RoomData, EquipmentData, EquipmentStatus};
+use crate::yaml::BuildingData;
+use crate::core::{Equipment, RoomType, EquipmentType, EquipmentStatus, SpatialProperties, Position, Dimensions, BoundingBox};
 use crate::spatial::{Point3D, BoundingBox3D};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -255,17 +256,10 @@ impl ARDataIntegrator {
             return Ok(index);
         }
         
-        // Create new floor
-        let new_floor = FloorData {
-            id: format!("floor-{}", floor_level),
-            name: format!("Floor {}", floor_level),
-            level: floor_level,
-            elevation: (floor_level as f64) * 3.0, // Assume 3m per floor
-            wings: Vec::new(),
-            rooms: Vec::new(),
-            equipment: Vec::new(),
-            bounding_box: None,
-        };
+        // Create new floor using core type
+        use crate::core::Floor;
+        let mut new_floor = Floor::new(format!("Floor {}", floor_level), floor_level);
+        new_floor.elevation = Some((floor_level as f64) * 3.0); // Assume 3m per floor
         
         self.building_data.floors.push(new_floor);
         Ok(self.building_data.floors.len() - 1)
@@ -275,29 +269,71 @@ impl ARDataIntegrator {
     fn find_or_create_room(&mut self, floor_index: usize, room_name: &str) -> Result<usize, Box<dyn std::error::Error>> {
         let floor = &mut self.building_data.floors[floor_index];
         
+        // Collect all rooms from wings
+        let all_rooms: Vec<&Room> = floor.wings.iter()
+            .flat_map(|wing| wing.rooms.iter())
+            .collect();
+        
         // Look for existing room
-        if let Some(index) = floor.rooms.iter().position(|r| r.name == room_name) {
-            return Ok(index);
+        if let Some(index) = all_rooms.iter().position(|r| r.name == room_name) {
+            // Find which wing contains this room
+            let mut room_idx = 0;
+            for wing in &floor.wings {
+                if index < room_idx + wing.rooms.len() {
+                    return Ok(room_idx + index);
+                }
+                room_idx += wing.rooms.len();
+            }
         }
         
-        // Create new room
-        let new_room = RoomData {
+        // Create new room using core type
+        use crate::core::Room;
+        let elevation = floor.elevation.unwrap_or(floor.level as f64 * 3.0);
+        let new_room = Room {
             id: format!("room-{}", room_name.to_lowercase().replace(" ", "-")),
             name: room_name.to_string(),
-            room_type: "IFCSPACE".to_string(),
-            area: None,
-            volume: None,
-            position: Point3D { x: 0.0, y: 0.0, z: floor.elevation },
-            bounding_box: BoundingBox3D {
-                min: Point3D { x: 0.0, y: 0.0, z: floor.elevation },
-                max: Point3D { x: 10.0, y: 10.0, z: floor.elevation + 3.0 },
-            },
+            room_type: RoomType::Other("IFCSPACE".to_string()),
             equipment: Vec::new(),
+            spatial_properties: SpatialProperties {
+                position: Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: elevation,
+                    coordinate_system: "building_local".to_string(),
+                },
+                dimensions: Dimensions {
+                    width: 10.0,
+                    depth: 10.0,
+                    height: 3.0,
+                },
+                bounding_box: BoundingBox {
+                    min: Position {
+                        x: 0.0,
+                        y: 0.0,
+                        z: elevation,
+                        coordinate_system: "building_local".to_string(),
+                    },
+                    max: Position {
+                        x: 10.0,
+                        y: 10.0,
+                        z: elevation + 3.0,
+                        coordinate_system: "building_local".to_string(),
+                    },
+                },
+                coordinate_system: "building_local".to_string(),
+            },
             properties: HashMap::new(),
+            created_at: Some(Utc::now()),
+            updated_at: Some(Utc::now()),
         };
         
-        floor.rooms.push(new_room);
-        Ok(floor.rooms.len() - 1)
+        // Add to default wing
+        use crate::core::Wing;
+        if floor.wings.is_empty() {
+            floor.wings.push(Wing::new("Default".to_string()));
+        }
+        floor.wings[0].rooms.push(new_room);
+        Ok(floor.wings[0].rooms.len() - 1)
     }
 
     /// Integrate equipment into building data
@@ -315,26 +351,30 @@ impl ARDataIntegrator {
             let existing_position = floor.equipment[existing_index].position;
             
             // Calculate position difference before mutable borrow
-            let position_diff = Self::calculate_position_difference(&existing_position, &detected_equipment.position);
+            let detected_pos = Position {
+                x: detected_equipment.position.x,
+                y: detected_equipment.position.y,
+                z: detected_equipment.position.z,
+                coordinate_system: "building_local".to_string(),
+            };
+            let position_diff = self.calculate_position_difference_core(&existing_position, &detected_pos);
             
             // Update existing equipment
             let existing_equipment = &mut floor.equipment[existing_index];
             
             if position_diff > 1.0 { // More than 1 meter difference
                 warn!("Position conflict for equipment {}: existing={:?}, detected={:?}", 
-                    detected_equipment.name, existing_equipment.position, detected_equipment.position);
+                    detected_equipment.name, existing_equipment.position, detected_pos);
                 
                 // Use AR data if confidence is high
                 if detected_equipment.confidence > 0.8 {
-                    existing_equipment.position = detected_equipment.position;
-                    existing_equipment.bounding_box = detected_equipment.bounding_box;
+                    existing_equipment.position = detected_pos;
                     existing_equipment.properties.insert("last_ar_update".to_string(), Utc::now().to_rfc3339());
                     return Ok(IntegrationAction::ConflictResolved);
                 }
             } else {
                 // Update with AR data
-                existing_equipment.position = detected_equipment.position;
-                existing_equipment.bounding_box = detected_equipment.bounding_box;
+                existing_equipment.position = detected_pos;
                 existing_equipment.properties.insert("last_ar_update".to_string(), Utc::now().to_rfc3339());
                 return Ok(IntegrationAction::Updated);
             }
@@ -342,28 +382,50 @@ impl ARDataIntegrator {
             // Add new equipment
             let equipment_name = detected_equipment.name.clone();
             let equipment_id = detected_equipment.id.clone();
-            let equipment_type = detected_equipment.equipment_type.clone();
+            let equipment_type_str = detected_equipment.equipment_type.clone();
             
-            let new_equipment = EquipmentData {
+            let equipment_type_enum = match equipment_type_str.as_str() {
+                "HVAC" => EquipmentType::HVAC,
+                "ELECTRICAL" => EquipmentType::Electrical,
+                "PLUMBING" => EquipmentType::Plumbing,
+                "SAFETY" => EquipmentType::Safety,
+                "NETWORK" => EquipmentType::Network,
+                "AV" => EquipmentType::AV,
+                "FURNITURE" => EquipmentType::Furniture,
+                _ => EquipmentType::Other(equipment_type_str.clone()),
+            };
+            
+            let new_equipment = Equipment {
                 id: equipment_id.clone(),
                 name: equipment_name.clone(),
-                equipment_type: equipment_type.clone(),
-                system_type: equipment_type,
-                universal_path: format!("/BUILDING/FLOOR-{}/ROOM-{}/EQUIPMENT/{}", 
+                path: format!("/BUILDING/FLOOR-{}/ROOM-{}/EQUIPMENT/{}", 
                     floor.level, room_index, equipment_name),
                 address: None,
-                position: detected_equipment.position,
-                bounding_box: detected_equipment.bounding_box,
-                status: EquipmentStatus::Healthy,
+                equipment_type: equipment_type_enum,
+                position: Position {
+                    x: detected_equipment.position.x,
+                    y: detected_equipment.position.y,
+                    z: detected_equipment.position.z,
+                    coordinate_system: "building_local".to_string(),
+                },
                 properties: detected_equipment.properties,
+                status: EquipmentStatus::Active,
+                health_status: None,
+                room_id: None,
                 sensor_mappings: None,
             };
             
             floor.equipment.push(new_equipment);
             
-            // Add equipment ID to room
-            if let Some(room) = floor.rooms.get_mut(room_index) {
-                room.equipment.push(equipment_id);
+            // Add equipment to room (find room in wings)
+            let mut room_idx = 0;
+            for wing in &mut floor.wings {
+                if room_index < room_idx + wing.rooms.len() {
+                    let actual_room_idx = room_index - room_idx;
+                    wing.rooms[actual_room_idx].equipment.push(floor.equipment.last().unwrap().clone());
+                    break;
+                }
+                room_idx += wing.rooms.len();
             }
             
             return Ok(IntegrationAction::Added);
@@ -379,7 +441,21 @@ impl ARDataIntegrator {
         room_index: usize,
         boundaries: RoomBoundaries,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let room = &mut self.building_data.floors[floor_index].rooms[room_index];
+        // Find room by iterating through wings (room_index is a flat index across all wings)
+        let floor = &mut self.building_data.floors[floor_index];
+        let mut current_index = 0;
+        let mut room = None;
+        
+        for wing in &mut floor.wings {
+            if room_index < current_index + wing.rooms.len() {
+                let local_index = room_index - current_index;
+                room = Some(&mut wing.rooms[local_index]);
+                break;
+            }
+            current_index += wing.rooms.len();
+        }
+        
+        let room = room.ok_or_else(|| format!("Room at index {} not found", room_index))?;
         
         // Update room properties with AR scan data
         room.properties.insert("ar_scan_walls".to_string(), boundaries.walls.len().to_string());
@@ -400,9 +476,21 @@ impl ARDataIntegrator {
                 max_y = max_y.max(wall.start_point.y).max(wall.end_point.y);
             }
             
-            room.bounding_box = BoundingBox3D {
-                min: Point3D { x: min_x, y: min_y, z: room.position.z },
-                max: Point3D { x: max_x, y: max_y, z: room.position.z + 3.0 },
+            use crate::core::{Position, BoundingBox};
+            let z = room.spatial_properties.position.z;
+            room.spatial_properties.bounding_box = BoundingBox {
+                min: Position {
+                    x: min_x,
+                    y: min_y,
+                    z,
+                    coordinate_system: room.spatial_properties.position.coordinate_system.clone(),
+                },
+                max: Position {
+                    x: max_x,
+                    y: max_y,
+                    z: z + 3.0,
+                    coordinate_system: room.spatial_properties.position.coordinate_system.clone(),
+                },
             };
         }
         
@@ -423,7 +511,14 @@ impl ARDataIntegrator {
     }
 
     /// Calculate position difference between two points
-    fn calculate_position_difference(pos1: &Point3D, pos2: &Point3D) -> f64 {
+    fn calculate_position_difference_core(&self, pos1: &Position, pos2: &Position) -> f64 {
+        let dx = pos1.x - pos2.x;
+        let dy = pos1.y - pos2.y;
+        let dz = pos1.z - pos2.z;
+        (dx * dx + dy * dy + dz * dz).sqrt()
+    }
+    
+    fn calculate_position_difference(&self, pos1: &Point3D, pos2: &Point3D) -> f64 {
         let dx = pos1.x - pos2.x;
         let dy = pos1.y - pos2.y;
         let dz = pos1.z - pos2.z;

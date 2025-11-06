@@ -81,9 +81,17 @@ pub fn calculate_delta(current: &BuildingData, last_state: Option<&IFCSyncState>
         Some(state) => state,
         None => {
             // Collect all equipment and rooms as new
+            // Convert core types to YAML types for delta
+            use crate::yaml::conversions::{equipment_to_equipment_data, room_to_room_data};
             for floor in &current.floors {
-                delta.new_equipment.extend(floor.equipment.iter().cloned());
-                delta.new_rooms.extend(floor.rooms.iter().cloned());
+                for equipment in &floor.equipment {
+                    delta.new_equipment.push(equipment_to_equipment_data(equipment));
+                }
+                for wing in &floor.wings {
+                    for room in &wing.rooms {
+                        delta.new_rooms.push(room_to_room_data(room));
+                    }
+                }
             }
             return delta;
         }
@@ -96,13 +104,14 @@ pub fn calculate_delta(current: &BuildingData, last_state: Option<&IFCSyncState>
     let mut rooms_by_path: std::collections::HashMap<String, RoomData> = std::collections::HashMap::new();
 
     for floor in &current.floors {
+        use crate::yaml::conversions::equipment_to_equipment_data;
         for equipment in &floor.equipment {
             let path = equipment.address.as_ref()
                 .map(|addr| addr.path.clone())
                 .filter(|p| !p.is_empty())
                 .or_else(|| {
-                    if !equipment.universal_path.is_empty() {
-                        Some(equipment.universal_path.clone())
+                    if !equipment.path.is_empty() {
+                        Some(equipment.path.clone())
                     } else {
                         None
                     }
@@ -112,18 +121,23 @@ pub fn calculate_delta(current: &BuildingData, last_state: Option<&IFCSyncState>
                 });
             
             current_equipment_paths.insert(path.clone());
-            equipment_by_path.insert(path.clone(), equipment.clone());
+            let equipment_data = equipment_to_equipment_data(equipment);
+            equipment_by_path.insert(path.clone(), equipment_data);
         }
 
-        for room in &floor.rooms {
-            let path = room.properties.get("universal_path")
-                .cloned()
-                .unwrap_or_else(|| {
-                    format!("building/floor-{}/room-{}", floor.level, room.id)
-                });
-            
-            current_rooms_paths.insert(path.clone());
-            rooms_by_path.insert(path.clone(), room.clone());
+        use crate::yaml::conversions::room_to_room_data;
+        for wing in &floor.wings {
+            for room in &wing.rooms {
+                let path = room.properties.get("universal_path")
+                    .cloned()
+                    .unwrap_or_else(|| {
+                        format!("building/floor-{}/room-{}", floor.level, room.id)
+                    });
+                
+                current_rooms_paths.insert(path.clone());
+                let room_data = room_to_room_data(room);
+                rooms_by_path.insert(path.clone(), room_data);
+            }
         }
     }
 

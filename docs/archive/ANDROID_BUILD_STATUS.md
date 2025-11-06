@@ -85,7 +85,7 @@ export ANDROID_NDK_HOME=/opt/homebrew/share/android-ndk
 
 ```bash
 # Rebuild Rust libraries
-cd /Users/joelpate/repos/arxos
+cd /path/to/arxos
 cargo ndk -t arm64-v8a -t armeabi-v7a -o android/app/src/main/jniLibs build --release --lib
 
 # Build Android

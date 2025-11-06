@@ -87,14 +87,30 @@ impl DashboardState {
         let mut total_rooms = 0;
         
         for floor in &building_data.floors {
-            total_rooms += floor.rooms.len();
+            // Count rooms from wings
+            for wing in &floor.wings {
+                total_rooms += wing.rooms.len();
+            }
+            
             for equipment in &floor.equipment {
                 total_equipment += 1;
-                match equipment.status {
-                    crate::yaml::EquipmentStatus::Healthy => healthy += 1,
-                    crate::yaml::EquipmentStatus::Warning => warning += 1,
-                    crate::yaml::EquipmentStatus::Critical => critical += 1,
-                    crate::yaml::EquipmentStatus::Unknown => unknown += 1,
+                // Use health_status if available, otherwise map from status
+                use crate::core::{EquipmentStatus, EquipmentHealthStatus};
+                if let Some(health_status) = &equipment.health_status {
+                    match health_status {
+                        EquipmentHealthStatus::Healthy => healthy += 1,
+                        EquipmentHealthStatus::Warning => warning += 1,
+                        EquipmentHealthStatus::Critical => critical += 1,
+                        EquipmentHealthStatus::Unknown => unknown += 1,
+                    }
+                } else {
+                    // Map operational status to health status for counting
+                    match equipment.status {
+                        EquipmentStatus::Active => healthy += 1,
+                        EquipmentStatus::Maintenance => warning += 1,
+                        EquipmentStatus::OutOfOrder => critical += 1,
+                        EquipmentStatus::Inactive | EquipmentStatus::Unknown => unknown += 1,
+                    }
                 }
             }
         }

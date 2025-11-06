@@ -3,7 +3,7 @@
 //! Provides high-level operations for building management,
 //! decoupled from persistence concerns.
 
-use super::repository::{Repository, RepositoryRef};
+use super::repository::RepositoryRef;
 use crate::core::Building;
 use crate::yaml::BuildingData;
 use std::sync::Arc;

@@ -3,7 +3,8 @@
 //! Converts BuildingData to IFC format using SpatialEntity conversion
 //! and the EnhancedIFCParser writer functionality.
 
-use crate::yaml::{BuildingData, EquipmentData, RoomData};
+use crate::yaml::BuildingData;
+use crate::core::{Equipment, Room};
 use crate::spatial::SpatialEntity;
 use crate::ifc::EnhancedIFCParser;
 use crate::error::ArxResult;
@@ -47,10 +48,12 @@ impl IFCExporter {
                 spatial_entities.push(entity);
             }
             
-            // Convert all rooms
-            for room in &floor.rooms {
-                let entity = self.convert_room_to_spatial_entity(room, floor.level);
-                spatial_entities.push(entity);
+            // Convert all rooms (rooms are in wings)
+            for wing in &floor.wings {
+                for room in &wing.rooms {
+                    let entity = self.convert_room_to_spatial_entity(room, floor.level);
+                    spatial_entities.push(entity);
+                }
             }
         }
         
@@ -101,31 +104,38 @@ impl IFCExporter {
         let mut spatial_entities = Vec::new();
         
         // Convert new and updated equipment
-        for equipment in &delta.new_equipment {
-            let entity = self.convert_equipment_to_spatial_entity(equipment);
+        // Note: delta still uses EquipmentData, so we need to convert or update delta module
+        // For now, we'll convert EquipmentData to Equipment-like access
+        use crate::yaml::conversions::equipment_data_to_equipment;
+        for equipment_data in &delta.new_equipment {
+            let equipment = equipment_data_to_equipment(equipment_data);
+            let entity = self.convert_equipment_to_spatial_entity(&equipment);
             spatial_entities.push(entity);
         }
         
-        for equipment in &delta.updated_equipment {
-            let entity = self.convert_equipment_to_spatial_entity(equipment);
+        for equipment_data in &delta.updated_equipment {
+            let equipment = equipment_data_to_equipment(equipment_data);
+            let entity = self.convert_equipment_to_spatial_entity(&equipment);
             spatial_entities.push(entity);
         }
         
         // Convert new and updated rooms
         // Find floor level for rooms (simplified - would need better lookup in production)
         for floor in &self.building_data.floors {
-            for room in &floor.rooms {
-                let room_path = room.properties.get("universal_path")
-                    .cloned()
-                    .unwrap_or_else(|| format!("building/floor-{}/room-{}", floor.level, room.id));
-                
-                if delta.new_rooms.iter().any(|r| {
-                    r.properties.get("universal_path").unwrap_or(&r.id) == &room_path || r.id == room.id
-                }) || delta.updated_rooms.iter().any(|r| {
-                    r.properties.get("universal_path").unwrap_or(&r.id) == &room_path || r.id == room.id
-                }) {
-                    let entity = self.convert_room_to_spatial_entity(room, floor.level);
-                    spatial_entities.push(entity);
+            for wing in &floor.wings {
+                for room in &wing.rooms {
+                    let room_path = room.properties.get("universal_path")
+                        .cloned()
+                        .unwrap_or_else(|| format!("building/floor-{}/room-{}", floor.level, room.id));
+                    
+                    if delta.new_rooms.iter().any(|r| {
+                        r.properties.get("universal_path").unwrap_or(&r.id) == &room_path || r.id == room.id
+                    }) || delta.updated_rooms.iter().any(|r| {
+                        r.properties.get("universal_path").unwrap_or(&r.id) == &room_path || r.id == room.id
+                    }) {
+                        let entity = self.convert_room_to_spatial_entity(room, floor.level);
+                        spatial_entities.push(entity);
+                    }
                 }
             }
         }
@@ -163,8 +173,8 @@ impl IFCExporter {
                     .map(|addr| addr.path.clone())
                     .filter(|p| !p.is_empty())
                     .or_else(|| {
-                        if !equipment.universal_path.is_empty() {
-                            Some(equipment.universal_path.clone())
+                        if !equipment.path.is_empty() {
+                            Some(equipment.path.clone())
                         } else {
                             None
                         }
@@ -175,9 +185,10 @@ impl IFCExporter {
                 equipment_paths.insert(path);
             }
             
-            for room in &floor.rooms {
-                let path = room.properties.get("universal_path")
-                    .cloned()
+            for wing in &floor.wings {
+                for room in &wing.rooms {
+                    let path = room.properties.get("universal_path")
+                        .cloned()
                     .unwrap_or_else(|| {
                         // Generate path from room ID, avoiding duplication if room.id already contains "room-"
                         if room.id.starts_with("room-") {
@@ -187,24 +198,27 @@ impl IFCExporter {
                         }
                     });
                 rooms_paths.insert(path);
+                }
             }
         }
         
         (equipment_paths, rooms_paths)
     }
 
-    /// Convert EquipmentData to SpatialEntity
+    /// Convert Equipment to SpatialEntity
     /// 
-    /// Uses ArxAddress when available, falls back to universal_path or equipment ID.
+    /// Uses ArxAddress when available, falls back to path or equipment ID.
     /// Preserves equipment properties for round-trip compatibility.
-    fn convert_equipment_to_spatial_entity(&self, equipment: &EquipmentData) -> SpatialEntity {
-        // Prefer ArxAddress, then universal_path, then equipment ID
+    fn convert_equipment_to_spatial_entity(&self, equipment: &Equipment) -> SpatialEntity {
+        use crate::spatial::{Point3D, BoundingBox3D};
+        
+        // Prefer ArxAddress, then path, then equipment ID
         let entity_id = equipment.address.as_ref()
             .map(|addr| addr.path.clone())
             .filter(|p| !p.is_empty())
             .or_else(|| {
-                if !equipment.universal_path.is_empty() {
-                    Some(equipment.universal_path.clone())
+                if !equipment.path.is_empty() {
+                    Some(equipment.path.clone())
                 } else {
                     None
                 }
@@ -212,22 +226,47 @@ impl IFCExporter {
             .unwrap_or_else(|| equipment.id.clone());
         
         // Map equipment type to IFC entity type
-        let ifc_entity_type = map_equipment_type_string_to_ifc(&equipment.equipment_type);
+        let equipment_type_str = format!("{:?}", equipment.equipment_type);
+        let ifc_entity_type = map_equipment_type_string_to_ifc(&equipment_type_str);
+        
+        // Convert position to Point3D
+        let position = Point3D {
+            x: equipment.position.x,
+            y: equipment.position.y,
+            z: equipment.position.z,
+        };
+        
+        // Create bounding box from position (equipment doesn't have direct bounding_box)
+        // Use a default size if needed
+        let bounding_box = BoundingBox3D {
+            min: Point3D {
+                x: position.x - 0.5,
+                y: position.y - 0.5,
+                z: position.z - 0.5,
+            },
+            max: Point3D {
+                x: position.x + 0.5,
+                y: position.y + 0.5,
+                z: position.z + 0.5,
+            },
+        };
         
         SpatialEntity {
             id: entity_id,
             name: equipment.name.clone(),
             entity_type: ifc_entity_type,
-            position: equipment.position,
-            bounding_box: equipment.bounding_box.clone(),
+            position,
+            bounding_box,
             coordinate_system: None,
         }
     }
 
-    /// Convert RoomData to SpatialEntity
+    /// Convert Room to SpatialEntity
     /// 
     /// Generates Universal Path if not present and uses IFCROOM entity type.
-    fn convert_room_to_spatial_entity(&self, room: &RoomData, floor_level: i32) -> SpatialEntity {
+    fn convert_room_to_spatial_entity(&self, room: &Room, floor_level: i32) -> SpatialEntity {
+        use crate::spatial::{Point3D, BoundingBox3D};
+        
         // Generate Universal Path for room if not present in properties
         let entity_id = room.properties.get("universal_path")
             .cloned()
@@ -243,12 +282,33 @@ impl IFCExporter {
         // Use IFCROOM as entity type
         let entity_type = "IFCROOM".to_string();
         
+        // Convert position from core::Position to Point3D
+        let position = Point3D {
+            x: room.spatial_properties.position.x,
+            y: room.spatial_properties.position.y,
+            z: room.spatial_properties.position.z,
+        };
+        
+        // Convert bounding box from core::BoundingBox to BoundingBox3D
+        let bounding_box = BoundingBox3D {
+            min: Point3D {
+                x: room.spatial_properties.bounding_box.min.x,
+                y: room.spatial_properties.bounding_box.min.y,
+                z: room.spatial_properties.bounding_box.min.z,
+            },
+            max: Point3D {
+                x: room.spatial_properties.bounding_box.max.x,
+                y: room.spatial_properties.bounding_box.max.y,
+                z: room.spatial_properties.bounding_box.max.z,
+            },
+        };
+        
         SpatialEntity {
             id: entity_id,
             name: room.name.clone(),
             entity_type,
-            position: room.position,
-            bounding_box: room.bounding_box.clone(),
+            position,
+            bounding_box,
             coordinate_system: None,
         }
     }
@@ -258,8 +318,7 @@ impl IFCExporter {
 mod tests {
     use crate::spatial::Point3D;
     use super::*;
-    use crate::yaml::{BuildingInfo, BuildingMetadata, FloorData, CoordinateSystemInfo};
-    use crate::spatial::BoundingBox3D;
+    use crate::yaml::{BuildingInfo, BuildingMetadata, CoordinateSystemInfo};
     use std::collections::HashMap;
 
     fn create_test_building_data() -> BuildingData {
@@ -282,50 +341,79 @@ mod tests {
                 units: "meters".to_string(),
                 tags: vec![],
             },
-            floors: vec![
-                FloorData {
+            floors: vec![{
+                use crate::core::{Floor, Wing, Room, Equipment, RoomType, EquipmentType, EquipmentStatus, Position, Dimensions, SpatialProperties, BoundingBox};
+                let position = Position {
+                    x: 5.0,
+                    y: 5.0,
+                    z: 1.5,
+                    coordinate_system: "building_local".to_string(),
+                };
+                let dimensions = Dimensions {
+                    width: 10.0,
+                    height: 3.0,
+                    depth: 5.0,
+                };
+                let bounding_box = BoundingBox {
+                    min: Position {
+                        x: 0.0,
+                        y: 0.0,
+                        z: 0.0,
+                        coordinate_system: "building_local".to_string(),
+                    },
+                    max: Position {
+                        x: 10.0,
+                        y: 5.0,
+                        z: 3.0,
+                        coordinate_system: "building_local".to_string(),
+                    },
+                };
+                let spatial_properties = SpatialProperties {
+                    position,
+                    dimensions,
+                    bounding_box,
+                    coordinate_system: "building_local".to_string(),
+                };
+                let room = Room {
+                    id: "room-101".to_string(),
+                    name: "Room 101".to_string(),
+                    room_type: RoomType::Office,
+                    equipment: vec![],
+                    spatial_properties,
+                    properties: HashMap::new(),
+                    created_at: None,
+                    updated_at: None,
+                };
+                let mut wing = Wing::new("Default".to_string());
+                wing.rooms.push(room);
+                Floor {
                     id: "floor-1".to_string(),
-                    wings: vec![],
                     name: "Floor 1".to_string(),
                     level: 1,
-                    elevation: 0.0,
-                    rooms: vec![
-                        RoomData {
-                            id: "room-101".to_string(),
-                            name: "Room 101".to_string(),
-                            room_type: "Office".to_string(),
-                            area: Some(25.0),
-                            volume: Some(75.0),
-                            position: Point3D::new(5.0, 5.0, 1.5),
-                            bounding_box: BoundingBox3D::new(
-                                Point3D::new(0.0, 0.0, 0.0),
-                                Point3D::new(10.0, 5.0, 3.0),
-                            ),
-                            equipment: vec![],
-                            properties: HashMap::new(),
-                        }
-                    ],
-                    equipment: vec![
-                        EquipmentData {
-                            address: None,
-                            id: "equipment-1".to_string(),
-                            name: "HVAC Unit 1".to_string(),
-                            equipment_type: "HVAC".to_string(),
-                            system_type: "HVAC".to_string(),
-                            position: Point3D::new(2.0, 2.0, 2.0),
-                            bounding_box: BoundingBox3D::new(
-                                Point3D::new(1.0, 1.0, 1.0),
-                                Point3D::new(3.0, 3.0, 3.0),
-                            ),
-                            status: crate::yaml::EquipmentStatus::Healthy,
-                            properties: HashMap::new(),
-                            universal_path: "building/floor-1/room-101/equipment-hvac-1".to_string(),
-                            sensor_mappings: None,
-                        }
-                    ],
+                    elevation: Some(0.0),
                     bounding_box: None,
+                    wings: vec![wing],
+                    equipment: vec![Equipment {
+                        id: "equipment-1".to_string(),
+                        name: "HVAC Unit 1".to_string(),
+                        path: "building/floor-1/room-101/equipment-hvac-1".to_string(),
+                        address: None,
+                        equipment_type: EquipmentType::HVAC,
+                        position: Position {
+                            x: 2.0,
+                            y: 2.0,
+                            z: 2.0,
+                            coordinate_system: "building_local".to_string(),
+                        },
+                        properties: HashMap::new(),
+                        status: EquipmentStatus::Active,
+                        health_status: None,
+                        room_id: None,
+                        sensor_mappings: None,
+                    }],
+                    properties: HashMap::new(),
                 }
-            ],
+            }],
             coordinate_systems: vec![CoordinateSystemInfo {
                 name: "World".to_string(),
                 origin: Point3D::origin(),
@@ -348,7 +436,9 @@ mod tests {
         assert_eq!(entity.id, "building/floor-1/room-101/equipment-hvac-1");
         assert_eq!(entity.name, "HVAC Unit 1");
         assert_eq!(entity.entity_type, "IFCAIRTERMINAL");
-        assert_eq!(entity.position, equipment.position);
+        assert_eq!(entity.position.x, equipment.position.x);
+        assert_eq!(entity.position.y, equipment.position.y);
+        assert_eq!(entity.position.z, equipment.position.z);
     }
 
     #[test]
@@ -356,19 +446,21 @@ mod tests {
         let building_data = create_test_building_data();
         let exporter = IFCExporter::new(building_data);
         
-        let room = &exporter.building_data.floors[0].rooms[0];
+        let room = &exporter.building_data.floors[0].wings[0].rooms[0];
         let entity = exporter.convert_room_to_spatial_entity(room, 1);
         
         assert_eq!(entity.id, "building/floor-1/room-101");
         assert_eq!(entity.name, "Room 101");
         assert_eq!(entity.entity_type, "IFCROOM");
-        assert_eq!(entity.position, room.position);
+        assert_eq!(entity.position.x, room.spatial_properties.position.x);
+        assert_eq!(entity.position.y, room.spatial_properties.position.y);
+        assert_eq!(entity.position.z, room.spatial_properties.position.z);
     }
 
     #[test]
     fn test_convert_equipment_without_universal_path() {
         let mut building_data = create_test_building_data();
-        building_data.floors[0].equipment[0].universal_path = String::new();
+        building_data.floors[0].equipment[0].path = String::new();
         
         let exporter = IFCExporter::new(building_data);
         let equipment = &exporter.building_data.floors[0].equipment[0];
@@ -382,13 +474,13 @@ mod tests {
     #[test]
     fn test_convert_room_with_universal_path_in_properties() {
         let mut building_data = create_test_building_data();
-        building_data.floors[0].rooms[0].properties.insert(
+        building_data.floors[0].wings[0].rooms[0].properties.insert(
             "universal_path".to_string(),
             "custom/path/room-101".to_string()
         );
         
         let exporter = IFCExporter::new(building_data);
-        let room = &exporter.building_data.floors[0].rooms[0];
+        let room = &exporter.building_data.floors[0].wings[0].rooms[0];
         let entity = exporter.convert_room_to_spatial_entity(room, 1);
         
         assert_eq!(entity.id, "custom/path/room-101");

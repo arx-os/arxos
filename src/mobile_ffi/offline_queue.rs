@@ -330,8 +330,8 @@ pub fn execute_operation(item: &QueuedOperationItem) -> Result<(), Box<dyn std::
                     "building_local".to_string(),
                 ),
                 properties: properties.clone(),
-                created_at: now,
-                updated_at: now,
+                created_at: Some(now),
+                updated_at: Some(now),
             };
             
             crate::core::create_room(building_name, *floor_level, room, wing_name.as_deref(), true)
@@ -373,7 +373,9 @@ pub fn execute_operation(item: &QueuedOperationItem) -> Result<(), Box<dyn std::
                 },
                 properties: properties.clone(),
                 status,
+                health_status: None,
                 room_id: room_id.clone(),
+                sensor_mappings: None,
             };
             
             crate::core::add_equipment(building_name, room_id.as_deref(), equipment, true)

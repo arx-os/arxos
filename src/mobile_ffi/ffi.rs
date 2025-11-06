@@ -277,7 +277,9 @@ pub unsafe extern "C" fn arxos_validate_constraints(
         },
         properties: HashMap::new(),
         status: crate::core::EquipmentStatus::Active,
+        health_status: None,
         room_id: None,
+        sensor_mappings: None,
     };
 
     // Create placement

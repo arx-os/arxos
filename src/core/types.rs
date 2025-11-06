@@ -3,12 +3,37 @@
 use serde::{Deserialize, Serialize};
 
 /// Position in 3D space with coordinate system
-#[derive(Debug, Clone, Serialize, Deserialize)]
+///
+/// When serializing to YAML, this serializes as Point3D (omitting coordinate_system)
+/// for backward compatibility. When deserializing, coordinate_system defaults to "building_local".
+#[derive(Debug, Clone)]
 pub struct Position {
     pub x: f64,
     pub y: f64,
     pub z: f64,
     pub coordinate_system: String,
+}
+
+// Custom serialization to Point3D format (omits coordinate_system)
+impl serde::Serialize for Position {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use crate::core::serde_helpers::serialize_position_as_point3d;
+        serialize_position_as_point3d(self, serializer)
+    }
+}
+
+// Custom deserialization from Point3D format (adds default coordinate_system)
+impl<'de> serde::Deserialize<'de> for Position {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use crate::core::serde_helpers::deserialize_point3d_as_position;
+        deserialize_point3d_as_position(deserializer)
+    }
 }
 
 /// Dimensions of a 3D object
@@ -20,10 +45,35 @@ pub struct Dimensions {
 }
 
 /// Bounding box for spatial entities
-#[derive(Debug, Clone, Serialize, Deserialize)]
+///
+/// When serializing to YAML, this serializes as BoundingBox3D (omitting coordinate systems)
+/// for backward compatibility. When deserializing, coordinate systems default to "building_local".
+#[derive(Debug, Clone)]
 pub struct BoundingBox {
     pub min: Position,
     pub max: Position,
+}
+
+// Custom serialization to BoundingBox3D format (omits coordinate systems)
+impl serde::Serialize for BoundingBox {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use crate::core::serde_helpers::serialize_bounding_box_as_bbox3d;
+        serialize_bounding_box_as_bbox3d(self, serializer)
+    }
+}
+
+// Custom deserialization from BoundingBox3D format (adds default coordinate systems)
+impl<'de> serde::Deserialize<'de> for BoundingBox {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use crate::core::serde_helpers::deserialize_bbox3d_as_bounding_box;
+        deserialize_bbox3d_as_bounding_box(deserializer)
+    }
 }
 
 impl BoundingBox {

@@ -2,7 +2,8 @@
 //!
 //! Defines trait and implementations for converting building data to spreadsheet format
 
-use crate::yaml::{BuildingData, EquipmentData, RoomData};
+use crate::yaml::BuildingData;
+use crate::core::{Equipment, Room, EquipmentType, EquipmentStatus, EquipmentHealthStatus, RoomType};
 use crate::hardware::SensorData;
 use super::types::{ColumnDefinition, CellValue, CellType, ValidationRule};
 
@@ -29,7 +30,7 @@ pub trait SpreadsheetDataSource: Send + Sync {
 
 /// Equipment data source implementation
 pub struct EquipmentDataSource {
-    equipment: Vec<EquipmentData>,
+    equipment: Vec<Equipment>,
     building_data: BuildingData,
     building_name: String,
     modified_rows: std::collections::HashSet<usize>,
@@ -150,13 +151,24 @@ impl SpreadsheetDataSource for EquipmentDataSource {
             }
             "equipment.id" => Ok(CellValue::UUID(equipment.id.clone())),
             "equipment.name" => Ok(CellValue::Text(equipment.name.clone())),
-            "equipment.type" => Ok(CellValue::Enum(equipment.equipment_type.clone())),
+            "equipment.type" => Ok(CellValue::Enum(format!("{:?}", equipment.equipment_type))),
             "equipment.status" => {
-                let status_str = match equipment.status {
-                    crate::yaml::EquipmentStatus::Healthy => "Healthy",
-                    crate::yaml::EquipmentStatus::Warning => "Warning",
-                    crate::yaml::EquipmentStatus::Critical => "Critical",
-                    crate::yaml::EquipmentStatus::Unknown => "Unknown",
+                // Use health_status if available, otherwise use status
+                let status_str = if let Some(health_status) = &equipment.health_status {
+                    match health_status {
+                        EquipmentHealthStatus::Healthy => "Healthy",
+                        EquipmentHealthStatus::Warning => "Warning",
+                        EquipmentHealthStatus::Critical => "Critical",
+                        EquipmentHealthStatus::Unknown => "Unknown",
+                    }
+                } else {
+                    match equipment.status {
+                        EquipmentStatus::Active => "Active",
+                        EquipmentStatus::Inactive => "Inactive",
+                        EquipmentStatus::Maintenance => "Maintenance",
+                        EquipmentStatus::OutOfOrder => "OutOfOrder",
+                        EquipmentStatus::Unknown => "Unknown",
+                    }
                 };
                 Ok(CellValue::Enum(status_str.to_string()))
             }
@@ -185,20 +197,45 @@ impl SpreadsheetDataSource for EquipmentDataSource {
             }
             "equipment.type" => {
                 if let CellValue::Enum(type_str) = value {
-                    equipment.equipment_type = type_str;
+                    equipment.equipment_type = match type_str.as_str() {
+                        "HVAC" => EquipmentType::HVAC,
+                        "Electrical" => EquipmentType::Electrical,
+                        "AV" => EquipmentType::AV,
+                        "Furniture" => EquipmentType::Furniture,
+                        "Safety" => EquipmentType::Safety,
+                        "Plumbing" => EquipmentType::Plumbing,
+                        "Network" => EquipmentType::Network,
+                        _ => EquipmentType::Other(type_str),
+                    };
                     self.modified_rows.insert(row);
                 }
             }
             "equipment.status" => {
                 if let CellValue::Enum(status_str) = value {
-                    let status = match status_str.as_str() {
-                        "Healthy" => crate::yaml::EquipmentStatus::Healthy,
-                        "Warning" => crate::yaml::EquipmentStatus::Warning,
-                        "Critical" => crate::yaml::EquipmentStatus::Critical,
-                        "Unknown" => crate::yaml::EquipmentStatus::Unknown,
+                    // Update health_status if it's a health status, otherwise update status
+                    match status_str.as_str() {
+                        "Healthy" | "Warning" | "Critical" | "Unknown" => {
+                            let health_status = match status_str.as_str() {
+                                "Healthy" => EquipmentHealthStatus::Healthy,
+                                "Warning" => EquipmentHealthStatus::Warning,
+                                "Critical" => EquipmentHealthStatus::Critical,
+                                "Unknown" => EquipmentHealthStatus::Unknown,
+                                _ => unreachable!(),
+                            };
+                            equipment.health_status = Some(health_status);
+                        }
+                        "Active" | "Inactive" | "Maintenance" | "OutOfOrder" => {
+                            let status = match status_str.as_str() {
+                                "Active" => EquipmentStatus::Active,
+                                "Inactive" => EquipmentStatus::Inactive,
+                                "Maintenance" => EquipmentStatus::Maintenance,
+                                "OutOfOrder" => EquipmentStatus::OutOfOrder,
+                                _ => unreachable!(),
+                            };
+                            equipment.status = status;
+                        }
                         _ => return Err(format!("Invalid status: {}", status_str).into()),
                     };
-                    equipment.status = status;
                     self.modified_rows.insert(row);
                 }
             }
@@ -219,7 +256,7 @@ impl SpreadsheetDataSource for EquipmentDataSource {
         let mut modified_count = 0;
         
         // Create a map of modified equipment by ID
-        let modified_equipment: std::collections::HashMap<String, &EquipmentData> = self.equipment
+        let modified_equipment: std::collections::HashMap<String, &Equipment> = self.equipment
             .iter()
             .enumerate()
             .filter(|(idx, _)| self.modified_rows.contains(idx))
@@ -297,7 +334,7 @@ impl SpreadsheetDataSource for EquipmentDataSource {
 
 /// Room data source implementation
 pub struct RoomDataSource {
-    rooms: Vec<RoomData>,
+    rooms: Vec<Room>,
     building_data: BuildingData,
     building_name: String,
     modified_rows: std::collections::HashSet<usize>,
@@ -306,10 +343,12 @@ pub struct RoomDataSource {
 impl RoomDataSource {
     /// Create a new room data source from building data
     pub fn new(building_data: BuildingData, building_name: String) -> Self {
-        // Collect all rooms from all floors
+        // Collect all rooms from all floors (rooms are now in wings)
         let mut rooms = Vec::new();
         for floor in &building_data.floors {
-            rooms.extend(floor.rooms.clone());
+            for wing in &floor.wings {
+                rooms.extend(wing.rooms.clone());
+            }
         }
         
         Self {
@@ -418,9 +457,17 @@ impl SpreadsheetDataSource for RoomDataSource {
             }
             "room.id" => Ok(CellValue::UUID(room.id.clone())),
             "room.name" => Ok(CellValue::Text(room.name.clone())),
-            "room.type" => Ok(CellValue::Enum(room.room_type.clone())),
-            "room.area" => Ok(room.area.map(CellValue::Number).unwrap_or(CellValue::Empty)),
-            "room.volume" => Ok(room.volume.map(CellValue::Number).unwrap_or(CellValue::Empty)),
+            "room.type" => Ok(CellValue::Enum(format!("{:?}", room.room_type))),
+            "room.area" => {
+                // Calculate area from dimensions
+                let area = room.spatial_properties.dimensions.width * room.spatial_properties.dimensions.depth;
+                Ok(CellValue::Number(area))
+            }
+            "room.volume" => {
+                // Calculate volume from dimensions
+                let volume = room.spatial_properties.dimensions.width * room.spatial_properties.dimensions.depth * room.spatial_properties.dimensions.height;
+                Ok(CellValue::Number(volume))
+            }
             _ => Ok(CellValue::Empty),
         }
     }
@@ -446,25 +493,55 @@ impl SpreadsheetDataSource for RoomDataSource {
             }
             "room.type" => {
                 if let CellValue::Enum(type_str) = value {
-                    room.room_type = type_str;
+                    // Parse room type string to enum
+                    room.room_type = match type_str.as_str() {
+                        "Classroom" => RoomType::Classroom,
+                        "Laboratory" => RoomType::Laboratory,
+                        "Office" => RoomType::Office,
+                        "Gymnasium" => RoomType::Gymnasium,
+                        "Cafeteria" => RoomType::Cafeteria,
+                        "Library" => RoomType::Library,
+                        "Auditorium" => RoomType::Auditorium,
+                        "Hallway" => RoomType::Hallway,
+                        "Restroom" => RoomType::Restroom,
+                        "Storage" => RoomType::Storage,
+                        "Mechanical" => RoomType::Mechanical,
+                        "Electrical" => RoomType::Electrical,
+                        _ => RoomType::Other(type_str),
+                    };
                     self.modified_rows.insert(row);
                 }
             }
             "room.area" => {
                 if let CellValue::Number(area) = value {
-                    room.area = Some(area);
-                    self.modified_rows.insert(row);
-                } else if matches!(value, CellValue::Empty) {
-                    room.area = None;
+                    // Update dimensions to reflect new area (preserve height, adjust width/depth proportionally)
+                    let current_area = room.spatial_properties.dimensions.width * room.spatial_properties.dimensions.depth;
+                    if current_area > 0.0 {
+                        let scale = (area / current_area).sqrt();
+                        room.spatial_properties.dimensions.width *= scale;
+                        room.spatial_properties.dimensions.depth *= scale;
+                    } else {
+                        // If no current area, set default dimensions
+                        let side = area.sqrt();
+                        room.spatial_properties.dimensions.width = side;
+                        room.spatial_properties.dimensions.depth = side;
+                    }
                     self.modified_rows.insert(row);
                 }
             }
             "room.volume" => {
                 if let CellValue::Number(volume) = value {
-                    room.volume = Some(volume);
-                    self.modified_rows.insert(row);
-                } else if matches!(value, CellValue::Empty) {
-                    room.volume = None;
+                    // Update height to reflect new volume (preserve area)
+                    let area = room.spatial_properties.dimensions.width * room.spatial_properties.dimensions.depth;
+                    if area > 0.0 {
+                        room.spatial_properties.dimensions.height = volume / area;
+                    } else {
+                        // If no area, set default dimensions
+                        let side = volume.cbrt();
+                        room.spatial_properties.dimensions.width = side;
+                        room.spatial_properties.dimensions.depth = side;
+                        room.spatial_properties.dimensions.height = side;
+                    }
                     self.modified_rows.insert(row);
                 }
             }
@@ -484,19 +561,21 @@ impl SpreadsheetDataSource for RoomDataSource {
         let mut modified_count = 0;
         
         // Create a map of modified rooms by ID
-        let modified_rooms: std::collections::HashMap<String, &RoomData> = self.rooms
+        let modified_rooms: std::collections::HashMap<String, &Room> = self.rooms
             .iter()
             .enumerate()
             .filter(|(idx, _)| self.modified_rows.contains(idx))
             .map(|(_, room)| (room.id.clone(), room))
             .collect();
         
-        // Update rooms in building data by matching IDs
+        // Update rooms in building data by matching IDs (rooms are now in wings)
         for floor in building_data.floors.iter_mut() {
-            for room in floor.rooms.iter_mut() {
-                if let Some(modified_room) = modified_rooms.get(&room.id) {
-                    *room = (*modified_room).clone();
-                    modified_count += 1;
+            for wing in floor.wings.iter_mut() {
+                for room in wing.rooms.iter_mut() {
+                    if let Some(modified_room) = modified_rooms.get(&room.id) {
+                        *room = (*modified_room).clone();
+                        modified_count += 1;
+                    }
                 }
             }
         }
@@ -546,10 +625,12 @@ impl SpreadsheetDataSource for RoomDataSource {
         // Update internal data
         self.building_data = building_data.clone();
         
-        // Rebuild rooms list
+        // Rebuild rooms list (rooms are now in wings)
         let mut rooms = Vec::new();
         for floor in &self.building_data.floors {
-            rooms.extend(floor.rooms.clone());
+            for wing in &floor.wings {
+                rooms.extend(wing.rooms.clone());
+            }
         }
         self.rooms = rooms;
         

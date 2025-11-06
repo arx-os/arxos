@@ -11,15 +11,16 @@ mod wing;
 mod room;
 mod equipment;
 mod operations;
+mod serde_helpers;
 
 // Re-export all public types and functions
 pub use types::{Position, Dimensions, BoundingBox, SpatialProperties, SpatialQueryResult};
 pub use crate::spatial::{GridCoordinate, GridSystem};
-pub use building::Building;
+pub use building::{Building, BuildingMetadata, CoordinateSystemInfo};
 pub use floor::Floor;
 pub use wing::Wing;
 pub use room::{Room, RoomType};
-pub use equipment::{Equipment, EquipmentType, EquipmentStatus};
+pub use equipment::{Equipment, EquipmentType, EquipmentStatus, EquipmentHealthStatus, SensorMapping, ThresholdConfig};
 
 // Re-export all operations
 pub use operations::{

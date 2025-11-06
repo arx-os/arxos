@@ -4,7 +4,7 @@
 //! decoupled from persistence concerns. Uses R-Tree spatial indexing for
 //! efficient queries on large datasets.
 
-use super::repository::{Repository, RepositoryRef};
+use super::repository::RepositoryRef;
 use crate::core::SpatialQueryResult;
 use crate::spatial::{SpatialEntity, Point3D, BoundingBox3D};
 use std::sync::{Arc, RwLock};
@@ -231,24 +231,61 @@ impl SpatialService {
         let mut entities = Vec::new();
         
         for floor in &building_data.floors {
-            // Add rooms as spatial entities
-            for room in &floor.rooms {
-                entities.push(SpatialEntity::new(
-                    room.id.clone(),
-                    room.name.clone(),
-                    "Room".to_string(),
-                    room.position.clone(),
-                ).with_bounding_box(room.bounding_box.clone()));
+            // Add rooms as spatial entities (rooms are now in wings)
+            for wing in &floor.wings {
+                for room in &wing.rooms {
+                    // Convert core::Position to spatial::Point3D
+                    use crate::spatial::Point3D;
+                    let position = Point3D {
+                        x: room.spatial_properties.position.x,
+                        y: room.spatial_properties.position.y,
+                        z: room.spatial_properties.position.z,
+                    };
+                    // Convert core::BoundingBox to spatial::BoundingBox3D
+                    use crate::spatial::BoundingBox3D;
+                    let bbox = &room.spatial_properties.bounding_box;
+                    let bounding_box = BoundingBox3D {
+                        min: Point3D {
+                            x: bbox.min.x,
+                            y: bbox.min.y,
+                            z: bbox.min.z,
+                        },
+                        max: Point3D {
+                            x: bbox.max.x,
+                            y: bbox.max.y,
+                            z: bbox.max.z,
+                        },
+                    };
+                    entities.push(SpatialEntity::new(
+                        room.id.clone(),
+                        room.name.clone(),
+                        "Room".to_string(),
+                        position,
+                    ).with_bounding_box(bounding_box));
+                }
             }
             
             // Add equipment as spatial entities
             for equipment in &floor.equipment {
+                // Convert core::Position to spatial::Point3D
+                use crate::spatial::Point3D;
+                let position = Point3D {
+                    x: equipment.position.x,
+                    y: equipment.position.y,
+                    z: equipment.position.z,
+                };
+                // Equipment doesn't have a direct bounding_box, so create a default one
+                use crate::spatial::BoundingBox3D;
+                let bounding_box = BoundingBox3D::new(
+                    Point3D::new(position.x - 0.5, position.y - 0.5, position.z - 0.5),
+                    Point3D::new(position.x + 0.5, position.y + 0.5, position.z + 0.5),
+                );
                 entities.push(SpatialEntity::new(
                     equipment.id.clone(),
                     equipment.name.clone(),
-                    equipment.equipment_type.clone(),
-                    equipment.position.clone(),
-                ).with_bounding_box(equipment.bounding_box.clone()));
+                    format!("{:?}", equipment.equipment_type),
+                    position,
+                ).with_bounding_box(bounding_box));
             }
         }
         

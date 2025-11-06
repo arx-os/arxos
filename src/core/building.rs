@@ -4,6 +4,29 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use super::{Floor, Room};
+use crate::spatial::BoundingBox3D;
+
+/// Building metadata (YAML-only field)
+///
+/// Contains parser metadata, source file information, and tags.
+/// This field is optional and omitted from YAML when None.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct BuildingMetadata {
+    /// Source file path (if loaded from file)
+    pub source_file: Option<String>,
+    /// Parser version that created this building data
+    pub parser_version: String,
+    /// Total number of entities in the building
+    pub total_entities: usize,
+    /// Number of spatial entities
+    pub spatial_entities: usize,
+    /// Coordinate system name
+    pub coordinate_system: String,
+    /// Units used (e.g., "meters", "feet")
+    pub units: String,
+    /// Tags for categorization
+    pub tags: Vec<String>,
+}
 
 /// Represents a building in ArxOS
 ///
@@ -18,7 +41,7 @@ use super::{Floor, Room};
 /// * `created_at` - Timestamp when the building was created
 /// * `updated_at` - Timestamp of last modification
 /// * `floors` - Collection of floors in the building
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Building {
     /// Unique identifier for the building
     pub id: String,
@@ -26,6 +49,15 @@ pub struct Building {
     pub name: String,
     /// Universal path identifier
     pub path: String,
+    /// Building description (optional)
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub description: Option<String>,
+    /// Building version string
+    #[serde(default = "default_version")]
+    pub version: String,
+    /// Global bounding box for the entire building
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub global_bounding_box: Option<BoundingBox3D>,
     /// Creation timestamp
     pub created_at: DateTime<Utc>,
     /// Last modification timestamp
@@ -33,6 +65,32 @@ pub struct Building {
     /// Collection of floors in the building
     pub floors: Vec<Floor>,
     // Equipment lives in floors -> wings -> rooms hierarchy
+    /// Building metadata (YAML-only field)
+    ///
+    /// Contains parser metadata, source file information, and tags.
+    /// This field is optional and omitted from YAML when None.
+    #[serde(flatten, skip_serializing_if = "Option::is_none", default)]
+    pub metadata: Option<BuildingMetadata>,
+    /// Coordinate systems information
+    #[serde(default)]
+    pub coordinate_systems: Vec<CoordinateSystemInfo>,
+}
+
+/// Default version string for buildings
+fn default_version() -> String {
+    "1.0.0".to_string()
+}
+
+/// Coordinate system information
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CoordinateSystemInfo {
+    pub name: String,
+    pub origin: crate::spatial::Point3D,
+    pub x_axis: crate::spatial::Point3D,
+    pub y_axis: crate::spatial::Point3D,
+    pub z_axis: crate::spatial::Point3D,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub description: Option<String>,
 }
 
 impl Building {
@@ -52,9 +110,14 @@ impl Building {
             id: Uuid::new_v4().to_string(),
             name,
             path,
+            description: None,
+            version: default_version(),
+            global_bounding_box: None,
             created_at: now,
             updated_at: now,
             floors: Vec::new(),
+            metadata: None,
+            coordinate_systems: Vec::new(),
         }
     }
     
@@ -107,6 +170,25 @@ impl Building {
     /// Find a room by ID
     pub fn find_room(&self, room_id: &str) -> Option<&Room> {
         self.get_all_rooms().into_iter().find(|room| room.id == room_id)
+    }
+}
+
+impl Default for Building {
+    fn default() -> Self {
+        let now = Utc::now();
+        Self {
+            id: Uuid::new_v4().to_string(),
+            name: "Default Building".to_string(),
+            path: "/default".to_string(),
+            description: None,
+            version: default_version(),
+            global_bounding_box: None,
+            created_at: now,
+            updated_at: now,
+            floors: Vec::new(),
+            metadata: None,
+            coordinate_systems: Vec::new(),
+        }
     }
 }
 

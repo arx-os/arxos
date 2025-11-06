@@ -1,10 +1,8 @@
 // Room management command handlers
 
 use crate::cli::RoomCommands;
-use crate::core::RoomType;
+use crate::core::{RoomType, Floor, Wing, Position, Dimensions, SpatialProperties};
 use crate::persistence::PersistenceManager;
-use crate::yaml::{RoomData, FloorData};
-use crate::spatial::Point3D;
 use std::collections::HashMap;
 
 /// Handle room management commands
@@ -117,71 +115,53 @@ fn handle_create_room(config: CreateRoomConfig) -> Result<(), Box<dyn std::error
     let mut building_data = persistence.load_building_data()?;
     
     // Find or create the floor
-    let floor_data = building_data.floors.iter_mut()
+    let floor = building_data.floors.iter_mut()
         .find(|f| f.level == config.floor);
     
-    let floor_data = if let Some(floor) = floor_data {
+    let floor = if let Some(floor) = floor {
         floor
     } else {
         // Floor doesn't exist, create it
-        let new_floor = FloorData {
-            id: format!("floor-{}", config.floor),
-            name: format!("Floor {}", config.floor),
-            level: config.floor,
-            elevation: config.floor as f64 * 3.0,
-            wings: vec![],
-            rooms: vec![],
-            equipment: vec![],
-            bounding_box: None,
-        };
+        let new_floor = Floor::new(format!("Floor {}", config.floor), config.floor);
         building_data.floors.push(new_floor);
         building_data.floors.last_mut()
             .ok_or_else(|| "Failed to access newly created floor".to_string())?
     };
     
     // Find or create the wing
-    use crate::yaml::WingData;
-    let wing_data = floor_data.wings.iter_mut()
+    let wing = floor.wings.iter_mut()
         .find(|w| w.name == config.wing);
     
-    let wing_data = if let Some(wing) = wing_data {
+    let wing = if let Some(wing) = wing {
         wing
     } else {
         // Wing doesn't exist, create it
-        let new_wing = WingData {
-            id: format!("wing-{}-{}", config.floor, config.wing),
-            name: config.wing.clone(),
-            rooms: vec![],
-            equipment: vec![],
-            properties: HashMap::new(),
-        };
-        floor_data.wings.push(new_wing);
-        floor_data.wings.last_mut()
+        let new_wing = Wing::new(config.wing.clone());
+        floor.wings.push(new_wing);
+        floor.wings.last_mut()
             .ok_or_else(|| "Failed to access newly created wing".to_string())?
     };
     
-    // Create room data
-    let position_3d = Point3D { x, y, z };
-    let room_data = RoomData {
-        id: room.id.clone(),
-        name: room.name.clone(),
-        room_type: format!("{}", room.room_type),
-        area: Some(width * depth),
-        volume: Some(width * depth * height),
-        position: position_3d,
-        bounding_box: crate::spatial::BoundingBox3D {
-            min: Point3D { x, y, z },
-            max: Point3D { x: x + width, y: y + depth, z: z + height },
-        },
-        equipment: vec![],
-        properties: HashMap::new(),
+    // Create spatial properties for the room
+    let position = Position {
+        x,
+        y,
+        z,
+        coordinate_system: "building_local".to_string(),
     };
+    let dimensions = Dimensions {
+        width,
+        depth,
+        height,
+    };
+    let spatial_properties = SpatialProperties::new(position, dimensions, "building_local".to_string());
     
-    // Add room to wing
-    wing_data.rooms.push(room_data.clone());
+    // Create room with spatial properties
+    let mut room_with_spatial = room;
+    room_with_spatial.spatial_properties = spatial_properties;
     
-    // Also add to floor's rooms list for backward compatibility
-    floor_data.rooms.push(room_data);
+    // Add room to wing (primary location)
+    wing.rooms.push(room_with_spatial);
     
     // Save
     if config.commit {

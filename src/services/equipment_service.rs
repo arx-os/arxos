@@ -3,9 +3,8 @@
 //! Provides high-level operations for equipment management,
 //! decoupled from persistence concerns.
 
-use super::repository::{Repository, RepositoryRef};
+use super::repository::RepositoryRef;
 use crate::core::Equipment;
-use crate::yaml::{BuildingData, EquipmentData};
 use std::sync::Arc;
 
 /// Service for equipment operations
@@ -40,28 +39,25 @@ impl EquipmentService {
         commit: bool,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut building_data = self.repository.load(building_name)?;
-        let equipment_data = self.equipment_to_equipment_data(&equipment);
         let equipment_name = equipment.name.clone();
         
         // Find room if specified
         if let Some(room_name) = room_name {
             for floor in &mut building_data.floors {
+                // Search in wings first (primary location)
                 for wing in &mut floor.wings {
                     if let Some(room) = wing.rooms.iter_mut().find(|r| r.name == room_name) {
-                        room.equipment.push(equipment.id.clone());
+                        // Add equipment to room
+                        room.equipment.push(equipment.clone());
                     }
                 }
-                // Also check legacy rooms list
-                if let Some(room) = floor.rooms.iter_mut().find(|r| r.name == room_name) {
-                    room.equipment.push(equipment.id.clone());
-                }
                 // Add to floor's equipment list
-                floor.equipment.push(equipment_data.clone());
+                floor.equipment.push(equipment.clone());
             }
         } else {
             // Add to first floor if no room specified
             if let Some(floor) = building_data.floors.first_mut() {
-                floor.equipment.push(equipment_data);
+                floor.equipment.push(equipment);
             }
         }
         
@@ -82,9 +78,7 @@ impl EquipmentService {
         let mut equipment = Vec::new();
         
         for floor in &building_data.floors {
-            for equipment_data in &floor.equipment {
-                equipment.push(self.equipment_data_to_equipment(equipment_data));
-            }
+            equipment.extend(floor.equipment.iter().cloned());
         }
         
         Ok(equipment)
@@ -95,25 +89,14 @@ impl EquipmentService {
         let building_data = self.repository.load(building_name)?;
         
         for floor in &building_data.floors {
-            if let Some(equipment_data) = floor.equipment.iter().find(|e| e.id == equipment_id) {
-                return Ok(Some(self.equipment_data_to_equipment(equipment_data)));
+            if let Some(equipment) = floor.equipment.iter().find(|e| e.id == equipment_id) {
+                return Ok(Some(equipment.clone()));
             }
         }
         
         Ok(None)
     }
     
-    /// Convert Equipment to EquipmentData
-    fn equipment_to_equipment_data(&self, equipment: &Equipment) -> EquipmentData {
-        use crate::yaml::conversions::equipment_to_equipment_data;
-        equipment_to_equipment_data(equipment)
-    }
-    
-    /// Convert EquipmentData to Equipment
-    fn equipment_data_to_equipment(&self, equipment_data: &EquipmentData) -> Equipment {
-        use crate::yaml::conversions::equipment_data_to_equipment;
-        equipment_data_to_equipment(equipment_data)
-    }
 }
 
 impl Default for EquipmentService {

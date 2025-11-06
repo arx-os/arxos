@@ -27,7 +27,12 @@ fn generate_yaml_output(building: &Building, building_name: &str) -> Result<Stri
     
     println!("📄 Generated YAML file: {}", yaml_file);
     println!("   Floors: {}", building_data.floors.len());
-    println!("   Total rooms: {}", building_data.floors.iter().map(|f| f.rooms.len()).sum::<usize>());
+    // Rooms are now in wings
+    let total_rooms: usize = building_data.floors.iter()
+        .flat_map(|f| &f.wings)
+        .map(|w| w.rooms.len())
+        .sum();
+    println!("   Total rooms: {}", total_rooms);
     println!("   Total equipment: {}", building_data.floors.iter().map(|f| f.equipment.len()).sum::<usize>());
     
     Ok(yaml_file)

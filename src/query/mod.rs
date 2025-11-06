@@ -89,11 +89,11 @@ pub fn query_addresses(building_data: &BuildingData, pattern: &str) -> Result<Ve
     // Search through all equipment
     for floor in &building_data.floors {
         for equipment in &floor.equipment {
-            // Get equipment path (prefer address, fallback to universal_path)
+            // Get equipment path (prefer address, fallback to path)
             let path = equipment.address.as_ref()
                 .map(|addr| addr.path.clone())
                 .filter(|p| !p.is_empty())
-                .unwrap_or_else(|| equipment.universal_path.clone());
+                .unwrap_or_else(|| equipment.path.clone());
 
             // Skip empty paths
             if path.is_empty() {
@@ -107,7 +107,7 @@ pub fn query_addresses(building_data: &BuildingData, pattern: &str) -> Result<Ve
                 results.push(QueryResult {
                     name: equipment.name.clone(),
                     address: path,
-                    equipment_type: equipment.equipment_type.clone(),
+                    equipment_type: format!("{:?}", equipment.equipment_type),
                     floor: floor_num,
                     room: room_name,
                 });

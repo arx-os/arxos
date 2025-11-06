@@ -54,11 +54,15 @@ impl BuildingDataIndex {
 }
 
 /// Top-level building data structure for YAML serialization
+///
+/// **UPDATED**: Now uses core types (Floor) instead of FloorData.
+/// Floors contain core types (Wing, Room, Equipment), completing the data model unification.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuildingData {
     pub building: BuildingInfo,
     pub metadata: BuildingMetadata,
-    pub floors: Vec<FloorData>,
+    #[allow(deprecated)]
+    pub floors: Vec<crate::core::Floor>,
     pub coordinate_systems: Vec<CoordinateSystemInfo>,
 }
 
@@ -69,13 +73,13 @@ impl BuildingData {
     }
     
     /// Get floor by level using index (O(1) lookup)
-    pub fn get_floor_mut(&mut self, level: i32, index: &BuildingDataIndex) -> Option<&mut FloorData> {
+    pub fn get_floor_mut(&mut self, level: i32, index: &BuildingDataIndex) -> Option<&mut crate::core::Floor> {
         index.get_floor_index(level)
             .and_then(|idx| self.floors.get_mut(idx))
     }
     
     /// Get wing by floor level and name using index (O(1) lookup)
-    pub fn get_wing_mut(&mut self, level: i32, wing_name: &str, index: &BuildingDataIndex) -> Option<&mut WingData> {
+    pub fn get_wing_mut(&mut self, level: i32, wing_name: &str, index: &BuildingDataIndex) -> Option<&mut crate::core::Wing> {
         index.get_wing_indices(level, wing_name)
             .and_then(|(floor_idx, wing_idx)| {
                 self.floors.get_mut(floor_idx)
@@ -84,21 +88,13 @@ impl BuildingData {
     }
     
     /// Get or create floor by level, updating index if new floor is created
-    pub fn get_or_create_floor_mut(&mut self, level: i32, index: &mut BuildingDataIndex) -> Result<&mut FloorData, Box<dyn std::error::Error>> {
+    pub fn get_or_create_floor_mut(&mut self, level: i32, index: &mut BuildingDataIndex) -> Result<&mut crate::core::Floor, Box<dyn std::error::Error>> {
         if let Some(floor_idx) = index.get_floor_index(level) {
             Ok(&mut self.floors[floor_idx])
         } else {
-            // Create new floor
-            let new_floor = FloorData {
-                id: format!("floor-{}", level),
-                name: format!("Floor {}", level),
-                level,
-                elevation: level as f64 * 3.0,
-                wings: vec![],
-                rooms: vec![],
-                equipment: vec![],
-                bounding_box: None,
-            };
+            // Create new floor using core type
+            use crate::core::Floor;
+            let new_floor = Floor::new(format!("Floor {}", level), level);
             
             let floor_idx = self.floors.len();
             self.floors.push(new_floor);
@@ -111,21 +107,16 @@ impl BuildingData {
     }
     
     /// Get or create wing by floor level and name, updating index if new wing is created
-    pub fn get_or_create_wing_mut(&mut self, level: i32, wing_name: &str, index: &mut BuildingDataIndex) -> Result<&mut WingData, Box<dyn std::error::Error>> {
+    pub fn get_or_create_wing_mut(&mut self, level: i32, wing_name: &str, index: &mut BuildingDataIndex) -> Result<&mut crate::core::Wing, Box<dyn std::error::Error>> {
         if let Some((floor_idx, wing_idx)) = index.get_wing_indices(level, wing_name) {
             Ok(&mut self.floors[floor_idx].wings[wing_idx])
         } else {
             // Need to get or create floor first
             let floor = self.get_or_create_floor_mut(level, index)?;
             
-            // Create new wing
-            let new_wing = WingData {
-                id: format!("wing-{}-{}", level, wing_name),
-                name: wing_name.to_string(),
-                rooms: vec![],
-                equipment: vec![],
-                properties: std::collections::HashMap::new(),
-            };
+            // Create new wing using core type
+            use crate::core::Wing;
+            let new_wing = Wing::new(wing_name.to_string());
             
             let wing_idx = floor.wings.len();
             floor.wings.push(new_wing);
@@ -199,16 +190,24 @@ pub struct BuildingMetadata {
 }
 
 /// Wing data structure for YAML serialization
+///
+/// **UPDATED**: Now uses core types (Room, Equipment) instead of RoomData, EquipmentData.
+/// This completes the data model unification.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WingData {
     pub id: String,
     pub name: String,
-    pub rooms: Vec<RoomData>,
-    pub equipment: Vec<EquipmentData>,
+    #[allow(deprecated)]
+    pub rooms: Vec<crate::core::Room>,
+    #[allow(deprecated)]
+    pub equipment: Vec<crate::core::Equipment>,
     pub properties: HashMap<String, String>,
 }
 
 /// Floor data structure
+///
+/// **UPDATED**: Now uses core types (Wing, Room, Equipment) instead of WingData, RoomData, EquipmentData.
+/// This completes the data model unification.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FloorData {
     pub id: String,
@@ -216,14 +215,22 @@ pub struct FloorData {
     pub level: i32,
     pub elevation: f64,
     #[serde(default)]
-    pub wings: Vec<WingData>,
+    #[allow(deprecated)]
+    pub wings: Vec<crate::core::Wing>,
     #[serde(default)]
-    pub rooms: Vec<RoomData>, // Legacy: kept for backward compatibility
-    pub equipment: Vec<EquipmentData>,
+    #[allow(deprecated)]
+    pub rooms: Vec<crate::core::Room>, // Legacy: kept for backward compatibility
+    #[allow(deprecated)]
+    pub equipment: Vec<crate::core::Equipment>,
     pub bounding_box: Option<BoundingBox3D>,
 }
 
 /// Room data structure
+///
+/// **DEPRECATED**: This type is maintained for backward compatibility.
+/// Core types (Room) now serialize directly to YAML format.
+/// Use `crate::core::Room` directly with serde serialization instead.
+#[deprecated(note = "Use crate::core::Room directly with serde serialization")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoomData {
     pub id: String,
@@ -238,6 +245,11 @@ pub struct RoomData {
 }
 
 /// Equipment data structure
+///
+/// **DEPRECATED**: This type is maintained for backward compatibility.
+/// Core types (Equipment) now serialize directly to YAML format.
+/// Use `crate::core::Equipment` directly with serde serialization instead.
+#[deprecated(note = "Use crate::core::Equipment directly with serde serialization")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EquipmentData {
     pub id: String,
@@ -321,9 +333,9 @@ impl BuildingYamlSerializer {
     ) -> Result<BuildingData, Box<dyn std::error::Error>> {
         let now = Utc::now();
         
-        // Convert building.floors to FloorData if available (from IFC hierarchy)
+        // Convert building.floors to Floor (core type) if available (from IFC hierarchy)
         // Otherwise, create floors from spatial entities
-        let floors = if !building.floors.is_empty() {
+        let floors: Vec<crate::core::Floor> = if !building.floors.is_empty() {
             self.convert_floors_from_building(building)?
         } else {
             // Group spatial entities by type
@@ -345,14 +357,29 @@ impl BuildingYamlSerializer {
             global_bounding_box,
         };
 
-        let metadata = BuildingMetadata {
-            source_file: source_file.map(|s| s.to_string()),
-            parser_version: "ArxOS v2.0".to_string(),
-            total_entities: spatial_entities.len(),
-            spatial_entities: spatial_entities.len(),
-            coordinate_system: "World".to_string(),
-            units: "meters".to_string(),
-            tags: vec!["ifc".to_string(), "building".to_string()],
+        // Use building.metadata if available, otherwise create default
+        let metadata = if let Some(ref building_metadata) = building.metadata {
+            // Convert core BuildingMetadata to YAML BuildingMetadata
+            BuildingMetadata {
+                source_file: building_metadata.source_file.clone(),
+                parser_version: building_metadata.parser_version.clone(),
+                total_entities: building_metadata.total_entities,
+                spatial_entities: building_metadata.spatial_entities,
+                coordinate_system: building_metadata.coordinate_system.clone(),
+                units: building_metadata.units.clone(),
+                tags: building_metadata.tags.clone(),
+            }
+        } else {
+            // Create default metadata
+            BuildingMetadata {
+                source_file: source_file.map(|s| s.to_string()),
+                parser_version: "ArxOS v2.0".to_string(),
+                total_entities: spatial_entities.len(),
+                spatial_entities: spatial_entities.len(),
+                coordinate_system: "World".to_string(),
+                units: "meters".to_string(),
+                tags: vec!["ifc".to_string(), "building".to_string()],
+            }
         };
 
         let coordinate_systems = vec![CoordinateSystemInfo {
@@ -389,7 +416,7 @@ impl BuildingYamlSerializer {
     }
 
     /// Create floors from spatial entities
-    fn create_floors_from_entities(&self, rooms: &[SpatialEntity], equipment: &[SpatialEntity]) -> Vec<FloorData> {
+    fn create_floors_from_entities(&self, rooms: &[SpatialEntity], equipment: &[SpatialEntity]) -> Vec<crate::core::Floor> {
         // Group entities by floor level (simplified approach)
         let mut floor_groups: HashMap<i32, Vec<SpatialEntity>> = HashMap::new();
         
@@ -407,48 +434,41 @@ impl BuildingYamlSerializer {
         for (level, entities) in floor_groups {
             let (floor_rooms, floor_equipment) = self.group_spatial_entities(&entities);
             
-            let room_data: Vec<RoomData> = floor_rooms.into_iter().map(|entity| {
-                RoomData {
-                    id: entity.id.clone(),
-                    name: entity.name.clone(),
-                    room_type: entity.entity_type.clone(),
-                    area: Some(self.calculate_area(&entity.bounding_box)),
-                    volume: Some(self.calculate_volume(&entity.bounding_box)),
-                    position: entity.position,
-                    bounding_box: entity.bounding_box.clone(),
-                    equipment: vec![], // Will be populated later
-                    properties: HashMap::new(),
-                }
+            // Convert SpatialEntity to Room (core type)
+            let rooms: Vec<crate::core::Room> = floor_rooms.into_iter().map(|entity| {
+                self.spatial_entity_to_room(&entity)
             }).collect();
 
-            let equipment_data: Vec<EquipmentData> = floor_equipment.into_iter().map(|entity| {
-                EquipmentData {
-                    id: entity.id.clone(),
-                    name: entity.name.clone(),
-                    equipment_type: entity.entity_type.clone(),
-                    sensor_mappings: None,
-                    system_type: self.determine_system_type(&entity.entity_type),
-                    position: entity.position,
-                    bounding_box: entity.bounding_box.clone(),
-                    status: EquipmentStatus::Healthy,
-                    properties: HashMap::new(),
-                    universal_path: self.generate_universal_path(&entity),
-                    address: None, // Address can be generated later if needed
-                }
+            // Convert SpatialEntity to Equipment (core type)
+            let equipment: Vec<crate::core::Equipment> = floor_equipment.into_iter().map(|entity| {
+                self.spatial_entity_to_equipment(&entity, level)
             }).collect();
 
             let floor_bounding_box = self.calculate_floor_bounding_box(&entities);
 
-            floors.push(FloorData {
+            use crate::core::Floor;
+            floors.push(Floor {
                 id: format!("floor-{}", level),
                 name: format!("Floor {}", level),
                 level,
-                elevation: level as f64 * 3.0, // Assume 3m floor height
-                wings: Vec::new(), // Rooms will be organized into wings when converting from core model
-                rooms: room_data,
-                equipment: equipment_data,
+                elevation: Some(level as f64 * 3.0), // Assume 3m floor height
                 bounding_box: floor_bounding_box,
+                wings: Vec::new(), // Rooms will be organized into wings when converting from core model
+                equipment,
+                properties: HashMap::new(),
             });
+            
+            // Add rooms to a default wing
+            if !rooms.is_empty() {
+                use crate::core::Wing;
+                let mut default_wing = Wing::new("Default".to_string());
+                for room in rooms {
+                    default_wing.add_room(room);
+                }
+                if let Some(floor) = floors.last_mut() {
+                    floor.wings.push(default_wing);
+                }
+            }
         }
 
         floors.sort_by_key(|floor| floor.level);
@@ -503,141 +523,122 @@ impl BuildingYamlSerializer {
         self.calculate_global_bounding_box(entities)
     }
     
-    /// Convert Building.floors (from IFC hierarchy) to FloorData
-    fn convert_floors_from_building(&self, building: &Building) -> Result<Vec<FloorData>, Box<dyn std::error::Error>> {
+    /// Convert SpatialEntity to Room (core type)
+    fn spatial_entity_to_room(&self, entity: &SpatialEntity) -> crate::core::Room {
+        use crate::core::{Room, RoomType, Position, Dimensions, SpatialProperties, BoundingBox};
         
-        let mut floor_data = Vec::new();
+        let position = Position {
+            x: entity.position.x,
+            y: entity.position.y,
+            z: entity.position.z,
+            coordinate_system: entity.coordinate_system.as_ref()
+                .map(|cs| format!("{:?}", cs))
+                .unwrap_or_else(|| "building_local".to_string()),
+        };
         
-        for floor in &building.floors {
-            // Convert wings with their rooms and equipment
-            let mut wings: Vec<WingData> = Vec::new();
-            let mut all_rooms: Vec<RoomData> = Vec::new(); // For backward compatibility
+        let dimensions = Dimensions {
+            width: entity.bounding_box.max.x - entity.bounding_box.min.x,
+            height: entity.bounding_box.max.z - entity.bounding_box.min.z,
+            depth: entity.bounding_box.max.y - entity.bounding_box.min.y,
+        };
+        
+        let bounding_box = BoundingBox {
+            min: Position {
+                x: entity.bounding_box.min.x,
+                y: entity.bounding_box.min.y,
+                z: entity.bounding_box.min.z,
+                coordinate_system: position.coordinate_system.clone(),
+            },
+            max: Position {
+                x: entity.bounding_box.max.x,
+                y: entity.bounding_box.max.y,
+                z: entity.bounding_box.max.z,
+                coordinate_system: position.coordinate_system.clone(),
+            },
+        };
+        
+        let spatial_properties = SpatialProperties {
+            position,
+            dimensions,
+            bounding_box,
+            coordinate_system: "building_local".to_string(),
+        };
+        
+        Room {
+            id: entity.id.clone(),
+            name: entity.name.clone(),
+            room_type: RoomType::Other(entity.entity_type.clone()),
+            equipment: Vec::new(),
+            spatial_properties,
+            properties: std::collections::HashMap::new(),
+            created_at: None,
+            updated_at: None,
+        }
+    }
+    
+    /// Convert SpatialEntity to Equipment (core type)
+    fn spatial_entity_to_equipment(&self, entity: &SpatialEntity, floor_level: i32) -> crate::core::Equipment {
+        use crate::core::{Equipment, EquipmentType, Position};
+        
+        let equipment_type = match entity.entity_type.as_str() {
+            "IFCAIRTERMINAL" | "IFCFLOWTERMINAL" | "IFCAIRHANDLINGUNIT" => EquipmentType::HVAC,
+            "IFCLIGHTFIXTURE" | "IFCDISTRIBUTIONELEMENT" | "IFCSWITCHINGDEVICE" => EquipmentType::Electrical,
+            "IFCFIREALARM" | "IFCFIREDETECTOR" => EquipmentType::Safety,
+            "IFCPIPE" | "IFCPIPEFITTING" | "IFCTANK" => EquipmentType::Plumbing,
+            _ => EquipmentType::Other(entity.entity_type.clone()),
+        };
+        
+        let universal_path = self.generate_universal_path(entity);
+        
+        let mut equipment = Equipment::new(
+            entity.name.clone(),
+            universal_path,
+            equipment_type,
+        );
+        
+        equipment.id = entity.id.clone();
+        equipment.position = Position {
+            x: entity.position.x,
+            y: entity.position.y,
+            z: entity.position.z,
+            coordinate_system: entity.coordinate_system.as_ref()
+                .map(|cs| format!("{:?}", cs))
+                .unwrap_or_else(|| "building_local".to_string()),
+        };
+        
+        equipment
+    }
+    
+    /// Convert Building.floors (from IFC hierarchy) to Floor (core type)
+    fn convert_floors_from_building(&self, building: &Building) -> Result<Vec<crate::core::Floor>, Box<dyn std::error::Error>> {
+        
+        // Building.floors is already Vec<Floor>, so we can use it directly
+        // Just need to ensure elevation and bounding_box are set
+        let mut floors: Vec<crate::core::Floor> = building.floors.clone();
+        
+        for floor in &mut floors {
+            // Set elevation if not already set
+            if floor.elevation.is_none() {
+                floor.elevation = Some(floor.level as f64 * 3.0); // Estimate based on level
+            }
             
-            for wing in &floor.wings {
-                // Convert rooms in this wing
-                let mut wing_rooms: Vec<RoomData> = Vec::new();
-                for room in &wing.rooms {
-                    let room_data = RoomData {
-                        id: room.id.clone(),
-                        name: room.name.clone(),
-                        room_type: format!("{:?}", room.room_type),
-                        area: Some(room.spatial_properties.dimensions.width * room.spatial_properties.dimensions.depth),
-                        volume: Some(room.spatial_properties.dimensions.width * room.spatial_properties.dimensions.depth * room.spatial_properties.dimensions.height),
-                        position: Point3D::new(
-                            room.spatial_properties.position.x,
-                            room.spatial_properties.position.y,
-                            room.spatial_properties.position.z,
-                        ),
-                        bounding_box: BoundingBox3D::new(
-                            Point3D::new(
-                                room.spatial_properties.bounding_box.min.x,
-                                room.spatial_properties.bounding_box.min.y,
-                                room.spatial_properties.bounding_box.min.z,
-                            ),
-                            Point3D::new(
-                                room.spatial_properties.bounding_box.max.x,
-                                room.spatial_properties.bounding_box.max.y,
-                                room.spatial_properties.bounding_box.max.z,
-                            ),
-                        ),
-                        equipment: room.equipment.iter().map(|e| e.id.clone()).collect(),
-                        properties: room.properties.clone(),
-                    };
-                    wing_rooms.push(room_data.clone());
-                    all_rooms.push(room_data); // Also add to flat list for backward compatibility
+            // Calculate bounding box from rooms if not set
+            if floor.bounding_box.is_none() {
+                let mut bbox_points = Vec::new();
+                for wing in &floor.wings {
+                    for room in &wing.rooms {
+                        let bbox = &room.spatial_properties.bounding_box;
+                        bbox_points.push(crate::spatial::Point3D::new(bbox.min.x, bbox.min.y, bbox.min.z));
+                        bbox_points.push(crate::spatial::Point3D::new(bbox.max.x, bbox.max.y, bbox.max.z));
+                    }
                 }
-                
-                // Convert equipment in this wing
-                let mut wing_equipment: Vec<EquipmentData> = Vec::new();
-                for eq in &wing.equipment {
-                    let eq_data = EquipmentData {
-                        id: eq.id.clone(),
-                        name: eq.name.clone(),
-                        equipment_type: format!("{:?}", eq.equipment_type),
-                        system_type: self.determine_equipment_system_type(&eq.equipment_type),
-                        position: Point3D::new(eq.position.x, eq.position.y, eq.position.z),
-                        bounding_box: BoundingBox3D::new(
-                            Point3D::new(-0.5, -0.5, -0.5),
-                            Point3D::new(0.5, 0.5, 0.5),
-                        ),
-                        status: match eq.status {
-                            crate::core::EquipmentStatus::Active => EquipmentStatus::Healthy,
-                            crate::core::EquipmentStatus::Maintenance => EquipmentStatus::Warning,
-                            crate::core::EquipmentStatus::Inactive => EquipmentStatus::Critical,
-                            crate::core::EquipmentStatus::OutOfOrder => EquipmentStatus::Critical,
-                            crate::core::EquipmentStatus::Unknown => EquipmentStatus::Unknown,
-                        },
-                        properties: eq.properties.clone(),
-                        universal_path: eq.path.clone(),
-                        address: eq.address.clone(),
-                        sensor_mappings: None,
-                    };
-                    wing_equipment.push(eq_data);
+                if !bbox_points.is_empty() {
+                    floor.bounding_box = crate::spatial::BoundingBox3D::from_points(&bbox_points);
                 }
-                
-                wings.push(WingData {
-                    id: wing.id.clone(),
-                    name: wing.name.clone(),
-                    rooms: wing_rooms,
-                    equipment: wing_equipment,
-                    properties: wing.properties.clone(),
-                });
             }
-            
-            // Convert floor-level equipment
-            let mut equipment: Vec<EquipmentData> = Vec::new();
-            for eq in &floor.equipment {
-                let eq_data = EquipmentData {
-                    id: eq.id.clone(),
-                    name: eq.name.clone(),
-                    equipment_type: format!("{:?}", eq.equipment_type),
-                    system_type: self.determine_equipment_system_type(&eq.equipment_type),
-                    position: Point3D::new(eq.position.x, eq.position.y, eq.position.z),
-                    bounding_box: BoundingBox3D::new(
-                        Point3D::new(-0.5, -0.5, -0.5),
-                        Point3D::new(0.5, 0.5, 0.5),
-                    ),
-                    status: match eq.status {
-                        crate::core::EquipmentStatus::Active => EquipmentStatus::Healthy,
-                        crate::core::EquipmentStatus::Maintenance => EquipmentStatus::Warning,
-                        crate::core::EquipmentStatus::Inactive => EquipmentStatus::Critical,
-                        crate::core::EquipmentStatus::OutOfOrder => EquipmentStatus::Critical,
-                        crate::core::EquipmentStatus::Unknown => EquipmentStatus::Unknown,
-                    },
-                    properties: eq.properties.clone(),
-                    universal_path: eq.path.clone(),
-                    address: eq.address.clone(),
-                    sensor_mappings: None,
-                };
-                equipment.push(eq_data);
-            }
-            
-            // Calculate floor bounding box from rooms and equipment
-            let mut floor_bbox: Option<BoundingBox3D> = None;
-            for room in &all_rooms {
-                floor_bbox = if let Some(bbox) = floor_bbox {
-                    BoundingBox3D::from_points(&[
-                        bbox.min, bbox.max,
-                        room.bounding_box.min, room.bounding_box.max,
-                    ])
-                } else {
-                    Some(room.bounding_box.clone())
-                };
-            }
-            
-            floor_data.push(FloorData {
-                id: floor.id.clone(),
-                name: floor.name.clone(),
-                level: floor.level,
-                elevation: floor.level as f64 * 3.0, // Estimate based on level
-                wings,
-                rooms: all_rooms, // Legacy: kept for backward compatibility
-                equipment,
-                bounding_box: floor_bbox,
-            });
         }
         
-        Ok(floor_data)
+        Ok(floors)
     }
     
     /// Determine system type from EquipmentType

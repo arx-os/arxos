@@ -36,14 +36,14 @@ Successfully built the ArxOS Android application on macOS without Android Studio
 
 **To install on device:**
 ```bash
-cd /Users/joelpate/repos/arxos/android
+cd android
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ## Build Command
 
 ```bash
-cd /Users/joelpate/repos/arxos/android
+cd android
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17
 export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
 ./gradlew assembleDebug

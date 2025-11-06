@@ -1,8 +1,8 @@
 //! Search engine implementation
 
 use super::types::{SearchConfig, FilterConfig, SearchResult};
-use crate::core::Building;
-use crate::yaml::{BuildingData, RoomData, EquipmentData};
+use crate::core::{Building, Room, Equipment};
+use crate::yaml::BuildingData;
 use regex::Regex;
 
 /// Search engine for building data with advanced filtering and fuzzy matching capabilities.
@@ -14,9 +14,9 @@ pub struct SearchEngine {
     /// Building data to search through
     pub buildings: Vec<Building>,
     /// Equipment data for searching
-    pub equipment: Vec<EquipmentData>,
+    pub equipment: Vec<Equipment>,
     /// Room data for searching
-    pub rooms: Vec<RoomData>,
+    pub rooms: Vec<Room>,
 }
 
 impl SearchEngine {
@@ -27,10 +27,14 @@ impl SearchEngine {
         
         // Extract equipment and rooms from building data
         for floor in &building_data.floors {
-            for room in &floor.rooms {
-                rooms.push(room.clone());
+            // Extract rooms from wings (primary location)
+            for wing in &floor.wings {
+                rooms.extend(wing.rooms.iter().cloned());
             }
-            equipment.extend(floor.equipment.clone());
+            // Also extract from legacy rooms list if present
+            // Note: Floor core type doesn't have rooms field, but BuildingData may have it via FloorData
+            // For now, we'll only extract from wings
+            equipment.extend(floor.equipment.iter().cloned());
         }
         
         // Create a Building struct from BuildingInfo
@@ -41,6 +45,26 @@ impl SearchEngine {
             created_at: building_data.building.created_at,
             updated_at: building_data.building.updated_at,
             floors: Vec::new(), // We'll extract this from floors data
+            description: building_data.building.description.clone(),
+            version: building_data.building.version.clone(),
+            global_bounding_box: building_data.building.global_bounding_box.clone(),
+            coordinate_systems: building_data.coordinate_systems.iter().map(|cs| crate::core::CoordinateSystemInfo {
+                name: cs.name.clone(),
+                origin: cs.origin.clone(),
+                x_axis: cs.x_axis.clone(),
+                y_axis: cs.y_axis.clone(),
+                z_axis: cs.z_axis.clone(),
+                description: None,
+            }).collect(),
+            metadata: Some(crate::core::BuildingMetadata {
+                source_file: building_data.metadata.source_file.clone(),
+                parser_version: building_data.metadata.parser_version.clone(),
+                total_entities: building_data.metadata.total_entities,
+                spatial_entities: building_data.metadata.spatial_entities,
+                coordinate_system: building_data.metadata.coordinate_system.clone(),
+                units: building_data.metadata.units.clone(),
+                tags: building_data.metadata.tags.clone(),
+            }),
         };
         
         Self {
@@ -114,9 +138,9 @@ impl SearchEngine {
                         building: Some(self.buildings[0].name.clone()),
                         floor,
                         room,
-                        equipment_type: Some(equipment.equipment_type.clone()),
-                        status: Some(format!("{:?}", equipment.status)),
-                        description: Some(format!("{} equipment", equipment.system_type)),
+                        equipment_type: Some(format!("{:?}", equipment.equipment_type)),
+                        status: Some(format!("{:?}", equipment.health_status.as_ref().unwrap_or(&crate::core::EquipmentHealthStatus::Unknown))),
+                        description: Some(format!("{} equipment", equipment.system_type())),
                         match_score: self.calculate_match_score(&equipment.name, &config.query),
                     });
                 }
@@ -139,17 +163,18 @@ impl SearchEngine {
         
         for equipment in &self.equipment {
             if self.matches_filter(equipment, config) {
-                let (floor, room) = self.extract_location_from_path(&equipment.universal_path);
+                let path = self.get_equipment_path(equipment);
+                let (floor, room) = self.extract_location_from_path(&path);
                 results.push(SearchResult {
                     item_type: "equipment".to_string(),
                     name: equipment.name.clone(),
-                    path: equipment.universal_path.clone(),
+                    path: path.clone(),
                     building: Some(self.buildings[0].name.clone()),
                     floor,
                     room,
-                    equipment_type: Some(equipment.equipment_type.clone()),
-                    status: Some(format!("{:?}", equipment.status)),
-                    description: Some(format!("{} equipment", equipment.system_type)),
+                    equipment_type: Some(format!("{:?}", equipment.equipment_type)),
+                    status: Some(format!("{:?}", equipment.health_status.as_ref().unwrap_or(&crate::core::EquipmentHealthStatus::Unknown))),
+                    description: Some(format!("{} equipment", equipment.system_type())),
                     match_score: 1.0, // All filtered results have equal relevance
                 });
             }
@@ -185,7 +210,7 @@ impl SearchEngine {
     }
     
     /// Check if a room matches the search query
-    fn matches_room(&self, room: &RoomData, query: &str, regex: &Option<Regex>, case_sensitive: bool) -> bool {
+    fn matches_room(&self, room: &Room, query: &str, regex: &Option<Regex>, case_sensitive: bool) -> bool {
         if let Some(regex) = regex {
             // For regex, use the original text without case conversion
             regex.is_match(&room.name)
@@ -207,23 +232,25 @@ impl SearchEngine {
         }
     }
     
-    /// Get equipment path, preferring ArxAddress over universal_path
-    fn get_equipment_path(&self, equipment: &EquipmentData) -> String {
+    /// Get equipment path, preferring ArxAddress over path
+    fn get_equipment_path(&self, equipment: &Equipment) -> String {
         equipment.address.as_ref()
             .map(|addr| addr.path.clone())
             .filter(|p| !p.is_empty())
-            .unwrap_or_else(|| equipment.universal_path.clone())
+            .unwrap_or_else(|| equipment.path.clone())
     }
 
     /// Check if equipment matches the search query (enhanced multi-field search)
-    fn matches_equipment(&self, equipment: &EquipmentData, query: &str, regex: &Option<Regex>, case_sensitive: bool) -> bool {
+    fn matches_equipment(&self, equipment: &Equipment, query: &str, regex: &Option<Regex>, case_sensitive: bool) -> bool {
         let path = self.get_equipment_path(equipment);
+        let equipment_type_str = format!("{:?}", equipment.equipment_type);
+        let system_type_str = equipment.system_type();
         
         if let Some(regex) = regex {
             // For regex, search across multiple fields
             regex.is_match(&equipment.name) ||
-            regex.is_match(&equipment.equipment_type) ||
-            regex.is_match(&equipment.system_type) ||
+            regex.is_match(&equipment_type_str) ||
+            regex.is_match(&system_type_str) ||
             regex.is_match(&path)
         } else {
             // For regular search, search across multiple fields
@@ -240,11 +267,11 @@ impl SearchEngine {
             };
             
             let type_match = if case_sensitive {
-                equipment.equipment_type.contains(&search_query) ||
-                equipment.system_type.contains(&search_query)
+                equipment_type_str.contains(&search_query) ||
+                system_type_str.contains(&search_query)
             } else {
-                equipment.equipment_type.to_lowercase().contains(&search_query) ||
-                equipment.system_type.to_lowercase().contains(&search_query)
+                equipment_type_str.to_lowercase().contains(&search_query) ||
+                system_type_str.to_lowercase().contains(&search_query)
             };
             
             let path_match = if case_sensitive {
@@ -258,21 +285,25 @@ impl SearchEngine {
     }
     
     /// Check if equipment matches the filter criteria
-    fn matches_filter(&self, equipment: &EquipmentData, config: &FilterConfig) -> bool {
+    fn matches_filter(&self, equipment: &Equipment, config: &FilterConfig) -> bool {
         // Equipment type filter - check both equipment_type and system_type
         if let Some(ref equipment_type) = config.equipment_type {
             let search_type = equipment_type.to_lowercase();
-            let eq_type = equipment.equipment_type.to_lowercase();
-            let sys_type = equipment.system_type.to_lowercase();
+            let eq_type = format!("{:?}", equipment.equipment_type).to_lowercase();
+            let sys_type = equipment.system_type().to_lowercase();
             
             if !eq_type.contains(&search_type) && !sys_type.contains(&search_type) {
                 return false;
             }
         }
         
-        // Status filter
+        // Status filter - check health_status first, then fall back to status
         if let Some(ref status) = config.status {
-            let status_str = format!("{:?}", equipment.status).to_lowercase();
+            let status_str = if let Some(ref health) = equipment.health_status {
+                format!("{:?}", health).to_lowercase()
+            } else {
+                format!("{:?}", equipment.status).to_lowercase()
+            };
             if !status_str.contains(&status.to_lowercase()) {
                 return false;
             }
@@ -309,7 +340,11 @@ impl SearchEngine {
         
         // Critical only filter
         if config.critical_only {
-            let status_str = format!("{:?}", equipment.status).to_lowercase();
+            let status_str = if let Some(ref health) = equipment.health_status {
+                format!("{:?}", health).to_lowercase()
+            } else {
+                format!("{:?}", equipment.status).to_lowercase()
+            };
             if !status_str.contains("critical") {
                 return false;
             }
@@ -317,7 +352,11 @@ impl SearchEngine {
         
         // Healthy only filter
         if config.healthy_only {
-            let status_str = format!("{:?}", equipment.status).to_lowercase();
+            let status_str = if let Some(ref health) = equipment.health_status {
+                format!("{:?}", health).to_lowercase()
+            } else {
+                format!("{:?}", equipment.status).to_lowercase()
+            };
             if !status_str.contains("healthy") {
                 return false;
             }
@@ -325,7 +364,11 @@ impl SearchEngine {
         
         // Alerts only filter
         if config.alerts_only {
-            let status_str = format!("{:?}", equipment.status).to_lowercase();
+            let status_str = if let Some(ref health) = equipment.health_status {
+                format!("{:?}", health).to_lowercase()
+            } else {
+                format!("{:?}", equipment.status).to_lowercase()
+            };
             if status_str.contains("healthy") {
                 return false;
             }

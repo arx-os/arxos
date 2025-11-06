@@ -83,21 +83,50 @@ pub fn render_equipment_info<'a>(
                     ]));
                     lines.push(Line::from(vec![
                         Span::styled("Type: ", Style::default().fg(theme.muted)),
-                        Span::styled(equipment.equipment_type.clone(), Style::default().fg(theme.text)),
+                        Span::styled(format!("{:?}", equipment.equipment_type), Style::default().fg(theme.text)),
                     ]));
+                    // Use health_status if available, otherwise map from operational status
+                    let status_color = if let Some(ref health) = equipment.health_status {
+                        match health {
+                            crate::core::EquipmentHealthStatus::Healthy => StatusColor::Healthy,
+                            crate::core::EquipmentHealthStatus::Warning => StatusColor::Warning,
+                            crate::core::EquipmentHealthStatus::Critical => StatusColor::Critical,
+                            crate::core::EquipmentHealthStatus::Unknown => StatusColor::Unknown,
+                        }
+                    } else {
+                        // Map operational status to health status color
+                        match equipment.status {
+                            crate::core::EquipmentStatus::Active => StatusColor::Healthy,
+                            crate::core::EquipmentStatus::Maintenance => StatusColor::Warning,
+                            crate::core::EquipmentStatus::OutOfOrder => StatusColor::Critical,
+                            crate::core::EquipmentStatus::Inactive | crate::core::EquipmentStatus::Unknown => StatusColor::Unknown,
+                        }
+                    };
+                    let status_text = if let Some(ref health) = equipment.health_status {
+                        format!("{:?}", health)
+                    } else {
+                        format!("{:?}", equipment.status)
+                    };
                     lines.push(Line::from(vec![
                         Span::styled("Status: ", Style::default().fg(theme.muted)),
                         Span::styled(
-                            format!("{:?}", equipment.status),
-                            Style::default().fg(StatusColor::from(&equipment.status).color()),
+                            status_text,
+                            Style::default().fg(status_color.color()),
                         ),
                     ]));
                     // Room information is stored separately in floor data
-                    // Find room name by searching through floors
+                    // Find room name by searching through floors and wings
                     for floor in building_data.floors.iter() {
-                        if let Some(room) = floor.rooms.iter().find(|r| {
-                            r.equipment.contains(&equipment.id)
-                        }) {
+                        let mut found_room = None;
+                        for wing in &floor.wings {
+                            if let Some(room) = wing.rooms.iter().find(|r| {
+                                r.equipment.iter().any(|e| e.id == equipment.id)
+                            }) {
+                                found_room = Some(room);
+                                break;
+                            }
+                        }
+                        if let Some(room) = found_room {
                             lines.push(Line::from(vec![
                                 Span::styled("Room: ", Style::default().fg(theme.muted)),
                                 Span::styled(room.name.clone(), Style::default().fg(theme.text)),

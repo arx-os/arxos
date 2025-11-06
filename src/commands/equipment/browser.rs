@@ -26,7 +26,7 @@ struct EquipmentItem {
     equipment_type: String,
     room: String,
     floor: i32,
-    status: crate::yaml::EquipmentStatus,
+    status: String, // Status as string for display
     position: crate::spatial::Point3D,
 }
 
@@ -112,35 +112,63 @@ fn load_equipment_items(
     
     for floor in &building_data.floors {
         for equipment in &floor.equipment {
+            // Find room containing this equipment (rooms are now in wings, and equipment is Vec<Equipment>)
+            let room_name = floor.wings.iter()
+                .flat_map(|w| &w.rooms)
+                .find(|r| r.equipment.iter().any(|e| e.id == equipment.id))
+                .map(|r| r.name.clone())
+                .unwrap_or_else(|| "Unknown".to_string());
+            
             if let Some(ref room_filter) = room_filter {
-                let room_name = floor.rooms.iter()
-                    .find(|r| r.equipment.contains(&equipment.id))
-                    .map(|r| r.name.clone())
-                    .unwrap_or_else(|| "Unknown".to_string());
                 if !room_name.to_lowercase().contains(&room_filter.to_lowercase()) {
                     continue;
                 }
             }
             
             if let Some(ref type_filter) = equipment_type_filter {
-                if !equipment.equipment_type.to_lowercase().contains(&type_filter.to_lowercase()) {
+                let eq_type_str = format!("{:?}", equipment.equipment_type);
+                if !eq_type_str.to_lowercase().contains(&type_filter.to_lowercase()) {
                     continue;
                 }
             }
             
-            let room_name = floor.rooms.iter()
-                .find(|r| r.equipment.contains(&equipment.id))
-                .map(|r| r.name.clone())
-                .unwrap_or_else(|| "Unknown".to_string());
+            // Format equipment_type enum to string
+            let eq_type_str = format!("{:?}", equipment.equipment_type);
+            // Use health_status if available, otherwise use status
+            use crate::core::{EquipmentStatus, EquipmentHealthStatus};
+            let status_str = if let Some(health_status) = &equipment.health_status {
+                match health_status {
+                    EquipmentHealthStatus::Healthy => "Healthy".to_string(),
+                    EquipmentHealthStatus::Warning => "Warning".to_string(),
+                    EquipmentHealthStatus::Critical => "Critical".to_string(),
+                    EquipmentHealthStatus::Unknown => "Unknown".to_string(),
+                }
+            } else {
+                match equipment.status {
+                    EquipmentStatus::Active => "Active".to_string(),
+                    EquipmentStatus::Inactive => "Inactive".to_string(),
+                    EquipmentStatus::Maintenance => "Maintenance".to_string(),
+                    EquipmentStatus::OutOfOrder => "OutOfOrder".to_string(),
+                    EquipmentStatus::Unknown => "Unknown".to_string(),
+                }
+            };
+            
+            // Convert Position to Point3D for EquipmentItem
+            use crate::spatial::Point3D;
+            let position_3d = Point3D {
+                x: equipment.position.x,
+                y: equipment.position.y,
+                z: equipment.position.z,
+            };
             
             items.push(EquipmentItem {
                 id: equipment.id.clone(),
                 name: equipment.name.clone(),
-                equipment_type: equipment.equipment_type.clone(),
+                equipment_type: eq_type_str,
                 room: room_name,
                 floor: floor.level,
-                status: equipment.status.clone(),
-                position: equipment.position,
+                status: status_str,
+                position: position_3d,
             });
         }
     }
@@ -159,8 +187,8 @@ fn render_equipment_list<'a>(
         .enumerate()
         .map(|(display_idx, &item_idx)| {
             let item = &state.items[item_idx];
-            let status_color = StatusColor::from(&item.status).color();
-            let icon = StatusColor::from(&item.status).icon();
+            let status_color = StatusColor::from(item.status.as_str()).color();
+            let icon = StatusColor::from(item.status.as_str()).icon();
             let is_selected = display_idx == state.selected;
             
             let prefix = if is_selected { ">" } else { " " };

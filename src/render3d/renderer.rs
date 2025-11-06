@@ -209,7 +209,8 @@ impl Building3DRenderer {
             metadata: SceneMetadata {
                 total_floors: self.building_data.floors.len(),
                 total_rooms: self.building_data.floors.iter()
-                    .map(|f| f.rooms.len())
+                    .flat_map(|f| f.wings.iter())
+                    .map(|w| w.rooms.len())
                     .sum(),
                 total_equipment: self.building_data.floors.iter()
                     .map(|f| f.equipment.len())
@@ -257,7 +258,8 @@ impl Building3DRenderer {
             metadata: SceneMetadata {
                 total_floors: self.building_data.floors.len(),
                 total_rooms: self.building_data.floors.iter()
-                    .map(|f| f.rooms.len())
+                    .flat_map(|f| f.wings.iter())
+                    .map(|w| w.rooms.len())
                     .sum(),
                 total_equipment: enhanced_equipment.len(),
                 render_time_ms: start_time.elapsed().as_millis() as u64,
@@ -412,7 +414,8 @@ impl Building3DRenderer {
             metadata: SceneMetadata {
                 total_floors: self.building_data.floors.len(),
                 total_rooms: self.building_data.floors.iter()
-                    .map(|f| f.rooms.len())
+                    .flat_map(|f| f.wings.iter())
+                    .map(|w| w.rooms.len())
                     .sum(),
                 total_equipment: self.building_data.floors.iter()
                     .map(|f| f.equipment.len())
@@ -467,12 +470,18 @@ impl Building3DRenderer {
                 id: floor.id.clone(),
                 name: floor.name.clone(),
                 level: floor.level,
-                elevation: floor.elevation,
-                bounding_box: floor.bounding_box.clone().unwrap_or(BoundingBox3D {
-                    min: Point3D { x: 0.0, y: 0.0, z: floor.elevation },
-                    max: Point3D { x: 100.0, y: 100.0, z: floor.elevation + 3.0 },
+                elevation: floor.elevation.unwrap_or(floor.level as f64 * 3.0),
+                bounding_box: floor.bounding_box.clone().unwrap_or_else(|| {
+                    let elev = floor.elevation.unwrap_or(floor.level as f64 * 3.0);
+                    BoundingBox3D {
+                        min: Point3D { x: 0.0, y: 0.0, z: elev },
+                        max: Point3D { x: 100.0, y: 100.0, z: elev + 3.0 },
+                    }
                 }),
-                rooms: floor.rooms.iter().map(|r| r.id.clone()).collect(),
+                rooms: floor.wings.iter()
+                    .flat_map(|w| w.rooms.iter())
+                    .map(|r| r.id.clone())
+                    .collect(),
                 equipment: floor.equipment.iter().map(|e| e.id.clone()).collect(),
             };
             floors_3d.push(floor_3d);
@@ -490,10 +499,25 @@ impl Building3DRenderer {
                 let equipment_3d_item = Equipment3D {
                     id: equipment.id.clone(),
                     name: equipment.name.clone(),
-                    equipment_type: equipment.equipment_type.clone(),
+                    equipment_type: format!("{:?}", equipment.equipment_type),
                     status: format!("{:?}", equipment.status),
-                    position: equipment.position,
-                    bounding_box: equipment.bounding_box.clone(),
+                    position: crate::spatial::Point3D {
+                        x: equipment.position.x,
+                        y: equipment.position.y,
+                        z: equipment.position.z,
+                    },
+                    bounding_box: crate::spatial::BoundingBox3D {
+                        min: crate::spatial::Point3D {
+                            x: equipment.position.x - 0.5,
+                            y: equipment.position.y - 0.5,
+                            z: equipment.position.z - 0.5,
+                        },
+                        max: crate::spatial::Point3D {
+                            x: equipment.position.x + 0.5,
+                            y: equipment.position.y + 0.5,
+                            z: equipment.position.z + 0.5,
+                        },
+                    },
                     floor_level: floor.level,
                     room_id: None, // EquipmentData doesn't have room_id, we'll need to find it
                     connections: Vec::new(), // Equipment connections are populated when equipment data is available
@@ -512,17 +536,34 @@ impl Building3DRenderer {
         let mut rooms_3d = Vec::new();
         
         for floor in &self.building_data.floors {
-            for room in &floor.rooms {
+            for wing in &floor.wings {
+                for room in &wing.rooms {
                 let room_3d = Room3D {
                     id: room.id.clone(),
                     name: room.name.clone(),
-                    room_type: room.room_type.clone(),
-                    position: room.position,
-                    bounding_box: room.bounding_box.clone(),
+                    room_type: format!("{:?}", room.room_type),
+                    position: crate::spatial::Point3D {
+                        x: room.spatial_properties.position.x,
+                        y: room.spatial_properties.position.y,
+                        z: room.spatial_properties.position.z,
+                    },
+                    bounding_box: crate::spatial::BoundingBox3D {
+                        min: crate::spatial::Point3D {
+                            x: room.spatial_properties.bounding_box.min.x,
+                            y: room.spatial_properties.bounding_box.min.y,
+                            z: room.spatial_properties.bounding_box.min.z,
+                        },
+                        max: crate::spatial::Point3D {
+                            x: room.spatial_properties.bounding_box.max.x,
+                            y: room.spatial_properties.bounding_box.max.y,
+                            z: room.spatial_properties.bounding_box.max.z,
+                        },
+                    },
                     floor_level: floor.level,
                     equipment: Vec::new(), // Equipment will be found when equipment data is available
                 };
                 rooms_3d.push(room_3d);
+                }
             }
         }
         

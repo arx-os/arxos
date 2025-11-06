@@ -3,7 +3,8 @@
 //! Generates HTML documentation from building data, similar to rustdoc for code.
 //! Produces self-contained HTML files that can be shared and viewed offline.
 
-use crate::yaml::{BuildingData, EquipmentStatus, EquipmentData};
+use crate::yaml::BuildingData;
+use crate::core::Equipment;
 use crate::utils::loading::load_building_data;
 use std::path::Path;
 use std::fs;
@@ -49,9 +50,14 @@ pub fn generate_building_docs(
 
 /// Generate HTML content from building data
 fn generate_html(data: &BuildingData) -> Result<String, Box<dyn std::error::Error>> {
-    let room_count: usize = data.floors.iter().map(|f| f.rooms.len()).sum();
+    // Rooms are now in wings
+    let room_count: usize = data.floors.iter()
+        .flat_map(|f| &f.wings)
+        .map(|w| w.rooms.len())
+        .sum();
     let room_equipment_count: usize = data.floors.iter()
-        .flat_map(|f| &f.rooms)
+        .flat_map(|f| &f.wings)
+        .flat_map(|w| &w.rooms)
         .map(|r| r.equipment.len())
         .sum();
     let floor_equipment_count: usize = data.floors.iter()
@@ -142,8 +148,12 @@ fn generate_floors_section(data: &BuildingData) -> String {
     
     data.floors.iter()
         .map(|floor| {
-            let room_count = floor.rooms.len();
-            let equipment_count = floor.equipment.len() + floor.rooms.iter()
+            // Rooms are now in wings
+            let room_count: usize = floor.wings.iter()
+                .map(|w| w.rooms.len())
+                .sum();
+            let equipment_count = floor.equipment.len() + floor.wings.iter()
+                .flat_map(|w| &w.rooms)
                 .map(|r| r.equipment.len())
                 .sum::<usize>();
             
@@ -158,7 +168,7 @@ fn generate_floors_section(data: &BuildingData) -> String {
                 </div>"#,
                 level = floor.level,
                 name = html_escape(&floor.name),
-                elevation = floor.elevation,
+                elevation = floor.elevation.unwrap_or(floor.level as f64 * 3.0),
                 rooms = room_count,
                 equipment = equipment_count,
             )
@@ -168,9 +178,11 @@ fn generate_floors_section(data: &BuildingData) -> String {
 }
 
 fn generate_rooms_section(data: &BuildingData) -> String {
+    // Rooms are now in wings
     let all_rooms: Vec<_> = data.floors.iter()
         .flat_map(|floor| {
-            floor.rooms.iter().map(move |room| (floor.level, room))
+            floor.wings.iter()
+                .flat_map(|wing| wing.rooms.iter().map(move |room| (floor.level, room)))
         })
         .collect();
     
@@ -180,9 +192,15 @@ fn generate_rooms_section(data: &BuildingData) -> String {
     
     all_rooms.iter()
         .map(|(floor_level, room)| {
-            let area_str = room.area.map(|a| format!("{:.2}m²", a)).unwrap_or_else(|| "N/A".to_string());
-            let volume_str = room.volume.map(|v| format!("{:.2}m³", v)).unwrap_or_else(|| "N/A".to_string());
-            let position_str = format!("({:.2}, {:.2}, {:.2})", room.position.x, room.position.y, room.position.z);
+            // Calculate area and volume from dimensions
+            let area = room.spatial_properties.dimensions.width * room.spatial_properties.dimensions.depth;
+            let volume = area * room.spatial_properties.dimensions.height;
+            let area_str = format!("{:.2}m²", area);
+            let volume_str = format!("{:.2}m³", volume);
+            let position_str = format!("({:.2}, {:.2}, {:.2})", 
+                room.spatial_properties.position.x, 
+                room.spatial_properties.position.y, 
+                room.spatial_properties.position.z);
             
             format!(
                 r#"<div class="room-item">
@@ -197,7 +215,7 @@ fn generate_rooms_section(data: &BuildingData) -> String {
                 </div>"#,
                 name = html_escape(&room.name),
                 floor = floor_level,
-                type = html_escape(&room.room_type),
+                type = html_escape(&format!("{:?}", room.room_type)),
                 area = area_str,
                 volume = volume_str,
                 position = position_str,
@@ -209,16 +227,18 @@ fn generate_rooms_section(data: &BuildingData) -> String {
 }
 
 fn generate_equipment_section(data: &BuildingData) -> String {
-    let mut all_equipment: Vec<(i32, Option<String>, &EquipmentData)> = Vec::new();
+    let mut all_equipment: Vec<(i32, Option<String>, &Equipment)> = Vec::new();
     
     for floor in &data.floors {
         for eq in &floor.equipment {
             all_equipment.push((floor.level, None, eq));
         }
         
-        for room in &floor.rooms {
-            for eq_id in &room.equipment {
-                if let Some(eq) = floor.equipment.iter().find(|e| e.id == *eq_id) {
+        // Rooms are now in wings
+        for wing in &floor.wings {
+            for room in &wing.rooms {
+                // Room.equipment is now Vec<Equipment>, not Vec<String>
+                for eq in &room.equipment {
                     all_equipment.push((floor.level, Some(room.name.clone()), eq));
                 }
             }
@@ -236,18 +256,25 @@ fn generate_equipment_section(data: &BuildingData) -> String {
             } else {
                 format!("Floor {}", floor_level)
             };
+            use crate::core::{EquipmentStatus, EquipmentHealthStatus};
             let position_str = format!("({:.2}, {:.2}, {:.2})", eq.position.x, eq.position.y, eq.position.z);
-            let status_class = match eq.status {
-                EquipmentStatus::Healthy => "status-healthy",
-                EquipmentStatus::Warning => "status-warning",
-                EquipmentStatus::Critical => "status-critical",
-                EquipmentStatus::Unknown => "status-unknown",
-            };
-            let status_text = match eq.status {
-                EquipmentStatus::Healthy => "Healthy",
-                EquipmentStatus::Warning => "Warning",
-                EquipmentStatus::Critical => "Critical",
-                EquipmentStatus::Unknown => "Unknown",
+            
+            // Use health_status if available, otherwise fall back to status
+            let (status_class, status_text) = if let Some(health_status) = &eq.health_status {
+                match health_status {
+                    EquipmentHealthStatus::Healthy => ("status-healthy", "Healthy"),
+                    EquipmentHealthStatus::Warning => ("status-warning", "Warning"),
+                    EquipmentHealthStatus::Critical => ("status-critical", "Critical"),
+                    EquipmentHealthStatus::Unknown => ("status-unknown", "Unknown"),
+                }
+            } else {
+                match eq.status {
+                    EquipmentStatus::Active => ("status-healthy", "Active"),
+                    EquipmentStatus::Inactive => ("status-unknown", "Inactive"),
+                    EquipmentStatus::Maintenance => ("status-warning", "Maintenance"),
+                    EquipmentStatus::OutOfOrder => ("status-critical", "Out of Order"),
+                    EquipmentStatus::Unknown => ("status-unknown", "Unknown"),
+                }
             };
             
             format!(
@@ -263,12 +290,12 @@ fn generate_equipment_section(data: &BuildingData) -> String {
                     </div>
                 </div>"#,
                 name = html_escape(&eq.name),
-                type = html_escape(&eq.equipment_type),
-                system = html_escape(&eq.system_type),
+                type = html_escape(&format!("{:?}", eq.equipment_type)),
+                system = html_escape(&eq.system_type()),
                 status = status_text,
                 location = location,
                 position = position_str,
-                path = html_escape(&eq.universal_path),
+                path = html_escape(&eq.path),
                 status_class = status_class,
             )
         })
@@ -285,32 +312,48 @@ fn generate_ascii_visualization(data: &BuildingData) -> String {
     
     for floor in &data.floors {
         output.push_str(&format!("Floor {}: {}\n", floor.level, floor.name));
-        output.push_str(&format!("  Elevation: {:.2}m\n", floor.elevation));
+        output.push_str(&format!("  Elevation: {:.2}m\n", floor.elevation.unwrap_or(floor.level as f64 * 3.0)));
         
-        if !floor.rooms.is_empty() {
+        // Rooms are now in wings
+        let has_rooms = floor.wings.iter().any(|w| !w.rooms.is_empty());
+        if has_rooms {
             output.push_str("  Rooms:\n");
-            for room in &floor.rooms {
-                output.push_str(&format!("    - {} ({})\n", room.name, room.room_type));
-        if !room.equipment.is_empty() {
-            for eq_id in &room.equipment {
-                output.push_str(&format!("      Equipment ID: {}\n", eq_id));
-            }
-        }
+            for wing in &floor.wings {
+                for room in &wing.rooms {
+                    output.push_str(&format!("    - {} ({:?})\n", room.name, room.room_type));
+                    if !room.equipment.is_empty() {
+                        for eq in &room.equipment {
+                            output.push_str(&format!("      Equipment: {} ({:?})\n", eq.name, eq.equipment_type));
+                        }
+                    }
+                }
             }
         }
         
         if !floor.equipment.is_empty() {
             output.push_str("  Floor Equipment:\n");
+            use crate::core::{EquipmentStatus, EquipmentHealthStatus};
             for eq in &floor.equipment {
-                output.push_str(&format!("    - {} ({}) - {}\n", 
-                    eq.name, 
-                    eq.equipment_type,
+                let status_str = if let Some(health_status) = &eq.health_status {
+                    match health_status {
+                        EquipmentHealthStatus::Healthy => "Healthy",
+                        EquipmentHealthStatus::Warning => "Warning",
+                        EquipmentHealthStatus::Critical => "Critical",
+                        EquipmentHealthStatus::Unknown => "Unknown",
+                    }
+                } else {
                     match eq.status {
-                        EquipmentStatus::Healthy => "Healthy",
-                        EquipmentStatus::Warning => "Warning",
-                        EquipmentStatus::Critical => "Critical",
+                        EquipmentStatus::Active => "Active",
+                        EquipmentStatus::Inactive => "Inactive",
+                        EquipmentStatus::Maintenance => "Maintenance",
+                        EquipmentStatus::OutOfOrder => "Out of Order",
                         EquipmentStatus::Unknown => "Unknown",
                     }
+                };
+                output.push_str(&format!("    - {} ({:?}) - {}\n", 
+                    eq.name, 
+                    eq.equipment_type,
+                    status_str
                 ));
             }
         }

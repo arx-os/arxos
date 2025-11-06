@@ -18,7 +18,8 @@
 use clap::Parser;
 use std::path::{Path, PathBuf};
 use serde_json::Value;
-use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, RoomData};
+use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+use arxos::core::{Floor, Wing, Room, RoomType, Position, Dimensions, SpatialProperties, BoundingBox};
 use arxos::spatial::{Point3D, BoundingBox3D};
 use arxos::yaml::BuildingYamlSerializer;
 use chrono::Utc;
@@ -398,29 +399,64 @@ fn generate_building_data(
     let center_z = (bounding_box.min.z + bounding_box.max.z) / 2.0;
     let floor_elevation = bounding_box.min.y;
     
-    // Create room data
-    let room = RoomData {
-        id: "room-main".to_string(),
-        name: room_name.to_string(),
-        room_type: "Residential".to_string(),
-        area: Some(width * depth),
-        volume: Some(width * depth * height),
-        position: Point3D::new(center_x, floor_elevation, center_z),
-        bounding_box: bounding_box.clone(),
-        equipment: vec![],
-        properties: room_properties,
+    // Create room using core types
+    let position = Position {
+        x: center_x,
+        y: floor_elevation,
+        z: center_z,
+        coordinate_system: "building_local".to_string(),
+    };
+    let dimensions = Dimensions {
+        width,
+        height,
+        depth,
+    };
+    let room_bounding_box = BoundingBox {
+        min: Position {
+            x: bounding_box.min.x,
+            y: bounding_box.min.y,
+            z: bounding_box.min.z,
+            coordinate_system: "building_local".to_string(),
+        },
+        max: Position {
+            x: bounding_box.max.x,
+            y: bounding_box.max.y,
+            z: bounding_box.max.z,
+            coordinate_system: "building_local".to_string(),
+        },
+    };
+    let spatial_properties = SpatialProperties {
+        position,
+        dimensions,
+        bounding_box: room_bounding_box,
+        coordinate_system: "building_local".to_string(),
     };
     
-    // Create floor data
-    let floor = FloorData {
+    let room = Room {
+        id: "room-main".to_string(),
+        name: room_name.to_string(),
+        room_type: RoomType::Other("Residential".to_string()),
+        equipment: vec![],
+        spatial_properties,
+        properties: room_properties,
+        created_at: None,
+        updated_at: None,
+    };
+    
+    // Create wing with room
+    let mut wing = Wing::new("Default".to_string());
+    wing.rooms.push(room);
+    
+    // Create floor using core types
+    let floor = Floor {
         id: "floor-ground".to_string(),
         name: "Ground Floor".to_string(),
         level: 0,
-        elevation: floor_elevation,
-        wings: vec![],
-        rooms: vec![room],
-        equipment: vec![],
+        elevation: Some(floor_elevation),
         bounding_box: Some(bounding_box.clone()),
+        wings: vec![wing],
+        equipment: vec![],
+        properties: HashMap::new(),
     };
     
     // Create building info

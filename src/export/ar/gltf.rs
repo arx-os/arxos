@@ -113,7 +113,7 @@ impl GLTFExporter {
                 rotation: None,
                 scale: None,
                 skin: None,
-                translation: Some([0.0, floor.elevation as f32, 0.0]),
+                translation: Some([0.0, floor.elevation.unwrap_or(floor.level as f64 * 3.0) as f32, 0.0]),
                 weights: None,
             };
             nodes.push(floor_node);
@@ -174,11 +174,12 @@ impl GLTFExporter {
         use std::collections::HashMap;
         let mut material_map = HashMap::new();
         
-        // Collect unique equipment types
+        // Collect unique equipment types (as strings for HashSet)
         let mut equipment_types = std::collections::HashSet::new();
         for floor in &self.building_data.floors {
             for equipment in &floor.equipment {
-                equipment_types.insert(equipment.equipment_type.clone());
+                let eq_type_str = format!("{:?}", equipment.equipment_type).to_lowercase();
+                equipment_types.insert(eq_type_str);
             }
         }
         
@@ -257,14 +258,28 @@ impl GLTFExporter {
     /// Create mesh from equipment bounding box
     fn create_equipment_mesh(
         &self,
-        equipment: &crate::yaml::EquipmentData,
+        equipment: &crate::core::Equipment,
         material_map: &std::collections::HashMap<String, usize>,
         buffer_offset: u32,
         meshes: &mut Vec<Mesh>,
         accessors: &mut Vec<Accessor>,
         buffer_views: &mut Vec<BufferView>,
     ) -> Result<(usize, usize, usize, Vec<u8>), Box<dyn std::error::Error>> {
-        let bbox = &equipment.bounding_box;
+        // Equipment doesn't have a direct bounding_box field, use position and estimate dimensions
+        // For now, create a default bounding box based on position
+        use crate::spatial::{Point3D, BoundingBox3D};
+        let bbox = BoundingBox3D {
+            min: Point3D {
+                x: equipment.position.x - 0.5,
+                y: equipment.position.y - 0.5,
+                z: equipment.position.z - 0.5,
+            },
+            max: Point3D {
+                x: equipment.position.x + 0.5,
+                y: equipment.position.y + 0.5,
+                z: equipment.position.z + 0.5,
+            },
+        };
         
         // Calculate dimensions
         let width = (bbox.max.x - bbox.min.x) as f32;
@@ -377,7 +392,8 @@ impl GLTFExporter {
         });
         
         // Get material index
-        let material_index = material_map.get(&equipment.equipment_type)
+        let eq_type_str = format!("{:?}", equipment.equipment_type).to_lowercase();
+        let material_index = material_map.get(&eq_type_str)
             .copied()
             .unwrap_or(0);
         
@@ -415,7 +431,7 @@ impl GLTFExporter {
     /// Create extras metadata for equipment node
     /// Note: gltf-json doesn't support extras in the current version, so this is kept for future use
     #[allow(dead_code)]
-    fn create_equipment_extras(&self, _equipment: &crate::yaml::EquipmentData) -> Result<(), Box<dyn std::error::Error>> {
+    fn create_equipment_extras(&self, _equipment: &crate::core::Equipment) -> Result<(), Box<dyn std::error::Error>> {
         // Extras are not supported in gltf-json crate's current API
         // Equipment metadata can be stored in node names or separate metadata files
         Ok(())

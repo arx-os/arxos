@@ -1,5 +1,6 @@
 // Terminal rendering for ArxOS
-use crate::yaml::{BuildingData, FloorData, RoomData, EquipmentData, EquipmentStatus};
+use crate::yaml::BuildingData;
+use crate::core::{Floor, Room, Equipment};
 
 pub struct BuildingRenderer {
     building_data: BuildingData,
@@ -10,7 +11,7 @@ impl BuildingRenderer {
         Self { building_data }
     }
     
-    pub fn floors(&self) -> &Vec<FloorData> {
+    pub fn floors(&self) -> &Vec<Floor> {
         &self.building_data.floors
     }
     
@@ -35,8 +36,13 @@ impl BuildingRenderer {
         Ok(())
     }
     
-    fn render_floor_plan(&self, floor_data: &FloorData) -> Result<(), Box<dyn std::error::Error>> {
-        if floor_data.rooms.is_empty() && floor_data.equipment.is_empty() {
+    fn render_floor_plan(&self, floor: &Floor) -> Result<(), Box<dyn std::error::Error>> {
+        // Collect all rooms from wings
+        let all_rooms: Vec<&Room> = floor.wings.iter()
+            .flat_map(|wing| wing.rooms.iter())
+            .collect();
+        
+        if all_rooms.is_empty() && floor.equipment.is_empty() {
             println!("┌─────────────────────────────────────────────────────────────┐");
             println!("│                    No data available                        │");
             println!("└─────────────────────────────────────────────────────────────┘");
@@ -44,7 +50,7 @@ impl BuildingRenderer {
         }
         
         // Calculate floor bounds (using X-Y plane for top-down view - polygon data uses X-Y)
-        let bounds = self.calculate_floor_bounds(floor_data);
+        let bounds = self.calculate_floor_bounds(floor);
         let (min_x, min_y, max_x, max_y) = bounds;
         
         // Calculate actual dimensions
@@ -88,13 +94,13 @@ impl BuildingRenderer {
         let mut grid = vec![vec![' '; width]; height];
         
         // Draw rooms (polygon outline IS the wall structure)
-        for room in &floor_data.rooms {
+        for room in &all_rooms {
             self.draw_room(&mut grid, room, bounds, 1.0)?;
         }
         
         // Draw interior walls ONLY if they're in polygon coordinate space
         // (Skip world-space walls that don't align with polygon)
-        for room in &floor_data.rooms {
+        for room in &all_rooms {
             if let Some(walls_str) = room.properties.get("walls_data") {
                 if !walls_str.is_empty() {
                     // Only draw walls that are clearly in the polygon's coordinate space
@@ -105,7 +111,7 @@ impl BuildingRenderer {
         }
         
         // Draw equipment
-        for equipment in &floor_data.equipment {
+        for equipment in &floor.equipment {
             self.draw_equipment(&mut grid, equipment, bounds, 1.0)?;
         }
         
@@ -119,7 +125,7 @@ impl BuildingRenderer {
         Ok(())
     }
     
-    fn calculate_floor_bounds(&self, floor_data: &FloorData) -> (f64, f64, f64, f64) {
+    fn calculate_floor_bounds(&self, floor: &Floor) -> (f64, f64, f64, f64) {
         // Returns (min_x, min_y, max_x, max_y) for top-down 2D floor plan view (X-Y plane)
         // Use ONLY polygon bounds - it's the authoritative floor plan shape
         let mut min_x = f64::INFINITY;
@@ -128,17 +134,22 @@ impl BuildingRenderer {
         let mut max_y = f64::NEG_INFINITY;
         let mut has_polygon = false;
         
+        // Collect all rooms from wings
+        let all_rooms: Vec<&Room> = floor.wings.iter()
+            .flat_map(|wing| wing.rooms.iter())
+            .collect();
+        
         // Check polygon data first - this defines the floor plan coordinate space
         // Note: IFC polygon coordinates are in LOCAL space, AR scans use WORLD space
-        for room in &floor_data.rooms {
+        for room in &all_rooms {
             if let Some(polygon_str) = room.properties.get("floor_polygon") {
                 if !polygon_str.is_empty() {
                     has_polygon = true;
                     // Determine coordinate space
                     let is_world_space = room.properties.get("scan_source").is_some() || 
                                          room.properties.get("scan_mode").is_some();
-                    let room_x = room.position.x;
-                    let room_y = room.position.y;
+                    let room_x = room.spatial_properties.position.x;
+                    let room_y = room.spatial_properties.position.y;
                     for point_str in polygon_str.split(';') {
                         let parts: Vec<&str> = point_str.split(',').collect();
                         if parts.len() >= 2 {
@@ -159,17 +170,18 @@ impl BuildingRenderer {
         
         // Only fall back to bounding box if no polygon
         if !has_polygon {
-            for room in &floor_data.rooms {
-                min_x = min_x.min(room.bounding_box.min.x);
-                min_y = min_y.min(room.bounding_box.min.y);
-                max_x = max_x.max(room.bounding_box.max.x);
-                max_y = max_y.max(room.bounding_box.max.y);
+            for room in &all_rooms {
+                let bbox = &room.spatial_properties.bounding_box;
+                min_x = min_x.min(bbox.min.x);
+                min_y = min_y.min(bbox.min.y);
+                max_x = max_x.max(bbox.max.x);
+                max_y = max_y.max(bbox.max.y);
             }
         }
         
         // If no rooms, use equipment positions to calculate bounds
         if min_x == f64::INFINITY {
-            for equipment in &floor_data.equipment {
+            for equipment in &floor.equipment {
                 let eq_x = equipment.position.x;
                 let eq_y = equipment.position.y;
                 min_x = min_x.min(eq_x);
@@ -188,7 +200,7 @@ impl BuildingRenderer {
         (min_x - padding, min_y - padding, max_x + padding, max_y + padding)
     }
     
-    fn draw_room(&self, grid: &mut Vec<Vec<char>>, room: &RoomData, bounds: (f64, f64, f64, f64), _scale: f64) -> Result<(), Box<dyn std::error::Error>> {
+    fn draw_room(&self, grid: &mut Vec<Vec<char>>, room: &Room, bounds: (f64, f64, f64, f64), _scale: f64) -> Result<(), Box<dyn std::error::Error>> {
         let (min_x, min_y, max_x, max_y) = bounds;
         let grid_width = grid[0].len();
         let grid_height = grid.len();
@@ -201,8 +213,8 @@ impl BuildingRenderer {
                 let is_world_space = room.properties.get("scan_source").is_some() || 
                                      room.properties.get("scan_mode").is_some();
                 
-                let room_x = room.position.x;
-                let room_y = room.position.y;
+                let room_x = room.spatial_properties.position.x;
+                let room_y = room.spatial_properties.position.y;
                 let polygon_points: Vec<(f64, f64)> = polygon_str
                     .split(';')
                     .filter_map(|s| {
@@ -235,10 +247,11 @@ impl BuildingRenderer {
         }
         
         // Fallback to bounding box rectangle (X-Y plane)
-        let room_min_x = room.bounding_box.min.x;
-        let room_min_y = room.bounding_box.min.y;
-        let room_max_x = room.bounding_box.max.x;
-        let room_max_y = room.bounding_box.max.y;
+        let bbox = &room.spatial_properties.bounding_box;
+        let room_min_x = bbox.min.x;
+        let room_min_y = bbox.min.y;
+        let room_max_x = bbox.max.x;
+        let room_max_y = bbox.max.y;
         
         let start_x = (((room_min_x - min_x) / (max_x - min_x) * grid_width as f64) as usize).min(grid_width.saturating_sub(1));
         let end_x = (((room_max_x - min_x) / (max_x - min_x) * grid_width as f64) as usize).min(grid_width.saturating_sub(1));
@@ -493,7 +506,7 @@ impl BuildingRenderer {
         Ok(())
     }
     
-    fn draw_equipment(&self, grid: &mut Vec<Vec<char>>, equipment: &EquipmentData, bounds: (f64, f64, f64, f64), _scale: f64) -> Result<(), Box<dyn std::error::Error>> {
+    fn draw_equipment(&self, grid: &mut Vec<Vec<char>>, equipment: &Equipment, bounds: (f64, f64, f64, f64), _scale: f64) -> Result<(), Box<dyn std::error::Error>> {
         let (min_x, min_y, max_x, max_y) = bounds;
         let width = grid[0].len();
         let height = grid.len();
@@ -513,8 +526,19 @@ impl BuildingRenderer {
         Ok(())
     }
     
-    fn get_equipment_symbol(&self, equipment: &EquipmentData) -> char {
-        match equipment.system_type.as_str() {
+    fn get_equipment_symbol(&self, equipment: &Equipment) -> char {
+        // Get system type from equipment type
+        let system_type = match equipment.equipment_type {
+            crate::core::EquipmentType::HVAC => "HVAC",
+            crate::core::EquipmentType::Electrical => "ELECTRICAL",
+            crate::core::EquipmentType::Plumbing => "PLUMBING",
+            crate::core::EquipmentType::Safety => "SAFETY",
+            crate::core::EquipmentType::Network => "NETWORK",
+            crate::core::EquipmentType::AV => "AV",
+            crate::core::EquipmentType::Furniture => "FURNITURE",
+            crate::core::EquipmentType::Other(_) => "OTHER",
+        };
+        match system_type {
             "HVAC" => 'H',
             "ELECTRICAL" => 'E',
             "PLUMBING" => 'P',
@@ -526,17 +550,26 @@ impl BuildingRenderer {
         }
     }
     
-    fn render_equipment_summary(&self, floor_data: &FloorData) -> Result<(), Box<dyn std::error::Error>> {
+    fn render_equipment_summary(&self, floor: &Floor) -> Result<(), Box<dyn std::error::Error>> {
         let mut healthy = 0;
         let mut warnings = 0;
         let mut critical = 0;
         
-        for equipment in &floor_data.equipment {
-            match equipment.status {
-                EquipmentStatus::Healthy => healthy += 1,
-                EquipmentStatus::Warning => warnings += 1,
-                EquipmentStatus::Critical => critical += 1,
-                EquipmentStatus::Unknown => warnings += 1,
+        for equipment in &floor.equipment {
+            // Map EquipmentStatus to health status
+            let health_status = equipment.health_status
+                .or_else(|| match equipment.status {
+                    crate::core::EquipmentStatus::Active => Some(crate::core::EquipmentHealthStatus::Healthy),
+                    crate::core::EquipmentStatus::Maintenance => Some(crate::core::EquipmentHealthStatus::Warning),
+                    crate::core::EquipmentStatus::Inactive | crate::core::EquipmentStatus::OutOfOrder => Some(crate::core::EquipmentHealthStatus::Critical),
+                    crate::core::EquipmentStatus::Unknown => Some(crate::core::EquipmentHealthStatus::Unknown),
+                });
+            
+            match health_status {
+                Some(crate::core::EquipmentHealthStatus::Healthy) => healthy += 1,
+                Some(crate::core::EquipmentHealthStatus::Warning) => warnings += 1,
+                Some(crate::core::EquipmentHealthStatus::Critical) => critical += 1,
+                Some(crate::core::EquipmentHealthStatus::Unknown) | None => warnings += 1,
             }
         }
         
@@ -546,15 +579,32 @@ impl BuildingRenderer {
         println!("Data Source: YAML building data");
         
         // Show equipment details
-        if !floor_data.equipment.is_empty() {
+        if !floor.equipment.is_empty() {
             println!("\nEquipment Details:");
-            for equipment in &floor_data.equipment {
-                let status_icon = self.get_status_symbol(&equipment.status);
+            for equipment in &floor.equipment {
+                let health_status = equipment.health_status
+                    .or_else(|| match equipment.status {
+                        crate::core::EquipmentStatus::Active => Some(crate::core::EquipmentHealthStatus::Healthy),
+                        crate::core::EquipmentStatus::Maintenance => Some(crate::core::EquipmentHealthStatus::Warning),
+                        crate::core::EquipmentStatus::Inactive | crate::core::EquipmentStatus::OutOfOrder => Some(crate::core::EquipmentHealthStatus::Critical),
+                        crate::core::EquipmentStatus::Unknown => Some(crate::core::EquipmentHealthStatus::Unknown),
+                    });
+                let status_icon = self.get_status_symbol_from_health(health_status);
+                let system_type = match equipment.equipment_type {
+                    crate::core::EquipmentType::HVAC => "HVAC",
+                    crate::core::EquipmentType::Electrical => "ELECTRICAL",
+                    crate::core::EquipmentType::Plumbing => "PLUMBING",
+                    crate::core::EquipmentType::Safety => "SAFETY",
+                    crate::core::EquipmentType::Network => "NETWORK",
+                    crate::core::EquipmentType::AV => "AV",
+                    crate::core::EquipmentType::Furniture => "FURNITURE",
+                    crate::core::EquipmentType::Other(_) => "OTHER",
+                };
                 println!("  {} {} ({}) - {}", 
                     status_icon, 
                     equipment.name, 
-                    equipment.system_type,
-                    equipment.universal_path
+                    system_type,
+                    equipment.path
                 );
             }
         }
@@ -562,12 +612,22 @@ impl BuildingRenderer {
         Ok(())
     }
     
-    fn get_status_symbol(&self, status: &EquipmentStatus) -> &str {
+    #[allow(deprecated)]
+    fn get_status_symbol(&self, status: &crate::yaml::EquipmentStatus) -> &str {
         match status {
-            EquipmentStatus::Healthy => "✅",
-            EquipmentStatus::Warning => "⚠️",
-            EquipmentStatus::Critical => "❌",
-            EquipmentStatus::Unknown => "❓",
+            crate::yaml::EquipmentStatus::Healthy => "✅",
+            crate::yaml::EquipmentStatus::Warning => "⚠️",
+            crate::yaml::EquipmentStatus::Critical => "❌",
+            crate::yaml::EquipmentStatus::Unknown => "❓",
+        }
+    }
+    
+    fn get_status_symbol_from_health(&self, health_status: Option<crate::core::EquipmentHealthStatus>) -> &str {
+        match health_status {
+            Some(crate::core::EquipmentHealthStatus::Healthy) => "✅",
+            Some(crate::core::EquipmentHealthStatus::Warning) => "⚠️",
+            Some(crate::core::EquipmentHealthStatus::Critical) => "❌",
+            Some(crate::core::EquipmentHealthStatus::Unknown) | None => "❓",
         }
     }
 }

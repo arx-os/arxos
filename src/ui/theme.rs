@@ -47,6 +47,24 @@ impl From<&crate::yaml::EquipmentStatus> for StatusColor {
     }
 }
 
+impl From<&str> for StatusColor {
+    fn from(status: &str) -> Self {
+        match status {
+            "Healthy" | "Active" => StatusColor::Healthy,
+            "Warning" | "Maintenance" => StatusColor::Warning,
+            "Critical" | "OutOfOrder" => StatusColor::Critical,
+            "Unknown" | "Inactive" => StatusColor::Unknown,
+            _ => StatusColor::Unknown,
+        }
+    }
+}
+
+impl From<&String> for StatusColor {
+    fn from(status: &String) -> Self {
+        StatusColor::from(status.as_str())
+    }
+}
+
 /// Theme configuration for ArxOS TUI
 #[derive(Debug, Clone)]
 pub struct Theme {

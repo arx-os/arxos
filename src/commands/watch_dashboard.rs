@@ -169,16 +169,46 @@ impl WatchDashboardState {
         for floor in &self.building_data.floors {
             for equipment in &floor.equipment {
                 // Simulate sensor readings based on equipment status
-                let (value, unit, sensor_type) = match equipment.status {
-                    crate::yaml::EquipmentStatus::Healthy => (22.5, "°C".to_string(), "Temperature".to_string()),
-                    crate::yaml::EquipmentStatus::Warning => (25.5, "°C".to_string(), "Temperature".to_string()),
-                    crate::yaml::EquipmentStatus::Critical => (30.0, "°C".to_string(), "Temperature".to_string()),
-                    _ => (20.0, "°C".to_string(), "Temperature".to_string()),
+                // Use health_status if available, otherwise map from status
+                use crate::core::{EquipmentStatus, EquipmentHealthStatus};
+                let (value, unit, sensor_type) = if let Some(health_status) = &equipment.health_status {
+                    match health_status {
+                        EquipmentHealthStatus::Healthy => (22.5, "°C".to_string(), "Temperature".to_string()),
+                        EquipmentHealthStatus::Warning => (25.5, "°C".to_string(), "Temperature".to_string()),
+                        EquipmentHealthStatus::Critical => (30.0, "°C".to_string(), "Temperature".to_string()),
+                        EquipmentHealthStatus::Unknown => (20.0, "°C".to_string(), "Temperature".to_string()),
+                    }
+                } else {
+                    match equipment.status {
+                        EquipmentStatus::Active => (22.5, "°C".to_string(), "Temperature".to_string()),
+                        EquipmentStatus::Maintenance => (25.5, "°C".to_string(), "Temperature".to_string()),
+                        EquipmentStatus::OutOfOrder => (30.0, "°C".to_string(), "Temperature".to_string()),
+                        _ => (20.0, "°C".to_string(), "Temperature".to_string()),
+                    }
                 };
                 
-                let room_name = floor.rooms.iter()
-                    .find(|r| r.equipment.contains(&equipment.id))
+                // Find room containing this equipment (rooms are in wings, equipment is Vec<Equipment>)
+                let room_name = floor.wings.iter()
+                    .flat_map(|w| &w.rooms)
+                    .find(|r| r.equipment.iter().any(|e| e.id == equipment.id))
                     .map(|r| r.name.clone());
+                
+                // Determine status color from health_status or status
+                let status_color = if let Some(health_status) = &equipment.health_status {
+                    match health_status {
+                        EquipmentHealthStatus::Healthy => StatusColor::Healthy,
+                        EquipmentHealthStatus::Warning => StatusColor::Warning,
+                        EquipmentHealthStatus::Critical => StatusColor::Critical,
+                        EquipmentHealthStatus::Unknown => StatusColor::Unknown,
+                    }
+                } else {
+                    match equipment.status {
+                        EquipmentStatus::Active => StatusColor::Healthy,
+                        EquipmentStatus::Maintenance => StatusColor::Warning,
+                        EquipmentStatus::OutOfOrder => StatusColor::Critical,
+                        _ => StatusColor::Unknown,
+                    }
+                };
                 
                 readings.push(SensorReading {
                     sensor_id: format!("sensor-{}", equipment.id),
@@ -188,7 +218,7 @@ impl WatchDashboardState {
                     timestamp: chrono::Utc::now().format("%H:%M:%S").to_string(),
                     equipment_id: Some(equipment.id.clone()),
                     room: room_name,
-                    status: StatusColor::from(&equipment.status),
+                    status: status_color,
                 });
             }
         }
@@ -202,26 +232,48 @@ impl WatchDashboardState {
         
         for floor in &self.building_data.floors {
             for equipment in &floor.equipment {
-                match equipment.status {
-                    crate::yaml::EquipmentStatus::Warning => {
-                        alerts.push(AlertItem {
-                            timestamp: chrono::Utc::now().format("%H:%M:%S").to_string(),
-                            severity: StatusColor::Warning,
-                            message: format!("{}: Warning condition detected", equipment.name),
-                            equipment_id: Some(equipment.id.clone()),
-                            sensor_id: None,
-                        });
-                    }
-                    crate::yaml::EquipmentStatus::Critical => {
-                        alerts.push(AlertItem {
-                            timestamp: chrono::Utc::now().format("%H:%M:%S").to_string(),
-                            severity: StatusColor::Critical,
-                            message: format!("{}: Critical condition requires attention", equipment.name),
-                            equipment_id: Some(equipment.id.clone()),
-                            sensor_id: None,
-                        });
-                    }
-                    _ => {}
+                // Use health_status if available, otherwise map from status
+                use crate::core::{EquipmentStatus, EquipmentHealthStatus};
+                let should_alert = if let Some(health_status) = &equipment.health_status {
+                    matches!(health_status, EquipmentHealthStatus::Warning | EquipmentHealthStatus::Critical)
+                } else {
+                    matches!(equipment.status, EquipmentStatus::Maintenance | EquipmentStatus::OutOfOrder)
+                };
+                
+                if should_alert {
+                    let (severity, message) = if let Some(health_status) = &equipment.health_status {
+                        match health_status {
+                            EquipmentHealthStatus::Warning => (
+                                StatusColor::Warning,
+                                format!("{}: Warning condition detected", equipment.name)
+                            ),
+                            EquipmentHealthStatus::Critical => (
+                                StatusColor::Critical,
+                                format!("{}: Critical condition requires attention", equipment.name)
+                            ),
+                            _ => continue,
+                        }
+                    } else {
+                        match equipment.status {
+                            EquipmentStatus::Maintenance => (
+                                StatusColor::Warning,
+                                format!("{}: Warning condition detected", equipment.name)
+                            ),
+                            EquipmentStatus::OutOfOrder => (
+                                StatusColor::Critical,
+                                format!("{}: Critical condition requires attention", equipment.name)
+                            ),
+                            _ => continue,
+                        }
+                    };
+                    
+                    alerts.push(AlertItem {
+                        timestamp: chrono::Utc::now().format("%H:%M:%S").to_string(),
+                        severity,
+                        message,
+                        equipment_id: Some(equipment.id.clone()),
+                        sensor_id: None,
+                    });
                 }
             }
         }
@@ -248,7 +300,24 @@ impl WatchDashboardState {
         
         for floor in &self.building_data.floors {
             for equipment in &floor.equipment {
-                status_map.insert(equipment.id.clone(), StatusColor::from(&equipment.status));
+                // Use health_status if available, otherwise map from status
+                use crate::core::{EquipmentStatus, EquipmentHealthStatus};
+                let status_color = if let Some(health_status) = &equipment.health_status {
+                    match health_status {
+                        EquipmentHealthStatus::Healthy => StatusColor::Healthy,
+                        EquipmentHealthStatus::Warning => StatusColor::Warning,
+                        EquipmentHealthStatus::Critical => StatusColor::Critical,
+                        EquipmentHealthStatus::Unknown => StatusColor::Unknown,
+                    }
+                } else {
+                    match equipment.status {
+                        EquipmentStatus::Active => StatusColor::Healthy,
+                        EquipmentStatus::Maintenance => StatusColor::Warning,
+                        EquipmentStatus::OutOfOrder => StatusColor::Critical,
+                        _ => StatusColor::Unknown,
+                    }
+                };
+                status_map.insert(equipment.id.clone(), status_color);
             }
         }
         
@@ -274,12 +343,14 @@ impl WatchDashboardState {
                 if let Some(filter_room) = &self.filter_room {
                     // Filter by room if equipment is in that room
                     if let Some(equipment_id) = &alert.equipment_id {
-                        // Find which room contains this equipment
+                        // Find which room contains this equipment (rooms are in wings, equipment is Vec<Equipment>)
                         for floor in &self.building_data.floors {
-                            for room in &floor.rooms {
-                                if room.equipment.contains(equipment_id) {
-                                    // Check if room name matches filter (case-insensitive partial match)
-                                    return room.name.to_lowercase().contains(&filter_room.to_lowercase());
+                            for wing in &floor.wings {
+                                for room in &wing.rooms {
+                                    if room.equipment.iter().any(|e| e.id == *equipment_id) {
+                                        // Check if room name matches filter (case-insensitive partial match)
+                                        return room.name.to_lowercase().contains(&filter_room.to_lowercase());
+                                    }
                                 }
                             }
                         }
@@ -673,7 +744,7 @@ fn render_equipment<'a>(
                     Span::styled(" ", Style::default()),
                     Span::styled(equipment.name.clone(), Style::default().fg(theme.text)),
                     Span::styled(" - ", Style::default().fg(theme.muted)),
-                    Span::styled(equipment.equipment_type.clone(), Style::default().fg(theme.muted)),
+                    Span::styled(format!("{:?}", equipment.equipment_type), Style::default().fg(theme.muted)),
                 ])
             })
         })

@@ -3,7 +3,8 @@
 //! This module handles equipment detected by AR scans that requires user confirmation
 //! before being added to the building data.
 
-use crate::yaml::{BuildingData, FloorData, RoomData, EquipmentData, EquipmentStatus};
+#[allow(deprecated)]
+use crate::yaml::BuildingData;
 use crate::spatial::{Point3D, BoundingBox3D};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -297,17 +298,9 @@ impl PendingEquipmentManager {
             return Ok(index);
         }
 
-        // Create new floor
-        let new_floor = FloorData {
-            id: format!("floor-{}", floor_level),
-            name: format!("Floor {}", floor_level),
-            level: floor_level,
-            elevation: (floor_level as f64) * 3.0,
-            wings: Vec::new(),
-            rooms: Vec::new(),
-            equipment: Vec::new(),
-            bounding_box: None,
-        };
+        // Create new floor using core type
+        let mut new_floor = crate::core::Floor::new(format!("Floor {}", floor_level), floor_level);
+        new_floor.elevation = Some((floor_level as f64) * 3.0);
 
         building_data.floors.push(new_floor);
         Ok(building_data.floors.len() - 1)
@@ -320,57 +313,57 @@ impl PendingEquipmentManager {
         room_name: &str,
     ) -> Result<usize, Box<dyn std::error::Error>> {
         let floor = &mut building_data.floors[floor_index];
-        
-        // Look for existing room in flat list (for backward compatibility)
-        if let Some(index) = floor.rooms.iter().position(|r| r.name == room_name) {
-            return Ok(index);
-        }
-        
-        // Create new room
-        use crate::spatial::BoundingBox3D;
-        use crate::yaml::WingData;
-        let new_room = RoomData {
-            id: format!("room-{}", room_name.to_lowercase().replace(" ", "-")),
-            name: room_name.to_string(),
-            room_type: "IFCSPACE".to_string(),
-            area: None,
-            volume: None,
-            position: Point3D { x: 0.0, y: 0.0, z: floor.elevation },
-            bounding_box: BoundingBox3D {
-                min: Point3D { x: 0.0, y: 0.0, z: floor.elevation },
-                max: Point3D { x: 10.0, y: 10.0, z: floor.elevation + 3.0 },
-            },
-            equipment: Vec::new(),
-            properties: HashMap::new(),
-        };
+        let floor_elevation = floor.elevation.unwrap_or(floor.level as f64 * 3.0);
         
         // Find or create default wing for AR-detected rooms
         let default_wing_name = "Default";
-        let wing_data = floor.wings.iter_mut()
+        let wing = floor.wings.iter_mut()
             .find(|w| w.name == default_wing_name);
         
-        let wing_data = if let Some(wing) = wing_data {
+        let wing = if let Some(wing) = wing {
             wing
         } else {
-            // Create default wing
-            let new_wing = WingData {
-                id: format!("wing-{}-{}", floor.level, default_wing_name),
-                name: default_wing_name.to_string(),
-                rooms: vec![],
-                equipment: vec![],
-                properties: HashMap::new(),
-            };
+            // Create default wing using core type
+            let new_wing = crate::core::Wing::new(default_wing_name.to_string());
             floor.wings.push(new_wing);
             floor.wings.last_mut()
                 .ok_or_else(|| "Failed to access newly created wing".to_string())?
         };
         
-        // Add room to wing
-        wing_data.rooms.push(new_room.clone());
+        // Look for existing room in wing
+        if let Some(index) = wing.rooms.iter().position(|r| r.name == room_name) {
+            return Ok(index);
+        }
         
-        // Also add to floor's rooms list for backward compatibility
-        floor.rooms.push(new_room);
-        Ok(floor.rooms.len() - 1)
+        // Create new room using core type
+        use crate::core::{Room, RoomType, Position, Dimensions, SpatialProperties};
+        let new_room = Room {
+            id: format!("room-{}", room_name.to_lowercase().replace(" ", "-")),
+            name: room_name.to_string(),
+            room_type: RoomType::Other("IFCSPACE".to_string()),
+            equipment: Vec::new(),
+            spatial_properties: SpatialProperties::new(
+                Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: floor_elevation,
+                    coordinate_system: "building_local".to_string(),
+                },
+                Dimensions {
+                    width: 10.0,
+                    depth: 10.0,
+                    height: 3.0,
+                },
+                "building_local".to_string(),
+            ),
+            properties: HashMap::new(),
+            created_at: Some(Utc::now()),
+            updated_at: Some(Utc::now()),
+        };
+        
+        // Add room to wing
+        wing.rooms.push(new_room);
+        Ok(wing.rooms.len() - 1)
     }
 
     /// Add equipment to building data
@@ -392,37 +385,58 @@ impl PendingEquipmentManager {
         // Now we can borrow the floor mutably
         let floor = &mut building_data.floors[floor_index];
 
-        let equipment = EquipmentData {
-            id: equipment_id.clone(),
-            name: pending.name.clone(),
-            equipment_type: pending.equipment_type.clone(),
-            system_type: pending.equipment_type.clone(),
-            universal_path: if let Some(room_name) = room_name_opt {
-                format!("/BUILDING/FLOOR-{}/ROOM-{}/EQUIPMENT/{}", pending.floor_level, room_name, pending.name)
-            } else {
-                format!("/BUILDING/FLOOR-{}/EQUIPMENT/{}", pending.floor_level, pending.name)
-            },
-            address: None,
-            position: pending.position,
-            bounding_box: pending.bounding_box.clone(),
-            status: EquipmentStatus::Healthy,
-            properties: pending.properties.clone(),
-            sensor_mappings: None,
+        // Parse equipment type
+        use crate::core::{Equipment, EquipmentType, Position};
+        let parsed_equipment_type = match pending.equipment_type.to_lowercase().as_str() {
+            "hvac" => EquipmentType::HVAC,
+            "electrical" => EquipmentType::Electrical,
+            "av" => EquipmentType::AV,
+            "furniture" => EquipmentType::Furniture,
+            "safety" => EquipmentType::Safety,
+            "plumbing" => EquipmentType::Plumbing,
+            "network" => EquipmentType::Network,
+            _ => EquipmentType::Other(pending.equipment_type.clone()),
         };
 
-        floor.equipment.push(equipment);
+        let universal_path = if let Some(room_name) = room_name_opt {
+            format!("/BUILDING/FLOOR-{}/ROOM-{}/EQUIPMENT/{}", pending.floor_level, room_name, pending.name)
+        } else {
+            format!("/BUILDING/FLOOR-{}/EQUIPMENT/{}", pending.floor_level, pending.name)
+        };
 
-        // Add equipment ID to room's equipment list if room was found/created
-        // Use the room_index we computed earlier - it's safe because it's just a usize value
-        // and rooms aren't modified after we compute it (only equipment is added)
-        if let Some(room_idx) = room_index {
-            if let Some(room) = floor.rooms.get_mut(room_idx) {
-                if !room.equipment.contains(&equipment_id) {
-                    room.equipment.push(equipment_id.clone());
-                }
-            } else {
-                if let Some(room_name) = room_name_opt {
-                    warn!("Room '{}' at index {} not found after equipment was added, cannot link equipment to room", room_name, room_idx);
+        let mut equipment = Equipment::new(
+            pending.name.clone(),
+            universal_path.clone(),
+            parsed_equipment_type,
+        );
+        equipment.id = equipment_id.clone();
+        equipment.position = Position {
+            x: pending.position.x,
+            y: pending.position.y,
+            z: pending.position.z,
+            coordinate_system: "building_local".to_string(),
+        };
+        equipment.properties = pending.properties.clone();
+        equipment.health_status = Some(crate::core::EquipmentHealthStatus::Healthy);
+        if let Some(room_name) = room_name_opt {
+            equipment.room_id = Some(format!("room-{}", room_name.to_lowercase().replace(" ", "-")));
+        }
+
+        floor.equipment.push(equipment.clone());
+
+        // Add equipment to room's equipment list if room was found/created
+        // Rooms are now in wings, so we need to find the room in the wing
+        if let Some(room_name) = room_name_opt {
+            // Find the room in the default wing
+            let default_wing_name = "Default";
+            if let Some(wing) = floor.wings.iter_mut().find(|w| w.name == default_wing_name) {
+                if let Some(room) = wing.rooms.iter_mut().find(|r| r.name == *room_name) {
+                    // Check if equipment is already in the room
+                    if !room.equipment.iter().any(|e| e.id == equipment_id) {
+                        room.equipment.push(equipment);
+                    }
+                } else {
+                    warn!("Room '{}' not found in wing '{}' after equipment was added, cannot link equipment to room", room_name, default_wing_name);
                 }
             }
         }

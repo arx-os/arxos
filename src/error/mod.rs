@@ -454,7 +454,7 @@ impl From<crate::git::GitError> for ArxError {
                             "Check: git config --list".to_string(),
                             "Verify repository permissions".to_string(),
                         ],
-                        help_url: Some("https://github.com/arxos/arxos/docs/core/ARCHITECTURE.md#git-operations".to_string()),
+                        help_url: Some("https://github.com/arx-os/arxos/docs/core/ARCHITECTURE.md#git-operations".to_string()),
                         ..Default::default()
                     }),
                     operation: "Git operation".to_string(),
@@ -654,7 +654,7 @@ impl ArxError {
                     "Try re-exporting from source software".to_string(),
                 ],
                 file_path: file_path.clone(),
-                help_url: Some("https://github.com/arxos/arxos/docs/features/IFC_PROCESSING.md".to_string()),
+                help_url: Some("https://github.com/arx-os/arxos/docs/features/IFC_PROCESSING.md".to_string()),
                 ..Default::default()
             }),
             source: None,
@@ -676,7 +676,7 @@ impl ArxError {
                     "Verify Git configuration: git config --list".to_string(),
                     "Check repository permissions".to_string(),
                 ],
-                help_url: Some("https://github.com/arxos/arxos/docs/core/ARCHITECTURE.md#git-operations".to_string()),
+                help_url: Some("https://github.com/arx-os/arxos/docs/core/ARCHITECTURE.md#git-operations".to_string()),
                 ..Default::default()
             }),
             operation: operation.into(),

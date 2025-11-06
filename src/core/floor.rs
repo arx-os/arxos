@@ -11,6 +11,12 @@ pub struct Floor {
     pub id: String,
     pub name: String,
     pub level: i32,
+    /// Elevation of the floor (in meters, relative to building origin)
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub elevation: Option<f64>,
+    /// Bounding box for the entire floor
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub bounding_box: Option<crate::spatial::BoundingBox3D>,
     pub wings: Vec<Wing>,
     pub equipment: Vec<Equipment>,
     pub properties: HashMap<String, String>,
@@ -22,6 +28,8 @@ impl Floor {
             id: Uuid::new_v4().to_string(),
             name,
             level,
+            elevation: None,
+            bounding_box: None,
             wings: Vec::new(),
             equipment: Vec::new(),
             properties: HashMap::new(),

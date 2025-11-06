@@ -22,7 +22,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		49819A312EB030FA00B93E8B /* ArxOS.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = ArxOS.xcframework; path = /Users/joelpate/repos/arxos/ios/build/ArxOS.xcframework; sourceTree = "<absolute>"; };
+		49819A312EB030FA00B93E8B /* ArxOS.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = ArxOS.xcframework; path = ios/build/ArxOS.xcframework; sourceTree = "<group>"; };
 		A1234567890123456789012B /* ArxOSMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArxOSMobileApp.swift; sourceTree = "<group>"; };
 		A1234567890123456789012D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A1234567890123456789012F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "../Assets.xcassets"; sourceTree = "<group>"; };

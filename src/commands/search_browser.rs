@@ -86,11 +86,19 @@ impl SearchBrowserState {
                     for floor in &building_data.floors {
                         for equipment in &floor.equipment {
                             if equipment.name == result.name {
-                                room_name = floor.rooms.iter()
-                                    .find(|r| r.equipment.contains(&equipment.id))
+                                // Find room containing this equipment (rooms are in wings, equipment is Vec<Equipment>)
+                                room_name = floor.wings.iter()
+                                    .flat_map(|w| &w.rooms)
+                                    .find(|r| r.equipment.iter().any(|e| e.id == equipment.id))
                                     .map(|r| r.name.clone());
                                 floor_level = Some(floor.level);
-                                status = Some(format!("{:?}", equipment.status));
+                                // Use health_status if available, otherwise use status
+                                let status_str = if let Some(health_status) = &equipment.health_status {
+                                    format!("{:?}", health_status)
+                                } else {
+                                    format!("{:?}", equipment.status)
+                                };
+                                status = Some(status_str);
                                 break;
                             }
                         }
@@ -109,7 +117,10 @@ impl SearchBrowserState {
                 "room" => {
                     let mut floor_level = None;
                     for floor in &building_data.floors {
-                        if let Some(_room) = floor.rooms.iter().find(|r| r.name == result.name) {
+                        // Find room by name across all wings
+                        if floor.wings.iter()
+                            .flat_map(|w| &w.rooms)
+                            .any(|r| r.name == result.name) {
                             floor_level = Some(floor.level);
                             break;
                         }

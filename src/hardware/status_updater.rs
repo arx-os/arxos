@@ -128,15 +128,16 @@ impl EquipmentStatusUpdater {
                 );
                 
                 // Update status based on sensor readings
+                use crate::core::EquipmentHealthStatus;
                 match threshold_check {
                     ThresholdCheck::Critical => {
-                        equipment.status = crate::yaml::EquipmentStatus::Critical;
+                        equipment.health_status = Some(EquipmentHealthStatus::Critical);
                     }
                     ThresholdCheck::OutOfRange => {
-                        equipment.status = crate::yaml::EquipmentStatus::Warning;
+                        equipment.health_status = Some(EquipmentHealthStatus::Warning);
                     }
                     ThresholdCheck::Normal => {
-                        equipment.status = crate::yaml::EquipmentStatus::Healthy;
+                        equipment.health_status = Some(EquipmentHealthStatus::Healthy);
                     }
                 }
                 

@@ -300,10 +300,9 @@ fn create_test_building_data(entity_count: usize) -> BuildingData {
     use chrono::Utc;
     use std::collections::HashMap;
     
-    use arxos::yaml::{
-        BuildingInfo, BuildingMetadata, FloorData, RoomData, EquipmentData, 
-        EquipmentStatus
-    };
+    use arxos::yaml::{BuildingInfo, BuildingMetadata};
+    use arxos::core::{Floor, Wing, Room, Equipment, RoomType, EquipmentType, EquipmentStatus, Position, Dimensions, SpatialProperties, BoundingBox};
+    use arxos::spatial::{Point3D, BoundingBox3D};
     
     let mut rooms = Vec::new();
     let mut equipment = Vec::new();
@@ -311,40 +310,74 @@ fn create_test_building_data(entity_count: usize) -> BuildingData {
     // Create rooms and equipment based on entity count
     for i in 0..entity_count {
         if i % 2 == 0 {
-            // Create room
-            rooms.push(RoomData {
+            // Create room using core types
+            let position = Position {
+                x: i as f64,
+                y: i as f64,
+                z: (i % 3) as f64,
+                coordinate_system: "building_local".to_string(),
+            };
+            let dimensions = Dimensions {
+                width: 10.0,
+                height: 4.0,
+                depth: 10.0,
+            };
+            let bounding_box = BoundingBox {
+                min: Position {
+                    x: i as f64,
+                    y: i as f64,
+                    z: 0.0,
+                    coordinate_system: "building_local".to_string(),
+                },
+                max: Position {
+                    x: (i + 10) as f64,
+                    y: (i + 10) as f64,
+                    z: 4.0,
+                    coordinate_system: "building_local".to_string(),
+                },
+            };
+            let spatial_properties = SpatialProperties {
+                position,
+                dimensions,
+                bounding_box,
+                coordinate_system: "building_local".to_string(),
+            };
+            rooms.push(Room {
                 id: format!("room-{}", i),
                 name: format!("Room {}", i),
-                room_type: "Office".to_string(),
-                area: Some(100.0 + i as f64),
-                volume: Some(400.0 + (i as f64 * 10.0)),
-                position: Point3D::new(i as f64, i as f64, (i % 3) as f64),
-                bounding_box: BoundingBox3D {
-                    min: Point3D::new(i as f64, i as f64, 0.0),
-                    max: Point3D::new((i + 10) as f64, (i + 10) as f64, 4.0),
-                },
+                room_type: RoomType::Office,
                 equipment: vec![],
+                spatial_properties,
                 properties: HashMap::new(),
+                created_at: None,
+                updated_at: None,
             });
         } else {
-            // Create equipment
-            equipment.push(EquipmentData {
+            // Create equipment using core types
+            equipment.push(Equipment {
                 id: format!("equipment-{}", i),
                 name: format!("Equipment {}", i),
-                equipment_type: "HVAC".to_string(),
-                system_type: "VAV".to_string(),
-                position: Point3D::new(i as f64, i as f64, 2.0),
-                bounding_box: BoundingBox3D {
-                    min: Point3D::new((i - 1) as f64, (i - 1) as f64, 1.5),
-                    max: Point3D::new((i + 1) as f64, (i + 1) as f64, 2.5),
+                path: format!("/building/floor1/equipment-{}", i),
+                address: None,
+                equipment_type: EquipmentType::HVAC,
+                position: Position {
+                    x: i as f64,
+                    y: i as f64,
+                    z: 2.0,
+                    coordinate_system: "building_local".to_string(),
                 },
-                status: EquipmentStatus::Healthy,
                 properties: HashMap::new(),
-                universal_path: format!("/building/floor1/equipment-{}", i),
+                status: EquipmentStatus::Active,
+                health_status: None,
+                room_id: None,
                 sensor_mappings: None,
             });
         }
     }
+    
+    // Create a wing with rooms
+    let mut wing = Wing::new("Default".to_string());
+    wing.rooms = rooms;
     
     BuildingData {
         building: BuildingInfo {
@@ -365,14 +398,15 @@ fn create_test_building_data(entity_count: usize) -> BuildingData {
             units: "meters".to_string(),
             tags: vec![],
         },
-        floors: vec![FloorData {
+        floors: vec![Floor {
             id: "floor-1".to_string(),
             name: "Floor 1".to_string(),
             level: 1,
-            elevation: 0.0,
-            rooms,
-            equipment,
+            elevation: Some(0.0),
             bounding_box: None,
+            wings: vec![wing],
+            equipment,
+            properties: HashMap::new(),
         }],
         coordinate_systems: vec![],
     }

@@ -215,19 +215,24 @@ fn build_room_tree(building_name: &str) -> Result<Vec<TreeNode>, Box<dyn std::er
     
     let mut floor_map: HashMap<i32, Vec<RoomNode>> = HashMap::new();
     
-    // Collect all rooms by floor
+    // Collect all rooms by floor (rooms are now in wings)
     for floor in &building_data.floors {
         let mut rooms = Vec::new();
-        for room in &floor.rooms {
-            let equipment_count = room.equipment.len();
-            rooms.push(RoomNode {
-                id: room.id.clone(),
-                name: room.name.clone(),
-                room_type: room.room_type.clone(),
-                equipment_count,
-                area: room.area,
-                volume: room.volume,
-            });
+        for wing in &floor.wings {
+            for room in &wing.rooms {
+                let equipment_count = room.equipment.len();
+                // Calculate area and volume from dimensions
+                let area = room.spatial_properties.dimensions.width * room.spatial_properties.dimensions.depth;
+                let volume = area * room.spatial_properties.dimensions.height;
+                rooms.push(RoomNode {
+                    id: room.id.clone(),
+                    name: room.name.clone(),
+                    room_type: format!("{:?}", room.room_type),
+                    equipment_count,
+                    area: Some(area),
+                    volume: Some(volume),
+                });
+            }
         }
         
         let total_equipment = floor.equipment.len();

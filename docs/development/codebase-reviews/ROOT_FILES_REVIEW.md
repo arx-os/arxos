@@ -274,7 +274,7 @@ User-generated building data from 3D Scanner App mobile scan.
 - Scan coordinates
 - Device information (iPhone15,3)
 - Timestamp (2025-11-01)
-- File path (`/Users/joelpate/Downloads/...`)
+- File path (`~/Downloads/...` or similar user-specific path)
 
 **Recommendation:** Remove from repository immediately
 

@@ -1,0 +1,15 @@
+{
+  "sensor_id": "rp2040_air_001",
+  "sensor_type": "air_quality",
+  "timestamp": "2025-01-03T14:30:00Z",
+  "values": {
+    "pm2_5": 12.5,
+    "pm10": 18.3,
+    "co2": 420
+  },
+  "equipment_id": "HVAC-301",
+  "building": "Office Building",
+  "floor": 2,
+  "room": "Conference Room"
+}
+

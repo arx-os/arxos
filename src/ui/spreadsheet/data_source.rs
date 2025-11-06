@@ -81,6 +81,15 @@ impl SpreadsheetDataSource for EquipmentDataSource {
     fn columns(&self) -> Vec<ColumnDefinition> {
         vec![
             ColumnDefinition {
+                id: "equipment.address".to_string(),
+                label: "Address".to_string(),
+                data_type: CellType::Text,
+                editable: false,
+                width: Some(50),
+                validation: None,
+                enum_values: None,
+            },
+            ColumnDefinition {
                 id: "equipment.id".to_string(),
                 label: "ID".to_string(),
                 data_type: CellType::UUID,
@@ -132,6 +141,13 @@ impl SpreadsheetDataSource for EquipmentDataSource {
             .ok_or_else(|| format!("Column {} out of bounds", col))?;
         
         match column.id.as_str() {
+            "equipment.address" => {
+                if let Some(ref addr) = equipment.address {
+                    Ok(CellValue::Text(addr.path.clone()))
+                } else {
+                    Ok(CellValue::Text("No address".to_string()))
+                }
+            }
             "equipment.id" => Ok(CellValue::UUID(equipment.id.clone())),
             "equipment.name" => Ok(CellValue::Text(equipment.name.clone())),
             "equipment.type" => Ok(CellValue::Enum(equipment.equipment_type.clone())),
@@ -327,6 +343,15 @@ impl SpreadsheetDataSource for RoomDataSource {
     fn columns(&self) -> Vec<ColumnDefinition> {
         vec![
             ColumnDefinition {
+                id: "room.address".to_string(),
+                label: "Address".to_string(),
+                data_type: CellType::Text,
+                editable: false,
+                width: Some(50),
+                validation: None,
+                enum_values: None,
+            },
+            ColumnDefinition {
                 id: "room.id".to_string(),
                 label: "ID".to_string(),
                 data_type: CellType::UUID,
@@ -387,6 +412,10 @@ impl SpreadsheetDataSource for RoomDataSource {
             .ok_or_else(|| format!("Column {} out of bounds", col))?;
         
         match column.id.as_str() {
+            "room.address" => {
+                // RoomData doesn't have address field yet, so show "No address"
+                Ok(CellValue::Text("No address".to_string()))
+            }
             "room.id" => Ok(CellValue::UUID(room.id.clone())),
             "room.name" => Ok(CellValue::Text(room.name.clone())),
             "room.type" => Ok(CellValue::Enum(room.room_type.clone())),
@@ -681,6 +710,7 @@ mod tests {
             floors: vec![
                 FloorData {
                     id: "floor-1".to_string(),
+                    wings: vec![],
                     name: "Ground Floor".to_string(),
                     level: 0,
                     elevation: 0.0,
@@ -702,6 +732,7 @@ mod tests {
                     ],
                     equipment: vec![
                         EquipmentData {
+                            address: None,
                             id: "eq-1".to_string(),
                             name: "HVAC Unit 1".to_string(),
                             equipment_type: "HVAC".to_string(),
@@ -717,6 +748,7 @@ mod tests {
                             sensor_mappings: None,
                         },
                         EquipmentData {
+                            address: None,
                             id: "eq-2".to_string(),
                             name: "Electrical Panel 1".to_string(),
                             equipment_type: "Electrical".to_string(),
@@ -900,6 +932,33 @@ mod tests {
         // Save should succeed (no-op)
         assert!(data_source.save(false).is_ok());
         assert!(data_source.save(true).is_ok());
+    }
+    
+    #[test]
+    fn test_equipment_data_source_address_column() {
+        let mut building_data = create_test_building_data();
+        // Add address to first equipment
+        if let Some(floor) = building_data.floors.first_mut() {
+            if let Some(equipment) = floor.equipment.first_mut() {
+                use crate::domain::ArxAddress;
+                equipment.address = Some(ArxAddress::from_path("/usa/fl/hillsborough/test/floor-01/mech/boiler-01").unwrap());
+            }
+        }
+        
+        let data_source = EquipmentDataSource::new(building_data, "test_building".to_string());
+        let columns = data_source.columns();
+        
+        // Check that address column is first
+        assert_eq!(columns[0].id, "equipment.address");
+        assert_eq!(columns[0].label, "Address");
+        
+        // Check address cell value
+        let addr_cell = data_source.get_cell(0, 0).unwrap();
+        assert_eq!(addr_cell, CellValue::Text("/usa/fl/hillsborough/test/floor-01/mech/boiler-01".to_string()));
+        
+        // Check equipment without address shows "No address"
+        let no_addr_cell = data_source.get_cell(1, 0).unwrap();
+        assert_eq!(no_addr_cell, CellValue::Text("No address".to_string()));
     }
 }
 

@@ -120,6 +120,7 @@ pub enum FilterCondition {
     LessThan(f64),
     InRange(f64, f64),
     IsIn(Vec<String>),
+    Glob(String), // Glob pattern matching
 }
 
 /// Column filter
@@ -157,6 +158,8 @@ pub struct Grid {
     pub sort_order: Vec<ColumnSort>,
     pub filtered_rows: Vec<usize>, // Original row indices after filtering
     pub original_row_count: usize, // Original row count before filtering
+    pub column_visibility: std::collections::HashSet<usize>,
+    pub address_modal: Option<String>, // Full address path to show in modal // Hidden column indices
 }
 
 impl Grid {
@@ -189,6 +192,8 @@ impl Grid {
             sort_order: Vec::new(),
             filtered_rows,
             original_row_count,
+            column_visibility: std::collections::HashSet::new(), // All columns visible by default
+            address_modal: None,
         }
     }
     
@@ -225,6 +230,63 @@ impl Grid {
     
     pub fn get_cell_mut(&mut self, row: usize, col: usize) -> Option<&mut Cell> {
         self.rows.get_mut(row)?.get_mut(col)
+    }
+    
+    /// Check if a column is visible
+    pub fn is_column_visible(&self, col: usize) -> bool {
+        !self.column_visibility.contains(&col)
+    }
+    
+    /// Toggle column visibility
+    pub fn toggle_column_visibility(&mut self, col: usize) {
+        if self.column_visibility.contains(&col) {
+            self.column_visibility.remove(&col);
+        } else {
+            self.column_visibility.insert(col);
+            // Adjust selected_col if it becomes hidden
+            if self.selected_col == col {
+                // Move to next visible column
+                for i in 0..self.columns.len() {
+                    if !self.column_visibility.contains(&i) {
+                        self.selected_col = i;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    
+    /// Get visible column count
+    pub fn visible_column_count(&self) -> usize {
+        self.columns.len() - self.column_visibility.len()
+    }
+    
+    /// Get visible column index from logical column index
+    pub fn get_visible_column_index(&self, logical_col: usize) -> Option<usize> {
+        if self.column_visibility.contains(&logical_col) {
+            return None;
+        }
+        let mut visible_idx = 0;
+        for i in 0..logical_col {
+            if !self.column_visibility.contains(&i) {
+                visible_idx += 1;
+            }
+        }
+        Some(visible_idx)
+    }
+    
+    /// Get logical column index from visible column index
+    pub fn get_logical_column_index(&self, visible_col: usize) -> Option<usize> {
+        let mut visible_count = 0;
+        for i in 0..self.columns.len() {
+            if !self.column_visibility.contains(&i) {
+                if visible_count == visible_col {
+                    return Some(i);
+                }
+                visible_count += 1;
+            }
+        }
+        None
     }
 }
 
@@ -285,6 +347,139 @@ mod tests {
         assert!(grid.get_cell(0, 0).is_some());
         assert!(grid.get_cell(10, 0).is_none());
         assert!(grid.get_cell(0, 10).is_none());
+    }
+    
+    #[test]
+    fn test_column_visibility() {
+        let columns = vec![
+            ColumnDefinition {
+                id: "col1".to_string(),
+                label: "Column 1".to_string(),
+                data_type: CellType::Text,
+                editable: true,
+                width: None,
+                validation: None,
+                enum_values: None,
+            },
+            ColumnDefinition {
+                id: "col2".to_string(),
+                label: "Column 2".to_string(),
+                data_type: CellType::Text,
+                editable: true,
+                width: None,
+                validation: None,
+                enum_values: None,
+            },
+        ];
+        
+        let mut grid = Grid::new(columns, 3);
+        
+        // All columns visible by default
+        assert!(grid.is_column_visible(0));
+        assert!(grid.is_column_visible(1));
+        assert_eq!(grid.visible_column_count(), 2);
+        
+        // Hide column 0
+        grid.toggle_column_visibility(0);
+        assert!(!grid.is_column_visible(0));
+        assert!(grid.is_column_visible(1));
+        assert_eq!(grid.visible_column_count(), 1);
+        
+        // Show column 0 again
+        grid.toggle_column_visibility(0);
+        assert!(grid.is_column_visible(0));
+        assert_eq!(grid.visible_column_count(), 2);
+    }
+    
+    #[test]
+    fn test_get_visible_column_index() {
+        let columns = vec![
+            ColumnDefinition {
+                id: "col1".to_string(),
+                label: "Column 1".to_string(),
+                data_type: CellType::Text,
+                editable: true,
+                width: None,
+                validation: None,
+                enum_values: None,
+            },
+            ColumnDefinition {
+                id: "col2".to_string(),
+                label: "Column 2".to_string(),
+                data_type: CellType::Text,
+                editable: true,
+                width: None,
+                validation: None,
+                enum_values: None,
+            },
+            ColumnDefinition {
+                id: "col3".to_string(),
+                label: "Column 3".to_string(),
+                data_type: CellType::Text,
+                editable: true,
+                width: None,
+                validation: None,
+                enum_values: None,
+            },
+        ];
+        
+        let mut grid = Grid::new(columns, 3);
+        
+        // Hide column 1
+        grid.toggle_column_visibility(1);
+        
+        // Column 0 should be visible at index 0
+        assert_eq!(grid.get_visible_column_index(0), Some(0));
+        
+        // Column 1 is hidden
+        assert_eq!(grid.get_visible_column_index(1), None);
+        
+        // Column 2 should be visible at index 1
+        assert_eq!(grid.get_visible_column_index(2), Some(1));
+    }
+    
+    #[test]
+    fn test_get_logical_column_index() {
+        let columns = vec![
+            ColumnDefinition {
+                id: "col1".to_string(),
+                label: "Column 1".to_string(),
+                data_type: CellType::Text,
+                editable: true,
+                width: None,
+                validation: None,
+                enum_values: None,
+            },
+            ColumnDefinition {
+                id: "col2".to_string(),
+                label: "Column 2".to_string(),
+                data_type: CellType::Text,
+                editable: true,
+                width: None,
+                validation: None,
+                enum_values: None,
+            },
+            ColumnDefinition {
+                id: "col3".to_string(),
+                label: "Column 3".to_string(),
+                data_type: CellType::Text,
+                editable: true,
+                width: None,
+                validation: None,
+                enum_values: None,
+            },
+        ];
+        
+        let mut grid = Grid::new(columns, 3);
+        
+        // Hide column 1
+        grid.toggle_column_visibility(1);
+        
+        // Visible column 0 should map to logical column 0
+        assert_eq!(grid.get_logical_column_index(0), Some(0));
+        
+        // Visible column 1 should map to logical column 2
+        assert_eq!(grid.get_logical_column_index(1), Some(2));
     }
 }
 

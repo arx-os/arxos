@@ -4,7 +4,7 @@
 
 use crate::cli::SpreadsheetCommands;
 use crate::persistence::PersistenceManager;
-use crate::ui::spreadsheet::workflow::{FileLock, WorkflowStatus};
+use crate::ui::spreadsheet::workflow::{FileLock, WorkflowStatus, ArScanWatcher};
 use crate::ui::spreadsheet::data_source::{EquipmentDataSource, RoomDataSource, SensorDataSource, SpreadsheetDataSource};
 use crate::ui::spreadsheet::types::{Grid, CellValue};
 use crate::ui::{TerminalManager, Theme};
@@ -45,7 +45,7 @@ pub fn handle_spreadsheet_command(subcommand: SpreadsheetCommands) -> Result<(),
 /// Handle equipment spreadsheet
 fn handle_spreadsheet_equipment(
     building: Option<String>,
-    _filter: Option<String>,
+    filter: Option<String>,
     _commit: bool,
     _no_git: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -95,6 +95,29 @@ fn handle_spreadsheet_equipment(
         }
     }
     
+    // Apply CLI filter if provided
+    if let Some(filter_str) = filter {
+        // Find address column (first column should be address)
+        if let Some(addr_col_idx) = grid.columns.iter().position(|c| c.id.contains("address")) {
+            // Check if filter contains glob patterns
+            let condition = if filter_str.contains('*') || filter_str.contains('?') {
+                // Glob pattern
+                crate::ui::spreadsheet::types::FilterCondition::Glob(filter_str.clone())
+            } else {
+                // Simple contains match
+                crate::ui::spreadsheet::types::FilterCondition::Contains(filter_str.clone())
+            };
+            
+            filter_sort::apply_filter(&mut grid, addr_col_idx, condition)?;
+            info!("Applied filter: {} ({} rows visible)", filter_str, grid.row_count());
+        } else {
+            warn!("Address column not found, filter not applied");
+        }
+    }
+    
+    // Initialize AR scan watcher
+    let mut ar_watcher = ArScanWatcher::new(&building_name)?;
+    
     // Initialize TUI
     let mut terminal_manager = TerminalManager::new()?;
     let theme = Theme::from_config();
@@ -102,6 +125,7 @@ fn handle_spreadsheet_equipment(
     // Main event loop
     let mut should_quit = false;
     let mut editor: Option<CellEditor> = None;
+    let mut ar_scan_count = 0;
     let mut undo_redo = UndoRedoManager::new(50); // Last 50 operations
     // Use longer debounce if watch mode is active to prevent excessive sync cycles
     let debounce_ms = if workflow_status.watch_mode_active || workflow_status.sync_active {
@@ -112,7 +136,7 @@ fn handle_spreadsheet_equipment(
     let mut auto_save = AutoSaveManager::new(debounce_ms);
     let mut last_auto_save_check = Instant::now();
     let mut clipboard = Clipboard::new();
-    let mut _search_state: Option<SearchState> = None;
+    let mut search_state: Option<SearchState> = None;
     
     while !should_quit {
         // Ensure selection is visible before rendering
@@ -124,7 +148,7 @@ fn handle_spreadsheet_equipment(
         // Render
         terminal_manager.terminal().draw(|frame| {
             let size = frame.size();
-            render::render_spreadsheet_with_editor_and_save(
+            render::render_spreadsheet_with_editor_save_search_ar(
                 frame,
                 size,
                 &grid,
@@ -132,6 +156,8 @@ fn handle_spreadsheet_equipment(
                 &workflow_status,
                 editor.as_ref(),
                 Some(auto_save.state()),
+                search_state.as_ref(),
+                if ar_scan_count > 0 { Some(ar_scan_count) } else { None },
             );
         })?;
         
@@ -208,26 +234,58 @@ fn handle_spreadsheet_equipment(
                         should_quit = true;
                     }
                     KeyCode::Esc => {
-                        // Esc only quits if not editing
-                        should_quit = true;
+                        // Esc: Close address modal first, then cancel search, then quit
+                        if grid.address_modal.is_some() {
+                            grid.address_modal = None;
+                        } else if search_state.as_ref().map(|s| s.is_active).unwrap_or(false) {
+                            if let Some(ref mut search) = search_state {
+                                search.deactivate();
+                                info!("Search cancelled");
+                            }
+                        } else {
+                            should_quit = true;
+                        }
                     }
                     KeyCode::Char('?') | KeyCode::F(1) => {
                         // Help is shown in status bar
                     }
+                    KeyCode::Enter if search_state.as_ref().map(|s| s.is_active).unwrap_or(false) => {
+                        // Enter: Apply search and exit search mode (check this BEFORE general Enter handler)
+                        if let Some(ref mut search) = search_state {
+                            search.find_matches(&grid, &data_source as &dyn SpreadsheetDataSource);
+                            if let Some((row, col)) = search.current_match {
+                                grid.selected_row = row;
+                                grid.selected_col = col;
+                                grid.ensure_selection_visible(visible_rows, visible_cols);
+                            }
+                            search.deactivate();
+                        }
+                    }
                     KeyCode::Enter | KeyCode::F(2) => {
-                        // Enter edit mode
+                        // Enter: Show address modal if on address column, otherwise enter edit mode
                         let column = &grid.columns[grid.selected_col];
-                        if column.editable {
+                        
+                        // Check if this is the address column (read-only)
+                        if column.id.contains("address") && !column.editable {
+                            // Show address modal
+                            if let Some(cell) = grid.get_cell(grid.selected_row, grid.selected_col) {
+                                let full_path = cell.value.to_string();
+                                if !full_path.is_empty() && full_path != "No address" {
+                                    grid.address_modal = Some(full_path);
+                                }
+                            }
+                        } else if column.editable {
+                            // Enter edit mode
                             let cell = grid.get_cell(grid.selected_row, grid.selected_col)
                                 .cloned()
                                 .unwrap_or_else(|| crate::ui::spreadsheet::types::Cell::new(
                                     crate::ui::spreadsheet::types::CellValue::Empty
                                 ));
                             
-                            // Check if sensor-locked (status field with active sensors)
-                            // Sensor locking will be fully implemented with sensor workflow integration
+                            // Note: Sensor locking is handled by the workflow integration system
+                            // Status field editing is allowed here; sensor integration will enforce locking at the workflow layer
                             if column.id == "equipment.status" {
-                                // Allow editing for now - sensor locking will be added in workflow integration
+                                // Status field editing - sensor locking enforced by workflow system
                             }
                             
                             let mut new_editor = CellEditor::new(column.clone(), cell.value);
@@ -280,8 +338,61 @@ fn handle_spreadsheet_equipment(
                         warn!("CSV import requires file path. Use: arx spreadsheet import --file <path>");
                     }
                     KeyCode::Char('f') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
-                        // Ctrl+F: Search functionality
-                        info!("Search functionality - Enter search term in status bar");
+                        // Ctrl+F: Activate search
+                        if search_state.is_none() {
+                            search_state = Some(SearchState::new(String::new(), false));
+                        }
+                        if let Some(ref mut search) = search_state {
+                            search.activate();
+                            info!("Search activated - Type to search, Esc to cancel, n/p to navigate");
+                        }
+                    }
+                    KeyCode::Char('n') if search_state.as_ref().map(|s| s.is_active).unwrap_or(false) => {
+                        // n: Next match (when in search mode)
+                        if let Some(ref mut search) = search_state {
+                            if let Some((row, col)) = search.next_match() {
+                                grid.selected_row = row;
+                                grid.selected_col = col;
+                                grid.ensure_selection_visible(visible_rows, visible_cols);
+                            }
+                        }
+                    }
+                    KeyCode::Char('p') if search_state.as_ref().map(|s| s.is_active).unwrap_or(false) => {
+                        // p: Previous match (when in search mode)
+                        if let Some(ref mut search) = search_state {
+                            if let Some((row, col)) = search.previous_match() {
+                                grid.selected_row = row;
+                                grid.selected_col = col;
+                                grid.ensure_selection_visible(visible_rows, visible_cols);
+                            }
+                        }
+                    }
+                    KeyCode::Char(c) if search_state.as_ref().map(|s| s.is_active).unwrap_or(false) 
+                        && !key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                        // Typing in search mode (but not Ctrl+key combinations)
+                        if let Some(ref mut search) = search_state {
+                            search.update_query(format!("{}{}", search.query, c));
+                            search.find_matches(&grid, &data_source as &dyn SpreadsheetDataSource);
+                            if let Some((row, col)) = search.current_match {
+                                grid.selected_row = row;
+                                grid.selected_col = col;
+                                grid.ensure_selection_visible(visible_rows, visible_cols);
+                            }
+                        }
+                    }
+                    KeyCode::Backspace if search_state.as_ref().map(|s| s.is_active).unwrap_or(false) => {
+                        // Backspace in search mode
+                        if let Some(ref mut search) = search_state {
+                            let mut query = search.query.clone();
+                            query.pop();
+                            search.update_query(query);
+                            search.find_matches(&grid, &data_source as &dyn SpreadsheetDataSource);
+                            if let Some((row, col)) = search.current_match {
+                                grid.selected_row = row;
+                                grid.selected_col = col;
+                                grid.ensure_selection_visible(visible_rows, visible_cols);
+                            }
+                        }
                     }
                     KeyCode::Char('c') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
                         // Ctrl+C: Copy selected cell
@@ -334,9 +445,44 @@ fn handle_spreadsheet_equipment(
                         filter_sort::clear_filters(&mut grid);
                         info!("Filters cleared");
                     }
+                    KeyCode::Char('a') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                        // Ctrl+A: Toggle address column visibility
+                        // Find address column (should be first column)
+                        if let Some(addr_col_idx) = grid.columns.iter().position(|c| c.id.contains("address")) {
+                            grid.toggle_column_visibility(addr_col_idx);
+                            let is_visible = grid.is_column_visible(addr_col_idx);
+                            info!("Address column {}", if is_visible { "shown" } else { "hidden" });
+                        }
+                    }
                     _ => {
-                        // Handle navigation
-                        navigation::handle_navigation(key, &mut grid);
+                        // Handle navigation (only if not in search mode)
+                        if !search_state.as_ref().map(|s| s.is_active).unwrap_or(false) {
+                            navigation::handle_navigation(key, &mut grid);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Check for new AR scans
+        if let Ok(new_scans) = ar_watcher.check_new_scans() {
+            if new_scans > 0 {
+                ar_scan_count += new_scans;
+                info!("AR: {} new scan(s) detected, reload to refresh", new_scans);
+                // Optionally auto-reload
+                if let Err(e) = perform_reload(&mut data_source, &mut conflict_detector, &mut grid, &mut auto_save, row_count) {
+                    warn!("Auto-reload after AR scan failed: {}", e);
+                } else {
+                    // Re-populate grid after reload
+                    let new_row_count = SpreadsheetDataSource::row_count(&data_source);
+                    for row in 0..new_row_count.min(grid.row_count()) {
+                        for col in 0..grid.column_count() {
+                            if let Ok(cell_value) = data_source.get_cell(row, col) {
+                                if let Some(cell) = grid.get_cell_mut(row, col) {
+                                    cell.value = cell_value;
+                                }
+                            }
+                        }
                     }
                 }
             }

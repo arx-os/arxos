@@ -285,6 +285,7 @@ mod tests {
             floors: vec![
                 FloorData {
                     id: "floor-1".to_string(),
+                    wings: vec![],
                     name: "Floor 1".to_string(),
                     level: 1,
                     elevation: 0.0,
@@ -306,6 +307,7 @@ mod tests {
                     ],
                     equipment: vec![
                         EquipmentData {
+                            address: None,
                             id: "equipment-1".to_string(),
                             name: "HVAC Unit 1".to_string(),
                             equipment_type: "HVAC".to_string(),

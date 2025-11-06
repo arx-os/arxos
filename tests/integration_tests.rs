@@ -303,33 +303,10 @@ mod tests {
         assert!(ifc_data.contains("END-ISO-10303-21"));
     }
     
-    #[test]
-    fn test_end_to_end_workflow() {
-        // This is a placeholder for end-to-end workflow testing
-        // Tests would include:
-        // 1. IFC import
-        // 2. Equipment management
-        // 3. Sensor processing
-        // 4. AR integration
-        // 5. Rendering
-        // 6. Git operations
-        
-        // For now, just verify test structure
-        assert!(true);
-    }
-
-    #[test]
-    fn test_complete_import_to_export_workflow() {
-        // Placeholder for complete workflow:
-        // 1. Import IFC file
-        // 2. Generate YAML output
-        // 3. Initialize Git repo
-        // 4. Commit changes
-        // 5. Export building data
-        
-        // For now, just verify test structure exists
-        assert!(true);
-    }
+    // Note: End-to-end workflow tests are covered in:
+    // - tests/e2e/e2e_workflow_tests.rs (complete workflows)
+    // - tests/ifc/ifc_sync_integration_tests.rs (IFC import/export)
+    // - tests/e2e/e2e_command_integration_tests.rs (import/export command workflows)
     
     // ==========================================
     // Phase 5: End-to-End Data Flow Tests
@@ -517,27 +494,9 @@ mod tests {
         assert!(yaml_string.contains("parser_version"));
     }
     
-    #[test]
-    fn test_persistence_workflow() {
-        use tempfile::TempDir;
-        
-        // This test verifies the persistence layer works correctly
-        
-        // Create a temporary directory for testing
-        let temp_dir = TempDir::new().unwrap();
-        let _building_yaml = temp_dir.path().join("test_building.yaml");
-        
-        // Note: Actual persistence operations would require a real Git repo
-        // For now, we just verify the manager can be created
-        // In a real scenario, you would:
-        // 1. Create a test Git repository
-        // 2. Generate test building data
-        // 3. Save to YAML
-        // 4. Load from YAML
-        // 5. Verify data integrity
-        
-        assert!(true, "Persistence workflow test structure created");
-    }
+    // Note: Persistence workflow tests are covered in:
+    // - tests/persistence/persistence_tests.rs (PersistenceManager tests)
+    // - tests/commands/address_integration_tests.rs (YAML + Git workflow)
     
     #[test]
     fn test_pending_equipment_manager_operations() {

@@ -1,7 +1,8 @@
 // Git operations command handlers
 // Handles status, diff, and history commands
 
-use crate::git::manager::{BuildingGitManager, GitConfigManager, GitStatus, CommitInfo, DiffStats, DiffResult, DiffLineType};
+use crate::git::manager::{BuildingGitManager, GitConfigManager};
+use crate::git::{GitStatus, CommitInfo, DiffStats, DiffResult, DiffLineType};
 use crate::identity::UserRegistry;
 use crate::utils::loading;
 

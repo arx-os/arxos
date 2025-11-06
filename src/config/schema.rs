@@ -211,15 +211,15 @@ pub fn precedence_documentation() -> &'static str {
    - ARX_MEMORY_LIMIT_MB
    - ARX_VERBOSITY
 
-2. Project Config (arx.toml in current directory)
+2. Project Config (`.arxos/config.toml` in current directory)
    - Highest file priority
    - Used for project-specific settings
 
-3. User Config (~/.arx/config.toml)
+3. User Config (`~/.arxos/config.toml` on Unix, `%APPDATA%\arxos\config.toml` on Windows)
    - User-specific settings
    - Persistent across projects
 
-4. Global Config (/etc/arx/config.toml)
+4. Global Config (`/etc/arxos/config.toml` on Unix, `C:\ProgramData\arxos\config.toml` on Windows)
    - System-wide defaults
    - Lowest file priority
 

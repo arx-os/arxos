@@ -666,6 +666,7 @@ mod tests {
                 name: "Floor 1".to_string(),
                 level: 0,
                 elevation: 0.0,
+                wings: vec![],
                 rooms: vec![],
                 equipment: vec![],
                 bounding_box: None,

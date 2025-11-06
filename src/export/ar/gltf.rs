@@ -484,8 +484,10 @@ mod tests {
                     level: 1,
                     elevation: 0.0,
                     rooms: vec![],
+                    wings: vec![],
                     equipment: vec![
                         EquipmentData {
+                            address: None,
                             id: "equip-1".to_string(),
                             name: "HVAC Unit".to_string(),
                             equipment_type: "HVAC".to_string(),
@@ -501,6 +503,7 @@ mod tests {
                             sensor_mappings: None,
                         },
                         EquipmentData {
+                            address: None,
                             id: "equip-2".to_string(),
                             name: "Electrical Panel".to_string(),
                             equipment_type: "electrical".to_string(),
@@ -524,8 +527,10 @@ mod tests {
                     level: 2,
                     elevation: 4.5,
                     rooms: vec![],
+                    wings: vec![],
                     equipment: vec![
                         EquipmentData {
+                            address: None,
                             id: "equip-3".to_string(),
                             name: "Network Switch".to_string(),
                             equipment_type: "network".to_string(),
@@ -767,6 +772,7 @@ mod tests {
         // Test that multiple equipment of same type share materials
         let mut building = create_test_building_with_equipment();
         building.floors[0].equipment.push(EquipmentData {
+            address: None,
             id: "equip-4".to_string(),
             name: "Another HVAC Unit".to_string(),
             equipment_type: "HVAC".to_string(),

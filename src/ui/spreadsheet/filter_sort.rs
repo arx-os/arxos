@@ -118,6 +118,14 @@ fn matches_filter(value: &CellValue, condition: &FilterCondition) -> bool {
             let value_str = value.to_string();
             values.iter().any(|v| v.to_lowercase() == value_str.to_lowercase())
         }
+        FilterCondition::Glob(pattern) => {
+            // Try to compile and match glob pattern
+            if let Ok(glob_pattern) = glob::Pattern::new(pattern) {
+                glob_pattern.matches(&value.to_string())
+            } else {
+                false
+            }
+        }
     }
 }
 
@@ -496,5 +504,62 @@ mod tests {
         
         clear_sorts(&mut grid);
         assert!(grid.sort_order.is_empty());
+    }
+    
+    #[test]
+    fn test_glob_filter() {
+        let columns = vec![
+            ColumnDefinition {
+                id: "address".to_string(),
+                label: "Address".to_string(),
+                data_type: CellType::Text,
+                editable: false,
+                width: None,
+                validation: None,
+                enum_values: None,
+            },
+        ];
+        
+        let mut grid = Grid::new(columns, 4);
+        
+        // Set address values
+        grid.get_cell_mut(0, 0).unwrap().value = CellValue::Text("/usa/ny/brooklyn/boiler-01".to_string());
+        grid.get_cell_mut(1, 0).unwrap().value = CellValue::Text("/usa/ny/manhattan/boiler-02".to_string());
+        grid.get_cell_mut(2, 0).unwrap().value = CellValue::Text("/usa/ca/boiler-03".to_string());
+        grid.get_cell_mut(3, 0).unwrap().value = CellValue::Text("/usa/ny/brooklyn/valve-01".to_string());
+        
+        // Apply glob filter for NY boilers
+        let condition = FilterCondition::Glob("/usa/ny/*/boiler-*".to_string());
+        apply_filter(&mut grid, 0, condition).unwrap();
+        
+        // Should match first two (NY boilers)
+        assert_eq!(grid.filtered_rows.len(), 2);
+        assert!(grid.filtered_rows.contains(&0));
+        assert!(grid.filtered_rows.contains(&1));
+    }
+    
+    #[test]
+    fn test_glob_filter_invalid_pattern() {
+        let columns = vec![
+            ColumnDefinition {
+                id: "address".to_string(),
+                label: "Address".to_string(),
+                data_type: CellType::Text,
+                editable: false,
+                width: None,
+                validation: None,
+                enum_values: None,
+            },
+        ];
+        
+        let mut grid = Grid::new(columns, 2);
+        grid.get_cell_mut(0, 0).unwrap().value = CellValue::Text("/usa/ny/test".to_string());
+        
+        // Invalid glob pattern (should not match anything)
+        let condition = FilterCondition::Glob("[invalid".to_string());
+        apply_filter(&mut grid, 0, condition).unwrap();
+        
+        // Should not match anything due to invalid pattern
+        assert_eq!(grid.filtered_rows.len(), 0);
     }
 }

@@ -80,6 +80,7 @@ mod tests {
                     name: "Ground Floor".to_string(),
                     level: 0,
                     elevation: 0.0,
+                    wings: vec![],
                     bounding_box: Some(BoundingBox3D {
                         min: Point3D { x: 0.0, y: 0.0, z: 0.0 },
                         max: Point3D { x: 100.0, y: 100.0, z: 3.0 },
@@ -114,6 +115,7 @@ mod tests {
                             status: crate::yaml::EquipmentStatus::Healthy,
                             properties: HashMap::new(),
                             universal_path: "/TEST_BUILDING/FLOOR_1/ROOM_1/EQUIP_1".to_string(),
+                            address: None,
                             sensor_mappings: None,
                         }
                     ],
@@ -123,6 +125,7 @@ mod tests {
                     name: "First Floor".to_string(),
                     level: 1,
                     elevation: 3.0,
+                    wings: vec![],
                     bounding_box: Some(BoundingBox3D {
                         min: Point3D { x: 0.0, y: 0.0, z: 3.0 },
                         max: Point3D { x: 100.0, y: 100.0, z: 6.0 },
@@ -142,6 +145,7 @@ mod tests {
                             status: crate::yaml::EquipmentStatus::Warning,
                             properties: HashMap::new(),
                             universal_path: "/TEST_BUILDING/FLOOR_2/EQUIP_2".to_string(),
+                            address: None,
                             sensor_mappings: None,
                         }
                     ],

@@ -4,15 +4,29 @@
 
 use ratatui::{
     Frame,
-    layout::{Rect, Layout, Direction, Constraint, Margin},
-    style::Style,
-    widgets::{Block, Borders, Row, Table, Cell as TableCell},
+    layout::{Alignment, Rect, Layout, Direction, Constraint, Margin},
+    style::{Style, Color, Modifier},
+    text::{Line, Span},
+    widgets::{Block, Borders, Row, Table, Cell as TableCell, Paragraph, Wrap},
 };
 use crate::ui::Theme;
 use super::types::Grid;
 use super::workflow::WorkflowStatus;
 use super::editor::CellEditor;
 use super::save_state::SaveState;
+use super::search::SearchState;
+
+/// Extract reserved system name from address path
+/// Address format: /country/state/city/building/floor/room/system/fixture
+fn extract_system_from_address(path: &str) -> Option<String> {
+    // Split by '/' and find the system part (usually 6th segment, 0-indexed as 5)
+    let parts: Vec<&str> = path.split('/').filter(|p| !p.is_empty()).collect();
+    if parts.len() >= 6 {
+        Some(parts[5].to_string())
+    } else {
+        None
+    }
+}
 
 /// Render the spreadsheet
 pub fn render_spreadsheet(
@@ -49,6 +63,39 @@ pub fn render_spreadsheet_with_editor_and_save(
     editor: Option<&CellEditor>,
     save_state: Option<&SaveState>,
 ) {
+    render_spreadsheet_with_editor_save_search(
+        frame, area, grid, theme, workflow_status, editor, save_state, None
+    )
+}
+
+/// Render the spreadsheet with editor, save state, and search
+pub fn render_spreadsheet_with_editor_save_search(
+    frame: &mut Frame,
+    area: Rect,
+    grid: &Grid,
+    theme: &Theme,
+    workflow_status: &WorkflowStatus,
+    editor: Option<&CellEditor>,
+    save_state: Option<&SaveState>,
+    search_state: Option<&SearchState>,
+) {
+    render_spreadsheet_with_editor_save_search_ar(
+        frame, area, grid, theme, workflow_status, editor, save_state, search_state, None
+    )
+}
+
+/// Render the spreadsheet with editor, save state, search, and AR scan status
+pub fn render_spreadsheet_with_editor_save_search_ar(
+    frame: &mut Frame,
+    area: Rect,
+    grid: &Grid,
+    theme: &Theme,
+    workflow_status: &WorkflowStatus,
+    editor: Option<&CellEditor>,
+    save_state: Option<&SaveState>,
+    search_state: Option<&SearchState>,
+    ar_scan_count: Option<usize>,
+) {
     let layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -62,10 +109,15 @@ pub fn render_spreadsheet_with_editor_and_save(
     render_header(frame, layout[0], grid, theme);
     
     // Render grid body
-    render_grid_body(frame, layout[1], grid, theme, editor);
+    render_grid_body(frame, layout[1], grid, theme, editor, search_state);
+    
+    // Render address modal if active
+    if let Some(ref address_path) = grid.address_modal {
+        render_address_modal(frame, area, address_path, theme);
+    }
     
     // Render status bar
-    render_status_bar(frame, layout[2], grid, theme, workflow_status, save_state);
+    render_status_bar(frame, layout[2], grid, theme, workflow_status, save_state, search_state, ar_scan_count);
 }
 
 /// Render header
@@ -80,7 +132,7 @@ fn render_header(frame: &mut Frame, area: Rect, _grid: &Grid, theme: &Theme) {
 }
 
 /// Render grid body with virtual scrolling
-fn render_grid_body(frame: &mut Frame, area: Rect, grid: &Grid, theme: &Theme, editor: Option<&CellEditor>) {
+fn render_grid_body(frame: &mut Frame, area: Rect, grid: &Grid, theme: &Theme, editor: Option<&CellEditor>, search_state: Option<&SearchState>) {
     // Calculate visible area (accounting for borders)
     let margin = Margin::new(1, 1);
     let inner_area = area.inner(&margin);
@@ -91,11 +143,14 @@ fn render_grid_body(frame: &mut Frame, area: Rect, grid: &Grid, theme: &Theme, e
     // Build table rows for visible rows only
     let mut rows = Vec::new();
     
-    // Header row
+    // Header row - only show visible columns
     let header_cells: Vec<TableCell> = grid.columns
         .iter()
         .enumerate()
-        .map(|(col_idx, col)| {
+        .filter_map(|(col_idx, col)| {
+            if !grid.is_column_visible(col_idx) {
+                return None;
+            }
             let is_selected_col = col_idx == grid.selected_col;
             let style = if is_selected_col {
                 Style::default()
@@ -106,17 +161,20 @@ fn render_grid_body(frame: &mut Frame, area: Rect, grid: &Grid, theme: &Theme, e
                     .fg(theme.secondary)
                     .add_modifier(ratatui::style::Modifier::BOLD)
             };
-            TableCell::from(col.label.clone()).style(style)
+            Some(TableCell::from(col.label.clone()).style(style))
         })
         .collect();
     rows.push(Row::new(header_cells).height(1));
     
-    // Data rows
+    // Data rows - only show visible columns
     for row_idx in start_row..end_row {
         let cells: Vec<TableCell> = grid.columns
             .iter()
             .enumerate()
-            .map(|(col_idx, _col)| {
+            .filter_map(|(col_idx, _col)| {
+                if !grid.is_column_visible(col_idx) {
+                    return None;
+                }
                 let cell = grid.get_cell(row_idx, col_idx);
                 let is_editing = grid.editing_cell == Some((row_idx, col_idx));
                 
@@ -131,8 +189,14 @@ fn render_grid_body(frame: &mut Frame, area: Rect, grid: &Grid, theme: &Theme, e
                     cell
                         .map(|c| {
                             let mut s = c.value.to_string();
-                            // Truncate long text
-                            if s.len() > 30 {
+                            // Truncate long text (special handling for address column)
+                            if col_idx == 0 && grid.columns[col_idx].id.contains("address") {
+                                // Address column: allow longer truncation
+                                if s.len() > 45 {
+                                    s.truncate(42);
+                                    s.push_str("...");
+                                }
+                            } else if s.len() > 30 {
                                 s.truncate(27);
                                 s.push_str("...");
                             }
@@ -152,7 +216,16 @@ fn render_grid_body(frame: &mut Frame, area: Rect, grid: &Grid, theme: &Theme, e
                 
                 // Determine cell style
                 let is_selected = row_idx == grid.selected_row && col_idx == grid.selected_col;
-                let style = if is_editing {
+                
+                // Check if this cell matches search (for highlighting)
+                let is_search_match = if let Some(search) = search_state {
+                    search.is_active && search.matches.contains(&(row_idx, col_idx))
+                } else {
+                    false
+                };
+                
+                // Color-code address column by reserved system
+                let mut base_style = if is_editing {
                     // Editing style: underline and different background
                     Style::default()
                         .bg(theme.accent)
@@ -171,14 +244,60 @@ fn render_grid_body(frame: &mut Frame, area: Rect, grid: &Grid, theme: &Theme, e
                     Style::default().fg(theme.text)
                 };
                 
-                TableCell::from(text).style(style)
+                // Apply search match highlighting
+                if is_search_match && !is_selected {
+                    base_style = base_style.bg(Color::Yellow).fg(Color::Black);
+                }
+                
+                // Apply system color for address column
+                if !is_editing && col_idx == 0 && grid.columns[col_idx].id.contains("address") {
+                    if let Some(c) = cell {
+                        let addr_path = c.value.to_string();
+                        // Extract system from address path (e.g., /usa/ny/.../mech/boiler-01 -> mech)
+                        if let Some(system) = extract_system_from_address(&addr_path) {
+                            let system_color = Theme::system_color(&system);
+                            if !is_selected {
+                                base_style = base_style.fg(system_color);
+                            }
+                        }
+                    }
+                }
+                
+                let style = base_style;
+                
+                Some(TableCell::from(text).style(style))
             })
             .collect();
         rows.push(Row::new(cells).height(1));
     }
     
-    // Calculate column widths
-    let column_widths = calculate_column_widths(&grid.columns, inner_area.width);
+    // Calculate column widths - only for visible columns
+    let visible_column_indices: Vec<usize> = grid.columns
+        .iter()
+        .enumerate()
+        .filter_map(|(col_idx, _col)| {
+            if grid.is_column_visible(col_idx) {
+                Some(col_idx)
+            } else {
+                None
+            }
+        })
+        .collect();
+    
+    // Calculate widths for visible columns only
+    let column_widths = if visible_column_indices.len() == grid.columns.len() {
+        // All columns visible - use all columns
+        calculate_column_widths(&grid.columns, inner_area.width)
+    } else {
+        // Some columns hidden - calculate for visible ones only
+        let visible_columns: Vec<&super::types::ColumnDefinition> = visible_column_indices
+            .iter()
+            .map(|&idx| &grid.columns[idx])
+            .collect();
+        // Create owned columns for the function
+        let owned_columns: Vec<super::types::ColumnDefinition> = visible_columns.iter().map(|c| (*c).clone()).collect();
+        calculate_column_widths(&owned_columns, inner_area.width)
+    };
     
     let table = Table::new(rows)
         .block(Block::default().borders(Borders::ALL))
@@ -238,6 +357,8 @@ fn render_status_bar(
     theme: &Theme,
     workflow_status: &WorkflowStatus,
     save_state: Option<&SaveState>,
+    search_state: Option<&SearchState>,
+    ar_scan_count: Option<usize>,
 ) {
     let layout = Layout::default()
         .direction(Direction::Vertical)
@@ -277,8 +398,39 @@ fn render_status_bar(
         }
     }).unwrap_or_default();
     
+    // Add search status
+    let search_status = if let Some(search) = search_state {
+        if search.is_active {
+            let match_info = if search.match_count() > 0 {
+                format!(" | Search: \"{}\" ({} matches, {}/{})", 
+                    search.query, 
+                    search.match_count(),
+                    search.current_match_index(),
+                    search.match_count())
+            } else {
+                format!(" | Search: \"{}\" (no matches)", search.query)
+            };
+            format!("{}{}", if search.use_glob { " [glob]" } else { "" }, match_info)
+        } else {
+            String::new()
+        }
+    } else {
+        String::new()
+    };
+    
+    // Add AR scan status
+    let ar_status = if let Some(count) = ar_scan_count {
+        if count > 0 {
+            format!(" | AR: {} new scan(s)", count)
+        } else {
+            String::new()
+        }
+    } else {
+        String::new()
+    };
+    
     let status_line1 = format!(
-        "Row {}/{} | Column: {} ({}/{}){} | Arrow keys: Navigate{} | Ctrl+S: Save{} | Q: Quit",
+        "Row {}/{} | Column: {} ({}/{}){} | Arrow keys: Navigate{} | Ctrl+S: Save | Ctrl+F: Search | Ctrl+A: Toggle Address{}{} | Q: Quit{}",
         grid.selected_row + 1,
         grid.row_count(),
         col_name,
@@ -286,6 +438,8 @@ fn render_status_bar(
         grid.column_count(),
         edit_hint,
         error_msg,
+        search_status,
+        ar_status,
         if save_status.is_empty() { "" } else { &save_status }
     );
     
@@ -309,5 +463,71 @@ fn render_status_bar(
             .style(Style::default().fg(ratatui::style::Color::Yellow));
         frame.render_widget(block2, layout[1]);
     }
+}
+
+/// Render address modal showing full path
+fn render_address_modal(frame: &mut Frame, area: Rect, address_path: &str, theme: &Theme) {
+    // Calculate modal area (centered, 60% width, 40% height)
+    let modal_width = (area.width as f32 * 0.6) as u16;
+    let modal_height = (area.height as f32 * 0.4) as u16;
+    let modal_x = (area.width.saturating_sub(modal_width)) / 2;
+    let modal_y = (area.height.saturating_sub(modal_height)) / 2;
+    
+    let modal_area = Rect {
+        x: area.x + modal_x,
+        y: area.y + modal_y,
+        width: modal_width,
+        height: modal_height,
+    };
+    
+    // Create lines for modal content
+    let mut lines = vec![
+        Line::from(vec![
+            Span::styled(
+                "Full Address Path",
+                Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        Line::from(Span::raw("")),
+        Line::from(vec![
+            Span::styled(
+                address_path,
+                Style::default().fg(theme.text),
+            ),
+        ]),
+        Line::from(Span::raw("")),
+        Line::from(vec![
+            Span::styled(
+                "Press Esc to close",
+                Style::default().fg(theme.muted),
+            ),
+        ]),
+    ];
+    
+    // Extract and display system information if available
+    if let Some(system) = extract_system_from_address(address_path) {
+        let system_color = Theme::system_color(&system);
+        let system_clone = system.clone(); // Clone to extend lifetime
+        lines.insert(2, Line::from(vec![
+            Span::styled("System: ", Style::default().fg(theme.muted)),
+            Span::styled(
+                system_clone,
+                Style::default().fg(system_color).add_modifier(Modifier::BOLD),
+            ),
+        ]));
+    }
+    
+    let paragraph = Paragraph::new(lines)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Address")
+                .border_style(Style::default().fg(theme.accent))
+        )
+        .alignment(Alignment::Left)
+        .wrap(Wrap { trim: true })
+        .style(Style::default().fg(theme.text).bg(theme.background));
+    
+    frame.render_widget(paragraph, modal_area);
 }
 

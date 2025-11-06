@@ -21,7 +21,6 @@ pub mod hardware;
 
 // Data modules (serialization/persistence)
 pub mod yaml;
-pub mod path;
 pub mod persistence;
 pub mod export;
 
@@ -33,6 +32,9 @@ pub mod utils;
 pub mod docs;
 pub mod game;
 pub mod identity;
+
+// Service layer (business logic abstraction)
+pub mod services;
 
 // UI module (terminal user interface)
 pub mod ui;

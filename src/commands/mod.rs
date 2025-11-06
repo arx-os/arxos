@@ -35,28 +35,31 @@ pub mod users;
 pub mod verify;
 pub mod migrate;
 
+mod traits;
+mod registry;
+mod handlers;
+
+pub use traits::CommandHandler;
+pub use registry::CommandRegistry;
+
 use crate::cli::Commands;
 
 /// Execute the specified command by routing to appropriate handler
+/// 
+/// This function uses a hybrid approach:
+/// - Simple commands use trait-based handlers via the registry
+/// - Complex commands with subcommands use direct match statements
+/// This provides better testability and extensibility for simple commands
+/// while maintaining flexibility for complex nested command structures.
 pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
+    // Try to use trait-based handler first
+    let registry = CommandRegistry::default();
+    if registry.find_handler(&command).is_some() {
+        return registry.execute(command);
+    }
+    
+    // Fall back to match for complex commands with subcommands
     match command {
-        Commands::Init { name, description, location, git_init, commit, coordinate_system, units } => {
-            use init::InitConfig;
-            init::handle_init(InitConfig {
-                name,
-                description,
-                location,
-                git_init,
-                commit,
-                coordinate_system,
-                units,
-            })
-        },
-        Commands::Import { ifc_file, repo, dry_run } => import::handle_import(ifc_file, repo, dry_run),
-        Commands::Export { format, output, repo, delta } => {
-            export::handle_export_with_format(format, output, repo, delta)
-        },
-        Commands::Sync { ifc, watch, delta } => sync::handle_sync(ifc, watch, delta),
         Commands::Status { verbose, interactive } => git_ops::handle_status(verbose, interactive),
         Commands::Stage { all, file } => git_ops::handle_stage(all, file),
         Commands::Commit { message } => git_ops::handle_commit(message),
@@ -97,7 +100,6 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
                 show_help,
             })
         },
-        Commands::Validate { path } => validate::handle_validate(path),
         Commands::Room { command } => room_handlers::handle_room_command(command),
         Commands::Equipment { command } => equipment_handlers::handle_equipment_command(command),
         Commands::Spatial { command } => spatial::handle_spatial_command(command),
@@ -117,9 +119,6 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
                 verbose,
             };
             search::handle_search_command(config, interactive)
-        },
-        Commands::Query { pattern, format, verbose } => {
-            query::handle_query_command(pattern, format, verbose)
         },
         Commands::Filter { equipment_type, status, floor, room, building, critical_only, healthy_only, alerts_only, format, limit, verbose } => {
             use crate::search::{FilterConfig, OutputFormat};
@@ -151,8 +150,7 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
             sensors::handle_sensors_mqtt_command(&building, &broker, port, username.as_deref(), password.as_deref(), &topics)
         },
         Commands::IFC { subcommand } => ifc::handle_ifc_command(subcommand),
-        Commands::Health { component, verbose, interactive } => health::handle_health(component, verbose, interactive),
-        Commands::Doc { building, output } => doc::handle_doc(building, output),
+            Commands::Health { component, verbose, interactive, diagnostic } => health::handle_health(component, verbose, interactive, diagnostic),
         Commands::Game { subcommand } => {
             use crate::cli::GameCommands;
             match subcommand {
@@ -173,11 +171,10 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
         Commands::Users { subcommand } => {
             users::handle_users_command(subcommand)
         },
-        Commands::Verify { commit, all, verbose } => {
-            verify::handle_verify(commit, all, verbose)
-        },
-        Commands::Migrate { dry_run } => {
-            migrate::handle_migrate_address(dry_run)
+        // Commands handled by registry (Init, Import, Export, Sync, Validate, Query, Migrate, Doc, Verify)
+        // are processed above and won't reach this match statement
+        _ => {
+            Err("Command not handled by registry or match statement".into())
         },
     }
 }

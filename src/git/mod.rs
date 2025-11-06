@@ -5,8 +5,16 @@
 //! including commits, diffs, history, and branch management.
 
 pub mod manager;
+pub mod repository;
+pub mod export;
+pub mod commit;
+pub mod diff;
+pub mod staging;
+
+// Re-export types and main manager
 pub use manager::*;
 pub use manager::CommitMetadata;
+pub use diff::{GitStatus, CommitInfo, DiffResult, FileDiff, DiffLineType, DiffStats};
 
 /// Legacy Git client wrapper (deprecated)
 ///

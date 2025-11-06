@@ -457,6 +457,9 @@ pub enum Commands {
         /// Open interactive dashboard
         #[arg(long)]
         interactive: bool,
+        /// Generate comprehensive diagnostic report
+        #[arg(long)]
+        diagnostic: bool,
     },
     /// Generate HTML documentation for a building
     Doc {

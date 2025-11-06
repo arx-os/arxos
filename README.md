@@ -26,6 +26,12 @@
 # Import an IFC building file
 arx import office-building.ifc
 
+# Open spreadsheet editor (Excel-like TUI)
+arx spreadsheet equipment --building "Building Name"
+
+# Search with glob patterns (e.g., all boilers on floor 02)
+arx spreadsheet equipment --filter "/usa/ny/*/floor-02/*/boiler-*"
+
 # Search for HVAC equipment
 arx search "VAV"
 
@@ -80,6 +86,7 @@ ArxOS follows security best practices with automated scanning and comprehensive 
 ## 📚 Documentation
 
 - **[User Guide](docs/core/USER_GUIDE.md)** - Complete usage instructions for end users
+- **[API Reference](docs/API_REFERENCE.md)** - Comprehensive API reference for CLI, FFI, and core types
 - **[Examples](examples/)** - Example building data files and usage patterns
 - **[Game System](docs/features/GAME_SYSTEM.md)** - Gamified PR review and planning system
 - **[Architecture](docs/core/ARCHITECTURE.md)** - System design and technical details  

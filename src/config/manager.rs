@@ -36,9 +36,9 @@ impl ConfigManager {
     /// 
     /// Precedence order (highest to lowest):
     /// 1. Environment variables (highest priority)
-    /// 2. Project config (arx.toml in current directory)
-    /// 3. User config (~/.arx/config.toml)
-    /// 4. Global config (/etc/arx/config.toml)
+    /// 2. Project config (`.arxos/config.toml` in current directory)
+    /// 3. User config (`~/.arxos/config.toml` on Unix, `%APPDATA%\arxos\config.toml` on Windows)
+    /// 4. Global config (`/etc/arxos/config.toml` on Unix, `C:\ProgramData\arxos\config.toml` on Windows)
     /// 5. Default values (lowest priority)
     pub fn load_from_default_locations() -> ConfigResult<Self> {
         // Start with defaults (lowest priority)
@@ -295,15 +295,15 @@ impl ConfigManager {
     /// Get configuration file paths in order of priority (highest to lowest)
     /// 
     /// Returns paths in order:
-    /// 1. Project config (arx.toml in current directory) - highest file priority
-    /// 2. User config (~/.arx/config.toml on Unix, %APPDATA%\arx\config.toml on Windows)
-    /// 3. Global config (/etc/arx/config.toml on Unix, C:\ProgramData\arx\config.toml on Windows) - lowest file priority
+    /// 1. Project config (`.arxos/config.toml` in current directory) - highest file priority
+    /// 2. User config (`~/.arxos/config.toml` on Unix, `%APPDATA%\arxos\config.toml` on Windows)
+    /// 3. Global config (`/etc/arxos/config.toml` on Unix, `C:\ProgramData\arxos\config.toml` on Windows) - lowest file priority
     fn get_config_paths() -> Vec<PathBuf> {
         let mut paths = Vec::new();
         
-        // 1. Project-specific config (arx.toml in current directory) - highest priority
+        // 1. Project-specific config (.arxos/config.toml in current directory) - highest priority
         if let Ok(current_dir) = env::current_dir() {
-            paths.push(current_dir.join("arx.toml"));
+            paths.push(current_dir.join(".arxos").join("config.toml"));
         }
         
         // 2. User-specific config
@@ -322,14 +322,14 @@ impl ConfigManager {
         #[cfg(unix)]
         {
             if let Some(home) = env::var_os("HOME") {
-                return Some(PathBuf::from(home).join(".arx").join("config.toml"));
+                return Some(PathBuf::from(home).join(".arxos").join("config.toml"));
             }
         }
         
         #[cfg(windows)]
         {
             if let Some(appdata) = env::var_os("APPDATA") {
-                return Some(PathBuf::from(appdata).join("arx").join("config.toml"));
+                return Some(PathBuf::from(appdata).join("arxos").join("config.toml"));
             }
         }
         
@@ -340,16 +340,16 @@ impl ConfigManager {
     fn global_config_path() -> PathBuf {
         #[cfg(unix)]
         {
-            PathBuf::from("/etc/arx/config.toml")
+            PathBuf::from("/etc/arxos/config.toml")
         }
         
         #[cfg(windows)]
         {
             if let Some(programdata) = env::var_os("ProgramData") {
-                PathBuf::from(programdata).join("arx").join("config.toml")
+                PathBuf::from(programdata).join("arxos").join("config.toml")
             } else {
                 // Fallback to C:\ProgramData if env var not set
-                PathBuf::from("C:\\ProgramData\\arx\\config.toml")
+                PathBuf::from("C:\\ProgramData\\arxos\\config.toml")
             }
         }
         
@@ -441,7 +441,17 @@ impl ConfigManager {
     }
     
     /// Validate configuration strictly (for when config is saved/applied)
-    fn validate_config(config: &ArxConfig) -> ConfigResult<()> {
+    /// 
+    /// This performs comprehensive validation including:
+    /// - User configuration validation (name, email format)
+    /// - Path configuration validation (paths exist and are accessible)
+    /// - Building configuration validation (coordinate systems, naming patterns)
+    /// - Performance configuration validation (thread counts, memory limits)
+    /// - UI configuration validation
+    /// - Cross-configuration validation (path conflicts, etc.)
+    /// 
+    /// Returns `ConfigError` if validation fails with detailed error messages.
+    pub fn validate_config(config: &ArxConfig) -> ConfigResult<()> {
         // Use the validation module for strict validation
         super::validation::ConfigValidator::validate(config)
     }
@@ -475,7 +485,8 @@ mod tests {
     #[test]
     fn test_config_loading_from_file() {
         let temp_dir = tempdir().unwrap();
-        let config_file = temp_dir.path().join("arx.toml");
+        let config_file = temp_dir.path().join(".arxos").join("config.toml");
+        std::fs::create_dir_all(config_file.parent().unwrap()).unwrap();
         
         let config_content = r#"
             [user]
@@ -519,7 +530,8 @@ mod tests {
     #[test]
     fn test_config_saving_to_file() {
         let temp_dir = tempdir().unwrap();
-        let config_file = temp_dir.path().join("arx.toml");
+        let config_file = temp_dir.path().join(".arxos").join("config.toml");
+        std::fs::create_dir_all(config_file.parent().unwrap()).unwrap();
         
         let manager = ConfigManager::default();
         manager.save_to_file(&config_file).unwrap();
@@ -570,7 +582,9 @@ mod tests {
         fs::write(&user_path, user_config_content).unwrap();
         
         // Create project config (highest file priority)
-        let project_path = temp_dir.path().join("arx.toml");
+        let project_dir = temp_dir.path().join(".arxos");
+        std::fs::create_dir_all(&project_dir).unwrap();
+        let project_path = project_dir.join("config.toml");
         let project_config_content = toml::to_string(&{
             let mut c = ArxConfig::default();
             c.user.name = "Project User".to_string();

@@ -5,6 +5,11 @@
 use crate::ui::spreadsheet::types::Grid;
 use crate::ui::spreadsheet::data_source::SpreadsheetDataSource;
 
+/// Check if a pattern contains glob wildcards
+fn is_glob_pattern(pattern: &str) -> bool {
+    pattern.contains('*') || pattern.contains('?')
+}
+
 /// Search state
 #[derive(Debug)]
 pub struct SearchState {
@@ -13,27 +18,64 @@ pub struct SearchState {
     pub current_match: Option<(usize, usize)>, // (row, col)
     pub matches: Vec<(usize, usize)>, // All matches
     pub match_index: usize,
+    pub is_active: bool, // Whether search is currently active
+    pub use_glob: bool, // Whether to use glob pattern matching
 }
 
 impl SearchState {
     /// Create new search state
     pub fn new(query: String, case_sensitive: bool) -> Self {
+        let use_glob = is_glob_pattern(&query);
         Self {
             query,
             case_sensitive,
             current_match: None,
             matches: Vec::new(),
             match_index: 0,
+            is_active: false,
+            use_glob,
         }
+    }
+    
+    /// Update query and detect glob pattern
+    pub fn update_query(&mut self, query: String) {
+        self.query = query.clone();
+        self.use_glob = is_glob_pattern(&query);
+        self.matches.clear();
+        self.current_match = None;
+        self.match_index = 0;
+    }
+    
+    /// Activate search mode
+    pub fn activate(&mut self) {
+        self.is_active = true;
+    }
+    
+    /// Deactivate search mode
+    pub fn deactivate(&mut self) {
+        self.is_active = false;
     }
     
     /// Find all matches in grid
     pub fn find_matches(&mut self, grid: &Grid, data_source: &dyn SpreadsheetDataSource) {
         self.matches.clear();
+        
+        if self.query.is_empty() {
+            self.current_match = None;
+            return;
+        }
+        
         let query = if self.case_sensitive {
             self.query.clone()
         } else {
             self.query.to_lowercase()
+        };
+        
+        // Try to compile glob pattern if using glob
+        let glob_pattern = if self.use_glob {
+            glob::Pattern::new(&query).ok()
+        } else {
+            None
         };
         
         for row_idx in 0..grid.row_count() {
@@ -46,7 +88,19 @@ impl SearchState {
                         cell_value.to_string().to_lowercase()
                     };
                     
-                    if cell_str.contains(&query) {
+                    let matches = if self.use_glob {
+                        // Use glob pattern matching
+                        if let Some(ref pattern) = glob_pattern {
+                            pattern.matches(&cell_str)
+                        } else {
+                            false
+                        }
+                    } else {
+                        // Simple string contains
+                        cell_str.contains(&query)
+                    };
+                    
+                    if matches {
                         self.matches.push((row_idx, col_idx));
                     }
                 }
@@ -56,6 +110,9 @@ impl SearchState {
         if !self.matches.is_empty() {
             self.match_index = 0;
             self.current_match = Some(self.matches[0]);
+        } else {
+            self.current_match = None;
+            self.match_index = 0;
         }
     }
     
@@ -303,6 +360,65 @@ mod tests {
         
         search.next_match();
         assert_eq!(search.current_match_index(), 2);
+    }
+    
+    #[test]
+    fn test_search_glob_pattern() {
+        let mut search = SearchState::new("/usa/ny/*/boiler-*".to_string(), false);
+        assert!(search.use_glob);
+        
+        let grid = create_test_grid();
+        let data_source = MockDataSource {
+            data: vec![
+                vec!["/usa/ny/brooklyn/boiler-01".to_string()],
+                vec!["/usa/ny/manhattan/boiler-02".to_string()],
+                vec!["/usa/ca/boiler-03".to_string()],
+            ],
+        };
+        
+        search.find_matches(&grid, &data_source);
+        
+        // Should match first two (NY boilers) but not CA
+        assert_eq!(search.match_count(), 2);
+    }
+    
+    #[test]
+    fn test_search_simple_string_not_glob() {
+        let mut search = SearchState::new("boiler".to_string(), false);
+        assert!(!search.use_glob);
+        
+        let grid = create_test_grid();
+        let data_source = MockDataSource {
+            data: vec![
+                vec!["boiler-01".to_string()],
+                vec!["other".to_string()],
+            ],
+        };
+        
+        search.find_matches(&grid, &data_source);
+        assert_eq!(search.match_count(), 1);
+    }
+    
+    #[test]
+    fn test_search_update_query() {
+        let mut search = SearchState::new("test".to_string(), false);
+        assert!(!search.use_glob);
+        
+        search.update_query("/usa/*/boiler-*".to_string());
+        assert!(search.use_glob);
+        assert_eq!(search.query, "/usa/*/boiler-*");
+    }
+    
+    #[test]
+    fn test_search_activate_deactivate() {
+        let mut search = SearchState::new("test".to_string(), false);
+        assert!(!search.is_active);
+        
+        search.activate();
+        assert!(search.is_active);
+        
+        search.deactivate();
+        assert!(!search.is_active);
     }
 }
 

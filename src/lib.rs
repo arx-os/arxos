@@ -21,7 +21,6 @@ pub mod hardware;
 
 // Data modules (serialization/persistence)
 pub mod yaml;
-pub mod path;
 pub mod persistence;
 pub mod export;
 
@@ -32,6 +31,9 @@ pub mod query;
 pub mod utils;
 pub mod docs;
 pub mod game;
+
+// Service layer (business logic abstraction)
+pub mod services;
 
 // Identity module (user registry and attribution)
 pub mod identity;
@@ -54,8 +56,6 @@ pub use spatial::{SpatialEngine, Point3D, BoundingBox3D, CoordinateSystem, Spati
 pub use git::{BuildingGitManager, GitConfig, GitConfigManager, GitError, CommitMetadata};
 pub use render::BuildingRenderer;
 pub use yaml::{BuildingYamlSerializer, BuildingData, BuildingInfo, BuildingMetadata, FloorData, RoomData, EquipmentData, SensorMapping, ThresholdConfig};
-// Re-export path types
-pub use path::{PathComponents, PathError, PathValidator};
 pub use domain::{ArxAddress, RESERVED_SYSTEMS};
 pub use query::{query_addresses, QueryResult};
 pub use utils::progress::{ProgressReporter, ProgressContext};
@@ -64,6 +64,7 @@ pub use config::{ArxConfig, ConfigManager, ConfigError, ConfigResult};
 pub use config::counters::CounterStorage;
 pub use export::ar::{ARExporter, ARFormat, GLTFExporter};
 pub use identity::{User, UserStatus, UserRegistry, RegistryError, PendingUserRequest, PendingUserRegistry, PendingRequestStatus, PendingRegistryError};
+pub use services::{BuildingService, RoomService, EquipmentService, SpatialService, Repository, InMemoryRepository, FileRepository};
 
 // Re-export error types
 pub use error::{ArxError, ArxResult, ErrorContext, ErrorAnalytics};

@@ -59,15 +59,15 @@ This release introduces the new **ArxOS Address** system, replacing the deprecat
 ### Changed
 
 #### Breaking Changes
-- **`UniversalPath` deprecated** - Use `ArxAddress` instead
-- **`GitClient` deprecated** - Use `BuildingGitManager` instead
-- **`PathGenerator` removed** - Address generation now uses `ArxAddress::new()` and `generate_address_from_context()`
+- **`UniversalPath` completely removed** - Use `ArxAddress` instead (migration required)
+- **`GitClient` completely removed** - Use `BuildingGitManager` instead (migration required)
+- **`PathGenerator` completely removed** - Address generation now uses `ArxAddress::new()` and `spatial::grid::to_address::generate_address_from_context()`
+- **`src/path/mod.rs` deleted** - All path-related functionality moved to `domain::ArxAddress`
 - **`Equipment.address` field added** (optional for migration compatibility)
 - **`EquipmentData.address` field added** (optional for migration compatibility)
 
 #### API Changes
 - **`ArxAddress`** replaces `UniversalPath` in public API
-- **`GitClient`** and `UniversalPath`** made `pub(crate)` - no longer exported
 - **Search engine** now prioritizes `address.path` over `universal_path`
 - **IFC export** uses `ArxAddress::guid()` for entity ID generation (SHA-256 hash)
 
@@ -78,9 +78,10 @@ This release introduces the new **ArxOS Address** system, replacing the deprecat
 
 ### Removed
 
-- **`UniversalPath`** from public API (kept internally for backward compatibility)
-- **`GitClient`** from public API (kept internally for backward compatibility)
-- **`PathGenerator`** module (functionality moved to `ArxAddress` and `to_address.rs`)
+- **`UniversalPath`** - Completely removed from codebase (replaced by `ArxAddress`)
+- **`GitClient`** - Completely removed from codebase (replaced by `BuildingGitManager`)
+- **`PathGenerator`** - Module deleted (functionality moved to `ArxAddress` and `spatial::grid::to_address`)
+- **`src/path/mod.rs`** - Deprecated path module removed
 
 ### Migration Guide
 

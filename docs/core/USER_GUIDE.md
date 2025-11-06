@@ -12,8 +12,9 @@
 2. [Installation](#installation)
 3. [Quick Start](#quick-start)
 4. [Core Commands](#core-commands)
-5. [Search & Filter System](#search--filter-system)
-6. [3D Visualization](#3d-visualization)
+5. [Spreadsheet Editor](#spreadsheet-editor)
+6. [Search & Filter System](#search--filter-system)
+7. [3D Visualization](#3d-visualization)
 7. [Interactive 3D Rendering](#interactive-3d-rendering)
 8. [Gamified PR Review & Planning](#gamified-pr-review--planning)
 9. [Configuration](#configuration)
@@ -206,6 +207,145 @@ Export building data to Git repository.
 # Export current building data
 arx export --repo ./export-repo
 ```
+
+---
+
+## Spreadsheet Editor
+
+ArxOS includes a powerful spreadsheet-style TUI for viewing and editing building data. It provides an Excel-like interface optimized for equipment audits and field work.
+
+### Opening the Spreadsheet
+
+```bash
+# Open equipment spreadsheet
+arx spreadsheet equipment --building "Building Name"
+
+# Open with filter (show only matching addresses)
+arx spreadsheet equipment --filter "/usa/ny/*/floor-02/*/boiler-*"
+
+# Open room spreadsheet
+arx spreadsheet rooms --building "Building Name"
+
+# View sensor data (read-only)
+arx spreadsheet sensors --building "Building Name"
+```
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+A` | Toggle address column visibility |
+| `Ctrl+F` | Activate search (supports glob patterns) |
+| `Ctrl+S` | Save changes (stage to Git) |
+| `Ctrl+Shift+S` | Save and commit |
+| `Ctrl+R` | Reload from file |
+| `Ctrl+Z` | Undo last change |
+| `Ctrl+Y` | Redo |
+| `Ctrl+C` | Copy selected cell |
+| `Ctrl+V` | Paste into selected cell |
+| `Ctrl+E` | Export to CSV |
+| `Ctrl+U` | Clear filters |
+| `Enter` | Edit selected cell |
+| `Esc` | Cancel search/edit or quit |
+| `n` | Next search match (when in search mode) |
+| `p` | Previous search match (when in search mode) |
+| `q` | Quit |
+| `?` or `F1` | Show help |
+
+### Address Column
+
+The spreadsheet displays a **7-part hierarchical address** for each equipment item:
+
+- Format: `/country/state/city/building/floor/room/fixture`
+- Example: `/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01`
+- Color-coded by reserved system (HVAC=cyan, plumbing=blue, electrical=yellow)
+- Toggle visibility with `Ctrl+A`
+
+**Pro tip**: For Gaither High audits, use `Ctrl+A` to hide the address column when you need more space for other fields.
+
+### Search & Filter
+
+#### Live Search (Ctrl+F)
+
+- Type to search in real-time
+- Supports glob patterns: `/gaither/*/boiler-*` matches all boilers in Gaither
+- Navigate matches with `n` (next) and `p` (previous)
+- Press `Enter` to apply search and exit search mode
+- Press `Esc` to cancel
+
+#### CLI Filter
+
+Filter on load using the `--filter` parameter:
+
+```bash
+# Simple string filter
+arx spreadsheet equipment --filter "boiler"
+
+# Glob pattern filter
+arx spreadsheet equipment --filter "/usa/ny/*/floor-*/mech/boiler-*"
+
+# Filter all HVAC equipment on floor 01
+arx spreadsheet equipment --filter "/*/floor-01/*/hvac/*"
+```
+
+#### Glob Pattern Examples
+
+- `/usa/ny/*/floor-*/mech/boiler-*` - All boilers in mechanical rooms on any floor in NY
+- `/gaither/*/kitchen/*` - All items in kitchen rooms in Gaither building
+- `/*/floor-02/*/boiler-*` - All boilers on floor 02 in any building
+- `/usa/ny/brooklyn/ps-118/*/*/hvac/*` - All HVAC equipment in PS-118
+
+### Editing Cells
+
+1. Navigate to a cell using arrow keys
+2. Press `Enter` to edit
+3. Type new value
+4. Press `Enter` to apply or `Esc` to cancel
+5. Changes are auto-saved (debounced) or use `Ctrl+S` to save immediately
+
+### AR Integration
+
+The spreadsheet automatically watches for new AR scan files:
+
+- Scans are saved to `.arxos/ar-scans/` directory
+- New scans trigger auto-reload (debounced to prevent excessive reloads)
+- Status bar shows: `AR: 3 new scan(s)` when scans are detected
+
+**Pro tip**: Use AR scans from mobile devices to quickly capture equipment locations, then review and edit in the spreadsheet for field audits.
+
+### Export & Import
+
+#### Export to CSV
+
+```bash
+# While in spreadsheet, press Ctrl+E
+# Or export from command line:
+arx spreadsheet export --building "Building Name" --output equipment.csv
+```
+
+#### Import CSV
+
+```bash
+arx spreadsheet import --file equipment.csv --building "Building Name" --commit
+```
+
+### Status Bar
+
+The status bar shows:
+
+- Current position: `Row 5/100 | Column: Name (2/5)`
+- Search status: `Search: "boiler" (12 matches, 3/12) [glob]`
+- AR scan status: `AR: 3 new scan(s)`
+- Save status: `Modified`, `Saving...`, `Saved`, or error messages
+- Keyboard hints: `Ctrl+S: Save | Ctrl+F: Search | Ctrl+A: Toggle Address`
+
+### Tips for Field Audits
+
+1. **Quick Filter**: Use `--filter` on command line to open pre-filtered view
+2. **Hide Address**: Press `Ctrl+A` to hide address column when you need more space
+3. **Search**: Use `Ctrl+F` with glob patterns to find specific equipment groups
+4. **AR Sync**: Mobile AR scans automatically appear in the spreadsheet
+5. **Auto-save**: Changes auto-save after a short delay, or press `Ctrl+S` for immediate save
 
 ---
 

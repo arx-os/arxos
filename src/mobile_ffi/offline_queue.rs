@@ -447,7 +447,8 @@ mod tests {
         queue.dequeue();
         queue.mark_completed(&id);
         
-        let item = queue.all_operations().first().unwrap();
+        let operations = queue.all_operations();
+        let item = operations.first().unwrap();
         assert!(matches!(item.status, OperationStatus::Completed));
     }
 }

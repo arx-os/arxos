@@ -65,7 +65,7 @@ mod tests {
         let mut modal = ErrorModal::new();
         modal.show_error(ArxError::IoError {
             message: "Test error".to_string(),
-            context: ErrorContext::default(),
+            context: Box::new(ErrorContext::default()),
             path: None,
         });
         
@@ -82,7 +82,7 @@ mod tests {
         let mut modal = ErrorModal::new();
         let error = Box::new(ArxError::IoError {
             message: "Test error".to_string(),
-            context: ErrorContext::default(),
+            context: Box::new(ErrorContext::default()),
             path: None,
         }) as Box<dyn std::error::Error>;
         
@@ -97,7 +97,7 @@ mod tests {
         let mut modal = ErrorModal::new();
         let error = Box::new(ArxError::Configuration {
             message: "Config error".to_string(),
-            context: ErrorContext::default(),
+            context: Box::new(ErrorContext::default()),
             field: None,
         }) as Box<dyn std::error::Error>;
         
@@ -142,7 +142,7 @@ mod tests {
         let mut modal = ErrorModal::new();
         modal.show_error(ArxError::IoError {
             message: "Test".to_string(),
-            context: ErrorContext::default(),
+            context: Box::new(ErrorContext::default()),
             path: None,
         });
         

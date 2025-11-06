@@ -229,8 +229,10 @@ mod tests {
                     level: 1,
                     elevation: 0.0,
                     rooms: vec![],
+                    wings: vec![],
                     equipment: vec![
                         crate::yaml::EquipmentData {
+                            address: None,
                             id: "equipment-1".to_string(),
                             name: "Equipment 1".to_string(),
                             equipment_type: "HVAC".to_string(),

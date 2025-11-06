@@ -1,0 +1,77 @@
+{
+  "detectedEquipment": [
+    {
+      "name": "VAV-301",
+      "equipmentType": "HVAC",
+      "position": {
+        "x": 10.0,
+        "y": 20.0,
+        "z": 0.0
+      },
+      "boundingBox": {
+        "min": {
+          "x": 9.5,
+          "y": 19.5,
+          "z": -1.0
+        },
+        "max": {
+          "x": 10.5,
+          "y": 20.5,
+          "z": 1.0
+        }
+      },
+      "confidence": 0.95,
+      "detectionMethod": "ARKit",
+      "properties": {
+        "model": "VAV-301",
+        "manufacturer": "Trane"
+      }
+    },
+    {
+      "name": "Light Fixture-01",
+      "equipmentType": "Electrical",
+      "position": {
+        "x": 5.0,
+        "y": 10.0,
+        "z": 2.5
+      },
+      "boundingBox": {
+        "min": {
+          "x": 4.8,
+          "y": 9.8,
+          "z": 2.3
+        },
+        "max": {
+          "x": 5.2,
+          "y": 10.2,
+          "z": 2.7
+        }
+      },
+      "confidence": 0.88,
+      "detectionMethod": "ARKit",
+      "properties": {}
+    }
+  ],
+  "roomBoundaries": {
+    "points": [
+      {"x": 0.0, "y": 0.0, "z": 0.0},
+      {"x": 20.0, "y": 0.0, "z": 0.0},
+      {"x": 20.0, "y": 15.0, "z": 0.0},
+      {"x": 0.0, "y": 15.0, "z": 0.0}
+    ],
+    "center": {
+      "x": 10.0,
+      "y": 7.5,
+      "z": 0.0
+    }
+  },
+  "deviceType": "iOS",
+  "appVersion": "1.0.0",
+  "scanDurationMs": 5000,
+  "pointCount": 10000,
+  "accuracyEstimate": 0.05,
+  "lightingConditions": "bright",
+  "roomName": "Conference Room",
+  "floorLevel": 2
+}
+

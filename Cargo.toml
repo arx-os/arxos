@@ -225,6 +225,10 @@ path = "tests/commands/error_path_tests.rs"
 name = "wing_tests"
 path = "tests/commands/wing_tests.rs"
 
+[[test]]
+name = "config_validation_tests"
+path = "tests/config/config_validation_tests.rs"
+
 [workspace.package]
 version = "2.0.0"
 edition = "2021"

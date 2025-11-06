@@ -4,7 +4,7 @@
 
 use std::path::{Path, PathBuf};
 use std::fs;
-use std::time::SystemTime;
+use std::time::{SystemTime, Duration, Instant};
 use log::{info, warn};
 
 /// File lock for preventing concurrent edits
@@ -220,6 +220,96 @@ impl WorkflowStatus {
         }
         
         warnings
+    }
+}
+
+/// AR scan file watcher
+/// Polls for new AR scan JSON files and notifies when they're detected
+pub struct ArScanWatcher {
+    scan_dir: PathBuf,
+    last_scan_count: usize,
+    last_check: Instant,
+    debounce_interval: Duration,
+}
+
+impl ArScanWatcher {
+    /// Create a new AR scan watcher for the given building
+    pub fn new(building_name: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        // Check multiple possible scan directory locations
+        let scan_dirs = vec![
+            PathBuf::from(format!(".arxos/ar-scans")),
+            PathBuf::from(format!("{}_scans", building_name)),
+            PathBuf::from(format!(".arxos/{}/scans", building_name)),
+        ];
+        
+        let mut scan_dir = None;
+        for dir in scan_dirs {
+            if dir.exists() {
+                scan_dir = Some(dir);
+                break;
+            }
+        }
+        
+        // Use first directory or create it if none exist
+        let scan_dir = scan_dir.unwrap_or_else(|| {
+            let dir = PathBuf::from(format!(".arxos/ar-scans"));
+            let _ = fs::create_dir_all(&dir);
+            dir
+        });
+        
+        // Count initial scan files
+        let last_scan_count = Self::count_scan_files(&scan_dir).unwrap_or(0);
+        
+        Ok(Self {
+            scan_dir,
+            last_scan_count,
+            last_check: Instant::now(),
+            debounce_interval: Duration::from_secs(1), // Debounce 1 second
+        })
+    }
+    
+    /// Count scan JSON files in directory
+    fn count_scan_files(dir: &Path) -> Result<usize, Box<dyn std::error::Error>> {
+        if !dir.exists() {
+            return Ok(0);
+        }
+        
+        let count = fs::read_dir(dir)?
+            .filter_map(|entry| entry.ok())
+            .filter(|entry| {
+                entry.path().extension().and_then(|e| e.to_str()) == Some("json")
+            })
+            .count();
+        
+        Ok(count)
+    }
+    
+    /// Check for new scan files (debounced)
+    pub fn check_new_scans(&mut self) -> Result<usize, Box<dyn std::error::Error>> {
+        // Debounce checks
+        if self.last_check.elapsed() < self.debounce_interval {
+            return Ok(0);
+        }
+        
+        let current_count = Self::count_scan_files(&self.scan_dir)?;
+        let new_count = current_count.saturating_sub(self.last_scan_count);
+        
+        if new_count > 0 {
+            self.last_scan_count = current_count;
+        }
+        
+        self.last_check = Instant::now();
+        Ok(new_count)
+    }
+    
+    /// Get scan directory path
+    pub fn scan_dir(&self) -> &Path {
+        &self.scan_dir
+    }
+    
+    /// Get total scan count
+    pub fn total_scan_count(&self) -> usize {
+        self.last_scan_count
     }
 }
 

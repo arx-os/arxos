@@ -329,7 +329,7 @@ impl WatchDashboardState {
         self.sensor_readings.iter()
             .filter(|reading| {
                 if let Some(ref filter_room) = self.filter_room {
-                    reading.room.as_ref().map_or(false, |r| r.contains(filter_room))
+                    reading.room.as_ref().is_some_and(|r| r.contains(filter_room))
                 } else {
                     true
                 }
@@ -675,7 +675,7 @@ fn render_sensors<'a>(
             Cell::from(reading.sensor_id.clone()),
             Cell::from(reading.sensor_type.clone()),
             Cell::from(format!("{:.1} {}", reading.value, reading.unit)),
-            Cell::from(reading.room.as_ref().map(|r| r.as_str()).unwrap_or("N/A")),
+            Cell::from(reading.room.as_deref().unwrap_or("N/A")),
             Cell::from(reading.status.icon().to_string()),
             Cell::from(reading.timestamp.clone()),
         ])
@@ -867,33 +867,28 @@ pub fn handle_watch_dashboard(
         })?;
         
         // Handle events
-        if let Some(event) = terminal.poll_event(Duration::from_millis(100))? {
-            match event {
-                Event::Key(key_event) => {
-                    if key_event.code == KeyCode::Char('q') || key_event.code == KeyCode::Esc {
-                        break;
-                    } else if key_event.code == KeyCode::Tab {
-                        state.selected_tab = (state.selected_tab + 1) % state.tabs.len();
-                    } else if key_event.code == KeyCode::BackTab {
-                        state.selected_tab = if state.selected_tab == 0 {
-                            state.tabs.len() - 1
-                        } else {
-                            state.selected_tab - 1
-                        };
-                    } else if key_event.code == KeyCode::Right {
-                        state.selected_tab = (state.selected_tab + 1) % state.tabs.len();
-                    } else if key_event.code == KeyCode::Left {
-                        state.selected_tab = if state.selected_tab == 0 {
-                            state.tabs.len() - 1
-                        } else {
-                            state.selected_tab - 1
-                        };
-                    } else if key_event.code == KeyCode::Char('r') || key_event.code == KeyCode::Char('R') {
-                        state.refresh()?;
-                        last_refresh = std::time::Instant::now();
-                    }
-                }
-                _ => {}
+        if let Some(Event::Key(key_event)) = terminal.poll_event(Duration::from_millis(100))? {
+            if key_event.code == KeyCode::Char('q') || key_event.code == KeyCode::Esc {
+                break;
+            } else if key_event.code == KeyCode::Tab {
+                state.selected_tab = (state.selected_tab + 1) % state.tabs.len();
+            } else if key_event.code == KeyCode::BackTab {
+                state.selected_tab = if state.selected_tab == 0 {
+                    state.tabs.len() - 1
+                } else {
+                    state.selected_tab - 1
+                };
+            } else if key_event.code == KeyCode::Right {
+                state.selected_tab = (state.selected_tab + 1) % state.tabs.len();
+            } else if key_event.code == KeyCode::Left {
+                state.selected_tab = if state.selected_tab == 0 {
+                    state.tabs.len() - 1
+                } else {
+                    state.selected_tab - 1
+                };
+            } else if key_event.code == KeyCode::Char('r') || key_event.code == KeyCode::Char('R') {
+                state.refresh()?;
+                last_refresh = std::time::Instant::now();
             }
         }
         

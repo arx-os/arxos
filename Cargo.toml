@@ -69,6 +69,7 @@ futures-util = { version = "0.3", features = ["sink"], optional = true }
 rumqttc = { version = "0.20", optional = true }
 
 [dev-dependencies]
+proptest = "1.4"
 serial_test = { workspace = true }
 
 [[bench]]

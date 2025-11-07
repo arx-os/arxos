@@ -5,7 +5,8 @@
 //! - Hardware sensor ingestion → Equipment status updates → Alerts
 //! - Full round-trip workflows
 
-use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, RoomData, EquipmentData, EquipmentStatus, CoordinateSystemInfo};
+use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, CoordinateSystemInfo};
+use arxos::core::{Floor, Wing, Room, Equipment, RoomType, EquipmentType, EquipmentStatus, EquipmentHealthStatus, Position, SpatialProperties, Dimensions, BoundingBox};
 use arxos::export::ifc::{IFCExporter, IFCSyncState};
 use arxos::export::ar::{ARExporter, ARFormat};
 use arxos::hardware::{EquipmentStatusUpdater, SensorData, SensorMetadata, SensorDataValues};
@@ -41,68 +42,77 @@ fn create_comprehensive_test_building() -> BuildingData {
             tags: vec!["e2e".to_string(), "test".to_string()],
         },
         floors: vec![
-            FloorData {
+            Floor {
                 id: "floor-1".to_string(),
                 name: "Ground Floor".to_string(),
                 level: 0,
-                elevation: 0.0,
-                rooms: vec![
-                    RoomData {
-                        id: "room-101".to_string(),
-                        name: "Office 101".to_string(),
-                        room_type: "Office".to_string(),
-                        area: Some(30.0),
-                        volume: Some(90.0),
-                        position: Point3D::new(5.0, 5.0, 2.0),
-                        bounding_box: BoundingBox3D::new(
-                            Point3D::new(0.0, 0.0, 0.0),
-                            Point3D::new(10.0, 6.0, 3.0),
-                        ),
-                        equipment: vec![],
-                        properties: HashMap::new(),
-                    },
-                ],
+                elevation: Some(0.0),
                 bounding_box: Some(BoundingBox3D::new(
                     Point3D::new(0.0, 0.0, 0.0),
                     Point3D::new(50.0, 50.0, 10.0),
                 )),
+                wings: vec![
+                    Wing {
+                        id: "wing-1".to_string(),
+                        name: "Main Wing".to_string(),
+                        rooms: vec![
+                            Room {
+                                id: "room-101".to_string(),
+                                name: "Office 101".to_string(),
+                                room_type: RoomType::Office,
+                                equipment: vec![],
+                                spatial_properties: SpatialProperties {
+                                    position: Position { x: 5.0, y: 5.0, z: 2.0, coordinate_system: "LOCAL".to_string() },
+                                    dimensions: Dimensions { width: 10.0, height: 3.0, depth: 6.0 },
+                                    bounding_box: BoundingBox {
+                                        min: Position { x: 0.0, y: 0.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
+                                        max: Position { x: 10.0, y: 6.0, z: 3.0, coordinate_system: "LOCAL".to_string() },
+                                    },
+                                    coordinate_system: "LOCAL".to_string(),
+                                },
+                                properties: HashMap::new(),
+                                created_at: None,
+                                updated_at: None,
+                            },
+                        ],
+                        equipment: vec![],
+                        properties: HashMap::new(),
+                    },
+                ],
                 equipment: vec![
-                    EquipmentData {
+                    Equipment {
                         id: "hvac-unit-1".to_string(),
                         name: "HVAC Unit 1".to_string(),
-                        equipment_type: "HVAC".to_string(),
-                        system_type: "HVAC".to_string(),
-                        position: Point3D::new(2.0, 3.0, 2.0),
-                        bounding_box: BoundingBox3D::new(
-                            Point3D::new(1.0, 2.0, 1.5),
-                            Point3D::new(3.0, 4.0, 2.5),
-                        ),
-                        status: EquipmentStatus::Healthy,
+                        path: "building/floor-1/room-101/equipment-hvac-1".to_string(),
+                        address: None,
+                        equipment_type: EquipmentType::HVAC,
+                        position: Position { x: 2.0, y: 3.0, z: 2.0, coordinate_system: "LOCAL".to_string() },
                         properties: {
                             let mut props = HashMap::new();
                             props.insert("temperature_setpoint".to_string(), "72".to_string());
                             props.insert("sensor_id".to_string(), "sensor-hvac-001".to_string());
                             props
                         },
-                        universal_path: "building/floor-1/room-101/equipment-hvac-1".to_string(),
+                        status: EquipmentStatus::Active,
+                        health_status: Some(EquipmentHealthStatus::Healthy),
+                        room_id: Some("room-101".to_string()),
                         sensor_mappings: None,
                     },
-                    EquipmentData {
+                    Equipment {
                         id: "electrical-fixture-1".to_string(),
                         name: "Light Fixture 1".to_string(),
-                        equipment_type: "Electrical".to_string(),
-                        system_type: "Electrical".to_string(),
-                        position: Point3D::new(7.0, 3.0, 2.5),
-                        bounding_box: BoundingBox3D::new(
-                            Point3D::new(6.5, 2.5, 2.0),
-                            Point3D::new(7.5, 3.5, 3.0),
-                        ),
-                        status: EquipmentStatus::Healthy,
+                        path: "building/floor-1/room-101/equipment-electrical-1".to_string(),
+                        address: None,
+                        equipment_type: EquipmentType::Electrical,
+                        position: Position { x: 7.0, y: 3.0, z: 2.5, coordinate_system: "LOCAL".to_string() },
                         properties: HashMap::new(),
-                        universal_path: "building/floor-1/room-101/equipment-electrical-1".to_string(),
+                        status: EquipmentStatus::Active,
+                        health_status: Some(EquipmentHealthStatus::Healthy),
+                        room_id: Some("room-101".to_string()),
                         sensor_mappings: None,
                     },
                 ],
+                properties: HashMap::new(),
             },
         ],
         coordinate_systems: vec![CoordinateSystemInfo {

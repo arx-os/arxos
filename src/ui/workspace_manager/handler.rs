@@ -39,11 +39,9 @@ pub fn handle_workspace_manager(
         })?;
         
         // Wait for any key
-        if let Some(event) = terminal.poll_event(Duration::from_secs(5))? {
-            if let Event::Key(key_event) = event {
-                if matches!(key_event.code, KeyCode::Esc | KeyCode::Char('q')) {
-                    return Ok(None);
-                }
+        if let Some(Event::Key(key_event)) = terminal.poll_event(Duration::from_secs(5))? {
+            if matches!(key_event.code, KeyCode::Esc | KeyCode::Char('q')) {
+                return Ok(None);
             }
         }
         
@@ -64,43 +62,40 @@ pub fn handle_workspace_manager(
                 continue;
             }
             
-            match event {
-                Event::Key(key_event) => {
-                    match key_event.code {
-                        KeyCode::Esc | KeyCode::Char('q') => {
-                            return Ok(None);
+            if let Event::Key(key_event) = event {
+                match key_event.code {
+                    KeyCode::Esc | KeyCode::Char('q') => {
+                        return Ok(None);
+                    }
+                    KeyCode::Enter => {
+                        if let Some(workspace) = manager.selected_workspace() {
+                            return Ok(Some(workspace.path.clone()));
                         }
-                        KeyCode::Enter => {
-                            if let Some(workspace) = manager.selected_workspace() {
-                                return Ok(Some(workspace.path.clone()));
-                            }
-                        }
-                        KeyCode::Up => {
-                            manager.previous();
-                        }
-                        KeyCode::Down => {
-                            manager.next();
-                        }
-                        KeyCode::Char(c) => {
-                            if key_event.modifiers.contains(KeyModifiers::CONTROL) && c == 'w' {
-                                // Ctrl+W to open workspace manager (already open)
-                                continue;
-                            } else {
-                                // Add to search query
-                                let mut query = manager.query().to_string();
-                                query.push(c);
-                                manager.update_query(query);
-                            }
-                        }
-                        KeyCode::Backspace => {
+                    }
+                    KeyCode::Up => {
+                        manager.previous();
+                    }
+                    KeyCode::Down => {
+                        manager.next();
+                    }
+                    KeyCode::Char(c) => {
+                        if key_event.modifiers.contains(KeyModifiers::CONTROL) && c == 'w' {
+                            // Ctrl+W to open workspace manager (already open)
+                            continue;
+                        } else {
+                            // Add to search query
                             let mut query = manager.query().to_string();
-                            query.pop();
+                            query.push(c);
                             manager.update_query(query);
                         }
-                        _ => {}
                     }
+                    KeyCode::Backspace => {
+                        let mut query = manager.query().to_string();
+                        query.pop();
+                        manager.update_query(query);
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
         }
     }

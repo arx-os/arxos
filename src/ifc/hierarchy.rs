@@ -110,7 +110,7 @@ impl HierarchyBuilder {
         if let Some(first_comma) = definition.find(',') {
             if let Some(start) = definition[first_comma..].find("#") {
                 let ref_start = first_comma + start;
-                if let Some(end) = definition[ref_start+1..].find(|c| c == ',' || c == ')') {
+                if let Some(end) = definition[ref_start+1..].find(|c| matches!(c, ',' | ')')) {
                     let ref_str = &definition[ref_start..ref_start+1+end];
                     return Some(ref_str.to_string());
                 }
@@ -150,7 +150,7 @@ impl HierarchyBuilder {
                                 if let Some(ref_start) = nested_content.find('#') {
                                     // Find the end of the reference
                                     for i in (ref_start+1)..nested_content.len() {
-                                        if nested_content.chars().nth(i).map_or(false, |c| c == ',' || c == ')') {
+                                        if nested_content.chars().nth(i).is_some_and(|c| c == ',' || c == ')') {
                                             let ref_str = &nested_content[ref_start..i];
                                             return Some(ref_str.to_string());
                                         }

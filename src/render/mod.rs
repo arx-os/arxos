@@ -146,8 +146,8 @@ impl BuildingRenderer {
                 if !polygon_str.is_empty() {
                     has_polygon = true;
                     // Determine coordinate space
-                    let is_world_space = room.properties.get("scan_source").is_some() || 
-                                         room.properties.get("scan_mode").is_some();
+                    let is_world_space = room.properties.contains_key("scan_source") || 
+                                         room.properties.contains_key("scan_mode");
                     let room_x = room.spatial_properties.position.x;
                     let room_y = room.spatial_properties.position.y;
                     for point_str in polygon_str.split(';') {
@@ -210,8 +210,8 @@ impl BuildingRenderer {
             if !polygon_str.is_empty() {
                 // Parse polygon points: "x,y,z;x,y,z;..."
                 // Determine coordinate space: IFC uses LOCAL, AR scans use WORLD
-                let is_world_space = room.properties.get("scan_source").is_some() || 
-                                     room.properties.get("scan_mode").is_some();
+                let is_world_space = room.properties.contains_key("scan_source") || 
+                                     room.properties.contains_key("scan_mode");
                 
                 let room_x = room.spatial_properties.position.x;
                 let room_y = room.spatial_properties.position.y;
@@ -264,6 +264,7 @@ impl BuildingRenderer {
         let end_y = end_y.max(start_y);
         
         // Draw rectangle
+        #[allow(clippy::needless_range_loop)]
         for y in start_y..=end_y {
             for x in start_x..=end_x {
                 if x < grid_width && y < grid_height {
@@ -303,7 +304,7 @@ impl BuildingRenderer {
     
     fn draw_polygon_outline(
         &self,
-        grid: &mut Vec<Vec<char>>,
+        grid: &mut [Vec<char>],
         points: &[(f64, f64)],
         bounds: (f64, f64, f64, f64),
         grid_width: usize,
@@ -371,7 +372,7 @@ impl BuildingRenderer {
         Ok(())
     }
     
-    fn draw_line(&self, grid: &mut Vec<Vec<char>>, p1: (usize, usize), p2: (usize, usize), grid_width: usize, grid_height: usize) {
+    fn draw_line(&self, grid: &mut [Vec<char>], p1: (usize, usize), p2: (usize, usize), grid_width: usize, grid_height: usize) {
         let dx = (p2.0 as i32 - p1.0 as i32).abs();
         let dy = (p2.1 as i32 - p1.1 as i32).abs();
         let sx = if p1.0 < p2.0 { 1 } else { -1 };
@@ -440,7 +441,7 @@ impl BuildingRenderer {
         (gx, gy)
     }
     
-    fn draw_room_name(&self, grid: &mut Vec<Vec<char>>, name: &str, center_x: usize, center_y: usize, grid_width: usize, grid_height: usize) {
+    fn draw_room_name(&self, grid: &mut [Vec<char>], name: &str, center_x: usize, center_y: usize, grid_width: usize, grid_height: usize) {
         if center_y < grid_height && center_x < grid_width {
             let name_start = center_x.saturating_sub(name.len() / 2);
             for (i, ch) in name.chars().enumerate().take(grid_width.saturating_sub(name_start)) {
@@ -455,7 +456,7 @@ impl BuildingRenderer {
         }
     }
     
-    fn draw_walls_in_polygon_space(&self, grid: &mut Vec<Vec<char>>, walls_str: &str, bounds: (f64, f64, f64, f64), grid_width: usize, grid_height: usize) -> Result<(), Box<dyn std::error::Error>> {
+    fn draw_walls_in_polygon_space(&self, grid: &mut [Vec<char>], walls_str: &str, bounds: (f64, f64, f64, f64), grid_width: usize, grid_height: usize) -> Result<(), Box<dyn std::error::Error>> {
         let (min_x, min_y, max_x, max_y) = bounds;
         let bounds_width = max_x - min_x;
         let bounds_height = max_y - min_y;
@@ -506,7 +507,7 @@ impl BuildingRenderer {
         Ok(())
     }
     
-    fn draw_equipment(&self, grid: &mut Vec<Vec<char>>, equipment: &Equipment, bounds: (f64, f64, f64, f64), _scale: f64) -> Result<(), Box<dyn std::error::Error>> {
+    fn draw_equipment(&self, grid: &mut [Vec<char>], equipment: &Equipment, bounds: (f64, f64, f64, f64), _scale: f64) -> Result<(), Box<dyn std::error::Error>> {
         let (min_x, min_y, max_x, max_y) = bounds;
         let width = grid[0].len();
         let height = grid.len();
@@ -557,7 +558,7 @@ impl BuildingRenderer {
         
         for equipment in &floor.equipment {
             // Map EquipmentStatus to health status
-            let health_status = equipment.health_status
+            let health_status = equipment.health_status.as_ref().cloned()
                 .or_else(|| match equipment.status {
                     crate::core::EquipmentStatus::Active => Some(crate::core::EquipmentHealthStatus::Healthy),
                     crate::core::EquipmentStatus::Maintenance => Some(crate::core::EquipmentHealthStatus::Warning),
@@ -582,7 +583,7 @@ impl BuildingRenderer {
         if !floor.equipment.is_empty() {
             println!("\nEquipment Details:");
             for equipment in &floor.equipment {
-                let health_status = equipment.health_status
+                let health_status = equipment.health_status.as_ref().cloned()
                     .or_else(|| match equipment.status {
                         crate::core::EquipmentStatus::Active => Some(crate::core::EquipmentHealthStatus::Healthy),
                         crate::core::EquipmentStatus::Maintenance => Some(crate::core::EquipmentHealthStatus::Warning),
@@ -610,16 +611,6 @@ impl BuildingRenderer {
         }
         
         Ok(())
-    }
-    
-    #[allow(deprecated)]
-    fn get_status_symbol(&self, status: &crate::yaml::EquipmentStatus) -> &str {
-        match status {
-            crate::yaml::EquipmentStatus::Healthy => "✅",
-            crate::yaml::EquipmentStatus::Warning => "⚠️",
-            crate::yaml::EquipmentStatus::Critical => "❌",
-            crate::yaml::EquipmentStatus::Unknown => "❓",
-        }
     }
     
     fn get_status_symbol_from_health(&self, health_status: Option<crate::core::EquipmentHealthStatus>) -> &str {

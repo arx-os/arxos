@@ -342,7 +342,7 @@ mod tests {
 
     #[test]
     fn test_validate_custom() {
-        let addr = ArxAddress::from_path("/usa/ny/brooklyn/ps-118/floor-02/kitchen/fridge/pbj-sandwich").unwrap();
+        let addr = ArxAddress::from_path("/usa/ny/brooklyn/ps-118/floor-02/kitchen/fridge-01").unwrap();
         assert!(addr.validate().is_ok());
     }
 
@@ -465,7 +465,7 @@ mod tests {
         let paths = vec![
             "/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01",
             "/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-02",
-            "/usa/ny/brooklyn/ps-118/floor-02/kitchen/fridge/pbj-sandwich",
+            "/usa/ny/brooklyn/ps-118/floor-02/kitchen/fridge-01",
             "/usa/ca/san-francisco/office-building/floor-01/hvac/ahu-01",
         ];
 

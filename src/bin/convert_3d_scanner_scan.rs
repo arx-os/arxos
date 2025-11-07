@@ -331,7 +331,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     if !args.quiet {
         println!("✅ Generated: {}", args.output.display());
-        println!("");
+        println!();
         println!("💡 Next steps:");
         println!("   1. Review the generated YAML file");
         println!("   2. Test with: arx doc --building \"{}\"", title);

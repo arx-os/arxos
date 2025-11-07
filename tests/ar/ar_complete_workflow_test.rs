@@ -12,7 +12,8 @@ use arxos::ar_integration::processing::{process_ar_scan_to_pending, ARScanData, 
 use arxos::ar_integration::pending::{PendingEquipmentManager, DetectedEquipmentInfo, DetectionMethod};
 use arxos::git::manager::{BuildingGitManager, GitConfig, GitConfigManager};
 use arxos::spatial::{Point3D, BoundingBox3D};
-use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentStatus};
+use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+use arxos::core::Floor;
 use arxos::utils::loading::load_building_data;
 use serial_test::serial;
 use std::collections::HashMap;
@@ -91,14 +92,15 @@ fn test_complete_ar_workflow_with_git() -> Result<(), Box<dyn std::error::Error>
             units: "meters".to_string(),
             tags: vec![],
         },
-        floors: vec![FloorData {
+        floors: vec![Floor {
             id: "floor-3".to_string(),
             name: "Floor 3".to_string(),
             level: 3,
-            elevation: 9.0,
-            rooms: vec![],
-            equipment: vec![],
+            elevation: Some(9.0),
             bounding_box: None,
+            wings: vec![],
+            equipment: vec![],
+            properties: HashMap::new(),
         }],
         coordinate_systems: vec![],
     };
@@ -167,8 +169,10 @@ fn test_complete_ar_workflow_with_git() -> Result<(), Box<dyn std::error::Error>
     // Verify equipment was added
     let floor = building_data.floors.iter().find(|f| f.level == 3).unwrap();
     let equipment = floor.equipment.iter().find(|e| e.name == "VAV-301-New").unwrap();
-    assert_eq!(equipment.position, Point3D { x: 10.0, y: 20.0, z: 9.0 });
-    assert!(matches!(equipment.status, EquipmentStatus::Healthy));
+    assert_eq!(equipment.position.x, 10.0);
+    assert_eq!(equipment.position.y, 20.0);
+    assert_eq!(equipment.position.z, 9.0);
+    assert!(equipment.health_status.is_some());
     
     // Phase 8: Commit changes to Git
     let commit_result = git_manager.export_building(&building_data, Some("Added VAV-301-New from AR scan"))?;

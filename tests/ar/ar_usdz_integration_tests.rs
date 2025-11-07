@@ -4,7 +4,8 @@
 //! glTF to USDZ conversion and USDZ file structure validation.
 
 use arxos::export::ar::{ARExporter, ARFormat};
-use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentData, EquipmentStatus, CoordinateSystemInfo};
+use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, CoordinateSystemInfo};
+use arxos::core::{Floor, Equipment, EquipmentType, EquipmentStatus, EquipmentHealthStatus, Position};
 use arxos::spatial::{Point3D, BoundingBox3D};
 use std::fs;
 use std::collections::HashMap;
@@ -34,45 +35,42 @@ fn create_test_building_data() -> BuildingData {
             tags: vec![],
         },
         floors: vec![
-            FloorData {
+            Floor {
                 id: "floor-1".to_string(),
                 name: "Floor 1".to_string(),
                 level: 1,
-                elevation: 0.0,
-                rooms: vec![],
+                elevation: Some(0.0),
+                bounding_box: None,
+                wings: vec![],
                 equipment: vec![
-                    EquipmentData {
+                    Equipment {
                         id: "equipment-1".to_string(),
                         name: "HVAC Unit 1".to_string(),
-                        equipment_type: "HVAC".to_string(),
-                        system_type: "HVAC".to_string(),
-                        position: Point3D::new(2.0, 2.0, 2.0),
-                        bounding_box: BoundingBox3D::new(
-                            Point3D::new(1.0, 1.0, 1.0),
-                            Point3D::new(3.0, 3.0, 3.0),
-                        ),
-                        status: EquipmentStatus::Healthy,
+                        path: "building/floor-1/equipment-hvac-1".to_string(),
+                        address: None,
+                        equipment_type: EquipmentType::HVAC,
+                        position: Position { x: 2.0, y: 2.0, z: 2.0, coordinate_system: "LOCAL".to_string() },
                         properties: HashMap::new(),
-                        universal_path: "building/floor-1/equipment-hvac-1".to_string(),
+                        status: EquipmentStatus::Active,
+                        health_status: Some(EquipmentHealthStatus::Healthy),
+                        room_id: None,
                         sensor_mappings: None,
                     },
-                    EquipmentData {
+                    Equipment {
                         id: "equipment-2".to_string(),
                         name: "Light Fixture 1".to_string(),
-                        equipment_type: "Electrical".to_string(),
-                        system_type: "Electrical".to_string(),
-                        position: Point3D::new(5.0, 5.0, 2.5),
-                        bounding_box: BoundingBox3D::new(
-                            Point3D::new(4.5, 4.5, 2.0),
-                            Point3D::new(5.5, 5.5, 3.0),
-                        ),
-                        status: EquipmentStatus::Healthy,
+                        path: "building/floor-1/equipment-electrical-1".to_string(),
+                        address: None,
+                        equipment_type: EquipmentType::Electrical,
+                        position: Position { x: 5.0, y: 5.0, z: 2.5, coordinate_system: "LOCAL".to_string() },
                         properties: HashMap::new(),
-                        universal_path: "building/floor-1/equipment-electrical-1".to_string(),
+                        status: EquipmentStatus::Active,
+                        health_status: Some(EquipmentHealthStatus::Healthy),
+                        room_id: None,
                         sensor_mappings: None,
                     },
                 ],
-                bounding_box: None,
+                properties: HashMap::new(),
             },
         ],
         coordinate_systems: vec![CoordinateSystemInfo {

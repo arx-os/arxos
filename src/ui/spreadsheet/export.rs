@@ -27,7 +27,7 @@ pub fn export_to_csv(
     
     // Write data rows
     for row in rows {
-        let values: Vec<String> = row.iter().map(|cell| format_cell_for_csv(cell)).collect();
+        let values: Vec<String> = row.iter().map(format_cell_for_csv).collect();
         writer.write_record(&values)
             .map_err(|e| format!("Failed to write CSV row: {}", e))?;
     }

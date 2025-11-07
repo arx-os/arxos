@@ -43,7 +43,7 @@ pub fn handle_health(component: Option<String>, verbose: bool, interactive: bool
                 all_checks_passed = false;
             }
         }
-        "all" | _ => {
+        _ => {
             if !check_git(verbose) {
                 all_checks_passed = false;
             }
@@ -309,7 +309,7 @@ fn generate_diagnostic_report(component: Option<String>, verbose: bool) -> Resul
         }
     }
     
-    report.push_str("\n");
+    report.push('\n');
     
     let component_to_check = component.unwrap_or_else(|| "all".to_string());
     
@@ -337,24 +337,24 @@ fn generate_diagnostic_report(component: Option<String>, verbose: bool) -> Resul
             report.push_str(&format!("{}\n", "-".repeat(60)));
             report.push_str(&format!("YAML Parsing: {}\n", check_yaml_parsing()));
         }
-        "all" | _ => {
+        _ => {
             report.push_str("Git Integration Diagnostics\n");
             report.push_str(&format!("{}\n", "-".repeat(60)));
             report.push_str(&format!("Git Available: {}\n", check_git_status()));
             report.push_str(&format!("Git Repository: {}\n", check_git_repo_status()));
-            report.push_str("\n");
+            report.push('\n');
             
             report.push_str("Configuration Diagnostics\n");
             report.push_str(&format!("{}\n", "-".repeat(60)));
             report.push_str(&format!("Configuration Status: {}\n", check_config_status()));
             report.push_str(&format!("Environment Variables: {}\n", check_env_vars()));
-            report.push_str("\n");
+            report.push('\n');
             
             report.push_str("Persistence Diagnostics\n");
             report.push_str(&format!("{}\n", "-".repeat(60)));
             report.push_str(&format!("Write Permissions: {}\n", check_write_permissions()));
             report.push_str(&format!("YAML Serialization: {}\n", check_yaml_serialization()));
-            report.push_str("\n");
+            report.push('\n');
             
             report.push_str("YAML Processing Diagnostics\n");
             report.push_str(&format!("{}\n", "-".repeat(60)));
@@ -362,7 +362,7 @@ fn generate_diagnostic_report(component: Option<String>, verbose: bool) -> Resul
         }
     }
     
-    report.push_str("\n");
+    report.push('\n');
     report.push_str("File System Information\n");
     report.push_str(&format!("{}\n", "-".repeat(60)));
     report.push_str(&format!("Current Directory: {}\n", std::env::current_dir()?.display()));
@@ -387,7 +387,7 @@ fn generate_diagnostic_report(component: Option<String>, verbose: bool) -> Resul
         }
     }
     
-    report.push_str("\n");
+    report.push('\n');
     report.push_str("Configuration File Locations\n");
     report.push_str(&format!("{}\n", "-".repeat(60)));
     

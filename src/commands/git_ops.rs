@@ -452,7 +452,7 @@ pub fn handle_history(limit: usize, verbose: bool, file: Option<String>) -> Resu
     
     if let Some(repo_path) = repo_path {
         // Load user registry (optional - if it doesn't exist, we'll show email only)
-        let registry = UserRegistry::load(&std::path::Path::new(&repo_path)).ok();
+        let registry = UserRegistry::load(std::path::Path::new(&repo_path)).ok();
         
         // Initialize Git manager
         let config = GitConfigManager::default_config();

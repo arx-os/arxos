@@ -32,6 +32,13 @@ extern "C" {
  * Load a PR for review (game mode)
  *
  * Returns JSON with PR summary including validation results
+ *
+ * # Safety
+ *
+ * This function is unsafe because it dereferences raw pointers. The caller must ensure:
+ * - `pr_id` is a valid null-terminated C string or null
+ * - `pr_dir` is a valid null-terminated C string or null
+ * - `building_name` is a valid null-terminated C string or null
  */
 char *arxos_load_pr(const char *pr_id, const char *pr_dir, const char *building_name);
 
@@ -39,6 +46,12 @@ char *arxos_load_pr(const char *pr_id, const char *pr_dir, const char *building_
  * Validate equipment placement against constraints
  *
  * Returns JSON validation result with violations and suggestions
+ *
+ * # Safety
+ *
+ * This function is unsafe because it dereferences raw pointers. The caller must ensure:
+ * - `equipment_json` is a valid null-terminated C string or null
+ * - `constraints_json` is a valid null-terminated C string or null
  */
 char *arxos_validate_constraints(const char *equipment_json, const char *constraints_json);
 
@@ -46,6 +59,12 @@ char *arxos_validate_constraints(const char *equipment_json, const char *constra
  * Get game plan from planning session
  *
  * Returns JSON with plan data, placements, and validation summary
+ *
+ * # Safety
+ *
+ * This function is unsafe because it dereferences raw pointers. The caller must ensure:
+ * - `session_id` is a valid null-terminated C string or null
+ * - `building_name` is a valid null-terminated C string or null
  */
 char *arxos_get_game_plan(const char *session_id, const char *building_name);
 
@@ -103,6 +122,11 @@ char *arxos_get_equipment(const char *building_name, const char *equipment_id);
  * Parse AR scan data from JSON string
  *
  * Returns parsed AR scan data as JSON
+ *
+ * # Safety
+ *
+ * This function is unsafe because it dereferences raw pointers. The caller must ensure:
+ * - `json_data` is a valid null-terminated C string or null
  */
 char *arxos_parse_ar_scan(const char *json_data);
 
@@ -110,6 +134,11 @@ char *arxos_parse_ar_scan(const char *json_data);
  * Process AR scan and extract equipment
  *
  * Returns equipment info list as JSON
+ *
+ * # Safety
+ *
+ * This function is unsafe because it dereferences raw pointers. The caller must ensure:
+ * - `json_data` is a valid null-terminated C string or null
  */
 char *arxos_extract_equipment(const char *json_data);
 
@@ -122,6 +151,12 @@ char *arxos_extract_equipment(const char *json_data);
  * * `confidence_threshold` - Minimum confidence (0.0-1.0) to create pending items
  *
  * Returns JSON with pending equipment IDs and details
+ *
+ * # Safety
+ *
+ * This function is unsafe because it dereferences raw pointers. The caller must ensure:
+ * - `json_data` is a valid null-terminated C string or null
+ * - `building_name` is a valid null-terminated C string or null
  */
 char *arxos_process_ar_scan_to_pending(const char *json_data,
                                        const char *building_name,
@@ -135,6 +170,12 @@ char *arxos_process_ar_scan_to_pending(const char *json_data,
  * * `format` - Export format: "gltf" or "usdz"
  *
  * Returns JSON with export status and file path
+ *
+ * # Safety
+ *
+ * This function is unsafe because it dereferences raw pointers. The caller must ensure:
+ * - `building_name` is a valid null-terminated C string or null
+ * - `format` is a valid null-terminated C string or null
  */
 char *arxos_export_for_ar(const char *building_name, const char *format);
 
@@ -212,6 +253,11 @@ char *arxos_save_ar_scan(const char *json_data,
  *
  * # Returns
  * JSON string with pending equipment list
+ *
+ * # Safety
+ *
+ * This function is unsafe because it dereferences raw pointers. The caller must ensure:
+ * - `building_name` is a valid null-terminated C string or null
  */
 char *arxos_list_pending_equipment(const char *building_name);
 
@@ -228,6 +274,13 @@ char *arxos_list_pending_equipment(const char *building_name);
  *
  * # Returns
  * JSON string with confirmation result
+ *
+ * # Safety
+ *
+ * This function is unsafe because it dereferences raw pointers. The caller must ensure:
+ * - `building_name` is a valid null-terminated C string or null
+ * - `pending_id` is a valid null-terminated C string or null
+ * - `user_email` is a valid null-terminated C string or null
  */
 char *arxos_confirm_pending_equipment(const char *building_name,
                                       const char *pending_id,
@@ -338,6 +391,12 @@ char *arxos_configure_git_signing(const char *building_name, const char *key_id)
  *
  * # Returns
  * JSON string with rejection result
+ *
+ * # Safety
+ *
+ * This function is unsafe because it dereferences raw pointers. The caller must ensure:
+ * - `building_name` is a valid null-terminated C string or null
+ * - `pending_id` is a valid null-terminated C string or null
  */
 char *arxos_reject_pending_equipment(const char *building_name, const char *pending_id);
 

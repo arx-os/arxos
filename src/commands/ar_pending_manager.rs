@@ -509,48 +509,43 @@ pub fn handle_ar_pending_manager(building_name: String) -> Result<(), Box<dyn st
         })?;
         
         // Handle events
-        if let Some(event) = terminal.poll_event(Duration::from_millis(100))? {
-            match event {
-                Event::Key(key_event) => {
-                    if key_event.code == KeyCode::Char('q') || key_event.code == KeyCode::Esc {
-                        break;
-                    } else if key_event.code == KeyCode::Down || key_event.code == KeyCode::Char('j') {
-                        state.next();
-                    } else if key_event.code == KeyCode::Up || key_event.code == KeyCode::Char('k') {
-                        state.previous();
-                    } else if key_event.code == KeyCode::Char(' ') {
-                        state.toggle_selection();
-                    } else if key_event.code == KeyCode::Char('a') || key_event.code == KeyCode::Char('A') {
-                        state.select_all();
-                    } else if key_event.code == KeyCode::Char('c') || key_event.code == KeyCode::Char('C') {
-                        state.clear_selection();
-                    } else if key_event.code == KeyCode::Char('y') || key_event.code == KeyCode::Char('Y') {
-                        // Confirm selected items
-                        match state.confirm_selected() {
-                            Ok(equipment_ids) => {
-                                if !equipment_ids.is_empty() {
-                                    // Show success message briefly
-                                    // Could add a message overlay here
-                                }
-                            }
-                            Err(e) => {
-                                eprintln!("Error confirming: {}", e);
-                            }
+        if let Some(Event::Key(key_event)) = terminal.poll_event(Duration::from_millis(100))? {
+            if key_event.code == KeyCode::Char('q') || key_event.code == KeyCode::Esc {
+                break;
+            } else if key_event.code == KeyCode::Down || key_event.code == KeyCode::Char('j') {
+                state.next();
+            } else if key_event.code == KeyCode::Up || key_event.code == KeyCode::Char('k') {
+                state.previous();
+            } else if key_event.code == KeyCode::Char(' ') {
+                state.toggle_selection();
+            } else if key_event.code == KeyCode::Char('a') || key_event.code == KeyCode::Char('A') {
+                state.select_all();
+            } else if key_event.code == KeyCode::Char('c') || key_event.code == KeyCode::Char('C') {
+                state.clear_selection();
+            } else if key_event.code == KeyCode::Char('y') || key_event.code == KeyCode::Char('Y') {
+                // Confirm selected items
+                match state.confirm_selected() {
+                    Ok(equipment_ids) => {
+                        if !equipment_ids.is_empty() {
+                            // Show success message briefly
+                            // Could add a message overlay here
                         }
-                    } else if key_event.code == KeyCode::Char('n') || key_event.code == KeyCode::Char('N') {
-                        // Reject selected items
-                        if let Err(e) = state.reject_selected() {
-                            eprintln!("Error rejecting: {}", e);
-                        }
-                    } else if key_event.code == KeyCode::Char('p') || key_event.code == KeyCode::Char('P') {
-                        // Toggle preview
-                        state.show_preview = !state.show_preview;
-                    } else if key_event.code == KeyCode::Char('r') || key_event.code == KeyCode::Char('R') {
-                        // Refresh
-                        state.refresh()?;
+                    }
+                    Err(e) => {
+                        eprintln!("Error confirming: {}", e);
                     }
                 }
-                _ => {}
+            } else if key_event.code == KeyCode::Char('n') || key_event.code == KeyCode::Char('N') {
+                // Reject selected items
+                if let Err(e) = state.reject_selected() {
+                    eprintln!("Error rejecting: {}", e);
+                }
+            } else if key_event.code == KeyCode::Char('p') || key_event.code == KeyCode::Char('P') {
+                // Toggle preview
+                state.show_preview = !state.show_preview;
+            } else if key_event.code == KeyCode::Char('r') || key_event.code == KeyCode::Char('R') {
+                // Refresh
+                state.refresh()?;
             }
         }
     }

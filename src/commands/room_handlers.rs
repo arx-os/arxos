@@ -157,6 +157,7 @@ fn handle_create_room(config: CreateRoomConfig) -> Result<(), Box<dyn std::error
     let spatial_properties = SpatialProperties::new(position, dimensions, "building_local".to_string());
     
     // Create room with spatial properties
+    let room_name = room.name.clone();
     let mut room_with_spatial = room;
     room_with_spatial.spatial_properties = spatial_properties;
     
@@ -165,13 +166,13 @@ fn handle_create_room(config: CreateRoomConfig) -> Result<(), Box<dyn std::error
     
     // Save
     if config.commit {
-        persistence.save_and_commit(&building_data, Some(&format!("Add room: {}", room.name)))?;
+        persistence.save_and_commit(&building_data, Some(&format!("Add room: {}", room_name)))?;
         println!("✅ Changes committed to Git");
     } else {
         persistence.save_building_data(&building_data)?;
     }
     
-    println!("✅ Room created successfully: {}", room.name);
+    println!("✅ Room created successfully: {}", room_name);
     Ok(())
 }
 

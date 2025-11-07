@@ -20,33 +20,118 @@
 
 ## 🚀 Quick Start
 
-### What You Can Do
+### Quick Start Examples
 
+#### Building Management
 ```bash
-# Import an IFC building file
-arx import office-building.ifc
+# Initialize a new building project
+arx init "Office Building" --location "123 Main St"
 
-# Open spreadsheet editor (Excel-like TUI)
-arx spreadsheet equipment --building "Building Name"
+# Import IFC building model
+arx import building.ifc --output "Office Building"
 
-# Search with glob patterns (e.g., all boilers on floor 02)
-arx spreadsheet equipment --filter "/usa/ny/*/floor-02/*/boiler-*"
+# Query building information
+arx query "/usa/ny/brooklyn/*/floor-*/room-*"
 
-# Search for HVAC equipment
-arx search "VAV"
-
-# Filter by floor
-arx filter --floor 2
-
-# Visualize in 3D
-arx render --building "Building Name" --three-d --show-status
-
-# Review contractor PRs (game mode)
-arx game review --pr-id pr_001 --building "Building Name" --interactive
-
-# Plan equipment placement with real-time validation
-arx game plan --building "Building Name" --interactive
+# View building structure
+arx list --building "Office Building"
 ```
+
+#### Equipment Management
+```bash
+# Add equipment to a building
+arx add equipment --building "Office Building" --floor 1 \
+  --name "VAV-101" --type HVAC --position "10,20,3"
+
+# Open spreadsheet editor for equipment (Excel-like TUI)
+arx spreadsheet equipment --building "Office Building"
+
+# Search for specific equipment
+arx search "VAV" --building "Office Building"
+
+# Filter equipment by floor
+arx filter --floor 2 --type HVAC
+
+# Remove equipment
+arx remove equipment "VAV-101" --building "Office Building"
+```
+
+#### Room Management
+```bash
+# Add a room
+arx add room --building "Office Building" --floor 1 \
+  --name "Conference Room A" --type Office \
+  --dimensions "10x8x3"
+
+# Edit rooms in spreadsheet
+arx spreadsheet rooms --building "Office Building"
+
+# List rooms on a floor
+arx list rooms --floor 1
+```
+
+#### Version Control & Collaboration
+```bash
+# View change history
+arx history --building "Office Building"
+
+# Show current changes
+arx diff --building "Office Building"
+
+# Commit changes
+arx commit --building "Office Building" -m "Added HVAC equipment"
+
+# View Git log
+arx log --building "Office Building"
+```
+
+#### Export & Integration
+```bash
+# Export to IFC
+arx export ifc --building "Office Building" --output building.ifc
+
+# Export to AR formats (glTF/USDZ)
+arx export ar --building "Office Building" --format gltf --output model.gltf
+arx export ar --building "Office Building" --format usdz --output model.usdz
+
+# Generate documentation
+arx docs --building "Office Building" --output docs/
+```
+
+#### Visualization & Analysis
+```bash
+# Visualize in 3D (terminal-based)
+arx render --building "Office Building" --three-d --show-status
+
+# Health dashboard
+arx dashboard health --building "Office Building"
+
+# Status dashboard
+arx dashboard status --building "Office Building"
+
+# Watch mode (live updates)
+arx watch --building "Office Building"
+```
+
+#### AR & Mobile Integration
+```bash
+# Manage pending AR-detected equipment
+arx ar pending --building "Office Building"
+
+# Process AR scan data
+arx ar process scan.json --building "Office Building"
+```
+
+#### Gamified Workflows
+```bash
+# Review contractor PRs interactively
+arx game review --pr-id pr_001 --building "Office Building" --interactive
+
+# Plan equipment placement with validation
+arx game plan --building "Office Building" --interactive
+```
+
+📖 **[See Complete CLI Reference](docs/CLI_REFERENCE.md)** for all commands and options
 
 ---
 

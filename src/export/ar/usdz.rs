@@ -74,7 +74,7 @@ impl USDZExporter {
         output: &Path,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Try using usdzconvert tool if available (primarily on macOS, but may work on Windows)
-        if let Ok(_) = self.convert_with_usdzconvert(gltf_path, output) {
+        if self.convert_with_usdzconvert(gltf_path, output).is_ok() {
             info!("Successfully converted using usdzconvert tool");
             return Ok(());
         }

@@ -18,7 +18,7 @@ use std::process::Command;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Platform {
-    IOS,
+    Ios,
     Android,
     MacOS,
     Linux,
@@ -31,7 +31,7 @@ fn detect_platform() -> Platform {
     let target = env::var("TARGET").unwrap_or_default();
     
     if target.contains("apple-ios") {
-        Platform::IOS
+        Platform::Ios
     } else if target.contains("android") {
         Platform::Android
     } else if target.contains("apple-darwin") {
@@ -150,7 +150,7 @@ fn main() {
     let header_generated = if cbindgen_available() {
         match generate_ffi_header() {
             Ok(()) => {
-                if platform == Platform::IOS || platform == Platform::Android {
+                if platform == Platform::Ios || platform == Platform::Android {
                     // Mobile builds benefit from auto-generated headers
                 }
                 true
@@ -177,7 +177,7 @@ fn main() {
                 println!("cargo:rerun-if-changed=src/mobile_ffi/ffi.rs");
                 println!("cargo:rerun-if-changed=cbindgen.toml");
             }
-            if platform == Platform::IOS || platform == Platform::Android {
+            if platform == Platform::Ios || platform == Platform::Android {
                 // Mobile builds typically need the header, so we're all set
             }
         }
@@ -206,7 +206,7 @@ fn main() {
     // Currently commented out as we're not doing linker config yet
     // Uncomment when adding platform-specific build logic:
     // match platform {
-    //     Platform::IOS | Platform::MacOS => {
+    //     Platform::Ios | Platform::MacOS => {
     //         // Could add Foundation framework linking here if needed
     //     }
     //     Platform::Android => {

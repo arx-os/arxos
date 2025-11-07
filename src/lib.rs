@@ -55,6 +55,7 @@ pub use spatial::{SpatialEngine, Point3D, BoundingBox3D, CoordinateSystem, Spati
 // Re-export Git types
 pub use git::{BuildingGitManager, GitConfig, GitConfigManager, GitError, CommitMetadata};
 pub use render::BuildingRenderer;
+#[allow(deprecated)]
 pub use yaml::{BuildingYamlSerializer, BuildingData, BuildingInfo, BuildingMetadata, FloorData, RoomData, EquipmentData, SensorMapping, ThresholdConfig};
 pub use domain::{ArxAddress, RESERVED_SYSTEMS};
 pub use query::{query_addresses, QueryResult};

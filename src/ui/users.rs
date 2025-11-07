@@ -65,9 +65,9 @@ impl UserBrowserState {
         let mut organization_groups: HashMap<String, Vec<usize>> = HashMap::new();
         for (idx, user) in users.iter().enumerate() {
             let org = user.organization.as_ref()
-                .map(|s| s.clone())
+                .cloned()
                 .unwrap_or_else(|| "Unaffiliated".to_string());
-            organization_groups.entry(org).or_insert_with(Vec::new).push(idx);
+            organization_groups.entry(org).or_default().push(idx);
         }
         
         Self {
@@ -215,7 +215,7 @@ fn render_user_list<'a>(state: &'a UserBrowserState, theme: &'a Theme, _area: Re
             
             let org_display = user.organization.as_ref()
                 .map(|org| format!(" 🏢 {}", org))
-                .unwrap_or_else(String::new);
+                .unwrap_or_default();
             
             let name_line = format!("{} {} {}", verification_badge, user.name, org_display);
             let email_line = format!("   📧 {}", user.email);
@@ -586,7 +586,7 @@ pub fn handle_user_browser() -> Result<(), Box<dyn std::error::Error>> {
                                 state.selected_index = 0;
                                 list_state.select(Some(0));
                                 // Reload activity for first filtered user
-                                if let Some(ref user) = state.selected_user() {
+                                if let Some(user) = state.selected_user() {
                                     let user_email = user.email.clone();
                                     if let Err(e) = state.load_user_activity(&user_email) {
                                         eprintln!("Warning: Could not load user activity: {}", e);

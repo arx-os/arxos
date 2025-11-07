@@ -18,8 +18,8 @@ use crate::render3d::types::{Floor3D, Equipment3D, Room3D};
 /// * `project_to_screen` - Closure to project 3D points to screen coordinates
 pub fn render_floors_to_canvas<F>(
     floors: &[Floor3D],
-    canvas: &mut Vec<Vec<char>>,
-    depth_buffer: &mut Vec<Vec<f64>>,
+    canvas: &mut [Vec<char>],
+    depth_buffer: &mut [Vec<f64>],
     width: usize,
     height: usize,
     project_to_screen: F,
@@ -76,8 +76,8 @@ pub fn render_floors_to_canvas<F>(
 /// * `project_to_screen` - Closure to project 3D points to screen coordinates
 pub fn render_equipment_to_canvas<F>(
     equipment: &[Equipment3D],
-    canvas: &mut Vec<Vec<char>>,
-    depth_buffer: &mut Vec<Vec<f64>>,
+    canvas: &mut [Vec<char>],
+    depth_buffer: &mut [Vec<f64>],
     width: usize,
     height: usize,
     project_to_screen: F,
@@ -121,8 +121,8 @@ pub fn render_equipment_to_canvas<F>(
 /// * `project_to_screen` - Closure to project 3D points to screen coordinates
 pub fn render_rooms_to_canvas<F>(
     rooms: &[Room3D],
-    canvas: &mut Vec<Vec<char>>,
-    depth_buffer: &mut Vec<Vec<f64>>,
+    canvas: &mut [Vec<char>],
+    depth_buffer: &mut [Vec<f64>],
     width: usize,
     height: usize,
     project_to_screen: F,

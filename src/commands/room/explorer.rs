@@ -272,8 +272,7 @@ fn render_tree_view<'a>(
     let items: Vec<ListItem> = state.get_flat_items()
         .unwrap_or_default()
         .iter()
-        .enumerate()
-        .map(|(_display_idx, item)| {
+        .map(|item| {
             let is_selected = item.path == state.selected_path;
             let prefix = if is_selected { ">" } else { " " };
             

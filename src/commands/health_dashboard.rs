@@ -583,30 +583,25 @@ pub fn handle_health_dashboard() -> Result<(), Box<dyn std::error::Error>> {
         })?;
         
         // Handle events
-        if let Some(event) = terminal.poll_event(Duration::from_millis(100))? {
-            match event {
-                Event::Key(key_event) => {
-                    match key_event.code {
-                        KeyCode::Char('q') | KeyCode::Esc => {
-                            break;
-                        }
-                        KeyCode::Char('r') | KeyCode::Char('R') => {
-                            state.refresh();
-                        }
-                        KeyCode::Char('d') | KeyCode::Char('D') => {
-                            state.show_details = !state.show_details;
-                        }
-                        KeyCode::Char('a') | KeyCode::Char('A') => {
-                            state.auto_refresh = !state.auto_refresh;
-                        }
-                        KeyCode::Right | KeyCode::Char('l') => {
-                            state.next_component();
-                        }
-                        KeyCode::Left | KeyCode::Char('h') => {
-                            state.previous_component();
-                        }
-                        _ => {}
-                    }
+        if let Some(Event::Key(key_event)) = terminal.poll_event(Duration::from_millis(100))? {
+            match key_event.code {
+                KeyCode::Char('q') | KeyCode::Esc => {
+                    break;
+                }
+                KeyCode::Char('r') | KeyCode::Char('R') => {
+                    state.refresh();
+                }
+                KeyCode::Char('d') | KeyCode::Char('D') => {
+                    state.show_details = !state.show_details;
+                }
+                KeyCode::Char('a') | KeyCode::Char('A') => {
+                    state.auto_refresh = !state.auto_refresh;
+                }
+                KeyCode::Right | KeyCode::Char('l') => {
+                    state.next_component();
+                }
+                KeyCode::Left | KeyCode::Char('h') => {
+                    state.previous_component();
                 }
                 _ => {}
             }

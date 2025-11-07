@@ -446,11 +446,12 @@ mod tests {
         };
         
         let id = queue.enqueue(op);
-        queue.dequeue();
+        
+        // Don't dequeue - mark_completed should work on queued items
         queue.mark_completed(&id);
         
         let operations = queue.all_operations();
-        let item = operations.first().unwrap();
+        let item = operations.iter().find(|item| item.id == id).expect("Should find marked item");
         assert!(matches!(item.status, OperationStatus::Completed));
     }
 }

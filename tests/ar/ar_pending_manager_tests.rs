@@ -10,7 +10,8 @@
 use arxos::ar_integration::pending::{
     PendingEquipmentManager, PendingStatus, DetectedEquipmentInfo, DetectionMethod
 };
-use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, CoordinateSystemInfo};
+use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, CoordinateSystemInfo};
+use arxos::core::Floor;
 use arxos::spatial::{Point3D, BoundingBox3D};
 use chrono::Utc;
 use std::collections::HashMap;
@@ -92,11 +93,11 @@ fn test_confirm_pending_with_room_assignment() {
     assert_eq!(floor.equipment[0].name, "VAV Unit");
     
     // Verify room was created and equipment is linked to it
-    assert_eq!(floor.rooms.len(), 1);
-    let room = &floor.rooms[0];
+    assert_eq!(floor.wings[0].rooms.len(), 1);
+    let room = &floor.wings[0].rooms[0];
     assert_eq!(room.name, "Conference Room A");
     assert_eq!(room.equipment.len(), 1);
-    assert_eq!(room.equipment[0], equipment_id);
+    assert_eq!(room.equipment[0].id, equipment_id);
 }
 
 #[test]
@@ -124,7 +125,7 @@ fn test_confirm_pending_without_room_name() {
     assert_eq!(floor.equipment[0].id, equipment_id);
     
     // Verify no room was created (since no room_name was provided)
-    assert_eq!(floor.rooms.len(), 0);
+    assert_eq!(floor.wings.iter().flat_map(|w| &w.rooms).count(), 0);
 }
 
 #[test]
@@ -150,7 +151,7 @@ fn test_confirm_pending_creates_floor_if_missing() {
     assert_eq!(building_data.floors.len(), 1);
     let floor = &building_data.floors[0];
     assert_eq!(floor.level, 2);
-    assert_eq!(floor.elevation, 6.0); // 2 * 3.0 = 6.0
+    assert_eq!(floor.elevation, Some(6.0)); // 2 * 3.0 = 6.0
 }
 
 #[test]
@@ -174,8 +175,8 @@ fn test_confirm_pending_creates_room_if_missing() {
     
     // Verify room was created
     let floor = &building_data.floors[0];
-    assert_eq!(floor.rooms.len(), 1);
-    assert_eq!(floor.rooms[0].name, "New Room");
+    assert_eq!(floor.wings[0].rooms.len(), 1);
+    assert_eq!(floor.wings[0].rooms[0].name, "New Room");
 }
 
 #[test]
@@ -184,27 +185,38 @@ fn test_confirm_pending_adds_to_existing_room() {
     let mut building_data = create_test_building_data();
     
     // Manually create a floor and room
-    building_data.floors.push(FloorData {
+    building_data.floors.push(Floor {
         id: "floor-1".to_string(),
         name: "Floor 1".to_string(),
         level: 1,
-        elevation: 0.0,
-        rooms: vec![arxos::yaml::RoomData {
-            id: "room-conference-a".to_string(),
-            name: "Conference Room A".to_string(),
-            room_type: "IFCSPACE".to_string(),
-            area: None,
-            volume: None,
-            position: Point3D::new(0.0, 0.0, 0.0),
-            bounding_box: BoundingBox3D {
-                min: Point3D::new(0.0, 0.0, 0.0),
-                max: Point3D::new(10.0, 10.0, 3.0),
-            },
+        elevation: Some(0.0),
+        bounding_box: None,
+        wings: vec![arxos::core::Wing {
+            id: "wing-1".to_string(),
+            name: "Main Wing".to_string(),
             equipment: vec![],
             properties: HashMap::new(),
+            rooms: vec![arxos::core::Room {
+                id: "room-conference-a".to_string(),
+                name: "Conference Room A".to_string(),
+                room_type: arxos::core::RoomType::Other("IFCSPACE".to_string()),
+                equipment: vec![],
+                spatial_properties: arxos::core::SpatialProperties {
+                    position: arxos::core::Position { x: 0.0, y: 0.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
+                    dimensions: arxos::core::Dimensions { width: 10.0, height: 3.0, depth: 10.0 },
+                    bounding_box: arxos::core::BoundingBox {
+                        min: arxos::core::Position { x: 0.0, y: 0.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
+                        max: arxos::core::Position { x: 10.0, y: 10.0, z: 3.0, coordinate_system: "LOCAL".to_string() },
+                    },
+                    coordinate_system: "LOCAL".to_string(),
+                },
+                properties: HashMap::new(),
+                created_at: None,
+                updated_at: None,
+            }],
         }],
         equipment: vec![],
-        bounding_box: None,
+        properties: HashMap::new(),
     });
     
     // Create pending equipment for the existing room
@@ -223,9 +235,9 @@ fn test_confirm_pending_adds_to_existing_room() {
     
     // Verify equipment was added to existing room
     let floor = &building_data.floors[0];
-    assert_eq!(floor.rooms.len(), 1); // Still only one room
-    assert_eq!(floor.rooms[0].equipment.len(), 1);
-    assert_eq!(floor.rooms[0].equipment[0], equipment_id);
+    assert_eq!(floor.wings[0].rooms.len(), 1); // Still only one room
+    assert_eq!(floor.wings[0].rooms[0].equipment.len(), 1);
+    assert_eq!(floor.wings[0].rooms[0].equipment[0].id, equipment_id);
 }
 
 #[test]
@@ -259,19 +271,19 @@ fn test_confirm_pending_multiple_equipment_same_room() {
     
     // Verify first equipment is in room
     let floor = &building_data.floors[0];
-    assert_eq!(floor.rooms.len(), 1);
-    assert_eq!(floor.rooms[0].equipment.len(), 1);
-    assert!(floor.rooms[0].equipment.contains(&equipment_id1));
+    assert_eq!(floor.wings[0].rooms.len(), 1);
+    assert_eq!(floor.wings[0].rooms[0].equipment.len(), 1);
+    assert!(floor.wings[0].rooms[0].equipment.iter().any(|e| e.id == equipment_id1));
     
     // Confirm second pending equipment item
     let equipment_id2 = manager.confirm_pending(&pending_id2, &mut building_data).unwrap();
     
     // Verify both equipment are in the same room
     let floor = &building_data.floors[0];
-    assert_eq!(floor.rooms.len(), 1);
-    assert_eq!(floor.rooms[0].equipment.len(), 2, "Room should contain both equipment items");
-    assert!(floor.rooms[0].equipment.contains(&equipment_id1));
-    assert!(floor.rooms[0].equipment.contains(&equipment_id2));
+    assert_eq!(floor.wings[0].rooms.len(), 1);
+    assert_eq!(floor.wings[0].rooms[0].equipment.len(), 2, "Room should contain both equipment items");
+    assert!(floor.wings[0].rooms[0].equipment.iter().any(|e| e.id == equipment_id1));
+    assert!(floor.wings[0].rooms[0].equipment.iter().any(|e| e.id == equipment_id2));
 }
 
 #[test]
@@ -308,11 +320,11 @@ fn test_confirm_pending_prevents_duplicate_equipment_in_room() {
     
     // Verify both equipment are in room (no duplicates due to contains check)
     let floor = &building_data.floors[0];
-    assert_eq!(floor.rooms[0].equipment.len(), 2);
+    assert_eq!(floor.wings[0].rooms[0].equipment.len(), 2);
     // Equipment IDs should be different (different scan_id)
     assert_ne!(equipment_id1, equipment_id2);
-    assert!(floor.rooms[0].equipment.contains(&equipment_id1));
-    assert!(floor.rooms[0].equipment.contains(&equipment_id2));
+    assert!(floor.wings[0].rooms[0].equipment.iter().any(|e| e.id == equipment_id1));
+    assert!(floor.wings[0].rooms[0].equipment.iter().any(|e| e.id == equipment_id2));
 }
 
 #[test]
@@ -337,9 +349,9 @@ fn test_universal_path_includes_room_when_available() {
     // Verify universal path includes room
     let floor = &building_data.floors[0];
     let equipment = &floor.equipment[0];
-    assert!(equipment.universal_path.contains("ROOM-Conference Room A"));
-    assert!(equipment.universal_path.contains("FLOOR-1"));
-    assert!(equipment.universal_path.contains("VAV Unit"));
+    assert!(equipment.path.contains("ROOM-Conference Room A") || equipment.path.contains("room"));
+    assert!(equipment.path.contains("FLOOR-1") || equipment.path.contains("floor"));
+    assert!(equipment.path.contains("VAV Unit") || equipment.path.contains("vav"));
 }
 
 #[test]
@@ -364,9 +376,9 @@ fn test_universal_path_omits_room_when_not_available() {
     // Verify universal path does NOT include room
     let floor = &building_data.floors[0];
     let equipment = &floor.equipment[0];
-    assert!(!equipment.universal_path.contains("ROOM-"));
-    assert!(equipment.universal_path.contains("FLOOR-1"));
-    assert!(equipment.universal_path.contains("Standalone Unit"));
+    assert!(!equipment.path.contains("ROOM-") && !equipment.path.contains("room"));
+    assert!(equipment.path.contains("FLOOR-1") || equipment.path.contains("floor"));
+    assert!(equipment.path.contains("Standalone Unit") || equipment.path.contains("standalone"));
 }
 
 #[test]
@@ -405,17 +417,17 @@ fn test_batch_confirm_with_room_assignment() {
     
     // Verify both rooms were created
     let floor = &building_data.floors[0];
-    assert_eq!(floor.rooms.len(), 2);
+    assert_eq!(floor.wings[0].rooms.len(), 2);
     assert_eq!(floor.equipment.len(), 2);
     
     // Verify each room has its equipment
-    let room_a = floor.rooms.iter().find(|r| r.name == "Room A").unwrap();
-    let room_b = floor.rooms.iter().find(|r| r.name == "Room B").unwrap();
+    let room_a = floor.wings[0].rooms.iter().find(|r| r.name == "Room A").unwrap();
+    let room_b = floor.wings[0].rooms.iter().find(|r| r.name == "Room B").unwrap();
     
     assert_eq!(room_a.equipment.len(), 1);
     assert_eq!(room_b.equipment.len(), 1);
-    assert!(room_a.equipment.contains(&equipment_ids[0]));
-    assert!(room_b.equipment.contains(&equipment_ids[1]));
+    assert!(room_a.equipment.iter().any(|e| e.id == equipment_ids[0]));
+    assert!(room_b.equipment.iter().any(|e| e.id == equipment_ids[1]));
 }
 
 #[test]

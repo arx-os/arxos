@@ -108,7 +108,7 @@ impl SearchBrowserState {
                         id: result.path.clone(),
                         name: result.name.clone(),
                         result_type: "Equipment".to_string(),
-                        description: format!("Type: {}", result.equipment_type.as_ref().map(|s| s.as_str()).unwrap_or("Unknown")),
+                        description: format!("Type: {}", result.equipment_type.as_deref().unwrap_or("Unknown")),
                         room: room_name,
                         floor: floor_level,
                         status,

@@ -2,7 +2,11 @@
 //! 
 //! Converts BuildingData to IFC format using SpatialEntity conversion
 //! and the EnhancedIFCParser writer functionality.
+//!
+//! **Note:** Uses deprecated conversion functions for backward compatibility
+//! with IFC export format. These will be migrated in a future update.
 
+#[allow(deprecated)]
 use crate::yaml::BuildingData;
 use crate::core::{Equipment, Room};
 use crate::spatial::SpatialEntity;
@@ -81,6 +85,7 @@ impl IFCExporter {
     /// 
     /// # Returns
     /// * Result indicating success or failure
+    #[allow(deprecated)]
     pub fn export_delta(&self, sync_state: Option<&IFCSyncState>, output: &Path) -> ArxResult<()> {
         info!("Starting delta IFC export to: {}", output.display());
         
@@ -106,6 +111,7 @@ impl IFCExporter {
         // Convert new and updated equipment
         // Note: delta still uses EquipmentData, so we need to convert or update delta module
         // For now, we'll convert EquipmentData to Equipment-like access
+        #[allow(deprecated)]
         use crate::yaml::conversions::equipment_data_to_equipment;
         for equipment_data in &delta.new_equipment {
             let equipment = equipment_data_to_equipment(equipment_data);

@@ -133,10 +133,8 @@ fn extract_location_from_path(path: &str) -> (Option<i32>, Option<String>) {
         // Extract floor number from "floor-02" format
         let floor = if let Some(floor_num_str) = floor_str.strip_prefix("floor-") {
             floor_num_str.parse::<i32>().ok()
-        } else if let Ok(floor_num) = floor_str.parse::<i32>() {
-            Some(floor_num)
         } else {
-            None
+            floor_str.parse::<i32>().ok()
         };
         
         return (floor, Some(room));
@@ -168,7 +166,8 @@ fn extract_location_from_path(path: &str) -> (Option<i32>, Option<String>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentData};
+    use crate::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+    use crate::core::{Floor, Equipment, EquipmentType, EquipmentStatus, EquipmentHealthStatus, Position};
     use crate::domain::ArxAddress;
     use crate::spatial::Point3D;
     use chrono::Utc;
@@ -194,64 +193,70 @@ mod tests {
                 tags: vec![],
             },
             floors: vec![
-                FloorData {
+                Floor {
                     id: "floor-1".to_string(),
                     name: "Floor 1".to_string(),
                     level: 1,
-                    elevation: 0.0,
+                    elevation: Some(0.0),
+                    bounding_box: None,
                     wings: vec![],
-                    rooms: vec![],
                     equipment: vec![
-                        EquipmentData {
+                        Equipment {
                             id: "equipment-1".to_string(),
                             name: "Boiler 01".to_string(),
-                            equipment_type: "HVAC".to_string(),
-                            system_type: "HVAC".to_string(),
-                            position: Point3D::new(0.0, 0.0, 0.0),
-                            bounding_box: crate::spatial::BoundingBox3D::new(
-                                Point3D::new(-0.5, -0.5, -0.5),
-                                Point3D::new(0.5, 0.5, 0.5),
-                            ),
-                            status: crate::yaml::EquipmentStatus::Healthy,
-                            properties: std::collections::HashMap::new(),
-                            universal_path: String::new(),
+                            path: String::new(),
                             address: Some(ArxAddress::from_path("/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01").unwrap()),
+                            equipment_type: EquipmentType::HVAC,
+                            position: Position {
+                                x: 0.0,
+                                y: 0.0,
+                                z: 0.0,
+                                coordinate_system: "LOCAL".to_string(),
+                            },
+                            properties: std::collections::HashMap::new(),
+                            status: EquipmentStatus::Active,
+                            health_status: Some(EquipmentHealthStatus::Healthy),
+                            room_id: None,
                             sensor_mappings: None,
                         },
-                        EquipmentData {
+                        Equipment {
                             id: "equipment-2".to_string(),
                             name: "Boiler 02".to_string(),
-                            equipment_type: "HVAC".to_string(),
-                            system_type: "HVAC".to_string(),
-                            position: Point3D::new(1.0, 1.0, 1.0),
-                            bounding_box: crate::spatial::BoundingBox3D::new(
-                                Point3D::new(0.5, 0.5, 0.5),
-                                Point3D::new(1.5, 1.5, 1.5),
-                            ),
-                            status: crate::yaml::EquipmentStatus::Healthy,
-                            properties: std::collections::HashMap::new(),
-                            universal_path: String::new(),
+                            path: String::new(),
                             address: Some(ArxAddress::from_path("/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-02").unwrap()),
+                            equipment_type: EquipmentType::HVAC,
+                            position: Position {
+                                x: 1.0,
+                                y: 1.0,
+                                z: 1.0,
+                                coordinate_system: "LOCAL".to_string(),
+                            },
+                            properties: std::collections::HashMap::new(),
+                            status: EquipmentStatus::Active,
+                            health_status: Some(EquipmentHealthStatus::Healthy),
+                            room_id: None,
                             sensor_mappings: None,
                         },
-                        EquipmentData {
+                        Equipment {
                             id: "equipment-3".to_string(),
                             name: "Valve 01".to_string(),
-                            equipment_type: "Plumbing".to_string(),
-                            system_type: "Plumbing".to_string(),
-                            position: Point3D::new(2.0, 2.0, 2.0),
-                            bounding_box: crate::spatial::BoundingBox3D::new(
-                                Point3D::new(1.5, 1.5, 1.5),
-                                Point3D::new(2.5, 2.5, 2.5),
-                            ),
-                            status: crate::yaml::EquipmentStatus::Healthy,
-                            properties: std::collections::HashMap::new(),
-                            universal_path: String::new(),
+                            path: String::new(),
                             address: Some(ArxAddress::from_path("/usa/ny/brooklyn/ps-118/floor-02/plumbing/valve-01").unwrap()),
+                            equipment_type: EquipmentType::Plumbing,
+                            position: Position {
+                                x: 2.0,
+                                y: 2.0,
+                                z: 2.0,
+                                coordinate_system: "LOCAL".to_string(),
+                            },
+                            properties: std::collections::HashMap::new(),
+                            status: EquipmentStatus::Active,
+                            health_status: Some(EquipmentHealthStatus::Healthy),
+                            room_id: None,
                             sensor_mappings: None,
                         },
                     ],
-                    bounding_box: None,
+                    properties: std::collections::HashMap::new(),
                 },
             ],
             coordinate_systems: vec![],

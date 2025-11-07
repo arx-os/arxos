@@ -48,7 +48,7 @@ impl MappingManager {
             .map_err(|e| HardwareError::IoError(std::io::Error::other(format!("Failed to read mapping file: {}", e))))?;
         
         let collection: MappingCollection = serde_yaml::from_str(&content)
-            .map_err(|e| HardwareError::YamlError(e))?;
+            .map_err(HardwareError::YamlError)?;
         
         self.mappings.clear();
         for mapping in collection.mappings {
@@ -68,7 +68,7 @@ impl MappingManager {
         };
         
         let yaml_content = serde_yaml::to_string(&collection)
-            .map_err(|e| HardwareError::YamlError(e))?;
+            .map_err(HardwareError::YamlError)?;
         
         // Create parent directory if it doesn't exist
         if let Some(parent) = self.mapping_file.parent() {

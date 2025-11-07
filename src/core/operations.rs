@@ -73,9 +73,8 @@ pub fn add_equipment(building_name: &str, room_name: Option<&str>, equipment: Eq
         }
     } else {
         // Add to floor-level equipment if no room specified
-        for floor in &mut building_data.floors {
-            floor.equipment.push(equipment);
-            break; // Add to first floor found
+        if let Some(floor) = building_data.floors.first_mut() {
+            floor.equipment.push(equipment.clone());
         }
     }
     
@@ -250,10 +249,7 @@ pub fn spatial_query(query_type: &str, entity: &str, params: Vec<String>) -> Res
             // Sort by distance (closest first)
             results.sort_by(|a, b| {
                 a.distance.partial_cmp(&b.distance)
-                    .unwrap_or_else(|| {
-                        // If distances are NaN or not comparable, maintain order
-                        std::cmp::Ordering::Equal
-                    })
+                    .unwrap_or(std::cmp::Ordering::Equal)
             });
         }
         
@@ -305,10 +301,7 @@ pub fn spatial_query(query_type: &str, entity: &str, params: Vec<String>) -> Res
             // Sort by distance and return only the nearest
             candidates.sort_by(|a, b| {
                 a.distance.partial_cmp(&b.distance)
-                    .unwrap_or_else(|| {
-                        // If distances are NaN or not comparable, maintain order
-                        std::cmp::Ordering::Equal
-                    })
+                    .unwrap_or(std::cmp::Ordering::Equal)
             });
             
             if let Some(nearest) = candidates.first() {

@@ -2,7 +2,8 @@
 
 use arxos::core::{spatial_query, validate_spatial, SpatialValidationResult};
 use arxos::persistence::PersistenceManager;
-use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, RoomData, EquipmentData};
+use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+use arxos::core::{Floor, Wing, Room, Equipment, RoomType, EquipmentType, EquipmentStatus, EquipmentHealthStatus, Position, SpatialProperties, Dimensions, BoundingBox};
 use arxos::spatial::{Point3D, BoundingBox3D};
 use tempfile::TempDir;
 use std::fs;

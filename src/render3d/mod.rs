@@ -50,6 +50,115 @@ mod tests {
     fn create_test_building_data() -> crate::yaml::BuildingData {
         use chrono::Utc;
         use std::collections::HashMap;
+        use crate::core::{Floor, Wing, Room, Equipment, RoomType, EquipmentType, EquipmentStatus, Position, SpatialProperties, Dimensions, BoundingBox};
+        
+        // Create equipment for room
+        let equip1 = Equipment {
+            id: "EQUIP_1".to_string(),
+            name: "HVAC Unit 1".to_string(),
+            path: "/TEST_BUILDING/FLOOR_1/WING_1/ROOM_1/EQUIP_1".to_string(),
+            address: None,
+            equipment_type: EquipmentType::HVAC,
+            position: Position {
+                x: 20.0,
+                y: 20.0,
+                z: 1.5,
+                coordinate_system: "LOCAL".to_string(),
+            },
+            properties: HashMap::new(),
+            status: EquipmentStatus::Active,
+            health_status: Some(crate::core::EquipmentHealthStatus::Healthy),
+            room_id: Some("ROOM_1".to_string()),
+            sensor_mappings: None,
+        };
+        
+        // Create room
+        let room1 = Room {
+            id: "ROOM_1".to_string(),
+            name: "Room 1".to_string(),
+            room_type: RoomType::Office,
+            equipment: vec![equip1],
+            spatial_properties: SpatialProperties {
+                position: Position {
+                    x: 10.0,
+                    y: 10.0,
+                    z: 0.0,
+                    coordinate_system: "LOCAL".to_string(),
+                },
+                dimensions: Dimensions {
+                    width: 20.0,
+                    height: 3.0,
+                    depth: 20.0,
+                },
+                bounding_box: BoundingBox {
+                    min: Position { x: 10.0, y: 10.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
+                    max: Position { x: 30.0, y: 30.0, z: 3.0, coordinate_system: "LOCAL".to_string() },
+                },
+                coordinate_system: "LOCAL".to_string(),
+            },
+            properties: HashMap::new(),
+            created_at: None,
+            updated_at: None,
+        };
+        
+        // Create wing
+        let wing1 = Wing {
+            id: "WING_1".to_string(),
+            name: "East Wing".to_string(),
+            rooms: vec![room1],
+            equipment: vec![],
+            properties: HashMap::new(),
+        };
+        
+        // Create floor 1
+        let floor1 = Floor {
+            id: "FLOOR_1".to_string(),
+            name: "Ground Floor".to_string(),
+            level: 0,
+            elevation: Some(0.0),
+            bounding_box: Some(BoundingBox3D {
+                min: Point3D { x: 0.0, y: 0.0, z: 0.0 },
+                max: Point3D { x: 100.0, y: 100.0, z: 3.0 },
+            }),
+            wings: vec![wing1],
+            equipment: vec![],
+            properties: HashMap::new(),
+        };
+        
+        // Create equipment for floor 2
+        let equip2 = Equipment {
+            id: "EQUIP_2".to_string(),
+            name: "Light Fixture 1".to_string(),
+            path: "/TEST_BUILDING/FLOOR_2/EQUIP_2".to_string(),
+            address: None,
+            equipment_type: EquipmentType::Electrical,
+            position: Position {
+                x: 50.0,
+                y: 50.0,
+                z: 4.5,
+                coordinate_system: "LOCAL".to_string(),
+            },
+            properties: HashMap::new(),
+            status: EquipmentStatus::Active,
+            health_status: Some(crate::core::EquipmentHealthStatus::Warning),
+            room_id: None,
+            sensor_mappings: None,
+        };
+        
+        // Create floor 2
+        let floor2 = Floor {
+            id: "FLOOR_2".to_string(),
+            name: "First Floor".to_string(),
+            level: 1,
+            elevation: Some(3.0),
+            bounding_box: Some(BoundingBox3D {
+                min: Point3D { x: 0.0, y: 0.0, z: 3.0 },
+                max: Point3D { x: 100.0, y: 100.0, z: 6.0 },
+            }),
+            wings: vec![],
+            equipment: vec![equip2],
+            properties: HashMap::new(),
+        };
         
         crate::yaml::BuildingData {
             building: crate::yaml::BuildingInfo {
@@ -74,83 +183,7 @@ mod tests {
                 units: "meters".to_string(),
                 tags: vec!["test".to_string()],
             },
-            floors: vec![
-                crate::yaml::FloorData {
-                    id: "FLOOR_1".to_string(),
-                    name: "Ground Floor".to_string(),
-                    level: 0,
-                    elevation: 0.0,
-                    wings: vec![],
-                    bounding_box: Some(BoundingBox3D {
-                        min: Point3D { x: 0.0, y: 0.0, z: 0.0 },
-                        max: Point3D { x: 100.0, y: 100.0, z: 3.0 },
-                    }),
-                    rooms: vec![
-                        crate::yaml::RoomData {
-                            id: "ROOM_1".to_string(),
-                            name: "Room 1".to_string(),
-                            room_type: "Office".to_string(),
-                            area: Some(400.0),
-                            volume: Some(1200.0),
-                            position: Point3D { x: 10.0, y: 10.0, z: 0.0 },
-                            bounding_box: BoundingBox3D {
-                                min: Point3D { x: 10.0, y: 10.0, z: 0.0 },
-                                max: Point3D { x: 30.0, y: 30.0, z: 3.0 },
-                            },
-                            equipment: vec!["EQUIP_1".to_string()],
-                            properties: HashMap::new(),
-                        }
-                    ],
-                    equipment: vec![
-                        crate::yaml::EquipmentData {
-                            id: "EQUIP_1".to_string(),
-                            name: "HVAC Unit 1".to_string(),
-                            equipment_type: "IFCAIRHANDLINGUNIT".to_string(),
-                            system_type: "HVAC".to_string(),
-                            position: Point3D { x: 20.0, y: 20.0, z: 1.5 },
-                            bounding_box: BoundingBox3D {
-                                min: Point3D { x: 18.0, y: 18.0, z: 1.0 },
-                                max: Point3D { x: 22.0, y: 22.0, z: 2.0 },
-                            },
-                            status: crate::yaml::EquipmentStatus::Healthy,
-                            properties: HashMap::new(),
-                            universal_path: "/TEST_BUILDING/FLOOR_1/ROOM_1/EQUIP_1".to_string(),
-                            address: None,
-                            sensor_mappings: None,
-                        }
-                    ],
-                },
-                crate::yaml::FloorData {
-                    id: "FLOOR_2".to_string(),
-                    name: "First Floor".to_string(),
-                    level: 1,
-                    elevation: 3.0,
-                    wings: vec![],
-                    bounding_box: Some(BoundingBox3D {
-                        min: Point3D { x: 0.0, y: 0.0, z: 3.0 },
-                        max: Point3D { x: 100.0, y: 100.0, z: 6.0 },
-                    }),
-                    rooms: vec![],
-                    equipment: vec![
-                        crate::yaml::EquipmentData {
-                            id: "EQUIP_2".to_string(),
-                            name: "Light Fixture 1".to_string(),
-                            equipment_type: "IFCLIGHTFIXTURE".to_string(),
-                            system_type: "Electrical".to_string(),
-                            position: Point3D { x: 50.0, y: 50.0, z: 4.5 },
-                            bounding_box: BoundingBox3D {
-                                min: Point3D { x: 49.0, y: 49.0, z: 4.0 },
-                                max: Point3D { x: 51.0, y: 51.0, z: 5.0 },
-                            },
-                            status: crate::yaml::EquipmentStatus::Warning,
-                            properties: HashMap::new(),
-                            universal_path: "/TEST_BUILDING/FLOOR_2/EQUIP_2".to_string(),
-                            address: None,
-                            sensor_mappings: None,
-                        }
-                    ],
-                },
-            ],
+            floors: vec![floor1, floor2],
         }
     }
     
@@ -211,10 +244,12 @@ mod tests {
         
         assert_eq!(scene.building_name, "Test Building");
         assert_eq!(scene.floors.len(), 2);
-        assert_eq!(scene.equipment.len(), 2);
-        assert_eq!(scene.rooms.len(), 1);
+        // Equipment count: 1 in room (floor 0) + 1 on floor 1 = 2 total
+        assert_eq!(scene.equipment.len(), 2, "Should have 2 equipment (1 in room, 1 on floor)");
+        assert_eq!(scene.rooms.len(), 1, "Should have 1 room in wing");
         assert_eq!(scene.metadata.total_floors, 2);
-        assert_eq!(scene.metadata.total_equipment, 2);
+        // Total equipment from floors: floor 0 has 0 floor-level, floor 1 has 1 floor-level = 1
+        assert_eq!(scene.metadata.total_equipment, 1, "Metadata counts only floor-level equipment");
         assert_eq!(scene.metadata.total_rooms, 1);
     }
     
@@ -331,7 +366,7 @@ mod tests {
         
         assert_eq!(scene.building_name, "Test Building");
         assert_eq!(scene.floors.len(), 2);
-        assert_eq!(scene.equipment.len(), 2);
+        assert_eq!(scene.equipment.len(), 2, "Should have 2 equipment total");
         assert_eq!(scene.metadata.total_floors, 2);
         assert_eq!(scene.metadata.total_equipment, 2);
     }
@@ -421,24 +456,19 @@ mod tests {
         let scene = renderer.render_3d_advanced().unwrap();
         
         // Test that equipment symbols are correctly mapped
-        let hvac_equipment = scene.equipment.iter().find(|e| e.equipment_type.contains("AIR"));
-        let electrical_equipment = scene.equipment.iter().find(|e| e.equipment_type.contains("LIGHT"));
+        // Note: equipment_type is now Debug format (e.g., "HVAC", "Electrical")
+        let hvac_equipment = scene.equipment.iter().find(|e| e.equipment_type.contains("HVAC"));
+        let electrical_equipment = scene.equipment.iter().find(|e| e.equipment_type.contains("Electrical"));
         
-        // We should have HVAC equipment (IFCAIRHANDLINGUNIT) and electrical equipment (IFCLIGHTFIXTURE)
-        assert!(hvac_equipment.is_some());
-        assert!(electrical_equipment.is_some());
+        // We should have HVAC and Electrical equipment
+        assert!(hvac_equipment.is_some(), "Should have HVAC equipment");
+        assert!(electrical_equipment.is_some(), "Should have Electrical equipment");
         
-        // Test symbol mapping logic
-        let hvac_symbol = match hvac_equipment.unwrap().equipment_type.as_str() {
-            s if s.contains("AIR") => '▲',
-            _ => '╬',
-        };
-        assert_eq!(hvac_symbol, '▲');
+        // Test that equipment_type is correctly formatted
+        let hvac_type = &hvac_equipment.unwrap().equipment_type;
+        let electrical_type = &electrical_equipment.unwrap().equipment_type;
         
-        let electrical_symbol = match electrical_equipment.unwrap().equipment_type.as_str() {
-            s if s.contains("LIGHT") => '●',
-            _ => '╬',
-        };
-        assert_eq!(electrical_symbol, '●');
+        assert!(hvac_type.contains("HVAC"), "HVAC equipment_type should contain 'HVAC'");
+        assert!(electrical_type.contains("Electrical"), "Electrical equipment_type should contain 'Electrical'");
     }
 }

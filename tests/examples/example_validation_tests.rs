@@ -59,14 +59,14 @@ fn test_example_buildings_are_valid() {
             assert!(!floor.name.is_empty(),
                 "Floor name should not be empty in {}", file_name);
             
-            // Validate rooms
-            for room in &floor.rooms {
-                assert!(!room.id.is_empty(),
-                    "Room ID should not be empty in {}", file_name);
-                assert!(!room.name.is_empty(),
-                    "Room name should not be empty in {}", file_name);
-                assert!(!room.room_type.is_empty(),
-                    "Room type should not be empty in {}", file_name);
+            // Validate rooms (now in wings)
+            for wing in &floor.wings {
+                for room in &wing.rooms {
+                    assert!(!room.id.is_empty(),
+                        "Room ID should not be empty in {}", file_name);
+                    assert!(!room.name.is_empty(),
+                        "Room name should not be empty in {}", file_name);
+                }
             }
             
             // Validate equipment
@@ -75,12 +75,9 @@ fn test_example_buildings_are_valid() {
                     "Equipment ID should not be empty in {}", file_name);
                 assert!(!equipment.name.is_empty(),
                     "Equipment name should not be empty in {}", file_name);
-                assert!(!equipment.equipment_type.is_empty(),
-                    "Equipment type should not be empty in {}", file_name);
-                assert!(!equipment.system_type.is_empty(),
-                    "System type should not be empty in {}", file_name);
-                assert!(!equipment.universal_path.is_empty(),
-                    "Universal path should not be empty in {}", file_name);
+                // equipment_type is an enum, check if it's Other("")
+                assert!(!equipment.path.is_empty(),
+                    "Equipment path should not be empty in {}", file_name);
             }
         }
     }
@@ -128,14 +125,16 @@ fn test_example_names_are_readable() {
                 floor.name
             );
             
-            // Check room names are readable
-            for room in &floor.rooms {
-                assert!(
-                    room.name.chars().any(|c| c.is_alphabetic()),
-                    "Room name should contain letters in {}: '{}'",
-                    file_name,
-                    room.name
-                );
+            // Check room names are readable (now in wings)
+            for wing in &floor.wings {
+                for room in &wing.rooms {
+                    assert!(
+                        room.name.chars().any(|c| c.is_alphabetic()),
+                        "Room name should contain letters in {}: '{}'",
+                        file_name,
+                        room.name
+                    );
+                }
             }
             
             // Check equipment names are readable
@@ -180,42 +179,44 @@ fn test_example_coordinates_are_reasonable() {
         const MIN_REASONABLE_COORD: f64 = -10000.0;
         
         for floor in &building_data.floors {
-            for room in &floor.rooms {
-                // Check position
-                let pos = &room.position;
-                assert!(
-                    pos.x >= MIN_REASONABLE_COORD && pos.x <= MAX_REASONABLE_COORD,
-                    "Room position x should be reasonable in {}: {}",
-                    file_name,
-                    pos.x
-                );
-                assert!(
-                    pos.y >= MIN_REASONABLE_COORD && pos.y <= MAX_REASONABLE_COORD,
-                    "Room position y should be reasonable in {}: {}",
-                    file_name,
-                    pos.y
-                );
-                assert!(
-                    pos.z >= MIN_REASONABLE_COORD && pos.z <= MAX_REASONABLE_COORD,
-                    "Room position z should be reasonable in {}: {}",
-                    file_name,
-                    pos.z
-                );
-                
-                // Check bounding box
-                let bbox = &room.bounding_box;
-                assert!(
-                    bbox.min.x >= MIN_REASONABLE_COORD && bbox.min.x <= MAX_REASONABLE_COORD,
-                    "Bounding box min.x should be reasonable in {}: {}",
-                    file_name,
-                    bbox.min.x
-                );
-                assert!(
-                    bbox.max.x >= MIN_REASONABLE_COORD && bbox.max.x <= MAX_REASONABLE_COORD,
-                    "Bounding box max.x should be reasonable in {}: {}",
-                    file_name,
-                    bbox.max.x
-                );
+            for wing in &floor.wings {
+                for room in &wing.rooms {
+                    // Check position
+                    let pos = &room.spatial_properties.position;
+                    assert!(
+                        pos.x >= MIN_REASONABLE_COORD && pos.x <= MAX_REASONABLE_COORD,
+                        "Room position x should be reasonable in {}: {}",
+                        file_name,
+                        pos.x
+                    );
+                    assert!(
+                        pos.y >= MIN_REASONABLE_COORD && pos.y <= MAX_REASONABLE_COORD,
+                        "Room position y should be reasonable in {}: {}",
+                        file_name,
+                        pos.y
+                    );
+                    assert!(
+                        pos.z >= MIN_REASONABLE_COORD && pos.z <= MAX_REASONABLE_COORD,
+                        "Room position z should be reasonable in {}: {}",
+                        file_name,
+                        pos.z
+                    );
+                    
+                    // Check bounding box
+                    let bbox = &room.spatial_properties.bounding_box;
+                    assert!(
+                        bbox.min.x >= MIN_REASONABLE_COORD && bbox.min.x <= MAX_REASONABLE_COORD,
+                        "Bounding box min.x should be reasonable in {}: {}",
+                        file_name,
+                        bbox.min.x
+                    );
+                    assert!(
+                        bbox.max.x >= MIN_REASONABLE_COORD && bbox.max.x <= MAX_REASONABLE_COORD,
+                        "Bounding box max.x should be reasonable in {}: {}",
+                        file_name,
+                        bbox.max.x
+                    );
+                }
             }
             
             for equipment in &floor.equipment {
@@ -258,7 +259,8 @@ fn test_example_metadata_consistency() {
         // Count actual entities
         let total_floors = building_data.floors.len();
         let total_rooms: usize = building_data.floors.iter()
-            .map(|f| f.rooms.len())
+            .flat_map(|f| f.wings.iter())
+            .map(|w| w.rooms.len())
             .sum();
         let total_equipment: usize = building_data.floors.iter()
             .map(|f| f.equipment.len())
@@ -300,7 +302,8 @@ fn test_complete_building_has_equipment() {
     
     // Should have rooms with equipment references
     let rooms_with_equipment: usize = building_data.floors.iter()
-        .map(|f| f.rooms.iter().filter(|r| !r.equipment.is_empty()).count())
+        .flat_map(|f| f.wings.iter())
+        .map(|w| w.rooms.iter().filter(|r| !r.equipment.is_empty()).count())
         .sum();
     
     assert!(

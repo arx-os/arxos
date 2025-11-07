@@ -181,8 +181,9 @@ fn generate_rooms_section(data: &BuildingData) -> String {
     // Rooms are now in wings
     let all_rooms: Vec<_> = data.floors.iter()
         .flat_map(|floor| {
+            let floor_level = floor.level;
             floor.wings.iter()
-                .flat_map(|wing| wing.rooms.iter().map(move |room| (floor.level, room)))
+                .flat_map(move |wing| wing.rooms.iter().map(move |room| (floor_level, room)))
         })
         .collect();
     

@@ -202,7 +202,7 @@ fn render_grid_body(frame: &mut Frame, area: Rect, grid: &Grid, theme: &Theme, e
                             }
                             s
                         })
-                        .unwrap_or_else(|| String::new())
+                        .unwrap_or_default()
                 };
                 
                 // Show modified indicator (only if not editing)

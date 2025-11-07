@@ -254,10 +254,8 @@ pub fn get_diff(
                 } else {
                     return true; // Skip if no path
                 }
-            } else {
-                if let Some(path) = delta.new_file().path() {
-                    file_paths.insert(path.to_string_lossy().to_string());
-                }
+            } else if let Some(path) = delta.new_file().path() {
+                file_paths.insert(path.to_string_lossy().to_string());
             }
             true
         },

@@ -409,7 +409,7 @@ impl InteractiveRenderer {
         
         // Game overlay (if in game mode)
         if let Some(ref game_state) = self.game_state {
-            overlay.push_str("\n");
+            overlay.push('\n');
             overlay.push_str("╔════════════════════════════════════════════════════════════╗\n");
             overlay.push_str("║                    GAME OVERLAY                           ║\n");
             overlay.push_str("╠════════════════════════════════════════════════════════════╣\n");
@@ -436,7 +436,7 @@ impl InteractiveRenderer {
                 stats.valid_placements, stats.total_placements, stats.violations));
             
             overlay.push_str("╚════════════════════════════════════════════════════════════╝\n");
-            overlay.push_str("\n");
+            overlay.push('\n');
         }
         
         // Session information
@@ -642,6 +642,8 @@ mod tests {
     use chrono::Utc;
 
     fn create_test_building_data() -> BuildingData {
+        use crate::core::Floor;
+        
         BuildingData {
             building: BuildingInfo {
                 id: "test".to_string(),
@@ -661,15 +663,15 @@ mod tests {
                 units: "meters".to_string(),
                 tags: vec![],
             },
-            floors: vec![FloorData {
+            floors: vec![Floor {
                 id: "floor-1".to_string(),
                 name: "Floor 1".to_string(),
                 level: 0,
-                elevation: 0.0,
-                wings: vec![],
-                rooms: vec![],
-                equipment: vec![],
+                elevation: Some(0.0),
                 bounding_box: None,
+                wings: vec![],
+                equipment: vec![],
+                properties: std::collections::HashMap::new(),
             }],
             coordinate_systems: vec![],
         }

@@ -183,11 +183,11 @@ mod tests {
         assert_eq!(coord.column, "D");
         assert_eq!(coord.row, 4);
         
-        let coord = GridCoordinate::parse("A1").unwrap();
+        let coord = GridCoordinate::parse("A-1").unwrap();
         assert_eq!(coord.column, "A");
         assert_eq!(coord.row, 1);
         
-        let coord = GridCoordinate::parse("Z 26").unwrap();
+        let coord = GridCoordinate::parse("Z-26").unwrap();
         assert_eq!(coord.column, "Z");
         assert_eq!(coord.row, 26);
     }

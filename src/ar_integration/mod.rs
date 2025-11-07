@@ -343,21 +343,31 @@ impl ARDataIntegrator {
         room_index: usize,
         detected_equipment: DetectedEquipment,
     ) -> Result<IntegrationAction, Box<dyn std::error::Error>> {
+        // Prepare detected position before any borrows
+        let detected_pos = Position {
+            x: detected_equipment.position.x,
+            y: detected_equipment.position.y,
+            z: detected_equipment.position.z,
+            coordinate_system: "building_local".to_string(),
+        };
+        
+        // Check if equipment already exists and get its position before mutable borrow
+        let existing_position_opt = self.building_data.floors[floor_index]
+            .equipment
+            .iter()
+            .find(|e| e.name == detected_equipment.name)
+            .map(|e| e.position.clone());
+        
+        // Calculate position difference before mutable borrow if equipment exists
+        let position_diff_opt = existing_position_opt.as_ref()
+            .map(|existing_pos| self.calculate_position_difference_core(existing_pos, &detected_pos));
+        
         let floor = &mut self.building_data.floors[floor_index];
         
         // Check if equipment already exists
         if let Some(existing_index) = floor.equipment.iter().position(|e| e.name == detected_equipment.name) {
-            // Get existing position before mutable borrow
-            let existing_position = floor.equipment[existing_index].position;
-            
-            // Calculate position difference before mutable borrow
-            let detected_pos = Position {
-                x: detected_equipment.position.x,
-                y: detected_equipment.position.y,
-                z: detected_equipment.position.z,
-                coordinate_system: "building_local".to_string(),
-            };
-            let position_diff = self.calculate_position_difference_core(&existing_position, &detected_pos);
+            // Get position difference we calculated before the mutable borrow
+            let position_diff = position_diff_opt.expect("Position diff should exist if equipment found");
             
             // Update existing equipment
             let existing_equipment = &mut floor.equipment[existing_index];
@@ -518,6 +528,7 @@ impl ARDataIntegrator {
         (dx * dx + dy * dy + dz * dz).sqrt()
     }
     
+    #[allow(dead_code)]
     fn calculate_position_difference(&self, pos1: &Point3D, pos2: &Point3D) -> f64 {
         let dx = pos1.x - pos2.x;
         let dy = pos1.y - pos2.y;

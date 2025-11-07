@@ -96,7 +96,7 @@ fn is_process_running(pid: u32) -> bool {
         use std::process::Command;
         // Try to kill with signal 0 (doesn't actually kill, just checks existence)
         let output = Command::new("kill")
-            .args(&["-0", &pid.to_string()])
+            .args(["-0", &pid.to_string()])
             .output();
         matches!(output, Ok(ref o) if o.status.success())
     }

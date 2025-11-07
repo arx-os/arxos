@@ -94,11 +94,11 @@ impl Repository for FileRepository {
         use crate::persistence::PersistenceManager;
         let persistence = PersistenceManager::new(building_name)
             .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
-                Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("{}", e)))
+                Box::new(std::io::Error::other(format!("{}", e)))
             })?;
         persistence.load_building_data()
             .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
-                Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("{}", e)))
+                Box::new(std::io::Error::other(format!("{}", e)))
             })
     }
     
@@ -106,11 +106,11 @@ impl Repository for FileRepository {
         use crate::persistence::PersistenceManager;
         let persistence = PersistenceManager::new(building_name)
             .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
-                Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("{}", e)))
+                Box::new(std::io::Error::other(format!("{}", e)))
             })?;
         persistence.save_building_data(data)
             .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
-                Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("{}", e)))
+                Box::new(std::io::Error::other(format!("{}", e)))
             })
     }
     
@@ -118,11 +118,11 @@ impl Repository for FileRepository {
         use crate::persistence::PersistenceManager;
         let persistence = PersistenceManager::new(building_name)
             .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
-                Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("{}", e)))
+                Box::new(std::io::Error::other(format!("{}", e)))
             })?;
         persistence.save_and_commit(data, message)
             .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
-                Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("{}", e)))
+                Box::new(std::io::Error::other(format!("{}", e)))
             })
             .map(|_| ())
     }

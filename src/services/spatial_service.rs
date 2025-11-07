@@ -20,12 +20,14 @@ pub struct SpatialService {
 /// Internal spatial index using R-Tree for efficient queries
 #[derive(Clone)]
 struct SpatialIndex {
+    #[allow(dead_code)]
     entities: Vec<SpatialEntity>,
     rtree: RTreeNode,
 }
 
 /// R-Tree node for spatial indexing
 #[derive(Clone)]
+#[allow(dead_code)]
 struct RTreeNode {
     bounds: BoundingBox3D,
     children: Vec<RTreeNode>,

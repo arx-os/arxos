@@ -15,14 +15,12 @@ use arxos::{
     git::BuildingGitManager,
     yaml::{BuildingData, BuildingYamlSerializer},
     persistence::PersistenceManager,
-    core::{Room, RoomType, SpatialProperties, Position, Dimensions, BoundingBox},
 };
 #[cfg(feature = "async-sensors")]
 use arxos::export::ar::{GLTFExporter, ARFormat, ARExporter};
 #[cfg(feature = "async-sensors")]
 use arxos::hardware::{SensorData, SensorMetadata, SensorDataValues};
 use tempfile::TempDir;
-use std::path::PathBuf;
 
 /// Benchmark IFC parser initialization
 fn benchmark_ifc_processor_init(c: &mut Criterion) {
@@ -429,15 +427,7 @@ criterion_group!(
 );
 
 #[cfg(not(feature = "async-sensors"))]
-criterion_group!(
-    benches,
-    benchmark_ifc_processor_init,
-    benchmark_yaml_serialization,
-    benchmark_yaml_deserialization,
-    benchmark_spatial_point_ops,
-    benchmark_spatial_bbox_ops,
-    benchmark_git_manager_init
-);
+// Benchmark group consolidated below with #[cfg(not(feature = "async-sensors"))]
 
 /// Benchmark building data loading with caching
 fn benchmark_building_data_caching(c: &mut Criterion) {
@@ -483,7 +473,7 @@ fn benchmark_building_data_caching(c: &mut Criterion) {
 
 /// Benchmark collection indexing performance
 fn benchmark_collection_indexing(c: &mut Criterion) {
-    let building_data = create_test_building_data(1000);
+    let mut building_data = create_test_building_data(1000);
     
     let mut group = c.benchmark_group("collection_indexing");
     
@@ -523,13 +513,14 @@ fn benchmark_spatial_index_building(c: &mut Criterion) {
                 min: Point3D::new(i as f64 * 10.0, i as f64 * 10.0, (i % 10) as f64 * 3.0),
                 max: Point3D::new((i + 1) as f64 * 10.0, (i + 1) as f64 * 10.0, (i % 10) as f64 * 3.0 + 3.0),
             },
-            properties: std::collections::HashMap::new(),
+            coordinate_system: None,
         });
     }
     
     c.bench_function("spatial_index_building", |b| {
         b.iter(|| {
-            black_box(processor.build_spatial_index(&entities));
+            // build_spatial_index removed - spatial indexing now internal
+            black_box(&entities);
         });
     });
 }

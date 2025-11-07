@@ -763,7 +763,8 @@ impl SpreadsheetDataSource for SensorDataSource {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentData, RoomData, EquipmentStatus};
+    use crate::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+    use crate::core::{Floor, Wing, Room, Equipment, RoomType, EquipmentType, EquipmentStatus, EquipmentHealthStatus, Position, SpatialProperties, Dimensions, BoundingBox};
     use crate::spatial::{Point3D, BoundingBox3D};
     use chrono::Utc;
     use std::collections::HashMap;
@@ -789,63 +790,69 @@ mod tests {
                 tags: vec![],
             },
             floors: vec![
-                FloorData {
+                Floor {
                     id: "floor-1".to_string(),
-                    wings: vec![],
                     name: "Ground Floor".to_string(),
                     level: 0,
-                    elevation: 0.0,
-                    rooms: vec![
-                        RoomData {
-                            id: "room-1".to_string(),
-                            name: "Room 1".to_string(),
-                            room_type: "Office".to_string(),
-                            area: Some(100.0),
-                            volume: Some(300.0),
-                            position: Point3D::new(0.0, 0.0, 0.0),
-                            bounding_box: BoundingBox3D::new(
-                                Point3D::new(0.0, 0.0, 0.0),
-                                Point3D::new(10.0, 10.0, 3.0),
-                            ),
+                    elevation: Some(0.0),
+                    bounding_box: None,
+                    wings: vec![
+                        Wing {
+                            id: "wing-1".to_string(),
+                            name: "Main Wing".to_string(),
+                            rooms: vec![
+                                Room {
+                                    id: "room-1".to_string(),
+                                    name: "Room 1".to_string(),
+                                    room_type: RoomType::Office,
+                                    equipment: vec![],
+                                    spatial_properties: SpatialProperties {
+                                        position: Position { x: 0.0, y: 0.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
+                                        dimensions: Dimensions { width: 10.0, height: 3.0, depth: 10.0 },
+                                        bounding_box: BoundingBox {
+                                            min: Position { x: 0.0, y: 0.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
+                                            max: Position { x: 10.0, y: 10.0, z: 3.0, coordinate_system: "LOCAL".to_string() },
+                                        },
+                                        coordinate_system: "LOCAL".to_string(),
+                                    },
+                                    properties: HashMap::new(),
+                                    created_at: None,
+                                    updated_at: None,
+                                },
+                            ],
                             equipment: vec![],
                             properties: HashMap::new(),
                         },
                     ],
                     equipment: vec![
-                        EquipmentData {
-                            address: None,
+                        Equipment {
                             id: "eq-1".to_string(),
                             name: "HVAC Unit 1".to_string(),
-                            equipment_type: "HVAC".to_string(),
-                            system_type: "HVAC".to_string(),
-                            position: Point3D::new(5.0, 5.0, 0.0),
-                            bounding_box: BoundingBox3D::new(
-                                Point3D::new(4.0, 4.0, 0.0),
-                                Point3D::new(6.0, 6.0, 2.0),
-                            ),
-                            status: EquipmentStatus::Healthy,
+                            path: "/building/floor-1/eq-1".to_string(),
+                            address: None,
+                            equipment_type: EquipmentType::HVAC,
+                            position: Position { x: 5.0, y: 5.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
                             properties: HashMap::new(),
-                            universal_path: "/building/floor-1/eq-1".to_string(),
+                            status: EquipmentStatus::Active,
+                            health_status: Some(EquipmentHealthStatus::Healthy),
+                            room_id: None,
                             sensor_mappings: None,
                         },
-                        EquipmentData {
-                            address: None,
+                        Equipment {
                             id: "eq-2".to_string(),
                             name: "Electrical Panel 1".to_string(),
-                            equipment_type: "Electrical".to_string(),
-                            system_type: "Electrical".to_string(),
-                            position: Point3D::new(8.0, 8.0, 0.0),
-                            bounding_box: BoundingBox3D::new(
-                                Point3D::new(7.0, 7.0, 0.0),
-                                Point3D::new(9.0, 9.0, 1.5),
-                            ),
-                            status: EquipmentStatus::Warning,
+                            path: "/building/floor-1/eq-2".to_string(),
+                            address: None,
+                            equipment_type: EquipmentType::Electrical,
+                            position: Position { x: 8.0, y: 8.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
                             properties: HashMap::new(),
-                            universal_path: "/building/floor-1/eq-2".to_string(),
+                            status: EquipmentStatus::Active,
+                            health_status: Some(EquipmentHealthStatus::Warning),
+                            room_id: None,
                             sensor_mappings: None,
                         },
                     ],
-                    bounding_box: None,
+                    properties: HashMap::new(),
                 },
             ],
             coordinate_systems: vec![],
@@ -878,16 +885,20 @@ mod tests {
         let building_data = create_test_building_data();
         let data_source = EquipmentDataSource::new(building_data, "test_building".to_string());
         
-        // Test getting ID (column 0)
-        let id = data_source.get_cell(0, 0).unwrap();
+        // Test getting Address (column 0)
+        let address = data_source.get_cell(0, 0).unwrap();
+        assert_eq!(address, CellValue::Text("No address".to_string()));
+        
+        // Test getting ID (column 1)
+        let id = data_source.get_cell(0, 1).unwrap();
         assert_eq!(id, CellValue::UUID("eq-1".to_string()));
         
-        // Test getting name (column 1)
-        let name = data_source.get_cell(0, 1).unwrap();
+        // Test getting name (column 2)
+        let name = data_source.get_cell(0, 2).unwrap();
         assert_eq!(name, CellValue::Text("HVAC Unit 1".to_string()));
         
-        // Test getting type (column 2)
-        let eq_type = data_source.get_cell(0, 2).unwrap();
+        // Test getting type (column 3)
+        let eq_type = data_source.get_cell(0, 3).unwrap();
         assert_eq!(eq_type, CellValue::Enum("HVAC".to_string()));
     }
     
@@ -908,12 +919,12 @@ mod tests {
         let building_data = create_test_building_data();
         let mut data_source = EquipmentDataSource::new(building_data, "test_building".to_string());
         
-        // Set name (column 1)
+        // Set name (column 2, after address and ID which are read-only)
         let new_name = CellValue::Text("Updated Name".to_string());
-        data_source.set_cell(0, 1, new_name.clone()).unwrap();
+        data_source.set_cell(0, 2, new_name.clone()).unwrap();
         
         // Verify it was set
-        let retrieved = data_source.get_cell(0, 1).unwrap();
+        let retrieved = data_source.get_cell(0, 2).unwrap();
         assert_eq!(retrieved, new_name);
         
         // Verify row was marked as modified
@@ -956,16 +967,24 @@ mod tests {
         let building_data = create_test_building_data();
         let data_source = RoomDataSource::new(building_data, "test_building".to_string());
         
+        // Check column order first
+        let columns = data_source.columns();
+        
+        // Find ID column index
+        let id_col = columns.iter().position(|c| c.id == "room.id").expect("Should have room.id column");
+        let name_col = columns.iter().position(|c| c.id == "room.name").expect("Should have room.name column");
+        let type_col = columns.iter().position(|c| c.id == "room.type").expect("Should have room.type column");
+        
         // Test getting ID
-        let id = data_source.get_cell(0, 0).unwrap();
+        let id = data_source.get_cell(0, id_col).unwrap();
         assert_eq!(id, CellValue::UUID("room-1".to_string()));
         
         // Test getting name
-        let name = data_source.get_cell(0, 1).unwrap();
+        let name = data_source.get_cell(0, name_col).unwrap();
         assert_eq!(name, CellValue::Text("Room 1".to_string()));
         
         // Test getting type
-        let room_type = data_source.get_cell(0, 2).unwrap();
+        let room_type = data_source.get_cell(0, type_col).unwrap();
         assert_eq!(room_type, CellValue::Enum("Office".to_string()));
     }
     
@@ -974,12 +993,16 @@ mod tests {
         let building_data = create_test_building_data();
         let mut data_source = RoomDataSource::new(building_data, "test_building".to_string());
         
+        // Find name column
+        let columns = data_source.columns();
+        let name_col = columns.iter().position(|c| c.id == "room.name").expect("Should have room.name column");
+        
         // Set name
         let new_name = CellValue::Text("Updated Room".to_string());
-        data_source.set_cell(0, 1, new_name.clone()).unwrap();
+        data_source.set_cell(0, name_col, new_name.clone()).unwrap();
         
         // Verify it was set
-        let retrieved = data_source.get_cell(0, 1).unwrap();
+        let retrieved = data_source.get_cell(0, name_col).unwrap();
         assert_eq!(retrieved, new_name);
         
         // Verify row was marked as modified

@@ -489,28 +489,26 @@ fn handle_spreadsheet_equipment(
         }
         
         // Check for auto-save
-        if auto_save.should_save() && auto_save.has_unsaved_changes() {
-            if last_auto_save_check.elapsed() >= Duration::from_millis(100) {
-                // Check for conflicts before auto-saving
-                match conflict_detector.check_conflict() {
-                    Ok(true) => {
-                        // Conflict detected - don't auto-save, show warning
-                        warn!("External changes detected. Auto-save skipped. Press Ctrl+R to reload or Ctrl+S to save.");
-                        auto_save.set_error("External changes detected".to_string());
-                    }
-                    Ok(false) => {
-                        // No conflict - proceed with auto-save
-                        if let Err(e) = perform_save(&mut data_source, &mut conflict_detector, &mut auto_save, false) {
-                            warn!("Auto-save failed: {}", e);
-                        }
-                    }
-                    Err(e) => {
-                        warn!("Conflict check failed: {}", e);
-                        auto_save.set_error("Conflict check failed".to_string());
+        if auto_save.should_save() && auto_save.has_unsaved_changes() && last_auto_save_check.elapsed() >= Duration::from_millis(100) {
+            // Check for conflicts before auto-saving
+            match conflict_detector.check_conflict() {
+                Ok(true) => {
+                    // Conflict detected - don't auto-save, show warning
+                    warn!("External changes detected. Auto-save skipped. Press Ctrl+R to reload or Ctrl+S to save.");
+                    auto_save.set_error("External changes detected".to_string());
+                }
+                Ok(false) => {
+                    // No conflict - proceed with auto-save
+                    if let Err(e) = perform_save(&mut data_source, &mut conflict_detector, &mut auto_save, false) {
+                        warn!("Auto-save failed: {}", e);
                     }
                 }
-                last_auto_save_check = Instant::now();
+                Err(e) => {
+                    warn!("Conflict check failed: {}", e);
+                    auto_save.set_error("Conflict check failed".to_string());
+                }
             }
+            last_auto_save_check = Instant::now();
         }
     }
     
@@ -812,25 +810,23 @@ fn handle_spreadsheet_rooms(
             }
         }
         
-        if auto_save.should_save() && auto_save.has_unsaved_changes() {
-            if last_auto_save_check.elapsed() >= Duration::from_millis(100) {
-                match conflict_detector.check_conflict() {
-                    Ok(true) => {
-                        warn!("External changes detected. Auto-save skipped.");
-                        auto_save.set_error("External changes detected".to_string());
-                    }
-                    Ok(false) => {
-                        if let Err(e) = perform_save(&mut data_source, &mut conflict_detector, &mut auto_save, false) {
-                            warn!("Auto-save failed: {}", e);
-                        }
-                    }
-                    Err(e) => {
-                        warn!("Conflict check failed: {}", e);
-                        auto_save.set_error("Conflict check failed".to_string());
+        if auto_save.should_save() && auto_save.has_unsaved_changes() && last_auto_save_check.elapsed() >= Duration::from_millis(100) {
+            match conflict_detector.check_conflict() {
+                Ok(true) => {
+                    warn!("External changes detected. Auto-save skipped.");
+                    auto_save.set_error("External changes detected".to_string());
+                }
+                Ok(false) => {
+                    if let Err(e) = perform_save(&mut data_source, &mut conflict_detector, &mut auto_save, false) {
+                        warn!("Auto-save failed: {}", e);
                     }
                 }
-                last_auto_save_check = Instant::now();
+                Err(e) => {
+                    warn!("Conflict check failed: {}", e);
+                    auto_save.set_error("Conflict check failed".to_string());
+                }
             }
+            last_auto_save_check = Instant::now();
         }
     }
     

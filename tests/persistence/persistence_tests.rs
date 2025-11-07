@@ -412,6 +412,7 @@ mod file_size_limit_tests {
         
         // Create test building data
         let building_data = create_test_building_data();
+        use arxos::BuildingYamlSerializer;
         let serializer = BuildingYamlSerializer::new();
         let yaml_content = serializer.to_yaml(&building_data).unwrap();
         let test_file = temp_dir.path().join("test_building.yaml");

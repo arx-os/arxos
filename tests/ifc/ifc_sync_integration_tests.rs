@@ -4,7 +4,8 @@
 //! delta tracking, sync state persistence, and round-trip compatibility.
 
 use arxos::export::ifc::{IFCExporter, IFCSyncState};
-use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, RoomData, EquipmentData, EquipmentStatus, CoordinateSystemInfo};
+use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, CoordinateSystemInfo};
+use arxos::core::{Floor, Wing, Room, Equipment, RoomType, EquipmentType, EquipmentStatus, EquipmentHealthStatus, Position, SpatialProperties, Dimensions, BoundingBox};
 use arxos::spatial::{Point3D, BoundingBox3D};
 use std::fs;
 use std::collections::HashMap;
@@ -13,6 +14,90 @@ use chrono::Utc;
 
 /// Create test building data
 fn create_test_building_data() -> BuildingData {
+    let room1 = Room {
+        id: "room-101".to_string(),
+        name: "Room 101".to_string(),
+        room_type: RoomType::Office,
+        equipment: vec![],
+        spatial_properties: SpatialProperties {
+            position: Position { x: 5.0, y: 5.0, z: 1.5, coordinate_system: "LOCAL".to_string() },
+            dimensions: Dimensions { width: 10.0, height: 3.0, depth: 5.0 },
+            bounding_box: BoundingBox {
+                min: Position { x: 0.0, y: 0.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
+                max: Position { x: 10.0, y: 5.0, z: 3.0, coordinate_system: "LOCAL".to_string() },
+            },
+            coordinate_system: "LOCAL".to_string(),
+        },
+        properties: HashMap::new(),
+        created_at: None,
+        updated_at: None,
+    };
+    
+    let room2 = Room {
+        id: "room-102".to_string(),
+        name: "Room 102".to_string(),
+        room_type: RoomType::Other("Conference".to_string()),
+        equipment: vec![],
+        spatial_properties: SpatialProperties {
+            position: Position { x: 15.0, y: 5.0, z: 1.5, coordinate_system: "LOCAL".to_string() },
+            dimensions: Dimensions { width: 10.0, height: 3.0, depth: 5.0 },
+            bounding_box: BoundingBox {
+                min: Position { x: 10.0, y: 0.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
+                max: Position { x: 20.0, y: 5.0, z: 3.0, coordinate_system: "LOCAL".to_string() },
+            },
+            coordinate_system: "LOCAL".to_string(),
+        },
+        properties: HashMap::new(),
+        created_at: None,
+        updated_at: None,
+    };
+    
+    let wing = Wing {
+        id: "wing-1".to_string(),
+        name: "Main Wing".to_string(),
+        rooms: vec![room1, room2],
+        equipment: vec![],
+        properties: HashMap::new(),
+    };
+    
+    let floor = Floor {
+        id: "floor-1".to_string(),
+        name: "Floor 1".to_string(),
+        level: 1,
+        elevation: Some(0.0),
+        bounding_box: None,
+        wings: vec![wing],
+        equipment: vec![
+            Equipment {
+                id: "equipment-1".to_string(),
+                name: "HVAC Unit 1".to_string(),
+                path: "building/floor-1/room-101/equipment-hvac-1".to_string(),
+                address: None,
+                equipment_type: EquipmentType::HVAC,
+                position: Position { x: 2.0, y: 2.0, z: 2.0, coordinate_system: "LOCAL".to_string() },
+                properties: HashMap::new(),
+                status: EquipmentStatus::Active,
+                health_status: Some(EquipmentHealthStatus::Healthy),
+                room_id: Some("room-101".to_string()),
+                sensor_mappings: None,
+            },
+            Equipment {
+                id: "equipment-2".to_string(),
+                name: "Light Fixture 1".to_string(),
+                path: "building/floor-1/room-101/equipment-electrical-1".to_string(),
+                address: None,
+                equipment_type: EquipmentType::Electrical,
+                position: Position { x: 7.0, y: 2.5, z: 2.5, coordinate_system: "LOCAL".to_string() },
+                properties: HashMap::new(),
+                status: EquipmentStatus::Active,
+                health_status: Some(EquipmentHealthStatus::Healthy),
+                room_id: Some("room-101".to_string()),
+                sensor_mappings: None,
+            },
+        ],
+        properties: HashMap::new(),
+    };
+    
     BuildingData {
         building: BuildingInfo {
             id: "test-building".to_string(),
@@ -32,84 +117,14 @@ fn create_test_building_data() -> BuildingData {
             units: "meters".to_string(),
             tags: vec![],
         },
-        floors: vec![
-            FloorData {
-                id: "floor-1".to_string(),
-                name: "Floor 1".to_string(),
-                level: 1,
-                elevation: 0.0,
-                rooms: vec![
-                    RoomData {
-                        id: "room-101".to_string(),
-                        name: "Room 101".to_string(),
-                        room_type: "Office".to_string(),
-                        area: Some(25.0),
-                        volume: Some(75.0),
-                        position: Point3D::new(5.0, 5.0, 1.5),
-                        bounding_box: BoundingBox3D::new(
-                            Point3D::new(0.0, 0.0, 0.0),
-                            Point3D::new(10.0, 5.0, 3.0),
-                        ),
-                        equipment: vec![],
-                        properties: HashMap::new(),
-                    },
-                    RoomData {
-                        id: "room-102".to_string(),
-                        name: "Room 102".to_string(),
-                        room_type: "Conference".to_string(),
-                        area: Some(50.0),
-                        volume: Some(150.0),
-                        position: Point3D::new(15.0, 5.0, 1.5),
-                        bounding_box: BoundingBox3D::new(
-                            Point3D::new(10.0, 0.0, 0.0),
-                            Point3D::new(20.0, 5.0, 3.0),
-                        ),
-                        equipment: vec![],
-                        properties: HashMap::new(),
-                    },
-                ],
-                equipment: vec![
-                    EquipmentData {
-                        id: "equipment-1".to_string(),
-                        name: "HVAC Unit 1".to_string(),
-                        equipment_type: "HVAC".to_string(),
-                        system_type: "HVAC".to_string(),
-                        position: Point3D::new(2.0, 2.0, 2.0),
-                        bounding_box: BoundingBox3D::new(
-                            Point3D::new(1.0, 1.0, 1.0),
-                            Point3D::new(3.0, 3.0, 3.0),
-                        ),
-                        status: EquipmentStatus::Healthy,
-                        properties: HashMap::new(),
-                        universal_path: "building/floor-1/room-101/equipment-hvac-1".to_string(),
-                        sensor_mappings: None,
-                    },
-                    EquipmentData {
-                        id: "equipment-2".to_string(),
-                        name: "Light Fixture 1".to_string(),
-                        equipment_type: "Electrical".to_string(),
-                        system_type: "Electrical".to_string(),
-                        position: Point3D::new(7.0, 2.5, 2.5),
-                        bounding_box: BoundingBox3D::new(
-                            Point3D::new(6.5, 2.0, 2.0),
-                            Point3D::new(7.5, 3.0, 3.0),
-                        ),
-                        status: EquipmentStatus::Healthy,
-                        properties: HashMap::new(),
-                        universal_path: "building/floor-1/room-101/equipment-electrical-1".to_string(),
-                        sensor_mappings: None,
-                    },
-                ],
-                bounding_box: None,
-            },
-        ],
+        floors: vec![floor],
         coordinate_systems: vec![CoordinateSystemInfo {
             name: "World".to_string(),
             origin: Point3D::origin(),
             x_axis: Point3D::new(1.0, 0.0, 0.0),
             y_axis: Point3D::new(0.0, 1.0, 0.0),
             z_axis: Point3D::new(0.0, 0.0, 1.0),
-            description: Some("Default world coordinate system".to_string()),
+            description: None,
         }],
     }
 }
@@ -159,19 +174,17 @@ fn test_delta_export_workflow() {
     sync_state.save(&sync_state_path).expect("Should save sync state");
     
     // Add new equipment to building data
-    building_data.floors[0].equipment.push(EquipmentData {
+    building_data.floors[0].equipment.push(Equipment {
         id: "equipment-3".to_string(),
         name: "Pump Unit 1".to_string(),
-        equipment_type: "Plumbing".to_string(),
-        system_type: "Plumbing".to_string(),
-        position: Point3D::new(12.0, 2.0, 1.0),
-        bounding_box: BoundingBox3D::new(
-            Point3D::new(11.0, 1.0, 0.0),
-            Point3D::new(13.0, 3.0, 2.0),
-        ),
-        status: EquipmentStatus::Healthy,
+        path: "building/floor-1/room-102/equipment-plumbing-1".to_string(),
+        address: None,
+        equipment_type: EquipmentType::Plumbing,
+        position: Position { x: 12.0, y: 2.0, z: 1.0, coordinate_system: "LOCAL".to_string() },
         properties: HashMap::new(),
-        universal_path: "building/floor-1/room-102/equipment-plumbing-1".to_string(),
+        status: EquipmentStatus::Active,
+        health_status: Some(EquipmentHealthStatus::Healthy),
+        room_id: Some("room-102".to_string()),
         sensor_mappings: None,
     });
     
@@ -243,19 +256,17 @@ fn test_delta_calculation_integration() {
     
     // Modify building data - add new equipment, remove old one
     building_data.floors[0].equipment.remove(1); // Remove equipment-2
-    building_data.floors[0].equipment.push(EquipmentData {
+    building_data.floors[0].equipment.push(Equipment {
         id: "equipment-3".to_string(),
         name: "New Equipment".to_string(),
-        equipment_type: "HVAC".to_string(),
-        system_type: "HVAC".to_string(),
-        position: Point3D::new(10.0, 10.0, 2.0),
-        bounding_box: BoundingBox3D::new(
-            Point3D::new(9.0, 9.0, 1.0),
-            Point3D::new(11.0, 11.0, 3.0),
-        ),
-        status: EquipmentStatus::Healthy,
+        path: "building/floor-1/room-102/equipment-hvac-3".to_string(),
+        address: None,
+        equipment_type: EquipmentType::HVAC,
+        position: Position { x: 10.0, y: 10.0, z: 2.0, coordinate_system: "LOCAL".to_string() },
         properties: HashMap::new(),
-        universal_path: "building/floor-1/room-102/equipment-hvac-3".to_string(),
+        status: EquipmentStatus::Active,
+        health_status: Some(EquipmentHealthStatus::Healthy),
+        room_id: Some("room-102".to_string()),
         sensor_mappings: None,
     });
     
@@ -315,42 +326,58 @@ fn test_multiple_floors_export() {
     
     let mut building_data = create_test_building_data();
     
+    // Create room for floor 2
+    let room201 = Room {
+        id: "room-201".to_string(),
+        name: "Room 201".to_string(),
+        room_type: RoomType::Office,
+        equipment: vec![],
+        spatial_properties: SpatialProperties {
+            position: Position { x: 5.0, y: 5.0, z: 4.5, coordinate_system: "LOCAL".to_string() },
+            dimensions: Dimensions { width: 10.0, height: 3.0, depth: 5.0 },
+            bounding_box: BoundingBox {
+                min: Position { x: 0.0, y: 0.0, z: 3.0, coordinate_system: "LOCAL".to_string() },
+                max: Position { x: 10.0, y: 5.0, z: 6.0, coordinate_system: "LOCAL".to_string() },
+            },
+            coordinate_system: "LOCAL".to_string(),
+        },
+        properties: HashMap::new(),
+        created_at: None,
+        updated_at: None,
+    };
+    
+    let wing2 = Wing {
+        id: "wing-2".to_string(),
+        name: "Floor 2 Wing".to_string(),
+        rooms: vec![room201],
+        equipment: vec![],
+        properties: HashMap::new(),
+    };
+    
     // Add second floor
-    building_data.floors.push(FloorData {
+    building_data.floors.push(Floor {
         id: "floor-2".to_string(),
         name: "Floor 2".to_string(),
         level: 2,
-        elevation: 3.0,
-        rooms: vec![RoomData {
-            id: "room-201".to_string(),
-            name: "Room 201".to_string(),
-            room_type: "Office".to_string(),
-            area: Some(30.0),
-            volume: Some(90.0),
-            position: Point3D::new(5.0, 5.0, 4.5),
-            bounding_box: BoundingBox3D::new(
-                Point3D::new(0.0, 0.0, 3.0),
-                Point3D::new(10.0, 5.0, 6.0),
-            ),
-            equipment: vec![],
-            properties: HashMap::new(),
-        }],
-        equipment: vec![EquipmentData {
-            id: "equipment-floor2-1".to_string(),
-            name: "Floor 2 Equipment".to_string(),
-            equipment_type: "HVAC".to_string(),
-            system_type: "HVAC".to_string(),
-            position: Point3D::new(2.0, 2.0, 4.5),
-            bounding_box: BoundingBox3D::new(
-                Point3D::new(1.0, 1.0, 4.0),
-                Point3D::new(3.0, 3.0, 5.0),
-            ),
-            status: EquipmentStatus::Healthy,
-            properties: HashMap::new(),
-            universal_path: "building/floor-2/room-201/equipment-hvac-1".to_string(),
-            sensor_mappings: None,
-        }],
+        elevation: Some(3.0),
         bounding_box: None,
+        wings: vec![wing2],
+        equipment: vec![
+            Equipment {
+                id: "equipment-floor2-1".to_string(),
+                name: "Floor 2 Equipment".to_string(),
+                path: "building/floor-2/room-201/equipment-hvac-1".to_string(),
+                address: None,
+                equipment_type: EquipmentType::HVAC,
+                position: Position { x: 2.0, y: 2.0, z: 4.5, coordinate_system: "LOCAL".to_string() },
+                properties: HashMap::new(),
+                status: EquipmentStatus::Active,
+                health_status: Some(EquipmentHealthStatus::Healthy),
+                room_id: Some("room-201".to_string()),
+                sensor_mappings: None,
+            },
+        ],
+        properties: HashMap::new(),
     });
     
     let exporter = IFCExporter::new(building_data);
@@ -387,4 +414,3 @@ fn test_universal_path_preservation() {
             content.contains("HVAC Unit 1"), 
             "Universal Path or equipment name should be in IFC");
 }
-

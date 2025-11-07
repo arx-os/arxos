@@ -10,7 +10,7 @@ mod floor;
 mod wing;
 mod room;
 mod equipment;
-mod operations;
+pub mod operations;
 mod serde_helpers;
 
 // Re-export all public types and functions

@@ -412,17 +412,12 @@ pub fn handle_status_dashboard(building_name: Option<String>) -> Result<(), Box<
         })?;
         
         // Handle events
-        if let Some(event) = terminal.poll_event(Duration::from_millis(100))? {
-            match event {
-                Event::Key(key_event) => {
-                    if TerminalManager::is_quit_key(&key_event) {
-                        break;
-                    } else if key_event.code == KeyCode::Char('r') || key_event.code == KeyCode::Char('R') {
-                        state.refresh()?;
-                        last_refresh = std::time::Instant::now();
-                    }
-                }
-                _ => {}
+        if let Some(Event::Key(key_event)) = terminal.poll_event(Duration::from_millis(100))? {
+            if TerminalManager::is_quit_key(&key_event) {
+                break;
+            } else if key_event.code == KeyCode::Char('r') || key_event.code == KeyCode::Char('R') {
+                state.refresh()?;
+                last_refresh = std::time::Instant::now();
             }
         }
         

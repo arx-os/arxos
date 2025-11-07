@@ -2,13 +2,21 @@
 //! 
 //! Calculates changes between current BuildingData and last sync state
 //! to enable incremental exports.
+//!
+//! **Note:** Uses deprecated types (EquipmentData, RoomData) for backward compatibility
+//! with IFC export format. These will be migrated in a future update.
 
+#[allow(deprecated)]
 use crate::yaml::{BuildingData, EquipmentData, RoomData};
 use super::sync_state::IFCSyncState;
 use std::collections::HashSet;
 use log::info;
 
 /// Export delta containing new, updated, and deleted entities
+///
+/// **Note:** Uses deprecated types (EquipmentData, RoomData) for backward compatibility
+/// with IFC export format. These will be migrated in a future update.
+#[allow(deprecated)]
 #[derive(Debug, Clone)]
 pub struct ExportDelta {
     /// New equipment that wasn't in last export
@@ -73,6 +81,7 @@ impl Default for ExportDelta {
 /// 
 /// # Returns
 /// * ExportDelta containing all changes
+#[allow(deprecated)]
 pub fn calculate_delta(current: &BuildingData, last_state: Option<&IFCSyncState>) -> ExportDelta {
     let mut delta = ExportDelta::new();
 
@@ -212,7 +221,8 @@ pub fn calculate_delta(current: &BuildingData, last_state: Option<&IFCSyncState>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::yaml::{BuildingInfo, BuildingMetadata, FloorData};
+    use crate::yaml::{BuildingInfo, BuildingMetadata};
+    use crate::core::{Floor, Equipment, EquipmentType, EquipmentStatus, EquipmentHealthStatus, Position};
     use crate::spatial::Point3D;
     use chrono::Utc;
 
@@ -237,32 +247,34 @@ mod tests {
                 tags: vec![],
             },
             floors: vec![
-                FloorData {
+                Floor {
                     id: "floor-1".to_string(),
                     name: "Floor 1".to_string(),
                     level: 1,
-                    elevation: 0.0,
-                    rooms: vec![],
+                    elevation: Some(0.0),
+                    bounding_box: None,
                     wings: vec![],
                     equipment: vec![
-                        crate::yaml::EquipmentData {
-                            address: None,
+                        Equipment {
                             id: "equipment-1".to_string(),
                             name: "Equipment 1".to_string(),
-                            equipment_type: "HVAC".to_string(),
-                            system_type: "HVAC".to_string(),
-                            position: Point3D::new(1.0, 1.0, 1.0),
-                            bounding_box: crate::spatial::BoundingBox3D::new(
-                                Point3D::new(0.0, 0.0, 0.0),
-                                Point3D::new(2.0, 2.0, 2.0),
-                            ),
-                            status: crate::yaml::EquipmentStatus::Healthy,
+                            path: "building/floor-1/equipment-1".to_string(),
+                            address: None,
+                            equipment_type: EquipmentType::HVAC,
+                            position: Position {
+                                x: 1.0,
+                                y: 1.0,
+                                z: 1.0,
+                                coordinate_system: "LOCAL".to_string(),
+                            },
                             properties: std::collections::HashMap::new(),
-                            universal_path: "building/floor-1/equipment-1".to_string(),
+                            status: EquipmentStatus::Active,
+                            health_status: Some(EquipmentHealthStatus::Healthy),
+                            room_id: None,
                             sensor_mappings: None,
                         }
                     ],
-                    bounding_box: None,
+                    properties: std::collections::HashMap::new(),
                 }
             ],
             coordinate_systems: vec![],
@@ -304,7 +316,8 @@ mod tests {
         let mut delta = ExportDelta::new();
         assert!(!delta.has_changes());
         
-        delta.new_equipment.push(create_test_building_data().floors[0].equipment[0].clone());
+        let equipment = create_test_building_data().floors[0].equipment[0].clone();
+        delta.new_equipment.push(crate::yaml::conversions::equipment_to_equipment_data(&equipment));
         assert!(delta.has_changes());
     }
 
@@ -314,8 +327,9 @@ mod tests {
         assert_eq!(delta.total_changes(), 0);
         
         let test_data = create_test_building_data();
-        delta.new_equipment.push(test_data.floors[0].equipment[0].clone());
-        delta.updated_equipment.push(test_data.floors[0].equipment[0].clone());
+        let equipment = &test_data.floors[0].equipment[0];
+        delta.new_equipment.push(crate::yaml::conversions::equipment_to_equipment_data(equipment));
+        delta.updated_equipment.push(crate::yaml::conversions::equipment_to_equipment_data(equipment));
         delta.deleted_equipment.push("path1".to_string());
         // Note: create_test_building_data has no rooms, so we'll use deleted_rooms instead
         delta.deleted_rooms.push("path2".to_string());

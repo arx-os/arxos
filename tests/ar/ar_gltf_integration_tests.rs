@@ -167,7 +167,8 @@ fn test_ar_scan_validation_invalid() {
 // ============================================================================
 
 use arxos::export::ar::gltf::GLTFExporter;
-use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentData, EquipmentStatus};
+use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+use arxos::core::{Floor, Equipment, EquipmentType, EquipmentStatus, EquipmentHealthStatus, Position};
 
 /// Create a test building with realistic equipment for integration testing
 fn create_realistic_test_building() -> BuildingData {

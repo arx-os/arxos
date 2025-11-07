@@ -495,6 +495,7 @@ impl Building3DRenderer {
         let mut equipment_3d = Vec::new();
         
         for floor in &self.building_data.floors {
+            // Extract floor-level equipment
             for equipment in &floor.equipment {
                 let equipment_3d_item = Equipment3D {
                     id: equipment.id.clone(),
@@ -519,12 +520,49 @@ impl Building3DRenderer {
                         },
                     },
                     floor_level: floor.level,
-                    room_id: None, // EquipmentData doesn't have room_id, we'll need to find it
-                    connections: Vec::new(), // Equipment connections are populated when equipment data is available
-                    spatial_relationships: None, // Will be set by enhance_equipment_with_spatial_data
-                    nearest_entity_distance: None, // Will be set by enhance_equipment_with_spatial_data
+                    room_id: equipment.room_id.clone(),
+                    connections: Vec::new(),
+                    spatial_relationships: None,
+                    nearest_entity_distance: None,
                 };
                 equipment_3d.push(equipment_3d_item);
+            }
+            
+            // Extract equipment from rooms within wings
+            for wing in &floor.wings {
+                for room in &wing.rooms {
+                    for equipment in &room.equipment {
+                        let equipment_3d_item = Equipment3D {
+                            id: equipment.id.clone(),
+                            name: equipment.name.clone(),
+                            equipment_type: format!("{:?}", equipment.equipment_type),
+                            status: format!("{:?}", equipment.status),
+                            position: crate::spatial::Point3D {
+                                x: equipment.position.x,
+                                y: equipment.position.y,
+                                z: equipment.position.z,
+                            },
+                            bounding_box: crate::spatial::BoundingBox3D {
+                                min: crate::spatial::Point3D {
+                                    x: equipment.position.x - 0.5,
+                                    y: equipment.position.y - 0.5,
+                                    z: equipment.position.z - 0.5,
+                                },
+                                max: crate::spatial::Point3D {
+                                    x: equipment.position.x + 0.5,
+                                    y: equipment.position.y + 0.5,
+                                    z: equipment.position.z + 0.5,
+                                },
+                            },
+                            floor_level: floor.level,
+                            room_id: Some(room.id.clone()),
+                            connections: Vec::new(),
+                            spatial_relationships: None,
+                            nearest_entity_distance: None,
+                        };
+                        equipment_3d.push(equipment_3d_item);
+                    }
+                }
             }
         }
         

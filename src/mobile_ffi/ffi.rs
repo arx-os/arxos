@@ -102,6 +102,13 @@ fn create_json_response<T: serde::Serialize>(result: Result<T, MobileError>) -> 
 /// Load a PR for review (game mode)
 ///
 /// Returns JSON with PR summary including validation results
+///
+/// # Safety
+///
+/// This function is unsafe because it dereferences raw pointers. The caller must ensure:
+/// - `pr_id` is a valid null-terminated C string or null
+/// - `pr_dir` is a valid null-terminated C string or null
+/// - `building_name` is a valid null-terminated C string or null
 #[no_mangle]
 pub unsafe extern "C" fn arxos_load_pr(
     pr_id: *const c_char,
@@ -197,6 +204,12 @@ pub unsafe extern "C" fn arxos_load_pr(
 /// Validate equipment placement against constraints
 ///
 /// Returns JSON validation result with violations and suggestions
+///
+/// # Safety
+///
+/// This function is unsafe because it dereferences raw pointers. The caller must ensure:
+/// - `equipment_json` is a valid null-terminated C string or null
+/// - `constraints_json` is a valid null-terminated C string or null
 #[no_mangle]
 pub unsafe extern "C" fn arxos_validate_constraints(
     equipment_json: *const c_char,
@@ -345,6 +358,12 @@ pub unsafe extern "C" fn arxos_validate_constraints(
 /// Get game plan from planning session
 ///
 /// Returns JSON with plan data, placements, and validation summary
+///
+/// # Safety
+///
+/// This function is unsafe because it dereferences raw pointers. The caller must ensure:
+/// - `session_id` is a valid null-terminated C string or null
+/// - `building_name` is a valid null-terminated C string or null
 #[no_mangle]
 pub unsafe extern "C" fn arxos_get_game_plan(
     session_id: *const c_char,
@@ -597,6 +616,11 @@ pub unsafe extern "C" fn arxos_get_equipment(
 /// Parse AR scan data from JSON string
 ///
 /// Returns parsed AR scan data as JSON
+///
+/// # Safety
+///
+/// This function is unsafe because it dereferences raw pointers. The caller must ensure:
+/// - `json_data` is a valid null-terminated C string or null
 #[no_mangle]
 pub unsafe extern "C" fn arxos_parse_ar_scan(json_data: *const c_char) -> *mut c_char {
     if json_data.is_null() {
@@ -619,6 +643,11 @@ pub unsafe extern "C" fn arxos_parse_ar_scan(json_data: *const c_char) -> *mut c
 /// Process AR scan and extract equipment
 ///
 /// Returns equipment info list as JSON
+///
+/// # Safety
+///
+/// This function is unsafe because it dereferences raw pointers. The caller must ensure:
+/// - `json_data` is a valid null-terminated C string or null
 #[no_mangle]
 pub unsafe extern "C" fn arxos_extract_equipment(json_data: *const c_char) -> *mut c_char {
     if json_data.is_null() {
@@ -666,6 +695,12 @@ pub unsafe extern "C" fn arxos_extract_equipment(json_data: *const c_char) -> *m
 /// * `confidence_threshold` - Minimum confidence (0.0-1.0) to create pending items
 ///
 /// Returns JSON with pending equipment IDs and details
+///
+/// # Safety
+///
+/// This function is unsafe because it dereferences raw pointers. The caller must ensure:
+/// - `json_data` is a valid null-terminated C string or null
+/// - `building_name` is a valid null-terminated C string or null
 #[no_mangle]
 pub unsafe extern "C" fn arxos_process_ar_scan_to_pending(
     json_data: *const c_char,
@@ -754,6 +789,12 @@ pub unsafe extern "C" fn arxos_process_ar_scan_to_pending(
 /// * `format` - Export format: "gltf" or "usdz"
 ///
 /// Returns JSON with export status and file path
+///
+/// # Safety
+///
+/// This function is unsafe because it dereferences raw pointers. The caller must ensure:
+/// - `building_name` is a valid null-terminated C string or null
+/// - `format` is a valid null-terminated C string or null
 #[no_mangle]
 pub unsafe extern "C" fn arxos_export_for_ar(
     building_name: *const c_char,
@@ -1049,7 +1090,7 @@ pub unsafe extern "C" fn arxos_save_ar_scan(
     };
     let user_email_opt = if user_email_str.is_empty() { None } else { Some(user_email_str) };
     // Validate confidence threshold
-    if confidence_threshold < 0.0 || confidence_threshold > 1.0 {
+    if !(0.0..=1.0).contains(&confidence_threshold) {
         warn!("arxos_save_ar_scan: invalid confidence_threshold: {}", confidence_threshold);
         return create_error_response(MobileError::InvalidData(
             format!("Confidence threshold must be between 0.0 and 1.0, got: {}", confidence_threshold)
@@ -1191,6 +1232,11 @@ pub unsafe extern "C" fn arxos_save_ar_scan(
 ///
 /// # Returns
 /// JSON string with pending equipment list
+///
+/// # Safety
+///
+/// This function is unsafe because it dereferences raw pointers. The caller must ensure:
+/// - `building_name` is a valid null-terminated C string or null
 #[no_mangle]
 pub unsafe extern "C" fn arxos_list_pending_equipment(
     building_name: *const c_char,
@@ -1278,6 +1324,13 @@ pub unsafe extern "C" fn arxos_list_pending_equipment(
 ///
 /// # Returns
 /// JSON string with confirmation result
+///
+/// # Safety
+///
+/// This function is unsafe because it dereferences raw pointers. The caller must ensure:
+/// - `building_name` is a valid null-terminated C string or null
+/// - `pending_id` is a valid null-terminated C string or null
+/// - `user_email` is a valid null-terminated C string or null
 #[no_mangle]
 pub unsafe extern "C" fn arxos_confirm_pending_equipment(
     building_name: *const c_char,
@@ -1349,7 +1402,7 @@ pub unsafe extern "C" fn arxos_confirm_pending_equipment(
         .and_then(|p| p.user_email.clone());
     
     // Prefer provided user_email, fall back to stored user_email from scan
-    let attribution_email = user_email_opt.or_else(|| stored_user_email.as_ref().map(|e| e.as_str()));
+    let attribution_email = user_email_opt.or(stored_user_email.as_deref());
     
     // Confirm pending equipment
     match manager.confirm_pending(pending_id_str, &mut building_data) {
@@ -2000,6 +2053,12 @@ pub unsafe extern "C" fn arxos_configure_git_signing(
 ///
 /// # Returns
 /// JSON string with rejection result
+///
+/// # Safety
+///
+/// This function is unsafe because it dereferences raw pointers. The caller must ensure:
+/// - `building_name` is a valid null-terminated C string or null
+/// - `pending_id` is a valid null-terminated C string or null
 #[no_mangle]
 pub unsafe extern "C" fn arxos_reject_pending_equipment(
     building_name: *const c_char,

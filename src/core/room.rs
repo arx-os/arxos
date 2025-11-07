@@ -259,13 +259,6 @@ impl std::str::FromStr for RoomType {
 }
 
 impl RoomType {
-    /// Convert to string (for backward compatibility)
-    /// 
-    /// **Note:** Prefer using `Display` trait (`format!("{}", room_type)`) instead.
-    #[deprecated(note = "Use Display trait instead: format!(\"{}\", room_type)")]
-    pub fn to_string(&self) -> String {
-        format!("{}", self)
-    }
     
     /// Parse from string (for backward compatibility)
     /// 

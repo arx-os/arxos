@@ -376,11 +376,9 @@ impl PendingEquipmentManager {
 
         // Find or create room if room_name is provided (before mutable borrow of floor)
         let room_name_opt = pending.room_name.as_ref();
-        let room_index = if let Some(room_name) = room_name_opt {
-            Some(Self::find_or_create_room(building_data, floor_index, room_name)?)
-        } else {
-            None
-        };
+        if let Some(room_name) = room_name_opt {
+            Self::find_or_create_room(building_data, floor_index, room_name)?;
+        }
 
         // Now we can borrow the floor mutably
         let floor = &mut building_data.floors[floor_index];

@@ -380,6 +380,7 @@ fn handle_remove_equipment(equipment: String, confirm: bool, commit: bool) -> Re
 }
 
 /// Convert EquipmentType enum to string
+#[allow(dead_code)]
 fn equipment_type_to_string(eq_type: &EquipmentType) -> String {
     match eq_type {
         EquipmentType::HVAC => "HVAC".to_string(),

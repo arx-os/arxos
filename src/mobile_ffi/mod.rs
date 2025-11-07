@@ -490,7 +490,7 @@ pub fn equipment_to_equipment_info(equipment: Equipment) -> EquipmentInfo {
         properties: equipment.properties.clone(),
         address_path: equipment.address.as_ref()
             .map(|addr| addr.path.clone())
-            .unwrap_or_else(String::new),
+            .unwrap_or_default(),
     }
 }
 

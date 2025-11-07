@@ -106,7 +106,8 @@ fn test_bounding_box_calculation() {
 
 #[test]
 fn test_building_data_structure() {
-    use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, RoomData};
+    use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+    use arxos::core::{Floor, Wing, Room, RoomType, SpatialProperties, Position, Dimensions, BoundingBox};
     use arxos::spatial::{Point3D, BoundingBox3D};
     use chrono::Utc;
     use std::collections::HashMap;
@@ -117,26 +118,42 @@ fn test_building_data_structure() {
         Point3D::new(10.0, 3.0, 8.0),
     );
     
-    let room = RoomData {
+    let room = Room {
         id: "room-test".to_string(),
         name: "Test Room".to_string(),
-        room_type: "Residential".to_string(),
-        area: Some(80.0),
-        volume: Some(240.0),
-        position: Point3D::new(5.0, 0.0, 4.0),
-        bounding_box: bbox.clone(),
+        room_type: RoomType::Other("Residential".to_string()),
+        equipment: vec![],
+        spatial_properties: SpatialProperties {
+            position: Position { x: 5.0, y: 0.0, z: 4.0, coordinate_system: "LOCAL".to_string() },
+            dimensions: Dimensions { width: 10.0, height: 3.0, depth: 8.0 },
+            bounding_box: BoundingBox {
+                min: Position { x: bbox.min.x, y: bbox.min.y, z: bbox.min.z, coordinate_system: "LOCAL".to_string() },
+                max: Position { x: bbox.max.x, y: bbox.max.y, z: bbox.max.z, coordinate_system: "LOCAL".to_string() },
+            },
+            coordinate_system: "LOCAL".to_string(),
+        },
+        properties: HashMap::new(),
+        created_at: None,
+        updated_at: None,
+    };
+    
+    let wing = Wing {
+        id: "wing-test".to_string(),
+        name: "Main Wing".to_string(),
+        rooms: vec![room],
         equipment: vec![],
         properties: HashMap::new(),
     };
     
-    let floor = FloorData {
+    let floor = Floor {
         id: "floor-test".to_string(),
         name: "Test Floor".to_string(),
         level: 0,
-        elevation: 0.0,
-        rooms: vec![room],
-        equipment: vec![],
+        elevation: Some(0.0),
         bounding_box: Some(bbox.clone()),
+        wings: vec![wing],
+        equipment: vec![],
+        properties: HashMap::new(),
     };
     
     let building_data = BuildingData {
@@ -165,8 +182,9 @@ fn test_building_data_structure() {
     // Verify structure is valid
     assert_eq!(building_data.building.name, "Test Building");
     assert_eq!(building_data.floors.len(), 1);
-    assert_eq!(building_data.floors[0].rooms.len(), 1);
-    assert_eq!(building_data.floors[0].rooms[0].name, "Test Room");
+    assert_eq!(building_data.floors[0].wings.len(), 1);
+    assert_eq!(building_data.floors[0].wings[0].rooms.len(), 1);
+    assert_eq!(building_data.floors[0].wings[0].rooms[0].name, "Test Room");
 }
 
 #[test]

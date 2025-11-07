@@ -10,11 +10,13 @@
 //! This ensures all FFI functions work together correctly.
 
 use arxos::mobile_ffi::ffi;
-use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, CoordinateSystemInfo};
+use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, CoordinateSystemInfo};
+use arxos::core::Floor;
 use arxos::spatial::Point3D;
 use std::ffi::{CString, CStr};
 use std::os::raw::c_char;
 use std::fs;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use tempfile::TempDir;
 use serial_test::serial;
@@ -55,14 +57,15 @@ fn create_test_building(building_name: &str, temp_dir: &PathBuf) -> Result<PathB
             units: "meters".to_string(),
             tags: vec![],
         },
-        floors: vec![FloorData {
+        floors: vec![Floor {
             id: "floor-1".to_string(),
             name: "Floor 1".to_string(),
             level: 1,
-            elevation: 0.0,
-            rooms: vec![],
-            equipment: vec![],
+            elevation: Some(0.0),
             bounding_box: None,
+            wings: vec![],
+            equipment: vec![],
+            properties: HashMap::new(),
         }],
         coordinate_systems: vec![CoordinateSystemInfo {
             name: "World".to_string(),

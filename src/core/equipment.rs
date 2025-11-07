@@ -91,7 +91,7 @@ pub struct Equipment {
 }
 
 /// Types of equipment
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum EquipmentType {
     HVAC,
     Electrical,
@@ -107,7 +107,7 @@ pub enum EquipmentType {
 ///
 /// This represents whether the equipment is running, stopped, in maintenance, etc.
 /// This is separate from health status, which represents the equipment's condition.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum EquipmentStatus {
     /// Equipment is active and running
     Active,
@@ -125,7 +125,7 @@ pub enum EquipmentStatus {
 ///
 /// This represents the equipment's condition/health, separate from operational status.
 /// Equipment can be operationally active but have a health warning (e.g., running but needs maintenance).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum EquipmentHealthStatus {
     /// Equipment is healthy and functioning correctly
     Healthy,

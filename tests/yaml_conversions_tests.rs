@@ -29,6 +29,7 @@ fn create_test_equipment(
         status,
         health_status,
         room_id: None,
+        sensor_mappings: None,
     }
 }
 
@@ -263,6 +264,7 @@ fn test_conversion_preserves_other_fields() {
     properties.insert("test_key".to_string(), "test_value".to_string());
     
     let equipment = Equipment {
+        sensor_mappings: None,
         id: "preserve-test-001".to_string(),
         name: "Preserve Test".to_string(),
         path: "/equipment/preserve-test".to_string(),

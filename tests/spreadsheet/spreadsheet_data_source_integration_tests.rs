@@ -7,7 +7,8 @@
 //! - ID-based equipment/room matching
 
 use arxos::ui::spreadsheet::data_source::{EquipmentDataSource, RoomDataSource, SpreadsheetDataSource};
-use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentData, RoomData, EquipmentStatus};
+use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+use arxos::core::{Floor, Wing, Room, Equipment, RoomType, EquipmentType, EquipmentStatus, EquipmentHealthStatus, Position, SpatialProperties, Dimensions, BoundingBox};
 use arxos::spatial::{Point3D, BoundingBox3D};
 use arxos::persistence::PersistenceManager;
 use arxos::BuildingYamlSerializer;
@@ -86,60 +87,67 @@ fn create_test_building_data() -> BuildingData {
             tags: vec![],
         },
         floors: vec![
-            FloorData {
+            Floor {
                 id: "floor-1".to_string(),
                 name: "Ground Floor".to_string(),
                 level: 0,
-                elevation: 0.0,
-                rooms: vec![
-                    RoomData {
-                        id: "room-1".to_string(),
-                        name: "Room 1".to_string(),
-                        room_type: "Office".to_string(),
-                        area: Some(100.0),
-                        volume: Some(300.0),
-                        position: Point3D::new(0.0, 0.0, 0.0),
-                        bounding_box: BoundingBox3D::new(
-                            Point3D::new(0.0, 0.0, 0.0),
-                            Point3D::new(10.0, 10.0, 3.0),
-                        ),
-                        equipment: vec![],
-                        properties: HashMap::new(),
-                    },
-                ],
+                elevation: Some(0.0),
+                bounding_box: None,
+                wings: vec![Wing {
+                    id: "wing-1".to_string(),
+                    name: "Main Wing".to_string(),
+                    rooms: vec![
+                        Room {
+                            id: "room-1".to_string(),
+                            name: "Room 1".to_string(),
+                            room_type: RoomType::Office,
+                            equipment: vec![],
+                            spatial_properties: SpatialProperties {
+                                position: Position { x: 0.0, y: 0.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
+                                dimensions: Dimensions { width: 10.0, height: 3.0, depth: 10.0 },
+                                bounding_box: BoundingBox {
+                                    min: Position { x: 0.0, y: 0.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
+                                    max: Position { x: 10.0, y: 10.0, z: 3.0, coordinate_system: "LOCAL".to_string() },
+                                },
+                                coordinate_system: "LOCAL".to_string(),
+                            },
+                            properties: HashMap::new(),
+                            created_at: None,
+                            updated_at: None,
+                        },
+                    ],
+                    equipment: vec![],
+                    properties: HashMap::new(),
+                }],
                 equipment: vec![
-                    EquipmentData {
+                    Equipment {
                         id: "eq-1".to_string(),
                         name: "HVAC Unit 1".to_string(),
-                        equipment_type: "HVAC".to_string(),
-                        system_type: "HVAC".to_string(),
-                        position: Point3D::new(5.0, 5.0, 0.0),
-                        bounding_box: BoundingBox3D::new(
-                            Point3D::new(4.0, 4.0, 0.0),
-                            Point3D::new(6.0, 6.0, 2.0),
-                        ),
-                        status: EquipmentStatus::Healthy,
+                        path: "/building/floor-1/eq-1".to_string(),
+                        address: None,
+                        equipment_type: EquipmentType::HVAC,
+                        position: Position { x: 5.0, y: 5.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
                         properties: HashMap::new(),
-                        universal_path: "/building/floor-1/eq-1".to_string(),
+                        status: EquipmentStatus::Active,
+                        health_status: Some(EquipmentHealthStatus::Healthy),
+                        room_id: None,
                         sensor_mappings: None,
                     },
-                    EquipmentData {
+                    Equipment {
                         id: "eq-2".to_string(),
                         name: "Electrical Panel 1".to_string(),
-                        equipment_type: "Electrical".to_string(),
-                        system_type: "Electrical".to_string(),
-                        position: Point3D::new(8.0, 8.0, 0.0),
-                        bounding_box: BoundingBox3D::new(
-                            Point3D::new(7.0, 7.0, 0.0),
-                            Point3D::new(9.0, 9.0, 1.5),
-                        ),
-                        status: EquipmentStatus::Warning,
+                        path: "/building/floor-1/eq-2".to_string(),
+                        address: None,
+                        equipment_type: EquipmentType::Electrical,
+                        position: Position { x: 8.0, y: 8.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
                         properties: HashMap::new(),
-                        universal_path: "/building/floor-1/eq-2".to_string(),
+                        status: EquipmentStatus::Active,
+                        health_status: Some(EquipmentHealthStatus::Warning),
+                        room_id: None,
                         sensor_mappings: None,
                     },
                 ],
-                bounding_box: None,
+                properties: HashMap::new(),
             },
         ],
         coordinate_systems: vec![],
@@ -337,30 +345,29 @@ fn test_data_source_multiple_floors() {
     
     // Create building with multiple floors
     let mut building_data = create_test_building_data();
-    building_data.floors.push(FloorData {
+    building_data.floors.push(Floor {
         id: "floor-2".to_string(),
         name: "Second Floor".to_string(),
         level: 1,
-        elevation: 3.0,
-        rooms: vec![],
+        elevation: Some(3.0),
+        bounding_box: None,
+        wings: vec![],
         equipment: vec![
-            EquipmentData {
+            Equipment {
                 id: "eq-3".to_string(),
                 name: "HVAC Unit 2".to_string(),
-                equipment_type: "HVAC".to_string(),
-                system_type: "HVAC".to_string(),
-                position: Point3D::new(5.0, 5.0, 3.0),
-                bounding_box: BoundingBox3D::new(
-                    Point3D::new(4.0, 4.0, 3.0),
-                    Point3D::new(6.0, 6.0, 5.0),
-                ),
-                status: EquipmentStatus::Healthy,
+                path: "/building/floor-2/eq-3".to_string(),
+                address: None,
+                equipment_type: EquipmentType::HVAC,
+                position: Position { x: 5.0, y: 5.0, z: 3.0, coordinate_system: "LOCAL".to_string() },
                 properties: HashMap::new(),
-                universal_path: "/building/floor-2/eq-3".to_string(),
+                status: EquipmentStatus::Active,
+                health_status: Some(EquipmentHealthStatus::Healthy),
+                room_id: None,
                 sensor_mappings: None,
             },
         ],
-        bounding_box: None,
+        properties: HashMap::new(),
     });
     
     create_test_building_file(&temp_dir, &building_data).unwrap();

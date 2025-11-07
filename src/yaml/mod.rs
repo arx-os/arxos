@@ -1,5 +1,5 @@
 // YAML serialization for ArxOS building data
-pub(crate) mod conversions;
+pub mod conversions;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -289,7 +289,7 @@ pub struct ThresholdConfig {
 }
 
 /// Equipment status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum EquipmentStatus {
     Healthy,
     Warning,
@@ -476,11 +476,13 @@ impl BuildingYamlSerializer {
     }
 
     /// Calculate area from bounding box
+    #[allow(dead_code)]
     fn calculate_area(&self, bbox: &BoundingBox3D) -> f64 {
         (bbox.max.x - bbox.min.x) * (bbox.max.y - bbox.min.y)
     }
 
     /// Calculate volume from bounding box
+    #[allow(dead_code)]
     fn calculate_volume(&self, bbox: &BoundingBox3D) -> f64 {
         (bbox.max.x - bbox.min.x) * (bbox.max.y - bbox.min.y) * (bbox.max.z - bbox.min.z)
     }
@@ -577,7 +579,7 @@ impl BuildingYamlSerializer {
     }
     
     /// Convert SpatialEntity to Equipment (core type)
-    fn spatial_entity_to_equipment(&self, entity: &SpatialEntity, floor_level: i32) -> crate::core::Equipment {
+    fn spatial_entity_to_equipment(&self, entity: &SpatialEntity, _floor_level: i32) -> crate::core::Equipment {
         use crate::core::{Equipment, EquipmentType, Position};
         
         let equipment_type = match entity.entity_type.as_str() {
@@ -642,6 +644,7 @@ impl BuildingYamlSerializer {
     }
     
     /// Determine system type from EquipmentType
+    #[allow(dead_code)]
     fn determine_equipment_system_type(&self, eq_type: &crate::core::EquipmentType) -> String {
         match eq_type {
             crate::core::EquipmentType::HVAC => "HVAC".to_string(),

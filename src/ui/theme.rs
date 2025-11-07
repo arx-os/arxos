@@ -143,7 +143,7 @@ impl Theme {
             // macOS: Check system appearance
             use std::process::Command;
             if let Ok(output) = Command::new("defaults")
-                .args(&["read", "-g", "AppleInterfaceStyle"])
+                .args(["read", "-g", "AppleInterfaceStyle"])
                 .output()
             {
                 if let Ok(style) = String::from_utf8(output.stdout) {

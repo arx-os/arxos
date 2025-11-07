@@ -8,7 +8,8 @@
 
 use arxos::ui::spreadsheet::data_source::{EquipmentDataSource, SpreadsheetDataSource};
 use arxos::ui::spreadsheet::workflow::{FileLock, ConflictDetector};
-use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentData, EquipmentStatus};
+use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+use arxos::core::{Floor, Equipment, EquipmentType, EquipmentStatus, EquipmentHealthStatus, Position};
 use arxos::persistence::PersistenceManager;
 use arxos::BuildingYamlSerializer;
 use arxos::spatial::{Point3D, BoundingBox3D};
@@ -88,28 +89,27 @@ fn create_test_building_data() -> BuildingData {
             units: "meters".to_string(),
             tags: vec![],
         },
-        floors: vec![FloorData {
+        floors: vec![Floor {
             id: "floor-1".to_string(),
             name: "Ground Floor".to_string(),
             level: 0,
-            elevation: 0.0,
-            rooms: vec![],
-            equipment: vec![EquipmentData {
+            elevation: Some(0.0),
+            bounding_box: None,
+            wings: vec![],
+            equipment: vec![Equipment {
                 id: "eq-1".to_string(),
                 name: "HVAC Unit 1".to_string(),
-                equipment_type: "HVAC".to_string(),
-                system_type: "HVAC".to_string(),
-                position: Point3D::new(5.0, 5.0, 0.0),
-                bounding_box: BoundingBox3D::new(
-                    Point3D::new(4.0, 4.0, 0.0),
-                    Point3D::new(6.0, 6.0, 2.0),
-                ),
-                status: EquipmentStatus::Healthy,
+                path: "/building/floor-1/eq-1".to_string(),
+                address: None,
+                equipment_type: EquipmentType::HVAC,
+                position: Position { x: 5.0, y: 5.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
+                status: EquipmentStatus::Active,
+                health_status: Some(EquipmentHealthStatus::Healthy),
                 properties: HashMap::new(),
-                universal_path: "/building/floor-1/eq-1".to_string(),
+                room_id: None,
                 sensor_mappings: None,
             }],
-            bounding_box: None,
+            properties: HashMap::new(),
         }],
         coordinate_systems: vec![],
     }

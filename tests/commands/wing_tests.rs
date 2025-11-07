@@ -1,9 +1,9 @@
 //! Tests for wing functionality in room creation
 
-use crate::core::{Room, RoomType};
-use crate::core::operations::create_room;
-use crate::persistence::PersistenceManager;
-use crate::yaml::BuildingData;
+use arxos::core::{Room, RoomType};
+use arxos::core::operations::create_room;
+use arxos::persistence::PersistenceManager;
+use arxos::yaml::BuildingData;
 use std::fs;
 use tempfile::TempDir;
 
@@ -40,8 +40,7 @@ fn test_create_room_with_wing() {
     assert_eq!(wing.rooms.len(), 1);
     assert_eq!(wing.rooms[0].name, "Test Room");
     
-    // Verify room is also in flat list for backward compatibility
-    assert!(floor.rooms.iter().any(|r| r.name == "Test Room"));
+    // Rooms are now in wings, not in a flat list
     
     std::env::set_current_dir(original_dir).unwrap();
 }

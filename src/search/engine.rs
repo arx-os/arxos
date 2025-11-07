@@ -50,10 +50,10 @@ impl SearchEngine {
             global_bounding_box: building_data.building.global_bounding_box.clone(),
             coordinate_systems: building_data.coordinate_systems.iter().map(|cs| crate::core::CoordinateSystemInfo {
                 name: cs.name.clone(),
-                origin: cs.origin.clone(),
-                x_axis: cs.x_axis.clone(),
-                y_axis: cs.y_axis.clone(),
-                z_axis: cs.z_axis.clone(),
+                origin: cs.origin,
+                x_axis: cs.x_axis,
+                y_axis: cs.y_axis,
+                z_axis: cs.z_axis,
                 description: None,
             }).collect(),
             metadata: Some(crate::core::BuildingMetadata {
@@ -506,10 +506,8 @@ impl SearchEngine {
             // Extract floor number from "floor-02" format
             let floor = if let Some(floor_num_str) = floor_str.strip_prefix("floor-") {
                 floor_num_str.parse::<i32>().ok()
-            } else if let Ok(floor_num) = floor_str.parse::<i32>() {
-                Some(floor_num)
             } else {
-                None
+                floor_str.parse::<i32>().ok()
             };
             
             return (floor, Some(room));

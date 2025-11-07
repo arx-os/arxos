@@ -54,7 +54,7 @@ pub fn handle_query_command(
             let yaml = serde_yaml::to_string(&results)?;
             println!("{}", yaml);
         }
-        "table" | _ => {
+        _ => {
             // Print table format
             print_table(&results, verbose);
         }
@@ -74,7 +74,7 @@ fn print_table(results: &[crate::query::QueryResult], verbose: bool) {
         
         for result in results {
             let floor_str = result.floor.map(|f| f.to_string()).unwrap_or_else(|| "-".to_string());
-            let room_str = result.room.as_ref().map(|r| r.clone()).unwrap_or_else(|| "-".to_string());
+            let room_str = result.room.as_ref().cloned().unwrap_or_else(|| "-".to_string());
             println!(
                 "{:<20} {:<50} {:<15} {:<10} {:<10}",
                 result.name,

@@ -235,10 +235,6 @@ impl GameScenarioLoader {
             for equipment_data in &floor.equipment {
                 use crate::core::Equipment;
                 
-                // equipment_data is now core::Equipment, so equipment_type and status are already enums
-                let equipment_type = equipment_data.equipment_type.clone();
-                let status = equipment_data.status.clone();
-                
                 // equipment_data is already core::Equipment, so we can use it directly
                 // Just clone it and ensure all fields are set
                 let equipment = Equipment {

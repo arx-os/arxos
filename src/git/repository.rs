@@ -38,7 +38,7 @@ pub fn initialize_repository(
             .map_err(|e| GitError::IoError(format!("Cannot canonicalize repository path: {}", e)))?
     } else {
         let current_dir = std::env::current_dir()
-            .map_err(|e| GitError::from(e))?;
+            .map_err(GitError::from)?;
         let joined = current_dir.join(repo_path_buf);
         joined.canonicalize()
             .map_err(|e| GitError::IoError(format!("Cannot canonicalize repository path: {}", e)))?

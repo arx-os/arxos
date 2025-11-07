@@ -9,7 +9,8 @@
 
 use arxos::commands::spreadsheet::handle_spreadsheet_command;
 use arxos::cli::SpreadsheetCommands;
-use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentData, EquipmentStatus};
+use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+use arxos::core::{Floor, Equipment, EquipmentType, EquipmentStatus, EquipmentHealthStatus, Position};
 use arxos::persistence::PersistenceManager;
 use arxos::BuildingYamlSerializer;
 use arxos::spatial::{Point3D, BoundingBox3D};
@@ -87,45 +88,42 @@ fn create_test_building_data() -> BuildingData {
             units: "meters".to_string(),
             tags: vec![],
         },
-        floors: vec![FloorData {
+        floors: vec![Floor {
             id: "floor-1".to_string(),
             name: "Ground Floor".to_string(),
             level: 0,
-            elevation: 0.0,
-            rooms: vec![],
+            elevation: Some(0.0),
+            bounding_box: None,
+            wings: vec![],
             equipment: vec![
-                EquipmentData {
+                Equipment {
                     id: "eq-1".to_string(),
                     name: "HVAC Unit 1".to_string(),
-                    equipment_type: "HVAC".to_string(),
-                    system_type: "HVAC".to_string(),
-                    position: Point3D::new(5.0, 5.0, 0.0),
-                    bounding_box: BoundingBox3D::new(
-                        Point3D::new(4.0, 4.0, 0.0),
-                        Point3D::new(6.0, 6.0, 2.0),
-                    ),
-                    status: EquipmentStatus::Healthy,
+                    path: "/building/floor-1/eq-1".to_string(),
+                    address: None,
+                    equipment_type: EquipmentType::HVAC,
+                    position: Position { x: 5.0, y: 5.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
                     properties: HashMap::new(),
-                    universal_path: "/building/floor-1/eq-1".to_string(),
+                    status: EquipmentStatus::Active,
+                    health_status: Some(EquipmentHealthStatus::Healthy),
+                    room_id: None,
                     sensor_mappings: None,
                 },
-                EquipmentData {
+                Equipment {
                     id: "eq-2".to_string(),
                     name: "Electrical Panel 1".to_string(),
-                    equipment_type: "Electrical".to_string(),
-                    system_type: "Electrical".to_string(),
-                    position: Point3D::new(8.0, 8.0, 0.0),
-                    bounding_box: BoundingBox3D::new(
-                        Point3D::new(7.0, 7.0, 0.0),
-                        Point3D::new(9.0, 9.0, 1.5),
-                    ),
-                    status: EquipmentStatus::Warning,
+                    path: "/building/floor-1/eq-2".to_string(),
+                    address: None,
+                    equipment_type: EquipmentType::Electrical,
+                    position: Position { x: 8.0, y: 8.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
                     properties: HashMap::new(),
-                    universal_path: "/building/floor-1/eq-2".to_string(),
+                    status: EquipmentStatus::Active,
+                    health_status: Some(EquipmentHealthStatus::Warning),
+                    room_id: None,
                     sensor_mappings: None,
                 },
             ],
-            bounding_box: None,
+            properties: HashMap::new(),
         }],
         coordinate_systems: vec![],
     }
@@ -190,19 +188,33 @@ fn test_spreadsheet_rooms_command_loads_data() {
     
     // Create building file with rooms
     let mut building_data = create_test_building_data();
-    building_data.floors[0].rooms.push(arxos::yaml::RoomData {
+    // Add room to wing (create wing if needed)
+    if building_data.floors[0].wings.is_empty() {
+        building_data.floors[0].wings.push(arxos::core::Wing {
+            id: "wing-1".to_string(),
+            name: "Main Wing".to_string(),
+            rooms: vec![],
+            equipment: vec![],
+            properties: HashMap::new(),
+        });
+    }
+    building_data.floors[0].wings[0].rooms.push(arxos::core::Room {
         id: "room-1".to_string(),
         name: "Room 1".to_string(),
-        room_type: "Office".to_string(),
-        area: Some(100.0),
-        volume: Some(300.0),
-        position: Point3D::new(0.0, 0.0, 0.0),
-        bounding_box: BoundingBox3D::new(
-            Point3D::new(0.0, 0.0, 0.0),
-            Point3D::new(10.0, 10.0, 3.0),
-        ),
+        room_type: arxos::core::RoomType::Office,
         equipment: vec![],
+        spatial_properties: arxos::core::SpatialProperties {
+            position: arxos::core::Position { x: 0.0, y: 0.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
+            dimensions: arxos::core::Dimensions { width: 10.0, height: 3.0, depth: 10.0 },
+            bounding_box: arxos::core::BoundingBox {
+                min: arxos::core::Position { x: 0.0, y: 0.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
+                max: arxos::core::Position { x: 10.0, y: 10.0, z: 3.0, coordinate_system: "LOCAL".to_string() },
+            },
+            coordinate_system: "LOCAL".to_string(),
+        },
         properties: HashMap::new(),
+        created_at: None,
+        updated_at: None,
     });
     
     create_test_building_file(&temp_dir, &building_data).unwrap();
@@ -213,8 +225,8 @@ fn test_spreadsheet_rooms_command_loads_data() {
     let loaded_data = persistence.load_building_data().unwrap();
     
     // Verify rooms are loaded
-    assert_eq!(loaded_data.floors[0].rooms.len(), 1);
-    assert_eq!(loaded_data.floors[0].rooms[0].name, "Room 1");
+    assert_eq!(loaded_data.floors[0].wings[0].rooms.len(), 1);
+    assert_eq!(loaded_data.floors[0].wings[0].rooms[0].name, "Room 1");
 }
 
 #[test]

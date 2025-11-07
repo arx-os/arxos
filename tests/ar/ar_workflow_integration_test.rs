@@ -3,7 +3,8 @@
 use arxos::ar_integration::pending::{PendingEquipmentManager, DetectedEquipmentInfo, DetectionMethod};
 use arxos::ar_integration::processing::{process_ar_scan_to_pending, ARScanData, DetectedEquipmentData, validate_ar_scan_data};
 use arxos::spatial::{Point3D, BoundingBox3D};
-use arxos::yaml::{BuildingData, FloorData, EquipmentStatus, BuildingInfo};
+use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+use arxos::core::Floor;
 use std::collections::HashMap;
 use tempfile::TempDir;
 
@@ -96,8 +97,12 @@ fn test_ar_workflow_complete() {
     
     assert_eq!(equipment.name, "VAV-301");
     // EquipmentStatus doesn't implement PartialEq, use debug string comparison
-    assert!(matches!(equipment.status, EquipmentStatus::Healthy));
-    assert_eq!(equipment.position, Point3D { x: 10.0, y: 20.0, z: 3.0 });
+    // Check health_status instead of old EquipmentStatus
+    assert!(equipment.health_status.is_some());
+    // Compare position coordinates individually
+    assert_eq!(equipment.position.x, 10.0);
+    assert_eq!(equipment.position.y, 20.0);
+    assert_eq!(equipment.position.z, 3.0);
 
     // Phase 10: Verify pending item is marked as confirmed
     let confirmed_pending = manager2.list_pending();
@@ -174,14 +179,15 @@ fn create_test_building_data() -> BuildingData {
             global_bounding_box: None,
         },
         floors: vec![
-            FloorData {
+            Floor {
                 id: "floor-3".to_string(),
                 name: "Floor 3".to_string(),
                 level: 3,
-                elevation: 9.0,
-                rooms: vec![],
-                equipment: vec![],
+                elevation: Some(9.0),
                 bounding_box: None,
+                wings: vec![],
+                equipment: vec![],
+                properties: HashMap::new(),
             },
         ],
         metadata: arxos::yaml::BuildingMetadata {

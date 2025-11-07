@@ -159,7 +159,7 @@ fn infer_address_from_equipment_data(
         };
         
         // Use ID or generate a simple one
-        let fixture_id = if let Some(id_suffix) = equipment_id.split('-').last() {
+        let fixture_id = if let Some(id_suffix) = equipment_id.split('-').next_back() {
             format!("{}-{}", fixture_type, id_suffix)
         } else {
             format!("{}-01", fixture_type)

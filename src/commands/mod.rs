@@ -110,7 +110,7 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
             use crate::search::SearchConfig;
             let config = SearchConfig {
                 query,
-                search_equipment: equipment || (!equipment && !rooms && !buildings),
+                search_equipment: equipment || (!rooms && !buildings),
                 search_rooms: rooms,
                 search_buildings: buildings,
                 case_sensitive,

@@ -141,7 +141,7 @@ impl DiffViewerState {
             context_lines,
         };
         
-        file_diffs.entry(file_path.to_string()).or_insert_with(Vec::new).push(hunk);
+        file_diffs.entry(file_path.to_string()).or_default().push(hunk);
     }
     
     fn select_file(&mut self, file_path: &str) {
@@ -231,9 +231,8 @@ fn render_file_tree<'a>(
     let files = state.get_file_list();
     
     let items: Vec<ListItem> = files.iter()
-        .enumerate()
-        .map(|(_idx, file)| {
-            let is_selected = state.selected_file.as_ref().map_or(false, |f| f == file);
+        .map(|file| {
+            let is_selected = state.selected_file.as_ref().is_some_and(|f| f == file);
             let prefix = if is_selected { ">" } else { " " };
             
             // Count changes in file
@@ -577,46 +576,39 @@ pub fn handle_diff_viewer(
         })?;
         
         // Handle events
-        if let Some(event) = terminal.poll_event(Duration::from_millis(100))? {
-            match event {
-                Event::Key(key_event) => {
-                    if key_event.code == KeyCode::Char('q') || key_event.code == KeyCode::Esc {
-                        break;
-                    } else if key_event.code == KeyCode::Right || key_event.code == KeyCode::Char('n') {
-                        state.next_hunk();
-                    } else if key_event.code == KeyCode::Left || key_event.code == KeyCode::Char('p') {
-                        state.previous_hunk();
-                    } else if key_event.code == KeyCode::Char('t') || key_event.code == KeyCode::Char('T') {
-                        state.toggle_view_mode();
-                    } else if key_event.code == KeyCode::Char('c') || key_event.code == KeyCode::Char('C') {
-                        state.toggle_hunk_collapse(state.selected_hunk);
-                    } else if key_event.code == KeyCode::Char('f') || key_event.code == KeyCode::Char('F') {
-                        state.show_file_tree = !state.show_file_tree;
-                    } else if state.show_file_tree {
-                        // File tree navigation
-                        let files = state.get_file_list();
-                        if key_event.code == KeyCode::Down || key_event.code == KeyCode::Char('j') {
-                            file_tree_index = (file_tree_index + 1) % files.len().max(1);
-                            if file_tree_index < files.len() {
-                                state.select_file(&files[file_tree_index]);
-                            }
-                        } else if key_event.code == KeyCode::Up || key_event.code == KeyCode::Char('k') {
-                            file_tree_index = if file_tree_index == 0 {
-                                files.len().saturating_sub(1)
-                            } else {
-                                file_tree_index - 1
-                            };
-                            if file_tree_index < files.len() {
-                                state.select_file(&files[file_tree_index]);
-                            }
-                        } else if key_event.code == KeyCode::Enter {
-                            if file_tree_index < files.len() {
-                                state.select_file(&files[file_tree_index]);
-                            }
-                        }
+        if let Some(Event::Key(key_event)) = terminal.poll_event(Duration::from_millis(100))? {
+            if key_event.code == KeyCode::Char('q') || key_event.code == KeyCode::Esc {
+                break;
+            } else if key_event.code == KeyCode::Right || key_event.code == KeyCode::Char('n') {
+                state.next_hunk();
+            } else if key_event.code == KeyCode::Left || key_event.code == KeyCode::Char('p') {
+                state.previous_hunk();
+            } else if key_event.code == KeyCode::Char('t') || key_event.code == KeyCode::Char('T') {
+                state.toggle_view_mode();
+            } else if key_event.code == KeyCode::Char('c') || key_event.code == KeyCode::Char('C') {
+                state.toggle_hunk_collapse(state.selected_hunk);
+            } else if key_event.code == KeyCode::Char('f') || key_event.code == KeyCode::Char('F') {
+                state.show_file_tree = !state.show_file_tree;
+            } else if state.show_file_tree {
+                // File tree navigation
+                let files = state.get_file_list();
+                if key_event.code == KeyCode::Down || key_event.code == KeyCode::Char('j') {
+                    file_tree_index = (file_tree_index + 1) % files.len().max(1);
+                    if file_tree_index < files.len() {
+                        state.select_file(&files[file_tree_index]);
                     }
+                } else if key_event.code == KeyCode::Up || key_event.code == KeyCode::Char('k') {
+                    file_tree_index = if file_tree_index == 0 {
+                        files.len().saturating_sub(1)
+                    } else {
+                        file_tree_index - 1
+                    };
+                    if file_tree_index < files.len() {
+                        state.select_file(&files[file_tree_index]);
+                    }
+                } else if key_event.code == KeyCode::Enter && file_tree_index < files.len() {
+                    state.select_file(&files[file_tree_index]);
                 }
-                _ => {}
             }
         }
     }

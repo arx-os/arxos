@@ -333,7 +333,7 @@ pub fn load_building_data_from_dir() -> PersistenceResult<BuildingData> {
     use crate::utils::path_safety::PathSafety;
     
     let current_dir = std::env::current_dir()
-        .map_err(|e| PersistenceError::IoError(e))?;
+        .map_err(PersistenceError::IoError)?;
     
     // Pre-allocate with estimated capacity for better performance
     let entries = PathSafety::read_dir_safely(std::path::Path::new("."), &current_dir)

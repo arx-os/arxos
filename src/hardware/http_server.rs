@@ -3,18 +3,12 @@
 //! This module provides an HTTP REST API endpoint for receiving sensor data
 //! from IoT devices via POST requests.
 
-use super::{SensorData, HardwareError, EquipmentStatusUpdater};
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::Json,
-    routing::post,
-    Router,
-};
+use super::{EquipmentStatusUpdater, HardwareError, SensorData};
+use axum::{extract::State, http::StatusCode, response::Json, routing::post, Router};
+use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use log::{info, warn, error};
 
 /// HTTP response for sensor data ingestion
 #[derive(Debug, Serialize, Deserialize)]
@@ -55,50 +49,60 @@ async fn ingest_sensor_data(
     State(service): State<SensorHttpService>,
     Json(sensor_data): Json<SensorData>,
 ) -> Result<Json<SensorIngestionResponse>, StatusCode> {
-    info!("Received sensor data ingestion request for sensor: {}", sensor_data.metadata.sensor_id);
-    
+    info!(
+        "Received sensor data ingestion request for sensor: {}",
+        sensor_data.metadata.sensor_id
+    );
+
     // Validate sensor data
     let ingestion_service = service.ingestion_service.read().await;
     if !ingestion_service.validate_sensor_data(&sensor_data) {
-        warn!("Invalid sensor data received from: {}", sensor_data.metadata.sensor_id);
+        warn!(
+            "Invalid sensor data received from: {}",
+            sensor_data.metadata.sensor_id
+        );
         return Err(StatusCode::BAD_REQUEST);
     }
     drop(ingestion_service); // Release lock before potentially long-running operation
-    
+
     // Process sensor data and update equipment status
     // Create equipment status updater for this building
     let mut status_updater = match EquipmentStatusUpdater::new(&service.building_name) {
         Ok(updater) => updater,
         Err(e) => {
-            error!("Failed to create equipment status updater for building '{}': {}", 
-                   service.building_name, e);
+            error!(
+                "Failed to create equipment status updater for building '{}': {}",
+                service.building_name, e
+            );
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
-    
+
     // Process sensor data and update equipment status
     match status_updater.process_sensor_data(&sensor_data) {
         Ok(update_result) => {
-            info!("Successfully processed sensor data and updated equipment status: {} → {} (equipment: {})", 
-                  update_result.old_status, update_result.new_status, update_result.equipment_id);
-            
+            info!(
+                "Successfully processed sensor data and updated equipment status: {} → {} (equipment: {})",
+                update_result.old_status,
+                update_result.new_status,
+                update_result.equipment_id
+            );
+
             let message = if update_result.alerts.is_empty() {
                 format!(
-                    "Successfully ingested sensor data and updated equipment '{}': {} → {}", 
-                    update_result.equipment_id, 
-                    update_result.old_status,
-                    update_result.new_status
+                    "Successfully ingested sensor data and updated equipment '{}': {} → {}",
+                    update_result.equipment_id, update_result.old_status, update_result.new_status
                 )
             } else {
                 format!(
-                    "Successfully ingested sensor data and updated equipment '{}': {} → {} ({} alerts generated)", 
-                    update_result.equipment_id, 
+                    "Successfully ingested sensor data and updated equipment '{}': {} → {} ({} alerts generated)",
+                    update_result.equipment_id,
                     update_result.old_status,
                     update_result.new_status,
                     update_result.alerts.len()
                 )
             };
-            
+
             Ok(Json(SensorIngestionResponse {
                 success: true,
                 message,
@@ -107,16 +111,18 @@ async fn ingest_sensor_data(
             }))
         }
         Err(e) => {
-            error!("Failed to process sensor data from '{}': {}", 
-                   sensor_data.metadata.sensor_id, e);
-            
+            error!(
+                "Failed to process sensor data from '{}': {}",
+                sensor_data.metadata.sensor_id, e
+            );
+
             // Return appropriate error code based on error type
             let status_code = match e {
                 HardwareError::MappingError { .. } => StatusCode::NOT_FOUND,
                 HardwareError::InvalidFormat { .. } => StatusCode::BAD_REQUEST,
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
-            
+
             Err(status_code)
         }
     }
@@ -133,32 +139,35 @@ pub async fn start_sensor_http_server(
         ingestion_service,
         building_name,
     };
-    
+
     let app = create_sensor_router(state);
-    
+
     let addr = format!("{}:{}", host, port);
     info!("Starting sensor HTTP ingestion server on {}", addr);
-    
-    let listener = tokio::net::TcpListener::bind(&addr)
-        .await
-        .map_err(|e| HardwareError::IoError(std::io::Error::other(format!("Failed to bind to {}: {}", addr, e))))?;
-    
+
+    let listener = tokio::net::TcpListener::bind(&addr).await.map_err(|e| {
+        HardwareError::IoError(std::io::Error::other(format!(
+            "Failed to bind to {}: {}",
+            addr, e
+        )))
+    })?;
+
     info!("Sensor HTTP ingestion server listening on {}", addr);
-    
-    axum::serve(listener, app)
-        .await
-        .map_err(|e| HardwareError::IoError(std::io::Error::other(format!("Server error: {}", e))))?;
-    
+
+    axum::serve(listener, app).await.map_err(|e| {
+        HardwareError::IoError(std::io::Error::other(format!("Server error: {}", e)))
+    })?;
+
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hardware::{SensorIngestionService, SensorIngestionConfig};
+    use crate::hardware::{SensorIngestionConfig, SensorIngestionService};
     use std::collections::HashMap;
     use tempfile::TempDir;
-    
+
     fn create_test_sensor_data() -> SensorData {
         SensorData {
             api_version: "arxos.io/v1".to_string(),
@@ -176,7 +185,10 @@ mod tests {
             data: crate::hardware::SensorDataValues {
                 values: {
                     let mut map = HashMap::new();
-                    map.insert("temperature".to_string(), serde_yaml::Value::Number(serde_yaml::Number::from(72)));
+                    map.insert(
+                        "temperature".to_string(),
+                        serde_yaml::Value::Number(serde_yaml::Number::from(72)),
+                    );
                     map
                 },
             },
@@ -184,14 +196,14 @@ mod tests {
             arxos: None,
         }
     }
-    
+
     #[tokio::test]
     async fn test_health_check() {
         let response = health_check().await.unwrap();
         assert!(response.0.success);
         assert!(response.0.message.contains("healthy"));
     }
-    
+
     #[tokio::test]
     async fn test_validate_sensor_data() {
         let temp_dir = TempDir::new().unwrap();
@@ -200,14 +212,17 @@ mod tests {
             ..Default::default()
         };
         let ingestion_service = Arc::new(RwLock::new(SensorIngestionService::new(config)));
-        
+
         let sensor_data = create_test_sensor_data();
-        
+
         // Should validate successfully
-        let valid = ingestion_service.read().await.validate_sensor_data(&sensor_data);
+        let valid = ingestion_service
+            .read()
+            .await
+            .validate_sensor_data(&sensor_data);
         assert!(valid);
     }
-    
+
     #[tokio::test]
     async fn test_ingest_sensor_data_valid() {
         let temp_dir = TempDir::new().unwrap();
@@ -220,14 +235,16 @@ mod tests {
             ingestion_service,
             building_name: "test_building".to_string(),
         };
-        
+
         let sensor_data = create_test_sensor_data();
-        let response = ingest_sensor_data(State(state), Json(sensor_data)).await.unwrap();
-        
+        let response = ingest_sensor_data(State(state), Json(sensor_data))
+            .await
+            .unwrap();
+
         assert!(response.0.success);
         assert_eq!(response.0.sensor_id, Some("test_sensor_001".to_string()));
     }
-    
+
     #[tokio::test]
     async fn test_ingest_sensor_data_invalid() {
         let temp_dir = TempDir::new().unwrap();
@@ -240,7 +257,7 @@ mod tests {
             ingestion_service,
             building_name: "test_building".to_string(),
         };
-        
+
         // Create invalid sensor data (missing required fields)
         let invalid_data = SensorData {
             api_version: String::new(),
@@ -261,10 +278,9 @@ mod tests {
             alerts: vec![],
             arxos: None,
         };
-        
+
         let result = ingest_sensor_data(State(state), Json(invalid_data)).await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), StatusCode::BAD_REQUEST);
     }
 }
-

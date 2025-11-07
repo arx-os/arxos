@@ -3,8 +3,8 @@
 //! This module contains functions for rendering 3D building elements
 //! (floors, equipment, rooms) to ASCII canvas with depth buffering.
 
+use crate::render3d::types::{Equipment3D, Floor3D, Room3D};
 use crate::spatial::Point3D;
-use crate::render3d::types::{Floor3D, Equipment3D, Room3D};
 
 /// Render floors to ASCII canvas
 ///
@@ -30,13 +30,13 @@ pub fn render_floors_to_canvas<F>(
         // Project floor bounding box to screen coordinates
         let min_screen = project_to_screen(&floor.bounding_box.min);
         let max_screen = project_to_screen(&floor.bounding_box.max);
-        
+
         // Draw floor outline
         let start_x = min_screen.x.max(0.0) as usize;
         let end_x = max_screen.x.min(width as f64) as usize;
         let start_y = min_screen.y.max(0.0) as usize;
         let end_y = max_screen.y.min(height as f64) as usize;
-        
+
         // Draw horizontal lines for floor
         for y in start_y..end_y {
             for x in start_x..end_x {
@@ -49,7 +49,7 @@ pub fn render_floors_to_canvas<F>(
                 }
             }
         }
-        
+
         // Draw floor label
         let label_x = ((min_screen.x + max_screen.x) / 2.0) as usize;
         let label_y = ((min_screen.y + max_screen.y) / 2.0) as usize;
@@ -88,21 +88,21 @@ pub fn render_equipment_to_canvas<F>(
         let screen_pos = project_to_screen(&eq.position);
         let x = screen_pos.x as usize;
         let y = screen_pos.y as usize;
-        
+
         if x < width && y < height {
             let depth = eq.position.z;
             if depth > depth_buffer[y][x] {
                 depth_buffer[y][x] = depth;
-                
+
                 // Choose symbol based on equipment type
                 let symbol = match eq.equipment_type.as_str() {
-                    s if s.contains("AIR") => '▲',  // HVAC
+                    s if s.contains("AIR") => '▲',   // HVAC
                     s if s.contains("LIGHT") => '●', // Electrical
                     s if s.contains("PUMP") => '◊',  // Plumbing
                     s if s.contains("FAN") => '◈',   // Mechanical
-                    _ => '╬', // Generic equipment
+                    _ => '╬',                        // Generic equipment
                 };
-                
+
                 canvas[y][x] = symbol;
             }
         }
@@ -132,12 +132,12 @@ pub fn render_rooms_to_canvas<F>(
     for room in rooms {
         let min_screen = project_to_screen(&room.bounding_box.min);
         let max_screen = project_to_screen(&room.bounding_box.max);
-        
+
         let start_x = min_screen.x.max(0.0) as usize;
         let end_x = max_screen.x.min(width as f64) as usize;
         let start_y = min_screen.y.max(0.0) as usize;
         let end_y = max_screen.y.min(height as f64) as usize;
-        
+
         // Draw room outline with box characters
         for y in start_y..end_y {
             for x in start_x..end_x {
@@ -145,13 +145,13 @@ pub fn render_rooms_to_canvas<F>(
                     let depth = room.bounding_box.min.z;
                     if depth > depth_buffer[y][x] {
                         depth_buffer[y][x] = depth;
-                        
+
                         // Draw room boundaries
                         let is_top = y == start_y;
                         let is_bottom = y == end_y.saturating_sub(1);
                         let is_left = x == start_x;
                         let is_right = x == end_x.saturating_sub(1);
-                        
+
                         let char = if is_top && is_left {
                             '┌'
                         } else if is_top && is_right {
@@ -167,13 +167,13 @@ pub fn render_rooms_to_canvas<F>(
                         } else {
                             ' ' // Interior space
                         };
-                        
+
                         canvas[y][x] = char;
                     }
                 }
             }
         }
-        
+
         // Draw room label
         let label_x = ((min_screen.x + max_screen.x) / 2.0) as usize;
         let label_y = ((min_screen.y + max_screen.y) / 2.0) as usize;
@@ -186,4 +186,3 @@ pub fn render_rooms_to_canvas<F>(
         }
     }
 }
-

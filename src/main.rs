@@ -1,37 +1,37 @@
 // Module declarations - aligned with lib.rs for consistency
 
 // Core modules (foundational)
-pub mod core;
 pub mod cli;
 pub mod config;
+pub mod core;
 pub mod error;
 
 // Domain modules (business logic)
 pub mod domain;
-pub mod spatial;
 pub mod git;
 pub mod ifc;
 pub mod render;
 pub mod render3d;
+pub mod spatial;
 
 // Integration modules (external systems)
 pub mod ar_integration;
-pub mod mobile_ffi;
 pub mod hardware;
+pub mod mobile_ffi;
 
 // Data modules (serialization/persistence)
-pub mod yaml;
-pub mod persistence;
 pub mod export;
+pub mod persistence;
+pub mod yaml;
 
 // Application modules (commands, utilities, features)
 pub mod commands;
-pub mod search;
-pub mod query;
-pub mod utils;
 pub mod docs;
 pub mod game;
 pub mod identity;
+pub mod query;
+pub mod search;
+pub mod utils;
 
 // Service layer (business logic abstraction)
 pub mod services;
@@ -49,12 +49,12 @@ use log::info;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     env_logger::init();
-    
+
     info!("Starting ArxOS v2.0");
-    
+
     // Parse CLI arguments
     let cli = Cli::parse();
-    
+
     // Execute command via command router
     match commands::execute_command(cli.command) {
         Ok(()) => {

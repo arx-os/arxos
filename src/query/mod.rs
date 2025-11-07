@@ -15,7 +15,7 @@
 
 use crate::yaml::BuildingData;
 use glob::Pattern;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Query result containing equipment matching the address pattern
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,7 +73,10 @@ pub struct QueryResult {
 /// # };
 /// let results = query_addresses(&building_data, "/usa/ny/*/floor-*/mech/boiler-*")?;
 /// ```
-pub fn query_addresses(building_data: &BuildingData, pattern: &str) -> Result<Vec<QueryResult>, Box<dyn std::error::Error>> {
+pub fn query_addresses(
+    building_data: &BuildingData,
+    pattern: &str,
+) -> Result<Vec<QueryResult>, Box<dyn std::error::Error>> {
     // Normalize pattern: ensure it starts with /
     let normalized_pattern = if pattern.starts_with('/') {
         pattern.to_string()
@@ -90,7 +93,9 @@ pub fn query_addresses(building_data: &BuildingData, pattern: &str) -> Result<Ve
     for floor in &building_data.floors {
         for equipment in &floor.equipment {
             // Get equipment path (prefer address, fallback to path)
-            let path = equipment.address.as_ref()
+            let path = equipment
+                .address
+                .as_ref()
                 .map(|addr| addr.path.clone())
                 .filter(|p| !p.is_empty())
                 .unwrap_or_else(|| equipment.path.clone());
@@ -103,7 +108,7 @@ pub fn query_addresses(building_data: &BuildingData, pattern: &str) -> Result<Ve
             // Match pattern
             if glob_pattern.matches(&path) {
                 let (floor_num, room_name) = extract_location_from_path(&path);
-                
+
                 results.push(QueryResult {
                     name: equipment.name.clone(),
                     address: path,
@@ -124,26 +129,26 @@ pub fn query_addresses(building_data: &BuildingData, pattern: &str) -> Result<Ve
 /// and legacy universal_path format.
 fn extract_location_from_path(path: &str) -> (Option<i32>, Option<String>) {
     let parts: Vec<&str> = path.split('/').filter(|p| !p.is_empty()).collect();
-    
+
     // Try ArxAddress format first: /country/state/city/building/floor/room/fixture
     if parts.len() == 7 {
         let floor_str = parts[4]; // 5th part (0-indexed)
         let room = parts[5].to_string(); // 6th part
-        
+
         // Extract floor number from "floor-02" format
         let floor = if let Some(floor_num_str) = floor_str.strip_prefix("floor-") {
             floor_num_str.parse::<i32>().ok()
         } else {
             floor_str.parse::<i32>().ok()
         };
-        
+
         return (floor, Some(room));
     }
-    
+
     // Fall back to universal path format
     let mut floor: Option<i32> = None;
     let mut room: Option<String> = None;
-    
+
     for (i, part) in parts.iter().enumerate() {
         if *part == "FLOOR" && i + 1 < parts.len() {
             if let Ok(floor_num) = parts[i + 1].parse::<i32>() {
@@ -159,17 +164,19 @@ fn extract_location_from_path(path: &str) -> (Option<i32>, Option<String>) {
             room = Some(parts[i + 1].to_string());
         }
     }
-    
+
     (floor, room)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
-    use crate::core::{Floor, Equipment, EquipmentType, EquipmentStatus, EquipmentHealthStatus, Position};
+    use crate::core::{
+        Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType, Floor, Position,
+    };
     use crate::domain::ArxAddress;
     use crate::spatial::Point3D;
+    use crate::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
     use chrono::Utc;
 
     fn create_test_building_data() -> BuildingData {
@@ -192,73 +199,86 @@ mod tests {
                 units: "meters".to_string(),
                 tags: vec![],
             },
-            floors: vec![
-                Floor {
-                    id: "floor-1".to_string(),
-                    name: "Floor 1".to_string(),
-                    level: 1,
-                    elevation: Some(0.0),
-                    bounding_box: None,
-                    wings: vec![],
-                    equipment: vec![
-                        Equipment {
-                            id: "equipment-1".to_string(),
-                            name: "Boiler 01".to_string(),
-                            path: String::new(),
-                            address: Some(ArxAddress::from_path("/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01").unwrap()),
-                            equipment_type: EquipmentType::HVAC,
-                            position: Position {
-                                x: 0.0,
-                                y: 0.0,
-                                z: 0.0,
-                                coordinate_system: "LOCAL".to_string(),
-                            },
-                            properties: std::collections::HashMap::new(),
-                            status: EquipmentStatus::Active,
-                            health_status: Some(EquipmentHealthStatus::Healthy),
-                            room_id: None,
-                            sensor_mappings: None,
+            floors: vec![Floor {
+                id: "floor-1".to_string(),
+                name: "Floor 1".to_string(),
+                level: 1,
+                elevation: Some(0.0),
+                bounding_box: None,
+                wings: vec![],
+                equipment: vec![
+                    Equipment {
+                        id: "equipment-1".to_string(),
+                        name: "Boiler 01".to_string(),
+                        path: String::new(),
+                        address: Some(
+                            ArxAddress::from_path(
+                                "/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01",
+                            )
+                            .unwrap(),
+                        ),
+                        equipment_type: EquipmentType::HVAC,
+                        position: Position {
+                            x: 0.0,
+                            y: 0.0,
+                            z: 0.0,
+                            coordinate_system: "LOCAL".to_string(),
                         },
-                        Equipment {
-                            id: "equipment-2".to_string(),
-                            name: "Boiler 02".to_string(),
-                            path: String::new(),
-                            address: Some(ArxAddress::from_path("/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-02").unwrap()),
-                            equipment_type: EquipmentType::HVAC,
-                            position: Position {
-                                x: 1.0,
-                                y: 1.0,
-                                z: 1.0,
-                                coordinate_system: "LOCAL".to_string(),
-                            },
-                            properties: std::collections::HashMap::new(),
-                            status: EquipmentStatus::Active,
-                            health_status: Some(EquipmentHealthStatus::Healthy),
-                            room_id: None,
-                            sensor_mappings: None,
+                        properties: std::collections::HashMap::new(),
+                        status: EquipmentStatus::Active,
+                        health_status: Some(EquipmentHealthStatus::Healthy),
+                        room_id: None,
+                        sensor_mappings: None,
+                    },
+                    Equipment {
+                        id: "equipment-2".to_string(),
+                        name: "Boiler 02".to_string(),
+                        path: String::new(),
+                        address: Some(
+                            ArxAddress::from_path(
+                                "/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-02",
+                            )
+                            .unwrap(),
+                        ),
+                        equipment_type: EquipmentType::HVAC,
+                        position: Position {
+                            x: 1.0,
+                            y: 1.0,
+                            z: 1.0,
+                            coordinate_system: "LOCAL".to_string(),
                         },
-                        Equipment {
-                            id: "equipment-3".to_string(),
-                            name: "Valve 01".to_string(),
-                            path: String::new(),
-                            address: Some(ArxAddress::from_path("/usa/ny/brooklyn/ps-118/floor-02/plumbing/valve-01").unwrap()),
-                            equipment_type: EquipmentType::Plumbing,
-                            position: Position {
-                                x: 2.0,
-                                y: 2.0,
-                                z: 2.0,
-                                coordinate_system: "LOCAL".to_string(),
-                            },
-                            properties: std::collections::HashMap::new(),
-                            status: EquipmentStatus::Active,
-                            health_status: Some(EquipmentHealthStatus::Healthy),
-                            room_id: None,
-                            sensor_mappings: None,
+                        properties: std::collections::HashMap::new(),
+                        status: EquipmentStatus::Active,
+                        health_status: Some(EquipmentHealthStatus::Healthy),
+                        room_id: None,
+                        sensor_mappings: None,
+                    },
+                    Equipment {
+                        id: "equipment-3".to_string(),
+                        name: "Valve 01".to_string(),
+                        path: String::new(),
+                        address: Some(
+                            ArxAddress::from_path(
+                                "/usa/ny/brooklyn/ps-118/floor-02/plumbing/valve-01",
+                            )
+                            .unwrap(),
+                        ),
+                        equipment_type: EquipmentType::Plumbing,
+                        position: Position {
+                            x: 2.0,
+                            y: 2.0,
+                            z: 2.0,
+                            coordinate_system: "LOCAL".to_string(),
                         },
-                    ],
-                    properties: std::collections::HashMap::new(),
-                },
-            ],
+                        properties: std::collections::HashMap::new(),
+                        status: EquipmentStatus::Active,
+                        health_status: Some(EquipmentHealthStatus::Healthy),
+                        room_id: None,
+                        sensor_mappings: None,
+                    },
+                ],
+                properties: std::collections::HashMap::new(),
+            }],
             coordinate_systems: vec![],
         }
     }
@@ -266,7 +286,11 @@ mod tests {
     #[test]
     fn test_query_exact_match() {
         let building_data = create_test_building_data();
-        let results = query_addresses(&building_data, "/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01").unwrap();
+        let results = query_addresses(
+            &building_data,
+            "/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01",
+        )
+        .unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].name, "Boiler 01");
     }
@@ -274,7 +298,11 @@ mod tests {
     #[test]
     fn test_query_wildcard_room() {
         let building_data = create_test_building_data();
-        let results = query_addresses(&building_data, "/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-*").unwrap();
+        let results = query_addresses(
+            &building_data,
+            "/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-*",
+        )
+        .unwrap();
         assert_eq!(results.len(), 2);
         assert!(results.iter().all(|r| r.name.starts_with("Boiler")));
     }
@@ -282,30 +310,39 @@ mod tests {
     #[test]
     fn test_query_wildcard_city() {
         let building_data = create_test_building_data();
-        let results = query_addresses(&building_data, "/usa/ny/*/ps-118/floor-02/mech/boiler-*").unwrap();
+        let results =
+            query_addresses(&building_data, "/usa/ny/*/ps-118/floor-02/mech/boiler-*").unwrap();
         assert_eq!(results.len(), 2);
     }
 
     #[test]
     fn test_query_wildcard_floor() {
         let building_data = create_test_building_data();
-        let results = query_addresses(&building_data, "/usa/ny/brooklyn/ps-118/floor-*/mech/boiler-*").unwrap();
+        let results = query_addresses(
+            &building_data,
+            "/usa/ny/brooklyn/ps-118/floor-*/mech/boiler-*",
+        )
+        .unwrap();
         assert_eq!(results.len(), 2);
     }
 
     #[test]
     fn test_query_no_match() {
         let building_data = create_test_building_data();
-        let results = query_addresses(&building_data, "/usa/ny/brooklyn/ps-118/floor-02/kitchen/*").unwrap();
+        let results =
+            query_addresses(&building_data, "/usa/ny/brooklyn/ps-118/floor-02/kitchen/*").unwrap();
         assert_eq!(results.len(), 0);
     }
 
     #[test]
     fn test_query_different_system() {
         let building_data = create_test_building_data();
-        let results = query_addresses(&building_data, "/usa/ny/brooklyn/ps-118/floor-02/plumbing/*").unwrap();
+        let results = query_addresses(
+            &building_data,
+            "/usa/ny/brooklyn/ps-118/floor-02/plumbing/*",
+        )
+        .unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].name, "Valve 01");
     }
 }
-

@@ -2,14 +2,14 @@
 //!
 //! Handles keyboard input and navigation
 
-use crossterm::event::{KeyEvent, KeyCode, KeyModifiers};
 use super::grid::Grid;
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 /// Handle keyboard navigation
 pub fn handle_navigation(key: KeyEvent, grid: &mut Grid) -> NavigationAction {
     // Check for Ctrl combinations
     let is_ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
-    
+
     match (key.code, is_ctrl) {
         (KeyCode::Up, false) => {
             grid.move_up();
@@ -81,4 +81,3 @@ pub enum NavigationAction {
     Save,
     SaveAndCommit,
 }
-

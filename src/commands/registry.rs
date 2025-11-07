@@ -1,7 +1,7 @@
 //! Command registry for trait-based command routing
 
-use super::traits::CommandHandler;
 use super::handlers::*;
+use super::traits::CommandHandler;
 use crate::cli::Commands;
 
 /// Registry that maps command names to handlers
@@ -18,7 +18,7 @@ impl CommandRegistry {
         registry.register_default_handlers();
         registry
     }
-    
+
     /// Register the default set of command handlers
     fn register_default_handlers(&mut self) {
         self.register(InitHandler);
@@ -31,19 +31,20 @@ impl CommandRegistry {
         self.register(DocHandler);
         self.register(VerifyHandler);
     }
-    
+
     /// Register a command handler
     pub fn register<H: CommandHandler + 'static>(&mut self, handler: H) {
         self.handlers.push(Box::new(handler));
     }
-    
+
     /// Find a handler for the given command
     pub fn find_handler(&self, command: &Commands) -> Option<&dyn CommandHandler> {
-        self.handlers.iter()
+        self.handlers
+            .iter()
             .find(|h| h.can_handle(command))
             .map(|h| h.as_ref())
     }
-    
+
     /// Execute a command using the registry
     pub fn execute(&self, command: Commands) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(handler) = self.find_handler(&command) {
@@ -59,4 +60,3 @@ impl Default for CommandRegistry {
         Self::new()
     }
 }
-

@@ -1,7 +1,7 @@
 //! Core game types for gamified PR review and planning
 
-use std::collections::HashMap;
 use crate::core::Equipment;
+use std::collections::HashMap;
 
 /// Game mode determines the type of gameplay
 #[derive(Debug, Clone, PartialEq)]
@@ -71,13 +71,13 @@ pub enum ConstraintSeverity {
 #[derive(Debug, Clone)]
 pub struct GameEquipmentPlacement {
     pub equipment: Equipment,
-    
+
     // IFC Preservation Fields
     pub ifc_entity_id: Option<String>,
     pub ifc_entity_type: Option<String>,
     pub ifc_placement_chain: Option<Vec<String>>,
     pub ifc_original_properties: HashMap<String, String>,
-    
+
     // Game-specific
     pub game_action: GameAction,
     pub constraint_validation: ValidationResult,
@@ -136,7 +136,8 @@ pub struct ValidationRule {
 }
 
 /// Type for validation functions (forward declare GameState)
-pub type ValidationFunction = fn(&crate::game::state::GameState, &GameEquipmentPlacement) -> ValidationResult;
+pub type ValidationFunction =
+    fn(&crate::game::state::GameState, &GameEquipmentPlacement) -> ValidationResult;
 
 /// Game objectives and goals
 #[derive(Debug, Clone)]
@@ -155,4 +156,3 @@ pub struct ObjectiveCriterion {
     pub is_required: bool,
     pub is_completed: bool,
 }
-

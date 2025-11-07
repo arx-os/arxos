@@ -3,8 +3,11 @@
 //! This module contains performance benchmarks for core operations
 //! using the Criterion benchmarking framework.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use arxos::{core::{Room, Equipment, RoomType, EquipmentType}, spatial::Point3D};
+use arxos::{
+    core::{Equipment, EquipmentType, Room, RoomType},
+    spatial::Point3D,
+};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 
 /// Benchmark room creation performance
 fn benchmark_room_creation(c: &mut Criterion) {
@@ -21,17 +24,14 @@ fn benchmark_room_creation(c: &mut Criterion) {
 /// Benchmark room listing performance with varying numbers of rooms
 fn benchmark_room_listing(c: &mut Criterion) {
     let mut group = c.benchmark_group("room_listing");
-    
+
     for room_count in [1, 10, 50, 100].iter() {
         // Create test rooms
         let mut rooms = Vec::new();
         for i in 0..*room_count {
-            rooms.push(Room::new(
-                format!("Room {}", i),
-                RoomType::Classroom,
-            ));
+            rooms.push(Room::new(format!("Room {}", i), RoomType::Classroom));
         }
-        
+
         group.bench_with_input(
             BenchmarkId::new("list_rooms", room_count),
             &rooms,
@@ -46,10 +46,10 @@ fn benchmark_room_listing(c: &mut Criterion) {
                     }
                     black_box(count);
                 });
-            }
+            },
         );
     }
-    
+
     group.finish();
 }
 
@@ -69,7 +69,7 @@ fn benchmark_equipment_management(c: &mut Criterion) {
 /// Benchmark spatial operations
 fn benchmark_spatial_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("spatial_operations");
-    
+
     group.bench_function("point_distance", |b| {
         let p1 = Point3D::new(0.0, 0.0, 0.0);
         let p2 = Point3D::new(1.0, 1.0, 1.0);
@@ -77,7 +77,7 @@ fn benchmark_spatial_operations(c: &mut Criterion) {
             black_box(p1.distance_to(&p2));
         });
     });
-    
+
     group.finish();
 }
 

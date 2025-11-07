@@ -3,8 +3,8 @@
 //! This module provides reusable helper functions to reduce code duplication
 //! when parsing JSON data from mobile AR applications.
 
-use crate::spatial::{Point3D, BoundingBox3D};
 use crate::ar_integration::DetectionMethod;
+use crate::spatial::{BoundingBox3D, Point3D};
 use serde_json::Value;
 
 /// Parse a Point3D from JSON object with x, y, z keys
@@ -36,9 +36,7 @@ pub fn parse_position(json: &Value) -> Point3D {
 ///
 /// Parsed f64 value or default
 pub fn parse_optional_f64(json: &Value, key: &str, default: f64) -> f64 {
-    json.get(key)
-        .and_then(|v| v.as_f64())
-        .unwrap_or(default)
+    json.get(key).and_then(|v| v.as_f64()).unwrap_or(default)
 }
 
 /// Parse an optional string value from JSON with a default
@@ -127,9 +125,16 @@ pub fn parse_bounding_box_from_json(json: &Value, default_size: f64) -> Bounding
     } else {
         // Ultimate fallback: empty box at origin
         BoundingBox3D {
-            min: Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            max: Point3D { x: 0.0, y: 0.0, z: 0.0 },
+            min: Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            max: Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
         }
     }
 }
-

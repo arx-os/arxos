@@ -20,9 +20,9 @@ pub fn handle_workspace_manager(
     theme: &Theme,
 ) -> Result<Option<PathBuf>, Box<dyn std::error::Error>> {
     use super::render::render_workspace_manager;
-    
+
     let mut manager = WorkspaceManager::new()?;
-    
+
     if manager.is_empty() {
         // No workspaces found
         terminal.terminal().draw(|frame| {
@@ -32,36 +32,40 @@ pub fn handle_workspace_manager(
                 Line::from(""),
                 Line::from("Initialize a building with: arxos init"),
             ])
-            .block(Block::default().borders(Borders::ALL).title("Workspace Manager"))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Workspace Manager"),
+            )
             .alignment(Alignment::Center)
             .style(Style::default().fg(theme.text));
             frame.render_widget(message, area);
         })?;
-        
+
         // Wait for any key
         if let Some(Event::Key(key_event)) = terminal.poll_event(Duration::from_secs(5))? {
             if matches!(key_event.code, KeyCode::Esc | KeyCode::Char('q')) {
                 return Ok(None);
             }
         }
-        
+
         return Ok(None);
     }
-    
+
     loop {
         let mouse_enabled = terminal.mouse_enabled();
         terminal.terminal().draw(|frame| {
             let area = frame.size();
             render_workspace_manager(frame, area, &mut manager, theme, mouse_enabled);
         })?;
-        
+
         if let Some(event) = terminal.poll_event(Duration::from_millis(100))? {
             // Handle help first
             use crate::ui::handle_help_event;
             if handle_help_event(event.clone(), manager.help_system_mut()) {
                 continue;
             }
-            
+
             if let Event::Key(key_event) = event {
                 match key_event.code {
                     KeyCode::Esc | KeyCode::Char('q') => {
@@ -104,14 +108,12 @@ pub fn handle_workspace_manager(
 #[cfg(test)]
 mod tests {
     use super::super::manager::WorkspaceManager;
-    
-    
 
     #[test]
     fn test_handle_workspace_manager_empty() {
         // Test empty workspace detection
         let manager = WorkspaceManager::new();
-        
+
         // Manager may be empty or have workspaces depending on environment
         // We test the is_empty logic
         if let Ok(manager) = manager {
@@ -127,7 +129,7 @@ mod tests {
         if let Ok(mut manager) = WorkspaceManager::new() {
             manager.update_query("test".to_string());
             assert_eq!(manager.query(), "test");
-            
+
             manager.update_query("".to_string());
             assert_eq!(manager.query(), "");
         }
@@ -142,12 +144,12 @@ mod tests {
                 let initial = manager.selected_workspace().map(|w| w.name.clone());
                 manager.next();
                 let after_next = manager.selected_workspace().map(|w| w.name.clone());
-                
+
                 // If there's more than one workspace, selection should change
                 if manager.workspaces().len() > 1 {
                     assert_ne!(initial, after_next, "Selection should change");
                 }
-                
+
                 manager.previous();
                 let after_prev = manager.selected_workspace().map(|w| w.name.clone());
                 assert_eq!(initial, after_prev, "Should return to initial selection");
@@ -168,4 +170,3 @@ mod tests {
         // If manager creation fails, that's acceptable
     }
 }
-

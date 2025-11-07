@@ -1,9 +1,9 @@
 //! Alert generation for hardware sensors
-//! 
+//!
 //! This module generates explicit alert objects when sensor thresholds are exceeded
 //! or equipment status changes to Warning or Critical states.
 
-use super::{SensorData, SensorAlert, ThresholdCheck};
+use super::{SensorAlert, SensorData, ThresholdCheck};
 use chrono::Utc;
 
 /// Alert generator for sensor data processing
@@ -11,13 +11,13 @@ pub struct AlertGenerator;
 
 impl AlertGenerator {
     /// Generate alerts based on threshold check result
-    /// 
+    ///
     /// # Arguments
     /// * `sensor_data` - The sensor data that triggered the check
     /// * `threshold_check` - Result of threshold checking
     /// * `equipment_id` - ID of the affected equipment
     /// * `value` - The actual sensor value that triggered the alert
-    /// 
+    ///
     /// # Returns
     /// * Vector of SensorAlert objects (may be empty if no alert needed)
     pub fn generate_alerts(
@@ -62,14 +62,14 @@ impl AlertGenerator {
     }
 
     /// Generate alert for status change
-    /// 
+    ///
     /// Generates an alert when equipment status changes to Warning or Critical.
-    /// 
+    ///
     /// # Arguments
     /// * `equipment_id` - ID of the equipment
     /// * `old_status` - Previous status
     /// * `new_status` - New status
-    /// 
+    ///
     /// # Returns
     /// * Option<SensorAlert> - Alert if status degraded, None otherwise
     pub fn generate_status_change_alert(
@@ -80,7 +80,7 @@ impl AlertGenerator {
         // Only generate alert if status degraded (worse than before)
         let is_degraded = (old_status.contains("Healthy") || old_status.contains("Unknown"))
             && (new_status.contains("Warning") || new_status.contains("Critical"));
-        
+
         if is_degraded {
             Some(SensorAlert {
                 level: if new_status.contains("Critical") {
@@ -90,9 +90,7 @@ impl AlertGenerator {
                 },
                 message: format!(
                     "Equipment '{}' status changed: {} → {}",
-                    equipment_id,
-                    old_status,
-                    new_status
+                    equipment_id, old_status, new_status
                 ),
                 timestamp: Utc::now().to_rfc3339(),
             })
@@ -102,10 +100,10 @@ impl AlertGenerator {
     }
 
     /// Generate alert for sensor mapping not found
-    /// 
+    ///
     /// # Arguments
     /// * `sensor_id` - ID of the sensor that couldn't be mapped
-    /// 
+    ///
     /// # Returns
     /// * SensorAlert indicating mapping issue
     pub fn generate_mapping_alert(sensor_id: &str) -> SensorAlert {
@@ -143,7 +141,10 @@ mod tests {
             data: crate::hardware::SensorDataValues {
                 values: {
                     let mut map = HashMap::new();
-                    map.insert("temperature".to_string(), serde_yaml::Value::Number(serde_yaml::Number::from(100)));
+                    map.insert(
+                        "temperature".to_string(),
+                        serde_yaml::Value::Number(serde_yaml::Number::from(100)),
+                    );
                     map
                 },
             },
@@ -161,7 +162,7 @@ mod tests {
             "equipment-001",
             100.0,
         );
-        
+
         assert_eq!(alerts.len(), 1);
         assert_eq!(alerts[0].level, "critical");
         assert!(alerts[0].message.contains("Critical threshold exceeded"));
@@ -177,7 +178,7 @@ mod tests {
             "equipment-001",
             85.0,
         );
-        
+
         assert_eq!(alerts.len(), 1);
         assert_eq!(alerts[0].level, "warning");
         assert!(alerts[0].message.contains("Warning threshold exceeded"));
@@ -192,18 +193,15 @@ mod tests {
             "equipment-001",
             72.0,
         );
-        
+
         assert_eq!(alerts.len(), 0);
     }
 
     #[test]
     fn test_status_change_alert() {
-        let alert = AlertGenerator::generate_status_change_alert(
-            "equipment-001",
-            "Healthy",
-            "Critical",
-        );
-        
+        let alert =
+            AlertGenerator::generate_status_change_alert("equipment-001", "Healthy", "Critical");
+
         assert!(alert.is_some());
         let alert = alert.unwrap();
         assert_eq!(alert.level, "critical");
@@ -212,14 +210,10 @@ mod tests {
 
     #[test]
     fn test_status_change_no_alert_for_improvement() {
-        let alert = AlertGenerator::generate_status_change_alert(
-            "equipment-001",
-            "Warning",
-            "Healthy",
-        );
-        
+        let alert =
+            AlertGenerator::generate_status_change_alert("equipment-001", "Warning", "Healthy");
+
         // Should not generate alert for status improvement
         assert!(alert.is_none());
     }
 }
-

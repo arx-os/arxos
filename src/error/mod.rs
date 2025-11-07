@@ -1,5 +1,5 @@
 //! Central error management for ArxOS
-//! 
+//!
 //! This module provides:
 //! - Rich error types with context and suggestions
 //! - Error recovery mechanisms
@@ -9,11 +9,11 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-pub mod display;
 pub mod analytics;
+pub mod display;
 
-pub use display::ErrorDisplay;
 pub use analytics::ErrorAnalytics;
+pub use display::ErrorDisplay;
 
 /// Rich error context with suggestions and recovery
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -42,49 +42,49 @@ pub enum ArxError {
         #[source]
         source: Option<Box<dyn std::error::Error + Send + Sync>>,
     },
-    
+
     #[error("Configuration Error: {message}")]
     Configuration {
         message: String,
         context: Box<ErrorContext>,
         field: Option<String>,
     },
-    
+
     #[error("Git Operation Error: {message}")]
     GitOperation {
         message: String,
         context: Box<ErrorContext>,
         operation: String,
     },
-    
+
     #[error("Validation Error: {message}")]
     Validation {
         message: String,
         context: Box<ErrorContext>,
         file_path: Option<String>,
     },
-    
+
     #[error("IO Error: {message}")]
     IoError {
         message: String,
         context: Box<ErrorContext>,
         path: Option<String>,
     },
-    
+
     #[error("YAML Processing Error: {message}")]
     YamlProcessing {
         message: String,
         context: Box<ErrorContext>,
         file_path: Option<String>,
     },
-    
+
     #[error("Spatial Data Error: {message}")]
     SpatialData {
         message: String,
         context: Box<ErrorContext>,
         entity_type: Option<String>,
     },
-    
+
     #[error("Address Validation Error: {message}")]
     AddressValidation {
         message: String,
@@ -93,7 +93,7 @@ pub enum ArxError {
         #[source]
         source: Option<Box<dyn std::error::Error + Send + Sync>>,
     },
-    
+
     #[error("Counter Overflow Error: {message}")]
     CounterOverflow {
         message: String,
@@ -101,7 +101,7 @@ pub enum ArxError {
         room: String,
         equipment_type: String,
     },
-    
+
     #[error("Path Invalid Error: {message}")]
     PathInvalid {
         message: String,
@@ -120,7 +120,7 @@ impl ArxError {
             source: None,
         }
     }
-    
+
     /// Create a new configuration error with context
     pub fn configuration(message: impl Into<String>) -> Self {
         Self::Configuration {
@@ -129,7 +129,7 @@ impl ArxError {
             field: None,
         }
     }
-    
+
     /// Create a new Git operation error with context
     pub fn git_operation(message: impl Into<String>, operation: impl Into<String>) -> Self {
         Self::GitOperation {
@@ -138,7 +138,7 @@ impl ArxError {
             operation: operation.into(),
         }
     }
-    
+
     /// Create a new validation error with context
     pub fn validation(message: impl Into<String>) -> Self {
         Self::Validation {
@@ -147,7 +147,7 @@ impl ArxError {
             file_path: None,
         }
     }
-    
+
     /// Create a new IO error with context
     pub fn io_error(message: impl Into<String>) -> Self {
         Self::IoError {
@@ -156,7 +156,7 @@ impl ArxError {
             path: None,
         }
     }
-    
+
     /// Create a new YAML processing error with context
     pub fn yaml_processing(message: impl Into<String>) -> Self {
         Self::YamlProcessing {
@@ -165,7 +165,7 @@ impl ArxError {
             file_path: None,
         }
     }
-    
+
     /// Create a new spatial data error with context
     pub fn spatial_data(message: impl Into<String>) -> Self {
         Self::SpatialData {
@@ -174,7 +174,7 @@ impl ArxError {
             entity_type: None,
         }
     }
-    
+
     /// Create a new address validation error
     pub fn address_validation(path: impl Into<String>, message: impl Into<String>) -> Self {
         Self::AddressValidation {
@@ -184,13 +184,16 @@ impl ArxError {
             source: None,
         }
     }
-    
+
     /// Create a new counter overflow error
     pub fn counter_overflow(room: impl Into<String>, equipment_type: impl Into<String>) -> Self {
         let room = room.into();
         let equipment_type = equipment_type.into();
         Self::CounterOverflow {
-            message: format!("Counter overflow for room '{}' and equipment type '{}'", room, equipment_type),
+            message: format!(
+                "Counter overflow for room '{}' and equipment type '{}'",
+                room, equipment_type
+            ),
             context: Box::new(ErrorContext {
                 suggestions: vec![
                     "Check if counter file is corrupted".to_string(),
@@ -207,7 +210,7 @@ impl ArxError {
             equipment_type,
         }
     }
-    
+
     /// Create a new path invalid error
     pub fn path_invalid(path: impl Into<String>, expected_format: impl Into<String>) -> Self {
         let path = path.into();
@@ -230,148 +233,147 @@ impl ArxError {
             expected_format,
         }
     }
-    
+
     /// Add suggestions to an error
     pub fn with_suggestions(mut self, suggestions: Vec<String>) -> Self {
         match &mut self {
-            ArxError::IfcProcessing { context, .. } |
-            ArxError::Configuration { context, .. } |
-            ArxError::GitOperation { context, .. } |
-            ArxError::Validation { context, .. } |
-            ArxError::IoError { context, .. } |
-            ArxError::YamlProcessing { context, .. } |
-            ArxError::SpatialData { context, .. } |
-            ArxError::AddressValidation { context, .. } |
-            ArxError::CounterOverflow { context, .. } |
-            ArxError::PathInvalid { context, .. } => {
+            ArxError::IfcProcessing { context, .. }
+            | ArxError::Configuration { context, .. }
+            | ArxError::GitOperation { context, .. }
+            | ArxError::Validation { context, .. }
+            | ArxError::IoError { context, .. }
+            | ArxError::YamlProcessing { context, .. }
+            | ArxError::SpatialData { context, .. }
+            | ArxError::AddressValidation { context, .. }
+            | ArxError::CounterOverflow { context, .. }
+            | ArxError::PathInvalid { context, .. } => {
                 context.suggestions = suggestions;
             }
         }
         self
     }
-    
+
     /// Add recovery steps to an error
     pub fn with_recovery(mut self, recovery_steps: Vec<String>) -> Self {
         match &mut self {
-            ArxError::IfcProcessing { context, .. } |
-            ArxError::Configuration { context, .. } |
-            ArxError::GitOperation { context, .. } |
-            ArxError::Validation { context, .. } |
-            ArxError::IoError { context, .. } |
-            ArxError::YamlProcessing { context, .. } |
-            ArxError::SpatialData { context, .. } |
-            ArxError::AddressValidation { context, .. } |
-            ArxError::CounterOverflow { context, .. } |
-            ArxError::PathInvalid { context, .. } => {
+            ArxError::IfcProcessing { context, .. }
+            | ArxError::Configuration { context, .. }
+            | ArxError::GitOperation { context, .. }
+            | ArxError::Validation { context, .. }
+            | ArxError::IoError { context, .. }
+            | ArxError::YamlProcessing { context, .. }
+            | ArxError::SpatialData { context, .. }
+            | ArxError::AddressValidation { context, .. }
+            | ArxError::CounterOverflow { context, .. }
+            | ArxError::PathInvalid { context, .. } => {
                 context.recovery_steps = recovery_steps;
             }
         }
         self
     }
-    
+
     /// Add debug information to an error
     pub fn with_debug_info(mut self, debug_info: impl Into<String>) -> Self {
         match &mut self {
-            ArxError::IfcProcessing { context, .. } |
-            ArxError::Configuration { context, .. } |
-            ArxError::GitOperation { context, .. } |
-            ArxError::Validation { context, .. } |
-            ArxError::IoError { context, .. } |
-            ArxError::YamlProcessing { context, .. } |
-            ArxError::SpatialData { context, .. } |
-            ArxError::AddressValidation { context, .. } |
-            ArxError::CounterOverflow { context, .. } |
-            ArxError::PathInvalid { context, .. } => {
+            ArxError::IfcProcessing { context, .. }
+            | ArxError::Configuration { context, .. }
+            | ArxError::GitOperation { context, .. }
+            | ArxError::Validation { context, .. }
+            | ArxError::IoError { context, .. }
+            | ArxError::YamlProcessing { context, .. }
+            | ArxError::SpatialData { context, .. }
+            | ArxError::AddressValidation { context, .. }
+            | ArxError::CounterOverflow { context, .. }
+            | ArxError::PathInvalid { context, .. } => {
                 context.debug_info = Some(debug_info.into());
             }
         }
         self
     }
-    
+
     /// Add file path context to an error
     pub fn with_file_path(mut self, file_path: impl Into<String>) -> Self {
         match &mut self {
-            ArxError::IfcProcessing { context, .. } |
-            ArxError::Configuration { context, .. } |
-            ArxError::GitOperation { context, .. } |
-            ArxError::Validation { context, .. } |
-            ArxError::IoError { context, .. } |
-            ArxError::YamlProcessing { context, .. } |
-            ArxError::SpatialData { context, .. } |
-            ArxError::AddressValidation { context, .. } |
-            ArxError::CounterOverflow { context, .. } |
-            ArxError::PathInvalid { context, .. } => {
+            ArxError::IfcProcessing { context, .. }
+            | ArxError::Configuration { context, .. }
+            | ArxError::GitOperation { context, .. }
+            | ArxError::Validation { context, .. }
+            | ArxError::IoError { context, .. }
+            | ArxError::YamlProcessing { context, .. }
+            | ArxError::SpatialData { context, .. }
+            | ArxError::AddressValidation { context, .. }
+            | ArxError::CounterOverflow { context, .. }
+            | ArxError::PathInvalid { context, .. } => {
                 context.file_path = Some(file_path.into());
             }
         }
         self
     }
-    
+
     /// Add line number context to an error
     pub fn with_line_number(mut self, line_number: usize) -> Self {
         match &mut self {
-            ArxError::IfcProcessing { context, .. } |
-            ArxError::Configuration { context, .. } |
-            ArxError::GitOperation { context, .. } |
-            ArxError::Validation { context, .. } |
-            ArxError::IoError { context, .. } |
-            ArxError::YamlProcessing { context, .. } |
-            ArxError::SpatialData { context, .. } |
-            ArxError::AddressValidation { context, .. } |
-            ArxError::CounterOverflow { context, .. } |
-            ArxError::PathInvalid { context, .. } => {
+            ArxError::IfcProcessing { context, .. }
+            | ArxError::Configuration { context, .. }
+            | ArxError::GitOperation { context, .. }
+            | ArxError::Validation { context, .. }
+            | ArxError::IoError { context, .. }
+            | ArxError::YamlProcessing { context, .. }
+            | ArxError::SpatialData { context, .. }
+            | ArxError::AddressValidation { context, .. }
+            | ArxError::CounterOverflow { context, .. }
+            | ArxError::PathInvalid { context, .. } => {
                 context.line_number = Some(line_number);
             }
         }
         self
     }
-    
+
     /// Add help URL to an error
     pub fn with_help_url(mut self, help_url: impl Into<String>) -> Self {
         match &mut self {
-            ArxError::IfcProcessing { context, .. } |
-            ArxError::Configuration { context, .. } |
-            ArxError::GitOperation { context, .. } |
-            ArxError::Validation { context, .. } |
-            ArxError::IoError { context, .. } |
-            ArxError::YamlProcessing { context, .. } |
-            ArxError::SpatialData { context, .. } |
-            ArxError::AddressValidation { context, .. } |
-            ArxError::CounterOverflow { context, .. } |
-            ArxError::PathInvalid { context, .. } => {
+            ArxError::IfcProcessing { context, .. }
+            | ArxError::Configuration { context, .. }
+            | ArxError::GitOperation { context, .. }
+            | ArxError::Validation { context, .. }
+            | ArxError::IoError { context, .. }
+            | ArxError::YamlProcessing { context, .. }
+            | ArxError::SpatialData { context, .. }
+            | ArxError::AddressValidation { context, .. }
+            | ArxError::CounterOverflow { context, .. }
+            | ArxError::PathInvalid { context, .. } => {
                 context.help_url = Some(help_url.into());
             }
         }
         self
     }
-    
+
     /// Get the error context
     pub fn context(&self) -> &ErrorContext {
         match self {
-            ArxError::IfcProcessing { context, .. } |
-            ArxError::Configuration { context, .. } |
-            ArxError::GitOperation { context, .. } |
-            ArxError::Validation { context, .. } |
-            ArxError::IoError { context, .. } |
-            ArxError::YamlProcessing { context, .. } |
-            ArxError::SpatialData { context, .. } |
-            ArxError::AddressValidation { context, .. } |
-            ArxError::CounterOverflow { context, .. } |
-            ArxError::PathInvalid { context, .. } => context.as_ref(),
+            ArxError::IfcProcessing { context, .. }
+            | ArxError::Configuration { context, .. }
+            | ArxError::GitOperation { context, .. }
+            | ArxError::Validation { context, .. }
+            | ArxError::IoError { context, .. }
+            | ArxError::YamlProcessing { context, .. }
+            | ArxError::SpatialData { context, .. }
+            | ArxError::AddressValidation { context, .. }
+            | ArxError::CounterOverflow { context, .. }
+            | ArxError::PathInvalid { context, .. } => context.as_ref(),
         }
     }
-    
+
     /// Check if this error has recovery suggestions
     pub fn has_recovery(&self) -> bool {
         !self.context().recovery_steps.is_empty()
     }
-    
+
     /// Check if this error has suggestions
     pub fn has_suggestions(&self) -> bool {
         !self.context().suggestions.is_empty()
     }
 }
-
 
 /// Result type alias for ArxOS operations
 pub type ArxResult<T> = Result<T, ArxError>;
@@ -389,13 +391,16 @@ impl From<std::io::Error> for ArxError {
                 if msg.contains("No such file") {
                     msg.split("No such file")
                         .nth(1)
-                        .map(|s| s.trim().trim_matches(|c| c == '"' || c == '\'' || c == '(' || c == ')'))
+                        .map(|s| {
+                            s.trim()
+                                .trim_matches(|c| c == '"' || c == '\'' || c == '(' || c == ')')
+                        })
                         .map(|s| s.to_string())
                 } else {
                     None
                 }
             });
-        
+
         Self::IoError {
             message: err.to_string(),
             context: Box::new(ErrorContext::default()),
@@ -408,7 +413,7 @@ impl From<serde_yaml::Error> for ArxError {
     fn from(err: serde_yaml::Error) -> Self {
         // Extract file path if available from location
         let file_path = err.location().map(|_| "YAML file".to_string());
-        
+
         Self::YamlProcessing {
             message: err.to_string(),
             context: Box::new(ErrorContext::default()),
@@ -440,130 +445,120 @@ impl From<git2::Error> for ArxError {
 impl From<crate::git::GitError> for ArxError {
     fn from(err: crate::git::GitError) -> Self {
         match err {
-            crate::git::GitError::GitError(git_err_msg) => {
-                Self::GitOperation {
-                    message: git_err_msg,
-                    context: Box::new(ErrorContext {
-                        suggestions: vec![
-                            "Check Git repository status".to_string(),
-                            "Verify Git is properly configured".to_string(),
-                            "Ensure you have appropriate permissions".to_string(),
-                        ],
-                        recovery_steps: vec![
-                            "Run: git status".to_string(),
-                            "Check: git config --list".to_string(),
-                            "Verify repository permissions".to_string(),
-                        ],
-                        help_url: Some("https://github.com/arx-os/arxos/docs/core/ARCHITECTURE.md#git-operations".to_string()),
-                        ..Default::default()
-                    }),
-                    operation: "Git operation".to_string(),
-                }
-            }
-            crate::git::GitError::IoError(io_err) => {
-                Self::IoError {
-                    message: format!("Git IO error: {}", io_err),
-                    context: Box::new(ErrorContext {
-                        suggestions: vec![
-                            "Check file system permissions".to_string(),
-                            "Verify disk space is available".to_string(),
-                            "Ensure the repository path is accessible".to_string(),
-                        ],
-                        recovery_steps: vec![
-                            "Check file permissions: ls -l".to_string(),
-                            "Verify disk space: df -h".to_string(),
-                            "Check repository path exists".to_string(),
-                        ],
-                        ..Default::default()
-                    }),
-                    path: None,
-                }
-            }
-            crate::git::GitError::SerializationError(serde_err) => {
-                Self::YamlProcessing {
-                    message: format!("Git serialization error: {}", serde_err),
-                    context: Box::new(ErrorContext {
-                        suggestions: vec![
-                            "Check YAML file format".to_string(),
-                            "Verify file encoding (UTF-8)".to_string(),
-                            "Review YAML syntax".to_string(),
-                        ],
-                        recovery_steps: vec![
-                            "Validate YAML syntax".to_string(),
-                            "Check file encoding".to_string(),
-                            "Review documentation for YAML format".to_string(),
-                        ],
-                        ..Default::default()
-                    }),
-                    file_path: None,
-                }
-            }
-            crate::git::GitError::Generic(err) => {
-                Self::GitOperation {
-                    message: format!("Git error: {}", err),
-                    context: Box::new(ErrorContext::default()),
-                    operation: "Git operation".to_string(),
-                }
-            }
-            crate::git::GitError::RepositoryNotFound { path } => {
-                Self::GitOperation {
-                    message: format!("Git repository not found: {}", path),
-                    context: Box::new(ErrorContext {
-                        suggestions: vec![
-                            "Verify the repository path is correct".to_string(),
-                            "Check if the repository exists".to_string(),
-                            "Initialize a new repository if needed".to_string(),
-                        ],
-                        recovery_steps: vec![
-                            format!("Check path exists: ls -la {}", path),
-                            "Initialize repository: git init".to_string(),
-                            "Verify repository path in configuration".to_string(),
-                        ],
-                        file_path: Some(path),
-                        ..Default::default()
-                    }),
-                    operation: "repository initialization".to_string(),
-                }
-            }
-            crate::git::GitError::InvalidConfig { reason } => {
-                Self::Configuration {
-                    message: format!("Invalid Git configuration: {}", reason),
-                    context: Box::new(ErrorContext {
-                        suggestions: vec![
-                            "Review Git configuration settings".to_string(),
-                            "Check environment variables".to_string(),
-                            "Verify ArxConfig settings".to_string(),
-                        ],
-                        recovery_steps: vec![
-                            "Check: git config --list".to_string(),
-                            "Review environment variables (GIT_AUTHOR_NAME, GIT_AUTHOR_EMAIL)".to_string(),
-                            "Verify ArxConfig user settings".to_string(),
-                        ],
-                        ..Default::default()
-                    }),
-                    field: Some("git_config".to_string()),
-                }
-            }
-            crate::git::GitError::OperationFailed { operation, reason } => {
-                Self::GitOperation {
-                    message: format!("Git operation failed: {}", reason),
-                    context: Box::new(ErrorContext {
-                        suggestions: vec![
-                            "Check Git repository status".to_string(),
-                            "Review error details for specific issue".to_string(),
-                            "Verify repository permissions".to_string(),
-                        ],
-                        recovery_steps: vec![
-                            format!("Review operation: {}", operation),
-                            "Check repository status: git status".to_string(),
-                            "Verify permissions and configuration".to_string(),
-                        ],
-                        debug_info: Some(format!("Operation: {}, Reason: {}", operation, reason)),
-                        ..Default::default()
-                    }),
-                    operation,
-                }
-            }
+            crate::git::GitError::GitError(git_err_msg) => Self::GitOperation {
+                message: git_err_msg,
+                context: Box::new(ErrorContext {
+                    suggestions: vec![
+                        "Check Git repository status".to_string(),
+                        "Verify Git is properly configured".to_string(),
+                        "Ensure you have appropriate permissions".to_string(),
+                    ],
+                    recovery_steps: vec![
+                        "Run: git status".to_string(),
+                        "Check: git config --list".to_string(),
+                        "Verify repository permissions".to_string(),
+                    ],
+                    help_url: Some(
+                        "https://github.com/arx-os/arxos/docs/core/ARCHITECTURE.md#git-operations"
+                            .to_string(),
+                    ),
+                    ..Default::default()
+                }),
+                operation: "Git operation".to_string(),
+            },
+            crate::git::GitError::IoError(io_err) => Self::IoError {
+                message: format!("Git IO error: {}", io_err),
+                context: Box::new(ErrorContext {
+                    suggestions: vec![
+                        "Check file system permissions".to_string(),
+                        "Verify disk space is available".to_string(),
+                        "Ensure the repository path is accessible".to_string(),
+                    ],
+                    recovery_steps: vec![
+                        "Check file permissions: ls -l".to_string(),
+                        "Verify disk space: df -h".to_string(),
+                        "Check repository path exists".to_string(),
+                    ],
+                    ..Default::default()
+                }),
+                path: None,
+            },
+            crate::git::GitError::SerializationError(serde_err) => Self::YamlProcessing {
+                message: format!("Git serialization error: {}", serde_err),
+                context: Box::new(ErrorContext {
+                    suggestions: vec![
+                        "Check YAML file format".to_string(),
+                        "Verify file encoding (UTF-8)".to_string(),
+                        "Review YAML syntax".to_string(),
+                    ],
+                    recovery_steps: vec![
+                        "Validate YAML syntax".to_string(),
+                        "Check file encoding".to_string(),
+                        "Review documentation for YAML format".to_string(),
+                    ],
+                    ..Default::default()
+                }),
+                file_path: None,
+            },
+            crate::git::GitError::Generic(err) => Self::GitOperation {
+                message: format!("Git error: {}", err),
+                context: Box::new(ErrorContext::default()),
+                operation: "Git operation".to_string(),
+            },
+            crate::git::GitError::RepositoryNotFound { path } => Self::GitOperation {
+                message: format!("Git repository not found: {}", path),
+                context: Box::new(ErrorContext {
+                    suggestions: vec![
+                        "Verify the repository path is correct".to_string(),
+                        "Check if the repository exists".to_string(),
+                        "Initialize a new repository if needed".to_string(),
+                    ],
+                    recovery_steps: vec![
+                        format!("Check path exists: ls -la {}", path),
+                        "Initialize repository: git init".to_string(),
+                        "Verify repository path in configuration".to_string(),
+                    ],
+                    file_path: Some(path),
+                    ..Default::default()
+                }),
+                operation: "repository initialization".to_string(),
+            },
+            crate::git::GitError::InvalidConfig { reason } => Self::Configuration {
+                message: format!("Invalid Git configuration: {}", reason),
+                context: Box::new(ErrorContext {
+                    suggestions: vec![
+                        "Review Git configuration settings".to_string(),
+                        "Check environment variables".to_string(),
+                        "Verify ArxConfig settings".to_string(),
+                    ],
+                    recovery_steps: vec![
+                        "Check: git config --list".to_string(),
+                        "Review environment variables (GIT_AUTHOR_NAME, GIT_AUTHOR_EMAIL)"
+                            .to_string(),
+                        "Verify ArxConfig user settings".to_string(),
+                    ],
+                    ..Default::default()
+                }),
+                field: Some("git_config".to_string()),
+            },
+            crate::git::GitError::OperationFailed { operation, reason } => Self::GitOperation {
+                message: format!("Git operation failed: {}", reason),
+                context: Box::new(ErrorContext {
+                    suggestions: vec![
+                        "Check Git repository status".to_string(),
+                        "Review error details for specific issue".to_string(),
+                        "Verify repository permissions".to_string(),
+                    ],
+                    recovery_steps: vec![
+                        format!("Review operation: {}", operation),
+                        "Check repository status: git status".to_string(),
+                        "Verify permissions and configuration".to_string(),
+                    ],
+                    debug_info: Some(format!("Operation: {}, Reason: {}", operation, reason)),
+                    ..Default::default()
+                }),
+                operation,
+            },
         }
     }
 }
@@ -593,7 +588,7 @@ impl ArxError {
             path: Some(path_str),
         }
     }
-    
+
     /// Create a permission denied error with helpful suggestions
     pub fn permission_denied(path: impl Into<String>) -> Self {
         let path_str = path.into();
@@ -616,7 +611,7 @@ impl ArxError {
             path: Some(path_str),
         }
     }
-    
+
     /// Create an invalid format error with helpful suggestions
     pub fn invalid_format(description: impl Into<String>) -> Self {
         Self::Validation {
@@ -637,7 +632,7 @@ impl ArxError {
             file_path: None,
         }
     }
-    
+
     /// Create an IFC parsing error with helpful suggestions
     pub fn ifc_parse_error(message: impl Into<String>, file_path: Option<String>) -> Self {
         Self::IfcProcessing {
@@ -654,13 +649,15 @@ impl ArxError {
                     "Try re-exporting from source software".to_string(),
                 ],
                 file_path: file_path.clone(),
-                help_url: Some("https://github.com/arx-os/arxos/docs/features/IFC_PROCESSING.md".to_string()),
+                help_url: Some(
+                    "https://github.com/arx-os/arxos/docs/features/IFC_PROCESSING.md".to_string(),
+                ),
                 ..Default::default()
             }),
             source: None,
         }
     }
-    
+
     /// Create a Git operation error with helpful suggestions
     pub fn git_operation_failed(operation: impl Into<String>, message: impl Into<String>) -> Self {
         Self::GitOperation {
@@ -676,7 +673,10 @@ impl ArxError {
                     "Verify Git configuration: git config --list".to_string(),
                     "Check repository permissions".to_string(),
                 ],
-                help_url: Some("https://github.com/arx-os/arxos/docs/core/ARCHITECTURE.md#git-operations".to_string()),
+                help_url: Some(
+                    "https://github.com/arx-os/arxos/docs/core/ARCHITECTURE.md#git-operations"
+                        .to_string(),
+                ),
                 ..Default::default()
             }),
             operation: operation.into(),
@@ -687,48 +687,51 @@ impl ArxError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_error_creation() {
         let error = ArxError::ifc_processing("Test error");
         assert_eq!(error.to_string(), "IFC Processing Error: Test error");
     }
-    
+
     #[test]
     fn test_error_with_suggestions() {
         let error = ArxError::ifc_processing("Test error")
             .with_suggestions(vec!["Suggestion 1".to_string(), "Suggestion 2".to_string()]);
-        
+
         assert!(error.has_suggestions());
         assert_eq!(error.context().suggestions.len(), 2);
     }
-    
+
     #[test]
     fn test_error_with_recovery() {
         let error = ArxError::ifc_processing("Test error")
             .with_recovery(vec!["Step 1".to_string(), "Step 2".to_string()]);
-        
+
         assert!(error.has_recovery());
         assert_eq!(error.context().recovery_steps.len(), 2);
     }
-    
+
     #[test]
     fn test_error_with_context() {
         let error = ArxError::ifc_processing("Test error")
             .with_file_path("test.ifc")
             .with_line_number(42)
             .with_debug_info("Debug information");
-        
+
         assert_eq!(error.context().file_path, Some("test.ifc".to_string()));
         assert_eq!(error.context().line_number, Some(42));
-        assert_eq!(error.context().debug_info, Some("Debug information".to_string()));
+        assert_eq!(
+            error.context().debug_info,
+            Some("Debug information".to_string())
+        );
     }
-    
+
     #[test]
     fn test_from_io_error() {
         let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "File not found");
         let arx_error: ArxError = io_err.into();
-        
+
         match arx_error {
             ArxError::IoError { message, .. } => {
                 assert!(message.contains("File not found"));
@@ -736,13 +739,17 @@ mod tests {
             _ => panic!("Expected IoError variant"),
         }
     }
-    
+
     #[test]
     fn test_file_not_found_helper() {
         let error = ArxError::file_not_found("/path/to/file");
-        
+
         match error {
-            ArxError::IoError { message, context, path } => {
+            ArxError::IoError {
+                message,
+                context,
+                path,
+            } => {
                 assert!(message.contains("File not found"));
                 assert_eq!(path, Some("/path/to/file".to_string()));
                 assert!(!context.suggestions.is_empty());
@@ -751,26 +758,30 @@ mod tests {
             _ => panic!("Expected IoError variant"),
         }
     }
-    
+
     #[test]
     fn test_permission_denied_helper() {
         let error = ArxError::permission_denied("/path/to/file");
-        
+
         match error {
-            ArxError::IoError { message, context, .. } => {
+            ArxError::IoError {
+                message, context, ..
+            } => {
                 assert!(message.contains("Permission denied"));
                 assert!(!context.suggestions.is_empty());
             }
             _ => panic!("Expected IoError variant"),
         }
     }
-    
+
     #[test]
     fn test_invalid_format_helper() {
         let error = ArxError::invalid_format("Invalid JSON structure");
-        
+
         match error {
-            ArxError::Validation { message, context, .. } => {
+            ArxError::Validation {
+                message, context, ..
+            } => {
                 assert!(message.contains("Invalid format"));
                 assert!(!context.suggestions.is_empty());
             }

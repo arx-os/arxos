@@ -1,11 +1,11 @@
 //! Equipment status updater for hardware integration
-//! 
+//!
 //! This module processes sensor data and updates equipment status in building data.
 
-use super::{SensorData, HardwareError, HardwareResult, AlertGenerator, ThresholdCheck};
+use super::{AlertGenerator, HardwareError, HardwareResult, SensorData, ThresholdCheck};
 use crate::persistence::PersistenceManager;
-use std::collections::HashMap;
 use log::info;
+use std::collections::HashMap;
 
 /// Result of updating equipment from sensor data
 #[derive(Debug, Clone)]
@@ -42,29 +42,33 @@ struct ThresholdConfig {
 impl EquipmentStatusUpdater {
     /// Create a new equipment status updater
     pub fn new(building_name: &str) -> HardwareResult<Self> {
-        let persistence = PersistenceManager::new(building_name)
-            .map_err(|e| HardwareError::IoError(std::io::Error::other(format!("Failed to create persistence manager: {}", e))))?;
-        
+        let persistence = PersistenceManager::new(building_name).map_err(|e| {
+            HardwareError::IoError(std::io::Error::other(format!(
+                "Failed to create persistence manager: {}",
+                e
+            )))
+        })?;
+
         // Load sensor mappings from building data
         let mappings = Self::load_sensor_mappings(&persistence)?;
-        
+
         Ok(Self {
             persistence,
             _mappings: mappings,
             _building_name: building_name.to_string(),
         })
     }
-    
+
     /// Load sensor mappings from building data
-    fn load_sensor_mappings(persistence: &PersistenceManager) -> HardwareResult<Vec<SensorEquipmentMapping>> {
-        let building_data = persistence.load_building_data()
+    fn load_sensor_mappings(
+        persistence: &PersistenceManager,
+    ) -> HardwareResult<Vec<SensorEquipmentMapping>> {
+        let building_data = persistence
+            .load_building_data()
             .map_err(|e| HardwareError::IoError(std::io::Error::other(e.to_string())))?;
-        
+
         let mut mappings = Vec::new();
-        
-        
-        
-        
+
         for floor in &building_data.floors {
             for equipment in &floor.equipment {
                 if let Some(ref sensor_mappings) = equipment.sensor_mappings {
@@ -72,12 +76,15 @@ impl EquipmentStatusUpdater {
                         // Convert from YAML SensorMapping to internal format
                         let mut threshold_map = HashMap::new();
                         for (key, threshold_config) in &mapping.thresholds {
-                            threshold_map.insert(key.clone(), ThresholdConfig {
-                                min: threshold_config.min,
-                                max: threshold_config.max,
-                            });
+                            threshold_map.insert(
+                                key.clone(),
+                                ThresholdConfig {
+                                    min: threshold_config.min,
+                                    max: threshold_config.max,
+                                },
+                            );
                         }
-                        
+
                         mappings.push(SensorEquipmentMapping {
                             sensor_id: mapping.sensor_id.clone(),
                             equipment_id: equipment.id.clone(),
@@ -88,37 +95,52 @@ impl EquipmentStatusUpdater {
                 }
             }
         }
-        
-        info!("Loaded {} sensor mappings from building data", mappings.len());
+
+        info!(
+            "Loaded {} sensor mappings from building data",
+            mappings.len()
+        );
         Ok(mappings)
     }
-    
+
     /// Process sensor data and update equipment status
-    pub fn process_sensor_data(&mut self, sensor_data: &SensorData) -> HardwareResult<UpdateResult> {
-        info!("Processing sensor data from: {}", sensor_data.metadata.sensor_id);
-        
+    pub fn process_sensor_data(
+        &mut self,
+        sensor_data: &SensorData,
+    ) -> HardwareResult<UpdateResult> {
+        info!(
+            "Processing sensor data from: {}",
+            sensor_data.metadata.sensor_id
+        );
+
         // Find equipment mapped to this sensor
         let equipment_id = self.find_equipment_for_sensor(&sensor_data.metadata.sensor_id)?;
-        
+
         // Load building data
-        let mut building_data = self.persistence.load_building_data()
+        let mut building_data = self
+            .persistence
+            .load_building_data()
             .map_err(|e| HardwareError::IoError(std::io::Error::other(e.to_string())))?;
-        
+
         // Find and update equipment
         let mut found = false;
         let mut old_status = String::new();
         let mut equipment_name = String::new();
         let mut alerts = Vec::new();
-        
+
         for floor in &mut building_data.floors {
-            if let Some(equipment) = floor.equipment.iter_mut().find(|e| e.id == equipment_id || e.name == equipment_id) {
+            if let Some(equipment) = floor
+                .equipment
+                .iter_mut()
+                .find(|e| e.id == equipment_id || e.name == equipment_id)
+            {
                 old_status = format!("{:?}", equipment.status);
                 equipment_name = equipment.name.clone();
-                
+
                 // Check sensor thresholds and update status
                 let threshold_check = self.check_sensor_thresholds(sensor_data);
                 let sensor_value = self.extract_main_value(sensor_data).unwrap_or(0.0);
-                
+
                 // Generate alerts based on threshold check
                 alerts = AlertGenerator::generate_alerts(
                     sensor_data,
@@ -126,21 +148,29 @@ impl EquipmentStatusUpdater {
                     &equipment_id,
                     sensor_value,
                 );
-                
+
                 // Update status based on sensor readings
-                use crate::core::EquipmentHealthStatus;
+                use crate::core::{EquipmentHealthStatus, EquipmentStatus};
                 match threshold_check {
                     ThresholdCheck::Critical => {
                         equipment.health_status = Some(EquipmentHealthStatus::Critical);
+                        equipment.status = EquipmentStatus::OutOfOrder;
                     }
                     ThresholdCheck::OutOfRange => {
                         equipment.health_status = Some(EquipmentHealthStatus::Warning);
+                        if equipment.status != EquipmentStatus::OutOfOrder {
+                            equipment.status = EquipmentStatus::Maintenance;
+                        }
                     }
                     ThresholdCheck::Normal => {
                         equipment.health_status = Some(EquipmentHealthStatus::Healthy);
+                        // Restore equipment to active unless user intentionally set another status
+                        if matches!(equipment.status, EquipmentStatus::Maintenance | EquipmentStatus::OutOfOrder | EquipmentStatus::Inactive) {
+                            equipment.status = EquipmentStatus::Active;
+                        }
                     }
                 }
-                
+
                 // Generate status change alert if status degraded
                 let new_status_str = format!("{:?}", equipment.status);
                 if let Some(status_alert) = AlertGenerator::generate_status_change_alert(
@@ -150,37 +180,50 @@ impl EquipmentStatusUpdater {
                 ) {
                     alerts.push(status_alert);
                 }
-                
+
                 // Update last sensor reading timestamp
-                equipment.properties.insert("last_sensor_reading".to_string(), 
-                                            sensor_data.metadata.timestamp.clone());
-                equipment.properties.insert("last_sensor_id".to_string(), 
-                                            sensor_data.metadata.sensor_id.clone());
-                
+                equipment.properties.insert(
+                    "last_sensor_reading".to_string(),
+                    sensor_data.metadata.timestamp.clone(),
+                );
+                equipment.properties.insert(
+                    "last_sensor_id".to_string(),
+                    sensor_data.metadata.sensor_id.clone(),
+                );
+
                 found = true;
                 break;
             }
         }
-        
+
         if !found {
             return Err(HardwareError::MappingError {
                 reason: format!("Equipment '{}' not found in building data", equipment_id),
             });
         }
-        
+
         // Save changes
-        self.persistence.save_building_data(&building_data)
+        self.persistence
+            .save_building_data(&building_data)
             .map_err(|e| HardwareError::IoError(std::io::Error::other(e.to_string())))?;
-        
+
         // Get the new status after update
-        let new_status = building_data.floors.iter()
+        let new_status = building_data
+            .floors
+            .iter()
             .flat_map(|f| &f.equipment)
             .find(|e| e.id == equipment_id || e.name == equipment_id)
             .map(|e| format!("{:?}", e.status))
             .unwrap_or_else(|| "Unknown".to_string());
-        
-        info!("Updated {}: {} → {} ({} alerts)", equipment_name, old_status, new_status, alerts.len());
-        
+
+        info!(
+            "Updated {}: {} → {} ({} alerts)",
+            equipment_name,
+            old_status,
+            new_status,
+            alerts.len()
+        );
+
         Ok(UpdateResult {
             equipment_id,
             old_status,
@@ -189,19 +232,19 @@ impl EquipmentStatusUpdater {
             alerts,
         })
     }
-    
+
     /// Find equipment ID for a sensor
     fn find_equipment_for_sensor(&self, sensor_id: &str) -> HardwareResult<String> {
         // Check explicit mappings first
         if let Some(mapping) = self._mappings.iter().find(|m| m.sensor_id == sensor_id) {
             return Ok(mapping.equipment_id.clone());
         }
-        
+
         // Try to infer from sensor ID pattern
         // For now, use sensor_id as equipment_id (assumes 1:1 mapping)
         Ok(sensor_id.to_string())
     }
-    
+
     /// Check sensor thresholds and determine status
     fn check_sensor_thresholds(&self, sensor_data: &SensorData) -> ThresholdCheck {
         // Get a numeric value from sensor data
@@ -212,11 +255,11 @@ impl EquipmentStatusUpdater {
                 return ThresholdCheck::Critical; // Unknown values are critical
             }
         };
-        
+
         // Find matching sensor mapping to use configured thresholds
         let sensor_id = &sensor_data.metadata.sensor_id;
         let sensor_type = &sensor_data.metadata.sensor_type.to_lowercase();
-        
+
         // Check if we have explicit thresholds for this sensor
         if let Some(mapping) = self._mappings.iter().find(|m| m.sensor_id == *sensor_id) {
             // Use configured thresholds from mapping
@@ -225,25 +268,31 @@ impl EquipmentStatusUpdater {
                     // Check critical range
                     if let (Some(min), Some(max)) = (threshold_config.min, threshold_config.max) {
                         if value < min || value > max {
-                            info!("Value {} is outside critical range [{}, {}]", value, min, max);
+                            info!(
+                                "Value {} is outside critical range [{}, {}]",
+                                value, min, max
+                            );
                             return ThresholdCheck::Critical;
                         }
                     }
-                    
+
                     // Check warning range (if configured)
                     if let (Some(min), Some(max)) = (threshold_config.min, threshold_config.max) {
                         // Assume 90% of critical range as warning
                         let warning_min = min + (max - min) * 0.05;
                         let warning_max = max - (max - min) * 0.05;
                         if value < warning_min || value > warning_max {
-                            info!("Value {} is outside warning range [{:.2}, {:.2}]", value, warning_min, warning_max);
+                            info!(
+                                "Value {} is outside warning range [{:.2}, {:.2}]",
+                                value, warning_min, warning_max
+                            );
                             return ThresholdCheck::OutOfRange;
                         }
                     }
                 }
             }
         }
-        
+
         // Fallback to default thresholds based on sensor type
         if sensor_type.contains("temperature") || sensor_type.contains("temp") {
             // Temperature-specific thresholds (in Fahrenheit for HVAC)
@@ -276,11 +325,11 @@ impl EquipmentStatusUpdater {
                 return ThresholdCheck::OutOfRange;
             }
         }
-        
+
         info!("Sensor value {} is within normal range", value);
         ThresholdCheck::Normal
     }
-    
+
     fn extract_main_value(&self, sensor_data: &SensorData) -> Option<f64> {
         // Try to extract the first numeric value from data.values
         for value in sensor_data.data.values.values() {
@@ -296,14 +345,16 @@ impl EquipmentStatusUpdater {
         }
         None
     }
-    
+
     /// Commit changes to Git
     pub fn commit_changes(&self, message: &str) -> HardwareResult<String> {
-        let building_data = self.persistence.load_building_data()
+        let building_data = self
+            .persistence
+            .load_building_data()
             .map_err(|e| HardwareError::IoError(std::io::Error::other(e.to_string())))?;
-        
-        self.persistence.save_and_commit(&building_data, Some(message))
+
+        self.persistence
+            .save_and_commit(&building_data, Some(message))
             .map_err(|e| HardwareError::IoError(std::io::Error::other(e.to_string())))
     }
 }
-

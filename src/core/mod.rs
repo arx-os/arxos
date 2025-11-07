@@ -4,43 +4,31 @@
 //! for representing buildings, floors, rooms, equipment, and their spatial relationships.
 
 // Core modules
-mod types;
 mod building;
-mod floor;
-mod wing;
-mod room;
 mod equipment;
+mod floor;
 pub mod operations;
+mod room;
 mod serde_helpers;
+mod types;
+mod wing;
 
 // Re-export all public types and functions
-pub use types::{Position, Dimensions, BoundingBox, SpatialProperties, SpatialQueryResult};
 pub use crate::spatial::{GridCoordinate, GridSystem};
 pub use building::{Building, BuildingMetadata, CoordinateSystemInfo};
+pub use equipment::{
+    Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType, SensorMapping,
+    ThresholdConfig,
+};
 pub use floor::Floor;
-pub use wing::Wing;
 pub use room::{Room, RoomType};
-pub use equipment::{Equipment, EquipmentType, EquipmentStatus, EquipmentHealthStatus, SensorMapping, ThresholdConfig};
+pub use types::{BoundingBox, Dimensions, Position, SpatialProperties, SpatialQueryResult};
+pub use wing::Wing;
 
 // Re-export all operations
 pub use operations::{
-    create_room,
-    add_equipment,
-    spatial_query,
-    list_rooms,
-    get_room,
-    update_room_impl,
-    delete_room_impl,
-    list_equipment,
-    update_equipment_impl,
-    remove_equipment_impl,
-    set_spatial_relationship,
-    transform_coordinates,
-    validate_spatial,
-    SpatialValidationResult,
-    SpatialValidationIssue,
-    update_room,
-    delete_room,
-    update_equipment,
-    remove_equipment,
+    add_equipment, create_room, delete_room, delete_room_impl, get_room, list_equipment,
+    list_rooms, remove_equipment, remove_equipment_impl, set_spatial_relationship, spatial_query,
+    transform_coordinates, update_equipment, update_equipment_impl, update_room, update_room_impl,
+    validate_spatial, SpatialValidationIssue, SpatialValidationResult,
 };

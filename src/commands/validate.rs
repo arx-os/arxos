@@ -35,7 +35,7 @@ use crate::utils::loading;
 pub fn handle_validate(path: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(data_path) = path {
         println!("Validating data at: {}", data_path);
-        
+
         // Check if it's an IFC file
         if data_path.to_lowercase().ends_with(".ifc") {
             let processor = ifc::IFCProcessor::new();
@@ -52,15 +52,15 @@ pub fn handle_validate(path: Option<String>) -> Result<(), Box<dyn std::error::E
         }
     } else {
         println!("Validating current directory");
-        
+
         // Look for YAML files to validate
         let yaml_files = loading::find_yaml_files()?;
-        
+
         if yaml_files.is_empty() {
             println!("❌ No YAML files found in current directory");
         } else {
             println!("📄 Found {} YAML file(s) to validate", yaml_files.len());
-            
+
             for yaml_file in yaml_files {
                 match loading::validate_yaml_file(&yaml_file) {
                     Ok(_) => {
@@ -73,6 +73,6 @@ pub fn handle_validate(path: Option<String>) -> Result<(), Box<dyn std::error::E
             }
         }
     }
-    
+
     Ok(())
 }

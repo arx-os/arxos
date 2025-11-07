@@ -1,15 +1,15 @@
 //! glTF export functionality for ArxOS
-//! 
+//!
 //! This module provides glTF 2.0 export for building data using the gltf-json crate.
 
 use crate::yaml::BuildingData;
-use std::path::Path;
-use log::info;
-use gltf_json::{Root, Asset, Scene, Node, Mesh, Accessor, Buffer, Material, Index};
 use gltf_json::buffer::View as BufferView;
 use gltf_json::validation::Checked;
-use gltf_json::{accessor, mesh, material};
+use gltf_json::{accessor, material, mesh};
+use gltf_json::{Accessor, Asset, Buffer, Index, Material, Mesh, Node, Root, Scene};
+use log::info;
 use serde_json::json;
+use std::path::Path;
 
 /// glTF exporter for building data
 pub struct GLTFExporter {
@@ -23,24 +23,24 @@ impl GLTFExporter {
             building_data: building_data.clone(),
         }
     }
-    
+
     /// Export building to glTF format
     pub fn export(&self, output: &Path) -> Result<(), Box<dyn std::error::Error>> {
         info!("Exporting building to glTF: {}", output.display());
-        
+
         // Build glTF root using gltf-json structures
         let root = self.build_gltf_root()?;
-        
+
         // Serialize to JSON
         let json_string = serde_json::to_string_pretty(&root)?;
-        
+
         // Write to file
         std::fs::write(output, json_string)?;
-        
+
         info!("Successfully exported glTF to {}", output.display());
         Ok(())
     }
-    
+
     /// Build a complete glTF root from building data
     fn build_gltf_root(&self) -> Result<Root, Box<dyn std::error::Error>> {
         let mut nodes = Vec::new();
@@ -49,23 +49,23 @@ impl GLTFExporter {
         let mut accessors = Vec::new();
         let mut buffer_views = Vec::new();
         let mut buffers = Vec::new();
-        
+
         // Create materials based on equipment types
         let material_map = self.create_materials(&mut materials)?;
-        
+
         // Track buffer data for binary encoding
         let mut buffer_data = Vec::new();
         let mut buffer_offset = 0;
-        
+
         // Process each floor
         for floor in &self.building_data.floors {
             let mut floor_children = Vec::new();
-            
+
             // Process equipment on this floor
             for equipment in &floor.equipment {
                 // Create mesh from bounding box
-                let (mesh_id, _accessor_start, _buffer_view_start, new_buffer_data) = 
-                    self.create_equipment_mesh(
+                let (mesh_id, _accessor_start, _buffer_view_start, new_buffer_data) = self
+                    .create_equipment_mesh(
                         equipment,
                         &material_map,
                         buffer_offset,
@@ -73,12 +73,12 @@ impl GLTFExporter {
                         &mut accessors,
                         &mut buffer_views,
                     )?;
-                
+
                 // Add to buffer data
                 let old_len = buffer_data.len();
                 buffer_data.extend_from_slice(&new_buffer_data);
                 buffer_offset += (buffer_data.len() - old_len) as u32;
-                
+
                 // Create equipment node
                 let equipment_node_id = nodes.len() as u32;
                 let equipment_node = Node {
@@ -101,11 +101,15 @@ impl GLTFExporter {
                 nodes.push(equipment_node);
                 floor_children.push(Index::new(equipment_node_id));
             }
-            
+
             // Create floor node
             let floor_node = Node {
                 camera: None,
-                children: if floor_children.is_empty() { None } else { Some(floor_children) },
+                children: if floor_children.is_empty() {
+                    None
+                } else {
+                    Some(floor_children)
+                },
                 extensions: None,
                 extras: Default::default(),
                 matrix: None,
@@ -113,12 +117,16 @@ impl GLTFExporter {
                 rotation: None,
                 scale: None,
                 skin: None,
-                translation: Some([0.0, floor.elevation.unwrap_or(floor.level as f64 * 3.0) as f32, 0.0]),
+                translation: Some([
+                    0.0,
+                    floor.elevation.unwrap_or(floor.level as f64 * 3.0) as f32,
+                    0.0,
+                ]),
                 weights: None,
             };
             nodes.push(floor_node);
         }
-        
+
         // Create buffer
         if !buffer_data.is_empty() {
             buffers.push(Buffer {
@@ -128,14 +136,14 @@ impl GLTFExporter {
                 extras: Default::default(),
             });
         }
-        
+
         // Create scene
         let scene = Scene {
             nodes: (0..nodes.len()).map(|i| Index::new(i as u32)).collect(),
             extensions: None,
             extras: Default::default(),
         };
-        
+
         // Build root
         let root = Root {
             extensions_used: vec![],
@@ -165,15 +173,18 @@ impl GLTFExporter {
             extensions: None,
             extras: Default::default(),
         };
-        
+
         Ok(root)
     }
-    
+
     /// Create materials based on equipment types
-    fn create_materials(&self, materials: &mut Vec<Material>) -> Result<std::collections::HashMap<String, usize>, Box<dyn std::error::Error>> {
+    fn create_materials(
+        &self,
+        materials: &mut Vec<Material>,
+    ) -> Result<std::collections::HashMap<String, usize>, Box<dyn std::error::Error>> {
         use std::collections::HashMap;
         let mut material_map = HashMap::new();
-        
+
         // Collect unique equipment types (as strings for HashSet)
         let mut equipment_types = std::collections::HashSet::new();
         for floor in &self.building_data.floors {
@@ -182,12 +193,12 @@ impl GLTFExporter {
                 equipment_types.insert(eq_type_str);
             }
         }
-        
+
         // Create material for each equipment type
         for eq_type in equipment_types {
             let material_id = materials.len();
             let color = self.get_equipment_type_color(&eq_type);
-            
+
             let material = Material {
                 extensions: None,
                 extras: Default::default(),
@@ -208,11 +219,11 @@ impl GLTFExporter {
                 alpha_cutoff: None,
                 double_sided: true,
             };
-            
+
             materials.push(material);
             material_map.insert(eq_type, material_id);
         }
-        
+
         // Add default material if no equipment
         if materials.is_empty() {
             let default_material = Material {
@@ -237,14 +248,14 @@ impl GLTFExporter {
             };
             materials.push(default_material);
         }
-        
+
         Ok(material_map)
     }
-    
+
     /// Get color for equipment type
     fn get_equipment_type_color(&self, eq_type: &str) -> [f32; 4] {
         match eq_type.to_lowercase().as_str() {
-            "hvac" => [0.3, 0.7, 1.0, 1.0],      // Light blue
+            "hvac" => [0.3, 0.7, 1.0, 1.0],       // Light blue
             "electrical" => [1.0, 0.9, 0.2, 1.0], // Yellow
             "av" => [0.8, 0.2, 0.8, 1.0],         // Magenta
             "furniture" => [0.6, 0.4, 0.2, 1.0],  // Brown
@@ -254,7 +265,7 @@ impl GLTFExporter {
             _ => [0.7, 0.7, 0.7, 1.0],            // Gray (default)
         }
     }
-    
+
     /// Create mesh from equipment bounding box
     fn create_equipment_mesh(
         &self,
@@ -267,7 +278,7 @@ impl GLTFExporter {
     ) -> Result<(usize, usize, usize, Vec<u8>), Box<dyn std::error::Error>> {
         // Equipment doesn't have a direct bounding_box field, use position and estimate dimensions
         // For now, create a default bounding box based on position
-        use crate::spatial::{Point3D, BoundingBox3D};
+        use crate::spatial::{BoundingBox3D, Point3D};
         let bbox = BoundingBox3D {
             min: Point3D {
                 x: equipment.position.x - 0.5,
@@ -280,45 +291,40 @@ impl GLTFExporter {
                 z: equipment.position.z + 0.5,
             },
         };
-        
+
         // Calculate dimensions
         let width = (bbox.max.x - bbox.min.x) as f32;
         let height = (bbox.max.z - bbox.min.z) as f32;
         let depth = (bbox.max.y - bbox.min.y) as f32;
-        
+
         // Generate box vertices (8 vertices)
         let half_w = width / 2.0;
         let half_h = height / 2.0;
         let half_d = depth / 2.0;
-        
+
         // Vertices relative to center
         let vertices: Vec<[f32; 3]> = vec![
             [-half_w, -half_h, -half_d], // 0: left-bottom-back
-            [ half_w, -half_h, -half_d], // 1: right-bottom-back
-            [ half_w,  half_h, -half_d], // 2: right-top-back
-            [-half_w,  half_h, -half_d], // 3: left-top-back
-            [-half_w, -half_h,  half_d], // 4: left-bottom-front
-            [ half_w, -half_h,  half_d], // 5: right-bottom-front
-            [ half_w,  half_h,  half_d], // 6: right-top-front
-            [-half_w,  half_h,  half_d], // 7: left-top-front
+            [half_w, -half_h, -half_d],  // 1: right-bottom-back
+            [half_w, half_h, -half_d],   // 2: right-top-back
+            [-half_w, half_h, -half_d],  // 3: left-top-back
+            [-half_w, -half_h, half_d],  // 4: left-bottom-front
+            [half_w, -half_h, half_d],   // 5: right-bottom-front
+            [half_w, half_h, half_d],    // 6: right-top-front
+            [-half_w, half_h, half_d],   // 7: left-top-front
         ];
-        
+
         // Box indices (12 triangles = 6 faces * 2 triangles each)
         let indices: Vec<u16> = vec![
             // Back face
-            0, 1, 2,  2, 3, 0,
-            // Front face
-            4, 5, 6,  6, 7, 4,
-            // Left face
-            0, 3, 7,  7, 4, 0,
-            // Right face
-            1, 5, 6,  6, 2, 1,
-            // Bottom face
-            0, 1, 5,  5, 4, 0,
-            // Top face
-            3, 2, 6,  6, 7, 3,
+            0, 1, 2, 2, 3, 0, // Front face
+            4, 5, 6, 6, 7, 4, // Left face
+            0, 3, 7, 7, 4, 0, // Right face
+            1, 5, 6, 6, 2, 1, // Bottom face
+            0, 1, 5, 5, 4, 0, // Top face
+            3, 2, 6, 6, 7, 3,
         ];
-        
+
         // Flatten vertices to byte array
         let mut vertex_bytes = Vec::new();
         for v in &vertices {
@@ -326,17 +332,17 @@ impl GLTFExporter {
             vertex_bytes.extend_from_slice(&v[1].to_le_bytes());
             vertex_bytes.extend_from_slice(&v[2].to_le_bytes());
         }
-        
+
         // Flatten indices to byte array
         let mut index_bytes = Vec::new();
         for i in &indices {
             index_bytes.extend_from_slice(&i.to_le_bytes());
         }
-        
+
         // Calculate offsets
         let vertex_buffer_offset = buffer_offset as u64;
         let index_buffer_offset = buffer_offset as u64 + vertex_bytes.len() as u64;
-        
+
         // Create buffer views
         let vertex_buffer_view_id = buffer_views.len();
         buffer_views.push(BufferView {
@@ -348,24 +354,28 @@ impl GLTFExporter {
             extensions: None,
             extras: Default::default(),
         });
-        
+
         let index_buffer_view_id = buffer_views.len();
         buffer_views.push(BufferView {
             buffer: Index::new(0),
             byte_length: (index_bytes.len() as u64).into(),
             byte_offset: Some(index_buffer_offset.into()),
             byte_stride: None,
-            target: Some(Checked::Valid(gltf_json::buffer::Target::ElementArrayBuffer)),
+            target: Some(Checked::Valid(
+                gltf_json::buffer::Target::ElementArrayBuffer,
+            )),
             extensions: None,
             extras: Default::default(),
         });
-        
+
         // Create accessors
         let position_accessor_id = accessors.len();
         accessors.push(Accessor {
             buffer_view: Some(Index::new(vertex_buffer_view_id as u32)),
             byte_offset: None,
-            component_type: Checked::Valid(accessor::GenericComponentType(accessor::ComponentType::F32)),
+            component_type: Checked::Valid(accessor::GenericComponentType(
+                accessor::ComponentType::F32,
+            )),
             normalized: false,
             count: (vertices.len() as u64).into(),
             min: Some(json!([-half_w, -half_h, -half_d])),
@@ -375,12 +385,14 @@ impl GLTFExporter {
             extras: Default::default(),
             type_: Checked::Valid(accessor::Type::Vec3),
         });
-        
+
         let index_accessor_id = accessors.len();
         accessors.push(Accessor {
             buffer_view: Some(Index::new(index_buffer_view_id as u32)),
             byte_offset: None,
-            component_type: Checked::Valid(accessor::GenericComponentType(accessor::ComponentType::U16)),
+            component_type: Checked::Valid(accessor::GenericComponentType(
+                accessor::ComponentType::U16,
+            )),
             normalized: false,
             count: (indices.len() as u64).into(),
             min: None,
@@ -390,18 +402,19 @@ impl GLTFExporter {
             extras: Default::default(),
             type_: Checked::Valid(accessor::Type::Scalar),
         });
-        
+
         // Get material index
         let eq_type_str = format!("{:?}", equipment.equipment_type).to_lowercase();
-        let material_index = material_map.get(&eq_type_str)
-            .copied()
-            .unwrap_or(0);
-        
+        let material_index = material_map.get(&eq_type_str).copied().unwrap_or(0);
+
         // Create primitive
         let primitive = mesh::Primitive {
             attributes: {
                 let mut attrs = std::collections::BTreeMap::new();
-                attrs.insert(Checked::Valid(mesh::Semantic::Positions), Index::new(position_accessor_id as u32));
+                attrs.insert(
+                    Checked::Valid(mesh::Semantic::Positions),
+                    Index::new(position_accessor_id as u32),
+                );
                 attrs
             },
             indices: Some(Index::new(index_accessor_id as u32)),
@@ -411,7 +424,7 @@ impl GLTFExporter {
             extensions: None,
             extras: Default::default(),
         };
-        
+
         // Create mesh
         let mesh_id = meshes.len();
         meshes.push(Mesh {
@@ -420,18 +433,26 @@ impl GLTFExporter {
             extensions: None,
             extras: Default::default(),
         });
-        
+
         // Combine buffer data
         let mut buffer_data = vertex_bytes;
         buffer_data.extend_from_slice(&index_bytes);
-        
-        Ok((mesh_id, position_accessor_id, vertex_buffer_view_id, buffer_data))
+
+        Ok((
+            mesh_id,
+            position_accessor_id,
+            vertex_buffer_view_id,
+            buffer_data,
+        ))
     }
-    
+
     /// Create extras metadata for equipment node
     /// Note: gltf-json doesn't support extras in the current version, so this is kept for future use
     #[allow(dead_code)]
-    fn create_equipment_extras(&self, _equipment: &crate::core::Equipment) -> Result<(), Box<dyn std::error::Error>> {
+    fn create_equipment_extras(
+        &self,
+        _equipment: &crate::core::Equipment,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         // Extras are not supported in gltf-json crate's current API
         // Equipment metadata can be stored in node names or separate metadata files
         Ok(())
@@ -441,12 +462,14 @@ impl GLTFExporter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::{
+        Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType, Floor, Position,
+    };
+    use crate::spatial::{BoundingBox3D, Point3D};
     use crate::yaml::{BuildingInfo, BuildingMetadata};
-    use crate::core::{Floor, Equipment, EquipmentType, EquipmentStatus, EquipmentHealthStatus, Position};
-    use crate::spatial::{Point3D, BoundingBox3D};
     use chrono::Utc;
     use std::collections::HashMap;
-    
+
     /// Create a minimal test building with no floors or equipment
     fn create_empty_building() -> BuildingData {
         BuildingData {
@@ -472,7 +495,7 @@ mod tests {
             coordinate_systems: vec![],
         }
     }
-    
+
     /// Create a test building with equipment of various types
     fn create_test_building_with_equipment() -> BuildingData {
         BuildingData {
@@ -524,7 +547,8 @@ mod tests {
                         Equipment {
                             id: "equip-2".to_string(),
                             name: "Electrical Panel".to_string(),
-                            path: "Building::Test::Floor::1::Equipment::Electrical_Panel".to_string(),
+                            path: "Building::Test::Floor::1::Equipment::Electrical_Panel"
+                                .to_string(),
                             address: None,
                             equipment_type: EquipmentType::Electrical,
                             position: Position {
@@ -549,96 +573,94 @@ mod tests {
                     elevation: Some(4.5),
                     bounding_box: None,
                     wings: vec![],
-                    equipment: vec![
-                        Equipment {
-                            id: "equip-3".to_string(),
-                            name: "Network Switch".to_string(),
-                            path: "Building::Test::Floor::2::Equipment::Network_Switch".to_string(),
-                            address: None,
-                            equipment_type: EquipmentType::Network,
-                            position: Position {
-                                x: 12.0,
-                                y: 8.0,
-                                z: 5.0,
-                                coordinate_system: "LOCAL".to_string(),
-                            },
-                            properties: HashMap::new(),
-                            status: EquipmentStatus::Active,
-                            health_status: Some(EquipmentHealthStatus::Healthy),
-                            room_id: None,
-                            sensor_mappings: None,
+                    equipment: vec![Equipment {
+                        id: "equip-3".to_string(),
+                        name: "Network Switch".to_string(),
+                        path: "Building::Test::Floor::2::Equipment::Network_Switch".to_string(),
+                        address: None,
+                        equipment_type: EquipmentType::Network,
+                        position: Position {
+                            x: 12.0,
+                            y: 8.0,
+                            z: 5.0,
+                            coordinate_system: "LOCAL".to_string(),
                         },
-                    ],
+                        properties: HashMap::new(),
+                        status: EquipmentStatus::Active,
+                        health_status: Some(EquipmentHealthStatus::Healthy),
+                        room_id: None,
+                        sensor_mappings: None,
+                    }],
                     properties: HashMap::new(),
                 },
             ],
             coordinate_systems: vec![],
         }
     }
-    
+
     #[test]
     fn test_gltf_exporter_creation() {
         let building = create_empty_building();
         let _exporter = GLTFExporter::new(&building);
         // Should not panic
     }
-    
+
     #[test]
     fn test_gltf_root_structure_empty() {
         let building = create_empty_building();
         let exporter = GLTFExporter::new(&building);
         let root = exporter.build_gltf_root().unwrap();
-        
+
         // Verify glTF 2.0 compliance
         assert_eq!(root.asset.version, "2.0");
         assert_eq!(root.asset.generator, Some("ArxOS".to_string()));
-        
+
         // Verify scene structure
         assert_eq!(root.scenes.len(), 1);
         assert_eq!(root.scene, Some(Index::new(0)));
-        
+
         // Empty building should have no nodes, meshes, or materials
         assert_eq!(root.nodes.len(), 0);
         assert_eq!(root.meshes.len(), 0);
         assert_eq!(root.materials.len(), 1); // Default material
     }
-    
+
     #[test]
     fn test_gltf_root_structure_with_equipment() {
         let building = create_test_building_with_equipment();
         let exporter = GLTFExporter::new(&building);
         let root = exporter.build_gltf_root().unwrap();
-        
+
         // Verify asset info
         assert_eq!(root.asset.version, "2.0");
         assert_eq!(root.asset.generator, Some("ArxOS".to_string()));
-        
+
         // Should have 2 floors (nodes) + 3 equipment (nodes) = 5 nodes
         assert_eq!(root.nodes.len(), 5);
-        
+
         // Should have 3 meshes (one per equipment)
         assert_eq!(root.meshes.len(), 3);
-        
+
         // Should have 3 materials (HVAC, electrical, network) + default = 4 materials
         // Actually, let me check: HVAC, electrical, network = 3 unique types, so 3 materials
         // Plus default if empty = 1, but we have equipment so no default
         assert!(root.materials.len() >= 3);
-        
+
         // Verify buffers and buffer views exist for geometry
         assert!(!root.buffers.is_empty());
         assert!(!root.buffer_views.is_empty());
         assert!(!root.accessors.is_empty());
     }
-    
+
     #[test]
     fn test_material_creation_by_equipment_type() {
         let building = create_test_building_with_equipment();
         let exporter = GLTFExporter::new(&building);
         let root = exporter.build_gltf_root().unwrap();
-        
+
         // Verify materials are created for different equipment types
         assert!(root.materials.len() >= 3);
-        
+
         // Verify material properties
         for _material in &root.materials {
             // Each material should have PBR metallic roughness
@@ -646,120 +668,148 @@ mod tests {
             // (We removed the Option wrapper in our fixes)
         }
     }
-    
+
     #[test]
     fn test_equipment_type_color_mapping() {
         let building = create_empty_building();
         let exporter = GLTFExporter::new(&building);
-        
+
         // Test color mappings for different equipment types
-        assert_eq!(exporter.get_equipment_type_color("HVAC"), [0.3, 0.7, 1.0, 1.0]);
-        assert_eq!(exporter.get_equipment_type_color("electrical"), [1.0, 0.9, 0.2, 1.0]);
-        assert_eq!(exporter.get_equipment_type_color("av"), [0.8, 0.2, 0.8, 1.0]);
-        assert_eq!(exporter.get_equipment_type_color("plumbing"), [0.2, 0.6, 1.0, 1.0]);
-        assert_eq!(exporter.get_equipment_type_color("network"), [0.2, 1.0, 0.2, 1.0]);
-        assert_eq!(exporter.get_equipment_type_color("furniture"), [0.6, 0.4, 0.2, 1.0]);
-        assert_eq!(exporter.get_equipment_type_color("safety"), [1.0, 0.2, 0.2, 1.0]);
-        
+        assert_eq!(
+            exporter.get_equipment_type_color("HVAC"),
+            [0.3, 0.7, 1.0, 1.0]
+        );
+        assert_eq!(
+            exporter.get_equipment_type_color("electrical"),
+            [1.0, 0.9, 0.2, 1.0]
+        );
+        assert_eq!(
+            exporter.get_equipment_type_color("av"),
+            [0.8, 0.2, 0.8, 1.0]
+        );
+        assert_eq!(
+            exporter.get_equipment_type_color("plumbing"),
+            [0.2, 0.6, 1.0, 1.0]
+        );
+        assert_eq!(
+            exporter.get_equipment_type_color("network"),
+            [0.2, 1.0, 0.2, 1.0]
+        );
+        assert_eq!(
+            exporter.get_equipment_type_color("furniture"),
+            [0.6, 0.4, 0.2, 1.0]
+        );
+        assert_eq!(
+            exporter.get_equipment_type_color("safety"),
+            [1.0, 0.2, 0.2, 1.0]
+        );
+
         // Test case insensitivity
-        assert_eq!(exporter.get_equipment_type_color("hvac"), [0.3, 0.7, 1.0, 1.0]);
-        assert_eq!(exporter.get_equipment_type_color("HVAC"), [0.3, 0.7, 1.0, 1.0]);
-        
+        assert_eq!(
+            exporter.get_equipment_type_color("hvac"),
+            [0.3, 0.7, 1.0, 1.0]
+        );
+        assert_eq!(
+            exporter.get_equipment_type_color("HVAC"),
+            [0.3, 0.7, 1.0, 1.0]
+        );
+
         // Test default color for unknown type
-        assert_eq!(exporter.get_equipment_type_color("unknown"), [0.7, 0.7, 0.7, 1.0]);
+        assert_eq!(
+            exporter.get_equipment_type_color("unknown"),
+            [0.7, 0.7, 0.7, 1.0]
+        );
     }
-    
+
     #[test]
     fn test_mesh_geometry_generation() {
         let building = create_test_building_with_equipment();
         let exporter = GLTFExporter::new(&building);
         let root = exporter.build_gltf_root().unwrap();
-        
+
         // Verify meshes have primitives
         for mesh in &root.meshes {
             assert_eq!(mesh.primitives.len(), 1);
             let primitive = &mesh.primitives[0];
-            
+
             // Verify primitive has attributes (positions)
             assert!(primitive.attributes.len() > 0);
-            
+
             // Verify primitive has indices
             assert!(primitive.indices.is_some());
-            
+
             // Verify primitive has material
             assert!(primitive.material.is_some());
         }
     }
-    
+
     #[test]
     fn test_buffer_views_and_accessors() {
         let building = create_test_building_with_equipment();
         let exporter = GLTFExporter::new(&building);
         let root = exporter.build_gltf_root().unwrap();
-        
+
         // Verify buffer structure
         assert!(!root.buffers.is_empty());
         // Note: byte_length might be 0 or > 0 depending on buffer data population
         // Just verify it's a valid USize64
         let _byte_length = root.buffers[0].byte_length;
         // Skip asserting exact value since buffer population implementation may vary
-        
+
         // Verify buffer views exist for geometry
         assert!(!root.buffer_views.is_empty());
-        
+
         // Verify accessors exist
         assert!(!root.accessors.is_empty());
-        
+
         // Verify each accessor references a buffer view
         for accessor in &root.accessors {
             assert!(accessor.buffer_view.is_some());
         }
     }
-    
+
     #[test]
     fn test_node_hierarchy() {
         let building = create_test_building_with_equipment();
         let exporter = GLTFExporter::new(&building);
         let root = exporter.build_gltf_root().unwrap();
-        
+
         // Should have nodes for floors and equipment
         assert!(root.nodes.len() > 0);
-        
+
         // Floor nodes should have children (equipment nodes)
-        let floor_nodes: Vec<&Node> = root.nodes.iter()
+        let floor_nodes: Vec<&Node> = root
+            .nodes
+            .iter()
             .filter(|n| n.mesh.is_none() && n.children.is_some())
             .collect();
-        
+
         assert_eq!(floor_nodes.len(), 2); // Two floors
-        
+
         // Equipment nodes should have meshes
-        let equipment_nodes: Vec<&Node> = root.nodes.iter()
-            .filter(|n| n.mesh.is_some())
-            .collect();
-        
+        let equipment_nodes: Vec<&Node> = root.nodes.iter().filter(|n| n.mesh.is_some()).collect();
+
         assert_eq!(equipment_nodes.len(), 3); // Three equipment items
     }
-    
+
     #[test]
     fn test_equipment_node_translations() {
         let building = create_test_building_with_equipment();
         let exporter = GLTFExporter::new(&building);
         let root = exporter.build_gltf_root().unwrap();
-        
+
         // Find equipment nodes by checking for mesh references
-        let equipment_nodes: Vec<&Node> = root.nodes.iter()
-            .filter(|n| n.mesh.is_some())
-            .collect();
-        
+        let equipment_nodes: Vec<&Node> = root.nodes.iter().filter(|n| n.mesh.is_some()).collect();
+
         assert_eq!(equipment_nodes.len(), 3);
-        
+
         // Verify translations match equipment positions
         let expected_positions = vec![
             [10.0, 20.0, 3.0], // HVAC Unit
             [5.0, 15.0, 2.5],  // Electrical Panel
             [12.0, 8.0, 5.0],  // Network Switch
         ];
-        
+
         for (node, expected_pos) in equipment_nodes.iter().zip(expected_positions.iter()) {
             assert!(node.translation.is_some());
             let translation = node.translation.unwrap();
@@ -768,20 +818,22 @@ mod tests {
             assert_eq!(translation[2], expected_pos[2] as f32);
         }
     }
-    
+
     #[test]
     fn test_floor_node_elevations() {
         let building = create_test_building_with_equipment();
         let exporter = GLTFExporter::new(&building);
         let root = exporter.build_gltf_root().unwrap();
-        
+
         // Find floor nodes (nodes without meshes but with children)
-        let floor_nodes: Vec<&Node> = root.nodes.iter()
+        let floor_nodes: Vec<&Node> = root
+            .nodes
+            .iter()
             .filter(|n| n.mesh.is_none() && n.children.is_some())
             .collect();
-        
+
         assert_eq!(floor_nodes.len(), 2);
-        
+
         // Verify floor elevations
         let elevations = vec![0.0, 4.5];
         for (node, elevation) in floor_nodes.iter().zip(elevations.iter()) {
@@ -790,7 +842,7 @@ mod tests {
             assert_eq!(translation[1], *elevation as f32); // Y-axis is elevation
         }
     }
-    
+
     #[test]
     fn test_multiple_equipment_same_type() {
         // Test that multiple equipment of same type share materials
@@ -813,17 +865,22 @@ mod tests {
             room_id: None,
             sensor_mappings: None,
         });
-        
+
         let exporter = GLTFExporter::new(&building);
         let root = exporter.build_gltf_root().unwrap();
-        
+
         // Should still have same number of materials (HVAC already exists)
         // Count unique equipment types: HVAC, electrical, network = 3
-        let unique_types: std::collections::HashSet<String> = building.floors.iter()
-            .flat_map(|f| f.equipment.iter().map(|e| format!("{:?}", e.equipment_type)))
+        let unique_types: std::collections::HashSet<String> = building
+            .floors
+            .iter()
+            .flat_map(|f| {
+                f.equipment
+                    .iter()
+                    .map(|e| format!("{:?}", e.equipment_type))
+            })
             .collect();
-        
+
         assert_eq!(root.materials.len(), unique_types.len());
     }
 }
-

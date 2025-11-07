@@ -3,12 +3,12 @@
 //! Provides a queue system for storing operations when offline and syncing when online.
 //! Operations are stored locally and persisted to disk, then executed when connection is restored.
 
+use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
-use log::{info, warn, error};
 
 /// Operation types that can be queued
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -94,11 +94,14 @@ pub struct QueuedOperationItem {
 impl QueuedOperationItem {
     /// Create a new queued operation item
     pub fn new(operation: QueuedOperation) -> Self {
-        let id = format!("op_{}", SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis());
-        
+        let id = format!(
+            "op_{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis()
+        );
+
         Self {
             id,
             operation,
@@ -130,18 +133,24 @@ impl OfflineQueue {
     /// Create a new offline queue for a building
     pub fn new(building_name: String) -> Self {
         let storage_path = PathBuf::from(format!("{}_offline_queue.json", building_name));
-        
+
         let mut queue = Self {
             building_name,
             queue: VecDeque::new(),
             storage_path,
             max_retries: 3,
         };
-        
+
         // Load existing queue from disk
         queue.load_from_disk();
-        
+
         queue
+    }
+
+    /// Override storage path (primarily for tests)
+    pub fn set_storage_path<P: Into<PathBuf>>(&mut self, path: P) {
+        self.storage_path = path.into();
+        self.load_from_disk();
     }
 
     /// Set maximum retry attempts
@@ -153,20 +162,25 @@ impl OfflineQueue {
     pub fn enqueue(&mut self, operation: QueuedOperation) -> String {
         let item = QueuedOperationItem::new(operation);
         let id = item.id.clone();
-        
+
         self.queue.push_back(item);
         self.save_to_disk();
-        
-        info!("Offline queue: Enqueued operation {} for building {}", id, self.building_name);
+
+        info!(
+            "Offline queue: Enqueued operation {} for building {}",
+            id, self.building_name
+        );
         id
     }
 
     /// Get the next pending operation
     pub fn dequeue(&mut self) -> Option<QueuedOperationItem> {
         // Find first pending operation
-        let index = self.queue.iter()
+        let index = self
+            .queue
+            .iter()
             .position(|item| matches!(item.status, OperationStatus::Pending));
-        
+
         if let Some(idx) = index {
             let mut item = self.queue.remove(idx).unwrap();
             item.status = OperationStatus::Executing;
@@ -185,7 +199,7 @@ impl OfflineQueue {
                 SystemTime::now()
                     .duration_since(UNIX_EPOCH)
                     .unwrap()
-                    .as_secs()
+                    .as_secs(),
             );
             self.save_to_disk();
             info!("Offline queue: Operation {} completed", operation_id);
@@ -196,26 +210,31 @@ impl OfflineQueue {
     pub fn mark_failed(&mut self, operation_id: &str, error: String) {
         if let Some(item) = self.queue.iter_mut().find(|i| i.id == operation_id) {
             item.retry_count += 1;
-            
+
             if item.retry_count >= self.max_retries {
                 item.status = OperationStatus::Failed(error.clone());
-                warn!("Offline queue: Operation {} failed after {} retries: {}", 
-                    operation_id, item.retry_count, error);
+                warn!(
+                    "Offline queue: Operation {} failed after {} retries: {}",
+                    operation_id, item.retry_count, error
+                );
             } else {
                 // Retry
                 item.status = OperationStatus::Pending;
                 item.error = Some(error);
-                info!("Offline queue: Operation {} will retry (attempt {}/{})", 
-                    operation_id, item.retry_count, self.max_retries);
+                info!(
+                    "Offline queue: Operation {} will retry (attempt {}/{})",
+                    operation_id, item.retry_count, self.max_retries
+                );
             }
-            
+
             self.save_to_disk();
         }
     }
 
     /// Get all pending operations
     pub fn pending_operations(&self) -> Vec<&QueuedOperationItem> {
-        self.queue.iter()
+        self.queue
+            .iter()
             .filter(|item| matches!(item.status, OperationStatus::Pending))
             .collect()
     }
@@ -237,14 +256,16 @@ impl OfflineQueue {
 
     /// Clear completed operations
     pub fn clear_completed(&mut self) {
-        self.queue.retain(|item| !matches!(item.status, OperationStatus::Completed));
+        self.queue
+            .retain(|item| !matches!(item.status, OperationStatus::Completed));
         self.save_to_disk();
         info!("Offline queue: Cleared completed operations");
     }
 
     /// Clear failed operations
     pub fn clear_failed(&mut self) {
-        self.queue.retain(|item| !matches!(item.status, OperationStatus::Failed(_)));
+        self.queue
+            .retain(|item| !matches!(item.status, OperationStatus::Failed(_)));
         self.save_to_disk();
         info!("Offline queue: Cleared failed operations");
     }
@@ -256,17 +277,18 @@ impl OfflineQueue {
         }
 
         match fs::read_to_string(&self.storage_path) {
-            Ok(content) => {
-                match serde_json::from_str::<Vec<QueuedOperationItem>>(&content) {
-                    Ok(items) => {
-                        self.queue = items.into_iter().collect();
-                        info!("Offline queue: Loaded {} operations from disk", self.queue.len());
-                    }
-                    Err(e) => {
-                        warn!("Offline queue: Failed to parse queue file: {}", e);
-                    }
+            Ok(content) => match serde_json::from_str::<Vec<QueuedOperationItem>>(&content) {
+                Ok(items) => {
+                    self.queue = items.into_iter().collect();
+                    info!(
+                        "Offline queue: Loaded {} operations from disk",
+                        self.queue.len()
+                    );
                 }
-            }
+                Err(e) => {
+                    warn!("Offline queue: Failed to parse queue file: {}", e);
+                }
+            },
             Err(e) => {
                 warn!("Offline queue: Failed to read queue file: {}", e);
             }
@@ -276,7 +298,7 @@ impl OfflineQueue {
     /// Save queue to disk
     fn save_to_disk(&self) {
         let items: Vec<&QueuedOperationItem> = self.queue.iter().collect();
-        
+
         match serde_json::to_string_pretty(&items) {
             Ok(json) => {
                 if let Err(e) = fs::write(&self.storage_path, json) {
@@ -293,10 +315,19 @@ impl OfflineQueue {
 /// Execute a queued operation
 pub fn execute_operation(item: &QueuedOperationItem) -> Result<(), Box<dyn std::error::Error>> {
     match &item.operation {
-        QueuedOperation::CreateRoom { building_name, floor_level, room_name, room_type, position, dimensions, wing_name, properties } => {
-            use crate::core::{Room, RoomType, Position, Dimensions, SpatialProperties};
+        QueuedOperation::CreateRoom {
+            building_name,
+            floor_level,
+            room_name,
+            room_type,
+            position,
+            dimensions,
+            wing_name,
+            properties,
+        } => {
+            use crate::core::{Dimensions, Position, Room, RoomType, SpatialProperties};
             use chrono::Utc;
-            
+
             let room_type = match room_type.as_str() {
                 "Office" => RoomType::Office,
                 "Restroom" => RoomType::Restroom,
@@ -305,13 +336,16 @@ pub fn execute_operation(item: &QueuedOperationItem) -> Result<(), Box<dyn std::
                 "Electrical" => RoomType::Electrical,
                 _ => RoomType::Other(room_type.clone()),
             };
-            
+
             let now = Utc::now();
             let room = Room {
-                id: format!("room-{}", SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .as_millis()),
+                id: format!(
+                    "room-{}",
+                    SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis()
+                ),
                 name: room_name.clone(),
                 room_type,
                 equipment: vec![],
@@ -333,13 +367,28 @@ pub fn execute_operation(item: &QueuedOperationItem) -> Result<(), Box<dyn std::
                 created_at: Some(now),
                 updated_at: Some(now),
             };
-            
-            crate::core::create_room(building_name, *floor_level, room, wing_name.as_deref(), true)
+
+            crate::core::create_room(
+                building_name,
+                *floor_level,
+                room,
+                wing_name.as_deref(),
+                true,
+            )
         }
-        
-        QueuedOperation::AddEquipment { building_name, equipment_id, equipment_name, equipment_type, position, room_id, properties, status } => {
-            use crate::core::{Equipment, EquipmentType, EquipmentStatus, Position};
-            
+
+        QueuedOperation::AddEquipment {
+            building_name,
+            equipment_id,
+            equipment_name,
+            equipment_type,
+            position,
+            room_id,
+            properties,
+            status,
+        } => {
+            use crate::core::{Equipment, EquipmentStatus, EquipmentType, Position};
+
             let equipment_type = match equipment_type.as_str() {
                 "HVAC" => EquipmentType::HVAC,
                 "Electrical" => EquipmentType::Electrical,
@@ -350,7 +399,7 @@ pub fn execute_operation(item: &QueuedOperationItem) -> Result<(), Box<dyn std::
                 "Network" => EquipmentType::Network,
                 _ => EquipmentType::Other(equipment_type.clone()),
             };
-            
+
             let status = match status.as_str() {
                 "Active" => EquipmentStatus::Active,
                 "Maintenance" => EquipmentStatus::Maintenance,
@@ -358,7 +407,7 @@ pub fn execute_operation(item: &QueuedOperationItem) -> Result<(), Box<dyn std::
                 "OutOfOrder" => EquipmentStatus::OutOfOrder,
                 _ => EquipmentStatus::Unknown,
             };
-            
+
             let equipment = Equipment {
                 id: equipment_id.clone(),
                 name: equipment_name.clone(),
@@ -377,27 +426,38 @@ pub fn execute_operation(item: &QueuedOperationItem) -> Result<(), Box<dyn std::
                 room_id: room_id.clone(),
                 sensor_mappings: None,
             };
-            
+
             crate::core::add_equipment(building_name, room_id.as_deref(), equipment, true)
         }
-        
-        QueuedOperation::UpdateEquipment { building_name, equipment_id, properties } => {
-            crate::core::update_equipment_impl(building_name, equipment_id, properties.clone(), true)
-                .map(|_| ())
-        }
-        
-        QueuedOperation::RemoveEquipment { building_name, equipment_id } => {
-            crate::core::remove_equipment_impl(building_name, equipment_id, true)
-        }
-        
-        QueuedOperation::UpdateRoom { building_name, room_id, properties } => {
-            crate::core::update_room_impl(building_name, room_id, properties.clone(), true)
-                .map(|_| ())
-        }
-        
-        QueuedOperation::DeleteRoom { building_name, room_id } => {
-            crate::core::delete_room_impl(building_name, room_id, true)
-        }
+
+        QueuedOperation::UpdateEquipment {
+            building_name,
+            equipment_id,
+            properties,
+        } => crate::core::update_equipment_impl(
+            building_name,
+            equipment_id,
+            properties.clone(),
+            true,
+        )
+        .map(|_| ()),
+
+        QueuedOperation::RemoveEquipment {
+            building_name,
+            equipment_id,
+        } => crate::core::remove_equipment_impl(building_name, equipment_id, true),
+
+        QueuedOperation::UpdateRoom {
+            building_name,
+            room_id,
+            properties,
+        } => crate::core::update_room_impl(building_name, room_id, properties.clone(), true)
+            .map(|_| ()),
+
+        QueuedOperation::DeleteRoom {
+            building_name,
+            room_id,
+        } => crate::core::delete_room_impl(building_name, room_id, true),
     }
 }
 
@@ -409,7 +469,7 @@ mod tests {
     #[test]
     fn test_enqueue_dequeue() {
         let mut queue = OfflineQueue::new("test_building".to_string());
-        
+
         let op = QueuedOperation::CreateRoom {
             building_name: "test_building".to_string(),
             floor_level: 1,
@@ -420,11 +480,11 @@ mod tests {
             wing_name: None,
             properties: HashMap::new(),
         };
-        
+
         let id = queue.enqueue(op);
         assert!(!queue.is_empty());
         assert_eq!(queue.len(), 1);
-        
+
         let item = queue.dequeue().unwrap();
         assert_eq!(item.id, id);
         assert!(matches!(item.status, OperationStatus::Executing));
@@ -433,7 +493,7 @@ mod tests {
     #[test]
     fn test_mark_completed() {
         let mut queue = OfflineQueue::new("test_building".to_string());
-        
+
         let op = QueuedOperation::AddEquipment {
             building_name: "test_building".to_string(),
             equipment_id: "eq1".to_string(),
@@ -444,15 +504,17 @@ mod tests {
             properties: HashMap::new(),
             status: "Active".to_string(),
         };
-        
+
         let id = queue.enqueue(op);
-        
+
         // Don't dequeue - mark_completed should work on queued items
         queue.mark_completed(&id);
-        
+
         let operations = queue.all_operations();
-        let item = operations.iter().find(|item| item.id == id).expect("Should find marked item");
+        let item = operations
+            .iter()
+            .find(|item| item.id == id)
+            .expect("Should find marked item");
         assert!(matches!(item.status, OperationStatus::Completed));
     }
 }
-

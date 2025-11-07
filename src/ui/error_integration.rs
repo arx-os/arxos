@@ -2,8 +2,8 @@
 //!
 //! Provides utilities for integrating error modals into TUI components
 
-use crate::ui::{ErrorModal, ErrorAction, render_error_modal, handle_error_modal_event};
 use crate::error::ArxError;
+use crate::ui::{handle_error_modal_event, render_error_modal, ErrorAction, ErrorModal};
 use crossterm::event::Event;
 use ratatui::Frame;
 
@@ -14,7 +14,7 @@ pub fn render_error_modal_in_frame(
     theme: &crate::ui::Theme,
 ) {
     use crate::ui::error_modal::calculate_modal_area;
-    
+
     if let Some(error_paragraph) = render_error_modal(modal, frame.size(), theme) {
         // Calculate centered modal area and render there
         let modal_area = calculate_modal_area(frame.size());
@@ -36,16 +36,13 @@ pub fn handle_error_with_modal(
         // Create generic ArxError from any error
         ArxError::io_error(error_msg)
     };
-    
+
     modal.show_error(arx_error);
     Ok(None)
 }
 
 /// Helper to process error modal events and return action
-pub fn process_error_modal_event(
-    event: Event,
-    modal: &mut ErrorModal,
-) -> Option<ErrorAction> {
+pub fn process_error_modal_event(event: Event, modal: &mut ErrorModal) -> Option<ErrorAction> {
     handle_error_modal_event(event, modal)
 }
 
@@ -61,19 +58,21 @@ mod tests {
         let _area = Rect::new(0, 0, 80, 24);
         let backend = TestBackend::new(80, 24);
         let mut terminal = ratatui::Terminal::new(backend).unwrap();
-        
+
         let mut modal = ErrorModal::new();
         modal.show_error(ArxError::IoError {
             message: "Test error".to_string(),
             context: Box::new(ErrorContext::default()),
             path: None,
         });
-        
+
         let theme = crate::ui::Theme::default();
-        
-        terminal.draw(|frame| {
-            render_error_modal_in_frame(frame, &modal, &theme);
-        }).unwrap();
+
+        terminal
+            .draw(|frame| {
+                render_error_modal_in_frame(frame, &modal, &theme);
+            })
+            .unwrap();
         // If no panic, rendering succeeded
     }
 
@@ -85,7 +84,7 @@ mod tests {
             context: Box::new(ErrorContext::default()),
             path: None,
         }) as Box<dyn std::error::Error>;
-        
+
         let result = handle_error_with_modal(error, &mut modal);
         assert!(result.is_ok(), "Should handle error successfully");
         assert!(modal.show, "Modal should be shown");
@@ -100,12 +99,12 @@ mod tests {
             context: Box::new(ErrorContext::default()),
             field: None,
         }) as Box<dyn std::error::Error>;
-        
+
         let result = handle_error_with_modal(error, &mut modal);
         assert!(result.is_ok());
         assert!(modal.show, "Modal should be shown");
         assert!(modal.error.is_some(), "Should have error");
-        
+
         // Verify it's a Configuration error
         if let Some(ArxError::Configuration { .. }) = modal.error {
             // Correct type
@@ -119,14 +118,14 @@ mod tests {
         let mut modal = ErrorModal::new();
         let error = Box::new(std::io::Error::new(
             std::io::ErrorKind::NotFound,
-            "File not found"
+            "File not found",
         )) as Box<dyn std::error::Error>;
-        
+
         let result = handle_error_with_modal(error, &mut modal);
         assert!(result.is_ok(), "Should handle generic error");
         assert!(modal.show, "Modal should be shown");
         assert!(modal.error.is_some(), "Should convert to ArxError");
-        
+
         // Generic errors should become IoError
         if let Some(ArxError::IoError { .. }) = modal.error {
             // Correct conversion
@@ -138,23 +137,22 @@ mod tests {
     #[test]
     fn test_process_error_modal_event() {
         use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
-        
+
         let mut modal = ErrorModal::new();
         modal.show_error(ArxError::IoError {
             message: "Test".to_string(),
             context: Box::new(ErrorContext::default()),
             path: None,
         });
-        
+
         let event = Event::Key(KeyEvent {
             code: KeyCode::Enter,
             modifiers: KeyModifiers::empty(),
             kind: KeyEventKind::Press,
             state: KeyEventState::empty(),
         });
-        
+
         let action = process_error_modal_event(event, &mut modal);
         assert!(action.is_some(), "Should return action");
     }
 }
-

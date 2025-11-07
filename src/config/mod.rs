@@ -1,5 +1,5 @@
 //! Configuration management for ArxOS
-//! 
+//!
 //! This module provides a comprehensive configuration system that supports:
 //! - Hierarchical configuration (global, project, command-specific)
 //! - Environment variable overrides
@@ -11,20 +11,19 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use thiserror::Error;
 
-pub mod manager;
-pub mod validation;
-pub mod schema;
-pub mod helpers;
 pub mod counters;
+pub mod helpers;
+pub mod manager;
+pub mod schema;
+pub mod validation;
 
-pub use manager::ConfigManager;
-pub use validation::ConfigValidator;
-pub use schema::{ConfigSchema, ConfigField, precedence_documentation};
 pub use helpers::{get_config_or_default, reload_global_config};
+pub use manager::ConfigManager;
+pub use schema::{precedence_documentation, ConfigField, ConfigSchema};
+pub use validation::ConfigValidator;
 
 /// Main configuration structure for ArxOS
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ArxConfig {
     /// User information and preferences
     pub user: UserConfig,
@@ -134,35 +133,34 @@ pub enum ColorScheme {
 pub enum ConfigError {
     #[error("Configuration file not found: {path}")]
     FileNotFound { path: String },
-    
+
     #[error("Invalid configuration format: {message}")]
     InvalidFormat { message: String },
-    
+
     #[error("Configuration validation failed: {field} - {message}")]
     ValidationFailed { field: String, message: String },
-    
+
     #[error("Path does not exist: {path}")]
     InvalidPath { path: PathBuf },
-    
+
     #[error("Permission denied: {path}")]
     PermissionDenied { path: PathBuf },
-    
+
     #[error("Environment variable error: {var} - {message}")]
     EnvironmentError { var: String, message: String },
-    
+
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
-    
+
     #[error("TOML parsing error: {0}")]
     TomlError(#[from] toml::de::Error),
-    
+
     #[error("TOML serialization error: {0}")]
     TomlSerializeError(#[from] toml::ser::Error),
 }
 
 /// Configuration result type
 pub type ConfigResult<T> = Result<T, ConfigError>;
-
 
 impl Default for UserConfig {
     fn default() -> Self {
@@ -223,7 +221,7 @@ impl Default for UiConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_default_config_creation() {
         let config = ArxConfig::default();
@@ -231,7 +229,7 @@ mod tests {
         assert!(config.building.auto_commit);
         assert!(config.performance.show_progress);
     }
-    
+
     #[test]
     fn test_config_serialization() {
         let config = ArxConfig::default();
@@ -239,7 +237,7 @@ mod tests {
         assert!(toml.contains("name = \"ArxOS User\""));
         assert!(toml.contains("auto_commit = true"));
     }
-    
+
     #[test]
     fn test_config_deserialization() {
         let toml = r#"
@@ -273,7 +271,7 @@ mod tests {
             color_scheme = "Auto"
             detailed_help = false
         "#;
-        
+
         let config: ArxConfig = toml::from_str(toml).unwrap();
         assert_eq!(config.user.name, "Test User");
         assert!(!config.building.auto_commit);

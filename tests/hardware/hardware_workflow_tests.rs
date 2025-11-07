@@ -2,9 +2,12 @@
 //!
 //! These tests verify the complete sensor data processing workflow.
 
-use arxos::hardware::{SensorIngestionService, SensorIngestionConfig, SensorData, SensorMetadata, SensorDataValues, EquipmentStatusUpdater};
-use std::collections::HashMap;
+use arxos::hardware::{
+    EquipmentStatusUpdater, SensorData, SensorDataValues, SensorIngestionConfig,
+    SensorIngestionService, SensorMetadata,
+};
 use chrono::Utc;
+use std::collections::HashMap;
 
 #[test]
 fn test_sensor_data_structure() {
@@ -19,16 +22,22 @@ fn test_sensor_data_structure() {
         equipment_id: Some("VAV-301".to_string()),
         extra: HashMap::new(),
     };
-    
+
     let data = SensorDataValues {
         values: {
             let mut values = HashMap::new();
-            values.insert("value".to_string(), serde_yaml::Value::Number(serde_yaml::Number::from(72.5)));
-            values.insert("unit".to_string(), serde_yaml::Value::String("fahrenheit".to_string()));
+            values.insert(
+                "value".to_string(),
+                serde_yaml::Value::Number(serde_yaml::Number::from(72.5)),
+            );
+            values.insert(
+                "unit".to_string(),
+                serde_yaml::Value::String("fahrenheit".to_string()),
+            );
             values
         },
     };
-    
+
     let sensor_data = SensorData {
         api_version: "arxos.io/v1".to_string(),
         kind: "SensorData".to_string(),
@@ -37,7 +46,7 @@ fn test_sensor_data_structure() {
         alerts: vec![],
         arxos: None,
     };
-    
+
     assert_eq!(sensor_data.metadata.sensor_id, "sensor-001");
     assert_eq!(sensor_data.metadata.sensor_type, "temperature");
 }
@@ -51,9 +60,12 @@ fn test_sensor_service_creation() {
         auto_process: true,
         ..Default::default()
     };
-    
+
     let service = SensorIngestionService::new(config);
-    assert_eq!(service.config.data_directory, std::path::PathBuf::from("./test_data/sensor-data"));
+    assert_eq!(
+        service.config.data_directory,
+        std::path::PathBuf::from("./test_data/sensor-data")
+    );
 }
 
 #[test]
@@ -61,9 +73,8 @@ fn test_equipment_status_updater_creation() {
     // Test creating equipment status updater
     // Note: This will fail if building data doesn't exist, which is expected in tests
     let _updater = EquipmentStatusUpdater::new("test_building");
-    
+
     // The updater might fail to create if building data doesn't exist
     // That's okay for this test
     assert!(true, "EquipmentStatusUpdater creation attempted");
 }
-

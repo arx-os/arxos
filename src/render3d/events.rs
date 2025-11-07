@@ -62,7 +62,10 @@ pub enum Action {
 #[derive(Debug, Clone, PartialEq)]
 pub enum GameAction {
     /// Place equipment at position
-    PlaceEquipment { position: crate::spatial::Point3D, equipment_id: String },
+    PlaceEquipment {
+        position: crate::spatial::Point3D,
+        equipment_id: String,
+    },
     /// Validate equipment placement
     ValidatePlacement { equipment_id: String },
     /// Check specific constraint
@@ -142,7 +145,7 @@ impl EventHandler {
             mouse_bindings: HashMap::new(),
             config: EventConfig::default(),
         };
-        
+
         handler.setup_default_bindings();
         handler
     }
@@ -154,7 +157,7 @@ impl EventHandler {
             mouse_bindings: HashMap::new(),
             config,
         };
-        
+
         handler.setup_default_bindings();
         handler
     }
@@ -162,40 +165,92 @@ impl EventHandler {
     /// Setup default key bindings for 3D navigation
     fn setup_default_bindings(&mut self) {
         // Camera movement
-        self.key_bindings.insert(KeyCode::Up, Action::CameraMove(CameraAction::MoveUp));
-        self.key_bindings.insert(KeyCode::Down, Action::CameraMove(CameraAction::MoveDown));
-        self.key_bindings.insert(KeyCode::Left, Action::CameraMove(CameraAction::MoveLeft));
-        self.key_bindings.insert(KeyCode::Right, Action::CameraMove(CameraAction::MoveRight));
-        self.key_bindings.insert(KeyCode::Char('w'), Action::CameraMove(CameraAction::MoveForward));
-        self.key_bindings.insert(KeyCode::Char('s'), Action::CameraMove(CameraAction::MoveBackward));
-        self.key_bindings.insert(KeyCode::Char('a'), Action::CameraMove(CameraAction::RotateLeft));
-        self.key_bindings.insert(KeyCode::Char('d'), Action::CameraMove(CameraAction::RotateRight));
-        self.key_bindings.insert(KeyCode::Char('q'), Action::CameraMove(CameraAction::RotateUp));
-        self.key_bindings.insert(KeyCode::Char('e'), Action::CameraMove(CameraAction::RotateDown));
-        self.key_bindings.insert(KeyCode::Char('r'), Action::CameraMove(CameraAction::Reset));
+        self.key_bindings
+            .insert(KeyCode::Up, Action::CameraMove(CameraAction::MoveUp));
+        self.key_bindings
+            .insert(KeyCode::Down, Action::CameraMove(CameraAction::MoveDown));
+        self.key_bindings
+            .insert(KeyCode::Left, Action::CameraMove(CameraAction::MoveLeft));
+        self.key_bindings
+            .insert(KeyCode::Right, Action::CameraMove(CameraAction::MoveRight));
+        self.key_bindings.insert(
+            KeyCode::Char('w'),
+            Action::CameraMove(CameraAction::MoveForward),
+        );
+        self.key_bindings.insert(
+            KeyCode::Char('s'),
+            Action::CameraMove(CameraAction::MoveBackward),
+        );
+        self.key_bindings.insert(
+            KeyCode::Char('a'),
+            Action::CameraMove(CameraAction::RotateLeft),
+        );
+        self.key_bindings.insert(
+            KeyCode::Char('d'),
+            Action::CameraMove(CameraAction::RotateRight),
+        );
+        self.key_bindings.insert(
+            KeyCode::Char('q'),
+            Action::CameraMove(CameraAction::RotateUp),
+        );
+        self.key_bindings.insert(
+            KeyCode::Char('e'),
+            Action::CameraMove(CameraAction::RotateDown),
+        );
+        self.key_bindings
+            .insert(KeyCode::Char('r'), Action::CameraMove(CameraAction::Reset));
 
         // Zoom controls
-        self.key_bindings.insert(KeyCode::Char('+'), Action::Zoom(ZoomAction::In));
-        self.key_bindings.insert(KeyCode::Char('='), Action::Zoom(ZoomAction::In));
-        self.key_bindings.insert(KeyCode::Char('-'), Action::Zoom(ZoomAction::Out));
-        self.key_bindings.insert(KeyCode::Char('0'), Action::Zoom(ZoomAction::Reset));
+        self.key_bindings
+            .insert(KeyCode::Char('+'), Action::Zoom(ZoomAction::In));
+        self.key_bindings
+            .insert(KeyCode::Char('='), Action::Zoom(ZoomAction::In));
+        self.key_bindings
+            .insert(KeyCode::Char('-'), Action::Zoom(ZoomAction::Out));
+        self.key_bindings
+            .insert(KeyCode::Char('0'), Action::Zoom(ZoomAction::Reset));
 
         // View mode changes
-        self.key_bindings.insert(KeyCode::Char('1'), Action::ViewModeChange(ViewModeAction::Standard));
-        self.key_bindings.insert(KeyCode::Char('2'), Action::ViewModeChange(ViewModeAction::CrossSection));
-        self.key_bindings.insert(KeyCode::Char('3'), Action::ViewModeChange(ViewModeAction::Connections));
-        self.key_bindings.insert(KeyCode::Char('4'), Action::ViewModeChange(ViewModeAction::Maintenance));
-        self.key_bindings.insert(KeyCode::Char('t'), Action::ViewModeChange(ViewModeAction::ToggleRooms));
-        self.key_bindings.insert(KeyCode::Char('i'), Action::ViewModeChange(ViewModeAction::ToggleStatus));
-        self.key_bindings.insert(KeyCode::Char('c'), Action::ViewModeChange(ViewModeAction::ToggleConnections));
+        self.key_bindings.insert(
+            KeyCode::Char('1'),
+            Action::ViewModeChange(ViewModeAction::Standard),
+        );
+        self.key_bindings.insert(
+            KeyCode::Char('2'),
+            Action::ViewModeChange(ViewModeAction::CrossSection),
+        );
+        self.key_bindings.insert(
+            KeyCode::Char('3'),
+            Action::ViewModeChange(ViewModeAction::Connections),
+        );
+        self.key_bindings.insert(
+            KeyCode::Char('4'),
+            Action::ViewModeChange(ViewModeAction::Maintenance),
+        );
+        self.key_bindings.insert(
+            KeyCode::Char('t'),
+            Action::ViewModeChange(ViewModeAction::ToggleRooms),
+        );
+        self.key_bindings.insert(
+            KeyCode::Char('i'),
+            Action::ViewModeChange(ViewModeAction::ToggleStatus),
+        );
+        self.key_bindings.insert(
+            KeyCode::Char('c'),
+            Action::ViewModeChange(ViewModeAction::ToggleConnections),
+        );
 
         // Floor navigation
-        self.key_bindings.insert(KeyCode::PageUp, Action::FloorChange(1));
-        self.key_bindings.insert(KeyCode::PageDown, Action::FloorChange(-1));
+        self.key_bindings
+            .insert(KeyCode::PageUp, Action::FloorChange(1));
+        self.key_bindings
+            .insert(KeyCode::PageDown, Action::FloorChange(-1));
 
         // Quit
-        self.key_bindings.insert(KeyCode::Esc, Action::CameraMove(CameraAction::Reset));
-        self.key_bindings.insert(KeyCode::Char('q'), Action::CameraMove(CameraAction::Reset));
+        self.key_bindings
+            .insert(KeyCode::Esc, Action::CameraMove(CameraAction::Reset));
+        self.key_bindings
+            .insert(KeyCode::Char('q'), Action::CameraMove(CameraAction::Reset));
     }
 
     /// Add custom key binding
@@ -220,7 +275,10 @@ impl EventHandler {
                 if let Some(action) = self.key_bindings.get(&key_event.code) {
                     Some(InteractiveEvent::Action(action.clone()))
                 } else {
-                    Some(InteractiveEvent::KeyPress(key_event.code, key_event.modifiers))
+                    Some(InteractiveEvent::KeyPress(
+                        key_event.code,
+                        key_event.modifiers,
+                    ))
                 }
             }
             Event::Mouse(mouse_event) if self.config.enable_mouse => {
@@ -249,22 +307,22 @@ impl EventHandler {
                 }
             }
             MouseEventKind::Up(_) => None, // Ignore mouse up events
-            MouseEventKind::Drag(_button) => {
-                Some(InteractiveEvent::MouseMove(MouseMoveEvent {
-                    x: mouse_event.column as usize,
-                    y: mouse_event.row as usize,
-                    modifiers: mouse_event.modifiers,
-                }))
+            MouseEventKind::Drag(_button) => Some(InteractiveEvent::MouseMove(MouseMoveEvent {
+                x: mouse_event.column as usize,
+                y: mouse_event.row as usize,
+                modifiers: mouse_event.modifiers,
+            })),
+            MouseEventKind::Moved => Some(InteractiveEvent::MouseMove(MouseMoveEvent {
+                x: mouse_event.column as usize,
+                y: mouse_event.row as usize,
+                modifiers: mouse_event.modifiers,
+            })),
+            MouseEventKind::ScrollUp => {
+                Some(InteractiveEvent::Action(Action::Zoom(ZoomAction::In)))
             }
-            MouseEventKind::Moved => {
-                Some(InteractiveEvent::MouseMove(MouseMoveEvent {
-                    x: mouse_event.column as usize,
-                    y: mouse_event.row as usize,
-                    modifiers: mouse_event.modifiers,
-                }))
+            MouseEventKind::ScrollDown => {
+                Some(InteractiveEvent::Action(Action::Zoom(ZoomAction::Out)))
             }
-            MouseEventKind::ScrollUp => Some(InteractiveEvent::Action(Action::Zoom(ZoomAction::In))),
-            MouseEventKind::ScrollDown => Some(InteractiveEvent::Action(Action::Zoom(ZoomAction::Out))),
             MouseEventKind::ScrollLeft | MouseEventKind::ScrollRight => None, // Ignore horizontal scroll
         }
     }
@@ -284,19 +342,19 @@ impl EventHandler {
         let mut help = String::new();
         help.push_str("Interactive 3D Controls:\n");
         help.push_str("======================\n\n");
-        
+
         help.push_str("Camera Movement:\n");
         help.push_str("  Arrow Keys    - Move camera\n");
         help.push_str("  W/S           - Move forward/backward\n");
         help.push_str("  A/D           - Rotate left/right\n");
         help.push_str("  Q/E           - Rotate up/down\n");
         help.push_str("  R             - Reset camera\n\n");
-        
+
         help.push_str("Zoom Controls:\n");
         help.push_str("  +/-           - Zoom in/out\n");
         help.push_str("  0             - Reset zoom\n");
         help.push_str("  Mouse Wheel   - Zoom in/out\n\n");
-        
+
         help.push_str("View Modes:\n");
         help.push_str("  1             - Standard view\n");
         help.push_str("  2             - Cross-section view\n");
@@ -305,12 +363,12 @@ impl EventHandler {
         help.push_str("  T             - Toggle rooms\n");
         help.push_str("  I             - Toggle status indicators\n");
         help.push_str("  C             - Toggle connections\n\n");
-        
+
         help.push_str("Navigation:\n");
         help.push_str("  Page Up/Down  - Change floors\n");
         help.push_str("  Mouse Click    - Select equipment\n");
         help.push_str("  ESC/Q          - Quit interactive mode\n\n");
-        
+
         help
     }
 }
@@ -347,18 +405,20 @@ mod tests {
     #[test]
     fn test_key_binding_processing() {
         let handler = EventHandler::new();
-        
+
         let key_event = Event::Key(KeyEvent {
             code: KeyCode::Up,
             modifiers: KeyModifiers::empty(),
             kind: crossterm::event::KeyEventKind::Press,
             state: crossterm::event::KeyEventState::empty(),
         });
-        
+
         let interactive_event = handler.process_event(key_event);
         assert!(interactive_event.is_some());
-        
-        if let Some(InteractiveEvent::Action(Action::CameraMove(CameraAction::MoveUp))) = interactive_event {
+
+        if let Some(InteractiveEvent::Action(Action::CameraMove(CameraAction::MoveUp))) =
+            interactive_event
+        {
             // Correct action
         } else {
             panic!("Expected MoveUp action");
@@ -368,19 +428,22 @@ mod tests {
     #[test]
     fn test_custom_key_binding() {
         let mut handler = EventHandler::new();
-        
-        handler.add_key_binding(KeyCode::Char('x'), Action::EquipmentSelect("test".to_string()));
-        
+
+        handler.add_key_binding(
+            KeyCode::Char('x'),
+            Action::EquipmentSelect("test".to_string()),
+        );
+
         let key_event = Event::Key(KeyEvent {
             code: KeyCode::Char('x'),
             modifiers: KeyModifiers::empty(),
             kind: crossterm::event::KeyEventKind::Press,
             state: crossterm::event::KeyEventState::empty(),
         });
-        
+
         let interactive_event = handler.process_event(key_event);
         assert!(interactive_event.is_some());
-        
+
         if let Some(InteractiveEvent::Action(Action::EquipmentSelect(id))) = interactive_event {
             assert_eq!(id, "test");
         } else {
@@ -392,7 +455,7 @@ mod tests {
     fn test_help_text_generation() {
         let handler = EventHandler::new();
         let help_text = handler.get_help_text();
-        
+
         assert!(help_text.contains("Interactive 3D Controls"));
         assert!(help_text.contains("Arrow Keys"));
         assert!(help_text.contains("W/S"));

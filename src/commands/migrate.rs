@@ -5,10 +5,10 @@
 
 use crate::domain::ArxAddress;
 use crate::persistence::PersistenceManager;
-use crate::utils::loading;
 use crate::spatial::grid::to_address::infer_room_from_grid;
-use std::path::Path;
+use crate::utils::loading;
 use glob::glob;
+use std::path::Path;
 
 /// Migrate existing fixtures to include ArxAddress
 ///
@@ -24,7 +24,7 @@ use glob::glob;
 /// Returns `Ok(())` if migration completes successfully, or an error if migration fails.
 pub fn handle_migrate_address(dry_run: bool) -> Result<(), Box<dyn std::error::Error>> {
     println!("🔄 Migrating existing fixtures to ArxAddress format");
-    
+
     if dry_run {
         println!("   (DRY RUN - no changes will be made)");
     }
@@ -68,9 +68,7 @@ pub fn handle_migrate_address(dry_run: bool) -> Result<(), Box<dyn std::error::E
 fn migrate_file(file_path: &Path, dry_run: bool) -> Result<(), Box<dyn std::error::Error>> {
     println!("📄 Processing: {}", file_path.display());
 
-    let building_data = loading::load_building_data(
-        file_path.to_str().unwrap_or("")
-    )?;
+    let building_data = loading::load_building_data(file_path.to_str().unwrap_or(""))?;
 
     let mut modified = false;
     let building_name = building_data.building.name.clone();
@@ -91,7 +89,7 @@ fn migrate_file(file_path: &Path, dry_run: bool) -> Result<(), Box<dyn std::erro
             let equipment_properties = equipment.properties.clone();
             let equipment_type_str = format!("{:?}", equipment.equipment_type);
             let equipment_id = equipment.id.clone();
-            
+
             if let Some(addr) = infer_address_from_equipment_data(
                 &equipment_path,
                 &equipment_properties,
@@ -101,7 +99,10 @@ fn migrate_file(file_path: &Path, dry_run: bool) -> Result<(), Box<dyn std::erro
                 floor_level,
             )? {
                 if dry_run {
-                    println!("   Would add address {} to equipment: {}", addr.path, equipment.name);
+                    println!(
+                        "   Would add address {} to equipment: {}",
+                        addr.path, equipment.name
+                    );
                 } else {
                     // Validate before assigning
                     addr.validate()?;
@@ -110,7 +111,10 @@ fn migrate_file(file_path: &Path, dry_run: bool) -> Result<(), Box<dyn std::erro
                     println!("   ✓ Added address to equipment: {}", equipment.name);
                 }
             } else {
-                println!("   ⚠️  Could not infer address for equipment: {}", equipment.name);
+                println!(
+                    "   ⚠️  Could not infer address for equipment: {}",
+                    equipment.name
+                );
             }
         }
     }
@@ -149,7 +153,7 @@ fn infer_address_from_equipment_data(
         // Build address from available data
         let building_name_sanitized = building_name.to_lowercase().replace(" ", "-");
         let floor_str = format!("floor-{:02}", floor_level);
-        
+
         // Infer fixture type from equipment type
         let fixture_type = match equipment_type.to_lowercase().as_str() {
             "hvac" => "boiler",
@@ -157,7 +161,7 @@ fn infer_address_from_equipment_data(
             "electrical" => "panel",
             _ => "equipment",
         };
-        
+
         // Use ID or generate a simple one
         let fixture_id = if let Some(id_suffix) = equipment_id.split('-').next_back() {
             format!("{}-{}", fixture_type, id_suffix)
@@ -166,13 +170,15 @@ fn infer_address_from_equipment_data(
         };
 
         let addr = ArxAddress::new(
-            "usa", "ny", "brooklyn", // Defaults - could be improved with config
+            "usa",
+            "ny",
+            "brooklyn", // Defaults - could be improved with config
             &building_name_sanitized,
             &floor_str,
             &room_name.to_lowercase().replace(" ", "-"),
             &fixture_id,
         );
-        
+
         // Validate the generated address
         addr.validate()?;
         Ok(Some(addr))
@@ -185,13 +191,12 @@ fn infer_address_from_equipment_data(
 fn extract_room_from_path(path: &str) -> Option<String> {
     // Try to parse /BUILDING/{building}/FLOOR/{floor}/ROOM/{room}/... format
     let parts: Vec<&str> = path.split('/').collect();
-    
+
     for (i, part) in parts.iter().enumerate() {
         if *part == "ROOM" && i + 1 < parts.len() {
             return Some(parts[i + 1].to_string());
         }
     }
-    
+
     None
 }
-

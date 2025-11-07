@@ -3,11 +3,11 @@
 //! Educational mode for learning from historical PRs with expert commentary,
 //! tutorials, and best practice examples.
 
-use std::path::Path;
-use crate::game::types::{GameMode, GameScenario};
 use crate::game::scenario::GameScenarioLoader;
 use crate::game::state::GameState;
+use crate::game::types::{GameMode, GameScenario};
 use log::info;
+use std::path::Path;
 
 /// Learning mode with educational features
 pub struct LearningMode {
@@ -93,7 +93,9 @@ impl LearningMode {
     }
 
     /// Load expert commentary from YAML
-    fn load_commentary(commentary_path: &Path) -> Result<Vec<ExpertCommentary>, Box<dyn std::error::Error>> {
+    fn load_commentary(
+        commentary_path: &Path,
+    ) -> Result<Vec<ExpertCommentary>, Box<dyn std::error::Error>> {
         let content = std::fs::read_to_string(commentary_path)?;
         let data: serde_yaml::Value = serde_yaml::from_str(&content)?;
 
@@ -101,7 +103,8 @@ impl LearningMode {
 
         if let Some(comments) = data.get("commentary").and_then(|c| c.as_sequence()) {
             for comment_data in comments {
-                let category_str = comment_data.get("category")
+                let category_str = comment_data
+                    .get("category")
                     .and_then(|c| c.as_str())
                     .unwrap_or("GeneralTip");
 
@@ -116,19 +119,23 @@ impl LearningMode {
                 };
 
                 commentary.push(ExpertCommentary {
-                    equipment_id: comment_data.get("equipment_id")
+                    equipment_id: comment_data
+                        .get("equipment_id")
                         .and_then(|e| e.as_str())
                         .map(|s| s.to_string()),
-                    title: comment_data.get("title")
+                    title: comment_data
+                        .get("title")
                         .and_then(|t| t.as_str())
                         .unwrap_or("Expert Tip")
                         .to_string(),
-                    content: comment_data.get("content")
+                    content: comment_data
+                        .get("content")
                         .and_then(|c| c.as_str())
                         .unwrap_or("")
                         .to_string(),
                     category,
-                    timestamp: comment_data.get("timestamp")
+                    timestamp: comment_data
+                        .get("timestamp")
                         .and_then(|t| t.as_str())
                         .map(|s| s.to_string()),
                 });
@@ -178,7 +185,9 @@ impl LearningMode {
     }
 
     /// Load tutorials from YAML
-    fn load_tutorials(tutorial_path: &Path) -> Result<Vec<TutorialStep>, Box<dyn std::error::Error>> {
+    fn load_tutorials(
+        tutorial_path: &Path,
+    ) -> Result<Vec<TutorialStep>, Box<dyn std::error::Error>> {
         let content = std::fs::read_to_string(tutorial_path)?;
         let data: serde_yaml::Value = serde_yaml::from_str(&content)?;
 
@@ -186,21 +195,26 @@ impl LearningMode {
 
         if let Some(steps) = data.get("tutorial_steps").and_then(|s| s.as_sequence()) {
             for (idx, step_data) in steps.iter().enumerate() {
-                let instructions: Vec<String> = step_data.get("instructions")
+                let instructions: Vec<String> = step_data
+                    .get("instructions")
                     .and_then(|i| i.as_sequence())
-                    .map(|seq| seq.iter()
-                        .filter_map(|v| v.as_str())
-                        .map(|s| s.to_string())
-                        .collect())
+                    .map(|seq| {
+                        seq.iter()
+                            .filter_map(|v| v.as_str())
+                            .map(|s| s.to_string())
+                            .collect()
+                    })
                     .unwrap_or_default();
 
                 tutorials.push(TutorialStep {
                     step_number: idx + 1,
-                    title: step_data.get("title")
+                    title: step_data
+                        .get("title")
                         .and_then(|t| t.as_str())
                         .unwrap_or(&format!("Step {}", idx + 1))
                         .to_string(),
-                    description: step_data.get("description")
+                    description: step_data
+                        .get("description")
                         .and_then(|d| d.as_str())
                         .unwrap_or("")
                         .to_string(),
@@ -254,8 +268,14 @@ impl LearningMode {
 
     /// Get expert commentary for equipment
     pub fn get_commentary_for_equipment(&self, equipment_id: &str) -> Vec<&ExpertCommentary> {
-        self.expert_commentary.iter()
-            .filter(|c| c.equipment_id.as_ref().map(|id| id == equipment_id).unwrap_or(false))
+        self.expert_commentary
+            .iter()
+            .filter(|c| {
+                c.equipment_id
+                    .as_ref()
+                    .map(|id| id == equipment_id)
+                    .unwrap_or(false)
+            })
             .collect()
     }
 
@@ -265,8 +285,12 @@ impl LearningMode {
     }
 
     /// Get commentary by category
-    pub fn get_commentary_by_category(&self, category: CommentaryCategory) -> Vec<&ExpertCommentary> {
-        self.expert_commentary.iter()
+    pub fn get_commentary_by_category(
+        &self,
+        category: CommentaryCategory,
+    ) -> Vec<&ExpertCommentary> {
+        self.expert_commentary
+            .iter()
             .filter(|c| c.category == category)
             .collect()
     }
@@ -295,4 +319,3 @@ impl LearningMode {
         &self.scenario
     }
 }
-

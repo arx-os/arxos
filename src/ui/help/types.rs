@@ -88,10 +88,10 @@ mod tests {
     fn test_help_system_toggle_overlay() {
         let mut system = HelpSystem::new(HelpContext::General);
         assert!(!system.show_overlay);
-        
+
         system.toggle_overlay();
         assert!(system.show_overlay);
-        
+
         system.toggle_overlay();
         assert!(!system.show_overlay);
     }
@@ -100,10 +100,10 @@ mod tests {
     fn test_help_system_toggle_cheat_sheet() {
         let mut system = HelpSystem::new(HelpContext::General);
         assert!(!system.show_cheat_sheet);
-        
+
         system.toggle_cheat_sheet();
         assert!(system.show_cheat_sheet);
-        
+
         system.toggle_cheat_sheet();
         assert!(!system.show_cheat_sheet);
     }
@@ -112,10 +112,10 @@ mod tests {
     fn test_help_system_set_context() {
         let mut system = HelpSystem::new(HelpContext::General);
         assert_eq!(system.current_context, HelpContext::General);
-        
+
         system.set_context(HelpContext::EquipmentBrowser);
         assert_eq!(system.current_context, HelpContext::EquipmentBrowser);
-        
+
         system.set_context(HelpContext::CommandPalette);
         assert_eq!(system.current_context, HelpContext::CommandPalette);
     }
@@ -134,4 +134,3 @@ mod tests {
         assert_ne!(ShortcutCategory::Views, ShortcutCategory::Filters);
     }
 }
-

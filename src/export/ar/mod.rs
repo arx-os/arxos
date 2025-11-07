@@ -1,15 +1,15 @@
 //! AR export functionality for ArxOS
-//! 
+//!
 //! This module provides AR format export capabilities including glTF and USDZ.
 
+pub mod anchor;
 pub mod gltf;
 pub mod usdz;
-pub mod anchor;
 
 // Re-export types
+pub use anchor::{export_anchors_to_json, import_anchors_from_json, SpatialAnchor};
 pub use gltf::GLTFExporter;
 pub use usdz::USDZExporter;
-pub use anchor::{SpatialAnchor, export_anchors_to_json, import_anchors_from_json};
 
 use crate::yaml::BuildingData;
 use std::path::Path;
@@ -54,9 +54,13 @@ impl ARExporter {
     pub fn new(building_data: BuildingData) -> Self {
         Self { building_data }
     }
-    
+
     /// Export building to AR format
-    pub fn export(&self, format: ARFormat, output: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn export(
+        &self,
+        format: ARFormat,
+        output: &Path,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         match format {
             ARFormat::GLTF => {
                 let exporter = GLTFExporter::new(&self.building_data);
@@ -73,13 +77,13 @@ impl ARExporter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_ar_format_display() {
         assert_eq!(ARFormat::GLTF.to_string(), "gltf");
         assert_eq!(ARFormat::USDZ.to_string(), "usdz");
     }
-    
+
     #[test]
     fn test_ar_format_from_str() {
         assert_eq!("gltf".parse::<ARFormat>(), Ok(ARFormat::GLTF));
@@ -87,4 +91,3 @@ mod tests {
         assert!("invalid".parse::<ARFormat>().is_err());
     }
 }
-

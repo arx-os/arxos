@@ -1,13 +1,13 @@
 //! Game command handlers for gamified PR review and planning
 
-use std::path::Path;
-use crate::game::pr_game::PRReviewGame;
-use crate::game::planning::PlanningGame;
 use crate::game::export::export_game_to_ifc;
+use crate::game::planning::PlanningGame;
+use crate::game::pr_game::PRReviewGame;
 use crate::render3d::interactive::InteractiveRenderer;
-use crate::render3d::{Render3DConfig, ProjectionType, ViewAngle};
+use crate::render3d::{ProjectionType, Render3DConfig, ViewAngle};
 use crate::utils::loading::load_building_data;
 use log::info;
+use std::path::Path;
 
 /// Game command configuration
 #[derive(Debug, Clone)]
@@ -62,9 +62,15 @@ pub fn handle_game_review(
     println!("╠════════════════════════════════════════════════════════════╣");
     println!("║ Total Items:        {:<42} ║", summary.total_items);
     println!("║ Valid Items:        {:<42} ║", summary.valid_items);
-    println!("║ Items with Issues:  {:<42} ║", summary.items_with_violations);
+    println!(
+        "║ Items with Issues:  {:<42} ║",
+        summary.items_with_violations
+    );
     println!("║ Total Violations:   {:<42} ║", summary.total_violations);
-    println!("║ Critical Issues:    {:<42} ║", summary.critical_violations);
+    println!(
+        "║ Critical Issues:    {:<42} ║",
+        summary.critical_violations
+    );
     println!("╚════════════════════════════════════════════════════════════╝");
 
     // Export to IFC if requested
@@ -99,7 +105,7 @@ pub fn handle_game_review(
             render_config,
             crate::render3d::interactive::InteractiveConfig::default(),
         )?;
-        
+
         // Start game mode in renderer
         renderer.start_game_mode(review_game.game_state().clone());
 
@@ -154,7 +160,7 @@ pub fn handle_game_plan(
             render_config,
             crate::render3d::interactive::InteractiveConfig::default(),
         )?;
-        
+
         // Start game mode in renderer
         renderer.start_game_mode(planning_game.game_state().clone());
 
@@ -215,16 +221,21 @@ pub fn handle_game_learn(
     // Create learning mode
     use crate::game::learning::LearningMode;
     let learning_mode = LearningMode::from_pr(&pr_id, &pr_dir_path)?;
-    
+
     // Display learning information
     let commentary = learning_mode.get_all_commentary();
     let tutorials = learning_mode.get_tutorials();
-    
+
     println!("\n📚 Expert Commentary Available: {}", commentary.len());
     for (idx, comment) in commentary.iter().take(3).enumerate() {
-        println!("   {}. {} - {}", idx + 1, comment.title, comment.content.chars().take(60).collect::<String>());
+        println!(
+            "   {}. {} - {}",
+            idx + 1,
+            comment.title,
+            comment.content.chars().take(60).collect::<String>()
+        );
     }
-    
+
     println!("\n📖 Tutorial Steps: {}", tutorials.len());
     for tutorial in tutorials {
         println!("   {}: {}", tutorial.step_number, tutorial.title);
@@ -236,7 +247,10 @@ pub fn handle_game_learn(
     println!("╠════════════════════════════════════════════════════════════╣");
     println!("║ PR ID: {:<52} ║", pr_id);
     println!("║ Objective: {:<49} ║", scenario.objective);
-    println!("║ Equipment Items: {:<43} ║", scenario.equipment_items.len());
+    println!(
+        "║ Equipment Items: {:<43} ║",
+        scenario.equipment_items.len()
+    );
     println!("╚════════════════════════════════════════════════════════════╝");
 
     println!("\n📚 This is a learning scenario. Study the equipment placements");
@@ -269,4 +283,3 @@ pub fn handle_game_learn(
 
     Ok(())
 }
-

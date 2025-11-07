@@ -1,7 +1,9 @@
 // Render command handlers
 // Handles 2D and 3D building visualization
 
-use crate::render3d::{ProjectionType, ViewAngle, Render3DConfig, Building3DRenderer, format_scene_output};
+use crate::render3d::{
+    format_scene_output, Building3DRenderer, ProjectionType, Render3DConfig, ViewAngle,
+};
 use crate::utils::loading::load_building_data;
 use log::{info, warn};
 
@@ -51,8 +53,14 @@ pub fn handle_render(config: RenderCommandConfig) -> Result<(), Box<dyn std::err
             "orthographic" => ProjectionType::Orthographic,
             "perspective" => ProjectionType::Perspective,
             _ => {
-                warn!("⚠️ Unknown projection type '{}', using isometric", config.projection);
-                println!("⚠️ Unknown projection type '{}', using isometric", config.projection);
+                warn!(
+                    "⚠️ Unknown projection type '{}', using isometric",
+                    config.projection
+                );
+                println!(
+                    "⚠️ Unknown projection type '{}', using isometric",
+                    config.projection
+                );
                 ProjectionType::Isometric
             }
         };
@@ -64,8 +72,14 @@ pub fn handle_render(config: RenderCommandConfig) -> Result<(), Box<dyn std::err
             "side" => ViewAngle::Side,
             "isometric" => ViewAngle::Isometric,
             _ => {
-                warn!("⚠️ Unknown view angle '{}', using isometric", config.view_angle);
-                println!("⚠️ Unknown view angle '{}', using isometric", config.view_angle);
+                warn!(
+                    "⚠️ Unknown view angle '{}', using isometric",
+                    config.view_angle
+                );
+                println!(
+                    "⚠️ Unknown view angle '{}', using isometric",
+                    config.view_angle
+                );
                 ViewAngle::Isometric
             }
         };
@@ -113,7 +127,11 @@ pub fn handle_render(config: RenderCommandConfig) -> Result<(), Box<dyn std::err
                 println!("{}", advanced_output);
             }
             _ => {
-                return Err(format!("Unsupported format: {}. Supported formats: ascii, advanced, json, yaml", config.format).into());
+                return Err(format!(
+                    "Unsupported format: {}. Supported formats: ascii, advanced, json, yaml",
+                    config.format
+                )
+                .into());
             }
         }
     } else {
@@ -138,4 +156,3 @@ pub fn handle_render(config: RenderCommandConfig) -> Result<(), Box<dyn std::err
     println!("✅ Rendering completed");
     Ok(())
 }
-

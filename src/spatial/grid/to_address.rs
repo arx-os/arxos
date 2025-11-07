@@ -53,18 +53,16 @@ pub fn infer_room_from_grid(grid: &str) -> Result<String> {
 /// * Next available ID number
 pub fn next_id(room: &str, typ: &str) -> Result<u32> {
     use crate::config::counters::CounterStorage;
-    
-    let mut storage = CounterStorage::load()
-        .unwrap_or_else(|_| CounterStorage::default());
-    
+
+    let mut storage = CounterStorage::load().unwrap_or_else(|_| CounterStorage::default());
+
     let id = storage.next_id(room, typ)?;
-    
+
     // Save after incrementing
-    storage.save()
-        .unwrap_or_else(|e| {
-            eprintln!("Warning: Failed to save counters: {}", e);
-        });
-    
+    storage.save().unwrap_or_else(|e| {
+        eprintln!("Warning: Failed to save counters: {}", e);
+    });
+
     Ok(id)
 }
 
@@ -153,7 +151,9 @@ mod tests {
             "fridge",
         )
         .unwrap();
-        assert_eq!(addr.path, "/usa/ca/san-francisco/office-building/floor-01/kitchen/fridge-01");
+        assert_eq!(
+            addr.path,
+            "/usa/ca/san-francisco/office-building/floor-01/kitchen/fridge-01"
+        );
     }
 }
-

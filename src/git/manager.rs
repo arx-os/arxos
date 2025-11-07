@@ -1,12 +1,12 @@
 // Real Git operations for ArxOS
-use git2::Repository;
-use serde::{Serialize, Deserialize};
-use crate::yaml::{BuildingData, BuildingYamlSerializer};
-use super::repository::initialize_repository;
-use super::export::export_building;
 use super::commit::{commit_staged, commit_staged_with_user};
-use super::diff::{get_status, get_diff, get_diff_stats, get_file_history, list_commits};
-use super::staging::{stage_file, stage_all, unstage_file, unstage_all};
+use super::diff::{get_diff, get_diff_stats, get_file_history, get_status, list_commits};
+use super::export::export_building;
+use super::repository::initialize_repository;
+use super::staging::{stage_all, stage_file, unstage_all, unstage_file};
+use crate::yaml::{BuildingData, BuildingYamlSerializer};
+use git2::Repository;
+use serde::{Deserialize, Serialize};
 
 /// Git repository manager for building data version control
 ///
@@ -94,14 +94,17 @@ impl BuildingGitManager {
             &self.git_config,
             metadata,
         );
-        
+
         if let Err(ref err) = result {
             use crate::error::analytics::ErrorAnalyticsManager;
             let git_err = err.clone();
             let arx_err: crate::error::ArxError = git_err.into();
-            ErrorAnalyticsManager::record_global_error(&arx_err, Some("export_building_with_metadata".to_string()));
+            ErrorAnalyticsManager::record_global_error(
+                &arx_err,
+                Some("export_building_with_metadata".to_string()),
+            );
         }
-        
+
         result
     }
 
@@ -119,9 +122,13 @@ impl BuildingGitManager {
     pub fn get_file_history(&self, file_path: &str) -> Result<Vec<super::CommitInfo>, GitError> {
         get_file_history(&self.repo, file_path)
     }
-    
+
     /// Get diff between commits
-    pub fn get_diff(&self, commit_hash: Option<&str>, file_path: Option<&str>) -> Result<super::DiffResult, GitError> {
+    pub fn get_diff(
+        &self,
+        commit_hash: Option<&str>,
+        file_path: Option<&str>,
+    ) -> Result<super::DiffResult, GitError> {
         get_diff(&self.repo, commit_hash, file_path)
     }
 
@@ -153,7 +160,7 @@ impl BuildingGitManager {
     /// Commit staged changes
     pub fn commit_staged(&mut self, message: &str) -> Result<String, GitError> {
         let result = commit_staged(&mut self.repo, &self.git_config, message);
-        
+
         // Record to error analytics if failed
         if let Err(ref err) = result {
             use crate::error::analytics::ErrorAnalyticsManager;
@@ -161,12 +168,15 @@ impl BuildingGitManager {
             let arx_err: crate::error::ArxError = git_err.into();
             ErrorAnalyticsManager::record_global_error(&arx_err, Some("commit_staged".to_string()));
         }
-        
+
         result
     }
 
     /// Commit staged changes with user attribution
-    pub fn commit_staged_with_user(&mut self, metadata: &CommitMetadata) -> Result<String, GitError> {
+    pub fn commit_staged_with_user(
+        &mut self,
+        metadata: &CommitMetadata,
+    ) -> Result<String, GitError> {
         commit_staged_with_user(&mut self.repo, &self.git_config, metadata)
     }
 }
@@ -179,22 +189,22 @@ impl BuildingGitManager {
 pub enum GitError {
     #[error("Git repository error: {0}")]
     GitError(String),
-    
+
     #[error("IO error: {0}")]
     IoError(String),
-    
+
     #[error("Serialization error: {0}")]
     SerializationError(String),
-    
+
     #[error("Generic error: {0}")]
     Generic(String),
-    
+
     #[error("Repository not found: {path}")]
     RepositoryNotFound { path: String },
-    
+
     #[error("Invalid configuration: {reason}")]
     InvalidConfig { reason: String },
-    
+
     #[error("Git operation failed: {operation} - {reason}")]
     OperationFailed { operation: String, reason: String },
 }
@@ -232,14 +242,14 @@ impl GitConfigManager {
     }
 
     /// Load Git configuration from ArxConfig or environment variables
-    /// 
+    ///
     /// Priority order:
     /// 1. Environment variables (GIT_AUTHOR_NAME, GIT_AUTHOR_EMAIL)
     /// 2. ArxConfig user settings
     /// 3. Default config
     pub fn load_from_arx_config_or_env() -> GitConfig {
         use std::env;
-        
+
         // Check environment variables first
         let author_name = env::var("GIT_AUTHOR_NAME")
             .or_else(|_| env::var("ARX_USER_NAME"))
@@ -248,7 +258,7 @@ impl GitConfigManager {
                 // Use helper function for consistent config access
                 crate::config::get_config_or_default().user.name.clone()
             });
-        
+
         let author_email = env::var("GIT_AUTHOR_EMAIL")
             .or_else(|_| env::var("ARX_USER_EMAIL"))
             .unwrap_or_else(|_| {
@@ -257,7 +267,7 @@ impl GitConfigManager {
                 // Use helper function for consistent config access
                 crate::config::get_config_or_default().user.email.clone()
             });
-        
+
         GitConfig {
             author_name,
             author_email,
@@ -290,13 +300,10 @@ mod tests {
     fn test_git_manager_creation() {
         let temp_dir = TempDir::new().unwrap();
         let config = GitConfigManager::default_config();
-        
-        let manager = BuildingGitManager::new(
-            temp_dir.path().to_str().unwrap(),
-            "Test Building",
-            config,
-        );
-        
+
+        let manager =
+            BuildingGitManager::new(temp_dir.path().to_str().unwrap(), "Test Building", config);
+
         // The manager creation should succeed
         match manager {
             Ok(_) => {
@@ -325,17 +332,18 @@ mod tests {
             branch: "main".to_string(),
             remote_url: None,
         };
-        
+
         let mut manager = BuildingGitManager::new(
             temp_dir.path().to_str().unwrap(),
             "Test Building",
             custom_config.clone(),
-        ).unwrap();
-        
+        )
+        .unwrap();
+
         // Create a minimal building data for testing
         use crate::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
         use chrono::Utc;
-        
+
         let building_data = BuildingData {
             building: BuildingInfo {
                 id: "test-1".to_string(),
@@ -358,17 +366,19 @@ mod tests {
             floors: vec![],
             coordinate_systems: vec![],
         };
-        
+
         // Export building (this will create a commit)
-        let result = manager.export_building(&building_data, Some("Test commit")).unwrap();
-        
+        let result = manager
+            .export_building(&building_data, Some("Test commit"))
+            .unwrap();
+
         // Verify commit was created
         assert!(!result.commit_id.is_empty());
-        
+
         // Get the commit and verify it uses the configured author
         let status = manager.get_status().unwrap();
         assert_eq!(status.last_commit_message, "Test commit");
-        
+
         // Verify commit author matches config
         let commits = manager.list_commits(1).unwrap();
         if let Some(commit) = commits.first() {

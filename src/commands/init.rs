@@ -1,9 +1,11 @@
 //! Init command handler for creating new buildings from scratch
 
-use crate::yaml::{BuildingData, BuildingInfo, BuildingMetadata, BuildingYamlSerializer, CoordinateSystemInfo};
 use crate::spatial::Point3D;
-use uuid::Uuid;
+use crate::yaml::{
+    BuildingData, BuildingInfo, BuildingMetadata, BuildingYamlSerializer, CoordinateSystemInfo,
+};
 use chrono::Utc;
+use uuid::Uuid;
 
 /// Configuration for init command
 #[derive(Debug, Clone)]
@@ -20,32 +22,38 @@ pub struct InitConfig {
 /// Handle the init command
 pub fn handle_init(config: InitConfig) -> Result<(), Box<dyn std::error::Error>> {
     println!("🏗️  Initializing new building: {}", config.name);
-    
+
     // Validate building name
     validate_building_name(&config.name)?;
-    
+
     // Create minimal building data
     let building_data = create_minimal_building(&config)?;
-    
+
     // Generate output filename
     let output_file = generate_output_filename(&config.name);
-    
+
     // Write to file
     let serializer = BuildingYamlSerializer::new();
     serializer.write_to_file(&building_data, &output_file)?;
-    
+
     println!("✅ Created building file: {}", output_file);
     println!("   Building ID: {}", building_data.building.id);
-    println!("   Created: {}", building_data.building.created_at.format("%Y-%m-%d %H:%M:%S"));
-    
+    println!(
+        "   Created: {}",
+        building_data
+            .building
+            .created_at
+            .format("%Y-%m-%d %H:%M:%S")
+    );
+
     // Initialize Git if requested
     if config.git_init || config.commit {
         initialize_git_for_building(&output_file, &building_data, &config)?;
     }
-    
+
     // Provide next steps
     print_next_steps(&config.name, &output_file);
-    
+
     Ok(())
 }
 
@@ -54,23 +62,25 @@ pub fn validate_building_name(name: &str) -> Result<(), Box<dyn std::error::Erro
     if name.trim().is_empty() {
         return Err("Building name cannot be empty".into());
     }
-    
+
     if name.len() > 100 {
         return Err("Building name too long (max 100 characters)".into());
     }
-    
+
     if name.contains('\0') || name.contains('/') {
         return Err("Building name contains invalid characters".into());
     }
-    
+
     Ok(())
 }
 
 /// Create minimal building data structure
-fn create_minimal_building(config: &InitConfig) -> Result<BuildingData, Box<dyn std::error::Error>> {
+fn create_minimal_building(
+    config: &InitConfig,
+) -> Result<BuildingData, Box<dyn std::error::Error>> {
     let now = Utc::now();
     let building_id = Uuid::new_v4().to_string();
-    
+
     // Build description from available metadata
     let description = if let Some(ref desc) = config.description {
         Some(desc.clone())
@@ -79,7 +89,7 @@ fn create_minimal_building(config: &InitConfig) -> Result<BuildingData, Box<dyn 
     } else {
         Some("Building created via arxos init".to_string())
     };
-    
+
     let building_info = BuildingInfo {
         id: building_id.clone(),
         name: config.name.clone(),
@@ -89,7 +99,7 @@ fn create_minimal_building(config: &InitConfig) -> Result<BuildingData, Box<dyn 
         version: "1.0.0".to_string(),
         global_bounding_box: None,
     };
-    
+
     let metadata = BuildingMetadata {
         source_file: None,
         parser_version: "ArxOS v2.0".to_string(),
@@ -99,7 +109,7 @@ fn create_minimal_building(config: &InitConfig) -> Result<BuildingData, Box<dyn 
         units: config.units.clone(),
         tags: vec!["manual-creation".to_string(), "init-command".to_string()],
     };
-    
+
     let coordinate_systems = vec![CoordinateSystemInfo {
         name: config.coordinate_system.clone(),
         origin: Point3D::origin(),
@@ -108,7 +118,7 @@ fn create_minimal_building(config: &InitConfig) -> Result<BuildingData, Box<dyn 
         z_axis: Point3D::new(0.0, 0.0, 1.0),
         description: Some("Default coordinate system".to_string()),
     }];
-    
+
     Ok(BuildingData {
         building: building_info,
         metadata,
@@ -119,7 +129,8 @@ fn create_minimal_building(config: &InitConfig) -> Result<BuildingData, Box<dyn 
 
 /// Generate output filename from building name
 pub fn generate_output_filename(name: &str) -> String {
-    format!("{}.yaml",
+    format!(
+        "{}.yaml",
         name.to_lowercase()
             .replace(" ", "_")
             .replace("/", "-")
@@ -135,7 +146,9 @@ fn initialize_git_for_building(
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Git integration for init command
     // Uses BuildingGitManager similar to import command when Git repository is initialized
-    println!("🔧 Git integration for init command will be available when repository is initialized");
+    println!(
+        "🔧 Git integration for init command will be available when repository is initialized"
+    );
     Ok(())
 }
 
@@ -143,7 +156,10 @@ fn initialize_git_for_building(
 fn print_next_steps(building_name: &str, _output_file: &str) {
     println!("\n📚 Next Steps:");
     println!("   1. Add a room:    arxos room create --building \"{}\" --floor 1 --wing A --name \"Main Hall\" --room-type hallway", building_name);
-    println!("   2. View building: arxos render --building \"{}\"", building_name);
+    println!(
+        "   2. View building: arxos render --building \"{}\"",
+        building_name
+    );
     println!("   3. Commit:        arxos stage --all && arxos commit \"Initial setup\"");
 }
 
@@ -164,7 +180,7 @@ mod tests {
         // Test empty names are rejected
         let result = validate_building_name("");
         assert!(result.is_err());
-        
+
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("cannot be empty"));
     }
@@ -182,7 +198,7 @@ mod tests {
         let long_name = "a".repeat(101);
         let result = validate_building_name(&long_name);
         assert!(result.is_err());
-        
+
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("too long"));
     }
@@ -234,15 +250,21 @@ mod tests {
             coordinate_system: "World".to_string(),
             units: "meters".to_string(),
         };
-        
+
         let building_data = create_minimal_building(&config).unwrap();
-        
+
         assert_eq!(building_data.building.name, "Test Building");
         assert_eq!(building_data.floors.len(), 0);
         assert_eq!(building_data.coordinate_systems.len(), 1);
         assert_eq!(building_data.metadata.tags.len(), 2);
-        assert!(building_data.metadata.tags.contains(&"manual-creation".to_string()));
-        assert!(building_data.metadata.tags.contains(&"init-command".to_string()));
+        assert!(building_data
+            .metadata
+            .tags
+            .contains(&"manual-creation".to_string()));
+        assert!(building_data
+            .metadata
+            .tags
+            .contains(&"init-command".to_string()));
     }
 
     #[test]
@@ -257,9 +279,12 @@ mod tests {
             coordinate_system: "World".to_string(),
             units: "meters".to_string(),
         };
-        
+
         let building_data = create_minimal_building(&config).unwrap();
-        assert_eq!(building_data.building.description, Some("A test building".to_string()));
+        assert_eq!(
+            building_data.building.description,
+            Some("A test building".to_string())
+        );
     }
 
     #[test]
@@ -274,9 +299,11 @@ mod tests {
             coordinate_system: "World".to_string(),
             units: "meters".to_string(),
         };
-        
+
         let building_data = create_minimal_building(&config).unwrap();
-        assert_eq!(building_data.building.description, Some("Building at 123 Main St".to_string()));
+        assert_eq!(
+            building_data.building.description,
+            Some("Building at 123 Main St".to_string())
+        );
     }
 }
-

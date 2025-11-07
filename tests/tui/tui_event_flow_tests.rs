@@ -6,16 +6,19 @@
 //! - Help event interception
 //! - Error event handling flow
 
-use arxos::ui::help::{HelpSystem, HelpContext, handle_help_event};
-use arxos::ui::mouse::{parse_mouse_event, MouseConfig, MouseAction};
+use arxos::ui::help::{handle_help_event, HelpContext, HelpSystem};
+use arxos::ui::mouse::{parse_mouse_event, MouseAction, MouseConfig};
 use arxos::ui::terminal::TerminalManager;
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+use crossterm::event::{
+    Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers, MouseButton, MouseEvent,
+    MouseEventKind,
+};
 
 /// Test keyboard event flow through help system
 #[test]
 fn test_keyboard_event_flow_help() {
     let mut help_system = HelpSystem::new(HelpContext::General);
-    
+
     // Test that '?' key toggles help overlay
     let question_mark_event = Event::Key(KeyEvent {
         code: KeyCode::Char('?'),
@@ -23,11 +26,11 @@ fn test_keyboard_event_flow_help() {
         kind: KeyEventKind::Press,
         state: KeyEventState::empty(),
     });
-    
+
     assert!(!help_system.show_overlay);
     handle_help_event(question_mark_event, &mut help_system);
     assert!(help_system.show_overlay);
-    
+
     // Test that Esc closes help
     let esc_event = Event::Key(KeyEvent {
         code: KeyCode::Esc,
@@ -35,7 +38,7 @@ fn test_keyboard_event_flow_help() {
         kind: KeyEventKind::Press,
         state: KeyEventState::empty(),
     });
-    
+
     handle_help_event(esc_event, &mut help_system);
     assert!(!help_system.show_overlay);
 }
@@ -44,7 +47,7 @@ fn test_keyboard_event_flow_help() {
 #[test]
 fn test_mouse_event_flow() {
     let config = MouseConfig::default();
-    
+
     // Test left click flow
     let mouse_event = Event::Mouse(MouseEvent {
         kind: MouseEventKind::Down(MouseButton::Left),
@@ -52,7 +55,7 @@ fn test_mouse_event_flow() {
         row: 5,
         modifiers: KeyModifiers::empty(),
     });
-    
+
     let action = parse_mouse_event(&mouse_event, &config);
     assert!(action.is_some());
     if let Some(MouseAction::LeftClick { x, y }) = action {
@@ -61,7 +64,7 @@ fn test_mouse_event_flow() {
     } else {
         panic!("Expected LeftClick action");
     }
-    
+
     // Test scroll flow
     let scroll_event = Event::Mouse(MouseEvent {
         kind: MouseEventKind::ScrollDown,
@@ -69,7 +72,7 @@ fn test_mouse_event_flow() {
         row: 0,
         modifiers: KeyModifiers::empty(),
     });
-    
+
     let action = parse_mouse_event(&scroll_event, &config);
     assert_eq!(action, Some(MouseAction::ScrollDown));
 }
@@ -78,7 +81,7 @@ fn test_mouse_event_flow() {
 #[test]
 fn test_help_event_interception() {
     let mut help_system = HelpSystem::new(HelpContext::General);
-    
+
     // Test 'h' key interception
     let h_event = Event::Key(KeyEvent {
         code: KeyCode::Char('h'),
@@ -86,11 +89,11 @@ fn test_help_event_interception() {
         kind: KeyEventKind::Press,
         state: KeyEventState::empty(),
     });
-    
+
     assert!(!help_system.show_overlay);
     handle_help_event(h_event, &mut help_system);
     assert!(help_system.show_overlay);
-    
+
     // Test Ctrl+H for cheat sheet
     let ctrl_h_event = Event::Key(KeyEvent {
         code: KeyCode::Char('h'),
@@ -98,7 +101,7 @@ fn test_help_event_interception() {
         kind: KeyEventKind::Press,
         state: KeyEventState::empty(),
     });
-    
+
     assert!(!help_system.show_cheat_sheet);
     handle_help_event(ctrl_h_event, &mut help_system);
     assert!(help_system.show_cheat_sheet);
@@ -109,7 +112,7 @@ fn test_help_event_interception() {
 fn test_non_help_events_ignored() {
     let mut help_system = HelpSystem::new(HelpContext::General);
     let initial_state = help_system.show_overlay;
-    
+
     // Test that regular key events don't affect help
     let regular_event = Event::Key(KeyEvent {
         code: KeyCode::Char('a'),
@@ -117,7 +120,7 @@ fn test_non_help_events_ignored() {
         kind: KeyEventKind::Press,
         state: KeyEventState::empty(),
     });
-    
+
     handle_help_event(regular_event, &mut help_system);
     assert_eq!(help_system.show_overlay, initial_state);
 }
@@ -126,16 +129,19 @@ fn test_non_help_events_ignored() {
 #[test]
 fn test_mouse_event_flow_disabled() {
     let config = MouseConfig::disabled();
-    
+
     let mouse_event = Event::Mouse(MouseEvent {
         kind: MouseEventKind::Down(MouseButton::Left),
         column: 10,
         row: 5,
         modifiers: KeyModifiers::empty(),
     });
-    
+
     let action = parse_mouse_event(&mouse_event, &config);
-    assert!(action.is_none(), "Mouse events should be ignored when disabled");
+    assert!(
+        action.is_none(),
+        "Mouse events should be ignored when disabled"
+    );
 }
 
 /// Test navigation key event flow
@@ -149,7 +155,7 @@ fn test_navigation_key_flow() {
         state: KeyEventState::empty(),
     };
     assert!(TerminalManager::is_nav_up(&up_key));
-    
+
     let down_key = KeyEvent {
         code: KeyCode::Down,
         modifiers: KeyModifiers::empty(),
@@ -157,7 +163,7 @@ fn test_navigation_key_flow() {
         state: KeyEventState::empty(),
     };
     assert!(TerminalManager::is_nav_down(&down_key));
-    
+
     // Test vim-style navigation
     let k_key = KeyEvent {
         code: KeyCode::Char('k'),
@@ -166,7 +172,7 @@ fn test_navigation_key_flow() {
         state: KeyEventState::empty(),
     };
     assert!(TerminalManager::is_nav_up(&k_key));
-    
+
     let j_key = KeyEvent {
         code: KeyCode::Char('j'),
         modifiers: KeyModifiers::empty(),
@@ -186,7 +192,7 @@ fn test_quit_key_flow() {
         state: KeyEventState::empty(),
     };
     assert!(TerminalManager::is_quit_key(&q_key));
-    
+
     let esc_key = KeyEvent {
         code: KeyCode::Esc,
         modifiers: KeyModifiers::empty(),
@@ -206,7 +212,7 @@ fn test_select_key_flow() {
         state: KeyEventState::empty(),
     };
     assert!(TerminalManager::is_select(&enter_key));
-    
+
     let space_key = KeyEvent {
         code: KeyCode::Char(' '),
         modifiers: KeyModifiers::empty(),

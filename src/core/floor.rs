@@ -1,9 +1,9 @@
 //! Floor data structure and implementation
 
+use super::{Equipment, Wing};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use std::collections::HashMap;
-use super::{Wing, Equipment};
+use uuid::Uuid;
 
 /// Represents a floor in a building
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -35,20 +35,19 @@ impl Floor {
             properties: HashMap::new(),
         }
     }
-    
+
     /// Add a wing to the floor
     pub fn add_wing(&mut self, wing: Wing) {
         self.wings.push(wing);
     }
-    
+
     /// Find a wing by name
     pub fn find_wing(&self, name: &str) -> Option<&Wing> {
         self.wings.iter().find(|w| w.name == name)
     }
-    
+
     /// Find a wing by name (mutable)
     pub fn find_wing_mut(&mut self, name: &str) -> Option<&mut Wing> {
         self.wings.iter_mut().find(|w| w.name == name)
     }
 }
-

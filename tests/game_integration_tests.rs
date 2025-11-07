@@ -3,19 +3,21 @@
 //! These tests verify end-to-end game workflows including PR review,
 //! planning, IFC export/import, and constraint validation.
 
-use arxos::game::{
-    GameScenarioLoader, PRReviewGame, PlanningGame, IFCGameExporter,
-    ConstraintSystem, GameState, GameMode, GameEquipmentPlacement,
-    GameAction, ValidationResult, ConstraintSeverity,
-};
 use arxos::core::{Equipment, EquipmentType, Position};
+use arxos::game::{
+    ConstraintSeverity, ConstraintSystem, GameAction, GameEquipmentPlacement, GameMode,
+    GameScenarioLoader, GameState, IFCGameExporter, PRReviewGame, PlanningGame, ValidationResult,
+};
 use arxos::spatial::Point3D;
-use tempfile::TempDir;
-use std::fs::{create_dir_all, write, read_to_string};
 use serial_test::serial;
+use std::fs::{create_dir_all, read_to_string, write};
+use tempfile::TempDir;
 
 /// Setup test building with YAML file
-fn setup_test_building(temp_dir: &TempDir, building_name: &str) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
+fn setup_test_building(
+    temp_dir: &TempDir,
+    building_name: &str,
+) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
     let building_dir = temp_dir.path().join(building_name);
     create_dir_all(&building_dir)?;
 
@@ -85,12 +87,15 @@ coordinate_systems:
     description: Default world coordinate system
 "#;
     write(building_dir.join("building.yaml"), building_yaml)?;
-    
+
     Ok(building_dir)
 }
 
 /// Setup test PR directory
-fn setup_test_pr(temp_dir: &TempDir, pr_id: &str) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
+fn setup_test_pr(
+    temp_dir: &TempDir,
+    pr_id: &str,
+) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
     let pr_dir = temp_dir.path().join(format!("prs/pr_{}", pr_id));
     create_dir_all(&pr_dir)?;
 
@@ -181,12 +186,14 @@ fn test_planning_workflow() {
     let mut planning_game = PlanningGame::new("Test Building").unwrap();
 
     // Place equipment
-    let equip_id = planning_game.place_equipment(
-        EquipmentType::Electrical,
-        "Test Light".to_string(),
-        Point3D::new(10.0, 20.0, 3.0),
-        Some("room_1".to_string()),
-    ).unwrap();
+    let equip_id = planning_game
+        .place_equipment(
+            EquipmentType::Electrical,
+            "Test Light".to_string(),
+            Point3D::new(10.0, 20.0, 3.0),
+            Some("room_1".to_string()),
+        )
+        .unwrap();
 
     assert!(!equip_id.is_empty());
 
@@ -196,11 +203,13 @@ fn test_planning_workflow() {
 
     // Export to PR
     let pr_dir = temp_dir.path().join("exported_pr");
-    planning_game.export_to_pr(
-        &pr_dir,
-        Some("Test Planning Session".to_string()),
-        Some("Integration test planning".to_string()),
-    ).unwrap();
+    planning_game
+        .export_to_pr(
+            &pr_dir,
+            Some("Test Planning Session".to_string()),
+            Some("Integration test planning".to_string()),
+        )
+        .unwrap();
 
     // Verify PR files exist
     assert!(pr_dir.join("metadata.yaml").exists());
@@ -224,23 +233,25 @@ fn test_ifc_round_trip() {
     // Create planning game and place equipment
     let mut planning_game = PlanningGame::new("Test Building").unwrap();
 
-    let _equip_id2 = planning_game.place_equipment(
-        EquipmentType::Electrical,
-        "Test Light".to_string(),
-        Point3D::new(10.0, 20.0, 3.0),
-        None,
-    ).unwrap();
+    let _equip_id2 = planning_game
+        .place_equipment(
+            EquipmentType::Electrical,
+            "Test Light".to_string(),
+            Point3D::new(10.0, 20.0, 3.0),
+            None,
+        )
+        .unwrap();
 
     // Export to IFC
     let ifc_path = temp_dir.path().join("test_game_export.ifc");
     let game_state = planning_game.game_state();
-    
+
     let mut exporter = IFCGameExporter::new();
     exporter.export_game_to_ifc(game_state, &ifc_path).unwrap();
 
     // Verify IFC file exists
     assert!(ifc_path.exists());
-    
+
     // Verify IFC file has content
     let ifc_content = read_to_string(&ifc_path).unwrap();
     assert!(ifc_content.contains("ISO-10303-21"));
@@ -253,9 +264,8 @@ fn test_ifc_round_trip() {
 #[serial]
 #[test]
 fn test_constraint_validation_workflow() {
-    
     let temp_dir = tempfile::tempdir().unwrap();
-    
+
     // Create constraints file
     let constraints_yaml = r#"
 constraints:
@@ -278,13 +288,13 @@ constraints:
       min_clearance: 0.5
       equipment_type: "Electrical"
 "#;
-    
+
     let constraints_path = temp_dir.path().join("Test Building-constraints.yaml");
     write(&constraints_path, constraints_yaml).unwrap();
 
     // Load constraint system
     let constraint_system = ConstraintSystem::load_from_file(&constraints_path).unwrap();
-    
+
     // Create game state with equipment
     let game_state = GameState::new(GameMode::Planning);
 
@@ -312,11 +322,15 @@ constraints:
 
     // Validate
     let result = constraint_system.validate_placement(&placement, &game_state);
-    
+
     // Equipment is in valid structural area, so should be valid
-    assert!(result.is_valid || result.violations.iter().any(|v| {
-        v.severity == ConstraintSeverity::Warning
-    }));
+    assert!(
+        result.is_valid
+            || result
+                .violations
+                .iter()
+                .any(|v| { v.severity == ConstraintSeverity::Warning })
+    );
 }
 
 #[serial]
@@ -345,4 +359,3 @@ fn test_scenario_loading_workflow() {
     // Restore directory
     std::env::set_current_dir(&original_dir).unwrap();
 }
-

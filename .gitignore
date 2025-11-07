@@ -34,6 +34,7 @@ test-office-repo/
 .vs/
 .vscode/
 .idea/
+/.cursor/
 *.swp
 *.swo
 *~

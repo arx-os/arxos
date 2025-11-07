@@ -1,17 +1,17 @@
 // YAML serialization for ArxOS building data
 pub mod conversions;
 
+use crate::core::Building;
+use crate::spatial::{BoundingBox3D, Point3D, SpatialEntity};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
-use crate::core::Building;
-use crate::spatial::{SpatialEntity, Point3D, BoundingBox3D};
 
 // Conversion functions are available via crate::yaml::conversions::
 // They are used by core::operations but accessed directly via the module path
 
 /// Index structure for efficient O(1) lookups in BuildingData
-/// 
+///
 /// This index maps floor levels and wing names to their positions in the floors vector,
 /// enabling fast lookups without linear searches.
 #[derive(Debug, Clone)]
@@ -27,29 +27,31 @@ impl BuildingDataIndex {
     pub fn build(data: &BuildingData) -> Self {
         let mut floors_by_level = std::collections::HashMap::with_capacity(data.floors.len());
         let mut wings_by_key = std::collections::HashMap::new();
-        
+
         for (floor_idx, floor) in data.floors.iter().enumerate() {
             floors_by_level.insert(floor.level, floor_idx);
-            
+
             for (wing_idx, wing) in floor.wings.iter().enumerate() {
                 wings_by_key.insert((floor.level, wing.name.clone()), (floor_idx, wing_idx));
             }
         }
-        
+
         Self {
             floors_by_level,
             wings_by_key,
         }
     }
-    
+
     /// Get floor index by level
     pub fn get_floor_index(&self, level: i32) -> Option<usize> {
         self.floors_by_level.get(&level).copied()
     }
-    
+
     /// Get wing indices by floor level and wing name
     pub fn get_wing_indices(&self, level: i32, wing_name: &str) -> Option<(usize, usize)> {
-        self.wings_by_key.get(&(level, wing_name.to_string())).copied()
+        self.wings_by_key
+            .get(&(level, wing_name.to_string()))
+            .copied()
     }
 }
 
@@ -71,60 +73,83 @@ impl BuildingData {
     pub fn build_index(&self) -> BuildingDataIndex {
         BuildingDataIndex::build(self)
     }
-    
+
     /// Get floor by level using index (O(1) lookup)
-    pub fn get_floor_mut(&mut self, level: i32, index: &BuildingDataIndex) -> Option<&mut crate::core::Floor> {
-        index.get_floor_index(level)
+    pub fn get_floor_mut(
+        &mut self,
+        level: i32,
+        index: &BuildingDataIndex,
+    ) -> Option<&mut crate::core::Floor> {
+        index
+            .get_floor_index(level)
             .and_then(|idx| self.floors.get_mut(idx))
     }
-    
+
     /// Get wing by floor level and name using index (O(1) lookup)
-    pub fn get_wing_mut(&mut self, level: i32, wing_name: &str, index: &BuildingDataIndex) -> Option<&mut crate::core::Wing> {
-        index.get_wing_indices(level, wing_name)
+    pub fn get_wing_mut(
+        &mut self,
+        level: i32,
+        wing_name: &str,
+        index: &BuildingDataIndex,
+    ) -> Option<&mut crate::core::Wing> {
+        index
+            .get_wing_indices(level, wing_name)
             .and_then(|(floor_idx, wing_idx)| {
-                self.floors.get_mut(floor_idx)
+                self.floors
+                    .get_mut(floor_idx)
                     .and_then(|floor| floor.wings.get_mut(wing_idx))
             })
     }
-    
+
     /// Get or create floor by level, updating index if new floor is created
-    pub fn get_or_create_floor_mut(&mut self, level: i32, index: &mut BuildingDataIndex) -> Result<&mut crate::core::Floor, Box<dyn std::error::Error>> {
+    pub fn get_or_create_floor_mut(
+        &mut self,
+        level: i32,
+        index: &mut BuildingDataIndex,
+    ) -> Result<&mut crate::core::Floor, Box<dyn std::error::Error>> {
         if let Some(floor_idx) = index.get_floor_index(level) {
             Ok(&mut self.floors[floor_idx])
         } else {
             // Create new floor using core type
             use crate::core::Floor;
             let new_floor = Floor::new(format!("Floor {}", level), level);
-            
+
             let floor_idx = self.floors.len();
             self.floors.push(new_floor);
-            
+
             // Update index
             index.floors_by_level.insert(level, floor_idx);
-            
+
             Ok(&mut self.floors[floor_idx])
         }
     }
-    
+
     /// Get or create wing by floor level and name, updating index if new wing is created
-    pub fn get_or_create_wing_mut(&mut self, level: i32, wing_name: &str, index: &mut BuildingDataIndex) -> Result<&mut crate::core::Wing, Box<dyn std::error::Error>> {
+    pub fn get_or_create_wing_mut(
+        &mut self,
+        level: i32,
+        wing_name: &str,
+        index: &mut BuildingDataIndex,
+    ) -> Result<&mut crate::core::Wing, Box<dyn std::error::Error>> {
         if let Some((floor_idx, wing_idx)) = index.get_wing_indices(level, wing_name) {
             Ok(&mut self.floors[floor_idx].wings[wing_idx])
         } else {
             // Need to get or create floor first
             let floor = self.get_or_create_floor_mut(level, index)?;
-            
+
             // Create new wing using core type
             use crate::core::Wing;
             let new_wing = Wing::new(wing_name.to_string());
-            
+
             let wing_idx = floor.wings.len();
             floor.wings.push(new_wing);
-            
+
             // Update index
             let floor_idx = index.get_floor_index(level).unwrap();
-            index.wings_by_key.insert((level, wing_name.to_string()), (floor_idx, wing_idx));
-            
+            index
+                .wings_by_key
+                .insert((level, wing_name.to_string()), (floor_idx, wing_idx));
+
             Ok(&mut self.floors[floor_idx].wings[wing_idx])
         }
     }
@@ -332,7 +357,7 @@ impl BuildingYamlSerializer {
         source_file: Option<&str>,
     ) -> Result<BuildingData, Box<dyn std::error::Error>> {
         let now = Utc::now();
-        
+
         // Convert building.floors to Floor (core type) if available (from IFC hierarchy)
         // Otherwise, create floors from spatial entities
         let floors: Vec<crate::core::Floor> = if !building.floors.is_empty() {
@@ -343,14 +368,17 @@ impl BuildingYamlSerializer {
             // Create floors from spatial entities
             self.create_floors_from_entities(&rooms, &equipment)
         };
-        
+
         // Calculate global bounding box
         let global_bounding_box = self.calculate_global_bounding_box(spatial_entities);
-        
+
         let building_info = BuildingInfo {
             id: building.id.clone(),
             name: building.name.clone(),
-            description: Some(format!("Building parsed from IFC file: {}", source_file.unwrap_or("unknown"))),
+            description: Some(format!(
+                "Building parsed from IFC file: {}",
+                source_file.unwrap_or("unknown")
+            )),
             created_at: building.created_at,
             updated_at: now,
             version: "1.0.0".to_string(),
@@ -400,7 +428,10 @@ impl BuildingYamlSerializer {
     }
 
     /// Group spatial entities by type
-    fn group_spatial_entities(&self, entities: &[SpatialEntity]) -> (Vec<SpatialEntity>, Vec<SpatialEntity>) {
+    fn group_spatial_entities(
+        &self,
+        entities: &[SpatialEntity],
+    ) -> (Vec<SpatialEntity>, Vec<SpatialEntity>) {
         let mut rooms = Vec::new();
         let mut equipment = Vec::new();
 
@@ -416,33 +447,45 @@ impl BuildingYamlSerializer {
     }
 
     /// Create floors from spatial entities
-    fn create_floors_from_entities(&self, rooms: &[SpatialEntity], equipment: &[SpatialEntity]) -> Vec<crate::core::Floor> {
+    fn create_floors_from_entities(
+        &self,
+        rooms: &[SpatialEntity],
+        equipment: &[SpatialEntity],
+    ) -> Vec<crate::core::Floor> {
         // Group entities by floor level (simplified approach)
         let mut floor_groups: HashMap<i32, Vec<SpatialEntity>> = HashMap::new();
-        
+
         for room in rooms {
             let floor_level = (room.position.z / 3.0).floor() as i32; // Assume 3m floor height
-            floor_groups.entry(floor_level).or_default().push(room.clone());
+            floor_groups
+                .entry(floor_level)
+                .or_default()
+                .push(room.clone());
         }
-        
+
         for eq in equipment {
             let floor_level = (eq.position.z / 3.0).floor() as i32;
-            floor_groups.entry(floor_level).or_default().push(eq.clone());
+            floor_groups
+                .entry(floor_level)
+                .or_default()
+                .push(eq.clone());
         }
 
         let mut floors = Vec::new();
         for (level, entities) in floor_groups {
             let (floor_rooms, floor_equipment) = self.group_spatial_entities(&entities);
-            
+
             // Convert SpatialEntity to Room (core type)
-            let rooms: Vec<crate::core::Room> = floor_rooms.into_iter().map(|entity| {
-                self.spatial_entity_to_room(&entity)
-            }).collect();
+            let rooms: Vec<crate::core::Room> = floor_rooms
+                .into_iter()
+                .map(|entity| self.spatial_entity_to_room(&entity))
+                .collect();
 
             // Convert SpatialEntity to Equipment (core type)
-            let equipment: Vec<crate::core::Equipment> = floor_equipment.into_iter().map(|entity| {
-                self.spatial_entity_to_equipment(&entity, level)
-            }).collect();
+            let equipment: Vec<crate::core::Equipment> = floor_equipment
+                .into_iter()
+                .map(|entity| self.spatial_entity_to_equipment(&entity, level))
+                .collect();
 
             let floor_bounding_box = self.calculate_floor_bounding_box(&entities);
 
@@ -457,7 +500,7 @@ impl BuildingYamlSerializer {
                 equipment,
                 properties: HashMap::new(),
             });
-            
+
             // Add rooms to a default wing
             if !rooms.is_empty() {
                 use crate::core::Wing;
@@ -503,8 +546,11 @@ impl BuildingYamlSerializer {
     fn generate_universal_path(&self, entity: &SpatialEntity) -> String {
         let floor_level = (entity.position.z / 3.0).floor() as i32;
         let system_type = self.determine_system_type(&entity.entity_type);
-        
-        format!("/BUILDING/FLOOR-{}/{}/{}", floor_level, system_type, entity.name)
+
+        format!(
+            "/BUILDING/FLOOR-{}/{}/{}",
+            floor_level, system_type, entity.name
+        )
     }
 
     /// Calculate global bounding box for all entities
@@ -513,7 +559,8 @@ impl BuildingYamlSerializer {
             return None;
         }
 
-        let points: Vec<Point3D> = entities.iter()
+        let points: Vec<Point3D> = entities
+            .iter()
             .flat_map(|entity| vec![entity.bounding_box.min, entity.bounding_box.max])
             .collect();
 
@@ -524,26 +571,28 @@ impl BuildingYamlSerializer {
     fn calculate_floor_bounding_box(&self, entities: &[SpatialEntity]) -> Option<BoundingBox3D> {
         self.calculate_global_bounding_box(entities)
     }
-    
+
     /// Convert SpatialEntity to Room (core type)
     fn spatial_entity_to_room(&self, entity: &SpatialEntity) -> crate::core::Room {
-        use crate::core::{Room, RoomType, Position, Dimensions, SpatialProperties, BoundingBox};
-        
+        use crate::core::{BoundingBox, Dimensions, Position, Room, RoomType, SpatialProperties};
+
         let position = Position {
             x: entity.position.x,
             y: entity.position.y,
             z: entity.position.z,
-            coordinate_system: entity.coordinate_system.as_ref()
+            coordinate_system: entity
+                .coordinate_system
+                .as_ref()
                 .map(|cs| format!("{:?}", cs))
                 .unwrap_or_else(|| "building_local".to_string()),
         };
-        
+
         let dimensions = Dimensions {
             width: entity.bounding_box.max.x - entity.bounding_box.min.x,
             height: entity.bounding_box.max.z - entity.bounding_box.min.z,
             depth: entity.bounding_box.max.y - entity.bounding_box.min.y,
         };
-        
+
         let bounding_box = BoundingBox {
             min: Position {
                 x: entity.bounding_box.min.x,
@@ -558,14 +607,14 @@ impl BuildingYamlSerializer {
                 coordinate_system: position.coordinate_system.clone(),
             },
         };
-        
+
         let spatial_properties = SpatialProperties {
             position,
             dimensions,
             bounding_box,
             coordinate_system: "building_local".to_string(),
         };
-        
+
         Room {
             id: entity.id.clone(),
             name: entity.name.clone(),
@@ -577,61 +626,71 @@ impl BuildingYamlSerializer {
             updated_at: None,
         }
     }
-    
+
     /// Convert SpatialEntity to Equipment (core type)
-    fn spatial_entity_to_equipment(&self, entity: &SpatialEntity, _floor_level: i32) -> crate::core::Equipment {
+    fn spatial_entity_to_equipment(
+        &self,
+        entity: &SpatialEntity,
+        _floor_level: i32,
+    ) -> crate::core::Equipment {
         use crate::core::{Equipment, EquipmentType, Position};
-        
+
         let equipment_type = match entity.entity_type.as_str() {
             "IFCAIRTERMINAL" | "IFCFLOWTERMINAL" | "IFCAIRHANDLINGUNIT" => EquipmentType::HVAC,
-            "IFCLIGHTFIXTURE" | "IFCDISTRIBUTIONELEMENT" | "IFCSWITCHINGDEVICE" => EquipmentType::Electrical,
+            "IFCLIGHTFIXTURE" | "IFCDISTRIBUTIONELEMENT" | "IFCSWITCHINGDEVICE" => {
+                EquipmentType::Electrical
+            }
             "IFCFIREALARM" | "IFCFIREDETECTOR" => EquipmentType::Safety,
             "IFCPIPE" | "IFCPIPEFITTING" | "IFCTANK" => EquipmentType::Plumbing,
             _ => EquipmentType::Other(entity.entity_type.clone()),
         };
-        
+
         let universal_path = self.generate_universal_path(entity);
-        
-        let mut equipment = Equipment::new(
-            entity.name.clone(),
-            universal_path,
-            equipment_type,
-        );
-        
+
+        let mut equipment = Equipment::new(entity.name.clone(), universal_path, equipment_type);
+
         equipment.id = entity.id.clone();
         equipment.position = Position {
             x: entity.position.x,
             y: entity.position.y,
             z: entity.position.z,
-            coordinate_system: entity.coordinate_system.as_ref()
+            coordinate_system: entity
+                .coordinate_system
+                .as_ref()
                 .map(|cs| format!("{:?}", cs))
                 .unwrap_or_else(|| "building_local".to_string()),
         };
-        
+
         equipment
     }
-    
+
     /// Convert Building.floors (from IFC hierarchy) to Floor (core type)
-    fn convert_floors_from_building(&self, building: &Building) -> Result<Vec<crate::core::Floor>, Box<dyn std::error::Error>> {
-        
+    fn convert_floors_from_building(
+        &self,
+        building: &Building,
+    ) -> Result<Vec<crate::core::Floor>, Box<dyn std::error::Error>> {
         // Building.floors is already Vec<Floor>, so we can use it directly
         // Just need to ensure elevation and bounding_box are set
         let mut floors: Vec<crate::core::Floor> = building.floors.clone();
-        
+
         for floor in &mut floors {
             // Set elevation if not already set
             if floor.elevation.is_none() {
                 floor.elevation = Some(floor.level as f64 * 3.0); // Estimate based on level
             }
-            
+
             // Calculate bounding box from rooms if not set
             if floor.bounding_box.is_none() {
                 let mut bbox_points = Vec::new();
                 for wing in &floor.wings {
                     for room in &wing.rooms {
                         let bbox = &room.spatial_properties.bounding_box;
-                        bbox_points.push(crate::spatial::Point3D::new(bbox.min.x, bbox.min.y, bbox.min.z));
-                        bbox_points.push(crate::spatial::Point3D::new(bbox.max.x, bbox.max.y, bbox.max.z));
+                        bbox_points.push(crate::spatial::Point3D::new(
+                            bbox.min.x, bbox.min.y, bbox.min.z,
+                        ));
+                        bbox_points.push(crate::spatial::Point3D::new(
+                            bbox.max.x, bbox.max.y, bbox.max.z,
+                        ));
                     }
                 }
                 if !bbox_points.is_empty() {
@@ -639,10 +698,10 @@ impl BuildingYamlSerializer {
                 }
             }
         }
-        
+
         Ok(floors)
     }
-    
+
     /// Determine system type from EquipmentType
     #[allow(dead_code)]
     fn determine_equipment_system_type(&self, eq_type: &crate::core::EquipmentType) -> String {
@@ -665,12 +724,19 @@ impl BuildingYamlSerializer {
     }
 
     /// Serialize building data to YAML string (legacy method)
-    pub fn to_yaml_building(&self, building_data: &BuildingData) -> Result<String, Box<dyn std::error::Error>> {
+    pub fn to_yaml_building(
+        &self,
+        building_data: &BuildingData,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         self.to_yaml(building_data)
     }
 
     /// Write building data to YAML file
-    pub fn write_to_file(&self, building_data: &BuildingData, file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn write_to_file(
+        &self,
+        building_data: &BuildingData,
+        file_path: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let yaml = self.to_yaml(building_data)?;
         std::fs::write(file_path, yaml)?;
         Ok(())
@@ -701,7 +767,9 @@ mod tests {
         ];
 
         let serializer = BuildingYamlSerializer::new();
-        let building_data = serializer.serialize_building(&building, &spatial_entities, Some("test.ifc")).unwrap();
+        let building_data = serializer
+            .serialize_building(&building, &spatial_entities, Some("test.ifc"))
+            .unwrap();
 
         assert_eq!(building_data.building.name, "Test Building");
         assert_eq!(building_data.metadata.total_entities, 2);
@@ -713,8 +781,10 @@ mod tests {
         let building = Building::new("Test Building".to_string(), "/test".to_string());
         let spatial_entities = vec![];
         let serializer = BuildingYamlSerializer::new();
-        let building_data = serializer.serialize_building(&building, &spatial_entities, None).unwrap();
-        
+        let building_data = serializer
+            .serialize_building(&building, &spatial_entities, None)
+            .unwrap();
+
         let yaml = serializer.to_yaml(&building_data).unwrap();
         assert!(yaml.contains("Test Building"));
         assert!(yaml.contains("ArxOS v2.0"));

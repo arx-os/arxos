@@ -6,13 +6,15 @@
 //! - File locking during edits
 //! - Conflict detection
 
-use arxos::ui::spreadsheet::data_source::{EquipmentDataSource, SpreadsheetDataSource};
-use arxos::ui::spreadsheet::workflow::{FileLock, ConflictDetector};
-use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
-use arxos::core::{Floor, Equipment, EquipmentType, EquipmentStatus, EquipmentHealthStatus, Position};
+use arxos::core::{
+    Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType, Floor, Position,
+};
 use arxos::persistence::PersistenceManager;
+use arxos::spatial::{BoundingBox3D, Point3D};
+use arxos::ui::spreadsheet::data_source::{EquipmentDataSource, SpreadsheetDataSource};
+use arxos::ui::spreadsheet::workflow::{ConflictDetector, FileLock};
+use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
 use arxos::BuildingYamlSerializer;
-use arxos::spatial::{Point3D, BoundingBox3D};
 use chrono::Utc;
 use serial_test::serial;
 use std::collections::HashMap;
@@ -52,7 +54,7 @@ impl Drop for DirectoryGuard {
                 }
             }
         }
-        
+
         // Restore original directory
         if let Some(ref original) = self.original_dir {
             for _ in 0..3 {
@@ -102,7 +104,12 @@ fn create_test_building_data() -> BuildingData {
                 path: "/building/floor-1/eq-1".to_string(),
                 address: None,
                 equipment_type: EquipmentType::HVAC,
-                position: Position { x: 5.0, y: 5.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
+                position: Position {
+                    x: 5.0,
+                    y: 5.0,
+                    z: 0.0,
+                    coordinate_system: "LOCAL".to_string(),
+                },
                 status: EquipmentStatus::Active,
                 health_status: Some(EquipmentHealthStatus::Healthy),
                 properties: HashMap::new(),
@@ -115,15 +122,18 @@ fn create_test_building_data() -> BuildingData {
     }
 }
 
-fn create_test_building_file(temp_dir: &TempDir, building_data: &BuildingData) -> Result<PathBuf, Box<dyn std::error::Error>> {
+fn create_test_building_file(
+    temp_dir: &TempDir,
+    building_data: &BuildingData,
+) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let building_name = "Test Building";
     let yaml_file = format!("{}.yaml", building_name);
     let file_path = temp_dir.path().join(&yaml_file);
-    
+
     let serializer = BuildingYamlSerializer::new();
     let yaml_content = serializer.to_yaml(building_data)?;
     fs::write(&file_path, yaml_content)?;
-    
+
     Ok(file_path)
 }
 
@@ -132,25 +142,27 @@ fn create_test_building_file(temp_dir: &TempDir, building_data: &BuildingData) -
 fn test_yaml_persistence_with_backup() {
     let temp_dir = setup_test_environment();
     let _guard = DirectoryGuard::new(temp_dir.path()).unwrap();
-    
+
     // Create initial building file
     let building_data = create_test_building_data();
     let file_path = create_test_building_file(&temp_dir, &building_data).unwrap();
     let backup_path = file_path.with_extension("yaml.bak");
-    
+
     // Load and modify via data source
     let building_name = "Test Building";
     let persistence = PersistenceManager::new(building_name).unwrap();
     let loaded_data = persistence.load_building_data().unwrap();
     let mut data_source = EquipmentDataSource::new(loaded_data, building_name.to_string());
-    
+
     // Edit
     use arxos::ui::spreadsheet::types::CellValue;
-    data_source.set_cell(0, 1, CellValue::Text("Updated Name".to_string())).unwrap();
-    
+    data_source
+        .set_cell(0, 1, CellValue::Text("Updated Name".to_string()))
+        .unwrap();
+
     // Save (should create backup)
     data_source.save(false).unwrap();
-    
+
     // Verify backup file was created
     assert!(backup_path.exists(), "Backup file should be created");
 }
@@ -160,28 +172,30 @@ fn test_yaml_persistence_with_backup() {
 fn test_git_staging() {
     let temp_dir = setup_test_environment();
     let _guard = DirectoryGuard::new(temp_dir.path()).unwrap();
-    
+
     // Initialize Git repo
     let repo_path = temp_dir.path().to_str().unwrap();
     let _ = git2::Repository::init(repo_path);
-    
+
     // Create building file
     let building_data = create_test_building_data();
     create_test_building_file(&temp_dir, &building_data).unwrap();
-    
+
     // Load and modify
     let building_name = "Test Building";
     let persistence = PersistenceManager::new(building_name).unwrap();
     let loaded_data = persistence.load_building_data().unwrap();
     let mut data_source = EquipmentDataSource::new(loaded_data, building_name.to_string());
-    
+
     // Edit
     use arxos::ui::spreadsheet::types::CellValue;
-    data_source.set_cell(0, 1, CellValue::Text("Git Staged".to_string())).unwrap();
-    
+    data_source
+        .set_cell(0, 1, CellValue::Text("Git Staged".to_string()))
+        .unwrap();
+
     // Save with staging (no commit)
     data_source.save(false).unwrap();
-    
+
     // Verify file was modified
     let persistence2 = PersistenceManager::new(building_name).unwrap();
     let reloaded = persistence2.load_building_data().unwrap();
@@ -193,31 +207,40 @@ fn test_git_staging() {
 fn test_file_locking() {
     let temp_dir = setup_test_environment();
     let _guard = DirectoryGuard::new(temp_dir.path()).unwrap();
-    
+
     // Create building file
     let building_data = create_test_building_data();
     let building_file = create_test_building_file(&temp_dir, &building_data).unwrap();
-    
+
     // Acquire lock using the building file path (FileLock creates .yaml.lock automatically)
     let lock = FileLock::acquire(&building_file).unwrap();
-    
+
     // Verify lock file exists (has .yaml.lock extension)
     let lock_file_path = lock.lock_file().to_path_buf();
     assert!(lock_file_path.exists(), "Lock file should exist");
-    
+
     // Try to acquire lock again (should fail because current process has it)
     let second_lock = FileLock::acquire(&building_file);
-    assert!(second_lock.is_err(), "Second lock acquisition should fail when lock is active");
-    
+    assert!(
+        second_lock.is_err(),
+        "Second lock acquisition should fail when lock is active"
+    );
+
     // Release the first lock
     lock.release().unwrap();
-    
+
     // Verify lock file is removed
-    assert!(!lock_file_path.exists(), "Lock file should be removed after release");
-    
+    assert!(
+        !lock_file_path.exists(),
+        "Lock file should be removed after release"
+    );
+
     // Now we should be able to acquire the lock again
     let final_lock = FileLock::acquire(&building_file);
-    assert!(final_lock.is_ok(), "Should be able to acquire lock after release");
+    assert!(
+        final_lock.is_ok(),
+        "Should be able to acquire lock after release"
+    );
     final_lock.unwrap().release().unwrap();
 }
 
@@ -226,29 +249,29 @@ fn test_file_locking() {
 fn test_conflict_detection() {
     let temp_dir = setup_test_environment();
     let _guard = DirectoryGuard::new(temp_dir.path()).unwrap();
-    
+
     // Create building file
     let building_data = create_test_building_data();
     let file_path = create_test_building_file(&temp_dir, &building_data).unwrap();
-    
+
     let building_name = "Test Building";
     let persistence = PersistenceManager::new(building_name).unwrap();
     let loaded_data = persistence.load_building_data().unwrap();
     let _data_source = EquipmentDataSource::new(loaded_data, building_name.to_string());
-    
+
     // Create conflict detector (this captures the initial modification time)
     let conflict_detector = ConflictDetector::new(&file_path).unwrap();
-    
+
     // Simulate external change by modifying file directly
     let mut modified_data = create_test_building_data();
     modified_data.floors[0].equipment[0].name = "Externally Modified".to_string();
     let serializer = BuildingYamlSerializer::new();
     let yaml_content = serializer.to_yaml(&modified_data).unwrap();
     fs::write(&file_path, yaml_content).unwrap();
-    
+
     // Wait a bit to ensure different modification time
     thread::sleep(Duration::from_millis(100));
-    
+
     // Check for conflict (should detect the external modification)
     let has_conflict = conflict_detector.check_conflict().unwrap();
     assert!(has_conflict, "Should detect external modification");
@@ -259,41 +282,55 @@ fn test_conflict_detection() {
 fn test_save_with_git_commit() {
     let temp_dir = setup_test_environment();
     let _guard = DirectoryGuard::new(temp_dir.path()).unwrap();
-    
+
     // Initialize Git repo
     let repo_path = temp_dir.path().to_str().unwrap();
     let _ = git2::Repository::init(repo_path);
-    
+
     // Create and commit initial building file
     let building_data = create_test_building_data();
     create_test_building_file(&temp_dir, &building_data).unwrap();
-    
+
     // Initial commit
     let repo = git2::Repository::open(repo_path).unwrap();
     let mut index = repo.index().unwrap();
-    index.add_all(["*"], git2::IndexAddOption::DEFAULT, None).unwrap();
+    index
+        .add_all(["*"], git2::IndexAddOption::DEFAULT, None)
+        .unwrap();
     index.write().unwrap();
     let tree_id = index.write_tree().unwrap();
     let tree = repo.find_tree(tree_id).unwrap();
     let signature = git2::Signature::now("Test", "test@test.com").unwrap();
-    repo.commit(Some("HEAD"), &signature, &signature, "Initial commit", &tree, &[]).unwrap();
-    
+    repo.commit(
+        Some("HEAD"),
+        &signature,
+        &signature,
+        "Initial commit",
+        &tree,
+        &[],
+    )
+    .unwrap();
+
     // Load and modify via data source
     let building_name = "Test Building";
     let persistence = PersistenceManager::new(building_name).unwrap();
     let loaded_data = persistence.load_building_data().unwrap();
     let mut data_source = EquipmentDataSource::new(loaded_data, building_name.to_string());
-    
+
     // Edit
     use arxos::ui::spreadsheet::types::CellValue;
-    data_source.set_cell(0, 1, CellValue::Text("Committed Change".to_string())).unwrap();
-    
+    data_source
+        .set_cell(0, 1, CellValue::Text("Committed Change".to_string()))
+        .unwrap();
+
     // Save with commit
     data_source.save(true).unwrap();
-    
+
     // Verify commit was created
     let head = repo.head().unwrap();
     let commit = head.peel_to_commit().unwrap();
-    assert!(commit.message().unwrap().contains("equipment") || commit.message().unwrap().contains("spreadsheet"));
+    assert!(
+        commit.message().unwrap().contains("equipment")
+            || commit.message().unwrap().contains("spreadsheet")
+    );
 }
-

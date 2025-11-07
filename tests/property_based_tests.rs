@@ -3,9 +3,9 @@
 //! These tests verify properties that should hold for all inputs,
 //! not just specific test cases.
 
+use arxos::core::{EquipmentHealthStatus, EquipmentStatus, EquipmentType, Position};
 use arxos::domain::address::ArxAddress;
-use arxos::spatial::{Point3D, BoundingBox3D};
-use arxos::core::{Position, EquipmentType, EquipmentStatus, EquipmentHealthStatus};
+use arxos::spatial::{BoundingBox3D, Point3D};
 use proptest::prelude::*;
 
 // ============================================================================
@@ -25,12 +25,12 @@ proptest! {
     ) {
         // Create a valid path
         let path = format!("/{}/{}/{}/{}/{}/{}", country, state, city, building, floor, room);
-        
+
         // Try to parse as address
         if let Ok(address) = ArxAddress::from_path(&path) {
             // Should be able to get the path back
             let reconstructed_path = address.path;
-            
+
             // Paths should be equivalent (case-insensitive)
             prop_assert_eq!(path.to_lowercase(), reconstructed_path.to_lowercase());
         }
@@ -44,7 +44,7 @@ proptest! {
         city in "[a-z]{3,10}",
     ) {
         let path = format!("/{}/{}/{}", country, state, city);
-        
+
         if let Ok(address1) = ArxAddress::from_path(&path) {
             if let Ok(address2) = ArxAddress::from_path(&path) {
                 // GUID should be derived deterministically from path
@@ -77,7 +77,7 @@ proptest! {
     ) {
         let parent_path = format!("/{}/{}/{}", country, state, city);
         let child_path = format!("/{}/{}/{}/{}", country, state, city, building);
-        
+
         if let (Ok(parent), Ok(child)) = (ArxAddress::from_path(&parent_path), ArxAddress::from_path(&child_path)) {
             // Parent path should be a prefix of child path
             prop_assert!(child.path.starts_with(&parent.path));
@@ -110,10 +110,10 @@ proptest! {
     ) {
         let point1 = Point3D { x: x1, y: y1, z: z1 };
         let point2 = Point3D { x: x2, y: y2, z: z2 };
-        
+
         let d1 = point1.distance_to(&point2);
         let d2 = point2.distance_to(&point1);
-        
+
         prop_assert!((d1 - d2).abs() < 1e-10, "Distance should be symmetric");
     }
 
@@ -127,11 +127,11 @@ proptest! {
         let p1 = Point3D { x: x1, y: y1, z: z1 };
         let p2 = Point3D { x: x2, y: y2, z: z2 };
         let p3 = Point3D { x: x3, y: y3, z: z3 };
-        
+
         let d12 = p1.distance_to(&p2);
         let d23 = p2.distance_to(&p3);
         let d13 = p1.distance_to(&p3);
-        
+
         // d(p1, p3) <= d(p1, p2) + d(p2, p3)
         prop_assert!(d13 <= d12 + d23 + 1e-10, "Triangle inequality should hold");
     }
@@ -146,12 +146,12 @@ proptest! {
         let (min_x, max_x) = if min_x <= max_x { (min_x, max_x) } else { (max_x, min_x) };
         let (min_y, max_y) = if min_y <= max_y { (min_y, max_y) } else { (max_y, min_y) };
         let (min_z, max_z) = if min_z <= max_z { (min_z, max_z) } else { (max_z, min_z) };
-        
+
         let _bbox = BoundingBox3D {
             min: Point3D { x: min_x, y: min_y, z: min_z },
             max: Point3D { x: max_x, y: max_y, z: max_z },
         };
-        
+
         prop_assert!(_bbox.min.x <= _bbox.max.x, "Bounding box min.x should be <= max.x");
         prop_assert!(_bbox.min.y <= _bbox.max.y, "Bounding box min.y should be <= max.y");
         prop_assert!(_bbox.min.z <= _bbox.max.z, "Bounding box min.z should be <= max.z");
@@ -166,16 +166,16 @@ proptest! {
         let (min_x, max_x) = if min_x <= max_x { (min_x, max_x) } else { (max_x, min_x) };
         let (min_y, max_y) = if min_y <= max_y { (min_y, max_y) } else { (max_y, min_y) };
         let (min_z, max_z) = if min_z <= max_z { (min_z, max_z) } else { (max_z, min_z) };
-        
+
         let _bbox = BoundingBox3D {
             min: Point3D { x: min_x, y: min_y, z: min_z },
             max: Point3D { x: max_x, y: max_y, z: max_z },
         };
-        
+
         let center_x = (min_x + max_x) / 2.0;
         let center_y = (min_y + max_y) / 2.0;
         let center_z = (min_z + max_z) / 2.0;
-        
+
         prop_assert!(center_x >= min_x && center_x <= max_x, "Center X should be between min and max");
         prop_assert!(center_y >= min_y && center_y <= max_y, "Center Y should be between min and max");
         prop_assert!(center_z >= min_z && center_z <= max_z, "Center Z should be between min and max");
@@ -197,12 +197,12 @@ proptest! {
             3 => EquipmentStatus::Unknown,
             _ => EquipmentStatus::Unknown,
         };
-        
+
         // All enum variants should be valid
-        prop_assert!(matches!(status, 
-            EquipmentStatus::Active | 
-            EquipmentStatus::Inactive | 
-            EquipmentStatus::Maintenance | 
+        prop_assert!(matches!(status,
+            EquipmentStatus::Active |
+            EquipmentStatus::Inactive |
+            EquipmentStatus::Maintenance |
             EquipmentStatus::Unknown
         ));
     }
@@ -220,14 +220,14 @@ proptest! {
             3 => Some(EquipmentHealthStatus::Unknown),
             _ => None,
         };
-        
+
         let status = match status_val {
             0 => EquipmentStatus::Active,
             1 => EquipmentStatus::Inactive,
             2 => EquipmentStatus::Maintenance,
             _ => EquipmentStatus::Unknown,
         };
-        
+
         // Equipment can be Active but have Critical health (e.g., running but overheating)
         // Equipment can be in Maintenance but have Healthy status (e.g., preventive maintenance)
         // These are independent dimensions
@@ -254,7 +254,7 @@ proptest! {
             z,
             coordinate_system: "LOCAL".to_string(),
         };
-        
+
         prop_assert_eq!(position.x, x);
         prop_assert_eq!(position.y, y);
         prop_assert_eq!(position.z, z);
@@ -273,9 +273,9 @@ proptest! {
             z,
             coordinate_system: "LOCAL".to_string(),
         };
-        
+
         let cloned = position.clone();
-        
+
         prop_assert_eq!(position.x, cloned.x);
         prop_assert_eq!(position.y, cloned.y);
         prop_assert_eq!(position.z, cloned.z);
@@ -301,7 +301,7 @@ proptest! {
             6 => EquipmentType::Furniture,
             _ => EquipmentType::HVAC,
         };
-        
+
         // Should be able to format as Debug string
         let debug_str = format!("{:?}", equipment_type);
         prop_assert!(!debug_str.is_empty());
@@ -313,7 +313,7 @@ proptest! {
         name in "[A-Za-z][A-Za-z0-9 ]{2,30}",
     ) {
         let equipment_type = EquipmentType::Other(name.clone());
-        
+
         if let EquipmentType::Other(stored_name) = equipment_type {
             prop_assert_eq!(stored_name, name);
         } else {
@@ -321,4 +321,3 @@ proptest! {
         }
     }
 }
-

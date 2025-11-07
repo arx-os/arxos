@@ -3,10 +3,10 @@
 //! This module provides custom serialization logic for core types to maintain
 //! backward compatibility with YAML format while supporting new features.
 
-use serde::{Serializer, Deserializer, Deserialize, Serialize};
-use crate::core::{EquipmentStatus, EquipmentHealthStatus, Position, BoundingBox, Equipment};
+use crate::core::{BoundingBox, Equipment, EquipmentHealthStatus, EquipmentStatus, Position};
+use crate::spatial::{BoundingBox3D, Point3D};
 use crate::yaml::EquipmentStatus as YamlEquipmentStatus;
-use crate::spatial::{Point3D, BoundingBox3D};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// Serialize Equipment's status for YAML format
 ///
@@ -32,7 +32,7 @@ where
         };
         return yaml_status.serialize(serializer);
     }
-    
+
     // Fallback: map operational status to health status (backward compatibility)
     let yaml_status = match status {
         EquipmentStatus::Active => YamlEquipmentStatus::Healthy,
@@ -41,7 +41,7 @@ where
         EquipmentStatus::OutOfOrder => YamlEquipmentStatus::Critical,
         EquipmentStatus::Unknown => YamlEquipmentStatus::Unknown,
     };
-    
+
     yaml_status.serialize(serializer)
 }
 
@@ -57,7 +57,7 @@ where
     D: Deserializer<'de>,
 {
     let yaml_status = YamlEquipmentStatus::deserialize(deserializer)?;
-    
+
     // Map YAML health status to both operational and health status
     let (operational_status, health_status) = match yaml_status {
         YamlEquipmentStatus::Healthy => (
@@ -77,7 +77,7 @@ where
             Some(EquipmentHealthStatus::Unknown),
         ),
     };
-    
+
     Ok((operational_status, health_status))
 }
 
@@ -108,9 +108,7 @@ where
 ///
 /// When deserializing from YAML, we get Point3D (no coordinate system).
 /// We convert it to Position with a default coordinate system.
-pub fn deserialize_point3d_as_position<'de, D>(
-    deserializer: D,
-) -> Result<Position, D::Error>
+pub fn deserialize_point3d_as_position<'de, D>(deserializer: D) -> Result<Position, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -157,9 +155,7 @@ where
 ///
 /// When deserializing from YAML, we get BoundingBox3D (no coordinate systems).
 /// We convert it to BoundingBox with default coordinate systems.
-pub fn deserialize_bbox3d_as_bounding_box<'de, D>(
-    deserializer: D,
-) -> Result<BoundingBox, D::Error>
+pub fn deserialize_bbox3d_as_bounding_box<'de, D>(deserializer: D) -> Result<BoundingBox, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -208,15 +204,13 @@ where
 /// separately using building data. This is a limitation of the current architecture
 /// where equipment is stored at floor level in YAML but in rooms in core.
 #[allow(dead_code)]
-pub fn deserialize_equipment_from_ids<'de, D>(
-    deserializer: D,
-) -> Result<Vec<Equipment>, D::Error>
+pub fn deserialize_equipment_from_ids<'de, D>(deserializer: D) -> Result<Vec<Equipment>, D::Error>
 where
     D: Deserializer<'de>,
 {
     // Deserialize as IDs
     let _ids: Vec<String> = Vec::<String>::deserialize(deserializer)?;
-    
+
     // Return empty Vec - equipment will be populated separately from building data
     // This is because equipment is stored at floor level in YAML, not in rooms
     Ok(Vec::new())
@@ -226,29 +220,29 @@ where
 mod tests {
     use super::*;
     use serde_json;
-    
+
     #[test]
     fn test_serialize_health_status_priority() {
         // When health_status is set, it should be used
         let status = EquipmentStatus::Active;
         let health_status = Some(EquipmentHealthStatus::Warning);
-        
-        let serialized = serde_json::to_string(&yaml_status_from_core(&status, &health_status))
-            .unwrap();
+
+        let serialized =
+            serde_json::to_string(&yaml_status_from_core(&status, &health_status)).unwrap();
         assert!(serialized.contains("Warning"));
     }
-    
+
     #[test]
     fn test_serialize_fallback_to_operational() {
         // When health_status is None, fall back to operational status mapping
         let status = EquipmentStatus::Maintenance;
         let health_status = None;
-        
-        let serialized = serde_json::to_string(&yaml_status_from_core(&status, &health_status))
-            .unwrap();
+
+        let serialized =
+            serde_json::to_string(&yaml_status_from_core(&status, &health_status)).unwrap();
         assert!(serialized.contains("Warning")); // Maintenance -> Warning
     }
-    
+
     // Helper function for testing
     fn yaml_status_from_core(
         status: &EquipmentStatus,
@@ -271,11 +265,11 @@ mod tests {
             }
         }
     }
-    
+
     // ============================================================================
     // Position Serialization Tests
     // ============================================================================
-    
+
     #[test]
     fn test_serialize_position_as_point3d() {
         let position = Position {
@@ -284,9 +278,9 @@ mod tests {
             z: 30.5,
             coordinate_system: "world".to_string(),
         };
-        
+
         let json = serde_json::to_string(&position).unwrap();
-        
+
         // Should serialize as Point3D (x, y, z only, no coordinate_system)
         assert!(json.contains("10.5"));
         assert!(json.contains("20.5"));
@@ -294,20 +288,20 @@ mod tests {
         assert!(!json.contains("coordinate_system")); // Should not include coordinate_system
         assert!(!json.contains("world")); // Should not include coordinate system value
     }
-    
+
     #[test]
     fn test_deserialize_point3d_as_position() {
         // Point3D JSON (no coordinate_system)
         let json = r#"{"x":10.5,"y":20.5,"z":30.5}"#;
-        
+
         let position: Position = serde_json::from_str(json).unwrap();
-        
+
         assert_eq!(position.x, 10.5);
         assert_eq!(position.y, 20.5);
         assert_eq!(position.z, 30.5);
         assert_eq!(position.coordinate_system, "building_local"); // Default coordinate system
     }
-    
+
     #[test]
     fn test_position_round_trip() {
         let original = Position {
@@ -316,27 +310,27 @@ mod tests {
             z: 35.0,
             coordinate_system: "custom_system".to_string(),
         };
-        
+
         // Serialize to JSON
         let json = serde_json::to_string(&original).unwrap();
-        
+
         // Deserialize back
         let round_tripped: Position = serde_json::from_str(&json).unwrap();
-        
+
         // Coordinates should match
         assert_eq!(round_tripped.x, original.x);
         assert_eq!(round_tripped.y, original.y);
         assert_eq!(round_tripped.z, original.z);
-        
+
         // Coordinate system will be default (building_local) after round-trip
         // This is expected behavior - coordinate_system is not serialized
         assert_eq!(round_tripped.coordinate_system, "building_local");
     }
-    
+
     // ============================================================================
     // BoundingBox Serialization Tests
     // ============================================================================
-    
+
     #[test]
     fn test_serialize_bounding_box_as_bbox3d() {
         let bbox = BoundingBox {
@@ -353,9 +347,9 @@ mod tests {
                 coordinate_system: "world".to_string(),
             },
         };
-        
+
         let json = serde_json::to_string(&bbox).unwrap();
-        
+
         // Should serialize as BoundingBox3D (min/max with x, y, z only)
         assert!(json.contains("min"));
         assert!(json.contains("max"));
@@ -365,26 +359,26 @@ mod tests {
         assert!(json.contains("30.0"));
         assert!(!json.contains("coordinate_system")); // Should not include coordinate_system
     }
-    
+
     #[test]
     fn test_deserialize_bbox3d_as_bounding_box() {
         // BoundingBox3D JSON (no coordinate systems)
         let json = r#"{"min":{"x":0.0,"y":0.0,"z":0.0},"max":{"x":10.0,"y":20.0,"z":30.0}}"#;
-        
+
         let bbox: BoundingBox = serde_json::from_str(json).unwrap();
-        
+
         assert_eq!(bbox.min.x, 0.0);
         assert_eq!(bbox.min.y, 0.0);
         assert_eq!(bbox.min.z, 0.0);
         assert_eq!(bbox.max.x, 10.0);
         assert_eq!(bbox.max.y, 20.0);
         assert_eq!(bbox.max.z, 30.0);
-        
+
         // Coordinate systems should default to "building_local"
         assert_eq!(bbox.min.coordinate_system, "building_local");
         assert_eq!(bbox.max.coordinate_system, "building_local");
     }
-    
+
     #[test]
     fn test_bounding_box_round_trip() {
         let original = BoundingBox {
@@ -401,13 +395,13 @@ mod tests {
                 coordinate_system: "custom_system".to_string(),
             },
         };
-        
+
         // Serialize to JSON
         let json = serde_json::to_string(&original).unwrap();
-        
+
         // Deserialize back
         let round_tripped: BoundingBox = serde_json::from_str(&json).unwrap();
-        
+
         // Coordinates should match
         assert_eq!(round_tripped.min.x, original.min.x);
         assert_eq!(round_tripped.min.y, original.min.y);
@@ -415,11 +409,10 @@ mod tests {
         assert_eq!(round_tripped.max.x, original.max.x);
         assert_eq!(round_tripped.max.y, original.max.y);
         assert_eq!(round_tripped.max.z, original.max.z);
-        
+
         // Coordinate systems will be default (building_local) after round-trip
         // This is expected behavior - coordinate_system is not serialized
         assert_eq!(round_tripped.min.coordinate_system, "building_local");
         assert_eq!(round_tripped.max.coordinate_system, "building_local");
     }
 }
-

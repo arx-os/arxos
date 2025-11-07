@@ -6,24 +6,42 @@ use crate::persistence::PersistenceManager;
 use crate::spatial::Point3D;
 
 /// Handle equipment management commands
-pub fn handle_equipment_command(command: EquipmentCommands) -> Result<(), Box<dyn std::error::Error>> {
+pub fn handle_equipment_command(
+    command: EquipmentCommands,
+) -> Result<(), Box<dyn std::error::Error>> {
     match command {
-        EquipmentCommands::Add { room, name, equipment_type, position, at, property, commit } => {
-            handle_add_equipment(room, name, equipment_type, position, at, property, commit)
-        }
-        EquipmentCommands::List { room, equipment_type, verbose, interactive } => {
+        EquipmentCommands::Add {
+            room,
+            name,
+            equipment_type,
+            position,
+            at,
+            property,
+            commit,
+        } => handle_add_equipment(room, name, equipment_type, position, at, property, commit),
+        EquipmentCommands::List {
+            room,
+            equipment_type,
+            verbose,
+            interactive,
+        } => {
             if interactive {
                 crate::commands::equipment::browser::handle_equipment_browser(room, equipment_type)
             } else {
                 handle_list_equipment(room, equipment_type, verbose)
             }
         }
-        EquipmentCommands::Update { equipment, property, position, commit } => {
-            handle_update_equipment(equipment, property, position, commit)
-        }
-        EquipmentCommands::Remove { equipment, confirm, commit } => {
-            handle_remove_equipment(equipment, confirm, commit)
-        }
+        EquipmentCommands::Update {
+            equipment,
+            property,
+            position,
+            commit,
+        } => handle_update_equipment(equipment, property, position, commit),
+        EquipmentCommands::Remove {
+            equipment,
+            confirm,
+            commit,
+        } => handle_remove_equipment(equipment, confirm, commit),
     }
 }
 
@@ -39,39 +57,56 @@ fn handle_add_equipment(
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("🔧 Adding equipment: {} to room {}", name, room);
     println!("   Type: {}", equipment_type);
-    
+
     // Parse equipment type using helper function
     let parsed_equipment_type = parse_equipment_type(&equipment_type);
-    
+
     // Parse position if provided
     let pos_3d = if let Some(ref pos_str) = position {
         let coords: Vec<&str> = pos_str.split(',').map(|s| s.trim()).collect();
         if coords.len() == 3 {
-            let x = coords[0].parse()
-                .map_err(|e| format!("Invalid X coordinate '{}': {}. Expected a number.", coords[0], e))?;
-            let y = coords[1].parse()
-                .map_err(|e| format!("Invalid Y coordinate '{}': {}. Expected a number.", coords[1], e))?;
-            let z = coords[2].parse()
-                .map_err(|e| format!("Invalid Z coordinate '{}': {}. Expected a number.", coords[2], e))?;
+            let x = coords[0].parse().map_err(|e| {
+                format!(
+                    "Invalid X coordinate '{}': {}. Expected a number.",
+                    coords[0], e
+                )
+            })?;
+            let y = coords[1].parse().map_err(|e| {
+                format!(
+                    "Invalid Y coordinate '{}': {}. Expected a number.",
+                    coords[1], e
+                )
+            })?;
+            let z = coords[2].parse().map_err(|e| {
+                format!(
+                    "Invalid Z coordinate '{}': {}. Expected a number.",
+                    coords[2], e
+                )
+            })?;
             Point3D { x, y, z }
         } else {
             return Err(format!(
                 "Invalid position format '{}'. Expected format: x,y,z (e.g., '10.0,20.0,5.0')",
                 pos_str
-            ).into());
+            )
+            .into());
         }
     } else {
-        Point3D { x: 0.0, y: 0.0, z: 0.0 }
+        Point3D {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }
     };
-    
+
     if let Some(ref pos) = position {
         println!("   Position: {}", pos);
     }
-    
+
     for prop in &property {
         println!("   Property: {}", prop);
     }
-    
+
     // Use PersistenceManager to add equipment
     // First, we need to find the building name - for now, try loading from current dir
     use crate::utils::path_safety::PathSafety;
@@ -81,16 +116,20 @@ fn handle_add_equipment(
         .into_iter()
         .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("yaml"))
         .collect();
-    
+
     let building_name = if let Some(yaml_file) = yaml_files.first() {
-        yaml_file.file_stem().and_then(|s| s.to_str()).unwrap_or("Default Building").to_string()
+        yaml_file
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("Default Building")
+            .to_string()
     } else {
         "Default Building".to_string()
     };
-    
+
     let persistence = PersistenceManager::new(&building_name)?;
     let mut building_data = persistence.load_building_data()?;
-    
+
     // Handle address: parse from --at flag or auto-generate
     let address = if let Some(path_str) = at {
         let addr = crate::domain::ArxAddress::from_path(&path_str)?;
@@ -114,7 +153,7 @@ fn handle_add_equipment(
                 break;
             }
         }
-        
+
         if let (Some(floor_level), Some(room_name)) = (found_floor_level, found_room_name) {
             // Generate address from room name
             // If grid coordinates are needed, they can be extracted from equipment properties
@@ -122,9 +161,11 @@ fn handle_add_equipment(
             let floor_str = format!("floor-{:02}", floor_level);
             let fixture_type = equipment_type.to_lowercase();
             let fixture_id = format!("{}-01", fixture_type);
-            
+
             let addr = crate::domain::ArxAddress::new(
-                "usa", "ny", "brooklyn", // Defaults - could come from config
+                "usa",
+                "ny",
+                "brooklyn", // Defaults - could come from config
                 &building_name.to_lowercase().replace(" ", "-"),
                 &floor_str,
                 &room_system,
@@ -136,9 +177,10 @@ fn handle_add_equipment(
             None
         }
     };
-    
+
     // Create equipment with position and address
-    let mut equipment = crate::core::Equipment::new(name.clone(), "".to_string(), parsed_equipment_type);
+    let mut equipment =
+        crate::core::Equipment::new(name.clone(), "".to_string(), parsed_equipment_type);
     equipment.position = crate::core::Position {
         x: pos_3d.x,
         y: pos_3d.y,
@@ -146,7 +188,7 @@ fn handle_add_equipment(
         coordinate_system: "building_local".to_string(),
     };
     equipment.address = address.clone();
-    
+
     // Find the room and add equipment to it
     let mut equipment_added = false;
     for floor in &mut building_data.floors {
@@ -155,11 +197,11 @@ fn handle_add_equipment(
             if let Some(room) = wing.rooms.iter_mut().find(|r| r.name == room) {
                 // Add equipment to room's equipment list
                 room.equipment.push(equipment.clone());
-                
+
                 // Add to floor equipment list
                 floor.equipment.push(equipment.clone());
                 equipment_added = true;
-                
+
                 if let Some(ref addr) = address {
                     println!("   Address: {}", addr.path);
                 }
@@ -170,11 +212,14 @@ fn handle_add_equipment(
             break;
         }
     }
-    
+
     if !equipment_added {
-        println!("⚠️ Warning: Room '{}' not found, equipment will not be added to any room", room);
+        println!(
+            "⚠️ Warning: Room '{}' not found, equipment will not be added to any room",
+            room
+        );
     }
-    
+
     // Save changes
     if commit {
         let commit_msg = format!("Add equipment: {} to room {}", equipment.name, room);
@@ -184,37 +229,46 @@ fn handle_add_equipment(
         persistence.save_building_data(&building_data)?;
         println!("💡 Changes saved (staged). Use --commit to commit to Git");
     }
-    
+
     println!("✅ Equipment added successfully: {}", equipment.name);
     Ok(())
 }
 
 /// List equipment
-fn handle_list_equipment(room: Option<String>, equipment_type: Option<String>, verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
+fn handle_list_equipment(
+    room: Option<String>,
+    equipment_type: Option<String>,
+    verbose: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("📋 Listing equipment");
-    
+
     if let Some(r) = room {
         println!("   Room: {}", r);
     }
-    
+
     if let Some(et) = equipment_type {
         println!("   Type: {}", et);
     }
-    
+
     if verbose {
         println!("   Verbose mode enabled");
     }
-    
+
     let equipment_list = crate::core::list_equipment(None)?;
-    
+
     if equipment_list.is_empty() {
         println!("No equipment found");
     } else {
         for eq in equipment_list {
-            println!("   {} (ID: {}) - Type: {:?}", eq.name, eq.id, eq.equipment_type);
+            println!(
+                "   {} (ID: {}) - Type: {:?}",
+                eq.name, eq.id, eq.equipment_type
+            );
             if verbose {
-                println!("     Position: ({:.2}, {:.2}, {:.2})", 
-                    eq.position.x, eq.position.y, eq.position.z);
+                println!(
+                    "     Position: ({:.2}, {:.2}, {:.2})",
+                    eq.position.x, eq.position.y, eq.position.z
+                );
                 println!("     Status: {:?}", eq.status);
                 if let Some(room_id) = &eq.room_id {
                     println!("     Room ID: {}", room_id);
@@ -222,23 +276,28 @@ fn handle_list_equipment(room: Option<String>, equipment_type: Option<String>, v
             }
         }
     }
-    
+
     println!("✅ Equipment listing completed");
     Ok(())
 }
 
 /// Update equipment
-fn handle_update_equipment(equipment: String, property: Vec<String>, position: Option<String>, commit: bool) -> Result<(), Box<dyn std::error::Error>> {
+fn handle_update_equipment(
+    equipment: String,
+    property: Vec<String>,
+    position: Option<String>,
+    commit: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("✏️ Updating equipment: {}", equipment);
-    
+
     for prop in &property {
         println!("   Property: {}", prop);
     }
-    
+
     if let Some(ref pos) = position {
         println!("   New position: {}", pos);
     }
-    
+
     // Load building data with path safety
     use crate::utils::path_safety::PathSafety;
     let current_dir = std::env::current_dir()?;
@@ -247,9 +306,13 @@ fn handle_update_equipment(equipment: String, property: Vec<String>, position: O
         .into_iter()
         .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("yaml"))
         .collect();
-    
+
     let building_name = if let Some(yaml_file) = yaml_files.first() {
-        yaml_file.file_stem().and_then(|s| s.to_str()).unwrap_or("Default Building").to_string()
+        yaml_file
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("Default Building")
+            .to_string()
     } else {
         "Default Building".to_string()
     };
@@ -275,15 +338,17 @@ fn handle_update_equipment(equipment: String, property: Vec<String>, position: O
                         };
                     }
                 }
-                
+
                 // Update custom properties
                 for prop in &property {
                     let parts: Vec<&str> = prop.split('=').map(|s| s.trim()).collect();
                     if parts.len() == 2 {
-                        equipment_data.properties.insert(parts[0].to_string(), parts[1].to_string());
+                        equipment_data
+                            .properties
+                            .insert(parts[0].to_string(), parts[1].to_string());
                     }
                 }
-                
+
                 equipment_found = true;
                 break;
             }
@@ -292,11 +357,11 @@ fn handle_update_equipment(equipment: String, property: Vec<String>, position: O
             break;
         }
     }
-    
+
     if !equipment_found {
         return Err(format!("Equipment '{}' not found", equipment).into());
     }
-    
+
     // Save changes
     if commit {
         let commit_msg = format!("Update equipment: {}", equipment);
@@ -306,20 +371,24 @@ fn handle_update_equipment(equipment: String, property: Vec<String>, position: O
         persistence.save_building_data(&building_data)?;
         println!("💡 Changes saved (staged). Use --commit to commit to Git");
     }
-    
+
     println!("✅ Equipment updated successfully: {}", equipment);
     Ok(())
 }
 
 /// Remove equipment
-fn handle_remove_equipment(equipment: String, confirm: bool, commit: bool) -> Result<(), Box<dyn std::error::Error>> {
+fn handle_remove_equipment(
+    equipment: String,
+    confirm: bool,
+    commit: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     if !confirm {
         println!("❌ Equipment removal requires confirmation. Use --confirm flag.");
         return Ok(());
     }
-    
+
     println!("🗑️ Removing equipment: {}", equipment);
-    
+
     // Load building data with path safety
     use crate::utils::path_safety::PathSafety;
     let current_dir = std::env::current_dir()?;
@@ -328,9 +397,13 @@ fn handle_remove_equipment(equipment: String, confirm: bool, commit: bool) -> Re
         .into_iter()
         .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("yaml"))
         .collect();
-    
+
     let building_name = if let Some(yaml_file) = yaml_files.first() {
-        yaml_file.file_stem().and_then(|s| s.to_str()).unwrap_or("Default Building").to_string()
+        yaml_file
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("Default Building")
+            .to_string()
     } else {
         "Default Building".to_string()
     };
@@ -342,14 +415,16 @@ fn handle_remove_equipment(equipment: String, confirm: bool, commit: bool) -> Re
     let mut equipment_removed = false;
     for floor in &mut building_data.floors {
         let equipment_len_before = floor.equipment.len();
-        
+
         // Remove from floor equipment list
-        floor.equipment.retain(|eq| eq.name != equipment && eq.id != equipment);
-        
+        floor
+            .equipment
+            .retain(|eq| eq.name != equipment && eq.id != equipment);
+
         if floor.equipment.len() < equipment_len_before {
             equipment_removed = true;
         }
-        
+
         // Remove from room equipment lists (search in wings)
         for wing in &mut floor.wings {
             for room in &mut wing.rooms {
@@ -360,11 +435,11 @@ fn handle_remove_equipment(equipment: String, confirm: bool, commit: bool) -> Re
             }
         }
     }
-    
+
     if !equipment_removed {
         return Err(format!("Equipment '{}' not found", equipment).into());
     }
-    
+
     // Save changes
     if commit {
         let commit_msg = format!("Remove equipment: {}", equipment);
@@ -374,7 +449,7 @@ fn handle_remove_equipment(equipment: String, confirm: bool, commit: bool) -> Re
         persistence.save_building_data(&building_data)?;
         println!("💡 Changes saved (staged). Use --commit to commit to Git");
     }
-    
+
     println!("✅ Equipment removed successfully");
     Ok(())
 }

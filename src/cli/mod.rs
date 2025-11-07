@@ -321,19 +321,19 @@ pub enum Commands {
         interactive: bool,
     },
     /// Query equipment by ArxAddress glob pattern
-    /// 
+    ///
     /// Query equipment matching an ArxAddress path pattern using glob wildcards (*).
     /// Supports hierarchical path queries: /country/state/city/building/floor/room/fixture
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```bash
     /// # Find all boilers in mech rooms on any floor
     /// arx query "/usa/ny/*/floor-*/mech/boiler-*"
-    /// 
+    ///
     /// # Find all equipment in kitchen on floor 02
     /// arx query "/usa/ny/brooklyn/ps-118/floor-02/kitchen/*"
-    /// 
+    ///
     /// # Find all HVAC equipment in any city
     /// arx query "/usa/ny/*/ps-118/floor-*/hvac/*"
     /// ```
@@ -348,7 +348,7 @@ pub enum Commands {
         verbose: bool,
     },
     /// Integrate AR scan data
-    /// 
+    ///
     /// **Note:** This command directly integrates AR scans without user review.
     /// For mobile apps, consider using `ar pending` workflow instead.
     ArIntegrate {
@@ -381,15 +381,15 @@ pub enum Commands {
         /// Directory containing sensor data files
         #[arg(long, default_value = "./sensor-data")]
         sensor_dir: String,
-        
+
         /// Building name to update
         #[arg(long)]
         building: String,
-        
+
         /// Commit changes to Git
         #[arg(long)]
         commit: bool,
-        
+
         /// Watch mode: continuously monitor for new sensor data
         #[arg(long)]
         watch: bool,
@@ -399,11 +399,11 @@ pub enum Commands {
         /// Building name to update
         #[arg(long)]
         building: String,
-        
+
         /// Host address to bind to
         #[arg(long, default_value = "127.0.0.1")]
         host: String,
-        
+
         /// Port to listen on (1-65535)
         #[arg(long, default_value = "3000", value_parser = |s: &str| -> Result<u16, String> {
             let val: u16 = s.parse().map_err(|_| format!("must be a number between 1 and 65535"))?;
@@ -420,23 +420,23 @@ pub enum Commands {
         /// Building name to update
         #[arg(long)]
         building: String,
-        
+
         /// MQTT broker URL
         #[arg(long, default_value = "localhost")]
         broker: String,
-        
+
         /// MQTT broker port
         #[arg(long, default_value = "1883")]
         port: u16,
-        
+
         /// MQTT username (optional)
         #[arg(long)]
         username: Option<String>,
-        
+
         /// MQTT password (optional)
         #[arg(long)]
         password: Option<String>,
-        
+
         /// MQTT topics to subscribe to (comma-separated)
         #[arg(long, default_value = "arxos/sensors/#")]
         topics: String,
@@ -517,7 +517,7 @@ pub enum Commands {
         subcommand: SpreadsheetCommands,
     },
     /// User management commands (admin permissions required for verify/revoke)
-    /// 
+    ///
     /// The first user added to the registry automatically becomes an admin with
     /// 'verify_users' and 'revoke_users' permissions. Only admins can verify or
     /// revoke other users.
@@ -526,7 +526,7 @@ pub enum Commands {
         subcommand: UsersCommands,
     },
     /// Verify GPG signatures on Git commits
-    /// 
+    ///
     /// Checks commit signatures and displays verification status.
     /// Requires GPG to be configured and public keys to be available.
     Verify {
@@ -541,7 +541,7 @@ pub enum Commands {
         verbose: bool,
     },
     /// Migrate existing fixtures to ArxAddress format
-    /// 
+    ///
     /// One-shot migration that fills address: for every existing fixture
     /// in building YAML files by inferring from grid/floor/room data.
     /// Old data becomes instantly searchable with the new address system.
@@ -895,7 +895,7 @@ pub enum SpreadsheetCommands {
 #[derive(Subcommand)]
 pub enum UsersCommands {
     /// Add user to registry
-    /// 
+    ///
     /// If --verify is used, requires 'verify_users' permission (admin only).
     /// The first user added automatically becomes an admin with all permissions.
     Add {
@@ -928,7 +928,7 @@ pub enum UsersCommands {
         email: String,
     },
     /// Verify a user (admin only - requires 'verify_users' permission)
-    /// 
+    ///
     /// Only users with the 'verify_users' permission can verify other users.
     /// The first user in the registry automatically receives admin permissions.
     Verify {
@@ -936,7 +936,7 @@ pub enum UsersCommands {
         email: String,
     },
     /// Revoke user access (admin only - requires 'revoke_users' permission)
-    /// 
+    ///
     /// Only users with the 'revoke_users' permission can revoke user access.
     /// The first user in the registry automatically receives admin permissions.
     Revoke {
@@ -944,7 +944,7 @@ pub enum UsersCommands {
         email: String,
     },
     /// Approve a pending user registration request (admin only)
-    /// 
+    ///
     /// Approves a pending request from a mobile user and adds them to the user registry.
     /// Requires 'verify_users' permission.
     Approve {
@@ -952,7 +952,7 @@ pub enum UsersCommands {
         email: String,
     },
     /// Deny a pending user registration request (admin only)
-    /// 
+    ///
     /// Denies a pending request from a mobile user.
     /// Requires 'verify_users' permission.
     Deny {

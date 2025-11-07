@@ -1,10 +1,10 @@
 //! Status badge widget for displaying equipment/system status
 
+use crate::ui::theme::{StatusColor, Theme};
 use ratatui::{
     style::Style,
     widgets::{Block, Borders, Paragraph, Widget},
 };
-use crate::ui::theme::{StatusColor, Theme};
 
 /// Widget for displaying status with color and icon
 pub struct StatusBadge {
@@ -22,12 +22,12 @@ impl StatusBadge {
             theme: Theme::default(),
         }
     }
-    
+
     /// Create from YAML equipment status
     pub fn from_yaml_status(status: &crate::yaml::EquipmentStatus) -> Self {
         Self::new(StatusColor::from(status), format!("{:?}", status))
     }
-    
+
     /// Create from core equipment status
     pub fn from_core_status(status: &crate::core::EquipmentStatus) -> Self {
         let status_color = match status {
@@ -39,18 +39,18 @@ impl StatusBadge {
         };
         Self::new(status_color, format!("{:?}", status))
     }
-    
+
     /// Set theme
     pub fn with_theme(mut self, theme: Theme) -> Self {
         self.theme = theme;
         self
     }
-    
+
     /// Get the icon for YAML equipment status
     pub fn icon_yaml(status: &crate::yaml::EquipmentStatus) -> &'static str {
         StatusColor::from(status).icon()
     }
-    
+
     /// Get the icon for core equipment status
     pub fn icon_core(status: &crate::core::EquipmentStatus) -> &'static str {
         match status {
@@ -68,11 +68,11 @@ impl Widget for StatusBadge {
         let color = self.status.color();
         let icon = self.status.icon();
         let text = format!("{} {}", icon, self.label);
-        
+
         let paragraph = Paragraph::new(text)
             .style(Style::default().fg(color))
             .block(Block::default().borders(Borders::NONE));
-        
+
         paragraph.render(area, buf);
     }
 }
@@ -81,8 +81,8 @@ impl Widget for StatusBadge {
 mod tests {
     use super::*;
     use ratatui::layout::Rect;
-    use ratatui::widgets::Widget;
     use ratatui::style::Color;
+    use ratatui::widgets::Widget;
 
     #[test]
     fn test_status_badge_creation() {
@@ -95,13 +95,13 @@ mod tests {
     fn test_status_badge_colors() {
         let healthy = StatusBadge::new(StatusColor::Healthy, "Healthy");
         assert_eq!(healthy.status.color(), Color::Green);
-        
+
         let warning = StatusBadge::new(StatusColor::Warning, "Warning");
         assert_eq!(warning.status.color(), Color::Yellow);
-        
+
         let critical = StatusBadge::new(StatusColor::Critical, "Critical");
         assert_eq!(critical.status.color(), Color::Red);
-        
+
         let unknown = StatusBadge::new(StatusColor::Unknown, "Unknown");
         assert_eq!(unknown.status.color(), Color::Gray);
     }
@@ -111,15 +111,12 @@ mod tests {
         let badge = StatusBadge::new(StatusColor::Healthy, "Test");
         let area = Rect::new(0, 0, 20, 1);
         let mut buffer = ratatui::buffer::Buffer::empty(area);
-        
+
         badge.render(area, &mut buffer);
-        
+
         // Verify content was rendered
-        let has_content = (0..area.height).any(|y| {
-            (0..area.width).any(|x| {
-                buffer.get(x, y).symbol != " "
-            })
-        });
+        let has_content =
+            (0..area.height).any(|y| (0..area.width).any(|x| buffer.get(x, y).symbol != " "));
         assert!(has_content, "Badge should render content");
     }
 
@@ -127,23 +124,22 @@ mod tests {
     fn test_status_badge_with_theme() {
         let mut theme = Theme::default();
         theme.primary = Color::Blue;
-        
-        let badge = StatusBadge::new(StatusColor::Warning, "Test")
-            .with_theme(theme.clone());
-        
+
+        let badge = StatusBadge::new(StatusColor::Warning, "Test").with_theme(theme.clone());
+
         assert_eq!(badge.theme.primary, Color::Blue);
     }
 
     #[test]
     fn test_status_badge_icon_yaml() {
         use crate::yaml::EquipmentStatus;
-        
+
         let icon = StatusBadge::icon_yaml(&EquipmentStatus::Healthy);
         assert_eq!(icon, "🟢");
-        
+
         let icon = StatusBadge::icon_yaml(&EquipmentStatus::Warning);
         assert_eq!(icon, "🟡");
-        
+
         let icon = StatusBadge::icon_yaml(&EquipmentStatus::Critical);
         assert_eq!(icon, "🔴");
     }
@@ -151,15 +147,14 @@ mod tests {
     #[test]
     fn test_status_badge_icon_core() {
         use crate::core::EquipmentStatus;
-        
+
         let icon = StatusBadge::icon_core(&EquipmentStatus::Active);
         assert_eq!(icon, "🟢");
-        
+
         let icon = StatusBadge::icon_core(&EquipmentStatus::Maintenance);
         assert_eq!(icon, "🟡");
-        
+
         let icon = StatusBadge::icon_core(&EquipmentStatus::OutOfOrder);
         assert_eq!(icon, "🔴");
     }
 }
-

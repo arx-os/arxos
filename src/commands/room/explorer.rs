@@ -7,8 +7,8 @@
 //! - Visual room type indicators
 //! - Quick filters
 
-use crate::ui::{TerminalManager, Theme};
 use crate::ui::layouts::list_detail_layout;
+use crate::ui::{TerminalManager, Theme};
 use crate::utils::loading;
 use crossterm::event::{Event, KeyCode};
 use ratatui::{
@@ -17,8 +17,8 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
 };
-use std::time::Duration;
 use std::collections::HashMap;
+use std::time::Duration;
 
 /// Tree node representing a building structure element
 #[derive(Debug, Clone)]
@@ -67,7 +67,7 @@ impl ExplorerState {
             show_details: true,
         }
     }
-    
+
     fn get_selected_node(&self) -> Option<TreeNode> {
         let mut current = &self.tree;
         for &idx in &self.selected_path[..self.selected_path.len().saturating_sub(1)] {
@@ -79,7 +79,7 @@ impl ExplorerState {
         }
         current.get(*self.selected_path.last()?).cloned()
     }
-    
+
     fn get_selected_room(&self) -> Option<&RoomNode> {
         // If selected path points to a room, extract it from the floor
         if self.selected_path.len() >= 3 {
@@ -92,21 +92,29 @@ impl ExplorerState {
         }
         None
     }
-    
+
     fn is_expanded(&self, path: &[usize]) -> bool {
-        let key = path.iter().map(|i| i.to_string()).collect::<Vec<_>>().join("/");
+        let key = path
+            .iter()
+            .map(|i| i.to_string())
+            .collect::<Vec<_>>()
+            .join("/");
         self.expanded.contains(&key)
     }
-    
+
     fn toggle_expand(&mut self, path: &[usize]) {
-        let key = path.iter().map(|i| i.to_string()).collect::<Vec<_>>().join("/");
+        let key = path
+            .iter()
+            .map(|i| i.to_string())
+            .collect::<Vec<_>>()
+            .join("/");
         if self.expanded.contains(&key) {
             self.expanded.remove(&key);
         } else {
             self.expanded.insert(key);
         }
     }
-    
+
     fn next(&mut self) {
         // Navigate to next visible item
         if let Some(flat_items) = self.get_flat_items() {
@@ -117,7 +125,7 @@ impl ExplorerState {
             }
         }
     }
-    
+
     fn previous(&mut self) {
         // Navigate to previous visible item
         if let Some(flat_items) = self.get_flat_items() {
@@ -132,18 +140,18 @@ impl ExplorerState {
             }
         }
     }
-    
+
     fn get_flat_items(&self) -> Option<Vec<FlatItem>> {
         let mut items = Vec::new();
         self.build_flat_list(&self.tree, &[], &mut items);
         Some(items)
     }
-    
+
     fn build_flat_list(&self, nodes: &[TreeNode], path: &[usize], items: &mut Vec<FlatItem>) {
         for (idx, node) in nodes.iter().enumerate() {
             let current_path = [path, &[idx]].concat();
             let depth = current_path.len();
-            
+
             match node {
                 TreeNode::Building { name, floors } => {
                     items.push(FlatItem {
@@ -154,12 +162,17 @@ impl ExplorerState {
                         equipment_count: None,
                         room_type: None,
                     });
-                    
+
                     if self.is_expanded(&current_path) {
                         self.build_flat_list(floors, &current_path, items);
                     }
                 }
-                TreeNode::Floor { level, name, rooms, equipment_count } => {
+                TreeNode::Floor {
+                    level,
+                    name,
+                    rooms,
+                    equipment_count,
+                } => {
                     items.push(FlatItem {
                         path: current_path.clone(),
                         depth,
@@ -168,7 +181,7 @@ impl ExplorerState {
                         equipment_count: Some(*equipment_count),
                         room_type: None,
                     });
-                    
+
                     if self.is_expanded(&current_path) {
                         for (room_idx, room) in rooms.iter().enumerate() {
                             let room_path = [&current_path[..], &[room_idx]].concat();
@@ -186,10 +199,11 @@ impl ExplorerState {
             }
         }
     }
-    
+
     fn get_current_flat_index(&self) -> usize {
         if let Some(flat_items) = self.get_flat_items() {
-            flat_items.iter()
+            flat_items
+                .iter()
                 .position(|item| item.path == self.selected_path)
                 .unwrap_or(0)
         } else {
@@ -212,9 +226,9 @@ struct FlatItem {
 fn build_room_tree(building_name: &str) -> Result<Vec<TreeNode>, Box<dyn std::error::Error>> {
     let building_data = loading::load_building_data(building_name)?;
     let mut trees = Vec::new();
-    
+
     let mut floor_map: HashMap<i32, Vec<RoomNode>> = HashMap::new();
-    
+
     // Collect all rooms by floor (rooms are now in wings)
     for floor in &building_data.floors {
         let mut rooms = Vec::new();
@@ -222,7 +236,8 @@ fn build_room_tree(building_name: &str) -> Result<Vec<TreeNode>, Box<dyn std::er
             for room in &wing.rooms {
                 let equipment_count = room.equipment.len();
                 // Calculate area and volume from dimensions
-                let area = room.spatial_properties.dimensions.width * room.spatial_properties.dimensions.depth;
+                let area = room.spatial_properties.dimensions.width
+                    * room.spatial_properties.dimensions.depth;
                 let volume = area * room.spatial_properties.dimensions.height;
                 rooms.push(RoomNode {
                     id: room.id.clone(),
@@ -234,10 +249,10 @@ fn build_room_tree(building_name: &str) -> Result<Vec<TreeNode>, Box<dyn std::er
                 });
             }
         }
-        
+
         let total_equipment = floor.equipment.len();
         floor_map.insert(floor.level, rooms);
-        
+
         trees.push(TreeNode::Floor {
             level: floor.level,
             name: floor.name.clone(),
@@ -245,17 +260,15 @@ fn build_room_tree(building_name: &str) -> Result<Vec<TreeNode>, Box<dyn std::er
             equipment_count: total_equipment,
         });
     }
-    
+
     // Sort floors by level
-    trees.sort_by(|a, b| {
-        match (a, b) {
-            (TreeNode::Floor { level: a_level, .. }, TreeNode::Floor { level: b_level, .. }) => {
-                a_level.cmp(b_level)
-            }
-            _ => std::cmp::Ordering::Equal,
+    trees.sort_by(|a, b| match (a, b) {
+        (TreeNode::Floor { level: a_level, .. }, TreeNode::Floor { level: b_level, .. }) => {
+            a_level.cmp(b_level)
         }
+        _ => std::cmp::Ordering::Equal,
     });
-    
+
     // Wrap in building node
     Ok(vec![TreeNode::Building {
         name: building_data.building.name.clone(),
@@ -264,21 +277,18 @@ fn build_room_tree(building_name: &str) -> Result<Vec<TreeNode>, Box<dyn std::er
 }
 
 /// Render tree view
-fn render_tree_view<'a>(
-    state: &'a ExplorerState,
-    _area: Rect,
-    theme: &'a Theme,
-) -> List<'a> {
-    let items: Vec<ListItem> = state.get_flat_items()
+fn render_tree_view<'a>(state: &'a ExplorerState, _area: Rect, theme: &'a Theme) -> List<'a> {
+    let items: Vec<ListItem> = state
+        .get_flat_items()
         .unwrap_or_default()
         .iter()
         .map(|item| {
             let is_selected = item.path == state.selected_path;
             let prefix = if is_selected { ">" } else { " " };
-            
+
             // Indentation based on depth
             let indent = "  ".repeat(item.depth);
-            
+
             // Icon based on node type
             let icon = match item.node_type {
                 "building" => "🏢",
@@ -286,13 +296,16 @@ fn render_tree_view<'a>(
                 "room" => "🚪",
                 _ => "  ",
             };
-            
+
             let mut line_parts = vec![
                 Span::styled(prefix, Style::default().fg(theme.accent)),
                 Span::styled(" ", Style::default()),
-                Span::styled(format!("{} {} ", icon, indent), Style::default().fg(theme.muted)),
+                Span::styled(
+                    format!("{} {} ", icon, indent),
+                    Style::default().fg(theme.muted),
+                ),
             ];
-            
+
             // Room type indicator
             if let Some(ref room_type) = item.room_type {
                 let type_color = match room_type.to_lowercase().as_str() {
@@ -307,14 +320,18 @@ fn render_tree_view<'a>(
                     Style::default().fg(type_color),
                 ));
             }
-            
+
             line_parts.push(Span::styled(
                 item.label.clone(),
                 Style::default()
                     .fg(theme.text)
-                    .add_modifier(if is_selected { Modifier::BOLD | Modifier::REVERSED } else { Modifier::empty() }),
+                    .add_modifier(if is_selected {
+                        Modifier::BOLD | Modifier::REVERSED
+                    } else {
+                        Modifier::empty()
+                    }),
             ));
-            
+
             // Equipment count
             if let Some(count) = item.equipment_count {
                 if count > 0 {
@@ -324,34 +341,33 @@ fn render_tree_view<'a>(
                     ));
                 }
             }
-            
+
             ListItem::new(Line::from(line_parts))
         })
         .collect();
-    
+
     let title = if state.filter.is_empty() {
         "Building Explorer".to_string()
     } else {
         format!("Building Explorer (filtered)")
     };
-    
+
     List::new(items)
         .block(Block::default().borders(Borders::ALL).title(title))
         .highlight_style(Style::default().add_modifier(Modifier::BOLD))
 }
 
 /// Render room details
-fn render_room_details<'a>(
-    node: &'a TreeNode,
-    _area: Rect,
-    theme: &'a Theme,
-) -> Paragraph<'a> {
+fn render_room_details<'a>(node: &'a TreeNode, _area: Rect, theme: &'a Theme) -> Paragraph<'a> {
     let lines = match node {
         TreeNode::Building { name, floors } => {
             vec![
                 Line::from(vec![
                     Span::styled("Building: ", Style::default().fg(theme.muted)),
-                    Span::styled(name, Style::default().fg(theme.text).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        name,
+                        Style::default().fg(theme.text).add_modifier(Modifier::BOLD),
+                    ),
                 ]),
                 Line::from(vec![
                     Span::styled("Floors: ", Style::default().fg(theme.muted)),
@@ -359,11 +375,19 @@ fn render_room_details<'a>(
                 ]),
             ]
         }
-        TreeNode::Floor { level, name, rooms, equipment_count } => {
+        TreeNode::Floor {
+            level,
+            name,
+            rooms,
+            equipment_count,
+        } => {
             vec![
                 Line::from(vec![
                     Span::styled("Floor: ", Style::default().fg(theme.muted)),
-                    Span::styled(format!("{} - {}", level, name), Style::default().fg(theme.text).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        format!("{} - {}", level, name),
+                        Style::default().fg(theme.text).add_modifier(Modifier::BOLD),
+                    ),
                 ]),
                 Line::from(vec![
                     Span::styled("Rooms: ", Style::default().fg(theme.muted)),
@@ -376,7 +400,7 @@ fn render_room_details<'a>(
             ]
         }
     };
-    
+
     Paragraph::new(lines)
         .block(Block::default().borders(Borders::ALL).title("Details"))
         .alignment(Alignment::Left)
@@ -391,7 +415,10 @@ fn render_room_node_details<'a>(
     let mut room_lines = vec![
         Line::from(vec![
             Span::styled("Room: ", Style::default().fg(theme.muted)),
-            Span::styled(room.name.clone(), Style::default().fg(theme.text).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                room.name.clone(),
+                Style::default().fg(theme.text).add_modifier(Modifier::BOLD),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Type: ", Style::default().fg(theme.muted)),
@@ -399,24 +426,27 @@ fn render_room_node_details<'a>(
         ]),
         Line::from(vec![
             Span::styled("Equipment: ", Style::default().fg(theme.muted)),
-            Span::styled(room.equipment_count.to_string(), Style::default().fg(theme.text)),
+            Span::styled(
+                room.equipment_count.to_string(),
+                Style::default().fg(theme.text),
+            ),
         ]),
     ];
-    
+
     if let Some(area) = room.area {
         room_lines.push(Line::from(vec![
             Span::styled("Area: ", Style::default().fg(theme.muted)),
             Span::styled(format!("{:.1} m²", area), Style::default().fg(theme.text)),
         ]));
     }
-    
+
     if let Some(volume) = room.volume {
         room_lines.push(Line::from(vec![
             Span::styled("Volume: ", Style::default().fg(theme.muted)),
             Span::styled(format!("{:.1} m³", volume), Style::default().fg(theme.text)),
         ]));
     }
-    
+
     Paragraph::new(room_lines)
         .block(Block::default().borders(Borders::ALL).title("Room Details"))
         .alignment(Alignment::Left)
@@ -429,7 +459,7 @@ fn render_footer<'a>(theme: &'a Theme, filter_mode: bool) -> Paragraph<'a> {
     } else {
         "→/Space: Expand | ←: Collapse | ↑/↓: Navigate | Enter: Toggle | /: Search | q: Quit"
     };
-    
+
     Paragraph::new(help_text)
         .style(Style::default().fg(theme.muted))
         .block(Block::default().borders(Borders::ALL).title("Controls"))
@@ -437,10 +467,12 @@ fn render_footer<'a>(theme: &'a Theme, filter_mode: bool) -> Paragraph<'a> {
 }
 
 /// Handle interactive room explorer
-pub fn handle_room_explorer(building_name: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn handle_room_explorer(
+    building_name: Option<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let mut terminal = TerminalManager::new()?;
     let theme = Theme::default();
-    
+
     let building = building_name.unwrap_or_else(|| {
         if let Ok(files) = crate::utils::loading::find_yaml_files() {
             if let Some(first_file) = files.first() {
@@ -456,35 +488,35 @@ pub fn handle_room_explorer(building_name: Option<String>) -> Result<(), Box<dyn
             "Default Building".to_string()
         }
     });
-    
+
     let tree = build_room_tree(&building)?;
-    
+
     if tree.is_empty() {
         println!("No building data found");
         return Ok(());
     }
-    
+
     let mut state = ExplorerState::new(tree);
     // Expand building node by default
     state.toggle_expand(&[0]);
-    
+
     let mut list_state = ListState::default();
     let mut filter_input = String::new();
     let mut filter_mode = false;
-    
+
     loop {
         terminal.terminal().draw(|frame| {
             let chunks = list_detail_layout(frame.size(), 50);
-            
+
             // Get current index and selected node before rendering
             let current_idx = state.get_current_flat_index();
             let selected_node = state.get_selected_node();
-            
+
             // Left: Tree view
             let tree_list = render_tree_view(&state, chunks[0], &theme);
             list_state.select(Some(current_idx));
             frame.render_stateful_widget(tree_list, chunks[0], &mut list_state);
-            
+
             // Right: Details
             if state.show_details {
                 if let Some(node) = &selected_node {
@@ -500,7 +532,7 @@ pub fn handle_room_explorer(building_name: Option<String>) -> Result<(), Box<dyn
                     frame.render_widget(no_selection, chunks[1]);
                 }
             }
-            
+
             // Footer
             let footer = render_footer(&theme, filter_mode);
             let footer_chunk = Layout::default()
@@ -508,7 +540,7 @@ pub fn handle_room_explorer(building_name: Option<String>) -> Result<(), Box<dyn
                 .constraints([Constraint::Min(0), Constraint::Length(3)])
                 .split(frame.size())[1];
             frame.render_widget(footer, footer_chunk);
-            
+
             // Filter input overlay
             if filter_mode {
                 let filter_text = if filter_input.is_empty() {
@@ -522,7 +554,7 @@ pub fn handle_room_explorer(building_name: Option<String>) -> Result<(), Box<dyn
                 frame.render_widget(filter_paragraph, chunks[0]);
             }
         })?;
-        
+
         // Handle events
         if let Some(event) = terminal.poll_event(Duration::from_millis(100))? {
             match event {
@@ -549,14 +581,19 @@ pub fn handle_room_explorer(building_name: Option<String>) -> Result<(), Box<dyn
                 Event::Key(key_event) => {
                     if key_event.code == KeyCode::Char('q') || key_event.code == KeyCode::Esc {
                         break;
-                    } else if key_event.code == KeyCode::Down || key_event.code == KeyCode::Char('j') {
+                    } else if key_event.code == KeyCode::Down
+                        || key_event.code == KeyCode::Char('j')
+                    {
                         state.next();
-                    } else if key_event.code == KeyCode::Up || key_event.code == KeyCode::Char('k') {
+                    } else if key_event.code == KeyCode::Up || key_event.code == KeyCode::Char('k')
+                    {
                         state.previous();
                     } else if key_event.code == KeyCode::Char('/') {
                         filter_mode = true;
                         filter_input.clear();
-                    } else if key_event.code == KeyCode::Char(' ') || key_event.code == KeyCode::Right {
+                    } else if key_event.code == KeyCode::Char(' ')
+                        || key_event.code == KeyCode::Right
+                    {
                         // Expand/collapse
                         let path_to_toggle = state.selected_path.clone();
                         state.toggle_expand(&path_to_toggle);
@@ -574,7 +611,6 @@ pub fn handle_room_explorer(building_name: Option<String>) -> Result<(), Box<dyn
             }
         }
     }
-    
+
     Ok(())
 }
-

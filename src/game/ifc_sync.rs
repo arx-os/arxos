@@ -3,11 +3,11 @@
 //! Preserves IFC metadata (entity IDs, types, placement chains, properties) when
 //! equipment is used in game modes, ensuring round-trip compatibility with IFC files.
 
-use std::collections::HashMap;
-use crate::game::types::GameEquipmentPlacement;
 use crate::core::Equipment;
+use crate::game::types::GameEquipmentPlacement;
 use crate::spatial::Point3D;
 use log::{info, warn};
+use std::collections::HashMap;
 
 /// IFC metadata for equipment placement
 #[derive(Debug, Clone)]
@@ -143,7 +143,10 @@ impl IFCSyncManager {
                 "ifc_last_position_z".to_string(),
                 new_position.z.to_string(),
             );
-            info!("Updated position in IFC metadata for equipment '{}'", equipment_id);
+            info!(
+                "Updated position in IFC metadata for equipment '{}'",
+                equipment_id
+            );
         }
     }
 
@@ -152,9 +155,15 @@ impl IFCSyncManager {
         if let Some(metadata) = self.metadata_map.get_mut(equipment_id) {
             let entity_type_clone = entity_type.clone();
             metadata.entity_type = Some(entity_type);
-            info!("Set IFC entity type '{}' for equipment '{}'", entity_type_clone, equipment_id);
+            info!(
+                "Set IFC entity type '{}' for equipment '{}'",
+                entity_type_clone, equipment_id
+            );
         } else {
-            warn!("Cannot set entity type for unregistered equipment: {}", equipment_id);
+            warn!(
+                "Cannot set entity type for unregistered equipment: {}",
+                equipment_id
+            );
         }
     }
 
@@ -185,9 +194,14 @@ impl IFCSyncManager {
             // Merge original properties
             for (key, value) in &metadata.original_properties {
                 if !placement.equipment.properties.contains_key(key) {
-                    placement.equipment.properties.insert(key.clone(), value.clone());
+                    placement
+                        .equipment
+                        .properties
+                        .insert(key.clone(), value.clone());
                 }
-                placement.ifc_original_properties.insert(key.clone(), value.clone());
+                placement
+                    .ifc_original_properties
+                    .insert(key.clone(), value.clone());
             }
         }
     }
@@ -206,13 +220,19 @@ impl IFCSyncManager {
     /// Export metadata summary for debugging
     pub fn export_summary(&self) -> IFCSyncSummary {
         let total = self.metadata_map.len();
-        let with_entity_id = self.metadata_map.values()
+        let with_entity_id = self
+            .metadata_map
+            .values()
             .filter(|m| m.entity_id.is_some())
             .count();
-        let with_entity_type = self.metadata_map.values()
+        let with_entity_type = self
+            .metadata_map
+            .values()
             .filter(|m| m.entity_type.is_some())
             .count();
-        let with_placement_chain = self.metadata_map.values()
+        let with_placement_chain = self
+            .metadata_map
+            .values()
             .filter(|m| !m.placement_chain.is_empty())
             .count();
 
@@ -268,7 +288,9 @@ pub fn extract_ifc_metadata_from_properties(equipment: &Equipment) -> IFCMetadat
     // Copy all IFC-related properties
     for (key, value) in &equipment.properties {
         if key.starts_with("ifc_") {
-            metadata.original_properties.insert(key.clone(), value.clone());
+            metadata
+                .original_properties
+                .insert(key.clone(), value.clone());
         }
     }
 
@@ -278,11 +300,15 @@ pub fn extract_ifc_metadata_from_properties(equipment: &Equipment) -> IFCMetadat
 /// Helper to inject IFC metadata into equipment properties
 pub fn inject_ifc_metadata_to_properties(equipment: &mut Equipment, metadata: &IFCMetadata) {
     if let Some(entity_id) = &metadata.entity_id {
-        equipment.properties.insert("ifc_entity_id".to_string(), entity_id.clone());
+        equipment
+            .properties
+            .insert("ifc_entity_id".to_string(), entity_id.clone());
     }
 
     if let Some(entity_type) = &metadata.entity_type {
-        equipment.properties.insert("ifc_entity_type".to_string(), entity_type.clone());
+        equipment
+            .properties
+            .insert("ifc_entity_type".to_string(), entity_type.clone());
     }
 
     if !metadata.placement_chain.is_empty() {
@@ -297,4 +323,3 @@ pub fn inject_ifc_metadata_to_properties(equipment: &mut Equipment, metadata: &I
         equipment.properties.insert(key.clone(), value.clone());
     }
 }
-

@@ -2,8 +2,8 @@
 //!
 //! Provides consistent color schemes and styling for building management context.
 
-use ratatui::style::Color;
 use crate::ui::theme_manager::ThemeManager;
+use ratatui::style::Color;
 
 /// Status colors for equipment and system health
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -24,7 +24,7 @@ impl StatusColor {
             StatusColor::Unknown => Color::Gray,
         }
     }
-    
+
     /// Get icon/symbol for this status
     pub fn icon(&self) -> &'static str {
         match self {
@@ -100,20 +100,20 @@ impl Theme {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Create a modern, professional color scheme
     /// Uses muted blues/cyans for primary, warm oranges for accents, greens for success
     pub fn modern() -> Self {
         Self {
-            primary: Color::Cyan,        // Muted cyan for primary actions
-            secondary: Color::Blue,      // Blue for secondary info
-            accent: Color::Yellow,       // Warm orange/yellow for accents
-            background: Color::Black,    // Black background
-            text: Color::White,          // White text
-            muted: Color::DarkGray,      // Dark gray for muted text
+            primary: Color::Cyan,     // Muted cyan for primary actions
+            secondary: Color::Blue,   // Blue for secondary info
+            accent: Color::Yellow,    // Warm orange/yellow for accents
+            background: Color::Black, // Black background
+            text: Color::White,       // White text
+            muted: Color::DarkGray,   // Dark gray for muted text
         }
     }
-    
+
     /// Get color for reserved system type
     pub fn system_color(system: &str) -> Color {
         match system.to_lowercase().as_str() {
@@ -134,7 +134,7 @@ impl Theme {
             _ => Color::White,               // White for custom items
         }
     }
-    
+
     /// Detect system theme preference
     /// Returns true for dark mode, false for light mode
     fn detect_system_theme() -> bool {
@@ -151,7 +151,7 @@ impl Theme {
                 }
             }
         }
-        
+
         #[cfg(target_os = "linux")]
         {
             // Linux: Check COLORFGBG environment variable
@@ -164,7 +164,7 @@ impl Theme {
                     }
                 }
             }
-            
+
             // Alternative: Check gsettings (GNOME)
             use std::process::Command;
             if let Ok(output) = Command::new("gsettings")
@@ -177,13 +177,18 @@ impl Theme {
                 }
             }
         }
-        
+
         #[cfg(target_os = "windows")]
         {
             // Windows: Check registry for theme preference
             use std::process::Command;
             if let Ok(output) = Command::new("reg")
-                .args(&["query", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", "/v", "AppsUseLightTheme"])
+                .args(&[
+                    "query",
+                    "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+                    "/v",
+                    "AppsUseLightTheme",
+                ])
                 .output()
             {
                 if let Ok(result) = String::from_utf8(output.stdout) {
@@ -192,11 +197,11 @@ impl Theme {
                 }
             }
         }
-        
+
         // Default: assume dark mode for terminals (most terminals use dark backgrounds)
         true
     }
-    
+
     /// Detect terminal theme from environment
     /// Checks COLORFGBG and other terminal-specific variables
     fn detect_terminal_theme() -> Option<bool> {
@@ -209,7 +214,7 @@ impl Theme {
                 }
             }
         }
-        
+
         // Check TERM_PROGRAM for specific terminal apps
         if let Ok(term_program) = std::env::var("TERM_PROGRAM") {
             match term_program.as_str() {
@@ -220,17 +225,17 @@ impl Theme {
                 _ => {}
             }
         }
-        
+
         None
     }
-    
+
     /// Create theme from terminal/system detection
     pub fn from_terminal() -> Self {
         // First try terminal-specific detection
         let is_dark = Self::detect_terminal_theme()
             .or_else(|| Some(Self::detect_system_theme()))
             .unwrap_or(true); // Default to dark
-        
+
         if is_dark {
             Self::modern() // Modern dark theme
         } else {
@@ -245,7 +250,7 @@ impl Theme {
             }
         }
     }
-    
+
     /// Get theme based on user configuration
     pub fn from_config() -> Self {
         // Try to load from config first
@@ -257,7 +262,7 @@ impl Theme {
                 return configured_theme;
             }
         }
-        
+
         // Auto-detect from terminal/system
         Self::from_terminal()
     }
@@ -274,7 +279,7 @@ mod tests {
         assert!(matches!(theme.background, Color::Black | Color::White));
         assert!(matches!(theme.text, Color::Black | Color::White));
     }
-    
+
     #[test]
     fn test_from_config_uses_terminal_detection() {
         // Test that from_config falls back to terminal detection
@@ -305,7 +310,15 @@ mod tests {
         // This should work even if config loading fails
         let theme = Theme::from_config();
         // Should have valid colors
-        assert!(matches!(theme.primary, Color::Cyan | Color::Blue | Color::LightBlue | Color::LightGreen | Color::LightMagenta | Color::Yellow));
+        assert!(matches!(
+            theme.primary,
+            Color::Cyan
+                | Color::Blue
+                | Color::LightBlue
+                | Color::LightGreen
+                | Color::LightMagenta
+                | Color::Yellow
+        ));
     }
 
     #[test]
@@ -331,4 +344,3 @@ mod tests {
         assert_ne!(StatusColor::Critical, StatusColor::Unknown);
     }
 }
-

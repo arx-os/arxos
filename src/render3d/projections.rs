@@ -3,8 +3,8 @@
 //! This module contains projection functions for transforming 3D coordinates
 //! to 2D screen coordinates using various projection methods.
 
+use crate::render3d::types::{Camera3D, Projection3D, ViewAngle};
 use crate::spatial::Point3D;
-use crate::render3d::types::{Projection3D, ViewAngle, Camera3D};
 
 /// Apply isometric projection to a 3D point
 ///
@@ -21,7 +21,7 @@ pub fn isometric_projection(point: &Point3D, scale: f64) -> Point3D {
     let x = (point.x - point.z) * scale;
     let y = (point.x + point.z) * 0.5 * scale + point.y * scale;
     let z = point.z; // Keep original Z for depth sorting
-    
+
     Point3D { x, y, z }
 }
 
@@ -72,11 +72,11 @@ pub fn perspective_projection(point: &Point3D, camera: &Camera3D) -> Point3D {
     if distance <= 0.0 {
         return *point; // Behind camera
     }
-    
+
     let x = (point.x - camera.position.x) * camera.fov / distance;
     let y = (point.y - camera.position.y) * camera.fov / distance;
     let z = distance; // Use distance for depth sorting
-    
+
     Point3D { x, y, z }
 }
 
@@ -92,11 +92,7 @@ pub fn perspective_projection(point: &Point3D, camera: &Camera3D) -> Point3D {
 ///
 /// Projected Point3D
 #[allow(dead_code)]
-pub fn apply_projection(
-    point: &Point3D,
-    projection: &Projection3D,
-    camera: &Camera3D,
-) -> Point3D {
+pub fn apply_projection(point: &Point3D, projection: &Projection3D, camera: &Camera3D) -> Point3D {
     match projection.projection_type {
         crate::render3d::types::ProjectionType::Isometric => {
             isometric_projection(point, projection.scale)
@@ -109,4 +105,3 @@ pub fn apply_projection(
         }
     }
 }
-

@@ -2,7 +2,7 @@
 //!
 //! Provides all available commands for the command palette.
 
-use super::types::{CommandEntry, CommandCategory};
+use super::types::{CommandCategory, CommandEntry};
 
 /// Load all available commands
 pub fn load_commands() -> Vec<CommandEntry> {
@@ -29,7 +29,6 @@ pub fn load_commands() -> Vec<CommandEntry> {
             category: CommandCategory::ImportExport,
             shortcut: None,
         },
-        
         // Equipment
         CommandEntry {
             name: "equipment list".to_string(),
@@ -52,7 +51,6 @@ pub fn load_commands() -> Vec<CommandEntry> {
             category: CommandCategory::Equipment,
             shortcut: None,
         },
-        
         // Rooms
         CommandEntry {
             name: "room list".to_string(),
@@ -68,7 +66,6 @@ pub fn load_commands() -> Vec<CommandEntry> {
             category: CommandCategory::Room,
             shortcut: None,
         },
-        
         // Git Operations
         CommandEntry {
             name: "status".to_string(),
@@ -91,7 +88,6 @@ pub fn load_commands() -> Vec<CommandEntry> {
             category: CommandCategory::Git,
             shortcut: None,
         },
-        
         // Search
         CommandEntry {
             name: "search".to_string(),
@@ -107,7 +103,6 @@ pub fn load_commands() -> Vec<CommandEntry> {
             category: CommandCategory::Search,
             shortcut: None,
         },
-        
         // Render
         CommandEntry {
             name: "render".to_string(),
@@ -123,7 +118,6 @@ pub fn load_commands() -> Vec<CommandEntry> {
             category: CommandCategory::Render,
             shortcut: None,
         },
-        
         // AR
         CommandEntry {
             name: "ar integrate".to_string(),
@@ -139,7 +133,6 @@ pub fn load_commands() -> Vec<CommandEntry> {
             category: CommandCategory::AR,
             shortcut: None,
         },
-        
         // Config
         CommandEntry {
             name: "config".to_string(),
@@ -155,7 +148,6 @@ pub fn load_commands() -> Vec<CommandEntry> {
             category: CommandCategory::Config,
             shortcut: None,
         },
-        
         // Sensors
         CommandEntry {
             name: "sensors process".to_string(),
@@ -171,7 +163,6 @@ pub fn load_commands() -> Vec<CommandEntry> {
             category: CommandCategory::Sensors,
             shortcut: None,
         },
-        
         // Health
         CommandEntry {
             name: "health".to_string(),
@@ -187,7 +178,6 @@ pub fn load_commands() -> Vec<CommandEntry> {
             category: CommandCategory::Health,
             shortcut: None,
         },
-        
         // Documentation
         CommandEntry {
             name: "doc".to_string(),
@@ -219,22 +209,27 @@ mod tests {
     #[test]
     fn test_commands_by_category() {
         let commands = load_commands();
-        let building: Vec<_> = commands.iter()
+        let building: Vec<_> = commands
+            .iter()
             .filter(|c| c.category == CommandCategory::Building)
             .collect();
-        let equipment: Vec<_> = commands.iter()
+        let equipment: Vec<_> = commands
+            .iter()
             .filter(|c| c.category == CommandCategory::Equipment)
             .collect();
-        let room: Vec<_> = commands.iter()
+        let room: Vec<_> = commands
+            .iter()
             .filter(|c| c.category == CommandCategory::Room)
             .collect();
-        let git: Vec<_> = commands.iter()
+        let git: Vec<_> = commands
+            .iter()
             .filter(|c| c.category == CommandCategory::Git)
             .collect();
-        let ar: Vec<_> = commands.iter()
+        let ar: Vec<_> = commands
+            .iter()
             .filter(|c| c.category == CommandCategory::AR)
             .collect();
-        
+
         assert!(!building.is_empty(), "Should have Building commands");
         assert!(!equipment.is_empty(), "Should have Equipment commands");
         assert!(!room.is_empty(), "Should have Room commands");
@@ -247,8 +242,14 @@ mod tests {
         let commands = load_commands();
         for cmd in &commands {
             assert!(!cmd.name.is_empty(), "Command should have a name");
-            assert!(!cmd.full_command.is_empty(), "Command should have full_command");
-            assert!(!cmd.description.is_empty(), "Command should have description");
+            assert!(
+                !cmd.full_command.is_empty(),
+                "Command should have full_command"
+            );
+            assert!(
+                !cmd.description.is_empty(),
+                "Command should have description"
+            );
         }
     }
 
@@ -257,8 +258,11 @@ mod tests {
         let commands = load_commands();
         let mut names: std::collections::HashSet<String> = std::collections::HashSet::new();
         for cmd in &commands {
-            assert!(!names.contains(&cmd.name), 
-                "Duplicate command name: {}", cmd.name);
+            assert!(
+                !names.contains(&cmd.name),
+                "Duplicate command name: {}",
+                cmd.name
+            );
             names.insert(cmd.name.clone());
         }
     }
@@ -266,65 +270,87 @@ mod tests {
     #[test]
     fn test_building_commands() {
         let commands = load_commands();
-        let building_cmds: Vec<_> = commands.iter()
+        let building_cmds: Vec<_> = commands
+            .iter()
             .filter(|c| c.category == CommandCategory::Building)
             .collect();
-        assert!(!building_cmds.is_empty(), "Should have Building category commands");
-        assert!(building_cmds.iter().any(|c| c.name == "init"), 
-            "Should have 'init' command");
+        assert!(
+            !building_cmds.is_empty(),
+            "Should have Building category commands"
+        );
+        assert!(
+            building_cmds.iter().any(|c| c.name == "init"),
+            "Should have 'init' command"
+        );
     }
 
     #[test]
     fn test_equipment_commands() {
         let commands = load_commands();
-        let equipment_cmds: Vec<_> = commands.iter()
+        let equipment_cmds: Vec<_> = commands
+            .iter()
             .filter(|c| c.category == CommandCategory::Equipment)
             .collect();
-        assert!(!equipment_cmds.is_empty(), "Should have Equipment category commands");
-        assert!(equipment_cmds.iter().any(|c| c.name.contains("equipment")), 
-            "Should have equipment-related commands");
+        assert!(
+            !equipment_cmds.is_empty(),
+            "Should have Equipment category commands"
+        );
+        assert!(
+            equipment_cmds.iter().any(|c| c.name.contains("equipment")),
+            "Should have equipment-related commands"
+        );
     }
 
     #[test]
     fn test_room_commands() {
         let commands = load_commands();
-        let room_cmds: Vec<_> = commands.iter()
+        let room_cmds: Vec<_> = commands
+            .iter()
             .filter(|c| c.category == CommandCategory::Room)
             .collect();
         assert!(!room_cmds.is_empty(), "Should have Room category commands");
-        assert!(room_cmds.iter().any(|c| c.name.contains("room")), 
-            "Should have room-related commands");
+        assert!(
+            room_cmds.iter().any(|c| c.name.contains("room")),
+            "Should have room-related commands"
+        );
     }
 
     #[test]
     fn test_git_commands() {
         let commands = load_commands();
-        let git_cmds: Vec<_> = commands.iter()
+        let git_cmds: Vec<_> = commands
+            .iter()
             .filter(|c| c.category == CommandCategory::Git)
             .collect();
         assert!(!git_cmds.is_empty(), "Should have Git category commands");
-        assert!(git_cmds.iter().any(|c| c.name == "status" || c.name == "commit"), 
-            "Should have git-related commands");
+        assert!(
+            git_cmds
+                .iter()
+                .any(|c| c.name == "status" || c.name == "commit"),
+            "Should have git-related commands"
+        );
     }
 
     #[test]
     fn test_ar_commands() {
         let commands = load_commands();
-        let ar_cmds: Vec<_> = commands.iter()
+        let ar_cmds: Vec<_> = commands
+            .iter()
             .filter(|c| c.category == CommandCategory::AR)
             .collect();
         assert!(!ar_cmds.is_empty(), "Should have AR category commands");
-        assert!(ar_cmds.iter().any(|c| c.name.contains("ar")), 
-            "Should have AR-related commands");
+        assert!(
+            ar_cmds.iter().any(|c| c.name.contains("ar")),
+            "Should have AR-related commands"
+        );
     }
 
     #[test]
     fn test_all_categories_represented() {
         let commands = load_commands();
-        let categories: std::collections::HashSet<_> = commands.iter()
-            .map(|c| c.category)
-            .collect();
-        
+        let categories: std::collections::HashSet<_> =
+            commands.iter().map(|c| c.category).collect();
+
         // Check that major categories are represented (Other may not have commands)
         assert!(categories.contains(&CommandCategory::Building));
         assert!(categories.contains(&CommandCategory::Equipment));
@@ -341,4 +367,3 @@ mod tests {
         // Other category may not have commands, which is fine
     }
 }
-

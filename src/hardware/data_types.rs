@@ -88,4 +88,3 @@ pub struct ArxosMetadata {
     pub validated: bool,
     pub device_id: String,
 }
-

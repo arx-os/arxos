@@ -11,24 +11,24 @@
 //! - Symlink safety (optional symlink resolution)
 //! - Path validation and sanitization
 
-use std::path::{Path, PathBuf};
 use crate::error::ArxError;
+use std::path::{Path, PathBuf};
 
 /// Path safety error types
 #[derive(Debug, thiserror::Error)]
 pub enum PathSafetyError {
     #[error("Path traversal detected: path escapes base directory")]
     PathTraversal { path: String, base: String },
-    
+
     #[error("Path does not exist: {path}")]
     PathNotFound { path: String },
-    
+
     #[error("Path is not within allowed base directory: {path}")]
     PathOutsideBase { path: String, base: String },
-    
+
     #[error("Cannot canonicalize path: {reason}")]
     CanonicalizationFailed { reason: String },
-    
+
     #[error("Invalid path: {reason}")]
     InvalidPath { reason: String },
 }
@@ -65,18 +65,18 @@ impl From<PathSafetyError> for ArxError {
                     ])
             }
             PathSafetyError::CanonicalizationFailed { reason } => {
-                ArxError::io_error(format!("Cannot resolve path: {}", reason))
-                    .with_suggestions(vec![
+                ArxError::io_error(format!("Cannot resolve path: {}", reason)).with_suggestions(
+                    vec![
                         "Check if the path exists".to_string(),
                         "Verify directory permissions".to_string(),
-                    ])
+                    ],
+                )
             }
             PathSafetyError::InvalidPath { reason } => {
-                ArxError::validation(format!("Invalid path: {}", reason))
-                    .with_suggestions(vec![
-                        "Ensure path does not contain invalid characters".to_string(),
-                        "Check path length is within limits".to_string(),
-                    ])
+                ArxError::validation(format!("Invalid path: {}", reason)).with_suggestions(vec![
+                    "Ensure path does not contain invalid characters".to_string(),
+                    "Check path length is within limits".to_string(),
+                ])
             }
         }
     }
@@ -122,11 +122,12 @@ impl PathSafety {
         base_dir: &Path,
     ) -> Result<PathBuf, PathSafetyError> {
         // First, ensure base_dir is canonicalized
-        let base_canonical = base_dir
-            .canonicalize()
-            .map_err(|e| PathSafetyError::CanonicalizationFailed {
-                reason: format!("Cannot canonicalize base directory: {}", e),
-            })?;
+        let base_canonical =
+            base_dir
+                .canonicalize()
+                .map_err(|e| PathSafetyError::CanonicalizationFailed {
+                    reason: format!("Cannot canonicalize base directory: {}", e),
+                })?;
 
         // Detect obvious path traversal attempts before canonicalization
         Self::detect_path_traversal(path)?;
@@ -139,21 +140,19 @@ impl PathSafety {
         };
 
         // Canonicalize the path
-        let canonical_path = path_to_canonicalize
-            .canonicalize()
-            .map_err(|e| {
-                // Check if path traversal was attempted (file doesn't exist, but could be traversal)
-                if path_to_canonicalize.to_string_lossy().contains("..") {
-                    PathSafetyError::PathTraversal {
-                        path: path.display().to_string(),
-                        base: base_canonical.display().to_string(),
-                    }
-                } else {
-                    PathSafetyError::CanonicalizationFailed {
-                        reason: format!("Cannot canonicalize path: {}", e),
-                    }
+        let canonical_path = path_to_canonicalize.canonicalize().map_err(|e| {
+            // Check if path traversal was attempted (file doesn't exist, but could be traversal)
+            if path_to_canonicalize.to_string_lossy().contains("..") {
+                PathSafetyError::PathTraversal {
+                    path: path.display().to_string(),
+                    base: base_canonical.display().to_string(),
                 }
-            })?;
+            } else {
+                PathSafetyError::CanonicalizationFailed {
+                    reason: format!("Cannot canonicalize path: {}", e),
+                }
+            }
+        })?;
 
         // Verify the canonicalized path is within the base directory
         Self::ensure_path_within_base(&canonical_path, &base_canonical)?;
@@ -170,11 +169,12 @@ impl PathSafety {
         base_dir: &Path,
     ) -> Result<PathBuf, PathSafetyError> {
         // First, ensure base_dir is canonicalized
-        let base_canonical = base_dir
-            .canonicalize()
-            .map_err(|e| PathSafetyError::CanonicalizationFailed {
-                reason: format!("Cannot canonicalize base directory: {}", e),
-            })?;
+        let base_canonical =
+            base_dir
+                .canonicalize()
+                .map_err(|e| PathSafetyError::CanonicalizationFailed {
+                    reason: format!("Cannot canonicalize base directory: {}", e),
+                })?;
 
         // Detect obvious path traversal attempts
         Self::detect_path_traversal(path)?;
@@ -187,40 +187,38 @@ impl PathSafety {
         };
 
         // Canonicalize the parent directory (which should exist) to validate structure
-        let parent = full_path.parent()
-            .unwrap_or(base_dir);
-        
-        let canonical_parent = parent
-            .canonicalize()
-            .map_err(|e| {
-                // Check if path traversal was attempted
-                if full_path.to_string_lossy().contains("..") {
-                    PathSafetyError::PathTraversal {
-                        path: path.display().to_string(),
-                        base: base_canonical.display().to_string(),
-                    }
-                } else {
-                    PathSafetyError::CanonicalizationFailed {
-                        reason: format!("Cannot canonicalize parent directory: {}", e),
-                    }
+        let parent = full_path.parent().unwrap_or(base_dir);
+
+        let canonical_parent = parent.canonicalize().map_err(|e| {
+            // Check if path traversal was attempted
+            if full_path.to_string_lossy().contains("..") {
+                PathSafetyError::PathTraversal {
+                    path: path.display().to_string(),
+                    base: base_canonical.display().to_string(),
                 }
-            })?;
+            } else {
+                PathSafetyError::CanonicalizationFailed {
+                    reason: format!("Cannot canonicalize parent directory: {}", e),
+                }
+            }
+        })?;
 
         // Ensure parent is within base
         Self::ensure_path_within_base(&canonical_parent, &base_canonical)?;
 
         // Construct the final canonical path
-        let file_name = full_path.file_name()
+        let file_name = full_path
+            .file_name()
             .ok_or_else(|| PathSafetyError::InvalidPath {
                 reason: "Path must have a file name".to_string(),
             })?;
-        
+
         let canonical_path = canonical_parent.join(file_name);
-        
+
         // Final check: ensure the final path is within base (using string comparison)
         let canonical_path_str = canonical_path.to_string_lossy();
         let base_str = base_canonical.to_string_lossy();
-        
+
         if !canonical_path_str.starts_with(&*base_str) {
             return Err(PathSafetyError::PathOutsideBase {
                 path: canonical_path.display().to_string(),
@@ -350,10 +348,7 @@ impl PathSafety {
     ///
     /// This is a convenience function that combines canonicalization, validation,
     /// and file reading in a single secure operation.
-    pub fn read_file_safely(
-        file_path: &Path,
-        base_dir: &Path,
-    ) -> Result<String, PathSafetyError> {
+    pub fn read_file_safely(file_path: &Path, base_dir: &Path) -> Result<String, PathSafetyError> {
         // Validate format first
         Self::validate_path_format(file_path)?;
 
@@ -361,10 +356,9 @@ impl PathSafety {
         let canonical_path = Self::canonicalize_and_validate(file_path, base_dir)?;
 
         // Read the file
-        std::fs::read_to_string(&canonical_path)
-            .map_err(|e| PathSafetyError::PathNotFound {
-                path: format!("{}: {}", canonical_path.display(), e),
-            })
+        std::fs::read_to_string(&canonical_path).map_err(|e| PathSafetyError::PathNotFound {
+            path: format!("{}: {}", canonical_path.display(), e),
+        })
     }
 
     /// Safely read directory with full path validation
@@ -379,17 +373,18 @@ impl PathSafety {
 
         // Canonicalize and ensure within base
         let canonical_dir = Self::canonicalize_and_validate(dir_path, base_dir)?;
-        
+
         // Canonicalize base_dir as well for comparison
-        let canonical_base = base_dir
-            .canonicalize()
-            .map_err(|e| PathSafetyError::CanonicalizationFailed {
-                reason: format!("Cannot canonicalize base directory: {}", e),
-            })?;
+        let canonical_base =
+            base_dir
+                .canonicalize()
+                .map_err(|e| PathSafetyError::CanonicalizationFailed {
+                    reason: format!("Cannot canonicalize base directory: {}", e),
+                })?;
 
         // Read directory contents
-        let entries = std::fs::read_dir(&canonical_dir)
-            .map_err(|e| PathSafetyError::PathNotFound {
+        let entries =
+            std::fs::read_dir(&canonical_dir).map_err(|e| PathSafetyError::PathNotFound {
                 path: format!("{}: {}", canonical_dir.display(), e),
             })?;
 
@@ -400,13 +395,15 @@ impl PathSafety {
             })?;
 
             let entry_path = entry.path();
-            
+
             // Canonicalize the entry path before validation
-            let canonical_entry = entry_path.canonicalize()
-                .map_err(|e| PathSafetyError::CanonicalizationFailed {
-                    reason: format!("Cannot canonicalize entry path: {}", e),
-                })?;
-            
+            let canonical_entry =
+                entry_path
+                    .canonicalize()
+                    .map_err(|e| PathSafetyError::CanonicalizationFailed {
+                        reason: format!("Cannot canonicalize entry path: {}", e),
+                    })?;
+
             // Validate each entry is still within base (both paths are canonicalized)
             match Self::ensure_path_within_base(&canonical_entry, &canonical_base) {
                 Ok(validated_path) => paths.push(validated_path),
@@ -424,8 +421,8 @@ impl PathSafety {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
     use std::fs;
+    use tempfile::TempDir;
 
     #[test]
     fn test_path_traversal_detection() {
@@ -440,7 +437,7 @@ mod tests {
         // Valid paths
         assert!(PathSafety::validate_path_format(Path::new("test.yml")).is_ok());
         assert!(PathSafety::validate_path_format(Path::new("./test.yml")).is_ok());
-        
+
         // Invalid paths
         assert!(PathSafety::validate_path_format(Path::new("")).is_err());
         assert!(PathSafety::validate_path_format(Path::new("/path/with\0null")).is_err());
@@ -450,15 +447,15 @@ mod tests {
     fn test_canonicalize_and_validate_relative_path() {
         let temp_dir = TempDir::new().unwrap();
         let base = temp_dir.path();
-        
+
         // Create a test file
         let test_file = base.join("test.yml");
         fs::write(&test_file, "test content").unwrap();
-        
+
         // Valid relative path
         let result = PathSafety::canonicalize_and_validate(Path::new("test.yml"), base);
         assert!(result.is_ok());
-        
+
         // Path traversal attempt
         let result = PathSafety::canonicalize_and_validate(Path::new("../test.yml"), base);
         assert!(result.is_err());
@@ -468,16 +465,16 @@ mod tests {
     fn test_canonicalize_and_validate_absolute_path() {
         let temp_dir = TempDir::new().unwrap();
         let base = temp_dir.path();
-        
+
         // Create a test file
         let test_file = base.join("test.yml");
         fs::write(&test_file, "test content").unwrap();
-        
+
         // Valid absolute path within base
         let abs_path = test_file.canonicalize().unwrap();
         let result = PathSafety::canonicalize_and_validate(&abs_path, base);
         assert!(result.is_ok());
-        
+
         // Try to access file outside base (using parent)
         if let Some(parent) = base.parent() {
             let outside_file = parent.join("outside.yml");
@@ -490,19 +487,19 @@ mod tests {
     fn test_ensure_path_within_base() {
         let temp_dir = TempDir::new().unwrap();
         let base = temp_dir.path();
-        
+
         // Create subdirectory structure
         let subdir = base.join("subdir");
         fs::create_dir(&subdir).unwrap();
         let file = subdir.join("file.yml");
         fs::write(&file, "content").unwrap();
-        
+
         let base_canonical = base.canonicalize().unwrap();
         let file_canonical = file.canonicalize().unwrap();
-        
+
         // File should be within base
         assert!(PathSafety::ensure_path_within_base(&file_canonical, &base_canonical).is_ok());
-        
+
         // Try with path outside base
         if let Some(parent) = base_canonical.parent() {
             assert!(PathSafety::ensure_path_within_base(parent, &base_canonical).is_err());
@@ -513,18 +510,18 @@ mod tests {
     fn test_read_file_safely() {
         let temp_dir = TempDir::new().unwrap();
         let base = temp_dir.path();
-        
+
         // Create test file
         let test_file = base.join("test.yml");
         fs::write(&test_file, "test content").unwrap();
-        
+
         // Read valid file
         let content = PathSafety::read_file_safely(Path::new("test.yml"), base).unwrap();
         assert_eq!(content, "test content");
-        
+
         // Try path traversal
         assert!(PathSafety::read_file_safely(Path::new("../test.yml"), base).is_err());
-        
+
         // Try non-existent file
         assert!(PathSafety::read_file_safely(Path::new("nonexistent.yml"), base).is_err());
     }
@@ -533,18 +530,21 @@ mod tests {
     fn test_read_dir_safely() {
         let temp_dir = TempDir::new().unwrap();
         let base = temp_dir.path();
-        
+
         // Create test files
         fs::write(base.join("file1.yml"), "content1").unwrap();
         fs::write(base.join("file2.yml"), "content2").unwrap();
         fs::write(base.join("file3.yaml"), "content3").unwrap();
-        
+
         // Read directory - use the base directory itself, not "."
         let paths = PathSafety::read_dir_safely(base, base).unwrap();
-        assert!(paths.len() >= 3, "Expected at least 3 files, got {}", paths.len()); // At least our test files
-        
+        assert!(
+            paths.len() >= 3,
+            "Expected at least 3 files, got {}",
+            paths.len()
+        ); // At least our test files
+
         // Try path traversal
         assert!(PathSafety::read_dir_safely(Path::new("../"), base).is_err());
     }
 }
-

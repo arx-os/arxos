@@ -1,8 +1,10 @@
 //! Game state management
 
-use std::collections::HashMap;
-use crate::game::types::{GameMode, GameScenario, GameEquipmentPlacement, ValidationResult, GameObjective};
+use crate::game::types::{
+    GameEquipmentPlacement, GameMode, GameObjective, GameScenario, ValidationResult,
+};
 use crate::spatial::Point3D;
+use std::collections::HashMap;
 
 /// Current state of the game session
 #[derive(Debug, Clone)]
@@ -63,7 +65,11 @@ impl GameState {
     }
 
     /// Update equipment placement
-    pub fn update_placement(&mut self, index: usize, placement: GameEquipmentPlacement) -> Result<(), String> {
+    pub fn update_placement(
+        &mut self,
+        index: usize,
+        placement: GameEquipmentPlacement,
+    ) -> Result<(), String> {
         if index >= self.placements.len() {
             return Err(format!("Invalid placement index: {}", index));
         }
@@ -84,30 +90,37 @@ impl GameState {
 
     /// Find placement by equipment ID
     pub fn find_placement_by_id(&self, equipment_id: &str) -> Option<&GameEquipmentPlacement> {
-        self.placements.iter().find(|p| p.equipment.id == equipment_id)
+        self.placements
+            .iter()
+            .find(|p| p.equipment.id == equipment_id)
     }
 
     /// Find placement by equipment ID (mutable)
-    pub fn find_placement_by_id_mut(&mut self, equipment_id: &str) -> Option<&mut GameEquipmentPlacement> {
-        self.placements.iter_mut().find(|p| p.equipment.id == equipment_id)
+    pub fn find_placement_by_id_mut(
+        &mut self,
+        equipment_id: &str,
+    ) -> Option<&mut GameEquipmentPlacement> {
+        self.placements
+            .iter_mut()
+            .find(|p| p.equipment.id == equipment_id)
     }
 
     /// Validate all placements and update state
     pub fn validate_all(&mut self) -> Vec<ValidationResult> {
         let mut results = Vec::new();
-        
+
         for placement in &self.placements {
             let result = &placement.constraint_validation;
-            
+
             if result.is_valid {
                 self.constraints_validated += 1;
             } else {
                 self.violations_found += result.violations.len();
             }
-            
+
             results.push(result.clone());
         }
-        
+
         self.update_score();
         self.update_progress();
         results
@@ -119,7 +132,7 @@ impl GameState {
         let placement_bonus = self.placements.len() * 10;
         let validation_bonus = self.constraints_validated * 5;
         let violation_penalty = self.violations_found * 10;
-        
+
         self.score = ((base_score + placement_bonus + validation_bonus) as i32)
             .saturating_sub(violation_penalty as i32)
             .max(0) as u32;
@@ -149,7 +162,9 @@ impl GameState {
     /// Check if objective is completed
     pub fn is_objective_completed(&self) -> bool {
         if let Some(ref objective) = self.objective {
-            objective.criteria.iter()
+            objective
+                .criteria
+                .iter()
                 .filter(|c| c.is_required)
                 .all(|c| c.is_completed)
         } else {
@@ -173,7 +188,9 @@ impl GameState {
     pub fn get_stats(&self) -> GameStats {
         GameStats {
             total_placements: self.placements.len(),
-            valid_placements: self.placements.iter()
+            valid_placements: self
+                .placements
+                .iter()
                 .filter(|p| p.constraint_validation.is_valid)
                 .count(),
             violations: self.violations_found,
@@ -192,4 +209,3 @@ pub struct GameStats {
     pub score: u32,
     pub progress: f32,
 }
-

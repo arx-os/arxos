@@ -1,5 +1,5 @@
 //! Configuration schema documentation and JSON schema generation
-//! 
+//!
 //! This module provides configuration schema documentation and validation
 //! schemas for ArxOS configuration.
 
@@ -8,18 +8,18 @@ pub struct ConfigSchema;
 
 impl ConfigSchema {
     /// Get the JSON schema for ArxOS configuration
-    /// 
+    ///
     /// Returns a JSON schema string that can be used for validation,
     /// IDE autocomplete, and documentation generation.
     pub fn json_schema() -> &'static str {
         include_str!("../../schemas/config.schema.json")
     }
-    
+
     /// Get detailed documentation for all configuration options
     pub fn documentation() -> &'static str {
         precedence_documentation()
     }
-    
+
     /// List all available configuration fields with descriptions
     pub fn field_documentation() -> Vec<ConfigField> {
         vec![
@@ -52,7 +52,6 @@ impl ConfigSchema {
                 example: "feat: {operation} {building_name}".to_string(),
                 env_var: "".to_string(),
             },
-            
             // Path configuration
             ConfigField {
                 path: "paths.default_import_path".to_string(),
@@ -82,11 +81,11 @@ impl ConfigSchema {
                 example: "./temp".to_string(),
                 env_var: "".to_string(),
             },
-            
             // Building configuration
             ConfigField {
                 path: "building.default_coordinate_system".to_string(),
-                description: "Default coordinate system for new buildings (WGS84, UTM, LOCAL)".to_string(),
+                description: "Default coordinate system for new buildings (WGS84, UTM, LOCAL)"
+                    .to_string(),
                 default: "WGS84".to_string(),
                 example: "LOCAL".to_string(),
                 env_var: "".to_string(),
@@ -100,7 +99,8 @@ impl ConfigSchema {
             },
             ConfigField {
                 path: "building.naming_pattern".to_string(),
-                description: "Default building naming pattern (must include {building_name})".to_string(),
+                description: "Default building naming pattern (must include {building_name})"
+                    .to_string(),
                 default: "{building_name}-{timestamp}".to_string(),
                 example: "{building_name}-{timestamp}".to_string(),
                 env_var: "".to_string(),
@@ -112,7 +112,6 @@ impl ConfigSchema {
                 example: "false".to_string(),
                 env_var: "".to_string(),
             },
-            
             // Performance configuration
             ConfigField {
                 path: "performance.max_parallel_threads".to_string(),
@@ -149,7 +148,6 @@ impl ConfigSchema {
                 example: "false".to_string(),
                 env_var: "".to_string(),
             },
-            
             // UI configuration
             ConfigField {
                 path: "ui.use_emoji".to_string(),
@@ -231,14 +229,14 @@ pub fn precedence_documentation() -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_field_documentation() {
         let fields = ConfigSchema::field_documentation();
         assert!(!fields.is_empty());
         assert!(fields.len() >= 20); // Should have all fields
     }
-    
+
     #[test]
     fn test_precedence_documentation() {
         let doc = precedence_documentation();
@@ -246,4 +244,3 @@ mod tests {
         assert!(doc.contains("Precedence"));
     }
 }
-

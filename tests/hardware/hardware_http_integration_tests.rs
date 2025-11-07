@@ -21,7 +21,10 @@ fn create_test_sensor_data() -> arxos::hardware::SensorData {
         data: arxos::hardware::SensorDataValues {
             values: {
                 let mut map = HashMap::new();
-                map.insert("temperature".to_string(), serde_yaml::Value::Number(serde_yaml::Number::from(72)));
+                map.insert(
+                    "temperature".to_string(),
+                    serde_yaml::Value::Number(serde_yaml::Number::from(72)),
+                );
                 map
             },
         },
@@ -33,7 +36,7 @@ fn create_test_sensor_data() -> arxos::hardware::SensorData {
 #[test]
 fn test_sensor_data_structure_validation() {
     let sensor_data = create_test_sensor_data();
-    
+
     // Verify all required fields
     assert_eq!(sensor_data.api_version, "arxos.io/v1");
     assert_eq!(sensor_data.metadata.sensor_id, "test_sensor_http_001");
@@ -44,8 +47,8 @@ fn test_sensor_data_structure_validation() {
 #[test]
 fn test_sensor_http_response_serialization() {
     // Test HTTP response serialization
-    use serde::{Serialize, Deserialize};
-    
+    use serde::{Deserialize, Serialize};
+
     #[derive(Debug, Serialize, Deserialize)]
     struct TestResponse {
         success: bool,
@@ -53,14 +56,14 @@ fn test_sensor_http_response_serialization() {
         sensor_id: Option<String>,
         timestamp: Option<String>,
     }
-    
+
     let response = TestResponse {
         success: true,
         message: "Test message".to_string(),
         sensor_id: Some("test_001".to_string()),
         timestamp: Some("2024-01-15T10:30:00Z".to_string()),
     };
-    
+
     // Verify JSON serialization works
     let json = serde_json::to_string(&response).unwrap();
     assert!(json.contains("test_001"));
@@ -70,7 +73,7 @@ fn test_sensor_http_response_serialization() {
 #[test]
 fn test_equipment_sensor_mapping_structure() {
     use arxos::hardware::{EquipmentSensorMapping, SensorType, ThresholdCheck};
-    
+
     let mapping = EquipmentSensorMapping {
         equipment_id: "HVAC-301".to_string(),
         sensor_id: "sensor_001".to_string(),
@@ -79,7 +82,7 @@ fn test_equipment_sensor_mapping_structure() {
         threshold_max: Some(75.0),
         alert_on_out_of_range: true,
     };
-    
+
     // Test threshold checking
     assert_eq!(mapping.check_thresholds(70.0), ThresholdCheck::Normal);
     assert_eq!(mapping.check_thresholds(60.0), ThresholdCheck::OutOfRange);
@@ -93,10 +96,9 @@ fn test_sensor_ingestion_service_config() {
         data_directory: temp_dir.path().to_path_buf(),
         ..Default::default()
     };
-    
+
     let service = arxos::hardware::SensorIngestionService::new(config);
-    
+
     // Verify default configuration
     assert_eq!(service.sensor_data_dir(), temp_dir.path());
 }
-

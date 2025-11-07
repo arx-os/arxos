@@ -158,11 +158,11 @@
 //! ```
 
 // Core modules
-mod types;
 mod engine;
 mod formatter;
+mod types;
 
 // Re-export public types and functions
-pub use types::{SearchConfig, FilterConfig, OutputFormat, SearchResult};
 pub use engine::SearchEngine;
 pub use formatter::{format_search_results, format_search_results_with_highlight};
+pub use types::{FilterConfig, OutputFormat, SearchConfig, SearchResult};

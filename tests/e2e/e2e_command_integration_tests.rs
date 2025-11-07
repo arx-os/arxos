@@ -3,14 +3,14 @@
 //! This module tests the command handlers in `src/commands/`
 //! through their public interfaces, verifying end-to-end workflows.
 
-use arxos::commands::import;
+use arxos::commands::equipment;
 use arxos::commands::export;
+use arxos::commands::import;
 use arxos::commands::init;
 use arxos::commands::room;
-use arxos::commands::equipment;
-use tempfile::TempDir;
 use std::fs::{create_dir_all, write, File};
 use std::io::Write;
+use tempfile::TempDir;
 
 /// Helper to create a temporary test building environment
 #[allow(dead_code)]
@@ -18,11 +18,11 @@ fn setup_test_building(temp_dir: &TempDir) -> Result<(String, String), Box<dyn s
     // Create building directory structure
     let building_dir = temp_dir.path().join("test_building");
     create_dir_all(&building_dir)?;
-    
+
     // Create a sample IFC file for import testing
     let ifc_path = building_dir.join("sample.ifc");
     let mut ifc_file = File::create(&ifc_path)?;
-    
+
     // Write a minimal valid IFC file
     ifc_file.write_all(b"ISO-10303-21;
 HEADER;
@@ -38,7 +38,7 @@ DATA;
 #5=IFCDIRECTION((0.,0.,1.));
 ENDSEC;
 END-ISO-10303-21;")?;
-    
+
     // Create a sample building YAML file for export testing
     let yaml_path = building_dir.join("building.yaml");
     let building_yaml = r#"
@@ -63,7 +63,7 @@ floors:
         universal_path: Building::TestBuilding::Floor::1::Equipment::TestHVAC
 "#;
     write(&yaml_path, building_yaml)?;
-    
+
     Ok((
         ifc_path.to_string_lossy().to_string(),
         yaml_path.to_string_lossy().to_string(),
@@ -74,20 +74,20 @@ floors:
 fn test_import_command_handles_nonexistent_file() {
     let temp_dir = tempfile::tempdir().unwrap();
     let nonexistent_ifc = temp_dir.path().join("nonexistent.ifc");
-    
+
     let result = import::handle_import(
         nonexistent_ifc.to_string_lossy().to_string(),
         None,
         false, // dry_run
     );
-    
+
     // Should return an error for file not found
     assert!(result.is_err());
     let error_msg = result.unwrap_err().to_string();
     assert!(
-        error_msg.contains("not found") || 
-        error_msg.contains("No such file") ||
-        error_msg.contains("cannot find")
+        error_msg.contains("not found")
+            || error_msg.contains("No such file")
+            || error_msg.contains("cannot find")
     );
 }
 
@@ -105,12 +105,10 @@ fn test_import_command_creates_yaml_output() {
 fn test_export_command_handles_nonexistent_directory() {
     let temp_dir = tempfile::tempdir().unwrap();
     let nonexistent_repo = temp_dir.path().join("nonexistent_repo");
-    
+
     // Export should handle gracefully when no YAML files exist
-    let result = export::handle_export(
-        nonexistent_repo.to_string_lossy().to_string(),
-    );
-    
+    let result = export::handle_export(nonexistent_repo.to_string_lossy().to_string());
+
     // Should either succeed (with no files to export) or fail gracefully
     // This depends on the actual implementation
     drop(result);
@@ -124,7 +122,7 @@ fn test_room_dimension_parsing_through_command() {
     assert!(dims.is_ok());
     let (w, d, h) = dims.unwrap();
     assert_eq!((w, d, h), (10.0, 20.0, 8.0));
-    
+
     let pos = room::parse_position("5, 10, 2");
     assert!(pos.is_ok());
     let (x, y, z) = pos.unwrap();
@@ -134,14 +132,14 @@ fn test_room_dimension_parsing_through_command() {
 #[test]
 fn test_equipment_type_parsing_through_command() {
     use arxos::core::EquipmentType;
-    
+
     // Test equipment type parsing
     let hvac = equipment::parse_equipment_type("hvac");
     assert!(matches!(hvac, EquipmentType::HVAC));
-    
+
     let electrical = equipment::parse_equipment_type("electrical");
     assert!(matches!(electrical, EquipmentType::Electrical));
-    
+
     let custom = equipment::parse_equipment_type("custom_type");
     assert!(matches!(custom, EquipmentType::Other(_)));
     if let EquipmentType::Other(ref value) = custom {
@@ -171,11 +169,11 @@ fn test_config_show_command() {
 fn test_error_handling_across_commands() {
     // Test that all commands handle errors gracefully
     // and provide helpful error messages
-    
+
     // Import with invalid file
     let result = import::handle_import("/nonexistent/path/file.ifc".to_string(), None, false);
     assert!(result.is_err());
-    
+
     // Export with invalid directory (if it returns error)
     // This depends on implementation
 }
@@ -183,8 +181,7 @@ fn test_error_handling_across_commands() {
 #[test]
 #[ignore] // Requires Git repository setup
 fn test_git_operations_with_safe_mocks() {
-    
-    
+
     // These tests would require a proper Git repository
     // They're marked ignore to avoid failures in CI/CD
     // In a real scenario, we'd create a test Git repo
@@ -195,13 +192,13 @@ fn test_coordinate_parsing_edge_cases() {
     // Test edge cases
     let pos_empty = room::parse_position("");
     assert!(pos_empty.is_err());
-    
+
     let dims_empty = room::parse_dimensions("");
     assert!(dims_empty.is_err());
-    
+
     let pos_extra_spaces = room::parse_position("  10  ,  20  ,  5  ");
     assert!(pos_extra_spaces.is_ok());
-    
+
     let dims_extra_spaces = room::parse_dimensions("  10  x  20  x  8  ");
     assert!(dims_extra_spaces.is_ok());
 }
@@ -209,33 +206,60 @@ fn test_coordinate_parsing_edge_cases() {
 #[test]
 fn test_equipment_type_parsing_variations() {
     use arxos::core::EquipmentType;
-    
+
     // Test case variations
-    assert!(matches!(equipment::parse_equipment_type("HVAC"), EquipmentType::HVAC));
-    assert!(matches!(equipment::parse_equipment_type("Hvac"), EquipmentType::HVAC));
-    assert!(matches!(equipment::parse_equipment_type("hVAC"), EquipmentType::HVAC));
-    
+    assert!(matches!(
+        equipment::parse_equipment_type("HVAC"),
+        EquipmentType::HVAC
+    ));
+    assert!(matches!(
+        equipment::parse_equipment_type("Hvac"),
+        EquipmentType::HVAC
+    ));
+    assert!(matches!(
+        equipment::parse_equipment_type("hVAC"),
+        EquipmentType::HVAC
+    ));
+
     // Test all defined types
-    assert!(matches!(equipment::parse_equipment_type("ELECTRICAL"), EquipmentType::Electrical));
-    assert!(matches!(equipment::parse_equipment_type("AV"), EquipmentType::AV));
-    assert!(matches!(equipment::parse_equipment_type("FURNITURE"), EquipmentType::Furniture));
-    assert!(matches!(equipment::parse_equipment_type("SAFETY"), EquipmentType::Safety));
-    assert!(matches!(equipment::parse_equipment_type("PLUMBING"), EquipmentType::Plumbing));
-    assert!(matches!(equipment::parse_equipment_type("NETWORK"), EquipmentType::Network));
+    assert!(matches!(
+        equipment::parse_equipment_type("ELECTRICAL"),
+        EquipmentType::Electrical
+    ));
+    assert!(matches!(
+        equipment::parse_equipment_type("AV"),
+        EquipmentType::AV
+    ));
+    assert!(matches!(
+        equipment::parse_equipment_type("FURNITURE"),
+        EquipmentType::Furniture
+    ));
+    assert!(matches!(
+        equipment::parse_equipment_type("SAFETY"),
+        EquipmentType::Safety
+    ));
+    assert!(matches!(
+        equipment::parse_equipment_type("PLUMBING"),
+        EquipmentType::Plumbing
+    ));
+    assert!(matches!(
+        equipment::parse_equipment_type("NETWORK"),
+        EquipmentType::Network
+    ));
 }
 
 #[test]
 fn test_init_then_room_create_workflow() {
     use arxos::commands::init::InitConfig;
     use std::path::Path;
-    
+
     // Create a temporary directory for this test
     let temp_dir = tempfile::tempdir().unwrap();
     let original_dir = std::env::current_dir().unwrap();
-    
+
     // Change to temp directory
     std::env::set_current_dir(temp_dir.path()).unwrap();
-    
+
     // Initialize a new building
     let config = InitConfig {
         name: "Test Init Building".to_string(),
@@ -246,24 +270,23 @@ fn test_init_then_room_create_workflow() {
         coordinate_system: "World".to_string(),
         units: "meters".to_string(),
     };
-    
+
     let result = init::handle_init(config);
     assert!(result.is_ok());
-    
+
     // Verify building file was created
     let building_file = Path::new("test_init_building.yaml");
     assert!(building_file.exists(), "Building YAML file should exist");
-    
+
     // Verify we can read the created YAML
     let content = std::fs::read_to_string(building_file).unwrap();
     assert!(content.contains("Test Init Building"));
     assert!(content.contains("Building at 123 Test St"));
     assert!(content.contains("floors: []"));
     assert!(content.contains("ArxOS v2.0"));
-    
+
     // Restore original directory
     std::env::set_current_dir(original_dir).unwrap();
-    
+
     // Cleanup - temp_dir will be deleted when dropped
 }
-

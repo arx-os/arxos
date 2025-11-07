@@ -81,7 +81,11 @@ void sendToArxOS(float temp, float humidity) {
   String url = "https://api.github.com/repos/" + String(repoOwner) + "/" + String(repoName) + "/contents/sensor-data/VAV-301/temperature-humidity.json";
   
   http.begin(url);
-  http.addHeader("Authorization", "Bearer " + String(githubToken));
+
+  String authHeader = String("token ");
+  authHeader += githubToken;
+
+  http.addHeader("Authorization", authHeader.c_str());
   http.addHeader("Content-Type", "application/json");
   
   int httpResponseCode = http.PUT(jsonString);
@@ -336,7 +340,9 @@ String getTimestamp() {
 // Direct GitHub API call
 String url = "https://api.github.com/repos/your-org/building/contents/sensor-data/equipment-id/sensor-type.json";
 http.begin(url);
-http.addHeader("Authorization", "Bearer " + String(githubToken));
+String authHeader = String("token ");
+authHeader += githubToken;
+http.addHeader("Authorization", authHeader.c_str());
 http.addHeader("Content-Type", "application/json");
 http.PUT(jsonData);
 ```

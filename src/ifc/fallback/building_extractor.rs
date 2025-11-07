@@ -2,8 +2,8 @@
 //!
 //! Extracts building information and hierarchy from IFC entities.
 
-use crate::core::Building;
 use super::types::IFCEntity;
+use crate::core::Building;
 
 /// Extracts building data from IFC entities
 pub struct BuildingExtractor;
@@ -12,12 +12,12 @@ impl BuildingExtractor {
     pub fn new() -> Self {
         Self
     }
-    
+
     /// Extract building information from entities
     pub fn extract_building(&self, entities: &[IFCEntity]) -> Building {
         let mut building_name = "Unknown Building".to_string();
         let mut building_id = "unknown".to_string();
-        
+
         // Find IFCBUILDING entity
         for entity in entities {
             if entity.entity_type == "IFCBUILDING" {
@@ -26,7 +26,7 @@ impl BuildingExtractor {
                 break;
             }
         }
-        
+
         Building::new(building_id, building_name)
     }
 }
@@ -36,4 +36,3 @@ impl Default for BuildingExtractor {
         Self::new()
     }
 }
-

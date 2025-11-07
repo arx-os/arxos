@@ -21,7 +21,7 @@ pub fn handle_ifc_command(subcommand: IFCCommands) -> Result<(), Box<dyn std::er
     match subcommand {
         IFCCommands::ExtractHierarchy { file, output } => {
             println!("🔧 Extracting building hierarchy from: {}", file);
-            
+
             // Validate IFC file exists
             if !std::path::Path::new(&file).exists() {
                 return Err(format!(
@@ -29,7 +29,7 @@ pub fn handle_ifc_command(subcommand: IFCCommands) -> Result<(), Box<dyn std::er
                     file
                 ).into());
             }
-            
+
             // Extract hierarchy
             let processor = ifc::IFCProcessor::new();
             match processor.extract_hierarchy(&file) {
@@ -38,29 +38,34 @@ pub fn handle_ifc_command(subcommand: IFCCommands) -> Result<(), Box<dyn std::er
                     println!("   Building: {}", building.name);
                     println!("   Building ID: {}", building.id);
                     println!("   Floors: {}", floors.len());
-                    
+
                     // Display floor information
                     for floor in floors.iter() {
                         println!("   - {}: level {}", floor.name, floor.level);
-                        
+
                         // Count rooms and equipment on this floor
                         let room_count: usize = floor.wings.iter().map(|w| w.rooms.len()).sum();
                         let equipment_count = floor.equipment.len();
-                        println!("      Rooms: {}, Equipment: {}", room_count, equipment_count);
+                        println!(
+                            "      Rooms: {}, Equipment: {}",
+                            room_count, equipment_count
+                        );
                     }
-                    
+
                     // Generate YAML output if requested
                     if let Some(output_file) = output {
                         let serializer = yaml::BuildingYamlSerializer::new();
-                        let building_data = serializer.serialize_building(&building, &[], Some(&file))
+                        let building_data = serializer
+                            .serialize_building(&building, &[], Some(&file))
                             .map_err(|e| format!("Failed to serialize building: {}", e))?;
-                        
-                        serializer.write_to_file(&building_data, &output_file)
+
+                        serializer
+                            .write_to_file(&building_data, &output_file)
                             .map_err(|e| format!("Failed to write YAML file: {}", e))?;
-                        
+
                         println!("📄 Hierarchy written to: {}", output_file);
                     }
-                    
+
                     println!("✅ Hierarchy extraction completed");
                 }
                 Err(e) => {
@@ -72,6 +77,6 @@ pub fn handle_ifc_command(subcommand: IFCCommands) -> Result<(), Box<dyn std::er
             }
         }
     }
-    
+
     Ok(())
 }

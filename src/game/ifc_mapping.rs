@@ -24,9 +24,15 @@ impl IFCTypeMapper {
             EquipmentType::Other(name) => {
                 // Try to map based on name patterns
                 let name_lower = name.to_lowercase();
-                if name_lower.contains("light") || name_lower.contains("lamp") || name_lower.contains("fixture") {
+                if name_lower.contains("light")
+                    || name_lower.contains("lamp")
+                    || name_lower.contains("fixture")
+                {
                     "IFCLIGHTFIXTURE".to_string()
-                } else if name_lower.contains("air") || name_lower.contains("vent") || name_lower.contains("hvac") {
+                } else if name_lower.contains("air")
+                    || name_lower.contains("vent")
+                    || name_lower.contains("hvac")
+                {
                     "IFCAIRTERMINAL".to_string()
                 } else if name_lower.contains("pump") {
                     "IFCPUMP".to_string()
@@ -50,25 +56,17 @@ impl IFCTypeMapper {
             "IFCAIRTERMINAL" | "IFCAIRTERMINALBOX" | "IFCAIRTERMINALDIFFUSER" => {
                 EquipmentType::HVAC
             }
-            "IFCLIGHTFIXTURE" | "IFCLAMP" => {
-                EquipmentType::Electrical
-            }
-            "IFCFLOWTERMINAL" | "IFCFLOWCONTROLLER" | "IFCFLOWMETER" => {
-                EquipmentType::Plumbing
-            }
+            "IFCLIGHTFIXTURE" | "IFCLAMP" => EquipmentType::Electrical,
+            "IFCFLOWTERMINAL" | "IFCFLOWCONTROLLER" | "IFCFLOWMETER" => EquipmentType::Plumbing,
             "IFCCABLECARRIERSEGMENT" | "IFCCABLESEGMENT" | "IFCELECTRICFLOWSTORAGEDEVICE" => {
                 EquipmentType::Network
             }
-            "IFCFURNISHINGELEMENT" => {
-                EquipmentType::Furniture
-            }
+            "IFCFURNISHINGELEMENT" => EquipmentType::Furniture,
             "IFCPUMP" | "IFCFAN" | "IFCVALVE" => {
                 // These could be HVAC or Plumbing - default to Plumbing
                 EquipmentType::Plumbing
             }
-            "IFCELECTRICDISTRIBUTIONBOARD" | "IFCELECTRICMOTOR" => {
-                EquipmentType::Electrical
-            }
+            "IFCELECTRICDISTRIBUTIONBOARD" | "IFCELECTRICMOTOR" => EquipmentType::Electrical,
             _ => {
                 // Default to Other with the IFC type name
                 EquipmentType::Other(ifc_type.to_string())
@@ -137,11 +135,11 @@ impl IFCTypeMapper {
         equipment_name: &str,
     ) -> String {
         let base_type = Self::map_equipment_type_to_ifc(equipment_type);
-        
+
         // Refine based on name if it's the generic type
         if base_type == "IFCDISTRIBUTIONELEMENT" {
             let name_lower = equipment_name.to_lowercase();
-            
+
             // Try to find more specific type
             if name_lower.contains("board") || name_lower.contains("panel") {
                 "IFCELECTRICDISTRIBUTIONBOARD".to_string()
@@ -195,7 +193,7 @@ pub fn apply_ifc_type_mapping(
     equipment_name: &str,
 ) {
     let ifc_type = IFCTypeMapper::get_recommended_ifc_type(equipment_type, equipment_name);
-    
+
     if IFCTypeMapper::validate_ifc_entity_type(&ifc_type) {
         sync_manager.set_entity_type(equipment_id, ifc_type);
     } else {
@@ -206,4 +204,3 @@ pub fn apply_ifc_type_mapping(
         sync_manager.set_entity_type(equipment_id, "IFCDISTRIBUTIONELEMENT".to_string());
     }
 }
-

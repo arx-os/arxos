@@ -1,14 +1,23 @@
 // Room management command handlers
 
 use crate::cli::RoomCommands;
-use crate::core::{RoomType, Floor, Wing, Position, Dimensions, SpatialProperties};
+use crate::core::{Dimensions, Floor, Position, RoomType, SpatialProperties, Wing};
 use crate::persistence::PersistenceManager;
 use std::collections::HashMap;
 
 /// Handle room management commands
 pub fn handle_room_command(command: RoomCommands) -> Result<(), Box<dyn std::error::Error>> {
     match command {
-        RoomCommands::Create { building, floor, wing, name, room_type, dimensions, position, commit } => {
+        RoomCommands::Create {
+            building,
+            floor,
+            wing,
+            name,
+            room_type,
+            dimensions,
+            position,
+            commit,
+        } => {
             use crate::commands::room_handlers::CreateRoomConfig;
             handle_create_room(CreateRoomConfig {
                 building,
@@ -21,22 +30,30 @@ pub fn handle_room_command(command: RoomCommands) -> Result<(), Box<dyn std::err
                 commit,
             })
         }
-        RoomCommands::List { building, floor, wing, verbose, interactive } => {
+        RoomCommands::List {
+            building,
+            floor,
+            wing,
+            verbose,
+            interactive,
+        } => {
             if interactive {
                 crate::commands::room::explorer::handle_room_explorer(building)
             } else {
                 handle_list_rooms(building, floor, wing, verbose)
             }
         }
-        RoomCommands::Show { room, equipment } => {
-            handle_show_room(room, equipment)
-        }
-        RoomCommands::Update { room, property, commit } => {
-            handle_update_room(room, property, commit)
-        }
-        RoomCommands::Delete { room, confirm, commit } => {
-            handle_delete_room(room, confirm, commit)
-        }
+        RoomCommands::Show { room, equipment } => handle_show_room(room, equipment),
+        RoomCommands::Update {
+            room,
+            property,
+            commit,
+        } => handle_update_room(room, property, commit),
+        RoomCommands::Delete {
+            room,
+            confirm,
+            commit,
+        } => handle_delete_room(room, confirm, commit),
     }
 }
 
@@ -65,17 +82,20 @@ pub struct CreateRoomConfig {
 
 /// Create a new room
 fn handle_create_room(config: CreateRoomConfig) -> Result<(), Box<dyn std::error::Error>> {
-    println!("🏗️ Creating room: {} in {} Floor {} Wing {}", config.name, config.building, config.floor, config.wing);
+    println!(
+        "🏗️ Creating room: {} in {} Floor {} Wing {}",
+        config.name, config.building, config.floor, config.wing
+    );
     println!("   Type: {}", config.room_type);
-    
+
     if let Some(ref dims) = config.dimensions {
         println!("   Dimensions: {}", dims);
     }
-    
+
     if let Some(ref pos) = config.position {
         println!("   Position: {}", pos);
     }
-    
+
     // Parse room type directly
     let parsed_room_type = match config.room_type.to_lowercase().as_str() {
         "classroom" => RoomType::Classroom,
@@ -92,56 +112,61 @@ fn handle_create_room(config: CreateRoomConfig) -> Result<(), Box<dyn std::error
         "electrical" => RoomType::Electrical,
         _ => RoomType::Other(config.room_type.clone()),
     };
-    
+
     // Use the local core types directly
     let room = crate::core::Room::new(config.name.clone(), parsed_room_type);
-    
+
     // Parse dimensions if provided
     let (width, height, depth) = if let Some(dims) = config.dimensions.as_ref() {
         parse_dimensions(dims)?
     } else {
         (10.0, 3.0, 10.0) // Default dimensions
     };
-    
+
     // Parse position if provided
     let (x, y, z) = if let Some(pos) = config.position.as_ref() {
         parse_position(pos)?
     } else {
         (0.0, 0.0, 0.0) // Default position
     };
-    
+
     // Add room using PersistenceManager
     let persistence = PersistenceManager::new(&config.building)?;
     let mut building_data = persistence.load_building_data()?;
-    
+
     // Find or create the floor
-    let floor = building_data.floors.iter_mut()
+    let floor = building_data
+        .floors
+        .iter_mut()
         .find(|f| f.level == config.floor);
-    
+
     let floor = if let Some(floor) = floor {
         floor
     } else {
         // Floor doesn't exist, create it
         let new_floor = Floor::new(format!("Floor {}", config.floor), config.floor);
         building_data.floors.push(new_floor);
-        building_data.floors.last_mut()
+        building_data
+            .floors
+            .last_mut()
             .ok_or_else(|| "Failed to access newly created floor".to_string())?
     };
-    
+
     // Find or create the wing
-    let wing = floor.wings.iter_mut()
-        .find(|w| w.name == config.wing);
-    
+    let wing = floor.wings.iter_mut().find(|w| w.name == config.wing);
+
     let wing = if let Some(wing) = wing {
         wing
     } else {
         // Wing doesn't exist, create it
         let new_wing = Wing::new(config.wing.clone());
         floor.wings.push(new_wing);
-        floor.wings.last_mut()
+        floor
+            .wings
+            .last_mut()
             .ok_or_else(|| "Failed to access newly created wing".to_string())?
     };
-    
+
     // Create spatial properties for the room
     let position = Position {
         x,
@@ -154,16 +179,17 @@ fn handle_create_room(config: CreateRoomConfig) -> Result<(), Box<dyn std::error
         depth,
         height,
     };
-    let spatial_properties = SpatialProperties::new(position, dimensions, "building_local".to_string());
-    
+    let spatial_properties =
+        SpatialProperties::new(position, dimensions, "building_local".to_string());
+
     // Create room with spatial properties
     let room_name = room.name.clone();
     let mut room_with_spatial = room;
     room_with_spatial.spatial_properties = spatial_properties;
-    
+
     // Add room to wing (primary location)
     wing.rooms.push(room_with_spatial);
-    
+
     // Save
     if config.commit {
         persistence.save_and_commit(&building_data, Some(&format!("Add room: {}", room_name)))?;
@@ -171,7 +197,7 @@ fn handle_create_room(config: CreateRoomConfig) -> Result<(), Box<dyn std::error
     } else {
         persistence.save_building_data(&building_data)?;
     }
-    
+
     println!("✅ Room created successfully: {}", room_name);
     Ok(())
 }
@@ -180,13 +206,13 @@ fn handle_create_room(config: CreateRoomConfig) -> Result<(), Box<dyn std::error
 pub fn parse_dimensions(dims: &str) -> Result<(f64, f64, f64), Box<dyn std::error::Error>> {
     let parts: Vec<&str> = dims.split('x').map(|s| s.trim()).collect();
     if parts.len() != 3 {
-        return Err(format!("Invalid dimensions format '{}'. Use: width x depth x height", dims).into());
+        return Err(format!(
+            "Invalid dimensions format '{}'. Use: width x depth x height",
+            dims
+        )
+        .into());
     }
-    Ok((
-        parts[0].parse()?,
-        parts[1].parse()?,
-        parts[2].parse()?,
-    ))
+    Ok((parts[0].parse()?, parts[1].parse()?, parts[2].parse()?))
 }
 
 /// Parse position string (x,y,z)
@@ -195,53 +221,61 @@ pub fn parse_position(pos: &str) -> Result<(f64, f64, f64), Box<dyn std::error::
     if parts.len() != 3 {
         return Err(format!("Invalid position format '{}'. Use: x,y,z", pos).into());
     }
-    Ok((
-        parts[0].parse()?,
-        parts[1].parse()?,
-        parts[2].parse()?,
-    ))
+    Ok((parts[0].parse()?, parts[1].parse()?, parts[2].parse()?))
 }
 
 /// List rooms
-fn handle_list_rooms(building: Option<String>, floor: Option<i32>, wing: Option<String>, verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
+fn handle_list_rooms(
+    building: Option<String>,
+    floor: Option<i32>,
+    wing: Option<String>,
+    verbose: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("📋 Listing rooms");
-    
+
     if let Some(b) = building {
         println!("   Building: {}", b);
     }
-    
+
     if let Some(f) = floor {
         println!("   Floor: {}", f);
     }
-    
+
     if let Some(w) = wing {
         println!("   Wing: {}", w);
     }
-    
+
     if verbose {
         println!("   Verbose mode enabled");
     }
-    
+
     let rooms = crate::core::list_rooms(None)?;
-    
+
     if rooms.is_empty() {
         println!("No rooms found");
     } else {
         for room in rooms {
-            println!("   {} (ID: {}) - Type: {:?}", room.name, room.id, room.room_type);
+            println!(
+                "   {} (ID: {}) - Type: {:?}",
+                room.name, room.id, room.room_type
+            );
             if verbose {
-                println!("     Position: ({:.2}, {:.2}, {:.2})", 
+                println!(
+                    "     Position: ({:.2}, {:.2}, {:.2})",
                     room.spatial_properties.position.x,
                     room.spatial_properties.position.y,
-                    room.spatial_properties.position.z);
-                println!("     Dimensions: {:.2} x {:.2} x {:.2}", 
+                    room.spatial_properties.position.z
+                );
+                println!(
+                    "     Dimensions: {:.2} x {:.2} x {:.2}",
                     room.spatial_properties.dimensions.width,
                     room.spatial_properties.dimensions.depth,
-                    room.spatial_properties.dimensions.height);
+                    room.spatial_properties.dimensions.height
+                );
             }
         }
     }
-    
+
     println!("✅ Room listing completed");
     Ok(())
 }
@@ -249,44 +283,52 @@ fn handle_list_rooms(building: Option<String>, floor: Option<i32>, wing: Option<
 /// Show room details
 fn handle_show_room(room: String, equipment: bool) -> Result<(), Box<dyn std::error::Error>> {
     println!("🔍 Showing room details: {}", room);
-    
+
     if equipment {
         println!("   Including equipment");
     }
-    
+
     let room_data = crate::core::get_room(None, &room)?;
-    
+
     println!("   Name: {}", room_data.name);
     println!("   ID: {}", room_data.id);
     println!("   Type: {:?}", room_data.room_type);
-    println!("   Position: ({:.2}, {:.2}, {:.2})", 
+    println!(
+        "   Position: ({:.2}, {:.2}, {:.2})",
         room_data.spatial_properties.position.x,
         room_data.spatial_properties.position.y,
-        room_data.spatial_properties.position.z);
-    println!("   Dimensions: {:.2} x {:.2} x {:.2}", 
+        room_data.spatial_properties.position.z
+    );
+    println!(
+        "   Dimensions: {:.2} x {:.2} x {:.2}",
         room_data.spatial_properties.dimensions.width,
         room_data.spatial_properties.dimensions.depth,
-        room_data.spatial_properties.dimensions.height);
-    
+        room_data.spatial_properties.dimensions.height
+    );
+
     if equipment {
         println!("   Equipment: {} items", room_data.equipment.len());
         for eq in &room_data.equipment {
             println!("     - {} ({:?})", eq.name, eq.equipment_type);
         }
     }
-    
+
     println!("✅ Room details displayed");
     Ok(())
 }
 
 /// Update room properties
-fn handle_update_room(room: String, property: Vec<String>, commit: bool) -> Result<(), Box<dyn std::error::Error>> {
+fn handle_update_room(
+    room: String,
+    property: Vec<String>,
+    commit: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("✏️ Updating room: {}", room);
-    
+
     for prop in &property {
         println!("   Property: {}", prop);
     }
-    
+
     // Load building data with path safety
     use crate::utils::path_safety::PathSafety;
     let current_dir = std::env::current_dir()?;
@@ -295,9 +337,13 @@ fn handle_update_room(room: String, property: Vec<String>, commit: bool) -> Resu
         .into_iter()
         .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("yaml"))
         .collect();
-    
+
     let building_name = if let Some(yaml_file) = yaml_files.first() {
-        yaml_file.file_stem().and_then(|s| s.to_str()).unwrap_or("Default Building").to_string()
+        yaml_file
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("Default Building")
+            .to_string()
     } else {
         "Default Building".to_string()
     };
@@ -310,29 +356,36 @@ fn handle_update_room(room: String, property: Vec<String>, commit: bool) -> Resu
             updates.insert(parts[0].to_string(), parts[1].to_string());
         }
     }
-    
+
     // Update room using impl function which handles persistence and commits
     let updated_room = crate::core::update_room_impl(&building_name, &room, updates, commit)?;
-    
+
     if commit {
         println!("💡 Changes committed to Git");
     } else {
         println!("💡 Changes saved (staged). Use --commit to commit to Git");
     }
-    
-    println!("✅ Room updated successfully: {} (ID: {})", updated_room.name, updated_room.id);
+
+    println!(
+        "✅ Room updated successfully: {} (ID: {})",
+        updated_room.name, updated_room.id
+    );
     Ok(())
 }
 
 /// Delete a room
-fn handle_delete_room(room: String, confirm: bool, commit: bool) -> Result<(), Box<dyn std::error::Error>> {
+fn handle_delete_room(
+    room: String,
+    confirm: bool,
+    commit: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     if !confirm {
         println!("❌ Room deletion requires confirmation. Use --confirm flag.");
         return Ok(());
     }
-    
+
     println!("🗑️ Deleting room: {}", room);
-    
+
     // Load building data with path safety
     use crate::utils::path_safety::PathSafety;
     let current_dir = std::env::current_dir()?;
@@ -341,22 +394,26 @@ fn handle_delete_room(room: String, confirm: bool, commit: bool) -> Result<(), B
         .into_iter()
         .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("yaml"))
         .collect();
-    
+
     let building_name = if let Some(yaml_file) = yaml_files.first() {
-        yaml_file.file_stem().and_then(|s| s.to_str()).unwrap_or("Default Building").to_string()
+        yaml_file
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("Default Building")
+            .to_string()
     } else {
         "Default Building".to_string()
     };
 
     // Delete room using impl function which handles persistence and commits
     crate::core::delete_room_impl(&building_name, &room, commit)?;
-    
+
     if commit {
         println!("💡 Changes committed to Git");
     } else {
         println!("💡 Changes saved (staged). Use --commit to commit to Git");
     }
-    
+
     println!("✅ Room deleted successfully");
     Ok(())
 }
@@ -392,7 +449,7 @@ mod tests {
         // Test invalid format (wrong number of parts)
         let result = parse_dimensions("10x20"); // Missing height
         assert!(result.is_err());
-        
+
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Invalid dimensions format"));
     }
@@ -431,7 +488,7 @@ mod tests {
         // Test invalid format (wrong number of coordinates)
         let result = parse_position("10,20"); // Missing z
         assert!(result.is_err());
-        
+
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Invalid position format"));
     }

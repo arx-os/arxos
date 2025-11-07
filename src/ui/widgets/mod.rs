@@ -5,4 +5,3 @@ pub mod summary_card;
 
 pub use status_badge::StatusBadge;
 pub use summary_card::SummaryCard;
-

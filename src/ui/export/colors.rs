@@ -96,7 +96,7 @@ mod tests {
     fn test_color_to_ansi_basic() {
         let fg = color_to_ansi(Color::Red, true);
         assert!(fg.contains("31"), "Red foreground should be 31");
-        
+
         let bg = color_to_ansi(Color::Green, false);
         assert!(bg.contains("42"), "Green background should be 42");
     }
@@ -108,9 +108,12 @@ mod tests {
         assert!(fg.contains("255"));
         assert!(fg.contains("128"));
         assert!(fg.contains("64"));
-        
+
         let bg = color_to_ansi(Color::Rgb(10, 20, 30), false);
-        assert!(bg.contains("48;2"), "RGB background should use 48;2 sequence");
+        assert!(
+            bg.contains("48;2"),
+            "RGB background should use 48;2 sequence"
+        );
     }
 
     #[test]
@@ -118,9 +121,12 @@ mod tests {
         let fg = color_to_ansi(Color::Indexed(42), true);
         assert!(fg.contains("38;5"), "Indexed should use 38;5 sequence");
         assert!(fg.contains("42"));
-        
+
         let bg = color_to_ansi(Color::Indexed(100), false);
-        assert!(bg.contains("48;5"), "Indexed background should use 48;5 sequence");
+        assert!(
+            bg.contains("48;5"),
+            "Indexed background should use 48;5 sequence"
+        );
     }
 
     #[test]
@@ -135,11 +141,15 @@ mod tests {
             (Color::Cyan, 36),
             (Color::White, 37),
         ];
-        
+
         for (color, code) in colors {
             let ansi = color_to_ansi(color, true);
-            assert!(ansi.contains(&code.to_string()), 
-                "Color {:?} should have code {}", color, code);
+            assert!(
+                ansi.contains(&code.to_string()),
+                "Color {:?} should have code {}",
+                color,
+                code
+            );
         }
     }
 
@@ -155,11 +165,15 @@ mod tests {
             (Color::Cyan, 46),
             (Color::White, 47),
         ];
-        
+
         for (color, code) in colors {
             let ansi = color_to_ansi(color, false);
-            assert!(ansi.contains(&code.to_string()), 
-                "Background color {:?} should have code {}", color, code);
+            assert!(
+                ansi.contains(&code.to_string()),
+                "Background color {:?} should have code {}",
+                color,
+                code
+            );
         }
     }
 
@@ -167,7 +181,10 @@ mod tests {
     fn test_modifiers_to_ansi() {
         let modifiers = ratatui::style::Modifier::empty();
         let ansi = modifiers_to_ansi(modifiers);
-        assert!(ansi.is_empty(), "Empty modifiers should produce empty string");
+        assert!(
+            ansi.is_empty(),
+            "Empty modifiers should produce empty string"
+        );
     }
 
     #[test]
@@ -198,7 +215,10 @@ mod tests {
         let ansi = modifiers_to_ansi(modifiers);
         assert!(ansi.contains("1"), "Should contain bold");
         assert!(ansi.contains("3"), "Should contain italic");
-        assert!(ansi.contains(";"), "Combined should use semicolon separator");
+        assert!(
+            ansi.contains(";"),
+            "Combined should use semicolon separator"
+        );
     }
 
     #[test]
@@ -213,10 +233,10 @@ mod tests {
     fn test_color_to_css_rgb() {
         let css = color_to_css(Color::Rgb(255, 128, 64));
         assert_eq!(css, "#ff8040", "RGB should convert to hex");
-        
+
         let css2 = color_to_css(Color::Rgb(0, 0, 0));
         assert_eq!(css2, "#000000", "Black RGB should be #000000");
-        
+
         let css3 = color_to_css(Color::Rgb(255, 255, 255));
         assert_eq!(css3, "#ffffff", "White RGB should be #ffffff");
     }
@@ -225,7 +245,7 @@ mod tests {
     fn test_color_to_css_indexed() {
         let css = color_to_css(Color::Indexed(128));
         assert_eq!(css, "#808080", "Indexed color should convert to hex");
-        
+
         let css2 = color_to_css(Color::Indexed(255));
         assert_eq!(css2, "#ffffff", "Indexed 255 should be white");
     }
@@ -236,8 +256,9 @@ mod tests {
         assert_eq!(css.len(), 7, "Hex should be 7 characters");
         assert!(css.starts_with("#"), "Should start with #");
         // Verify hex format (lowercase)
-        assert!(css.chars().skip(1).all(|c| c.is_ascii_hexdigit()),
-            "Should contain only hex digits");
+        assert!(
+            css.chars().skip(1).all(|c| c.is_ascii_hexdigit()),
+            "Should contain only hex digits"
+        );
     }
 }
-

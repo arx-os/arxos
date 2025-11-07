@@ -5,14 +5,13 @@
 //! - Switch active workspace
 //! - Multi-building navigation
 
-pub mod types;
 pub mod discovery;
+pub mod handler;
 pub mod manager;
 pub mod render;
-pub mod handler;
+pub mod types;
 
 // Re-export public API
-pub use types::Workspace;
-pub use manager::WorkspaceManager;
 pub use handler::handle_workspace_manager;
-
+pub use manager::WorkspaceManager;
+pub use types::Workspace;

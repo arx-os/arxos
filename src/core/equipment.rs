@@ -1,10 +1,10 @@
 //! Equipment data structure and implementation
 
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use std::collections::HashMap;
 use super::types::Position;
 use crate::domain::ArxAddress;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use uuid::Uuid;
 
 /// Sensor mapping structure for equipment
 ///
@@ -181,22 +181,22 @@ impl Equipment {
             sensor_mappings: None,
         }
     }
-    
+
     /// Set the position of the equipment
     pub fn set_position(&mut self, position: Position) {
         self.position = position;
     }
-    
+
     /// Set the room this equipment belongs to
     pub fn set_room(&mut self, room_id: String) {
         self.room_id = Some(room_id);
     }
-    
+
     /// Add a property to the equipment
     pub fn add_property(&mut self, key: String, value: String) {
         self.properties.insert(key, value);
     }
-    
+
     /// Get system type from equipment type
     ///
     /// This computes the system_type string from the equipment_type enum.
@@ -211,7 +211,8 @@ impl Equipment {
             EquipmentType::AV => "AV",
             EquipmentType::Furniture => "FURNITURE",
             EquipmentType::Other(_) => "OTHER",
-        }.to_string()
+        }
+        .to_string()
     }
 }
 
@@ -229,7 +230,7 @@ impl EquipmentType {
             EquipmentType::AV => "AV",
             EquipmentType::Furniture => "FURNITURE",
             EquipmentType::Other(_) => "OTHER",
-        }.to_string()
+        }
+        .to_string()
     }
 }
-

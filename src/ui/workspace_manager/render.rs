@@ -28,31 +28,33 @@ pub fn render_workspace_manager(
             Constraint::Length(3), // Footer
         ])
         .split(area);
-    
+
     // Search input
     let search_text = if manager.query().is_empty() {
         "Type to search workspaces...".to_string()
     } else {
         format!("Search: {}", manager.query())
     };
-    
+
     let search_paragraph = Paragraph::new(search_text.as_str())
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .title("Workspace Manager (Ctrl+W)")
-            .style(Style::default().fg(theme.primary)))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Workspace Manager (Ctrl+W)")
+                .style(Style::default().fg(theme.primary)),
+        )
         .style(if manager.query().is_empty() {
             Style::default().fg(theme.muted)
         } else {
             Style::default().fg(theme.text)
         });
-    
+
     frame.render_widget(search_paragraph, chunks[0]);
-    
+
     // Collect workspace info first to avoid borrow conflicts
     let filtered_indices = manager.filtered_workspaces().to_vec();
     let filtered_count = filtered_indices.len();
-    
+
     // Extract all workspace data before mutable borrow
     let workspace_data: Vec<(String, Option<String>, String, bool, bool)> = {
         let workspaces = manager.workspaces();
@@ -71,7 +73,7 @@ pub fn render_workspace_manager(
             })
             .collect()
     };
-    
+
     // Workspace list
     let items: Vec<ListItem> = workspace_data
         .iter()
@@ -80,65 +82,75 @@ pub fn render_workspace_manager(
             let active_indicator = if is_active { "● " } else { "  " };
             let active_color = if is_active { theme.accent } else { theme.text };
             let indicator_color = if is_active { theme.accent } else { theme.muted };
-            
+
             let mut spans = vec![
-                Span::styled(
-                    active_indicator,
-                    Style::default().fg(indicator_color),
-                ),
+                Span::styled(active_indicator, Style::default().fg(indicator_color)),
                 Span::styled(
                     name,
                     Style::default()
                         .fg(active_color)
-                        .add_modifier(if is_active { Modifier::BOLD } else { Modifier::empty() }),
+                        .add_modifier(if is_active {
+                            Modifier::BOLD
+                        } else {
+                            Modifier::empty()
+                        }),
                 ),
             ];
-            
+
             if is_active {
                 spans.push(Span::styled(
                     " [ACTIVE]",
-                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(theme.accent)
+                        .add_modifier(Modifier::BOLD),
                 ));
             }
-            
+
             let mut lines = vec![Line::from(spans)];
-            
+
             if let Some(desc) = desc {
                 lines.push(Line::from(vec![
                     Span::styled("  ", Style::default()),
                     Span::styled(desc, Style::default().fg(theme.muted)),
                 ]));
             }
-            
+
             lines.push(Line::from(vec![
                 Span::styled("  ", Style::default()),
                 Span::styled(
                     format!("Path: {}", path_str),
-                    Style::default().fg(theme.muted).add_modifier(Modifier::ITALIC),
+                    Style::default()
+                        .fg(theme.muted)
+                        .add_modifier(Modifier::ITALIC),
                 ),
             ]));
-            
+
             if *has_git {
                 lines.push(Line::from(vec![
                     Span::styled("  ", Style::default()),
-                    Span::styled(
-                        "📦 Git repository",
-                        Style::default().fg(theme.secondary),
-                    ),
+                    Span::styled("📦 Git repository", Style::default().fg(theme.secondary)),
                 ]));
             }
-            
+
             ListItem::new(lines)
         })
         .collect();
-    
+
     let list = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title("Available Workspaces"))
-        .highlight_style(Style::default().fg(theme.accent).add_modifier(Modifier::BOLD))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Available Workspaces"),
+        )
+        .highlight_style(
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        )
         .highlight_symbol("▶ ");
-    
+
     frame.render_stateful_widget(list, chunks[1], manager.list_state_mut());
-    
+
     // Footer
     let footer_text = if filtered_count == 0 {
         "No workspaces found. Press Esc to close.".to_string()
@@ -148,14 +160,14 @@ pub fn render_workspace_manager(
             filtered_count
         )
     };
-    
+
     let footer = Paragraph::new(footer_text)
         .block(Block::default().borders(Borders::ALL))
         .alignment(Alignment::Center)
         .style(Style::default().fg(theme.muted));
-    
+
     frame.render_widget(footer, chunks[2]);
-    
+
     // Render help overlay if needed
     use crate::ui::{render_help_overlay, HelpContext};
     if manager.help_system().show_overlay {
@@ -173,9 +185,9 @@ pub fn render_workspace_manager(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ui::workspace_manager::manager::WorkspaceManager;
     use ratatui::backend::TestBackend;
     use ratatui::layout::Rect;
-    use crate::ui::workspace_manager::manager::WorkspaceManager;
     use std::path::PathBuf;
 
     #[test]
@@ -183,7 +195,7 @@ mod tests {
         let area = Rect::new(0, 0, 80, 24);
         let backend = TestBackend::new(80, 24);
         let mut terminal = ratatui::Terminal::new(backend).unwrap();
-        
+
         // Create manager (may fail if no workspaces, but we test rendering)
         let mut manager = match WorkspaceManager::new() {
             Ok(m) => m,
@@ -192,12 +204,14 @@ mod tests {
                 return;
             }
         };
-        
+
         let theme = Theme::default();
-        
-        terminal.draw(|frame| {
-            render_workspace_manager(frame, area, &mut manager, &theme, false);
-        }).unwrap();
+
+        terminal
+            .draw(|frame| {
+                render_workspace_manager(frame, area, &mut manager, &theme, false);
+            })
+            .unwrap();
         // If no panic, rendering succeeded
     }
 
@@ -206,7 +220,7 @@ mod tests {
         let area = Rect::new(0, 0, 80, 24);
         let backend = TestBackend::new(80, 24);
         let mut terminal = ratatui::Terminal::new(backend).unwrap();
-        
+
         // Test with manager (may have workspaces or be empty)
         let mut manager = match WorkspaceManager::new() {
             Ok(m) => m,
@@ -215,12 +229,14 @@ mod tests {
                 return;
             }
         };
-        
+
         let theme = Theme::default();
-        
-        terminal.draw(|frame| {
-            render_workspace_manager(frame, area, &mut manager, &theme, false);
-        }).unwrap();
+
+        terminal
+            .draw(|frame| {
+                render_workspace_manager(frame, area, &mut manager, &theme, false);
+            })
+            .unwrap();
         // Should render empty state
     }
 
@@ -230,7 +246,7 @@ mod tests {
         let is_active = true;
         let active_indicator = if is_active { "● " } else { "  " };
         assert_eq!(active_indicator, "● ");
-        
+
         let is_active = false;
         let active_indicator = if is_active { "● " } else { "  " };
         assert_eq!(active_indicator, "  ");
@@ -245,7 +261,7 @@ mod tests {
             git_repo: None,
             description: Some("Test description".to_string()),
         };
-        
+
         assert_eq!(workspace.name, "Test Building");
         assert!(workspace.description.is_some());
     }
@@ -259,7 +275,7 @@ mod tests {
             git_repo: Some(PathBuf::from("/test")),
             description: None,
         };
-        
+
         assert!(workspace_with_git.git_repo.is_some());
     }
 
@@ -271,7 +287,7 @@ mod tests {
         } else {
             format!("Search: {}", query)
         };
-        
+
         assert_eq!(search_text, "Search: test");
     }
 
@@ -286,8 +302,7 @@ mod tests {
                 filtered_count
             )
         };
-        
+
         assert!(footer_text.contains("5 workspaces found"));
     }
 }
-

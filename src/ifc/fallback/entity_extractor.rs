@@ -11,14 +11,17 @@ impl EntityExtractor {
     pub fn new() -> Self {
         Self
     }
-    
+
     /// Extract all entities from STEP content
-    pub fn extract_entities(&self, content: &str) -> Result<Vec<IFCEntity>, Box<dyn std::error::Error>> {
+    pub fn extract_entities(
+        &self,
+        content: &str,
+    ) -> Result<Vec<IFCEntity>, Box<dyn std::error::Error>> {
         use log::info;
-        
+
         let mut entities = Vec::new();
         let lines: Vec<&str> = content.lines().collect();
-        
+
         for line in lines {
             if line.starts_with("#") && line.contains("=") {
                 if let Some(entity) = self.parse_entity_line(line) {
@@ -26,11 +29,11 @@ impl EntityExtractor {
                 }
             }
         }
-        
+
         info!("Extracted {} entities from IFC file", entities.len());
         Ok(entities)
     }
-    
+
     /// Parse a single entity line from STEP format
     ///
     /// Format: #1=IFCBUILDING('Building-1',...)
@@ -39,16 +42,16 @@ impl EntityExtractor {
         if parts.len() != 2 {
             return None;
         }
-        
+
         let id = parts[0].trim_start_matches('#').to_string();
         let entity_def = parts[1];
-        
+
         // Extract entity type (check more specific types first, excluding TYPE definitions)
         let entity_type = self.detect_entity_type(entity_def);
-        
+
         // Extract name if present
         let name = self.extract_name(entity_def);
-        
+
         Some(IFCEntity {
             id,
             entity_type: entity_type.to_string(),
@@ -56,7 +59,7 @@ impl EntityExtractor {
             definition: entity_def.to_string(),
         })
     }
-    
+
     /// Detect entity type from STEP definition
     fn detect_entity_type(&self, entity_def: &str) -> &str {
         if entity_def.contains("IFCBUILDINGSTOREY") {
@@ -95,7 +98,7 @@ impl EntityExtractor {
             "UNKNOWN"
         }
     }
-    
+
     /// Extract name from entity definition
     fn extract_name(&self, entity_def: &str) -> String {
         if let Some(name_start) = entity_def.find("'") {
@@ -115,4 +118,3 @@ impl Default for EntityExtractor {
         Self::new()
     }
 }
-

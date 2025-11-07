@@ -78,29 +78,15 @@ pub enum ParticleType {
 #[derive(Debug, Clone)]
 pub enum ParticleData {
     /// Basic particle data
-    Basic {
-        color_intensity: f64,
-    },
+    Basic { color_intensity: f64 },
     /// Smoke particle data
-    Smoke {
-        opacity: f64,
-        temperature: f64,
-    },
+    Smoke { opacity: f64, temperature: f64 },
     /// Fire particle data
-    Fire {
-        intensity: f64,
-        flicker_rate: f64,
-    },
+    Fire { intensity: f64, flicker_rate: f64 },
     /// Spark particle data
-    Spark {
-        energy: f64,
-        trail_length: usize,
-    },
+    Spark { energy: f64, trail_length: usize },
     /// Dust particle data
-    Dust {
-        mass: f64,
-        static_charge: f64,
-    },
+    Dust { mass: f64, static_charge: f64 },
     /// Status indicator data
     StatusIndicator {
         equipment_id: String,
@@ -202,24 +188,24 @@ impl ParticleSystem {
     /// Update all particles (call this every frame)
     pub fn update(&mut self, delta_time: f64) {
         let start_time = Instant::now();
-        
+
         // Update each particle
         let mut particles_to_update = Vec::new();
-        
+
         // Collect particles that need updating
         for (i, particle) in self.particles.iter().enumerate() {
             particles_to_update.push((i, particle.clone()));
         }
-        
+
         // Update particles
         for (i, mut particle) in particles_to_update {
             self.update_particle(&mut particle, delta_time);
             self.particles[i] = particle;
         }
-        
+
         // Remove dead particles
         self.remove_dead_particles();
-        
+
         // Update statistics
         self.update_stats(start_time, delta_time);
     }
@@ -239,22 +225,24 @@ impl ParticleSystem {
             ParticleType::Dust => self.update_dust_particle(particle, delta_time),
             ParticleType::StatusIndicator => self.update_status_particle(particle, delta_time),
             ParticleType::Connection => self.update_connection_particle(particle, delta_time),
-            ParticleType::MaintenanceAlert => self.update_maintenance_particle(particle, delta_time),
+            ParticleType::MaintenanceAlert => {
+                self.update_maintenance_particle(particle, delta_time)
+            }
         }
-        
+
         // Update lifetime
         particle.lifetime -= delta_time / particle.max_lifetime;
-        
+
         // Update position based on velocity
         particle.position.x += particle.velocity.x * delta_time;
         particle.position.y += particle.velocity.y * delta_time;
         particle.position.z += particle.velocity.z * delta_time;
-        
+
         // Update velocity based on acceleration
         particle.velocity.x += particle.acceleration.x * delta_time;
         particle.velocity.y += particle.acceleration.y * delta_time;
         particle.velocity.z += particle.acceleration.z * delta_time;
-        
+
         // Apply air resistance
         let resistance = 1.0 - (self.config.air_resistance * delta_time);
         particle.velocity.x *= resistance;
@@ -273,9 +261,13 @@ impl ParticleSystem {
         // Smoke rises and spreads
         particle.acceleration.y += 2.0; // Upward force
         particle.acceleration.x += (particle.lifetime - 0.5) * 0.5; // Horizontal drift
-        
+
         // Update smoke-specific data
-        if let ParticleData::Smoke { opacity, temperature } = &mut particle.data {
+        if let ParticleData::Smoke {
+            opacity,
+            temperature,
+        } = &mut particle.data
+        {
             *opacity *= 0.98; // Fade out over time
             *temperature *= 0.99; // Cool down
         }
@@ -285,14 +277,18 @@ impl ParticleSystem {
     fn update_fire_particle(&mut self, particle: &mut Particle, _delta_time: f64) {
         // Fire flickers and moves upward
         particle.acceleration.y += 1.5;
-        
+
         // Random flicker
         let flicker = (particle.lifetime * 10.0).sin() * 0.3;
         particle.acceleration.x += flicker;
         particle.acceleration.z += flicker * 0.5;
-        
+
         // Update fire-specific data
-        if let ParticleData::Fire { intensity, flicker_rate } = &mut particle.data {
+        if let ParticleData::Fire {
+            intensity,
+            flicker_rate,
+        } = &mut particle.data
+        {
             *intensity = (particle.lifetime * *flicker_rate).sin().abs();
         }
     }
@@ -302,13 +298,13 @@ impl ParticleSystem {
         // Sparks move randomly and lose energy
         let random_x = (particle.lifetime * 15.0).sin() * 2.0;
         let random_z = (particle.lifetime * 12.0).cos() * 1.5;
-        
+
         particle.acceleration.x += random_x;
         particle.acceleration.z += random_z;
-        
+
         // Apply gravity
         particle.acceleration.y -= self.config.gravity * 0.5;
-        
+
         // Update spark-specific data
         if let ParticleData::Spark { energy, .. } = &mut particle.data {
             *energy *= 0.95; // Lose energy over time
@@ -319,7 +315,7 @@ impl ParticleSystem {
     fn update_dust_particle(&mut self, particle: &mut Particle, _delta_time: f64) {
         // Dust falls slowly with gravity
         particle.acceleration.y -= self.config.gravity * 0.3;
-        
+
         // Slight horizontal drift
         particle.acceleration.x += (particle.lifetime - 0.5) * 0.1;
     }
@@ -351,22 +347,22 @@ impl ParticleSystem {
     /// Remove particles that have expired
     fn remove_dead_particles(&mut self) {
         let _initial_count = self.particles.len();
-        
+
         self.particles.retain(|particle| {
             if particle.lifetime <= 0.0 {
                 self.stats.particles_destroyed += 1;
-                
+
                 // Return particle to pool if pooling is enabled
                 if self.config.enable_pooling {
                     self.particle_pool.push_back(particle.clone());
                 }
-                
+
                 false
             } else {
                 true
             }
         });
-        
+
         // Update peak count
         if self.particles.len() > self.stats.peak_particle_count {
             self.stats.peak_particle_count = self.particles.len();
@@ -386,10 +382,10 @@ impl ParticleSystem {
         if self.particles.len() >= self.config.max_particles {
             return; // System is at capacity
         }
-        
+
         // Initialize particle
         particle.lifetime = 1.0;
-        
+
         // Add to active particles
         self.particles.push(particle);
         self.stats.particles_created += 1;
@@ -407,7 +403,7 @@ impl ParticleSystem {
         for i in 0..count {
             let angle = (i as f64 / count as f64) * 2.0 * std::f64::consts::PI;
             let speed = 2.0 + (i as f64 * 0.1);
-            
+
             let particle = Particle {
                 position,
                 velocity: Vector3D {
@@ -428,7 +424,7 @@ impl ParticleSystem {
                 particle_type: particle_type.clone(),
                 data: self.create_particle_data(&particle_type),
             };
-            
+
             self.emit_particle(particle);
         }
     }
@@ -436,11 +432,25 @@ impl ParticleSystem {
     /// Create particle data based on type
     fn create_particle_data(&self, particle_type: &ParticleType) -> ParticleData {
         match particle_type {
-            ParticleType::Basic => ParticleData::Basic { color_intensity: 1.0 },
-            ParticleType::Smoke => ParticleData::Smoke { opacity: 1.0, temperature: 100.0 },
-            ParticleType::Fire => ParticleData::Fire { intensity: 1.0, flicker_rate: 8.0 },
-            ParticleType::Spark => ParticleData::Spark { energy: 1.0, trail_length: 3 },
-            ParticleType::Dust => ParticleData::Dust { mass: 0.1, static_charge: 0.0 },
+            ParticleType::Basic => ParticleData::Basic {
+                color_intensity: 1.0,
+            },
+            ParticleType::Smoke => ParticleData::Smoke {
+                opacity: 1.0,
+                temperature: 100.0,
+            },
+            ParticleType::Fire => ParticleData::Fire {
+                intensity: 1.0,
+                flicker_rate: 8.0,
+            },
+            ParticleType::Spark => ParticleData::Spark {
+                energy: 1.0,
+                trail_length: 3,
+            },
+            ParticleType::Dust => ParticleData::Dust {
+                mass: 0.1,
+                static_charge: 0.0,
+            },
             ParticleType::StatusIndicator => ParticleData::StatusIndicator {
                 equipment_id: "unknown".to_string(),
                 status_type: StatusType::Healthy,
@@ -565,7 +575,7 @@ mod tests {
     #[test]
     fn test_particle_emission() {
         let mut system = ParticleSystem::new();
-        
+
         let particle = Particle {
             position: Point3D::new(0.0, 0.0, 0.0),
             velocity: Vector3D::new(1.0, 0.0, 0.0),
@@ -575,9 +585,11 @@ mod tests {
             size: 1.0,
             character: '•',
             particle_type: ParticleType::Basic,
-            data: ParticleData::Basic { color_intensity: 1.0 },
+            data: ParticleData::Basic {
+                color_intensity: 1.0,
+            },
         };
-        
+
         system.emit_particle(particle);
         assert_eq!(system.particle_count(), 1);
         assert_eq!(system.stats.particles_created, 1);
@@ -586,7 +598,7 @@ mod tests {
     #[test]
     fn test_particle_burst() {
         let mut system = ParticleSystem::new();
-        
+
         system.create_burst(Point3D::new(0.0, 0.0, 0.0), 5, ParticleType::Spark);
         assert_eq!(system.particle_count(), 5);
     }
@@ -594,7 +606,7 @@ mod tests {
     #[test]
     fn test_particle_update() {
         let mut system = ParticleSystem::new();
-        
+
         let particle = Particle {
             position: Point3D::new(0.0, 0.0, 0.0),
             velocity: Vector3D::new(1.0, 0.0, 0.0),
@@ -604,12 +616,14 @@ mod tests {
             size: 1.0,
             character: '•',
             particle_type: ParticleType::Basic,
-            data: ParticleData::Basic { color_intensity: 1.0 },
+            data: ParticleData::Basic {
+                color_intensity: 1.0,
+            },
         };
-        
+
         system.emit_particle(particle);
         system.update(1.0); // Update with 1 second delta time
-        
+
         // Particle should be removed after update
         assert_eq!(system.particle_count(), 0);
     }
@@ -618,16 +632,21 @@ mod tests {
     fn test_vector_operations() {
         let vector = Vector3D::new(3.0, 4.0, 0.0);
         assert_eq!(vector.length(), 5.0);
-        
+
         let normalized = vector.normalize();
         assert!((normalized.length() - 1.0).abs() < 1e-10);
     }
 
     #[test]
     fn test_particle_types() {
-        let basic_data = ParticleData::Basic { color_intensity: 1.0 };
-        let smoke_data = ParticleData::Smoke { opacity: 0.8, temperature: 50.0 };
-        
+        let basic_data = ParticleData::Basic {
+            color_intensity: 1.0,
+        };
+        let smoke_data = ParticleData::Smoke {
+            opacity: 0.8,
+            temperature: 50.0,
+        };
+
         assert!(matches!(basic_data, ParticleData::Basic { .. }));
         assert!(matches!(smoke_data, ParticleData::Smoke { .. }));
     }

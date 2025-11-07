@@ -3,8 +3,8 @@
 //! This module provides state management for interactive 3D rendering sessions,
 //! including camera state, selection state, and session data.
 
-use crate::spatial::Point3D;
 use crate::render3d::{ProjectionType, ViewAngle};
+use crate::spatial::Point3D;
 use std::collections::HashSet;
 
 /// Interactive session state for 3D rendering
@@ -269,7 +269,7 @@ impl CameraState {
         self.rotation.pitch += pitch;
         self.rotation.yaw += yaw;
         self.rotation.roll += roll;
-        
+
         // Normalize angles to [-180, 180]
         self.rotation.pitch = self.normalize_angle(self.rotation.pitch);
         self.rotation.yaw = self.normalize_angle(self.rotation.yaw);
@@ -418,16 +418,16 @@ mod tests {
     #[test]
     fn test_equipment_selection() {
         let mut state = InteractiveState::new();
-        
+
         // Test selection
         state.select_equipment("equipment-1".to_string());
         assert!(state.is_equipment_selected("equipment-1"));
         assert_eq!(state.session_data.stats.selection_count, 1);
-        
+
         // Test deselection
         state.deselect_equipment("equipment-1");
         assert!(!state.is_equipment_selected("equipment-1"));
-        
+
         // Test clear selections
         state.select_equipment("equipment-1".to_string());
         state.select_equipment("equipment-2".to_string());
@@ -438,20 +438,20 @@ mod tests {
     #[test]
     fn test_camera_operations() {
         let mut camera = CameraState::new();
-        
+
         // Test zoom
         camera.zoom_in(2.0);
         assert_eq!(camera.zoom, 2.0);
-        
+
         camera.zoom_out(2.0);
         assert_eq!(camera.zoom, 1.0);
-        
+
         // Test rotation
         camera.rotate(45.0, 30.0, 15.0);
         assert_eq!(camera.rotation.pitch, 45.0);
         assert_eq!(camera.rotation.yaw, 30.0);
         assert_eq!(camera.rotation.roll, 15.0);
-        
+
         // Test translation
         camera.translate(Vector3D::new(1.0, 2.0, 3.0));
         assert_eq!(camera.position.x, 1.0);
@@ -463,7 +463,7 @@ mod tests {
     fn test_vector_operations() {
         let vector = Vector3D::new(3.0, 4.0, 0.0);
         assert_eq!(vector.length(), 5.0);
-        
+
         let normalized = vector.normalize();
         assert!((normalized.length() - 1.0).abs() < 1e-10);
     }
@@ -471,11 +471,11 @@ mod tests {
     #[test]
     fn test_view_mode_changes() {
         let mut state = InteractiveState::new();
-        
+
         state.set_view_mode(ViewMode::CrossSection);
         assert_eq!(state.view_mode, ViewMode::CrossSection);
         assert_eq!(state.session_data.stats.view_change_count, 1);
-        
+
         // Same mode should not increment counter
         state.set_view_mode(ViewMode::CrossSection);
         assert_eq!(state.session_data.stats.view_change_count, 1);

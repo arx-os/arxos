@@ -1,51 +1,51 @@
 // Command execution router for ArxOS
 // This module routes CLI commands to their respective handlers
 
-pub mod import;
-pub mod export;
-pub mod init;
-pub mod git_ops;
-pub mod diff_viewer;
-pub mod config_mgmt;
-pub mod config_wizard;
-pub mod render;
-pub mod interactive;
-pub mod room;
-pub mod room_handlers;
-pub mod equipment_handlers;
-pub mod equipment;
-pub mod status_dashboard;
-pub mod spatial;
-pub mod search;
-pub mod search_browser;
-pub mod query;
-pub mod watch_dashboard;
-pub mod watch;
 pub mod ar;
 pub mod ar_pending_manager;
-pub mod sensors;
-pub mod ifc;
-pub mod validate;
-pub mod health;
+pub mod config_mgmt;
+pub mod config_wizard;
+pub mod diff_viewer;
 pub mod doc;
+pub mod equipment;
+pub mod equipment_handlers;
+pub mod export;
 pub mod game;
-pub mod sync;
-pub mod spreadsheet;
-pub mod users;
-pub mod verify;
+pub mod git_ops;
+pub mod health;
+pub mod ifc;
+pub mod import;
+pub mod init;
+pub mod interactive;
 pub mod migrate;
+pub mod query;
+pub mod render;
+pub mod room;
+pub mod room_handlers;
+pub mod search;
+pub mod search_browser;
+pub mod sensors;
+pub mod spatial;
+pub mod spreadsheet;
+pub mod status_dashboard;
+pub mod sync;
+pub mod users;
+pub mod validate;
+pub mod verify;
+pub mod watch;
+pub mod watch_dashboard;
 
-mod traits;
-mod registry;
 mod handlers;
+mod registry;
+mod traits;
 
-pub use traits::CommandHandler;
 pub use registry::CommandRegistry;
+pub use traits::CommandHandler;
 
 use crate::cli::Commands;
 
 /// Execute the specified command by routing to appropriate handler
-/// 
+///
 /// This function uses a hybrid approach:
 /// - Simple commands use trait-based handlers via the registry
 /// - Complex commands with subcommands use direct match statements
@@ -57,17 +57,46 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
     if registry.find_handler(&command).is_some() {
         return registry.execute(command);
     }
-    
+
     // Fall back to match for complex commands with subcommands
     match command {
-        Commands::Status { verbose, interactive } => git_ops::handle_status(verbose, interactive),
+        Commands::Status {
+            verbose,
+            interactive,
+        } => git_ops::handle_status(verbose, interactive),
         Commands::Stage { all, file } => git_ops::handle_stage(all, file),
         Commands::Commit { message } => git_ops::handle_commit(message),
         Commands::Unstage { all, file } => git_ops::handle_unstage(all, file),
-        Commands::Diff { commit, file, stat, interactive } => git_ops::handle_diff(commit, file, stat, interactive),
-        Commands::History { limit, verbose, file } => git_ops::handle_history(limit, verbose, file),
-        Commands::Config { show, set, reset, edit, interactive } => config_mgmt::handle_config(show, set, reset, edit, interactive),
-        Commands::Render { building, floor, three_d, show_status, show_rooms, format, projection, view_angle, scale, spatial_index } => {
+        Commands::Diff {
+            commit,
+            file,
+            stat,
+            interactive,
+        } => git_ops::handle_diff(commit, file, stat, interactive),
+        Commands::History {
+            limit,
+            verbose,
+            file,
+        } => git_ops::handle_history(limit, verbose, file),
+        Commands::Config {
+            show,
+            set,
+            reset,
+            edit,
+            interactive,
+        } => config_mgmt::handle_config(show, set, reset, edit, interactive),
+        Commands::Render {
+            building,
+            floor,
+            three_d,
+            show_status,
+            show_rooms,
+            format,
+            projection,
+            view_angle,
+            scale,
+            spatial_index,
+        } => {
             use render::RenderCommandConfig;
             render::handle_render(RenderCommandConfig {
                 building,
@@ -81,8 +110,22 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
                 scale,
                 spatial_index,
             })
-        },
-        Commands::Interactive { building, projection, view_angle, scale, width, height, spatial_index, show_status, show_rooms, show_connections, fps, show_fps, show_help } => {
+        }
+        Commands::Interactive {
+            building,
+            projection,
+            view_angle,
+            scale,
+            width,
+            height,
+            spatial_index,
+            show_status,
+            show_rooms,
+            show_connections,
+            fps,
+            show_fps,
+            show_help,
+        } => {
             use interactive::InteractiveCommandConfig;
             interactive::handle_interactive(InteractiveCommandConfig {
                 building,
@@ -99,14 +142,38 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
                 show_fps,
                 show_help,
             })
-        },
+        }
         Commands::Room { command } => room_handlers::handle_room_command(command),
         Commands::Equipment { command } => equipment_handlers::handle_equipment_command(command),
         Commands::Spatial { command } => spatial::handle_spatial_command(command),
-        Commands::Watch { building, floor, room, refresh_interval, sensors_only, alerts_only, log_level } => {
-            watch::handle_watch_command(building, floor, room, refresh_interval, sensors_only, alerts_only, log_level)
-        },
-        Commands::Search { query, equipment, rooms, buildings, case_sensitive, regex, limit, verbose, interactive } => {
+        Commands::Watch {
+            building,
+            floor,
+            room,
+            refresh_interval,
+            sensors_only,
+            alerts_only,
+            log_level,
+        } => watch::handle_watch_command(
+            building,
+            floor,
+            room,
+            refresh_interval,
+            sensors_only,
+            alerts_only,
+            log_level,
+        ),
+        Commands::Search {
+            query,
+            equipment,
+            rooms,
+            buildings,
+            case_sensitive,
+            regex,
+            limit,
+            verbose,
+            interactive,
+        } => {
             use crate::search::SearchConfig;
             let config = SearchConfig {
                 query,
@@ -119,8 +186,20 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
                 verbose,
             };
             search::handle_search_command(config, interactive)
-        },
-        Commands::Filter { equipment_type, status, floor, room, building, critical_only, healthy_only, alerts_only, format, limit, verbose } => {
+        }
+        Commands::Filter {
+            equipment_type,
+            status,
+            floor,
+            room,
+            building,
+            critical_only,
+            healthy_only,
+            alerts_only,
+            format,
+            limit,
+            verbose,
+        } => {
             use crate::search::{FilterConfig, OutputFormat};
             let config = FilterConfig {
                 equipment_type,
@@ -135,47 +214,76 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
                 limit,
             };
             search::handle_filter_command(config, verbose)
-        },
-        Commands::ArIntegrate { scan_file, room, floor, building, commit, message } => {
-            ar::handle_ar_integrate_command(scan_file, room, floor, building, commit, message)
-        },
+        }
+        Commands::ArIntegrate {
+            scan_file,
+            room,
+            floor,
+            building,
+            commit,
+            message,
+        } => ar::handle_ar_integrate_command(scan_file, room, floor, building, commit, message),
         Commands::Ar { subcommand } => ar::handle_ar_command(subcommand),
-        Commands::ProcessSensors { sensor_dir, building, commit, watch } => {
-            sensors::handle_process_sensors_command(&sensor_dir, &building, commit, watch)
-        },
-        Commands::SensorsHttp { building, host, port } => {
-            sensors::handle_sensors_http_command(&building, &host, port)
-        },
-        Commands::SensorsMqtt { building, broker, port, username, password, topics } => {
-            sensors::handle_sensors_mqtt_command(&building, &broker, port, username.as_deref(), password.as_deref(), &topics)
-        },
+        Commands::ProcessSensors {
+            sensor_dir,
+            building,
+            commit,
+            watch,
+        } => sensors::handle_process_sensors_command(&sensor_dir, &building, commit, watch),
+        Commands::SensorsHttp {
+            building,
+            host,
+            port,
+        } => sensors::handle_sensors_http_command(&building, &host, port),
+        Commands::SensorsMqtt {
+            building,
+            broker,
+            port,
+            username,
+            password,
+            topics,
+        } => sensors::handle_sensors_mqtt_command(
+            &building,
+            &broker,
+            port,
+            username.as_deref(),
+            password.as_deref(),
+            &topics,
+        ),
         Commands::IFC { subcommand } => ifc::handle_ifc_command(subcommand),
-            Commands::Health { component, verbose, interactive, diagnostic } => health::handle_health(component, verbose, interactive, diagnostic),
+        Commands::Health {
+            component,
+            verbose,
+            interactive,
+            diagnostic,
+        } => health::handle_health(component, verbose, interactive, diagnostic),
         Commands::Game { subcommand } => {
             use crate::cli::GameCommands;
             match subcommand {
-                GameCommands::Review { pr_id, pr_dir, building, interactive, export_ifc } => {
-                    game::handle_game_review(pr_id, pr_dir, building, interactive, export_ifc)
-                },
-                GameCommands::Plan { building, interactive, export_pr, export_ifc } => {
-                    game::handle_game_plan(building, interactive, export_pr, export_ifc)
-                },
-                GameCommands::Learn { pr_id, pr_dir, building } => {
-                    game::handle_game_learn(pr_id, pr_dir, building)
-                },
+                GameCommands::Review {
+                    pr_id,
+                    pr_dir,
+                    building,
+                    interactive,
+                    export_ifc,
+                } => game::handle_game_review(pr_id, pr_dir, building, interactive, export_ifc),
+                GameCommands::Plan {
+                    building,
+                    interactive,
+                    export_pr,
+                    export_ifc,
+                } => game::handle_game_plan(building, interactive, export_pr, export_ifc),
+                GameCommands::Learn {
+                    pr_id,
+                    pr_dir,
+                    building,
+                } => game::handle_game_learn(pr_id, pr_dir, building),
             }
-        },
-        Commands::Spreadsheet { subcommand } => {
-            spreadsheet::handle_spreadsheet_command(subcommand)
-        },
-        Commands::Users { subcommand } => {
-            users::handle_users_command(subcommand)
-        },
+        }
+        Commands::Spreadsheet { subcommand } => spreadsheet::handle_spreadsheet_command(subcommand),
+        Commands::Users { subcommand } => users::handle_users_command(subcommand),
         // Commands handled by registry (Init, Import, Export, Sync, Validate, Query, Migrate, Doc, Verify)
         // are processed above and won't reach this match statement
-        _ => {
-            Err("Command not handled by registry or match statement".into())
-        },
+        _ => Err("Command not handled by registry or match statement".into()),
     }
 }
-

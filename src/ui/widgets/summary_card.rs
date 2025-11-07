@@ -1,11 +1,11 @@
 //! Summary card widget for dashboard displays
 
+use crate::ui::theme::Theme;
 use ratatui::{
     style::{Color, Modifier, Style},
-    widgets::{Block, Borders, Paragraph, Widget},
     text::{Line, Span},
+    widgets::{Block, Borders, Paragraph, Widget},
 };
-use crate::ui::theme::Theme;
 
 /// Widget for displaying summary information in a card format
 pub struct SummaryCard {
@@ -27,19 +27,19 @@ impl SummaryCard {
             color: None,
         }
     }
-    
+
     /// Add a subtitle
     pub fn with_subtitle(mut self, subtitle: impl Into<String>) -> Self {
         self.subtitle = Some(subtitle.into());
         self
     }
-    
+
     /// Set theme
     pub fn with_theme(mut self, theme: Theme) -> Self {
         self.theme = theme;
         self
     }
-    
+
     /// Set color
     pub fn with_color(mut self, color: Color) -> Self {
         self.color = Some(color);
@@ -51,42 +51,32 @@ impl Widget for SummaryCard {
     fn render(self, area: ratatui::layout::Rect, buf: &mut ratatui::buffer::Buffer) {
         let value_color = self.color.unwrap_or(self.theme.primary);
         let title = self.title.clone();
-        
+
         let lines: Vec<Line> = vec![
-            Line::from(vec![
-                Span::styled(
-                    self.value,
-                    Style::default()
-                        .fg(value_color)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled(
-                    title.clone(),
-                    Style::default().fg(self.theme.muted),
-                ),
-            ]),
+            Line::from(vec![Span::styled(
+                self.value,
+                Style::default()
+                    .fg(value_color)
+                    .add_modifier(Modifier::BOLD),
+            )]),
+            Line::from(vec![Span::styled(
+                title.clone(),
+                Style::default().fg(self.theme.muted),
+            )]),
         ];
-        
+
         let mut lines = lines;
         if let Some(subtitle) = self.subtitle {
-            lines.push(Line::from(vec![
-                Span::styled(
-                    subtitle,
-                    Style::default().fg(self.theme.muted),
-                ),
-            ]));
+            lines.push(Line::from(vec![Span::styled(
+                subtitle,
+                Style::default().fg(self.theme.muted),
+            )]));
         }
-        
+
         let paragraph = Paragraph::new(lines)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(title),
-            )
+            .block(Block::default().borders(Borders::ALL).title(title))
             .alignment(ratatui::layout::Alignment::Center);
-        
+
         paragraph.render(area, buf);
     }
 }
@@ -107,8 +97,7 @@ mod tests {
 
     #[test]
     fn test_summary_card_with_subtitle() {
-        let card = SummaryCard::new("Title", "100")
-            .with_subtitle("Subtitle");
+        let card = SummaryCard::new("Title", "100").with_subtitle("Subtitle");
         assert_eq!(card.subtitle, Some("Subtitle".to_string()));
     }
 
@@ -116,18 +105,16 @@ mod tests {
     fn test_summary_card_with_theme() {
         let mut theme = Theme::default();
         theme.primary = Color::Blue;
-        
-        let card = SummaryCard::new("Title", "100")
-            .with_theme(theme.clone());
-        
+
+        let card = SummaryCard::new("Title", "100").with_theme(theme.clone());
+
         assert_eq!(card.theme.primary, Color::Blue);
     }
 
     #[test]
     fn test_summary_card_with_color() {
-        let card = SummaryCard::new("Title", "100")
-            .with_color(Color::Red);
-        
+        let card = SummaryCard::new("Title", "100").with_color(Color::Red);
+
         assert_eq!(card.color, Some(Color::Red));
     }
 
@@ -136,23 +123,19 @@ mod tests {
         let card = SummaryCard::new("Equipment Count", "42");
         let area = Rect::new(0, 0, 30, 10);
         let mut buffer = ratatui::buffer::Buffer::empty(area);
-        
+
         card.render(area, &mut buffer);
-        
+
         // Verify content was rendered
-        let has_content = (0..area.height).any(|y| {
-            (0..area.width).any(|x| {
-                buffer.get(x, y).symbol != " "
-            })
-        });
+        let has_content =
+            (0..area.height).any(|y| (0..area.width).any(|x| buffer.get(x, y).symbol != " "));
         assert!(has_content, "Card should render content");
     }
 
     #[test]
     fn test_summary_card_data() {
-        let card = SummaryCard::new("Total Equipment", "150")
-            .with_subtitle("Active systems");
-        
+        let card = SummaryCard::new("Total Equipment", "150").with_subtitle("Active systems");
+
         assert_eq!(card.title, "Total Equipment");
         assert_eq!(card.value, "150");
         assert_eq!(card.subtitle, Some("Active systems".to_string()));
@@ -164,11 +147,10 @@ mod tests {
             .with_subtitle("All systems operational")
             .with_theme(Theme::default())
             .with_color(Color::Green);
-        
+
         assert_eq!(card.title, "Status");
         assert_eq!(card.value, "OK");
         assert_eq!(card.subtitle, Some("All systems operational".to_string()));
         assert_eq!(card.color, Some(Color::Green));
     }
 }
-

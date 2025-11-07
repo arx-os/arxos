@@ -24,17 +24,19 @@ use log::info;
 /// * Building data not found
 /// * Invalid building data
 /// * File system errors
-pub fn handle_doc(building: String, output: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn handle_doc(
+    building: String,
+    output: Option<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
     info!("📚 Generating documentation for building: {}", building);
     println!("📚 Generating documentation for building: {}", building);
-    
+
     let output_path = output.as_deref();
     let generated_path = generate_building_docs(&building, output_path)?;
-    
+
     println!("✅ Documentation generated successfully");
     println!("   Location: {}", generated_path);
     println!("   Open in browser to view");
-    
+
     Ok(())
 }
-

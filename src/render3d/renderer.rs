@@ -1,10 +1,10 @@
 //! Building3DRenderer implementation for 3D building visualization
 
-use super::types::*;
-use super::projections;
 use super::canvas_operations;
+use super::projections;
+use super::types::*;
+use crate::spatial::{BoundingBox3D, Point3D};
 use crate::yaml::BuildingData;
-use crate::spatial::{Point3D, BoundingBox3D};
 use std::collections::HashMap;
 
 /// Advanced 3D building renderer with camera and projection systems
@@ -22,9 +22,13 @@ impl Building3DRenderer {
     /// Create a new advanced 3D building renderer
     pub fn new(building_data: BuildingData, config: Render3DConfig) -> Self {
         let camera = Camera3D::default();
-        let projection = Projection3D::new(config.projection_type.clone(), config.view_angle.clone(), config.scale_factor);
+        let projection = Projection3D::new(
+            config.projection_type.clone(),
+            config.view_angle.clone(),
+            config.scale_factor,
+        );
         let viewport = Viewport3D::new(config.max_width, config.max_height);
-        
+
         Self {
             building_data,
             config,
@@ -34,15 +38,20 @@ impl Building3DRenderer {
             spatial_index: None,
         }
     }
-    
+
     pub fn new_with_spatial_index(
-        building_data: BuildingData, 
+        building_data: BuildingData,
         config: Render3DConfig,
-        spatial_index: crate::ifc::SpatialIndex) -> Self {
+        spatial_index: crate::ifc::SpatialIndex,
+    ) -> Self {
         let camera = Camera3D::default();
-        let projection = Projection3D::new(config.projection_type.clone(), config.view_angle.clone(), config.scale_factor);
+        let projection = Projection3D::new(
+            config.projection_type.clone(),
+            config.view_angle.clone(),
+            config.scale_factor,
+        );
         let viewport = Viewport3D::new(config.max_width, config.max_height);
-        
+
         Self {
             building_data,
             config,
@@ -52,46 +61,54 @@ impl Building3DRenderer {
             spatial_index: Some(spatial_index),
         }
     }
-    
+
     /// Set camera position and target
     pub fn set_camera(&mut self, position: Point3D, target: Point3D) {
         self.camera.position = position;
         self.camera.target = target;
     }
-    
+
     /// Set projection type and view angle
     pub fn set_projection(&mut self, projection_type: ProjectionType, view_angle: ViewAngle) {
         self.projection.projection_type = projection_type;
         self.projection.view_angle = view_angle;
     }
-    
+
     /// Set spatial index for advanced spatial queries
     pub fn set_spatial_index(&mut self, spatial_index: crate::ifc::SpatialIndex) {
         self.spatial_index = Some(spatial_index);
     }
-    
+
     /// Get entities within a 3D bounding box using spatial index
-    pub fn query_spatial_entities(&self, bbox: &BoundingBox3D) -> Vec<crate::ifc::SpatialQueryResult> {
+    pub fn query_spatial_entities(
+        &self,
+        bbox: &BoundingBox3D,
+    ) -> Vec<crate::ifc::SpatialQueryResult> {
         if let Some(ref spatial_index) = self.spatial_index {
             spatial_index.find_within_bounding_box(bbox.clone())
         } else {
             vec![]
         }
     }
-    
+
     /// Get entities within a radius of a point using spatial index
-    pub fn query_entities_within_radius(&self, center: &Point3D, radius: f64) -> Vec<crate::ifc::SpatialQueryResult> {
+    pub fn query_entities_within_radius(
+        &self,
+        center: &Point3D,
+        radius: f64,
+    ) -> Vec<crate::ifc::SpatialQueryResult> {
         if let Some(ref spatial_index) = self.spatial_index {
             spatial_index.find_within_radius(*center, radius)
         } else {
             vec![]
         }
     }
-    
+
     /// Get entities in a specific room using spatial index
     pub fn query_entities_in_room(&self, room_id: &str) -> Vec<crate::ifc::SpatialQueryResult> {
         if let Some(ref spatial_index) = self.spatial_index {
-            spatial_index.find_in_room(room_id)
+            spatial_index
+                .find_in_room(room_id)
                 .into_iter()
                 .map(|entity| crate::ifc::SpatialQueryResult {
                     entity,
@@ -104,11 +121,12 @@ impl Building3DRenderer {
             vec![]
         }
     }
-    
+
     /// Get entities on a specific floor using spatial index
     pub fn query_entities_on_floor(&self, floor: i32) -> Vec<crate::ifc::SpatialQueryResult> {
         if let Some(ref spatial_index) = self.spatial_index {
-            spatial_index.find_in_floor(floor)
+            spatial_index
+                .find_in_floor(floor)
                 .into_iter()
                 .map(|entity| crate::ifc::SpatialQueryResult {
                     entity,
@@ -121,7 +139,7 @@ impl Building3DRenderer {
             vec![]
         }
     }
-    
+
     /// Find the nearest entity to a point using spatial index
     pub fn find_nearest_entity(&self, point: &Point3D) -> Option<crate::ifc::SpatialQueryResult> {
         if let Some(ref spatial_index) = self.spatial_index {
@@ -130,14 +148,19 @@ impl Building3DRenderer {
             None
         }
     }
-    
+
     /// Get equipment clusters for visualization
-    pub fn get_equipment_clusters(&self, min_cluster_size: usize) -> Vec<Vec<crate::ifc::SpatialQueryResult>> {
+    pub fn get_equipment_clusters(
+        &self,
+        min_cluster_size: usize,
+    ) -> Vec<Vec<crate::ifc::SpatialQueryResult>> {
         if let Some(ref spatial_index) = self.spatial_index {
-            spatial_index.find_equipment_clusters(10.0, min_cluster_size)
+            spatial_index
+                .find_equipment_clusters(10.0, min_cluster_size)
                 .into_iter()
                 .map(|cluster| {
-                    cluster.into_iter()
+                    cluster
+                        .into_iter()
                         .map(|entity| crate::ifc::SpatialQueryResult {
                             entity,
                             distance: 0.0,
@@ -151,54 +174,57 @@ impl Building3DRenderer {
             vec![]
         }
     }
-    
+
     /// Enhance equipment data with spatial index information
-    fn enhance_equipment_with_spatial_data(&self, equipment: &[Equipment3D]) -> Result<Vec<Equipment3D>, Box<dyn std::error::Error>> {
+    fn enhance_equipment_with_spatial_data(
+        &self,
+        equipment: &[Equipment3D],
+    ) -> Result<Vec<Equipment3D>, Box<dyn std::error::Error>> {
         if self.spatial_index.is_none() {
             return Ok(equipment.to_vec());
         }
-        
+
         let mut enhanced_equipment = Vec::new();
-        
+
         for eq in equipment {
             let mut enhanced_eq = eq.clone();
-            
+
             // Query spatial relationships for this equipment
             let spatial_results = self.query_spatial_entities(&eq.bounding_box);
-            
+
             // Add spatial relationship information to equipment metadata
             if !spatial_results.is_empty() {
                 enhanced_eq.spatial_relationships = Some(spatial_results.len());
-                
+
                 // Find the nearest equipment for connection visualization
                 if let Some(nearest) = self.find_nearest_entity(&eq.position) {
                     enhanced_eq.nearest_entity_distance = Some(nearest.distance);
                 }
             }
-            
+
             enhanced_equipment.push(enhanced_eq);
         }
-        
+
         Ok(enhanced_equipment)
     }
-    
+
     /// Render 3D scene with advanced projection
     pub fn render_3d_advanced(&self) -> Result<Scene3D, Box<dyn std::error::Error>> {
         let start_time = std::time::Instant::now();
-        
+
         // Extract 3D data from building
         let floors = self.extract_floors_3d()?;
         let equipment = self.extract_equipment_3d()?;
         let rooms = self.extract_rooms_3d()?;
-        
+
         // Calculate overall bounding box
         let bounding_box = self.calculate_overall_bounds(&floors, &equipment, &rooms);
-        
+
         // Apply 3D transformations
         let transformed_floors = self.transform_floors_3d(&floors);
         let transformed_equipment = self.transform_equipment_3d(&equipment);
         let transformed_rooms = self.transform_rooms_3d(&rooms);
-        
+
         // Create scene
         let scene = Scene3D {
             building_name: self.building_data.building.name.clone(),
@@ -208,11 +234,17 @@ impl Building3DRenderer {
             bounding_box,
             metadata: SceneMetadata {
                 total_floors: self.building_data.floors.len(),
-                total_rooms: self.building_data.floors.iter()
+                total_rooms: self
+                    .building_data
+                    .floors
+                    .iter()
                     .flat_map(|f| f.wings.iter())
                     .map(|w| w.rooms.len())
                     .sum(),
-                total_equipment: self.building_data.floors.iter()
+                total_equipment: self
+                    .building_data
+                    .floors
+                    .iter()
                     .map(|f| f.equipment.len())
                     .sum(),
                 render_time_ms: start_time.elapsed().as_millis() as u64,
@@ -220,34 +252,34 @@ impl Building3DRenderer {
                 view_angle: format!("{:?}", self.projection.view_angle),
             },
         };
-        
+
         Ok(scene)
     }
-    
+
     /// Render 3D scene with spatial index integration for enhanced queries
     pub fn render_3d_with_spatial_queries(&self) -> Result<Scene3D, Box<dyn std::error::Error>> {
         let start_time = std::time::Instant::now();
-        
+
         // Extract 3D data from building
         let floors = self.extract_floors_3d()?;
         let equipment = self.extract_equipment_3d()?;
         let rooms = self.extract_rooms_3d()?;
-        
+
         // Calculate overall bounding box
         let bounding_box = self.calculate_overall_bounds(&floors, &equipment, &rooms);
-        
+
         // Use spatial index to enhance equipment data if available
         let enhanced_equipment = if self.spatial_index.is_some() {
             self.enhance_equipment_with_spatial_data(&equipment)?
         } else {
             equipment
         };
-        
+
         // Apply 3D transformations
         let transformed_floors = self.transform_floors_3d(&floors);
         let transformed_equipment = self.transform_equipment_3d(&enhanced_equipment);
         let transformed_rooms = self.transform_rooms_3d(&rooms);
-        
+
         // Create scene with enhanced metadata
         let scene = Scene3D {
             building_name: self.building_data.building.name.clone(),
@@ -257,7 +289,10 @@ impl Building3DRenderer {
             bounding_box,
             metadata: SceneMetadata {
                 total_floors: self.building_data.floors.len(),
-                total_rooms: self.building_data.floors.iter()
+                total_rooms: self
+                    .building_data
+                    .floors
+                    .iter()
                     .flat_map(|f| f.wings.iter())
                     .map(|w| w.rooms.len())
                     .sum(),
@@ -267,33 +302,42 @@ impl Building3DRenderer {
                 view_angle: format!("{:?}", self.projection.view_angle),
             },
         };
-        
+
         Ok(scene)
     }
-    
+
     /// Render 3D scene to advanced ASCII with projection
-    pub fn render_to_ascii_advanced(&self, scene: &Scene3D) -> Result<String, Box<dyn std::error::Error>> {
+    pub fn render_to_ascii_advanced(
+        &self,
+        scene: &Scene3D,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let mut output = String::new();
-        
+
         // Header with camera info
-        output.push_str(&format!("🏢 {} - Advanced 3D Building Visualization\n", scene.building_name));
-        output.push_str(&format!("📊 {} floors, {} rooms, {} equipment\n", 
-            scene.metadata.total_floors,
-            scene.metadata.total_rooms,
-            scene.metadata.total_equipment
+        output.push_str(&format!(
+            "🏢 {} - Advanced 3D Building Visualization\n",
+            scene.building_name
         ));
-        output.push_str(&format!("🎯 Projection: {} | View: {} | Scale: {:.2}\n", 
-            scene.metadata.projection_type,
-            scene.metadata.view_angle,
-            self.projection.scale
+        output.push_str(&format!(
+            "📊 {} floors, {} rooms, {} equipment\n",
+            scene.metadata.total_floors, scene.metadata.total_rooms, scene.metadata.total_equipment
         ));
-        output.push_str(&format!("📷 Camera: ({:.1}, {:.1}, {:.1}) → ({:.1}, {:.1}, {:.1})\n",
-            self.camera.position.x, self.camera.position.y, self.camera.position.z,
-            self.camera.target.x, self.camera.target.y, self.camera.target.z
+        output.push_str(&format!(
+            "🎯 Projection: {} | View: {} | Scale: {:.2}\n",
+            scene.metadata.projection_type, scene.metadata.view_angle, self.projection.scale
+        ));
+        output.push_str(&format!(
+            "📷 Camera: ({:.1}, {:.1}, {:.1}) → ({:.1}, {:.1}, {:.1})\n",
+            self.camera.position.x,
+            self.camera.position.y,
+            self.camera.position.z,
+            self.camera.target.x,
+            self.camera.target.y,
+            self.camera.target.z
         ));
         output.push_str("═".repeat(80).as_str());
         output.push('\n');
-        
+
         // Render with 3D projection
         match self.projection.projection_type {
             ProjectionType::Isometric => {
@@ -306,85 +350,152 @@ impl Building3DRenderer {
                 output.push_str(&self.render_perspective_view(scene)?);
             }
         }
-        
+
         // Equipment status summary
         if self.config.show_status {
             output.push_str(&self.render_equipment_status_summary(scene)?);
         }
-        
+
         Ok(output)
     }
-    
+
     /// Render 3D building as ASCII art with depth and perspective
-    pub fn render_3d_ascii_art(&self, scene: &Scene3D) -> Result<String, Box<dyn std::error::Error>> {
+    pub fn render_3d_ascii_art(
+        &self,
+        scene: &Scene3D,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let mut output = String::new();
-        
+
         // Create a 2D canvas for ASCII rendering
         let canvas_width = self.viewport.width.min(120);
         let canvas_height = self.viewport.height.min(40);
         let mut canvas = vec![vec![' '; canvas_width]; canvas_height];
         let mut depth_buffer = vec![vec![f64::NEG_INFINITY; canvas_width]; canvas_height];
-        
+
         // Render floors as horizontal planes
-        self.render_floors_to_canvas(&scene.floors, &mut canvas, &mut depth_buffer, canvas_width, canvas_height);
-        
+        self.render_floors_to_canvas(
+            &scene.floors,
+            &mut canvas,
+            &mut depth_buffer,
+            canvas_width,
+            canvas_height,
+        );
+
         // Render equipment as 3D symbols
-        self.render_equipment_to_canvas(&scene.equipment, &mut canvas, &mut depth_buffer, canvas_width, canvas_height);
-        
+        self.render_equipment_to_canvas(
+            &scene.equipment,
+            &mut canvas,
+            &mut depth_buffer,
+            canvas_width,
+            canvas_height,
+        );
+
         // Render rooms as bounded areas
-        self.render_rooms_to_canvas(&scene.rooms, &mut canvas, &mut depth_buffer, canvas_width, canvas_height);
-        
+        self.render_rooms_to_canvas(
+            &scene.rooms,
+            &mut canvas,
+            &mut depth_buffer,
+            canvas_width,
+            canvas_height,
+        );
+
         // Convert canvas to string
         output.push_str("┌─────────────────────────────────────────────────────────────┐\n");
-        output.push_str(&format!("│ 🏢 {} - 3D ASCII Building Visualization │\n", scene.building_name));
+        output.push_str(&format!(
+            "│ 🏢 {} - 3D ASCII Building Visualization │\n",
+            scene.building_name
+        ));
         output.push_str("└─────────────────────────────────────────────────────────────┘\n");
-        
+
         for row in canvas {
             let line: String = row.into_iter().collect();
             output.push_str(&format!("│{}│\n", line));
         }
-        
+
         // Add legend
         output.push_str("└─────────────────────────────────────────────────────────────┘\n");
-        output.push_str("Legend: █=Wall │ ╬=Equipment │ ○=Room │ ─=Floor │ ▲=HVAC │ ●=Electrical\n");
-        
+        output
+            .push_str("Legend: █=Wall │ ╬=Equipment │ ○=Room │ ─=Floor │ ▲=HVAC │ ●=Electrical\n");
+
         Ok(output)
     }
-    
+
     /// Render floors to ASCII canvas (delegates to canvas_operations module)
-    pub fn render_floors_to_canvas(&self, floors: &[Floor3D], canvas: &mut Vec<Vec<char>>, depth_buffer: &mut Vec<Vec<f64>>, width: usize, height: usize) {
+    pub fn render_floors_to_canvas(
+        &self,
+        floors: &[Floor3D],
+        canvas: &mut Vec<Vec<char>>,
+        depth_buffer: &mut Vec<Vec<f64>>,
+        width: usize,
+        height: usize,
+    ) {
         let project = |p: &Point3D| self.project_to_screen(p, width, height);
-        canvas_operations::render_floors_to_canvas(floors, canvas, depth_buffer, width, height, project);
+        canvas_operations::render_floors_to_canvas(
+            floors,
+            canvas,
+            depth_buffer,
+            width,
+            height,
+            project,
+        );
     }
-    
+
     /// Render equipment to ASCII canvas (delegates to canvas_operations module)
-    pub fn render_equipment_to_canvas(&self, equipment: &[Equipment3D], canvas: &mut Vec<Vec<char>>, depth_buffer: &mut Vec<Vec<f64>>, width: usize, height: usize) {
+    pub fn render_equipment_to_canvas(
+        &self,
+        equipment: &[Equipment3D],
+        canvas: &mut Vec<Vec<char>>,
+        depth_buffer: &mut Vec<Vec<f64>>,
+        width: usize,
+        height: usize,
+    ) {
         let project = |p: &Point3D| self.project_to_screen(p, width, height);
-        canvas_operations::render_equipment_to_canvas(equipment, canvas, depth_buffer, width, height, project);
+        canvas_operations::render_equipment_to_canvas(
+            equipment,
+            canvas,
+            depth_buffer,
+            width,
+            height,
+            project,
+        );
     }
-    
+
     /// Render rooms to ASCII canvas (delegates to canvas_operations module)
-    pub fn render_rooms_to_canvas(&self, rooms: &[Room3D], canvas: &mut Vec<Vec<char>>, depth_buffer: &mut Vec<Vec<f64>>, width: usize, height: usize) {
+    pub fn render_rooms_to_canvas(
+        &self,
+        rooms: &[Room3D],
+        canvas: &mut Vec<Vec<char>>,
+        depth_buffer: &mut Vec<Vec<f64>>,
+        width: usize,
+        height: usize,
+    ) {
         let project = |p: &Point3D| self.project_to_screen(p, width, height);
-        canvas_operations::render_rooms_to_canvas(rooms, canvas, depth_buffer, width, height, project);
+        canvas_operations::render_rooms_to_canvas(
+            rooms,
+            canvas,
+            depth_buffer,
+            width,
+            height,
+            project,
+        );
     }
-    
+
     /// Project 3D point to 2D screen coordinates
     fn project_to_screen(&self, point: &Point3D, width: usize, height: usize) -> Point3D {
         // Apply camera transformation
         let transformed = self.transform_point(point);
-        
+
         // Apply projection
         let projected = match self.projection.projection_type {
             ProjectionType::Isometric => self.isometric_projection(&transformed),
             ProjectionType::Orthographic => self.orthographic_projection(&transformed),
             ProjectionType::Perspective => self.perspective_projection(&transformed),
         };
-        
+
         // Scale to screen coordinates
         let scale_x = width as f64 / 100.0; // Assuming building fits in 100x100 units
         let scale_y = height as f64 / 100.0;
-        
+
         Point3D {
             x: (projected.x * scale_x + width as f64 / 2.0).clamp(0.0, width as f64 - 1.0),
             y: (projected.y * scale_y + height as f64 / 2.0).clamp(0.0, height as f64 - 1.0),
@@ -395,15 +506,15 @@ impl Building3DRenderer {
     /// Render the building in 3D
     pub fn render_3d(&self) -> Result<Scene3D, Box<dyn std::error::Error>> {
         let start_time = std::time::Instant::now();
-        
+
         // Extract 3D data from building
         let floors = self.extract_floors_3d()?;
         let equipment = self.extract_equipment_3d()?;
         let rooms = self.extract_rooms_3d()?;
-        
+
         // Calculate overall bounding box
         let bounding_box = self.calculate_overall_bounds(&floors, &equipment, &rooms);
-        
+
         // Create scene
         let scene = Scene3D {
             building_name: self.building_data.building.name.clone(),
@@ -413,11 +524,17 @@ impl Building3DRenderer {
             bounding_box,
             metadata: SceneMetadata {
                 total_floors: self.building_data.floors.len(),
-                total_rooms: self.building_data.floors.iter()
+                total_rooms: self
+                    .building_data
+                    .floors
+                    .iter()
                     .flat_map(|f| f.wings.iter())
                     .map(|w| w.rooms.len())
                     .sum(),
-                total_equipment: self.building_data.floors.iter()
+                total_equipment: self
+                    .building_data
+                    .floors
+                    .iter()
                     .map(|f| f.equipment.len())
                     .sum(),
                 render_time_ms: start_time.elapsed().as_millis() as u64,
@@ -425,46 +542,48 @@ impl Building3DRenderer {
                 view_angle: format!("{:?}", self.config.view_angle),
             },
         };
-        
+
         Ok(scene)
     }
 
     /// Render 3D scene to ASCII terminal output
     pub fn render_to_ascii(&self, scene: &Scene3D) -> Result<String, Box<dyn std::error::Error>> {
         let mut output = String::new();
-        
+
         // Header
-        output.push_str(&format!("🏢 {} - 3D Building Visualization\n", scene.building_name));
-        output.push_str(&format!("📊 {} floors, {} rooms, {} equipment\n", 
-            scene.metadata.total_floors,
-            scene.metadata.total_rooms,
-            scene.metadata.total_equipment
+        output.push_str(&format!(
+            "🏢 {} - 3D Building Visualization\n",
+            scene.building_name
         ));
-        output.push_str(&format!("🎯 Projection: {} | View: {}\n", 
-            scene.metadata.projection_type,
-            scene.metadata.view_angle
+        output.push_str(&format!(
+            "📊 {} floors, {} rooms, {} equipment\n",
+            scene.metadata.total_floors, scene.metadata.total_rooms, scene.metadata.total_equipment
+        ));
+        output.push_str(&format!(
+            "🎯 Projection: {} | View: {}\n",
+            scene.metadata.projection_type, scene.metadata.view_angle
         ));
         output.push_str("═".repeat(80).as_str());
         output.push('\n');
-        
+
         // Render each floor
         for floor in &scene.floors {
             output.push_str(&self.render_floor_3d_ascii(floor, scene)?);
             output.push('\n');
         }
-        
+
         // Equipment status summary
         if self.config.show_status {
             output.push_str(&self.render_equipment_status_summary(scene)?);
         }
-        
+
         Ok(output)
     }
 
     /// Extract floors as 3D objects
     fn extract_floors_3d(&self) -> Result<Vec<Floor3D>, Box<dyn std::error::Error>> {
         let mut floors_3d = Vec::new();
-        
+
         for floor in &self.building_data.floors {
             let floor_3d = Floor3D {
                 id: floor.id.clone(),
@@ -474,11 +593,21 @@ impl Building3DRenderer {
                 bounding_box: floor.bounding_box.clone().unwrap_or_else(|| {
                     let elev = floor.elevation.unwrap_or(floor.level as f64 * 3.0);
                     BoundingBox3D {
-                        min: Point3D { x: 0.0, y: 0.0, z: elev },
-                        max: Point3D { x: 100.0, y: 100.0, z: elev + 3.0 },
+                        min: Point3D {
+                            x: 0.0,
+                            y: 0.0,
+                            z: elev,
+                        },
+                        max: Point3D {
+                            x: 100.0,
+                            y: 100.0,
+                            z: elev + 3.0,
+                        },
                     }
                 }),
-                rooms: floor.wings.iter()
+                rooms: floor
+                    .wings
+                    .iter()
                     .flat_map(|w| w.rooms.iter())
                     .map(|r| r.id.clone())
                     .collect(),
@@ -486,14 +615,14 @@ impl Building3DRenderer {
             };
             floors_3d.push(floor_3d);
         }
-        
+
         Ok(floors_3d)
     }
 
     /// Extract equipment as 3D objects
     fn extract_equipment_3d(&self) -> Result<Vec<Equipment3D>, Box<dyn std::error::Error>> {
         let mut equipment_3d = Vec::new();
-        
+
         for floor in &self.building_data.floors {
             // Extract floor-level equipment
             for equipment in &floor.equipment {
@@ -527,7 +656,7 @@ impl Building3DRenderer {
                 };
                 equipment_3d.push(equipment_3d_item);
             }
-            
+
             // Extract equipment from rooms within wings
             for wing in &floor.wings {
                 for room in &wing.rooms {
@@ -565,46 +694,46 @@ impl Building3DRenderer {
                 }
             }
         }
-        
+
         Ok(equipment_3d)
     }
 
     /// Extract rooms as 3D objects
     fn extract_rooms_3d(&self) -> Result<Vec<Room3D>, Box<dyn std::error::Error>> {
         let mut rooms_3d = Vec::new();
-        
+
         for floor in &self.building_data.floors {
             for wing in &floor.wings {
                 for room in &wing.rooms {
-                let room_3d = Room3D {
-                    id: room.id.clone(),
-                    name: room.name.clone(),
-                    room_type: format!("{:?}", room.room_type),
-                    position: crate::spatial::Point3D {
-                        x: room.spatial_properties.position.x,
-                        y: room.spatial_properties.position.y,
-                        z: room.spatial_properties.position.z,
-                    },
-                    bounding_box: crate::spatial::BoundingBox3D {
-                        min: crate::spatial::Point3D {
-                            x: room.spatial_properties.bounding_box.min.x,
-                            y: room.spatial_properties.bounding_box.min.y,
-                            z: room.spatial_properties.bounding_box.min.z,
+                    let room_3d = Room3D {
+                        id: room.id.clone(),
+                        name: room.name.clone(),
+                        room_type: format!("{:?}", room.room_type),
+                        position: crate::spatial::Point3D {
+                            x: room.spatial_properties.position.x,
+                            y: room.spatial_properties.position.y,
+                            z: room.spatial_properties.position.z,
                         },
-                        max: crate::spatial::Point3D {
-                            x: room.spatial_properties.bounding_box.max.x,
-                            y: room.spatial_properties.bounding_box.max.y,
-                            z: room.spatial_properties.bounding_box.max.z,
+                        bounding_box: crate::spatial::BoundingBox3D {
+                            min: crate::spatial::Point3D {
+                                x: room.spatial_properties.bounding_box.min.x,
+                                y: room.spatial_properties.bounding_box.min.y,
+                                z: room.spatial_properties.bounding_box.min.z,
+                            },
+                            max: crate::spatial::Point3D {
+                                x: room.spatial_properties.bounding_box.max.x,
+                                y: room.spatial_properties.bounding_box.max.y,
+                                z: room.spatial_properties.bounding_box.max.z,
+                            },
                         },
-                    },
-                    floor_level: floor.level,
-                    equipment: Vec::new(), // Equipment will be found when equipment data is available
-                };
-                rooms_3d.push(room_3d);
+                        floor_level: floor.level,
+                        equipment: Vec::new(), // Equipment will be found when equipment data is available
+                    };
+                    rooms_3d.push(room_3d);
                 }
             }
         }
-        
+
         Ok(rooms_3d)
     }
 
@@ -621,7 +750,7 @@ impl Building3DRenderer {
         let mut max_x = f64::NEG_INFINITY;
         let mut max_y = f64::NEG_INFINITY;
         let mut max_z = f64::NEG_INFINITY;
-        
+
         // Check floors
         for floor in floors {
             min_x = min_x.min(floor.bounding_box.min.x);
@@ -631,7 +760,7 @@ impl Building3DRenderer {
             max_y = max_y.max(floor.bounding_box.max.y);
             max_z = max_z.max(floor.bounding_box.max.z);
         }
-        
+
         // Check equipment
         for equipment in equipment {
             min_x = min_x.min(equipment.position.x);
@@ -641,7 +770,7 @@ impl Building3DRenderer {
             max_y = max_y.max(equipment.position.y);
             max_z = max_z.max(equipment.position.z);
         }
-        
+
         // Check rooms
         for room in rooms {
             min_x = min_x.min(room.position.x);
@@ -651,35 +780,56 @@ impl Building3DRenderer {
             max_y = max_y.max(room.position.y);
             max_z = max_z.max(room.position.z);
         }
-        
+
         BoundingBox3D {
-            min: Point3D { x: min_x, y: min_y, z: min_z },
-            max: Point3D { x: max_x, y: max_y, z: max_z },
+            min: Point3D {
+                x: min_x,
+                y: min_y,
+                z: min_z,
+            },
+            max: Point3D {
+                x: max_x,
+                y: max_y,
+                z: max_z,
+            },
         }
     }
 
     /// Render a single floor in 3D ASCII
-    fn render_floor_3d_ascii(&self, floor: &Floor3D, scene: &Scene3D) -> Result<String, Box<dyn std::error::Error>> {
+    fn render_floor_3d_ascii(
+        &self,
+        floor: &Floor3D,
+        scene: &Scene3D,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let mut output = String::new();
-        
+
         // Floor header
-        output.push_str(&format!("┌─ Floor {}: {} (Level {}) ─┐\n", 
-            floor.level, floor.name, floor.level));
-        
+        output.push_str(&format!(
+            "┌─ Floor {}: {} (Level {}) ─┐\n",
+            floor.level, floor.name, floor.level
+        ));
+
         // Floor elevation info
         output.push_str(&format!("│ Elevation: {:.1}m │\n", floor.elevation));
-        
+
         // Floor bounding box
-        output.push_str(&format!("│ Bounds: ({:.1}, {:.1}, {:.1}) to ({:.1}, {:.1}, {:.1}) │\n",
-            floor.bounding_box.min.x, floor.bounding_box.min.y, floor.bounding_box.min.z,
-            floor.bounding_box.max.x, floor.bounding_box.max.y, floor.bounding_box.max.z
+        output.push_str(&format!(
+            "│ Bounds: ({:.1}, {:.1}, {:.1}) to ({:.1}, {:.1}, {:.1}) │\n",
+            floor.bounding_box.min.x,
+            floor.bounding_box.min.y,
+            floor.bounding_box.min.z,
+            floor.bounding_box.max.x,
+            floor.bounding_box.max.y,
+            floor.bounding_box.max.z
         ));
-        
+
         // Equipment on this floor
-        let floor_equipment: Vec<&Equipment3D> = scene.equipment.iter()
+        let floor_equipment: Vec<&Equipment3D> = scene
+            .equipment
+            .iter()
             .filter(|e| e.floor_level == floor.level)
             .collect();
-        
+
         if !floor_equipment.is_empty() {
             output.push_str("│ Equipment: ");
             for (i, equipment) in floor_equipment.iter().enumerate() {
@@ -696,12 +846,14 @@ impl Building3DRenderer {
             }
             output.push_str(" │\n");
         }
-        
+
         // Rooms on this floor
-        let floor_rooms: Vec<&Room3D> = scene.rooms.iter()
+        let floor_rooms: Vec<&Room3D> = scene
+            .rooms
+            .iter()
             .filter(|r| r.floor_level == floor.level)
             .collect();
-        
+
         if !floor_rooms.is_empty() {
             output.push_str("│ Rooms: ");
             for (i, room) in floor_rooms.iter().enumerate() {
@@ -712,94 +864,106 @@ impl Building3DRenderer {
             }
             output.push_str(" │\n");
         }
-        
+
         output.push_str("└─────────────────────────────────────────────────────────────┘");
-        
+
         Ok(output)
     }
 
     /// Render equipment status summary
-    fn render_equipment_status_summary(&self, scene: &Scene3D) -> Result<String, Box<dyn std::error::Error>> {
+    fn render_equipment_status_summary(
+        &self,
+        scene: &Scene3D,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let mut output = String::new();
-        
+
         // Count equipment by status
         let mut status_counts: HashMap<String, usize> = HashMap::new();
         for equipment in &scene.equipment {
             *status_counts.entry(equipment.status.clone()).or_insert(0) += 1;
         }
-        
+
         output.push_str("📊 Equipment Status Summary:\n");
         output.push_str("┌─────────────────────────────────────────────────────────────┐\n");
-        
+
         for (status, count) in status_counts {
             let symbol = match status.as_str() {
                 "Healthy" => "🟢",
-                "Warning" => "🟡", 
+                "Warning" => "🟡",
                 "Critical" => "🔴",
                 _ => "⚪",
             };
             output.push_str(&format!("│ {} {}: {} equipment\n", symbol, status, count));
         }
-        
+
         output.push_str("└─────────────────────────────────────────────────────────────┘\n");
-        
+
         Ok(output)
     }
-    
+
     /// Transform 3D floors with camera and projection
     fn transform_floors_3d(&self, floors: &[Floor3D]) -> Vec<Floor3D> {
-        floors.iter().map(|floor| {
-            let transformed_bbox = self.transform_bounding_box(&floor.bounding_box);
-            Floor3D {
-                id: floor.id.clone(),
-                name: floor.name.clone(),
-                level: floor.level,
-                elevation: floor.elevation,
-                bounding_box: transformed_bbox,
-                rooms: floor.rooms.clone(),
-                equipment: floor.equipment.clone(),
-            }
-        }).collect()
+        floors
+            .iter()
+            .map(|floor| {
+                let transformed_bbox = self.transform_bounding_box(&floor.bounding_box);
+                Floor3D {
+                    id: floor.id.clone(),
+                    name: floor.name.clone(),
+                    level: floor.level,
+                    elevation: floor.elevation,
+                    bounding_box: transformed_bbox,
+                    rooms: floor.rooms.clone(),
+                    equipment: floor.equipment.clone(),
+                }
+            })
+            .collect()
     }
-    
+
     /// Transform 3D equipment with camera and projection
     fn transform_equipment_3d(&self, equipment: &[Equipment3D]) -> Vec<Equipment3D> {
-        equipment.iter().map(|eq| {
-            let transformed_position = self.transform_point(&eq.position);
-            let transformed_bbox = self.transform_bounding_box(&eq.bounding_box);
-            Equipment3D {
-                id: eq.id.clone(),
-                name: eq.name.clone(),
-                equipment_type: eq.equipment_type.clone(),
-                status: eq.status.clone(),
-                position: transformed_position,
-                bounding_box: transformed_bbox,
-                floor_level: eq.floor_level,
-                room_id: eq.room_id.clone(),
-                connections: eq.connections.clone(),
-                spatial_relationships: eq.spatial_relationships,
-                nearest_entity_distance: eq.nearest_entity_distance,
-            }
-        }).collect()
+        equipment
+            .iter()
+            .map(|eq| {
+                let transformed_position = self.transform_point(&eq.position);
+                let transformed_bbox = self.transform_bounding_box(&eq.bounding_box);
+                Equipment3D {
+                    id: eq.id.clone(),
+                    name: eq.name.clone(),
+                    equipment_type: eq.equipment_type.clone(),
+                    status: eq.status.clone(),
+                    position: transformed_position,
+                    bounding_box: transformed_bbox,
+                    floor_level: eq.floor_level,
+                    room_id: eq.room_id.clone(),
+                    connections: eq.connections.clone(),
+                    spatial_relationships: eq.spatial_relationships,
+                    nearest_entity_distance: eq.nearest_entity_distance,
+                }
+            })
+            .collect()
     }
-    
+
     /// Transform 3D rooms with camera and projection
     fn transform_rooms_3d(&self, rooms: &[Room3D]) -> Vec<Room3D> {
-        rooms.iter().map(|room| {
-            let transformed_position = self.transform_point(&room.position);
-            let transformed_bbox = self.transform_bounding_box(&room.bounding_box);
-            Room3D {
-                id: room.id.clone(),
-                name: room.name.clone(),
-                room_type: room.room_type.clone(),
-                position: transformed_position,
-                bounding_box: transformed_bbox,
-                floor_level: room.floor_level,
-                equipment: room.equipment.clone(),
-            }
-        }).collect()
+        rooms
+            .iter()
+            .map(|room| {
+                let transformed_position = self.transform_point(&room.position);
+                let transformed_bbox = self.transform_bounding_box(&room.bounding_box);
+                Room3D {
+                    id: room.id.clone(),
+                    name: room.name.clone(),
+                    room_type: room.room_type.clone(),
+                    position: transformed_position,
+                    bounding_box: transformed_bbox,
+                    floor_level: room.floor_level,
+                    equipment: room.equipment.clone(),
+                }
+            })
+            .collect()
     }
-    
+
     /// Transform a 3D point using camera and projection
     fn transform_point(&self, point: &Point3D) -> Point3D {
         match self.projection.projection_type {
@@ -808,53 +972,57 @@ impl Building3DRenderer {
             ProjectionType::Perspective => self.perspective_projection(point),
         }
     }
-    
+
     /// Transform a 3D bounding box using camera and projection
     fn transform_bounding_box(&self, bbox: &BoundingBox3D) -> BoundingBox3D {
         let transformed_min = self.transform_point(&bbox.min);
         let transformed_max = self.transform_point(&bbox.max);
-        
+
         BoundingBox3D {
             min: transformed_min,
             max: transformed_max,
         }
     }
-    
+
     /// Isometric projection (delegates to projections module)
     pub fn isometric_projection(&self, point: &Point3D) -> Point3D {
         projections::isometric_projection(point, self.projection.scale)
     }
-    
+
     /// Orthographic projection (delegates to projections module)
     pub fn orthographic_projection(&self, point: &Point3D) -> Point3D {
         projections::orthographic_projection(point, &self.projection)
     }
-    
+
     /// Perspective projection (delegates to projections module)
     fn perspective_projection(&self, point: &Point3D) -> Point3D {
         projections::perspective_projection(point, &self.camera)
     }
-    
+
     /// Render isometric view
     fn render_isometric_view(&self, scene: &Scene3D) -> Result<String, Box<dyn std::error::Error>> {
         let mut output = String::new();
-        
+
         output.push_str("📐 Isometric 3D View:\n");
         output.push_str("┌─────────────────────────────────────────────────────────────┐\n");
-        
+
         // Sort floors by level for proper rendering order
         let mut floors = scene.floors.clone();
         floors.sort_by_key(|f| f.level);
-        
+
         for floor in &floors {
-            output.push_str(&format!("│ Floor {}: {} (Z: {:.1}m) │\n", 
-                floor.level, floor.name, floor.elevation));
-            
+            output.push_str(&format!(
+                "│ Floor {}: {} (Z: {:.1}m) │\n",
+                floor.level, floor.name, floor.elevation
+            ));
+
             // Show equipment on this floor
-            let floor_equipment: Vec<&Equipment3D> = scene.equipment.iter()
+            let floor_equipment: Vec<&Equipment3D> = scene
+                .equipment
+                .iter()
                 .filter(|e| e.floor_level == floor.level)
                 .collect();
-            
+
             for equipment in &floor_equipment {
                 let status_symbol = match equipment.status.as_str() {
                     "Healthy" => "🟢",
@@ -862,24 +1030,35 @@ impl Building3DRenderer {
                     "Critical" => "🔴",
                     _ => "⚪",
                 };
-                output.push_str(&format!("│   {} {} at ({:.1}, {:.1}, {:.1}) │\n",
-                    status_symbol, equipment.name, 
-                    equipment.position.x, equipment.position.y, equipment.position.z));
+                output.push_str(&format!(
+                    "│   {} {} at ({:.1}, {:.1}, {:.1}) │\n",
+                    status_symbol,
+                    equipment.name,
+                    equipment.position.x,
+                    equipment.position.y,
+                    equipment.position.z
+                ));
             }
         }
-        
+
         output.push_str("└─────────────────────────────────────────────────────────────┘\n");
-        
+
         Ok(output)
     }
-    
+
     /// Render orthographic view
-    fn render_orthographic_view(&self, scene: &Scene3D) -> Result<String, Box<dyn std::error::Error>> {
+    fn render_orthographic_view(
+        &self,
+        scene: &Scene3D,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let mut output = String::new();
-        
-        output.push_str(&format!("📐 Orthographic View ({:?}):\n", self.projection.view_angle));
+
+        output.push_str(&format!(
+            "📐 Orthographic View ({:?}):\n",
+            self.projection.view_angle
+        ));
         output.push_str("┌─────────────────────────────────────────────────────────────┐\n");
-        
+
         // Render based on view angle
         match self.projection.view_angle {
             ViewAngle::TopDown => {
@@ -898,39 +1077,46 @@ impl Building3DRenderer {
                 output.push_str("│ Orthographic View │\n");
             }
         }
-        
+
         output.push_str("└─────────────────────────────────────────────────────────────┘\n");
-        
+
         Ok(output)
     }
-    
+
     /// Render perspective view
-    fn render_perspective_view(&self, scene: &Scene3D) -> Result<String, Box<dyn std::error::Error>> {
+    fn render_perspective_view(
+        &self,
+        scene: &Scene3D,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let mut output = String::new();
-        
+
         output.push_str("📐 Perspective View:\n");
         output.push_str("┌─────────────────────────────────────────────────────────────┐\n");
-        output.push_str(&format!("│ Camera Position: ({:.1}, {:.1}, {:.1}) │\n",
-            self.camera.position.x, self.camera.position.y, self.camera.position.z));
-        output.push_str(&format!("│ Camera Target: ({:.1}, {:.1}, {:.1}) │\n",
-            self.camera.target.x, self.camera.target.y, self.camera.target.z));
+        output.push_str(&format!(
+            "│ Camera Position: ({:.1}, {:.1}, {:.1}) │\n",
+            self.camera.position.x, self.camera.position.y, self.camera.position.z
+        ));
+        output.push_str(&format!(
+            "│ Camera Target: ({:.1}, {:.1}, {:.1}) │\n",
+            self.camera.target.x, self.camera.target.y, self.camera.target.z
+        ));
         output.push_str(&format!("│ FOV: {:.1}° │\n", self.camera.fov));
-        
+
         // Show equipment with perspective depth
-        let mut equipment_with_depth: Vec<(&Equipment3D, f64)> = scene.equipment.iter()
+        let mut equipment_with_depth: Vec<(&Equipment3D, f64)> = scene
+            .equipment
+            .iter()
             .map(|e| {
-                let depth = (e.position.x - self.camera.position.x).powi(2) + 
-                           (e.position.y - self.camera.position.y).powi(2) + 
-                           (e.position.z - self.camera.position.z).powi(2);
+                let depth = (e.position.x - self.camera.position.x).powi(2)
+                    + (e.position.y - self.camera.position.y).powi(2)
+                    + (e.position.z - self.camera.position.z).powi(2);
                 (e, depth.sqrt())
             })
             .collect();
-        
-        equipment_with_depth.sort_by(|a, b| {
-            a.1.partial_cmp(&b.1)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
-        
+
+        equipment_with_depth
+            .sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+
         for (equipment, depth) in &equipment_with_depth {
             let status_symbol = match equipment.status.as_str() {
                 "Healthy" => "🟢",
@@ -938,38 +1124,40 @@ impl Building3DRenderer {
                 "Critical" => "🔴",
                 _ => "⚪",
             };
-            output.push_str(&format!("│   {} {} (depth: {:.1}m) │\n",
-                status_symbol, equipment.name, depth));
+            output.push_str(&format!(
+                "│   {} {} (depth: {:.1}m) │\n",
+                status_symbol, equipment.name, depth
+            ));
         }
-        
+
         output.push_str("└─────────────────────────────────────────────────────────────┘\n");
-        
+
         Ok(output)
     }
-    
+
     /// Render top-down view
     fn render_top_down_view(&self, scene: &Scene3D) -> String {
         let mut output = String::new();
-        
+
         // Create a simple ASCII grid representation
         let grid_size = 20;
         let mut grid = vec![vec![' '; grid_size]; grid_size];
-        
+
         // Place equipment on the grid
         for equipment in &scene.equipment {
             let x = ((equipment.position.x / 10.0) as usize).min(grid_size - 1);
             let y = ((equipment.position.y / 10.0) as usize).min(grid_size - 1);
-            
+
             let char = match equipment.equipment_type.as_str() {
                 s if s.contains("HVAC") => 'H',
                 s if s.contains("ELECTRIC") => 'E',
                 s if s.contains("FIRE") => 'F',
                 _ => 'O',
             };
-            
+
             grid[y][x] = char;
         }
-        
+
         output.push_str("│ Equipment Grid (Top-Down):\n");
         for row in &grid {
             output.push_str("│ ");
@@ -978,58 +1166,67 @@ impl Building3DRenderer {
             }
             output.push_str(" │\n");
         }
-        
+
         output
     }
-    
+
     /// Render front view
     fn render_front_view(&self, scene: &Scene3D) -> String {
         let mut output = String::new();
-        
+
         output.push_str("│ Front View (X-Z Plane):\n");
-        
+
         // Group equipment by floor level
-        let mut floor_equipment: std::collections::HashMap<i32, Vec<&Equipment3D>> = std::collections::HashMap::new();
+        let mut floor_equipment: std::collections::HashMap<i32, Vec<&Equipment3D>> =
+            std::collections::HashMap::new();
         for equipment in &scene.equipment {
-            floor_equipment.entry(equipment.floor_level).or_default().push(equipment);
+            floor_equipment
+                .entry(equipment.floor_level)
+                .or_default()
+                .push(equipment);
         }
-        
+
         let mut floors: Vec<_> = floor_equipment.keys().collect();
         floors.sort();
-        
+
         for &floor_level in &floors {
             output.push_str(&format!("│   Floor {}: ", floor_level));
             if let Some(equipment) = floor_equipment.get(floor_level) {
                 for (i, eq) in equipment.iter().enumerate() {
-                    if i > 0 { output.push_str(", "); }
+                    if i > 0 {
+                        output.push_str(", ");
+                    }
                     output.push_str(&eq.name);
                 }
             }
             output.push_str(" │\n");
         }
-        
+
         output
     }
-    
+
     /// Render side view
     fn render_side_view(&self, scene: &Scene3D) -> String {
         let mut output = String::new();
-        
+
         output.push_str("│ Side View (Y-Z Plane):\n");
-        
+
         // Show equipment by Y position (depth)
         let mut equipment_by_y: Vec<_> = scene.equipment.iter().collect();
         equipment_by_y.sort_by(|a, b| {
-            a.position.y.partial_cmp(&b.position.y)
+            a.position
+                .y
+                .partial_cmp(&b.position.y)
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
-        
+
         for equipment in &equipment_by_y {
-            output.push_str(&format!("│   {} at Y: {:.1}m, Z: {:.1}m │\n",
-                equipment.name, equipment.position.y, equipment.position.z));
+            output.push_str(&format!(
+                "│   {} at Y: {:.1}m, Z: {:.1}m │\n",
+                equipment.name, equipment.position.y, equipment.position.z
+            ));
         }
-        
+
         output
     }
 }
-

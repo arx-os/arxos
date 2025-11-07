@@ -3,8 +3,10 @@
 //! This module provides advanced visual effects for equipment status, building health,
 //! and interactive elements using particles and animations.
 
-use crate::render3d::particles::{ParticleSystem, Particle, ParticleType, ParticleData, Vector3D, StatusType, AlertLevel};
 use crate::render3d::animation::{AnimationSystem, EquipmentStatus};
+use crate::render3d::particles::{
+    AlertLevel, Particle, ParticleData, ParticleSystem, ParticleType, StatusType, Vector3D,
+};
 use crate::spatial::Point3D;
 use std::collections::HashMap;
 
@@ -227,20 +229,20 @@ impl VisualEffectsEngine {
     /// Update all effects (call this every frame)
     pub fn update(&mut self, delta_time: f64) {
         let start_time = std::time::Instant::now();
-        
+
         // Update particle system
         if self.config.enable_particles {
             self.particle_system.update(delta_time);
         }
-        
+
         // Update animation system
         if self.config.enable_animations {
             self.animation_system.update(delta_time);
         }
-        
+
         // Update visual effects
         self.update_effects(delta_time);
-        
+
         // Update statistics
         self.update_stats(start_time, delta_time);
     }
@@ -249,26 +251,26 @@ impl VisualEffectsEngine {
     fn update_effects(&mut self, delta_time: f64) {
         let mut completed_effects = Vec::new();
         let mut effects_to_update = Vec::new();
-        
+
         // Collect effects that need updating
         for (id, effect) in &self.active_effects {
             effects_to_update.push((id.clone(), effect.clone()));
         }
-        
+
         // Update effects
         for (id, mut effect) in effects_to_update {
             self.update_effect(&mut effect, delta_time);
-            
+
             if effect.state == EffectState::Completed {
                 completed_effects.push(id.clone());
             }
-            
+
             // Update the effect in the map
             if let Some(stored_effect) = self.active_effects.get_mut(&id) {
                 *stored_effect = effect;
             }
         }
-        
+
         // Remove completed effects
         for id in completed_effects {
             self.active_effects.remove(&id);
@@ -295,11 +297,17 @@ impl VisualEffectsEngine {
 
     /// Update equipment status effect
     fn update_equipment_status_effect(&mut self, effect: &mut VisualEffect) {
-        if let EffectData::EquipmentStatus { status, pulse_rate, color_intensity, .. } = &mut effect.data {
+        if let EffectData::EquipmentStatus {
+            status,
+            pulse_rate,
+            color_intensity,
+            ..
+        } = &mut effect.data
+        {
             // Create pulsing particle effect
             let pulse = (effect.intensity * *pulse_rate).sin().abs();
             *color_intensity = pulse;
-            
+
             // Emit status indicator particles
             if self.config.enable_particles {
                 let particle = Particle {
@@ -328,7 +336,7 @@ impl VisualEffectsEngine {
                         },
                     },
                 };
-                
+
                 self.particle_system.emit_particle(particle);
             }
         }
@@ -336,7 +344,12 @@ impl VisualEffectsEngine {
 
     /// Update building health effect
     fn update_building_health_effect(&mut self, effect: &mut VisualEffect) {
-        if let EffectData::BuildingHealth { health_level, alert_count, maintenance_count } = &mut effect.data {
+        if let EffectData::BuildingHealth {
+            health_level,
+            alert_count,
+            maintenance_count,
+        } = &mut effect.data
+        {
             // Create building-wide health visualization
             let health_color = if *health_level > 0.8 {
                 '🟢' // Green for healthy
@@ -345,13 +358,15 @@ impl VisualEffectsEngine {
             } else {
                 '🔴' // Red for critical
             };
-            
+
             // Emit health indicator particles
             if self.config.enable_particles {
                 for i in 0..(*alert_count + *maintenance_count) {
-                    let angle = (i as f64 / (*alert_count + *maintenance_count) as f64) * 2.0 * std::f64::consts::PI;
+                    let angle = (i as f64 / (*alert_count + *maintenance_count) as f64)
+                        * 2.0
+                        * std::f64::consts::PI;
                     let radius = 5.0 + (*health_level * 10.0);
-                    
+
                     let particle = Particle {
                         position: Point3D::new(
                             effect.position.x + angle.cos() * radius,
@@ -370,7 +385,7 @@ impl VisualEffectsEngine {
                             status_type: StatusType::Healthy,
                         },
                     };
-                    
+
                     self.particle_system.emit_particle(particle);
                 }
             }
@@ -379,7 +394,12 @@ impl VisualEffectsEngine {
 
     /// Update maintenance alert effect
     fn update_maintenance_alert_effect(&mut self, effect: &mut VisualEffect) {
-        if let EffectData::MaintenanceAlert { alert_level, urgency, .. } = &mut effect.data {
+        if let EffectData::MaintenanceAlert {
+            alert_level,
+            urgency,
+            ..
+        } = &mut effect.data
+        {
             // Create blinking alert effect
             let blink = (effect.intensity * 8.0).sin() > 0.0;
             let alert_char = if blink {
@@ -392,7 +412,7 @@ impl VisualEffectsEngine {
             } else {
                 ' '
             };
-            
+
             // Emit alert particles
             if self.config.enable_particles {
                 let particle = Particle {
@@ -409,7 +429,7 @@ impl VisualEffectsEngine {
                         equipment_id: "maintenance".to_string(),
                     },
                 };
-                
+
                 self.particle_system.emit_particle(particle);
             }
         }
@@ -417,10 +437,15 @@ impl VisualEffectsEngine {
 
     /// Update equipment connection effect
     fn update_equipment_connection_effect(&mut self, effect: &mut VisualEffect) {
-        if let EffectData::EquipmentConnection { connection_strength, data_flow, .. } = &mut effect.data {
+        if let EffectData::EquipmentConnection {
+            connection_strength,
+            data_flow,
+            ..
+        } = &mut effect.data
+        {
             // Create flowing connection effect
             let flow_intensity = *data_flow * *connection_strength;
-            
+
             // Emit connection particles
             if self.config.enable_particles {
                 let particle = Particle {
@@ -438,7 +463,7 @@ impl VisualEffectsEngine {
                         connection_strength: *connection_strength,
                     },
                 };
-                
+
                 self.particle_system.emit_particle(particle);
             }
         }
@@ -446,10 +471,15 @@ impl VisualEffectsEngine {
 
     /// Update selection highlight effect
     fn update_selection_highlight_effect(&mut self, effect: &mut VisualEffect) {
-        if let EffectData::SelectionHighlight { highlight_color, pulse_intensity, .. } = &mut effect.data {
+        if let EffectData::SelectionHighlight {
+            highlight_color,
+            pulse_intensity,
+            ..
+        } = &mut effect.data
+        {
             // Create pulsing highlight effect
             let pulse = (effect.intensity * *pulse_intensity).sin().abs();
-            
+
             // Emit highlight particles
             if self.config.enable_particles {
                 let particle = Particle {
@@ -466,7 +496,7 @@ impl VisualEffectsEngine {
                         status_type: StatusType::Healthy,
                     },
                 };
-                
+
                 self.particle_system.emit_particle(particle);
             }
         }
@@ -474,7 +504,10 @@ impl VisualEffectsEngine {
 
     /// Update floor transition effect
     fn update_floor_transition_effect(&mut self, effect: &mut VisualEffect) {
-        if let EffectData::FloorTransition { transition_speed, .. } = &mut effect.data {
+        if let EffectData::FloorTransition {
+            transition_speed, ..
+        } = &mut effect.data
+        {
             // Create floor transition particles
             if self.config.enable_particles {
                 for i in 0..10 {
@@ -491,9 +524,11 @@ impl VisualEffectsEngine {
                         size: 1.0,
                         character: '│',
                         particle_type: ParticleType::Basic,
-                        data: ParticleData::Basic { color_intensity: 1.0 },
+                        data: ParticleData::Basic {
+                            color_intensity: 1.0,
+                        },
                     };
-                    
+
                     self.particle_system.emit_particle(particle);
                 }
             }
@@ -513,30 +548,42 @@ impl VisualEffectsEngine {
                 size: effect.intensity,
                 character: '✨',
                 particle_type: ParticleType::Basic,
-                data: ParticleData::Basic { color_intensity: effect.intensity },
+                data: ParticleData::Basic {
+                    color_intensity: effect.intensity,
+                },
             };
-            
+
             self.particle_system.emit_particle(particle);
         }
     }
 
     /// Update particle burst effect
     fn update_particle_burst_effect(&mut self, effect: &mut VisualEffect) {
-        if let EffectData::ParticleBurst { particle_count, burst_radius: _, particle_type } = &mut effect.data {
+        if let EffectData::ParticleBurst {
+            particle_count,
+            burst_radius: _,
+            particle_type,
+        } = &mut effect.data
+        {
             // Create burst effect
             self.particle_system.create_burst(
                 effect.position,
                 *particle_count,
-                particle_type.clone()
+                particle_type.clone(),
             );
-            
+
             effect.state = EffectState::Completed;
         }
     }
 
     /// Update smoke effect
     fn update_smoke_effect(&mut self, effect: &mut VisualEffect) {
-        if let EffectData::SmokeEffect { smoke_intensity, temperature, wind_direction } = &mut effect.data {
+        if let EffectData::SmokeEffect {
+            smoke_intensity,
+            temperature,
+            wind_direction,
+        } = &mut effect.data
+        {
             // Create smoke particles
             if self.config.enable_particles {
                 let particle = Particle {
@@ -557,7 +604,7 @@ impl VisualEffectsEngine {
                         temperature: *temperature,
                     },
                 };
-                
+
                 self.particle_system.emit_particle(particle);
             }
         }
@@ -565,7 +612,12 @@ impl VisualEffectsEngine {
 
     /// Update fire effect
     fn update_fire_effect(&mut self, effect: &mut VisualEffect) {
-        if let EffectData::FireEffect { fire_intensity, temperature: _, flicker_rate } = &mut effect.data {
+        if let EffectData::FireEffect {
+            fire_intensity,
+            temperature: _,
+            flicker_rate,
+        } = &mut effect.data
+        {
             // Create fire particles
             if self.config.enable_particles {
                 let particle = Particle {
@@ -582,7 +634,7 @@ impl VisualEffectsEngine {
                         flicker_rate: *flicker_rate,
                     },
                 };
-                
+
                 self.particle_system.emit_particle(particle);
             }
         }
@@ -590,20 +642,21 @@ impl VisualEffectsEngine {
 
     /// Update spark effect
     fn update_spark_effect(&mut self, effect: &mut VisualEffect) {
-        if let EffectData::SparkEffect { spark_count, energy_level, .. } = &mut effect.data {
+        if let EffectData::SparkEffect {
+            spark_count,
+            energy_level,
+            ..
+        } = &mut effect.data
+        {
             // Create spark particles
             if self.config.enable_particles {
                 for i in 0..*spark_count {
                     let angle = (i as f64 / *spark_count as f64) * 2.0 * std::f64::consts::PI;
                     let speed = *energy_level * 2.0;
-                    
+
                     let particle = Particle {
                         position: effect.position,
-                        velocity: Vector3D::new(
-                            angle.cos() * speed,
-                            0.0,
-                            angle.sin() * speed,
-                        ),
+                        velocity: Vector3D::new(angle.cos() * speed, 0.0, angle.sin() * speed),
                         acceleration: Vector3D::zero(),
                         lifetime: 1.0,
                         max_lifetime: 1.0,
@@ -615,7 +668,7 @@ impl VisualEffectsEngine {
                             trail_length: 3,
                         },
                     };
-                    
+
                     self.particle_system.emit_particle(particle);
                 }
             }
@@ -627,16 +680,22 @@ impl VisualEffectsEngine {
         if self.active_effects.len() >= self.config.max_effects {
             return Err("Maximum effect limit reached".to_string());
         }
-        
+
         let id = effect.id.clone();
         self.active_effects.insert(id, effect);
         self.stats.effects_created += 1;
-        
+
         Ok(())
     }
 
     /// Create equipment status effect
-    pub fn create_equipment_status_effect(&mut self, id: String, equipment_id: String, status: EquipmentStatus, position: Point3D) -> Result<(), String> {
+    pub fn create_equipment_status_effect(
+        &mut self,
+        id: String,
+        equipment_id: String,
+        status: EquipmentStatus,
+        position: Point3D,
+    ) -> Result<(), String> {
         let effect = VisualEffect {
             id,
             effect_type: EffectType::EquipmentStatus,
@@ -651,12 +710,18 @@ impl VisualEffectsEngine {
                 color_intensity: 1.0,
             },
         };
-        
+
         self.create_effect(effect)
     }
 
     /// Create maintenance alert effect
-    pub fn create_maintenance_alert_effect(&mut self, id: String, equipment_id: String, alert_level: AlertLevel, position: Point3D) -> Result<(), String> {
+    pub fn create_maintenance_alert_effect(
+        &mut self,
+        id: String,
+        equipment_id: String,
+        alert_level: AlertLevel,
+        position: Point3D,
+    ) -> Result<(), String> {
         let effect = VisualEffect {
             id,
             effect_type: EffectType::MaintenanceAlert,
@@ -670,12 +735,18 @@ impl VisualEffectsEngine {
                 urgency: 1.0,
             },
         };
-        
+
         self.create_effect(effect)
     }
 
     /// Create particle burst effect
-    pub fn create_particle_burst_effect(&mut self, id: String, position: Point3D, particle_type: ParticleType, count: usize) -> Result<(), String> {
+    pub fn create_particle_burst_effect(
+        &mut self,
+        id: String,
+        position: Point3D,
+        particle_type: ParticleType,
+        count: usize,
+    ) -> Result<(), String> {
         let effect = VisualEffect {
             id,
             effect_type: EffectType::ParticleBurst,
@@ -689,7 +760,7 @@ impl VisualEffectsEngine {
                 particle_type,
             },
         };
-        
+
         self.create_effect(effect)
     }
 
@@ -751,7 +822,7 @@ impl VisualEffectsEngine {
         self.stats.avg_update_time_ms = update_duration.as_secs_f64() * 1000.0;
         self.stats.active_effects = self.active_effects.len();
         self.stats.fps = 1.0 / delta_time;
-        
+
         // Update peak count
         if self.active_effects.len() > self.stats.peak_effect_count {
             self.stats.peak_effect_count = self.active_effects.len();
@@ -807,14 +878,14 @@ mod tests {
     #[test]
     fn test_equipment_status_effect() {
         let mut engine = VisualEffectsEngine::new();
-        
+
         let result = engine.create_equipment_status_effect(
             "test_status".to_string(),
             "equipment_1".to_string(),
             EquipmentStatus::Healthy,
-            Point3D::new(0.0, 0.0, 0.0)
+            Point3D::new(0.0, 0.0, 0.0),
         );
-        
+
         assert!(result.is_ok());
         assert_eq!(engine.effect_count(), 1);
     }
@@ -822,14 +893,14 @@ mod tests {
     #[test]
     fn test_maintenance_alert_effect() {
         let mut engine = VisualEffectsEngine::new();
-        
+
         let result = engine.create_maintenance_alert_effect(
             "test_alert".to_string(),
             "equipment_1".to_string(),
             AlertLevel::High,
-            Point3D::new(0.0, 0.0, 0.0)
+            Point3D::new(0.0, 0.0, 0.0),
         );
-        
+
         assert!(result.is_ok());
         assert_eq!(engine.effect_count(), 1);
     }
@@ -837,14 +908,14 @@ mod tests {
     #[test]
     fn test_particle_burst_effect() {
         let mut engine = VisualEffectsEngine::new();
-        
+
         let result = engine.create_particle_burst_effect(
             "test_burst".to_string(),
             Point3D::new(0.0, 0.0, 0.0),
             ParticleType::Spark,
-            10
+            10,
         );
-        
+
         assert!(result.is_ok());
         assert_eq!(engine.effect_count(), 1);
     }
@@ -852,17 +923,19 @@ mod tests {
     #[test]
     fn test_effects_update() {
         let mut engine = VisualEffectsEngine::new();
-        
-        engine.create_equipment_status_effect(
-            "test_status".to_string(),
-            "equipment_1".to_string(),
-            EquipmentStatus::Healthy,
-            Point3D::new(0.0, 0.0, 0.0)
-        ).unwrap();
-        
+
+        engine
+            .create_equipment_status_effect(
+                "test_status".to_string(),
+                "equipment_1".to_string(),
+                EquipmentStatus::Healthy,
+                Point3D::new(0.0, 0.0, 0.0),
+            )
+            .unwrap();
+
         // Update with 16ms delta time (60 FPS)
         engine.update(0.016);
-        
+
         // Effect should still be active
         assert_eq!(engine.effect_count(), 1);
     }
@@ -872,7 +945,7 @@ mod tests {
         let status_effect = EffectType::EquipmentStatus;
         let alert_effect = EffectType::MaintenanceAlert;
         let burst_effect = EffectType::ParticleBurst;
-        
+
         assert!(matches!(status_effect, EffectType::EquipmentStatus));
         assert!(matches!(alert_effect, EffectType::MaintenanceAlert));
         assert!(matches!(burst_effect, EffectType::ParticleBurst));

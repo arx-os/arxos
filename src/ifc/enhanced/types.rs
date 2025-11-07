@@ -1,7 +1,7 @@
 //! Type definitions for enhanced IFC parsing
 
-use crate::spatial::{SpatialEntity, Point3D, BoundingBox3D};
 use crate::error::ArxError;
+use crate::spatial::{BoundingBox3D, Point3D, SpatialEntity};
 use std::collections::HashMap;
 
 /// Types of equipment relationships
@@ -174,7 +174,7 @@ impl ParseStats {
             processing_time_ms: 0,
         }
     }
-    
+
     /// Calculate success rate
     pub fn success_rate(&self) -> f64 {
         if self.total_lines == 0 {
@@ -183,7 +183,7 @@ impl ParseStats {
             self.successful_entities as f64 / self.total_lines as f64
         }
     }
-    
+
     /// Calculate error rate
     pub fn error_rate(&self) -> f64 {
         let total_errors = self.failed_parses + self.failed_spatial_extractions;
@@ -193,7 +193,7 @@ impl ParseStats {
             total_errors as f64 / self.total_lines as f64
         }
     }
-    
+
     /// Get processing speed (lines per second)
     pub fn processing_speed(&self) -> f64 {
         if self.processing_time_ms == 0 {
@@ -235,4 +235,3 @@ pub struct ParseResult {
     pub parse_stats: ParseStats,
     pub errors: Vec<ArxError>,
 }
-

@@ -29,26 +29,35 @@ impl GridCoordinate {
     pub fn parse(s: &str) -> Result<Self, Box<dyn std::error::Error>> {
         // Remove whitespace and convert to uppercase
         let s = s.trim().to_uppercase();
-        
+
         // Try formats: "D-4", "D4", "D 4"
         let parts: Vec<&str> = s
             .split(&['-', ' ', '_'][..])
             .filter(|p| !p.is_empty())
             .collect();
-        
+
         if parts.len() != 2 {
-            return Err(format!("Invalid grid coordinate format '{}'. Expected format: 'D-4' or 'D4'", s).into());
+            return Err(format!(
+                "Invalid grid coordinate format '{}'. Expected format: 'D-4' or 'D4'",
+                s
+            )
+            .into());
         }
-        
+
         let column = parts[0].to_string();
-        let row = parts[1].parse::<i32>()
+        let row = parts[1]
+            .parse::<i32>()
             .map_err(|e| format!("Invalid row number in grid coordinate '{}': {}", s, e))?;
-        
+
         // Validate column is a letter
         if column.len() != 1 || !column.chars().next().unwrap().is_alphabetic() {
-            return Err(format!("Invalid column in grid coordinate '{}'. Column must be a single letter (A-Z)", s).into());
+            return Err(format!(
+                "Invalid column in grid coordinate '{}'. Column must be a single letter (A-Z)",
+                s
+            )
+            .into());
         }
-        
+
         Ok(Self { column, row })
     }
 
@@ -100,7 +109,12 @@ impl GridSystem {
     }
 
     /// Create a grid system with custom spacing
-    pub fn with_spacing(origin: Point3D, column_spacing: f64, row_spacing: f64, elevation_spacing: f64) -> Self {
+    pub fn with_spacing(
+        origin: Point3D,
+        column_spacing: f64,
+        row_spacing: f64,
+        elevation_spacing: f64,
+    ) -> Self {
         Self {
             origin,
             column_spacing,
@@ -115,7 +129,7 @@ impl GridSystem {
     pub fn grid_to_real(&self, grid: &GridCoordinate) -> Point3D {
         let column_idx = grid.column_index();
         let row_idx = grid.row - 1; // Convert to 0-based
-        
+
         Point3D::new(
             self.origin.x + (column_idx as f64) * self.column_spacing,
             self.origin.y + (row_idx as f64) * self.row_spacing,
@@ -127,7 +141,7 @@ impl GridSystem {
     pub fn real_to_grid(&self, point: &Point3D) -> GridCoordinate {
         let column_idx = ((point.x - self.origin.x) / self.column_spacing).round() as i32;
         let row_idx = ((point.y - self.origin.y) / self.row_spacing).round() as i32;
-        
+
         let column = if column_idx >= 0 && (column_idx as usize) < self.column_labels.len() {
             self.column_labels[column_idx as usize].clone()
         } else {
@@ -140,17 +154,21 @@ impl GridSystem {
             }
             col
         };
-        
+
         let row = row_idx + 1; // Convert to 1-based
-        
+
         GridCoordinate::new(column, row)
     }
 
     /// Get grid bounds for a given grid coordinate range
-    pub fn grid_bounds(&self, min_grid: &GridCoordinate, max_grid: &GridCoordinate) -> (Point3D, Point3D) {
+    pub fn grid_bounds(
+        &self,
+        min_grid: &GridCoordinate,
+        max_grid: &GridCoordinate,
+    ) -> (Point3D, Point3D) {
         let min_point = self.grid_to_real(min_grid);
         let max_point = self.grid_to_real(max_grid);
-        
+
         // Ensure min < max
         let actual_min = Point3D::new(
             min_point.x.min(max_point.x),
@@ -162,7 +180,7 @@ impl GridSystem {
             min_point.y.max(max_point.y),
             min_point.z.max(max_point.z),
         );
-        
+
         (actual_min, actual_max)
     }
 }
@@ -182,11 +200,11 @@ mod tests {
         let coord = GridCoordinate::parse("D-4").unwrap();
         assert_eq!(coord.column, "D");
         assert_eq!(coord.row, 4);
-        
+
         let coord = GridCoordinate::parse("A-1").unwrap();
         assert_eq!(coord.column, "A");
         assert_eq!(coord.row, 1);
-        
+
         let coord = GridCoordinate::parse("Z-26").unwrap();
         assert_eq!(coord.column, "Z");
         assert_eq!(coord.row, 26);
@@ -202,12 +220,12 @@ mod tests {
     #[test]
     fn test_grid_to_real() {
         let grid_system = GridSystem::new(Point3D::origin(), 10.0, 10.0);
-        
+
         let grid = GridCoordinate::parse("A-1").unwrap();
         let real = grid_system.grid_to_real(&grid);
         assert_eq!(real.x, 0.0);
         assert_eq!(real.y, 0.0);
-        
+
         let grid = GridCoordinate::parse("D-4").unwrap();
         let real = grid_system.grid_to_real(&grid);
         assert_eq!(real.x, 30.0); // Column D = index 3, 3 * 10 = 30
@@ -217,7 +235,7 @@ mod tests {
     #[test]
     fn test_real_to_grid() {
         let grid_system = GridSystem::new(Point3D::origin(), 10.0, 10.0);
-        
+
         let point = Point3D::new(30.0, 30.0, 0.0);
         let grid = grid_system.real_to_grid(&point);
         assert_eq!(grid.column, "D");
@@ -227,10 +245,10 @@ mod tests {
     #[test]
     fn test_grid_bounds() {
         let grid_system = GridSystem::new(Point3D::origin(), 10.0, 10.0);
-        
+
         let min_grid = GridCoordinate::parse("A-1").unwrap();
         let max_grid = GridCoordinate::parse("D-4").unwrap();
-        
+
         let (min_point, max_point) = grid_system.grid_bounds(&min_grid, &max_grid);
         assert_eq!(min_point.x, 0.0);
         assert_eq!(min_point.y, 0.0);
@@ -238,4 +256,3 @@ mod tests {
         assert_eq!(max_point.y, 30.0);
     }
 }
-

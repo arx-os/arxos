@@ -16,7 +16,16 @@ ArxOS supports open source hardware sensors that integrate directly with your bu
 // ESP32 Arduino example
 HTTPClient http;
 http.begin("https://api.github.com/repos/your-org/building/contents/sensor-data/temp.json");
-http.addHeader("Authorization", "Bearer YOUR_TOKEN");
+
+Preferences prefs;
+prefs.begin("arxos", true);
+String githubToken = prefs.getString("github_token", "");
+prefs.end();
+
+String authHeader = String("token ");
+authHeader += githubToken;
+
+http.addHeader("Authorization", authHeader.c_str());
 http.addHeader("Content-Type", "application/json");
 
 String jsonData = "{\"temperature\": 72.5, \"timestamp\": \"2024-12-01T10:30:00Z\"}";

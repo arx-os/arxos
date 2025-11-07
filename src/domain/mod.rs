@@ -6,4 +6,3 @@
 pub mod address;
 
 pub use address::{ArxAddress, RESERVED_SYSTEMS};
-

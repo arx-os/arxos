@@ -4,41 +4,56 @@
 
 use crate::cli::SpreadsheetCommands;
 use crate::persistence::PersistenceManager;
-use crate::ui::spreadsheet::workflow::{FileLock, WorkflowStatus, ArScanWatcher};
-use crate::ui::spreadsheet::data_source::{EquipmentDataSource, RoomDataSource, SensorDataSource, SpreadsheetDataSource};
-use crate::ui::spreadsheet::types::{Grid, CellValue};
-use crate::ui::{TerminalManager, Theme};
-use crate::ui::spreadsheet::render;
-use crate::ui::spreadsheet::navigation;
-use crate::ui::spreadsheet::editor::{CellEditor, EditorAction};
-use crate::ui::spreadsheet::validation::validate_cell;
-use crate::ui::spreadsheet::undo_redo::UndoRedoManager;
-use crate::ui::spreadsheet::save_state::AutoSaveManager;
-use crate::ui::spreadsheet::workflow::ConflictDetector;
-use crate::ui::spreadsheet::export;
-use crate::ui::spreadsheet::import;
-use crate::ui::spreadsheet::filter_sort;
-use crate::ui::spreadsheet::search::SearchState;
 use crate::ui::spreadsheet::clipboard::Clipboard;
+use crate::ui::spreadsheet::data_source::{
+    EquipmentDataSource, RoomDataSource, SensorDataSource, SpreadsheetDataSource,
+};
+use crate::ui::spreadsheet::editor::{CellEditor, EditorAction};
+use crate::ui::spreadsheet::export;
+use crate::ui::spreadsheet::filter_sort;
+use crate::ui::spreadsheet::import;
+use crate::ui::spreadsheet::navigation;
+use crate::ui::spreadsheet::render;
+use crate::ui::spreadsheet::save_state::AutoSaveManager;
+use crate::ui::spreadsheet::search::SearchState;
+use crate::ui::spreadsheet::types::{CellValue, Grid};
+use crate::ui::spreadsheet::undo_redo::UndoRedoManager;
+use crate::ui::spreadsheet::validation::validate_cell;
+use crate::ui::spreadsheet::workflow::ConflictDetector;
+use crate::ui::spreadsheet::workflow::{ArScanWatcher, FileLock, WorkflowStatus};
+use crate::ui::{TerminalManager, Theme};
 use crossterm::event::{Event, KeyCode};
-use std::time::{Duration, Instant};
 use log::{info, warn};
+use std::time::{Duration, Instant};
 
 /// Handle spreadsheet command
-pub fn handle_spreadsheet_command(subcommand: SpreadsheetCommands) -> Result<(), Box<dyn std::error::Error>> {
+pub fn handle_spreadsheet_command(
+    subcommand: SpreadsheetCommands,
+) -> Result<(), Box<dyn std::error::Error>> {
     match subcommand {
-        SpreadsheetCommands::Equipment { building, filter, commit, no_git } => {
-            handle_spreadsheet_equipment(building, filter, commit, no_git)
-        },
-        SpreadsheetCommands::Rooms { building, filter, commit, no_git } => {
-            handle_spreadsheet_rooms(building, filter, commit, no_git)
-        },
-        SpreadsheetCommands::Sensors { building, filter, commit, no_git } => {
-            handle_spreadsheet_sensors(building, filter, commit, no_git)
-        },
-        SpreadsheetCommands::Import { file, building, commit } => {
-            handle_spreadsheet_import(file, building, commit)
-        },
+        SpreadsheetCommands::Equipment {
+            building,
+            filter,
+            commit,
+            no_git,
+        } => handle_spreadsheet_equipment(building, filter, commit, no_git),
+        SpreadsheetCommands::Rooms {
+            building,
+            filter,
+            commit,
+            no_git,
+        } => handle_spreadsheet_rooms(building, filter, commit, no_git),
+        SpreadsheetCommands::Sensors {
+            building,
+            filter,
+            commit,
+            no_git,
+        } => handle_spreadsheet_sensors(building, filter, commit, no_git),
+        SpreadsheetCommands::Import {
+            file,
+            building,
+            commit,
+        } => handle_spreadsheet_import(file, building, commit),
     }
 }
 
@@ -54,20 +69,23 @@ fn handle_spreadsheet_equipment(
         // Default to current directory name or first building found
         "Building".to_string()
     });
-    
-    info!("Opening equipment spreadsheet for building: {}", building_name);
-    
+
+    info!(
+        "Opening equipment spreadsheet for building: {}",
+        building_name
+    );
+
     // Load building data
     let persistence = PersistenceManager::new(&building_name)?;
     let building_data = persistence.load_building_data()?;
-    
+
     // Acquire file lock
     let building_file = persistence.working_file();
     let file_lock = FileLock::acquire(building_file)?;
-    
+
     // Initialize conflict detector
     let mut conflict_detector = ConflictDetector::new(building_file)?;
-    
+
     // Check for active workflows
     let workflow_status = WorkflowStatus::detect();
     if workflow_status.has_active_workflows() {
@@ -75,15 +93,15 @@ fn handle_spreadsheet_equipment(
             warn!("{}", warning);
         }
     }
-    
+
     // Initialize data source
     let mut data_source = EquipmentDataSource::new(building_data, building_name.clone());
     let columns = SpreadsheetDataSource::columns(&data_source);
     let row_count = SpreadsheetDataSource::row_count(&data_source);
-    
+
     // Create grid
     let mut grid = Grid::new(columns, row_count);
-    
+
     // Populate grid with data
     for row in 0..row_count {
         for col in 0..grid.column_count() {
@@ -94,7 +112,7 @@ fn handle_spreadsheet_equipment(
             }
         }
     }
-    
+
     // Apply CLI filter if provided
     if let Some(filter_str) = filter {
         // Find address column (first column should be address)
@@ -107,44 +125,48 @@ fn handle_spreadsheet_equipment(
                 // Simple contains match
                 crate::ui::spreadsheet::types::FilterCondition::Contains(filter_str.clone())
             };
-            
+
             filter_sort::apply_filter(&mut grid, addr_col_idx, condition)?;
-            info!("Applied filter: {} ({} rows visible)", filter_str, grid.row_count());
+            info!(
+                "Applied filter: {} ({} rows visible)",
+                filter_str,
+                grid.row_count()
+            );
         } else {
             warn!("Address column not found, filter not applied");
         }
     }
-    
+
     // Initialize AR scan watcher
     let mut ar_watcher = ArScanWatcher::new(&building_name)?;
-    
+
     // Initialize TUI
     let mut terminal_manager = TerminalManager::new()?;
     let theme = Theme::from_config();
-    
+
     // Main event loop
     let mut should_quit = false;
     let mut editor: Option<CellEditor> = None;
     let mut ar_scan_count = 0;
     let mut undo_redo = UndoRedoManager::new(50); // Last 50 operations
-    // Use longer debounce if watch mode is active to prevent excessive sync cycles
+                                                  // Use longer debounce if watch mode is active to prevent excessive sync cycles
     let debounce_ms = if workflow_status.watch_mode_active || workflow_status.sync_active {
         2000 // 2 seconds for watch mode
     } else {
-        500  // 500ms normal
+        500 // 500ms normal
     };
     let mut auto_save = AutoSaveManager::new(debounce_ms);
     let mut last_auto_save_check = Instant::now();
     let mut clipboard = Clipboard::new();
     let mut search_state: Option<SearchState> = None;
-    
+
     while !should_quit {
         // Ensure selection is visible before rendering
         let terminal_size = terminal_manager.terminal().size()?;
         let visible_rows = (terminal_size.height.saturating_sub(5)) as usize;
         let visible_cols = (terminal_size.width.saturating_sub(2)) as usize;
         grid.ensure_selection_visible(visible_rows, visible_cols);
-        
+
         // Render
         terminal_manager.terminal().draw(|frame| {
             let size = frame.size();
@@ -157,10 +179,14 @@ fn handle_spreadsheet_equipment(
                 editor.as_ref(),
                 Some(auto_save.state()),
                 search_state.as_ref(),
-                if ar_scan_count > 0 { Some(ar_scan_count) } else { None },
+                if ar_scan_count > 0 {
+                    Some(ar_scan_count)
+                } else {
+                    None
+                },
             );
         })?;
-        
+
         // Handle events
         if let Some(Event::Key(key)) = terminal_manager.poll_event(Duration::from_millis(100))? {
             // If editing, handle editor events
@@ -175,10 +201,11 @@ fn handle_spreadsheet_equipment(
                         match validate_cell(ed.get_current_value(), column) {
                             Ok(cell_value) => {
                                 // Get old value for undo
-                                let old_value = grid.get_cell(grid.selected_row, grid.selected_col)
+                                let old_value = grid
+                                    .get_cell(grid.selected_row, grid.selected_col)
                                     .map(|c| c.value.clone())
                                     .unwrap_or(crate::ui::spreadsheet::types::CellValue::Empty);
-                                
+
                                 // Record operation for undo
                                 undo_redo.record_operation(
                                     grid.selected_row,
@@ -186,38 +213,49 @@ fn handle_spreadsheet_equipment(
                                     old_value.clone(),
                                     cell_value.clone(),
                                 );
-                                
+
                                 // Apply change
-                                if let Some(cell) = grid.get_cell_mut(grid.selected_row, grid.selected_col) {
+                                if let Some(cell) =
+                                    grid.get_cell_mut(grid.selected_row, grid.selected_col)
+                                {
                                     cell.value = cell_value.clone();
                                     cell.modified = true;
                                     cell.error = None;
                                 }
-                                
+
                                 // Update data source
-                                if let Err(e) = data_source.set_cell(grid.selected_row, grid.selected_col, cell_value) {
+                                if let Err(e) = data_source.set_cell(
+                                    grid.selected_row,
+                                    grid.selected_col,
+                                    cell_value,
+                                ) {
                                     warn!("Failed to set cell: {}", e);
-                                    if let Some(cell) = grid.get_cell_mut(grid.selected_row, grid.selected_col) {
+                                    if let Some(cell) =
+                                        grid.get_cell_mut(grid.selected_row, grid.selected_col)
+                                    {
                                         cell.error = Some(e.to_string());
                                     }
                                 } else {
                                     // Trigger auto-save on successful edit
                                     auto_save.trigger_save();
                                 }
-                                
+
                                 // Exit edit mode
                                 grid.editing_cell = None;
                                 editor = None;
-                                
+
                                 // Move to next cell
                                 grid.move_down();
                             }
                             Err(e) => {
                                 // Show validation error
-                                if let Some(cell) = grid.get_cell_mut(grid.selected_row, grid.selected_col) {
+                                if let Some(cell) =
+                                    grid.get_cell_mut(grid.selected_row, grid.selected_col)
+                                {
                                     cell.error = Some(e.message.clone());
                                 }
-                                ed.state = crate::ui::spreadsheet::editor::EditState::Error(e.message);
+                                ed.state =
+                                    crate::ui::spreadsheet::editor::EditState::Error(e.message);
                             }
                         }
                     }
@@ -249,7 +287,9 @@ fn handle_spreadsheet_equipment(
                     KeyCode::Char('?') | KeyCode::F(1) => {
                         // Help is shown in status bar
                     }
-                    KeyCode::Enter if search_state.as_ref().map(|s| s.is_active).unwrap_or(false) => {
+                    KeyCode::Enter
+                        if search_state.as_ref().map(|s| s.is_active).unwrap_or(false) =>
+                    {
                         // Enter: Apply search and exit search mode (check this BEFORE general Enter handler)
                         if let Some(ref mut search) = search_state {
                             search.find_matches(&grid, &data_source as &dyn SpreadsheetDataSource);
@@ -264,11 +304,12 @@ fn handle_spreadsheet_equipment(
                     KeyCode::Enter | KeyCode::F(2) => {
                         // Enter: Show address modal if on address column, otherwise enter edit mode
                         let column = &grid.columns[grid.selected_col];
-                        
+
                         // Check if this is the address column (read-only)
                         if column.id.contains("address") && !column.editable {
                             // Show address modal
-                            if let Some(cell) = grid.get_cell(grid.selected_row, grid.selected_col) {
+                            if let Some(cell) = grid.get_cell(grid.selected_row, grid.selected_col)
+                            {
                                 let full_path = cell.value.to_string();
                                 if !full_path.is_empty() && full_path != "No address" {
                                     grid.address_modal = Some(full_path);
@@ -276,78 +317,137 @@ fn handle_spreadsheet_equipment(
                             }
                         } else if column.editable {
                             // Enter edit mode
-                            let cell = grid.get_cell(grid.selected_row, grid.selected_col)
+                            let cell = grid
+                                .get_cell(grid.selected_row, grid.selected_col)
                                 .cloned()
-                                .unwrap_or_else(|| crate::ui::spreadsheet::types::Cell::new(
-                                    crate::ui::spreadsheet::types::CellValue::Empty
-                                ));
-                            
+                                .unwrap_or_else(|| {
+                                    crate::ui::spreadsheet::types::Cell::new(
+                                        crate::ui::spreadsheet::types::CellValue::Empty,
+                                    )
+                                });
+
                             // Note: Sensor locking is handled by the workflow integration system
                             // Status field editing is allowed here; sensor integration will enforce locking at the workflow layer
                             if column.id == "equipment.status" {
                                 // Status field editing - sensor locking enforced by workflow system
                             }
-                            
+
                             let mut new_editor = CellEditor::new(column.clone(), cell.value);
                             new_editor.reset_cursor();
                             editor = Some(new_editor);
                             grid.editing_cell = Some((grid.selected_row, grid.selected_col));
                         }
                     }
-                    KeyCode::Char('z') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                    KeyCode::Char('z')
+                        if key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::CONTROL) =>
+                    {
                         // Ctrl+Z: Undo
                         undo_redo.undo(&mut grid);
                         auto_save.trigger_save();
                     }
-                    KeyCode::Char('y') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                    KeyCode::Char('y')
+                        if key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::CONTROL) =>
+                    {
                         // Ctrl+Y: Redo
                         undo_redo.redo(&mut grid);
                         auto_save.trigger_save();
                     }
-                    KeyCode::Char('s') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) && 
-                                         !key.modifiers.contains(crossterm::event::KeyModifiers::SHIFT) => {
+                    KeyCode::Char('s')
+                        if key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::CONTROL)
+                            && !key
+                                .modifiers
+                                .contains(crossterm::event::KeyModifiers::SHIFT) =>
+                    {
                         // Ctrl+S: Save (stage to Git)
-                        if let Err(e) = perform_save(&mut data_source, &mut conflict_detector, &mut auto_save, false) {
+                        if let Err(e) = perform_save(
+                            &mut data_source,
+                            &mut conflict_detector,
+                            &mut auto_save,
+                            false,
+                        ) {
                             warn!("Save failed: {}", e);
                         }
                     }
-                    KeyCode::Char('s') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) && 
-                                         key.modifiers.contains(crossterm::event::KeyModifiers::SHIFT) => {
+                    KeyCode::Char('s')
+                        if key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::CONTROL)
+                            && key
+                                .modifiers
+                                .contains(crossterm::event::KeyModifiers::SHIFT) =>
+                    {
                         // Ctrl+Shift+S: Save and commit
-                        if let Err(e) = perform_save(&mut data_source, &mut conflict_detector, &mut auto_save, true) {
+                        if let Err(e) = perform_save(
+                            &mut data_source,
+                            &mut conflict_detector,
+                            &mut auto_save,
+                            true,
+                        ) {
                             warn!("Save and commit failed: {}", e);
                         }
                     }
-                    KeyCode::Char('r') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                    KeyCode::Char('r')
+                        if key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::CONTROL) =>
+                    {
                         // Ctrl+R: Reload
                         if auto_save.has_unsaved_changes() {
                             warn!("Unsaved changes will be lost. Reloading...");
                         }
-                        if let Err(e) = perform_reload(&mut data_source, &mut conflict_detector, &mut grid, &mut auto_save, row_count) {
+                        if let Err(e) = perform_reload(
+                            &mut data_source,
+                            &mut conflict_detector,
+                            &mut grid,
+                            &mut auto_save,
+                            row_count,
+                        ) {
                             warn!("Reload failed: {}", e);
                         }
                     }
-                    KeyCode::Char('e') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                    KeyCode::Char('e')
+                        if key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::CONTROL) =>
+                    {
                         // Ctrl+E: Export to CSV
                         if let Err(e) = perform_export(&grid, &data_source) {
                             warn!("Export failed: {}", e);
                         }
                     }
-                    KeyCode::Char('o') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                    KeyCode::Char('o')
+                        if key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::CONTROL) =>
+                    {
                         // Ctrl+O: Import CSV
                         warn!("CSV import requires file path. Use: arx spreadsheet import --file <path>");
                     }
-                    KeyCode::Char('f') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                    KeyCode::Char('f')
+                        if key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::CONTROL) =>
+                    {
                         // Ctrl+F: Activate search
                         if search_state.is_none() {
                             search_state = Some(SearchState::new(String::new(), false));
                         }
                         if let Some(ref mut search) = search_state {
                             search.activate();
-                            info!("Search activated - Type to search, Esc to cancel, n/p to navigate");
+                            info!(
+                                "Search activated - Type to search, Esc to cancel, n/p to navigate"
+                            );
                         }
                     }
-                    KeyCode::Char('n') if search_state.as_ref().map(|s| s.is_active).unwrap_or(false) => {
+                    KeyCode::Char('n')
+                        if search_state.as_ref().map(|s| s.is_active).unwrap_or(false) =>
+                    {
                         // n: Next match (when in search mode)
                         if let Some(ref mut search) = search_state {
                             if let Some((row, col)) = search.next_match() {
@@ -357,7 +457,9 @@ fn handle_spreadsheet_equipment(
                             }
                         }
                     }
-                    KeyCode::Char('p') if search_state.as_ref().map(|s| s.is_active).unwrap_or(false) => {
+                    KeyCode::Char('p')
+                        if search_state.as_ref().map(|s| s.is_active).unwrap_or(false) =>
+                    {
                         // p: Previous match (when in search mode)
                         if let Some(ref mut search) = search_state {
                             if let Some((row, col)) = search.previous_match() {
@@ -367,8 +469,12 @@ fn handle_spreadsheet_equipment(
                             }
                         }
                     }
-                    KeyCode::Char(c) if search_state.as_ref().map(|s| s.is_active).unwrap_or(false) 
-                        && !key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                    KeyCode::Char(c)
+                        if search_state.as_ref().map(|s| s.is_active).unwrap_or(false)
+                            && !key
+                                .modifiers
+                                .contains(crossterm::event::KeyModifiers::CONTROL) =>
+                    {
                         // Typing in search mode (but not Ctrl+key combinations)
                         if let Some(ref mut search) = search_state {
                             search.update_query(format!("{}{}", search.query, c));
@@ -380,7 +486,9 @@ fn handle_spreadsheet_equipment(
                             }
                         }
                     }
-                    KeyCode::Backspace if search_state.as_ref().map(|s| s.is_active).unwrap_or(false) => {
+                    KeyCode::Backspace
+                        if search_state.as_ref().map(|s| s.is_active).unwrap_or(false) =>
+                    {
                         // Backspace in search mode
                         if let Some(ref mut search) = search_state {
                             let mut query = search.query.clone();
@@ -394,45 +502,62 @@ fn handle_spreadsheet_equipment(
                             }
                         }
                     }
-                    KeyCode::Char('c') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                    KeyCode::Char('c')
+                        if key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::CONTROL) =>
+                    {
                         // Ctrl+C: Copy selected cell
                         if let Some(cell) = grid.get_cell(grid.selected_row, grid.selected_col) {
                             clipboard.copy_cell(cell.value.clone());
                             info!("Cell copied");
                         }
                     }
-                    KeyCode::Char('v') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                    KeyCode::Char('v')
+                        if key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::CONTROL) =>
+                    {
                         // Ctrl+V: Paste into selected cell
                         if let Some(cell_value) = clipboard.get_cell(0, 0) {
                             let column = &grid.columns[grid.selected_col];
                             if column.editable {
                                 match validate_cell(&cell_value.to_string(), column) {
                                     Ok(valid_value) => {
-                                        let old_value = grid.get_cell(grid.selected_row, grid.selected_col)
+                                        let old_value = grid
+                                            .get_cell(grid.selected_row, grid.selected_col)
                                             .map(|c| c.value.clone())
                                             .unwrap_or(CellValue::Empty);
-                                        
+
                                         undo_redo.record_operation(
                                             grid.selected_row,
                                             grid.selected_col,
                                             old_value.clone(),
                                             valid_value.clone(),
                                         );
-                                        
-                                        if let Some(cell) = grid.get_cell_mut(grid.selected_row, grid.selected_col) {
+
+                                        if let Some(cell) =
+                                            grid.get_cell_mut(grid.selected_row, grid.selected_col)
+                                        {
                                             cell.value = valid_value.clone();
                                             cell.modified = true;
                                             cell.error = None;
                                         }
-                                        
-                                        if let Err(e) = data_source.set_cell(grid.selected_row, grid.selected_col, valid_value) {
+
+                                        if let Err(e) = data_source.set_cell(
+                                            grid.selected_row,
+                                            grid.selected_col,
+                                            valid_value,
+                                        ) {
                                             warn!("Failed to set cell: {}", e);
                                         } else {
                                             auto_save.trigger_save();
                                         }
                                     }
                                     Err(e) => {
-                                        if let Some(cell) = grid.get_cell_mut(grid.selected_row, grid.selected_col) {
+                                        if let Some(cell) =
+                                            grid.get_cell_mut(grid.selected_row, grid.selected_col)
+                                        {
                                             cell.error = Some(e.message.clone());
                                         }
                                     }
@@ -440,18 +565,31 @@ fn handle_spreadsheet_equipment(
                             }
                         }
                     }
-                    KeyCode::Char('u') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                    KeyCode::Char('u')
+                        if key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::CONTROL) =>
+                    {
                         // Ctrl+U: Clear filters
                         filter_sort::clear_filters(&mut grid);
                         info!("Filters cleared");
                     }
-                    KeyCode::Char('a') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                    KeyCode::Char('a')
+                        if key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::CONTROL) =>
+                    {
                         // Ctrl+A: Toggle address column visibility
                         // Find address column (should be first column)
-                        if let Some(addr_col_idx) = grid.columns.iter().position(|c| c.id.contains("address")) {
+                        if let Some(addr_col_idx) =
+                            grid.columns.iter().position(|c| c.id.contains("address"))
+                        {
                             grid.toggle_column_visibility(addr_col_idx);
                             let is_visible = grid.is_column_visible(addr_col_idx);
-                            info!("Address column {}", if is_visible { "shown" } else { "hidden" });
+                            info!(
+                                "Address column {}",
+                                if is_visible { "shown" } else { "hidden" }
+                            );
                         }
                     }
                     _ => {
@@ -463,14 +601,20 @@ fn handle_spreadsheet_equipment(
                 }
             }
         }
-        
+
         // Check for new AR scans
         if let Ok(new_scans) = ar_watcher.check_new_scans() {
             if new_scans > 0 {
                 ar_scan_count += new_scans;
                 info!("AR: {} new scan(s) detected, reload to refresh", new_scans);
                 // Optionally auto-reload
-                if let Err(e) = perform_reload(&mut data_source, &mut conflict_detector, &mut grid, &mut auto_save, row_count) {
+                if let Err(e) = perform_reload(
+                    &mut data_source,
+                    &mut conflict_detector,
+                    &mut grid,
+                    &mut auto_save,
+                    row_count,
+                ) {
                     warn!("Auto-reload after AR scan failed: {}", e);
                 } else {
                     // Re-populate grid after reload
@@ -487,9 +631,12 @@ fn handle_spreadsheet_equipment(
                 }
             }
         }
-        
+
         // Check for auto-save
-        if auto_save.should_save() && auto_save.has_unsaved_changes() && last_auto_save_check.elapsed() >= Duration::from_millis(100) {
+        if auto_save.should_save()
+            && auto_save.has_unsaved_changes()
+            && last_auto_save_check.elapsed() >= Duration::from_millis(100)
+        {
             // Check for conflicts before auto-saving
             match conflict_detector.check_conflict() {
                 Ok(true) => {
@@ -499,7 +646,12 @@ fn handle_spreadsheet_equipment(
                 }
                 Ok(false) => {
                     // No conflict - proceed with auto-save
-                    if let Err(e) = perform_save(&mut data_source, &mut conflict_detector, &mut auto_save, false) {
+                    if let Err(e) = perform_save(
+                        &mut data_source,
+                        &mut conflict_detector,
+                        &mut auto_save,
+                        false,
+                    ) {
                         warn!("Auto-save failed: {}", e);
                     }
                 }
@@ -511,15 +663,15 @@ fn handle_spreadsheet_equipment(
             last_auto_save_check = Instant::now();
         }
     }
-    
+
     // Check for unsaved changes before quitting
     if auto_save.has_unsaved_changes() {
         info!("Exiting with unsaved changes");
     }
-    
+
     // Release file lock
     file_lock.release()?;
-    
+
     info!("Spreadsheet closed");
     Ok(())
 }
@@ -535,9 +687,9 @@ fn perform_save(
     if conflict_detector.check_conflict()? {
         return Err("External changes detected. Please reload before saving.".into());
     }
-    
+
     auto_save.set_saving();
-    
+
     // Perform save
     match data_source.save(commit) {
         Ok(()) => {
@@ -563,7 +715,7 @@ fn perform_reload(
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Reload from data source
     data_source.reload()?;
-    
+
     // Reload grid data
     for row in 0..row_count.min(grid.row_count()) {
         for col in 0..grid.column_count() {
@@ -576,13 +728,13 @@ fn perform_reload(
             }
         }
     }
-    
+
     // Update conflict detector
     conflict_detector.update()?;
-    
+
     // Mark as clean
     auto_save.set_clean();
-    
+
     info!("Reload successful");
     Ok(())
 }
@@ -594,7 +746,7 @@ fn perform_export(
 ) -> Result<(), Box<dyn std::error::Error>> {
     use std::path::PathBuf;
     use std::time::SystemTime;
-    
+
     // Generate default filename with timestamp
     let timestamp = SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -602,23 +754,24 @@ fn perform_export(
         .as_secs();
     let filename = format!("equipment_export_{}.csv", timestamp);
     let file_path = PathBuf::from(&filename);
-    
+
     // Collect all rows from grid
     let mut rows = Vec::new();
     for row_idx in 0..grid.row_count() {
         let mut row = Vec::new();
         for col_idx in 0..grid.column_count() {
-            let cell_value = grid.get_cell(row_idx, col_idx)
+            let cell_value = grid
+                .get_cell(row_idx, col_idx)
                 .map(|c| c.value.clone())
                 .unwrap_or(CellValue::Empty);
             row.push(cell_value);
         }
         rows.push(row);
     }
-    
+
     // Export to CSV
     export::export_to_csv(&file_path, &grid.columns, &rows)?;
-    
+
     info!("Exported {} rows to {}", rows.len(), file_path.display());
     Ok(())
 }
@@ -631,20 +784,20 @@ fn handle_spreadsheet_rooms(
     _no_git: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let building_name = building.unwrap_or_else(|| "Building".to_string());
-    
+
     info!("Opening room spreadsheet for building: {}", building_name);
-    
+
     // Load building data
     let persistence = PersistenceManager::new(&building_name)?;
     let building_data = persistence.load_building_data()?;
-    
+
     // Acquire file lock
     let building_file = persistence.working_file();
     let file_lock = FileLock::acquire(building_file)?;
-    
+
     // Initialize conflict detector
     let mut conflict_detector = ConflictDetector::new(building_file)?;
-    
+
     // Check for active workflows
     let workflow_status = WorkflowStatus::detect();
     if workflow_status.has_active_workflows() {
@@ -652,15 +805,15 @@ fn handle_spreadsheet_rooms(
             warn!("{}", warning);
         }
     }
-    
+
     // Initialize data source
     let mut data_source = RoomDataSource::new(building_data, building_name.clone());
     let columns = SpreadsheetDataSource::columns(&data_source);
     let row_count = SpreadsheetDataSource::row_count(&data_source);
-    
+
     // Create grid
     let mut grid = Grid::new(columns, row_count);
-    
+
     // Populate grid with data
     for row in 0..row_count {
         for col in 0..grid.column_count() {
@@ -671,11 +824,11 @@ fn handle_spreadsheet_rooms(
             }
         }
     }
-    
+
     // Initialize TUI
     let mut terminal_manager = TerminalManager::new()?;
     let theme = Theme::from_config();
-    
+
     // Main event loop (same as equipment, but with RoomDataSource)
     let mut should_quit = false;
     let mut editor: Option<CellEditor> = None;
@@ -688,13 +841,13 @@ fn handle_spreadsheet_rooms(
     let mut auto_save = AutoSaveManager::new(debounce_ms);
     let mut last_auto_save_check = Instant::now();
     let _clipboard = Clipboard::new();
-    
+
     while !should_quit {
         let terminal_size = terminal_manager.terminal().size()?;
         let visible_rows = (terminal_size.height.saturating_sub(5)) as usize;
         let visible_cols = (terminal_size.width.saturating_sub(2)) as usize;
         grid.ensure_selection_visible(visible_rows, visible_cols);
-        
+
         terminal_manager.terminal().draw(|frame| {
             let size = frame.size();
             render::render_spreadsheet_with_editor_and_save(
@@ -707,7 +860,7 @@ fn handle_spreadsheet_rooms(
                 Some(auto_save.state()),
             );
         })?;
-        
+
         if let Some(Event::Key(key)) = terminal_manager.poll_event(Duration::from_millis(100))? {
             if let Some(ref mut ed) = editor {
                 match ed.handle_key(key) {
@@ -716,38 +869,48 @@ fn handle_spreadsheet_rooms(
                         let column = &grid.columns[grid.selected_col];
                         match validate_cell(ed.get_current_value(), column) {
                             Ok(cell_value) => {
-                                let old_value = grid.get_cell(grid.selected_row, grid.selected_col)
+                                let old_value = grid
+                                    .get_cell(grid.selected_row, grid.selected_col)
                                     .map(|c| c.value.clone())
                                     .unwrap_or(CellValue::Empty);
-                                
+
                                 undo_redo.record_operation(
                                     grid.selected_row,
                                     grid.selected_col,
                                     old_value.clone(),
                                     cell_value.clone(),
                                 );
-                                
-                                if let Some(cell) = grid.get_cell_mut(grid.selected_row, grid.selected_col) {
+
+                                if let Some(cell) =
+                                    grid.get_cell_mut(grid.selected_row, grid.selected_col)
+                                {
                                     cell.value = cell_value.clone();
                                     cell.modified = true;
                                     cell.error = None;
                                 }
-                                
-                                if let Err(e) = data_source.set_cell(grid.selected_row, grid.selected_col, cell_value) {
+
+                                if let Err(e) = data_source.set_cell(
+                                    grid.selected_row,
+                                    grid.selected_col,
+                                    cell_value,
+                                ) {
                                     warn!("Failed to set cell: {}", e);
                                 } else {
                                     auto_save.trigger_save();
                                 }
-                                
+
                                 grid.editing_cell = None;
                                 editor = None;
                                 grid.move_down();
                             }
                             Err(e) => {
-                                if let Some(cell) = grid.get_cell_mut(grid.selected_row, grid.selected_col) {
+                                if let Some(cell) =
+                                    grid.get_cell_mut(grid.selected_row, grid.selected_col)
+                                {
                                     cell.error = Some(e.message.clone());
                                 }
-                                ed.state = crate::ui::spreadsheet::editor::EditState::Error(e.message);
+                                ed.state =
+                                    crate::ui::spreadsheet::editor::EditState::Error(e.message);
                             }
                         }
                     }
@@ -764,42 +927,85 @@ fn handle_spreadsheet_rooms(
                     KeyCode::Enter | KeyCode::F(2) => {
                         let column = &grid.columns[grid.selected_col];
                         if column.editable {
-                            let cell = grid.get_cell(grid.selected_row, grid.selected_col)
+                            let cell = grid
+                                .get_cell(grid.selected_row, grid.selected_col)
                                 .cloned()
-                                .unwrap_or_else(|| crate::ui::spreadsheet::types::Cell::new(
-                                    crate::ui::spreadsheet::types::CellValue::Empty
-                                ));
+                                .unwrap_or_else(|| {
+                                    crate::ui::spreadsheet::types::Cell::new(
+                                        crate::ui::spreadsheet::types::CellValue::Empty,
+                                    )
+                                });
                             let mut new_editor = CellEditor::new(column.clone(), cell.value);
                             new_editor.reset_cursor();
                             editor = Some(new_editor);
                             grid.editing_cell = Some((grid.selected_row, grid.selected_col));
                         }
                     }
-                    KeyCode::Char('z') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                    KeyCode::Char('z')
+                        if key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::CONTROL) =>
+                    {
                         undo_redo.undo(&mut grid);
                         auto_save.trigger_save();
                     }
-                    KeyCode::Char('y') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                    KeyCode::Char('y')
+                        if key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::CONTROL) =>
+                    {
                         undo_redo.redo(&mut grid);
                         auto_save.trigger_save();
                     }
-                    KeyCode::Char('s') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) &&
-                                         !key.modifiers.contains(crossterm::event::KeyModifiers::SHIFT) => {
-                        if let Err(e) = perform_save(&mut data_source, &mut conflict_detector, &mut auto_save, false) {
+                    KeyCode::Char('s')
+                        if key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::CONTROL)
+                            && !key
+                                .modifiers
+                                .contains(crossterm::event::KeyModifiers::SHIFT) =>
+                    {
+                        if let Err(e) = perform_save(
+                            &mut data_source,
+                            &mut conflict_detector,
+                            &mut auto_save,
+                            false,
+                        ) {
                             warn!("Save failed: {}", e);
                         }
                     }
-                    KeyCode::Char('s') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) &&
-                                         key.modifiers.contains(crossterm::event::KeyModifiers::SHIFT) => {
-                        if let Err(e) = perform_save(&mut data_source, &mut conflict_detector, &mut auto_save, true) {
+                    KeyCode::Char('s')
+                        if key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::CONTROL)
+                            && key
+                                .modifiers
+                                .contains(crossterm::event::KeyModifiers::SHIFT) =>
+                    {
+                        if let Err(e) = perform_save(
+                            &mut data_source,
+                            &mut conflict_detector,
+                            &mut auto_save,
+                            true,
+                        ) {
                             warn!("Save and commit failed: {}", e);
                         }
                     }
-                    KeyCode::Char('r') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                    KeyCode::Char('r')
+                        if key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::CONTROL) =>
+                    {
                         if auto_save.has_unsaved_changes() {
                             warn!("Unsaved changes will be lost. Reloading...");
                         }
-                        if let Err(e) = perform_reload(&mut data_source, &mut conflict_detector, &mut grid, &mut auto_save, row_count) {
+                        if let Err(e) = perform_reload(
+                            &mut data_source,
+                            &mut conflict_detector,
+                            &mut grid,
+                            &mut auto_save,
+                            row_count,
+                        ) {
                             warn!("Reload failed: {}", e);
                         }
                     }
@@ -809,15 +1015,23 @@ fn handle_spreadsheet_rooms(
                 }
             }
         }
-        
-        if auto_save.should_save() && auto_save.has_unsaved_changes() && last_auto_save_check.elapsed() >= Duration::from_millis(100) {
+
+        if auto_save.should_save()
+            && auto_save.has_unsaved_changes()
+            && last_auto_save_check.elapsed() >= Duration::from_millis(100)
+        {
             match conflict_detector.check_conflict() {
                 Ok(true) => {
                     warn!("External changes detected. Auto-save skipped.");
                     auto_save.set_error("External changes detected".to_string());
                 }
                 Ok(false) => {
-                    if let Err(e) = perform_save(&mut data_source, &mut conflict_detector, &mut auto_save, false) {
+                    if let Err(e) = perform_save(
+                        &mut data_source,
+                        &mut conflict_detector,
+                        &mut auto_save,
+                        false,
+                    ) {
                         warn!("Auto-save failed: {}", e);
                     }
                 }
@@ -829,11 +1043,11 @@ fn handle_spreadsheet_rooms(
             last_auto_save_check = Instant::now();
         }
     }
-    
+
     if auto_save.has_unsaved_changes() {
         info!("Exiting with unsaved changes");
     }
-    
+
     file_lock.release()?;
     info!("Room spreadsheet closed");
     Ok(())
@@ -847,29 +1061,29 @@ fn handle_spreadsheet_sensors(
     _no_git: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let building_name = building.unwrap_or_else(|| "Building".to_string());
-    
+
     info!("Opening sensor spreadsheet for building: {}", building_name);
-    
+
     // Acquire file lock (read-only for sensors)
     let persistence = PersistenceManager::new(&building_name)?;
     let building_file = persistence.working_file();
     let file_lock = FileLock::acquire(building_file)?;
-    
+
     // Initialize conflict detector
     let _conflict_detector = ConflictDetector::new(building_file)?;
-    
+
     // Check for active workflows
     let workflow_status = WorkflowStatus::detect();
-    
+
     // Initialize data source
     let mut data_source = SensorDataSource::new(building_name.clone());
     data_source.load_sensor_data()?;
     let columns = SpreadsheetDataSource::columns(&data_source);
     let row_count = SpreadsheetDataSource::row_count(&data_source);
-    
+
     // Create grid
     let mut grid = Grid::new(columns, row_count);
-    
+
     // Populate grid with data
     for row in 0..row_count {
         for col in 0..grid.column_count() {
@@ -880,20 +1094,20 @@ fn handle_spreadsheet_sensors(
             }
         }
     }
-    
+
     // Initialize TUI
     let mut terminal_manager = TerminalManager::new()?;
     let theme = Theme::from_config();
-    
+
     // Main event loop (read-only for sensors)
     let mut should_quit = false;
-    
+
     while !should_quit {
         let terminal_size = terminal_manager.terminal().size()?;
         let visible_rows = (terminal_size.height.saturating_sub(5)) as usize;
         let visible_cols = (terminal_size.width.saturating_sub(2)) as usize;
         grid.ensure_selection_visible(visible_rows, visible_cols);
-        
+
         terminal_manager.terminal().draw(|frame| {
             let size = frame.size();
             render::render_spreadsheet_with_editor_and_save(
@@ -906,13 +1120,17 @@ fn handle_spreadsheet_sensors(
                 None,
             );
         })?;
-        
+
         if let Some(Event::Key(key)) = terminal_manager.poll_event(Duration::from_millis(100))? {
             match key.code {
                 KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc => {
                     should_quit = true;
                 }
-                KeyCode::Char('r') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                KeyCode::Char('r')
+                    if key
+                        .modifiers
+                        .contains(crossterm::event::KeyModifiers::CONTROL) =>
+                {
                     // Reload sensor data
                     if let Err(e) = data_source.reload() {
                         warn!("Reload failed: {}", e);
@@ -938,7 +1156,7 @@ fn handle_spreadsheet_sensors(
             }
         }
     }
-    
+
     file_lock.release()?;
     info!("Sensor spreadsheet closed");
     Ok(())
@@ -951,32 +1169,35 @@ fn handle_spreadsheet_import(
     commit: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use std::path::PathBuf;
-    
+
     let building_name = building.unwrap_or_else(|| "Building".to_string());
     let file_path = PathBuf::from(&file);
-    
+
     if !file_path.exists() {
         return Err(format!("CSV file not found: {}", file).into());
     }
-    
+
     info!("Importing CSV from: {}", file_path.display());
-    
+
     // Load building data
     let persistence = PersistenceManager::new(&building_name)?;
     let building_data = persistence.load_building_data()?;
-    
+
     // Acquire file lock
     let building_file = persistence.working_file();
     let file_lock = FileLock::acquire(building_file)?;
-    
+
     // Initialize data source
     let mut data_source = EquipmentDataSource::new(building_data, building_name.clone());
     let columns = SpreadsheetDataSource::columns(&data_source);
-    
+
     // Preview CSV first
     info!("Previewing CSV file...");
     let preview = import::preview_csv_file(&file_path, 5)?;
-    info!("CSV preview (first {} rows):", preview.len().saturating_sub(1));
+    info!(
+        "CSV preview (first {} rows):",
+        preview.len().saturating_sub(1)
+    );
     for (idx, row) in preview.iter().enumerate() {
         if idx == 0 {
             info!("  Headers: {:?}", row);
@@ -984,35 +1205,46 @@ fn handle_spreadsheet_import(
             info!("  Row {}: {:?}", idx, row);
         }
     }
-    
+
     // Import CSV
     let import_result = import::import_csv_file(&file_path, &columns)?;
-    
+
     if !import_result.errors.is_empty() {
-        warn!("Import completed with {} errors:", import_result.errors.len());
+        warn!(
+            "Import completed with {} errors:",
+            import_result.errors.len()
+        );
         for error in &import_result.errors {
-            warn!("  Row {}, Column {}: {}", error.row, error.column, error.message);
+            warn!(
+                "  Row {}, Column {}: {}",
+                error.row, error.column, error.message
+            );
         }
     }
-    
+
     // Apply imported data to data source
     info!("Applying {} imported rows...", import_result.rows.len());
     for (row_idx, row) in import_result.rows.iter().enumerate() {
         for (col_idx, cell_value) in row.iter().enumerate() {
             if let Err(e) = data_source.set_cell(row_idx, col_idx, cell_value.clone()) {
-                warn!("Failed to set cell at row {}, col {}: {}", row_idx, col_idx, e);
+                warn!(
+                    "Failed to set cell at row {}, col {}: {}",
+                    row_idx, col_idx, e
+                );
             }
         }
     }
-    
+
     // Save imported data
     info!("Saving imported data...");
     data_source.save(commit)?;
-    
+
     // Release file lock
     file_lock.release()?;
-    
-    info!("CSV import completed successfully. {} rows imported.", import_result.row_count);
+
+    info!(
+        "CSV import completed successfully. {} rows imported.",
+        import_result.row_count
+    );
     Ok(())
 }
-

@@ -8,11 +8,11 @@
 //! - Batch operations
 
 use arxos::ar_integration::pending::{
-    PendingEquipmentManager, PendingStatus, DetectedEquipmentInfo, DetectionMethod
+    DetectedEquipmentInfo, DetectionMethod, PendingEquipmentManager, PendingStatus,
 };
-use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, CoordinateSystemInfo};
 use arxos::core::Floor;
-use arxos::spatial::{Point3D, BoundingBox3D};
+use arxos::spatial::{BoundingBox3D, Point3D};
+use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, CoordinateSystemInfo};
 use chrono::Utc;
 use std::collections::HashMap;
 
@@ -50,14 +50,26 @@ fn create_test_building_data() -> BuildingData {
 }
 
 /// Helper to create DetectedEquipmentInfo for testing
-fn create_detected_equipment(name: &str, position: Point3D, confidence: f64) -> DetectedEquipmentInfo {
+fn create_detected_equipment(
+    name: &str,
+    position: Point3D,
+    confidence: f64,
+) -> DetectedEquipmentInfo {
     DetectedEquipmentInfo {
         name: name.to_string(),
         equipment_type: "HVAC".to_string(),
         position,
         bounding_box: BoundingBox3D {
-            min: Point3D { x: position.x - 0.5, y: position.y - 0.5, z: position.z - 0.5 },
-            max: Point3D { x: position.x + 0.5, y: position.y + 0.5, z: position.z + 0.5 },
+            min: Point3D {
+                x: position.x - 0.5,
+                y: position.y - 0.5,
+                z: position.z - 0.5,
+            },
+            max: Point3D {
+                x: position.x + 0.5,
+                y: position.y + 0.5,
+                z: position.z + 0.5,
+            },
         },
         confidence,
         detection_method: DetectionMethod::ARKit,
@@ -69,21 +81,26 @@ fn create_detected_equipment(name: &str, position: Point3D, confidence: f64) -> 
 fn test_confirm_pending_with_room_assignment() {
     let mut manager = PendingEquipmentManager::new("test_building".to_string());
     let mut building_data = create_test_building_data();
-    
+
     // Create a pending equipment item with room name
     let detected = create_detected_equipment("VAV Unit", Point3D::new(10.0, 20.0, 3.0), 0.95);
-    let pending_id = manager.add_pending_equipment(
-        &detected,
-        "scan_001",
-        1, // floor level
-        Some("Conference Room A"), // room name
-        0.7,
-        None,
-    ).unwrap().unwrap();
-    
+    let pending_id = manager
+        .add_pending_equipment(
+            &detected,
+            "scan_001",
+            1,                         // floor level
+            Some("Conference Room A"), // room name
+            0.7,
+            None,
+        )
+        .unwrap()
+        .unwrap();
+
     // Confirm the pending equipment
-    let equipment_id = manager.confirm_pending(&pending_id, &mut building_data).unwrap();
-    
+    let equipment_id = manager
+        .confirm_pending(&pending_id, &mut building_data)
+        .unwrap();
+
     // Verify equipment was added to floor
     assert_eq!(building_data.floors.len(), 1);
     let floor = &building_data.floors[0];
@@ -91,7 +108,7 @@ fn test_confirm_pending_with_room_assignment() {
     assert_eq!(floor.equipment.len(), 1);
     assert_eq!(floor.equipment[0].id, equipment_id);
     assert_eq!(floor.equipment[0].name, "VAV Unit");
-    
+
     // Verify room was created and equipment is linked to it
     assert_eq!(floor.wings[0].rooms.len(), 1);
     let room = &floor.wings[0].rooms[0];
@@ -104,26 +121,28 @@ fn test_confirm_pending_with_room_assignment() {
 fn test_confirm_pending_without_room_name() {
     let mut manager = PendingEquipmentManager::new("test_building".to_string());
     let mut building_data = create_test_building_data();
-    
+
     // Create a pending equipment item without room name
-    let detected = create_detected_equipment("Standalone Unit", Point3D::new(15.0, 25.0, 3.0), 0.90);
-    let pending_id = manager.add_pending_equipment(
-        &detected,
-        "scan_002",
-        1,
-        None, // no room name
-        0.7,
-        None,
-    ).unwrap().unwrap();
-    
+    let detected =
+        create_detected_equipment("Standalone Unit", Point3D::new(15.0, 25.0, 3.0), 0.90);
+    let pending_id = manager
+        .add_pending_equipment(
+            &detected, "scan_002", 1, None, // no room name
+            0.7, None,
+        )
+        .unwrap()
+        .unwrap();
+
     // Confirm the pending equipment
-    let equipment_id = manager.confirm_pending(&pending_id, &mut building_data).unwrap();
-    
+    let equipment_id = manager
+        .confirm_pending(&pending_id, &mut building_data)
+        .unwrap();
+
     // Verify equipment was added to floor
     let floor = &building_data.floors[0];
     assert_eq!(floor.equipment.len(), 1);
     assert_eq!(floor.equipment[0].id, equipment_id);
-    
+
     // Verify no room was created (since no room_name was provided)
     assert_eq!(floor.wings.iter().flat_map(|w| &w.rooms).count(), 0);
 }
@@ -132,21 +151,27 @@ fn test_confirm_pending_without_room_name() {
 fn test_confirm_pending_creates_floor_if_missing() {
     let mut manager = PendingEquipmentManager::new("test_building".to_string());
     let mut building_data = create_test_building_data();
-    
+
     // Create pending equipment for floor 2 (which doesn't exist yet)
-    let detected = create_detected_equipment("Second Floor Unit", Point3D::new(10.0, 20.0, 6.0), 0.85);
-    let pending_id = manager.add_pending_equipment(
-        &detected,
-        "scan_003",
-        2, // floor level 2
-        Some("Office 201"),
-        0.7,
-        None,
-    ).unwrap().unwrap();
-    
+    let detected =
+        create_detected_equipment("Second Floor Unit", Point3D::new(10.0, 20.0, 6.0), 0.85);
+    let pending_id = manager
+        .add_pending_equipment(
+            &detected,
+            "scan_003",
+            2, // floor level 2
+            Some("Office 201"),
+            0.7,
+            None,
+        )
+        .unwrap()
+        .unwrap();
+
     // Confirm the pending equipment
-    manager.confirm_pending(&pending_id, &mut building_data).unwrap();
-    
+    manager
+        .confirm_pending(&pending_id, &mut building_data)
+        .unwrap();
+
     // Verify floor 2 was created
     assert_eq!(building_data.floors.len(), 1);
     let floor = &building_data.floors[0];
@@ -158,21 +183,26 @@ fn test_confirm_pending_creates_floor_if_missing() {
 fn test_confirm_pending_creates_room_if_missing() {
     let mut manager = PendingEquipmentManager::new("test_building".to_string());
     let mut building_data = create_test_building_data();
-    
+
     // Create pending equipment with a new room name
     let detected = create_detected_equipment("New Room Unit", Point3D::new(10.0, 20.0, 3.0), 0.88);
-    let pending_id = manager.add_pending_equipment(
-        &detected,
-        "scan_004",
-        1,
-        Some("New Room"), // room doesn't exist yet
-        0.7,
-        None,
-    ).unwrap().unwrap();
-    
+    let pending_id = manager
+        .add_pending_equipment(
+            &detected,
+            "scan_004",
+            1,
+            Some("New Room"), // room doesn't exist yet
+            0.7,
+            None,
+        )
+        .unwrap()
+        .unwrap();
+
     // Confirm the pending equipment
-    manager.confirm_pending(&pending_id, &mut building_data).unwrap();
-    
+    manager
+        .confirm_pending(&pending_id, &mut building_data)
+        .unwrap();
+
     // Verify room was created
     let floor = &building_data.floors[0];
     assert_eq!(floor.wings[0].rooms.len(), 1);
@@ -183,7 +213,7 @@ fn test_confirm_pending_creates_room_if_missing() {
 fn test_confirm_pending_adds_to_existing_room() {
     let mut manager = PendingEquipmentManager::new("test_building".to_string());
     let mut building_data = create_test_building_data();
-    
+
     // Manually create a floor and room
     building_data.floors.push(Floor {
         id: "floor-1".to_string(),
@@ -202,11 +232,30 @@ fn test_confirm_pending_adds_to_existing_room() {
                 room_type: arxos::core::RoomType::Other("IFCSPACE".to_string()),
                 equipment: vec![],
                 spatial_properties: arxos::core::SpatialProperties {
-                    position: arxos::core::Position { x: 0.0, y: 0.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
-                    dimensions: arxos::core::Dimensions { width: 10.0, height: 3.0, depth: 10.0 },
+                    position: arxos::core::Position {
+                        x: 0.0,
+                        y: 0.0,
+                        z: 0.0,
+                        coordinate_system: "LOCAL".to_string(),
+                    },
+                    dimensions: arxos::core::Dimensions {
+                        width: 10.0,
+                        height: 3.0,
+                        depth: 10.0,
+                    },
                     bounding_box: arxos::core::BoundingBox {
-                        min: arxos::core::Position { x: 0.0, y: 0.0, z: 0.0, coordinate_system: "LOCAL".to_string() },
-                        max: arxos::core::Position { x: 10.0, y: 10.0, z: 3.0, coordinate_system: "LOCAL".to_string() },
+                        min: arxos::core::Position {
+                            x: 0.0,
+                            y: 0.0,
+                            z: 0.0,
+                            coordinate_system: "LOCAL".to_string(),
+                        },
+                        max: arxos::core::Position {
+                            x: 10.0,
+                            y: 10.0,
+                            z: 3.0,
+                            coordinate_system: "LOCAL".to_string(),
+                        },
                     },
                     coordinate_system: "LOCAL".to_string(),
                 },
@@ -218,21 +267,27 @@ fn test_confirm_pending_adds_to_existing_room() {
         equipment: vec![],
         properties: HashMap::new(),
     });
-    
+
     // Create pending equipment for the existing room
-    let detected = create_detected_equipment("Existing Room Unit", Point3D::new(5.0, 5.0, 1.5), 0.92);
-    let pending_id = manager.add_pending_equipment(
-        &detected,
-        "scan_005",
-        1,
-        Some("Conference Room A"), // existing room
-        0.7,
-        None,
-    ).unwrap().unwrap();
-    
+    let detected =
+        create_detected_equipment("Existing Room Unit", Point3D::new(5.0, 5.0, 1.5), 0.92);
+    let pending_id = manager
+        .add_pending_equipment(
+            &detected,
+            "scan_005",
+            1,
+            Some("Conference Room A"), // existing room
+            0.7,
+            None,
+        )
+        .unwrap()
+        .unwrap();
+
     // Confirm the pending equipment
-    let equipment_id = manager.confirm_pending(&pending_id, &mut building_data).unwrap();
-    
+    let equipment_id = manager
+        .confirm_pending(&pending_id, &mut building_data)
+        .unwrap();
+
     // Verify equipment was added to existing room
     let floor = &building_data.floors[0];
     assert_eq!(floor.wings[0].rooms.len(), 1); // Still only one room
@@ -244,108 +299,152 @@ fn test_confirm_pending_adds_to_existing_room() {
 fn test_confirm_pending_multiple_equipment_same_room() {
     let mut manager = PendingEquipmentManager::new("test_building".to_string());
     let mut building_data = create_test_building_data();
-    
+
     // Create two pending equipment items for the same room
     let detected1 = create_detected_equipment("Unit 1", Point3D::new(5.0, 5.0, 1.5), 0.90);
-    let pending_id1 = manager.add_pending_equipment(
-        &detected1,
-        "scan_006",
-        1,
-        Some("Conference Room A"),
-        0.7,
-        None,
-    ).unwrap().unwrap();
-    
+    let pending_id1 = manager
+        .add_pending_equipment(
+            &detected1,
+            "scan_006",
+            1,
+            Some("Conference Room A"),
+            0.7,
+            None,
+        )
+        .unwrap()
+        .unwrap();
+
     let detected2 = create_detected_equipment("Unit 2", Point3D::new(7.0, 7.0, 1.5), 0.88);
-    let pending_id2 = manager.add_pending_equipment(
-        &detected2,
-        "scan_007",
-        1,
-        Some("Conference Room A"), // same room
-        0.7,
-        None,
-    ).unwrap().unwrap();
-    
+    let pending_id2 = manager
+        .add_pending_equipment(
+            &detected2,
+            "scan_007",
+            1,
+            Some("Conference Room A"), // same room
+            0.7,
+            None,
+        )
+        .unwrap()
+        .unwrap();
+
     // Confirm first pending equipment item
-    let equipment_id1 = manager.confirm_pending(&pending_id1, &mut building_data).unwrap();
-    
+    let equipment_id1 = manager
+        .confirm_pending(&pending_id1, &mut building_data)
+        .unwrap();
+
     // Verify first equipment is in room
     let floor = &building_data.floors[0];
     assert_eq!(floor.wings[0].rooms.len(), 1);
     assert_eq!(floor.wings[0].rooms[0].equipment.len(), 1);
-    assert!(floor.wings[0].rooms[0].equipment.iter().any(|e| e.id == equipment_id1));
-    
+    assert!(floor.wings[0].rooms[0]
+        .equipment
+        .iter()
+        .any(|e| e.id == equipment_id1));
+
     // Confirm second pending equipment item
-    let equipment_id2 = manager.confirm_pending(&pending_id2, &mut building_data).unwrap();
-    
+    let equipment_id2 = manager
+        .confirm_pending(&pending_id2, &mut building_data)
+        .unwrap();
+
     // Verify both equipment are in the same room
     let floor = &building_data.floors[0];
     assert_eq!(floor.wings[0].rooms.len(), 1);
-    assert_eq!(floor.wings[0].rooms[0].equipment.len(), 2, "Room should contain both equipment items");
-    assert!(floor.wings[0].rooms[0].equipment.iter().any(|e| e.id == equipment_id1));
-    assert!(floor.wings[0].rooms[0].equipment.iter().any(|e| e.id == equipment_id2));
+    assert_eq!(
+        floor.wings[0].rooms[0].equipment.len(),
+        2,
+        "Room should contain both equipment items"
+    );
+    assert!(floor.wings[0].rooms[0]
+        .equipment
+        .iter()
+        .any(|e| e.id == equipment_id1));
+    assert!(floor.wings[0].rooms[0]
+        .equipment
+        .iter()
+        .any(|e| e.id == equipment_id2));
 }
 
 #[test]
 fn test_confirm_pending_prevents_duplicate_equipment_in_room() {
     let mut manager = PendingEquipmentManager::new("test_building".to_string());
     let mut building_data = create_test_building_data();
-    
+
     // Create and confirm first equipment
     let detected1 = create_detected_equipment("Unit 1", Point3D::new(5.0, 5.0, 1.5), 0.90);
-    let pending_id1 = manager.add_pending_equipment(
-        &detected1,
-        "scan_008",
-        1,
-        Some("Conference Room A"),
-        0.7,
-        None,
-    ).unwrap().unwrap();
-    
-    let equipment_id1 = manager.confirm_pending(&pending_id1, &mut building_data).unwrap();
-    
+    let pending_id1 = manager
+        .add_pending_equipment(
+            &detected1,
+            "scan_008",
+            1,
+            Some("Conference Room A"),
+            0.7,
+            None,
+        )
+        .unwrap()
+        .unwrap();
+
+    let equipment_id1 = manager
+        .confirm_pending(&pending_id1, &mut building_data)
+        .unwrap();
+
     // Create and confirm second equipment with different scan_id
     let detected2 = create_detected_equipment("Unit 2", Point3D::new(7.0, 7.0, 1.5), 0.88);
-    let pending_id2 = manager.add_pending_equipment(
-        &detected2,
-        "scan_009", // different scan_id, so different equipment_id will be generated
-        1,
-        Some("Conference Room A"),
-        0.7,
-        None,
-    ).unwrap().unwrap();
-    
+    let pending_id2 = manager
+        .add_pending_equipment(
+            &detected2,
+            "scan_009", // different scan_id, so different equipment_id will be generated
+            1,
+            Some("Conference Room A"),
+            0.7,
+            None,
+        )
+        .unwrap()
+        .unwrap();
+
     // Confirm second equipment
-    let equipment_id2 = manager.confirm_pending(&pending_id2, &mut building_data).unwrap();
-    
+    let equipment_id2 = manager
+        .confirm_pending(&pending_id2, &mut building_data)
+        .unwrap();
+
     // Verify both equipment are in room (no duplicates due to contains check)
     let floor = &building_data.floors[0];
     assert_eq!(floor.wings[0].rooms[0].equipment.len(), 2);
     // Equipment IDs should be different (different scan_id)
     assert_ne!(equipment_id1, equipment_id2);
-    assert!(floor.wings[0].rooms[0].equipment.iter().any(|e| e.id == equipment_id1));
-    assert!(floor.wings[0].rooms[0].equipment.iter().any(|e| e.id == equipment_id2));
+    assert!(floor.wings[0].rooms[0]
+        .equipment
+        .iter()
+        .any(|e| e.id == equipment_id1));
+    assert!(floor.wings[0].rooms[0]
+        .equipment
+        .iter()
+        .any(|e| e.id == equipment_id2));
 }
 
 #[test]
 fn test_universal_path_includes_room_when_available() {
     let mut manager = PendingEquipmentManager::new("test_building".to_string());
     let mut building_data = create_test_building_data();
-    
+
     // Create pending equipment with room name
     let detected = create_detected_equipment("VAV Unit", Point3D::new(10.0, 20.0, 3.0), 0.95);
-    let pending_id = manager.add_pending_equipment(
-        &detected,
-        "scan_009",
-        1,
-        Some("Conference Room A"),
-        0.7,
-        None,
-    ).unwrap().unwrap();
-    
+    let pending_id = manager
+        .add_pending_equipment(
+            &detected,
+            "scan_009",
+            1,
+            Some("Conference Room A"),
+            0.7,
+            None,
+        )
+        .unwrap()
+        .unwrap();
+
     // Confirm the pending equipment
-    manager.confirm_pending(&pending_id, &mut building_data).unwrap();
-    
+    manager
+        .confirm_pending(&pending_id, &mut building_data)
+        .unwrap();
+
     // Verify universal path includes room
     let floor = &building_data.floors[0];
     let equipment = &floor.equipment[0];
@@ -358,21 +457,23 @@ fn test_universal_path_includes_room_when_available() {
 fn test_universal_path_omits_room_when_not_available() {
     let mut manager = PendingEquipmentManager::new("test_building".to_string());
     let mut building_data = create_test_building_data();
-    
+
     // Create pending equipment without room name
-    let detected = create_detected_equipment("Standalone Unit", Point3D::new(15.0, 25.0, 3.0), 0.90);
-    let pending_id = manager.add_pending_equipment(
-        &detected,
-        "scan_010",
-        1,
-        None, // no room name
-        0.7,
-        None,
-    ).unwrap().unwrap();
-    
+    let detected =
+        create_detected_equipment("Standalone Unit", Point3D::new(15.0, 25.0, 3.0), 0.90);
+    let pending_id = manager
+        .add_pending_equipment(
+            &detected, "scan_010", 1, None, // no room name
+            0.7, None,
+        )
+        .unwrap()
+        .unwrap();
+
     // Confirm the pending equipment
-    manager.confirm_pending(&pending_id, &mut building_data).unwrap();
-    
+    manager
+        .confirm_pending(&pending_id, &mut building_data)
+        .unwrap();
+
     // Verify universal path does NOT include room
     let floor = &building_data.floors[0];
     let equipment = &floor.equipment[0];
@@ -385,45 +486,51 @@ fn test_universal_path_omits_room_when_not_available() {
 fn test_batch_confirm_with_room_assignment() {
     let mut manager = PendingEquipmentManager::new("test_building".to_string());
     let mut building_data = create_test_building_data();
-    
+
     // Create multiple pending equipment items
     let detected1 = create_detected_equipment("Unit 1", Point3D::new(5.0, 5.0, 1.5), 0.90);
-    let pending_id1 = manager.add_pending_equipment(
-        &detected1,
-        "scan_011",
-        1,
-        Some("Room A"),
-        0.7,
-        None,
-    ).unwrap().unwrap();
-    
+    let pending_id1 = manager
+        .add_pending_equipment(&detected1, "scan_011", 1, Some("Room A"), 0.7, None)
+        .unwrap()
+        .unwrap();
+
     let detected2 = create_detected_equipment("Unit 2", Point3D::new(7.0, 7.0, 1.5), 0.88);
-    let pending_id2 = manager.add_pending_equipment(
-        &detected2,
-        "scan_012",
-        1,
-        Some("Room B"), // different room
-        0.7,
-        None,
-    ).unwrap().unwrap();
-    
+    let pending_id2 = manager
+        .add_pending_equipment(
+            &detected2,
+            "scan_012",
+            1,
+            Some("Room B"), // different room
+            0.7,
+            None,
+        )
+        .unwrap()
+        .unwrap();
+
     // Batch confirm
-    let equipment_ids = manager.batch_confirm(
-        vec![&pending_id1, &pending_id2],
-        &mut building_data,
-    ).unwrap();
-    
+    let equipment_ids = manager
+        .batch_confirm(vec![&pending_id1, &pending_id2], &mut building_data)
+        .unwrap();
+
     assert_eq!(equipment_ids.len(), 2);
-    
+
     // Verify both rooms were created
     let floor = &building_data.floors[0];
     assert_eq!(floor.wings[0].rooms.len(), 2);
     assert_eq!(floor.equipment.len(), 2);
-    
+
     // Verify each room has its equipment
-    let room_a = floor.wings[0].rooms.iter().find(|r| r.name == "Room A").unwrap();
-    let room_b = floor.wings[0].rooms.iter().find(|r| r.name == "Room B").unwrap();
-    
+    let room_a = floor.wings[0]
+        .rooms
+        .iter()
+        .find(|r| r.name == "Room A")
+        .unwrap();
+    let room_b = floor.wings[0]
+        .rooms
+        .iter()
+        .find(|r| r.name == "Room B")
+        .unwrap();
+
     assert_eq!(room_a.equipment.len(), 1);
     assert_eq!(room_b.equipment.len(), 1);
     assert!(room_a.equipment.iter().any(|e| e.id == equipment_ids[0]));
@@ -434,25 +541,23 @@ fn test_batch_confirm_with_room_assignment() {
 fn test_confirm_pending_updates_status() {
     let mut manager = PendingEquipmentManager::new("test_building".to_string());
     let mut building_data = create_test_building_data();
-    
+
     // Create pending equipment
     let detected = create_detected_equipment("Test Unit", Point3D::new(10.0, 20.0, 3.0), 0.95);
-    let pending_id = manager.add_pending_equipment(
-        &detected,
-        "scan_013",
-        1,
-        Some("Test Room"),
-        0.7,
-        None,
-    ).unwrap().unwrap();
-    
+    let pending_id = manager
+        .add_pending_equipment(&detected, "scan_013", 1, Some("Test Room"), 0.7, None)
+        .unwrap()
+        .unwrap();
+
     // Verify status is Pending
     let pending = manager.get_pending(&pending_id).unwrap();
     assert_eq!(pending.status, PendingStatus::Pending);
-    
+
     // Confirm the pending equipment
-    manager.confirm_pending(&pending_id, &mut building_data).unwrap();
-    
+    manager
+        .confirm_pending(&pending_id, &mut building_data)
+        .unwrap();
+
     // Verify status is now Confirmed
     let pending = manager.get_pending(&pending_id).unwrap();
     assert_eq!(pending.status, PendingStatus::Confirmed);
@@ -462,11 +567,10 @@ fn test_confirm_pending_updates_status() {
 fn test_confirm_pending_not_found_error() {
     let mut manager = PendingEquipmentManager::new("test_building".to_string());
     let mut building_data = create_test_building_data();
-    
+
     // Try to confirm non-existent pending equipment
     let result = manager.confirm_pending("nonexistent_id", &mut building_data);
-    
+
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("not found"));
 }
-

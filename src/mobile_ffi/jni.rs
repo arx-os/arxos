@@ -354,6 +354,8 @@ pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeP
             
             let processing_scan = processing::ARScanData {
                 detected_equipment,
+                floor_level: Some(mobile_scan.floor_level),
+                room_name: Some(mobile_scan.room_name.clone()),
             };
             
             // Process to pending

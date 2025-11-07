@@ -17,15 +17,14 @@
 //! - **Separation of Concerns**: Business logic separated from I/O
 //! - **Dependency Injection**: Services accept repositories as dependencies
 
-pub mod repository;
 pub mod building_service;
-pub mod room_service;
 pub mod equipment_service;
+pub mod repository;
+pub mod room_service;
 pub mod spatial_service;
 
-pub use repository::{Repository, InMemoryRepository, FileRepository};
 pub use building_service::BuildingService;
-pub use room_service::RoomService;
 pub use equipment_service::EquipmentService;
+pub use repository::{FileRepository, InMemoryRepository, Repository};
+pub use room_service::RoomService;
 pub use spatial_service::SpatialService;
-

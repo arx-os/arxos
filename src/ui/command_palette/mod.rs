@@ -6,14 +6,13 @@
 //! - Command execution from palette
 //! - Command descriptions and categories
 
-pub mod types;
 pub mod commands;
+pub mod handler;
 pub mod palette;
 pub mod render;
-pub mod handler;
+pub mod types;
 
 // Re-export public API
-pub use types::{CommandEntry, CommandCategory};
-pub use palette::CommandPalette;
 pub use handler::handle_command_palette;
-
+pub use palette::CommandPalette;
+pub use types::{CommandCategory, CommandEntry};

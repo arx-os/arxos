@@ -1,6 +1,8 @@
 // Interactive 3D rendering command handler
 
-use crate::render3d::{ProjectionType, ViewAngle, Render3DConfig, InteractiveConfig, InteractiveRenderer};
+use crate::render3d::{
+    InteractiveConfig, InteractiveRenderer, ProjectionType, Render3DConfig, ViewAngle,
+};
 use crate::utils::loading::load_building_data;
 use log::{info, warn};
 
@@ -38,9 +40,17 @@ pub struct InteractiveCommandConfig {
 }
 
 /// Handle the interactive 3D building visualization command
-pub fn handle_interactive(config: InteractiveCommandConfig) -> Result<(), Box<dyn std::error::Error>> {
-    info!("🔮 Interactive 3D Building Visualization: {}", config.building);
-    println!("🔮 Interactive 3D Building Visualization: {}", config.building);
+pub fn handle_interactive(
+    config: InteractiveCommandConfig,
+) -> Result<(), Box<dyn std::error::Error>> {
+    info!(
+        "🔮 Interactive 3D Building Visualization: {}",
+        config.building
+    );
+    println!(
+        "🔮 Interactive 3D Building Visualization: {}",
+        config.building
+    );
 
     // Load building data
     let building_data = load_building_data(&config.building)?;
@@ -51,8 +61,14 @@ pub fn handle_interactive(config: InteractiveCommandConfig) -> Result<(), Box<dy
         "orthographic" => ProjectionType::Orthographic,
         "perspective" => ProjectionType::Perspective,
         _ => {
-            warn!("⚠️ Unknown projection type '{}', using isometric", config.projection);
-            println!("⚠️ Unknown projection type '{}', using isometric", config.projection);
+            warn!(
+                "⚠️ Unknown projection type '{}', using isometric",
+                config.projection
+            );
+            println!(
+                "⚠️ Unknown projection type '{}', using isometric",
+                config.projection
+            );
             ProjectionType::Isometric
         }
     };
@@ -64,8 +80,14 @@ pub fn handle_interactive(config: InteractiveCommandConfig) -> Result<(), Box<dy
         "side" => ViewAngle::Side,
         "isometric" => ViewAngle::Isometric,
         _ => {
-            warn!("⚠️ Unknown view angle '{}', using isometric", config.view_angle);
-            println!("⚠️ Unknown view angle '{}', using isometric", config.view_angle);
+            warn!(
+                "⚠️ Unknown view angle '{}', using isometric",
+                config.view_angle
+            );
+            println!(
+                "⚠️ Unknown view angle '{}', using isometric",
+                config.view_angle
+            );
             ViewAngle::Isometric
         }
     };
@@ -94,11 +116,8 @@ pub fn handle_interactive(config: InteractiveCommandConfig) -> Result<(), Box<dy
     };
 
     // Create interactive renderer
-    let mut interactive_renderer = InteractiveRenderer::with_config(
-        building_data,
-        render_config,
-        interactive_config
-    )?;
+    let mut interactive_renderer =
+        InteractiveRenderer::with_config(building_data, render_config, interactive_config)?;
 
     // Apply spatial index if requested
     if config.spatial_index {
@@ -114,4 +133,3 @@ pub fn handle_interactive(config: InteractiveCommandConfig) -> Result<(), Box<dy
     println!("✅ Interactive session completed");
     Ok(())
 }
-

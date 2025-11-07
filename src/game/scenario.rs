@@ -1,19 +1,24 @@
 //! Scenario loading and management for game system
 
-use std::path::Path;
-use std::collections::HashMap;
-use crate::game::types::{GameScenario, GameMode, Constraint, GameEquipmentPlacement, GameAction, ValidationResult};
+use crate::game::types::{
+    Constraint, GameAction, GameEquipmentPlacement, GameMode, GameScenario, ValidationResult,
+};
 use crate::utils::loading::load_building_data;
 use log::{info, warn};
+use std::collections::HashMap;
+use std::path::Path;
 
 /// Loads game scenarios from various sources
 pub struct GameScenarioLoader;
 
 impl GameScenarioLoader {
     /// Load scenario from a PR
-    pub fn load_from_pr(pr_id: &str, pr_dir: &Path) -> Result<GameScenario, Box<dyn std::error::Error>> {
+    pub fn load_from_pr(
+        pr_id: &str,
+        pr_dir: &Path,
+    ) -> Result<GameScenario, Box<dyn std::error::Error>> {
         info!("Loading game scenario from PR: {}", pr_id);
-        
+
         // Load PR metadata
         let metadata_path = pr_dir.join("metadata.yaml");
         let metadata: HashMap<String, serde_yaml::Value> = if metadata_path.exists() {
@@ -34,7 +39,8 @@ impl GameScenarioLoader {
         };
 
         // Extract building name
-        let building = metadata.get("building")
+        let building = metadata
+            .get("building")
             .and_then(|v| v.as_str())
             .unwrap_or("Unknown Building")
             .to_string();
@@ -66,7 +72,9 @@ impl GameScenarioLoader {
     }
 
     /// Load equipment items from markup.json
-    fn load_equipment_from_markup(markup_path: &Path) -> Result<Vec<GameEquipmentPlacement>, Box<dyn std::error::Error>> {
+    fn load_equipment_from_markup(
+        markup_path: &Path,
+    ) -> Result<Vec<GameEquipmentPlacement>, Box<dyn std::error::Error>> {
         let content = std::fs::read_to_string(markup_path)?;
         let markup: serde_json::Value = serde_json::from_str(&content)?;
 
@@ -84,19 +92,23 @@ impl GameScenarioLoader {
     }
 
     /// Parse single equipment item from markup JSON
-    fn parse_equipment_from_markup(eq_data: &serde_json::Value) -> Result<GameEquipmentPlacement, Box<dyn std::error::Error>> {
-        use crate::core::{Equipment, EquipmentType, EquipmentStatus, Position};
+    fn parse_equipment_from_markup(
+        eq_data: &serde_json::Value,
+    ) -> Result<GameEquipmentPlacement, Box<dyn std::error::Error>> {
+        use crate::core::{Equipment, EquipmentStatus, EquipmentType, Position};
         use std::collections::HashMap;
 
-                let name = eq_data.get("name")
+        let name = eq_data
+            .get("name")
             .and_then(|v| v.as_str())
             .unwrap_or("Unknown")
             .to_string();
 
-        let eq_type_str = eq_data.get("type")
+        let eq_type_str = eq_data
+            .get("type")
             .and_then(|v| v.as_str())
             .unwrap_or("Other");
-        
+
         let equipment_type = match eq_type_str {
             "HVAC" => EquipmentType::HVAC,
             "Electrical" => EquipmentType::Electrical,
@@ -107,20 +119,23 @@ impl GameScenarioLoader {
         };
 
         // Parse position
-        let pos_data = eq_data.get("position")
+        let pos_data = eq_data
+            .get("position")
             .ok_or("Missing position in equipment data")?;
-        
+
         let x = pos_data.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0);
         let y = pos_data.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0);
         let z = pos_data.get("z").and_then(|v| v.as_f64()).unwrap_or(0.0);
 
         // Parse confidence
-        let confidence = eq_data.get("confidence")
+        let confidence = eq_data
+            .get("confidence")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0);
 
         // Create equipment ID first to avoid borrow issues
-        let equipment_id = eq_data.get("id")
+        let equipment_id = eq_data
+            .get("id")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
             .unwrap_or_else(|| format!("pending_{}", name));
@@ -164,9 +179,11 @@ impl GameScenarioLoader {
     }
 
     /// Load constraints from YAML file
-    fn load_constraints_from_file(constraints_path: &Path) -> Result<Vec<Constraint>, Box<dyn std::error::Error>> {
-        use crate::game::types::{Constraint, ConstraintType, ConstraintSeverity};
-        
+    fn load_constraints_from_file(
+        constraints_path: &Path,
+    ) -> Result<Vec<Constraint>, Box<dyn std::error::Error>> {
+        use crate::game::types::{Constraint, ConstraintSeverity, ConstraintType};
+
         let content = std::fs::read_to_string(constraints_path)?;
         let data: serde_yaml::Value = serde_yaml::from_str(&content)?;
 
@@ -174,13 +191,17 @@ impl GameScenarioLoader {
 
         if let Some(constraints_obj) = data.get("constraints") {
             // Load structural constraints
-            if let Some(structural) = constraints_obj.get("structural").and_then(|s| s.as_sequence()) {
+            if let Some(structural) = constraints_obj
+                .get("structural")
+                .and_then(|s| s.as_sequence())
+            {
                 for item in structural {
                     if item.get("type").and_then(|t| t.as_str()).is_some() {
                         let constraint = Constraint {
                             id: format!("structural_{}", constraints.len()),
                             constraint_type: ConstraintType::Structural,
-                            description: item.get("notes")
+                            description: item
+                                .get("notes")
                                 .and_then(|n| n.as_str())
                                 .unwrap_or("Structural constraint")
                                 .to_string(),
@@ -224,17 +245,19 @@ impl GameScenarioLoader {
     }
 
     /// Load scenario from building data for planning mode
-    pub fn load_from_building(building_name: &str) -> Result<GameScenario, Box<dyn std::error::Error>> {
+    pub fn load_from_building(
+        building_name: &str,
+    ) -> Result<GameScenario, Box<dyn std::error::Error>> {
         info!("Loading planning scenario from building: {}", building_name);
-        
+
         let building_data = load_building_data(building_name)?;
-        
+
         // Convert building equipment to game placements
         let mut equipment_items = Vec::new();
         for floor in &building_data.floors {
             for equipment_data in &floor.equipment {
                 use crate::core::Equipment;
-                
+
                 // equipment_data is already core::Equipment, so we can use it directly
                 // Just clone it and ensure all fields are set
                 let equipment = Equipment {
@@ -249,8 +272,8 @@ impl GameScenarioLoader {
                     health_status: equipment_data.health_status.clone(),
                     room_id: equipment_data.room_id.clone(),
                     sensor_mappings: equipment_data.sensor_mappings.clone(),
-            };
-                
+                };
+
                 let placement = GameEquipmentPlacement {
                     equipment,
                     ifc_entity_id: equipment_data.properties.get("ifc_entity_id").cloned(),
@@ -260,7 +283,7 @@ impl GameScenarioLoader {
                     game_action: GameAction::Loaded,
                     constraint_validation: ValidationResult::default(),
                 };
-                
+
                 equipment_items.push(placement);
             }
         }
@@ -269,7 +292,10 @@ impl GameScenarioLoader {
             id: format!("planning_{}", building_name),
             mode: GameMode::Planning,
             building: building_data.building.name.clone(),
-            objective: format!("Plan equipment placement for {}", building_data.building.name),
+            objective: format!(
+                "Plan equipment placement for {}",
+                building_data.building.name
+            ),
             constraints: Vec::new(), // Will be loaded separately
             equipment_items,
             validation_rules: Vec::new(),
@@ -277,11 +303,13 @@ impl GameScenarioLoader {
     }
 
     /// Create learning scenario from approved PR
-    pub fn create_learning_scenario(pr_id: &str, pr_dir: &Path) -> Result<GameScenario, Box<dyn std::error::Error>> {
+    pub fn create_learning_scenario(
+        pr_id: &str,
+        pr_dir: &Path,
+    ) -> Result<GameScenario, Box<dyn std::error::Error>> {
         let mut scenario = Self::load_from_pr(pr_id, pr_dir)?;
         scenario.mode = GameMode::Learning;
         scenario.objective = format!("Learn from PR {}: {}", pr_id, scenario.objective);
         Ok(scenario)
     }
 }
-

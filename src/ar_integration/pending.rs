@@ -3,14 +3,13 @@
 //! This module handles equipment detected by AR scans that requires user confirmation
 //! before being added to the building data.
 
+use crate::spatial::{BoundingBox3D, Point3D};
 #[allow(deprecated)]
 use crate::yaml::BuildingData;
-use crate::spatial::{Point3D, BoundingBox3D};
+use chrono::{DateTime, Utc};
+use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
-use log::{info, warn, debug};
-
 
 /// Pending equipment from AR scan
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -77,21 +76,27 @@ impl PendingEquipmentManager {
     }
 
     /// Load pending equipment from storage
-    pub fn load_from_storage(&mut self, storage_file: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn load_from_storage(
+        &mut self,
+        storage_file: &std::path::Path,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         use std::fs;
         use std::io::Read;
-        
+
         if !storage_file.exists() {
-            info!("No pending equipment storage file found at: {:?}", storage_file);
+            info!(
+                "No pending equipment storage file found at: {:?}",
+                storage_file
+            );
             return Ok(());
         }
-        
+
         let mut file = fs::File::open(storage_file)?;
         let mut content = String::new();
         file.read_to_string(&mut content)?;
-        
+
         let pending_list: serde_json::Value = serde_json::from_str(&content)?;
-        
+
         if let Some(items) = pending_list.get("items").and_then(|v| v.as_array()) {
             for item_json in items {
                 if let Ok(pending) = serde_json::from_value::<PendingEquipment>(item_json.clone()) {
@@ -99,9 +104,12 @@ impl PendingEquipmentManager {
                 }
             }
         }
-        
+
         self.storage_path = Some(storage_file.to_path_buf());
-        info!("Loaded {} pending equipment items from storage", self.pending_items.len());
+        info!(
+            "Loaded {} pending equipment items from storage",
+            self.pending_items.len()
+        );
         Ok(())
     }
 
@@ -113,57 +121,71 @@ impl PendingEquipmentManager {
         Ok(())
     }
 
+    /// Specify the storage path for pending equipment
+    pub fn set_storage_path(&mut self, storage_path: std::path::PathBuf) {
+        self.storage_path = Some(storage_path);
+    }
+
     /// Save to specific storage path (filesystem only, no Git)
-    pub fn save_to_storage_path(&self, storage_file: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn save_to_storage_path(
+        &self,
+        storage_file: &std::path::Path,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         use std::fs;
         use std::io::Write;
-        
+
         #[derive(serde::Serialize)]
         struct PendingEquipmentStorage {
             building: String,
             items: Vec<PendingEquipment>,
             updated_at: String,
         }
-        
+
         let storage = PendingEquipmentStorage {
             building: self.building_name.clone(),
             items: self.pending_items.clone(),
             updated_at: Utc::now().to_rfc3339(),
         };
-        
+
         let json_content = serde_json::to_string_pretty(&storage)?;
-        
+
         // Create parent directories if they don't exist
         if let Some(parent) = storage_file.parent() {
             fs::create_dir_all(parent)?;
         }
-        
+
         let mut file = fs::File::create(storage_file)?;
         file.write_all(json_content.as_bytes())?;
-        
-        info!("Saved {} pending equipment items to storage", self.pending_items.len());
+
+        info!(
+            "Saved {} pending equipment items to storage",
+            self.pending_items.len()
+        );
         Ok(())
     }
 
     /// Save to storage path and commit to Git if repository exists
-    /// 
+    ///
     /// This method follows the Git-native philosophy by committing pending equipment
     /// changes to Git when a repository is available. Falls back to filesystem-only
     /// if no Git repository is found.
-    /// 
+    ///
     /// Note: This is a convenience method. For production use, consider using
     /// `PersistenceManager` which handles Git operations more comprehensively.
-    pub fn save_to_storage_path_with_git(&self, storage_file: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn save_to_storage_path_with_git(
+        &self,
+        storage_file: &std::path::Path,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         // First, save to filesystem
         self.save_to_storage_path(storage_file)?;
-        
+
         // Try to commit to Git if repository exists
         // For now, we'll just save to filesystem. Full Git integration should be
         // handled by the calling code using PersistenceManager or BuildingGitManager
         // directly, as pending equipment changes are typically committed when
         // equipment is confirmed (which already uses PersistenceManager).
         debug!("Saved pending equipment to storage. Git commits should be handled by PersistenceManager when confirming equipment.");
-        
+
         Ok(())
     }
 
@@ -186,8 +208,8 @@ impl PendingEquipmentManager {
             return Ok(None);
         }
 
-        let pending_id = format!("pending_{}", Utc::now().timestamp());
-        
+        let pending_id = format!("pending_{}", uuid::Uuid::new_v4());
+
         let pending = PendingEquipment {
             id: pending_id.clone(),
             scan_id: scan_id.to_string(),
@@ -205,7 +227,10 @@ impl PendingEquipmentManager {
             user_email,
         };
 
-        info!("Added pending equipment: {} (confidence: {:.2})", pending.name, pending.confidence);
+        info!(
+            "Added pending equipment: {} (confidence: {:.2})",
+            pending.name, pending.confidence
+        );
         self.pending_items.push(pending);
 
         Ok(Some(pending_id))
@@ -231,14 +256,17 @@ impl PendingEquipmentManager {
         building_data: &mut BuildingData,
     ) -> Result<String, Box<dyn std::error::Error>> {
         // First, update the status
-        if let Some(pending) = self.pending_items
+        if let Some(pending) = self
+            .pending_items
             .iter_mut()
-            .find(|item| item.id == pending_id && item.status == PendingStatus::Pending) {
+            .find(|item| item.id == pending_id && item.status == PendingStatus::Pending)
+        {
             pending.status = PendingStatus::Confirmed;
         }
 
         // Then get the pending data (clone to avoid borrow issues)
-        let pending = self.pending_items
+        let pending = self
+            .pending_items
             .iter()
             .find(|item| item.id == pending_id)
             .ok_or_else(|| format!("Pending equipment '{}' not found", pending_id))?
@@ -246,27 +274,27 @@ impl PendingEquipmentManager {
 
         // Find or create the floor
         let floor_index = Self::find_or_create_floor(building_data, pending.floor_level)?;
-        
-        // Create equipment in building data
-        let equipment_id = Self::add_equipment_to_building(
-            building_data,
-            floor_index,
-            &pending,
-        )?;
 
-        info!("Confirmed pending equipment '{}' as equipment '{}'", pending_id, equipment_id);
+        // Create equipment in building data
+        let equipment_id = Self::add_equipment_to_building(building_data, floor_index, &pending)?;
+
+        info!(
+            "Confirmed pending equipment '{}' as equipment '{}'",
+            pending_id, equipment_id
+        );
         Ok(equipment_id)
     }
 
     /// Reject pending equipment
     pub fn reject_pending(&mut self, pending_id: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let pending = self.pending_items
+        let pending = self
+            .pending_items
             .iter_mut()
             .find(|item| item.id == pending_id && item.status == PendingStatus::Pending)
             .ok_or_else(|| format!("Pending equipment '{}' not found", pending_id))?;
 
         pending.status = PendingStatus::Rejected;
-        
+
         info!("Rejected pending equipment '{}'", pending_id);
         Ok(())
     }
@@ -278,23 +306,36 @@ impl PendingEquipmentManager {
         building_data: &mut BuildingData,
     ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
         let mut confirmed_equipment_ids = Vec::new();
-        
+
         for pending_id in pending_ids {
             match self.confirm_pending(pending_id, building_data) {
                 Ok(equipment_id) => confirmed_equipment_ids.push(equipment_id),
                 Err(e) => {
-                    warn!("Failed to confirm pending equipment '{}': {}", pending_id, e);
+                    warn!(
+                        "Failed to confirm pending equipment '{}': {}",
+                        pending_id, e
+                    );
                 }
             }
         }
 
-        info!("Batch confirmed {} pending equipment items", confirmed_equipment_ids.len());
+        info!(
+            "Batch confirmed {} pending equipment items",
+            confirmed_equipment_ids.len()
+        );
         Ok(confirmed_equipment_ids)
     }
 
     /// Find or create floor
-    fn find_or_create_floor(building_data: &mut BuildingData, floor_level: i32) -> Result<usize, Box<dyn std::error::Error>> {
-        if let Some(index) = building_data.floors.iter().position(|f| f.level == floor_level) {
+    fn find_or_create_floor(
+        building_data: &mut BuildingData,
+        floor_level: i32,
+    ) -> Result<usize, Box<dyn std::error::Error>> {
+        if let Some(index) = building_data
+            .floors
+            .iter()
+            .position(|f| f.level == floor_level)
+        {
             return Ok(index);
         }
 
@@ -311,32 +352,40 @@ impl PendingEquipmentManager {
         building_data: &mut BuildingData,
         floor_index: usize,
         room_name: &str,
-    ) -> Result<usize, Box<dyn std::error::Error>> {
+    ) -> Result<(usize, usize), Box<dyn std::error::Error>> {
+        use crate::core::{Dimensions, Position, Room, RoomType, SpatialProperties, Wing};
+
         let floor = &mut building_data.floors[floor_index];
-        let floor_elevation = floor.elevation.unwrap_or(floor.level as f64 * 3.0);
-        
-        // Find or create default wing for AR-detected rooms
-        let default_wing_name = "Default";
-        let wing = floor.wings.iter_mut()
-            .find(|w| w.name == default_wing_name);
-        
-        let wing = if let Some(wing) = wing {
-            wing
-        } else {
-            // Create default wing using core type
-            let new_wing = crate::core::Wing::new(default_wing_name.to_string());
-            floor.wings.push(new_wing);
-            floor.wings.last_mut()
-                .ok_or_else(|| "Failed to access newly created wing".to_string())?
-        };
-        
-        // Look for existing room in wing
-        if let Some(index) = wing.rooms.iter().position(|r| r.name == room_name) {
-            return Ok(index);
+
+        // First, look for an existing room across all wings
+        if let Some((wing_idx, room_idx)) = floor
+            .wings
+            .iter()
+            .enumerate()
+            .find_map(|(wi, wing)| {
+                wing.rooms
+                    .iter()
+                    .position(|r| r.name == room_name)
+                    .map(|ri| (wi, ri))
+            })
+        {
+            return Ok((wing_idx, room_idx));
         }
-        
-        // Create new room using core type
-        use crate::core::{Room, RoomType, Position, Dimensions, SpatialProperties};
+
+        // Determine which wing should receive the new room
+        let default_wing_name = "Default";
+        let wing_index = if let Some(idx) = floor.wings.iter().position(|w| w.name == default_wing_name) {
+            idx
+        } else if floor.wings.is_empty() {
+            floor.wings.push(Wing::new(default_wing_name.to_string()));
+            floor.wings.len() - 1
+        } else {
+            // Create a dedicated default wing to keep AR-generated rooms grouped
+            floor.wings.push(Wing::new(default_wing_name.to_string()));
+            floor.wings.len() - 1
+        };
+
+        let floor_elevation = floor.elevation.unwrap_or(floor.level as f64 * 3.0);
         let new_room = Room {
             id: format!("room-{}", room_name.to_lowercase().replace(" ", "-")),
             name: room_name.to_string(),
@@ -360,10 +409,13 @@ impl PendingEquipmentManager {
             created_at: Some(Utc::now()),
             updated_at: Some(Utc::now()),
         };
-        
-        // Add room to wing
+
+        let wing = floor
+            .wings
+            .get_mut(wing_index)
+            .ok_or_else(|| "Failed to access wing while creating room".to_string())?;
         wing.rooms.push(new_room);
-        Ok(wing.rooms.len() - 1)
+        Ok((wing_index, wing.rooms.len() - 1))
     }
 
     /// Add equipment to building data
@@ -372,13 +424,16 @@ impl PendingEquipmentManager {
         floor_index: usize,
         pending: &PendingEquipment,
     ) -> Result<String, Box<dyn std::error::Error>> {
-        let equipment_id = format!("equipment_{}", pending.scan_id);
+        let sanitized_name = pending.name.to_lowercase().replace(' ', "-");
+        let equipment_id = format!("equipment_{}_{}", pending.scan_id, sanitized_name);
 
         // Find or create room if room_name is provided (before mutable borrow of floor)
         let room_name_opt = pending.room_name.as_ref();
-        if let Some(room_name) = room_name_opt {
-            Self::find_or_create_room(building_data, floor_index, room_name)?;
-        }
+        let room_location = if let Some(room_name) = room_name_opt {
+            Some(Self::find_or_create_room(building_data, floor_index, room_name)?)
+        } else {
+            None
+        };
 
         // Now we can borrow the floor mutably
         let floor = &mut building_data.floors[floor_index];
@@ -397,9 +452,15 @@ impl PendingEquipmentManager {
         };
 
         let universal_path = if let Some(room_name) = room_name_opt {
-            format!("/BUILDING/FLOOR-{}/ROOM-{}/EQUIPMENT/{}", pending.floor_level, room_name, pending.name)
+            format!(
+                "/BUILDING/FLOOR-{}/ROOM-{}/EQUIPMENT/{}",
+                pending.floor_level, room_name, pending.name
+            )
         } else {
-            format!("/BUILDING/FLOOR-{}/EQUIPMENT/{}", pending.floor_level, pending.name)
+            format!(
+                "/BUILDING/FLOOR-{}/EQUIPMENT/{}",
+                pending.floor_level, pending.name
+            )
         };
 
         let mut equipment = Equipment::new(
@@ -424,18 +485,26 @@ impl PendingEquipmentManager {
 
         // Add equipment to room's equipment list if room was found/created
         // Rooms are now in wings, so we need to find the room in the wing
-        if let Some(room_name) = room_name_opt {
-            // Find the room in the default wing
-            let default_wing_name = "Default";
-            if let Some(wing) = floor.wings.iter_mut().find(|w| w.name == default_wing_name) {
-                if let Some(room) = wing.rooms.iter_mut().find(|r| r.name == *room_name) {
-                    // Check if equipment is already in the room
+        if let (Some(room_name), Some((wing_idx, room_idx))) = (room_name_opt, room_location) {
+            if let Some(wing) = floor.wings.get_mut(wing_idx) {
+                if let Some(room) = wing.rooms.get_mut(room_idx) {
                     if !room.equipment.iter().any(|e| e.id == equipment_id) {
                         room.equipment.push(equipment);
                     }
                 } else {
-                    warn!("Room '{}' not found in wing '{}' after equipment was added, cannot link equipment to room", room_name, default_wing_name);
+                    warn!(
+                        "Room '{}' not found in wing '{}' after equipment was added, cannot link equipment to room",
+                        room_name,
+                        wing.name
+                    );
                 }
+            } else {
+                warn!(
+                    "Wing index {} out of bounds when linking equipment '{}' to room '{}'",
+                    wing_idx,
+                    equipment_id,
+                    room_name
+                );
             }
         }
 
@@ -464,6 +533,12 @@ pub fn create_pending_equipment_from_ar_scan(
     confidence_threshold: f64,
 ) -> Result<Option<String>, Box<dyn std::error::Error>> {
     let mut manager = PendingEquipmentManager::new("default".to_string());
-    manager.add_pending_equipment(detected_equipment, scan_id, floor_level, room_name, confidence_threshold, None)
+    manager.add_pending_equipment(
+        detected_equipment,
+        scan_id,
+        floor_level,
+        room_name,
+        confidence_threshold,
+        None,
+    )
 }
-

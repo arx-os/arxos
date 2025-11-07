@@ -25,7 +25,7 @@ impl ExportFormat {
             ExportFormat::Markdown,
         ]
     }
-    
+
     /// Get format name
     pub fn name(&self) -> &'static str {
         match self {
@@ -35,7 +35,7 @@ impl ExportFormat {
             ExportFormat::Markdown => "Markdown",
         }
     }
-    
+
     /// Get file extension
     pub fn extension(&self) -> &'static str {
         match self {
@@ -85,4 +85,3 @@ mod tests {
         assert_ne!(ExportFormat::Html, ExportFormat::Markdown);
     }
 }
-

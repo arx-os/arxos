@@ -67,7 +67,7 @@ impl CommandCategory {
             CommandCategory::Other => "Other",
         }
     }
-    
+
     /// Get category icon
     pub fn icon(&self) -> &'static str {
         match self {
@@ -109,10 +109,14 @@ mod tests {
             CommandCategory::Documentation,
             CommandCategory::Other,
         ];
-        
+
         for category in categories {
             let name = category.name();
-            assert!(!name.is_empty(), "Category {:?} should have a name", category);
+            assert!(
+                !name.is_empty(),
+                "Category {:?} should have a name",
+                category
+            );
             assert!(name.len() > 0, "Category name should not be empty");
         }
     }
@@ -134,10 +138,14 @@ mod tests {
             CommandCategory::Documentation,
             CommandCategory::Other,
         ];
-        
+
         for category in categories {
             let icon = category.icon();
-            assert!(!icon.is_empty(), "Category {:?} should have an icon", category);
+            assert!(
+                !icon.is_empty(),
+                "Category {:?} should have an icon",
+                category
+            );
         }
     }
 
@@ -150,7 +158,7 @@ mod tests {
             category: CommandCategory::Other,
             shortcut: Some("Ctrl+T".to_string()),
         };
-        
+
         assert_eq!(entry.name, "test");
         assert_eq!(entry.full_command, "arxos test");
         assert_eq!(entry.description, "Test command");
@@ -166,4 +174,3 @@ mod tests {
         assert_ne!(CommandCategory::Git, CommandCategory::Room);
     }
 }
-

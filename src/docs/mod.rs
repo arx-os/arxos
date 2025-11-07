@@ -3,11 +3,11 @@
 //! Generates HTML documentation from building data, similar to rustdoc for code.
 //! Produces self-contained HTML files that can be shared and viewed offline.
 
-use crate::yaml::BuildingData;
 use crate::core::Equipment;
 use crate::utils::loading::load_building_data;
-use std::path::Path;
+use crate::yaml::BuildingData;
 use std::fs;
+use std::path::Path;
 
 /// Generate HTML documentation for a building
 ///
@@ -31,46 +31,49 @@ pub fn generate_building_docs(
     output_path: Option<&str>,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let building_data = load_building_data(building_name)?;
-    
+
     let html = generate_html(&building_data)?;
-    
+
     let output = output_path.map(String::from).unwrap_or_else(|| {
         let filename = sanitize_filename(building_name);
         format!("./docs/{}.html", filename)
     });
-    
+
     if let Some(parent) = Path::new(&output).parent() {
         fs::create_dir_all(parent)?;
     }
-    
+
     fs::write(&output, &html)?;
-    
+
     Ok(output)
 }
 
 /// Generate HTML content from building data
 fn generate_html(data: &BuildingData) -> Result<String, Box<dyn std::error::Error>> {
     // Rooms are now in wings
-    let room_count: usize = data.floors.iter()
+    let room_count: usize = data
+        .floors
+        .iter()
         .flat_map(|f| &f.wings)
         .map(|w| w.rooms.len())
         .sum();
-    let room_equipment_count: usize = data.floors.iter()
+    let room_equipment_count: usize = data
+        .floors
+        .iter()
         .flat_map(|f| &f.wings)
         .flat_map(|w| &w.rooms)
         .map(|r| r.equipment.len())
         .sum();
-    let floor_equipment_count: usize = data.floors.iter()
-        .map(|f| f.equipment.len())
-        .sum();
+    let floor_equipment_count: usize = data.floors.iter().map(|f| f.equipment.len()).sum();
     let equipment_count = room_equipment_count + floor_equipment_count;
-    
+
     let floors_html = generate_floors_section(data);
     let rooms_html = generate_rooms_section(data);
     let equipment_html = generate_equipment_section(data);
     let ascii_render = generate_ascii_visualization(data);
-    
-    Ok(format!(r#"<!DOCTYPE html>
+
+    Ok(format!(
+        r#"<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -129,7 +132,10 @@ fn generate_html(data: &BuildingData) -> Result<String, Box<dyn std::error::Erro
         updated_at = data.building.updated_at.format("%Y-%m-%d %H:%M:%S UTC"),
         version = html_escape(&data.building.version),
         description_html = if let Some(ref desc) = data.building.description {
-            format!(r#"<div class="description"><p>{}</p></div>"#, html_escape(desc))
+            format!(
+                r#"<div class="description"><p>{}</p></div>"#,
+                html_escape(desc)
+            )
         } else {
             String::new()
         },
@@ -145,18 +151,20 @@ fn generate_floors_section(data: &BuildingData) -> String {
     if data.floors.is_empty() {
         return "<p>No floors defined.</p>".to_string();
     }
-    
-    data.floors.iter()
+
+    data.floors
+        .iter()
         .map(|floor| {
             // Rooms are now in wings
-            let room_count: usize = floor.wings.iter()
-                .map(|w| w.rooms.len())
-                .sum();
-            let equipment_count = floor.equipment.len() + floor.wings.iter()
-                .flat_map(|w| &w.rooms)
-                .map(|r| r.equipment.len())
-                .sum::<usize>();
-            
+            let room_count: usize = floor.wings.iter().map(|w| w.rooms.len()).sum();
+            let equipment_count = floor.equipment.len()
+                + floor
+                    .wings
+                    .iter()
+                    .flat_map(|w| &w.rooms)
+                    .map(|r| r.equipment.len())
+                    .sum::<usize>();
+
             format!(
                 r#"<div class="floor-item">
                     <h3>Floor {level}: {name}</h3>
@@ -179,30 +187,38 @@ fn generate_floors_section(data: &BuildingData) -> String {
 
 fn generate_rooms_section(data: &BuildingData) -> String {
     // Rooms are now in wings
-    let all_rooms: Vec<_> = data.floors.iter()
+    let all_rooms: Vec<_> = data
+        .floors
+        .iter()
         .flat_map(|floor| {
             let floor_level = floor.level;
-            floor.wings.iter()
+            floor
+                .wings
+                .iter()
                 .flat_map(move |wing| wing.rooms.iter().map(move |room| (floor_level, room)))
         })
         .collect();
-    
+
     if all_rooms.is_empty() {
         return "<p>No rooms defined.</p>".to_string();
     }
-    
-    all_rooms.iter()
+
+    all_rooms
+        .iter()
         .map(|(floor_level, room)| {
             // Calculate area and volume from dimensions
-            let area = room.spatial_properties.dimensions.width * room.spatial_properties.dimensions.depth;
+            let area =
+                room.spatial_properties.dimensions.width * room.spatial_properties.dimensions.depth;
             let volume = area * room.spatial_properties.dimensions.height;
             let area_str = format!("{:.2}m²", area);
             let volume_str = format!("{:.2}m³", volume);
-            let position_str = format!("({:.2}, {:.2}, {:.2})", 
-                room.spatial_properties.position.x, 
-                room.spatial_properties.position.y, 
-                room.spatial_properties.position.z);
-            
+            let position_str = format!(
+                "({:.2}, {:.2}, {:.2})",
+                room.spatial_properties.position.x,
+                room.spatial_properties.position.y,
+                room.spatial_properties.position.z
+            );
+
             format!(
                 r#"<div class="room-item">
                     <h4>{name} (Floor {floor})</h4>
@@ -229,12 +245,12 @@ fn generate_rooms_section(data: &BuildingData) -> String {
 
 fn generate_equipment_section(data: &BuildingData) -> String {
     let mut all_equipment: Vec<(i32, Option<String>, &Equipment)> = Vec::new();
-    
+
     for floor in &data.floors {
         for eq in &floor.equipment {
             all_equipment.push((floor.level, None, eq));
         }
-        
+
         // Rooms are now in wings
         for wing in &floor.wings {
             for room in &wing.rooms {
@@ -245,21 +261,25 @@ fn generate_equipment_section(data: &BuildingData) -> String {
             }
         }
     }
-    
+
     if all_equipment.is_empty() {
         return "<p>No equipment defined.</p>".to_string();
     }
-    
-    all_equipment.iter()
+
+    all_equipment
+        .iter()
         .map(|(floor_level, room_name, eq)| {
             let location = if let Some(room) = room_name {
                 format!("Floor {}, Room {}", floor_level, html_escape(room))
             } else {
                 format!("Floor {}", floor_level)
             };
-            use crate::core::{EquipmentStatus, EquipmentHealthStatus};
-            let position_str = format!("({:.2}, {:.2}, {:.2})", eq.position.x, eq.position.y, eq.position.z);
-            
+            use crate::core::{EquipmentHealthStatus, EquipmentStatus};
+            let position_str = format!(
+                "({:.2}, {:.2}, {:.2})",
+                eq.position.x, eq.position.y, eq.position.z
+            );
+
             // Use health_status if available, otherwise fall back to status
             let (status_class, status_text) = if let Some(health_status) = &eq.health_status {
                 match health_status {
@@ -277,7 +297,7 @@ fn generate_equipment_section(data: &BuildingData) -> String {
                     EquipmentStatus::Unknown => ("status-unknown", "Unknown"),
                 }
             };
-            
+
             format!(
                 r#"<div class="equipment-item {status_class}">
                     <h4>{name}</h4>
@@ -306,15 +326,18 @@ fn generate_equipment_section(data: &BuildingData) -> String {
 
 fn generate_ascii_visualization(data: &BuildingData) -> String {
     let mut output = String::new();
-    
+
     if data.floors.is_empty() {
         return "No building data available for visualization.".to_string();
     }
-    
+
     for floor in &data.floors {
         output.push_str(&format!("Floor {}: {}\n", floor.level, floor.name));
-        output.push_str(&format!("  Elevation: {:.2}m\n", floor.elevation.unwrap_or(floor.level as f64 * 3.0)));
-        
+        output.push_str(&format!(
+            "  Elevation: {:.2}m\n",
+            floor.elevation.unwrap_or(floor.level as f64 * 3.0)
+        ));
+
         // Rooms are now in wings
         let has_rooms = floor.wings.iter().any(|w| !w.rooms.is_empty());
         if has_rooms {
@@ -324,16 +347,19 @@ fn generate_ascii_visualization(data: &BuildingData) -> String {
                     output.push_str(&format!("    - {} ({:?})\n", room.name, room.room_type));
                     if !room.equipment.is_empty() {
                         for eq in &room.equipment {
-                            output.push_str(&format!("      Equipment: {} ({:?})\n", eq.name, eq.equipment_type));
+                            output.push_str(&format!(
+                                "      Equipment: {} ({:?})\n",
+                                eq.name, eq.equipment_type
+                            ));
                         }
                     }
                 }
             }
         }
-        
+
         if !floor.equipment.is_empty() {
             output.push_str("  Floor Equipment:\n");
-            use crate::core::{EquipmentStatus, EquipmentHealthStatus};
+            use crate::core::{EquipmentHealthStatus, EquipmentStatus};
             for eq in &floor.equipment {
                 let status_str = if let Some(health_status) = &eq.health_status {
                     match health_status {
@@ -351,17 +377,16 @@ fn generate_ascii_visualization(data: &BuildingData) -> String {
                         EquipmentStatus::Unknown => "Unknown",
                     }
                 };
-                output.push_str(&format!("    - {} ({:?}) - {}\n", 
-                    eq.name, 
-                    eq.equipment_type,
-                    status_str
+                output.push_str(&format!(
+                    "    - {} ({:?}) - {}\n",
+                    eq.name, eq.equipment_type, status_str
                 ));
             }
         }
-        
+
         output.push('\n');
     }
-    
+
     output
 }
 
@@ -375,12 +400,14 @@ fn html_escape(text: &str) -> String {
 
 fn sanitize_filename(name: &str) -> String {
     name.chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' {
-            c.to_lowercase().collect::<String>()
-        } else if c == ' ' {
-            "-".to_string()
-        } else {
-            String::new()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' {
+                c.to_lowercase().collect::<String>()
+            } else if c == ' ' {
+                "-".to_string()
+            } else {
+                String::new()
+            }
         })
         .collect::<String>()
         .trim_matches('-')
@@ -510,7 +537,7 @@ mod tests {
     use super::*;
     use crate::yaml::{BuildingInfo, BuildingMetadata};
     use chrono::Utc;
-    
+
     fn create_test_building_data() -> BuildingData {
         BuildingData {
             building: BuildingInfo {
@@ -535,7 +562,7 @@ mod tests {
             coordinate_systems: vec![],
         }
     }
-    
+
     #[test]
     fn test_html_escape() {
         assert_eq!(html_escape("test"), "test");
@@ -543,7 +570,7 @@ mod tests {
         assert_eq!(html_escape("&amp;"), "&amp;amp;");
         assert_eq!(html_escape("\"quote\""), "&quot;quote&quot;");
     }
-    
+
     #[test]
     fn test_sanitize_filename() {
         assert_eq!(sanitize_filename("Test Building"), "test-building");
@@ -551,33 +578,33 @@ mod tests {
         assert_eq!(sanitize_filename("Test@Building#1"), "testbuilding1");
         assert_eq!(sanitize_filename("  Test  "), "test");
     }
-    
+
     #[test]
     fn test_generate_html_empty_building() {
         let data = create_test_building_data();
         let html = generate_html(&data).unwrap();
-        
+
         assert!(html.contains("Test Building"));
         assert!(html.contains("test-building-1"));
         assert!(html.contains("No floors defined"));
         assert!(html.contains("No rooms defined"));
         assert!(html.contains("No equipment defined"));
     }
-    
+
     #[test]
     fn test_generate_floors_section_empty() {
         let data = create_test_building_data();
         let result = generate_floors_section(&data);
         assert_eq!(result, "<p>No floors defined.</p>");
     }
-    
+
     #[test]
     fn test_generate_rooms_section_empty() {
         let data = create_test_building_data();
         let result = generate_rooms_section(&data);
         assert_eq!(result, "<p>No rooms defined.</p>");
     }
-    
+
     #[test]
     fn test_generate_equipment_section_empty() {
         let data = create_test_building_data();
@@ -585,4 +612,3 @@ mod tests {
         assert_eq!(result, "<p>No equipment defined.</p>");
     }
 }
-

@@ -8,4 +8,3 @@ pub struct IFCEntity {
     pub name: String,
     pub definition: String,
 }
-

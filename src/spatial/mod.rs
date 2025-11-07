@@ -1,10 +1,10 @@
 // Spatial data processing for ArxOS
 use nalgebra::Point3;
 
-pub mod types;
 pub mod grid;
-pub use types::*;
+pub mod types;
 pub use grid::{GridCoordinate, GridSystem};
+pub use types::*;
 
 // Re-export grid address utilities
 pub use grid::to_address;
@@ -43,7 +43,8 @@ impl SpatialEngine {
         equipment
             .iter()
             .filter(|entity| {
-                let entity_point = Point3::new(entity.position.x, entity.position.y, entity.position.z);
+                let entity_point =
+                    Point3::new(entity.position.x, entity.position.y, entity.position.z);
                 self.calculate_distance(center, entity_point) <= radius
             })
             .collect()
@@ -60,17 +61,21 @@ impl SpatialEngine {
         let dx = to_system.origin.x - from_system.origin.x;
         let dy = to_system.origin.y - from_system.origin.y;
         let dz = to_system.origin.z - from_system.origin.z;
-        
+
         Point3D::new(point.x + dx, point.y + dy, point.z + dz)
     }
 
     /// Calculate bounding box for a collection of spatial entities
-    pub fn calculate_global_bounding_box(&self, entities: &[SpatialEntity]) -> Option<BoundingBox3D> {
+    pub fn calculate_global_bounding_box(
+        &self,
+        entities: &[SpatialEntity],
+    ) -> Option<BoundingBox3D> {
         if entities.is_empty() {
             return None;
         }
 
-        let points: Vec<Point3D> = entities.iter()
+        let points: Vec<Point3D> = entities
+            .iter()
             .flat_map(|entity| vec![entity.bounding_box.min, entity.bounding_box.max])
             .collect();
 

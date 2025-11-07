@@ -5,8 +5,8 @@
 //! - Mouse support integration
 //! - Terminal state management
 
-use arxos::ui::terminal::TerminalManager;
 use arxos::ui::mouse::MouseConfig;
+use arxos::ui::terminal::TerminalManager;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
 use std::time::Duration;
 
@@ -21,7 +21,7 @@ fn test_terminal_manager_key_helpers() {
         state: KeyEventState::empty(),
     };
     assert!(TerminalManager::is_quit_key(&quit_key));
-    
+
     let esc_key = KeyEvent {
         code: KeyCode::Esc,
         modifiers: KeyModifiers::empty(),
@@ -29,7 +29,7 @@ fn test_terminal_manager_key_helpers() {
         state: KeyEventState::empty(),
     };
     assert!(TerminalManager::is_quit_key(&esc_key));
-    
+
     // Test navigation
     let up_key = KeyEvent {
         code: KeyCode::Up,
@@ -38,7 +38,7 @@ fn test_terminal_manager_key_helpers() {
         state: KeyEventState::empty(),
     };
     assert!(TerminalManager::is_nav_up(&up_key));
-    
+
     let down_key = KeyEvent {
         code: KeyCode::Down,
         modifiers: KeyModifiers::empty(),
@@ -46,7 +46,7 @@ fn test_terminal_manager_key_helpers() {
         state: KeyEventState::empty(),
     };
     assert!(TerminalManager::is_nav_down(&down_key));
-    
+
     // Test select
     let enter_key = KeyEvent {
         code: KeyCode::Enter,
@@ -68,7 +68,7 @@ fn test_terminal_manager_navigation_keys() {
         state: KeyEventState::empty(),
     };
     assert!(TerminalManager::is_nav_up(&k_key));
-    
+
     let j_key = KeyEvent {
         code: KeyCode::Char('j'),
         modifiers: KeyModifiers::empty(),
@@ -99,11 +99,11 @@ fn test_mouse_config_integration() {
     assert!(default_config.click_to_select);
     assert!(default_config.scroll_enabled);
     assert!(!default_config.drag_enabled);
-    
+
     // Test disabled config
     let disabled_config = MouseConfig::disabled();
     assert!(!disabled_config.enabled);
-    
+
     // Test full config
     let full_config = MouseConfig::full();
     assert!(full_config.enabled);

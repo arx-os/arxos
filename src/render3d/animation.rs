@@ -259,39 +259,39 @@ impl AnimationSystem {
     /// Update all animations (call this every frame)
     pub fn update(&mut self, delta_time: f64) {
         let start_time = Instant::now();
-        
+
         // Update each animation
         let mut completed_animations = Vec::new();
         let mut animations_to_update = Vec::new();
-        
+
         // Collect animations that need updating
         for (id, animation) in &self.animations {
             if animation.state == AnimationState::Running {
                 animations_to_update.push((id.clone(), animation.clone()));
             }
         }
-        
+
         // Update animations
         for (id, mut animation) in animations_to_update {
             self.update_animation(&mut animation, delta_time);
-            
+
             if animation.progress >= 1.0 {
                 animation.state = AnimationState::Completed;
                 completed_animations.push(id.clone());
             }
-            
+
             // Update the animation in the map
             if let Some(stored_animation) = self.animations.get_mut(&id) {
                 *stored_animation = animation;
             }
         }
-        
+
         // Remove completed animations
         for id in completed_animations {
             self.animations.remove(&id);
             self.stats.animations_completed += 1;
         }
-        
+
         // Update statistics
         self.update_stats(start_time, delta_time);
     }
@@ -301,12 +301,12 @@ impl AnimationSystem {
         // Calculate progress based on elapsed time
         let elapsed = animation.start_time.elapsed();
         let duration_secs = animation.duration.as_secs_f64();
-        
+
         animation.progress = (elapsed.as_secs_f64() / duration_secs).min(1.0);
-        
+
         // Apply easing function
         let eased_progress = self.apply_easing(animation.progress, &animation.easing);
-        
+
         // Update animation data based on type
         self.update_animation_data(animation, eased_progress);
     }
@@ -327,7 +327,9 @@ impl AnimationSystem {
             EasingFunction::Bounce => self.bounce_easing(progress),
             EasingFunction::Elastic => self.elastic_easing(progress),
             EasingFunction::Back => self.back_easing(progress),
-            EasingFunction::CubicBezier(x1, y1, x2, y2) => self.cubic_bezier_easing(progress, *x1, *y1, *x2, *y2),
+            EasingFunction::CubicBezier(x1, y1, x2, y2) => {
+                self.cubic_bezier_easing(progress, *x1, *y1, *x2, *y2)
+            }
         }
     }
 
@@ -372,25 +374,43 @@ impl AnimationSystem {
         let mt = 1.0 - t;
         let mt2 = mt * mt;
         let _mt3 = mt2 * mt;
-        
+
         3.0 * mt2 * t * y1 + 3.0 * mt * t2 * y2 + t3
     }
 
     /// Update animation data based on animation type
     fn update_animation_data(&mut self, animation: &mut Animation, eased_progress: f64) {
         match &mut animation.data {
-            AnimationData::Linear { start_value, end_value, current_value } => {
+            AnimationData::Linear {
+                start_value,
+                end_value,
+                current_value,
+            } => {
                 *current_value = *start_value + (*end_value - *start_value) * eased_progress;
             }
-            AnimationData::CameraMove { start_position, end_position, current_position } => {
-                current_position.x = start_position.x + (end_position.x - start_position.x) * eased_progress;
-                current_position.y = start_position.y + (end_position.y - start_position.y) * eased_progress;
-                current_position.z = start_position.z + (end_position.z - start_position.z) * eased_progress;
-                current_position.target_x = start_position.target_x + (end_position.target_x - start_position.target_x) * eased_progress;
-                current_position.target_y = start_position.target_y + (end_position.target_y - start_position.target_y) * eased_progress;
-                current_position.target_z = start_position.target_z + (end_position.target_z - start_position.target_z) * eased_progress;
+            AnimationData::CameraMove {
+                start_position,
+                end_position,
+                current_position,
+            } => {
+                current_position.x =
+                    start_position.x + (end_position.x - start_position.x) * eased_progress;
+                current_position.y =
+                    start_position.y + (end_position.y - start_position.y) * eased_progress;
+                current_position.z =
+                    start_position.z + (end_position.z - start_position.z) * eased_progress;
+                current_position.target_x = start_position.target_x
+                    + (end_position.target_x - start_position.target_x) * eased_progress;
+                current_position.target_y = start_position.target_y
+                    + (end_position.target_y - start_position.target_y) * eased_progress;
+                current_position.target_z = start_position.target_z
+                    + (end_position.target_z - start_position.target_z) * eased_progress;
             }
-            AnimationData::StatusTransition { from_status, to_status, current_status } => {
+            AnimationData::StatusTransition {
+                from_status,
+                to_status,
+                current_status,
+            } => {
                 // Status transitions are discrete, so we use a threshold
                 if eased_progress < 0.5 {
                     *current_status = from_status.clone();
@@ -398,19 +418,33 @@ impl AnimationSystem {
                     *current_status = to_status.clone();
                 }
             }
-            AnimationData::BuildingFade { start_opacity, end_opacity, current_opacity } => {
-                *current_opacity = *start_opacity + (*end_opacity - *start_opacity) * eased_progress;
+            AnimationData::BuildingFade {
+                start_opacity,
+                end_opacity,
+                current_opacity,
+            } => {
+                *current_opacity =
+                    *start_opacity + (*end_opacity - *start_opacity) * eased_progress;
             }
             AnimationData::ParticleEffect { intensity, .. } => {
                 *intensity = eased_progress;
             }
-            AnimationData::SelectionHighlight { highlight_intensity, pulse_rate, .. } => {
+            AnimationData::SelectionHighlight {
+                highlight_intensity,
+                pulse_rate,
+                ..
+            } => {
                 *highlight_intensity = (eased_progress * *pulse_rate).sin().abs();
             }
-            AnimationData::FloorTransition { transition_height, .. } => {
+            AnimationData::FloorTransition {
+                transition_height, ..
+            } => {
                 *transition_height = eased_progress * 10.0; // 10 units height transition
             }
-            AnimationData::ViewModeTransition { transition_progress, .. } => {
+            AnimationData::ViewModeTransition {
+                transition_progress,
+                ..
+            } => {
                 *transition_progress = eased_progress;
             }
         }
@@ -421,19 +455,25 @@ impl AnimationSystem {
         if self.animations.len() >= self.config.max_animations {
             return Err("Maximum animation limit reached".to_string());
         }
-        
+
         animation.start_time = Instant::now();
         animation.state = AnimationState::Running;
         animation.progress = 0.0;
-        
+
         self.animations.insert(animation.id.clone(), animation);
         self.stats.animations_created += 1;
-        
+
         Ok(())
     }
 
     /// Create and start a linear animation
-    pub fn animate_linear(&mut self, id: String, start_value: f64, end_value: f64, duration: Duration) -> Result<(), String> {
+    pub fn animate_linear(
+        &mut self,
+        id: String,
+        start_value: f64,
+        end_value: f64,
+        duration: Duration,
+    ) -> Result<(), String> {
         let animation = Animation {
             id,
             animation_type: AnimationType::Linear,
@@ -448,12 +488,18 @@ impl AnimationSystem {
                 current_value: start_value,
             },
         };
-        
+
         self.start_animation(animation)
     }
 
     /// Create and start a camera movement animation
-    pub fn animate_camera_move(&mut self, id: String, start_pos: CameraPosition, end_pos: CameraPosition, duration: Duration) -> Result<(), String> {
+    pub fn animate_camera_move(
+        &mut self,
+        id: String,
+        start_pos: CameraPosition,
+        end_pos: CameraPosition,
+        duration: Duration,
+    ) -> Result<(), String> {
         let animation = Animation {
             id,
             animation_type: AnimationType::CameraMove,
@@ -468,12 +514,18 @@ impl AnimationSystem {
                 current_position: start_pos,
             },
         };
-        
+
         self.start_animation(animation)
     }
 
     /// Create and start a status transition animation
-    pub fn animate_status_transition(&mut self, id: String, from_status: EquipmentStatus, to_status: EquipmentStatus, duration: Duration) -> Result<(), String> {
+    pub fn animate_status_transition(
+        &mut self,
+        id: String,
+        from_status: EquipmentStatus,
+        to_status: EquipmentStatus,
+        duration: Duration,
+    ) -> Result<(), String> {
         let animation = Animation {
             id,
             animation_type: AnimationType::StatusTransition,
@@ -488,7 +540,7 @@ impl AnimationSystem {
                 current_status: from_status,
             },
         };
-        
+
         self.start_animation(animation)
     }
 
@@ -540,7 +592,7 @@ impl AnimationSystem {
         self.stats.avg_update_time_ms = update_duration.as_secs_f64() * 1000.0;
         self.stats.active_animations = self.animations.len();
         self.stats.fps = 1.0 / delta_time;
-        
+
         // Update peak count
         if self.animations.len() > self.stats.peak_animation_count {
             self.stats.peak_animation_count = self.animations.len();
@@ -625,14 +677,10 @@ mod tests {
     #[test]
     fn test_linear_animation() {
         let mut system = AnimationSystem::new();
-        
-        let result = system.animate_linear(
-            "test".to_string(),
-            0.0,
-            100.0,
-            Duration::from_millis(100)
-        );
-        
+
+        let result =
+            system.animate_linear("test".to_string(), 0.0, 100.0, Duration::from_millis(100));
+
         assert!(result.is_ok());
         assert_eq!(system.animation_count(), 1);
     }
@@ -640,17 +688,14 @@ mod tests {
     #[test]
     fn test_animation_update() {
         let mut system = AnimationSystem::new();
-        
-        system.animate_linear(
-            "test".to_string(),
-            0.0,
-            100.0,
-            Duration::from_millis(100)
-        ).unwrap();
-        
+
+        system
+            .animate_linear("test".to_string(), 0.0, 100.0, Duration::from_millis(100))
+            .unwrap();
+
         // Update with 50ms delta time
         system.update(0.05);
-        
+
         let animation = system.get_animation("test").unwrap();
         assert!(animation.progress > 0.0);
     }
@@ -658,14 +703,14 @@ mod tests {
     #[test]
     fn test_easing_functions() {
         let system = AnimationSystem::new();
-        
+
         // Test linear easing
         assert_eq!(system.apply_easing(0.5, &EasingFunction::Linear), 0.5);
-        
+
         // Test ease-in
         let ease_in = system.apply_easing(0.5, &EasingFunction::EaseIn);
         assert!(ease_in < 0.5);
-        
+
         // Test ease-out
         let ease_out = system.apply_easing(0.5, &EasingFunction::EaseOut);
         assert!(ease_out > 0.5);
@@ -674,14 +719,11 @@ mod tests {
     #[test]
     fn test_animation_cancellation() {
         let mut system = AnimationSystem::new();
-        
-        system.animate_linear(
-            "test".to_string(),
-            0.0,
-            100.0,
-            Duration::from_millis(100)
-        ).unwrap();
-        
+
+        system
+            .animate_linear("test".to_string(), 0.0, 100.0, Duration::from_millis(100))
+            .unwrap();
+
         assert!(system.cancel_animation("test"));
         assert!(!system.cancel_animation("nonexistent"));
     }
@@ -689,24 +731,32 @@ mod tests {
     #[test]
     fn test_camera_position() {
         let pos1 = CameraPosition {
-            x: 0.0, y: 0.0, z: 0.0,
-            target_x: 0.0, target_y: 0.0, target_z: 0.0,
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            target_x: 0.0,
+            target_y: 0.0,
+            target_z: 0.0,
         };
-        
+
         let pos2 = CameraPosition {
-            x: 10.0, y: 10.0, z: 10.0,
-            target_x: 5.0, target_y: 5.0, target_z: 5.0,
+            x: 10.0,
+            y: 10.0,
+            z: 10.0,
+            target_x: 5.0,
+            target_y: 5.0,
+            target_z: 5.0,
         };
-        
+
         let mut system = AnimationSystem::new();
-        
+
         let result = system.animate_camera_move(
             "camera_test".to_string(),
             pos1,
             pos2,
-            Duration::from_millis(100)
+            Duration::from_millis(100),
         );
-        
+
         assert!(result.is_ok());
     }
 }

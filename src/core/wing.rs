@@ -1,9 +1,9 @@
 //! Wing data structure and implementation
 
+use super::{Equipment, Room};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use std::collections::HashMap;
-use super::{Room, Equipment};
+use uuid::Uuid;
 
 /// Represents a wing on a floor
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,20 +25,19 @@ impl Wing {
             properties: HashMap::new(),
         }
     }
-    
+
     /// Add a room to the wing
     pub fn add_room(&mut self, room: Room) {
         self.rooms.push(room);
     }
-    
+
     /// Find a room by name
     pub fn find_room(&self, name: &str) -> Option<&Room> {
         self.rooms.iter().find(|r| r.name == name)
     }
-    
+
     /// Find a room by name (mutable)
     pub fn find_room_mut(&mut self, name: &str) -> Option<&mut Room> {
         self.rooms.iter_mut().find(|r| r.name == name)
     }
 }
-

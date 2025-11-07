@@ -4,17 +4,17 @@
 //! The primary interface is `BuildingGitManager`, which provides comprehensive Git operations
 //! including commits, diffs, history, and branch management.
 
-pub mod manager;
-pub mod repository;
-pub mod export;
 pub mod commit;
 pub mod diff;
+pub mod export;
+pub mod manager;
+pub mod repository;
 pub mod staging;
 
 // Re-export types and main manager
-pub use manager::*;
+pub use diff::{CommitInfo, DiffLineType, DiffResult, DiffStats, FileDiff, GitStatus};
 pub use manager::CommitMetadata;
-pub use diff::{GitStatus, CommitInfo, DiffResult, FileDiff, DiffLineType, DiffStats};
+pub use manager::*;
 
 /// Legacy Git client wrapper (deprecated)
 ///
@@ -45,7 +45,9 @@ pub use diff::{GitStatus, CommitInfo, DiffResult, FileDiff, DiffLineType, DiffSt
 /// let mut manager = BuildingGitManager::new("path/to/repo", "building", config)?;
 /// // ... use manager methods ...
 /// ```
-#[deprecated(note = "Use BuildingGitManager instead. This type will be removed in a future version.")]
+#[deprecated(
+    note = "Use BuildingGitManager instead. This type will be removed in a future version."
+)]
 #[allow(dead_code)]
 pub(crate) struct GitClient {
     repository: git2::Repository,
@@ -74,7 +76,7 @@ impl GitClient {
         let repository = git2::Repository::open(repo_path)?;
         Ok(Self { repository })
     }
-    
+
     /// Write a file to the repository working directory
     ///
     /// # Arguments
@@ -92,22 +94,26 @@ impl GitClient {
     /// - The repository is a bare repository (no working directory)
     /// - The file path is invalid
     /// - The file cannot be written
-    #[deprecated(note = "Use BuildingGitManager::export_building() or BuildingGitManager::stage_file() instead")]
+    #[deprecated(
+        note = "Use BuildingGitManager::export_building() or BuildingGitManager::stage_file() instead"
+    )]
     pub fn write_file(&self, path: &str, content: &str) -> Result<(), Box<dyn std::error::Error>> {
         // Fix: Use workdir() instead of path() to write to working directory, not .git/
-        let workdir = self.repository.workdir()
+        let workdir = self
+            .repository
+            .workdir()
             .ok_or_else(|| "Repository is bare (no working directory)".to_string())?;
         let file_path = workdir.join(path);
-        
+
         // Create parent directories if needed
         if let Some(parent) = file_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        
+
         std::fs::write(&file_path, content)?;
         Ok(())
     }
-    
+
     /// Commit all changes in the repository
     ///
     /// # Arguments
@@ -123,20 +129,22 @@ impl GitClient {
     /// Returns an error if:
     /// - Git operations fail
     /// - The repository is in an invalid state
-    #[deprecated(note = "Use BuildingGitManager::commit_staged() or BuildingGitManager::commit_staged_with_user() instead")]
+    #[deprecated(
+        note = "Use BuildingGitManager::commit_staged() or BuildingGitManager::commit_staged_with_user() instead"
+    )]
     pub fn commit(&self, message: &str) -> Result<(), Box<dyn std::error::Error>> {
         let mut index = self.repository.index()?;
         index.add_all(["*"], git2::IndexAddOption::DEFAULT, None)?;
         index.write()?;
-        
+
         let tree_id = index.write_tree()?;
         let tree = self.repository.find_tree(tree_id)?;
-        
+
         // Use default Git config for consistency
         use crate::git::GitConfigManager;
         let config = GitConfigManager::default_config();
         let signature = git2::Signature::now(&config.author_name, &config.author_email)?;
-        
+
         // Handle initial commit (no HEAD) or detached HEAD gracefully
         let parents: Vec<git2::Commit> = match self.repository.head() {
             Ok(head) => {
@@ -151,9 +159,9 @@ impl GitClient {
             }
             Err(_) => vec![], // No HEAD, initial commit
         };
-        
+
         let parent_refs: Vec<&git2::Commit> = parents.iter().collect();
-        
+
         self.repository.commit(
             Some("HEAD"),
             &signature,
@@ -162,7 +170,7 @@ impl GitClient {
             &tree,
             &parent_refs,
         )?;
-        
+
         Ok(())
     }
 }

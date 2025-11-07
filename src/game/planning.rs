@@ -3,17 +3,17 @@
 //! Interactive planning mode where users can place equipment in 3D space with
 //! real-time constraint validation. Plans can be exported as PRs for review.
 
+use crate::core::{Equipment, EquipmentType, Position};
+use crate::game::constraints::ConstraintSystem;
+use crate::game::scenario::GameScenarioLoader;
+use crate::game::state::GameState;
+use crate::game::types::{GameAction, GameEquipmentPlacement, GameMode, ValidationResult};
+use crate::spatial::Point3D;
+use crate::utils::loading::load_building_data;
+use crate::yaml::BuildingData;
+use log::{info, warn};
 use std::collections::HashMap;
 use std::path::Path;
-use crate::game::types::{GameMode, GameEquipmentPlacement, GameAction, ValidationResult};
-use crate::game::scenario::GameScenarioLoader;
-use crate::game::constraints::ConstraintSystem;
-use crate::game::state::GameState;
-use crate::core::{Equipment, EquipmentType, Position};
-use crate::spatial::Point3D;
-use crate::yaml::BuildingData;
-use crate::utils::loading::load_building_data;
-use log::{info, warn};
 
 /// Planning game for interactive equipment placement
 pub struct PlanningGame {
@@ -119,10 +119,9 @@ impl PlanningGame {
         };
 
         // Validate placement
-        placement.constraint_validation = self.constraint_system.validate_placement(
-            &placement,
-            &self.game_state,
-        );
+        placement.constraint_validation = self
+            .constraint_system
+            .validate_placement(&placement, &self.game_state);
 
         // Add to game state
         let equipment_id_clone = placement.equipment.id.clone();
@@ -135,7 +134,10 @@ impl PlanningGame {
             timestamp: std::time::Instant::now(),
         });
 
-        info!("Equipment '{}' placed with ID: {}", name, equipment_id_clone);
+        info!(
+            "Equipment '{}' placed with ID: {}",
+            name, equipment_id_clone
+        );
 
         Ok(equipment_id_clone)
     }
@@ -146,9 +148,13 @@ impl PlanningGame {
         equipment_id: &str,
         new_position: Point3D,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        info!("Moving equipment '{}' to position {:?}", equipment_id, new_position);
+        info!(
+            "Moving equipment '{}' to position {:?}",
+            equipment_id, new_position
+        );
 
-        let placement = self.game_state
+        let placement = self
+            .game_state
             .find_placement_by_id(equipment_id)
             .ok_or_else(|| format!("Equipment not found: {}", equipment_id))?;
 
@@ -166,14 +172,17 @@ impl PlanningGame {
         updated_placement.game_action = GameAction::Modified;
 
         // Re-validate
-        updated_placement.constraint_validation = self.constraint_system.validate_placement(
-            &updated_placement,
-            &self.game_state,
-        );
+        updated_placement.constraint_validation = self
+            .constraint_system
+            .validate_placement(&updated_placement, &self.game_state);
 
         // Find index and update
-        if let Some(index) = self.game_state.placements.iter()
-            .position(|p| p.equipment.id == equipment_id) {
+        if let Some(index) = self
+            .game_state
+            .placements
+            .iter()
+            .position(|p| p.equipment.id == equipment_id)
+        {
             self.game_state.update_placement(index, updated_placement)?;
         } else {
             return Err(format!("Equipment not found in placements: {}", equipment_id).into());
@@ -191,10 +200,14 @@ impl PlanningGame {
     }
 
     /// Remove equipment from planning
-    pub fn remove_equipment(&mut self, equipment_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn remove_equipment(
+        &mut self,
+        equipment_id: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         info!("Removing equipment '{}'", equipment_id);
 
-        let placement = self.game_state
+        let placement = self
+            .game_state
             .find_placement_by_id(equipment_id)
             .ok_or_else(|| format!("Equipment not found: {}", equipment_id))?;
 
@@ -205,8 +218,12 @@ impl PlanningGame {
         );
 
         // Remove from game state
-        if let Some(index) = self.game_state.placements.iter()
-            .position(|p| p.equipment.id == equipment_id) {
+        if let Some(index) = self
+            .game_state
+            .placements
+            .iter()
+            .position(|p| p.equipment.id == equipment_id)
+        {
             self.game_state.remove_placement(index)?;
         } else {
             return Err(format!("Equipment not found in placements: {}", equipment_id).into());
@@ -225,13 +242,16 @@ impl PlanningGame {
     /// Get validation summary for current plan
     pub fn get_validation_summary(&self) -> PlanningValidationSummary {
         let stats = self.game_state.get_stats();
-        
+
         PlanningValidationSummary {
             total_placements: stats.total_placements,
             valid_placements: stats.valid_placements,
             invalid_placements: stats.total_placements - stats.valid_placements,
             total_violations: stats.violations,
-            critical_violations: self.game_state.placements.iter()
+            critical_violations: self
+                .game_state
+                .placements
+                .iter()
                 .flat_map(|p| &p.constraint_validation.violations)
                 .filter(|v| v.severity == crate::game::types::ConstraintSeverity::Critical)
                 .count(),
@@ -256,20 +276,41 @@ impl PlanningGame {
         use serde_json::Value as JsonValue;
         let metadata_obj: HashMap<String, JsonValue> = {
             let mut map = HashMap::new();
-            map.insert("pr_id".to_string(), JsonValue::String(self.planning_session_id.clone()));
-            map.insert("building".to_string(), JsonValue::String(self.building_data.building.name.clone()));
-            map.insert("title".to_string(), JsonValue::String(title.unwrap_or_else(|| "Planning Session".to_string())));
+            map.insert(
+                "pr_id".to_string(),
+                JsonValue::String(self.planning_session_id.clone()),
+            );
+            map.insert(
+                "building".to_string(),
+                JsonValue::String(self.building_data.building.name.clone()),
+            );
+            map.insert(
+                "title".to_string(),
+                JsonValue::String(title.unwrap_or_else(|| "Planning Session".to_string())),
+            );
             if let Some(desc) = description {
                 map.insert("description".to_string(), JsonValue::String(desc));
             }
-            map.insert("created_at".to_string(), JsonValue::String(chrono::Utc::now().to_rfc3339()));
-            map.insert("mode".to_string(), JsonValue::String("planning".to_string()));
-            map.insert("total_items".to_string(), JsonValue::Number(serde_json::Number::from(self.game_state.placements.len())));
-            map.insert("session_stats".to_string(), serde_json::json!({
-                "score": self.game_state.score,
-                "progress": self.game_state.progress,
-                "constraints_validated": self.game_state.constraints_validated,
-            }));
+            map.insert(
+                "created_at".to_string(),
+                JsonValue::String(chrono::Utc::now().to_rfc3339()),
+            );
+            map.insert(
+                "mode".to_string(),
+                JsonValue::String("planning".to_string()),
+            );
+            map.insert(
+                "total_items".to_string(),
+                JsonValue::Number(serde_json::Number::from(self.game_state.placements.len())),
+            );
+            map.insert(
+                "session_stats".to_string(),
+                serde_json::json!({
+                    "score": self.game_state.score,
+                    "progress": self.game_state.progress,
+                    "constraints_validated": self.game_state.constraints_validated,
+                }),
+            );
             map
         };
         let metadata = serde_yaml::to_string(&metadata_obj)?;
@@ -305,7 +346,10 @@ impl PlanningGame {
                 })
             }).collect::<Vec<_>>()
         });
-        std::fs::write(pr_dir.join("markup.json"), serde_json::to_string_pretty(&markup)?)?;
+        std::fs::write(
+            pr_dir.join("markup.json"),
+            serde_json::to_string_pretty(&markup)?,
+        )?;
 
         // Create README.md
         let summary = self.get_validation_summary();
@@ -338,7 +382,9 @@ impl PlanningGame {
             summary.total_violations,
             summary.critical_violations,
             summary.score,
-            self.game_state.placements.iter()
+            self.game_state
+                .placements
+                .iter()
                 .map(|p| format!(
                     "- **{}** ({:?}) at ({:.2}, {:.2}, {:.2}) - {}\n",
                     p.equipment.name,
@@ -346,7 +392,11 @@ impl PlanningGame {
                     p.equipment.position.x,
                     p.equipment.position.y,
                     p.equipment.position.z,
-                    if p.constraint_validation.is_valid { "✅ Valid" } else { "❌ Invalid" }
+                    if p.constraint_validation.is_valid {
+                        "✅ Valid"
+                    } else {
+                        "❌ Invalid"
+                    }
                 ))
                 .collect::<String>()
         );
@@ -393,4 +443,3 @@ pub struct PlanningValidationSummary {
     pub warnings: usize,
     pub score: u32,
 }
-

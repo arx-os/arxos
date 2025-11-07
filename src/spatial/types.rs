@@ -16,7 +16,11 @@ impl Point3D {
     }
 
     pub fn origin() -> Self {
-        Self { x: 0.0, y: 0.0, z: 0.0 }
+        Self {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }
     }
 
     /// Calculate distance to another point
@@ -178,7 +182,7 @@ mod tests {
             Point3D::new(1.0, 1.0, 1.0),
             Point3D::new(-1.0, -1.0, -1.0),
         ];
-        
+
         let bbox = BoundingBox3D::from_points(&points).unwrap();
         assert_eq!(bbox.min, Point3D::new(-1.0, -1.0, -1.0));
         assert_eq!(bbox.max, Point3D::new(1.0, 1.0, 1.0));
@@ -192,7 +196,7 @@ mod tests {
             "HVAC".to_string(),
             Point3D::new(10.0, 20.0, 30.0),
         );
-        
+
         assert_eq!(entity.id, "test-1");
         assert_eq!(entity.position, Point3D::new(10.0, 20.0, 30.0));
     }

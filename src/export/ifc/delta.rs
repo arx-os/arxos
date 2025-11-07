@@ -1,16 +1,16 @@
 //! Delta Calculation for IFC Export
-//! 
+//!
 //! Calculates changes between current BuildingData and last sync state
 //! to enable incremental exports.
 //!
 //! **Note:** Uses deprecated types (EquipmentData, RoomData) for backward compatibility
 //! with IFC export format. These will be migrated in a future update.
 
+use super::sync_state::IFCSyncState;
 #[allow(deprecated)]
 use crate::yaml::{BuildingData, EquipmentData, RoomData};
-use super::sync_state::IFCSyncState;
-use std::collections::HashSet;
 use log::info;
+use std::collections::HashSet;
 
 /// Export delta containing new, updated, and deleted entities
 ///
@@ -74,11 +74,11 @@ impl Default for ExportDelta {
 }
 
 /// Calculate export delta between current building data and last sync state
-/// 
+///
 /// # Arguments
 /// * `current` - Current BuildingData
 /// * `last_state` - Last sync state (if available)
-/// 
+///
 /// # Returns
 /// * ExportDelta containing all changes
 #[allow(deprecated)]
@@ -94,7 +94,9 @@ pub fn calculate_delta(current: &BuildingData, last_state: Option<&IFCSyncState>
             use crate::yaml::conversions::{equipment_to_equipment_data, room_to_room_data};
             for floor in &current.floors {
                 for equipment in &floor.equipment {
-                    delta.new_equipment.push(equipment_to_equipment_data(equipment));
+                    delta
+                        .new_equipment
+                        .push(equipment_to_equipment_data(equipment));
                 }
                 for wing in &floor.wings {
                     for room in &wing.rooms {
@@ -109,13 +111,17 @@ pub fn calculate_delta(current: &BuildingData, last_state: Option<&IFCSyncState>
     // Collect all current Universal Paths
     let mut current_equipment_paths = HashSet::new();
     let mut current_rooms_paths = HashSet::new();
-    let mut equipment_by_path: std::collections::HashMap<String, EquipmentData> = std::collections::HashMap::new();
-    let mut rooms_by_path: std::collections::HashMap<String, RoomData> = std::collections::HashMap::new();
+    let mut equipment_by_path: std::collections::HashMap<String, EquipmentData> =
+        std::collections::HashMap::new();
+    let mut rooms_by_path: std::collections::HashMap<String, RoomData> =
+        std::collections::HashMap::new();
 
     for floor in &current.floors {
         use crate::yaml::conversions::equipment_to_equipment_data;
         for equipment in &floor.equipment {
-            let path = equipment.address.as_ref()
+            let path = equipment
+                .address
+                .as_ref()
                 .map(|addr| addr.path.clone())
                 .filter(|p| !p.is_empty())
                 .or_else(|| {
@@ -128,7 +134,7 @@ pub fn calculate_delta(current: &BuildingData, last_state: Option<&IFCSyncState>
                 .unwrap_or_else(|| {
                     format!("building/floor-{}/equipment-{}", floor.level, equipment.id)
                 });
-            
+
             current_equipment_paths.insert(path.clone());
             let equipment_data = equipment_to_equipment_data(equipment);
             equipment_by_path.insert(path.clone(), equipment_data);
@@ -137,12 +143,12 @@ pub fn calculate_delta(current: &BuildingData, last_state: Option<&IFCSyncState>
         use crate::yaml::conversions::room_to_room_data;
         for wing in &floor.wings {
             for room in &wing.rooms {
-                let path = room.properties.get("universal_path")
+                let path = room
+                    .properties
+                    .get("universal_path")
                     .cloned()
-                    .unwrap_or_else(|| {
-                        format!("building/floor-{}/room-{}", floor.level, room.id)
-                    });
-                
+                    .unwrap_or_else(|| format!("building/floor-{}/room-{}", floor.level, room.id));
+
                 current_rooms_paths.insert(path.clone());
                 let room_data = room_to_room_data(room);
                 rooms_by_path.insert(path.clone(), room_data);
@@ -221,9 +227,11 @@ pub fn calculate_delta(current: &BuildingData, last_state: Option<&IFCSyncState>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::yaml::{BuildingInfo, BuildingMetadata};
-    use crate::core::{Floor, Equipment, EquipmentType, EquipmentStatus, EquipmentHealthStatus, Position};
+    use crate::core::{
+        Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType, Floor, Position,
+    };
     use crate::spatial::Point3D;
+    use crate::yaml::{BuildingInfo, BuildingMetadata};
     use chrono::Utc;
 
     fn create_test_building_data() -> BuildingData {
@@ -246,37 +254,33 @@ mod tests {
                 units: "meters".to_string(),
                 tags: vec![],
             },
-            floors: vec![
-                Floor {
-                    id: "floor-1".to_string(),
-                    name: "Floor 1".to_string(),
-                    level: 1,
-                    elevation: Some(0.0),
-                    bounding_box: None,
-                    wings: vec![],
-                    equipment: vec![
-                        Equipment {
-                            id: "equipment-1".to_string(),
-                            name: "Equipment 1".to_string(),
-                            path: "building/floor-1/equipment-1".to_string(),
-                            address: None,
-                            equipment_type: EquipmentType::HVAC,
-                            position: Position {
-                                x: 1.0,
-                                y: 1.0,
-                                z: 1.0,
-                                coordinate_system: "LOCAL".to_string(),
-                            },
-                            properties: std::collections::HashMap::new(),
-                            status: EquipmentStatus::Active,
-                            health_status: Some(EquipmentHealthStatus::Healthy),
-                            room_id: None,
-                            sensor_mappings: None,
-                        }
-                    ],
+            floors: vec![Floor {
+                id: "floor-1".to_string(),
+                name: "Floor 1".to_string(),
+                level: 1,
+                elevation: Some(0.0),
+                bounding_box: None,
+                wings: vec![],
+                equipment: vec![Equipment {
+                    id: "equipment-1".to_string(),
+                    name: "Equipment 1".to_string(),
+                    path: "building/floor-1/equipment-1".to_string(),
+                    address: None,
+                    equipment_type: EquipmentType::HVAC,
+                    position: Position {
+                        x: 1.0,
+                        y: 1.0,
+                        z: 1.0,
+                        coordinate_system: "LOCAL".to_string(),
+                    },
                     properties: std::collections::HashMap::new(),
-                }
-            ],
+                    status: EquipmentStatus::Active,
+                    health_status: Some(EquipmentHealthStatus::Healthy),
+                    room_id: None,
+                    sensor_mappings: None,
+                }],
+                properties: std::collections::HashMap::new(),
+            }],
             coordinate_systems: vec![],
         }
     }
@@ -285,7 +289,7 @@ mod tests {
     fn test_calculate_delta_no_previous_state() {
         let building_data = create_test_building_data();
         let delta = calculate_delta(&building_data, None);
-        
+
         assert_eq!(delta.new_equipment.len(), 1);
         assert_eq!(delta.new_rooms.len(), 0);
         assert!(delta.has_changes());
@@ -295,17 +299,17 @@ mod tests {
     fn test_calculate_delta_with_previous_state() {
         let building_data = create_test_building_data();
         let mut sync_state = IFCSyncState::new(std::path::PathBuf::from("test.ifc"));
-        
+
         // Empty previous state - everything should be new
         let delta = calculate_delta(&building_data, Some(&sync_state));
         assert_eq!(delta.new_equipment.len(), 1);
-        
+
         // Update state with current equipment
-        let equipment_paths: HashSet<String> = [
-            "building/floor-1/equipment-1".to_string(),
-        ].into_iter().collect();
+        let equipment_paths: HashSet<String> = ["building/floor-1/equipment-1".to_string()]
+            .into_iter()
+            .collect();
         sync_state.update_after_export(equipment_paths, HashSet::new());
-        
+
         // Calculate delta again - should have no new equipment
         let delta2 = calculate_delta(&building_data, Some(&sync_state));
         assert_eq!(delta2.new_equipment.len(), 0);
@@ -315,9 +319,13 @@ mod tests {
     fn test_export_delta_has_changes() {
         let mut delta = ExportDelta::new();
         assert!(!delta.has_changes());
-        
+
         let equipment = create_test_building_data().floors[0].equipment[0].clone();
-        delta.new_equipment.push(crate::yaml::conversions::equipment_to_equipment_data(&equipment));
+        delta
+            .new_equipment
+            .push(crate::yaml::conversions::equipment_to_equipment_data(
+                &equipment,
+            ));
         assert!(delta.has_changes());
     }
 
@@ -325,15 +333,23 @@ mod tests {
     fn test_export_delta_total_changes() {
         let mut delta = ExportDelta::new();
         assert_eq!(delta.total_changes(), 0);
-        
+
         let test_data = create_test_building_data();
         let equipment = &test_data.floors[0].equipment[0];
-        delta.new_equipment.push(crate::yaml::conversions::equipment_to_equipment_data(equipment));
-        delta.updated_equipment.push(crate::yaml::conversions::equipment_to_equipment_data(equipment));
+        delta
+            .new_equipment
+            .push(crate::yaml::conversions::equipment_to_equipment_data(
+                equipment,
+            ));
+        delta
+            .updated_equipment
+            .push(crate::yaml::conversions::equipment_to_equipment_data(
+                equipment,
+            ));
         delta.deleted_equipment.push("path1".to_string());
         // Note: create_test_building_data has no rooms, so we'll use deleted_rooms instead
         delta.deleted_rooms.push("path2".to_string());
-        
+
         // Should have 4 changes: new equipment, updated equipment, deleted equipment, deleted room
         assert_eq!(delta.total_changes(), 4);
     }
@@ -341,21 +357,25 @@ mod tests {
     #[test]
     fn test_calculate_delta_deleted_equipment() {
         let mut sync_state = IFCSyncState::new(std::path::PathBuf::from("test.ifc"));
-        
+
         // Set up state with some equipment
         let old_equipment_paths: HashSet<String> = [
             "building/floor-1/equipment-1".to_string(),
             "building/floor-1/equipment-2".to_string(),
-        ].into_iter().collect();
+        ]
+        .into_iter()
+        .collect();
         sync_state.update_after_export(old_equipment_paths, HashSet::new());
-        
+
         // Create building data with only one equipment (one deleted)
         let building_data = create_test_building_data();
         let delta = calculate_delta(&building_data, Some(&sync_state));
-        
+
         // Should detect one deleted equipment
         assert_eq!(delta.deleted_equipment.len(), 1);
-        assert!(delta.deleted_equipment.contains(&"building/floor-1/equipment-2".to_string()));
+        assert!(delta
+            .deleted_equipment
+            .contains(&"building/floor-1/equipment-2".to_string()));
     }
 
     #[test]
@@ -382,11 +402,10 @@ mod tests {
             floors: vec![],
             coordinate_systems: vec![],
         };
-        
+
         let delta = calculate_delta(&building_data, None);
         assert_eq!(delta.new_equipment.len(), 0);
         assert_eq!(delta.new_rooms.len(), 0);
         assert!(!delta.has_changes());
     }
 }
-

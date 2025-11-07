@@ -81,20 +81,28 @@
 //! }
 //! ```
 
+pub mod json_helpers;
 pub mod pending;
 pub mod processing;
-pub mod json_helpers;
 
+use crate::core::{
+    BoundingBox, Dimensions, Equipment, EquipmentStatus, EquipmentType, Position, RoomType,
+    SpatialProperties,
+};
+use crate::spatial::{BoundingBox3D, Point3D};
 use crate::yaml::BuildingData;
-use crate::core::{Equipment, RoomType, EquipmentType, EquipmentStatus, SpatialProperties, Position, Dimensions, BoundingBox};
-use crate::spatial::{Point3D, BoundingBox3D};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use log::{info, warn};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
-pub use pending::{PendingEquipment, PendingStatus, PendingEquipmentManager, DetectedEquipmentInfo};
-pub use processing::{process_ar_scan_to_pending, validate_ar_scan_data, pending_equipment_to_json, pending_equipment_from_json, process_ar_scan_and_save_pending};
+pub use pending::{
+    DetectedEquipmentInfo, PendingEquipment, PendingEquipmentManager, PendingStatus,
+};
+pub use processing::{
+    pending_equipment_from_json, pending_equipment_to_json, process_ar_scan_and_save_pending,
+    process_ar_scan_to_pending, validate_ar_scan_data,
+};
 
 /// AR scan data structure from mobile applications
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -201,20 +209,26 @@ impl ARDataIntegrator {
     }
 
     /// Integrate AR scan data into building data
-    pub fn integrate_ar_scan(&mut self, scan_data: ARScanData) -> Result<IntegrationResult, Box<dyn std::error::Error>> {
-        info!("Integrating AR scan: {} for room: {}", scan_data.scan_id, scan_data.room_name);
-        
+    pub fn integrate_ar_scan(
+        &mut self,
+        scan_data: ARScanData,
+    ) -> Result<IntegrationResult, Box<dyn std::error::Error>> {
+        info!(
+            "Integrating AR scan: {} for room: {}",
+            scan_data.scan_id, scan_data.room_name
+        );
+
         let mut equipment_added = 0;
         let mut equipment_updated = 0;
         let mut rooms_updated = 0;
         let mut conflicts_resolved = 0;
-        
+
         // Find or create the floor
         let floor_index = self.find_or_create_floor(scan_data.floor_level)?;
-        
+
         // Find or create the room
         let room_index = self.find_or_create_room(floor_index, &scan_data.room_name)?;
-        
+
         // Integrate detected equipment
         for detected_equipment in &scan_data.detected_equipment {
             match self.integrate_equipment(floor_index, room_index, detected_equipment.clone()) {
@@ -222,20 +236,23 @@ impl ARDataIntegrator {
                 Ok(IntegrationAction::Updated) => equipment_updated += 1,
                 Ok(IntegrationAction::ConflictResolved) => conflicts_resolved += 1,
                 Err(e) => {
-                    warn!("Failed to integrate equipment {}: {}", detected_equipment.name, e);
+                    warn!(
+                        "Failed to integrate equipment {}: {}",
+                        detected_equipment.name, e
+                    );
                 }
             }
         }
-        
+
         // Update room boundaries if provided
         if let Some(ref boundaries) = scan_data.room_boundaries {
             self.update_room_boundaries(floor_index, room_index, boundaries.clone())?;
             rooms_updated += 1;
         }
-        
+
         // Update building metadata
         self.update_building_metadata(&scan_data);
-        
+
         let result = IntegrationResult {
             scan_id: scan_data.scan_id,
             equipment_added,
@@ -244,36 +261,50 @@ impl ARDataIntegrator {
             conflicts_resolved,
             integration_timestamp: Utc::now(),
         };
-        
+
         info!("AR scan integration completed: {:?}", result);
         Ok(result)
     }
 
     /// Find or create floor
-    fn find_or_create_floor(&mut self, floor_level: i32) -> Result<usize, Box<dyn std::error::Error>> {
+    fn find_or_create_floor(
+        &mut self,
+        floor_level: i32,
+    ) -> Result<usize, Box<dyn std::error::Error>> {
         // Look for existing floor
-        if let Some(index) = self.building_data.floors.iter().position(|f| f.level == floor_level) {
+        if let Some(index) = self
+            .building_data
+            .floors
+            .iter()
+            .position(|f| f.level == floor_level)
+        {
             return Ok(index);
         }
-        
+
         // Create new floor using core type
         use crate::core::Floor;
         let mut new_floor = Floor::new(format!("Floor {}", floor_level), floor_level);
         new_floor.elevation = Some((floor_level as f64) * 3.0); // Assume 3m per floor
-        
+
         self.building_data.floors.push(new_floor);
         Ok(self.building_data.floors.len() - 1)
     }
 
     /// Find or create room
-    fn find_or_create_room(&mut self, floor_index: usize, room_name: &str) -> Result<usize, Box<dyn std::error::Error>> {
+    fn find_or_create_room(
+        &mut self,
+        floor_index: usize,
+        room_name: &str,
+    ) -> Result<usize, Box<dyn std::error::Error>> {
         let floor = &mut self.building_data.floors[floor_index];
-        
+
         // Collect all rooms from wings
-        let all_rooms: Vec<&Room> = floor.wings.iter()
+        let all_rooms: Vec<&Room> = floor
+            .wings
+            .iter()
             .flat_map(|wing| wing.rooms.iter())
             .collect();
-        
+
         // Look for existing room
         if let Some(index) = all_rooms.iter().position(|r| r.name == room_name) {
             // Find which wing contains this room
@@ -285,7 +316,7 @@ impl ARDataIntegrator {
                 room_idx += wing.rooms.len();
             }
         }
-        
+
         // Create new room using core type
         use crate::core::Room;
         let elevation = floor.elevation.unwrap_or(floor.level as f64 * 3.0);
@@ -326,7 +357,7 @@ impl ARDataIntegrator {
             created_at: Some(Utc::now()),
             updated_at: Some(Utc::now()),
         };
-        
+
         // Add to default wing
         use crate::core::Wing;
         if floor.wings.is_empty() {
@@ -350,42 +381,55 @@ impl ARDataIntegrator {
             z: detected_equipment.position.z,
             coordinate_system: "building_local".to_string(),
         };
-        
+
         // Check if equipment already exists and get its position before mutable borrow
         let existing_position_opt = self.building_data.floors[floor_index]
             .equipment
             .iter()
             .find(|e| e.name == detected_equipment.name)
             .map(|e| e.position.clone());
-        
+
         // Calculate position difference before mutable borrow if equipment exists
-        let position_diff_opt = existing_position_opt.as_ref()
-            .map(|existing_pos| self.calculate_position_difference_core(existing_pos, &detected_pos));
-        
+        let position_diff_opt = existing_position_opt.as_ref().map(|existing_pos| {
+            self.calculate_position_difference_core(existing_pos, &detected_pos)
+        });
+
         let floor = &mut self.building_data.floors[floor_index];
-        
+
         // Check if equipment already exists
-        if let Some(existing_index) = floor.equipment.iter().position(|e| e.name == detected_equipment.name) {
+        if let Some(existing_index) = floor
+            .equipment
+            .iter()
+            .position(|e| e.name == detected_equipment.name)
+        {
             // Get position difference we calculated before the mutable borrow
-            let position_diff = position_diff_opt.expect("Position diff should exist if equipment found");
-            
+            let position_diff =
+                position_diff_opt.expect("Position diff should exist if equipment found");
+
             // Update existing equipment
             let existing_equipment = &mut floor.equipment[existing_index];
-            
-            if position_diff > 1.0 { // More than 1 meter difference
-                warn!("Position conflict for equipment {}: existing={:?}, detected={:?}", 
-                    detected_equipment.name, existing_equipment.position, detected_pos);
-                
+
+            if position_diff > 1.0 {
+                // More than 1 meter difference
+                warn!(
+                    "Position conflict for equipment {}: existing={:?}, detected={:?}",
+                    detected_equipment.name, existing_equipment.position, detected_pos
+                );
+
                 // Use AR data if confidence is high
                 if detected_equipment.confidence > 0.8 {
                     existing_equipment.position = detected_pos;
-                    existing_equipment.properties.insert("last_ar_update".to_string(), Utc::now().to_rfc3339());
+                    existing_equipment
+                        .properties
+                        .insert("last_ar_update".to_string(), Utc::now().to_rfc3339());
                     return Ok(IntegrationAction::ConflictResolved);
                 }
             } else {
                 // Update with AR data
                 existing_equipment.position = detected_pos;
-                existing_equipment.properties.insert("last_ar_update".to_string(), Utc::now().to_rfc3339());
+                existing_equipment
+                    .properties
+                    .insert("last_ar_update".to_string(), Utc::now().to_rfc3339());
                 return Ok(IntegrationAction::Updated);
             }
         } else {
@@ -393,7 +437,7 @@ impl ARDataIntegrator {
             let equipment_name = detected_equipment.name.clone();
             let equipment_id = detected_equipment.id.clone();
             let equipment_type_str = detected_equipment.equipment_type.clone();
-            
+
             let equipment_type_enum = match equipment_type_str.as_str() {
                 "HVAC" => EquipmentType::HVAC,
                 "ELECTRICAL" => EquipmentType::Electrical,
@@ -404,12 +448,14 @@ impl ARDataIntegrator {
                 "FURNITURE" => EquipmentType::Furniture,
                 _ => EquipmentType::Other(equipment_type_str.clone()),
             };
-            
+
             let new_equipment = Equipment {
                 id: equipment_id.clone(),
                 name: equipment_name.clone(),
-                path: format!("/BUILDING/FLOOR-{}/ROOM-{}/EQUIPMENT/{}", 
-                    floor.level, room_index, equipment_name),
+                path: format!(
+                    "/BUILDING/FLOOR-{}/ROOM-{}/EQUIPMENT/{}",
+                    floor.level, room_index, equipment_name
+                ),
                 address: None,
                 equipment_type: equipment_type_enum,
                 position: Position {
@@ -424,23 +470,25 @@ impl ARDataIntegrator {
                 room_id: None,
                 sensor_mappings: None,
             };
-            
+
             floor.equipment.push(new_equipment);
-            
+
             // Add equipment to room (find room in wings)
             let mut room_idx = 0;
             for wing in &mut floor.wings {
                 if room_index < room_idx + wing.rooms.len() {
                     let actual_room_idx = room_index - room_idx;
-                    wing.rooms[actual_room_idx].equipment.push(floor.equipment.last().unwrap().clone());
+                    wing.rooms[actual_room_idx]
+                        .equipment
+                        .push(floor.equipment.last().unwrap().clone());
                     break;
                 }
                 room_idx += wing.rooms.len();
             }
-            
+
             return Ok(IntegrationAction::Added);
         }
-        
+
         Ok(IntegrationAction::Updated)
     }
 
@@ -455,7 +503,7 @@ impl ARDataIntegrator {
         let floor = &mut self.building_data.floors[floor_index];
         let mut current_index = 0;
         let mut room = None;
-        
+
         for wing in &mut floor.wings {
             if room_index < current_index + wing.rooms.len() {
                 let local_index = room_index - current_index;
@@ -464,29 +512,38 @@ impl ARDataIntegrator {
             }
             current_index += wing.rooms.len();
         }
-        
+
         let room = room.ok_or_else(|| format!("Room at index {} not found", room_index))?;
-        
+
         // Update room properties with AR scan data
-        room.properties.insert("ar_scan_walls".to_string(), boundaries.walls.len().to_string());
-        room.properties.insert("ar_scan_openings".to_string(), boundaries.openings.len().to_string());
-        room.properties.insert("last_ar_boundary_update".to_string(), Utc::now().to_rfc3339());
-        
+        room.properties.insert(
+            "ar_scan_walls".to_string(),
+            boundaries.walls.len().to_string(),
+        );
+        room.properties.insert(
+            "ar_scan_openings".to_string(),
+            boundaries.openings.len().to_string(),
+        );
+        room.properties.insert(
+            "last_ar_boundary_update".to_string(),
+            Utc::now().to_rfc3339(),
+        );
+
         // Update bounding box based on walls if available
         if !boundaries.walls.is_empty() {
             let mut min_x = f64::INFINITY;
             let mut min_y = f64::INFINITY;
             let mut max_x = f64::NEG_INFINITY;
             let mut max_y = f64::NEG_INFINITY;
-            
+
             for wall in &boundaries.walls {
                 min_x = min_x.min(wall.start_point.x).min(wall.end_point.x);
                 min_y = min_y.min(wall.start_point.y).min(wall.end_point.y);
                 max_x = max_x.max(wall.start_point.x).max(wall.end_point.x);
                 max_y = max_y.max(wall.start_point.y).max(wall.end_point.y);
             }
-            
-            use crate::core::{Position, BoundingBox};
+
+            use crate::core::{BoundingBox, Position};
             let z = room.spatial_properties.position.z;
             room.spatial_properties.bounding_box = BoundingBox {
                 min: Position {
@@ -503,18 +560,21 @@ impl ARDataIntegrator {
                 },
             };
         }
-        
+
         Ok(())
     }
 
     /// Update building metadata with scan information
     fn update_building_metadata(&mut self, scan_data: &ARScanData) {
         self.building_data.building.updated_at = Utc::now();
-        
+
         // Add scan metadata to building properties
         self.building_data.metadata.tags.push("ar_scan".to_string());
-        self.building_data.metadata.tags.push(format!("scan_{}", scan_data.scan_id));
-        
+        self.building_data
+            .metadata
+            .tags
+            .push(format!("scan_{}", scan_data.scan_id));
+
         // Update total entities count
         self.building_data.metadata.total_entities += scan_data.detected_equipment.len();
         self.building_data.metadata.spatial_entities += scan_data.detected_equipment.len();
@@ -527,7 +587,7 @@ impl ARDataIntegrator {
         let dz = pos1.z - pos2.z;
         (dx * dx + dy * dy + dz * dz).sqrt()
     }
-    
+
     #[allow(dead_code)]
     fn calculate_position_difference(&self, pos1: &Point3D, pos2: &Point3D) -> f64 {
         let dx = pos1.x - pos2.x;
@@ -558,9 +618,9 @@ pub fn convert_mobile_ar_data(
 ) -> Result<ARScanData, Box<dyn std::error::Error>> {
     // Parse mobile AR data (JSON format from mobile apps)
     let ar_json = serde_json::from_slice::<serde_json::Value>(&mobile_data)?;
-    
+
     let mut detected_equipment = Vec::new();
-    
+
     // Parse detected equipment from mobile data
     if let Some(equipment_array) = ar_json.get("detectedEquipment").and_then(|e| e.as_array()) {
         for (i, equipment) in equipment_array.iter().enumerate() {
@@ -569,29 +629,35 @@ pub fn convert_mobile_ar_data(
             }
         }
     }
-    
+
     // Parse room boundaries if available
     let room_boundaries = if let Some(boundaries) = ar_json.get("roomBoundaries") {
         Some(parse_room_boundaries_from_mobile(boundaries)?)
     } else {
         None
     };
-    
+
     // Parse scan metadata using JSON helpers
     use crate::ar_integration::json_helpers;
     let scan_metadata = ScanMetadata {
         device_type: json_helpers::parse_optional_string(&ar_json, "deviceType", "unknown"),
         app_version: json_helpers::parse_optional_string(&ar_json, "appVersion", "1.0.0"),
-        scan_duration_ms: ar_json.get("scanDurationMs")
+        scan_duration_ms: ar_json
+            .get("scanDurationMs")
             .and_then(|v| v.as_u64())
             .unwrap_or(0),
-        point_count: ar_json.get("pointCount")
+        point_count: ar_json
+            .get("pointCount")
             .and_then(|v| v.as_u64())
             .unwrap_or(0) as usize,
         accuracy_estimate: json_helpers::parse_optional_f64(&ar_json, "accuracyEstimate", 0.1),
-        lighting_conditions: json_helpers::parse_optional_string(&ar_json, "lightingConditions", "unknown"),
+        lighting_conditions: json_helpers::parse_optional_string(
+            &ar_json,
+            "lightingConditions",
+            "unknown",
+        ),
     };
-    
+
     Ok(ARScanData {
         scan_id: format!("scan_{}", Utc::now().timestamp()),
         room_name,
@@ -609,25 +675,26 @@ fn parse_equipment_from_mobile(
     equipment_json: &serde_json::Value,
     index: usize,
 ) -> Result<Option<DetectedEquipment>, Box<dyn std::error::Error>> {
-    let name = equipment_json.get("name")
+    let name = equipment_json
+        .get("name")
         .and_then(|v| v.as_str())
         .ok_or("Missing equipment name")?;
-    
+
     use crate::ar_integration::json_helpers;
     let equipment_type = json_helpers::parse_optional_string(equipment_json, "type", "Unknown");
-    
+
     let position = if let Some(pos) = equipment_json.get("position") {
         json_helpers::parse_position(pos)
     } else {
         return Ok(None); // Skip equipment without position
     };
-    
+
     let confidence = json_helpers::parse_optional_f64(equipment_json, "confidence", 0.5);
     let detection_method = json_helpers::parse_detection_method(equipment_json);
-    
+
     // Create bounding box using helper
     let bounding_box = json_helpers::parse_bounding_box(&position, 0.5);
-    
+
     Ok(Some(DetectedEquipment {
         id: format!("ar_equipment_{}", index),
         name: name.to_string(),
@@ -647,14 +714,13 @@ fn parse_room_boundaries_from_mobile(
     use crate::ar_integration::json_helpers;
     let mut walls = Vec::new();
     let mut openings = Vec::new();
-    
+
     // Parse walls
     if let Some(walls_array) = boundaries_json.get("walls").and_then(|w| w.as_array()) {
         for wall_json in walls_array {
-            if let (Some(start), Some(end)) = (
-                wall_json.get("startPoint"),
-                wall_json.get("endPoint"),
-            ) {
+            if let (Some(start), Some(end)) =
+                (wall_json.get("startPoint"), wall_json.get("endPoint"))
+            {
                 let wall = Wall {
                     start_point: json_helpers::parse_position(start),
                     end_point: json_helpers::parse_position(end),
@@ -665,7 +731,7 @@ fn parse_room_boundaries_from_mobile(
             }
         }
     }
-    
+
     // Parse openings
     if let Some(openings_array) = boundaries_json.get("openings").and_then(|o| o.as_array()) {
         for opening_json in openings_array {
@@ -680,10 +746,10 @@ fn parse_room_boundaries_from_mobile(
             }
         }
     }
-    
+
     Ok(RoomBoundaries {
         walls,
-        floor_plane: None, // Floor plane will be parsed when AR data is available
+        floor_plane: None,   // Floor plane will be parsed when AR data is available
         ceiling_plane: None, // Ceiling plane will be parsed when AR data is available
         openings,
     })

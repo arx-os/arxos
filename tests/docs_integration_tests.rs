@@ -11,11 +11,11 @@ fn test_generate_docs_integration() {
     let temp_dir = TempDir::new().unwrap();
     let original_dir = std::env::current_dir().unwrap();
     std::env::set_current_dir(temp_dir.path()).unwrap();
-    
+
     let result = generate_building_docs("test-building", None);
-    
+
     std::env::set_current_dir(original_dir).unwrap();
-    
+
     if let Ok(path) = result {
         assert!(Path::new(&path).exists());
         let content = fs::read_to_string(&path).unwrap();
@@ -30,15 +30,12 @@ fn test_generate_docs_integration() {
 fn test_docs_html_structure() {
     let temp_dir = TempDir::new().unwrap();
     let output_path = temp_dir.path().join("test-docs.html");
-    
-    let result = generate_building_docs(
-        "test-building",
-        Some(output_path.to_str().unwrap()),
-    );
-    
+
+    let result = generate_building_docs("test-building", Some(output_path.to_str().unwrap()));
+
     if let Ok(_) = result {
         let content = fs::read_to_string(&output_path).unwrap();
-        
+
         assert!(content.contains("<!DOCTYPE html>"));
         assert!(content.contains("<head>"));
         assert!(content.contains("<body>"));
@@ -54,15 +51,12 @@ fn test_docs_html_structure() {
 fn test_docs_html_escape() {
     let temp_dir = TempDir::new().unwrap();
     let output_path = temp_dir.path().join("test-docs.html");
-    
-    let result = generate_building_docs(
-        "test-building",
-        Some(output_path.to_str().unwrap()),
-    );
-    
+
+    let result = generate_building_docs("test-building", Some(output_path.to_str().unwrap()));
+
     if let Ok(_) = result {
         let content = fs::read_to_string(&output_path).unwrap();
-        
+
         assert!(!content.contains("<script>"));
         assert!(!content.contains("&lt;script&gt;"));
         assert!(content.contains("&amp;") || !content.contains("&"));
@@ -74,15 +68,11 @@ fn test_docs_html_escape() {
 fn test_docs_creates_directory_if_missing() {
     let temp_dir = TempDir::new().unwrap();
     let output_path = temp_dir.path().join("docs").join("building.html");
-    
-    let result = generate_building_docs(
-        "test-building",
-        Some(output_path.to_str().unwrap()),
-    );
-    
+
+    let result = generate_building_docs("test-building", Some(output_path.to_str().unwrap()));
+
     if let Ok(_) = result {
         assert!(output_path.exists());
         assert!(output_path.parent().unwrap().exists());
     }
 }
-

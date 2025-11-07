@@ -3,15 +3,19 @@
 //! This module provides an interactive wrapper around the existing Building3DRenderer,
 //! adding real-time input handling, state management, and interactive controls.
 
+use crate::render3d::events::{
+    Action, CameraAction, EventHandler, InteractiveEvent, ViewModeAction, ZoomAction,
+};
+use crate::render3d::state::{CameraState, InteractiveState, Vector3D, ViewMode};
+use crate::render3d::{
+    Building3DRenderer, InfoPanelState, Render3DConfig, Scene3D, VisualEffectsEngine,
+};
 use crate::yaml::BuildingData;
-use crate::render3d::{Building3DRenderer, Render3DConfig, Scene3D, VisualEffectsEngine, InfoPanelState};
-use crate::render3d::state::{InteractiveState, CameraState, ViewMode, Vector3D};
-use crate::render3d::events::{EventHandler, InteractiveEvent, Action, CameraAction, ZoomAction, ViewModeAction};
 use crossterm::event::KeyCode;
-use crossterm::terminal::{enable_raw_mode, disable_raw_mode};
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
+use log::info;
 use std::io::{self, Write};
 use std::time::{Duration, Instant};
-use log::info;
 
 /// Interactive 3D building renderer with real-time controls
 pub struct InteractiveRenderer {
@@ -56,7 +60,10 @@ pub struct InteractiveConfig {
 
 impl InteractiveRenderer {
     /// Create a new interactive renderer
-    pub fn new(building_data: BuildingData, config: Render3DConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(
+        building_data: BuildingData,
+        config: Render3DConfig,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let building_data_clone = building_data.clone();
         let renderer = Building3DRenderer::new(building_data, config);
         let state = InteractiveState::new();
@@ -64,7 +71,7 @@ impl InteractiveRenderer {
         let effects_engine = VisualEffectsEngine::new();
         let interactive_config = InteractiveConfig::default();
         let info_panel = InfoPanelState::new();
-        
+
         Ok(Self {
             renderer,
             state,
@@ -81,9 +88,9 @@ impl InteractiveRenderer {
 
     /// Create interactive renderer with custom configuration
     pub fn with_config(
-        building_data: BuildingData, 
+        building_data: BuildingData,
         render_config: Render3DConfig,
-        interactive_config: InteractiveConfig
+        interactive_config: InteractiveConfig,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let building_data_clone = building_data.clone();
         let renderer = Building3DRenderer::new(building_data, render_config);
@@ -91,7 +98,7 @@ impl InteractiveRenderer {
         let event_handler = EventHandler::new();
         let effects_engine = VisualEffectsEngine::new();
         let info_panel = InfoPanelState::new();
-        
+
         Ok(Self {
             renderer,
             state,
@@ -111,20 +118,20 @@ impl InteractiveRenderer {
         println!("🎮 Starting Interactive 3D Rendering Session");
         println!("{}", self.event_handler.get_help_text());
         println!("Press any key to start...");
-        
+
         // Enable raw mode for real-time input
         enable_raw_mode()?;
-        
+
         // Activate session
         self.state.activate();
-        
+
         // Main event loop
         self.run_event_loop()?;
-        
+
         // Cleanup
         disable_raw_mode()?;
         self.state.deactivate();
-        
+
         println!("✅ Interactive session ended");
         Ok(())
     }
@@ -133,58 +140,61 @@ impl InteractiveRenderer {
     fn run_event_loop(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let mut last_frame_time = Instant::now();
         let frame_duration = Duration::from_secs_f64(1.0 / self.config.target_fps as f64);
-        
+
         loop {
             let current_time = Instant::now();
-            
+
             // Process events
             if let Some(event) = self.poll_event()? {
                 if self.handle_event(event)? {
                     break; // Quit requested
                 }
             }
-            
+
             // Render if enough time has passed
             if current_time.duration_since(last_frame_time) >= frame_duration {
                 self.render_frame()?;
                 last_frame_time = current_time;
             }
-            
+
             // Small sleep to prevent 100% CPU usage
             std::thread::sleep(Duration::from_millis(1));
         }
-        
+
         Ok(())
     }
 
     /// Poll for events from crossterm
     fn poll_event(&self) -> Result<Option<InteractiveEvent>, Box<dyn std::error::Error>> {
         use crossterm::event::{poll, read};
-        
+
         if poll(self.event_handler.config().poll_interval)? {
             if let Some(event) = self.event_handler.process_event(read()?) {
                 return Ok(Some(event));
             }
         }
-        
+
         Ok(None)
     }
 
     /// Handle interactive events
-    fn handle_event(&mut self, event: InteractiveEvent) -> Result<bool, Box<dyn std::error::Error>> {
+    fn handle_event(
+        &mut self,
+        event: InteractiveEvent,
+    ) -> Result<bool, Box<dyn std::error::Error>> {
         match event {
             InteractiveEvent::Action(action) => {
                 self.handle_action(action)?;
             }
-            InteractiveEvent::KeyPress(KeyCode::Esc, _) | 
-            InteractiveEvent::KeyPress(KeyCode::Char('q'), _) => {
+            InteractiveEvent::KeyPress(KeyCode::Esc, _)
+            | InteractiveEvent::KeyPress(KeyCode::Char('q'), _) => {
                 return Ok(true); // Quit
             }
             InteractiveEvent::KeyPress(KeyCode::Char('h'), _) => {
                 self.toggle_help();
             }
-            InteractiveEvent::KeyPress(KeyCode::Char('i'), _) | 
-            InteractiveEvent::KeyPress(KeyCode::Char('I'), _) => {
+            InteractiveEvent::KeyPress(KeyCode::Char('i'), _)
+            | InteractiveEvent::KeyPress(KeyCode::Char('I'), _) => {
                 self.info_panel.toggle();
             }
             InteractiveEvent::Resize(width, height) => {
@@ -194,7 +204,7 @@ impl InteractiveRenderer {
                 // Handle other events as needed
             }
         }
-        
+
         Ok(false) // Continue
     }
 
@@ -222,33 +232,48 @@ impl InteractiveRenderer {
                 log::debug!("Game action received: {:?}", game_action);
             }
         }
-        
+
         Ok(())
     }
 
     /// Handle camera movement actions
-    fn handle_camera_action(&mut self, action: CameraAction) -> Result<(), Box<dyn std::error::Error>> {
+    fn handle_camera_action(
+        &mut self,
+        action: CameraAction,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let move_speed = 1.0;
         let rotation_speed = 5.0;
-        
+
         match action {
             CameraAction::MoveUp => {
-                self.state.camera_state.translate(Vector3D::new(0.0, move_speed, 0.0));
+                self.state
+                    .camera_state
+                    .translate(Vector3D::new(0.0, move_speed, 0.0));
             }
             CameraAction::MoveDown => {
-                self.state.camera_state.translate(Vector3D::new(0.0, -move_speed, 0.0));
+                self.state
+                    .camera_state
+                    .translate(Vector3D::new(0.0, -move_speed, 0.0));
             }
             CameraAction::MoveLeft => {
-                self.state.camera_state.translate(Vector3D::new(-move_speed, 0.0, 0.0));
+                self.state
+                    .camera_state
+                    .translate(Vector3D::new(-move_speed, 0.0, 0.0));
             }
             CameraAction::MoveRight => {
-                self.state.camera_state.translate(Vector3D::new(move_speed, 0.0, 0.0));
+                self.state
+                    .camera_state
+                    .translate(Vector3D::new(move_speed, 0.0, 0.0));
             }
             CameraAction::MoveForward => {
-                self.state.camera_state.translate(Vector3D::new(0.0, 0.0, -move_speed));
+                self.state
+                    .camera_state
+                    .translate(Vector3D::new(0.0, 0.0, -move_speed));
             }
             CameraAction::MoveBackward => {
-                self.state.camera_state.translate(Vector3D::new(0.0, 0.0, move_speed));
+                self.state
+                    .camera_state
+                    .translate(Vector3D::new(0.0, 0.0, move_speed));
             }
             CameraAction::RotateLeft => {
                 self.state.camera_state.rotate(0.0, -rotation_speed, 0.0);
@@ -266,7 +291,7 @@ impl InteractiveRenderer {
                 self.state.camera_state = CameraState::default();
             }
         }
-        
+
         Ok(())
     }
 
@@ -283,12 +308,15 @@ impl InteractiveRenderer {
                 self.state.camera_state.zoom = 1.0;
             }
         }
-        
+
         Ok(())
     }
 
     /// Handle view mode changes
-    fn handle_view_mode_action(&mut self, action: ViewModeAction) -> Result<(), Box<dyn std::error::Error>> {
+    fn handle_view_mode_action(
+        &mut self,
+        action: ViewModeAction,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         match action {
             ViewModeAction::Standard => {
                 self.state.set_view_mode(ViewMode::Standard);
@@ -303,16 +331,19 @@ impl InteractiveRenderer {
                 self.state.set_view_mode(ViewMode::Maintenance);
             }
             ViewModeAction::ToggleRooms => {
-                self.state.session_data.preferences.show_rooms = !self.state.session_data.preferences.show_rooms;
+                self.state.session_data.preferences.show_rooms =
+                    !self.state.session_data.preferences.show_rooms;
             }
             ViewModeAction::ToggleStatus => {
-                self.state.session_data.preferences.show_status = !self.state.session_data.preferences.show_status;
+                self.state.session_data.preferences.show_status =
+                    !self.state.session_data.preferences.show_status;
             }
             ViewModeAction::ToggleConnections => {
-                self.state.session_data.preferences.show_connections = !self.state.session_data.preferences.show_connections;
+                self.state.session_data.preferences.show_connections =
+                    !self.state.session_data.preferences.show_connections;
             }
         }
-        
+
         Ok(())
     }
 
@@ -320,31 +351,43 @@ impl InteractiveRenderer {
     fn handle_floor_change(&mut self, floor_delta: i32) -> Result<(), Box<dyn std::error::Error>> {
         let current_floor = self.state.current_floor.unwrap_or(0);
         let new_floor = current_floor + floor_delta;
-        
+
         // Validate floor exists in building data
-        let max_floor = self.renderer.building_data.floors.iter()
+        let max_floor = self
+            .renderer
+            .building_data
+            .floors
+            .iter()
             .map(|f| f.level)
             .max()
             .unwrap_or(0);
-        
-        let min_floor = self.renderer.building_data.floors.iter()
+
+        let min_floor = self
+            .renderer
+            .building_data
+            .floors
+            .iter()
             .map(|f| f.level)
             .min()
             .unwrap_or(0);
-        
+
         if new_floor >= min_floor && new_floor <= max_floor {
             self.state.set_current_floor(Some(new_floor));
         }
-        
+
         Ok(())
     }
 
     /// Handle terminal resize
-    fn handle_resize(&mut self, width: usize, height: usize) -> Result<(), Box<dyn std::error::Error>> {
+    fn handle_resize(
+        &mut self,
+        width: usize,
+        height: usize,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         // Update renderer configuration
         self.renderer.config.max_width = width;
         self.renderer.config.max_height = height;
-        
+
         Ok(())
     }
 
@@ -357,36 +400,36 @@ impl InteractiveRenderer {
     fn render_frame(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         // Clear screen
         print!("\x1B[2J\x1B[1;1H");
-        
+
         // Update camera in renderer
         self.renderer.set_camera(
             self.state.camera_state.position,
-            self.state.camera_state.target
+            self.state.camera_state.target,
         );
-        
+
         // Update visual effects
         let delta_time = 1.0 / self.config.target_fps as f64;
         self.effects_engine.update(delta_time);
-        
+
         // Render the 3D scene
         let scene = self.renderer.render_3d()?;
-        
+
         // Convert to ASCII output
         let mut ascii_output = self.renderer.render_to_ascii(&scene)?;
-        
+
         // Add particle effects to the output
         ascii_output = self.add_particle_effects_to_output(ascii_output);
-        
+
         // Display the rendered scene
         print!("{}", ascii_output);
-        
+
         // Display overlay information
         self.render_overlay(&scene)?;
-        
+
         // Update statistics
         self.state.increment_render_count();
         self.frame_count += 1;
-        
+
         // Calculate FPS
         let current_time = Instant::now();
         let elapsed = current_time.duration_since(self.last_render_time);
@@ -398,7 +441,7 @@ impl InteractiveRenderer {
             self.frame_count = 0;
             self.last_render_time = current_time;
         }
-        
+
         io::stdout().flush()?;
         Ok(())
     }
@@ -406,81 +449,104 @@ impl InteractiveRenderer {
     /// Render overlay information
     fn render_overlay(&self, _scene: &Scene3D) -> Result<(), Box<dyn std::error::Error>> {
         let mut overlay = String::new();
-        
+
         // Game overlay (if in game mode)
         if let Some(ref game_state) = self.game_state {
             overlay.push('\n');
             overlay.push_str("╔════════════════════════════════════════════════════════════╗\n");
             overlay.push_str("║                    GAME OVERLAY                           ║\n");
             overlay.push_str("╠════════════════════════════════════════════════════════════╣\n");
-            
+
             // Objective
             if let Some(ref scenario) = game_state.scenario {
-                overlay.push_str(&format!("║ Objective: {:<55} ║\n", 
-                    scenario.objective.chars().take(55).collect::<String>()));
+                overlay.push_str(&format!(
+                    "║ Objective: {:<55} ║\n",
+                    scenario.objective.chars().take(55).collect::<String>()
+                ));
             }
-            
+
             // Progress bar
             let progress_width: usize = 50;
             let filled = (game_state.progress * progress_width as f32) as usize;
-            let bar = format!("[{}{}]", 
+            let bar = format!(
+                "[{}{}]",
                 "=".repeat(filled),
                 " ".repeat(progress_width.saturating_sub(filled))
             );
             overlay.push_str(&format!("║ Progress: {:<55} ║\n", bar));
             overlay.push_str(&format!("║ Score: {:<57} ║\n", game_state.score));
-            
+
             // Validation status
             let stats = game_state.get_stats();
-            overlay.push_str(&format!("║ Valid: {} / {} | Violations: {:<42} ║\n", 
-                stats.valid_placements, stats.total_placements, stats.violations));
-            
+            overlay.push_str(&format!(
+                "║ Valid: {} / {} | Violations: {:<42} ║\n",
+                stats.valid_placements, stats.total_placements, stats.violations
+            ));
+
             overlay.push_str("╚════════════════════════════════════════════════════════════╝\n");
             overlay.push('\n');
         }
-        
+
         // Session information
-        overlay.push_str(&format!("Session: {}s | ", self.state.session_duration().as_secs()));
-        overlay.push_str(&format!("Floor: {} | ", 
-            self.state.current_floor.map(|f| f.to_string()).unwrap_or("All".to_string())));
-        overlay.push_str(&format!("Selected: {} | ", self.state.selected_equipment.len()));
+        overlay.push_str(&format!(
+            "Session: {}s | ",
+            self.state.session_duration().as_secs()
+        ));
+        overlay.push_str(&format!(
+            "Floor: {} | ",
+            self.state
+                .current_floor
+                .map(|f| f.to_string())
+                .unwrap_or("All".to_string())
+        ));
+        overlay.push_str(&format!(
+            "Selected: {} | ",
+            self.state.selected_equipment.len()
+        ));
         overlay.push_str(&format!("Mode: {:?}", self.state.view_mode));
         if self.info_panel.show_panel {
             overlay.push_str(" | Info Panel: ON");
         }
-        
+
         // Help overlay
         if self.config.show_help {
             overlay.push_str("\n\n");
             overlay.push_str(&self.event_handler.get_help_text());
         }
-        
+
         // Info panel overlay (if enabled)
         if self.info_panel.show_panel {
             overlay.push_str("\n\n");
             overlay.push_str("╔════════════════════════════════════════════════════════════╗\n");
             overlay.push_str("║                    INFO PANEL                             ║\n");
             overlay.push_str("╠════════════════════════════════════════════════════════════╣\n");
-            
+
             // Equipment info
             if !self.state.selected_equipment.is_empty() {
                 overlay.push_str("║ Equipment:\n");
                 for equipment_id in &self.state.selected_equipment {
                     for floor in &self.building_data.floors {
-                        if let Some(equipment) = floor.equipment.iter().find(|e| e.id == *equipment_id) {
-                            overlay.push_str(&format!("║   • {} ({:?})\n", equipment.name, equipment.status));
+                        if let Some(equipment) =
+                            floor.equipment.iter().find(|e| e.id == *equipment_id)
+                        {
+                            overlay.push_str(&format!(
+                                "║   • {} ({:?})\n",
+                                equipment.name, equipment.status
+                            ));
                         }
                     }
                 }
             } else {
                 overlay.push_str("║ Equipment: None selected\n");
             }
-            
+
             // Camera info
             let camera = &self.state.camera_state;
-            overlay.push_str(&format!("║ Camera: Pos({:.1},{:.1},{:.1}) Zoom:{:.2}x\n", 
-                camera.position.x, camera.position.y, camera.position.z, camera.zoom));
-            
+            overlay.push_str(&format!(
+                "║ Camera: Pos({:.1},{:.1},{:.1}) Zoom:{:.2}x\n",
+                camera.position.x, camera.position.y, camera.position.z, camera.zoom
+            ));
+
             // View mode
             let mode_text = match self.state.view_mode {
                 ViewMode::Standard => "Standard",
@@ -489,7 +555,7 @@ impl InteractiveRenderer {
                 ViewMode::Maintenance => "Maintenance",
             };
             overlay.push_str(&format!("║ View: {}\n", mode_text));
-            
+
             // Stats
             let current_time = Instant::now();
             let elapsed = current_time.duration_since(self.last_render_time);
@@ -498,32 +564,35 @@ impl InteractiveRenderer {
             } else {
                 0.0
             };
-            overlay.push_str(&format!("║ FPS: {:.1} | Frames: {}\n", fps, self.frame_count));
-            
+            overlay.push_str(&format!(
+                "║ FPS: {:.1} | Frames: {}\n",
+                fps, self.frame_count
+            ));
+
             overlay.push_str("╚════════════════════════════════════════════════════════════╝\n");
         }
-        
+
         print!("{}", overlay);
         Ok(())
     }
-    
+
     /// Start game mode with a scenario
     pub fn start_game_mode(&mut self, game_state: crate::game::state::GameState) {
         self.game_state = Some(game_state);
         info!("Game mode activated");
     }
-    
+
     /// Stop game mode
     pub fn stop_game_mode(&mut self) {
         self.game_state = None;
         info!("Game mode deactivated");
     }
-    
+
     /// Get game state (mutable)
     pub fn game_state_mut(&mut self) -> Option<&mut crate::game::state::GameState> {
         self.game_state.as_mut()
     }
-    
+
     /// Get game state
     pub fn game_state(&self) -> Option<&crate::game::state::GameState> {
         self.game_state.as_ref()
@@ -533,50 +602,65 @@ impl InteractiveRenderer {
     fn add_particle_effects_to_output(&self, mut output: String) -> String {
         // Get all active particles
         let particles = self.effects_engine.particle_system().particles();
-        
+
         // Convert particles to ASCII characters and add to output
         for particle in particles {
             // Simple particle rendering - in a real implementation, this would be more sophisticated
             let particle_char = particle.character;
             let intensity = particle.lifetime;
-            
+
             // Add particle to output (simplified - would need proper 3D to 2D projection)
             if intensity > 0.1 {
                 // This is a simplified approach - in reality, we'd need proper 3D projection
                 output.push_str(&format!("{}", particle_char));
             }
         }
-        
+
         output
     }
 
     /// Create equipment status effect
-    pub fn create_equipment_status_effect(&mut self, equipment_id: String, status: crate::render3d::EquipmentStatus, position: crate::spatial::Point3D) -> Result<(), String> {
+    pub fn create_equipment_status_effect(
+        &mut self,
+        equipment_id: String,
+        status: crate::render3d::EquipmentStatus,
+        position: crate::spatial::Point3D,
+    ) -> Result<(), String> {
         self.effects_engine.create_equipment_status_effect(
             format!("status_{}", equipment_id),
             equipment_id,
             status,
-            position
+            position,
         )
     }
 
     /// Create maintenance alert effect
-    pub fn create_maintenance_alert_effect(&mut self, equipment_id: String, alert_level: crate::render3d::AlertLevel, position: crate::spatial::Point3D) -> Result<(), String> {
+    pub fn create_maintenance_alert_effect(
+        &mut self,
+        equipment_id: String,
+        alert_level: crate::render3d::AlertLevel,
+        position: crate::spatial::Point3D,
+    ) -> Result<(), String> {
         self.effects_engine.create_maintenance_alert_effect(
             format!("alert_{}", equipment_id),
             equipment_id,
             alert_level,
-            position
+            position,
         )
     }
 
     /// Create particle burst effect
-    pub fn create_particle_burst_effect(&mut self, position: crate::spatial::Point3D, particle_type: crate::render3d::ParticleType, count: usize) -> Result<(), String> {
+    pub fn create_particle_burst_effect(
+        &mut self,
+        position: crate::spatial::Point3D,
+        particle_type: crate::render3d::ParticleType,
+        count: usize,
+    ) -> Result<(), String> {
         self.effects_engine.create_particle_burst_effect(
             format!("burst_{}", self.frame_count),
             position,
             particle_type,
-            count
+            count,
         )
     }
 
@@ -637,13 +721,13 @@ impl Default for InteractiveConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData};
     use crate::render3d::{ProjectionType, ViewAngle};
+    use crate::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData};
     use chrono::Utc;
 
     fn create_test_building_data() -> BuildingData {
         use crate::core::Floor;
-        
+
         BuildingData {
             building: BuildingInfo {
                 id: "test".to_string(),
@@ -691,7 +775,7 @@ mod tests {
             max_width: 120,
             max_height: 40,
         };
-        
+
         let renderer = InteractiveRenderer::new(building_data, config);
         assert!(renderer.is_ok());
     }
@@ -720,14 +804,16 @@ mod tests {
             max_width: 120,
             max_height: 40,
         };
-        
+
         let mut renderer = InteractiveRenderer::new(building_data, config).unwrap();
-        
+
         // Test state access
         assert!(!renderer.state().is_active);
-        
+
         // Test mutable state access
-        renderer.state_mut().select_equipment("test-equipment".to_string());
+        renderer
+            .state_mut()
+            .select_equipment("test-equipment".to_string());
         assert!(renderer.state().is_equipment_selected("test-equipment"));
     }
 }

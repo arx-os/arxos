@@ -29,7 +29,7 @@ mod tests {
             git_repo: Some(PathBuf::from("/test")),
             description: Some("Test description".to_string()),
         };
-        
+
         assert_eq!(workspace.name, "Test Building");
         assert_eq!(workspace.path, PathBuf::from("/test/building.yaml"));
         assert_eq!(workspace.git_repo, Some(PathBuf::from("/test")));
@@ -44,7 +44,7 @@ mod tests {
             git_repo: Some(PathBuf::from("/test")),
             description: Some("Test description".to_string()),
         };
-        
+
         let cloned = workspace.clone();
         assert_eq!(workspace.name, cloned.name);
         assert_eq!(workspace.path, cloned.path);
@@ -52,4 +52,3 @@ mod tests {
         assert_eq!(workspace.description, cloned.description);
     }
 }
-

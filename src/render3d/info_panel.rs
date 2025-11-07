@@ -6,8 +6,8 @@
 //! - View mode and rendering stats
 //! - Quick actions and controls
 
-use crate::ui::{Theme, StatusColor};
-use crate::render3d::state::{InteractiveState, CameraState, ViewMode};
+use crate::render3d::state::{CameraState, InteractiveState, ViewMode};
+use crate::ui::{StatusColor, Theme};
 use crate::yaml::BuildingData;
 use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
@@ -31,7 +31,7 @@ impl InfoPanelState {
             theme: Theme::default(),
         }
     }
-    
+
     pub fn toggle(&mut self) {
         self.show_panel = !self.show_panel;
     }
@@ -45,29 +45,25 @@ pub fn render_equipment_info<'a>(
     theme: &'a Theme,
 ) -> Paragraph<'a> {
     let mut lines = vec![
-        Line::from(vec![
-            Span::styled(
-                "Equipment Information",
-                Style::default().fg(theme.primary).add_modifier(Modifier::BOLD),
-            ),
-        ]),
+        Line::from(vec![Span::styled(
+            "Equipment Information",
+            Style::default()
+                .fg(theme.primary)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(Span::raw("")),
     ];
-    
+
     if state.selected_equipment.is_empty() {
-        lines.push(Line::from(vec![
-            Span::styled(
-                "No equipment selected",
-                Style::default().fg(theme.muted),
-            ),
-        ]));
+        lines.push(Line::from(vec![Span::styled(
+            "No equipment selected",
+            Style::default().fg(theme.muted),
+        )]));
         lines.push(Line::from(Span::raw("")));
-        lines.push(Line::from(vec![
-            Span::styled(
-                "Press 's' to select equipment",
-                Style::default().fg(theme.muted),
-            ),
-        ]));
+        lines.push(Line::from(vec![Span::styled(
+            "Press 's' to select equipment",
+            Style::default().fg(theme.muted),
+        )]));
     } else {
         for equipment_id in &state.selected_equipment {
             // Find equipment in building data
@@ -83,7 +79,10 @@ pub fn render_equipment_info<'a>(
                     ]));
                     lines.push(Line::from(vec![
                         Span::styled("Type: ", Style::default().fg(theme.muted)),
-                        Span::styled(format!("{:?}", equipment.equipment_type), Style::default().fg(theme.text)),
+                        Span::styled(
+                            format!("{:?}", equipment.equipment_type),
+                            Style::default().fg(theme.text),
+                        ),
                     ]));
                     // Use health_status if available, otherwise map from operational status
                     let status_color = if let Some(ref health) = equipment.health_status {
@@ -99,7 +98,8 @@ pub fn render_equipment_info<'a>(
                             crate::core::EquipmentStatus::Active => StatusColor::Healthy,
                             crate::core::EquipmentStatus::Maintenance => StatusColor::Warning,
                             crate::core::EquipmentStatus::OutOfOrder => StatusColor::Critical,
-                            crate::core::EquipmentStatus::Inactive | crate::core::EquipmentStatus::Unknown => StatusColor::Unknown,
+                            crate::core::EquipmentStatus::Inactive
+                            | crate::core::EquipmentStatus::Unknown => StatusColor::Unknown,
                         }
                     };
                     let status_text = if let Some(ref health) = equipment.health_status {
@@ -109,19 +109,18 @@ pub fn render_equipment_info<'a>(
                     };
                     lines.push(Line::from(vec![
                         Span::styled("Status: ", Style::default().fg(theme.muted)),
-                        Span::styled(
-                            status_text,
-                            Style::default().fg(status_color.color()),
-                        ),
+                        Span::styled(status_text, Style::default().fg(status_color.color())),
                     ]));
                     // Room information is stored separately in floor data
                     // Find room name by searching through floors and wings
                     for floor in building_data.floors.iter() {
                         let mut found_room = None;
                         for wing in &floor.wings {
-                            if let Some(room) = wing.rooms.iter().find(|r| {
-                                r.equipment.iter().any(|e| e.id == equipment.id)
-                            }) {
+                            if let Some(room) = wing
+                                .rooms
+                                .iter()
+                                .find(|r| r.equipment.iter().any(|e| e.id == equipment.id))
+                            {
                                 found_room = Some(room);
                                 break;
                             }
@@ -140,7 +139,7 @@ pub fn render_equipment_info<'a>(
             }
         }
     }
-    
+
     Paragraph::new(lines)
         .block(Block::default().borders(Borders::ALL).title("Equipment"))
         .alignment(Alignment::Left)
@@ -153,24 +152,30 @@ pub fn render_camera_info<'a>(
     theme: &'a Theme,
 ) -> Paragraph<'a> {
     let lines = vec![
-        Line::from(vec![
-            Span::styled(
-                "Camera Information",
-                Style::default().fg(theme.primary).add_modifier(Modifier::BOLD),
-            ),
-        ]),
+        Line::from(vec![Span::styled(
+            "Camera Information",
+            Style::default()
+                .fg(theme.primary)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(Span::raw("")),
         Line::from(vec![
             Span::styled("Position: ", Style::default().fg(theme.muted)),
             Span::styled(
-                format!("({:.1}, {:.1}, {:.1})", camera_state.position.x, camera_state.position.y, camera_state.position.z),
+                format!(
+                    "({:.1}, {:.1}, {:.1})",
+                    camera_state.position.x, camera_state.position.y, camera_state.position.z
+                ),
                 Style::default().fg(theme.text),
             ),
         ]),
         Line::from(vec![
             Span::styled("Target: ", Style::default().fg(theme.muted)),
             Span::styled(
-                format!("({:.1}, {:.1}, {:.1})", camera_state.target.x, camera_state.target.y, camera_state.target.z),
+                format!(
+                    "({:.1}, {:.1}, {:.1})",
+                    camera_state.target.x, camera_state.target.y, camera_state.target.z
+                ),
                 Style::default().fg(theme.text),
             ),
         ]),
@@ -191,7 +196,8 @@ pub fn render_camera_info<'a>(
         Line::from(vec![
             Span::styled("Rotation: ", Style::default().fg(theme.muted)),
             Span::styled(
-                format!("P:{:.1}° Y:{:.1}° R:{:.1}°", 
+                format!(
+                    "P:{:.1}° Y:{:.1}° R:{:.1}°",
                     camera_state.rotation.pitch,
                     camera_state.rotation.yaw,
                     camera_state.rotation.roll
@@ -200,7 +206,7 @@ pub fn render_camera_info<'a>(
             ),
         ]),
     ];
-    
+
     Paragraph::new(lines)
         .block(Block::default().borders(Borders::ALL).title("Camera"))
         .alignment(Alignment::Left)
@@ -218,24 +224,26 @@ pub fn render_view_mode_info<'a>(
         ViewMode::Connections => "Connections View",
         ViewMode::Maintenance => "Maintenance Overlay",
     };
-    
+
     let lines = vec![
-        Line::from(vec![
-            Span::styled(
-                "View Mode",
-                Style::default().fg(theme.primary).add_modifier(Modifier::BOLD),
-            ),
-        ]),
+        Line::from(vec![Span::styled(
+            "View Mode",
+            Style::default()
+                .fg(theme.primary)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(Span::raw("")),
-        Line::from(vec![
-            Span::styled(mode_text, Style::default().fg(theme.text)),
-        ]),
+        Line::from(vec![Span::styled(
+            mode_text,
+            Style::default().fg(theme.text),
+        )]),
         Line::from(Span::raw("")),
-        Line::from(vec![
-            Span::styled("Press 'v' to cycle modes", Style::default().fg(theme.muted)),
-        ]),
+        Line::from(vec![Span::styled(
+            "Press 'v' to cycle modes",
+            Style::default().fg(theme.muted),
+        )]),
     ];
-    
+
     Paragraph::new(lines)
         .block(Block::default().borders(Borders::ALL).title("View"))
         .alignment(Alignment::Left)
@@ -250,26 +258,29 @@ pub fn render_stats<'a>(
     theme: &'a Theme,
 ) -> Paragraph<'a> {
     let lines = vec![
-        Line::from(vec![
-            Span::styled(
-                "Statistics",
-                Style::default().fg(theme.primary).add_modifier(Modifier::BOLD),
-            ),
-        ]),
+        Line::from(vec![Span::styled(
+            "Statistics",
+            Style::default()
+                .fg(theme.primary)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(Span::raw("")),
         Line::from(vec![
             Span::styled("FPS: ", Style::default().fg(theme.muted)),
             Span::styled(
                 format!("{:.1}", fps),
-                Style::default().fg(if fps > 20.0 { Color::Green } else if fps > 10.0 { Color::Yellow } else { Color::Red }),
+                Style::default().fg(if fps > 20.0 {
+                    Color::Green
+                } else if fps > 10.0 {
+                    Color::Yellow
+                } else {
+                    Color::Red
+                }),
             ),
         ]),
         Line::from(vec![
             Span::styled("Frames: ", Style::default().fg(theme.muted)),
-            Span::styled(
-                format!("{}", frame_count),
-                Style::default().fg(theme.text),
-            ),
+            Span::styled(format!("{}", frame_count), Style::default().fg(theme.text)),
         ]),
         Line::from(vec![
             Span::styled("Render Time: ", Style::default().fg(theme.muted)),
@@ -279,48 +290,52 @@ pub fn render_stats<'a>(
             ),
         ]),
     ];
-    
+
     Paragraph::new(lines)
         .block(Block::default().borders(Borders::ALL).title("Stats"))
         .alignment(Alignment::Left)
 }
 
 /// Render quick actions/controls
-pub fn render_controls<'a>(
-    _area: Rect,
-    theme: &'a Theme,
-) -> Paragraph<'a> {
+pub fn render_controls<'a>(_area: Rect, theme: &'a Theme) -> Paragraph<'a> {
     let lines = vec![
-        Line::from(vec![
-            Span::styled(
-                "Controls",
-                Style::default().fg(theme.primary).add_modifier(Modifier::BOLD),
-            ),
-        ]),
+        Line::from(vec![Span::styled(
+            "Controls",
+            Style::default()
+                .fg(theme.primary)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(Span::raw("")),
-        Line::from(vec![
-            Span::styled("WASD/Arrows: Move camera", Style::default().fg(theme.muted)),
-        ]),
-        Line::from(vec![
-            Span::styled("Q/E: Zoom in/out", Style::default().fg(theme.muted)),
-        ]),
-        Line::from(vec![
-            Span::styled("V: Cycle view modes", Style::default().fg(theme.muted)),
-        ]),
-        Line::from(vec![
-            Span::styled("S: Select equipment", Style::default().fg(theme.muted)),
-        ]),
-        Line::from(vec![
-            Span::styled("I: Toggle info panel", Style::default().fg(theme.muted)),
-        ]),
-        Line::from(vec![
-            Span::styled("H: Toggle help", Style::default().fg(theme.muted)),
-        ]),
-        Line::from(vec![
-            Span::styled("ESC/Q: Quit", Style::default().fg(theme.muted)),
-        ]),
+        Line::from(vec![Span::styled(
+            "WASD/Arrows: Move camera",
+            Style::default().fg(theme.muted),
+        )]),
+        Line::from(vec![Span::styled(
+            "Q/E: Zoom in/out",
+            Style::default().fg(theme.muted),
+        )]),
+        Line::from(vec![Span::styled(
+            "V: Cycle view modes",
+            Style::default().fg(theme.muted),
+        )]),
+        Line::from(vec![Span::styled(
+            "S: Select equipment",
+            Style::default().fg(theme.muted),
+        )]),
+        Line::from(vec![Span::styled(
+            "I: Toggle info panel",
+            Style::default().fg(theme.muted),
+        )]),
+        Line::from(vec![Span::styled(
+            "H: Toggle help",
+            Style::default().fg(theme.muted),
+        )]),
+        Line::from(vec![Span::styled(
+            "ESC/Q: Quit",
+            Style::default().fg(theme.muted),
+        )]),
     ];
-    
+
     Paragraph::new(lines)
         .block(Block::default().borders(Borders::ALL).title("Controls"))
         .alignment(Alignment::Left)
@@ -339,21 +354,32 @@ pub fn render_info_panel<'a>(
     let chunks = Layout::default()
         .direction(ratatui::layout::Direction::Vertical)
         .constraints([
-            Constraint::Min(8),  // Equipment info
-            Constraint::Min(6),  // Camera info
-            Constraint::Min(4),  // View mode
-            Constraint::Min(4),  // Stats
-            Constraint::Min(8),  // Controls
+            Constraint::Min(8), // Equipment info
+            Constraint::Min(6), // Camera info
+            Constraint::Min(4), // View mode
+            Constraint::Min(4), // Stats
+            Constraint::Min(8), // Controls
         ])
         .split(area)
         .to_vec();
-    
+
     vec![
-        (chunks[0], render_equipment_info(state, building_data, chunks[0], theme)),
-        (chunks[1], render_camera_info(&state.camera_state, chunks[1], theme)),
-        (chunks[2], render_view_mode_info(&state.view_mode, chunks[2], theme)),
-        (chunks[3], render_stats(fps, frame_count, render_time, chunks[3], theme)),
+        (
+            chunks[0],
+            render_equipment_info(state, building_data, chunks[0], theme),
+        ),
+        (
+            chunks[1],
+            render_camera_info(&state.camera_state, chunks[1], theme),
+        ),
+        (
+            chunks[2],
+            render_view_mode_info(&state.view_mode, chunks[2], theme),
+        ),
+        (
+            chunks[3],
+            render_stats(fps, frame_count, render_time, chunks[3], theme),
+        ),
         (chunks[4], render_controls(chunks[4], theme)),
     ]
 }
-

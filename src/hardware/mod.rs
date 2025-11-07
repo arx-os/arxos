@@ -1,13 +1,13 @@
 //! Hardware integration module for ArxOS
-//! 
+//!
 //! This module provides integration between hardware sensors and the ArxOS building data system.
 //! It handles sensor data ingestion, normalization, and equipment status updates.
 
-mod ingestion;
-mod data_types;
-mod status_updater;
-mod mapping;
 mod alert;
+mod data_types;
+mod ingestion;
+mod mapping;
+mod status_updater;
 
 #[cfg(feature = "async-sensors")]
 mod http_server;
@@ -16,18 +16,21 @@ mod mqtt_client;
 #[cfg(feature = "async-sensors")]
 mod websocket_server;
 
-pub use ingestion::{SensorIngestionService, SensorIngestionConfig};
-pub use data_types::{SensorData, SensorType, EquipmentSensorMapping, SensorMetadata, SensorDataValues, ThresholdCheck, SensorAlert, ArxosMetadata};
-pub use status_updater::{EquipmentStatusUpdater, UpdateResult};
-pub use mapping::MappingManager;
 pub use alert::AlertGenerator;
+pub use data_types::{
+    ArxosMetadata, EquipmentSensorMapping, SensorAlert, SensorData, SensorDataValues,
+    SensorMetadata, SensorType, ThresholdCheck,
+};
+pub use ingestion::{SensorIngestionConfig, SensorIngestionService};
+pub use mapping::MappingManager;
+pub use status_updater::{EquipmentStatusUpdater, UpdateResult};
 
 #[cfg(feature = "async-sensors")]
 pub use http_server::{start_sensor_http_server, SensorHttpService};
 #[cfg(feature = "async-sensors")]
-pub use mqtt_client::{MqttSensorClient, MqttClientConfig, start_mqtt_subscriber};
+pub use mqtt_client::{start_mqtt_subscriber, MqttClientConfig, MqttSensorClient};
 #[cfg(feature = "async-sensors")]
-pub use websocket_server::{WebSocketSensorServer, start_websocket_server};
+pub use websocket_server::{start_websocket_server, WebSocketSensorServer};
 
 // Hardware integration types exported from this module
 
@@ -44,22 +47,21 @@ pub struct EquipmentUpdate {
 pub enum HardwareError {
     #[error("Sensor data file not found: {path}")]
     FileNotFound { path: String },
-    
+
     #[error("Invalid sensor data format: {reason}")]
     InvalidFormat { reason: String },
-    
+
     #[error("Failed to map sensor to equipment: {reason}")]
     MappingError { reason: String },
-    
+
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
-    
+
     #[error("YAML serialization error: {0}")]
     YamlError(#[from] serde_yaml::Error),
-    
+
     #[error("JSON serialization error: {0}")]
     JsonError(#[from] serde_json::Error),
 }
 
 pub type HardwareResult<T> = Result<T, HardwareError>;
-

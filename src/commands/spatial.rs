@@ -17,18 +17,18 @@ use crate::cli::SpatialCommands;
 /// Returns `Ok(())` if the command executes successfully, or an error if it fails.
 pub fn handle_spatial_command(command: SpatialCommands) -> Result<(), Box<dyn std::error::Error>> {
     match command {
-        SpatialCommands::GridToReal { grid, building } => {
-            handle_grid_to_real(grid, building)
-        }
-        SpatialCommands::RealToGrid { x, y, z, building } => {
-            handle_real_to_grid(x, y, z, building)
-        }
-        SpatialCommands::Query { query_type, entity, params } => {
-            handle_spatial_query(query_type, entity, params)
-        }
-        SpatialCommands::Relate { entity1, entity2, relationship } => {
-            handle_spatial_relate(entity1, entity2, relationship)
-        }
+        SpatialCommands::GridToReal { grid, building } => handle_grid_to_real(grid, building),
+        SpatialCommands::RealToGrid { x, y, z, building } => handle_real_to_grid(x, y, z, building),
+        SpatialCommands::Query {
+            query_type,
+            entity,
+            params,
+        } => handle_spatial_query(query_type, entity, params),
+        SpatialCommands::Relate {
+            entity1,
+            entity2,
+            relationship,
+        } => handle_spatial_relate(entity1, entity2, relationship),
         SpatialCommands::Transform { from, to, entity } => {
             handle_spatial_transform(from, to, entity)
         }
@@ -39,26 +39,41 @@ pub fn handle_spatial_command(command: SpatialCommands) -> Result<(), Box<dyn st
 }
 
 /// Handle grid to real coordinate conversion
-fn handle_grid_to_real(grid: String, building: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
-    use crate::spatial::{GridCoordinate, GridSystem};
+fn handle_grid_to_real(
+    grid: String,
+    building: Option<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
     use crate::persistence::load_building_data_from_dir;
-    
-    println!("🔢 Converting grid coordinate to real coordinates: {}", grid);
-    
+    use crate::spatial::{GridCoordinate, GridSystem};
+
+    println!(
+        "🔢 Converting grid coordinate to real coordinates: {}",
+        grid
+    );
+
     let grid_coord = GridCoordinate::parse(&grid)?;
-    println!("   Parsed grid: Column {}, Row {}", grid_coord.column, grid_coord.row);
-    
+    println!(
+        "   Parsed grid: Column {}, Row {}",
+        grid_coord.column, grid_coord.row
+    );
+
     // Try to load grid system from building data, or use default
     // Note: Grid system configuration can be added to building metadata in the future
     let grid_system = if let Some(building_name) = building {
         match load_building_data_from_dir() {
             Ok(building_data) => {
                 if building_data.building.name == building_name {
-                    println!("   📐 Building '{}' found, using default grid system", building_name);
+                    println!(
+                        "   📐 Building '{}' found, using default grid system",
+                        building_name
+                    );
                     println!("   💡 Tip: Grid system configuration will be stored in building metadata in a future release");
                     GridSystem::default()
                 } else {
-                    println!("   ⚠️  Building '{}' not found, using default grid system", building_name);
+                    println!(
+                        "   ⚠️  Building '{}' not found, using default grid system",
+                        building_name
+                    );
                     GridSystem::default()
                 }
             }
@@ -70,33 +85,50 @@ fn handle_grid_to_real(grid: String, building: Option<String>) -> Result<(), Box
     } else {
         GridSystem::default()
     };
-    
+
     let real_coords = grid_system.grid_to_real(&grid_coord);
-    println!("   Real coordinates: ({:.2}, {:.2}, {:.2})", real_coords.x, real_coords.y, real_coords.z);
+    println!(
+        "   Real coordinates: ({:.2}, {:.2}, {:.2})",
+        real_coords.x, real_coords.y, real_coords.z
+    );
     println!("✅ Conversion completed");
-    
+
     Ok(())
 }
 
 /// Handle real to grid coordinate conversion
-fn handle_real_to_grid(x: f64, y: f64, z: Option<f64>, building: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
-    use crate::spatial::{GridSystem, Point3D};
+fn handle_real_to_grid(
+    x: f64,
+    y: f64,
+    z: Option<f64>,
+    building: Option<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
     use crate::persistence::load_building_data_from_dir;
-    
+    use crate::spatial::{GridSystem, Point3D};
+
     let z_coord = z.unwrap_or(0.0);
-    println!("🔢 Converting real coordinates to grid: ({:.2}, {:.2}, {:.2})", x, y, z_coord);
-    
+    println!(
+        "🔢 Converting real coordinates to grid: ({:.2}, {:.2}, {:.2})",
+        x, y, z_coord
+    );
+
     // Try to load grid system from building data, or use default
     // Note: Grid system configuration can be added to building metadata in the future
     let grid_system = if let Some(building_name) = building {
         match load_building_data_from_dir() {
             Ok(building_data) => {
                 if building_data.building.name == building_name {
-                    println!("   📐 Building '{}' found, using default grid system", building_name);
+                    println!(
+                        "   📐 Building '{}' found, using default grid system",
+                        building_name
+                    );
                     println!("   💡 Tip: Grid system configuration will be stored in building metadata in a future release");
                     GridSystem::default()
                 } else {
-                    println!("   ⚠️  Building '{}' not found, using default grid system", building_name);
+                    println!(
+                        "   ⚠️  Building '{}' not found, using default grid system",
+                        building_name
+                    );
                     GridSystem::default()
                 }
             }
@@ -108,12 +140,12 @@ fn handle_real_to_grid(x: f64, y: f64, z: Option<f64>, building: Option<String>)
     } else {
         GridSystem::default()
     };
-    
+
     let point = Point3D::new(x, y, z_coord);
     let grid_coord = grid_system.real_to_grid(&point);
     println!("   Grid coordinate: {}", grid_coord);
     println!("✅ Conversion completed");
-    
+
     Ok(())
 }
 
@@ -130,26 +162,35 @@ fn handle_real_to_grid(x: f64, y: f64, z: Option<f64>, building: Option<String>)
 /// # Returns
 ///
 /// Returns `Ok(())` if query succeeds, or an error if query fails.
-fn handle_spatial_query(query_type: String, entity: String, params: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
+fn handle_spatial_query(
+    query_type: String,
+    entity: String,
+    params: Vec<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("🔍 Spatial query: {} for entity {}", query_type, entity);
-    
+
     for param in &params {
         println!("   Parameter: {}", param);
     }
-    
+
     // Use the core module directly for spatial queries
     let result = crate::core::spatial_query(&query_type, &entity, params)?;
-    
+
     if result.is_empty() {
         println!("No results found");
     } else {
         println!("Found {} results:", result.len());
         for (i, spatial_result) in result.iter().enumerate() {
-            println!("  {}. {} ({})", i + 1, spatial_result.entity_name, spatial_result.entity_type);
-            println!("     Position: ({:.2}, {:.2}, {:.2})", 
-                spatial_result.position.x, 
-                spatial_result.position.y, 
-                spatial_result.position.z);
+            println!(
+                "  {}. {} ({})",
+                i + 1,
+                spatial_result.entity_name,
+                spatial_result.entity_type
+            );
+            println!(
+                "     Position: ({:.2}, {:.2}, {:.2})",
+                spatial_result.position.x, spatial_result.position.y, spatial_result.position.z
+            );
             println!("     Distance: {:.2}", spatial_result.distance);
         }
     }
@@ -170,11 +211,18 @@ fn handle_spatial_query(query_type: String, entity: String, params: Vec<String>)
 /// # Returns
 ///
 /// Returns `Ok(())` if relationship is set successfully, or an error if it fails.
-fn handle_spatial_relate(entity1: String, entity2: String, relationship: String) -> Result<(), Box<dyn std::error::Error>> {
-    println!("🔗 Setting spatial relationship: {} {} {}", entity1, relationship, entity2);
-    
+fn handle_spatial_relate(
+    entity1: String,
+    entity2: String,
+    relationship: String,
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!(
+        "🔗 Setting spatial relationship: {} {} {}",
+        entity1, relationship, entity2
+    );
+
     let result = crate::core::set_spatial_relationship(&entity1, &entity2, &relationship)?;
-    
+
     println!("{}", result);
     println!("✅ Spatial relationship set successfully");
     Ok(())
@@ -193,11 +241,18 @@ fn handle_spatial_relate(entity1: String, entity2: String, relationship: String)
 /// # Returns
 ///
 /// Returns `Ok(())` if transformation succeeds, or an error if it fails.
-fn handle_spatial_transform(from: String, to: String, entity: String) -> Result<(), Box<dyn std::error::Error>> {
-    println!("🔄 Transforming coordinates: {} from {} to {}", entity, from, to);
-    
+fn handle_spatial_transform(
+    from: String,
+    to: String,
+    entity: String,
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!(
+        "🔄 Transforming coordinates: {} from {} to {}",
+        entity, from, to
+    );
+
     let result = crate::core::transform_coordinates(&from, &to, &entity)?;
-    
+
     println!("{}", result);
     println!("✅ Coordinate transformation completed");
     Ok(())
@@ -215,28 +270,35 @@ fn handle_spatial_transform(from: String, to: String, entity: String) -> Result<
 /// # Returns
 ///
 /// Returns `Ok(())` if validation passes, or an error if validation fails.
-fn handle_spatial_validate(entity: Option<String>, tolerance: Option<f64>) -> Result<(), Box<dyn std::error::Error>> {
+fn handle_spatial_validate(
+    entity: Option<String>,
+    tolerance: Option<f64>,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("✅ Validating spatial data");
-    
+
     if let Some(ref e) = entity {
         println!("   Entity: {}", e);
     }
-    
+
     if let Some(t) = tolerance {
         println!("   Tolerance: {}", t);
     }
-    
+
     let result = crate::core::validate_spatial(entity.as_deref(), tolerance)?;
-    
+
     println!("   Entities checked: {}", result.entities_checked);
     println!("   Issues found: {}", result.issues_found);
-    
+
     if result.is_valid {
         println!("✅ Spatial validation passed - all entities valid");
     } else {
-        println!("⚠️  Spatial validation found {} issues:", result.issues_found);
+        println!(
+            "⚠️  Spatial validation found {} issues:",
+            result.issues_found
+        );
         for (i, issue) in result.issues.iter().enumerate() {
-            println!("   {}. {} [{}] - {}: {}", 
+            println!(
+                "   {}. {} [{}] - {}: {}",
                 i + 1,
                 issue.entity_name,
                 issue.entity_type,
@@ -245,7 +307,7 @@ fn handle_spatial_validate(entity: Option<String>, tolerance: Option<f64>) -> Re
             );
         }
     }
-    
+
     println!("✅ Spatial validation completed");
     Ok(())
 }

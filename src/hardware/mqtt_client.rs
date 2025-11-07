@@ -4,11 +4,11 @@
 //! from IoT devices via MQTT brokers using the rumqttc library.
 
 #[cfg(feature = "async-sensors")]
-use super::{SensorData, HardwareError};
+use super::{HardwareError, SensorData};
 #[cfg(feature = "async-sensors")]
-use log::{info, warn, error};
+use log::{error, info, warn};
 #[cfg(feature = "async-sensors")]
-use rumqttc::{AsyncClient, MqttOptions, Event, Incoming, QoS};
+use rumqttc::{AsyncClient, Event, Incoming, MqttOptions, QoS};
 #[cfg(feature = "async-sensors")]
 use std::sync::Arc;
 
@@ -48,10 +48,13 @@ pub struct MqttSensorClient {
 impl MqttSensorClient {
     /// Create a new MQTT client
     pub fn new(config: MqttClientConfig) -> Result<Self, HardwareError> {
-        info!("Created MQTT client configuration for broker: {}:{}", config.broker_url, config.broker_port);
+        info!(
+            "Created MQTT client configuration for broker: {}:{}",
+            config.broker_url, config.broker_port
+        );
         Ok(Self { config })
     }
-    
+
     /// Get the configuration
     pub fn get_config(&self) -> &MqttClientConfig {
         &self.config
@@ -65,32 +68,43 @@ pub async fn start_mqtt_subscriber(
     callback: impl Fn(SensorData) -> Result<(), String> + Send + Sync + 'static,
 ) -> Result<(), HardwareError> {
     info!("Starting MQTT subscriber for sensor ingestion");
-    info!("Configuration: broker={}:{}, topics={:?}", config.broker_url, config.broker_port, config.topics);
-    
+    info!(
+        "Configuration: broker={}:{}, topics={:?}",
+        config.broker_url, config.broker_port, config.topics
+    );
+
     // Build MQTT options
-    let mut mqtt_options = MqttOptions::new(&config.client_id, &config.broker_url, config.broker_port);
-    
+    let mut mqtt_options =
+        MqttOptions::new(&config.client_id, &config.broker_url, config.broker_port);
+
     // Set credentials if provided
     if let (Some(username), Some(password)) = (&config.username, &config.password) {
         mqtt_options.set_credentials(username, password);
     }
-    
+
     // Set keep alive interval
     mqtt_options.set_keep_alive(std::time::Duration::from_secs(60));
-    
+
     // Create async client with 10 message capacity
     let (client, mut event_loop) = AsyncClient::new(mqtt_options, 10);
-    
+
     // Subscribe to all configured topics with QoS 1 (at least once delivery)
     for topic in &config.topics {
         info!("Subscribing to MQTT topic: {}", topic);
-        client.subscribe(topic, QoS::AtLeastOnce).await.map_err(|e| {
-            HardwareError::IoError(std::io::Error::other(format!("Failed to subscribe to topic {}: {}", topic, e)))
-        })?;
+        client
+            .subscribe(topic, QoS::AtLeastOnce)
+            .await
+            .map_err(|e| {
+                HardwareError::IoError(std::io::Error::other(format!(
+                    "Failed to subscribe to topic {}: {}",
+                    topic, e
+                )))
+            })?;
     }
-    
+
     // Spawn task to handle incoming messages
-    let callback_arc: Arc<dyn Fn(SensorData) -> Result<(), String> + Send + Sync> = Arc::new(callback);
+    let callback_arc: Arc<dyn Fn(SensorData) -> Result<(), String> + Send + Sync> =
+        Arc::new(callback);
     tokio::spawn(async move {
         loop {
             match event_loop.poll().await {
@@ -102,7 +116,7 @@ pub async fn start_mqtt_subscriber(
                 }
                 Ok(Event::Incoming(Incoming::Publish(publish))) => {
                     info!("Received MQTT message on topic: {}", publish.topic);
-                    
+
                     // Parse sensor data from MQTT payload
                     let payload_str = match String::from_utf8(publish.payload.to_vec()) {
                         Ok(s) => s,
@@ -111,7 +125,7 @@ pub async fn start_mqtt_subscriber(
                             continue;
                         }
                     };
-                    
+
                     // Try to parse as SensorData JSON
                     match serde_json::from_str::<SensorData>(&payload_str) {
                         Ok(sensor_data) => {
@@ -137,7 +151,7 @@ pub async fn start_mqtt_subscriber(
         }
         warn!("MQTT subscriber event loop terminated");
     });
-    
+
     info!("MQTT subscriber started successfully");
     Ok(())
 }
@@ -148,14 +162,16 @@ pub struct MqttSensorClient;
 #[cfg(not(feature = "async-sensors"))]
 impl MqttSensorClient {
     pub fn new(_config: MqttClientConfig) -> Result<Self, HardwareError> {
-        Err(HardwareError::IoError(std::io::Error::other("MQTT support requires async-sensors feature")))
+        Err(HardwareError::IoError(std::io::Error::other(
+            "MQTT support requires async-sensors feature",
+        )))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     #[cfg(feature = "async-sensors")]
     fn test_mqtt_config_defaults() {
@@ -165,7 +181,7 @@ mod tests {
         assert_eq!(config.topics.len(), 1);
         assert!(config.topics[0].contains("arxos"));
     }
-    
+
     #[test]
     #[cfg(feature = "async-sensors")]
     fn test_mqtt_config_custom() {
@@ -177,14 +193,14 @@ mod tests {
             password: Some("pass".to_string()),
             topics: vec!["sensors/temp".to_string(), "sensors/humidity".to_string()],
         };
-        
+
         assert_eq!(config.broker_url, "mqtt.example.com");
         assert_eq!(config.broker_port, 8883);
         assert_eq!(config.topics.len(), 2);
         assert_eq!(config.username, Some("user".to_string()));
         assert_eq!(config.password, Some("pass".to_string()));
     }
-    
+
     #[tokio::test]
     #[cfg(feature = "async-sensors")]
     async fn test_mqtt_client_creation() {
@@ -195,15 +211,13 @@ mod tests {
         // Should succeed even without broker
         assert!(result.is_ok());
     }
-    
+
     #[tokio::test]
     #[cfg(feature = "async-sensors")]
     async fn test_mqtt_subscriber_placeholder() {
         let config = MqttClientConfig::default();
-        let callback = |_data: SensorData| -> Result<(), String> {
-            Ok(())
-        };
-        
+        let callback = |_data: SensorData| -> Result<(), String> { Ok(()) };
+
         // This will fail without a real broker, but we can verify it starts the setup
         let result = start_mqtt_subscriber(config, callback).await;
         // For now, expect it to at least start (would need real broker for actual success)

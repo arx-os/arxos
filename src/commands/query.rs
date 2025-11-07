@@ -69,19 +69,25 @@ fn print_table(results: &[crate::query::QueryResult], verbose: bool) {
     if verbose {
         // Detailed table with all fields
         println!("{:-<100}", "");
-        println!("{:<20} {:<50} {:<15} {:<10} {:<10}", "Name", "Address", "Type", "Floor", "Room");
+        println!(
+            "{:<20} {:<50} {:<15} {:<10} {:<10}",
+            "Name", "Address", "Type", "Floor", "Room"
+        );
         println!("{:-<100}", "");
-        
+
         for result in results {
-            let floor_str = result.floor.map(|f| f.to_string()).unwrap_or_else(|| "-".to_string());
-            let room_str = result.room.as_ref().cloned().unwrap_or_else(|| "-".to_string());
+            let floor_str = result
+                .floor
+                .map(|f| f.to_string())
+                .unwrap_or_else(|| "-".to_string());
+            let room_str = result
+                .room
+                .as_ref()
+                .cloned()
+                .unwrap_or_else(|| "-".to_string());
             println!(
                 "{:<20} {:<50} {:<15} {:<10} {:<10}",
-                result.name,
-                result.address,
-                result.equipment_type,
-                floor_str,
-                room_str
+                result.name, result.address, result.equipment_type, floor_str, room_str
             );
         }
         println!("{:-<100}", "");
@@ -90,16 +96,13 @@ fn print_table(results: &[crate::query::QueryResult], verbose: bool) {
         println!("{:-<90}", "");
         println!("{:<20} {:<50} {:<15}", "Name", "Address", "Type");
         println!("{:-<90}", "");
-        
+
         for result in results {
             println!(
                 "{:<20} {:<50} {:<15}",
-                result.name,
-                result.address,
-                result.equipment_type
+                result.name, result.address, result.equipment_type
             );
         }
         println!("{:-<90}", "");
     }
 }
-

@@ -21,41 +21,39 @@ impl ProgressReporter {
             })
             .progress_chars("#>-");
         pb.set_style(style);
-        
+
         pb.set_message(format!("Starting {}", operation_name));
-        
-        Self {
-            pb,
-        }
+
+        Self { pb }
     }
-    
+
     /// Update progress with current position and message
     pub fn update(&self, position: u64, message: &str) {
         self.pb.set_position(position);
         self.pb.set_message(message.to_string());
     }
-    
+
     /// Increment progress by one
     pub fn inc(&self, message: &str) {
         self.pb.inc(1);
         self.pb.set_message(message.to_string());
     }
-    
+
     /// Set a custom message
     pub fn set_message(&self, message: &str) {
         self.pb.set_message(message.to_string());
     }
-    
+
     /// Finish the progress bar with success message
     pub fn finish_success(&self, message: &str) {
         self.pb.finish_with_message(format!("✅ {}", message));
     }
-    
+
     /// Finish the progress bar with error message
     pub fn finish_error(&self, message: &str) {
         self.pb.finish_with_message(format!("❌ {}", message));
     }
-    
+
     /// Abandon the progress bar
     pub fn abandon(&self) {
         self.pb.abandon();
@@ -79,7 +77,7 @@ impl ProgressContext {
             callback: None,
         }
     }
-    
+
     /// Create with progress reporter
     pub fn with_reporter(reporter: Arc<ProgressReporter>) -> Self {
         Self {
@@ -87,7 +85,7 @@ impl ProgressContext {
             callback: None,
         }
     }
-    
+
     /// Create with callback function
     pub fn with_callback(callback: ProgressCallback) -> Self {
         Self {
@@ -95,25 +93,25 @@ impl ProgressContext {
             callback: Some(callback),
         }
     }
-    
+
     /// Update progress
     pub fn update(&self, progress: u32, message: &str) {
         if let Some(reporter) = &self.reporter {
             reporter.update(progress as u64, message);
         }
-        
+
         if let Some(callback) = &self.callback {
             callback(progress);
         }
     }
-    
+
     /// Finish with success
     pub fn finish_success(&self, message: &str) {
         if let Some(reporter) = &self.reporter {
             reporter.finish_success(message);
         }
     }
-    
+
     /// Finish with error
     pub fn finish_error(&self, message: &str) {
         if let Some(reporter) = &self.reporter {
@@ -131,17 +129,17 @@ impl Default for ProgressContext {
 /// Utility functions for common progress operations
 pub mod utils {
     use super::*;
-    
+
     /// Create a progress reporter for IFC processing
     pub fn create_ifc_progress(total_entities: u64) -> Arc<ProgressReporter> {
         Arc::new(ProgressReporter::new("IFC Processing", total_entities))
     }
-    
+
     /// Create a progress reporter for Git operations
     pub fn create_git_progress(operation: &str) -> Arc<ProgressReporter> {
         Arc::new(ProgressReporter::new(operation, 100))
     }
-    
+
     /// Create a progress reporter for file operations
     pub fn create_file_progress(operation: &str, total_files: u64) -> Arc<ProgressReporter> {
         Arc::new(ProgressReporter::new(operation, total_files))
@@ -151,21 +149,21 @@ pub mod utils {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_progress_reporter_creation() {
         let reporter = ProgressReporter::new("Test Operation", 100);
         // Test that the reporter was created successfully
         assert_eq!(reporter.pb.length(), Some(100));
     }
-    
+
     #[test]
     fn test_progress_context_creation() {
         let context = ProgressContext::new();
         assert!(context.reporter.is_none());
         assert!(context.callback.is_none());
     }
-    
+
     #[test]
     fn test_progress_context_with_reporter() {
         let reporter = Arc::new(ProgressReporter::new("Test", 100));
@@ -173,4 +171,3 @@ mod tests {
         assert!(context.reporter.is_some());
     }
 }
-

@@ -6,8 +6,11 @@
 //! - Detail panel on selection
 //! - Filtering capabilities
 
-use crate::ui::{TerminalManager, Theme, StatusColor, HelpSystem, HelpContext, render_help_overlay, handle_help_event, MouseConfig};
 use crate::ui::layouts::list_detail_layout;
+use crate::ui::{
+    handle_help_event, render_help_overlay, HelpContext, HelpSystem, MouseConfig, StatusColor,
+    TerminalManager, Theme,
+};
 use crate::utils::loading;
 use crossterm::event::{Event, KeyCode, KeyModifiers};
 use ratatui::{
@@ -56,17 +59,19 @@ impl BrowserState {
             mouse_config: MouseConfig::default(),
         }
     }
-    
+
     fn selected_item(&self) -> Option<&EquipmentItem> {
-        self.filtered_items.get(self.selected).map(|&idx| &self.items[idx])
+        self.filtered_items
+            .get(self.selected)
+            .map(|&idx| &self.items[idx])
     }
-    
+
     fn next(&mut self) {
         if !self.filtered_items.is_empty() {
             self.selected = (self.selected + 1) % self.filtered_items.len();
         }
     }
-    
+
     fn previous(&mut self) {
         if !self.filtered_items.is_empty() {
             self.selected = if self.selected == 0 {
@@ -76,20 +81,21 @@ impl BrowserState {
             };
         }
     }
-    
+
     fn apply_filter(&mut self, filter: &str) {
         self.filter = filter.to_lowercase();
         if filter.is_empty() {
             self.filtered_items = (0..self.items.len()).collect();
         } else {
-            self.filtered_items = self.items
+            self.filtered_items = self
+                .items
                 .iter()
                 .enumerate()
                 .filter(|(_, item)| {
-                    item.name.to_lowercase().contains(&self.filter) ||
-                    item.equipment_type.to_lowercase().contains(&self.filter) ||
-                    item.room.to_lowercase().contains(&self.filter) ||
-                    item.id.to_lowercase().contains(&self.filter)
+                    item.name.to_lowercase().contains(&self.filter)
+                        || item.equipment_type.to_lowercase().contains(&self.filter)
+                        || item.room.to_lowercase().contains(&self.filter)
+                        || item.id.to_lowercase().contains(&self.filter)
                 })
                 .map(|(idx, _)| idx)
                 .collect();
@@ -109,33 +115,41 @@ fn load_equipment_items(
 ) -> Result<Vec<EquipmentItem>, Box<dyn std::error::Error>> {
     let building_data = loading::load_building_data("")?;
     let mut items = Vec::new();
-    
+
     for floor in &building_data.floors {
         for equipment in &floor.equipment {
             // Find room containing this equipment (rooms are now in wings, and equipment is Vec<Equipment>)
-            let room_name = floor.wings.iter()
+            let room_name = floor
+                .wings
+                .iter()
                 .flat_map(|w| &w.rooms)
                 .find(|r| r.equipment.iter().any(|e| e.id == equipment.id))
                 .map(|r| r.name.clone())
                 .unwrap_or_else(|| "Unknown".to_string());
-            
+
             if let Some(ref room_filter) = room_filter {
-                if !room_name.to_lowercase().contains(&room_filter.to_lowercase()) {
+                if !room_name
+                    .to_lowercase()
+                    .contains(&room_filter.to_lowercase())
+                {
                     continue;
                 }
             }
-            
+
             if let Some(ref type_filter) = equipment_type_filter {
                 let eq_type_str = format!("{:?}", equipment.equipment_type);
-                if !eq_type_str.to_lowercase().contains(&type_filter.to_lowercase()) {
+                if !eq_type_str
+                    .to_lowercase()
+                    .contains(&type_filter.to_lowercase())
+                {
                     continue;
                 }
             }
-            
+
             // Format equipment_type enum to string
             let eq_type_str = format!("{:?}", equipment.equipment_type);
             // Use health_status if available, otherwise use status
-            use crate::core::{EquipmentStatus, EquipmentHealthStatus};
+            use crate::core::{EquipmentHealthStatus, EquipmentStatus};
             let status_str = if let Some(health_status) = &equipment.health_status {
                 match health_status {
                     EquipmentHealthStatus::Healthy => "Healthy".to_string(),
@@ -152,7 +166,7 @@ fn load_equipment_items(
                     EquipmentStatus::Unknown => "Unknown".to_string(),
                 }
             };
-            
+
             // Convert Position to Point3D for EquipmentItem
             use crate::spatial::Point3D;
             let position_3d = Point3D {
@@ -160,7 +174,7 @@ fn load_equipment_items(
                 y: equipment.position.y,
                 z: equipment.position.z,
             };
-            
+
             items.push(EquipmentItem {
                 id: equipment.id.clone(),
                 name: equipment.name.clone(),
@@ -172,17 +186,14 @@ fn load_equipment_items(
             });
         }
     }
-    
+
     Ok(items)
 }
 
 /// Render equipment list widget
-fn render_equipment_list<'a>(
-    state: &'a BrowserState,
-    _area: Rect,
-    theme: &'a Theme,
-) -> List<'a> {
-    let items: Vec<ListItem> = state.filtered_items
+fn render_equipment_list<'a>(state: &'a BrowserState, _area: Rect, theme: &'a Theme) -> List<'a> {
+    let items: Vec<ListItem> = state
+        .filtered_items
         .iter()
         .enumerate()
         .map(|(display_idx, &item_idx)| {
@@ -190,33 +201,41 @@ fn render_equipment_list<'a>(
             let status_color = StatusColor::from(item.status.as_str()).color();
             let icon = StatusColor::from(item.status.as_str()).icon();
             let is_selected = display_idx == state.selected;
-            
+
             let prefix = if is_selected { ">" } else { " " };
-            
+
             let line = Line::from(vec![
                 Span::styled(prefix, Style::default().fg(theme.accent)),
                 Span::styled(
                     format!(" {} {} ", icon, item.name),
                     Style::default()
                         .fg(status_color)
-                        .add_modifier(if is_selected { Modifier::BOLD | Modifier::REVERSED } else { Modifier::empty() }),
+                        .add_modifier(if is_selected {
+                            Modifier::BOLD | Modifier::REVERSED
+                        } else {
+                            Modifier::empty()
+                        }),
                 ),
                 Span::styled(
                     format!("| {} | Floor {}", item.equipment_type, item.floor),
                     Style::default().fg(theme.muted),
                 ),
             ]);
-            
+
             ListItem::new(line)
         })
         .collect();
-    
+
     let title = if state.filter.is_empty() {
         format!("Equipment ({})", state.filtered_items.len())
     } else {
-        format!("Equipment (filtered: {}/{})", state.filtered_items.len(), state.items.len())
+        format!(
+            "Equipment (filtered: {}/{})",
+            state.filtered_items.len(),
+            state.items.len()
+        )
     };
-    
+
     List::new(items)
         .block(Block::default().borders(Borders::ALL).title(title))
         .highlight_style(Style::default().add_modifier(Modifier::BOLD))
@@ -230,11 +249,14 @@ fn render_equipment_details<'a>(
 ) -> Paragraph<'a> {
     let status_color = StatusColor::from(&item.status).color();
     let icon = StatusColor::from(&item.status).icon();
-    
+
     let lines = vec![
         Line::from(vec![
             Span::styled("Name: ", Style::default().fg(theme.muted)),
-            Span::styled(&item.name, Style::default().fg(theme.text).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                &item.name,
+                Style::default().fg(theme.text).add_modifier(Modifier::BOLD),
+            ),
         ]),
         Line::from(vec![
             Span::styled("ID: ", Style::default().fg(theme.muted)),
@@ -262,19 +284,31 @@ fn render_equipment_details<'a>(
         Line::from(vec![
             Span::styled("Position: ", Style::default().fg(theme.muted)),
             Span::styled(
-                format!("({:.1}, {:.1}, {:.1})", item.position.x, item.position.y, item.position.z),
+                format!(
+                    "({:.1}, {:.1}, {:.1})",
+                    item.position.x, item.position.y, item.position.z
+                ),
                 Style::default().fg(theme.text),
             ),
         ]),
     ];
-    
+
     Paragraph::new(lines)
-        .block(Block::default().borders(Borders::ALL).title("Equipment Details"))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Equipment Details"),
+        )
         .alignment(Alignment::Left)
 }
 
 /// Render footer with help text
-fn render_footer<'a>(_area: Rect, theme: &'a Theme, filter_mode: bool, mouse_enabled: bool) -> Paragraph<'a> {
+fn render_footer<'a>(
+    _area: Rect,
+    theme: &'a Theme,
+    filter_mode: bool,
+    mouse_enabled: bool,
+) -> Paragraph<'a> {
     let help_text = if filter_mode {
         "Type to filter | Enter: Apply | Esc: Cancel | q: Quit"
     } else if mouse_enabled {
@@ -282,7 +316,7 @@ fn render_footer<'a>(_area: Rect, theme: &'a Theme, filter_mode: bool, mouse_ena
     } else {
         "↑/↓: Navigate | /: Search | Enter: Details | q: Quit"
     };
-    
+
     Paragraph::new(help_text)
         .style(Style::default().fg(theme.muted))
         .block(Block::default().borders(Borders::ALL).title("Controls"))
@@ -296,28 +330,28 @@ pub fn handle_equipment_browser(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut terminal = TerminalManager::new()?;
     let theme = Theme::default();
-    
+
     let items = load_equipment_items(room_filter, equipment_type_filter)?;
-    
+
     if items.is_empty() {
         println!("No equipment found matching filters");
         return Ok(());
     }
-    
+
     let mut state = BrowserState::new(items);
     let mut list_state = ListState::default();
     let mut filter_input = String::new();
     let mut filter_mode = false;
     let mouse_enabled = terminal.mouse_enabled();
-    
+
     loop {
         terminal.terminal().draw(|frame| {
             let chunks = list_detail_layout(frame.size(), 50);
-            
+
             let list = render_equipment_list(&state, chunks[0], &theme);
             list_state.select(Some(state.selected));
             frame.render_stateful_widget(list, chunks[0], &mut list_state);
-            
+
             if state.show_details {
                 if let Some(item) = state.selected_item() {
                     let details = render_equipment_details(item, chunks[1], &theme);
@@ -329,14 +363,14 @@ pub fn handle_equipment_browser(
                     frame.render_widget(no_selection, chunks[1]);
                 }
             }
-            
+
             let footer = render_footer(frame.size(), &theme, filter_mode, mouse_enabled);
             let footer_chunk = Layout::default()
                 .direction(ratatui::layout::Direction::Vertical)
                 .constraints([Constraint::Min(0), Constraint::Length(3)])
                 .split(frame.size())[1];
             frame.render_widget(footer, footer_chunk);
-            
+
             if filter_mode {
                 let filter_text = if filter_input.is_empty() {
                     "Enter filter: _".to_string()
@@ -348,49 +382,53 @@ pub fn handle_equipment_browser(
                     .block(Block::default().borders(Borders::ALL).title("Search"));
                 frame.render_widget(filter_paragraph, chunks[0]);
             }
-            
+
             // Render help overlay if enabled
             if state.help_system.show_overlay {
-                let help_overlay = render_help_overlay(state.help_system.current_context, frame.size(), &theme);
+                let help_overlay =
+                    render_help_overlay(state.help_system.current_context, frame.size(), &theme);
                 frame.render_widget(help_overlay, frame.size());
             }
         })?;
-        
+
         if let Some(event) = terminal.poll_event(Duration::from_millis(100))? {
             match event {
-                Event::Key(key_event) if filter_mode => {
-                    match key_event.code {
-                        KeyCode::Char(c) => {
-                            filter_input.push(c);
-                        }
-                        KeyCode::Backspace => {
-                            filter_input.pop();
-                        }
-                        KeyCode::Enter => {
-                            state.apply_filter(&filter_input);
-                            filter_mode = false;
-                            filter_input.clear();
-                        }
-                        KeyCode::Esc => {
-                            filter_mode = false;
-                            filter_input.clear();
-                        }
-                        _ => {}
+                Event::Key(key_event) if filter_mode => match key_event.code {
+                    KeyCode::Char(c) => {
+                        filter_input.push(c);
                     }
-                }
+                    KeyCode::Backspace => {
+                        filter_input.pop();
+                    }
+                    KeyCode::Enter => {
+                        state.apply_filter(&filter_input);
+                        filter_mode = false;
+                        filter_input.clear();
+                    }
+                    KeyCode::Esc => {
+                        filter_mode = false;
+                        filter_input.clear();
+                    }
+                    _ => {}
+                },
                 Event::Key(key_event) => {
                     // Handle help events first
                     if handle_help_event(event.clone(), &mut state.help_system) {
                         continue;
                     }
-                    
+
                     // Handle cheat sheet toggle
-                    if key_event.code == KeyCode::Char('h') && key_event.modifiers.contains(KeyModifiers::CONTROL) {
+                    if key_event.code == KeyCode::Char('h')
+                        && key_event.modifiers.contains(KeyModifiers::CONTROL)
+                    {
                         state.help_system.toggle_cheat_sheet();
                         continue;
                     }
-                    
-                    if TerminalManager::is_quit_key(&key_event) && !state.help_system.show_overlay && !state.help_system.show_cheat_sheet {
+
+                    if TerminalManager::is_quit_key(&key_event)
+                        && !state.help_system.show_overlay
+                        && !state.help_system.show_cheat_sheet
+                    {
                         break;
                     } else if state.help_system.show_overlay || state.help_system.show_cheat_sheet {
                         // In help mode, only allow closing help
@@ -413,7 +451,6 @@ pub fn handle_equipment_browser(
             }
         }
     }
-    
+
     Ok(())
 }
-

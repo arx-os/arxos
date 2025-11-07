@@ -4,17 +4,17 @@
 //! with clients for live sensor data updates.
 
 #[cfg(feature = "async-sensors")]
-use super::{SensorData, HardwareError};
+use super::{HardwareError, SensorData};
+#[cfg(feature = "async-sensors")]
+use futures_util::{SinkExt, StreamExt};
+#[cfg(feature = "async-sensors")]
+use log::{error, info, warn};
 #[cfg(feature = "async-sensors")]
 use tokio::net::{TcpListener, TcpStream};
 #[cfg(feature = "async-sensors")]
-use tokio_tungstenite::{accept_async, tungstenite::Message};
-#[cfg(feature = "async-sensors")]
-use log::{info, warn, error};
-#[cfg(feature = "async-sensors")]
 use tokio::sync::broadcast;
 #[cfg(feature = "async-sensors")]
-use futures_util::{SinkExt, StreamExt};
+use tokio_tungstenite::{accept_async, tungstenite::Message};
 
 /// WebSocket server for sensor data streaming
 #[cfg(feature = "async-sensors")]
@@ -29,44 +29,47 @@ impl WebSocketSensorServer {
     /// Create a new WebSocket server
     pub fn new(host: String, port: u16) -> Self {
         let (tx, _rx) = broadcast::channel::<SensorData>(100);
-        
+
         Self {
             host,
             port,
             broadcaster: tx,
         }
     }
-    
+
     /// Get broadcaster for sending sensor data
     pub fn get_broadcaster(&self) -> broadcast::Sender<SensorData> {
         self.broadcaster.clone()
     }
-    
+
     /// Start the WebSocket server
     pub async fn start(&self) -> Result<(), HardwareError> {
         let addr = format!("{}:{}", self.host, self.port);
-        let listener = TcpListener::bind(&addr)
-            .await
-            .map_err(|e| HardwareError::IoError(std::io::Error::other(format!("Failed to bind to {}: {}", addr, e))))?;
-        
+        let listener = TcpListener::bind(&addr).await.map_err(|e| {
+            HardwareError::IoError(std::io::Error::other(format!(
+                "Failed to bind to {}: {}",
+                addr, e
+            )))
+        })?;
+
         info!("WebSocket sensor server listening on ws://{}", addr);
-        
+
         // Spawn a task to accept connections
         let broadcaster = self.broadcaster.clone();
         tokio::spawn(async move {
             while let Ok((stream, addr)) = listener.accept().await {
                 info!("New WebSocket connection from: {}", addr);
                 let tx = broadcaster.clone();
-                
+
                 tokio::spawn(async move {
                     Self::handle_connection(stream, addr, tx).await;
                 });
             }
         });
-        
+
         Ok(())
     }
-    
+
     /// Handle a WebSocket connection
     #[cfg(feature = "async-sensors")]
     async fn handle_connection(
@@ -81,12 +84,12 @@ impl WebSocketSensorServer {
                 return;
             }
         };
-        
+
         info!("WebSocket connection established with: {}", addr);
-        
+
         let (mut tx, mut rx) = ws_stream.split();
         let mut broadcast_rx = broadcaster.subscribe();
-        
+
         // Forward broadcast messages to WebSocket client
         tokio::spawn(async move {
             loop {
@@ -118,7 +121,7 @@ impl WebSocketSensorServer {
                 }
             }
         });
-        
+
         // Handle incoming messages from client
         while let Some(message_result) = rx.next().await {
             match message_result {
@@ -141,7 +144,7 @@ impl WebSocketSensorServer {
                 }
             }
         }
-        
+
         info!("WebSocket connection closed with: {}", addr);
     }
 }
@@ -154,26 +157,29 @@ pub async fn start_websocket_server(
 ) -> Result<broadcast::Sender<SensorData>, HardwareError> {
     let (tx, _rx) = broadcast::channel::<SensorData>(100);
     let broadcaster = tx.clone();
-    
+
     let addr = format!("{}:{}", host, port);
-    let listener = TcpListener::bind(&addr)
-        .await
-        .map_err(|e| HardwareError::IoError(std::io::Error::other(format!("Failed to bind to {}: {}", addr, e))))?;
-    
+    let listener = TcpListener::bind(&addr).await.map_err(|e| {
+        HardwareError::IoError(std::io::Error::other(format!(
+            "Failed to bind to {}: {}",
+            addr, e
+        )))
+    })?;
+
     info!("WebSocket sensor server listening on ws://{}", addr);
-    
+
     // Spawn a task to accept connections
     tokio::spawn(async move {
         while let Ok((stream, addr)) = listener.accept().await {
             info!("New WebSocket connection from: {}", addr);
             let tx_clone = broadcaster.clone();
-            
+
             tokio::spawn(async move {
                 WebSocketSensorServer::handle_connection(stream, addr, tx_clone).await;
             });
         }
     });
-    
+
     Ok(tx)
 }
 
@@ -185,9 +191,11 @@ impl WebSocketSensorServer {
     pub fn new(_host: String, _port: u16) -> Self {
         Self
     }
-    
+
     pub async fn start(&self) -> Result<(), HardwareError> {
-        Err(HardwareError::IoError(std::io::Error::other("WebSocket support requires async-sensors feature")))
+        Err(HardwareError::IoError(std::io::Error::other(
+            "WebSocket support requires async-sensors feature",
+        )))
     }
 }
 
@@ -195,14 +203,13 @@ impl WebSocketSensorServer {
 #[cfg(feature = "async-sensors")]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_websocket_server_creation() {
         let server = WebSocketSensorServer::new("127.0.0.1".to_string(), 8080);
         let _broadcaster = server.get_broadcaster();
-        
+
         // Test that we can get the broadcaster successfully
         // (receiver_count is always >= 0, so the comparison was redundant)
     }
 }
-

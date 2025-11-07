@@ -62,4 +62,3 @@ pub struct SearchResult {
     pub description: Option<String>,
     pub match_score: f64,
 }
-

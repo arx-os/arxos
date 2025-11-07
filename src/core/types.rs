@@ -78,14 +78,14 @@ impl<'de> serde::Deserialize<'de> for BoundingBox {
 
 impl BoundingBox {
     /// Create a new bounding box with validation
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `min` - Minimum position (should be less than max in all dimensions)
     /// * `max` - Maximum position (should be greater than min in all dimensions)
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Panics if `min` is not less than `max` in any dimension (debug builds only).
     /// In release builds, invalid bounding boxes are allowed but may cause issues.
     pub fn new(min: Position, max: Position) -> Self {
@@ -95,9 +95,9 @@ impl BoundingBox {
         );
         Self { min, max }
     }
-    
+
     /// Validate that the bounding box is well-formed
-    /// 
+    ///
     /// Returns `true` if `min <= max` in all dimensions, `false` otherwise.
     pub fn is_valid(&self) -> bool {
         self.min.x <= self.max.x && self.min.y <= self.max.y && self.min.z <= self.max.z
@@ -129,7 +129,7 @@ impl SpatialProperties {
                 coordinate_system: coordinate_system.clone(),
             },
         };
-        
+
         Self {
             position,
             dimensions,
@@ -147,13 +147,13 @@ impl Default for SpatialProperties {
             z: 0.0,
             coordinate_system: "building_local".to_string(),
         };
-        
+
         let dimensions = Dimensions {
             width: 10.0,
             height: 3.0,
             depth: 10.0,
         };
-        
+
         Self::new(position, dimensions, "building_local".to_string())
     }
 }
@@ -166,4 +166,3 @@ pub struct SpatialQueryResult {
     pub position: Position,
     pub distance: f64,
 }
-

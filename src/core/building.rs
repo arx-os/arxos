@@ -1,10 +1,10 @@
 //! Building data structure and implementation
 
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use chrono::{DateTime, Utc};
 use super::{Floor, Room};
 use crate::spatial::BoundingBox3D;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 /// Building metadata (YAML-only field)
 ///
@@ -120,11 +120,11 @@ impl Building {
             coordinate_systems: Vec::new(),
         }
     }
-    
+
     /// Add a floor to the building
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Panics in debug builds if a floor with the same level already exists.
     /// In release builds, duplicate floors are allowed but may cause issues.
     pub fn add_floor(&mut self, floor: Floor) {
@@ -136,9 +136,9 @@ impl Building {
         self.floors.push(floor);
         self.updated_at = Utc::now();
     }
-    
+
     /// Add a floor to the building with validation
-    /// 
+    ///
     /// Returns `Err` if a floor with the same level already exists.
     pub fn try_add_floor(&mut self, floor: Floor) -> Result<(), String> {
         if self.floors.iter().any(|f| f.level == floor.level) {
@@ -148,28 +148,31 @@ impl Building {
         self.updated_at = Utc::now();
         Ok(())
     }
-    
+
     /// Find a floor by level
     pub fn find_floor(&self, level: i32) -> Option<&Floor> {
         self.floors.iter().find(|f| f.level == level)
     }
-    
+
     /// Find a floor by level (mutable)
     pub fn find_floor_mut(&mut self, level: i32) -> Option<&mut Floor> {
         self.floors.iter_mut().find(|f| f.level == level)
     }
-    
+
     /// Get all rooms in the building
     pub fn get_all_rooms(&self) -> Vec<&Room> {
-        self.floors.iter()
+        self.floors
+            .iter()
             .flat_map(|floor| floor.wings.iter())
             .flat_map(|wing| wing.rooms.iter())
             .collect()
     }
-    
+
     /// Find a room by ID
     pub fn find_room(&self, room_id: &str) -> Option<&Room> {
-        self.get_all_rooms().into_iter().find(|room| room.id == room_id)
+        self.get_all_rooms()
+            .into_iter()
+            .find(|room| room.id == room_id)
     }
 }
 
@@ -191,4 +194,3 @@ impl Default for Building {
         }
     }
 }
-

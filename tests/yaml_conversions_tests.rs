@@ -3,9 +3,9 @@
 //! These tests verify that conversion between core types and YAML types
 //! works correctly, especially with the new health_status field.
 
-use arxos::core::{Equipment, EquipmentType, EquipmentStatus, EquipmentHealthStatus, Position};
+use arxos::core::{Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType, Position};
+use arxos::yaml::conversions::{equipment_data_to_equipment, equipment_to_equipment_data};
 use arxos::yaml::{EquipmentData, EquipmentStatus as YamlEquipmentStatus};
-use arxos::yaml::conversions::{equipment_to_equipment_data, equipment_data_to_equipment};
 use std::collections::HashMap;
 
 /// Create a test equipment with specified status and health_status
@@ -40,9 +40,9 @@ fn test_equipment_to_equipment_data_with_health_status() {
         EquipmentStatus::Active,
         Some(EquipmentHealthStatus::Warning),
     );
-    
+
     let equipment_data = equipment_to_equipment_data(&equipment);
-    
+
     // Should use health_status (Warning) instead of mapping from status
     assert_eq!(equipment_data.status, YamlEquipmentStatus::Warning);
     assert_eq!(equipment_data.id, "test-equipment-001");
@@ -53,9 +53,9 @@ fn test_equipment_to_equipment_data_with_health_status() {
 fn test_equipment_to_equipment_data_without_health_status() {
     // Test backward compatibility: when health_status is None, should map from status
     let equipment = create_test_equipment(EquipmentStatus::Maintenance, None);
-    
+
     let equipment_data = equipment_to_equipment_data(&equipment);
-    
+
     // Should map Maintenance -> Warning
     assert_eq!(equipment_data.status, YamlEquipmentStatus::Warning);
 }
@@ -66,20 +66,19 @@ fn test_equipment_to_equipment_data_all_health_status_variants() {
     let test_cases = vec![
         (EquipmentHealthStatus::Healthy, YamlEquipmentStatus::Healthy),
         (EquipmentHealthStatus::Warning, YamlEquipmentStatus::Warning),
-        (EquipmentHealthStatus::Critical, YamlEquipmentStatus::Critical),
+        (
+            EquipmentHealthStatus::Critical,
+            YamlEquipmentStatus::Critical,
+        ),
         (EquipmentHealthStatus::Unknown, YamlEquipmentStatus::Unknown),
     ];
-    
+
     for (health_status, expected_yaml_status) in test_cases {
-        let equipment = create_test_equipment(
-            EquipmentStatus::Active,
-            Some(health_status),
-        );
-        
+        let equipment = create_test_equipment(EquipmentStatus::Active, Some(health_status));
+
         let equipment_data = equipment_to_equipment_data(&equipment);
         assert_eq!(
-            equipment_data.status,
-            expected_yaml_status,
+            equipment_data.status, expected_yaml_status,
             "Failed for health_status: {:?}",
             health_status
         );
@@ -96,14 +95,13 @@ fn test_equipment_to_equipment_data_all_operational_status_fallbacks() {
         (EquipmentStatus::OutOfOrder, YamlEquipmentStatus::Critical),
         (EquipmentStatus::Unknown, YamlEquipmentStatus::Unknown),
     ];
-    
+
     for (operational_status, expected_yaml_status) in test_cases {
         let equipment = create_test_equipment(operational_status, None);
-        
+
         let equipment_data = equipment_to_equipment_data(&equipment);
         assert_eq!(
-            equipment_data.status,
-            expected_yaml_status,
+            equipment_data.status, expected_yaml_status,
             "Failed for operational status: {:?}",
             operational_status
         );
@@ -135,17 +133,29 @@ fn test_equipment_data_to_equipment_maps_to_both_statuses() {
             EquipmentHealthStatus::Unknown,
         ),
     ];
-    
+
     for (yaml_status, expected_operational, expected_health) in test_cases {
         let equipment_data = EquipmentData {
             id: "test-001".to_string(),
             name: "Test".to_string(),
             equipment_type: "HVAC".to_string(),
             system_type: "HVAC".to_string(),
-            position: arxos::spatial::Point3D { x: 0.0, y: 0.0, z: 0.0 },
+            position: arxos::spatial::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
             bounding_box: arxos::spatial::BoundingBox3D {
-                min: arxos::spatial::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-                max: arxos::spatial::Point3D { x: 1.0, y: 1.0, z: 1.0 },
+                min: arxos::spatial::Point3D {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                max: arxos::spatial::Point3D {
+                    x: 1.0,
+                    y: 1.0,
+                    z: 1.0,
+                },
             },
             status: yaml_status,
             properties: HashMap::new(),
@@ -153,16 +163,15 @@ fn test_equipment_data_to_equipment_maps_to_both_statuses() {
             address: None,
             sensor_mappings: None,
         };
-        
+
         let equipment = equipment_data_to_equipment(&equipment_data);
-        
+
         assert_eq!(
-            equipment.status,
-            expected_operational,
+            equipment.status, expected_operational,
             "Operational status mismatch for YAML status: {:?}",
             yaml_status
         );
-        
+
         assert_eq!(
             equipment.health_status,
             Some(expected_health),
@@ -179,24 +188,27 @@ fn test_round_trip_conversion_with_health_status() {
         EquipmentStatus::Active,
         Some(EquipmentHealthStatus::Warning),
     );
-    
+
     let equipment_data = equipment_to_equipment_data(&original);
     let round_tripped = equipment_data_to_equipment(&equipment_data);
-    
+
     // Verify health_status is preserved
     assert_eq!(round_tripped.health_status, original.health_status);
     // Note: operational status may differ due to mapping, but health_status should match
-    assert_eq!(round_tripped.health_status, Some(EquipmentHealthStatus::Warning));
+    assert_eq!(
+        round_tripped.health_status,
+        Some(EquipmentHealthStatus::Warning)
+    );
 }
 
 #[test]
 fn test_round_trip_conversion_without_health_status() {
     // Test round-trip when health_status is None (backward compatibility)
     let original = create_test_equipment(EquipmentStatus::Maintenance, None);
-    
+
     let equipment_data = equipment_to_equipment_data(&original);
     let round_tripped = equipment_data_to_equipment(&equipment_data);
-    
+
     // After round-trip, health_status should be set (from YAML status)
     assert_eq!(
         round_tripped.health_status,
@@ -212,9 +224,9 @@ fn test_health_status_priority_over_operational_status() {
         EquipmentStatus::Active,
         Some(EquipmentHealthStatus::Warning),
     );
-    
+
     let equipment_data = equipment_to_equipment_data(&equipment);
-    
+
     // Should use Warning (from health_status), not Healthy (from Active status)
     assert_eq!(equipment_data.status, YamlEquipmentStatus::Warning);
 }
@@ -242,17 +254,15 @@ fn test_independent_status_scenarios() {
             YamlEquipmentStatus::Critical,
         ),
     ];
-    
+
     for (operational, health, expected_yaml) in scenarios {
         let equipment = create_test_equipment(operational, health);
         let equipment_data = equipment_to_equipment_data(&equipment);
-        
+
         assert_eq!(
-            equipment_data.status,
-            expected_yaml,
+            equipment_data.status, expected_yaml,
             "Failed for scenario: operational={:?}, health={:?}",
-            operational,
-            health
+            operational, health
         );
     }
 }
@@ -262,7 +272,7 @@ fn test_conversion_preserves_other_fields() {
     // Test that conversion preserves all other equipment fields
     let mut properties = HashMap::new();
     properties.insert("test_key".to_string(), "test_value".to_string());
-    
+
     let equipment = Equipment {
         sensor_mappings: None,
         id: "preserve-test-001".to_string(),
@@ -281,10 +291,10 @@ fn test_conversion_preserves_other_fields() {
         health_status: Some(EquipmentHealthStatus::Healthy),
         room_id: Some("room-001".to_string()),
     };
-    
+
     let equipment_data = equipment_to_equipment_data(&equipment);
     let round_tripped = equipment_data_to_equipment(&equipment_data);
-    
+
     // Verify all fields are preserved
     assert_eq!(round_tripped.id, equipment.id);
     assert_eq!(round_tripped.name, equipment.name);
@@ -296,4 +306,3 @@ fn test_conversion_preserves_other_fields() {
     assert_eq!(round_tripped.properties, equipment.properties);
     // Note: room_id is not preserved in conversion (set to None in equipment_data_to_equipment)
 }
-

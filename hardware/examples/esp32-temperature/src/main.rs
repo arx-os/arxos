@@ -61,6 +61,12 @@ const SENSOR_TYPE: &str = "temperature_humidity";
 const ROOM_PATH: &str = "/B1/3/301/HVAC";
 const BUILDING_ID: &str = "B1";
 
+fn github_token_header(token: &str) -> String {
+    let mut header = String::from("token ");
+    header.push_str(token);
+    header
+}
+
 struct SensorData {
     temperature: f32,
     humidity: f32,
@@ -288,7 +294,8 @@ fn post_to_github(yaml_data: &str) -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let mut request = client.post(&url)?;
-    request.insert_header("Authorization", &format!("token {}", GITHUB_TOKEN))?;
+	let auth_header = github_token_header(GITHUB_TOKEN);
+	request.insert_header("Authorization", &auth_header)?;
     request.insert_header("Content-Type", "application/json")?;
     request.insert_header("User-Agent", "ArxOS-ESP32-Rust/1.0")?;
 

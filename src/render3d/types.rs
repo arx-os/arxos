@@ -1,6 +1,6 @@
 //! Type definitions for 3D rendering
 
-use crate::spatial::{Point3D, BoundingBox3D};
+use crate::spatial::{BoundingBox3D, Point3D};
 use serde::{Deserialize, Serialize};
 
 /// 3D rendering configuration
@@ -114,7 +114,7 @@ pub struct Floor3D {
     pub level: i32,
     pub elevation: f64,
     pub bounding_box: BoundingBox3D,
-    pub rooms: Vec<String>, // Room IDs
+    pub rooms: Vec<String>,     // Room IDs
     pub equipment: Vec<String>, // Equipment IDs
 }
 
@@ -129,7 +129,7 @@ pub struct Equipment3D {
     pub bounding_box: BoundingBox3D,
     pub floor_level: i32,
     pub room_id: Option<String>,
-    pub connections: Vec<String>, // Connected equipment IDs
+    pub connections: Vec<String>,             // Connected equipment IDs
     pub spatial_relationships: Option<usize>, // Number of spatial relationships
     pub nearest_entity_distance: Option<f64>, // Distance to nearest entity
 }
@@ -156,4 +156,3 @@ pub struct SceneMetadata {
     pub projection_type: String,
     pub view_angle: String,
 }
-

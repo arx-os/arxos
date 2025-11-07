@@ -3,14 +3,14 @@
 //! Exports game plans to IFC files while preserving all metadata (entity IDs,
 //! types, placement chains, properties) for complete round-trip compatibility.
 
-use std::path::Path;
-use crate::game::state::GameState;
-use crate::game::ifc_sync::{IFCSyncManager, IFCMetadata};
 use crate::game::ifc_mapping::IFCTypeMapper;
+use crate::game::ifc_sync::{IFCMetadata, IFCSyncManager};
+use crate::game::state::GameState;
 use crate::game::types::GameEquipmentPlacement;
-use crate::spatial::{SpatialEntity, Point3D, BoundingBox3D};
 use crate::ifc::EnhancedIFCParser;
+use crate::spatial::{BoundingBox3D, Point3D, SpatialEntity};
 use log::info;
+use std::path::Path;
 
 /// Export game state to IFC file with full metadata preservation
 pub struct IFCGameExporter {
@@ -39,10 +39,10 @@ impl IFCGameExporter {
         let spatial_entities = self.convert_placements_to_spatial_entities(game_state)?;
 
         // Write to IFC file
-        let output_path_str = output_path.to_str()
-            .ok_or("Invalid output path")?;
-        
-        self.parser.write_spatial_entities_to_ifc(&spatial_entities, output_path_str)?;
+        let output_path_str = output_path.to_str().ok_or("Invalid output path")?;
+
+        self.parser
+            .write_spatial_entities_to_ifc(&spatial_entities, output_path_str)?;
 
         info!(
             "Successfully exported {} equipment items to IFC file",
@@ -77,14 +77,14 @@ impl IFCGameExporter {
             }
 
             // Get final metadata after mapping
-            let metadata = self.sync_manager
+            let metadata = self
+                .sync_manager
                 .get_or_create_metadata(&placement.equipment.id);
 
             // Determine IFC entity type
-            let ifc_entity_type = metadata.entity_type.clone()
-                .unwrap_or_else(|| {
-                    IFCTypeMapper::map_equipment_type_to_ifc(&placement.equipment.equipment_type)
-                });
+            let ifc_entity_type = metadata.entity_type.clone().unwrap_or_else(|| {
+                IFCTypeMapper::map_equipment_type_to_ifc(&placement.equipment.equipment_type)
+            });
 
             // Create spatial entity
             let _merged_properties = self.merge_properties(placement, &metadata);
@@ -93,9 +93,10 @@ impl IFCGameExporter {
                 placement.equipment.position.y,
                 placement.equipment.position.z,
             );
-            
+
             let spatial_entity = SpatialEntity::new(
-                metadata.entity_id
+                metadata
+                    .entity_id
                     .clone()
                     .unwrap_or_else(|| format!("GAME_{}", placement.equipment.id)),
                 placement.equipment.name.clone(),
@@ -103,7 +104,7 @@ impl IFCGameExporter {
                 position,
             )
             .with_bounding_box(self.calculate_bounding_box(placement));
-            
+
             // Note: Properties are preserved in the equipment and IFC metadata,
             // but SpatialEntity doesn't store them directly
 
@@ -117,27 +118,21 @@ impl IFCGameExporter {
     fn calculate_bounding_box(&self, placement: &GameEquipmentPlacement) -> BoundingBox3D {
         // Default size - could be enhanced with actual equipment dimensions
         let default_size = 0.5;
-        
+
         let pos = &placement.equipment.position;
         let center = Point3D::new(pos.x, pos.y, pos.z);
 
         // Check if size is specified in properties
-        let size = placement.equipment.properties
+        let size = placement
+            .equipment
+            .properties
             .get("size")
             .and_then(|s| s.parse::<f64>().ok())
             .unwrap_or(default_size);
 
         BoundingBox3D {
-            min: Point3D::new(
-                center.x - size,
-                center.y - size,
-                center.z - size,
-            ),
-            max: Point3D::new(
-                center.x + size,
-                center.y + size,
-                center.z + size,
-            ),
+            min: Point3D::new(center.x - size, center.y - size, center.z - size),
+            max: Point3D::new(center.x + size, center.y + size, center.z + size),
         }
     }
 
@@ -227,4 +222,3 @@ pub fn export_game_to_ifc(
     let mut exporter = IFCGameExporter::new();
     exporter.export_game_to_ifc(game_state, output_path)
 }
-

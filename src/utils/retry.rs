@@ -1,7 +1,7 @@
 //! Retry logic utilities for resilient operations
 
-use std::time::Duration;
 use std::fmt::Debug;
+use std::time::Duration;
 
 /// Retry configuration
 #[derive(Debug, Clone)]
@@ -35,21 +35,21 @@ where
 {
     let mut delay = config.initial_delay;
     let mut last_error = None;
-    
+
     for attempt in 0..config.max_attempts {
         match operation() {
             Ok(result) => return Ok(result),
             Err(e) => {
                 last_error = Some(e);
-                
+
                 // Don't delay after the last attempt
                 if attempt < config.max_attempts - 1 {
                     std::thread::sleep(delay);
-                    
+
                     // Calculate next delay with exponential backoff
                     let next_delay_secs = delay.as_secs_f64() * config.backoff_multiplier;
                     let next_delay = Duration::from_secs_f64(next_delay_secs);
-                    
+
                     // Cap at max delay
                     delay = if next_delay > config.max_delay {
                         config.max_delay
@@ -60,7 +60,7 @@ where
             }
         }
     }
-    
+
     // Last attempt failed, return the last error
     Err(last_error.unwrap())
 }
@@ -68,14 +68,14 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_retry_success_first_attempt() {
         let config = RetryConfig::default();
         let result = retry(&config, || Ok::<i32, &str>(42));
         assert_eq!(result, Ok(42));
     }
-    
+
     #[test]
     fn test_retry_success_on_second_attempt() {
         let config = RetryConfig::default();
@@ -91,7 +91,7 @@ mod tests {
         assert_eq!(result, Ok(42));
         assert_eq!(attempts, 2);
     }
-    
+
     #[test]
     fn test_retry_exhausts_attempts() {
         let config = RetryConfig {
@@ -104,4 +104,3 @@ mod tests {
         assert_eq!(result, Err("always fails"));
     }
 }
-

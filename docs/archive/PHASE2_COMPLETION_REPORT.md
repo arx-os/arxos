@@ -135,7 +135,7 @@ C FFI Functions (@_silgen_name)
   ↓
 libarxos.a (Static library in XCFramework)
   ↓
-Rust Code (src/mobile_ffi/)
+Rust Code (crates/arxos/crates/arxos/src/mobile_ffi/)
   ↓
 YAML Data / Git Repo
 ```

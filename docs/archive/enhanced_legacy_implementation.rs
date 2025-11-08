@@ -12,11 +12,11 @@ use std::collections::HashMap;
 /// Types of equipment relationships
 #[derive(Debug, Clone, PartialEq)]
 pub enum RelationshipType {
-    FlowConnection,
-    ControlConnection,
-    SpatialConnection,
-    ElectricalConnection,
-    MechanicalConnection,
+    Flow,
+    Control,
+    Spatial,
+    Electrical,
+    Mechanical,
 }
 
 /// Equipment relationship data structure
@@ -1108,7 +1108,7 @@ impl EnhancedIFCParser {
         let relationship = EquipmentRelationship {
             from_entity_id: entity.id.clone(),
             to_entity_id: format!("{}_CONNECTION", entity.id),
-            relationship_type: RelationshipType::FlowConnection,
+            relationship_type: RelationshipType::Flow,
             connection_type: Some("DUCT_SEGMENT".to_string()),
             properties: vec![
                 ("length".to_string(), "estimated".to_string()),
@@ -1125,7 +1125,7 @@ impl EnhancedIFCParser {
         let relationship = EquipmentRelationship {
             from_entity_id: entity.id.clone(),
             to_entity_id: format!("{}_INLET", entity.id),
-            relationship_type: RelationshipType::FlowConnection,
+            relationship_type: RelationshipType::Flow,
             connection_type: Some("FITTING".to_string()),
             properties: vec![
                 ("fitting_type".to_string(), "elbow".to_string()),
@@ -1139,7 +1139,7 @@ impl EnhancedIFCParser {
         let outlet_relationship = EquipmentRelationship {
             from_entity_id: entity.id.clone(),
             to_entity_id: format!("{}_OUTLET", entity.id),
-            relationship_type: RelationshipType::FlowConnection,
+            relationship_type: RelationshipType::Flow,
             connection_type: Some("FITTING".to_string()),
             properties: vec![
                 ("fitting_type".to_string(), "elbow".to_string()),
@@ -1156,7 +1156,7 @@ impl EnhancedIFCParser {
         let relationship = EquipmentRelationship {
             from_entity_id: entity.id.clone(),
             to_entity_id: format!("{}_SUPPLY", entity.id),
-            relationship_type: RelationshipType::FlowConnection,
+            relationship_type: RelationshipType::Flow,
             connection_type: Some("TERMINAL".to_string()),
             properties: vec![
                 ("flow_rate".to_string(), "variable".to_string()),
@@ -1173,7 +1173,7 @@ impl EnhancedIFCParser {
         let relationship = EquipmentRelationship {
             from_entity_id: entity.id.clone(),
             to_entity_id: format!("{}_CONTROL", entity.id),
-            relationship_type: RelationshipType::ControlConnection,
+            relationship_type: RelationshipType::Control,
             connection_type: Some("CONTROLLER".to_string()),
             properties: vec![
                 ("control_type".to_string(), "modulating".to_string()),
@@ -1190,7 +1190,7 @@ impl EnhancedIFCParser {
         let relationship = EquipmentRelationship {
             from_entity_id: entity.id.clone(),
             to_entity_id: format!("{}_SPATIAL", entity.id),
-            relationship_type: RelationshipType::SpatialConnection,
+            relationship_type: RelationshipType::Spatial,
             connection_type: Some("GENERIC".to_string()),
             properties: vec![
                 ("spatial_type".to_string(), "proximity".to_string()),
@@ -1244,11 +1244,11 @@ impl EnhancedIFCParser {
         
         // Count different types of connections
         let flow_connections = relationships.iter()
-            .filter(|rel| rel.relationship_type == RelationshipType::FlowConnection)
+            .filter(|rel| rel.relationship_type == RelationshipType::Flow)
             .count() as f64;
         
         let control_connections = relationships.iter()
-            .filter(|rel| rel.relationship_type == RelationshipType::ControlConnection)
+            .filter(|rel| rel.relationship_type == RelationshipType::Control)
             .count() as f64;
         
         // Calculate efficiency based on connection types
@@ -3247,12 +3247,12 @@ mod tests {
         
         // Verify relationship types
         let flow_connections = relationships.iter()
-            .filter(|rel| rel.relationship_type == RelationshipType::FlowConnection)
+            .filter(|rel| rel.relationship_type == RelationshipType::Flow)
             .count();
         assert_eq!(flow_connections, 4);
         
         let control_connections = relationships.iter()
-            .filter(|rel| rel.relationship_type == RelationshipType::ControlConnection)
+            .filter(|rel| rel.relationship_type == RelationshipType::Control)
             .count();
         assert_eq!(control_connections, 1);
         
@@ -3260,7 +3260,7 @@ mod tests {
         let duct_relationship = relationships.iter()
             .find(|rel| rel.from_entity_id == "DUCT_001")
             .unwrap();
-        assert_eq!(duct_relationship.relationship_type, RelationshipType::FlowConnection);
+        assert_eq!(duct_relationship.relationship_type, RelationshipType::Flow);
         assert_eq!(duct_relationship.connection_type, Some("DUCT_SEGMENT".to_string()));
         
         let fitting_relationships = relationships.iter()
@@ -3271,13 +3271,13 @@ mod tests {
         let terminal_relationship = relationships.iter()
             .find(|rel| rel.from_entity_id == "TERMINAL_001")
             .unwrap();
-        assert_eq!(terminal_relationship.relationship_type, RelationshipType::FlowConnection);
+        assert_eq!(terminal_relationship.relationship_type, RelationshipType::Flow);
         assert_eq!(terminal_relationship.connection_type, Some("TERMINAL".to_string()));
         
         let valve_relationship = relationships.iter()
             .find(|rel| rel.from_entity_id == "VALVE_001")
             .unwrap();
-        assert_eq!(valve_relationship.relationship_type, RelationshipType::ControlConnection);
+        assert_eq!(valve_relationship.relationship_type, RelationshipType::Control);
         assert_eq!(valve_relationship.connection_type, Some("CONTROLLER".to_string()));
     }
     
@@ -3290,21 +3290,21 @@ mod tests {
             EquipmentRelationship {
                 from_entity_id: "EQUIPMENT_001".to_string(),
                 to_entity_id: "EQUIPMENT_002".to_string(),
-                relationship_type: RelationshipType::FlowConnection,
+                relationship_type: RelationshipType::Flow,
                 connection_type: Some("DUCT".to_string()),
                 properties: vec![("length".to_string(), "10.0".to_string())],
             },
             EquipmentRelationship {
                 from_entity_id: "EQUIPMENT_002".to_string(),
                 to_entity_id: "EQUIPMENT_003".to_string(),
-                relationship_type: RelationshipType::FlowConnection,
+                relationship_type: RelationshipType::Flow,
                 connection_type: Some("FITTING".to_string()),
                 properties: vec![("type".to_string(), "elbow".to_string())],
             },
             EquipmentRelationship {
                 from_entity_id: "EQUIPMENT_001".to_string(),
                 to_entity_id: "EQUIPMENT_004".to_string(),
-                relationship_type: RelationshipType::ControlConnection,
+                relationship_type: RelationshipType::Control,
                 connection_type: Some("VALVE".to_string()),
                 properties: vec![("position".to_string(), "open".to_string())],
             },
@@ -3333,28 +3333,28 @@ mod tests {
             EquipmentRelationship {
                 from_entity_id: "EQUIPMENT_001".to_string(),
                 to_entity_id: "EQUIPMENT_002".to_string(),
-                relationship_type: RelationshipType::FlowConnection,
+                relationship_type: RelationshipType::Flow,
                 connection_type: Some("DUCT".to_string()),
                 properties: vec![],
             },
             EquipmentRelationship {
                 from_entity_id: "EQUIPMENT_002".to_string(),
                 to_entity_id: "EQUIPMENT_003".to_string(),
-                relationship_type: RelationshipType::FlowConnection,
+                relationship_type: RelationshipType::Flow,
                 connection_type: Some("DUCT".to_string()),
                 properties: vec![],
             },
             EquipmentRelationship {
                 from_entity_id: "EQUIPMENT_003".to_string(),
                 to_entity_id: "EQUIPMENT_004".to_string(),
-                relationship_type: RelationshipType::FlowConnection,
+                relationship_type: RelationshipType::Flow,
                 connection_type: Some("DUCT".to_string()),
                 properties: vec![],
             },
             EquipmentRelationship {
                 from_entity_id: "EQUIPMENT_001".to_string(),
                 to_entity_id: "EQUIPMENT_005".to_string(),
-                relationship_type: RelationshipType::FlowConnection,
+                relationship_type: RelationshipType::Flow,
                 connection_type: Some("DUCT".to_string()),
                 properties: vec![],
             },
@@ -3392,28 +3392,28 @@ mod tests {
             EquipmentRelationship {
                 from_entity_id: "EQUIPMENT_001".to_string(),
                 to_entity_id: "EQUIPMENT_002".to_string(),
-                relationship_type: RelationshipType::FlowConnection,
+                relationship_type: RelationshipType::Flow,
                 connection_type: Some("DUCT".to_string()),
                 properties: vec![],
             },
             EquipmentRelationship {
                 from_entity_id: "EQUIPMENT_002".to_string(),
                 to_entity_id: "EQUIPMENT_003".to_string(),
-                relationship_type: RelationshipType::FlowConnection,
+                relationship_type: RelationshipType::Flow,
                 connection_type: Some("DUCT".to_string()),
                 properties: vec![],
             },
             EquipmentRelationship {
                 from_entity_id: "EQUIPMENT_001".to_string(),
                 to_entity_id: "EQUIPMENT_004".to_string(),
-                relationship_type: RelationshipType::ControlConnection,
+                relationship_type: RelationshipType::Control,
                 connection_type: Some("VALVE".to_string()),
                 properties: vec![],
             },
             EquipmentRelationship {
                 from_entity_id: "EQUIPMENT_005".to_string(),
                 to_entity_id: "EQUIPMENT_006".to_string(),
-                relationship_type: RelationshipType::SpatialConnection,
+                relationship_type: RelationshipType::Spatial,
                 connection_type: Some("PROXIMITY".to_string()),
                 properties: vec![],
             },
@@ -3437,14 +3437,14 @@ mod tests {
             EquipmentRelationship {
                 from_entity_id: "EQUIPMENT_001".to_string(),
                 to_entity_id: "EQUIPMENT_002".to_string(),
-                relationship_type: RelationshipType::FlowConnection,
+                relationship_type: RelationshipType::Flow,
                 connection_type: Some("DUCT".to_string()),
                 properties: vec![],
             },
             EquipmentRelationship {
                 from_entity_id: "EQUIPMENT_002".to_string(),
                 to_entity_id: "EQUIPMENT_003".to_string(),
-                relationship_type: RelationshipType::FlowConnection,
+                relationship_type: RelationshipType::Flow,
                 connection_type: Some("DUCT".to_string()),
                 properties: vec![],
             },

@@ -6,9 +6,9 @@
 //! - Help event interception
 //! - Error event handling flow
 
-use arxos::ui::help::{handle_help_event, HelpContext, HelpSystem};
-use arxos::ui::mouse::{parse_mouse_event, MouseAction, MouseConfig};
-use arxos::ui::terminal::TerminalManager;
+use arxui::tui::help::{handle_help_event, HelpContext, HelpSystem};
+use arxui::tui::mouse::{parse_mouse_event, MouseAction, MouseConfig};
+use arxui::tui::terminal::TerminalManager;
 use crossterm::event::{
     Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers, MouseButton, MouseEvent,
     MouseEventKind,

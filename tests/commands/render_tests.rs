@@ -1,6 +1,6 @@
 //! Tests for render command handlers
 
-use arxos::commands::render::handle_render;
+use arxui::commands::render::handle_render;
 
 #[test]
 #[ignore] // Requires building data

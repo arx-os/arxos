@@ -1,7 +1,7 @@
 # Commands Directory In-Depth Review
 
 **Date:** January 2025  
-**Directory:** `src/commands/`  
+**Directory:** `crates/arxui/crates/arxui/src/commands/`  
 **Status:** ✅ **Well-Organized, Minor Issues Identified**
 
 ---
@@ -96,7 +96,7 @@ The commands directory is well-structured with a clear router pattern, consisten
 
 ### ✅ 1. Router Pattern
 
-**Location:** `src/commands/mod.rs`
+**Location:** `crates/arxui/crates/arxui/src/commands/mod.rs`
 
 **Pattern:**
 ```rust
@@ -185,7 +185,7 @@ Commands::Search { interactive, ... } => {
 
 #### 1. **Orphaned Search Module**
 
-**Location:** `src/commands/search_module.rs` and `src/commands/search_module/mod.rs`
+**Location:** `crates/arxui/crates/arxui/src/commands/search_module.rs` and `crates/arxui/crates/arxui/src/commands/search_module/mod.rs`
 
 **Issue:**
 - Both files contain only: `pub mod browser;`

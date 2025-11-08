@@ -299,7 +299,7 @@ struct ArxOSMobileApp: App {
 #### 1. Add FFI Function to Set Git Credentials
 
 ```rust
-// Add to src/mobile_ffi/ffi.rs
+// Add to crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs
 
 /// Configure Git user credentials for this app session
 /// 
@@ -419,7 +419,7 @@ impl BuildingGitManager {
 For a cleaner implementation, store Git config in thread-local or app context:
 
 ```rust
-// Add to src/mobile_ffi/mod.rs
+// Add to crates/arxos/crates/arxos/src/mobile_ffi/mod.rs
 
 use std::sync::Mutex;
 use crate::git::GitConfig;

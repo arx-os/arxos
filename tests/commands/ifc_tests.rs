@@ -1,7 +1,7 @@
 //! Tests for IFC command handlers
 
-use arxos::commands::ifc::handle_ifc_command;
-use arxos::cli::IFCCommands;
+use arxui::cli::IfcCommands;
+use arxui::commands::ifc::handle_ifc_command;
 
 #[test]
 #[ignore] // Requires IFC file

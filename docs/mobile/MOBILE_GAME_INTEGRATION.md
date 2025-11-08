@@ -140,7 +140,7 @@ JSON game plan:
 **Current:** Core game system complete  
 **Pending:** Mobile FFI extensions (next phase)
 
-The game system is ready for mobile integration. FFI functions will be added to `src/mobile_ffi/ffi.rs` and wrapped in Swift/Kotlin.
+The game system is ready for mobile integration. FFI functions will be added to `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs` and wrapped in Swift/Kotlin.
 
 ---
 

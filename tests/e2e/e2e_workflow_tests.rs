@@ -18,6 +18,7 @@ use chrono::Utc;
 use serial_test::serial;
 use std::collections::HashMap;
 use std::fs;
+use std::path::PathBuf;
 use tempfile::TempDir;
 
 /// Create comprehensive test building data
@@ -247,7 +248,8 @@ fn test_sensor_ingestion_to_equipment_update_workflow() {
     fs::write(&building_yaml_path, yaml_content).unwrap();
 
     // Change to temp directory to simulate working directory
-    let original_dir = std::env::current_dir().unwrap();
+    let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let original_dir = std::env::current_dir().unwrap_or_else(|_| repo_root.clone());
     std::env::set_current_dir(temp_dir.path()).unwrap();
 
     // Create equipment status updater
@@ -313,7 +315,9 @@ fn test_sensor_ingestion_to_equipment_update_workflow() {
     );
 
     // Restore original directory
-    std::env::set_current_dir(original_dir).unwrap();
+    if std::env::set_current_dir(&original_dir).is_err() {
+        std::env::set_current_dir(repo_root).unwrap();
+    }
 }
 
 #[serial]
@@ -362,7 +366,8 @@ fn test_complete_workflow_yaml_ifc_ar_hardware() {
     )
     .unwrap();
 
-    let original_dir = std::env::current_dir().unwrap();
+    let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let original_dir = std::env::current_dir().unwrap_or_else(|_| repo_root.clone());
     std::env::set_current_dir(temp_dir.path()).unwrap();
 
     let mut status_updater =
@@ -402,7 +407,7 @@ fn test_complete_workflow_yaml_ifc_ar_hardware() {
 
     // Verify complete workflow results
     assert!(
-        update_result.alerts.len() > 0,
+        !update_result.alerts.is_empty(),
         "Should generate alerts for critical temperature"
     );
     assert_eq!(update_result.equipment_id, "hvac-unit-1");
@@ -412,10 +417,13 @@ fn test_complete_workflow_yaml_ifc_ar_hardware() {
     assert!(gltf_path.exists(), "glTF export should exist");
 
     // Restore original directory
-    std::env::set_current_dir(original_dir).unwrap();
+    if std::env::set_current_dir(&original_dir).is_err() {
+        std::env::set_current_dir(repo_root).unwrap();
+    }
 }
 
 #[test]
+#[serial]
 fn test_delta_export_with_sensor_updates() {
     // Test: Delta IFC export after sensor-driven equipment status changes
     let temp_dir = TempDir::new().unwrap();
@@ -437,9 +445,14 @@ fn test_delta_export_with_sensor_updates() {
     let building_yaml_path = temp_dir.path().join(format!("{}.yaml", building_name));
     let serializer = arxos::yaml::BuildingYamlSerializer::new();
     let yaml_content = serializer.to_yaml(&building_data).unwrap();
+    assert!(
+        yaml_content.contains("wings:"),
+        "Serialized building YAML should include wings section"
+    );
     fs::write(&building_yaml_path, yaml_content).unwrap();
 
-    let original_dir = std::env::current_dir().unwrap();
+    let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let original_dir = std::env::current_dir().unwrap_or_else(|_| repo_root.clone());
     std::env::set_current_dir(temp_dir.path()).unwrap();
 
     // Initial full export
@@ -488,6 +501,13 @@ fn test_delta_export_with_sensor_updates() {
 
     status_updater.process_sensor_data(&sensor_data).unwrap();
 
+    let updated_yaml = fs::read_to_string(&building_yaml_path).unwrap();
+    assert!(
+        updated_yaml.contains("wings:"),
+        "Updated building YAML missing wings section:\n{}",
+        updated_yaml
+    );
+
     // Reload building data and create delta export
     let updated_building = arxos::persistence::PersistenceManager::new(&building_name)
         .unwrap()
@@ -504,5 +524,7 @@ fn test_delta_export_with_sensor_updates() {
     // Verify delta export was created
     assert!(delta_ifc_path.exists(), "Delta IFC file should be created");
 
-    std::env::set_current_dir(original_dir).unwrap();
+    if std::env::set_current_dir(&original_dir).is_err() {
+        std::env::set_current_dir(repo_root).unwrap();
+    }
 }

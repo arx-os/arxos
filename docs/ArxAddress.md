@@ -150,7 +150,7 @@ pub fn grid_to_address(grid: &str, floor: &str, building: &str) -> ArxAddress {
 ---
 
 ## 8. IFC Sync: Path → GUID
-// src/export/ifc/mapper.rs
+// crates/arxos/crates/arxos/src/export/ifc/mapper.rs
 // Uses SHA-256 hash of address path for stable GUID generation
 let guid = address.guid(); // Returns SHA-256 hash as hex string
 model.create_entity("IfcBoiler", &guid, &fixture.model, coords)?;
@@ -158,7 +158,7 @@ model.create_entity("IfcBoiler", &guid, &fixture.model, coords)?;
 ---
 
 ## 9. Query Engine
-// src/query/mod.rs
+// crates/arxos/crates/arxos/src/query/mod.rs
 pub fn query(path_glob: &str) -> Vec<Fixture> {
     glob::glob(&format!(".arxos/repos{}/*.yaml", path_glob))
         .map(|p| load_fixture(p))

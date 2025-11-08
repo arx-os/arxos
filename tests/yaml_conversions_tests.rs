@@ -3,6 +3,8 @@
 //! These tests verify that conversion between core types and YAML types
 //! works correctly, especially with the new health_status field.
 
+#![allow(deprecated)]
+
 use arxos::core::{Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType, Position};
 use arxos::yaml::conversions::{equipment_data_to_equipment, equipment_to_equipment_data};
 use arxos::yaml::{EquipmentData, EquipmentStatus as YamlEquipmentStatus};

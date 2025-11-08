@@ -59,9 +59,9 @@ mkdir -p android/app/src/main/jniLibs/armeabi-v7a
 
 # Build for ARM64
 echo -e "${BLUE}📱 Building for ARM64...${NC}"
-if cargo ndk -t arm64-v8a -o android/app/src/main/jniLibs build --release --lib --features android 2>/dev/null; then
+if cargo ndk -p arxos -t arm64-v8a -o android/app/src/main/jniLibs build --release --lib --features android 2>/dev/null; then
     echo -e "${GREEN}✅ ARM64 build successful${NC}"
-elif cargo ndk -t arm64-v8a -o android/app/src/main/jniLibs build --release --lib 2>/dev/null; then
+elif cargo ndk -p arxos -t arm64-v8a -o android/app/src/main/jniLibs build --release --lib 2>/dev/null; then
     echo -e "${YELLOW}⚠️  ARM64 build successful (without android feature)${NC}"
 else
     echo -e "${RED}❌ ARM64 build failed${NC}"
@@ -70,9 +70,9 @@ fi
 
 # Build for ARMv7
 echo -e "${BLUE}📱 Building for ARMv7...${NC}"
-if cargo ndk -t armeabi-v7a -o android/app/src/main/jniLibs build --release --lib --features android 2>/dev/null; then
+if cargo ndk -p arxos -t armeabi-v7a -o android/app/src/main/jniLibs build --release --lib --features android 2>/dev/null; then
     echo -e "${GREEN}✅ ARMv7 build successful${NC}"
-elif cargo ndk -t armeabi-v7a -o android/app/src/main/jniLibs build --release --lib 2>/dev/null; then
+elif cargo ndk -p arxos -t armeabi-v7a -o android/app/src/main/jniLibs build --release --lib 2>/dev/null; then
     echo -e "${YELLOW}⚠️  ARMv7 build successful (without android feature)${NC}"
 else
     echo -e "${RED}❌ ARMv7 build failed${NC}"

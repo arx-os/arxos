@@ -139,10 +139,10 @@ Test with both data sources:
 
 ```bash
 # AR scan data
-cargo run --bin arx -- render --building "Untitled Scan.yaml"
+cargo run -p arxui -- render --building "Untitled Scan.yaml"
 
 # IFC data
-cargo run --bin arx -- render --building building.yaml --floor 1
+cargo run -p arxui -- render --building building.yaml --floor 1
 ```
 
 ## Scan Quality Tips

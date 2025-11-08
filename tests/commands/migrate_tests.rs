@@ -2,8 +2,11 @@
 //!
 //! Tests the migration of universal_path to ArxAddress format
 
-use arxos::commands::migrate::handle_migrate_address;
-use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentData, EquipmentStatus};
+use arxui::commands::migrate::handle_migrate_address;
+#[allow(deprecated)]
+use arxos::yaml::{
+    BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentData, EquipmentStatus,
+};
 use arxos::spatial::{Point3D, BoundingBox3D};
 use arxos::persistence::PersistenceManager;
 use arxos::domain::ArxAddress;

@@ -6,7 +6,7 @@ ArxOS Mobile provides cross-platform mobile applications for iOS and Android usi
 
 ## Architecture
 
-- **Rust Core**: Main crate with UniFFI bindings (from `src/mobile_ffi/`)
+- **Rust Core**: Main crate with UniFFI bindings (from `crates/arxos/crates/arxos/src/mobile_ffi/`)
 - **iOS**: SwiftUI app with Swift bindings
 - **Android**: Jetpack Compose app with Kotlin bindings
 - **FFI**: UniFFI generates native language bindings automatically
@@ -46,19 +46,19 @@ cargo build --lib
 ### iOS (macOS only)
 ```bash
 # Build for iOS device
-cargo build --target aarch64-apple-ios --release
+cargo build -p arxos --target aarch64-apple-ios --release
 
 # Build for iOS simulator
-cargo build --target x86_64-apple-ios --release
+cargo build -p arxos --target x86_64-apple-ios --release
 ```
 
 ### Android (Cross-platform)
 ```bash
 # Build for Android ARM64
-cargo build --target aarch64-linux-android --release
+cargo build -p arxos --target aarch64-linux-android --release
 
 # Build for Android x86_64
-cargo build --target x86_64-linux-android --release
+cargo build -p arxos --target x86_64-linux-android --release
 ```
 
 ## Mobile API Reference
@@ -136,7 +136,7 @@ pub struct CommandResult {
 
 1. **Build the Rust library**:
    ```bash
-   cargo build --target aarch64-apple-ios --release
+   cargo build -p arxos --target aarch64-apple-ios --release
    ```
 
 2. **Generate Swift bindings**:
@@ -153,7 +153,7 @@ pub struct CommandResult {
 
 1. **Build the Rust library**:
    ```bash
-   cargo build --target aarch64-linux-android --release
+   cargo build -p arxos --target aarch64-linux-android --release
    ```
 
 2. **Generate Kotlin bindings**:

@@ -11,12 +11,12 @@ use arxos::core::{
     Floor, Position, Room, RoomType, SpatialProperties, Wing,
 };
 use arxos::persistence::PersistenceManager;
-use arxos::spatial::{BoundingBox3D, Point3D};
-use arxos::ui::spreadsheet::data_source::{
-    EquipmentDataSource, RoomDataSource, SpreadsheetDataSource,
-};
 use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
 use arxos::BuildingYamlSerializer;
+use arxui::tui::spreadsheet::data_source::{
+    EquipmentDataSource, RoomDataSource, SpreadsheetDataSource,
+};
+use arxui::tui::spreadsheet::types::{CellValue, ColumnDefinition};
 use chrono::Utc;
 use serial_test::serial;
 use std::collections::HashMap;
@@ -199,6 +199,13 @@ fn create_test_building_file(
     Ok(file_path)
 }
 
+fn column_index(columns: &[ColumnDefinition], id: &str) -> usize {
+    columns
+        .iter()
+        .position(|col| col.id == id)
+        .unwrap_or_else(|| panic!("Column {id} not found"))
+}
+
 #[test]
 #[serial]
 fn test_equipment_data_source_full_cycle() {
@@ -214,19 +221,20 @@ fn test_equipment_data_source_full_cycle() {
     let persistence = PersistenceManager::new(building_name).unwrap();
     let loaded_data = persistence.load_building_data().unwrap();
     let mut data_source = EquipmentDataSource::new(loaded_data, building_name.to_string());
+    let columns = data_source.columns();
+    let name_col = column_index(&columns, "equipment.name");
 
     // Verify initial state
     assert_eq!(data_source.row_count(), 2);
-    let original_name = data_source.get_cell(0, 1).unwrap(); // Name column
+    let original_name = data_source.get_cell(0, name_col).unwrap(); // Name column
     assert_eq!(original_name.to_string(), "HVAC Unit 1");
 
     // Edit a cell
-    use arxos::ui::spreadsheet::types::CellValue;
     let new_name = CellValue::Text("Updated HVAC Unit".to_string());
-    data_source.set_cell(0, 1, new_name.clone()).unwrap();
+    data_source.set_cell(0, name_col, new_name.clone()).unwrap();
 
     // Verify change in memory
-    let updated_name = data_source.get_cell(0, 1).unwrap();
+    let updated_name = data_source.get_cell(0, name_col).unwrap();
     assert_eq!(updated_name, new_name);
 
     // Save (stage only, no commit)
@@ -236,7 +244,7 @@ fn test_equipment_data_source_full_cycle() {
     data_source.reload().unwrap();
 
     // Verify change persisted
-    let reloaded_name = data_source.get_cell(0, 1).unwrap();
+    let reloaded_name = data_source.get_cell(0, name_col).unwrap();
     assert_eq!(
         reloaded_name,
         CellValue::Text("Updated HVAC Unit".to_string())
@@ -258,19 +266,20 @@ fn test_room_data_source_full_cycle() {
     let persistence = PersistenceManager::new(building_name).unwrap();
     let loaded_data = persistence.load_building_data().unwrap();
     let mut data_source = RoomDataSource::new(loaded_data, building_name.to_string());
+    let columns = data_source.columns();
+    let name_col = column_index(&columns, "room.name");
 
     // Verify initial state
     assert_eq!(data_source.row_count(), 1);
-    let original_name = data_source.get_cell(0, 1).unwrap(); // Name column
+    let original_name = data_source.get_cell(0, name_col).unwrap(); // Name column
     assert_eq!(original_name.to_string(), "Room 1");
 
     // Edit a cell
-    use arxos::ui::spreadsheet::types::CellValue;
     let new_name = CellValue::Text("Updated Room 1".to_string());
-    data_source.set_cell(0, 1, new_name.clone()).unwrap();
+    data_source.set_cell(0, name_col, new_name.clone()).unwrap();
 
     // Verify change in memory
-    let updated_name = data_source.get_cell(0, 1).unwrap();
+    let updated_name = data_source.get_cell(0, name_col).unwrap();
     assert_eq!(updated_name, new_name);
 
     // Save (stage only, no commit)
@@ -280,7 +289,7 @@ fn test_room_data_source_full_cycle() {
     data_source.reload().unwrap();
 
     // Verify change persisted
-    let reloaded_name = data_source.get_cell(0, 1).unwrap();
+    let reloaded_name = data_source.get_cell(0, name_col).unwrap();
     assert_eq!(reloaded_name, CellValue::Text("Updated Room 1".to_string()));
 }
 
@@ -299,11 +308,12 @@ fn test_data_source_id_matching() {
     let persistence = PersistenceManager::new(building_name).unwrap();
     let loaded_data = persistence.load_building_data().unwrap();
     let mut data_source = EquipmentDataSource::new(loaded_data, building_name.to_string());
+    let columns = data_source.columns();
+    let name_col = column_index(&columns, "equipment.name");
 
     // Edit equipment at row 1 (eq-2)
-    use arxos::ui::spreadsheet::types::CellValue;
     let new_name = CellValue::Text("Updated Panel".to_string());
-    data_source.set_cell(1, 1, new_name.clone()).unwrap(); // Edit row 1, column 1 (name)
+    data_source.set_cell(1, name_col, new_name.clone()).unwrap(); // Edit row 1, column (name)
 
     // Save
     data_source.save(false).unwrap();
@@ -312,10 +322,10 @@ fn test_data_source_id_matching() {
     data_source.reload().unwrap();
 
     // Verify the correct equipment (eq-2) was updated, not eq-1
-    let eq1_name = data_source.get_cell(0, 1).unwrap();
+    let eq1_name = data_source.get_cell(0, name_col).unwrap();
     assert_eq!(eq1_name.to_string(), "HVAC Unit 1"); // Should be unchanged
 
-    let eq2_name = data_source.get_cell(1, 1).unwrap();
+    let eq2_name = data_source.get_cell(1, name_col).unwrap();
     assert_eq!(eq2_name, CellValue::Text("Updated Panel".to_string())); // Should be updated
 }
 
@@ -334,14 +344,15 @@ fn test_data_source_multiple_edits() {
     let persistence = PersistenceManager::new(building_name).unwrap();
     let loaded_data = persistence.load_building_data().unwrap();
     let mut data_source = EquipmentDataSource::new(loaded_data, building_name.to_string());
+    let columns = data_source.columns();
+    let name_col = column_index(&columns, "equipment.name");
 
     // Edit multiple cells
-    use arxos::ui::spreadsheet::types::CellValue;
     data_source
-        .set_cell(0, 1, CellValue::Text("HVAC Updated".to_string()))
+        .set_cell(0, name_col, CellValue::Text("HVAC Updated".to_string()))
         .unwrap();
     data_source
-        .set_cell(1, 1, CellValue::Text("Panel Updated".to_string()))
+        .set_cell(1, name_col, CellValue::Text("Panel Updated".to_string()))
         .unwrap();
 
     // Save
@@ -352,11 +363,11 @@ fn test_data_source_multiple_edits() {
 
     // Verify both changes persisted
     assert_eq!(
-        data_source.get_cell(0, 1).unwrap(),
+        data_source.get_cell(0, name_col).unwrap(),
         CellValue::Text("HVAC Updated".to_string())
     );
     assert_eq!(
-        data_source.get_cell(1, 1).unwrap(),
+        data_source.get_cell(1, name_col).unwrap(),
         CellValue::Text("Panel Updated".to_string())
     );
 }
@@ -426,11 +437,13 @@ fn test_data_source_multiple_floors() {
     let persistence = PersistenceManager::new(building_name).unwrap();
     let loaded_data = persistence.load_building_data().unwrap();
     let data_source = EquipmentDataSource::new(loaded_data, building_name.to_string());
+    let columns = data_source.columns();
+    let name_col = column_index(&columns, "equipment.name");
 
     // Verify all equipment from all floors is loaded
     assert_eq!(data_source.row_count(), 3); // 2 from floor 1, 1 from floor 2
 
     // Verify equipment from second floor is accessible
-    let floor2_eq = data_source.get_cell(2, 1).unwrap();
+    let floor2_eq = data_source.get_cell(2, name_col).unwrap();
     assert_eq!(floor2_eq.to_string(), "HVAC Unit 2");
 }

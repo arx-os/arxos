@@ -32,7 +32,7 @@ Successfully updated core operations and services to use serde-based conversion 
 - Type-safe conversion (serde handles format compatibility)
 - Cleaner code (no manual field-by-field conversion)
 
-### Room Service (`src/services/room_service.rs`) ✅
+### Room Service (`crates/arxos/crates/arxos/src/services/room_service.rs`) ✅
 
 **Changes:**
 - Replaced manual Room → RoomData conversion with serde-based conversion
@@ -60,7 +60,7 @@ fn room_to_room_data(&self, room: &Room) -> RoomData {
 }
 ```
 
-### Equipment Service (`src/services/equipment_service.rs`) ✅
+### Equipment Service (`crates/arxos/crates/arxos/src/services/equipment_service.rs`) ✅
 
 **Changes:**
 - Replaced deprecated conversion function calls with serde-based conversion
@@ -148,7 +148,7 @@ The following modules still show deprecation warnings (expected):
 
 1. **`src/lib.rs`** - Public API exports (will be updated in future phase)
 2. **`src/render/mod.rs`** - Render module (can be updated later)
-3. **`src/ar_integration/`** - AR integration (can be updated later)
+3. **`crates/arxos/crates/arxos/src/ar_integration/`** - AR integration (can be updated later)
 4. **`src/yaml/mod.rs`** - YAML module itself (expected, BuildingData uses these types)
 
 These warnings are **expected** and **acceptable** because:
@@ -175,8 +175,8 @@ cargo test
 - `src/core/operations.rs` - Added serde-based conversion helpers, updated all calls
 
 **Services:**
-- `src/services/room_service.rs` - Replaced manual conversion with serde
-- `src/services/equipment_service.rs` - Replaced deprecated functions with serde
+- `crates/arxos/crates/arxos/src/services/room_service.rs` - Replaced manual conversion with serde
+- `crates/arxos/crates/arxos/src/services/equipment_service.rs` - Replaced deprecated functions with serde
 
 ---
 
@@ -188,7 +188,7 @@ cargo test
 
 **Optional Future Work:**
 - Update `src/render/mod.rs` to use core types
-- Update `src/ar_integration/` to use core types
+- Update `crates/arxos/crates/arxos/src/ar_integration/` to use core types
 - Update `src/lib.rs` public API
 
 ---

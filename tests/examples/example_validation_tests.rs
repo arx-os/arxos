@@ -4,13 +4,18 @@
 //! are valid and match the current BuildingData schema.
 
 use arxos::yaml::BuildingData;
+use std::collections::HashSet;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+fn examples_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples")
+}
 
 /// Test that all example building files are valid YAML and match the schema
 #[test]
 fn test_example_buildings_are_valid() {
-    let examples_dir = Path::new("examples/buildings");
+    let examples_dir = examples_root().join("buildings");
 
     // List of example files to validate
     let example_files = vec![
@@ -121,7 +126,7 @@ fn test_example_buildings_are_valid() {
 /// Test that example files use human-readable names (not obfuscated)
 #[test]
 fn test_example_names_are_readable() {
-    let examples_dir = Path::new("examples/buildings");
+    let examples_dir = examples_root().join("buildings");
     let example_files = vec![
         "building.yaml",
         "minimal-building.yaml",
@@ -187,7 +192,7 @@ fn test_example_names_are_readable() {
 /// Test that coordinates are reasonable (not extreme precision issues)
 #[test]
 fn test_example_coordinates_are_reasonable() {
-    let examples_dir = Path::new("examples/buildings");
+    let examples_dir = examples_root().join("buildings");
     let example_files = vec![
         "building.yaml",
         "minimal-building.yaml",
@@ -268,7 +273,7 @@ fn test_example_coordinates_are_reasonable() {
 /// Test that metadata is consistent with actual content
 #[test]
 fn test_example_metadata_consistency() {
-    let examples_dir = Path::new("examples/buildings");
+    let examples_dir = examples_root().join("buildings");
     let example_files = vec![
         "building.yaml",
         "minimal-building.yaml",
@@ -314,7 +319,7 @@ fn test_example_metadata_consistency() {
 /// Test that the complete building example has equipment
 #[test]
 fn test_complete_building_has_equipment() {
-    let file_path = Path::new("examples/buildings/building.yaml");
+    let file_path = examples_root().join("buildings/building.yaml");
     let content = fs::read_to_string(file_path).expect("Failed to read building.yaml");
 
     let building_data: BuildingData =
@@ -329,12 +334,30 @@ fn test_complete_building_has_equipment() {
         total_equipment
     );
 
-    // Should have rooms with equipment references
+    // Should have rooms with equipment references (either inline or via floor-level equipment)
     let rooms_with_equipment: usize = building_data
         .floors
         .iter()
-        .flat_map(|f| f.wings.iter())
-        .map(|w| w.rooms.iter().filter(|r| !r.equipment.is_empty()).count())
+        .map(|floor| {
+            let equipped_room_ids: HashSet<_> = floor
+                .equipment
+                .iter()
+                .filter_map(|eq| eq.room_id.clone())
+                .collect();
+
+            floor
+                .wings
+                .iter()
+                .map(|wing| {
+                    wing.rooms
+                        .iter()
+                        .filter(|room| {
+                            !room.equipment.is_empty() || equipped_room_ids.contains(&room.id)
+                        })
+                        .count()
+                })
+                .sum::<usize>()
+        })
         .sum();
 
     assert!(

@@ -312,36 +312,26 @@ mod tests {
         let ifc_path_str = ifc_file.to_str().unwrap();
         let result = processor.extract_hierarchy(ifc_path_str);
 
-        if let Ok(hierarchy) = result {
-            // Verify hierarchy structure (hierarchy is a tuple of (Building, Vec<Floor>))
-            let (building, floors) = hierarchy;
-            assert!(!building.name.is_empty());
-            assert!(!building.id.is_empty());
+        match result {
+            Ok((building, floors)) => {
+                assert!(!building.name.is_empty());
+                assert!(!building.id.is_empty());
 
-            if !floors.is_empty() {
-                let first_floor = &floors[0];
-                assert!(!first_floor.id.is_empty());
-                // Floor.level is an i32, not Option
-                assert!(first_floor.level >= 0);
-            }
+                if let Some(first_floor) = floors.first() {
+                    assert!(!first_floor.id.is_empty());
+                    assert!(first_floor.level >= 0);
+                }
 
-            // Equipment is embedded in floors
-            // Note: Test data may not have equipment, so we just verify structure
-            let total_equipment: usize = floors.iter().map(|f| f.equipment.len()).sum();
-            // If equipment exists, verify structure, but don't fail if test data has none
-            if total_equipment > 0 {
-                // Verify equipment structure if present
-                assert!(true, "Equipment found in hierarchy");
-            } else {
-                // Test data may not include equipment, that's acceptable for minimal test files
-                assert!(
-                    true,
-                    "Hierarchy extracted successfully (no equipment in test data)"
-                );
+                if let Some(equipment) = floors.iter().flat_map(|f| &f.equipment).next() {
+                    assert!(
+                        !equipment.id.is_empty(),
+                        "Equipment entries should have identifiers"
+                    );
+                }
             }
-        } else {
-            // Test passes if hierarchy extraction works (even if it returns an error for test data)
-            assert!(true, "IFC hierarchy extraction attempted");
+            Err(err) => {
+                eprintln!("IFC hierarchy extraction returned error: {err}");
+            }
         }
     }
 
@@ -377,14 +367,18 @@ mod tests {
         }
 
         let config = SensorIngestionConfig {
-            data_directory: sensor_dir,
+            data_directory: sensor_dir.clone(),
             ..Default::default()
         };
 
-        let _ingestion_service = SensorIngestionService::new(config);
+        let ingestion_service = SensorIngestionService::new(config);
 
-        // Verify service was created
-        assert!(true, "Sensor ingestion service created successfully");
+        // Verify service was created with expected configuration
+        assert_eq!(
+            ingestion_service.config.data_directory,
+            sensor_dir,
+            "Sensor ingestion service should use provided data directory"
+        );
     }
 
     #[test]
@@ -600,10 +594,12 @@ mod tests {
         use arxos::hardware::EquipmentStatusUpdater;
 
         // This test verifies sensor threshold checking
-        let _updater = EquipmentStatusUpdater::new("test_building");
+        let updater = EquipmentStatusUpdater::new("test_building");
 
-        // Test would verify threshold checking logic
-        // This is a placeholder test structure
-        assert!(true, "Sensor threshold test structure created");
+        // Building data may not exist in test fixtures, so we expect an error instead of a panic.
+        assert!(
+            updater.is_err(),
+            "EquipmentStatusUpdater::new should report an error when building data is missing"
+        );
     }
 }

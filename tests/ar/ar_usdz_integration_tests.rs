@@ -7,8 +7,8 @@ use arxos::core::{
     Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType, Floor, Position,
 };
 use arxos::export::ar::{ARExporter, ARFormat};
-use arxos::spatial::{BoundingBox3D, Point3D};
 use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, CoordinateSystemInfo};
+use arxos::Point3D;
 use chrono::Utc;
 use std::collections::HashMap;
 use std::fs;
@@ -110,7 +110,10 @@ fn test_usdz_export_creates_valid_archive() {
             // Verify it's a valid ZIP archive
             let file = fs::File::open(&usdz_path).unwrap();
             let zip = ZipArchive::new(file).expect("USDZ should be a valid ZIP archive");
-            assert!(zip.len() > 0, "USDZ should contain at least one file");
+            assert!(
+                zip.file_names().next().is_some(),
+                "USDZ should contain at least one file"
+            );
         }
         Err(e) => {
             // On Windows without usdzconvert, wrapper should still be created

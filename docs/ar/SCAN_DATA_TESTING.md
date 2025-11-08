@@ -75,7 +75,7 @@
 
 ## Data Conversion Tool
 
-**Location:** `src/bin/convert_3d_scanner_scan.rs`
+**Location:** `crates/arxui/src/bin/convert_3d_scanner_scan.rs`
 
 **What it does:**
 - Reads `info.json` from 3D Scanner App scan directory
@@ -86,7 +86,7 @@
 
 **Usage:**
 ```bash
-cargo run --bin convert_3d_scanner_scan -- ~/Downloads/2025_11_01_08_21_41 [output.yaml]
+cargo run -p arxui --bin convert_3d_scanner_scan -- ~/Downloads/2025_11_01_08_21_41 [output.yaml]
 ```
 
 ---

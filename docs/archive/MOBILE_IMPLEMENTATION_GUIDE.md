@@ -9,7 +9,7 @@ This document outlines the complete implementation of ArxOS mobile applications 
 ### Core Components
 
 1. **Rust Core**: High-performance building data processing (main crate)
-2. **Mobile FFI Bindings**: UniFFI-based bindings from `src/mobile_ffi/`
+2. **Mobile FFI Bindings**: UniFFI-based bindings from `crates/arxos/crates/arxos/src/mobile_ffi/`
 3. **iOS App**: Native SwiftUI interface with ARKit integration
 4. **Android App**: Native Jetpack Compose interface with ARCore integration
 

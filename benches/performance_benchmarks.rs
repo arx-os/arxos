@@ -309,7 +309,6 @@ fn create_test_building_data(entity_count: usize) -> BuildingData {
         BoundingBox, Dimensions, Equipment, EquipmentStatus, EquipmentType, Floor, Position, Room,
         RoomType, SpatialProperties, Wing,
     };
-    use arxos::spatial::{BoundingBox3D, Point3D};
     use arxos::yaml::{BuildingInfo, BuildingMetadata};
 
     let mut rooms = Vec::new();
@@ -436,9 +435,8 @@ criterion_group!(
     benchmark_sensor_validation
 );
 
-#[cfg(not(feature = "async-sensors"))]
 // Benchmark group consolidated below with #[cfg(not(feature = "async-sensors"))]
-
+#[cfg(not(feature = "async-sensors"))]
 /// Benchmark building data loading with caching
 fn benchmark_building_data_caching(c: &mut Criterion) {
     let temp_dir = TempDir::new().unwrap();
@@ -509,8 +507,6 @@ fn benchmark_collection_indexing(c: &mut Criterion) {
 
 /// Benchmark spatial index building performance
 fn benchmark_spatial_index_building(c: &mut Criterion) {
-    let processor = IFCProcessor::new();
-
     // Create test spatial entities
     let mut entities = Vec::new();
     for i in 0..1000 {

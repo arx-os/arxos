@@ -63,7 +63,7 @@
 ### Code Organization
 
 #### New Modules
-- `src/game/` - Complete game system implementation
+- `crates/arxos/crates/arxos/src/game/` - Complete game system implementation
   - `types.rs` - Core game types
   - `scenario.rs` - Scenario loading
   - `state.rs` - Game state management
@@ -78,8 +78,8 @@
 #### Enhanced Modules
 - `src/render3d/interactive.rs` - Added game overlay support
 - `src/render3d/events.rs` - Added game action events
-- `src/mobile_ffi/ffi.rs` - Added game-related FFI functions
-- `src/commands/game.rs` - New game command handlers
+- `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs` - Added game-related FFI functions
+- `crates/arxui/crates/arxui/src/commands/game.rs` - New game command handlers
 - `src/cli/mod.rs` - Added game command definitions
 
 ### Testing

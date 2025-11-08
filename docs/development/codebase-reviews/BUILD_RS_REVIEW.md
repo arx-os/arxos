@@ -146,7 +146,7 @@ fn validate_ffi_header() -> Result<(), Box<dyn std::error::Error>> {
     }
     
     // Optionally: Parse header and validate function signatures
-    // Optionally: Compare against src/mobile_ffi/ffi.rs exports
+    // Optionally: Compare against crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs exports
     
     println!("cargo:rerun-if-changed={}", header_path);
     Ok(())
@@ -362,7 +362,7 @@ fn generate_ffi_header() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
     
-    // Generate header from src/mobile_ffi/ffi.rs
+    // Generate header from crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs
     Command::new("cbindgen")
         .arg("--config")
         .arg("cbindgen.toml")
@@ -395,13 +395,13 @@ autogen_warning = "/* Warning: auto-generated file, do not edit manually */"
 cargo build
 
 # Test iOS build
-cargo build --target aarch64-apple-ios
+cargo build -p arxos --target aarch64-apple-ios
 
 # Test Android build
-cargo build --target aarch64-linux-android --features android
+cargo build -p arxos --target aarch64-linux-android --features android
 
 # Test with header validation
-cargo build --target aarch64-apple-ios 2>&1 | grep -i "warning"
+cargo build -p arxos --target aarch64-apple-ios 2>&1 | grep -i "warning"
 ```
 
 ### Expected Behavior

@@ -51,7 +51,7 @@ cargo ndk -t arm64-v8a -t armeabi-v7a -o app/src/main/jniLibs build --release --
 - `android/gradlew` - Gradle wrapper script
 - Resource files (themes.xml, colors.xml, icons)
 - Modified `Cargo.toml` - Added JNI dependency
-- Modified `src/mobile_ffi/mod.rs` - Fixed JNI module
+- Modified `crates/arxos/crates/arxos/src/mobile_ffi/mod.rs` - Fixed JNI module
 
 ## Next Steps to Complete
 

@@ -94,7 +94,7 @@ src/render/
 Keep existing renderer working throughout refactor:
 1. Before each module move: `cargo test render`
 2. After each module move: `cargo test render`
-3. Smoke test with: `cargo run --bin arx render --building building.yaml`
+3. Smoke test with: `cargo run -p arxui -- render --building building.yaml`
 4. Test both AR scan and IFC data formats
 
 ## Timeline Estimate

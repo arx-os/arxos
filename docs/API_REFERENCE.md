@@ -1332,7 +1332,7 @@ All JNI functions are Java-compatible wrappers around C FFI functions.
 - `rejectPendingEquipment(buildingName: String, pendingId: String): String` - Reject pending equipment
 - `loadARModel(buildingName: String, format: String, outputPath: String?): String` - Load AR model
 
-See `src/mobile_ffi/jni.rs` for complete JNI function signatures.
+See `crates/arxos/crates/arxos/src/mobile_ffi/jni.rs` for complete JNI function signatures.
 
 ---
 

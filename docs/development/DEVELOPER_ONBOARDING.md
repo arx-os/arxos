@@ -150,7 +150,7 @@ git checkout -b feature/my-feature-name
 ### 2. Make Changes
 
 Follow ArxOS conventions:
-- **Command handlers**: Place in `src/commands/`
+- **Command handlers**: Place in `crates/arxui/crates/arxui/src/commands/`
 - **Core types**: Add to `src/core/`
 - **New module**: Create in `src/` with proper `mod.rs`
 - **Tests**: Add integration tests in `tests/`
@@ -260,7 +260,7 @@ fn test_equipment_persistence() {
 ### 1. Command Handler Pattern
 
 ```rust
-// src/commands/my_command.rs
+// crates/arxui/crates/arxui/src/commands/my_command.rs
 use crate::cli::MyCommand;
 use crate::persistence::PersistenceManager;
 
@@ -427,10 +427,10 @@ cargo doc --all-features --open
 ### Common Questions
 
 **Q: How do I add a new command?**  
-A: Create a handler in `src/commands/`, add CLI definition in `src/cli/mod.rs`, and route in `src/commands/mod.rs`.
+A: Create a handler in `crates/arxui/crates/arxui/src/commands/`, add CLI definition in `src/cli/mod.rs`, and route in `crates/arxui/crates/arxui/src/commands/mod.rs`.
 
 **Q: How do I integrate with mobile apps?**  
-A: Add FFI functions in `src/mobile_ffi/ffi.rs` and update Swift/Kotlin wrappers.
+A: Add FFI functions in `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs` and update Swift/Kotlin wrappers.
 
 **Q: How do I add a new module?**  
 A: Create directory in `src/` with `mod.rs`, add module declaration in parent `mod.rs`.

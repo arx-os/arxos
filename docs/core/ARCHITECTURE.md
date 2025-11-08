@@ -102,7 +102,7 @@ Comprehensive error handling strategy:
 
 ## Core Components
 
-### 1. Search Engine (`src/search/mod.rs`)
+### 1. Search Engine (`crates/arxos/crates/arxos/src/search/mod.rs`)
 
 **Purpose**: Advanced search and filtering capabilities
 
@@ -314,101 +314,50 @@ Effect Trigger → Particle Creation → Physics Update → Rendering → Cleanu
 
 ## Module Structure
 
-### Core Modules
+### Workspace Layout
 
 ```
-src/
-├── main.rs                 # CLI entry point
-├── lib.rs                  # Library API exports
-├── cli/                    # Command-line interface
-│   └── mod.rs             # CLI command definitions
-├── search/                 # Search and filtering
-│   └── mod.rs             # Search engine implementation
-├── render3d/               # 3D rendering system
-│   ├── mod.rs             # Core 3D renderer
-│   ├── interactive.rs      # Interactive 3D renderer
-│   ├── particles.rs        # Particle system
-│   ├── animation.rs        # Animation framework
-│   ├── effects.rs          # Visual effects engine
-│   ├── events.rs           # Event handling
-│   └── state.rs            # State management
-├── spatial/                # Spatial operations
-│   ├── mod.rs             # Spatial data structures
-│   └── types.rs           # Spatial type definitions
-├── yaml/                   # Data serialization
-│   └── mod.rs             # YAML/JSON data handling
-├── git/                    # Git integration
-│   ├── mod.rs             # Git operations
-│   └── manager.rs         # Git repository management
-├── ifc/                    # IFC file processing
-│   ├── mod.rs             # IFC processing pipeline
-│   ├── enhanced.rs         # Enhanced IFC processing
-│   └── fallback.rs         # Fallback processing
-└── config/                 # Configuration management
-    ├── mod.rs             # Configuration system
-    ├── manager.rs         # Configuration manager
-    └── validation.rs      # Configuration validation
+crates/
+├── arx/                      # Protocol core library
+│   ├── src/
+│   │   ├── core/             # Data model and operations
+│   │   ├── git/              # Git manager + adapters
+│   │   ├── ifc/              # IFC parsing pipeline
+│   │   ├── depin/            # Sensor + validation primitives
+│   │   ├── utils/            # Shared utilities (loading, path safety, progress)
+│   │   └── yaml/             # YAML serializers/deserializers
+│   └── examples/             # IFC import examples
+├── arxui/                    # CLI + TUI + optional 3D renderer
+│   ├── src/
+│   │   ├── cli/              # Clap definitions for the `arx` binary
+│   │   ├── commands/         # Command handlers
+│   │   ├── tui/              # Terminal UI components/widgets
+│   │   └── render3d/         # Feature-gated 3D renderer
+│   └── assets/               # Fonts, glTF samples, etc.
+├── arxos/                    # Embedded runtime & integrations
+│   ├── src/
+│   │   ├── ar_integration/   # AR workflow helpers
+│   │   ├── export/           # Git/IFC export pipeline
+│   │   ├── game/             # Gamified planning systems
+│   │   ├── hardware/         # Sensor ingestion + async services
+│   │   ├── mobile_ffi/       # FFI bindings for mobile apps
+│   │   ├── query/            # Legacy query helpers
+│   │   ├── search/           # Advanced search service
+│   │   ├── services/         # Service layer abstractions
+│   │   └── runtime.rs        # Minimal `no_std` runtime registry
+│   └── build.rs              # cbindgen integration for mobile headers
+└── arxos-hal/
+    ├── src/lib.rs            # Aggregated HAL re-exports
+    ├── esp32-c3/             # ESP32-C3 board support
+    └── rp2040/               # RP2040 board support
 ```
 
-### Module Organization
+### Module Responsibilities
 
-The project uses a **unified crate structure** with all modules in `src/`. As of December 2024, the architecture was refactored from a monolithic `main.rs` (2,132 lines) into a clean, modular structure with dedicated command handlers:
-
-```
-src/
-├── lib.rs                  # Library API for tests and mobile FFI
-├── main.rs                 # CLI entry point (~50 lines)
-├── commands/               # Command handlers (NEW)
-│   ├── mod.rs             # Command router
-│   ├── import.rs          # IFC file import
-│   ├── export.rs          # Git export
-│   ├── git_ops.rs         # Git operations
-│   ├── config_mgmt.rs     # Configuration
-│   ├── room.rs            # Room management
-│   ├── equipment.rs       # Equipment management
-│   ├── spatial.rs         # Spatial operations
-│   ├── search.rs          # Search and filter
-│   ├── watch.rs           # Live monitoring
-│   ├── ar.rs              # AR integration
-│   ├── sensors.rs         # Sensor processing
-│   ├── render.rs          # 2D/3D rendering
-│   ├── interactive.rs     # Interactive 3D
-│   ├── ifc.rs             # IFC commands
-│   └── validate.rs        # Validation
-├── utils/                  # Utility functions (NEW)
-│   ├── mod.rs             # Utils module
-│   └── loading.rs         # Data loading helpers
-├── core/                   # Core business logic and data structures
-│   └── mod.rs             # Building, Room, Equipment types
-├── cli/                    # CLI command definitions
-│   └── mod.rs             # Command parsing with clap
-├── ifc/                    # IFC file processing
-│   ├── mod.rs             # Main IFC processor
-│   ├── enhanced.rs         # Enhanced parsing
-│   ├── fallback.rs        # Fallback parsing
-│   └── hierarchy.rs       # Building hierarchy extraction
-├── render3d/               # 3D rendering system
-│   ├── mod.rs             # 3D renderer
-│   ├── interactive.rs     # Interactive rendering
-│   ├── particles.rs       # Particle system
-│   ├── animation.rs       # Animation framework
-│   ├── effects.rs         # Visual effects
-│   ├── events.rs          # Event handling
-│   └── state.rs           # State management
-├── git/                    # Git integration
-│   ├── mod.rs             # Git operations
-│   └── manager.rs         # Git repository management
-├── spatial/                # Spatial operations
-│   ├── mod.rs             # Spatial engine
-│   └── types.rs           # Spatial types
-├── search/                 # Search and filtering
-│   └── mod.rs             # Search engine
-├── mobile_ffi/             # Mobile FFI bindings
-│   ├── mod.rs             # FFI definitions
-│   ├── ffi.rs             # FFI functions
-│   └── jni.rs             # JNI bindings for Android
-└── [other modules]/       # Additional functionality
-```
+- **Protocol core (`crates/arx`)** – Pure business logic shared by every target.
+- **User interface (`crates/arxui`)** – Ships the `arx` binary, TUI system, and 3D renderer.
+- **Runtime (`crates/arxos`)** – Integrations, async coordination, FFI surface, and embedded-friendly runtime primitives.
+- **Hardware abstraction (`crates/arxos-hal`)** – Board-specific driver crates aggregated under a single umbrella.
 
 ### Command Handler Architecture (Refactored December 2024)
 
@@ -427,7 +376,7 @@ The command handlers were refactored to follow best engineering practices:
 
 **Pattern Example**:
 ```rust
-// src/commands/mod.rs - Command Router
+// crates/arxui/crates/arxui/crates/arxui/src/commands/mod.rs - Command Router
 pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
     match command {
         Commands::Import { ifc_file, repo } => import::handle_import(ifc_file, repo),

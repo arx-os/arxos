@@ -33,10 +33,10 @@ The code review identified **248 unwrap/expect instances** (worse than the 134 i
 2. **Identify all file I/O operations** (found ~10 locations):
    - `src/core/mod.rs` - `load_building_data_from_dir()`
    - `src/utils/loading.rs` - `find_yaml_files()`, `find_ifc_files()`
-   - `src/hardware/ingestion.rs` - `read_sensor_data_file()`, `scan_directory()`
+   - `crates/arxos/crates/arxos/src/hardware/ingestion.rs` - `read_sensor_data_file()`, `scan_directory()`
    - `src/persistence/mod.rs` - `load_building_data()`, `save_building_data()`
-   - `src/commands/import.rs` - IFC file loading
-   - `src/commands/export.rs` - Git repo initialization
+   - `crates/arxui/crates/arxui/src/commands/import.rs` - IFC file loading
+   - `crates/arxui/crates/arxui/src/commands/export.rs` - Git repo initialization
    - `src/ifc/mod.rs` - File validation and reading
 
 3. **Implement canonicalization**:
@@ -95,8 +95,8 @@ The code review identified **248 unwrap/expect instances** (worse than the 134 i
    ```
 
 2. **Files to update**:
-   - `src/mobile_ffi/ffi.rs` (15 functions)
-   - `src/mobile_ffi/jni.rs` (6 functions)
+   - `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs` (15 functions)
+   - `crates/arxos/crates/arxos/src/mobile_ffi/jni.rs` (6 functions)
 
 3. **Add FFI error handling**:
    - Return error codes instead of panicking
@@ -125,16 +125,16 @@ The code review identified **248 unwrap/expect instances** (worse than the 134 i
 **Priority Order:**
 
 **Tier 1: Production-critical paths** (~50 instances)
-1. `src/commands/equipment.rs` - Equipment CRUD operations (9 unwraps)
-2. `src/commands/import.rs` - IFC import (2 unwraps)
+1. `crates/arxui/crates/arxui/src/commands/equipment.rs` - Equipment CRUD operations (9 unwraps)
+2. `crates/arxui/crates/arxui/src/commands/import.rs` - IFC import (2 unwraps)
 3. `src/persistence/mod.rs` - Data loading/saving (7 unwraps)
 4. `src/core/mod.rs` - Core domain operations (3 unwraps)
 5. `src/utils/loading.rs` - File discovery (1 unwrap)
 
 **Tier 2: Command handlers** (~30 instances)
-- `src/commands/room.rs` (7 unwraps)
-- `src/commands/git_ops.rs` (4 unwraps)
-- `src/commands/ar.rs`, `watch.rs`, `config_mgmt.rs`
+- `crates/arxui/crates/arxui/src/commands/room.rs` (7 unwraps)
+- `crates/arxui/crates/arxui/src/commands/git_ops.rs` (4 unwraps)
+- `crates/arxui/crates/arxui/src/commands/ar.rs`, `watch.rs`, `config_mgmt.rs`
 
 **Tier 3: Internal utilities** (~168 instances - lower priority)
 

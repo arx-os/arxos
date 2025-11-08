@@ -103,7 +103,7 @@ rustup target add aarch64-linux-android armv7-linux-androideabi
 
 - `scripts/build-android-mac.sh` - Automated build script
 - `android/app/src/main/jniLibs/` - Where compiled .so files live
-- `src/mobile_ffi/ffi.rs` - C FFI bindings (currently used)
+- `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs` - C FFI bindings (currently used)
 - `android/app/build.gradle` - Gradle configuration
 
 ---

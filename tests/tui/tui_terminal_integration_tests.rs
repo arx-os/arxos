@@ -5,8 +5,8 @@
 //! - Mouse support integration
 //! - Terminal state management
 
-use arxos::ui::mouse::MouseConfig;
-use arxos::ui::terminal::TerminalManager;
+use arxui::tui::mouse::MouseConfig;
+use arxui::tui::terminal::TerminalManager;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
 use std::time::Duration;
 

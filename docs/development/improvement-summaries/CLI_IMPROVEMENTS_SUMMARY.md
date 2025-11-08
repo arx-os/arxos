@@ -27,7 +27,7 @@
 
 **Verification:**
 ```bash
-$ cargo run --bin arx -- --version
+$ cargo run -p arxui -- --version
 arx 0.1.0
 ```
 
@@ -107,11 +107,11 @@ fps: u32,
 **Verification:**
 ```bash
 # Invalid FPS (rejected)
-$ cargo run --bin arx -- interactive --building test --fps 300
+$ cargo run -p arxui -- interactive --building test --fps 300
 error: invalid value '300' for '--fps <FPS>': FPS must be between 1 and 240, got 300
 
 # Valid FPS (accepted)
-$ cargo run --bin arx -- interactive --building test --fps 60
+$ cargo run -p arxui -- interactive --building test --fps 60
 🔮 Interactive 3D Building Visualization: test
 ```
 
@@ -228,25 +228,25 @@ All priority improvements have been successfully implemented:
 
 ```bash
 # Test version display
-cargo run --bin arx -- --version
+cargo run -p arxui -- --version
 
 # Test FPS validation (should fail)
-cargo run --bin arx -- interactive --building test --fps 300
+cargo run -p arxui -- interactive --building test --fps 300
 
 # Test FPS validation (should succeed)
-cargo run --bin arx -- interactive --building test --fps 60
+cargo run -p arxui -- interactive --building test --fps 60
 
 # Test port validation (should fail)
-cargo run --bin arx -- sensors-http --building test --port 0
+cargo run -p arxui -- sensors-http --building test --port 0
 
 # Test port validation (should succeed)
-cargo run --bin arx -- sensors-http --building test --port 8080
+cargo run -p arxui -- sensors-http --building test --port 8080
 
 # Test limit validation (should fail)
-cargo run --bin arx -- search "test" --limit 50000
+cargo run -p arxui -- search "test" --limit 50000
 
 # Test limit validation (should succeed)
-cargo run --bin arx -- search "test" --limit 100
+cargo run -p arxui -- search "test" --limit 100
 ```
 
 All tests pass! ✅

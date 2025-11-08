@@ -53,13 +53,13 @@ done
 
 # Build for iOS architectures
 echo -e "${BLUE}📱 Building for iOS devices (arm64)...${NC}"
-cargo build --target aarch64-apple-ios --release --lib
+cargo build -p arxos --target aarch64-apple-ios --release --lib
 
 echo -e "${BLUE}📱 Building for iOS simulator (x86_64)...${NC}"
-cargo build --target x86_64-apple-ios --release --lib
+cargo build -p arxos --target x86_64-apple-ios --release --lib
 
 echo -e "${BLUE}📱 Building for iOS simulator (arm64)...${NC}"
-cargo build --target aarch64-apple-ios-sim --release --lib
+cargo build -p arxos --target aarch64-apple-ios-sim --release --lib
 
 # Copy libraries to build directory
 echo -e "${BLUE}📦 Copying libraries...${NC}"

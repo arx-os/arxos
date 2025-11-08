@@ -3,7 +3,7 @@
 //! Tests platform-specific theme detection (macOS, Linux, Windows)
 //! and terminal environment variable detection
 
-use arxos::ui::Theme;
+use arxui::tui::Theme;
 
 /// Test theme detection returns valid theme
 #[test]

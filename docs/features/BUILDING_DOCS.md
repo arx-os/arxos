@@ -42,7 +42,7 @@ arx doc --building "Main Building"
 ### Module Structure (Minimal)
 
 ```
-src/docs/
+crates/arxui/crates/arxui/src/docs/
 └── mod.rs         # Single file with everything
 ```
 
@@ -51,7 +51,7 @@ src/docs/
 ### Function Signature
 
 ```rust
-// src/docs/mod.rs
+// crates/arxui/crates/arxui/src/docs/mod.rs
 pub fn generate_building_docs(
     building_name: &str,
     output_path: Option<&str>
@@ -184,7 +184,7 @@ pub enum Commands {
 ### Command Handler
 
 ```rust
-// src/commands/mod.rs
+// crates/arxui/crates/arxui/src/commands/mod.rs
 Commands::Doc { building, output } => {
     docs::generate_building_docs(&building, output.as_deref())
 },
@@ -193,7 +193,7 @@ Commands::Doc { building, output } => {
 ### Handler Implementation
 
 ```rust
-// src/commands/doc.rs (or src/docs/mod.rs)
+// crates/arxui/crates/arxui/src/commands/doc.rs (or crates/arxui/crates/arxui/src/docs/mod.rs)
 pub fn handle_doc(building: String, output: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
     let output_path = output.unwrap_or_else(|| {
         format!("./docs/{}.html", building.to_lowercase().replace(" ", "-"))
@@ -212,7 +212,7 @@ pub fn handle_doc(building: String, output: Option<String>) -> Result<(), Box<dy
 
 ## Complete Minimal Implementation
 
-### File: `src/docs/mod.rs`
+### File: `crates/arxui/crates/arxui/src/docs/mod.rs`
 
 ```rust
 //! Building documentation generation
@@ -527,7 +527,7 @@ fn get_css() -> &'static str {
 ### Step 1: Create Module
 
 ```rust
-// src/lib.rs or src/docs/mod.rs
+// src/lib.rs or crates/arxui/crates/arxui/src/docs/mod.rs
 pub mod docs;
 ```
 
@@ -543,7 +543,7 @@ Commands::Doc { building, output } => {
 ### Step 3: Implement Core Function
 
 ```rust
-// src/docs/mod.rs
+// crates/arxui/crates/arxui/src/docs/mod.rs
 // Implement generate_building_docs() as shown above
 ```
 
@@ -607,7 +607,7 @@ docs/
 
 ## Next Steps
 
-1. ✅ Create `src/docs/mod.rs` with minimal implementation
+1. ✅ Create `crates/arxui/crates/arxui/src/docs/mod.rs` with minimal implementation
 2. ✅ Add `Doc` command to CLI
 3. ✅ Test with real building data
 4. ✅ Iterate based on usage

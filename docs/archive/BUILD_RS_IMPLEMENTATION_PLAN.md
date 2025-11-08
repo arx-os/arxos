@@ -350,11 +350,11 @@ fn main() {
 | Platform | Build Command | Expected Result |
 |----------|--------------|-----------------|
 | macOS Desktop | `cargo build` | ✅ Links Foundation, validates header |
-| iOS Device | `cargo build --target aarch64-apple-ios --lib` | ✅ Links Foundation, validates header |
-| iOS Simulator | `cargo build --target x86_64-apple-ios --lib` | ✅ Links Foundation, validates header |
-| Android ARM64 | `cargo build --target aarch64-linux-android --lib --features android` | ✅ Links log, validates header |
-| Linux Desktop | `cargo build --target x86_64-unknown-linux-gnu` | ✅ Links libc, validates header |
-| Windows | `cargo build --target x86_64-pc-windows-msvc` | ✅ No special links, validates header |
+| iOS Device | `cargo build -p arxos --target aarch64-apple-ios --lib` | ✅ Links Foundation, validates header |
+| iOS Simulator | `cargo build -p arxos --target x86_64-apple-ios --lib` | ✅ Links Foundation, validates header |
+| Android ARM64 | `cargo build -p arxos --target aarch64-linux-android --lib --features android` | ✅ Links log, validates header |
+| Linux Desktop | `cargo build -p arxos --target x86_64-unknown-linux-gnu` | ✅ Links libc, validates header |
+| Windows | `cargo build -p arxos --target x86_64-pc-windows-msvc` | ✅ No special links, validates header |
 
 #### Validation Checklist
 

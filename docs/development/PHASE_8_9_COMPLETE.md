@@ -19,7 +19,7 @@ Successfully completed Phase 8 (Testing & Verification) and Phase 9 (Documentati
 **Goal:** Ensure all tests work with core types
 
 **Completed:**
-- ✅ Updated `src/export/ifc/exporter.rs` test code to use core types
+- ✅ Updated `crates/arxos/crates/arxos/src/export/ifc/exporter.rs` test code to use core types
 - ✅ Updated `tests/persistence/persistence_tests.rs` to use core `Floor` type
 - ✅ Updated `benches/performance_benchmarks.rs` to use core types
 - ✅ Fixed test assertions to work with new structure (wings, spatial_properties)
@@ -82,7 +82,7 @@ Successfully completed Phase 8 (Testing & Verification) and Phase 9 (Documentati
 
 **Remaining Deprecated Usage:**
 - `src/lib.rs` - Public API exports (kept for backward compatibility)
-- `src/export/ifc/delta.rs` - Delta calculation (uses deprecated types for compatibility)
+- `crates/arxos/crates/arxos/src/export/ifc/delta.rs` - Delta calculation (uses deprecated types for compatibility)
 - Test files - Conversion function tests (intentionally use deprecated types)
 
 ---
@@ -174,20 +174,20 @@ pub struct Equipment {
 ### ✅ Completed Modules
 
 1. **Core Operations** (`src/core/operations.rs`)
-2. **Services** (`src/services/room_service.rs`, `src/services/equipment_service.rs`)
-3. **Command Handlers** (`src/commands/room_handlers.rs`, `src/commands/equipment_handlers.rs`)
-4. **Search Engine** (`src/search/engine.rs`)
-5. **AR Integration** (`src/ar_integration/mod.rs`, `src/ar_integration/pending.rs`)
-6. **Export Modules** (`src/export/ar/gltf.rs`, `src/export/ifc/exporter.rs`, `src/export/ifc/delta.rs`)
+2. **Services** (`crates/arxos/crates/arxos/src/services/room_service.rs`, `crates/arxos/crates/arxos/src/services/equipment_service.rs`)
+3. **Command Handlers** (`crates/arxui/crates/arxui/src/commands/room_handlers.rs`, `crates/arxui/crates/arxui/src/commands/equipment_handlers.rs`)
+4. **Search Engine** (`crates/arxos/crates/arxos/src/search/engine.rs`)
+5. **AR Integration** (`crates/arxos/crates/arxos/src/ar_integration/mod.rs`, `crates/arxos/crates/arxos/src/ar_integration/pending.rs`)
+6. **Export Modules** (`crates/arxos/crates/arxos/src/export/ar/gltf.rs`, `crates/arxos/crates/arxos/src/export/ifc/exporter.rs`, `crates/arxos/crates/arxos/src/export/ifc/delta.rs`)
 7. **Render Module** (`src/render/mod.rs`)
-8. **Other Modules** (`src/docs/mod.rs`, `src/ui/spreadsheet/data_source.rs`, `src/render3d/`, `src/query/mod.rs`, etc.)
+8. **Other Modules** (`crates/arxui/crates/arxui/src/docs/mod.rs`, `src/ui/spreadsheet/data_source.rs`, `src/render3d/`, `crates/arxos/crates/arxos/src/query/mod.rs`, etc.)
 9. **BuildingData Structure** (`src/yaml/mod.rs`)
 10. **Tests** (persistence tests, exporter tests, benchmarks)
 
 ### ⚠️ Deprecated (But Functional)
 
 1. **`src/lib.rs`** - Public API exports (kept for backward compatibility)
-2. **`src/export/ifc/delta.rs`** - Uses deprecated types for delta calculation
+2. **`crates/arxos/crates/arxos/src/export/ifc/delta.rs`** - Uses deprecated types for delta calculation
 3. **Conversion Functions** (`src/yaml/conversions.rs`) - Deprecated wrappers
 
 ---
@@ -208,7 +208,7 @@ pub struct Equipment {
 ## Files Modified in Phase 8 & 9
 
 ### Test Files
-- `src/export/ifc/exporter.rs` - Updated test code to use core types
+- `crates/arxos/crates/arxos/src/export/ifc/exporter.rs` - Updated test code to use core types
 - `tests/persistence/persistence_tests.rs` - Updated to use core `Floor` type
 - `benches/performance_benchmarks.rs` - Updated to use core types
 

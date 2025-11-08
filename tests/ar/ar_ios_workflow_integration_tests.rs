@@ -18,7 +18,7 @@ use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::fs;
 use std::os::raw::c_char;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
 /// Helper to convert Rust string to C string for FFI
@@ -36,7 +36,7 @@ unsafe fn free_c_string(ptr: *const c_char) {
 /// Create a test building YAML file
 fn create_test_building(
     building_name: &str,
-    temp_dir: &PathBuf,
+    temp_dir: &Path,
 ) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let building_yaml = format!("{}.yaml", building_name);
     let building_path = temp_dir.join(&building_yaml);
@@ -96,7 +96,7 @@ fn test_complete_ios_ar_workflow() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create test building
     let building_name = "ios_workflow_test_building";
-    create_test_building(building_name, &temp_dir.path().to_path_buf())?;
+    create_test_building(building_name, temp_dir.path())?;
 
     unsafe {
         let building = to_c_string(building_name);
@@ -286,7 +286,7 @@ fn test_ios_ar_workflow_with_rejection() -> Result<(), Box<dyn std::error::Error
 
     // Create test building first (before changing directory)
     let building_name = "ios_reject_test_building";
-    create_test_building(building_name, &temp_dir.path().to_path_buf())?;
+    create_test_building(building_name, temp_dir.path())?;
 
     std::env::set_current_dir(temp_dir.path())?;
 

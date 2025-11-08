@@ -220,27 +220,27 @@ let world_end = transform_matrix * local_end;
 
 ### Basic Usage
 ```bash
-cargo run --bin convert_3d_scanner_scan -- ~/Downloads/scan_directory
+cargo run -p arxui --bin convert_3d_scanner_scan -- ~/Downloads/scan_directory
 ```
 
 ### With Custom Output
 ```bash
-cargo run --bin convert_3d_scanner_scan -- ~/Downloads/scan_directory -o output.yaml
+cargo run -p arxui --bin convert_3d_scanner_scan -- ~/Downloads/scan_directory -o output.yaml
 ```
 
 ### Verbose Mode
 ```bash
-cargo run --bin convert_3d_scanner_scan -- ~/Downloads/scan_directory --verbose
+cargo run -p arxui --bin convert_3d_scanner_scan -- ~/Downloads/scan_directory --verbose
 ```
 
 ### Quiet Mode
 ```bash
-cargo run --bin convert_3d_scanner_scan -- ~/Downloads/scan_directory --quiet
+cargo run -p arxui --bin convert_3d_scanner_scan -- ~/Downloads/scan_directory --quiet
 ```
 
 ### Help
 ```bash
-cargo run --bin convert_3d_scanner_scan -- --help
+cargo run -p arxui --bin convert_3d_scanner_scan -- --help
 ```
 
 ---

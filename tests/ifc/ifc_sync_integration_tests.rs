@@ -8,8 +8,8 @@ use arxos::core::{
     Floor, Position, Room, RoomType, SpatialProperties, Wing,
 };
 use arxos::export::ifc::{IFCExporter, IFCSyncState};
-use arxos::spatial::{BoundingBox3D, Point3D};
 use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, CoordinateSystemInfo};
+use arxos::Point3D;
 use chrono::Utc;
 use std::collections::HashMap;
 use std::fs;

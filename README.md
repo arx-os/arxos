@@ -183,44 +183,50 @@ ArxOS follows security best practices with automated scanning and comprehensive 
 
 ## 🏗️ Project Structure
 
-ArxOS uses a **unified crate structure** with clear module separation:
+ArxOS is organised as a multi-crate Cargo workspace:
 
 ```
 arxos/
-├── src/                         # All Rust source code
-│   ├── lib.rs                  # Library API (for tests/mobile FFI)
-│   ├── main.rs                 # CLI entry point
-│   ├── core/                   # Core business logic
-│   ├── cli/                    # CLI command definitions
-│   ├── ifc/                    # IFC file processing
-│   ├── render3d/               # 3D rendering system
-│   ├── git/                    # Git integration
-│   ├── spatial/                # Spatial operations
-│   ├── search/                 # Search & filtering
-│   ├── game/                   # Gamified PR review and planning
-│   └── [other modules]/
-├── ios/                        # iOS Native Shell (SwiftUI)
-├── android/                    # Android Native Shell (Jetpack Compose)
-└── docs/                       # Documentation
+├── docs/                         # Documentation and design references
+├── crates/
+│   ├── arx/                      # Protocol core (IFC, Git, spatial, YAML, DePIN primitives)
+│   │   ├── src/
+│   │   └── examples/
+│   ├── arxui/                    # Terminal UI + optional 3D renderer + CLI binary `arx`
+│   │   ├── src/
+│   │   │   ├── cli/
+│   │   │   ├── commands/
+│   │   │   ├── render3d/
+│   │   │   └── tui/
+│   │   └── assets/
+│   ├── arxos/                    # Embedded runtime core (no_std capable)
+│   │   └── src/
+│   └── arxos-hal/                # Hardware abstraction layer workspace
+│       ├── src/
+│       ├── esp32-c3/
+│       └── rp2040/
+├── ios/                          # iOS native shell (SwiftUI)
+├── android/                      # Android native shell (Jetpack Compose)
+├── scripts/                      # Tooling and automation
+├── tests/                        # Cross-crate integration tests
+└── examples/                     # Sample IFC/building datasets
 ```
 
-### **Module Responsibilities:**
+### **Crate Responsibilities:**
 
-- **`core/`** - Pure business logic (buildings, rooms, equipment data structures)
-- **`cli/`** - Command-line interface definitions and parsing
-- **`ifc/`** - IFC file processing and parsing
-- **`render3d/`** - 3D visualization engine
-- **`git/`** - Git repository operations
-- **`mobile_ffi/`** - FFI bindings for mobile apps
-- **`search/`** - Advanced search and filtering
-- **`spatial/`** - 3D coordinate systems and spatial operations
-- **`game/`** - Gamified PR review and planning system
+- **`crates/arx`** – Core protocol: immutable data model, IFC parser, Git manager, spatial engine, YAML serializer, and DePIN primitives.
+- **`crates/arxui`** – Binary crate delivering the `arx` CLI, TUI widgets, command handlers, and optional 3D renderer (`render3d` feature).
+- **`crates/arxos`** – Embedded/runtime systems: hardware ingestion, mobile FFI surface, runtime services, and a minimal `no_std` runtime core.
+- **`crates/arxos-hal`** – Aggregated hardware abstraction layer with board-specific sub-crates (ESP32-C3, RP2040, …).
 
 ---
 
 ### **Architecture Philosophy:**
 
-- **Rust Core** - Single unified crate compiled to static library
+- **Layered Crates** – Protocol (`arx`), UI (`arxui`), runtime (`arxos`), and hardware (`arxos-hal`) cleanly separated.
+- **Git-native workflow** – Buildings stored as YAML tracked in Git repositories.
+- **FFI-first** – Mobile apps consume the same Rust logic via the FFI surface in `crates/arxos`.
+- **Hardware-aware** – Sensors plug into Git-managed buildings through the HAL workspace.
 - **Native UI Shells** - iOS (Swift/SwiftUI) and Android (Jetpack Compose)
 - **Git-First DePIN** - No database required, uses Git for distributed data storage and contribution tracking
 - **Decentralized Network** - Building owners, sensor operators, and field technicians contribute to a distributed building data network
@@ -302,13 +308,13 @@ cargo clippy -- -W clippy::all
 
 **iOS:**
 ```bash
-cargo build --target aarch64-apple-ios --release
+cargo build -p arxos --target aarch64-apple-ios --release
 open ios/ArxOSMobile.xcodeproj
 ```
 
 **Android:**
 ```bash
-cargo build --target aarch64-linux-android --release
+cargo build -p arxos --target aarch64-linux-android --release
 cd android && ./gradlew build
 ```
 

@@ -69,7 +69,7 @@ ArxOS is a **terminal-first building management system** that brings Git-based v
 
 #### 1.2 FFI Safety Hardening ✅
 
-**Files Modified:** `src/mobile_ffi/ffi.rs`, `src/mobile_ffi/jni.rs`
+**Files Modified:** `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs`, `crates/arxos/crates/arxos/src/mobile_ffi/jni.rs`
 
 **Achievements:**
 - ✅ Added null pointer checks to all C FFI functions (7 functions)
@@ -105,7 +105,7 @@ ArxOS is a **terminal-first building management system** that brings Git-based v
 
 #### 2.1 Equipment & Room Persistence ✅
 
-**Files Modified:** `src/commands/equipment.rs`, `src/commands/room.rs`
+**Files Modified:** `crates/arxui/crates/arxui/src/commands/equipment.rs`, `crates/arxui/crates/arxui/src/commands/room.rs`
 
 **Achievements:**
 - ✅ Equipment CRUD operations persist to YAML
@@ -115,7 +115,7 @@ ArxOS is a **terminal-first building management system** that brings Git-based v
 
 #### 2.2 Git Staging Commands ✅
 
-**Files Modified:** `src/commands/git_ops.rs`, `src/git/manager.rs`
+**Files Modified:** `crates/arxui/crates/arxui/src/commands/git_ops.rs`, `src/git/manager.rs`
 
 **Achievements:**
 - ✅ `arx git stage` - Stage current changes
@@ -127,7 +127,7 @@ ArxOS is a **terminal-first building management system** that brings Git-based v
 
 #### 2.3 IFC Import Workflow ✅
 
-**Files Modified:** `src/commands/import.rs`, `src/ifc/`
+**Files Modified:** `crates/arxui/crates/arxui/src/commands/import.rs`, `src/ifc/`
 
 **Achievements:**
 - ✅ Complete IFC import with hierarchy extraction
@@ -138,7 +138,7 @@ ArxOS is a **terminal-first building management system** that brings Git-based v
 
 #### 2.4 3D Rendering Integration ✅
 
-**Files Modified:** `src/commands/render.rs`, `src/commands/interactive.rs`
+**Files Modified:** `crates/arxui/crates/arxui/src/commands/render.rs`, `crates/arxui/crates/arxui/src/commands/interactive.rs`
 
 **Achievements:**
 - ✅ 3D rendering loads real building data from persistence
@@ -152,7 +152,7 @@ ArxOS is a **terminal-first building management system** that brings Git-based v
 
 #### 3.1 AR Confirmation Workflow ✅
 
-**Files Modified:** `src/ar_integration/pending.rs`, `src/commands/ar.rs`
+**Files Modified:** `crates/arxos/crates/arxos/src/ar_integration/pending.rs`, `crates/arxui/crates/arxui/src/commands/ar.rs`
 
 **Achievements:**
 - ✅ Storage-backed persistence for pending equipment
@@ -210,7 +210,7 @@ ArxOS is a **terminal-first building management system** that brings Git-based v
 - ✅ `docs/DEVELOPER_ONBOARDING.md` (453 lines)
 - ✅ `docs/ERROR_HANDLING_GUIDE.md` (456 lines)
 - ✅ `docs/IOS_FFI_STATUS.md` (246 lines)
-- ✅ `src/ar_integration/mod.rs` (module documentation)
+- ✅ `crates/arxos/crates/arxos/src/ar_integration/mod.rs` (module documentation)
 
 **Content:**
 - ✅ Setup and installation instructions

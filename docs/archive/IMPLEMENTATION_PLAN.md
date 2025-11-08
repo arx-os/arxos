@@ -37,8 +37,8 @@ This plan addresses all critical gaps identified in the project review, focusing
 
 **Files to modify**:
 
-- `src/commands/equipment.rs` (lines 50, 110, 129)
-- `src/commands/room.rs` (similar pattern)
+- `crates/arxui/crates/arxui/src/commands/equipment.rs` (lines 50, 110, 129)
+- `crates/arxui/crates/arxui/src/commands/room.rs` (similar pattern)
 
 **Implementation**:
 
@@ -68,7 +68,7 @@ if commit {
 
 - `handle_update_equipment()`
 - `handle_remove_equipment()`
-- All room commands in `src/commands/room.rs`
+- All room commands in `crates/arxui/crates/arxui/src/commands/room.rs`
 
 ### 1.2 Git Staging Commands
 
@@ -82,7 +82,7 @@ if commit {
 
 **Files to create/modify**:
 
-- `src/commands/git_ops.rs` - Add staging handlers
+- `crates/arxui/crates/arxui/src/commands/git_ops.rs` - Add staging handlers
 - `src/git/manager.rs` - Add staging methods to BuildingGitManager
 
 **Implementation**: Use git2 staging area APIs to track changes before committing.
@@ -93,7 +93,7 @@ if commit {
 
 **Files to modify**:
 
-- `src/commands/spatial.rs` - Wire up persistence for coordinate system changes
+- `crates/arxui/crates/arxui/src/commands/spatial.rs` - Wire up persistence for coordinate system changes
 
 ## Phase 2: Mobile Integration (Priority: High)
 
@@ -170,7 +170,7 @@ private func loadEquipment() {
 
 **Files to modify**:
 
-- `src/commands/import.rs` - Complete import handler
+- `crates/arxui/crates/arxui/src/commands/import.rs` - Complete import handler
 
 **Current code** (line 25-30):
 
@@ -219,8 +219,8 @@ pub fn handle_import(ifc_file: PathBuf, repo: Option<PathBuf>) -> Result<(), Box
 
 **Files to modify**:
 
-- `src/commands/sensors.rs` - Complete sensor processing command
-- `src/hardware/status_updater.rs` - Implement status update logic
+- `crates/arxui/crates/arxui/src/commands/sensors.rs` - Complete sensor processing command
+- `crates/arxos/crates/arxos/src/hardware/status_updater.rs` - Implement status update logic
 
 **Implementation**:
 
@@ -269,7 +269,7 @@ pub fn handle_process_sensors_command(
 
 **Problem**: Need to map sensor readings to equipment status fields.
 
-**Implementation in** `src/hardware/status_updater.rs`:
+**Implementation in** `crates/arxos/crates/arxos/src/hardware/status_updater.rs`:
 
 - Match sensor `device_id` or `equipment_id` to equipment in building data
 - Update equipment properties based on sensor type (temperature, humidity, CO2, etc.)
@@ -284,8 +284,8 @@ pub fn handle_process_sensors_command(
 
 **Files to modify**:
 
-- `src/commands/render.rs` - Load building data from persistence
-- `src/commands/interactive.rs` - Wire up interactive renderer
+- `crates/arxui/crates/arxui/src/commands/render.rs` - Load building data from persistence
+- `crates/arxui/crates/arxui/src/commands/interactive.rs` - Wire up interactive renderer
 
 ### 4.2 AR Workflow Integration
 
@@ -326,12 +326,12 @@ pub fn handle_process_sensors_command(
 
 ### To-dos
 
-- [x] Implement equipment CRUD persistence with Git staging support in src/commands/equipment.rs ✅ **COMPLETED**
+- [x] Implement equipment CRUD persistence with Git staging support in crates/arxui/crates/arxui/src/commands/equipment.rs ✅ **COMPLETED**
   - Added equipment persistence to YAML files
   - Git staging support (--commit flag)
   - Full CRUD operations (add, update, remove)
   
-- [x] Implement room CRUD persistence with Git staging support in src/commands/room.rs ✅ **COMPLETED**
+- [x] Implement room CRUD persistence with Git staging support in crates/arxui/crates/arxui/src/commands/room.rs ✅ **COMPLETED**
   - Already implemented in existing code
 
 - [x] Add Git staging commands (stage, commit, unstage) to CLI and git manager ✅ **COMPLETED**
@@ -382,19 +382,19 @@ pub fn handle_process_sensors_command(
   - ⚠️ **TESTING**: Need to test with larger IFC file for realistic data
 
 - [✅] Sensor data ingestion pipeline with equipment status updates ✅ **IMPLEMENTED**
-  - ✅ Infrastructure in `src/commands/sensors.rs`
+  - ✅ Infrastructure in `crates/arxui/crates/arxui/src/commands/sensors.rs`
   - ✅ Uses `SensorIngestionService` and `EquipmentStatusUpdater`
   - ✅ Can process sensor files and update equipment status
   - ⚠️ **VERIFICATION NEEDED**: Test with actual sensor data
 
 - [✅] Wire 3D rendering commands to load real building data from persistence ✅ **COMPLETED**
-  - ✅ `src/commands/render.rs` uses `load_building_data()`
-  - ✅ `src/commands/interactive.rs` uses `load_building_data()`
+  - ✅ `crates/arxui/crates/arxui/src/commands/render.rs` uses `load_building_data()`
+  - ✅ `crates/arxui/crates/arxui/src/commands/interactive.rs` uses `load_building_data()`
   - ✅ Both renderers load from YAML files
 
 - [⚠️] Integrate AR scanning with pending equipment workflow and confirmation ⚠️ **VERIFY COMPLETENESS**
-  - ✅ `PendingEquipmentManager` exists in `src/ar_integration/pending.rs`
-  - ✅ AR processing functions exist in `src/ar_integration/processing.rs`
+  - ✅ `PendingEquipmentManager` exists in `crates/arxos/crates/arxos/src/ar_integration/pending.rs`
+  - ✅ AR processing functions exist in `crates/arxos/crates/arxos/src/ar_integration/processing.rs`
   - ⚠️ **NEED TO VERIFY**: CLI integration complete
 
 - [ ] Add integration tests for new features ❌ **NOT STARTED**

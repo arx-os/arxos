@@ -166,11 +166,11 @@ All existing code continues to work:
 - `src/core/mod.rs` - Re-exported `EquipmentHealthStatus`
 - `src/core/serde_helpers.rs` - Created helper functions (for future use)
 - `src/yaml/conversions.rs` - Updated conversion functions
-- `src/mobile_ffi/offline_queue.rs` - Updated Equipment constructor
-- `src/mobile_ffi/mod.rs` - Updated Equipment constructor
-- `src/mobile_ffi/ffi.rs` - Updated Equipment constructor
+- `crates/arxos/crates/arxos/src/mobile_ffi/offline_queue.rs` - Updated Equipment constructor
+- `crates/arxos/crates/arxos/src/mobile_ffi/mod.rs` - Updated Equipment constructor
+- `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs` - Updated Equipment constructor
 - `src/ifc/hierarchy.rs` - Updated Equipment constructor
-- `src/game/scenario.rs` - Updated Equipment constructors
+- `crates/arxos/crates/arxos/src/game/scenario.rs` - Updated Equipment constructors
 - `tests/yaml_conversions_tests.rs` - Added comprehensive tests
 
 ---

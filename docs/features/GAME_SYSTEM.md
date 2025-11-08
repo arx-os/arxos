@@ -69,7 +69,7 @@ arx game learn --pr-id pr_approved_001 --building "My Building"
 ### Module Structure
 
 ```
-src/game/
+crates/arxos/crates/arxos/src/game/
 ├── mod.rs           # Public API and re-exports
 ├── types.rs         # Core game types (GameMode, GameScenario, etc.)
 ├── scenario.rs      # Scenario loading from PRs and buildings

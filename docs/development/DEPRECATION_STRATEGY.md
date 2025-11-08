@@ -143,7 +143,7 @@ The following usage is **expected and acceptable**:
    - **Reason:** Backward compatibility for external users
    - **Action:** Keep until v3.0.0
 
-2. **`src/export/ifc/delta.rs`** - Delta calculations
+2. **`crates/arxos/crates/arxos/src/export/ifc/delta.rs`** - Delta calculations
    - **Reason:** Delta format uses deprecated types for compatibility
    - **Action:** Keep until delta format is updated
 

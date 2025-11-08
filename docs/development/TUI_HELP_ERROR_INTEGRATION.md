@@ -190,7 +190,7 @@ if let Some(event) = terminal.poll_event(Duration::from_millis(100))? {
 
 ## Complete Example
 
-See `src/commands/equipment/browser.rs` for a complete integration example.
+See `crates/arxui/crates/arxui/src/commands/equipment/browser.rs` for a complete integration example.
 
 ---
 

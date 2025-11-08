@@ -51,7 +51,7 @@ This Android app follows the **Rust Core + Native UI Shell** architecture:
 2. **Build Rust Core** (if not already built):
    ```bash
    # From the project root
-   cargo build --target aarch64-linux-android --release
+   cargo build -p arxos --target aarch64-linux-android --release
    ```
 
 3. **Run on Device**:

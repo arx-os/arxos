@@ -20,7 +20,7 @@ This guide documents the architectural changes made during the December 2024 ref
 ### After (Modular Structure)
 
 - Clean `src/main.rs` entry point (~50 lines, 97.7% reduction)
-- 16 focused command handler modules in `src/commands/`
+- 16 focused command handler modules in `crates/arxui/crates/arxui/src/commands/`
 - Separation of concerns: each handler in its own file
 - Comprehensive test coverage (150+ tests)
 - Reusable helper functions
@@ -28,7 +28,7 @@ This guide documents the architectural changes made during the December 2024 ref
 
 ## New Module Structure
 
-### Command Handlers (`src/commands/`)
+### Command Handlers (`crates/arxui/crates/arxui/src/commands/`)
 
 Each command now has its own focused module:
 
@@ -57,7 +57,7 @@ Each command now has its own focused module:
 
 ### Command Router
 
-`src/commands/mod.rs` acts as the central dispatcher:
+`crates/arxui/crates/arxui/src/commands/mod.rs` acts as the central dispatcher:
 
 ```rust
 pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
@@ -80,9 +80,9 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
 
 **Before**: Search through 2,132 lines in `main.rs`
 
-**After**: Look in `src/commands/[command_name].rs`
+**After**: Look in `crates/arxui/crates/arxui/src/commands/[command_name].rs`
 
-Example: `arxos room create ...` → `src/commands/room.rs`
+Example: `arxos room create ...` → `crates/arxui/crates/arxui/src/commands/room.rs`
 
 ### 2. Adding New Commands
 
@@ -92,10 +92,10 @@ Example: `arxos room create ...` → `src/commands/room.rs`
 3. Difficult to test
 
 **After**:
-1. Create new file: `src/commands/my_feature.rs`
+1. Create new file: `crates/arxui/crates/arxui/src/commands/my_feature.rs`
 2. Implement handler function
-3. Add to router in `src/commands/mod.rs`
-4. Add tests: `src/commands/my_feature.rs` (with `#[cfg(test)]` module)
+3. Add to router in `crates/arxui/crates/arxui/src/commands/mod.rs`
+4. Add tests: `crates/arxui/crates/arxui/src/commands/my_feature.rs` (with `#[cfg(test)]` module)
 
 ### 3. Testing
 
@@ -108,7 +108,7 @@ Example: `arxos room create ...` → `src/commands/room.rs`
 
 Example test structure:
 ```rust
-// src/commands/room.rs
+// crates/arxui/crates/arxui/src/commands/room.rs
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -202,7 +202,7 @@ No code changes needed on your part - backward compatible.
 
 Example: Modifying room management
 
-1. Open `src/commands/room.rs`
+1. Open `crates/arxui/crates/arxui/src/commands/room.rs`
 2. Make changes to `handle_room_command()`
 3. Run relevant tests: `cargo test commands::room::tests`
 4. Verify integration: `cargo test room`
@@ -212,9 +212,9 @@ Example: Modifying room management
 
 Example: Adding a "maintenance" command
 
-1. Create `src/commands/maintenance.rs`
+1. Create `crates/arxui/crates/arxui/src/commands/maintenance.rs`
 2. Implement `pub fn handle_maintenance(...)` 
-3. Add module declaration to `src/commands/mod.rs`:
+3. Add module declaration to `crates/arxui/crates/arxui/src/commands/mod.rs`:
    ```rust
    pub mod maintenance;
    ```
@@ -229,7 +229,7 @@ Example: Adding a "maintenance" command
 **Before**: Debug in huge `main.rs` file
 
 **After**: Focused debugging in specific module
-- Set breakpoint in `src/commands/[module].rs`
+- Set breakpoint in `crates/arxui/crates/arxui/src/commands/[module].rs`
 - Easier to trace through logic
 - Smaller scope = faster debugging
 
@@ -253,7 +253,7 @@ cargo test --lib commands::room::tests
 
 ### Test Organization
 
-- **Unit tests**: In `src/commands/*.rs` with `#[cfg(test)]`
+- **Unit tests**: In `crates/arxui/crates/arxui/src/commands/*.rs` with `#[cfg(test)]`
 - **Integration tests**: In `tests/` directory
 - **Parser tests**: Test input validation and error cases
 - **Handler tests**: Test full command workflows
@@ -289,7 +289,7 @@ The refactoring is complete. You can now:
 - **ARCHITECTURE.md**: Updated to reflect new structure
 - **REFACTORING_SUMMARY.md**: Detailed summary of changes
 - **NEXT_STEPS.md**: Guide for continued development
-- Source code: See `src/commands/` for implementation examples
+- Source code: See `crates/arxui/crates/arxui/src/commands/` for implementation examples
 
 ---
 

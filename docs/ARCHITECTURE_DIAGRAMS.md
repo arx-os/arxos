@@ -880,19 +880,19 @@ Commit (A2) ─────────────────────▶�
 
 **Adding New Equipment Types:**
 1. Add variant to `EquipmentType` enum (src/core/equipment.rs)
-2. Add mapping to IFC type (src/export/ifc/mapper.rs)
+2. Add mapping to IFC type (crates/arxos/crates/arxos/src/export/ifc/mapper.rs)
 3. Add color for 3D rendering (src/render3d/mod.rs)
 4. Update documentation
 
 **Adding New Commands:**
-1. Add handler to src/commands/
+1. Add handler to crates/arxui/crates/arxui/src/commands/
 2. Add CLI definition to src/cli.rs
 3. Add to command palette (src/ui/command_palette/commands.rs)
 4. Add tests
 5. Update CLI_REFERENCE.md
 
 **Adding New Export Formats:**
-1. Create exporter in src/export/<format>/
+1. Create exporter in crates/arxos/crates/arxos/src/export/<format>/
 2. Implement traits if needed
 3. Add CLI command
 4. Add tests

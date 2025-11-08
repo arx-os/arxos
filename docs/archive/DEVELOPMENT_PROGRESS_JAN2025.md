@@ -16,7 +16,7 @@ Completed critical development phase implementing AR confirmation workflow, comp
 ### 1. AR Confirmation Workflow Integration
 
 **Status:** ✅ Complete  
-**Files Modified:** `src/ar_integration/pending.rs`, `src/commands/ar.rs`
+**Files Modified:** `crates/arxos/crates/arxos/src/ar_integration/pending.rs`, `crates/arxui/crates/arxui/src/commands/ar.rs`
 
 **Key Achievements:**
 - ✅ Added storage-backed persistence to `PendingEquipmentManager`
@@ -81,7 +81,7 @@ test result: ok. 3 passed; 0 failed; 0 ignored
 ### 3. Module Documentation
 
 **Status:** ✅ Complete  
-**Files Modified:** `src/ar_integration/mod.rs`
+**Files Modified:** `crates/arxos/crates/arxos/src/ar_integration/mod.rs`
 
 **Documentation Added:**
 - ✅ Comprehensive module overview

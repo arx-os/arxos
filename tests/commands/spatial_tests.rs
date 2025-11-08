@@ -7,8 +7,10 @@ use arxos::core::{
 };
 use arxos::spatial::Point3D;
 use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+use serial_test::serial;
 use std::collections::HashMap;
 use std::fs;
+use std::path::PathBuf;
 use tempfile::TempDir;
 
 /// Helper function to create a test building with rooms and equipment
@@ -152,35 +154,61 @@ fn create_test_building_data() -> BuildingData {
 }
 
 /// Helper function to setup test environment with building data
-fn setup_test_environment() -> (TempDir, String) {
-    let temp_dir = TempDir::new().expect("Failed to create temp directory");
-    let original_dir = std::env::current_dir().expect("Failed to get current directory");
-
-    // Change to temp directory
-    std::env::set_current_dir(temp_dir.path()).expect("Failed to change directory");
-
-    // Create building data
-    let building_data = create_test_building_data();
-    let serializer = arxos::yaml::BuildingYamlSerializer::new();
-    let yaml_content = serializer
-        .to_yaml(&building_data)
-        .expect("Failed to serialize building");
-
-    let yaml_file = "test_building.yaml";
-    fs::write(yaml_file, yaml_content).expect("Failed to write YAML file");
-
-    (temp_dir, original_dir.to_string_lossy().to_string())
+struct TestEnvironment {
+    _temp_dir: TempDir,
+    original_dir: PathBuf,
 }
 
-/// Helper function to cleanup test environment
-fn cleanup_test_environment(temp_dir: TempDir, original_dir: String) {
-    drop(temp_dir);
-    std::env::set_current_dir(&original_dir).expect("Failed to restore directory");
+impl TestEnvironment {
+    fn new() -> Self {
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let original_dir = std::env::current_dir().expect("Failed to get current directory");
+
+        std::env::set_current_dir(temp_dir.path()).expect("Failed to change directory");
+
+        Self {
+            _temp_dir: temp_dir,
+            original_dir,
+        }
+    }
+
+    fn write_default_building(&self) {
+        let building_data = create_test_building_data();
+        let serializer = arxos::yaml::BuildingYamlSerializer::new();
+        let yaml_content = serializer
+            .to_yaml(&building_data)
+            .expect("Failed to serialize building");
+        fs::write("test_building.yaml", yaml_content).expect("Failed to write YAML file");
+    }
+}
+
+impl Drop for TestEnvironment {
+    fn drop(&mut self) {
+        if let Err(err) = std::env::set_current_dir(&self.original_dir) {
+            let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            if let Err(fallback_err) = std::env::set_current_dir(&manifest_dir) {
+                eprintln!(
+                    "TestEnvironment: failed to restore directory {}: {}. Fallback to manifest dir {} failed: {}",
+                    self.original_dir.display(),
+                    err,
+                    manifest_dir.display(),
+                    fallback_err
+                );
+            }
+        }
+    }
+}
+
+fn setup_test_environment() -> TestEnvironment {
+    let env = TestEnvironment::new();
+    env.write_default_building();
+    env
 }
 
 #[test]
+#[serial]
 fn test_spatial_query_all() {
-    let (temp_dir, original_dir) = setup_test_environment();
+    let _env = setup_test_environment();
 
     let result = spatial_query("all", "", vec![]);
     assert!(result.is_ok(), "spatial_query should succeed");
@@ -198,13 +226,12 @@ fn test_spatial_query_all() {
     assert!(entity_names.contains(&"Room B".to_string()));
     assert!(entity_names.contains(&"HVAC Unit 1".to_string()));
     assert!(entity_names.contains(&"Electrical Panel".to_string()));
-
-    cleanup_test_environment(temp_dir, original_dir);
 }
 
 #[test]
+#[serial]
 fn test_spatial_query_room_filter() {
-    let (temp_dir, original_dir) = setup_test_environment();
+    let _env = setup_test_environment();
 
     let result = spatial_query("all", "room", vec![]);
     assert!(result.is_ok());
@@ -215,13 +242,12 @@ fn test_spatial_query_room_filter() {
     for result in &results {
         assert!(result.entity_type.contains("Room"));
     }
-
-    cleanup_test_environment(temp_dir, original_dir);
 }
 
 #[test]
+#[serial]
 fn test_spatial_query_equipment_filter() {
-    let (temp_dir, original_dir) = setup_test_environment();
+    let _env = setup_test_environment();
 
     let result = spatial_query("all", "equipment", vec![]);
     assert!(result.is_ok());
@@ -232,13 +258,12 @@ fn test_spatial_query_equipment_filter() {
     for result in &results {
         assert!(result.entity_type.contains("Equipment"));
     }
-
-    cleanup_test_environment(temp_dir, original_dir);
 }
 
 #[test]
+#[serial]
 fn test_spatial_query_distance() {
-    let (temp_dir, original_dir) = setup_test_environment();
+    let _env = setup_test_environment();
 
     let result = spatial_query(
         "distance",
@@ -256,13 +281,12 @@ fn test_spatial_query_distance() {
         (distance - 20.0).abs() < 0.01,
         "Distance should be approximately 20.0"
     );
-
-    cleanup_test_environment(temp_dir, original_dir);
 }
 
 #[test]
+#[serial]
 fn test_spatial_query_distance_invalid_entities() {
-    let (temp_dir, original_dir) = setup_test_environment();
+    let _env = setup_test_environment();
 
     let result = spatial_query(
         "distance",
@@ -270,13 +294,12 @@ fn test_spatial_query_distance_invalid_entities() {
         vec!["Nonexistent".to_string(), "Room A".to_string()],
     );
     assert!(result.is_err(), "Should fail with invalid entity");
-
-    cleanup_test_environment(temp_dir, original_dir);
 }
 
 #[test]
+#[serial]
 fn test_spatial_query_within_radius() {
-    let (temp_dir, original_dir) = setup_test_environment();
+    let _env = setup_test_environment();
 
     // Query entities within radius 15.0 of point (10, 10, 1.5)
     let result = spatial_query(
@@ -292,7 +315,7 @@ fn test_spatial_query_within_radius() {
     assert!(result.is_ok());
 
     let results = result.unwrap();
-    assert!(results.len() >= 1, "Should find at least HVAC Unit 1");
+    assert!(!results.is_empty(), "Should find at least HVAC Unit 1");
 
     // Results should be sorted by distance
     for i in 1..results.len() {
@@ -301,13 +324,12 @@ fn test_spatial_query_within_radius() {
             "Results should be sorted by distance"
         );
     }
-
-    cleanup_test_environment(temp_dir, original_dir);
 }
 
 #[test]
+#[serial]
 fn test_spatial_query_within_radius_invalid_params() {
-    let (temp_dir, original_dir) = setup_test_environment();
+    let _env = setup_test_environment();
 
     // Missing radius parameter
     let result = spatial_query(
@@ -316,13 +338,12 @@ fn test_spatial_query_within_radius_invalid_params() {
         vec!["10.0".to_string(), "10.0".to_string(), "1.5".to_string()],
     );
     assert!(result.is_err(), "Should fail with insufficient parameters");
-
-    cleanup_test_environment(temp_dir, original_dir);
 }
 
 #[test]
+#[serial]
 fn test_spatial_query_nearest() {
-    let (temp_dir, original_dir) = setup_test_environment();
+    let _env = setup_test_environment();
 
     // Find nearest entity to point (12, 8, 1.5)
     let result = spatial_query(
@@ -337,13 +358,12 @@ fn test_spatial_query_nearest() {
 
     // Should be HVAC Unit 1 (at 10, 10, 1.5) which is closest
     assert_eq!(results[0].entity_name, "HVAC Unit 1");
-
-    cleanup_test_environment(temp_dir, original_dir);
 }
 
 #[test]
+#[serial]
 fn test_spatial_query_nearest_with_max_distance() {
-    let (temp_dir, original_dir) = setup_test_environment();
+    let _env = setup_test_environment();
 
     // Find nearest entity within 5.0 units of point (12, 8, 1.5)
     let result = spatial_query(
@@ -362,13 +382,12 @@ fn test_spatial_query_nearest_with_max_distance() {
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].entity_name, "HVAC Unit 1");
     assert!(results[0].distance <= 5.0);
-
-    cleanup_test_environment(temp_dir, original_dir);
 }
 
 #[test]
+#[serial]
 fn test_spatial_query_nearest_no_results_within_max_distance() {
-    let (temp_dir, original_dir) = setup_test_environment();
+    let _env = setup_test_environment();
 
     // Find nearest entity within 0.1 units (too small)
     let result = spatial_query(
@@ -389,26 +408,24 @@ fn test_spatial_query_nearest_no_results_within_max_distance() {
         0,
         "Should return no results if nothing within max distance"
     );
-
-    cleanup_test_environment(temp_dir, original_dir);
 }
 
 #[test]
+#[serial]
 fn test_spatial_query_invalid_query_type() {
-    let (temp_dir, original_dir) = setup_test_environment();
+    let _env = setup_test_environment();
 
     let result = spatial_query("invalid_type", "", vec![]);
     assert!(result.is_err(), "Should fail with invalid query type");
 
     let error_msg = result.unwrap_err().to_string();
     assert!(error_msg.contains("Unknown query type"));
-
-    cleanup_test_environment(temp_dir, original_dir);
 }
 
 #[test]
+#[serial]
 fn test_validate_spatial_all_entities() {
-    let (temp_dir, original_dir) = setup_test_environment();
+    let _env = setup_test_environment();
 
     let result = validate_spatial(None, None);
     assert!(result.is_ok());
@@ -420,13 +437,12 @@ fn test_validate_spatial_all_entities() {
     );
     assert!(validation.is_valid, "All entities should be valid");
     assert_eq!(validation.issues_found, 0, "Should find no issues");
-
-    cleanup_test_environment(temp_dir, original_dir);
 }
 
 #[test]
+#[serial]
 fn test_validate_spatial_specific_entity() {
-    let (temp_dir, original_dir) = setup_test_environment();
+    let _env = setup_test_environment();
 
     let result = validate_spatial(Some("Room A"), None);
     assert!(result.is_ok());
@@ -435,36 +451,33 @@ fn test_validate_spatial_specific_entity() {
     assert_eq!(validation.entities_checked, 1);
     assert!(validation.is_valid);
     assert_eq!(validation.issues_found, 0);
-
-    cleanup_test_environment(temp_dir, original_dir);
 }
 
 #[test]
+#[serial]
 fn test_validate_spatial_invalid_entity() {
-    let (temp_dir, original_dir) = setup_test_environment();
+    let _env = setup_test_environment();
 
     let result = validate_spatial(Some("Nonexistent Entity"), None);
     assert!(result.is_err(), "Should fail with nonexistent entity");
-
-    cleanup_test_environment(temp_dir, original_dir);
 }
 
 #[test]
+#[serial]
 fn test_validate_spatial_with_custom_tolerance() {
-    let (temp_dir, original_dir) = setup_test_environment();
+    let _env = setup_test_environment();
 
     let result = validate_spatial(None, Some(0.0001));
     assert!(result.is_ok());
 
     let validation = result.unwrap();
     assert_eq!(validation.tolerance, 0.0001);
-
-    cleanup_test_environment(temp_dir, original_dir);
 }
 
 #[test]
+#[serial]
 fn test_validate_spatial_invalid_bounding_box() {
-    let (temp_dir, original_dir) = setup_test_environment();
+    let _env = setup_test_environment();
 
     // Create a building with invalid bounding box
     let mut building_data = create_test_building_data();
@@ -503,13 +516,12 @@ fn test_validate_spatial_invalid_bounding_box() {
         .iter()
         .any(|issue| issue.issue_type == "BoundingBoxInvalid");
     assert!(has_bbox_issue, "Should have BoundingBoxInvalid issue");
-
-    cleanup_test_environment(temp_dir, original_dir);
 }
 
 #[test]
+#[serial]
 fn test_validate_spatial_zero_dimension() {
-    let (temp_dir, original_dir) = setup_test_environment();
+    let _env = setup_test_environment();
 
     // Create a building with zero-width bounding box
     let mut building_data = create_test_building_data();
@@ -546,13 +558,12 @@ fn test_validate_spatial_zero_dimension() {
         .iter()
         .any(|issue| issue.issue_type == "ZeroDimension");
     assert!(has_zero_dim_issue, "Should have ZeroDimension issue");
-
-    cleanup_test_environment(temp_dir, original_dir);
 }
 
 #[test]
+#[serial]
 fn test_validate_spatial_issue_details() {
-    let (temp_dir, original_dir) = setup_test_environment();
+    let _env = setup_test_environment();
 
     // Create invalid bounding box
     let mut building_data = create_test_building_data();
@@ -590,8 +601,6 @@ fn test_validate_spatial_issue_details() {
     assert_eq!(issue.entity_type, "Room");
     assert!(!issue.message.is_empty());
     assert!(!issue.severity.is_empty());
-
-    cleanup_test_environment(temp_dir, original_dir);
 }
 
 #[test]

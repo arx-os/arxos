@@ -28,10 +28,10 @@ Successfully completed Phase 2 of the Data Model Unification plan, which adds YA
 - `src/core/mod.rs` - Re-exported SensorMapping and ThresholdConfig
 - `src/yaml/conversions.rs` - Updated conversion functions
 - `src/ifc/hierarchy.rs` - Updated Equipment creation
-- `src/mobile_ffi/ffi.rs` - Updated Equipment creation
-- `src/mobile_ffi/offline_queue.rs` - Updated Equipment creation
-- `src/mobile_ffi/mod.rs` - Updated Equipment creation
-- `src/game/scenario.rs` - Updated Equipment creation
+- `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs` - Updated Equipment creation
+- `crates/arxos/crates/arxos/src/mobile_ffi/offline_queue.rs` - Updated Equipment creation
+- `crates/arxos/crates/arxos/src/mobile_ffi/mod.rs` - Updated Equipment creation
+- `crates/arxos/crates/arxos/src/game/scenario.rs` - Updated Equipment creation
 
 **Code Example:**
 ```rust
@@ -68,13 +68,13 @@ let equipment = Equipment {
 - Added `BuildingMetadata` struct to `src/core/building.rs`
 - Added optional `metadata` field to `Building` struct (using `#[serde(flatten)]`)
 - Updated `BuildingYamlSerializer` to use building.metadata if available
-- Updated Building creation in `src/search/engine.rs` to include metadata
+- Updated Building creation in `crates/arxos/crates/arxos/src/search/engine.rs` to include metadata
 
 **Files Modified:**
 - `src/core/building.rs` - Added BuildingMetadata and metadata field
 - `src/core/mod.rs` - Re-exported BuildingMetadata
 - `src/yaml/mod.rs` - Updated serialize_building to use building.metadata
-- `src/search/engine.rs` - Updated Building creation
+- `crates/arxos/crates/arxos/src/search/engine.rs` - Updated Building creation
 
 **Code Example:**
 ```rust
@@ -160,11 +160,11 @@ All existing code continues to work:
 
 **Other:**
 - `src/ifc/hierarchy.rs` - Updated Equipment creation
-- `src/mobile_ffi/ffi.rs` - Updated Equipment creation
-- `src/mobile_ffi/offline_queue.rs` - Updated Equipment creation
-- `src/mobile_ffi/mod.rs` - Updated Equipment creation
-- `src/game/scenario.rs` - Updated Equipment creation
-- `src/search/engine.rs` - Updated Building creation
+- `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs` - Updated Equipment creation
+- `crates/arxos/crates/arxos/src/mobile_ffi/offline_queue.rs` - Updated Equipment creation
+- `crates/arxos/crates/arxos/src/mobile_ffi/mod.rs` - Updated Equipment creation
+- `crates/arxos/crates/arxos/src/game/scenario.rs` - Updated Equipment creation
+- `crates/arxos/crates/arxos/src/search/engine.rs` - Updated Building creation
 
 ---
 

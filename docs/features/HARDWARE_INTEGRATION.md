@@ -198,11 +198,11 @@ Hardware Sensor → HTTP/MQTT/Webhook → Git Repository
   ↓
 Sensor Data Files (YAML/JSON)
   ↓
-Sensor Data Ingestion Service (src/hardware/ingestion.rs - NEW)
+Sensor Data Ingestion Service (crates/arxos/crates/arxos/crates/arxos/src/hardware/ingestion.rs - NEW)
   ↓
-Sensor Data Normalizer (src/hardware/normalizer.rs - NEW)
+Sensor Data Normalizer (crates/arxos/crates/arxos/crates/arxos/src/hardware/normalizer.rs - NEW)
   ↓
-Equipment Status Updater (src/hardware/updater.rs - NEW)
+Equipment Status Updater (crates/arxos/crates/arxos/crates/arxos/src/hardware/updater.rs - NEW)
   ↓
 Building Data Update → Git Commit
 ```
@@ -250,7 +250,7 @@ equipment:
 **Concept:** Assign sensors to specific equipment in building data
 
 ```rust
-// Future implementation in src/core/equipment.rs
+// Future implementation in crates/arx/src/core/equipment.rs
 pub struct EquipmentSensorMapping {
     pub equipment_id: String,
     pub sensor_id: String,

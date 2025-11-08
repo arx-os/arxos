@@ -15,7 +15,7 @@
 
 ### 1. `wing` Parameter in Room Creation ⚠️
 
-**Location:** `src/commands/room_handlers.rs`
+**Location:** `crates/arxui/crates/arxui/src/commands/room_handlers.rs`
 
 **Issue:** The `wing` parameter is accepted by the CLI command but **never actually used** in the room creation logic.
 
@@ -129,14 +129,14 @@ fn handle_create_room(config: CreateRoomConfig) -> Result<(), Box<dyn std::error
 ## Code Locations
 
 ### Dead Code
-- `src/commands/room_handlers.rs:55` - `wing` field in `CreateRoomConfig`
-- `src/commands/room_handlers.rs:70` - `wing` printed but not stored
+- `crates/arxui/crates/arxui/src/commands/room_handlers.rs:55` - `wing` field in `CreateRoomConfig`
+- `crates/arxui/crates/arxui/src/commands/room_handlers.rs:70` - `wing` printed but not stored
 - `src/cli/mod.rs:656` - `wing` CLI parameter
 
 ### Still Needed
-- `src/commands/room_handlers.rs:68-171` - `handle_create_room` function
+- `crates/arxui/crates/arxui/src/commands/room_handlers.rs:68-171` - `handle_create_room` function
 - `src/core/operations.rs:9-40` - `create_room` function
-- `src/mobile_ffi/mod.rs:226` - Mobile FFI `create_room`
+- `crates/arxos/crates/arxos/src/mobile_ffi/mod.rs:226` - Mobile FFI `create_room`
 
 ---
 

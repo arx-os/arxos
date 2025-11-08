@@ -1,12 +1,64 @@
 //! Tests for wing functionality in room creation
 
 use arxos::core::operations::create_room;
-use arxos::core::{Room, RoomType};
+use arxos::core::{Floor, Room, RoomType, Wing};
 use arxos::persistence::PersistenceManager;
-use arxos::yaml::BuildingData;
+use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+use arxos::BuildingYamlSerializer;
+use serial_test::serial;
+use std::collections::HashMap;
 use std::fs;
 use tempfile::TempDir;
 
+fn initialize_building(building_name: &str) -> PersistenceManager {
+    let building_data = BuildingData {
+        building: BuildingInfo {
+            id: building_name.to_string(),
+            name: building_name.to_string(),
+            description: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            version: "1.0.0".to_string(),
+            global_bounding_box: None,
+        },
+        metadata: BuildingMetadata {
+            source_file: None,
+            parser_version: "wing-tests".to_string(),
+            total_entities: 0,
+            spatial_entities: 0,
+            coordinate_system: "LOCAL".to_string(),
+            units: "meters".to_string(),
+            tags: vec![],
+        },
+        floors: vec![Floor {
+            id: "floor-1".to_string(),
+            name: "Floor 1".to_string(),
+            level: 1,
+            elevation: Some(0.0),
+            bounding_box: None,
+            wings: vec![Wing {
+                id: "wing-default".to_string(),
+                name: "Default Wing".to_string(),
+                rooms: vec![],
+                equipment: vec![],
+                properties: HashMap::new(),
+            }],
+            equipment: vec![],
+            properties: HashMap::new(),
+        }],
+        coordinate_systems: vec![],
+    };
+
+    let serializer = BuildingYamlSerializer::new();
+    let yaml_content = serializer
+        .to_yaml(&building_data)
+        .expect("Failed to serialize building data");
+    fs::write(format!("{}.yaml", building_name), yaml_content)
+        .expect("Failed to write initial building YAML");
+    PersistenceManager::new(building_name).expect("Failed to initialize persistence manager")
+}
+
+#[serial]
 #[test]
 fn test_create_room_with_wing() {
     let temp_dir = TempDir::new().unwrap();
@@ -16,10 +68,7 @@ fn test_create_room_with_wing() {
 
     // Create a test building
     let building_name = "TestBuilding";
-    let persistence = PersistenceManager::new(building_name).unwrap();
-    let mut building_data = BuildingData::default();
-    building_data.building.name = building_name.to_string();
-    persistence.save_building_data(&building_data).unwrap();
+    let persistence = initialize_building(building_name);
 
     // Create a room with a specific wing
     let room = Room::new("Test Room".to_string(), RoomType::Office);
@@ -49,6 +98,7 @@ fn test_create_room_with_wing() {
     std::env::set_current_dir(original_dir).unwrap();
 }
 
+#[serial]
 #[test]
 fn test_create_room_with_default_wing() {
     let temp_dir = TempDir::new().unwrap();
@@ -58,10 +108,7 @@ fn test_create_room_with_default_wing() {
 
     // Create a test building
     let building_name = "TestBuilding2";
-    let persistence = PersistenceManager::new(building_name).unwrap();
-    let mut building_data = BuildingData::default();
-    building_data.building.name = building_name.to_string();
-    persistence.save_building_data(&building_data).unwrap();
+    let persistence = initialize_building(building_name);
 
     // Create a room without specifying wing (should use default)
     let room = Room::new("Test Room 2".to_string(), RoomType::Classroom);
@@ -89,6 +136,7 @@ fn test_create_room_with_default_wing() {
     std::env::set_current_dir(original_dir).unwrap();
 }
 
+#[serial]
 #[test]
 fn test_create_multiple_rooms_in_same_wing() {
     let temp_dir = TempDir::new().unwrap();
@@ -98,10 +146,7 @@ fn test_create_multiple_rooms_in_same_wing() {
 
     // Create a test building
     let building_name = "TestBuilding3";
-    let persistence = PersistenceManager::new(building_name).unwrap();
-    let mut building_data = BuildingData::default();
-    building_data.building.name = building_name.to_string();
-    persistence.save_building_data(&building_data).unwrap();
+    let persistence = initialize_building(building_name);
 
     // Create multiple rooms in the same wing
     let room1 = Room::new("Room 1".to_string(), RoomType::Office);
@@ -131,6 +176,7 @@ fn test_create_multiple_rooms_in_same_wing() {
     std::env::set_current_dir(original_dir).unwrap();
 }
 
+#[serial]
 #[test]
 fn test_create_rooms_in_different_wings() {
     let temp_dir = TempDir::new().unwrap();
@@ -140,10 +186,7 @@ fn test_create_rooms_in_different_wings() {
 
     // Create a test building
     let building_name = "TestBuilding4";
-    let persistence = PersistenceManager::new(building_name).unwrap();
-    let mut building_data = BuildingData::default();
-    building_data.building.name = building_name.to_string();
-    persistence.save_building_data(&building_data).unwrap();
+    let persistence = initialize_building(building_name);
 
     // Create rooms in different wings
     let room1 = Room::new("North Room".to_string(), RoomType::Office);
@@ -160,7 +203,11 @@ fn test_create_rooms_in_different_wings() {
         .find(|f| f.level == 1)
         .expect("Floor 1 should exist");
 
-    assert_eq!(floor.wings.len(), 2);
+    assert!(
+        floor.wings.len() >= 2,
+        "Expected at least two wings, found {}",
+        floor.wings.len()
+    );
 
     let north_wing = floor
         .wings

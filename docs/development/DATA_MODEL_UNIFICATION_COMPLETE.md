@@ -128,14 +128,14 @@ This is:
 
 ### Operations & Services
 - `src/core/operations.rs` - Uses serde-based conversion
-- `src/services/room_service.rs` - Uses serde-based conversion
-- `src/services/equipment_service.rs` - Uses serde-based conversion
+- `crates/arxos/crates/arxos/src/services/room_service.rs` - Uses serde-based conversion
+- `crates/arxos/crates/arxos/src/services/equipment_service.rs` - Uses serde-based conversion
 
 ### Other
 - `src/ifc/hierarchy.rs` - Updated Room/Equipment creation
-- `src/mobile_ffi/` - Updated Room/Equipment creation
-- `src/game/scenario.rs` - Updated Equipment creation
-- `src/search/engine.rs` - Updated Building creation
+- `crates/arxos/crates/arxos/src/mobile_ffi/` - Updated Room/Equipment creation
+- `crates/arxos/crates/arxos/src/game/scenario.rs` - Updated Equipment creation
+- `crates/arxos/crates/arxos/src/search/engine.rs` - Updated Building creation
 
 ---
 
@@ -144,7 +144,7 @@ This is:
 The following modules still show deprecation warnings (expected and acceptable):
 
 1. **`src/lib.rs`** - Public API exports (kept for backward compatibility)
-2. **`src/export/ifc/delta.rs`** - Delta calculation (uses deprecated types for compatibility)
+2. **`crates/arxos/crates/arxos/src/export/ifc/delta.rs`** - Delta calculation (uses deprecated types for compatibility)
 3. **Test files** - Conversion function tests (intentionally use deprecated types)
 
 These warnings are **expected** and **acceptable** because:
@@ -193,7 +193,7 @@ Created comprehensive documentation:
 
 2. **All Modules Updated** ✅
    - ✅ Updated `src/render/mod.rs` to use core types
-   - ✅ Updated `src/ar_integration/` to use core types
+   - ✅ Updated `crates/arxos/crates/arxos/src/ar_integration/` to use core types
    - ✅ Updated all command handlers, services, and modules
    - ✅ Updated all tests
 

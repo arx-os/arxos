@@ -24,7 +24,7 @@ This audit categorizes all `unwrap()` and `expect()` calls in production code (e
 
 ### Critical Priority Files
 
-#### 1. `src/commands/sync.rs`
+#### 1. `crates/arxui/crates/arxui/src/commands/sync.rs`
 
 **Line 31:**
 ```rust
@@ -38,7 +38,7 @@ let yaml_file = yaml_files.first().unwrap();
 
 ---
 
-#### 2. `src/commands/spreadsheet.rs`
+#### 2. `crates/arxui/crates/arxui/src/commands/spreadsheet.rs`
 
 **Line 234:**
 ```rust
@@ -73,7 +73,7 @@ editor.as_mut().unwrap().reset_cursor();
 
 ---
 
-#### 3. `src/commands/room_handlers.rs`
+#### 3. `crates/arxui/crates/arxui/src/commands/room_handlers.rs`
 
 **Lines 367, 378, 406, 417:**
 ```rust
@@ -89,7 +89,7 @@ let (width, depth, height) = result.unwrap();
 
 ---
 
-#### 4. `src/commands/init.rs`
+#### 4. `crates/arxui/crates/arxui/src/commands/init.rs`
 
 **Lines 238, 261, 278:**
 ```rust
@@ -118,7 +118,7 @@ let building_data = create_minimal_building(&config).unwrap();
 
 ---
 
-#### 6. `src/mobile_ffi/ffi.rs`
+#### 6. `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs`
 
 **Line 67:**
 ```rust
@@ -252,8 +252,8 @@ Most unwrap/expect calls in the codebase are in test files. While lower priority
 
 ### Phase 1: Critical Fixes (Week 1)
 
-1. **`src/commands/sync.rs`** - Line 31 (CRITICAL)
-2. **`src/commands/spreadsheet.rs`** - Lines 234, 628 (CRITICAL)
+1. **`crates/arxui/crates/arxui/src/commands/sync.rs`** - Line 31 (CRITICAL)
+2. **`crates/arxui/crates/arxui/src/commands/spreadsheet.rs`** - Lines 234, 628 (CRITICAL)
 3. **`src/ifc/fallback.rs`** - Line 125 (HIGH)
 4. **`src/identity/pending.rs`** - Line 197 (MEDIUM)
 

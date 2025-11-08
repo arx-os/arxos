@@ -195,18 +195,6 @@ mod ffi_safety_tests {
     use super::*;
     use std::ptr;
 
-    /// Test that FFI functions handle null pointers correctly
-    #[test]
-    fn test_ffi_null_pointer_handling() {
-        // Note: We test the FFI functions indirectly through their error handling
-        // Direct testing would require linking C code, but we can verify
-        // that the error paths exist and are properly handled.
-
-        // Test that null checks are in place by examining the code structure
-        // This is verified by code review, but we document expected behavior here
-        assert!(true, "FFI null checks verified in code review");
-    }
-
     /// Test C string conversion handles invalid UTF-8 safely
     #[test]
     fn test_ffi_invalid_utf8_handling() {
@@ -225,8 +213,6 @@ mod ffi_safety_tests {
         unsafe {
             arxos::mobile_ffi::ffi::arxos_free_string(ptr::null_mut());
         }
-        // If we get here, null pointer was handled safely
-        assert!(true, "Freeing null pointer should be safe");
     }
 
     /// Test FFI error response creation doesn't panic
@@ -282,7 +268,7 @@ mod input_validation_tests {
             // 2. Validation rules for reserved systems
             // 3. Sanitization when creating addresses via new()
             if result.is_ok() {
-                let addr = result.unwrap();
+                let _addr = result.unwrap();
                 // Even if parsed, the path should be safe to use (path safety utilities protect file operations)
                 // The path itself may contain special characters, but they won't cause security issues
                 // when used with proper path safety utilities
@@ -311,6 +297,7 @@ mod input_validation_tests {
                 // Even if parsed, the path should not cause security issues when used with path safety utilities
                 // Paths with traversal may not parse correctly (won't have 7 valid parts)
                 // Paths with special characters may be parsed, but path safety utilities protect file operations
+                let _ = addr;
             } else {
                 // Rejection is also acceptable - paths with traversal may not parse correctly
             }
@@ -365,9 +352,7 @@ mod input_validation_tests {
 
         // Should fail to parse as BuildingData
         let result: Result<arxos::yaml::BuildingData, _> = serde_yaml::from_str(malicious_yaml);
-        // Should either fail to parse or parse safely without code execution
-        // serde_yaml should be safe, but we verify
-        assert!(result.is_err() || true, "YAML parsing should be safe");
+        assert!(result.is_err(), "Malicious YAML should not be deserialized");
     }
 
     /// Test JSON input validation for AR scans
@@ -386,12 +371,10 @@ mod input_validation_tests {
             // Verify we can handle the result without crashing
             match result {
                 Ok(_) => {
-                    // If it parses, it should be safe JSON
-                    assert!(true, "Parsed JSON should be safe");
+                    // If it parses, it should be safe JSON; nothing further to assert.
                 }
                 Err(_) => {
-                    // If it fails, that's also safe
-                    assert!(true, "Invalid JSON should be rejected safely");
+                    // If it fails, that's also acceptable.
                 }
             }
         }

@@ -1,4 +1,4 @@
-# In-Depth Review: `/src/bin` Directory
+# In-Depth Review: `/crates/arxui/src/bin` Directory
 
 **Date:** January 2025  
 **Purpose:** Comprehensive review of binary utilities in ArxOS
@@ -7,7 +7,7 @@
 
 ## Overview
 
-**Location:** `src/bin/`  
+**Location:** `crates/arxui/src/bin/`  
 **Files:** 1 binary (`convert_3d_scanner_scan.rs`, 394 lines)  
 **Purpose:** Utility binary for converting 3D Scanner App scan data to ArxOS YAML format
 
@@ -16,7 +16,7 @@
 ## Current Structure
 
 ```
-src/bin/
+crates/arxui/src/bin/
 └── convert_3d_scanner_scan.rs  (394 lines)
 ```
 

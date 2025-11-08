@@ -9,9 +9,9 @@
 //! - Git commit attribution
 //! - End-to-end user browser workflow
 
-use arxos::commands::git_ops::extract_user_id_from_commit;
 use arxos::git::manager::{BuildingGitManager, CommitMetadata, GitConfig};
 use arxos::identity::{User, UserRegistry};
+use arxui::commands::git_ops::extract_user_id_from_commit;
 use serial_test::serial;
 use std::collections::HashMap;
 use tempfile::TempDir;

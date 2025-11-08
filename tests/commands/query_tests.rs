@@ -2,8 +2,11 @@
 //!
 //! Tests the query engine with glob pattern matching for ArxAddress paths
 
-use arxos::commands::query::handle_query_command;
-use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentData, EquipmentStatus};
+use arxui::commands::query::handle_query_command;
+#[allow(deprecated)]
+use arxos::yaml::{
+    BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentData, EquipmentStatus,
+};
 use arxos::spatial::{Point3D, BoundingBox3D};
 use arxos::persistence::PersistenceManager;
 use arxos::domain::ArxAddress;

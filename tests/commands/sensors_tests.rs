@@ -1,6 +1,6 @@
 //! Tests for sensor processing command handlers
 
-use arxos::commands::sensors::handle_process_sensors_command;
+use arxui::commands::sensors::handle_process_sensors_command;
 use tempfile::TempDir;
 use std::fs::{create_dir_all, write};
 

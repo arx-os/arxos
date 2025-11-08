@@ -1,8 +1,20 @@
 //! Integration tests for mobile FFI bindings
 
+use arxos::core::{
+    Dimensions, Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType, Floor, Position,
+    Room, RoomType, SpatialProperties, Wing,
+};
 use arxos::mobile_ffi::ffi;
+use arxos::spatial::{BoundingBox3D, Point3D};
+use arxos::yaml::{
+    BuildingData, BuildingInfo, BuildingMetadata, BuildingYamlSerializer, CoordinateSystemInfo,
+};
+use chrono::Utc;
+use std::collections::HashMap;
 use std::ffi::{CStr, CString};
+use std::fs;
 use std::os::raw::c_char;
+use std::path::{Path, PathBuf};
 
 /// Helper to convert Rust string to C string
 /// Returns a pointer that can be passed to FFI functions expecting *const c_char
@@ -17,10 +29,156 @@ unsafe fn free_c_string(ptr: *const c_char) {
     }
 }
 
+fn create_mobile_test_building(
+    building_name: &str,
+    temp_dir: &Path,
+) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    let building_yaml = format!("{}.yaml", building_name);
+    let building_path = temp_dir.join(&building_yaml);
+
+    let mut equipment_properties = HashMap::new();
+    equipment_properties.insert("manufacturer".to_string(), "TestCo".to_string());
+
+    let room_spatial = SpatialProperties::new(
+        Position {
+            x: 10.0,
+            y: 10.0,
+            z: 0.0,
+            coordinate_system: "building_local".to_string(),
+        },
+        Dimensions {
+            width: 12.0,
+            height: 3.0,
+            depth: 10.0,
+        },
+        "building_local".to_string(),
+    );
+
+    let room = Room {
+        id: "room_1".to_string(),
+        name: "Test Room".to_string(),
+        room_type: RoomType::Office,
+        equipment: Vec::new(),
+        spatial_properties: room_spatial,
+        properties: HashMap::new(),
+        created_at: None,
+        updated_at: None,
+    };
+
+    let wing = Wing {
+        id: "wing_main".to_string(),
+        name: "Main Wing".to_string(),
+        rooms: vec![room],
+        equipment: Vec::new(),
+        properties: HashMap::new(),
+    };
+
+    let floor_equipment = Equipment {
+        id: "eq-1".to_string(),
+        name: "Test Equipment".to_string(),
+        path: format!(
+            "/BUILDING/{}/FLOOR-1/ROOM-Test-Room/EQUIPMENT/Test-Equipment",
+            building_name
+        ),
+        address: None,
+        equipment_type: EquipmentType::HVAC,
+        position: Position {
+            x: 10.0,
+            y: 20.0,
+            z: 3.0,
+            coordinate_system: "building_local".to_string(),
+        },
+        properties: equipment_properties,
+        status: EquipmentStatus::Active,
+        health_status: Some(EquipmentHealthStatus::Healthy),
+        room_id: Some("room_1".to_string()),
+        sensor_mappings: None,
+    };
+
+    let floor = Floor {
+        id: "floor-1".to_string(),
+        name: "Floor 1".to_string(),
+        level: 1,
+        elevation: Some(0.0),
+        bounding_box: Some(BoundingBox3D {
+            min: Point3D::new(0.0, 0.0, 0.0),
+            max: Point3D::new(30.0, 20.0, 5.0),
+        }),
+        wings: vec![wing],
+        equipment: vec![floor_equipment],
+        properties: HashMap::new(),
+    };
+
+    let building_data = BuildingData {
+        building: BuildingInfo {
+            id: building_name.to_string(),
+            name: format!("{} Building", building_name),
+            description: Some("Test building for AR integration tests".to_string()),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            version: "1.0.0".to_string(),
+            global_bounding_box: Some(BoundingBox3D {
+                min: Point3D::new(0.0, 0.0, 0.0),
+                max: Point3D::new(50.0, 50.0, 10.0),
+            }),
+        },
+        metadata: BuildingMetadata {
+            source_file: Some("test_building.ifc".to_string()),
+            parser_version: "ArxOS Test".to_string(),
+            total_entities: 3,
+            spatial_entities: 2,
+            coordinate_system: "World".to_string(),
+            units: "meters".to_string(),
+            tags: vec!["test".to_string(), "mobile".to_string()],
+        },
+        floors: vec![floor],
+        coordinate_systems: vec![CoordinateSystemInfo {
+            name: "World".to_string(),
+            origin: Point3D::new(0.0, 0.0, 0.0),
+            x_axis: Point3D::new(1.0, 0.0, 0.0),
+            y_axis: Point3D::new(0.0, 1.0, 0.0),
+            z_axis: Point3D::new(0.0, 0.0, 1.0),
+            description: Some("World coordinate system".to_string()),
+        }],
+    };
+
+    let serializer = BuildingYamlSerializer::new();
+    let yaml_content = serializer.to_yaml(&building_data)?;
+    fs::write(&building_path, yaml_content)?;
+
+    Ok(building_path)
+}
+
+struct WorkingDirGuard {
+    original_dir: PathBuf,
+}
+
+impl WorkingDirGuard {
+    fn change_to(target: &Path) -> Self {
+        let original_dir = std::env::current_dir().expect("Failed to get current directory");
+        std::env::set_current_dir(target).expect("Failed to change working directory");
+        Self { original_dir }
+    }
+}
+
+impl Drop for WorkingDirGuard {
+    fn drop(&mut self) {
+        if let Err(err) = std::env::set_current_dir(&self.original_dir) {
+            eprintln!(
+                "WorkingDirGuard: failed to restore directory to {:?}: {}",
+                self.original_dir, err
+            );
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
+    use tempfile::TempDir;
 
+    #[serial]
     #[test]
     fn test_arxos_free_string() {
         // Test that arxos_free_string doesn't crash
@@ -32,6 +190,7 @@ mod tests {
         }
     }
 
+    #[serial]
     #[test]
     fn test_arxos_free_string_null() {
         unsafe {
@@ -39,6 +198,7 @@ mod tests {
         }
     }
 
+    #[serial]
     #[test]
     fn test_arxos_list_rooms_null_input() {
         unsafe {
@@ -55,8 +215,13 @@ mod tests {
         }
     }
 
+    #[serial]
     #[test]
     fn test_arxos_list_rooms_valid_input() {
+        let temp_dir = TempDir::new().unwrap();
+        let _dir_guard = WorkingDirGuard::change_to(temp_dir.path());
+        create_mobile_test_building("test_building", temp_dir.path()).unwrap();
+
         unsafe {
             let building_name = to_c_string("test_building");
 
@@ -77,11 +242,16 @@ mod tests {
         }
     }
 
+    #[serial]
     #[test]
     fn test_arxos_get_room() {
+        let temp_dir = TempDir::new().unwrap();
+        let _dir_guard = WorkingDirGuard::change_to(temp_dir.path());
+        create_mobile_test_building("test_building", temp_dir.path()).unwrap();
+
         unsafe {
             let building_name = to_c_string("test_building");
-            let room_id = to_c_string("room_123");
+            let room_id = to_c_string("room_1");
 
             let result = ffi::arxos_get_room(building_name, room_id);
 
@@ -98,8 +268,13 @@ mod tests {
         }
     }
 
+    #[serial]
     #[test]
     fn test_arxos_list_equipment() {
+        let temp_dir = TempDir::new().unwrap();
+        let _dir_guard = WorkingDirGuard::change_to(temp_dir.path());
+        create_mobile_test_building("test_building", temp_dir.path()).unwrap();
+
         unsafe {
             let building_name = to_c_string("test_building");
 
@@ -117,6 +292,7 @@ mod tests {
         }
     }
 
+    #[serial]
     #[test]
     fn test_arxos_parse_ar_scan() {
         unsafe {
@@ -138,6 +314,7 @@ mod tests {
         }
     }
 
+    #[serial]
     #[test]
     fn test_arxos_extract_equipment() {
         unsafe {
@@ -158,12 +335,14 @@ mod tests {
         }
     }
 
+    #[serial]
     #[test]
     fn test_arxos_last_error() {
         let code = ffi::arxos_last_error();
         assert!(code >= 0);
     }
 
+    #[serial]
     #[test]
     fn test_arxos_last_error_message() {
         unsafe {
@@ -182,6 +361,7 @@ mod tests {
 mod ffi_error_tracking_tests {
     use super::*;
     use arxos::mobile_ffi::ffi::ArxOSErrorCode;
+    use serial_test::serial;
 
     unsafe fn call_ffi_and_get_error<F>(f: F) -> (i32, String)
     where
@@ -215,6 +395,7 @@ mod ffi_error_tracking_tests {
         (error_code, error_msg)
     }
 
+    #[serial]
     #[test]
     fn test_ffi_error_tracking_null_building_name() {
         unsafe {
@@ -236,6 +417,7 @@ mod ffi_error_tracking_tests {
         }
     }
 
+    #[serial]
     #[test]
     fn test_ffi_error_tracking_invalid_utf8() {
         unsafe {
@@ -259,6 +441,7 @@ mod ffi_error_tracking_tests {
         }
     }
 
+    #[serial]
     #[test]
     fn test_ffi_error_code_mapping() {
         // Test that error codes are properly mapped
@@ -269,6 +452,7 @@ mod ffi_error_tracking_tests {
         assert_eq!(ArxOSErrorCode::Unknown as i32, 99);
     }
 
+    #[serial]
     #[test]
     fn test_ffi_memory_management() {
         unsafe {
@@ -290,6 +474,7 @@ mod ffi_error_tracking_tests {
         }
     }
 
+    #[serial]
     #[test]
     fn test_ffi_get_room_error_handling() {
         unsafe {
@@ -311,6 +496,7 @@ mod ffi_error_tracking_tests {
         }
     }
 
+    #[serial]
     #[test]
     fn test_ffi_error_isolation() {
         unsafe {
@@ -341,7 +527,9 @@ mod ffi_error_tracking_tests {
 #[cfg(test)]
 mod jni_tests {
     use arxos::mobile_ffi;
+    use serial_test::serial;
 
+    #[serial]
     #[test]
     fn test_jni_underlying_list_rooms() {
         // Test the underlying function that JNI calls
@@ -356,6 +544,7 @@ mod jni_tests {
         }
     }
 
+    #[serial]
     #[test]
     fn test_jni_underlying_get_room() {
         let result = mobile_ffi::get_room("test_building".to_string(), "room_123".to_string());
@@ -363,6 +552,7 @@ mod jni_tests {
         assert!(result.is_ok() || result.is_err());
     }
 
+    #[serial]
     #[test]
     fn test_jni_underlying_list_equipment() {
         let result = mobile_ffi::list_equipment("test_building".to_string());
@@ -370,6 +560,7 @@ mod jni_tests {
         assert!(result.is_ok() || result.is_err());
     }
 
+    #[serial]
     #[test]
     fn test_jni_underlying_get_equipment() {
         let result = mobile_ffi::get_equipment("test_building".to_string(), "eq_123".to_string());
@@ -377,6 +568,7 @@ mod jni_tests {
         assert!(result.is_ok() || result.is_err());
     }
 
+    #[serial]
     #[test]
     fn test_jni_underlying_parse_ar_scan() {
         let json_data = r#"{
@@ -394,6 +586,7 @@ mod jni_tests {
         assert_eq!(scan_data.floor_level, 1);
     }
 
+    #[serial]
     #[test]
     fn test_jni_underlying_parse_ar_scan_invalid_json() {
         let invalid_json = "not json";
@@ -404,6 +597,7 @@ mod jni_tests {
         assert!(result.is_err());
     }
 
+    #[serial]
     #[test]
     fn test_jni_underlying_extract_equipment() {
         let json_data = r#"{
@@ -430,6 +624,7 @@ mod jni_tests {
         assert_eq!(equipment[0].equipment_type, "VAV");
     }
 
+    #[serial]
     #[test]
     fn test_jni_json_serialization() {
         // Verify that mobile_ffi types can be serialized to JSON (required for JNI)
@@ -459,52 +654,11 @@ mod jni_tests {
 // Tests for new AR integration FFI functions
 mod ar_integration_tests {
     use super::*;
-    use std::fs;
+    use serial_test::serial;
     use std::path::PathBuf;
     use tempfile::TempDir;
 
-    /// Helper to create a test building YAML file
-    fn create_test_building(
-        building_name: &str,
-        temp_dir: &PathBuf,
-    ) -> Result<PathBuf, Box<dyn std::error::Error>> {
-        let building_yaml = format!("{}.yaml", building_name);
-        let building_path = temp_dir.join(&building_yaml);
-
-        let yaml_content = r#"building:
-  id: test-building-id
-  name: Test Building
-  description: Test building for AR integration tests
-  created_at: 2025-01-01T00:00:00Z
-  updated_at: 2025-01-01T00:00:00Z
-  version: "1.0.0"
-metadata:
-  parser_version: "test"
-  total_entities: 0
-  spatial_entities: 0
-  coordinate_system: "World"
-  units: "meters"
-floors:
-  - id: floor-1
-    name: Floor 1
-    level: 1
-    elevation: 0.0
-    rooms: []
-    equipment:
-      - id: eq-1
-        name: Test Equipment
-        type: HVAC
-        position:
-          x: 10.0
-          y: 20.0
-          z: 3.0
-        status: Healthy
-        properties: {}
-"#;
-        fs::write(&building_path, yaml_content)?;
-        Ok(building_path)
-    }
-
+    #[serial]
     #[test]
     fn test_arxos_load_ar_model_null_building_name() {
         unsafe {
@@ -521,6 +675,7 @@ floors:
         }
     }
 
+    #[serial]
     #[test]
     fn test_arxos_load_ar_model_null_format() {
         unsafe {
@@ -537,6 +692,7 @@ floors:
         }
     }
 
+    #[serial]
     #[test]
     fn test_arxos_load_ar_model_invalid_format() {
         unsafe {
@@ -565,6 +721,7 @@ floors:
         }
     }
 
+    #[serial]
     #[test]
     fn test_arxos_load_ar_model_nonexistent_building() {
         unsafe {
@@ -593,17 +750,15 @@ floors:
         }
     }
 
+    #[serial]
     #[test]
     fn test_arxos_load_ar_model_with_temp_file() {
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-
-        // Change to temp directory for building file loading
-        std::env::set_current_dir(temp_dir.path()).unwrap();
+        let _dir_guard = WorkingDirGuard::change_to(temp_dir.path());
 
         // Create test building
         let building_name = "test_ar_building";
-        create_test_building(building_name, &temp_dir.path().to_path_buf()).unwrap();
+        super::create_mobile_test_building(building_name, temp_dir.path()).unwrap();
 
         unsafe {
             let building = to_c_string(building_name);
@@ -634,19 +789,16 @@ floors:
             free_c_string(building);
             free_c_string(format);
         }
-
-        std::env::set_current_dir(original_dir).unwrap();
     }
 
+    #[serial]
     #[test]
     fn test_arxos_load_ar_model_with_custom_path() {
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-
-        std::env::set_current_dir(temp_dir.path()).unwrap();
+        let _dir_guard = WorkingDirGuard::change_to(temp_dir.path());
 
         let building_name = "test_ar_building";
-        create_test_building(building_name, &temp_dir.path().to_path_buf()).unwrap();
+        super::create_mobile_test_building(building_name, temp_dir.path()).unwrap();
 
         let output_path = temp_dir.path().join("custom_model.gltf");
 
@@ -679,10 +831,9 @@ floors:
             free_c_string(format);
             free_c_string(output);
         }
-
-        std::env::set_current_dir(original_dir).unwrap();
     }
 
+    #[serial]
     #[test]
     fn test_arxos_save_ar_scan_null_json() {
         unsafe {
@@ -699,6 +850,7 @@ floors:
         }
     }
 
+    #[serial]
     #[test]
     fn test_arxos_save_ar_scan_null_building() {
         unsafe {
@@ -718,6 +870,7 @@ floors:
         }
     }
 
+    #[serial]
     #[test]
     fn test_arxos_save_ar_scan_invalid_json() {
         unsafe {
@@ -748,12 +901,12 @@ floors:
         }
     }
 
+    #[serial]
     #[test]
     fn test_arxos_save_ar_scan_valid_data() {
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-
-        std::env::set_current_dir(temp_dir.path()).unwrap();
+        let _dir_guard = WorkingDirGuard::change_to(temp_dir.path());
+        super::create_mobile_test_building("test_building", temp_dir.path()).unwrap();
 
         unsafe {
             let json_data = r#"{
@@ -778,7 +931,9 @@ floors:
             assert!(!result.is_null());
             let c_str = CStr::from_ptr(result);
             let json_str = c_str.to_str().unwrap();
-            let parsed: serde_json::Value = serde_json::from_str(json_str).unwrap();
+            let parsed: serde_json::Value = serde_json::from_str(json_str).unwrap_or_else(|e| {
+                panic!("Invalid JSON from arxos_save_ar_scan: {e}: {json_str}");
+            });
 
             // Should succeed and create pending equipment
             if parsed
@@ -796,10 +951,9 @@ floors:
             free_c_string(json_ptr);
             free_c_string(building);
         }
-
-        std::env::set_current_dir(original_dir).unwrap();
     }
 
+    #[serial]
     #[test]
     fn test_arxos_list_pending_equipment_null_building() {
         unsafe {
@@ -814,12 +968,12 @@ floors:
         }
     }
 
+    #[serial]
     #[test]
     fn test_arxos_list_pending_equipment_empty() {
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-
-        std::env::set_current_dir(temp_dir.path()).unwrap();
+        let _dir_guard = WorkingDirGuard::change_to(temp_dir.path());
+        super::create_mobile_test_building("test_building", temp_dir.path()).unwrap();
 
         unsafe {
             let building = to_c_string("test_building");
@@ -838,7 +992,7 @@ floors:
             {
                 let empty_vec: Vec<serde_json::Value> = vec![];
                 let items = parsed
-                    .get("items")
+                    .get("pending_items")
                     .and_then(|i| i.as_array())
                     .unwrap_or(&empty_vec);
                 assert_eq!(items.len(), 0);
@@ -847,16 +1001,14 @@ floors:
             ffi::arxos_free_string(result);
             free_c_string(building);
         }
-
-        std::env::set_current_dir(original_dir).unwrap();
     }
 
+    #[serial]
     #[test]
     fn test_arxos_list_pending_equipment_with_items() {
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-
-        std::env::set_current_dir(temp_dir.path()).unwrap();
+        let _dir_guard = WorkingDirGuard::change_to(temp_dir.path());
+        super::create_mobile_test_building("test_building", temp_dir.path()).unwrap();
 
         // First, create some pending equipment
         unsafe {
@@ -870,14 +1022,30 @@ floors:
                         "detectionMethod": "Tap-to-Place"
                     }
                 ],
-                "roomBoundaries": {"walls": [], "openings": []}
+                "roomBoundaries": {"walls": [], "openings": []},
+                "roomName": "Pending Test Room",
+                "floorLevel": 1
             }"#;
             let json_ptr = to_c_string(json_data);
             let building = to_c_string("test_building");
 
             // Save scan to create pending items
-            let _save_result = ffi::arxos_save_ar_scan(json_ptr, building, std::ptr::null(), 0.7);
-            ffi::arxos_free_string(_save_result);
+            let save_result = ffi::arxos_save_ar_scan(json_ptr, building, std::ptr::null(), 0.7);
+            assert!(!save_result.is_null());
+            let save_c_str = CStr::from_ptr(save_result);
+            let save_json_str = save_c_str.to_str().unwrap();
+            let save_parsed: serde_json::Value = serde_json::from_str(save_json_str)
+                .unwrap_or_else(|e| {
+                    panic!("Invalid JSON from arxos_save_ar_scan: {e}: {save_json_str}");
+                });
+
+            assert!(
+                save_parsed
+                    .get("success")
+                    .and_then(|s| s.as_bool())
+                    .unwrap_or(false),
+                "arxos_save_ar_scan should succeed: {save_json_str}"
+            );
 
             // Now list pending equipment
             let list_result = ffi::arxos_list_pending_equipment(building);
@@ -885,7 +1053,9 @@ floors:
             assert!(!list_result.is_null());
             let c_str = CStr::from_ptr(list_result);
             let json_str = c_str.to_str().unwrap();
-            let parsed: serde_json::Value = serde_json::from_str(json_str).unwrap();
+            let parsed: serde_json::Value = serde_json::from_str(json_str).unwrap_or_else(|e| {
+                panic!("Invalid JSON from arxos_list_pending_equipment: {e}: {json_str}");
+            });
 
             if parsed
                 .get("success")
@@ -894,20 +1064,20 @@ floors:
             {
                 let empty_vec: Vec<serde_json::Value> = vec![];
                 let items = parsed
-                    .get("items")
+                    .get("pending_items")
                     .and_then(|i| i.as_array())
                     .unwrap_or(&empty_vec);
-                assert!(items.len() > 0, "Should have at least one pending item");
+                assert!(!items.is_empty(), "Should have at least one pending item");
             }
 
             ffi::arxos_free_string(list_result);
+            ffi::arxos_free_string(save_result);
             free_c_string(json_ptr);
             free_c_string(building);
         }
-
-        std::env::set_current_dir(original_dir).unwrap();
     }
 
+    #[serial]
     #[test]
     fn test_arxos_confirm_pending_equipment_null_params() {
         unsafe {
@@ -929,12 +1099,12 @@ floors:
         }
     }
 
+    #[serial]
     #[test]
     fn test_arxos_confirm_pending_equipment_nonexistent() {
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-
-        std::env::set_current_dir(temp_dir.path()).unwrap();
+        let _dir_guard = WorkingDirGuard::change_to(temp_dir.path());
+        super::create_mobile_test_building("test_building", temp_dir.path()).unwrap();
 
         unsafe {
             let building = to_c_string("test_building");
@@ -961,20 +1131,17 @@ floors:
             free_c_string(building);
             free_c_string(pending_id);
         }
-
-        std::env::set_current_dir(original_dir).unwrap();
     }
 
+    #[serial]
     #[test]
     fn test_arxos_confirm_pending_equipment_workflow() {
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-
-        std::env::set_current_dir(temp_dir.path()).unwrap();
+        let _dir_guard = WorkingDirGuard::change_to(temp_dir.path());
 
         // Create test building
         let building_name = "test_building";
-        create_test_building(building_name, &temp_dir.path().to_path_buf()).unwrap();
+        super::create_mobile_test_building(building_name, temp_dir.path()).unwrap();
 
         unsafe {
             let building = to_c_string(building_name);
@@ -1047,10 +1214,9 @@ floors:
             free_c_string(json_ptr);
             free_c_string(building);
         }
-
-        std::env::set_current_dir(original_dir).unwrap();
     }
 
+    #[serial]
     #[test]
     fn test_arxos_reject_pending_equipment_null_params() {
         unsafe {
@@ -1067,12 +1233,12 @@ floors:
         }
     }
 
+    #[serial]
     #[test]
     fn test_arxos_reject_pending_equipment_workflow() {
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-
-        std::env::set_current_dir(temp_dir.path()).unwrap();
+        let _dir_guard = WorkingDirGuard::change_to(temp_dir.path());
+        super::create_mobile_test_building("test_building", temp_dir.path()).unwrap();
 
         unsafe {
             let building = to_c_string("test_building");
@@ -1140,21 +1306,18 @@ floors:
             free_c_string(json_ptr);
             free_c_string(building);
         }
-
-        std::env::set_current_dir(original_dir).unwrap();
     }
 
+    #[serial]
     #[test]
     fn test_complete_ar_workflow_ffi() {
         // Test complete workflow: save scan -> list pending -> confirm -> verify
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-
-        std::env::set_current_dir(temp_dir.path()).unwrap();
+        let _dir_guard = WorkingDirGuard::change_to(temp_dir.path());
 
         // Create test building
         let building_name = "workflow_test_building";
-        create_test_building(building_name, &temp_dir.path().to_path_buf()).unwrap();
+        super::create_mobile_test_building(building_name, temp_dir.path()).unwrap();
 
         unsafe {
             let building = to_c_string(building_name);
@@ -1179,7 +1342,10 @@ floors:
             let save_result = ffi::arxos_save_ar_scan(json_ptr, building, std::ptr::null(), 0.7);
             let save_c_str = CStr::from_ptr(save_result);
             let save_json_str = save_c_str.to_str().unwrap();
-            let save_parsed: serde_json::Value = serde_json::from_str(save_json_str).unwrap();
+            let save_parsed: serde_json::Value = serde_json::from_str(save_json_str)
+                .unwrap_or_else(|e| {
+                    panic!("Invalid JSON from arxos_save_ar_scan: {e}: {save_json_str}");
+                });
 
             assert!(
                 save_parsed
@@ -1203,7 +1369,10 @@ floors:
             let list_result = ffi::arxos_list_pending_equipment(building);
             let list_c_str = CStr::from_ptr(list_result);
             let list_json_str = list_c_str.to_str().unwrap();
-            let list_parsed: serde_json::Value = serde_json::from_str(list_json_str).unwrap();
+            let list_parsed: serde_json::Value = serde_json::from_str(list_json_str)
+                .unwrap_or_else(|e| {
+                    panic!("Invalid JSON from arxos_list_pending_equipment: {e}: {list_json_str}");
+                });
 
             assert!(
                 list_parsed
@@ -1214,10 +1383,13 @@ floors:
             );
             let empty_items: Vec<serde_json::Value> = vec![];
             let items = list_parsed
-                .get("items")
+                .get("pending_items")
                 .and_then(|i| i.as_array())
                 .unwrap_or(&empty_items);
-            assert!(!items.is_empty(), "Should have pending items in list");
+            assert!(
+                !items.is_empty(),
+                "Should have pending items in list: {list_json_str}"
+            );
 
             // Step 3: Confirm pending equipment
             let confirm_result =
@@ -1246,21 +1418,18 @@ floors:
             free_c_string(building);
             free_c_string(pending_id);
         }
-
-        std::env::set_current_dir(original_dir).unwrap();
     }
 
+    #[serial]
     #[test]
     fn test_arxos_save_ar_scan_with_user_email() {
         // Test that user_email parameter is accepted and propagated
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-
-        std::env::set_current_dir(temp_dir.path()).unwrap();
+        let _dir_guard = WorkingDirGuard::change_to(temp_dir.path());
 
         // Create test building
         let building_name = "test_user_email_building";
-        create_test_building(building_name, &temp_dir.path().to_path_buf()).unwrap();
+        super::create_mobile_test_building(building_name, temp_dir.path()).unwrap();
 
         unsafe {
             let building = to_c_string(building_name);
@@ -1302,21 +1471,18 @@ floors:
             free_c_string(building);
             free_c_string(user_email);
         }
-
-        std::env::set_current_dir(original_dir).unwrap();
     }
 
+    #[serial]
     #[test]
     fn test_arxos_confirm_pending_equipment_with_user_email() {
         // Test that user_email parameter is accepted in confirm function
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-
-        std::env::set_current_dir(temp_dir.path()).unwrap();
+        let _dir_guard = WorkingDirGuard::change_to(temp_dir.path());
 
         // Create test building
         let building_name = "test_confirm_user_email";
-        create_test_building(building_name, &temp_dir.path().to_path_buf()).unwrap();
+        super::create_mobile_test_building(building_name, temp_dir.path()).unwrap();
 
         unsafe {
             let building = to_c_string(building_name);
@@ -1386,7 +1552,5 @@ floors:
             free_c_string(building);
             free_c_string(user_email);
         }
-
-        std::env::set_current_dir(original_dir).unwrap();
     }
 }

@@ -7,7 +7,10 @@
 //! - Loading and deserializing from YAML
 
 use arxos::domain::ArxAddress;
-use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentData, EquipmentStatus};
+#[allow(deprecated)]
+use arxos::yaml::{
+    BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentData, EquipmentStatus,
+};
 use arxos::spatial::{Point3D, BoundingBox3D};
 use arxos::persistence::PersistenceManager;
 use arxos::git::manager::BuildingGitManager;

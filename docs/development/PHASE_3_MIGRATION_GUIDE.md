@@ -86,7 +86,7 @@ Conversion functions and YAML types are now marked as deprecated:
 
 Gradually update call sites:
 
-1. **Services** (`src/services/`)
+1. **Services** (`crates/arxos/crates/arxos/src/services/`)
    - Update `room_service.rs` to use Room directly
    - Update `equipment_service.rs` to use Equipment directly
 

@@ -10,11 +10,11 @@ use arxos::core::{
     Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType, Floor, Position,
 };
 use arxos::persistence::PersistenceManager;
-use arxos::spatial::{BoundingBox3D, Point3D};
-use arxos::ui::spreadsheet::data_source::{EquipmentDataSource, SpreadsheetDataSource};
-use arxos::ui::spreadsheet::workflow::{ConflictDetector, FileLock};
 use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
 use arxos::BuildingYamlSerializer;
+use arxui::tui::spreadsheet::data_source::{EquipmentDataSource, SpreadsheetDataSource};
+use arxui::tui::spreadsheet::types::{CellValue, ColumnDefinition};
+use arxui::tui::spreadsheet::workflow::{ConflictDetector, FileLock};
 use chrono::Utc;
 use serial_test::serial;
 use std::collections::HashMap;
@@ -137,6 +137,13 @@ fn create_test_building_file(
     Ok(file_path)
 }
 
+fn column_index(columns: &[ColumnDefinition], id: &str) -> usize {
+    columns
+        .iter()
+        .position(|col| col.id == id)
+        .unwrap_or_else(|| panic!("Column {id} not found"))
+}
+
 #[test]
 #[serial]
 fn test_yaml_persistence_with_backup() {
@@ -155,9 +162,10 @@ fn test_yaml_persistence_with_backup() {
     let mut data_source = EquipmentDataSource::new(loaded_data, building_name.to_string());
 
     // Edit
-    use arxos::ui::spreadsheet::types::CellValue;
+    let columns = data_source.columns();
+    let name_col = column_index(&columns, "equipment.name");
     data_source
-        .set_cell(0, 1, CellValue::Text("Updated Name".to_string()))
+        .set_cell(0, name_col, CellValue::Text("Updated Name".to_string()))
         .unwrap();
 
     // Save (should create backup)
@@ -188,9 +196,10 @@ fn test_git_staging() {
     let mut data_source = EquipmentDataSource::new(loaded_data, building_name.to_string());
 
     // Edit
-    use arxos::ui::spreadsheet::types::CellValue;
+    let columns = data_source.columns();
+    let name_col = column_index(&columns, "equipment.name");
     data_source
-        .set_cell(0, 1, CellValue::Text("Git Staged".to_string()))
+        .set_cell(0, name_col, CellValue::Text("Git Staged".to_string()))
         .unwrap();
 
     // Save with staging (no commit)
@@ -318,9 +327,10 @@ fn test_save_with_git_commit() {
     let mut data_source = EquipmentDataSource::new(loaded_data, building_name.to_string());
 
     // Edit
-    use arxos::ui::spreadsheet::types::CellValue;
+    let columns = data_source.columns();
+    let name_col = column_index(&columns, "equipment.name");
     data_source
-        .set_cell(0, 1, CellValue::Text("Committed Change".to_string()))
+        .set_cell(0, name_col, CellValue::Text("Committed Change".to_string()))
         .unwrap();
 
     // Save with commit

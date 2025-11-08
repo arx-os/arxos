@@ -57,7 +57,7 @@ pub struct FloorData {
 }
 ```
 
-### 2. Room Creation (`src/commands/room_handlers.rs`)
+### 2. Room Creation (`crates/arxui/crates/arxui/src/commands/room_handlers.rs`)
 
 **Fixed:**
 - Now finds or creates the specified wing
@@ -90,13 +90,13 @@ floor_data.rooms.push(room_data);  // Also for backward compatibility
 - Creates default wing ("Default") if no wing specified
 - Properly organizes rooms into wings
 
-### 4. Mobile FFI (`src/mobile_ffi/mod.rs`)
+### 4. Mobile FFI (`crates/arxos/crates/arxos/src/mobile_ffi/mod.rs`)
 
 **Updated:**
 - Extracts wing from room properties if available
 - Passes wing to `core::create_room()`
 
-### 5. AR Integration (`src/ar_integration/pending.rs`)
+### 5. AR Integration (`crates/arxos/crates/arxos/src/ar_integration/pending.rs`)
 
 **Updated:**
 - Creates rooms in default wing ("Default")
@@ -191,11 +191,11 @@ Building
 
 ### Core Changes (6 files)
 - `src/yaml/mod.rs` - Added WingData, updated FloorData
-- `src/commands/room_handlers.rs` - Fixed wing usage
+- `crates/arxui/crates/arxui/src/commands/room_handlers.rs` - Fixed wing usage
 - `src/core/operations.rs` - Added wing parameter
-- `src/mobile_ffi/mod.rs` - Extract wing from properties
-- `src/ar_integration/pending.rs` - Create default wing
-- `src/ar_integration/mod.rs` - Added wings field
+- `crates/arxos/crates/arxos/src/mobile_ffi/mod.rs` - Extract wing from properties
+- `crates/arxos/crates/arxos/src/ar_integration/pending.rs` - Create default wing
+- `crates/arxos/crates/arxos/src/ar_integration/mod.rs` - Added wings field
 
 ### Testing (1 file)
 - `tests/commands/wing_tests.rs` - Comprehensive test suite

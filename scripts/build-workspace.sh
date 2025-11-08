@@ -21,11 +21,31 @@ if ! command -v cargo &> /dev/null; then
 fi
 
 # Build main package
-echo -e "${BLUE}📦 Building arxos package with git features...${NC}"
-if cargo build --features git; then
-    echo -e "${GREEN}✅ Build successful${NC}"
+echo -e "${BLUE}📦 Building protocol core (crates/arx)...${NC}"
+if cargo build -p arx; then
+    echo -e "${GREEN}✅ arx built successfully${NC}"
 else
-    echo -e "${RED}❌ Build failed${NC}"
+    echo -e "${RED}❌ Failed to build crates/arx${NC}"
+    exit 1
+fi
+
+echo ""
+
+echo -e "${BLUE}🖥️  Building CLI + TUI (crates/arxui)...${NC}"
+if cargo build -p arxui; then
+    echo -e "${GREEN}✅ arxui built successfully${NC}"
+else
+    echo -e "${RED}❌ Failed to build crates/arxui${NC}"
+    exit 1
+fi
+
+echo ""
+
+echo -e "${BLUE}🛠️  Building runtime integrations (crates/arxos)...${NC}"
+if cargo build -p arxos; then
+    echo -e "${GREEN}✅ arxos built successfully${NC}"
+else
+    echo -e "${RED}❌ Failed to build crates/arxos${NC}"
     exit 1
 fi
 
@@ -55,4 +75,4 @@ echo ""
 echo -e "${GREEN}✅ Main build completed successfully!${NC}"
 echo ""
 echo "To run the CLI:"
-echo "  cargo run --bin arx -- --help"
+echo "  cargo run -p arxui -- --help"

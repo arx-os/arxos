@@ -43,10 +43,10 @@ pub fn get_config_or_default() -> ArxConfig {
 - **Estimated waste:** 5-10ms per call × 12 = **60-120ms per operation**
 
 **Usage Locations:**
-- `src/mobile_ffi/ffi.rs`: 4 calls
-- `src/commands/users.rs`: 5 calls
+- `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs`: 4 calls
+- `crates/arxui/crates/arxui/src/commands/users.rs`: 5 calls
 - `src/git/manager.rs`: 2 calls
-- `src/commands/health_dashboard.rs`: 1 call
+- `crates/arxui/crates/arxui/src/commands/health_dashboard.rs`: 1 call
 
 ### Recommendation
 

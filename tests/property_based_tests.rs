@@ -232,7 +232,7 @@ proptest! {
         // Equipment can be in Maintenance but have Healthy status (e.g., preventive maintenance)
         // These are independent dimensions
         let _ = (health, status); // Just verify types work together
-        prop_assert!(true);
+        prop_assert!(health.is_some());
     }
 }
 

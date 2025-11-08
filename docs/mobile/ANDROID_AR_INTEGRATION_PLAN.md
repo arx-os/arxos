@@ -94,7 +94,7 @@ Complete Android ARCore integration for ArxOS, enabling users to:
 
 #### 1.1 Add JNI Functions in Rust
 
-**File:** `src/mobile_ffi/jni.rs`
+**File:** `crates/arxos/crates/arxos/src/mobile_ffi/jni.rs`
 
 Add these JNI functions mirroring the C FFI functions:
 

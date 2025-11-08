@@ -28,8 +28,8 @@ export ANDROID_NDK_HOME=$HOME/Android/Sdk/ndk-bundle
 
 # Build for all architectures
 cd /path/to/arxos
-cargo build --target aarch64-linux-android --release --lib
-cargo build --target armv7-linux-androideabi --release --lib
+cargo build -p arxos --target aarch64-linux-android --release --lib
+cargo build -p arxos --target armv7-linux-androideabi --release --lib
 
 # Copy libraries to Android project
 cp target/aarch64-linux-android/release/libarxos.so android/app/src/main/jniLibs/arm64-v8a/

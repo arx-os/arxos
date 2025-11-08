@@ -9,7 +9,6 @@ use std::path::PathBuf;
 fn test_ifc_processor_creation() {
     // Test creating IFC processor
     let _processor = IFCProcessor::new();
-    assert!(true, "IFC processor created successfully");
 }
 
 #[test]
@@ -24,9 +23,6 @@ fn test_hierarchy_extraction_with_sample_file() {
     }
 
     let _result = processor.extract_hierarchy(sample_file.to_str().unwrap());
-
-    // Test should not panic, result may be Ok or Err
-    assert!(true, "Hierarchy extraction attempted");
 }
 
 #[test]
@@ -46,9 +42,6 @@ fn test_entity_classification() {
     use arxos::ifc::IFCProcessor;
 
     let _processor = IFCProcessor::new();
-
-    // Test processor creation
-    assert!(true, "IFC processor created successfully");
 
     // This tests that the processor can be used for entity classification
     // through the public API

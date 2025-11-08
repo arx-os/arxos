@@ -100,7 +100,10 @@ fn test_ar_export_format_parsing() {
 
 #[test]
 fn test_ar_export_with_equipment() {
-    use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentData, EquipmentStatus};
+    #[allow(deprecated)]
+    use arxos::yaml::{
+        BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentData, EquipmentStatus,
+    };
     use arxos::spatial::{Point3D, BoundingBox3D};
     use arxos::export::ar::{ARExporter, ARFormat};
     use chrono::Utc;

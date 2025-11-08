@@ -288,11 +288,11 @@ pub fn handle_import(ifc_file: PathBuf, repo: Option<PathBuf>)
 | Core | `ArxError` | `src/error/mod.rs` | ✅ Central type |
 | IFC | `IFCError` | `src/ifc/error.rs` | ✅ Good |
 | Git | `GitError` | `src/git/manager.rs` | ✅ Good |
-| Hardware | `HardwareError` | `src/hardware/mod.rs` | ✅ Good |
+| Hardware | `HardwareError` | `crates/arxos/crates/arxos/src/hardware/mod.rs` | ✅ Good |
 | Persistence | `PersistenceError` | `src/persistence/error.rs` | ✅ Good |
 | Config | `ConfigError` | `src/config/mod.rs` | ✅ Good |
 | Path Safety | `PathSafetyError` | `src/utils/path_safety.rs` | ✅ Good |
-| Mobile FFI | `FFIError` | `src/mobile_ffi/mod.rs` | ✅ Good |
+| Mobile FFI | `FFIError` | `crates/arxos/crates/arxos/src/mobile_ffi/mod.rs` | ✅ Good |
 
 ---
 

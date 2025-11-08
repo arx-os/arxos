@@ -74,7 +74,7 @@ for target_pair in "${TARGETS[@]}"; do
     arch=$(echo "$target_pair" | cut -d: -f2)
     
     echo -e "${BLUE}📱 Building for Android ($arch)...${NC}"
-    cargo build --target "$target" --release --lib
+    cargo build -p arxos --target "$target" --release --lib
     
     # Copy .so file to jniLibs directory
     SO_FILE="target/$target/release/libarxos.so"

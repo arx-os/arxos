@@ -27,7 +27,7 @@ While not a critical problem, the operations module is tightly coupled to persis
 ### Proposed Solution
 
 **Option 1: Service Layer (Recommended)**
-- Create `src/services/spatial_service.rs`
+- Create `crates/arxos/crates/arxos/src/services/spatial_service.rs`
 - Move spatial operations to service layer
 - Use dependency injection for persistence
 - Operations module becomes thin wrapper

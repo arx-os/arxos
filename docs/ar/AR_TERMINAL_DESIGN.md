@@ -1402,7 +1402,7 @@ struct EquipmentTagView: View {
 #### 4. Simple Command Parsing (Rust Side)
 
 ```rust
-// src/commands/simple.rs (new module for field user commands)
+// crates/arxui/crates/arxui/src/commands/simple.rs (new module for field user commands)
 
 /// Handle simple field user commands
 /// These are shortcuts that map to full CLI commands
@@ -1488,7 +1488,7 @@ Type command name (e.g., "equipment") for more options."#.to_string()
 **Integration in Command Router:**
 
 ```rust
-// src/commands/mod.rs
+// crates/arxui/crates/arxui/src/commands/mod.rs
 pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
     match command {
         // ... existing commands ...
@@ -1743,7 +1743,7 @@ enum class FieldUserCommand(val terminalCommand: String, val description: String
 ### New FFI Functions
 
 ```rust
-// src/mobile_ffi/ffi.rs
+// crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs
 
 /// Create a pull request from AR markup data
 #[no_mangle]

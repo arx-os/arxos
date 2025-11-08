@@ -281,10 +281,10 @@ let file_path = Path::new(&self.repository.path()).join(path);
 ### Used By
 - **21 files** across the codebase
 - **Persistence layer** (`src/persistence/mod.rs`)
-- **Command handlers** (`src/commands/git_ops.rs`, `src/commands/import.rs`, etc.)
+- **Command handlers** (`crates/arxui/crates/arxui/src/commands/git_ops.rs`, `crates/arxui/crates/arxui/src/commands/import.rs`, etc.)
 - **UI components** (`src/ui/spreadsheet/data_source.rs`)
-- **Mobile FFI** (`src/mobile_ffi/ffi.rs`)
-- **AR integration** (`src/ar_integration/pending.rs`)
+- **Mobile FFI** (`crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs`)
+- **AR integration** (`crates/arxos/crates/arxos/src/ar_integration/pending.rs`)
 
 ### Dependencies
 - `git2` - Git library bindings

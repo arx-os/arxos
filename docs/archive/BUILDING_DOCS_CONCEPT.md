@@ -202,7 +202,7 @@ Optional: Start local server
 
 ### Components Needed
 
-1. **Documentation Generator** (`src/docs/generator.rs`)
+1. **Documentation Generator** (`crates/arxui/crates/arxui/src/docs/generator.rs`)
    - Reads building data
    - Transforms to documentation structure
    - Generates HTML files
@@ -212,12 +212,12 @@ Optional: Start local server
    - CSS stylesheets
    - JavaScript for interactivity
 
-3. **Asset Generation** (`src/docs/assets.rs`)
+3. **Asset Generation** (`crates/arxui/crates/arxui/src/docs/assets.rs`)
    - Generates floor plan diagrams
    - Creates equipment network graphs
    - Generates status indicators
 
-4. **Static Server** (`src/docs/server.rs`)
+4. **Static Server** (`crates/arxui/crates/arxui/src/docs/server.rs`)
    - Optional local server (like `cargo doc --open`)
    - Serves generated HTML files
 

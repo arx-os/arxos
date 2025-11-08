@@ -25,7 +25,7 @@ ArxOS follows a **modular monolith** pattern centered around:
 
 - **Unified Rust Core:** Single crate (`arxos`) compiled to multiple formats (cdylib, rlib, staticlib)
 - **Git-First Storage:** No database required; all data persisted to YAML files with Git version control
-- **Command Router Pattern:** Central dispatch in `src/commands/mod.rs` routing to 16 specialized handler modules
+- **Command Router Pattern:** Central dispatch in `crates/arxui/crates/arxui/src/commands/mod.rs` routing to 16 specialized handler modules
 - **FFI-Based Mobile Support:** Rust functions exported via C ABI for iOS/Android native apps
 
 ### Main Components
@@ -38,7 +38,7 @@ ArxOS follows a **modular monolith** pattern centered around:
                         │
 ┌───────────────────────▼─────────────────────────────────────┐
 │                 Command Router Layer                        │
-│            (src/commands/mod.rs)                           │
+│            (crates/arxui/crates/arxui/src/commands/mod.rs)                           │
 │  Handles: import, export, render, equipment, room, etc.   │
 └────────┬───────────────────────────────────────────────────┘
          │
@@ -123,7 +123,7 @@ ArxOS follows a **modular monolith** pattern centered around:
 
 **Recommendation:** Extract conversion logic to separate adapter layer
 
-#### 3. `src/commands/equipment.rs` (~430 lines)
+#### 3. `crates/arxui/crates/arxui/src/commands/equipment.rs` (~430 lines)
 
 **Complexity:** MEDIUM  
 **Purpose:** Equipment CRUD operations
@@ -226,7 +226,7 @@ ArxOS follows a **modular monolith** pattern centered around:
 **Issue:** Excessive use of `unwrap()` and `expect()`
 
 ```rust
-// Example from src/commands/equipment.rs
+// Example from crates/arxui/crates/arxui/src/commands/equipment.rs
 let coords: Vec<&str> = pos_str.split(',').map(|s| s.trim()).collect();
 if coords.len() == 3 {
     equipment_data.position = Point3D {
@@ -284,13 +284,13 @@ fn load_building_data_from_dir() -> Result<crate::yaml::BuildingData, Box<dyn st
 
 #### 3. FFI Safety Boundaries (Medium Priority)
 
-**Location:** `src/mobile_ffi/ffi.rs` and `jni.rs`  
+**Location:** `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs` and `jni.rs`  
 **Risk Level:** Medium
 
 **Issue:** Unsafe FFI functions with manual memory management
 
 ```rust
-// From src/mobile_ffi/ffi.rs
+// From crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs
 pub unsafe extern "C" fn arxos_list_rooms(building_name: *const c_char) -> *mut c_char {
     let name = unsafe {
         CStr::from_ptr(building_name)
@@ -592,7 +592,7 @@ ArxOS already functions as a DePIN (Decentralized Physical Infrastructure Networ
    - Reward calculations and payment status
    - Network participation statistics
    - All data derived from Git commit analysis
-   - **File location:** `src/commands/depin.rs` (new command handler)
+   - **File location:** `crates/arxui/crates/arxui/src/commands/depin.rs` (new command handler)
 
 4. **Network Statistics & Registry**
    - Registry of active sensor nodes (Git repo discovery)
@@ -618,7 +618,7 @@ ArxOS already functions as a DePIN (Decentralized Physical Infrastructure Networ
 | `src/core/mod.rs` | ~900 | Medium-High | Core domain models |
 | `src/cli/mod.rs` | ~570 | Medium | CLI command definitions |
 | `src/git/manager.rs` | ~600 | Medium | Git operations |
-| `src/commands/equipment.rs` | ~430 | Medium | Equipment CRUD |
+| `crates/arxui/crates/arxui/src/commands/equipment.rs` | ~430 | Medium | Equipment CRUD |
 | Other command files | ~100-300 | Low-Medium | Command handlers |
 | FFI files | ~400 | Medium | Mobile integration |
 

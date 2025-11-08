@@ -67,7 +67,7 @@ Implemented automatic C header generation from Rust FFI code using `cbindgen`:
 2. **Build Script Integration** ✅
    - Auto-generates `include/arxos_mobile.h` during build
    - Graceful fallback to validation-only if cbindgen unavailable
-   - Automatically reruns when `src/mobile_ffi/ffi.rs` changes
+   - Automatically reruns when `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs` changes
    - Detects cbindgen availability before attempting generation
 
 3. **Benefits** ✅

@@ -58,7 +58,6 @@ fn test_sensor_service_creation() {
         data_directory: std::path::PathBuf::from("./test_data/sensor-data"),
         supported_formats: vec!["yaml".to_string(), "json".to_string()],
         auto_process: true,
-        ..Default::default()
     };
 
     let service = SensorIngestionService::new(config);
@@ -74,7 +73,5 @@ fn test_equipment_status_updater_creation() {
     // Note: This will fail if building data doesn't exist, which is expected in tests
     let _updater = EquipmentStatusUpdater::new("test_building");
 
-    // The updater might fail to create if building data doesn't exist
-    // That's okay for this test
-    assert!(true, "EquipmentStatusUpdater creation attempted");
+    // The updater might fail to create if building data doesn't exist, which is acceptable for this smoke test.
 }

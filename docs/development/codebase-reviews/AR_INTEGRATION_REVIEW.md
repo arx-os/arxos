@@ -1,4 +1,4 @@
-# In-Depth Review: `/arxos/src/ar_integration`
+# In-Depth Review: `/arxos/crates/arxos/src/ar_integration`
 
 **Date:** $(date)  
 **Status:** ✅ Complete Review
@@ -83,7 +83,7 @@ The `ar_integration` module handles AR/LiDAR scan data from mobile applications 
 **Path:** `ARScanData` → `ARDataIntegrator` → `BuildingData`
 
 **Usage:**
-- Used in `src/commands/ar.rs` (`handle_ar_integrate_command`)
+- Used in `crates/arxui/crates/arxui/src/commands/ar.rs` (`handle_ar_integrate_command`)
 - Directly integrates AR scans into building data
 - No user review step
 - Creates/updates equipment immediately
@@ -108,7 +108,7 @@ The `ar_integration` module handles AR/LiDAR scan data from mobile applications 
 ### Critical Issues
 
 #### 1. **Room Assignment Missing in `confirm_pending`**
-**Location:** `src/ar_integration/pending.rs:293-316`
+**Location:** `crates/arxos/crates/arxos/src/ar_integration/pending.rs:293-316`
 
 **Issue:** When confirming pending equipment, `add_equipment_to_building()` adds equipment to the floor but does NOT add it to the room (even though `pending.room_name` is available).
 
@@ -140,7 +140,7 @@ if let Some(room) = floor.rooms.get_mut(room_index) {
 ---
 
 #### 2. **Inconsistent Room Handling**
-**Location:** `src/ar_integration/pending.rs` vs `src/ar_integration/mod.rs`
+**Location:** `crates/arxos/crates/arxos/src/ar_integration/pending.rs` vs `crates/arxos/crates/arxos/src/ar_integration/mod.rs`
 
 **Issue:** 
 - `ARDataIntegrator.integrate_equipment()` correctly adds equipment to rooms (line 363-364)
@@ -153,9 +153,9 @@ if let Some(room) = floor.rooms.get_mut(room_index) {
 ### High Priority Issues
 
 #### 3. **ARDataIntegrator Not Used in Mobile Workflow**
-**Location:** `src/ar_integration/mod.rs:181-435`
+**Location:** `crates/arxos/crates/arxos/src/ar_integration/mod.rs:181-435`
 
-**Issue:** `ARDataIntegrator` is only used in `src/commands/ar.rs` for CLI integration. Mobile apps use the pending workflow exclusively. This creates confusion about which workflow to use.
+**Issue:** `ARDataIntegrator` is only used in `crates/arxui/crates/arxui/src/commands/ar.rs` for CLI integration. Mobile apps use the pending workflow exclusively. This creates confusion about which workflow to use.
 
 **Recommendation:**
 - Option A: Document that `ARDataIntegrator` is for CLI-only direct integration
@@ -167,7 +167,7 @@ if let Some(room) = floor.rooms.get_mut(room_index) {
 ---
 
 #### 4. **No Git Integration in Storage**
-**Location:** `src/ar_integration/pending.rs:115-144`
+**Location:** `crates/arxos/crates/arxos/src/ar_integration/pending.rs:115-144`
 
 **Issue:** `save_to_storage_path()` writes directly to filesystem, bypassing Git. This violates the project's Git-native philosophy.
 
@@ -236,7 +236,7 @@ pub fn save_to_storage_path(&self, storage_file: &std::path::Path) -> Result<(),
 ---
 
 #### 9. **Missing Validation in `add_pending_equipment`**
-**Location:** `src/ar_integration/pending.rs:147-188`
+**Location:** `crates/arxos/crates/arxos/src/ar_integration/pending.rs:147-188`
 
 **Issue:** `add_pending_equipment()` doesn't validate:
 - Equipment name uniqueness within pending items
@@ -250,7 +250,7 @@ pub fn save_to_storage_path(&self, storage_file: &std::path::Path) -> Result<(),
 ### Low Priority Issues
 
 #### 10. **Unused Helper Function**
-**Location:** `src/ar_integration/pending.rs:331-341`
+**Location:** `crates/arxos/crates/arxos/src/ar_integration/pending.rs:331-341`
 
 **Issue:** `create_pending_equipment_from_ar_scan()` is a convenience function that creates a manager with "default" building name. This seems unused and may be misleading.
 
@@ -270,7 +270,7 @@ pub fn save_to_storage_path(&self, storage_file: &std::path::Path) -> Result<(),
 ---
 
 #### 12. **Missing Room Boundary Updates**
-**Location:** `src/ar_integration/mod.rs:578-582`
+**Location:** `crates/arxos/crates/arxos/src/ar_integration/mod.rs:578-582`
 
 **Issue:** `parse_room_boundaries_from_mobile()` always sets `floor_plane` and `ceiling_plane` to `None` with a comment "will be parsed when AR data is available".
 
@@ -331,9 +331,9 @@ pub fn save_to_storage_path(&self, storage_file: &std::path::Path) -> Result<(),
 ## Integration Points
 
 ### Used By:
-- **Mobile FFI** (`src/mobile_ffi/ffi.rs`, `src/mobile_ffi/jni.rs`): Primary consumer
-- **CLI Commands** (`src/commands/ar.rs`): Uses `ARDataIntegrator`
-- **TUI Commands** (`src/commands/ar_pending_manager.rs`): Uses `PendingEquipmentManager`
+- **Mobile FFI** (`crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs`, `crates/arxos/crates/arxos/src/mobile_ffi/jni.rs`): Primary consumer
+- **CLI Commands** (`crates/arxui/crates/arxui/src/commands/ar.rs`): Uses `ARDataIntegrator`
+- **TUI Commands** (`crates/arxui/crates/arxui/src/commands/ar_pending_manager.rs`): Uses `PendingEquipmentManager`
 
 ### Dependencies:
 - `crate::yaml` - Building data structures

@@ -1,0 +1,45 @@
+[package]
+name = "arxui"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Arx terminal UI and 3D rendering"
+
+[features]
+default = ["tui", "render3d"]
+tui = []
+render3d = []
+async-sensors = ["dep:tokio"]
+
+[dependencies]
+arx = { path = "../arx" }
+arxos = { path = "../arxos" }
+clap = { workspace = true }
+env_logger = { workspace = true }
+arboard = "3.2"
+chrono = { workspace = true }
+crossterm = { workspace = true }
+log = { workspace = true }
+ratatui = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+tokio = { workspace = true, optional = true }
+uuid = { workspace = true }
+csv = "1.4"
+tempfile = { workspace = true }
+glob = { workspace = true }
+toml = { workspace = true }
+notify = { workspace = true }
+git2 = { workspace = true }
+nalgebra = { workspace = true }
+
+[[bin]]
+name = "arx"
+path = "src/main.rs"
+
+[dev-dependencies]
+serial_test = { workspace = true }

@@ -235,7 +235,7 @@ let equipment = try JSONDecoder().decode([Equipment].self, from: data)
 
 For FFI integration issues:
 - Check `docs/MOBILE_FFI_INTEGRATION.md` for detailed documentation
-- Review `src/mobile_ffi/ffi.rs` for Rust FFI implementation
+- Review `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs` for Rust FFI implementation
 - Check Xcode build logs for linker errors
 
 ---

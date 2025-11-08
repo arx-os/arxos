@@ -87,7 +87,7 @@ Foundation data structures and operations:
 
 **Key Types**: `Building`, `Floor`, `Wing`, `Room`, `Equipment`, `Position`, `SpatialProperties`
 
-### Command Handlers (`src/commands/`)
+### Command Handlers (`crates/arxui/crates/arxui/src/commands/`)
 
 Central routing layer mapping CLI commands to business logic:
 
@@ -150,7 +150,7 @@ Version control operations for building data:
 
 **Key Operations**: `export_building()`, `get_status()`, `get_diff()`, `list_commits()`, `commit_staged()`
 
-### Search Engine (`src/search/`)
+### Search Engine (`crates/arxos/crates/arxos/src/search/`)
 
 Advanced search and filtering capabilities:
 
@@ -167,7 +167,7 @@ Building data serialization for storage:
 - **`mod.rs`**: `BuildingYamlSerializer` and data structures
 - Separate data structures (`BuildingInfo`, `FloorData`, `RoomData`, `EquipmentData`) for serialization
 
-### AR Integration (`src/ar_integration/`)
+### AR Integration (`crates/arxos/crates/arxos/src/ar_integration/`)
 
 Mobile AR scan processing:
 
@@ -175,7 +175,7 @@ Mobile AR scan processing:
 - **`processing.rs`**: AR scan data processing and validation
 - **`mod.rs`**: AR integration workflow coordination
 
-### Game System (`src/game/`)
+### Game System (`crates/arxos/crates/arxos/src/game/`)
 
 Gamified PR review and planning system:
 
@@ -193,7 +193,7 @@ Gamified PR review and planning system:
 
 **Key Types**: `GameState`, `GameScenario`, `PRReviewGame`, `PlanningGame`, `LearningMode`, `ConstraintSystem`, `IFCSyncManager`
 
-### Mobile FFI (`src/mobile_ffi/`)
+### Mobile FFI (`crates/arxos/crates/arxos/src/mobile_ffi/`)
 
 Foreign function interface for mobile apps:
 
@@ -224,7 +224,7 @@ Configuration management with environment overrides:
 - **`mod.rs`**: Configuration structure
 - **`validation.rs`**: Configuration validation
 
-### Hardware Integration (`src/hardware/`)
+### Hardware Integration (`crates/arxos/crates/arxos/src/hardware/`)
 
 Sensor data ingestion and status updates:
 
@@ -246,10 +246,10 @@ Sensor data ingestion and status updates:
    - User runs `arx import building.ifc --repo ./repo`
    - `Cli::parse()` extracts `Import` command with IFC path and repo options
 
-2. **Command Routing** (`src/commands/mod.rs`)
+2. **Command Routing** (`crates/arxui/crates/arxui/src/commands/mod.rs`)
    - `execute_command()` matches `Import` to `import::handle_import()`
 
-3. **Import Handler** (`src/commands/import.rs`)
+3. **Import Handler** (`crates/arxui/crates/arxui/src/commands/import.rs`)
    - Validates IFC file path with `PathSafety`
    - Creates progress context for user feedback
    - Calls `IFCProcessor::extract_hierarchy()`
@@ -359,7 +359,7 @@ pub struct Building {
 **Recommended**: Complete migration or document the current model.
 
 #### 3. Command Module Coupling
-**Problem**: `src/commands/` modules depend on many layers.
+**Problem**: `crates/arxui/crates/arxui/src/commands/` modules depend on many layers.
 
 **Impact**:
 - Changes ripple across command handlers
@@ -423,11 +423,11 @@ pub struct Building {
 
 ### Integration Flow
 
-1. **Sensor Data Ingestion** (`src/hardware/ingestion.rs`)
+1. **Sensor Data Ingestion** (`crates/arxos/crates/arxos/src/hardware/ingestion.rs`)
    - Read JSON from devices
    - Validate and map to internal types
 
-2. **Status Updates** (`src/hardware/status_updater.rs`)
+2. **Status Updates** (`crates/arxos/crates/arxos/src/hardware/status_updater.rs`)
    - Update equipment status
    - Persist with Git
    - Trigger notifications

@@ -42,7 +42,7 @@ ArxOS mobile FFI integration enables native mobile applications (iOS/Android) to
 
 ### Implementation
 
-**File:** `src/mobile_ffi/ffi.rs`
+**File:** `crates/arxos/crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs`
 
 ```rust
 #[no_mangle]
@@ -94,8 +94,8 @@ class ArxOSCoreFFI {
 
 1. **Build Rust library:**
    ```bash
-   cargo build --target aarch64-apple-ios --release
-   cargo build --target x86_64-apple-ios --release
+   cargo build -p arxos --target aarch64-apple-ios --release
+   cargo build -p arxos --target x86_64-apple-ios --release
    ```
 
 2. **Create universal framework:**
@@ -144,10 +144,10 @@ class ArxOSCoreJNI {
 
 2. **Build for Android architectures:**
    ```bash
-   cargo build --target aarch64-linux-android --release
-   cargo build --target armv7-linux-androideabi --release
-   cargo build --target i686-linux-android --release
-   cargo build --target x86_64-linux-android --release
+   cargo build -p arxos --target aarch64-linux-android --release
+   cargo build -p arxos --target armv7-linux-androideabi --release
+   cargo build -p arxos --target i686-linux-android --release
+   cargo build -p arxos --target x86_64-linux-android --release
    ```
 
 3. **Create JNI libraries:**
@@ -177,7 +177,7 @@ class ArxOSCoreJNI {
 
 5. **Create JNI bindings in Rust:**
    ```rust
-   // src/mobile_ffi/jni.rs
+   // crates/arxos/crates/arxos/crates/arxos/src/mobile_ffi/jni.rs
    #![allow(non_snake_case)]
    
    #[no_mangle]

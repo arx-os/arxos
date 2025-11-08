@@ -1,6 +1,6 @@
 //! Tests for export command handler
 
-use arxos::commands::export::handle_export;
+use arxui::commands::export::handle_export;
 
 #[test]
 fn test_export_no_yaml_files() {

@@ -10,6 +10,7 @@ use arxos::core::Floor;
 use arxos::spatial::{BoundingBox3D, Point3D};
 use arxos::yaml::{BuildingData, BuildingInfo};
 use std::collections::HashMap;
+use std::path::PathBuf;
 use tempfile::TempDir;
 
 #[test]
@@ -50,7 +51,8 @@ fn test_ar_workflow_complete() {
 
     // Phase 3: Process AR scan to pending equipment
     let temp_dir = TempDir::new().expect("Should create temp directory");
-    let original_dir = std::env::current_dir().unwrap();
+    let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let original_dir = std::env::current_dir().unwrap_or_else(|_| repo_root.clone());
     std::env::set_current_dir(temp_dir.path()).unwrap();
 
     let pending_ids = process_ar_scan_to_pending(&ar_scan, "test_building", 0.7, None)
@@ -156,7 +158,9 @@ fn test_ar_workflow_complete() {
     );
 
     // Cleanup working directory
-    std::env::set_current_dir(original_dir).unwrap();
+    if std::env::set_current_dir(&original_dir).is_err() {
+        std::env::set_current_dir(repo_root).unwrap();
+    }
 }
 
 #[test]

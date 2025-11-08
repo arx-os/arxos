@@ -185,10 +185,10 @@ pub fn get_config_or_default() -> ArxConfig {
   5. Clones config
 
 **Usage:**
-- `src/mobile_ffi/ffi.rs`: 4 calls
-- `src/commands/users.rs`: 5 calls
+- `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs`: 4 calls
+- `crates/arxui/crates/arxui/src/commands/users.rs`: 5 calls
 - `src/git/manager.rs`: 2 calls
-- `src/commands/health_dashboard.rs`: 1 call
+- `crates/arxui/crates/arxui/src/commands/health_dashboard.rs`: 1 call
 
 **Recommendation:**
 - Add a global/lazy static `ConfigManager` instance
@@ -877,6 +877,6 @@ cargo test --lib config
 cargo check --lib
 
 # Verify config loading
-cargo run --bin arx -- config --show
+cargo run -p arxui -- config --show
 ```
 

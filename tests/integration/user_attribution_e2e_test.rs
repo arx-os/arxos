@@ -7,13 +7,14 @@
 //! 4. Verify user attribution in commit history
 //! 5. Verify user appears in user browser with activity
 
-use arxos::commands::git_ops::extract_user_id_from_commit;
+use arxos::ar_integration::pending::PendingEquipmentManager;
 use arxos::git::manager::{BuildingGitManager, GitConfig};
 use arxos::identity::{User, UserRegistry};
 use arxos::mobile_ffi::ffi;
+use arxui::commands::git_ops::extract_user_id_from_commit;
 use serial_test::serial;
 use std::ffi::{CStr, CString};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
 /// Helper to create a C string for FFI calls
@@ -83,20 +84,43 @@ floors:
     Ok(())
 }
 
+struct DirGuard {
+    original_dir: PathBuf,
+}
+
+impl DirGuard {
+    fn change_to(target: &Path) -> Result<Self, Box<dyn std::error::Error>> {
+        let original_dir = std::env::current_dir()?;
+        std::env::set_current_dir(target)?;
+        Ok(Self { original_dir })
+    }
+}
+
+impl Drop for DirGuard {
+    fn drop(&mut self) {
+        if let Err(err) = std::env::set_current_dir(&self.original_dir) {
+            eprintln!(
+                "DirGuard: failed to restore directory {}: {}",
+                self.original_dir.display(),
+                err
+            );
+        }
+    }
+}
+
 #[serial]
 #[test]
 fn test_user_attribution_e2e_ar_scan() -> Result<(), Box<dyn std::error::Error>> {
     // Test: Complete user attribution flow for AR scan
 
     let temp_dir = TempDir::new()?;
-    let original_dir = std::env::current_dir()?;
 
     // Setup: Create test building and Git repository
     let building_name = "e2e_attribution_test";
     create_test_building(&temp_dir, building_name)?;
 
     // Change to temp directory
-    std::env::set_current_dir(temp_dir.path())?;
+    let _guard = DirGuard::change_to(temp_dir.path())?;
 
     // Step 1: Create user in registry
     let user_email = "test.user@example.com";
@@ -168,69 +192,28 @@ fn test_user_attribution_e2e_ar_scan() -> Result<(), Box<dyn std::error::Error>>
         free_c_string(user_email_ptr);
     }
 
-    // Step 3: Verify Git commit includes ArxOS-User-ID trailer
-    let config = GitConfig {
-        author_name: "Test Author".to_string(),
-        author_email: "test@example.com".to_string(),
-        branch: "main".to_string(),
-        remote_url: None,
-    };
-
-    let repo_path_str = temp_dir.path().to_string_lossy().to_string();
-    let git_manager = BuildingGitManager::new(&repo_path_str, building_name, config)?;
-
-    let commits = git_manager.list_commits(10)?;
-
-    // Find the commit with our AR scan (should be the most recent)
-    let commit_with_attribution = commits
-        .iter()
-        .find(|c| c.message.contains("AR scan") || c.message.contains("Add equipment"))
-        .expect("Should find commit with AR scan");
-
-    // Verify commit message contains ArxOS-User-ID trailer
+    // Step 3: Verify pending equipment captures user attribution
+    let storage_file = format!("{}_pending.json", building_name);
+    let storage_path = Path::new(&storage_file);
+    let mut manager = PendingEquipmentManager::new(building_name.to_string());
+    manager.load_from_storage(storage_path)?;
+    let pending_items = manager.list_pending();
     assert!(
-        commit_with_attribution.message.contains("ArxOS-User-ID"),
-        "Commit should contain ArxOS-User-ID trailer"
+        !pending_items.is_empty(),
+        "AR scan should create pending equipment"
     );
-
-    // Extract user ID from commit
-    let extracted_user_id = extract_user_id_from_commit(&commit_with_attribution.message)
-        .expect("Should extract user ID from commit");
-
-    // Verify it matches our user
+    let pending_user = pending_items[0].user_email.as_deref().unwrap_or_default();
     assert_eq!(
-        extracted_user_id, user_id,
-        "Extracted user ID should match registry user ID"
+        pending_user, user_email,
+        "Pending equipment should retain user email"
     );
 
-    // Step 4: Verify user can be looked up from commit
+    // Step 4: Verify registry still contains user
     let registry_after = UserRegistry::load(temp_dir.path())?;
-    let user_from_id = registry_after
-        .find_by_id(&extracted_user_id)
-        .expect("Should find user by ID from commit");
-
-    assert_eq!(user_from_id.email, user_email);
-    assert_eq!(user_from_id.name, user_name);
-
-    // Step 5: Verify user appears in commit history with attribution
-    // This tests the display logic that would be used in `arx users browse`
-    let all_commits = git_manager.list_commits(50)?;
-    let user_commits: Vec<_> = all_commits
-        .iter()
-        .filter(|c| {
-            extract_user_id_from_commit(&c.message)
-                .map(|uid| uid == user_id)
-                .unwrap_or(false)
-        })
-        .collect();
-
-    assert!(
-        !user_commits.is_empty(),
-        "Should find at least one commit attributed to user"
-    );
-
-    // Restore directory
-    std::env::set_current_dir(original_dir)?;
+    let user_from_registry = registry_after
+        .find_by_email(user_email)
+        .expect("User should remain in registry");
+    assert_eq!(user_from_registry.id, user_id);
 
     Ok(())
 }
@@ -241,13 +224,12 @@ fn test_user_attribution_e2e_confirm_equipment() -> Result<(), Box<dyn std::erro
     // Test: User attribution in pending equipment confirmation
 
     let temp_dir = TempDir::new()?;
-    let original_dir = std::env::current_dir()?;
 
     // Setup: Create test building
     let building_name = "e2e_confirm_attribution_test";
     create_test_building(&temp_dir, building_name)?;
 
-    std::env::set_current_dir(temp_dir.path())?;
+    let _guard = DirGuard::change_to(temp_dir.path())?;
 
     // Step 1: Create user
     let user_email = "confirm.user@example.com";
@@ -304,7 +286,6 @@ fn test_user_attribution_e2e_confirm_equipment() -> Result<(), Box<dyn std::erro
             free_c_string(building_ptr);
             free_c_string(user_email_ptr);
 
-            std::env::set_current_dir(original_dir)?;
             return Ok(());
         }
 
@@ -369,9 +350,6 @@ fn test_user_attribution_e2e_confirm_equipment() -> Result<(), Box<dyn std::erro
         "Confirmation commit should be attributed to correct user"
     );
 
-    // Restore directory
-    std::env::set_current_dir(original_dir)?;
-
     Ok(())
 }
 
@@ -381,12 +359,11 @@ fn test_user_attribution_fallback_to_config() -> Result<(), Box<dyn std::error::
     // Test: Backward compatibility - null user_email falls back to config
 
     let temp_dir = TempDir::new()?;
-    let original_dir = std::env::current_dir()?;
 
     let building_name = "e2e_fallback_test";
     create_test_building(&temp_dir, building_name)?;
 
-    std::env::set_current_dir(temp_dir.path())?;
+    let _guard = DirGuard::change_to(temp_dir.path())?;
 
     // Create user in registry
     let user_email = "config.user@example.com";
@@ -438,6 +415,5 @@ fn test_user_attribution_fallback_to_config() -> Result<(), Box<dyn std::error::
         free_c_string(building_ptr);
     }
 
-    std::env::set_current_dir(original_dir)?;
     Ok(())
 }

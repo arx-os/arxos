@@ -1,7 +1,7 @@
 # Operations Module Architectural Review
 
 **Date:** 2025-11-07  
-**Module:** `src/core/operations.rs` (948 lines)  
+**Module:** `crates/arx/src/core/operations.rs` (948 lines)  
 **Functions:** 17 public functions
 
 ---
@@ -547,7 +547,7 @@ No code smells or anti-patterns identified:
 
 - **Module:** `src/core/operations.rs`
 - **Tests:** `tests/commands/wing_tests.rs`, integration tests
-- **Related:** `src/persistence/mod.rs`, `src/commands/`
+- **Related:** `crates/arx/src/persistence/mod.rs`, `crates/arxui/crates/arxui/crates/arxui/src/commands/`
 
 **Reviewed By:** AI Code Review (2025-11-07)  
 **Next Review:** When adding 5+ more operations or if performance issues emerge

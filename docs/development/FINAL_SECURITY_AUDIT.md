@@ -66,22 +66,22 @@ This audit verifies that all file I/O operations and FFI functions are secure an
    - ✅ YAML/IFC file discovery
    - ✅ Safe directory reading
 
-6. **`src/hardware/ingestion.rs`** - 5 instances
+6. **`crates/arxos/crates/arxos/src/hardware/ingestion.rs`** - 5 instances
    - ✅ Sensor data file reading
    - ✅ Restricted to configured data directory
 
-7. **`src/commands/import.rs`** - 4 instances
+7. **`crates/arxui/crates/arxui/src/commands/import.rs`** - 4 instances
    - ✅ IFC file validation
    - ✅ Safe file loading
 
-8. **`src/commands/export.rs`** - 6 instances
+8. **`crates/arxui/crates/arxui/src/commands/export.rs`** - 6 instances
    - ✅ Export file writing
    - ✅ Path validation
 
-9. **`src/commands/ar.rs`** - 2 instances
+9. **`crates/arxui/crates/arxui/src/commands/ar.rs`** - 2 instances
    - ✅ AR output file writing
 
-10. **`src/commands/equipment_handlers.rs`** - 6 instances
+10. **`crates/arxui/crates/arxui/src/commands/equipment_handlers.rs`** - 6 instances
     - ✅ Directory reading for equipment discovery
 
 **Total Protected Operations:** 181+ file I/O operations
@@ -106,7 +106,7 @@ This audit verifies that all file I/O operations and FFI functions are secure an
 
 ### 2.1 Null Pointer Checks
 
-**File:** `src/mobile_ffi/ffi.rs`
+**File:** `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs`
 
 **Status:** ✅ **EXCELLENT** - Comprehensive null checks
 
@@ -149,7 +149,7 @@ pub unsafe extern "C" fn arxos_function(param: *const c_char) -> *mut c_char {
 
 ### 2.3 Acceptable `expect()` Usage
 
-**Location:** `src/mobile_ffi/ffi.rs` (Lines 67, 464)
+**Location:** `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs` (Lines 67, 464)
 
 **Status:** ✅ **ACCEPTABLE** - Documented fallback cases
 
@@ -251,7 +251,7 @@ pub unsafe extern "C" fn arxos_function(param: *const c_char) -> *mut c_char {
    - Before: `to_str().unwrap()` could panic
    - After: Proper error handling with context
 
-2. ✅ **`src/commands/sync.rs`** - Fixed YAML file access
+2. ✅ **`crates/arxui/crates/arxui/src/commands/sync.rs`** - Fixed YAML file access
    - Before: `unwrap()` could panic
    - After: Proper error with helpful message
 

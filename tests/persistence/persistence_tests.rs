@@ -7,7 +7,7 @@
 //! and file operations that occur in temporary directories.
 
 use arxos::persistence::{invalidate_building_data_cache, PersistenceManager};
-use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata, FloorData};
+use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
 use chrono::Utc;
 use serial_test::serial;
 use std::fs;
@@ -476,15 +476,12 @@ mod file_size_limit_tests {
     fn test_cache_invalidation() {
         invalidate_building_data_cache();
         // Cache should be cleared (no error means success)
-        assert!(true);
     }
 }
 
 #[cfg(test)]
 mod indexing_tests {
     use super::*;
-    use arxos::yaml::BuildingDataIndex;
-
     fn create_test_building_with_floors(floor_count: usize) -> BuildingData {
         use arxos::core::Floor;
         let mut floors = Vec::new();
@@ -533,7 +530,7 @@ mod indexing_tests {
         // Verify all floors are indexed
         assert_eq!(index.floors_by_level.len(), 10);
         for i in 0..10 {
-            assert!(index.get_floor_index(i as i32).is_some());
+            assert!(index.get_floor_index(i).is_some());
         }
     }
 

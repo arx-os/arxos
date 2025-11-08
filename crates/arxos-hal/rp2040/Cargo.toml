@@ -1,0 +1,14 @@
+[package]
+name = "arxos-hal-rp2040"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "RP2040 hardware support for the ArxOS runtime"
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+arxos = { path = "../../arxos", optional = true }
+

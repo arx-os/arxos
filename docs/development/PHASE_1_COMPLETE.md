@@ -120,8 +120,8 @@ Successfully completed Phase 1 of the Data Model Unification plan, which adds se
 - `src/core/room.rs` - Changed timestamps to Option<DateTime<Utc>>
 - `src/yaml/conversions.rs` - Updated Room creation
 - `src/ifc/hierarchy.rs` - Updated Room creation
-- `src/mobile_ffi/mod.rs` - Updated Room creation
-- `src/mobile_ffi/offline_queue.rs` - Updated Room creation
+- `crates/arxos/crates/arxos/src/mobile_ffi/mod.rs` - Updated Room creation
+- `crates/arxos/crates/arxos/src/mobile_ffi/offline_queue.rs` - Updated Room creation
 
 **Benefits:**
 - Timestamps omitted from YAML (cleaner format)
@@ -234,8 +234,8 @@ All existing code continues to work:
 
 **Other:**
 - `src/ifc/hierarchy.rs` - Updated Room creation
-- `src/mobile_ffi/mod.rs` - Updated Room creation
-- `src/mobile_ffi/offline_queue.rs` - Updated Room creation
+- `crates/arxos/crates/arxos/src/mobile_ffi/mod.rs` - Updated Room creation
+- `crates/arxos/crates/arxos/src/mobile_ffi/offline_queue.rs` - Updated Room creation
 
 ---
 

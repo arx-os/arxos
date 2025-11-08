@@ -7,7 +7,7 @@ iPhone/iPad LiDAR Scan
     ↓
 3D Scanner App → scan directory
     ↓
-convert_3d_scanner_scan.rs
+crates/arxui/src/bin/convert_3d_scanner_scan.rs
     ↓
 YAML (building.yaml)
     ↓
@@ -56,16 +56,16 @@ iOS/Android App renders in AR
 - [ ] Add material/texture information
   - Export wall materials, floor types, equipment appearances
   - Include metadata for AR occlusion, shadows, lighting
-- [ ] Create `src/export/` module
-  - `src/export/ar/mod.rs` - Main export module
-  - `src/export/ar/usdz.rs` - USDZ export implementation
-  - `src/export/ar/gltf.rs` - glTF export implementation
-  - `src/export/ar/anchor.rs` - Spatial anchor handling
+- [ ] Create `crates/arxos/crates/arxos/crates/arxos/src/export/` module
+  - `crates/arxos/crates/arxos/crates/arxos/src/export/ar/mod.rs` - Main export module
+  - `crates/arxos/crates/arxos/crates/arxos/src/export/ar/usdz.rs` - USDZ export implementation
+  - `crates/arxos/crates/arxos/crates/arxos/src/export/ar/gltf.rs` - glTF export implementation
+  - `crates/arxos/crates/arxos/crates/arxos/src/export/ar/anchor.rs` - Spatial anchor handling
 
 **Command**:
 ```bash
-arxos export --building "Scan Name" --format usdz --output scan_ar.usdz
-arxos export --building "Scan Name" --format gltf --output scan_ar.gltf
+arx export --building "Scan Name" --format usdz --output scan_ar.usdz
+arx export --building "Scan Name" --format gltf --output scan_ar.gltf
 ```
 
 **Technical Considerations**:
@@ -74,12 +74,12 @@ arxos export --building "Scan Name" --format gltf --output scan_ar.gltf
 - Spatial anchors: ARKit's anchor system, ARCore's Cloud Anchors
 
 **Files to create**:
-- `src/export/mod.rs`
-- `src/export/ar/mod.rs`
-- `src/export/ar/usdz.rs`
-- `src/export/ar/gltf.rs`
-- `src/export/ar/anchor.rs`
-- `src/commands/export.rs` (update if exists)
+- `crates/arxos/crates/arxos/crates/arxos/src/export/mod.rs`
+- `crates/arxos/crates/arxos/crates/arxos/src/export/ar/mod.rs`
+- `crates/arxos/crates/arxos/crates/arxos/src/export/ar/usdz.rs`
+- `crates/arxos/crates/arxos/crates/arxos/src/export/ar/gltf.rs`
+- `crates/arxos/crates/arxos/crates/arxos/src/export/ar/anchor.rs`
+- `crates/arxui/crates/arxui/crates/arxui/src/commands/export.rs` (update if exists)
 
 ---
 
@@ -158,7 +158,7 @@ ArxOS FFI Bridge           ArxOS JNI Bridge
 **Files to create**:
 - `ios/ArxOSMobile/` - iOS app (exists, needs AR features)
 - `android/app/src/main/java/com/arxos/` - Android app
-- `src/mobile_ffi/ar_ops.rs` - AR-specific FFI operations
+- `crates/arxos/crates/arxos/crates/arxos/src/mobile_ffi/ar_ops.rs` - AR-specific FFI operations
 
 ---
 
@@ -185,9 +185,9 @@ ArxOS FFI Bridge           ArxOS JNI Bridge
   - Encrypted data transmission
 
 **Files to create**:
-- `src/server/mod.rs` - WebSocket server
-- `src/server/sync.rs` - Synchronization logic
-- `src/server/auth.rs` - Authentication
+- `crates/arxos/src/server/mod.rs` - WebSocket server
+- `crates/arxos/src/server/sync.rs` - Synchronization logic
+- `crates/arxos/src/server/auth.rs` - Authentication
 
 ---
 

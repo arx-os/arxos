@@ -79,7 +79,7 @@ Complete iOS ARKit integration for ArxOS, enabling users to:
 
 #### 1.1 Add `arxos_load_ar_model()` FFI Function
 
-**File:** `src/mobile_ffi/ffi.rs`
+**File:** `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs`
 
 ```rust
 /// Load/export building model for AR
@@ -154,7 +154,7 @@ func loadARModel(
 
 #### 1.2 Add `arxos_save_ar_scan()` FFI Function
 
-**File:** `src/mobile_ffi/ffi.rs`
+**File:** `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs`
 
 ```rust
 /// Save AR scan data and process to pending equipment
@@ -516,7 +516,7 @@ struct PendingEquipmentConfirmationView: View {
 
 ## File Changes Summary
 
-### Rust Files (src/mobile_ffi/)
+### Rust Files (crates/arxos/crates/arxos/src/mobile_ffi/)
 - `ffi.rs` - Add `arxos_load_ar_model()` and `arxos_save_ar_scan()`
 
 ### Swift Files (ios/ArxOSMobile/ArxOSMobile/)

@@ -12,7 +12,7 @@
 //! - Mouse interaction workflows
 
 use arxos::error::ArxError;
-use arxos::ui::{
+use arxui::tui::{
     export_buffer, get_context_help, handle_help_event, parse_mouse_event, CommandPalette,
     ErrorAction, ErrorModal, ExportFormat, HelpContext, HelpSystem, MouseAction, MouseConfig,
     Theme, ThemeManager, WorkspaceManager,
@@ -195,7 +195,7 @@ fn test_theme_switching_workflow() {
         assert!(matches!(current_theme.text, _));
 
         // Step 4: Test theme presets are available
-        use arxos::ui::ThemePreset;
+        use arxui::tui::ThemePreset;
         let presets = ThemePreset::all();
         assert!(!presets.is_empty(), "Should have theme presets");
     }

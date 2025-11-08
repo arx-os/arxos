@@ -65,7 +65,7 @@ cd android
 cd android
 
 # Build for all ABIs (or specific one)
-cargo ndk -t arm64-v8a -t armeabi-v7a -t x86 -t x86_64 build --release
+cargo ndk -p arxos -t arm64-v8a -t armeabi-v7a -t x86 -t x86_64 build --release
 
 # Copy libraries to Android project
 # (Adjust paths based on your cargo-ndk output)
@@ -285,7 +285,7 @@ jobs:
         uses: android-actions/setup-android@v2
       - name: Build native library
         run: |
-          cargo ndk -t arm64-v8a build --release
+          cargo ndk -p arxos -t arm64-v8a build --release
       - name: Copy libraries
         run: |
           # Copy built libraries

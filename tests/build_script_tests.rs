@@ -21,7 +21,7 @@ fn test_build_version_available() {
 
     // Version should start with a digit
     assert!(
-        version.chars().next().map_or(false, |c| c.is_ascii_digit()),
+        version.chars().next().is_some_and(|c| c.is_ascii_digit()),
         "ARXOS_VERSION should start with a digit, got: {}",
         version
     );

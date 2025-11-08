@@ -1,7 +1,7 @@
 # Commands Directory Improvements Summary
 
 **Date:** January 2025  
-**Directory:** `src/commands/`  
+**Directory:** `crates/arxui/crates/arxui/src/commands/`  
 **Status:** ✅ **All Improvements Completed**
 
 ---
@@ -11,9 +11,9 @@
 ### ✅ Priority 1: Remove Orphaned Modules
 
 **Files Removed:**
-- `src/commands/search_module.rs`
-- `src/commands/search_module/mod.rs`
-- `src/commands/search_module/` directory
+- `crates/arxui/crates/arxui/src/commands/search_module.rs`
+- `crates/arxui/crates/arxui/src/commands/search_module/mod.rs`
+- `crates/arxui/crates/arxui/src/commands/search_module/` directory
 
 **Issue:**
 - Both files contained only `pub mod browser;`
@@ -157,24 +157,24 @@
 ## Files Modified
 
 ### Deleted
-- `src/commands/search_module.rs`
-- `src/commands/search_module/mod.rs`
+- `crates/arxui/crates/arxui/src/commands/search_module.rs`
+- `crates/arxui/crates/arxui/src/commands/search_module/mod.rs`
 
 ### Modified (Dead Code Cleanup)
-- `src/commands/watch_dashboard.rs`
-- `src/commands/diff_viewer.rs`
-- `src/commands/git_ops.rs`
-- `src/commands/status_dashboard.rs`
-- `src/commands/room/explorer.rs`
-- `src/commands/ar_pending_manager.rs`
-- `src/commands/equipment/browser.rs`
-- `src/commands/health_dashboard.rs`
+- `crates/arxui/crates/arxui/src/commands/watch_dashboard.rs`
+- `crates/arxui/crates/arxui/src/commands/diff_viewer.rs`
+- `crates/arxui/crates/arxui/src/commands/git_ops.rs`
+- `crates/arxui/crates/arxui/src/commands/status_dashboard.rs`
+- `crates/arxui/crates/arxui/src/commands/room/explorer.rs`
+- `crates/arxui/crates/arxui/src/commands/ar_pending_manager.rs`
+- `crates/arxui/crates/arxui/src/commands/equipment/browser.rs`
+- `crates/arxui/crates/arxui/src/commands/health_dashboard.rs`
 
 ### Modified (Documentation)
-- `src/commands/validate.rs`
-- `src/commands/search.rs`
-- `src/commands/spatial.rs`
-- `src/commands/ifc.rs`
+- `crates/arxui/crates/arxui/src/commands/validate.rs`
+- `crates/arxui/crates/arxui/src/commands/search.rs`
+- `crates/arxui/crates/arxui/src/commands/spatial.rs`
+- `crates/arxui/crates/arxui/src/commands/ifc.rs`
 
 **Total:** 12 files modified, 2 files deleted
 
@@ -253,16 +253,16 @@ All priority improvements have been successfully implemented:
 cargo build
 
 # Verify commands work
-cargo run --bin arx -- --help
-cargo run --bin arx -- validate
-cargo run --bin arx -- search "test"
-cargo run --bin arx -- spatial query nearest "room-1" --params "10"
+cargo run -p arxui -- --help
+cargo run -p arxui -- validate
+cargo run -p arxui -- search "test"
+cargo run -p arxui -- spatial query nearest "room-1" --params "10"
 
 # Verify orphaned files removed
-find src/commands -name "search_module*"
+find crates/arxui/src/commands -name "search_module*"
 
 # Verify dead code removed
-grep -r "#[allow(dead_code)]" src/commands
+grep -r "#[allow(dead_code)]" crates/arxui/src/commands
 ```
 
 All tests pass! ✅

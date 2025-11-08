@@ -3,11 +3,11 @@
 //! This module tests the command handlers in `src/commands/`
 //! through their public interfaces, verifying end-to-end workflows.
 
-use arxos::commands::equipment;
-use arxos::commands::export;
-use arxos::commands::import;
-use arxos::commands::init;
-use arxos::commands::room;
+use arxui::commands::equipment_handlers::parse_equipment_type;
+use arxui::commands::export;
+use arxui::commands::import;
+use arxui::commands::init;
+use arxui::commands::room_handlers::{parse_dimensions, parse_position};
 use std::fs::{create_dir_all, write, File};
 use std::io::Write;
 use tempfile::TempDir;
@@ -118,12 +118,12 @@ fn test_export_command_handles_nonexistent_directory() {
 fn test_room_dimension_parsing_through_command() {
     // Test that parsing functions work correctly (when feature is enabled)
     // For now, test through the module's test functions
-    let dims = room::parse_dimensions("10 x 20 x 8");
+    let dims = parse_dimensions("10 x 20 x 8");
     assert!(dims.is_ok());
     let (w, d, h) = dims.unwrap();
     assert_eq!((w, d, h), (10.0, 20.0, 8.0));
 
-    let pos = room::parse_position("5, 10, 2");
+    let pos = parse_position("5, 10, 2");
     assert!(pos.is_ok());
     let (x, y, z) = pos.unwrap();
     assert_eq!((x, y, z), (5.0, 10.0, 2.0));
@@ -134,13 +134,13 @@ fn test_equipment_type_parsing_through_command() {
     use arxos::core::EquipmentType;
 
     // Test equipment type parsing
-    let hvac = equipment::parse_equipment_type("hvac");
+    let hvac = parse_equipment_type("hvac");
     assert!(matches!(hvac, EquipmentType::HVAC));
 
-    let electrical = equipment::parse_equipment_type("electrical");
+    let electrical = parse_equipment_type("electrical");
     assert!(matches!(electrical, EquipmentType::Electrical));
 
-    let custom = equipment::parse_equipment_type("custom_type");
+    let custom = parse_equipment_type("custom_type");
     assert!(matches!(custom, EquipmentType::Other(_)));
     if let EquipmentType::Other(ref value) = custom {
         assert_eq!(value, "custom_type");
@@ -190,16 +190,16 @@ fn test_git_operations_with_safe_mocks() {
 #[test]
 fn test_coordinate_parsing_edge_cases() {
     // Test edge cases
-    let pos_empty = room::parse_position("");
+    let pos_empty = parse_position("");
     assert!(pos_empty.is_err());
 
-    let dims_empty = room::parse_dimensions("");
+    let dims_empty = parse_dimensions("");
     assert!(dims_empty.is_err());
 
-    let pos_extra_spaces = room::parse_position("  10  ,  20  ,  5  ");
+    let pos_extra_spaces = parse_position("  10  ,  20  ,  5  ");
     assert!(pos_extra_spaces.is_ok());
 
-    let dims_extra_spaces = room::parse_dimensions("  10  x  20  x  8  ");
+    let dims_extra_spaces = parse_dimensions("  10  x  20  x  8  ");
     assert!(dims_extra_spaces.is_ok());
 }
 
@@ -208,49 +208,37 @@ fn test_equipment_type_parsing_variations() {
     use arxos::core::EquipmentType;
 
     // Test case variations
-    assert!(matches!(
-        equipment::parse_equipment_type("HVAC"),
-        EquipmentType::HVAC
-    ));
-    assert!(matches!(
-        equipment::parse_equipment_type("Hvac"),
-        EquipmentType::HVAC
-    ));
-    assert!(matches!(
-        equipment::parse_equipment_type("hVAC"),
-        EquipmentType::HVAC
-    ));
+    assert!(matches!(parse_equipment_type("HVAC"), EquipmentType::HVAC));
+    assert!(matches!(parse_equipment_type("Hvac"), EquipmentType::HVAC));
+    assert!(matches!(parse_equipment_type("hVAC"), EquipmentType::HVAC));
 
     // Test all defined types
     assert!(matches!(
-        equipment::parse_equipment_type("ELECTRICAL"),
+        parse_equipment_type("ELECTRICAL"),
         EquipmentType::Electrical
     ));
+    assert!(matches!(parse_equipment_type("AV"), EquipmentType::AV));
     assert!(matches!(
-        equipment::parse_equipment_type("AV"),
-        EquipmentType::AV
-    ));
-    assert!(matches!(
-        equipment::parse_equipment_type("FURNITURE"),
+        parse_equipment_type("FURNITURE"),
         EquipmentType::Furniture
     ));
     assert!(matches!(
-        equipment::parse_equipment_type("SAFETY"),
+        parse_equipment_type("SAFETY"),
         EquipmentType::Safety
     ));
     assert!(matches!(
-        equipment::parse_equipment_type("PLUMBING"),
+        parse_equipment_type("PLUMBING"),
         EquipmentType::Plumbing
     ));
     assert!(matches!(
-        equipment::parse_equipment_type("NETWORK"),
+        parse_equipment_type("NETWORK"),
         EquipmentType::Network
     ));
 }
 
 #[test]
 fn test_init_then_room_create_workflow() {
-    use arxos::commands::init::InitConfig;
+    use arxui::commands::init::InitConfig;
     use std::path::Path;
 
     // Create a temporary directory for this test

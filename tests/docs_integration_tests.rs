@@ -1,6 +1,6 @@
 //! Integration tests for documentation generation
 
-use arxos::generate_building_docs;
+use arxui::generate_building_docs;
 use std::fs;
 use std::path::Path;
 use tempfile::TempDir;

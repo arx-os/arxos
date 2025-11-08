@@ -1,6 +1,6 @@
 //! Tests for validation command handlers
 
-use arxos::commands::validate::handle_validate_command;
+use arxui::commands::validate::handle_validate_command;
 
 #[test]
 #[ignore] // Requires IFC/YAML files

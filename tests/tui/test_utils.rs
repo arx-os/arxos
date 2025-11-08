@@ -11,7 +11,7 @@ use ratatui::{
     Terminal,
 };
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
-use arxos::ui::Theme;
+use arxui::tui::Theme;
 
 /// Create a test theme for testing
 pub fn create_test_theme() -> Theme {

@@ -189,8 +189,8 @@ pub struct Equipment {
 
 **3.2 Call Site Updates** ✅ **COMPLETED**
 - ✅ Updated `src/core/operations.rs` to use serde-based conversion
-- ✅ Updated `src/services/room_service.rs` to use serde-based conversion
-- ✅ Updated `src/services/equipment_service.rs` to use serde-based conversion
+- ✅ Updated `crates/arxos/crates/arxos/src/services/room_service.rs` to use serde-based conversion
+- ✅ Updated `crates/arxos/crates/arxos/src/services/equipment_service.rs` to use serde-based conversion
 - ✅ Removed deprecated conversion function calls from core operations
 - ✅ Added serde-based conversion helpers (leverages format compatibility)
 - ⏳ Render/AR integration modules still use YAML types (can be updated later, not critical)

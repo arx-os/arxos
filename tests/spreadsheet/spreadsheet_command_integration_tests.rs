@@ -7,15 +7,14 @@
 //! - CSV import command
 //! - Command options (filter, commit, no-git)
 
-use arxos::cli::SpreadsheetCommands;
-use arxos::commands::spreadsheet::handle_spreadsheet_command;
 use arxos::core::{
     Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType, Floor, Position,
 };
 use arxos::persistence::PersistenceManager;
-use arxos::spatial::{BoundingBox3D, Point3D};
 use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
 use arxos::BuildingYamlSerializer;
+use arxui::cli::SpreadsheetCommands;
+use arxui::commands::spreadsheet::handle_spreadsheet_command;
 use chrono::Utc;
 use serial_test::serial;
 use std::collections::HashMap;

@@ -39,11 +39,11 @@ All high-priority security fixes from the code review have been successfully imp
 |------|-------------------|--------|
 | `src/utils/loading.rs` | YAML/IFC file discovery | ✅ |
 | `src/persistence/mod.rs` | Building data load/save, file discovery | ✅ |
-| `src/hardware/ingestion.rs` | Sensor data file reading | ✅ |
-| `src/commands/import.rs` | IFC file validation & loading | ✅ |
-| `src/commands/export.rs` | YAML file reading | ✅ |
-| `src/commands/ar.rs` | AR output file writing | ✅ |
-| `src/commands/equipment.rs` | Directory reading (3 locations) | ✅ |
+| `crates/arxos/crates/arxos/src/hardware/ingestion.rs` | Sensor data file reading | ✅ |
+| `crates/arxui/crates/arxui/src/commands/import.rs` | IFC file validation & loading | ✅ |
+| `crates/arxui/crates/arxui/src/commands/export.rs` | YAML file reading | ✅ |
+| `crates/arxui/crates/arxui/src/commands/ar.rs` | AR output file writing | ✅ |
+| `crates/arxui/crates/arxui/src/commands/equipment.rs` | Directory reading (3 locations) | ✅ |
 | `src/core/mod.rs` | Building data loading | ✅ |
 | `src/ifc/mod.rs` | IFC file reading (2 locations) | ✅ |
 
@@ -54,8 +54,8 @@ All high-priority security fixes from the code review have been successfully imp
 ## 3. FFI Safety Hardening ✅
 
 **Files Updated:** 
-- `src/mobile_ffi/ffi.rs`
-- `src/mobile_ffi/jni.rs`
+- `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs`
+- `crates/arxos/crates/arxos/src/mobile_ffi/jni.rs`
 
 **Improvements:**
 - ✅ Added null pointer checks to all C FFI functions:
@@ -78,9 +78,9 @@ All high-priority security fixes from the code review have been successfully imp
 - ✅ `src/core/mod.rs` - 2 unwraps fixed
   - File loading: `first().unwrap()` → `first().ok_or(...)?`
   - Floor creation: `last_mut().unwrap()` → proper error handling
-- ✅ `src/commands/import.rs` - Verified clean (no production unwraps)
+- ✅ `crates/arxui/crates/arxui/src/commands/import.rs` - Verified clean (no production unwraps)
 - ✅ `src/persistence/mod.rs` - Path safety applied (unwraps only in tests)
-- ✅ `src/commands/equipment.rs` - All 3 directory reads now path-safe
+- ✅ `crates/arxui/crates/arxui/src/commands/equipment.rs` - All 3 directory reads now path-safe
 
 **Impact:**
 - Reduced panic risk in production-critical paths

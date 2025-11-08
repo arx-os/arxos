@@ -31,7 +31,7 @@ Now that BuildingData uses core types (Floor, Wing, Room, Equipment) directly, w
 
 ## Phase 2: Service Layer (HIGH PRIORITY)
 
-### 2.1 Update `src/services/room_service.rs`
+### 2.1 Update `crates/arxos/crates/arxos/src/services/room_service.rs`
 
 **Goal**: Remove RoomData conversions, work directly with Room
 
@@ -42,9 +42,9 @@ Now that BuildingData uses core types (Floor, Wing, Room, Equipment) directly, w
 - Update `get_room()`, `update_room()` to work with `Room` directly
 - Remove `#[allow(deprecated)]` import of `RoomData`
 
-**Files**: `src/services/room_service.rs`
+**Files**: `crates/arxos/crates/arxos/src/services/room_service.rs`
 
-### 2.2 Update `src/services/equipment_service.rs`
+### 2.2 Update `crates/arxos/crates/arxos/src/services/equipment_service.rs`
 
 **Goal**: Remove EquipmentData conversions, work directly with Equipment
 
@@ -55,11 +55,11 @@ Now that BuildingData uses core types (Floor, Wing, Room, Equipment) directly, w
 - Update `get_equipment()`, `update_equipment()` to work with `Equipment` directly
 - Remove `#[allow(deprecated)]` import of `EquipmentData`
 
-**Files**: `src/services/equipment_service.rs`
+**Files**: `crates/arxos/crates/arxos/src/services/equipment_service.rs`
 
 ## Phase 3: Command Handlers (MEDIUM PRIORITY)
 
-### 3.1 Update `src/commands/room_handlers.rs`
+### 3.1 Update `crates/arxui/crates/arxui/src/commands/room_handlers.rs`
 
 **Goal**: Use core Room type instead of RoomData
 
@@ -70,9 +70,9 @@ Now that BuildingData uses core types (Floor, Wing, Room, Equipment) directly, w
 - Update room listing/display to work with `Room` fields (e.g., `room.spatial_properties.position` instead of `room.position`)
 - Update room updates to modify `Room` fields directly
 
-**Files**: `src/commands/room_handlers.rs`
+**Files**: `crates/arxui/crates/arxui/src/commands/room_handlers.rs`
 
-### 3.2 Update `src/commands/equipment_handlers.rs`
+### 3.2 Update `crates/arxui/crates/arxui/src/commands/equipment_handlers.rs`
 
 **Goal**: Use core Equipment type instead of EquipmentData
 
@@ -83,11 +83,11 @@ Now that BuildingData uses core types (Floor, Wing, Room, Equipment) directly, w
 - Update equipment listing/display to work with `Equipment` fields
 - Update equipment status handling to use `EquipmentStatus` and `EquipmentHealthStatus` enums
 
-**Files**: `src/commands/equipment_handlers.rs`
+**Files**: `crates/arxui/crates/arxui/src/commands/equipment_handlers.rs`
 
 ## Phase 4: Search Engine (MEDIUM PRIORITY)
 
-### 4.1 Update `src/search/engine.rs`
+### 4.1 Update `crates/arxos/crates/arxos/src/search/engine.rs`
 
 **Goal**: Extract Room/Equipment from core types instead of RoomData/EquipmentData
 
@@ -99,11 +99,11 @@ Now that BuildingData uses core types (Floor, Wing, Room, Equipment) directly, w
 - Update search methods to work with core type fields (e.g., `room.spatial_properties.position` instead of `room.position`)
 - Update equipment status matching to use `EquipmentStatus` and `EquipmentHealthStatus` enums
 
-**Files**: `src/search/engine.rs`
+**Files**: `crates/arxos/crates/arxos/src/search/engine.rs`
 
 ## Phase 5: AR Integration Pending (MEDIUM PRIORITY)
 
-### 5.1 Update `src/ar_integration/pending.rs`
+### 5.1 Update `crates/arxos/crates/arxos/src/ar_integration/pending.rs`
 
 **Goal**: Use core types for pending equipment operations
 
@@ -114,11 +114,11 @@ Now that BuildingData uses core types (Floor, Wing, Room, Equipment) directly, w
 - Update pending equipment creation to use `Equipment` directly
 - Update room creation to use `Room` directly with proper `SpatialProperties`
 
-**Files**: `src/ar_integration/pending.rs`
+**Files**: `crates/arxos/crates/arxos/src/ar_integration/pending.rs`
 
 ## Phase 6: Export Modules (LOWER PRIORITY)
 
-### 6.1 Update `src/export/ar/gltf.rs`
+### 6.1 Update `crates/arxos/crates/arxos/src/export/ar/gltf.rs`
 
 **Goal**: Use core Equipment type for GLTF export
 
@@ -128,9 +128,9 @@ Now that BuildingData uses core types (Floor, Wing, Room, Equipment) directly, w
 - Update equipment position access: `equipment.position.x` (already correct for core type)
 - Update equipment type handling to use `EquipmentType` enum
 
-**Files**: `src/export/ar/gltf.rs`
+**Files**: `crates/arxos/crates/arxos/src/export/ar/gltf.rs`
 
-### 6.2 Update `src/export/ifc/exporter.rs`
+### 6.2 Update `crates/arxos/crates/arxos/src/export/ifc/exporter.rs`
 
 **Goal**: Use core types for IFC export
 
@@ -140,9 +140,9 @@ Now that BuildingData uses core types (Floor, Wing, Room, Equipment) directly, w
 - Replace `EquipmentData` with `Equipment` (core type)
 - Update room/equipment field access to use core type structure
 
-**Files**: `src/export/ifc/exporter.rs`
+**Files**: `crates/arxos/crates/arxos/src/export/ifc/exporter.rs`
 
-### 6.3 Update `src/export/ifc/delta.rs`
+### 6.3 Update `crates/arxos/crates/arxos/src/export/ifc/delta.rs`
 
 **Goal**: Use core types for IFC delta calculations
 
@@ -152,11 +152,11 @@ Now that BuildingData uses core types (Floor, Wing, Room, Equipment) directly, w
 - Replace `EquipmentData` with `Equipment` (core type)
 - Update comparison logic to work with core type fields
 
-**Files**: `src/export/ifc/delta.rs`
+**Files**: `crates/arxos/crates/arxos/src/export/ifc/delta.rs`
 
 ## Phase 7: Other Modules (LOWER PRIORITY)
 
-### 7.1 Update `src/game/scenario.rs`
+### 7.1 Update `crates/arxos/crates/arxos/src/game/scenario.rs`
 
 **Goal**: Use core types in game scenarios
 
@@ -165,7 +165,7 @@ Now that BuildingData uses core types (Floor, Wing, Room, Equipment) directly, w
 - Replace `RoomData`/`EquipmentData` with `Room`/`Equipment`
 - Update scenario loading to work with core types
 
-**Files**: `src/game/scenario.rs`
+**Files**: `crates/arxos/crates/arxos/src/game/scenario.rs`
 
 ### 7.2 Update `src/lib.rs`
 
@@ -184,11 +184,11 @@ Now that BuildingData uses core types (Floor, Wing, Room, Equipment) directly, w
 
 **Files to check**:
 
-- `src/mobile_ffi/` modules
+- `crates/arxos/crates/arxos/src/mobile_ffi/` modules
 - `src/ui/spreadsheet/data_source.rs`
 - `src/render3d/` modules
-- `src/query/mod.rs`
-- `src/bin/convert_3d_scanner_scan.rs`
+- `crates/arxos/crates/arxos/src/query/mod.rs`
+- `arx/src/bin/convert_3d_scanner_scan.rs`
 
 ## Phase 8: Testing & Verification
 

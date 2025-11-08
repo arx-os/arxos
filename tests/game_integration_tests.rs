@@ -43,29 +43,39 @@ floors:
     name: Ground Floor
     level: 0
     elevation: 0.0
-    rooms:
-      - id: room_1
-        name: Test Room
-        room_type: Office
-        area: 100.0
-        volume: 300.0
-        position:
-          x: 10.0
-          y: 10.0
-          z: 0.0
-        bounding_box:
-          min:
-            x: 5.0
-            y: 5.0
-            z: 0.0
-          max:
-            x: 15.0
-            y: 15.0
-            z: 3.0
+    bounding_box: null
+    wings:
+      - id: wing_1
+        name: Main Wing
+        rooms:
+          - id: room_1
+            name: Test Room
+            room_type: Office
+            equipment: []
+            spatial_properties:
+              position:
+                x: 10.0
+                y: 10.0
+                z: 0.0
+              dimensions:
+                width: 10.0
+                depth: 10.0
+                height: 3.0
+              bounding_box:
+                min:
+                  x: 5.0
+                  y: 5.0
+                  z: 0.0
+                max:
+                  x: 15.0
+                  y: 15.0
+                  z: 3.0
+              coordinate_system: "LOCAL"
+            properties: {}
         equipment: []
         properties: {}
     equipment: []
-    bounding_box: null
+    properties: {}
 coordinate_systems:
   - name: World
     origin:

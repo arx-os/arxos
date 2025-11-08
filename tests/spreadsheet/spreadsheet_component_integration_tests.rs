@@ -6,7 +6,7 @@
 //! - Undo/Redo integration with grid and editor
 //! - Filter/Sort integration with grid navigation
 
-use arxos::ui::spreadsheet::{
+use arxui::tui::spreadsheet::{
     editor::{CellEditor, EditState},
     undo_redo::UndoRedoManager,
     validation::validate_cell,
@@ -174,7 +174,7 @@ fn test_validation_error_integration() {
     // Clear the value (simulate backspace)
     let _current = editor.get_current_value();
     // For required field, empty should fail
-    let validation_result = validate_cell(&"".to_string(), column);
+    let validation_result = validate_cell("", column);
 
     assert!(validation_result.is_err());
     let error = validation_result.unwrap_err();
@@ -231,7 +231,7 @@ fn test_filter_with_navigation() {
     let mut grid = create_test_grid();
 
     // Add filter for Type = "HVAC"
-    use arxos::ui::spreadsheet::filter_sort;
+    use arxui::tui::spreadsheet::filter_sort;
     filter_sort::apply_filter(&mut grid, 2, FilterCondition::Equals("HVAC".to_string())).unwrap();
 
     // Should have filtered rows (only even rows have HVAC)
@@ -252,7 +252,7 @@ fn test_sort_with_filter() {
     let mut grid = create_test_grid();
 
     // First filter
-    use arxos::ui::spreadsheet::filter_sort;
+    use arxui::tui::spreadsheet::filter_sort;
     filter_sort::apply_filter(&mut grid, 2, FilterCondition::Equals("HVAC".to_string())).unwrap();
 
     // Then sort by name

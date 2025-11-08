@@ -17,4 +17,4 @@ echo.
 echo All builds completed successfully!
 echo.
 echo To run the CLI:
-echo   cargo run --bin arxos -- --help
+echo   cargo run -p arx -- --help

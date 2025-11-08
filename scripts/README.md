@@ -98,9 +98,9 @@ scripts\build-workspace.bat
 ```
 
 **What it does:**
-1. Builds main package with git features
-2. Builds all tests
-3. Builds all benchmarks
+1. Builds protocol core (`crates/arx`), CLI (`crates/arxui`), and runtime (`crates/arxos`)
+2. Builds all tests (`cargo test --no-run`)
+3. Builds all benchmarks (`cargo bench --no-run`)
 
 ---
 

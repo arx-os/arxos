@@ -37,7 +37,7 @@ When creating a room with `arx room create --wing "A"`, the room should:
 
 **Current Implementation (BROKEN):**
 ```rust
-// src/commands/room_handlers.rs:115-159
+// crates/arxui/crates/arxui/src/commands/room_handlers.rs:115-159
 // 1. Accepts wing parameter ✓
 // 2. Prints wing in output message ✓
 // 3. Creates room data ✓
@@ -117,7 +117,7 @@ for floor in &building.floors {
 
 ### 1. CLI Example Shows Wing Usage
 ```rust
-// src/commands/init.rs:145
+// crates/arxui/crates/arxui/src/commands/init.rs:145
 println!("   1. Add a room:    arxos room create --building \"{}\" --floor 1 --wing A --name \"Main Hall\" --room-type hallway", building_name);
 ```
 **Shows:** Wing was intended to be used
@@ -141,7 +141,7 @@ if floor.wings.is_empty() {
 
 ### 4. Room Explorer Shows Wing Hierarchy
 ```rust
-// src/commands/room/explorer.rs:4
+// crates/arxui/crates/arxui/src/commands/room/explorer.rs:4
 //! - Building → Floors → Wings → Rooms hierarchy
 ```
 **Shows:** UI expects wing hierarchy

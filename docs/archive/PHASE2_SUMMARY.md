@@ -92,7 +92,7 @@ C FFI Functions (arxos_list_equipment, etc.)
   ↓
 libarxos.a (Static library)
   ↓
-Rust Code (src/mobile_ffi/)
+Rust Code (crates/arxos/crates/arxos/src/mobile_ffi/)
   ↓
 YAML Data / Git Repo
 ```

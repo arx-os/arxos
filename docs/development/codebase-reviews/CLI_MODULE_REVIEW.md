@@ -98,7 +98,7 @@ Init {
 
 ### ✅ 4. Proper Command Routing
 
-All commands are handled in `src/commands/mod.rs`:
+All commands are handled in `crates/arxui/crates/arxui/src/commands/mod.rs`:
 - ✅ No unreachable patterns
 - ✅ All variants routed to handlers
 - ✅ Consistent handler naming (`handle_*`)
@@ -271,7 +271,7 @@ Consider using typed defaults where possible, or document the pattern.
 
 ### ✅ All Commands Routed
 
-Verified that all `Commands` enum variants have handlers in `src/commands/mod.rs`:
+Verified that all `Commands` enum variants have handlers in `crates/arxui/crates/arxui/src/commands/mod.rs`:
 
 1. ✅ `Init` → `init::handle_init`
 2. ✅ `Import` → `import::handle_import`

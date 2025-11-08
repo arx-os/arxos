@@ -127,7 +127,7 @@ docs/api/
    - Document all flags and options
    - Note defaults and validation rules
 
-2. ✅ Extract all FFI functions from `src/mobile_ffi/ffi.rs` and `jni.rs`
+2. ✅ Extract all FFI functions from `crates/arxos/crates/arxos/src/mobile_ffi/ffi.rs` and `jni.rs`
    - List C FFI functions with signatures
    - List JNI functions with Java signatures
    - Document memory management

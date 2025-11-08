@@ -45,9 +45,9 @@ ios/build/lib/
 export DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
 export IPHONEOS_DEPLOYMENT_TARGET=17.0
 
-cargo build --target aarch64-apple-ios --release --lib
-cargo build --target x86_64-apple-ios --release --lib
-cargo build --target aarch64-apple-ios-sim --release --lib
+cargo build -p arxos --target aarch64-apple-ios --release --lib
+cargo build -p arxos --target x86_64-apple-ios --release --lib
+cargo build -p arxos --target aarch64-apple-ios-sim --release --lib
 
 # Then run the build script to create XCFramework
 ./scripts/build-mobile-ios.sh
@@ -160,11 +160,11 @@ The universal simulator library is created by combining x86_64 and arm64 archite
 ./scripts/build-mobile-ios.sh
 
 # Just device build
-cargo build --target aarch64-apple-ios --release --lib
+cargo build -p arxos --target aarch64-apple-ios --release --lib
 
 # Just simulator builds
-cargo build --target x86_64-apple-ios --release --lib
-cargo build --target aarch64-apple-ios-sim --release --lib
+cargo build -p arxos --target x86_64-apple-ios --release --lib
+cargo build -p arxos --target aarch64-apple-ios-sim --release --lib
 
 # Clean build
 cargo clean

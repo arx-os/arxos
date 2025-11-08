@@ -1,8 +1,0 @@
----
-alwaysApply: true
----
-
-Tests should be placed in tests/ directory matching src/ structure:
-- Unit tests in tests/commands/{name}_tests.rs
-- Integration tests in tests/{feature}_integration_tests.rs
-- Maintain >90% test coverage as per existing standards

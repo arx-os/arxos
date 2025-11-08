@@ -2,7 +2,7 @@
 
 **ArxOS** brings version control to building management. Import IFC files, manage equipment and rooms, track changes with Git, and visualize buildings in 3D — all from your terminal.
 
-**A Decentralized Physical Infrastructure Network (DePIN)** powered by Git—no blockchain complexity, just distributed sensors, crowd-sourced verification, and network effects that grow with participation.
+**A Decentralized Physical Infrastructure Network (DePIN)** powered by Git—no blockchain complexity, just distributed, crowd-sourced verification, and network effects that grow with participation.
 
 ### What Makes ArxOS Different?
 

@@ -1,9 +1,0 @@
----
-alwaysApply: true
----
-
-Always integrate Git operations through src/git/manager.rs:
-- Use BuildingGitManager for repository operations
-- Stage changes before committing
-- Follow Git-native philosophy for all data changes
-- No direct filesystem writes—always go through Git

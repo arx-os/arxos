@@ -1,125 +1,152 @@
 import Foundation
 import Combine
 
-#if canImport(arxos_mobile)
-import arxos_mobile
-#endif
-
-// MARK: - ArxOS Core Integration using C FFI
+/// High-level facade around the ArxOS FFI surface used by the SwiftUI app.
 class ArxOSCore: ObservableObject {
+    @Published private(set) var activeBuildingName: String
     private let ffi: ArxOSCoreFFI
     
-    init() {
+    init(activeBuildingName: String = "main") {
+        self.activeBuildingName = activeBuildingName
         self.ffi = ArxOSCoreFFI()
-        print("ArxOS Core initialized")
     }
     
-    init(path: String) {
-        self.ffi = ArxOSCoreFFI()
-        print("ArxOS Core initialized with path: \(path)")
+    func setActiveBuilding(_ building: String) {
+        let trimmed = building.trimmingCharacters(in: .whitespacesAndNewlines)
+        activeBuildingName = trimmed.isEmpty ? "main" : trimmed
     }
+    
+    private func resolveBuilding(_ building: String?) -> String {
+        let trimmed = building?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed?.isEmpty == false ? trimmed! : activeBuildingName
+    }
+    
+    // MARK: - Terminal command helpers
     
     func executeRoomCommand(_ arguments: [String], completion: @escaping (Result<String, Error>) -> Void) {
-        let command = "room " + arguments.joined(separator: " ")
-        executeCommand(command, completion: completion)
+        guard let action = arguments.first?.lowercased() else {
+            completion(.failure(TerminalError.invalidArguments))
+            return
+        }
+        let building = resolveBuilding(nil)
+        switch action {
+        case "list":
+            ffi.listRooms(buildingName: building) { result in
+                switch result {
+                case .success(let rooms):
+                    let lines = rooms.map { "\($0.name) (floor \($0.floor))" }
+                    completion(.success(lines.joined(separator: "\n")))
+                case .failure(let error):
+                    completion(.failure(error))
+                }
+            }
+        default:
+            completion(.failure(TerminalError.ffiError("Room command '\(action)' not supported on mobile yet")))
+        }
     }
     
     func executeEquipmentCommand(_ arguments: [String], completion: @escaping (Result<String, Error>) -> Void) {
-        let command = "equipment " + arguments.joined(separator: " ")
-        executeCommand(command, completion: completion)
+        guard let action = arguments.first?.lowercased() else {
+            completion(.failure(TerminalError.invalidArguments))
+            return
+        }
+        let building = resolveBuilding(nil)
+        switch action {
+        case "list":
+            ffi.listEquipment(buildingName: building) { result in
+                switch result {
+                case .success(let equipment):
+                    let lines = equipment.map { "\($0.name) [\($0.type)] - \($0.locationDescription)" }
+                    completion(.success(lines.joined(separator: "\n")))
+                case .failure(let error):
+                    completion(.failure(error))
+                }
+            }
+        default:
+            completion(.failure(TerminalError.ffiError("Equipment command '\(action)' not supported on mobile yet")))
+        }
     }
     
     func getStatus(completion: @escaping (Result<String, Error>) -> Void) {
-        executeCommand("status", completion: completion)
+        completion(.failure(TerminalError.ffiError("Status command not yet available on mobile")))
     }
     
     func getDiff(completion: @escaping (Result<String, Error>) -> Void) {
-        executeCommand("diff", completion: completion)
+        completion(.failure(TerminalError.ffiError("Diff command not yet available on mobile")))
     }
     
     func getHistory(completion: @escaping (Result<String, Error>) -> Void) {
-        executeCommand("history", completion: completion)
+        completion(.failure(TerminalError.ffiError("History command not yet available on mobile")))
     }
     
-    private func executeCommand(_ command: String, completion: @escaping (Result<String, Error>) -> Void) {
-        DispatchQueue.global().async {
-            let result = FFIWrapper.executeCommand(command)
-            DispatchQueue.main.async {
-                completion(result)
+    // MARK: - AR helpers
+    
+    func processARData(_ data: Data, completion: @escaping (Result<[DetectedEquipment], Error>) -> Void) {
+        guard let jsonString = String(data: data, encoding: .utf8) else {
+            completion(.failure(TerminalError.parseError("Invalid AR scan payload")))
+            return
+        }
+        ffi.parseARScan(jsonData: jsonString) { result in
+            switch result {
+            case .success(let scanData):
+                completion(.success(scanData.detectedEquipment))
+            case .failure(let error):
+                completion(.failure(error))
             }
         }
     }
     
-    func processARData(_ data: Data, roomName: String, completion: @escaping (Result<[DetectedEquipment], Error>) -> Void) {
-        DispatchQueue.global().async {
-            let jsonString = String(data: data, encoding: .utf8) ?? "{}"
-            let result = FFIWrapper.parseARScan(jsonString: jsonString)
-            
-            DispatchQueue.main.async {
-                completion(result)
-            }
-        }
+    func saveARScan(
+        scanData: ARScanData,
+        buildingName: String? = nil,
+        confidenceThreshold: Double = 0.7,
+        completion: @escaping (Result<ARScanSaveResult, Error>) -> Void
+    ) {
+        let building = resolveBuilding(buildingName ?? scanData.roomName)
+        ffi.saveARScan(
+            scanData: scanData,
+            buildingName: building,
+            confidenceThreshold: confidenceThreshold,
+            completion: completion
+        )
     }
     
-    func saveARScan(_ equipment: [DetectedEquipment], room: String, completion: @escaping (Result<String, Error>) -> Void) {
-        DispatchQueue.global().async {
-            let result = FFIWrapper.saveARScan(equipment: equipment, room: room)
-            DispatchQueue.main.async {
-                completion(result)
-            }
-        }
+    func listPendingEquipment(buildingName: String? = nil, completion: @escaping (Result<PendingEquipmentListResult, Error>) -> Void) {
+        ffi.listPendingEquipment(buildingName: resolveBuilding(buildingName), completion: completion)
     }
     
-    private func iconForEquipmentType(_ type: String) -> String {
-        switch type.lowercased() {
-        case "hvac":
-            return "fan"
-        case "electrical":
-            return "bolt"
-        case "av":
-            return "tv"
-        case "furniture":
-            return "chair"
-        case "safety":
-            return "exclamationmark.triangle"
-        case "plumbing":
-            return "drop"
-        case "network":
-            return "network"
-        default:
-            return "wrench"
-        }
-    }
-}
-
-// MARK: - FFI Wrapper
-struct FFIWrapper {
-    static func executeCommand(_ command: String) -> Result<String, Error> {
-        #if canImport(arxos_mobile)
-        // FFI implementation when library is linked
-        // return .success(executeFFICommand(command))
-        return .failure(TerminalError.ffiError("FFI not yet linked"))
-        #else
-        return .failure(TerminalError.ffiError("FFI library not available"))
-        #endif
+    func confirmPendingEquipment(
+        buildingName: String,
+        pendingId: String,
+        commitToGit: Bool = true,
+        completion: @escaping (Result<PendingEquipmentConfirmResult, Error>) -> Void
+    ) {
+        ffi.confirmPendingEquipment(
+            buildingName: resolveBuilding(buildingName),
+            pendingId: pendingId,
+            commitToGit: commitToGit,
+            completion: completion
+        )
     }
     
-    static func parseARScan(jsonString: String) -> Result<[DetectedEquipment], Error> {
-        #if canImport(arxos_mobile)
-        // FFI implementation when library is linked
-        return .success([])
-        #else
-        return .failure(TerminalError.ffiError("FFI library not available"))
-        #endif
+    func rejectPendingEquipment(
+        buildingName: String,
+        pendingId: String,
+        completion: @escaping (Result<PendingEquipmentRejectResult, Error>) -> Void
+    ) {
+        ffi.rejectPendingEquipment(
+            buildingName: resolveBuilding(buildingName),
+            pendingId: pendingId,
+            completion: completion
+        )
     }
     
-    static func saveARScan(equipment: [DetectedEquipment], room: String) -> Result<String, Error> {
-        #if canImport(arxos_mobile)
-        // FFI implementation when library is linked
-        return .success("AR scan saved for \(room)")
-        #else
-        return .failure(TerminalError.ffiError("FFI library not available"))
-        #endif
+    func listEquipment(buildingName: String? = nil, completion: @escaping (Result<[Equipment], Error>) -> Void) {
+        ffi.listEquipment(buildingName: resolveBuilding(buildingName), completion: completion)
+    }
+    
+    func listRooms(buildingName: String? = nil, completion: @escaping (Result<[Room], Error>) -> Void) {
+        ffi.listRooms(buildingName: resolveBuilding(buildingName), completion: completion)
     }
 }
 
@@ -128,100 +155,42 @@ class TerminalService: ObservableObject {
     private let arxosCore = ArxOSCore()
     
     func executeCommand(_ command: String, completion: @escaping (Result<String, Error>) -> Void) {
-        let components = command.components(separatedBy: " ")
-        guard !components.isEmpty else {
+        let components = command.split(separator: " ").map(String.init)
+        guard let commandName = components.first else {
             completion(.success(""))
             return
         }
-        
-        let commandName = components[0]
         let arguments = Array(components.dropFirst())
         
-        switch commandName {
+        switch commandName.lowercased() {
         case "help":
             completion(.success(getHelpText()))
-            
         case "room":
-            handleRoomCommand(arguments, completion: completion)
-            
+            arxosCore.executeRoomCommand(arguments, completion: completion)
         case "equipment":
-            handleEquipmentCommand(arguments, completion: completion)
-            
+            arxosCore.executeEquipmentCommand(arguments, completion: completion)
         case "status":
-            handleStatusCommand(completion: completion)
-            
+            arxosCore.getStatus(completion: completion)
         case "diff":
-            handleDiffCommand(completion: completion)
-            
+            arxosCore.getDiff(completion: completion)
         case "history":
-            handleHistoryCommand(completion: completion)
-            
+            arxosCore.getHistory(completion: completion)
         default:
             completion(.failure(TerminalError.unknownCommand(commandName)))
         }
     }
     
     private func getHelpText() -> String {
-        return """
+        """
         ArxOS Mobile
         
         Available commands:
-        room create --name <name> --floor <floor>  Create a new room
         room list                                  List all rooms
-        room show <id>                            Show room details
-        
-        equipment add --name <name> --type <type>  Add equipment
-        equipment list                            List equipment
-        equipment update <id>                     Update equipment
-        
-        status                                    Show system status
-        diff                                      Show changes
-        history                                   Show commit history
-        
-        help                                      Show this help
+        equipment list                             List equipment
+        status                                     Show system status (coming soon)
+        diff                                       Show changes (coming soon)
+        history                                    Show commit history (coming soon)
+        help                                       Show this help
         """
     }
-    
-    private func handleRoomCommand(_ arguments: [String], completion: @escaping (Result<String, Error>) -> Void) {
-        arxosCore.executeRoomCommand(arguments) { result in
-            DispatchQueue.main.async {
-                completion(result)
-            }
-        }
-    }
-    
-    private func handleEquipmentCommand(_ arguments: [String], completion: @escaping (Result<String, Error>) -> Void) {
-        arxosCore.executeEquipmentCommand(arguments) { result in
-            DispatchQueue.main.async {
-                completion(result)
-            }
-        }
-    }
-    
-    private func handleStatusCommand(completion: @escaping (Result<String, Error>) -> Void) {
-        arxosCore.getStatus { result in
-            DispatchQueue.main.async {
-                completion(result)
-            }
-        }
-    }
-    
-    private func handleDiffCommand(completion: @escaping (Result<String, Error>) -> Void) {
-        arxosCore.getDiff { result in
-            DispatchQueue.main.async {
-                completion(result)
-            }
-        }
-    }
-    
-    private func handleHistoryCommand(completion: @escaping (Result<String, Error>) -> Void) {
-        arxosCore.getHistory { result in
-            DispatchQueue.main.async {
-                completion(result)
-            }
-        }
-    }
 }
-
-// MARK: - Error handling
-// TerminalError is defined in ArxOSCoreFFI.swift

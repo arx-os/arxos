@@ -3,14 +3,200 @@
 use super::canvas_operations;
 use super::projections;
 use super::types::*;
+use arx::core::{EquipmentStatus, EquipmentType};
 use arx::ifc::{SpatialIndex, SpatialQueryResult, SpatialRelationship};
 use arx::spatial::{BoundingBox3D, Point3D};
 use arx::yaml::BuildingData;
 use std::collections::HashMap;
+use std::sync::Arc;
+
+struct SceneCache {
+    building_name: Arc<String>,
+    floors: Vec<Floor3D>,
+    equipment: Vec<Equipment3D>,
+    rooms: Vec<Room3D>,
+}
+
+fn extract_floors_3d(building_data: &BuildingData) -> Vec<Floor3D> {
+    building_data
+        .floors
+        .iter()
+        .map(|floor| {
+            let elevation = floor.elevation.unwrap_or(floor.level as f64 * 3.0);
+            let bounding_box = floor.bounding_box.clone().unwrap_or_else(|| BoundingBox3D {
+                min: Point3D {
+                    x: 0.0,
+                    y: 0.0,
+                    z: elevation,
+                },
+                max: Point3D {
+                    x: 100.0,
+                    y: 100.0,
+                    z: elevation + 3.0,
+                },
+            });
+
+            let rooms = floor
+                .wings
+                .iter()
+                .flat_map(|w| w.rooms.iter())
+                .map(|r| Arc::new(r.id.clone()))
+                .collect();
+
+            let equipment = floor
+                .equipment
+                .iter()
+                .map(|e| Arc::new(e.id.clone()))
+                .collect();
+
+            Floor3D {
+                id: Arc::new(floor.id.clone()),
+                name: Arc::new(floor.name.clone()),
+                level: floor.level,
+                elevation,
+                bounding_box,
+                rooms,
+                equipment,
+            }
+        })
+        .collect()
+}
+
+fn extract_equipment_3d(building_data: &BuildingData) -> Vec<Equipment3D> {
+    let mut equipment_3d = Vec::new();
+
+    for floor in &building_data.floors {
+        // Extract floor-level equipment
+        for equipment in &floor.equipment {
+            equipment_3d.push(Equipment3D {
+                id: Arc::new(equipment.id.clone()),
+                name: Arc::new(equipment.name.clone()),
+                equipment_type: equipment.equipment_type.clone(),
+                status: equipment.status,
+                position: Point3D {
+                    x: equipment.position.x,
+                    y: equipment.position.y,
+                    z: equipment.position.z,
+                },
+                bounding_box: BoundingBox3D {
+                    min: Point3D {
+                        x: equipment.position.x - 0.5,
+                        y: equipment.position.y - 0.5,
+                        z: equipment.position.z - 0.5,
+                    },
+                    max: Point3D {
+                        x: equipment.position.x + 0.5,
+                        y: equipment.position.y + 0.5,
+                        z: equipment.position.z + 0.5,
+                    },
+                },
+                floor_level: floor.level,
+                room_id: equipment
+                    .room_id
+                    .as_ref()
+                    .map(|room_id| Arc::new(room_id.clone())),
+                connections: Vec::new(),
+                spatial_relationships: None,
+                nearest_entity_distance: None,
+            });
+        }
+
+        // Extract equipment from rooms within wings
+        for wing in &floor.wings {
+            for room in &wing.rooms {
+                for equipment in &room.equipment {
+                    equipment_3d.push(Equipment3D {
+                        id: Arc::new(equipment.id.clone()),
+                        name: Arc::new(equipment.name.clone()),
+                        equipment_type: equipment.equipment_type.clone(),
+                        status: equipment.status,
+                        position: Point3D {
+                            x: equipment.position.x,
+                            y: equipment.position.y,
+                            z: equipment.position.z,
+                        },
+                        bounding_box: BoundingBox3D {
+                            min: Point3D {
+                                x: equipment.position.x - 0.5,
+                                y: equipment.position.y - 0.5,
+                                z: equipment.position.z - 0.5,
+                            },
+                            max: Point3D {
+                                x: equipment.position.x + 0.5,
+                                y: equipment.position.y + 0.5,
+                                z: equipment.position.z + 0.5,
+                            },
+                        },
+                        floor_level: floor.level,
+                        room_id: Some(Arc::new(room.id.clone())),
+                        connections: Vec::new(),
+                        spatial_relationships: None,
+                        nearest_entity_distance: None,
+                    });
+                }
+            }
+        }
+    }
+
+    equipment_3d
+}
+
+fn extract_rooms_3d(building_data: &BuildingData) -> Vec<Room3D> {
+    let mut rooms_3d = Vec::new();
+
+    for floor in &building_data.floors {
+        for wing in &floor.wings {
+            for room in &wing.rooms {
+                rooms_3d.push(Room3D {
+                    id: Arc::new(room.id.clone()),
+                    name: Arc::new(room.name.clone()),
+                    room_type: room.room_type.clone(),
+                    position: Point3D {
+                        x: room.spatial_properties.position.x,
+                        y: room.spatial_properties.position.y,
+                        z: room.spatial_properties.position.z,
+                    },
+                    bounding_box: BoundingBox3D {
+                        min: Point3D {
+                            x: room.spatial_properties.bounding_box.min.x,
+                            y: room.spatial_properties.bounding_box.min.y,
+                            z: room.spatial_properties.bounding_box.min.z,
+                        },
+                        max: Point3D {
+                            x: room.spatial_properties.bounding_box.max.x,
+                            y: room.spatial_properties.bounding_box.max.y,
+                            z: room.spatial_properties.bounding_box.max.z,
+                        },
+                    },
+                    floor_level: floor.level,
+                    equipment: room
+                        .equipment
+                        .iter()
+                        .map(|e| Arc::new(e.id.clone()))
+                        .collect(),
+                });
+            }
+        }
+    }
+
+    rooms_3d
+}
+
+impl SceneCache {
+    fn new(building_data: &BuildingData) -> Self {
+        Self {
+            building_name: Arc::new(building_data.building.name.clone()),
+            floors: extract_floors_3d(building_data),
+            equipment: extract_equipment_3d(building_data),
+            rooms: extract_rooms_3d(building_data),
+        }
+    }
+}
 
 /// Advanced 3D building renderer with camera and projection systems
 pub struct Building3DRenderer {
     pub(super) building_data: BuildingData,
+    scene_cache: SceneCache,
     pub(super) config: Render3DConfig,
     pub camera: Camera3D,
     pub projection: Projection3D,
@@ -29,9 +215,11 @@ impl Building3DRenderer {
             config.scale_factor,
         );
         let viewport = Viewport3D::new(config.max_width, config.max_height);
+        let scene_cache = SceneCache::new(&building_data);
 
         Self {
             building_data,
+            scene_cache,
             config,
             camera,
             projection,
@@ -52,9 +240,11 @@ impl Building3DRenderer {
             config.scale_factor,
         );
         let viewport = Viewport3D::new(config.max_width, config.max_height);
+        let scene_cache = SceneCache::new(&building_data);
 
         Self {
             building_data,
+            scene_cache,
             config,
             camera,
             projection,
@@ -207,22 +397,22 @@ impl Building3DRenderer {
     pub fn render_3d_advanced(&self) -> Result<Scene3D, Box<dyn std::error::Error>> {
         let start_time = std::time::Instant::now();
 
-        // Extract 3D data from building
-        let floors = self.extract_floors_3d()?;
-        let equipment = self.extract_equipment_3d()?;
-        let rooms = self.extract_rooms_3d()?;
+        // Use cached 3D data from building
+        let floors = &self.scene_cache.floors;
+        let equipment = &self.scene_cache.equipment;
+        let rooms = &self.scene_cache.rooms;
 
         // Calculate overall bounding box
-        let bounding_box = self.calculate_overall_bounds(&floors, &equipment, &rooms);
+        let bounding_box = self.calculate_overall_bounds(floors, equipment, rooms);
 
         // Apply 3D transformations
-        let transformed_floors = self.transform_floors_3d(&floors);
-        let transformed_equipment = self.transform_equipment_3d(&equipment);
-        let transformed_rooms = self.transform_rooms_3d(&rooms);
+        let transformed_floors = self.transform_floors_3d(floors);
+        let transformed_equipment = self.transform_equipment_3d(equipment);
+        let transformed_rooms = self.transform_rooms_3d(rooms);
 
         // Create scene
         let scene = Scene3D {
-            building_name: self.building_data.building.name.clone(),
+            building_name: Arc::clone(&self.scene_cache.building_name),
             floors: transformed_floors,
             equipment: transformed_equipment,
             rooms: transformed_rooms,
@@ -255,29 +445,29 @@ impl Building3DRenderer {
     pub fn render_3d_with_spatial_queries(&self) -> Result<Scene3D, Box<dyn std::error::Error>> {
         let start_time = std::time::Instant::now();
 
-        // Extract 3D data from building
-        let floors = self.extract_floors_3d()?;
-        let equipment = self.extract_equipment_3d()?;
-        let rooms = self.extract_rooms_3d()?;
+        // Use cached 3D data from building
+        let floors = &self.scene_cache.floors;
+        let equipment = &self.scene_cache.equipment;
+        let rooms = &self.scene_cache.rooms;
 
         // Calculate overall bounding box
-        let bounding_box = self.calculate_overall_bounds(&floors, &equipment, &rooms);
+        let bounding_box = self.calculate_overall_bounds(floors, equipment, rooms);
 
         // Use spatial index to enhance equipment data if available
         let enhanced_equipment = if self.spatial_index.is_some() {
-            self.enhance_equipment_with_spatial_data(&equipment)?
+            self.enhance_equipment_with_spatial_data(equipment)?
         } else {
-            equipment
+            equipment.clone()
         };
 
         // Apply 3D transformations
-        let transformed_floors = self.transform_floors_3d(&floors);
+        let transformed_floors = self.transform_floors_3d(floors);
         let transformed_equipment = self.transform_equipment_3d(&enhanced_equipment);
-        let transformed_rooms = self.transform_rooms_3d(&rooms);
+        let transformed_rooms = self.transform_rooms_3d(rooms);
 
         // Create scene with enhanced metadata
         let scene = Scene3D {
-            building_name: self.building_data.building.name.clone(),
+            building_name: Arc::clone(&self.scene_cache.building_name),
             floors: transformed_floors,
             equipment: transformed_equipment,
             rooms: transformed_rooms,
@@ -311,7 +501,7 @@ impl Building3DRenderer {
         // Header with camera info
         output.push_str(&format!(
             "🏢 {} - Advanced 3D Building Visualization\n",
-            scene.building_name
+            scene.building_name.as_str()
         ));
         output.push_str(&format!(
             "📊 {} floors, {} rooms, {} equipment\n",
@@ -398,7 +588,7 @@ impl Building3DRenderer {
         output.push_str("┌─────────────────────────────────────────────────────────────┐\n");
         output.push_str(&format!(
             "│ 🏢 {} - 3D ASCII Building Visualization │\n",
-            scene.building_name
+            scene.building_name.as_str()
         ));
         output.push_str("└─────────────────────────────────────────────────────────────┘\n");
 
@@ -409,8 +599,9 @@ impl Building3DRenderer {
 
         // Add legend
         output.push_str("└─────────────────────────────────────────────────────────────┘\n");
-        output
-            .push_str("Legend: █=Wall │ ╬=Equipment │ ○=Room │ ─=Floor │ ▲=HVAC │ ●=Electrical\n");
+        output.push_str(
+            "Legend: █=Wall │ ╬=Generic │ ○=Room │ ─=Floor │ ▲=HVAC │ ●=Electrical │ ◊=Plumbing │ ◈=Safety │ ↯=Network │ ♫=AV │ ⌂=Furniture\n",
+        );
 
         Ok(output)
     }
@@ -502,17 +693,17 @@ impl Building3DRenderer {
     pub fn render_3d(&self) -> Result<Scene3D, Box<dyn std::error::Error>> {
         let start_time = std::time::Instant::now();
 
-        // Extract 3D data from building
-        let floors = self.extract_floors_3d()?;
-        let equipment = self.extract_equipment_3d()?;
-        let rooms = self.extract_rooms_3d()?;
+        // Use cached 3D data from building
+        let floors = self.scene_cache.floors.clone();
+        let equipment = self.scene_cache.equipment.clone();
+        let rooms = self.scene_cache.rooms.clone();
 
         // Calculate overall bounding box
         let bounding_box = self.calculate_overall_bounds(&floors, &equipment, &rooms);
 
         // Create scene
         let scene = Scene3D {
-            building_name: self.building_data.building.name.clone(),
+            building_name: Arc::clone(&self.scene_cache.building_name),
             floors,
             equipment,
             rooms,
@@ -548,7 +739,7 @@ impl Building3DRenderer {
         // Header
         output.push_str(&format!(
             "🏢 {} - 3D Building Visualization\n",
-            scene.building_name
+            scene.building_name.as_str()
         ));
         output.push_str(&format!(
             "📊 {} floors, {} rooms, {} equipment\n",
@@ -573,163 +764,6 @@ impl Building3DRenderer {
         }
 
         Ok(output)
-    }
-
-    /// Extract floors as 3D objects
-    fn extract_floors_3d(&self) -> Result<Vec<Floor3D>, Box<dyn std::error::Error>> {
-        let mut floors_3d = Vec::new();
-
-        for floor in &self.building_data.floors {
-            let floor_3d = Floor3D {
-                id: floor.id.clone(),
-                name: floor.name.clone(),
-                level: floor.level,
-                elevation: floor.elevation.unwrap_or(floor.level as f64 * 3.0),
-                bounding_box: floor.bounding_box.clone().unwrap_or_else(|| {
-                    let elev = floor.elevation.unwrap_or(floor.level as f64 * 3.0);
-                    BoundingBox3D {
-                        min: Point3D {
-                            x: 0.0,
-                            y: 0.0,
-                            z: elev,
-                        },
-                        max: Point3D {
-                            x: 100.0,
-                            y: 100.0,
-                            z: elev + 3.0,
-                        },
-                    }
-                }),
-                rooms: floor
-                    .wings
-                    .iter()
-                    .flat_map(|w| w.rooms.iter())
-                    .map(|r| r.id.clone())
-                    .collect(),
-                equipment: floor.equipment.iter().map(|e| e.id.clone()).collect(),
-            };
-            floors_3d.push(floor_3d);
-        }
-
-        Ok(floors_3d)
-    }
-
-    /// Extract equipment as 3D objects
-    fn extract_equipment_3d(&self) -> Result<Vec<Equipment3D>, Box<dyn std::error::Error>> {
-        let mut equipment_3d = Vec::new();
-
-        for floor in &self.building_data.floors {
-            // Extract floor-level equipment
-            for equipment in &floor.equipment {
-                let equipment_3d_item = Equipment3D {
-                    id: equipment.id.clone(),
-                    name: equipment.name.clone(),
-                    equipment_type: format!("{:?}", equipment.equipment_type),
-                    status: format!("{:?}", equipment.status),
-                    position: Point3D {
-                        x: equipment.position.x,
-                        y: equipment.position.y,
-                        z: equipment.position.z,
-                    },
-                    bounding_box: BoundingBox3D {
-                        min: Point3D {
-                            x: equipment.position.x - 0.5,
-                            y: equipment.position.y - 0.5,
-                            z: equipment.position.z - 0.5,
-                        },
-                        max: Point3D {
-                            x: equipment.position.x + 0.5,
-                            y: equipment.position.y + 0.5,
-                            z: equipment.position.z + 0.5,
-                        },
-                    },
-                    floor_level: floor.level,
-                    room_id: equipment.room_id.clone(),
-                    connections: Vec::new(),
-                    spatial_relationships: None,
-                    nearest_entity_distance: None,
-                };
-                equipment_3d.push(equipment_3d_item);
-            }
-
-            // Extract equipment from rooms within wings
-            for wing in &floor.wings {
-                for room in &wing.rooms {
-                    for equipment in &room.equipment {
-                        let equipment_3d_item = Equipment3D {
-                            id: equipment.id.clone(),
-                            name: equipment.name.clone(),
-                            equipment_type: format!("{:?}", equipment.equipment_type),
-                            status: format!("{:?}", equipment.status),
-                            position: Point3D {
-                                x: equipment.position.x,
-                                y: equipment.position.y,
-                                z: equipment.position.z,
-                            },
-                            bounding_box: BoundingBox3D {
-                                min: Point3D {
-                                    x: equipment.position.x - 0.5,
-                                    y: equipment.position.y - 0.5,
-                                    z: equipment.position.z - 0.5,
-                                },
-                                max: Point3D {
-                                    x: equipment.position.x + 0.5,
-                                    y: equipment.position.y + 0.5,
-                                    z: equipment.position.z + 0.5,
-                                },
-                            },
-                            floor_level: floor.level,
-                            room_id: Some(room.id.clone()),
-                            connections: Vec::new(),
-                            spatial_relationships: None,
-                            nearest_entity_distance: None,
-                        };
-                        equipment_3d.push(equipment_3d_item);
-                    }
-                }
-            }
-        }
-
-        Ok(equipment_3d)
-    }
-
-    /// Extract rooms as 3D objects
-    fn extract_rooms_3d(&self) -> Result<Vec<Room3D>, Box<dyn std::error::Error>> {
-        let mut rooms_3d = Vec::new();
-
-        for floor in &self.building_data.floors {
-            for wing in &floor.wings {
-                for room in &wing.rooms {
-                    let room_3d = Room3D {
-                        id: room.id.clone(),
-                        name: room.name.clone(),
-                        room_type: format!("{:?}", room.room_type),
-                        position: Point3D {
-                            x: room.spatial_properties.position.x,
-                            y: room.spatial_properties.position.y,
-                            z: room.spatial_properties.position.z,
-                        },
-                        bounding_box: BoundingBox3D {
-                            min: Point3D {
-                                x: room.spatial_properties.bounding_box.min.x,
-                                y: room.spatial_properties.bounding_box.min.y,
-                                z: room.spatial_properties.bounding_box.min.z,
-                            },
-                            max: Point3D {
-                                x: room.spatial_properties.bounding_box.max.x,
-                                y: room.spatial_properties.bounding_box.max.y,
-                                z: room.spatial_properties.bounding_box.max.z,
-                            },
-                        },
-                        floor_level: floor.level,
-                        equipment: Vec::new(), // Equipment will be found when equipment data is available
-                    };
-                    rooms_3d.push(room_3d);
-                }
-            }
-        }
-
-        Ok(rooms_3d)
     }
 
     /// Calculate overall bounding box for the building
@@ -801,7 +835,9 @@ impl Building3DRenderer {
         // Floor header
         output.push_str(&format!(
             "┌─ Floor {}: {} (Level {}) ─┐\n",
-            floor.level, floor.name, floor.level
+            floor.level,
+            floor.name.as_str(),
+            floor.level
         ));
 
         // Floor elevation info
@@ -831,13 +867,13 @@ impl Building3DRenderer {
                 if i > 0 {
                     output.push_str(", ");
                 }
-                let status_symbol = match equipment.status.as_str() {
-                    "Healthy" => "🟢",
-                    "Warning" => "🟡",
-                    "Critical" => "🔴",
-                    _ => "⚪",
+                let status_symbol = match equipment.status {
+                    EquipmentStatus::Active => "🟢",
+                    EquipmentStatus::Maintenance => "🟡",
+                    EquipmentStatus::OutOfOrder => "🔴",
+                    EquipmentStatus::Inactive | EquipmentStatus::Unknown => "⚪",
                 };
-                output.push_str(&format!("{}{}", status_symbol, equipment.name));
+                output.push_str(&format!("{}{}", status_symbol, equipment.name.as_str()));
             }
             output.push_str(" │\n");
         }
@@ -855,7 +891,7 @@ impl Building3DRenderer {
                 if i > 0 {
                     output.push_str(", ");
                 }
-                output.push_str(&format!("{} ({})", room.name, room.room_type));
+                output.push_str(&format!("{} ({})", room.name.as_str(), room.room_type));
             }
             output.push_str(" │\n");
         }
@@ -873,20 +909,20 @@ impl Building3DRenderer {
         let mut output = String::new();
 
         // Count equipment by status
-        let mut status_counts: HashMap<String, usize> = HashMap::new();
+        let mut status_counts: HashMap<EquipmentStatus, usize> = HashMap::new();
         for equipment in &scene.equipment {
-            *status_counts.entry(equipment.status.clone()).or_insert(0) += 1;
+            *status_counts.entry(equipment.status).or_insert(0) += 1;
         }
 
         output.push_str("📊 Equipment Status Summary:\n");
         output.push_str("┌─────────────────────────────────────────────────────────────┐\n");
 
         for (status, count) in status_counts {
-            let symbol = match status.as_str() {
-                "Healthy" => "🟢",
-                "Warning" => "🟡",
-                "Critical" => "🔴",
-                _ => "⚪",
+            let symbol = match status {
+                EquipmentStatus::Active => "🟢",
+                EquipmentStatus::Maintenance => "🟡",
+                EquipmentStatus::OutOfOrder => "🔴",
+                EquipmentStatus::Inactive | EquipmentStatus::Unknown => "⚪",
             };
             output.push_str(&format!("│ {} {}: {} equipment\n", symbol, status, count));
         }
@@ -1008,7 +1044,9 @@ impl Building3DRenderer {
         for floor in &floors {
             output.push_str(&format!(
                 "│ Floor {}: {} (Z: {:.1}m) │\n",
-                floor.level, floor.name, floor.elevation
+                floor.level,
+                floor.name.as_str(),
+                floor.elevation
             ));
 
             // Show equipment on this floor
@@ -1019,16 +1057,16 @@ impl Building3DRenderer {
                 .collect();
 
             for equipment in &floor_equipment {
-                let status_symbol = match equipment.status.as_str() {
-                    "Healthy" => "🟢",
-                    "Warning" => "🟡",
-                    "Critical" => "🔴",
-                    _ => "⚪",
+                let status_symbol = match equipment.status {
+                    EquipmentStatus::Active => "🟢",
+                    EquipmentStatus::Maintenance => "🟡",
+                    EquipmentStatus::OutOfOrder => "🔴",
+                    EquipmentStatus::Inactive | EquipmentStatus::Unknown => "⚪",
                 };
                 output.push_str(&format!(
                     "│   {} {} at ({:.1}, {:.1}, {:.1}) │\n",
                     status_symbol,
-                    equipment.name,
+                    equipment.name.as_str(),
                     equipment.position.x,
                     equipment.position.y,
                     equipment.position.z
@@ -1113,15 +1151,17 @@ impl Building3DRenderer {
             .sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
 
         for (equipment, depth) in &equipment_with_depth {
-            let status_symbol = match equipment.status.as_str() {
-                "Healthy" => "🟢",
-                "Warning" => "🟡",
-                "Critical" => "🔴",
-                _ => "⚪",
+            let status_symbol = match equipment.status {
+                EquipmentStatus::Active => "🟢",
+                EquipmentStatus::Maintenance => "🟡",
+                EquipmentStatus::OutOfOrder => "🔴",
+                EquipmentStatus::Inactive | EquipmentStatus::Unknown => "⚪",
             };
             output.push_str(&format!(
                 "│   {} {} (depth: {:.1}m) │\n",
-                status_symbol, equipment.name, depth
+                status_symbol,
+                equipment.name.as_str(),
+                depth
             ));
         }
 
@@ -1143,11 +1183,15 @@ impl Building3DRenderer {
             let x = ((equipment.position.x / 10.0) as usize).min(grid_size - 1);
             let y = ((equipment.position.y / 10.0) as usize).min(grid_size - 1);
 
-            let char = match equipment.equipment_type.as_str() {
-                s if s.contains("HVAC") => 'H',
-                s if s.contains("ELECTRIC") => 'E',
-                s if s.contains("FIRE") => 'F',
-                _ => 'O',
+            let char = match equipment.equipment_type {
+                EquipmentType::HVAC => 'H',
+                EquipmentType::Electrical => 'E',
+                EquipmentType::Safety => 'S',
+                EquipmentType::Network => 'N',
+                EquipmentType::AV => 'A',
+                EquipmentType::Furniture => 'F',
+                EquipmentType::Plumbing => 'P',
+                EquipmentType::Other(_) => 'O',
             };
 
             grid[y][x] = char;
@@ -1191,7 +1235,7 @@ impl Building3DRenderer {
                     if i > 0 {
                         output.push_str(", ");
                     }
-                    output.push_str(&eq.name);
+                    output.push_str(eq.name.as_str());
                 }
             }
             output.push_str(" │\n");
@@ -1218,7 +1262,9 @@ impl Building3DRenderer {
         for equipment in &equipment_by_y {
             output.push_str(&format!(
                 "│   {} at Y: {:.1}m, Z: {:.1}m │\n",
-                equipment.name, equipment.position.y, equipment.position.z
+                equipment.name.as_str(),
+                equipment.position.y,
+                equipment.position.z
             ));
         }
 

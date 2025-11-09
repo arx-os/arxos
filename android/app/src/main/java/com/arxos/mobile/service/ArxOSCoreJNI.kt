@@ -3,6 +3,9 @@ package com.arxos.mobile.service
 import android.content.Context
 import android.util.Log
 import com.arxos.mobile.data.Equipment
+import com.arxos.mobile.data.ARScanData
+import com.arxos.mobile.data.DetectedEquipment
+import com.arxos.mobile.data.Vector3
 
 /**
  * JNI wrapper for ArxOS FFI functions
@@ -386,10 +389,10 @@ class ArxOSCoreJNIWrapper(private val jni: ArxOSCoreJNI) {
             id = obj.getString("id"),
             name = obj.getString("name"),
             room_type = obj.getString("room_type"),
-            position = Position(
-                x = positionObj.getDouble("x"),
-                y = positionObj.getDouble("y"),
-                z = positionObj.getDouble("z")
+            position = Vector3(
+                x = positionObj.getDouble("x").toFloat(),
+                y = positionObj.getDouble("y").toFloat(),
+                z = positionObj.getDouble("z").toFloat()
             ),
             properties = properties
         )
@@ -422,10 +425,10 @@ class ArxOSCoreJNIWrapper(private val jni: ArxOSCoreJNI) {
             name = obj.getString("name"),
             equipment_type = obj.getString("equipment_type"),
             status = obj.getString("status"),
-            position = Position(
-                x = positionObj.getDouble("x"),
-                y = positionObj.getDouble("y"),
-                z = positionObj.getDouble("z")
+            position = Vector3(
+                x = positionObj.getDouble("x").toFloat(),
+                y = positionObj.getDouble("y").toFloat(),
+                z = positionObj.getDouble("z").toFloat()
             ),
             properties = properties
         )
@@ -441,7 +444,13 @@ class ArxOSCoreJNIWrapper(private val jni: ArxOSCoreJNI) {
                 id = eqObj.optString("id", ""),
                 name = eqObj.getString("name"),
                 type = eqObj.getString("type"),
-                position = "${posObj.getDouble("x")},${posObj.getDouble("y")},${posObj.getDouble("z")}"
+                position = Vector3(
+                    x = posObj.getDouble("x").toFloat(),
+                    y = posObj.getDouble("y").toFloat(),
+                    z = posObj.getDouble("z").toFloat()
+                ),
+                status = eqObj.optString("status", "Detected"),
+                icon = eqObj.optString("icon", "default")
             )
         }
         return ARScanData(equipment = equipmentList)
@@ -819,6 +828,8 @@ class ArxOSCoreJNIWrapper(private val jni: ArxOSCoreJNI) {
             // Add confidence and detection method (default values if not present)
             eqObj.put("confidence", 0.9)
             eqObj.put("detectionMethod", "ARCore")
+            eqObj.put("status", eq.status)
+            eqObj.put("icon", eq.icon)
             equipmentArray.put(eqObj)
         }
         
@@ -851,10 +862,10 @@ class ArxOSCoreJNIWrapper(private val jni: ArxOSCoreJNI) {
             id = obj.getString("id"),
             name = obj.getString("name"),
             equipmentType = obj.getString("equipment_type"),
-            position = Position(
-                x = positionObj.getDouble("x"),
-                y = positionObj.getDouble("y"),
-                z = positionObj.getDouble("z")
+            position = Vector3(
+                x = positionObj.getDouble("x").toFloat(),
+                y = positionObj.getDouble("y").toFloat(),
+                z = positionObj.getDouble("z").toFloat()
             ),
             confidence = obj.optDouble("confidence", 0.0),
             detectionMethod = obj.optString("detection_method", ""),
@@ -870,7 +881,7 @@ class ArxOSCoreJNIWrapper(private val jni: ArxOSCoreJNI) {
         val id: String,
         val name: String,
         val room_type: String,
-        val position: Position,
+        val position: Vector3,
         val properties: Map<String, String>
     )
     
@@ -879,7 +890,7 @@ class ArxOSCoreJNIWrapper(private val jni: ArxOSCoreJNI) {
         val name: String,
         val equipment_type: String,
         val status: String,
-        val position: Position,
+        val position: Vector3,
         val properties: Map<String, String>
     )
     
@@ -893,7 +904,7 @@ class ArxOSCoreJNIWrapper(private val jni: ArxOSCoreJNI) {
         val id: String,
         val name: String,
         val equipmentType: String,
-        val position: Position,
+        val position: Vector3,
         val confidence: Double,
         val detectionMethod: String,
         val detectedAt: String,
@@ -934,7 +945,7 @@ data class PendingEquipmentItem(
     val id: String,
     val name: String,
     val equipmentType: String,
-    val position: Position,
+    val position: Vector3,
     val confidence: Double,
     val detectionMethod: String,
     val detectedAt: String,

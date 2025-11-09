@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct EquipmentListView: View {
+    @StateObject private var core = ArxOSCore()
     @State private var equipmentList: [Equipment] = []
     @State private var isLoading = false
     @State private var searchText = ""
@@ -82,24 +83,13 @@ struct EquipmentListView: View {
     
     private func loadEquipment() {
         isLoading = true
+        core.setActiveBuilding("Default Building")
         
-        // FFI calls enabled - ready for testing
-        let ffi = ArxOSCoreFFI()
-        ffi.listEquipment(buildingName: "Default Building") { result in
+        core.listEquipment(buildingName: "Default Building") { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let equipment):
-                    // Convert EquipmentInfo to Equipment
-                    self.equipmentList = equipment.map { eq in
-                        Equipment(
-                            id: eq.id,
-                            name: eq.name,
-                            type: eq.equipmentType,
-                            status: eq.status,
-                            location: "Room \(eq.position.x), \(eq.position.y)",
-                            lastMaintenance: "Unknown"
-                        )
-                    }
+                    self.equipmentList = equipment
                 case .failure(let error):
                     print("Error loading equipment: \(error.localizedDescription)")
                     self.equipmentList = []
@@ -156,7 +146,7 @@ struct EquipmentRowView: View {
                 Text(equipment.name)
                     .font(.headline)
                 
-                Text(equipment.location)
+                Text(equipment.locationDescription)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }

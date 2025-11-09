@@ -9,8 +9,6 @@ use super::{HardwareError, SensorData};
 use log::{error, info, warn};
 #[cfg(feature = "async-sensors")]
 use rumqttc::{AsyncClient, Event, Incoming, MqttOptions, QoS};
-#[cfg(feature = "async-sensors")]
-use std::sync::Arc;
 
 /// MQTT client configuration
 #[cfg(feature = "async-sensors")]
@@ -103,8 +101,6 @@ pub async fn start_mqtt_subscriber(
     }
 
     // Spawn task to handle incoming messages
-    let callback_arc: Arc<dyn Fn(SensorData) -> Result<(), String> + Send + Sync> =
-        Arc::new(callback);
     tokio::spawn(async move {
         loop {
             match event_loop.poll().await {
@@ -130,7 +126,7 @@ pub async fn start_mqtt_subscriber(
                     match serde_json::from_str::<SensorData>(&payload_str) {
                         Ok(sensor_data) => {
                             // Call user callback with sensor data
-                            if let Err(e) = callback_arc(sensor_data) {
+                            if let Err(e) = callback(sensor_data) {
                                 error!("Callback error processing sensor data: {}", e);
                             }
                         }

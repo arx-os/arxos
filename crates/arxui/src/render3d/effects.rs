@@ -249,32 +249,23 @@ impl VisualEffectsEngine {
 
     /// Update all visual effects
     fn update_effects(&mut self, delta_time: f64) {
-        let mut completed_effects = Vec::new();
-        let mut effects_to_update = Vec::new();
+        let mut completed = 0usize;
+        let previous_effects = std::mem::take(&mut self.active_effects);
+        let mut next_effects = HashMap::with_capacity(previous_effects.capacity());
 
-        // Collect effects that need updating
-        for (id, effect) in &self.active_effects {
-            effects_to_update.push((id.clone(), effect.clone()));
-        }
-
-        // Update effects
-        for (id, mut effect) in effects_to_update {
+        for (id, mut effect) in previous_effects.into_iter() {
             self.update_effect(&mut effect, delta_time);
-
             if effect.state == EffectState::Completed {
-                completed_effects.push(id.clone());
-            }
-
-            // Update the effect in the map
-            if let Some(stored_effect) = self.active_effects.get_mut(&id) {
-                *stored_effect = effect;
+                completed += 1;
+            } else {
+                next_effects.insert(id, effect);
             }
         }
 
-        // Remove completed effects
-        for id in completed_effects {
-            self.active_effects.remove(&id);
-            self.stats.effects_completed += 1;
+        self.active_effects = next_effects;
+
+        if completed > 0 {
+            self.stats.effects_completed += completed as u64;
         }
     }
 

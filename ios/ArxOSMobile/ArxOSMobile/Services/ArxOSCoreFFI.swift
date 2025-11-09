@@ -243,18 +243,7 @@ class ArxOSCoreFFI {
             
             do {
                 let decoder = JSONDecoder()
-                let equipmentInfos = try decoder.decode([EquipmentInfo].self, from: data)
-                // Convert EquipmentInfo to Equipment
-                let equipment = equipmentInfos.map { eqInfo in
-                    Equipment(
-                        id: eqInfo.id,
-                        name: eqInfo.name,
-                        type: eqInfo.equipmentType,
-                        status: eqInfo.status,
-                        location: String(format: "X:%.1f Y:%.1f Z:%.1f", eqInfo.position.x, eqInfo.position.y, eqInfo.position.z),
-                        lastMaintenance: eqInfo.properties["last_maintenance"] ?? "Unknown"
-                    )
-                }
+                let equipment = try decoder.decode([Equipment].self, from: data)
                 DispatchQueue.main.async {
                     completion(.success(equipment))
                 }
@@ -302,16 +291,7 @@ class ArxOSCoreFFI {
             
             do {
                 let decoder = JSONDecoder()
-                let eqInfo = try decoder.decode(EquipmentInfo.self, from: data)
-                // Convert EquipmentInfo to Equipment
-                let equipment = Equipment(
-                    id: eqInfo.id,
-                    name: eqInfo.name,
-                    type: eqInfo.equipmentType,
-                    status: eqInfo.status,
-                    location: String(format: "X:%.1f Y:%.1f Z:%.1f", eqInfo.position.x, eqInfo.position.y, eqInfo.position.z),
-                    lastMaintenance: eqInfo.properties["last_maintenance"] ?? "Unknown"
-                )
+                let equipment = try decoder.decode(Equipment.self, from: data)
                 DispatchQueue.main.async {
                     completion(.success(equipment))
                 }
@@ -401,18 +381,7 @@ class ArxOSCoreFFI {
             
             do {
                 let decoder = JSONDecoder()
-                let equipmentInfos = try decoder.decode([EquipmentInfo].self, from: data)
-                // Convert EquipmentInfo to Equipment
-                let equipment = equipmentInfos.map { eqInfo in
-                    Equipment(
-                        id: eqInfo.id,
-                        name: eqInfo.name,
-                        type: eqInfo.equipmentType,
-                        status: eqInfo.status,
-                        location: String(format: "X:%.1f Y:%.1f Z:%.1f", eqInfo.position.x, eqInfo.position.y, eqInfo.position.z),
-                        lastMaintenance: eqInfo.properties["last_maintenance"] ?? "Unknown"
-                    )
-                }
+                let equipment = try decoder.decode([Equipment].self, from: data)
                 DispatchQueue.main.async {
                     completion(.success(equipment))
                 }
@@ -1034,31 +1003,12 @@ struct RoomInfo: Codable {
     }
 }
 
-/// EquipmentInfo from Rust FFI (matches Rust EquipmentInfo struct)
-struct EquipmentInfo: Codable {
-    let id: String
-    let name: String
-    let equipmentType: String
-    let status: String
-    let position: Position
-    let properties: [String: String]
-    
-    enum CodingKeys: String, CodingKey {
-        case id
-        case name
-        case equipmentType = "equipment_type"
-        case status
-        case position
-        case properties
-    }
-}
-
 /// Position from Rust FFI (matches Rust Position struct)
 struct Position: Codable {
     let x: Double
     let y: Double
     let z: Double
-    let coordinateSystem: String
+    let coordinateSystem: String?
     
     enum CodingKeys: String, CodingKey {
         case x

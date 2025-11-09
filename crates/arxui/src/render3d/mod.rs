@@ -309,7 +309,7 @@ mod tests {
             .render_3d_advanced()
             .expect("Failed to render 3D scene");
 
-        assert_eq!(scene.building_name, "Test Building");
+        assert_eq!(scene.building_name.as_str(), "Test Building");
         assert_eq!(scene.floors.len(), 2);
         // Equipment count: 1 in room (floor 0) + 1 on floor 1 = 2 total
         assert_eq!(
@@ -462,7 +462,7 @@ mod tests {
         // Test enhanced rendering without spatial index (should work normally)
         let scene = renderer.render_3d_with_spatial_queries().unwrap();
 
-        assert_eq!(scene.building_name, "Test Building");
+        assert_eq!(scene.building_name.as_str(), "Test Building");
         assert_eq!(scene.floors.len(), 2);
         assert_eq!(scene.equipment.len(), 2, "Should have 2 equipment total");
         assert_eq!(scene.metadata.total_floors, 2);
@@ -575,7 +575,7 @@ mod tests {
 
         // Verify scene was created successfully (indirectly tests projection)
         assert!(!scene.floors.is_empty());
-        assert_eq!(scene.building_name, "Test Building");
+        assert_eq!(scene.building_name.as_str(), "Test Building");
     }
 
     #[test]
@@ -591,11 +591,11 @@ mod tests {
         let hvac_equipment = scene
             .equipment
             .iter()
-            .find(|e| e.equipment_type.contains("HVAC"));
+            .find(|e| matches!(e.equipment_type, arx::core::EquipmentType::HVAC));
         let electrical_equipment = scene
             .equipment
             .iter()
-            .find(|e| e.equipment_type.contains("Electrical"));
+            .find(|e| matches!(e.equipment_type, arx::core::EquipmentType::Electrical));
 
         // We should have HVAC and Electrical equipment
         assert!(hvac_equipment.is_some(), "Should have HVAC equipment");
@@ -609,12 +609,12 @@ mod tests {
         let electrical_type = &electrical_equipment.unwrap().equipment_type;
 
         assert!(
-            hvac_type.contains("HVAC"),
-            "HVAC equipment_type should contain 'HVAC'"
+            matches!(hvac_type, arx::core::EquipmentType::HVAC),
+            "HVAC equipment_type should be HVAC"
         );
         assert!(
-            electrical_type.contains("Electrical"),
-            "Electrical equipment_type should contain 'Electrical'"
+            matches!(electrical_type, arx::core::EquipmentType::Electrical),
+            "Electrical equipment_type should be Electrical"
         );
     }
 }

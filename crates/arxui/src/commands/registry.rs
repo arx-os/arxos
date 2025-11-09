@@ -1,56 +1,81 @@
-//! Command registry for trait-based command routing
+//! Command registry for statically dispatched command routing
 
-use super::handlers::*;
-use super::traits::CommandHandler;
 use crate::cli::Commands;
+use crate::commands::{
+    doc, export, import, init, init::InitConfig, migrate, query, sync, validate, verify,
+};
 
-/// Registry that maps command names to handlers
-pub struct CommandRegistry {
-    handlers: Vec<Box<dyn CommandHandler>>,
-}
+/// Registry that maps command enums to their execution functions
+pub struct CommandRegistry;
 
 impl CommandRegistry {
-    /// Create a new command registry with all default handlers registered
+    /// Create a new command registry
     pub fn new() -> Self {
-        let mut registry = Self {
-            handlers: Vec::new(),
-        };
-        registry.register_default_handlers();
-        registry
+        Self
     }
 
-    /// Register the default set of command handlers
-    fn register_default_handlers(&mut self) {
-        self.register(InitHandler);
-        self.register(ImportHandler);
-        self.register(ExportHandler);
-        self.register(SyncHandler);
-        self.register(ValidateHandler);
-        self.register(QueryHandler);
-        self.register(MigrateHandler);
-        self.register(DocHandler);
-        self.register(VerifyHandler);
+    /// Determine whether the registry can execute the provided command.
+    pub fn can_handle(&self, command: &Commands) -> bool {
+        matches!(
+            command,
+            Commands::Init { .. }
+                | Commands::Import { .. }
+                | Commands::Export { .. }
+                | Commands::Sync { .. }
+                | Commands::Validate { .. }
+                | Commands::Query { .. }
+                | Commands::Migrate { .. }
+                | Commands::Doc { .. }
+                | Commands::Verify { .. }
+        )
     }
 
-    /// Register a command handler
-    pub fn register<H: CommandHandler + 'static>(&mut self, handler: H) {
-        self.handlers.push(Box::new(handler));
-    }
-
-    /// Find a handler for the given command
-    pub fn find_handler(&self, command: &Commands) -> Option<&dyn CommandHandler> {
-        self.handlers
-            .iter()
-            .find(|h| h.can_handle(command))
-            .map(|h| h.as_ref())
-    }
-
-    /// Execute a command using the registry
+    /// Execute a command using direct enum dispatch
     pub fn execute(&self, command: Commands) -> Result<(), Box<dyn std::error::Error>> {
-        if let Some(handler) = self.find_handler(&command) {
-            handler.execute(command)
-        } else {
-            Err("No handler found for command".into())
+        match command {
+            Commands::Init {
+                name,
+                description,
+                location,
+                git_init,
+                commit,
+                coordinate_system,
+                units,
+            } => init::handle_init(InitConfig {
+                name,
+                description,
+                location,
+                git_init,
+                commit,
+                coordinate_system,
+                units,
+            }),
+            Commands::Import {
+                ifc_file,
+                repo,
+                dry_run,
+            } => import::handle_import(ifc_file, repo, dry_run),
+            Commands::Export {
+                format,
+                output,
+                repo,
+                delta,
+            } => export::handle_export_with_format(format, output, repo, delta),
+            Commands::Sync { ifc, watch, delta } => sync::handle_sync(ifc, watch, delta),
+            Commands::Validate { path } => validate::handle_validate(path),
+            Commands::Query {
+                pattern,
+                format,
+                verbose,
+            } => query::handle_query_command(pattern, format, verbose),
+            Commands::Migrate { dry_run } => migrate::handle_migrate_address(dry_run),
+            Commands::Doc { building, output } => doc::handle_doc(building, output),
+            Commands::Verify {
+                commit,
+                all,
+                verbose,
+            } => verify::handle_verify(commit, all, verbose),
+            _ => Err("No handler found for command".into()),
         }
     }
 }
@@ -58,5 +83,40 @@ impl CommandRegistry {
 impl Default for CommandRegistry {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cli::Commands;
+
+    #[test]
+    fn matches_simple_commands() {
+        let registry = CommandRegistry::new();
+        let init_cmd = Commands::Init {
+            name: "Test Building".to_string(),
+            description: Some("Description".to_string()),
+            location: Some("123 Main".to_string()),
+            git_init: false,
+            commit: false,
+            coordinate_system: "World".to_string(),
+            units: "meters".to_string(),
+        };
+
+        assert!(registry.can_handle(&init_cmd));
+    }
+
+    #[test]
+    fn reports_unhandled_command() {
+        let registry = CommandRegistry::new();
+        let status_cmd = Commands::Status {
+            verbose: false,
+            interactive: false,
+        };
+
+        assert!(!registry.can_handle(&status_cmd));
+        let result = registry.execute(status_cmd);
+        assert!(result.is_err());
     }
 }

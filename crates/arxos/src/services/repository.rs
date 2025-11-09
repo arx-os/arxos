@@ -4,7 +4,6 @@
 //! mocked for testing or swapped for different storage backends.
 
 use crate::yaml::BuildingData;
-use std::sync::Arc;
 
 /// Repository trait for building data access
 ///
@@ -176,6 +175,3 @@ impl Repository for FileRepository {
             .is_ok()
     }
 }
-
-/// Type alias for repository references
-pub type RepositoryRef = Arc<dyn Repository>;

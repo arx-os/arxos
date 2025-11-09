@@ -3,31 +3,19 @@
 //! Provides high-level operations for equipment management,
 //! decoupled from persistence concerns.
 
-use super::repository::RepositoryRef;
+use super::repository::{FileRepository, InMemoryRepository, Repository};
 use crate::core::Equipment;
 use std::sync::Arc;
 
 /// Service for equipment operations
-pub struct EquipmentService {
-    repository: RepositoryRef,
+pub struct EquipmentService<R: Repository> {
+    repository: Arc<R>,
 }
 
-impl EquipmentService {
+impl<R: Repository> EquipmentService<R> {
     /// Create a new equipment service with the given repository
-    pub fn new(repository: RepositoryRef) -> Self {
+    pub fn new(repository: Arc<R>) -> Self {
         Self { repository }
-    }
-
-    /// Create an equipment service with file-based repository (production)
-    pub fn with_file_repository() -> Self {
-        use super::repository::FileRepository;
-        Self::new(Arc::new(FileRepository::new()))
-    }
-
-    /// Create an equipment service with in-memory repository (testing)
-    pub fn with_memory_repository() -> Self {
-        use super::repository::InMemoryRepository;
-        Self::new(Arc::new(InMemoryRepository::new()))
     }
 
     /// Add equipment to a building
@@ -106,7 +94,21 @@ impl EquipmentService {
     }
 }
 
-impl Default for EquipmentService {
+impl EquipmentService<FileRepository> {
+    /// Create an equipment service with file-based repository (production)
+    pub fn with_file_repository() -> Self {
+        Self::new(Arc::new(FileRepository::new()))
+    }
+}
+
+impl EquipmentService<InMemoryRepository> {
+    /// Create an equipment service with in-memory repository (testing)
+    pub fn with_memory_repository() -> Self {
+        Self::new(Arc::new(InMemoryRepository::new()))
+    }
+}
+
+impl Default for EquipmentService<FileRepository> {
     fn default() -> Self {
         Self::with_file_repository()
     }

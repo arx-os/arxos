@@ -4,15 +4,15 @@
 //! decoupled from persistence concerns. Uses R-Tree spatial indexing for
 //! efficient queries on large datasets.
 
-use super::repository::RepositoryRef;
+use super::repository::{FileRepository, InMemoryRepository, Repository};
 use crate::core::SpatialQueryResult;
 use crate::spatial::{BoundingBox3D, Point3D, SpatialEntity};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 /// Service for spatial operations with built-in spatial indexing
-pub struct SpatialService {
-    repository: RepositoryRef,
+pub struct SpatialService<R: Repository> {
+    repository: Arc<R>,
     // Cache spatial indices per building to avoid rebuilding
     indices: Arc<RwLock<HashMap<String, SpatialIndex>>>,
 }
@@ -36,25 +36,13 @@ struct RTreeNode {
     max_entities: usize,
 }
 
-impl SpatialService {
+impl<R: Repository> SpatialService<R> {
     /// Create a new spatial service with the given repository
-    pub fn new(repository: RepositoryRef) -> Self {
+    pub fn new(repository: Arc<R>) -> Self {
         Self {
             repository,
             indices: Arc::new(RwLock::new(HashMap::new())),
         }
-    }
-
-    /// Create a spatial service with file-based repository (production)
-    pub fn with_file_repository() -> Self {
-        use super::repository::FileRepository;
-        Self::new(Arc::new(FileRepository::new()))
-    }
-
-    /// Create a spatial service with in-memory repository (testing)
-    pub fn with_memory_repository() -> Self {
-        use super::repository::InMemoryRepository;
-        Self::new(Arc::new(InMemoryRepository::new()))
     }
 
     /// Build or get cached spatial index for a building
@@ -319,6 +307,20 @@ impl SpatialService {
     }
 }
 
+impl SpatialService<FileRepository> {
+    /// Create a spatial service with file-based repository (production)
+    pub fn with_file_repository() -> Self {
+        Self::new(Arc::new(FileRepository::new()))
+    }
+}
+
+impl SpatialService<InMemoryRepository> {
+    /// Create a spatial service with in-memory repository (testing)
+    pub fn with_memory_repository() -> Self {
+        Self::new(Arc::new(InMemoryRepository::new()))
+    }
+}
+
 impl SpatialIndex {
     /// Create a new spatial index from entities
     fn new(entities: Vec<SpatialEntity>) -> Self {
@@ -478,7 +480,7 @@ impl RTreeNode {
     }
 }
 
-impl Default for SpatialService {
+impl Default for SpatialService<FileRepository> {
     fn default() -> Self {
         Self::with_file_repository()
     }

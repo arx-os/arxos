@@ -23,15 +23,15 @@ struct Equipment: Identifiable, Codable {
     let name: String
     let type: String
     let status: String
-    let location: String
+    let position: Position3D?
     let lastMaintenance: String
     
-    init(id: String, name: String, type: String, status: String, location: String, lastMaintenance: String) {
+    init(id: String, name: String, type: String, status: String, position: Position3D?, lastMaintenance: String) {
         self.id = id
         self.name = name
         self.type = type
         self.status = status
-        self.location = location
+        self.position = position
         self.lastMaintenance = lastMaintenance
     }
     
@@ -40,7 +40,7 @@ struct Equipment: Identifiable, Codable {
         case name
         case type = "equipment_type"
         case status
-        case location
+        case position
         case lastMaintenance = "last_maintenance"
     }
     
@@ -50,8 +50,15 @@ struct Equipment: Identifiable, Codable {
         name = try container.decode(String.self, forKey: .name)
         type = try container.decode(String.self, forKey: .type)
         status = try container.decode(String.self, forKey: .status)
-        location = try container.decode(String.self, forKey: .location)
+        position = try container.decodeIfPresent(Position3D.self, forKey: .position)
         lastMaintenance = try container.decodeIfPresent(String.self, forKey: .lastMaintenance) ?? "Unknown"
+    }
+
+    var locationDescription: String {
+        if let position = position {
+            return String(format: "X: %.2f  Y: %.2f  Z: %.2f", position.x, position.y, position.z)
+        }
+        return "Location unavailable"
     }
 }
 
@@ -148,6 +155,19 @@ struct Position3D: Codable {
     let x: Double
     let y: Double
     let z: Double
+    let coordinateSystem: String?
+
+    enum CodingKeys: String, CodingKey {
+        case x, y, z
+        case coordinateSystem = "coordinate_system"
+    }
+
+    init(x: Double, y: Double, z: Double, coordinateSystem: String? = nil) {
+        self.x = x
+        self.y = y
+        self.z = z
+        self.coordinateSystem = coordinateSystem
+    }
 }
 
 /// Room Boundaries

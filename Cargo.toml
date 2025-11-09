@@ -19,7 +19,7 @@ description = "ArxOS - Git for Buildings"
 
 [workspace.dependencies]
 # Core dependencies
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive", "rc"] }
 serde_yaml = "0.9"
 serde_json = "1.0"
 chrono = { version = "0.4", features = ["serde"] }

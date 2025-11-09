@@ -39,8 +39,6 @@ pub struct InteractiveRenderer {
     game_state: Option<GameState>,
     /// Info panel state
     info_panel: InfoPanelState,
-    /// Building data reference for info panel
-    building_data: BuildingData,
 }
 
 /// Configuration for interactive rendering
@@ -66,7 +64,6 @@ impl InteractiveRenderer {
         building_data: BuildingData,
         config: Render3DConfig,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        let building_data_clone = building_data.clone();
         let renderer = Building3DRenderer::new(building_data, config);
         let state = InteractiveState::new();
         let event_handler = EventHandler::new();
@@ -84,7 +81,6 @@ impl InteractiveRenderer {
             frame_count: 0,
             game_state: None,
             info_panel,
-            building_data: building_data_clone,
         })
     }
 
@@ -94,7 +90,6 @@ impl InteractiveRenderer {
         render_config: Render3DConfig,
         interactive_config: InteractiveConfig,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        let building_data_clone = building_data.clone();
         let renderer = Building3DRenderer::new(building_data, render_config);
         let state = InteractiveState::new();
         let event_handler = EventHandler::new();
@@ -111,7 +106,6 @@ impl InteractiveRenderer {
             frame_count: 0,
             game_state: None,
             info_panel,
-            building_data: building_data_clone,
         })
     }
 
@@ -527,7 +521,7 @@ impl InteractiveRenderer {
             if !self.state.selected_equipment.is_empty() {
                 overlay.push_str("║ Equipment:\n");
                 for equipment_id in &self.state.selected_equipment {
-                    for floor in &self.building_data.floors {
+                    for floor in &self.renderer.building_data.floors {
                         if let Some(equipment) =
                             floor.equipment.iter().find(|e| e.id == *equipment_id)
                         {

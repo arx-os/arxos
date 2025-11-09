@@ -78,11 +78,11 @@ pub fn render_equipment_info<'a>(
                 if let Some(equipment) = floor.equipment.iter().find(|e| e.id == *equipment_id) {
                     lines.push(Line::from(vec![
                         Span::styled("ID: ", Style::default().fg(theme.muted)),
-                        Span::styled(equipment.id.clone(), Style::default().fg(theme.text)),
+                        Span::styled(equipment.id.as_str(), Style::default().fg(theme.text)),
                     ]));
                     lines.push(Line::from(vec![
                         Span::styled("Name: ", Style::default().fg(theme.muted)),
-                        Span::styled(equipment.name.clone(), Style::default().fg(theme.text)),
+                        Span::styled(equipment.name.as_str(), Style::default().fg(theme.text)),
                     ]));
                     lines.push(Line::from(vec![
                         Span::styled("Type: ", Style::default().fg(theme.muted)),
@@ -127,7 +127,7 @@ pub fn render_equipment_info<'a>(
                             if let Some(room) = wing
                                 .rooms
                                 .iter()
-                                .find(|r| r.equipment.iter().any(|e| e.id == equipment.id))
+                                .find(|r| r.equipment.iter().any(|e| e.id == equipment.id.as_str()))
                             {
                                 found_room = Some(room);
                                 break;

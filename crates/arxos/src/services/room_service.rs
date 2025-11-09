@@ -3,31 +3,19 @@
 //! Provides high-level operations for room management,
 //! decoupled from persistence concerns.
 
-use super::repository::RepositoryRef;
+use super::repository::{FileRepository, InMemoryRepository, Repository};
 use crate::core::Room;
 use std::sync::Arc;
 
 /// Service for room operations
-pub struct RoomService {
-    repository: RepositoryRef,
+pub struct RoomService<R: Repository> {
+    repository: Arc<R>,
 }
 
-impl RoomService {
+impl<R: Repository> RoomService<R> {
     /// Create a new room service with the given repository
-    pub fn new(repository: RepositoryRef) -> Self {
+    pub fn new(repository: Arc<R>) -> Self {
         Self { repository }
-    }
-
-    /// Create a room service with file-based repository (production)
-    pub fn with_file_repository() -> Self {
-        use super::repository::FileRepository;
-        Self::new(Arc::new(FileRepository::new()))
-    }
-
-    /// Create a room service with in-memory repository (testing)
-    pub fn with_memory_repository() -> Self {
-        use super::repository::InMemoryRepository;
-        Self::new(Arc::new(InMemoryRepository::new()))
     }
 
     /// Create a room in a building
@@ -110,7 +98,21 @@ impl RoomService {
     }
 }
 
-impl Default for RoomService {
+impl RoomService<FileRepository> {
+    /// Create a room service with file-based repository (production)
+    pub fn with_file_repository() -> Self {
+        Self::new(Arc::new(FileRepository::new()))
+    }
+}
+
+impl RoomService<InMemoryRepository> {
+    /// Create a room service with in-memory repository (testing)
+    pub fn with_memory_repository() -> Self {
+        Self::new(Arc::new(InMemoryRepository::new()))
+    }
+}
+
+impl Default for RoomService<FileRepository> {
     fn default() -> Self {
         Self::with_file_repository()
     }

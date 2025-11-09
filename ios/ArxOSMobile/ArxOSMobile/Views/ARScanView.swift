@@ -4,6 +4,7 @@ import RealityKit
 import UIKit
 
 struct ARScanView: View {
+    @StateObject private var core = ArxOSCore()
     @State private var isScanning = false
     @State private var detectedEquipment: [DetectedEquipment] = []
     @State private var showEquipmentList = false
@@ -190,8 +191,15 @@ struct ARScanView: View {
             .sheet(isPresented: $showPendingConfirmation) {
                 PendingEquipmentConfirmationView(
                     pendingIds: pendingEquipmentIds,
-                    buildingName: buildingName
+                    buildingName: buildingName,
+                    core: core
                 )
+            }
+            .onAppear {
+                core.setActiveBuilding(buildingName)
+            }
+            .onChange(of: buildingName) { newValue in
+                core.setActiveBuilding(newValue)
             }
             .sheet(isPresented: $showEquipmentDialog) {
                 EquipmentPlacementDialog(
@@ -332,11 +340,11 @@ struct ARScanView: View {
         )
         
         // Call FFI to save and process scan
-        let ffi = ArxOSCoreFFI()
-        ffi.saveARScan(
+        core.setActiveBuilding(buildingName)
+        core.saveARScan(
             scanData: scanData,
             buildingName: buildingName,
-            confidenceThreshold: 0.7 // Default confidence threshold
+            confidenceThreshold: 0.7
         ) { result in
             DispatchQueue.main.async {
                 self.isSavingScan = false

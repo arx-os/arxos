@@ -35,12 +35,9 @@ pub mod verify;
 pub mod watch;
 pub mod watch_dashboard;
 
-mod handlers;
 mod registry;
-mod traits;
 
 pub use registry::CommandRegistry;
-pub use traits::CommandHandler;
 
 use crate::cli::Commands;
 
@@ -54,7 +51,7 @@ use crate::cli::Commands;
 pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
     // Try to use trait-based handler first
     let registry = CommandRegistry::default();
-    if registry.find_handler(&command).is_some() {
+    if registry.can_handle(&command) {
         return registry.execute(command);
     }
 

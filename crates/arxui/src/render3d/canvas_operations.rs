@@ -4,6 +4,7 @@
 //! (floors, equipment, rooms) to ASCII canvas with depth buffering.
 
 use crate::render3d::types::{Equipment3D, Floor3D, Room3D};
+use arx::core::EquipmentType;
 use arx::spatial::Point3D;
 
 /// Render floors to ASCII canvas
@@ -95,12 +96,15 @@ pub fn render_equipment_to_canvas<F>(
                 depth_buffer[y][x] = depth;
 
                 // Choose symbol based on equipment type
-                let symbol = match eq.equipment_type.as_str() {
-                    s if s.contains("AIR") => '▲',   // HVAC
-                    s if s.contains("LIGHT") => '●', // Electrical
-                    s if s.contains("PUMP") => '◊',  // Plumbing
-                    s if s.contains("FAN") => '◈',   // Mechanical
-                    _ => '╬',                        // Generic equipment
+                let symbol = match eq.equipment_type {
+                    EquipmentType::HVAC => '▲',
+                    EquipmentType::Electrical => '●',
+                    EquipmentType::Plumbing => '◊',
+                    EquipmentType::Safety => '◈',
+                    EquipmentType::Network => '↯',
+                    EquipmentType::AV => '♫',
+                    EquipmentType::Furniture => '⌂',
+                    EquipmentType::Other(_) => '╬',
                 };
 
                 canvas[y][x] = symbol;

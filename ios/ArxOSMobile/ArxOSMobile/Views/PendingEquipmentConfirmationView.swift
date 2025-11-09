@@ -10,6 +10,7 @@ import SwiftUI
 struct PendingEquipmentConfirmationView: View {
     let pendingIds: [String]
     let buildingName: String
+    @ObservedObject var core: ArxOSCore
     
     @State private var pendingEquipment: [PendingEquipmentItem] = []
     @State private var isLoading = false
@@ -78,15 +79,19 @@ struct PendingEquipmentConfirmationView: View {
     private func loadPendingEquipment() {
         isLoading = true
         errorMessage = nil
+        core.setActiveBuilding(buildingName)
         
-        let ffi = ArxOSCoreFFI()
-        ffi.listPendingEquipment(buildingName: buildingName) { result in
+        core.listPendingEquipment(buildingName: buildingName) { result in
             DispatchQueue.main.async {
                 self.isLoading = false
                 
                 switch result {
                 case .success(let listResult):
-                    self.pendingEquipment = listResult.pendingItems
+                    if pendingIds.isEmpty {
+                        self.pendingEquipment = listResult.pendingItems
+                    } else {
+                        self.pendingEquipment = listResult.pendingItems.filter { pendingIds.contains($0.id) }
+                    }
                     print("✅ Loaded \(listResult.pendingCount) pending equipment items")
                     
                 case .failure(let error):
@@ -99,13 +104,13 @@ struct PendingEquipmentConfirmationView: View {
     
     private func confirmEquipment(_ id: String) {
         isLoading = true
+        core.setActiveBuilding(buildingName)
         
-        let ffi = ArxOSCoreFFI()
-        ffi.confirmPendingEquipment(
+        core.confirmPendingEquipment(
             buildingName: buildingName,
             pendingId: id,
-            commitToGit: true
-        ) { result in
+            commitToGit: true,
+            completion: { result in
             DispatchQueue.main.async {
                 self.isLoading = false
                 
@@ -126,17 +131,17 @@ struct PendingEquipmentConfirmationView: View {
                     print("❌ Failed to confirm equipment: \(error.localizedDescription)")
                 }
             }
-        }
+        })
     }
     
     private func rejectEquipment(_ id: String) {
         isLoading = true
+        core.setActiveBuilding(buildingName)
         
-        let ffi = ArxOSCoreFFI()
-        ffi.rejectPendingEquipment(
+        core.rejectPendingEquipment(
             buildingName: buildingName,
-            pendingId: id
-        ) { result in
+            pendingId: id,
+            completion: { result in
             DispatchQueue.main.async {
                 self.isLoading = false
                 
@@ -153,7 +158,7 @@ struct PendingEquipmentConfirmationView: View {
                     print("❌ Failed to reject equipment: \(error.localizedDescription)")
                 }
             }
-        }
+        })
     }
 }
 
@@ -274,7 +279,8 @@ struct EmptyPendingEquipmentView: View {
 #Preview {
     PendingEquipmentConfirmationView(
         pendingIds: ["pending-1", "pending-2"],
-        buildingName: "Test Building"
+        buildingName: "Test Building",
+        core: ArxOSCore() // Provide a mock or dummy core for preview
     )
 }
 

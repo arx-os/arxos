@@ -1,7 +1,9 @@
 //! Type definitions for 3D rendering
 
+use arx::core::{EquipmentStatus, EquipmentType, RoomType};
 use arx::spatial::{BoundingBox3D, Point3D};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 /// 3D rendering configuration
 #[derive(Debug, Clone)]
@@ -98,7 +100,7 @@ pub struct ScreenCoord {
 /// Rendered 3D scene data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Scene3D {
-    pub building_name: String,
+    pub building_name: Arc<String>,
     pub floors: Vec<Floor3D>,
     pub equipment: Vec<Equipment3D>,
     pub rooms: Vec<Room3D>,
@@ -109,27 +111,27 @@ pub struct Scene3D {
 /// 3D floor representation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Floor3D {
-    pub id: String,
-    pub name: String,
+    pub id: Arc<String>,
+    pub name: Arc<String>,
     pub level: i32,
     pub elevation: f64,
     pub bounding_box: BoundingBox3D,
-    pub rooms: Vec<String>,     // Room IDs
-    pub equipment: Vec<String>, // Equipment IDs
+    pub rooms: Vec<Arc<String>>,     // Room IDs
+    pub equipment: Vec<Arc<String>>, // Equipment IDs
 }
 
 /// 3D equipment representation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Equipment3D {
-    pub id: String,
-    pub name: String,
-    pub equipment_type: String,
-    pub status: String,
+    pub id: Arc<String>,
+    pub name: Arc<String>,
+    pub equipment_type: EquipmentType,
+    pub status: EquipmentStatus,
     pub position: Point3D,
     pub bounding_box: BoundingBox3D,
     pub floor_level: i32,
-    pub room_id: Option<String>,
-    pub connections: Vec<String>,             // Connected equipment IDs
+    pub room_id: Option<Arc<String>>,
+    pub connections: Vec<Arc<String>>, // Connected equipment IDs
     pub spatial_relationships: Option<usize>, // Number of spatial relationships
     pub nearest_entity_distance: Option<f64>, // Distance to nearest entity
 }
@@ -137,13 +139,13 @@ pub struct Equipment3D {
 /// 3D room representation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Room3D {
-    pub id: String,
-    pub name: String,
-    pub room_type: String,
+    pub id: Arc<String>,
+    pub name: Arc<String>,
+    pub room_type: RoomType,
     pub position: Point3D,
     pub bounding_box: BoundingBox3D,
     pub floor_level: i32,
-    pub equipment: Vec<String>, // Equipment IDs in this room
+    pub equipment: Vec<Arc<String>>, // Equipment IDs in this room
 }
 
 /// Scene metadata

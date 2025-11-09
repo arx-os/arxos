@@ -4,6 +4,7 @@ use super::types::Position;
 use crate::domain::ArxAddress;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt;
 use uuid::Uuid;
 
 /// Sensor mapping structure for equipment
@@ -107,7 +108,7 @@ pub enum EquipmentType {
 ///
 /// This represents whether the equipment is running, stopped, in maintenance, etc.
 /// This is separate from health status, which represents the equipment's condition.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum EquipmentStatus {
     /// Equipment is active and running
     Active,
@@ -232,5 +233,32 @@ impl EquipmentType {
             EquipmentType::Other(_) => "OTHER",
         }
         .to_string()
+    }
+}
+
+impl fmt::Display for EquipmentType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            EquipmentType::HVAC => write!(f, "HVAC"),
+            EquipmentType::Electrical => write!(f, "Electrical"),
+            EquipmentType::AV => write!(f, "AV"),
+            EquipmentType::Furniture => write!(f, "Furniture"),
+            EquipmentType::Safety => write!(f, "Safety"),
+            EquipmentType::Plumbing => write!(f, "Plumbing"),
+            EquipmentType::Network => write!(f, "Network"),
+            EquipmentType::Other(name) => write!(f, "{name}"),
+        }
+    }
+}
+
+impl fmt::Display for EquipmentStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            EquipmentStatus::Active => write!(f, "Active"),
+            EquipmentStatus::Inactive => write!(f, "Inactive"),
+            EquipmentStatus::Maintenance => write!(f, "Maintenance"),
+            EquipmentStatus::OutOfOrder => write!(f, "Out of Order"),
+            EquipmentStatus::Unknown => write!(f, "Unknown"),
+        }
     }
 }

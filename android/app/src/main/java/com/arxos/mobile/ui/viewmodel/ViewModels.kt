@@ -88,6 +88,7 @@ class ARViewModel(application: Application) : AndroidViewModel(application) {
     
     fun updateBuildingName(building: String) {
         _arState.value = _arState.value.copy(buildingName = building)
+        arxosCoreService.setActiveBuilding(building)
     }
     
     fun addDetectedEquipment(equipment: DetectedEquipment) {
@@ -142,19 +143,16 @@ class ARViewModel(application: Application) : AndroidViewModel(application) {
                     floorLevel = _arState.value.floorLevel
                 )
                 
-                // Use building name from state, or fallback to current room
-                val buildingName = if (_arState.value.buildingName.isNotEmpty()) {
-                    _arState.value.buildingName
-                } else {
-                    _arState.value.currentRoom
-                }
-                
-                // Call FFI service directly via wrapper
-                val wrapper = com.arxos.mobile.service.ArxOSCoreJNIWrapper(
-                    com.arxos.mobile.service.ArxOSCoreJNI(application)
+                val buildingName = (
+                    if (_arState.value.buildingName.isNotEmpty()) {
+                        _arState.value.buildingName
+                    } else {
+                        _arState.value.currentRoom
+                    }
                 )
-                
-                val saveResult = wrapper.saveARScan(
+
+                arxosCoreService.setActiveBuilding(buildingName)
+                val saveResult = arxosCoreService.saveARScan(
                     scanData = scanData,
                     buildingName = buildingName,
                     confidenceThreshold = 0.7
@@ -196,6 +194,7 @@ class ARViewModel(application: Application) : AndroidViewModel(application) {
         
         viewModelScope.launch {
             try {
+                arxosCoreService.setActiveBuilding(buildingName)
                 val result = arxosCoreService.loadARModel(buildingName, format)
                 
                 if (result.success && result.filePath != null) {
@@ -234,6 +233,7 @@ class ARViewModel(application: Application) : AndroidViewModel(application) {
      * List pending equipment for a building
      */
     suspend fun listPendingEquipment(buildingName: String): com.arxos.mobile.service.PendingEquipmentListResult {
+        arxosCoreService.setActiveBuilding(buildingName)
         return arxosCoreService.listPendingEquipment(buildingName)
     }
     
@@ -245,6 +245,7 @@ class ARViewModel(application: Application) : AndroidViewModel(application) {
         pendingId: String,
         commitToGit: Boolean = true
     ): com.arxos.mobile.service.PendingEquipmentConfirmResult {
+        arxosCoreService.setActiveBuilding(buildingName)
         return arxosCoreService.confirmPendingEquipment(buildingName, pendingId, commitToGit)
     }
     
@@ -255,6 +256,7 @@ class ARViewModel(application: Application) : AndroidViewModel(application) {
         buildingName: String,
         pendingId: String
     ): com.arxos.mobile.service.PendingEquipmentRejectResult {
+        arxosCoreService.setActiveBuilding(buildingName)
         return arxosCoreService.rejectPendingEquipment(buildingName, pendingId)
     }
 }

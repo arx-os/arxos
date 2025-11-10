@@ -1,0 +1,113 @@
+name: Docker Images
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+      - '*.*.*'
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - 'Dockerfile.android'
+      - '.github/workflows/docker-images.yml'
+      - 'docs/development/DOCKER_GUIDE.md'
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: builder
+            file: Dockerfile
+            target: builder
+            tag-suffix: builder
+          - name: runtime
+            file: Dockerfile
+            target: runtime
+            tag-suffix: runtime
+          - name: android-sdk
+            file: Dockerfile.android
+            target: android-builder
+            tag-suffix: android-sdk
+    env:
+      IMAGE_NAME: ghcr.io/${{ github.repository }}
+      SHOULD_PUSH: ${{ github.event_name != 'pull_request' }}
+      IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: env.SHOULD_PUSH == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ matrix.tag-suffix }}
+            type=semver,pattern={{version}}-${{ matrix.tag-suffix }}
+            type=semver,pattern={{major}}.{{minor}}-${{ matrix.tag-suffix }}
+            type=semver,pattern={{major}}-${{ matrix.tag-suffix }}
+
+      - name: Build image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          target: ${{ matrix.target }}
+          platforms: linux/amd64
+          push: ${{ env.SHOULD_PUSH == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Generate SBOM
+        if: env.SHOULD_PUSH == 'true'
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ fromJSON(steps.build.outputs.metadata)['image.name'] }}
+          output-file: sbom-${{ matrix.name }}.spdx.json
+
+      - name: Upload SBOM artifact
+        if: env.SHOULD_PUSH == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.name }}
+          path: sbom-${{ matrix.name }}.spdx.json
+
+      - name: Install Cosign
+        if: env.SHOULD_PUSH == 'true'
+        uses: sigstore/cosign-installer@v3
+
+      - name: Cosign image
+        if: env.SHOULD_PUSH == 'true'
+        env:
+          COSIGN_YES: "true"
+        run: |
+          cosign sign ${{ steps.meta.outputs.tags }}
+

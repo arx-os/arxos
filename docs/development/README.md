@@ -9,6 +9,8 @@ Documentation for contributing to ArxOS development.
 - **[ERROR_HANDLING_GUIDE.md](./ERROR_HANDLING_GUIDE.md)** - Standard error handling patterns
 - **[SECURITY.md](./SECURITY.md)** - Security practices and automated scanning
 - **[PERFORMANCE_GUIDE.md](./PERFORMANCE_GUIDE.md)** - Optimization strategies
+- **[DOCKER_GUIDE.md](./DOCKER_GUIDE.md)** - Official container images and deployment guidance
+- **[K8S_GUIDE.md](./K8S_GUIDE.md)** - Running ArxOS workloads on Kubernetes
 - **[BENCHMARKS.md](./BENCHMARKS.md)** - Performance benchmark data
 - **[RUSTDOC_GUIDE.md](./RUSTDOC_GUIDE.md)** - Documentation generation guide
 - **[TODO_REMAINING.md](./TODO_REMAINING.md)** - Pending development tasks

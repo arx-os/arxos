@@ -1,0 +1,92 @@
+# Android-capable builder image for ArxOS artifacts
+#
+# Produces JNI libraries and CLI using Android NDK + cargo-ndk.
+
+FROM rust:1.75-bookworm AS android-builder
+
+LABEL org.opencontainers.image.source="https://github.com/arx-os/arxos" \
+      org.opencontainers.image.description="ArxOS builder image with Android NDK toolchain."
+
+ENV CARGO_HOME=/usr/local/cargo \
+    RUSTUP_HOME=/usr/local/rustup \
+    ANDROID_SDK_ROOT=/opt/android-sdk \
+    ANDROID_NDK_VERSION=26.1.10909125 \
+    PATH="/usr/local/cargo/bin:${PATH}"
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        curl \
+        unzip \
+        zip \
+        git \
+        pkg-config \
+        clang \
+        libssl-dev \
+        libclang-dev \
+        cmake \
+        python3 \
+        openjdk-17-jdk && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install cbindgen and cargo-ndk
+RUN cargo install --locked cbindgen cargo-ndk
+
+# Install Android command line tools
+RUN mkdir -p ${ANDROID_SDK_ROOT}/cmdline-tools && \
+    curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o /tmp/cmdline-tools.zip && \
+    unzip -q /tmp/cmdline-tools.zip -d ${ANDROID_SDK_ROOT}/cmdline-tools && \
+    mv ${ANDROID_SDK_ROOT}/cmdline-tools/cmdline-tools ${ANDROID_SDK_ROOT}/cmdline-tools/latest && \
+    rm /tmp/cmdline-tools.zip
+
+ENV PATH="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin:${ANDROID_SDK_ROOT}/platform-tools:${ANDROID_SDK_ROOT}/emulator:${PATH}"
+
+# Accept licenses and install NDK + platforms
+RUN yes | sdkmanager --licenses && \
+    sdkmanager \
+        "platform-tools" \
+        "platforms;android-34" \
+        "build-tools;34.0.0" \
+        "ndk;${ANDROID_NDK_VERSION}" && \
+    ln -s ${ANDROID_SDK_ROOT}/ndk/${ANDROID_NDK_VERSION} ${ANDROID_SDK_ROOT}/ndk-bundle
+
+WORKDIR /workspace
+
+COPY Cargo.toml Cargo.lock ./
+COPY crates/arx/Cargo.toml crates/arx/Cargo.toml
+COPY crates/arxui/Cargo.toml crates/arxui/Cargo.toml
+COPY crates/arxos/Cargo.toml crates/arxos/Cargo.toml
+COPY crates/arxos-hal/Cargo.toml crates/arxos-hal/Cargo.toml
+COPY crates/arxos-hal/esp32-c3/Cargo.toml crates/arxos-hal/esp32-c3/Cargo.toml
+COPY crates/arxos-hal/rp2040/Cargo.toml crates/arxos-hal/rp2040/Cargo.toml
+
+RUN cargo fetch
+
+COPY crates ./crates
+COPY include ./include
+COPY schemas ./schemas
+COPY android ./android
+COPY scripts ./scripts
+
+# Install Android Rust targets
+RUN rustup target add \
+    aarch64-linux-android \
+    armv7-linux-androideabi \
+    i686-linux-android \
+    x86_64-linux-android
+
+# Build Android libraries using cargo-ndk
+RUN cargo ndk -t arm64-v8a,armeabi-v7a,x86,x86_64 \
+    --platform 34 \
+    -- build -p arxos --release --features android
+
+RUN mkdir -p /artifacts/android && \
+    find target -path "*/release/libarxos.so" -exec cp --parents {} /artifacts/android/ \; && \
+    if [ -f include/arxos_mobile.h ]; then cp include/arxos_mobile.h /artifacts/android/; fi
+
+# Also build native CLI for completeness
+RUN cargo build -p arxui --release
+
+RUN mkdir -p /artifacts/bin && \
+    cp target/release/arx /artifacts/bin/
+

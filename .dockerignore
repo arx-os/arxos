@@ -1,0 +1,14 @@
+target
+.git
+.github
+.idea
+.vscode
+node_modules
+android/build
+ios/build
+**/*.pyc
+**/__pycache__
+*.log
+tmp
+dist
+

@@ -35,6 +35,7 @@ Documentation for contributing to ArxOS development.
 - **[PERFORMANCE_GUIDE.md](./development/PERFORMANCE_GUIDE.md)** - Optimization strategies
 - **[BENCHMARKS.md](./development/BENCHMARKS.md)** - Performance benchmark data
 - **[RUSTDOC_GUIDE.md](./development/RUSTDOC_GUIDE.md)** - Documentation generation guide
+- **[K8S_GUIDE.md](./development/K8S_GUIDE.md)** - Running ArxOS workloads on Kubernetes
 - **[TODO_REMAINING.md](./development/TODO_REMAINING.md)** - Pending development tasks
 - **[render/](./development/render/)** - Rendering system documentation
   - [2D_FLOOR_PLANS.md](./development/render/2D_FLOOR_PLANS.md) - 2D ASCII rendering

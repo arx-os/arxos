@@ -208,6 +208,39 @@ Export building data to Git repository.
 arx export --repo ./export-repo
 ```
 
+#### `arx economy`
+Interact with Polygon staking, rewards, and dataset publishing flows.
+
+```bash
+# Show current wallet balances and totals
+arx economy balance
+arx economy rewards
+arx economy total-value
+
+# Stake / unstake ARXO tokens (accepts fractional values)
+arx economy stake --amount 125.75
+arx economy unstake --amount 25
+arx economy claim
+
+# Submit an assessed property to the oracle and mint ARXO
+arx economy verify \
+  --property-id "NYC-2025-0123" \
+  --recipient 0x1234abcd... \
+  --tax-value 1250000
+
+# Publish a dataset (pins payload to IPFS and registers on Ocean if configured)
+arx economy publish \
+  --name "nyc-hvac-2025q1" \
+  --payload dataset.json \
+  --metadata metadata.json
+
+# Trigger USDC revenue split (requires treasury permissions)
+arx economy distribute --usdc-amount 3400
+
+# Inspect merged configuration
+arx economy show-config
+```
+
 ---
 
 ## Spreadsheet Editor

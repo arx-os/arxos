@@ -4,6 +4,7 @@ import android.content.Context
 import com.arxos.mobile.data.Equipment
 import com.arxos.mobile.data.ARScanData
 import com.arxos.mobile.data.DetectedEquipment
+import com.arxos.mobile.data.EconomySnapshot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -157,6 +158,22 @@ class ArxOSCoreService(private val context: Context) {
         pendingId: String
     ): PendingEquipmentRejectResult = withContext(Dispatchers.IO) {
         wrapper.rejectPendingEquipment(resolveBuildingName(buildingName), pendingId)
+    }
+
+    suspend fun getEconomySnapshot(addressOverride: String? = null): EconomySnapshot? = withContext(Dispatchers.IO) {
+        wrapper.economySnapshot(addressOverride)
+    }
+
+    suspend fun stakeARXO(amount: String): Boolean = withContext(Dispatchers.IO) {
+        wrapper.stakeARXO(amount)
+    }
+
+    suspend fun unstakeARXO(amount: String): Boolean = withContext(Dispatchers.IO) {
+        wrapper.unstakeARXO(amount)
+    }
+
+    suspend fun claimStakingRewards(): Boolean = withContext(Dispatchers.IO) {
+        wrapper.claimStakingRewards()
     }
 
     companion object {

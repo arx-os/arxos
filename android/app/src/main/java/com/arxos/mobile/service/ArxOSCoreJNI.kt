@@ -6,6 +6,7 @@ import com.arxos.mobile.data.Equipment
 import com.arxos.mobile.data.ARScanData
 import com.arxos.mobile.data.DetectedEquipment
 import com.arxos.mobile.data.Vector3
+import com.arxos.mobile.data.EconomySnapshot
 
 /**
  * JNI wrapper for ArxOS FFI functions
@@ -99,6 +100,26 @@ class ArxOSCoreJNI(val context: Context) {  // Changed from private to public fo
         buildingName: String,
         pendingId: String
     ): String
+    
+    /**
+     * Retrieve economy snapshot information.
+     */
+    external fun nativeEconomySnapshot(addressOverride: String?): String
+    
+    /**
+     * Stake ARXO tokens.
+     */
+    external fun nativeEconomyStake(amount: String): String
+    
+    /**
+     * Unstake ARXO tokens.
+     */
+    external fun nativeEconomyUnstake(amount: String): String
+    
+    /**
+     * Claim staking rewards.
+     */
+    external fun nativeEconomyClaimRewards(): String
     
     companion object {
         private const val TAG = "ArxOSCoreJNI"
@@ -352,6 +373,105 @@ class ArxOSCoreJNIWrapper(private val jni: ArxOSCoreJNI) {
         }
     }
     
+    /**
+     * Fetch economy snapshot via JNI.
+     */
+    suspend fun economySnapshot(addressOverride: String? = null): EconomySnapshot? {
+        if (!jni.isNativeLibraryLoaded()) {
+            Log.w(TAG, "Native library not loaded - returning null economy snapshot")
+            return null
+        }
+        
+        return try {
+            val json = jni.nativeEconomySnapshot(addressOverride)
+            if (json.isEmpty()) {
+                Log.w(TAG, "Empty JSON response from nativeEconomySnapshot")
+                null
+            } else if (json.contains("\"error\"")) {
+                val errorMsg = extractErrorMessage(json)
+                Log.e(TAG, "Error from nativeEconomySnapshot: $errorMsg")
+                null
+            } else {
+                parseEconomySnapshot(json)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to fetch economy snapshot: ${e.message}", e)
+            null
+        }
+    }
+    
+    /**
+     * Stake ARXO tokens via JNI.
+     */
+    suspend fun stakeARXO(amount: String): Boolean {
+        if (!jni.isNativeLibraryLoaded()) {
+            Log.w(TAG, "Native library not loaded - stake call ignored")
+            return false
+        }
+        
+        return try {
+            val json = jni.nativeEconomyStake(amount)
+            if (json.contains("\"error\"")) {
+                val errorMsg = extractErrorMessage(json)
+                Log.e(TAG, "Error from nativeEconomyStake: $errorMsg")
+                false
+            } else {
+                true
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to stake ARXO: ${e.message}", e)
+            false
+        }
+    }
+    
+    /**
+     * Unstake ARXO tokens via JNI.
+     */
+    suspend fun unstakeARXO(amount: String): Boolean {
+        if (!jni.isNativeLibraryLoaded()) {
+            Log.w(TAG, "Native library not loaded - unstake call ignored")
+            return false
+        }
+        
+        return try {
+            val json = jni.nativeEconomyUnstake(amount)
+            if (json.contains("\"error\"")) {
+                val errorMsg = extractErrorMessage(json)
+                Log.e(TAG, "Error from nativeEconomyUnstake: $errorMsg")
+                false
+            } else {
+                true
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to unstake ARXO: ${e.message}", e)
+            false
+        }
+    }
+    
+    /**
+     * Claim staking rewards via JNI.
+     */
+    suspend fun claimStakingRewards(): Boolean {
+        if (!jni.isNativeLibraryLoaded()) {
+            Log.w(TAG, "Native library not loaded - claim call ignored")
+            return false
+        }
+        
+        return try {
+            val json = jni.nativeEconomyClaimRewards()
+            if (json.contains("\"error\"")) {
+                val errorMsg = extractErrorMessage(json)
+                Log.e(TAG, "Error from nativeEconomyClaimRewards: $errorMsg")
+                false
+            } else {
+                true
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to claim staking rewards: ${e.message}", e)
+            false
+        }
+    }
+    
     // Private helper functions for JSON parsing
     
     private fun extractErrorMessage(json: String): String {
@@ -360,6 +480,21 @@ class ArxOSCoreJNIWrapper(private val jni: ArxOSCoreJNI) {
             jsonObj.optString("error", "Unknown error")
         } catch (e: Exception) {
             "Failed to parse error message"
+        }
+    }
+    
+    private fun parseEconomySnapshot(json: String): EconomySnapshot? {
+        return try {
+            val obj = org.json.JSONObject(json)
+            EconomySnapshot(
+                walletAddress = obj.optString("wallet_address"),
+                arxoBalance = obj.optString("arxo_balance"),
+                pendingRewards = obj.optString("pending_rewards"),
+                totalAssessedValue = obj.optString("total_assessed_value")
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse economy snapshot: ${e.message}", e)
+            null
         }
     }
     

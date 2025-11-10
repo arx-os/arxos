@@ -28,6 +28,14 @@ extern "C" {
 #include <stdint.h>
 #include <stdlib.h>
 
+char *arxos_economy_snapshot(const char *address);
+
+char *arxos_economy_stake(const char *amount);
+
+char *arxos_economy_unstake(const char *amount);
+
+char *arxos_economy_claim(void);
+
 /**
  * Load a PR for review (game mode)
  *

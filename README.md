@@ -13,6 +13,7 @@
 - 🔍 **Smart Search** - Find equipment and rooms with regex and filtering
 - 🎨 **3D Visualization** - Interactive terminal-based 3D building visualization
 - 🎮 **Gamified Planning** - Interactive PR review and equipment placement with constraint validation
+- 🪙 **On-Chain Economy** - Polygon contracts, staking CLI, and mobile FFI for rewards and revenue splits
 - 📱 **Mobile Support** - Native iOS/Android apps with AR capabilities for field verification
 - ⚡ **Terminal-First** - Designed for efficiency and automation
 

@@ -13,6 +13,13 @@ pub mod offline_queue;
 use crate::core::{Equipment, Room};
 use std::collections::HashMap;
 
+#[cfg(feature = "economy")]
+use crate::economy::{ArxoEconomyService, EconomyConfig, StakingAction};
+#[cfg(feature = "economy")]
+use ethers::types::{Address, U256};
+#[cfg(feature = "economy")]
+use tokio::runtime::Runtime;
+
 /// Error type for FFI operations
 ///
 /// All errors are serialized to JSON for cross-platform compatibility.
@@ -111,6 +118,177 @@ impl std::fmt::Display for MobileError {
 
 impl std::error::Error for MobileError {}
 
+#[cfg(feature = "economy")]
+const ARXO_DECIMALS: u32 = 18;
+#[cfg(feature = "economy")]
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct EconomyAccountSnapshot {
+    pub wallet_address: String,
+    pub arxo_balance: String,
+    pub pending_rewards: String,
+    pub total_assessed_value: String,
+}
+
+#[cfg(feature = "economy")]
+fn build_runtime() -> Result<Runtime, MobileError> {
+    Runtime::new().map_err(|e| MobileError::IoError(format!("Failed to initialize runtime: {}", e)))
+}
+
+#[cfg(feature = "economy")]
+fn load_economy_service() -> Result<(Runtime, ArxoEconomyService), MobileError> {
+    let config = EconomyConfig::from_env()
+        .map_err(|e| MobileError::InvalidData(format!("Economy config error: {e}")))?;
+    let runtime = build_runtime()?;
+    let service = ArxoEconomyService::new(config)
+        .map_err(|e| MobileError::IoError(format!("Failed to initialize economy service: {e}")))?;
+    Ok((runtime, service))
+}
+
+#[cfg(feature = "economy")]
+fn resolve_wallet_address(
+    override_address: Option<String>,
+    config: &EconomyConfig,
+) -> Result<Address, MobileError> {
+    if let Some(addr) = override_address {
+        return addr
+            .parse()
+            .map_err(|e| MobileError::InvalidData(format!("Invalid wallet address: {e}")));
+    }
+
+    if let Some(default_sender) = &config.wallet.default_sender {
+        return default_sender
+            .parse()
+            .map_err(|e| MobileError::InvalidData(format!("Invalid default wallet address: {e}")));
+    }
+
+    Err(MobileError::InvalidData(
+        "No wallet address provided (set wallet.default_sender or supply override)".into(),
+    ))
+}
+
+#[cfg(feature = "economy")]
+fn parse_decimal_amount(value: &str, decimals: u32) -> Result<U256, MobileError> {
+    let parts: Vec<&str> = value.split('.').collect();
+    if parts.len() > 2 {
+        return Err(MobileError::InvalidData(format!(
+            "Invalid decimal format '{value}'"
+        )));
+    }
+
+    let scale = U256::exp10(decimals as usize);
+    let whole = U256::from_dec_str(parts[0])
+        .map_err(|e| MobileError::InvalidData(format!("Invalid numeric value '{value}': {e}")))?;
+    let mut result = whole * scale;
+
+    if parts.len() == 2 {
+        let mut fraction = parts[1].to_string();
+        if fraction.len() > decimals as usize {
+            return Err(MobileError::InvalidData(format!(
+                "Too many decimal places in '{value}'. Maximum {decimals} decimals supported."
+            )));
+        }
+        while fraction.len() < decimals as usize {
+            fraction.push('0');
+        }
+        let frac_value = U256::from_dec_str(&fraction).map_err(|e| {
+            MobileError::InvalidData(format!("Invalid decimal value '{value}': {e}"))
+        })?;
+        result += frac_value;
+    }
+
+    Ok(result)
+}
+
+#[cfg(feature = "economy")]
+fn format_decimal(value: U256, decimals: u32) -> String {
+    if decimals == 0 {
+        return value.to_string();
+    }
+
+    let scale = U256::exp10(decimals as usize);
+    let whole = value / scale;
+    let remainder = value % scale;
+
+    if remainder.is_zero() {
+        return whole.to_string();
+    }
+
+    let mut frac = remainder.to_string();
+    if frac.len() < decimals as usize {
+        frac = format!("{:0>width$}", frac, width = decimals as usize);
+    }
+    let frac_trimmed = frac.trim_end_matches('0');
+    if frac_trimmed.is_empty() {
+        whole.to_string()
+    } else {
+        format!("{}.{}", whole, frac_trimmed)
+    }
+}
+
+#[cfg(feature = "economy")]
+#[tracing::instrument(skip(address_override))]
+pub fn economy_account_snapshot(
+    address_override: Option<String>,
+) -> Result<EconomyAccountSnapshot, MobileError> {
+    let (runtime, service) = load_economy_service()?;
+    let wallet_address = resolve_wallet_address(address_override, service.config())?;
+
+    let balance = runtime
+        .block_on(async { service.token_balance(wallet_address).await })
+        .map_err(|e| MobileError::IoError(format!("Failed to fetch balance: {e}")))?;
+
+    let rewards = runtime
+        .block_on(async { service.pending_rewards(wallet_address).await })
+        .map_err(|e| MobileError::IoError(format!("Failed to fetch rewards: {e}")))?;
+
+    let total_value = runtime
+        .block_on(async { service.total_assessed_value().await })
+        .map_err(|e| MobileError::IoError(format!("Failed to fetch total value: {e}")))?;
+
+    Ok(EconomyAccountSnapshot {
+        wallet_address: format!("{wallet_address:?}"),
+        arxo_balance: format_decimal(balance, ARXO_DECIMALS),
+        pending_rewards: format_decimal(rewards, ARXO_DECIMALS),
+        total_assessed_value: total_value.to_string(),
+    })
+}
+
+#[cfg(feature = "economy")]
+#[tracing::instrument(skip(amount))]
+pub fn economy_stake_tokens(amount: &str) -> Result<(), MobileError> {
+    let (runtime, service) = load_economy_service()?;
+    let amount = parse_decimal_amount(amount, ARXO_DECIMALS)?;
+    runtime
+        .block_on(async {
+            service
+                .execute_staking(StakingAction::Stake { amount })
+                .await
+        })
+        .map_err(|e| MobileError::IoError(format!("Stake failed: {e}")))
+}
+
+#[cfg(feature = "economy")]
+#[tracing::instrument(skip(amount))]
+pub fn economy_unstake_tokens(amount: &str) -> Result<(), MobileError> {
+    let (runtime, service) = load_economy_service()?;
+    let amount = parse_decimal_amount(amount, ARXO_DECIMALS)?;
+    runtime
+        .block_on(async {
+            service
+                .execute_staking(StakingAction::Unstake { amount })
+                .await
+        })
+        .map_err(|e| MobileError::IoError(format!("Unstake failed: {e}")))
+}
+
+#[cfg(feature = "economy")]
+#[tracing::instrument]
+pub fn economy_claim_rewards() -> Result<(), MobileError> {
+    let (runtime, service) = load_economy_service()?;
+    runtime
+        .block_on(async { service.execute_staking(StakingAction::Claim).await })
+        .map_err(|e| MobileError::IoError(format!("Claim failed: {e}")))
+}
 /// Room information for mobile apps
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct RoomInfo {
@@ -597,5 +775,19 @@ mod tests {
         assert_eq!(info.id, "test-1");
         assert_eq!(info.name, "Test Room");
         assert_eq!(info.position.x, 1.0);
+    }
+
+    #[cfg(feature = "economy")]
+    #[test]
+    fn parse_decimal_amount_supports_fractional_values() {
+        let amount = parse_decimal_amount("12.345", ARXO_DECIMALS).expect("parse");
+        assert_eq!(format_decimal(amount, ARXO_DECIMALS), "12.345");
+    }
+
+    #[cfg(feature = "economy")]
+    #[test]
+    fn parse_decimal_amount_rejects_excess_precision() {
+        let result = parse_decimal_amount("1.1234567890123456789", ARXO_DECIMALS);
+        assert!(result.is_err());
     }
 }

@@ -48,6 +48,13 @@ data class TerminalOutput(
     val isExecuting: Boolean = false
 )
 
+data class EconomySnapshot(
+    val walletAddress: String,
+    val arxoBalance: String,
+    val pendingRewards: String,
+    val totalAssessedValue: String
+)
+
 data class ARScanResult(
     val room: String,
     val equipment: List<DetectedEquipment>,

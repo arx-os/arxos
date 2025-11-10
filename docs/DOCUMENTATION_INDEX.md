@@ -80,6 +80,12 @@ Business and enterprise features.
 - **[PAYMENT_TRACKING.md](./business/PAYMENT_TRACKING.md)** - Payment processing
 - **[ENTERPRISE_DEPLOYMENT.md](./business/ENTERPRISE_DEPLOYMENT.md)** - Deploying at scale
 
+### [Economy](./economy/)
+
+On-chain incentives, staking, and revenue infrastructure.
+
+- **[README.md](./economy/README.md)** - Polygon contracts, Rust services, CLI/FFI, and ops runbooks
+
 ### [Ideas](./ideas/)
 
 Future feature exploration and brainstorming.
@@ -140,3 +146,4 @@ Historical and outdated documentation preserved in the [`archive/`](./archive/) 
 - 📱 **Mobile Game Integration** - Mobile FFI functions for PR review and planning
 - 📚 **Learning Mode** - Educational scenarios from historical PRs
 - ✅ **IFC Round-Trip Compatibility** - Complete metadata preservation for game operations
+- 🪙 **Economy Layer Integration** - Polygon contracts, CLI staking commands, and mobile FFI endpoints for ARXO rewards

@@ -2,10 +2,12 @@
 //!
 //! This module handles loading, saving, and committing building data to YAML files and Git.
 
+mod economy;
 mod error;
 
 pub use error::{PersistenceError, PersistenceResult};
 
+use crate::domain::economy::{ContributionRecord, EconomySnapshot};
 use crate::git::{BuildingGitManager, CommitMetadata, GitConfigManager};
 use crate::identity::UserRegistry;
 use crate::yaml::{BuildingData, BuildingYamlSerializer};
@@ -239,6 +241,24 @@ impl PersistenceManager {
 
         info!("Building data saved successfully");
         Ok(())
+    }
+
+    /// Load the persisted economic snapshot (valuations, contributions, revenue history).
+    pub fn load_economy_snapshot(&self) -> PersistenceResult<EconomySnapshot> {
+        let base_dir = self.working_file.parent().unwrap_or_else(|| Path::new("."));
+        economy::load_snapshot(base_dir)
+    }
+
+    /// Persist the provided economic snapshot to disk.
+    pub fn save_economy_snapshot(&self, snapshot: &EconomySnapshot) -> PersistenceResult<()> {
+        let base_dir = self.working_file.parent().unwrap_or_else(|| Path::new("."));
+        economy::save_snapshot(base_dir, snapshot)
+    }
+
+    /// Append a contribution record to the cumulative ledger.
+    pub fn append_contribution_record(&self, record: ContributionRecord) -> PersistenceResult<()> {
+        let base_dir = self.working_file.parent().unwrap_or_else(|| Path::new("."));
+        economy::append_contribution(base_dir, record)
     }
 
     /// Save building data and commit to Git (if repository exists)

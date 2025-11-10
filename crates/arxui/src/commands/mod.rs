@@ -7,6 +7,7 @@ pub mod config_mgmt;
 pub mod config_wizard;
 pub mod diff_viewer;
 pub mod doc;
+pub mod economy;
 pub mod equipment;
 pub mod equipment_handlers;
 pub mod export;
@@ -82,6 +83,7 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
             edit,
             interactive,
         } => config_mgmt::handle_config(show, set, reset, edit, interactive),
+        Commands::Economy { command } => economy::handle_economy_command(command),
         Commands::Render {
             building,
             floor,

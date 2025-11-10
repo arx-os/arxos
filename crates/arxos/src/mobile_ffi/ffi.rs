@@ -9,6 +9,11 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 
 use crate::mobile_ffi::MobileError;
+#[cfg(feature = "economy")]
+use crate::mobile_ffi::{
+    economy_account_snapshot, economy_claim_rewards, economy_stake_tokens, economy_unstake_tokens,
+    EconomyAccountSnapshot,
+};
 
 /// FFI error code enumeration
 #[repr(C)]
@@ -122,6 +127,74 @@ fn create_json_response<T: serde::Serialize>(result: Result<T, MobileError>) -> 
             }
         }
     }
+}
+
+#[cfg(feature = "economy")]
+#[no_mangle]
+pub unsafe extern "C" fn arxos_economy_snapshot(address: *const c_char) -> *mut c_char {
+    let address = if address.is_null() {
+        None
+    } else {
+        match CStr::from_ptr(address).to_str() {
+            Ok(s) if s.trim().is_empty() => None,
+            Ok(s) => Some(s.to_string()),
+            Err(_) => {
+                return create_json_response::<EconomyAccountSnapshot>(Err(
+                    MobileError::InvalidData("Invalid address string".into()),
+                ))
+            }
+        }
+    };
+
+    create_json_response(economy_account_snapshot(address))
+}
+
+#[cfg(feature = "economy")]
+#[no_mangle]
+pub unsafe extern "C" fn arxos_economy_stake(amount: *const c_char) -> *mut c_char {
+    if amount.is_null() {
+        return create_json_response::<()>(Err(MobileError::InvalidData(
+            "Amount pointer was null".into(),
+        )));
+    }
+
+    let amount = match CStr::from_ptr(amount).to_str() {
+        Ok(s) => s.to_string(),
+        Err(_) => {
+            return create_json_response::<()>(Err(MobileError::InvalidData(
+                "Amount string was not UTF-8".into(),
+            )))
+        }
+    };
+
+    create_json_response(economy_stake_tokens(amount.trim()))
+}
+
+#[cfg(feature = "economy")]
+#[no_mangle]
+pub unsafe extern "C" fn arxos_economy_unstake(amount: *const c_char) -> *mut c_char {
+    if amount.is_null() {
+        return create_json_response::<()>(Err(MobileError::InvalidData(
+            "Amount pointer was null".into(),
+        )));
+    }
+
+    let amount = match CStr::from_ptr(amount).to_str() {
+        Ok(s) => s.to_string(),
+        Err(_) => {
+            return create_json_response::<()>(Err(MobileError::InvalidData(
+                "Amount string was not UTF-8".into(),
+            )))
+        }
+    };
+
+    create_json_response(economy_unstake_tokens(amount.trim()))
+}
+
+#[cfg(feature = "economy")]
+#[no_mangle]
+pub unsafe extern "C" fn arxos_economy_claim() -> *mut c_char {
+    create_json_response(economy_claim_rewards())
 }
 
 // Game system FFI functions

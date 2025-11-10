@@ -15,6 +15,8 @@ pub use arx::{core, domain, git, ifc, spatial, utils, yaml};
 // Integration modules (external systems)
 #[cfg(feature = "std")]
 pub mod ar_integration;
+#[cfg(all(feature = "std", feature = "economy"))]
+pub mod economy;
 #[cfg(feature = "std")]
 pub mod hardware;
 #[cfg(feature = "std")]
@@ -73,6 +75,11 @@ pub use arx::yaml::{
 pub use config::counters::CounterStorage;
 #[cfg(feature = "std")]
 pub use config::{ArxConfig, ConfigError, ConfigManager, ConfigResult};
+#[cfg(all(feature = "std", feature = "economy"))]
+pub use economy::{
+    ArxoEconomyService, DatasetPublishRequest, EconomyConfig, EconomyError,
+    RevenueDistributionRequest, StakingAction, VerificationRequest,
+};
 #[cfg(feature = "std")]
 pub use export::ar::{ARExporter, ARFormat, GLTFExporter};
 pub use identity::{

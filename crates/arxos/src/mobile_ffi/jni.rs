@@ -9,6 +9,10 @@ use std::os::raw::c_char;
 use std::ffi::{CStr, CString};
 
 use crate::mobile_ffi::{MobileError, RoomInfo, EquipmentInfo};
+#[cfg(feature = "economy")]
+use crate::mobile_ffi::{
+    economy_account_snapshot, economy_claim_rewards, economy_stake_tokens, economy_unstake_tokens,
+};
 
 // External C FFI function declarations
 extern "C" {
@@ -916,6 +920,104 @@ pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeR
         }
         Err(e) => {
             let error_json = format!(r#"{{"success":false,"error":"Failed to reject: {}"}}"#, e);
+            rust_string_to_java(&env, &error_json)
+        }
+    }
+}
+
+#[cfg(feature = "economy")]
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeEconomySnapshot(
+    mut env: JNIEnv,
+    _class: JClass,
+    address: JString,
+) -> jstring {
+    let address = if address.is_null() {
+        None
+    } else {
+        let raw = java_string_to_rust(&env, address);
+        if env.exception_check().unwrap_or(false) {
+            return std::ptr::null_mut();
+        }
+        let trimmed = raw.trim().to_string();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed)
+        }
+    };
+
+    match economy_account_snapshot(address) {
+        Ok(snapshot) => match serde_json::to_string(&snapshot) {
+            Ok(json) => rust_string_to_java(&env, &json),
+            Err(e) => {
+                env.throw_new(
+                    "java/lang/RuntimeException",
+                    &format!("Serialization failed: {e}"),
+                )
+                .ok();
+                std::ptr::null_mut()
+            }
+        },
+        Err(e) => {
+            let error_json = format!(r#"{{"error":"{}"}}"#, e);
+            rust_string_to_java(&env, &error_json)
+        }
+    }
+}
+
+#[cfg(feature = "economy")]
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeEconomyStake(
+    mut env: JNIEnv,
+    _class: JClass,
+    amount: JString,
+) -> jstring {
+    let amount_str = java_string_to_rust(&env, amount);
+    if env.exception_check().unwrap_or(false) {
+        return std::ptr::null_mut();
+    }
+
+    match economy_stake_tokens(amount_str.trim()) {
+        Ok(_) => rust_string_to_java(&env, r#"{"status":"ok"}"#),
+        Err(e) => {
+            let error_json = format!(r#"{{"error":"{}"}}"#, e);
+            rust_string_to_java(&env, &error_json)
+        }
+    }
+}
+
+#[cfg(feature = "economy")]
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeEconomyUnstake(
+    mut env: JNIEnv,
+    _class: JClass,
+    amount: JString,
+) -> jstring {
+    let amount_str = java_string_to_rust(&env, amount);
+    if env.exception_check().unwrap_or(false) {
+        return std::ptr::null_mut();
+    }
+
+    match economy_unstake_tokens(amount_str.trim()) {
+        Ok(_) => rust_string_to_java(&env, r#"{"status":"ok"}"#),
+        Err(e) => {
+            let error_json = format!(r#"{{"error":"{}"}}"#, e);
+            rust_string_to_java(&env, &error_json)
+        }
+    }
+}
+
+#[cfg(feature = "economy")]
+#[no_mangle]
+pub unsafe extern "system" fn Java_com_arxos_mobile_service_ArxOSCoreJNI_nativeEconomyClaimRewards(
+    mut env: JNIEnv,
+    _class: JClass,
+) -> jstring {
+    match economy_claim_rewards() {
+        Ok(_) => rust_string_to_java(&env, r#"{"status":"ok"}"#),
+        Err(e) => {
+            let error_json = format!(r#"{{"error":"{}"}}"#, e);
             rust_string_to_java(&env, &error_json)
         }
     }

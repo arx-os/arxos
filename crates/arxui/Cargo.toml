@@ -8,14 +8,15 @@ repository.workspace = true
 description = "Arx terminal UI and 3D rendering"
 
 [features]
-default = ["tui", "render3d"]
+default = ["tui", "render3d", "economy"]
 tui = []
 render3d = []
+economy = ["dep:tokio"]
 async-sensors = ["dep:tokio"]
 
 [dependencies]
 arx = { path = "../arx" }
-arxos = { path = "../arxos" }
+arxos = { path = "../arxos", features = ["economy"] }
 clap = { workspace = true }
 env_logger = { workspace = true }
 arboard = "3.2"
@@ -36,6 +37,7 @@ toml = { workspace = true }
 notify = { workspace = true }
 git2 = { workspace = true }
 nalgebra = { workspace = true }
+ethers-core = "2.0"
 
 [[bin]]
 name = "arx"

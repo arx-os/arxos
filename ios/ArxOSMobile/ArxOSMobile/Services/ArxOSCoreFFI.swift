@@ -48,6 +48,18 @@ func arxos_confirm_pending_equipment(_ buildingName: UnsafePointer<CChar>?, _ pe
 @_silgen_name("arxos_reject_pending_equipment")
 func arxos_reject_pending_equipment(_ buildingName: UnsafePointer<CChar>?, _ pendingId: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>?
 
+@_silgen_name("arxos_economy_snapshot")
+func arxos_economy_snapshot(_ address: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>?
+
+@_silgen_name("arxos_economy_stake")
+func arxos_economy_stake(_ amount: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>?
+
+@_silgen_name("arxos_economy_unstake")
+func arxos_economy_unstake(_ amount: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>?
+
+@_silgen_name("arxos_economy_claim")
+func arxos_economy_claim() -> UnsafeMutablePointer<CChar>?
+
 @_silgen_name("arxos_free_string")
 func arxos_free_string(_ ptr: UnsafeMutablePointer<CChar>?)
 
@@ -830,6 +842,150 @@ class ArxOSCoreFFI {
             }
         }
     }
+    
+    /// Fetch the economy snapshot for the configured wallet or override address.
+    func getEconomySnapshot(addressOverride: String? = nil, completion: @escaping (Result<EconomySnapshot, Error>) -> Void) {
+        DispatchQueue.global().async {
+            let addressCString = addressOverride?.cString(using: .utf8)
+            let resultPtr = addressCString?.withUnsafeBufferPointer { buffer in
+                arxos_economy_snapshot(buffer.baseAddress)
+            } ?? arxos_economy_snapshot(nil)
+            
+            guard let resultPtr = resultPtr else {
+                DispatchQueue.main.async {
+                    completion(.failure(TerminalError.ffiError("FFI call returned null pointer")))
+                }
+                return
+            }
+            
+            let resultString = String(cString: resultPtr)
+            arxos_free_string(resultPtr)
+            
+            guard let data = resultString.data(using: .utf8) else {
+                DispatchQueue.main.async {
+                    completion(.failure(TerminalError.ffiError("Failed to convert result to data")))
+                }
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                if let response = try? decoder.decode(FFIResponse<EconomySnapshot>.self, from: data) {
+                    if let error = response.error {
+                        DispatchQueue.main.async {
+                            completion(.failure(TerminalError.ffiError(error)))
+                        }
+                        return
+                    }
+                    if let snapshot = response.data {
+                        DispatchQueue.main.async {
+                            completion(.success(snapshot))
+                        }
+                        return
+                    }
+                }
+                
+                let snapshot = try decoder.decode(EconomySnapshot.self, from: data)
+                DispatchQueue.main.async {
+                    completion(.success(snapshot))
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(TerminalError.parseError("Failed to parse economy snapshot: \(error.localizedDescription)")))
+                }
+            }
+        }
+    }
+    
+    /// Stake ARXO via the economy service.
+    func stakeARXO(amount: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        performEconomyMutation(amount: amount, function: arxos_economy_stake, operation: "stake", completion: completion)
+    }
+    
+    /// Unstake ARXO via the economy service.
+    func unstakeARXO(amount: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        performEconomyMutation(amount: amount, function: arxos_economy_unstake, operation: "unstake", completion: completion)
+    }
+    
+    /// Claim staking rewards via the economy service.
+    func claimStakingRewards(completion: @escaping (Result<Void, Error>) -> Void) {
+        DispatchQueue.global().async {
+            let resultPtr = arxos_economy_claim()
+            
+            guard let resultPtr = resultPtr else {
+                DispatchQueue.main.async {
+                    completion(.failure(TerminalError.ffiError("FFI claim call returned null pointer")))
+                }
+                return
+            }
+            
+            let resultString = String(cString: resultPtr)
+            arxos_free_string(resultPtr)
+            
+            if resultString.contains("\"error\"") {
+                let message = self.extractError(from: resultString) ?? "Unknown claim error"
+                DispatchQueue.main.async {
+                    completion(.failure(TerminalError.ffiError(message)))
+                }
+            } else {
+                DispatchQueue.main.async {
+                    completion(.success(()))
+                }
+            }
+        }
+    }
+    
+    /// Helper to perform staking mutations.
+    private func performEconomyMutation(
+        amount: String,
+        function: (UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>?,
+        operation: String,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        DispatchQueue.global().async {
+            guard let amountCString = amount.cString(using: .utf8) else {
+                DispatchQueue.main.async {
+                    completion(.failure(TerminalError.ffiError("Failed to convert \(operation) amount to C string")))
+                }
+                return
+            }
+            
+            let resultPtr = amountCString.withUnsafeBufferPointer { buffer in
+                function(buffer.baseAddress)
+            }
+            
+            guard let resultPtr = resultPtr else {
+                DispatchQueue.main.async {
+                    completion(.failure(TerminalError.ffiError("FFI \(operation) call returned null pointer")))
+                }
+                return
+            }
+            
+            let resultString = String(cString: resultPtr)
+            arxos_free_string(resultPtr)
+            
+            if resultString.contains("\"error\"") {
+                let message = self.extractError(from: resultString) ?? "Unknown \(operation) error"
+                DispatchQueue.main.async {
+                    completion(.failure(TerminalError.ffiError(message)))
+                }
+            } else {
+                DispatchQueue.main.async {
+                    completion(.success(()))
+                }
+            }
+        }
+    }
+    
+    /// Extract error message from JSON payload.
+    private func extractError(from json: String) -> String? {
+        guard let data = json.data(using: .utf8) else { return nil }
+        if let payload = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+           let error = payload["error"] as? String {
+            return error
+        }
+        return nil
+    }
 }
 
 /// Result from processing AR scan to pending
@@ -983,6 +1139,21 @@ struct PendingEquipmentRejectResult: Codable {
         case building
         case pendingId = "pending_id"
         case message
+    }
+}
+
+/// Economy snapshot returned from Rust FFI
+struct EconomySnapshot: Codable {
+    let walletAddress: String
+    let arxoBalance: String
+    let pendingRewards: String
+    let totalAssessedValue: String
+    
+    enum CodingKeys: String, CodingKey {
+        case walletAddress = "wallet_address"
+        case arxoBalance = "arxo_balance"
+        case pendingRewards = "pending_rewards"
+        case totalAssessedValue = "total_assessed_value"
     }
 }
 

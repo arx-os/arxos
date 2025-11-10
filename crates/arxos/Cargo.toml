@@ -26,6 +26,7 @@ async-sensors = [
     "dep:rumqttc",
 ]
 android = ["jni"]
+economy = ["dep:ethers", "dep:async-trait", "dep:reqwest", "dep:tokio"]
 
 [dependencies]
 arx = { path = "../arx" }
@@ -62,6 +63,9 @@ gltf = { version = "1.4.1", default-features = false }
 gltf-json = { version = "1.4.1", default-features = false }
 zip = "0.6"
 csv = "1.3"
+ethers = { version = "2.0", features = ["abigen", "rustls"], optional = true }
+async-trait = { version = "0.1", optional = true }
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], optional = true }
 # GPG/PGP support (Phase 3: User Identity)
 # Note: Using Git's native GPG support via git2, no additional dependencies needed
 

@@ -32,7 +32,10 @@ pub use depin::{
     SensorAlert, SensorData, SensorMetadata, SensorReadingValidator, SensorType, ThresholdCheck,
     ValidationOutcome,
 };
-pub use domain::{ArxAddress, RESERVED_SYSTEMS};
+pub use domain::{
+    ArxAddress, BuildingValuation, ContributionRecord, EconomySnapshot, Money, RevenuePayout,
+    RESERVED_SYSTEMS,
+};
 pub use error::{ArxError, ArxResult, ErrorAnalytics, ErrorContext};
 pub use git::{BuildingGitManager, CommitMetadata, GitConfig, GitConfigManager, GitError};
 pub use identity::{

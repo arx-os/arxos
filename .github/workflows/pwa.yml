@@ -1,0 +1,64 @@
+name: pwa
+
+on:
+  push:
+    paths:
+      - "crates/arxos-wasm/**"
+      - "crates/arxos/src/command_catalog.rs"
+      - "pwa/**"
+      - "WEB_PWA_PLAN.md"
+      - "docs/web/**"
+      - ".github/workflows/pwa.yml"
+  pull_request:
+    paths:
+      - "crates/arxos-wasm/**"
+      - "crates/arxos/src/command_catalog.rs"
+      - "pwa/**"
+      - "WEB_PWA_PLAN.md"
+      - "docs/web/**"
+      - ".github/workflows/pwa.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache wasm-pack
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/wasm-pack
+          key: wasm-pack-${{ runner.os }}
+
+      - name: Install wasm-pack
+        run: |
+          if ! command -v wasm-pack > /dev/null; then
+            cargo install wasm-pack --locked
+          fi
+
+      - name: Build WASM bindings
+        run: wasm-pack build crates/arxos-wasm --target web --out-dir pkg
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: pwa/package-lock.json
+
+      - name: Install dependencies
+        working-directory: pwa
+        run: npm ci
+
+      - name: Type check
+        working-directory: pwa
+        run: npm run typecheck
+
+      - name: Build PWA bundle
+        working-directory: pwa
+        run: npm run build

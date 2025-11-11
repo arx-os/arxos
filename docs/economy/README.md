@@ -19,6 +19,8 @@ The economy layer enables on-chain minting, staking, revenue distribution, and r
 - Contracts live under `contracts/contracts/…` with mocks for local testing.
 - Tests in `contracts/test/arxos.spec.ts` validate minting, staking, and revenue splitting with deterministic mocks.
 - Deployment script `contracts/scripts/deploy.ts` wires token, staking, splitter, and oracle contracts with environment-configurable addresses.
+- `RevenueSplitter` executes the 60/20/20 swap pattern (60% to staker rewards, 20% burn, 20% to treasury) when new USDC revenue is deposited.
+- Requires Node.js 20 LTS (see `.nvmrc`) for local and CI Hardhat runs.
 - Runbook:
   ```bash
   cd contracts
@@ -65,26 +67,10 @@ The economy layer enables on-chain minting, staking, revenue distribution, and r
 - `commands/economy.rs` uses `tokio::runtime::Builder::new_multi_thread()` to orchestrate async calls without requiring a global runtime.
 - `arxui/Cargo.toml` enables the `economy` feature by default, pulling in Tokio and ethers.
 
-## Mobile FFI Surfaces (`crates/arxos/src/mobile_ffi`)
+## WASM Surface (`crates/arxos/src/ar_integration/wasm.rs`)
 
-- New APIs exposed for iOS/Android:
-  - `arxos_economy_snapshot(address?)`
-  - `arxos_economy_stake(amount)`
-  - `arxos_economy_unstake(amount)`
-  - `arxos_economy_claim()`
-- `mobile_ffi::economy_account_snapshot` et al. share parsing helpers and are instrumented with tracing.
-- iOS (`ios/ArxOSMobile/.../ArxOSCoreFFI.swift`):
-  - Adds `_silgen_name` imports.
-  - Provides async-friendly wrappers returning `EconomySnapshot`.
-  - Includes stake/unstake/claim wrappers and JSON decoding types.
-- Android (`android/app/.../ArxOSCoreJNI.kt` + `ArxOSCoreService.kt`):
-  - Declares new JNI externals.
-  - Wrapper methods parse JSON responses into `EconomySnapshot`.
-  - Service layer exposes coroutine-based helpers for app view models.
-- Update bridging header via:
-  ```bash
-  cbindgen --config cbindgen.toml --crate arxos --output include/arxos_mobile.h
-  ```
+- WebAssembly-friendly helpers expose AR scan parsing and equipment extraction.
+- Legacy mobile FFI economy APIs were archived with the native clients (see `docs/mobile/STATUS.md`).
 
 ## Testing & Observability
 

@@ -1,5 +1,7 @@
 # ArxOS API Reference
 
+> **Mobile FFI Notice (November 2025):** C/UniFFI exports for iOS/Android were archived with the native clients. References remain here for historical context. The supported surface going forward is the WASM PWA (`WEB_PWA_PLAN.md`) powered by `ar_integration::wasm`.
+
 **Version:** 2.0.0  
 **Last Updated:** January 2025
 

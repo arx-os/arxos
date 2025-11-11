@@ -1,4 +1,6 @@
-# ArxOS Mobile FFI Integration Guide
+# ArxOS Mobile FFI Integration Guide _(Archived)_
+
+> **Status (November 2025):** Native mobile bindings are paused. Use this document only when working with the archived clients (`mobile-apps-final`). For the active roadmap, see `WEB_PWA_PLAN.md` and the WASM helpers under `ar_integration::wasm`.
 
 **Version:** 1.0  
 **Date:** December 2024  

@@ -144,6 +144,9 @@ mod tests {
 
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].contributor_id, record.contributor_id);
-        assert_eq!(entries[0].revenue_share.amount_cents, record.revenue_share.amount_cents);
+        assert_eq!(
+            entries[0].revenue_share.amount_cents,
+            record.revenue_share.amount_cents
+        );
     }
 }

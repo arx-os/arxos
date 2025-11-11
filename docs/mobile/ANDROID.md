@@ -1,4 +1,6 @@
-# ArxOS Android Development
+# ArxOS Android Development _(Archived)_
+
+> **Status (November 2025):** Native Android development is on hold. Follow this guide only when working with the archived clients (`mobile-apps-final`).
 
 Complete guide for building and developing the ArxOS Android app.
 

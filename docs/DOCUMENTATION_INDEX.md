@@ -42,16 +42,9 @@ Documentation for contributing to ArxOS development.
 - **[codebase-reviews/](./development/codebase-reviews/)** - In-depth module reviews and architecture analysis
 - **[improvement-summaries/](./development/improvement-summaries/)** - Summaries of completed improvements
 
-### [Mobile](./mobile/)
-
-iOS and Android development documentation.
-
-- **[MOBILE_FFI_INTEGRATION.md](./mobile/MOBILE_FFI_INTEGRATION.md)** - Complete FFI guide
-- **[MOBILE_GAME_INTEGRATION.md](./mobile/MOBILE_GAME_INTEGRATION.md)** - Game system mobile integration
-- **[IOS_FFI_STATUS.md](./mobile/IOS_FFI_STATUS.md)** - Current iOS integration status
-- **[ANDROID.md](./mobile/ANDROID.md)** - Android setup and build guide
-- **[MOBILE_CI_CD.md](./mobile/MOBILE_CI_CD.md)** - GitHub Actions workflows
-- **[MOBILE_SIGNUP_WORKFLOW.md](./mobile/MOBILE_SIGNUP_WORKFLOW.md)** - Auth system design
+- ### [Mobile (Archived)](./mobile/)
+  - **[STATUS.md](./mobile/STATUS.md)** – Current state and archive retrieval instructions
+  - Legacy references (FFI guide, iOS/Android build docs, CI/CD, signup workflow) are preserved for historical purposes only.
 
 ### [Augmented Reality](./ar/)
 
@@ -132,7 +125,7 @@ Historical and outdated documentation preserved in the [`archive/`](./archive/) 
 **Contributing?** → See [Developer Onboarding](./development/DEVELOPER_ONBOARDING.md)  
 **Security?** → Review [Security Guide](./development/SECURITY.md)  
 **Adding features?** → See [Architecture](./core/ARCHITECTURE.md)  
-**Building mobile apps?** → See [Mobile FFI](./mobile/MOBILE_FFI_INTEGRATION.md)  
+**Need the old mobile clients?** → See [Mobile Status & Archive](./mobile/STATUS.md)  
 **Deploying at scale?** → See [Enterprise Deployment](./business/ENTERPRISE_DEPLOYMENT.md)  
 **Need performance tips?** → See [Performance Guide](./development/PERFORMANCE_GUIDE.md)  
 **Looking for API details?** → See [API Reference](./core/API_REFERENCE.md)  

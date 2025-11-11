@@ -7,7 +7,7 @@ mod render3d;
 mod tui;
 
 pub use arx::{config, core, depin, domain, error, git, ifc, persistence, spatial, utils, yaml};
-pub use arxos::{ar_integration, export, game, hardware, mobile_ffi, query, search, services};
+pub use arxos::{ar_integration, export, game, hardware, query, search, services};
 #[cfg(feature = "render3d")]
 pub use render3d::*;
 pub use {docs::generate_building_docs, render::BuildingRenderer, tui::*};

@@ -1,4 +1,6 @@
-# iOS AR Integration Plan
+# iOS AR Integration Plan _(Archived)_
+
+> **Status (November 2025):** Plan retained for historical context while the project focuses on the WASM PWA.
 
 **Date:** November 2025  
 **Status:** Planning  

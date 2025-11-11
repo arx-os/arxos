@@ -18,12 +18,9 @@ AR integration and workflow tests:
 - `ar_gltf_integration_tests.rs` - glTF export integration tests
 - `ar_usdz_integration_tests.rs` - USDZ export integration tests
 - `ar_workflow_integration_test.rs` - AR workflow integration
-- `ar_ios_workflow_integration_tests.rs` - iOS AR workflow integration
 - `ar_json_helpers_tests.rs` - AR JSON parsing helper tests
 
-#### Mobile/FFI Tests (`tests/mobile/`)
-Mobile FFI and cross-platform tests:
-- `mobile_ffi_tests.rs` - Core FFI function tests (JNI, iOS, error handling)
+> **Note:** Legacy iOS/Android workflow tests were archived with the native clients. See `docs/mobile/STATUS.md`.
 
 #### Hardware Tests (`tests/hardware/`)
 Hardware sensor integration tests:
@@ -87,9 +84,6 @@ cargo test --test ar_workflow_integration_test
 cargo test --test ar_complete_workflow_test
 # etc.
 
-# Mobile/FFI tests
-cargo test --test mobile_ffi_tests
-
 # Hardware tests
 cargo test --test hardware_integration_tests
 cargo test --test hardware_http_integration_tests
@@ -144,13 +138,12 @@ cargo test --test commands/export_tests
 ## Test File Naming Convention
 
 Tests use the following naming pattern:
-- **Category subdirectory** (e.g., `ar/`, `mobile/`, `hardware/`, `tui/`)
+- **Category subdirectory** (e.g., `ar/`, `hardware/`, `tui/`)
 - **Feature name** (e.g., `workflow`, `integration`, `component`)
 - **Test type suffix** (e.g., `_tests.rs`, `_test.rs`)
 
 Examples:
 - `tests/ar/ar_workflow_integration_test.rs` - AR workflow integration test
-- `tests/mobile/mobile_ffi_tests.rs` - Mobile FFI tests
 - `tests/hardware/hardware_http_integration_tests.rs` - Hardware HTTP integration tests
 - `tests/tui/tui_workflow_integration_tests.rs` - TUI workflow integration tests
 - `tests/spreadsheet/spreadsheet_component_integration_tests.rs` - Spreadsheet component integration tests
@@ -164,26 +157,23 @@ Examples:
 5. **IDE Friendly**: Most IDEs group files by directory automatically
 6. **Better Organization**: Subdirectories prevent test directory from becoming cluttered
 
-## Test Statistics
+## Test Statistics (Nov 2025)
 
-- **Total Test Files**: 45 Rust test files
-- **AR Tests**: 6 files in `tests/ar/`
+- **Total Test Files**: 43 Rust test files
+- **AR Tests**: 5 files in `tests/ar/`
 - **Command Tests**: 17 files in `tests/commands/`
-- **Mobile Tests**: 1 file in `tests/mobile/`
 - **Hardware Tests**: 3 files in `tests/hardware/`
 - **E2E Tests**: 2 files in `tests/e2e/`
 - **IFC Tests**: 2 files in `tests/ifc/`
 - **Persistence Tests**: 1 file in `tests/persistence/`
 - **TUI Tests**: 5 files in `tests/tui/` (including `test_utils.rs`)
-- **Spreadsheet Tests**: 4 files in `tests/spreadsheet/` ⭐ NEW
+- **Spreadsheet Tests**: 4 files in `tests/spreadsheet/`
 - **Other Tests**: 4 files in `tests/` root
-- **Test Coverage**: >90% (as per project standards)
-
+- **Test Coverage**: >90% (per project standards)
 ## Related Documentation
 
 - `tests/README_PERSISTENCE_TESTS.md` - Persistence test details
-- `tests/README_MOBILE_FFI_TESTS.md` - Mobile FFI test details
-- `tests/README_ANDROID_AR_TESTS.md` - Android AR test details
+- `docs/mobile/STATUS.md` - Status of archived mobile tests
 - `tests/TEST_COVERAGE_SUMMARY.md` - Overall test coverage summary
 - `tests/IMPLEMENTATION_SUMMARY.md` - Implementation details
 - `tests/TESTS_DIRECTORY_REVIEW.md` - Structure review and best practices

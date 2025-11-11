@@ -1,4 +1,6 @@
-# Mobile CI/CD Guide
+# Mobile CI/CD Guide _(Archived)_
+
+> **Status (November 2025):** Automated pipelines for native mobile builds are paused. This guide remains for historical reference only.
 
 ## Overview
 

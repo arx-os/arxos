@@ -1,45 +1,20 @@
-# ArxOS Mobile FFI Headers
+# Archived Mobile FFI Headers
 
-This directory contains C header files for ArxOS mobile FFI (Foreign Function Interface) integration.
+The native mobile bindings were retired in November 2025 as part of the WASM PWA transition. No active header files are shipped in this directory anymore.
 
-## Purpose
+## Where Did The Headers Go?
 
-The C header files in this directory define the public API for calling ArxOS Rust functions from iOS (Swift) and Android (Kotlin) applications.
+- The final `arxos_mobile.h` and related UniFFI scaffolding live in the `archive/mobile-clients` bundle referenced from `docs/mobile/STATUS.md`.
+- Use that archive only if you need to reproduce historic builds; the maintained path forward is the WebAssembly PWA (`WEB_PWA_PLAN.md`).
 
-## Files
+## Current Status
 
-- **`arxos_mobile.h`** - C FFI bindings for mobile integration
-  - Defines function signatures for room/equipment operations
-  - Provides AR scan processing functions
-  - Includes memory management functions (`arxos_free_string`)
+- ✅ WASM-first workflow (browser + optional desktop agent)
+- ⚠️ Native Swift/Kotlin shells **paused** and no longer built in this repository
+- 🔄 WebXR progress reviewed quarterly to decide whether native capture should be revived
 
-## Build Integration
+## Related Documentation
 
-These headers are automatically copied to the iOS XCFramework during the build process:
-
-```bash
-# When building for iOS
-scripts/build-mobile-ios.sh
-# → Copies include/arxos_mobile.h to ios/build/ArxOS.xcframework/Headers/
-```
-
-## Usage
-
-**For iOS:**
-- Headers are included in the XCFramework bundle
-- Swift wrappers in `ios/ArxOSMobile/Services/ArxOSCoreFFI.swift` use these functions
-
-**For Android:**
-- JNI bindings in `src/mobile_ffi/jni.rs` implement these same functions
-- Kotlin wrappers in `android/app/src/main/java/com/arxos/mobile/` use the JNI functions
-
-## Memory Management
-
-⚠️ **Important:** All strings returned from FFI functions must be freed using `arxos_free_string()` to prevent memory leaks.
-
-## See Also
-
-- [Mobile FFI Integration Documentation](../docs/MOBILE_FFI_INTEGRATION.md)
-- [iOS FFI Status](../docs/IOS_FFI_STATUS.md)
-- [FFI Source Code](../src/mobile_ffi/)
-
+- `docs/mobile/STATUS.md` – mobile archive notes
+- `docs/CHANGELOG_NOVEMBER_2025.md` – announcement of the strategy change
+- `WEB_PWA_PLAN.md` – updated architecture plan

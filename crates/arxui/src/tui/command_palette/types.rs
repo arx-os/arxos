@@ -48,6 +48,26 @@ pub enum CommandCategory {
     Other,
 }
 
+impl From<arx_command_catalog::CommandCategory> for CommandCategory {
+    fn from(value: arx_command_catalog::CommandCategory) -> Self {
+        match value {
+            arx_command_catalog::CommandCategory::Building => CommandCategory::Building,
+            arx_command_catalog::CommandCategory::Equipment => CommandCategory::Equipment,
+            arx_command_catalog::CommandCategory::Room => CommandCategory::Room,
+            arx_command_catalog::CommandCategory::Git => CommandCategory::Git,
+            arx_command_catalog::CommandCategory::ImportExport => CommandCategory::ImportExport,
+            arx_command_catalog::CommandCategory::AR => CommandCategory::AR,
+            arx_command_catalog::CommandCategory::Render => CommandCategory::Render,
+            arx_command_catalog::CommandCategory::Search => CommandCategory::Search,
+            arx_command_catalog::CommandCategory::Config => CommandCategory::Config,
+            arx_command_catalog::CommandCategory::Sensors => CommandCategory::Sensors,
+            arx_command_catalog::CommandCategory::Health => CommandCategory::Health,
+            arx_command_catalog::CommandCategory::Documentation => CommandCategory::Documentation,
+            arx_command_catalog::CommandCategory::Other => CommandCategory::Other,
+        }
+    }
+}
+
 impl CommandCategory {
     /// Get category name
     pub fn name(&self) -> &'static str {

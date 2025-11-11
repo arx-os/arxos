@@ -1,19 +1,23 @@
-# Mobile Development Documentation
+# Mobile Documentation (Archived)
 
-Documentation for iOS and Android development with ArxOS.
+Native mobile development for ArxOS is on hold while we build the WASM-powered PWA.
 
-## Contents
+## Current Status
 
-- **[MOBILE_FFI_INTEGRATION.md](./MOBILE_FFI_INTEGRATION.md)** - Complete guide for iOS/Android FFI
-- **[IOS_FFI_STATUS.md](./IOS_FFI_STATUS.md)** - Current iOS integration status
-- **[ANDROID.md](./ANDROID.md)** - Android setup and build guide
-- **[MOBILE_CI_CD.md](./MOBILE_CI_CD.md)** - GitHub Actions workflows
-- **[MOBILE_SIGNUP_WORKFLOW.md](./MOBILE_SIGNUP_WORKFLOW.md)** - User authentication system
+- ✅ Active surface: Terminal/TUI and WebAssembly PWA (`WEB_PWA_PLAN.md`)
+- ⚠️ Archived surface: Native iOS & Android clients (see `docs/mobile/STATUS.md`)
+- 🔄 Mobile scanning revisit: Quarterly review of WebXR capabilities
 
-## Quick Links
+## Legacy References
 
-**Starting mobile development?** → See [Mobile FFI Integration](./MOBILE_FFI_INTEGRATION.md)  
-**iOS specific?** → See [iOS FFI Status](./IOS_FFI_STATUS.md)  
-**Android specific?** → See [Android](./ANDROID.md)  
-**Setting up CI/CD?** → See [Mobile CI/CD](./MOBILE_CI_CD.md)
+The documents in this directory are preserved for historical purposes. They describe the old FFI pipeline, build steps, and CI/CD workflows. Use them only if you need to spin up the archived clients from the `mobile-apps-final` tag.
+
+- [STATUS.md](./STATUS.md) – archive pointers and revival criteria
+- [MOBILE_FFI_INTEGRATION.md](./MOBILE_FFI_INTEGRATION.md) – legacy FFI guide (no longer maintained)
+- [IOS_FFI_STATUS.md](./IOS_FFI_STATUS.md) – historical integration notes
+- [ANDROID.md](./ANDROID.md) – previous Android build checklist
+- [MOBILE_CI_CD.md](./MOBILE_CI_CD.md) – deprecated pipelines
+- [MOBILE_SIGNUP_WORKFLOW.md](./MOBILE_SIGNUP_WORKFLOW.md) – historical UX plan
+
+For the roadmap ahead, focus on `WEB_PWA_PLAN.md` and the new `crates/arxos-wasm` workstream.
 

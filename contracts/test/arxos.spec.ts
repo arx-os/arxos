@@ -58,7 +58,10 @@ describe("ARXO Economy Contracts", () => {
     // Provide USDC revenue
     await usdc.mint(await splitter.getAddress(), ethers.parseUnits("600", 6));
 
-    await expect(splitter.connect(oracle).distribute(ethers.parseUnits("600", 6))).to.emit(splitter, "RevenueDistributed");
+    await expect(splitter.connect(oracle).distribute(ethers.parseUnits("600", 6))).to.emit(
+      splitter,
+      "RevenueDistributed"
+    );
 
     const pending = await staking.pendingRewards(staker.address);
     expect(pending).to.be.gt(0);

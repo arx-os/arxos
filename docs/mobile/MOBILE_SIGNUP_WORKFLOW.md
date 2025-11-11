@@ -1,4 +1,6 @@
-# Mobile Signup & Git Configuration Workflow
+# Mobile Signup & Git Configuration Workflow _(Archived)_
+
+> **Status (November 2025):** Native mobile onboarding is paused. The workflow described below applies only to the archived clients.
 
 **Last Updated:** January 2025  
 **Status:** Design Documentation  

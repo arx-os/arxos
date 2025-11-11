@@ -13,8 +13,8 @@
 - 🔍 **Smart Search** - Find equipment and rooms with regex and filtering
 - 🎨 **3D Visualization** - Interactive terminal-based 3D building visualization
 - 🎮 **Gamified Planning** - Interactive PR review and equipment placement with constraint validation
-- 🪙 **On-Chain Economy** - Polygon contracts, staking CLI, and mobile FFI for rewards and revenue splits
-- 📱 **Mobile Support** - Native iOS/Android apps with AR capabilities for field verification
+- 🪙 **On-Chain Economy** - Polygon contracts, staking CLI, and WASM surface for rewards and revenue splits
+- 📱 **Mobile Support** - WASM PWA with WebXR overlays (native apps archived for future reference)
 - ⚡ **Terminal-First** - Designed for efficiency and automation
 
 ---
@@ -194,7 +194,8 @@ ArxOS follows security best practices with automated scanning and comprehensive 
 - **[Examples](examples/)** - Example building data files and usage patterns
 - **[Game System](docs/features/GAME_SYSTEM.md)** - Gamified PR review and planning system
 - **[Architecture](docs/core/ARCHITECTURE.md)** - System design and technical details  
-- **[Mobile FFI Integration](docs/mobile/MOBILE_FFI_INTEGRATION.md)** - Mobile app development
+- **[WASM Web Development](docs/web/DEVELOPMENT.md)** - Run the PWA, desktop agent, and WASM toolchain
+- **[Mobile FFI Integration](docs/mobile/MOBILE_FFI_INTEGRATION.md)** - Archived native app docs
 - **[Hardware Integration](docs/features/HARDWARE_INTEGRATION.md)** - Deploy sensors and contribute to the DePIN network
 - **[Reward System](docs/business/REWARD_SYSTEM.md)** - How contributors earn rewards for building data (USD-based, no crypto complexity)
 
@@ -206,50 +207,40 @@ ArxOS is organised as a multi-crate Cargo workspace:
 
 ```
 arxos/
-├── docs/                         # Documentation and design references
+├── archive/mobile-clients/     # Archived iOS/Android shells + support policy
+├── docs/                       # Documentation and design references
 ├── crates/
-│   ├── arx/                      # Protocol core (IFC, Git, spatial, YAML, DePIN primitives)
-│   │   ├── src/
-│   │   └── examples/
-│   ├── arxui/                    # Terminal UI + optional 3D renderer + CLI binary `arx`
-│   │   ├── src/
-│   │   │   ├── cli/
-│   │   │   ├── commands/
-│   │   │   ├── render3d/
-│   │   │   └── tui/
-│   │   └── assets/
-│   ├── arxos/                    # Embedded runtime core (no_std capable)
-│   │   └── src/
-│   └── arxos-hal/                # Hardware abstraction layer workspace
-│       ├── src/
-│       ├── esp32-c3/
-│       └── rp2040/
-├── ios/                          # iOS native shell (SwiftUI)
-├── android/                      # Android native shell (Jetpack Compose)
-├── scripts/                      # Tooling and automation
-├── tests/                        # Cross-crate integration tests
-└── examples/                     # Sample IFC/building datasets
+│   ├── arx/                    # Protocol core (IFC, Git, spatial, YAML, DePIN primitives)
+│   ├── arxui/                  # Terminal UI + optional 3D renderer + CLI binary `arx`
+│   ├── arxos/                  # Runtime services, hardware ingestion, AR helpers
+│   ├── arxos-wasm/             # wasm-bindgen bindings for the PWA
+│   ├── arxos-agent/            # Desktop companion exposing Git/FS over WebSocket
+│   └── arxos-hal/              # Hardware abstraction layer (ESP32-C3, RP2040, ...)
+├── pwa/                        # React/Vite/Zustand web app
+├── scripts/                    # Tooling and automation
+├── tests/                      # Cross-crate integration tests
+└── examples/                   # Sample IFC/building datasets
 ```
 
 ### **Crate Responsibilities:**
 
 - **`crates/arx`** – Core protocol: immutable data model, IFC parser, Git manager, spatial engine, YAML serializer, and DePIN primitives.
 - **`crates/arxui`** – Binary crate delivering the `arx` CLI, TUI widgets, command handlers, and optional 3D renderer (`render3d` feature).
-- **`crates/arxos`** – Embedded/runtime systems: hardware ingestion, mobile FFI surface, runtime services, and a minimal `no_std` runtime core.
-- **`crates/arxos-hal`** – Aggregated hardware abstraction layer with board-specific sub-crates (ESP32-C3, RP2040, …).
+- **`crates/arxos`** – Runtime services, hardware ingestion, AR workflows, and a minimal `no_std` core.
+- **`crates/arxos-wasm`** – Exposes selected ArxOS APIs to the browser via `wasm-bindgen`.
+- **`crates/arxos-agent`** – Loopback WebSocket agent securing Git/FS access with DID:key tokens.
+- **`crates/arxos-hal`** – Aggregated hardware abstraction layer with board-specific sub-crates.
 
 ---
 
 ### **Architecture Philosophy:**
 
-- **Layered Crates** – Protocol (`arx`), UI (`arxui`), runtime (`arxos`), and hardware (`arxos-hal`) cleanly separated.
+- **Layered Crates** – Protocol (`arx`), UI (`arxui`), runtime (`arxos`), web bindings (`arxos-wasm`), and agent (`arxos-agent`).
 - **Git-native workflow** – Buildings stored as YAML tracked in Git repositories.
-- **FFI-first** – Mobile apps consume the same Rust logic via the FFI surface in `crates/arxos`.
+- **WASM-first** – Browsers reuse the same Rust logic via WebAssembly; native shells are archived.
 - **Hardware-aware** – Sensors plug into Git-managed buildings through the HAL workspace.
-- **Native UI Shells** - iOS (Swift/SwiftUI) and Android (Jetpack Compose)
-- **Git-First DePIN** - No database required, uses Git for distributed data storage and contribution tracking
-- **Decentralized Network** - Building owners, sensor operators, and field technicians contribute to a distributed building data network
-- **FFI Integration** - Mobile apps call Rust via C FFI bindings
+- **Desktop Agent Bridge** – Local Git/IFC access gated by DID:key tokens over loopback WebSocket.
+- **Decentralized Network** – Building owners, sensor operators, and field technicians contribute to a distributed building data network.
 
 ---
 

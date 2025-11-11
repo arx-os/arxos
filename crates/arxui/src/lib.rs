@@ -13,7 +13,7 @@ pub mod tui;
 pub use arx::{
     config, core, depin, domain, error, git, identity, ifc, persistence, spatial, utils, yaml,
 };
-pub use arxos::{ar_integration, export, game, hardware, mobile_ffi, query, search, services};
+pub use arxos::{ar_integration, export, game, hardware, query, search, services};
 
 pub use docs::generate_building_docs;
 pub use render::BuildingRenderer;

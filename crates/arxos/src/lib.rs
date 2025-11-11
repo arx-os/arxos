@@ -19,8 +19,11 @@ pub mod ar_integration;
 pub mod economy;
 #[cfg(feature = "std")]
 pub mod hardware;
+
 #[cfg(feature = "std")]
-pub mod mobile_ffi;
+pub mod command_catalog {
+    pub use arx_command_catalog::*;
+}
 
 // Data modules (serialization/persistence)
 #[cfg(feature = "std")]

@@ -1,7 +1,9 @@
-# Android AR Integration Tests
+# Android AR Integration Tests _(Archived)_
+
+> **Status (November 2025):** Native Android support is paused. The content below is preserved for historical reference and applies only to the archived mobile clients. See `docs/mobile/STATUS.md` and `WEB_PWA_PLAN.md` for the active WASM roadmap.
 
 **Last Updated:** January 2025  
-**Status:** Phase 1 Complete
+**Phase:** 1 Complete
 
 ---
 

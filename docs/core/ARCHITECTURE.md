@@ -340,7 +340,7 @@ crates/
 │   │   ├── export/           # Git/IFC export pipeline
 │   │   ├── game/             # Gamified planning systems
 │   │   ├── hardware/         # Sensor ingestion + async services
-│   │   ├── mobile_ffi/       # FFI bindings for mobile apps
+│   │   ├── ar_integration/wasm.rs  # WASM bindings for PWA clients
 │   │   ├── query/            # Legacy query helpers
 │   │   ├── search/           # Advanced search service
 │   │   ├── services/         # Service layer abstractions

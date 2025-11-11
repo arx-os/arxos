@@ -25,12 +25,12 @@ async-sensors = [
     "dep:futures-util",
     "dep:rumqttc",
 ]
-android = ["jni"]
 economy = ["dep:ethers", "dep:async-trait", "dep:reqwest", "dep:tokio"]
 
 [dependencies]
 arx = { path = "../arx" }
 # Re-export all workspace dependencies for integration tests
+arx-command-catalog = { path = "../arx-command-catalog" }
 serde = { workspace = true }
 serde_yaml = { workspace = true }
 serde_json = { workspace = true }
@@ -51,9 +51,6 @@ toml = { workspace = true }
 notify = { workspace = true }
 num_cpus = { workspace = true }
 tempfile = { workspace = true }
-uniffi = { workspace = true }
-uniffi_build = { workspace = true }
-jni = { workspace = true, optional = true }
 log = { workspace = true }
 regex = "1.10"
 sha2 = { workspace = true }
@@ -123,17 +120,8 @@ name = "ar_usdz_integration_tests"
 path = "../../tests/ar/ar_usdz_integration_tests.rs"
 
 [[test]]
-name = "ar_ios_workflow_integration_tests"
-path = "../../tests/ar/ar_ios_workflow_integration_tests.rs"
-
-[[test]]
 name = "ar_json_helpers_tests"
 path = "../../tests/ar/ar_json_helpers_tests.rs"
-
-# Mobile/FFI Tests
-[[test]]
-name = "mobile_ffi_tests"
-path = "../../tests/mobile/mobile_ffi_tests.rs"
 
 # Hardware Tests
 [[test]]
@@ -192,11 +180,6 @@ path = "../../tests/tui/tui_terminal_integration_tests.rs"
 name = "tui_users_browser_integration_tests"
 path = "../../tests/tui/users_browser_integration_tests.rs"
 
-[[test]]
-name = "user_attribution_e2e_test"
-path = "../../tests/integration/user_attribution_e2e_test.rs"
-
-# Spreadsheet Tests
 [[test]]
 name = "spreadsheet_component_integration_tests"
 path = "../../tests/spreadsheet/spreadsheet_component_integration_tests.rs"

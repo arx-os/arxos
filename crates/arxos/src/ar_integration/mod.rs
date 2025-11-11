@@ -84,6 +84,7 @@
 pub mod json_helpers;
 pub mod pending;
 pub mod processing;
+pub mod wasm;
 
 use crate::core::{
     BoundingBox, Dimensions, Equipment, EquipmentStatus, EquipmentType, Position, RoomType,
@@ -102,6 +103,11 @@ pub use pending::{
 pub use processing::{
     pending_equipment_from_json, pending_equipment_to_json, process_ar_scan_and_save_pending,
     process_ar_scan_to_pending, validate_ar_scan_data,
+};
+pub use wasm::{
+    extract_equipment_from_ar_scan, parse_ar_scan, Opening as WasmOpening,
+    Position as WasmPosition, Position3D as WasmPosition3D, RoomBoundaries as WasmRoomBoundaries,
+    WasmArScanData, WasmDetectedEquipment, WasmEquipmentInfo,
 };
 
 /// AR scan data structure from mobile applications

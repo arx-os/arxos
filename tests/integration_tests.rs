@@ -4,7 +4,7 @@
 //! core functionality and workflows.
 
 use arxos::core::{Equipment, EquipmentType, Room, RoomType};
-use arxos::mobile_ffi::{extract_equipment_from_ar_scan, parse_ar_scan};
+use arxos::ar_integration::{extract_equipment_from_ar_scan, parse_ar_scan};
 
 // Note: setup_test_environment and cleanup_test_environment are not currently used
 // but are kept for potential future use

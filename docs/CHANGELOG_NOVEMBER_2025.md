@@ -1,5 +1,14 @@
 # ArxOS Changelog - November 2025
 
+## 📱 Mobile Pivot to WASM PWA
+
+- Archived the native app directories (`ios/`, `android/`) and their build assets (`Dockerfile.android`, mobile build scripts, UniFFI headers).
+- Removed the `mobile_ffi` Rust module and replaced it with `ar_integration::wasm` helpers designed for the browser-based PWA.
+- Added WASM-friendly parsing helpers so the upcoming PWA can reuse AR scan datasets (`parse_ar_scan`, `extract_equipment_from_ar_scan`).
+- Introduced `crates/arxos-wasm`, React/Zustand PWA shell (`pwa/`), and the `crates/arxos-agent` loopback service secured by DID:key tokens.
+- Updated docs and scripts to point contributors to the Web PWA roadmap (`WEB_PWA_PLAN.md`) and the archived mobile bundle (`docs/mobile/STATUS.md`).
+- Simplified the `arxos` build script—no more cbindgen/cross-platform header generation.
+
 ## 🎮 Gamified PR Review & Planning System
 
 ### New Features
@@ -106,48 +115,4 @@ None.
 
 ### Known Limitations
 
-1. **Session Persistence**: `arxos_get_game_plan` accepts `session_id` but currently creates new sessions (session persistence not yet implemented)
-2. **Constraint JSON Parsing**: `arxos_validate_constraints` accepts constraint JSON but full parsing not yet implemented (uses empty system)
-
-Both limitations are documented with TODOs and don't affect current functionality.
-
----
-
-## 🔧 Technical Details
-
-### Architecture
-- Game system integrated with existing 3D renderer
-- Constraint system extensible via YAML configuration
-- IFC sync layer ensures metadata preservation
-- Mobile FFI follows existing patterns
-
-### Performance
-- Real-time constraint validation optimized for interactive use
-- Efficient spatial indexing for conflict detection
-- Minimal overhead for game overlay rendering
-
-### Security
-- Input validation for all game operations
-- Safe constraint file loading
-- Proper error handling in FFI functions
-
----
-
-## 📚 Documentation Updates
-
-All documentation has been updated to reflect the new game system:
-- User guide includes game commands
-- Architecture docs describe game module
-- Feature documentation complete
-- Mobile integration documented
-
----
-
-## 🎯 Next Steps (Future Enhancements)
-
-- Session persistence for planning games
-- Full constraint JSON parsing in FFI
-- Enhanced learning mode with more expert commentary
-- Multi-player collaborative planning
-- Advanced constraint visualizations
-
+1. **Session Persistence**: `

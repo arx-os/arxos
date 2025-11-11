@@ -17,6 +17,7 @@ async-sensors = ["dep:tokio"]
 [dependencies]
 arx = { path = "../arx" }
 arxos = { path = "../arxos", features = ["economy"] }
+arx-command-catalog = { path = "../arx-command-catalog" }
 clap = { workspace = true }
 env_logger = { workspace = true }
 arboard = "3.2"

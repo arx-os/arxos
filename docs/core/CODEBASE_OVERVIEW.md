@@ -193,13 +193,13 @@ Gamified PR review and planning system:
 
 **Key Types**: `GameState`, `GameScenario`, `PRReviewGame`, `PlanningGame`, `LearningMode`, `ConstraintSystem`, `IFCSyncManager`
 
-### Mobile FFI (`crates/arxos/crates/arxos/src/mobile_ffi/`)
+### Web/WASM Bindings (`crates/arxos/crates/arxos/src/ar_integration/wasm.rs`)
 
-Foreign function interface for mobile apps:
+Browser-oriented helpers that replace the retired mobile FFI surface:
 
-- **`ffi.rs`**: C FFI bindings with JSON serialization
-- **`jni.rs`**: Android JNI bindings
-- **`mod.rs`**: Mobile-specific data structures
+- JSON parsing for AR scan payloads (`parse_ar_scan`)
+- Equipment extraction helpers reused by the PWA
+- Data structures that mirror the legacy mobile schema for backward compatibility
 
 ### Spatial Operations (`src/spatial/`)
 

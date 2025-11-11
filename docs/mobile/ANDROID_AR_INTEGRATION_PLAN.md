@@ -1,4 +1,6 @@
-# Android AR Integration Plan
+# Android AR Integration Plan _(Archived)_
+
+> **Status (November 2025):** Plan retained for historical reference while native Android work is paused.
 
 **Date:** November 2025  
 **Status:** Planning  

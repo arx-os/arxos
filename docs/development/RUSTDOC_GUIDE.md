@@ -262,7 +262,7 @@ rustdoc recognizes special sections:
 /// # Examples
 ///
 /// ```
-/// use arxos::mobile_ffi::parse_ar_scan;
+/// use arxos::ar_integration::parse_ar_scan;
 ///
 /// let json = r#"{"roomName": "Room 101", "floorLevel": 2}"#;
 /// let scan = parse_ar_scan(json)?;
@@ -275,7 +275,7 @@ rustdoc recognizes special sections:
 /// # Safety
 ///
 /// This function is safe to call with any valid UTF-8 string.
-pub fn parse_ar_scan(scan_data: &str) -> Result<ARScanData, Error> {
+pub fn parse_ar_scan(scan_data: &str) -> Result<WasmArScanData, Error> {
     // ...
 }
 ```

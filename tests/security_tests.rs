@@ -9,8 +9,6 @@
 //! These tests follow security best practices and should be run
 //! as part of the CI/CD pipeline.
 
-use std::ffi::{CStr, CString};
-use std::os::raw::c_char;
 use std::path::Path;
 use tempfile::TempDir;
 
@@ -187,43 +185,6 @@ mod path_traversal_tests {
             result.is_err(),
             "Path traversal in read_dir_safely should be blocked"
         );
-    }
-}
-
-#[cfg(test)]
-mod ffi_safety_tests {
-    use super::*;
-    use std::ptr;
-
-    /// Test C string conversion handles invalid UTF-8 safely
-    #[test]
-    fn test_ffi_invalid_utf8_handling() {
-        // Create a C string with potentially invalid UTF-8
-        // Note: Rust's CStr should handle this, but we verify error paths exist
-        let bytes = b"valid\0";
-        let c_str = CStr::from_bytes_with_nul(bytes);
-        assert!(c_str.is_ok(), "Valid C string should parse");
-    }
-
-    /// Test that FFI string freeing handles null pointers
-    #[test]
-    fn test_ffi_free_string_null_safety() {
-        // Test that freeing null pointer doesn't crash
-        // This is tested by verifying arxos_free_string checks for null
-        unsafe {
-            arxos::mobile_ffi::ffi::arxos_free_string(ptr::null_mut());
-        }
-    }
-
-    /// Test FFI error response creation doesn't panic
-    #[test]
-    fn test_ffi_error_response_creation() {
-        // Verify that error responses can be created without panicking
-        use arxos::mobile_ffi::MobileError;
-
-        let error = MobileError::InvalidData("test error".to_string());
-        // If we can create the error, the FFI error path exists
-        assert!(matches!(error, MobileError::InvalidData(_)));
     }
 }
 

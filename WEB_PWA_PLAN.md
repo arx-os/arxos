@@ -8,17 +8,17 @@ This document captures the envisioned approach for building a WebAssembly-powere
 
 - **Rust-first workspace**  
   - Core logic stays in existing crates (`crates/arx`, `crates/arxos`).  
-  - New `crates/arxos-wasm` crate exposes Web bindings via `wasm-bindgen`/`web-sys`.  
-  - Optional UI layer in Rust (Leptos, Yew, Dioxus) or a thin TypeScript shell that talks to the WASM module.
+  - `crates/arxos-wasm` exposes Web bindings via `wasm-bindgen`/`serde_wasm_bindgen`.  
+  - PWA implemented with React + Vite + Zustand; Rust focuses on business logic, the TypeScript shell on UX.
 
 - **Service worker & offline-first**  
-  - Installable PWA with caching of static assets, CLI bundles, and local datasets.  
-  - Offline edits stored in IndexedDB; sync back to Git when online.
+  - Installable PWA with caching of static assets, WASM bundles, and command metadata.  
+  - Offline edits stored in IndexedDB; sync back to Git via the desktop agent when online.
 
 - **Module boundaries**
-  1. `wasm-core`: wraps core functionality for the browser (IFC parsing, YAML ops).  
-  2. `ui-shell`: components for the floor plan editor, dashboards, messaging.  
-  3. `interop`: pathways to host services (Git, messaging, optional backend APIs).
+  1. `wasm-core`: wraps core functionality for the browser (IFC parsing, YAML ops, command catalog).  
+  2. `ui-shell`: React components (command palette, floor studio, collaboration, AR preview).  
+  3. `interop`: Desktop agent bridge (WebSocket over loopback, DID:key authentication).
 
 ---
 
@@ -48,52 +48,55 @@ This document captures the envisioned approach for building a WebAssembly-powere
 
 | Capability | Option | Notes |
 |------------|--------|-------|
-| UI Shell | Leptos / Dioxus (Rust) or TS shell + `wasm-bindgen` | Entirely Rust or hybrid UI. |
-| Rendering | `wgpu` (via WASM) or Canvas2D/WebGL | High-fidelity overlays, zoom, pan. |
-| State | `serde` + `serde_wasm_bindgen` | Shared structs across Rust/JS. |
-| Storage | `indexed_db` crate or `idb-keyval` bindings | Offline model and history. |
-| CLI Bridge | WebWorker or local agent (WebSocket) | Heavy commands run off-thread or on desktop daemon. |
-| Tooling | `trunk` or Vite + `wasm-pack` | Choose based on front-end preference. |
+| UI Shell | React + Vite + Zustand | Mirrors CLI workflow, minimal runtime overhead. |
+| Rendering | Canvas2D today; WebGPU/WebGL roadmap | Floor Studio prototype uses Canvas2D. |
+| State | Zustand + immer (optional) | Browser state mirrored from WASM DTOs. |
+| Storage | IndexedDB via idb-keyval | Offline queue + cached commands. |
+| CLI Bridge | Rust desktop agent (`crates/arxos-agent`) | DID:key token passed over loopback WebSocket. |
+| Tooling | `wasm-pack` + Vite build | GitHub Pages deploy + IPFS mirror.
 
 ---
 
 ## 4. Interaction Modes
 
 1. **Pure Browser**  
-   - Entire flow runs inside WASM sandbox.  
-   - Git operations via HTTPS PATs or hosted API.
+   - Read-only exploration using WASM bindings.  
+   - Git operations limited to hosted APIs; no filesystem access.
 
 2. **Desktop Companion**  
-   - Optional Rust “agent” binary exposes local filesystem/Git through WebSocket API.  
-   - PWA connects securely to execute commands with local privileges.
+   - Rust “agent” binary exposes local filesystem/Git through WebSocket API secured by DID:key.  
+   - Required for commits, IFC import/export, and collaboration sync.
 
 3. **Field Tablet / Kiosk**  
-   - Install PWA as app on Android tablets, iPads (Safari).  
-   - Offline caches and scheduled syncs for facility visits.
+   - Install PWA on iPadOS/Android with WebXR enabled.  
+   - Offline caches and scheduled syncs via the agent when docked.
 
 ---
 
 ## 5. Developer Workflow
 
-- `cargo watch` for core crates; `trunk serve` or `npm run dev` for WASM build with live reload.  
+- `wasm-pack build crates/arxos-wasm --target web --out-dir pkg` before running the PWA.  
+- `npm install && npm run dev` inside `pwa/` for local development.  
 - Integration tests with `wasm-pack test --headless --chrome`.  
-- E2E tests using Playwright/Selenium to ensure cross-browser behavior.
+- E2E tests using Playwright (planned) to ensure cross-browser behavior.  
+- GitHub Pages publishes the static bundle; IPFS snapshot mirrors each release.
 
 ---
 
 ## 6. Roadmap Sketch
 
 1. **MVP (2D & data workflows)**  
-   - View/import IFC, edit metadata, render 2D plans.  
-   - Command palette and Git sync with backend helper.
+   - ✅ View/import IFC-derived geometry from AR scans, render 2D plans.  
+   - ✅ Command palette hydrated from Rust command catalog + Zustand history.  
+   - ⚙️ Git sync flows via desktop agent (in progress as actions/Git commands come online).
 
 2. **Visualization Enhancements**  
    - WebGL 3D viewer for existing point clouds.  
-   - Messaging + collaboration panel.
+   - Collaboration panel backed by agent WebSocket → Git issue/comment pipeline.
 
 3. **AR Overlay (no new capture)**  
-   - WebXR viewer for alignment/inspection on supported devices.  
-   - Offer guidance on third-party capture tools or archived native apps.
+   - ✅ WebXR capability detection and session bootstrap.  
+   - AR overlays consume the same `WasmArScanData`; desktop agent streams anchors.
 
 4. **WebXR Scanning (future)**  
    - When browsers expose LiDAR-quality scanning, integrate capture flow.  
@@ -120,11 +123,11 @@ This document captures the envisioned approach for building a WebAssembly-powere
 
 ## 9. Action Items (Initial)
 
-1. Select WASM UI framework and scaffolding tools.  
-2. Create `crates/arxos-wasm` crate with bindings to core logic.  
-3. Prototype 2D plan editor UI + IFC import/export through WASM.  
-4. Design command palette and backend interface (local agent or hosted API).  
-5. Draft documentation for the new platform direction and update roadmap.
+1. ✅ Select WASM UI framework and scaffolding tools (Vite + React + Zustand).  
+2. ✅ Create `crates/arxos-wasm` crate with bindings to core logic.  
+3. ✅ Prototype 2D plan editor UI + AR scan rendering through WASM.  
+4. ✅ Design command palette and backend interface (local agent with DID:key auth).  
+5. ✅ Draft documentation (`docs/web/DEVELOPMENT.md`) and update roadmap for WASM-first delivery.
 
 ---
 

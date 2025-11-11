@@ -1,4 +1,6 @@
-# iOS FFI Integration Status
+# iOS FFI Integration Status _(Archived)_
+
+> **Status (November 2025):** Native iOS FFI integration is on hold while we ship the WASM PWA. The information below is preserved for historical reference.
 
 **Date:** January 2025  
 **Status:** Ready for Integration  

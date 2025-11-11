@@ -3,9 +3,12 @@ members = [
     "crates/arx",
     "crates/arxui",
     "crates/arxos",
+    "crates/arx-command-catalog",
+    "crates/arxos-agent",
     "crates/arxos-hal",
     "crates/arxos-hal/esp32-c3",
     "crates/arxos-hal/rp2040",
+    "crates/arxos-wasm",
 ]
 resolver = "2"
 
@@ -61,11 +64,6 @@ toml = "0.8"
 notify = "6.1"
 num_cpus = "1.16"
 tempfile = "3.8"
-
-# Mobile FFI dependencies
-uniffi = "0.25"
-uniffi_build = "0.25"
-jni = "0.21"
 
 # Development dependencies
 criterion = "0.5"

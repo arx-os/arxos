@@ -26,7 +26,7 @@ npm install
 npm run dev
 ```
 
-When the dev server starts you can open `http://localhost:5173` to use the command palette, Floor Plan Studio, collaboration queue, and AR preview components.
+When the dev server starts you can open `http://localhost:5173` to use the command palette, Floor Plan Studio, collaboration queue, Git workspace panel, IFC import/export panel, and AR preview components.
 
 ### Helpful Scripts
 
@@ -46,27 +46,45 @@ cargo run -p arxos-agent -- --host 127.0.0.1 --port 8787 --token did:key:zexampl
 - The PWA stores the token locally and appends it to the WebSocket query string (`/ws?token=did:key:...`).
 - Current capabilities:
   - Health + capability discovery (`/health`, `/capabilities`)
-  - WebSocket `ping`, `version`, `capabilities` actions
-  - Offline collaboration queue flush (prototype) — messages are acknowledged via `ping` responses
-- Planned: Git status/commit plumbing, IFC import/export, file streaming.
+  - WebSocket actions: `ping`, `version`, `capabilities`
+  - Git automation: `git.status`, `git.diff`, `git.commit` (DID-key attributed)
+  - IFC workflows: `ifc.import` (base64 upload → YAML) and `ifc.export` (full/delta IFC back to browser)
+  - Auth controls: `auth.rotate` to refresh DID tokens, `auth.negotiate` to scope capabilities per session
+  - Secure file access: `files.read` with repository-scoped path safety
+- Collaboration bridge: `collab.config.get|set` to persist GitHub targets and `collab.sync` to post queue items as
+  issue/PR comments
+- Planned: IFC import/export streaming, file write APIs, token rotation & structured logging.
+
+### GitHub Comment Sync & Release Automation
+
+- Provide a personal access token (PAT) with `repo` scope via `ARXOS_GITHUB_TOKEN` before launching the agent.
+- Configure the target repository/issue from the PWA collaboration panel. Settings are written to
+  `~/.config/arxos/collab.toml` (override with `ARXOS_AGENT_CONFIG_DIR`).
+- Successful syncs attach the GitHub comment URL to each message; failures stay in history with a retry option.
 
 ## Offline & Collaboration Flow
 
 1. Users compose messages in the collaboration panel. Messages are queued in IndexedDB via Zustand persistence.
-2. When the agent connection succeeds, the queue flushes over the DID-authenticated WebSocket.
-3. Failures mark the message as `error` and leave it in history for manual retry.
+2. When the agent connection succeeds, the queue flushes to GitHub (issue/PR comments) through the
+   `collab.sync` action.
+3. Successes include a deep link to the posted comment. Failures mark the message as `error`, capture the agent’s
+   error message, and surface a retry button.
 
-## AR Preview
+## AR Preview & WebXR Pilot
 
 - The AR preview card checks `navigator.xr.isSessionSupported('immersive-ar')`.
-- When available, users can trigger a short-lived session to confirm browser support.
-- WebXR overlays consume the same `WasmArScanData` structures used by the Floor Plan Studio.
+- When available, users can preload a demo overlay (`/offline-demo/ar-overlay.json`) and trigger a short-lived session to confirm browser support.
+- Demo overlays consume the same `WasmArScanData` structures used by the Floor Plan Studio; anchors stream via the desktop agent in the pilot setup.
 - Safari (iOS 17+) and Chrome (Android) require experimental flags; browser guidance is shown in the UI.
+- Phase 5 focuses on streamed overlays—no in-browser scanning yet. Known issues (fetched with the demo payload) are surfaced to the user, which helps QA track Chrome/Safari regressions.
 
 ## Deployment
 
-- **Primary:** GitHub Pages builds via `.github/workflows/pwa.yml` (`npm run build`).
-- **Mirror:** IPFS snapshot published alongside releases (`ipfs add pwa/dist`).
+- **Primary:** GitHub Pages builds via `.github/workflows/pwa.yml`. On merges to `main` the workflow:
+  1. Runs `wasm-pack build`, `cargo test -p arx-command-catalog`, `npm run typecheck`, `npm run test:unit -- --run`, and `npm run test:e2e`.
+  2. Uploads `pwa/dist` as the Pages artifact and deploys through `actions/deploy-pages@v4`.
+- **Mirror:** The same job packs `pwa/dist.car` using `ipfs-car pack` and uploads it as a CI artifact for pinning to IPFS.
+- Release automation (`node scripts/release.mjs --version <x.y.z>`) performs Cargo/Node version bumps, regenerates `CHANGELOG.md`, rebuilds the WASM bindings, and creates annotated `v<version>` and `wasm/v<version>` tags. Use `--dry-run` to preview changes.
 - Service worker (`public/sw.js`) caches `index.html`, WASM bundles, and command metadata for offline launch.
 
 ## Repository Layout

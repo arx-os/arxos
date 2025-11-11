@@ -1,6 +1,6 @@
 # ArxOS Documentation Index
 
-**Last Updated:** November 2025  
+**Last Updated:** 2025-11-11  
 **Project:** ArxOS - Git for Buildings
 
 ---
@@ -45,6 +45,12 @@ Documentation for contributing to ArxOS development.
 - ### [Mobile (Archived)](./mobile/)
   - **[STATUS.md](./mobile/STATUS.md)** – Current state and archive retrieval instructions
   - Legacy references (FFI guide, iOS/Android build docs, CI/CD, signup workflow) are preserved for historical purposes only.
+
+### [Web](./web/)
+
+Progressive Web App documentation and WASM tooling.
+
+- **[DEVELOPMENT.md](./web/DEVELOPMENT.md)** - Build, run, and deploy the ArxOS PWA
 
 ### [Augmented Reality](./ar/)
 
@@ -105,7 +111,7 @@ Example building data files and usage patterns.
 ## 🔄 Migration & Updates
 
 - **[MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md)** - Upgrading between ArxOS versions
-- **[CHANGELOG_NOVEMBER_2025.md](./CHANGELOG_NOVEMBER_2025.md)** - November 2025 updates (Game System)
+- **[CHANGELOG_NOVEMBER_2025.md](./archive/2025/CHANGELOG_NOVEMBER_2025.md)** - Archived notes on the November 2025 pivot
 
 ---
 
@@ -126,6 +132,7 @@ Historical and outdated documentation preserved in the [`archive/`](./archive/) 
 **Security?** → Review [Security Guide](./development/SECURITY.md)  
 **Adding features?** → See [Architecture](./core/ARCHITECTURE.md)  
 **Need the old mobile clients?** → See [Mobile Status & Archive](./mobile/STATUS.md)  
+**Building the PWA?** → See [Web Development](./web/DEVELOPMENT.md)  
 **Deploying at scale?** → See [Enterprise Deployment](./business/ENTERPRISE_DEPLOYMENT.md)  
 **Need performance tips?** → See [Performance Guide](./development/PERFORMANCE_GUIDE.md)  
 **Looking for API details?** → See [API Reference](./core/API_REFERENCE.md)  
@@ -136,8 +143,7 @@ Historical and outdated documentation preserved in the [`archive/`](./archive/) 
 
 ## 🆕 Recent Updates (November 2025)
 
-- ✨ **Gamified PR Review & Planning System** - Interactive game-based building management
-- 📱 **Mobile Game Integration** - Mobile FFI functions for PR review and planning
-- 📚 **Learning Mode** - Educational scenarios from historical PRs
-- ✅ **IFC Round-Trip Compatibility** - Complete metadata preservation for game operations
-- 🪙 **Economy Layer Integration** - Polygon contracts, CLI staking commands, and mobile FFI endpoints for ARXO rewards
+- 🌐 **WASM PWA First** - Native shells archived; the PWA + desktop agent are the supported surfaces
+- 🔁 **Rustdoc Overhaul** - Upstream Rust/WASM docs are now modularized under `docs/rustdoc/`
+- 🪙 **Economy Layer Integration** - Polygon contracts, CLI staking commands, and rewards workflows
+- 🎮 **Gamified PR Review & Planning System** - Interactive game-based building management

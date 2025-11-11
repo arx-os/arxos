@@ -4,8 +4,11 @@ import {
   fetchCommandDetails,
   fetchCommandPalette,
   initWasm,
+  type WasmCommandAvailability,
   type WasmCommandEntry
 } from "../lib/wasm";
+
+export type CommandAvailability = WasmCommandAvailability;
 
 export type PaletteCommand = {
   id: string;
@@ -17,6 +20,8 @@ export type PaletteCommand = {
   shortcut?: string;
   lastUsed?: number;
   onSelect: () => void;
+  tags: string[];
+  availability: CommandAvailability;
 };
 
 type StoreState = {
@@ -27,6 +32,12 @@ type StoreState = {
   hydrate: () => Promise<void>;
   filteredCommands: (value: string) => PaletteCommand[];
   recordUse: (id: string) => void;
+};
+
+const DEFAULT_AVAILABILITY: CommandAvailability = {
+  cli: true,
+  pwa: true,
+  agent: false
 };
 
 function mapCommand(entry: WasmCommandEntry, version: string): PaletteCommand {
@@ -52,7 +63,9 @@ function mapCommand(entry: WasmCommandEntry, version: string): PaletteCommand {
     category: entry.category.slug,
     categoryLabel: entry.category.label,
     shortcut: entry.shortcut,
-    onSelect: overrides[entry.command] ?? fallback
+    onSelect: overrides[entry.command] ?? fallback,
+    tags: Array.isArray(entry.tags) ? entry.tags : [],
+    availability: entry.availability ?? DEFAULT_AVAILABILITY
   };
 }
 
@@ -72,7 +85,13 @@ export const useCommandPaletteStore = create<StoreState>()(
           return sorted.slice(0, 10);
         }
         return sorted.filter((command) => {
-          const haystack = `${command.title} ${command.description} ${command.command} ${command.categoryLabel}`.toLowerCase();
+          const availabilityTokens = Object.entries(command.availability)
+            .filter(([, enabled]) => enabled)
+            .map(([key]) => key)
+            .join(" ");
+          const haystack = `${command.title} ${command.description} ${command.command} ${command.categoryLabel} ${command.tags.join(
+            " "
+          )} ${availabilityTokens}`.toLowerCase();
           return haystack.includes(normalized);
         });
       },
@@ -92,7 +111,25 @@ export const useCommandPaletteStore = create<StoreState>()(
       }
     }),
     {
-      name: "arxos-command-palette"
+      name: "arxos-command-palette",
+      version: 2,
+      migrate: (persistedState, version) => {
+        if (!persistedState || typeof persistedState !== "object") {
+          return persistedState as StoreState | undefined;
+        }
+        const state = persistedState as StoreState;
+        if (version < 2) {
+          return {
+            ...state,
+            commands: state.commands.map((command) => ({
+              ...command,
+              tags: command.tags ?? [],
+              availability: command.availability ?? DEFAULT_AVAILABILITY
+            }))
+          };
+        }
+        return state;
+      }
     }
   )
 );

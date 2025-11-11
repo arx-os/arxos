@@ -65,42 +65,90 @@ export default function CommandPalette() {
                   No commands match &ldquo;{query}&rdquo; yet.
                 </li>
               )}
-              {results.map((command) => (
-                <li
-                  key={command.id}
-                  className="border-b border-slate-800/50 last:border-b-0"
-                >
-                  <button
-                    onClick={() => {
-                      recordUse(command.id);
-                      command.onSelect();
-                      setOpen(false);
-                    }}
-                    className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left text-sm text-slate-200 transition hover:bg-slate-800/60"
+              {results.map((command) => {
+                const isPwaAvailable = command.availability.pwa;
+                return (
+                  <li
+                    key={command.id}
+                    className="border-b border-slate-800/50 last:border-b-0"
                   >
-                    <span className="flex-1">
-                      <span className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-500">
-                        <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-medium text-slate-300">
-                          {command.categoryLabel}
+                    <button
+                      onClick={() => {
+                        if (!isPwaAvailable) {
+                          console.info(`Command "${command.title}" is not available in the PWA.`);
+                          return;
+                        }
+                        recordUse(command.id);
+                        command.onSelect();
+                        setOpen(false);
+                      }}
+                      disabled={!isPwaAvailable}
+                      className={`flex w-full items-start justify-between gap-4 px-4 py-3 text-left text-sm transition ${
+                        isPwaAvailable
+                          ? "text-slate-200 hover:bg-slate-800/60"
+                          : "cursor-not-allowed bg-slate-900/80 text-slate-500 opacity-60"
+                      }`}
+                    >
+                      <span className="flex-1">
+                        <span className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-500">
+                          <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-medium text-slate-300">
+                            {command.categoryLabel}
+                          </span>
+                        </span>
+                        <span className="mt-1 block font-medium text-slate-100">{command.title}</span>
+                        <span className="mt-1 block text-xs text-slate-400">{command.description}</span>
+                        <span className="mt-1 block text-[11px] text-slate-500">{command.command}</span>
+                        {command.tags.length > 0 && (
+                          <span className="mt-2 flex flex-wrap gap-1">
+                            {command.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="rounded border border-slate-700 bg-slate-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-300"
+                              >
+                                #{tag}
+                              </span>
+                            ))}
+                          </span>
+                        )}
+                        <span className="mt-2 flex gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                          <AvailabilityBadge label="CLI" active={command.availability.cli} />
+                          <AvailabilityBadge label="PWA" active={command.availability.pwa} />
+                          <AvailabilityBadge label="Agent" active={command.availability.agent} />
                         </span>
                       </span>
-                      <span className="mt-1 block font-medium text-slate-100">{command.title}</span>
-                      <span className="mt-1 block text-xs text-slate-400">{command.description}</span>
-                      <span className="mt-1 block text-[11px] text-slate-500">{command.command}</span>
-                    </span>
-                    {command.shortcut && (
-                      <kbd className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">
-                        {command.shortcut}
-                      </kbd>
-                    )}
-                  </button>
-                </li>
-              ))}
+                      {command.shortcut && (
+                        <kbd className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">
+                          {command.shortcut}
+                        </kbd>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+type AvailabilityBadgeProps = {
+  label: "CLI" | "PWA" | "Agent";
+  active: boolean;
+};
+
+function AvailabilityBadge({ label, active }: AvailabilityBadgeProps) {
+  return (
+    <span
+      className={`rounded px-1.5 py-0.5 ${
+        active
+          ? "border border-slate-600 bg-slate-700/70 text-slate-200"
+          : "border border-slate-800 bg-slate-900 text-slate-600 line-through"
+      }`}
+    >
+      {label}
+    </span>
   );
 }
 

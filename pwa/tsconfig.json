@@ -10,7 +10,12 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "types": ["vite/client"],
+    "types": [
+      "webxr",
+      "vitest/globals",
+      "@testing-library/jest-dom",
+      "three"
+    ],
     "baseUrl": ".",
     "paths": {
       "@arxos-wasm": ["../crates/arxos-wasm/pkg/arxos_wasm.js"]

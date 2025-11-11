@@ -7,26 +7,42 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:wasm": "wasm-pack build ../crates/arxos-wasm --target web --out-dir pkg",
+    "prebuild": "npm run build:wasm",
+    "preview:test": "npm run build -- --mode preview && vite preview --mode preview --host 127.0.0.1 --port 4173",
+    "test:unit": "vitest",
+    "test:e2e": "playwright test",
+    "test": "npm run test:unit"
   },
   "dependencies": {
+    "idb-keyval": "^6.2.1",
     "nanoid": "^5.0.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "three": "^0.170.0",
     "zustand": "^4.5.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.48.2",
+    "@testing-library/jest-dom": "^6.4.2",
+    "@testing-library/react": "^15.0.3",
+    "@testing-library/user-event": "^14.5.2",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
+    "@types/three": "^0.172.0",
     "@types/webxr": "^0.5.14",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
+    "cross-env": "^10.1.0",
+    "jsdom": "^24.0.0",
     "postcss": "^8.4.49",
+    "source-map": "^0.8.0-beta.0",
     "tailwindcss": "^3.4.13",
     "tslib": "^2.8.1",
     "typescript": "^5.5.4",
     "vite": "^5.2.11",
+    "vitest": "^1.6.0",
     "workbox-build": "^7.1.0"
   }
 }
-

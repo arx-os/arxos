@@ -39,6 +39,20 @@ impl CommandCategory {
     }
 }
 
+/// Availability of a command across the different surfaces.
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct CommandAvailability {
+    pub cli: bool,
+    pub pwa: bool,
+    pub agent: bool,
+}
+
+impl CommandAvailability {
+    pub const fn new(cli: bool, pwa: bool, agent: bool) -> Self {
+        Self { cli, pwa, agent }
+    }
+}
+
 /// Descriptor for a command palette entry.
 #[derive(Debug, Clone, Serialize)]
 pub struct CommandDescriptor {
@@ -47,6 +61,8 @@ pub struct CommandDescriptor {
     pub description: &'static str,
     pub category: CommandCategory,
     pub shortcut: Option<&'static str>,
+    pub tags: &'static [&'static str],
+    pub availability: CommandAvailability,
 }
 
 static COMMANDS: &[CommandDescriptor] = &[
@@ -57,6 +73,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Initialize a new building project",
         category: CommandCategory::Building,
         shortcut: None,
+        tags: &["setup", "project"],
+        availability: CommandAvailability::new(true, false, false),
     },
     CommandDescriptor {
         name: "import",
@@ -64,6 +82,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Import IFC file into building",
         category: CommandCategory::ImportExport,
         shortcut: None,
+        tags: &["ifc", "ingest", "data"],
+        availability: CommandAvailability::new(true, true, true),
     },
     CommandDescriptor {
         name: "export",
@@ -71,6 +91,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Export building data to various formats",
         category: CommandCategory::ImportExport,
         shortcut: None,
+        tags: &["ifc", "yaml", "data"],
+        availability: CommandAvailability::new(true, true, true),
     },
     // Equipment
     CommandDescriptor {
@@ -79,6 +101,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "List all equipment",
         category: CommandCategory::Equipment,
         shortcut: None,
+        tags: &["equipment", "report"],
+        availability: CommandAvailability::new(true, true, false),
     },
     CommandDescriptor {
         name: "equipment browser",
@@ -86,6 +110,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Interactive equipment browser",
         category: CommandCategory::Equipment,
         shortcut: None,
+        tags: &["equipment", "ui"],
+        availability: CommandAvailability::new(true, true, false),
     },
     CommandDescriptor {
         name: "equipment add",
@@ -93,6 +119,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Add new equipment",
         category: CommandCategory::Equipment,
         shortcut: None,
+        tags: &["equipment", "edit"],
+        availability: CommandAvailability::new(true, false, false),
     },
     // Rooms
     CommandDescriptor {
@@ -101,6 +129,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "List all rooms",
         category: CommandCategory::Room,
         shortcut: None,
+        tags: &["rooms", "report"],
+        availability: CommandAvailability::new(true, false, false),
     },
     CommandDescriptor {
         name: "room explorer",
@@ -108,6 +138,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Interactive room explorer",
         category: CommandCategory::Room,
         shortcut: None,
+        tags: &["rooms", "ui"],
+        availability: CommandAvailability::new(true, true, false),
     },
     // Git
     CommandDescriptor {
@@ -116,6 +148,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Show Git status",
         category: CommandCategory::Git,
         shortcut: None,
+        tags: &["git", "report"],
+        availability: CommandAvailability::new(true, true, true),
     },
     CommandDescriptor {
         name: "commit",
@@ -123,6 +157,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Commit changes to Git",
         category: CommandCategory::Git,
         shortcut: None,
+        tags: &["git", "changes"],
+        availability: CommandAvailability::new(true, true, true),
     },
     CommandDescriptor {
         name: "diff",
@@ -130,6 +166,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Show Git diff",
         category: CommandCategory::Git,
         shortcut: None,
+        tags: &["git", "changes"],
+        availability: CommandAvailability::new(true, true, true),
     },
     // Search
     CommandDescriptor {
@@ -138,6 +176,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Search building data",
         category: CommandCategory::Search,
         shortcut: None,
+        tags: &["search", "data"],
+        availability: CommandAvailability::new(true, true, false),
     },
     CommandDescriptor {
         name: "filter",
@@ -145,6 +185,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Filter equipment by criteria",
         category: CommandCategory::Search,
         shortcut: None,
+        tags: &["search", "filter"],
+        availability: CommandAvailability::new(true, true, false),
     },
     // Render
     CommandDescriptor {
@@ -153,6 +195,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Render building visualization",
         category: CommandCategory::Render,
         shortcut: None,
+        tags: &["render", "visualization"],
+        availability: CommandAvailability::new(true, true, false),
     },
     CommandDescriptor {
         name: "interactive",
@@ -160,6 +204,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Interactive 3D renderer",
         category: CommandCategory::Render,
         shortcut: None,
+        tags: &["render", "3d"],
+        availability: CommandAvailability::new(true, true, false),
     },
     // AR
     CommandDescriptor {
@@ -168,6 +214,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Integrate AR scan data",
         category: CommandCategory::AR,
         shortcut: None,
+        tags: &["ar", "scan"],
+        availability: CommandAvailability::new(true, true, true),
     },
     CommandDescriptor {
         name: "ar pending",
@@ -175,6 +223,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Manage pending AR equipment",
         category: CommandCategory::AR,
         shortcut: None,
+        tags: &["ar", "review"],
+        availability: CommandAvailability::new(true, true, true),
     },
     // Config
     CommandDescriptor {
@@ -183,6 +233,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Manage configuration",
         category: CommandCategory::Config,
         shortcut: None,
+        tags: &["config", "settings"],
+        availability: CommandAvailability::new(true, false, false),
     },
     CommandDescriptor {
         name: "config wizard",
@@ -190,6 +242,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Interactive configuration wizard",
         category: CommandCategory::Config,
         shortcut: None,
+        tags: &["config", "wizard"],
+        availability: CommandAvailability::new(true, false, false),
     },
     // Sensors
     CommandDescriptor {
@@ -198,6 +252,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Process sensor data",
         category: CommandCategory::Sensors,
         shortcut: None,
+        tags: &["sensors", "ingest"],
+        availability: CommandAvailability::new(true, false, true),
     },
     CommandDescriptor {
         name: "watch",
@@ -205,6 +261,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Watch building data in real-time",
         category: CommandCategory::Sensors,
         shortcut: None,
+        tags: &["monitoring", "sensors"],
+        availability: CommandAvailability::new(true, true, true),
     },
     // Health
     CommandDescriptor {
@@ -213,6 +271,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Check system health",
         category: CommandCategory::Health,
         shortcut: None,
+        tags: &["health", "status"],
+        availability: CommandAvailability::new(true, true, true),
     },
     CommandDescriptor {
         name: "validate",
@@ -220,6 +280,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Validate building data",
         category: CommandCategory::Health,
         shortcut: None,
+        tags: &["validate", "quality"],
+        availability: CommandAvailability::new(true, false, true),
     },
     // Documentation
     CommandDescriptor {
@@ -228,6 +290,8 @@ static COMMANDS: &[CommandDescriptor] = &[
         description: "Generate documentation",
         category: CommandCategory::Documentation,
         shortcut: None,
+        tags: &["docs", "export"],
+        availability: CommandAvailability::new(true, false, false),
     },
 ];
 
@@ -249,6 +313,17 @@ mod tests {
             assert!(
                 !command.full_command.is_empty(),
                 "full command missing for {}",
+                command.name
+            );
+            assert!(
+                command.tags.iter().all(|tag| !tag.is_empty()),
+                "tags must not be empty for {}",
+                command.name
+            );
+            let availability = command.availability;
+            assert!(
+                availability.cli || availability.pwa || availability.agent,
+                "command {} must be available somewhere",
                 command.name
             );
         }

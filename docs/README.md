@@ -22,9 +22,13 @@ Essential documentation for understanding and using ArxOS.
 Documentation for contributing to ArxOS development.
 - Developer Onboarding, Performance Guides, Benchmarks, Rendering
 
-### [Mobile](./mobile/)
-iOS and Android development documentation.
-- FFI Integration, Platform-specific Guides, CI/CD
+### [Mobile (Archived)](./mobile/)
+Historical iOS and Android documentation. Native clients were archived in November 2025 in favor of the WASM PWA.
+- FFI Integration, Platform-specific Guides, CI/CD (read-only)
+
+### [Web](./web/)
+Progressive Web App development powered by Rust+WASM.
+- PWA build/run guides, desktop agent bridge, deployment playbooks
 
 ### [Augmented Reality](./ar/)
 AR and LiDAR integration documentation.
@@ -54,7 +58,7 @@ Historical and outdated documentation.
 **Contributing?** → See [Developer Onboarding](./development/DEVELOPER_ONBOARDING.md)  
 **Security?** → Review [Security Guide](./development/SECURITY.md)  
 **Adding features?** → See [Architecture](./core/ARCHITECTURE.md)  
-**Building mobile apps?** → See [Mobile FFI](./mobile/MOBILE_FFI_INTEGRATION.md)  
+**Building the PWA?** → See [Web Development](./web/DEVELOPMENT.md)  
 **Deploying at scale?** → See [Enterprise Deployment](./business/ENTERPRISE_DEPLOYMENT.md)  
 **Need performance tips?** → See [Performance Guide](./development/PERFORMANCE_GUIDE.md)  
 **Looking for API details?** → See [API Reference](./core/API_REFERENCE.md)  

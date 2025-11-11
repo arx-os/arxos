@@ -19,7 +19,17 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter", "fmt"] }
 uuid = { version = "1.8", features = ["v4"] }
 futures-util = "0.3"
+arx = { path = "../arx" }
+arxos = { path = "../arxos" }
+git2 = { workspace = true }
+base64 = "0.21"
+chrono = { workspace = true }
+serde_yaml = { workspace = true }
+octocrab = { version = "0.32", default-features = false, features = ["rustls"] }
+dirs = "5.0"
+toml = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
+tempfile = { workspace = true }
 

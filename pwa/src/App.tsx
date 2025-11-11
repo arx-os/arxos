@@ -3,10 +3,14 @@ import { useCommandPaletteStore } from "./state/commandPalette";
 import CommandPalette from "./components/CommandPalette";
 import FloorPlanCanvas from "./components/FloorPlanCanvas";
 import CollaborationPanel from "./components/CollaborationPanel";
+import GitStatusPanel from "./components/GitStatusPanel";
+import IfcPanel from "./components/IfcPanel";
 import ArPreview from "./components/ArPreview";
+import WebGlViewer from "./components/WebGlViewer";
 
 export default function App() {
   const { hydrate } = useCommandPaletteStore();
+  const disableWebGl = import.meta.env.VITE_DISABLE_WEBGL === "1";
 
   useEffect(() => {
     hydrate();
@@ -38,6 +42,9 @@ export default function App() {
 
         <FloorPlanCanvas />
         <CollaborationPanel />
+        <GitStatusPanel />
+        {!disableWebGl && <WebGlViewer />}
+        <IfcPanel />
         <ArPreview />
 
         <section className="grid gap-4 md:grid-cols-3">

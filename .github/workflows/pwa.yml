@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "crates/arxos-wasm/**"
-      - "crates/arxos/src/command_catalog.rs"
+      - "crates/arx-command-catalog/**"
       - "pwa/**"
       - "WEB_PWA_PLAN.md"
       - "docs/web/**"
@@ -12,14 +12,24 @@ on:
   pull_request:
     paths:
       - "crates/arxos-wasm/**"
-      - "crates/arxos/src/command_catalog.rs"
+      - "crates/arx-command-catalog/**"
       - "pwa/**"
       - "WEB_PWA_PLAN.md"
       - "docs/web/**"
       - ".github/workflows/pwa.yml"
 
+concurrency:
+  group: pwa-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
-  build:
+  checks:
+    name: Build & Test
     runs-on: ubuntu-latest
 
     steps:
@@ -44,6 +54,9 @@ jobs:
       - name: Build WASM bindings
         run: wasm-pack build crates/arxos-wasm --target web --out-dir pkg
 
+      - name: Run Rust unit tests
+        run: cargo test -p arx-command-catalog
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -55,10 +68,57 @@ jobs:
         working-directory: pwa
         run: npm ci
 
+      - name: Install Playwright browsers
+        working-directory: pwa
+        run: npx playwright install --with-deps chromium
+
       - name: Type check
         working-directory: pwa
         run: npm run typecheck
 
+      - name: Run unit tests
+        working-directory: pwa
+        run: npm run test:unit -- --run
+
+      - name: Run Playwright smoke tests
+        working-directory: pwa
+        env:
+          CI: true
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+        run: npm run test:e2e
+
       - name: Build PWA bundle
         working-directory: pwa
         run: npm run build
+
+      - name: Pack IPFS artifact
+        working-directory: pwa
+        run: |
+          npx --yes ipfs-car pack dist --output dist.car
+
+      - name: Upload IPFS CAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pwa-dist-car
+          path: pwa/dist.car
+
+      - name: Upload Pages artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pwa/dist
+
+  deploy:
+    name: Deploy GitHub Pages
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: checks
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - id: deploy
+        name: Deploy to Pages
+        uses: actions/deploy-pages@v4

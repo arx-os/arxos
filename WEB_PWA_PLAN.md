@@ -29,9 +29,9 @@ This document captures the envisioned approach for building a WebAssembly-powere
 - Constraint engine leverages core Rust logic; diff overlay vs. repo baseline.
 
 ### B. AR View & Edit
-- Near-term: WebXR “immersive-ar” overlays for inspection on supported devices.  
-- Future: enable in-browser scanning once LiDAR-quality WebXR lands (targeted for Q4 2026).  
-- Until then, rely on imported scans or third-party capture tools.
+- Near-term: WebXR “immersive-ar” overlays for inspection on supported devices (Chrome/Android, Safari/iOS 17+).  
+- In-flight (Phase 5): streamed overlays rendered from captured anchor/point data.  
+- Future: revisit in-browser scanning once LiDAR-quality WebXR capture lands.
 
 ### C. CLI Command Palette
 - Command palette UI wrapping core CLI operations (`arx diff`, `arx docs`, etc.).  
@@ -91,15 +91,17 @@ This document captures the envisioned approach for building a WebAssembly-powere
    - ⚙️ Git sync flows via desktop agent (in progress as actions/Git commands come online).
 
 2. **Visualization Enhancements**  
-   - WebGL 3D viewer for existing point clouds.  
-   - Collaboration panel backed by agent WebSocket → Git issue/comment pipeline.
+- ✅ WebGL 3D viewer for existing point clouds.  
+- ✅ Collaboration panel backed by agent WebSocket → Git issue/comment pipeline.
 
 3. **AR Overlay (no new capture)**  
    - ✅ WebXR capability detection and session bootstrap.  
-   - AR overlays consume the same `WasmArScanData`; desktop agent streams anchors.
+   - ✅ Phase 5 pilot: streamed overlays via WebXR + desktop agent bridge.
+   - ❌ Use simulated anchors until browser capture stabilises.
 
 4. **WebXR Scanning (future)**  
    - When browsers expose LiDAR-quality scanning, integrate capture flow.  
+   - Monitor WebXR Device API roadmap (Apple Vision Pro, Chrome origin trials) quarterly.  
    - Reevaluate need for reviving native apps.
 
 ---

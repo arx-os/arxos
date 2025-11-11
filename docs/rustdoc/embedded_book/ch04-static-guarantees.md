@@ -1,0 +1,431 @@
+# Static Guarantees
+Rust's type system prevents data races at compile time (see Send and Sync traits). The type system can also be used to check other properties at compile time; reducing the need for runtime checks in some cases.
+
+When applied to embedded programs these static checks can be used, for example, to enforce that configuration of I/O interfaces is done properly. For instance, one can design an API where it is only possible to initialize a serial interface by first configuring the pins that will be used by the interface.
+
+One can also statically check that operations, like setting a pin low, can only be performed on correctly configured peripherals. For example, trying to change the output state of a pin configured in floating input mode would raise a compile error.
+
+And, as seen in the previous chapter, the concept of ownership can be applied to peripherals to ensure that only certain parts of a program can modify a peripheral. This access control makes software easier to reason about compared to the alternative of treating peripherals as global mutable state.
+
+## Typestate Programming
+
+The concept of typestates describes the encoding of information about the current state of an object into the type of that object. Although this can sound a little arcane, if you have used the Builder Pattern in Rust, you have already started using Typestate Programming!
+
+pub mod foo_module {
+    #[derive(Debug)]
+    pub struct Foo {
+        inner: u32,
+    }
+
+    pub struct FooBuilder {
+        a: u32,
+        b: u32,
+    }
+
+    impl FooBuilder {
+        pub fn new(starter: u32) -> Self {
+            Self {
+                a: starter,
+                b: starter,
+            }
+        }
+
+        pub fn double_a(self) -> Self {
+            Self {
+                a: self.a * 2,
+                b: self.b,
+            }
+        }
+
+        pub fn into_foo(self) -> Foo {
+            Foo {
+                inner: self.a + self.b,
+            }
+        }
+    }
+}
+
+fn main() {
+    let x = foo_module::FooBuilder::new(10)
+        .double_a()
+        .into_foo();
+
+    println!("{:#?}", x);
+}
+In this example, there is no direct way to create a Foo object. We must create a FooBuilder, and properly initialize it before we can obtain the Foo object we want.
+
+This minimal example encodes two states:
+
+FooBuilder, which represents an "unconfigured", or "configuration in process" state
+Foo, which represents a "configured", or "ready to use" state.
+Strong Types
+
+Because Rust has a Strong Type System, there is no easy way to magically create an instance of Foo, or to turn a FooBuilder into a Foo without calling the into_foo() method. Additionally, calling the into_foo() method consumes the original FooBuilder structure, meaning it can not be reused without the creation of a new instance.
+
+This allows us to represent the states of our system as types, and to include the necessary actions for state transitions into the methods that exchange one type for another. By creating a FooBuilder, and exchanging it for a Foo object, we have walked through the steps of a basic state machine.
+
+## Peripherals as State Machines
+
+The peripherals of a microcontroller can be thought of as set of state machines. For example, the configuration of a simplified GPIO pin could be represented as the following tree of states:
+
+Disabled
+Enabled
+Configured as Output
+Output: High
+Output: Low
+Configured as Input
+Input: High Resistance
+Input: Pulled Low
+Input: Pulled High
+If the peripheral starts in the Disabled mode, to move to the Input: High Resistance mode, we must perform the following steps:
+
+Disabled
+Enabled
+Configured as Input
+Input: High Resistance
+If we wanted to move from Input: High Resistance to Input: Pulled Low, we must perform the following steps:
+
+Input: High Resistance
+Input: Pulled Low
+Similarly, if we want to move a GPIO pin from configured as Input: Pulled Low to Output: High, we must perform the following steps:
+
+Input: Pulled Low
+Configured as Input
+Configured as Output
+Output: High
+Hardware Representation
+
+Typically the states listed above are set by writing values to given registers mapped to a GPIO peripheral. Let's define an imaginary GPIO Configuration Register to illustrate this:
+
+Name	Bit Number(s)	Value	Meaning	Notes
+enable	0	0	disabled	Disables the GPIO
+1	enabled	Enables the GPIO
+direction	1	0	input	Sets the direction to Input
+1	output	Sets the direction to Output
+input_mode	2..3	00	hi-z	Sets the input as high resistance
+01	pull-low	Input pin is pulled low
+10	pull-high	Input pin is pulled high
+11	n/a	Invalid state. Do not set
+output_mode	4	0	set-low	Output pin is driven low
+1	set-high	Output pin is driven high
+input_status	5	x	in-val	0 if input is < 1.5v, 1 if input >= 1.5v
+We could expose the following structure in Rust to control this GPIO:
+
+/// GPIO interface
+struct GpioConfig {
+    /// GPIO Configuration structure generated by svd2rust
+    periph: GPIO_CONFIG,
+}
+
+impl GpioConfig {
+    pub fn set_enable(&mut self, is_enabled: bool) {
+        self.periph.modify(|_r, w| {
+            w.enable().set_bit(is_enabled)
+        });
+    }
+
+    pub fn set_direction(&mut self, is_output: bool) {
+        self.periph.modify(|_r, w| {
+            w.direction().set_bit(is_output)
+        });
+    }
+
+    pub fn set_input_mode(&mut self, variant: InputMode) {
+        self.periph.modify(|_r, w| {
+            w.input_mode().variant(variant)
+        });
+    }
+
+    pub fn set_output_mode(&mut self, is_high: bool) {
+        self.periph.modify(|_r, w| {
+            w.output_mode.set_bit(is_high)
+        });
+    }
+
+    pub fn get_input_status(&self) -> bool {
+        self.periph.read().input_status().bit_is_set()
+    }
+}
+However, this would allow us to modify certain registers that do not make sense. For example, what happens if we set the output_mode field when our GPIO is configured as an input?
+
+In general, use of this structure would allow us to reach states not defined by our state machine above: e.g. an output that is pulled low, or an input that is set high. For some hardware, this may not matter. On other hardware, it could cause unexpected or undefined behavior!
+
+Although this interface is convenient to write, it doesn't enforce the design contracts set out by our hardware implementation.
+
+## Design Contracts
+
+In our last chapter, we wrote an interface that didn't enforce design contracts. Let's take another look at our imaginary GPIO configuration register:
+
+Name	Bit Number(s)	Value	Meaning	Notes
+enable	0	0	disabled	Disables the GPIO
+1	enabled	Enables the GPIO
+direction	1	0	input	Sets the direction to Input
+1	output	Sets the direction to Output
+input_mode	2..3	00	hi-z	Sets the input as high resistance
+01	pull-low	Input pin is pulled low
+10	pull-high	Input pin is pulled high
+11	n/a	Invalid state. Do not set
+output_mode	4	0	set-low	Output pin is driven low
+1	set-high	Output pin is driven high
+input_status	5	x	in-val	0 if input is < 1.5v, 1 if input >= 1.5v
+If we instead checked the state before making use of the underlying hardware, enforcing our design contracts at runtime, we might write code that looks like this instead:
+
+/// GPIO interface
+struct GpioConfig {
+    /// GPIO Configuration structure generated by svd2rust
+    periph: GPIO_CONFIG,
+}
+
+impl GpioConfig {
+    pub fn set_enable(&mut self, is_enabled: bool) {
+        self.periph.modify(|_r, w| {
+            w.enable().set_bit(is_enabled)
+        });
+    }
+
+    pub fn set_direction(&mut self, is_output: bool) -> Result<(), ()> {
+        if self.periph.read().enable().bit_is_clear() {
+            // Must be enabled to set direction
+            return Err(());
+        }
+
+        self.periph.modify(|r, w| {
+            w.direction().set_bit(is_output)
+        });
+
+        Ok(())
+    }
+
+    pub fn set_input_mode(&mut self, variant: InputMode) -> Result<(), ()> {
+        if self.periph.read().enable().bit_is_clear() {
+            // Must be enabled to set input mode
+            return Err(());
+        }
+
+        if self.periph.read().direction().bit_is_set() {
+            // Direction must be input
+            return Err(());
+        }
+
+        self.periph.modify(|_r, w| {
+            w.input_mode().variant(variant)
+        });
+
+        Ok(())
+    }
+
+    pub fn set_output_status(&mut self, is_high: bool) -> Result<(), ()> {
+        if self.periph.read().enable().bit_is_clear() {
+            // Must be enabled to set output status
+            return Err(());
+        }
+
+        if self.periph.read().direction().bit_is_clear() {
+            // Direction must be output
+            return Err(());
+        }
+
+        self.periph.modify(|_r, w| {
+            w.output_mode.set_bit(is_high)
+        });
+
+        Ok(())
+    }
+
+    pub fn get_input_status(&self) -> Result<bool, ()> {
+        if self.periph.read().enable().bit_is_clear() {
+            // Must be enabled to get status
+            return Err(());
+        }
+
+        if self.periph.read().direction().bit_is_set() {
+            // Direction must be input
+            return Err(());
+        }
+
+        Ok(self.periph.read().input_status().bit_is_set())
+    }
+}
+Because we need to enforce the restrictions on the hardware, we end up doing a lot of runtime checking which wastes time and resources, and this code will be much less pleasant for the developer to use.
+
+Type States
+
+But what if instead, we used Rust's type system to enforce the state transition rules? Take this example:
+
+/// GPIO interface
+struct GpioConfig<ENABLED, DIRECTION, MODE> {
+    /// GPIO Configuration structure generated by svd2rust
+    periph: GPIO_CONFIG,
+    enabled: ENABLED,
+    direction: DIRECTION,
+    mode: MODE,
+}
+
+// Type states for MODE in GpioConfig
+struct Disabled;
+struct Enabled;
+struct Output;
+struct Input;
+struct PulledLow;
+struct PulledHigh;
+struct HighZ;
+struct DontCare;
+
+/// These functions may be used on any GPIO Pin
+impl<EN, DIR, IN_MODE> GpioConfig<EN, DIR, IN_MODE> {
+    pub fn into_disabled(self) -> GpioConfig<Disabled, DontCare, DontCare> {
+        self.periph.modify(|_r, w| w.enable.disabled());
+        GpioConfig {
+            periph: self.periph,
+            enabled: Disabled,
+            direction: DontCare,
+            mode: DontCare,
+        }
+    }
+
+    pub fn into_enabled_input(self) -> GpioConfig<Enabled, Input, HighZ> {
+        self.periph.modify(|_r, w| {
+            w.enable.enabled()
+             .direction.input()
+             .input_mode.high_z()
+        });
+        GpioConfig {
+            periph: self.periph,
+            enabled: Enabled,
+            direction: Input,
+            mode: HighZ,
+        }
+    }
+
+    pub fn into_enabled_output(self) -> GpioConfig<Enabled, Output, DontCare> {
+        self.periph.modify(|_r, w| {
+            w.enable.enabled()
+             .direction.output()
+             .input_mode.set_high()
+        });
+        GpioConfig {
+            periph: self.periph,
+            enabled: Enabled,
+            direction: Output,
+            mode: DontCare,
+        }
+    }
+}
+
+/// This function may be used on an Output Pin
+impl GpioConfig<Enabled, Output, DontCare> {
+    pub fn set_bit(&mut self, set_high: bool) {
+        self.periph.modify(|_r, w| w.output_mode.set_bit(set_high));
+    }
+}
+
+/// These methods may be used on any enabled input GPIO
+impl<IN_MODE> GpioConfig<Enabled, Input, IN_MODE> {
+    pub fn bit_is_set(&self) -> bool {
+        self.periph.read().input_status.bit_is_set()
+    }
+
+    pub fn into_input_high_z(self) -> GpioConfig<Enabled, Input, HighZ> {
+        self.periph.modify(|_r, w| w.input_mode().high_z());
+        GpioConfig {
+            periph: self.periph,
+            enabled: Enabled,
+            direction: Input,
+            mode: HighZ,
+        }
+    }
+
+    pub fn into_input_pull_down(self) -> GpioConfig<Enabled, Input, PulledLow> {
+        self.periph.modify(|_r, w| w.input_mode().pull_low());
+        GpioConfig {
+            periph: self.periph,
+            enabled: Enabled,
+            direction: Input,
+            mode: PulledLow,
+        }
+    }
+
+    pub fn into_input_pull_up(self) -> GpioConfig<Enabled, Input, PulledHigh> {
+        self.periph.modify(|_r, w| w.input_mode().pull_high());
+        GpioConfig {
+            periph: self.periph,
+            enabled: Enabled,
+            direction: Input,
+            mode: PulledHigh,
+        }
+    }
+}
+Now let's see what the code using this would look like:
+
+/*
+ * Example 1: Unconfigured to High-Z input
+ */
+let pin: GpioConfig<Disabled, _, _> = get_gpio();
+
+// Can't do this, pin isn't enabled!
+// pin.into_input_pull_down();
+
+// Now turn the pin from unconfigured to a high-z input
+let input_pin = pin.into_enabled_input();
+
+// Read from the pin
+let pin_state = input_pin.bit_is_set();
+
+// Can't do this, input pins don't have this interface!
+// input_pin.set_bit(true);
+
+/*
+ * Example 2: High-Z input to Pulled Low input
+ */
+let pulled_low = input_pin.into_input_pull_down();
+let pin_state = pulled_low.bit_is_set();
+
+/*
+ * Example 3: Pulled Low input to Output, set high
+ */
+let output_pin = pulled_low.into_enabled_output();
+output_pin.set_bit(true);
+
+// Can't do this, output pins don't have this interface!
+// output_pin.into_input_pull_down();
+This is definitely a convenient way to store the state of the pin, but why do it this way? Why is this better than storing the state as an enum inside of our GpioConfig structure?
+
+Compile Time Functional Safety
+
+Because we are enforcing our design constraints entirely at compile time, this incurs no runtime cost. It is impossible to set an output mode when you have a pin in an input mode. Instead, you must walk through the states by converting it to an output pin, and then setting the output mode. Because of this, there is no runtime penalty due to checking the current state before executing a function.
+
+Also, because these states are enforced by the type system, there is no longer room for errors by consumers of this interface. If they try to perform an illegal state transition, the code will not compile!
+
+## Zero Cost Abstractions
+
+Type states are also an excellent example of Zero Cost Abstractions - the ability to move certain behaviors to compile time execution or analysis. These type states contain no actual data, and are instead used as markers. Since they contain no data, they have no actual representation in memory at runtime:
+
+use core::mem::size_of;
+
+let _ = size_of::<Enabled>();    // == 0
+let _ = size_of::<Input>();      // == 0
+let _ = size_of::<PulledHigh>(); // == 0
+let _ = size_of::<GpioConfig<Enabled, Input, PulledHigh>>(); // == 0
+Zero Sized Types
+
+struct Enabled;
+Structures defined like this are called Zero Sized Types, as they contain no actual data. Although these types act "real" at compile time - you can copy them, move them, take references to them, etc., however the optimizer will completely strip them away.
+
+In this snippet of code:
+
+pub fn into_input_high_z(self) -> GpioConfig<Enabled, Input, HighZ> {
+    self.periph.modify(|_r, w| w.input_mode().high_z());
+    GpioConfig {
+        periph: self.periph,
+        enabled: Enabled,
+        direction: Input,
+        mode: HighZ,
+    }
+}
+The GpioConfig we return never exists at runtime. Calling this function will generally boil down to a single assembly instruction - storing a constant register value to a register location. This means that the type state interface we've developed is a zero cost abstraction - it uses no more CPU, RAM, or code space tracking the state of GpioConfig, and renders to the same machine code as a direct register access.
+
+Nesting
+
+In general, these abstractions may be nested as deeply as you would like. As long as all components used are zero sized types, the whole structure will not exist at runtime.
+
+For complex or deeply nested structures, it may be tedious to define all possible combinations of state. In these cases, macros may be used to generate all implementations.

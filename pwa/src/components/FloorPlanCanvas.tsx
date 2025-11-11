@@ -3,10 +3,52 @@ import {
   extractEquipmentFromScan,
   initWasm,
   parseArScan,
-  validateArScan
+  validateArScan,
+  type WasmArScanData,
+  type WasmEquipmentInfo,
+  type WasmOpening,
+  type WasmWall
 } from "../lib/wasm";
+import { useViewerStore } from "../state/viewer";
+import { get, set as setKeyVal } from "idb-keyval";
 
-type EquipmentPoint = {
+const FLOOR_PLAN_STORAGE_KEY = "arxos-floor-plan-scan-input";
+
+const canUseLocalStorage = () => {
+  try {
+    if (typeof window === "undefined" || !("localStorage" in window)) {
+      return false;
+    }
+    const testKey = "__arxos_test";
+    window.localStorage.setItem(testKey, "1");
+    window.localStorage.removeItem(testKey);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const loadStoredScan = async () => {
+  if (typeof indexedDB === "undefined") {
+    if (canUseLocalStorage()) {
+      return window.localStorage.getItem(FLOOR_PLAN_STORAGE_KEY);
+    }
+    return null;
+  }
+  return get<string>(FLOOR_PLAN_STORAGE_KEY);
+};
+
+const persistStoredScan = async (value: string) => {
+  if (typeof indexedDB === "undefined") {
+    if (canUseLocalStorage()) {
+      window.localStorage.setItem(FLOOR_PLAN_STORAGE_KEY, value);
+    }
+    return;
+  }
+  await setKeyVal(FLOOR_PLAN_STORAGE_KEY, value);
+};
+
+export type EquipmentPoint = {
   x: number;
   y: number;
   label: string;
@@ -76,55 +118,43 @@ const SAMPLE_SCAN = JSON.stringify(
   2
 );
 
-function deriveLayout(data: any, equipment: EquipmentPoint[]): LayoutState {
+function deriveLayout(data: WasmArScanData, equipment: EquipmentPoint[]): LayoutState {
   let minX = Number.POSITIVE_INFINITY;
   let maxX = Number.NEGATIVE_INFINITY;
   let minY = Number.POSITIVE_INFINITY;
   let maxY = Number.NEGATIVE_INFINITY;
 
-  const track = (x?: unknown, y?: unknown) => {
-    const numericX = typeof x === "number" ? x : Number(x);
-    const numericY = typeof y === "number" ? y : Number(y);
-    if (!Number.isFinite(numericX) || !Number.isFinite(numericY)) {
+  const track = (x?: number | null, y?: number | null) => {
+    if (typeof x !== "number" || typeof y !== "number") {
       return;
     }
-    minX = Math.min(minX, numericX);
-    maxX = Math.max(maxX, numericX);
-    minY = Math.min(minY, numericY);
-    maxY = Math.max(maxY, numericY);
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
   };
 
-  const walls: WallSegment[] = Array.isArray(data?.roomBoundaries?.walls)
-    ? data.roomBoundaries.walls.map((wall: any) => {
-        track(wall.startPoint?.x, wall.startPoint?.y);
-        track(wall.endPoint?.x, wall.endPoint?.y);
-        return {
-          start: {
-            x: Number(wall.startPoint?.x ?? 0),
-            y: Number(wall.startPoint?.y ?? 0)
-          },
-          end: {
-            x: Number(wall.endPoint?.x ?? 0),
-            y: Number(wall.endPoint?.y ?? 0)
-          }
-        };
-      })
-    : [];
+  const wallsSource: WasmWall[] = data.roomBoundaries?.walls ?? [];
+  const openingsSource: WasmOpening[] = data.roomBoundaries?.openings ?? [];
 
-  const openings: Opening[] = Array.isArray(data?.roomBoundaries?.openings)
-    ? data.roomBoundaries.openings.map((opening: any) => {
-        track(opening.position?.x, opening.position?.y);
-        return {
-          position: {
-            x: Number(opening.position?.x ?? 0),
-            y: Number(opening.position?.y ?? 0)
-          },
-          width: Number(opening.width ?? 0),
-          height: Number(opening.height ?? 0),
-          type: typeof opening.type === "string" ? opening.type : undefined
-        };
-      })
-    : [];
+  const walls: WallSegment[] = wallsSource.map((wall) => {
+    track(wall.startPoint.x, wall.startPoint.y);
+    track(wall.endPoint.x, wall.endPoint.y);
+    return {
+      start: { x: wall.startPoint.x, y: wall.startPoint.y },
+      end: { x: wall.endPoint.x, y: wall.endPoint.y }
+    };
+  });
+
+  const openings: Opening[] = openingsSource.map((opening) => {
+    track(opening.position.x, opening.position.y);
+    return {
+      position: { x: opening.position.x, y: opening.position.y },
+      width: opening.width,
+      height: opening.height,
+      type: opening.type
+    };
+  });
 
   equipment.forEach((item) => track(item.x, item.y));
 
@@ -152,6 +182,7 @@ export default function FloorPlanCanvas() {
   const [loading, setLoading] = useState(false);
   const [equipment, setEquipment] = useState<EquipmentPoint[]>([]);
   const [layout, setLayout] = useState<LayoutState>(() => createDefaultLayout());
+  const [hydrated, setHydrated] = useState(false);
 
   const worldSize = useMemo(() => {
     const width = Math.max(layout.maxX - layout.minX, 1);
@@ -173,19 +204,19 @@ export default function FloorPlanCanvas() {
         return;
       }
 
-      const parsed = await parseArScan<any>(scanInput);
-      const equipmentList = (await extractEquipmentFromScan<any[]>(scanInput)) ?? [];
-      const equipmentPoints: EquipmentPoint[] = Array.isArray(equipmentList)
-        ? equipmentList.map((item: any) => ({
-            x: Number(item.position?.x ?? 0),
-            y: Number(item.position?.y ?? 0),
-            label: typeof item.name === "string" ? item.name : "equipment"
-          }))
-        : [];
-
-      setEquipment(equipmentPoints);
-      setLayout(deriveLayout(parsed, equipmentPoints));
-      setStatus(`Rendered ${equipmentPoints.length} equipment points.`);
+      const parsed = await parseArScan(scanInput);
+      setLayout(deriveLayout(parsed, equipment));
+      const equipmentList = await extractEquipmentFromScan(scanInput);
+      setEquipment(equipmentList.map((item) => ({
+        x: item.position.x,
+        y: item.position.y,
+        label: item.name
+      })));
+      setValidationState("valid");
+      setStatus(
+        `Rendered ${equipmentList.length} equipment points with ${parsed.roomBoundaries.walls.length} walls.`
+      );
+      void useViewerStore.getState().updateFromScan(scanInput);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message);
@@ -194,7 +225,7 @@ export default function FloorPlanCanvas() {
     } finally {
       setLoading(false);
     }
-  }, [scanInput]);
+  }, [scanInput, equipment]);
 
   const loadSample = useCallback(() => {
     setScanInput(SAMPLE_SCAN);
@@ -203,8 +234,42 @@ export default function FloorPlanCanvas() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const saved = await loadStoredScan();
+        if (!cancelled && saved) {
+          setScanInput(saved);
+          setStatus("Loaded scan from previous session.");
+        }
+      } catch (error) {
+        console.warn("Unable to load floor plan state", error);
+      } finally {
+        if (!cancelled) {
+          setHydrated(true);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+    void persistStoredScan(scanInput).catch((error) => {
+      console.warn("Failed to persist floor plan state", error);
+    });
+  }, [scanInput, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
     void renderScan();
-  }, [renderScan]);
+  }, [renderScan, hydrated]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -286,7 +351,10 @@ export default function FloorPlanCanvas() {
   }, [equipment, layout, worldSize.height, worldSize.width]);
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 shadow-inner shadow-slate-950/40">
+    <div
+      className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 shadow-inner shadow-slate-950/40"
+      data-testid="panel-floor-plan"
+    >
       <div className="mb-3 flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-slate-100">Floor Plan Studio</h3>

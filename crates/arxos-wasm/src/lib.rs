@@ -25,8 +25,12 @@ mod scan;
 #[cfg(target_arch = "wasm32")]
 mod wasm_exports {
     use super::*;
-    use crate::scan::{extract_equipment_from_ar_scan, parse_ar_scan as parse_scan_internal};
-    use arx_command_catalog::{self, CommandCategory as CatalogCategory};
+    use crate::scan::{
+        extract_equipment_from_ar_scan, parse_ar_scan as parse_scan_internal, scan_to_mesh_buffers,
+    };
+    use arx_command_catalog::{
+        self, CommandAvailability as CatalogAvailability, CommandCategory as CatalogCategory,
+    };
     use wasm_bindgen::prelude::*;
 
     #[wasm_bindgen(start)]
@@ -56,6 +60,15 @@ mod wasm_exports {
             .map_err(|e| JsValue::from_str(&format!("Failed to serialize equipment list: {e}")))
     }
 
+    #[wasm_bindgen]
+    pub fn generate_scan_mesh(json: &str) -> Result<JsValue, JsValue> {
+        let scan = parse_scan_internal(json)
+            .map_err(|e| JsValue::from_str(&format!("Failed to parse AR scan JSON: {e}")))?;
+        let buffers = scan_to_mesh_buffers(&scan);
+        serde_wasm_bindgen::to_value(&buffers)
+            .map_err(|e| JsValue::from_str(&format!("Failed to serialize mesh buffers: {e}")))
+    }
+
     /// Validates that the provided JSON payload conforms to the expected schema.
     ///
     /// Returns `true` if the payload can be parsed into `WasmArScanData`,
@@ -78,6 +91,25 @@ mod wasm_exports {
         description: &'static str,
         category: CategoryDto,
         shortcut: Option<&'static str>,
+        tags: &'static [&'static str],
+        availability: AvailabilityDto,
+    }
+
+    #[derive(Serialize)]
+    struct AvailabilityDto {
+        cli: bool,
+        pwa: bool,
+        agent: bool,
+    }
+
+    impl From<CatalogAvailability> for AvailabilityDto {
+        fn from(value: CatalogAvailability) -> Self {
+            Self {
+                cli: value.cli,
+                pwa: value.pwa,
+                agent: value.agent,
+            }
+        }
     }
 
     const fn category_slug(category: CatalogCategory) -> &'static str {
@@ -111,6 +143,8 @@ mod wasm_exports {
                     label: descriptor.category.name(),
                 },
                 shortcut: descriptor.shortcut,
+                tags: descriptor.tags,
+                availability: descriptor.availability.into(),
             })
             .collect();
 
@@ -166,6 +200,8 @@ mod wasm_exports {
                         label: entry.category.name(),
                     },
                     shortcut: entry.shortcut,
+                    tags: entry.tags,
+                    availability: entry.availability.into(),
                 };
                 serde_wasm_bindgen::to_value(&payload).map_err(|e| {
                     JsValue::from_str(&format!("Failed to serialize command details: {e}"))

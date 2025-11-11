@@ -1,127 +1,342 @@
 # ArxOS API Reference
 
-**Version:** 2.0  
-**Last Updated:** December 2024
+> **Mobile FFI Notice (November 2025):** C/UniFFI exports for iOS/Android were archived with the native clients. References remain here for historical context. The supported surface going forward is the WASM PWA (`WEB_PWA_PLAN.md`) powered by `ar_integration::wasm`.
 
-## Table of Contents
+**Version:** 2.0.0  
+**Last Updated:** January 2025
 
-1. [Introduction](#introduction)
-2. [CLI Commands](#cli-commands)
-   - [Core Commands](#core-commands)
-   - [Git Operations](#git-operations)
-   - [Data Management](#data-management)
-   - [Visualization](#visualization)
-   - [Search & Filter](#search--filter)
-   - [AR Integration](#ar-integration)
-   - [Sensor Processing](#sensor-processing)
-   - [System Commands](#system-commands)
-3. [Configuration API](#configuration-api)
-4. [Mobile FFI API](#mobile-ffi-api)
-   - [C FFI Functions](#c-ffi-functions)
-   - [JNI Functions](#jni-functions)
-   - [Data Structures](#data-structures)
-5. [Core Rust API](#core-rust-api)
-6. [Error Reference](#error-reference)
-7. [Examples](#examples)
+This document provides a comprehensive reference for all ArxOS APIs, including CLI commands, configuration options, FFI functions, and core types.
 
 ---
 
-## Introduction
+## Table of Contents
 
-This document provides a comprehensive reference for all public APIs in ArxOS. It covers CLI commands, configuration options, mobile FFI bindings, core Rust types, and error handling.
-
-**For users:** See the [User Guide](./USER_GUIDE.md) for tutorials and workflows.  
-**For developers:** This document provides complete API specifications.
+1. [CLI Commands](#cli-commands)
+2. [Configuration Options](#configuration-options)
+3. [FFI Functions](#ffi-functions)
+4. [Core API Types](#core-api-types)
+5. [Error Codes](#error-codes)
+6. [Request/Response Formats](#requestresponse-formats)
 
 ---
 
 ## CLI Commands
 
-All ArxOS commands follow the pattern: `arx <command> [options] [arguments]`
+### Building Management
 
-### Core Commands
+#### `arx init`
 
-#### `arx import`
+Initialize a new building from scratch.
 
-Import an IFC building file into the ArxOS repository.
-
-**Signature:**
+**Usage:**
 ```bash
-arx import <IFC_FILE> [OPTIONS]
+arx init --name <building-name> [OPTIONS]
 ```
 
 **Arguments:**
-- `IFC_FILE` (required): Path to IFC file to import
-
-**Options:**
-- `--repo <REPO>` (optional): Git repository URL (default: current directory)
-- `--dry-run` (flag): Preview changes without making them
+- `--name <STRING>` (required) - Building name
+- `--description <STRING>` (optional) - Building description
+- `--location <STRING>` (optional) - Location/address
+- `--git-init` - Initialize Git repository
+- `--commit` - Commit initial building.yaml
+- `--coordinate-system <STRING>` (default: "World") - Coordinate system
+- `--units <STRING>` (default: "meters") - Units
 
 **Examples:**
-
 ```bash
-# Basic import
-arx import building.ifc
+# Initialize a new building
+arx init --name "PS-118" --description "Public School 118" --location "Brooklyn, NY"
 
-# Import to specific repository
-arx import building.ifc --repo https://github.com/company/buildings.git
-
-# Preview import changes
-arx import building.ifc --dry-run
+# Initialize with Git
+arx init --name "PS-118" --git-init --commit
 ```
 
-**Related Commands:**
-- [`arx export`](#arx-export) - Export building data
-- [`arx validate`](#arx-validate) - Validate IFC files
+---
+
+#### `arx import`
+
+Import IFC file to Git repository.
+
+**Usage:**
+```bash
+arx import <ifc-file> [OPTIONS]
+```
+
+**Arguments:**
+- `<ifc-file>` (required) - Path to IFC file
+- `--repo <URL>` (optional) - Git repository URL
+- `--dry-run` - Show what would be done without making changes
+
+**Examples:**
+```bash
+# Import IFC file
+arx import building.ifc
+
+# Dry run to see what would happen
+arx import building.ifc --dry-run
+```
 
 ---
 
 #### `arx export`
 
-Export building data to a Git repository.
+Export building data to Git repository or other formats.
 
-**Signature:**
+**Usage:**
 ```bash
-arx export --repo <REPO>
+arx export [OPTIONS]
 ```
 
-**Options:**
-- `--repo <REPO>` (required): Git repository URL
+**Arguments:**
+- `--format <FORMAT>` (default: "git") - Export format: git, ifc, gltf, usdz
+- `--output <PATH>` (optional) - Output file path (required for non-git formats)
+- `--repo <URL>` (optional) - Git repository URL (required for git format)
+- `--delta` - Export only changes (delta mode)
 
 **Examples:**
-
 ```bash
-# Export to remote repository
-arx export --repo https://github.com/company/buildings.git
-```
+# Export to Git
+arx export --format git --repo https://github.com/example/building.git
 
-**Related Commands:**
-- [`arx import`](#arx-import) - Import IFC files
-- [`arx status`](#arx-status) - Check repository status
+# Export to IFC
+arx export --format ifc --output building.ifc
+
+# Export to glTF for AR
+arx export --format gltf --output building.gltf
+```
 
 ---
 
-#### `arx validate`
+#### `arx sync`
 
-Validate building data files.
+Sync building data to IFC file (continuous or one-time).
 
-**Signature:**
+**Usage:**
 ```bash
-arx validate [--path <PATH>]
+arx sync [OPTIONS]
 ```
 
-**Options:**
-- `--path <PATH>` (optional): Path to building data (default: current directory)
+**Arguments:**
+- `--ifc <PATH>` (optional) - Path to IFC file
+- `--watch` - Enable watch mode (daemon) for continuous sync
+- `--delta` - Export only changes (delta mode)
 
 **Examples:**
-
 ```bash
-# Validate current directory
-arx validate
+# One-time sync
+arx sync --ifc building.ifc
 
-# Validate specific path
-arx validate --path ./buildings/main-building.yaml
+# Continuous sync (watch mode)
+arx sync --ifc building.ifc --watch
 ```
+
+---
+
+### Equipment Management
+
+#### `arx equipment add`
+
+Add equipment to a room.
+
+**Usage:**
+```bash
+arx equipment add --room <ROOM> --name <NAME> --equipment-type <TYPE> [OPTIONS]
+```
+
+**Arguments:**
+- `--room <ROOM>` (required) - Room ID or name
+- `--name <NAME>` (required) - Equipment name
+- `--equipment-type <TYPE>` (required) - Equipment type
+- `--position <x,y,z>` (optional) - Equipment position
+- `--at <PATH>` (optional) - ArxOS Address path (e.g., `/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01`)
+- `--property <key=value>` (optional) - Equipment properties (can be repeated)
+- `--commit` - Commit changes to Git
+
+**Examples:**
+```bash
+# Add equipment with auto-generated address
+arx equipment add --room "Conference Room" --name "VAV-301" --equipment-type "HVAC"
+
+# Add equipment with custom address
+arx equipment add --room "Conference Room" --name "VAV-301" --equipment-type "HVAC" \
+    --at "/usa/ny/brooklyn/ps-118/floor-02/mech/vav-301"
+
+# Add equipment with properties
+arx equipment add --room "Kitchen" --name "Refrigerator" --equipment-type "Custom" \
+    --property "model=ABC123" --property "serial=XYZ789"
+```
+
+---
+
+#### `arx equipment list`
+
+List equipment.
+
+**Usage:**
+```bash
+arx equipment list [OPTIONS]
+```
+
+**Arguments:**
+- `--room <ROOM>` (optional) - Filter by room ID or name
+- `--equipment-type <TYPE>` (optional) - Filter by equipment type
+- `--verbose` - Show detailed information
+- `--interactive` - Open interactive browser
+
+**Examples:**
+```bash
+# List all equipment
+arx equipment list
+
+# List equipment in a specific room
+arx equipment list --room "Conference Room"
+
+# List HVAC equipment
+arx equipment list --equipment-type "HVAC" --verbose
+```
+
+---
+
+#### `arx equipment update`
+
+Update equipment properties.
+
+**Usage:**
+```bash
+arx equipment update <equipment> [OPTIONS]
+```
+
+**Arguments:**
+- `<equipment>` (required) - Equipment ID or name
+- `--property <key=value>` (optional) - Property to update (can be repeated)
+- `--position <x,y,z>` (optional) - New position
+- `--commit` - Commit changes to Git
+
+**Examples:**
+```bash
+# Update equipment property
+arx equipment update "VAV-301" --property "status=Active"
+
+# Update equipment position
+arx equipment update "VAV-301" --position "10.5,20.3,0.0" --commit
+```
+
+---
+
+#### `arx equipment remove`
+
+Remove equipment.
+
+**Usage:**
+```bash
+arx equipment remove <equipment> [OPTIONS]
+```
+
+**Arguments:**
+- `<equipment>` (required) - Equipment ID or name
+- `--confirm` - Confirm deletion
+- `--commit` - Commit changes to Git
+
+**Examples:**
+```bash
+# Remove equipment
+arx equipment remove "VAV-301" --confirm --commit
+```
+
+---
+
+### Room Management
+
+#### `arx room create`
+
+Create a new room.
+
+**Usage:**
+```bash
+arx room create --building <BUILDING> --floor <LEVEL> --wing <WING> --name <NAME> --room-type <TYPE> [OPTIONS]
+```
+
+**Arguments:**
+- `--building <BUILDING>` (required) - Building name
+- `--floor <LEVEL>` (required) - Floor level
+- `--wing <WING>` (required) - Wing name
+- `--name <NAME>` (required) - Room name
+- `--room-type <TYPE>` (required) - Room type
+- `--dimensions <width x depth x height>` (optional) - Room dimensions
+- `--position <x,y,z>` (optional) - Room position
+- `--commit` - Commit changes to Git
+
+**Examples:**
+```bash
+# Create a room
+arx room create --building "PS-118" --floor 2 --wing "Main" --name "Conference Room" \
+    --room-type "Conference" --dimensions "10 x 20 x 8" --position "0,0,0"
+```
+
+---
+
+#### `arx room list`
+
+List rooms.
+
+**Usage:**
+```bash
+arx room list [OPTIONS]
+```
+
+**Arguments:**
+- `--building <BUILDING>` (optional) - Filter by building name
+- `--floor <LEVEL>` (optional) - Filter by floor level
+- `--wing <WING>` (optional) - Filter by wing name
+- `--verbose` - Show detailed information
+- `--interactive` - Open interactive explorer
+
+---
+
+#### `arx room show`
+
+Show room details.
+
+**Usage:**
+```bash
+arx room show <room> [OPTIONS]
+```
+
+**Arguments:**
+- `<room>` (required) - Room ID or name
+- `--equipment` - Show equipment in room
+
+---
+
+#### `arx room update`
+
+Update room properties.
+
+**Usage:**
+```bash
+arx room update <room> --property <key=value> [OPTIONS]
+```
+
+**Arguments:**
+- `<room>` (required) - Room ID or name
+- `--property <key=value>` (required) - Property to update (can be repeated)
+- `--commit` - Commit changes to Git
+
+---
+
+#### `arx room delete`
+
+Delete a room.
+
+**Usage:**
+```bash
+arx room delete <room> [OPTIONS]
+```
+
+**Arguments:**
+- `<room>` (required) - Room ID or name
+- `--confirm` - Confirm deletion
+- `--commit` - Commit changes to Git
 
 ---
 
@@ -131,23 +346,14 @@ arx validate --path ./buildings/main-building.yaml
 
 Show repository status and changes.
 
-**Signature:**
+**Usage:**
 ```bash
-arx status [--verbose]
+arx status [OPTIONS]
 ```
 
-**Options:**
-- `--verbose` (flag): Show detailed status information
-
-**Examples:**
-
-```bash
-# Basic status
-arx status
-
-# Detailed status
-arx status --verbose
-```
+**Arguments:**
+- `--verbose` - Show detailed status information
+- `--interactive` - Open interactive dashboard
 
 ---
 
@@ -155,110 +361,74 @@ arx status --verbose
 
 Stage changes in the working directory.
 
-**Signature:**
+**Usage:**
 ```bash
-arx stage [--all] [<FILE>]
+arx stage [OPTIONS]
 ```
 
-**Options:**
-- `--all` (flag): Stage all modified files (default behavior)
-- `<FILE>` (optional): Specific file to stage
+**Arguments:**
+- `--all` - Stage all modified files (default behavior)
+- `<file>` (optional) - Specific file to stage
 
 **Examples:**
-
 ```bash
 # Stage all changes
-arx stage --all
+arx stage
 
 # Stage specific file
-arx stage main-building.yaml
+arx stage building.yaml
 ```
-
-**Related Commands:**
-- [`arx commit`](#arx-commit) - Commit staged changes
-- [`arx unstage`](#arx-unstage) - Unstage changes
 
 ---
 
 #### `arx commit`
 
-Commit staged changes to Git.
+Commit staged changes.
 
-**Signature:**
+**Usage:**
 ```bash
-arx commit <MESSAGE>
+arx commit <message>
 ```
 
 **Arguments:**
-- `MESSAGE` (required): Commit message
+- `<message>` (required) - Commit message
 
 **Examples:**
-
 ```bash
-# Commit with message
-arx commit "Add new HVAC equipment to floor 3"
+arx commit "Add new HVAC equipment"
 ```
-
-**Related Commands:**
-- [`arx stage`](#arx-stage) - Stage changes
-- [`arx history`](#arx-history) - View commit history
 
 ---
 
 #### `arx unstage`
 
-Unstage changes from the staging area.
+Unstage changes.
 
-**Signature:**
+**Usage:**
 ```bash
-arx unstage [--all] [<FILE>]
+arx unstage [OPTIONS]
 ```
 
-**Options:**
-- `--all` (flag): Unstage all files
-- `<FILE>` (optional): Specific file to unstage
-
-**Examples:**
-
-```bash
-# Unstage all files
-arx unstage --all
-
-# Unstage specific file
-arx unstage main-building.yaml
-```
+**Arguments:**
+- `--all` - Unstage all files
+- `<file>` (optional) - Specific file to unstage
 
 ---
 
 #### `arx diff`
 
-Show differences between commits or files.
+Show differences between commits.
 
-**Signature:**
+**Usage:**
 ```bash
-arx diff [--commit <COMMIT>] [--file <FILE>] [--stat]
+arx diff [OPTIONS]
 ```
 
-**Options:**
-- `--commit <COMMIT>` (optional): Compare with specific commit hash
-- `--file <FILE>` (optional): Show diff for specific file
-- `--stat` (flag): Show file statistics only
-
-**Examples:**
-
-```bash
-# Show diff for working directory
-arx diff
-
-# Compare with specific commit
-arx diff --commit abc123
-
-# Show diff for specific file
-arx diff --file main-building.yaml
-
-# Show statistics
-arx diff --stat
-```
+**Arguments:**
+- `--commit <HASH>` (optional) - Compare with specific commit hash
+- `--file <PATH>` (optional) - Show diff for specific file
+- `--stat` - Show statistics only
+- `--interactive` - Open interactive diff viewer
 
 ---
 
@@ -266,566 +436,100 @@ arx diff --stat
 
 Show commit history.
 
-**Signature:**
+**Usage:**
 ```bash
-arx history [--limit <N>] [--verbose] [--file <FILE>]
-```
-
-**Options:**
-- `--limit <N>` (optional, default: 10): Number of commits to show
-- `--verbose` (flag): Show detailed commit information
-- `--file <FILE>` (optional): Show history for specific file
-
-**Examples:**
-
-```bash
-# Show last 10 commits
-arx history
-
-# Show last 20 commits with details
-arx history --limit 20 --verbose
-
-# Show history for specific file
-arx history --file main-building.yaml
-```
-
----
-
-### Data Management
-
-#### `arx room`
-
-Room management commands.
-
-**Subcommands:**
-
-##### `arx room create`
-
-Create a new room.
-
-**Signature:**
-```bash
-arx room create --building <BUILDING> --floor <FLOOR> --wing <WING> --name <NAME> --room-type <TYPE> [OPTIONS]
-```
-
-**Required Options:**
-- `--building <BUILDING>`: Building name
-- `--floor <FLOOR>`: Floor level (integer)
-- `--wing <WING>`: Wing identifier
-- `--name <NAME>`: Room name
-- `--room-type <TYPE>`: Room type
-
-**Optional Options:**
-- `--dimensions <WIDTH>x<DEPTH>x<HEIGHT>`: Room dimensions
-- `--position <X,Y,Z>`: Room position coordinates
-- `--commit` (flag): Commit changes to Git
-
-**Examples:**
-
-```bash
-# Create a room with dimensions
-arx room create --building "Main Building" --floor 2 --wing "A" --name "Conference Room 201" --room-type "Office" --dimensions "10x8x3" --position "5,10,2"
-
-# Create and commit
-arx room create --building "Main Building" --floor 1 --wing "B" --name "Lab 101" --room-type "Laboratory" --commit
-```
-
----
-
-##### `arx room list`
-
-List rooms.
-
-**Signature:**
-```bash
-arx room list [--building <BUILDING>] [--floor <FLOOR>] [--wing <WING>] [--verbose]
-```
-
-**Options:**
-- `--building <BUILDING>` (optional): Filter by building
-- `--floor <FLOOR>` (optional): Filter by floor
-- `--wing <WING>` (optional): Filter by wing
-- `--verbose` (flag): Show detailed information
-
-**Examples:**
-
-```bash
-# List all rooms
-arx room list
-
-# List rooms on floor 2
-arx room list --floor 2 --verbose
-
-# List rooms in specific building
-arx room list --building "Main Building"
-```
-
----
-
-##### `arx room show`
-
-Show room details.
-
-**Signature:**
-```bash
-arx room show <ROOM> [--equipment]
+arx history [OPTIONS]
 ```
 
 **Arguments:**
-- `ROOM` (required): Room ID or name
-
-**Options:**
-- `--equipment` (flag): Show equipment in room
-
-**Examples:**
-
-```bash
-# Show room details
-arx room show "Conference Room 201"
-
-# Show room with equipment
-arx room show "Conference Room 201" --equipment
-```
+- `--limit <N>` (optional) - Limit number of commits
+- `--verbose` - Show detailed information
+- `--file <PATH>` (optional) - Show history for specific file
 
 ---
 
-##### `arx room update`
-
-Update room properties.
-
-**Signature:**
-```bash
-arx room update <ROOM> --property <KEY=VALUE> [--commit]
-```
-
-**Arguments:**
-- `ROOM` (required): Room ID or name
-
-**Options:**
-- `--property <KEY=VALUE>` (repeatable): Property to update
-- `--commit` (flag): Commit changes to Git
-
-**Examples:**
-
-```bash
-# Update room name
-arx room update "Conference Room 201" --property "name=Conference Room 201A" --commit
-```
-
----
-
-##### `arx room delete`
-
-Delete a room.
-
-**Signature:**
-```bash
-arx room delete <ROOM> [--confirm] [--commit]
-```
-
-**Arguments:**
-- `ROOM` (required): Room ID or name
-
-**Options:**
-- `--confirm` (flag): Confirm deletion
-- `--commit` (flag): Commit changes to Git
-
-**Examples:**
-
-```bash
-# Delete room with confirmation
-arx room delete "Conference Room 201" --confirm --commit
-```
-
----
-
-#### `arx equipment`
-
-Equipment management commands.
-
-**Subcommands:**
-
-##### `arx equipment add`
-
-Add equipment to a room.
-
-**Signature:**
-```bash
-arx equipment add --room <ROOM> --name <NAME> --equipment-type <TYPE> [OPTIONS]
-```
-
-**Required Options:**
-- `--room <ROOM>`: Room ID or name
-- `--name <NAME>`: Equipment name
-- `--equipment-type <TYPE>`: Equipment type (HVAC, Electrical, AV, etc.)
-
-**Optional Options:**
-- `--position <X,Y,Z>`: Equipment position
-- `--property <KEY=VALUE>` (repeatable): Equipment properties
-- `--commit` (flag): Commit changes to Git
-
-**Examples:**
-
-```bash
-# Add HVAC equipment
-arx equipment add --room "Conference Room 201" --name "VAV-301" --equipment-type "HVAC" --position "5,8,2" --commit
-
-# Add equipment with properties
-arx equipment add --room "Lab 101" --name "Camera-101" --equipment-type "AV" --property "resolution=4K" --property "model=Sony"
-```
-
-**Equipment Types:**
-- `HVAC` - Heating, ventilation, air conditioning
-- `Electrical` - Electrical equipment
-- `AV` - Audio/visual equipment
-- `Furniture` - Furniture items
-- `Safety` - Safety equipment
-- `Plumbing` - Plumbing fixtures
-- `Network` - Network equipment
-- `Other` - Other equipment types
-
----
-
-##### `arx equipment list`
-
-List equipment.
-
-**Signature:**
-```bash
-arx equipment list [--room <ROOM>] [--equipment-type <TYPE>] [--verbose]
-```
-
-**Options:**
-- `--room <ROOM>` (optional): Filter by room
-- `--equipment-type <TYPE>` (optional): Filter by equipment type
-- `--verbose` (flag): Show detailed information
-
-**Examples:**
-
-```bash
-# List all equipment
-arx equipment list
-
-# List HVAC equipment
-arx equipment list --equipment-type "HVAC" --verbose
-
-# List equipment in room
-arx equipment list --room "Conference Room 201"
-```
-
----
-
-##### `arx equipment update`
-
-Update equipment properties.
-
-**Signature:**
-```bash
-arx equipment update <EQUIPMENT> [--property <KEY=VALUE>] [--position <X,Y,Z>] [--commit]
-```
-
-**Arguments:**
-- `EQUIPMENT` (required): Equipment ID or name
-
-**Options:**
-- `--property <KEY=VALUE>` (repeatable): Property to update
-- `--position <X,Y,Z>` (optional): New position
-- `--commit` (flag): Commit changes to Git
-
-**Examples:**
-
-```bash
-# Update equipment status
-arx equipment update "VAV-301" --property "status=Maintenance" --commit
-
-# Update equipment position
-arx equipment update "VAV-301" --position "6,8,2" --commit
-```
-
----
-
-##### `arx equipment remove`
-
-Remove equipment.
-
-**Signature:**
-```bash
-arx equipment remove <EQUIPMENT> [--confirm] [--commit]
-```
-
-**Arguments:**
-- `EQUIPMENT` (required): Equipment ID or name
-
-**Options:**
-- `--confirm` (flag): Confirm removal
-- `--commit` (flag): Commit changes to Git
-
-**Examples:**
-
-```bash
-# Remove equipment
-arx equipment remove "VAV-301" --confirm --commit
-```
-
----
-
-#### `arx spatial`
-
-Spatial operations and queries.
-
-**Subcommands:**
-
-##### `arx spatial query`
-
-Query spatial relationships.
-
-**Signature:**
-```bash
-arx spatial query --query-type <TYPE> --entity <ENTITY> [--params <PARAMS>]
-```
-
-**Options:**
-- `--query-type <TYPE>`: Query type
-- `--entity <ENTITY>`: Target entity (room or equipment)
-- `--params <PARAMS>` (repeatable): Additional parameters
-
-**Examples:**
-
-```bash
-# Query nearby equipment
-arx spatial query --query-type "nearby" --entity "VAV-301" --params "radius=10"
-```
-
----
-
-##### `arx spatial relate`
-
-Set spatial relationships.
-
-**Signature:**
-```bash
-arx spatial relate --entity1 <ENTITY1> --entity2 <ENTITY2> --relationship <REL>
-```
-
-**Options:**
-- `--entity1 <ENTITY1>`: First entity
-- `--entity2 <ENTITY2>`: Second entity
-- `--relationship <REL>`: Relationship type
-
----
-
-##### `arx spatial transform`
-
-Transform coordinates.
-
-**Signature:**
-```bash
-arx spatial transform --from <FROM> --to <TO> --entity <ENTITY>
-```
-
-**Options:**
-- `--from <FROM>`: Source coordinate system
-- `--to <TO>`: Target coordinate system
-- `--entity <ENTITY>`: Entity to transform
-
----
-
-##### `arx spatial validate`
-
-Validate spatial data.
-
-**Signature:**
-```bash
-arx spatial validate [--entity <ENTITY>] [--tolerance <TOL>]
-```
-
-**Options:**
-- `--entity <ENTITY>` (optional): Entity to validate
-- `--tolerance <TOL>` (optional): Validation tolerance
-
----
-
-### Visualization
-
-#### `arx render`
-
-Render building visualization.
-
-**Signature:**
-```bash
-arx render --building <BUILDING> [OPTIONS]
-```
-
-**Required Options:**
-- `--building <BUILDING>`: Building identifier
-
-**Optional Options:**
-- `--floor <FLOOR>` (integer): Floor number to render
-- `--three-d` (flag): Enable 3D multi-floor visualization
-- `--show-status` (flag): Show equipment status indicators
-- `--show-rooms` (flag): Show room boundaries
-- `--format <FORMAT>` (default: "ascii"): Output format (ascii, advanced, json, yaml)
-- `--projection <TYPE>` (default: "isometric"): Projection type (isometric, orthographic, perspective)
-- `--view-angle <ANGLE>` (default: "isometric"): View angle (topdown, front, side, isometric)
-- `--scale <SCALE>` (default: 1.0): Scale factor for 3D rendering
-- `--spatial-index` (flag): Enable spatial index integration
-
-**Examples:**
-
-```bash
-# Basic render
-arx render --building "Main Building"
-
-# 3D render with status indicators
-arx render --building "Main Building" --three-d --show-status
-
-# Render specific floor in JSON format
-arx render --building "Main Building" --floor 2 --format json
-
-# 3D render with custom projection
-arx render --building "Main Building" --three-d --projection perspective --view-angle front --scale 1.5
-```
-
----
-
-#### `arx interactive`
-
-Interactive 3D building visualization with real-time controls.
-
-**Signature:**
-```bash
-arx interactive --building <BUILDING> [OPTIONS]
-```
-
-**Required Options:**
-- `--building <BUILDING>`: Building identifier
-
-**Optional Options:**
-- `--projection <TYPE>` (default: "isometric"): Projection type (isometric, orthographic, perspective)
-- `--view-angle <ANGLE>` (default: "isometric"): View angle (topdown, front, side, isometric)
-- `--scale <SCALE>` (default: 1.0): Scale factor for rendering
-- `--width <WIDTH>` (default: 120): Canvas width in characters
-- `--height <HEIGHT>` (default: 40): Canvas height in characters
-- `--spatial-index` (flag): Enable spatial index integration
-- `--show-status` (flag): Show equipment status indicators
-- `--show-rooms` (flag): Show room boundaries
-- `--show-connections` (flag): Show equipment connections
-- `--fps <FPS>` (default: 30): Target FPS for rendering
-- `--show-fps` (flag): Show FPS counter
-- `--show-help` (flag): Show help overlay by default
-
-**Examples:**
-
-```bash
-# Start interactive mode
-arx interactive --building "Main Building"
-
-# Interactive with custom view and FPS display
-arx interactive --building "Main Building" --view-angle topdown --show-fps --fps 60
-
-# Interactive with all features enabled
-arx interactive --building "Main Building" --show-status --show-rooms --show-connections --spatial-index
-```
-
-**Controls:**
-- Arrow keys: Pan view
-- `+/-`: Zoom in/out
-- `R`: Reset view
-- `Q`: Quit
-- `H`: Toggle help
-
----
-
-### Search & Filter
+### Search and Query
 
 #### `arx search`
 
 Search building data.
 
-**Signature:**
+**Usage:**
 ```bash
-arx search <QUERY> [OPTIONS]
+arx search <query> [OPTIONS]
 ```
 
 **Arguments:**
-- `QUERY` (required): Search query string
-
-**Options:**
-- `--equipment` (flag): Search in equipment names
-- `--rooms` (flag): Search in room names
-- `--buildings` (flag): Search in building names
-- `--case-sensitive` (flag): Case-sensitive search
-- `--regex` (flag): Use regex pattern matching
-- `--limit <N>` (default: 50): Maximum number of results
-- `--verbose` (flag): Show detailed results
+- `<query>` (required) - Search query
+- `--equipment` - Search equipment only
+- `--rooms` - Search rooms only
+- `--buildings` - Search buildings only
+- `--case-sensitive` - Case-sensitive search
+- `--regex` - Use regex pattern matching
+- `--limit <N>` (optional) - Maximum number of results
+- `--verbose` - Show detailed results
+- `--interactive` - Open interactive browser
 
 **Examples:**
-
 ```bash
-# Basic search
-arx search "VAV"
+# Search for equipment
+arx search "VAV" --equipment
 
-# Regex search in equipment
-arx search "HVAC.*301" --equipment --regex
-
-# Case-sensitive room search
-arx search "Conference" --rooms --case-sensitive --verbose
-
-# Search with limit
-arx search "main" --limit 20
+# Search with regex
+arx search "HVAC.*301" --regex --equipment
 ```
 
-**Search Behavior:**
-- By default, searches in equipment names unless `--rooms` or `--buildings` is specified
-- If multiple flags are specified, searches in all specified types
-- Regex patterns use Rust regex syntax
+---
+
+#### `arx query`
+
+Query equipment by ArxAddress glob pattern.
+
+**Usage:**
+```bash
+arx query <pattern> [OPTIONS]
+```
+
+**Arguments:**
+- `<pattern>` (required) - Glob pattern (e.g., `/usa/ny/*/floor-*/mech/boiler-*`)
+- `--format <FORMAT>` (default: "table") - Output format: table, json, yaml
+- `--verbose` - Show detailed information
+
+**Examples:**
+```bash
+# Query all equipment in NYC buildings
+arx query "/usa/ny/*"
+
+# Query all HVAC equipment on floor 2
+arx query "/*/*/*/*/floor-02/mech/*"
+
+# Query specific boiler
+arx query "/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01" --format json
+```
 
 ---
 
 #### `arx filter`
 
-Filter building data by criteria.
+Filter building data.
 
-**Signature:**
+**Usage:**
 ```bash
 arx filter [OPTIONS]
 ```
 
-**Options:**
-- `--equipment-type <TYPE>` (optional): Filter by equipment type
-- `--status <STATUS>` (optional): Filter by equipment status
-- `--floor <FLOOR>` (optional): Filter by floor number
-- `--room <ROOM>` (optional): Filter by room
-- `--building <BUILDING>` (optional): Filter by building
-- `--critical-only` (flag): Show only critical equipment
-- `--healthy-only` (flag): Show only healthy equipment
-- `--alerts-only` (flag): Show only equipment with alerts
-- `--format <FORMAT>` (default: "table"): Output format (table, json, yaml)
-- `--limit <N>` (default: 100): Maximum number of results
-- `--verbose` (flag): Show detailed results
-
-**Examples:**
-
-```bash
-# Filter by equipment type
-arx filter --equipment-type "HVAC"
-
-# Filter by status and floor
-arx filter --status "Maintenance" --floor 2
-
-# Filter critical equipment in JSON format
-arx filter --critical-only --format json
-
-# Filter with limit
-arx filter --equipment-type "Electrical" --limit 50 --verbose
-```
-
-**Equipment Status Values:**
-- `Active`
-- `Inactive`
-- `Maintenance`
-- `OutOfOrder`
-- `Unknown`
+**Arguments:**
+- `--equipment-type <TYPE>` (optional) - Filter by equipment type
+- `--status <STATUS>` (optional) - Filter by equipment status
+- `--floor <LEVEL>` (optional) - Filter by floor level
+- `--room <ROOM>` (optional) - Filter by room name
+- `--building <BUILDING>` (optional) - Filter by building name
+- `--critical-only` - Show only critical equipment
+- `--healthy-only` - Show only healthy equipment
+- `--alerts-only` - Show only equipment with alerts
+- `--format <FORMAT>` (default: "table") - Output format: table, json, yaml
+- `--limit <N>` (default: 100) - Maximum number of results
+- `--verbose` - Show detailed results
 
 ---
 
@@ -835,212 +539,235 @@ arx filter --equipment-type "Electrical" --limit 50 --verbose
 
 Integrate AR scan data.
 
-**Signature:**
+**Usage:**
 ```bash
-arx ar-integrate --scan-file <FILE> --room <ROOM> --floor <FLOOR> --building <BUILDING> [OPTIONS]
-```
-
-**Required Options:**
-- `--scan-file <FILE>`: AR scan data file (JSON)
-- `--room <ROOM>`: Room name for the scan
-- `--floor <FLOOR>`: Floor level (integer)
-- `--building <BUILDING>`: Building identifier
-
-**Optional Options:**
-- `--commit` (flag): Commit changes to Git
-- `--message <MESSAGE>` (optional): Commit message
-
-**Examples:**
-
-```bash
-# Integrate AR scan
-arx ar-integrate --scan-file scan.json --room "Conference Room 201" --floor 2 --building "Main Building"
-
-# Integrate and commit
-arx ar-integrate --scan-file scan.json --room "Lab 101" --floor 1 --building "Main Building" --commit --message "AR scan integration"
-```
-
----
-
-#### `arx ar pending`
-
-Pending equipment management commands.
-
-**Subcommands:**
-
-##### `arx ar pending list`
-
-List all pending equipment.
-
-**Signature:**
-```bash
-arx ar pending list --building <BUILDING> [--floor <FLOOR>] [--verbose]
-```
-
-**Required Options:**
-- `--building <BUILDING>`: Building name
-
-**Optional Options:**
-- `--floor <FLOOR>` (integer): Filter by floor level
-- `--verbose` (flag): Show detailed information
-
-**Examples:**
-
-```bash
-# List all pending equipment
-arx ar pending list --building "Main Building"
-
-# List pending equipment on floor 2
-arx ar pending list --building "Main Building" --floor 2 --verbose
-```
-
----
-
-##### `arx ar pending confirm`
-
-Confirm pending equipment.
-
-**Signature:**
-```bash
-arx ar pending confirm <PENDING_ID> --building <BUILDING> [--commit]
+arx ar-integrate <scan-file> [OPTIONS]
 ```
 
 **Arguments:**
-- `PENDING_ID` (required): Pending equipment ID
-
-**Options:**
-- `--building <BUILDING>`: Building name
-- `--commit` (flag): Commit changes to Git
-
-**Examples:**
-
-```bash
-# Confirm pending equipment
-arx ar pending confirm "pending-123" --building "Main Building" --commit
-```
+- `<scan-file>` (required) - Path to AR scan JSON file
+- `--room <ROOM>` (optional) - Room name
+- `--floor <LEVEL>` (optional) - Floor level
+- `--building <BUILDING>` (optional) - Building name
+- `--commit` - Commit changes to Git
+- `--message <MSG>` (optional) - Custom commit message
 
 ---
 
-##### `arx ar pending reject`
-
-Reject pending equipment.
-
-**Signature:**
-```bash
-arx ar pending reject <PENDING_ID>
-```
-
-**Arguments:**
-- `PENDING_ID` (required): Pending equipment ID
-
-**Examples:**
-
-```bash
-# Reject pending equipment
-arx ar pending reject "pending-123"
-```
-
----
-
-##### `arx ar pending batch-confirm`
-
-Batch confirm multiple pending items.
-
-**Signature:**
-```bash
-arx ar pending batch-confirm <ID1> <ID2> ... --building <BUILDING> [--commit]
-```
-
-**Arguments:**
-- `<ID1> <ID2> ...` (required): Comma-separated list of pending IDs
-
-**Options:**
-- `--building <BUILDING>`: Building name
-- `--commit` (flag): Commit changes to Git
-
-**Examples:**
-
-```bash
-# Batch confirm multiple items
-arx ar pending batch-confirm "pending-123" "pending-124" "pending-125" --building "Main Building" --commit
-```
-
----
-
-### Sensor Processing
+### Sensor Data
 
 #### `arx process-sensors`
 
 Process sensor data and update equipment status.
 
-**Signature:**
+**Usage:**
 ```bash
-arx process-sensors --building <BUILDING> [--sensor-dir <DIR>] [--commit] [--watch]
+arx process-sensors <sensor-dir> --building <BUILDING> [OPTIONS]
 ```
 
-**Required Options:**
-- `--building <BUILDING>`: Building name to update
-
-**Optional Options:**
-- `--sensor-dir <DIR>` (default: "./sensor-data"): Directory containing sensor data files
-- `--commit` (flag): Commit changes to Git
-- `--watch` (flag): Continuously monitor for new sensor data
-
-**Examples:**
-
-```bash
-# Process sensor data once
-arx process-sensors --building "Main Building" --commit
-
-# Process from custom directory
-arx process-sensors --building "Main Building" --sensor-dir "./sensors" --commit
-
-# Watch mode for continuous processing
-arx process-sensors --building "Main Building" --watch
-```
+**Arguments:**
+- `<sensor-dir>` (required) - Directory containing sensor data files
+- `--building <BUILDING>` (required) - Building name
+- `--commit` - Commit changes to Git
+- `--watch` - Watch directory for new sensor files
 
 ---
 
-### System Commands
+#### `arx sensors-http`
+
+Start HTTP server for real-time sensor data ingestion.
+
+**Usage:**
+```bash
+arx sensors-http --building <BUILDING> [OPTIONS]
+```
+
+**Arguments:**
+- `--building <BUILDING>` (required) - Building name
+- `--host <HOST>` (default: "localhost") - Server host
+- `--port <PORT>` (default: 8080) - Server port
+
+---
+
+#### `arx sensors-mqtt`
+
+Start MQTT subscriber for real-time sensor data ingestion.
+
+**Usage:**
+```bash
+arx sensors-mqtt --building <BUILDING> [OPTIONS]
+```
+
+**Arguments:**
+- `--building <BUILDING>` (required) - Building name
+- `--broker <HOST>` (default: "localhost") - MQTT broker host
+- `--port <PORT>` (default: 1883) - MQTT broker port
+- `--username <USER>` (optional) - MQTT username
+- `--password <PASS>` (optional) - MQTT password
+- `--topics <TOPIC>` (optional) - MQTT topics to subscribe to (can be repeated)
+
+---
+
+### Visualization
+
+#### `arx render`
+
+Render building visualization.
+
+**Usage:**
+```bash
+arx render --building <BUILDING> [OPTIONS]
+```
+
+**Arguments:**
+- `--building <BUILDING>` (required) - Building identifier
+- `--floor <LEVEL>` (optional) - Floor number
+- `--three-d` - Enable 3D multi-floor visualization
+- `--show-status` - Show equipment status indicators
+- `--show-rooms` - Show room boundaries
+- `--format <FORMAT>` (default: "ascii") - Output format: ascii, advanced, json, yaml
+- `--projection <TYPE>` (default: "isometric") - Projection type: isometric, orthographic, perspective
+- `--view-angle <ANGLE>` (default: "isometric") - View angle: topdown, front, side, isometric
+- `--scale <FLOAT>` (default: 1.0) - Scale factor for 3D rendering
+- `--spatial-index` - Enable spatial index integration
+
+---
+
+#### `arx interactive`
+
+Interactive 3D building visualization with real-time controls.
+
+**Usage:**
+```bash
+arx interactive --building <BUILDING> [OPTIONS]
+```
+
+**Arguments:**
+- `--building <BUILDING>` (required) - Building identifier
+- `--projection <TYPE>` (default: "isometric") - Projection type
+- `--view-angle <ANGLE>` (default: "isometric") - View angle
+- `--scale <FLOAT>` (default: 1.0) - Scale factor
+- `--width <N>` (default: 120) - Canvas width in characters
+- `--height <N>` (default: 40) - Canvas height in characters
+- `--spatial-index` - Enable spatial index integration
+- `--show-status` - Show equipment status indicators
+- `--show-rooms` - Show room boundaries
+- `--show-connections` - Show equipment connections
+- `--fps <N>` (default: 30) - Target FPS for rendering (1-240)
+- `--show-fps` - Show FPS counter
+- `--show-help` - Show help overlay by default
+
+---
+
+### Spreadsheet Interface
+
+#### `arx spreadsheet equipment`
+
+Open equipment spreadsheet.
+
+**Usage:**
+```bash
+arx spreadsheet equipment [OPTIONS]
+```
+
+**Arguments:**
+- `--building <BUILDING>` (optional) - Building name (default: current directory)
+- `--filter <PATTERN>` (optional) - Pre-filter data (e.g., "status=Active" or glob pattern)
+- `--commit` - Auto-commit on save (default: stage only)
+- `--no-git` - Disable Git integration (read-only mode)
+
+**Keyboard Shortcuts:**
+- Arrow keys: Navigate cells
+- Enter: Edit cell / Open address modal (on address column)
+- Ctrl+F: Activate search
+- Ctrl+A: Toggle address column visibility
+- Esc: Close modal / Exit search / Quit
+- Tab: Next cell
+- Shift+Tab: Previous cell
+- Ctrl+S: Save changes
+
+---
+
+#### `arx spreadsheet rooms`
+
+Open room spreadsheet.
+
+**Usage:**
+```bash
+arx spreadsheet rooms [OPTIONS]
+```
+
+**Arguments:**
+- `--building <BUILDING>` (optional) - Building name
+- `--filter <PATTERN>` (optional) - Pre-filter data
+- `--commit` - Auto-commit on save
+- `--no-git` - Disable Git integration
+
+---
+
+#### `arx spreadsheet sensors`
+
+Open sensor spreadsheet.
+
+**Usage:**
+```bash
+arx spreadsheet sensors [OPTIONS]
+```
+
+**Arguments:**
+- `--building <BUILDING>` (optional) - Building name
+- `--filter <PATTERN>` (optional) - Pre-filter data
+- `--commit` - Auto-commit on save
+- `--no-git` - Disable Git integration
+
+---
+
+### Configuration
 
 #### `arx config`
 
 Manage configuration.
 
-**Signature:**
+**Usage:**
 ```bash
-arx config [--show] [--set <KEY=VALUE>] [--reset] [--edit]
+arx config [OPTIONS]
 ```
 
-**Options:**
-- `--show` (flag): Show current configuration
-- `--set <KEY=VALUE>` (optional): Set configuration value (format: section.key=value)
-- `--reset` (flag): Reset to defaults
-- `--edit` (flag): Edit configuration file
+**Arguments:**
+- `--show` - Show current configuration
+- `--set <section.key=value>` (optional) - Set configuration value
+- `--reset` - Reset to defaults
+- `--edit` - Edit configuration file
+- `--interactive` - Open interactive wizard
 
 **Examples:**
-
 ```bash
 # Show current configuration
 arx config --show
 
 # Set configuration value
-arx config --set "building.auto_commit=false"
-
-# Reset to defaults
-arx config --reset
+arx config --set user.name="John Doe"
+arx config --set building.auto_commit=false
 
 # Edit configuration file
 arx config --edit
 ```
 
-**Configuration Format:**
-Configuration keys use dot notation: `section.key=value`
+---
 
-Example:
-- `user.name="John Doe"`
-- `building.auto_commit=true`
-- `performance.max_parallel_threads=8`
+### Utilities
+
+#### `arx validate`
+
+Validate building data.
+
+**Usage:**
+```bash
+arx validate [OPTIONS]
+```
+
+**Arguments:**
+- `--path <PATH>` (optional) - Path to building data (default: current directory)
 
 ---
 
@@ -1048,114 +775,179 @@ Example:
 
 Run system health diagnostics.
 
-**Signature:**
+**Usage:**
 ```bash
-arx health [--component <COMPONENT>] [--verbose]
+arx health [OPTIONS]
 ```
 
-**Options:**
-- `--component <COMPONENT>` (optional): Check specific component (all, git, config, persistence, yaml)
-- `--verbose` (flag): Show detailed diagnostics
-
-**Examples:**
-
-```bash
-# Check all components
-arx health
-
-# Check specific component
-arx health --component git --verbose
-
-# Detailed health check
-arx health --verbose
-```
-
-**Components:**
-- `all` (default): Check all components
-- `git`: Git integration
-- `config`: Configuration loading
-- `persistence`: Data persistence
-- `yaml`: YAML processing
+**Arguments:**
+- `<component>` (optional) - Specific component to check
+- `--verbose` - Show detailed diagnostics
+- `--interactive` - Open interactive dashboard
 
 ---
 
-#### `arx watch`
+#### `arx doc`
 
-Live monitoring dashboard.
+Generate HTML documentation for a building.
 
-**Signature:**
+**Usage:**
 ```bash
-arx watch [--building <BUILDING>] [--floor <FLOOR>] [--room <ROOM>] [--refresh-interval <SEC>] [--sensors-only] [--alerts-only] [--log-level <LEVEL>]
+arx doc --building <BUILDING> [OPTIONS]
 ```
 
-**Options:**
-- `--building <BUILDING>` (optional): Filter by building
-- `--floor <FLOOR>` (optional): Filter by floor
-- `--room <ROOM>` (optional): Filter by room
-- `--refresh-interval <SEC>` (default: 5): Refresh interval in seconds
-- `--sensors-only` (flag): Show only sensor data
-- `--alerts-only` (flag): Show only alerts
-- `--log-level <LEVEL>` (optional): Log level (error, warn, info, debug)
+**Arguments:**
+- `--building <BUILDING>` (required) - Building name to document
+- `--output <PATH>` (optional) - Output file path (default: ./docs/{building}.html)
+
+---
+
+#### `arx migrate`
+
+Migrate existing fixtures to ArxAddress format.
+
+**Usage:**
+```bash
+arx migrate [OPTIONS]
+```
+
+**Arguments:**
+- `--dry-run` - Show what would be migrated without making changes
 
 **Examples:**
-
 ```bash
-# Watch all buildings
-arx watch
+# Preview migration
+arx migrate --dry-run
 
-# Watch specific building with custom refresh
-arx watch --building "Main Building" --refresh-interval 10
-
-# Watch only alerts
-arx watch --alerts-only --log-level warn
+# Perform migration
+arx migrate
 ```
 
 ---
 
-#### `arx ifc`
+## Configuration Options
 
-IFC file processing commands.
+### Configuration Precedence
 
-**Subcommands:**
+Configuration is loaded with the following precedence (highest to lowest):
 
-##### `arx ifc extract-hierarchy`
+1. **Environment Variables** (highest priority)
+2. **Project Config** (`.arxos/config.toml` in current directory)
+3. **User Config** (`~/.arxos/config.toml` on Unix, `%APPDATA%\arxos\config.toml` on Windows)
+4. **Global Config** (`/etc/arxos/config.toml` on Unix, `C:\ProgramData\arxos\config.toml` on Windows)
+5. **Built-in Defaults** (lowest priority)
 
-Extract building hierarchy from IFC file.
+### Configuration Schema
 
-**Signature:**
-```bash
-arx ifc extract-hierarchy --file <FILE> [--output <OUTPUT>]
-```
+#### User Configuration (`[user]`)
 
-**Required Options:**
-- `--file <FILE>`: IFC file path
+| Field | Type | Default | Environment Variable | Description |
+|-------|------|---------|---------------------|-------------|
+| `name` | String | "ArxOS User" | `ARX_USER_NAME` | User's full name for commits |
+| `email` | String | "user@arxos.com" | `ARX_USER_EMAIL` | User's email address for commits |
+| `organization` | String? | None | `ARX_USER_ORGANIZATION` | User's organization (optional) |
+| `commit_template` | String | "feat: {operation} {building_name}" | - | Default commit message template |
 
-**Optional Options:**
-- `--output <OUTPUT>` (optional): Output YAML file path
-
-**Examples:**
-
-```bash
-# Extract hierarchy
-arx ifc extract-hierarchy --file building.ifc
-
-# Extract hierarchy to specific output file
-arx ifc extract-hierarchy --file building.ifc --output hierarchy.yaml
+**Example:**
+```toml
+[user]
+name = "John Doe"
+email = "john.doe@example.com"
+organization = "Acme Corp"
+commit_template = "feat: {operation} {building_name}"
 ```
 
 ---
 
-## Configuration API
+#### Path Configuration (`[paths]`)
 
-ArxOS uses a hierarchical configuration system with environment variable overrides.
+| Field | Type | Default | Environment Variable | Description |
+|-------|------|---------|---------------------|-------------|
+| `default_import_path` | Path | "./buildings" | `ARX_DEFAULT_IMPORT_PATH` | Default directory for importing IFC files |
+| `backup_path` | Path | "./backups" | `ARX_BACKUP_PATH` | Directory for backup files |
+| `template_path` | Path | "./templates" | - | Directory for template files |
+| `temp_path` | Path | "./temp" | - | Directory for temporary files |
 
-### Configuration Structure
+**Example:**
+```toml
+[paths]
+default_import_path = "./buildings"
+backup_path = "./backups"
+template_path = "./templates"
+temp_path = "./temp"
+```
+
+---
+
+#### Building Configuration (`[building]`)
+
+| Field | Type | Default | Environment Variable | Description |
+|-------|------|---------|---------------------|-------------|
+| `default_coordinate_system` | String | "WGS84" | - | Default coordinate system (WGS84, UTM, LOCAL) |
+| `auto_commit` | Boolean | true | `ARX_AUTO_COMMIT` | Automatically commit changes to Git |
+| `naming_pattern` | String | "{building_name}-{timestamp}" | - | Default building naming pattern (must include {building_name}) |
+| `validate_on_import` | Boolean | true | - | Validate IFC files on import |
+
+**Example:**
+```toml
+[building]
+default_coordinate_system = "WGS84"
+auto_commit = true
+naming_pattern = "{building_name}-{timestamp}"
+validate_on_import = true
+```
+
+---
+
+#### Performance Configuration (`[performance]`)
+
+| Field | Type | Default | Environment Variable | Description |
+|-------|------|---------|---------------------|-------------|
+| `max_parallel_threads` | Integer | CPU count | `ARX_MAX_THREADS` | Maximum number of parallel threads (1-64) |
+| `memory_limit_mb` | Integer | 1024 | `ARX_MEMORY_LIMIT_MB` | Memory limit in MB (1-16384) |
+| `cache_enabled` | Boolean | true | - | Enable caching |
+| `cache_path` | Path | "./cache" | - | Cache directory path |
+| `show_progress` | Boolean | true | - | Show progress bars |
+
+**Example:**
+```toml
+[performance]
+max_parallel_threads = 4
+memory_limit_mb = 2048
+cache_enabled = true
+cache_path = "./cache"
+show_progress = true
+```
+
+---
+
+#### UI Configuration (`[ui]`)
+
+| Field | Type | Default | Environment Variable | Description |
+|-------|------|---------|---------------------|-------------|
+| `use_emoji` | Boolean | true | - | Use emoji in output |
+| `verbosity` | Enum | "Normal" | `ARX_VERBOSITY` | Output verbosity level (Silent, Normal, Verbose, Debug) |
+| `color_scheme` | Enum | "Auto" | - | Color scheme preference (Auto, Always, Never) |
+| `detailed_help` | Boolean | false | - | Show detailed help by default |
+
+**Example:**
+```toml
+[ui]
+use_emoji = true
+verbosity = "Normal"
+color_scheme = "Auto"
+detailed_help = false
+```
+
+---
+
+### Complete Configuration Example
 
 ```toml
 [user]
-name = "User Name"
-email = "user@example.com"
-organization = "Organization Name"  # Optional
+name = "John Doe"
+email = "john.doe@example.com"
+organization = "Acme Corp"
 commit_template = "feat: {operation} {building_name}"
 
 [paths]
@@ -1165,1174 +957,587 @@ template_path = "./templates"
 temp_path = "./temp"
 
 [building]
-default_coordinate_system = "WGS84"  # Options: WGS84, UTM, LOCAL
+default_coordinate_system = "WGS84"
 auto_commit = true
 naming_pattern = "{building_name}-{timestamp}"
 validate_on_import = true
 
 [performance]
-max_parallel_threads = 8  # Default: number of CPU cores
-memory_limit_mb = 1024    # Default: 1024 MB (1 GB)
+max_parallel_threads = 4
+memory_limit_mb = 2048
 cache_enabled = true
 cache_path = "./cache"
 show_progress = true
 
 [ui]
 use_emoji = true
-verbosity = "Normal"  # Options: Silent, Normal, Verbose, Debug
-color_scheme = "Auto"  # Options: Auto, Always, Never
+verbosity = "Normal"
+color_scheme = "Auto"
 detailed_help = false
 ```
 
-### Configuration Precedence
+---
 
-Configuration is loaded in the following order (highest to lowest priority):
+## FFI Functions
 
-1. **Environment Variables** (highest priority)
-2. **Project Config** (`arx.toml` in current directory)
-3. **User Config** (`~/.arx/config.toml`)
-4. **Global Config** (`/etc/arx/config.toml`)
-5. **Default Values** (lowest priority)
+### C FFI Functions (iOS/Android)
 
-### Environment Variables
+All FFI functions return JSON strings and use thread-local error storage.
 
-All configuration can be overridden using environment variables with the `ARX_` prefix:
+#### Error Handling
 
-| Configuration Key | Environment Variable | Type |
-|------------------|---------------------|------|
-| `user.name` | `ARX_USER_NAME` | String |
-| `user.email` | `ARX_USER_EMAIL` | String |
-| `user.organization` | `ARX_USER_ORGANIZATION` | String |
-| `paths.default_import_path` | `ARX_DEFAULT_IMPORT_PATH` | Path |
-| `paths.backup_path` | `ARX_BACKUP_PATH` | Path |
-| `building.auto_commit` | `ARX_AUTO_COMMIT` | Boolean (true/false) |
-| `performance.max_parallel_threads` | `ARX_MAX_THREADS` | Integer |
-| `performance.memory_limit_mb` | `ARX_MEMORY_LIMIT_MB` | Integer |
-| `ui.verbosity` | `ARX_VERBOSITY` | Enum (silent, normal, verbose, debug) |
+**Functions:**
+- `arxos_last_error() -> i32` - Get last error code
+- `arxos_last_error_message() -> *mut c_char` - Get last error message
+- `arxos_free_string(ptr: *mut c_char)` - Free string returned by FFI functions
 
-### Default Values
-
-| Setting | Default Value |
-|---------|--------------|
-| `user.name` | "ArxOS User" |
-| `user.email` | "user@arxos.com" |
-| `building.auto_commit` | `true` |
-| `building.default_coordinate_system` | "WGS84" |
-| `performance.max_parallel_threads` | Number of CPU cores |
-| `performance.memory_limit_mb` | 1024 |
-| `ui.verbosity` | "Normal" |
-| `ui.use_emoji` | `true` |
-
-For complete configuration documentation, see [Configuration Guide](./CONFIGURATION.md).
+**Error Codes:**
+- `0` - Success
+- `1` - NotFound
+- `2` - InvalidData
+- `3` - IoError
+- `99` - Unknown
 
 ---
 
-## Mobile FFI API
+#### Room Operations
 
-ArxOS provides Foreign Function Interface (FFI) bindings for iOS and Android applications.
-
-### C FFI Functions
-
-All C FFI functions are exported with the `arxos_` prefix and return JSON strings. All returned strings must be freed using `arxos_free_string()`.
-
-#### Memory Management
-
-**Critical:** All strings returned by FFI functions must be freed using `arxos_free_string()` to prevent memory leaks.
-
-```c
-// Correct usage pattern
-char* result = arxos_list_rooms(building_name);
-// Use result...
-arxos_free_string(result);  // Must free!
-```
-
----
-
-#### `arxos_free_string`
-
-Free a C string allocated by ArxOS.
-
-**C Signature:**
-```c
-void arxos_free_string(char* ptr);
-```
-
-**Parameters:**
-- `ptr`: Pointer to string returned from ArxOS FFI function
-
-**Safety:**
-- Must only be called with pointers returned from ArxOS FFI functions
-- Safe to call with `NULL` pointer
-- Must not be called twice with the same pointer
-
-**Example:**
-```c
-char* rooms = arxos_list_rooms("Main Building");
-// Use rooms...
-arxos_free_string(rooms);
-```
-
----
-
-#### `arxos_last_error`
-
-Get the last error code from the last operation.
-
-**C Signature:**
-```c
-int arxos_last_error();
-```
-
-**Returns:**
-- Error code as integer:
-  - `0` = Success
-  - `1` = NotFound
-  - `2` = InvalidData
-  - `3` = IoError
-  - `99` = Unknown
-
-**Example:**
-```c
-char* result = arxos_list_rooms(building_name);
-int error_code = arxos_last_error();
-if (error_code != 0) {
-    // Handle error
-    char* error_msg = arxos_last_error_message();
-    printf("Error %d: %s\n", error_code, error_msg);
-    arxos_free_string(error_msg);
-}
-arxos_free_string(result);
-```
-
----
-
-#### `arxos_last_error_message`
-
-Get the last error message.
-
-**C Signature:**
-```c
-char* arxos_last_error_message();
-```
-
-**Returns:**
-- Error message string (must be freed with `arxos_free_string()`)
-- Empty string if no error occurred
-
-**Example:**
-```c
-if (arxos_last_error() != 0) {
-    char* msg = arxos_last_error_message();
-    printf("Error: %s\n", msg);
-    arxos_free_string(msg);
-}
-```
-
----
-
-#### `arxos_list_rooms`
+**`arxos_list_rooms(building_name: *const c_char) -> *mut c_char`**
 
 List all rooms in a building.
 
-**C Signature:**
-```c
-char* arxos_list_rooms(const char* building_name);
-```
-
 **Parameters:**
-- `building_name`: UTF-8 null-terminated string with building identifier
+- `building_name` - Building name (null-terminated C string)
 
 **Returns:**
-- JSON string with array of room objects
-- Error JSON on failure (format: `{"error": "message"}`)
-- Must be freed with `arxos_free_string()`
-
-**Error Codes:**
-- `NotFound` (1): Building not found
-- `InvalidData` (2): Invalid building name format
-
-**Example (C):**
-```c
-char* rooms_json = arxos_list_rooms("Main Building");
-if (arxos_last_error() == 0) {
-    // Parse JSON...
-    printf("Rooms: %s\n", rooms_json);
-}
-arxos_free_string(rooms_json);
-```
-
-**Example (iOS/Swift):**
-```swift
-if let roomsJson = arxos_list_rooms("Main Building") {
-    let roomsJsonString = String(cString: roomsJson)
-    let rooms = try JSONDecoder().decode([Room].self, from: roomsJsonString.data(using: .utf8)!)
-    arxos_free_string(roomsJson)
-}
-```
-
-**Example (Android/Kotlin via JNI):**
-```kotlin
-val roomsJson = nativeListRooms("Main Building")
-val rooms = Gson().fromJson(roomsJson, Array<Room>::class.java)
+JSON array of room objects:
+```json
+[
+  {
+    "id": "room-001",
+    "name": "Conference Room",
+    "room_type": "Conference",
+    "area": 200.0,
+    "volume": 1600.0,
+    "position": {"x": 0.0, "y": 0.0, "z": 0.0},
+    "address_path": "/usa/ny/brooklyn/ps-118/floor-02/main/conference-room"
+  }
+]
 ```
 
 ---
 
-#### `arxos_get_room`
+**`arxos_get_room(building_name: *const c_char, room_id: *const c_char) -> *mut c_char`**
 
-Get a specific room by ID.
-
-**C Signature:**
-```c
-char* arxos_get_room(const char* building_name, const char* room_id);
-```
+Get details for a specific room.
 
 **Parameters:**
-- `building_name`: UTF-8 null-terminated string with building identifier
-- `room_id`: UTF-8 null-terminated string with room ID or name
+- `building_name` - Building name
+- `room_id` - Room ID or name
 
 **Returns:**
-- JSON string with room object
-- Error JSON on failure
-- Must be freed with `arxos_free_string()`
-
-**Error Codes:**
-- `NotFound` (1): Building or room not found
-- `InvalidData` (2): Invalid parameter format
-
-**Example:**
-```c
-char* room_json = arxos_get_room("Main Building", "room-123");
-if (arxos_last_error() == 0) {
-    // Parse JSON...
+JSON object with room details:
+```json
+{
+  "id": "room-001",
+  "name": "Conference Room",
+  "room_type": "Conference",
+  "area": 200.0,
+  "volume": 1600.0,
+  "position": {"x": 0.0, "y": 0.0, "z": 0.0},
+  "equipment": [
+    {"id": "equip-001", "name": "VAV-301", "type": "HVAC"}
+  ],
+  "address_path": "/usa/ny/brooklyn/ps-118/floor-02/main/conference-room"
 }
-arxos_free_string(room_json);
 ```
 
 ---
 
-#### `arxos_list_equipment`
+#### Equipment Operations
+
+**`arxos_list_equipment(building_name: *const c_char) -> *mut c_char`**
 
 List all equipment in a building.
 
-**C Signature:**
-```c
-char* arxos_list_equipment(const char* building_name);
+**Parameters:**
+- `building_name` - Building name
+
+**Returns:**
+JSON array of equipment objects:
+```json
+[
+  {
+    "id": "equip-001",
+    "name": "VAV-301",
+    "equipment_type": "HVAC",
+    "status": "Active",
+    "position": {"x": 10.0, "y": 20.0, "z": 0.0},
+    "address_path": "/usa/ny/brooklyn/ps-118/floor-02/mech/vav-301"
+  }
+]
 ```
+
+---
+
+**`arxos_get_equipment(building_name: *const c_char, equipment_id: *const c_char) -> *mut c_char`**
+
+Get details for specific equipment.
 
 **Parameters:**
-- `building_name`: UTF-8 null-terminated string with building identifier
+- `building_name` - Building name
+- `equipment_id` - Equipment ID or name
 
 **Returns:**
-- JSON string with array of equipment objects
-- Error JSON on failure
-- Must be freed with `arxos_free_string()`
-
-**Error Codes:**
-- `NotFound` (1): Building not found
-- `InvalidData` (2): Invalid building name format
-
-**Example:**
-```c
-char* equipment_json = arxos_list_equipment("Main Building");
-if (arxos_last_error() == 0) {
-    // Parse JSON...
-}
-arxos_free_string(equipment_json);
-```
-
----
-
-#### `arxos_get_equipment`
-
-Get a specific equipment item by ID.
-
-**C Signature:**
-```c
-char* arxos_get_equipment(const char* building_name, const char* equipment_id);
-```
-
-**Parameters:**
-- `building_name`: UTF-8 null-terminated string with building identifier
-- `equipment_id`: UTF-8 null-terminated string with equipment ID or name
-
-**Returns:**
-- JSON string with equipment object
-- Error JSON on failure
-- Must be freed with `arxos_free_string()`
-
-**Error Codes:**
-- `NotFound` (1): Building or equipment not found
-- `InvalidData` (2): Invalid parameter format
-
-**Example:**
-```c
-char* equipment_json = arxos_get_equipment("Main Building", "VAV-301");
-if (arxos_last_error() == 0) {
-    // Parse JSON...
-}
-arxos_free_string(equipment_json);
-```
-
----
-
-#### `arxos_parse_ar_scan`
-
-Parse AR scan data from JSON string.
-
-**C Signature:**
-```c
-char* arxos_parse_ar_scan(const char* json_data);
-```
-
-**Parameters:**
-- `json_data`: UTF-8 null-terminated JSON string with AR scan data
-
-**Returns:**
-- JSON string with parsed AR scan data
-- Error JSON on failure
-- Must be freed with `arxos_free_string()`
-
-**Error Codes:**
-- `InvalidData` (2): Invalid JSON format or missing required fields
-
-**Example:**
-```c
-const char* scan_json = "{...}";  // AR scan JSON
-char* result = arxos_parse_ar_scan(scan_json);
-if (arxos_last_error() == 0) {
-    // Use parsed scan data...
-}
-arxos_free_string(result);
-```
-
----
-
-#### `arxos_extract_equipment`
-
-Process AR scan and extract equipment.
-
-**C Signature:**
-```c
-char* arxos_extract_equipment(const char* json_data);
-```
-
-**Parameters:**
-- `json_data`: UTF-8 null-terminated JSON string with AR scan data
-
-**Returns:**
-- JSON string with array of extracted equipment
-- Error JSON on failure
-- Must be freed with `arxos_free_string()`
-
-**Error Codes:**
-- `InvalidData` (2): Invalid JSON format or missing required fields
-
-**Example:**
-```c
-const char* scan_json = "{...}";  // AR scan JSON
-char* equipment_json = arxos_extract_equipment(scan_json);
-if (arxos_last_error() == 0) {
-    // Use extracted equipment...
-}
-arxos_free_string(equipment_json);
-```
-
----
-
-### JNI Functions
-
-JNI functions follow the Java naming convention: `Java_com_arxos_mobile_service_ArxOSCoreJNI_<function_name>`
-
-All JNI functions return JSON strings that must be parsed in Java/Kotlin code.
-
-#### `nativeListRooms`
-
-List all rooms in a building (JNI).
-
-**Java Signature:**
-```java
-public native String nativeListRooms(String buildingName);
-```
-
-**Kotlin Signature:**
-```kotlin
-external fun nativeListRooms(buildingName: String): String
-```
-
-**Parameters:**
-- `buildingName`: Building identifier
-
-**Returns:**
-- JSON string with array of room objects
-- Error JSON on failure (format: `{"error": "message"}`)
-
-**Example (Kotlin):**
-```kotlin
-val roomsJson = nativeListRooms("Main Building")
-val rooms = Gson().fromJson(roomsJson, Array<RoomInfo>::class.java)
-```
-
----
-
-#### `nativeGetRoom`
-
-Get a specific room by ID (JNI).
-
-**Java Signature:**
-```java
-public native String nativeGetRoom(String buildingName, String roomId);
-```
-
-**Parameters:**
-- `buildingName`: Building identifier
-- `roomId`: Room ID or name
-
-**Returns:**
-- JSON string with room object
-- Error JSON on failure
-
-**Example:**
-```kotlin
-val roomJson = nativeGetRoom("Main Building", "room-123")
-val room = Gson().fromJson(roomJson, RoomInfo::class.java)
-```
-
----
-
-#### `nativeListEquipment`
-
-List all equipment in a building (JNI).
-
-**Java Signature:**
-```java
-public native String nativeListEquipment(String buildingName);
-```
-
-**Returns:**
-- JSON string with array of equipment objects
-- Error JSON on failure
-
-**Example:**
-```kotlin
-val equipmentJson = nativeListEquipment("Main Building")
-val equipment = Gson().fromJson(equipmentJson, Array<EquipmentInfo>::class.java)
-```
-
----
-
-#### `nativeGetEquipment`
-
-Get a specific equipment item by ID (JNI).
-
-**Java Signature:**
-```java
-public native String nativeGetEquipment(String buildingName, String equipmentId);
-```
-
-**Parameters:**
-- `buildingName`: Building identifier
-- `equipmentId`: Equipment ID or name
-
-**Returns:**
-- JSON string with equipment object
-- Error JSON on failure
-
-**Example:**
-```kotlin
-val equipmentJson = nativeGetEquipment("Main Building", "VAV-301")
-val equipment = Gson().fromJson(equipmentJson, EquipmentInfo::class.java)
-```
-
----
-
-#### `nativeParseARScan`
-
-Parse AR scan data from JSON string (JNI).
-
-**Java Signature:**
-```java
-public native String nativeParseARScan(String jsonData);
-```
-
-**Parameters:**
-- `jsonData`: JSON string with AR scan data
-
-**Returns:**
-- JSON string with parsed AR scan data
-- Error JSON on failure
-
-**Example:**
-```kotlin
-val scanJson = "{...}"  // AR scan JSON
-val result = nativeParseARScan(scanJson)
-val scanData = Gson().fromJson(result, ARScanData::class.java)
-```
-
----
-
-#### `nativeExtractEquipment`
-
-Process AR scan and extract equipment (JNI).
-
-**Java Signature:**
-```java
-public native String nativeExtractEquipment(String jsonData);
-```
-
-**Parameters:**
-- `jsonData`: JSON string with AR scan data
-
-**Returns:**
-- JSON string with array of extracted equipment
-- Error JSON on failure
-
-**Example:**
-```kotlin
-val scanJson = "{...}"  // AR scan JSON
-val equipmentJson = nativeExtractEquipment(scanJson)
-val equipment = Gson().fromJson(equipmentJson, Array<EquipmentInfo>::class.java)
-```
-
----
-
-### Data Structures
-
-#### `RoomInfo`
-
-Room information for mobile apps.
-
-**JSON Structure:**
+JSON object with equipment details:
 ```json
 {
-  "id": "room-uuid",
-  "name": "Conference Room 201",
-  "type": "Office",
-  "position": {
-    "x": 5.0,
-    "y": 10.0,
-    "z": 2.0,
-    "coordinate_system": "WGS84"
-  },
-  "equipment_count": 3
-}
-```
-
----
-
-#### `EquipmentInfo`
-
-Equipment information for mobile apps.
-
-**JSON Structure:**
-```json
-{
-  "id": "equipment-uuid",
+  "id": "equip-001",
   "name": "VAV-301",
-  "type": "HVAC",
+  "equipment_type": "HVAC",
   "status": "Active",
-  "position": {
-    "x": 5.0,
-    "y": 8.0,
-    "z": 2.0,
-    "coordinate_system": "WGS84"
-  },
-  "room_id": "room-uuid"
+  "position": {"x": 10.0, "y": 20.0, "z": 0.0},
+  "properties": {"model": "ABC123", "serial": "XYZ789"},
+  "address_path": "/usa/ny/brooklyn/ps-118/floor-02/mech/vav-301"
 }
 ```
 
 ---
 
-#### `ARScanData`
+#### AR Operations
 
-AR scan data structure.
+**`arxos_parse_ar_scan(json_data: *const c_char) -> *mut c_char`**
 
-**JSON Structure:**
+Parse AR scan data from JSON.
+
+**Parameters:**
+- `json_data` - JSON string containing AR scan data (see ARScanData structure)
+
+**Returns:**
+JSON object with parsed scan data:
+```json
+{
+  "success": true,
+  "detected_equipment": [
+    {
+      "name": "VAV-301",
+      "equipment_type": "HVAC",
+      "position": {"x": 10.0, "y": 20.0, "z": 0.0},
+      "confidence": 0.95
+    }
+  ],
+  "room_boundaries": {...},
+  "scan_timestamp": "2025-01-03T14:30:00Z"
+}
+```
+
+---
+
+**`arxos_save_ar_scan(json_data: *const c_char, building_name: *const c_char, confidence_threshold: f64) -> *mut c_char`**
+
+Save AR scan data and process to pending equipment.
+
+**Parameters:**
+- `json_data` - JSON string containing AR scan data
+- `building_name` - Name of building for context
+- `confidence_threshold` - Minimum confidence score (0.0-1.0) to create pending items
+
+**Returns:**
+JSON object with processing results:
+```json
+{
+  "success": true,
+  "building": "ps-118",
+  "pending_count": 3,
+  "pending_ids": ["pending-1", "pending-2", "pending-3"],
+  "confidence_threshold": 0.7,
+  "scan_timestamp": "2025-01-03T14:30:00Z",
+  "message": "AR scan processed successfully"
+}
+```
+
+---
+
+**`arxos_list_pending_equipment(building_name: *const c_char) -> *mut c_char`**
+
+List pending equipment items waiting for confirmation.
+
+**Parameters:**
+- `building_name` - Building name
+
+**Returns:**
+JSON array of pending equipment:
+```json
+[
+  {
+    "id": "pending-1",
+    "name": "VAV-301",
+    "equipment_type": "HVAC",
+    "confidence": 0.95,
+    "scan_id": "scan-001",
+    "detected_at": "2025-01-03T14:30:00Z"
+  }
+]
+```
+
+---
+
+**`arxos_confirm_pending_equipment(building_name: *const c_char, pending_id: *const c_char, room_id: *const c_char) -> *mut c_char`**
+
+Confirm pending equipment and add to building.
+
+**Parameters:**
+- `building_name` - Building name
+- `pending_id` - Pending equipment ID
+- `room_id` - Room ID or name (optional, can be null)
+
+**Returns:**
+JSON object with confirmation result:
+```json
+{
+  "success": true,
+  "pending_id": "pending-1",
+  "equipment_id": "equip-001",
+  "message": "Equipment confirmed and added to building"
+}
+```
+
+---
+
+**`arxos_reject_pending_equipment(building_name: *const c_char, pending_id: *const c_char) -> *mut c_char`**
+
+Reject pending equipment item.
+
+**Parameters:**
+- `building_name` - Building name
+- `pending_id` - Pending equipment ID
+
+**Returns:**
+JSON object with rejection result:
+```json
+{
+  "success": true,
+  "pending_id": "pending-1",
+  "message": "Pending equipment rejected"
+}
+```
+
+---
+
+**`arxos_load_ar_model(building_name: *const c_char, format: *const c_char, output_path: *const c_char) -> *mut c_char`**
+
+Load AR model (glTF or USDZ) for a building.
+
+**Parameters:**
+- `building_name` - Building name
+- `format` - Export format: "usdz" or "gltf" (case-insensitive)
+- `output_path` - Optional path where model should be saved (null for temp file)
+
+**Returns:**
+JSON object with export result:
+```json
+{
+  "success": true,
+  "building": "ps-118",
+  "format": "usdz",
+  "file_path": "/path/to/model.usdz",
+  "file_size": 12345,
+  "message": "Model exported successfully"
+}
+```
+
+---
+
+#### Game System Operations
+
+**`arxos_load_pr(pr_id: *const c_char, pr_dir: *const c_char, building_name: *const c_char) -> *mut c_char`**
+
+Load a PR for review (game mode).
+
+**Parameters:**
+- `pr_id` - PR ID
+- `pr_dir` - PR directory path (optional, can be null for default)
+- `building_name` - Building name
+
+**Returns:**
+JSON object with PR summary:
+```json
+{
+  "pr_id": "pr-001",
+  "building": "ps-118",
+  "total_items": 10,
+  "valid_items": 8,
+  "items_with_violations": 2,
+  "total_violations": 3,
+  "critical_violations": 1,
+  "warnings": 2,
+  "equipment": [...]
+}
+```
+
+---
+
+**`arxos_validate_constraints(equipment_json: *const c_char, constraints_json: *const c_char) -> *mut c_char`**
+
+Validate equipment placement against constraints.
+
+**Parameters:**
+- `equipment_json` - JSON string with equipment data
+- `constraints_json` - JSON string with constraints (optional, can be null)
+
+**Returns:**
+JSON object with validation results:
+```json
+{
+  "is_valid": false,
+  "violations": [
+    {
+      "type": "proximity",
+      "message": "Equipment too close to wall",
+      "severity": "critical"
+    }
+  ],
+  "suggestions": ["Move equipment 2m away from wall"]
+}
+```
+
+---
+
+**`arxos_get_game_plan(session_id: *const c_char, building_name: *const c_char) -> *mut c_char`**
+
+Get game plan for equipment placement.
+
+**Parameters:**
+- `session_id` - Game session ID
+- `building_name` - Building name
+
+**Returns:**
+JSON object with game plan.
+
+---
+
+### JNI Functions (Android)
+
+All JNI functions are Java-compatible wrappers around C FFI functions.
+
+**Package:** `com.arxos.mobile`
+
+**Functions:**
+- `listRooms(buildingName: String): String` - List all rooms
+- `getRoom(buildingName: String, roomId: String): String` - Get room details
+- `listEquipment(buildingName: String): String` - List all equipment
+- `getEquipment(buildingName: String, equipmentId: String): String` - Get equipment details
+- `parseARScan(jsonData: String): String` - Parse AR scan data
+- `saveARScan(jsonData: String, buildingName: String, confidenceThreshold: Double): String` - Save AR scan
+- `listPendingEquipment(buildingName: String): String` - List pending equipment
+- `confirmPendingEquipment(buildingName: String, pendingId: String, roomId: String?): String` - Confirm pending equipment
+- `rejectPendingEquipment(buildingName: String, pendingId: String): String` - Reject pending equipment
+- `loadARModel(buildingName: String, format: String, outputPath: String?): String` - Load AR model
+
+See `crates/arxos/crates/arxos/src/mobile_ffi/jni.rs` for complete JNI function signatures.
+
+---
+
+## Core API Types
+
+### Building Types
+
+**`Building`**
+- Root entity for building data
+- Contains floors, metadata, and coordinate systems
+
+**`Floor`**
+- Represents a floor in a building
+- Contains wings, rooms, and equipment
+
+**`Wing`**
+- Represents a wing on a floor
+- Contains rooms and equipment
+
+**`Room`**
+- Represents a room in a building
+- Contains equipment and spatial properties
+
+**`Equipment`**
+- Represents equipment in a building
+- Contains position, type, status, and properties
+
+### Spatial Types
+
+**`Position`**
+- 3D position with coordinate system
+- Fields: `x`, `y`, `z`, `coordinate_system`
+
+**`Dimensions`**
+- 3D dimensions
+- Fields: `width`, `height`, `depth`
+
+**`BoundingBox`**
+- 3D bounding box
+- Fields: `min: Position`, `max: Position`
+
+**`ArxAddress`**
+- 7-part hierarchical address
+- Format: `/country/state/city/building/floor/room/fixture`
+- Path: `String` - Full path string
+- Methods:
+  - `new(country, state, city, building, floor, room, fixture) -> Result<ArxAddress>`
+  - `from_path(path: &str) -> Result<ArxAddress>`
+  - `validate() -> Result<()>`
+  - `to_guid() -> String` - Generate SHA-256 GUID for IFC
+
+### Equipment Types
+
+**`EquipmentType`**
+- Enum: `HVAC`, `Electrical`, `AV`, `Plumbing`, `Network`, `Other(String)`
+
+**`EquipmentStatus`**
+- Enum: `Active`, `Inactive`, `Maintenance`, `Retired`
+
+### Room Types
+
+**`RoomType`**
+- Enum: `Office`, `Conference`, `Classroom`, `Lab`, `Storage`, `Bathroom`, `Kitchen`, `Other(String)`
+
+---
+
+## Error Codes
+
+### ArxError Variants
+
+All errors include a `Box<ErrorContext>` with suggestions, recovery steps, and debug information.
+
+**`IfcProcessing`**
+- IFC file processing errors
+- Fields: `message`, `context`, `source`
+
+**`Configuration`**
+- Configuration errors
+- Fields: `message`, `context`, `field`
+
+**`GitOperation`**
+- Git operation errors
+- Fields: `message`, `context`, `operation`
+
+**`Validation`**
+- Validation errors
+- Fields: `message`, `context`, `file_path`
+
+**`IoError`**
+- I/O errors
+- Fields: `message`, `context`, `path`
+
+**`YamlProcessing`**
+- YAML processing errors
+- Fields: `message`, `context`, `file_path`
+
+**`SpatialData`**
+- Spatial data errors
+- Fields: `message`, `context`, `entity_type`
+
+**`AddressValidation`**
+- Address validation errors
+- Fields: `message`, `context`, `path`, `source`
+
+**`CounterOverflow`**
+- Counter overflow errors
+- Fields: `message`, `context`, `room`, `equipment_type`
+
+**`PathInvalid`**
+- Path validation errors
+- Fields: `message`, `context`, `path`, `expected_format`
+
+### FFI Error Codes
+
+**`ArxOSErrorCode`**
+- `0` - Success
+- `1` - NotFound
+- `2` - InvalidData
+- `3` - IoError
+- `99` - Unknown
+
+---
+
+## Request/Response Formats
+
+### AR Scan Data Format
+
+**Request:**
 ```json
 {
   "detectedEquipment": [
     {
-      "name": "VAV Unit",
-      "type": "HVAC",
-      "position": {"x": 5.0, "y": 8.0, "z": 2.0},
+      "name": "VAV-301",
+      "equipmentType": "HVAC",
+      "position": {"x": 10.0, "y": 20.0, "z": 0.0},
+      "boundingBox": {
+        "min": {"x": 9.5, "y": 19.5, "z": -1.0},
+        "max": {"x": 10.5, "y": 20.5, "z": 1.0}
+      },
       "confidence": 0.95,
-      "boundingBox": {...}
+      "detectionMethod": "ARKit",
+      "properties": {}
     }
   ],
   "roomBoundaries": {
-    "corners": [...]
+    "points": [...],
+    "center": {"x": 0.0, "y": 0.0, "z": 0.0}
   },
-  "roomName": "Conference Room 201",
-  "floorLevel": 2,
   "deviceType": "iOS",
-  "appVersion": "1.0.0"
+  "appVersion": "1.0.0",
+  "scanDurationMs": 5000,
+  "pointCount": 10000,
+  "accuracyEstimate": 0.05,
+  "lightingConditions": "bright",
+  "roomName": "Conference Room",
+  "floorLevel": 2
 }
 ```
 
-For complete mobile FFI documentation, see [Mobile FFI Integration](./MOBILE_FFI_INTEGRATION.md).
+### Sensor Data Format
 
----
-
-## Core Rust API
-
-The core Rust API provides programmatic access to building data structures and operations.
-
-### Main Types
-
-#### `Building`
-
-Root entity representing a building.
-
-**Location:** `arxos::core::Building`
-
-**Fields:**
-- `id: String` - Unique identifier (UUID)
-- `name: String` - Human-readable building name
-- `path: String` - Universal path identifier
-- `created_at: DateTime<Utc>` - Creation timestamp
-- `updated_at: DateTime<Utc>` - Last modification timestamp
-- `floors: Vec<Floor>` - Collection of floors
-
-**Methods:**
-- `new(name: String, path: String) -> Building` - Create new building
-- `add_floor(floor: Floor)` - Add floor to building
-- `find_floor(level: i32) -> Option<&Floor>` - Find floor by level
-
-**Example:**
-```rust
-use arxos::core::Building;
-
-let building = Building::new("Main Building".to_string(), "main-building".to_string());
-building.add_floor(floor);
+**YAML Format:**
+```yaml
+sensor_id: "esp32_temp_001"
+sensor_type: "temperature"
+timestamp: "2025-01-03T14:30:00Z"
+values:
+  temperature: 72.5
+  humidity: 45.0
+equipment_id: "HVAC-301"
+building: "ps-118"
+floor: 2
+room: "Conference Room"
 ```
 
----
-
-#### `Floor`
-
-Represents a floor in a building.
-
-**Location:** `arxos::core::Floor`
-
-**Fields:**
-- `level: i32` - Floor level number
-- `name: String` - Floor name
-- `wings: Vec<Wing>` - Collection of wings
-
----
-
-#### `Wing`
-
-Represents a wing on a floor.
-
-**Location:** `arxos::core::Wing`
-
-**Fields:**
-- `name: String` - Wing name
-- `rooms: Vec<Room>` - Collection of rooms
-
----
-
-#### `Room`
-
-Represents a room in a building.
-
-**Location:** `arxos::core::Room`
-
-**Fields:**
-- `id: String` - Unique identifier (UUID)
-- `name: String` - Human-readable room name
-- `room_type: RoomType` - Type categorization
-- `equipment: Vec<Equipment>` - Collection of equipment
-- `spatial_properties: SpatialProperties` - Position, dimensions, bounding box
-- `properties: HashMap<String, String>` - Key-value metadata
-- `created_at: DateTime<Utc>` - Creation timestamp
-- `updated_at: DateTime<Utc>` - Last modification timestamp
-
-**Room Types:**
-- `Classroom`
-- `Laboratory`
-- `Office` (default)
-- `Gymnasium`
-- `Cafeteria`
-- `Library`
-- `Auditorium`
-- `Hallway`
-- `Restroom`
-- `Storage`
-- `Mechanical`
-- `Electrical`
-- `Other(String)`
-
----
-
-#### `Equipment`
-
-Represents equipment in a building.
-
-**Location:** `arxos::core::Equipment`
-
-**Fields:**
-- `id: String` - Unique identifier (UUID)
-- `name: String` - Human-readable equipment name
-- `path: String` - Universal path identifier
-- `equipment_type: EquipmentType` - Type categorization
-- `position: Position` - 3D spatial position
-- `properties: HashMap<String, String>` - Key-value metadata
-- `status: EquipmentStatus` - Operational status
-- `room_id: Option<String>` - Reference to parent room
-
-**Equipment Types:**
-- `HVAC`
-- `Electrical`
-- `AV`
-- `Furniture`
-- `Safety`
-- `Plumbing`
-- `Network`
-- `Other(String)`
-
-**Equipment Status:**
-- `Active`
-- `Inactive`
-- `Maintenance`
-- `OutOfOrder`
-- `Unknown`
-
----
-
-#### `Position`
-
-3D position with coordinate system.
-
-**Location:** `arxos::core::Position`
-
-**Fields:**
-- `x: f64` - X coordinate
-- `y: f64` - Y coordinate
-- `z: f64` - Z coordinate
-- `coordinate_system: String` - Coordinate system identifier
-
----
-
-#### `Dimensions`
-
-3D dimensions.
-
-**Location:** `arxos::core::Dimensions`
-
-**Fields:**
-- `width: f64` - Width
-- `height: f64` - Height
-- `depth: f64` - Depth
-
----
-
-#### `SpatialProperties`
-
-Spatial properties of an entity.
-
-**Location:** `arxos::core::SpatialProperties`
-
-**Fields:**
-- `position: Position` - 3D position
-- `dimensions: Dimensions` - 3D dimensions
-- `bounding_box: BoundingBox` - Bounding box
-- `coordinate_system: String` - Coordinate system
-
-**Methods:**
-- `new(position: Position, dimensions: Dimensions, coordinate_system: String) -> SpatialProperties`
-
----
-
-### Core Operations
-
-#### `create_room`
-
-Create a new room.
-
-**Signature:**
-```rust
-pub fn create_room(
-    building: &mut Building,
-    floor_level: i32,
-    wing_name: &str,
-    name: String,
-    room_type: RoomType,
-    dimensions: Option<Dimensions>,
-    position: Option<Position>
-) -> Result<String, Box<dyn std::error::Error>>
-```
-
-**Returns:**
-- `Ok(room_id)` on success
-- `Err` on failure
-
----
-
-#### `add_equipment`
-
-Add equipment to a room.
-
-**Signature:**
-```rust
-pub fn add_equipment(
-    building: &mut Building,
-    room_id: &str,
-    name: String,
-    equipment_type: EquipmentType,
-    position: Position
-) -> Result<String, Box<dyn std::error::Error>>
-```
-
----
-
-#### `list_rooms`
-
-List all rooms in a building.
-
-**Signature:**
-```rust
-pub fn list_rooms(building: &Building) -> Vec<Room>
-```
-
----
-
-#### `list_equipment`
-
-List all equipment in a building or room.
-
-**Signature:**
-```rust
-pub fn list_equipment(building: &Building, room_id: Option<&str>) -> Vec<Equipment>
-```
-
----
-
-#### `spatial_query`
-
-Query spatial relationships.
-
-**Signature:**
-```rust
-pub fn spatial_query(
-    building: &Building,
-    query_type: &str,
-    entity_id: &str,
-    params: &HashMap<String, String>
-) -> Result<SpatialQueryResult, Box<dyn std::error::Error>>
-```
-
----
-
-For complete Rust API documentation, use `cargo doc --open` to view rustdoc documentation.
-
----
-
-## Error Reference
-
-### Error Types
-
-#### `ArxError`
-
-Main error type for ArxOS operations.
-
-**Location:** `arxos::error::ArxError`
-
-**Variants:**
-
-##### `IfcProcessing`
-
-IFC processing error.
-
-```rust
-ArxError::IfcProcessing {
-    message: String,
-    context: ErrorContext,
-    source: Option<Box<dyn std::error::Error + Send + Sync>>,
-}
-```
-
----
-
-##### `Configuration`
-
-Configuration error.
-
-```rust
-ArxError::Configuration {
-    message: String,
-    context: ErrorContext,
-    field: Option<String>,
-}
-```
-
----
-
-##### `GitOperation`
-
-Git operation error.
-
-```rust
-ArxError::GitOperation {
-    message: String,
-    context: ErrorContext,
-    operation: String,
-}
-```
-
----
-
-##### `Validation`
-
-Validation error.
-
-```rust
-ArxError::Validation {
-    message: String,
-    context: ErrorContext,
-    file_path: Option<String>,
-}
-```
-
----
-
-##### `IoError`
-
-I/O error.
-
-```rust
-ArxError::IoError {
-    message: String,
-    context: ErrorContext,
-    path: Option<String>,
-}
-```
-
----
-
-##### `YamlProcessing`
-
-YAML processing error.
-
-```rust
-ArxError::YamlProcessing {
-    message: String,
-    context: ErrorContext,
-    file_path: Option<String>,
-}
-```
-
----
-
-##### `SpatialData`
-
-Spatial data error.
-
-```rust
-ArxError::SpatialData {
-    message: String,
-    context: ErrorContext,
-    entity_type: Option<String>,
-}
-```
-
----
-
-### Error Codes (Mobile FFI)
-
-| Code | Name | Description |
-|------|------|-------------|
-| `0` | `Success` | Operation completed successfully |
-| `1` | `NotFound` | Resource not found |
-| `2` | `InvalidData` | Invalid data format or content |
-| `3` | `IoError` | I/O or file system error |
-| `99` | `Unknown` | Unknown error |
-
-### Error Context
-
-All errors include an `ErrorContext` with:
-- `suggestions: Vec<String>` - Helpful suggestions for resolving the error
-- `recovery_steps: Vec<String>` - Step-by-step recovery instructions
-- `debug_info: Option<String>` - Additional debugging information
-- `help_url: Option<String>` - URL to help documentation
-- `file_path: Option<String>` - File path where error occurred
-- `line_number: Option<usize>` - Line number where error occurred
-
-For complete error handling documentation, see [Error Handling Guide](./ERROR_HANDLING_GUIDE.md).
-
----
-
-## Examples
-
-### CLI Usage Examples
-
-#### Complete Workflow: Import, Search, Render
-
-```bash
-# 1. Import building from IFC
-arx import building.ifc --dry-run  # Preview first
-arx import building.ifc
-
-# 2. Search for HVAC equipment
-arx search "VAV" --equipment --verbose
-
-# 3. Filter by floor
-arx filter --floor 2 --equipment-type "HVAC"
-
-# 4. Render 3D visualization
-arx render --building "Main Building" --three-d --show-status
-```
-
----
-
-#### AR Integration Workflow
-
-```bash
-# 1. Process AR scan
-arx ar-integrate --scan-file scan.json --room "Conference Room 201" --floor 2 --building "Main Building"
-
-# 2. List pending equipment
-arx ar pending list --building "Main Building" --verbose
-
-# 3. Confirm pending equipment
-arx ar pending confirm "pending-123" --building "Main Building" --commit
-
-# 4. Verify with render
-arx render --building "Main Building" --floor 2 --show-rooms
-```
-
----
-
-#### Sensor Processing Workflow
-
-```bash
-# Process sensor data
-arx process-sensors --building "Main Building" --commit
-
-# Watch for new sensor data
-arx process-sensors --building "Main Building" --watch
-
-# Monitor with watch dashboard
-arx watch --building "Main Building" --alerts-only
-```
-
----
-
-### FFI Integration Examples
-
-#### iOS Swift Example
-
-```swift
-import Foundation
-
-// List rooms
-guard let roomsJson = arxos_list_rooms("Main Building") else {
-    print("Failed to get rooms")
-    return
-}
-
-let roomsString = String(cString: roomsJson)
-let roomsData = roomsString.data(using: .utf8)!
-
-do {
-    let rooms = try JSONDecoder().decode([RoomInfo].self, from: roomsData)
-    print("Found \(rooms.count) rooms")
-    
-    for room in rooms {
-        print("- \(room.name)")
-    }
-} catch {
-    print("Failed to parse rooms: \(error)")
-}
-
-// Always free the string
-arxos_free_string(roomsJson)
-
-// Check for errors
-let errorCode = arxos_last_error()
-if errorCode != 0 {
-    let errorMsg = arxos_last_error_message()
-    print("Error \(errorCode): \(String(cString: errorMsg!))")
-    arxos_free_string(errorMsg)
-}
-```
-
----
-
-#### Android Kotlin Example
-
-```kotlin
-import com.google.gson.Gson
-
-// List rooms
-val roomsJson = nativeListRooms("Main Building")
-val rooms = Gson().fromJson(roomsJson, Array<RoomInfo>::class.java)
-
-for (room in rooms) {
-    println("- ${room.name}")
-}
-
-// Get specific room
-val roomJson = nativeGetRoom("Main Building", "room-123")
-val room = Gson().fromJson(roomJson, RoomInfo::class.java)
-
-// Process AR scan
-val scanJson = """
+**JSON Format:**
+```json
 {
-  "roomName": "Conference Room 201",
-  "floorLevel": 2,
-  "detectedEquipment": [...]
+  "sensor_id": "rp2040_air_001",
+  "sensor_type": "air_quality",
+  "timestamp": "2025-01-03T14:30:00Z",
+  "values": {
+    "pm2_5": 12.5,
+    "pm10": 18.3,
+    "co2": 420
+  },
+  "equipment_id": "HVAC-205",
+  "building": "ps-118",
+  "floor": 2,
+  "room": "Conference Room"
 }
-""".trimIndent()
-
-val equipmentJson = nativeExtractEquipment(scanJson)
-val equipment = Gson().fromJson(equipmentJson, Array<EquipmentInfo>::class.java)
 ```
 
 ---
 
-#### Rust Programmatic Example
+## Additional Resources
 
-```rust
-use arxos::core::{Building, Room, RoomType};
-use arxos::core::operations::create_room;
-use arxos::persistence::PersistenceManager;
-
-// Load building data
-let persistence = PersistenceManager::new("Main Building")?;
-let mut building_data = persistence.load_building_data()?;
-
-// Create a room
-let room_id = create_room(
-    &mut building_data,
-    2,  // floor level
-    "A",  // wing
-    "Conference Room 201".to_string(),
-    RoomType::Office,
-    None,  // dimensions
-    None,  // position
-)?;
-
-// Save changes
-persistence.save_building_data(&building_data)?;
-
-println!("Created room: {}", room_id);
-```
+- **User Guide:** See `docs/core/USER_GUIDE.md`
+- **Integration Examples:** See `docs/INTEGRATION_EXAMPLES.md`
+- **Troubleshooting:** See `docs/TROUBLESHOOTING.md`
+- **Rust Documentation:** Generate with `cargo doc --open`
 
 ---
 
-## See Also
-
-- [User Guide](./USER_GUIDE.md) - Tutorials and workflows
-- [Configuration Guide](./CONFIGURATION.md) - Configuration details
-- [Mobile FFI Integration](./MOBILE_FFI_INTEGRATION.md) - Mobile integration guide
-- [Error Handling Guide](./ERROR_HANDLING_GUIDE.md) - Error handling patterns
-- [Architecture](./ARCHITECTURE.md) - System architecture
-- [Operations Guide](./OPERATIONS.md) - Operational procedures
-
----
-
-**Document Version:** 2.0  
-**Last Updated:** December 2024
+**Note:** This API reference is automatically generated from source code. For the most up-to-date information, refer to the inline documentation in the source code.
 

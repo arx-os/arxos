@@ -1,24 +1,35 @@
-export type WasmCommandCategory = {
-  slug: string;
-  label: string;
+import type {
+  WasmArScanData,
+  WasmCommandCategory,
+  WasmCommandEntry as WasmModuleCommandEntry,
+  WasmCommandAvailability,
+  WasmEquipmentInfo,
+  WasmOpening,
+  WasmRoomBoundaries,
+  WasmWall,
+  WasmMeshBuffers
+} from "@arxos-wasm";
+
+export type {
+  WasmArScanData,
+  WasmEquipmentInfo,
+  WasmOpening,
+  WasmWall,
+  WasmMeshBuffers,
+  WasmCommandAvailability
 };
 
-export type WasmCommandEntry = {
-  name: string;
-  command: string;
-  description: string;
-  category: WasmCommandCategory;
-  shortcut?: string;
-};
+export type WasmCommandEntry = WasmModuleCommandEntry;
 
 export type ArxosWasmModule = {
   arxos_version(): string;
-  parse_ar_scan(json: string): unknown;
-  extract_equipment(json: string): unknown;
+  parse_ar_scan(json: string): WasmArScanData;
+  extract_equipment(json: string): WasmEquipmentInfo[];
+  generate_scan_mesh(json: string): WasmMeshBuffers;
   validate_ar_scan(json: string): boolean;
-  command_palette(): Promise<unknown>;
-  command_categories(): Promise<unknown>;
-  command_details(name: string): Promise<unknown>;
+  command_palette(): Promise<WasmModuleCommandEntry[]>;
+  command_categories(): Promise<WasmCommandCategory[]>;
+  command_details(name: string): Promise<WasmModuleCommandEntry>;
 };
 
 let wasmModule: ArxosWasmModule | null = null;
@@ -28,13 +39,111 @@ function isCommandCategory(value: unknown): value is WasmCommandCategory {
   return typeof record?.slug === "string" && typeof record?.label === "string";
 }
 
-function isCommandEntry(value: unknown): value is WasmCommandEntry {
+function isAvailability(value: unknown): value is WasmCommandAvailability {
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record?.cli === "boolean" &&
+    typeof record?.pwa === "boolean" &&
+    typeof record?.agent === "boolean"
+  );
+}
+
+function isCommandEntry(value: unknown): value is WasmModuleCommandEntry {
   const record = value as Record<string, unknown>;
   return (
     typeof record?.name === "string" &&
     typeof record?.command === "string" &&
     typeof record?.description === "string" &&
-    isCommandCategory(record?.category)
+    isCommandCategory(record?.category) &&
+    Array.isArray(record?.tags) &&
+    record.tags.every((entry: unknown) => typeof entry === "string") &&
+    isAvailability(record?.availability)
+  );
+}
+
+function isPosition(value: unknown): value is { x: number; y: number; z: number } {
+  const record = value as Record<string, unknown>;
+  return ["x", "y", "z"].every((key) => typeof record?.[key] === "number");
+}
+
+function isOpening(value: unknown): value is WasmOpening {
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record?.width === "number" &&
+    typeof record?.height === "number" &&
+    typeof record?.type === "string" &&
+    isPosition(record?.position)
+  );
+}
+
+function isWall(value: unknown): value is WasmWall {
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record?.height === "number" &&
+    typeof record?.thickness === "number" &&
+    isPosition(record?.startPoint) &&
+    isPosition(record?.endPoint)
+  );
+}
+
+function isRoomBoundaries(value: unknown): value is WasmRoomBoundaries {
+  const record = value as Record<string, unknown>;
+  const walls = record?.walls;
+  const openings = record?.openings;
+  return (
+    Array.isArray(walls) && walls.every(isWall) &&
+    Array.isArray(openings) && openings.every(isOpening)
+  );
+}
+
+function isEquipment(value: unknown): value is WasmEquipmentInfo {
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record?.id === "string" &&
+    typeof record?.name === "string" &&
+    typeof record?.equipmentType === "string" &&
+    typeof record?.status === "string" &&
+    isPosition(record?.position) &&
+    typeof record?.properties === "object" &&
+    record?.properties !== null &&
+    typeof record?.addressPath === "string"
+  );
+}
+
+function isScanData(value: unknown): value is WasmArScanData {
+  const record = value as Record<string, unknown>;
+  const equipment = record?.detectedEquipment;
+  return (
+    Array.isArray(equipment) && equipment.every((entry) => {
+      const item = entry as Record<string, unknown>;
+      return (
+        typeof item?.name === "string" &&
+        typeof item?.type === "string" &&
+        typeof item?.confidence === "number" &&
+        isPosition(item?.position)
+      );
+    }) &&
+    isRoomBoundaries(record?.roomBoundaries)
+  );
+}
+
+function isMeshBuffers(value: unknown): value is WasmMeshBuffers {
+  const record = value as Record<string, unknown>;
+  const isNumberArray = (candidate: unknown) =>
+    Array.isArray(candidate) && candidate.every((entry) => typeof entry === "number");
+  const boundsMin = record?.boundsMin;
+  const boundsMax = record?.boundsMax;
+
+  return (
+    isNumberArray(record?.wallPositions) &&
+    isNumberArray(record?.equipmentPositions) &&
+    isNumberArray(record?.pointCloudPositions) &&
+    Array.isArray(boundsMin) &&
+      boundsMin.length === 3 &&
+      boundsMin.every((entry) => typeof entry === "number") &&
+    Array.isArray(boundsMax) &&
+      boundsMax.length === 3 &&
+      boundsMax.every((entry) => typeof entry === "number")
   );
 }
 
@@ -44,8 +153,6 @@ export async function initWasm(): Promise<ArxosWasmModule> {
   }
 
   try {
-    // Expect wasm-pack output in crates/arxos-wasm/pkg. `@vite-ignore` avoids static analysis so we
-    // can surface a helpful runtime error if the package has not been generated yet.
     const module = (await import(
       /* @vite-ignore */
       "@arxos-wasm"
@@ -63,8 +170,6 @@ export async function initWasm(): Promise<ArxosWasmModule> {
       "ArxOS WASM package missing. Run `wasm-pack build crates/arxos-wasm --target web --out-dir pkg` before starting the PWA."
     );
   }
-
-  // Unreachable; the throw above keeps TypeScript satisfied.
 }
 
 export function requireWasm(): ArxosWasmModule {
@@ -106,14 +211,31 @@ export async function fetchCommandDetails(name: string): Promise<WasmCommandEntr
   }
 }
 
-export async function parseArScan<T = unknown>(json: string): Promise<T> {
+export async function parseArScan(json: string): Promise<WasmArScanData> {
   const module = await initWasm();
-  return module.parse_ar_scan(json) as T;
+  const payload = module.parse_ar_scan(json);
+  if (!isScanData(payload)) {
+    throw new Error("WASM returned invalid AR scan payload");
+  }
+  return payload;
 }
 
-export async function extractEquipmentFromScan<T = unknown>(json: string): Promise<T> {
+export async function extractEquipmentFromScan(json: string): Promise<WasmEquipmentInfo[]> {
   const module = await initWasm();
-  return module.extract_equipment(json) as T;
+  const payload = module.extract_equipment(json);
+  if (!Array.isArray(payload) || !payload.every(isEquipment)) {
+    throw new Error("WASM returned invalid equipment payload");
+  }
+  return payload;
+}
+
+export async function generateScanMesh(json: string): Promise<WasmMeshBuffers> {
+  const module = await initWasm();
+  const payload = module.generate_scan_mesh(json);
+  if (!isMeshBuffers(payload)) {
+    throw new Error("WASM returned invalid mesh buffers");
+  }
+  return payload;
 }
 
 export async function validateArScan(json: string): Promise<boolean> {

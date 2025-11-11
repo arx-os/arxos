@@ -1,5 +1,6 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useCollaborationStore } from "../state/collaboration";
+import type { CollabConfig } from "../lib/agent";
 
 export default function CollaborationPanel() {
   const {
@@ -9,12 +10,25 @@ export default function CollaborationPanel() {
     messages,
     queue,
     hydrate,
+    flushQueue,
     token,
     setToken,
-    agentStatus
+    agentStatus,
+    lastSync,
+    syncTarget,
+    configureTarget,
+    retryMessage,
+    isSyncing
   } = useCollaborationStore();
+
   const [buildingId, setBuildingId] = useState("ps-118");
   const [content, setContent] = useState("");
+  const [owner, setOwner] = useState("" );
+  const [repo, setRepo] = useState("");
+  const [targetType, setTargetType] = useState<"issue" | "pull_request">("issue");
+  const [targetNumber, setTargetNumber] = useState("1");
+  const [configError, setConfigError] = useState<string | null>(null);
+  const [configSaving, setConfigSaving] = useState(false);
 
   useEffect(() => {
     const handleOnline = () => setOnline(true);
@@ -33,6 +47,15 @@ export default function CollaborationPanel() {
     }
   }, [hydrate, online, queue.length]);
 
+  useEffect(() => {
+    if (syncTarget) {
+      setOwner(syncTarget.owner);
+      setRepo(syncTarget.repo);
+      setTargetType(syncTarget.target.type);
+      setTargetNumber(String(syncTarget.target.number));
+    }
+  }, [syncTarget]);
+
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!content.trim()) {
@@ -46,16 +69,54 @@ export default function CollaborationPanel() {
     setContent("");
   };
 
+  const handleConfigSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setConfigError(null);
+    const parsedNumber = Number(targetNumber);
+    if (!owner.trim() || !repo.trim() || Number.isNaN(parsedNumber) || parsedNumber <= 0) {
+      setConfigError("Owner, repo, and positive issue/PR number are required");
+      return;
+    }
+
+    const config: CollabConfig = {
+      owner: owner.trim(),
+      repo: repo.trim(),
+      target: {
+        type: targetType,
+        number: parsedNumber
+      }
+    };
+
+    try {
+      setConfigSaving(true);
+      await configureTarget(config);
+    } catch (error) {
+      setConfigError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setConfigSaving(false);
+    }
+  };
+
   const indicatorColor = online ? "bg-emerald-500/80" : "bg-amber-500/80";
   const indicatorText = online ? "Online" : "Offline (queued)";
 
+  const targetSummary = useMemo(() => {
+    if (!syncTarget) {
+      return "Not configured";
+    }
+    return `${syncTarget.owner}/${syncTarget.repo} #${syncTarget.target.number} (${syncTarget.target.type})`;
+  }, [syncTarget]);
+
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 shadow-lg shadow-slate-900/40">
+    <div
+      className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 shadow-lg shadow-slate-900/40"
+      data-testid="panel-collaboration"
+    >
       <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <h3 className="text-sm font-semibold text-slate-100">Collaboration & Offline Queue</h3>
           <p className="text-xs text-slate-400">
-            Messages sync through the desktop agent when connectivity is available.
+            Messages sync to GitHub issues or PRs via the desktop agent when connectivity is available.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-slate-100">
@@ -77,8 +138,67 @@ export default function CollaborationPanel() {
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-white" />
             Agent: {agentStatus}
           </span>
+          {lastSync && (
+            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-200">
+              Last sync {new Date(lastSync).toLocaleTimeString()}
+            </span>
+          )}
         </div>
       </div>
+
+      <section className="mb-4 space-y-3 rounded-md border border-slate-800 bg-slate-950/60 p-3 text-xs text-slate-300">
+        <header className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="font-semibold text-slate-200">GitHub Target</p>
+            <p className="text-slate-400">{targetSummary}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void hydrate()}
+            className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-[10px] uppercase tracking-wide text-slate-100 transition hover:border-slate-500 hover:bg-slate-700"
+          >
+            Refresh
+          </button>
+        </header>
+        <form onSubmit={handleConfigSubmit} className="grid gap-2 md:grid-cols-4">
+          <input
+            value={owner}
+            onChange={(event) => setOwner(event.target.value)}
+            className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-100 focus:border-slate-500 focus:outline-none"
+            placeholder="owner"
+          />
+          <input
+            value={repo}
+            onChange={(event) => setRepo(event.target.value)}
+            className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-100 focus:border-slate-500 focus:outline-none"
+            placeholder="repo"
+          />
+          <select
+            value={targetType}
+            onChange={(event) => setTargetType(event.target.value as "issue" | "pull_request")}
+            className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-100 focus:border-slate-500 focus:outline-none"
+          >
+            <option value="issue">Issue</option>
+            <option value="pull_request">Pull Request</option>
+          </select>
+          <input
+            value={targetNumber}
+            onChange={(event) => setTargetNumber(event.target.value.replace(/[^0-9]/g, ""))}
+            className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-100 focus:border-slate-500 focus:outline-none"
+            placeholder="#"
+          />
+          <div className="md:col-span-4 flex items-center justify-between">
+            {configError && <span className="text-[11px] text-red-400">{configError}</span>}
+            <button
+              type="submit"
+              disabled={configSaving}
+              className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-[10px] font-medium uppercase tracking-wide text-slate-100 transition hover:border-slate-500 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {configSaving ? "Saving…" : "Save Target"}
+            </button>
+          </div>
+        </form>
+      </section>
 
       <form onSubmit={handleSubmit} className="mb-4 space-y-2">
         <div className="flex flex-wrap gap-2">
@@ -96,12 +216,16 @@ export default function CollaborationPanel() {
           />
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-          <span>Queued messages: {queue.length}</span>
+          <span>
+            Queued messages: {queue.length}
+            {isSyncing && " (syncing…)"}
+          </span>
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => void hydrate()}
-              className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1 font-medium text-slate-100 transition hover:border-slate-500 hover:bg-slate-700"
+              onClick={() => void flushQueue()}
+              disabled={isSyncing}
+              className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1 font-medium text-slate-100 transition hover:border-slate-500 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Sync Now
             </button>
@@ -156,9 +280,33 @@ export default function CollaborationPanel() {
                 </span>
               </header>
               <p>{message.content}</p>
-              <footer className="mt-1 text-[10px] text-slate-500">
-                {new Date(message.timestamp).toLocaleTimeString()}
+              <footer className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500">
+                <span>{new Date(message.timestamp).toLocaleTimeString()}</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {message.remoteUrl && (
+                    <a
+                      href={message.remoteUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-md border border-slate-700 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-200 hover:border-slate-500"
+                    >
+                      View on GitHub
+                    </a>
+                  )}
+                  {message.status === "error" && (
+                    <button
+                      type="button"
+                      onClick={() => retryMessage(message.id)}
+                      className="rounded-md border border-red-500/60 px-2 py-0.5 text-[10px] uppercase tracking-wide text-red-200 hover:border-red-400"
+                    >
+                      Retry
+                    </button>
+                  )}
+                </div>
               </footer>
+              {message.errorReason && (
+                <p className="mt-1 text-[10px] text-red-400">{message.errorReason}</p>
+              )}
             </article>
           ))
         )}

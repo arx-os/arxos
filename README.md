@@ -14,7 +14,7 @@
 - 🎨 **3D Visualization** - Interactive terminal-based 3D building visualization
 - 🎮 **Gamified Planning** - Interactive PR review and equipment placement with constraint validation
 - 🪙 **On-Chain Economy** - Polygon contracts, staking CLI, and WASM surface for rewards and revenue splits
-- 📱 **Mobile Support** - WASM PWA with WebXR overlays (native apps archived for future reference)
+- 💻 **WASM PWA** - Browser-based command surface with WebXR preview; native iOS/Android shells are archived
 - ⚡ **Terminal-First** - Designed for efficiency and automation
 
 ---
@@ -187,17 +187,13 @@ ArxOS follows security best practices with automated scanning and comprehensive 
 
 ---
 
-## 📚 Documentation
-
 - **[User Guide](docs/core/USER_GUIDE.md)** - Complete usage instructions for end users
-- **[API Reference](docs/API_REFERENCE.md)** - Comprehensive API reference for CLI, FFI, and core types
-- **[Examples](examples/)** - Example building data files and usage patterns
-- **[Game System](docs/features/GAME_SYSTEM.md)** - Gamified PR review and planning system
 - **[Architecture](docs/core/ARCHITECTURE.md)** - System design and technical details  
-- **[WASM Web Development](docs/web/DEVELOPMENT.md)** - Run the PWA, desktop agent, and WASM toolchain
-- **[Mobile FFI Integration](docs/mobile/MOBILE_FFI_INTEGRATION.md)** - Archived native app docs
+- **[API Reference](docs/core/API_REFERENCE.md)** - Comprehensive API reference for CLI, WASM, and core types
+- **[WASM Web Development](docs/web/DEVELOPMENT.md)** - Run the PWA, desktop agent, and CI pipeline
 - **[Hardware Integration](docs/features/HARDWARE_INTEGRATION.md)** - Deploy sensors and contribute to the DePIN network
 - **[Reward System](docs/business/REWARD_SYSTEM.md)** - How contributors earn rewards for building data (USD-based, no crypto complexity)
+- **[Mobile (Archived)](docs/mobile/README.md)** - Historical native app documentation (read-only)
 
 ---
 
@@ -314,24 +310,6 @@ cargo clippy -- -W clippy::all
 
 **Note:** Pre-commit hooks automatically run `fmt`, `clippy`, and tests before commits. CI/CD runs stricter checks with `-D warnings`.
 
-### Mobile Development
-
-**iOS:**
-```bash
-cargo build -p arxos --target aarch64-apple-ios --release
-open ios/ArxOSMobile.xcodeproj
-```
-
-**Android:**
-```bash
-cargo build -p arxos --target aarch64-linux-android --release
-cd android && ./gradlew build
-```
-
-See [Mobile FFI Integration](docs/mobile/MOBILE_FFI_INTEGRATION.md) for details.
-
----
-
 ## 🔧 Troubleshooting
 
 ### Common Issues
@@ -339,22 +317,15 @@ See [Mobile FFI Integration](docs/mobile/MOBILE_FFI_INTEGRATION.md) for details.
 **Build Errors:**
 - Ensure you have the latest Rust toolchain: `rustup update`
 - Clean build artifacts: `cargo clean && cargo build`
-- Check platform-specific dependencies (see mobile development sections)
 
 **Test Failures:**
 - Some tests require Git repository: Initialize with `git init` in test directory
 - Serial tests may conflict: Run with `cargo test --test-threads=1`
-- Platform-specific tests: See [Mobile FFI Integration](docs/mobile/MOBILE_FFI_INTEGRATION.md)
 
 **FFI Header Generation:**
 - Install cbindgen: `cargo install cbindgen`
 - Headers auto-generate during build if cbindgen is available
 - Falls back to validation-only if cbindgen is not installed
-
-**Mobile Build Issues:**
-- iOS: Ensure Xcode Command Line Tools installed: `xcode-select --install`
-- Android: Install Android NDK and set `ANDROID_NDK_HOME`
-- See platform-specific guides in `docs/mobile/`
 
 **Performance Issues:**
 - Use release builds: `cargo build --release`

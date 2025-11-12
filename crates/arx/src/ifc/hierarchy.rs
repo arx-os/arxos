@@ -5,6 +5,7 @@ use crate::core::{
     BoundingBox, Building, Dimensions, Equipment, EquipmentType, Floor, Position, Room, RoomType,
     SpatialProperties, Wing,
 };
+use crate::ifc::identifiers::derive_building_identifiers;
 use chrono::Utc;
 use regex::Regex;
 use std::collections::HashMap;
@@ -579,10 +580,21 @@ impl HierarchyBuilder {
     }
 
     /// Build complete hierarchy: Building → Floor → Room → Equipment
-    pub fn build_hierarchy(
-        &self,
-        building_name: String,
-    ) -> Result<Building, Box<dyn std::error::Error>> {
+    pub fn build_hierarchy(&self) -> Result<Building, Box<dyn std::error::Error>> {
+        let building_entity = self
+            .entities
+            .iter()
+            .find(|entity| entity.entity_type == "IFCBUILDING");
+
+        let fallback_id = building_entity
+            .map(|entity| entity.id.as_str())
+            .unwrap_or("building");
+
+        let identifiers = derive_building_identifiers(
+            building_entity.map(|entity| entity.name.as_str()),
+            fallback_id,
+        );
+
         let mut floors = self.extract_floors()?;
         let rooms = self.extract_rooms()?;
         let equipment_list = self.extract_equipment(&rooms)?;
@@ -623,10 +635,8 @@ impl HierarchyBuilder {
         }
 
         // Build the hierarchy
-        let mut building = Building::new(
-            building_name.clone(),
-            format!("/building/{}", building_name.to_lowercase()),
-        );
+        let mut building =
+            Building::new(identifiers.display_name.clone(), identifiers.canonical_path());
 
         // Add floors with populated rooms and equipment
         for floor in floors {

@@ -7,6 +7,7 @@ use std::path::Path;
 mod enhanced;
 mod error;
 mod fallback;
+mod identifiers;
 mod hierarchy;
 
 pub use enhanced::{
@@ -108,7 +109,7 @@ impl IFCProcessor {
 
         // Build hierarchy
         let building = hierarchy_builder
-            .build_hierarchy("Building".to_string())
+            .build_hierarchy()
             .map_err(|e| IFCError::ParsingError {
                 message: e.to_string(),
             })?;

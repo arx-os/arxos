@@ -3,7 +3,7 @@
 
 use crate::core::Building;
 use crate::ifc;
-use crate::utils::progress;
+use crate::utils::{progress, string::slugify};
 use log::warn;
 
 /// Helper function to generate YAML output from building data
@@ -24,7 +24,17 @@ fn generate_yaml_output(
         }
     };
 
-    let yaml_file = format!("{}.yaml", building_name.to_lowercase().replace(" ", "_"));
+    let mut slug = slugify(&building.name);
+    if slug.is_empty() {
+        slug = building
+            .path
+            .rsplit('/')
+            .find(|segment| !segment.is_empty())
+            .map(|segment| segment.to_string())
+            .unwrap_or_else(|| "building".to_string());
+    }
+
+    let yaml_file = format!("{}.yaml", slug);
 
     serializer.write_to_file(&building_data, &yaml_file)?;
 

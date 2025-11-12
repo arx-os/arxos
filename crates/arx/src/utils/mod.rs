@@ -5,3 +5,4 @@ pub mod loading;
 pub mod path_safety;
 pub mod progress;
 pub mod retry;
+pub mod string;

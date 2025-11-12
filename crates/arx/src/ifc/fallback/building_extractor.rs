@@ -4,6 +4,7 @@
 
 use super::types::IFCEntity;
 use crate::core::Building;
+use crate::ifc::identifiers::derive_building_identifiers;
 
 /// Extracts building data from IFC entities
 pub struct BuildingExtractor;
@@ -15,19 +16,21 @@ impl BuildingExtractor {
 
     /// Extract building information from entities
     pub fn extract_building(&self, entities: &[IFCEntity]) -> Building {
-        let mut building_name = "Unknown Building".to_string();
-        let mut building_id = "unknown".to_string();
+        let building_entity = entities.iter().find(|entity| entity.entity_type == "IFCBUILDING");
 
-        // Find IFCBUILDING entity
-        for entity in entities {
-            if entity.entity_type == "IFCBUILDING" {
-                building_name = entity.name.clone();
-                building_id = entity.id.clone();
-                break;
-            }
-        }
+        let fallback_id = building_entity
+            .map(|entity| entity.id.as_str())
+            .unwrap_or("building");
 
-        Building::new(building_id, building_name)
+        let identifiers = derive_building_identifiers(
+            building_entity.map(|entity| entity.name.as_str()),
+            fallback_id,
+        );
+
+        Building::new(
+            identifiers.display_name,
+            identifiers.canonical_path(),
+        )
     }
 }
 

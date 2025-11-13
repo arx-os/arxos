@@ -4,6 +4,7 @@
 //! integration, spatial reasoning engine, and DePIN primitives used across the
 //! ArxOS ecosystem.
 
+pub mod building;
 pub mod config;
 pub mod core;
 pub mod depin;
@@ -13,8 +14,10 @@ pub mod git;
 pub mod identity;
 pub mod ifc;
 pub mod persistence;
+pub mod sensor;
 pub mod spatial;
 pub mod utils;
+pub mod validation;
 pub mod yaml;
 
 // Re-export foundational types for convenience.

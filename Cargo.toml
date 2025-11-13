@@ -1,14 +1,8 @@
 [workspace]
 members = [
     "crates/arx",
-    "crates/arxui",
-    "crates/arxos",
-    "crates/arx-command-catalog",
-    "crates/arxos-agent",
-    "crates/arxos-hal",
-    "crates/arxos-hal/esp32-c3",
-    "crates/arxos-hal/rp2040",
-    "crates/arxos-wasm",
+    "crates/arx-cli", 
+    "crates/arx-agent",
 ]
 resolver = "2"
 

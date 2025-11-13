@@ -9,7 +9,6 @@ use log::warn;
 /// Helper function to generate YAML output from building data
 fn generate_yaml_output(
     building: &Building,
-    building_name: &str,
 ) -> Result<String, Box<dyn std::error::Error>> {
     use crate::yaml::BuildingYamlSerializer;
 
@@ -132,7 +131,7 @@ pub fn handle_import(
             }
 
             // Generate YAML output using helper function
-            match generate_yaml_output(&building, &building.name) {
+            match generate_yaml_output(&building) {
                 Ok(yaml_file) => {
                     // Initialize Git repo if requested
                     if let Some(ref repo_path) = repo {
@@ -181,7 +180,7 @@ pub fn handle_import(
                     }
 
                     // Generate YAML output using helper function
-                    match generate_yaml_output(&building, &building.name) {
+                    match generate_yaml_output(&building) {
                         Ok(yaml_file) => {
                             // Initialize Git repo if requested
                             if let Some(ref repo_path) = repo {

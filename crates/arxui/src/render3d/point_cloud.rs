@@ -4,11 +4,11 @@
 use super::camera::{Camera, Vec3, vec3, project};
 use super::types::*;
 use arx::EquipmentType;
-use crossterm::event::{Event, KeyCode, KeyModifiers, MouseEvent, MouseEventKind};
-use crossterm::style::{Color, Print, SetForegroundColor};
+use crossterm::event::{Event, KeyCode, MouseEventKind};
+use crossterm::style::{Color, Print};
 use crossterm::terminal::{size, Clear, ClearType};
-use crossterm::{cursor, execute, queue};
-use std::collections::HashMap;
+use crossterm::{cursor, execute};
+
 use std::io::{self, Write};
 
 /// Point in a 3D point cloud with color
@@ -22,8 +22,10 @@ pub struct Point3DColored {
 #[derive(Debug, Clone)]
 pub struct UniformGrid {
     cells: Vec<Vec<Vec<GridCell>>>,
+    #[allow(dead_code)]
     cell_size: f32,
     grid_size: usize,
+    #[allow(dead_code)]
     bounds: (Vec3, Vec3), // min, max
 }
 

@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 /// Coordinate in 2D or 3D space
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub struct Coordinate {
     pub x: f64,
     pub y: f64,
@@ -17,6 +18,7 @@ pub struct Coordinate {
 
 /// Axis-aligned bounding box
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub struct BoundingBox {
     pub min: Coordinate,
     pub max: Coordinate,
@@ -24,6 +26,7 @@ pub struct BoundingBox {
 
 /// Summary information about a building (for list views)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub struct BuildingSummary {
     pub path: String,
     pub name: String,
@@ -33,6 +36,7 @@ pub struct BuildingSummary {
 
 /// Full building data including all floors
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub struct Building {
     pub path: String,
     pub name: String,
@@ -44,6 +48,7 @@ pub struct Building {
 
 /// Floor with rooms and equipment
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub struct Floor {
     pub id: String,
     pub name: String,
@@ -56,6 +61,7 @@ pub struct Floor {
 
 /// Room with spatial data and equipment
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub struct Room {
     pub id: String,
     pub name: String,
@@ -68,6 +74,7 @@ pub struct Room {
 
 /// Equipment entity with position and properties
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub struct Equipment {
     pub id: String,
     pub name: String,
@@ -81,6 +88,7 @@ pub struct Equipment {
 // Helper functions for creating mock data (M03 - no real data source yet)
 // Made public for use in lib.rs WASM exports
 
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub fn create_mock_building_summary() -> BuildingSummary {
     BuildingSummary {
         path: "building/demo-hq".to_string(),
@@ -90,6 +98,7 @@ pub fn create_mock_building_summary() -> BuildingSummary {
     }
 }
 
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub fn create_mock_building() -> Building {
     Building {
         path: "building/demo-hq".to_string(),
@@ -108,6 +117,7 @@ pub fn create_mock_building() -> Building {
     }
 }
 
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub fn create_mock_floor(id: &str, name: &str, level: i32) -> Floor {
     let elevation = level as f64 * 3.5; // 3.5m per floor
     Floor {
@@ -129,6 +139,7 @@ pub fn create_mock_floor(id: &str, name: &str, level: i32) -> Floor {
     }
 }
 
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 fn create_mock_room(
     id: &str,
     name: &str,
@@ -169,6 +180,7 @@ fn create_mock_room(
     }
 }
 
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 fn create_mock_equipment(id: &str, name: &str, equip_type: &str, x: f64, y: f64) -> Equipment {
     Equipment {
         id: id.to_string(),

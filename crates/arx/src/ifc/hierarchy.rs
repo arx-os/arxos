@@ -29,8 +29,10 @@ pub struct HierarchyBuilder {
     entities: Vec<IFCEntity>,
     entity_map: HashMap<String, IFCEntity>, // Map entity IDs to entities for reference resolution
     aggregates: HashMap<String, Vec<String>>,
+    #[allow(dead_code)]
     containment: HashMap<String, Vec<String>>,
     rooms_by_structure: HashMap<String, Vec<String>>,
+    #[allow(dead_code)]
     elements_by_structure: HashMap<String, Vec<String>>,
     room_parents: HashMap<String, String>,
     element_parents: HashMap<String, String>,

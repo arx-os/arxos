@@ -3,7 +3,7 @@
 
 use super::types::Vector3D;
 use arx::spatial::Point3D;
-use std::f64::consts::{PI, FRAC_PI_2};
+use std::f64::consts::FRAC_PI_2;
 
 /// WebGL-style camera with yaw/pitch/distance controls
 /// Behaves exactly like three.js OrbitControls
@@ -87,21 +87,33 @@ impl Vec3 {
 impl std::ops::Sub for Vec3 {
     type Output = Vec3;
     fn sub(self, other: Vec3) -> Vec3 {
-        self.sub(other)
+        Vec3 {
+            x: self.x - other.x,
+            y: self.y - other.y,
+            z: self.z - other.z,
+        }
     }
 }
 
 impl std::ops::Add for Vec3 {
     type Output = Vec3;
     fn add(self, other: Vec3) -> Vec3 {
-        self.add(other)
+        Vec3 {
+            x: self.x + other.x,
+            y: self.y + other.y,
+            z: self.z + other.z,
+        }
     }
 }
 
 impl std::ops::Mul<f32> for Vec3 {
     type Output = Vec3;
     fn mul(self, scalar: f32) -> Vec3 {
-        self.mul(scalar)
+        Vec3 {
+            x: self.x * scalar,
+            y: self.y * scalar,
+            z: self.z * scalar,
+        }
     }
 }
 

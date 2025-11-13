@@ -1,0 +1,25 @@
+{
+  "building": {
+    "name": "TestBuilding",
+    "path": "/building/testbuilding"
+  },
+  "floors": [
+    {
+      "name": "Floor1",
+      "path": "/building/testbuilding/floor1",
+      "rooms": [
+        {
+          "name": "Conference Room",
+          "path": "/building/testbuilding/floor1/conference-room",
+          "equipment": [
+            {
+              "name": "VAV-301",
+              "path": "/building/testbuilding/floor1/conference-room/vav-301"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+

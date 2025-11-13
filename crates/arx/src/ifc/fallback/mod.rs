@@ -23,6 +23,7 @@ pub use spatial_extractor::SpatialExtractor;
 pub use types::IFCEntity;
 
 use crate::core::Building;
+use crate::ifc::geometry::PlacementResolver;
 use crate::spatial::SpatialEntity;
 use crate::utils::progress::ProgressContext;
 use log::info;
@@ -125,10 +126,12 @@ impl FallbackIFCParser {
 
         let building = self.building_extractor.extract_building(&entities);
 
+        let resolver = PlacementResolver::new(&entities);
+
         let spatial_entities: Vec<SpatialEntity> = entities
             .iter()
             .filter(|e| self.spatial_extractor.is_spatial_entity(&e.entity_type))
-            .filter_map(|e| self.spatial_extractor.extract_spatial_data(e))
+            .filter_map(|e| self.spatial_extractor.extract_spatial_data(e, &resolver))
             .collect();
 
         Ok((building, spatial_entities))
@@ -142,10 +145,12 @@ impl FallbackIFCParser {
 
         let building = self.building_extractor.extract_building(&entities);
 
+        let resolver = PlacementResolver::new(&entities);
+
         let spatial_entities: Vec<SpatialEntity> = entities
             .par_iter()
             .filter(|e| self.spatial_extractor.is_spatial_entity(&e.entity_type))
-            .filter_map(|e| self.spatial_extractor.extract_spatial_data(e))
+            .filter_map(|e| self.spatial_extractor.extract_spatial_data(e, &resolver))
             .collect();
 
         Ok((building, spatial_entities))
@@ -191,12 +196,13 @@ impl FallbackIFCParser {
         let building = self.building_extractor.extract_building(&entities);
 
         progress.update(90, "Extracting spatial data...");
+        let resolver = PlacementResolver::new(&entities);
         let spatial_entities: Vec<SpatialEntity> = entities
             .iter()
             .filter(|e| self.spatial_extractor.is_spatial_entity(&e.entity_type))
             .filter_map(|e| {
                 self.spatial_extractor
-                    .extract_spatial_data(e)
+                    .extract_spatial_data(e, &resolver)
                     .or_else(|| self.error_recovery.recover_spatial(e))
             })
             .collect();

@@ -87,6 +87,8 @@ cargo test
 - **Hierarchical extraction**: Building → Floor → Room → Equipment structure
 - **Floor entities (IFCBUILDINGSTOREY)**: Properly extracted into Floor objects
 - **Separate hierarchy extraction command**: `arx ifc extract-hierarchy`
+- **PlacementResolver**: Accurate absolute transforms (translation + rotation) based on local placements
+- **Canonical paths**: Deterministic `/building/<slug>/floor-*/room-*/equipment-*` paths for Git + ArxAddress workflows
 
 ### Recent Updates (December 2024) ✅
 - Implemented `HierarchyBuilder` for proper building structure
@@ -94,6 +96,12 @@ cargo test
 - Added `extract_hierarchy()` method for structured data extraction
 - Integrated hierarchy extraction into import workflow
 - Added fallback to spatial entity parsing if hierarchy fails
+
+### Recent Updates (March 2025) ✅
+- Replaced hash-based coordinate fallbacks with real geometry extraction (profiles, extrusions, bounding boxes)
+- Deterministic floor/room/equipment mapping via `IFCRELAGGREGATES` and `IFCRELCONTAINEDINSPATIALSTRUCTURE`
+- Canonical slug/path generation wired into CLI imports and exporters
+- Golden fixtures (`tests/fixtures/ifc/simple.ifc`) and renderer/export regression tests keep the pipeline honest
 
 ### Usage Example
 
@@ -104,7 +112,7 @@ arx import building.ifc
 # Extract hierarchy separately
 arx ifc extract-hierarchy --file building.ifc --output building.yml
 ```
-- Equipment not properly categorized and assigned to rooms
+Equipment and rooms now inherit canonical parent paths; any fixture regressions are caught by the golden tests.
 
 ## Planned Enhancements
 
@@ -168,7 +176,7 @@ Building Data Structure
 
 ### Testing Strategy
 
-- Test with `test_data/sample_building.ifc`
+- Test with `test_data/sample_building.ifc` and `tests/fixtures/ifc/simple.ifc`
 - Verify floor/room/equipment extraction
 - Test with real-world IFC files
 - Handle edge cases (no floors, no rooms, malformed files)

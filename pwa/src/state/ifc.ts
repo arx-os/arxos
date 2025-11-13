@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { invokeAgent } from "../lib/agent";
-import { useCollaborationStore } from "./collaboration";
+import { ifcImport, ifcExport } from "../modules/agent/commands/ifc";
+import { useAgentStore } from "../modules/agent/state/agentStore";
 
 type ImportSummary = {
   buildingName: string;
@@ -19,6 +19,9 @@ type ExportArtifact = {
 type IfcStore = {
   importing: boolean;
   exporting: boolean;
+  importProgress: number;
+  exportProgress: number;
+  progressMessage: string;
   error?: string;
   lastImport?: ImportSummary;
   lastExport?: ExportArtifact;
@@ -27,12 +30,11 @@ type IfcStore = {
   clearError: () => void;
 };
 
-function getAgentToken(): string {
-  const token = useCollaborationStore.getState().token;
-  if (!token.startsWith("did:key:")) {
-    throw new Error("Agent token missing or invalid");
+function checkAgentConnected(): void {
+  const agentState = useAgentStore.getState();
+  if (!agentState.isInitialized || agentState.connectionState.status !== "connected") {
+    throw new Error("Agent not connected. Please authenticate first.");
   }
-  return token;
 }
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
@@ -73,82 +75,84 @@ function base64ToBlobUri(base64: string, mime = "application/octet-stream"): str
 export const useIfcStore = create<IfcStore>((set) => ({
   importing: false,
   exporting: false,
+  importProgress: 0,
+  exportProgress: 0,
+  progressMessage: "",
   error: undefined,
   lastImport: undefined,
   lastExport: undefined,
   importIfc: async (file) => {
     try {
-      set({ importing: true, error: undefined });
-      const token = getAgentToken();
+      set({ importing: true, importProgress: 0, progressMessage: "Starting import...", error: undefined });
+      checkAgentConnected();
+
       const buffer = await file.arrayBuffer();
       const base64 = arrayBufferToBase64(buffer);
 
-      const response = await invokeAgent<{
-        building_name: string;
-        yaml_path: string;
-        floors: number;
-        rooms: number;
-        equipment: number;
-      }>(token, "ifc.import", {
-        filename: file.name,
-        data: base64
-      });
+      const result = await ifcImport(
+        {
+          base64Data: base64,
+        },
+        (progress, message) => {
+          set({ importProgress: progress, progressMessage: message });
+        }
+      );
 
-      if (response.status !== "ok") {
-        throw new Error(
-          typeof response.payload === "object" && response.payload !== null
-            ? (response.payload as Record<string, unknown>).error?.toString() ?? "Agent error"
-            : "Agent error"
-        );
+      if (!result.success) {
+        throw new Error("IFC import failed");
       }
 
       set({
         importing: false,
+        importProgress: 100,
+        progressMessage: "Import complete!",
         lastImport: {
-          buildingName: response.payload.building_name,
-          yamlPath: response.payload.yaml_path,
-          floors: response.payload.floors,
-          rooms: response.payload.rooms,
-          equipment: response.payload.equipment
-        }
+          buildingName: result.buildingPath,
+          yamlPath: result.yamlPath,
+          floors: result.floorCount,
+          rooms: result.roomCount,
+          equipment: result.equipmentCount,
+        },
       });
     } catch (error) {
-      set({ importing: false, error: (error as Error).message });
+      set({ importing: false, importProgress: 0, progressMessage: "", error: (error as Error).message });
     }
   },
   exportIfc: async (options) => {
     try {
-      set({ exporting: true, error: undefined });
-      const token = getAgentToken();
-      const response = await invokeAgent<{
-        filename: string;
-        data: string;
-        size_bytes: number;
-      }>(token, "ifc.export", {
-        filename: options?.filename,
-        delta: options?.delta ?? false
-      });
+      set({ exporting: true, exportProgress: 0, progressMessage: "Starting export...", error: undefined });
+      checkAgentConnected();
 
-      if (response.status !== "ok") {
-        throw new Error(
-          typeof response.payload === "object" && response.payload !== null
-            ? (response.payload as Record<string, unknown>).error?.toString() ?? "Agent error"
-            : "Agent error"
-        );
+      const result = await ifcExport(
+        {
+          buildingPath: options?.filename || "building",
+          format: "ifc",
+        },
+        (progress, message) => {
+          set({ exportProgress: progress, progressMessage: message });
+        }
+      );
+
+      if (!result.success) {
+        throw new Error("IFC export failed");
       }
 
-      const downloadUrl =
-        base64ToBlobUri(response.payload.data) || `data:application/octet-stream;base64,${response.payload.data}`;
+      const downloadUrl = result.base64Data
+        ? base64ToBlobUri(result.base64Data)
+        : result.filePath || "";
+
       set({
         exporting: false,
+        exportProgress: 100,
+        progressMessage: "Export complete!",
         lastExport: {
-          filename: response.payload.filename,
-          sizeBytes: response.payload.size_bytes,
-          downloadUrl
-        }
+          filename: options?.filename || "building.ifc",
+          sizeBytes: result.size,
+          downloadUrl,
+        },
       });
     } catch (error) {
-      set({ exporting: false, error: (error as Error).message });
+      set({ exporting: false, exportProgress: 0, progressMessage: "", error: (error as Error).message });
     }
   },
   clearError: () => set({ error: undefined })

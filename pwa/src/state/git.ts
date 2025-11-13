@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { invokeAgent } from "../lib/agent";
-import { useCollaborationStore } from "./collaboration";
+import { gitStatus, gitDiff, gitCommit } from "../modules/agent/commands/git";
+import { useAgentStore } from "../modules/agent/state/agentStore";
 
 export type GitStatus = {
   branch: string;
@@ -54,12 +54,80 @@ type GitStore = {
   clearError: () => void;
 };
 
-function getAgentToken(): string {
-  const token = useCollaborationStore.getState().token;
-  if (!token.startsWith("did:key:")) {
-    throw new Error("Agent token missing or invalid");
+function checkAgentConnected(): void {
+  const agentState = useAgentStore.getState();
+  if (!agentState.isInitialized || agentState.connectionState.status !== "connected") {
+    throw new Error("Agent not connected. Please authenticate first.");
   }
-  return token;
+}
+
+/**
+ * Parse raw git diff output into structured format
+ */
+function parseDiffString(diffString: string, commit?: string): GitDiff {
+  const lines = diffString.split("\n");
+  const files: GitDiff["files"] = [];
+  let filesChanged = 0;
+  let insertions = 0;
+  let deletions = 0;
+  let currentFile = "";
+  let lineNumber = 0;
+
+  for (const line of lines) {
+    // Parse file headers (diff --git a/file b/file)
+    if (line.startsWith("diff --git")) {
+      const match = line.match(/diff --git a\/(.+) b\/(.+)/);
+      if (match) {
+        currentFile = match[2];
+        filesChanged++;
+      }
+    }
+
+    // Parse hunk headers (@@ -1,5 +1,7 @@)
+    if (line.startsWith("@@")) {
+      const match = line.match(/@@ -(\d+),?\d* \+(\d+),?\d* @@/);
+      if (match) {
+        lineNumber = parseInt(match[2]);
+      }
+    }
+
+    // Parse diff lines
+    if (line.startsWith("+") && !line.startsWith("+++")) {
+      insertions++;
+      files.push({
+        file_path: currentFile,
+        line_number: lineNumber,
+        kind: "addition",
+        content: line.substring(1),
+      });
+      lineNumber++;
+    } else if (line.startsWith("-") && !line.startsWith("---")) {
+      deletions++;
+      files.push({
+        file_path: currentFile,
+        line_number: lineNumber,
+        kind: "deletion",
+        content: line.substring(1),
+      });
+    } else if (line.startsWith(" ")) {
+      files.push({
+        file_path: currentFile,
+        line_number: lineNumber,
+        kind: "context",
+        content: line.substring(1),
+      });
+      lineNumber++;
+    }
+  }
+
+  return {
+    commit_hash: "HEAD",
+    compare_hash: commit || "HEAD~1",
+    files_changed: filesChanged,
+    insertions,
+    deletions,
+    files,
+  };
 }
 
 export const useGitStore = create<GitStore>((set) => ({
@@ -71,16 +139,10 @@ export const useGitStore = create<GitStore>((set) => ({
   refreshStatus: async () => {
     try {
       set({ loading: true, error: undefined });
-      const token = getAgentToken();
-      const response = await invokeAgent<GitStatus>(token, "git.status");
-      if (response.status !== "ok") {
-        throw new Error(
-          typeof response.payload === "object" && response.payload !== null
-            ? (response.payload as Record<string, unknown>).error?.toString() ?? "Agent error"
-            : "Agent error"
-        );
-      }
-      set({ status: response.payload, loading: false });
+      checkAgentConnected();
+
+      const response = await gitStatus();
+      set({ status: response as unknown as GitStatus, loading: false });
     } catch (error) {
       set({ error: (error as Error).message, loading: false });
     }
@@ -88,19 +150,16 @@ export const useGitStore = create<GitStore>((set) => ({
   loadDiff: async (params) => {
     try {
       set({ loading: true, error: undefined });
-      const token = getAgentToken();
-      const response = await invokeAgent<GitDiff>(token, "git.diff", {
-        commit: params?.commit,
-        file: params?.file
+      checkAgentConnected();
+
+      const diffString = await gitDiff({
+        file: params?.file,
+        staged: params?.commit === "staged",
       });
-      if (response.status !== "ok") {
-        throw new Error(
-          typeof response.payload === "object" && response.payload !== null
-            ? (response.payload as Record<string, unknown>).error?.toString() ?? "Agent error"
-            : "Agent error"
-        );
-      }
-      set({ diff: response.payload, loading: false });
+
+      // Parse diff string to extract stats and file changes
+      const diff = parseDiffString(diffString, params?.commit);
+      set({ diff, loading: false });
     } catch (error) {
       set({ error: (error as Error).message, loading: false });
     }
@@ -108,20 +167,18 @@ export const useGitStore = create<GitStore>((set) => ({
   commit: async (message, stageAll = false) => {
     try {
       set({ loading: true, error: undefined });
-      const token = getAgentToken();
-      const response = await invokeAgent<GitCommitResult>(token, "git.commit", {
+      checkAgentConnected();
+
+      const response = await gitCommit({
         message,
-        stage_all: stageAll
+        files: stageAll ? undefined : [],
       });
-      if (response.status !== "ok") {
-        throw new Error(
-          typeof response.payload === "object" && response.payload !== null
-            ? (response.payload as Record<string, unknown>).error?.toString() ?? "Agent error"
-            : "Agent error"
-        );
-      }
+
       await useGitStore.getState().refreshStatus();
-      return response.payload;
+      return {
+        commit_id: response.hash,
+        staged_files: response.filesChanged,
+      };
     } catch (error) {
       set({ error: (error as Error).message, loading: false });
     }
@@ -129,16 +186,12 @@ export const useGitStore = create<GitStore>((set) => ({
   readFile: async (path) => {
     try {
       set({ loading: true, error: undefined });
-      const token = getAgentToken();
-      const response = await invokeAgent<FileContent>(token, "files.read", { path });
-      if (response.status !== "ok") {
-        throw new Error(
-          typeof response.payload === "object" && response.payload !== null
-            ? (response.payload as Record<string, unknown>).error?.toString() ?? "Agent error"
-            : "Agent error"
-        );
-      }
-      set({ file: response.payload, loading: false });
+      checkAgentConnected();
+
+      const agentStore = useAgentStore.getState();
+      const response = await agentStore.send<FileContent>("files.read", { path });
+
+      set({ file: response, loading: false });
     } catch (error) {
       set({ error: (error as Error).message, loading: false });
     }

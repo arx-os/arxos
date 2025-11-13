@@ -19,6 +19,7 @@ fn init_once() {
     console_error_panic_hook::set_once();
 }
 
+mod geometry;
 mod scan;
 
 /// Exports intended for WebAssembly consumers.
@@ -209,6 +210,60 @@ mod wasm_exports {
             }
             None => Err(JsValue::from_str("Command not found")),
         }
+    }
+
+    // ========================================
+    // Geometry Module Exports (M03)
+    // ========================================
+
+    /// Get list of all buildings (summary information only)
+    /// Returns: JSON array of BuildingSummary
+    #[wasm_bindgen]
+    pub async fn get_buildings() -> Result<JsValue, JsValue> {
+        // M03: Return mock data for now (real data loading in M04 with agent)
+        let summaries = vec![crate::geometry::create_mock_building_summary()];
+        serde_wasm_bindgen::to_value(&summaries)
+            .map_err(|e| JsValue::from_str(&format!("Failed to serialize buildings: {e}")))
+    }
+
+    /// Get full building data including all floors
+    /// Returns: JSON Building
+    #[wasm_bindgen]
+    pub async fn get_building(_path: String) -> Result<JsValue, JsValue> {
+        // M03: Return mock data for now (path parameter will be used in M04)
+        let building = crate::geometry::create_mock_building();
+        serde_wasm_bindgen::to_value(&building)
+            .map_err(|e| JsValue::from_str(&format!("Failed to serialize building: {e}")))
+    }
+
+    /// Get specific floor with rooms and equipment
+    /// Returns: JSON Floor
+    #[wasm_bindgen]
+    pub async fn get_floor(_building_path: String, floor_id: String) -> Result<JsValue, JsValue> {
+        // M03: Return mock data based on floor_id
+        let floor = match floor_id.as_str() {
+            "floor-1" => crate::geometry::create_mock_floor("floor-1", "Ground Floor", 0),
+            "floor-2" => crate::geometry::create_mock_floor("floor-2", "Second Floor", 1),
+            "floor-3" => crate::geometry::create_mock_floor("floor-3", "Third Floor", 2),
+            _ => return Err(JsValue::from_str(&format!("Floor not found: {floor_id}"))),
+        };
+        serde_wasm_bindgen::to_value(&floor)
+            .map_err(|e| JsValue::from_str(&format!("Failed to serialize floor: {e}")))
+    }
+
+    /// Get bounding box for a floor (for viewport initialization)
+    /// Returns: JSON BoundingBox
+    #[wasm_bindgen]
+    pub async fn get_floor_bounds(_building_path: String, floor_id: String) -> Result<JsValue, JsValue> {
+        // M03: Return bounds from mock floor data
+        let floor = match floor_id.as_str() {
+            "floor-1" | "floor-2" | "floor-3" => {
+                crate::geometry::create_mock_floor(&floor_id, "Floor", 0)
+            }
+            _ => return Err(JsValue::from_str(&format!("Floor not found: {floor_id}"))),
+        };
+        serde_wasm_bindgen::to_value(&floor.bounds)
+            .map_err(|e| JsValue::from_str(&format!("Failed to serialize floor bounds: {e}")))
     }
 }
 

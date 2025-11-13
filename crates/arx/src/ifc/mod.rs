@@ -7,6 +7,7 @@ use std::path::Path;
 mod enhanced;
 mod error;
 mod fallback;
+mod geometry;
 mod identifiers;
 mod hierarchy;
 
@@ -16,6 +17,7 @@ pub use enhanced::{
 };
 pub use error::{IFCError, IFCResult};
 pub use fallback::FallbackIFCParser;
+pub use geometry::{PlacementResolver, Transform3D};
 pub use hierarchy::HierarchyBuilder;
 
 /// IFC (Industry Foundation Classes) file processor

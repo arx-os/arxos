@@ -1,22 +1,36 @@
 import type {
   WasmArScanData,
+  WasmBuilding,
+  WasmBuildingSummary,
+  WasmBoundingBox,
   WasmCommandCategory,
   WasmCommandEntry as WasmModuleCommandEntry,
   WasmCommandAvailability,
+  WasmCoordinate,
+  WasmEquipment,
   WasmEquipmentInfo,
+  WasmFloor,
+  WasmMeshBuffers,
   WasmOpening,
+  WasmRoom,
   WasmRoomBoundaries,
-  WasmWall,
-  WasmMeshBuffers
+  WasmWall
 } from "@arxos-wasm";
 
 export type {
   WasmArScanData,
+  WasmBuilding,
+  WasmBuildingSummary,
+  WasmBoundingBox,
+  WasmCommandAvailability,
+  WasmCoordinate,
+  WasmEquipment,
   WasmEquipmentInfo,
-  WasmOpening,
-  WasmWall,
+  WasmFloor,
   WasmMeshBuffers,
-  WasmCommandAvailability
+  WasmOpening,
+  WasmRoom,
+  WasmWall
 };
 
 export type WasmCommandEntry = WasmModuleCommandEntry;
@@ -30,6 +44,10 @@ export type ArxosWasmModule = {
   command_palette(): Promise<WasmModuleCommandEntry[]>;
   command_categories(): Promise<WasmCommandCategory[]>;
   command_details(name: string): Promise<WasmModuleCommandEntry>;
+  get_buildings(): Promise<WasmBuildingSummary[]>;
+  get_building(path: string): Promise<WasmBuilding>;
+  get_floor(buildingPath: string, floorId: string): Promise<WasmFloor>;
+  get_floor_bounds(buildingPath: string, floorId: string): Promise<WasmBoundingBox>;
 };
 
 let wasmModule: ArxosWasmModule | null = null;

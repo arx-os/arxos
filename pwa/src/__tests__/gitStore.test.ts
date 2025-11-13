@@ -1,20 +1,24 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 
-vi.mock("../lib/agent", () => ({
-  invokeAgent: vi.fn()
+// Mock the agent commands
+vi.mock("../modules/agent/commands/git", () => ({
+  gitStatus: vi.fn(),
+  gitDiff: vi.fn(),
+  gitCommit: vi.fn(),
 }));
 
-vi.mock("../state/collaboration", () => ({
-  useCollaborationStore: {
+// Mock the agent store
+vi.mock("../modules/agent/state/agentStore", () => ({
+  useAgentStore: {
     getState: () => ({
-      token: "did:key:test",
-      agentStatus: "connected"
-    })
-  }
+      isInitialized: true,
+      connectionState: { status: "connected" },
+    }),
+  },
 }));
 
-import { invokeAgent } from "../lib/agent";
+import { gitStatus } from "../modules/agent/commands/git";
 import { useGitStore } from "../state/git";
 
 describe("git store", () => {
@@ -30,23 +34,20 @@ describe("git store", () => {
   });
 
   it("hydrates status from agent", async () => {
-    vi.mocked(invokeAgent).mockResolvedValue({
-      status: "ok",
-      payload: {
-        branch: "main",
-        last_commit: "abc",
-        last_commit_message: "Init",
-        last_commit_time: 1,
-        staged_changes: 0,
-        unstaged_changes: 1,
-        untracked: 2,
-        diff_summary: {
-          files_changed: 1,
-          insertions: 3,
-          deletions: 0
-        }
-      }
-    });
+    vi.mocked(gitStatus).mockResolvedValue({
+      branch: "main",
+      last_commit: "abc",
+      last_commit_message: "Init",
+      last_commit_time: 1,
+      staged_changes: 0,
+      unstaged_changes: 1,
+      untracked: 2,
+      diff_summary: {
+        files_changed: 1,
+        insertions: 3,
+        deletions: 0,
+      },
+    } as any);
 
     await act(async () => {
       await useGitStore.getState().refreshStatus();
@@ -56,10 +57,7 @@ describe("git store", () => {
   });
 
   it("records error when agent fails", async () => {
-    vi.mocked(invokeAgent).mockResolvedValue({
-      status: "error",
-      payload: { error: "boom" }
-    });
+    vi.mocked(gitStatus).mockRejectedValue(new Error("boom"));
 
     await act(async () => {
       await useGitStore.getState().refreshStatus();

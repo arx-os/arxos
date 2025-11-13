@@ -3,11 +3,17 @@ import { useCommandPaletteStore } from "../state/commandPalette";
 
 export default function CommandPalette() {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const listRef = useRef<HTMLUListElement | null>(null);
   const [open, setOpen] = useState(false);
-  const { commands, query, setQuery, clearQuery, filteredCommands, recordUse } =
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const { query, setQuery, clearQuery, filteredCommands, recordUse } =
     useCommandPaletteStore();
 
   const results = useMemo(() => filteredCommands(query), [filteredCommands, query]);
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [results]);
 
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
@@ -25,8 +31,36 @@ export default function CommandPalette() {
       setTimeout(() => inputRef.current?.focus(), 0);
     } else {
       clearQuery();
+      setSelectedIndex(0);
     }
   }, [open, clearQuery]);
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setSelectedIndex((prev) => Math.min(prev + 1, results.length - 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setSelectedIndex((prev) => Math.max(prev - 1, 0));
+    } else if (event.key === "Enter" && results[selectedIndex]) {
+      event.preventDefault();
+      const command = results[selectedIndex];
+      if (command.availability.pwa) {
+        recordUse(command.id);
+        command.onSelect();
+        setOpen(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!open || !listRef.current) return;
+
+    const selectedElement = listRef.current.children[selectedIndex] as HTMLElement;
+    if (selectedElement) {
+      selectedElement.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [selectedIndex, open]);
 
   return (
     <div className="relative">
@@ -48,6 +82,7 @@ export default function CommandPalette() {
                 ref={inputRef}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Type a command..."
                 className="h-12 w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
               />
@@ -59,14 +94,15 @@ export default function CommandPalette() {
               </button>
             </div>
 
-            <ul className="max-h-72 overflow-y-auto bg-slate-900/90">
+            <ul ref={listRef} className="max-h-72 overflow-y-auto bg-slate-900/90">
               {results.length === 0 && (
                 <li className="px-4 py-6 text-center text-xs text-slate-500">
                   No commands match &ldquo;{query}&rdquo; yet.
                 </li>
               )}
-              {results.map((command) => {
+              {results.map((command, index) => {
                 const isPwaAvailable = command.availability.pwa;
+                const isSelected = index === selectedIndex;
                 return (
                   <li
                     key={command.id}
@@ -75,7 +111,7 @@ export default function CommandPalette() {
                     <button
                       onClick={() => {
                         if (!isPwaAvailable) {
-                          console.info(`Command "${command.title}" is not available in the PWA.`);
+                          // Command not available in PWA - button is disabled
                           return;
                         }
                         recordUse(command.id);
@@ -85,7 +121,9 @@ export default function CommandPalette() {
                       disabled={!isPwaAvailable}
                       className={`flex w-full items-start justify-between gap-4 px-4 py-3 text-left text-sm transition ${
                         isPwaAvailable
-                          ? "text-slate-200 hover:bg-slate-800/60"
+                          ? isSelected
+                            ? "bg-slate-800/80 text-slate-200"
+                            : "text-slate-200 hover:bg-slate-800/60"
                           : "cursor-not-allowed bg-slate-900/80 text-slate-500 opacity-60"
                       }`}
                     >

@@ -5,10 +5,14 @@ use crate::core::{
     BoundingBox, Building, Dimensions, Equipment, EquipmentType, Floor, Position, Room, RoomType,
     SpatialProperties, Wing,
 };
-use crate::ifc::identifiers::derive_building_identifiers;
+use crate::ifc::{
+    geometry::{extract_all_references, extract_reference_id, parameters_from_definition},
+    identifiers::derive_building_identifiers,
+};
+use crate::utils::string::slugify;
 use chrono::Utc;
 use regex::Regex;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// IFC entity structure for hierarchy building
 /// This matches the structure from src/ifc/fallback.rs
@@ -24,15 +28,105 @@ pub struct IFCEntity {
 pub struct HierarchyBuilder {
     entities: Vec<IFCEntity>,
     entity_map: HashMap<String, IFCEntity>, // Map entity IDs to entities for reference resolution
+    aggregates: HashMap<String, Vec<String>>,
+    containment: HashMap<String, Vec<String>>,
+    rooms_by_structure: HashMap<String, Vec<String>>,
+    elements_by_structure: HashMap<String, Vec<String>>,
+    room_parents: HashMap<String, String>,
+    element_parents: HashMap<String, String>,
 }
 
 impl HierarchyBuilder {
     pub fn new(entities: Vec<IFCEntity>) -> Self {
         let entity_map: HashMap<String, IFCEntity> =
             entities.iter().map(|e| (e.id.clone(), e.clone())).collect();
+        let mut aggregates: HashMap<String, Vec<String>> = HashMap::new();
+        let mut containment: HashMap<String, Vec<String>> = HashMap::new();
+        let mut rooms_by_structure: HashMap<String, Vec<String>> = HashMap::new();
+        let mut elements_by_structure: HashMap<String, Vec<String>> = HashMap::new();
+        let mut room_parents: HashMap<String, String> = HashMap::new();
+        let mut element_parents: HashMap<String, String> = HashMap::new();
+
+        for entity in &entities {
+            match entity.entity_type.as_str() {
+                "IFCRELAGGREGATES" => {
+                    let params = parameters_from_definition(&entity.definition);
+                    if params.len() < 6 {
+                        continue;
+                    }
+                    if let Some(relating) = extract_reference_id(&params[4]) {
+                        let related = extract_all_references(&params[5]);
+                        if !related.is_empty() {
+                            aggregates
+                                .entry(relating.clone())
+                                .or_default()
+                                .extend(related.iter().cloned());
+
+                            for child in related {
+                                if let Some(child_entity) = entity_map.get(&child) {
+                                    if child_entity.entity_type == "IFCSPACE" {
+                                        rooms_by_structure
+                                            .entry(relating.clone())
+                                            .or_default()
+                                            .push(child.clone());
+                                        room_parents.insert(child.clone(), relating.clone());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                "IFCRELCONTAINEDINSPATIALSTRUCTURE" => {
+                    let params = parameters_from_definition(&entity.definition);
+                    if params.len() < 6 {
+                        continue;
+                    }
+
+                    let relating = match extract_reference_id(&params[4]) {
+                        Some(r) => r,
+                        None => continue,
+                    };
+                    let related = extract_all_references(&params[5]);
+                    if related.is_empty() {
+                        continue;
+                    }
+
+                    containment
+                        .entry(relating.clone())
+                        .or_default()
+                        .extend(related.iter().cloned());
+
+                    for child in related {
+                        if let Some(child_entity) = entity_map.get(&child) {
+                            if child_entity.entity_type == "IFCSPACE" {
+                                rooms_by_structure
+                                    .entry(relating.clone())
+                                    .or_default()
+                                    .push(child.clone());
+                                room_parents.insert(child.clone(), relating.clone());
+                            } else {
+                                elements_by_structure
+                                    .entry(relating.clone())
+                                    .or_default()
+                                    .push(child.clone());
+                                element_parents.insert(child.clone(), relating.clone());
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
         Self {
             entities,
             entity_map,
+            aggregates,
+            containment,
+            rooms_by_structure,
+            elements_by_structure,
+            room_parents,
+            element_parents,
         }
     }
 
@@ -196,32 +290,50 @@ impl HierarchyBuilder {
 
     /// Extract all IFCBUILDINGSTOREY entities as Floor objects
     pub fn extract_floors(&self) -> Result<Vec<Floor>, Box<dyn std::error::Error>> {
-        let storey_entities: Vec<&IFCEntity> = self
+        let mut floors = Vec::new();
+        for storey in self
             .entities
             .iter()
             .filter(|e| self.is_storey_entity(&e.entity_type))
-            .collect();
-
-        let mut floors = Vec::new();
-        for storey in storey_entities {
-            let floor = Floor {
-                id: storey.id.clone(),
-                name: self.extract_storey_name(storey)?,
-                level: self.extract_storey_level(storey)?,
-                elevation: None,
-                bounding_box: None,
-                wings: Vec::new(),
-                equipment: Vec::new(),
-                properties: HashMap::new(),
-            };
-            floors.push(floor);
+        {
+            floors.push(self.create_floor_from_entity(storey)?);
         }
-
         Ok(floors)
     }
 
+    fn create_floor_from_entity(
+        &self,
+        storey: &IFCEntity,
+    ) -> Result<Floor, Box<dyn std::error::Error>> {
+        let params = parameters_from_definition(&storey.definition);
+        let elevation = params
+            .iter()
+            .rev()
+            .filter_map(|param| param.trim().trim_matches('\'').parse::<f64>().ok())
+            .next();
+        Ok(Floor {
+            id: storey.id.clone(),
+            name: self.extract_storey_name(storey)?,
+            level: self.extract_storey_level(storey)?,
+            elevation,
+            bounding_box: None,
+            wings: Vec::new(),
+            equipment: Vec::new(),
+            properties: HashMap::new(),
+        })
+    }
+
+    fn ensure_default_wing(floor: &mut Floor) {
+        if floor.wings.is_empty() {
+            floor.wings.push(Wing::new("Default".to_string()));
+        }
+    }
+
     /// Extract all IFCSPACE entities as Room objects
-    pub fn extract_rooms(&self) -> Result<Vec<Room>, Box<dyn std::error::Error>> {
+    pub fn extract_rooms(
+        &self,
+        allowed_ids: Option<&HashSet<String>>,
+    ) -> Result<Vec<Room>, Box<dyn std::error::Error>> {
         let space_entities: Vec<&IFCEntity> = self
             .entities
             .iter()
@@ -230,6 +342,11 @@ impl HierarchyBuilder {
 
         let mut rooms = Vec::new();
         for space in space_entities {
+            if let Some(ids) = allowed_ids {
+                if !ids.contains(&space.id) {
+                    continue;
+                }
+            }
             // Extract placement reference from IFCSPACE definition
             // Format: IFCSPACE('Conference Room',$,#8,$,#20,$,$,.ELEMENT.,0.)
             // The placement is typically the 5th parameter (#20)
@@ -521,6 +638,7 @@ impl HierarchyBuilder {
     pub fn extract_equipment(
         &self,
         _rooms: &[Room],
+        allowed_ids: Option<&HashSet<String>>,
     ) -> Result<Vec<Equipment>, Box<dyn std::error::Error>> {
         let equipment_entities: Vec<&IFCEntity> = self
             .entities
@@ -531,6 +649,11 @@ impl HierarchyBuilder {
 
         let mut equipment_list = Vec::new();
         for eq in equipment_entities {
+            if let Some(ids) = allowed_ids {
+                if !ids.contains(&eq.id) {
+                    continue;
+                }
+            }
             // Extract actual coordinates from placement chain
             let (x, y, z) = self
                 .extract_equipment_coordinates(eq)
@@ -594,90 +717,269 @@ impl HierarchyBuilder {
             building_entity.map(|entity| entity.name.as_str()),
             fallback_id,
         );
+        let building_path = identifiers.canonical_path();
 
-        let mut floors = self.extract_floors()?;
-        let rooms = self.extract_rooms()?;
-        let equipment_list = self.extract_equipment(&rooms)?;
+        let mut floors: Vec<Floor> = Vec::new();
+        let mut floor_lookup: HashMap<String, usize> = HashMap::new();
 
-        // Assign rooms and equipment to floors
-        // Create a default wing for each floor to hold rooms
-        for floor in &mut floors {
-            // Create a default wing if the floor has no wings
-            if floor.wings.is_empty() {
-                floor.wings.push(Wing {
-                    id: format!("wing-{}", floor.level),
-                    name: "Default".to_string(),
-                    rooms: Vec::new(),
-                    equipment: Vec::new(),
-                    properties: HashMap::new(),
-                });
-            }
-        }
-
-        // Assign rooms to appropriate floor/wing
-        for room in rooms {
-            let floor_index = self.find_floor_for_room(&room.id, &floors);
-            if floor_index < floors.len() && !floors[floor_index].wings.is_empty() {
-                // Add room to the first (default) wing
-                floors[floor_index].wings[0].rooms.push(room);
-            }
-        }
-
-        // Assign equipment to appropriate floor
-        for equipment in equipment_list {
-            let assigned = self.assign_equipment_to_floor(&equipment, &mut floors);
-            if !assigned {
-                // If not assigned to a room, assign to first floor's equipment list
-                if !floors.is_empty() {
-                    floors[0].equipment.push(equipment);
+        let mut floor_ids: Vec<String> = Vec::new();
+        if let Some(building) = building_entity {
+            if let Some(children) = self.aggregates.get(&building.id) {
+                for child_id in children {
+                    if let Some(child_entity) = self.entity_map.get(child_id) {
+                        if self.is_storey_entity(&child_entity.entity_type) {
+                            floor_ids.push(child_id.clone());
+                        }
+                    }
                 }
             }
         }
 
-        // Build the hierarchy
-        let mut building =
-            Building::new(identifiers.display_name.clone(), identifiers.canonical_path());
+        if floor_ids.is_empty() {
+            floor_ids = self
+                .entities
+                .iter()
+                .filter(|e| self.is_storey_entity(&e.entity_type))
+                .map(|e| e.id.clone())
+                .collect();
+        }
 
-        // Add floors with populated rooms and equipment
+        for floor_id in &floor_ids {
+            if let Some(storey) = self.entity_map.get(floor_id) {
+                let mut floor = self.create_floor_from_entity(storey)?;
+                Self::ensure_default_wing(&mut floor);
+                floor_lookup.insert(floor_id.clone(), floors.len());
+                floors.push(floor);
+            }
+        }
+
+        if floors.is_empty() {
+            let mut default_floor = Floor::new("Default Floor".to_string(), 0);
+            Self::ensure_default_wing(&mut default_floor);
+            floor_lookup.insert(default_floor.id.clone(), 0);
+            floors.push(default_floor);
+        }
+
+        let mut used_paths: HashSet<String> = HashSet::new();
+        used_paths.insert(building_path.clone());
+        let mut floor_paths: HashMap<String, String> = HashMap::new();
+        for (structure_id, &index) in &floor_lookup {
+            if let Some(floor) = floors.get_mut(index) {
+                let mut floor_slug = slugify(&floor.name);
+                if floor_slug.is_empty() {
+                    floor_slug = format!("floor-{}", floor.level);
+                }
+                let candidate = format!("{}/{}", building_path, floor_slug);
+                let canonical = ensure_unique_path(&candidate, &mut used_paths);
+                floor
+                    .properties
+                    .insert("canonical_path".to_string(), canonical.clone());
+                floor_paths.insert(structure_id.clone(), canonical);
+            }
+        }
+
+        let room_ids: HashSet<String> = self.room_parents.keys().cloned().collect();
+        let mut rooms = if room_ids.is_empty() {
+            self.extract_rooms(None)?
+        } else {
+            self.extract_rooms(Some(&room_ids))?
+        };
+
+        let mut rooms_map: HashMap<String, Room> =
+            rooms.drain(..).map(|room| (room.id.clone(), room)).collect();
+        let mut room_location: HashMap<String, (usize, usize, usize)> = HashMap::new();
+
+        for (structure_id, room_list) in &self.rooms_by_structure {
+            if let Some(&floor_idx) = floor_lookup.get(structure_id) {
+                let floor = floors.get_mut(floor_idx).unwrap();
+                Self::ensure_default_wing(floor);
+                let wing_idx = 0;
+                for room_id in room_list {
+                if let Some(mut room) = rooms_map.remove(room_id) {
+                    let base_path = floor_paths
+                        .get(structure_id)
+                        .cloned()
+                        .or_else(|| {
+                            floor
+                                .properties
+                                .get("canonical_path")
+                                .cloned()
+                        })
+                        .unwrap_or_else(|| building_path.clone());
+
+                    let mut room_slug = slugify(&room.name);
+                    if room_slug.is_empty() {
+                        room_slug = room.id.to_lowercase();
+                    }
+                    let candidate = format!("{}/{}", base_path, room_slug);
+                    let canonical = ensure_unique_path(&candidate, &mut used_paths);
+                    room
+                        .properties
+                        .insert("canonical_path".to_string(), canonical.clone());
+
+                    let position = floor.wings[wing_idx].rooms.len();
+                    let room_id_clone = room.id.clone();
+                    floor.wings[wing_idx].rooms.push(room);
+                    room_location.insert(room_id_clone, (floor_idx, wing_idx, position));
+                    }
+                }
+            }
+        }
+
+        if !rooms_map.is_empty() {
+            if let Some(first_floor) = floors.first_mut() {
+                Self::ensure_default_wing(first_floor);
+                let wing_idx = 0;
+                let floor_idx = 0;
+            let base_path = first_floor
+                .properties
+                .get("canonical_path")
+                .cloned()
+                .unwrap_or_else(|| building_path.clone());
+            for (_, mut room) in rooms_map.into_iter() {
+                let mut room_slug = slugify(&room.name);
+                if room_slug.is_empty() {
+                    room_slug = room.id.to_lowercase();
+                }
+                let candidate = format!("{}/{}", base_path, room_slug);
+                let canonical = ensure_unique_path(&candidate, &mut used_paths);
+                room
+                    .properties
+                    .insert("canonical_path".to_string(), canonical.clone());
+                let position = first_floor.wings[wing_idx].rooms.len();
+                let room_id_clone = room.id.clone();
+                first_floor.wings[wing_idx].rooms.push(room);
+                room_location.insert(room_id_clone, (floor_idx, wing_idx, position));
+                }
+            }
+        }
+
+        let equipment_ids: HashSet<String> = self.element_parents.keys().cloned().collect();
+        let mut equipment_list = if equipment_ids.is_empty() {
+            self.extract_equipment(&[], None)?
+        } else {
+            self.extract_equipment(&[], Some(&equipment_ids))?
+        };
+
+        for mut equipment in equipment_list.drain(..) {
+            let mut placed = false;
+            if let Some(parent_id) = self.element_parents.get(&equipment.id) {
+                if let Some(&(floor_idx, wing_idx, room_idx)) = room_location.get(parent_id) {
+                    let floor = floors.get_mut(floor_idx).unwrap();
+                let room_id = floor.wings[wing_idx].rooms[room_idx].id.clone();
+                let room_path = floor.wings[wing_idx].rooms[room_idx]
+                    .properties
+                    .get("canonical_path")
+                    .cloned()
+                    .unwrap_or_else(|| {
+                        floor
+                            .properties
+                            .get("canonical_path")
+                            .cloned()
+                            .unwrap_or_else(|| building_path.clone())
+                    });
+                let mut slug = slugify(&equipment.name);
+                if slug.is_empty() {
+                    slug = equipment.id.to_lowercase();
+                }
+                let candidate = format!("{}/{}", room_path, slug);
+                let canonical = ensure_unique_path(&candidate, &mut used_paths);
+                equipment.path = canonical.clone();
+                equipment
+                    .properties
+                    .insert("canonical_path".to_string(), canonical.clone());
+                equipment.room_id = Some(room_id.clone());
+                floor.wings[wing_idx].rooms[room_idx]
+                        .equipment
+                        .push(equipment.clone());
+                floor.equipment.push(equipment);
+                    placed = true;
+                } else if let Some(&floor_idx) = floor_lookup.get(parent_id) {
+                let floor = floors.get_mut(floor_idx).unwrap();
+                let floor_path = floor
+                    .properties
+                    .get("canonical_path")
+                    .cloned()
+                    .unwrap_or_else(|| building_path.clone());
+                let mut slug = slugify(&equipment.name);
+                if slug.is_empty() {
+                    slug = equipment.id.to_lowercase();
+                }
+                let candidate = format!("{}/{}", floor_path, slug);
+                let canonical = ensure_unique_path(&candidate, &mut used_paths);
+                equipment.path = canonical.clone();
+                equipment
+                    .properties
+                    .insert("canonical_path".to_string(), canonical.clone());
+                floor.equipment.push(equipment);
+                    placed = true;
+                } else if let Some(room_parent) = self.room_parents.get(parent_id) {
+                    if let Some(&(floor_idx, wing_idx, room_idx)) =
+                        room_location.get(room_parent)
+                    {
+                        let floor = floors.get_mut(floor_idx).unwrap();
+                    let room_id = floor.wings[wing_idx].rooms[room_idx].id.clone();
+                    let room_path = floor.wings[wing_idx].rooms[room_idx]
+                        .properties
+                        .get("canonical_path")
+                        .cloned()
+                        .unwrap_or_else(|| {
+                            floor
+                                .properties
+                                .get("canonical_path")
+                                .cloned()
+                                .unwrap_or_else(|| building_path.clone())
+                        });
+                    let mut slug = slugify(&equipment.name);
+                    if slug.is_empty() {
+                        slug = equipment.id.to_lowercase();
+                    }
+                    let candidate = format!("{}/{}", room_path, slug);
+                    let canonical = ensure_unique_path(&candidate, &mut used_paths);
+                    equipment.path = canonical.clone();
+                    equipment
+                        .properties
+                        .insert("canonical_path".to_string(), canonical.clone());
+                    equipment.room_id = Some(room_id.clone());
+                    floor.wings[wing_idx].rooms[room_idx]
+                            .equipment
+                            .push(equipment.clone());
+                    floor.equipment.push(equipment);
+                        placed = true;
+                    }
+                }
+            }
+
+            if !placed {
+            if let Some(first_floor) = floors.first_mut() {
+                let floor_path = first_floor
+                    .properties
+                    .get("canonical_path")
+                    .cloned()
+                    .unwrap_or_else(|| building_path.clone());
+                let mut slug = slugify(&equipment.name);
+                if slug.is_empty() {
+                    slug = equipment.id.to_lowercase();
+                }
+                let candidate = format!("{}/{}", floor_path, slug);
+                let canonical = ensure_unique_path(&candidate, &mut used_paths);
+                equipment.path = canonical.clone();
+                equipment
+                    .properties
+                    .insert("canonical_path".to_string(), canonical.clone());
+                first_floor.equipment.push(equipment);
+                }
+            }
+        }
+
+        let mut building =
+        Building::new(identifiers.display_name.clone(), building_path.clone());
+
         for floor in floors {
             building.add_floor(floor);
         }
 
         Ok(building)
-    }
-
-    /// Find appropriate floor for a room based on ID pattern
-    fn find_floor_for_room(&self, room_id: &str, floors: &[Floor]) -> usize {
-        // Try to match room ID pattern with floor
-        // This is a simple heuristic - can be enhanced with actual IFC reference parsing
-        for (index, floor) in floors.iter().enumerate() {
-            let room_prefix = if room_id.len() >= 3 {
-                &room_id[..3]
-            } else {
-                room_id
-            };
-            if floor.id.contains(room_prefix) || room_id.contains(&floor.id) {
-                return index;
-            }
-        }
-        0 // Default to first floor
-    }
-
-    /// Assign equipment to appropriate floor based on room
-    fn assign_equipment_to_floor(&self, equipment: &Equipment, floors: &mut [Floor]) -> bool {
-        if let Some(ref room_id) = equipment.room_id {
-            for floor in floors.iter_mut() {
-                // Search for room in all wings
-                for wing in &mut floor.wings {
-                    if wing.rooms.iter().any(|r| r.id == *room_id) {
-                        // Add to wing's equipment
-                        wing.equipment.push(equipment.clone());
-                        return true;
-                    }
-                }
-            }
-        }
-        false
     }
 
     /// Helper: Check if entity is a storey (floor)
@@ -788,3 +1090,19 @@ impl HierarchyBuilder {
         }
     }
 }
+
+fn ensure_unique_path(base: &str, used: &mut HashSet<String>) -> String {
+    if used.insert(base.to_string()) {
+        base.to_string()
+    } else {
+        let mut index = 1;
+        loop {
+            let candidate = format!("{}-{}", base, index);
+            if used.insert(candidate.clone()) {
+                return candidate;
+            }
+            index += 1;
+        }
+    }
+}
+

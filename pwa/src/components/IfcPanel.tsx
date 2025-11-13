@@ -1,19 +1,22 @@
 import { ChangeEvent, FormEvent, useState } from "react";
 import { useIfcStore } from "../state/ifc";
-import { useCollaborationStore } from "../state/collaboration";
+import { useAgentStore } from "../modules/agent/state/agentStore";
 
 export default function IfcPanel() {
   const {
     importing,
     exporting,
+    importProgress,
+    exportProgress,
+    progressMessage,
     error,
     lastImport,
     lastExport,
     importIfc,
     exportIfc,
-    clearError
+    clearError,
   } = useIfcStore();
-  const { agentStatus } = useCollaborationStore();
+  const { connectionState } = useAgentStore();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [exportFilename, setExportFilename] = useState("building.ifc");
   const [useDelta, setUseDelta] = useState(true);
@@ -51,16 +54,16 @@ export default function IfcPanel() {
         <div className="flex items-center gap-2 text-[10px] uppercase tracking-wide text-slate-100">
           <span
             className={`rounded-md px-2 py-0.5 ${
-              agentStatus === "connected"
+              connectionState.status === "connected"
                 ? "bg-emerald-500/40"
-                : agentStatus === "connecting"
+                : connectionState.status === "connecting"
                 ? "bg-sky-500/40"
-                : agentStatus === "error"
+                : connectionState.status === "error"
                 ? "bg-red-500/40"
                 : "bg-slate-800"
             }`}
           >
-            Agent {agentStatus}
+            Agent {connectionState.status}
           </span>
         </div>
       </header>
@@ -95,6 +98,17 @@ export default function IfcPanel() {
           >
             {importing ? "Importing…" : "Import IFC"}
           </button>
+          {importing && (
+            <div className="space-y-2">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+                <div
+                  className="h-full bg-sky-500 transition-all duration-300"
+                  style={{ width: `${importProgress}%` }}
+                />
+              </div>
+              <p className="text-[11px] text-slate-400">{progressMessage}</p>
+            </div>
+          )}
           {lastImport && (
             <dl className="space-y-1 rounded border border-slate-800 bg-slate-950/70 p-3">
               <div className="flex justify-between">
@@ -153,6 +167,17 @@ export default function IfcPanel() {
           >
             {exporting ? "Exporting…" : "Export IFC"}
           </button>
+          {exporting && (
+            <div className="space-y-2">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+                <div
+                  className="h-full bg-sky-500 transition-all duration-300"
+                  style={{ width: `${exportProgress}%` }}
+                />
+              </div>
+              <p className="text-[11px] text-slate-400">{progressMessage}</p>
+            </div>
+          )}
           {lastExport && (
             <div className="space-y-1 rounded border border-slate-800 bg-slate-950/70 p-3">
               <p>

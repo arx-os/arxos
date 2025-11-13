@@ -91,6 +91,9 @@ This will:
 - Extract building hierarchy (floors, rooms, equipment)
 - Generate YAML building data
 - Display a summary
+- Generate canonical paths for every floor, room, and equipment (`/building/<slug>/floor-*/...`) for Git-friendly addressing
+- Compute real-world placement and bounding boxes from IFC geometry (no more hash-based fallbacks)
+- Run regression checks against the fixture suite (`tests/fixtures/ifc/`) to ensure importer, renderers, and exporters stay in sync
 
 ### 2. Explore Your Building Data
 

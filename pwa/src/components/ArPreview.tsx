@@ -78,7 +78,6 @@ export default function ArPreview() {
         throw new Error(`Unexpected response ${response.status}`);
       }
       const payload = await response.json();
-      console.info("Demo overlay payload", payload);
       setOverlayReady(true);
       setKnownIssues(
         Array.isArray(payload?.issues)

@@ -49,7 +49,7 @@ describe("ArPreview", () => {
       }
     });
 
-    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+    vi.spyOn(window, "fetch").mockResolvedValueOnce({
       ok: true,
       json: async () => ({ anchors: [], metadata: "demo" })
     } as Response);
@@ -78,6 +78,6 @@ describe("ArPreview", () => {
       once: true
     });
 
-    (global.fetch as unknown as vi.Mock).mockRestore();
+    vi.mocked(window.fetch).mockRestore();
   });
 });

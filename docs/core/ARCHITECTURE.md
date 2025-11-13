@@ -202,6 +202,17 @@ pub enum ParticleType {
 }
 ```
 
+### 5. IFC Processing Pipeline (2025 refresh)
+
+**Purpose**: Generate trustworthy building models from raw IFC assets.
+
+**Recent Enhancements**:
+- Absolute placement resolution via `PlacementResolver` (handles `IfcLocalPlacement → IfcAxis2Placement3D → IfcCartesianPoint` with rotation support).
+- Real geometry extraction for rooms and equipment (`IfcExtrudedAreaSolid`, profile traversal) with accurate bounding boxes.
+- Deterministic hierarchy mapping using `IFCRelContainedInSpatialStructure` and `IFCRelAggregates`; equipment inherits canonical parent relationships.
+- Canonical path generation for building → floor → room → equipment that aligns with the ArxAddress scheme (`/building/<slug>/floor-*/…`).
+- Fixture-backed regression tests (`tests/fixtures/ifc/simple.ifc`) validate the full pipeline, renderers, and exporters to guard against regressions.
+
 ### 5. Animation System (`src/render3d/animation.rs`)
 
 **Purpose**: Smooth animations and transitions

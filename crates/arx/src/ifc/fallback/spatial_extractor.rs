@@ -3,6 +3,7 @@
 //! Extracts spatial information (position, bounding box) from IFC entities.
 
 use super::types::IFCEntity;
+use crate::ifc::geometry::PlacementResolver;
 use crate::spatial::{BoundingBox3D, Point3D, SpatialEntity};
 
 /// Extracts spatial data from IFC entities
@@ -28,29 +29,28 @@ impl SpatialExtractor {
     }
 
     /// Extract spatial data from an IFC entity
-    pub fn extract_spatial_data(&self, entity: &IFCEntity) -> Option<SpatialEntity> {
+    pub fn extract_spatial_data(
+        &self,
+        entity: &IFCEntity,
+        resolver: &PlacementResolver,
+    ) -> Option<SpatialEntity> {
         if !self.is_spatial_entity(&entity.entity_type) {
             return None;
         }
 
-        // Parse real coordinate data from the STEP definition
-        let position = self.parse_entity_coordinates(entity);
+        // Resolve coordinates via placement resolver
+        let position = self.resolve_entity_position(entity, resolver);
 
-        // Create bounding box based on entity type
-        let size = self.get_entity_size(&entity.entity_type);
-
-        let bounding_box = BoundingBox3D::new(
-            Point3D::new(
-                position.x - size.0 / 2.0,
-                position.y - size.1 / 2.0,
-                position.z - size.2 / 2.0,
-            ),
-            Point3D::new(
-                position.x + size.0 / 2.0,
-                position.y + size.1 / 2.0,
-                position.z + size.2 / 2.0,
-            ),
-        );
+        let bounding_box = if let Some((min_vec, max_vec)) =
+            resolver.compute_entity_bounding_box(entity)
+        {
+            BoundingBox3D::new(
+                Point3D::new(min_vec.x, min_vec.y, min_vec.z),
+                Point3D::new(max_vec.x, max_vec.y, max_vec.z),
+            )
+        } else {
+            self.default_bounding_box(&position, &entity.entity_type)
+        };
 
         Some(
             SpatialEntity::new(
@@ -63,6 +63,34 @@ impl SpatialExtractor {
         )
     }
 
+    fn resolve_entity_position(
+        &self,
+        entity: &IFCEntity,
+        resolver: &PlacementResolver,
+    ) -> Point3D {
+        if let Some(transform) = resolver.resolve_entity_transform(entity) {
+            transform.to_point()
+        } else {
+            self.generate_fallback_coordinates(entity)
+        }
+    }
+
+    fn default_bounding_box(&self, center: &Point3D, entity_type: &str) -> BoundingBox3D {
+        let size = self.get_entity_size(entity_type);
+        BoundingBox3D::new(
+            Point3D::new(
+                center.x - size.0 / 2.0,
+                center.y - size.1 / 2.0,
+                center.z - size.2 / 2.0,
+            ),
+            Point3D::new(
+                center.x + size.0 / 2.0,
+                center.y + size.1 / 2.0,
+                center.z + size.2 / 2.0,
+            ),
+        )
+    }
+
     /// Get default size for entity type
     fn get_entity_size(&self, entity_type: &str) -> (f64, f64, f64) {
         match entity_type {
@@ -71,34 +99,6 @@ impl SpatialExtractor {
             "IFCWALL" => (0.2, 10.0, 3.0),        // Wall dimensions
             _ => (1.0, 1.0, 1.0),                 // Default size
         }
-    }
-
-    /// Parse coordinates from entity definition by following placement references
-    fn parse_entity_coordinates(&self, entity: &IFCEntity) -> Point3D {
-        // Look for placement reference in the entity definition
-        if let Some(placement_ref) = self.extract_placement_reference(&entity.definition) {
-            // For now, return coordinates based on the placement reference ID
-            // In a full implementation, we would parse the entire placement chain
-            match placement_ref.as_str() {
-                "14" => Point3D::new(10.5, 8.2, 2.7), // Room-101 coordinates
-                "20" => Point3D::new(10.5, 8.2, 2.7), // VAV-301 coordinates
-                _ => self.generate_fallback_coordinates(entity),
-            }
-        } else {
-            self.generate_fallback_coordinates(entity)
-        }
-    }
-
-    /// Extract placement reference from entity definition
-    fn extract_placement_reference(&self, definition: &str) -> Option<String> {
-        // Look for pattern like #14 in the definition
-        if let Some(start) = definition.find(",#") {
-            if let Some(end) = definition[start + 2..].find(',') {
-                let ref_id = &definition[start + 2..start + 2 + end];
-                return Some(ref_id.to_string());
-            }
-        }
-        None
     }
 
     /// Generate fallback coordinates when placement parsing fails

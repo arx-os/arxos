@@ -5,7 +5,6 @@ import {
   parseArScan,
   validateArScan,
   type WasmArScanData,
-  type WasmEquipmentInfo,
   type WasmOpening,
   type WasmWall
 } from "../lib/wasm";
@@ -83,8 +82,6 @@ const createDefaultLayout = (): LayoutState => ({
   walls: [],
   openings: []
 });
-
-const DEFAULT_LAYOUT = createDefaultLayout();
 
 const SAMPLE_SCAN = JSON.stringify(
   {

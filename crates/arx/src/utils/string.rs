@@ -74,5 +74,14 @@ mod tests {
         assert_eq!(slugify(""), "");
         assert_eq!(slugify("!!!"), "");
     }
+
+    #[test]
+    fn slugify_produces_safe_characters() {
+        let slug = slugify("ABC! @123");
+
+        assert!(slug
+            .chars()
+            .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-'));
+    }
 }
 

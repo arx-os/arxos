@@ -47,29 +47,6 @@ export default function WebGlViewer() {
     disableFlag ||
     (typeof navigator !== "undefined" && (navigator.webdriver || /HeadlessChrome/i.test(navigator.userAgent)));
 
-  if (skipRenderer) {
-    return (
-      <section
-        className="rounded-xl border border-slate-800 bg-slate-900/70 p-6 shadow-lg shadow-slate-900/40"
-        data-testid="panel-webgl"
-      >
-        <header className="mb-3 flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-slate-100">3D Scan Viewer</h2>
-            <p className="text-xs text-slate-400">
-              WebGL rendering is disabled in this environment. Mesh data is still available via WASM.
-            </p>
-          </div>
-        </header>
-        <div className="relative h-[360px] w-full overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
-          <div className="absolute inset-0 flex items-center justify-center text-xs text-slate-300">
-            WebGL viewer disabled for automation.
-          </div>
-        </div>
-      </section>
-    );
-  }
-
   useEffect(() => {
     if (skipRenderer || !containerRef.current || !canvasRef.current || context) {
       return;
@@ -132,7 +109,7 @@ export default function WebGlViewer() {
       cancelAnimationFrame(frameId);
       renderer.dispose();
     };
-  }, [context]);
+  }, [context, skipRenderer]);
 
   useEffect(() => {
     if (skipRenderer || !context || !mesh) {
@@ -184,7 +161,30 @@ export default function WebGlViewer() {
       const cloud = new THREE.Points(cloudGeometry, cloudMaterial);
       context.group.add(cloud);
     }
-  }, [context, mesh]);
+  }, [context, mesh, skipRenderer]);
+
+  if (skipRenderer) {
+    return (
+      <section
+        className="rounded-xl border border-slate-800 bg-slate-900/70 p-6 shadow-lg shadow-slate-900/40"
+        data-testid="panel-webgl"
+      >
+        <header className="mb-3 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-slate-100">3D Scan Viewer</h2>
+            <p className="text-xs text-slate-400">
+              WebGL rendering is disabled in this environment. Mesh data is still available via WASM.
+            </p>
+          </div>
+        </header>
+        <div className="relative h-[360px] w-full overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
+          <div className="absolute inset-0 flex items-center justify-center text-xs text-slate-300">
+            WebGL viewer disabled for automation.
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section

@@ -62,6 +62,17 @@ fi
 
 echo ""
 
+# Run IFC regression suite (ensures importer + downstream integrations stay healthy)
+echo -e "${BLUE}🏗️  Running IFC regression tests...${NC}"
+if cargo test --test ifc_golden_tests --test downstream_validation_tests; then
+    echo -e "${GREEN}✅ IFC regression tests passed${NC}"
+else
+    echo -e "${RED}❌ IFC regression tests failed${NC}"
+    exit 1
+fi
+
+echo ""
+
 # Build benchmarks
 echo -e "${BLUE}⚡ Building benchmarks...${NC}"
 if cargo bench --no-run; then

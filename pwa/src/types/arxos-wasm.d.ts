@@ -80,6 +80,62 @@ declare module "@arxos-wasm" {
     boundsMax: [number, number, number];
   };
 
+  // Geometry types (M03)
+  export type WasmCoordinate = {
+    x: number;
+    y: number;
+    z?: number;
+  };
+
+  export type WasmBoundingBox = {
+    min: WasmCoordinate;
+    max: WasmCoordinate;
+  };
+
+  export type WasmBuildingSummary = {
+    path: string;
+    name: string;
+    floor_count: number;
+    last_modified: string;
+  };
+
+  export type WasmEquipment = {
+    id: string;
+    name: string;
+    equipment_type: string;
+    position: WasmCoordinate;
+    bounds?: WasmBoundingBox;
+    properties: Record<string, unknown>;
+  };
+
+  export type WasmRoom = {
+    id: string;
+    name: string;
+    room_type: string;
+    bounds: WasmBoundingBox;
+    polygon?: WasmCoordinate[];
+    equipment: WasmEquipment[];
+  };
+
+  export type WasmFloor = {
+    id: string;
+    name: string;
+    level: number;
+    elevation: number;
+    height: number;
+    rooms: WasmRoom[];
+    bounds: WasmBoundingBox;
+  };
+
+  export type WasmBuilding = {
+    path: string;
+    name: string;
+    address?: string;
+    floors: WasmFloor[];
+    metadata: Record<string, unknown>;
+  };
+
+  // Command & AR functions
   export function arxos_version(): string;
   export function parse_ar_scan(json: string): WasmArScanData;
   export function extract_equipment(json: string): WasmEquipmentInfo[];
@@ -88,5 +144,11 @@ declare module "@arxos-wasm" {
   export function command_palette(): Promise<WasmCommandEntry[]>;
   export function command_categories(): Promise<WasmCommandCategory[]>;
   export function command_details(name: string): Promise<WasmCommandEntry>;
+
+  // Geometry functions (M03)
+  export function get_buildings(): Promise<WasmBuildingSummary[]>;
+  export function get_building(path: string): Promise<WasmBuilding>;
+  export function get_floor(buildingPath: string, floorId: string): Promise<WasmFloor>;
+  export function get_floor_bounds(buildingPath: string, floorId: string): Promise<WasmBoundingBox>;
 }
 

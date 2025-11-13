@@ -72,6 +72,14 @@ jobs:
         working-directory: pwa
         run: npx playwright install --with-deps chromium
 
+      - name: Lint code
+        working-directory: pwa
+        run: npm run lint
+
+      - name: Check code formatting
+        working-directory: pwa
+        run: npm run format:check
+
       - name: Type check
         working-directory: pwa
         run: npm run typecheck

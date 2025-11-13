@@ -1,12 +1,5 @@
-[workspace]
-members = [
-    "crates/arx",
-    "crates/arx-cli", 
-    "crates/arx-agent",
-]
-resolver = "2"
-
-[workspace.package]
+[package]
+name = "arx"
 version = "2.0.0"
 edition = "2021"
 authors = ["Joel <joel@arxos.io>"]
@@ -14,7 +7,11 @@ license = "MIT"
 repository = "https://github.com/arx-os/arxos"
 description = "ArxOS - Git for Buildings"
 
-[workspace.dependencies]
+[[bin]]
+name = "arx"
+path = "src/main.rs"
+
+[dependencies]
 # Core dependencies
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_yaml = "0.9"
@@ -23,31 +20,22 @@ chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
 thiserror = "1.0"
 anyhow = "1.0"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
 
 # Git dependencies
 git2 = { version = "0.20", features = ["vendored-openssl"] }
 url = "2.4"
 
 # Spatial dependencies
-nalgebra = "0.32"
+nalgebra = { version = "0.32", features = ["serde-serialize"] }
 geo = "0.25"
 rstar = "0.10"
 
-# Terminal dependencies
-crossterm = "0.27"
-ratatui = "0.24"
-rand = "0.8"
-
 # CLI dependencies
 clap = { version = "4.4", features = ["derive"] }
-env_logger = "0.10"
-log = "0.4"
 glob = "0.3"
-tokio = { version = "1.35", features = ["full"] }
 regex = "1.10"
 sha2 = "0.10"
+log = "0.4"
 
 # Performance dependencies
 rayon = "1.8"
@@ -59,7 +47,24 @@ notify = "6.1"
 num_cpus = "1.16"
 tempfile = "3.8"
 
-# Development dependencies
+# Optional feature dependencies
+tokio = { version = "1.35", features = ["full"], optional = true }
+tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"], optional = true }
+crossterm = { version = "0.27", optional = true }
+ratatui = { version = "0.24", optional = true }
+bevy = { version = "0.14", optional = true, features = ["dynamic_linking"] }
+axum = { version = "0.7", features = ["ws", "macros"], optional = true }
+futures-util = { version = "0.3", optional = true }
+
+[features]
+default = ["tui"]
+tui = ["crossterm", "ratatui"]
+render3d = ["bevy"]
+agent = ["tokio", "tracing", "tracing-subscriber", "axum", "futures-util"]
+full = ["tui", "render3d", "agent"]
+
+[dev-dependencies]
 criterion = "0.5"
 proptest = "1.4"
 serial_test = "3.0"

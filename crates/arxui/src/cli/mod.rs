@@ -106,6 +106,9 @@ pub enum Commands {
         /// Enable spatial index integration for enhanced queries
         #[arg(long)]
         spatial_index: bool,
+        /// Enable interactive WebGL-style point cloud renderer with WASD+mouse controls
+        #[arg(long)]
+        interactive: bool,
     },
     /// Interactive 3D building visualization with real-time controls
     Interactive {

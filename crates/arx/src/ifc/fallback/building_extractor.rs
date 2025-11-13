@@ -28,7 +28,7 @@ impl BuildingExtractor {
         );
 
         Building::new(
-            identifiers.display_name,
+            identifiers.display_name.clone(),
             identifiers.canonical_path(),
         )
     }

@@ -3,6 +3,7 @@
 
 use crate::render3d::{
     format_scene_output, Building3DRenderer, ProjectionType, Render3DConfig, ViewAngle,
+    PointCloudRenderer, building_to_point_cloud,
 };
 use crate::utils::loading::load_building_data;
 use log::{info, warn};
@@ -32,6 +33,8 @@ pub struct RenderCommandConfig {
     pub scale: f64,
     /// Build spatial index for enhanced queries
     pub spatial_index: bool,
+    /// Use interactive WebGL-style point cloud renderer
+    pub interactive: bool,
 }
 
 /// Handle the render command for both 2D and 3D building visualization
@@ -106,6 +109,21 @@ pub fn handle_render(config: RenderCommandConfig) -> Result<(), Box<dyn std::err
         }
 
         let scene = renderer.render_3d_advanced()?;
+
+        // Check if interactive mode is requested
+        if config.interactive {
+            info!("🎮 Starting interactive WebGL-style point cloud renderer");
+            println!("🎮 Starting interactive WebGL-style point cloud renderer");
+            println!("Controls: WASD=move, arrows=orbit, +/-=zoom, q=quit");
+            
+            // Convert scene to point cloud
+            let points = building_to_point_cloud(&scene);
+            println!("📊 Generated {} points from building data", points.len());
+            
+            // Create and run interactive renderer
+            let mut cloud_renderer = PointCloudRenderer::new(points);
+            return cloud_renderer.run_interactive().map_err(|e| e.into());
+        }
 
         match config.format.to_lowercase().as_str() {
             "json" => {

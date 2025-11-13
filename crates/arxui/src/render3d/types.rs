@@ -47,6 +47,19 @@ pub struct Camera3D {
     pub far_clip: f64,
 }
 
+impl Default for Camera3D {
+    fn default() -> Self {
+        Self {
+            position: Point3D::new(0.0, 0.0, 10.0),
+            target: Point3D::new(0.0, 0.0, 0.0),
+            up: Vector3D { x: 0.0, y: 1.0, z: 0.0 },
+            fov: 45.0,
+            near_clip: 0.1,
+            far_clip: 1000.0,
+        }
+    }
+}
+
 /// 3D vector for camera and transformations
 #[derive(Debug, Clone)]
 pub struct Vector3D {

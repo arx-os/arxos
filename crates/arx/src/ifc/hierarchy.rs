@@ -892,7 +892,7 @@ impl HierarchyBuilder {
                 floor.wings[wing_idx].rooms[room_idx]
                         .equipment
                         .push(equipment.clone());
-                floor.equipment.push(equipment);
+                floor.equipment.push(equipment.clone());
                     placed = true;
                 } else if let Some(&floor_idx) = floor_lookup.get(parent_id) {
                 let floor = floors.get_mut(floor_idx).unwrap();
@@ -911,7 +911,7 @@ impl HierarchyBuilder {
                 equipment
                     .properties
                     .insert("canonical_path".to_string(), canonical.clone());
-                floor.equipment.push(equipment);
+                floor.equipment.push(equipment.clone());
                     placed = true;
                 } else if let Some(room_parent) = self.room_parents.get(parent_id) {
                     if let Some(&(floor_idx, wing_idx, room_idx)) =
@@ -944,7 +944,7 @@ impl HierarchyBuilder {
                     floor.wings[wing_idx].rooms[room_idx]
                             .equipment
                             .push(equipment.clone());
-                    floor.equipment.push(equipment);
+                    floor.equipment.push(equipment.clone());
                         placed = true;
                     }
                 }
@@ -967,7 +967,7 @@ impl HierarchyBuilder {
                 equipment
                     .properties
                     .insert("canonical_path".to_string(), canonical.clone());
-                first_floor.equipment.push(equipment);
+                first_floor.equipment.push(equipment.clone());
                 }
             }
         }

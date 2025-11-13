@@ -1,0 +1,168 @@
+   Compiling serde_core v1.0.228
+   Compiling windows-sys v0.61.2
+   Compiling byteorder v1.5.0
+   Compiling bytemuck v1.24.0
+   Compiling log v0.4.28
+   Compiling windows-sys v0.60.2
+   Compiling digest v0.10.7
+   Compiling tracing-core v0.1.34
+   Compiling hash32 v0.2.1
+   Compiling safe_arch v0.7.4
+   Compiling sha2 v0.10.9
+   Compiling heapless v0.7.17
+   Compiling tracing v0.1.41
+   Compiling wide v0.7.33
+   Compiling rstar v0.10.0
+   Compiling filetime v0.2.26
+   Compiling winapi-util v0.1.11
+   Compiling tempfile v3.23.0
+   Compiling same-file v1.0.6
+   Compiling walkdir v2.5.0
+   Compiling geo-types v0.7.17
+   Compiling notify v6.1.1
+   Compiling geo v0.25.1
+   Compiling simba v0.8.1
+   Compiling serde v1.0.228
+   Compiling serde_json v1.0.145
+   Compiling serde_spanned v0.6.9
+   Compiling toml_datetime v0.6.11
+   Compiling url v2.5.7
+   Compiling chrono v0.4.42
+   Compiling uuid v1.18.1
+   Compiling serde_yaml v0.9.34+deprecated
+   Compiling toml_edit v0.22.27
+   Compiling git2 v0.20.2
+   Compiling toml v0.8.23
+   Compiling nalgebra v0.32.6
+   Compiling arx v2.0.0 (C:\Users\215724\source\repos\arxos\crates\arx)
+error[E0432]: unresolved imports `crate::ifc::geometry::extract_reference_id`, `crate::ifc::geometry::parameters_from_definition`
+ --> crates\arx\src\ifc\hierarchy.rs:9:40
+  |
+9 |     geometry::{extract_all_references, extract_reference_id, parameters_from_definition},
+  |                                        ^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^ no `parameters_from_definition` in `ifc::geometry`
+  |                                        |
+  |                                        no `extract_reference_id` in `ifc::geometry`
+
+error[E0425]: cannot find function `parameters_from_definition` in this scope
+  --> crates\arx\src\ifc\geometry.rs:73:22
+   |
+73 |         let params = parameters_from_definition(&entity.definition);
+   |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+   |
+help: consider using the associated function on `Self`
+   |
+73 |         let params = Self::parameters_from_definition(&entity.definition);
+   |                      ++++++
+
+error[E0425]: cannot find function `extract_reference_id` in this scope
+  --> crates\arx\src\ifc\geometry.rs:75:38
+   |
+75 |             if let Some(reference) = extract_reference_id(&param) {
+   |                                      ^^^^^^^^^^^^^^^^^^^^ not found in this scope
+   |
+help: consider using the associated function on `Self`
+   |
+75 |             if let Some(reference) = Self::extract_reference_id(&param) {
+   |                                      ++++++
+
+error[E0277]: the size for values of type `str` cannot be known at compilation time
+  --> crates\arx\src\ifc\geometry.rs:75:20
+   |
+75 |             if let Some(reference) = extract_reference_id(&param) {
+   |                    ^^^^^^^^^^^^^^^ doesn't have a size known at compile-time
+   |
+   = help: the trait `Sized` is not implemented for `str`
+note: required by a bound in `std::prelude::v1::Some`
+  --> /rustc/1159e78c4747b02ef996e55082b704c09b970588\library\core\src\option.rs:601:5
+
+error[E0425]: cannot find function `parameters_from_definition` in this scope
+   --> crates\arx\src\ifc\geometry.rs:101:22
+    |
+101 |         let params = parameters_from_definition(&entity.definition);
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+    |
+help: consider using the associated function on `Self`
+    |
+101 |         let params = Self::parameters_from_definition(&entity.definition);
+    |                      ++++++
+
+error[E0425]: cannot find function `parameters_from_definition` in this scope
+   --> crates\arx\src\ifc\geometry.rs:174:22
+    |
+174 |         let params = parameters_from_definition(&entity.definition);
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+    |
+help: consider using the associated function on `Self`
+    |
+174 |         let params = Self::parameters_from_definition(&entity.definition);
+    |                      ++++++
+
+error[E0425]: cannot find function `parameters_from_definition` in this scope
+   --> crates\arx\src\ifc\geometry.rs:196:22
+    |
+196 |         let params = parameters_from_definition(&entity.definition);
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+    |
+help: consider using the associated function on `Self`
+    |
+196 |         let params = Self::parameters_from_definition(&entity.definition);
+    |                      ++++++
+
+error[E0425]: cannot find function `parameters_from_definition` in this scope
+   --> crates\arx\src\ifc\geometry.rs:303:22
+    |
+303 |         for param in parameters_from_definition(&entity.definition) {
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+    |
+help: consider using the associated function on `Self`
+    |
+303 |         for param in Self::parameters_from_definition(&entity.definition) {
+    |                      ++++++
+
+error[E0425]: cannot find function `extract_reference_id` in this scope
+   --> crates\arx\src\ifc\geometry.rs:304:38
+    |
+304 |             if let Some(reference) = extract_reference_id(&param) {
+    |                                      ^^^^^^^^^^^^^^^^^^^^ not found in this scope
+    |
+help: consider using the associated function on `Self`
+    |
+304 |             if let Some(reference) = Self::extract_reference_id(&param) {
+    |                                      ++++++
+
+error[E0425]: cannot find function `parameters_from_definition` in this scope
+   --> crates\arx\src\ifc\geometry.rs:348:22
+    |
+348 |         let params = parameters_from_definition(&solid.definition);
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+    |
+help: consider using the associated function on `Self`
+    |
+348 |         let params = Self::parameters_from_definition(&solid.definition);
+    |                      ++++++
+
+error[E0425]: cannot find function `parameters_from_definition` in this scope
+   --> crates\arx\src\ifc\geometry.rs:410:22
+    |
+410 |         let params = parameters_from_definition(&profile.definition);
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+    |
+help: consider using the associated function on `Self`
+    |
+410 |         let params = Self::parameters_from_definition(&profile.definition);
+    |                      ++++++
+
+error[E0425]: cannot find function `parameters_from_definition` in this scope
+   --> crates\arx\src\ifc\geometry.rs:433:22
+    |
+433 |         let params = parameters_from_definition(&profile.definition);
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+    |
+help: consider using the associated function on `Self`
+    |
+433 |         let params = Self::parameters_from_definition(&profile.definition);
+    |                      ++++++
+
+Some errors have detailed explanations: E0277, E0425, E0432.
+For more information about an error, try `rustc --explain E0277`.
+error: could not compile `arx` (lib) due to 12 previous errors

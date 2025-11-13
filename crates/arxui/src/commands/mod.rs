@@ -95,6 +95,7 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
             view_angle,
             scale,
             spatial_index,
+            interactive,
         } => {
             use render::RenderCommandConfig;
             render::handle_render(RenderCommandConfig {
@@ -108,6 +109,7 @@ pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Erro
                 view_angle,
                 scale,
                 spatial_index,
+                interactive,
             })
         }
         Commands::Interactive {

@@ -7,6 +7,7 @@
 // Core modules
 mod camera;
 mod canvas_operations;
+mod point_cloud;
 mod projection;
 mod projections;
 mod renderer;
@@ -30,6 +31,9 @@ pub use types::*;
 // Re-export renderer and utils
 pub use renderer::Building3DRenderer;
 pub use utils::format_scene_output;
+
+// Re-export point cloud renderer
+pub use point_cloud::{PointCloudRenderer, Point3DColored, building_to_point_cloud};
 
 // Re-export interactive components
 pub use animation::{

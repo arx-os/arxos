@@ -6,7 +6,59 @@ use nalgebra::{Matrix3, Vector3};
 
 use crate::spatial::Point3D;
 
-use super::fallback::types::IFCEntity;
+use super::fallback::IFCEntity;
+
+pub(crate) fn parameters_from_definition(definition: &str) -> Vec<String> {
+    let mut params = Vec::new();
+    let start = match definition.find('(') {
+        Some(idx) => idx + 1,
+        None => return params,
+    };
+
+    let mut depth = 0i32;
+    let mut current = String::new();
+    let chars: Vec<char> = definition[start..].chars().collect();
+
+    for ch in chars {
+        match ch {
+            '(' => {
+                depth += 1;
+                current.push(ch);
+            }
+            ')' => {
+                if depth == 0 {
+                    if !current.trim().is_empty() {
+                        params.push(current.trim().to_string());
+                    }
+                    break;
+                } else {
+                    depth -= 1;
+                    current.push(ch);
+                }
+            }
+            ',' => {
+                if depth == 0 {
+                    params.push(current.trim().to_string());
+                    current.clear();
+                } else {
+                    current.push(ch);
+                }
+            }
+            _ => current.push(ch),
+        }
+    }
+
+    params
+}
+
+pub(crate) fn extract_reference_id(param: &str) -> Option<String> {
+    let trimmed = param.trim();
+    if trimmed.starts_with('#') {
+        Some(trimmed.trim_start_matches('#').to_string())
+    } else {
+        None
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct Transform3D {
@@ -245,59 +297,8 @@ impl PlacementResolver {
             Some(vector / magnitude)
         }
     }
-}
 
-pub(crate) fn parameters_from_definition(definition: &str) -> Vec<String> {
-    let mut params = Vec::new();
-    let start = match definition.find('(') {
-        Some(idx) => idx + 1,
-        None => return params,
-    };
 
-    let mut depth = 0i32;
-    let mut current = String::new();
-    let chars: Vec<char> = definition[start..].chars().collect();
-
-    for ch in chars {
-        match ch {
-            '(' => {
-                depth += 1;
-                current.push(ch);
-            }
-            ')' => {
-                if depth == 0 {
-                    if !current.trim().is_empty() {
-                        params.push(current.trim().to_string());
-                    }
-                    break;
-                } else {
-                    depth -= 1;
-                    current.push(ch);
-                }
-            }
-            ',' => {
-                if depth == 0 {
-                    params.push(current.trim().to_string());
-                    current.clear();
-                } else {
-                    current.push(ch);
-                }
-            }
-            _ => current.push(ch),
-        }
-    }
-
-    params
-}
-
-pub(crate) fn extract_reference_id(param: &str) -> Option<String> {
-    let trimmed = param.trim();
-    if trimmed.starts_with('#') {
-        Some(trimmed.trim_start_matches('#').to_string())
-    } else {
-        None
-    }
-}
 
     fn collect_shape_references(&self, entity: &IFCEntity) -> Vec<String> {
         let mut references = Vec::new();
@@ -467,6 +468,7 @@ pub(crate) fn extract_reference_id(param: &str) -> Option<String> {
 
         points
     }
+}
 
 fn extract_numeric_values(definition: &str) -> Vec<f64> {
     let mut values = Vec::new();

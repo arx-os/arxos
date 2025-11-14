@@ -366,7 +366,7 @@ enum RelayResponse {
 ### Rust Module Structure (Proposed)
 
 ```
-crates/arxos-agent/src/relay/
+src/agent/relay/
 ├── mod.rs              # Public relay module
 ├── server.rs           # WebSocket server
 ├── room.rs             # Room management

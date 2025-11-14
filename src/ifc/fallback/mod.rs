@@ -92,7 +92,7 @@ impl FallbackIFCParser {
     pub fn parse_ifc_file_with_progress(
         &self,
         file_path: &str,
-        progress: ProgressContext,
+        mut progress: ProgressContext,
     ) -> Result<(Building, Vec<Box<dyn SpatialEntity>>), Box<dyn std::error::Error>> {
         info!("Using custom STEP parser with progress for: {}", file_path);
 
@@ -159,7 +159,7 @@ impl FallbackIFCParser {
     pub fn parse_step_content_with_progress(
         &self,
         content: &str,
-        progress: ProgressContext,
+        mut progress: ProgressContext,
     ) -> Result<(Building, Vec<Box<dyn SpatialEntity>>), Box<dyn std::error::Error>> {
         let lines: Vec<&str> = content.lines().collect();
         let total_lines = lines.len();
@@ -186,7 +186,7 @@ impl FallbackIFCParser {
             if i % 100 == 0 {
                 let progress_percent = 60 + ((i * 30) / total_lines);
                 progress.update(
-                    progress_percent as u32,
+                    progress_percent,
                     &format!("Processing line {}/{}", i, total_lines),
                 );
             }

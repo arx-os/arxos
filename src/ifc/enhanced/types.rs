@@ -124,16 +124,17 @@ pub struct SpatialQuery {
 }
 
 /// Query result with detailed spatial information
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SpatialQueryResult {
-    pub entity: Box<dyn SpatialEntity>,
+    pub entity_id: String,
+    pub entity_name: String,
+    pub entity_type: String,
     pub distance: f64,
     pub relationship_type: SpatialRelationship,
     pub intersection_points: Vec<Point3D>,
 }
 
 /// R-Tree node for spatial indexing
-#[derive(Debug)]
 pub struct RTreeNode {
     pub bounds: BoundingBox3D,
     pub children: Vec<RTreeNode>,
@@ -143,7 +144,6 @@ pub struct RTreeNode {
 }
 
 /// Spatial index with R-Tree for efficient spatial queries
-#[derive(Debug, Clone)]
 pub struct SpatialIndex {
     pub rtree: RTreeNode,
     pub room_index: HashMap<String, Vec<String>>, // room_id -> equipment_ids
@@ -229,7 +229,6 @@ pub struct EnhancedIFCParser {
 }
 
 /// Result of IFC parsing with error recovery
-#[derive(Debug)]
 pub struct ParseResult {
     pub building: crate::core::Building,
     pub spatial_entities: Vec<Box<dyn SpatialEntity>>,

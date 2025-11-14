@@ -16,7 +16,7 @@ pub struct Floor {
     pub elevation: Option<f64>,
     /// Bounding box for the entire floor
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub bounding_box: Option<crate::spatial::BoundingBox3D>,
+    pub bounding_box: Option<crate::core::spatial::BoundingBox3D>,
     pub wings: Vec<Wing>,
     pub equipment: Vec<Equipment>,
     pub properties: HashMap<String, String>,

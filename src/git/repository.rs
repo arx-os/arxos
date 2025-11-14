@@ -17,14 +17,14 @@ pub fn initialize_repository(
     let repo_path_buf = Path::new(repo_path);
 
     // Validate repository path format (no traversal, no null bytes)
-    PathSafety::validate_path_format(repo_path_buf).map_err(|e| GitError::OperationFailed {
+    PathSafety::validate_path_format(repo_path).map_err(|e| GitError::OperationFailed {
         operation: "validate repository path".to_string(),
         reason: format!("Path validation failed: {}", e),
     })?;
 
     // Detect path traversal attempts in relative paths
     if !repo_path_buf.is_absolute() {
-        PathSafety::detect_path_traversal(repo_path_buf).map_err(|e| {
+        PathSafety::detect_path_traversal(repo_path).map_err(|e| {
             GitError::OperationFailed {
                 operation: "validate repository path".to_string(),
                 reason: format!("Path traversal detected: {}", e),

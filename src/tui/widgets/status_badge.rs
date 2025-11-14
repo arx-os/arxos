@@ -37,7 +37,7 @@ impl StatusBadge {
             crate::core::EquipmentStatus::Inactive => StatusColor::Unknown,
             crate::core::EquipmentStatus::Unknown => StatusColor::Unknown,
         };
-        Self::new(status_color, format!("{:?}", status))
+        Self::new(color, format!("{:?}", status))
     }
 
     /// Set theme
@@ -134,7 +134,7 @@ mod tests {
 
     #[test]
     fn test_status_badge_icon_yaml() {
-        use arx::yaml::EquipmentStatus;
+        use crate::yaml::EquipmentStatus;
 
         let icon = StatusBadge::icon_yaml(&EquipmentStatus::Healthy);
         assert_eq!(icon, "🟢");
@@ -148,7 +148,7 @@ mod tests {
 
     #[test]
     fn test_status_badge_icon_core() {
-        use arx::core::EquipmentStatus;
+        use crate::core::EquipmentStatus;
 
         let icon = StatusBadge::icon_core(&EquipmentStatus::Active);
         assert_eq!(icon, "🟢");

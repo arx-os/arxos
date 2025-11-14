@@ -4,8 +4,65 @@
 
 use super::types::IFCEntity;
 use crate::ifc::geometry::PlacementResolver;
-use crate::core::spatial::BoundingBox3D;
-use crate::spatial::{Point3D, SpatialEntity};
+use crate::core::spatial::{BoundingBox3D, Point3D};
+use crate::spatial::SpatialEntity;
+
+/// Generic spatial entity implementation for IFC entities
+#[derive(Debug, Clone)]
+pub struct GenericSpatialEntity {
+    id: String,
+    name: String,
+    entity_type: String,
+    position: crate::spatial::Point3D,
+    bounding_box: BoundingBox3D,
+}
+
+impl GenericSpatialEntity {
+    pub fn new(
+        id: String,
+        name: String,
+        entity_type: String,
+        position: Point3D,
+        bounding_box: BoundingBox3D,
+    ) -> Self {
+        // Convert core::spatial::Point3D to nalgebra::Point3D
+        let nalgebra_position = crate::spatial::Point3D::new(position.x, position.y, position.z);
+
+        Self {
+            id,
+            name,
+            entity_type,
+            position: nalgebra_position,
+            bounding_box,
+        }
+    }
+}
+
+impl SpatialEntity for GenericSpatialEntity {
+    fn position(&self) -> crate::spatial::Point3D {
+        self.position
+    }
+
+    fn set_position(&mut self, position: crate::spatial::Point3D) {
+        self.position = position;
+    }
+
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn entity_type(&self) -> &str {
+        &self.entity_type
+    }
+
+    fn bounding_box(&self) -> &BoundingBox3D {
+        &self.bounding_box
+    }
+}
 
 /// Extracts spatial data from IFC entities
 pub struct SpatialExtractor;
@@ -53,8 +110,16 @@ impl SpatialExtractor {
             self.default_bounding_box(&position, &entity.entity_type)
         };
 
-        // TODO: Fix SpatialEntity construction - this needs a concrete type
-        None
+        // Create a GenericSpatialEntity with the extracted data
+        let spatial_entity = GenericSpatialEntity::new(
+            entity.id.clone(),
+            entity.name.clone(),
+            entity.entity_type.clone(),
+            position,
+            bounding_box,
+        );
+
+        Some(Box::new(spatial_entity))
     }
 
     fn resolve_entity_position(
@@ -63,7 +128,8 @@ impl SpatialExtractor {
         resolver: &PlacementResolver,
     ) -> Point3D {
         if let Some(transform) = resolver.resolve_entity_transform(entity) {
-            transform.to_point()
+            let nalgebra_point = transform.to_point();
+            Point3D::new(nalgebra_point.x, nalgebra_point.y, nalgebra_point.z)
         } else {
             self.generate_fallback_coordinates(entity)
         }

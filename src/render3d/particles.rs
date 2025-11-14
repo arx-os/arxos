@@ -3,7 +3,7 @@
 //! This module provides a high-performance particle system optimized for terminal rendering,
 //! including particle lifecycle management, physics simulation, and visual effects.
 
-use arx::spatial::Point3D;
+use crate::spatial::Point3D;
 use std::collections::VecDeque;
 use std::time::Instant;
 

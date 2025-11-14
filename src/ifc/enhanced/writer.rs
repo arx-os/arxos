@@ -11,7 +11,7 @@ impl EnhancedIFCParser {
     /// Write IFC entities from SpatialEntity data (for terminal 3D → IFC sync)
     pub fn write_spatial_entities_to_ifc(
         &self,
-        entities: &[dyn SpatialEntity],
+        entities: &[Box<dyn SpatialEntity>],
         output_path: &str,
     ) -> ArxResult<()> {
         let mut file = File::create(output_path).map_err(|e| {
@@ -28,7 +28,7 @@ impl EnhancedIFCParser {
 
         // Write spatial entities
         for entity in entities {
-            self.write_spatial_entity(&mut file, entity)?;
+            self.write_spatial_entity(&mut file, entity.as_ref())?;
         }
 
         // Write IFC footer
@@ -125,7 +125,7 @@ impl EnhancedIFCParser {
     fn write_ifc_space(
         &self,
         file: &mut File,
-        entity: &SpatialEntity,
+        entity: &dyn SpatialEntity,
         entity_id: u32,
         placement_id: u32,
     ) -> ArxResult<()> {
@@ -133,7 +133,7 @@ impl EnhancedIFCParser {
             file,
             &format!(
                 "#{}={}('{}','{}',$,#{});",
-                entity_id, "IFCSPACE", entity.id, entity.name, placement_id
+                entity_id, "IFCSPACE", entity.id(), entity.name(), placement_id
             ),
         )?;
         Ok(())

@@ -63,7 +63,7 @@ fn estimate_building_size(
     let mut size = main_yaml.len();
 
     // Estimate size of all floor/room/equipment files
-    for floor in &building_data.floors {
+    for floor in &building_data.building.floors {
         let floor_yaml = serializer
             .to_yaml(floor)
             .map_err(|e| GitError::Generic(e.to_string()))?;
@@ -116,13 +116,13 @@ fn write_building_files(
         }
 
         // Validate the path
-        let validated_full_path = PathSafety::validate_path_for_write(&full_path, &repo_workdir)
+        PathSafety::validate_path_for_write(&full_path)
             .map_err(|e| GitError::OperationFailed {
                 operation: format!("validate file path: {}", file_path),
                 reason: format!("Path validation failed: {}", e),
             })?;
 
-        std::fs::write(&validated_full_path, content)?;
+        std::fs::write(&full_path, content)?;
         files_changed += 1;
     }
 
@@ -143,7 +143,7 @@ pub fn create_file_structure(
     files.insert("building.yml".to_string(), building_yaml);
 
     // Floor files
-    for floor in &building_data.floors {
+    for floor in &building_data.building.floors {
         let floor_path = format!("floors/floor-{}.yml", floor.level);
         let floor_yaml = serializer
             .to_yaml(floor)
@@ -239,7 +239,7 @@ fn create_index_file(
 
     // Add floors index
     let mut floors_list = Vec::new();
-    for floor in &building_data.floors {
+    for floor in &building_data.building.floors {
         let mut floor_map = Mapping::new();
         floor_map.insert(
             Value::String("level".to_string()),

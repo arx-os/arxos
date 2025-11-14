@@ -3,7 +3,7 @@
 
 use super::camera::{Camera, Vec3, vec3, project};
 use super::types::*;
-use arx::EquipmentType;
+use crate::core::EquipmentType;
 use crossterm::event::{Event, KeyCode, MouseEventKind};
 use crossterm::style::{Color, Print};
 use crossterm::terminal::{size, Clear, ClearType};

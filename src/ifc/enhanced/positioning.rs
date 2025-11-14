@@ -1,31 +1,18 @@
 //! Deterministic position generation and spatial data extraction
 
 use super::types::{EnhancedIFCParser, IFCEntity};
-use crate::spatial::types::CoordinateSystem;
-use crate::core::spatial::BoundingBox3D;
-use crate::spatial::{Point3D, SpatialEntity};
+use crate::core::spatial::{BoundingBox3D, Point3D};
+use crate::spatial::SpatialEntity;
 use log::warn;
 
 /// Extract spatial data from entity
 pub fn extract_spatial_data(
-    parser: &EnhancedIFCParser,
+    _parser: &EnhancedIFCParser,
     entity: &IFCEntity,
 ) -> Result<Box<dyn SpatialEntity>, Box<dyn std::error::Error>> {
-    // Parse placement and geometry data from IFC entity
-    let position = parse_entity_placement(parser, entity)?;
-    let bounding_box = calculate_entity_bounds(parser, entity, &position)?;
-
-    Ok(SpatialEntity {
-        id: entity.id.clone(),
-        name: entity.id.clone(), // Use ID as name since name field doesn't exist
-        entity_type: entity.entity_type.clone(),
-        position,
-        bounding_box,
-        coordinate_system: Some(CoordinateSystem::new(
-            "IFC_COORDINATE_SYSTEM".to_string(),
-            Point3D::origin(),
-        )),
-    })
+    // Stub implementation - would create actual spatial entity from IFC data
+    // For now, return an error since we need proper SpatialEntity implementation
+    Err(format!("Spatial data extraction not yet implemented for entity: {}", entity.id).into())
 }
 
 /// Parse entity placement from IFC data

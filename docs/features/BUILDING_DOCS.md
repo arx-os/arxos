@@ -42,7 +42,7 @@ arx doc --building "Main Building"
 ### Module Structure (Minimal)
 
 ```
-crates/arxui/crates/arxui/src/docs/
+src/docs/
 └── mod.rs         # Single file with everything
 ```
 

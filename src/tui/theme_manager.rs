@@ -7,7 +7,7 @@
 //! - Custom theme creation
 
 use crate::tui::Theme;
-use arx::config::ConfigManager;
+use crate::config::ConfigManager;
 use ratatui::style::Color;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -175,12 +175,11 @@ impl ThemeManager {
     /// Load theme from configuration
     fn load_theme_from_config() -> Result<Theme, Box<dyn std::error::Error>> {
         // Try to load from config manager
-        if let Ok(config_manager) = ConfigManager::new() {
-            let _config = config_manager.get_config();
-            // Check if there's a theme in the config
-            // For now, use default theme
-            // In the future, we can add theme to UiConfig
-        }
+        let config_manager = ConfigManager::new();
+        let _config = config_manager.config();
+        // Check if there's a theme in the config
+        // For now, use default theme
+        // In the future, we can add theme to UiConfig
         Ok(Theme::default())
     }
 

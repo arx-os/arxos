@@ -87,7 +87,7 @@ Foundation data structures and operations:
 
 **Key Types**: `Building`, `Floor`, `Wing`, `Room`, `Equipment`, `Position`, `SpatialProperties`
 
-### Command Handlers (`crates/arxui/crates/arxui/src/commands/`)
+### Command Handlers (`src/cli/`)
 
 Central routing layer mapping CLI commands to business logic:
 
@@ -246,10 +246,10 @@ Sensor data ingestion and status updates:
    - User runs `arx import building.ifc --repo ./repo`
    - `Cli::parse()` extracts `Import` command with IFC path and repo options
 
-2. **Command Routing** (`crates/arxui/crates/arxui/src/commands/mod.rs`)
+2. **Command Routing** (`src/cli/mod.rs`)
    - `execute_command()` matches `Import` to `import::handle_import()`
 
-3. **Import Handler** (`crates/arxui/crates/arxui/src/commands/import.rs`)
+3. **Import Handler** (`src/cli/import.rs`)
    - Validates IFC file path with `PathSafety`
    - Creates progress context for user feedback
    - Calls `IFCProcessor::extract_hierarchy()`
@@ -359,7 +359,7 @@ pub struct Building {
 **Recommended**: Complete migration or document the current model.
 
 #### 3. Command Module Coupling
-**Problem**: `crates/arxui/crates/arxui/src/commands/` modules depend on many layers.
+**Problem**: `src/cli/` modules depend on many layers.
 
 **Impact**:
 - Changes ripple across command handlers

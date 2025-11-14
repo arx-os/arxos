@@ -4,6 +4,7 @@
 //! and collaborative workflows using Git as the foundation.
 
 // Core modules (always available)
+mod config;
 mod core;
 mod domain;
 mod error;

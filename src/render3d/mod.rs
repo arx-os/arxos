@@ -5,12 +5,15 @@
 //! It also includes interactive 3D rendering with real-time controls.
 
 // Core modules
+mod ascii;
 mod camera;
 mod canvas_operations;
+mod extractors;
 mod point_cloud;
 mod projection;
 mod projections;
 mod renderer;
+mod scene_cache;
 mod types;
 mod utils;
 
@@ -61,15 +64,15 @@ pub use state::{
 #[cfg(test)]
 mod tests {
     use super::*;
-    use arx::spatial::{BoundingBox3D, Point3D};
+    use crate::spatial::{BoundingBox3D, Point3D};
 
     /// Create test building data for 3D rendering tests
     fn create_test_building_data() -> arx::yaml::BuildingData {
-        use arx::core::{
+        use crate::core::{
             BoundingBox, Dimensions, Equipment, EquipmentHealthStatus, EquipmentStatus,
             EquipmentType, Floor, Position, Room, RoomType, SpatialProperties, Wing,
         };
-        use arx::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+        use crate::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
         use chrono::Utc;
         use std::collections::HashMap;
 

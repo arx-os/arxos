@@ -8,8 +8,8 @@
 
 use crate::render3d::state::{CameraState, InteractiveState, ViewMode};
 use crate::tui::{StatusColor, Theme};
-use arx::core::{EquipmentHealthStatus, EquipmentStatus};
-use arx::yaml::BuildingData;
+use crate::core::{EquipmentHealthStatus, EquipmentStatus};
+use crate::yaml::BuildingData;
 use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Modifier, Style},

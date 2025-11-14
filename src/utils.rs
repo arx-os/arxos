@@ -58,12 +58,16 @@ pub mod progress {
         pub fn set_total(&mut self, total: usize) {
             self.total = total;
         }
+
+        pub fn finish_error(&self, error_message: &str) {
+            eprintln!("{}: ERROR - {}", self.description, error_message);
+        }
     }
 }
 
 /// Path safety utilities
 pub mod path_safety {
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
 
     /// Validate that a path is safe to use
     pub fn validate_safe_path(path: &Path) -> Result<(), String> {
@@ -99,6 +103,97 @@ pub mod path_safety {
 
         pub fn sanitize_path_string(path: &str) -> String {
             sanitize_path(path)
+        }
+
+        /// Canonicalize and validate a path
+        pub fn canonicalize_and_validate(path: &Path) -> Result<PathBuf, String> {
+            // Validate the path first
+            Self::validate_path(path)?;
+
+            // Attempt to canonicalize
+            path.canonicalize()
+                .map_err(|e| format!("Failed to canonicalize path: {}", e))
+        }
+
+        /// Safely read a file's contents with path validation
+        pub fn read_file_safely(file_path: &Path, _base_dir: &Path) -> Result<String, Box<dyn std::error::Error>> {
+            // Validate the path is safe
+            Self::validate_path(file_path).map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::InvalidInput, e)) as Box<dyn std::error::Error>)?;
+
+            // Read the file
+            let content = std::fs::read_to_string(file_path)?;
+            Ok(content)
+        }
+
+        /// Validate path for write operations
+        pub fn validate_path_for_write(path: &Path) -> Result<(), String> {
+            // Check basic path safety
+            Self::validate_path(path)?;
+
+            // Check if parent directory exists
+            if let Some(parent) = path.parent() {
+                if !parent.exists() {
+                    return Err(format!("Parent directory does not exist: {}", parent.display()));
+                }
+            }
+
+            // Check if path is writable (if it exists)
+            if path.exists() {
+                let metadata = std::fs::metadata(path)
+                    .map_err(|e| format!("Cannot access path metadata: {}", e))?;
+                if metadata.permissions().readonly() {
+                    return Err("Path is read-only".to_string());
+                }
+            }
+
+            Ok(())
+        }
+
+        /// Validate path format
+        pub fn validate_path_format(path: &str) -> Result<(), String> {
+            // Check for empty path
+            if path.trim().is_empty() {
+                return Err("Path cannot be empty".to_string());
+            }
+
+            // Check for null bytes
+            if path.contains('\0') {
+                return Err("Path contains null bytes".to_string());
+            }
+
+            // Check for invalid characters (platform-specific)
+            #[cfg(windows)]
+            {
+                let invalid_chars = ['<', '>', ':', '"', '|', '?', '*'];
+                if path.chars().any(|c| invalid_chars.contains(&c)) {
+                    return Err("Path contains invalid characters".to_string());
+                }
+            }
+
+            Ok(())
+        }
+
+        /// Detect path traversal attempts
+        pub fn detect_path_traversal(path: &str) -> Result<(), String> {
+            // Check for .. sequences
+            if path.contains("..") {
+                return Err("Path traversal detected: contains '..'".to_string());
+            }
+
+            // Check for absolute path attempts in relative contexts
+            if path.starts_with('/') || path.starts_with('\\') {
+                return Err("Absolute path detected in relative context".to_string());
+            }
+
+            // Check for drive letter on Windows
+            #[cfg(windows)]
+            {
+                if path.len() >= 2 && path.chars().nth(1) == Some(':') {
+                    return Err("Drive letter detected in path".to_string());
+                }
+            }
+
+            Ok(())
         }
     }
 }
@@ -150,9 +245,34 @@ pub mod string {
 
 /// Loading utilities module
 pub mod loading {
+    
+
     /// Simple loading indicator
     pub fn show_loading_message(message: &str) {
         println!("Loading: {}", message);
+    }
+
+    /// Find YAML files in the current directory and subdirectories
+    pub fn find_yaml_files() -> Result<Vec<String>, Box<dyn std::error::Error>> {
+        let mut yaml_files = Vec::new();
+        let current_dir = std::env::current_dir()?;
+
+        // Look for building.yaml files in common locations
+        let search_paths = vec![
+            current_dir.join("building.yaml"),
+            current_dir.join("data/building.yaml"),
+            current_dir.join("buildings/building.yaml"),
+        ];
+
+        for path in search_paths {
+            if path.exists() && path.is_file() {
+                if let Some(path_str) = path.to_str() {
+                    yaml_files.push(path_str.to_string());
+                }
+            }
+        }
+
+        Ok(yaml_files)
     }
 }
 

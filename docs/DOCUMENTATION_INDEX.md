@@ -39,7 +39,6 @@ Documentation for contributing to ArxOS development.
 - **[TODO_REMAINING.md](./development/TODO_REMAINING.md)** - Pending development tasks
 - **[render/](./development/render/)** - Rendering system documentation
   - [2D_FLOOR_PLANS.md](./development/render/2D_FLOOR_PLANS.md) - 2D ASCII rendering
-- **[codebase-reviews/](./development/codebase-reviews/)** - In-depth module reviews and architecture analysis
 - **[improvement-summaries/](./development/improvement-summaries/)** - Summaries of completed improvements
 
 - ### [Mobile (Archived)](./mobile/)
@@ -48,9 +47,9 @@ Documentation for contributing to ArxOS development.
 
 ### [Web](./web/)
 
-Progressive Web App documentation and WASM tooling.
+Progressive Web App documentation.
 
-- **[DEVELOPMENT.md](./web/DEVELOPMENT.md)** - Build, run, and deploy the ArxOS PWA
+- **[PWA Documentation](../pwa/)** - See pwa/README.md and pwa/docs/ for PWA development
 
 ### [Augmented Reality](./ar/)
 
@@ -58,7 +57,6 @@ AR and LiDAR integration documentation.
 
 - **[AR_SCAN_INTEGRATION.md](./ar/AR_SCAN_INTEGRATION.md)** - AR/ARKit and ARCore integration
 - **[AR_TERMINAL_DESIGN.md](./ar/AR_TERMINAL_DESIGN.md)** - Hybrid AR+Terminal UI design
-- **[AR_LOOP_ROADMAP.md](./ar/AR_LOOP_ROADMAP.md)** - Roadmap to close AR loop
 - **[SCAN_DATA_TESTING.md](./ar/SCAN_DATA_TESTING.md)** - Scan data testing
 
 ### [Features](./features/)
@@ -69,7 +67,6 @@ Specific feature documentation.
 - **[CONSTRAINTS.md](./features/CONSTRAINTS.md)** - Constraint validation system
 - **[IFC_COMPATIBILITY.md](./features/IFC_COMPATIBILITY.md)** - IFC round-trip compatibility
 - **[IFC_PROCESSING.md](./features/IFC_PROCESSING.md)** - IFC file import and conversion
-- **[HARDWARE_INTEGRATION.md](./features/HARDWARE_INTEGRATION.md)** - IoT sensor integration
 - **[BUILDING_DOCS.md](./features/BUILDING_DOCS.md)** - Automatic documentation generation
 
 ### [Business](./business/)
@@ -108,20 +105,15 @@ Example building data files and usage patterns.
 
 ---
 
-## 🔄 Migration & Updates
-
-- **[MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md)** - Upgrading between ArxOS versions
-- **[CHANGELOG_NOVEMBER_2025.md](./archive/2025/CHANGELOG_NOVEMBER_2025.md)** - Archived notes on the November 2025 pivot
-
----
-
 ## 📖 Documentation Archive
 
 Historical and outdated documentation preserved in the [`archive/`](./archive/) directory:
 - Previous implementations and plans
 - Legacy mobile build guides
 - Old architecture decisions
-- Historical code reviews
+- Historical code reviews (codebase-reviews/)
+- Phase completion documents (PHASE_1_COMPLETE.md, etc.)
+- V1.0 release documentation
 
 ---
 

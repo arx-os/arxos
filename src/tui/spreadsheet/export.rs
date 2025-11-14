@@ -7,6 +7,9 @@ use std::io::Write;
 use std::fs::File;
 use std::path::Path;
 
+#[cfg(feature = "tui")]
+use csv::WriterBuilder;
+
 /// Export grid data to CSV file
 pub fn export_to_csv(
     file_path: &Path,

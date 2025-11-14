@@ -130,7 +130,7 @@ impl EnhancedIFCParser {
     pub fn parse_with_progress_and_recovery(
         &mut self,
         file_path: &str,
-        progress: ProgressContext,
+        mut progress: ProgressContext,
     ) -> ArxResult<ParseResult> {
         let start_time = std::time::Instant::now();
 
@@ -158,7 +158,7 @@ impl EnhancedIFCParser {
 
             // Update progress every 100 lines
             if line_num % 100 == 0 {
-                let progress_percent = 20 + ((line_num as f64 / lines.len() as f64) * 70.0) as u32;
+                let progress_percent = 20 + ((line_num as f64 / lines.len() as f64) * 70.0) as usize;
                 progress.update(
                     progress_percent,
                     &format!("Processing line {}/{}", line_num + 1, lines.len()),
@@ -281,13 +281,13 @@ impl EnhancedIFCParser {
             .map_err(|e| ArxError::io_error(format!("Cannot get current directory: {}", e)))?;
         let file_path_buf = Path::new(file_path);
         let validated_path = if file_path_buf.is_absolute() {
-            PathSafety::canonicalize_and_validate(file_path_buf, &current_dir).map_err(|e| {
+            PathSafety::canonicalize_and_validate(file_path_buf).map_err(|e| {
                 ArxError::io_error(format!("Path validation failed: {}", e))
                     .with_file_path(file_path)
             })?
         } else {
             let joined = current_dir.join(file_path_buf);
-            PathSafety::canonicalize_and_validate(&joined, &current_dir).map_err(|e| {
+            PathSafety::canonicalize_and_validate(&joined).map_err(|e| {
                 ArxError::io_error(format!("Path validation failed: {}", e))
                     .with_file_path(file_path)
             })?
@@ -548,7 +548,7 @@ impl EnhancedIFCParser {
     }
 
     /// Build spatial index from spatial entities
-    pub fn build_spatial_index(&self, entities: &[Box<dyn SpatialEntity>]) -> super::types::SpatialIndex {
+    pub fn build_spatial_index(&self, entities: Vec<Box<dyn SpatialEntity>>) -> super::types::SpatialIndex {
         use std::collections::HashMap;
 
         // Pre-allocate HashMaps with estimated capacity for better performance
@@ -557,16 +557,18 @@ impl EnhancedIFCParser {
         let mut room_index = HashMap::with_capacity(entity_count / 10); // Estimate: ~10 entities per room
         let mut floor_index = HashMap::with_capacity(10); // Estimate: few floors
 
-        // Build room and floor indices
-        for entity in entities {
-            // Clone entity once (needed for cache)
-            let entity_id = entity.id.clone();
-            entity_cache.insert(entity_id.clone(), entity.clone());
+        // Build room and floor indices - consume entities vector
+        // First collect all entity boxes for cache
+        let entity_boxes: Vec<_> = entities.into_iter().collect();
+
+        for entity in &entity_boxes {
+            let entity_id = entity.id().to_string();
+            let entity_name = entity.name();
 
             // Build room_id efficiently - pre-allocate capacity
-            let mut room_id = String::with_capacity(entity.name.len() + 6); // "ROOM_" + name
+            let mut room_id = String::with_capacity(entity_name.len() + 6); // "ROOM_" + name
             room_id.push_str("ROOM_");
-            room_id.push_str(&entity.name.replace(" ", "_"));
+            room_id.push_str(&entity_name.replace(" ", "_"));
 
             // Use entry API efficiently - move room_id instead of cloning
             room_index
@@ -575,16 +577,22 @@ impl EnhancedIFCParser {
                 .push(entity_id.clone());
 
             // For now, use a default floor based on Z coordinate
-            let floor = (entity.position.z / 10.0) as i32;
+            let floor = (entity.position().z / 10.0) as i32;
             floor_index
                 .entry(floor)
                 .or_insert_with(Vec::new)
-                .push(entity_id); // Single clone per entity
+                .push(entity_id);
         }
 
         // Build R-Tree
         use super::types::RTreeNode;
-        let rtree = RTreeNode::new(entities);
+        let rtree = RTreeNode::new(&entity_boxes);
+
+        // Now move entities into cache
+        for entity in entity_boxes {
+            let entity_id = entity.id().to_string();
+            entity_cache.insert(entity_id, entity);
+        }
 
         super::types::SpatialIndex {
             rtree,

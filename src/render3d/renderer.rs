@@ -2,196 +2,13 @@
 
 use super::canvas_operations;
 use super::projections;
+use super::scene_cache::SceneCache;
 use super::types::*;
-use arx::core::{EquipmentStatus, EquipmentType};
-use arx::ifc::{SpatialIndex, SpatialQueryResult, SpatialRelationship};
-use arx::spatial::{BoundingBox3D, Point3D};
-use arx::yaml::BuildingData;
+use crate::core::{EquipmentStatus, EquipmentType};
+use crate::ifc::{SpatialIndex, SpatialQueryResult, SpatialRelationship};
+use crate::spatial::{BoundingBox3D, Point3D};
+use crate::yaml::BuildingData;
 use std::collections::HashMap;
-use std::sync::Arc;
-
-struct SceneCache {
-    building_name: Arc<String>,
-    floors: Vec<Floor3D>,
-    equipment: Vec<Equipment3D>,
-    rooms: Vec<Room3D>,
-}
-
-fn extract_floors_3d(building_data: &BuildingData) -> Vec<Floor3D> {
-    building_data
-        .floors
-        .iter()
-        .map(|floor| {
-            let elevation = floor.elevation.unwrap_or(floor.level as f64 * 3.0);
-            let bounding_box = floor.bounding_box.clone().unwrap_or_else(|| BoundingBox3D {
-                min: Point3D {
-                    x: 0.0,
-                    y: 0.0,
-                    z: elevation,
-                },
-                max: Point3D {
-                    x: 100.0,
-                    y: 100.0,
-                    z: elevation + 3.0,
-                },
-            });
-
-            let rooms = floor
-                .wings
-                .iter()
-                .flat_map(|w| w.rooms.iter())
-                .map(|r| Arc::new(r.id.clone()))
-                .collect();
-
-            let equipment = floor
-                .equipment
-                .iter()
-                .map(|e| Arc::new(e.id.clone()))
-                .collect();
-
-            Floor3D {
-                id: Arc::new(floor.id.clone()),
-                name: Arc::new(floor.name.clone()),
-                level: floor.level,
-                elevation,
-                bounding_box,
-                rooms,
-                equipment,
-            }
-        })
-        .collect()
-}
-
-fn extract_equipment_3d(building_data: &BuildingData) -> Vec<Equipment3D> {
-    let mut equipment_3d = Vec::new();
-
-    for floor in &building_data.floors {
-        // Extract floor-level equipment
-        for equipment in &floor.equipment {
-            equipment_3d.push(Equipment3D {
-                id: Arc::new(equipment.id.clone()),
-                name: Arc::new(equipment.name.clone()),
-                equipment_type: equipment.equipment_type.clone(),
-                status: equipment.status,
-                position: Point3D {
-                    x: equipment.position.x,
-                    y: equipment.position.y,
-                    z: equipment.position.z,
-                },
-                bounding_box: BoundingBox3D {
-                    min: Point3D {
-                        x: equipment.position.x - 0.5,
-                        y: equipment.position.y - 0.5,
-                        z: equipment.position.z - 0.5,
-                    },
-                    max: Point3D {
-                        x: equipment.position.x + 0.5,
-                        y: equipment.position.y + 0.5,
-                        z: equipment.position.z + 0.5,
-                    },
-                },
-                floor_level: floor.level,
-                room_id: equipment
-                    .room_id
-                    .as_ref()
-                    .map(|room_id| Arc::new(room_id.clone())),
-                connections: Vec::new(),
-                spatial_relationships: None,
-                nearest_entity_distance: None,
-            });
-        }
-
-        // Extract equipment from rooms within wings
-        for wing in &floor.wings {
-            for room in &wing.rooms {
-                for equipment in &room.equipment {
-                    equipment_3d.push(Equipment3D {
-                        id: Arc::new(equipment.id.clone()),
-                        name: Arc::new(equipment.name.clone()),
-                        equipment_type: equipment.equipment_type.clone(),
-                        status: equipment.status,
-                        position: Point3D {
-                            x: equipment.position.x,
-                            y: equipment.position.y,
-                            z: equipment.position.z,
-                        },
-                        bounding_box: BoundingBox3D {
-                            min: Point3D {
-                                x: equipment.position.x - 0.5,
-                                y: equipment.position.y - 0.5,
-                                z: equipment.position.z - 0.5,
-                            },
-                            max: Point3D {
-                                x: equipment.position.x + 0.5,
-                                y: equipment.position.y + 0.5,
-                                z: equipment.position.z + 0.5,
-                            },
-                        },
-                        floor_level: floor.level,
-                        room_id: Some(Arc::new(room.id.clone())),
-                        connections: Vec::new(),
-                        spatial_relationships: None,
-                        nearest_entity_distance: None,
-                    });
-                }
-            }
-        }
-    }
-
-    equipment_3d
-}
-
-fn extract_rooms_3d(building_data: &BuildingData) -> Vec<Room3D> {
-    let mut rooms_3d = Vec::new();
-
-    for floor in &building_data.floors {
-        for wing in &floor.wings {
-            for room in &wing.rooms {
-                rooms_3d.push(Room3D {
-                    id: Arc::new(room.id.clone()),
-                    name: Arc::new(room.name.clone()),
-                    room_type: room.room_type.clone(),
-                    position: Point3D {
-                        x: room.spatial_properties.position.x,
-                        y: room.spatial_properties.position.y,
-                        z: room.spatial_properties.position.z,
-                    },
-                    bounding_box: BoundingBox3D {
-                        min: Point3D {
-                            x: room.spatial_properties.bounding_box.min.x,
-                            y: room.spatial_properties.bounding_box.min.y,
-                            z: room.spatial_properties.bounding_box.min.z,
-                        },
-                        max: Point3D {
-                            x: room.spatial_properties.bounding_box.max.x,
-                            y: room.spatial_properties.bounding_box.max.y,
-                            z: room.spatial_properties.bounding_box.max.z,
-                        },
-                    },
-                    floor_level: floor.level,
-                    equipment: room
-                        .equipment
-                        .iter()
-                        .map(|e| Arc::new(e.id.clone()))
-                        .collect(),
-                });
-            }
-        }
-    }
-
-    rooms_3d
-}
-
-impl SceneCache {
-    fn new(building_data: &BuildingData) -> Self {
-        Self {
-            building_name: Arc::new(building_data.building.name.clone()),
-            floors: extract_floors_3d(building_data),
-            equipment: extract_equipment_3d(building_data),
-            rooms: extract_rooms_3d(building_data),
-        }
-    }
-}
 
 /// Advanced 3D building renderer with camera and projection systems
 pub struct Building3DRenderer {
@@ -418,7 +235,7 @@ impl Building3DRenderer {
             rooms: transformed_rooms,
             bounding_box,
             metadata: SceneMetadata {
-                total_floors: self.building_data.floors.len(),
+                total_floors: self.building_data.building.floors.len(),
                 total_rooms: self
                     .building_data
                     .floors
@@ -473,7 +290,7 @@ impl Building3DRenderer {
             rooms: transformed_rooms,
             bounding_box,
             metadata: SceneMetadata {
-                total_floors: self.building_data.floors.len(),
+                total_floors: self.building_data.building.floors.len(),
                 total_rooms: self
                     .building_data
                     .floors
@@ -709,7 +526,7 @@ impl Building3DRenderer {
             rooms,
             bounding_box,
             metadata: SceneMetadata {
-                total_floors: self.building_data.floors.len(),
+                total_floors: self.building_data.building.floors.len(),
                 total_rooms: self
                     .building_data
                     .floors

@@ -20,10 +20,10 @@ impl IFCReader {
         let current_dir = std::env::current_dir()?;
         let file_path_buf = Path::new(file_path);
         let validated_path = if file_path_buf.is_absolute() {
-            PathSafety::canonicalize_and_validate(file_path_buf, &current_dir)?
+            PathSafety::canonicalize_and_validate(file_path_buf)?
         } else {
             let joined = current_dir.join(file_path_buf);
-            PathSafety::canonicalize_and_validate(&joined, &current_dir)?
+            PathSafety::canonicalize_and_validate(&joined)?
         };
 
         // Check file size before reading

@@ -3,7 +3,7 @@
 //! Provides functions to infer room names from grid coordinates and generate
 //! addresses automatically from building context.
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use std::collections::HashMap;
 
 /// Context required to generate an ArxAddress.

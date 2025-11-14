@@ -3,9 +3,9 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail, Result};
 use crate::utils::path_safety::PathSafety;
-use arxos::export::ifc::{IFCExporter, IFCSyncState};
-use arxos::ifc::IFCProcessor;
-use arxos::yaml::{BuildingData, BuildingYamlSerializer};
+use crate::export::ifc::{IFCExporter, IFCSyncState};
+use crate::ifc::IFCProcessor;
+use crate::yaml::{BuildingData, BuildingYamlSerializer};
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{DateTime, Utc};
 
@@ -258,8 +258,8 @@ fn load_building_data(repo_root: &Path) -> Result<BuildingData> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use arxos::core::{Building, Floor, Room, RoomType, SpatialProperties, Wing};
-    use arxos::yaml::BuildingYamlSerializer;
+    use crate::core::{Building, Floor, Room, RoomType, SpatialProperties, Wing};
+    use crate::yaml::BuildingYamlSerializer;
     use tempfile::TempDir;
 
     fn sample_ifc_bytes() -> Vec<u8> {

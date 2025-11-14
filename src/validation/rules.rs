@@ -1,6 +1,6 @@
 //! Validation rules and constraints engine
 
-use crate::error::{ArxError, ArxResult};
+use crate::error::ArxResult;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -4,8 +4,7 @@
 //! backward compatibility with YAML format while supporting new features.
 
 use crate::core::{BoundingBox, Equipment, EquipmentHealthStatus, EquipmentStatus, Position};
-use crate::core::spatial::BoundingBox3D;
-use crate::spatial::Point3D;
+use crate::core::spatial::{BoundingBox3D, Point3D};
 use crate::yaml::EquipmentStatus as YamlEquipmentStatus;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -98,11 +97,7 @@ where
     S: Serializer,
 {
     // Create Point3D from Position fields (Position has x,y,z fields directly)
-    let point = Point3D {
-        x: position.x,
-        y: position.y,
-        z: position.z,
-    };
+    let point = Point3D::new(position.x, position.y, position.z);
     point.serialize(serializer)
 }
 
@@ -139,17 +134,10 @@ where
     S: Serializer,
 {
     // bbox.min and bbox.max are Position types with x,y,z fields
+    // Convert to Point3D (nalgebra Point3<f64>) for BoundingBox3D
     let bbox3d = BoundingBox3D {
-        min: Position {
-            x: bbox.min.coords[0],
-            y: bbox.min.coords[1],
-            z: bbox.min.coords[2],
-        },
-        max: Position {
-            x: bbox.max.coords[0],
-            y: bbox.max.coords[1],
-            z: bbox.max.coords[2],
-        },
+        min: Point3D::new(bbox.min.x, bbox.min.y, bbox.min.z),
+        max: Point3D::new(bbox.max.x, bbox.max.y, bbox.max.z),
     };
     bbox3d.serialize(serializer)
 }

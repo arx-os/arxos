@@ -1,7 +1,7 @@
 //! Building data structure and implementation
 
 use super::{Floor, Room};
-use crate::spatial::{BoundingBox, Position};
+use crate::spatial::BoundingBox;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;

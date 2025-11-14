@@ -3,11 +3,9 @@ use nalgebra::Point3;
 
 pub mod grid;
 pub mod types;
-pub use grid::{GridCoordinate, GridSystem};
 pub use types::*;
 
 // Re-export grid address utilities
-pub use grid::to_address;
 
 /// Spatial engine for geometric operations
 pub struct SpatialEngine {

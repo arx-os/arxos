@@ -36,17 +36,6 @@ impl StatusColor {
     }
 }
 
-impl From<&arx::yaml::EquipmentStatus> for StatusColor {
-    fn from(status: &str) -> Self {
-        match status {
-            "Healthy" => StatusColor::Healthy,
-            "Warning" => StatusColor::Warning,
-            "Critical" => StatusColor::Critical,
-            _ => StatusColor::Unknown,
-        }
-    }
-}
-
 impl From<&str> for StatusColor {
     fn from(status: &str) -> Self {
         match status {

@@ -23,6 +23,74 @@ use ratatui::{
 };
 use std::collections::HashMap;
 use std::time::Duration;
+use std::path::PathBuf;
+
+/// User in the identity registry
+#[derive(Debug, Clone)]
+struct User {
+    id: String,
+    name: String,
+    email: String,
+    organization: Option<String>,
+    phone: Option<String>,
+    verified: bool,
+    verified_by: Option<String>,
+    verified_at: Option<chrono::DateTime<chrono::Utc>>,
+    role: String,
+    status: String,
+    permissions: Vec<String>,
+    last_active: Option<chrono::DateTime<chrono::Utc>>,
+    added_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// User registry for managing user identities
+#[derive(Debug, Clone)]
+struct UserRegistry {
+    users: HashMap<String, User>,
+}
+
+impl UserRegistry {
+    fn new() -> Self {
+        Self {
+            users: HashMap::new(),
+        }
+    }
+
+    fn load(_path: PathBuf) -> Result<Self, Box<dyn std::error::Error>> {
+        // Stub implementation - would load from file
+        Ok(Self::new())
+    }
+
+    fn all_users(&self) -> Vec<User> {
+        self.users.values().cloned().collect()
+    }
+
+    fn get_user(&self, id: &str) -> Option<&User> {
+        self.users.get(id)
+    }
+
+    fn find_by_email(&self, email: &str) -> Option<&User> {
+        self.users.values().find(|user| user.email == email)
+    }
+}
+
+/// Find the Git repository path (stub implementation)
+fn find_git_repository() -> Result<Option<String>, Box<dyn std::error::Error>> {
+    // Stub - would search for .git directory
+    Ok(Some(".".to_string()))
+}
+
+/// Extract user ID from commit message (stub implementation)
+fn extract_user_id_from_commit(_message: &str) -> Option<String> {
+    // Stub - would parse commit message for user ID
+    None
+}
+
+/// Extract email from commit author string (stub implementation)
+fn extract_email_from_author(_author: &str) -> Option<String> {
+    // Stub - would parse author string for email
+    None
+}
 
 /// User activity item for timeline
 #[derive(Debug, Clone)]
@@ -291,12 +359,10 @@ fn render_user_details<'a>(user: &'a User, theme: &'a Theme, _area: Rect) -> Par
         ]));
     }
 
-    if let Some(ref role) = user.role {
-        lines.push(Line::from(vec![
-            Span::styled("Role: ", Style::default().fg(theme.muted)),
-            Span::styled(role, Style::default().fg(theme.text)),
-        ]));
-    }
+    lines.push(Line::from(vec![
+        Span::styled("Role: ", Style::default().fg(theme.muted)),
+        Span::styled(&user.role, Style::default().fg(theme.text)),
+    ]));
 
     if let Some(ref phone) = user.phone {
         lines.push(Line::from(vec![
@@ -523,7 +589,7 @@ pub fn handle_user_browser() -> Result<(), Box<dyn std::error::Error>> {
     let repo_path = std::path::Path::new(&repo_path_str);
 
     // Load registry
-    let registry = UserRegistry::load(repo_path)?;
+    let registry = UserRegistry::load(repo_path.to_path_buf())?;
 
     let mut terminal = TerminalManager::new()?;
     let theme = Theme::default();
@@ -699,10 +765,10 @@ pub fn handle_user_browser() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         KeyCode::Enter => {
                             if let Some(user) = state.selected_user() {
-                                let email = &user.email;
+                                let email = user.email.clone();
                                 if state.view_mode == ViewMode::List {
                                     // Reload activity for selected user
-                                    if let Err(e) = state.load_user_activity(email) {
+                                    if let Err(e) = state.load_user_activity(&email) {
                                         eprintln!("Warning: Could not load user activity: {}", e);
                                     }
                                 }

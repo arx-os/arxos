@@ -15,22 +15,13 @@ mod types;
 mod wing;
 
 // Re-export all public types and functions
-pub use crate::spatial::{GridCoordinate, GridSystem};
-pub use building::{Building, BuildingMetadata, CoordinateSystemInfo};
+pub use building::Building;
 pub use equipment::{
-    Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType, SensorMapping,
-    ThresholdConfig,
+    Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType,
 };
 pub use floor::Floor;
 pub use room::{Room, RoomType};
-pub use spatial::BoundingBox3D;
-pub use types::{BoundingBox, Dimensions, Position, SpatialProperties, SpatialQueryResult};
+pub use types::{BoundingBox, Dimensions, Position, SpatialProperties};
 pub use wing::Wing;
 
 // Re-export all operations
-pub use operations::{
-    add_equipment, create_room, delete_room, delete_room_impl, get_room, list_equipment,
-    list_rooms, remove_equipment, remove_equipment_impl, set_spatial_relationship, spatial_query,
-    transform_coordinates, update_equipment, update_equipment_impl, update_room, update_room_impl,
-    validate_spatial, SpatialValidationIssue, SpatialValidationResult,
-};

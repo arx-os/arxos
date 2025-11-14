@@ -3,19 +3,11 @@ name: pwa
 on:
   push:
     paths:
-      - "crates/arxos-wasm/**"
-      - "crates/arx-command-catalog/**"
       - "pwa/**"
-      - "WEB_PWA_PLAN.md"
-      - "docs/web/**"
       - ".github/workflows/pwa.yml"
   pull_request:
     paths:
-      - "crates/arxos-wasm/**"
-      - "crates/arx-command-catalog/**"
       - "pwa/**"
-      - "WEB_PWA_PLAN.md"
-      - "docs/web/**"
       - ".github/workflows/pwa.yml"
 
 concurrency:
@@ -35,27 +27,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache wasm-pack
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin/wasm-pack
-          key: wasm-pack-${{ runner.os }}
-
-      - name: Install wasm-pack
-        run: |
-          if ! command -v wasm-pack > /dev/null; then
-            cargo install wasm-pack --locked
-          fi
-
-      - name: Build WASM bindings
-        run: wasm-pack build crates/arxos-wasm --target web --out-dir pkg
-
-      - name: Run Rust unit tests
-        run: cargo test -p arx-command-catalog
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

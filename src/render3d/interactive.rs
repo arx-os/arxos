@@ -10,9 +10,10 @@ use crate::render3d::state::{CameraState, InteractiveState, Vector3D, ViewMode};
 use crate::render3d::{
     Building3DRenderer, InfoPanelState, Render3DConfig, Scene3D, VisualEffectsEngine,
 };
-use arx::spatial::Point3D;
-use arx::yaml::BuildingData;
-use arxos::game::state::GameState;
+use crate::spatial::Point3D;
+use crate::yaml::BuildingData;
+// Note: GameState may need to be implemented or removed
+// use crate::game::state::GameState;
 use crossterm::event::KeyCode;
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 use log::info;
@@ -718,11 +719,11 @@ impl Default for InteractiveConfig {
 mod tests {
     use super::*;
     use crate::render3d::{ProjectionType, ViewAngle};
-    use arx::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+    use crate::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
     use chrono::Utc;
 
     fn create_test_building_data() -> BuildingData {
-        use arx::core::Floor;
+        use crate::core::Floor;
 
         BuildingData {
             building: BuildingInfo {

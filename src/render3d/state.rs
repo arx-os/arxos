@@ -4,7 +4,7 @@
 //! including camera state, selection state, and session data.
 
 use crate::render3d::{ProjectionType, ViewAngle};
-use arx::spatial::Point3D;
+use crate::spatial::Point3D;
 use std::collections::HashSet;
 
 /// Interactive session state for 3D rendering

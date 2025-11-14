@@ -1,7 +1,7 @@
 //! Type definitions for 3D rendering
 
-use arx::core::{EquipmentStatus, EquipmentType, RoomType};
-use arx::spatial::{BoundingBox3D, Point3D};
+use crate::core::{EquipmentStatus, EquipmentType, RoomType};
+use crate::spatial::{BoundingBox3D, Point3D};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 

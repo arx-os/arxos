@@ -46,7 +46,7 @@ This document specifies the design and implementation of an AR + Terminal hybrid
 └────────────────────┬────────────────────────────────────┘
                      │
 ┌────────────────────▼────────────────────────────────────┐
-│  FFI Layer (Rust Core)                                  │
+│  FFI Layer (Rust Core - /arxos/src)                    │
 │  - Command execution via FFI                            │
 │  - AR data processing                                   │
 │  - Pending equipment management                         │
@@ -1402,7 +1402,7 @@ struct EquipmentTagView: View {
 #### 4. Simple Command Parsing (Rust Side)
 
 ```rust
-// crates/arxui/crates/arxui/src/commands/simple.rs (new module for field user commands)
+// src/cli/simple.rs (new module for field user commands)
 
 /// Handle simple field user commands
 /// These are shortcuts that map to full CLI commands
@@ -1488,7 +1488,7 @@ Type command name (e.g., "equipment") for more options."#.to_string()
 **Integration in Command Router:**
 
 ```rust
-// crates/arxui/crates/arxui/src/commands/mod.rs
+// src/cli/mod.rs
 pub fn execute_command(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
     match command {
         // ... existing commands ...

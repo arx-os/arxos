@@ -206,15 +206,21 @@ impl EnhancedIFCParser {
                     .with_debug_info(format!("Error: {}", e))
             })?;
 
-        for entity in entities.iter_mut() {
-            if let Some(ref current_system) = entity.coordinate_system {
-                // Transform entity position to target coordinate system
-                entity.position =
-                    self.transform_point(&entity.position, current_system, &target_coord_system);
+        // Note: SpatialEntity trait doesn't have coordinate_system field
+        // For now, we assume all entities are in the same coordinate system
+        // and transform them to the target system using a world coordinate system as the base
+        let world_system = CoordinateSystem::world();
 
-                // Update coordinate system reference
-                entity.coordinate_system = Some(target_coord_system.clone());
-            }
+        for entity in entities.iter_mut() {
+            // Get current position
+            let current_position = entity.position();
+
+            // Transform entity position to target coordinate system
+            let transformed_position =
+                self.transform_point(&current_position, &world_system, &target_coord_system);
+
+            // Update entity position using trait method
+            entity.set_position(transformed_position);
         }
 
         info!(

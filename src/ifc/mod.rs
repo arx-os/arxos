@@ -12,12 +12,10 @@ mod identifiers;
 mod hierarchy;
 
 pub use enhanced::{
-    EnhancedIFCParser, ParseResult, ParseStats, RTreeNode, SpatialIndex, SpatialQueryResult,
-    SpatialRelationship,
+    EnhancedIFCParser, ParseResult,
 };
 pub use error::{IFCError, IFCResult};
 pub use fallback::FallbackIFCParser;
-pub use geometry::{PlacementResolver, Transform3D};
 pub use hierarchy::HierarchyBuilder;
 
 /// IFC (Industry Foundation Classes) file processor
@@ -196,7 +194,7 @@ impl IFCProcessor {
     pub fn process_file_with_progress(
         &self,
         file_path: &str,
-        progress: ProgressContext,
+        mut progress: ProgressContext,
     ) -> IFCResult<(Building, Vec<Box<dyn crate::spatial::SpatialEntity>>)> {
         info!("Processing IFC file with progress reporting: {}", file_path);
 
@@ -259,7 +257,7 @@ impl IFCProcessor {
     fn fallback_parsing_with_progress(
         &self,
         file_path: &str,
-        progress: ProgressContext,
+        mut progress: ProgressContext,
     ) -> IFCResult<(Building, Vec<Box<dyn crate::spatial::SpatialEntity>>)> {
         info!("Using custom STEP parser with progress");
         let parser = FallbackIFCParser::new();

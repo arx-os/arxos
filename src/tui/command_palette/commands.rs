@@ -9,7 +9,7 @@ pub fn load_commands() -> Vec<CommandEntry> {
     crate::cli::commands::all_commands()
         .into_iter()
         .map(|descriptor| CommandEntry {
-            name: descriptor.name,
+            name: descriptor.name.clone(),
             full_command: descriptor.example.unwrap_or_else(|| format!("arx {}", descriptor.name)),
             description: descriptor.description,
             category: CommandCategory::from(descriptor.category),

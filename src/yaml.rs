@@ -11,12 +11,21 @@ use std::collections::HashMap;
 pub struct BuildingYamlSerializer;
 
 impl BuildingYamlSerializer {
+    pub fn new() -> Self {
+        BuildingYamlSerializer
+    }
+
     pub fn serialize(data: &BuildingData) -> Result<String, Box<dyn std::error::Error>> {
         Ok(serde_yaml::to_string(data)?)
     }
-    
+
     pub fn deserialize(yaml: &str) -> Result<BuildingData, Box<dyn std::error::Error>> {
         Ok(serde_yaml::from_str(yaml)?)
+    }
+
+    /// Generic method to serialize any serializable type to YAML
+    pub fn to_yaml<T: Serialize>(&self, data: &T) -> Result<String, Box<dyn std::error::Error>> {
+        Ok(serde_yaml::to_string(data)?)
     }
 }
 

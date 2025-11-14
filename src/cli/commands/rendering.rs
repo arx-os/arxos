@@ -1,0 +1,166 @@
+//! Rendering command implementations
+//!
+//! Command implementations for rendering-related operations including
+//! visualization and interactive 3D rendering.
+
+use super::Command;
+use crate::cli::args::{InteractiveArgs, RenderArgs};
+use std::error::Error;
+
+/// Render building visualization command
+pub struct RenderCommand {
+    pub args: RenderArgs,
+}
+
+impl Command for RenderCommand {
+    fn execute(&self) -> Result<(), Box<dyn Error>> {
+        println!("🎨 Rendering building: {}", self.args.building);
+
+        if let Some(floor) = self.args.floor {
+            println!("   Floor: {}", floor);
+        }
+
+        if self.args.three_d {
+            println!("   Mode: 3D multi-floor visualization");
+        } else {
+            println!("   Mode: 2D single floor");
+        }
+
+        println!("   Format: {}", self.args.format);
+        println!("   Projection: {}", self.args.projection);
+        println!("   View Angle: {}", self.args.view_angle);
+
+        if self.args.show_status {
+            println!("   Showing equipment status indicators");
+        }
+
+        if self.args.show_rooms {
+            println!("   Showing room boundaries");
+        }
+
+        if self.args.interactive {
+            println!("   Launching interactive 3D renderer...");
+            // TODO: Launch interactive renderer
+            #[cfg(feature = "render3d")]
+            {
+                crate::render3d::start_interactive_renderer(&self.args.building)?;
+            }
+            #[cfg(not(feature = "render3d"))]
+            {
+                return Err("Interactive 3D rendering requires --features render3d".into());
+            }
+        } else {
+            // TODO: Implement static rendering
+            println!("✅ Render completed");
+        }
+
+        Ok(())
+    }
+
+    fn name(&self) -> &'static str {
+        "render"
+    }
+}
+
+/// Interactive 3D visualization command
+pub struct InteractiveCommand {
+    pub args: InteractiveArgs,
+}
+
+impl Command for InteractiveCommand {
+    fn execute(&self) -> Result<(), Box<dyn Error>> {
+        println!("🎮 Launching interactive 3D visualization...");
+        println!("   Building: {}", self.args.building);
+
+        if let Some(floor) = self.args.floor {
+            println!("   Initial Floor: {}", floor);
+        }
+
+        println!("   Projection: {}", self.args.projection);
+
+        if self.args.show_status {
+            println!("   Equipment status: enabled");
+        }
+
+        if self.args.spatial_queries {
+            println!("   Spatial queries: enabled");
+        }
+
+        if self.args.animations {
+            println!("   Animations: enabled (speed: {})", self.args.animation_speed);
+        }
+
+        println!("   Target FPS: {}", self.args.fps);
+
+        if self.args.show_fps {
+            println!("   FPS counter: enabled");
+        }
+
+        if self.args.show_help {
+            println!("   Help overlay: enabled");
+        }
+
+        // TODO: Launch interactive 3D renderer with specified settings
+        #[cfg(feature = "render3d")]
+        {
+            println!("   Starting interactive renderer...");
+            crate::render3d::start_interactive_renderer(&self.args.building)?;
+        }
+        #[cfg(not(feature = "render3d"))]
+        {
+            return Err("Interactive 3D rendering requires --features render3d".into());
+        }
+
+        Ok(())
+    }
+
+    fn name(&self) -> &'static str {
+        "interactive"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_render_command() {
+        let cmd = RenderCommand {
+            args: RenderArgs {
+                building: "test-building".to_string(),
+                floor: Some(1),
+                three_d: false,
+                show_status: false,
+                show_rooms: false,
+                format: "ascii".to_string(),
+                projection: "isometric".to_string(),
+                view_angle: "45deg".to_string(),
+                interactive: false,
+            },
+        };
+
+        assert_eq!(cmd.name(), "render");
+        // Note: Execution will fail without render3d feature if interactive=true
+    }
+
+    #[test]
+    fn test_interactive_command() {
+        let cmd = InteractiveCommand {
+            args: InteractiveArgs {
+                building: "test-building".to_string(),
+                floor: Some(2),
+                projection: "isometric".to_string(),
+                show_status: true,
+                spatial_queries: false,
+                animations: false,
+                animation_speed: 50,
+                fps: 30,
+                show_fps: false,
+                show_help: false,
+            },
+        };
+
+        assert_eq!(cmd.name(), "interactive");
+        // Note: Execution will fail without render3d feature
+    }
+}

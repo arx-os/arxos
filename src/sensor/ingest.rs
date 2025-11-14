@@ -1,6 +1,6 @@
 //! Sensor data ingestion logic
 
-use crate::error::{ArxError, ArxResult};
+use crate::error::ArxResult;
 use super::types::{SensorReading, SensorBatch};
 
 pub struct SensorIngestor {

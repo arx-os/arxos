@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use crate::domain::economy::{ContributionRecord, EconomySnapshot};
 
-use super::{PersistenceError, PersistenceResult};
+use super::PersistenceResult;
 
 const ECONOMY_DIR: &str = ".arxos/economy";
 const SNAPSHOT_FILE: &str = "snapshot.yaml";

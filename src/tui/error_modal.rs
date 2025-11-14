@@ -189,8 +189,14 @@ pub fn render_error_modal<'a>(
         ArxError::AddressValidation { message, .. } => {
             format!("Address Validation Error: {}", message)
         }
-        ArxError::CounterOverflow { message, .. } => format!("Counter Overflow Error: {}", message),
-        ArxError::PathInvalid { message, .. } => format!("Path Invalid Error: {}", message),
+        ArxError::CounterOverflow { counter_name } => format!("Counter Overflow Error: {}", counter_name),
+        ArxError::PathInvalid { path, expected } => format!("Path Invalid Error: '{}' (expected: {})", path, expected),
+        ArxError::Io(err) => format!("IO Error: {}", err),
+        ArxError::Serialization(msg) => format!("Serialization Error: {}", msg),
+        ArxError::Git(msg) => format!("Git Error: {}", msg),
+        ArxError::Ifc(msg) => format!("IFC Error: {}", msg),
+        ArxError::Config(msg) => format!("Configuration Error: {}", msg),
+        ArxError::General(msg) => format!("Error: {}", msg),
     };
 
     lines.push(Line::from(vec![Span::styled(
@@ -349,7 +355,7 @@ pub fn handle_error_modal_event(event: Event, modal: &mut ErrorModal) -> Option<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use arx::error::ErrorContext;
+    use crate::error::ErrorContext;
     use ratatui::layout::Rect;
 
     fn create_test_error() -> ArxError {

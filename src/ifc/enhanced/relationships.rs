@@ -8,28 +8,30 @@ impl EnhancedIFCParser {
     /// Parse equipment relationships from IFC data
     pub fn parse_equipment_relationships(
         &self,
-        entities: &[SpatialEntity],
+        entities: &[Box<dyn SpatialEntity>],
     ) -> Vec<EquipmentRelationship> {
         let mut relationships = Vec::new();
 
         for entity in entities {
             // Parse different types of relationships based on entity type
-            match entity.entity_type.as_str() {
+            // Dereference Box to get &dyn SpatialEntity
+            let entity_ref: &dyn SpatialEntity = entity.as_ref();
+            match entity_ref.entity_type() {
                 "IFCDUCTSEGMENT" | "IFCPIPESEGMENT" => {
-                    self.parse_flow_segment_relationships(entity, &mut relationships);
+                    self.parse_flow_segment_relationships(entity_ref, &mut relationships);
                 }
                 "IFCDUCTFITTING" | "IFCPIPEFITTING" => {
-                    self.parse_fitting_relationships(entity, &mut relationships);
+                    self.parse_fitting_relationships(entity_ref, &mut relationships);
                 }
                 "IFCFLOWTERMINAL" | "IFCAIRTERMINAL" => {
-                    self.parse_terminal_relationships(entity, &mut relationships);
+                    self.parse_terminal_relationships(entity_ref, &mut relationships);
                 }
                 "IFCFLOWCONTROLLER" => {
-                    self.parse_controller_relationships(entity, &mut relationships);
+                    self.parse_controller_relationships(entity_ref, &mut relationships);
                 }
                 _ => {
                     // For other equipment types, look for generic connections
-                    self.parse_generic_relationships(entity, &mut relationships);
+                    self.parse_generic_relationships(entity_ref, &mut relationships);
                 }
             }
         }
@@ -41,7 +43,7 @@ impl EnhancedIFCParser {
     /// Parse flow segment relationships (ducts, pipes)
     fn parse_flow_segment_relationships(
         &self,
-        entity: &SpatialEntity,
+        entity: &dyn SpatialEntity,
         relationships: &mut Vec<EquipmentRelationship>,
     ) {
         // Flow segments typically connect to fittings and other segments
@@ -50,8 +52,8 @@ impl EnhancedIFCParser {
 
         // Create relationship to nearby equipment
         let relationship = EquipmentRelationship {
-            from_entity_id: entity.id.clone(),
-            to_entity_id: format!("{}_CONNECTION", entity.id),
+            from_entity_id: entity.id().to_string(),
+            to_entity_id: format!("{}_CONNECTION", entity.id()),
             relationship_type: RelationshipType::Flow,
             connection_type: Some("DUCT_SEGMENT".to_string()),
             properties: vec![
@@ -66,13 +68,13 @@ impl EnhancedIFCParser {
     /// Parse fitting relationships (elbows, tees, reducers)
     fn parse_fitting_relationships(
         &self,
-        entity: &SpatialEntity,
+        entity: &dyn SpatialEntity,
         relationships: &mut Vec<EquipmentRelationship>,
     ) {
         // Fittings connect multiple flow segments
         let relationship = EquipmentRelationship {
-            from_entity_id: entity.id.clone(),
-            to_entity_id: format!("{}_INLET", entity.id),
+            from_entity_id: entity.id().to_string(),
+            to_entity_id: format!("{}_INLET", entity.id()),
             relationship_type: RelationshipType::Flow,
             connection_type: Some("FITTING".to_string()),
             properties: vec![
@@ -85,8 +87,8 @@ impl EnhancedIFCParser {
 
         // Add outlet connection
         let outlet_relationship = EquipmentRelationship {
-            from_entity_id: entity.id.clone(),
-            to_entity_id: format!("{}_OUTLET", entity.id),
+            from_entity_id: entity.id().to_string(),
+            to_entity_id: format!("{}_OUTLET", entity.id()),
             relationship_type: RelationshipType::Flow,
             connection_type: Some("FITTING".to_string()),
             properties: vec![
@@ -101,13 +103,13 @@ impl EnhancedIFCParser {
     /// Parse terminal relationships (air terminals, outlets)
     fn parse_terminal_relationships(
         &self,
-        entity: &SpatialEntity,
+        entity: &dyn SpatialEntity,
         relationships: &mut Vec<EquipmentRelationship>,
     ) {
         // Terminals connect to supply/return systems
         let relationship = EquipmentRelationship {
-            from_entity_id: entity.id.clone(),
-            to_entity_id: format!("{}_SUPPLY", entity.id),
+            from_entity_id: entity.id().to_string(),
+            to_entity_id: format!("{}_SUPPLY", entity.id()),
             relationship_type: RelationshipType::Flow,
             connection_type: Some("TERMINAL".to_string()),
             properties: vec![
@@ -122,13 +124,13 @@ impl EnhancedIFCParser {
     /// Parse controller relationships (valves, dampers)
     fn parse_controller_relationships(
         &self,
-        entity: &SpatialEntity,
+        entity: &dyn SpatialEntity,
         relationships: &mut Vec<EquipmentRelationship>,
     ) {
         // Controllers regulate flow in systems
         let relationship = EquipmentRelationship {
-            from_entity_id: entity.id.clone(),
-            to_entity_id: format!("{}_CONTROL", entity.id),
+            from_entity_id: entity.id().to_string(),
+            to_entity_id: format!("{}_CONTROL", entity.id()),
             relationship_type: RelationshipType::Control,
             connection_type: Some("CONTROLLER".to_string()),
             properties: vec![
@@ -143,13 +145,13 @@ impl EnhancedIFCParser {
     /// Parse generic equipment relationships
     fn parse_generic_relationships(
         &self,
-        entity: &SpatialEntity,
+        entity: &dyn SpatialEntity,
         relationships: &mut Vec<EquipmentRelationship>,
     ) {
         // For generic equipment, create spatial relationships
         let relationship = EquipmentRelationship {
-            from_entity_id: entity.id.clone(),
-            to_entity_id: format!("{}_SPATIAL", entity.id),
+            from_entity_id: entity.id().to_string(),
+            to_entity_id: format!("{}_SPATIAL", entity.id()),
             relationship_type: RelationshipType::Spatial,
             connection_type: Some("GENERIC".to_string()),
             properties: vec![

@@ -1,10 +1,13 @@
 //! Spatial data types and utilities
 
-use nalgebra::Point3;
 use serde::{Deserialize, Serialize};
 
-/// 3D Point type alias
-pub type Point3D = Point3<f64>;
+// Re-export custom Point3D as the standard for this module
+pub use crate::core::spatial::Point3D;
+
+// Keep nalgebra available for internal advanced operations
+#[allow(dead_code)]
+type NalgebraPoint3 = nalgebra::Point3<f64>;
 
 /// Spatial entity trait
 pub trait SpatialEntity: Send + Sync {
@@ -97,9 +100,9 @@ pub struct SpatialProperties {
 
 impl SpatialProperties {
     pub fn new(position: Position, dimensions: Dimensions) -> Self {
-        let half = dimensions / 2.0;
-        let min = Point3D::new(position.x - half.x, position.y - half.y, position.z - half.z);
-        let max = Point3D::new(position.x + half.x, position.y + half.y, position.z + half.z);
+        let half = dimensions.scale(0.5);
+        let min = position.sub(&half);
+        let max = position.add(&half);
         let bounding_box = BoundingBox::new(min, max);
 
         Self {

@@ -139,8 +139,8 @@ impl ArxError {
             },
             ArxError::Validation { field, .. } => {
                 let mut suggestions = vec!["Check input value format".to_string()];
-                if field.is_some() {
-                    suggestions.push(format!("Verify the '{}' field", field.as_ref().unwrap()));
+                if let Some(f) = field {
+                    suggestions.push(format!("Verify the '{}' field", f));
                 }
                 ErrorContext {
                     suggestions,
@@ -190,8 +190,8 @@ impl ArxError {
             },
             ArxError::SpatialData { entity, .. } => {
                 let mut suggestions = vec!["Verify spatial coordinates".to_string()];
-                if entity.is_some() {
-                    suggestions.push(format!("Check entity '{}'", entity.as_ref().unwrap()));
+                if let Some(e) = entity {
+                    suggestions.push(format!("Check entity '{}'", e));
                 }
                 ErrorContext {
                     suggestions,

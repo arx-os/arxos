@@ -38,7 +38,12 @@ pub fn create_room(
         // Create new floor
         let new_floor = crate::core::Floor::new(format!("Floor {}", floor_level), floor_level);
         building_data.building.add_floor(new_floor);
-        building_data.building.find_floor_mut(floor_level).unwrap()
+        building_data
+            .building
+            .find_floor_mut(floor_level)
+            .ok_or_else(|| {
+                format!("Failed to find floor {} after creating it", floor_level)
+            })?
     };
 
     // Find or create the wing
@@ -47,7 +52,11 @@ pub fn create_room(
         let new_wing = crate::core::Wing::new(wing_name.to_string());
         floor.wings.push(new_wing);
     }
-    let wing = floor.wings.iter_mut().find(|w| w.name == wing_name).unwrap();
+    let wing = floor
+        .wings
+        .iter_mut()
+        .find(|w| w.name == wing_name)
+        .ok_or_else(|| format!("Failed to find wing '{}' after creating it", wing_name))?;
 
     // Add room to wing
     wing.rooms.push(room);

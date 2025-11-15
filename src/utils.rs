@@ -299,7 +299,7 @@ pub fn generate_id(prefix: &str) -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .unwrap()
+        .expect("System time is before UNIX epoch (1970-01-01). Check your system clock.")
         .as_millis();
     format!("{}_{}", prefix, timestamp)
 }

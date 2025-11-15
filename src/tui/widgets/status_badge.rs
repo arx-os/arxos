@@ -134,15 +134,14 @@ mod tests {
 
     #[test]
     fn test_status_badge_icon_yaml() {
-        use crate::yaml::EquipmentStatus;
-
-        let icon = StatusBadge::icon_yaml(&EquipmentStatus::Healthy);
+        // Test with string status values (as expected by icon_yaml)
+        let icon = StatusBadge::icon_yaml("Healthy");
         assert_eq!(icon, "🟢");
 
-        let icon = StatusBadge::icon_yaml(&EquipmentStatus::Warning);
+        let icon = StatusBadge::icon_yaml("Warning");
         assert_eq!(icon, "🟡");
 
-        let icon = StatusBadge::icon_yaml(&EquipmentStatus::Critical);
+        let icon = StatusBadge::icon_yaml("Critical");
         assert_eq!(icon, "🔴");
     }
 

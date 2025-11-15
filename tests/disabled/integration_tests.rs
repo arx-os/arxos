@@ -447,25 +447,26 @@ mod tests {
 
     #[test]
     fn test_yaml_serialization_roundtrip() {
+        use arxos::core::{Building, BuildingMetadata};
         use arxos::yaml::{BuildingData, BuildingYamlSerializer};
+        use chrono::Utc;
 
         // This test verifies YAML serialization maintains data integrity
 
         let serializer = BuildingYamlSerializer::new();
 
-        // Create test building data
-        use chrono::Utc;
-        let building_data = BuildingData {
-            building: arxos::yaml::BuildingInfo {
-                id: "test-building-001".to_string(),
-                name: "Test Building".to_string(),
-                description: Some("Test building for YAML serialization".to_string()),
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
-                version: "1.0".to_string(),
-                global_bounding_box: None,
-            },
-            metadata: arxos::yaml::BuildingMetadata {
+        // Create test building data using current types
+        let building = Building {
+            id: "test-building-001".to_string(),
+            name: "Test Building".to_string(),
+            path: "/test/building".to_string(),
+            description: Some("Test building for YAML serialization".to_string()),
+            version: "1.0.0".to_string(),
+            global_bounding_box: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            floors: vec![],
+            metadata: Some(BuildingMetadata {
                 source_file: None,
                 parser_version: "1.0".to_string(),
                 total_entities: 5,
@@ -473,9 +474,13 @@ mod tests {
                 coordinate_system: "local".to_string(),
                 units: "meters".to_string(),
                 tags: vec!["test".to_string()],
-            },
-            floors: vec![],
+            }),
             coordinate_systems: vec![],
+        };
+
+        let building_data = BuildingData {
+            building,
+            equipment: vec![],
         };
 
         // Serialize to YAML

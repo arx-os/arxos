@@ -7,6 +7,21 @@ license = "MIT"
 repository = "https://github.com/arx-os/arxos"
 description = "ArxOS - Git for Buildings"
 
+[lints.rust]
+unsafe_code = "warn"
+missing_docs = "allow"  # Too many to fix at once, enable later
+
+[lints.clippy]
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+todo = "warn"
+unimplemented = "warn"
+
+[lib]
+name = "arxos"
+path = "src/lib.rs"
+
 [[bin]]
 name = "arx"
 path = "src/main.rs"

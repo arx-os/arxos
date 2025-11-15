@@ -35,7 +35,7 @@ pub fn get_equipment_symbol(equipment_type: &EquipmentType) -> char {
         EquipmentType::Network => '↯',
         EquipmentType::AV => '♫',
         EquipmentType::Furniture => '⌂',
-        EquipmentType::Generic => '╬',
+        EquipmentType::Other(_) => '╬', // Generic/Other equipment
     }
 }
 

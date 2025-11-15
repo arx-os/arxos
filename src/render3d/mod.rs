@@ -627,12 +627,8 @@ mod tests {
 }
 
 /// Start the interactive 3D renderer for a building
-pub fn start_interactive_renderer(building_name: &str) -> Result<(), Box<dyn std::error::Error>> {
-    println!("🎮 Starting interactive 3D renderer for: {}", building_name);
-    
-    // Use the existing interactive renderer
-    match interactive::run_interactive_renderer(building_name) {
-        Ok(_) => Ok(()),
-        Err(e) => Err(format!("Renderer error: {}", e).into()),
-    }
+pub fn start_interactive_renderer(_building_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    // TODO: Implement interactive renderer entry point
+    // This function needs to be implemented or the call to run_interactive_renderer needs to be added to the interactive module
+    Err("Interactive renderer not yet fully implemented".into())
 }

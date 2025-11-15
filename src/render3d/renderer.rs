@@ -9,6 +9,7 @@ use crate::core::spatial::{BoundingBox3D, Point3D};
 use crate::ifc::{SpatialIndex, SpatialQueryResult, SpatialRelationship};
 use crate::yaml::BuildingData;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// Advanced 3D building renderer with camera and projection systems
 pub struct Building3DRenderer {
@@ -116,7 +117,9 @@ impl Building3DRenderer {
                 .find_in_room(room_id)
                 .into_iter()
                 .map(|entity| SpatialQueryResult {
-                    entity,
+                    entity_id: entity.id().to_string(),
+                    entity_name: entity.name().to_string(),
+                    entity_type: entity.entity_type().to_string(),
                     distance: 0.0,
                     relationship_type: SpatialRelationship::Within,
                     intersection_points: vec![],
@@ -134,7 +137,9 @@ impl Building3DRenderer {
                 .find_in_floor(floor)
                 .into_iter()
                 .map(|entity| SpatialQueryResult {
-                    entity,
+                    entity_id: entity.id().to_string(),
+                    entity_name: entity.name().to_string(),
+                    entity_type: entity.entity_type().to_string(),
                     distance: 0.0,
                     relationship_type: SpatialRelationship::Within,
                     intersection_points: vec![],
@@ -164,7 +169,9 @@ impl Building3DRenderer {
                     cluster
                         .into_iter()
                         .map(|entity| SpatialQueryResult {
-                            entity,
+                            entity_id: entity.id().to_string(),
+                            entity_name: entity.name().to_string(),
+                            entity_type: entity.entity_type().to_string(),
                             distance: 0.0,
                             relationship_type: SpatialRelationship::Adjacent,
                             intersection_points: vec![],

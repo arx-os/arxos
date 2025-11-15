@@ -15,6 +15,36 @@ use crate::yaml::BuildingData;
 // Note: GameState may need to be implemented or removed
 // use crate::game::state::GameState;
 use crossterm::event::KeyCode;
+
+// Temporary GameState stub for game feature (not yet implemented)
+#[derive(Debug, Clone)]
+pub struct GameState {
+    pub score: u32,
+    pub progress: f32,
+    pub scenario: Option<GameScenario>,
+}
+
+#[derive(Debug, Clone)]
+pub struct GameScenario {
+    pub objective: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct GameStats {
+    pub valid_placements: u32,
+    pub total_placements: u32,
+    pub violations: u32,
+}
+
+impl GameState {
+    pub fn get_stats(&self) -> GameStats {
+        GameStats {
+            valid_placements: 0,
+            total_placements: 0,
+            violations: 0,
+        }
+    }
+}
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 use log::info;
 use std::io::{self, Write};

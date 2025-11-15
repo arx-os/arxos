@@ -4,7 +4,7 @@
 //! creating unified 3D representations with positions and bounding boxes.
 
 use crate::render3d::types::Equipment3D;
-use crate::spatial::{BoundingBox3D, Point3D};
+use crate::core::spatial::{BoundingBox3D, Point3D};
 use crate::yaml::BuildingData;
 use std::sync::Arc;
 

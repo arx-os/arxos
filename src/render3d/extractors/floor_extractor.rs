@@ -4,7 +4,7 @@
 //! proper elevations, bounding boxes, and entity references.
 
 use crate::render3d::types::Floor3D;
-use crate::spatial::{BoundingBox3D, Point3D};
+use crate::core::spatial::{BoundingBox3D, Point3D};
 use crate::yaml::BuildingData;
 use std::sync::Arc;
 

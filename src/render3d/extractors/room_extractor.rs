@@ -4,7 +4,7 @@
 //! with spatial properties and equipment references.
 
 use crate::render3d::types::Room3D;
-use crate::spatial::{BoundingBox3D, Point3D};
+use crate::core::spatial::{BoundingBox3D, Point3D};
 use crate::yaml::BuildingData;
 use std::sync::Arc;
 

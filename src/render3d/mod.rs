@@ -64,7 +64,7 @@ pub use state::{
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::spatial::{BoundingBox3D, Point3D};
+    use crate::core::spatial::{BoundingBox3D, Point3D};
 
     /// Create test building data for 3D rendering tests
     fn create_test_building_data() -> arx::yaml::BuildingData {

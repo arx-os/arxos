@@ -26,7 +26,7 @@ pub use help::{
     handle_help_event, render_help_overlay, HelpContext, HelpSystem,
 };
 pub use terminal::TerminalManager;
-pub use theme::Theme;
+pub use theme::{StatusColor, Theme};
 
 /// Simple building renderer for ASCII output
 pub fn render_building(building_name: &str) -> Result<(), Box<dyn std::error::Error>> {

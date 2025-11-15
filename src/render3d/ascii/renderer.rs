@@ -219,7 +219,7 @@ pub struct ProjectionInfo {
 mod tests {
     use super::*;
     use crate::render3d::types::{Floor3D, SceneMetadata};
-    use crate::spatial::BoundingBox3D;
+    use crate::core::spatial::BoundingBox3D;
     use std::sync::Arc;
 
     fn create_test_scene() -> Scene3D {

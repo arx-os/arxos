@@ -5,8 +5,8 @@ use super::projections;
 use super::scene_cache::SceneCache;
 use super::types::*;
 use crate::core::{EquipmentStatus, EquipmentType};
+use crate::core::spatial::{BoundingBox3D, Point3D};
 use crate::ifc::{SpatialIndex, SpatialQueryResult, SpatialRelationship};
-use crate::spatial::{BoundingBox3D, Point3D};
 use crate::yaml::BuildingData;
 use std::collections::HashMap;
 

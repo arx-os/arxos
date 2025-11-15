@@ -353,6 +353,7 @@ impl InteractiveRenderer {
         let max_floor = self
             .renderer
             .building_data
+            .building
             .floors
             .iter()
             .map(|f| f.level)
@@ -362,6 +363,7 @@ impl InteractiveRenderer {
         let min_floor = self
             .renderer
             .building_data
+            .building
             .floors
             .iter()
             .map(|f| f.level)
@@ -522,7 +524,7 @@ impl InteractiveRenderer {
             if !self.state.selected_equipment.is_empty() {
                 overlay.push_str("║ Equipment:\n");
                 for equipment_id in &self.state.selected_equipment {
-                    for floor in &self.renderer.building_data.floors {
+                    for floor in &self.renderer.building_data.building.floors {
                         if let Some(equipment) =
                             floor.equipment.iter().find(|e| e.id == *equipment_id)
                         {

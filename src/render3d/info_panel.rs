@@ -74,7 +74,7 @@ pub fn render_equipment_info<'a>(
     } else {
         for equipment_id in &state.selected_equipment {
             // Find equipment in building data
-            for floor in &building_data.floors {
+            for floor in &building_data.building.floors {
                 if let Some(equipment) = floor.equipment.iter().find(|e| e.id == *equipment_id) {
                     lines.push(Line::from(vec![
                         Span::styled("ID: ", Style::default().fg(theme.muted)),
@@ -121,7 +121,7 @@ pub fn render_equipment_info<'a>(
                     ]));
                     // Room information is stored separately in floor data
                     // Find room name by searching through floors and wings
-                    for floor in building_data.floors.iter() {
+                    for floor in building_data.building.floors.iter() {
                         let mut found_room = None;
                         for wing in &floor.wings {
                             if let Some(room) = wing

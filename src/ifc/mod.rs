@@ -12,7 +12,7 @@ mod identifiers;
 mod hierarchy;
 
 pub use enhanced::{
-    EnhancedIFCParser, ParseResult,
+    EnhancedIFCParser, ParseResult, SpatialIndex, SpatialQueryResult, SpatialRelationship,
 };
 pub use error::{IFCError, IFCResult};
 pub use fallback::FallbackIFCParser;

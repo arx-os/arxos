@@ -30,11 +30,70 @@ impl Point3D {
         let dz = self.z - other.z;
         (dx * dx + dy * dy + dz * dz).sqrt()
     }
+
+    /// Access by index (0=x, 1=y, 2=z) for nalgebra compatibility
+    pub fn get(&self, index: usize) -> Option<f64> {
+        match index {
+            0 => Some(self.x),
+            1 => Some(self.y),
+            2 => Some(self.z),
+            _ => None,
+        }
+    }
+
+    /// Add two points (vector addition)
+    pub fn add(&self, other: &Point3D) -> Point3D {
+        Point3D::new(self.x + other.x, self.y + other.y, self.z + other.z)
+    }
+
+    /// Subtract two points (vector subtraction)
+    pub fn sub(&self, other: &Point3D) -> Point3D {
+        Point3D::new(self.x - other.x, self.y - other.y, self.z - other.z)
+    }
+
+    /// Scale by a factor
+    pub fn scale(&self, factor: f64) -> Point3D {
+        Point3D::new(self.x * factor, self.y * factor, self.z * factor)
+    }
+
+    /// Dot product with another point
+    pub fn dot(&self, other: &Point3D) -> f64 {
+        self.x * other.x + self.y * other.y + self.z * other.z
+    }
+
+    /// Calculate the magnitude (length) of the vector from origin to this point
+    pub fn magnitude(&self) -> f64 {
+        (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
+    }
+
+    /// Normalize to unit vector
+    pub fn normalize(&self) -> Point3D {
+        let mag = self.magnitude();
+        if mag > 0.0 {
+            self.scale(1.0 / mag)
+        } else {
+            *self
+        }
+    }
 }
 
 impl fmt::Display for Point3D {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "({:.2}, {:.2}, {:.2})", self.x, self.y, self.z)
+    }
+}
+
+// Conversion from nalgebra Point3 to custom Point3D
+impl From<nalgebra::Point3<f64>> for Point3D {
+    fn from(p: nalgebra::Point3<f64>) -> Self {
+        Self::new(p.x, p.y, p.z)
+    }
+}
+
+// Conversion from custom Point3D to nalgebra Point3
+impl From<Point3D> for nalgebra::Point3<f64> {
+    fn from(p: Point3D) -> Self {
+        nalgebra::Point3::new(p.x, p.y, p.z)
     }
 }
 
@@ -199,5 +258,72 @@ mod tests {
 
         assert_eq!(entity.id, "test-1");
         assert_eq!(entity.position, Point3D::new(10.0, 20.0, 30.0));
+    }
+
+    #[test]
+    fn test_point3d_math_operations() {
+        let p1 = Point3D::new(1.0, 2.0, 3.0);
+        let p2 = Point3D::new(4.0, 5.0, 6.0);
+
+        // Addition
+        let sum = p1.add(&p2);
+        assert_eq!(sum, Point3D::new(5.0, 7.0, 9.0));
+
+        // Subtraction
+        let diff = p2.sub(&p1);
+        assert_eq!(diff, Point3D::new(3.0, 3.0, 3.0));
+
+        // Scaling
+        let scaled = p1.scale(2.0);
+        assert_eq!(scaled, Point3D::new(2.0, 4.0, 6.0));
+
+        // Dot product
+        let dot = p1.dot(&p2);
+        assert_eq!(dot, 32.0); // 1*4 + 2*5 + 3*6 = 4 + 10 + 18 = 32
+    }
+
+    #[test]
+    fn test_point3d_magnitude_normalize() {
+        let p = Point3D::new(3.0, 4.0, 0.0);
+        assert_eq!(p.magnitude(), 5.0);
+
+        let normalized = p.normalize();
+        assert!((normalized.magnitude() - 1.0).abs() < 1e-10);
+        assert_eq!(normalized, Point3D::new(0.6, 0.8, 0.0));
+    }
+
+    #[test]
+    fn test_point3d_get_index() {
+        let p = Point3D::new(1.0, 2.0, 3.0);
+        assert_eq!(p.get(0), Some(1.0));
+        assert_eq!(p.get(1), Some(2.0));
+        assert_eq!(p.get(2), Some(3.0));
+        assert_eq!(p.get(3), None);
+    }
+
+    #[test]
+    fn test_from_nalgebra_point3() {
+        let na_point = nalgebra::Point3::new(1.0, 2.0, 3.0);
+        let custom_point: Point3D = na_point.into();
+        assert_eq!(custom_point.x, 1.0);
+        assert_eq!(custom_point.y, 2.0);
+        assert_eq!(custom_point.z, 3.0);
+    }
+
+    #[test]
+    fn test_to_nalgebra_point3() {
+        let custom_point = Point3D::new(1.0, 2.0, 3.0);
+        let na_point: nalgebra::Point3<f64> = custom_point.into();
+        assert_eq!(na_point.x, 1.0);
+        assert_eq!(na_point.y, 2.0);
+        assert_eq!(na_point.z, 3.0);
+    }
+
+    #[test]
+    fn test_roundtrip_conversion() {
+        let original = Point3D::new(1.5, 2.5, 3.5);
+        let na_point: nalgebra::Point3<f64> = original.into();
+        let back: Point3D = na_point.into();
+        assert_eq!(original, back);
     }
 }

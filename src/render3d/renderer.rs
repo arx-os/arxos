@@ -238,6 +238,7 @@ impl Building3DRenderer {
                 total_floors: self.building_data.building.floors.len(),
                 total_rooms: self
                     .building_data
+                    .building
                     .floors
                     .iter()
                     .flat_map(|f| f.wings.iter())
@@ -245,6 +246,7 @@ impl Building3DRenderer {
                     .sum(),
                 total_equipment: self
                     .building_data
+                    .building
                     .floors
                     .iter()
                     .map(|f| f.equipment.len())
@@ -293,6 +295,7 @@ impl Building3DRenderer {
                 total_floors: self.building_data.building.floors.len(),
                 total_rooms: self
                     .building_data
+                    .building
                     .floors
                     .iter()
                     .flat_map(|f| f.wings.iter())
@@ -529,6 +532,7 @@ impl Building3DRenderer {
                 total_floors: self.building_data.building.floors.len(),
                 total_rooms: self
                     .building_data
+                    .building
                     .floors
                     .iter()
                     .flat_map(|f| f.wings.iter())
@@ -536,6 +540,7 @@ impl Building3DRenderer {
                     .sum(),
                 total_equipment: self
                     .building_data
+                    .building
                     .floors
                     .iter()
                     .map(|f| f.equipment.len())

@@ -10,7 +10,7 @@ use crate::render3d::state::{CameraState, InteractiveState, Vector3D, ViewMode};
 use crate::render3d::{
     Building3DRenderer, InfoPanelState, Render3DConfig, Scene3D, VisualEffectsEngine,
 };
-use crate::spatial::Point3D;
+use crate::core::spatial::Point3D;
 use crate::yaml::BuildingData;
 // Note: GameState may need to be implemented or removed
 // use crate::game::state::GameState;

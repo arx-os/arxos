@@ -6,7 +6,7 @@
 use super::canvas::{render_equipment, render_floors, render_rooms, AsciiCanvas, DepthBuffer};
 use super::characters::LEGEND;
 use crate::render3d::types::{ProjectionType, Scene3D};
-use crate::spatial::Point3D;
+use crate::core::spatial::Point3D;
 
 /// ASCII renderer for 3D scenes
 pub struct AsciiRenderer;

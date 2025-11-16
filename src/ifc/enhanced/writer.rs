@@ -2,7 +2,7 @@
 
 use super::types::EnhancedIFCParser;
 use crate::error::{ArxError, ArxResult};
-use crate::spatial::SpatialEntity;
+use crate::core::spatial::SpatialEntity;
 use log::info;
 use std::fs::File;
 use std::io::Write;
@@ -11,7 +11,7 @@ impl EnhancedIFCParser {
     /// Write IFC entities from SpatialEntity data (for terminal 3D → IFC sync)
     pub fn write_spatial_entities_to_ifc(
         &self,
-        entities: &[Box<dyn SpatialEntity>],
+        entities: &[SpatialEntity],
         output_path: &str,
     ) -> ArxResult<()> {
         let mut file = File::create(output_path).map_err(|e| {
@@ -71,7 +71,7 @@ impl EnhancedIFCParser {
     }
 
     /// Write a single spatial entity to IFC format
-    fn write_spatial_entity(&self, file: &mut File, entity: &dyn SpatialEntity) -> ArxResult<()> {
+    fn write_spatial_entity(&self, file: &mut File, entity: &SpatialEntity) -> ArxResult<()> {
         // Generate unique ID for this entity
         let entity_id = self.generate_entity_id(entity.id());
 
@@ -125,7 +125,7 @@ impl EnhancedIFCParser {
     fn write_ifc_space(
         &self,
         file: &mut File,
-        entity: &dyn SpatialEntity,
+        entity: &SpatialEntity,
         entity_id: u32,
         placement_id: u32,
     ) -> ArxResult<()> {
@@ -143,7 +143,7 @@ impl EnhancedIFCParser {
     fn write_ifc_room(
         &self,
         file: &mut File,
-        entity: &dyn SpatialEntity,
+        entity: &SpatialEntity,
         entity_id: u32,
         placement_id: u32,
     ) -> ArxResult<()> {
@@ -161,7 +161,7 @@ impl EnhancedIFCParser {
     fn write_ifc_air_terminal(
         &self,
         file: &mut File,
-        entity: &dyn SpatialEntity,
+        entity: &SpatialEntity,
         entity_id: u32,
         placement_id: u32,
     ) -> ArxResult<()> {
@@ -179,7 +179,7 @@ impl EnhancedIFCParser {
     fn write_ifc_light_fixture(
         &self,
         file: &mut File,
-        entity: &dyn SpatialEntity,
+        entity: &SpatialEntity,
         entity_id: u32,
         placement_id: u32,
     ) -> ArxResult<()> {
@@ -197,7 +197,7 @@ impl EnhancedIFCParser {
     fn write_ifc_fan(
         &self,
         file: &mut File,
-        entity: &dyn SpatialEntity,
+        entity: &SpatialEntity,
         entity_id: u32,
         placement_id: u32,
     ) -> ArxResult<()> {
@@ -215,7 +215,7 @@ impl EnhancedIFCParser {
     fn write_ifc_pump(
         &self,
         file: &mut File,
-        entity: &dyn SpatialEntity,
+        entity: &SpatialEntity,
         entity_id: u32,
         placement_id: u32,
     ) -> ArxResult<()> {
@@ -233,7 +233,7 @@ impl EnhancedIFCParser {
     fn write_generic_equipment(
         &self,
         file: &mut File,
-        entity: &dyn SpatialEntity,
+        entity: &SpatialEntity,
         entity_id: u32,
         placement_id: u32,
     ) -> ArxResult<()> {

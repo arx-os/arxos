@@ -2,14 +2,14 @@
 
 use super::types::{EnhancedIFCParser, IFCEntity};
 use crate::core::spatial::{BoundingBox3D, Point3D};
-use crate::spatial::SpatialEntity;
+use crate::core::spatial::SpatialEntity;
 use log::warn;
 
 /// Extract spatial data from entity
 pub fn extract_spatial_data(
     _parser: &EnhancedIFCParser,
     entity: &IFCEntity,
-) -> Result<Box<dyn SpatialEntity>, Box<dyn std::error::Error>> {
+) -> Result<SpatialEntity, Box<dyn std::error::Error>> {
     // Stub implementation - would create actual spatial entity from IFC data
     // For now, return an error since we need proper SpatialEntity implementation
     Err(format!("Spatial data extraction not yet implemented for entity: {}", entity.id).into())

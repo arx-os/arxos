@@ -7,7 +7,7 @@ use crate::render3d::animation::{AnimationSystem, EquipmentStatus};
 use crate::render3d::particles::{
     AlertLevel, Particle, ParticleData, ParticleSystem, ParticleType, StatusType, Vector3D,
 };
-use crate::spatial::Point3D;
+use crate::core::spatial::Point3D;
 use std::collections::HashMap;
 
 /// Visual effects engine for terminal rendering

@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use nalgebra::{Matrix3, Vector3};
 
-use crate::spatial::Point3D;
+use crate::core::spatial::Point3D;
 
 use super::fallback::IFCEntity;
 

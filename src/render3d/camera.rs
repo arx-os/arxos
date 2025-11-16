@@ -2,7 +2,7 @@
 //! Exactly matches three.js OrbitControls behavior
 
 use super::types::Vector3D;
-use crate::spatial::Point3D;
+use crate::core::spatial::Point3D;
 use std::f64::consts::FRAC_PI_2;
 
 /// WebGL-style camera with yaw/pitch/distance controls

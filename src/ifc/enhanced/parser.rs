@@ -3,7 +3,7 @@
 use super::types::{EnhancedIFCParser, IFCEntity, ParseResult, ParseStats};
 use crate::core::Building;
 use crate::error::{ArxError, ArxResult};
-use crate::spatial::SpatialEntity;
+use crate::core::spatial::SpatialEntity;
 use crate::utils::progress::ProgressContext;
 use log::{info, warn};
 
@@ -521,7 +521,7 @@ impl EnhancedIFCParser {
     }
 
     /// Safely extract spatial data from entity
-    fn extract_spatial_data_safe(&self, entity: &IFCEntity) -> ArxResult<Option<Box<dyn SpatialEntity>>> {
+    fn extract_spatial_data_safe(&self, entity: &IFCEntity) -> ArxResult<Option<SpatialEntity>> {
         use super::positioning;
 
         match positioning::extract_spatial_data(self, entity) {
@@ -548,7 +548,7 @@ impl EnhancedIFCParser {
     }
 
     /// Build spatial index from spatial entities
-    pub fn build_spatial_index(&self, entities: Vec<Box<dyn SpatialEntity>>) -> super::types::SpatialIndex {
+    pub fn build_spatial_index(&self, entities: Vec<SpatialEntity>) -> super::types::SpatialIndex {
         use std::collections::HashMap;
 
         // Pre-allocate HashMaps with estimated capacity for better performance

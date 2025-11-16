@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::domain::economy::{ContributionRecord, EconomySnapshot};
+use crate::core::domain::economy::{ContributionRecord, EconomySnapshot};
 
 use super::PersistenceResult;
 
@@ -64,7 +64,7 @@ fn economy_path(base_dir: &Path, filename: &str) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::economy::{BuildingValuation, Money, RevenuePayout};
+    use crate::core::domain::economy::{BuildingValuation, Money, RevenuePayout};
     use chrono::Utc;
     use tempfile::tempdir;
 

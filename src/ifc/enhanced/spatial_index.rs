@@ -6,11 +6,11 @@ use super::types::{
 };
 use crate::error::ArxResult;
 use crate::core::spatial::{BoundingBox3D, Point3D};
-use crate::spatial::{SpatialEntity, Point3D as NalgebraPoint3D};
+use crate::core::spatial::{SpatialEntity, Point3D as NalgebraPoint3D};
 
 impl RTreeNode {
     /// Create a new R-Tree node
-    pub fn new(entities: &[Box<dyn SpatialEntity>]) -> Self {
+    pub fn new(entities: &[SpatialEntity]) -> Self {
         if entities.is_empty() {
             return RTreeNode {
                 bounds: BoundingBox3D {
@@ -37,7 +37,7 @@ impl RTreeNode {
     }
 
     /// Calculate bounding box for a set of entities
-    fn calculate_bounds(entities: &[Box<dyn SpatialEntity>]) -> BoundingBox3D {
+    fn calculate_bounds(entities: &[SpatialEntity]) -> BoundingBox3D {
         if entities.is_empty() {
             return BoundingBox3D {
                 min: Point3D::new(0.0, 0.0, 0.0),
@@ -89,7 +89,7 @@ impl RTreeNode {
     }
 
     /// Search for entities within a bounding box
-    pub fn search_within_bounds(&self, bbox: &BoundingBox3D) -> Vec<&Box<dyn SpatialEntity>> {
+    pub fn search_within_bounds(&self, bbox: &BoundingBox3D) -> Vec<&SpatialEntity> {
         let mut results = Vec::new();
 
         if !self.intersects(bbox) {
@@ -114,7 +114,7 @@ impl RTreeNode {
     }
 
     /// Check if an entity intersects with a bounding box
-    fn entity_intersects_bbox(entity: &Box<dyn SpatialEntity>, bbox: &BoundingBox3D) -> bool {
+    fn entity_intersects_bbox(entity: &SpatialEntity, bbox: &BoundingBox3D) -> bool {
         let entity_bbox = entity.bounding_box();
         entity_bbox.min.x <= bbox.max.x
             && entity_bbox.max.x >= bbox.min.x
@@ -202,7 +202,7 @@ impl SpatialIndex {
     }
 
     /// Find entities in a specific room
-    pub fn find_in_room(&self, room_id: &str) -> Vec<&Box<dyn SpatialEntity>> {
+    pub fn find_in_room(&self, room_id: &str) -> Vec<&SpatialEntity> {
         if let Some(entity_ids) = self.room_index.get(room_id) {
             entity_ids
                 .iter()
@@ -214,7 +214,7 @@ impl SpatialIndex {
     }
 
     /// Find entities on a specific floor
-    pub fn find_in_floor(&self, floor: i32) -> Vec<&Box<dyn SpatialEntity>> {
+    pub fn find_in_floor(&self, floor: i32) -> Vec<&SpatialEntity> {
         if let Some(entity_ids) = self.floor_index.get(&floor) {
             entity_ids
                 .iter()
@@ -343,7 +343,7 @@ impl SpatialIndex {
     }
 
     /// Find entities that span across multiple floors
-    pub fn find_cross_floor_entities(&self, min_floor: i32, max_floor: i32) -> Vec<&Box<dyn SpatialEntity>> {
+    pub fn find_cross_floor_entities(&self, min_floor: i32, max_floor: i32) -> Vec<&SpatialEntity> {
         let mut results = Vec::new();
 
         for entity in self.entity_cache.values() {
@@ -382,7 +382,7 @@ impl SpatialIndex {
         &self,
         cluster_radius: f64,
         min_cluster_size: usize,
-    ) -> Vec<Vec<&Box<dyn SpatialEntity>>> {
+    ) -> Vec<Vec<&SpatialEntity>> {
         let mut clusters = Vec::new();
         let mut processed = std::collections::HashSet::new();
 
@@ -397,7 +397,7 @@ impl SpatialIndex {
             let nearby_results = self.find_within_radius(center, cluster_radius);
 
             // Look up entities from cache using result IDs
-            let cluster: Vec<&Box<dyn SpatialEntity>> = nearby_results
+            let cluster: Vec<&SpatialEntity> = nearby_results
                 .iter()
                 .filter_map(|result| self.entity_cache.get(&result.entity_id))
                 .collect();
@@ -536,8 +536,8 @@ impl SpatialIndex {
     /// Analyze spatial relationships between two entities
     pub fn analyze_spatial_relationships(
         &self,
-        entity1: &Box<dyn SpatialEntity>,
-        entity2: &Box<dyn SpatialEntity>,
+        entity1: &SpatialEntity,
+        entity2: &SpatialEntity,
     ) -> SpatialRelationship {
         let bbox1 = entity1.bounding_box();
         let bbox2 = entity2.bounding_box();
@@ -573,8 +573,8 @@ impl SpatialIndex {
     /// Calculate geometric similarity between two entities
     pub fn calculate_geometric_similarity(
         &self,
-        entity1: &Box<dyn SpatialEntity>,
-        entity2: &Box<dyn SpatialEntity>,
+        entity1: &SpatialEntity,
+        entity2: &SpatialEntity,
     ) -> f64 {
         let volume1 = entity1.bounding_box().volume();
         let volume2 = entity2.bounding_box().volume();
@@ -601,7 +601,7 @@ impl SpatialIndex {
     }
 
     /// Detect geometric conflicts between entities
-    pub fn detect_geometric_conflicts(&self, entities: &[Box<dyn SpatialEntity>]) -> Vec<GeometricConflict> {
+    pub fn detect_geometric_conflicts(&self, entities: &[SpatialEntity]) -> Vec<GeometricConflict> {
         let mut conflicts = Vec::new();
 
         for i in 0..entities.len() {
@@ -682,7 +682,7 @@ impl SpatialIndex {
     }
 
     /// Calculate minimum clearance required between two entities
-    fn calculate_minimum_clearance(&self, entity1: &dyn SpatialEntity, entity2: &dyn SpatialEntity) -> f64 {
+    fn calculate_minimum_clearance(&self, entity1: &SpatialEntity, entity2: &SpatialEntity) -> f64 {
         // Base clearance requirements based on entity types
         let base_clearance = match (entity1.entity_type(), entity2.entity_type()) {
             (t1, t2) if t1.contains("ELECTRIC") && t2.contains("ELECTRIC") => 0.3,

@@ -1,7 +1,7 @@
 //! Equipment data structure and implementation
 
 use super::types::Position;
-use crate::domain::ArxAddress;
+use crate::core::domain::ArxAddress;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;

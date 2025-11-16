@@ -4,7 +4,7 @@
 
 use super::types::IFCEntity;
 use super::spatial_extractor::GenericSpatialEntity;
-use crate::spatial::SpatialEntity;
+use crate::core::spatial::SpatialEntity;
 
 /// Error recovery strategies for IFC parsing
 pub struct ErrorRecovery;
@@ -57,7 +57,7 @@ impl ErrorRecovery {
     /// Recover from spatial extraction errors
     ///
     /// Provides fallback spatial data when extraction fails
-    pub fn recover_spatial(&self, entity: &IFCEntity) -> Option<Box<dyn SpatialEntity>> {
+    pub fn recover_spatial(&self, entity: &IFCEntity) -> Option<SpatialEntity> {
         // Use default position and size for recovered entities
         use crate::core::spatial::{BoundingBox3D, Point3D};
 

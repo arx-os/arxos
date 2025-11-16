@@ -1,7 +1,6 @@
 //! Building data structure and implementation
 
-use super::{Floor, Room};
-use crate::spatial::BoundingBox;
+use super::{BoundingBox, Floor, Room};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -85,10 +84,10 @@ fn default_version() -> String {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CoordinateSystemInfo {
     pub name: String,
-    pub origin: crate::spatial::Point3D,
-    pub x_axis: crate::spatial::Point3D,
-    pub y_axis: crate::spatial::Point3D,
-    pub z_axis: crate::spatial::Point3D,
+    pub origin: crate::core::spatial::Point3D,
+    pub x_axis: crate::core::spatial::Point3D,
+    pub y_axis: crate::core::spatial::Point3D,
+    pub z_axis: crate::core::spatial::Point3D,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub description: Option<String>,
 }

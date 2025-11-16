@@ -1,21 +1,21 @@
 //! Equipment relationship parsing
 
 use super::types::{EnhancedIFCParser, EquipmentRelationship, RelationshipType};
-use crate::spatial::SpatialEntity;
+use crate::core::spatial::SpatialEntity;
 use log::info;
 
 impl EnhancedIFCParser {
     /// Parse equipment relationships from IFC data
     pub fn parse_equipment_relationships(
         &self,
-        entities: &[Box<dyn SpatialEntity>],
+        entities: &[SpatialEntity],
     ) -> Vec<EquipmentRelationship> {
         let mut relationships = Vec::new();
 
         for entity in entities {
             // Parse different types of relationships based on entity type
-            // Dereference Box to get &dyn SpatialEntity
-            let entity_ref: &dyn SpatialEntity = entity.as_ref();
+            // Dereference Box to get &SpatialEntity
+            let entity_ref: &SpatialEntity = entity.as_ref();
             match entity_ref.entity_type() {
                 "IFCDUCTSEGMENT" | "IFCPIPESEGMENT" => {
                     self.parse_flow_segment_relationships(entity_ref, &mut relationships);
@@ -43,7 +43,7 @@ impl EnhancedIFCParser {
     /// Parse flow segment relationships (ducts, pipes)
     fn parse_flow_segment_relationships(
         &self,
-        entity: &dyn SpatialEntity,
+        entity: &SpatialEntity,
         relationships: &mut Vec<EquipmentRelationship>,
     ) {
         // Flow segments typically connect to fittings and other segments
@@ -68,7 +68,7 @@ impl EnhancedIFCParser {
     /// Parse fitting relationships (elbows, tees, reducers)
     fn parse_fitting_relationships(
         &self,
-        entity: &dyn SpatialEntity,
+        entity: &SpatialEntity,
         relationships: &mut Vec<EquipmentRelationship>,
     ) {
         // Fittings connect multiple flow segments
@@ -103,7 +103,7 @@ impl EnhancedIFCParser {
     /// Parse terminal relationships (air terminals, outlets)
     fn parse_terminal_relationships(
         &self,
-        entity: &dyn SpatialEntity,
+        entity: &SpatialEntity,
         relationships: &mut Vec<EquipmentRelationship>,
     ) {
         // Terminals connect to supply/return systems
@@ -124,7 +124,7 @@ impl EnhancedIFCParser {
     /// Parse controller relationships (valves, dampers)
     fn parse_controller_relationships(
         &self,
-        entity: &dyn SpatialEntity,
+        entity: &SpatialEntity,
         relationships: &mut Vec<EquipmentRelationship>,
     ) {
         // Controllers regulate flow in systems
@@ -145,7 +145,7 @@ impl EnhancedIFCParser {
     /// Parse generic equipment relationships
     fn parse_generic_relationships(
         &self,
-        entity: &dyn SpatialEntity,
+        entity: &SpatialEntity,
         relationships: &mut Vec<EquipmentRelationship>,
     ) {
         // For generic equipment, create spatial relationships

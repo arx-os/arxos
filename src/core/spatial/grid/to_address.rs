@@ -3,7 +3,7 @@
 //! Provides functions to infer room names from grid coordinates and generate
 //! addresses automatically from building context.
 
-use crate::domain::ArxAddress;
+use crate::core::domain::ArxAddress;
 use anyhow::{bail, Result};
 use std::collections::HashMap;
 

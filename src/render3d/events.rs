@@ -3,7 +3,7 @@
 //! This module provides event handling for interactive 3D rendering,
 //! including keyboard and mouse input processing using crossterm.
 
-use crate::spatial::Point3D;
+use crate::core::spatial::Point3D;
 use crossterm::event::{Event, KeyCode, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use std::collections::HashMap;
 use std::time::Duration;

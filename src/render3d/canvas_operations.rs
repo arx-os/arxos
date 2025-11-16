@@ -5,7 +5,7 @@
 
 use crate::render3d::types::{Equipment3D, Floor3D, Room3D};
 use crate::core::EquipmentType;
-use crate::spatial::Point3D;
+use crate::core::spatial::Point3D;
 
 /// Render floors to ASCII canvas
 ///

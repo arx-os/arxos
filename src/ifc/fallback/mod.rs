@@ -24,7 +24,7 @@ pub use types::IFCEntity;
 
 use crate::core::Building;
 use crate::ifc::geometry::PlacementResolver;
-use crate::spatial::SpatialEntity;
+use crate::core::spatial::SpatialEntity;
 use crate::utils::progress::ProgressContext;
 use log::info;
 use rayon::prelude::*;
@@ -58,7 +58,7 @@ impl FallbackIFCParser {
     pub fn parse_ifc_file(
         &self,
         file_path: &str,
-    ) -> Result<(Building, Vec<Box<dyn SpatialEntity>>), Box<dyn std::error::Error>> {
+    ) -> Result<(Building, Vec<SpatialEntity>), Box<dyn std::error::Error>> {
         info!("Using custom STEP parser for: {}", file_path);
 
         let content = self.reader.read_file(file_path)?;
@@ -75,7 +75,7 @@ impl FallbackIFCParser {
     pub fn parse_ifc_file_parallel(
         &self,
         file_path: &str,
-    ) -> Result<(Building, Vec<Box<dyn SpatialEntity>>), Box<dyn std::error::Error>> {
+    ) -> Result<(Building, Vec<SpatialEntity>), Box<dyn std::error::Error>> {
         info!("Using parallel custom STEP parser for: {}", file_path);
 
         let content = self.reader.read_file(file_path)?;
@@ -93,7 +93,7 @@ impl FallbackIFCParser {
         &self,
         file_path: &str,
         mut progress: ProgressContext,
-    ) -> Result<(Building, Vec<Box<dyn SpatialEntity>>), Box<dyn std::error::Error>> {
+    ) -> Result<(Building, Vec<SpatialEntity>), Box<dyn std::error::Error>> {
         info!("Using custom STEP parser with progress for: {}", file_path);
 
         progress.update(25, "Validating file path...");
@@ -121,14 +121,14 @@ impl FallbackIFCParser {
     fn parse_step_content(
         &self,
         content: &str,
-    ) -> Result<(Building, Vec<Box<dyn SpatialEntity>>), Box<dyn std::error::Error>> {
+    ) -> Result<(Building, Vec<SpatialEntity>), Box<dyn std::error::Error>> {
         let entities = self.entity_extractor.extract_entities(content)?;
 
         let building = self.building_extractor.extract_building(&entities);
 
         let resolver = PlacementResolver::new(&entities);
 
-        let spatial_entities: Vec<Box<dyn SpatialEntity>> = entities
+        let spatial_entities: Vec<SpatialEntity> = entities
             .iter()
             .filter(|e| self.spatial_extractor.is_spatial_entity(&e.entity_type))
             .filter_map(|e| self.spatial_extractor.extract_spatial_data(e, &resolver))
@@ -140,14 +140,14 @@ impl FallbackIFCParser {
     pub fn parse_step_content_parallel(
         &self,
         content: &str,
-    ) -> Result<(Building, Vec<Box<dyn SpatialEntity>>), Box<dyn std::error::Error>> {
+    ) -> Result<(Building, Vec<SpatialEntity>), Box<dyn std::error::Error>> {
         let entities = self.entity_extractor.extract_entities(content)?;
 
         let building = self.building_extractor.extract_building(&entities);
 
         let resolver = PlacementResolver::new(&entities);
 
-        let spatial_entities: Vec<Box<dyn SpatialEntity>> = entities
+        let spatial_entities: Vec<SpatialEntity> = entities
             .par_iter()
             .filter(|e| self.spatial_extractor.is_spatial_entity(&e.entity_type))
             .filter_map(|e| self.spatial_extractor.extract_spatial_data(e, &resolver))
@@ -160,7 +160,7 @@ impl FallbackIFCParser {
         &self,
         content: &str,
         mut progress: ProgressContext,
-    ) -> Result<(Building, Vec<Box<dyn SpatialEntity>>), Box<dyn std::error::Error>> {
+    ) -> Result<(Building, Vec<SpatialEntity>), Box<dyn std::error::Error>> {
         let lines: Vec<&str> = content.lines().collect();
         let total_lines = lines.len();
 
@@ -197,7 +197,7 @@ impl FallbackIFCParser {
 
         progress.update(90, "Extracting spatial data...");
         let resolver = PlacementResolver::new(&entities);
-        let spatial_entities: Vec<Box<dyn SpatialEntity>> = entities
+        let spatial_entities: Vec<SpatialEntity> = entities
             .iter()
             .filter(|e| self.spatial_extractor.is_spatial_entity(&e.entity_type))
             .filter_map(|e| {

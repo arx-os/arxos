@@ -5,7 +5,7 @@
 use super::types::IFCEntity;
 use crate::ifc::geometry::PlacementResolver;
 use crate::core::spatial::{BoundingBox3D, Point3D};
-use crate::spatial::SpatialEntity;
+use crate::core::spatial::SpatialEntity;
 
 /// Generic spatial entity implementation for IFC entities
 #[derive(Debug, Clone)]
@@ -13,7 +13,7 @@ pub struct GenericSpatialEntity {
     id: String,
     name: String,
     entity_type: String,
-    position: crate::spatial::Point3D,
+    position: crate::core::spatial::Point3D,
     bounding_box: BoundingBox3D,
 }
 
@@ -26,7 +26,7 @@ impl GenericSpatialEntity {
         bounding_box: BoundingBox3D,
     ) -> Self {
         // Convert core::spatial::Point3D to nalgebra::Point3D
-        let nalgebra_position = crate::spatial::Point3D::new(position.x, position.y, position.z);
+        let nalgebra_position = crate::core::spatial::Point3D::new(position.x, position.y, position.z);
 
         Self {
             id,
@@ -38,12 +38,18 @@ impl GenericSpatialEntity {
     }
 }
 
+// TODO: SpatialEntity is a struct, not a trait. This impl block is invalid.
+// This code needs to be refactored - either SpatialEntity should be a trait,
+// or GenericSpatialEntity should directly contain the necessary fields.
+// Commenting out for now to allow compilation.
+// See: tech-debt issue for SpatialEntity trait/struct confusion
+/*
 impl SpatialEntity for GenericSpatialEntity {
-    fn position(&self) -> crate::spatial::Point3D {
+    fn position(&self) -> crate::core::spatial::Point3D {
         self.position
     }
 
-    fn set_position(&mut self, position: crate::spatial::Point3D) {
+    fn set_position(&mut self, position: crate::core::spatial::Point3D) {
         self.position = position;
     }
 
@@ -63,6 +69,7 @@ impl SpatialEntity for GenericSpatialEntity {
         &self.bounding_box
     }
 }
+*/
 
 /// Extracts spatial data from IFC entities
 pub struct SpatialExtractor;
@@ -91,7 +98,7 @@ impl SpatialExtractor {
         &self,
         entity: &IFCEntity,
         resolver: &PlacementResolver,
-    ) -> Option<Box<dyn SpatialEntity>> {
+    ) -> Option<SpatialEntity> {
         if !self.is_spatial_entity(&entity.entity_type) {
             return None;
         }

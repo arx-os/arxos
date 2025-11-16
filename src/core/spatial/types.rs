@@ -213,6 +213,31 @@ impl SpatialEntity {
         self.coordinate_system = Some(coordinate_system);
         self
     }
+
+    // Accessor methods (for compatibility with code expecting trait-like interface)
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn entity_type(&self) -> &str {
+        &self.entity_type
+    }
+
+    pub fn position(&self) -> Point3D {
+        self.position
+    }
+
+    pub fn bounding_box(&self) -> &BoundingBox3D {
+        &self.bounding_box
+    }
+
+    pub fn set_position(&mut self, position: Point3D) {
+        self.position = position;
+    }
 }
 
 #[cfg(test)]

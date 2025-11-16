@@ -6,7 +6,7 @@
 
 pub mod to_address;
 
-use crate::spatial::Point3D;
+use super::Point3D;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 

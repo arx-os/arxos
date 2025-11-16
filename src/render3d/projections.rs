@@ -4,7 +4,7 @@
 //! to 2D screen coordinates using various projection methods.
 
 use crate::render3d::types::{Camera3D, Projection3D, ViewAngle};
-use crate::spatial::Point3D;
+use crate::core::spatial::Point3D;
 
 /// Apply isometric projection to a 3D point
 ///

@@ -2,7 +2,7 @@
 
 use crate::error::ArxError;
 use crate::core::spatial::BoundingBox3D;
-use crate::spatial::{Point3D, SpatialEntity};
+use crate::core::spatial::{Point3D, SpatialEntity};
 use std::collections::HashMap;
 
 /// Types of equipment relationships
@@ -138,7 +138,7 @@ pub struct SpatialQueryResult {
 pub struct RTreeNode {
     pub bounds: BoundingBox3D,
     pub children: Vec<RTreeNode>,
-    pub entities: Vec<Box<dyn SpatialEntity>>,
+    pub entities: Vec<SpatialEntity>,
     pub is_leaf: bool,
     pub max_entities: usize,
 }
@@ -148,7 +148,7 @@ pub struct SpatialIndex {
     pub rtree: RTreeNode,
     pub room_index: HashMap<String, Vec<String>>, // room_id -> equipment_ids
     pub floor_index: HashMap<i32, Vec<String>>,   // floor -> equipment_ids
-    pub entity_cache: HashMap<String, Box<dyn SpatialEntity>>, // entity_id -> entity
+    pub entity_cache: HashMap<String, SpatialEntity>, // entity_id -> entity
     pub query_times: Vec<f64>,
     pub cache_hits: usize,
     pub cache_misses: usize,
@@ -231,7 +231,7 @@ pub struct EnhancedIFCParser {
 /// Result of IFC parsing with error recovery
 pub struct ParseResult {
     pub building: crate::core::Building,
-    pub spatial_entities: Vec<Box<dyn SpatialEntity>>,
+    pub spatial_entities: Vec<SpatialEntity>,
     pub parse_stats: ParseStats,
     pub errors: Vec<ArxError>,
 }

@@ -5,6 +5,7 @@
 
 // Core modules
 mod building;
+pub mod domain;
 mod equipment;
 mod floor;
 pub mod operations;

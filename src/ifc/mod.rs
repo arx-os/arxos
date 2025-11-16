@@ -127,7 +127,7 @@ impl IFCProcessor {
     pub fn process_file(
         &self,
         file_path: &str,
-    ) -> IFCResult<(Building, Vec<Box<dyn crate::spatial::SpatialEntity>>)> {
+    ) -> IFCResult<(Building, Vec<crate::core::spatial::SpatialEntity>)> {
         info!("Processing IFC file: {}", file_path);
 
         // Check if file exists
@@ -159,7 +159,7 @@ impl IFCProcessor {
     pub fn process_file_parallel(
         &self,
         file_path: &str,
-    ) -> IFCResult<(Building, Vec<Box<dyn crate::spatial::SpatialEntity>>)> {
+    ) -> IFCResult<(Building, Vec<crate::core::spatial::SpatialEntity>)> {
         info!(
             "Processing IFC file with parallel processing: {}",
             file_path
@@ -195,7 +195,7 @@ impl IFCProcessor {
         &self,
         file_path: &str,
         mut progress: ProgressContext,
-    ) -> IFCResult<(Building, Vec<Box<dyn crate::spatial::SpatialEntity>>)> {
+    ) -> IFCResult<(Building, Vec<crate::core::spatial::SpatialEntity>)> {
         info!("Processing IFC file with progress reporting: {}", file_path);
 
         progress.update(10, "Reading IFC file...");
@@ -231,7 +231,7 @@ impl IFCProcessor {
     fn fallback_parsing(
         &self,
         file_path: &str,
-    ) -> IFCResult<(Building, Vec<Box<dyn crate::spatial::SpatialEntity>>)> {
+    ) -> IFCResult<(Building, Vec<crate::core::spatial::SpatialEntity>)> {
         info!("Using custom STEP parser");
         let parser = FallbackIFCParser::new();
         parser
@@ -244,7 +244,7 @@ impl IFCProcessor {
     fn fallback_parsing_parallel(
         &self,
         file_path: &str,
-    ) -> IFCResult<(Building, Vec<Box<dyn crate::spatial::SpatialEntity>>)> {
+    ) -> IFCResult<(Building, Vec<crate::core::spatial::SpatialEntity>)> {
         info!("Using parallel custom STEP parser");
         let parser = FallbackIFCParser::new();
         parser
@@ -258,7 +258,7 @@ impl IFCProcessor {
         &self,
         file_path: &str,
         mut progress: ProgressContext,
-    ) -> IFCResult<(Building, Vec<Box<dyn crate::spatial::SpatialEntity>>)> {
+    ) -> IFCResult<(Building, Vec<crate::core::spatial::SpatialEntity>)> {
         info!("Using custom STEP parser with progress");
         let parser = FallbackIFCParser::new();
 

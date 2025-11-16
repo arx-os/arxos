@@ -2,8 +2,8 @@
 
 use super::types::EnhancedIFCParser;
 use crate::error::{ArxError, ArxResult};
-use crate::spatial::types::CoordinateSystem;
-use crate::spatial::{Point3D, SpatialEntity};
+use crate::core::spatial::types::CoordinateSystem;
+use crate::core::spatial::{Point3D, SpatialEntity};
 use log::info;
 
 impl EnhancedIFCParser {
@@ -196,7 +196,7 @@ impl EnhancedIFCParser {
     /// Normalize coordinates to a standard coordinate system
     pub fn normalize_coordinates(
         &self,
-        entities: &mut [Box<dyn SpatialEntity>],
+        entities: &mut [SpatialEntity],
         target_system: &str,
     ) -> ArxResult<()> {
         let target_coord_system = self

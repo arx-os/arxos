@@ -73,7 +73,7 @@ pub fn spatial_query(
     entity: &str,
     params: Vec<String>,
 ) -> Result<Vec<SpatialQueryResult>, Box<dyn std::error::Error>> {
-    use crate::spatial::Point3D;
+    use crate::core::spatial::Point3D;
 
     // Load building data - implementation would need proper file path
     let building_data = crate::yaml::BuildingData {
@@ -104,7 +104,7 @@ pub fn spatial_query(
                     all_entities.push((
                         room.name.clone(),
                         format!("Room ({:?})", room.room_type),
-                        crate::spatial::Point3D::new(
+                        crate::core::spatial::Point3D::new(
                             room.spatial_properties.position.x,
                             room.spatial_properties.position.y,
                             room.spatial_properties.position.z,
@@ -121,7 +121,7 @@ pub fn spatial_query(
                 all_entities.push((
                     equipment.name.clone(),
                     format!("Equipment ({:?})", equipment.equipment_type),
-                    crate::spatial::Point3D::new(
+                    crate::core::spatial::Point3D::new(
                         equipment.position.x,
                         equipment.position.y,
                         equipment.position.z,

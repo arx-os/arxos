@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
-use crate::spatial::Point3D;
+use crate::core::spatial::Point3D;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SensorReading {

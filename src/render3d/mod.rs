@@ -16,6 +16,7 @@ mod renderer;
 mod scene_cache;
 mod types;
 mod utils;
+mod views;
 
 // Re-export interactive components
 pub mod events;

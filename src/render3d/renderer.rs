@@ -4,6 +4,7 @@ use super::canvas_operations;
 use super::projections;
 use super::scene_cache::SceneCache;
 use super::types::*;
+use super::views;
 use crate::core::{EquipmentStatus, EquipmentType};
 use crate::core::spatial::{BoundingBox3D, Point3D};
 use crate::ifc::{SpatialIndex, SpatialQueryResult, SpatialRelationship};
@@ -861,51 +862,7 @@ impl Building3DRenderer {
 
     /// Render isometric view
     fn render_isometric_view(&self, scene: &Scene3D) -> Result<String, Box<dyn std::error::Error>> {
-        let mut output = String::new();
-
-        output.push_str("📐 Isometric 3D View:\n");
-        output.push_str("┌─────────────────────────────────────────────────────────────┐\n");
-
-        // Sort floors by level for proper rendering order
-        let mut floors = scene.floors.clone();
-        floors.sort_by_key(|f| f.level);
-
-        for floor in &floors {
-            output.push_str(&format!(
-                "│ Floor {}: {} (Z: {:.1}m) │\n",
-                floor.level,
-                floor.name.as_str(),
-                floor.elevation
-            ));
-
-            // Show equipment on this floor
-            let floor_equipment: Vec<&Equipment3D> = scene
-                .equipment
-                .iter()
-                .filter(|e| e.floor_level == floor.level)
-                .collect();
-
-            for equipment in &floor_equipment {
-                let status_symbol = match equipment.status {
-                    EquipmentStatus::Active => "🟢",
-                    EquipmentStatus::Maintenance => "🟡",
-                    EquipmentStatus::OutOfOrder => "🔴",
-                    EquipmentStatus::Inactive | EquipmentStatus::Unknown => "⚪",
-                };
-                output.push_str(&format!(
-                    "│   {} {} at ({:.1}, {:.1}, {:.1}) │\n",
-                    status_symbol,
-                    equipment.name.as_str(),
-                    equipment.position.x,
-                    equipment.position.y,
-                    equipment.position.z
-                ));
-            }
-        }
-
-        output.push_str("└─────────────────────────────────────────────────────────────┘\n");
-
-        Ok(output)
+        views::render_isometric_view(scene)
     }
 
     /// Render orthographic view
@@ -913,36 +870,13 @@ impl Building3DRenderer {
         &self,
         scene: &Scene3D,
     ) -> Result<String, Box<dyn std::error::Error>> {
-        let mut output = String::new();
-
-        output.push_str(&format!(
-            "📐 Orthographic View ({:?}):\n",
-            self.projection.view_angle
-        ));
-        output.push_str("┌─────────────────────────────────────────────────────────────┐\n");
-
-        // Render based on view angle
-        match self.projection.view_angle {
-            ViewAngle::TopDown => {
-                output.push_str("│ Top-Down View (X-Y Plane) │\n");
-                output.push_str(&self.render_top_down_view(scene));
-            }
-            ViewAngle::Front => {
-                output.push_str("│ Front View (X-Z Plane) │\n");
-                output.push_str(&self.render_front_view(scene));
-            }
-            ViewAngle::Side => {
-                output.push_str("│ Side View (Y-Z Plane) │\n");
-                output.push_str(&self.render_side_view(scene));
-            }
-            _ => {
-                output.push_str("│ Orthographic View │\n");
-            }
-        }
-
-        output.push_str("└─────────────────────────────────────────────────────────────┘\n");
-
-        Ok(output)
+        views::render_orthographic_view(
+            scene,
+            &self.projection,
+            views::render_top_down_view,
+            views::render_front_view,
+            views::render_side_view,
+        )
     }
 
     /// Render perspective view
@@ -950,153 +884,21 @@ impl Building3DRenderer {
         &self,
         scene: &Scene3D,
     ) -> Result<String, Box<dyn std::error::Error>> {
-        let mut output = String::new();
-
-        output.push_str("📐 Perspective View:\n");
-        output.push_str("┌─────────────────────────────────────────────────────────────┐\n");
-        output.push_str(&format!(
-            "│ Camera Position: ({:.1}, {:.1}, {:.1}) │\n",
-            self.camera.position.x, self.camera.position.y, self.camera.position.z
-        ));
-        output.push_str(&format!(
-            "│ Camera Target: ({:.1}, {:.1}, {:.1}) │\n",
-            self.camera.target.x, self.camera.target.y, self.camera.target.z
-        ));
-        output.push_str(&format!("│ FOV: {:.1}° │\n", self.camera.fov));
-
-        // Show equipment with perspective depth
-        let mut equipment_with_depth: Vec<(&Equipment3D, f64)> = scene
-            .equipment
-            .iter()
-            .map(|e| {
-                let depth = (e.position.x - self.camera.position.x).powi(2)
-                    + (e.position.y - self.camera.position.y).powi(2)
-                    + (e.position.z - self.camera.position.z).powi(2);
-                (e, depth.sqrt())
-            })
-            .collect();
-
-        equipment_with_depth
-            .sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
-
-        for (equipment, depth) in &equipment_with_depth {
-            let status_symbol = match equipment.status {
-                EquipmentStatus::Active => "🟢",
-                EquipmentStatus::Maintenance => "🟡",
-                EquipmentStatus::OutOfOrder => "🔴",
-                EquipmentStatus::Inactive | EquipmentStatus::Unknown => "⚪",
-            };
-            output.push_str(&format!(
-                "│   {} {} (depth: {:.1}m) │\n",
-                status_symbol,
-                equipment.name.as_str(),
-                depth
-            ));
-        }
-
-        output.push_str("└─────────────────────────────────────────────────────────────┘\n");
-
-        Ok(output)
+        views::render_perspective_view(scene, &self.camera)
     }
 
     /// Render top-down view
     fn render_top_down_view(&self, scene: &Scene3D) -> String {
-        let mut output = String::new();
-
-        // Create a simple ASCII grid representation
-        let grid_size = 20;
-        let mut grid = vec![vec![' '; grid_size]; grid_size];
-
-        // Place equipment on the grid
-        for equipment in &scene.equipment {
-            let x = ((equipment.position.x / 10.0) as usize).min(grid_size - 1);
-            let y = ((equipment.position.y / 10.0) as usize).min(grid_size - 1);
-
-            let char = match equipment.equipment_type {
-                EquipmentType::HVAC => 'H',
-                EquipmentType::Electrical => 'E',
-                EquipmentType::Safety => 'S',
-                EquipmentType::Network => 'N',
-                EquipmentType::AV => 'A',
-                EquipmentType::Furniture => 'F',
-                EquipmentType::Plumbing => 'P',
-                EquipmentType::Other(_) => 'O',
-            };
-
-            grid[y][x] = char;
-        }
-
-        output.push_str("│ Equipment Grid (Top-Down):\n");
-        for row in &grid {
-            output.push_str("│ ");
-            for &cell in row {
-                output.push(cell);
-            }
-            output.push_str(" │\n");
-        }
-
-        output
+        views::render_top_down_view(scene)
     }
 
     /// Render front view
     fn render_front_view(&self, scene: &Scene3D) -> String {
-        let mut output = String::new();
-
-        output.push_str("│ Front View (X-Z Plane):\n");
-
-        // Group equipment by floor level
-        let mut floor_equipment: std::collections::HashMap<i32, Vec<&Equipment3D>> =
-            std::collections::HashMap::new();
-        for equipment in &scene.equipment {
-            floor_equipment
-                .entry(equipment.floor_level)
-                .or_default()
-                .push(equipment);
-        }
-
-        let mut floors: Vec<_> = floor_equipment.keys().collect();
-        floors.sort();
-
-        for &floor_level in &floors {
-            output.push_str(&format!("│   Floor {}: ", floor_level));
-            if let Some(equipment) = floor_equipment.get(floor_level) {
-                for (i, eq) in equipment.iter().enumerate() {
-                    if i > 0 {
-                        output.push_str(", ");
-                    }
-                    output.push_str(eq.name.as_str());
-                }
-            }
-            output.push_str(" │\n");
-        }
-
-        output
+        views::render_front_view(scene)
     }
 
     /// Render side view
     fn render_side_view(&self, scene: &Scene3D) -> String {
-        let mut output = String::new();
-
-        output.push_str("│ Side View (Y-Z Plane):\n");
-
-        // Show equipment by Y position (depth)
-        let mut equipment_by_y: Vec<_> = scene.equipment.iter().collect();
-        equipment_by_y.sort_by(|a, b| {
-            a.position
-                .y
-                .partial_cmp(&b.position.y)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
-
-        for equipment in &equipment_by_y {
-            output.push_str(&format!(
-                "│   {} at Y: {:.1}m, Z: {:.1}m │\n",
-                equipment.name.as_str(),
-                equipment.position.y,
-                equipment.position.z
-            ));
-        }
-
-        output
+        views::render_side_view(scene)
     }
 }

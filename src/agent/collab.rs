@@ -207,7 +207,7 @@ mod tests {
 
     #[test]
     fn save_and_load_roundtrip() {
-        let tmp = tempdir().unwrap();
+        let tmp = tempdir().expect("Failed to create temp directory");
         env::set_var(CONFIG_ENV, tmp.path());
 
         let config = CollabConfig {
@@ -216,10 +216,12 @@ mod tests {
             target: CollabTarget::Issue { number: 42 },
         };
 
-        let stored = save_config(&config).unwrap();
+        let stored = save_config(&config).expect("Failed to save config");
         assert_eq!(stored.owner, "arx-os");
 
-        let loaded = load_config().unwrap().unwrap();
+        let loaded = load_config()
+            .expect("Failed to load config")
+            .expect("Config should exist after saving");
         assert_eq!(loaded.owner, "arx-os");
         assert_eq!(loaded.repo, "arxos");
 

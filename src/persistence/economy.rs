@@ -70,7 +70,7 @@ mod tests {
 
     #[test]
     fn save_snapshot_roundtrip() {
-        let dir = tempdir().unwrap();
+        let dir = tempdir().expect("Failed to create temp directory");
         let snapshot = EconomySnapshot {
             valuations: vec![BuildingValuation {
                 building: "alpha".into(),
@@ -89,8 +89,8 @@ mod tests {
             }],
         };
 
-        save_snapshot(dir.path(), &snapshot).unwrap();
-        let loaded = load_snapshot(dir.path()).unwrap();
+        save_snapshot(dir.path(), &snapshot).expect("Failed to save snapshot");
+        let loaded = load_snapshot(dir.path()).expect("Failed to load snapshot");
 
         assert_eq!(snapshot.valuations.len(), loaded.valuations.len());
         assert_eq!(snapshot.revenue_history.len(), loaded.revenue_history.len());

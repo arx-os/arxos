@@ -6,33 +6,19 @@
 pub mod economy;
 pub mod manager;
 
-use std::error::Error;
-use std::fmt;
+use thiserror::Error;
 
 /// Persistence error types
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum PersistenceError {
-    IoError(std::io::Error),
+    #[error("IO error: {0}")]
+    IoError(#[from] std::io::Error),
+
+    #[error("Serialization error: {0}")]
     SerializationError(String),
+
+    #[error("Validation error: {0}")]
     ValidationError(String),
-}
-
-impl fmt::Display for PersistenceError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            PersistenceError::IoError(err) => write!(f, "IO error: {}", err),
-            PersistenceError::SerializationError(msg) => write!(f, "Serialization error: {}", msg),
-            PersistenceError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
-        }
-    }
-}
-
-impl Error for PersistenceError {}
-
-impl From<std::io::Error> for PersistenceError {
-    fn from(err: std::io::Error) -> Self {
-        PersistenceError::IoError(err)
-    }
 }
 
 impl From<serde_yaml::Error> for PersistenceError {

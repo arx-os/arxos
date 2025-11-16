@@ -1,6 +1,7 @@
 import { initWasm } from "./wasm";
 import { AgentClient } from "../modules/agent/client/AgentClient";
 import { useAgentStore } from "../modules/agent/state/agentStore";
+import type { AgentAction } from "../modules/agent/client/types";
 
 export type CommandResult = {
   success: boolean;
@@ -81,8 +82,8 @@ Current status: ${agentStore.connectionState.status}`;
     // Parse command and build payload
     const payload = buildAgentPayload(command, args);
 
-    // Send to agent
-    const response = await client.send(command as any, payload);
+    // Send to agent (command is validated against AGENT_COMMANDS list in executeCommand)
+    const response = await client.send(command as AgentAction, payload);
 
     // Format response for display
     return formatAgentResponse(command, response);

@@ -1,7 +1,12 @@
 import { create } from "zustand";
 import { gitStatus, gitDiff, gitCommit } from "../modules/agent/commands/git";
 import { useAgentStore } from "../modules/agent/state/agentStore";
+import type { GitStatus as AgentGitStatus } from "../modules/agent/client/types";
 
+/**
+ * UI-focused Git status type with detailed change tracking
+ * This extends the agent's basic GitStatus with additional fields for display
+ */
 export type GitStatus = {
   branch: string;
   last_commit: string;
@@ -59,6 +64,30 @@ function checkAgentConnected(): void {
   if (!agentState.isInitialized || agentState.connectionState.status !== "connected") {
     throw new Error("Agent not connected. Please authenticate first.");
   }
+}
+
+/**
+ * Convert agent's GitStatus response to UI display format
+ * Maps the agent's file arrays to change counts for display
+ */
+function mapAgentStatusToDisplay(agentStatus: AgentGitStatus): GitStatus {
+  // Calculate total files changed for diff summary
+  const filesChanged = agentStatus.modified.length + agentStatus.added.length + agentStatus.deleted.length;
+
+  return {
+    branch: agentStatus.branch,
+    last_commit: "HEAD", // Will be fetched separately in future
+    last_commit_message: "", // Will be fetched separately in future
+    last_commit_time: Date.now() / 1000, // Will be fetched separately in future
+    staged_changes: agentStatus.added.length, // Added files are typically staged
+    unstaged_changes: agentStatus.modified.length,
+    untracked: agentStatus.untracked.length,
+    diff_summary: {
+      files_changed: filesChanged,
+      insertions: 0, // Requires parsing diff output
+      deletions: 0, // Requires parsing diff output
+    },
+  };
 }
 
 /**
@@ -141,8 +170,9 @@ export const useGitStore = create<GitStore>((set) => ({
       set({ loading: true, error: undefined });
       checkAgentConnected();
 
-      const response = await gitStatus();
-      set({ status: response as unknown as GitStatus, loading: false });
+      const agentStatus = await gitStatus();
+      const displayStatus = mapAgentStatusToDisplay(agentStatus);
+      set({ status: displayStatus, loading: false });
     } catch (error) {
       set({ error: (error as Error).message, loading: false });
     }

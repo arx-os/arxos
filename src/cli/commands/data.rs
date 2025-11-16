@@ -15,42 +15,11 @@ pub struct RoomCommand {
 impl Command for RoomCommand {
     fn execute(&self) -> Result<(), Box<dyn Error>> {
         match &self.subcommand {
-            RoomCommands::Create {
-                building,
-                floor,
-                wing,
-                name,
-                room_type,
-                dimensions,
-                position,
-                commit,
-            } => {
-                println!("🏗️  Creating room: {}", name);
-                println!("   Building: {}", building);
-                println!("   Floor: {}", floor);
-                println!("   Wing: {}", wing);
-                println!("   Type: {}", room_type);
-
-                if let Some(ref dims) = dimensions {
-                    println!("   Dimensions: {}", dims);
-                }
-
-                if let Some(ref pos) = position {
-                    println!("   Position: {}", pos);
-                }
-
-                // TODO: Implement room creation logic
-                // - Parse dimensions and position
-                // - Create room in building data
-                // - Update YAML file
-
-                if *commit {
-                    println!("   Committing changes...");
-                    // TODO: Git commit
-                }
-
-                println!("✅ Room created successfully");
-                Ok(())
+            RoomCommands::Create { .. } => {
+                Err("Room creation is not yet implemented. \
+                     This feature is planned for a future release. \
+                     Use the spreadsheet editor (`arx spreadsheet`) or YAML files directly for now."
+                    .into())
             }
             RoomCommands::List {
                 building,
@@ -95,48 +64,19 @@ impl Command for RoomCommand {
 
                 Ok(())
             }
-            RoomCommands::Update {
-                room,
-                property,
-                commit,
-            } => {
-                println!("✏️  Updating room: {}", room);
-
-                for prop in property {
-                    println!("   Setting property: {}", prop);
-                    // TODO: Parse key=value and update room
-                }
-
-                if *commit {
-                    println!("   Committing changes...");
-                    // TODO: Git commit
-                }
-
-                println!("✅ Room updated successfully");
-                Ok(())
+            RoomCommands::Update { .. } => {
+                Err("Room update is not yet implemented. \
+                     Use the spreadsheet editor (`arx spreadsheet`) or edit YAML files directly."
+                    .into())
             }
-            RoomCommands::Delete {
-                room,
-                confirm,
-                commit,
-            } => {
+            RoomCommands::Delete { confirm, .. } => {
                 if !confirm {
                     return Err("Room deletion requires --confirm flag".into());
                 }
 
-                println!("🗑️  Deleting room: {}", room);
-                // TODO: Implement room deletion
-                // - Remove from building data
-                // - Handle equipment in room
-                // - Update YAML file
-
-                if *commit {
-                    println!("   Committing changes...");
-                    // TODO: Git commit
-                }
-
-                println!("✅ Room deleted successfully");
-                Ok(())
+                Err("Room deletion is not yet implemented. \
+                     Edit YAML files directly to remove rooms."
+                    .into())
             }
         }
     }
@@ -154,46 +94,10 @@ pub struct EquipmentCommand {
 impl Command for EquipmentCommand {
     fn execute(&self) -> Result<(), Box<dyn Error>> {
         match &self.subcommand {
-            EquipmentCommands::Add {
-                room,
-                name,
-                equipment_type,
-                position,
-                at,
-                property,
-                commit,
-            } => {
-                println!("➕ Adding equipment: {}", name);
-                println!("   Room: {}", room);
-                println!("   Type: {}", equipment_type);
-
-                if let Some(ref pos) = position {
-                    println!("   Position: {}", pos);
-                }
-
-                if let Some(ref address) = at {
-                    println!("   ArxAddress: {}", address);
-                } else {
-                    println!("   ArxAddress: (auto-generated)");
-                }
-
-                for prop in property {
-                    println!("   Property: {}", prop);
-                    // TODO: Parse key=value pairs
-                }
-
-                // TODO: Implement equipment creation
-                // - Create equipment object
-                // - Add to room
-                // - Update building YAML
-
-                if *commit {
-                    println!("   Committing changes...");
-                    // TODO: Git commit
-                }
-
-                println!("✅ Equipment added successfully");
-                Ok(())
+            EquipmentCommands::Add { .. } => {
+                Err("Equipment addition is not yet implemented. \
+                     Use the spreadsheet editor (`arx spreadsheet`) or YAML files directly."
+                    .into())
             }
             EquipmentCommands::List {
                 room,
@@ -222,51 +126,19 @@ impl Command for EquipmentCommand {
 
                 Ok(())
             }
-            EquipmentCommands::Update {
-                equipment,
-                property,
-                position,
-                commit,
-            } => {
-                println!("✏️  Updating equipment: {}", equipment);
-
-                if let Some(ref pos) = position {
-                    println!("   New position: {}", pos);
-                    // TODO: Parse and update position
-                }
-
-                for prop in property {
-                    println!("   Setting property: {}", prop);
-                    // TODO: Parse key=value and update
-                }
-
-                if *commit {
-                    println!("   Committing changes...");
-                    // TODO: Git commit
-                }
-
-                println!("✅ Equipment updated successfully");
-                Ok(())
+            EquipmentCommands::Update { .. } => {
+                Err("Equipment update is not yet implemented. \
+                     Use the spreadsheet editor (`arx spreadsheet`) or edit YAML files directly."
+                    .into())
             }
-            EquipmentCommands::Remove {
-                equipment,
-                confirm,
-                commit,
-            } => {
+            EquipmentCommands::Remove { confirm, .. } => {
                 if !confirm {
                     return Err("Equipment removal requires --confirm flag".into());
                 }
 
-                println!("🗑️  Removing equipment: {}", equipment);
-                // TODO: Implement equipment removal
-
-                if *commit {
-                    println!("   Committing changes...");
-                    // TODO: Git commit
-                }
-
-                println!("✅ Equipment removed successfully");
-                Ok(())
+                Err("Equipment removal is not yet implemented. \
+                     Edit YAML files directly to remove equipment."
+                    .into())
             }
         }
     }

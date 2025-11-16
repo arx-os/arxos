@@ -1,8 +1,11 @@
-//! Visual Effects Engine for Terminal Rendering
+//! Visual Effects Engine Implementation
 //!
-//! This module provides advanced visual effects for equipment status, building health,
-//! and interactive elements using particles and animations.
+//! This module contains the main VisualEffectsEngine struct and its implementation.
+//! The engine coordinates particles, animations, and various visual effects.
 
+use super::config::{EffectsConfig, EffectQuality};
+use super::stats::EffectsStats;
+use super::types::{EffectData, EffectState, EffectType, VisualEffect};
 use crate::render3d::animation::{AnimationSystem, EquipmentStatus};
 use crate::render3d::particles::{
     AlertLevel, Particle, ParticleData, ParticleSystem, ParticleType, StatusType, Vector3D,
@@ -24,185 +27,6 @@ pub struct VisualEffectsEngine {
     stats: EffectsStats,
 }
 
-/// Individual visual effect
-#[derive(Debug, Clone)]
-pub struct VisualEffect {
-    /// Effect identifier
-    pub id: String,
-    /// Effect type
-    pub effect_type: EffectType,
-    /// Effect state
-    pub state: EffectState,
-    /// Effect duration
-    pub duration: Option<std::time::Duration>,
-    /// Effect intensity
-    pub intensity: f64,
-    /// Effect position
-    pub position: Point3D,
-    /// Effect data
-    pub data: EffectData,
-}
-
-/// Different types of visual effects
-#[derive(Debug, Clone, PartialEq)]
-pub enum EffectType {
-    /// Equipment status indicator
-    EquipmentStatus,
-    /// Building health visualization
-    BuildingHealth,
-    /// Maintenance alert
-    MaintenanceAlert,
-    /// Equipment connection
-    EquipmentConnection,
-    /// Selection highlight
-    SelectionHighlight,
-    /// Floor transition effect
-    FloorTransition,
-    /// View mode transition
-    ViewModeTransition,
-    /// Particle burst effect
-    ParticleBurst,
-    /// Smoke effect
-    SmokeEffect,
-    /// Fire effect
-    FireEffect,
-    /// Spark effect
-    SparkEffect,
-}
-
-/// Effect state
-#[derive(Debug, Clone, PartialEq)]
-pub enum EffectState {
-    /// Effect is starting
-    Starting,
-    /// Effect is active
-    Active,
-    /// Effect is ending
-    Ending,
-    /// Effect has completed
-    Completed,
-    /// Effect was cancelled
-    Cancelled,
-}
-
-/// Custom data for different effect types
-#[derive(Debug, Clone)]
-pub enum EffectData {
-    /// Equipment status effect data
-    EquipmentStatus {
-        equipment_id: String,
-        status: EquipmentStatus,
-        pulse_rate: f64,
-        color_intensity: f64,
-    },
-    /// Building health effect data
-    BuildingHealth {
-        health_level: f64,
-        alert_count: usize,
-        maintenance_count: usize,
-    },
-    /// Maintenance alert effect data
-    MaintenanceAlert {
-        equipment_id: String,
-        alert_level: AlertLevel,
-        urgency: f64,
-    },
-    /// Equipment connection effect data
-    EquipmentConnection {
-        source_id: String,
-        target_id: String,
-        connection_strength: f64,
-        data_flow: f64,
-    },
-    /// Selection highlight effect data
-    SelectionHighlight {
-        equipment_id: String,
-        highlight_color: char,
-        pulse_intensity: f64,
-    },
-    /// Floor transition effect data
-    FloorTransition {
-        from_floor: i32,
-        to_floor: i32,
-        transition_speed: f64,
-    },
-    /// View mode transition effect data
-    ViewModeTransition {
-        from_mode: String,
-        to_mode: String,
-        transition_type: String,
-    },
-    /// Particle burst effect data
-    ParticleBurst {
-        particle_count: usize,
-        burst_radius: f64,
-        particle_type: ParticleType,
-    },
-    /// Smoke effect data
-    SmokeEffect {
-        smoke_intensity: f64,
-        temperature: f64,
-        wind_direction: Vector3D,
-    },
-    /// Fire effect data
-    FireEffect {
-        fire_intensity: f64,
-        temperature: f64,
-        flicker_rate: f64,
-    },
-    /// Spark effect data
-    SparkEffect {
-        spark_count: usize,
-        energy_level: f64,
-        trail_length: usize,
-    },
-}
-
-/// Visual effects configuration
-#[derive(Debug, Clone)]
-pub struct EffectsConfig {
-    /// Maximum number of concurrent effects
-    pub max_effects: usize,
-    /// Enable particle effects
-    pub enable_particles: bool,
-    /// Enable animation effects
-    pub enable_animations: bool,
-    /// Default effect duration
-    pub default_duration: std::time::Duration,
-    /// Effect quality level
-    pub quality_level: EffectQuality,
-    /// Enable performance optimizations
-    pub enable_optimizations: bool,
-    /// Target effects FPS
-    pub target_fps: u32,
-}
-
-/// Effect quality levels
-#[derive(Debug, Clone, PartialEq)]
-pub enum EffectQuality {
-    Low,
-    Medium,
-    High,
-    Ultra,
-}
-
-/// Visual effects performance statistics
-#[derive(Debug, Clone)]
-pub struct EffectsStats {
-    /// Total effects created
-    pub effects_created: u64,
-    /// Total effects completed
-    pub effects_completed: u64,
-    /// Current active effect count
-    pub active_effects: usize,
-    /// Average update time per frame
-    pub avg_update_time_ms: f64,
-    /// Peak effect count
-    pub peak_effect_count: usize,
-    /// Effects frame rate
-    pub fps: f64,
-}
-
 impl Default for VisualEffectsEngine {
     fn default() -> Self {
         Self::new()
@@ -210,6 +34,8 @@ impl Default for VisualEffectsEngine {
 }
 
 impl VisualEffectsEngine {
+    // ==================== CONSTRUCTORS ====================
+    
     /// Create a new visual effects engine
     pub fn new() -> Self {
         Self::with_config(EffectsConfig::default())
@@ -226,7 +52,7 @@ impl VisualEffectsEngine {
         }
     }
 
-    /// Update all effects (call this every frame)
+    // ==================== MAIN UPDATE LOOP ====================
     pub fn update(&mut self, delta_time: f64) {
         let start_time = std::time::Instant::now();
 
@@ -820,125 +646,4 @@ impl VisualEffectsEngine {
         }
     }
 }
-
-impl Default for EffectsConfig {
-    fn default() -> Self {
-        Self {
-            max_effects: 50,
-            enable_particles: true,
-            enable_animations: true,
-            default_duration: std::time::Duration::from_secs(3),
-            quality_level: EffectQuality::Medium,
-            enable_optimizations: true,
-            target_fps: 60,
-        }
-    }
-}
-
-impl EffectsStats {
-    /// Create new statistics
-    pub fn new() -> Self {
-        Self {
-            effects_created: 0,
-            effects_completed: 0,
-            active_effects: 0,
-            avg_update_time_ms: 0.0,
-            peak_effect_count: 0,
-            fps: 0.0,
-        }
-    }
-}
-
-impl Default for EffectsStats {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_visual_effects_engine_creation() {
-        let engine = VisualEffectsEngine::new();
-        assert_eq!(engine.effect_count(), 0);
-        assert_eq!(engine.config.max_effects, 50);
-    }
-
-    #[test]
-    fn test_equipment_status_effect() {
-        let mut engine = VisualEffectsEngine::new();
-
-        let result = engine.create_equipment_status_effect(
-            "test_status".to_string(),
-            "equipment_1".to_string(),
-            EquipmentStatus::Healthy,
-            Point3D::new(0.0, 0.0, 0.0),
-        );
-
-        assert!(result.is_ok());
-        assert_eq!(engine.effect_count(), 1);
-    }
-
-    #[test]
-    fn test_maintenance_alert_effect() {
-        let mut engine = VisualEffectsEngine::new();
-
-        let result = engine.create_maintenance_alert_effect(
-            "test_alert".to_string(),
-            "equipment_1".to_string(),
-            AlertLevel::High,
-            Point3D::new(0.0, 0.0, 0.0),
-        );
-
-        assert!(result.is_ok());
-        assert_eq!(engine.effect_count(), 1);
-    }
-
-    #[test]
-    fn test_particle_burst_effect() {
-        let mut engine = VisualEffectsEngine::new();
-
-        let result = engine.create_particle_burst_effect(
-            "test_burst".to_string(),
-            Point3D::new(0.0, 0.0, 0.0),
-            ParticleType::Spark,
-            10,
-        );
-
-        assert!(result.is_ok());
-        assert_eq!(engine.effect_count(), 1);
-    }
-
-    #[test]
-    fn test_effects_update() {
-        let mut engine = VisualEffectsEngine::new();
-
-        engine
-            .create_equipment_status_effect(
-                "test_status".to_string(),
-                "equipment_1".to_string(),
-                EquipmentStatus::Healthy,
-                Point3D::new(0.0, 0.0, 0.0),
-            )
-            .unwrap();
-
-        // Update with 16ms delta time (60 FPS)
-        engine.update(0.016);
-
-        // Effect should still be active
-        assert_eq!(engine.effect_count(), 1);
-    }
-
-    #[test]
-    fn test_effect_types() {
-        let status_effect = EffectType::EquipmentStatus;
-        let alert_effect = EffectType::MaintenanceAlert;
-        let burst_effect = EffectType::ParticleBurst;
-
-        assert!(matches!(status_effect, EffectType::EquipmentStatus));
-        assert!(matches!(alert_effect, EffectType::MaintenanceAlert));
-        assert!(matches!(burst_effect, EffectType::ParticleBurst));
-    }
 }

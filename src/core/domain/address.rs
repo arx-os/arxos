@@ -107,7 +107,7 @@ impl ArxAddress {
         if parts.len() != 7 {
             return Err(ArxError::path_invalid(
                 self.path.clone(),
-                "/country/state/city/building/floor/room/fixture",
+                "/country/state/city/building/floor/room/fixture".to_string(),
             )
             .into());
         }
@@ -122,7 +122,7 @@ impl ArxAddress {
                     if !fixture.starts_with("boiler-") && !fixture.starts_with("ahu-") {
                         return Err(ArxError::address_validation(
                             self.path.clone(),
-                            "HVAC fixture must start with boiler- or ahu-",
+                            "HVAC fixture must start with boiler- or ahu-".to_string(),
                         )
                         .into());
                     }
@@ -131,7 +131,7 @@ impl ArxAddress {
                     if !fixture.starts_with("valve-") && !fixture.starts_with("pump-") {
                         return Err(ArxError::address_validation(
                             self.path.clone(),
-                            "Plumbing fixture must start with valve- or pump-",
+                            "Plumbing fixture must start with valve- or pump-".to_string(),
                         )
                         .into());
                     }
@@ -140,7 +140,7 @@ impl ArxAddress {
                     if !fixture.starts_with("panel-") && !fixture.starts_with("breaker-") {
                         return Err(ArxError::address_validation(
                             self.path.clone(),
-                            "Electrical fixture must start with panel- or breaker-",
+                            "Electrical fixture must start with panel- or breaker-".to_string(),
                         )
                         .into());
                     }
@@ -149,7 +149,7 @@ impl ArxAddress {
                     if !fixture.starts_with("sprinkler-") && !fixture.starts_with("alarm-") {
                         return Err(ArxError::address_validation(
                             self.path.clone(),
-                            "Fire fixture must start with sprinkler- or alarm-",
+                            "Fire fixture must start with sprinkler- or alarm-".to_string(),
                         )
                         .into());
                     }
@@ -158,7 +158,7 @@ impl ArxAddress {
                     if !fixture.starts_with("fixture-") && !fixture.starts_with("control-") {
                         return Err(ArxError::address_validation(
                             self.path.clone(),
-                            "Lighting fixture must start with fixture- or control-",
+                            "Lighting fixture must start with fixture- or control-".to_string(),
                         )
                         .into());
                     }
@@ -167,7 +167,7 @@ impl ArxAddress {
                     if !fixture.starts_with("camera-") && !fixture.starts_with("access-") {
                         return Err(ArxError::address_validation(
                             self.path.clone(),
-                            "Security fixture must start with camera- or access-",
+                            "Security fixture must start with camera- or access-".to_string(),
                         )
                         .into());
                     }
@@ -176,7 +176,7 @@ impl ArxAddress {
                     if !fixture.starts_with("car-") && !fixture.starts_with("control-") {
                         return Err(ArxError::address_validation(
                             self.path.clone(),
-                            "Elevator fixture must start with car- or control-",
+                            "Elevator fixture must start with car- or control-".to_string(),
                         )
                         .into());
                     }
@@ -185,7 +185,7 @@ impl ArxAddress {
                     if !fixture.starts_with("unit-") && !fixture.starts_with("drain-") {
                         return Err(ArxError::address_validation(
                             self.path.clone(),
-                            "Roof fixture must start with unit- or drain-",
+                            "Roof fixture must start with unit- or drain-".to_string(),
                         )
                         .into());
                     }
@@ -194,7 +194,7 @@ impl ArxAddress {
                     if !fixture.starts_with("frame-") && !fixture.starts_with("glass-") {
                         return Err(ArxError::address_validation(
                             self.path.clone(),
-                            "Window fixture must start with frame- or glass-",
+                            "Window fixture must start with frame- or glass-".to_string(),
                         )
                         .into());
                     }
@@ -203,7 +203,7 @@ impl ArxAddress {
                     if !fixture.starts_with("hinge-") && !fixture.starts_with("lock-") {
                         return Err(ArxError::address_validation(
                             self.path.clone(),
-                            "Door fixture must start with hinge- or lock-",
+                            "Door fixture must start with hinge- or lock-".to_string(),
                         )
                         .into());
                     }
@@ -212,7 +212,7 @@ impl ArxAddress {
                     if !fixture.starts_with("column-") && !fixture.starts_with("beam-") {
                         return Err(ArxError::address_validation(
                             self.path.clone(),
-                            "Structure fixture must start with column- or beam-",
+                            "Structure fixture must start with column- or beam-".to_string(),
                         )
                         .into());
                     }
@@ -221,7 +221,7 @@ impl ArxAddress {
                     if !fixture.starts_with("wall-") && !fixture.starts_with("insulation-") {
                         return Err(ArxError::address_validation(
                             self.path.clone(),
-                            "Envelope fixture must start with wall- or insulation-",
+                            "Envelope fixture must start with wall- or insulation-".to_string(),
                         )
                         .into());
                     }
@@ -230,7 +230,7 @@ impl ArxAddress {
                     if !fixture.starts_with("switch-") && !fixture.starts_with("ap-") {
                         return Err(ArxError::address_validation(
                             self.path.clone(),
-                            "IT fixture must start with switch- or ap-",
+                            "IT fixture must start with switch- or ap-".to_string(),
                         )
                         .into());
                     }
@@ -239,7 +239,7 @@ impl ArxAddress {
                     if !fixture.starts_with("desk-") && !fixture.starts_with("chair-") {
                         return Err(ArxError::address_validation(
                             self.path.clone(),
-                            "Furniture fixture must start with desk- or chair-",
+                            "Furniture fixture must start with desk- or chair-".to_string(),
                         )
                         .into());
                     }
@@ -283,7 +283,7 @@ impl ArxAddress {
         if parts.len() != 7 {
             return Err(ArxError::path_invalid(
                 self.path.clone(),
-                "/country/state/city/building/floor/room/fixture",
+                "/country/state/city/building/floor/room/fixture".to_string(),
             )
             .into());
         }

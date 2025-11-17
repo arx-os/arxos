@@ -3,9 +3,17 @@
 //! This module provides a high-performance particle system optimized for terminal rendering,
 //! including particle lifecycle management, physics simulation, and visual effects.
 
+mod particles;
+
 use crate::core::spatial::Point3D;
 use std::collections::VecDeque;
 use std::time::Instant;
+
+// Re-export types from submodules
+pub use particles::{
+    AlertLevel, Particle, ParticleData, ParticleSystemConfig, ParticleSystemStats, ParticleType,
+    StatusType, Vector3D,
+};
 
 /// Particle system for terminal-based visual effects
 pub struct ParticleSystem {
@@ -22,145 +30,6 @@ pub struct ParticleSystem {
     last_update: Instant,
 }
 
-/// Individual particle with physics and rendering properties
-#[derive(Debug, Clone)]
-pub struct Particle {
-    /// Position in 3D space
-    pub position: Point3D,
-    /// Velocity vector
-    pub velocity: Vector3D,
-    /// Acceleration vector
-    pub acceleration: Vector3D,
-    /// Particle lifetime (0.0 to 1.0)
-    pub lifetime: f64,
-    /// Maximum lifetime
-    pub max_lifetime: f64,
-    /// Particle size
-    pub size: f64,
-    /// Particle color/character
-    pub character: char,
-    /// Particle type for different behaviors
-    pub particle_type: ParticleType,
-    /// Custom data for specific particle types
-    pub data: ParticleData,
-}
-
-/// 3D vector for particle physics
-#[derive(Debug, Clone)]
-pub struct Vector3D {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
-}
-
-/// Different types of particles with specific behaviors
-#[derive(Debug, Clone, PartialEq)]
-pub enum ParticleType {
-    /// Basic particle with simple physics
-    Basic,
-    /// Smoke particle with upward drift
-    Smoke,
-    /// Fire particle with flickering
-    Fire,
-    /// Spark particle with random movement
-    Spark,
-    /// Dust particle with gravity
-    Dust,
-    /// Equipment status indicator
-    StatusIndicator,
-    /// Connection line particle
-    Connection,
-    /// Maintenance alert particle
-    MaintenanceAlert,
-}
-
-/// Custom data for different particle types
-#[derive(Debug, Clone)]
-pub enum ParticleData {
-    /// Basic particle data
-    Basic { color_intensity: f64 },
-    /// Smoke particle data
-    Smoke { opacity: f64, temperature: f64 },
-    /// Fire particle data
-    Fire { intensity: f64, flicker_rate: f64 },
-    /// Spark particle data
-    Spark { energy: f64, trail_length: usize },
-    /// Dust particle data
-    Dust { mass: f64, static_charge: f64 },
-    /// Status indicator data
-    StatusIndicator {
-        equipment_id: String,
-        status_type: StatusType,
-    },
-    /// Connection particle data
-    Connection {
-        source_id: String,
-        target_id: String,
-        connection_strength: f64,
-    },
-    /// Maintenance alert data
-    MaintenanceAlert {
-        alert_level: AlertLevel,
-        equipment_id: String,
-    },
-}
-
-/// Equipment status types for status indicator particles
-#[derive(Debug, Clone, PartialEq)]
-pub enum StatusType {
-    Healthy,
-    Warning,
-    Critical,
-    Maintenance,
-    Offline,
-}
-
-/// Alert levels for maintenance particles
-#[derive(Debug, Clone, PartialEq)]
-pub enum AlertLevel {
-    Low,
-    Medium,
-    High,
-    Critical,
-}
-
-/// Particle system configuration
-#[derive(Debug, Clone)]
-pub struct ParticleSystemConfig {
-    /// Maximum number of active particles
-    pub max_particles: usize,
-    /// Global gravity force
-    pub gravity: f64,
-    /// Air resistance coefficient
-    pub air_resistance: f64,
-    /// Enable particle pooling for performance
-    pub enable_pooling: bool,
-    /// Target update frequency (Hz)
-    pub target_fps: u32,
-    /// Enable physics simulation
-    pub enable_physics: bool,
-    /// Enable particle trails
-    pub enable_trails: bool,
-    /// Trail length for particles
-    pub trail_length: usize,
-}
-
-/// Particle system performance statistics
-#[derive(Debug, Clone)]
-pub struct ParticleSystemStats {
-    /// Total particles created
-    pub particles_created: u64,
-    /// Total particles destroyed
-    pub particles_destroyed: u64,
-    /// Current active particle count
-    pub active_particles: usize,
-    /// Average update time per frame
-    pub avg_update_time_ms: f64,
-    /// Peak particle count
-    pub peak_particle_count: usize,
-    /// Frame rate
-    pub fps: f64,
-}
 
 impl Default for ParticleSystem {
     fn default() -> Self {
@@ -210,138 +79,9 @@ impl ParticleSystem {
         self.update_stats(start_time, delta_time);
     }
 
-    /// Update a single particle
+    /// Update a single particle using the physics module
     fn update_particle(&mut self, particle: &mut Particle, delta_time: f64) {
-        if !self.config.enable_physics {
-            return;
-        }
-
-        // Apply physics based on particle type
-        match particle.particle_type {
-            ParticleType::Basic => self.update_basic_particle(particle, delta_time),
-            ParticleType::Smoke => self.update_smoke_particle(particle, delta_time),
-            ParticleType::Fire => self.update_fire_particle(particle, delta_time),
-            ParticleType::Spark => self.update_spark_particle(particle, delta_time),
-            ParticleType::Dust => self.update_dust_particle(particle, delta_time),
-            ParticleType::StatusIndicator => self.update_status_particle(particle, delta_time),
-            ParticleType::Connection => self.update_connection_particle(particle, delta_time),
-            ParticleType::MaintenanceAlert => {
-                self.update_maintenance_particle(particle, delta_time)
-            }
-        }
-
-        // Update lifetime
-        particle.lifetime -= delta_time / particle.max_lifetime;
-
-        // Update position based on velocity
-        particle.position.x += particle.velocity.x * delta_time;
-        particle.position.y += particle.velocity.y * delta_time;
-        particle.position.z += particle.velocity.z * delta_time;
-
-        // Update velocity based on acceleration
-        particle.velocity.x += particle.acceleration.x * delta_time;
-        particle.velocity.y += particle.acceleration.y * delta_time;
-        particle.velocity.z += particle.acceleration.z * delta_time;
-
-        // Apply air resistance
-        let resistance = 1.0 - (self.config.air_resistance * delta_time);
-        particle.velocity.x *= resistance;
-        particle.velocity.y *= resistance;
-        particle.velocity.z *= resistance;
-    }
-
-    /// Update basic particle physics
-    fn update_basic_particle(&mut self, particle: &mut Particle, _delta_time: f64) {
-        // Apply gravity
-        particle.acceleration.y -= self.config.gravity;
-    }
-
-    /// Update smoke particle physics
-    fn update_smoke_particle(&mut self, particle: &mut Particle, _delta_time: f64) {
-        // Smoke rises and spreads
-        particle.acceleration.y += 2.0; // Upward force
-        particle.acceleration.x += (particle.lifetime - 0.5) * 0.5; // Horizontal drift
-
-        // Update smoke-specific data
-        if let ParticleData::Smoke {
-            opacity,
-            temperature,
-        } = &mut particle.data
-        {
-            *opacity *= 0.98; // Fade out over time
-            *temperature *= 0.99; // Cool down
-        }
-    }
-
-    /// Update fire particle physics
-    fn update_fire_particle(&mut self, particle: &mut Particle, _delta_time: f64) {
-        // Fire flickers and moves upward
-        particle.acceleration.y += 1.5;
-
-        // Random flicker
-        let flicker = (particle.lifetime * 10.0).sin() * 0.3;
-        particle.acceleration.x += flicker;
-        particle.acceleration.z += flicker * 0.5;
-
-        // Update fire-specific data
-        if let ParticleData::Fire {
-            intensity,
-            flicker_rate,
-        } = &mut particle.data
-        {
-            *intensity = (particle.lifetime * *flicker_rate).sin().abs();
-        }
-    }
-
-    /// Update spark particle physics
-    fn update_spark_particle(&mut self, particle: &mut Particle, _delta_time: f64) {
-        // Sparks move randomly and lose energy
-        let random_x = (particle.lifetime * 15.0).sin() * 2.0;
-        let random_z = (particle.lifetime * 12.0).cos() * 1.5;
-
-        particle.acceleration.x += random_x;
-        particle.acceleration.z += random_z;
-
-        // Apply gravity
-        particle.acceleration.y -= self.config.gravity * 0.5;
-
-        // Update spark-specific data
-        if let ParticleData::Spark { energy, .. } = &mut particle.data {
-            *energy *= 0.95; // Lose energy over time
-        }
-    }
-
-    /// Update dust particle physics
-    fn update_dust_particle(&mut self, particle: &mut Particle, _delta_time: f64) {
-        // Dust falls slowly with gravity
-        particle.acceleration.y -= self.config.gravity * 0.3;
-
-        // Slight horizontal drift
-        particle.acceleration.x += (particle.lifetime - 0.5) * 0.1;
-    }
-
-    /// Update status indicator particle
-    fn update_status_particle(&mut self, particle: &mut Particle, _delta_time: f64) {
-        // Status indicators pulse
-        let pulse = (particle.lifetime * 8.0).sin() * 0.2;
-        particle.size = 1.0 + pulse;
-    }
-
-    /// Update connection particle
-    fn update_connection_particle(&mut self, _particle: &mut Particle, _delta_time: f64) {
-        // Connection particles flow along the connection
-        // This would be updated based on actual connection data
-    }
-
-    /// Update maintenance alert particle
-    fn update_maintenance_particle(&mut self, particle: &mut Particle, _delta_time: f64) {
-        // Maintenance alerts blink
-        let blink = (particle.lifetime * 6.0).sin() > 0.0;
-        if blink {
-            particle.character = '!';
-        } else {
-            particle.character = ' ';
-        }
+        particles::update_particle(particle, delta_time, &self.config);
     }
 
     /// Remove particles that have expired
@@ -398,73 +138,10 @@ impl ParticleSystem {
         }
     }
 
-    /// Create a particle burst effect
+    /// Create a particle burst effect using the emitters module
     pub fn create_burst(&mut self, position: Point3D, count: usize, particle_type: ParticleType) {
-        for i in 0..count {
-            let angle = (i as f64 / count as f64) * 2.0 * std::f64::consts::PI;
-            let speed = 2.0 + (i as f64 * 0.1);
-
-            let particle = Particle {
-                position,
-                velocity: Vector3D {
-                    x: angle.cos() * speed,
-                    y: 0.0,
-                    z: angle.sin() * speed,
-                },
-                acceleration: Vector3D::zero(),
-                lifetime: 1.0,
-                max_lifetime: 2.0,
-                size: 1.0,
-                character: match particle_type {
-                    ParticleType::Spark => '*',
-                    ParticleType::Fire => '^',
-                    ParticleType::Smoke => '~',
-                    _ => '•',
-                },
-                particle_type: particle_type.clone(),
-                data: self.create_particle_data(&particle_type),
-            };
-
-            self.emit_particle(particle);
-        }
-    }
-
-    /// Create particle data based on type
-    fn create_particle_data(&self, particle_type: &ParticleType) -> ParticleData {
-        match particle_type {
-            ParticleType::Basic => ParticleData::Basic {
-                color_intensity: 1.0,
-            },
-            ParticleType::Smoke => ParticleData::Smoke {
-                opacity: 1.0,
-                temperature: 100.0,
-            },
-            ParticleType::Fire => ParticleData::Fire {
-                intensity: 1.0,
-                flicker_rate: 8.0,
-            },
-            ParticleType::Spark => ParticleData::Spark {
-                energy: 1.0,
-                trail_length: 3,
-            },
-            ParticleType::Dust => ParticleData::Dust {
-                mass: 0.1,
-                static_charge: 0.0,
-            },
-            ParticleType::StatusIndicator => ParticleData::StatusIndicator {
-                equipment_id: "unknown".to_string(),
-                status_type: StatusType::Healthy,
-            },
-            ParticleType::Connection => ParticleData::Connection {
-                source_id: "unknown".to_string(),
-                target_id: "unknown".to_string(),
-                connection_strength: 1.0,
-            },
-            ParticleType::MaintenanceAlert => ParticleData::MaintenanceAlert {
-                alert_level: AlertLevel::Medium,
-                equipment_id: "unknown".to_string(),
-            },
-        }
+        let burst_particles = particles::create_burst(position, count, particle_type);
+        self.emit_burst(burst_particles);
     }
 
     /// Get all active particles
@@ -499,67 +176,6 @@ impl ParticleSystem {
     }
 }
 
-impl Vector3D {
-    /// Create a new 3D vector
-    pub fn new(x: f64, y: f64, z: f64) -> Self {
-        Self { x, y, z }
-    }
-
-    /// Create zero vector
-    pub fn zero() -> Self {
-        Self::new(0.0, 0.0, 0.0)
-    }
-
-    /// Calculate vector length
-    pub fn length(&self) -> f64 {
-        (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
-    }
-
-    /// Normalize vector to unit length
-    pub fn normalize(&self) -> Self {
-        let len = self.length();
-        if len > 0.0 {
-            Self::new(self.x / len, self.y / len, self.z / len)
-        } else {
-            Self::zero()
-        }
-    }
-}
-
-impl Default for ParticleSystemConfig {
-    fn default() -> Self {
-        Self {
-            max_particles: 1000,
-            gravity: 9.8,
-            air_resistance: 0.1,
-            enable_pooling: true,
-            target_fps: 60,
-            enable_physics: true,
-            enable_trails: true,
-            trail_length: 5,
-        }
-    }
-}
-
-impl ParticleSystemStats {
-    /// Create new statistics
-    pub fn new() -> Self {
-        Self {
-            particles_created: 0,
-            particles_destroyed: 0,
-            active_particles: 0,
-            avg_update_time_ms: 0.0,
-            peak_particle_count: 0,
-            fps: 0.0,
-        }
-    }
-}
-
-impl Default for ParticleSystemStats {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
 #[cfg(test)]
 mod tests {

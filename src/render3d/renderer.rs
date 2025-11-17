@@ -3,6 +3,8 @@
 use super::canvas_operations;
 use super::projections;
 use super::scene_cache::SceneCache;
+use super::spatial_query;
+use super::transforms;
 use super::types::*;
 use super::views;
 use crate::core::{EquipmentStatus, EquipmentType};
@@ -91,11 +93,7 @@ impl Building3DRenderer {
 
     /// Get entities within a 3D bounding box using spatial index
     pub fn query_spatial_entities(&self, bbox: &BoundingBox3D) -> Vec<SpatialQueryResult> {
-        if let Some(ref spatial_index) = self.spatial_index {
-            spatial_index.find_within_bounding_box(bbox.clone())
-        } else {
-            vec![]
-        }
+        spatial_query::query_spatial_entities(self.spatial_index.as_ref(), bbox)
     }
 
     /// Get entities within a radius of a point using spatial index
@@ -104,85 +102,27 @@ impl Building3DRenderer {
         center: &Point3D,
         radius: f64,
     ) -> Vec<SpatialQueryResult> {
-        if let Some(ref spatial_index) = self.spatial_index {
-            spatial_index.find_within_radius(*center, radius)
-        } else {
-            vec![]
-        }
+        spatial_query::query_entities_within_radius(self.spatial_index.as_ref(), center, radius)
     }
 
     /// Get entities in a specific room using spatial index
     pub fn query_entities_in_room(&self, room_id: &str) -> Vec<SpatialQueryResult> {
-        if let Some(ref spatial_index) = self.spatial_index {
-            spatial_index
-                .find_in_room(room_id)
-                .into_iter()
-                .map(|entity| SpatialQueryResult {
-                    entity_id: entity.id().to_string(),
-                    entity_name: entity.name().to_string(),
-                    entity_type: entity.entity_type().to_string(),
-                    distance: 0.0,
-                    relationship_type: SpatialRelationship::Within,
-                    intersection_points: vec![],
-                })
-                .collect()
-        } else {
-            vec![]
-        }
+        spatial_query::query_entities_in_room(self.spatial_index.as_ref(), room_id)
     }
 
     /// Get entities on a specific floor using spatial index
     pub fn query_entities_on_floor(&self, floor: i32) -> Vec<SpatialQueryResult> {
-        if let Some(ref spatial_index) = self.spatial_index {
-            spatial_index
-                .find_in_floor(floor)
-                .into_iter()
-                .map(|entity| SpatialQueryResult {
-                    entity_id: entity.id().to_string(),
-                    entity_name: entity.name().to_string(),
-                    entity_type: entity.entity_type().to_string(),
-                    distance: 0.0,
-                    relationship_type: SpatialRelationship::Within,
-                    intersection_points: vec![],
-                })
-                .collect()
-        } else {
-            vec![]
-        }
+        spatial_query::query_entities_on_floor(self.spatial_index.as_ref(), floor)
     }
 
     /// Find the nearest entity to a point using spatial index
     pub fn find_nearest_entity(&self, point: &Point3D) -> Option<SpatialQueryResult> {
-        if let Some(ref spatial_index) = self.spatial_index {
-            spatial_index.find_nearest(*point)
-        } else {
-            None
-        }
+        spatial_query::find_nearest_entity(self.spatial_index.as_ref(), point)
     }
 
     /// Get equipment clusters for visualization
     pub fn get_equipment_clusters(&self, min_cluster_size: usize) -> Vec<Vec<SpatialQueryResult>> {
-        if let Some(ref spatial_index) = self.spatial_index {
-            spatial_index
-                .find_equipment_clusters(10.0, min_cluster_size)
-                .into_iter()
-                .map(|cluster| {
-                    cluster
-                        .into_iter()
-                        .map(|entity| SpatialQueryResult {
-                            entity_id: entity.id().to_string(),
-                            entity_name: entity.name().to_string(),
-                            entity_type: entity.entity_type().to_string(),
-                            distance: 0.0,
-                            relationship_type: SpatialRelationship::Adjacent,
-                            intersection_points: vec![],
-                        })
-                        .collect()
-                })
-                .collect()
-        } else {
-            vec![]
-        }
+        spatial_query::get_equipment_clusters(self.spatial_index.as_ref(), min_cluster_size)
     }
 
     /// Enhance equipment data with spatial index information
@@ -231,9 +171,9 @@ impl Building3DRenderer {
         let bounding_box = self.calculate_overall_bounds(floors, equipment, rooms);
 
         // Apply 3D transformations
-        let transformed_floors = self.transform_floors_3d(floors);
-        let transformed_equipment = self.transform_equipment_3d(equipment);
-        let transformed_rooms = self.transform_rooms_3d(rooms);
+        let transformed_floors = transforms::transform_floors(floors, &self.projection, &self.camera);
+        let transformed_equipment = transforms::transform_equipment(equipment, &self.projection, &self.camera);
+        let transformed_rooms = transforms::transform_rooms(rooms, &self.projection, &self.camera);
 
         // Create scene
         let scene = Scene3D {
@@ -288,9 +228,9 @@ impl Building3DRenderer {
         };
 
         // Apply 3D transformations
-        let transformed_floors = self.transform_floors_3d(floors);
-        let transformed_equipment = self.transform_equipment_3d(&enhanced_equipment);
-        let transformed_rooms = self.transform_rooms_3d(rooms);
+        let transformed_floors = transforms::transform_floors(floors, &self.projection, &self.camera);
+        let transformed_equipment = transforms::transform_equipment(&enhanced_equipment, &self.projection, &self.camera);
+        let transformed_rooms = transforms::transform_rooms(rooms, &self.projection, &self.camera);
 
         // Create scene with enhanced metadata
         let scene = Scene3D {
@@ -496,10 +436,10 @@ impl Building3DRenderer {
 
     /// Project 3D point to 2D screen coordinates
     fn project_to_screen(&self, point: &Point3D, width: usize, height: usize) -> Point3D {
-        // Apply camera transformation
-        let transformed = self.transform_point(point);
+        // Apply camera transformation and projection
+        let transformed = transforms::transform_point(point, &self.projection, &self.camera);
 
-        // Apply projection
+        // Apply projection again for screen coordinates
         let projected = match self.projection.projection_type {
             ProjectionType::Isometric => self.isometric_projection(&transformed),
             ProjectionType::Orthographic => self.orthographic_projection(&transformed),
@@ -762,88 +702,6 @@ impl Building3DRenderer {
         Ok(output)
     }
 
-    /// Transform 3D floors with camera and projection
-    fn transform_floors_3d(&self, floors: &[Floor3D]) -> Vec<Floor3D> {
-        floors
-            .iter()
-            .map(|floor| {
-                let transformed_bbox = self.transform_bounding_box(&floor.bounding_box);
-                Floor3D {
-                    id: floor.id.clone(),
-                    name: floor.name.clone(),
-                    level: floor.level,
-                    elevation: floor.elevation,
-                    bounding_box: transformed_bbox,
-                    rooms: floor.rooms.clone(),
-                    equipment: floor.equipment.clone(),
-                }
-            })
-            .collect()
-    }
-
-    /// Transform 3D equipment with camera and projection
-    fn transform_equipment_3d(&self, equipment: &[Equipment3D]) -> Vec<Equipment3D> {
-        equipment
-            .iter()
-            .map(|eq| {
-                let transformed_position = self.transform_point(&eq.position);
-                let transformed_bbox = self.transform_bounding_box(&eq.bounding_box);
-                Equipment3D {
-                    id: eq.id.clone(),
-                    name: eq.name.clone(),
-                    equipment_type: eq.equipment_type.clone(),
-                    status: eq.status.clone(),
-                    position: transformed_position,
-                    bounding_box: transformed_bbox,
-                    floor_level: eq.floor_level,
-                    room_id: eq.room_id.clone(),
-                    connections: eq.connections.clone(),
-                    spatial_relationships: eq.spatial_relationships,
-                    nearest_entity_distance: eq.nearest_entity_distance,
-                }
-            })
-            .collect()
-    }
-
-    /// Transform 3D rooms with camera and projection
-    fn transform_rooms_3d(&self, rooms: &[Room3D]) -> Vec<Room3D> {
-        rooms
-            .iter()
-            .map(|room| {
-                let transformed_position = self.transform_point(&room.position);
-                let transformed_bbox = self.transform_bounding_box(&room.bounding_box);
-                Room3D {
-                    id: room.id.clone(),
-                    name: room.name.clone(),
-                    room_type: room.room_type.clone(),
-                    position: transformed_position,
-                    bounding_box: transformed_bbox,
-                    floor_level: room.floor_level,
-                    equipment: room.equipment.clone(),
-                }
-            })
-            .collect()
-    }
-
-    /// Transform a 3D point using camera and projection
-    fn transform_point(&self, point: &Point3D) -> Point3D {
-        match self.projection.projection_type {
-            ProjectionType::Isometric => self.isometric_projection(point),
-            ProjectionType::Orthographic => self.orthographic_projection(point),
-            ProjectionType::Perspective => self.perspective_projection(point),
-        }
-    }
-
-    /// Transform a 3D bounding box using camera and projection
-    fn transform_bounding_box(&self, bbox: &BoundingBox3D) -> BoundingBox3D {
-        let transformed_min = self.transform_point(&bbox.min);
-        let transformed_max = self.transform_point(&bbox.max);
-
-        BoundingBox3D {
-            min: transformed_min,
-            max: transformed_max,
-        }
-    }
 
     /// Isometric projection (delegates to projections module)
     pub fn isometric_projection(&self, point: &Point3D) -> Point3D {

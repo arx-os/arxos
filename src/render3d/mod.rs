@@ -14,6 +14,8 @@ mod projection;
 mod projections;
 mod renderer;
 mod scene_cache;
+mod spatial_query;
+mod transforms;
 mod types;
 mod utils;
 mod views;

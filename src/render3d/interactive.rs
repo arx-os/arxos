@@ -3,49 +3,20 @@
 //! This module provides an interactive wrapper around the existing Building3DRenderer,
 //! adding real-time input handling, state management, and interactive controls.
 
-use crate::render3d::events::{
-    Action, CameraAction, EventHandler, InteractiveEvent, ViewModeAction, ZoomAction,
-};
-use crate::render3d::state::{CameraState, InteractiveState, Vector3D, ViewMode};
+mod interactive;
+
+use crate::render3d::events::{EventHandler, InteractiveEvent};
+use crate::render3d::state::InteractiveState;
 use crate::render3d::{
-    Building3DRenderer, InfoPanelState, Render3DConfig, Scene3D, VisualEffectsEngine,
+    Building3DRenderer, InfoPanelState, Render3DConfig, VisualEffectsEngine,
 };
 use crate::core::spatial::Point3D;
 use crate::yaml::BuildingData;
-// Note: GameState may need to be implemented or removed
-// use crate::game::state::GameState;
 use crossterm::event::KeyCode;
-
-// Temporary GameState stub for game feature (not yet implemented)
-#[derive(Debug, Clone)]
-pub struct GameState {
-    pub score: u32,
-    pub progress: f32,
-    pub scenario: Option<GameScenario>,
-}
-
-#[derive(Debug, Clone)]
-pub struct GameScenario {
-    pub objective: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct GameStats {
-    pub valid_placements: u32,
-    pub total_placements: u32,
-    pub violations: u32,
-}
-
-impl GameState {
-    pub fn get_stats(&self) -> GameStats {
-        GameStats {
-            valid_placements: 0,
-            total_placements: 0,
-            violations: 0,
-        }
-    }
-}
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
+
+// Re-export types from submodules
+pub use interactive::{GameScenario, GameState, GameStats};
 use log::info;
 use std::io::{self, Write};
 use std::time::{Duration, Instant};
@@ -235,32 +206,9 @@ impl InteractiveRenderer {
         Ok(false) // Continue
     }
 
-    /// Handle specific actions
-    fn handle_action(&mut self, action: Action) -> Result<(), Box<dyn std::error::Error>> {
-        match action {
-            Action::CameraMove(camera_action) => {
-                self.handle_camera_action(camera_action)?;
-            }
-            Action::Zoom(zoom_action) => {
-                self.handle_zoom_action(zoom_action)?;
-            }
-            Action::ViewModeChange(view_action) => {
-                self.handle_view_mode_action(view_action)?;
-            }
-            Action::FloorChange(floor_delta) => {
-                self.handle_floor_change(floor_delta)?;
-            }
-            Action::EquipmentSelect(equipment_id) => {
-                self.state.select_equipment(equipment_id);
-            }
-            Action::GameAction(game_action) => {
-                // Game actions are handled by game overlay system
-                // Game overlay processes these actions for game mode functionality
-                log::debug!("Game action received: {:?}", game_action);
-            }
-        }
-
-        Ok(())
+    /// Handle specific actions (delegates to handlers module)
+    fn handle_action(&mut self, action: crate::render3d::events::Action) -> Result<(), Box<dyn std::error::Error>> {
+        interactive::handlers::handle_action(&mut self.state, action, &self.renderer.building_data)
     }
 
     /// Handle camera movement actions

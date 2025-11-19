@@ -99,7 +99,7 @@ fn validate_history_limit(s: &str) -> Result<usize, String> {
     let val: usize = s
         .parse()
         .map_err(|_| "must be a number between 1 and 1000".to_string())?;
-    if val < 1 || val > 1000 {
+    if !(1..=1000).contains(&val) {
         Err(format!("Limit must be between 1 and 1000, got {}", val))
     } else {
         Ok(val)

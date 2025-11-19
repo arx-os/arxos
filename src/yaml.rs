@@ -3,12 +3,16 @@
 //! Provides YAML serialization/deserialization support and maintains
 //! compatibility with legacy building data formats.
 
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 /// Simple YAML serializer for building data
 pub struct BuildingYamlSerializer;
+
+impl Default for BuildingYamlSerializer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl BuildingYamlSerializer {
     pub fn new() -> Self {

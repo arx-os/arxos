@@ -3,7 +3,6 @@
 //! Handles parsing errors gracefully and provides fallback behavior.
 
 use super::types::IFCEntity;
-use super::spatial_extractor::GenericSpatialEntity;
 use crate::core::spatial::SpatialEntity;
 
 /// Error recovery strategies for IFC parsing
@@ -65,16 +64,16 @@ impl ErrorRecovery {
         let bounding_box =
             BoundingBox3D::new(Point3D::new(-0.5, -0.5, -0.5), Point3D::new(0.5, 0.5, 0.5));
 
-        // Create a GenericSpatialEntity with fallback data
-        let spatial_entity = GenericSpatialEntity::new(
+        // Create a SpatialEntity with fallback data
+        let spatial_entity = SpatialEntity::new(
             entity.id.clone(),
             entity.name.clone(),
             entity.entity_type.clone(),
             position,
-            bounding_box,
-        );
+        )
+        .with_bounding_box(bounding_box);
 
-        Some(Box::new(spatial_entity))
+        Some(spatial_entity)
     }
 
     /// Check if an error is recoverable

@@ -12,7 +12,7 @@ pub struct PersistenceManager {
 impl PersistenceManager {
     pub fn new(building_name: &str) -> PersistenceResult<Self> {
         let base_path = std::env::current_dir()
-            .map_err(|e| PersistenceError::IoError(e))?;
+            .map_err(PersistenceError::IoError)?;
         
         Ok(Self {
             base_path,

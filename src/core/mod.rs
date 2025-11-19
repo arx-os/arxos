@@ -16,7 +16,7 @@ mod types;
 mod wing;
 
 // Re-export all public types and functions
-pub use building::Building;
+pub use building::{Building, BuildingMetadata, CoordinateSystemInfo};
 pub use equipment::{
     Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType,
 };

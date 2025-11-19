@@ -341,20 +341,21 @@ mod tests {
         .unwrap();
 
         // Create a minimal building data for testing
-        use crate::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+        use crate::yaml::BuildingData;
+        use crate::core::{Building, BuildingMetadata};
         use chrono::Utc;
 
-        let building_data = BuildingData {
-            building: BuildingInfo {
-                id: "test-1".to_string(),
-                name: "Test Building".to_string(),
-                description: None,
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
-                version: "1.0".to_string(),
-                global_bounding_box: None,
-            },
-            metadata: BuildingMetadata {
+        let building = Building {
+            id: "test-1".to_string(),
+            name: "Test Building".to_string(),
+            path: "/World/Test Building".to_string(),
+            description: None,
+            version: "1.0".to_string(),
+            global_bounding_box: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            floors: vec![],
+            metadata: Some(BuildingMetadata {
                 source_file: None,
                 parser_version: "1.0".to_string(),
                 total_entities: 0,
@@ -362,9 +363,13 @@ mod tests {
                 coordinate_system: "World".to_string(),
                 units: "meters".to_string(),
                 tags: vec![],
-            },
-            floors: vec![],
+            }),
             coordinate_systems: vec![],
+        };
+
+        let building_data = BuildingData {
+            building,
+            equipment: vec![],
         };
 
         // Export building (this will create a commit)

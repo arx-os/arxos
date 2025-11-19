@@ -334,7 +334,7 @@ impl MergeViewer {
         // Note: In real implementation, we'd pass resolutions here
         let merged = engine.build_merged_content();
 
-        let lines: Vec<Line> = merged.lines().map(|l| Line::from(l)).collect();
+        let lines: Vec<Line> = merged.lines().map(Line::from).collect();
 
         let preview = Paragraph::new(lines)
             .block(

@@ -210,7 +210,7 @@ impl ResolutionEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tui::merge_tool::conflict::ConflictSection;
+    use crate::tui::merge_tool::conflict::{ConflictSection, ConflictSections};
 
     fn create_test_conflict() -> Conflict {
         Conflict {

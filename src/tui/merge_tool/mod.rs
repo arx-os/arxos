@@ -70,7 +70,7 @@ impl MergeTool {
         use std::process::Command;
 
         let output = Command::new("git")
-            .args(&["diff", "--name-only", "--diff-filter=U"])
+            .args(["diff", "--name-only", "--diff-filter=U"])
             .output()?;
 
         let files = String::from_utf8(output.stdout)?

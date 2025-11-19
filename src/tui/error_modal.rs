@@ -361,7 +361,6 @@ mod tests {
     fn create_test_error() -> ArxError {
         ArxError::IoError {
             message: "Test error message".to_string(),
-            context: Box::new(ErrorContext::default()),
             path: Some("/test/path".to_string()),
         }
     }
@@ -369,16 +368,14 @@ mod tests {
     fn create_git_error() -> ArxError {
         ArxError::GitOperation {
             message: "Git operation failed".to_string(),
-            context: Box::new(ErrorContext::default()),
-            operation: "commit".to_string(),
+            context: Some("commit".to_string()),
         }
     }
 
     fn create_config_error() -> ArxError {
         ArxError::Configuration {
             message: "Configuration error".to_string(),
-            context: Box::new(ErrorContext::default()),
-            field: Some("test_field".to_string()),
+            details: Some("test_field".to_string()),
         }
     }
 

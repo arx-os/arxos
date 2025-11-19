@@ -234,7 +234,7 @@ impl ArxError {
     }
 
     pub fn io_error<S: Into<String>>(message: S) -> Self {
-        ArxError::Io(std::io::Error::new(std::io::ErrorKind::Other, message.into()))
+        ArxError::Io(std::io::Error::other(message.into()))
     }
 
     pub fn ifc_processing<S: Into<String>>(message: S) -> Self {

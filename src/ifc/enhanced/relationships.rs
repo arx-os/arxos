@@ -14,24 +14,23 @@ impl EnhancedIFCParser {
 
         for entity in entities {
             // Parse different types of relationships based on entity type
-            // Dereference Box to get &SpatialEntity
-            let entity_ref: &SpatialEntity = entity.as_ref();
-            match entity_ref.entity_type() {
+            // entity is already &SpatialEntity
+            match entity.entity_type() {
                 "IFCDUCTSEGMENT" | "IFCPIPESEGMENT" => {
-                    self.parse_flow_segment_relationships(entity_ref, &mut relationships);
+                    self.parse_flow_segment_relationships(entity, &mut relationships);
                 }
                 "IFCDUCTFITTING" | "IFCPIPEFITTING" => {
-                    self.parse_fitting_relationships(entity_ref, &mut relationships);
+                    self.parse_fitting_relationships(entity, &mut relationships);
                 }
                 "IFCFLOWTERMINAL" | "IFCAIRTERMINAL" => {
-                    self.parse_terminal_relationships(entity_ref, &mut relationships);
+                    self.parse_terminal_relationships(entity, &mut relationships);
                 }
                 "IFCFLOWCONTROLLER" => {
-                    self.parse_controller_relationships(entity_ref, &mut relationships);
+                    self.parse_controller_relationships(entity, &mut relationships);
                 }
                 _ => {
                     // For other equipment types, look for generic connections
-                    self.parse_generic_relationships(entity_ref, &mut relationships);
+                    self.parse_generic_relationships(entity, &mut relationships);
                 }
             }
         }

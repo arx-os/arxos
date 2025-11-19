@@ -117,16 +117,16 @@ impl SpatialExtractor {
             self.default_bounding_box(&position, &entity.entity_type)
         };
 
-        // Create a GenericSpatialEntity with the extracted data
-        let spatial_entity = GenericSpatialEntity::new(
+        // Create a SpatialEntity with the extracted data
+        let spatial_entity = SpatialEntity::new(
             entity.id.clone(),
             entity.name.clone(),
             entity.entity_type.clone(),
             position,
-            bounding_box,
-        );
+        )
+        .with_bounding_box(bounding_box);
 
-        Some(Box::new(spatial_entity))
+        Some(spatial_entity)
     }
 
     fn resolve_entity_position(

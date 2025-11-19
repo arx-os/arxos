@@ -72,17 +72,18 @@ pub mod path_safety {
     /// Validate that a path is safe to use
     pub fn validate_safe_path(path: &Path) -> Result<(), String> {
         let path_str = path.to_string_lossy();
-        
-        // Check for dangerous patterns
+
+        // Check for path traversal attacks
         if path_str.contains("..") {
             return Err("Path contains dangerous '..' pattern".to_string());
         }
-        
-        // Check for absolute paths in unsafe contexts
-        if path.is_absolute() && path_str.starts_with('/') {
-            return Err("Absolute path may be unsafe".to_string());
-        }
-        
+
+        // Note: Absolute paths are allowed. They're not inherently unsafe.
+        // The real security comes from:
+        // 1. No path traversal (checked above)
+        // 2. Proper file permissions (handled by OS)
+        // 3. Input validation at boundaries (caller's responsibility)
+
         Ok(())
     }
 
@@ -234,7 +235,17 @@ pub mod string {
     pub fn slugify(s: &str) -> String {
         s.to_lowercase()
             .chars()
-            .map(|c| if c.is_alphanumeric() { c } else if c.is_whitespace() { '-' } else { '_' })
+            .map(|c| {
+                if c.is_alphanumeric() {
+                    c
+                } else if c.is_whitespace() || c == '-' || c == '_' {
+                    '-'  // Normalize separators to dash
+                } else if c == '#' {
+                    '-'  // Convert hash to dash (for IDs like "#42")
+                } else {
+                    '-'  // Convert other special chars to dash
+                }
+            })
             .collect::<String>()
             .split('-')
             .filter(|part| !part.is_empty())

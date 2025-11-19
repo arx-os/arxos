@@ -314,7 +314,12 @@ mod tests {
 
         let normalized = p.normalize();
         assert!((normalized.magnitude() - 1.0).abs() < 1e-10);
-        assert_eq!(normalized, Point3D::new(0.6, 0.8, 0.0));
+
+        // Use epsilon comparison for floating-point values
+        let expected = Point3D::new(0.6, 0.8, 0.0);
+        assert!((normalized.x - expected.x).abs() < 1e-10);
+        assert!((normalized.y - expected.y).abs() < 1e-10);
+        assert!((normalized.z - expected.z).abs() < 1e-10);
     }
 
     #[test]

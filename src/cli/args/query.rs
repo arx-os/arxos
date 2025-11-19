@@ -82,7 +82,7 @@ fn validate_search_limit(s: &str) -> Result<usize, String> {
     let val: usize = s
         .parse()
         .map_err(|_| "must be a number between 1 and 10000".to_string())?;
-    if val < 1 || val > 10000 {
+    if !(1..=10000).contains(&val) {
         Err(format!("Limit must be between 1 and 10000, got {}", val))
     } else {
         Ok(val)

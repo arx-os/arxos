@@ -6,6 +6,7 @@
 use crate::core::domain::ArxAddress;
 use anyhow::{bail, Result};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 /// Context required to generate an [`ArxAddress`].
 #[derive(Debug)]
@@ -100,14 +101,14 @@ pub fn infer_room_from_grid(grid: &str) -> Result<String> {
 ///
 /// # Returns
 /// * Next available ID number
-pub fn next_id(room: &str, typ: &str) -> Result<u32> {
-    // Simple counter implementation - in a real system this would be persistent
-    static mut COUNTER: u32 = 1;
-    unsafe {
-        let id = COUNTER;
-        COUNTER += 1;
-        Ok(id)
-    }
+pub fn next_id(_room: &str, _typ: &str) -> Result<u32> {
+    // Simple counter implementation using atomic operations (thread-safe)
+    // In a real system this would be persistent
+    static COUNTER: AtomicU32 = AtomicU32::new(1);
+
+    // Atomically increment and return the previous value
+    let id = COUNTER.fetch_add(1, Ordering::SeqCst);
+    Ok(id)
 }
 
 /// Generate address from building context and grid

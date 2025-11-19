@@ -264,7 +264,7 @@ fn validate_refresh_interval(s: &str) -> Result<u64, String> {
     let val: u64 = s
         .parse()
         .map_err(|_| "must be a number between 1 and 3600".to_string())?;
-    if val < 1 || val > 3600 {
+    if !(1..=3600).contains(&val) {
         Err(format!(
             "Refresh interval must be between 1 and 3600 seconds, got {}",
             val

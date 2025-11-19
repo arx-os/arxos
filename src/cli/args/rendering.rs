@@ -98,7 +98,7 @@ fn validate_animation_speed(s: &str) -> Result<u32, String> {
     let val: u32 = s
         .parse()
         .map_err(|_| "must be a number between 1 and 100".to_string())?;
-    if val < 1 || val > 100 {
+    if !(1..=100).contains(&val) {
         Err(format!(
             "Animation speed must be between 1 and 100, got {}",
             val
@@ -113,7 +113,7 @@ fn validate_fps(s: &str) -> Result<u32, String> {
     let val: u32 = s
         .parse()
         .map_err(|_| "must be a number between 1 and 240".to_string())?;
-    if val < 1 || val > 240 {
+    if !(1..=240).contains(&val) {
         Err(format!("FPS must be between 1 and 240, got {}", val))
     } else {
         Ok(val)

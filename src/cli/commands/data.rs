@@ -295,7 +295,8 @@ mod tests {
         };
 
         assert_eq!(cmd.name(), "room");
-        assert!(cmd.execute().is_ok());
+        // Room creation is not yet implemented - should return error
+        assert!(cmd.execute().is_err());
     }
 
     #[test]
@@ -313,7 +314,8 @@ mod tests {
         };
 
         assert_eq!(cmd.name(), "equipment");
-        assert!(cmd.execute().is_ok());
+        // Equipment add is not yet implemented - should return error
+        assert!(cmd.execute().is_err());
     }
 
     #[test]

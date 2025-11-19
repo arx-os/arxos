@@ -151,7 +151,7 @@ impl PlacementResolver {
         }
 
         let params = parameters_from_definition(&entity.definition);
-        let parent_ref = params.get(0).map(|s| s.as_str()).unwrap_or("$");
+        let parent_ref = params.first().map(|s| s.as_str()).unwrap_or("$");
         let relative_ref = params.get(1).map(|s| s.as_str()).unwrap_or("$");
 
         let parent_transform = if parent_ref != "$" {
@@ -224,7 +224,7 @@ impl PlacementResolver {
 
     fn resolve_axis2placement3d(&self, entity: &IFCEntity) -> Option<Transform3D> {
         let params = parameters_from_definition(&entity.definition);
-        let location_ref = params.get(0)?.as_str();
+        let location_ref = params.first()?.as_str();
         let axis_ref = params.get(1).map(|s| s.as_str()).filter(|s| *s != "$");
         let ref_dir_ref = params.get(2).map(|s| s.as_str()).filter(|s| *s != "$");
 
@@ -246,7 +246,7 @@ impl PlacementResolver {
 
     fn resolve_axis2placement2d(&self, entity: &IFCEntity) -> Option<Transform3D> {
         let params = parameters_from_definition(&entity.definition);
-        let location_ref = params.get(0)?.as_str();
+        let location_ref = params.first()?.as_str();
         let ref_dir_ref = params.get(1).map(|s| s.as_str()).filter(|s| *s != "$");
 
         let location = self.resolve_cartesian_point(location_ref)?;
@@ -270,7 +270,7 @@ impl PlacementResolver {
         }
 
         let coords = extract_numeric_values(&entity.definition);
-        let x = coords.get(0).copied().unwrap_or(0.0);
+        let x = coords.first().copied().unwrap_or(0.0);
         let y = coords.get(1).copied().unwrap_or(0.0);
         let z = coords.get(2).copied().unwrap_or(0.0);
 
@@ -285,7 +285,7 @@ impl PlacementResolver {
         }
 
         let coords = extract_numeric_values(&entity.definition);
-        let x = coords.get(0).copied().unwrap_or(1.0);
+        let x = coords.first().copied().unwrap_or(1.0);
         let y = coords.get(1).copied().unwrap_or(0.0);
         let z = coords.get(2).copied().unwrap_or(0.0);
 
@@ -331,11 +331,8 @@ impl PlacementResolver {
         let item_refs = extract_all_references(&shape.definition);
         for item_ref in item_refs {
             if let Some(item_entity) = self.entities.get(&item_ref) {
-                match item_entity.entity_type.as_str() {
-                    "IFCEXTRUDEDAREASOLID" => {
-                        points.extend(self.collect_points_from_extruded_area_solid(item_entity))
-                    }
-                    _ => {}
+                if item_entity.entity_type.as_str() == "IFCEXTRUDEDAREASOLID" {
+                    points.extend(self.collect_points_from_extruded_area_solid(item_entity))
                 }
             }
         }

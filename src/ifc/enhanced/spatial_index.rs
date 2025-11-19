@@ -267,7 +267,7 @@ impl SpatialIndex {
             .into_iter()
             .map(|entity| {
                 let intersection_points =
-                    self.calculate_intersection_points(&entity.bounding_box(), &bbox);
+                    self.calculate_intersection_points(entity.bounding_box(), &bbox);
                 // Convert core::spatial::Point3D to nalgebra Point3D
                 let nalgebra_points: Vec<NalgebraPoint3D> = intersection_points
                     .into_iter()
@@ -326,7 +326,7 @@ impl SpatialIndex {
             .into_iter()
             .filter_map(|entity| {
                 // Check if entity is fully contained within the volume
-                if self.bounding_box_contained(&entity.bounding_box(), &bbox) {
+                if self.bounding_box_contained(entity.bounding_box(), &bbox) {
                     Some(SpatialQueryResult {
                         entity_id: entity.id().to_string(),
                         entity_name: entity.name().to_string(),
@@ -592,8 +592,8 @@ impl SpatialIndex {
         let position_similarity = 1.0 - (distance / max_distance).min(1.0);
 
         // Shape similarity (aspect ratio)
-        let aspect1 = self.calculate_aspect_ratio(&entity1.bounding_box());
-        let aspect2 = self.calculate_aspect_ratio(&entity2.bounding_box());
+        let aspect1 = self.calculate_aspect_ratio(entity1.bounding_box());
+        let aspect2 = self.calculate_aspect_ratio(entity2.bounding_box());
         let shape_similarity = 1.0 - (aspect1 - aspect2).abs() / (aspect1 + aspect2).max(1.0);
 
         // Weighted average
@@ -610,7 +610,7 @@ impl SpatialIndex {
                 let entity2 = &entities[j];
 
                 let intersection_volume = self
-                    .calculate_intersection_volume(&entity1.bounding_box(), &entity2.bounding_box());
+                    .calculate_intersection_volume(entity1.bounding_box(), entity2.bounding_box());
                 let pos1_nalgebra = entity1.position();
                 let pos2_nalgebra = entity2.position();
                 let pos1 = Point3D::new(pos1_nalgebra.x, pos1_nalgebra.y, pos1_nalgebra.z);
@@ -643,7 +643,7 @@ impl SpatialIndex {
                 }
 
                 // Check for insufficient clearance
-                let min_clearance = self.calculate_minimum_clearance(entity1.as_ref(), entity2.as_ref());
+                let min_clearance = self.calculate_minimum_clearance(entity1, entity2);
                 if distance < min_clearance {
                     conflicts.push(GeometricConflict {
                         entity1_id: entity1.id().to_string(),

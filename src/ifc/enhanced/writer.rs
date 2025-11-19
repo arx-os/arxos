@@ -28,7 +28,7 @@ impl EnhancedIFCParser {
 
         // Write spatial entities
         for entity in entities {
-            self.write_spatial_entity(&mut file, entity.as_ref())?;
+            self.write_spatial_entity(&mut file, entity)?;
         }
 
         // Write IFC footer

@@ -139,7 +139,12 @@ impl PlacementResolver {
         let id = reference.trim_start_matches('#').to_string();
 
         {
-            let cache = self.transform_cache.lock().unwrap();
+            // Recover from poisoned mutex - cache is non-critical
+            let cache = self.transform_cache.lock()
+                .unwrap_or_else(|poisoned| {
+                    log::warn!("Transform cache mutex poisoned, recovering");
+                    poisoned.into_inner()
+                });
             if let Some(existing) = cache.get(&id) {
                 return Some(existing.clone());
             }
@@ -168,7 +173,12 @@ impl PlacementResolver {
 
         let composed = parent_transform.compose(&relative_transform);
 
-        let mut cache = self.transform_cache.lock().unwrap();
+        // Recover from poisoned mutex - cache is non-critical
+        let mut cache = self.transform_cache.lock()
+            .unwrap_or_else(|poisoned| {
+                log::warn!("Transform cache mutex poisoned, recovering");
+                poisoned.into_inner()
+            });
         cache.insert(id, composed.clone());
 
         Some(composed)

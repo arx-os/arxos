@@ -646,4 +646,3 @@ impl VisualEffectsEngine {
         }
     }
 }
-}

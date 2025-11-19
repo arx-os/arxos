@@ -792,7 +792,8 @@ impl HierarchyBuilder {
 
         for (structure_id, room_list) in &self.rooms_by_structure {
             if let Some(&floor_idx) = floor_lookup.get(structure_id) {
-                let floor = floors.get_mut(floor_idx).unwrap();
+                let floor = floors.get_mut(floor_idx)
+                    .ok_or_else(|| format!("Floor index {} out of bounds (structure: {})", floor_idx, structure_id))?;
                 Self::ensure_default_wing(floor);
                 let wing_idx = 0;
                 for room_id in room_list {
@@ -866,7 +867,8 @@ impl HierarchyBuilder {
             let mut placed = false;
             if let Some(parent_id) = self.element_parents.get(&equipment.id) {
                 if let Some(&(floor_idx, wing_idx, room_idx)) = room_location.get(parent_id) {
-                    let floor = floors.get_mut(floor_idx).unwrap();
+                    let floor = floors.get_mut(floor_idx)
+                        .ok_or_else(|| format!("Floor index {} out of bounds (equipment parent: {})", floor_idx, parent_id))?;
                 let room_id = floor.wings[wing_idx].rooms[room_idx].id.clone();
                 let room_path = floor.wings[wing_idx].rooms[room_idx]
                     .properties
@@ -896,7 +898,8 @@ impl HierarchyBuilder {
                 floor.equipment.push(equipment.clone());
                     placed = true;
                 } else if let Some(&floor_idx) = floor_lookup.get(parent_id) {
-                let floor = floors.get_mut(floor_idx).unwrap();
+                let floor = floors.get_mut(floor_idx)
+                    .ok_or_else(|| format!("Floor index {} out of bounds (equipment floor parent: {})", floor_idx, parent_id))?;
                 let floor_path = floor
                     .properties
                     .get("canonical_path")
@@ -918,7 +921,8 @@ impl HierarchyBuilder {
                     if let Some(&(floor_idx, wing_idx, room_idx)) =
                         room_location.get(room_parent)
                     {
-                        let floor = floors.get_mut(floor_idx).unwrap();
+                        let floor = floors.get_mut(floor_idx)
+                            .ok_or_else(|| format!("Floor index {} out of bounds (equipment room parent: {})", floor_idx, room_parent))?;
                     let room_id = floor.wings[wing_idx].rooms[room_idx].id.clone();
                     let room_path = floor.wings[wing_idx].rooms[room_idx]
                         .properties

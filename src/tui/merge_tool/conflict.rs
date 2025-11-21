@@ -193,13 +193,13 @@ impl ConflictParser {
 
         if before {
             let start = index.saturating_sub(self.context_lines);
-            for i in start..index {
-                context.push(lines[i].clone());
+            for line in lines.iter().skip(start).take(index - start) {
+                context.push(line.clone());
             }
         } else {
             let end = (index + 1 + self.context_lines).min(lines.len());
-            for i in (index + 1)..end {
-                context.push(lines[i].clone());
+            for line in lines.iter().skip(index + 1).take(end - index - 1) {
+                context.push(line.clone());
             }
         }
 

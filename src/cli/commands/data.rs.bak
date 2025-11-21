@@ -42,10 +42,13 @@ impl Command for RoomCommand {
 
                 if *interactive {
                     println!("   Opening interactive explorer...");
+                    // TODO: Launch TUI room explorer
                 } else if *verbose {
                     println!("   Mode: Verbose");
+                    // TODO: Show detailed room information
                 } else {
                     println!("   Mode: Standard list");
+                    // TODO: Show room list
                 }
 
                 Ok(())
@@ -53,8 +56,10 @@ impl Command for RoomCommand {
             RoomCommands::Show { room, equipment } => {
                 println!("🔍 Room details: {}", room);
 
+                // TODO: Fetch room details from building data
                 if *equipment {
                     println!("   Including equipment list...");
+                    // TODO: Show equipment in room
                 }
 
                 Ok(())
@@ -111,9 +116,12 @@ impl Command for EquipmentCommand {
 
                 if *interactive {
                     println!("   Opening interactive browser...");
+                    // TODO: Launch TUI equipment browser
                 } else if *verbose {
                     println!("   Mode: Verbose");
+                    // TODO: Show detailed equipment info
                 } else {
+                    // TODO: Show equipment list
                 }
 
                 Ok(())
@@ -156,6 +164,7 @@ impl Command for SpatialCommand {
                     println!("   Building: {}", b);
                 }
 
+                // TODO: Implement grid to real coordinate conversion
                 // Example output:
                 // println!("   Real coordinates: x=10.5, y=20.3, z=0.0");
 
@@ -173,6 +182,7 @@ impl Command for SpatialCommand {
                     println!("   Building: {}", b);
                 }
 
+                // TODO: Implement real to grid coordinate conversion
                 // Example output:
                 // println!("   Grid: D-4");
 
@@ -194,6 +204,7 @@ impl Command for SpatialCommand {
                     }
                 }
 
+                // TODO: Implement spatial queries
                 // - within distance
                 // - intersects
                 // - contains
@@ -211,6 +222,7 @@ impl Command for SpatialCommand {
                 println!("   Entity 2: {}", entity2);
                 println!("   Relationship: {}", relationship);
 
+                // TODO: Implement spatial relationship setting
                 // - adjacent_to
                 // - above
                 // - below
@@ -225,6 +237,7 @@ impl Command for SpatialCommand {
                 println!("   To: {}", to);
                 println!("   Entity: {}", entity);
 
+                // TODO: Implement coordinate system transformation
                 // - Grid <-> World
                 // - World <-> Local
                 // - Local <-> Grid
@@ -245,6 +258,7 @@ impl Command for SpatialCommand {
                     println!("   Tolerance: {}", tol);
                 }
 
+                // TODO: Implement spatial validation
                 // - Check for overlaps
                 // - Verify bounding boxes
                 // - Validate coordinates

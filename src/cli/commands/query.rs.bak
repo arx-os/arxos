@@ -47,6 +47,7 @@ impl Command for SearchCommand {
 
         if self.args.interactive {
             println!("   Opening interactive browser...");
+            // TODO: Launch TUI search result browser
             #[cfg(feature = "tui")]
             {
                 // Launch TUI browser
@@ -56,6 +57,7 @@ impl Command for SearchCommand {
                 return Err("Interactive browser requires --features tui".into());
             }
         } else {
+            // TODO: Implement search logic
             // - Load building data
             // - Search across specified scope
             // - Apply case sensitivity and regex if enabled
@@ -64,8 +66,10 @@ impl Command for SearchCommand {
 
             if self.args.verbose {
                 println!("\n   Detailed results:");
+                // TODO: Show verbose results with full details
             } else {
                 println!("\n   Results:");
+                // TODO: Show compact results
             }
 
             println!("\n✅ Search completed (showing up to {} results)", self.args.limit);
@@ -89,6 +93,7 @@ impl Command for QueryCommand {
         println!("🔎 Querying ArxAddress pattern: {}", self.args.pattern);
         println!("   Format: {}", self.args.format);
 
+        // TODO: Implement ArxAddress pattern matching
         // - Parse glob pattern
         // - Match against all equipment addresses
         // - Collect matching equipment
@@ -124,6 +129,7 @@ impl Command for QueryCommand {
         match self.args.format.as_str() {
             "json" => {
                 println!("\n   Output format: JSON");
+                // TODO: Format as JSON
                 if self.args.verbose {
                     // Include full equipment details
                 } else {
@@ -132,6 +138,7 @@ impl Command for QueryCommand {
             }
             "yaml" => {
                 println!("\n   Output format: YAML");
+                // TODO: Format as YAML
                 if self.args.verbose {
                     // Include full equipment details
                 } else {
@@ -140,6 +147,7 @@ impl Command for QueryCommand {
             }
             "table" => {
                 println!("\n   Output format: Table");
+                // TODO: Format as table
                 if self.args.verbose {
                     println!("\n   Detailed table view:");
                     // Show all fields

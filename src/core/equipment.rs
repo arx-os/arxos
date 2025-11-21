@@ -162,6 +162,37 @@ impl Default for Equipment {
 }
 
 impl Equipment {
+    /// Create new equipment with a unique ID and default values
+    ///
+    /// The equipment is initialized with:
+    /// - A unique UUID
+    /// - Default position (0, 0, 0) in "building_local" coordinate system
+    /// - Active operational status
+    /// - Empty properties map
+    /// - No room assignment
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - Human-readable equipment name
+    /// * `path` - Universal path identifier (legacy)
+    /// * `equipment_type` - Type categorization
+    ///
+    /// # Returns
+    ///
+    /// A new Equipment instance with default values
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::{Equipment, EquipmentType};
+    /// let equipment = Equipment::new(
+    ///     "Chiller-01".to_string(),
+    ///     "/building/mechanical/chiller-01".to_string(),
+    ///     EquipmentType::HVAC,
+    /// );
+    /// assert_eq!(equipment.name, "Chiller-01");
+    /// assert_eq!(equipment.equipment_type, EquipmentType::HVAC);
+    /// ```
     pub fn new(name: String, path: String, equipment_type: EquipmentType) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
@@ -183,17 +214,78 @@ impl Equipment {
         }
     }
 
-    /// Set the position of the equipment
+    /// Set the 3D spatial position of the equipment
+    ///
+    /// # Arguments
+    ///
+    /// * `position` - The new position with coordinates and coordinate system
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::{Equipment, EquipmentType, Position};
+    /// let mut equipment = Equipment::new(
+    ///     "Chiller-01".to_string(),
+    ///     "/chiller".to_string(),
+    ///     EquipmentType::HVAC,
+    /// );
+    /// equipment.set_position(Position {
+    ///     x: 100.0,
+    ///     y: 200.0,
+    ///     z: 10.0,
+    ///     coordinate_system: "world".to_string(),
+    /// });
+    /// assert_eq!(equipment.position.x, 100.0);
+    /// ```
     pub fn set_position(&mut self, position: Position) {
         self.position = position;
     }
 
-    /// Set the room this equipment belongs to
+    /// Assign this equipment to a room
+    ///
+    /// # Arguments
+    ///
+    /// * `room_id` - The unique identifier of the parent room
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::{Equipment, EquipmentType};
+    /// let mut equipment = Equipment::new(
+    ///     "Chiller-01".to_string(),
+    ///     "/chiller".to_string(),
+    ///     EquipmentType::HVAC,
+    /// );
+    /// equipment.set_room("room-123".to_string());
+    /// assert_eq!(equipment.room_id, Some("room-123".to_string()));
+    /// ```
     pub fn set_room(&mut self, room_id: String) {
         self.room_id = Some(room_id);
     }
 
-    /// Add a property to the equipment
+    /// Add a custom property to the equipment metadata
+    ///
+    /// Properties are stored as key-value pairs and can represent
+    /// any equipment-specific metadata (manufacturer, model, serial number, etc.)
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - Property name
+    /// * `value` - Property value
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::{Equipment, EquipmentType};
+    /// let mut equipment = Equipment::new(
+    ///     "Chiller-01".to_string(),
+    ///     "/chiller".to_string(),
+    ///     EquipmentType::HVAC,
+    /// );
+    /// equipment.add_property("manufacturer".to_string(), "Carrier".to_string());
+    /// equipment.add_property("model".to_string(), "30XA".to_string());
+    /// assert_eq!(equipment.properties.get("manufacturer"), Some(&"Carrier".to_string()));
+    /// ```
     pub fn add_property(&mut self, key: String, value: String) {
         self.properties.insert(key, value);
     }

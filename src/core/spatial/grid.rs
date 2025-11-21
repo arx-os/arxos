@@ -20,12 +20,55 @@ pub struct GridCoordinate {
 }
 
 impl GridCoordinate {
-    /// Create a new grid coordinate
+    /// Create a new grid coordinate from column and row
+    ///
+    /// # Arguments
+    ///
+    /// * `column` - Column letter (A-Z, typically uppercase)
+    /// * `row` - Row number (typically 1-based)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::spatial::grid::GridCoordinate;
+    /// let coord = GridCoordinate::new("D".to_string(), 4);
+    /// assert_eq!(coord.column, "D");
+    /// assert_eq!(coord.row, 4);
+    /// assert_eq!(coord.to_string(), "D-4");
+    /// ```
     pub fn new(column: String, row: i32) -> Self {
         Self { column, row }
     }
 
-    /// Parse grid coordinate from string (e.g., "D-4", "A-1", "D4", "A1")
+    /// Parse grid coordinate from string
+    ///
+    /// Supports multiple formats: "D-4", "D4", "D 4", "d-4" (case insensitive)
+    ///
+    /// # Arguments
+    ///
+    /// * `s` - Grid coordinate string to parse
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(GridCoordinate)` - Successfully parsed coordinate
+    /// * `Err(...)` - Invalid format or invalid column/row values
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::spatial::grid::GridCoordinate;
+    /// let coord = GridCoordinate::parse("D-4").unwrap();
+    /// assert_eq!(coord.column, "D");
+    /// assert_eq!(coord.row, 4);
+    ///
+    /// // Case insensitive with space separator
+    /// let coord2 = GridCoordinate::parse("d 4").unwrap();
+    /// assert_eq!(coord2.column, "D");
+    /// assert_eq!(coord2.row, 4);
+    ///
+    /// // Invalid format (missing separator)
+    /// assert!(GridCoordinate::parse("invalid").is_err());
+    /// ```
     pub fn parse(s: &str) -> Result<Self, Box<dyn std::error::Error>> {
         // Remove whitespace and convert to uppercase
         let s = s.trim().to_uppercase();
@@ -50,7 +93,13 @@ impl GridCoordinate {
             .map_err(|e| format!("Invalid row number in grid coordinate '{}': {}", s, e))?;
 
         // Validate column is a letter
-        if column.len() != 1 || !column.chars().next().unwrap().is_alphabetic() {
+        let column_char = column.chars().next()
+            .ok_or_else(|| format!(
+                "Invalid column in grid coordinate '{}'. Column must be a single letter (A-Z)",
+                s
+            ))?;
+
+        if column.len() != 1 || !column_char.is_alphabetic() {
             return Err(format!(
                 "Invalid column in grid coordinate '{}'. Column must be a single letter (A-Z)",
                 s
@@ -61,11 +110,36 @@ impl GridCoordinate {
         Ok(Self { column, row })
     }
 
-    /// Convert column letter to index (A=0, B=1, ..., Z=25)
+    /// Convert column letter to zero-based index
+    ///
+    /// Maps column letters to numeric indices: A=0, B=1, ..., Z=25
+    ///
+    /// # Returns
+    ///
+    /// The zero-based column index (0 for 'A', 1 for 'B', etc.)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::spatial::grid::GridCoordinate;
+    /// let coord_a = GridCoordinate::new("A".to_string(), 1);
+    /// assert_eq!(coord_a.column_index(), 0);
+    ///
+    /// let coord_d = GridCoordinate::new("D".to_string(), 4);
+    /// assert_eq!(coord_d.column_index(), 3);
+    ///
+    /// let coord_z = GridCoordinate::new("Z".to_string(), 1);
+    /// assert_eq!(coord_z.column_index(), 25);
+    /// ```
     pub fn column_index(&self) -> i32 {
         if let Some(ch) = self.column.chars().next() {
-            let upper = ch.to_uppercase().next().unwrap();
-            (upper as i32) - ('A' as i32)
+            // to_uppercase() on a valid char always produces at least one char
+            // but we handle it safely anyway
+            if let Some(upper) = ch.to_uppercase().next() {
+                (upper as i32) - ('A' as i32)
+            } else {
+                0
+            }
         } else {
             0
         }
@@ -96,7 +170,31 @@ pub struct GridSystem {
 }
 
 impl GridSystem {
-    /// Create a default grid system
+    /// Create a default grid system with standard column/row labels
+    ///
+    /// Initializes a grid with:
+    /// - Columns labeled A through Z
+    /// - Rows numbered 1 through 100
+    /// - Zero elevation spacing (2D grid)
+    ///
+    /// # Arguments
+    ///
+    /// * `origin` - Real-world coordinates where grid position A-1 is located
+    /// * `column_spacing` - Distance between columns (X direction)
+    /// * `row_spacing` - Distance between rows (Y direction)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::spatial::{grid::GridSystem, Point3D};
+    /// let grid = GridSystem::new(
+    ///     Point3D::new(0.0, 0.0, 0.0),
+    ///     10.0,  // 10 meters between columns
+    ///     10.0,  // 10 meters between rows
+    /// );
+    /// assert_eq!(grid.column_spacing, 10.0);
+    /// assert_eq!(grid.row_spacing, 10.0);
+    /// ```
     pub fn new(origin: Point3D, column_spacing: f64, row_spacing: f64) -> Self {
         Self {
             origin,
@@ -108,7 +206,29 @@ impl GridSystem {
         }
     }
 
-    /// Create a grid system with custom spacing
+    /// Create a grid system with custom elevation spacing for 3D grids
+    ///
+    /// Like `new()`, but allows specifying vertical spacing between grid levels.
+    ///
+    /// # Arguments
+    ///
+    /// * `origin` - Real-world coordinates where grid position A-1 is located
+    /// * `column_spacing` - Distance between columns (X direction)
+    /// * `row_spacing` - Distance between rows (Y direction)
+    /// * `elevation_spacing` - Distance between elevation levels (Z direction)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::spatial::{grid::GridSystem, Point3D};
+    /// let grid = GridSystem::with_spacing(
+    ///     Point3D::new(0.0, 0.0, 0.0),
+    ///     10.0,  // 10 meters between columns
+    ///     10.0,  // 10 meters between rows
+    ///     3.5,   // 3.5 meters between floors
+    /// );
+    /// assert_eq!(grid.elevation_spacing, 3.5);
+    /// ```
     pub fn with_spacing(
         origin: Point3D,
         column_spacing: f64,

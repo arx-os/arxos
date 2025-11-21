@@ -3,7 +3,6 @@
 //! Handles exporting spreadsheet data to CSV
 
 use crate::tui::spreadsheet::types::{CellValue, ColumnDefinition};
-use std::io::Write;
 use std::fs::File;
 use std::path::Path;
 

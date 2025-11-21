@@ -37,7 +37,6 @@ export class CommandQueueManager {
     payload: unknown,
     sessionId: string
   ): Promise<QueuedCommand> {
-    console.log(`Queuing command: ${command}`, payload);
 
     const queuedCommand = await enqueueCommand(command, payload, sessionId);
     await incrementCommandCount();
@@ -50,7 +49,6 @@ export class CommandQueueManager {
    */
   async processQueue(): Promise<QueueProcessResult> {
     if (this.isProcessing) {
-      console.log("Queue processing already in progress");
       return {
         processed: 0,
         successful: 0,
@@ -74,7 +72,6 @@ export class CommandQueueManager {
         (cmd) => cmd.status === "pending" || cmd.status === "retrying"
       );
 
-      console.log(`Processing ${pendingCommands.length} queued commands`);
 
       for (const cmd of pendingCommands) {
         result.processed++;
@@ -84,7 +81,6 @@ export class CommandQueueManager {
           await this.executeCommand(cmd);
           await dequeueCommand(cmd.id);
           result.successful++;
-          console.log(`Command executed successfully: ${cmd.command}`);
         } catch (error) {
           const errorMessage = (error as Error).message;
           console.error(`Command failed: ${cmd.command}`, error);
@@ -110,7 +106,6 @@ export class CommandQueueManager {
         }
       }
 
-      console.log(`Queue processing complete:`, result);
       this.notifyProgress(result);
     } catch (error) {
       console.error("Queue processing error:", error);

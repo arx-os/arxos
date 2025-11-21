@@ -29,10 +29,12 @@ impl Command for InitCommand {
 
         if self.args.git_init {
             println!("   Initializing Git repository...");
+            // TODO: Implement Git initialization
         }
 
         if self.args.commit {
             println!("   Committing initial building.yaml...");
+            // TODO: Implement initial commit
         }
 
         println!("✅ Building initialized successfully");
@@ -68,6 +70,7 @@ impl Command for ExportCommand {
             println!("   Mode: Full export");
         }
 
+        // TODO: Implement export logic
         println!("✅ Export completed successfully");
         Ok(())
     }
@@ -92,6 +95,7 @@ impl Command for SyncCommand {
 
         if self.args.watch {
             println!("   Mode: Watch (continuous sync)");
+            // TODO: Implement watch mode daemon
         } else {
             println!("   Mode: One-time sync");
         }
@@ -102,6 +106,7 @@ impl Command for SyncCommand {
             println!("   Syncing full data...");
         }
 
+        // TODO: Implement sync logic
         println!("✅ Sync completed successfully");
         Ok(())
     }
@@ -126,12 +131,14 @@ impl Command for ImportCommand {
 
         if self.args.dry_run {
             println!("   Mode: Dry run (no changes will be made)");
+            // TODO: Implement dry run analysis
             println!("   Preview of changes:");
             println!("   - Building structure would be extracted");
             println!("   - Floors would be created");
             println!("   - Equipment would be imported");
         } else {
             println!("   Importing data...");
+            // TODO: Implement actual import logic
         }
 
         println!("✅ Import completed successfully");

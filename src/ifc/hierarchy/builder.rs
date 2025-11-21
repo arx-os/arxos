@@ -13,6 +13,7 @@ use crate::ifc::{
 use crate::utils::string::slugify;
 use chrono::Utc;
 use super::{
+    geometry_extraction,
     helpers::{
         extract_equipment_type, extract_space_name, extract_space_type, extract_storey_level,
         extract_storey_name, is_equipment_entity, is_space_entity, is_storey_entity,
@@ -28,10 +29,10 @@ pub struct HierarchyBuilder {
     entities: Vec<IFCEntity>,
     entity_map: HashMap<String, IFCEntity>, // Map entity IDs to entities for reference resolution
     aggregates: HashMap<String, Vec<String>>,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Reserved for IFC export and reverse relationship queries
     containment: HashMap<String, Vec<String>>,
     rooms_by_structure: HashMap<String, Vec<String>>,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Reserved for IFC element relationship tracking
     elements_by_structure: HashMap<String, Vec<String>>,
     room_parents: HashMap<String, String>,
     element_parents: HashMap<String, String>,
@@ -132,164 +133,6 @@ impl HierarchyBuilder {
     }
 
     /// Extract coordinates from IFC placement chain
-    /// Follows: IFCSPACE -> IFCLOCALPLACEMENT -> IFCAXIS2PLACEMENT3D -> IFCCARTESIANPOINT
-    fn extract_coordinates_from_placement(&self, placement_ref: &str) -> Option<(f64, f64, f64)> {
-        // Remove # prefix if present
-        let ref_id = placement_ref.trim_start_matches('#').to_string();
-
-        // Find the placement entity
-        let placement_entity = self.entity_map.get(&ref_id)?;
-
-        // Parse IFCLOCALPLACEMENT(#parent,#relative_placement)
-        // We need the relative_placement (#21 in example)
-        if placement_entity.entity_type == "IFCLOCALPLACEMENT" {
-            // Extract relative placement reference from definition
-            // Format: IFCLOCALPLACEMENT(#16,#21)
-            if let Some(relative_ref) = self.extract_second_reference(&placement_entity.definition)
-            {
-                return self.extract_coordinates_from_axis_placement(&relative_ref);
-            }
-        }
-
-        None
-    }
-
-    /// Extract coordinates from IFCAXIS2PLACEMENT3D
-    /// Format: IFCAXIS2PLACEMENT3D(#location,#axis,#ref_dir)
-    fn extract_coordinates_from_axis_placement(&self, axis_ref: &str) -> Option<(f64, f64, f64)> {
-        let ref_id = axis_ref.trim_start_matches('#').to_string();
-        let axis_entity = self.entity_map.get(&ref_id)?;
-
-        if axis_entity.entity_type == "IFCAXIS2PLACEMENT3D" {
-            // Extract location reference (first parameter)
-            // Format: IFCAXIS2PLACEMENT3D(#22,#6,#7)
-            if let Some(location_ref) = self.extract_first_reference(&axis_entity.definition) {
-                return self.extract_coordinates_from_point(&location_ref);
-            }
-        }
-
-        None
-    }
-
-    /// Extract coordinates from IFCCARTESIANPOINT
-    /// Format: IFCCARTESIANPOINT((x,y,z))
-    fn extract_coordinates_from_point(&self, point_ref: &str) -> Option<(f64, f64, f64)> {
-        let ref_id = point_ref.trim_start_matches('#').to_string();
-        let point_entity = self.entity_map.get(&ref_id)?;
-
-        if point_entity.entity_type == "IFCCARTESIANPOINT" {
-            // Parse coordinates from definition
-            // Format: IFCCARTESIANPOINT((5.,5.,0.))
-            if let Some(coords) = self.parse_cartesian_point(&point_entity.definition) {
-                return Some(coords);
-            }
-        }
-
-        None
-    }
-
-    /// Extract first reference from entity definition
-    /// Format: IFCAXIS2PLACEMENT3D(#22,#6,#7) -> #22
-    fn extract_first_reference(&self, definition: &str) -> Option<String> {
-        if let Some(start) = definition.find("(#") {
-            if let Some(end) = definition[start + 2..].find(',') {
-                let ref_str = &definition[start + 1..start + 2 + end];
-                return Some(ref_str.to_string());
-            } else if let Some(end) = definition[start + 2..].find(')') {
-                let ref_str = &definition[start + 1..start + 2 + end];
-                return Some(ref_str.to_string());
-            }
-        }
-        None
-    }
-
-    /// Extract second reference from entity definition
-    /// Format: IFCLOCALPLACEMENT(#16,#21) -> #21
-    fn extract_second_reference(&self, definition: &str) -> Option<String> {
-        if let Some(first_comma) = definition.find(',') {
-            if let Some(start) = definition[first_comma..].find("#") {
-                let ref_start = first_comma + start;
-                if let Some(end) = definition[ref_start + 1..].find(|c| [',', ')'].contains(&c)) {
-                    let ref_str = &definition[ref_start..ref_start + 1 + end];
-                    return Some(ref_str.to_string());
-                }
-            }
-        }
-        None
-    }
-
-    /// Extract nested reference from entity definition with nested parentheses
-    /// Format: IFCPRODUCTDEFINITIONSHAPE($,$,(#172)) -> #172
-    fn extract_nested_reference(&self, definition: &str) -> Option<String> {
-        // Find the nested parentheses group (need to look inside outermost parens)
-        // Format: IFCPRODUCTDEFINITIONSHAPE($,$,(#172))
-        // Need to find the innermost (#ref) group
-
-        // First find the outermost opening paren
-        if let Some(out_start) = definition.find('(') {
-            // From there, find matching closing parens
-            let mut depth = 1;
-            let mut pos = out_start + 1;
-            let mut inner_start = None;
-
-            while pos < definition.len() && depth > 0 {
-                match definition.chars().nth(pos) {
-                    Some('(') => {
-                        if inner_start.is_none() {
-                            inner_start = Some(pos + 1);
-                        }
-                        depth += 1;
-                    }
-                    Some(')') => {
-                        depth -= 1;
-                        if depth == 0 {
-                            if let Some(start) = inner_start {
-                                let nested_content = &definition[start..pos];
-                                // Look for #reference in nested content
-                                if let Some(ref_start) = nested_content.find('#') {
-                                    // Find the end of the reference
-                                    for i in (ref_start + 1)..nested_content.len() {
-                                        if nested_content
-                                            .chars()
-                                            .nth(i)
-                                            .is_some_and(|c| c == ',' || c == ')')
-                                        {
-                                            let ref_str = &nested_content[ref_start..i];
-                                            return Some(ref_str.to_string());
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-                pos += 1;
-            }
-        }
-        None
-    }
-
-    /// Parse coordinates from IFCCARTESIANPOINT definition
-    /// Format: IFCCARTESIANPOINT((5.,5.,0.)) -> (5.0, 5.0, 0.0)
-    fn parse_cartesian_point(&self, definition: &str) -> Option<(f64, f64, f64)> {
-        // Look for double parentheses: ((x,y,z))
-        if let Some(start) = definition.find("((") {
-            if let Some(end) = definition[start + 2..].find("))") {
-                let coords_str = &definition[start + 2..start + 2 + end];
-                let coords: Vec<&str> = coords_str.split(',').collect();
-                if coords.len() >= 3 {
-                    let x = coords[0].trim().parse::<f64>().ok()?;
-                    let y = coords[1].trim().parse::<f64>().ok()?;
-                    let z = coords[2].trim().parse::<f64>().ok()?;
-                    return Some((x, y, z));
-                }
-            }
-        }
-        None
-    }
-
-    /// Extract all IFCBUILDINGSTOREY entities as Floor objects
     pub fn extract_floors(&self) -> Result<Vec<Floor>, Box<dyn std::error::Error>> {
         let mut floors = Vec::new();
         for storey in self
@@ -422,7 +265,7 @@ impl HierarchyBuilder {
             let param = param.trim();
             if param.starts_with("#") {
                 // This is likely the placement reference
-                if let Some(coords) = self.extract_coordinates_from_placement(param) {
+                if let Some(coords) = geometry_extraction::extract_coordinates_from_placement(param, &self.entity_map) {
                     return Some(coords);
                 }
             }
@@ -483,7 +326,7 @@ impl HierarchyBuilder {
 
         // Find the IFCSHAPEREPRESENTATION reference (inside the product def shape definition)
         // IFCPRODUCTDEFINITIONSHAPE($,$,(#172)) - reference is in nested parens
-        let shape_ref = self.extract_nested_reference(&product_def.definition)?;
+        let shape_ref = geometry_extraction::extract_nested_reference(&product_def.definition)?;
         let shape_id = shape_ref.trim_start_matches('#');
         let shape_repr = self.entity_map.get(shape_id)?;
         if !shape_repr.definition.contains("IFCSHAPEREPRESENTATION") {
@@ -498,7 +341,7 @@ impl HierarchyBuilder {
         log::debug!("Got IFCSHAPEREPRESENTATION #{}", shape_id);
 
         // Find the IFCEXTRUDEDAREASOLID reference
-        let extruded_ref = self.extract_second_reference(&shape_repr.definition)?;
+        let extruded_ref = geometry_extraction::extract_second_reference(&shape_repr.definition)?;
         let extruded_id = extruded_ref.trim_start_matches('#');
         let extruded = self.entity_map.get(extruded_id)?;
         if !extruded.definition.contains("IFCEXTRUDEDAREASOLID") {
@@ -513,7 +356,7 @@ impl HierarchyBuilder {
         log::debug!("Got IFCEXTRUDEDAREASOLID #{}", extruded_id);
 
         // Find the IFCARBITRARYCLOSEDPROFILEDEF reference (first parameter of IFCEXTRUDEDAREASOLID)
-        let profile_ref = self.extract_first_reference(&extruded.definition)?;
+        let profile_ref = geometry_extraction::extract_first_reference(&extruded.definition)?;
         let profile_id = profile_ref.trim_start_matches('#');
         let profile = self.entity_map.get(profile_id)?;
         if !profile.definition.contains("IFCARBITRARYCLOSEDPROFILEDEF") {
@@ -528,7 +371,7 @@ impl HierarchyBuilder {
         log::debug!("Got IFCARBITRARYCLOSEDPROFILEDEF #{}", profile_id);
 
         // Find the IFCPOLYLINE reference (second parameter of IFCARBITRARYCLOSEDPROFILEDEF)
-        let polyline_ref = self.extract_second_reference(&profile.definition)?;
+        let polyline_ref = geometry_extraction::extract_second_reference(&profile.definition)?;
         let polyline_id = polyline_ref.trim_start_matches('#');
         let polyline = self.entity_map.get(polyline_id)?;
         if !polyline.definition.contains("IFCPOLYLINE") {
@@ -544,7 +387,7 @@ impl HierarchyBuilder {
 
         // Extract all IFCCARTESIANPOINT references from IFCPOLYLINE
         // Format: IFCPOLYLINE((#160,#161,#162,#163,#164,#165,#166,#167))
-        let polyline_params = self.extract_reference_list(&polyline.definition)?;
+        let polyline_params = geometry_extraction::extract_reference_list(&polyline.definition)?;
 
         log::debug!(
             "Extracted {} point references from IFCPOLYLINE",
@@ -562,7 +405,7 @@ impl HierarchyBuilder {
                     point_id,
                     point_entity.definition
                 );
-                if let Some((x, y, _z)) = self.parse_cartesian_point_2d(&point_entity.definition) {
+                if let Some((x, y, _z)) = geometry_extraction::parse_cartesian_point_2d(&point_entity.definition) {
                     log::debug!("Parsed coordinates: ({}, {})", x, y);
                     points.push(format!("{},{}", x, y));
                 } else {
@@ -586,56 +429,6 @@ impl HierarchyBuilder {
     }
 
     /// Extract a list of references from a parameter group like (#160,#161,#162)
-    fn extract_reference_list(&self, definition: &str) -> Option<Vec<String>> {
-        // Look for pattern: (#REF1,#REF2,#REF3)
-        let start = definition.find("((")?;
-        let end = definition[start..].find("))")?;
-        let params_str = &definition[start + 2..start + end]; // Skip the "((" part
-
-        log::debug!("extract_reference_list: params_str = '{}'", params_str);
-
-        // Use regex to extract all #number references
-        let re = Regex::new(r"#\d+").ok()?;
-        let references: Vec<String> = re
-            .find_iter(params_str)
-            .map(|m| m.as_str().to_string())
-            .collect();
-
-        log::debug!(
-            "extract_reference_list: extracted {} references",
-            references.len()
-        );
-        Some(references)
-    }
-
-    /// Parse a 2D IFCCARTESIANPOINT definition: IFCCARTESIANPOINT((x,y)) or IFCCARTESIANPOINT((x,y,z))
-    fn parse_cartesian_point_2d(&self, definition: &str) -> Option<(f64, f64, f64)> {
-        // Look for pattern: IFCCARTESIANPOINT((x,y,z)) or IFCCARTESIANPOINT((x,y))
-        let start = definition.find("((")?;
-        let end = definition[start..].find("))")?;
-        let coords_str = &definition[start + 2..start + end]; // Skip both opening parens
-
-        log::debug!("parse_cartesian_point_2d: coords_str = '{}'", coords_str);
-
-        let coords: Vec<&str> = coords_str.split(',').collect();
-        if coords.len() >= 2 {
-            if let (Ok(x), Ok(y)) = (
-                coords[0].trim().parse::<f64>(),
-                coords[1].trim().parse::<f64>(),
-            ) {
-                let z = if coords.len() >= 3 {
-                    coords[2].trim().parse::<f64>().unwrap_or(0.0)
-                } else {
-                    0.0
-                };
-                return Some((x, y, z));
-            }
-        }
-
-        None
-    }
-
-    /// Extract equipment entities and assign to rooms based on spatial proximity
     pub fn extract_equipment(
         &self,
         _rooms: &[Room],
@@ -694,7 +487,7 @@ impl HierarchyBuilder {
         for param in params {
             let param = param.trim();
             if param.starts_with("#") {
-                if let Some(coords) = self.extract_coordinates_from_placement(param) {
+                if let Some(coords) = geometry_extraction::extract_coordinates_from_placement(param, &self.entity_map) {
                     return Some(coords);
                 }
             }

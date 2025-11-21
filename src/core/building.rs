@@ -122,10 +122,26 @@ impl Building {
 
     /// Add a floor to the building
     ///
+    /// Updates the building's `updated_at` timestamp automatically.
+    ///
+    /// # Arguments
+    ///
+    /// * `floor` - The floor to add
+    ///
     /// # Panics
     ///
     /// Panics in debug builds if a floor with the same level already exists.
     /// In release builds, duplicate floors are allowed but may cause issues.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::{Building, Floor};
+    /// let mut building = Building::new("HQ".to_string(), "/hq".to_string());
+    /// let floor = Floor::new("Ground Floor".to_string(), 0);
+    /// building.add_floor(floor);
+    /// assert_eq!(building.floors.len(), 1);
+    /// ```
     pub fn add_floor(&mut self, floor: Floor) {
         debug_assert!(
             !self.floors.iter().any(|f| f.level == floor.level),
@@ -138,7 +154,29 @@ impl Building {
 
     /// Add a floor to the building with validation
     ///
-    /// Returns `Err` if a floor with the same level already exists.
+    /// Validates that no floor with the same level exists before adding.
+    /// Updates the building's `updated_at` timestamp on success.
+    ///
+    /// # Arguments
+    ///
+    /// * `floor` - The floor to add
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` - Floor was added successfully
+    /// * `Err(String)` - A floor with the same level already exists
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::{Building, Floor};
+    /// let mut building = Building::new("HQ".to_string(), "/hq".to_string());
+    /// let floor1 = Floor::new("Ground Floor".to_string(), 0);
+    /// let floor2 = Floor::new("Duplicate".to_string(), 0);
+    ///
+    /// assert!(building.try_add_floor(floor1).is_ok());
+    /// assert!(building.try_add_floor(floor2).is_err());
+    /// ```
     pub fn try_add_floor(&mut self, floor: Floor) -> Result<(), String> {
         if self.floors.iter().any(|f| f.level == floor.level) {
             return Err(format!("Floor with level {} already exists", floor.level));
@@ -148,17 +186,84 @@ impl Building {
         Ok(())
     }
 
-    /// Find a floor by level
+    /// Find a floor by its level number
+    ///
+    /// # Arguments
+    ///
+    /// * `level` - The floor level to search for (0 = ground, 1 = first floor, etc.)
+    ///
+    /// # Returns
+    ///
+    /// * `Some(&Floor)` - Reference to the floor if found
+    /// * `None` - If no floor exists at that level
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::{Building, Floor};
+    /// let mut building = Building::new("HQ".to_string(), "/hq".to_string());
+    /// building.add_floor(Floor::new("Ground".to_string(), 0));
+    /// building.add_floor(Floor::new("First".to_string(), 1));
+    ///
+    /// assert!(building.find_floor(0).is_some());
+    /// assert!(building.find_floor(1).is_some());
+    /// assert!(building.find_floor(2).is_none());
+    /// ```
     pub fn find_floor(&self, level: i32) -> Option<&Floor> {
         self.floors.iter().find(|f| f.level == level)
     }
 
-    /// Find a floor by level (mutable)
+    /// Find a floor by its level number (mutable reference)
+    ///
+    /// # Arguments
+    ///
+    /// * `level` - The floor level to search for
+    ///
+    /// # Returns
+    ///
+    /// * `Some(&mut Floor)` - Mutable reference to the floor if found
+    /// * `None` - If no floor exists at that level
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::{Building, Floor};
+    /// let mut building = Building::new("HQ".to_string(), "/hq".to_string());
+    /// building.add_floor(Floor::new("Ground".to_string(), 0));
+    ///
+    /// if let Some(floor) = building.find_floor_mut(0) {
+    ///     floor.name = "Updated Ground Floor".to_string();
+    /// }
+    /// assert_eq!(building.find_floor(0).unwrap().name, "Updated Ground Floor");
+    /// ```
     pub fn find_floor_mut(&mut self, level: i32) -> Option<&mut Floor> {
         self.floors.iter_mut().find(|f| f.level == level)
     }
 
-    /// Get all rooms in the building
+    /// Get all rooms in the building across all floors and wings
+    ///
+    /// Flattens the building hierarchy (Building → Floor → Wing → Room)
+    /// into a single collection of room references.
+    ///
+    /// # Returns
+    ///
+    /// A vector of references to all rooms in the building
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::{Building, Floor, Wing, Room, RoomType};
+    /// let mut building = Building::new("HQ".to_string(), "/hq".to_string());
+    /// let mut floor = Floor::new("Ground".to_string(), 0);
+    /// let mut wing = Wing::new("East".to_string());
+    /// wing.add_room(Room::new("Office 101".to_string(), RoomType::Office));
+    /// wing.add_room(Room::new("Office 102".to_string(), RoomType::Office));
+    /// floor.add_wing(wing);
+    /// building.add_floor(floor);
+    ///
+    /// let rooms = building.get_all_rooms();
+    /// assert_eq!(rooms.len(), 2);
+    /// ```
     pub fn get_all_rooms(&self) -> Vec<&Room> {
         self.floors
             .iter()
@@ -167,7 +272,35 @@ impl Building {
             .collect()
     }
 
-    /// Find a room by ID
+    /// Find a room by its unique ID
+    ///
+    /// Searches across all floors and wings in the building.
+    ///
+    /// # Arguments
+    ///
+    /// * `room_id` - The unique room identifier to search for
+    ///
+    /// # Returns
+    ///
+    /// * `Some(&Room)` - Reference to the room if found
+    /// * `None` - If no room with that ID exists
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::{Building, Floor, Wing, Room, RoomType};
+    /// let mut building = Building::new("HQ".to_string(), "/hq".to_string());
+    /// let mut floor = Floor::new("Ground".to_string(), 0);
+    /// let mut wing = Wing::new("East".to_string());
+    /// let room = Room::new("Office 101".to_string(), RoomType::Office);
+    /// let room_id = room.id.clone();
+    /// wing.add_room(room);
+    /// floor.add_wing(wing);
+    /// building.add_floor(floor);
+    ///
+    /// assert!(building.find_room(&room_id).is_some());
+    /// assert!(building.find_room("nonexistent").is_none());
+    /// ```
     pub fn find_room(&self, room_id: &str) -> Option<&Room> {
         self.get_all_rooms()
             .into_iter()

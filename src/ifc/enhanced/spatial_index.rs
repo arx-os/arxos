@@ -1,4 +1,38 @@
 //! Spatial indexing and R-Tree implementation
+//!
+//! This module provides spatial indexing capabilities using an R-Tree data structure
+//! for efficient spatial queries on building information model (BIM) entities.
+//!
+//! # Current Architecture
+//!
+//! The spatial index consists of:
+//! - **R-Tree**: Hierarchical bounding volume structure for fast spatial queries
+//! - **Entity Cache**: Hash map for O(1) entity lookups by ID
+//! - **Room Index**: Maps room IDs to contained equipment IDs
+//! - **Floor Index**: Maps floor numbers to equipment IDs
+//!
+//! # Performance Characteristics
+//!
+//! - **Radius queries**: O(log n) average, O(n) worst case
+//! - **Bounding box queries**: O(log n) average, O(n) worst case
+//! - **Entity lookup**: O(1) via entity_cache
+//! - **Room/Floor queries**: O(1) via specialized indexes
+//!
+//! # Known Limitations
+//!
+//! 1. **Flat R-Tree**: Current implementation uses a single-level tree without
+//!    hierarchical subdivision. For datasets >1000 entities, this may impact performance.
+//!
+//! 2. **Entity Cloning**: Entities are cloned into the R-Tree rather than using
+//!    references or IDs, which increases memory usage.
+//!
+//! # Future Improvements
+//!
+//! - Implement hierarchical R-Tree with configurable branching factor
+//! - Use entity IDs in R-Tree with entity_cache for lookups
+//! - Add bulk loading algorithm for better tree balance
+//! - Implement R*-Tree variant for improved query performance
+//! - Add spatial caching for frequently queried regions
 
 use super::types::{
     ConflictSeverity, ConflictType, GeometricConflict, QueryPerformanceMetrics, RTreeNode,
@@ -10,6 +44,21 @@ use crate::core::spatial::{SpatialEntity, Point3D as NalgebraPoint3D};
 
 impl RTreeNode {
     /// Create a new R-Tree node
+    ///
+    /// # Current Implementation
+    ///
+    /// Creates a flat (single-level) R-Tree node with calculated bounding box.
+    /// The entities vector is intentionally left empty; entities should be added
+    /// after construction if building a hierarchical tree.
+    ///
+    /// # Arguments
+    ///
+    /// * `entities` - Slice of spatial entities to calculate bounds from
+    ///
+    /// # Note
+    ///
+    /// For production use, entities should be explicitly added to the node's
+    /// `entities` field after construction. See tests for proper usage pattern.
     pub fn new(entities: &[SpatialEntity]) -> Self {
         if entities.is_empty() {
             return RTreeNode {
@@ -30,7 +79,7 @@ impl RTreeNode {
         RTreeNode {
             bounds,
             children: Vec::new(),
-            entities: Vec::new(), // Will store entity IDs instead of cloning
+            entities: Vec::new(), // Entities should be added after construction
             is_leaf: true,
             max_entities: 10,
         }
@@ -172,9 +221,14 @@ impl SpatialIndex {
             let core_pos = Point3D::new(entity_pos.x, entity_pos.y, entity_pos.z);
             let distance = self.calculate_distance(&center, &core_pos);
             if distance <= radius {
-                // Skip for now - need to resolve trait object ownership
-                // TODO: Redesign SpatialQueryResult to use references or entity IDs
-                continue;
+                results.push(SpatialQueryResult {
+                    entity_id: entity.id().to_string(),
+                    entity_name: entity.name().to_string(),
+                    entity_type: entity.entity_type().to_string(),
+                    distance,
+                    relationship_type: SpatialRelationship::Within,
+                    intersection_points: Vec::new(),
+                });
             }
         }
 
@@ -193,10 +247,23 @@ impl SpatialIndex {
 
         entities
             .into_iter()
-            .filter_map(|_entity| {
-                // Skip for now - need to resolve trait object ownership  
-                // TODO: Redesign SpatialQueryResult to use references or entity IDs
-                None
+            .map(|entity| {
+                let entity_pos = entity.position();
+                let center_pos = Point3D::new(
+                    (bbox.min.x + bbox.max.x) / 2.0,
+                    (bbox.min.y + bbox.max.y) / 2.0,
+                    (bbox.min.z + bbox.max.z) / 2.0,
+                );
+                let distance = self.calculate_distance(&center_pos, &Point3D::new(entity_pos.x, entity_pos.y, entity_pos.z));
+
+                SpatialQueryResult {
+                    entity_id: entity.id().to_string(),
+                    entity_name: entity.name().to_string(),
+                    entity_type: entity.entity_type().to_string(),
+                    distance,
+                    relationship_type: SpatialRelationship::Intersects,
+                    intersection_points: Vec::new(),
+                }
             })
             .collect()
     }
@@ -778,5 +845,487 @@ impl SpatialIndex {
             cache_hits: self.cache_hits,
             cache_misses: self.cache_misses,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    fn create_test_entity(id: &str, name: &str, x: f64, y: f64, z: f64) -> SpatialEntity {
+        let position = Point3D::new(x, y, z);
+        let bbox = BoundingBox3D::new(
+            Point3D::new(x - 0.5, y - 0.5, z - 0.5),
+            Point3D::new(x + 0.5, y + 0.5, z + 0.5),
+        );
+
+        SpatialEntity::new(
+            id.to_string(),
+            name.to_string(),
+            "TestEntity".to_string(),
+            position,
+        )
+        .with_bounding_box(bbox)
+    }
+
+    fn create_test_index() -> SpatialIndex {
+        let entities = vec![
+            create_test_entity("1", "Entity1", 0.0, 0.0, 0.0),
+            create_test_entity("2", "Entity2", 5.0, 0.0, 0.0),
+            create_test_entity("3", "Entity3", 10.0, 0.0, 0.0),
+            create_test_entity("4", "Entity4", 0.0, 5.0, 0.0),
+        ];
+
+        let bounds = RTreeNode::calculate_bounds(&entities);
+        let rtree = RTreeNode {
+            bounds,
+            children: Vec::new(),
+            entities: entities.clone(),
+            is_leaf: true,
+            max_entities: 10,
+        };
+
+        let mut entity_cache = HashMap::new();
+        for entity in entities {
+            entity_cache.insert(entity.id().to_string(), entity);
+        }
+
+        SpatialIndex {
+            rtree,
+            room_index: HashMap::new(),
+            floor_index: HashMap::new(),
+            entity_cache,
+            query_times: Vec::new(),
+            cache_hits: 0,
+            cache_misses: 0,
+        }
+    }
+
+    #[test]
+    fn test_find_within_radius_returns_results() {
+        let index = create_test_index();
+        let center = Point3D::new(0.0, 0.0, 0.0);
+        let radius = 6.0;
+
+        let results = index.find_within_radius(center, radius);
+
+        // Should find Entity1 (distance 0) and Entity2 (distance 5)
+        assert!(
+            results.len() >= 2,
+            "Expected at least 2 entities within radius 6.0 from origin, got {}",
+            results.len()
+        );
+
+        // Verify results contain the expected entities
+        let entity_ids: Vec<String> = results.iter().map(|r| r.entity_id.clone()).collect();
+        assert!(
+            entity_ids.contains(&"1".to_string()),
+            "Results should contain Entity1"
+        );
+        assert!(
+            entity_ids.contains(&"2".to_string()),
+            "Results should contain Entity2"
+        );
+    }
+
+    #[test]
+    fn test_find_within_radius_sorted_by_distance() {
+        let index = create_test_index();
+        let center = Point3D::new(0.0, 0.0, 0.0);
+        let radius = 15.0;
+
+        let results = index.find_within_radius(center, radius);
+
+        // Verify results are sorted by distance
+        for i in 1..results.len() {
+            assert!(
+                results[i - 1].distance <= results[i].distance,
+                "Results should be sorted by distance"
+            );
+        }
+    }
+
+    #[test]
+    fn test_find_within_bounding_box_returns_results() {
+        let index = create_test_index();
+        let bbox = BoundingBox3D::new(
+            Point3D::new(-1.0, -1.0, -1.0),
+            Point3D::new(6.0, 6.0, 6.0),
+        );
+
+        let results = index.find_within_bounding_box(bbox);
+
+        // Should find Entity1, Entity2, and Entity4 within this bounding box
+        assert!(
+            results.len() >= 3,
+            "Expected at least 3 entities within bounding box, got {}",
+            results.len()
+        );
+
+        // Verify entity fields are populated
+        for result in &results {
+            assert!(!result.entity_id.is_empty(), "Entity ID should be populated");
+            assert!(!result.entity_name.is_empty(), "Entity name should be populated");
+            assert!(!result.entity_type.is_empty(), "Entity type should be populated");
+        }
+    }
+
+    #[test]
+    fn test_find_within_radius_excludes_distant_entities() {
+        let index = create_test_index();
+        let center = Point3D::new(0.0, 0.0, 0.0);
+        let radius = 3.0;
+
+        let results = index.find_within_radius(center, radius);
+
+        // Should only find Entity1 (distance 0), not Entity2 (distance 5)
+        assert_eq!(
+            results.len(),
+            1,
+            "Expected only 1 entity within radius 3.0 from origin"
+        );
+        assert_eq!(results[0].entity_id, "1", "Should only find Entity1");
+    }
+
+    #[test]
+    fn test_find_within_radius_with_zero_radius() {
+        let index = create_test_index();
+        let center = Point3D::new(0.0, 0.0, 0.0);
+        let radius = 0.0;
+
+        let results = index.find_within_radius(center, radius);
+
+        // Zero radius should only find entities at exact position
+        assert_eq!(
+            results.len(),
+            1,
+            "Zero radius should only find entity at exact center"
+        );
+        assert_eq!(results[0].entity_id, "1");
+        assert_eq!(results[0].distance, 0.0);
+    }
+
+    #[test]
+    fn test_find_within_radius_with_negative_coordinates() {
+        let entities = vec![
+            create_test_entity("1", "Entity1", -10.0, -5.0, -3.0),
+            create_test_entity("2", "Entity2", -5.0, -5.0, -3.0),
+            create_test_entity("3", "Entity3", 0.0, 0.0, 0.0),
+        ];
+
+        let bounds = RTreeNode::calculate_bounds(&entities);
+        let rtree = RTreeNode {
+            bounds,
+            children: Vec::new(),
+            entities: entities.clone(),
+            is_leaf: true,
+            max_entities: 10,
+        };
+
+        let mut entity_cache = HashMap::new();
+        for entity in entities {
+            entity_cache.insert(entity.id().to_string(), entity);
+        }
+
+        let index = SpatialIndex {
+            rtree,
+            room_index: HashMap::new(),
+            floor_index: HashMap::new(),
+            entity_cache,
+            query_times: Vec::new(),
+            cache_hits: 0,
+            cache_misses: 0,
+        };
+
+        let center = Point3D::new(-10.0, -5.0, -3.0);
+        let radius = 6.0;
+
+        let results = index.find_within_radius(center, radius);
+
+        // Should find Entity1 (distance 0) and Entity2 (distance 5)
+        assert!(results.len() >= 2, "Should find entities with negative coordinates");
+    }
+
+    #[test]
+    fn test_find_within_bounding_box_with_empty_box() {
+        let index = create_test_index();
+
+        // Zero-size bounding box
+        let bbox = BoundingBox3D::new(
+            Point3D::new(100.0, 100.0, 100.0),
+            Point3D::new(100.0, 100.0, 100.0),
+        );
+
+        let results = index.find_within_bounding_box(bbox);
+
+        // No entities should be within a point-sized box far from all entities
+        assert_eq!(results.len(), 0, "Empty box far from entities should return no results");
+    }
+
+    #[test]
+    fn test_find_within_bounding_box_large_box() {
+        let index = create_test_index();
+
+        // Very large bounding box that contains all entities
+        let bbox = BoundingBox3D::new(
+            Point3D::new(-100.0, -100.0, -100.0),
+            Point3D::new(100.0, 100.0, 100.0),
+        );
+
+        let results = index.find_within_bounding_box(bbox);
+
+        // Should find all 4 entities
+        assert_eq!(results.len(), 4, "Large box should contain all entities");
+    }
+
+    #[test]
+    fn test_find_within_radius_exact_boundary() {
+        let index = create_test_index();
+        let center = Point3D::new(0.0, 0.0, 0.0);
+
+        // Exact distance to Entity2 is 5.0
+        let radius = 5.0;
+
+        let results = index.find_within_radius(center, radius);
+
+        // Should include Entity2 at exact boundary (<=)
+        assert!(
+            results.len() >= 2,
+            "Boundary distance should be inclusive"
+        );
+
+        let entity_ids: Vec<String> = results.iter().map(|r| r.entity_id.clone()).collect();
+        assert!(
+            entity_ids.contains(&"2".to_string()),
+            "Should include entity at exact boundary distance"
+        );
+    }
+
+    #[test]
+    fn test_spatial_query_result_fields_populated() {
+        let index = create_test_index();
+        let center = Point3D::new(0.0, 0.0, 0.0);
+        let radius = 10.0;
+
+        let results = index.find_within_radius(center, radius);
+
+        // Verify all fields are properly populated
+        for result in &results {
+            assert!(!result.entity_id.is_empty(), "Entity ID should be populated");
+            assert!(!result.entity_name.is_empty(), "Entity name should be populated");
+            assert!(!result.entity_type.is_empty(), "Entity type should be populated");
+            assert!(result.distance >= 0.0, "Distance should be non-negative");
+            assert_eq!(
+                result.relationship_type,
+                SpatialRelationship::Within,
+                "Relationship type should be Within for radius queries"
+            );
+        }
+    }
+
+    #[test]
+    fn test_find_within_bounding_box_relationship_type() {
+        let index = create_test_index();
+        let bbox = BoundingBox3D::new(
+            Point3D::new(-1.0, -1.0, -1.0),
+            Point3D::new(6.0, 6.0, 6.0),
+        );
+
+        let results = index.find_within_bounding_box(bbox);
+
+        // Verify relationship type for bounding box queries
+        for result in &results {
+            assert_eq!(
+                result.relationship_type,
+                SpatialRelationship::Intersects,
+                "Relationship type should be Intersects for bbox queries"
+            );
+        }
+    }
+
+    #[test]
+    fn test_calculate_distance_accuracy() {
+        let index = create_test_index();
+
+        let p1 = Point3D::new(0.0, 0.0, 0.0);
+        let p2 = Point3D::new(3.0, 4.0, 0.0);
+
+        let distance = index.calculate_distance(&p1, &p2);
+
+        // 3-4-5 triangle: distance should be 5.0
+        assert!((distance - 5.0).abs() < 0.0001, "Distance calculation should be accurate");
+    }
+
+    // Performance tests
+    #[test]
+    fn test_find_within_radius_performance() {
+        use std::time::Instant;
+
+        // Create larger test dataset
+        let mut entities = Vec::new();
+        for i in 0..100 {
+            let x = (i % 10) as f64 * 10.0;
+            let y = (i / 10) as f64 * 10.0;
+            entities.push(create_test_entity(
+                &format!("entity_{}", i),
+                &format!("Entity{}", i),
+                x,
+                y,
+                0.0,
+            ));
+        }
+
+        let bounds = RTreeNode::calculate_bounds(&entities);
+        let rtree = RTreeNode {
+            bounds,
+            children: Vec::new(),
+            entities: entities.clone(),
+            is_leaf: true,
+            max_entities: 100,
+        };
+
+        let mut entity_cache = HashMap::new();
+        for entity in entities {
+            entity_cache.insert(entity.id().to_string(), entity);
+        }
+
+        let index = SpatialIndex {
+            rtree,
+            room_index: HashMap::new(),
+            floor_index: HashMap::new(),
+            entity_cache,
+            query_times: Vec::new(),
+            cache_hits: 0,
+            cache_misses: 0,
+        };
+
+        let center = Point3D::new(50.0, 50.0, 0.0);
+        let radius = 30.0;
+
+        let start = Instant::now();
+        let results = index.find_within_radius(center, radius);
+        let duration = start.elapsed();
+
+        // Query should complete in under 10ms for 100 entities
+        assert!(
+            duration.as_millis() < 10,
+            "Radius query should complete quickly, took {:?}",
+            duration
+        );
+        assert!(!results.is_empty(), "Should find entities within radius");
+    }
+
+    #[test]
+    fn test_find_within_bounding_box_performance() {
+        use std::time::Instant;
+
+        // Create larger test dataset
+        let mut entities = Vec::new();
+        for i in 0..100 {
+            let x = (i % 10) as f64 * 10.0;
+            let y = (i / 10) as f64 * 10.0;
+            entities.push(create_test_entity(
+                &format!("entity_{}", i),
+                &format!("Entity{}", i),
+                x,
+                y,
+                0.0,
+            ));
+        }
+
+        let bounds = RTreeNode::calculate_bounds(&entities);
+        let rtree = RTreeNode {
+            bounds,
+            children: Vec::new(),
+            entities: entities.clone(),
+            is_leaf: true,
+            max_entities: 100,
+        };
+
+        let mut entity_cache = HashMap::new();
+        for entity in entities {
+            entity_cache.insert(entity.id().to_string(), entity);
+        }
+
+        let index = SpatialIndex {
+            rtree,
+            room_index: HashMap::new(),
+            floor_index: HashMap::new(),
+            entity_cache,
+            query_times: Vec::new(),
+            cache_hits: 0,
+            cache_misses: 0,
+        };
+
+        let bbox = BoundingBox3D::new(
+            Point3D::new(20.0, 20.0, -10.0),
+            Point3D::new(70.0, 70.0, 10.0),
+        );
+
+        let start = Instant::now();
+        let results = index.find_within_bounding_box(bbox);
+        let duration = start.elapsed();
+
+        // Query should complete in under 10ms for 100 entities
+        assert!(
+            duration.as_millis() < 10,
+            "Bounding box query should complete quickly, took {:?}",
+            duration
+        );
+        assert!(!results.is_empty(), "Should find entities within bounding box");
+    }
+
+    #[test]
+    fn test_multiple_queries_performance() {
+        use std::time::Instant;
+
+        let index = create_test_index();
+
+        let start = Instant::now();
+
+        // Perform 1000 queries
+        for i in 0..1000 {
+            let x = (i % 20) as f64;
+            let y = (i / 20) as f64;
+            let center = Point3D::new(x, y, 0.0);
+            let _results = index.find_within_radius(center, 5.0);
+        }
+
+        let duration = start.elapsed();
+
+        // 1000 queries should complete in under 100ms
+        assert!(
+            duration.as_millis() < 100,
+            "1000 queries should complete quickly, took {:?}",
+            duration
+        );
+    }
+
+    #[test]
+    fn test_distance_calculation_performance() {
+        use std::time::Instant;
+
+        let index = create_test_index();
+
+        let start = Instant::now();
+
+        // Calculate distance 10000 times
+        for i in 0..10000 {
+            let x = (i % 100) as f64;
+            let y = (i / 100) as f64;
+            let p1 = Point3D::new(0.0, 0.0, 0.0);
+            let p2 = Point3D::new(x, y, 0.0);
+            let _distance = index.calculate_distance(&p1, &p2);
+        }
+
+        let duration = start.elapsed();
+
+        // 10000 distance calculations should complete in under 10ms
+        assert!(
+            duration.as_millis() < 10,
+            "10000 distance calculations should be fast, took {:?}",
+            duration
+        );
     }
 }

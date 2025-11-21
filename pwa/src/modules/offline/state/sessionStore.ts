@@ -68,7 +68,6 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         if (navigator.onLine) {
           try {
             const result = await createSessionBranch(session.id);
-            console.log("Session branch created:", result.branchName);
           } catch (error) {
             console.warn(
               "Could not create session branch (agent may be offline):",
@@ -166,7 +165,6 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       if (manualResolutions && manualResolutions.size > 0) {
         // TODO: Send manual resolutions to agent
         // This would require a separate agent command
-        console.log("Manual resolutions:", manualResolutions);
       }
 
       // Merge with strategy

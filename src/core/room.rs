@@ -280,6 +280,33 @@ impl RoomType {
 }
 
 impl Room {
+    /// Create a new room with a unique ID and default values
+    ///
+    /// The room is initialized with:
+    /// - A unique UUID
+    /// - Empty equipment collection
+    /// - Default spatial properties (origin position, zero dimensions)
+    /// - Empty properties map
+    /// - Creation and update timestamps
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - Human-readable room name
+    /// * `room_type` - Type categorization (Office, Laboratory, etc.)
+    ///
+    /// # Returns
+    ///
+    /// A new Room instance with default values
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::{Room, RoomType};
+    /// let room = Room::new("Office 101".to_string(), RoomType::Office);
+    /// assert_eq!(room.name, "Office 101");
+    /// assert_eq!(room.room_type.to_string(), "Office");
+    /// assert_eq!(room.equipment.len(), 0);
+    /// ```
     pub fn new(name: String, room_type: RoomType) -> Self {
         let now = Some(Utc::now());
         Self {
@@ -295,22 +322,121 @@ impl Room {
     }
 
     /// Add equipment to the room
+    ///
+    /// Updates the room's `updated_at` timestamp automatically.
+    ///
+    /// # Arguments
+    ///
+    /// * `equipment` - The equipment to add to this room
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::{Room, RoomType, Equipment, EquipmentType};
+    /// let mut room = Room::new("Office 101".to_string(), RoomType::Office);
+    /// let equipment = Equipment::new(
+    ///     "Desk Lamp".to_string(),
+    ///     "/equipment/lamp".to_string(),
+    ///     EquipmentType::Furniture,
+    /// );
+    /// room.add_equipment(equipment);
+    /// assert_eq!(room.equipment.len(), 1);
+    /// ```
     pub fn add_equipment(&mut self, equipment: Equipment) {
         self.equipment.push(equipment);
         self.updated_at = Some(Utc::now());
     }
 
     /// Find equipment by name
+    ///
+    /// Performs case-sensitive name matching.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The equipment name to search for
+    ///
+    /// # Returns
+    ///
+    /// * `Some(&Equipment)` - Reference to the equipment if found
+    /// * `None` - If no equipment with that name exists
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::{Room, RoomType, Equipment, EquipmentType};
+    /// let mut room = Room::new("Office 101".to_string(), RoomType::Office);
+    /// room.add_equipment(Equipment::new(
+    ///     "Desk Lamp".to_string(),
+    ///     "/lamp".to_string(),
+    ///     EquipmentType::Furniture,
+    /// ));
+    ///
+    /// assert!(room.find_equipment("Desk Lamp").is_some());
+    /// assert!(room.find_equipment("Missing").is_none());
+    /// ```
     pub fn find_equipment(&self, name: &str) -> Option<&Equipment> {
         self.equipment.iter().find(|e| e.name == name)
     }
 
-    /// Find equipment by name (mutable)
+    /// Find equipment by name (mutable reference)
+    ///
+    /// Performs case-sensitive name matching.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The equipment name to search for
+    ///
+    /// # Returns
+    ///
+    /// * `Some(&mut Equipment)` - Mutable reference to the equipment if found
+    /// * `None` - If no equipment with that name exists
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::{Room, RoomType, Equipment, EquipmentType};
+    /// let mut room = Room::new("Office 101".to_string(), RoomType::Office);
+    /// room.add_equipment(Equipment::new(
+    ///     "Desk Lamp".to_string(),
+    ///     "/lamp".to_string(),
+    ///     EquipmentType::Furniture,
+    /// ));
+    ///
+    /// if let Some(equipment) = room.find_equipment_mut("Desk Lamp") {
+    ///     equipment.name = "Floor Lamp".to_string();
+    /// }
+    /// assert_eq!(room.find_equipment("Floor Lamp").unwrap().name, "Floor Lamp");
+    /// ```
     pub fn find_equipment_mut(&mut self, name: &str) -> Option<&mut Equipment> {
         self.equipment.iter_mut().find(|e| e.name == name)
     }
 
-    /// Update spatial properties
+    /// Update the room's spatial properties
+    ///
+    /// Sets the position, dimensions, and bounding box for the room.
+    /// Updates the room's `updated_at` timestamp automatically.
+    ///
+    /// # Arguments
+    ///
+    /// * `spatial_properties` - The new spatial properties
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arxos::core::{Room, RoomType, SpatialProperties, Position, Dimensions, BoundingBox};
+    /// let mut room = Room::new("Office 101".to_string(), RoomType::Office);
+    /// let spatial_props = SpatialProperties {
+    ///     position: Position { x: 10.0, y: 20.0, z: 0.0, coordinate_system: "building".to_string() },
+    ///     dimensions: Dimensions { width: 5.0, height: 3.0, depth: 4.0 },
+    ///     bounding_box: BoundingBox::new(
+    ///         Position { x: 10.0, y: 20.0, z: 0.0, coordinate_system: "building".to_string() },
+    ///         Position { x: 15.0, y: 23.0, z: 4.0, coordinate_system: "building".to_string() },
+    ///     ),
+    ///     coordinate_system: "building".to_string(),
+    /// };
+    /// room.update_spatial_properties(spatial_props);
+    /// assert_eq!(room.spatial_properties.dimensions.width, 5.0);
+    /// ```
     pub fn update_spatial_properties(&mut self, spatial_properties: SpatialProperties) {
         self.spatial_properties = spatial_properties;
         self.updated_at = Some(Utc::now());

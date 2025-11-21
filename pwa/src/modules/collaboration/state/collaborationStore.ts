@@ -106,12 +106,10 @@ export const useCollaborationStore = create<CollaborationState>(
       // Setup event listeners
       newClient.on("connected", () => {
         set({ connectionState: "connected" });
-        console.log("Collaboration client connected");
       });
 
       newClient.on("disconnected", () => {
         set({ connectionState: "disconnected", connectedPeers: 0 });
-        console.log("Collaboration client disconnected");
       });
 
       newClient.on("message", (event) => {

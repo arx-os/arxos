@@ -21,7 +21,7 @@ pub struct Building3DRenderer {
     pub(super) config: Render3DConfig,
     pub camera: Camera3D,
     pub projection: Projection3D,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Reserved for viewport-based culling and clipping optimizations
     pub(super) viewport: Viewport3D,
     pub(super) spatial_index: Option<SpatialIndex>,
 }

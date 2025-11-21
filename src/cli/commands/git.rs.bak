@@ -18,10 +18,13 @@ impl Command for StageCommand {
 
         if self.args.all {
             println!("   Staging all modified files");
+            // TODO: Implement git add -A
         } else if let Some(ref file) = self.args.file {
             println!("   Staging file: {}", file);
+            // TODO: Implement git add <file>
         } else {
             println!("   Staging all modified files (default)");
+            // TODO: Implement git add -A
         }
 
         println!("✅ Changes staged successfully");
@@ -43,6 +46,7 @@ impl Command for CommitCommand {
         println!("💾 Committing changes...");
         println!("   Message: {}", self.args.message);
 
+        // TODO: Implement git commit -m
         println!("✅ Changes committed successfully");
         Ok(())
     }
@@ -63,10 +67,13 @@ impl Command for UnstageCommand {
 
         if self.args.all {
             println!("   Unstaging all files");
+            // TODO: Implement git reset
         } else if let Some(ref file) = self.args.file {
             println!("   Unstaging file: {}", file);
+            // TODO: Implement git reset <file>
         } else {
             println!("   Unstaging all files (default)");
+            // TODO: Implement git reset
         }
 
         println!("✅ Changes unstaged successfully");
@@ -97,10 +104,13 @@ impl Command for DiffCommand {
 
         if self.args.stat {
             println!("   Mode: Statistics only");
+            // TODO: Implement git diff --stat
         } else if self.args.interactive {
             println!("   Opening interactive viewer...");
+            // TODO: Implement interactive diff viewer
         } else {
             println!("   Showing full diff...");
+            // TODO: Implement git diff
         }
 
         Ok(())
@@ -127,8 +137,10 @@ impl Command for HistoryCommand {
 
         if self.args.verbose {
             println!("   Mode: Verbose (detailed information)");
+            // TODO: Implement git log --verbose
         } else {
             println!("   Mode: Standard");
+            // TODO: Implement git log
         }
 
         Ok(())
@@ -150,10 +162,13 @@ impl Command for StatusCommand {
 
         if self.args.interactive {
             println!("   Opening interactive dashboard...");
+            // TODO: Implement interactive status dashboard
         } else if self.args.verbose {
             println!("   Mode: Verbose");
+            // TODO: Implement git status -v
         } else {
             println!("   Mode: Standard");
+            // TODO: Implement git status
         }
 
         Ok(())

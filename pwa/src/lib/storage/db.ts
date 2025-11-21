@@ -91,7 +91,6 @@ export async function initializeStorage(): Promise<void> {
     // Verify storage is accessible
     await set("arxos:init-test", true);
     await del("arxos:init-test");
-    console.log("IndexedDB initialized successfully");
   } catch (error) {
     console.error("Failed to initialize IndexedDB", error);
     throw new Error(

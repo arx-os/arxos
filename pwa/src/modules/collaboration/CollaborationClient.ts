@@ -309,7 +309,6 @@ export class CollaborationClient {
    * Handle WebSocket close
    */
   private handleClose(event: CloseEvent): void {
-    console.log("WebSocket closed:", event.code, event.reason);
 
     if (this.pingTimer) {
       clearInterval(this.pingTimer);
@@ -342,7 +341,6 @@ export class CollaborationClient {
     const delay =
       this.config.reconnectDelay * Math.pow(2, this.reconnectAttempt - 1);
 
-    console.log(
       `Reconnecting in ${delay}ms (attempt ${this.reconnectAttempt}/${this.config.reconnectAttempts})`
     );
 

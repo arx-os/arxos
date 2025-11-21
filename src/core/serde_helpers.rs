@@ -3,6 +3,8 @@
 //! This module provides custom serialization logic for core types to maintain
 //! backward compatibility with YAML format while supporting new features.
 
+#![allow(deprecated)] // This module intentionally uses deprecated YAML types for backward compatibility
+
 use crate::core::{BoundingBox, Equipment, EquipmentHealthStatus, EquipmentStatus, Position};
 use crate::core::spatial::{BoundingBox3D, Point3D};
 use crate::yaml::EquipmentStatus as YamlEquipmentStatus;
@@ -13,7 +15,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 /// This function serializes the health_status field (if present) as "status" in YAML
 /// for backward compatibility. If health_status is None, it falls back to mapping
 /// operational status to health status.
-#[allow(dead_code)]
+#[allow(dead_code)] // Reserved for YAML format migration - used via #[serde(serialize_with = "...")]
 pub fn serialize_equipment_status_for_yaml<S>(
     status: &EquipmentStatus,
     health_status: &Option<EquipmentHealthStatus>,
@@ -49,7 +51,7 @@ where
 ///
 /// This function deserializes the "status" field from YAML and maps it to health_status.
 /// The operational status is inferred from health status for backward compatibility.
-#[allow(dead_code)]
+#[allow(dead_code)] // Reserved for YAML format migration - used via #[serde(deserialize_with = "...")]
 pub fn deserialize_equipment_status_from_yaml<'de, D>(
     deserializer: D,
 ) -> Result<(EquipmentStatus, Option<EquipmentHealthStatus>), D::Error>
@@ -176,7 +178,7 @@ where
 ///
 /// This allows Room's equipment field to serialize as Vec<String> (IDs) in YAML,
 /// while keeping full Equipment objects in the core type.
-#[allow(dead_code)]
+#[allow(dead_code)] // Reserved for YAML format migration - used via #[serde(serialize_with = "...")]
 pub fn serialize_equipment_as_ids<S>(
     equipment: &[Equipment],
     serializer: S,
@@ -194,7 +196,7 @@ where
 /// building context. It returns an empty Vec and equipment should be populated
 /// separately using building data. This is a limitation of the current architecture
 /// where equipment is stored at floor level in YAML but in rooms in core.
-#[allow(dead_code)]
+#[allow(dead_code)] // Reserved for YAML format migration - used via #[serde(deserialize_with = "...")]
 pub fn deserialize_equipment_from_ids<'de, D>(deserializer: D) -> Result<Vec<Equipment>, D::Error>
 where
     D: Deserializer<'de>,

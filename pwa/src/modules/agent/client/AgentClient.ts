@@ -243,7 +243,6 @@ export class AgentClient {
     this.ws!.send(JSON.stringify(request));
 
     if (this.config.debug) {
-      console.log("[AgentClient] Sent request:", request);
     }
 
     return withTimeout(responsePromise, timeout, `Request timeout: ${action}`);
@@ -310,7 +309,6 @@ export class AgentClient {
       const message: AgentMessage = JSON.parse(event.data);
 
       if (this.config.debug) {
-        console.log("[AgentClient] Received message:", message);
       }
 
       switch (message.type) {
@@ -495,7 +493,6 @@ export class AgentClient {
 
   private log(...args: unknown[]): void {
     if (this.config.debug) {
-      console.log("[AgentClient]", ...args);
     }
   }
 }

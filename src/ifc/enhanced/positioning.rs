@@ -1,4 +1,9 @@
 //! Deterministic position generation and spatial data extraction
+//!
+//! Note: Many functions in this module are planned for future implementation
+//! of enhanced IFC positioning and are currently unused.
+
+#![allow(dead_code)]
 
 use super::types::{EnhancedIFCParser, IFCEntity};
 use crate::core::spatial::{BoundingBox3D, Point3D};

@@ -20,6 +20,12 @@ impl Cli {
                 println!("🏗️  Initializing building: {}", name);
                 Ok(())
             },
+            Commands::Import { ifc_file, repo, dry_run } => {
+                Self::handle_import(ifc_file, repo, dry_run)
+            },
+            Commands::Export { format, output, repo, delta } => {
+                Self::handle_export(format, output, repo, delta)
+            },
             Commands::Render { building, interactive, .. } => {
                 if interactive {
                     #[cfg(feature = "render3d")]
@@ -54,11 +60,567 @@ impl Cli {
                     Err("TUI feature not enabled".into())
                 }
             },
+            Commands::Status { verbose, interactive } => {
+                Self::handle_status(verbose, interactive)
+            },
+            Commands::Stage { all, file } => {
+                Self::handle_stage(all, file)
+            },
+            Commands::Unstage { all, file } => {
+                Self::handle_unstage(all, file)
+            },
+            Commands::Commit { message } => {
+                Self::handle_commit(&message)
+            },
+            Commands::Diff { commit, file, stat, interactive } => {
+                Self::handle_diff(commit.as_deref(), file.as_deref(), stat, interactive)
+            },
+            Commands::History { limit, verbose, file } => {
+                Self::handle_history(limit, verbose, file)
+            },
+            Commands::Search { query, equipment, rooms, buildings, case_sensitive, regex, limit, verbose, interactive } => {
+                Self::handle_search(query, equipment, rooms, buildings, case_sensitive, regex, limit, verbose, interactive)
+            },
+            Commands::Query { pattern, format, verbose } => {
+                Self::handle_query(pattern, format, verbose)
+            },
             _ => {
                 println!("⚠️  Command not yet implemented in restructured CLI");
                 Ok(())
             },
         }
+    }
+
+    // Git command handlers
+    fn handle_status(verbose: bool, interactive: bool) -> Result<(), Box<dyn std::error::Error>> {
+        use crate::git::manager::{BuildingGitManager, GitConfigManager};
+
+        if interactive {
+            println!("⚠️  Interactive status dashboard not yet implemented");
+            return Ok(());
+        }
+
+        // Get git manager for current directory
+        let config = GitConfigManager::load_from_arx_config_or_env();
+        let manager = BuildingGitManager::new(".", "current", config)?;
+
+        let status = manager.get_status()?;
+
+        println!("📊 Repository Status");
+        println!();
+        println!("Branch: {}", status.current_branch);
+        println!("Last commit: {}", if status.last_commit.is_empty() { "(none)" } else { &status.last_commit[..8.min(status.last_commit.len())] });
+        println!("Message: {}", status.last_commit_message);
+        println!();
+
+        if verbose {
+            println!("💡 Use 'arx stage <file>' to stage changes");
+            println!("💡 Use 'arx commit <message>' to commit staged changes");
+            println!("💡 Use 'arx diff' to see changes");
+        }
+
+        Ok(())
+    }
+
+    fn handle_stage(all: bool, file: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+        use crate::git::manager::{BuildingGitManager, GitConfigManager};
+
+        let config = GitConfigManager::load_from_arx_config_or_env();
+        let mut manager = BuildingGitManager::new(".", "current", config)?;
+
+        if all || file.is_none() {
+            let count = manager.stage_all()?;
+            println!("✅ Staged {} file(s)", count);
+        } else if let Some(path) = file {
+            manager.stage_file(&path)?;
+            println!("✅ Staged: {}", path);
+        }
+
+        Ok(())
+    }
+
+    fn handle_commit(message: &str) -> Result<(), Box<dyn std::error::Error>> {
+        use crate::git::manager::{BuildingGitManager, GitConfigManager};
+
+        let config = GitConfigManager::load_from_arx_config_or_env();
+        let mut manager = BuildingGitManager::new(".", "current", config)?;
+
+        let commit_id = manager.commit_staged(message)?;
+        let short_id = if commit_id.len() >= 8 { &commit_id[..8] } else { &commit_id };
+        println!("✅ Committed: {}", short_id);
+        println!("📝 Message: {}", message);
+
+        Ok(())
+    }
+
+    fn handle_diff(
+        commit: Option<&str>,
+        file: Option<&str>,
+        stat: bool,
+        interactive: bool,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        use crate::git::manager::{BuildingGitManager, GitConfigManager};
+
+        if interactive {
+            println!("⚠️  Interactive diff viewer not yet implemented");
+            return Ok(());
+        }
+
+        let config = GitConfigManager::load_from_arx_config_or_env();
+        let manager = BuildingGitManager::new(".", "current", config)?;
+
+        if stat {
+            let stats = manager.get_diff_stats(commit)?;
+            println!("📊 Diff Statistics");
+            println!();
+            println!("  Files changed: {}", stats.files_changed);
+            println!("  Insertions:    {}", stats.insertions);
+            println!("  Deletions:     {}", stats.deletions);
+        } else {
+            let diff_result = manager.get_diff(commit, file)?;
+            println!("📊 Diff: {} → {}", diff_result.compare_hash[..8.min(diff_result.compare_hash.len())].to_string(), diff_result.commit_hash[..8.min(diff_result.commit_hash.len())].to_string());
+            println!("Files changed: {}", diff_result.files_changed);
+            println!();
+            for file_diff in &diff_result.file_diffs {
+                match file_diff.line_type {
+                    crate::git::diff::DiffLineType::Addition => println!("+{}: {}", file_diff.line_number, file_diff.content),
+                    crate::git::diff::DiffLineType::Deletion => println!("-{}: {}", file_diff.line_number, file_diff.content),
+                    crate::git::diff::DiffLineType::Context => println!(" {}: {}", file_diff.line_number, file_diff.content),
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn handle_unstage(all: bool, file: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+        use crate::git::manager::{BuildingGitManager, GitConfigManager};
+
+        let config = GitConfigManager::load_from_arx_config_or_env();
+        let mut manager = BuildingGitManager::new(".", "current", config)?;
+
+        if all || file.is_none() {
+            let count = manager.unstage_all()?;
+            println!("✅ Unstaged {} file(s)", count);
+        } else if let Some(path) = file {
+            manager.unstage_file(&path)?;
+            println!("✅ Unstaged: {}", path);
+        }
+
+        Ok(())
+    }
+
+    fn handle_history(
+        limit: usize,
+        verbose: bool,
+        file: Option<String>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        use crate::git::manager::{BuildingGitManager, GitConfigManager};
+
+        let config = GitConfigManager::load_from_arx_config_or_env();
+        let manager = BuildingGitManager::new(".", "current", config)?;
+
+        let mut commits = if let Some(file_path) = file {
+            // Get history for specific file (no limit parameter)
+            manager.get_file_history(&file_path)?
+        } else {
+            // Get general commit history with limit
+            manager.list_commits(limit)?
+        };
+
+        // Apply limit to file history results if needed
+        if commits.len() > limit {
+            commits.truncate(limit);
+        }
+
+        if commits.is_empty() {
+            println!("📋 No commits found");
+            return Ok(());
+        }
+
+        println!("📋 Commit History ({} commits)", commits.len());
+        println!();
+
+        for commit in commits {
+            let short_id = if commit.id.len() >= 8 {
+                &commit.id[..8]
+            } else {
+                &commit.id
+            };
+
+            if verbose {
+                println!("Commit: {}", short_id);
+                println!("Author: {}", commit.author);
+                println!("Date:   {}", commit.time);
+                println!();
+                println!("    {}", commit.message);
+                println!();
+            } else {
+                println!("{} - {} ({})", short_id, commit.message, commit.author);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn handle_import(
+        _ifc_file: String,
+        _repo: Option<String>,
+        _dry_run: bool,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        println!("⚠️  IFC import not yet fully implemented");
+        println!();
+        println!("The import command requires additional infrastructure:");
+        println!("  - IFC-to-YAML conversion pipeline");
+        println!("  - Building data serialization");
+        println!();
+        println!("💡 For now, you can:");
+        println!("  1. Manually convert IFC files using external tools");
+        println!("  2. Create building.yaml files directly");
+        println!("  3. Use the TUI to edit building data");
+        Err("Import command not yet implemented".into())
+    }
+
+    fn handle_export(
+        format: String,
+        output: Option<String>,
+        _repo: Option<String>,
+        _delta: bool,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        use std::path::Path;
+        use std::fs;
+
+        let repo_root = Path::new(".");
+
+        match format.as_str() {
+            "ifc" => {
+                println!("⚠️  IFC export not yet implemented");
+                println!();
+                println!("IFC export requires:");
+                println!("  - IFC file format writer");
+                println!("  - BuildingData to IFC entity conversion");
+                println!();
+                println!("💡 Use 'yaml' or 'json' format instead");
+                Err("IFC export not yet implemented".into())
+            }
+            "yaml" => {
+                // Load building data and save as YAML
+                println!("📤 Exporting to YAML format...");
+
+                let output_file = output.unwrap_or_else(|| "building.yaml".to_string());
+                let output_path = repo_root.join(&output_file);
+
+                // Check if building.yaml exists to export
+                let source_path = repo_root.join("building.yaml");
+                if !source_path.exists() {
+                    return Err("No building.yaml found to export".into());
+                }
+
+                // Copy or read/write
+                if output_file != "building.yaml" {
+                    fs::copy(&source_path, &output_path)?;
+                    println!("✅ Export successful!");
+                    println!();
+                    println!("Output: {}", output_file);
+                } else {
+                    println!("⚠️  Source and destination are the same file");
+                }
+
+                Ok(())
+            }
+            "json" => {
+                println!("📤 Exporting to JSON format...");
+
+                let output_file = output.unwrap_or_else(|| "building.json".to_string());
+                let output_path = repo_root.join(&output_file);
+
+                // Load YAML and convert to JSON
+                let source_path = repo_root.join("building.yaml");
+                if !source_path.exists() {
+                    return Err("No building.yaml found to export".into());
+                }
+
+                let yaml_content = fs::read_to_string(&source_path)?;
+                let yaml_value: serde_yaml::Value = serde_yaml::from_str(&yaml_content)?;
+                let json_content = serde_json::to_string_pretty(&yaml_value)?;
+
+                fs::write(&output_path, json_content)?;
+
+                println!("✅ Export successful!");
+                println!();
+                println!("Output: {}", output_file);
+
+                Ok(())
+            }
+            _ => {
+                Err(format!("Unsupported export format: '{}'. Use: ifc, yaml, json", format).into())
+            }
+        }
+    }
+
+    fn handle_search(
+        query: String,
+        equipment: bool,
+        rooms: bool,
+        buildings: bool,
+        case_sensitive: bool,
+        regex: bool,
+        limit: usize,
+        verbose: bool,
+        interactive: bool,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        use crate::core::operations::{equipment as eq_ops, room as room_ops};
+        use crate::persistence::load_building_data_from_dir;
+
+        if interactive {
+            println!("⚠️  Interactive search browser not yet implemented");
+            println!("💡 Use without --interactive for text-based search");
+            return Ok(());
+        }
+
+        // If no specific search type specified, search everything
+        let search_all = !equipment && !rooms && !buildings;
+        let search_equipment = equipment || search_all;
+        let search_rooms = rooms || search_all;
+        let search_buildings = buildings || search_all;
+
+        println!("🔍 Searching for: \"{}\"", query);
+        if regex {
+            println!("   Mode: Regex pattern");
+        } else if case_sensitive {
+            println!("   Mode: Case-sensitive");
+        } else {
+            println!("   Mode: Case-insensitive");
+        }
+        println!();
+
+        let mut total_results = 0;
+
+        // Search equipment
+        if search_equipment {
+            let equipment_list = eq_ops::list_equipment(None)?;
+            let mut matches = Vec::new();
+
+            for item in equipment_list {
+                let matches_name = if regex {
+                    let re = regex::Regex::new(&query)?;
+                    re.is_match(&item.name)
+                } else if case_sensitive {
+                    item.name.contains(&query)
+                } else {
+                    item.name.to_lowercase().contains(&query.to_lowercase())
+                };
+
+                if matches_name {
+                    matches.push(item);
+                }
+            }
+
+            if !matches.is_empty() {
+                println!("📦 Equipment ({} found):", matches.len());
+                for (i, item) in matches.iter().take(limit).enumerate() {
+                    if verbose {
+                        println!("  {}. {} (ID: {})", i + 1, item.name, item.id);
+                        println!("     Type: {:?}", item.equipment_type);
+                        if !item.properties.is_empty() {
+                            println!("     Properties: {} entries", item.properties.len());
+                        }
+                        println!();
+                    } else {
+                        println!("  - {}", item.name);
+                    }
+                }
+                if matches.len() > limit {
+                    println!("  ... and {} more (use --limit to see more)", matches.len() - limit);
+                }
+                println!();
+                total_results += matches.len();
+            }
+        }
+
+        // Search rooms
+        if search_rooms {
+            let room_list = room_ops::list_rooms(None)?;
+            let mut matches = Vec::new();
+
+            for room in room_list {
+                let matches_name = if regex {
+                    let re = regex::Regex::new(&query)?;
+                    re.is_match(&room.name)
+                } else if case_sensitive {
+                    room.name.contains(&query)
+                } else {
+                    room.name.to_lowercase().contains(&query.to_lowercase())
+                };
+
+                if matches_name {
+                    matches.push(room);
+                }
+            }
+
+            if !matches.is_empty() {
+                println!("🚪 Rooms ({} found):", matches.len());
+                for (i, room) in matches.iter().take(limit).enumerate() {
+                    if verbose {
+                        println!("  {}. {} (ID: {})", i + 1, room.name, room.id);
+                        println!("     Type: {}", room.room_type);
+                        println!("     Equipment: {} items", room.equipment.len());
+                        println!();
+                    } else {
+                        println!("  - {}", room.name);
+                    }
+                }
+                if matches.len() > limit {
+                    println!("  ... and {} more (use --limit to see more)", matches.len() - limit);
+                }
+                println!();
+                total_results += matches.len();
+            }
+        }
+
+        // Search buildings
+        if search_buildings {
+            let building_data = load_building_data_from_dir()?;
+            let building_name = &building_data.building.name;
+
+            let matches_name = if regex {
+                let re = regex::Regex::new(&query)?;
+                re.is_match(building_name)
+            } else if case_sensitive {
+                building_name.contains(&query)
+            } else {
+                building_name.to_lowercase().contains(&query.to_lowercase())
+            };
+
+            if matches_name {
+                println!("🏢 Building:");
+                if verbose {
+                    println!("  Name: {}", building_name);
+                    println!("  Floors: {}", building_data.building.floors.len());
+                    let total_rooms: usize = building_data.building.floors.iter()
+                        .flat_map(|f| f.wings.iter())
+                        .map(|w| w.rooms.len())
+                        .sum();
+                    println!("  Rooms: {}", total_rooms);
+                    println!();
+                } else {
+                    println!("  - {}", building_name);
+                    println!();
+                }
+                total_results += 1;
+            }
+        }
+
+        if total_results == 0 {
+            println!("❌ No results found");
+        } else {
+            println!("✅ Total: {} result(s)", total_results);
+        }
+
+        Ok(())
+    }
+
+    fn handle_query(
+        pattern: String,
+        format: String,
+        verbose: bool,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        use crate::core::operations::equipment as eq_ops;
+
+        println!("🔍 Query pattern: {}", pattern);
+        println!();
+
+        // Parse pattern into glob-compatible format
+        // ArxAddress format: /country/state/city/building/floor/room/fixture
+        let pattern_parts: Vec<&str> = pattern.trim_start_matches('/').split('/').collect();
+
+        if pattern_parts.len() != 7 {
+            return Err(format!(
+                "Invalid ArxAddress pattern. Expected 7 parts, got {}.\nFormat: /country/state/city/building/floor/room/fixture",
+                pattern_parts.len()
+            ).into());
+        }
+
+        // Load equipment and filter by pattern
+        let equipment_list = eq_ops::list_equipment(None)?;
+        let mut matches = Vec::new();
+
+        for item in equipment_list {
+            // Try to construct ArxAddress for this equipment
+            // For now, we'll do simple pattern matching on the ArxAddress path field if it exists
+            // Note: Equipment might not have ArxAddress yet, so we'll need to construct it or skip
+
+            // Simple glob-style matching on equipment name
+            let matches_pattern = if pattern_parts[6] == "*" {
+                true // Match all fixtures
+            } else if pattern_parts[6].contains('*') {
+                // Simple wildcard matching
+                let pattern_prefix = pattern_parts[6].trim_end_matches('*');
+                item.name.starts_with(pattern_prefix)
+            } else {
+                item.name == pattern_parts[6]
+            };
+
+            if matches_pattern {
+                matches.push(item);
+            }
+        }
+
+        if matches.is_empty() {
+            println!("❌ No equipment found matching pattern");
+            return Ok(());
+        }
+
+        // Format output
+        match format.as_str() {
+            "json" => {
+                let json = serde_json::to_string_pretty(&matches)?;
+                println!("{}", json);
+            }
+            "yaml" => {
+                let yaml = serde_yaml::to_string(&matches)?;
+                println!("{}", yaml);
+            }
+            "table" | _ => {
+                println!("📦 Equipment ({} found):", matches.len());
+                println!();
+                println!("  {:<30} {:<15} {:<20}", "Name", "Type", "ID");
+                println!("  {}", "-".repeat(70));
+
+                for item in &matches {
+                    let eq_type = format!("{:?}", item.equipment_type);
+                    let name = if item.name.len() > 28 {
+                        format!("{}...", &item.name[..28])
+                    } else {
+                        item.name.clone()
+                    };
+                    let id = if item.id.len() > 18 {
+                        format!("{}...", &item.id[..18])
+                    } else {
+                        item.id.clone()
+                    };
+                    println!("  {:<30} {:<15} {:<20}", name, eq_type, id);
+
+                    if verbose {
+                        if !item.properties.is_empty() {
+                            println!("     Properties:");
+                            for (key, value) in item.properties.iter().take(3) {
+                                println!("       {}: {}", key, value);
+                            }
+                            if item.properties.len() > 3 {
+                                println!("       ... and {} more", item.properties.len() - 3);
+                            }
+                        }
+                        println!();
+                    }
+                }
+
+                println!();
+                println!("✅ Total: {} result(s)", matches.len());
+            }
+        }
+
+        Ok(())
     }
 }
 

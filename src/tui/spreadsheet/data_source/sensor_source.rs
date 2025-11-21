@@ -32,7 +32,7 @@ pub struct SensorData {
 /// - No persistence (data is ephemeral)
 pub struct SensorDataSource {
     sensor_data: Vec<SensorData>,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Reserved for future filtering/display features
     building_name: String,
 }
 

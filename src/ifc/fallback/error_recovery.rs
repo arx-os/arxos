@@ -77,7 +77,7 @@ impl ErrorRecovery {
     }
 
     /// Check if an error is recoverable
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Reserved for future error classification and handling strategies
     pub fn is_recoverable(&self, error: &str) -> bool {
         // Most parsing errors are recoverable with fallback behavior
         !error.contains("FATAL") && !error.contains("CRITICAL")

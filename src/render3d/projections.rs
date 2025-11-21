@@ -91,7 +91,7 @@ pub fn perspective_projection(point: &Point3D, camera: &Camera3D) -> Point3D {
 /// # Returns
 ///
 /// Projected Point3D
-#[allow(dead_code)]
+#[allow(dead_code)] // Reserved for future unified projection pipeline
 pub fn apply_projection(point: &Point3D, projection: &Projection3D, camera: &Camera3D) -> Point3D {
     match projection.projection_type {
         crate::render3d::types::ProjectionType::Isometric => {

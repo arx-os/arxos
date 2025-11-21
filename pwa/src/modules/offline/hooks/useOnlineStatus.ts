@@ -39,12 +39,10 @@ export function useOnlineStatus(): OnlineStatus {
   useEffect(() => {
     const handleOnline = () => {
       setBrowserOnline(true);
-      console.log("Browser online event detected");
     };
 
     const handleOffline = () => {
       setBrowserOnline(false);
-      console.log("Browser offline event detected");
     };
 
     window.addEventListener("online", handleOnline);
@@ -86,10 +84,8 @@ export function useOnlineStatusChange(
   useEffect(() => {
     if (isOnline !== previousStatus) {
       if (isOnline && onOnline) {
-        console.log("Transitioned to online");
         onOnline();
       } else if (!isOnline && onOffline) {
-        console.log("Transitioned to offline");
         onOffline();
       }
       setPreviousStatus(isOnline);

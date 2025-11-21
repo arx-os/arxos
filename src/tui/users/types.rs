@@ -44,6 +44,7 @@ impl UserRegistry {
         self.users.values().cloned().collect()
     }
 
+    #[allow(dead_code)]
     pub fn get_user(&self, id: &str) -> Option<&User> {
         self.users.get(id)
     }

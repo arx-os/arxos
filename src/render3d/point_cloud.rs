@@ -22,10 +22,10 @@ pub struct Point3DColored {
 #[derive(Debug, Clone)]
 pub struct UniformGrid {
     cells: Vec<Vec<Vec<GridCell>>>,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Reserved for adaptive LOD based on cell size
     cell_size: f32,
     grid_size: usize,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Reserved for spatial query optimization
     bounds: (Vec3, Vec3), // min, max
 }
 

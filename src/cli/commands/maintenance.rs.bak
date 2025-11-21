@@ -22,6 +22,7 @@ impl Command for ValidateCommand {
         let path = self.args.path.as_deref().unwrap_or(".");
         println!("   Path: {}", path);
 
+        // TODO: Implement validation logic
         // - Load building.yaml
         // - Validate schema
         // - Check referential integrity
@@ -54,19 +55,24 @@ impl Command for ConfigCommand {
 
         if self.args.show {
             println!("\n   Current configuration:");
+            // TODO: Load and display configuration
             println!("     database.path: ~/.arxos/data");
             println!("     git.auto_commit: false");
             println!("     render.default_format: ascii");
         } else if let Some(ref value) = self.args.set {
             println!("\n   Setting configuration: {}", value);
+            // TODO: Parse section.key=value and update config
             println!("✅ Configuration updated");
         } else if self.args.reset {
             println!("\n   Resetting to defaults...");
+            // TODO: Reset configuration to defaults
             println!("✅ Configuration reset to defaults");
         } else if self.args.edit {
             println!("\n   Opening configuration file in editor...");
+            // TODO: Open config file in $EDITOR
         } else if self.args.interactive {
             println!("\n   Opening interactive configuration wizard...");
+            // TODO: Launch TUI configuration wizard
             #[cfg(feature = "tui")]
             {
                 // Launch wizard
@@ -120,6 +126,7 @@ impl Command for WatchCommand {
             println!("   Log level: {}", level);
         }
 
+        // TODO: Implement watch mode
         // - Launch TUI dashboard
         // - Poll for changes at refresh_interval
         // - Update display in real-time
@@ -128,6 +135,7 @@ impl Command for WatchCommand {
         #[cfg(feature = "tui")]
         {
             println!("\n   Press 'q' to quit, arrow keys to navigate");
+            // TODO: Launch TUI watch dashboard
         }
         #[cfg(not(feature = "tui"))]
         {
@@ -156,6 +164,7 @@ impl Command for HealthCommand {
 
         if self.args.interactive {
             println!("\n   Opening interactive health dashboard...");
+            // TODO: Launch TUI health dashboard
             #[cfg(feature = "tui")]
             {
                 // Launch dashboard
@@ -167,6 +176,7 @@ impl Command for HealthCommand {
         } else {
             println!("\n   Health check results:");
 
+            // TODO: Implement health checks based on component
             match component {
                 "all" => {
                     println!("     Git: ✓ OK");
@@ -197,6 +207,7 @@ impl Command for HealthCommand {
 
             if self.args.verbose || self.args.diagnostic {
                 println!("\n   Detailed diagnostics:");
+                // TODO: Show verbose diagnostic information
             }
         }
 
@@ -254,6 +265,7 @@ impl Command for FilterCommand {
         println!("   Format: {}", self.args.format);
         println!("   Limit: {}", self.args.limit);
 
+        // TODO: Implement filtering logic
         // - Load building data
         // - Apply filters
         // - Limit results
@@ -261,8 +273,10 @@ impl Command for FilterCommand {
 
         if self.args.verbose {
             println!("\n   Detailed results:");
+            // TODO: Show verbose results
         } else {
             println!("\n   Results:");
+            // TODO: Show compact results
         }
 
         println!("\n✅ Filter completed");
@@ -288,6 +302,7 @@ impl Command for DocCommand {
 
         println!("   Output: {}", output_path);
 
+        // TODO: Implement documentation generation
         // - Load building data
         // - Generate HTML with:
         //   - Building overview
@@ -325,15 +340,19 @@ impl Command for ProcessSensorsCommand {
 
         if self.args.watch {
             println!("   Mode: Watch (continuous monitoring)");
+            // TODO: Implement watch mode daemon
             println!("\n   Watching for new sensor data files...");
             println!("   Press Ctrl+C to stop");
+            // TODO: Loop and process new files as they appear
         } else {
             println!("   Mode: One-time processing");
+            // TODO: Process all sensor data files in directory
             println!("\n   Processing sensor data files...");
         }
 
         if self.args.commit {
             println!("   Auto-commit: enabled");
+            // TODO: Commit changes after processing
         }
 
         println!("\n✅ Sensor data processed successfully");
@@ -356,6 +375,7 @@ impl Command for SensorsHttpCommand {
         println!("   Building: {}", self.args.building);
         println!("   Address: http://{}:{}", self.args.host, self.args.port);
 
+        // TODO: Implement HTTP server
         // - Start HTTP server on specified host:port
         // - Accept POST requests with sensor data
         // - Validate and process sensor readings
@@ -368,6 +388,7 @@ impl Command for SensorsHttpCommand {
         println!("     GET  /equipment/:id    - Equipment status");
 
         println!("\n   Server running. Press Ctrl+C to stop");
+        // TODO: Run server loop
 
         Ok(())
     }
@@ -393,6 +414,7 @@ impl Command for SensorsMqttCommand {
             println!("   Username: {}", user);
         }
 
+        // TODO: Implement MQTT subscriber
         // - Connect to MQTT broker
         // - Subscribe to specified topics
         // - Process incoming sensor messages
@@ -401,6 +423,7 @@ impl Command for SensorsMqttCommand {
         println!("\n   Connected to MQTT broker");
         println!("   Subscribed to topics");
         println!("\n   Listening for sensor data. Press Ctrl+C to stop");
+        // TODO: Run subscriber loop
 
         Ok(())
     }
@@ -421,12 +444,14 @@ impl Command for MigrateCommand {
 
         if self.args.dry_run {
             println!("   Mode: Dry run (no changes will be made)");
+            // TODO: Analyze and show what would be migrated
             println!("\n   Migration preview:");
             println!("     - 50 fixtures would be migrated");
             println!("     - Addresses would be generated from grid/floor/room data");
             println!("\n   Run without --dry-run to apply changes");
         } else {
             println!("   Mode: Live migration");
+            // TODO: Perform actual migration
             // - Load all building YAML files
             // - For each fixture without 'address' field:
             //   - Infer address from grid position and hierarchy
@@ -462,11 +487,14 @@ impl Command for VerifyCommand {
 
         if self.args.all {
             println!("   Mode: All commits in current branch");
+            // TODO: Verify all commits
         } else {
             let commit = self.args.commit.as_deref().unwrap_or("HEAD");
             println!("   Commit: {}", commit);
+            // TODO: Verify specific commit
         }
 
+        // TODO: Implement GPG verification
         // - Use git verify-commit or git log --show-signature
         // - Parse GPG output
         // - Display verification status

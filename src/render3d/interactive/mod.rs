@@ -225,157 +225,16 @@ impl InteractiveRenderer {
         handlers::handle_action(&mut self.state, action, &self.renderer.building_data)
     }
 
-    /// Handle camera movement actions
-    fn handle_camera_action(
-        &mut self,
-        action: CameraAction,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let move_speed = 1.0;
-        let rotation_speed = 5.0;
-
-        match action {
-            CameraAction::MoveUp => {
-                self.state
-                    .camera_state
-                    .translate(Vector3D::new(0.0, move_speed, 0.0));
-            }
-            CameraAction::MoveDown => {
-                self.state
-                    .camera_state
-                    .translate(Vector3D::new(0.0, -move_speed, 0.0));
-            }
-            CameraAction::MoveLeft => {
-                self.state
-                    .camera_state
-                    .translate(Vector3D::new(-move_speed, 0.0, 0.0));
-            }
-            CameraAction::MoveRight => {
-                self.state
-                    .camera_state
-                    .translate(Vector3D::new(move_speed, 0.0, 0.0));
-            }
-            CameraAction::MoveForward => {
-                self.state
-                    .camera_state
-                    .translate(Vector3D::new(0.0, 0.0, -move_speed));
-            }
-            CameraAction::MoveBackward => {
-                self.state
-                    .camera_state
-                    .translate(Vector3D::new(0.0, 0.0, move_speed));
-            }
-            CameraAction::RotateLeft => {
-                self.state.camera_state.rotate(0.0, -rotation_speed, 0.0);
-            }
-            CameraAction::RotateRight => {
-                self.state.camera_state.rotate(0.0, rotation_speed, 0.0);
-            }
-            CameraAction::RotateUp => {
-                self.state.camera_state.rotate(-rotation_speed, 0.0, 0.0);
-            }
-            CameraAction::RotateDown => {
-                self.state.camera_state.rotate(rotation_speed, 0.0, 0.0);
-            }
-            CameraAction::Reset => {
-                self.state.camera_state = CameraState::default();
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Handle zoom actions
-    fn handle_zoom_action(&mut self, action: ZoomAction) -> Result<(), Box<dyn std::error::Error>> {
-        match action {
-            ZoomAction::In => {
-                self.state.camera_state.zoom_in(1.2);
-            }
-            ZoomAction::Out => {
-                self.state.camera_state.zoom_out(1.2);
-            }
-            ZoomAction::Reset => {
-                self.state.camera_state.zoom = 1.0;
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Handle view mode changes
-    fn handle_view_mode_action(
-        &mut self,
-        action: ViewModeAction,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        match action {
-            ViewModeAction::Standard => {
-                self.state.set_view_mode(ViewMode::Standard);
-            }
-            ViewModeAction::CrossSection => {
-                self.state.set_view_mode(ViewMode::CrossSection);
-            }
-            ViewModeAction::Connections => {
-                self.state.set_view_mode(ViewMode::Connections);
-            }
-            ViewModeAction::Maintenance => {
-                self.state.set_view_mode(ViewMode::Maintenance);
-            }
-            ViewModeAction::ToggleRooms => {
-                self.state.session_data.preferences.show_rooms =
-                    !self.state.session_data.preferences.show_rooms;
-            }
-            ViewModeAction::ToggleStatus => {
-                self.state.session_data.preferences.show_status =
-                    !self.state.session_data.preferences.show_status;
-            }
-            ViewModeAction::ToggleConnections => {
-                self.state.session_data.preferences.show_connections =
-                    !self.state.session_data.preferences.show_connections;
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Handle floor changes
-    fn handle_floor_change(&mut self, floor_delta: i32) -> Result<(), Box<dyn std::error::Error>> {
-        let current_floor = self.state.current_floor.unwrap_or(0);
-        let new_floor = current_floor + floor_delta;
-
-        // Validate floor exists in building data
-        let max_floor = self
-            .renderer
-            .building_data
-            .building
-            .floors
-            .iter()
-            .map(|f| f.level)
-            .max()
-            .unwrap_or(0);
-
-        let min_floor = self
-            .renderer
-            .building_data
-            .building
-            .floors
-            .iter()
-            .map(|f| f.level)
-            .min()
-            .unwrap_or(0);
-
-        if new_floor >= min_floor && new_floor <= max_floor {
-            self.state.set_current_floor(Some(new_floor));
-        }
-
-        Ok(())
-    }
-
-    /// Handle terminal resize
+    /// Handle terminal resize (delegates to handlers module)
     fn handle_resize(
         &mut self,
         width: usize,
         height: usize,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        // Update renderer configuration
+        // Convert usize to u16 and delegate to handlers module
+        handlers::handle_resize(&mut self.state, width as u16, height as u16)?;
+
+        // Also update renderer configuration
         self.renderer.config.max_width = width;
         self.renderer.config.max_height = height;
 

@@ -2,7 +2,7 @@
 
 use crate::tui::merge_tool::MergeTool;
 use clap::Args;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Resolve merge conflicts interactively
 #[derive(Debug, Args)]
@@ -50,14 +50,14 @@ impl MergeCommand {
         Ok(())
     }
 
-    fn resolve_file(&self, file_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    fn resolve_file(&self, file_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
         if !file_path.exists() {
             return Err(format!("File not found: {}", file_path.display()).into());
         }
 
         println!("Resolving conflicts in: {}", file_path.display());
 
-        let mut tool = MergeTool::new(file_path.clone())?;
+        let mut tool = MergeTool::new(file_path.to_path_buf())?;
         tool.run_interactive()?;
 
         println!("✓ Conflicts resolved in {}", file_path.display());

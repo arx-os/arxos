@@ -238,12 +238,8 @@ pub mod string {
             .map(|c| {
                 if c.is_alphanumeric() {
                     c
-                } else if c.is_whitespace() || c == '-' || c == '_' {
-                    '-'  // Normalize separators to dash
-                } else if c == '#' {
-                    '-'  // Convert hash to dash (for IDs like "#42")
                 } else {
-                    '-'  // Convert other special chars to dash
+                    '-'  // Normalize separators and special chars to dash
                 }
             })
             .collect::<String>()
@@ -310,7 +306,14 @@ pub fn generate_id(prefix: &str) -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .expect("System time is before UNIX epoch (1970-01-01). Check your system clock.")
+        .unwrap_or_else(|_| {
+            // System clock is before UNIX epoch - use a random fallback
+            use std::collections::hash_map::RandomState;
+            use std::hash::BuildHasher;
+            
+            
+            std::time::Duration::from_millis(RandomState::new().hash_one(prefix))
+        })
         .as_millis();
     format!("{}_{}", prefix, timestamp)
 }

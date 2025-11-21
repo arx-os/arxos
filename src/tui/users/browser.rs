@@ -95,11 +95,10 @@ pub fn handle_user_browser() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+type BrowserComponents = (UserBrowserState, TerminalManager, Theme, Option<Clipboard>);
+
 /// Initialize browser state and terminal
-fn initialize_browser() -> Result<
-    (UserBrowserState, TerminalManager, Theme, Option<Clipboard>),
-    Box<dyn std::error::Error>,
-> {
+fn initialize_browser() -> Result<BrowserComponents, Box<dyn std::error::Error>> {
     // Find Git repository
     let repo_path_str = find_git_repository()?
         .ok_or("Not in a Git repository. User registry must be in a Git repository.")?;

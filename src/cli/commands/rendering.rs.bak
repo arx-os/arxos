@@ -40,6 +40,7 @@ impl Command for RenderCommand {
 
         if self.args.interactive {
             println!("   Launching interactive 3D renderer...");
+            // TODO: Launch interactive renderer
             #[cfg(feature = "render3d")]
             {
                 crate::render3d::start_interactive_renderer(&self.args.building)?;
@@ -49,6 +50,7 @@ impl Command for RenderCommand {
                 return Err("Interactive 3D rendering requires --features render3d".into());
             }
         } else {
+            // TODO: Implement static rendering
             println!("✅ Render completed");
         }
 
@@ -98,6 +100,7 @@ impl Command for InteractiveCommand {
             println!("   Help overlay: enabled");
         }
 
+        // TODO: Launch interactive 3D renderer with specified settings
         #[cfg(feature = "render3d")]
         {
             println!("   Starting interactive renderer...");

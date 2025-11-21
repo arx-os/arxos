@@ -123,11 +123,11 @@ mod tests {
         assert!(modal.show, "Modal should be shown");
         assert!(modal.error.is_some(), "Should convert to ArxError");
 
-        // Generic errors should become IoError
-        if let Some(ArxError::IoError { .. }) = modal.error {
+        // Generic errors should become Io error
+        if let Some(ArxError::Io(_)) = modal.error {
             // Correct conversion
         } else {
-            panic!("Generic error should be converted to IoError");
+            panic!("Generic error should be converted to Io error, got: {:?}", modal.error);
         }
     }
 

@@ -8,6 +8,7 @@
 //! - `types` - IFC entity data structures
 //! - `builder` - HierarchyBuilder implementation
 //! - `helpers` - Entity classification and property extraction
+//! - `geometry_extraction` - Coordinate and geometry extraction utilities
 //! - `utils` - Utility functions (path uniqueness, etc.)
 //!
 //! # Usage
@@ -21,6 +22,7 @@
 //! ```
 
 pub mod builder;
+pub mod geometry_extraction;
 pub mod helpers;
 pub mod types;
 pub mod utils;

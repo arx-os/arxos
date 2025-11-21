@@ -217,11 +217,7 @@ impl MergeViewer {
             })
             .collect();
 
-        let block_title = if is_selected {
-            format!("{} ({})", title, section.label)
-        } else {
-            format!("{} ({})", title, section.label)
-        };
+        let block_title = format!("{} ({})", title, section.label);
 
         let list = List::new(items).block(
             Block::default()
@@ -236,12 +232,7 @@ impl MergeViewer {
     /// Check if a section is currently selected in the resolution
     fn is_section_selected(&self, section_name: &str) -> bool {
         if let Some(resolution) = self.resolutions.iter().find(|r| r.conflict_index == self.current_conflict) {
-            match (section_name, resolution.choice) {
-                ("OURS", ResolutionChoice::Ours) => true,
-                ("THEIRS", ResolutionChoice::Theirs) => true,
-                ("OURS" | "THEIRS", ResolutionChoice::Both | ResolutionChoice::BothReversed) => true,
-                _ => false,
-            }
+            matches!((section_name, resolution.choice), ("OURS", ResolutionChoice::Ours) | ("THEIRS", ResolutionChoice::Theirs) | ("OURS" | "THEIRS", ResolutionChoice::Both | ResolutionChoice::BothReversed))
         } else {
             false
         }

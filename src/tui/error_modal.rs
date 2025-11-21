@@ -163,11 +163,11 @@ pub fn render_error_modal<'a>(
     _area: Rect,
     theme: &'a Theme,
 ) -> Option<Paragraph<'a>> {
-    if !modal.show || modal.error.is_none() {
+    if !modal.show {
         return None;
     }
 
-    let error = modal.error.as_ref().unwrap();
+    let error = modal.error.as_ref()?;
 
     let mut lines = vec![
         Line::from(vec![Span::styled(

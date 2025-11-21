@@ -5,6 +5,10 @@
 //!
 //! This library can be used independently of the CLI binary.
 
+// Enforce safe error handling practices
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+
 // Core modules (always available)
 pub mod config;
 pub mod core;

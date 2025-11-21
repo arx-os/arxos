@@ -152,25 +152,6 @@ Show commit history.
 arx history
 arx history --limit 20
 arx history --verbose
-```
-
-#### `arx stage`, `arx commit`, `arx unstage`
-Git staging commands for building data.
-
-```bash
-# Stage all changes
-arx stage --all
-
-# Stage specific file
-arx stage building.yaml
-
-# Commit staged changes
-arx commit "Update equipment status"
-
-# Unstage changes
-arx unstage building.yaml
-```
-
 ### Building Initialization
 
 #### `arx init`

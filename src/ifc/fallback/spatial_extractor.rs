@@ -26,6 +26,12 @@ impl SpatialExtractor {
                 | "IFCWALL"
                 | "IFCDOOR"
                 | "IFCWINDOW"
+                | "IFCCOLUMN"
+                | "IFCSLAB"
+                | "IFCBEAM"
+                | "IFCROOF"
+                | "IFCSTAIR"
+                | "IFCRAILING"
         )
     }
 
@@ -100,6 +106,12 @@ impl SpatialExtractor {
             "IFCSPACE" => (5.0, 4.0, 3.0),        // Room size
             "IFCFLOWTERMINAL" => (1.0, 1.0, 0.5), // Equipment size
             "IFCWALL" => (0.2, 10.0, 3.0),        // Wall dimensions
+            "IFCCOLUMN" => (0.5, 0.5, 3.0),       // Column dimensions
+            "IFCSLAB" => (10.0, 10.0, 0.3),       // Slab dimensions
+            "IFCBEAM" => (0.3, 5.0, 0.5),         // Beam dimensions
+            "IFCROOF" => (10.0, 10.0, 1.0),       // Roof dimensions
+            "IFCSTAIR" => (2.0, 4.0, 3.0),        // Stair dimensions
+            "IFCRAILING" => (0.1, 2.0, 1.1),      // Railing dimensions
             _ => (1.0, 1.0, 1.0),                 // Default size
         }
     }
@@ -182,6 +194,33 @@ impl SpatialExtractor {
                     (id_hash % 1000) as f64 / 10.0,
                     (name_hash % 800) as f64 / 10.0,
                     floor * floor_height + 2.7,
+                )
+            }
+            "IFCROOF" => {
+                let floor_height = 3.0;
+                let floor = (id_hash % 5) as f64;
+                Point3D::new(
+                    (id_hash % 1000) as f64 / 10.0,
+                    (name_hash % 800) as f64 / 10.0,
+                    floor * floor_height + 3.0,
+                )
+            }
+            "IFCSTAIR" => {
+                let floor_height = 3.0;
+                let floor = (id_hash % 5) as f64;
+                Point3D::new(
+                    (id_hash % 1000) as f64 / 10.0,
+                    (name_hash % 800) as f64 / 10.0,
+                    floor * floor_height + 0.0,
+                )
+            }
+            "IFCRAILING" => {
+                let floor_height = 3.0;
+                let floor = (id_hash % 5) as f64;
+                Point3D::new(
+                    (id_hash % 1000) as f64 / 10.0,
+                    (name_hash % 800) as f64 / 10.0,
+                    floor * floor_height + 0.0,
                 )
             }
             _ => {

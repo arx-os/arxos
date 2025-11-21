@@ -4,8 +4,8 @@
 //! not just specific test cases.
 
 use arxos::core::{EquipmentHealthStatus, EquipmentStatus, EquipmentType, Position};
-use arxos::domain::address::ArxAddress;
-use arxos::spatial::{BoundingBox3D, Point3D};
+use arxos::core::domain::address::ArxAddress;
+use arxos::core::spatial::{BoundingBox3D, Point3D};
 use proptest::prelude::*;
 
 // ============================================================================

@@ -4,6 +4,8 @@
 //! Designed for non-technical building management professionals.
 
 pub mod command_palette;
+pub mod dashboard;
+pub mod diff_view;
 pub mod error_integration;
 pub mod error_modal;
 pub mod export;

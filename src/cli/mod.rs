@@ -96,8 +96,17 @@ impl Cli {
         use crate::git::manager::{BuildingGitManager, GitConfigManager};
 
         if interactive {
-            println!("⚠️  Interactive status dashboard not yet implemented");
-            return Ok(());
+            #[cfg(feature = "tui")]
+            {
+                let dashboard = crate::tui::dashboard::Dashboard::new()?;
+                dashboard.run()?;
+                return Ok(());
+            }
+            #[cfg(not(feature = "tui"))]
+            {
+                println!("⚠️  Interactive dashboard requires --features tui");
+                return Ok(());
+            }
         }
 
         // Get git manager for current directory
@@ -162,8 +171,17 @@ impl Cli {
         use crate::git::manager::{BuildingGitManager, GitConfigManager};
 
         if interactive {
-            println!("⚠️  Interactive diff viewer not yet implemented");
-            return Ok(());
+            #[cfg(feature = "tui")]
+            {
+                let diff_view = crate::tui::diff_view::DiffView::new()?;
+                diff_view.run()?;
+                return Ok(());
+            }
+            #[cfg(not(feature = "tui"))]
+            {
+                println!("⚠️  Interactive diff viewer requires --features tui");
+                return Ok(());
+            }
         }
 
         let config = GitConfigManager::load_from_arx_config_or_env();

@@ -7,8 +7,8 @@ This document describes the on-chain economy layer introduced in this iteration 
 The economy layer enables on-chain minting, staking, revenue distribution, and reporting workflows that complement the Git-first building management workflow. The implementation spans:
 
 - A Hardhat-based contract suite for `ArxosToken`, `ArxStaking`, `RevenueSplitter`, `TaxOracle`, and supporting mocks.
-- New Rust economy services (`crates/arxos/src/economy`) that wrap Polygon RPC access, Chainlink oracle calls, IPFS/Ocean integrations, and mobile-friendly workflows.
-- Domain models (`crates/arx/src/domain/economy.rs`) and persistence helpers for Git-native economic ledgers.
+- New Rust economy services (`src/economy`) that wrap Polygon RPC access, Chainlink oracle calls, IPFS/Ocean integrations, and mobile-friendly workflows.
+- Domain models (`src/core/economy.rs`) and persistence helpers for Git-native economic ledgers.
 - CLI and mobile bindings to expose staking/rewards functionality for operators in the field.
 - Observability hooks and tests to validate the flow end-to-end.
 
@@ -30,7 +30,7 @@ The economy layer enables on-chain minting, staking, revenue distribution, and r
   npx hardhat run --network polygonMumbai scripts/deploy.ts
   ```
 
-## Rust Economy Services (`crates/arxos/src/economy`)
+## Rust Economy Services (`src/economy`)
 
 - `EconomyConfig::from_env` reads required configuration:
   - `ARXO_POLYGON_RPC` / `ARXO_POLYGON_CHAIN_ID`
@@ -103,8 +103,8 @@ The economy layer enables on-chain minting, staking, revenue distribution, and r
 | Component | Path/Command |
 |-----------|--------------|
 | Contracts | `contracts/` (`npm test`, `npx hardhat compile`) |
-| Economy services | `crates/arxos/src/economy/` |
-| Domain models | `crates/arx/src/domain/economy.rs` |
+| Economy services | `src/economy/` |
+| Domain models | `src/core/economy.rs` |
 | Persistence | `crates/arx/src/persistence/economy.rs` |
 | CLI commands | `arx economy ...` |
 | iOS bindings | `ios/ArxOSMobile/ArxOSMobile/Services/ArxOSCoreFFI.swift` |

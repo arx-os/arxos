@@ -6,6 +6,7 @@ use crate::utils::path_safety::PathSafety;
 use crate::export::ifc::{IFCExporter, IFCSyncState};
 use crate::ifc::IFCProcessor;
 use crate::yaml::{BuildingData, BuildingYamlSerializer};
+use crate::core::BuildingMetadata;
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{DateTime, Utc};
 
@@ -38,7 +39,7 @@ pub fn import_ifc(repo_root: &Path, filename: &str, data_base64: &str) -> Result
     fs::create_dir_all(&imports_dir)?;
 
     let import_path = imports_dir.join(&sanitized_name);
-    PathSafety::validate_path_for_write(&import_path, repo_root)?;
+    PathSafety::validate_path_for_write(&import_path).map_err(|e| anyhow!(e))?;
     fs::write(&import_path, &bytes).map_err(|e| {
         anyhow!(
             "Failed to write IFC upload to {}: {}",
@@ -57,23 +58,46 @@ pub fn import_ifc(repo_root: &Path, filename: &str, data_base64: &str) -> Result
     let _dir_guard = DirGuard::change_to(repo_root)?;
 
     let building_data = match processor.extract_hierarchy(import_path_str) {
-        Ok((building, floors)) => {
-            let mut data = serializer
-                .serialize_building(&building, &[], Some(import_path_str))
-                .map_err(|e| anyhow!("Failed to serialize IFC hierarchy: {}", e))?;
+        Ok((mut building, floors)) => {
             if !floors.is_empty() {
-                data.floors = floors;
+                building.floors = floors;
             }
-            data
+            
+            building.metadata = Some(BuildingMetadata {
+                source_file: Some(import_path_str.to_string()),
+                parser_version: "2.0.0".to_string(),
+                total_entities: 0,
+                spatial_entities: 0,
+                coordinate_system: "Unknown".to_string(),
+                units: "Meters".to_string(),
+                tags: Vec::new(),
+            });
+
+            BuildingData {
+                building,
+                equipment: Vec::new(),
+            }
         }
         Err(primary_err) => {
-            let (building, spatial_entities) =
+            let (mut building, spatial_entities) =
                 processor.process_file(import_path_str).map_err(|e| {
                     anyhow!("IFC parsing failed: {}; fallback error: {}", primary_err, e)
                 })?;
-            serializer
-                .serialize_building(&building, &spatial_entities, Some(import_path_str))
-                .map_err(|e| anyhow!("Failed to convert IFC spatial entities: {}", e))?
+            
+            building.metadata = Some(BuildingMetadata {
+                source_file: Some(import_path_str.to_string()),
+                parser_version: "2.0.0".to_string(),
+                total_entities: 0,
+                spatial_entities: spatial_entities.len(),
+                coordinate_system: "Unknown".to_string(),
+                units: "Meters".to_string(),
+                tags: Vec::new(),
+            });
+
+            BuildingData {
+                building,
+                equipment: Vec::new(),
+            }
         }
     };
 
@@ -82,12 +106,15 @@ pub fn import_ifc(repo_root: &Path, filename: &str, data_base64: &str) -> Result
         ".yaml",
     );
     let yaml_path = repo_root.join(&yaml_filename);
-    PathSafety::validate_path_for_write(&yaml_path, repo_root)?;
+    PathSafety::validate_path_for_write(&yaml_path).map_err(|e| anyhow!(e))?;
     let yaml_path_str = yaml_path
         .to_str()
         .ok_or_else(|| anyhow!("Invalid YAML path encoding"))?;
-    serializer
-        .write_to_file(&building_data, yaml_path_str)
+    
+    let yaml_content = serializer.to_yaml(&building_data)
+        .map_err(|e| anyhow!("Failed to serialize YAML: {}", e))?;
+
+    fs::write(&yaml_path, yaml_content)
         .map_err(|e| anyhow!("Failed to write YAML to {}: {}", yaml_path.display(), e))?;
 
     let floors = building_data.floors.len();
@@ -148,7 +175,7 @@ pub fn export_ifc(
     );
 
     let ifc_path = exports_dir.join(&export_filename);
-    PathSafety::validate_path_for_write(&ifc_path, repo_root)?;
+    PathSafety::validate_path_for_write(&ifc_path).map_err(|e| anyhow!(e))?;
 
     let sync_state_path = repo_root.join(IFCSyncState::default_path());
     let mut sync_state = IFCSyncState::load(&sync_state_path).unwrap_or_else(|| {

@@ -18,6 +18,10 @@ pub struct Floor {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub bounding_box: Option<crate::core::spatial::BoundingBox3D>,
     pub wings: Vec<Wing>,
+    /// Collection of equipment in common areas (hallways, lobbies)
+    ///
+    /// Equipment located inside specific rooms should be stored in `Room.equipment`.
+    /// This collection is for equipment that doesn't belong to a specific room.
     pub equipment: Vec<Equipment>,
     pub properties: HashMap<String, String>,
 }

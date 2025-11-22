@@ -28,7 +28,7 @@ pub struct Room {
     pub name: String,
     /// Type categorization of the room
     pub room_type: RoomType,
-    /// Collection of equipment in the room
+    /// Collection of equipment physically located in the room
     ///
     /// When serializing to YAML, this serializes as Vec<String> (equipment IDs only).
     /// When deserializing from YAML, equipment IDs are read but equipment objects

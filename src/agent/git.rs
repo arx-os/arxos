@@ -1,7 +1,8 @@
 use std::path::Path;
 
 use anyhow::{anyhow, Context, Result};
-use crate::git::{BuildingGitManager, CommitMetadata, DiffLineType, GitConfigManager};
+use crate::git::{BuildingGitManager, CommitMetadata, GitConfigManager};
+use crate::git::diff::DiffLineType;
 use git2::{Repository, Status, StatusOptions};
 use serde::Serialize;
 
@@ -59,7 +60,7 @@ pub fn status(repo_root: &Path) -> Result<GitStatusSummary> {
     let status = manager.get_status().context("Failed to fetch Git status")?;
     let diff_stats = manager
         .get_diff_stats(None)
-        .unwrap_or_else(|_| arx::git::DiffStats {
+        .unwrap_or_else(|_| crate::git::DiffStats {
             files_changed: 0,
             insertions: 0,
             deletions: 0,

@@ -18,7 +18,7 @@ pub fn read_file(repo_root: &Path, relative_path: &str) -> Result<FileContent> {
     // Normalize the requested path
     let sanitized = PathBuf::from(relative_path);
     let content = PathSafety::read_file_safely(&sanitized, repo_root)
-        .with_context(|| format!("Failed to read file {}", sanitized.display()))?;
+        .map_err(|e| anyhow::anyhow!("Failed to read file {}: {}", sanitized.display(), e))?;
 
     Ok(FileContent {
         path: sanitized.to_string_lossy().to_string(),

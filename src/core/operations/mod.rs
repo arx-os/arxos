@@ -27,6 +27,8 @@
 pub mod room;
 pub mod equipment;
 pub mod spatial;
+#[cfg(test)]
+mod spatial_tests;
 
 // Re-export room operations
 pub use room::{

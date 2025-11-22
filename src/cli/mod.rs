@@ -4,6 +4,11 @@ use clap::{Parser, Subcommand};
 pub mod args;
 pub mod commands;
 
+use commands::{
+    Command, ImportCommand, ExportCommand, MergeCommand,
+    git::{StatusCommand, CommitCommand, StageCommand, DiffCommand},
+};
+
 #[derive(Parser)]
 #[command(name = "arx")]
 #[command(about = "ArxOS - Git for Buildings")]
@@ -21,10 +26,12 @@ impl Cli {
                 Ok(())
             },
             Commands::Import { ifc_file, repo, dry_run } => {
-                Self::handle_import(ifc_file, repo, dry_run)
+                let cmd = ImportCommand { ifc_file, repo, dry_run };
+                cmd.execute()
             },
             Commands::Export { format, output, repo, delta } => {
-                Self::handle_export(format, output, repo, delta)
+                let cmd = ExportCommand { format, output, repo, delta };
+                cmd.execute()
             },
             Commands::Render { building, interactive, .. } => {
                 if interactive {
@@ -61,19 +68,25 @@ impl Cli {
                 }
             },
             Commands::Status { verbose, interactive } => {
-                Self::handle_status(verbose, interactive)
+                let cmd = StatusCommand { verbose, interactive };
+                cmd.execute()
             },
             Commands::Stage { all, file } => {
-                Self::handle_stage(all, file)
+                let cmd = StageCommand { all, file };
+                cmd.execute()
             },
             Commands::Unstage { all, file } => {
+                // Reusing StageCommand logic for unstage is not ideal but keeping it simple for now
+                // Ideally UnstageCommand should be separate
                 Self::handle_unstage(all, file)
             },
             Commands::Commit { message } => {
-                Self::handle_commit(&message)
+                let cmd = CommitCommand { message };
+                cmd.execute()
             },
             Commands::Diff { commit, file, stat, interactive } => {
-                Self::handle_diff(commit.as_deref(), file.as_deref(), stat, interactive)
+                let cmd = DiffCommand { commit, file, stat, interactive };
+                cmd.execute()
             },
             Commands::History { limit, verbose, file } => {
                 Self::handle_history(limit, verbose, file)
@@ -89,126 +102,6 @@ impl Cli {
                 Ok(())
             },
         }
-    }
-
-    // Git command handlers
-    fn handle_status(verbose: bool, interactive: bool) -> Result<(), Box<dyn std::error::Error>> {
-        use crate::git::manager::{BuildingGitManager, GitConfigManager};
-
-        if interactive {
-            #[cfg(feature = "tui")]
-            {
-                let dashboard = crate::tui::dashboard::Dashboard::new()?;
-                dashboard.run()?;
-                return Ok(());
-            }
-            #[cfg(not(feature = "tui"))]
-            {
-                println!("⚠️  Interactive dashboard requires --features tui");
-                return Ok(());
-            }
-        }
-
-        // Get git manager for current directory
-        let config = GitConfigManager::load_from_arx_config_or_env();
-        let manager = BuildingGitManager::new(".", "current", config)?;
-
-        let status = manager.get_status()?;
-
-        println!("📊 Repository Status");
-        println!();
-        println!("Branch: {}", status.current_branch);
-        println!("Last commit: {}", if status.last_commit.is_empty() { "(none)" } else { &status.last_commit[..8.min(status.last_commit.len())] });
-        println!("Message: {}", status.last_commit_message);
-        println!();
-
-        if verbose {
-            println!("💡 Use 'arx stage <file>' to stage changes");
-            println!("💡 Use 'arx commit <message>' to commit staged changes");
-            println!("💡 Use 'arx diff' to see changes");
-        }
-
-        Ok(())
-    }
-
-    fn handle_stage(all: bool, file: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
-        use crate::git::manager::{BuildingGitManager, GitConfigManager};
-
-        let config = GitConfigManager::load_from_arx_config_or_env();
-        let mut manager = BuildingGitManager::new(".", "current", config)?;
-
-        if all || file.is_none() {
-            let count = manager.stage_all()?;
-            println!("✅ Staged {} file(s)", count);
-        } else if let Some(path) = file {
-            manager.stage_file(&path)?;
-            println!("✅ Staged: {}", path);
-        }
-
-        Ok(())
-    }
-
-    fn handle_commit(message: &str) -> Result<(), Box<dyn std::error::Error>> {
-        use crate::git::manager::{BuildingGitManager, GitConfigManager};
-
-        let config = GitConfigManager::load_from_arx_config_or_env();
-        let mut manager = BuildingGitManager::new(".", "current", config)?;
-
-        let commit_id = manager.commit_staged(message)?;
-        let short_id = if commit_id.len() >= 8 { &commit_id[..8] } else { &commit_id };
-        println!("✅ Committed: {}", short_id);
-        println!("📝 Message: {}", message);
-
-        Ok(())
-    }
-
-    fn handle_diff(
-        commit: Option<&str>,
-        file: Option<&str>,
-        stat: bool,
-        interactive: bool,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        use crate::git::manager::{BuildingGitManager, GitConfigManager};
-
-        if interactive {
-            #[cfg(feature = "tui")]
-            {
-                let diff_view = crate::tui::diff_view::DiffView::new()?;
-                diff_view.run()?;
-                return Ok(());
-            }
-            #[cfg(not(feature = "tui"))]
-            {
-                println!("⚠️  Interactive diff viewer requires --features tui");
-                return Ok(());
-            }
-        }
-
-        let config = GitConfigManager::load_from_arx_config_or_env();
-        let manager = BuildingGitManager::new(".", "current", config)?;
-
-        if stat {
-            let stats = manager.get_diff_stats(commit)?;
-            println!("📊 Diff Statistics");
-            println!();
-            println!("  Files changed: {}", stats.files_changed);
-            println!("  Insertions:    {}", stats.insertions);
-            println!("  Deletions:     {}", stats.deletions);
-        } else {
-            let diff_result = manager.get_diff(commit, file)?;
-            println!("📊 Diff: {} → {}", diff_result.compare_hash[..8.min(diff_result.compare_hash.len())].to_string(), diff_result.commit_hash[..8.min(diff_result.commit_hash.len())].to_string());
-            println!("Files changed: {}", diff_result.files_changed);
-            println!();
-            for file_diff in &diff_result.file_diffs {
-                match file_diff.line_type {
-                    crate::git::diff::DiffLineType::Addition => println!("+{}: {}", file_diff.line_number, file_diff.content),
-                    crate::git::diff::DiffLineType::Deletion => println!("-{}: {}", file_diff.line_number, file_diff.content),
-                    crate::git::diff::DiffLineType::Context => println!(" {}: {}", file_diff.line_number, file_diff.content),
-                }
-            }
-        }
-
-        Ok(())
     }
 
     fn handle_unstage(all: bool, file: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
@@ -279,101 +172,6 @@ impl Cli {
         }
 
         Ok(())
-    }
-
-    fn handle_import(
-        _ifc_file: String,
-        _repo: Option<String>,
-        _dry_run: bool,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        println!("⚠️  IFC import not yet fully implemented");
-        println!();
-        println!("The import command requires additional infrastructure:");
-        println!("  - IFC-to-YAML conversion pipeline");
-        println!("  - Building data serialization");
-        println!();
-        println!("💡 For now, you can:");
-        println!("  1. Manually convert IFC files using external tools");
-        println!("  2. Create building.yaml files directly");
-        println!("  3. Use the TUI to edit building data");
-        Err("Import command not yet implemented".into())
-    }
-
-    fn handle_export(
-        format: String,
-        output: Option<String>,
-        _repo: Option<String>,
-        _delta: bool,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        use std::path::Path;
-        use std::fs;
-
-        let repo_root = Path::new(".");
-
-        match format.as_str() {
-            "ifc" => {
-                println!("⚠️  IFC export not yet implemented");
-                println!();
-                println!("IFC export requires:");
-                println!("  - IFC file format writer");
-                println!("  - BuildingData to IFC entity conversion");
-                println!();
-                println!("💡 Use 'yaml' or 'json' format instead");
-                Err("IFC export not yet implemented".into())
-            }
-            "yaml" => {
-                // Load building data and save as YAML
-                println!("📤 Exporting to YAML format...");
-
-                let output_file = output.unwrap_or_else(|| "building.yaml".to_string());
-                let output_path = repo_root.join(&output_file);
-
-                // Check if building.yaml exists to export
-                let source_path = repo_root.join("building.yaml");
-                if !source_path.exists() {
-                    return Err("No building.yaml found to export".into());
-                }
-
-                // Copy or read/write
-                if output_file != "building.yaml" {
-                    fs::copy(&source_path, &output_path)?;
-                    println!("✅ Export successful!");
-                    println!();
-                    println!("Output: {}", output_file);
-                } else {
-                    println!("⚠️  Source and destination are the same file");
-                }
-
-                Ok(())
-            }
-            "json" => {
-                println!("📤 Exporting to JSON format...");
-
-                let output_file = output.unwrap_or_else(|| "building.json".to_string());
-                let output_path = repo_root.join(&output_file);
-
-                // Load YAML and convert to JSON
-                let source_path = repo_root.join("building.yaml");
-                if !source_path.exists() {
-                    return Err("No building.yaml found to export".into());
-                }
-
-                let yaml_content = fs::read_to_string(&source_path)?;
-                let yaml_value: serde_yaml::Value = serde_yaml::from_str(&yaml_content)?;
-                let json_content = serde_json::to_string_pretty(&yaml_value)?;
-
-                fs::write(&output_path, json_content)?;
-
-                println!("✅ Export successful!");
-                println!();
-                println!("Output: {}", output_file);
-
-                Ok(())
-            }
-            _ => {
-                Err(format!("Unsupported export format: '{}'. Use: ifc, yaml, json", format).into())
-            }
-        }
     }
 
     fn handle_search(

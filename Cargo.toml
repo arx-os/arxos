@@ -75,6 +75,8 @@ arboard = { version = "3.3", optional = true }
 bevy = { version = "0.14", optional = true, features = ["dynamic_linking"] }
 axum = { version = "0.7", features = ["ws", "macros"], optional = true }
 futures-util = { version = "0.3", optional = true }
+base64 = "0.22.1"
+octocrab = "0.48.0"
 
 [features]
 default = ["tui"]

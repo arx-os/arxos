@@ -4,6 +4,7 @@
 //! for building entities.
 
 use crate::core::types::{Position, SpatialQueryResult};
+use crate::yaml::BuildingData;
 
 /// Result of spatial validation
 #[derive(Debug, Clone)]
@@ -61,6 +62,7 @@ pub struct SpatialValidationIssue {
 ///
 /// # Arguments
 ///
+/// * `building_data` - The building data to query against
 /// * `query_type` - Type of spatial query to perform
 /// * `entity` - Optional entity type filter ("room", "equipment", or empty for all)
 /// * `params` - Query-specific parameters
@@ -69,17 +71,13 @@ pub struct SpatialValidationIssue {
 ///
 /// Vector of spatial query results with entity information and calculated distances.
 pub fn spatial_query(
+    building_data: &BuildingData,
     query_type: &str,
     entity: &str,
     params: Vec<String>,
 ) -> Result<Vec<SpatialQueryResult>, Box<dyn std::error::Error>> {
     use crate::core::spatial::Point3D;
 
-    // Load building data - implementation would need proper file path
-    let building_data = crate::yaml::BuildingData {
-        building: crate::core::Building::default(),
-        equipment: Vec::new()
-    };
     let mut results = Vec::new();
 
     // Helper function to calculate 3D distance
@@ -113,7 +111,6 @@ pub fn spatial_query(
                     ));
                 }
             }
-            // Note: Legacy rooms list removed - rooms are only in wings now
         }
 
         if include_equipment {
@@ -338,47 +335,95 @@ pub fn set_spatial_relationship(
 
 /// Transform coordinates between coordinate systems
 ///
-/// **Note:** This function is reserved for future use. Currently, all coordinates
-/// are in the "building_local" system. Full coordinate transformation support will
-/// be implemented in a future release.
-///
-/// When implemented, this will support transformations between:
-/// - Building local coordinates
-/// - World coordinates (GPS/lat-lon)
-/// - UTM coordinates
-/// - Custom coordinate systems
-///
-/// **Implementation Status:** This function is part of the public CLI API but is reserved
-/// for future implementation. It currently returns a status message. Full implementation would
-/// require coordinate system definitions and transformation matrices.
+/// Transforms entity coordinates between defined coordinate systems.
+/// Currently supports basic translation if the target system is defined in the building metadata.
 ///
 /// # Arguments
 ///
-/// * `from` - Source coordinate system
-/// * `to` - Target coordinate system
+/// * `building_data` - The building data containing coordinate system definitions
+/// * `from` - Source coordinate system name
+/// * `to` - Target coordinate system name
 /// * `entity` - Entity identifier to transform
 ///
 /// # Returns
 ///
-/// Currently returns a formatted message indicating the transformation would be completed.
-///
-/// # Future Implementation
-///
-/// When fully implemented, this function will:
-/// 1. Load coordinate system definitions from building metadata
-/// 2. Calculate transformation matrices
-/// 3. Transform entity coordinates
-/// 4. Update entity positions in building data
-/// 5. Return transformation metadata instead of a string
-#[allow(dead_code)] // Reserved for future coordinate transformation implementation - part of CLI API
+/// Returns a formatted string with the transformed coordinates or status.
 pub fn transform_coordinates(
+    building_data: &BuildingData,
     from: &str,
     to: &str,
     entity: &str,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    // Reserved for future implementation - currently returns status message
-    // This is part of the CLI API, so we maintain the function signature
-    Ok(format!("Coordinate transformation '{}' to '{}' for entity '{}' completed (all coordinates in building_local system)", from, to, entity))
+    // Find the entity
+    let mut entity_pos = None;
+    let mut entity_name = String::new();
+
+    // Search in rooms
+    for floor in &building_data.building.floors {
+        for wing in &floor.wings {
+            for room in &wing.rooms {
+                if room.name == entity || room.id == entity {
+                    entity_pos = Some(room.spatial_properties.position.clone());
+                    entity_name = room.name.clone();
+                    break;
+                }
+            }
+        }
+        if entity_pos.is_some() { break; }
+
+        // Search in equipment
+        for equipment in &floor.equipment {
+            if equipment.name == entity || equipment.id == entity {
+                entity_pos = Some(equipment.position.clone());
+                entity_name = equipment.name.clone();
+                break;
+            }
+        }
+        if entity_pos.is_some() { break; }
+    }
+
+    let pos = match entity_pos {
+        Some(p) => p,
+        None => return Err(format!("Entity '{}' not found", entity).into()),
+    };
+
+    // Check if we are already in the target system
+    if from == to {
+        return Ok(format!("Entity '{}' is already in coordinate system '{}' (x={:.2}, y={:.2}, z={:.2})", 
+            entity_name, to, pos.x, pos.y, pos.z));
+    }
+
+    // Simple translation logic
+    // If transforming from "building_local" to a defined system
+    if from == "building_local" {
+        if let Some(cs) = building_data.building.coordinate_systems.iter().find(|cs| cs.name == to) {
+            // Apply offset (subtract origin)
+            // This is a simplified transformation assuming axes are aligned
+            // A real implementation would use a transformation matrix
+            let new_x = pos.x - cs.origin.x;
+            let new_y = pos.y - cs.origin.y;
+            let new_z = pos.z - cs.origin.z;
+            
+            return Ok(format!("Transformed '{}' from '{}' to '{}': (x={:.2}, y={:.2}, z={:.2}) -> (x={:.2}, y={:.2}, z={:.2})",
+                entity_name, from, to, pos.x, pos.y, pos.z, new_x, new_y, new_z));
+        }
+    }
+
+    // If transforming from a defined system to "building_local"
+    if to == "building_local" {
+        if let Some(cs) = building_data.building.coordinate_systems.iter().find(|cs| cs.name == from) {
+            // Apply offset (add origin)
+            let new_x = pos.x + cs.origin.x;
+            let new_y = pos.y + cs.origin.y;
+            let new_z = pos.z + cs.origin.z;
+            
+            return Ok(format!("Transformed '{}' from '{}' to '{}': (x={:.2}, y={:.2}, z={:.2}) -> (x={:.2}, y={:.2}, z={:.2})",
+                entity_name, from, to, pos.x, pos.y, pos.z, new_x, new_y, new_z));
+        }
+    }
+
+    Ok(format!("Coordinate transformation from '{}' to '{}' not fully supported yet. Entity '{}' is at (x={:.2}, y={:.2}, z={:.2})", 
+        from, to, entity_name, pos.x, pos.y, pos.z))
 }
 
 /// Validate spatial data for entities
@@ -390,6 +435,7 @@ pub fn transform_coordinates(
 ///
 /// # Arguments
 ///
+/// * `building_data` - The building data to validate
 /// * `entity` - Optional entity name to validate. If None, validates all entities.
 /// * `tolerance` - Optional tolerance for floating-point comparisons (default: 0.001).
 ///
@@ -397,15 +443,11 @@ pub fn transform_coordinates(
 ///
 /// Structured validation result with detailed issue information.
 pub fn validate_spatial(
+    building_data: &BuildingData,
     entity: Option<&str>,
     tolerance: Option<f64>,
 ) -> Result<SpatialValidationResult, Box<dyn std::error::Error>> {
     let tol = tolerance.unwrap_or(0.001);
-    // Load building data - implementation would need proper file path
-    let building_data = crate::yaml::BuildingData {
-        building: crate::core::Building::default(),
-        equipment: Vec::new()
-    };
     let mut issues = Vec::new();
     let mut entities_checked = 0;
 
@@ -531,10 +573,6 @@ pub fn validate_spatial(
                 if found {
                     break;
                 }
-                // Note: Legacy rooms list removed - rooms are only in wings now
-                if found {
-                    break;
-                }
             }
 
             // Check equipment if not found in rooms
@@ -588,9 +626,6 @@ pub fn validate_spatial(
                         ));
                     }
                 }
-                // Also validate legacy rooms list
-                // Note: Legacy rooms list removed - rooms are only in wings now
-                // Rooms are validated through wings above
 
                 for equipment in &floor.equipment {
                     entities_checked += 1;

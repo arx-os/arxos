@@ -630,7 +630,15 @@ mod tests {
 }
 
 /// Start the interactive 3D renderer for a building
-pub fn start_interactive_renderer(_building_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+///
+/// # Arguments
+///
+/// * `_building_name` - Name of the building to render
+/// * `_brightness_ramp` - Character ramp for depth visualization
+pub fn start_interactive_renderer(
+    _building_name: &str,
+    _brightness_ramp: &'static str,
+) -> Result<(), Box<dyn std::error::Error>> {
     // This function needs to be implemented or the call to run_interactive_renderer needs to be added to the interactive module
     Err("Interactive renderer not yet fully implemented".into())
 }

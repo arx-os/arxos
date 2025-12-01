@@ -33,11 +33,24 @@ impl Cli {
                 let cmd = ExportCommand { format, output, repo, delta };
                 cmd.execute()
             },
-            Commands::Render { building, interactive, .. } => {
+            Commands::Render { building, interactive, brightness_style, .. } => {
                 if interactive {
                     #[cfg(feature = "render3d")]
                     {
-                        crate::render3d::start_interactive_renderer(&building)?;
+                        // Validate and convert brightness style
+                        let brightness_ramp = match brightness_style.as_str() {
+                            "acerola" => crate::render3d::point_cloud::brightness_ramps::ACEROLA_16,
+                            "classic" => crate::render3d::point_cloud::brightness_ramps::CLASSIC,
+                            "extended" => crate::render3d::point_cloud::brightness_ramps::EXTENDED_16,
+                            "unicode" => crate::render3d::point_cloud::brightness_ramps::UNICODE_16,
+                            _ => {
+                                eprintln!("❌ Invalid brightness style: '{}'", brightness_style);
+                                eprintln!("   Valid options: acerola, classic, extended, unicode");
+                                return Err(format!("Invalid brightness style: {}", brightness_style).into());
+                            }
+                        };
+                        
+                        crate::render3d::start_interactive_renderer(&building, brightness_ramp)?;
                     }
                     #[cfg(not(feature = "render3d"))]
                     {
@@ -539,6 +552,15 @@ pub enum Commands {
         /// Enable interactive WebGL-style point cloud renderer with WASD+mouse controls
         #[arg(long)]
         interactive: bool,
+        /// ASCII brightness style for point cloud rendering (acerola, classic, extended, unicode)
+        ///
+        /// Controls the character set used for depth visualization:
+        /// - acerola: 16-level Acerola-style ramp (default, best for LiDAR scans)
+        /// - classic: 9-level original ramp (legacy compatibility)
+        /// - extended: 16-level extended ASCII characters
+        /// - unicode: 16-level Unicode block characters
+        #[arg(long, default_value = "acerola")]
+        brightness_style: String,
     },
     /// Interactive 3D building visualization with real-time controls
     Interactive {
@@ -588,6 +610,15 @@ pub enum Commands {
         /// Show help overlay by default
         #[arg(long)]
         show_help: bool,
+        /// ASCII brightness style for point cloud rendering (acerola, classic, extended, unicode)
+        ///
+        /// Controls the character set used for depth visualization:
+        /// - acerola: 16-level Acerola-style ramp (default, best for LiDAR scans)
+        /// - classic: 9-level original ramp (legacy compatibility)
+        /// - extended: 16-level extended ASCII characters
+        /// - unicode: 16-level Unicode block characters
+        #[arg(long, default_value = "acerola")]
+        brightness_style: String,
     },
     /// Validate building data
     Validate {

@@ -11,6 +11,68 @@ use crossterm::{cursor, execute};
 
 use std::io::{self, Write};
 
+/// Brightness character ramps for ASCII rendering
+///
+/// Different character sets provide varying levels of detail and visual styles.
+/// Each ramp is ordered from darkest (space) to brightest (densest character).
+pub mod brightness_ramps {
+    /// Original 9-level ramp (legacy compatibility)
+    ///
+    /// Simple progression from space to full block.
+    /// Good for basic visualization but limited depth perception.
+    pub const CLASSIC: &str = " .,:;+*#█";
+    
+    /// Acerola-style 16-level density ramp (RECOMMENDED)
+    ///
+    /// Based on Acerola's ASCII shader technique with 16 luminance values.
+    /// Provides smooth gradients and excellent depth perception for LiDAR scans.
+    /// Optimized for terminal rendering of architectural spaces.
+    ///
+    /// Reference: https://www.youtube.com/watch?v=3Z4AenUGRSs
+    pub const ACEROLA_16: &str = " .:-=+*#%@MWBQ&$";
+    
+    /// Extended ASCII 16-level ramp
+    ///
+    /// Uses punctuation and special characters for varied texture.
+    /// May not render consistently across all terminal fonts.
+    pub const EXTENDED_16: &str = " .'`^\",:;Il!i><~+";
+    
+    /// Unicode block elements 16-level ramp
+    ///
+    /// Uses Unicode box-drawing and block characters.
+    /// Requires Unicode-capable terminal.
+    pub const UNICODE_16: &str = " ░▒▓█▀▄▌▐│─┼┤├┬┴";
+}
+
+/// Get brightness character from normalized depth value
+///
+/// Maps a depth value [0.0, 1.0] to a character from the brightness ramp.
+/// Uses linear interpolation to select the appropriate character.
+///
+/// # Arguments
+///
+/// * `depth` - Normalized depth value (0.0 = closest, 1.0 = farthest)
+/// * `ramp` - Character ramp string (ordered from darkest to brightest)
+///
+/// # Returns
+///
+/// Character representing the brightness level, or space if invalid
+///
+/// # Examples
+///
+/// ```
+/// let ch = get_brightness_char(0.0, brightness_ramps::ACEROLA_16);
+/// assert_eq!(ch, ' '); // Closest point = darkest = space
+///
+/// let ch = get_brightness_char(1.0, brightness_ramps::ACEROLA_16);
+/// assert_eq!(ch, '$'); // Farthest point = brightest = '$'
+/// ```
+fn get_brightness_char(depth: f32, ramp: &str) -> char {
+    let max_brightness = (ramp.chars().count() - 1) as f32;
+    let brightness = (depth * max_brightness).min(max_brightness).max(0.0) as usize;
+    ramp.chars().nth(brightness).unwrap_or(' ')
+}
+
 /// Point in a 3D point cloud with color
 #[derive(Debug, Clone, Copy)]
 pub struct Point3DColored {
@@ -226,9 +288,29 @@ pub struct PointCloudRenderer {
     points: Vec<Point3DColored>,
     grid: Option<UniformGrid>,
     zbuffer: ZBuffer,
+    /// Brightness character ramp for depth visualization
+    ///
+    /// Defaults to ACEROLA_16 for optimal mobile LiDAR scan rendering.
+    /// Can be changed via `with_brightness_ramp()` method.
+    brightness_ramp: &'static str,
 }
 
 impl PointCloudRenderer {
+    /// Create a new point cloud renderer with default settings
+    ///
+    /// Uses ACEROLA_16 brightness ramp by default for optimal visual quality.
+    /// Automatically enables LOD (Level of Detail) for point clouds > 10,000 points.
+    ///
+    /// # Arguments
+    ///
+    /// * `points` - Vector of colored 3D points to render
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let points = vec![Point3DColored { pos: vec3(0.0, 0.0, 0.0), color: Color::White }];
+    /// let renderer = PointCloudRenderer::new(points);
+    /// ```
     pub fn new(points: Vec<Point3DColored>) -> Self {
         let (width, height) = size().unwrap_or((120, 40));
         
@@ -241,7 +323,34 @@ impl PointCloudRenderer {
             },
             points,
             zbuffer: ZBuffer::new(width as usize, height as usize),
+            brightness_ramp: brightness_ramps::ACEROLA_16,
         }
+    }
+
+    /// Set custom brightness ramp (builder pattern)
+    ///
+    /// Allows customization of the ASCII character set used for rendering.
+    ///
+    /// # Arguments
+    ///
+    /// * `ramp` - Static string slice containing brightness characters
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use brightness_ramps::*;
+    ///
+    /// // Use classic 9-level ramp
+    /// let renderer = PointCloudRenderer::new(points)
+    ///     .with_brightness_ramp(CLASSIC);
+    ///
+    /// // Use Unicode blocks
+    /// let renderer = PointCloudRenderer::new(points)
+    ///     .with_brightness_ramp(UNICODE_16);
+    /// ```
+    pub fn with_brightness_ramp(mut self, ramp: &'static str) -> Self {
+        self.brightness_ramp = ramp;
+        self
     }
 
     /// Render point cloud with Z-buffer (Steps 1-4)
@@ -266,14 +375,16 @@ impl PointCloudRenderer {
     }
 
     /// Direct rendering for smaller point clouds
+    ///
+    /// Renders each point individually using the configured brightness ramp.
+    /// Uses Z-buffer for proper depth sorting.
     fn render_direct(&mut self, width: u16, height: u16) -> io::Result<()> {
         for point in &self.points {
             if let Some((x, y, depth)) = project(point.pos, &self.camera, width, height) {
-                // Step 3: Brightness based on depth
-                let brightness = (depth * 8.0).min(7.0) as usize;
-                let ch = " .,:;+*#█".chars().nth(brightness).unwrap_or(' ');
+                // Map depth to brightness character using configured ramp
+                let ch = get_brightness_char(depth, self.brightness_ramp);
 
-                // Step 3: Z-buffer test
+                // Z-buffer depth test
                 self.zbuffer.set_pixel(x, y, depth, ch);
             }
         }
@@ -281,27 +392,29 @@ impl PointCloudRenderer {
     }
 
     /// LOD rendering for massive point clouds (Step 5)
+    ///
+    /// Uses uniform grid for frustum culling and adaptive detail levels.
+    /// Dense cells are rendered as single bright characters, sparse cells show individual points.
     fn render_with_lod(&mut self, grid: &UniformGrid, width: u16, height: u16) -> io::Result<()> {
         let visible_cells = grid.visible_cells(&self.camera);
 
         for cell in visible_cells {
             let screen_area = self.projected_area_of_cell(cell, width, height);
 
-            // If cell covers < 2×2 terminal pixels → render as single bright block
+            // If cell covers < 2×2 terminal pixels → render as single bright character
             if screen_area < 4.0 {
                 if let Some(center) = self.cell_center(cell) {
                     if let Some((x, y, depth)) = project(center, &self.camera, width, height) {
-                        // Step 4: Use Unicode blocks for better visual quality
-                        let ch = if cell.points.len() > 100 { '█' } else { '▓' };
+                        // Use brightest character from ramp for dense cells
+                        let ch = self.brightness_ramp.chars().last().unwrap_or('█');
                         self.zbuffer.set_pixel(x, y, depth, ch);
                     }
                 }
             } else {
-                // Render individual points in the cell
+                // Render individual points in the cell with depth-based brightness
                 for point in &cell.points {
                     if let Some((x, y, depth)) = project(point.pos, &self.camera, width, height) {
-                        let brightness = (depth * 8.0).min(7.0) as usize;
-                        let ch = " .,:;+*#█".chars().nth(brightness).unwrap_or(' ');
+                        let ch = get_brightness_char(depth, self.brightness_ramp);
                         self.zbuffer.set_pixel(x, y, depth, ch);
                     }
                 }
@@ -553,5 +666,170 @@ mod tests {
         let initial_yaw = camera.yaw;
         camera.orbit(0.1, 0.0, 1.0);
         assert!(camera.yaw != initial_yaw);
+    }
+
+    // ============================================================================
+    // Brightness Ramp System Tests
+    // ============================================================================
+
+    #[test]
+    fn test_brightness_ramp_lengths() {
+        // Verify all ramps have correct character counts
+        assert_eq!(brightness_ramps::CLASSIC.chars().count(), 9);
+        assert_eq!(brightness_ramps::ACEROLA_16.chars().count(), 16);
+        assert_eq!(brightness_ramps::EXTENDED_16.chars().count(), 16);
+        assert_eq!(brightness_ramps::UNICODE_16.chars().count(), 16);
+    }
+
+    #[test]
+    fn test_brightness_ramp_ordering() {
+        // All ramps should start with space (darkest)
+        assert_eq!(brightness_ramps::CLASSIC.chars().next().unwrap(), ' ');
+        assert_eq!(brightness_ramps::ACEROLA_16.chars().next().unwrap(), ' ');
+        
+        // ACEROLA_16 should end with '$' (brightest)
+        assert_eq!(brightness_ramps::ACEROLA_16.chars().last().unwrap(), '$');
+    }
+
+    #[test]
+    fn test_get_brightness_char_bounds() {
+        let ramp = brightness_ramps::ACEROLA_16;
+        
+        // Depth 0.0 should give first character (space)
+        assert_eq!(get_brightness_char(0.0, ramp), ' ');
+        
+        // Depth 1.0 should give last character ($)
+        assert_eq!(get_brightness_char(1.0, ramp), '$');
+    }
+
+    #[test]
+    fn test_get_brightness_char_midrange() {
+        let ramp = brightness_ramps::ACEROLA_16;
+        
+        // Mid-range depth should give middle character
+        let ch = get_brightness_char(0.5, ramp);
+        assert!(ch != ' ' && ch != '$');
+        
+        // Should be around index 7-8 for 16-character ramp
+        let expected_chars = ['#', '%', '@'];
+        assert!(expected_chars.contains(&ch));
+    }
+
+    #[test]
+    fn test_get_brightness_char_progression() {
+        let ramp = brightness_ramps::ACEROLA_16;
+        
+        // Verify smooth progression from dark to bright
+        let depths = [0.0, 0.25, 0.5, 0.75, 1.0];
+        let mut prev_idx = 0;
+        
+        for depth in depths {
+            let ch = get_brightness_char(depth, ramp);
+            let idx = ramp.chars().position(|c| c == ch).unwrap();
+            
+            // Each step should be at same or higher brightness
+            assert!(idx >= prev_idx);
+            prev_idx = idx;
+        }
+    }
+
+    #[test]
+    fn test_get_brightness_char_edge_cases() {
+        let ramp = brightness_ramps::ACEROLA_16;
+        
+        // Negative depth should clamp to 0
+        assert_eq!(get_brightness_char(-0.5, ramp), ' ');
+        
+        // Depth > 1.0 should clamp to max
+        assert_eq!(get_brightness_char(2.0, ramp), '$');
+    }
+
+    #[test]
+    fn test_point_cloud_renderer_default_ramp() {
+        let points = vec![
+            Point3DColored { 
+                pos: vec3(0.0, 0.0, 0.0), 
+                color: Color::White 
+            },
+        ];
+        
+        let renderer = PointCloudRenderer::new(points);
+        
+        // Should default to ACEROLA_16
+        assert_eq!(renderer.brightness_ramp, brightness_ramps::ACEROLA_16);
+    }
+
+    #[test]
+    fn test_point_cloud_renderer_custom_ramp() {
+        let points = vec![
+            Point3DColored { 
+                pos: vec3(0.0, 0.0, 0.0), 
+                color: Color::White 
+            },
+        ];
+        
+        // Test builder pattern with different ramps
+        let renderer = PointCloudRenderer::new(points.clone())
+            .with_brightness_ramp(brightness_ramps::CLASSIC);
+        assert_eq!(renderer.brightness_ramp, brightness_ramps::CLASSIC);
+        
+        let renderer = PointCloudRenderer::new(points.clone())
+            .with_brightness_ramp(brightness_ramps::UNICODE_16);
+        assert_eq!(renderer.brightness_ramp, brightness_ramps::UNICODE_16);
+    }
+
+    #[test]
+    fn test_acerola_16_specific_characters() {
+        // Verify the exact Acerola character set
+        let expected = " .:-=+*#%@MWBQ&$";
+        assert_eq!(brightness_ramps::ACEROLA_16, expected);
+        
+        // Verify key characters at specific positions
+        let chars: Vec<char> = brightness_ramps::ACEROLA_16.chars().collect();
+        assert_eq!(chars[0], ' ');   // Darkest
+        assert_eq!(chars[8], '%');   // Mid-range
+        assert_eq!(chars[15], '$');  // Brightest
+    }
+
+    #[test]
+    fn test_lod_threshold() {
+        // Small point cloud should not use LOD
+        let small_points: Vec<Point3DColored> = (0..5000)
+            .map(|i| Point3DColored {
+                pos: vec3(i as f32, 0.0, 0.0),
+                color: Color::White,
+            })
+            .collect();
+        
+        let renderer = PointCloudRenderer::new(small_points);
+        assert!(renderer.grid.is_none());
+        
+        // Large point cloud should use LOD
+        let large_points: Vec<Point3DColored> = (0..15000)
+            .map(|i| Point3DColored {
+                pos: vec3(i as f32, 0.0, 0.0),
+                color: Color::White,
+            })
+            .collect();
+        
+        let renderer = PointCloudRenderer::new(large_points);
+        assert!(renderer.grid.is_some());
+    }
+
+    #[test]
+    fn test_brightness_ramp_no_duplicates() {
+        // Each ramp should have unique characters for best visual distinction
+        for (name, ramp) in [
+            ("CLASSIC", brightness_ramps::CLASSIC),
+            ("ACEROLA_16", brightness_ramps::ACEROLA_16),
+            ("EXTENDED_16", brightness_ramps::EXTENDED_16),
+            ("UNICODE_16", brightness_ramps::UNICODE_16),
+        ] {
+            let chars: Vec<char> = ramp.chars().collect();
+            let unique_chars: std::collections::HashSet<char> = chars.iter().copied().collect();
+            
+            assert_eq!(chars.len(), unique_chars.len(),
+                "{} ramp should have no duplicate characters", name);
+        }
     }
 }

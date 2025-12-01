@@ -35,6 +35,9 @@ pub mod render3d;
 #[cfg(feature = "agent")]
 pub mod agent;
 
+#[cfg(feature = "web")]
+pub mod web;
+
 // Re-export commonly used types
 pub use error::ArxError;
 pub use core::{Building, Equipment, Floor, Room, Wing};

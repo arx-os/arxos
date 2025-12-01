@@ -78,13 +78,20 @@ futures-util = { version = "0.3", optional = true }
 base64 = "0.22.1"
 octocrab = "0.48.0"
 bim = "0.0.1"
+leptos = { version = "0.8.14", features = ["csr"], optional = true }
+leptos_meta = { version = "0.8.5", optional = true }
+leptos_router = { version = "0.8.10", optional = true }
+wasm-bindgen = { version = "0.2.106", optional = true }
+console_error_panic_hook = { version = "0.1.7", optional = true }
+web-sys = { version = "0.3.83", features = ["Window", "Document", "HtmlElement", "Storage", "FileList", "File", "FileReader"], optional = true }
 
 [features]
 default = ["tui"]
 tui = ["crossterm", "ratatui", "csv", "arboard"]
 render3d = ["bevy"]
 agent = ["tokio", "tracing", "tracing-subscriber", "axum", "futures-util"]
-full = ["tui", "render3d", "agent"]
+web = ["leptos", "leptos_meta", "leptos_router", "wasm-bindgen", "console_error_panic_hook", "web-sys"]
+full = ["tui", "render3d", "agent", "web"]
 
 [dev-dependencies]
 criterion = "0.5"

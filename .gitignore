@@ -82,7 +82,8 @@ gradlew.bat
 # Pre-commit hooks cache
 .pre-commit-cache/
 
-# PWA build artifacts
-pwa/node_modules/
-pwa/dist/
-pwa/.vite/
+# Trunk/WASM build artifacts
+dist/
+pkg/
+.trunk/
+

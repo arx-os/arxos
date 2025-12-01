@@ -4,19 +4,15 @@ use crate::utils::progress::ProgressContext;
 use log::{info, warn};
 use std::path::Path;
 
-mod enhanced;
 mod error;
-mod fallback;
 mod geometry;
 mod identifiers;
 mod hierarchy;
+mod bim_parser;
 
-pub use enhanced::{
-    EnhancedIFCParser, ParseResult, SpatialIndex, SpatialQueryResult, SpatialRelationship,
-};
 pub use error::{IFCError, IFCResult};
-pub use fallback::FallbackIFCParser;
 pub use hierarchy::HierarchyBuilder;
+pub use bim_parser::BimParser;
 
 /// IFC (Industry Foundation Classes) file processor
 ///
@@ -37,92 +33,6 @@ impl IFCProcessor {
         Self {}
     }
 
-    /// Extract building hierarchy (floors, rooms, equipment) from IFC file
-    pub fn extract_hierarchy(&self, file_path: &str) -> IFCResult<(Building, Vec<Floor>)> {
-        info!("Extracting building hierarchy from: {}", file_path);
-
-        // Use path-safe file reading
-        use crate::utils::path_safety::PathSafety;
-        let base_dir = std::env::current_dir().map_err(|e| IFCError::FileNotFound {
-            path: format!("Failed to get current directory: {}", e),
-        })?;
-
-        let content = PathSafety::read_file_safely(std::path::Path::new(file_path), &base_dir)
-            .map_err(|e| IFCError::FileNotFound {
-                path: format!("Failed to read IFC file '{}': {}", file_path, e),
-            })?;
-        let parser = FallbackIFCParser::new();
-        let entities = parser
-            .extract_entities(&content)
-            .map_err(|e| IFCError::ParsingError {
-                message: e.to_string(),
-            })?;
-
-        // Convert entities to hierarchy builder format
-        // Parse entity types properly from definitions
-        let hierarchy_entities_mapped: Vec<hierarchy::IFCEntity> = entities
-            .iter()
-            .map(|e| {
-                // Determine entity type from definition (more accurate, preserving TYPE distinction)
-                let entity_type = if e.definition.contains("IFCBUILDINGSTOREY") {
-                    "IFCBUILDINGSTOREY"
-                } else if e.definition.contains("IFCSPACE") {
-                    "IFCSPACE"
-                } else if e.definition.contains("IFCAIRTERMINALTYPE") {
-                    "IFCAIRTERMINALTYPE"
-                } else if e.definition.contains("IFCAIRTERMINAL") {
-                    "IFCAIRTERMINAL"
-                } else if e.definition.contains("IFCFLOWTERMINALTYPE") {
-                    "IFCFLOWTERMINALTYPE"
-                } else if e.definition.contains("IFCFLOWTERMINAL") {
-                    "IFCFLOWTERMINAL"
-                } else if e.definition.contains("IFCPRODUCTDEFINITIONSHAPE") {
-                    "IFCPRODUCTDEFINITIONSHAPE"
-                } else if e.definition.contains("IFCSHAPEREPRESENTATION") {
-                    "IFCSHAPEREPRESENTATION"
-                } else if e.definition.contains("IFCEXTRUDEDAREASOLID") {
-                    "IFCEXTRUDEDAREASOLID"
-                } else if e.definition.contains("IFCARBITRARYCLOSEDPROFILEDEF") {
-                    "IFCARBITRARYCLOSEDPROFILEDEF"
-                } else if e.definition.contains("IFCPOLYLINE") {
-                    "IFCPOLYLINE"
-                } else if e.definition.contains("IFCLOCALPLACEMENT") {
-                    "IFCLOCALPLACEMENT"
-                } else if e.definition.contains("IFCAXIS2PLACEMENT3D") {
-                    "IFCAXIS2PLACEMENT3D"
-                } else if e.definition.contains("IFCCARTESIANPOINT") {
-                    "IFCCARTESIANPOINT"
-                } else {
-                    &e.entity_type
-                };
-
-                hierarchy::IFCEntity {
-                    id: e.id.clone(),
-                    entity_type: entity_type.to_string(),
-                    name: e.name.clone(),
-                    definition: e.definition.clone(),
-                }
-            })
-            .collect();
-
-        let hierarchy_builder = HierarchyBuilder::new(hierarchy_entities_mapped);
-
-        // Build hierarchy
-        let building = hierarchy_builder
-            .build_hierarchy()
-            .map_err(|e| IFCError::ParsingError {
-                message: e.to_string(),
-            })?;
-        let floors = hierarchy_builder
-            .extract_floors()
-            .map_err(|e| IFCError::ParsingError {
-                message: e.to_string(),
-            })?;
-
-        info!("Extracted {} floors from IFC file", floors.len());
-
-        Ok((building, floors))
-    }
 
     pub fn process_file(
         &self,
@@ -142,15 +52,18 @@ impl IFCProcessor {
             warn!("File does not have .ifc extension: {}", file_path);
         }
 
-        // Use custom STEP parser
-        match self.fallback_parsing(file_path) {
+        // Use bim crate parser
+        let parser = BimParser::new();
+        match parser.parse_ifc_file(file_path) {
             Ok((building, spatial_entities)) => {
-                info!("Successfully parsed with custom STEP parser");
+                info!("Successfully parsed with bim crate");
                 Ok((building, spatial_entities))
             }
             Err(e) => {
-                warn!("Custom STEP parsing failed: {}", e);
-                Err(e)
+                warn!("bim crate parsing failed: {}", e);
+                Err(IFCError::ParsingError {
+                    message: e.to_string(),
+                })
             }
         }
     }
@@ -177,15 +90,18 @@ impl IFCProcessor {
             warn!("File does not have .ifc extension: {}", file_path);
         }
 
-        // Use parallel custom STEP parser
-        match self.fallback_parsing_parallel(file_path) {
+        // Note: bim crate doesn't have explicit parallel mode, but it's efficient
+        let parser = BimParser::new();
+        match parser.parse_ifc_file(file_path) {
             Ok((building, spatial_entities)) => {
-                info!("Successfully parsed with parallel custom STEP parser");
+                info!("Successfully parsed with bim crate");
                 Ok((building, spatial_entities))
             }
             Err(e) => {
-                warn!("Parallel custom STEP parsing failed: {}", e);
-                Err(e)
+                warn!("bim crate parsing failed: {}", e);
+                Err(IFCError::ParsingError {
+                    message: e.to_string(),
+                })
             }
         }
     }
@@ -215,71 +131,22 @@ impl IFCProcessor {
 
         progress.update(20, "Parsing IFC entities...");
 
-        // Use custom STEP parser with progress
-        match self.fallback_parsing_with_progress(file_path, progress) {
+        // Use bim crate parser with progress
+        let parser = BimParser::new();
+        match parser.parse_ifc_file_with_progress(file_path, progress) {
             Ok((building, spatial_entities)) => {
-                info!("Successfully parsed with custom STEP parser");
+                info!("Successfully parsed with bim crate");
                 Ok((building, spatial_entities))
             }
             Err(e) => {
-                warn!("Custom STEP parsing failed: {}", e);
-                Err(e)
-            }
-        }
-    }
-
-    fn fallback_parsing(
-        &self,
-        file_path: &str,
-    ) -> IFCResult<(Building, Vec<crate::core::spatial::SpatialEntity>)> {
-        info!("Using custom STEP parser");
-        let parser = FallbackIFCParser::new();
-        parser
-            .parse_ifc_file(file_path)
-            .map_err(|e| IFCError::ParsingError {
-                message: e.to_string(),
-            })
-    }
-
-    fn fallback_parsing_parallel(
-        &self,
-        file_path: &str,
-    ) -> IFCResult<(Building, Vec<crate::core::spatial::SpatialEntity>)> {
-        info!("Using parallel custom STEP parser");
-        let parser = FallbackIFCParser::new();
-        parser
-            .parse_ifc_file_parallel(file_path)
-            .map_err(|e| IFCError::ParsingError {
-                message: e.to_string(),
-            })
-    }
-
-    fn fallback_parsing_with_progress(
-        &self,
-        file_path: &str,
-        mut progress: ProgressContext,
-    ) -> IFCResult<(Building, Vec<crate::core::spatial::SpatialEntity>)> {
-        info!("Using custom STEP parser with progress");
-        let parser = FallbackIFCParser::new();
-
-        progress.update(30, "Initializing parser...");
-
-        // Parse with progress updates
-        let result = parser.parse_ifc_file_with_progress(file_path, progress);
-
-        match result {
-            Ok((building, spatial_entities)) => {
-                info!("Successfully parsed with progress reporting");
-                Ok((building, spatial_entities))
-            }
-            Err(e) => {
-                warn!("Parsing with progress failed: {}", e);
+                warn!("bim crate parsing failed: {}", e);
                 Err(IFCError::ParsingError {
                     message: e.to_string(),
                 })
             }
         }
     }
+
 
     pub fn validate_ifc_file(&self, file_path: &str) -> IFCResult<bool> {
         info!("Validating IFC file: {}", file_path);
@@ -323,36 +190,6 @@ impl IFCProcessor {
         Ok(true)
     }
 
-    /// Process IFC file with enhanced error recovery
-    pub fn process_file_with_recovery(
-        &self,
-        file_path: &str,
-    ) -> Result<ParseResult, Box<dyn std::error::Error>> {
-        info!(
-            "Processing IFC file with enhanced error recovery: {}",
-            file_path
-        );
-
-        let mut parser = EnhancedIFCParser::new();
-        parser.parse_with_recovery(file_path).map_err(|e| e.into())
-    }
-
-    /// Process IFC file with progress and error recovery
-    pub fn process_file_with_progress_and_recovery(
-        &self,
-        file_path: &str,
-        progress: ProgressContext,
-    ) -> Result<ParseResult, Box<dyn std::error::Error>> {
-        info!(
-            "Processing IFC file with progress and error recovery: {}",
-            file_path
-        );
-
-        let mut parser = EnhancedIFCParser::new();
-        parser
-            .parse_with_progress_and_recovery(file_path, progress)
-            .map_err(|e| e.into())
-    }
 
     /// Validate IFC file structure and format
     fn validate_ifc_structure(&self, content: &str) -> IFCResult<()> {

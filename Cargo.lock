@@ -290,6 +290,7 @@ dependencies = [
  "axum",
  "base64 0.22.1",
  "bevy",
+ "bim",
  "chrono",
  "clap",
  "criterion",
@@ -1360,6 +1361,12 @@ dependencies = [
  "web-sys",
  "winit",
 ]
+
+[[package]]
+name = "bim"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96b315596d7c85263b184eefcabfc40ef368be1495e079e7ef6b9828bf7691eb"
 
 [[package]]
 name = "bindgen"

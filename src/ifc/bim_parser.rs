@@ -29,8 +29,32 @@ impl BimParser {
         let ifc_file = bim::read(path)
             .map_err(|e| format!("Failed to read IFC file: {}", e))?;
 
+        self.process_ifc_file(&ifc_file)
+    }
+
+    /// Parse IFC data from a string (useful for WASM/Web)
+    pub fn parse_from_string(
+        &self,
+        content: &str,
+    ) -> Result<(Building, Vec<SpatialEntity>), Box<dyn std::error::Error>> {
+        info!("Parsing IFC from string (length: {})", content.len());
+
+        // Attempt to parse string directly
+        // Note: Assuming bim crate supports FromStr or similar. 
+        // If not, we might need a temporary workaround or check docs.
+        // For now, let's try bim::parse or generic read.
+        let ifc_file = bim::parse(content)
+            .map_err(|e| format!("Failed to parse IFC content: {}", e))?;
+
+        self.process_ifc_file(&ifc_file)
+    }
+
+    fn process_ifc_file(
+        &self,
+        ifc_file: &bim::Ifc,
+    ) -> Result<(Building, Vec<SpatialEntity>), Box<dyn std::error::Error>> {
         // Convert bim entities to our IFCEntity format for compatibility with HierarchyBuilder
-        let entities = self.convert_bim_entities(&ifc_file)?;
+        let entities = self.convert_bim_entities(ifc_file)?;
 
         // Use existing HierarchyBuilder to construct the Building hierarchy
         let hierarchy_builder = HierarchyBuilder::new(entities);

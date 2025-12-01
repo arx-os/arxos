@@ -86,27 +86,78 @@ impl Dashboard {
     fn get_status_text(&self) -> Vec<Line> {
         let mut lines = Vec::new();
 
-        // Mock data for now since git_manager might need a repo path or context
-        // In a real implementation, we'd call self.git_manager methods
-        
-        lines.push(Line::from(vec![
-            Span::styled("Current Branch: ", Style::default().fg(Color::Yellow)),
-            Span::raw("main"),
-        ]));
-        
+        match self.git_manager.get_status() {
+            Ok(status) => {
+                lines.push(Line::from(vec![
+                    Span::styled("Current Branch: ", Style::default().fg(Color::Yellow)),
+                    Span::raw(status.current_branch),
+                ]));
+                
+                lines.push(Line::from(""));
+                
+                let status_color = if status.is_clean { Color::Green } else { Color::Red };
+                lines.push(Line::from(vec![
+                    Span::styled("Status: ", Style::default().fg(status_color)),
+                    Span::raw(if status.is_clean { "Clean" } else { "Dirty" }),
+                ]));
+                
+                if !status.modified_files.is_empty() {
+                    lines.push(Line::from(""));
+                    lines.push(Line::from(Span::styled("Modified Files:", Style::default().fg(Color::Red))));
+                    for file in status.modified_files.iter().take(5) {
+                        lines.push(Line::from(vec![
+                            Span::raw("  - "),
+                            Span::raw(file),
+                        ]));
+                    }
+                    if status.modified_files.len() > 5 {
+                        lines.push(Line::from(vec![
+                            Span::raw("  ... and "),
+                            Span::raw((status.modified_files.len() - 5).to_string()),
+                            Span::raw(" more"),
+                        ]));
+                    }
+                }
+            },
+            Err(e) => {
+                lines.push(Line::from(vec![
+                    Span::styled("Error getting status: ", Style::default().fg(Color::Red)),
+                    Span::raw(e.to_string()),
+                ]));
+            }
+        }
+
         lines.push(Line::from(""));
 
-        lines.push(Line::from(vec![
-            Span::styled("Last Commit: ", Style::default().fg(Color::Yellow)),
-            Span::raw("a1b2c3d - Initial commit"),
-        ]));
-
-        lines.push(Line::from(""));
-
-        lines.push(Line::from(vec![
-            Span::styled("Status: ", Style::default().fg(Color::Green)),
-            Span::raw("Clean"),
-        ]));
+        match self.git_manager.list_commits(1) {
+            Ok(commits) => {
+                if let Some(commit) = commits.first() {
+                    lines.push(Line::from(vec![
+                        Span::styled("Last Commit: ", Style::default().fg(Color::Yellow)),
+                        Span::raw(format!("{} - {}", &commit.id[..7], commit.message)),
+                    ]));
+                    lines.push(Line::from(vec![
+                        Span::styled("Author: ", Style::default().fg(Color::Blue)),
+                        Span::raw(&commit.author),
+                    ]));
+                    
+                    use chrono::{TimeZone, Utc};
+                    let dt = Utc.timestamp_opt(commit.time, 0).single().unwrap_or_default();
+                    lines.push(Line::from(vec![
+                        Span::styled("Date: ", Style::default().fg(Color::Blue)),
+                        Span::raw(dt.format("%Y-%m-%d %H:%M:%S").to_string()),
+                    ]));
+                } else {
+                    lines.push(Line::from("No commits yet"));
+                }
+            },
+            Err(e) => {
+                lines.push(Line::from(vec![
+                    Span::styled("Error getting commits: ", Style::default().fg(Color::Red)),
+                    Span::raw(e.to_string()),
+                ]));
+            }
+        }
 
         lines
     }

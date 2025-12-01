@@ -1,7 +1,9 @@
 //! Import page for IFC file upload
 
 use leptos::*;
-use web_sys::{Event, FileList};
+use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
+use web_sys::Event;
 
 #[component]
 pub fn Import() -> impl IntoView {
@@ -17,18 +19,39 @@ pub fn Import() -> impl IntoView {
             if files.length() > 0 {
                 if let Some(file) = files.get(0) {
                     set_file_name.set(file.name());
-                    
-                    // TODO: Read file and parse with BimParser
                     set_parsing.set(true);
+                    set_result.set(None);
                     
-                    // Placeholder for actual parsing
-                    set_timeout(
-                        move || {
-                            set_parsing.set(false);
-                            set_result.set(Some(format!("Successfully parsed: {}", file.name())));
-                        },
-                        std::time::Duration::from_secs(1),
-                    );
+                    let file_name_clone = file.name();
+                    let file_reader = web_sys::FileReader::new().unwrap();
+                    let file_reader_clone = file_reader.clone();
+                    
+                    let onload = Closure::wrap(Box::new(move |_event: Event| {
+                        let text = file_reader_clone.result().unwrap().as_string().unwrap();
+                        
+                        match crate::web::wasm_bridge::parse_ifc_data(&text) {
+                            Ok(json) => {
+                                // TODO: Store the building data (e.g. in local storage)
+                                // For now, we just show success
+                                set_result.set(Some(format!("Successfully parsed: {} ({} bytes)", file_name_clone, text.len())));
+                                
+                                // Save to local storage for the Buildings page
+                                if let Some(window) = web_sys::window() {
+                                    if let Ok(Some(storage)) = window.local_storage() {
+                                        let _ = storage.set_item("last_imported_building", &json);
+                                    }
+                                }
+                            },
+                            Err(e) => {
+                                set_result.set(Some(format!("Error parsing IFC: {:?}", e)));
+                            }
+                        }
+                        set_parsing.set(false);
+                    }) as Box<dyn FnMut(_)>);
+                    
+                    file_reader.set_onload(Some(onload.as_ref().unchecked_ref()));
+                    file_reader.read_as_text(&file).unwrap();
+                    onload.forget();
                 }
             }
         }

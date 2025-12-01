@@ -11,6 +11,8 @@ pub struct GitStatus {
     pub last_commit: String,
     pub last_commit_message: String,
     pub last_commit_time: i64,
+    pub is_clean: bool,
+    pub modified_files: Vec<String>,
 }
 
 /// Commit information
@@ -60,6 +62,21 @@ pub struct DiffStats {
 
 /// Get repository status
 pub fn get_status(repo: &Repository, default_branch: &str) -> Result<GitStatus, GitError> {
+    // Get working directory status
+    let mut modified_files = Vec::new();
+    let statuses = repo.statuses(None).map_err(|e| GitError::GitError(e.message().to_string()))?;
+    
+    for entry in statuses.iter() {
+        let status = entry.status();
+        if status.is_wt_new() || status.is_wt_modified() || status.is_index_new() || status.is_index_modified() {
+            if let Some(path) = entry.path() {
+                modified_files.push(path.to_string());
+            }
+        }
+    }
+    
+    let is_clean = modified_files.is_empty();
+
     match repo.head() {
         Ok(head) => {
             let commit = head
@@ -70,6 +87,8 @@ pub fn get_status(repo: &Repository, default_branch: &str) -> Result<GitStatus, 
                 last_commit: commit.id().to_string(),
                 last_commit_message: commit.message().unwrap_or("").to_string(),
                 last_commit_time: commit.time().seconds(),
+                is_clean,
+                modified_files,
             })
         }
         Err(_) => {
@@ -79,6 +98,8 @@ pub fn get_status(repo: &Repository, default_branch: &str) -> Result<GitStatus, 
                 last_commit: "".to_string(),
                 last_commit_message: "No commits yet".to_string(),
                 last_commit_time: 0,
+                is_clean,
+                modified_files,
             })
         }
     }

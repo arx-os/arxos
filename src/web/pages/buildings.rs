@@ -1,15 +1,22 @@
-//! Buildings list page
-
 use leptos::*;
 use leptos_router::*;
+use crate::core::Building;
 
 #[component]
 pub fn Buildings() -> impl IntoView {
-    // TODO: Load buildings from local storage or agent
-    let buildings = vec![
-        ("building-1", "Sample Building"),
-        ("building-2", "Office Complex"),
-    ];
+    let (buildings, set_buildings) = create_signal(Vec::<Building>::new());
+
+    create_effect(move |_| {
+        if let Some(window) = web_sys::window() {
+            if let Ok(Some(storage)) = window.local_storage() {
+                if let Ok(Some(json)) = storage.get_item("last_imported_building") {
+                    if let Ok(building) = serde_json::from_str::<Building>(&json) {
+                        set_buildings.set(vec![building]);
+                    }
+                }
+            }
+        }
+    });
 
     view! {
         <div class="page buildings-page">
@@ -17,16 +24,28 @@ pub fn Buildings() -> impl IntoView {
             <p>"Manage your building data"</p>
 
             <div class="buildings-list">
-                {buildings.into_iter().map(|(id, name)| {
+                {move || buildings.get().into_iter().map(|building| {
                     view! {
                         <div class="building-card">
-                            <h3>{name}</h3>
-                            <A href=format!("/buildings/{}", id) class="btn btn-sm">
+                            <h3>{building.name}</h3>
+                            <p class="building-id">"ID: " {building.id.clone()}</p>
+                            <A href=format!("/buildings/{}", building.id) class="btn btn-sm">
                                 "View Details"
                             </A>
                         </div>
                     }
                 }).collect_view()}
+                
+                {move || if buildings.get().is_empty() {
+                    view! { 
+                        <div class="empty-state">
+                            <p>"No buildings found."</p>
+                            <A href="/import" class="btn btn-primary">"Import a Building"</A>
+                        </div>
+                    }.into_view()
+                } else {
+                    view! { <></> }.into_view()
+                }}
             </div>
         </div>
     }

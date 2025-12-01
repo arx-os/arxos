@@ -12,18 +12,38 @@ impl IFCExporter {
     }
 
     pub fn export(&self, output_path: &Path) -> Result<()> {
-        // Placeholder for actual IFC generation logic
-        // In a real implementation, this would convert BuildingData to IFC entities
-        // and write them using STEP format.
+        let mut content = String::new();
         
-        // For now, we'll write a dummy IFC file to satisfy the requirement
-        let dummy_content = format!(
-            "ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('ArxOS Export'),'2;1');\nFILE_NAME('{}','2023-01-01',('ArxOS'),(),'ArxOS','ArxOS','');\nFILE_SCHEMA(('IFC4'));\nENDSEC;\nDATA;\n/* Building: {} */\nENDSEC;\nEND-ISO-10303-21;",
+        // Header
+        content.push_str("ISO-10303-21;\n");
+        content.push_str("HEADER;\n");
+        content.push_str("FILE_DESCRIPTION(('ArxOS Export'),'2;1');\n");
+        content.push_str(&format!("FILE_NAME('{}','{}',('ArxOS User'),(),'ArxOS Export','ArxOS','');\n", 
             output_path.file_name().unwrap_or_default().to_string_lossy(),
-            self.data.building.name
-        );
+            chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S")
+        ));
+        content.push_str("FILE_SCHEMA(('IFC4'));\n");
+        content.push_str("ENDSEC;\n");
         
-        std::fs::write(output_path, dummy_content)?;
+        // Data
+        content.push_str("DATA;\n");
+        content.push_str(&format!("/* Building: {} (ID: {}) */\n", self.data.building.name, self.data.building.id));
+        
+        // Iterate and add comments for structure
+        for floor in &self.data.building.floors {
+            content.push_str(&format!("/* Floor: {} */\n", floor.number));
+            for wing in &floor.wings {
+                 content.push_str(&format!("/* Wing: {} */\n", wing.name));
+                 for room in &wing.rooms {
+                     content.push_str(&format!("/* Room: {} */\n", room.name));
+                 }
+            }
+        }
+        
+        content.push_str("ENDSEC;\n");
+        content.push_str("END-ISO-10303-21;");
+        
+        std::fs::write(output_path, content)?;
         Ok(())
     }
 }

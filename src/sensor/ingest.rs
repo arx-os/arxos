@@ -2,6 +2,8 @@
 
 use crate::error::ArxResult;
 use super::types::{SensorReading, SensorBatch};
+use std::fs::OpenOptions;
+use std::io::Write;
 
 pub struct SensorIngestor {
     // Placeholder for ingestion logic
@@ -12,8 +14,22 @@ impl SensorIngestor {
         Self {}
     }
 
-    pub fn ingest_reading(&mut self, _reading: SensorReading) -> ArxResult<()> {
-        // Placeholder implementation
+    pub fn ingest_reading(&mut self, reading: SensorReading) -> ArxResult<()> {
+        let file_path = "sensor_data.csv";
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(file_path)
+            .map_err(|e| crate::error::ArxError::IoError(e))?;
+            
+        writeln!(file, "{},{},{},{},{:?}", 
+            reading.sensor_id, 
+            reading.timestamp, 
+            reading.value, 
+            reading.unit,
+            reading.location
+        ).map_err(|e| crate::error::ArxError::IoError(e))?;
+        
         Ok(())
     }
 

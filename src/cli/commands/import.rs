@@ -27,12 +27,8 @@ impl Command for ImportCommand {
         let repo_root = Path::new(".");
 
         // 1. Extract hierarchy
-        let building_data = match processor.extract_hierarchy(&self.ifc_file) {
-            Ok((mut building, floors)) => {
-                if !floors.is_empty() {
-                    building.floors = floors;
-                }
-                
+        let building_data = match processor.process_file(&self.ifc_file) {
+            Ok((mut building, _spatial_entities)) => {
                 building.metadata = Some(BuildingMetadata {
                     source_file: Some(self.ifc_file.clone()),
                     parser_version: "2.0.0".to_string(),

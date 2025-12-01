@@ -20,7 +20,10 @@ impl SensorIngestor {
             .create(true)
             .append(true)
             .open(file_path)
-            .map_err(|e| crate::error::ArxError::IoError(e))?;
+            .map_err(|e| crate::error::ArxError::IoError { 
+                message: format!("Failed to open file: {}", e),
+                path: Some(file_path.to_string()),
+            })?;
             
         writeln!(file, "{},{},{},{},{:?}", 
             reading.sensor_id, 
@@ -28,7 +31,10 @@ impl SensorIngestor {
             reading.value, 
             reading.unit,
             reading.location
-        ).map_err(|e| crate::error::ArxError::IoError(e))?;
+        ).map_err(|e| crate::error::ArxError::IoError { 
+            message: format!("Failed to write sensor data: {}", e),
+            path: Some(file_path.to_string()),
+        })?;
         
         Ok(())
     }

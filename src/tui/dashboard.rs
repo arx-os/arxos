@@ -90,7 +90,7 @@ impl Dashboard {
             Ok(status) => {
                 lines.push(Line::from(vec![
                     Span::styled("Current Branch: ", Style::default().fg(Color::Yellow)),
-                    Span::raw(status.current_branch),
+                    Span::raw(status.current_branch.clone()),
                 ]));
                 
                 lines.push(Line::from(""));
@@ -101,19 +101,22 @@ impl Dashboard {
                     Span::raw(if status.is_clean { "Clean" } else { "Dirty" }),
                 ]));
                 
-                if !status.modified_files.is_empty() {
+                // Clone to avoid borrow issues
+                let modified_files = status.modified_files.clone();
+                
+                if !modified_files.is_empty() {
                     lines.push(Line::from(""));
                     lines.push(Line::from(Span::styled("Modified Files:", Style::default().fg(Color::Red))));
-                    for file in status.modified_files.iter().take(5) {
+                    for file in modified_files.iter().take(5) {
                         lines.push(Line::from(vec![
                             Span::raw("  - "),
-                            Span::raw(file),
+                            Span::raw(file.clone()),
                         ]));
                     }
-                    if status.modified_files.len() > 5 {
+                    if modified_files.len() > 5 {
                         lines.push(Line::from(vec![
                             Span::raw("  ... and "),
-                            Span::raw((status.modified_files.len() - 5).to_string()),
+                            Span::raw((modified_files.len() - 5).to_string()),
                             Span::raw(" more"),
                         ]));
                     }
@@ -129,34 +132,26 @@ impl Dashboard {
 
         lines.push(Line::from(""));
 
-        match self.git_manager.list_commits(1) {
-            Ok(commits) => {
-                if let Some(commit) = commits.first() {
-                    lines.push(Line::from(vec![
-                        Span::styled("Last Commit: ", Style::default().fg(Color::Yellow)),
-                        Span::raw(format!("{} - {}", &commit.id[..7], commit.message)),
-                    ]));
-                    lines.push(Line::from(vec![
-                        Span::styled("Author: ", Style::default().fg(Color::Blue)),
-                        Span::raw(&commit.author),
-                    ]));
-                    
-                    use chrono::{TimeZone, Utc};
-                    let dt = Utc.timestamp_opt(commit.time, 0).single().unwrap_or_default();
-                    lines.push(Line::from(vec![
-                        Span::styled("Date: ", Style::default().fg(Color::Blue)),
-                        Span::raw(dt.format("%Y-%m-%d %H:%M:%S").to_string()),
-                    ]));
-                } else {
-                    lines.push(Line::from("No commits yet"));
-                }
-            },
-            Err(e) => {
-                lines.push(Line::from(vec![
-                    Span::styled("Error getting commits: ", Style::default().fg(Color::Red)),
-                    Span::raw(e.to_string()),
-                ]));
-            }
+        // Clone commits to avoid borrow issues
+        let commits = self.git_manager.list_commits(1).unwrap_or_else(|_| Vec::new());
+        if let Some(commit) = commits.first() {
+            lines.push(Line::from(vec![
+                Span::styled("Last Commit: ", Style::default().fg(Color::Yellow)),
+                Span::raw(format!("{} - {}", &commit.id[..7], &commit.message)),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("Author: ", Style::default().fg(Color::Blue)),
+                Span::raw(commit.author.clone()),
+            ]));
+            
+            use chrono::{TimeZone, Utc};
+            let dt = Utc.timestamp_opt(commit.time, 0).single().unwrap_or_default();
+            lines.push(Line::from(vec![
+                Span::styled("Date: ", Style::default().fg(Color::Blue)),
+                Span::raw(dt.format("%Y-%m-%d %H:%M:%S").to_string()),
+            ]));
+        } else {
+            lines.push(Line::from("No commits yet"));
         }
 
         lines

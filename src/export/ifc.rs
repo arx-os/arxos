@@ -31,7 +31,7 @@ impl IFCExporter {
         
         // Iterate and add comments for structure
         for floor in &self.data.building.floors {
-            content.push_str(&format!("/* Floor: {} */\n", floor.number));
+            content.push_str(&format!("/* Floor: {} (Level: {}) */\n", floor.name, floor.level));
             for wing in &floor.wings {
                  content.push_str(&format!("/* Wing: {} */\n", wing.name));
                  for room in &wing.rooms {

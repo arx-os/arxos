@@ -5,8 +5,7 @@ use std::sync::{Arc, Mutex};
 use nalgebra::{Matrix3, Vector3};
 
 use crate::core::spatial::Point3D;
-
-use super::fallback::IFCEntity;
+use super::hierarchy::IFCEntity;
 
 pub(crate) fn parameters_from_definition(definition: &str) -> Vec<String> {
     let mut params = Vec::new();

@@ -77,7 +77,7 @@ axum = { version = "0.7", features = ["ws", "macros"], optional = true }
 futures-util = { version = "0.3", optional = true }
 base64 = "0.22.1"
 octocrab = "0.48.0"
-bim = "0.0.1"
+ifc_rs = "0.1.0-alpha.9"
 leptos = { version = "0.8.14", features = ["csr"], optional = true }
 leptos_meta = { version = "0.8.5", optional = true }
 leptos_router = { version = "0.8.10", optional = true }

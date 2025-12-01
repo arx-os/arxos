@@ -9,9 +9,10 @@ mod geometry;
 mod identifiers;
 mod hierarchy;
 mod bim_parser;
+mod ifc_rs_converter;
 
 pub use error::{IFCError, IFCResult};
-pub use hierarchy::HierarchyBuilder;
+pub use hierarchy::{HierarchyBuilder, IFCEntity};
 pub use bim_parser::BimParser;
 
 /// IFC (Industry Foundation Classes) file processor
@@ -52,15 +53,15 @@ impl IFCProcessor {
             warn!("File does not have .ifc extension: {}", file_path);
         }
 
-        // Use bim crate parser
+        // Use ifc_rs parser via BimParser
         let parser = BimParser::new();
         match parser.parse_ifc_file(file_path) {
             Ok((building, spatial_entities)) => {
-                info!("Successfully parsed with bim crate");
+                info!("Successfully parsed IFC file");
                 Ok((building, spatial_entities))
             }
             Err(e) => {
-                warn!("bim crate parsing failed: {}", e);
+                warn!("IFC parsing failed: {}", e);
                 Err(IFCError::ParsingError {
                     message: e.to_string(),
                 })
@@ -90,15 +91,15 @@ impl IFCProcessor {
             warn!("File does not have .ifc extension: {}", file_path);
         }
 
-        // Note: bim crate doesn't have explicit parallel mode, but it's efficient
+        // Note: ifc_rs is efficient, no explicit parallel mode needed
         let parser = BimParser::new();
         match parser.parse_ifc_file(file_path) {
             Ok((building, spatial_entities)) => {
-                info!("Successfully parsed with bim crate");
+                info!("Successfully parsed IFC file");
                 Ok((building, spatial_entities))
             }
             Err(e) => {
-                warn!("bim crate parsing failed: {}", e);
+                warn!("IFC parsing failed: {}", e);
                 Err(IFCError::ParsingError {
                     message: e.to_string(),
                 })
@@ -131,15 +132,15 @@ impl IFCProcessor {
 
         progress.update(20, "Parsing IFC entities...");
 
-        // Use bim crate parser with progress
+        // Use ifc_rs parser via BimParser with progress reporting
         let parser = BimParser::new();
         match parser.parse_ifc_file_with_progress(file_path, progress) {
             Ok((building, spatial_entities)) => {
-                info!("Successfully parsed with bim crate");
+                info!("Successfully parsed IFC file");
                 Ok((building, spatial_entities))
             }
             Err(e) => {
-                warn!("bim crate parsing failed: {}", e);
+                warn!("IFC parsing failed: {}", e);
                 Err(IFCError::ParsingError {
                     message: e.to_string(),
                 })

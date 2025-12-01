@@ -46,7 +46,7 @@ pub fn render_building(building_name: &str) -> Result<(), Box<dyn std::error::Er
     println!("   ID: {}", building.id);
     
     for floor in &building.floors {
-        println!("   ├──  Floor {}", floor.number);
+        println!("   ├──  Floor {} (Level: {})", floor.name, floor.level);
         for wing in &floor.wings {
             println!("   │   ├── 🪽 Wing: {}", wing.name);
             for room in &wing.rooms {

@@ -49,7 +49,6 @@ pub fn process_error_modal_event(event: Event, modal: &mut ErrorModal) -> Option
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::ErrorContext;
     use ratatui::backend::TestBackend;
     use ratatui::layout::Rect;
 

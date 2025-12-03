@@ -13,6 +13,7 @@ use std::time::Duration;
 
 pub struct Dashboard {
     git_manager: BuildingGitManager,
+    #[allow(dead_code)] // Reserved for future theme customization
     theme: Theme,
 }
 
@@ -83,7 +84,7 @@ impl Dashboard {
         Ok(())
     }
 
-    fn get_status_text(&self) -> Vec<Line> {
+    fn get_status_text(&self) -> Vec<Line<'static>> {
         let mut lines = Vec::new();
 
         match self.git_manager.get_status() {

@@ -1,5 +1,5 @@
-// IFC processing for ArxOS using custom STEP parser
-use crate::core::{Building, Floor};
+// IFC processing for ArxOS using ifc_rs crate
+use crate::core::Building;
 use crate::utils::progress::ProgressContext;
 use log::{info, warn};
 use std::path::Path;
@@ -18,9 +18,9 @@ pub use bim_parser::BimParser;
 /// IFC (Industry Foundation Classes) file processor
 ///
 /// Handles parsing and processing of IFC files to extract building data.
-/// Uses a custom STEP parser to convert IFC entities into ArxOS building models.
+/// Uses the `ifc_rs` crate for parsing, then converts to ArxOS building models.
 pub struct IFCProcessor {
-    // Custom STEP parser implementation
+    // Delegates to BimParser which uses ifc_rs
 }
 
 impl Default for IFCProcessor {

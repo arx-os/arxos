@@ -2,8 +2,8 @@
 mod tests {
     use crate::core::operations::spatial::{spatial_query, transform_coordinates};
     use crate::core::{Building, Floor, Room, RoomType, Equipment, EquipmentType, Wing};
-    use crate::core::types::{Position, SpatialProperties};
-    use crate::core::spatial::{Point3D, BoundingBox3D};
+    use crate::core::types::Position;
+    use crate::core::spatial::Point3D;
     use crate::core::CoordinateSystemInfo;
     use crate::yaml::BuildingData;
 

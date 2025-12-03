@@ -59,12 +59,16 @@ pub(crate) fn extract_reference_id(param: &str) -> Option<String> {
     }
 }
 
+/// 3D transformation with translation and rotation.
+/// Used for IFC placement resolution - currently unused but kept for future geometry processing.
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct Transform3D {
     pub translation: Vector3<f64>,
     pub rotation: Matrix3<f64>,
 }
 
+#[allow(dead_code)]
 impl Transform3D {
     pub fn identity() -> Self {
         Self {
@@ -95,12 +99,16 @@ impl Transform3D {
     }
 }
 
+/// Resolves absolute placements from IFC placement hierarchy.
+/// Currently unused but implemented for future IFC geometry processing.
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct PlacementResolver {
     entities: Arc<HashMap<String, IFCEntity>>,
     transform_cache: Arc<Mutex<HashMap<String, Transform3D>>>,
 }
 
+#[allow(dead_code)]
 impl PlacementResolver {
     pub fn new(entities: &[IFCEntity]) -> Self {
         let mut map = HashMap::with_capacity(entities.len());
@@ -477,6 +485,7 @@ impl PlacementResolver {
     }
 }
 
+#[allow(dead_code)]
 fn extract_numeric_values(definition: &str) -> Vec<f64> {
     let mut values = Vec::new();
     let mut buf = String::new();
@@ -509,6 +518,7 @@ fn extract_numeric_values(definition: &str) -> Vec<f64> {
     values
 }
 
+#[allow(dead_code)]
 fn build_rotation_matrix(axis_dir: &Vector3<f64>, ref_dir: &Vector3<f64>) -> Matrix3<f64> {
     let z_axis = normalize_or_default(axis_dir, Vector3::new(0.0, 0.0, 1.0));
     let mut x_axis = normalize_or_default(ref_dir, Vector3::new(1.0, 0.0, 0.0));
@@ -521,6 +531,7 @@ fn build_rotation_matrix(axis_dir: &Vector3<f64>, ref_dir: &Vector3<f64>) -> Mat
     Matrix3::from_columns(&[x_axis, y_axis, z_axis])
 }
 
+#[allow(dead_code)]
 fn normalize_or_default(vector: &Vector3<f64>, default: Vector3<f64>) -> Vector3<f64> {
     let norm = vector.norm();
     if norm == 0.0 {
@@ -530,6 +541,7 @@ fn normalize_or_default(vector: &Vector3<f64>, default: Vector3<f64>) -> Vector3
     }
 }
 
+#[allow(dead_code)]
 fn parse_float(value: &str) -> Option<f64> {
     let trimmed = value.trim().trim_matches('\'');
     trimmed.parse::<f64>().ok()
@@ -557,6 +569,7 @@ pub(crate) fn extract_all_references(definition: &str) -> Vec<String> {
     refs
 }
 
+#[allow(dead_code)]
 fn compute_bounds(points: &[Vector3<f64>]) -> (Vector3<f64>, Vector3<f64>) {
     let mut min = points[0];
     let mut max = points[0];

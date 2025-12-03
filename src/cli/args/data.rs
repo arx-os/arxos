@@ -226,8 +226,6 @@ pub enum SpatialCommands {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_room_commands_derive() {
         // Verify that the Subcommand derive works correctly

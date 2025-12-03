@@ -76,7 +76,7 @@ impl DiffView {
         Ok(())
     }
 
-    fn get_diff_text(&self) -> Vec<Line> {
+    fn get_diff_text(&self) -> Vec<Line<'static>> {
         let mut lines = Vec::new();
 
         match self.git_manager.get_diff(None, None) {

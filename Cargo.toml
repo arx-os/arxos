@@ -26,6 +26,11 @@ path = "src/lib.rs"
 name = "arx"
 path = "src/main.rs"
 
+[[bin]]
+name = "arx-web"
+path = "src/bin/web.rs"
+required-features = ["web"]
+
 [dependencies]
 # Core dependencies
 serde = { version = "1.0", features = ["derive", "rc"] }

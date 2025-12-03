@@ -5,7 +5,7 @@ pub mod args;
 pub mod commands;
 
 use commands::{
-    Command, ImportCommand, ExportCommand, MergeCommand,
+    Command, ImportCommand, ExportCommand,
     git::{StatusCommand, CommitCommand, StageCommand, DiffCommand},
 };
 
@@ -34,6 +34,8 @@ impl Cli {
                 cmd.execute()
             },
             Commands::Render { building, interactive, brightness_style, .. } => {
+                #[allow(unused_variables)]
+                let brightness_style = brightness_style; // Used only when render3d feature is enabled
                 if interactive {
                     #[cfg(feature = "render3d")]
                     {

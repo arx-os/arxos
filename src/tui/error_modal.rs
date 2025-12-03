@@ -355,7 +355,6 @@ pub fn handle_error_modal_event(event: Event, modal: &mut ErrorModal) -> Option<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::ErrorContext;
     use ratatui::layout::Rect;
 
     fn create_test_error() -> ArxError {

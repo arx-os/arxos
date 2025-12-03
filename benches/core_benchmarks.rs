@@ -3,9 +3,9 @@
 //! This module contains performance benchmarks for core operations
 //! using the Criterion benchmarking framework.
 
-use arxos::{
-    core::{Equipment, EquipmentType, Room, RoomType},
+use arxos::core::{
     spatial::Point3D,
+    Equipment, EquipmentType, Room, RoomType,
 };
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 

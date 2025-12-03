@@ -199,43 +199,37 @@ ArxOS follows security best practices with automated scanning and comprehensive 
 
 ## 🏗️ Project Structure
 
-ArxOS is organised as a multi-crate Cargo workspace:
+ArxOS is a single Rust crate with a modular internal structure:
 
 ```
 arxos/
-├── archive/mobile-clients/     # Archived iOS/Android shells + support policy
 ├── docs/                       # Documentation and design references
-├── crates/
-│   ├── arx/                    # Protocol core (IFC, Git, spatial, YAML, DePIN primitives)
-│   ├── arxui/                  # Terminal UI + optional 3D renderer + CLI binary `arx`
-│   ├── arxos/                  # Runtime services, hardware ingestion, AR helpers
-│   ├── arxos-wasm/             # wasm-bindgen bindings for the PWA
-│   ├── arxos-agent/            # Desktop companion exposing Git/FS over WebSocket
-│   └── arxos-hal/              # Hardware abstraction layer (ESP32-C3, RP2040, ...)
+├── src/                        # Source code
+│   ├── core/                   # Protocol core (IFC, Git, spatial, DePIN primitives)
+│   ├── cli/                    # CLI command handlers and arguments
+│   ├── tui/                    # Terminal UI widgets and views
+│   ├── web/                    # WASM bindings for the PWA
+│   └── main.rs                 # Entry point
 ├── pwa/                        # React/Vite/Zustand web app
 ├── scripts/                    # Tooling and automation
-├── tests/                      # Cross-crate integration tests
+├── tests/                      # Integration tests
 └── examples/                   # Sample IFC/building datasets
 ```
 
-### **Crate Responsibilities:**
+### **Module Responsibilities:**
 
-- **`crates/arx`** – Core protocol: immutable data model, IFC parser, Git manager, spatial engine, YAML serializer, and DePIN primitives.
-- **`crates/arxui`** – Binary crate delivering the `arx` CLI, TUI widgets, command handlers, and optional 3D renderer (`render3d` feature).
-- **`crates/arxos`** – Runtime services, hardware ingestion, AR workflows, and a minimal `no_std` core.
-- **`crates/arxos-wasm`** – Exposes selected ArxOS APIs to the browser via `wasm-bindgen`.
-- **`crates/arxos-agent`** – Loopback WebSocket agent securing Git/FS access with DID:key tokens.
-- **`crates/arxos-hal`** – Aggregated hardware abstraction layer with board-specific sub-crates.
+- **`src/core`** – Core protocol: immutable data model, IFC parser, Git manager, spatial engine, and DePIN primitives.
+- **`src/cli`** – Command-line interface definition and handlers.
+- **`src/tui`** – Terminal UI components, widgets, and dashboards.
+- **`src/web`** – WASM bindings exposing ArxOS APIs to the browser.
 
 ---
 
 ### **Architecture Philosophy:**
 
-- **Layered Crates** – Protocol (`arx`), UI (`arxui`), runtime (`arxos`), web bindings (`arxos-wasm`), and agent (`arxos-agent`).
 - **Git-native workflow** – Buildings stored as YAML tracked in Git repositories.
-- **WASM-first** – Browsers reuse the same Rust logic via WebAssembly; native shells are archived.
-- **Hardware-aware** – Sensors plug into Git-managed buildings through the HAL workspace.
-- **Desktop Agent Bridge** – Local Git/IFC access gated by DID:key tokens over loopback WebSocket.
+- **WASM-first** – Browsers reuse the same Rust logic via WebAssembly.
+- **Hardware-aware** – Sensors plug into Git-managed buildings.
 - **Decentralized Network** – Building owners, sensor operators, and field technicians contribute to a distributed building data network.
 
 ---

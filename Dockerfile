@@ -11,18 +11,18 @@ ENV CARGO_HOME=/usr/local/cargo \
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        build-essential \
-        clang \
-        pkg-config \
-        libssl-dev \
-        libclang-dev \
-        cmake \
-        protobuf-compiler \
-        python3 \
-        python3-pip \
-        git \
-        curl \
-        unzip && \
+    build-essential \
+    clang \
+    pkg-config \
+    libssl-dev \
+    libclang-dev \
+    cmake \
+    protobuf-compiler \
+    python3 \
+    python3-pip \
+    git \
+    curl \
+    unzip && \
     rm -rf /var/lib/apt/lists/*
 
 # Install tooling needed by build.rs (cbindgen) and optional wasm support
@@ -32,33 +32,25 @@ WORKDIR /workspace
 
 # Pre-copy manifests to maximize Docker layer caching
 COPY Cargo.toml Cargo.lock ./
-COPY crates/arx/Cargo.toml crates/arx/Cargo.toml
-COPY crates/arxui/Cargo.toml crates/arxui/Cargo.toml
-COPY crates/arxos/Cargo.toml crates/arxos/Cargo.toml
-COPY crates/arxos-hal/Cargo.toml crates/arxos-hal/Cargo.toml
-COPY crates/arxos-hal/esp32-c3/Cargo.toml crates/arxos-hal/esp32-c3/Cargo.toml
-COPY crates/arxos-hal/rp2040/Cargo.toml crates/arxos-hal/rp2040/Cargo.toml
 
 # Fetch dependencies first (cached)
 RUN cargo fetch
 
 # Copy the rest of the workspace
 COPY benches ./benches
-COPY crates ./crates
 COPY docs ./docs
 COPY include ./include
 COPY schemas ./schemas
 COPY scripts ./scripts
 COPY tests ./tests
 COPY examples ./examples
-COPY android ./android
-COPY ios ./ios
 COPY test_data ./test_data
+COPY src ./src
 COPY README.md .
 COPY SECURITY.txt .
 
-# Build full workspace in release mode
-RUN cargo build --workspace --release
+# Build release mode
+RUN cargo build --release
 
 # Export commonly used artifacts for downstream stages
 RUN mkdir -p /artifacts/bin /artifacts/lib /artifacts/include && \
@@ -80,13 +72,13 @@ ENV ARX_HOME=/opt/arxos \
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        ca-certificates \
-        git && \
+    ca-certificates \
+    git && \
     rm -rf /var/lib/apt/lists/*
 
 RUN groupadd --gid ${ARXOS_GID} ${ARXOS_USER} && \
     useradd --home-dir ${ARX_HOME} --shell /usr/sbin/nologin \
-            --uid ${ARXOS_UID} --gid ${ARXOS_GID} ${ARXOS_USER}
+    --uid ${ARXOS_UID} --gid ${ARXOS_GID} ${ARXOS_USER}
 
 WORKDIR ${ARX_HOME}
 
@@ -107,7 +99,6 @@ CMD ["--help"]
 
 # ---- Metadata ------------------------------------------------------------
 LABEL org.opencontainers.image.title="ArxOS Runtime" \
-      org.opencontainers.image.url="https://arxos.io" \
-      org.opencontainers.image.description="Official ArxOS runtime image with CLI and schemas." \
-      org.opencontainers.image.licenses="MIT"
-
+    org.opencontainers.image.url="https://arxos.io" \
+    org.opencontainers.image.description="Official ArxOS runtime image with CLI and schemas." \
+    org.opencontainers.image.licenses="MIT"

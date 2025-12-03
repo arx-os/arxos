@@ -43,25 +43,6 @@ test-office-repo/
 .DS_Store
 Thumbs.db
 
-# iOS build artifacts
-ios/build/
-ios/Pods/
-ios/*.xcworkspace
-**/xcuserdata/
-DerivedData/
-
-# Android build artifacts
-android/.gradle/
-android/build/
-android/local.properties
-android/app/build/
-android/.idea/
-
-# Note: android/gradle.properties should be committed
-# Note: android/gradlew wrapper scripts should be committed (in android/ only)
-gradlew
-gradlew.bat
-
 # Temporary files
 *.log
 *.tmp
@@ -86,4 +67,3 @@ gradlew.bat
 dist/
 pkg/
 .trunk/
-

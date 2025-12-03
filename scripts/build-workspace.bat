@@ -1,9 +1,9 @@
 @echo off
-echo Building ArxOS workspace...
+echo Building ArxOS...
 
 echo.
-echo Building arxos package with git features...
-cargo build --features git
+echo Building arx package...
+cargo build --release
 
 echo.
 echo Building tests...
@@ -17,4 +17,4 @@ echo.
 echo All builds completed successfully!
 echo.
 echo To run the CLI:
-echo   cargo run -p arx -- --help
+echo   target\release\arx.exe --help

@@ -11,7 +11,6 @@ on:
   pull_request:
     paths:
       - 'Dockerfile'
-      - 'Dockerfile.android'
       - '.github/workflows/docker-images.yml'
       - 'docs/development/DOCKER_GUIDE.md'
 
@@ -35,10 +34,6 @@ jobs:
             file: Dockerfile
             target: runtime
             tag-suffix: runtime
-          - name: android-sdk
-            file: Dockerfile.android
-            target: android-builder
-            tag-suffix: android-sdk
     env:
       IMAGE_NAME: ghcr.io/${{ github.repository }}
       SHOULD_PUSH: ${{ github.event_name != 'pull_request' }}

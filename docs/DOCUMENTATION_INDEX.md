@@ -35,7 +35,6 @@ Documentation for contributing to ArxOS development.
 - **[PERFORMANCE_GUIDE.md](./development/PERFORMANCE_GUIDE.md)** - Optimization strategies
 - **[BENCHMARKS.md](./development/BENCHMARKS.md)** - Performance benchmark data
 - **[RUSTDOC_GUIDE.md](./development/RUSTDOC_GUIDE.md)** - Documentation generation guide
-- **[K8S_GUIDE.md](./development/K8S_GUIDE.md)** - Running ArxOS workloads on Kubernetes
 - **[improvement-summaries/](./development/improvement-summaries/)** - Summaries of completed improvements
 
 ### [Mobile (Archived)](./mobile/)

@@ -165,11 +165,7 @@ docker pull ghcr.io/arx-os/arxos:runtime
 docker run --rm -v "$(pwd)":/workspace ghcr.io/arx-os/arxos:runtime list --help
 ```
 
-See `docs/development/DOCKER_GUIDE.md` for full details on builder and Android SDK images.
-
-### Kubernetes Automation
-
-Automate ArxOS tasks at scale with Kubernetes Jobs, CronJobs, or a custom operator. Start with `docs/development/K8S_GUIDE.md` for architecture, CRDs, and Helm chart plans.
+See `docs/development/DOCKER_GUIDE.md` for full details.
 
 📖 **[Complete User Guide](docs/core/USER_GUIDE.md)** - Learn all the commands and features
 

@@ -287,25 +287,6 @@ cargo build --release --target x86_64-apple-ios
 # See docs/mobile/MOBILE_FFI_INTEGRATION.md
 ```
 
----
-
-### Android Build Errors
-
-**Error:** `Native library not found`
-
-**Solution:**
-```bash
-# Build for Android
-cargo build --release --target aarch64-linux-android
-cargo build --release --target armv7-linux-androideabi
-cargo build --release --target i686-linux-android
-cargo build --release --target x86_64-linux-android
-
-# Copy .so files to Android project
-# See docs/mobile/MOBILE_FFI_INTEGRATION.md
-```
-
----
 
 ### FFI Function Errors
 

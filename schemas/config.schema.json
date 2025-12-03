@@ -1,7 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ArxOS Configuration Schema",
-  "description": "JSON Schema for ArxOS configuration files (arx.toml). Provides validation and IDE autocomplete support.",
+  "title": "ArxOS Configuration Schema (DEPRECATED)",
+  "description": "This JSON Schema is DEPRECATED. ArxOS uses TOML configuration files, not JSON. This file is kept for reference only. For TOML validation, use Taplo CLI or IDE TOML extensions. See schemas/README.md for details.",
+  "deprecated": true,
   "version": "1.0.0",
   "type": "object",
   "properties": {
@@ -14,29 +15,45 @@
           "description": "User's full name for Git commits and attribution",
           "default": "ArxOS User",
           "maxLength": 100,
-          "examples": ["John Doe", "Jane Smith"]
+          "examples": [
+            "John Doe",
+            "Jane Smith"
+          ]
         },
         "email": {
           "type": "string",
           "format": "email",
           "description": "User's email address for Git commits and attribution",
           "default": "user@arxos.com",
-          "examples": ["john.doe@example.com", "jane.smith@company.com"]
+          "examples": [
+            "john.doe@example.com",
+            "jane.smith@company.com"
+          ]
         },
         "organization": {
           "type": "string",
           "nullable": true,
           "description": "User's organization or company (optional)",
-          "examples": ["Acme Corp", "Building Systems Inc"]
+          "examples": [
+            "Acme Corp",
+            "Building Systems Inc"
+          ]
         },
         "commit_template": {
           "type": "string",
           "description": "Default commit message template. Supports {operation} and {building_name} placeholders",
           "default": "feat: {operation} {building_name}",
-          "examples": ["feat: {operation} {building_name}", "chore: {operation}"]
+          "examples": [
+            "feat: {operation} {building_name}",
+            "chore: {operation}"
+          ]
         }
       },
-      "required": ["name", "email", "commit_template"]
+      "required": [
+        "name",
+        "email",
+        "commit_template"
+      ]
     },
     "paths": {
       "type": "object",
@@ -46,28 +63,46 @@
           "type": "string",
           "description": "Default directory for importing IFC files",
           "default": "./buildings",
-          "examples": ["./buildings", "./imports", "~/buildings"]
+          "examples": [
+            "./buildings",
+            "./imports",
+            "~/buildings"
+          ]
         },
         "backup_path": {
           "type": "string",
           "description": "Directory for backup files",
           "default": "./backups",
-          "examples": ["./backups", "./.arx/backups"]
+          "examples": [
+            "./backups",
+            "./.arx/backups"
+          ]
         },
         "template_path": {
           "type": "string",
           "description": "Directory for template files",
           "default": "./templates",
-          "examples": ["./templates", "./.arx/templates"]
+          "examples": [
+            "./templates",
+            "./.arx/templates"
+          ]
         },
         "temp_path": {
           "type": "string",
           "description": "Directory for temporary files",
           "default": "./temp",
-          "examples": ["./temp", "/tmp/arxos"]
+          "examples": [
+            "./temp",
+            "/tmp/arxos"
+          ]
         }
       },
-      "required": ["default_import_path", "backup_path", "template_path", "temp_path"]
+      "required": [
+        "default_import_path",
+        "backup_path",
+        "template_path",
+        "temp_path"
+      ]
     },
     "building": {
       "type": "object",
@@ -75,31 +110,53 @@
       "properties": {
         "default_coordinate_system": {
           "type": "string",
-          "enum": ["WGS84", "UTM", "LOCAL"],
+          "enum": [
+            "WGS84",
+            "UTM",
+            "LOCAL"
+          ],
           "description": "Default coordinate system for new buildings. WGS84 for global coordinates, UTM for regional, LOCAL for building-local",
           "default": "WGS84",
-          "examples": ["WGS84", "UTM", "LOCAL"]
+          "examples": [
+            "WGS84",
+            "UTM",
+            "LOCAL"
+          ]
         },
         "auto_commit": {
           "type": "boolean",
           "description": "Automatically commit changes to Git repository after operations",
           "default": true,
-          "examples": [true, false]
+          "examples": [
+            true,
+            false
+          ]
         },
         "naming_pattern": {
           "type": "string",
           "description": "Default building naming pattern. Must include {building_name} placeholder. Supports {timestamp} placeholder",
           "default": "{building_name}-{timestamp}",
-          "examples": ["{building_name}-{timestamp}", "{building_name}"]
+          "examples": [
+            "{building_name}-{timestamp}",
+            "{building_name}"
+          ]
         },
         "validate_on_import": {
           "type": "boolean",
           "description": "Validate IFC files on import to catch errors early",
           "default": true,
-          "examples": [true, false]
+          "examples": [
+            true,
+            false
+          ]
         }
       },
-      "required": ["default_coordinate_system", "auto_commit", "naming_pattern", "validate_on_import"]
+      "required": [
+        "default_coordinate_system",
+        "auto_commit",
+        "naming_pattern",
+        "validate_on_import"
+      ]
     },
     "performance": {
       "type": "object",
@@ -111,7 +168,12 @@
           "minimum": 1,
           "maximum": 64,
           "default": 4,
-          "examples": [1, 4, 8, 16]
+          "examples": [
+            1,
+            4,
+            8,
+            16
+          ]
         },
         "memory_limit_mb": {
           "type": "integer",
@@ -119,28 +181,48 @@
           "minimum": 1,
           "maximum": 16384,
           "default": 1024,
-          "examples": [512, 1024, 2048, 4096]
+          "examples": [
+            512,
+            1024,
+            2048,
+            4096
+          ]
         },
         "cache_enabled": {
           "type": "boolean",
           "description": "Enable caching for improved performance",
           "default": true,
-          "examples": [true, false]
+          "examples": [
+            true,
+            false
+          ]
         },
         "cache_path": {
           "type": "string",
           "description": "Cache directory path",
           "default": "./cache",
-          "examples": ["./cache", "./.arx/cache"]
+          "examples": [
+            "./cache",
+            "./.arx/cache"
+          ]
         },
         "show_progress": {
           "type": "boolean",
           "description": "Show progress bars during long-running operations",
           "default": true,
-          "examples": [true, false]
+          "examples": [
+            true,
+            false
+          ]
         }
       },
-      "required": ["max_parallel_threads", "memory_limit_mb", "cache_enabled", "cache_path", "show_progress"]
+      "required": [
+        "max_parallel_threads",
+        "memory_limit_mb",
+        "cache_enabled",
+        "cache_path",
+        "show_progress"
+      ]
     },
     "ui": {
       "type": "object",
@@ -150,32 +232,67 @@
           "type": "boolean",
           "description": "Use emoji icons in terminal output",
           "default": true,
-          "examples": [true, false]
+          "examples": [
+            true,
+            false
+          ]
         },
         "verbosity": {
           "type": "string",
-          "enum": ["Silent", "Normal", "Verbose", "Debug"],
+          "enum": [
+            "Silent",
+            "Normal",
+            "Verbose",
+            "Debug"
+          ],
           "description": "Output verbosity level. Silent: minimal output, Normal: standard messages, Verbose: detailed output, Debug: maximum diagnostics",
           "default": "Normal",
-          "examples": ["Silent", "Normal", "Verbose", "Debug"]
+          "examples": [
+            "Silent",
+            "Normal",
+            "Verbose",
+            "Debug"
+          ]
         },
         "color_scheme": {
           "type": "string",
-          "enum": ["Auto", "Always", "Never"],
+          "enum": [
+            "Auto",
+            "Always",
+            "Never"
+          ],
           "description": "Color scheme preference. Auto: detect based on terminal, Always: force colors, Never: disable colors",
           "default": "Auto",
-          "examples": ["Auto", "Always", "Never"]
+          "examples": [
+            "Auto",
+            "Always",
+            "Never"
+          ]
         },
         "detailed_help": {
           "type": "boolean",
           "description": "Show detailed help text by default in command output",
           "default": false,
-          "examples": [true, false]
+          "examples": [
+            true,
+            false
+          ]
         }
       },
-      "required": ["use_emoji", "verbosity", "color_scheme", "detailed_help"]
+      "required": [
+        "use_emoji",
+        "verbosity",
+        "color_scheme",
+        "detailed_help"
+      ]
     }
   },
-  "required": ["user", "paths", "building", "performance", "ui"],
+  "required": [
+    "user",
+    "paths",
+    "building",
+    "performance",
+    "ui"
+  ],
   "additionalProperties": false
 }

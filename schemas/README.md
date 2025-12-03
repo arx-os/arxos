@@ -1,28 +1,31 @@
-# ArxOS JSON Schemas
+# ArxOS TOML Schemas
 
-This directory contains JSON Schema definitions for ArxOS configuration and data files.
+This directory contains schema definitions and documentation for ArxOS TOML configuration files.
 
 ## Purpose
 
-JSON Schemas provide:
-- **IDE Autocomplete**: IntelliSense and autocomplete support in editors
-- **Validation**: Catch configuration errors before runtime
-- **Documentation**: Inline documentation for configuration fields
-- **Type Safety**: Ensure configuration values match expected types
+TOML configuration provides:
+- **Human-readable** configuration format
+- **Comments** for inline documentation
+- **Type safety** through Rust's serde deserialization
+- **IDE support** via Taplo and TOML language servers
 
-## Available Schemas
+## Configuration File
 
-### `config.schema.json`
+### `arx.toml.example`
 
-JSON Schema for ArxOS configuration files (`arx.toml`).
+Example TOML configuration file with all available options documented.
+
+**Location:** `../arx.toml.example`
 
 **Usage:**
-- IDE autocomplete for configuration files
-- Validation of configuration values
-- Documentation for all configuration options
+```bash
+# Copy to create your configuration
+cp arx.toml.example arx.toml
 
-**Schema Version:** 1.0.0  
-**JSON Schema Draft:** Draft-07
+# Or create in user directory
+cp arx.toml.example ~/.arx/config.toml
+```
 
 **Configuration Sections:**
 - `user`: User information and Git commit preferences
@@ -31,85 +34,83 @@ JSON Schema for ArxOS configuration files (`arx.toml`).
 - `performance`: Performance and optimization settings
 - `ui`: User interface preferences
 
-## Integration
-
-The schema is integrated into the codebase via:
-- `src/config/schema.rs`: Provides schema access via `ConfigSchema::json_schema()`
-- `docs/development/IDE_AUTOCOMPLETE_SETUP.md`: IDE setup instructions
-
 ## IDE Setup
 
-See [IDE Autocomplete Setup](../docs/development/IDE_AUTOCOMPLETE_SETUP.md) for detailed instructions on configuring your IDE to use these schemas.
+See [IDE Autocomplete Setup](../docs/development/IDE_AUTOCOMPLETE_SETUP.md) for detailed instructions on configuring your IDE for TOML support.
 
 ### Quick Setup (VSCode)
 
-Add to `.vscode/settings.json`:
+1. Install **Even Better TOML** extension (`tamasfe.even-better-toml`)
+2. TOML files will automatically get syntax highlighting and validation
 
-```json
-{
-  "json.schemas": [
-    {
-      "fileMatch": ["arx.toml", ".arx/config.toml", "**/arx.toml"],
-      "url": "./schemas/config.schema.json"
-    }
-  ]
-}
+### Quick Setup (RustRover/IntelliJ)
+
+TOML support is built-in. No additional setup required.
+
+## Validation
+
+### Using Taplo
+
+Install Taplo CLI for TOML validation:
+```bash
+cargo install taplo-cli
+
+# Validate syntax
+taplo check arx.toml
+
+# Format file
+taplo format arx.toml
 ```
 
-## Schema Validation
+### Using ArxOS
 
-The schema uses:
-- **JSON Schema Draft-07**: Modern, widely supported schema version
-- **Type Validation**: Enforces correct types (string, integer, boolean, etc.)
-- **Enum Constraints**: Restricts values to allowed options
-- **Range Constraints**: Validates numeric ranges (min/max)
-- **Required Fields**: Ensures essential configuration is present
-- **Default Values**: Documents default values for optional fields
-- **Examples**: Provides example values for better IDE support
+ArxOS validates configuration at runtime:
+```bash
+# Show current configuration
+arx config --show
+
+# Validate without running
+arx config --validate
+```
+
+## Configuration Hierarchy
+
+ArxOS loads configuration from multiple locations (in order of precedence):
+
+1. **Project-level**: `./arx.toml`
+2. **Project hidden**: `./.arx/config.toml`
+3. **User-level**: `~/.arx/config.toml`
+4. **System-level**: `/etc/arx/config.toml` (Linux/macOS)
+
+Later configurations override earlier ones.
+
+## Legacy Files
+
+### `config.schema.json`
+
+**Status:** Deprecated
+
+This JSON Schema was created for JSON configuration files, but ArxOS uses TOML. It is kept for reference but is not functional for TOML validation.
+
+For TOML validation, use:
+- Taplo CLI (`taplo check`)
+- IDE TOML extensions
+- ArxOS runtime validation
 
 ## Maintenance
 
-### Updating Schemas
+### Updating Configuration Structure
 
-When updating configuration structures in Rust code:
+When adding new configuration options:
 
-1. **Update the schema** to match the new structure
-2. **Update `src/config/schema.rs`** if field documentation changes
-3. **Increment schema version** if making breaking changes
-4. **Test IDE autocomplete** to ensure changes work correctly
-
-### Schema Versioning
-
-- **Major version** (X.0.0): Breaking changes (removed fields, changed types)
-- **Minor version** (0.X.0): New fields added (backward compatible)
-- **Patch version** (0.0.X): Documentation updates, bug fixes
-
-Current schema version: **1.0.0**
-
-## Future Schemas
-
-Potential additional schemas:
-- `building.schema.json`: Schema for building YAML files
-- `sensor-data.schema.json`: Schema for sensor data JSON files
-- `ar-scan.schema.json`: Schema for AR scan data files
-
-## Testing
-
-To validate the schema:
-
-```bash
-# Validate JSON syntax
-python3 -m json.tool schemas/config.schema.json > /dev/null
-
-# Validate against JSON Schema meta-schema (requires jsonschema package)
-python3 -m pip install jsonschema
-python3 -c "import json, jsonschema; schema = json.load(open('schemas/config.schema.json')); jsonschema.Draft7Validator.check_schema(schema)"
-```
+1. **Update Rust code** in `src/config/mod.rs`
+2. **Update `arx.toml.example`** with new fields and comments
+3. **Update documentation** in `docs/core/CONFIGURATION.md`
+4. **Test validation** with `arx config --show`
 
 ## References
 
-- [JSON Schema Specification](https://json-schema.org/)
-- [JSON Schema Draft-07](https://json-schema.org/draft-07/schema#)
+- [Taplo Documentation](https://taplo.tamasfe.dev/)
+- [TOML Specification](https://toml.io/)
 - [IDE Autocomplete Setup Guide](../docs/development/IDE_AUTOCOMPLETE_SETUP.md)
 - [Configuration Documentation](../docs/core/CONFIGURATION.md)
-

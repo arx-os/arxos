@@ -1,0 +1,38 @@
+# ArxOS Configuration File
+# Copy this file to .arx/config.toml or arx.toml and customize for your needs
+
+[user]
+# User information for Git commits and attribution
+name = "ArxOS User"
+email = "user@arxos.com"
+organization = "My Organization"  # Optional
+commit_template = "feat: {operation} {building_name}"
+
+[paths]
+# File and directory paths
+default_import_path = "./buildings"
+backup_path = "./backups"
+template_path = "./templates"
+temp_path = "./temp"
+
+[building]
+# Building-specific settings
+default_coordinate_system = "WGS84"  # Options: WGS84, UTM, LOCAL
+auto_commit = true
+naming_pattern = "{building_name}-{timestamp}"
+validate_on_import = true
+
+[performance]
+# Performance and optimization settings
+max_parallel_threads = 4  # Range: 1-64
+memory_limit_mb = 1024    # Range: 1-16384
+cache_enabled = true
+cache_path = "./cache"
+show_progress = true
+
+[ui]
+# User interface preferences
+use_emoji = true
+verbosity = "Normal"  # Options: Silent, Normal, Verbose, Debug
+color_scheme = "Auto"  # Options: Auto, Always, Never
+detailed_help = false

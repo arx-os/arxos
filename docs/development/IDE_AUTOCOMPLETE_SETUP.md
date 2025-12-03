@@ -1,214 +1,144 @@
-# IDE Autocomplete Setup for ArxOS Configuration
+# IDE Autocomplete Setup for ArxOS
 
-**Last Updated:** January 2025
+This guide shows how to configure your IDE for TOML autocomplete and validation in ArxOS configuration files.
 
-## Overview
+---
 
-ArxOS provides a JSON schema for configuration files that enables IDE autocomplete, validation, and documentation. This guide shows how to set up autocomplete in popular IDEs.
+## VSCode Setup
 
-## Prerequisites
+### 1. Install Extensions
 
-- ArxOS JSON schema file: `schemas/config.schema.json`
-- IDE with JSON schema support (VSCode, IntelliJ, etc.)
+Install the **Even Better TOML** extension:
+- Extension ID: `tamasfe.even-better-toml`
+- Provides syntax highlighting, validation, and autocomplete for TOML files
 
-## Visual Studio Code
+### 2. Install Taplo CLI (Optional)
 
-### Method 1: Project-Level Configuration (Recommended)
-
-1. Create `.vscode/settings.json` in your project root:
-
-```json
-{
-  "json.schemas": [
-    {
-      "fileMatch": ["arx.toml", ".arx/config.toml", "**/arx.toml"],
-      "url": "./schemas/config.schema.json",
-      "schema": {
-        "$schema": "http://json-schema.org/draft-07/schema#"
-      }
-    }
-  ]
-}
+For advanced validation:
+```bash
+cargo install taplo-cli
 ```
 
-**Note**: VSCode's JSON schema support for TOML is limited. For better TOML support, see the TOML extension method below.
+### 3. Configuration
 
-### Method 2: Using TOML Extension
-
-1. Install the "Even Better TOML" extension (id: `tamasfe.even-better-toml`)
-
-2. Add to `.vscode/settings.json`:
+VSCode will automatically recognize `.toml` files. For custom settings, add to `.vscode/settings.json`:
 
 ```json
 {
-  "evenBetterToml.schema.enabled": true,
-  "evenBetterToml.schema.associations": {
-    "arx.toml": "./schemas/config.schema.json",
-    "**/.arx/config.toml": "./schemas/config.schema.json"
+  "evenBetterToml.formatter.alignEntries": true,
+  "evenBetterToml.formatter.indentTables": true,
+  "[toml]": {
+    "editor.defaultFormatter": "tamasfe.even-better-toml",
+    "editor.formatOnSave": true
   }
 }
 ```
 
-3. Create a TOML schema reference file `schemas/arx.toml.schema.json`:
+---
 
-```json
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ArxOS Configuration Schema Reference",
-  "type": "object",
-  "$ref": "./config.schema.json"
-}
+## IntelliJ IDEA / RustRover Setup
+
+### 1. TOML Plugin
+
+The TOML plugin is built-in for RustRover and recent IntelliJ IDEA versions.
+
+For older versions:
+- Go to **Settings → Plugins**
+- Search for "TOML"
+- Install the TOML plugin
+
+### 2. Enable Formatting
+
+- **Settings → Editor → Code Style → TOML**
+- Configure indentation and formatting preferences
+
+---
+
+## Neovim Setup
+
+### 1. Install Taplo LSP
+
+Using `mason.nvim`:
+```lua
+require("mason").setup()
+require("mason-lspconfig").setup({
+  ensure_installed = { "taplo" }
+})
 ```
 
-### Method 3: Global User Settings
-
-Add to your global VSCode settings (`~/.config/Code/User/settings.json` on Linux, `~/Library/Application Support/Code/User/settings.json` on macOS):
-
-```json
-{
-  "json.schemas": [
-    {
-      "fileMatch": ["**/arx.toml", "**/.arx/config.toml"],
-      "url": "file:///path/to/arxos/schemas/config.schema.json"
-    }
-  ]
-}
-```
-
-## JetBrains IDEs (IntelliJ, CLion, etc.)
-
-### Method 1: Using JSON Schema
-
-1. Go to **File → Settings → Languages & Frameworks → Schemas and DTDs → JSON Schema Mappings**
-2. Click **+** to add a new schema
-3. Configure:
-   - **Name**: ArxOS Configuration
-   - **Schema file**: Point to `schemas/config.schema.json`
-   - **Schema version**: Draft 7
-   - **File path patterns**: `**/arx.toml`, `**/.arx/config.toml`
-
-### Method 2: Using TOML Plugin
-
-1. Install the **TOML** plugin (if not already installed)
-2. Go to **File → Settings → Languages & Frameworks → TOML**
-3. Enable schema validation
-4. Add schema mapping for `arx.toml` files
-
-## Vim/Neovim
-
-### Using coc.nvim
-
-1. Install `coc-json` extension:
-
-```vim
-:CocInstall coc-json
-```
-
-2. Add to your `coc-settings.json`:
-
-```json
-{
-  "json.schemas": [
-    {
-      "fileMatch": ["arx.toml", ".arx/config.toml"],
-      "url": "./schemas/config.schema.json"
-    }
-  ]
-}
-```
-
-### Using nvim-lspconfig
-
-1. Configure `jsonls` in your Neovim config:
+### 2. Configure LSP
 
 ```lua
-require('lspconfig').jsonls.setup {
+require("lspconfig").taplo.setup({
   settings = {
-    json = {
-      schemas = {
-        {
-          fileMatch = { "arx.toml", ".arx/config.toml" },
-          url = "./schemas/config.schema.json"
-        }
+    evenBetterToml = {
+      schema = {
+        enabled = true
       }
     }
   }
-}
+})
 ```
 
-## Emacs
+---
 
-### Using lsp-mode
+## Configuration File Locations
 
-1. Install `lsp-mode` and `lsp-json`
+ArxOS looks for configuration in the following order:
 
-2. Add to your `init.el`:
+1. `./arx.toml` (project-specific)
+2. `./.arx/config.toml` (project-specific, hidden)
+3. `~/.arx/config.toml` (user-level)
+4. `/etc/arx/config.toml` (system-level, Linux/macOS)
 
-```elisp
-(with-eval-after-load 'lsp-json
-  (add-to-list 'lsp-json-schemas
-               `(:fileMatch ,(rx (or "arx.toml" ".arx/config.toml"))
-                 :url "file:///path/to/arxos/schemas/config.schema.json")))
+---
+
+## Example Configuration
+
+See [`arx.toml.example`](../../arx.toml.example) for a fully commented example configuration.
+
+---
+
+## Validation
+
+### Using Taplo CLI
+
+```bash
+# Validate TOML syntax
+taplo check arx.toml
+
+# Format TOML file
+taplo format arx.toml
 ```
 
-## Verifying Setup
+### Using Cargo
 
-### Test Configuration File
-
-Create a test `arx.toml` file:
-
-```toml
-[user]
-name = "Test User"
-email = "test@example.com"
-
-[performance]
-max_parallel_threads = 8
+ArxOS validates configuration at runtime:
+```bash
+# Check configuration validity
+arx config --show
 ```
 
-### Expected Behavior
-
-When properly configured, you should see:
-- ✅ **Autocomplete**: Typing `[user.` should show suggestions
-- ✅ **Validation**: Invalid values (e.g., `max_parallel_threads = 0`) should show errors
-- ✅ **Documentation**: Hovering over fields should show descriptions
-- ✅ **Type hints**: Invalid types should be highlighted
+---
 
 ## Troubleshooting
 
 ### Autocomplete Not Working
 
-1. **Check file association**: Ensure your IDE recognizes `arx.toml` as a config file
-2. **Verify schema path**: Confirm the schema file path is correct
-3. **Restart IDE**: Some IDEs require a restart to load schema changes
-4. **Check schema format**: Validate that `schemas/config.schema.json` is valid JSON
+1. Ensure the TOML extension/plugin is installed
+2. Restart your IDE
+3. Check that the file has `.toml` extension
 
-### Validation Errors Showing Incorrectly
+### Validation Errors
 
-1. **Schema version**: Ensure your IDE supports JSON Schema Draft 7
-2. **File matching**: Check that your file pattern matches the config file name
-3. **Schema syntax**: Verify the schema file is valid JSON Schema
+1. Run `taplo check arx.toml` to see syntax errors
+2. Compare with `arx.toml.example`
+3. Check [Configuration Documentation](../core/CONFIGURATION.md)
 
-### TOML-Specific Issues
+---
 
-Since the schema is JSON but config files are TOML:
-- Some IDEs may have limited TOML schema support
-- Consider using a TOML-to-JSON converter for validation
-- Use TOML-specific extensions when available
+## References
 
-## Schema Location
-
-The ArxOS configuration schema is located at:
-- **Relative path**: `schemas/config.schema.json` (from project root)
-- **Absolute path**: `<arxos-install>/schemas/config.schema.json`
-
-## Related Documentation
-
-- [Configuration Guide](../core/CONFIGURATION.md) - Complete configuration reference
-- [API Reference](../core/API_REFERENCE.md) - Configuration API documentation
-- [Developer Onboarding](./DEVELOPER_ONBOARDING.md) - Development setup
-
-## Contributing
-
-If you set up autocomplete for another IDE, please contribute your configuration to this document!
-
+- [Taplo Documentation](https://taplo.tamasfe.dev/)
+- [Even Better TOML Extension](https://marketplace.visualstudio.com/items?itemName=tamasfe.even-better-toml)
+- [ArxOS Configuration Guide](../core/CONFIGURATION.md)

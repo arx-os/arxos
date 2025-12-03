@@ -1,0 +1,23 @@
+# Taplo Configuration for ArxOS
+
+# TOML formatting and validation settings
+[formatting]
+align_entries = true
+align_comments = true
+array_trailing_comma = true
+array_auto_expand = true
+array_auto_collapse = true
+compact_arrays = false
+compact_inline_tables = false
+column_width = 100
+indent_tables = true
+indent_entries = true
+reorder_keys = false
+allowed_blank_lines = 1
+
+[rule.arx-config]
+# Match ArxOS configuration files
+include = ["arx.toml", ".arx/config.toml", "**/.arx/config.toml"]
+
+# No schema validation (TOML doesn't have standard schema format like JSON)
+# Validation is done at runtime by ArxOS

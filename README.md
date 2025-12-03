@@ -206,10 +206,12 @@ arxos/
 │   ├── tui/                    # Terminal UI widgets and views
 │   ├── web/                    # WASM bindings for the PWA
 │   └── main.rs                 # Entry point
-├── pwa/                        # React/Vite/Zustand web app
 ├── scripts/                    # Tooling and automation
 ├── tests/                      # Integration tests
-└── examples/                   # Sample IFC/building datasets
+├── examples/                   # Sample IFC/building datasets
+├── index.html                  # PWA entry point (built via Trunk)
+├── style.css                   # PWA styles
+└── Trunk.toml                  # WASM build configuration
 ```
 
 ### **Module Responsibilities:**

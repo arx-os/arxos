@@ -111,6 +111,11 @@ pub mod path_safety {
             // Validate the path first
             Self::validate_path(path)?;
 
+            // Validate path format
+            if let Some(path_str) = path.to_str() {
+                Self::validate_path_format(path_str)?;
+            }
+
             // Attempt to canonicalize
             path.canonicalize()
                 .map_err(|e| format!("Failed to canonicalize path: {}", e))
@@ -160,6 +165,12 @@ pub mod path_safety {
             // Check for null bytes
             if path.contains('\0') {
                 return Err("Path contains null bytes".to_string());
+            }
+
+            // Check path length limits (4096 is a common filesystem limit)
+            const MAX_PATH_LENGTH: usize = 4096;
+            if path.len() > MAX_PATH_LENGTH {
+                return Err(format!("Path exceeds maximum length of {} bytes", MAX_PATH_LENGTH));
             }
 
             // Check for invalid characters (platform-specific)

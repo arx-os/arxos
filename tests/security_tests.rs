@@ -23,7 +23,7 @@ mod path_traversal_tests {
     #[test]
     fn test_path_traversal_detection_relative() {
         let temp_dir = TempDir::new().unwrap();
-        let base = temp_dir.path();
+        let _base = temp_dir.path();
 
         // Test various traversal patterns
         let traversal_paths = vec![
@@ -82,14 +82,13 @@ mod path_traversal_tests {
         let test_file = subdir.join("test.yaml");
         std::fs::write(&test_file, "test content").unwrap();
 
-        // Test relative paths
-        let relative_path = Path::new("data/test.yaml");
-        let result = path_safety::PathSafety::canonicalize_and_validate(relative_path);
-        assert!(result.is_ok(), "Legitimate relative path should be allowed");
-
-        // Test absolute paths within base
+        // Test absolute paths within base (these actually exist and can be canonicalized)
         let result = path_safety::PathSafety::canonicalize_and_validate(&test_file);
         assert!(result.is_ok(), "Legitimate absolute path should be allowed");
+
+        // Test that valid path format passes validation
+        let result = path_safety::PathSafety::validate_path(&test_file);
+        assert!(result.is_ok(), "Valid path should pass validation");
     }
 
     /// Test path traversal with symlinks (if supported on platform)
@@ -130,7 +129,7 @@ mod path_traversal_tests {
         ];
 
         for path_str in invalid_paths {
-            let path = Path::new(path_str);
+            let _path = Path::new(path_str);
             let result = path_safety::PathSafety::validate_path_format(path_str);
             assert!(
                 result.is_err(),
@@ -148,7 +147,7 @@ mod path_traversal_tests {
 
         // Create a path that exceeds reasonable limits
         let long_path = "a/".repeat(3000);
-        let path = Path::new(&long_path);
+        let _path = Path::new(&long_path);
 
         let result = path_safety::PathSafety::validate_path_format(&long_path);
         assert!(result.is_err(), "Very long paths should be rejected");

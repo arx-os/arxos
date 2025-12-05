@@ -10,10 +10,12 @@ use crate::agent::protocol::{
     METHOD_NOT_FOUND,
 };
 use crate::agent::{collab, files, git, ifc};
+use crate::hardware::HardwareManager;
 
 pub struct AgentState {
     pub repo_root: PathBuf,
     pub token: Arc<Mutex<TokenState>>,
+    pub hardware: Arc<HardwareManager>,
 }
 
 pub async fn dispatch(state: Arc<AgentState>, request: JsonRpcRequest) -> JsonRpcResponse {

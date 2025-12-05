@@ -91,15 +91,75 @@ impl Handler for AgentServerHandler {
     
     async fn exec_request(
         self,
-        _channel: ChannelId,
+        channel: ChannelId,
         data: &[u8],
-        session: Session,
+        mut session: Session,
     ) -> Result<(Self, Session), Self::Error> {
-        let command = String::from_utf8_lossy(data).to_string();
-        println!("SSH Exec: {}", command);
+        let command_line = String::from_utf8_lossy(data).to_string();
+        println!("SSH Exec: {}", command_line);
         
-        // FUTURE: Dispatch 'command' to self.state
-        // For now, we just acknowledge receipt.
+        let parts: Vec<&str> = command_line.split_whitespace().collect();
+        let response = if parts.is_empty() {
+            "Empty command".to_string()
+        } else {
+            let cmd = parts[0];
+            let repo_root = self._state.repo_root.clone();
+            let hardware = self._state.hardware.clone();
+            let sensor_cmds = crate::agent::commands::sensors::SensorCommands::new(hardware, repo_root);
+            
+            match cmd {
+                "get" => {
+                    if parts.len() < 2 {
+                        "Usage: get <sensor_type> [location]".to_string()
+                    } else {
+                        let sensor_type = parts[1]; // e.g. "temp"
+                        let location = if parts.len() > 2 { parts[2] } else { "floor:1:room:101" }; // Default for testing
+                        
+                        match sensor_type {
+                            "temp" => {
+                                match sensor_cmds.get_temp(location, crate::agent::commands::sensors::QueryOptions::default()).await {
+                                    Ok(res) => format!("Temperature at {}: {:.2} {}", res.location, res.value, res.unit),
+                                    Err(e) => format!("Error reading temp: {}", e),
+                                }
+                            }
+                            "sensors" => {
+                                match sensor_cmds.get_sensors().await {
+                                    Ok(list) => {
+                                        let mut out = String::from("Available Sensors:\n");
+                                        for s in list {
+                                            out.push_str(&format!("- {}:{} = {:.2} {}\n", s.location, s.sensor_type, s.value, s.unit));
+                                        }
+                                        out
+                                    }
+                                    Err(e) => format!("Error listing sensors: {}", e),
+                                }
+                            }
+                            _ => format!("Unknown sensor type: {}", sensor_type),
+                        }
+                    }
+                }
+                "set" => {
+                    if parts.len() < 3 {
+                        "Usage: set <location> <value>".to_string()
+                    } else {
+                        let location = parts[1];
+                        if let Ok(val) = parts[2].parse::<f64>() {
+                             match sensor_cmds.set_temp(location, val, true).await {
+                                Ok(msg) => msg,
+                                Err(e) => format!("Error setting temp: {}", e),
+                             }
+                        } else {
+                            "Invalid value".to_string()
+                        }
+                    }
+                }
+                "help" => "Available commands: get temp [loc], get sensors, set [loc] [val]".to_string(),
+                _ => format!("Unknown command: {}", cmd),
+            }
+        };
+
+        session.data(channel, russh::CryptoVec::from(format!("{}\n", response).into_bytes()));
+        session.close(channel);
         
         Ok((self, session))
     }

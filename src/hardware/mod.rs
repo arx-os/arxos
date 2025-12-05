@@ -13,7 +13,10 @@ use std::collections::HashMap;
 #[cfg(feature = "agent")]
 pub mod bacnet;
 #[cfg(feature = "agent")]
+#[cfg(feature = "agent")]
 pub mod modbus;
+#[cfg(feature = "agent")]
+pub mod simulated;
 #[cfg(feature = "agent")]
 pub mod mqtt;
 #[cfg(feature = "agent")]
@@ -65,6 +68,8 @@ pub enum HardwareProtocol {
     #[cfg(feature = "agent")]
     Modbus(modbus::ModbusInterface),
     #[cfg(feature = "agent")]
+    Simulated(simulated::SimulatedInterface),
+    #[cfg(feature = "agent")]
     Mqtt(mqtt::MqttInterface),
 }
 
@@ -77,6 +82,8 @@ impl HardwareProtocol {
             Self::Modbus(i) => i.read_sensor(location, sensor_type).await,
             #[cfg(feature = "agent")]
             Self::Mqtt(i) => i.read_sensor(location, sensor_type).await,
+            #[cfg(feature = "agent")]
+            Self::Simulated(i) => i.read_sensor(location, sensor_type).await,
             #[cfg(not(feature = "agent"))]
             _ => anyhow::bail!("Agent feature disabled"),
         }
@@ -90,6 +97,8 @@ impl HardwareProtocol {
             Self::Modbus(i) => i.write_control(location, control_type, value).await,
             #[cfg(feature = "agent")]
             Self::Mqtt(i) => i.write_control(location, control_type, value).await,
+            #[cfg(feature = "agent")]
+            Self::Simulated(i) => i.write_control(location, control_type, value).await,
             #[cfg(not(feature = "agent"))]
             _ => anyhow::bail!("Agent feature disabled"),
         }
@@ -103,6 +112,8 @@ impl HardwareProtocol {
             Self::Modbus(i) => i.is_connected().await,
             #[cfg(feature = "agent")]
             Self::Mqtt(i) => i.is_connected().await,
+            #[cfg(feature = "agent")]
+            Self::Simulated(i) => i.is_connected().await,
             #[cfg(not(feature = "agent"))]
             _ => false,
         }
@@ -116,6 +127,8 @@ impl HardwareProtocol {
             Self::Modbus(i) => i.list_sensors().await,
             #[cfg(feature = "agent")]
             Self::Mqtt(i) => i.list_sensors().await,
+            #[cfg(feature = "agent")]
+            Self::Simulated(i) => i.list_sensors().await,
             #[cfg(not(feature = "agent"))]
             _ => Ok(vec![]),
         }

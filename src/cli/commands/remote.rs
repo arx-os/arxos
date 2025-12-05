@@ -8,7 +8,7 @@ use std::sync::Arc;
 use russh::client;
 use russh_keys::key;
 use async_trait::async_trait;
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct BuildingHost {
@@ -211,16 +211,71 @@ async fn connect_and_run(addr: String, user: String, key_path: PathBuf, command:
             }
         }
     } else {
-        // Interactive shell (simple)
+        // Interactive shell
         println!("Interactive shell session started (type 'exit' to quit)");
-        let channel = session.channel_open_session().await?;
+        let mut channel = session.channel_open_session().await?;
+        
+        // Request PTY
+        // term, col_width, row_height, pix_width, pix_height, modes
         channel.request_pty(true, "xterm", 80, 24, 0, 0, &[]).await?;
+        
+        // Request Shell
         channel.request_shell(true).await?;
         
-        // This is a simplified interactive shell. 
-        // Real interactive shell requires raw terminal handling (crossterm/termion)
-        // For now, we will just say it's implemented for exec mostly.
-        println!("(Interactive shell input not fully implemented in this version. Use 'exec' for commands)");
+        // Enter raw mode if possible logic
+        #[cfg(feature = "tui")]
+        {
+            use crossterm::terminal::{enable_raw_mode, disable_raw_mode};
+            enable_raw_mode()?;
+            
+            // We need to restore raw mode on any exit.
+            // For this simple implementation, we'll try to ensure we call disable at end.
+            // Using a scope guard or similar would be better in production.
+        }
+
+        let mut stdin = tokio::io::stdin();
+        let mut stdout = tokio::io::stdout();
+        let mut buf = [0u8; 1024];
+
+        // Loop until channel closes or user quits
+        loop {
+             tokio::select! {
+                 // Read from remote
+                 msg = channel.wait() => {
+                     match msg {
+                         Some(russh::ChannelMsg::Data { data }) => {
+                             stdout.write_all(&data).await?;
+                             stdout.flush().await?;
+                         }
+                         Some(russh::ChannelMsg::ExitStatus { .. }) => {
+                             break;
+                         }
+                         Some(russh::ChannelMsg::Close) => {
+                             break;
+                         }
+                         None => break,
+                         _ => {}
+                     }
+                 }
+                 // Read from stdin
+                 n = stdin.read(&mut buf) => {
+                     match n {
+                         Ok(0) => break, // EOF
+                         Ok(n) => {
+                             // Send to remote
+                             channel.data(&buf[0..n]).await?;
+                         }
+                         Err(_) => break,
+                     }
+                 }
+             }
+        }
+        
+        #[cfg(feature = "tui")]
+        {
+            use crossterm::terminal::disable_raw_mode;
+            let _ = disable_raw_mode();
+        }
     }
     
     session.disconnect(russh::Disconnect::ByApplication, "Bye", "English").await?;

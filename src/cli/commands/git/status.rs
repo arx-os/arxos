@@ -12,8 +12,20 @@ impl Command for StatusCommand {
         if self.interactive {
             #[cfg(feature = "tui")]
             {
-                let dashboard = crate::tui::dashboard::Dashboard::new()?;
-                dashboard.run()?;
+                use crate::agent::auth::TokenState;
+                // Dummy state for consistency with CLI dashboard command
+                let repo_root = std::path::PathBuf::from(".");
+                let token_state = TokenState::new("dummy".to_string(), vec![]);
+                let hardware = crate::hardware::HardwareManager::new();
+                
+                let state = std::sync::Arc::new(crate::agent::dispatcher::AgentState {
+                    repo_root,
+                    token: std::sync::Arc::new(std::sync::Mutex::new(token_state)),
+                    hardware: std::sync::Arc::new(hardware),
+                });
+                
+                let rt = tokio::runtime::Runtime::new()?;
+                rt.block_on(crate::tui::dashboard::run_dashboard(state))?;
                 return Ok(());
             }
             #[cfg(not(feature = "tui"))]

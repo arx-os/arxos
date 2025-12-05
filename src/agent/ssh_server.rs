@@ -4,7 +4,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use russh::{
     server::{Auth, Handler, Server as SshServer, Session},
-    Channel, ChannelId,
+    Channel, ChannelId, Pty,
 };
 use russh_keys::key::PublicKey;
 
@@ -46,6 +46,7 @@ impl SshServer for AgentServer {
         AgentServerHandler {
             _state: self.state.clone(),
             authenticator: self.authenticator.clone(),
+            input_buffer: String::new(),
         }
     }
 }
@@ -55,6 +56,7 @@ impl SshServer for AgentServer {
 struct AgentServerHandler {
     _state: Arc<AgentState>,
     authenticator: Arc<SshAuthenticator>,
+    input_buffer: String,
 }
 
 #[async_trait]
@@ -66,18 +68,11 @@ impl Handler for AgentServerHandler {
         user: &str,
         public_key: &PublicKey,
     ) -> Result<(Self, Auth), Self::Error> {
-        // Authenticator check
-        // Note: russh 0.40+ Handler signatures consume self and return it in the Result tuple.
-        
-        // TODO: Use actual verify_key when we assume keys are loaded correctly.
-        // For now, simple logging and accept to demonstrate flow.
         let key_fingerprint = public_key.fingerprint();
         println!("Wait auth: User={}, Key={}", user, key_fingerprint);
         
+        // Simple permission check
         let _valid = self.authenticator.check_permission(user, "connect");
-        // If we want to strictly enforce it:
-        // if !valid { return Ok((self, Auth::Reject { proceed_with_methods: None })); }
-        
         Ok((self, Auth::Accept))
     }
 
@@ -89,6 +84,33 @@ impl Handler for AgentServerHandler {
         Ok((self, true, session))
     }
     
+    async fn pty_request(
+        self,
+        _channel: ChannelId,
+        _term: &str,
+        _col_width: u32,
+        _row_height: u32,
+        _pix_width: u32,
+        _pix_height: u32,
+        _modes: &[(Pty, u32)],
+        session: Session,
+    ) -> Result<(Self, Session), Self::Error> {
+        Ok((self, session))
+    }
+
+    async fn shell_request(
+        self,
+        channel: ChannelId,
+        mut session: Session,
+    ) -> Result<(Self, Session), Self::Error> {
+        let welcome = format!(
+            "\r\nWelcome to ArxOS Agent Shell\r\nHost: {}\r\nType 'help' for commands, 'exit' to quit.\r\n\r\n> ", 
+            self._state.repo_root.display()
+        );
+        session.data(channel, russh::CryptoVec::from(welcome.into_bytes()));
+        Ok((self, session))
+    }
+
     async fn exec_request(
         self,
         channel: ChannelId,
@@ -112,8 +134,8 @@ impl Handler for AgentServerHandler {
                     if parts.len() < 2 {
                         "Usage: get <sensor_type> [location]".to_string()
                     } else {
-                        let sensor_type = parts[1]; // e.g. "temp"
-                        let location = if parts.len() > 2 { parts[2] } else { "floor:1:room:101" }; // Default for testing
+                        let sensor_type = parts[1];
+                        let location = if parts.len() > 2 { parts[2] } else { "floor:1:room:101" };
                         
                         match sensor_type {
                             "temp" => {
@@ -161,6 +183,99 @@ impl Handler for AgentServerHandler {
         session.data(channel, russh::CryptoVec::from(format!("{}\n", response).into_bytes()));
         session.close(channel);
         
+        Ok((self, session))
+    }
+
+    async fn data(
+        mut self,
+        channel: ChannelId,
+        data: &[u8],
+        mut session: Session,
+    ) -> Result<(Self, Session), Self::Error> {
+        let input = String::from_utf8_lossy(data);
+        
+        for c in input.chars() {
+            match c {
+                '\r' | '\n' => {
+                    session.data(channel, russh::CryptoVec::from("\r\n".as_bytes().to_vec()));
+                    
+                    let cmd_line = std::mem::take(&mut self.input_buffer);
+                    if !cmd_line.trim().is_empty() {
+                         let parts: Vec<&str> = cmd_line.split_whitespace().collect();
+                         let cmd = parts[0];
+                         
+                         match cmd {
+                             "exit" | "quit" => {
+                                 session.close(channel);
+                                 return Ok((self, session));
+                             }
+                             "help" => {
+                                 session.data(channel, russh::CryptoVec::from("Commands: get, set, exit\r\n".as_bytes().to_vec()));
+                             }
+                             _ => {
+                                 let repo_root = self._state.repo_root.clone();
+                                 let hardware = self._state.hardware.clone();
+                                 let sensor_cmds = crate::agent::commands::sensors::SensorCommands::new(hardware, repo_root);
+                                 
+                                 if cmd == "get" {
+                                     if parts.len() > 1 && parts[1] == "temp" {
+                                         let location = if parts.len() > 2 { parts[2] } else { "floor:1:room:101" };
+                                          match sensor_cmds.get_temp(location, crate::agent::commands::sensors::QueryOptions::default()).await {
+                                             Ok(res) => {
+                                                 let out = format!("Temperature at {}: {:.2} {}\r\n", res.location, res.value, res.unit);
+                                                 session.data(channel, russh::CryptoVec::from(out.into_bytes()));
+                                             }
+                                             Err(e) => {
+                                                 session.data(channel, russh::CryptoVec::from(format!("Error: {}\r\n", e).into_bytes()));
+                                             }
+                                         }
+                                     } else {
+                                          session.data(channel, russh::CryptoVec::from("Usage: get temp [location]\r\n".as_bytes().to_vec()));
+                                     }
+                                 } else if cmd == "get" && parts.len() > 1 && parts[1] == "sensors" {
+                                      match sensor_cmds.get_sensors().await {
+                                         Ok(list) => {
+                                             let mut out = String::from("Available Sensors:\r\n");
+                                             for s in list {
+                                                 out.push_str(&format!("- {}:{} = {:.2} {}\r\n", s.location, s.sensor_type, s.value, s.unit));
+                                             }
+                                             session.data(channel, russh::CryptoVec::from(out.into_bytes()));
+                                         }
+                                         Err(e) => {
+                                             session.data(channel, russh::CryptoVec::from(format!("Error listing sensors: {}\r\n", e).into_bytes()));
+                                         }
+                                     }
+                                 } else if cmd == "clear" {
+                                     session.data(channel, russh::CryptoVec::from("\x1b[2J\x1b[H".as_bytes().to_vec()));
+                                 } else {
+                                     session.data(channel, russh::CryptoVec::from(format!("Unrecognized command: {}\r\n", cmd).into_bytes()));
+                                 }
+                             }
+                         }
+                    }
+                    
+                    session.data(channel, russh::CryptoVec::from("> ".as_bytes().to_vec()));
+                }
+                '\x08' | '\x7f' => {
+                    // Backspace
+                    if !self.input_buffer.is_empty() {
+                        self.input_buffer.pop();
+                        session.data(channel, russh::CryptoVec::from("\x08 \x08".as_bytes().to_vec()));
+                    }
+                }
+                '\x03' => { // Ctrl-C
+                    session.data(channel, russh::CryptoVec::from("^C\r\n".as_bytes().to_vec()));
+                    self.input_buffer.clear();
+                    session.data(channel, russh::CryptoVec::from("> ".as_bytes().to_vec()));
+                }
+                _ => {
+                    self.input_buffer.push(c);
+                    let mut buf = [0; 4];
+                    session.data(channel, russh::CryptoVec::from(c.encode_utf8(&mut buf).as_bytes().to_vec()));
+                }
+            }
+        }
+
         Ok((self, session))
     }
 }

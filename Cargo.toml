@@ -63,7 +63,6 @@ indicatif = "0.17"
 
 # Configuration dependencies
 toml = "0.8"
-notify = "6.1"
 num_cpus = "1.16"
 tempfile = "3.8"
 whoami = "1.4"
@@ -80,9 +79,16 @@ arboard = { version = "3.3", optional = true }
 bevy = { version = "0.14", optional = true, features = ["dynamic_linking"] }
 axum = { version = "0.7", features = ["ws", "macros"], optional = true }
 futures-util = { version = "0.3", optional = true }
+notify = { version = "6.1", optional = true }
+russh = { version = "0.40", optional = true }
+russh-keys = { version = "0.40", optional = true }
+ssh2 = { version = "0.9", optional = true }
+tokio-modbus = { version = "0.7", optional = true }
+rumqttc = { version = "0.23", optional = true }
 base64 = "0.22.1"
 octocrab = "0.48.0"
 ifc_rs = "0.1.0-alpha.9"
+async-trait = "0.1.77"
 leptos = { version = "0.8.14", features = ["csr"], optional = true }
 leptos_meta = { version = "0.8.5", optional = true }
 leptos_router = { version = "0.8.10", optional = true }
@@ -94,7 +100,7 @@ web-sys = { version = "0.3.83", features = ["Window", "Document", "HtmlElement",
 default = ["tui"]
 tui = ["crossterm", "ratatui", "csv", "arboard"]
 render3d = ["bevy"]
-agent = ["tokio", "tracing", "tracing-subscriber", "axum", "futures-util"]
+agent = ["tokio", "tracing", "tracing-subscriber", "axum", "futures-util", "notify", "russh", "russh-keys", "ssh2", "tokio-modbus", "rumqttc"]
 web = ["leptos", "leptos_meta", "leptos_router", "wasm-bindgen", "console_error_panic_hook", "web-sys"]
 full = ["tui", "render3d", "agent", "web"]
 

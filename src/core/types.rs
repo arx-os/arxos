@@ -110,6 +110,7 @@ pub struct SpatialProperties {
     pub position: Position,
     pub dimensions: Dimensions,
     pub bounding_box: BoundingBox,
+    pub mesh: Option<crate::core::spatial::mesh::Mesh>,
     pub coordinate_system: String,
 }
 
@@ -134,6 +135,7 @@ impl SpatialProperties {
             position,
             dimensions,
             bounding_box,
+            mesh: None,
             coordinate_system,
         }
     }

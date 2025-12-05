@@ -1,0 +1,12 @@
+name: My Building
+path: /building
+description: A sample building managed with ArxOS
+metadata:
+  source_file: null
+  parser_version: "2.0.0"
+  total_entities: 0
+  spatial_entities: 0
+  coordinate_system: "Local"
+  units: "Meters"
+  tags: []
+floors: []

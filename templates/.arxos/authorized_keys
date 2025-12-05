@@ -1,0 +1,6 @@
+# ArxOS Authorized SSH Keys
+# Format: ssh-rsa AAAAB3... user@host
+# The comment part (user@host) is used as the user identifier for RBAC mapping.
+
+# Example:
+# ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... manager@laptop

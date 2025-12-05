@@ -17,7 +17,7 @@ use axum::{
 #[cfg(feature = "agent")]
 use serde::Deserialize;
 #[cfg(feature = "agent")]
-use tokio::sync::broadcast;
+
 
 #[cfg(feature = "agent")]
 use crate::agent::{
@@ -60,17 +60,26 @@ pub async fn start_agent() -> Result<(), Box<dyn std::error::Error>> {
         token: Arc::new(Mutex::new(token_state)),
     });
 
-    println!("\n🔑 ROOT TOKEN: {}\n", root_token);
+    println!("\\n🔑 ROOT TOKEN: {}\\n", root_token);
     println!("⚠️  Keep this token secret! You will need it to connect.");
 
     // 3. Setup Router
     let app = Router::new()
         .route("/ws", get(ws_handler))
-        .with_state(state);
+        .with_state(state.clone());
 
-    // 4. Start Server
+    // 4. Start File Watcher for Auto-Export
+    let watcher_state = state.clone();
+    tokio::spawn(async move {
+        if let Err(e) = run_auto_export_watcher(watcher_state).await {
+            eprintln!("❌ File watcher error: {}", e);
+        }
+    });
+
+    // 5. Start WebSocket Server
     let addr = SocketAddr::from(([127, 0, 0, 1], 8787));
     println!("📡 WebSocket server listening on ws://{}", addr);
+    println!("🔍 Auto-export enabled: watching for YAML changes...\\n");
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
@@ -151,6 +160,34 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AgentState>) {
                 return;
             }
             _ => {}
+        }
+    }
+}
+
+#[cfg(feature = "agent")]
+async fn run_auto_export_watcher(state: Arc<AgentState>) -> Result<(), Box<dyn std::error::Error>> {
+    use crate::agent::{watcher::FileWatcher, ifc};
+    use std::time::Duration;
+
+    let watcher = FileWatcher::new(&state.repo_root)?;
+    println!("👀 Watching {} for YAML changes", state.repo_root.display());
+
+    loop {
+        // Check for changes every 500ms
+        tokio::time::sleep(Duration::from_millis(500)).await;
+
+        if let Some(changed_path) = watcher.check_for_changes() {
+            println!("📝 Detected change: {}", changed_path.display());
+            println!("🔄 Auto-exporting IFC (delta mode)...");
+
+            match ifc::export_ifc(&state.repo_root, None, true) {
+                Ok(result) => {
+                    println!("✅ Auto-export complete: {} ({} bytes)", result.filename, result.size_bytes);
+                }
+                Err(e) => {
+                    eprintln!("❌ Auto-export failed: {}", e);
+                }
+            }
         }
     }
 }

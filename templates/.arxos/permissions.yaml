@@ -1,0 +1,30 @@
+# Role-Based Access Control for ArxOS
+# Define roles with permissions and map users to roles.
+
+roles:
+  admin:
+    permissions:
+      - "*"
+  
+  facilities_manager:
+    permissions:
+      - read_sensors
+      - write_hvac
+      - read_history
+      - write_git_log
+  
+  security_guard:
+    permissions:
+      - read_sensors
+      - read_history
+  
+  observer:
+    permissions:
+      - read_sensors
+
+# Map users (by identifier from authorized_keys) to roles
+users:
+  "manager@laptop": 
+    role: "facilities_manager"
+  "admin@desktop":
+    role: "admin"

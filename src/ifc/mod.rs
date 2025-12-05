@@ -69,6 +69,19 @@ impl IFCProcessor {
         }
     }
 
+    /// Extract hierarchical building data from an IFC file
+    /// Returns a BuildingData structure compatible with ArxOS YAML format
+    pub fn extract_hierarchy(&self, file_path: &str) -> IFCResult<crate::yaml::BuildingData> {
+        let (building, _) = self.process_file(file_path)?;
+        
+        // Convert to BuildingData
+        // Note: In a real implementation, we might want to preserve more metadata
+        Ok(crate::yaml::BuildingData {
+            building,
+            equipment: Vec::new(),
+        })
+    }
+
     /// Process IFC file with parallel processing and progress reporting
     pub fn process_file_parallel(
         &self,

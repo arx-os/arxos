@@ -11,9 +11,15 @@ pub mod query;
 pub mod rendering;
 pub mod import;
 pub mod export;
+pub mod init;
+pub mod sync;
 
 pub use catalog::*;
 pub use command_trait::Command;
 pub use merge::MergeCommand;
 pub use import::ImportCommand;
 pub use export::ExportCommand;
+pub use init::InitCommand;
+pub use sync::SyncCommand;
+pub mod remote;
+pub use remote::RemoteCommand;

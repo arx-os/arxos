@@ -1,0 +1,25 @@
+#!/bin/sh
+# ArxOS Git Hook - Post-Merge
+# Auto-export IFC when YAML files change after git pull/merge
+#
+# Installation:
+#   cp templates/post-merge .git/hooks/post-merge
+#   chmod +x .git/hooks/post-merge
+
+# Check if any YAML files changed in this merge
+if git diff-tree -r --name-only --no-commit-id ORIG_HEAD HEAD | grep -qE '\.(yaml|yml)$'; then
+    echo "📝 YAML files changed, regenerating IFC..."
+    
+    # Check if arx is available
+    if command -v arx >/dev/null 2>&1; then
+        arx export --format ifc
+        if [ $? -eq 0 ]; then
+            echo "✅ IFC export complete"
+        else
+            echo "❌ IFC export failed (run 'arx export --format ifc' manually)"
+        fi
+    else
+        echo "⚠️  ArxOS CLI not found. Install with: cargo install --path ."
+        echo "   Then run: arx export --format ifc"
+    fi
+fi

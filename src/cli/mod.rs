@@ -5,7 +5,7 @@ pub mod args;
 pub mod commands;
 
 use commands::{
-    Command, ImportCommand, ExportCommand,
+    Command, ImportCommand, ExportCommand, InitCommand, RemoteCommand,
     git::{StatusCommand, CommitCommand, StageCommand, DiffCommand},
 };
 
@@ -21,17 +21,22 @@ pub struct Cli {
 impl Cli {
     pub fn execute(self) -> Result<(), Box<dyn std::error::Error>> {
         match self.command {
-            Commands::Init { name, .. } => {
-                println!("🏗️  Initializing building: {}", name);
-                Ok(())
+            Commands::Init { .. } => {
+                let cmd = InitCommand {
+                    directory: std::path::PathBuf::from("."),
+                    name: None,
+                    install_hooks: true,
+                    init_git: true,
+                };
+                Ok(cmd.execute()?)
             },
             Commands::Import { ifc_file, repo, dry_run } => {
                 let cmd = ImportCommand { ifc_file, repo, dry_run };
-                cmd.execute()
+                Ok(cmd.execute()?)
             },
             Commands::Export { format, output, repo, delta } => {
                 let cmd = ExportCommand { format, output, repo, delta };
-                cmd.execute()
+                Ok(cmd.execute()?)
             },
             Commands::Render { building, interactive, brightness_style, .. } => {
                 #[allow(unused_variables)]
@@ -74,7 +79,7 @@ impl Cli {
             Commands::Merge(cmd) => {
                 #[cfg(feature = "tui")]
                 {
-                    cmd.execute()
+                    Ok(cmd.execute()?)
                 }
                 #[cfg(not(feature = "tui"))]
                 {
@@ -111,6 +116,9 @@ impl Cli {
             },
             Commands::Query { pattern, format, verbose } => {
                 Self::handle_query(pattern, format, verbose)
+            },
+            Commands::Remote(cmd) => {
+                Ok(cmd.execute()?)
             },
             _ => {
                 println!("⚠️  Command not yet implemented in restructured CLI");
@@ -785,7 +793,10 @@ pub enum Commands {
         /// Open interactive browser
         #[arg(long)]
         interactive: bool,
+
     },
+    /// Manage remote building connections via SSH
+    Remote(RemoteCommand),
     /// Query equipment by ArxAddress glob pattern
     ///
     /// Query equipment matching an ArxAddress path pattern using glob wildcards (*).

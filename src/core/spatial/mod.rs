@@ -3,7 +3,9 @@ use nalgebra::Point3;
 
 pub mod grid;
 pub mod types;
+pub mod mesh;
 pub use types::*;
+pub use mesh::*;
 
 // Re-export grid address utilities
 

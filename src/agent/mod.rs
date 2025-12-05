@@ -14,6 +14,14 @@ pub mod git;
 pub mod ifc;
 #[cfg(feature = "agent")]
 pub mod workspace;
+#[cfg(feature = "agent")]
+pub mod watcher;
+#[cfg(feature = "agent")]
+pub mod ssh_server;
+#[cfg(feature = "agent")]
+pub mod ssh_auth;
+#[cfg(feature = "agent")]
+pub mod commands;
 
 #[cfg(feature = "agent")]
 pub mod server;

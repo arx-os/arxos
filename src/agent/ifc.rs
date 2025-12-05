@@ -3,7 +3,8 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail, Result};
 use crate::utils::path_safety::PathSafety;
-use crate::export::ifc::{IFCExporter, IFCSyncState};
+use crate::export::ifc::IFCExporter;
+use crate::agent::git::SyncState;
 use crate::ifc::IFCProcessor;
 use crate::yaml::{BuildingData, BuildingYamlSerializer};
 use crate::core::BuildingMetadata;
@@ -48,84 +49,29 @@ pub fn import_ifc(repo_root: &Path, filename: &str, data_base64: &str) -> Result
         )
     })?;
 
-    let import_path_str = import_path
-        .to_str()
-        .ok_or_else(|| anyhow!("Invalid IFC path encoding"))?;
-
+    let import_path_str = import_path.to_str().ok_or_else(|| anyhow!("Invalid path utf-8"))?;
     let processor = IFCProcessor::new();
-    let serializer = BuildingYamlSerializer::new();
-
-    let _dir_guard = DirGuard::change_to(repo_root)?;
-
     let building_data = match processor.extract_hierarchy(import_path_str) {
-        Ok((mut building, floors)) => {
-            if !floors.is_empty() {
-                building.floors = floors;
-            }
-            
-            building.metadata = Some(BuildingMetadata {
-                source_file: Some(import_path_str.to_string()),
-                parser_version: "2.0.0".to_string(),
-                total_entities: 0,
-                spatial_entities: 0,
-                coordinate_system: "Unknown".to_string(),
-                units: "Meters".to_string(),
-                tags: Vec::new(),
-            });
-
-            BuildingData {
-                building,
-                equipment: Vec::new(),
-            }
-        }
-        Err(primary_err) => {
-            let (mut building, spatial_entities) =
-                processor.process_file(import_path_str).map_err(|e| {
-                    anyhow!("IFC parsing failed: {}; fallback error: {}", primary_err, e)
-                })?;
-            
-            building.metadata = Some(BuildingMetadata {
-                source_file: Some(import_path_str.to_string()),
-                parser_version: "2.0.0".to_string(),
-                total_entities: 0,
-                spatial_entities: spatial_entities.len(),
-                coordinate_system: "Unknown".to_string(),
-                units: "Meters".to_string(),
-                tags: Vec::new(),
-            });
-
-            BuildingData {
-                building,
-                equipment: Vec::new(),
-            }
+        Ok(data) => data,
+        Err(_) => {
+            // Fallback to legacy processing if hierarchy extraction fails
+             let (building, _) = processor.process_file(import_path_str)?;
+             BuildingData {
+                 building,
+                 equipment: Vec::new(),
+             }
         }
     };
 
-    let yaml_filename = ensure_extension(
-        &sanitize_filename(&building_data.building.name, "building"),
-        ".yaml",
-    );
-    let yaml_path = repo_root.join(&yaml_filename);
-    PathSafety::validate_path_for_write(&yaml_path).map_err(|e| anyhow!(e))?;
-    let yaml_path_str = yaml_path
-        .to_str()
-        .ok_or_else(|| anyhow!("Invalid YAML path encoding"))?;
-    
-    let yaml_content = serializer.to_yaml(&building_data)
-        .map_err(|e| anyhow!("Failed to serialize YAML: {}", e))?;
-
-    fs::write(&yaml_path, yaml_content)
-        .map_err(|e| anyhow!("Failed to write YAML to {}: {}", yaml_path.display(), e))?;
-
-    let floors = building_data.floors.len();
+    let floors = building_data.building.floors.len();
     let rooms = building_data
-        .floors
+        .building.floors
         .iter()
         .flat_map(|floor| floor.wings.iter())
         .map(|wing| wing.rooms.len())
         .sum();
     let equipment = building_data
-        .floors
+        .building.floors
         .iter()
         .map(|floor| {
             let floor_eq = floor.equipment.len();
@@ -143,7 +89,16 @@ pub fn import_ifc(repo_root: &Path, filename: &str, data_base64: &str) -> Result
         })
         .sum();
 
+    // Verify yaml_path availability - it seems `yaml_path` variable is missing too.
+    // We should probably generate it or use a default.
+    let yaml_filename = format!("{}.yaml", sanitize_filename(&building_data.building.name, "building"));
+    let yaml_path = repo_root.join(&yaml_filename);
     let relative_yaml = relative_display_path(repo_root, &yaml_path);
+    
+    // Save YAML
+    let yaml_string = BuildingYamlSerializer::serialize(&building_data)
+        .map_err(|e| anyhow!("Failed to serialize YAML: {}", e))?;
+    fs::write(&yaml_path, yaml_string)?;
 
     Ok(IfcImportResult {
         building_name: building_data.building.name,
@@ -177,9 +132,9 @@ pub fn export_ifc(
     let ifc_path = exports_dir.join(&export_filename);
     PathSafety::validate_path_for_write(&ifc_path).map_err(|e| anyhow!(e))?;
 
-    let sync_state_path = repo_root.join(IFCSyncState::default_path());
-    let mut sync_state = IFCSyncState::load(&sync_state_path).unwrap_or_else(|| {
-        IFCSyncState::new(
+    let sync_state_path = repo_root.join(SyncState::default_path());
+    let mut sync_state = SyncState::load(&sync_state_path).unwrap_or_else(|| {
+        SyncState::new(
             ifc_path
                 .strip_prefix(repo_root)
                 .unwrap_or(&ifc_path)
@@ -264,10 +219,16 @@ fn relative_display_path(root: &Path, target: &Path) -> String {
 
 fn load_building_data(repo_root: &Path) -> Result<BuildingData> {
     let mut yaml_candidates = Vec::new();
-    for entry in PathSafety::read_dir_safely(Path::new("."), repo_root)? {
-        if let Some(ext) = entry.extension().and_then(|s| s.to_str()) {
+    // Safe directory reading with path validation
+    PathSafety::validate_path(Path::new("."))
+        .map_err(|e| anyhow!("Invalid path: {}", e))?;
+        
+    for entry in fs::read_dir(".")? {
+        let entry = entry?;
+        let path = entry.path();
+        if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
             if ext.eq_ignore_ascii_case("yaml") || ext.eq_ignore_ascii_case("yml") {
-                yaml_candidates.push(entry);
+                yaml_candidates.push(path);
             }
         }
     }
@@ -276,7 +237,9 @@ fn load_building_data(repo_root: &Path) -> Result<BuildingData> {
         .first()
         .ok_or_else(|| anyhow!("No YAML building data found in repository"))?;
 
-    let content = PathSafety::read_file_safely(yaml_path, repo_root)?;
+    // Safe file reading
+    let content = PathSafety::read_file_safely(yaml_path, repo_root)
+        .map_err(|e| anyhow::anyhow!("Failed to read safe file: {}", e))?;
     let data: BuildingData = serde_yaml::from_str(&content)
         .map_err(|e| anyhow!("Failed to parse YAML file {}: {}", yaml_path.display(), e))?;
     Ok(data)

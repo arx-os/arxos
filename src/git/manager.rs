@@ -141,7 +141,6 @@ impl BuildingGitManager {
     pub fn stage_file(&mut self, file_path: &str) -> Result<(), GitError> {
         stage_file(&mut self.repo, file_path)
     }
-
     /// Stage all modified files
     pub fn stage_all(&mut self) -> Result<usize, GitError> {
         stage_all(&mut self.repo)
@@ -170,6 +169,11 @@ impl BuildingGitManager {
         }
 
         result
+    }
+
+    /// Helper for simple commit (alias to commit_staged)
+    pub fn commit(&mut self, message: &str) -> Result<String, GitError> {
+        self.commit_staged(message)
     }
 
     /// Commit staged changes with user attribution

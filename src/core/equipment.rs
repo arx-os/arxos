@@ -71,6 +71,9 @@ pub struct Equipment {
     pub equipment_type: EquipmentType,
     /// 3D spatial position with coordinate system
     pub position: Position,
+    /// Optional mesh geometry
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mesh: Option<crate::core::spatial::mesh::Mesh>,
     /// Key-value metadata
     pub properties: HashMap<String, String>,
     /// Operational status (whether equipment is running/active)
@@ -152,6 +155,7 @@ impl Default for Equipment {
                 z: 0.0,
                 coordinate_system: "building_local".to_string(),
             },
+            mesh: None,
             properties: HashMap::new(),
             status: EquipmentStatus::Unknown,
             health_status: None,
@@ -206,6 +210,7 @@ impl Equipment {
                 z: 0.0,
                 coordinate_system: "building_local".to_string(),
             },
+            mesh: None,
             properties: HashMap::new(),
             status: EquipmentStatus::Active,
             health_status: None,

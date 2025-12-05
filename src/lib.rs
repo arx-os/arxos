@@ -17,6 +17,8 @@ pub mod ifc;
 pub mod git;
 pub mod persistence;
 pub mod sensor;
+pub mod hardware;
+pub mod spatial;
 pub mod utils;
 pub mod validation;
 pub mod yaml;

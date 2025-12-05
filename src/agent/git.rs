@@ -4,7 +4,54 @@ use anyhow::{anyhow, Context, Result};
 use crate::git::{BuildingGitManager, CommitMetadata, GitConfigManager};
 use crate::git::diff::DiffLineType;
 use git2::{Repository, Status, StatusOptions};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SyncState {
+    pub last_export_timestamp: chrono::DateTime<chrono::Utc>,
+    pub ifc_file_path: std::path::PathBuf,
+    pub equipment_paths: Vec<String>,
+    pub rooms_paths: Vec<String>,
+}
+
+impl SyncState {
+    pub fn new(ifc_file_path: std::path::PathBuf) -> Self {
+        Self {
+            last_export_timestamp: chrono::DateTime::<chrono::Utc>::MIN_UTC,
+            ifc_file_path,
+            equipment_paths: Vec::new(),
+            rooms_paths: Vec::new(),
+        }
+    }
+
+    pub fn default_path() -> &'static str {
+        ".arxos/ifc_sync_state.yaml"
+    }
+
+    pub fn load(path: &std::path::Path) -> Option<Self> {
+        if path.exists() {
+             let content = std::fs::read_to_string(path).ok()?;
+             serde_yaml::from_str(&content).ok()
+        } else {
+            None
+        }
+    }
+
+    pub fn save(&self, path: &std::path::Path) -> anyhow::Result<()> {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let content = serde_yaml::to_string(self)?;
+        std::fs::write(path, content)?;
+        Ok(())
+    }
+
+    pub fn update_after_export(&mut self, equipment: Vec<String>, rooms: Vec<String>) {
+        self.last_export_timestamp = chrono::Utc::now();
+        self.equipment_paths = equipment;
+        self.rooms_paths = rooms;
+    }
+}
 
 #[derive(Serialize)]
 pub struct GitStatusSummary {

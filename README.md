@@ -114,6 +114,15 @@ arx dashboard status --building "Office Building"
 arx watch --building "Office Building"
 ```
 
+#### Remote Control (SSH)
+```bash
+# Connect to a remote Agent
+arx remote connect office-hq
+
+# Execute remote command
+arx remote exec office-hq "get temp --room 'Server Room'"
+```
+
 #### AR & Mobile Integration
 ```bash
 # Manage pending AR-detected equipment
@@ -190,6 +199,8 @@ ArxOS follows security best practices with automated scanning and comprehensive 
 - **[Hardware Integration](docs/features/HARDWARE_INTEGRATION.md)** - Deploy sensors and contribute to the DePIN network
 - **[Reward System](docs/business/REWARD_SYSTEM.md)** - How contributors earn rewards for building data (USD-based, no crypto complexity)
 - **[Mobile (Archived)](docs/mobile/README.md)** - Historical native app documentation (read-only)
+- **[Remote Control](docs/SSH_REMOTE_CONTROL.md)** - SSH-based remote management and automation guide
+- **[Vendor Integration](docs/VENDOR_INTEGRATION.md)** - Guide for hardware vendors and driver developers
 
 ---
 

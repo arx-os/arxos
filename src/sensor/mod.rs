@@ -2,4 +2,5 @@
 
 pub mod ingest;
 pub mod types;
+pub mod storage;
 

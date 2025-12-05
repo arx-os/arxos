@@ -488,6 +488,7 @@ pub struct SpatialEntity {
     pub entity_type: String,
     pub position: Point3D,
     pub bounding_box: BoundingBox3D,
+    pub mesh: Option<super::mesh::Mesh>,
     pub coordinate_system: Option<CoordinateSystem>,
 }
 
@@ -530,8 +531,15 @@ impl SpatialEntity {
             entity_type,
             position,
             bounding_box,
+            mesh: None,
             coordinate_system: None,
         }
+    }
+
+    /// Set a custom mesh for this entity (builder pattern)
+    pub fn with_mesh(mut self, mesh: super::mesh::Mesh) -> Self {
+        self.mesh = Some(mesh);
+        self
     }
 
     /// Set a custom bounding box for this entity (builder pattern)

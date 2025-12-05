@@ -242,6 +242,7 @@ impl HierarchyBuilder {
                         },
                     },
                     coordinate_system: "building_local".to_string(),
+                    mesh: None,
                 },
                 properties,
                 created_at: Some(Utc::now()),
@@ -470,6 +471,7 @@ impl HierarchyBuilder {
                 health_status: None,
                 room_id: None, // Will be assigned based on spatial data
                 sensor_mappings: None,
+                mesh: None,
             };
             equipment_list.push(equipment);
         }

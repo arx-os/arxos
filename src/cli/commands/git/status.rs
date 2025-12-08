@@ -10,7 +10,7 @@ pub struct StatusCommand {
 impl Command for StatusCommand {
     fn execute(&self) -> Result<(), Box<dyn Error>> {
         if self.interactive {
-            #[cfg(feature = "tui")]
+            #[cfg(all(feature = "tui", feature = "agent"))]
             {
                 use crate::agent::auth::TokenState;
                 // Dummy state for consistency with CLI dashboard command
@@ -26,6 +26,11 @@ impl Command for StatusCommand {
                 
                 let rt = tokio::runtime::Runtime::new()?;
                 rt.block_on(crate::tui::dashboard::run_dashboard(state))?;
+                return Ok(());
+            }
+            #[cfg(all(feature = "tui", not(feature = "agent")))]
+            {
+                println!("⚠️  Interactive dashboard requires --features agent");
                 return Ok(());
             }
             #[cfg(not(feature = "tui"))]

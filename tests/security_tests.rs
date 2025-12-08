@@ -407,6 +407,7 @@ fn create_test_c_string(s: &str) -> *mut c_char {
 
 /// Helper function to free test FFI string
 #[allow(dead_code)]
+#[allow(unsafe_code)]
 unsafe fn free_test_c_string(ptr: *mut c_char) {
     if !ptr.is_null() {
         let _ = CString::from_raw(ptr);

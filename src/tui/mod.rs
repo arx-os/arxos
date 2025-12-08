@@ -4,6 +4,7 @@
 //! Designed for non-technical building management professionals.
 
 pub mod command_palette;
+#[cfg(feature = "agent")]
 pub mod dashboard;
 pub mod diff_view;
 pub mod error_integration;

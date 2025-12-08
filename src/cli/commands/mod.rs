@@ -21,5 +21,7 @@ pub use import::ImportCommand;
 pub use export::ExportCommand;
 pub use init::InitCommand;
 pub use sync::SyncCommand;
+#[cfg(feature = "agent")]
 pub mod remote;
+#[cfg(feature = "agent")]
 pub use remote::RemoteCommand;

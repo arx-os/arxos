@@ -1,3 +1,6 @@
+//! Remote building management commands - requires agent feature
+#![cfg(feature = "agent")]
+
 use clap::{Args, Subcommand};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

@@ -5,9 +5,11 @@ pub mod args;
 pub mod commands;
 
 use commands::{
-    Command, ImportCommand, ExportCommand, InitCommand, RemoteCommand,
+    Command, ImportCommand, ExportCommand, InitCommand,
     git::{StatusCommand, CommitCommand, StageCommand, DiffCommand},
 };
+#[cfg(feature = "agent")]
+use commands::RemoteCommand;
 
 #[derive(Parser)]
 #[command(name = "arx")]
@@ -117,38 +119,14 @@ impl Cli {
             Commands::Query { pattern, format, verbose } => {
                 Self::handle_query(pattern, format, verbose)
             },
+            #[cfg(feature = "agent")]
             Commands::Remote(cmd) => {
                 Ok(cmd.execute()?)
             },
             Commands::Dashboard => {
-                #[cfg(feature = "tui")]
+                #[cfg(all(feature = "tui", feature = "agent"))]
                 {
                     use crate::agent::auth::TokenState;
-                    
-                    // For now, create a dummy state since the dashboard simulates data internally.
-                    // In the future, this should connect to the running agent or initialize hardware.
-                    let repo_root = std::path::PathBuf::from(".");
-                    let token_state = TokenState::new("dummy".to_string(), vec![]);
-                    
-                    // Initialize Hardware Manager with Simulated Interface
-                    let mut hardware = crate::hardware::HardwareManager::new();
-                    let mut sim = crate::hardware::simulated::SimulatedInterface::new();
-                    // We must connect explicitly
-                    // Since connect is async and we are in a sync block (before rt), we can't await here easily until we have RT.
-                    // Actually, we can just let run_dashboard handle connection if we moved it there, 
-                    // OR we do it inside the runtime block below.
-                    
-                    // For now, let's just add it. The dashboard loop should handle connection or we connect in the RT block.
-                    // HardwareProtocol::Simulated takes the interface.
-                    // We need to wrap it in the enum.
-                    hardware.add_interface("sim".to_string(), crate::hardware::HardwareProtocol::Simulated(sim));
-
-
-                    let state = std::sync::Arc::new(crate::agent::dispatcher::AgentState {
-                        repo_root,
-                        token: std::sync::Arc::new(std::sync::Mutex::new(token_state)),
-                        hardware: std::sync::Arc::new(hardware),
-                    });
                     
                     let rt = tokio::runtime::Runtime::new()?;
                     rt.block_on(async {
@@ -172,6 +150,11 @@ impl Cli {
                         crate::tui::dashboard::run_dashboard(state).await
                     })?;
                     Ok(())
+                }
+                #[cfg(all(feature = "tui", not(feature = "agent")))]
+                {
+                    println!("⚠️  Dashboard requires both --features tui and --features agent");
+                    Err("Agent feature not enabled".into())
                 }
                 #[cfg(not(feature = "tui"))]
                 {
@@ -855,6 +838,7 @@ pub enum Commands {
 
     },
     /// Manage remote building connections via SSH
+    #[cfg(feature = "agent")]
     Remote(RemoteCommand),
     /// Query equipment by ArxAddress glob pattern
     ///

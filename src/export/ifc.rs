@@ -62,6 +62,7 @@ impl<W: Write> StepWriter<W> {
     }
 
     /// Write a raw STEP line
+    #[allow(dead_code)]
     fn write_line(&mut self, _id: usize, content: &str) -> Result<()> {
         writeln!(self.writer, "#{};", content)?;
         // writeln!(self.writer, "#{}= {};", id, content)?; // Correct format is #1= IFCTYPE(...);
@@ -139,7 +140,15 @@ impl IFCExporter {
         self.export_content(&mut writer, owner_history_id)
     }
 
+    #[cfg(feature = "agent")]
     pub fn export_delta(&self, _sync_state: Option<&crate::agent::git::SyncState>, output_path: &Path) -> Result<()> {
+        // For now, delta export is same as full export (placeholder)
+        // In real implementation, this would filter entities based on sync state
+        self.export(output_path)
+    }
+
+    #[cfg(not(feature = "agent"))]
+    pub fn export_delta(&self, _sync_state: Option<&()>, output_path: &Path) -> Result<()> {
         // For now, delta export is same as full export (placeholder)
         // In real implementation, this would filter entities based on sync state
         self.export(output_path)
@@ -588,7 +597,7 @@ impl IFCExporter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::{Building, Floor, Room, RoomType, Equipment, EquipmentType, SpatialProperties, Position, Dimensions, BoundingBox3D, Point3D};
+    use crate::core::{Building, Floor, Room, RoomType, Equipment, EquipmentType, SpatialProperties, Position, Dimensions, BoundingBox};
     use tempfile::NamedTempFile;
 
     #[test]
@@ -603,7 +612,11 @@ mod tests {
         room.spatial_properties = SpatialProperties {
             position: Position { x: 10.0, y: 20.0, z: 0.0, coordinate_system: "floor".to_string() },
             dimensions: Dimensions { width: 5.0, height: 3.0, depth: 4.0 },
-            bounding_box: BoundingBox3D::new(Point3D::origin(), Point3D::origin()), // Dummy
+            bounding_box: BoundingBox::new(
+                Position { x: 7.5, y: 18.0, z: 0.0, coordinate_system: "floor".to_string() },
+                Position { x: 12.5, y: 22.0, z: 3.0, coordinate_system: "floor".to_string() },
+            ),
+            mesh: None,
             coordinate_system: "floor".to_string(),
         };
         
@@ -623,7 +636,7 @@ mod tests {
 
         let data = BuildingData {
             building,
-            ..Default::default()
+            equipment: vec![],
         };
 
         // Export to temp file

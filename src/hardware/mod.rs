@@ -13,7 +13,6 @@ use std::collections::HashMap;
 #[cfg(feature = "agent")]
 pub mod bacnet;
 #[cfg(feature = "agent")]
-#[cfg(feature = "agent")]
 pub mod modbus;
 #[cfg(feature = "agent")]
 pub mod simulated;
@@ -43,10 +42,10 @@ pub enum ReadingQuality {
 #[async_trait]
 pub trait HardwareInterface: Send + Sync {
     /// Read a sensor value
-    async fn read_sensor(&self, location: &str, sensor_type: &str) -> Result<SensorReading>;
+    async fn read_sensor(&self, _location: &str, _sensor_type: &str) -> Result<SensorReading>;
     
     /// Write a control value
-    async fn write_control(&self, location: &str, control_type: &str, value: f64) -> Result<()>;
+    async fn write_control(&self, _location: &str, _control_type: &str, _value: f64) -> Result<()>;
     
     /// Get all available sensors
     async fn list_sensors(&self) -> Result<Vec<String>>;
@@ -71,9 +70,12 @@ pub enum HardwareProtocol {
     Simulated(simulated::SimulatedInterface),
     #[cfg(feature = "agent")]
     Mqtt(mqtt::MqttInterface),
+    #[cfg(not(feature = "agent"))]
+    Disabled,
 }
 
 impl HardwareProtocol {
+    #[cfg_attr(not(feature = "agent"), allow(unused_variables))]
     pub async fn read_sensor(&self, location: &str, sensor_type: &str) -> Result<SensorReading> {
         match self {
             #[cfg(feature = "agent")]
@@ -85,10 +87,11 @@ impl HardwareProtocol {
             #[cfg(feature = "agent")]
             Self::Simulated(i) => i.read_sensor(location, sensor_type).await,
             #[cfg(not(feature = "agent"))]
-            _ => anyhow::bail!("Agent feature disabled"),
+            Self::Disabled => anyhow::bail!("Agent feature disabled (attempted to read {} sensor at {})", sensor_type, location),
         }
     }
 
+    #[cfg_attr(not(feature = "agent"), allow(unused_variables))]
     pub async fn write_control(&self, location: &str, control_type: &str, value: f64) -> Result<()> {
         match self {
             #[cfg(feature = "agent")]
@@ -100,7 +103,7 @@ impl HardwareProtocol {
             #[cfg(feature = "agent")]
             Self::Simulated(i) => i.write_control(location, control_type, value).await,
             #[cfg(not(feature = "agent"))]
-            _ => anyhow::bail!("Agent feature disabled"),
+            Self::Disabled => anyhow::bail!("Agent feature disabled (attempted to write {} control at {} with value {})", control_type, location, value),
         }
     }
 
@@ -115,7 +118,7 @@ impl HardwareProtocol {
             #[cfg(feature = "agent")]
             Self::Simulated(i) => i.is_connected().await,
             #[cfg(not(feature = "agent"))]
-            _ => false,
+            Self::Disabled => false,
         }
     }
 
@@ -130,7 +133,7 @@ impl HardwareProtocol {
             #[cfg(feature = "agent")]
             Self::Simulated(i) => i.list_sensors().await,
             #[cfg(not(feature = "agent"))]
-            _ => Ok(vec![]),
+            Self::Disabled => Ok(vec![]),
         }
     }
 }
@@ -158,7 +161,10 @@ impl HardwareManager {
                 match interface.read_sensor(location, sensor_type).await {
                     Ok(reading) => return Ok(reading),
                     Err(e) => {
+                        #[cfg(feature = "agent")]
                         tracing::warn!("Interface {} failed to read sensor: {}", name, e);
+                        #[cfg(not(feature = "agent"))]
+                        eprintln!("Interface {} failed to read sensor: {}", name, e);
                         continue;
                     }
                 }
@@ -175,7 +181,10 @@ impl HardwareManager {
                 match interface.write_control(location, control_type, value).await {
                     Ok(()) => return Ok(()),
                     Err(e) => {
+                        #[cfg(feature = "agent")]
                         tracing::warn!("Interface {} failed to write control: {}", name, e);
+                        #[cfg(not(feature = "agent"))]
+                        eprintln!("Interface {} failed to write control: {}", name, e);
                         continue;
                     }
                 }

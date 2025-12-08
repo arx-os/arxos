@@ -1,3 +1,6 @@
+//! Dashboard module - requires both tui and agent features
+#![cfg(feature = "agent")]
+
 use crate::agent::dispatcher::AgentState;
 use anyhow::Result;
 use crossterm::{

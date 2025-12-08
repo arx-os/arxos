@@ -13,6 +13,8 @@ pub mod import;
 pub mod export;
 pub mod init;
 pub mod sync;
+#[cfg(feature = "tui")]
+pub mod search;
 
 pub use catalog::*;
 pub use command_trait::Command;
@@ -21,6 +23,8 @@ pub use import::ImportCommand;
 pub use export::ExportCommand;
 pub use init::InitCommand;
 pub use sync::SyncCommand;
+#[cfg(feature = "tui")]
+pub use search::SearchCommand;
 #[cfg(feature = "agent")]
 pub mod remote;
 #[cfg(feature = "agent")]

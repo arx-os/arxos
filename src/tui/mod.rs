@@ -14,6 +14,8 @@ pub mod help;
 pub mod layouts;
 pub mod merge_tool;
 pub mod mouse;
+#[cfg(feature = "tui")]
+pub mod search;
 pub mod spreadsheet;
 pub mod terminal;
 pub mod theme;

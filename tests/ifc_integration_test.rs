@@ -28,12 +28,11 @@ fn test_ifc_files_parse_with_bounding_boxes() {
                 
                 // Verify spatial entities have valid bounding boxes where applicable
                 for entity in &spatial_entities {
-                    if let Some(bbox) = &entity.bounding_box {
-                        // Basic sanity check: max >= min for all dimensions
-                        assert!(bbox.max.x >= bbox.min.x, "Invalid bbox X for entity");
-                        assert!(bbox.max.y >= bbox.min.y, "Invalid bbox Y for entity");
-                        assert!(bbox.max.z >= bbox.min.z, "Invalid bbox Z for entity");
-                    }
+                    let bbox = &entity.bounding_box;
+                    // Basic sanity check: max >= min for all dimensions
+                    assert!(bbox.max.x >= bbox.min.x, "Invalid bbox X for entity {}", entity.id);
+                    assert!(bbox.max.y >= bbox.min.y, "Invalid bbox Y for entity {}", entity.id);
+                    assert!(bbox.max.z >= bbox.min.z, "Invalid bbox Z for entity {}", entity.id);
                 }
                 println!("  ✅ All bounding boxes valid");
             }

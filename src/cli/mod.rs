@@ -254,9 +254,66 @@ impl Cli {
         use crate::persistence::load_building_data_from_dir;
 
         if interactive {
-            println!("⚠️  Interactive search browser not yet implemented");
-            println!("💡 Use without --interactive for text-based search");
-            return Ok(());
+            #[cfg(feature = "tui")]
+            {
+                use crate::persistence::load_building_data_from_dir;
+                use crate::tui::search::{SearchAction, SearchBrowser};
+                use crate::tui::TerminalManager;
+                use crossterm::event::{self, Event};
+                use std::time::Duration;
+
+                // Load building data
+                let building_data = load_building_data_from_dir()?;
+
+                // Initialize terminal (automatically enters alternate screen)
+                let mut terminal_manager = TerminalManager::new()?;
+
+                // Create search browser with initial query
+                let mut browser = SearchBrowser::new(building_data);
+                for c in query.chars() {
+                    browser.handle_key(event::KeyEvent::from(crossterm::event::KeyCode::Char(c)));
+                }
+
+                // Main event loop
+                let result = loop {
+                    terminal_manager.terminal().draw(|frame| {
+                        browser.render(frame, frame.size());
+                    })?;
+
+                    if event::poll(Duration::from_millis(100))? {
+                        if let Event::Key(key) = event::read()? {
+                            match browser.handle_key(key) {
+                                SearchAction::Continue => {}
+                                SearchAction::Select(result) => {
+                                    break Ok(result);
+                                }
+                                SearchAction::Exit => {
+                                    // TerminalManager cleanup handled by Drop
+                                    return Ok(());
+                                }
+                            }
+                        }
+                    }
+                };
+
+                // TerminalManager cleanup handled by Drop trait
+
+                // Display selected result
+                match result {
+                    Ok(result) => {
+                        println!("Selected: {} {} - {}", result.icon(), result.title, result.subtitle);
+                        println!("ID: {}", result.id);
+                        return Ok(());
+                    }
+                    Err(e) => return Err(e),
+                }
+            }
+            #[cfg(not(feature = "tui"))]
+            {
+                println!("⚠️  Interactive search browser requires --features tui");
+                println!("💡 Use without --interactive for text-based search");
+                return Ok(());
+            }
         }
 
         // If no specific search type specified, search everything

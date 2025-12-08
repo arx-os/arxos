@@ -7,15 +7,15 @@ use nalgebra::Vector3;
 fn test_extruded_solid_bounding_box_manual() {
     // Profile points: 4x3 rectangle at Z=0
     let profile_points = vec![
-        Vector3::new(0.0, 0.0, 0.0),
-        Vector3::new(4.0, 0.0, 0.0),
-        Vector3::new(4.0, 3.0, 0.0),
-        Vector3::new(0.0, 3.0, 0.0),
+        Vector3::new(0.0_f64, 0.0_f64, 0.0_f64),
+        Vector3::new(4.0_f64, 0.0_f64, 0.0_f64),
+        Vector3::new(4.0_f64, 3.0_f64, 0.0_f64),
+        Vector3::new(0.0_f64, 3.0_f64, 0.0_f64),
     ];
 
     // Extrusion: 3.0 units in Z direction
-    let extrusion_direction = Vector3::new(0.0, 0.0, 1.0);
-    let extrusion_depth = 3.0;
+    let extrusion_direction = Vector3::new(0.0_f64, 0.0_f64, 1.0_f64);
+    let extrusion_depth = 3.0_f64;
     let extrusion_vector = extrusion_direction * extrusion_depth;
 
     // Generate all points (base + extruded)

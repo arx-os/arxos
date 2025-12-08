@@ -76,6 +76,7 @@ crossterm = { version = "0.27", optional = true }
 ratatui = { version = "0.24", optional = true }
 csv = { version = "1.3", optional = true }
 arboard = { version = "3.3", optional = true }
+fuzzy-matcher = { version = "0.3", optional = true }
 bevy = { version = "0.14", optional = true, features = ["dynamic_linking"] }
 axum = { version = "0.7", features = ["ws", "macros"], optional = true }
 futures-util = { version = "0.3", optional = true }
@@ -98,7 +99,7 @@ web-sys = { version = "0.3.83", features = ["Window", "Document", "HtmlElement",
 
 [features]
 default = ["tui"]
-tui = ["crossterm", "ratatui", "csv", "arboard"]
+tui = ["crossterm", "ratatui", "csv", "arboard", "fuzzy-matcher"]
 render3d = ["bevy"]
 agent = ["tokio", "tracing", "tracing-subscriber", "axum", "futures-util", "notify", "russh", "russh-keys", "ssh2", "tokio-modbus", "rumqttc"]
 web = ["leptos", "leptos_meta", "leptos_router", "wasm-bindgen", "console_error_panic_hook", "web-sys"]

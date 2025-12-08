@@ -357,19 +357,136 @@ arx watch --building "Office"               # Live watch mode
 ## Search & Query Commands
 
 ### `arx search`
-Search for equipment or rooms.
+Interactive fuzzy search browser for fast discovery of rooms, equipment, floors, and buildings.
 
 ```bash
-arx search <QUERY> [--building <NAME>]
+arx search [QUERY] [OPTIONS]
 
 # Examples
-arx search "VAV"                           # Search all buildings
-arx search "VAV" --building "Office"       # Search specific building
-arx search "HVAC" --type equipment         # Search equipment only
+arx search                                 # Open interactive browser
+arx search "hvac"                          # Start with initial query
+arx search --interactive                   # Explicit interactive mode
+arx search "boiler" --type equipment       # Filter equipment only
+arx search --floor 2                       # Filter floor 2 only
+arx search "conference" --type room --floor 3  # Combined filters
 ```
 
+**Options:**
+- `-q, --query <QUERY>` - Initial search query
+- `-n, --max-results <NUM>` - Maximum results (default: 50)
+- `-t, --type <TYPE>` - Filter by type: `room`, `equipment`, `floor`, `building`
+- `-f, --floor <NUM>` - Filter by floor level
+- `--interactive` - Force interactive mode (default if no args)
+
+#### Interactive Mode
+
+The interactive search browser provides real-time fuzzy matching with keyboard navigation:
+
+**Search Features:**
+- **Fuzzy Matching**: Type partial names (e.g., "hvac" matches "HVAC-AHU-01")
+- **Syntax Highlighting**: Matched characters highlighted in yellow
+- **Live Filtering**: Results update as you type
+- **Score-Based Ranking**: Best matches appear first
+- **Search History**: Press Up/Down when empty to recall recent searches
+
+**Keyboard Shortcuts:**
+
+| Shortcut | Action |
+|----------|--------|
+| **Navigation** |
+| `↑` / `k` | Select previous result |
+| `↓` / `j` | Select next result |
+| `Ctrl+N` | Next result (Emacs-style) |
+| `Ctrl+P` | Previous result (Emacs-style) |
+| **Selection** |
+| `Enter` | Select current result and exit |
+| `Esc` / `q` | Cancel and exit |
+| **Editing** |
+| Type characters | Add to search query |
+| `Backspace` | Remove last character |
+| `Ctrl+U` | Clear entire query |
+| **Filters** |
+| `Ctrl+R` | Toggle room filter |
+| `Ctrl+E` | Toggle equipment filter |
+| `Ctrl+F` | Toggle floor filter |
+| `Ctrl+X` | Clear all filters |
+| **History** |
+| `↑` (when empty) | Navigate search history |
+| `↓` (when empty) | Navigate search history |
+
+**UI Layout:**
+
+```
+┌─ 🔍 Search [Filter: Room] [Floor: 2] ────────────┐
+│ hvac                                              │
+├───────────────────────────────────────────────────┤
+│ Results (12/50)                                   │
+│ ▸ ⚙️  HVAC-AHU-01  Floor 2, East Wing           │
+│   ⚙️  HVAC-VAV-12  Floor 3, West Wing           │
+│   🚪 HVAC Room     Floor 1, Mechanical           │
+├───────────────────────────────────────────────────┤
+│ Help                                              │
+│ ↑↓ Navigate │ Enter: Select │ Esc: Cancel        │
+│ Ctrl+R: Rooms │ Ctrl+E: Equipment │ Ctrl+X: Clear │
+└───────────────────────────────────────────────────┘
+```
+
+**Search Targets:**
+- **Rooms**: Searches name and room type (Office, Conference, Storage, etc.)
+- **Equipment**: Searches name and equipment type (HVAC, Electrical, Plumbing, etc.)
+- **Floors**: Searches floor level identifier
+- **Building**: Searches building name
+
+**Result Icons:**
+- 🚪 Room
+- ⚙️  Equipment
+- 🏢 Floor
+- 🏠 Building
+- #️⃣  Tag
+
+#### Examples
+
+**Basic Search:**
+```bash
+# Open browser, type "conf" to find all conference rooms
+arx search
+
+# Start with pre-filled query
+arx search "boiler"
+
+# Search with filter
+arx search "ahu" --type equipment
+```
+
+**Workflow Example:**
+```bash
+# 1. Open search browser
+arx search
+
+# 2. Type "mech" → finds "Mechanical Room", "HVAC-MECH-01", etc.
+# 3. Press Ctrl+E → filters to equipment only
+# 4. Press ↓ to select
+# 5. Press Enter → displays result details
+```
+
+**Search History:**
+```bash
+# Search for something
+arx search "hvac"
+
+# Later, open search and press ↑ to recall "hvac"
+arx search
+```
+
+**Performance:**
+- Handles 1000+ entities without lag (<100ms response)
+- Results truncated at max_results (default: 50)
+- LRU cache stores last 50 searches
+
+---
+
 ### `arx query`
-Query by ArxAddress path.
+Query by ArxAddress path pattern.
 
 ```bash
 arx query <ADDRESS_PATTERN>

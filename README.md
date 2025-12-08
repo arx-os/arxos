@@ -14,7 +14,8 @@
 - 🎨 **3D Visualization** - Interactive terminal-based 3D building visualization
 - 🎮 **Gamified Planning** - Interactive PR review and equipment placement with constraint validation
 - 🪙 **On-Chain Economy** - Polygon contracts, staking CLI, and WASM surface for rewards and revenue splits
-- 💻 **WASM PWA** - Browser-based command surface with WebXR preview; native iOS/Android shells are archived
+- 🌐 **WASM PWA** - Progressive Web App runs in any modern browser, works offline, installable on mobile
+- 🔌 **Vendor Integration** - BACnet, Modbus, MQTT protocols for existing building automation systems
 - ⚡ **Terminal-First** - Designed for efficiency and automation
 
 ---
@@ -123,13 +124,16 @@ arx remote connect office-hq
 arx remote exec office-hq "get temp --room 'Server Room'"
 ```
 
-#### AR & Mobile Integration
+#### Hardware Integration (Vendor Protocols)
 ```bash
-# Manage pending AR-detected equipment
-arx ar pending --building "Office Building"
+# Configure BACnet device
+arx hardware add --protocol bacnet --device-id 12345 --address 192.168.1.100
 
-# Process AR scan data
-arx ar process scan.json --building "Office Building"
+# Monitor Modbus sensor
+arx hardware monitor --protocol modbus --address 192.168.1.50 --register 40001
+
+# Subscribe to MQTT topics
+arx hardware mqtt --broker mqtt.building.local --topic sensors/hvac/#
 ```
 
 #### Gamified Workflows
@@ -197,10 +201,11 @@ ArxOS follows security best practices with automated scanning and comprehensive 
 - **[API Reference](docs/core/API_REFERENCE.md)** - Comprehensive API reference for CLI, WASM, and core types
 - **[WASM Web Development](docs/web/DEVELOPMENT.md)** - Run the PWA, desktop agent, and CI pipeline
 - **[Hardware Integration](docs/features/HARDWARE_INTEGRATION.md)** - Deploy sensors and contribute to the DePIN network
+- **[Vendor Integration](docs/VENDOR_INTEGRATION.md)** - BACnet, Modbus, MQTT protocol guide for building automation vendors
 - **[Reward System](docs/business/REWARD_SYSTEM.md)** - How contributors earn rewards for building data (USD-based, no crypto complexity)
-- **[Mobile (Archived)](docs/mobile/README.md)** - Historical native app documentation (read-only)
 - **[Remote Control](docs/SSH_REMOTE_CONTROL.md)** - SSH-based remote management and automation guide
-- **[Vendor Integration](docs/VENDOR_INTEGRATION.md)** - Guide for hardware vendors and driver developers
+- **[Development Plan](docs/development/GEOMETRY_ENHANCEMENT_PLAN.md)** - Engineering roadmap and architectural decisions
+- **[Mobile (Archived)](docs/archive/mobile/README.md)** - Historical native app documentation (read-only)
 
 ---
 

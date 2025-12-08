@@ -10,8 +10,9 @@ Get started with ArxOS in 5 minutes! This guide covers the most common use cases
 2. [Import Your First Building](#import-your-first-building)
 3. [Add and Manage Equipment](#add-and-manage-equipment)
 4. [Visualize Your Building](#visualize-your-building)
-5. [Export and Share](#export-and-share)
-6. [AR Integration](#ar-integration)
+5. [Browser Requirements](#browser-requirements)
+6. [Hardware Integration](#hardware-integration)
+7. [Export and Share](#export-and-share)
 
 ---
 
@@ -199,41 +200,101 @@ open docs/index.html  # macOS
 xdg-open docs/index.html  # Linux
 ```
 
+## Browser Requirements
+
+### Supported Browsers
+
+ArxOS runs as a **Progressive Web App (PWA)** in modern browsers:
+
+**Desktop:**
+- ✅ Chrome/Edge 90+ (Recommended)
+- ✅ Firefox 88+
+- ✅ Safari 14+
+
+**Mobile:**
+- ✅ Chrome Mobile (Android)
+- ✅ Safari Mobile (iOS 14+)
+- ✅ Samsung Internet
+- ✅ Firefox Mobile
+
+**Requirements:**
+- WebAssembly support
+- IndexedDB for offline storage
+- Service Workers for offline mode
+- WebGL for 3D visualization
+
+### Installing as PWA
+
+**Desktop (Chrome/Edge):**
+1. Visit ArxOS web app
+2. Click install icon in address bar (⊕)
+3. Launch from desktop/start menu
+
+**Mobile:**
+1. Visit ArxOS in browser
+2. Tap "Add to Home Screen"
+3. Launch like native app
+
+**Offline Mode:**
+- PWA caches all assets
+- Works without internet connection
+- Syncs changes when online
+
 ---
 
-## AR Integration
+## Hardware Integration
 
-### Using Mobile App
+### Connecting to Building Automation Systems
 
-**Step 1:** Install ArxOS mobile app (iOS/Android)
+ArxOS integrates with existing building automation via standard protocols:
 
-**Step 2:** Scan equipment with your phone
-- Point camera at equipment
-- App detects and captures equipment
-- Equipment saved as "pending"
-
-**Step 3:** Review and confirm on desktop
-
+**BACnet (Building Automation and Control Networks):**
 ```bash
-# Open pending equipment manager
-arx ar pending --building "My Building"
+# Discover BACnet devices on network
+arx hardware discover --protocol bacnet
+
+# Add BACnet device
+arx hardware add --protocol bacnet \
+  --device-id 12345 \
+  --address 192.168.1.100 \
+  --building "Office Building"
+
+# Monitor all BACnet points
+arx hardware monitor --protocol bacnet --device-id 12345
 ```
 
-**Interactive mode:**
-- `↑/↓` - Navigate pending items
-- `Enter` - Confirm detection
-- `R` - Reject detection
-- `E` - Edit details before confirming
-- `Q` - Quit
-
-**Step 4:** Changes are auto-committed to Git!
-
+**Modbus (Industrial Sensors):**
 ```bash
-# View what was added
-arx log --building "My Building"
+# Connect to Modbus TCP device
+arx hardware add --protocol modbus \
+  --address 192.168.1.50 \
+  --port 502 \
+  --building "Factory"
+
+# Read specific registers
+arx hardware read --protocol modbus \
+  --address 192.168.1.50 \
+  --register 40001 \
+  --count 10
 ```
+
+**MQTT (IoT Sensors):**
+```bash
+# Subscribe to MQTT broker
+arx hardware mqtt \
+  --broker mqtt.building.local \
+  --topic sensors/hvac/# \
+  --building "Office Building"
+
+# Monitor in real-time
+arx hardware monitor --protocol mqtt
+```
+
+**See:** [Vendor Integration Guide](VENDOR_INTEGRATION.md) for detailed protocol setup
 
 ---
+
+## Export and Share
 
 ## Common Workflows
 
@@ -269,26 +330,25 @@ arx render --building "Office" --three-d --floor 3
 arx commit --building "Office" -m "Added floor 3 with equipment"
 ```
 
-### Workflow 3: AR Field Survey (20 minutes)
+### Workflow 3: Hardware Integration (20 minutes)
 
 ```bash
-# Day 1: Field work (on mobile)
-# - Walk building with phone
-# - Scan equipment (app does detection)
-# - Data syncs to cloud/server
+# Discover BACnet devices on building network
+arx hardware discover --protocol bacnet
 
-# Day 2: Office review (on desktop)
-# 1. Review detections
-arx ar pending --building "Office"
+# Add discovered device
+arx hardware add --protocol bacnet --device-id 12345 --address 192.168.1.100
 
-# 2. Confirm/reject each item
-# 3. Assign to rooms
-# 4. Add missing details
+# Monitor sensor readings in real-time
+arx hardware monitor --protocol bacnet
 
-# 3. Export updated model
+# Link sensors to equipment in spreadsheet
+arx spreadsheet equipment --building "Office"
+
+# Export with sensor mappings
 arx export ifc --building "Office" --output updated.ifc
 
-# 4. Share with team
+# Share with team
 git push origin main
 ```
 
@@ -497,7 +557,8 @@ COMMON COMMANDS:
   arx search <query>                 Search equipment
   arx commit -m "message"            Commit changes
   arx export ifc --output file.ifc   Export to IFC
-  arx ar pending                     Review AR scans
+  arx hardware discover              Discover devices
+  arx hardware monitor               Monitor sensors
   arx dashboard status               Status overview
   arx help                           Show help
 

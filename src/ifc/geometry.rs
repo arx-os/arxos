@@ -396,14 +396,19 @@ impl PlacementResolver {
             Vector3::new(0.0, 0.0, 1.0)
         };
 
-        let extrude_direction = profile_transform.rotate_vector(&direction);
-        let extrusion = extrude_direction * depth;
+        // Compute extrusion vector in local space before transformation
+        let local_extrusion = direction * depth;
 
         let mut result = Vec::new();
         for point in profile_points.drain(..) {
+            // Transform profile point to global space
             let base = profile_transform.transform_point(&point);
             result.push(base);
-            result.push(base + extrusion);
+            
+            // Transform the extruded point: apply extrusion in local space, then transform
+            let extruded_local = point + local_extrusion;
+            let extruded_global = profile_transform.transform_point(&extruded_local);
+            result.push(extruded_global);
         }
 
         result
@@ -646,9 +651,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // Feature not implemented: Bounding box computation for IFCEXTRUDEDAREASOLID
-    // Requires: Profile geometry analysis, extrusion direction processing, and 3D bounds calculation
-    // Impact: Spatial queries may have reduced accuracy for extruded solid geometries
     fn computes_bounding_box_for_extruded_solid() {
         let entities = vec![
             entity("1", "IFCCARTESIANPOINT", "IFCCARTESIANPOINT((0.,0.,0.))"),
@@ -694,6 +696,103 @@ mod tests {
         assert!((bbox.1.x - 4.0).abs() < 1e-6);
         assert!((bbox.1.y - 3.0).abs() < 1e-6);
         assert!((bbox.1.z - 3.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn computes_bounding_box_with_translated_placement() {
+        // Test extruded solid with translated placement (not at origin)
+        let entities = vec![
+            entity("1", "IFCCARTESIANPOINT", "IFCCARTESIANPOINT((10.,5.,2.))"),
+            entity("2", "IFCCARTESIANPOINT", "IFCCARTESIANPOINT((0.,0.,0.))"),
+            entity("3", "IFCCARTESIANPOINT", "IFCCARTESIANPOINT((2.,0.,0.))"),
+            entity("4", "IFCCARTESIANPOINT", "IFCCARTESIANPOINT((2.,2.,0.))"),
+            entity("5", "IFCCARTESIANPOINT", "IFCCARTESIANPOINT((0.,2.,0.))"),
+            entity("6", "IFCPOLYLINE", "IFCPOLYLINE((#3,#4,#5,#3))"),
+            entity("7", "IFCARBITRARYCLOSEDPROFILEDEF", "IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#6)"),
+            entity("8", "IFCAXIS2PLACEMENT3D", "IFCAXIS2PLACEMENT3D(#1,$,$)"),
+            entity("9", "IFCDIRECTION", "IFCDIRECTION((0.,0.,1.))"),
+            entity("10", "IFCEXTRUDEDAREASOLID", "IFCEXTRUDEDAREASOLID(#7,#8,#9,4.)"),
+            entity("11", "IFCSHAPEREPRESENTATION", "IFCSHAPEREPRESENTATION($,$,(#10))"),
+            entity("12", "IFCPRODUCTDEFINITIONSHAPE", "IFCPRODUCTDEFINITIONSHAPE($,$,(#11))"),
+            entity("13", "IFCSPACE", "IFCSPACE('Room',$,$,$,#12,$,$,.ELEMENT.,0.)"),
+        ];
+
+        let resolver = PlacementResolver::new(&entities);
+        let room = entities.iter().find(|e| e.id == "13").unwrap();
+        let bbox = resolver.compute_entity_bounding_box(room).unwrap();
+        
+        // Expected: 2x2 profile at (10,5,2) extruded 4 units in Z
+        // Min: (10, 5, 2), Max: (12, 7, 6)
+        assert!((bbox.0.x - 10.0).abs() < 1e-6, "min.x expected 10.0, got {}", bbox.0.x);
+        assert!((bbox.0.y - 5.0).abs() < 1e-6, "min.y expected 5.0, got {}", bbox.0.y);
+        assert!((bbox.0.z - 2.0).abs() < 1e-6, "min.z expected 2.0, got {}", bbox.0.z);
+        assert!((bbox.1.x - 12.0).abs() < 1e-6, "max.x expected 12.0, got {}", bbox.1.x);
+        assert!((bbox.1.y - 7.0).abs() < 1e-6, "max.y expected 7.0, got {}", bbox.1.y);
+        assert!((bbox.1.z - 6.0).abs() < 1e-6, "max.z expected 6.0, got {}", bbox.1.z);
+    }
+
+    #[test]
+    fn computes_bounding_box_with_angled_extrusion() {
+        // Test extruded solid with non-vertical extrusion direction
+        let entities = vec![
+            entity("1", "IFCCARTESIANPOINT", "IFCCARTESIANPOINT((0.,0.,0.))"),
+            entity("2", "IFCCARTESIANPOINT", "IFCCARTESIANPOINT((0.,0.,0.))"),
+            entity("3", "IFCCARTESIANPOINT", "IFCCARTESIANPOINT((3.,0.,0.))"),
+            entity("4", "IFCCARTESIANPOINT", "IFCCARTESIANPOINT((3.,3.,0.))"),
+            entity("5", "IFCCARTESIANPOINT", "IFCCARTESIANPOINT((0.,3.,0.))"),
+            entity("6", "IFCPOLYLINE", "IFCPOLYLINE((#2,#3,#4,#5,#2))"),
+            entity("7", "IFCARBITRARYCLOSEDPROFILEDEF", "IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#6)"),
+            entity("8", "IFCAXIS2PLACEMENT3D", "IFCAXIS2PLACEMENT3D(#1,$,$)"),
+            // Extrusion direction: normalized (1,0,1) vector
+            entity("9", "IFCDIRECTION", "IFCDIRECTION((0.7071067811865476,0.,0.7071067811865476))"),
+            entity("10", "IFCEXTRUDEDAREASOLID", "IFCEXTRUDEDAREASOLID(#7,#8,#9,4.24264)"), // ~3*sqrt(2)
+            entity("11", "IFCSHAPEREPRESENTATION", "IFCSHAPEREPRESENTATION($,$,(#10))"),
+            entity("12", "IFCPRODUCTDEFINITIONSHAPE", "IFCPRODUCTDEFINITIONSHAPE($,$,(#11))"),
+            entity("13", "IFCSPACE", "IFCSPACE('Room',$,$,$,#12,$,$,.ELEMENT.,0.)"),
+        ];
+
+        let resolver = PlacementResolver::new(&entities);
+        let room = entities.iter().find(|e| e.id == "13").unwrap();
+        let bbox = resolver.compute_entity_bounding_box(room).unwrap();
+        
+        // 3x3 profile extruded 3 units in X and 3 units in Z (45-degree angle)
+        // Min: (0, 0, 0), Max: (6, 3, 3)
+        assert!((bbox.0.x - 0.0).abs() < 1e-4, "min.x expected ~0.0, got {}", bbox.0.x);
+        assert!((bbox.0.y - 0.0).abs() < 1e-4, "min.y expected ~0.0, got {}", bbox.0.y);
+        assert!((bbox.0.z - 0.0).abs() < 1e-4, "min.z expected ~0.0, got {}", bbox.0.z);
+        assert!((bbox.1.x - 6.0).abs() < 1e-4, "max.x expected ~6.0, got {}", bbox.1.x);
+        assert!((bbox.1.y - 3.0).abs() < 1e-4, "max.y expected ~3.0, got {}", bbox.1.y);
+        assert!((bbox.1.z - 3.0).abs() < 1e-4, "max.z expected ~3.0, got {}", bbox.1.z);
+    }
+
+    #[test]
+    fn computes_bounding_box_with_small_profile() {
+        // Edge case: Very small profile (1mm cube)
+        let entities = vec![
+            entity("1", "IFCCARTESIANPOINT", "IFCCARTESIANPOINT((0.,0.,0.))"),
+            entity("2", "IFCCARTESIANPOINT", "IFCCARTESIANPOINT((0.001,0.,0.))"),
+            entity("3", "IFCCARTESIANPOINT", "IFCCARTESIANPOINT((0.001,0.001,0.))"),
+            entity("4", "IFCCARTESIANPOINT", "IFCCARTESIANPOINT((0.,0.001,0.))"),
+            entity("5", "IFCPOLYLINE", "IFCPOLYLINE((#1,#2,#3,#4,#1))"),
+            entity("6", "IFCARBITRARYCLOSEDPROFILEDEF", "IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#5)"),
+            entity("7", "IFCAXIS2PLACEMENT3D", "IFCAXIS2PLACEMENT3D(#1,$,$)"),
+            entity("8", "IFCDIRECTION", "IFCDIRECTION((0.,0.,1.))"),
+            entity("9", "IFCEXTRUDEDAREASOLID", "IFCEXTRUDEDAREASOLID(#6,#7,#8,0.001)"),
+            entity("10", "IFCSHAPEREPRESENTATION", "IFCSHAPEREPRESENTATION($,$,(#9))"),
+            entity("11", "IFCPRODUCTDEFINITIONSHAPE", "IFCPRODUCTDEFINITIONSHAPE($,$,(#10))"),
+            entity("12", "IFCSPACE", "IFCSPACE('SmallRoom',$,$,$,#11,$,$,.ELEMENT.,0.)"),
+        ];
+
+        let resolver = PlacementResolver::new(&entities);
+        let room = entities.iter().find(|e| e.id == "12").unwrap();
+        let bbox = resolver.compute_entity_bounding_box(room).unwrap();
+        
+        assert!((bbox.0.x - 0.0).abs() < 1e-6);
+        assert!((bbox.0.y - 0.0).abs() < 1e-6);
+        assert!((bbox.0.z - 0.0).abs() < 1e-6);
+        assert!((bbox.1.x - 0.001).abs() < 1e-6);
+        assert!((bbox.1.y - 0.001).abs() < 1e-6);
+        assert!((bbox.1.z - 0.001).abs() < 1e-6);
     }
 }
 

@@ -260,7 +260,10 @@ impl GitConfigManager {
             .unwrap_or_else(|_| {
                 // Try to load from ArxConfig
                 // Use helper function for consistent config access
-                crate::config::get_config_or_default().user.name.clone()
+                crate::config::ConfigManager::new()
+                    .ok()
+                    .map(|m| m.get_config().user.name.clone())
+                    .unwrap_or_else(|| whoami::realname())
             });
 
         let author_email = env::var("GIT_AUTHOR_EMAIL")
@@ -269,7 +272,10 @@ impl GitConfigManager {
                 // Try to load from ArxConfig
                 // Load config with fallback to default
                 // Use helper function for consistent config access
-                crate::config::get_config_or_default().user.email.clone()
+                crate::config::ConfigManager::new()
+                    .ok()
+                    .map(|m| m.get_config().user.email.clone())
+                    .unwrap_or_else(|| format!("{}@localhost", whoami::username()))
             });
 
         GitConfig {

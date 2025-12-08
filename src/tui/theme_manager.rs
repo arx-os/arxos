@@ -175,8 +175,8 @@ impl ThemeManager {
     /// Load theme from configuration
     fn load_theme_from_config() -> Result<Theme, Box<dyn std::error::Error>> {
         // Try to load from config manager
-        let config_manager = ConfigManager::new();
-        let _config = config_manager.config();
+        let _config_manager = ConfigManager::new().ok();
+        // Config loaded successfully if Some
         // Check if there's a theme in the config
         // For now, use default theme
         // In the future, we can add theme to UiConfig

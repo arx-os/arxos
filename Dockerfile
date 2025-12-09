@@ -1,7 +1,7 @@
 ## Multi-stage Dockerfile for ArxOS
 
 # ---- Builder Stage -------------------------------------------------------
-FROM rust:1.75-bookworm AS builder
+FROM rust:1.83-bookworm AS builder
 
 LABEL org.opencontainers.image.source="https://github.com/arx-os/arxos"
 

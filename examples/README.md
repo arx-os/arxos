@@ -65,7 +65,6 @@ let building: BuildingData = serde_yaml::from_str(&content)?;
 
 - **[Test Data](../test_data/)** - Test fixtures (different from examples)
 - **[Hardware Examples](../hardware/examples/)** - Hardware integration examples
-- **[Schemas](../schemas/)** - JSON schemas for validation
 
 ## 📝 Notes
 

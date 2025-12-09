@@ -40,7 +40,6 @@ RUN cargo fetch
 COPY benches ./benches
 COPY docs ./docs
 COPY include ./include
-COPY schemas ./schemas
 COPY scripts ./scripts
 COPY tests ./tests
 COPY examples ./examples
@@ -57,7 +56,6 @@ RUN mkdir -p /artifacts/bin /artifacts/lib /artifacts/include && \
     cp target/release/arx /artifacts/bin/ && \
     find target/release -maxdepth 1 -type f -name "libarx*.so" -exec cp {} /artifacts/lib/ \; && \
     if [ -f include/arxos_mobile.h ]; then cp include/arxos_mobile.h /artifacts/include/; fi && \
-    cp -R schemas /artifacts/schemas && \
     cp docs/CLI_REFERENCE.md /artifacts/CLI_REFERENCE.md
 
 # ---- Runtime Stage -------------------------------------------------------
@@ -85,10 +83,7 @@ WORKDIR ${ARX_HOME}
 COPY --from=builder /artifacts/bin/arx /usr/local/bin/arx
 COPY --from=builder /artifacts/lib ${ARX_HOME}/lib
 COPY --from=builder /artifacts/include ${ARX_HOME}/include
-COPY --from=builder /artifacts/schemas ${ARX_HOME}/schemas
 COPY --from=builder /artifacts/CLI_REFERENCE.md ${ARX_HOME}/CLI_REFERENCE.md
-
-RUN ln -s ${ARX_HOME}/schemas /workspace-schemas
 
 VOLUME ["/workspace"]
 
@@ -100,5 +95,5 @@ CMD ["--help"]
 # ---- Metadata ------------------------------------------------------------
 LABEL org.opencontainers.image.title="ArxOS Runtime" \
     org.opencontainers.image.url="https://arxos.io" \
-    org.opencontainers.image.description="Official ArxOS runtime image with CLI and schemas." \
+    org.opencontainers.image.description="Official ArxOS runtime image with CLI." \
     org.opencontainers.image.licenses="MIT"

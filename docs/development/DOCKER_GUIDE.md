@@ -9,7 +9,7 @@ This guide covers official ArxOS container images, how they are built, and how t
 | Image | Purpose | Key Contents |
 |-------|---------|--------------|
 | `ghcr.io/arx-os/arxos:builder` | Reproducible build + test environment | Rust toolchain, `cargo`, `cbindgen`, `wasm-pack`, Linux build deps |
-| `ghcr.io/arx-os/arxos:runtime` | Lightweight execution environment for CLI and automation jobs | `arx` binary, schemas |
+| `ghcr.io/arx-os/arxos:runtime` | Lightweight execution environment for CLI and automation jobs | `arx` binary |
 
 Tagging aligns with `package.version` from the top-level `Cargo.toml`. Each release publishes semantic tags (e.g., `2.0.0`) plus rolling `latest`.
 
@@ -23,7 +23,7 @@ Tagging aligns with `package.version` from the top-level `Cargo.toml`. Each rele
 - Workflow:
   1. Copy manifests and run `cargo fetch` (layer caching).
   2. Copy source and run `cargo build --release`.
-  3. Export artifacts (`arx` binary, schemas, CLI reference) to `/artifacts`.
+  3. Export artifacts (`arx` binary, CLI reference) to `/artifacts`.
 - Usage examples:
 
 ```bash
@@ -48,7 +48,7 @@ docker run --rm -it \
 - Base: `debian:bookworm-slim`, installs only `ca-certificates` and `git`.
 - Runtime layout:
   - Binary: `/usr/local/bin/arx`.
-  - Assets: `/opt/arxos/{schemas,CLI_REFERENCE.md}`.
+  - Assets: `/opt/arxos/CLI_REFERENCE.md`.
   - Volume: `/workspace` (mount Git repos, IFC data, outputs).
   - Non-root user `arxos` (UID/GID `10001`).
 - Environment variables:

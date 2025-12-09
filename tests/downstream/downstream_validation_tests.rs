@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use arx::ifc::IFCProcessor;
 use arx::yaml::BuildingYamlSerializer;
-use arxui::render::BuildingRenderer;
+use arxos::render::BuildingRenderer;
 use arxos::export::ar::gltf::GLTFExporter;
 use tempfile::tempdir;
 

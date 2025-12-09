@@ -1,12 +1,12 @@
 //! Tests for equipment management command handlers
 
-use arxui::commands::equipment::handle_equipment_command;
-use arxui::cli::EquipmentCommands;
+use arxos::commands::equipment::handle_equipment_command;
+use arxos::cli::EquipmentCommands;
 use tempfile::TempDir;
 
 #[test]
 fn test_parse_equipment_type() {
-    use arxui::commands::equipment::parse_equipment_type;
+    use arxos::commands::equipment::parse_equipment_type;
     use arxos::core::EquipmentType;
     
     // Test valid equipment types
@@ -49,7 +49,7 @@ fn test_equipment_update_command() {
 
 mod malformed_input_tests {
     use super::*;
-    use arxui::commands::equipment;
+    use arxos::commands::equipment;
 
     #[test]
     fn test_equipment_position_malformed_coordinates() {

@@ -12,9 +12,9 @@ use arxos::core::{
 use arxos::persistence::PersistenceManager;
 use arxos::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
 use arxos::BuildingYamlSerializer;
-use arxui::tui::spreadsheet::data_source::{EquipmentDataSource, SpreadsheetDataSource};
-use arxui::tui::spreadsheet::types::{CellValue, ColumnDefinition};
-use arxui::tui::spreadsheet::workflow::{ConflictDetector, FileLock};
+use arxos::tui::spreadsheet::data_source::{EquipmentDataSource, SpreadsheetDataSource};
+use arxos::tui::spreadsheet::types::{CellValue, ColumnDefinition};
+use arxos::tui::spreadsheet::workflow::{ConflictDetector, FileLock};
 use chrono::Utc;
 use serial_test::serial;
 use std::collections::HashMap;

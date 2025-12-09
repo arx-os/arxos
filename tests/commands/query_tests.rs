@@ -2,7 +2,7 @@
 //!
 //! Tests the query engine with glob pattern matching for ArxAddress paths
 
-use arxui::commands::query::handle_query_command;
+use arxos::commands::query::handle_query_command;
 #[allow(deprecated)]
 use arxos::yaml::{
     BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentData, EquipmentStatus,

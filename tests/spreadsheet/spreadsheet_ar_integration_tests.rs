@@ -3,7 +3,7 @@
 //! Tests the AR scan file watcher that monitors for new AR scan files
 //! and triggers spreadsheet auto-reload.
 
-use arxui::tui::spreadsheet::workflow::ArScanWatcher;
+use arxos::tui::spreadsheet::workflow::ArScanWatcher;
 use std::path::Path;
 use serial_test::serial;
 use std::fs;

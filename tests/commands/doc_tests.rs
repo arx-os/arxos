@@ -1,6 +1,6 @@
 //! Tests for documentation generation command
 
-use arxui::commands::doc::handle_doc;
+use arxos::commands::doc::handle_doc;
 use std::fs;
 use std::path::Path;
 

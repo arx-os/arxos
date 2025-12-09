@@ -1,74 +1,103 @@
-# Test Organization
-
-**Last Updated:** January 2025
+# ArxOS Test Suite
 
 ## Overview
 
-This directory contains all integration tests for ArxOS. Tests are organized by feature category in subdirectories for better organization and scalability.
+The test suite contains **52 integration and unit test files** organized by feature category. Tests are written in Rust and use the standard `cargo test` framework.
 
-## Test Organization Strategy
+## Directory Structure
 
-Tests are organized in **subdirectories by category**. Each subdirectory contains related integration tests. Tests in subdirectories are explicitly registered in `Cargo.toml` using `[[test]]` entries to ensure Cargo can discover them.
+```
+tests/
+├── bin/                   # Binary-specific tests (1 file)
+├── commands/              # CLI command tests (27 files)
+├── downstream/            # Downstream validation tests (1 file)
+├── e2e/                   # End-to-end workflow tests (2 files)
+├── examples/              # Example validation tests (1 file)
+├── fixtures/              # Test data and golden files
+│   ├── golden/           # Expected output samples
+│   └── ifc/              # Sample IFC files
+├── git/                   # Git workflow tests (1 file)
+├── hardware/              # Hardware sensor tests (3 files)
+├── ifc/                   # IFC processing tests (4 files)
+├── persistence/           # Data persistence tests (1 file)
+├── render3d/              # 3D rendering tests (1 file)
+├── spreadsheet/           # Spreadsheet TUI tests (5 files)
+├── tui/                   # Terminal UI tests (6 files)
+├── ui/                    # UI component tests (1 file)
+└── Root level             # Core integration tests (4 files)
+```
 
-### Test Categories
+## Test Categories
 
-#### AR Tests (`tests/ar/`)
-AR integration and workflow tests:
-- `ar_complete_workflow_test.rs` - Complete AR workflow end-to-end
-- `ar_gltf_integration_tests.rs` - glTF export integration tests
-- `ar_usdz_integration_tests.rs` - USDZ export integration tests
-- `ar_workflow_integration_test.rs` - AR workflow integration
-- `ar_json_helpers_tests.rs` - AR JSON parsing helper tests
+### Command Tests (`commands/`)
+Unit tests for CLI commands (27 files):
+- `address_integration_tests.rs` - ArxAddress system
+- `config_tests.rs` - Configuration management
+- `doc_tests.rs` - Documentation generation
+- `equipment_tests.rs` - Equipment CRUD operations
+- `export_tests.rs` - Export functionality
+- `git_ops_tests.rs` - Git operations
+- `ifc_tests.rs` - IFC import/export
+- `import_tests.rs` - Data import
+- `interactive_tests.rs` - Interactive mode
+- `migrate_tests.rs` - Data migration
+- `query_tests.rs` - Query engine
+- `render_tests.rs` - 3D rendering
+- `room_tests.rs` - Room management
+- `search_tests.rs` - Search functionality
+- `sensors_tests.rs` - Sensor data handling
+- `spatial_tests.rs` - Spatial operations
+- `validate_tests.rs` - Validation
+- `watch_tests.rs` - File watching
+- `wing_tests.rs` - Building wing management
+- And more...
 
-> **Note:** Legacy iOS/Android workflow tests were archived with the native clients. See `docs/mobile/STATUS.md`.
-
-#### Hardware Tests (`tests/hardware/`)
-Hardware sensor integration tests:
-- `hardware_integration_tests.rs` - Core hardware integration
-- `hardware_http_integration_tests.rs` - HTTP sensor integration
-- `hardware_workflow_tests.rs` - Hardware workflow tests
-
-#### Persistence Tests (`tests/persistence/`)
-Data persistence and Git integration tests:
-- `persistence_tests.rs` - Building data persistence, save/load, Git operations
-
-#### E2E Tests (`tests/e2e/`)
+### E2E Tests (`e2e/`)
 End-to-end workflow tests:
-- `e2e_workflow_tests.rs` - Complete end-to-end workflows
-- `e2e_command_integration_tests.rs` - Command integration tests
+- `e2e_workflow_tests.rs` - Complete workflows
+- `e2e_command_integration_tests.rs` - Command integration
 
-#### IFC Tests (`tests/ifc/`)
-IFC file processing tests:
-- `ifc_workflow_tests.rs` - IFC processing workflows
-- `ifc_sync_integration_tests.rs` - IFC bidirectional sync
+### Hardware Tests (`hardware/`)
+Hardware sensor integration:
+- `hardware_integration_tests.rs` - Core hardware integration
+- `hardware_http_integration_tests.rs` - HTTP sensor endpoints
+- `hardware_workflow_tests.rs` - Hardware workflows
 
-#### TUI Tests (`tests/tui/`)
-Terminal User Interface integration tests:
-- `tui_workflow_integration_tests.rs` - Complete TUI workflows
-- `tui_component_interaction_tests.rs` - Component interaction tests
-- `tui_event_flow_tests.rs` - Event flow and propagation tests
-- `tui_terminal_integration_tests.rs` - Terminal manager integration
-- `test_utils.rs` - Shared test utilities and helpers
+### IFC Tests (`ifc/`)
+IFC file processing:
+- `ifc_golden_tests.rs` - Golden file validation
+- `ifc_rs_integration_tests.rs` - ifc-rs library integration
+- `ifc_sync_integration_tests.rs` - Bidirectional IFC sync
+- `ifc_workflow_tests.rs` - IFC workflows
 
-#### Spreadsheet Tests (`tests/spreadsheet/`) ⭐ NEW
-Spreadsheet TUI integration tests:
-- `spreadsheet_component_integration_tests.rs` - Component interaction tests (Grid + Editor + Validation)
-- `spreadsheet_data_source_integration_tests.rs` - Data source workflow tests (Load → Edit → Save → Reload)
-- `spreadsheet_filesystem_integration_tests.rs` - File system operations (YAML persistence, Git, file locking)
-- `spreadsheet_command_integration_tests.rs` - CLI command handler integration tests
+### Persistence Tests (`persistence/`)
+Data persistence and Git integration:
+- `persistence_tests.rs` - Save/load operations, Git workflows
 
-#### Command Tests (`tests/commands/`)
-Unit tests for individual command handlers:
-- Located in `tests/commands/` subdirectory
-- One test file per command module
-- See `tests/commands/README.md` for details
+### Spreadsheet Tests (`spreadsheet/`)
+Spreadsheet TUI component tests:
+- `spreadsheet_component_integration_tests.rs` - Component interactions
+- `spreadsheet_data_source_integration_tests.rs` - Data source workflows
+- `spreadsheet_filesystem_integration_tests.rs` - File operations
+- `spreadsheet_command_integration_tests.rs` - CLI command handlers
+- `spreadsheet_ar_integration_tests.rs` - AR integration
 
-#### Other Tests (Root Level)
-Tests that don't fit into specific categories:
-- `docs_integration_tests.rs` - Documentation generation tests
-- `game_integration_tests.rs` - Gamified PR review tests
-- `integration_tests.rs` - General integration tests
-- `security_tests.rs` - Security and validation tests
+### TUI Tests (`tui/`)
+Terminal user interface tests:
+- `tui_workflow_integration_tests.rs` - TUI workflows
+- `tui_component_interaction_tests.rs` - Component interactions
+- `tui_event_flow_tests.rs` - Event handling
+- `tui_terminal_integration_tests.rs` - Terminal manager
+- `users_browser_integration_tests.rs` - User browser UI
+- `test_utils.rs` - Shared test utilities
+
+### Root Level Tests
+Core integration tests:
+- `config_validation_tests.rs` - Configuration validation
+- `ifc_extruded_solid_test.rs` - IFC geometry processing
+- `ifc_integration_test.rs` - IFC integration
+- `property_based_tests.rs` - Property-based testing
+- `security_tests.rs` - Security validation
 
 ## Running Tests
 
@@ -79,102 +108,163 @@ cargo test
 
 ### Run Tests by Category
 ```bash
-# AR tests
-cargo test --test ar_workflow_integration_test
-cargo test --test ar_complete_workflow_test
-# etc.
+# Command tests
+cargo test --test equipment_tests
+cargo test --test ifc_tests
+
+# E2E tests
+cargo test --test e2e_workflow_tests
 
 # Hardware tests
 cargo test --test hardware_integration_tests
-cargo test --test hardware_http_integration_tests
-cargo test --test hardware_workflow_tests
+
+# IFC tests
+cargo test --test ifc_workflow_tests
 
 # Persistence tests
 cargo test --test persistence_tests
 
-# E2E tests
-cargo test --test e2e_workflow_tests
-cargo test --test e2e_command_integration_tests
-
-# IFC tests
-cargo test --test ifc_workflow_tests
-cargo test --test ifc_sync_integration_tests
+# Spreadsheet tests
+cargo test --test spreadsheet_component_integration_tests
 
 # TUI tests
 cargo test --test tui_workflow_integration_tests
-cargo test --test tui_component_interaction_tests
-cargo test --test tui_event_flow_tests
-cargo test --test tui_terminal_integration_tests
 
-# Spreadsheet tests
-cargo test --test spreadsheet_component_integration_tests
-cargo test --test spreadsheet_data_source_integration_tests
-cargo test --test spreadsheet_filesystem_integration_tests
-cargo test --test spreadsheet_command_integration_tests
+# Security tests
+cargo test --test security_tests
 ```
 
-### Run All Tests in a Category
+### Run Specific Test Function
 ```bash
-# Run all AR tests
-cargo test --test ar_
+cargo test --test <test_file> <test_function_name>
 
-# Run all hardware tests  
-cargo test --test hardware_
-
-# Run all TUI tests
-cargo test --test tui_
-
-# Run all spreadsheet tests
-cargo test --test spreadsheet_
+# Example:
+cargo test --test equipment_tests test_equipment_add
 ```
 
-### Run Command Tests
+### Run Tests with Output
 ```bash
-cargo test --test commands/ar_tests
-cargo test --test commands/export_tests
-# etc.
+cargo test -- --nocapture
 ```
 
-## Test File Naming Convention
+### Run Tests in Parallel/Serial
+Most tests run in parallel. Tests that modify shared state use `#[serial]` attribute to run sequentially.
 
-Tests use the following naming pattern:
-- **Category subdirectory** (e.g., `ar/`, `hardware/`, `tui/`)
-- **Feature name** (e.g., `workflow`, `integration`, `component`)
-- **Test type suffix** (e.g., `_tests.rs`, `_test.rs`)
+## Test Patterns
 
-Examples:
-- `tests/ar/ar_workflow_integration_test.rs` - AR workflow integration test
-- `tests/hardware/hardware_http_integration_tests.rs` - Hardware HTTP integration tests
-- `tests/tui/tui_workflow_integration_tests.rs` - TUI workflow integration tests
-- `tests/spreadsheet/spreadsheet_component_integration_tests.rs` - Spreadsheet component integration tests
+### Test Isolation
+Tests use several patterns for isolation:
 
-## Benefits of This Organization
+**DirectoryGuard Pattern**
+```rust
+struct DirectoryGuard {
+    original_dir: PathBuf,
+}
 
-1. **Easy Discovery**: Files grouped in subdirectories make it easy to find related tests
-2. **Cargo Compatible**: Tests registered in `Cargo.toml` ensure Cargo can discover them
-3. **Scalable**: Easy to add new tests in appropriate subdirectories
-4. **Clear Intent**: Directory structure and descriptive names make test purpose obvious
-5. **IDE Friendly**: Most IDEs group files by directory automatically
-6. **Better Organization**: Subdirectories prevent test directory from becoming cluttered
+impl DirectoryGuard {
+    fn new(test_dir: &Path) -> Result<Self> {
+        let original_dir = std::env::current_dir()?;
+        std::env::set_current_dir(test_dir)?;
+        Ok(Self { original_dir })
+    }
+}
 
-## Test Statistics (Nov 2025)
+impl Drop for DirectoryGuard {
+    fn drop(&mut self) {
+        let _ = std::env::set_current_dir(&self.original_dir);
+    }
+}
+```
 
-- **Total Test Files**: 43 Rust test files
-- **AR Tests**: 5 files in `tests/ar/`
-- **Command Tests**: 17 files in `tests/commands/`
-- **Hardware Tests**: 3 files in `tests/hardware/`
-- **E2E Tests**: 2 files in `tests/e2e/`
-- **IFC Tests**: 2 files in `tests/ifc/`
-- **Persistence Tests**: 1 file in `tests/persistence/`
-- **TUI Tests**: 5 files in `tests/tui/` (including `test_utils.rs`)
-- **Spreadsheet Tests**: 4 files in `tests/spreadsheet/`
-- **Other Tests**: 4 files in `tests/` root
-- **Test Coverage**: >90% (per project standards)
-## Related Documentation
+**Temporary Directories**
+```rust
+use tempfile::TempDir;
 
-- `tests/README_PERSISTENCE_TESTS.md` - Persistence test details
-- `docs/mobile/STATUS.md` - Status of archived mobile tests
-- `tests/TEST_COVERAGE_SUMMARY.md` - Overall test coverage summary
-- `tests/IMPLEMENTATION_SUMMARY.md` - Implementation details
-- `tests/TESTS_DIRECTORY_REVIEW.md` - Structure review and best practices
+let temp_dir = TempDir::new()?;
+let _guard = DirectoryGuard::new(temp_dir.path())?;
+// Test code here - directory automatically cleaned up
+```
 
+**Serial Execution**
+```rust
+use serial_test::serial;
+
+#[test]
+#[serial]
+fn test_modifies_global_state() {
+    // This test runs serially with other #[serial] tests
+}
+```
+
+### Test Fixtures
+Test data is stored in `tests/fixtures/`:
+- `fixtures/golden/` - Expected output samples (YAML, JSON)
+- `fixtures/ifc/` - Sample IFC files for testing
+
+### Shared Utilities
+- `tests/tui/test_utils.rs` - Helper functions for TUI testing
+
+## Adding New Tests
+
+### Integration Test
+Create a new file in the appropriate category directory:
+
+```rust
+// tests/commands/mynewcommand_tests.rs
+
+use arxos::cli::commands::mynewcommand;
+
+#[test]
+fn test_mynewcommand_basic() {
+    // Test code
+}
+```
+
+### Command Test
+For new CLI commands, add tests in `tests/commands/`:
+1. Create `<command>_tests.rs`
+2. Test command parsing, validation, execution
+3. Test error handling
+
+### Category Test
+For new feature categories, create a new subdirectory:
+1. Create `tests/mynewfeature/`
+2. Add test files following naming pattern: `<feature>_<type>_tests.rs`
+3. Register in `Cargo.toml` if needed
+
+## Test Coverage
+
+Tests cover:
+- ✅ CLI command parsing and execution
+- ✅ Data persistence (YAML, Git)
+- ✅ IFC import/export
+- ✅ ArxAddress system and query engine
+- ✅ Hardware sensor integration
+- ✅ Spreadsheet TUI components
+- ✅ Terminal UI workflows
+- ✅ Security validation
+- ✅ Configuration management
+
+## CI/CD Integration
+
+Tests run automatically on:
+- Pull requests
+- Commits to main branch
+- Release builds
+
+## Troubleshooting
+
+### Test Fails with Directory Errors
+Ensure test uses `DirectoryGuard` and `TempDir` for isolation.
+
+### Test Hangs
+Check for missing `#[serial]` attribute if test modifies global state.
+
+### Test Fixtures Missing
+Ensure `tests/fixtures/` directory is present with required files.
+
+## Notes
+
+- **Removed outdated tests**: AR integration tests and disabled tests were removed as they referenced non-existent modules (`arxos::ar_integration`, `arxos::game` not exposed in lib)
+- **Crate name**: All tests use `arxos::` (the library crate name), not `arxui`
+- **Test count**: 52 test files (down from 63 after removing tests for unimplemented features)

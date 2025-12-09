@@ -1,7 +1,7 @@
 //! Tests for configuration management command handlers
 
-use arxui::commands::config_mgmt::handle_config;
-use arxui::cli::{ConfigCommands, ConfigSubCommand};
+use arxos::commands::config_mgmt::handle_config;
+use arxos::cli::{ConfigCommands, ConfigSubCommand};
 
 #[test]
 #[ignore] // Requires config file

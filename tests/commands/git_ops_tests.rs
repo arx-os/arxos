@@ -1,6 +1,6 @@
 //! Tests for git operations command handlers
 
-use arxui::commands::git_ops::{handle_status, handle_diff, handle_history};
+use arxos::commands::git_ops::{handle_status, handle_diff, handle_history};
 use arxos::yaml::BuildingData;
 use tempfile::TempDir;
 use std::fs::{create_dir_all, write};

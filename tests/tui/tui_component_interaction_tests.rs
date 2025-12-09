@@ -7,7 +7,7 @@
 //! - Mouse support across components
 
 use arxos::error::ArxError;
-use arxui::tui::{
+use arxos::tui::{
     parse_mouse_event, CommandPalette, ErrorAction, ErrorModal, HelpContext, HelpSystem,
     MouseConfig, Theme, ThemeManager, WorkspaceManager,
 };
@@ -128,7 +128,7 @@ fn test_help_context_integration() {
     );
 
     // Test that context-specific help is available
-    use arxui::tui::get_context_help;
+    use arxos::tui::get_context_help;
     let help_content = get_context_help(HelpContext::CommandPalette);
     assert!(!help_content.is_empty());
 }
@@ -209,7 +209,7 @@ fn test_component_event_isolation() {
         state: KeyEventState::empty(),
     });
 
-    use arxui::tui::handle_help_event;
+    use arxos::tui::handle_help_event;
     let handled = handle_help_event(help_event, &mut help_system);
     assert!(handled);
     assert!(help_system.show_overlay);

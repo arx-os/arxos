@@ -1,6 +1,6 @@
 //! Tests for room management command handlers
 
-use arxui::commands::room;
+use arxos::commands::room;
 
 // Note: parse_room_type doesn't exist in the module, but we can test what's there
 

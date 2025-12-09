@@ -1,6 +1,6 @@
 //! Tests for interactive rendering command handlers
 
-use arxui::commands::interactive::handle_interactive;
+use arxos::commands::interactive::handle_interactive;
 
 #[test]
 #[ignore] // Requires TUI setup

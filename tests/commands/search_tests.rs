@@ -1,7 +1,7 @@
 //! Tests for search and filter command handlers
 
-use arxui::commands::search::handle_search_command;
-use arxui::commands::search::handle_filter_command;
+use arxos::commands::search::handle_search_command;
+use arxos::commands::search::handle_filter_command;
 
 #[test]
 #[ignore] // Requires building data setup

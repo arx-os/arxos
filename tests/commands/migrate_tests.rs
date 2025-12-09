@@ -2,7 +2,7 @@
 //!
 //! Tests the migration of universal_path to ArxAddress format
 
-use arxui::commands::migrate::handle_migrate_address;
+use arxos::commands::migrate::handle_migrate_address;
 #[allow(deprecated)]
 use arxos::yaml::{
     BuildingData, BuildingInfo, BuildingMetadata, FloorData, EquipmentData, EquipmentStatus,

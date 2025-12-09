@@ -3,11 +3,11 @@
 //! This module tests the command handlers in `src/commands/`
 //! through their public interfaces, verifying end-to-end workflows.
 
-use arxui::commands::equipment_handlers::parse_equipment_type;
-use arxui::commands::export;
-use arxui::commands::import;
-use arxui::commands::init;
-use arxui::commands::room_handlers::{parse_dimensions, parse_position};
+use arxos::commands::equipment_handlers::parse_equipment_type;
+use arxos::commands::export;
+use arxos::commands::import;
+use arxos::commands::init;
+use arxos::commands::room_handlers::{parse_dimensions, parse_position};
 use std::fs::{create_dir_all, write, File};
 use std::io::Write;
 use tempfile::TempDir;
@@ -238,7 +238,7 @@ fn test_equipment_type_parsing_variations() {
 
 #[test]
 fn test_init_then_room_create_workflow() {
-    use arxui::commands::init::InitConfig;
+    use arxos::commands::init::InitConfig;
     use std::path::Path;
 
     // Create a temporary directory for this test

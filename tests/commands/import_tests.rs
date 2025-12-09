@@ -1,6 +1,6 @@
 //! Tests for import command handler
 
-use arxui::commands::import::handle_import;
+use arxos::commands::import::handle_import;
 use tempfile::TempDir;
 use std::fs::{create_dir_all, write, File};
 use std::io::Write;

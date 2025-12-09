@@ -1,75 +1,52 @@
 # ArxOS Documentation
 
-**Git for Buildings** - Terminal-first building management with Git-native data storage
+**Git for Buildings** – Terminal-first building data management
 
 ---
 
-## 🚀 Quick Start
+## Getting Started
 
-- **[User Guide](./core/USER_GUIDE.md)** - Complete guide to using ArxOS CLI and features
-- **[Architecture](./core/ARCHITECTURE.md)** - System architecture and design patterns  
-- **[Developer Onboarding](./development/DEVELOPER_ONBOARDING.md)** - Setup guide for new developers
-
----
-
-## 📚 Documentation Structure
-
-### [Core Documentation](./core/)
-Essential documentation for understanding and using ArxOS.
-- User Guide, Architecture, API Reference, Configuration
-
-### [Development](./development/)
-Documentation for contributing to ArxOS development.
-- Developer Onboarding, Performance Guides, Benchmarks, Rendering
-
-### [Mobile (Archived)](./mobile/)
-Historical iOS and Android documentation. Native clients were archived in November 2025 in favor of the WASM PWA.
-- FFI Integration, Platform-specific Guides, CI/CD (read-only)
-
-### [Web](./web/)
-Progressive Web App development powered by Rust+WASM.
-- PWA build/run guides, desktop agent bridge, deployment playbooks
-
-### [Augmented Reality](./ar/)
-AR and LiDAR integration documentation.
-- AR Scanning, Terminal Design, Integration Roadmap
-
-### [Features](./features/)
-Specific feature documentation.
-- IFC Processing, Hardware Integration, Building Docs
-
-### [Business](./business/)
-Business and enterprise features.
-- Reward System, Payment Tracking, Enterprise Deployment
-
-### [Ideas](./ideas/)
-Future feature exploration.
-- Movement Replay, Brainstorming Concepts
-
-### [Archive](./archive/)
-Historical and outdated documentation.
-- Previous implementations, Legacy guides, Old designs
+- **[Getting Started Guide](./getting-started.md)** – Installation, first building, basic workflows
+- **[CLI Reference](./cli-reference.md)** – Complete command-line interface documentation
+- **[Data Format](./data-format.md)** – YAML schema and Git storage structure
 
 ---
 
-## 🎯 Quick Reference
+## Core Features
 
-**New to ArxOS?** → Start with [User Guide](./core/USER_GUIDE.md)  
-**Contributing?** → See [Developer Onboarding](./development/DEVELOPER_ONBOARDING.md)  
-**Security?** → Review [Security Guide](./development/SECURITY.md)  
-**Adding features?** → See [Architecture](./core/ARCHITECTURE.md)  
-**Building the PWA?** → See [Web Development](./web/DEVELOPMENT.md)  
-**Deploying at scale?** → See [Enterprise Deployment](./business/ENTERPRISE_DEPLOYMENT.md)  
-**Need performance tips?** → See [Performance Guide](./development/PERFORMANCE_GUIDE.md)  
-**Looking for API details?** → See [API Reference](./core/API_REFERENCE.md)  
-**Need example files?** → See [Examples](../examples/)
+- **[Architecture](./architecture.md)** – System design, single binary approach, feature gates
+- **[IFC Import/Export](./ifc.md)** – Industry Foundation Classes file handling
+- **[Web Interface](./web.md)** – Progressive Web App (WASM) usage and deployment
 
 ---
 
-## 📝 Migration
+## Development
 
-- **[Migration Guide](./MIGRATION_GUIDE.md)** - Upgrading between ArxOS versions
+- **[Building from Source](./development/building.md)** – Compilation and installation
+- **[Testing](./development/testing.md)** – Running tests and benchmarks
+- **[Contributing](./development/contributing.md)** – Contribution guidelines
 
 ---
 
-**Questions?** See [Documentation Index](./DOCUMENTATION_INDEX.md) for complete table of contents.
+## Quick Reference
+
+```bash
+# Initialize a new building
+arx init --name "My Building"
+
+# Import IFC file
+arx import building.ifc
+
+# List building data
+arx list
+
+# Start web interface
+arx web
+
+# Get help
+arx --help
+```
+
+---
+
+**Rust API Documentation:** See `/docs/rustdoc/` for generated Rust documentation

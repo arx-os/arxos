@@ -141,16 +141,25 @@ function getBuildingWallet(string calldata buildingId) external view returns (ad
 - Owner-controlled (ArxOS LLC initially)
 
 #### 2. ArxContributionOracle.sol
-**Purpose**: Verify contributions and trigger 70/10/10/10 mints
+**Purpose**: Verify contributions and trigger 70/10/10/10 mints with multi-oracle consensus
 
 ```solidity
 // Key Functions
-function reportContribution(
+function proposeContribution(
     string calldata buildingId,
     address worker,
     uint256 amountARXO,
-    bytes calldata proof
-) external onlyOwner
+    ContributionProof calldata proof
+) external onlyRole(ORACLE_ROLE)
+
+function finalizeContribution(
+    bytes32 contributionId
+) external
+
+function verifyProof(
+    ContributionProof calldata proof,
+    address worker
+) internal view returns (bool)
 
 function _distributeMint(
     address worker,
@@ -159,11 +168,20 @@ function _distributeMint(
 ) internal
 ```
 
-**Logic**:
-- Verify proof (GPS, Merkle root, device signature)
+**Multi-Oracle Logic**:
+- Require 2-of-3 oracle confirmations
+- 24-hour finalization delay (dispute period)
+- EIP-712 signature verification
+- Replay protection via nonce tracking
 - Calculate split: 70% worker, 10% building, 10% maintainer, 10% treasury
 - Call `ArxosToken.mintBatch()`
 - Emit detailed event with all recipients
+
+**Security Features**:
+- Role-based access control (not just owner)
+- Timestamp validation (proof expires in 1 hour)
+- Proof hash tracking (prevents replay attacks)
+- Multi-sig protection against single oracle compromise
 
 #### 3. ArxPaymentRouter.sol
 **Purpose**: Handle x402 micropayments for data access
@@ -384,27 +402,99 @@ The existing ArxOS Rust codebase will need to:
 
 ---
 
-## Questions for Resolution
+## Implementation Decisions (RESOLVED)
 
-1. **Building Payment Distribution**: For x402 payments, should the 70% "contributor share" go to:
-   - A) The Building Wallet (current plan - simple)
-   - B) A staking pool for all past contributors to that building (complex, gas-intensive)
-   - C) A separate `BuildingRewardsPool` contract (middle ground)
+### 1. Building Payment Distribution: **Option A → Progressive Evolution**
 
-2. **Proof Format**: What exact format should contribution proofs use?
-   - Merkle root + signature?
-   - Chainlink Functions for verification?
-   - TEE attestation?
+**Decision**: Start with Option A (Building Wallet), evolve to Option C
 
-3. **Maintainer Vault**: Should this be:
-   - A) Simple multisig wallet
-   - B) Gnosis Safe with RPGF module
-   - C) Custom contract with vesting/voting
+**Rationale**:
+- Ship incrementally - validate market demand before over-engineering
+- Clear incentives for building owners to register
+- Lower audit cost for simpler contract
 
-4. **Network Choice**: Confirm Base as primary chain, or consider:
-   - Arbitrum (has Stylus for native Rust contracts)
-   - Polygon (current Hardhat config targets Mumbai)
-   - Multi-chain deployment
+**Evolution Path**:
+```
+V1 (Launch): 70% → Building Wallet (owner controlled)
+V2 (6 months): 70% → BuildingRewardsPool (time-weighted contributions)
+V3 (12 months): Full DAO per building (if >1000 contributors)
+```
+
+### 2. Proof Format: **EIP-712 Typed Signatures + Merkle Commitments**
+
+**Decision**: Use EIP-712 for signature verification with Merkle root data commitments
+
+**Proof Structure**:
+```solidity
+struct ContributionProof {
+    bytes32 merkleRoot;      // Root of spatial data Merkle tree
+    bytes32 locationHash;    // keccak256(abi.encodePacked(lat, lon, timestamp))
+    bytes32 buildingHash;    // keccak256(buildingId) for validation
+    uint256 timestamp;       // Block timestamp for replay protection
+    uint256 dataSize;        // Bytes contributed (for proportional rewards)
+    bytes signature;         // ECDSA signature from registered worker device
+}
+```
+
+**EIP-712 Domain**:
+```solidity
+EIP712Domain {
+    name: "ArxOS Contribution Oracle"
+    version: "1"
+    chainId: 8453  // Base
+    verifyingContract: <ArxContributionOracle address>
+}
+```
+
+**Benefits**:
+- Industry standard, wallet-compatible
+- Gas efficient (~3k gas for signature verification)
+- Merkle roots compress unlimited data to 32 bytes
+- Flexible - can evolve proof internals without contract changes
+
+### 3. Maintainer Vault: **Gnosis Safe 5-of-9 Multisig**
+
+**Decision**: Use Gnosis Safe with 5-of-9 signature threshold
+
+**Rationale**:
+- Battle-tested ($100B+ secured)
+- Zero custom smart contract code = no additional audit cost
+- Transparent on-chain transactions
+- Can upgrade to DAO module later via Zodiac
+
+**Initial Signers**:
+- Core Team: 3 signers (founder, lead engineer, operations)
+- Community: 3 signers (top contributor, building owner rep, security researcher)
+- Advisors: 3 signers (legal, tokenomics, technical)
+
+**Evolution Path**:
+```
+Phase 1 (Launch): Gnosis Safe 5-of-9
+Phase 2 (6mo): Add Snapshot signaling for community input
+Phase 3 (12mo): SafeSnap module (Snapshot votes auto-execute)
+Phase 4 (24mo): Full DAO governance contract
+```
+
+### 4. Network Choice: **Base L2 (Coinbase)**
+
+**Decision**: Deploy exclusively on Base for V1
+
+**Rationale**:
+- Target audience alignment: Real estate/buildings = institutional users = Coinbase customers
+- Best fiat onramps: USD → USDC → ARXO conversion path
+- Gas costs: ~$0.01 per transaction (vs $50 on Ethereum)
+- Growing DeFi ecosystem: Uniswap, Aerodrome DEX
+- EVM compatible - can bridge to other chains later if needed
+
+**Deployment Strategy**:
+```
+Phase 1: Base Sepolia (testnet) - Full testing + community beta
+Phase 2: Base Mainnet - Primary deployment, all liquidity
+Phase 3 (optional): Multi-chain via bridges if demand justifies
+```
+
+**Why NOT Arbitrum Stylus**: Too bleeding edge, smaller auditor pool for Rust contracts
+**Why NOT Polygon**: Less institutional adoption, MATIC token dependency adds complexity
 
 ---
 

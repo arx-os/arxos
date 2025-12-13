@@ -37,6 +37,9 @@ pub mod render3d;
 #[cfg(feature = "agent")]
 pub mod agent;
 
+#[cfg(feature = "blockchain")]
+pub mod blockchain;
+
 #[cfg(feature = "web")]
 pub mod web;
 

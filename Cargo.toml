@@ -90,6 +90,13 @@ base64 = "0.22.1"
 octocrab = "0.48.0"
 ifc_rs = "0.1.0-alpha.9"
 async-trait = "0.1.77"
+
+# Blockchain dependencies (for tokenomics)
+ethers = { version = "2.0", optional = true, features = ["abigen", "ws"] }
+ethers-contract = { version = "2.0", optional = true }
+ethers-signers = { version = "2.0", optional = true }
+hex = { version = "0.4", optional = true }
+
 leptos = { version = "0.8.14", features = ["csr"], optional = true }
 leptos_meta = { version = "0.8.5", optional = true }
 leptos_router = { version = "0.8.10", optional = true }
@@ -102,8 +109,9 @@ default = ["tui"]
 tui = ["crossterm", "ratatui", "csv", "arboard", "fuzzy-matcher"]
 render3d = ["bevy"]
 agent = ["tokio", "tracing", "tracing-subscriber", "axum", "futures-util", "notify", "russh", "russh-keys", "ssh2", "tokio-modbus", "rumqttc"]
+blockchain = ["tokio", "ethers", "ethers-contract", "ethers-signers", "hex"]
 web = ["leptos", "leptos_meta", "leptos_router", "wasm-bindgen", "console_error_panic_hook", "web-sys"]
-full = ["tui", "render3d", "agent", "web"]
+full = ["tui", "render3d", "agent", "blockchain", "web"]
 
 [dev-dependencies]
 criterion = "0.5"

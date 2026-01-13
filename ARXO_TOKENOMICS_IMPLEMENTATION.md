@@ -6,6 +6,18 @@
 > 
 > **Context**: This document consolidates all planning for implementing the full ARXO tokenomics vision using Foundry (Rust-based tooling) instead of Hardhat.
 
+> **Immediate Security Priorities (pre-mainnet)**
+> 1) Expand oracle set to 5+ with 3-of-5 consensus and staking/slashing.
+> 2) Add minting circuit breakers: per-building/worker daily caps + global pause.
+> 3) Protect payments from front-running with timelocked price changes and user max-price commitments.
+> 4) Book external audit; do not mainnet until zero critical/high findings.
+
+> **Rollout Plan (12 weeks)**
+> - Weeks 1-3: Oracle security + rate limits + payment timelocks.
+> - Weeks 4-6: Configurable splits, dispute resolution, quality-based rewards.
+> - Weeks 7-9: Gas/size optimization (IR, storage packing, optional contract split).
+> - Weeks 10-12: Monitoring, on-chain analytics, testnet soak, audit fix-review.
+
 ---
 
 ## Table of Contents

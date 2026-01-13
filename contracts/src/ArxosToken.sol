@@ -14,6 +14,21 @@ contract ArxosToken is ERC20, AccessControl {
     /// @notice Role identifier for addresses that can mint tokens
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
+    /// @notice Global emergency pause flag for minting flows
+    bool public emergencyPause;
+
+    /// @notice Per-building and per-worker daily caps (in token units)
+    uint256 public buildingDailyCap = type(uint256).max;
+    uint256 public workerDailyCap = type(uint256).max;
+
+    struct DailyLimit {
+        uint256 amount; // minted so far today
+        uint64 lastUpdatedDay; // day index to roll over usage
+    }
+
+    mapping(address => DailyLimit) private buildingDailyUsage;
+    mapping(address => DailyLimit) private workerDailyUsage;
+
     /// @notice Total value contributed (in USD equivalent)
     uint256 public totalContributedValue;
 
@@ -25,6 +40,12 @@ contract ArxosToken is ERC20, AccessControl {
         address treasury,
         uint256 totalAmount
     );
+
+    /// @notice Emitted when daily caps are updated (0 treated as unlimited)
+    event DailyCapsUpdated(uint256 buildingCap, uint256 workerCap);
+
+    /// @notice Emitted when the emergency pause flag changes
+    event EmergencyPauseSet(address indexed caller, bool paused);
 
     /// @notice Emitted when tokens are minted in batch
     event BatchMinted(address indexed minter, uint256 totalAmount, uint256 recipientCount);
@@ -48,6 +69,7 @@ contract ArxosToken is ERC20, AccessControl {
      * @dev Only callable by addresses with MINTER_ROLE
      */
     function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
+        require(!emergencyPause, "ArxosToken: paused");
         require(to != address(0), "ArxosToken: zero address");
         require(amount > 0, "ArxosToken: zero amount");
 
@@ -65,6 +87,7 @@ contract ArxosToken is ERC20, AccessControl {
         address[] calldata recipients,
         uint256[] calldata amounts
     ) external onlyRole(MINTER_ROLE) {
+        require(!emergencyPause, "ArxosToken: paused");
         require(recipients.length == amounts.length, "ArxosToken: length mismatch");
         require(recipients.length > 0, "ArxosToken: empty arrays");
 
@@ -98,6 +121,7 @@ contract ArxosToken is ERC20, AccessControl {
         address treasury,
         uint256 totalAmount
     ) external onlyRole(MINTER_ROLE) {
+        require(!emergencyPause, "ArxosToken: paused");
         require(worker != address(0), "ArxosToken: zero worker");
         require(building != address(0), "ArxosToken: zero building");
         require(maintainer != address(0), "ArxosToken: zero maintainer");
@@ -109,6 +133,9 @@ contract ArxosToken is ERC20, AccessControl {
         uint256 buildingAmount = (totalAmount * 10) / 100;
         uint256 maintainerAmount = (totalAmount * 10) / 100;
         uint256 treasuryAmount = totalAmount - workerAmount - buildingAmount - maintainerAmount;
+
+        _enforceDailyCap(workerDailyUsage[worker], workerDailyCap, workerAmount, "worker");
+        _enforceDailyCap(buildingDailyUsage[building], buildingDailyCap, buildingAmount, "building");
 
         // Mint to all recipients
         _mint(worker, workerAmount);
@@ -146,10 +173,53 @@ contract ArxosToken is ERC20, AccessControl {
     }
 
     /**
+     * @notice Set the emergency pause flag for all minting entrypoints
+     * @param paused Whether minting should be paused
+     * @dev Only callable by DEFAULT_ADMIN_ROLE
+     */
+    function setEmergencyPause(bool paused) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        emergencyPause = paused;
+        emit EmergencyPauseSet(msg.sender, paused);
+    }
+
+    /**
+     * @notice Update daily mint caps for buildings and workers
+     * @param newBuildingCap Cap applied to each building's 10% share per day (0 means unlimited)
+     * @param newWorkerCap Cap applied to each worker's 70% share per day (0 means unlimited)
+     * @dev Only callable by DEFAULT_ADMIN_ROLE. Caps are evaluated on the minted share amounts.
+     */
+    function setDailyCaps(uint256 newBuildingCap, uint256 newWorkerCap) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        buildingDailyCap = newBuildingCap == 0 ? type(uint256).max : newBuildingCap;
+        workerDailyCap = newWorkerCap == 0 ? type(uint256).max : newWorkerCap;
+        emit DailyCapsUpdated(buildingDailyCap, workerDailyCap);
+    }
+
+    /**
      * @notice Get token decimals
      * @return Number of decimals (18)
      */
     function decimals() public pure override returns (uint8) {
         return 18;
+    }
+
+    function _enforceDailyCap(
+        DailyLimit storage limit,
+        uint256 cap,
+        uint256 amount,
+        string memory domain
+    ) internal {
+        if (cap == type(uint256).max) {
+            return; // unlimited
+        }
+
+        uint64 currentDay = uint64(block.timestamp / 1 days);
+        if (limit.lastUpdatedDay < currentDay) {
+            limit.amount = 0;
+            limit.lastUpdatedDay = currentDay;
+        }
+
+        uint256 newTotal = limit.amount + amount;
+        require(newTotal <= cap, string.concat("ArxosToken: ", domain, " daily cap"));
+        limit.amount = newTotal;
     }
 }

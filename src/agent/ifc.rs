@@ -51,24 +51,13 @@ pub fn import_ifc(repo_root: &Path, filename: &str, data_base64: &str) -> Result
 
     let import_path_str = import_path.to_str().ok_or_else(|| anyhow!("Invalid path utf-8"))?;
     let processor = IFCProcessor::new();
-    let building_data = match processor.extract_hierarchy(import_path_str) {
-        Ok(data) => data,
-        Err(_) => {
-            // Fallback to legacy processing if hierarchy extraction fails
-             let (building, _) = processor.process_file(import_path_str)?;
-             BuildingData {
-                 building,
-                 equipment: Vec::new(),
-             }
-        }
-    };
+    let building_data = processor.extract_hierarchy(import_path_str)?;
 
     let floors = building_data.building.floors.len();
     let rooms = building_data
         .building.floors
         .iter()
-        .flat_map(|floor| floor.wings.iter())
-        .map(|wing| wing.rooms.len())
+        .map(|f| f.rooms.len())
         .sum();
     let equipment = building_data
         .building.floors
@@ -89,10 +78,18 @@ pub fn import_ifc(repo_root: &Path, filename: &str, data_base64: &str) -> Result
         })
         .sum();
 
-    // Verify yaml_path availability - it seems `yaml_path` variable is missing too.
-    // We should probably generate it or use a default.
     let yaml_filename = format!("{}.yaml", sanitize_filename(&building_data.building.name, "building"));
     let yaml_path = repo_root.join(&yaml_filename);
+
+    // Check if we have old data to merge
+    if yaml_path.exists() {
+        if let Ok(old_content) = fs::read_to_string(&yaml_path) {
+            if let Ok(old_data) = serde_yaml::from_str::<BuildingData>(&old_content) {
+                merge_building_data(&mut building_data, &old_data);
+            }
+        }
+    }
+
     let relative_yaml = relative_display_path(repo_root, &yaml_path);
     
     // Save YAML
@@ -107,6 +104,108 @@ pub fn import_ifc(repo_root: &Path, filename: &str, data_base64: &str) -> Result
         rooms,
         equipment,
     })
+}
+
+pub fn import_ifc_local(repo_root: &Path, ifc_path: &Path) -> Result<IfcImportResult> {
+    let import_path_str = ifc_path.to_str().ok_or_else(|| anyhow!("Invalid path utf-8"))?;
+    let processor = IFCProcessor::new();
+    let building_data = processor.extract_hierarchy(import_path_str)?;
+
+    let floors = building_data.building.floors.len();
+    let rooms = building_data
+        .building.floors
+        .iter()
+        .map(|f| f.rooms.len())
+        .sum();
+    let equipment = building_data.equipment.len();
+
+    let yaml_filename = format!("{}.yaml", sanitize_filename(&building_data.building.name, "building"));
+    let yaml_path = repo_root.join(&yaml_filename);
+    
+    // Check if we have old data to merge
+    if yaml_path.exists() {
+        if let Ok(old_content) = fs::read_to_string(&yaml_path) {
+            if let Ok(old_data) = serde_yaml::from_str::<BuildingData>(&old_content) {
+                merge_building_data(&mut building_data, &old_data);
+            }
+        }
+    }
+
+    let relative_yaml = relative_display_path(repo_root, &yaml_path);
+    
+    let yaml_string = BuildingYamlSerializer::serialize(&building_data)
+        .map_err(|e| anyhow!("Failed to serialize YAML: {}", e))?;
+    fs::write(&yaml_path, yaml_string)?;
+
+    Ok(IfcImportResult {
+        building_name: building_data.building.name,
+        yaml_path: relative_yaml,
+        floors,
+        rooms,
+        equipment,
+    })
+}
+
+fn merge_building_data(new_data: &mut BuildingData, old_data: &BuildingData) {
+    // 1. Merge Building metadata
+    if new_data.building.name == old_data.building.name {
+        new_data.building.created_at = old_data.building.created_at;
+        for tag in &old_data.building.tags {
+            if !new_data.building.tags.contains(tag) {
+                new_data.building.tags.push(tag.clone());
+            }
+        }
+    }
+
+    // 2. Index old components by ArxAddress
+    let mut old_rooms = std::collections::HashMap::new();
+    let mut old_equipment = std::collections::HashMap::new();
+
+    for floor in &old_data.building.floors {
+        for wing in &floor.wings {
+            for room in &wing.rooms {
+                if let Some(addr) = room.get_address() {
+                    old_rooms.insert(addr.path.clone(), room);
+                }
+            }
+        }
+    }
+
+    for eq in &old_data.equipment {
+        if let Some(addr) = &eq.address {
+            old_equipment.insert(addr.path.clone(), eq);
+        }
+    }
+
+    // 3. Merge Rooms
+    for floor in &mut new_data.building.floors {
+        for wing in &mut floor.wings {
+            for room in &mut wing.rooms {
+                if let Some(addr) = room.get_address() {
+                    if let Some(old_room) = old_rooms.get(&addr.path) {
+                        room.created_at = old_room.created_at;
+                        for (k, v) in &old_room.properties {
+                            // Only preserve properties that weren't just re-extracted (or manual ones)
+                            room.properties.entry(k.clone()).or_insert_with(|| v.clone());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 4. Merge Equipment
+    for eq in &mut new_data.equipment {
+        if let Some(addr) = &eq.address {
+            if let Some(old_eq) = old_equipment.get(&addr.path) {
+                eq.status = old_eq.status.clone();
+                eq.health_status = old_eq.health_status.clone();
+                for (k, v) in &old_eq.properties {
+                    eq.properties.entry(k.clone()).or_insert_with(|| v.clone());
+                }
+            }
+        }
+    }
 }
 
 pub fn export_ifc(

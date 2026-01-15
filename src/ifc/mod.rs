@@ -10,6 +10,7 @@ mod identifiers;
 mod hierarchy;
 mod bim_parser;
 mod ifc_rs_converter;
+pub mod parser;
 
 pub use error::{IFCError, IFCResult};
 pub use hierarchy::{HierarchyBuilder, IFCEntity};
@@ -39,7 +40,7 @@ impl IFCProcessor {
         &self,
         file_path: &str,
     ) -> IFCResult<(Building, Vec<crate::core::spatial::SpatialEntity>)> {
-        info!("Processing IFC file: {}", file_path);
+        info!("Processing IFC file (Legacy): {}", file_path);
 
         // Check if file exists
         if !Path::new(file_path).exists() {
@@ -69,13 +70,32 @@ impl IFCProcessor {
         }
     }
 
+    /// Parse IFC file using the new high-performance native parser
+    pub fn parse_native(&self, file_path: &str) -> anyhow::Result<crate::yaml::BuildingData> {
+        info!("Processing IFC file (Native): {}", file_path);
+        
+        let content = std::fs::read_to_string(file_path)?;
+        let lexer = parser::StepLexer::new(&content);
+        let mut registry = parser::EntityRegistry::new();
+        registry.populate_from_lexer(lexer);
+        
+        let mut resolver = parser::IfcResolver::new(&mut registry);
+        resolver.resolve_all()
+    }
+
     /// Extract hierarchical building data from an IFC file
     /// Returns a BuildingData structure compatible with ArxOS YAML format
-    pub fn extract_hierarchy(&self, file_path: &str) -> IFCResult<crate::yaml::BuildingData> {
+    pub fn extract_hierarchy(&self, file_path: &str) -> anyhow::Result<crate::yaml::BuildingData> {
+        // Try native parser first
+        if let Ok(data) = self.parse_native(file_path) {
+            return Ok(data);
+        }
+
+        warn!("Native parser failed, falling back to legacy for hierarchy: {}", file_path);
+
         let (building, _) = self.process_file(file_path)?;
         
         // Convert to BuildingData
-        // Note: In a real implementation, we might want to preserve more metadata
         Ok(crate::yaml::BuildingData {
             building,
             equipment: Vec::new(),

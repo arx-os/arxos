@@ -20,7 +20,9 @@ impl BuildingYamlSerializer {
     }
 
     pub fn serialize(data: &BuildingData) -> Result<String, Box<dyn std::error::Error>> {
-        Ok(serde_yaml::to_string(data)?)
+        let mut sorted_data = data.clone();
+        sorted_data.sort_deterministically();
+        Ok(serde_yaml::to_string(&sorted_data)?)
     }
 
     pub fn deserialize(yaml: &str) -> Result<BuildingData, Box<dyn std::error::Error>> {
@@ -38,6 +40,43 @@ impl BuildingYamlSerializer {
 pub struct BuildingData {
     pub building: crate::core::Building,
     pub equipment: Vec<crate::core::Equipment>,
+}
+
+impl BuildingData {
+    /// Sorts all hierarchical collections deterministically to ensure zero-diff Git output.
+    pub fn sort_deterministically(&mut self) {
+        // 1. Sort Floors by level (numerical)
+        self.building.floors.sort_by_key(|f| f.level);
+
+        for floor in &mut self.building.floors {
+            // 2. Sort Wings by name (alphabetical)
+            floor.wings.sort_by(|a, b| a.name.cmp(&b.name));
+            
+            // 3. Sort Floor-level (common area) equipment
+            floor.equipment.sort_by(|a, b| a.name.cmp(&b.name));
+
+            for wing in &mut floor.wings {
+                // 4. Sort Rooms by name
+                wing.rooms.sort_by(|a, b| a.name.cmp(&b.name));
+                
+                // 5. Sort Wing-level equipment
+                wing.equipment.sort_by(|a, b| a.name.cmp(&b.name));
+
+                for room in &mut wing.rooms {
+                    // 6. Sort Room equipment
+                    room.equipment.sort_by(|a, b| a.name.cmp(&b.name));
+                }
+            }
+        }
+
+        // 7. Sort Global equipment list by ArxAddress path (or name fallback)
+        self.equipment.sort_by(|a, b| {
+            match (&a.address, &b.address) {
+                (Some(addr_a), Some(addr_b)) => addr_a.path.cmp(&addr_b.path),
+                _ => a.name.cmp(&b.name),
+            }
+        });
+    }
 }
 
 

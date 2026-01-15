@@ -37,6 +37,7 @@ impl Command for ImportCommand {
                     coordinate_system: "Unknown".to_string(),
                     units: "Meters".to_string(),
                     tags: Vec::new(),
+                    properties: Default::default(),
                 });
 
                 BuildingData {

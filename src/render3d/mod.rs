@@ -243,6 +243,7 @@ mod tests {
                 coordinate_system: "WGS84".to_string(),
                 units: "meters".to_string(),
                 tags: vec!["test".to_string()],
+                properties: Default::default(),
             },
             floors: vec![floor1, floor2],
         }

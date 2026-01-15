@@ -83,11 +83,18 @@ pub async fn start_agent() -> Result<(), Box<dyn std::error::Error>> {
         .route("/ws", get(ws_handler))
         .with_state(state.clone());
 
-    // 4. Start File Watcher for Auto-Export
-    let watcher_state = state.clone();
+    // 4. Start File Watchers
+    let export_state = state.clone();
     tokio::spawn(async move {
-        if let Err(e) = run_auto_export_watcher(watcher_state).await {
-            eprintln!("❌ File watcher error: {}", e);
+        if let Err(e) = run_auto_export_watcher(export_state).await {
+            eprintln!("❌ Auto-export watcher error: {}", e);
+        }
+    });
+
+    let import_state = state.clone();
+    tokio::spawn(async move {
+        if let Err(e) = run_auto_import_watcher(import_state).await {
+            eprintln!("❌ Auto-import watcher error: {}", e);
         }
     });
 
@@ -181,10 +188,9 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AgentState>) {
 
 #[cfg(feature = "agent")]
 async fn run_auto_export_watcher(state: Arc<AgentState>) -> Result<(), Box<dyn std::error::Error>> {
-    use crate::agent::{watcher::FileWatcher, ifc};
     use std::time::Duration;
 
-    let watcher = FileWatcher::new(&state.repo_root)?;
+    let watcher = crate::agent::watcher::FileWatcher::new(&state.repo_root, vec!["yaml".to_string(), "yml".to_string()])?;
     println!("👀 Watching {} for YAML changes", state.repo_root.display());
 
     loop {
@@ -195,12 +201,39 @@ async fn run_auto_export_watcher(state: Arc<AgentState>) -> Result<(), Box<dyn s
             println!("📝 Detected change: {}", changed_path.display());
             println!("🔄 Auto-exporting IFC (delta mode)...");
 
-            match ifc::export_ifc(&state.repo_root, None, true) {
+            match crate::agent::ifc::export_ifc(&state.repo_root, None, true) {
                 Ok(result) => {
                     println!("✅ Auto-export complete: {} ({} bytes)", result.filename, result.size_bytes);
                 }
                 Err(e) => {
                     eprintln!("❌ Auto-export failed: {}", e);
+                }
+            }
+        }
+    }
+}
+
+#[cfg(feature = "agent")]
+async fn run_auto_import_watcher(state: Arc<AgentState>) -> Result<(), Box<dyn std::error::Error>> {
+    use std::time::Duration;
+
+    let watcher = crate::agent::watcher::FileWatcher::new(&state.repo_root, vec!["ifc".to_string()])?;
+    println!("👀 Watching {} for new IFC files", state.repo_root.display());
+
+    loop {
+        tokio::time::sleep(Duration::from_millis(1000)).await;
+
+        if let Some(changed_path) = watcher.check_for_changes() {
+            println!("🏗️  Detected new/modified IFC: {}", changed_path.display());
+            println!("🔄 Auto-importing using native engine...");
+
+            match crate::agent::ifc::import_ifc_local(&state.repo_root, &changed_path) {
+                Ok(result) => {
+                    println!("✅ Auto-import complete: {} ({} floors, {} equipment)", 
+                        result.building_name, result.floors, result.equipment);
+                }
+                Err(e) => {
+                    eprintln!("❌ Auto-import failed: {}", e);
                 }
             }
         }

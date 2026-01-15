@@ -373,6 +373,7 @@ mod tests {
                 coordinate_system: "World".to_string(),
                 units: "meters".to_string(),
                 tags: vec![],
+                properties: Default::default(),
             }),
             coordinate_systems: vec![],
         };

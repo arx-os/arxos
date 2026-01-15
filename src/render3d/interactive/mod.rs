@@ -596,6 +596,7 @@ mod tests {
                 coordinate_system: "local".to_string(),
                 units: "meters".to_string(),
                 tags: vec![],
+                properties: Default::default(),
             },
             floors: vec![Floor {
                 id: "floor-1".to_string(),

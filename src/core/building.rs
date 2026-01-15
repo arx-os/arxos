@@ -3,6 +3,7 @@
 use super::{BoundingBox, Floor, Room};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Building metadata (YAML-only field)
@@ -25,6 +26,9 @@ pub struct BuildingMetadata {
     pub units: String,
     /// Tags for categorization
     pub tags: Vec<String>,
+    /// Additional properties extracted during parsing
+    #[serde(default)]
+    pub properties: HashMap<String, String>,
 }
 
 /// Represents a building in ArxOS
@@ -305,6 +309,25 @@ impl Building {
         self.get_all_rooms()
             .into_iter()
             .find(|room| room.id == room_id)
+    }
+
+    /// Add a property to the building metadata
+    pub fn add_metadata_property(&mut self, key: String, value: String) {
+        if self.metadata.is_none() {
+            self.metadata = Some(BuildingMetadata {
+                source_file: None,
+                parser_version: "native-1.0".to_string(),
+                total_entities: 0,
+                spatial_entities: 0,
+                coordinate_system: "building_local".to_string(),
+                units: "meters".to_string(),
+                tags: Vec::new(),
+                properties: HashMap::new(),
+            });
+        }
+        if let Some(meta) = &mut self.metadata {
+            meta.properties.insert(key, value);
+        }
     }
 }
 

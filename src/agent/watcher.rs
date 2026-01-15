@@ -9,11 +9,12 @@ use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watche
 pub struct FileWatcher {
     watcher: RecommendedWatcher,
     receiver: Receiver<Result<Event, notify::Error>>,
+    extensions: Vec<String>,
 }
 
 impl FileWatcher {
-    /// Create a new file watcher for the given repository root
-    pub fn new(repo_root: &Path) -> Result<Self> {
+    /// Create a new file watcher for the given repository root and extensions
+    pub fn new(repo_root: &Path, extensions: Vec<String>) -> Result<Self> {
         let (tx, rx) = channel();
         
         let mut watcher = RecommendedWatcher::new(
@@ -24,37 +25,38 @@ impl FileWatcher {
                 .with_poll_interval(Duration::from_millis(500)),
         )?;
 
-        // Watch for YAML files in the repository root (non-recursive)
+        // Watch for relevant files in the repository root (non-recursive)
         watcher.watch(repo_root, RecursiveMode::NonRecursive)?;
 
         Ok(Self {
             watcher,
             receiver: rx,
+            extensions,
         })
     }
 
-    /// Check for YAML file changes (non-blocking)
-    /// Returns Some(path) if a YAML file was modified, None otherwise
+    /// Check for file changes (non-blocking)
+    /// Returns Some(path) if a relevant file was modified, None otherwise
     pub fn check_for_changes(&self) -> Option<PathBuf> {
-        // Drain all pending events and check if any are YAML modifications
-        let mut yaml_changed = None;
+        // Drain all pending events and check if any are relevant modifications
+        let mut file_changed = None;
 
         while let Ok(event_result) = self.receiver.try_recv() {
             if let Ok(event) = event_result {
-                if self.is_yaml_modification(&event) {
-                    // Get the first modified YAML path
+                if self.is_relevant_modification(&event) {
+                    // Get the first modified path
                     if let Some(path) = event.paths.first() {
-                        yaml_changed = Some(path.clone());
+                        file_changed = Some(path.clone());
                     }
                 }
             }
         }
 
-        yaml_changed
+        file_changed
     }
 
-    /// Check if an event represents a YAML file modification
-    fn is_yaml_modification(&self, event: &Event) -> bool {
+    /// Check if an event represents a relevant file modification
+    fn is_relevant_modification(&self, event: &Event) -> bool {
         // Only care about modify/create events
         let is_relevant_event = matches!(
             event.kind,
@@ -65,11 +67,11 @@ impl FileWatcher {
             return false;
         }
 
-        // Check if any path is a YAML file
+        // Check if any path matches one of the target extensions
         event.paths.iter().any(|path| {
             path.extension()
                 .and_then(|ext| ext.to_str())
-                .map(|ext| ext.eq_ignore_ascii_case("yaml") || ext.eq_ignore_ascii_case("yml"))
+                .map(|ext| self.extensions.iter().any(|e| e.eq_ignore_ascii_case(ext)))
                 .unwrap_or(false)
         })
     }

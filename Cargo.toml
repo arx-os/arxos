@@ -60,6 +60,7 @@ log = "0.4"
 # Performance dependencies
 rayon = "1.8"
 indicatif = "0.17"
+earcutr = "0.4"
 
 # Configuration dependencies
 toml = "0.8"

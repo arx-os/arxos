@@ -354,6 +354,7 @@ dependencies = [
  "crossterm",
  "csv",
  "dirs",
+ "earcutr",
  "ethers",
  "ethers-contract",
  "ethers-signers",

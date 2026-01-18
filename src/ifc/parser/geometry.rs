@@ -138,6 +138,38 @@ impl<'a> GeometryResolver<'a> {
         None
     }
 
+    pub fn resolve_spherical_point(&self, point_id: u64) -> Vector3<f64> {
+        if let Some(entity) = self.registry.get_raw(point_id) {
+            if entity.class == "IFCSPHERICALPOINT" {
+                let r = self.extract_float(&entity.params, 0).unwrap_or(0.0);
+                let theta = self.extract_float(&entity.params, 1).unwrap_or(0.0).to_radians();
+                let phi = self.extract_float(&entity.params, 2).unwrap_or(0.0).to_radians();
+                return Vector3::new(
+                    r * phi.sin() * theta.cos(),
+                    r * phi.sin() * theta.sin(),
+                    r * phi.cos()
+                );
+            }
+        }
+        Vector3::new(0.0, 0.0, 0.0)
+    }
+
+    pub fn resolve_cylindrical_point(&self, point_id: u64) -> Vector3<f64> {
+        if let Some(entity) = self.registry.get_raw(point_id) {
+            if entity.class == "IFCCYLINDRICALPOINT" {
+                let rho = self.extract_float(&entity.params, 0).unwrap_or(0.0);
+                let phi = self.extract_float(&entity.params, 1).unwrap_or(0.0).to_radians();
+                let z = self.extract_float(&entity.params, 2).unwrap_or(0.0);
+                return Vector3::new(
+                    rho * phi.cos(),
+                    rho * phi.sin(),
+                    z
+                );
+            }
+        }
+        Vector3::new(0.0, 0.0, 0.0)
+    }
+
     /// Resolve points from a polyline (IfcPolyline)
     pub fn resolve_polyline(&self, polyline_id: u64) -> Vec<Vector3<f64>> {
         let mut points = Vec::new();
@@ -187,5 +219,41 @@ impl<'a> GeometryResolver<'a> {
             Param::Integer(i) => Some(*i as f64),
             _ => None,
         }
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ifc::parser::registry::EntityRegistry;
+
+    #[test]
+    fn test_coordinate_resolutions() {
+        let mut registry = EntityRegistry::new();
+        
+        // Spherical: R=1.0, Theta=0, Phi=90 (Should be X=1, Y=0, Z=0)
+        registry.register(RawEntity { 
+            id: 1, 
+            class: "IFCSPHERICALPOINT".to_string(), 
+            params: vec![Param::Float(1.0), Param::Float(0.0), Param::Float(90.0)] 
+        });
+
+        // Cylindrical: Rho=1.0, Phi=90, Z=5.0 (Should be X=0, Y=1, Z=5)
+        registry.register(RawEntity { 
+            id: 2, 
+            class: "IFCCYLINDRICALPOINT".to_string(), 
+            params: vec![Param::Float(1.0), Param::Float(90.0), Param::Float(5.0)] 
+        });
+
+        let resolver = GeometryResolver::new(&registry);
+        
+        let sphere = resolver.resolve_spherical_point(1);
+        assert!((sphere.x - 1.0).abs() < 1e-6);
+        assert!(sphere.y.abs() < 1e-6);
+        assert!(sphere.z.abs() < 1e-6);
+
+        let cylinder = resolver.resolve_cylindrical_point(2);
+        assert!(cylinder.x.abs() < 1e-6);
+        assert!((cylinder.y - 1.0).abs() < 1e-6);
+        assert_eq!(cylinder.z, 5.0);
     }
 }

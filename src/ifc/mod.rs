@@ -2,6 +2,8 @@
 use crate::core::Building;
 use crate::utils::progress::ProgressContext;
 use log::{info, warn};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::Path;
 
 mod error;
@@ -22,6 +24,20 @@ pub use bim_parser::BimParser;
 /// Uses the `ifc_rs` crate for parsing, then converts to ArxOS building models.
 pub struct IFCProcessor {
     // Delegates to BimParser which uses ifc_rs
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EntityStats {
+    pub total_entities: usize,
+    pub class_counts: HashMap<String, usize>,
+    pub spatial_entities: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct ParsingResult {
+    pub data: crate::yaml::BuildingData,
+    pub stats: EntityStats,
+    pub warnings: Vec<String>,
 }
 
 impl Default for IFCProcessor {
@@ -71,24 +87,37 @@ impl IFCProcessor {
     }
 
     /// Parse IFC file using the new high-performance native parser
-    pub fn parse_native(&self, file_path: &str) -> anyhow::Result<crate::yaml::BuildingData> {
-        info!("Processing IFC file (Native): {}", file_path);
+    pub fn parse_native(&self, file_path: &str, validate_strict: bool) -> anyhow::Result<ParsingResult> {
+        info!("Processing IFC file (Native, strict={}): {}", validate_strict, file_path);
         
         let content = std::fs::read_to_string(file_path)?;
         let lexer = parser::StepLexer::new(&content);
         let mut registry = parser::EntityRegistry::new();
         registry.populate_from_lexer(lexer);
         
+        // Collect stats
+        let stats = registry.get_stats();
+
+        if validate_strict && stats.spatial_entities == 0 {
+            return Err(anyhow::anyhow!("Strict validation failed: No spatial entities found (IFC contains no Site/Building/Storey)"));
+        }
+
         let mut resolver = parser::IfcResolver::new(&mut registry);
-        resolver.resolve_all()
+        let data = resolver.resolve_all()?;
+        
+        Ok(ParsingResult {
+            data,
+            stats,
+            warnings: Vec::new(), // TODO: Collect warnings from resolver
+        })
     }
 
     /// Extract hierarchical building data from an IFC file
     /// Returns a BuildingData structure compatible with ArxOS YAML format
     pub fn extract_hierarchy(&self, file_path: &str) -> anyhow::Result<crate::yaml::BuildingData> {
         // Try native parser first
-        if let Ok(data) = self.parse_native(file_path) {
-            return Ok(data);
+        if let Ok(result) = self.parse_native(file_path, false) {
+            return Ok(result.data);
         }
 
         warn!("Native parser failed, falling back to legacy for hierarchy: {}", file_path);

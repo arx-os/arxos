@@ -466,3 +466,24 @@ impl<'a> IfcResolver<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ifc::parser::registry::EntityRegistry;
+
+    #[test]
+    fn test_extract_string_param() {
+        let mut registry = EntityRegistry::new();
+        let resolver = IfcResolver::new(&mut registry);
+        
+        let entity = RawEntity {
+            id: 1,
+            class: "TEST".to_string(),
+            params: vec![Param::String("Hello".to_string())]
+        };
+        
+        assert_eq!(resolver.extract_string_param(&entity, 0), Some("Hello".to_string()));
+        assert_eq!(resolver.extract_string_param(&entity, 1), None);
+    }
+}

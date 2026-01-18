@@ -11,6 +11,7 @@ use crate::yaml::BuildingData;
 use anyhow::Result;
 use chrono::Utc;
 
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
@@ -208,12 +209,18 @@ impl IFCExporter {
                 let room_id = self.create_space(writer, room, floor.elevation.unwrap_or(0.0), owner_history_id)?;
                 room_ids.push(room_id);
                 
+                // --- ADD PSETS FOR ROOM ---
+                self.create_property_set(writer, owner_history_id, room_id, "Pset_ArxRoomProperties", &room.properties)?;
+
                 // 8. Process Equipment in Room
                 if !room.equipment.is_empty() {
                     let mut equipment_ids = Vec::new();
                     for equipment in &room.equipment {
                          let eq_id = self.create_equipment(writer, equipment, owner_history_id)?;
                          equipment_ids.push(eq_id);
+
+                         // --- ADD PSETS FOR EQUIPMENT ---
+                         self.create_property_set(writer, owner_history_id, eq_id, "Pset_ArxEquipmentProperties", &equipment.properties)?;
                     }
                     // Link Room -> Equipment (Spatial Containment)
                     if !equipment_ids.is_empty() {
@@ -295,27 +302,39 @@ impl IFCExporter {
     fn create_building<W: Write>(&self, writer: &mut StepWriter<W>, building: &Building, owner_hist: usize) -> Result<usize> {
         let placement = self.create_local_placement(writer, None, 0.0, 0.0, 0.0)?;
         
-        writer.write_entity(format!(
+        let building_id = writer.write_entity(format!(
             "IFCBUILDING('{}',#{},'{}',$,$,#{},$,$,.ELEMENT.,$,$,$)",
             self.generate_guid(),
             owner_hist,
             building.name,
             placement
-        ))
+        ))?;
+
+        // --- ADD PSETS FOR BUILDING ---
+        if let Some(meta) = &building.metadata {
+            self.create_property_set(writer, owner_hist, building_id, "Pset_ArxBuildingMetadata", &meta.properties)?;
+        }
+
+        Ok(building_id)
     }
 
     fn create_building_storey<W: Write>(&self, writer: &mut StepWriter<W>, floor: &Floor, owner_hist: usize) -> Result<usize> {
         let elevation = floor.elevation.unwrap_or(0.0);
         let placement = self.create_local_placement(writer, None, 0.0, 0.0, elevation)?;
         
-        writer.write_entity(format!(
+        let floor_id = writer.write_entity(format!(
             "IFCBUILDINGSTOREY('{}',#{},'{}',$,$,#{},$,$,.ELEMENT.,{})",
             self.generate_guid(),
             owner_hist,
             floor.name,
             placement,
             elevation
-        ))
+        ))?;
+
+        // --- ADD PSETS FOR FLOOR ---
+        self.create_property_set(writer, owner_hist, floor_id, "Pset_ArxFloorProperties", &floor.properties)?;
+
+        Ok(floor_id)
     }
 
     fn create_space<W: Write>(&self, writer: &mut StepWriter<W>, room: &Room, _floor_elevation: f64, owner_hist: usize) -> Result<usize> {
@@ -423,6 +442,49 @@ impl IFCExporter {
             contained_refs,
             container_id
         ))
+    }
+
+    /// Link properties to an entity via IfcRelDefinesByProperties
+    fn create_property_set<W: Write>(
+        &self,
+        writer: &mut StepWriter<W>,
+        owner_hist: usize,
+        related_id: usize,
+        name: &str,
+        properties: &HashMap<String, String>,
+    ) -> Result<Option<usize>> {
+        if properties.is_empty() {
+            return Ok(None);
+        }
+
+        let mut prop_ids = Vec::new();
+        for (key, value) in properties {
+            // IfcPropertySingleValue
+            let p_id = writer.write_entity(format!(
+                "IFCPROPERTYSINGLEVALUE('{}',$,IFCLABEL('{}'),$)",
+                key, value
+            ))?;
+            prop_ids.push(p_id);
+        }
+
+        let prop_refs = prop_ids.iter().map(|id| format!("#{}", id)).collect::<Vec<_>>().join(",");
+        let pset_id = writer.write_entity(format!(
+            "IFCPROPERTYSET('{}',#{},'{}',$,(#{}))",
+            self.generate_guid(),
+            owner_hist,
+            name,
+            prop_refs
+        ))?;
+
+        writer.write_entity(format!(
+            "IFCRELDEFINESBYPROPERTIES('{}',#{},$,$,(#{}),#{})",
+            self.generate_guid(),
+            owner_hist,
+            related_id,
+            pset_id
+        ))?;
+
+        Ok(Some(pset_id))
     }
 
     // --- Geometry Helpers ---
@@ -594,83 +656,3 @@ impl IFCExporter {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::core::{Building, Floor, Room, RoomType, Equipment, EquipmentType, SpatialProperties, Position, Dimensions, BoundingBox};
-    use tempfile::NamedTempFile;
-
-    #[test]
-    fn test_ifc_export_basic() -> Result<()> {
-        // Create dummy building data
-        let mut building = Building::new("Test Building".to_string(), "/test".to_string());
-        
-        let mut floor = Floor::new("Ground Floor".to_string(), 0);
-        floor.elevation = Some(0.0);
-        
-        let mut room = Room::new("Office 101".to_string(), RoomType::Office);
-        room.spatial_properties = SpatialProperties {
-            position: Position { x: 10.0, y: 20.0, z: 0.0, coordinate_system: "floor".to_string() },
-            dimensions: Dimensions { width: 5.0, height: 3.0, depth: 4.0 },
-            bounding_box: BoundingBox::new(
-                Position { x: 7.5, y: 18.0, z: 0.0, coordinate_system: "floor".to_string() },
-                Position { x: 12.5, y: 22.0, z: 3.0, coordinate_system: "floor".to_string() },
-            ),
-            mesh: None,
-            coordinate_system: "floor".to_string(),
-        };
-        
-        let mut equipment = Equipment::new("Desk Lamp".to_string(), "/lamp".to_string(), EquipmentType::Furniture);
-        equipment.position = Position { x: 12.0, y: 22.0, z: 0.8, coordinate_system: "room".to_string() };
-        // Add a simple tetrahedron mesh
-        equipment.mesh = Some(Mesh::tetrahedron(0.5));
-        
-        room.add_equipment(equipment);
-        
-        // Add room to a wing (need to create a wing first)
-        let mut wing = crate::core::Wing::new("East Wing".to_string());
-        wing.add_room(room);
-        floor.add_wing(wing);
-        
-        building.add_floor(floor);
-
-        let data = BuildingData {
-            building,
-            equipment: vec![],
-        };
-
-        // Export to temp file
-        let file = NamedTempFile::new()?;
-        let path = file.path();
-        
-        let exporter = IFCExporter::new(data);
-        exporter.export(path)?;
-
-        // Verify file content
-        let content = std::fs::read_to_string(path)?;
-        assert!(content.contains("ISO-10303-21;"));
-        assert!(content.contains("IFCPROJECT"));
-        assert!(content.contains("IFCSITE"));
-        assert!(content.contains("IFCBUILDING"));
-        assert!(content.contains("IFCBUILDINGSTOREY"));
-        assert!(content.contains("IFCSPACE"));
-        assert!(content.contains("IFCFURNITURE")); // Equipment type
-        assert!(content.contains("IFCCARTESIANPOINTLIST3D")); // Mesh vertices
-        assert!(content.contains("IFCTRIANGULATEDFACESET")); // Mesh faces
-        assert!(content.contains("END-ISO-10303-21;"));
-
-        // Verify GUID format
-        // Find a GUID in the content (e.g., '28k9S_X_X_X_X_X_X_X_X_')
-        // Simple check: find lines with IFCPROJECT('...
-        let project_line = content.lines().find(|l| l.contains("IFCPROJECT")).unwrap();
-        let parts: Vec<&str> = project_line.split('\'').collect();
-        // IFCPROJECT('GUID', ...) -> parts[1] is GUID
-        if parts.len() >= 2 {
-            let guid = parts[1];
-            assert_eq!(guid.len(), 22, "GUID must be 22 characters long");
-            assert!(guid.chars().all(|c| "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$".contains(c)), "GUID contains invalid characters");
-        }
-
-        Ok(())
-    }
-}

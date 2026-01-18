@@ -32,8 +32,8 @@ impl Cli {
                 };
                 Ok(cmd.execute()?)
             },
-            Commands::Import { ifc_file, repo, dry_run } => {
-                let cmd = ImportCommand { ifc_file, repo, dry_run };
+            Commands::Import { ifc_file, repo, dry_run, strict } => {
+                let cmd = ImportCommand { ifc_file, repo, dry_run, strict };
                 Ok(cmd.execute()?)
             },
             Commands::Export { format, output, repo, delta } => {
@@ -598,6 +598,9 @@ pub enum Commands {
         /// Dry run - show what would be done without making changes
         #[arg(long)]
         dry_run: bool,
+        /// Enable strict validation (fail on missing spatial entities)
+        #[arg(long)]
+        strict: bool,
     },
     /// Export building data to Git repository or other formats
     Export {

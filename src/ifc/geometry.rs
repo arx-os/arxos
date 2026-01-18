@@ -434,7 +434,11 @@ impl PlacementResolver {
             return Vec::new();
         }
 
-        let polyline_ref = params[1].as_str();
+        let polyline_ref = params.iter()
+            .skip(1)
+            .find(|s| s.trim().starts_with('#'))
+            .map(|s| s.trim())
+            .unwrap_or("$");
         let id = polyline_ref.trim_start_matches('#');
         let polyline = match self.entities.get(id) {
             Some(entity) if entity.entity_type == "IFCPOLYLINE" => entity,

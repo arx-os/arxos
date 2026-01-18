@@ -2,7 +2,6 @@ use crate::cli::commands::Command;
 use crate::ifc::IFCProcessor;
 use crate::yaml::BuildingYamlSerializer;
 use crate::core::BuildingMetadata;
-use crate::yaml::BuildingData;
 use crate::utils::path_safety::PathSafety;
 use anyhow::anyhow;
 use std::error::Error;
@@ -12,6 +11,7 @@ pub struct ImportCommand {
     pub ifc_file: String,
     pub repo: Option<String>,
     pub dry_run: bool,
+    pub strict: bool,
 }
 
 impl Command for ImportCommand {
@@ -21,39 +21,41 @@ impl Command for ImportCommand {
         if self.dry_run {
             println!("🔍 Dry run mode enabled - no changes will be written");
         }
+        
+        if self.strict {
+            println!("🛡️  Strict validation enabled");
+        }
 
         let processor = IFCProcessor::new();
         let serializer = BuildingYamlSerializer::new();
         let repo_root = Path::new(".");
 
-        // 1. Extract hierarchy
-        let building_data = match processor.process_file(&self.ifc_file) {
-            Ok((mut building, _spatial_entities)) => {
-                building.metadata = Some(BuildingMetadata {
-                    source_file: Some(self.ifc_file.clone()),
-                    parser_version: "2.0.0".to_string(),
-                    total_entities: 0,
-                    spatial_entities: 0,
-                    coordinate_system: "Unknown".to_string(),
-                    units: "Meters".to_string(),
-                    tags: Vec::new(),
-                    properties: Default::default(),
-                });
-
-                BuildingData {
-                    building,
-                    equipment: Vec::new(),
-                }
-            }
+        // 1. Extract hierarchy using native parser
+        let result = match processor.parse_native(&self.ifc_file, self.strict) {
+            Ok(res) => res,
             Err(e) => {
                 return Err(format!("Failed to parse IFC file: {}", e).into());
             }
         };
 
+        let mut building_data = result.data;
+        building_data.building.metadata = Some(BuildingMetadata {
+            source_file: Some(self.ifc_file.clone()),
+            parser_version: env!("CARGO_PKG_VERSION").to_string(),
+            total_entities: result.stats.total_entities,
+            spatial_entities: result.stats.spatial_entities,
+            coordinate_system: "building_local".to_string(),
+            units: "meters".to_string(),
+            tags: Vec::new(),
+            properties: Default::default(),
+        });
+
         if self.dry_run {
             println!("✅ Parsed successfully:");
             println!("  Building: {}", building_data.building.name);
             println!("  Floors: {}", building_data.building.floors.len());
+            println!("  Total IFC Entities: {}", result.stats.total_entities);
+            println!("  Spatial Entities: {}", result.stats.spatial_entities);
             return Ok(());
         }
 

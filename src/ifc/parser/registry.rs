@@ -109,10 +109,50 @@ impl EntityRegistry {
             .filter(|&id| self.get_raw(id).map(|e| e.class == class).unwrap_or(false))
             .collect()
     }
+
+    pub fn get_stats(&self) -> crate::ifc::EntityStats {
+        let mut class_counts = HashMap::new();
+        for (class, ids) in &self.class_map {
+            class_counts.insert(class.clone(), ids.len());
+        }
+
+        let spatial_classes = ["IFCSITE", "IFCBUILDING", "IFCBUILDINGSTOREY", "IFCSPACE"];
+        let spatial_entities = spatial_classes.iter()
+            .map(|&c| self.class_map.get(c).map(|v| v.len()).unwrap_or(0))
+            .sum();
+
+        crate::ifc::EntityStats {
+            total_entities: self.entities.len(),
+            class_counts,
+            spatial_entities,
+        }
+    }
 }
 
-impl Default for EntityRegistry {
-    fn default() -> Self {
-        Self::new()
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_registry_basic() {
+        let mut registry = EntityRegistry::new();
+        registry.register(RawEntity { id: 1, class: "IFCSPACE".to_string(), params: vec![] });
+        registry.register(RawEntity { id: 2, class: "IFCSPACE".to_string(), params: vec![] });
+        
+        assert_eq!(registry.entity_count(), 2);
+        assert_eq!(registry.get_by_class("IFCSPACE").len(), 2);
+        assert!(registry.get_raw(1).is_some());
+    }
+
+    #[test]
+    fn test_registry_stats() {
+        let mut registry = EntityRegistry::new();
+        registry.register(RawEntity { id: 1, class: "IFCBUILDING".to_string(), params: vec![] });
+        registry.register(RawEntity { id: 2, class: "IFCWALL".to_string(), params: vec![] });
+        
+        let stats = registry.get_stats();
+        assert_eq!(stats.total_entities, 2);
+        assert_eq!(stats.spatial_entities, 1);
+        assert_eq!(stats.class_counts.get("IFCWALL"), Some(&1));
     }
 }

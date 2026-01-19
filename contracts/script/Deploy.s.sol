@@ -6,7 +6,10 @@ import "../src/ArxAddresses.sol";
 import "../src/ArxRegistry.sol";
 import "../src/ArxosToken.sol";
 import "../src/ArxContributionOracle.sol";
+import "../src/ArxContributionOracle.sol";
 import "../src/ArxPaymentRouter.sol";
+import "../src/ArxOracleStaking.sol";
+import "../src/ArxDisputeResolver.sol";
 
 /**
  * @title DeployArxos
@@ -15,8 +18,10 @@ import "../src/ArxPaymentRouter.sol";
  *      1. ArxAddresses (configuration)
  *      2. ArxRegistry (identity management)
  *      3. ArxosToken (ERC20 token)
- *      4. ArxContributionOracle (minting logic)
- *      5. ArxPaymentRouter (x402 payments)
+ *      4. ArxOracleStaking (security)
+ *      5. ArxContributionOracle (minting logic)
+ *      6. ArxPaymentRouter (x402 payments)
+ *      7. ArxDisputeResolver (dispute handling)
  */
 contract DeployArxos is Script {
     function run() external {
@@ -53,17 +58,25 @@ contract DeployArxos is Script {
         console.log("ArxosToken deployed at:", address(token));
 
         // 4. Deploy ArxContributionOracle
-        console.log("\n4. Deploying ArxContributionOracle...");
+        // 4. Deploy ArxOracleStaking
+        console.log("\n4. Deploying ArxOracleStaking...");
+        uint256 minStake = 10_000 * 10**18;
+        ArxOracleStaking staking = new ArxOracleStaking(deployer, address(token), minStake); // owner first
+        console.log("ArxOracleStaking deployed at:", address(staking));
+
+        // 5. Deploy ArxContributionOracle
+        console.log("\n5. Deploying ArxContributionOracle...");
         ArxContributionOracle oracle = new ArxContributionOracle(
             deployer,
             address(token),
             address(registry),
-            address(addresses)
+            address(addresses),
+            address(staking)
         );
         console.log("ArxContributionOracle deployed at:", address(oracle));
 
-        // 5. Deploy ArxPaymentRouter
-        console.log("\n5. Deploying ArxPaymentRouter...");
+        // 6. Deploy ArxPaymentRouter
+        console.log("\n6. Deploying ArxPaymentRouter...");
         ArxPaymentRouter router = new ArxPaymentRouter(
             deployer,
             address(token),
@@ -71,6 +84,19 @@ contract DeployArxos is Script {
             address(addresses)
         );
         console.log("ArxPaymentRouter deployed at:", address(router));
+
+        // 7. Deploy ArxDisputeResolver
+        console.log("\n7. Deploying ArxDisputeResolver...");
+        ArxDisputeResolver resolver = new ArxDisputeResolver(
+            deployer,
+            address(token),
+            address(oracle),
+            address(staking)
+        );
+        console.log("ArxDisputeResolver deployed at:", address(resolver));
+        
+        // Connect Oracle to Resolver
+        oracle.setResolver(address(resolver));
 
         // Grant MINTER_ROLE to oracle
         console.log("\n6. Granting MINTER_ROLE to oracle...");

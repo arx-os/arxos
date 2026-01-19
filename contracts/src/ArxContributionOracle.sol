@@ -43,6 +43,9 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
     /// @notice ArxOracleStaking contract
     ArxOracleStaking public immutable staking;
 
+    /// @notice ArxDisputeResolver contract
+    address public disputeResolver;
+
     /// @notice EIP-712 typehash for ContributionProof
     bytes32 public constant CONTRIBUTION_PROOF_TYPEHASH =
         keccak256(
@@ -82,6 +85,7 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
         uint256 proposedAt;
         bool finalized;
         mapping(address => bool) confirmed;
+        bool disputed;
     }
 
     /// @notice Mapping from contribution ID to pending contribution
@@ -144,6 +148,22 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
     }
 
     /**
+     * @notice Returns the EIP-712 domain separator
+     */
+    function DOMAIN_SEPARATOR() external view returns (bytes32) {
+        return _domainSeparatorV4();
+    }
+
+    /**
+     * @notice Set the dispute resolver contract address
+     * @param _resolver Address of the ArxDisputeResolver
+     */
+    function setResolver(address _resolver) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_resolver != address(0), "Zero resolver");
+        disputeResolver = _resolver;
+    }
+
+    /**
      * @notice Propose a contribution (oracle 1 of 3)
      * @param buildingId Building identifier
      * @param worker Worker wallet address
@@ -190,11 +210,19 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
         // Oracle confirms
         require(staking.hasMinStake(msg.sender), "ArxContributionOracle: insufficient stake");
         require(!pending.confirmed[msg.sender], "ArxContributionOracle: already confirmed");
-        require(!usedProofs[proofHash], "ArxContributionOracle: proof already used");
+        
+        // Replay protection:
+        // 1. If new contribution (confirms == 0), proof must be unused
+        // 2. If existing, proof must match the one used to initialize it
+        if (pending.confirmations == 0) {
+            require(!usedProofs[proofHash], "ArxContributionOracle: proof already used");
+            usedProofs[proofHash] = true;
+        } else {
+            require(contributionProofHashes[contributionId] == proofHash, "Proof mismatch");
+        }
 
         pending.confirmed[msg.sender] = true;
         pending.confirmations++;
-        usedProofs[proofHash] = true;
 
         emit ContributionConfirmed(contributionId, msg.sender, pending.confirmations);
     }
@@ -209,6 +237,7 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
 
         require(pending.confirmations > 0, "ArxContributionOracle: contribution not found");
         require(!pending.finalized, "Already finalized");
+        require(!pending.disputed, "Contribution is disputed");
 
         require(
             pending.confirmations >= MIN_CONFIRMATIONS,
@@ -253,7 +282,61 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
         require(!pending.finalized, "Already finalized");
 
         // Mark as disputed (prevents minting) but do not finalize
+        pending.disputed = true;
         emit ContributionDisputed(contributionId, msg.sender, reason);
+    }
+
+    /**
+     * @notice Called by resolver to flag a contribution as disputed
+     * @param contributionId Contribution ID
+     * @param disputer Address of the disputer
+     */
+    function flagDisputed(bytes32 contributionId, address disputer) external {
+        require(msg.sender == disputeResolver, "Only resolver");
+        PendingContribution storage pending = pendingContributions[contributionId];
+        require(pending.confirmations > 0, "Not found");
+        require(!pending.finalized, "Finalized");
+        require(!pending.disputed, "Already disputed");
+
+        pending.disputed = true;
+        emit ContributionDisputed(contributionId, disputer, "Dispute raised via Resolver");
+    }
+
+    /**
+     * @notice Called by resolver to finalize dispute outcome
+     * @param contributionId Contribution ID
+     * @param valid True if contribution was ruled VALID, false if INVALID
+     */
+    function resolveDispute(bytes32 contributionId, bool valid) external {
+        require(msg.sender == disputeResolver, "Only resolver");
+        PendingContribution storage pending = pendingContributions[contributionId];
+        
+        require(pending.disputed, "Not disputed");
+        require(!pending.finalized, "Already finalized");
+
+        if (valid) {
+            // Ruling: VALID. Lift dispute flag, allow finalizer to proceed (or auto-finalize?)
+            // Auto-finalizing is simpler UX
+            
+            // Get system addresses
+            (address maintainer, address treasury) = addresses.getAddresses();
+    
+            // Mint with 70/10/10/10 split
+            arxoToken.mintContribution(
+                pending.worker,
+                pending.building,
+                maintainer,
+                treasury,
+                pending.amount
+            );
+    
+            pending.finalized = true;
+            emit ContributionFinalized(contributionId, pending.worker, pending.amount);
+        } else {
+            // Ruling: INVALID. Mark finalized (dead) without minting
+            pending.finalized = true;
+            // No tokens minted.
+        }
     }
 
     /**

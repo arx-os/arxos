@@ -46,11 +46,15 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
     /// @notice ArxDisputeResolver contract
     address public disputeResolver;
 
-    /// @notice EIP-712 typehash for ContributionProof
+    /// @notice EIP-712 typehash for ContributionProof (Updated for V2)
     bytes32 public constant CONTRIBUTION_PROOF_TYPEHASH =
         keccak256(
-            "ContributionProof(bytes32 merkleRoot,bytes32 locationHash,bytes32 buildingHash,uint256 timestamp,uint256 dataSize)"
+            "ContributionProof(bytes32 merkleRoot,bytes32 locationHash,bytes32 buildingHash,uint256 timestamp,uint256 dataSize,QualityMetrics quality)QualityMetrics(uint8 accuracy,uint8 completeness)"
         );
+
+    /// @notice EIP-712 typehash for QualityMetrics
+    bytes32 public constant QUALITY_METRICS_TYPEHASH =
+        keccak256("QualityMetrics(uint8 accuracy,uint8 completeness)");
 
     /**
      * @notice Contribution proof structure
@@ -60,13 +64,32 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
      * @param timestamp Proof creation timestamp
      * @param dataSize Bytes of data contributed
      */
+    /**
+     * @notice Quality metrics for contribution
+     * @param accuracy accuracy score 0-100
+     * @param completeness completeness score 0-100
+     */
+    struct QualityMetrics {
+        uint8 accuracy;
+        uint8 completeness;
+    }
+
     struct ContributionProof {
         bytes32 merkleRoot;
         bytes32 locationHash;
         bytes32 buildingHash;
         uint256 timestamp;
         uint256 dataSize;
+        QualityMetrics quality;
     }
+
+    struct WorkerStats {
+        uint256 totalContributions;
+        uint256 totalEarned;
+        uint256 totalScore; // Cumulative quality score
+    }
+
+    mapping(address => WorkerStats) public workerStats;
 
     /**
      * @notice Pending contribution awaiting finalization
@@ -78,14 +101,17 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
      * @param finalized Whether contribution has been processed
      */
     struct PendingContribution {
-        address worker;
-        address building;
-        uint256 amount;
-        uint256 confirmations;
-        uint256 proposedAt;
-        bool finalized;
-        mapping(address => bool) confirmed;
-        bool disputed;
+        address worker;           // 20 bytes - SLOT 0
+        uint8 confirmations;      // 1 byte   - SLOT 0 (packed)
+        address building;         // 20 bytes - SLOT 1
+        uint40 proposedAt;        // 5 bytes  - SLOT 1 (packed)
+        string buildingId;        // dynamic  - SLOT 2+
+        uint256 amount;           // 32 bytes - SLOT N
+        uint8 accuracy;           // 1 byte   - SLOT N+1
+        uint8 completeness;       // 1 byte   - SLOT N+1 (packed)
+        bool finalized;           // 1 byte   - SLOT N+1 (packed)
+        bool disputed;            // 1 byte   - SLOT N+1 (packed)
+        mapping(address => bool) confirmed; // SLOT N+2
     }
 
     /// @notice Mapping from contribution ID to pending contribution
@@ -96,6 +122,22 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
 
         /// @notice Mapping from contributionId to proof hash
         mapping(bytes32 => bytes32) public contributionProofHashes;
+
+    // --- Phase 2: Revenue Splits ---
+    enum SplitTier { STANDARD, PREMIUM, ENTERPRISE }
+    
+    struct RevenueConfig {
+        uint256 workerBps;      // e.g. 7000 = 70%
+        uint256 buildingBps;    // e.g. 1000 = 10%
+        uint256 maintainerBps;  // e.g. 1000 = 10%
+        uint256 treasuryBps;    // e.g. 1000 = 10%
+    }
+    
+    mapping(SplitTier => RevenueConfig) public tierConfigs;
+    mapping(string => SplitTier) public buildingTiers;
+    
+    event TierConfigUpdated(SplitTier indexed tier, uint256 workerBps, uint256 buildingBps, uint256 maintainerBps, uint256 treasuryBps);
+    event BuildingTierUpdated(string indexed buildingId, SplitTier tier);
 
     /// @notice Emitted when contribution is proposed
     event ContributionProposed(
@@ -143,6 +185,14 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
         registry = ArxRegistry(_registry);
         addresses = ArxAddresses(_addresses);
         staking = ArxOracleStaking(_staking);
+
+        // Initialize Default Tiers
+        // Standard: 70/10/10/10
+        tierConfigs[SplitTier.STANDARD] = RevenueConfig(7000, 1000, 1000, 1000);
+        // Premium: 60/20/10/10 (Building gets more)
+        tierConfigs[SplitTier.PREMIUM] = RevenueConfig(6000, 2000, 1000, 1000);
+        // Enterprise: 50/30/10/10
+        tierConfigs[SplitTier.ENTERPRISE] = RevenueConfig(5000, 3000, 1000, 1000);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
@@ -201,8 +251,11 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
         if (pending.confirmations == 0) {
             pending.worker = worker;
             pending.building = registry.getBuildingWallet(buildingId);
+            pending.buildingId = buildingId;
             pending.amount = amount;
-            pending.proposedAt = block.timestamp;
+            pending.accuracy = proof.quality.accuracy;
+            pending.completeness = proof.quality.completeness;
+            pending.proposedAt = uint40(block.timestamp);
 
             emit ContributionProposed(contributionId, worker, buildingId, amount, msg.sender);
         }
@@ -251,17 +304,52 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
         // Get system addresses
         (address maintainer, address treasury) = addresses.getAddresses();
 
-        // Mint with 70/10/10/10 split
-        arxoToken.mintContribution(
-            pending.worker,
-            pending.building,
-            maintainer,
-            treasury,
-            pending.amount
-        );
+        // Get Split Config
+        SplitTier tier = buildingTiers[pending.buildingId];
+        RevenueConfig memory config = tierConfigs[tier];
+        
+        // Calculate Shares (BPS = Basis Points, 10000 = 100%)
+        // Calculate Reward Multiplier
+        // Average of accuracy and completeness (0-100)
+        uint256 qualityScore = (uint256(pending.accuracy) + uint256(pending.completeness)) / 2;
+        // Scale amount: Base * Score / 100
+        uint256 scaledAmount = (pending.amount * qualityScore) / 100;
+        
+        // Calculate Shares (BPS = Basis Points, 10000 = 100%)
+        // Use scaledAmount for distribution
+        uint256 workerAmount = (scaledAmount * config.workerBps) / 10000;
+        uint256 buildingAmount = (scaledAmount * config.buildingBps) / 10000;
+        uint256 maintainerAmount = (scaledAmount * config.maintainerBps) / 10000;
+        uint256 treasuryAmount = (scaledAmount * config.treasuryBps) / 10000;
+        
+        // Enforce Caps via Token
+        arxoToken.checkDailyCap(pending.worker, workerAmount, true); // true = worker
+        arxoToken.checkDailyCap(pending.building, buildingAmount, false); // false = building
+        
+        // Prepare Batch Mint
+        address[] memory recipients = new address[](4);
+        recipients[0] = pending.worker;
+        recipients[1] = pending.building;
+        recipients[2] = maintainer;
+        recipients[3] = treasury;
+        
+        uint256[] memory amounts = new uint256[](4);
+        amounts[0] = workerAmount;
+        amounts[1] = buildingAmount;
+        amounts[2] = maintainerAmount;
+        amounts[3] = treasuryAmount;
+        
+        // Mint Batch
+        arxoToken.mintBatch(recipients, amounts);
+
+        // Update Worker Stats
+        WorkerStats storage stats = workerStats[pending.worker];
+        stats.totalContributions++;
+        stats.totalEarned += workerAmount;
+        stats.totalScore += qualityScore;
 
         pending.finalized = true;
-        emit ContributionFinalized(contributionId, pending.worker, pending.amount);
+        emit ContributionFinalized(contributionId, pending.worker, scaledAmount);
     }
 
     /**
@@ -357,7 +445,13 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
             "ArxContributionOracle: proof expired"
         );
 
-        // Verify EIP-712 signature
+        // Verify EIP-712 signature (V2 with QualityMetrics)
+        bytes32 qualityHash = keccak256(abi.encode(
+            QUALITY_METRICS_TYPEHASH,
+            proof.quality.accuracy,
+            proof.quality.completeness
+        ));
+
         bytes32 structHash = keccak256(
             abi.encode(
                 CONTRIBUTION_PROOF_TYPEHASH,
@@ -365,7 +459,8 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
                 proof.locationHash,
                 proof.buildingHash,
                 proof.timestamp,
-                proof.dataSize
+                proof.dataSize,
+                qualityHash
             )
         );
 
@@ -406,8 +501,8 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
             pending.worker,
             pending.building,
             pending.amount,
-            pending.confirmations,
-            pending.proposedAt,
+            uint256(pending.confirmations),
+            uint256(pending.proposedAt),
             pending.finalized
         );
     }
@@ -420,5 +515,36 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
      */
     function hasConfirmed(bytes32 contributionId, address oracle) external view returns (bool) {
         return pendingContributions[contributionId].confirmed[oracle];
+    }
+
+    /**
+     * @notice Update the revenue configuration for a specific tier
+     * @param tier The tier to update
+     * @param workerBps Basis points for worker (e.g. 7000 = 70%)
+     * @param buildingBps Basis points for building
+     * @param maintainerBps Basis points for maintainer vault
+     * @param treasuryBps Basis points for treasury
+     */
+    function updateTierConfig(
+        SplitTier tier,
+        uint256 workerBps,
+        uint256 buildingBps,
+        uint256 maintainerBps,
+        uint256 treasuryBps
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(workerBps + buildingBps + maintainerBps + treasuryBps == 10000, "Total must be 100%");
+        
+        tierConfigs[tier] = RevenueConfig(workerBps, buildingBps, maintainerBps, treasuryBps);
+        emit TierConfigUpdated(tier, workerBps, buildingBps, maintainerBps, treasuryBps);
+    }
+
+    /**
+     * @notice Assign a revenue tier to a building
+     * @param buildingId The building identifier
+     * @param tier The tier to assign
+     */
+    function setBuildingTier(string calldata buildingId, SplitTier tier) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        buildingTiers[buildingId] = tier;
+        emit BuildingTierUpdated(buildingId, tier);
     }
 }

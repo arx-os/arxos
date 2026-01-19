@@ -30,7 +30,8 @@ contract ArxDisputeResolverTest is Test {
     string public constant BUILDING_ID = "test-building";
     
     // EIP-712 Helpers
-    bytes32 public constant CONTRIBUTION_PROOF_TYPEHASH = keccak256("ContributionProof(bytes32 merkleRoot,bytes32 locationHash,bytes32 buildingHash,uint256 timestamp,uint256 dataSize)");
+    bytes32 public constant CONTRIBUTION_PROOF_TYPEHASH = keccak256("ContributionProof(bytes32 merkleRoot,bytes32 locationHash,bytes32 buildingHash,uint256 timestamp,uint256 dataSize,QualityMetrics quality)QualityMetrics(uint8 accuracy,uint8 completeness)");
+    bytes32 public constant QUALITY_METRICS_TYPEHASH = keccak256("QualityMetrics(uint8 accuracy,uint8 completeness)");
     uint256 public workerPk = 0xA11CE;
     
     function setUp() public {
@@ -94,8 +95,18 @@ contract ArxDisputeResolverTest is Test {
             locationHash: keccak256("loc"),
             buildingHash: keccak256(bytes(BUILDING_ID)),
             timestamp: block.timestamp,
-            dataSize: 100
+            dataSize: 100,
+            quality: ArxContributionOracle.QualityMetrics({
+                accuracy: 100,
+                completeness: 100
+            })
         });
+        
+        bytes32 qualityHash = keccak256(abi.encode(
+            QUALITY_METRICS_TYPEHASH,
+            proof.quality.accuracy,
+            proof.quality.completeness
+        ));
         
         bytes32 structHash = keccak256(abi.encode(
             CONTRIBUTION_PROOF_TYPEHASH,
@@ -103,7 +114,8 @@ contract ArxDisputeResolverTest is Test {
             proof.locationHash,
             proof.buildingHash,
             proof.timestamp,
-            proof.dataSize
+            proof.dataSize,
+            qualityHash
         ));
         
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", oracle.DOMAIN_SEPARATOR(), structHash));

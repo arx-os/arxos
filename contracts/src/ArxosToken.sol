@@ -98,6 +98,16 @@ contract ArxosToken is ERC20, AccessControl, EIP712, IERC3009 {
     );
 
     /// @notice Emitted when daily caps are updated (0 treated as unlimited)
+    event DailyCapUpdated(uint256 oldCap, uint256 newCap, bool isWorker);
+
+    /// @notice Emitted when a daily limit is reached
+    event DailyLimitReached(address indexed account, uint256 attemptedAmount, bool isWorker);
+
+    /// @notice Emitted when emergency pause is activated
+    event EmergencyPaused(address indexed admin, string reason);
+
+    /// @notice Emitted when emergency pause is deactivated
+    event EmergencyUnpaused(address indexed admin);
     event DailyCapsUpdated(uint256 buildingCap, uint256 workerCap);
 
     /// @notice Emitted when the emergency pause flag changes
@@ -256,6 +266,14 @@ contract ArxosToken is ERC20, AccessControl, EIP712, IERC3009 {
      */
     function decimals() public pure override returns (uint8) {
         return 18;
+    }
+
+    function checkDailyCap(address account, uint256 amount, bool isWorker) external onlyRole(MINTER_ROLE) {
+        if (isWorker) {
+            _enforceDailyCap(workerDailyUsage[account], workerDailyCap, amount, "worker");
+        } else {
+            _enforceDailyCap(buildingDailyUsage[account], buildingDailyCap, amount, "building");
+        }
     }
 
     function _enforceDailyCap(

@@ -63,6 +63,27 @@ contract ArxContributionTest is Test {
         string reason
     );
 
+    
+    // Helper to stake oracles
+    function _stakeOracle(address _oracle) internal {
+        vm.startPrank(owner);
+        uint256 stakeAmount = 1000 ether;
+        if(token.balanceOf(_oracle) < stakeAmount) {
+            token.mint(_oracle, stakeAmount);
+        }
+        vm.stopPrank();
+        
+        vm.startPrank(_oracle);
+        if(token.allowance(_oracle, address(staking)) < stakeAmount) {
+            token.approve(address(staking), stakeAmount);
+        }
+        // Only stake if not already staked enough
+        if(!staking.hasMinStake(_oracle)) {
+            staking.stake(stakeAmount);
+        }
+        vm.stopPrank();
+    }
+
     function setUp() public {
         // Deploy core contracts
         addresses = new ArxAddresses(owner, maintainerVault, treasury);
@@ -124,7 +145,25 @@ contract ArxContributionTest is Test {
             locationHash: LOCATION_HASH,
             buildingHash: BUILDING_HASH,
             timestamp: timestamp,
-            dataSize: DATA_SIZE
+            dataSize: DATA_SIZE,
+            quality: ArxContributionOracle.QualityMetrics({
+                accuracy: 100,
+                completeness: 100
+            })
+        });
+    }
+
+    function createQualityProof(uint256 timestamp, uint8 accuracy, uint8 completeness) internal pure returns (ArxContributionOracle.ContributionProof memory) {
+        return ArxContributionOracle.ContributionProof({
+            merkleRoot: MERKLE_ROOT,
+            locationHash: LOCATION_HASH,
+            buildingHash: BUILDING_HASH,
+            timestamp: timestamp,
+            dataSize: DATA_SIZE,
+            quality: ArxContributionOracle.QualityMetrics({
+                accuracy: accuracy,
+                completeness: completeness
+            })
         });
     }
 
@@ -132,6 +171,13 @@ contract ArxContributionTest is Test {
         ArxContributionOracle.ContributionProof memory proof,
         uint256 privateKey
     ) internal view returns (bytes memory) {
+        // Build QualityMetrics hash
+        bytes32 qualityHash = keccak256(abi.encode(
+            oracle.QUALITY_METRICS_TYPEHASH(),
+            proof.quality.accuracy,
+            proof.quality.completeness
+        ));
+
         // Build EIP-712 struct hash
         bytes32 structHash = keccak256(abi.encode(
             oracle.CONTRIBUTION_PROOF_TYPEHASH(),
@@ -139,7 +185,8 @@ contract ArxContributionTest is Test {
             proof.locationHash,
             proof.buildingHash,
             proof.timestamp,
-            proof.dataSize
+            proof.dataSize,
+            qualityHash
         ));
         
         // Build EIP-712 domain separator manually
@@ -308,11 +355,13 @@ contract ArxContributionTest is Test {
         vm.prank(oracle1);
         oracle.proposeContribution(BUILDING_ID, worker1, 1000 ether, proof, signature);
         
-        // Try to use same proof again with different oracle
+        // Try to use same proof again for a DIFFERENT contribution (should fail)
+        // If we use same amount/worker/building, it's just a confirmation of the same ID (which is allowed).
+        // Change amount to force new ID.
         bytes memory sig2 = signProof(proof, WORKER1_KEY);
         vm.prank(oracle2);
         vm.expectRevert("ArxContributionOracle: proof already used");
-        oracle.proposeContribution(BUILDING_ID, worker1, 1000 ether, proof, sig2);
+        oracle.proposeContribution(BUILDING_ID, worker1, 2000 ether, proof, sig2);
     }
 
     function test_RevertWhen_OracleConfirmsTwice() public {
@@ -700,5 +749,136 @@ contract ArxContributionTest is Test {
         
         vm.expectRevert("Contribution does not exist");
         oracle.getContribution(fakeId);
+    }
+
+    function test_RevenueSplits_Standard() public {
+        _stakeOracle(oracle1);
+        _stakeOracle(oracle2);
+        
+        ArxContributionOracle.ContributionProof memory proof = createProof(block.timestamp);
+        bytes memory signature = signProof(proof, WORKER1_KEY);
+
+        // Propose
+        vm.prank(oracle1);
+        oracle.proposeContribution(BUILDING_ID, worker1, 1000 ether, proof, signature);
+        
+        // Confirm
+        vm.prank(oracle2);
+        oracle.proposeContribution(BUILDING_ID, worker1, 1000 ether, proof, signature);
+        
+        bytes32 id = calculateContributionId(BUILDING_ID, worker1, 1000 ether, proof);
+        
+        vm.warp(block.timestamp + 25 hours);
+        oracle.finalizeContribution(id);
+        
+        // Check 70% worker (700 ether)
+        assertEq(token.balanceOf(worker1), 700 ether);
+        // Check 10% building (100 ether)
+        assertEq(token.balanceOf(buildingWallet), 100 ether);
+    }
+    
+    function test_RevenueSplits_Premium() public {
+        _stakeOracle(oracle1);
+        _stakeOracle(oracle2);
+        
+        // Set Building to PREMIUM (60/20)
+        vm.prank(owner);
+        oracle.setBuildingTier(BUILDING_ID, ArxContributionOracle.SplitTier.PREMIUM);
+        
+        ArxContributionOracle.ContributionProof memory proof = createProof(block.timestamp);
+        bytes memory signature = signProof(proof, WORKER1_KEY);
+
+        // Propose
+        vm.prank(oracle1);
+        oracle.proposeContribution(BUILDING_ID, worker1, 1000 ether, proof, signature);
+        
+        // Confirm
+        vm.prank(oracle2);
+        oracle.proposeContribution(BUILDING_ID, worker1, 1000 ether, proof, signature);
+        
+        bytes32 id = calculateContributionId(BUILDING_ID, worker1, 1000 ether, proof);
+        
+        vm.warp(block.timestamp + 25 hours);
+        oracle.finalizeContribution(id);
+        
+        // Check 60% worker (600 ether)
+        assertEq(token.balanceOf(worker1), 600 ether);
+        // Check 20% building (200 ether)
+        assertEq(token.balanceOf(buildingWallet), 200 ether);
+    }
+
+    function test_QualityBasedRewards_High() public {
+        _stakeOracle(oracle1);
+        _stakeOracle(oracle2);
+        
+        // 100% Quality (100 accuracy, 100 completeness)
+        ArxContributionOracle.ContributionProof memory proof = createQualityProof(block.timestamp, 100, 100);
+        bytes memory signature = signProof(proof, WORKER1_KEY);
+
+        vm.prank(oracle1);
+        oracle.proposeContribution(BUILDING_ID, worker1, 1000 ether, proof, signature);
+        
+        vm.prank(oracle2);
+        oracle.proposeContribution(BUILDING_ID, worker1, 1000 ether, proof, signature);
+        
+        bytes32 id = calculateContributionId(BUILDING_ID, worker1, 1000 ether, proof);
+        
+        vm.warp(block.timestamp + 25 hours);
+        oracle.finalizeContribution(id);
+        
+        // 100% of 1000 ether = 1000 ether distributed
+        // Worker gets 70% of 1000 = 700
+        assertEq(token.balanceOf(worker1), 700 ether);
+    }
+
+    function test_QualityBasedRewards_Low() public {
+        _stakeOracle(oracle1);
+        _stakeOracle(oracle2);
+        
+        // 50% Quality (50 accuracy, 50 completeness). Average = 50.
+        ArxContributionOracle.ContributionProof memory proof = createQualityProof(block.timestamp, 50, 50);
+        bytes memory signature = signProof(proof, WORKER1_KEY);
+
+        vm.prank(oracle1);
+        oracle.proposeContribution(BUILDING_ID, worker1, 1000 ether, proof, signature);
+        
+        vm.prank(oracle2);
+        oracle.proposeContribution(BUILDING_ID, worker1, 1000 ether, proof, signature);
+        
+        bytes32 id = calculateContributionId(BUILDING_ID, worker1, 1000 ether, proof);
+        
+        vm.warp(block.timestamp + 25 hours);
+        oracle.finalizeContribution(id);
+        
+        // 50% of 1000 ether = 500 ether distributed
+        // Worker gets 70% of 500 = 350
+        assertEq(token.balanceOf(worker1), 350 ether);
+    }
+
+    function test_WorkerReputationTracking() public {
+        _stakeOracle(oracle1);
+        _stakeOracle(oracle2);
+        
+        ArxContributionOracle.ContributionProof memory proof = createQualityProof(block.timestamp, 80, 80); // 80% score
+        bytes memory signature = signProof(proof, WORKER1_KEY);
+
+        vm.prank(oracle1);
+        oracle.proposeContribution(BUILDING_ID, worker1, 1000 ether, proof, signature);
+        
+        vm.prank(oracle2);
+        oracle.proposeContribution(BUILDING_ID, worker1, 1000 ether, proof, signature);
+        
+        bytes32 id = calculateContributionId(BUILDING_ID, worker1, 1000 ether, proof);
+        
+        vm.warp(block.timestamp + 25 hours);
+        oracle.finalizeContribution(id);
+        
+        // Check verification stats
+        (uint256 totalContributions, uint256 totalEarned, uint256 totalScore) = oracle.workerStats(worker1);
+        
+        assertEq(totalContributions, 1);
+        // Worker gets 70% of (80% of 1000) = 70% of 800 = 560
+        assertEq(totalEarned, 560 ether); 
+        assertEq(totalScore, 80);
     }
 }

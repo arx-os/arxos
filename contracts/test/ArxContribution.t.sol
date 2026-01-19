@@ -6,12 +6,14 @@ import {ArxContributionOracle} from "../src/ArxContributionOracle.sol";
 import {ArxosToken} from "../src/ArxosToken.sol";
 import {ArxRegistry} from "../src/ArxRegistry.sol";
 import {ArxAddresses} from "../src/ArxAddresses.sol";
+import {ArxOracleStaking} from "../src/ArxOracleStaking.sol";
 
 contract ArxContributionTest is Test {
     ArxContributionOracle public oracle;
     ArxosToken public token;
     ArxRegistry public registry;
     ArxAddresses public addresses;
+    ArxOracleStaking public staking;
     
     address public owner = address(this);
     address public oracle1 = vm.addr(0x101);
@@ -66,21 +68,47 @@ contract ArxContributionTest is Test {
         addresses = new ArxAddresses(owner, maintainerVault, treasury);
         registry = new ArxRegistry(owner);
         token = new ArxosToken(owner);  // owner is the admin
+        staking = new ArxOracleStaking(owner, address(token), 1000 ether);
         oracle = new ArxContributionOracle(
             owner,
             address(token),
             address(registry),
-            address(addresses)
+            address(addresses),
+            address(staking)
         );
         
         // Grant MINTER_ROLE to oracle (as token owner)
         vm.startPrank(owner);
         token.grantRole(token.MINTER_ROLE(), address(oracle));
         
-        // Grant ORACLE_ROLE to three oracles
+        // Grant ORACLE_ROLE and stake for three oracles
         oracle.grantRole(oracle.ORACLE_ROLE(), oracle1);
         oracle.grantRole(oracle.ORACLE_ROLE(), oracle2);
         oracle.grantRole(oracle.ORACLE_ROLE(), oracle3);
+        
+        token.grantRole(token.MINTER_ROLE(), owner);
+        token.mint(oracle1, 2000 ether);
+        token.mint(oracle2, 2000 ether);
+        token.mint(oracle3, 2000 ether);
+        
+        vm.stopPrank();
+        
+        vm.prank(oracle1);
+        token.approve(address(staking), 1000 ether);
+        vm.prank(oracle1);
+        staking.stake(1000 ether);
+        
+        vm.prank(oracle2);
+        token.approve(address(staking), 1000 ether);
+        vm.prank(oracle2);
+        staking.stake(1000 ether);
+        
+        vm.prank(oracle3);
+        token.approve(address(staking), 1000 ether);
+        vm.prank(oracle3);
+        staking.stake(1000 ether);
+        
+        vm.startPrank(owner);
         
         // Register worker and building
         registry.registerWorker(worker1, WORKER_METADATA);
@@ -584,6 +612,10 @@ contract ArxContributionTest is Test {
         // Ensure role is set (defensive)
         vm.startPrank(owner);
         oracle.grantRole(oracle.ORACLE_ROLE(), owner);
+        token.grantRole(token.MINTER_ROLE(), owner);
+        token.mint(owner, 1000 ether);
+        token.approve(address(staking), 1000 ether);
+        staking.stake(1000 ether);
         vm.stopPrank();
 
         // First contribution

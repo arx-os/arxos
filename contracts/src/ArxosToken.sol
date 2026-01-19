@@ -3,6 +3,45 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+
+interface IERC3009 {
+    event AuthorizationUsed(address indexed authorizer, bytes32 indexed nonce);
+    event AuthorizationCanceled(address indexed authorizer, bytes32 indexed nonce);
+
+    function transferWithAuthorization(
+        address from,
+        address to,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
+    function receiveWithAuthorization(
+        address from,
+        address to,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
+    function cancelAuthorization(
+        address authorizer,
+        bytes32 nonce,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+}
 
 /**
  * @title ArxosToken
@@ -10,7 +49,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
  * @dev Supports batch minting for 70/10/10/10 distribution splits
  *      Minting controlled by MINTER_ROLE (assigned to ArxContributionOracle)
  */
-contract ArxosToken is ERC20, AccessControl {
+contract ArxosToken is ERC20, AccessControl, EIP712, IERC3009 {
     /// @notice Role identifier for addresses that can mint tokens
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
@@ -28,6 +67,23 @@ contract ArxosToken is ERC20, AccessControl {
 
     mapping(address => DailyLimit) private buildingDailyUsage;
     mapping(address => DailyLimit) private workerDailyUsage;
+
+    // EIP-3009 TypeHashes
+    bytes32 public constant TRANSFER_WITH_AUTHORIZATION_TYPEHASH =
+        keccak256(
+            "TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)"
+        );
+
+    bytes32 public constant RECEIVE_WITH_AUTHORIZATION_TYPEHASH =
+        keccak256(
+            "ReceiveWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)"
+        );
+
+    bytes32 public constant CANCEL_AUTHORIZATION_TYPEHASH =
+        keccak256("CancelAuthorization(address authorizer,bytes32 nonce)");
+
+    // EIP-3009 State
+    mapping(address => mapping(bytes32 => bool)) private _authorizationStates;
 
     /// @notice Total value contributed (in USD equivalent)
     uint256 public totalContributedValue;
@@ -57,7 +113,7 @@ contract ArxosToken is ERC20, AccessControl {
      * @notice Contract constructor
      * @param admin Address that will have DEFAULT_ADMIN_ROLE
      */
-    constructor(address admin) ERC20("ArxOS Token", "ARXO") {
+    constructor(address admin) ERC20("ArxOS Token", "ARXO") EIP712("ArxOS Token", "1") {
         require(admin != address(0), "ArxosToken: zero admin");
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
@@ -221,5 +277,144 @@ contract ArxosToken is ERC20, AccessControl {
         uint256 newTotal = limit.amount + amount;
         require(newTotal <= cap, string.concat("ArxosToken: ", domain, " daily cap"));
         limit.amount = newTotal;
+    }
+
+    // ============ EIP-3009 Implementation ============
+
+    /**
+     * @notice Execute a transfer with a signed authorization
+     * @param from Payer address (authorizer)
+     * @param to Payee address
+     * @param value Amount to transfer
+     * @param validAfter The time after which this is valid (unix time)
+     * @param validBefore The time before which this is valid (unix time)
+     * @param nonce Unique nonce
+     * @param v ECDSA signature parameter v
+     * @param r ECDSA signature parameter r
+     * @param s ECDSA signature parameter s
+     */
+    function transferWithAuthorization(
+        address from,
+        address to,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external override {
+        require(now() <= validBefore, "ArxosToken: authorization expired");
+        require(now() >= validAfter, "ArxosToken: authorization not yet valid");
+        require(!_authorizationStates[from][nonce], "ArxosToken: authorization used");
+
+        bytes32 digest = _hashTypedDataV4(
+            keccak256(
+                abi.encode(
+                    TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
+                    from,
+                    to,
+                    value,
+                    validAfter,
+                    validBefore,
+                    nonce
+                )
+            )
+        );
+
+        address recoveredAddress = ECDSA.recover(digest, v, r, s);
+        require(recoveredAddress != address(0) && recoveredAddress == from, "ArxosToken: invalid signature");
+
+        _authorizationStates[from][nonce] = true;
+        emit AuthorizationUsed(from, nonce);
+
+        _transfer(from, to, value);
+    }
+
+    /**
+     * @notice Receive a transfer with a signed authorization from the payer
+     * @param from Payer address (authorizer)
+     * @param to Payee address (caller)
+     * @param value Amount to transfer
+     * @param validAfter The time after which this is valid (unix time)
+     * @param validBefore The time before which this is valid (unix time)
+     * @param nonce Unique nonce
+     * @param v ECDSA signature parameter v
+     * @param r ECDSA signature parameter r
+     * @param s ECDSA signature parameter s
+     */
+    function receiveWithAuthorization(
+        address from,
+        address to,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external override {
+        require(to == msg.sender, "ArxosToken: caller must be the payee");
+        require(now() <= validBefore, "ArxosToken: authorization expired");
+        require(now() >= validAfter, "ArxosToken: authorization not yet valid");
+        require(!_authorizationStates[from][nonce], "ArxosToken: authorization used");
+
+        bytes32 digest = _hashTypedDataV4(
+            keccak256(
+                abi.encode(
+                    RECEIVE_WITH_AUTHORIZATION_TYPEHASH,
+                    from,
+                    to,
+                    value,
+                    validAfter,
+                    validBefore,
+                    nonce
+                )
+            )
+        );
+
+        address recoveredAddress = ECDSA.recover(digest, v, r, s);
+        require(recoveredAddress != address(0) && recoveredAddress == from, "ArxosToken: invalid signature");
+
+        _authorizationStates[from][nonce] = true;
+        emit AuthorizationUsed(from, nonce);
+
+        _transfer(from, to, value);
+    }
+
+    /**
+     * @notice Cancel an authorization
+     * @param authorizer Authorizer address
+     * @param nonce Unique nonce
+     * @param v ECDSA signature parameter v
+     * @param r ECDSA signature parameter r
+     * @param s ECDSA signature parameter s
+     */
+    function cancelAuthorization(
+        address authorizer,
+        bytes32 nonce,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external override {
+        require(authorizer == msg.sender, "ArxosToken: caller must be the authorizer");
+        require(!_authorizationStates[authorizer][nonce], "ArxosToken: authorization used");
+
+        bytes32 digest = _hashTypedDataV4(
+            keccak256(abi.encode(CANCEL_AUTHORIZATION_TYPEHASH, authorizer, nonce))
+        );
+
+        address recoveredAddress = ECDSA.recover(digest, v, r, s);
+        require(recoveredAddress != address(0) && recoveredAddress == authorizer, "ArxosToken: invalid signature");
+
+        _authorizationStates[authorizer][nonce] = true;
+        emit AuthorizationCanceled(authorizer, nonce);
+    }
+
+    /**
+     * @notice Helper to get current time (mockable if needed)
+     */
+    function now() internal view returns (uint256) {
+        return block.timestamp;
     }
 }

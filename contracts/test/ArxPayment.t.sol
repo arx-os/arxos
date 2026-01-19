@@ -40,6 +40,7 @@ contract ArxPaymentTest is Test {
     );
     
     event MinimumPaymentUpdated(string indexed buildingId, uint256 oldMinimum, uint256 newMinimum);
+    event PriceUpdateScheduled(string indexed buildingId, uint256 newPrice, uint256 effectiveTimestamp);
 
     function setUp() public {
         // Deploy contracts
@@ -85,7 +86,7 @@ contract ArxPaymentTest is Test {
         emit AccessPaid(BUILDING_ID, payer, amount, nonce, block.timestamp);
         
         vm.prank(payer);
-        router.payForAccess(BUILDING_ID, amount, nonce);
+        router.payForAccess(BUILDING_ID, amount, nonce, amount);
         
         // Verify 70/10/10/10 distribution
         assertEq(token.balanceOf(buildingWallet), (amount * 70) / 100);
@@ -104,7 +105,7 @@ contract ArxPaymentTest is Test {
         bytes32 nonce = keccak256("nonce1");
         
         vm.prank(payer);
-        router.payForAccess(BUILDING_ID, amount, nonce);
+        router.payForAccess(BUILDING_ID, amount, nonce, amount);
         
         // Verify exact 70/10/10/10 split
         uint256 expectedBuilding = 700 ether;
@@ -141,7 +142,7 @@ contract ArxPaymentTest is Test {
         );
         
         vm.prank(payer);
-        router.payForAccess(BUILDING_ID, amount, nonce);
+        router.payForAccess(BUILDING_ID, amount, nonce, amount);
     }
 
     // ============ Batch Payment Tests ============
@@ -204,25 +205,43 @@ contract ArxPaymentTest is Test {
         assertEq(router.getMinimumPayment(BUILDING_ID), router.DEFAULT_MINIMUM());
     }
 
-    function test_SetMinimumPayment() public {
+    function test_TimelockedPriceUpdate() public {
         uint256 newMinimum = 1 ether;
+        uint256 effectiveTime = block.timestamp + 7 days;
         
         vm.expectEmit(true, false, false, true);
-        emit MinimumPaymentUpdated(BUILDING_ID, 0, newMinimum);
+        emit PriceUpdateScheduled(BUILDING_ID, newMinimum, effectiveTime);
         
         router.setMinimumPayment(BUILDING_ID, newMinimum);
         
+        // Price should NOT change yet
+        assertEq(router.getMinimumPayment(BUILDING_ID), router.DEFAULT_MINIMUM());
+        
+        // Warp to effective time
+        vm.warp(effectiveTime);
         assertEq(router.getMinimumPayment(BUILDING_ID), newMinimum);
+    }
+    
+    function test_RevertWhen_PriceExceedsMax() public {
+        uint256 price = router.DEFAULT_MINIMUM();
+        uint256 maxPrice = price - 1;
+        bytes32 nonce = keccak256("nonce1");
+        
+        vm.prank(payer);
+        vm.expectRevert("ArxPaymentRouter: price exceeds max price");
+        router.payForAccess(BUILDING_ID, price, nonce, maxPrice);
     }
 
     function test_PayForAccess_WithCustomMinimum() public {
         uint256 customMinimum = 5 ether;
+        // For test with custom minimum, we need to bypass timelock or wait
         router.setMinimumPayment(BUILDING_ID, customMinimum);
+        vm.warp(block.timestamp + 7 days);
         
         bytes32 nonce = keccak256("nonce1");
-        
+
         vm.prank(payer);
-        router.payForAccess(BUILDING_ID, customMinimum, nonce);
+        router.payForAccess(BUILDING_ID, customMinimum, nonce, customMinimum);
         
         assertEq(token.balanceOf(buildingWallet), (customMinimum * 70) / 100);
     }
@@ -234,12 +253,12 @@ contract ArxPaymentTest is Test {
         
         // First payment succeeds
         vm.prank(payer);
-        router.payForAccess(BUILDING_ID, 1 ether, nonce);
+        router.payForAccess(BUILDING_ID, 1 ether, nonce, 1 ether);
         
         // Second payment with same nonce fails
         vm.expectRevert("ArxPaymentRouter: nonce already used");
         vm.prank(payer);
-        router.payForAccess(BUILDING_ID, 1 ether, nonce);
+        router.payForAccess(BUILDING_ID, 1 ether, nonce, 1 ether);
     }
 
     function test_IsNonceUsed() public {
@@ -247,7 +266,7 @@ contract ArxPaymentTest is Test {
         assertFalse(router.isNonceUsed(nonce));
         
         vm.prank(payer);
-        router.payForAccess(BUILDING_ID, 1 ether, nonce);
+        router.payForAccess(BUILDING_ID, 1 ether, nonce, 1 ether);
         
         assertTrue(router.isNonceUsed(nonce));
     }
@@ -259,7 +278,7 @@ contract ArxPaymentTest is Test {
         
         vm.expectRevert("ArxPaymentRouter: building not registered");
         vm.prank(payer);
-        router.payForAccess("nonexistent-building", 1 ether, nonce);
+        router.payForAccess("nonexistent-building", 1 ether, nonce, 1 ether);
     }
 
     function test_RevertWhen_InsufficientAmount() public {
@@ -268,7 +287,7 @@ contract ArxPaymentTest is Test {
         
         vm.expectRevert("ArxPaymentRouter: insufficient amount");
         vm.prank(payer);
-        router.payForAccess(BUILDING_ID, tooSmall, nonce);
+        router.payForAccess(BUILDING_ID, tooSmall, nonce, 1 ether);
     }
 
     function test_RevertWhen_InsufficientAllowance() public {
@@ -280,7 +299,7 @@ contract ArxPaymentTest is Test {
         
         vm.expectRevert(); // ERC20InsufficientAllowance custom error
         vm.prank(newPayer);
-        router.payForAccess(BUILDING_ID, 1 ether, nonce);
+        router.payForAccess(BUILDING_ID, 1 ether, nonce, 1 ether);
     }
 
     function test_RevertWhen_InsufficientBalance() public {
@@ -293,7 +312,7 @@ contract ArxPaymentTest is Test {
         
         vm.expectRevert(); // ERC20InsufficientBalance custom error
         vm.prank(poorPayer);
-        router.payForAccess(BUILDING_ID, 1 ether, nonce);
+        router.payForAccess(BUILDING_ID, 1 ether, nonce, 1 ether);
     }
 
     function test_RevertWhen_SetMinimumNotOwner() public {
@@ -423,7 +442,7 @@ contract ArxPaymentTest is Test {
         bytes32 nonce = keccak256(abi.encodePacked("fuzz", amount));
         
         vm.prank(payer);
-        router.payForAccess(BUILDING_ID, amount, nonce);
+        router.payForAccess(BUILDING_ID, amount, nonce, amount);
         
         // Verify distribution sums to total
         uint256 total = token.balanceOf(buildingWallet) + 

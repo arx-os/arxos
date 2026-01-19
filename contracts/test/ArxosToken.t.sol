@@ -27,6 +27,8 @@ contract ArxosTokenTest is Test {
     );
     event BatchMinted(address indexed minter, uint256 totalAmount, uint256 recipientCount);
     event TokensBurned(address indexed burner, uint256 amount);
+    event AuthorizationUsed(address indexed authorizer, bytes32 indexed nonce);
+    event AuthorizationCanceled(address indexed authorizer, bytes32 indexed nonce);
 
     function setUp() public {
         token = new ArxosToken(admin);
@@ -448,5 +450,152 @@ contract ArxosTokenTest is Test {
         
         assertEq(token.balanceOf(worker), mintAmount - burnAmount);
         assertEq(token.totalSupply(), mintAmount - burnAmount);
+    }
+
+    // ============ EIP-3009 Tests ============
+
+    bytes32 constant TRANSFER_WITH_AUTHORIZATION_TYPEHASH =
+        keccak256(
+            "TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)"
+        );
+
+    bytes32 constant RECEIVE_WITH_AUTHORIZATION_TYPEHASH =
+        keccak256(
+            "ReceiveWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)"
+        );
+
+    bytes32 constant CANCEL_AUTHORIZATION_TYPEHASH =
+        keccak256("CancelAuthorization(address authorizer,bytes32 nonce)");
+
+    function getDomainSeparator() internal view returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes("ArxOS Token")),
+                keccak256(bytes("1")),
+                block.chainid,
+                address(token)
+            )
+        );
+    }
+
+    function signTransferAuthorization(
+        uint256 privateKey,
+        address from,
+        address to,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce
+    ) internal view returns (uint8 v, bytes32 r, bytes32 s) {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
+                from,
+                to,
+                value,
+                validAfter,
+                validBefore,
+                nonce
+            )
+        );
+        
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", getDomainSeparator(), structHash));
+        (v, r, s) = vm.sign(privateKey, digest);
+    }
+
+    function test_TransferWithAuthorization() public {
+        uint256 privateKey = 0xA11CE;
+        address from = vm.addr(privateKey);
+        address to = address(0xB0B);
+        uint256 amount = 100 ether;
+        uint256 validAfter = 0;
+        uint256 validBefore = block.timestamp + 1 hours;
+        bytes32 nonce = keccak256("nonce1");
+        
+        vm.prank(minter);
+        token.mint(from, amount);
+        
+        (uint8 v, bytes32 r, bytes32 s) = signTransferAuthorization(
+            privateKey, 
+            from, 
+            to, 
+            amount, 
+            validAfter, 
+            validBefore, 
+            nonce
+        );
+        
+        vm.expectEmit(true, true, false, true);
+        emit AuthorizationUsed(from, nonce);
+        
+        // Anyone can submit the transaction
+        token.transferWithAuthorization(from, to, amount, validAfter, validBefore, nonce, v, r, s);
+        
+        assertEq(token.balanceOf(from), 0);
+        assertEq(token.balanceOf(to), amount);
+    }
+
+    function test_ReceiveWithAuthorization() public {
+        uint256 privateKey = 0xA11CE;
+        address from = vm.addr(privateKey);
+        address to = address(0xB0B);
+        uint256 amount = 100 ether;
+        uint256 validAfter = 0;
+        uint256 validBefore = block.timestamp + 1 hours;
+        bytes32 nonce = keccak256("nonce2");
+        
+        vm.prank(minter);
+        token.mint(from, amount);
+        
+        // Construct struct hash for ReceiveWithAuthorization
+        bytes32 structHash = keccak256(
+            abi.encode(
+                RECEIVE_WITH_AUTHORIZATION_TYPEHASH,
+                from,
+                to,
+                amount,
+                validAfter,
+                validBefore,
+                nonce
+            )
+        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", getDomainSeparator(), structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
+        
+        vm.expectEmit(true, true, false, true);
+        emit AuthorizationUsed(from, nonce);
+        
+        // Only payee can submit
+        vm.prank(to);
+        token.receiveWithAuthorization(from, to, amount, validAfter, validBefore, nonce, v, r, s);
+        
+        assertEq(token.balanceOf(from), 0);
+        assertEq(token.balanceOf(to), amount);
+    }
+
+    function test_CancelAuthorization() public {
+        uint256 privateKey = 0xA11CE;
+        address authorizer = vm.addr(privateKey);
+        bytes32 nonce = keccak256("nonce3");
+        
+        bytes32 structHash = keccak256(
+            abi.encode(CANCEL_AUTHORIZATION_TYPEHASH, authorizer, nonce)
+        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", getDomainSeparator(), structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
+        
+        vm.expectEmit(true, true, false, true);
+        emit AuthorizationCanceled(authorizer, nonce);
+        
+        vm.prank(authorizer);
+        token.cancelAuthorization(authorizer, nonce, v, r, s);
+        
+        // Helper to check revert strings more easily
+        address to = address(0xB0B);
+        (uint8 v2, bytes32 r2, bytes32 s2) = signTransferAuthorization(privateKey, authorizer, to, 100, 0, block.timestamp + 1 hours, nonce);
+        
+        vm.expectRevert("ArxosToken: authorization used");
+        token.transferWithAuthorization(authorizer, to, 100, 0, block.timestamp + 1 hours, nonce, v2, r2, s2);
     }
 }

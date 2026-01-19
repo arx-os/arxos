@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "./ArxosToken.sol";
 import "./ArxRegistry.sol";
 import "./ArxAddresses.sol";
+import "./ArxOracleStaking.sol";
 
 /**
  * @title ArxContributionOracle
@@ -38,6 +39,9 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
 
     /// @notice ArxAddresses contract
     ArxAddresses public immutable addresses;
+
+    /// @notice ArxOracleStaking contract
+    ArxOracleStaking public immutable staking;
 
     /// @notice EIP-712 typehash for ContributionProof
     bytes32 public constant CONTRIBUTION_PROOF_TYPEHASH =
@@ -122,16 +126,19 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
         address admin,
         address _arxoToken,
         address _registry,
-        address _addresses
+        address _addresses,
+        address _staking
     ) EIP712("ArxOS Contribution Oracle", "1") {
         require(admin != address(0), "ArxContributionOracle: zero admin");
         require(_arxoToken != address(0), "ArxContributionOracle: zero token");
         require(_registry != address(0), "ArxContributionOracle: zero registry");
         require(_addresses != address(0), "ArxContributionOracle: zero addresses");
+        require(_staking != address(0), "ArxContributionOracle: zero staking");
 
         arxoToken = ArxosToken(_arxoToken);
         registry = ArxRegistry(_registry);
         addresses = ArxAddresses(_addresses);
+        staking = ArxOracleStaking(_staking);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
@@ -181,6 +188,7 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
         }
 
         // Oracle confirms
+        require(staking.hasMinStake(msg.sender), "ArxContributionOracle: insufficient stake");
         require(!pending.confirmed[msg.sender], "ArxContributionOracle: already confirmed");
         require(!usedProofs[proofHash], "ArxContributionOracle: proof already used");
 

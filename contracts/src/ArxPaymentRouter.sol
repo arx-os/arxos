@@ -33,6 +33,17 @@ contract ArxPaymentRouter is Ownable, ReentrancyGuard {
     /// @notice Default minimum payment (0.01 ARXO)
     uint256 public constant DEFAULT_MINIMUM = 10**16;
 
+    /// @notice Delay before a price increase becomes effective (7 days)
+    uint256 public constant PRICE_UPDATE_DELAY = 7 days;
+
+    struct ScheduledPrice {
+        uint256 price;
+        uint256 effectiveTimestamp;
+    }
+
+    /// @notice Mapping from building ID to pending price update
+    mapping(string => ScheduledPrice) public pendingPriceUpdates;
+
     /// @notice Emitted when payment is made for data access
     event AccessPaid(
         string indexed buildingId,
@@ -54,6 +65,9 @@ contract ArxPaymentRouter is Ownable, ReentrancyGuard {
 
     /// @notice Emitted when minimum payment is updated
     event MinimumPaymentUpdated(string indexed buildingId, uint256 oldMinimum, uint256 newMinimum);
+
+    /// @notice Emitted when a price update is scheduled
+    event PriceUpdateScheduled(string indexed buildingId, uint256 newPrice, uint256 effectiveTimestamp);
 
     /**
      * @notice Contract constructor
@@ -88,10 +102,13 @@ contract ArxPaymentRouter is Ownable, ReentrancyGuard {
     function payForAccess(
         string calldata buildingId,
         uint256 amount,
-        bytes32 nonce
+        bytes32 nonce,
+        uint256 maxPrice
     ) external nonReentrant {
         require(registry.isBuildingRegistered(buildingId), "ArxPaymentRouter: building not registered");
-        require(amount >= getMinimumPayment(buildingId), "ArxPaymentRouter: insufficient amount");
+        uint256 currentPrice = getMinimumPayment(buildingId);
+        require(currentPrice <= maxPrice, "ArxPaymentRouter: price exceeds max price");
+        require(amount >= currentPrice, "ArxPaymentRouter: insufficient amount");
         require(!noncesUsed[nonce], "ArxPaymentRouter: nonce already used");
 
         // Mark nonce as used
@@ -189,10 +206,10 @@ contract ArxPaymentRouter is Ownable, ReentrancyGuard {
         require(registry.isBuildingRegistered(buildingId), "ArxPaymentRouter: building not registered");
         require(minimum > 0, "ArxPaymentRouter: zero minimum");
 
-        uint256 oldMinimum = minimumPayment[buildingId];
-        minimumPayment[buildingId] = minimum;
+        uint256 effectiveTimestamp = block.timestamp + PRICE_UPDATE_DELAY;
+        pendingPriceUpdates[buildingId] = ScheduledPrice(minimum, effectiveTimestamp);
 
-        emit MinimumPaymentUpdated(buildingId, oldMinimum, minimum);
+        emit PriceUpdateScheduled(buildingId, minimum, effectiveTimestamp);
     }
 
     /**
@@ -201,8 +218,30 @@ contract ArxPaymentRouter is Ownable, ReentrancyGuard {
      * @return Minimum payment amount (defaults to 0.01 ARXO if not set)
      */
     function getMinimumPayment(string calldata buildingId) public view returns (uint256) {
+        // Check if there's a pending update that is now effective
+        ScheduledPrice memory update = pendingPriceUpdates[buildingId];
+        if (update.effectiveTimestamp != 0 && block.timestamp >= update.effectiveTimestamp) {
+            return update.price;
+        }
+
         uint256 minimum = minimumPayment[buildingId];
         return minimum > 0 ? minimum : DEFAULT_MINIMUM;
+    }
+
+    /**
+     * @notice Apply a pending price update (public utility)
+     * @param buildingId Building identifier
+     */
+    function applyPriceUpdate(string calldata buildingId) external {
+        ScheduledPrice memory update = pendingPriceUpdates[buildingId];
+        require(update.effectiveTimestamp != 0, "ArxPaymentRouter: no pending update");
+        require(block.timestamp >= update.effectiveTimestamp, "ArxPaymentRouter: update not ready");
+
+        uint256 oldMinimum = minimumPayment[buildingId];
+        minimumPayment[buildingId] = update.price;
+        delete pendingPriceUpdates[buildingId];
+
+        emit MinimumPaymentUpdated(buildingId, oldMinimum, update.price);
     }
 
     /**

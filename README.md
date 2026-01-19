@@ -1,4 +1,4 @@
-# ArxOS
+# Arxos
 
 **Git for Buildings** – Terminal-first building data management with Git-native storage.
 

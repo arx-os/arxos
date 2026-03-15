@@ -1,12 +1,21 @@
-name: My Building
-path: /building
-description: A sample building managed with ArxOS
-metadata:
-  source_file: null
-  parser_version: "2.0.0"
-  total_entities: 0
-  spatial_entities: 0
-  coordinate_system: "Local"
-  units: "Meters"
-  tags: []
-floors: []
+building:
+  id: ""
+  name: My Building
+  path: /building
+  description: A sample building managed with ArxOS
+  version: "1.0.0"
+  global_bounding_box: null
+  created_at: 2026-01-01T00:00:00Z
+  updated_at: 2026-01-01T00:00:00Z
+  floors: []
+  metadata:
+    source_file: null
+    parser_version: "2.0.0"
+    total_entities: 0
+    spatial_entities: 0
+    coordinate_system: "building_local"
+    units: "meters"
+    tags: []
+    properties: {}
+  coordinate_systems: []
+equipment: []

@@ -6,7 +6,8 @@ pub mod commands;
 
 use commands::{
     Command, ImportCommand, ExportCommand, InitCommand,
-    git::{StatusCommand, CommitCommand, StageCommand, DiffCommand},
+    git::{StatusCommand, CommitCommand, StageCommand, UnstageCommand, DiffCommand},
+    data::{RoomCommand, EquipmentCommand, SpatialCommand},
 };
 #[cfg(feature = "agent")]
 use commands::RemoteCommand;
@@ -98,9 +99,8 @@ impl Cli {
                 cmd.execute()
             },
             Commands::Unstage { all, file } => {
-                // Reusing StageCommand logic for unstage is not ideal but keeping it simple for now
-                // Ideally UnstageCommand should be separate
-                Self::handle_unstage(all, file)
+                let cmd = UnstageCommand { all, file };
+                cmd.execute()
             },
             Commands::Commit { message } => {
                 let cmd = CommitCommand { message };
@@ -118,6 +118,18 @@ impl Cli {
             },
             Commands::Query { pattern, format, verbose } => {
                 Self::handle_query(pattern, format, verbose)
+            },
+            Commands::Room { command } => {
+                let cmd = RoomCommand { subcommand: command };
+                cmd.execute()
+            },
+            Commands::Equipment { command } => {
+                let cmd = EquipmentCommand { subcommand: command };
+                cmd.execute()
+            },
+            Commands::Spatial { command } => {
+                let cmd = SpatialCommand { subcommand: command };
+                cmd.execute()
             },
             #[cfg(feature = "agent")]
             Commands::Remote(cmd) => {
@@ -163,27 +175,9 @@ impl Cli {
                 }
             },
             _ => {
-                println!("⚠️  Command not yet implemented in restructured CLI");
-                Ok(())
+                Err("Command not yet implemented in restructured CLI".into())
             },
         }
-    }
-
-    fn handle_unstage(all: bool, file: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
-        use crate::git::manager::{BuildingGitManager, GitConfigManager};
-
-        let config = GitConfigManager::load_from_arx_config_or_env();
-        let mut manager = BuildingGitManager::new(".", "current", config)?;
-
-        if all || file.is_none() {
-            let count = manager.unstage_all()?;
-            println!("✅ Unstaged {} file(s)", count);
-        } else if let Some(path) = file {
-            manager.unstage_file(&path)?;
-            println!("✅ Unstaged: {}", path);
-        }
-
-        Ok(())
     }
 
     fn handle_history(

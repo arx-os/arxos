@@ -106,6 +106,7 @@ impl OracleClient {
             building_hash: proof.building_hash,
             timestamp: U256::from(proof.timestamp),
             data_size: U256::from(proof.data_size),
+            quality: U256::from(100), // Default high quality for now
         };
 
         // Call contract - this returns a PendingTransaction

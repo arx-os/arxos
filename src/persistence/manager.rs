@@ -41,8 +41,9 @@ impl PersistenceManager {
             fs::create_dir_all(&building_dir)?;
         }
 
-        // Serialize building data to YAML
-        let yaml_content = serde_yaml::to_string(data)?;
+        // Serialize building data to YAML (deterministic ordering)
+        let yaml_content = crate::yaml::BuildingYamlSerializer::serialize(data)
+            .map_err(|e| PersistenceError::SerializationError(e.to_string()))?;
 
         // Write to building.yaml file
         let file_path = building_dir.join("building.yaml");

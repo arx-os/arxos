@@ -105,8 +105,10 @@ impl PaymentClient {
         // Approve token spending if needed
         self.approve_if_needed(amount_wei).await?;
 
-        // Execute payment
-        let call = self.router_contract.pay_for_access(building_id.to_string(), amount_wei, nonce);
+        // Call contract - this returns a PendingTransaction
+        // Assume the 4th argument is a lock duration or expiry, or signature
+        let call = self.router_contract.pay_for_access(building_id.to_string(), amount_wei, nonce, U256::zero());
+        
         let pending_tx = call.send()
             .await
             .map_err(|e| BlockchainError::TransactionFailed(e.to_string()))?;
@@ -114,7 +116,7 @@ impl PaymentClient {
         let tx = pending_tx
             .await
             .map_err(|e| BlockchainError::TransactionFailed(e.to_string()))?
-            .ok_or_else(|| BlockchainError::TransactionFailed("No receipt".to_string()))?;;
+            .ok_or_else(|| BlockchainError::TransactionFailed("No receipt".to_string()))?;
 
         Ok(TxReceipt {
             tx_hash: format!("{:?}", tx.transaction_hash),

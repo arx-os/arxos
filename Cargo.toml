@@ -19,7 +19,7 @@ todo = "warn"
 unimplemented = "warn"
 
 [lib]
-name = "arxos"
+name = "arx"
 path = "src/lib.rs"
 
 [[bin]]

@@ -132,14 +132,14 @@ impl PersistenceManager {
             .map_err(|e| PersistenceError::SerializationError(format!("Failed to find tree: {}", e)))?;
 
         // Get or create signature
-        let signature = match Signature::now("ArxOS", "arxos@example.com") {
+        let signature = match Signature::now("Arx", "arxos@example.com") {
             Ok(sig) => sig,
             Err(_) => {
                 // If signature creation fails, try to get from config
                 let config = repo.config()
                     .map_err(|e| PersistenceError::SerializationError(format!("Failed to get Git config: {}", e)))?;
 
-                let name = config.get_string("user.name").unwrap_or_else(|_| "ArxOS".to_string());
+                let name = config.get_string("user.name").unwrap_or_else(|_| "Arx".to_string());
                 let email = config.get_string("user.email").unwrap_or_else(|_| "arxos@example.com".to_string());
 
                 Signature::now(&name, &email)

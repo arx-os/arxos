@@ -11,7 +11,7 @@ use ethers::{
 };
 
 use crate::blockchain::{
-    contracts::{OracleContract, arx_contribution_oracle},
+    contracts::{arx_contribution_oracle, OracleContract},
     proof::{ContributionProof, ProofSigner},
     types::{BlockchainError, NetworkConfig, TxReceipt},
 };
@@ -27,25 +27,22 @@ pub struct OracleClient {
 #[cfg(feature = "blockchain")]
 impl OracleClient {
     /// Create a new oracle client
-    pub async fn new(
-        config: NetworkConfig,
-        private_key: &str,
-    ) -> Result<Self> {
+    pub async fn new(config: NetworkConfig, private_key: &str) -> Result<Self> {
         // Create provider
         let provider = Provider::<Http>::try_from(config.get_rpc_url())?;
-        
+
         // Create wallet
         let wallet: LocalWallet = private_key
             .parse::<LocalWallet>()?
             .with_chain_id(config.chain_id as u64);
-        
+
         // Create signer middleware
         let client = Arc::new(SignerMiddleware::new(provider, wallet));
-        
+
         // Create contract instance
         let contract_address: Address = config.addresses.oracle.parse()?;
         let contract = OracleContract::new(contract_address, client);
-        
+
         // Create proof signer
         let signer = ProofSigner::new(
             private_key,
@@ -81,17 +78,13 @@ impl OracleClient {
         data_size: u64,
     ) -> Result<TxReceipt> {
         // Parse worker address
-        let worker_address: Address = worker.parse()
+        let worker_address: Address = worker
+            .parse()
             .map_err(|_| BlockchainError::InvalidAddress(worker.to_string()))?;
 
         // Create contribution proof
-        let proof = ContributionProof::new(
-            merkle_root,
-            latitude,
-            longitude,
-            building_id,
-            data_size,
-        );
+        let proof =
+            ContributionProof::new(merkle_root, latitude, longitude, building_id, data_size);
 
         // Sign proof with EIP-712
         let signature = self.signer.sign_proof(&proof).await?;
@@ -117,8 +110,9 @@ impl OracleClient {
             contract_proof,
             Bytes::from(signature),
         );
-        
-        let pending_tx = call.send()
+
+        let pending_tx = call
+            .send()
             .await
             .map_err(|e| BlockchainError::TransactionFailed(e.to_string()))?;
 
@@ -141,12 +135,10 @@ impl OracleClient {
     ///
     /// # Arguments
     /// * `contribution_id` - Contribution identifier from proposal
-    pub async fn finalize_contribution(
-        &self,
-        contribution_id: [u8; 32],
-    ) -> Result<TxReceipt> {
+    pub async fn finalize_contribution(&self, contribution_id: [u8; 32]) -> Result<TxReceipt> {
         let call = self.contract.finalize_contribution(contribution_id);
-        let pending_tx = call.send()
+        let pending_tx = call
+            .send()
             .await
             .map_err(|e| BlockchainError::TransactionFailed(e.to_string()))?;
 
@@ -171,11 +163,11 @@ impl OracleClient {
         &self,
         contribution_id: [u8; 32],
     ) -> Result<ContributionStatus> {
-        let (worker, building, amount, confirmations, proposed_at, finalized) = 
-            self.contract
-                .get_contribution(contribution_id)
-                .await
-                .map_err(|e| BlockchainError::Contract(e.to_string()))?;
+        let (worker, building, amount, confirmations, proposed_at, finalized) = self
+            .contract
+            .get_contribution(contribution_id)
+            .await
+            .map_err(|e| BlockchainError::Contract(e.to_string()))?;
 
         Ok(ContributionStatus {
             worker: format!("{:?}", worker),
@@ -196,7 +188,7 @@ impl OracleClient {
         timestamp: u64,
     ) -> [u8; 32] {
         use ethers::utils::keccak256;
-        
+
         let encoded = ethers::abi::encode(&[
             ethers::abi::Token::String(building_id.to_string()),
             ethers::abi::Token::Address(worker.parse().unwrap()),
@@ -204,7 +196,7 @@ impl OracleClient {
             ethers::abi::Token::FixedBytes(merkle_root.to_vec()),
             ethers::abi::Token::Uint(U256::from(timestamp)),
         ]);
-        
+
         keccak256(&encoded)
     }
 
@@ -234,7 +226,7 @@ impl ContributionStatus {
 
     /// Check if contribution can be finalized
     pub fn can_finalize(&self) -> bool {
-        !self.finalized 
+        !self.finalized
             && self.confirmations >= 2
             && chrono::Utc::now().timestamp() as u64 >= self.proposed_at + 86400
     }

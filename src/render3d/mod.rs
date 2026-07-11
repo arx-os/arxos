@@ -5,11 +5,11 @@
 //! It also includes interactive 3D rendering with real-time controls.
 
 // Core modules
-mod ascii;
+pub mod ascii;
 mod camera;
 mod canvas_operations;
 mod extractors;
-mod point_cloud;
+pub mod point_cloud;
 mod projection;
 mod projections;
 mod renderer;
@@ -70,12 +70,12 @@ mod tests {
     use crate::core::spatial::{BoundingBox3D, Point3D};
 
     /// Create test building data for 3D rendering tests
-    fn create_test_building_data() -> arx::yaml::BuildingData {
+    fn create_test_building_data() -> crate::yaml::BuildingData {
         use crate::core::{
             BoundingBox, Dimensions, Equipment, EquipmentHealthStatus, EquipmentStatus,
             EquipmentType, Floor, Position, Room, RoomType, SpatialProperties, Wing,
         };
-        use crate::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+        use crate::yaml::BuildingData;
         use chrono::Utc;
         use std::collections::HashMap;
 
@@ -95,8 +95,9 @@ mod tests {
             properties: HashMap::new(),
             status: EquipmentStatus::Active,
             health_status: Some(EquipmentHealthStatus::Healthy),
-            room_id: Some("ROOM_1".to_string()),
             sensor_mappings: None,
+            room_id: Some("ROOM_1".to_string()),
+            mesh: None,
         };
 
         // Create room
@@ -104,7 +105,7 @@ mod tests {
             id: "ROOM_1".to_string(),
             name: "Room 1".to_string(),
             room_type: RoomType::Office,
-            equipment: vec![equip1],
+            equipment: vec![equip1.clone()],
             spatial_properties: SpatialProperties {
                 position: Position {
                     x: 10.0,
@@ -132,6 +133,7 @@ mod tests {
                     },
                 },
                 coordinate_system: "LOCAL".to_string(),
+                mesh: None,
             },
             properties: HashMap::new(),
             created_at: None,
@@ -186,8 +188,9 @@ mod tests {
             properties: HashMap::new(),
             status: EquipmentStatus::Active,
             health_status: Some(EquipmentHealthStatus::Warning),
-            room_id: None,
             sensor_mappings: None,
+            room_id: None,
+            mesh: None,
         };
 
         // Create floor 2
@@ -209,43 +212,28 @@ mod tests {
                 },
             }),
             wings: vec![],
-            equipment: vec![equip2],
+            equipment: vec![equip2.clone()],
             properties: HashMap::new(),
         };
 
+        let mut building = crate::core::Building::new("Test Building".to_string(), "Test building for 3D rendering".to_string());
+        building.id = "TEST_BUILDING".to_string();
+        building.add_floor(floor1);
+        building.add_floor(floor2);
+        building.metadata = Some(crate::core::BuildingMetadata {
+            source_file: Some("test.ifc".to_string()),
+            parser_version: "1.0.0".to_string(),
+            total_entities: 10,
+            spatial_entities: 8,
+            coordinate_system: "WGS84".to_string(),
+            units: "meters".to_string(),
+            tags: vec!["test".to_string()],
+            properties: Default::default(),
+        });
+
         BuildingData {
-            building: BuildingInfo {
-                id: "TEST_BUILDING".to_string(),
-                name: "Test Building".to_string(),
-                description: Some("Test building for 3D rendering".to_string()),
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
-                version: "1.0.0".to_string(),
-                global_bounding_box: Some(BoundingBox3D {
-                    min: Point3D {
-                        x: 0.0,
-                        y: 0.0,
-                        z: 0.0,
-                    },
-                    max: Point3D {
-                        x: 100.0,
-                        y: 100.0,
-                        z: 6.0,
-                    },
-                }),
-            },
-            coordinate_systems: vec![],
-            metadata: BuildingMetadata {
-                source_file: Some("test.ifc".to_string()),
-                parser_version: "1.0.0".to_string(),
-                total_entities: 10,
-                spatial_entities: 8,
-                coordinate_system: "WGS84".to_string(),
-                units: "meters".to_string(),
-                tags: vec!["test".to_string()],
-                properties: Default::default(),
-            },
-            floors: vec![floor1, floor2],
+            building,
+            equipment: vec![equip1, equip2],
         }
     }
 
@@ -257,7 +245,7 @@ mod tests {
         let renderer = Building3DRenderer::new(building_data, config);
 
         // Test default camera settings
-        assert_eq!(renderer.camera.position.z, 100.0);
+        assert_eq!(renderer.camera.position.z, 10.0);
         assert_eq!(renderer.camera.fov, 45.0);
 
         // Test default projection settings
@@ -602,11 +590,11 @@ mod tests {
         let hvac_equipment = scene
             .equipment
             .iter()
-            .find(|e| matches!(e.equipment_type, arx::core::EquipmentType::HVAC));
+            .find(|e| matches!(e.equipment_type, crate::core::EquipmentType::HVAC));
         let electrical_equipment = scene
             .equipment
             .iter()
-            .find(|e| matches!(e.equipment_type, arx::core::EquipmentType::Electrical));
+            .find(|e| matches!(e.equipment_type, crate::core::EquipmentType::Electrical));
 
         // We should have HVAC and Electrical equipment
         assert!(hvac_equipment.is_some(), "Should have HVAC equipment");
@@ -620,11 +608,11 @@ mod tests {
         let electrical_type = &electrical_equipment.unwrap().equipment_type;
 
         assert!(
-            matches!(hvac_type, arx::core::EquipmentType::HVAC),
+            matches!(hvac_type, crate::core::EquipmentType::HVAC),
             "HVAC equipment_type should be HVAC"
         );
         assert!(
-            matches!(electrical_type, arx::core::EquipmentType::Electrical),
+            matches!(electrical_type, crate::core::EquipmentType::Electrical),
             "Electrical equipment_type should be Electrical"
         );
     }

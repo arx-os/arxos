@@ -10,6 +10,8 @@ pub mod components;
 pub mod pages;
 #[cfg(feature = "web")]
 pub mod wasm_bridge;
+#[cfg(feature = "web")]
+pub mod ws_client;
 
 #[cfg(feature = "web")]
 pub use app::App;

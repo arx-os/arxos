@@ -59,8 +59,8 @@ pub fn export_buffer(
 /// ```
 ///
 /// This function exists for API completeness but delegates to the pattern above.
-pub fn export_current_view(
-    _terminal: &mut ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
+pub fn export_current_view<B: ratatui::backend::Backend>(
+    _terminal: &mut ratatui::Terminal<B>,
     _format: ExportFormat,
     _output_path: PathBuf,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -185,9 +185,9 @@ mod tests {
 
     #[test]
     fn test_export_current_view_error() {
-        use ratatui::backend::CrosstermBackend;
-        let mut terminal =
-            ratatui::Terminal::new(CrosstermBackend::new(std::io::stdout())).unwrap();
+        use ratatui::backend::TestBackend;
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = ratatui::Terminal::new(backend).unwrap();
 
         let result = export_current_view(
             &mut terminal,

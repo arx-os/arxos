@@ -149,7 +149,7 @@ mod tests {
     #[test]
     fn test_transform_bounding_box() {
         let bbox = BoundingBox3D {
-            min: Point3D { x: 0.0, y: 0.0, z: 0.0 },
+            min: Point3D { x: 1.0, y: 1.0, z: 1.0 },
             max: Point3D { x: 10.0, y: 10.0, z: 5.0 },
         };
         let projection = Projection3D::new(ProjectionType::Isometric, ViewAngle::Isometric, 1.0);

@@ -65,7 +65,7 @@ impl SceneCache {
 mod tests {
     use super::*;
     use crate::core::{Building, Floor, Wing, Room, Equipment};
-    use crate::core::{SpatialProperties, EquipmentType, EquipmentStatus};
+    use crate::core::{SpatialProperties, EquipmentType, EquipmentStatus, EquipmentHealthStatus, RoomType};
 
     fn create_test_building_data() -> BuildingData {
         let mut building = Building::default();
@@ -76,18 +76,50 @@ mod tests {
 
         let mut wing = Wing::new("Wing A".to_string());
 
-        let mut room = Room::new("Room 101".to_string());
+        let mut room = Room::new("Room 101".to_string(), RoomType::Office);
         room.spatial_properties = SpatialProperties {
-            position: crate::core::spatial::Point3D::new(10.0, 10.0, 0.0),
-            bounding_box: crate::core::spatial::BoundingBox3D::new(
-                crate::core::spatial::Point3D::new(5.0, 5.0, 0.0),
-                crate::core::spatial::Point3D::new(15.0, 15.0, 3.0),
-            ),
+            position: crate::core::Position {
+                x: 10.0,
+                y: 10.0,
+                z: 0.0,
+                coordinate_system: "building_local".to_string(),
+            },
+            dimensions: crate::core::Dimensions {
+                width: 10.0,
+                height: 3.0,
+                depth: 10.0,
+            },
+            bounding_box: crate::core::BoundingBox {
+                min: crate::core::Position {
+                    x: 5.0,
+                    y: 5.0,
+                    z: 0.0,
+                    coordinate_system: "building_local".to_string(),
+                },
+                max: crate::core::Position {
+                    x: 15.0,
+                    y: 15.0,
+                    z: 3.0,
+                    coordinate_system: "building_local".to_string(),
+                },
+            },
+            mesh: None,
+            coordinate_system: "building_local".to_string(),
         };
 
-        let mut equipment = Equipment::new("AC-1".to_string(), EquipmentType::HVAC);
-        equipment.position = crate::core::spatial::Point3D::new(12.0, 12.0, 2.0);
-        equipment.status = EquipmentStatus::Healthy;
+        let mut equipment = Equipment::new(
+            "AC-1".to_string(),
+            "US/HQ/Main/test_facility/Floor 1/Wing A/Room 101/AC-1".to_string(),
+            EquipmentType::HVAC,
+        );
+        equipment.position = crate::core::Position {
+            x: 12.0,
+            y: 12.0,
+            z: 2.0,
+            coordinate_system: "building_local".to_string(),
+        };
+        equipment.status = EquipmentStatus::Active;
+        equipment.health_status = Some(EquipmentHealthStatus::Healthy);
 
         room.equipment.push(equipment);
         wing.rooms.push(room);

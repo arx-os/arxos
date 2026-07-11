@@ -51,13 +51,13 @@ pub fn import_ifc(repo_root: &Path, filename: &str, data_base64: &str) -> Result
 
     let import_path_str = import_path.to_str().ok_or_else(|| anyhow!("Invalid path utf-8"))?;
     let processor = IFCProcessor::new();
-    let building_data = processor.extract_hierarchy(import_path_str)?;
+    let mut building_data = processor.extract_hierarchy(import_path_str)?;
 
     let floors = building_data.building.floors.len();
     let rooms = building_data
         .building.floors
         .iter()
-        .map(|f| f.rooms.len())
+        .map(|f| f.wings.iter().map(|w| w.rooms.len()).sum::<usize>())
         .sum();
     let equipment = building_data
         .building.floors
@@ -109,13 +109,13 @@ pub fn import_ifc(repo_root: &Path, filename: &str, data_base64: &str) -> Result
 pub fn import_ifc_local(repo_root: &Path, ifc_path: &Path) -> Result<IfcImportResult> {
     let import_path_str = ifc_path.to_str().ok_or_else(|| anyhow!("Invalid path utf-8"))?;
     let processor = IFCProcessor::new();
-    let building_data = processor.extract_hierarchy(import_path_str)?;
+    let mut building_data = processor.extract_hierarchy(import_path_str)?;
 
     let floors = building_data.building.floors.len();
     let rooms = building_data
         .building.floors
         .iter()
-        .map(|f| f.rooms.len())
+        .map(|f| f.wings.iter().map(|w| w.rooms.len()).sum::<usize>())
         .sum();
     let equipment = building_data.equipment.len();
 
@@ -146,13 +146,23 @@ pub fn import_ifc_local(repo_root: &Path, ifc_path: &Path) -> Result<IfcImportRe
     })
 }
 
+fn get_room_address(building_name: &str, floor_name: &str, room_name: &str) -> crate::core::domain::ArxAddress {
+    crate::core::domain::ArxAddress::new("usa", "ny", "brooklyn", building_name, floor_name, room_name, "")
+}
+
 fn merge_building_data(new_data: &mut BuildingData, old_data: &BuildingData) {
     // 1. Merge Building metadata
     if new_data.building.name == old_data.building.name {
         new_data.building.created_at = old_data.building.created_at;
-        for tag in &old_data.building.tags {
-            if !new_data.building.tags.contains(tag) {
-                new_data.building.tags.push(tag.clone());
+        if let Some(old_meta) = &old_data.building.metadata {
+            if let Some(new_meta) = &mut new_data.building.metadata {
+                for tag in &old_meta.tags {
+                    if !new_meta.tags.contains(tag) {
+                        new_meta.tags.push(tag.clone());
+                    }
+                }
+            } else {
+                new_data.building.metadata = Some(old_meta.clone());
             }
         }
     }
@@ -164,9 +174,8 @@ fn merge_building_data(new_data: &mut BuildingData, old_data: &BuildingData) {
     for floor in &old_data.building.floors {
         for wing in &floor.wings {
             for room in &wing.rooms {
-                if let Some(addr) = room.get_address() {
-                    old_rooms.insert(addr.path.clone(), room);
-                }
+                let addr = get_room_address(&old_data.building.name, &floor.name, &room.name);
+                old_rooms.insert(addr.path.clone(), room);
             }
         }
     }
@@ -181,13 +190,12 @@ fn merge_building_data(new_data: &mut BuildingData, old_data: &BuildingData) {
     for floor in &mut new_data.building.floors {
         for wing in &mut floor.wings {
             for room in &mut wing.rooms {
-                if let Some(addr) = room.get_address() {
-                    if let Some(old_room) = old_rooms.get(&addr.path) {
-                        room.created_at = old_room.created_at;
-                        for (k, v) in &old_room.properties {
-                            // Only preserve properties that weren't just re-extracted (or manual ones)
-                            room.properties.entry(k.clone()).or_insert_with(|| v.clone());
-                        }
+                let addr = get_room_address(&new_data.building.name, &floor.name, &room.name);
+                if let Some(old_room) = old_rooms.get(&addr.path) {
+                    room.created_at = old_room.created_at;
+                    for (k, v) in &old_room.properties {
+                        // Only preserve properties that weren't just re-extracted (or manual ones)
+                        room.properties.entry(k.clone()).or_insert_with(|| v.clone());
                     }
                 }
             }
@@ -319,10 +327,10 @@ fn relative_display_path(root: &Path, target: &Path) -> String {
 fn load_building_data(repo_root: &Path) -> Result<BuildingData> {
     let mut yaml_candidates = Vec::new();
     // Safe directory reading with path validation
-    PathSafety::validate_path(Path::new("."))
+    PathSafety::validate_path(repo_root)
         .map_err(|e| anyhow!("Invalid path: {}", e))?;
         
-    for entry in fs::read_dir(".")? {
+    for entry in fs::read_dir(repo_root)? {
         let entry = entry?;
         let path = entry.path();
         if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
@@ -353,10 +361,6 @@ mod tests {
 
     fn sample_ifc_bytes() -> Vec<u8> {
         let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
             .join("test_data")
             .join("sample_building.ifc");
         fs::read(path).expect("sample IFC should exist")
@@ -397,14 +401,13 @@ mod tests {
         floor.wings.push(wing);
         building.floors.push(floor);
 
-        let serializer = BuildingYamlSerializer::new();
-        let data = serializer
-            .serialize_building(&building, &[], Some("generated"))
-            .unwrap();
+        let building_data = BuildingData {
+            building,
+            equipment: Vec::new(),
+        };
+        let data = BuildingYamlSerializer::serialize(&building_data).unwrap();
         let yaml_path = repo_root.join("test_facility.yaml");
-        serializer
-            .write_to_file(&data, yaml_path.to_str().unwrap())
-            .unwrap();
+        std::fs::write(&yaml_path, data).unwrap();
 
         let export = export_ifc(repo_root, None, false).unwrap();
         assert!(export.size_bytes > 0);

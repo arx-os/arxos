@@ -11,7 +11,8 @@ use axum::{
     },
     http::{StatusCode, HeaderMap},
     response::IntoResponse,
-    routing::get,
+    routing::{get, post},
+    Json,
     Router,
 };
 #[cfg(feature = "agent")]
@@ -81,6 +82,7 @@ pub async fn start_agent() -> Result<(), Box<dyn std::error::Error>> {
     // 3. Setup Router
     let app = Router::new()
         .route("/ws", get(ws_handler))
+        .route("/rpc", post(rpc_handler))
         .with_state(state.clone());
 
     // 4. Start File Watchers
@@ -98,9 +100,12 @@ pub async fn start_agent() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    // 5. Start WebSocket Server
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8787));
-    println!("📡 WebSocket server listening on ws://{}", addr);
+    // 5. Start P2P Local Discovery
+    crate::agent::discovery::start_discovery(root_token.clone(), 8787);
+
+    // 6. Start WebSocket Server
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8787));
+    println!("📡 Server listening on http://{}", addr);
     println!("🔍 Auto-export enabled: watching for YAML changes...\\n");
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
@@ -140,6 +145,38 @@ async fn ws_handler(
     }
 
     ws.on_upgrade(|socket| handle_socket(socket, state))
+}
+
+#[cfg(feature = "agent")]
+async fn rpc_handler(
+    headers: HeaderMap,
+    Query(params): Query<AuthParams>,
+    State(state): State<Arc<AgentState>>,
+    Json(request): Json<JsonRpcRequest>,
+) -> impl IntoResponse {
+    let token_str = if let Some(bearer) = headers
+        .get("Authorization")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|s| s.strip_prefix("Bearer "))
+    {
+        Some(bearer.to_string())
+    } else {
+        params.token
+    };
+
+    let valid = if let Some(token) = token_str {
+        let guard = state.token.lock().unwrap();
+        guard.value() == token
+    } else {
+        false
+    };
+
+    if !valid {
+        return (StatusCode::UNAUTHORIZED, "Unauthorized: Invalid or missing token").into_response();
+    }
+
+    let response = dispatch(state, request).await;
+    Json(response).into_response()
 }
 
 #[cfg(feature = "agent")]

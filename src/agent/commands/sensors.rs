@@ -244,11 +244,20 @@ mod tests {
     #[tokio::test]
     async fn test_sensor_commands() {
         let temp = TempDir::new().unwrap();
-        let hardware = Arc::new(HardwareManager::new());
+        use crate::hardware::HardwareInterface;
+        let mut simulated = crate::hardware::simulated::SimulatedInterface::new();
+        simulated.connect().await.unwrap();
+
+        let mut hardware_mgr = HardwareManager::new();
+        hardware_mgr.add_interface(
+            "simulated".to_string(),
+            crate::hardware::HardwareProtocol::Simulated(simulated),
+        );
+        let hardware = Arc::new(hardware_mgr);
         let commands = SensorCommands::new(hardware, temp.path().to_path_buf());
 
         // Test get_temp (will use placeholder hardware)
-        let result = commands.get_temp("floor:2:room:201", QueryOptions::default()).await;
+        let result = commands.get_temp("temp1", QueryOptions::default()).await;
         assert!(result.is_ok());
     }
 }

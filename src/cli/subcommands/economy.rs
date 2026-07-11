@@ -4,7 +4,7 @@ use clap::Subcommand;
 
 #[derive(Subcommand)]
 pub enum EconomyCommands {
-    /// Submit tax verification to mint ARXO
+    /// Submit tax verification to mint $AXD
     Verify {
         /// External property identifier (e.g., parcel id)
         #[arg(long)]
@@ -16,15 +16,15 @@ pub enum EconomyCommands {
         #[arg(long)]
         tax_value: String,
     },
-    /// Stake ARXO for revenue shares
+    /// Stake $AXD for revenue shares
     Stake {
-        /// Amount of ARXO to stake (whole tokens)
+        /// Amount of $AXD to stake (whole tokens)
         #[arg(long)]
         amount: String,
     },
-    /// Unstake ARXO
+    /// Unstake $AXD
     Unstake {
-        /// Amount of ARXO to unstake
+        /// Amount of $AXD to unstake
         #[arg(long)]
         amount: String,
     },
@@ -54,13 +54,13 @@ pub enum EconomyCommands {
         #[arg(long)]
         metadata: Option<String>,
     },
-    /// Display ARXO balance for an address
+    /// Display $AXD balance for an address
     Balance {
         /// Wallet address to query (defaults to configured wallet)
         #[arg(long)]
         address: Option<String>,
     },
-    /// Display total assessed value backing ARXO
+    /// Display total assessed value backing $AXD
     TotalValue,
     /// Print resolved economy configuration
     ShowConfig,

@@ -88,7 +88,7 @@ mod tests {
         let temp = TempDir::new().unwrap();
         let repo_root = temp.path();
         
-        let watcher = FileWatcher::new(repo_root).unwrap();
+        let watcher = FileWatcher::new(repo_root, vec!["yaml".to_string(), "yml".to_string()]).unwrap();
 
         // Create a YAML file
         let yaml_path = repo_root.join("building.yaml");
@@ -100,7 +100,10 @@ mod tests {
         // Check for changes
         let changed = watcher.check_for_changes();
         assert!(changed.is_some());
-        assert_eq!(changed.unwrap(), yaml_path);
+        assert_eq!(
+            std::fs::canonicalize(changed.unwrap()).unwrap(),
+            std::fs::canonicalize(yaml_path).unwrap()
+        );
     }
 
     #[test]
@@ -108,7 +111,7 @@ mod tests {
         let temp = TempDir::new().unwrap();
         let repo_root = temp.path();
         
-        let watcher = FileWatcher::new(repo_root).unwrap();
+        let watcher = FileWatcher::new(repo_root, vec!["yaml".to_string(), "yml".to_string()]).unwrap();
 
         // Create a non-YAML file
         fs::write(repo_root.join("README.md"), "# Test").unwrap();

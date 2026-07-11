@@ -44,12 +44,18 @@ interface IERC3009 {
 }
 
 /**
- * @title ArxosToken
- * @notice ERC-20 token for ArxOS ecosystem with role-based minting
- * @dev Supports batch minting for 70/10/10/10 distribution splits
- *      Minting controlled by MINTER_ROLE (assigned to ArxContributionOracle)
+ * @title ArxDenariusToken
+ * @notice ERC-20 token for the ArxOS ecosystem — ticker symbol $AXD (Arx Denarius)
+ * @dev Supports batch minting for 70/10/10/10 distribution splits.
+ *      Minting is controlled by MINTER_ROLE (assigned to ArxContributionOracle).
+ *
+ *      Naming rationale:
+ *        • "Arx Denarius" references the Latin "denarius" (a unit of value)
+ *          paired with "Arx" (citadel/building), reflecting that every token is
+ *          backed by verified real-world spatial data.
+ *        • Ticker $AXD is concise and unambiguous on-chain.
  */
-contract ArxosToken is ERC20, AccessControl, EIP712, IERC3009 {
+contract ArxDenariusToken is ERC20, AccessControl, EIP712, IERC3009 {
     /// @notice Role identifier for addresses that can mint tokens
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
@@ -123,8 +129,8 @@ contract ArxosToken is ERC20, AccessControl, EIP712, IERC3009 {
      * @notice Contract constructor
      * @param admin Address that will have DEFAULT_ADMIN_ROLE
      */
-    constructor(address admin) ERC20("ArxOS Token", "ARXO") EIP712("ArxOS Token", "1") {
-        require(admin != address(0), "ArxosToken: zero admin");
+    constructor(address admin) ERC20("Arx Denarius", "AXD") EIP712("Arx Denarius", "1") {
+        require(admin != address(0), "ArxDenariusToken: zero admin");
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
@@ -135,9 +141,9 @@ contract ArxosToken is ERC20, AccessControl, EIP712, IERC3009 {
      * @dev Only callable by addresses with MINTER_ROLE
      */
     function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
-        require(!emergencyPause, "ArxosToken: paused");
-        require(to != address(0), "ArxosToken: zero address");
-        require(amount > 0, "ArxosToken: zero amount");
+        require(!emergencyPause, "ArxDenariusToken: paused");
+        require(to != address(0), "ArxDenariusToken: zero address");
+        require(amount > 0, "ArxDenariusToken: zero amount");
 
         _mint(to, amount);
     }
@@ -153,15 +159,15 @@ contract ArxosToken is ERC20, AccessControl, EIP712, IERC3009 {
         address[] calldata recipients,
         uint256[] calldata amounts
     ) external onlyRole(MINTER_ROLE) {
-        require(!emergencyPause, "ArxosToken: paused");
-        require(recipients.length == amounts.length, "ArxosToken: length mismatch");
-        require(recipients.length > 0, "ArxosToken: empty arrays");
+        require(!emergencyPause, "ArxDenariusToken: paused");
+        require(recipients.length == amounts.length, "ArxDenariusToken: length mismatch");
+        require(recipients.length > 0, "ArxDenariusToken: empty arrays");
 
         uint256 totalAmount = 0;
 
         for (uint256 i = 0; i < recipients.length; i++) {
-            require(recipients[i] != address(0), "ArxosToken: zero address");
-            require(amounts[i] > 0, "ArxosToken: zero amount");
+            require(recipients[i] != address(0), "ArxDenariusToken: zero address");
+            require(amounts[i] > 0, "ArxDenariusToken: zero amount");
 
             _mint(recipients[i], amounts[i]);
             totalAmount += amounts[i];
@@ -187,12 +193,12 @@ contract ArxosToken is ERC20, AccessControl, EIP712, IERC3009 {
         address treasury,
         uint256 totalAmount
     ) external onlyRole(MINTER_ROLE) {
-        require(!emergencyPause, "ArxosToken: paused");
-        require(worker != address(0), "ArxosToken: zero worker");
-        require(building != address(0), "ArxosToken: zero building");
-        require(maintainer != address(0), "ArxosToken: zero maintainer");
-        require(treasury != address(0), "ArxosToken: zero treasury");
-        require(totalAmount > 0, "ArxosToken: zero amount");
+        require(!emergencyPause, "ArxDenariusToken: paused");
+        require(worker != address(0), "ArxDenariusToken: zero worker");
+        require(building != address(0), "ArxDenariusToken: zero building");
+        require(maintainer != address(0), "ArxDenariusToken: zero maintainer");
+        require(treasury != address(0), "ArxDenariusToken: zero treasury");
+        require(totalAmount > 0, "ArxDenariusToken: zero amount");
 
         // Calculate 70/10/10/10 split
         uint256 workerAmount = (totalAmount * 70) / 100;
@@ -220,7 +226,7 @@ contract ArxosToken is ERC20, AccessControl, EIP712, IERC3009 {
      * @dev Public function for deflationary mechanics (RevenueSplitter)
      */
     function burn(uint256 amount) external {
-        require(amount > 0, "ArxosToken: zero amount");
+        require(amount > 0, "ArxDenariusToken: zero amount");
         _burn(msg.sender, amount);
         emit TokensBurned(msg.sender, amount);
     }
@@ -232,7 +238,7 @@ contract ArxosToken is ERC20, AccessControl, EIP712, IERC3009 {
      * @dev Used by contracts with burn approval
      */
     function burnFrom(address from, uint256 amount) external {
-        require(amount > 0, "ArxosToken: zero amount");
+        require(amount > 0, "ArxDenariusToken: zero amount");
         _spendAllowance(from, msg.sender, amount);
         _burn(from, amount);
         emit TokensBurned(from, amount);
@@ -293,7 +299,7 @@ contract ArxosToken is ERC20, AccessControl, EIP712, IERC3009 {
         }
 
         uint256 newTotal = limit.amount + amount;
-        require(newTotal <= cap, string.concat("ArxosToken: ", domain, " daily cap"));
+        require(newTotal <= cap, string.concat("ArxDenariusToken: ", domain, " daily cap"));
         limit.amount = newTotal;
     }
 
@@ -322,9 +328,9 @@ contract ArxosToken is ERC20, AccessControl, EIP712, IERC3009 {
         bytes32 r,
         bytes32 s
     ) external override {
-        require(now() <= validBefore, "ArxosToken: authorization expired");
-        require(now() >= validAfter, "ArxosToken: authorization not yet valid");
-        require(!_authorizationStates[from][nonce], "ArxosToken: authorization used");
+        require(now() <= validBefore, "ArxDenariusToken: authorization expired");
+        require(now() >= validAfter, "ArxDenariusToken: authorization not yet valid");
+        require(!_authorizationStates[from][nonce], "ArxDenariusToken: authorization used");
 
         bytes32 digest = _hashTypedDataV4(
             keccak256(
@@ -341,7 +347,7 @@ contract ArxosToken is ERC20, AccessControl, EIP712, IERC3009 {
         );
 
         address recoveredAddress = ECDSA.recover(digest, v, r, s);
-        require(recoveredAddress != address(0) && recoveredAddress == from, "ArxosToken: invalid signature");
+        require(recoveredAddress != address(0) && recoveredAddress == from, "ArxDenariusToken: invalid signature");
 
         _authorizationStates[from][nonce] = true;
         emit AuthorizationUsed(from, nonce);
@@ -372,10 +378,10 @@ contract ArxosToken is ERC20, AccessControl, EIP712, IERC3009 {
         bytes32 r,
         bytes32 s
     ) external override {
-        require(to == msg.sender, "ArxosToken: caller must be the payee");
-        require(now() <= validBefore, "ArxosToken: authorization expired");
-        require(now() >= validAfter, "ArxosToken: authorization not yet valid");
-        require(!_authorizationStates[from][nonce], "ArxosToken: authorization used");
+        require(to == msg.sender, "ArxDenariusToken: caller must be the payee");
+        require(now() <= validBefore, "ArxDenariusToken: authorization expired");
+        require(now() >= validAfter, "ArxDenariusToken: authorization not yet valid");
+        require(!_authorizationStates[from][nonce], "ArxDenariusToken: authorization used");
 
         bytes32 digest = _hashTypedDataV4(
             keccak256(
@@ -392,7 +398,7 @@ contract ArxosToken is ERC20, AccessControl, EIP712, IERC3009 {
         );
 
         address recoveredAddress = ECDSA.recover(digest, v, r, s);
-        require(recoveredAddress != address(0) && recoveredAddress == from, "ArxosToken: invalid signature");
+        require(recoveredAddress != address(0) && recoveredAddress == from, "ArxDenariusToken: invalid signature");
 
         _authorizationStates[from][nonce] = true;
         emit AuthorizationUsed(from, nonce);
@@ -415,15 +421,15 @@ contract ArxosToken is ERC20, AccessControl, EIP712, IERC3009 {
         bytes32 r,
         bytes32 s
     ) external override {
-        require(authorizer == msg.sender, "ArxosToken: caller must be the authorizer");
-        require(!_authorizationStates[authorizer][nonce], "ArxosToken: authorization used");
+        require(authorizer == msg.sender, "ArxDenariusToken: caller must be the authorizer");
+        require(!_authorizationStates[authorizer][nonce], "ArxDenariusToken: authorization used");
 
         bytes32 digest = _hashTypedDataV4(
             keccak256(abi.encode(CANCEL_AUTHORIZATION_TYPEHASH, authorizer, nonce))
         );
 
         address recoveredAddress = ECDSA.recover(digest, v, r, s);
-        require(recoveredAddress != address(0) && recoveredAddress == authorizer, "ArxosToken: invalid signature");
+        require(recoveredAddress != address(0) && recoveredAddress == authorizer, "ArxDenariusToken: invalid signature");
 
         _authorizationStates[authorizer][nonce] = true;
         emit AuthorizationCanceled(authorizer, nonce);

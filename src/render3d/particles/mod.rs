@@ -6,6 +6,9 @@
 pub mod emitters;
 pub mod physics;
 pub mod types;
+pub mod system;
+
+pub use system::ParticleSystem;
 
 // Re-export commonly used types
 pub use types::{

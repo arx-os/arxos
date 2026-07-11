@@ -13,10 +13,12 @@ mod hierarchy;
 mod bim_parser;
 mod ifc_rs_converter;
 pub mod parser;
+pub mod spatial;
 
 pub use error::{IFCError, IFCResult};
 pub use hierarchy::{HierarchyBuilder, IFCEntity};
 pub use bim_parser::BimParser;
+pub use spatial::{SpatialIndex, SpatialQueryResult, SpatialRelationship};
 
 /// IFC (Industry Foundation Classes) file processor
 ///
@@ -56,6 +58,13 @@ impl IFCProcessor {
         &self,
         file_path: &str,
     ) -> IFCResult<(Building, Vec<crate::core::spatial::SpatialEntity>)> {
+        // Try native parser first
+        if let Ok(result) = self.parse_native(file_path, false) {
+            if !result.data.building.floors.is_empty() {
+                return Ok((result.data.building, Vec::new()));
+            }
+        }
+
         info!("Processing IFC file (Legacy): {}", file_path);
 
         // Check if file exists
@@ -117,7 +126,9 @@ impl IFCProcessor {
     pub fn extract_hierarchy(&self, file_path: &str) -> anyhow::Result<crate::yaml::BuildingData> {
         // Try native parser first
         if let Ok(result) = self.parse_native(file_path, false) {
-            return Ok(result.data);
+            if !result.data.building.floors.is_empty() {
+                return Ok(result.data);
+            }
         }
 
         warn!("Native parser failed, falling back to legacy for hierarchy: {}", file_path);

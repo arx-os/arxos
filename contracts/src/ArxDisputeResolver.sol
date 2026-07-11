@@ -18,7 +18,7 @@ contract ArxDisputeResolver is AccessControl, ReentrancyGuard {
     bytes32 public constant DISPUTER_ROLE = keccak256("DISPUTER_ROLE"); // Can be ANYONE in V1, or restricted for beta
     
     // Config
-    uint256 public disputeBondAmount = 500 ether; // 500 ARXO required to dispute
+    uint256 public disputeBondAmount = 500 ether; // 500 $AXD required to dispute
     uint256 public constant VOTING_WINDOW = 48 hours;
     uint256 public constant MIN_JURORS = 2; // Minimum jurors needed for validity
     

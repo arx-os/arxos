@@ -1,7 +1,8 @@
 //! Home page
 
 use leptos::*;
-use leptos_router::*;
+use leptos::prelude::*;
+use leptos_router::components::A;
 
 #[component]
 pub fn Home() -> impl IntoView {
@@ -12,10 +13,10 @@ pub fn Home() -> impl IntoView {
                 <p class="subtitle">"Git for Buildings - Version control for building management data"</p>
                 
                 <div class="cta-buttons">
-                    <A href="/import" class="btn btn-primary">
+                    <A href="/import" attr:class="btn btn-primary">
                         "Import IFC File"
                     </A>
-                    <A href="/buildings" class="btn btn-secondary">
+                    <A href="/buildings" attr:class="btn btn-secondary">
                         "View Buildings"
                     </A>
                 </div>

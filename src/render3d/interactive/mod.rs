@@ -23,9 +23,10 @@ pub use rendering::{render_frame, render_overlay};
 
 // Imports
 use crate::render3d::events::{EventHandler, InteractiveEvent};
-use crate::render3d::state::InteractiveState;
+use crate::render3d::state::{InteractiveState, CameraState};
 use crate::render3d::{
     Building3DRenderer, InfoPanelState, Render3DConfig, VisualEffectsEngine,
+    Scene3D, ViewMode,
 };
 use crate::core::spatial::Point3D;
 use crate::yaml::BuildingData;
@@ -55,6 +56,23 @@ pub struct InteractiveRenderer {
     game_state: Option<GameState>,
     /// Info panel state
     info_panel: InfoPanelState,
+    
+    // Caching state fields for dirty frame optimization
+    last_rendered_camera: Option<CameraState>,
+    last_rendered_floor: Option<i32>,
+    last_rendered_view_mode: Option<ViewMode>,
+    last_selected_equipment: std::collections::HashSet<String>,
+    last_viewport_width: usize,
+    last_viewport_height: usize,
+    last_info_panel_show: bool,
+    last_help_show: bool,
+    last_game_score: Option<u32>,
+    last_game_progress: Option<f32>,
+    last_game_violations: Option<u32>,
+    last_rendered_duration_secs: u64,
+    cached_scene: Option<crate::render3d::Scene3D>,
+    cached_ascii_output: Option<String>,
+    start_time: Instant,
 }
 
 /// Configuration for interactive rendering
@@ -72,6 +90,8 @@ pub struct InteractiveConfig {
     pub auto_hide_help: bool,
     /// Help display duration
     pub help_duration: Duration,
+    /// Enable dirty frame checking to skip rendering when idle
+    pub enable_dirty_rendering: bool,
 }
 
 impl InteractiveRenderer {
@@ -97,6 +117,21 @@ impl InteractiveRenderer {
             frame_count: 0,
             game_state: None,
             info_panel,
+            last_rendered_camera: None,
+            last_rendered_floor: None,
+            last_rendered_view_mode: None,
+            last_selected_equipment: std::collections::HashSet::new(),
+            last_viewport_width: 0,
+            last_viewport_height: 0,
+            last_info_panel_show: false,
+            last_help_show: false,
+            last_game_score: None,
+            last_game_progress: None,
+            last_game_violations: None,
+            last_rendered_duration_secs: 0,
+            cached_scene: None,
+            cached_ascii_output: None,
+            start_time: Instant::now(),
         })
     }
 
@@ -122,6 +157,21 @@ impl InteractiveRenderer {
             frame_count: 0,
             game_state: None,
             info_panel,
+            last_rendered_camera: None,
+            last_rendered_floor: None,
+            last_rendered_view_mode: None,
+            last_selected_equipment: std::collections::HashSet::new(),
+            last_viewport_width: 0,
+            last_viewport_height: 0,
+            last_info_panel_show: false,
+            last_help_show: false,
+            last_game_score: None,
+            last_game_progress: None,
+            last_game_violations: None,
+            last_rendered_duration_secs: 0,
+            cached_scene: None,
+            cached_ascii_output: None,
+            start_time: Instant::now(),
         })
     }
 
@@ -248,51 +298,163 @@ impl InteractiveRenderer {
 
     /// Render a single frame
     fn render_frame(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        // Clear screen
-        print!("\x1B[2J\x1B[1;1H");
+        let current_time = Instant::now();
+        let session_duration_secs = current_time.duration_since(self.start_time).as_secs();
 
-        // Update camera in renderer
-        self.renderer.set_camera(
-            self.state.camera_state.position,
-            self.state.camera_state.target,
-        );
+        // 1. Check if the 3D scene needs to be re-rendered (projection & geometry pass)
+        let mut is_3d_scene_dirty = false;
 
-        // Update visual effects
+        if !self.config.enable_dirty_rendering {
+            is_3d_scene_dirty = true;
+        } else {
+            // Check camera changes
+            if self.last_rendered_camera.as_ref() != Some(&self.state.camera_state) {
+                is_3d_scene_dirty = true;
+            }
+            // Check current floor change
+            if self.last_rendered_floor != self.state.current_floor {
+                is_3d_scene_dirty = true;
+            }
+            // Check view mode change
+            if self.last_rendered_view_mode.as_ref() != Some(&self.state.view_mode) {
+                is_3d_scene_dirty = true;
+            }
+            // Check viewport dimension changes
+            if self.last_viewport_width != self.state.session_data.viewport_width
+                || self.last_viewport_height != self.state.session_data.viewport_height
+            {
+                is_3d_scene_dirty = true;
+            }
+            // Check selections changes
+            if self.last_selected_equipment != self.state.selected_equipment {
+                is_3d_scene_dirty = true;
+            }
+            // If cached components are missing
+            if self.cached_scene.is_none() || self.cached_ascii_output.is_none() {
+                is_3d_scene_dirty = true;
+            }
+        }
+
+        // 2. Fetch or compute the 3D scene & basic ASCII output
+        let (scene, ascii_output) = if is_3d_scene_dirty {
+            // Update camera in renderer
+            self.renderer.set_camera(
+                self.state.camera_state.position,
+                self.state.camera_state.target,
+            );
+
+            // Render the 3D scene (expensive!)
+            let new_scene = self.renderer.render_3d()?;
+
+            // Convert to ASCII output (expensive!)
+            let new_ascii = self.renderer.render_to_ascii(&new_scene)?;
+
+            // Cache them
+            self.cached_scene = Some(new_scene.clone());
+            self.cached_ascii_output = Some(new_ascii.clone());
+
+            // Update cached states
+            self.last_rendered_camera = Some(self.state.camera_state.clone());
+            self.last_rendered_floor = self.state.current_floor;
+            self.last_rendered_view_mode = Some(self.state.view_mode.clone());
+            self.last_viewport_width = self.state.session_data.viewport_width;
+            self.last_viewport_height = self.state.session_data.viewport_height;
+            self.last_selected_equipment = self.state.selected_equipment.clone();
+
+            (new_scene, new_ascii)
+        } else {
+            // Reuse cached outputs
+            (self.cached_scene.clone().unwrap(), self.cached_ascii_output.clone().unwrap())
+        };
+
+        // 3. Update visual effects
         let delta_time = 1.0 / self.config.target_fps as f64;
         self.effects_engine.update(delta_time);
 
-        // Render the 3D scene
-        let scene = self.renderer.render_3d()?;
+        // 4. Check if the terminal display actually needs to be updated.
+        // Even if the 3D scene didn't change, we might need to redraw if:
+        // - Active visual effects/particles/animations are running
+        // - Info panel toggle changed
+        // - Help screen toggle changed
+        // - Game state changes (progress/score/violations)
+        // - Session duration seconds changed (updating the overlay counter)
+        let mut is_display_dirty = is_3d_scene_dirty;
 
-        // Convert to ASCII output
-        let mut ascii_output = self.renderer.render_to_ascii(&scene)?;
+        if !is_display_dirty && self.config.enable_dirty_rendering {
+            // Check active effects
+            if self.effects_engine.effect_count() > 0
+                || self.effects_engine.animation_system().animation_count() > 0
+                || self.effects_engine.particle_system().particle_count() > 0
+            {
+                is_display_dirty = true;
+            }
+            // Check overlays toggle changes
+            if self.last_info_panel_show != self.info_panel.show_panel {
+                is_display_dirty = true;
+            }
+            if self.last_help_show != self.config.show_help {
+                is_display_dirty = true;
+            }
+            // Check game state changes
+            if let Some(ref gs) = self.game_state {
+                let stats = gs.get_stats();
+                if self.last_game_score != Some(gs.score)
+                    || self.last_game_progress != Some(gs.progress)
+                    || self.last_game_violations != Some(stats.violations)
+                {
+                    is_display_dirty = true;
+                }
+            }
+            // Check session clock seconds
+            if self.last_rendered_duration_secs != session_duration_secs {
+                is_display_dirty = true;
+            }
+        }
 
-        // Add particle effects to the output
-        ascii_output = self.add_particle_effects_to_output(ascii_output);
+        // 5. If dirty, execute clear, print, and overlay output
+        if is_display_dirty {
+            // Clear screen
+            print!("\x1B[2J\x1B[1;1H");
 
-        // Display the rendered scene
-        print!("{}", ascii_output);
+            // Add particle effects to the output
+            let final_ascii = self.add_particle_effects_to_output(ascii_output);
 
-        // Display overlay information
-        self.render_overlay(&scene)?;
+            // Display the rendered scene
+            print!("{}", final_ascii);
 
-        // Update statistics
-        self.state.increment_render_count();
-        self.frame_count += 1;
+            // Display overlay information
+            self.render_overlay(&scene)?;
 
-        // Calculate FPS
-        let current_time = Instant::now();
+            // Update stats
+            self.last_info_panel_show = self.info_panel.show_panel;
+            self.last_help_show = self.config.show_help;
+            if let Some(ref gs) = self.game_state {
+                let stats = gs.get_stats();
+                self.last_game_score = Some(gs.score);
+                self.last_game_progress = Some(gs.progress);
+                self.last_game_violations = Some(stats.violations);
+            }
+            self.last_rendered_duration_secs = session_duration_secs;
+            
+            self.state.increment_render_count();
+            self.frame_count += 1;
+        }
+
+        // Calculate FPS (we do this regardless of print to keep the frame rate calculations running)
         let elapsed = current_time.duration_since(self.last_render_time);
         if elapsed >= Duration::from_secs(1) {
             let fps = self.frame_count as f64 / elapsed.as_secs_f64();
-            if self.config.show_fps {
+            if self.config.show_fps && is_display_dirty {
                 print!("FPS: {:.1}", fps);
             }
             self.frame_count = 0;
             self.last_render_time = current_time;
         }
 
-        io::stdout().flush()?;
+        if is_display_dirty {
+            io::stdout().flush()?;
+        }
+        
         Ok(())
     }
 
@@ -564,6 +726,7 @@ impl Default for InteractiveConfig {
             show_help: false,
             auto_hide_help: true,
             help_duration: Duration::from_secs(5),
+            enable_dirty_rendering: true,
         }
     }
 }
@@ -572,43 +735,38 @@ impl Default for InteractiveConfig {
 mod tests {
     use super::*;
     use crate::render3d::{ProjectionType, ViewAngle};
-    use crate::yaml::{BuildingData, BuildingInfo, BuildingMetadata};
+    use crate::yaml::BuildingData;
     use chrono::Utc;
 
     fn create_test_building_data() -> BuildingData {
         use crate::core::Floor;
 
+        let mut building = crate::core::Building::new("Test Building".to_string(), "".to_string());
+        building.id = "test".to_string();
+        building.add_floor(Floor {
+            id: "floor-1".to_string(),
+            name: "Floor 1".to_string(),
+            level: 0,
+            elevation: Some(0.0),
+            bounding_box: None,
+            wings: vec![],
+            equipment: vec![],
+            properties: std::collections::HashMap::new(),
+        });
+        building.metadata = Some(crate::core::BuildingMetadata {
+            source_file: None,
+            parser_version: "1.0".to_string(),
+            total_entities: 1,
+            spatial_entities: 1,
+            coordinate_system: "local".to_string(),
+            units: "meters".to_string(),
+            tags: vec![],
+            properties: Default::default(),
+        });
+
         BuildingData {
-            building: BuildingInfo {
-                id: "test".to_string(),
-                name: "Test Building".to_string(),
-                description: None,
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
-                version: "1.0".to_string(),
-                global_bounding_box: None,
-            },
-            metadata: BuildingMetadata {
-                source_file: None,
-                parser_version: "1.0".to_string(),
-                total_entities: 1,
-                spatial_entities: 1,
-                coordinate_system: "local".to_string(),
-                units: "meters".to_string(),
-                tags: vec![],
-                properties: Default::default(),
-            },
-            floors: vec![Floor {
-                id: "floor-1".to_string(),
-                name: "Floor 1".to_string(),
-                level: 0,
-                elevation: Some(0.0),
-                bounding_box: None,
-                wings: vec![],
-                equipment: vec![],
-                properties: std::collections::HashMap::new(),
-            }],
-            coordinate_systems: vec![],
+            building,
+            equipment: vec![],
         }
     }
 

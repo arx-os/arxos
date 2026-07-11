@@ -146,12 +146,16 @@ impl StepLexer {
                 return Some(params);
             }
 
+            let start_pos = self.pos;
             if let Some(param) = self.parse_single_param() {
                 params.push(param);
             }
 
             self.skip_whitespace();
             if self.peek() == Some(',') {
+                self.pos += 1;
+            } else if self.pos == start_pos {
+                // Prevent infinite loop if no progress was made
                 self.pos += 1;
             }
         }
@@ -163,7 +167,7 @@ impl StepLexer {
         let c = self.peek()?;
 
         match c {
-            '$' => {
+            '$' | '*' => {
                 self.pos += 1;
                 Some(Param::Null)
             }

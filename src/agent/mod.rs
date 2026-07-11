@@ -22,6 +22,8 @@ pub mod ssh_server;
 pub mod ssh_auth;
 #[cfg(feature = "agent")]
 pub mod commands;
+#[cfg(feature = "agent")]
+pub mod discovery;
 
 #[cfg(feature = "agent")]
 pub mod server;

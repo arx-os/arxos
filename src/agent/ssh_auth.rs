@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use russh_keys::key::PublicKey;
+use russh_keys::PublicKeyBase64;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::Path;
@@ -77,35 +78,19 @@ impl SshAuthenticator {
 
     /// Verify a public key and return the associated username if valid
     /// Note: This compares base64 representation of the key.
-    pub fn verify_key(&self, _public_key: &PublicKey) -> Option<String> {
-        // TODO: Implement proper key comparison using russh_keys
-        // For now, we would need to convert the incoming PublicKey to base64 
-        // string to match what we have in the authorized_keys file.
-        // This is a simplified placeholder.
-        
-        // Real implementation would look something like:
-        // let key_openssh = public_key.to_openssh_string(); ...
-        
-        None 
+    pub fn verify_key(&self, public_key: &PublicKey) -> Option<String> {
+        let b64 = public_key.public_key_base64();
+        self.authorized_keys.get(&b64).cloned()
     }
 
     /// Check if a user has a specific permission
-    pub fn check_permission(&self, _username: &str, _permission: &str) -> bool {
-        // 1. Find role usage for the user? 
-        // The users map matches identifier (key string often) to role.
-        // Ideally we map username -> role if username is stable.
-        
-        // In permissions.yaml:
-        // users:
-        //   "ssh-rsa AAA...": { role: "admin" }
-        // The key is the full public key line or just the key part?
-        // The implementation plan example showed "ssh-rsa AAA...manager@laptop" as key.
-        
-        // Assuming we look up by username for now if we extracted it from authorized_keys
-        // Or we might need to look up by the key itself.
-        
-        // Let's assume we pass the username that was resolved from verify_key
-        false // Placeholder
+    pub fn check_permission(&self, username: &str, permission: &str) -> bool {
+        if let Some(role_name) = self.get_user_role(username) {
+            if let Some(perms) = self.get_role_permissions(role_name) {
+                return perms.iter().any(|p| p == permission || p == "*");
+            }
+        }
+        false
     }
     
     pub fn get_user_role(&self, user_id: &str) -> Option<&String> {
@@ -114,5 +99,54 @@ impl SshAuthenticator {
     
     pub fn get_role_permissions(&self, role_name: &str) -> Option<&Vec<String>> {
         self.permissions.roles.get(role_name).map(|r| &r.permissions)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_authenticator_flow() {
+        let temp = TempDir::new().unwrap();
+        let arxos_dir = temp.path().join(".arxos");
+        std::fs::create_dir_all(&arxos_dir).unwrap();
+
+        let keypair = russh_keys::key::KeyPair::generate_ed25519().unwrap();
+        let public_key = keypair.clone_public_key().unwrap();
+        let b64 = public_key.public_key_base64();
+
+        // 2. Write authorized_keys
+        let auth_keys_path = arxos_dir.join("authorized_keys");
+        let auth_keys_content = format!("ssh-ed25519 {} test_user\n", b64);
+        std::fs::write(&auth_keys_path, auth_keys_content).unwrap();
+
+        // 3. Write permissions.yaml
+        let permissions_path = arxos_dir.join("permissions.yaml");
+        let permissions_content = r#"
+roles:
+  admin:
+    permissions:
+      - "connect"
+      - "read"
+users:
+  test_user:
+    role: "admin"
+"#;
+        std::fs::write(&permissions_path, permissions_content).unwrap();
+
+        // 4. Load authenticator
+        let auth = SshAuthenticator::new(temp.path()).unwrap();
+
+        // 5. Verify public key resolves to test_user
+        let user = auth.verify_key(&public_key);
+        assert_eq!(user, Some("test_user".to_string()));
+
+        // 6. Verify permissions
+        assert!(auth.check_permission("test_user", "connect"));
+        assert!(auth.check_permission("test_user", "read"));
+        assert!(!auth.check_permission("test_user", "write"));
+        assert!(!auth.check_permission("non_existent_user", "connect"));
     }
 }

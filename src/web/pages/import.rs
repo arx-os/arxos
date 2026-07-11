@@ -1,6 +1,7 @@
 //! Import page for IFC file upload
 
 use leptos::*;
+use leptos::prelude::*;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::Event;
@@ -77,21 +78,21 @@ pub fn Import() -> impl IntoView {
                 {move || if !file_name.get().is_empty() {
                     view! {
                         <p class="file-name">"Selected: " {file_name.get()}</p>
-                    }.into_view()
+                    }.into_any()
                 } else {
-                    view! { <p class="hint">"No file selected"</p> }.into_view()
+                    view! { <p class="hint">"No file selected"</p> }.into_any()
                 }}
                 
                 {move || if parsing.get() {
-                    view! { <p class="status">"Parsing..."</p> }.into_view()
+                    view! { <p class="status">"Parsing..."</p> }.into_any()
                 } else {
-                    view! { <></> }.into_view()
+                    view! { <></> }.into_any()
                 }}
                 
                 {move || if let Some(msg) = result.get() {
-                    view! { <p class="result success">{msg}</p> }.into_view()
+                    view! { <p class="result success">{msg}</p> }.into_any()
                 } else {
-                    view! { <></> }.into_view()
+                    view! { <></> }.into_any()
                 }}
             </div>
         </div>

@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./ArxosToken.sol";
+import "./ArxosToken.sol" // ArxDenariusToken ($AXD);
 import "./ArxRegistry.sol";
 import "./ArxAddresses.sol";
 
@@ -15,8 +15,8 @@ import "./ArxAddresses.sol";
  *      Integrates with x402 protocol for off-chain verification
  */
 contract ArxPaymentRouter is Ownable, ReentrancyGuard {
-    /// @notice ArxosToken contract
-    ArxosToken public immutable arxoToken;
+    /// @notice ArxDenariusToken ($AXD) contract
+    ArxDenariusToken public immutable arxoToken;
 
     /// @notice ArxRegistry contract
     ArxRegistry public immutable registry;
@@ -30,7 +30,7 @@ contract ArxPaymentRouter is Ownable, ReentrancyGuard {
     /// @notice Mapping from building ID to minimum payment amount
     mapping(string => uint256) public minimumPayment;
 
-    /// @notice Default minimum payment (0.01 ARXO)
+    /// @notice Default minimum payment (0.01 AXD)
     uint256 public constant DEFAULT_MINIMUM = 10**16;
 
     /// @notice Delay before a price increase becomes effective (7 days)
@@ -72,7 +72,7 @@ contract ArxPaymentRouter is Ownable, ReentrancyGuard {
     /**
      * @notice Contract constructor
      * @param _initialOwner Address that will own this contract
-     * @param _arxoToken ArxosToken contract address
+     * @param _arxoToken ArxDenariusToken ($AXD) contract address
      * @param _registry ArxRegistry contract address
      * @param _addresses ArxAddresses contract address
      */
@@ -86,7 +86,7 @@ contract ArxPaymentRouter is Ownable, ReentrancyGuard {
         require(_registry != address(0), "ArxPaymentRouter: zero registry");
         require(_addresses != address(0), "ArxPaymentRouter: zero addresses");
 
-        arxoToken = ArxosToken(_arxoToken);
+        arxoToken = ArxDenariusToken(_arxoToken);
         registry = ArxRegistry(_registry);
         addresses = ArxAddresses(_addresses);
     }
@@ -94,9 +94,9 @@ contract ArxPaymentRouter is Ownable, ReentrancyGuard {
     /**
      * @notice Pay for building data access
      * @param buildingId Building identifier
-     * @param amount Amount of ARXO to pay
+     * @param amount Amount of $AXD to pay
      * @param nonce Unique nonce from server (prevents replay)
-     * @dev Transfers ARXO from user and distributes with 70/10/10/10 split
+     * @dev Transfers $AXD from user and distributes with 70/10/10/10 split
      *      Emits AccessPaid event for x402 protocol verification
      */
     function payForAccess(
@@ -114,7 +114,7 @@ contract ArxPaymentRouter is Ownable, ReentrancyGuard {
         // Mark nonce as used
         noncesUsed[nonce] = true;
 
-        // Transfer ARXO from user to contract
+        // Transfer $AXD from user to contract
         require(
             arxoToken.transferFrom(msg.sender, address(this), amount),
             "ArxPaymentRouter: transfer failed"
@@ -199,7 +199,7 @@ contract ArxPaymentRouter is Ownable, ReentrancyGuard {
     /**
      * @notice Set minimum payment for a building
      * @param buildingId Building identifier
-     * @param minimum Minimum payment amount in ARXO
+     * @param minimum Minimum payment amount in $AXD
      * @dev Only callable by owner (ArxOS LLC initially)
      */
     function setMinimumPayment(string calldata buildingId, uint256 minimum) external onlyOwner {
@@ -215,7 +215,7 @@ contract ArxPaymentRouter is Ownable, ReentrancyGuard {
     /**
      * @notice Get minimum payment for a building
      * @param buildingId Building identifier
-     * @return Minimum payment amount (defaults to 0.01 ARXO if not set)
+     * @return Minimum payment amount (defaults to 0.01 $AXD if not set)
      */
     function getMinimumPayment(string calldata buildingId) public view returns (uint256) {
         // Check if there's a pending update that is now effective
@@ -263,8 +263,8 @@ contract ArxPaymentRouter is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Get contract ARXO balance
-     * @return Contract's ARXO token balance
+     * @notice Get contract $AXD balance
+     * @return Contract's $AXD token balance
      */
     function getBalance() external view returns (uint256) {
         return arxoToken.balanceOf(address(this));

@@ -7,15 +7,15 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title ArxOracleStaking
- * @notice Manages ARXO stakes for oracles in the ArxOS ecosystem
+ * @notice Manages $AXD stakes for oracles in the ArxOS ecosystem
  * @dev Oracles must maintain a minimum stake to participate in consensus
  *      Includes a withdrawal delay and slashing mechanism
  */
 contract ArxOracleStaking is Ownable, ReentrancyGuard {
-    /// @notice The ARXO token contract
+    /// @notice The $AXD token contract
     IERC20 public immutable arxoToken;
 
-    /// @notice Minimum amount of ARXO required to be an active oracle
+    /// @notice Minimum amount of $AXD required to be an active oracle
     uint256 public minStake;
 
     /// @notice Delay required before stake can be withdrawn (7 days)
@@ -48,7 +48,7 @@ contract ArxOracleStaking is Ownable, ReentrancyGuard {
     /**
      * @notice Contract constructor
      * @param _initialOwner Address that will own the contract
-     * @param _arxoToken Address of the ARXO token contract
+     * @param _arxoToken Address of the $AXD token contract
      * @param _minStake Initial minimum stake requirement
      */
     constructor(
@@ -62,8 +62,8 @@ contract ArxOracleStaking is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Deposit ARXO to stake as an oracle
-     * @param amount Amount of ARXO to stake
+     * @notice Deposit $AXD to stake as an oracle
+     * @param amount Amount of $AXD to stake
      */
     function stake(uint256 amount) external nonReentrant {
         require(amount > 0, "ArxOracleStaking: amount is zero");

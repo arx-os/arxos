@@ -6,7 +6,7 @@ Rust integration layer for ArxOS smart contracts on Base L2.
 
 This module provides high-level Rust APIs for interacting with ArxOS tokenomics contracts:
 
-- **OracleClient**: Report spatial data contributions and trigger ARXO mints
+- **OracleClient**: Report spatial data contributions and trigger $AXD mints
 - **PaymentClient**: Execute x402 micropayments for data access
 - **ProofSigner**: Generate EIP-712 signatures for contribution verification
 - **Contract Bindings**: Type-safe interfaces to Solidity contracts
@@ -51,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
     let tx = oracle.report_contribution(
         "ps-118",                    // Building ID
         "0xWorkerAddress",           // Worker wallet
-        100,                         // 100 ARXO to mint
+        100,                         // 100 $AXD to mint
         merkle_root,                 // Spatial data commitment
         40.7128,                     // Latitude
         -74.0060,                    // Longitude
@@ -77,11 +77,11 @@ async fn main() -> anyhow::Result<()> {
 
     // Check balance first
     let balance = payment_client.get_balance().await?;
-    println!("💰 Your balance: {} ARXO", balance);
+    println!("💰 Your balance: {} $AXD", balance);
 
     // Get minimum payment for building
     let minimum = payment_client.get_minimum_payment("ps-118").await?;
-    println!("💳 Minimum payment: {} ARXO", minimum);
+    println!("💳 Minimum payment: {} $AXD", minimum);
 
     // Parse nonce from 402 response
     let nonce = PaymentClient::parse_nonce("0xServerNonceHex")?;
@@ -89,7 +89,7 @@ async fn main() -> anyhow::Result<()> {
     // Execute payment
     let tx = payment_client.pay_for_access(
         "ps-118",     // Building ID
-        0.1,          // 0.1 ARXO
+        0.1,          // 0.1 $AXD
         nonce,        // From server
     ).await?;
 
@@ -232,7 +232,7 @@ match payment_client.pay_for_access("ps-118", 0.1, nonce).await {
     Err(e) => {
         eprintln!("❌ Payment failed: {}", e);
         if e.to_string().contains("insufficient balance") {
-            println!("💡 Top up your ARXO balance first");
+            println!("💡 Top up your $AXD balance first");
         }
     }
 }
@@ -271,7 +271,7 @@ tokio = "1.35"
 
 - [x402 Protocol Specification](../../docs/x402-protocol.md)
 - [Smart Contract Documentation](../../contracts/README.md)
-- [Tokenomics Implementation Plan](../../ARXO_TOKENOMICS_IMPLEMENTATION.md)
+- [Tokenomics Implementation Plan](../../AXD_TOKENOMICS_IMPLEMENTATION.md)
 
 ---
 

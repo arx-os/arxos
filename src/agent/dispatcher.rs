@@ -141,7 +141,7 @@ async fn handle_collab_sync(params: Value) -> Result<Value> {
     let config = collab::load_config()?
         .ok_or_else(|| anyhow::anyhow!("Collaboration config not found"))?;
         
-    let token = collab::github_token()?;
+    let token = collab::github_token()?.unwrap_or_default();
 
     let outcome = collab::sync_messages(&messages, &config, &token).await?;
     Ok(serde_json::to_value(outcome)?)

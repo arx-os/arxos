@@ -215,6 +215,7 @@ impl HierarchyBuilder {
                 name: extract_space_name(space)?,
                 room_type: extract_space_type(space)?,
                 equipment: Vec::new(),
+                pending_equipment_ids: Vec::new(),
                 spatial_properties: SpatialProperties {
                     position: Position {
                         x,

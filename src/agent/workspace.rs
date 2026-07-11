@@ -46,18 +46,20 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
+    #[serial_test::serial]
     fn detects_repo_root_from_env() {
         let tmp = TempDir::new().expect("Failed to create temp directory");
         git2::Repository::init(tmp.path()).expect("Failed to initialize Git repository");
         std::env::set_var("ARXOS_REPO_ROOT", tmp.path());
 
         let root = detect_repo_root().expect("Failed to detect repo root");
-        assert_eq!(root, tmp.path().canonicalize().expect("Failed to canonicalize temp path"));
+        assert_eq!(root.canonicalize().unwrap(), tmp.path().canonicalize().expect("Failed to canonicalize temp path"));
 
         std::env::remove_var("ARXOS_REPO_ROOT");
     }
 
     #[test]
+    #[serial_test::serial]
     fn discovers_repo_from_current_dir() {
         let tmp = TempDir::new().expect("Failed to create temp directory");
         git2::Repository::init(tmp.path()).expect("Failed to initialize Git repository");
@@ -65,7 +67,7 @@ mod tests {
         std::env::set_current_dir(tmp.path()).expect("Failed to change to temp directory");
 
         let root = detect_repo_root().expect("Failed to detect repo root");
-        assert_eq!(root, tmp.path().canonicalize().expect("Failed to canonicalize temp path"));
+        assert_eq!(root.canonicalize().unwrap(), tmp.path().canonicalize().expect("Failed to canonicalize temp path"));
 
         std::env::set_current_dir(original).expect("Failed to restore original directory");
     }

@@ -286,7 +286,8 @@ mod tests {
     #[test]
     fn test_render_session_info() {
         let state = InteractiveState::new();
-        let info_panel = InfoPanelState { show_panel: false };
+        let mut info_panel = InfoPanelState::default();
+        info_panel.show_panel = false;
         let mut overlay = String::new();
 
         render_session_info(&mut overlay, &state, &info_panel);

@@ -5,14 +5,14 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
-import "./ArxosToken.sol";
+import "./ArxosToken.sol" // ArxDenariusToken ($AXD);
 import "./ArxRegistry.sol";
 import "./ArxAddresses.sol";
 import "./ArxOracleStaking.sol";
 
 /**
  * @title ArxContributionOracle
- * @notice Verifies spatial data contributions and mints ARXO with 70/10/10/10 split
+ * @notice Verifies spatial data contributions and mints $AXD with 70/10/10/10 split
  * @dev Uses multi-oracle consensus (2-of-3) and EIP-712 typed signatures
  *      24-hour finalization delay allows for dispute resolution
  */
@@ -31,8 +31,8 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
     /// @notice Maximum proof age in seconds (1 hour)
     uint256 public constant MAX_PROOF_AGE = 1 hours;
 
-    /// @notice ArxosToken contract
-    ArxosToken public immutable arxoToken;
+    /// @notice ArxDenariusToken ($AXD) contract
+    ArxDenariusToken public immutable arxoToken;
 
     /// @notice ArxRegistry contract
     ArxRegistry public immutable registry;
@@ -95,7 +95,7 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
      * @notice Pending contribution awaiting finalization
      * @param worker Worker wallet address
      * @param building Building wallet address
-     * @param amount Total ARXO to mint
+     * @param amount Total $AXD to mint
      * @param confirmations Number of oracle confirmations
      * @param proposedAt Timestamp when first proposed
      * @param finalized Whether contribution has been processed
@@ -164,7 +164,7 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
     /**
      * @notice Contract constructor
      * @param admin Address with DEFAULT_ADMIN_ROLE
-     * @param _arxoToken ArxosToken contract address
+     * @param _arxoToken ArxDenariusToken ($AXD) contract address
      * @param _registry ArxRegistry contract address
      * @param _addresses ArxAddresses contract address
      */
@@ -181,7 +181,7 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
         require(_addresses != address(0), "ArxContributionOracle: zero addresses");
         require(_staking != address(0), "ArxContributionOracle: zero staking");
 
-        arxoToken = ArxosToken(_arxoToken);
+        arxoToken = ArxDenariusToken(_arxoToken);
         registry = ArxRegistry(_registry);
         addresses = ArxAddresses(_addresses);
         staking = ArxOracleStaking(_staking);
@@ -217,7 +217,7 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
      * @notice Propose a contribution (oracle 1 of 3)
      * @param buildingId Building identifier
      * @param worker Worker wallet address
-     * @param amount Total ARXO to mint
+     * @param amount Total $AXD to mint
      * @param proof Contribution proof with signature
      * @param signature Worker's EIP-712 signature
      * @dev Only callable by addresses with ORACLE_ROLE

@@ -13,6 +13,13 @@ use ethers::{
     utils::keccak256,
 };
 
+/// Quality metrics for spatial data contribution matching Solidity struct
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QualityMetrics {
+    pub accuracy: u8,
+    pub completeness: u8,
+}
+
 /// Contribution proof structure matching Solidity contract
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContributionProof {
@@ -30,6 +37,9 @@ pub struct ContributionProof {
     
     /// Size of contributed data in bytes
     pub data_size: u64,
+
+    /// Quality metrics of the spatial data contribution
+    pub quality: QualityMetrics,
 }
 
 impl ContributionProof {
@@ -55,6 +65,10 @@ impl ContributionProof {
             building_hash,
             timestamp,
             data_size,
+            quality: QualityMetrics {
+                accuracy: 100,
+                completeness: 100,
+            },
         }
     }
 
@@ -62,9 +76,24 @@ impl ContributionProof {
     fn hash_location(latitude: f64, longitude: f64, timestamp: u64) -> [u8; 32] {
         #[cfg(feature = "blockchain")]
         {
+            let lat_val = (latitude * 1_000_000.0) as i64;
+            let lon_val = (longitude * 1_000_000.0) as i64;
+            
+            let lat_u256 = if lat_val >= 0 {
+                U256::from(lat_val as u64)
+            } else {
+                !U256::from((-lat_val) as u64) + 1
+            };
+            
+            let lon_u256 = if lon_val >= 0 {
+                U256::from(lon_val as u64)
+            } else {
+                !U256::from((-lon_val) as u64) + 1
+            };
+
             let encoded = ethers::abi::encode(&[
-                ethers::abi::Token::Int(U256::from((latitude * 1_000_000.0) as i64)),
-                ethers::abi::Token::Int(U256::from((longitude * 1_000_000.0) as i64)),
+                ethers::abi::Token::Int(lat_u256),
+                ethers::abi::Token::Int(lon_u256),
                 ethers::abi::Token::Uint(U256::from(timestamp)),
             ]);
             keccak256(&encoded)
@@ -99,9 +128,20 @@ impl ContributionProof {
     /// Convert to EIP-712 struct hash
     #[cfg(feature = "blockchain")]
     pub fn struct_hash(&self) -> H256 {
-        // EIP-712 typehash for ContributionProof
+        // EIP-712 typehash for QualityMetrics
+        let quality_type_hash = keccak256(
+            b"QualityMetrics(uint8 accuracy,uint8 completeness)"
+        );
+        let quality_encoded = ethers::abi::encode(&[
+            ethers::abi::Token::FixedBytes(quality_type_hash.to_vec()),
+            ethers::abi::Token::Uint(U256::from(self.quality.accuracy)),
+            ethers::abi::Token::Uint(U256::from(self.quality.completeness)),
+        ]);
+        let quality_hash = keccak256(&quality_encoded);
+
+        // EIP-712 typehash for ContributionProof (Updated for V2 with QualityMetrics)
         let type_hash = keccak256(
-            b"ContributionProof(bytes32 merkleRoot,bytes32 locationHash,bytes32 buildingHash,uint256 timestamp,uint256 dataSize)"
+            b"ContributionProof(bytes32 merkleRoot,bytes32 locationHash,bytes32 buildingHash,uint256 timestamp,uint256 dataSize,QualityMetrics quality)QualityMetrics(uint8 accuracy,uint8 completeness)"
         );
 
         // Hash struct data according to EIP-712
@@ -112,6 +152,7 @@ impl ContributionProof {
             ethers::abi::Token::FixedBytes(self.building_hash.to_vec()),
             ethers::abi::Token::Uint(U256::from(self.timestamp)),
             ethers::abi::Token::Uint(U256::from(self.data_size)),
+            ethers::abi::Token::FixedBytes(quality_hash.to_vec()),
         ]);
 
         H256::from(keccak256(&encoded))
@@ -165,8 +206,8 @@ impl ProofSigner {
         // Create digest: keccak256("\x19\x01" || domainSeparator || structHash)
         let digest = self.create_digest(domain_separator, struct_hash);
         
-        // Sign digest
-        let signature = self.wallet.sign_message(digest.as_bytes()).await?;
+        // Sign digest directly using sign_hash (correct EIP-712 signing)
+        let signature = self.wallet.sign_hash(digest)?;
         
         Ok(signature.to_vec())
     }
@@ -230,5 +271,36 @@ mod tests {
 
         assert_eq!(hash1, hash2);
         assert_ne!(hash1, hash3);
+    }
+
+    #[cfg(feature = "blockchain")]
+    #[tokio::test]
+    async fn test_proof_signing_and_verification() {
+        let private_key_hex = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+        let wallet: LocalWallet = private_key_hex.parse().unwrap();
+        
+        let signer = ProofSigner::new(
+            &private_key_hex,
+            8453,
+            "0x0000000000000000000000000000000000000001",
+        ).unwrap();
+        
+        let proof = ContributionProof::new(
+            [0u8; 32],
+            40.7128,
+            -74.0060,
+            "ps-118",
+            1024000,
+        );
+        
+        let signature_bytes = signer.sign_proof(&proof).await.unwrap();
+        let signature = ethers::core::types::Signature::try_from(signature_bytes.as_slice()).unwrap();
+        
+        let domain_separator = signer.domain_separator();
+        let struct_hash = proof.struct_hash();
+        let digest = signer.create_digest(domain_separator, struct_hash);
+        
+        let recovered_address = signature.recover(digest).unwrap();
+        assert_eq!(recovered_address, wallet.address());
     }
 }

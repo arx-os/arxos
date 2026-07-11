@@ -9,6 +9,7 @@ pub mod domain;
 mod equipment;
 mod floor;
 pub mod operations;
+pub mod identity;
 mod room;
 mod serde_helpers;
 pub mod spatial;
@@ -16,6 +17,7 @@ mod types;
 mod wing;
 
 // Re-export all public types and functions
+pub use identity::ArxId;
 pub use building::{Building, BuildingMetadata, CoordinateSystemInfo};
 pub use equipment::{
     Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType,

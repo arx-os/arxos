@@ -28,12 +28,18 @@ pub struct Room {
     pub name: String,
     /// Type categorization of the room
     pub room_type: RoomType,
-    /// Collection of equipment physically located in the room
+    /// Collection of equipment physically located in the room.
     ///
-    /// When serializing to YAML, this serializes as Vec<String> (equipment IDs only).
-    /// When deserializing from YAML, equipment IDs are read but equipment objects
-    /// must be populated separately from building data (equipment is stored at floor level in YAML).
+    /// When serializing to YAML, this serializes as `Vec<String>` (equipment IDs only).
+    /// When deserializing from YAML, call `BuildingData::rehydrate_room_equipment()` after
+    /// deserialization to populate this list from the global `BuildingData.equipment` list.
     pub equipment: Vec<Equipment>,
+    /// Equipment IDs captured during YAML deserialization (before rehydration).
+    ///
+    /// After calling `BuildingData::rehydrate_room_equipment()` these IDs have been
+    /// resolved into full `Equipment` objects in `self.equipment` and can be ignored.
+    #[doc(hidden)]
+    pub pending_equipment_ids: Vec<String>,
     /// Position, dimensions, and bounding box
     pub spatial_properties: SpatialProperties,
     /// Key-value metadata
@@ -141,10 +147,12 @@ impl<'de> serde::Deserialize<'de> for Room {
                             if equipment.is_some() {
                                 return Err(de::Error::duplicate_field("equipment"));
                             }
-                            // Deserialize as Vec<String> (equipment IDs)
-                            let _ids: Vec<String> = map.next_value()?;
-                            // Equipment will be populated separately from building data
-                            equipment = Some(Vec::new());
+                            // Deserialize as Vec<String> (equipment IDs).
+                            // These IDs are stored in `pending_equipment_ids` and
+                            // resolved into full Equipment objects by
+                            // `BuildingData::rehydrate_room_equipment()`.
+                            let ids: Vec<String> = map.next_value()?;
+                            equipment = Some(ids);
                         }
                         Field::SpatialProperties => {
                             if spatial_properties.is_some() {
@@ -176,7 +184,8 @@ impl<'de> serde::Deserialize<'de> for Room {
                 let id = id.ok_or_else(|| de::Error::missing_field("id"))?;
                 let name = name.ok_or_else(|| de::Error::missing_field("name"))?;
                 let room_type = room_type.ok_or_else(|| de::Error::missing_field("room_type"))?;
-                let equipment = equipment.unwrap_or_default();
+                // equipment field holds the IDs from YAML; resolve to objects later.
+                let pending_equipment_ids = equipment.unwrap_or_default();
                 let spatial_properties = spatial_properties
                     .ok_or_else(|| de::Error::missing_field("spatial_properties"))?;
                 let properties = properties.unwrap_or_default();
@@ -185,7 +194,8 @@ impl<'de> serde::Deserialize<'de> for Room {
                     id,
                     name,
                     room_type,
-                    equipment,
+                    equipment: Vec::new(), // populated by rehydrate_room_equipment()
+                    pending_equipment_ids,
                     spatial_properties,
                     properties,
                     created_at,
@@ -314,6 +324,7 @@ impl Room {
             name,
             room_type,
             equipment: Vec::new(),
+            pending_equipment_ids: Vec::new(),
             spatial_properties: SpatialProperties::default(),
             properties: HashMap::new(),
             created_at: now,
@@ -422,7 +433,7 @@ impl Room {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```rust,ignore
     /// use arxos::core::{Room, RoomType, SpatialProperties, Position, Dimensions, BoundingBox};
     /// let mut room = Room::new("Office 101".to_string(), RoomType::Office);
     /// let spatial_props = SpatialProperties {

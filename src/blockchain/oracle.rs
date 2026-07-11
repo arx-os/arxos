@@ -1,4 +1,4 @@
-//! Oracle client for reporting contributions and minting ARXO
+//! Oracle client for reporting contributions and minting $AXD (Arx Denarius)
 
 use anyhow::Result;
 use std::sync::Arc;
@@ -62,7 +62,7 @@ impl OracleClient {
     /// # Arguments
     /// * `building_id` - Building identifier (e.g., "ps-118")
     /// * `worker` - Worker wallet address
-    /// * `amount_arxo` - Amount of ARXO to mint (in whole tokens)
+    /// * `amount_arxo` - Amount of $AXD to mint (in whole tokens)
     /// * `merkle_root` - Root of spatial data Merkle tree
     /// * `latitude` - GPS latitude
     /// * `longitude` - GPS longitude
@@ -99,7 +99,10 @@ impl OracleClient {
             building_hash: proof.building_hash,
             timestamp: U256::from(proof.timestamp),
             data_size: U256::from(proof.data_size),
-            quality: U256::from(100), // Default high quality for now
+            quality: arx_contribution_oracle::QualityMetrics {
+                accuracy: proof.quality.accuracy,
+                completeness: proof.quality.completeness,
+            },
         };
 
         // Call contract - this returns a PendingTransaction
@@ -218,7 +221,7 @@ pub struct ContributionStatus {
 }
 
 impl ContributionStatus {
-    /// Get amount in ARXO tokens (human-readable)
+    /// Get amount in $AXD tokens (human-readable)
     pub fn amount_arxo(&self) -> f64 {
         let wei_f64 = self.amount_wei.as_u128() as f64;
         wei_f64 / 1e18

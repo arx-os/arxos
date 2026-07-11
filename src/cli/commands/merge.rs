@@ -1,5 +1,6 @@
 //! Merge conflict resolution command
 
+#[cfg(feature = "tui")]
 use crate::tui::merge_tool::MergeTool;
 use clap::Args;
 use std::path::{Path, PathBuf};
@@ -17,6 +18,7 @@ pub struct MergeCommand {
 }
 
 impl MergeCommand {
+    #[cfg(feature = "tui")]
     pub fn execute(&self) -> Result<(), Box<dyn std::error::Error>> {
         if self.list {
             return self.list_conflicts();
@@ -33,6 +35,12 @@ impl MergeCommand {
         Ok(())
     }
 
+    #[cfg(not(feature = "tui"))]
+    pub fn execute(&self) -> Result<(), Box<dyn std::error::Error>> {
+        Err("TUI feature not enabled".into())
+    }
+
+    #[cfg(feature = "tui")]
     fn list_conflicts(&self) -> Result<(), Box<dyn std::error::Error>> {
         let files = MergeTool::find_conflicted_files()?;
 
@@ -50,6 +58,7 @@ impl MergeCommand {
         Ok(())
     }
 
+    #[cfg(feature = "tui")]
     fn resolve_file(&self, file_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
         if !file_path.exists() {
             return Err(format!("File not found: {}", file_path.display()).into());
@@ -65,6 +74,7 @@ impl MergeCommand {
         Ok(())
     }
 
+    #[cfg(feature = "tui")]
     fn resolve_all(&self) -> Result<(), Box<dyn std::error::Error>> {
         let files = MergeTool::find_conflicted_files()?;
 
@@ -104,3 +114,4 @@ impl MergeCommand {
         Ok(())
     }
 }
+

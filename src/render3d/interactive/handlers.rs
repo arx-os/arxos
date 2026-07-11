@@ -253,14 +253,12 @@ pub fn handle_resize(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::yaml::Building;
 
     fn create_test_building_data() -> BuildingData {
+        let building = crate::core::Building::new("Test Building".to_string(), "".to_string());
         BuildingData {
-            building: Building {
-                name: "Test Building".to_string(),
-                floors: vec![],
-            },
+            building,
+            equipment: vec![],
         }
     }
 

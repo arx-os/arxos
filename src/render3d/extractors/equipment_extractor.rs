@@ -108,16 +108,26 @@ pub fn extract_equipment_3d(building_data: &BuildingData) -> Vec<Equipment3D> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::{Building, Equipment, EquipmentStatus, EquipmentType, Floor, Room, SpatialProperties, Wing};
+    use crate::core::{Building, Equipment, EquipmentStatus, EquipmentHealthStatus, EquipmentType, Floor, Room, RoomType, SpatialProperties, Wing};
 
     #[test]
     fn test_extract_floor_level_equipment() {
         let mut building = Building::default();
         let mut floor = Floor::new("Floor 1".to_string(), 0);
 
-        let mut equipment = Equipment::new("AC-1".to_string(), EquipmentType::HVAC);
-        equipment.position = crate::core::spatial::Point3D::new(10.0, 10.0, 1.5);
-        equipment.status = EquipmentStatus::Healthy;
+        let mut equipment = Equipment::new(
+            "AC-1".to_string(),
+            "/TEST_BUILDING/FLOOR_1/WING_1/ROOM_1/AC-1".to_string(),
+            EquipmentType::HVAC,
+        );
+        equipment.position = crate::core::Position {
+            x: 10.0,
+            y: 10.0,
+            z: 1.5,
+            coordinate_system: "LOCAL".to_string(),
+        };
+        equipment.status = EquipmentStatus::Active;
+        equipment.health_status = Some(EquipmentHealthStatus::Healthy);
 
         floor.equipment.push(equipment);
         building.add_floor(floor);
@@ -141,11 +151,21 @@ mod tests {
         let mut building = Building::default();
         let mut floor = Floor::new("Floor 1".to_string(), 0);
         let mut wing = Wing::new("Wing A".to_string());
-        let mut room = Room::new("Room 101".to_string());
+        let mut room = Room::new("Room 101".to_string(), RoomType::Office);
 
-        let mut equipment = Equipment::new("Light-1".to_string(), EquipmentType::Electrical);
-        equipment.position = crate::core::spatial::Point3D::new(12.0, 12.0, 2.0);
-        equipment.status = EquipmentStatus::Healthy;
+        let mut equipment = Equipment::new(
+            "Light-1".to_string(),
+            "/TEST_BUILDING/FLOOR_1/WING_A/ROOM_101/Light-1".to_string(),
+            EquipmentType::Electrical,
+        );
+        equipment.position = crate::core::Position {
+            x: 12.0,
+            y: 12.0,
+            z: 2.0,
+            coordinate_system: "LOCAL".to_string(),
+        };
+        equipment.status = EquipmentStatus::Active;
+        equipment.health_status = Some(EquipmentHealthStatus::Healthy);
 
         room.equipment.push(equipment);
         wing.rooms.push(room);
@@ -170,8 +190,17 @@ mod tests {
         let mut building = Building::default();
         let mut floor = Floor::new("Floor 1".to_string(), 0);
 
-        let mut equipment = Equipment::new("AC-1".to_string(), EquipmentType::HVAC);
-        equipment.position = crate::core::spatial::Point3D::new(10.0, 10.0, 1.5);
+        let mut equipment = Equipment::new(
+            "AC-1".to_string(),
+            "/TEST_BUILDING/FLOOR_1/AC-1".to_string(),
+            EquipmentType::HVAC,
+        );
+        equipment.position = crate::core::Position {
+            x: 10.0,
+            y: 10.0,
+            z: 1.5,
+            coordinate_system: "LOCAL".to_string(),
+        };
 
         floor.equipment.push(equipment);
         building.add_floor(floor);

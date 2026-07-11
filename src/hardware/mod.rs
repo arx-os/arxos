@@ -211,3 +211,28 @@ impl Default for HardwareManager {
         Self::new()
     }
 }
+
+/// Represents the compiled sensor readings of a physical device.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceState {
+    pub readings: HashMap<String, f64>,
+}
+
+/// Thread-safe registry caching the latest hardware states.
+pub struct HardwareStateRegistry {
+    pub cache: std::sync::RwLock<HashMap<String, f64>>,
+}
+
+impl HardwareStateRegistry {
+    pub fn new() -> Self {
+        Self {
+            cache: std::sync::RwLock::new(HashMap::new()),
+        }
+    }
+}
+
+impl Default for HardwareStateRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}

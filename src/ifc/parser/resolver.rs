@@ -454,6 +454,23 @@ impl<'a> IfcResolver<'a> {
                 }
             }
         }
+        
+        if children.is_empty() {
+            // Fallback: look for direct reference to parent in child entities
+            for &id in self.registry.get_by_class(child_class) {
+                if let Some(entity) = self.registry.get_raw(id) {
+                    for param in &entity.params {
+                        if let Param::Reference(ref_id) = param {
+                            if *ref_id == parent_id {
+                                children.push(id);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
         children
     }
 

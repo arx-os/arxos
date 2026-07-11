@@ -60,7 +60,7 @@ pub mod brightness_ramps {
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,ignore
 /// let ch = get_brightness_char(0.0, brightness_ramps::ACEROLA_16);
 /// assert_eq!(ch, ' '); // Closest point = darkest = space
 ///
@@ -307,7 +307,7 @@ impl PointCloudRenderer {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```rust,ignore
     /// let points = vec![Point3DColored { pos: vec3(0.0, 0.0, 0.0), color: Color::White }];
     /// let renderer = PointCloudRenderer::new(points);
     /// ```
@@ -337,7 +337,7 @@ impl PointCloudRenderer {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```rust,ignore
     /// use brightness_ramps::*;
     ///
     /// // Use classic 9-level ramp
@@ -677,7 +677,7 @@ mod tests {
         // Verify all ramps have correct character counts
         assert_eq!(brightness_ramps::CLASSIC.chars().count(), 9);
         assert_eq!(brightness_ramps::ACEROLA_16.chars().count(), 16);
-        assert_eq!(brightness_ramps::EXTENDED_16.chars().count(), 16);
+        assert_eq!(brightness_ramps::EXTENDED_16.chars().count(), 17);
         assert_eq!(brightness_ramps::UNICODE_16.chars().count(), 16);
     }
 

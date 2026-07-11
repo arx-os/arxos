@@ -3,6 +3,7 @@ use ethers::types::{H256, U256};
 use ethers::utils::keccak256;
 use crate::core::identity::ArxId; // Explicitly renamed ArxId
 use crate::hardware::DeviceState;
+use crate::blockchain::merkle::ArxMerkleTree;
 use anyhow::Result;
 
 #[cfg(feature = "agent")]
@@ -64,11 +65,17 @@ impl ContributionBuffer {
 
     /// Iterates through all batched contributions and computes a deterministic ordered root.
     pub fn generate_batch_root(&self) -> [u8; 32] {
-        let mut payload = String::new();
-        payload.push_str(&self.window_name);
-        payload.push_str("|");
+        if self.items.is_empty() {
+            return keccak256(self.window_name.as_bytes());
+        }
 
-        for item in &self.items {
+        let tree = self.build_merkle_tree();
+        tree.get_root().unwrap_or_else(|| keccak256(self.window_name.as_bytes()))
+    }
+
+    /// Builds a proper binary Merkle Tree from the batched contributions.
+    pub fn build_merkle_tree(&self) -> ArxMerkleTree {
+        let leaves_data: Vec<Vec<u8>> = self.items.iter().map(|item| {
             let row = format!(
                 "w:{}_e:{}_h:{}_t:{}|", 
                 item.worker_id.0, 
@@ -76,10 +83,10 @@ impl ContributionBuffer {
                 hex::encode(item.change_hash),
                 item.timestamp
             );
-            payload.push_str(&row);
-        }
+            row.into_bytes()
+        }).collect();
 
-        keccak256(payload.as_bytes())
+        ArxMerkleTree::build_tree(&leaves_data)
     }
 }
 
@@ -201,5 +208,63 @@ mod tests {
         let empty_buffer = ContributionBuffer::new("Daily Batch - March 14");
         let empty_root = empty_buffer.generate_batch_root();
         assert_ne!(root_a, empty_root);
+    }
+
+    #[test]
+    fn test_merkle_tree_proof_generation_and_verification() {
+        let worker_1 = ArxId(uuid::Uuid::new_v4());
+        let entity_1 = ArxId(uuid::Uuid::new_v4());
+        let worker_2 = ArxId(uuid::Uuid::new_v4());
+        let entity_2 = ArxId(uuid::Uuid::new_v4());
+
+        let mut readings_1 = HashMap::new();
+        readings_1.insert("Sensor_A".to_string(), 10.0);
+        let mut readings_2 = HashMap::new();
+        readings_2.insert("Sensor_B".to_string(), 20.0);
+        let mut readings_3 = HashMap::new();
+        readings_3.insert("Sensor_C".to_string(), 30.0);
+
+        let cont_1 = WorkContribution::new(worker_1.clone(), entity_1.clone(), &DeviceState { readings: readings_1 });
+        let cont_2 = WorkContribution::new(worker_2.clone(), entity_2.clone(), &DeviceState { readings: readings_2 });
+        let cont_3 = WorkContribution::new(worker_1.clone(), entity_2.clone(), &DeviceState { readings: readings_3 });
+
+        let mut buffer = ContributionBuffer::new("Daily Batch - March 14");
+        buffer.add_contribution(cont_1.clone());
+        buffer.add_contribution(cont_2.clone());
+        buffer.add_contribution(cont_3.clone());
+
+        let root = buffer.generate_batch_root();
+        let tree = buffer.build_merkle_tree();
+        assert_eq!(tree.get_root().unwrap(), root);
+
+        // Compute the raw leaf string matching generate_batch_root formatting
+        let get_row_bytes = |item: &WorkContribution| {
+            let row = format!(
+                "w:{}_e:{}_h:{}_t:{}|", 
+                item.worker_id.0, 
+                item.entity_id.0, 
+                hex::encode(item.change_hash),
+                item.timestamp
+            );
+            row.into_bytes()
+        };
+
+        // We want to prove inclusion of cont_2 (index 1 in leaves)
+        let leaf_2_bytes = get_row_bytes(&cont_2);
+        let leaf_2_hash = crate::blockchain::merkle::Keccak256Algorithm::hash(&leaf_2_bytes);
+
+        // Generate proof for index 1
+        let proof_bytes = tree.generate_proof(&[1]);
+
+        // Verify the proof
+        let is_valid = ArxMerkleTree::verify_proof(
+            root,
+            &proof_bytes,
+            &[1],
+            &[leaf_2_hash],
+            3, // total leaves
+        );
+
+        assert!(is_valid, "Merkle inclusion proof failed to verify!");
     }
 }

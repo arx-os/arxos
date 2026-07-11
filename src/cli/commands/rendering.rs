@@ -42,7 +42,7 @@ impl Command for RenderCommand {
             println!("   Launching interactive 3D renderer...");
             #[cfg(feature = "render3d")]
             {
-                crate::render3d::start_interactive_renderer(&self.args.building)?;
+                crate::render3d::start_interactive_renderer(&self.args.building, crate::render3d::point_cloud::brightness_ramps::CLASSIC)?;
             }
             #[cfg(not(feature = "render3d"))]
             {
@@ -101,7 +101,7 @@ impl Command for InteractiveCommand {
         #[cfg(feature = "render3d")]
         {
             println!("   Starting interactive renderer...");
-            crate::render3d::start_interactive_renderer(&self.args.building)?;
+            crate::render3d::start_interactive_renderer(&self.args.building, crate::render3d::point_cloud::brightness_ramps::CLASSIC)?;
             Ok(())
         }
         #[cfg(not(feature = "render3d"))]

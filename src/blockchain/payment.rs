@@ -61,7 +61,7 @@ impl PaymentClient {
     ///
     /// # Arguments
     /// * `building_id` - Building identifier
-    /// * `amount_arxo` - Amount to pay in ARXO (whole tokens)
+    /// * `amount_arxo` - Amount to pay in $AXD (whole tokens)
     /// * `nonce` - Unique nonce from server (prevents replay)
     ///
     /// # Returns
@@ -142,7 +142,7 @@ impl PaymentClient {
             // Approve maximum amount for convenience
             let max_approval = U256::MAX;
             
-            println!("💳 Approving ARXO spending...");
+            println!("💳 Approving $AXD spending...");
             
             let call = self.token_contract.approve(router_address, max_approval);
             let pending_tx = call.send()
@@ -160,7 +160,7 @@ impl PaymentClient {
         Ok(())
     }
 
-    /// Get user's ARXO balance
+    /// Get user's $AXD balance
     pub async fn get_balance(&self) -> Result<f64> {
         let user_address = self.client.address();
         let balance = self.token_contract

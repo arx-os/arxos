@@ -70,7 +70,39 @@ pub fn extract_rooms_3d(building_data: &BuildingData) -> Vec<Room3D> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::{Building, Equipment, EquipmentStatus, EquipmentType, Floor, Room, SpatialProperties, Wing};
+    use crate::core::{Building, Equipment, EquipmentStatus, EquipmentType, Floor, Room, RoomType, SpatialProperties, Wing};
+
+    fn create_test_spatial_properties() -> SpatialProperties {
+        SpatialProperties {
+            position: crate::core::Position {
+                x: 10.0,
+                y: 10.0,
+                z: 0.0,
+                coordinate_system: "building_local".to_string(),
+            },
+            dimensions: crate::core::Dimensions {
+                width: 10.0,
+                height: 3.0,
+                depth: 10.0,
+            },
+            bounding_box: crate::core::BoundingBox {
+                min: crate::core::Position {
+                    x: 5.0,
+                    y: 5.0,
+                    z: 0.0,
+                    coordinate_system: "building_local".to_string(),
+                },
+                max: crate::core::Position {
+                    x: 15.0,
+                    y: 15.0,
+                    z: 3.0,
+                    coordinate_system: "building_local".to_string(),
+                },
+            },
+            mesh: None,
+            coordinate_system: "building_local".to_string(),
+        }
+    }
 
     #[test]
     fn test_extract_rooms_3d() {
@@ -78,14 +110,8 @@ mod tests {
         let mut floor = Floor::new("Floor 1".to_string(), 0);
         let mut wing = Wing::new("Wing A".to_string());
 
-        let mut room = Room::new("Room 101".to_string());
-        room.spatial_properties = SpatialProperties {
-            position: crate::core::spatial::Point3D::new(10.0, 10.0, 0.0),
-            bounding_box: crate::core::spatial::BoundingBox3D::new(
-                crate::core::spatial::Point3D::new(5.0, 5.0, 0.0),
-                crate::core::spatial::Point3D::new(15.0, 15.0, 3.0),
-            ),
-        };
+        let mut room = Room::new("Room 101".to_string(), RoomType::Office);
+        room.spatial_properties = create_test_spatial_properties();
 
         wing.rooms.push(room);
         floor.wings.push(wing);
@@ -109,22 +135,37 @@ mod tests {
         let mut building = Building::default();
         let mut floor = Floor::new("Floor 1".to_string(), 0);
         let mut wing = Wing::new("Wing A".to_string());
-        let mut room = Room::new("Room 101".to_string());
+        let mut room = Room::new("Room 101".to_string(), RoomType::Office);
 
-        room.spatial_properties = SpatialProperties {
-            position: crate::core::spatial::Point3D::new(10.0, 10.0, 0.0),
-            bounding_box: crate::core::spatial::BoundingBox3D::new(
-                crate::core::spatial::Point3D::new(5.0, 5.0, 0.0),
-                crate::core::spatial::Point3D::new(15.0, 15.0, 3.0),
-            ),
-        };
+        room.spatial_properties = create_test_spatial_properties();
 
         // Add equipment to room
-        let mut equipment1 = Equipment::new("AC-1".to_string(), EquipmentType::HVAC);
-        equipment1.position = crate::core::spatial::Point3D::new(12.0, 12.0, 2.0);
+        let mut equipment1 = Equipment::new(
+            "AC-1".to_string(),
+            "/TEST_BUILDING/FLOOR_1/WING_A/ROOM_101/AC-1".to_string(),
+            EquipmentType::HVAC,
+        );
+        equipment1.position = crate::core::Position {
+            x: 12.0,
+            y: 12.0,
+            z: 2.0,
+            coordinate_system: "LOCAL".to_string(),
+        };
 
-        let mut equipment2 = Equipment::new("Light-1".to_string(), EquipmentType::Electrical);
-        equipment2.position = crate::core::spatial::Point3D::new(8.0, 8.0, 2.5);
+        let mut equipment2 = Equipment::new(
+            "Light-1".to_string(),
+            "/TEST_BUILDING/FLOOR_1/WING_A/ROOM_101/Light-1".to_string(),
+            EquipmentType::Electrical,
+        );
+        equipment2.position = crate::core::Position {
+            x: 8.0,
+            y: 8.0,
+            z: 2.5,
+            coordinate_system: "LOCAL".to_string(),
+        };
+
+        let eq1_id = equipment1.id.clone();
+        let eq2_id = equipment2.id.clone();
 
         room.equipment.push(equipment1);
         room.equipment.push(equipment2);
@@ -141,8 +182,8 @@ mod tests {
         let rooms = extract_rooms_3d(&building_data);
 
         assert_eq!(rooms[0].equipment.len(), 2);
-        assert_eq!(*rooms[0].equipment[0], "AC-1");
-        assert_eq!(*rooms[0].equipment[1], "Light-1");
+        assert_eq!(*rooms[0].equipment[0], eq1_id);
+        assert_eq!(*rooms[0].equipment[1], eq2_id);
     }
 
     #[test]
@@ -150,15 +191,9 @@ mod tests {
         let mut building = Building::default();
         let mut floor = Floor::new("Floor 1".to_string(), 0);
         let mut wing = Wing::new("Wing A".to_string());
-        let mut room = Room::new("Room 101".to_string());
+        let mut room = Room::new("Room 101".to_string(), RoomType::Office);
 
-        room.spatial_properties = SpatialProperties {
-            position: crate::core::spatial::Point3D::new(10.0, 10.0, 0.0),
-            bounding_box: crate::core::spatial::BoundingBox3D::new(
-                crate::core::spatial::Point3D::new(5.0, 5.0, 0.0),
-                crate::core::spatial::Point3D::new(15.0, 15.0, 3.0),
-            ),
-        };
+        room.spatial_properties = create_test_spatial_properties();
 
         wing.rooms.push(room);
         floor.wings.push(wing);

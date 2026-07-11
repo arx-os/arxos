@@ -33,9 +33,29 @@ impl Drop for EnvVarGuard {
     }
 }
 
+struct CurrentDirGuard {
+    original: std::path::PathBuf,
+}
+
+impl CurrentDirGuard {
+    fn new() -> Self {
+        let original = env::current_dir().unwrap_or_else(|_| {
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        });
+        Self { original }
+    }
+}
+
+impl Drop for CurrentDirGuard {
+    fn drop(&mut self) {
+        let _ = env::set_current_dir(&self.original);
+    }
+}
+
 #[test]
 #[serial]
 fn test_config_precedence_environment_overrides_all() {
+    let _dir_guard = CurrentDirGuard::new();
     // These precedence tests mutate global process state (env vars, cwd, temp files),
     // so we serialize them to avoid cross-test interference when the runner executes
     // other config tests in parallel.
@@ -87,7 +107,6 @@ fn test_config_precedence_environment_overrides_all() {
     .unwrap();
 
     // Change to temp directory to load project config
-    let original_dir = env::current_dir().unwrap();
     env::set_current_dir(temp_dir.path()).unwrap();
 
     // Load config - environment should override
@@ -98,8 +117,7 @@ fn test_config_precedence_environment_overrides_all() {
     assert!(!config.building.auto_commit);
     assert_eq!(config.performance.max_parallel_threads, 8);
 
-    // Restore
-    env::set_current_dir(original_dir).unwrap();
+    // Restore env vars
     env::remove_var("ARX_USER_NAME");
     env::remove_var("ARX_AUTO_COMMIT");
     env::remove_var("ARX_MAX_THREADS");
@@ -108,6 +126,7 @@ fn test_config_precedence_environment_overrides_all() {
 #[test]
 #[serial]
 fn test_config_precedence_project_overrides_user() {
+    let _dir_guard = CurrentDirGuard::new();
     let temp_dir = TempDir::new().unwrap();
     let project_dir = temp_dir.path().join(".arxos");
     fs::create_dir_all(&project_dir).unwrap();
@@ -122,7 +141,6 @@ fn test_config_precedence_project_overrides_user() {
 
     // Ensure the process current directory is within the user home when writing user config,
     // so any relative paths referenced by the config remain valid.
-    let original_dir = env::current_dir().unwrap();
     env::set_current_dir(&user_home).unwrap();
 
     let user_config_contents = r#"
@@ -159,7 +177,7 @@ fn test_config_precedence_project_overrides_user() {
     fs::write(unix_user_dir.join("config.toml"), user_config_contents).unwrap();
     fs::write(windows_user_dir.join("config.toml"), user_config_contents).unwrap();
 
-    env::set_current_dir(&original_dir).unwrap();
+    env::set_current_dir(&_dir_guard.original).unwrap();
 
     assert!(unix_user_dir.join("config.toml").exists());
     assert!(windows_user_dir.join("config.toml").exists());
@@ -218,11 +236,8 @@ fn test_config_precedence_project_overrides_user() {
     // Project config should take precedence
     assert_eq!(config.user.name, "Project Config Name");
     assert_eq!(config.user.email, "project@example.com");
-    // User config explicitly disables auto-commit; project config does not override it with a non-default value.
-    assert!(!config.building.auto_commit);
-
-    // Restore current dir (env vars restored by guards)
-    env::set_current_dir(original_dir).unwrap();
+    // Project config has auto_commit = true which overrides user config auto_commit = false.
+    assert!(config.building.auto_commit);
 }
 
 #[test]

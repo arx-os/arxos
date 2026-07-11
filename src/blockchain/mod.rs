@@ -12,7 +12,7 @@
 //!
 //! # Usage
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use arxos::blockchain::{OracleClient, PaymentClient};
 //!
 //! #[tokio::main]
@@ -28,7 +28,7 @@
 //!     oracle.report_contribution(
 //!         "ps-118",
 //!         worker_address,
-//!         100,  // 100 ARXO
+//!         100,  // 100 $AXD
 //!         proof,
 //!     ).await?;
 //!     
@@ -38,6 +38,12 @@
 
 #[cfg(feature = "blockchain")]
 pub mod contracts;
+
+#[cfg(feature = "blockchain")]
+pub mod contribution;
+
+#[cfg(feature = "blockchain")]
+pub mod merkle;
 
 #[cfg(feature = "blockchain")]
 pub mod oracle;

@@ -1,5 +1,6 @@
 use leptos::*;
-use leptos_router::*;
+use leptos::prelude::*;
+use leptos_router::components::A;
 use crate::core::Building;
 
 #[component]
@@ -29,7 +30,7 @@ pub fn Buildings() -> impl IntoView {
                         <div class="building-card">
                             <h3>{building.name}</h3>
                             <p class="building-id">"ID: " {building.id.clone()}</p>
-                            <A href=format!("/buildings/{}", building.id) class="btn btn-sm">
+                            <A href=format!("/buildings/{}", building.id) attr:class="btn btn-sm">
                                 "View Details"
                             </A>
                         </div>
@@ -40,11 +41,11 @@ pub fn Buildings() -> impl IntoView {
                     view! { 
                         <div class="empty-state">
                             <p>"No buildings found."</p>
-                            <A href="/import" class="btn btn-primary">"Import a Building"</A>
+                            <A href="/import" attr:class="btn btn-primary">"Import a Building"</A>
                         </div>
-                    }.into_view()
+                    }.into_any()
                 } else {
-                    view! { <></> }.into_view()
+                    view! { <></> }.into_any()
                 }}
             </div>
         </div>

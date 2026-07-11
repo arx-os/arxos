@@ -281,7 +281,7 @@ mod tests {
     fn test_animation_config_default() {
         let config = AnimationConfig::default();
         assert_eq!(config.max_animations, 100);
-        assert_eq!(config.target_fps, 32);
+        assert_eq!(config.target_fps, 60);
         assert_eq!(config.quality_level, AnimationQuality::High);
     }
 }

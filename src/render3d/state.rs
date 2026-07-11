@@ -25,7 +25,7 @@ pub struct InteractiveState {
 }
 
 /// Camera state for 3D navigation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CameraState {
     /// Camera position in 3D space
     pub position: Point3D,
@@ -42,7 +42,7 @@ pub struct CameraState {
 }
 
 /// 3D rotation representation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Rotation3D {
     pub pitch: f64, // X-axis rotation
     pub yaw: f64,   // Y-axis rotation
@@ -50,7 +50,7 @@ pub struct Rotation3D {
 }
 
 /// 3D vector for camera operations
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Vector3D {
     pub x: f64,
     pub y: f64,
@@ -79,6 +79,10 @@ pub struct SessionData {
     pub stats: SessionStats,
     /// Last interaction timestamp
     pub last_interaction: std::time::Instant,
+    /// Viewport width in characters
+    pub viewport_width: usize,
+    /// Viewport height in characters
+    pub viewport_height: usize,
 }
 
 /// User rendering preferences
@@ -353,6 +357,8 @@ impl SessionData {
             preferences: RenderPreferences::default(),
             stats: SessionStats::new(),
             last_interaction: std::time::Instant::now(),
+            viewport_width: 80,
+            viewport_height: 24,
         }
     }
 }

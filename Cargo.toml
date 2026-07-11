@@ -19,7 +19,7 @@ todo = "warn"
 unimplemented = "warn"
 
 [lib]
-name = "arx"
+name = "arxos"
 path = "src/lib.rs"
 
 [[bin]]
@@ -87,6 +87,7 @@ russh-keys = { version = "0.40", optional = true }
 ssh2 = { version = "0.9", optional = true }
 tokio-modbus = { version = "0.7", optional = true }
 rumqttc = { version = "0.23", optional = true }
+reqwest = { version = "0.11", features = ["json"], optional = true }
 base64 = "0.22.1"
 octocrab = "0.48.0"
 ifc_rs = "0.1.0-alpha.9"
@@ -97,21 +98,24 @@ ethers = { version = "2.0", optional = true, features = ["abigen", "ws"] }
 ethers-contract = { version = "2.0", optional = true }
 ethers-signers = { version = "2.0", optional = true }
 hex = { version = "0.4", optional = true }
+rs_merkle = { version = "1.4", optional = true }
 
 leptos = { version = "0.8.14", features = ["csr"], optional = true }
 leptos_meta = { version = "0.8.5", optional = true }
 leptos_router = { version = "0.8.10", optional = true }
 wasm-bindgen = { version = "0.2.106", optional = true }
+wasm-bindgen-futures = { version = "0.4.45", optional = true }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 web-sys = { version = "0.3.83", features = ["Window", "Document", "HtmlElement", "Storage", "FileList", "File", "FileReader"], optional = true }
+futures = { version = "0.3", optional = true }
 
 [features]
 default = ["tui"]
 tui = ["crossterm", "ratatui", "csv", "arboard", "fuzzy-matcher"]
 render3d = ["bevy"]
-agent = ["tokio", "tracing", "tracing-subscriber", "axum", "futures-util", "notify", "russh", "russh-keys", "ssh2", "tokio-modbus", "rumqttc"]
-blockchain = ["tokio", "ethers", "ethers-contract", "ethers-signers", "hex"]
-web = ["leptos", "leptos_meta", "leptos_router", "wasm-bindgen", "console_error_panic_hook", "web-sys"]
+agent = ["tokio", "tracing", "tracing-subscriber", "axum", "futures-util", "notify", "russh", "russh-keys", "ssh2", "tokio-modbus", "rumqttc", "reqwest"]
+blockchain = ["tokio", "ethers", "ethers-contract", "ethers-signers", "hex", "rs_merkle"]
+web = ["leptos", "leptos_meta", "leptos_router", "wasm-bindgen", "wasm-bindgen-futures", "console_error_panic_hook", "web-sys", "futures"]
 full = ["tui", "render3d", "agent", "blockchain", "web"]
 
 [dev-dependencies]

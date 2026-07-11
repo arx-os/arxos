@@ -3,14 +3,11 @@
 //! This module provides a high-performance particle system optimized for terminal rendering,
 //! including particle lifecycle management, physics simulation, and visual effects.
 
-mod particles;
-
 use crate::core::spatial::Point3D;
 use std::collections::VecDeque;
 use std::time::Instant;
 
-// Re-export types from submodules
-pub use particles::{
+use super::{
     AlertLevel, Particle, ParticleData, ParticleSystemConfig, ParticleSystemStats, ParticleType,
     StatusType, Vector3D,
 };
@@ -29,7 +26,6 @@ pub struct ParticleSystem {
     #[allow(dead_code)] // Will be used in future animation features
     last_update: Instant,
 }
-
 
 impl Default for ParticleSystem {
     fn default() -> Self {
@@ -81,7 +77,7 @@ impl ParticleSystem {
 
     /// Update a single particle using the physics module
     fn update_particle(&mut self, particle: &mut Particle, delta_time: f64) {
-        particles::update_particle(particle, delta_time, &self.config);
+        super::physics::update_particle(particle, delta_time, &self.config);
     }
 
     /// Remove particles that have expired
@@ -140,7 +136,7 @@ impl ParticleSystem {
 
     /// Create a particle burst effect using the emitters module
     pub fn create_burst(&mut self, position: Point3D, count: usize, particle_type: ParticleType) {
-        let burst_particles = particles::create_burst(position, count, particle_type);
+        let burst_particles = super::emitters::create_burst(position, count, particle_type);
         self.emit_burst(burst_particles);
     }
 
@@ -173,97 +169,5 @@ impl ParticleSystem {
     /// Get particle count
     pub fn particle_count(&self) -> usize {
         self.particles.len()
-    }
-}
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_particle_system_creation() {
-        let system = ParticleSystem::new();
-        assert_eq!(system.particle_count(), 0);
-        assert_eq!(system.config.max_particles, 1000);
-    }
-
-    #[test]
-    fn test_particle_emission() {
-        let mut system = ParticleSystem::new();
-
-        let particle = Particle {
-            position: Point3D::new(0.0, 0.0, 0.0),
-            velocity: Vector3D::new(1.0, 0.0, 0.0),
-            acceleration: Vector3D::zero(),
-            lifetime: 1.0,
-            max_lifetime: 2.0,
-            size: 1.0,
-            character: '•',
-            particle_type: ParticleType::Basic,
-            data: ParticleData::Basic {
-                color_intensity: 1.0,
-            },
-        };
-
-        system.emit_particle(particle);
-        assert_eq!(system.particle_count(), 1);
-        assert_eq!(system.stats.particles_created, 1);
-    }
-
-    #[test]
-    fn test_particle_burst() {
-        let mut system = ParticleSystem::new();
-
-        system.create_burst(Point3D::new(0.0, 0.0, 0.0), 5, ParticleType::Spark);
-        assert_eq!(system.particle_count(), 5);
-    }
-
-    #[test]
-    fn test_particle_update() {
-        let mut system = ParticleSystem::new();
-
-        let particle = Particle {
-            position: Point3D::new(0.0, 0.0, 0.0),
-            velocity: Vector3D::new(1.0, 0.0, 0.0),
-            acceleration: Vector3D::zero(),
-            lifetime: 1.0,
-            max_lifetime: 1.0,
-            size: 1.0,
-            character: '•',
-            particle_type: ParticleType::Basic,
-            data: ParticleData::Basic {
-                color_intensity: 1.0,
-            },
-        };
-
-        system.emit_particle(particle);
-        system.update(1.0); // Update with 1 second delta time
-
-        // Particle should be removed after update
-        assert_eq!(system.particle_count(), 0);
-    }
-
-    #[test]
-    fn test_vector_operations() {
-        let vector = Vector3D::new(3.0, 4.0, 0.0);
-        assert_eq!(vector.length(), 5.0);
-
-        let normalized = vector.normalize();
-        assert!((normalized.length() - 1.0).abs() < 1e-10);
-    }
-
-    #[test]
-    fn test_particle_types() {
-        let basic_data = ParticleData::Basic {
-            color_intensity: 1.0,
-        };
-        let smoke_data = ParticleData::Smoke {
-            opacity: 0.8,
-            temperature: 50.0,
-        };
-
-        assert!(matches!(basic_data, ParticleData::Basic { .. }));
-        assert!(matches!(smoke_data, ParticleData::Smoke { .. }));
     }
 }

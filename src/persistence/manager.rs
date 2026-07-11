@@ -61,7 +61,9 @@ impl PersistenceManager {
 
         if file_path.exists() {
             let yaml_content = fs::read_to_string(&file_path)?;
-            let building_data = serde_yaml::from_str(&yaml_content)?;
+            let mut building_data: crate::yaml::BuildingData = serde_yaml::from_str(&yaml_content)?;
+            // Rehydrate room equipment from global equipment list
+            building_data.rehydrate_room_equipment();
             return Ok(building_data);
         }
 
@@ -76,7 +78,9 @@ impl PersistenceManager {
                     if let Some(extension) = path.extension() {
                         if extension == "yaml" || extension == "yml" {
                             if let Ok(yaml_content) = fs::read_to_string(&path) {
-                                if let Ok(building_data) = serde_yaml::from_str::<crate::yaml::BuildingData>(&yaml_content) {
+                                if let Ok(mut building_data) = serde_yaml::from_str::<crate::yaml::BuildingData>(&yaml_content) {
+                                    // Rehydrate room equipment from global equipment list
+                                    building_data.rehydrate_room_equipment();
                                     return Ok(building_data);
                                 }
                             }

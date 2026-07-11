@@ -69,11 +69,28 @@ impl Handler for AgentServerHandler {
         public_key: &PublicKey,
     ) -> Result<(Self, Auth), Self::Error> {
         let key_fingerprint = public_key.fingerprint();
-        println!("Wait auth: User={}, Key={}", user, key_fingerprint);
+        log::info!("SSH authentication attempt: user={}, key_fingerprint={}", user, key_fingerprint);
         
-        // Simple permission check
-        let _valid = self.authenticator.check_permission(user, "connect");
-        Ok((self, Auth::Accept))
+        if let Some(resolved_user) = self.authenticator.verify_key(public_key) {
+            if resolved_user == user {
+                if self.authenticator.check_permission(&resolved_user, "connect") {
+                    log::info!("SSH authentication accepted for user={}", user);
+                    return Ok((self, Auth::Accept));
+                } else {
+                    log::warn!("SSH authentication rejected: user={} lacks 'connect' permission", user);
+                }
+            } else {
+                log::warn!(
+                    "SSH authentication rejected: key belongs to user '{}', but connection requested as '{}'",
+                    resolved_user,
+                    user
+                );
+            }
+        } else {
+            log::warn!("SSH authentication rejected: public key not authorized");
+        }
+        
+        Ok((self, Auth::Reject { proceed_with_methods: None }))
     }
 
     async fn channel_open_session(

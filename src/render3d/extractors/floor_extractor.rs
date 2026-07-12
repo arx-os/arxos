@@ -5,7 +5,7 @@
 
 use crate::render3d::types::Floor3D;
 use crate::core::spatial::{BoundingBox3D, Point3D};
-use crate::yaml::BuildingData;
+use crate::core::Building;
 use std::sync::Arc;
 
 /// Extract 3D floor representations from building data
@@ -30,9 +30,8 @@ use std::sync::Arc;
 ///
 /// - Uses floor.bounding_box if available
 /// - Otherwise creates default 100x100m box at floor elevation
-pub fn extract_floors_3d(building_data: &BuildingData) -> Vec<Floor3D> {
-    building_data
-        .building
+pub fn extract_floors_3d(building: &Building) -> Vec<Floor3D> {
+    building
         .floors
         .iter()
         .map(|floor| {
@@ -95,12 +94,7 @@ mod tests {
         floor.wings.push(wing);
         building.add_floor(floor);
 
-        let building_data = crate::yaml::BuildingData {
-            building,
-            equipment: Vec::new(),
-        };
-
-        let floors = extract_floors_3d(&building_data);
+        let floors = extract_floors_3d(&building);
 
         assert_eq!(floors.len(), 1);
         assert_eq!(*floors[0].name, "Floor 1");
@@ -119,12 +113,7 @@ mod tests {
         building.add_floor(floor1);
         building.add_floor(floor2);
 
-        let building_data = crate::yaml::BuildingData {
-            building,
-            equipment: Vec::new(),
-        };
-
-        let floors = extract_floors_3d(&building_data);
+        let floors = extract_floors_3d(&building);
 
         // Should calculate elevation as level * 3.0
         assert_eq!(floors[0].elevation, 0.0);
@@ -137,12 +126,7 @@ mod tests {
         let floor = Floor::new("Floor 1".to_string(), 0);
         building.add_floor(floor);
 
-        let building_data = crate::yaml::BuildingData {
-            building,
-            equipment: Vec::new(),
-        };
-
-        let floors = extract_floors_3d(&building_data);
+        let floors = extract_floors_3d(&building);
 
         // Should have default 100x100m bounding box
         assert_eq!(floors[0].bounding_box.min.x, 0.0);

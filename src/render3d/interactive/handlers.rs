@@ -5,7 +5,7 @@
 
 use crate::render3d::events::{Action, CameraAction, ViewModeAction, ZoomAction};
 use crate::render3d::state::{CameraState, InteractiveState, Vector3D, ViewMode};
-use crate::yaml::BuildingData;
+use crate::core::Building;
 
 /// Handle a specific action on the interactive state
 ///
@@ -19,7 +19,7 @@ use crate::yaml::BuildingData;
 pub fn handle_action(
     state: &mut InteractiveState,
     action: Action,
-    building_data: &BuildingData,
+    building: &Building,
 ) -> Result<(), Box<dyn std::error::Error>> {
     match action {
         Action::CameraMove(camera_action) => {
@@ -32,7 +32,7 @@ pub fn handle_action(
             handle_view_mode_action(state, view_action)?;
         }
         Action::FloorChange(floor_delta) => {
-            handle_floor_change(state, floor_delta, building_data)?;
+            handle_floor_change(state, floor_delta, building)?;
         }
         Action::EquipmentSelect(equipment_id) => {
             state.select_equipment(equipment_id);
@@ -194,21 +194,19 @@ pub fn handle_view_mode_action(
 pub fn handle_floor_change(
     state: &mut InteractiveState,
     floor_delta: i32,
-    building_data: &BuildingData,
+    building: &Building,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let current_floor = state.current_floor.unwrap_or(0);
     let new_floor = current_floor + floor_delta;
 
-    // Validate floor exists in building data
-    let max_floor = building_data
-        .building
+    // Validate floor exists in building
+    let max_floor = building
         .floors
         .iter()
         .map(|f| f.level)
         .max()
         .unwrap_or(0);
-    let min_floor = building_data
-        .building
+    let min_floor = building
         .floors
         .iter()
         .map(|f| f.level)
@@ -254,12 +252,8 @@ pub fn handle_resize(
 mod tests {
     use super::*;
 
-    fn create_test_building_data() -> BuildingData {
-        let building = crate::core::Building::new("Test Building".to_string(), "".to_string());
-        BuildingData {
-            building,
-            equipment: vec![],
-        }
+    fn create_test_building() -> Building {
+        crate::core::Building::new("Test Building".to_string(), "".to_string())
     }
 
     #[test]

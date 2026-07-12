@@ -50,171 +50,60 @@ pub struct Room {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-// Custom Serialize implementation for Room
+/// DTO for Room serialization to preserve YAML and Git layout
+#[derive(Serialize, Deserialize)]
+struct RoomDto {
+    id: String,
+    name: String,
+    room_type: RoomType,
+    equipment: Vec<String>,
+    spatial_properties: super::SpatialProperties,
+    properties: HashMap<String, String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    created_at: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    updated_at: Option<DateTime<Utc>>,
+}
+
+// Custom Serialize implementation for Room via RoomDto
 impl serde::Serialize for Room {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        use serde::ser::SerializeStruct;
-        let field_count = 5
-            + if self.created_at.is_some() { 1 } else { 0 }
-            + if self.updated_at.is_some() { 1 } else { 0 };
-        let mut state = serializer.serialize_struct("Room", field_count)?;
-        state.serialize_field("id", &self.id)?;
-        state.serialize_field("name", &self.name)?;
-        state.serialize_field("room_type", &self.room_type)?;
-        // Serialize equipment as IDs
         let equipment_ids: Vec<String> = self.equipment.iter().map(|e| e.id.clone()).collect();
-        state.serialize_field("equipment", &equipment_ids)?;
-        state.serialize_field("spatial_properties", &self.spatial_properties)?;
-        state.serialize_field("properties", &self.properties)?;
-        if let Some(ref created_at) = self.created_at {
-            state.serialize_field("created_at", created_at)?;
-        }
-        if let Some(ref updated_at) = self.updated_at {
-            state.serialize_field("updated_at", updated_at)?;
-        }
-        state.end()
+        let dto = RoomDto {
+            id: self.id.clone(),
+            name: self.name.clone(),
+            room_type: self.room_type.clone(),
+            equipment: equipment_ids,
+            spatial_properties: self.spatial_properties.clone(),
+            properties: self.properties.clone(),
+            created_at: self.created_at,
+            updated_at: self.updated_at,
+        };
+        dto.serialize(serializer)
     }
 }
 
-// Custom Deserialize implementation for Room
+// Custom Deserialize implementation for Room via RoomDto
 impl<'de> serde::Deserialize<'de> for Room {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        use serde::de::{self, MapAccess, Visitor};
-        use std::fmt;
-
-        #[derive(Deserialize)]
-        #[serde(field_identifier, rename_all = "snake_case")]
-        enum Field {
-            Id,
-            Name,
-            RoomType,
-            Equipment,
-            SpatialProperties,
-            Properties,
-            CreatedAt,
-            UpdatedAt,
-        }
-
-        struct RoomVisitor;
-
-        impl<'de> Visitor<'de> for RoomVisitor {
-            type Value = Room;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("struct Room")
-            }
-
-            fn visit_map<V>(self, mut map: V) -> Result<Room, V::Error>
-            where
-                V: MapAccess<'de>,
-            {
-                let mut id = None;
-                let mut name = None;
-                let mut room_type = None;
-                let mut equipment = None;
-                let mut spatial_properties = None;
-                let mut properties = None;
-                let mut created_at = None;
-                let mut updated_at = None;
-
-                while let Some(key) = map.next_key()? {
-                    match key {
-                        Field::Id => {
-                            if id.is_some() {
-                                return Err(de::Error::duplicate_field("id"));
-                            }
-                            id = Some(map.next_value()?);
-                        }
-                        Field::Name => {
-                            if name.is_some() {
-                                return Err(de::Error::duplicate_field("name"));
-                            }
-                            name = Some(map.next_value()?);
-                        }
-                        Field::RoomType => {
-                            if room_type.is_some() {
-                                return Err(de::Error::duplicate_field("room_type"));
-                            }
-                            room_type = Some(map.next_value()?);
-                        }
-                        Field::Equipment => {
-                            if equipment.is_some() {
-                                return Err(de::Error::duplicate_field("equipment"));
-                            }
-                            // Deserialize as Vec<String> (equipment IDs).
-                            // These IDs are stored in `pending_equipment_ids` and
-                            // resolved into full Equipment objects by
-                            // `BuildingData::rehydrate_room_equipment()`.
-                            let ids: Vec<String> = map.next_value()?;
-                            equipment = Some(ids);
-                        }
-                        Field::SpatialProperties => {
-                            if spatial_properties.is_some() {
-                                return Err(de::Error::duplicate_field("spatial_properties"));
-                            }
-                            spatial_properties = Some(map.next_value()?);
-                        }
-                        Field::Properties => {
-                            if properties.is_some() {
-                                return Err(de::Error::duplicate_field("properties"));
-                            }
-                            properties = Some(map.next_value()?);
-                        }
-                        Field::CreatedAt => {
-                            if created_at.is_some() {
-                                return Err(de::Error::duplicate_field("created_at"));
-                            }
-                            created_at = map.next_value()?;
-                        }
-                        Field::UpdatedAt => {
-                            if updated_at.is_some() {
-                                return Err(de::Error::duplicate_field("updated_at"));
-                            }
-                            updated_at = map.next_value()?;
-                        }
-                    }
-                }
-
-                let id = id.ok_or_else(|| de::Error::missing_field("id"))?;
-                let name = name.ok_or_else(|| de::Error::missing_field("name"))?;
-                let room_type = room_type.ok_or_else(|| de::Error::missing_field("room_type"))?;
-                // equipment field holds the IDs from YAML; resolve to objects later.
-                let pending_equipment_ids = equipment.unwrap_or_default();
-                let spatial_properties = spatial_properties
-                    .ok_or_else(|| de::Error::missing_field("spatial_properties"))?;
-                let properties = properties.unwrap_or_default();
-
-                Ok(Room {
-                    id,
-                    name,
-                    room_type,
-                    equipment: Vec::new(), // populated by rehydrate_room_equipment()
-                    pending_equipment_ids,
-                    spatial_properties,
-                    properties,
-                    created_at,
-                    updated_at,
-                })
-            }
-        }
-
-        const FIELDS: &[&str] = &[
-            "id",
-            "name",
-            "room_type",
-            "equipment",
-            "spatial_properties",
-            "properties",
-            "created_at",
-            "updated_at",
-        ];
-        deserializer.deserialize_struct("Room", FIELDS, RoomVisitor)
+        let dto = RoomDto::deserialize(deserializer)?;
+        Ok(Room {
+            id: dto.id,
+            name: dto.name,
+            room_type: dto.room_type,
+            equipment: Vec::new(),
+            pending_equipment_ids: dto.equipment,
+            spatial_properties: dto.spatial_properties,
+            properties: dto.properties,
+            created_at: dto.created_at,
+            updated_at: dto.updated_at,
+        })
     }
 }
 

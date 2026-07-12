@@ -412,8 +412,8 @@ impl Cli {
 
         // Search buildings
         if search_buildings {
-            let building_data = load_building_data_from_dir()?;
-            let building_name = &building_data.building.name;
+            let building = load_building_data_from_dir()?;
+            let building_name = &building.name;
 
             let matches_name = if regex {
                 let re = regex::Regex::new(&query)?;
@@ -428,8 +428,8 @@ impl Cli {
                 println!("🏢 Building:");
                 if verbose {
                     println!("  Name: {}", building_name);
-                    println!("  Floors: {}", building_data.building.floors.len());
-                    let total_rooms: usize = building_data.building.floors.iter()
+                    println!("  Floors: {}", building.floors.len());
+                    let total_rooms: usize = building.floors.iter()
                         .flat_map(|f| f.wings.iter())
                         .map(|w| w.rooms.len())
                         .sum();

@@ -10,13 +10,13 @@ use super::views;
 use crate::core::{EquipmentStatus, EquipmentType};
 use crate::core::spatial::{BoundingBox3D, Point3D};
 use crate::ifc::{SpatialIndex, SpatialQueryResult, SpatialRelationship};
-use crate::yaml::BuildingData;
+use crate::core::Building;
 use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Advanced 3D building renderer with camera and projection systems
 pub struct Building3DRenderer {
-    pub(super) building_data: BuildingData,
+    pub(super) building: Building,
     scene_cache: SceneCache,
     pub(super) config: Render3DConfig,
     pub camera: Camera3D,
@@ -28,7 +28,7 @@ pub struct Building3DRenderer {
 
 impl Building3DRenderer {
     /// Create a new advanced 3D building renderer
-    pub fn new(building_data: BuildingData, config: Render3DConfig) -> Self {
+    pub fn new(building: Building, config: Render3DConfig) -> Self {
         let camera = Camera3D::default();
         let projection = Projection3D::new(
             config.projection_type.clone(),
@@ -36,10 +36,10 @@ impl Building3DRenderer {
             config.scale_factor,
         );
         let viewport = Viewport3D::new(config.max_width, config.max_height);
-        let scene_cache = SceneCache::new(&building_data);
+        let scene_cache = SceneCache::new(&building);
 
         Self {
-            building_data,
+            building,
             scene_cache,
             config,
             camera,
@@ -50,7 +50,7 @@ impl Building3DRenderer {
     }
 
     pub fn new_with_spatial_index(
-        building_data: BuildingData,
+        building: Building,
         config: Render3DConfig,
         spatial_index: SpatialIndex,
     ) -> Self {
@@ -61,10 +61,10 @@ impl Building3DRenderer {
             config.scale_factor,
         );
         let viewport = Viewport3D::new(config.max_width, config.max_height);
-        let scene_cache = SceneCache::new(&building_data);
+        let scene_cache = SceneCache::new(&building);
 
         Self {
-            building_data,
+            building,
             scene_cache,
             config,
             camera,
@@ -183,9 +183,8 @@ impl Building3DRenderer {
             rooms: transformed_rooms,
             bounding_box,
             metadata: SceneMetadata {
-                total_floors: self.building_data.building.floors.len(),
+                total_floors: self.building.floors.len(),
                 total_rooms: self
-                    .building_data
                     .building
                     .floors
                     .iter()
@@ -193,12 +192,9 @@ impl Building3DRenderer {
                     .map(|w| w.rooms.len())
                     .sum(),
                 total_equipment: self
-                    .building_data
                     .building
-                    .floors
-                    .iter()
-                    .map(|f| f.equipment.len())
-                    .sum(),
+                    .get_all_equipment()
+                    .len(),
                 render_time_ms: start_time.elapsed().as_millis() as u64,
                 projection_type: format!("{:?}", self.projection.projection_type),
                 view_angle: format!("{:?}", self.projection.view_angle),
@@ -240,9 +236,8 @@ impl Building3DRenderer {
             rooms: transformed_rooms,
             bounding_box,
             metadata: SceneMetadata {
-                total_floors: self.building_data.building.floors.len(),
+                total_floors: self.building.floors.len(),
                 total_rooms: self
-                    .building_data
                     .building
                     .floors
                     .iter()
@@ -477,9 +472,8 @@ impl Building3DRenderer {
             rooms,
             bounding_box,
             metadata: SceneMetadata {
-                total_floors: self.building_data.building.floors.len(),
+                total_floors: self.building.floors.len(),
                 total_rooms: self
-                    .building_data
                     .building
                     .floors
                     .iter()
@@ -487,12 +481,9 @@ impl Building3DRenderer {
                     .map(|w| w.rooms.len())
                     .sum(),
                 total_equipment: self
-                    .building_data
                     .building
-                    .floors
-                    .iter()
-                    .map(|f| f.equipment.len())
-                    .sum(),
+                    .get_all_equipment()
+                    .len(),
                 render_time_ms: start_time.elapsed().as_millis() as u64,
                 projection_type: format!("{:?}", self.config.projection_type),
                 view_angle: format!("{:?}", self.config.view_angle),

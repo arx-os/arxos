@@ -6,13 +6,58 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Represents a wing on a floor
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Wing {
     pub id: String,
     pub name: String,
     pub rooms: Vec<Room>,
     pub equipment: Vec<Equipment>,
+    /// Temporary list of equipment IDs parsed during deserialization
+    pub pending_equipment_ids: Vec<String>,
     pub properties: HashMap<String, String>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct WingDto {
+    id: String,
+    name: String,
+    rooms: Vec<Room>,
+    equipment: Vec<String>,
+    properties: HashMap<String, String>,
+}
+
+impl serde::Serialize for Wing {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let equipment_ids: Vec<String> = self.equipment.iter().map(|e| e.id.clone()).collect();
+        let dto = WingDto {
+            id: self.id.clone(),
+            name: self.name.clone(),
+            rooms: self.rooms.clone(),
+            equipment: equipment_ids,
+            properties: self.properties.clone(),
+        };
+        dto.serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Wing {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let dto = WingDto::deserialize(deserializer)?;
+        Ok(Wing {
+            id: dto.id,
+            name: dto.name,
+            rooms: dto.rooms,
+            equipment: Vec::new(),
+            pending_equipment_ids: dto.equipment,
+            properties: dto.properties,
+        })
+    }
 }
 
 impl Wing {
@@ -45,6 +90,7 @@ impl Wing {
             name,
             rooms: Vec::new(),
             equipment: Vec::new(),
+            pending_equipment_ids: Vec::new(),
             properties: HashMap::new(),
         }
     }

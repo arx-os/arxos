@@ -37,7 +37,7 @@ pub struct EntityStats {
 
 #[derive(Debug, Clone)]
 pub struct ParsingResult {
-    pub data: crate::yaml::BuildingData,
+    pub building: crate::core::Building,
     pub stats: EntityStats,
     pub warnings: Vec<String>,
 }
@@ -60,8 +60,8 @@ impl IFCProcessor {
     ) -> IFCResult<(Building, Vec<crate::core::spatial::SpatialEntity>)> {
         // Try native parser first
         if let Ok(result) = self.parse_native(file_path, false) {
-            if !result.data.building.floors.is_empty() {
-                return Ok((result.data.building, Vec::new()));
+            if !result.building.floors.is_empty() {
+                return Ok((result.building, Vec::new()));
             }
         }
 
@@ -112,22 +112,22 @@ impl IFCProcessor {
         }
 
         let mut resolver = parser::IfcResolver::new(&mut registry);
-        let data = resolver.resolve_all()?;
+        let building = resolver.resolve_all()?;
         
         Ok(ParsingResult {
-            data,
+            building,
             stats,
             warnings: Vec::new(), // TODO: Collect warnings from resolver
         })
     }
 
     /// Extract hierarchical building data from an IFC file
-    /// Returns a BuildingData structure compatible with ArxOS YAML format
-    pub fn extract_hierarchy(&self, file_path: &str) -> anyhow::Result<crate::yaml::BuildingData> {
+    /// Returns a Building structure directly
+    pub fn extract_hierarchy(&self, file_path: &str) -> anyhow::Result<crate::core::Building> {
         // Try native parser first
         if let Ok(result) = self.parse_native(file_path, false) {
-            if !result.data.building.floors.is_empty() {
-                return Ok(result.data);
+            if !result.building.floors.is_empty() {
+                return Ok(result.building);
             }
         }
 
@@ -135,11 +135,7 @@ impl IFCProcessor {
 
         let (building, _) = self.process_file(file_path)?;
         
-        // Convert to BuildingData
-        Ok(crate::yaml::BuildingData {
-            building,
-            equipment: Vec::new(),
-        })
+        Ok(building)
     }
 
     /// Process IFC file with parallel processing and progress reporting

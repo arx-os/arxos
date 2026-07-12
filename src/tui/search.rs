@@ -6,8 +6,7 @@
 //! - Floors and Buildings
 //! - Git commit messages (optional)
 
-use crate::core::{Equipment, Room};
-use crate::yaml::BuildingData;
+use crate::core::{Building, Equipment, Room};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
@@ -70,7 +69,7 @@ pub struct SearchBrowser {
     results: Vec<SearchResult>,
     selected: usize,
     list_state: ListState,
-    building_data: BuildingData,
+    building_data: Building,
     matcher: SkimMatcherV2,
     max_results: usize,
     /// LRU search history (most recent first)
@@ -81,7 +80,7 @@ pub struct SearchBrowser {
 }
 
 impl SearchBrowser {
-    pub fn new(building_data: BuildingData) -> Self {
+    pub fn new(building_data: Building) -> Self {
         let mut browser = Self {
             query: String::new(),
             results: Vec::new(),
@@ -268,7 +267,7 @@ impl SearchBrowser {
         }
 
         // Search rooms (nested in wings)
-        for floor in &self.building_data.building.floors {
+        for floor in &self.building_data.floors {
             // Apply floor filter
             if let Some(filter_level) = self.filter.floor_level {
                 if floor.level != filter_level {
@@ -299,8 +298,8 @@ impl SearchBrowser {
             }
         }
 
-        // Search equipment (floor-level and room-level)
-        for floor in &self.building_data.building.floors {
+        // Search equipment (floor-level, wing-level, and room-level)
+        for floor in &self.building_data.floors {
             // Apply floor filter
             if let Some(filter_level) = self.filter.floor_level {
                 if floor.level != filter_level {
@@ -308,15 +307,14 @@ impl SearchBrowser {
                 }
             }
             
+            // Floor-level equipment
             for equip in &floor.equipment {
                 if let Some((score, indices)) = self.match_equipment_with_indices(equip) {
-                    // Apply type filter
                     if let Some(ref filter_type) = self.filter.result_type {
                         if filter_type != &SearchResultType::Equipment {
                             continue;
                         }
                     }
-                    
                     let location = format!("Floor {}", floor.level);
                     self.results.push(SearchResult {
                         result_type: SearchResultType::Equipment,
@@ -328,10 +326,54 @@ impl SearchBrowser {
                     });
                 }
             }
+
+            for wing in &floor.wings {
+                // Wing-level equipment
+                for equip in &wing.equipment {
+                    if let Some((score, indices)) = self.match_equipment_with_indices(equip) {
+                        if let Some(ref filter_type) = self.filter.result_type {
+                            if filter_type != &SearchResultType::Equipment {
+                                continue;
+                            }
+                        }
+                        let location = format!("Floor {}, {}", floor.level, wing.name);
+                        self.results.push(SearchResult {
+                            result_type: SearchResultType::Equipment,
+                            title: equip.name.clone(),
+                            subtitle: format!("{:?} - {}", equip.equipment_type, location),
+                            id: equip.id.clone(),
+                            score,
+                            match_indices: indices,
+                        });
+                    }
+                }
+
+                // Room-level equipment
+                for room in &wing.rooms {
+                    for equip in &room.equipment {
+                        if let Some((score, indices)) = self.match_equipment_with_indices(equip) {
+                            if let Some(ref filter_type) = self.filter.result_type {
+                                if filter_type != &SearchResultType::Equipment {
+                                    continue;
+                                }
+                            }
+                            let location = format!("Floor {}, {}, Room {}", floor.level, wing.name, room.name);
+                            self.results.push(SearchResult {
+                                result_type: SearchResultType::Equipment,
+                                title: equip.name.clone(),
+                                subtitle: format!("{:?} - {}", equip.equipment_type, location),
+                                id: equip.id.clone(),
+                                score,
+                                match_indices: indices,
+                            });
+                        }
+                    }
+                }
+            }
         }
 
         // Search floors
-        for floor in &self.building_data.building.floors {
+        for floor in &self.building_data.floors {
             // Apply type filter
             if let Some(ref filter_type) = self.filter.result_type {
                 if filter_type != &SearchResultType::Floor {
@@ -363,11 +405,11 @@ impl SearchBrowser {
         // Search building
         // Apply type filter
         if self.filter.result_type.is_none() || self.filter.result_type == Some(SearchResultType::Building) {
-            if let Some((score, indices)) = self.matcher.fuzzy_indices(&self.building_data.building.name, &self.query) {
+            if let Some((score, indices)) = self.matcher.fuzzy_indices(&self.building_data.name, &self.query) {
                 self.results.push(SearchResult {
                     result_type: SearchResultType::Building,
-                    title: self.building_data.building.name.clone(),
-                    subtitle: format!("{} floors", self.building_data.building.floors.len()),
+                    title: self.building_data.name.clone(),
+                    subtitle: format!("{} floors", self.building_data.floors.len()),
                     id: "building".to_string(),
                     score,
                     match_indices: indices,
@@ -392,7 +434,7 @@ impl SearchBrowser {
 
     fn add_all_items(&mut self) {
         // Show all rooms
-        for floor in &self.building_data.building.floors {
+        for floor in &self.building_data.floors {
             for wing in &floor.wings {
                 for room in &wing.rooms {
                     self.results.push(SearchResult {
@@ -408,7 +450,7 @@ impl SearchBrowser {
         }
 
         // Show all equipment
-        for floor in &self.building_data.building.floors {
+        for floor in &self.building_data.floors {
             for equip in &floor.equipment {
                 self.results.push(SearchResult {
                     result_type: SearchResultType::Equipment,
@@ -418,6 +460,30 @@ impl SearchBrowser {
                     score: 0,
                     match_indices: Vec::new(),
                 });
+            }
+            for wing in &floor.wings {
+                for equip in &wing.equipment {
+                    self.results.push(SearchResult {
+                        result_type: SearchResultType::Equipment,
+                        title: equip.name.clone(),
+                        subtitle: format!("{:?} - Floor {}, {}", equip.equipment_type, floor.level, wing.name),
+                        id: equip.id.clone(),
+                        score: 0,
+                        match_indices: Vec::new(),
+                    });
+                }
+                for room in &wing.rooms {
+                    for equip in &room.equipment {
+                        self.results.push(SearchResult {
+                            result_type: SearchResultType::Equipment,
+                            title: equip.name.clone(),
+                            subtitle: format!("{:?} - Floor {}, {}, Room {}", equip.equipment_type, floor.level, wing.name, room.name),
+                            id: equip.id.clone(),
+                            score: 0,
+                            match_indices: Vec::new(),
+                        });
+                    }
+                }
             }
         }
 

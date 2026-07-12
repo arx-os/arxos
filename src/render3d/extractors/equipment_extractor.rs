@@ -5,7 +5,7 @@
 
 use crate::render3d::types::Equipment3D;
 use crate::core::spatial::{BoundingBox3D, Point3D};
-use crate::yaml::BuildingData;
+use crate::core::Building;
 use std::sync::Arc;
 
 /// Extract 3D equipment representations from building data
@@ -26,10 +26,10 @@ use std::sync::Arc;
 ///
 /// Equipment bounding boxes are computed as ±0.5 units around the equipment position,
 /// creating a 1x1x1 unit cube for standard equipment visualization.
-pub fn extract_equipment_3d(building_data: &BuildingData) -> Vec<Equipment3D> {
+pub fn extract_equipment_3d(building: &Building) -> Vec<Equipment3D> {
     let mut equipment_3d = Vec::new();
 
-    for floor in &building_data.building.floors {
+    for floor in &building.floors {
         // Extract floor-level equipment
         for equipment in &floor.equipment {
             equipment_3d.push(Equipment3D {
@@ -63,6 +63,40 @@ pub fn extract_equipment_3d(building_data: &BuildingData) -> Vec<Equipment3D> {
                 spatial_relationships: None,
                 nearest_entity_distance: None,
             });
+        }
+
+        // Extract equipment from wings (wing-level common areas)
+        for wing in &floor.wings {
+            for equipment in &wing.equipment {
+                equipment_3d.push(Equipment3D {
+                    id: Arc::new(equipment.id.clone()),
+                    name: Arc::new(equipment.name.clone()),
+                    equipment_type: equipment.equipment_type.clone(),
+                    status: equipment.status,
+                    position: Point3D {
+                        x: equipment.position.x,
+                        y: equipment.position.y,
+                        z: equipment.position.z,
+                    },
+                    bounding_box: BoundingBox3D {
+                        min: Point3D {
+                            x: equipment.position.x - 0.5,
+                            y: equipment.position.y - 0.5,
+                            z: equipment.position.z - 0.5,
+                        },
+                        max: Point3D {
+                            x: equipment.position.x + 0.5,
+                            y: equipment.position.y + 0.5,
+                            z: equipment.position.z + 0.5,
+                        },
+                    },
+                    floor_level: floor.level,
+                    room_id: None,
+                    connections: Vec::new(),
+                    spatial_relationships: None,
+                    nearest_entity_distance: None,
+                });
+            }
         }
 
         // Extract equipment from rooms within wings
@@ -132,12 +166,7 @@ mod tests {
         floor.equipment.push(equipment);
         building.add_floor(floor);
 
-        let building_data = crate::yaml::BuildingData {
-            building,
-            equipment: Vec::new(),
-        };
-
-        let extracted = extract_equipment_3d(&building_data);
+        let extracted = extract_equipment_3d(&building);
 
         assert_eq!(extracted.len(), 1);
         assert_eq!(*extracted[0].name, "AC-1");
@@ -172,12 +201,7 @@ mod tests {
         floor.wings.push(wing);
         building.add_floor(floor);
 
-        let building_data = crate::yaml::BuildingData {
-            building,
-            equipment: Vec::new(),
-        };
-
-        let extracted = extract_equipment_3d(&building_data);
+        let extracted = extract_equipment_3d(&building);
 
         assert_eq!(extracted.len(), 1);
         assert_eq!(*extracted[0].name, "Light-1");
@@ -205,12 +229,7 @@ mod tests {
         floor.equipment.push(equipment);
         building.add_floor(floor);
 
-        let building_data = crate::yaml::BuildingData {
-            building,
-            equipment: Vec::new(),
-        };
-
-        let extracted = extract_equipment_3d(&building_data);
+        let extracted = extract_equipment_3d(&building);
 
         // Bounding box should be ±0.5 around position
         assert_eq!(extracted[0].bounding_box.min.x, 9.5);

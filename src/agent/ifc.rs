@@ -7,7 +7,7 @@ use crate::export::ifc::IFCExporter;
 use crate::agent::git::SyncState;
 use crate::ifc::IFCProcessor;
 use crate::yaml::{BuildingData, BuildingYamlSerializer};
-use crate::core::BuildingMetadata;
+use crate::core::{Building, BuildingMetadata};
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{DateTime, Utc};
 
@@ -51,41 +51,24 @@ pub fn import_ifc(repo_root: &Path, filename: &str, data_base64: &str) -> Result
 
     let import_path_str = import_path.to_str().ok_or_else(|| anyhow!("Invalid path utf-8"))?;
     let processor = IFCProcessor::new();
-    let mut building_data = processor.extract_hierarchy(import_path_str)?;
+    let mut building = processor.extract_hierarchy(import_path_str)?;
 
-    let floors = building_data.building.floors.len();
-    let rooms = building_data
-        .building.floors
+    let floors = building.floors.len();
+    let rooms = building
+        .floors
         .iter()
         .map(|f| f.wings.iter().map(|w| w.rooms.len()).sum::<usize>())
         .sum();
-    let equipment = building_data
-        .building.floors
-        .iter()
-        .map(|floor| {
-            let floor_eq = floor.equipment.len();
-            let wing_eq: usize = floor
-                .wings
-                .iter()
-                .map(|wing| {
-                    let wing_level = wing.equipment.len();
-                    let room_level: usize =
-                        wing.rooms.iter().map(|room| room.equipment.len()).sum();
-                    wing_level + room_level
-                })
-                .sum();
-            floor_eq + wing_eq
-        })
-        .sum();
+    let equipment = building.get_all_equipment().len();
 
-    let yaml_filename = format!("{}.yaml", sanitize_filename(&building_data.building.name, "building"));
+    let yaml_filename = format!("{}.yaml", sanitize_filename(&building.name, "building"));
     let yaml_path = repo_root.join(&yaml_filename);
 
     // Check if we have old data to merge
     if yaml_path.exists() {
         if let Ok(old_content) = fs::read_to_string(&yaml_path) {
-            if let Ok(old_data) = serde_yaml::from_str::<BuildingData>(&old_content) {
-                merge_building_data(&mut building_data, &old_data);
+            if let Ok(old_building) = BuildingYamlSerializer::deserialize_building(&old_content) {
+                merge_buildings(&mut building, &old_building);
             }
         }
     }
@@ -93,12 +76,12 @@ pub fn import_ifc(repo_root: &Path, filename: &str, data_base64: &str) -> Result
     let relative_yaml = relative_display_path(repo_root, &yaml_path);
     
     // Save YAML
-    let yaml_string = BuildingYamlSerializer::serialize(&building_data)
+    let yaml_string = BuildingYamlSerializer::serialize_building(&building)
         .map_err(|e| anyhow!("Failed to serialize YAML: {}", e))?;
     fs::write(&yaml_path, yaml_string)?;
 
     Ok(IfcImportResult {
-        building_name: building_data.building.name,
+        building_name: building.name,
         yaml_path: relative_yaml,
         floors,
         rooms,
@@ -109,36 +92,36 @@ pub fn import_ifc(repo_root: &Path, filename: &str, data_base64: &str) -> Result
 pub fn import_ifc_local(repo_root: &Path, ifc_path: &Path) -> Result<IfcImportResult> {
     let import_path_str = ifc_path.to_str().ok_or_else(|| anyhow!("Invalid path utf-8"))?;
     let processor = IFCProcessor::new();
-    let mut building_data = processor.extract_hierarchy(import_path_str)?;
+    let mut building = processor.extract_hierarchy(import_path_str)?;
 
-    let floors = building_data.building.floors.len();
-    let rooms = building_data
-        .building.floors
+    let floors = building.floors.len();
+    let rooms = building
+        .floors
         .iter()
         .map(|f| f.wings.iter().map(|w| w.rooms.len()).sum::<usize>())
         .sum();
-    let equipment = building_data.equipment.len();
+    let equipment = building.get_all_equipment().len();
 
-    let yaml_filename = format!("{}.yaml", sanitize_filename(&building_data.building.name, "building"));
+    let yaml_filename = format!("{}.yaml", sanitize_filename(&building.name, "building"));
     let yaml_path = repo_root.join(&yaml_filename);
     
     // Check if we have old data to merge
     if yaml_path.exists() {
         if let Ok(old_content) = fs::read_to_string(&yaml_path) {
-            if let Ok(old_data) = serde_yaml::from_str::<BuildingData>(&old_content) {
-                merge_building_data(&mut building_data, &old_data);
+            if let Ok(old_building) = BuildingYamlSerializer::deserialize_building(&old_content) {
+                merge_buildings(&mut building, &old_building);
             }
         }
     }
 
     let relative_yaml = relative_display_path(repo_root, &yaml_path);
     
-    let yaml_string = BuildingYamlSerializer::serialize(&building_data)
+    let yaml_string = BuildingYamlSerializer::serialize_building(&building)
         .map_err(|e| anyhow!("Failed to serialize YAML: {}", e))?;
     fs::write(&yaml_path, yaml_string)?;
 
     Ok(IfcImportResult {
-        building_name: building_data.building.name,
+        building_name: building.name,
         yaml_path: relative_yaml,
         floors,
         rooms,
@@ -146,55 +129,64 @@ pub fn import_ifc_local(repo_root: &Path, ifc_path: &Path) -> Result<IfcImportRe
     })
 }
 
-fn get_room_address(building_name: &str, floor_name: &str, room_name: &str) -> crate::core::domain::ArxAddress {
-    crate::core::domain::ArxAddress::new("usa", "ny", "brooklyn", building_name, floor_name, room_name, "")
-}
-
-fn merge_building_data(new_data: &mut BuildingData, old_data: &BuildingData) {
+fn merge_buildings(new_building: &mut Building, old_building: &Building) {
     // 1. Merge Building metadata
-    if new_data.building.name == old_data.building.name {
-        new_data.building.created_at = old_data.building.created_at;
-        if let Some(old_meta) = &old_data.building.metadata {
-            if let Some(new_meta) = &mut new_data.building.metadata {
+    if new_building.name == old_building.name {
+        new_building.created_at = old_building.created_at;
+        if let Some(old_meta) = &old_building.metadata {
+            if let Some(new_meta) = &mut new_building.metadata {
                 for tag in &old_meta.tags {
                     if !new_meta.tags.contains(tag) {
                         new_meta.tags.push(tag.clone());
                     }
                 }
             } else {
-                new_data.building.metadata = Some(old_meta.clone());
+                new_building.metadata = Some(old_meta.clone());
             }
         }
     }
 
-    // 2. Index old components by ArxAddress
+    // 2. Index old components
     let mut old_rooms = std::collections::HashMap::new();
     let mut old_equipment = std::collections::HashMap::new();
 
-    for floor in &old_data.building.floors {
+    for floor in &old_building.floors {
         for wing in &floor.wings {
             for room in &wing.rooms {
-                let addr = get_room_address(&old_data.building.name, &floor.name, &room.name);
-                old_rooms.insert(addr.path.clone(), room);
+                let path = format!("{}/{}", floor.name, room.name);
+                old_rooms.insert(path, room);
             }
         }
     }
 
-    for eq in &old_data.equipment {
-        if let Some(addr) = &eq.address {
-            old_equipment.insert(addr.path.clone(), eq);
+    // Index old equipment by their hierarchical paths
+    for floor in &old_building.floors {
+        for eq in &floor.equipment {
+            let path = format!("{}/{}", floor.name, eq.name);
+            old_equipment.insert(path, eq.clone());
+        }
+        for wing in &floor.wings {
+            for eq in &wing.equipment {
+                let path = format!("{}/{}/{}", floor.name, wing.name, eq.name);
+                old_equipment.insert(path, eq.clone());
+            }
+            for room in &wing.rooms {
+                for eq in &room.equipment {
+                    let path = format!("{}/{}/{}/{}", floor.name, wing.name, room.name, eq.name);
+                    old_equipment.insert(path, eq.clone());
+                }
+            }
         }
     }
 
     // 3. Merge Rooms
-    for floor in &mut new_data.building.floors {
+    for floor in &mut new_building.floors {
         for wing in &mut floor.wings {
             for room in &mut wing.rooms {
-                let addr = get_room_address(&new_data.building.name, &floor.name, &room.name);
-                if let Some(old_room) = old_rooms.get(&addr.path) {
+                let path = format!("{}/{}", floor.name, room.name);
+                if let Some(old_room) = old_rooms.get(&path) {
                     room.created_at = old_room.created_at;
                     for (k, v) in &old_room.properties {
-                        // Only preserve properties that weren't just re-extracted (or manual ones)
                         room.properties.entry(k.clone()).or_insert_with(|| v.clone());
                     }
                 }
@@ -203,13 +195,41 @@ fn merge_building_data(new_data: &mut BuildingData, old_data: &BuildingData) {
     }
 
     // 4. Merge Equipment
-    for eq in &mut new_data.equipment {
-        if let Some(addr) = &eq.address {
-            if let Some(old_eq) = old_equipment.get(&addr.path) {
-                eq.status = old_eq.status.clone();
+    for floor in &mut new_building.floors {
+        let floor_name = &floor.name;
+        for eq in &mut floor.equipment {
+            let path = format!("{}/{}", floor_name, eq.name);
+            if let Some(old_eq) = old_equipment.get(&path) {
+                eq.status = old_eq.status;
                 eq.health_status = old_eq.health_status.clone();
                 for (k, v) in &old_eq.properties {
                     eq.properties.entry(k.clone()).or_insert_with(|| v.clone());
+                }
+            }
+        }
+        for wing in &mut floor.wings {
+            let wing_name = &wing.name;
+            for eq in &mut wing.equipment {
+                let path = format!("{}/{}/{}", floor_name, wing_name, eq.name);
+                if let Some(old_eq) = old_equipment.get(&path) {
+                    eq.status = old_eq.status;
+                    eq.health_status = old_eq.health_status.clone();
+                    for (k, v) in &old_eq.properties {
+                        eq.properties.entry(k.clone()).or_insert_with(|| v.clone());
+                    }
+                }
+            }
+            for room in &mut wing.rooms {
+                let room_name = &room.name;
+                for eq in &mut room.equipment {
+                    let path = format!("{}/{}/{}/{}", floor_name, wing_name, room_name, eq.name);
+                    if let Some(old_eq) = old_equipment.get(&path) {
+                        eq.status = old_eq.status;
+                        eq.health_status = old_eq.health_status.clone();
+                        for (k, v) in &old_eq.properties {
+                            eq.properties.entry(k.clone()).or_insert_with(|| v.clone());
+                        }
+                    }
                 }
             }
         }
@@ -222,14 +242,15 @@ pub fn export_ifc(
     delta: bool,
 ) -> Result<IfcExportResult> {
     let building_data = load_building_data(repo_root)?;
-    let exporter = IFCExporter::new(building_data.clone());
+    let building = building_data.into_building();
+    let exporter = IFCExporter::new(building.clone());
 
     let exports_dir = repo_root.join("exports");
     fs::create_dir_all(&exports_dir)?;
 
     let default_name = format!(
         "{}.ifc",
-        sanitize_filename(&building_data.building.name, "building")
+        sanitize_filename(&building.name, "building")
     );
     let export_filename = ensure_extension(
         &sanitize_filename(filename.as_deref().unwrap_or(&default_name), &default_name),
@@ -396,16 +417,13 @@ mod tests {
             properties: Default::default(),
             created_at: None,
             updated_at: None,
+            pending_equipment_ids: Vec::new(),
         };
         wing.rooms.push(room);
         floor.wings.push(wing);
         building.floors.push(floor);
 
-        let building_data = BuildingData {
-            building,
-            equipment: Vec::new(),
-        };
-        let data = BuildingYamlSerializer::serialize(&building_data).unwrap();
+        let data = BuildingYamlSerializer::serialize_building(&building).unwrap();
         let yaml_path = repo_root.join("test_facility.yaml");
         std::fs::write(&yaml_path, data).unwrap();
 

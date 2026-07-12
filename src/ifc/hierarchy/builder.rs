@@ -163,6 +163,7 @@ impl HierarchyBuilder {
             bounding_box: None,
             wings: Vec::new(),
             equipment: Vec::new(),
+            pending_equipment_ids: Vec::new(),
             properties: HashMap::new(),
         })
     }

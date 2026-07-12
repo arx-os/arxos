@@ -5,7 +5,7 @@
 
 use super::extractors::{extract_equipment_3d, extract_floors_3d, extract_rooms_3d};
 use super::types::*;
-use crate::yaml::BuildingData;
+use crate::core::Building;
 use std::sync::Arc;
 
 /// Cache of 3D scene data extracted from building data
@@ -20,23 +20,23 @@ pub struct SceneCache {
 }
 
 impl SceneCache {
-    /// Create a new scene cache from building data
+    /// Create a new scene cache from building
     ///
     /// Extracts and caches all 3D scene elements for efficient rendering.
     ///
     /// # Arguments
     ///
-    /// * `building_data` - Source building data to cache
+    /// * `building` - Source building to cache
     ///
     /// # Returns
     ///
     /// A new SceneCache with all scene elements pre-processed
-    pub fn new(building_data: &BuildingData) -> Self {
+    pub fn new(building: &Building) -> Self {
         Self {
-            building_name: Arc::new(building_data.building.name.clone()),
-            floors: extract_floors_3d(building_data),
-            equipment: extract_equipment_3d(building_data),
-            rooms: extract_rooms_3d(building_data),
+            building_name: Arc::new(building.name.clone()),
+            floors: extract_floors_3d(building),
+            equipment: extract_equipment_3d(building),
+            rooms: extract_rooms_3d(building),
         }
     }
 
@@ -67,7 +67,7 @@ mod tests {
     use crate::core::{Building, Floor, Wing, Room, Equipment};
     use crate::core::{SpatialProperties, EquipmentType, EquipmentStatus, EquipmentHealthStatus, RoomType};
 
-    fn create_test_building_data() -> BuildingData {
+    fn create_test_building() -> Building {
         let mut building = Building::default();
         building.name = "Test Building".to_string();
 
@@ -126,16 +126,13 @@ mod tests {
         floor.wings.push(wing);
         building.add_floor(floor);
 
-        BuildingData {
-            building,
-            equipment: Vec::new(),
-        }
+        building
     }
 
     #[test]
     fn test_scene_cache_creation() {
-        let building_data = create_test_building_data();
-        let cache = SceneCache::new(&building_data);
+        let building = create_test_building();
+        let cache = SceneCache::new(&building);
 
         assert_eq!(cache.building_name(), "Test Building");
         assert_eq!(cache.floors().len(), 1);

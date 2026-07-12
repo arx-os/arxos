@@ -24,26 +24,28 @@ pub fn add_equipment(
     use crate::persistence::PersistenceManager;
 
     let persistence = PersistenceManager::new(building_name)?;
-    let mut building_data = persistence.load_building_data()?;
+    let mut building = persistence.load_building_data()?;
 
     // Find room if specified
     if let Some(room_name) = room_name {
-        for floor in &mut building_data.building.floors {
+        let mut added = false;
+        for floor in &mut building.floors {
             // Search in wings first (primary location)
             for wing in &mut floor.wings {
-                if let Some(room) = wing.rooms.iter_mut().find(|r| r.name == room_name) {
-                    // Add equipment to room
+                if let Some(room) = wing.rooms.iter_mut().find(|r| r.name == room_name || r.id == room_name) {
+                    // Add equipment to room only (no duplication in floor.equipment!)
                     room.equipment.push(equipment.clone());
-                    // Also add to floor's equipment list
-                    floor.equipment.push(equipment.clone());
+                    added = true;
                     break;
                 }
             }
-            // Note: Legacy rooms list removed - rooms are only in wings now
+            if added {
+                break;
+            }
         }
     } else {
         // Add to floor-level equipment if no room specified
-        if let Some(floor) = building_data.building.floors.first_mut() {
+        if let Some(floor) = building.floors.first_mut() {
             floor.equipment.push(equipment.clone());
         }
     }
@@ -51,11 +53,11 @@ pub fn add_equipment(
     // Save
     if commit {
         persistence.save_and_commit(
-            &building_data,
+            &building,
             Some(&format!("Add equipment: {}", equipment.name)),
         )?;
     } else {
-        persistence.save_building_data(&building_data)?;
+        persistence.save_building_data(&building)?;
     }
 
     Ok(())
@@ -70,18 +72,18 @@ pub fn list_equipment(
 ) -> Result<Vec<Equipment>, Box<dyn std::error::Error>> {
     use crate::persistence::{load_building_data_from_dir, PersistenceManager};
 
-    let building_data = if let Some(building) = building_name {
-        let persistence = PersistenceManager::new(building)?;
+    let building = if let Some(b) = building_name {
+        let persistence = PersistenceManager::new(b)?;
         persistence.load_building_data()?
     } else {
         load_building_data_from_dir()?
     };
 
-    let mut equipment = Vec::new();
-
-    for floor in &building_data.building.floors {
-        equipment.extend(floor.equipment.iter().cloned());
-    }
+    // Use inherent query on Building to collect all equipment without duplication
+    let equipment = building.get_all_equipment()
+        .into_iter()
+        .cloned()
+        .collect();
 
     Ok(equipment)
 }
@@ -96,22 +98,15 @@ pub fn update_equipment_impl(
     use crate::persistence::PersistenceManager;
 
     let persistence = PersistenceManager::new(building_name)?;
-    let mut building_data = persistence.load_building_data()?;
+    let mut building = persistence.load_building_data()?;
 
-    // Find and update equipment
+    // Find and update equipment in building model
     let mut found = false;
-    for floor in &mut building_data.building.floors {
-        if let Some(equipment) = floor
-            .equipment
-            .iter_mut()
-            .find(|e| e.id == equipment_id || e.name == equipment_id)
-        {
-            for (key, value) in updates.iter() {
-                equipment.properties.insert(key.clone(), value.clone());
-            }
-            found = true;
-            break;
+    if let Some(equipment) = building.find_equipment_mut(equipment_id) {
+        for (key, value) in updates.iter() {
+            equipment.properties.insert(key.clone(), value.clone());
         }
+        found = true;
     }
 
     if !found {
@@ -119,29 +114,18 @@ pub fn update_equipment_impl(
     }
 
     // Get the updated equipment before saving
-    let updated_equipment = {
-        let mut found_equipment = None;
-        for floor in &building_data.building.floors {
-            if let Some(equipment) = floor
-                .equipment
-                .iter()
-                .find(|e| e.id == equipment_id || e.name == equipment_id)
-            {
-                found_equipment = Some(equipment.clone());
-                break;
-            }
-        }
-        found_equipment.ok_or_else(|| format!("Equipment '{}' not found", equipment_id))?
-    };
+    let updated_equipment = building.find_equipment(equipment_id)
+        .cloned()
+        .ok_or_else(|| format!("Equipment '{}' not found", equipment_id))?;
 
     // Save
     if commit {
         persistence.save_and_commit(
-            &building_data,
+            &building,
             Some(&format!("Update equipment: {}", equipment_id)),
         )?;
     } else {
-        persistence.save_building_data(&building_data)?;
+        persistence.save_building_data(&building)?;
     }
 
     Ok(updated_equipment)
@@ -156,17 +140,29 @@ pub fn remove_equipment_impl(
     use crate::persistence::PersistenceManager;
 
     let persistence = PersistenceManager::new(building_name)?;
-    let mut building_data = persistence.load_building_data()?;
+    let mut building = persistence.load_building_data()?;
 
-    // Find and remove equipment
+    // Find and remove equipment from Building model
     let mut found = false;
-    for floor in &mut building_data.building.floors {
+    for floor in &mut building.floors {
         let before = floor.equipment.len();
-        floor
-            .equipment
-            .retain(|e| e.id != equipment_id && e.name != equipment_id);
+        floor.equipment.retain(|e| e.id != equipment_id && e.name != equipment_id);
         if floor.equipment.len() < before {
             found = true;
+        }
+        for wing in &mut floor.wings {
+            let before = wing.equipment.len();
+            wing.equipment.retain(|e| e.id != equipment_id && e.name != equipment_id);
+            if wing.equipment.len() < before {
+                found = true;
+            }
+            for room in &mut wing.rooms {
+                let before = room.equipment.len();
+                room.equipment.retain(|e| e.id != equipment_id && e.name != equipment_id);
+                if room.equipment.len() < before {
+                    found = true;
+                }
+            }
         }
     }
 
@@ -177,11 +173,11 @@ pub fn remove_equipment_impl(
     // Save
     if commit {
         persistence.save_and_commit(
-            &building_data,
+            &building,
             Some(&format!("Remove equipment: {}", equipment_id)),
         )?;
     } else {
-        persistence.save_building_data(&building_data)?;
+        persistence.save_building_data(&building)?;
     }
 
     Ok(())
@@ -199,6 +195,7 @@ pub fn update_equipment(
     
 
     // Parse properties into HashMap
+    // Parse properties into HashMap
     let mut updates = HashMap::new();
     for prop in property {
         if let Some((key, value)) = prop.split_once('=') {
@@ -206,13 +203,9 @@ pub fn update_equipment(
         }
     }
 
-    // Determine building name from YAML file in current directory
-    let building_data = crate::yaml::BuildingData {
-        building: crate::core::Building::default(),
-        equipment: Vec::new()
-    };
-
-    let building_name = &building_data.building.name;
+    // Determine building name from loaded building in current directory
+    let building = crate::persistence::load_building_data_from_dir()?;
+    let building_name = &building.name;
     update_equipment_impl(building_name, equipment_id, updates, false)
 }
 
@@ -222,12 +215,8 @@ pub fn update_equipment(
 /// current directory. For better reliability, use `remove_equipment_impl` with an explicit
 /// building name.
 pub fn remove_equipment(equipment_id: &str) -> Result<(), Box<dyn std::error::Error>> {
-    // Determine building name from YAML file in current directory
-    let building_data = crate::yaml::BuildingData {
-        building: crate::core::Building::default(),
-        equipment: Vec::new()
-    };
-
-    let building_name = &building_data.building.name;
+    // Determine building name from loaded building in current directory
+    let building = crate::persistence::load_building_data_from_dir()?;
+    let building_name = &building.name;
     remove_equipment_impl(building_name, equipment_id, false)
 }

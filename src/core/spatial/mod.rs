@@ -7,6 +7,10 @@ pub mod mesh;
 pub use types::*;
 pub use mesh::*;
 
+/// Alias for Point3D representing a 3D position
+pub type Position3D = Point3D;
+
+
 // Re-export grid address utilities
 
 /// Spatial engine for geometric operations

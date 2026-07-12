@@ -26,20 +26,19 @@ pub fn create_room(
     use crate::persistence::PersistenceManager;
 
     let persistence = PersistenceManager::new(building_name)?;
-    let mut building_data = persistence.load_building_data()?;
+    let mut building = persistence.load_building_data()?;
 
     // Store room name for commit message
     let room_name = room.name.clone();
 
     // Find or create the floor
-    let floor = if let Some(floor) = building_data.building.find_floor_mut(floor_level) {
+    let floor = if let Some(floor) = building.find_floor_mut(floor_level) {
         floor
     } else {
         // Create new floor
         let new_floor = crate::core::Floor::new(format!("Floor {}", floor_level), floor_level);
-        building_data.building.add_floor(new_floor);
-        building_data
-            .building
+        building.add_floor(new_floor);
+        building
             .find_floor_mut(floor_level)
             .ok_or_else(|| {
                 format!("Failed to find floor {} after creating it", floor_level)
@@ -63,10 +62,10 @@ pub fn create_room(
 
     // Save
     if commit {
-        persistence.save_and_commit(&building_data, Some(&format!("Add room: {}", room_name)))?;
+        persistence.save_and_commit(&building, Some(&format!("Add room: {}", room_name)))?;
     } else {
         // For now, use the same method
-        persistence.save_and_commit(&building_data, None)?;
+        persistence.save_and_commit(&building, None)?;
     }
 
     Ok(())
@@ -79,8 +78,8 @@ pub fn create_room(
 pub fn list_rooms(building_name: Option<&str>) -> Result<Vec<Room>, Box<dyn std::error::Error>> {
     use crate::persistence::{load_building_data_from_dir, PersistenceManager};
 
-    let building_data = if let Some(building) = building_name {
-        let persistence = PersistenceManager::new(building)?;
+    let building = if let Some(b) = building_name {
+        let persistence = PersistenceManager::new(b)?;
         persistence.load_building_data()?
     } else {
         load_building_data_from_dir()?
@@ -88,7 +87,7 @@ pub fn list_rooms(building_name: Option<&str>) -> Result<Vec<Room>, Box<dyn std:
 
     let mut rooms = Vec::new();
 
-    for floor in &building_data.building.floors {
+    for floor in &building.floors {
         // Collect rooms from wings (primary location)
         for wing in &floor.wings {
             rooms.extend(wing.rooms.iter().cloned());
@@ -111,14 +110,14 @@ pub fn get_room(
 ) -> Result<Room, Box<dyn std::error::Error>> {
     use crate::persistence::{load_building_data_from_dir, PersistenceManager};
 
-    let building_data = if let Some(building) = building_name {
-        let persistence = PersistenceManager::new(building)?;
+    let building = if let Some(b) = building_name {
+        let persistence = PersistenceManager::new(b)?;
         persistence.load_building_data()?
     } else {
         load_building_data_from_dir()?
     };
 
-    for floor in &building_data.building.floors {
+    for floor in &building.floors {
         // Search in wings first (primary location)
         for wing in &floor.wings {
             for room in &wing.rooms {
@@ -145,43 +144,27 @@ pub fn update_room_impl(
     use crate::persistence::PersistenceManager;
 
     let persistence = PersistenceManager::new(building_name)?;
-    let mut building_data = persistence.load_building_data()?;
+    let mut building = persistence.load_building_data()?;
 
-    // Find and update room
-    let mut updated_room = None;
-    for floor in &mut building_data.building.floors {
-        // Search in wings first (primary location)
-        for wing in &mut floor.wings {
-            if let Some(room) = wing
-                .rooms
-                .iter_mut()
-                .find(|r| r.id == room_id || r.name == room_id)
-            {
-                // Update properties
-                for (key, value) in updates.iter() {
-                    room.properties.insert(key.clone(), value.clone());
-                }
-                updated_room = Some(room.clone());
-                break;
-            }
-        }
-        if updated_room.is_some() {
-            break;
-        }
-        // Note: Legacy rooms list removed - rooms are only in wings now
+    // Find and update room using find_room_mut
+    let room = building.find_room_mut(room_id)
+        .ok_or_else(|| format!("Room '{}' not found", room_id))?;
+
+    // Update properties
+    for (key, value) in updates.iter() {
+        room.properties.insert(key.clone(), value.clone());
     }
-
-    let room = updated_room.ok_or_else(|| format!("Room '{}' not found", room_id))?;
+    let updated_room = room.clone();
 
     // Save
     if commit {
         persistence
-            .save_and_commit(&building_data, Some(&format!("Update room: {}", room.name)))?;
+            .save_and_commit(&building, Some(&format!("Update room: {}", updated_room.name)))?;
     } else {
-        persistence.save_building_data(&building_data)?;
+        persistence.save_building_data(&building)?;
     }
 
-    Ok(room)
+    Ok(updated_room)
 }
 
 /// Delete a room from a building
@@ -193,10 +176,10 @@ pub fn delete_room_impl(
     use crate::persistence::PersistenceManager;
 
     let persistence = PersistenceManager::new(building_name)?;
-    let mut building_data = persistence.load_building_data()?;
+    let mut building = persistence.load_building_data()?;
 
     // Find and remove room
-    for floor in &mut building_data.building.floors {
+    for floor in &mut building.floors {
         // Remove from wings (primary location)
         for wing in &mut floor.wings {
             wing.rooms.retain(|r| r.id != room_id && r.name != room_id);
@@ -206,9 +189,9 @@ pub fn delete_room_impl(
 
     // Save
     if commit {
-        persistence.save_and_commit(&building_data, Some(&format!("Delete room: {}", room_id)))?;
+        persistence.save_and_commit(&building, Some(&format!("Delete room: {}", room_id)))?;
     } else {
-        persistence.save_building_data(&building_data)?;
+        persistence.save_building_data(&building)?;
     }
 
     Ok(())

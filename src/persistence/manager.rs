@@ -32,7 +32,7 @@ impl PersistenceManager {
     }
 
     /// Save building data to YAML file
-    pub fn save_building_data(&self, data: &crate::yaml::BuildingData) -> PersistenceResult<()> {
+    pub fn save_building_data(&self, building: &crate::core::Building) -> PersistenceResult<()> {
         use std::fs;
 
         // Ensure the building directory exists
@@ -41,8 +41,8 @@ impl PersistenceManager {
             fs::create_dir_all(&building_dir)?;
         }
 
-        // Serialize building data to YAML (deterministic ordering)
-        let yaml_content = crate::yaml::BuildingYamlSerializer::serialize(data)
+        // Serialize building data to YAML (deterministic ordering via DTO)
+        let yaml_content = crate::yaml::BuildingYamlSerializer::serialize_building(building)
             .map_err(|e| PersistenceError::SerializationError(e.to_string()))?;
 
         // Write to building.yaml file
@@ -53,7 +53,7 @@ impl PersistenceManager {
     }
 
     /// Load building data from YAML file
-    pub fn load_building_data(&self) -> PersistenceResult<crate::yaml::BuildingData> {
+    pub fn load_building_data(&self) -> PersistenceResult<crate::core::Building> {
         use std::fs;
 
         // Try to load from building.yaml first
@@ -61,10 +61,9 @@ impl PersistenceManager {
 
         if file_path.exists() {
             let yaml_content = fs::read_to_string(&file_path)?;
-            let mut building_data: crate::yaml::BuildingData = serde_yaml::from_str(&yaml_content)?;
-            // Rehydrate room equipment from global equipment list
-            building_data.rehydrate_room_equipment();
-            return Ok(building_data);
+            let building = crate::yaml::BuildingYamlSerializer::deserialize_building(&yaml_content)
+                .map_err(|e| PersistenceError::SerializationError(e.to_string()))?;
+            return Ok(building);
         }
 
         // If building.yaml doesn't exist, search for any YAML file in the directory
@@ -78,10 +77,8 @@ impl PersistenceManager {
                     if let Some(extension) = path.extension() {
                         if extension == "yaml" || extension == "yml" {
                             if let Ok(yaml_content) = fs::read_to_string(&path) {
-                                if let Ok(mut building_data) = serde_yaml::from_str::<crate::yaml::BuildingData>(&yaml_content) {
-                                    // Rehydrate room equipment from global equipment list
-                                    building_data.rehydrate_room_equipment();
-                                    return Ok(building_data);
+                                if let Ok(building) = crate::yaml::BuildingYamlSerializer::deserialize_building(&yaml_content) {
+                                    return Ok(building);
                                 }
                             }
                         }
@@ -100,9 +97,9 @@ impl PersistenceManager {
     ///
     /// Saves the building data to disk and, if a Git repository exists,
     /// stages and commits the changes.
-    pub fn save_and_commit(&self, data: &crate::yaml::BuildingData, message: Option<&str>) -> PersistenceResult<()> {
+    pub fn save_and_commit(&self, building: &crate::core::Building, message: Option<&str>) -> PersistenceResult<()> {
         // First, save the data to disk
-        self.save_building_data(data)?;
+        self.save_building_data(building)?;
 
         // If there's a Git repository, commit the changes
         if self.has_git_repo() {

@@ -4,7 +4,7 @@ use super::diff::{get_diff, get_diff_stats, get_file_history, get_status, list_c
 use super::export::export_building;
 use super::repository::initialize_repository;
 use super::staging::{stage_all, stage_file, unstage_all, unstage_file};
-use crate::yaml::{BuildingData, BuildingYamlSerializer};
+use crate::yaml::BuildingYamlSerializer;
 use git2::Repository;
 use serde::{Deserialize, Serialize};
 
@@ -65,7 +65,7 @@ impl BuildingGitManager {
     /// Export building data to Git repository
     pub fn export_building(
         &mut self,
-        building_data: &BuildingData,
+        building: &crate::core::Building,
         commit_message: Option<&str>,
     ) -> Result<GitOperationResult, GitError> {
         // For backward compatibility, create simple metadata
@@ -77,20 +77,20 @@ impl BuildingGitManager {
             ar_scan_id: None,
             signature: None,
         };
-        self.export_building_with_metadata(building_data, &metadata)
+        self.export_building_with_metadata(building, &metadata)
     }
 
     /// Export building data with user attribution metadata
     pub fn export_building_with_metadata(
         &mut self,
-        building_data: &BuildingData,
+        building: &crate::core::Building,
         metadata: &CommitMetadata,
     ) -> Result<GitOperationResult, GitError> {
         // Record to error analytics if failed
         let result = export_building(
             &mut self.repo,
             &self.serializer,
-            building_data,
+            building,
             &self.git_config,
             metadata,
         );
@@ -378,14 +378,9 @@ mod tests {
             coordinate_systems: vec![],
         };
 
-        let building_data = BuildingData {
-            building,
-            equipment: vec![],
-        };
-
         // Export building (this will create a commit)
         let result = manager
-            .export_building(&building_data, Some("Test commit"))
+            .export_building(&building, Some("Test commit"))
             .unwrap();
 
         // Verify commit was created

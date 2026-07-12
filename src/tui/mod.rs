@@ -37,9 +37,8 @@ pub use theme::{StatusColor, Theme};
 pub fn render_building(building_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("🏠 Rendering building: {}", building_name);
     
-    // Load building data from current directory
-    let building_data = crate::persistence::load_building_data_from_dir()?;
-    let building = &building_data.building;
+    // Load building from current directory
+    let building = crate::persistence::load_building_data_from_dir()?;
     
     if building.name != building_name && building.id != building_name {
         println!("⚠️  Warning: Loaded building '{}' does not match requested '{}'", building.name, building_name);

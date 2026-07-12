@@ -6,16 +6,14 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Represents a floor in a building
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Floor {
     pub id: String,
     pub name: String,
     pub level: i32,
     /// Elevation of the floor (in meters, relative to building origin)
-    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub elevation: Option<f64>,
     /// Bounding box for the entire floor
-    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub bounding_box: Option<crate::core::spatial::BoundingBox3D>,
     pub wings: Vec<Wing>,
     /// Collection of equipment in common areas (hallways, lobbies)
@@ -23,7 +21,63 @@ pub struct Floor {
     /// Equipment located inside specific rooms should be stored in `Room.equipment`.
     /// This collection is for equipment that doesn't belong to a specific room.
     pub equipment: Vec<Equipment>,
+    /// Temporary list of equipment IDs parsed during deserialization
+    pub pending_equipment_ids: Vec<String>,
     pub properties: HashMap<String, String>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct FloorDto {
+    id: String,
+    name: String,
+    level: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    elevation: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    bounding_box: Option<crate::core::spatial::BoundingBox3D>,
+    wings: Vec<Wing>,
+    equipment: Vec<String>,
+    properties: HashMap<String, String>,
+}
+
+impl serde::Serialize for Floor {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let equipment_ids: Vec<String> = self.equipment.iter().map(|e| e.id.clone()).collect();
+        let dto = FloorDto {
+            id: self.id.clone(),
+            name: self.name.clone(),
+            level: self.level,
+            elevation: self.elevation,
+            bounding_box: self.bounding_box.clone(),
+            wings: self.wings.clone(),
+            equipment: equipment_ids,
+            properties: self.properties.clone(),
+        };
+        dto.serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Floor {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let dto = FloorDto::deserialize(deserializer)?;
+        Ok(Floor {
+            id: dto.id,
+            name: dto.name,
+            level: dto.level,
+            elevation: dto.elevation,
+            bounding_box: dto.bounding_box,
+            wings: dto.wings,
+            equipment: Vec::new(),
+            pending_equipment_ids: dto.equipment,
+            properties: dto.properties,
+        })
+    }
 }
 
 impl Floor {
@@ -62,6 +116,7 @@ impl Floor {
             bounding_box: None,
             wings: Vec::new(),
             equipment: Vec::new(),
+            pending_equipment_ids: Vec::new(),
             properties: HashMap::new(),
         }
     }

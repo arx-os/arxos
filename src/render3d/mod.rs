@@ -70,12 +70,12 @@ mod tests {
     use crate::core::spatial::{BoundingBox3D, Point3D};
 
     /// Create test building data for 3D rendering tests
-    fn create_test_building_data() -> crate::yaml::BuildingData {
+    /// Create test building for 3D rendering tests
+    fn create_test_building() -> crate::core::Building {
         use crate::core::{
             BoundingBox, Dimensions, Equipment, EquipmentHealthStatus, EquipmentStatus,
             EquipmentType, Floor, Position, Room, RoomType, SpatialProperties, Wing,
         };
-        use crate::yaml::BuildingData;
         use chrono::Utc;
         use std::collections::HashMap;
 
@@ -105,7 +105,8 @@ mod tests {
             id: "ROOM_1".to_string(),
             name: "Room 1".to_string(),
             room_type: RoomType::Office,
-            equipment: vec![equip1.clone()],
+            equipment: vec![equip1],
+            pending_equipment_ids: Vec::new(),
             spatial_properties: SpatialProperties {
                 position: Position {
                     x: 10.0,
@@ -146,6 +147,7 @@ mod tests {
             name: "East Wing".to_string(),
             rooms: vec![room1],
             equipment: vec![],
+            pending_equipment_ids: vec![],
             properties: HashMap::new(),
         };
 
@@ -169,6 +171,7 @@ mod tests {
             }),
             wings: vec![wing1],
             equipment: vec![],
+            pending_equipment_ids: vec![],
             properties: HashMap::new(),
         };
 
@@ -212,7 +215,8 @@ mod tests {
                 },
             }),
             wings: vec![],
-            equipment: vec![equip2.clone()],
+            equipment: vec![equip2],
+            pending_equipment_ids: vec![],
             properties: HashMap::new(),
         };
 
@@ -231,18 +235,19 @@ mod tests {
             properties: Default::default(),
         });
 
-        BuildingData {
-            building,
-            equipment: vec![equip1, equip2],
-        }
+        building
+    }
+
+    fn create_test_building_data() -> crate::core::Building {
+        create_test_building()
     }
 
     #[test]
     fn test_3d_renderer_creation() {
-        let building_data = create_test_building_data();
+        let building = create_test_building();
         let config = Render3DConfig::default();
 
-        let renderer = Building3DRenderer::new(building_data, config);
+        let renderer = Building3DRenderer::new(building, config);
 
         // Test default camera settings
         assert_eq!(renderer.camera.position.z, 10.0);
@@ -258,9 +263,9 @@ mod tests {
 
     #[test]
     fn test_camera_manipulation() {
-        let building_data = create_test_building_data();
+        let building = create_test_building();
         let config = Render3DConfig::default();
-        let mut renderer = Building3DRenderer::new(building_data, config);
+        let mut renderer = Building3DRenderer::new(building, config);
 
         let new_position = Point3D {
             x: 100.0,
@@ -285,9 +290,9 @@ mod tests {
 
     #[test]
     fn test_projection_manipulation() {
-        let building_data = create_test_building_data();
+        let building = create_test_building();
         let config = Render3DConfig::default();
-        let mut renderer = Building3DRenderer::new(building_data, config);
+        let mut renderer = Building3DRenderer::new(building, config);
 
         renderer.set_projection(ProjectionType::Perspective, ViewAngle::Front);
 
@@ -300,9 +305,9 @@ mod tests {
 
     #[test]
     fn test_3d_scene_rendering() {
-        let building_data = create_test_building_data();
+        let building = create_test_building();
         let config = Render3DConfig::default();
-        let renderer = Building3DRenderer::new(building_data, config);
+        let renderer = Building3DRenderer::new(building, config);
 
         let scene = renderer
             .render_3d_advanced()
@@ -318,10 +323,10 @@ mod tests {
         );
         assert_eq!(scene.rooms.len(), 1, "Should have 1 room in wing");
         assert_eq!(scene.metadata.total_floors, 2);
-        // Total equipment from floors: floor 0 has 0 floor-level, floor 1 has 1 floor-level = 1
+        // Total equipment: 1 in room + 1 floor-level = 2
         assert_eq!(
-            scene.metadata.total_equipment, 1,
-            "Metadata counts only floor-level equipment"
+            scene.metadata.total_equipment, 2,
+            "Metadata should count all equipment in the hierarchy without duplication"
         );
         assert_eq!(scene.metadata.total_rooms, 1);
     }

@@ -5,6 +5,7 @@ use crate::core::identity::ArxId; // Explicitly renamed ArxId
 use crate::hardware::DeviceState;
 use crate::blockchain::merkle::ArxMerkleTree;
 use anyhow::Result;
+use rs_merkle::Hasher;
 
 #[cfg(feature = "agent")]
 use tracing;

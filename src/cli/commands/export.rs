@@ -28,14 +28,14 @@ impl Command for ExportCommand {
                 }
 
                 let yaml_content = std::fs::read_to_string(&source_path)?;
-                let building_data = BuildingYamlSerializer::deserialize(&yaml_content)?;
+                let building = BuildingYamlSerializer::deserialize_building(&yaml_content)?;
 
-                let output_file = self.output.clone().unwrap_or_else(|| format!("{}.ifc", building_data.building.name));
+                let output_file = self.output.clone().unwrap_or_else(|| format!("{}.ifc", building.name));
                 let output_path = repo_root.join(&output_file);
                 
                 PathSafety::validate_path_for_write(&output_path).map_err(|e| anyhow!(e))?;
 
-                let exporter = IFCExporter::new(building_data);
+                let exporter = IFCExporter::new(building);
                 exporter.export(&output_path).map_err(|e| anyhow!(e))?;
 
                 println!("✅ Export successful: {}", output_path.display());

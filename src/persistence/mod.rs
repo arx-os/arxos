@@ -31,14 +31,9 @@ pub type PersistenceResult<T> = Result<T, PersistenceError>;
 
 pub use manager::PersistenceManager;
 
-/// Load building data from the current directory
-///
-/// Searches the current directory for a building YAML file and loads it.
-/// Returns the first valid building file found.
-pub fn load_building_data_from_dir() -> Result<crate::yaml::BuildingData, Box<dyn std::error::Error>> {
+pub fn load_building_data_from_dir() -> Result<crate::core::Building, Box<dyn std::error::Error>> {
     use std::fs;
     
-
     let current_dir = std::env::current_dir()?;
 
     // Look for YAML files in the current directory
@@ -54,8 +49,8 @@ pub fn load_building_data_from_dir() -> Result<crate::yaml::BuildingData, Box<dy
                 if extension == "yaml" || extension == "yml" {
                     // Try to load it as building data
                     if let Ok(contents) = fs::read_to_string(&path) {
-                        if let Ok(building_data) = serde_yaml::from_str::<crate::yaml::BuildingData>(&contents) {
-                            return Ok(building_data);
+                        if let Ok(building) = crate::yaml::BuildingYamlSerializer::deserialize_building(&contents) {
+                            return Ok(building);
                         }
                     }
                 }

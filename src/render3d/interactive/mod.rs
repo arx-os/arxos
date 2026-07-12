@@ -29,7 +29,7 @@ use crate::render3d::{
     Scene3D, ViewMode,
 };
 use crate::core::spatial::Point3D;
-use crate::yaml::BuildingData;
+use crate::core::Building;
 use crossterm::event::KeyCode;
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 use log::info;
@@ -97,10 +97,10 @@ pub struct InteractiveConfig {
 impl InteractiveRenderer {
     /// Create a new interactive renderer
     pub fn new(
-        building_data: BuildingData,
+        building: Building,
         config: Render3DConfig,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        let renderer = Building3DRenderer::new(building_data, config);
+        let renderer = Building3DRenderer::new(building, config);
         let state = InteractiveState::new();
         let event_handler = EventHandler::new();
         let effects_engine = VisualEffectsEngine::new();
@@ -137,11 +137,11 @@ impl InteractiveRenderer {
 
     /// Create interactive renderer with custom configuration
     pub fn with_config(
-        building_data: BuildingData,
+        building: Building,
         render_config: Render3DConfig,
         interactive_config: InteractiveConfig,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        let renderer = Building3DRenderer::new(building_data, render_config);
+        let renderer = Building3DRenderer::new(building, render_config);
         let state = InteractiveState::new();
         let event_handler = EventHandler::new();
         let effects_engine = VisualEffectsEngine::new();
@@ -272,7 +272,7 @@ impl InteractiveRenderer {
 
     /// Handle specific actions (delegates to handlers module)
     fn handle_action(&mut self, action: crate::render3d::events::Action) -> Result<(), Box<dyn std::error::Error>> {
-        handlers::handle_action(&mut self.state, action, &self.renderer.building_data)
+        handlers::handle_action(&mut self.state, action, &self.renderer.building)
     }
 
     /// Handle terminal resize (delegates to handlers module)
@@ -537,15 +537,11 @@ impl InteractiveRenderer {
             if !self.state.selected_equipment.is_empty() {
                 overlay.push_str("║ Equipment:\n");
                 for equipment_id in &self.state.selected_equipment {
-                    for floor in &self.renderer.building_data.building.floors {
-                        if let Some(equipment) =
-                            floor.equipment.iter().find(|e| e.id == *equipment_id)
-                        {
-                            overlay.push_str(&format!(
-                                "║   • {} ({:?})\n",
-                                equipment.name, equipment.status
-                            ));
-                        }
+                    if let Some(equipment) = self.renderer.building.find_equipment(equipment_id) {
+                        overlay.push_str(&format!(
+                            "║   • {} ({:?})\n",
+                            equipment.name, equipment.status
+                        ));
                     }
                 }
             } else {
@@ -736,43 +732,74 @@ mod tests {
     use super::*;
     use crate::render3d::{ProjectionType, ViewAngle};
     use crate::yaml::BuildingData;
+    use crate::core::{Building, Floor, Room, RoomType, Wing};
     use chrono::Utc;
 
-    fn create_test_building_data() -> BuildingData {
-        use crate::core::Floor;
+    fn create_test_building() -> Building {
+        let mut building = Building::default();
+        building.name = "Test Building".to_string();
 
-        let mut building = crate::core::Building::new("Test Building".to_string(), "".to_string());
-        building.id = "test".to_string();
-        building.add_floor(Floor {
-            id: "floor-1".to_string(),
-            name: "Floor 1".to_string(),
-            level: 0,
-            elevation: Some(0.0),
-            bounding_box: None,
-            wings: vec![],
-            equipment: vec![],
-            properties: std::collections::HashMap::new(),
-        });
-        building.metadata = Some(crate::core::BuildingMetadata {
-            source_file: None,
-            parser_version: "1.0".to_string(),
-            total_entities: 1,
-            spatial_entities: 1,
-            coordinate_system: "local".to_string(),
-            units: "meters".to_string(),
-            tags: vec![],
-            properties: Default::default(),
-        });
+        let mut floor = Floor::new("Floor 1".to_string(), 0);
+        floor.elevation = Some(0.0);
 
-        BuildingData {
-            building,
-            equipment: vec![],
-        }
+        let mut wing = Wing::new("Wing A".to_string());
+
+        let mut room = Room::new("Room 101".to_string(), RoomType::Office);
+        room.spatial_properties = crate::core::SpatialProperties {
+            position: crate::core::Position {
+                x: 10.0,
+                y: 10.0,
+                z: 0.0,
+                coordinate_system: "building_local".to_string(),
+            },
+            dimensions: crate::core::Dimensions {
+                width: 10.0,
+                height: 3.0,
+                depth: 10.0,
+            },
+            bounding_box: crate::core::BoundingBox {
+                min: crate::core::Position {
+                    x: 5.0,
+                    y: 5.0,
+                    z: 0.0,
+                    coordinate_system: "building_local".to_string(),
+                },
+                max: crate::core::Position {
+                    x: 15.0,
+                    y: 15.0,
+                    z: 3.0,
+                    coordinate_system: "building_local".to_string(),
+                },
+            },
+            mesh: None,
+            coordinate_system: "building_local".to_string(),
+        };
+
+        let mut equipment = crate::core::Equipment::new(
+            "AC-1".to_string(),
+            "US/HQ/Main/test_facility/Floor 1/Wing A/Room 101/AC-1".to_string(),
+            crate::core::EquipmentType::HVAC,
+        );
+        equipment.position = crate::core::Position {
+            x: 12.0,
+            y: 12.0,
+            z: 2.0,
+            coordinate_system: "building_local".to_string(),
+        };
+        equipment.status = crate::core::EquipmentStatus::Active;
+        equipment.health_status = Some(crate::core::EquipmentHealthStatus::Healthy);
+
+        room.equipment.push(equipment);
+        wing.rooms.push(room);
+        floor.wings.push(wing);
+        building.add_floor(floor);
+
+        building
     }
 
     #[test]
     fn test_interactive_renderer_creation() {
-        let building_data = create_test_building_data();
+        let building = create_test_building();
         let config = Render3DConfig {
             show_status: true,
             show_rooms: true,
@@ -785,7 +812,7 @@ mod tests {
             max_height: 40,
         };
 
-        let renderer = InteractiveRenderer::new(building_data, config);
+        let renderer = InteractiveRenderer::new(building, config);
         assert!(renderer.is_ok());
     }
 
@@ -801,7 +828,7 @@ mod tests {
 
     #[test]
     fn test_state_access() {
-        let building_data = create_test_building_data();
+        let building = create_test_building();
         let config = Render3DConfig {
             show_status: true,
             show_rooms: true,
@@ -814,7 +841,7 @@ mod tests {
             max_height: 40,
         };
 
-        let mut renderer = InteractiveRenderer::new(building_data, config).unwrap();
+        let mut renderer = InteractiveRenderer::new(building, config).unwrap();
 
         // Test state access
         assert!(!renderer.state().is_active);

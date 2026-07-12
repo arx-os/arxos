@@ -50,7 +50,7 @@ pub fn parse_ifc_data(content: &str) -> Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn render_building_ascii(building_json: &str, canvas_width: u32, canvas_height: u32) -> String {
     use crate::render3d::ascii::AsciiRenderer;
-    use crate::render3d::types::Scene3D;
+    use crate::render3d::Scene3D;
     use crate::core::spatial::{BoundingBox3D, Point3D};
     use std::sync::Arc;
 
@@ -108,8 +108,8 @@ pub fn render_building_ascii_simple(building_json: &str, canvas_width: u32, canv
 ///
 /// Extracts floor slabs, rooms, and equipment from the building hierarchy and
 /// builds the lightweight scene representation used by `AsciiRenderer`.
-fn building_to_scene3d(building: &crate::core::Building) -> crate::render3d::types::Scene3D {
-    use crate::render3d::types::{
+fn building_to_scene3d(building: &crate::core::Building) -> crate::render3d::Scene3D {
+    use crate::render3d::{
         Equipment3D, Floor3D, Room3D, Scene3D, SceneMetadata,
     };
     use crate::core::spatial::{BoundingBox3D, Point3D};

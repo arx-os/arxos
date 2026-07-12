@@ -27,7 +27,6 @@ impl Command for ImportCommand {
         }
 
         let processor = IFCProcessor::new();
-        let serializer = BuildingYamlSerializer::new();
         let repo_root = Path::new(".");
 
         // 1. Extract hierarchy using native parser
@@ -38,8 +37,8 @@ impl Command for ImportCommand {
             }
         };
 
-        let mut building_data = result.data;
-        building_data.building.metadata = Some(BuildingMetadata {
+        let mut building = result.building;
+        building.metadata = Some(BuildingMetadata {
             source_file: Some(self.ifc_file.clone()),
             parser_version: env!("CARGO_PKG_VERSION").to_string(),
             total_entities: result.stats.total_entities,
@@ -52,20 +51,20 @@ impl Command for ImportCommand {
 
         if self.dry_run {
             println!("✅ Parsed successfully:");
-            println!("  Building: {}", building_data.building.name);
-            println!("  Floors: {}", building_data.building.floors.len());
+            println!("  Building: {}", building.name);
+            println!("  Floors: {}", building.floors.len());
             println!("  Total IFC Entities: {}", result.stats.total_entities);
             println!("  Spatial Entities: {}", result.stats.spatial_entities);
             return Ok(());
         }
 
         // 2. Write to YAML
-        let yaml_filename = format!("{}.yaml", building_data.building.name.replace(" ", "_").to_lowercase());
+        let yaml_filename = format!("{}.yaml", building.name.replace(" ", "_").to_lowercase());
         let yaml_path = repo_root.join(&yaml_filename);
         
         PathSafety::validate_path_for_write(&yaml_path).map_err(|e| anyhow!(e))?;
         
-        let yaml_content = serializer.to_yaml(&building_data)
+        let yaml_content = BuildingYamlSerializer::serialize_building(&building)
             .map_err(|e| anyhow!("Failed to serialize YAML: {}", e))?;
 
         std::fs::write(&yaml_path, yaml_content)

@@ -5,7 +5,7 @@
 
 use crate::render3d::types::Room3D;
 use crate::core::spatial::{BoundingBox3D, Point3D};
-use crate::yaml::BuildingData;
+use crate::core::Building;
 use std::sync::Arc;
 
 /// Extract 3D room representations from building data
@@ -26,10 +26,10 @@ use std::sync::Arc;
 /// - Position: Center point of the room
 /// - Bounding box: 3D extents of the room
 /// - Equipment: References to equipment IDs within the room
-pub fn extract_rooms_3d(building_data: &BuildingData) -> Vec<Room3D> {
+pub fn extract_rooms_3d(building: &Building) -> Vec<Room3D> {
     let mut rooms_3d = Vec::new();
 
-    for floor in &building_data.building.floors {
+    for floor in &building.floors {
         for wing in &floor.wings {
             for room in &wing.rooms {
                 rooms_3d.push(Room3D {
@@ -117,12 +117,7 @@ mod tests {
         floor.wings.push(wing);
         building.add_floor(floor);
 
-        let building_data = crate::yaml::BuildingData {
-            building,
-            equipment: Vec::new(),
-        };
-
-        let rooms = extract_rooms_3d(&building_data);
+        let rooms = extract_rooms_3d(&building);
 
         assert_eq!(rooms.len(), 1);
         assert_eq!(*rooms[0].name, "Room 101");
@@ -174,12 +169,7 @@ mod tests {
         floor.wings.push(wing);
         building.add_floor(floor);
 
-        let building_data = crate::yaml::BuildingData {
-            building,
-            equipment: Vec::new(),
-        };
-
-        let rooms = extract_rooms_3d(&building_data);
+        let rooms = extract_rooms_3d(&building);
 
         assert_eq!(rooms[0].equipment.len(), 2);
         assert_eq!(*rooms[0].equipment[0], eq1_id);
@@ -199,12 +189,7 @@ mod tests {
         floor.wings.push(wing);
         building.add_floor(floor);
 
-        let building_data = crate::yaml::BuildingData {
-            building,
-            equipment: Vec::new(),
-        };
-
-        let rooms = extract_rooms_3d(&building_data);
+        let rooms = extract_rooms_3d(&building);
 
         assert_eq!(rooms[0].bounding_box.min.x, 5.0);
         assert_eq!(rooms[0].bounding_box.min.y, 5.0);

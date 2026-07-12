@@ -5,8 +5,7 @@
 
 use super::super::types::{CellType, CellValue, ColumnDefinition, ValidationRule};
 use super::trait_def::SpreadsheetDataSource;
-use crate::core::{Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType};
-use crate::yaml::BuildingData;
+use crate::core::{Building, Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 
@@ -20,7 +19,7 @@ use std::error::Error;
 /// - Git integration for saves
 pub struct EquipmentDataSource {
     equipment: Vec<Equipment>,
-    building_data: BuildingData,
+    building_data: Building,
     building_name: String,
     modified_rows: HashSet<usize>,
 }
@@ -33,14 +32,14 @@ impl EquipmentDataSource {
     ///
     /// # Arguments
     ///
-    /// * `building_data` - The building data loaded from YAML
+    /// * `building_data` - The building loaded from YAML
     /// * `building_name` - Name of the building for persistence
-    pub fn new(building_data: BuildingData, building_name: String) -> Self {
-        // Collect all equipment from all floors
-        let mut equipment = Vec::new();
-        for floor in &building_data.building.floors {
-            equipment.extend(floor.equipment.clone());
-        }
+    pub fn new(building_data: Building, building_name: String) -> Self {
+        // Collect all equipment from all floors using Building inherent query
+        let equipment = building_data.get_all_equipment()
+            .into_iter()
+            .cloned()
+            .collect();
 
         Self {
             equipment,
@@ -72,6 +71,42 @@ impl EquipmentDataSource {
             "OutOfOrder".to_string(),
             "Unknown".to_string(),
         ]
+    }
+
+    fn get_equipment_address(&self, eq: &Equipment) -> String {
+        for floor in &self.building_data.floors {
+            if floor.equipment.iter().any(|e| e.id == eq.id) {
+                return format!(
+                    "/usa/ny/brooklyn/{}/floor-{}/{}",
+                    self.building_name.to_lowercase().replace(" ", "-"),
+                    floor.level,
+                    eq.name.to_lowercase().replace(" ", "-")
+                );
+            }
+            for wing in &floor.wings {
+                if wing.equipment.iter().any(|e| e.id == eq.id) {
+                    return format!(
+                        "/usa/ny/brooklyn/{}/floor-{}/wing-{}/{}",
+                        self.building_name.to_lowercase().replace(" ", "-"),
+                        floor.level,
+                        wing.name.to_lowercase().replace(" ", "-"),
+                        eq.name.to_lowercase().replace(" ", "-")
+                    );
+                }
+                for room in &wing.rooms {
+                    if room.equipment.iter().any(|e| e.id == eq.id) {
+                        return format!(
+                            "/usa/ny/brooklyn/{}/floor-{}/{}/{}",
+                            self.building_name.to_lowercase().replace(" ", "-"),
+                            floor.level,
+                            room.name.to_lowercase().replace(" ", "-"),
+                            eq.name.to_lowercase().replace(" ", "-")
+                        );
+                    }
+                }
+            }
+        }
+        "No address".to_string()
     }
 }
 
@@ -143,11 +178,7 @@ impl SpreadsheetDataSource for EquipmentDataSource {
 
         match column.id.as_str() {
             "equipment.address" => {
-                if let Some(ref addr) = equipment.address {
-                    Ok(CellValue::Text(addr.path.clone()))
-                } else {
-                    Ok(CellValue::Text("No address".to_string()))
-                }
+                Ok(CellValue::Text(self.get_equipment_address(equipment)))
             }
             "equipment.id" => Ok(CellValue::UUID(equipment.id.clone())),
             "equipment.name" => Ok(CellValue::Text(equipment.name.clone())),
@@ -273,13 +304,11 @@ impl SpreadsheetDataSource for EquipmentDataSource {
             .map(|(_, eq)| (eq.id.clone(), eq))
             .collect();
 
-        // Update equipment in building data by matching IDs
-        for floor in building_data.building.floors.iter_mut() {
-            for equipment in floor.equipment.iter_mut() {
-                if let Some(modified_eq) = modified_equipment.get(&equipment.id) {
-                    *equipment = (*modified_eq).clone();
-                    modified_count += 1;
-                }
+        // Update equipment in building data by matching IDs using find_equipment_mut
+        for (id, modified_eq) in modified_equipment {
+            if let Some(equipment) = building_data.find_equipment_mut(&id) {
+                *equipment = (*modified_eq).clone();
+                modified_count += 1;
             }
         }
 
@@ -333,11 +362,10 @@ impl SpreadsheetDataSource for EquipmentDataSource {
         self.building_data = building_data.clone();
 
         // Rebuild equipment list
-        let mut equipment = Vec::new();
-        for floor in &self.building_data.building.floors {
-            equipment.extend(floor.equipment.clone());
-        }
-        self.equipment = equipment;
+        self.equipment = self.building_data.get_all_equipment()
+            .into_iter()
+            .cloned()
+            .collect();
 
         // Clear modified rows
         self.modified_rows.clear();

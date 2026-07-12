@@ -5,7 +5,6 @@ use arxos::ifc::parser::registry::EntityRegistry;
 use arxos::ifc::parser::geometry::{GeometryResolver, Transform3D};
 use arxos::ifc::parser::mesh::MeshResolver;
 use arxos::export::ifc::IFCExporter;
-use arxos::yaml::BuildingData;
 use nalgebra::Matrix4;
 use tempfile::NamedTempFile;
 use anyhow::Result;
@@ -49,9 +48,8 @@ fn test_ifc_export_with_properties() -> Result<()> {
     floor.add_wing(wing);
     building.add_floor(floor);
 
-    let data = BuildingData { building, equipment: vec![] };
     let file = NamedTempFile::new()?;
-    let exporter = IFCExporter::new(data);
+    let exporter = IFCExporter::new(building);
     exporter.export(file.path())?;
 
     let content = std::fs::read_to_string(file.path())?;

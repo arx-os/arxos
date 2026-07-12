@@ -524,7 +524,6 @@ impl Command for EquipmentCommand {
                         {
                             equipment.room_id = Some(room_ref.id.clone());
                             room_ref.add_equipment(equipment.clone());
-                            floor_ref.equipment.push(equipment.clone());
                             added = true;
                             break;
                         }
@@ -814,7 +813,12 @@ mod tests {
         let yaml = BuildingYamlSerializer::serialize(&data).expect("serialize building");
         fs::write(dir.join("building.yaml"), yaml).expect("write building.yaml");
 
-        let original_dir = std::env::current_dir().expect("current_dir");
+        let original_dir = std::env::current_dir().unwrap_or_else(|_| {
+            let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR env var");
+            let path = PathBuf::from(manifest_dir);
+            let _ = std::env::set_current_dir(&path);
+            path
+        });
         std::env::set_current_dir(dir).expect("set_current_dir");
 
         let cmd = RoomCommand {
@@ -833,10 +837,10 @@ mod tests {
         assert_eq!(cmd.name(), "room");
         assert!(cmd.execute().is_ok());
 
-        let data = crate::persistence::load_building_data_from_dir().expect("load building data");
-        assert_eq!(data.building.floors.len(), 1);
-        assert_eq!(data.building.floors[0].wings.len(), 1);
-        assert_eq!(data.building.floors[0].wings[0].rooms.len(), 1);
+        let building = crate::persistence::load_building_data_from_dir().expect("load building data");
+        assert_eq!(building.floors.len(), 1);
+        assert_eq!(building.floors[0].wings.len(), 1);
+        assert_eq!(building.floors[0].wings[0].rooms.len(), 1);
 
         std::env::set_current_dir(&original_dir).expect("restore current_dir");
     }
@@ -848,14 +852,15 @@ mod tests {
         let dir = tmp.path();
 
         let building = crate::core::Building::new("My Building".to_string(), "/building".to_string());
-        let data = crate::yaml::BuildingData {
-            building,
-            equipment: Vec::new(),
-        };
-        let yaml = BuildingYamlSerializer::serialize(&data).expect("serialize building");
+        let yaml = BuildingYamlSerializer::serialize_building(&building).expect("serialize building");
         fs::write(dir.join("building.yaml"), yaml).expect("write building.yaml");
 
-        let original_dir = std::env::current_dir().expect("current_dir");
+        let original_dir = std::env::current_dir().unwrap_or_else(|_| {
+            let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR env var");
+            let path = PathBuf::from(manifest_dir);
+            let _ = std::env::set_current_dir(&path);
+            path
+        });
         std::env::set_current_dir(dir).expect("set_current_dir");
 
         let room_cmd = RoomCommand {
@@ -887,8 +892,8 @@ mod tests {
         assert_eq!(cmd.name(), "equipment");
         assert!(cmd.execute().is_ok());
 
-        let data = crate::persistence::load_building_data_from_dir().expect("load building data");
-        let eq_count = data.building.floors[0].equipment.len();
+        let building = crate::persistence::load_building_data_from_dir().expect("load building data");
+        let eq_count = building.get_all_equipment().len();
         assert_eq!(eq_count, 1);
 
         std::env::set_current_dir(&original_dir).expect("restore current_dir");

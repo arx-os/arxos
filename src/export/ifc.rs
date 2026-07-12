@@ -7,7 +7,6 @@ use crate::core::{Building, Floor, Room, Equipment};
 // Wait, I can't leave empty lines. Just remove the line.
 
 use crate::core::spatial::mesh::Mesh;
-use crate::yaml::BuildingData;
 use anyhow::Result;
 use chrono::Utc;
 
@@ -120,12 +119,12 @@ impl<W: Write> StepWriter<W> {
 }
 
 pub struct IFCExporter {
-    data: BuildingData,
+    building: Building,
 }
 
 impl IFCExporter {
-    pub fn new(data: BuildingData) -> Self {
-        Self { data }
+    pub fn new(building: Building) -> Self {
+        Self { building }
     }
 
     pub fn export(&self, output_path: &Path) -> Result<()> {
@@ -160,12 +159,12 @@ impl IFCExporter {
         let mut equipment_paths = Vec::new();
         let mut rooms_paths = Vec::new();
 
-        for floor in &self.data.building.floors {
+        for floor in &self.building.floors {
              for wing in &floor.wings {
                  for room in &wing.rooms {
                      // Construct room path - simplified for now
                      // In a real scenario, this should match the canonical path structure used elsewhere
-                     let room_path = format!("{}/{}/{}", self.data.building.name, floor.name, room.name);
+                     let room_path = format!("{}/{}/{}", self.building.name, floor.name, room.name);
                      rooms_paths.push(room_path.clone());
                      
                      for eq in &room.equipment {
@@ -181,13 +180,13 @@ impl IFCExporter {
 
     fn export_content<W: Write>(&self, writer: &mut StepWriter<W>, owner_history_id: usize) -> Result<()> {
         // 2. Create Project
-        let project_id = self.create_project(writer, &self.data.building, owner_history_id)?;
+        let project_id = self.create_project(writer, &self.building, owner_history_id)?;
 
         // 3. Create Site
-        let site_id = self.create_site(writer, &self.data.building, owner_history_id)?;
+        let site_id = self.create_site(writer, &self.building, owner_history_id)?;
 
         // 4. Create Building
-        let building_id = self.create_building(writer, &self.data.building, owner_history_id)?;
+        let building_id = self.create_building(writer, &self.building, owner_history_id)?;
 
         // 5. Link Project -> Site -> Building
         self.create_aggregation(writer, project_id, vec![site_id], "ProjectToSite", owner_history_id)?;
@@ -195,38 +194,84 @@ impl IFCExporter {
 
         // 6. Process Floors (BuildingStoreys)
         let mut floor_ids = Vec::new();
-        for floor in &self.data.building.floors {
+        for floor in &self.building.floors {
             let floor_id = self.create_building_storey(writer, floor, owner_history_id)?;
             floor_ids.push(floor_id);
 
-            // 7. Process Rooms (Spaces)
+            // 7. Process Wings and Rooms
             let mut room_ids = Vec::new();
-            
-            // Collect all rooms from all wings
-            let all_rooms: Vec<&Room> = floor.wings.iter().flat_map(|w| w.rooms.iter()).collect();
-            
-            for room in all_rooms {
-                let room_id = self.create_space(writer, room, floor.elevation.unwrap_or(0.0), owner_history_id)?;
-                room_ids.push(room_id);
-                
-                // --- ADD PSETS FOR ROOM ---
-                self.create_property_set(writer, owner_history_id, room_id, "Pset_ArxRoomProperties", &room.properties)?;
 
-                // 8. Process Equipment in Room
-                if !room.equipment.is_empty() {
-                    let mut equipment_ids = Vec::new();
-                    for equipment in &room.equipment {
-                         let eq_id = self.create_equipment(writer, equipment, owner_history_id)?;
-                         equipment_ids.push(eq_id);
+            for wing in &floor.wings {
+                let mut zone_entity_ids = Vec::new();
 
-                         // --- ADD PSETS FOR EQUIPMENT ---
-                         self.create_property_set(writer, owner_history_id, eq_id, "Pset_ArxEquipmentProperties", &equipment.properties)?;
-                    }
-                    // Link Room -> Equipment (Spatial Containment)
-                    if !equipment_ids.is_empty() {
+                for room in &wing.rooms {
+                    let room_id = self.create_space(writer, room, floor.elevation.unwrap_or(0.0), owner_history_id)?;
+                    room_ids.push(room_id);
+                    zone_entity_ids.push(room_id);
+
+                    // --- ADD PSETS FOR ROOM ---
+                    let mut room_props = room.properties.clone();
+                    room_props.insert("ArxWing".to_string(), wing.name.clone());
+                    self.create_property_set(writer, owner_history_id, room_id, "Pset_ArxRoomProperties", &room_props)?;
+
+                    // Process Equipment in Room
+                    if !room.equipment.is_empty() {
+                        let mut equipment_ids = Vec::new();
+                        for equipment in &room.equipment {
+                            let eq_id = self.create_equipment(writer, equipment, owner_history_id)?;
+                            equipment_ids.push(eq_id);
+
+                            self.create_property_set(writer, owner_history_id, eq_id, "Pset_ArxEquipmentProperties", &equipment.properties)?;
+                        }
                         self.create_containment(writer, room_id, equipment_ids, "RoomToEquipment", owner_history_id)?;
                     }
                 }
+
+                // Process Wing-level Equipment
+                if !wing.equipment.is_empty() {
+                    let mut wing_equipment_ids = Vec::new();
+                    for equipment in &wing.equipment {
+                        let eq_id = self.create_equipment(writer, equipment, owner_history_id)?;
+                        wing_equipment_ids.push(eq_id);
+                        zone_entity_ids.push(eq_id);
+
+                        let mut eq_props = equipment.properties.clone();
+                        eq_props.insert("ArxWing".to_string(), wing.name.clone());
+                        self.create_property_set(writer, owner_history_id, eq_id, "Pset_ArxEquipmentProperties", &eq_props)?;
+                    }
+                    self.create_containment(writer, floor_id, wing_equipment_ids, "FloorToWingEquipment", owner_history_id)?;
+                }
+
+                // Create standard IFCZONE for Wing grouping
+                if !zone_entity_ids.is_empty() {
+                    let zone_id = writer.write_entity(format!(
+                        "IFCZONE('{}',#{},'{}',$,$)",
+                        self.generate_guid(),
+                        owner_history_id,
+                        wing.name
+                    ))?;
+
+                    let related_refs = zone_entity_ids.iter().map(|id| format!("#{}", id)).collect::<Vec<_>>().join(",");
+                    writer.write_entity(format!(
+                        "IFCRELASSIGNSTOGROUP('{}',#{},'WingAssignment',$,({}),$,#{})",
+                        self.generate_guid(),
+                        owner_history_id,
+                        related_refs,
+                        zone_id
+                    ))?;
+                }
+            }
+
+            // Process Floor-level Equipment
+            if !floor.equipment.is_empty() {
+                let mut floor_equipment_ids = Vec::new();
+                for equipment in &floor.equipment {
+                    let eq_id = self.create_equipment(writer, equipment, owner_history_id)?;
+                    floor_equipment_ids.push(eq_id);
+
+                    self.create_property_set(writer, owner_history_id, eq_id, "Pset_ArxEquipmentProperties", &equipment.properties)?;
+                }
+                self.create_containment(writer, floor_id, floor_equipment_ids, "FloorToEquipment", owner_history_id)?;
             }
 
             // Link Floor -> Rooms (Aggregation)
@@ -388,9 +433,15 @@ impl IFCExporter {
 
         let placement = self.create_local_placement(writer, None, x, y, z)?;
         
-        // Map EquipmentType to IfcDistributionElement subtype or generic
+        // Map EquipmentType to specific IfcDistributionElement subtypes or standard classes
         let ifc_entity_type = match equipment.equipment_type {
             crate::core::EquipmentType::Furniture => "IFCFURNITURE",
+            crate::core::EquipmentType::AV => "IFCAUDIOVISUALAPPLIANCE",
+            crate::core::EquipmentType::Electrical => "IFCSWITCHINGDEVICE",
+            crate::core::EquipmentType::HVAC => "IFCFLOWTERMINAL",
+            crate::core::EquipmentType::Safety => "IFCFIREALARM",
+            crate::core::EquipmentType::Network => "IFCCOMMUNICATIONSAPPLIANCE",
+            crate::core::EquipmentType::Plumbing => "IFCFLOWTERMINAL", // standard fallback for plumbing
             _ => "IFCDISTRIBUTIONELEMENT", // Generic fallback
         };
 
@@ -423,7 +474,7 @@ impl IFCExporter {
     fn create_aggregation<W: Write>(&self, writer: &mut StepWriter<W>, parent_id: usize, child_ids: Vec<usize>, name: &str, owner_hist: usize) -> Result<usize> {
         let children_refs = child_ids.iter().map(|id| format!("#{}", id)).collect::<Vec<_>>().join(",");
         writer.write_entity(format!(
-            "IFCRELAGGREGATES('{}',#{},'{}',$,#{},(#{}))",
+            "IFCRELAGGREGATES('{}',#{},'{}',$,#{},({}))",
             self.generate_guid(),
             owner_hist,
             name,
@@ -435,7 +486,7 @@ impl IFCExporter {
     fn create_containment<W: Write>(&self, writer: &mut StepWriter<W>, container_id: usize, contained_ids: Vec<usize>, name: &str, owner_hist: usize) -> Result<usize> {
         let contained_refs = contained_ids.iter().map(|id| format!("#{}", id)).collect::<Vec<_>>().join(",");
         writer.write_entity(format!(
-            "IFCRELCONTAINEDINSPATIALSTRUCTURE('{}',#{},'{}',$,(#{}),#{})",
+            "IFCRELCONTAINEDINSPATIALSTRUCTURE('{}',#{},'{}',$,({}),#{})",
             self.generate_guid(),
             owner_hist,
             name,
@@ -469,7 +520,7 @@ impl IFCExporter {
 
         let prop_refs = prop_ids.iter().map(|id| format!("#{}", id)).collect::<Vec<_>>().join(",");
         let pset_id = writer.write_entity(format!(
-            "IFCPROPERTYSET('{}',#{},'{}',$,(#{}))",
+            "IFCPROPERTYSET('{}',#{},'{}',$,({}))",
             self.generate_guid(),
             owner_hist,
             name,

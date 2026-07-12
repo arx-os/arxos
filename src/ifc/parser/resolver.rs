@@ -6,7 +6,6 @@
 use std::collections::HashMap;
 use crate::core::domain::ArxAddress;
 use crate::core::{Building, Equipment, EquipmentType, Floor, Position, Room, RoomType, Wing};
-use crate::yaml::BuildingData;
 use super::lexer::{Param, RawEntity};
 use super::registry::EntityRegistry;
 use super::geometry::GeometryResolver;
@@ -20,6 +19,7 @@ pub struct IfcResolver<'a> {
     country: String,
     state: String,
     city: String,
+    resolved_rooms: std::collections::HashSet<u64>,
 }
 
 impl<'a> IfcResolver<'a> {
@@ -30,6 +30,7 @@ impl<'a> IfcResolver<'a> {
             country: "Global".to_string(),
             state: "HQ".to_string(),
             city: "Main".to_string(),
+            resolved_rooms: std::collections::HashSet::new(),
         }
     }
 
@@ -41,8 +42,8 @@ impl<'a> IfcResolver<'a> {
         self
     }
 
-    /// Resolve the entire building hierarchy into BuildingData.
-    pub fn resolve_all(&mut self) -> Result<BuildingData> {
+    /// Resolve the entire building hierarchy into a rich Building.
+    pub fn resolve_all(&mut self) -> Result<Building> {
         let mut building = Building::default();
         let mut equipment_list = Vec::new();
 
@@ -65,10 +66,75 @@ impl<'a> IfcResolver<'a> {
             equipment_list.append(&mut anchors);
         }
 
-        Ok(BuildingData {
-            building,
-            equipment: equipment_list,
-        })
+        // Rehydrate the building hierarchy with the resolved equipment
+        for mut eq in equipment_list {
+            let mut attached = false;
+            if let Some(ref addr) = eq.address {
+                let parts = addr.parts().unwrap_or_default();
+                let floor_name = parts.4;
+                let room_name = parts.5;
+
+                if !room_name.is_empty() {
+                    // Try to find the room and attach it
+                    for floor in &mut building.floors {
+                        for wing in &mut floor.wings {
+                            if let Some(room) = wing.rooms.iter_mut().find(|r| {
+                                let sanitized_r_name = r.name.to_lowercase().replace(' ', "-").replace('_', "-");
+                                r.name == room_name || sanitized_r_name == room_name
+                            }) {
+                                eq.set_room(room.id.clone());
+                                room.equipment.push(eq.clone());
+                                attached = true;
+                                break;
+                            }
+                        }
+                        if attached {
+                            break;
+                        }
+                    }
+                }
+
+                if !attached && !floor_name.is_empty() {
+                    // Try to find the floor
+                    if let Some(floor) = building.floors.iter_mut().find(|f| {
+                        let sanitized_f_name = f.name.to_lowercase().replace(' ', "-").replace('_', "-");
+                        f.name == floor_name || sanitized_f_name == floor_name
+                    }) {
+                        let wing_opt = eq.properties.get("Pset_ArxEquipmentProperties:ArxWing")
+                            .or_else(|| eq.properties.get("Pset_ArxEquipmentProperties:Wing"))
+                            .cloned();
+
+                        if let Some(w_name) = wing_opt {
+                            // Find or create wing on that floor
+                            if let Some(wing) = floor.wings.iter_mut().find(|w| {
+                                let sanitized_w_name = w.name.to_lowercase().replace(' ', "-").replace('_', "-");
+                                w.name == w_name || sanitized_w_name == w_name
+                            }) {
+                                wing.equipment.push(eq.clone());
+                                attached = true;
+                            } else {
+                                let mut wing = Wing::new(w_name);
+                                wing.equipment.push(eq.clone());
+                                floor.wings.push(wing);
+                                attached = true;
+                            }
+                        } else {
+                            floor.equipment.push(eq.clone());
+                            attached = true;
+                        }
+                    }
+                }
+            }
+
+            if !attached {
+                // Fallback: attach to first floor
+                if let Some(floor) = building.floors.first_mut() {
+                    floor.equipment.push(eq);
+                }
+            }
+        }
+
+        Ok(building)
     }
 
     // --- Traversal Helpers ---
@@ -84,7 +150,7 @@ impl<'a> IfcResolver<'a> {
 
     fn resolve_building(&mut self, id: u64) -> Result<Building> {
         let raw = self.registry.get_raw(id).ok_or_else(|| anyhow!("Building entity #{} not found", id))?;
-        let name = self.extract_string_param(raw, 2).unwrap_or_else(|| "Unknown Building".to_string());
+        let name = self.extract_entity_name(raw).unwrap_or_else(|| "Unknown Building".to_string());
         
         // Generate ArxAddress for Building
         let addr = ArxAddress::new(&self.country, &self.state, &self.city, &name, "", "", "");
@@ -104,12 +170,32 @@ impl<'a> IfcResolver<'a> {
             building.floors.push(self.resolve_floor(floor_id, id)?);
         }
 
+        // --- FALLBACK FOR UNRESOLVED SPACES (ROOMS) ---
+        // Resolve any IFCSPACE that was not yet resolved under a floor, and attach to the first floor
+        let all_spaces: Vec<u64> = self.registry.get_by_class("IFCSPACE").to_vec();
+        for space_id in all_spaces {
+            if !self.resolved_rooms.contains(&space_id) {
+                if let Some(first_floor) = building.floors.first_mut() {
+                    // Try to resolve room. Pass floor ID if first_floor was resolved with a STEP ID, else parent building ID
+                    let room = self.resolve_room(space_id, id)?;
+                    // Attach to first floor's default ("Main") wing
+                    if let Some(wing) = first_floor.wings.iter_mut().find(|w| w.name == "Main") {
+                        wing.rooms.push(room);
+                    } else {
+                        let mut wing = Wing::new("Main".to_string());
+                        wing.rooms.push(room);
+                        first_floor.wings.push(wing);
+                    }
+                }
+            }
+        }
+
         Ok(building)
     }
 
     fn resolve_floor(&mut self, id: u64, parent_id: u64) -> Result<Floor> {
         let raw = self.registry.get_raw(id).ok_or_else(|| anyhow!("Floor entity #{} not found", id))?;
-        let name = self.extract_string_param(raw, 2).unwrap_or_else(|| "Unknown Floor".to_string());
+        let name = self.extract_entity_name(raw).unwrap_or_else(|| "Unknown Floor".to_string());
         
         // Generate ArxAddress for Floor
         if let Some(parent_addr) = self.registry.get_address(parent_id) {
@@ -119,13 +205,44 @@ impl<'a> IfcResolver<'a> {
         }
 
         let mut floor = Floor::new(name, 0); // Defaulting to level 0, can be refined with IfcStorey
-        let mut default_wing = Wing::new("Main".to_string());
 
         for room_id in self.registry.get_contained(id) {
-            default_wing.rooms.push(self.resolve_room(room_id, id)?);
+            let is_space = if let Some(raw) = self.registry.get_raw(room_id) {
+                raw.class == "IFCSPACE"
+            } else {
+                false
+            };
+
+            if is_space {
+                let room = self.resolve_room(room_id, id)?;
+                
+                // Prefer standard IFC group/zone grouping
+                let mut wing_name = self.find_zone_of_entity(room_id);
+                
+                // Fallback to custom property ArxWing
+                if wing_name.is_none() {
+                    wing_name = room.properties.get("Pset_ArxRoomProperties:ArxWing")
+                        .or_else(|| room.properties.get("Pset_ArxRoomProperties:Wing"))
+                        .cloned();
+                }
+                
+                let wing_name = wing_name.unwrap_or_else(|| "Main".to_string());
+                
+                // Find or create wing on the floor
+                if let Some(wing) = floor.wings.iter_mut().find(|w| w.name == wing_name) {
+                    wing.rooms.push(room);
+                } else {
+                    let mut wing = Wing::new(wing_name);
+                    wing.rooms.push(room);
+                    floor.wings.push(wing);
+                }
+            }
         }
-        
-        floor.wings.push(default_wing);
+
+        // If no wings were created, add a default "Main" wing
+        if floor.wings.is_empty() {
+            floor.wings.push(Wing::new("Main".to_string()));
+        }
 
         // Resolve Properties
         self.resolve_properties(id, &mut floor.properties);
@@ -134,9 +251,10 @@ impl<'a> IfcResolver<'a> {
     }
 
     fn resolve_room(&mut self, id: u64, parent_id: u64) -> Result<Room> {
+        self.resolved_rooms.insert(id);
         let name = {
             let raw = self.registry.get_raw(id).ok_or_else(|| anyhow!("Room entity #{} not found", id))?;
-            self.extract_string_param(raw, 2).unwrap_or_else(|| "Unknown Room".to_string())
+            self.extract_entity_name(raw).unwrap_or_else(|| "Unknown Room".to_string())
         };
         
         // Generate ArxAddress for Room
@@ -259,16 +377,18 @@ impl<'a> IfcResolver<'a> {
             "IFCAIRTERMINAL", "IFCLIGHTFIXTURE", "IFCBOILER", 
             "IFCCHILLER", "IFCFAN", "IFCPUMP", "IFCVALVE", 
             "IFCLAMP", "IFCOUTLET", "IFCSWITCHINGDEVICE",
-            "IFCFIREALARM", "IFCFIRESUPRESSION"
+            "IFCFIREALARM", "IFCFIRESUPRESSION",
+            "IFCAUDIOVISUALAPPLIANCE", "IFCFURNITURE",
+            "IFCDISTRIBUTIONELEMENT", "IFCCOMMUNICATIONSAPPLIANCE"
         ];
         
         let geom_resolver = GeometryResolver::new(self.registry);
         let mesh_resolver = MeshResolver::new(self.registry, &geom_resolver);
-
+ 
         for &class in &classes {
             for &id in self.registry.get_by_class(class) {
                 let eq_data = if let Some(raw) = self.registry.get_raw(id) {
-                    let name = self.extract_string_param(raw, 2).unwrap_or_else(|| format!("{}_{}", class, id));
+                    let name = self.extract_entity_name(raw).unwrap_or_else(|| format!("{}_{}", class, id));
                     let eq_type = self.map_class_to_type(class);
                     Some((name, eq_type))
                 } else {
@@ -285,6 +405,14 @@ impl<'a> IfcResolver<'a> {
                             eq.address = Some(ArxAddress::new(&country, &state, &city, &building, &floor, &room, &eq.name));
                         }
                     }
+
+                    // Prefer standard IFC group/zone grouping for wing membership
+                    if let Some(w_name) = self.find_zone_of_entity(id) {
+                        eq.properties.insert("Pset_ArxEquipmentProperties:ArxWing".to_string(), w_name);
+                    }
+
+                    // Resolve Properties
+                    self.resolve_properties(id, &mut eq.properties);
 
                     // Extract Placement and Mesh
                     if let Some(raw) = self.registry.get_raw(id) {
@@ -315,13 +443,13 @@ impl<'a> IfcResolver<'a> {
 
     fn map_class_to_type(&self, class: &str) -> EquipmentType {
         match class {
-            "IFCFLOWSEGMENT" | "IFCFLOWFITTING" | "IFCFLOWTERMINAL" | "IFCFLOWMOVINGDEVICE" => EquipmentType::HVAC,
-            "IFCCABLESEGMENT" | "IFCCABLEFITTING" | "IFCSWITCHINGDEVICE" | "IFCPROTECTIVEDEVICE" => EquipmentType::Electrical,
+            "IFCFLOWSEGMENT" | "IFCFLOWFITTING" | "IFCFLOWTERMINAL" | "IFCFLOWMOVINGDEVICE" | "IFCBOILER" | "IFCCHILLER" | "IFCFAN" | "IFCPUMP" => EquipmentType::HVAC,
+            "IFCCABLESEGMENT" | "IFCCABLEFITTING" | "IFCSWITCHINGDEVICE" | "IFCPROTECTIVEDEVICE" | "IFCOUTLET" => EquipmentType::Electrical,
             "IFCLAMP" | "IFCLIGHTFIXTURE" => EquipmentType::Other("Lighting".to_string()),
             "IFCVALVE" | "IFCPIPESEGMENT" | "IFCPIPEFITTING" | "IFCSANITARYTERMINAL" => EquipmentType::Plumbing,
             "IFCAUDIOVISUALAPPLIANCE" => EquipmentType::AV,
             "IFCFURNITURE" => EquipmentType::Furniture,
-            "IFCFIREALLOWANCE" | "IFCALARM" => EquipmentType::Safety,
+            "IFCFIREALARM" | "IFCFIRESUPRESSION" | "IFCALARM" => EquipmentType::Safety,
             "IFCCOMMUNICATIONSAPPLIANCE" => EquipmentType::Network,
             _ => EquipmentType::Other(class.to_string()),
         }
@@ -408,10 +536,10 @@ impl<'a> IfcResolver<'a> {
     // --- Relationship Discovery ---
 
     fn find_container_of(&self, entity_id: u64) -> Option<u64> {
-        // Look for IFCRELCONTAINEDINSPATIALSTRUCTURE where RelatedElements contains entity_id
+        // 1. Look for IFCRELCONTAINEDINSPATIALSTRUCTURE where RelatedElements contains entity_id
         for &id in self.registry.get_by_class("IFCRELCONTAINEDINSPATIALSTRUCTURE") {
             if let Some(entity) = self.registry.get_raw(id) {
-                // Param 4: RelatedElements (List of References)
+                // Param 4: RelatedObjects (List of References)
                 if let Some(Param::List(elements)) = entity.params.get(4) {
                     for item in elements {
                         if let Param::Reference(e_id) = item {
@@ -426,6 +554,53 @@ impl<'a> IfcResolver<'a> {
                 }
             }
         }
+
+        // 2. Fallback: Placement-based container tracking
+        let mut placement_id_opt = None;
+        if let Some(raw) = self.registry.get_raw(entity_id) {
+            for param in &raw.params {
+                if let Param::Reference(ref_id) = param {
+                    if let Some(ref_entity) = self.registry.get_raw(*ref_id) {
+                        if ref_entity.class == "IFCLOCALPLACEMENT" {
+                            placement_id_opt = Some(*ref_id);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some(mut placement_id) = placement_id_opt {
+            let mut visited = std::collections::HashSet::new();
+            while visited.insert(placement_id) {
+                // Find if any spatial structure uses this placement
+                for class in &["IFCSPACE", "IFCBUILDINGSTOREY", "IFCBUILDING"] {
+                    for &sp_id in self.registry.get_by_class(class) {
+                        if let Some(sp_raw) = self.registry.get_raw(sp_id) {
+                            let has_placement = sp_raw.params.iter().any(|p| {
+                                matches!(p, Param::Reference(pid) if *pid == placement_id)
+                            });
+                            if has_placement {
+                                return Some(sp_id);
+                            }
+                        }
+                    }
+                }
+
+                // Walk up the local placement parent
+                if let Some(place_raw) = self.registry.get_raw(placement_id) {
+                    if place_raw.class == "IFCLOCALPLACEMENT" {
+                        // Param 0 is PlacementRelTo
+                        if let Some(Param::Reference(parent_place_id)) = place_raw.params.get(0) {
+                            placement_id = *parent_place_id;
+                            continue;
+                        }
+                    }
+                }
+                break;
+            }
+        }
+
         None
     }
 
@@ -474,6 +649,36 @@ impl<'a> IfcResolver<'a> {
         children
     }
 
+    fn find_zone_of_entity(&self, entity_id: u64) -> Option<String> {
+        // Look for IFCRELASSIGNSTOGROUP where RelatedObjects list contains entity_id
+        for &rel_id in self.registry.get_by_class("IFCRELASSIGNSTOGROUP") {
+            if let Some(rel) = self.registry.get_raw(rel_id) {
+                // Param 4: RelatedObjects (List of References)
+                if let Some(Param::List(related)) = rel.params.get(4) {
+                    let contains_entity = related.iter().any(|item| {
+                        matches!(item, Param::Reference(id) if *id == entity_id)
+                    });
+                    if contains_entity {
+                        // Param 6: RelatingGroup (Reference to IfcZone/IfcGroup)
+                        if let Some(Param::Reference(group_id)) = rel.params.get(6) {
+                            if let Some(group_raw) = self.registry.get_raw(*group_id) {
+                                if group_raw.class == "IFCZONE" || group_raw.class == "IFCGROUP" {
+                                    // Param 2: Name
+                                    if let Some(name) = self.extract_string_param(group_raw, 2) {
+                                        if !name.trim().is_empty() {
+                                            return Some(name);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
     // --- Data Extraction Helpers ---
 
     fn extract_string_param(&self, entity: &RawEntity, index: usize) -> Option<String> {
@@ -481,6 +686,18 @@ impl<'a> IfcResolver<'a> {
             Param::String(s) => Some(s.clone()),
             _ => None,
         }
+    }
+
+    fn extract_entity_name(&self, entity: &RawEntity) -> Option<String> {
+        // Try Name parameter first (index 2 for most spatial and product elements)
+        if let Some(Param::String(s)) = entity.params.get(2) {
+            return Some(s.clone());
+        }
+        // Fallback to GlobalId (index 0)
+        if let Some(Param::String(s)) = entity.params.get(0) {
+            return Some(s.clone());
+        }
+        None
     }
 }
 

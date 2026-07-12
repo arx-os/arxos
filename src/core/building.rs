@@ -311,6 +311,122 @@ impl Building {
             .find(|room| room.id == room_id)
     }
 
+    /// Get all rooms in the building (mutable references)
+    pub fn get_all_rooms_mut(&mut self) -> Vec<&mut Room> {
+        self.floors
+            .iter_mut()
+            .flat_map(|floor| floor.wings.iter_mut())
+            .flat_map(|wing| wing.rooms.iter_mut())
+            .collect()
+    }
+
+    /// Find a room by its unique ID (mutable reference)
+    pub fn find_room_mut(&mut self, room_id: &str) -> Option<&mut Room> {
+        self.get_all_rooms_mut()
+            .into_iter()
+            .find(|room| room.id == room_id)
+    }
+
+    /// Get all rooms of a specific type
+    pub fn get_rooms_by_type(&self, room_type: &super::RoomType) -> Vec<&Room> {
+        self.get_all_rooms()
+            .into_iter()
+            .filter(|room| std::mem::discriminant(&room.room_type) == std::mem::discriminant(room_type))
+            .collect()
+    }
+
+    /// Get all equipment in the building (non-duplicated)
+    ///
+    /// Collects equipment from floors (common areas), wings (common areas),
+    /// and rooms.
+    pub fn get_all_equipment(&self) -> Vec<&super::Equipment> {
+        let mut equipment = Vec::new();
+        for floor in &self.floors {
+            // Floor level equipment
+            for eq in &floor.equipment {
+                equipment.push(eq);
+            }
+            for wing in &floor.wings {
+                // Wing level equipment
+                for eq in &wing.equipment {
+                    equipment.push(eq);
+                }
+                // Room level equipment
+                for room in &wing.rooms {
+                    for eq in &room.equipment {
+                        equipment.push(eq);
+                    }
+                }
+            }
+        }
+        equipment
+    }
+
+    /// Get all equipment in the building (mutable references, non-duplicated)
+    pub fn get_all_equipment_mut(&mut self) -> Vec<&mut super::Equipment> {
+        let mut equipment = Vec::new();
+        for floor in &mut self.floors {
+            for eq in &mut floor.equipment {
+                equipment.push(eq);
+            }
+            for wing in &mut floor.wings {
+                for eq in &mut wing.equipment {
+                    equipment.push(eq);
+                }
+                for room in &mut wing.rooms {
+                    for eq in &mut room.equipment {
+                        equipment.push(eq);
+                    }
+                }
+            }
+        }
+        equipment
+    }
+
+    /// Find an equipment item by its unique ID
+    pub fn find_equipment(&self, id: &str) -> Option<&super::Equipment> {
+        self.get_all_equipment()
+            .into_iter()
+            .find(|eq| eq.id == id || eq.name == id)
+    }
+
+    /// Find an equipment item by its unique ID (mutable reference)
+    pub fn find_equipment_mut(&mut self, id: &str) -> Option<&mut super::Equipment> {
+        self.get_all_equipment_mut()
+            .into_iter()
+            .find(|eq| eq.id == id || eq.name == id)
+    }
+
+    /// Find equipment within a given radius of a 3D point
+    pub fn find_equipment_within_radius(
+        &self,
+        center: super::spatial::Point3D,
+        radius: f64,
+    ) -> Vec<&super::Equipment> {
+        self.get_all_equipment()
+            .into_iter()
+            .filter(|eq| {
+                let eq_point = super::spatial::Point3D::new(eq.position.x, eq.position.y, eq.position.z);
+                center.distance_to(&eq_point) <= radius
+            })
+            .collect()
+    }
+
+    /// Find the nearest equipment item to a 3D point
+    pub fn find_nearest_equipment(
+        &self,
+        center: super::spatial::Point3D,
+    ) -> Option<(&super::Equipment, f64)> {
+        self.get_all_equipment()
+            .into_iter()
+            .map(|eq| {
+                let eq_point = super::spatial::Point3D::new(eq.position.x, eq.position.y, eq.position.z);
+                let distance = center.distance_to(&eq_point);
+                (eq, distance)
+            })
+            .min_by(|(_, dist_a), (_, dist_b)| dist_a.partial_cmp(dist_b).unwrap_or(std::cmp::Ordering::Equal))
+    }
+
     /// Add a property to the building metadata
     pub fn add_metadata_property(&mut self, key: String, value: String) {
         if self.metadata.is_none() {

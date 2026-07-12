@@ -6,7 +6,7 @@
 use crate::render3d::events::EventHandler;
 use crate::render3d::state::{InteractiveState, ViewMode};
 use crate::render3d::{Building3DRenderer, InfoPanelState, Scene3D, VisualEffectsEngine};
-use crate::yaml::BuildingData;
+use crate::core::Building;
 use std::io::{self, Write};
 use std::time::Instant;
 
@@ -78,7 +78,7 @@ where
         info_panel,
         event_handler,
         show_help,
-        &renderer.building_data,
+        &renderer.building,
         *last_render_time,
         *frame_count,
     )?;
@@ -126,7 +126,7 @@ pub fn render_overlay(
     info_panel: &InfoPanelState,
     event_handler: &EventHandler,
     show_help: bool,
-    building_data: &BuildingData,
+    building: &Building,
     last_render_time: Instant,
     frame_count: u32,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -148,7 +148,7 @@ pub fn render_overlay(
 
     // Info panel overlay (if enabled)
     if info_panel.show_panel {
-        render_info_panel(&mut overlay, state, building_data, last_render_time, frame_count)?;
+        render_info_panel(&mut overlay, state, building, last_render_time, frame_count)?;
     }
 
     print!("{}", overlay);
@@ -219,7 +219,7 @@ fn render_session_info(overlay: &mut String, state: &InteractiveState, info_pane
 fn render_info_panel(
     overlay: &mut String,
     state: &InteractiveState,
-    building_data: &BuildingData,
+    building: &Building,
     last_render_time: Instant,
     frame_count: u32,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -232,13 +232,11 @@ fn render_info_panel(
     if !state.selected_equipment.is_empty() {
         overlay.push_str("║ Equipment:\n");
         for equipment_id in &state.selected_equipment {
-            for floor in &building_data.building.floors {
-                if let Some(equipment) = floor.equipment.iter().find(|e| e.id == *equipment_id) {
-                    overlay.push_str(&format!(
-                        "║   • {} ({:?})\n",
-                        equipment.name, equipment.status
-                    ));
-                }
+            if let Some(equipment) = building.find_equipment(equipment_id) {
+                overlay.push_str(&format!(
+                    "║   • {} ({:?})\n",
+                    equipment.name, equipment.status
+                ));
             }
         }
     } else {

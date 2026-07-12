@@ -20,7 +20,7 @@ impl BuildingYamlSerializer {
     }
 
     pub fn serialize(data: &BuildingData) -> Result<String, Box<dyn std::error::Error>> {
-        let mut sorted_data = data.clone();
+        let mut sorted_data = BuildingData::from_building(&data.building);
         sorted_data.sort_deterministically();
         Ok(serde_yaml::to_string(&sorted_data)?)
     }
@@ -33,6 +33,18 @@ impl BuildingYamlSerializer {
         let mut data: BuildingData = serde_yaml::from_str(yaml)?;
         data.rehydrate_room_equipment();
         Ok(data)
+    }
+
+    /// Serialize a canonical Building by projecting it to BuildingData DTO first
+    pub fn serialize_building(building: &crate::core::Building) -> Result<String, Box<dyn std::error::Error>> {
+        let data = BuildingData::from_building(building);
+        Self::serialize(&data)
+    }
+
+    /// Deserialize YAML and rehydrate it into a rich canonical Building
+    pub fn deserialize_building(yaml: &str) -> Result<crate::core::Building, Box<dyn std::error::Error>> {
+        let data = Self::deserialize(yaml)?;
+        Ok(data.into_building())
     }
 
     /// Generic method to serialize any serializable type to YAML
@@ -49,6 +61,21 @@ pub struct BuildingData {
 }
 
 impl BuildingData {
+    /// Convert BuildingData DTO into a rich canonical Building (rehydrates relationships)
+    pub fn into_building(mut self) -> crate::core::Building {
+        self.rehydrate_room_equipment();
+        self.building
+    }
+
+    /// Create a BuildingData DTO from a rich canonical Building
+    pub fn from_building(building: &crate::core::Building) -> Self {
+        // Collect all equipment from the hierarchy into a flat list
+        let equipment = building.get_all_equipment().into_iter().cloned().collect();
+        Self {
+            building: building.clone(),
+            equipment,
+        }
+    }
     /// Sorts all hierarchical collections deterministically to ensure zero-diff Git output.
     pub fn sort_deterministically(&mut self) {
         // 1. Sort Floors by level (numerical)
@@ -115,7 +142,27 @@ impl BuildingData {
             .collect();
 
         for floor in &mut self.building.floors {
+            // Rehydrate floor-level equipment
+            if !floor.pending_equipment_ids.is_empty() {
+                floor.equipment = floor
+                    .pending_equipment_ids
+                    .iter()
+                    .filter_map(|id| equipment_by_id.get(id).cloned())
+                    .collect();
+                floor.pending_equipment_ids.clear();
+            }
+
             for wing in &mut floor.wings {
+                // Rehydrate wing-level equipment
+                if !wing.pending_equipment_ids.is_empty() {
+                    wing.equipment = wing
+                        .pending_equipment_ids
+                        .iter()
+                        .filter_map(|id| equipment_by_id.get(id).cloned())
+                        .collect();
+                    wing.pending_equipment_ids.clear();
+                }
+
                 for room in &mut wing.rooms {
                     if !room.pending_equipment_ids.is_empty() {
                         // Resolve IDs to Equipment objects.

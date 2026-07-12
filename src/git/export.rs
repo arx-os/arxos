@@ -13,14 +13,14 @@ use std::path::Path;
 pub fn export_building(
     repo: &mut Repository,
     serializer: &BuildingYamlSerializer,
-    building_data: &BuildingData,
+    building: &crate::core::Building,
     config: &GitConfig,
     metadata: &CommitMetadata,
 ) -> Result<GitOperationResult, GitError> {
     info!("Exporting building data to Git repository");
 
     // Check total size before exporting
-    let total_size_mb = estimate_building_size(serializer, building_data)?;
+    let total_size_mb = estimate_building_size(serializer, building)?;
     const WARNING_SIZE_MB: usize = 50;
 
     if total_size_mb > WARNING_SIZE_MB {
@@ -31,7 +31,7 @@ pub fn export_building(
     }
 
     // Create directory structure
-    let file_structure = create_file_structure(serializer, building_data)?;
+    let file_structure = create_file_structure(serializer, building)?;
 
     // Write files to repository
     let files_changed = write_building_files(repo, &file_structure)?;
@@ -55,15 +55,16 @@ pub fn export_building(
 /// Estimate building data size in megabytes
 fn estimate_building_size(
     serializer: &BuildingYamlSerializer,
-    building_data: &BuildingData,
+    building: &crate::core::Building,
 ) -> Result<usize, GitError> {
+    let building_data = BuildingData::from_building(building);
     let main_yaml = serializer
-        .to_yaml(building_data)
+        .to_yaml(&building_data)
         .map_err(|e| GitError::Generic(e.to_string()))?;
     let mut size = main_yaml.len();
 
     // Estimate size of all floor/room/equipment files
-    for floor in &building_data.building.floors {
+    for floor in &building.floors {
         let floor_yaml = serializer
             .to_yaml(floor)
             .map_err(|e| GitError::Generic(e.to_string()))?;
@@ -75,6 +76,18 @@ fn estimate_building_size(
                     .to_yaml(room)
                     .map_err(|e| GitError::Generic(e.to_string()))?;
                 size += room_yaml.len();
+                for equipment in &room.equipment {
+                    let equipment_yaml = serializer
+                        .to_yaml(equipment)
+                        .map_err(|e| GitError::Generic(e.to_string()))?;
+                    size += equipment_yaml.len();
+                }
+            }
+            for equipment in &wing.equipment {
+                let equipment_yaml = serializer
+                    .to_yaml(equipment)
+                    .map_err(|e| GitError::Generic(e.to_string()))?;
+                size += equipment_yaml.len();
             }
         }
         for equipment in &floor.equipment {
@@ -132,18 +145,19 @@ fn write_building_files(
 /// Create file structure for building data
 pub fn create_file_structure(
     serializer: &BuildingYamlSerializer,
-    building_data: &BuildingData,
+    building: &crate::core::Building,
 ) -> Result<HashMap<String, String>, GitError> {
     let mut files = HashMap::new();
 
-    // Main building file
+    // Main building file (projected as BuildingData DTO)
+    let building_data = BuildingData::from_building(building);
     let building_yaml = serializer
-        .to_yaml(building_data)
+        .to_yaml(&building_data)
         .map_err(|e| GitError::Generic(e.to_string()))?;
     files.insert("building.yml".to_string(), building_yaml);
 
     // Floor files
-    for floor in &building_data.building.floors {
+    for floor in &building.floors {
         let floor_path = format!("floors/floor-{}.yml", floor.level);
         let floor_yaml = serializer
             .to_yaml(floor)
@@ -162,61 +176,67 @@ pub fn create_file_structure(
                     .to_yaml(room)
                     .map_err(|e| GitError::Generic(e.to_string()))?;
                 files.insert(room_path, room_yaml);
+
+                // Room-level equipment files
+                for equipment in &room.equipment {
+                    let path = format!(
+                        "floors/floor-{}/rooms/{}/equipment/{}.yml",
+                        floor.level,
+                        room.name.to_lowercase().replace(" ", "-"),
+                        equipment.name.to_lowercase().replace(" ", "-")
+                    );
+                    write_equipment_file(&mut files, serializer, path, equipment)?;
+                }
+            }
+
+            // Wing-level equipment files
+            for equipment in &wing.equipment {
+                let path = format!(
+                    "floors/floor-{}/wings/{}/equipment/{}.yml",
+                    floor.level,
+                    wing.name.to_lowercase().replace(" ", "-"),
+                    equipment.name.to_lowercase().replace(" ", "-")
+                );
+                write_equipment_file(&mut files, serializer, path, equipment)?;
             }
         }
 
-        // Equipment files
+        // Floor-level equipment files
         for equipment in &floor.equipment {
-            // Use ArxAddress path for directory structure if available
-            let equipment_path = if let Some(ref addr) = equipment.address {
-                let path_parts: Vec<&str> = addr.path.trim_start_matches('/').split('/').collect();
-                if path_parts.len() == 7 {
-                    format!(
-                        "{}/{}/{}/{}/{}/{}/{}.yml",
-                        path_parts[0], // country
-                        path_parts[1], // state
-                        path_parts[2], // city
-                        path_parts[3], // building
-                        path_parts[4], // floor
-                        path_parts[5], // room
-                        path_parts[6]  // fixture
-                    )
-                } else {
-                    // Fallback to old format
-                    format!(
-                        "floors/floor-{}/equipment/{}/{}.yml",
-                        floor.level,
-                        equipment.system_type().to_lowercase(),
-                        equipment.name.to_lowercase().replace(" ", "-")
-                    )
-                }
-            } else {
-                // Fallback to old format if no address
-                format!(
-                    "floors/floor-{}/equipment/{}/{}.yml",
-                    floor.level,
-                    equipment.system_type().to_lowercase(),
-                    equipment.name.to_lowercase().replace(" ", "-")
-                )
-            };
-            let equipment_yaml = serializer
-                .to_yaml(equipment)
-                .map_err(|e| GitError::Generic(e.to_string()))?;
-            files.insert(equipment_path, equipment_yaml);
+            let path = format!(
+                "floors/floor-{}/equipment/{}.yml",
+                floor.level,
+                equipment.name.to_lowercase().replace(" ", "-")
+            );
+            write_equipment_file(&mut files, serializer, path, equipment)?;
         }
     }
 
     // Create index file for easy navigation
-    let index_content = create_index_file(serializer, building_data)?;
+    let index_content = create_index_file(serializer, building)?;
     files.insert("index.yml".to_string(), index_content);
 
     Ok(files)
 }
 
+/// Helper to write equipment file using hierarchy-derived path
+fn write_equipment_file(
+    files: &mut HashMap<String, String>,
+    serializer: &BuildingYamlSerializer,
+    equipment_path: String,
+    equipment: &crate::core::Equipment,
+) -> Result<(), GitError> {
+    let equipment_yaml = serializer
+        .to_yaml(equipment)
+        .map_err(|e| GitError::Generic(e.to_string()))?;
+    files.insert(equipment_path, equipment_yaml);
+    Ok(())
+}
+
 /// Create index file for building navigation
 fn create_index_file(
     _serializer: &BuildingYamlSerializer,
-    building_data: &BuildingData,
+    building: &crate::core::Building,
 ) -> Result<String, GitError> {
     use serde_yaml::{Mapping, Value};
 
@@ -226,11 +246,11 @@ fn create_index_file(
     let mut building_map = Mapping::new();
     building_map.insert(
         Value::String("id".to_string()),
-        Value::String(building_data.building.id.clone()),
+        Value::String(building.id.clone()),
     );
     building_map.insert(
         Value::String("name".to_string()),
-        Value::String(building_data.building.name.clone()),
+        Value::String(building.name.clone()),
     );
     index_map.insert(
         Value::String("building".to_string()),
@@ -239,7 +259,7 @@ fn create_index_file(
 
     // Add floors index
     let mut floors_list = Vec::new();
-    for floor in &building_data.building.floors {
+    for floor in &building.floors {
         let mut floor_map = Mapping::new();
         floor_map.insert(
             Value::String("level".to_string()),

@@ -5,8 +5,7 @@
 
 use super::super::types::{CellType, CellValue, ColumnDefinition, ValidationRule};
 use super::trait_def::SpreadsheetDataSource;
-use crate::core::{Room, RoomType};
-use crate::yaml::BuildingData;
+use crate::core::{Building, Room, RoomType};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 
@@ -21,7 +20,7 @@ use std::error::Error;
 /// - Automatic area/volume calculations
 pub struct RoomDataSource {
     rooms: Vec<Room>,
-    building_data: BuildingData,
+    building_data: Building,
     building_name: String,
     modified_rows: HashSet<usize>,
 }
@@ -34,16 +33,14 @@ impl RoomDataSource {
     ///
     /// # Arguments
     ///
-    /// * `building_data` - The building data loaded from YAML
+    /// * `building_data` - The building loaded from YAML
     /// * `building_name` - Name of the building for persistence
-    pub fn new(building_data: BuildingData, building_name: String) -> Self {
-        // Collect all rooms from all floors (rooms are now in wings)
-        let mut rooms = Vec::new();
-        for floor in &building_data.building.floors {
-            for wing in &floor.wings {
-                rooms.extend(wing.rooms.clone());
-            }
-        }
+    pub fn new(building_data: Building, building_name: String) -> Self {
+        // Collect all rooms from all floors (rooms are now in wings) using Building inherent query
+        let rooms = building_data.get_all_rooms()
+            .into_iter()
+            .cloned()
+            .collect();
 
         Self {
             rooms,
@@ -280,15 +277,11 @@ impl SpreadsheetDataSource for RoomDataSource {
             .map(|(_, room)| (room.id.clone(), room))
             .collect();
 
-        // Update rooms in building data by matching IDs (rooms are now in wings)
-        for floor in building_data.building.floors.iter_mut() {
-            for wing in floor.wings.iter_mut() {
-                for room in wing.rooms.iter_mut() {
-                    if let Some(modified_room) = modified_rooms.get(&room.id) {
-                        *room = (*modified_room).clone();
-                        modified_count += 1;
-                    }
-                }
+        // Update rooms in building data by matching IDs using find_room_mut
+        for (id, modified_room) in modified_rooms {
+            if let Some(room) = building_data.find_room_mut(&id) {
+                *room = (*modified_room).clone();
+                modified_count += 1;
             }
         }
 
@@ -341,14 +334,11 @@ impl SpreadsheetDataSource for RoomDataSource {
         // Update internal data
         self.building_data = building_data.clone();
 
-        // Rebuild rooms list (rooms are now in wings)
-        let mut rooms = Vec::new();
-        for floor in &self.building_data.building.floors {
-            for wing in &floor.wings {
-                rooms.extend(wing.rooms.clone());
-            }
-        }
-        self.rooms = rooms;
+        // Rebuild rooms list using Building inherent query
+        self.rooms = self.building_data.get_all_rooms()
+            .into_iter()
+            .cloned()
+            .collect();
 
         // Clear modified rows
         self.modified_rows.clear();

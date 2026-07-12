@@ -1,6 +1,7 @@
 //! Spatial data structures and operations
 
 // Placeholder module for spatial functionality
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Point3D {
     pub x: f64,
     pub y: f64,
@@ -12,3 +13,5 @@ impl Point3D {
         Self { x, y, z }
     }
 }
+
+pub mod lidar;

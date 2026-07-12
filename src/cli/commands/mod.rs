@@ -10,6 +10,7 @@ pub mod merge;
 pub mod query;
 pub mod rendering;
 pub mod import;
+pub mod import_lidar;
 pub mod export;
 pub mod init;
 pub mod sync;

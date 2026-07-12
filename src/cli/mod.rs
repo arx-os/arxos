@@ -33,9 +33,24 @@ impl Cli {
                 };
                 Ok(cmd.execute()?)
             },
-            Commands::Import { ifc_file, repo, dry_run, strict } => {
-                let cmd = ImportCommand { ifc_file, repo, dry_run, strict };
-                Ok(cmd.execute()?)
+            Commands::Import { subcommand } => {
+                match subcommand {
+                    ImportSubcommand::Ifc { ifc_file, repo, dry_run, strict } => {
+                        let cmd = ImportCommand { ifc_file, repo, dry_run, strict };
+                        Ok(cmd.execute()?)
+                    }
+                    ImportSubcommand::Lidar { file_path, voxel_size, light, dry_run, merge, building } => {
+                        let cmd = commands::import_lidar::ImportLidarCommand {
+                            file_path,
+                            voxel_size,
+                            light,
+                            dry_run,
+                            merge,
+                            building,
+                        };
+                        Ok(cmd.execute()?)
+                    }
+                }
             },
             Commands::Export { format, output, repo, delta } => {
                 let cmd = ExportCommand { format, output, repo, delta };
@@ -582,19 +597,10 @@ pub enum Commands {
         #[arg(long, default_value = "meters")]
         units: String,
     },
-    /// Import IFC file to Git repository
+    /// Import data into building model
     Import {
-        /// Path to IFC file
-        ifc_file: String,
-        /// Git repository URL
-        #[arg(long)]
-        repo: Option<String>,
-        /// Dry run - show what would be done without making changes
-        #[arg(long)]
-        dry_run: bool,
-        /// Enable strict validation (fail on missing spatial entities)
-        #[arg(long)]
-        strict: bool,
+        #[command(subcommand)]
+        subcommand: ImportSubcommand,
     },
     /// Export building data to Git repository or other formats
     Export {
@@ -1140,3 +1146,41 @@ pub enum Commands {
 // Sub-command definitions
 pub mod subcommands;
 pub use subcommands::*;
+
+#[derive(Subcommand)]
+pub enum ImportSubcommand {
+    /// Import IFC file
+    Ifc {
+        /// Path to IFC file
+        ifc_file: String,
+        /// Git repository URL
+        #[arg(long)]
+        repo: Option<String>,
+        /// Dry run - show what would be done without making changes
+        #[arg(long)]
+        dry_run: bool,
+        /// Enable strict validation (fail on missing spatial entities)
+        #[arg(long)]
+        strict: bool,
+    },
+    /// Import LiDAR point cloud
+    Lidar {
+        /// Path to PLY, LAS, or CSV/XYZ file
+        file_path: String,
+        /// Voxel size in meters for downsampling
+        #[arg(long, default_value = "0.05")]
+        voxel_size: f64,
+        /// Enable light mode (aggresive downsampling & lower memory limits)
+        #[arg(long)]
+        light: bool,
+        /// Dry run - parse and downsample without writing to disk
+        #[arg(long)]
+        dry_run: bool,
+        /// Merge into an existing building instead of creating new
+        #[arg(long)]
+        merge: bool,
+        /// Name of the existing building to merge into
+        #[arg(long)]
+        building: Option<String>,
+    }
+}

@@ -102,6 +102,34 @@ impl BoundingBox {
     pub fn is_valid(&self) -> bool {
         self.min.x <= self.max.x && self.min.y <= self.max.y && self.min.z <= self.max.z
     }
+
+    /// Returns the center (centroid) of the bounding box
+    pub fn center(&self) -> Position {
+        Position {
+            x: (self.min.x + self.max.x) / 2.0,
+            y: (self.min.y + self.max.y) / 2.0,
+            z: (self.min.z + self.max.z) / 2.0,
+            coordinate_system: self.min.coordinate_system.clone(),
+        }
+    }
+
+    /// Returns the volume of the bounding box
+    pub fn volume(&self) -> f64 {
+        (self.max.x - self.min.x) * (self.max.y - self.min.y) * (self.max.z - self.min.z)
+    }
+}
+
+/// LiDAR-specific enrichments for spatial entities
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LidarEnrichment {
+    /// Number of raw points belonging to this entity
+    pub point_count: usize,
+    /// Classification confidence score (0.0 to 1.0)
+    pub confidence_score: f64,
+    /// Timestamp of the last scan/update
+    pub last_scan_timestamp: Option<chrono::DateTime<chrono::Utc>>,
+    /// Details about the heuristic or classification algorithm used
+    pub classification_heuristic: Option<String>,
 }
 
 /// Spatial properties of an entity

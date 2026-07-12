@@ -77,6 +77,9 @@ pub struct Building {
     /// Coordinate systems information
     #[serde(default)]
     pub coordinate_systems: Vec<CoordinateSystemInfo>,
+    /// IFC product GlobalId when known (stable interchange identity)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ifc_global_id: Option<String>,
 }
 
 /// Default version string for buildings
@@ -121,6 +124,7 @@ impl Building {
             floors: Vec::new(),
             metadata: None,
             coordinate_systems: Vec::new(),
+            ifc_global_id: None,
         }
     }
 
@@ -462,6 +466,7 @@ impl Default for Building {
             floors: Vec::new(),
             metadata: None,
             coordinate_systems: Vec::new(),
+            ifc_global_id: None,
         }
     }
 }

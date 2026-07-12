@@ -98,6 +98,8 @@ mod tests {
             sensor_mappings: None,
             room_id: Some("ROOM_1".to_string()),
             mesh: None,
+            lidar_enrichment: None,
+            ifc_global_id: None,
         };
 
         // Create room
@@ -139,6 +141,8 @@ mod tests {
             properties: HashMap::new(),
             created_at: None,
             updated_at: None,
+            lidar_enrichment: None,
+            ifc_global_id: None,
         };
 
         // Create wing
@@ -173,6 +177,7 @@ mod tests {
             equipment: vec![],
             pending_equipment_ids: vec![],
             properties: HashMap::new(),
+            ifc_global_id: None,
         };
 
         // Create equipment for floor 2
@@ -194,6 +199,8 @@ mod tests {
             sensor_mappings: None,
             room_id: None,
             mesh: None,
+            lidar_enrichment: None,
+            ifc_global_id: None,
         };
 
         // Create floor 2
@@ -218,6 +225,7 @@ mod tests {
             equipment: vec![equip2],
             pending_equipment_ids: vec![],
             properties: HashMap::new(),
+            ifc_global_id: None,
         };
 
         let mut building = crate::core::Building::new("Test Building".to_string(), "Test building for 3D rendering".to_string());

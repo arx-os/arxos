@@ -1,8 +1,7 @@
 use crate::cli::commands::Command;
-use crate::ifc::IFCProcessor;
-use crate::yaml::BuildingYamlSerializer;
-use crate::core::BuildingMetadata;
+use crate::ingest::import_ifc_path;
 use crate::utils::path_safety::PathSafety;
+use crate::yaml::BuildingYamlSerializer;
 use anyhow::anyhow;
 use std::error::Error;
 use std::path::Path;
@@ -16,61 +15,64 @@ pub struct ImportCommand {
 
 impl Command for ImportCommand {
     fn execute(&self) -> Result<(), Box<dyn Error>> {
-        println!("🏗️  Importing IFC file: {}", self.ifc_file);
+        println!("Importing IFC file: {}", self.ifc_file);
 
         if self.dry_run {
-            println!("🔍 Dry run mode enabled - no changes will be written");
+            println!("Dry run mode enabled - no changes will be written");
         }
-        
         if self.strict {
-            println!("🛡️  Strict validation enabled");
+            println!("Strict validation enabled");
         }
 
-        let processor = IFCProcessor::new();
         let repo_root = Path::new(".");
+        let ifc_path = Path::new(&self.ifc_file);
 
-        // 1. Extract hierarchy using native parser
-        let result = match processor.parse_native(&self.ifc_file, self.strict) {
-            Ok(res) => res,
-            Err(e) => {
-                return Err(format!("Failed to parse IFC file: {}", e).into());
-            }
+        // Candidate existing YAML for merge (name not known until parse — try building.yaml + stem)
+        let stem_yaml = ifc_path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .map(|s| {
+                repo_root.join(format!(
+                    "{}.yaml",
+                    s.replace(' ', "_").to_lowercase()
+                ))
+            });
+        let building_yaml = repo_root.join("building.yaml");
+        let existing = if building_yaml.exists() {
+            Some(building_yaml.as_path())
+        } else {
+            stem_yaml.as_ref().map(|p| p.as_path())
         };
 
-        let mut building = result.building;
-        building.metadata = Some(BuildingMetadata {
-            source_file: Some(self.ifc_file.clone()),
-            parser_version: env!("CARGO_PKG_VERSION").to_string(),
-            total_entities: result.stats.total_entities,
-            spatial_entities: result.stats.spatial_entities,
-            coordinate_system: "building_local".to_string(),
-            units: "meters".to_string(),
-            tags: Vec::new(),
-            properties: Default::default(),
-        });
+        let result = import_ifc_path(ifc_path, existing, self.strict, true)
+            .map_err(|e| format!("IFC import failed: {}", e))?;
 
         if self.dry_run {
-            println!("✅ Parsed successfully:");
-            println!("  Building: {}", building.name);
-            println!("  Floors: {}", building.floors.len());
-            println!("  Total IFC Entities: {}", result.stats.total_entities);
-            println!("  Spatial Entities: {}", result.stats.spatial_entities);
+            println!("Parsed successfully:");
+            println!("  Building: {}", result.building.name);
+            println!("  Floors: {}", result.building.floors.len());
+            for line in result.summary_lines() {
+                println!("  {}", line);
+            }
             return Ok(());
         }
 
-        // 2. Write to YAML
-        let yaml_filename = format!("{}.yaml", building.name.replace(" ", "_").to_lowercase());
+        let yaml_filename = format!(
+            "{}.yaml",
+            result.building.name.replace(' ', "_").to_lowercase()
+        );
         let yaml_path = repo_root.join(&yaml_filename);
-        
         PathSafety::validate_path_for_write(&yaml_path).map_err(|e| anyhow!(e))?;
-        
-        let yaml_content = BuildingYamlSerializer::serialize_building(&building)
-            .map_err(|e| anyhow!("Failed to serialize YAML: {}", e))?;
 
+        let yaml_content = BuildingYamlSerializer::serialize_building(&result.building)
+            .map_err(|e| anyhow!("Failed to serialize YAML: {}", e))?;
         std::fs::write(&yaml_path, yaml_content)
             .map_err(|e| anyhow!("Failed to write YAML to {}: {}", yaml_path.display(), e))?;
 
-        println!("✅ Imported successfully to {}", yaml_path.display());
+        println!("Imported successfully to {}", yaml_path.display());
+        for line in result.summary_lines() {
+            println!("  {}", line);
+        }
 
         Ok(())
     }

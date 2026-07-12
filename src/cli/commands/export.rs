@@ -1,7 +1,8 @@
 use crate::cli::commands::Command;
 use crate::export::ifc::IFCExporter;
-use crate::yaml::BuildingYamlSerializer;
+use crate::ifc::mapping::report_export_losses;
 use crate::utils::path_safety::PathSafety;
+use crate::yaml::BuildingYamlSerializer;
 use anyhow::anyhow;
 use std::error::Error;
 use std::path::Path;
@@ -35,10 +36,14 @@ impl Command for ExportCommand {
                 
                 PathSafety::validate_path_for_write(&output_path).map_err(|e| anyhow!(e))?;
 
+                let export_notes = report_export_losses(&building);
                 let exporter = IFCExporter::new(building);
                 exporter.export(&output_path).map_err(|e| anyhow!(e))?;
 
-                println!("✅ Export successful: {}", output_path.display());
+                println!("Export successful: {}", output_path.display());
+                for line in export_notes.summary_lines() {
+                    println!("  {}", line);
+                }
                 Ok(())
             }
             "yaml" => {

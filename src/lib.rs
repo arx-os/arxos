@@ -23,6 +23,7 @@ pub mod utils;
 pub mod validation;
 pub mod yaml;
 pub mod export;
+pub mod ingest;
 
 // CLI module (public for testing)
 pub mod cli;

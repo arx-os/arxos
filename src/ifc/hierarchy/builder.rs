@@ -165,6 +165,7 @@ impl HierarchyBuilder {
             equipment: Vec::new(),
             pending_equipment_ids: Vec::new(),
             properties: HashMap::new(),
+            ifc_global_id: None,
         })
     }
 
@@ -249,6 +250,9 @@ impl HierarchyBuilder {
                 properties,
                 created_at: Some(Utc::now()),
                 updated_at: Some(Utc::now()),
+                lidar_enrichment: None,
+                // Legacy path: STEP entity id is not an IFC GlobalId; leave unset.
+                ifc_global_id: None,
             };
             rooms.push(room);
         }
@@ -474,6 +478,8 @@ impl HierarchyBuilder {
                 room_id: None, // Will be assigned based on spatial data
                 sensor_mappings: None,
                 mesh: None,
+                lidar_enrichment: None,
+                ifc_global_id: None,
             };
             equipment_list.push(equipment);
         }

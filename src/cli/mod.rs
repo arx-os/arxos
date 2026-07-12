@@ -50,7 +50,23 @@ impl Cli {
                         };
                         Ok(cmd.execute()?)
                     }
+                    ImportSubcommand::Text { script, building, dry_run } => {
+                        let cmd = commands::edit::EditCommand {
+                            script,
+                            building,
+                            dry_run,
+                        };
+                        Ok(cmd.execute()?)
+                    }
                 }
+            },
+            Commands::Edit { script, building, dry_run } => {
+                let cmd = commands::edit::EditCommand {
+                    script,
+                    building,
+                    dry_run,
+                };
+                Ok(cmd.execute()?)
             },
             Commands::Export { format, output, repo, delta } => {
                 let cmd = ExportCommand { format, output, repo, delta };
@@ -601,6 +617,17 @@ pub enum Commands {
     Import {
         #[command(subcommand)]
         subcommand: ImportSubcommand,
+    },
+    /// Apply text / AR command script to a building YAML
+    Edit {
+        /// Script file path, or "-" for stdin
+        script: String,
+        /// Building YAML path or name
+        #[arg(long)]
+        building: Option<String>,
+        /// Show result without writing
+        #[arg(long)]
+        dry_run: bool,
     },
     /// Export building data to Git repository or other formats
     Export {
@@ -1182,5 +1209,16 @@ pub enum ImportSubcommand {
         /// Name of the existing building to merge into
         #[arg(long)]
         building: Option<String>,
-    }
+    },
+    /// Apply a text / AR command script (same as `arx edit`)
+    Text {
+        /// Script file path, or "-" for stdin
+        script: String,
+        /// Building YAML path or name
+        #[arg(long)]
+        building: Option<String>,
+        /// Show result without writing
+        #[arg(long)]
+        dry_run: bool,
+    },
 }

@@ -5,7 +5,15 @@
 
 use std::collections::HashMap;
 use crate::core::domain::ArxAddress;
-use crate::core::{Building, Equipment, EquipmentType, Floor, Position, Room, RoomType, Wing};
+use crate::core::{
+    Building, Dimensions, Equipment, EquipmentType, Floor, Position, Room, RoomType, Wing,
+};
+use crate::ifc::mapping::{
+    apply_identity_on_import, apply_lidar_on_import, dimensions_from_mesh_aabb, mesh_to_local,
+    normalize_imported_properties, position_from_origin, spatial_from_position_dims,
+    wing_name_from_properties, COORD_BUILDING_LOCAL, FidelityLevel, LossReport, MappingWarning,
+    PROP_ARX_WING,
+};
 use super::lexer::{Param, RawEntity};
 use super::registry::EntityRegistry;
 use super::geometry::GeometryResolver;
@@ -20,17 +28,19 @@ pub struct IfcResolver<'a> {
     state: String,
     city: String,
     resolved_rooms: std::collections::HashSet<u64>,
+    warnings: Vec<MappingWarning>,
 }
 
 impl<'a> IfcResolver<'a> {
     /// Create a new resolver with a populated registry.
     pub fn new(registry: &'a mut EntityRegistry) -> Self {
-        Self { 
+        Self {
             registry,
             country: "Global".to_string(),
             state: "HQ".to_string(),
             city: "Main".to_string(),
             resolved_rooms: std::collections::HashSet::new(),
+            warnings: Vec::new(),
         }
     }
 
@@ -42,8 +52,8 @@ impl<'a> IfcResolver<'a> {
         self
     }
 
-    /// Resolve the entire building hierarchy into a rich Building.
-    pub fn resolve_all(&mut self) -> Result<Building> {
+    /// Resolve the entire building hierarchy into a rich Building + loss report.
+    pub fn resolve_all(&mut self) -> Result<(Building, LossReport)> {
         let mut building = Building::default();
         let mut equipment_list = Vec::new();
 
@@ -55,18 +65,36 @@ impl<'a> IfcResolver<'a> {
         if let Some(building_id) = self.find_building_under(project_id) {
             building = self.resolve_building(building_id)?;
             equipment_list = self.resolve_equipment_under(building_id)?;
-            
+
             // 3. Extract Geolocation from Site
             if let Some(site_id) = self.find_root_entity("IFCSITE") {
                 self.resolve_site_metadata(site_id, &mut building)?;
+            } else {
+                self.warnings.push(MappingWarning::new(
+                    "no_site",
+                    "No IFCSITE found; geolocation metadata skipped",
+                ));
             }
 
             // 4. Extract AR Anchors (Annotations)
             let mut anchors = self.resolve_ar_anchors()?;
             equipment_list.append(&mut anchors);
+        } else {
+            self.warnings.push(MappingWarning::new(
+                "no_building",
+                "No IFCBUILDING under project; hierarchy may be empty",
+            ));
+        }
+
+        if building.floors.is_empty() {
+            self.warnings.push(MappingWarning::new(
+                "no_storeys",
+                "No building storeys resolved from IFC",
+            ));
         }
 
         // Rehydrate the building hierarchy with the resolved equipment
+        let mut fallback_attach = 0usize;
         for mut eq in equipment_list {
             let mut attached = false;
             if let Some(ref addr) = eq.address {
@@ -100,9 +128,7 @@ impl<'a> IfcResolver<'a> {
                         let sanitized_f_name = f.name.to_lowercase().replace(' ', "-").replace('_', "-");
                         f.name == floor_name || sanitized_f_name == floor_name
                     }) {
-                        let wing_opt = eq.properties.get("Pset_ArxEquipmentProperties:ArxWing")
-                            .or_else(|| eq.properties.get("Pset_ArxEquipmentProperties:Wing"))
-                            .cloned();
+                        let wing_opt = wing_name_from_properties(&eq.properties);
 
                         if let Some(w_name) = wing_opt {
                             // Find or create wing on that floor
@@ -129,12 +155,28 @@ impl<'a> IfcResolver<'a> {
             if !attached {
                 // Fallback: attach to first floor
                 if let Some(floor) = building.floors.first_mut() {
+                    let name = eq.name.clone();
                     floor.equipment.push(eq);
+                    fallback_attach += 1;
+                    self.warnings.push(
+                        MappingWarning::new(
+                            "equipment_fallback_floor",
+                            "equipment could not be placed by containment; attached to first floor",
+                        )
+                        .with_entity(name),
+                    );
                 }
             }
         }
 
-        Ok(building)
+        if fallback_attach > 0 {
+            // already warned per entity
+            let _ = fallback_attach;
+        }
+
+        let mut report = LossReport::new(FidelityLevel::L2);
+        report.warnings.append(&mut self.warnings);
+        Ok((building, report))
     }
 
     // --- Traversal Helpers ---
@@ -161,6 +203,16 @@ impl<'a> IfcResolver<'a> {
         // Resolve Properties
         let mut props = HashMap::new();
         self.resolve_properties(id, &mut props);
+
+        let global_id = self.registry.get_raw(id).and_then(|raw| self.extract_string_param(raw, 0));
+        apply_identity_on_import(
+            &mut building.id,
+            &mut building.ifc_global_id,
+            global_id,
+            &props,
+        );
+        normalize_imported_properties(&mut props);
+
         for (k, v) in props {
             building.add_metadata_property(k, v);
         }
@@ -194,9 +246,18 @@ impl<'a> IfcResolver<'a> {
     }
 
     fn resolve_floor(&mut self, id: u64, parent_id: u64) -> Result<Floor> {
-        let raw = self.registry.get_raw(id).ok_or_else(|| anyhow!("Floor entity #{} not found", id))?;
-        let name = self.extract_entity_name(raw).unwrap_or_else(|| "Unknown Floor".to_string());
-        
+        let (name, floor_global_id) = {
+            let raw = self
+                .registry
+                .get_raw(id)
+                .ok_or_else(|| anyhow!("Floor entity #{} not found", id))?;
+            let name = self
+                .extract_entity_name(raw)
+                .unwrap_or_else(|| "Unknown Floor".to_string());
+            let floor_global_id = self.extract_string_param(raw, 0);
+            (name, floor_global_id)
+        };
+
         // Generate ArxAddress for Floor
         if let Some(parent_addr) = self.registry.get_address(parent_id) {
             let (_, _, _, building_name, _, _, _) = parent_addr.parts().unwrap_or_default();
@@ -205,6 +266,7 @@ impl<'a> IfcResolver<'a> {
         }
 
         let mut floor = Floor::new(name, 0); // Defaulting to level 0, can be refined with IfcStorey
+
 
         for room_id in self.registry.get_contained(id) {
             let is_space = if let Some(raw) = self.registry.get_raw(room_id) {
@@ -219,11 +281,9 @@ impl<'a> IfcResolver<'a> {
                 // Prefer standard IFC group/zone grouping
                 let mut wing_name = self.find_zone_of_entity(room_id);
                 
-                // Fallback to custom property ArxWing
+                // Fallback to custom property ArxWing (clean or legacy-prefixed)
                 if wing_name.is_none() {
-                    wing_name = room.properties.get("Pset_ArxRoomProperties:ArxWing")
-                        .or_else(|| room.properties.get("Pset_ArxRoomProperties:Wing"))
-                        .cloned();
+                    wing_name = wing_name_from_properties(&room.properties);
                 }
                 
                 let wing_name = wing_name.unwrap_or_else(|| "Main".to_string());
@@ -246,15 +306,24 @@ impl<'a> IfcResolver<'a> {
 
         // Resolve Properties
         self.resolve_properties(id, &mut floor.properties);
+        apply_identity_on_import(
+            &mut floor.id,
+            &mut floor.ifc_global_id,
+            floor_global_id,
+            &floor.properties,
+        );
+        normalize_imported_properties(&mut floor.properties);
 
         Ok(floor)
     }
 
     fn resolve_room(&mut self, id: u64, parent_id: u64) -> Result<Room> {
         self.resolved_rooms.insert(id);
-        let name = {
+        let (name, global_id) = {
             let raw = self.registry.get_raw(id).ok_or_else(|| anyhow!("Room entity #{} not found", id))?;
-            self.extract_entity_name(raw).unwrap_or_else(|| "Unknown Room".to_string())
+            let name = self.extract_entity_name(raw).unwrap_or_else(|| "Unknown Room".to_string());
+            let global_id = self.extract_string_param(raw, 0);
+            (name, global_id)
         };
         
         // Generate ArxAddress for Room
@@ -269,21 +338,64 @@ impl<'a> IfcResolver<'a> {
 
         // Resolve Properties
         self.resolve_properties(id, &mut room.properties);
+        apply_identity_on_import(
+            &mut room.id,
+            &mut room.ifc_global_id,
+            global_id,
+            &room.properties,
+        );
+        apply_lidar_on_import(&mut room.lidar_enrichment, &mut room.properties);
+        normalize_imported_properties(&mut room.properties);
 
-        // Extract Mesh if available
+        // Placement + body (L2 geometry contract — building_local meters)
         let geom_resolver = GeometryResolver::new(self.registry);
         let mesh_resolver = MeshResolver::new(self.registry, &geom_resolver);
 
-        // IfcSpace has ObjectPlacement at Param 2 and Representation at Param 4
-        if let Some(Param::Reference(placement_id)) = raw.params.get(2) {
-            let transform = geom_resolver.resolve_placement(*placement_id);
-            if let Some(Param::Reference(shape_id)) = raw.params.get(4) {
-                if let Some(mesh) = mesh_resolver.resolve_mesh_item(*shape_id, &transform) {
-                    room.spatial_properties.mesh = Some(mesh);
-                }
+        // IFC4 product: ObjectPlacement @5, Representation @6; fall back for sparse files
+        let placement_param = raw.params.get(5).or_else(|| raw.params.get(2));
+        let representation_param = raw.params.get(6).or_else(|| raw.params.get(4));
+
+        let (ox, oy, oz, transform) =
+            if let Some(Param::Reference(placement_id)) = placement_param {
+                let transform = geom_resolver.resolve_placement(*placement_id);
+                let origin = transform.transform_point(&nalgebra::Vector3::new(0.0, 0.0, 0.0));
+                (origin.x, origin.y, origin.z, transform)
+            } else {
+                (
+                    0.0,
+                    0.0,
+                    0.0,
+                    crate::ifc::parser::geometry::Transform3D::identity(),
+                )
+            };
+
+        let position = position_from_origin(ox, oy, oz);
+        let mut mesh_local = None;
+        let mut dims_opt = None;
+
+        if let Some(Param::Reference(shape_id)) = representation_param {
+            // Prefer exact extruded rectangle dims (Arx box export path).
+            // Skip materializing a mesh so Model→IFC→Model keeps mesh=None for boxes.
+            if let Some((w, d, h)) = mesh_resolver.extract_extruded_rect_dimensions(*shape_id) {
+                dims_opt = Some(Dimensions {
+                    width: w,
+                    depth: d,
+                    height: h,
+                });
+            } else if let Some(mesh_world) =
+                mesh_resolver.extract_mesh_from_shape(*shape_id, &transform)
+            {
+                let local = mesh_to_local(&mesh_world, ox, oy, oz);
+                dims_opt = dimensions_from_mesh_aabb(&local);
+                mesh_local = Some(local);
             }
         }
-        
+
+        let dimensions = dims_opt.unwrap_or_else(|| room.spatial_properties.dimensions.clone());
+        let mut spatial = spatial_from_position_dims(position, dimensions);
+        spatial.mesh = mesh_local;
+        room.spatial_properties = spatial;
+
         Ok(room)
     }
 
@@ -408,26 +520,46 @@ impl<'a> IfcResolver<'a> {
 
                     // Prefer standard IFC group/zone grouping for wing membership
                     if let Some(w_name) = self.find_zone_of_entity(id) {
-                        eq.properties.insert("Pset_ArxEquipmentProperties:ArxWing".to_string(), w_name);
+                        eq.properties.insert(PROP_ARX_WING.to_string(), w_name);
                     }
 
-                    // Resolve Properties
+                    // Resolve Properties + identity
                     self.resolve_properties(id, &mut eq.properties);
+                    let global_id = self
+                        .registry
+                        .get_raw(id)
+                        .and_then(|raw| self.extract_string_param(raw, 0));
+                    apply_identity_on_import(
+                        &mut eq.id,
+                        &mut eq.ifc_global_id,
+                        global_id,
+                        &eq.properties,
+                    );
+                    apply_lidar_on_import(&mut eq.lidar_enrichment, &mut eq.properties);
+                    normalize_imported_properties(&mut eq.properties);
 
-                    // Extract Placement and Mesh
+                    // Placement + optional body (L2)
                     if let Some(raw) = self.registry.get_raw(id) {
-                        if let Some(Param::Reference(placement_id)) = raw.params.get(2) {
+                        let placement_param = raw.params.get(5).or_else(|| raw.params.get(2));
+                        let representation_param = raw.params.get(6).or_else(|| raw.params.get(4));
+                        if let Some(Param::Reference(placement_id)) = placement_param {
                             let transform = geom_resolver.resolve_placement(*placement_id);
+                            let origin =
+                                transform.transform_point(&nalgebra::Vector3::new(0.0, 0.0, 0.0));
                             eq.position = Position {
-                                x: transform.matrix[(0, 3)],
-                                y: transform.matrix[(1, 3)],
-                                z: transform.matrix[(2, 3)],
-                                coordinate_system: "building_local".to_string(),
+                                x: origin.x,
+                                y: origin.y,
+                                z: origin.z,
+                                coordinate_system: COORD_BUILDING_LOCAL.to_string(),
                             };
 
-                            if let Some(Param::Reference(shape_id)) = raw.params.get(4) {
-                                if let Some(mesh) = mesh_resolver.resolve_mesh_item(*shape_id, &transform) {
-                                    eq.mesh = Some(mesh);
+                            if let Some(Param::Reference(shape_id)) = representation_param {
+                                if let Some(mesh_world) =
+                                    mesh_resolver.extract_mesh_from_shape(*shape_id, &transform)
+                                {
+                                    eq.mesh = Some(mesh_to_local(
+                                        &mesh_world, origin.x, origin.y, origin.z,
+                                    ));
                                 }
                             }
                         }

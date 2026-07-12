@@ -5,9 +5,9 @@ use anyhow::{anyhow, bail, Result};
 use crate::utils::path_safety::PathSafety;
 use crate::export::ifc::IFCExporter;
 use crate::agent::git::SyncState;
-use crate::ifc::IFCProcessor;
+use crate::ingest::import_ifc_path;
 use crate::yaml::{BuildingData, BuildingYamlSerializer};
-use crate::core::{Building, BuildingMetadata};
+use crate::core::Building;
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{DateTime, Utc};
 
@@ -20,6 +20,9 @@ pub struct IfcImportResult {
     pub floors: usize,
     pub rooms: usize,
     pub equipment: usize,
+    /// Human-readable loss / merge summary lines (Phase 5).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub report_summary: Vec<String>,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -49,51 +52,28 @@ pub fn import_ifc(repo_root: &Path, filename: &str, data_base64: &str) -> Result
         )
     })?;
 
-    let import_path_str = import_path.to_str().ok_or_else(|| anyhow!("Invalid path utf-8"))?;
-    let processor = IFCProcessor::new();
-    let mut building = processor.extract_hierarchy(import_path_str)?;
-
-    let floors = building.floors.len();
-    let rooms = building
-        .floors
-        .iter()
-        .map(|f| f.wings.iter().map(|w| w.rooms.len()).sum::<usize>())
-        .sum();
-    let equipment = building.get_all_equipment().len();
-
-    let yaml_filename = format!("{}.yaml", sanitize_filename(&building.name, "building"));
-    let yaml_path = repo_root.join(&yaml_filename);
-
-    // Check if we have old data to merge
-    if yaml_path.exists() {
-        if let Ok(old_content) = fs::read_to_string(&yaml_path) {
-            if let Ok(old_building) = BuildingYamlSerializer::deserialize_building(&old_content) {
-                merge_buildings(&mut building, &old_building);
-            }
-        }
-    }
-
-    let relative_yaml = relative_display_path(repo_root, &yaml_path);
-    
-    // Save YAML
-    let yaml_string = BuildingYamlSerializer::serialize_building(&building)
-        .map_err(|e| anyhow!("Failed to serialize YAML: {}", e))?;
-    fs::write(&yaml_path, yaml_string)?;
-
-    Ok(IfcImportResult {
-        building_name: building.name,
-        yaml_path: relative_yaml,
-        floors,
-        rooms,
-        equipment,
-    })
+    finish_import(repo_root, &import_path)
 }
 
 pub fn import_ifc_local(repo_root: &Path, ifc_path: &Path) -> Result<IfcImportResult> {
-    let import_path_str = ifc_path.to_str().ok_or_else(|| anyhow!("Invalid path utf-8"))?;
-    let processor = IFCProcessor::new();
-    let mut building = processor.extract_hierarchy(import_path_str)?;
+    finish_import(repo_root, ifc_path)
+}
 
+/// Shared import pipeline via `ingest` (parse → merge → validate → write YAML).
+fn finish_import(repo_root: &Path, ifc_path: &Path) -> Result<IfcImportResult> {
+    // Prefer merging with an existing YAML named after the eventual building, if present
+    let building_yaml = repo_root.join("building.yaml");
+    let existing = if building_yaml.exists() {
+        Some(building_yaml.as_path())
+    } else {
+        None
+    };
+
+    let result = import_ifc_path(ifc_path, existing, false, true)
+        .map_err(|e| anyhow!("IFC import failed: {}", e))?;
+
+    let report_summary = result.summary_lines();
+    let building = result.building;
     let floors = building.floors.len();
     let rooms = building
         .floors
@@ -104,18 +84,7 @@ pub fn import_ifc_local(repo_root: &Path, ifc_path: &Path) -> Result<IfcImportRe
 
     let yaml_filename = format!("{}.yaml", sanitize_filename(&building.name, "building"));
     let yaml_path = repo_root.join(&yaml_filename);
-    
-    // Check if we have old data to merge
-    if yaml_path.exists() {
-        if let Ok(old_content) = fs::read_to_string(&yaml_path) {
-            if let Ok(old_building) = BuildingYamlSerializer::deserialize_building(&old_content) {
-                merge_buildings(&mut building, &old_building);
-            }
-        }
-    }
-
     let relative_yaml = relative_display_path(repo_root, &yaml_path);
-    
     let yaml_string = BuildingYamlSerializer::serialize_building(&building)
         .map_err(|e| anyhow!("Failed to serialize YAML: {}", e))?;
     fs::write(&yaml_path, yaml_string)?;
@@ -126,114 +95,8 @@ pub fn import_ifc_local(repo_root: &Path, ifc_path: &Path) -> Result<IfcImportRe
         floors,
         rooms,
         equipment,
+        report_summary,
     })
-}
-
-fn merge_buildings(new_building: &mut Building, old_building: &Building) {
-    // 1. Merge Building metadata
-    if new_building.name == old_building.name {
-        new_building.created_at = old_building.created_at;
-        if let Some(old_meta) = &old_building.metadata {
-            if let Some(new_meta) = &mut new_building.metadata {
-                for tag in &old_meta.tags {
-                    if !new_meta.tags.contains(tag) {
-                        new_meta.tags.push(tag.clone());
-                    }
-                }
-            } else {
-                new_building.metadata = Some(old_meta.clone());
-            }
-        }
-    }
-
-    // 2. Index old components
-    let mut old_rooms = std::collections::HashMap::new();
-    let mut old_equipment = std::collections::HashMap::new();
-
-    for floor in &old_building.floors {
-        for wing in &floor.wings {
-            for room in &wing.rooms {
-                let path = format!("{}/{}", floor.name, room.name);
-                old_rooms.insert(path, room);
-            }
-        }
-    }
-
-    // Index old equipment by their hierarchical paths
-    for floor in &old_building.floors {
-        for eq in &floor.equipment {
-            let path = format!("{}/{}", floor.name, eq.name);
-            old_equipment.insert(path, eq.clone());
-        }
-        for wing in &floor.wings {
-            for eq in &wing.equipment {
-                let path = format!("{}/{}/{}", floor.name, wing.name, eq.name);
-                old_equipment.insert(path, eq.clone());
-            }
-            for room in &wing.rooms {
-                for eq in &room.equipment {
-                    let path = format!("{}/{}/{}/{}", floor.name, wing.name, room.name, eq.name);
-                    old_equipment.insert(path, eq.clone());
-                }
-            }
-        }
-    }
-
-    // 3. Merge Rooms
-    for floor in &mut new_building.floors {
-        for wing in &mut floor.wings {
-            for room in &mut wing.rooms {
-                let path = format!("{}/{}", floor.name, room.name);
-                if let Some(old_room) = old_rooms.get(&path) {
-                    room.created_at = old_room.created_at;
-                    for (k, v) in &old_room.properties {
-                        room.properties.entry(k.clone()).or_insert_with(|| v.clone());
-                    }
-                }
-            }
-        }
-    }
-
-    // 4. Merge Equipment
-    for floor in &mut new_building.floors {
-        let floor_name = &floor.name;
-        for eq in &mut floor.equipment {
-            let path = format!("{}/{}", floor_name, eq.name);
-            if let Some(old_eq) = old_equipment.get(&path) {
-                eq.status = old_eq.status;
-                eq.health_status = old_eq.health_status.clone();
-                for (k, v) in &old_eq.properties {
-                    eq.properties.entry(k.clone()).or_insert_with(|| v.clone());
-                }
-            }
-        }
-        for wing in &mut floor.wings {
-            let wing_name = &wing.name;
-            for eq in &mut wing.equipment {
-                let path = format!("{}/{}/{}", floor_name, wing_name, eq.name);
-                if let Some(old_eq) = old_equipment.get(&path) {
-                    eq.status = old_eq.status;
-                    eq.health_status = old_eq.health_status.clone();
-                    for (k, v) in &old_eq.properties {
-                        eq.properties.entry(k.clone()).or_insert_with(|| v.clone());
-                    }
-                }
-            }
-            for room in &mut wing.rooms {
-                let room_name = &room.name;
-                for eq in &mut room.equipment {
-                    let path = format!("{}/{}/{}/{}", floor_name, wing_name, room_name, eq.name);
-                    if let Some(old_eq) = old_equipment.get(&path) {
-                        eq.status = old_eq.status;
-                        eq.health_status = old_eq.health_status.clone();
-                        for (k, v) in &old_eq.properties {
-                            eq.properties.entry(k.clone()).or_insert_with(|| v.clone());
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
 
 pub fn export_ifc(
@@ -418,6 +281,8 @@ mod tests {
             created_at: None,
             updated_at: None,
             pending_equipment_ids: Vec::new(),
+            lidar_enrichment: None,
+            ifc_global_id: None,
         };
         wing.rooms.push(room);
         floor.wings.push(wing);

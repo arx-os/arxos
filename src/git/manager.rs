@@ -376,6 +376,7 @@ mod tests {
                 properties: Default::default(),
             }),
             coordinate_systems: vec![],
+            ifc_global_id: None,
         };
 
         // Export building (this will create a commit)

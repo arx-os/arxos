@@ -18,13 +18,26 @@ pub fn BuildingDetail() -> impl IntoView {
     let (commit_message, set_commit_message) = create_signal(String::new());
     let (action_message, set_action_message) = create_signal(String::new());
 
-    // Load building data from localStorage on mount
+    // Load building data from sync envelope (or legacy localStorage) on mount
     create_effect(move |_| {
+        let want_id = id();
+        if let Ok(envelope_json) = crate::web::wasm_bridge::load_active_building() {
+            if let Ok(building_json) =
+                crate::web::wasm_bridge::building_json_from_envelope(&envelope_json)
+            {
+                if let Ok(b) = serde_json::from_str::<Building>(&building_json) {
+                    if b.id == want_id || want_id.is_empty() {
+                        set_building.set(Some(b));
+                        return;
+                    }
+                }
+            }
+        }
         if let Some(window) = web_sys::window() {
             if let Ok(Some(storage)) = window.local_storage() {
                 if let Ok(Some(json)) = storage.get_item("last_imported_building") {
                     if let Ok(b) = serde_json::from_str::<Building>(&json) {
-                        if b.id == id() {
+                        if b.id == want_id {
                             set_building.set(Some(b));
                         }
                     }

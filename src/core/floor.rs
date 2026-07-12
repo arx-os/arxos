@@ -24,6 +24,8 @@ pub struct Floor {
     /// Temporary list of equipment IDs parsed during deserialization
     pub pending_equipment_ids: Vec<String>,
     pub properties: HashMap<String, String>,
+    /// IFC product GlobalId when known (stable interchange identity)
+    pub ifc_global_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -38,6 +40,8 @@ struct FloorDto {
     wings: Vec<Wing>,
     equipment: Vec<String>,
     properties: HashMap<String, String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    ifc_global_id: Option<String>,
 }
 
 impl serde::Serialize for Floor {
@@ -55,6 +59,7 @@ impl serde::Serialize for Floor {
             wings: self.wings.clone(),
             equipment: equipment_ids,
             properties: self.properties.clone(),
+            ifc_global_id: self.ifc_global_id.clone(),
         };
         dto.serialize(serializer)
     }
@@ -76,6 +81,7 @@ impl<'de> serde::Deserialize<'de> for Floor {
             equipment: Vec::new(),
             pending_equipment_ids: dto.equipment,
             properties: dto.properties,
+            ifc_global_id: dto.ifc_global_id,
         })
     }
 }
@@ -118,6 +124,7 @@ impl Floor {
             equipment: Vec::new(),
             pending_equipment_ids: Vec::new(),
             properties: HashMap::new(),
+            ifc_global_id: None,
         }
     }
 

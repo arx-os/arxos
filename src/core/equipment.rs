@@ -93,6 +93,12 @@ pub struct Equipment {
     /// This field is optional and omitted from YAML when None.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sensor_mappings: Option<Vec<SensorMapping>>,
+    /// LiDAR-specific enrichments (optional)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lidar_enrichment: Option<super::LidarEnrichment>,
+    /// IFC product GlobalId when known (stable interchange identity)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ifc_global_id: Option<String>,
 }
 
 /// Types of equipment
@@ -162,6 +168,8 @@ impl Default for Equipment {
             health_status: None,
             room_id: None,
             sensor_mappings: None,
+            lidar_enrichment: None,
+            ifc_global_id: None,
         }
     }
 }
@@ -217,6 +225,8 @@ impl Equipment {
             health_status: None,
             room_id: None,
             sensor_mappings: None,
+            lidar_enrichment: None,
+            ifc_global_id: None,
         }
     }
 

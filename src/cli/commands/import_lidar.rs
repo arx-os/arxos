@@ -1,8 +1,7 @@
 use crate::cli::commands::Command;
-use crate::spatial::lidar::LidarPipeline;
-use crate::spatial::lidar::merger::ModelMerger;
-use crate::yaml::BuildingYamlSerializer;
+use crate::ingest::import_lidar_path;
 use crate::utils::path_safety::PathSafety;
+use crate::yaml::BuildingYamlSerializer;
 use anyhow::anyhow;
 use std::error::Error;
 use std::path::Path;
@@ -18,70 +17,79 @@ pub struct ImportLidarCommand {
 
 impl Command for ImportLidarCommand {
     fn execute(&self) -> Result<(), Box<dyn Error>> {
-        println!("🏗️  Importing LiDAR file: {}", self.file_path);
-        println!("   Voxel Size: {} m", self.voxel_size);
+        println!("Importing LiDAR file: {}", self.file_path);
+        println!("  Voxel Size: {} m", self.voxel_size);
         if self.light {
-            println!("   Mode: Light (optimized for resource limits)");
+            println!("  Mode: Light (optimized for resource limits)");
         }
         if self.dry_run {
-            println!("🔍 Dry run mode enabled - no changes will be written");
+            println!("Dry run mode enabled - no changes will be written");
         }
 
-        let pipeline = LidarPipeline::new(self.voxel_size, self.light);
-        let incoming_building = pipeline.process(&self.file_path)?;
+        let repo_root = Path::new(".");
+        let lidar_path = Path::new(&self.file_path);
 
-        let target_building = if self.merge {
-            let existing_name = self.building.as_ref().cloned().unwrap_or_else(|| {
-                incoming_building.name.clone()
-            });
-
-            let yaml_filename = format!("{}.yaml", existing_name.replace(" ", "_").to_lowercase());
-            let yaml_path = Path::new(".").join(&yaml_filename);
-
-            if yaml_path.exists() {
-                println!("📂 Loading existing building model from: {}", yaml_path.display());
-                let yaml_content = std::fs::read_to_string(&yaml_path)
-                    .map_err(|e| anyhow!("Failed to read existing building YAML: {}", e))?;
-                let existing_building = BuildingYamlSerializer::deserialize_building(&yaml_content)
-                    .map_err(|e| anyhow!("Failed to deserialize existing building: {}", e))?;
-
-                ModelMerger::merge(existing_building, incoming_building)
-            } else {
-                println!("⚠️  Merge enabled but no existing model found at {}. Creating new building.", yaml_path.display());
-                incoming_building
-            }
+        let existing = if self.merge {
+            let name_hint = self.building.clone().unwrap_or_default();
+            let candidates = [
+                if !name_hint.is_empty() {
+                    Some(repo_root.join(format!(
+                        "{}.yaml",
+                        name_hint.replace(' ', "_").to_lowercase()
+                    )))
+                } else {
+                    None
+                },
+                Some(repo_root.join("building.yaml")),
+            ];
+            candidates
+                .into_iter()
+                .flatten()
+                .find(|p| p.exists())
         } else {
-            incoming_building
+            None
         };
 
+        let result = import_lidar_path(
+            lidar_path,
+            existing.as_deref(),
+            self.voxel_size,
+            self.light,
+            true,
+        )
+        .map_err(|e| format!("LiDAR import failed: {}", e))?;
+
         if self.dry_run {
-            println!("✅ Parsed successfully (dry-run):");
-            println!("  Building: {}", target_building.name);
-            if let Some(ref metadata) = target_building.metadata {
+            println!("Parsed successfully (dry-run):");
+            println!("  Building: {}", result.building.name);
+            if let Some(ref metadata) = result.building.metadata {
                 if let Some(total) = metadata.properties.get("total_points") {
                     println!("  Total points: {}", total);
                 }
-                if let Some(ds) = metadata.properties.get("downsampled_points") {
-                    println!("  Downsampled points: {}", ds);
-                }
+            }
+            for line in result.summary_lines() {
+                println!("  {}", line);
             }
             return Ok(());
         }
 
-        // Write to YAML in repository root
-        let repo_root = Path::new(".");
-        let yaml_filename = format!("{}.yaml", target_building.name.replace(" ", "_").to_lowercase());
+        let yaml_filename = format!(
+            "{}.yaml",
+            result.building.name.replace(' ', "_").to_lowercase()
+        );
         let yaml_path = repo_root.join(&yaml_filename);
-
         PathSafety::validate_path_for_write(&yaml_path).map_err(|e| anyhow!(e))?;
 
-        let yaml_content = BuildingYamlSerializer::serialize_building(&target_building)
+        let yaml_content = BuildingYamlSerializer::serialize_building(&result.building)
             .map_err(|e| anyhow!("Failed to serialize YAML: {}", e))?;
-
         std::fs::write(&yaml_path, yaml_content)
             .map_err(|e| anyhow!("Failed to write YAML to {}: {}", yaml_path.display(), e))?;
 
-        println!("✅ Imported successfully to {}", yaml_path.display());
+        println!("Imported successfully to {}", yaml_path.display());
+        for line in result.summary_lines() {
+            println!("  {}", line);
+        }
+
         Ok(())
     }
 

@@ -12,12 +12,18 @@ mod identifiers;
 mod hierarchy;
 mod bim_parser;
 mod ifc_rs_converter;
+pub mod mapping;
 pub mod parser;
 pub mod spatial;
 
 pub use error::{IFCError, IFCResult};
 pub use hierarchy::{HierarchyBuilder, IFCEntity};
 pub use bim_parser::BimParser;
+pub use mapping::{
+    assign_missing_global_ids, merge_building, merge_building_with_policy, merge_into_report,
+    merge_into_report_with_policy, report_export_losses, resolve_product_global_id, FidelityLevel,
+    HierarchyBase, LossReport, MappingResult, MergePolicy, MergeResult, MergeSource, MergeStats,
+};
 pub use spatial::{SpatialIndex, SpatialQueryResult, SpatialRelationship};
 
 /// IFC (Industry Foundation Classes) file processor
@@ -39,6 +45,9 @@ pub struct EntityStats {
 pub struct ParsingResult {
     pub building: crate::core::Building,
     pub stats: EntityStats,
+    /// Structured fidelity / loss report (Phase 5).
+    pub report: mapping::LossReport,
+    /// Flattened warning messages (derived from `report` for simple consumers).
     pub warnings: Vec<String>,
 }
 
@@ -98,26 +107,47 @@ impl IFCProcessor {
     /// Parse IFC file using the new high-performance native parser
     pub fn parse_native(&self, file_path: &str, validate_strict: bool) -> anyhow::Result<ParsingResult> {
         info!("Processing IFC file (Native, strict={}): {}", validate_strict, file_path);
-        
         let content = std::fs::read_to_string(file_path)?;
-        let lexer = parser::StepLexer::new(&content);
+        self.parse_native_content(&content, validate_strict)
+    }
+
+    /// Parse IFC from an in-memory STEP string (CLI / WASM shared path).
+    pub fn parse_native_content(
+        &self,
+        content: &str,
+        validate_strict: bool,
+    ) -> anyhow::Result<ParsingResult> {
+        let lexer = parser::StepLexer::new(content);
         let mut registry = parser::EntityRegistry::new();
         registry.populate_from_lexer(lexer);
-        
-        // Collect stats
+
         let stats = registry.get_stats();
 
         if validate_strict && stats.spatial_entities == 0 {
-            return Err(anyhow::anyhow!("Strict validation failed: No spatial entities found (IFC contains no Site/Building/Storey)"));
+            return Err(anyhow::anyhow!(
+                "Strict validation failed: No spatial entities found (IFC contains no Site/Building/Storey)"
+            ));
         }
 
         let mut resolver = parser::IfcResolver::new(&mut registry);
-        let building = resolver.resolve_all()?;
-        
+        let (building, report) = resolver.resolve_all()?;
+        let warnings = report
+            .warnings
+            .iter()
+            .map(|w| {
+                if let Some(ref e) = w.entity {
+                    format!("[{}] {} ({})", w.code, w.message, e)
+                } else {
+                    format!("[{}] {}", w.code, w.message)
+                }
+            })
+            .collect();
+
         Ok(ParsingResult {
             building,
             stats,
-            warnings: Vec::new(), // TODO: Collect warnings from resolver
+            report,
+            warnings,
         })
     }
 

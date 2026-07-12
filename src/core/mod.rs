@@ -24,7 +24,7 @@ pub use equipment::{
 };
 pub use floor::Floor;
 pub use room::{Room, RoomType};
-pub use types::{BoundingBox, Dimensions, Position, SpatialProperties};
+pub use types::{BoundingBox, Dimensions, Position, SpatialProperties, LidarEnrichment};
 pub use wing::Wing;
 
 // Re-export all operations

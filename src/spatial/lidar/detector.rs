@@ -1,5 +1,5 @@
 use crate::spatial::Point3D;
-use crate::core::{Room, RoomType, Position, Dimensions, BoundingBox, SpatialProperties, Equipment, EquipmentType};
+use crate::core::{Room, RoomType, Position, Dimensions, BoundingBox, SpatialProperties, Equipment, EquipmentType, LidarEnrichment};
 use std::collections::{VecDeque, HashMap};
 
 pub struct DetectedFloor {
@@ -268,6 +268,23 @@ impl RoomDetector {
                             coordinate_system: "building_local".to_string(),
                         };
 
+                        let room_points_count = slice_points
+                            .iter()
+                            .filter(|p| {
+                                p.x >= room_min_x
+                                    && p.x <= room_max_x
+                                    && p.y >= room_min_y
+                                    && p.y <= room_max_y
+                            })
+                            .count();
+
+                        room.lidar_enrichment = Some(LidarEnrichment {
+                            point_count: room_points_count,
+                            confidence_score: 0.90,
+                            last_scan_timestamp: Some(chrono::Utc::now()),
+                            classification_heuristic: Some("2D Occupancy Grid Connected Components".to_string()),
+                        });
+
                         rooms.push(room);
                         room_counter += 1;
                     }
@@ -441,6 +458,18 @@ impl EquipmentDetector {
             equipment.properties.insert("height".to_string(), height.to_string());
             equipment.properties.insert("volume".to_string(), volume.to_string());
             equipment.properties.insert("point_count".to_string(), cluster.len().to_string());
+
+            let confidence_score = match &equipment.equipment_type {
+                EquipmentType::Furniture => 0.75, // Default fallback
+                _ => 0.90, // Rule-based match
+            };
+
+            equipment.lidar_enrichment = Some(LidarEnrichment {
+                point_count: cluster.len(),
+                confidence_score,
+                last_scan_timestamp: Some(chrono::Utc::now()),
+                classification_heuristic: Some(format!("Rule-based geometric filter (height: {:.2}, vol: {:.3})", height, volume)),
+            });
 
             equipment_list.push(equipment);
             eq_counter += 1;

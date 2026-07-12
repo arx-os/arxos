@@ -12,6 +12,44 @@ ArxOS supports importing and exporting IFC files, the industry standard format f
 - IFC2x3
 - IFC4
 
+### Identity (L0)
+
+Product entities carry a stable IFC `GlobalId` linked to Arx entity ids:
+
+- Domain field: `ifc_global_id` on Building, Floor, Room, and Equipment
+- On **export**, product GlobalIds are reused when set; otherwise derived deterministically from the Arx UUID
+- On **import**, GlobalId is stored and `Pset_ArxIdentity.ArxId` restores the Arx UUID when present
+
+### LiDAR enrichment (L1)
+
+Rooms and equipment with `lidar_enrichment` export/import via
+`Pset_ArxLidarEnrichment` (`PointCount`, `ConfidenceScore`, `LastScanTimestamp`,
+`ClassificationHeuristic`). After import the values live on the typed field, not
+in the free-form properties bag.
+
+### Free-form properties (Phase 3)
+
+Arx free-form metadata uses **clean keys** in the domain model and YAML
+(e.g. `max_occupancy`, not `Pset_ArxRoomProperties:max_occupancy`). Import
+strips known Arx Pset prefixes; export writes clean names into the matching
+Pset. Re-export will not stack prefixes.
+
+### Geometry (Phase 4 / L2)
+
+Coordinates are **`building_local` meters**. Room placement is the footprint
+center (X/Y) and volume bottom (Z). Rooms export as an extruded box from
+dimensions or as a local mesh; equipment exports position plus optional mesh
+(no synthetic body). Import restores position and dimensions within 1 mm.
+
+### Merge & loss reports (Phase 5)
+
+Re-importing an IFC over an existing YAML merges by GlobalId / Arx id / path,
+preserving LiDAR enrichments, equipment status, and Arx-only properties.
+CLI `arx import` / `arx export` print a short fidelity report (warnings + merge
+stats).
+
+See [ifc-mapping.md](./ifc-mapping.md) for the full fidelity contract and mapping rules.
+
 ---
 
 ## Import

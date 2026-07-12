@@ -327,10 +327,22 @@ fn test_lidar_pipeline_incremental_merge() -> Result<(), Box<dyn std::error::Err
         mesh: None,
         coordinate_system: "building_local".to_string(),
     };
+    room1_in.lidar_enrichment = Some(arxos::core::LidarEnrichment {
+        point_count: 9999,
+        confidence_score: 0.99,
+        last_scan_timestamp: None,
+        classification_heuristic: Some("rescan".into()),
+    });
 
     // Matches eq1 (HVAC, position [2.25, 2.25, 0.5] is within 1.5m of [2.2, 2.2, 0.5])
     let mut eq1_in = Equipment::new("HVAC Item 1".to_string(), "/building/floor-1/room-1/hvac-item-1".to_string(), EquipmentType::HVAC);
     eq1_in.position = Position { x: 2.25, y: 2.25, z: 0.5, coordinate_system: "building_local".to_string() };
+    eq1_in.lidar_enrichment = Some(arxos::core::LidarEnrichment {
+        point_count: 111,
+        confidence_score: 0.8,
+        last_scan_timestamp: None,
+        classification_heuristic: Some("eq_rescan".into()),
+    });
 
     // New Equipment (Electrical, position [3.0, 3.0, 1.0])
     let mut eq2_in = Equipment::new("Electrical Item 2".to_string(), "/building/floor-1/room-1/electrical-item-2".to_string(), EquipmentType::Electrical);
@@ -371,6 +383,11 @@ fn test_lidar_pipeline_incremental_merge() -> Result<(), Box<dyn std::error::Err
 
     // Verify room ID preservation
     assert_eq!(r1.id, room1_id);
+    assert_eq!(
+        r1.lidar_enrichment.as_ref().map(|e| e.point_count),
+        Some(9999),
+        "LiDAR re-scan enrichment must update on matched rooms"
+    );
 
     // Verify room 1 equipment merging
     assert_eq!(r1.equipment.len(), 2);
@@ -381,11 +398,96 @@ fn test_lidar_pipeline_incremental_merge() -> Result<(), Box<dyn std::error::Err
     assert_eq!(hvac.id, eq1_id);
     // Verify position updated
     assert_eq!(hvac.position.x, 2.25);
+    assert_eq!(
+        hvac.lidar_enrichment.as_ref().map(|e| e.point_count),
+        Some(111)
+    );
     // Verify new equipment details
     assert_eq!(elec.position.x, 3.0);
 
     // Verify new room details
     assert_eq!(r2.name, "Room 2");
+
+    Ok(())
+}
+
+#[test]
+fn test_lidar_enrichment_yaml_round_trip() -> Result<(), Box<dyn std::error::Error>> {
+    use arxos::core::{Building, Floor, Wing, Room, RoomType, Equipment, EquipmentType, LidarEnrichment, Position, Dimensions, BoundingBox, SpatialProperties};
+    use arxos::yaml::BuildingYamlSerializer;
+
+    // 1. Create a building with detailed LiDAR enrichment
+    let mut building = Building::new("Enriched Building".to_string(), "enriched-building".to_string());
+    let mut floor = Floor::new("Floor 1".to_string(), 0);
+    let mut wing = Wing::new("Main".to_string());
+    
+    let mut room = Room::new("Room 101".to_string(), RoomType::Office);
+    room.spatial_properties = SpatialProperties {
+        position: Position { x: 2.0, y: 2.0, z: 0.0, coordinate_system: "building_local".to_string() },
+        dimensions: Dimensions { width: 4.0, height: 3.0, depth: 4.0 },
+        bounding_box: BoundingBox {
+            min: Position { x: 0.0, y: 0.0, z: 0.0, coordinate_system: "building_local".to_string() },
+            max: Position { x: 4.0, y: 4.0, z: 3.0, coordinate_system: "building_local".to_string() },
+        },
+        mesh: None,
+        coordinate_system: "building_local".to_string(),
+    };
+    
+    let now = chrono::Utc::now();
+    let room_lidar = LidarEnrichment {
+        point_count: 15420,
+        confidence_score: 0.95,
+        last_scan_timestamp: Some(now),
+        classification_heuristic: Some("Connected Components 2D".to_string()),
+    };
+    room.lidar_enrichment = Some(room_lidar.clone());
+
+    let mut eq = Equipment::new("HVAC Unit 1".to_string(), "/building/floor-1/room-101/hvac-1".to_string(), EquipmentType::HVAC);
+    eq.position = Position { x: 2.2, y: 2.2, z: 0.5, coordinate_system: "building_local".to_string() };
+    
+    let eq_lidar = LidarEnrichment {
+        point_count: 320,
+        confidence_score: 0.90,
+        last_scan_timestamp: Some(now),
+        classification_heuristic: Some("Rule-based geometric filter".to_string()),
+    };
+    eq.lidar_enrichment = Some(eq_lidar.clone());
+
+    room.add_equipment(eq);
+    wing.add_room(room);
+    floor.add_wing(wing);
+    building.add_floor(floor);
+
+    // 2. Serialize to YAML
+    let yaml_content = BuildingYamlSerializer::serialize_building(&building)?;
+    println!("Serialized YAML:\n{}", yaml_content);
+
+    // 3. Deserialize from YAML
+    let deserialized_building = BuildingYamlSerializer::deserialize_building(&yaml_content)?;
+
+    // 4. Assert that fields round-trip losslessly
+    let des_floor = &deserialized_building.floors[0];
+    let des_wing = &des_floor.wings[0];
+    let des_room = &des_wing.rooms[0];
+    let des_eq = &des_room.equipment[0];
+
+    // Room assertion
+    let des_room_lidar = des_room.lidar_enrichment.as_ref().expect("Room lidar enrichment missing");
+    assert_eq!(des_room_lidar.point_count, room_lidar.point_count);
+    assert_eq!(des_room_lidar.confidence_score, room_lidar.confidence_score);
+    assert_eq!(des_room_lidar.classification_heuristic, room_lidar.classification_heuristic);
+    // Since timestamp is serialized to string and parsed back, check that their absolute difference is zero or extremely tiny
+    if let (Some(t1), Some(t2)) = (des_room_lidar.last_scan_timestamp, room_lidar.last_scan_timestamp) {
+        assert!((t1 - t2).num_milliseconds() == 0);
+    } else {
+        panic!("Timestamp was lost");
+    }
+
+    // Equipment assertion
+    let des_eq_lidar = des_eq.lidar_enrichment.as_ref().expect("Equipment lidar enrichment missing");
+    assert_eq!(des_eq_lidar.point_count, eq_lidar.point_count);
+    assert_eq!(des_eq_lidar.confidence_score, eq_lidar.confidence_score);
+    assert_eq!(des_eq_lidar.classification_heuristic, eq_lidar.classification_heuristic);
 
     Ok(())
 }

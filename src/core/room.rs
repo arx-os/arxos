@@ -48,6 +48,10 @@ pub struct Room {
     pub created_at: Option<DateTime<Utc>>,
     /// Last modification timestamp (optional, omitted from YAML for backward compatibility)
     pub updated_at: Option<DateTime<Utc>>,
+    /// LiDAR-specific enrichments (optional)
+    pub lidar_enrichment: Option<super::LidarEnrichment>,
+    /// IFC product GlobalId when known (stable interchange identity)
+    pub ifc_global_id: Option<String>,
 }
 
 /// DTO for Room serialization to preserve YAML and Git layout
@@ -63,6 +67,10 @@ struct RoomDto {
     created_at: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     updated_at: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    lidar_enrichment: Option<super::LidarEnrichment>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    ifc_global_id: Option<String>,
 }
 
 // Custom Serialize implementation for Room via RoomDto
@@ -81,6 +89,8 @@ impl serde::Serialize for Room {
             properties: self.properties.clone(),
             created_at: self.created_at,
             updated_at: self.updated_at,
+            lidar_enrichment: self.lidar_enrichment.clone(),
+            ifc_global_id: self.ifc_global_id.clone(),
         };
         dto.serialize(serializer)
     }
@@ -103,6 +113,8 @@ impl<'de> serde::Deserialize<'de> for Room {
             properties: dto.properties,
             created_at: dto.created_at,
             updated_at: dto.updated_at,
+            lidar_enrichment: dto.lidar_enrichment,
+            ifc_global_id: dto.ifc_global_id,
         })
     }
 }
@@ -218,6 +230,8 @@ impl Room {
             properties: HashMap::new(),
             created_at: now,
             updated_at: now,
+            lidar_enrichment: None,
+            ifc_global_id: None,
         }
     }
 

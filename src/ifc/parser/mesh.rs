@@ -23,22 +23,104 @@ impl<'a> MeshResolver<'a> {
     /// Extract a Mesh from a product definition shape.
     pub fn extract_mesh_from_shape(&self, shape_id: u64, transform: &Transform3D) -> Option<Mesh> {
         let shape_entity = self.registry.get_raw(shape_id)?;
-        if shape_entity.class != "IFCPRODUCTDEFINITIONSHAPE" {
+        // Accept product definition shape or a bare shape representation / item
+        match shape_entity.class.as_str() {
+            "IFCPRODUCTDEFINITIONSHAPE" => {
+                // Param 2: Representations (List of IfcShapeRepresentation)
+                if let Some(Param::List(reps)) = shape_entity.params.get(2) {
+                    for rep_id_param in reps {
+                        if let Param::Reference(rep_id) = rep_id_param {
+                            if let Some(mesh) =
+                                self.extract_mesh_from_representation(*rep_id, transform)
+                            {
+                                return Some(mesh);
+                            }
+                        }
+                    }
+                }
+                None
+            }
+            "IFCSHAPEREPRESENTATION" => self.extract_mesh_from_representation(shape_id, transform),
+            _ => self.resolve_mesh_item(shape_id, transform),
+        }
+    }
+
+    /// Extract width/depth/height from an extruded rectangle body when present.
+    ///
+    /// Returns `(width=XDim, depth=YDim, height=extrusion depth)` for
+    /// `IfcExtrudedAreaSolid` + `IfcRectangleProfileDef` under a product shape.
+    /// Does not apply placement transforms (dimensions are local).
+    pub fn extract_extruded_rect_dimensions(&self, shape_id: u64) -> Option<(f64, f64, f64)> {
+        let shape_entity = self.registry.get_raw(shape_id)?;
+        match shape_entity.class.as_str() {
+            "IFCPRODUCTDEFINITIONSHAPE" => {
+                if let Some(Param::List(reps)) = shape_entity.params.get(2) {
+                    for rep_id_param in reps {
+                        if let Param::Reference(rep_id) = rep_id_param {
+                            if let Some(dims) = self.extruded_dims_from_representation(*rep_id) {
+                                return Some(dims);
+                            }
+                        }
+                    }
+                }
+                None
+            }
+            "IFCSHAPEREPRESENTATION" => self.extruded_dims_from_representation(shape_id),
+            "IFCEXTRUDEDAREASOLID" => self.extruded_dims_from_solid(shape_id),
+            _ => None,
+        }
+    }
+
+    fn extruded_dims_from_representation(&self, rep_id: u64) -> Option<(f64, f64, f64)> {
+        let rep_entity = self.registry.get_raw(rep_id)?;
+        if rep_entity.class != "IFCSHAPEREPRESENTATION" {
             return None;
         }
-
-        // Param 2: Representations (List of IfcShapeRepresentation)
-        if let Some(Param::List(reps)) = shape_entity.params.get(2) {
-            for rep_id_param in reps {
-                if let Param::Reference(rep_id) = rep_id_param {
-                    if let Some(mesh) = self.extract_mesh_from_representation(*rep_id, transform) {
-                        return Some(mesh); // Return first valid mesh for now
+        if let Some(Param::List(items)) = rep_entity.params.get(3) {
+            for item_id_param in items {
+                if let Param::Reference(item_id) = item_id_param {
+                    if let Some(dims) = self.extruded_dims_from_solid(*item_id) {
+                        return Some(dims);
                     }
                 }
             }
         }
-
         None
+    }
+
+    fn extruded_dims_from_solid(&self, solid_id: u64) -> Option<(f64, f64, f64)> {
+        let solid = self.registry.get_raw(solid_id)?;
+        if solid.class != "IFCEXTRUDEDAREASOLID" {
+            return None;
+        }
+        let profile_id = match solid.params.get(0)? {
+            Param::Reference(id) => *id,
+            _ => return None,
+        };
+        let height = match solid.params.get(3)? {
+            Param::Float(f) => *f,
+            Param::Integer(i) => *i as f64,
+            _ => return None,
+        };
+        let profile = self.registry.get_raw(profile_id)?;
+        if profile.class != "IFCRECTANGLEPROFILEDEF" {
+            return None;
+        }
+        // Param 3: XDim (width), Param 4: YDim (depth)
+        let width = match profile.params.get(3)? {
+            Param::Float(f) => *f,
+            Param::Integer(i) => *i as f64,
+            _ => return None,
+        };
+        let depth = match profile.params.get(4)? {
+            Param::Float(f) => *f,
+            Param::Integer(i) => *i as f64,
+            _ => return None,
+        };
+        if width <= 0.0 || depth <= 0.0 || height <= 0.0 {
+            return None;
+        }
+        Some((width, depth, height))
     }
 
     fn extract_mesh_from_representation(&self, rep_id: u64, transform: &Transform3D) -> Option<Mesh> {

@@ -37,7 +37,7 @@ pub enum ValidationSeverity {
     Info,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValidationResult {
     pub rule_id: String,
     pub message: String,

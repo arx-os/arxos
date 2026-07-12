@@ -1,12 +1,10 @@
 use crate::core::{Building, Floor, Room, Equipment};
-
-// Use commented out if unsure or delete. "unused import: `crate::core::spatial::SpatialEntity`"
-// It's used in `write_triangulated_face_set` fix I made earlier?
-// Wait, I used `use crate::core::...` inside the function or file? 
-// The warning says it's unused. Let's remove it.
-// Wait, I can't leave empty lines. Just remove the line.
-
 use crate::core::spatial::mesh::Mesh;
+use crate::ifc::mapping::{
+    entity_kind, identity_property_map, lidar_enrichment_to_pset, properties_for_export,
+    resolve_product_global_id, PROP_ARX_WING, PSET_ARX_BUILDING, PSET_ARX_EQUIPMENT,
+    PSET_ARX_FLOOR, PSET_ARX_IDENTITY, PSET_ARX_LIDAR, PSET_ARX_ROOM,
+};
 use anyhow::Result;
 use chrono::Utc;
 
@@ -210,9 +208,33 @@ impl IFCExporter {
                     zone_entity_ids.push(room_id);
 
                     // --- ADD PSETS FOR ROOM ---
-                    let mut room_props = room.properties.clone();
-                    room_props.insert("ArxWing".to_string(), wing.name.clone());
-                    self.create_property_set(writer, owner_history_id, room_id, "Pset_ArxRoomProperties", &room_props)?;
+                    let identity = identity_property_map(&room.id, entity_kind::ROOM);
+                    self.create_property_set(
+                        writer,
+                        owner_history_id,
+                        room_id,
+                        PSET_ARX_IDENTITY,
+                        &identity,
+                    )?;
+                    if let Some(ref enrichment) = room.lidar_enrichment {
+                        let lidar_props = lidar_enrichment_to_pset(enrichment);
+                        self.create_property_set(
+                            writer,
+                            owner_history_id,
+                            room_id,
+                            PSET_ARX_LIDAR,
+                            &lidar_props,
+                        )?;
+                    }
+                    let mut room_props = properties_for_export(&room.properties, PSET_ARX_ROOM);
+                    room_props.insert(PROP_ARX_WING.to_string(), wing.name.clone());
+                    self.create_property_set(
+                        writer,
+                        owner_history_id,
+                        room_id,
+                        PSET_ARX_ROOM,
+                        &room_props,
+                    )?;
 
                     // Process Equipment in Room
                     if !room.equipment.is_empty() {
@@ -221,7 +243,33 @@ impl IFCExporter {
                             let eq_id = self.create_equipment(writer, equipment, owner_history_id)?;
                             equipment_ids.push(eq_id);
 
-                            self.create_property_set(writer, owner_history_id, eq_id, "Pset_ArxEquipmentProperties", &equipment.properties)?;
+                            let identity = identity_property_map(&equipment.id, entity_kind::EQUIPMENT);
+                            self.create_property_set(
+                                writer,
+                                owner_history_id,
+                                eq_id,
+                                PSET_ARX_IDENTITY,
+                                &identity,
+                            )?;
+                            if let Some(ref enrichment) = equipment.lidar_enrichment {
+                                let lidar_props = lidar_enrichment_to_pset(enrichment);
+                                self.create_property_set(
+                                    writer,
+                                    owner_history_id,
+                                    eq_id,
+                                    PSET_ARX_LIDAR,
+                                    &lidar_props,
+                                )?;
+                            }
+                            let eq_props =
+                                properties_for_export(&equipment.properties, PSET_ARX_EQUIPMENT);
+                            self.create_property_set(
+                                writer,
+                                owner_history_id,
+                                eq_id,
+                                PSET_ARX_EQUIPMENT,
+                                &eq_props,
+                            )?;
                         }
                         self.create_containment(writer, room_id, equipment_ids, "RoomToEquipment", owner_history_id)?;
                     }
@@ -235,9 +283,34 @@ impl IFCExporter {
                         wing_equipment_ids.push(eq_id);
                         zone_entity_ids.push(eq_id);
 
-                        let mut eq_props = equipment.properties.clone();
-                        eq_props.insert("ArxWing".to_string(), wing.name.clone());
-                        self.create_property_set(writer, owner_history_id, eq_id, "Pset_ArxEquipmentProperties", &eq_props)?;
+                        let identity = identity_property_map(&equipment.id, entity_kind::EQUIPMENT);
+                        self.create_property_set(
+                            writer,
+                            owner_history_id,
+                            eq_id,
+                            PSET_ARX_IDENTITY,
+                            &identity,
+                        )?;
+                        if let Some(ref enrichment) = equipment.lidar_enrichment {
+                            let lidar_props = lidar_enrichment_to_pset(enrichment);
+                            self.create_property_set(
+                                writer,
+                                owner_history_id,
+                                eq_id,
+                                PSET_ARX_LIDAR,
+                                &lidar_props,
+                            )?;
+                        }
+                        let mut eq_props =
+                            properties_for_export(&equipment.properties, PSET_ARX_EQUIPMENT);
+                        eq_props.insert(PROP_ARX_WING.to_string(), wing.name.clone());
+                        self.create_property_set(
+                            writer,
+                            owner_history_id,
+                            eq_id,
+                            PSET_ARX_EQUIPMENT,
+                            &eq_props,
+                        )?;
                     }
                     self.create_containment(writer, floor_id, wing_equipment_ids, "FloorToWingEquipment", owner_history_id)?;
                 }
@@ -269,7 +342,33 @@ impl IFCExporter {
                     let eq_id = self.create_equipment(writer, equipment, owner_history_id)?;
                     floor_equipment_ids.push(eq_id);
 
-                    self.create_property_set(writer, owner_history_id, eq_id, "Pset_ArxEquipmentProperties", &equipment.properties)?;
+                    let identity = identity_property_map(&equipment.id, entity_kind::EQUIPMENT);
+                    self.create_property_set(
+                        writer,
+                        owner_history_id,
+                        eq_id,
+                        PSET_ARX_IDENTITY,
+                        &identity,
+                    )?;
+                    if let Some(ref enrichment) = equipment.lidar_enrichment {
+                        let lidar_props = lidar_enrichment_to_pset(enrichment);
+                        self.create_property_set(
+                            writer,
+                            owner_history_id,
+                            eq_id,
+                            PSET_ARX_LIDAR,
+                            &lidar_props,
+                        )?;
+                    }
+                    let eq_props =
+                        properties_for_export(&equipment.properties, PSET_ARX_EQUIPMENT);
+                    self.create_property_set(
+                        writer,
+                        owner_history_id,
+                        eq_id,
+                        PSET_ARX_EQUIPMENT,
+                        &eq_props,
+                    )?;
                 }
                 self.create_containment(writer, floor_id, floor_equipment_ids, "FloorToEquipment", owner_history_id)?;
             }
@@ -346,18 +445,29 @@ impl IFCExporter {
 
     fn create_building<W: Write>(&self, writer: &mut StepWriter<W>, building: &Building, owner_hist: usize) -> Result<usize> {
         let placement = self.create_local_placement(writer, None, 0.0, 0.0, 0.0)?;
-        
+        let global_id = resolve_product_global_id(&building.ifc_global_id, &building.id);
+
         let building_id = writer.write_entity(format!(
             "IFCBUILDING('{}',#{},'{}',$,$,#{},$,$,.ELEMENT.,$,$,$)",
-            self.generate_guid(),
+            global_id,
             owner_hist,
             building.name,
             placement
         ))?;
 
+        let identity = identity_property_map(&building.id, entity_kind::BUILDING);
+        self.create_property_set(writer, owner_hist, building_id, PSET_ARX_IDENTITY, &identity)?;
+
         // --- ADD PSETS FOR BUILDING ---
         if let Some(meta) = &building.metadata {
-            self.create_property_set(writer, owner_hist, building_id, "Pset_ArxBuildingMetadata", &meta.properties)?;
+            let meta_props = properties_for_export(&meta.properties, PSET_ARX_BUILDING);
+            self.create_property_set(
+                writer,
+                owner_hist,
+                building_id,
+                PSET_ARX_BUILDING,
+                &meta_props,
+            )?;
         }
 
         Ok(building_id)
@@ -366,59 +476,73 @@ impl IFCExporter {
     fn create_building_storey<W: Write>(&self, writer: &mut StepWriter<W>, floor: &Floor, owner_hist: usize) -> Result<usize> {
         let elevation = floor.elevation.unwrap_or(0.0);
         let placement = self.create_local_placement(writer, None, 0.0, 0.0, elevation)?;
-        
+        let global_id = resolve_product_global_id(&floor.ifc_global_id, &floor.id);
+
         let floor_id = writer.write_entity(format!(
             "IFCBUILDINGSTOREY('{}',#{},'{}',$,$,#{},$,$,.ELEMENT.,{})",
-            self.generate_guid(),
+            global_id,
             owner_hist,
             floor.name,
             placement,
             elevation
         ))?;
 
+        let identity = identity_property_map(&floor.id, entity_kind::FLOOR);
+        self.create_property_set(writer, owner_hist, floor_id, PSET_ARX_IDENTITY, &identity)?;
+
         // --- ADD PSETS FOR FLOOR ---
-        self.create_property_set(writer, owner_hist, floor_id, "Pset_ArxFloorProperties", &floor.properties)?;
+        let floor_props = properties_for_export(&floor.properties, PSET_ARX_FLOOR);
+        self.create_property_set(writer, owner_hist, floor_id, PSET_ARX_FLOOR, &floor_props)?;
 
         Ok(floor_id)
     }
 
     fn create_space<W: Write>(&self, writer: &mut StepWriter<W>, room: &Room, _floor_elevation: f64, owner_hist: usize) -> Result<usize> {
-        // Position is relative to floor, but room.spatial_properties.position might be global or local.
-        // Assuming room position Z is absolute, we subtract floor elevation for local Z.
-        // Or if Z is already local to floor, we use it as is.
-        // For simplicity, let's assume room Z is relative to floor for now, or 0.0 if not specified.
-        
+        // L2 contract: placement is absolute building_local meters.
+        // Position = footprint center (X/Y) and volume bottom (Z). Body is local to placement.
         let x = room.spatial_properties.position.x;
         let y = room.spatial_properties.position.y;
-        let z = room.spatial_properties.position.z; // Assuming relative to floor
+        let z = room.spatial_properties.position.z;
 
         let placement = self.create_local_placement(writer, None, x, y, z)?;
-        
-        // Geometry
+
+        // Prefer explicit mesh (local coords); else extruded rectangle from dimensions
         let shape_rep_id = if let Some(mesh) = &room.spatial_properties.mesh {
-             Some(self.create_mesh_shape(writer, mesh)?)
-        } else {
-            let width = room.spatial_properties.dimensions.width;
-            let depth = room.spatial_properties.dimensions.depth;
-            let height = room.spatial_properties.dimensions.height;
-            
-            if width > 0.0 && depth > 0.0 && height > 0.0 {
-                Some(self.create_bounding_box_shape(writer, width, depth, height)?)
+            if !mesh.vertices.is_empty() {
+                Some(self.create_mesh_shape(writer, mesh)?)
             } else {
                 None
+            }
+        } else {
+            None
+        };
+
+        let shape_rep_id = match shape_rep_id {
+            Some(id) => Some(id),
+            None => {
+                let width = room.spatial_properties.dimensions.width;
+                let depth = room.spatial_properties.dimensions.depth;
+                let height = room.spatial_properties.dimensions.height;
+                if width > 0.0 && depth > 0.0 && height > 0.0 {
+                    Some(self.create_bounding_box_shape(writer, width, depth, height)?)
+                } else {
+                    None
+                }
             }
         };
 
         let representation = if let Some(rep_id) = shape_rep_id {
-             let product_def_shape = writer.write_entity(format!("IFCPRODUCTDEFINITIONSHAPE($,$,(#{}))", rep_id))?;
-             format!("#{}", product_def_shape)
+            let product_def_shape =
+                writer.write_entity(format!("IFCPRODUCTDEFINITIONSHAPE($,$,(#{}))", rep_id))?;
+            format!("#{}", product_def_shape)
         } else {
             "$".to_string()
         };
 
+        let global_id = resolve_product_global_id(&room.ifc_global_id, &room.id);
         writer.write_entity(format!(
             "IFCSPACE('{}',#{},'{}',$,$,#{},{},$,.ELEMENT.,.INTERNAL.,$)",
-            self.generate_guid(),
+            global_id,
             owner_hist,
             room.name,
             placement,
@@ -427,13 +551,13 @@ impl IFCExporter {
     }
 
     fn create_equipment<W: Write>(&self, writer: &mut StepWriter<W>, equipment: &Equipment, owner_hist: usize) -> Result<usize> {
+        // L2: absolute building_local placement; body only when mesh is present (no synthetic 1x1x1).
         let x = equipment.position.x;
         let y = equipment.position.y;
         let z = equipment.position.z;
 
         let placement = self.create_local_placement(writer, None, x, y, z)?;
-        
-        // Map EquipmentType to specific IfcDistributionElement subtypes or standard classes
+
         let ifc_entity_type = match equipment.equipment_type {
             crate::core::EquipmentType::Furniture => "IFCFURNITURE",
             crate::core::EquipmentType::AV => "IFCAUDIOVISUALAPPLIANCE",
@@ -441,27 +565,28 @@ impl IFCExporter {
             crate::core::EquipmentType::HVAC => "IFCFLOWTERMINAL",
             crate::core::EquipmentType::Safety => "IFCFIREALARM",
             crate::core::EquipmentType::Network => "IFCCOMMUNICATIONSAPPLIANCE",
-            crate::core::EquipmentType::Plumbing => "IFCFLOWTERMINAL", // standard fallback for plumbing
-            _ => "IFCDISTRIBUTIONELEMENT", // Generic fallback
+            crate::core::EquipmentType::Plumbing => "IFCFLOWTERMINAL",
+            _ => "IFCDISTRIBUTIONELEMENT",
         };
 
-        // Geometry
         let representation = if let Some(mesh) = &equipment.mesh {
-             let rep_id = self.create_mesh_shape(writer, mesh)?;
-             let product_def_shape = writer.write_entity(format!("IFCPRODUCTDEFINITIONSHAPE($,$,(#{}))", rep_id))?;
-             format!("#{}", product_def_shape)
+            if !mesh.vertices.is_empty() {
+                let rep_id = self.create_mesh_shape(writer, mesh)?;
+                let product_def_shape =
+                    writer.write_entity(format!("IFCPRODUCTDEFINITIONSHAPE($,$,(#{}))", rep_id))?;
+                format!("#{}", product_def_shape)
+            } else {
+                "$".to_string()
+            }
         } else {
-             // Default 1x1x1 box for equipment if no mesh, or just None?
-             // Let's use a default box for now to show something.
-             let rep_id = self.create_bounding_box_shape(writer, 1.0, 1.0, 1.0)?;
-             let product_def_shape = writer.write_entity(format!("IFCPRODUCTDEFINITIONSHAPE($,$,(#{}))", rep_id))?;
-             format!("#{}", product_def_shape)
+            "$".to_string()
         };
 
+        let global_id = resolve_product_global_id(&equipment.ifc_global_id, &equipment.id);
         writer.write_entity(format!(
             "{}('{}',#{},'{}',$,$,#{},{},$,$)",
             ifc_entity_type,
-            self.generate_guid(),
+            global_id,
             owner_hist,
             equipment.name,
             placement,

@@ -14,7 +14,8 @@ pub struct ImportCommand {
 
 impl Command for ImportCommand {
     fn execute(&self) -> Result<(), Box<dyn Error>> {
-        println!("Importing IFC file: {}", self.ifc_file);
+        println!("Importing IFC (compiler spine): {}", self.ifc_file);
+        println!("  Policy: vendor BIM → clean IFC export → arx (no CAD plugins)");
 
         if self.dry_run {
             println!("Dry run mode enabled - no changes will be written");

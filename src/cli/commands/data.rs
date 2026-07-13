@@ -701,16 +701,6 @@ impl Command for SpatialCommand {
         use std::path::Path;
 
         match &self.subcommand {
-            SpatialCommands::GridToReal { .. } => Err(
-                "arx spatial grid-to-real is not implemented (no fake success). \
-                 Use arx query for address-based lookup."
-                    .into(),
-            ),
-            SpatialCommands::RealToGrid { .. } => Err(
-                "arx spatial real-to-grid is not implemented (no fake success). \
-                 Use arx query for address-based lookup."
-                    .into(),
-            ),
             SpatialCommands::Query {
                 query_type,
                 entity,
@@ -737,10 +727,6 @@ impl Command for SpatialCommand {
                 }
                 Ok(())
             }
-            SpatialCommands::Relate { .. } => Err(
-                "arx spatial relate is not implemented (relationships are implicit via hierarchy/bbox; no fake success)."
-                    .into(),
-            ),
             SpatialCommands::Transform { from, to, entity } => {
                 let building = load_building_at(Path::new("."))
                     .map_err(|e| format!("load building.yaml: {}", e))?;
@@ -884,28 +870,13 @@ mod tests {
     }
 
     #[test]
-    fn test_spatial_grid_to_real_command_is_not_theater() {
+    fn test_spatial_command_name() {
         let cmd = SpatialCommand {
-            subcommand: SpatialCommands::GridToReal {
-                grid: "D-4".to_string(),
-                building: Some("test-building".to_string()),
+            subcommand: SpatialCommands::Validate {
+                entity: None,
+                tolerance: None,
             },
         };
-
         assert_eq!(cmd.name(), "spatial");
-        // Unimplemented subcommands must fail — never print fake success.
-        assert!(cmd.execute().is_err());
-    }
-
-    #[test]
-    fn test_spatial_relate_is_not_theater() {
-        let cmd = SpatialCommand {
-            subcommand: SpatialCommands::Relate {
-                entity1: "a".into(),
-                entity2: "b".into(),
-                relationship: "adjacent".into(),
-            },
-        };
-        assert!(cmd.execute().is_err());
     }
 }

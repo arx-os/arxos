@@ -1,28 +1,13 @@
-//! Spatial query and coordinate transformation commands
+//! Spatial query and validation commands (implemented verbs only).
+//!
+//! Unimplemented grid/relate theater was removed from the clap surface (CLI review C3).
+//! Address-based discovery: `arx query`.
 
 use clap::Subcommand;
 
 #[derive(Subcommand)]
 pub enum SpatialCommands {
-    /// Convert grid coordinates to real coordinates
-    GridToReal {
-        /// Grid coordinate (e.g., "D-4")
-        grid: String,
-        /// Building name
-        building: Option<String>,
-    },
-    /// Convert real coordinates to grid coordinates
-    RealToGrid {
-        /// X coordinate
-        x: f64,
-        /// Y coordinate
-        y: f64,
-        /// Z coordinate (optional)
-        z: Option<f64>,
-        /// Building name
-        building: Option<String>,
-    },
-    /// Query spatial relationships
+    /// Query spatial relationships / nearest entities
     Query {
         /// Query type
         #[arg(long)]
@@ -34,19 +19,7 @@ pub enum SpatialCommands {
         #[arg(long)]
         params: Vec<String>,
     },
-    /// Set spatial relationships
-    Relate {
-        /// First entity
-        #[arg(long)]
-        entity1: String,
-        /// Second entity
-        #[arg(long)]
-        entity2: String,
-        /// Relationship type
-        #[arg(long)]
-        relationship: String,
-    },
-    /// Transform coordinates
+    /// Transform coordinates for an entity between systems
     Transform {
         /// Source coordinate system
         #[arg(long)]

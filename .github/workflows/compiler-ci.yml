@@ -57,7 +57,9 @@ jobs:
             --test lidar_tests \
             --test bidirectional_tests \
             --test vendor_ifc_test \
-            --test contribution_spine_test
+            --test buildingsmart_ifc_test \
+            --test contribution_spine_test \
+            --test cli_help_surface_test
 
       - name: Full compiler-core suite
         run: cargo test --verbose

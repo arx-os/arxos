@@ -178,9 +178,64 @@ impl<'a> IfcResolver<'a> {
             let _ = fallback_attach;
         }
 
+        // Honesty: product classes present in STEP but never mapped into Building domain
+        self.append_unmapped_product_warnings();
+
         let mut report = LossReport::new(FidelityLevel::L2);
         report.warnings.append(&mut self.warnings);
         Ok((building, report))
+    }
+
+    /// Report building-element products that exist in the file but are not imported.
+    ///
+    /// Pilot honesty (R2 / LossReport P0): do not claim "Warnings: none" when walls,
+    /// slabs, doors, etc. are silently dropped. Spaces and MEP equipment classes
+    /// that `resolve_equipment_under` already walks are **not** listed here.
+    fn append_unmapped_product_warnings(&mut self) {
+        /// IFC product classes Arx does not currently map into Room/Equipment.
+        const UNMAPPED_PRODUCT_CLASSES: &[&str] = &[
+            "IFCWALL",
+            "IFCWALLSTANDARDCASE",
+            "IFCSLAB",
+            "IFCDOOR",
+            "IFCWINDOW",
+            "IFCCOLUMN",
+            "IFCBEAM",
+            "IFCROOF",
+            "IFCBUILDINGELEMENTPROXY",
+            "IFCCOVERING",
+            "IFCSTAIR",
+            "IFCSTAIRFLIGHT",
+            "IFCMEMBER",
+            "IFCPLATE",
+            "IFCRAILING",
+            "IFCFURNISHINGELEMENT",
+            "IFCFOOTING",
+            "IFCPILE",
+            "IFCCURTAINWALL",
+            "IFCRAMP",
+            "IFCCHIMNEY",
+        ];
+
+        let mut parts: Vec<String> = Vec::new();
+        let mut total = 0usize;
+        for class in UNMAPPED_PRODUCT_CLASSES {
+            let n = self.registry.get_by_class(class).len();
+            if n > 0 {
+                total += n;
+                parts.push(format!("{}×{}", class, n));
+            }
+        }
+        if total > 0 {
+            self.warnings.push(MappingWarning::new(
+                "unmapped_products",
+                format!(
+                    "{} product entity(ies) present in IFC but not imported into Arx domain ({})",
+                    total,
+                    parts.join(", ")
+                ),
+            ));
+        }
     }
 
     // --- Traversal Helpers ---
@@ -953,5 +1008,35 @@ mod tests {
             Some("Hello".to_string())
         );
         assert_eq!(resolver.extract_string_param(&entity, 1), None);
+    }
+
+    #[test]
+    fn unmapped_products_warning_counts_walls() {
+        let mut registry = EntityRegistry::new();
+        for (id, class) in [
+            (1u64, "IFCWALL"),
+            (2u64, "IFCWALL"),
+            (3u64, "IFCSLAB"),
+            (4u64, "IFCSPACE"),
+        ] {
+            registry.register(RawEntity {
+                id,
+                class: class.to_string(),
+                params: vec![],
+            });
+        }
+        let mut resolver = IfcResolver::new(&mut registry);
+        resolver.append_unmapped_product_warnings();
+        assert!(
+            resolver
+                .warnings
+                .iter()
+                .any(|w| w.code == "unmapped_products"
+                    && w.message.contains("IFCWALL×2")
+                    && w.message.contains("IFCSLAB×1")
+                    && !w.message.contains("IFCSPACE")),
+            "expected unmapped product warning, got {:?}",
+            resolver.warnings
+        );
     }
 }

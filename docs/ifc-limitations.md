@@ -40,10 +40,39 @@ Identity rules: [identity.md](./identity.md).
 | `tests/fixtures/ifc/simple.ifc` | Minimal | Yes | Smoke |
 | `test_data/Building-Architecture.ifc` | SketchUp | Yes | Non-panic + optional persist |
 | `test_data/Building-Hvac.ifc` | HVAC sample | Yes | Equipment-ish mapping partial |
-| Revit / ArchiCAD anonymized | **Not checked in** | Open (**R2**) | Provide under `tests/fixtures/ifc/vendor/` with license note |
+| `tests/fixtures/ifc/buildingsmart/*.ifc` | buildingSMART ISO RV | Yes | Non-panic + `unmapped_products` honesty |
+| Revit / ArchiCAD anonymized | **Not checked in** | Open (**R2**) | Provide under `tests/fixtures/ifc/vendor/` |
 
 “No panic” ≠ semantic completeness. District pilots must log preserve/drop in
 [field-truth-log.md](./field-truth-log.md).
+
+## buildingSMART Sample-Test-Files (2026-07 assessment)
+
+**Source:** https://github.com/buildingSMART/Sample-Test-Files  
+**Report:** [`tests/ifc_buildingsmart_report.md`](../tests/ifc_buildingsmart_report.md)
+
+| Sample class | Import crash? | Domain extract | GID round-trip (kept entities) |
+| :--- | :---: | :--- | :---: |
+| ISO RV micro (tessellation) | No | Often empty floors + warnings | Weak (few entities) |
+| ISO wall+opening+window | No | Storey only; wall/window not domain | Yes for kept IDs |
+| PCERT Building-Architecture IFC4/4.3 | No | Storey + spaces (+ sparse products) | Yes |
+| PCERT Building-Hvac IFC4/4.3 | No | Storey + few terminals | Yes |
+| PCERT Building-Structural | No | Storey shell only | Yes |
+| PCERT Infra-Bridge | No | Multiple levels; no rooms | Yes |
+
+**Takeaway:** Non-panic and GlobalId stability on **mapped** entities are strong.  
+Walls/slabs/doors/windows are typically **not** first-class Arx entities; import now emits  
+`unmapped_products` LossReport warnings with class counts (do not treat “validate OK” as full BIM).  
+**District readiness** still needs real Revit (or similar) exports in the field-truth log (**R2**).
+
+## What is mapped today (domain)
+
+| IFC concept | Arx domain | Notes |
+| :--- | :--- | :--- |
+| Project / Site / Building / Storey | Building + Floor | Spatial structure |
+| Space / Room / Zone | Room | When present |
+| Selected MEP / furniture classes | Equipment | See `resolve_equipment_under` |
+| Wall / slab / door / window / column / beam / roof / … | **Not mapped** | Counted in LossReport `unmapped_products` |
 
 ## Merge policy (import)
 

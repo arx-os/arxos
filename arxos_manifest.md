@@ -9,7 +9,7 @@
 | **Engine** | Rust 2021 (CLI + lib) · native IFC · Git SSOT · Foundry contracts · optional WASM/agent/render3d/`blockchain` |
 | **Design philosophy** | Local-first · single `Building` model · Git-native · free to use · pay only for data access |
 | **Document status** | Living plan — full vision locked; compiler + economy spine **lab-complete** (N1–N8 + Horizon A tooling); **Horizon B** (district L1 obligations) is current priority (§1.5, §1.6, §10) |
-| **Last reconciled** | 2026-07-13 (default tui; hardware+render3d removed; R6 limits; pilot docs) |
+| **Last reconciled** | 2026-07-13 (LossReport unmapped_products; buildingSMART fixtures; R2 eng half) |
 | **Audience** | Vision holder, field IT pilots, core maintainers, external builders |
 
 ---
@@ -186,7 +186,7 @@ This section is the **obligation register**: each reservation must be **relegate
 | ID | Reservation (what is wrong / incomplete) | Why it matters (district / field) | Work to relegate | Exit criteria | Owner | Status |
 | :---: | :--- | :--- | :--- | :--- | :---: | :---: |
 | **R1** | **Field LiDAR quality unproven** | Auto rooms/equip can be wrong; false certainty is dangerous near electrical / life safety | Run 1–2 real scans; mandatory human review; log false +/−; document site failure modes | Written failure-mode note for pilot site; no “official” use of unreviewed `proposed` entities | Field + eng | **Open** |
-| **R2** | **Vendor BIM/IFC incomplete** | District Revit/etc. exports may drop structure/IDs | Import 2–3 **real** anonymized district IFCs; round-trip matrix | Local interop matrix (preserve/drop) checked in or attached to pilot | Field + eng | **Open** |
+| **R2** | **Vendor BIM/IFC incomplete** | District Revit/etc. exports may drop structure/IDs | Import 2–3 **real** anonymized district IFCs; round-trip matrix | Local interop matrix (preserve/drop) checked in or attached to pilot | Field + eng | **Partial** — buildingSMART lab battery + `unmapped_products` LossReport; **district IFC evidence still open** |
 | **R3** | **Live chain/mint ops not turnkey** | 2-of-3, stake, 24h finalize, keys ≠ “install and forget” | Keep L1 **off-chain**; for L3: ops runbook with two oracles + finalize; testnet only until policy OK | L1: chain optional/demo. L3: documented mint with named operators | Eng + ops | **Open** (lab E2E done) |
 | **R4** | **Host payment gate is local-file only** | `export --commercial` + receipt is bypassable; free export still works by design | Process: commercial deliveries **must** use `--commercial`. Product: host that checks `AccessPaid` / receipt server-side (L3) | L1: written process. L3: non-bypassable download path | Eng + field IT | **Partial** (CLI gate done; enforcement open) |
 | **R5** | **No second-person cold start on district env** | Hero dependency; program dies if only one tech can run it | Timed walkthrough by non-author on district laptop/network | Checklist signed; stuck points filed as backlog | Field IT | **Open** — template: `docs/second-person-checklist.md` |

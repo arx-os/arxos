@@ -9,8 +9,8 @@
 | **Engine** | Rust 2021 (CLI + lib) · native IFC · Git SSOT · Foundry contracts · optional WASM/agent/render3d/`blockchain` |
 | **Design philosophy** | Local-first · single `Building` model · Git-native · free to use · pay only for data access |
 | **Document status** | Living plan — full vision locked; compiler + economy spine **lab-complete** (N1–N5); path to live loop is Horizon A–C (§1.5, §10) |
-| **Last reconciled** | 2026-07-13 (post N1–N5 economy spine + field-loop strategy) |
-| **Audience** | Vision holder, core maintainers, external builders |
+| **Last reconciled** | 2026-07-13 (deployment obligations §1.6 — school/district pilot bar) |
+| **Audience** | Vision holder, field IT pilots, core maintainers, external builders |
 
 ---
 
@@ -162,6 +162,58 @@ HORIZON C — Network scale (after B works ≥1–2 times)
 
 **Rule:** Do not start Horizon C feature work until Horizon B has succeeded at least once.
 
+### 1.6 Deployment obligations (reservations → work)
+
+**Hard truth:** Lab-complete (N1–N5, Horizon A tooling) is **not** “absolutely ready for district production.”  
+This section is the **obligation register**: each reservation must be **relegated** (reduced or closed) by named work before the corresponding go-level is claimed.
+
+#### Go levels (do not skip)
+
+| Level | Allowed claim | Requires |
+| :---: | :--- | :--- |
+| **L0 — Lab** | “CI / Foundry / local Anvil path works” | Current default |
+| **L1 — Controlled field pilot** | “We may run free as-built software on **one** building under policy” | **R1, R2, R5, R7, R8, R9, R10** at least *pilot-mitigated* |
+| **L2 — Multi-building program** | “Repeatable district process” | L1 + **R3, R6** closed for profiled sites; second-person walkthrough repeated |
+| **L3 — Full vision (reward + market)** | “Mint/pay as production path” | L2 + **R3 (ops), R4 (enforced host), R8 (token policy)** closed |
+
+**Default for a public school district first use:** target **L1 only**. Keep **$AXD mainnet and paid market off** the critical path until L3 criteria are met.
+
+#### Obligation register
+
+| ID | Reservation (what is wrong / incomplete) | Why it matters (district / field) | Work to relegate | Exit criteria | Owner | Status |
+| :---: | :--- | :--- | :--- | :--- | :---: | :---: |
+| **R1** | **Field LiDAR quality unproven** | Auto rooms/equip can be wrong; false certainty is dangerous near electrical / life safety | Run 1–2 real scans; mandatory human review; log false +/−; document site failure modes | Written failure-mode note for pilot site; no “official” use of unreviewed `proposed` entities | Field + eng | **Open** |
+| **R2** | **Vendor BIM/IFC incomplete** | District Revit/etc. exports may drop structure/IDs | Import 2–3 **real** anonymized district IFCs; round-trip matrix | Local interop matrix (preserve/drop) checked in or attached to pilot | Field + eng | **Open** |
+| **R3** | **Live chain/mint ops not turnkey** | 2-of-3, stake, 24h finalize, keys ≠ “install and forget” | Keep L1 **off-chain**; for L3: ops runbook with two oracles + finalize; testnet only until policy OK | L1: chain optional/demo. L3: documented mint with named operators | Eng + ops | **Open** (lab E2E done) |
+| **R4** | **Host payment gate is local-file only** | `export --commercial` + receipt is bypassable; free export still works by design | Process: commercial deliveries **must** use `--commercial`. Product: host that checks `AccessPaid` / receipt server-side (L3) | L1: written process. L3: non-bypassable download path | Eng + field IT | **Partial** (CLI gate done; enforcement open) |
+| **R5** | **No second-person cold start on district env** | Hero dependency; program dies if only one tech can run it | Timed walkthrough by non-author on district laptop/network | Checklist signed; stuck points filed as backlog | Field IT | **Open** |
+| **R6** | **Scale/performance unprofiled** | Large school models may OOM/hang; people skip validation | Profile worst-case IFC/scan on pilot hardware; set limits | Written max points/time; light-mode guidance | Eng + field | **Open** |
+| **R7** | **Security / compliance / classification** | Facility plans sensitive; Git remotes, exports, backups | Data class policy (internal-only default); who can clone/export; no student PII in properties | Security/IT sign-off for pilot repo location | Field IT + security | **Open** |
+| **R8** | **Mainnet token / institutional fit** | Public entity crypto, custody, procurement, reputation | L1/L2: **no production token**. L3 only with Legal/Finance | Written go/no-go from leadership for any chain use | Vision + Legal | **Open** (default: no mainnet) |
+| **R9** | **Support / ownership / change control** | No vendor SLA; `main` moves | Pin release tag/hash; one supported workflow page; escalation path | Pinned install + “supported loop” doc used in R5 | Eng + field IT | **Open** |
+| **R10** | **Safety / professional liability framing** | Model must not replace LOTO, licensed drawings, or code docs | Pilot disclaimer policy; culture: human + licensed docs win | Signed pilot charter with disclaimer language | Field IT + leadership | **Open** |
+
+#### Work packages to relegate obligations (ordered)
+
+| Package | Obligations hit | Deliverables |
+| :---: | :--- | :--- |
+| **P-Safety** | R10, R1 (process) | Pilot charter + disclaimer; “no unreviewed proposed as official” rule in runbook |
+| **P-Transfer** | R5, R9 | Pinned release; second-person walkthrough; supported-workflow page |
+| **P-Data** | R7 | Classification + private Git; export approval same class as CAD |
+| **P-Field-truth** | R1, R2, R6 | Real scan + real IFC matrix + one performance profile on pilot hardware |
+| **P-Chain-optional** | R3, R8 | Explicit “compiler pilot = off-chain”; testnet demo only if requested |
+| **P-Market-enforcement** | R4 | L1 process; L3 host service that gates download on payment |
+
+**Relegation rule:** Do not mark an obligation **Done** without exit criteria evidence (doc path, test name, or signed checklist). Update this table when evidence lands.
+
+#### Mapping to horizons
+
+| Horizon | Primary obligations to attack |
+| :--- | :--- |
+| **A** (tooling) | R3 lab ops, R4 CLI gate — **mostly done** |
+| **B** (first building) | **P-Safety, P-Transfer, P-Data, P-Field-truth** (R1,R2,R5,R6,R7,R9,R10) |
+| **C** (network scale) | R3 production ops, R4 enforced host, R8 institutional token go |
+
 ---
 
 ## 2. Current state assessment (honest)
@@ -173,19 +225,19 @@ HORIZON C — Network scale (after B works ≥1–2 times)
 | Domain model | **8/10** | Building hierarchy; durable `ArxAddress`; review_status |
 | YAML + Git SSOT | **8.5/10** | Single `building.yaml`; `schema_version: 1`; validated saves |
 | IFC native | **8/10** | Only stack; Arx goldens + SketchUp/HVAC non-panic samples |
-| LiDAR | **6.5/10** | Synthetic CI + proposed review; **field unproven** |
+| LiDAR | **6.5/10** | Synthetic CI + proposed review; **field unproven (R1)** |
 | Text/AR DSL | **8/10** | `arx edit` + review_status keys |
-| Contribution / reward | **7.5/10** | Package + EIP-712 + Foundry mint E2E; **live env incomplete** |
-| Buyer access market | **7/10** | Router E2E + `arx access`; **no host gate on AccessPaid yet (N7)** |
-| PWA / WASM | **4/10** | Optional; not Horizon A blocker |
-| Contracts ($AXD) | **8/10** | Foundry suite green (~150 tests); oracle proof lock fixed |
+| Contribution / reward | **7.5/10** | Package + EIP-712 + Foundry mint E2E; **live ops still hard (R3)** |
+| Buyer access market | **7.5/10** | Router E2E + `arx access` + commercial export gate; **not server-enforced (R4)** |
+| PWA / WASM | **4/10** | Optional; not L1 blocker |
+| Contracts ($AXD) | **8/10** | Foundry suite green; oracle proof lock fixed |
 | CLI surface | **8/10** | Compiler + contribute + access; spatial honesty |
 | CI | **8/10** | Compiler CI + forge; clippy green (unwrap allow-listed) |
-| **Lab closed-loop** | **~7.5/10** | N1–N5 proven in tests/CLI shapes |
-| **Live closed-loop** | **~3/10** | Needs N7–N8 + field (Horizon A–B) |
-| **Field readiness** | **~5/10** | Runbook outline exists; real building not run |
+| **Lab closed-loop** | **~8/10** | N1–N8 tooling present |
+| **District pilot (L1) readiness** | **~4/10** | Blocked on §1.6 obligations R1,R2,R5,R7,R9,R10 |
+| **Full vision (L3) readiness** | **~2/10** | Needs L1+L2 + R3/R4/R8 production |
 
-**Audit rule:** Scores reflect what a second engineer experiences **today** (CI, CLI, forge)—not aspiration.
+**Audit rule:** Scores reflect what a second engineer experiences **today** (CI, CLI, forge)—not aspiration. **§1.6 overrides optimistic claims.**
 
 ### 2.2 Architecture convergence completed (do not re-open without cause)
 

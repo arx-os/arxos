@@ -1,9 +1,10 @@
 //! Equipment CRUD operations
 //!
-//! Mutates `core::Building` then persists via `ingest::persist_building`.
+//! Mutates `core::Building` then persists via `ingest::persist_building_at`
+//! using the same base path as the load.
 
 use crate::core::Equipment;
-use crate::ingest::persist_building;
+use crate::ingest::persist_building_at;
 use crate::persistence::{load_building_data_from_dir, PersistenceManager};
 use std::collections::HashMap;
 
@@ -15,6 +16,7 @@ pub fn add_equipment(
     commit: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let persistence = PersistenceManager::new(building_name)?;
+    let base = persistence.base_path().to_path_buf();
     let mut building = persistence.load_building_data()?;
     let eq_name = equipment.name.clone();
 
@@ -45,7 +47,8 @@ pub fn add_equipment(
         return Err("Building has no floors to attach equipment".into());
     }
 
-    persist_building(
+    persist_building_at(
+        base,
         building,
         commit,
         Some(&format!("Add equipment: {}", eq_name)),
@@ -74,6 +77,7 @@ pub fn update_equipment_impl(
     commit: bool,
 ) -> Result<Equipment, Box<dyn std::error::Error>> {
     let persistence = PersistenceManager::new(building_name)?;
+    let base = persistence.base_path().to_path_buf();
     let mut building = persistence.load_building_data()?;
 
     let equipment = building
@@ -84,7 +88,8 @@ pub fn update_equipment_impl(
     }
     let updated = equipment.clone();
 
-    let building = persist_building(
+    let building = persist_building_at(
+        base,
         building,
         commit,
         Some(&format!("Update equipment: {}", equipment_id)),
@@ -104,6 +109,7 @@ pub fn remove_equipment_impl(
     commit: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let persistence = PersistenceManager::new(building_name)?;
+    let base = persistence.base_path().to_path_buf();
     let mut building = persistence.load_building_data()?;
 
     let mut found = false;
@@ -137,7 +143,8 @@ pub fn remove_equipment_impl(
         return Err(format!("Equipment '{}' not found", equipment_id).into());
     }
 
-    persist_building(
+    persist_building_at(
+        base,
         building,
         commit,
         Some(&format!("Remove equipment: {}", equipment_id)),

@@ -9,8 +9,6 @@ use crate::utils::path_safety::PathSafety;
 use anyhow::{anyhow, bail, Result};
 use base64::{engine::general_purpose, Engine as _};
 
-const MAX_IFC_BYTES: usize = 50 * 1024 * 1024; // 50 MB ceiling for uploads
-
 #[derive(Debug, serde::Serialize)]
 pub struct IfcImportResult {
     pub building_name: String,
@@ -32,8 +30,12 @@ pub struct IfcExportResult {
 
 pub fn import_ifc(repo_root: &Path, filename: &str, data_base64: &str) -> Result<IfcImportResult> {
     let bytes = decode_base64(data_base64)?;
-    if bytes.len() > MAX_IFC_BYTES {
-        bail!("IFC payload exceeds {} bytes", MAX_IFC_BYTES);
+    let max_ifc = crate::resource_limits::max_ifc_bytes() as usize;
+    if bytes.len() > max_ifc {
+        bail!(
+            "IFC payload exceeds {} bytes (ARX_MAX_IFC_BYTES / pilot default). See docs/resource-limits.md.",
+            max_ifc
+        );
     }
 
     let sanitized_name = ensure_extension(&sanitize_filename(filename, "upload.ifc"), ".ifc");

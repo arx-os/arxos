@@ -28,7 +28,7 @@ field evidence close obligations in `arxos_manifest.md` §1.6.
 | Building ID (Arx UUID after `arx init`) | |
 | Allowed inputs | [ ] IFC  [ ] LiDAR  [ ] text edits |
 | Git remote location (must be internal) | |
-| Pinned Arx install (tag or commit) | `v2.0.0-pilot.3` / `5449838a565b43efc9c9c9185a3389c9895e791c` (confirm at sign-off) |
+| Pinned Arx install (tag or commit) | See `docs/pilot-release.md` (prefer `v2.0.0-pilot.4` once cut; else record exact tag + SHA) |
 | Pilot start date | |
 | Pilot end / review date | |
 

@@ -157,73 +157,15 @@ impl Handler for AgentServerHandler {
             "Empty command".to_string()
         } else {
             let cmd = parts[0];
-            let repo_root = self._state.repo_root.clone();
-            let hardware = self._state.hardware.clone();
-            let sensor_cmds =
-                crate::agent::commands::sensors::SensorCommands::new(hardware, repo_root);
+            let _ = self._state.repo_root.clone();
 
             match cmd {
-                "get" => {
-                    if parts.len() < 2 {
-                        "Usage: get <sensor_type> [location]".to_string()
-                    } else {
-                        let sensor_type = parts[1];
-                        let location = if parts.len() > 2 {
-                            parts[2]
-                        } else {
-                            "floor:1:room:101"
-                        };
-
-                        match sensor_type {
-                            "temp" => {
-                                match sensor_cmds
-                                    .get_temp(
-                                        location,
-                                        crate::agent::commands::sensors::QueryOptions::default(),
-                                    )
-                                    .await
-                                {
-                                    Ok(res) => format!(
-                                        "Temperature at {}: {:.2} {}",
-                                        res.location, res.value, res.unit
-                                    ),
-                                    Err(e) => format!("Error reading temp: {}", e),
-                                }
-                            }
-                            "sensors" => match sensor_cmds.get_sensors().await {
-                                Ok(list) => {
-                                    let mut out = String::from("Available Sensors:\n");
-                                    for s in list {
-                                        out.push_str(&format!(
-                                            "- {}:{} = {:.2} {}\n",
-                                            s.location, s.sensor_type, s.value, s.unit
-                                        ));
-                                    }
-                                    out
-                                }
-                                Err(e) => format!("Error listing sensors: {}", e),
-                            },
-                            _ => format!("Unknown sensor type: {}", sensor_type),
-                        }
-                    }
-                }
-                "set" => {
-                    if parts.len() < 3 {
-                        "Usage: set <location> <value>".to_string()
-                    } else {
-                        let location = parts[1];
-                        if let Ok(val) = parts[2].parse::<f64>() {
-                            match sensor_cmds.set_temp(location, val, true).await {
-                                Ok(msg) => msg,
-                                Err(e) => format!("Error setting temp: {}", e),
-                            }
-                        } else {
-                            "Invalid value".to_string()
-                        }
-                    }
+                "get" | "set" => {
+                    "Hardware/sensor SSH commands removed (revisit later). Use git/IFC agent RPC."
+                        .to_string()
                 }
                 "help" => {
-                    "Available commands: get temp [loc], get sensors, set [loc] [val]".to_string()
+                    "Available: help. Sensor get/set deferred with hardware stack.".to_string()
                 }
                 _ => format!("Unknown command: {}", cmd),
             }
@@ -265,83 +207,36 @@ impl Handler for AgentServerHandler {
                                 session.data(
                                     channel,
                                     russh::CryptoVec::from(
-                                        "Commands: get, set, exit\r\n".as_bytes().to_vec(),
+                                        "Commands: help, clear, exit (sensors deferred)\r\n"
+                                            .as_bytes()
+                                            .to_vec(),
+                                    ),
+                                );
+                            }
+                            "clear" => {
+                                session.data(
+                                    channel,
+                                    russh::CryptoVec::from("\x1b[2J\x1b[H".as_bytes().to_vec()),
+                                );
+                            }
+                            "get" | "set" => {
+                                session.data(
+                                    channel,
+                                    russh::CryptoVec::from(
+                                        "Hardware/sensor commands removed; use agent git/IFC RPC.\r\n"
+                                            .as_bytes()
+                                            .to_vec(),
                                     ),
                                 );
                             }
                             _ => {
-                                let repo_root = self._state.repo_root.clone();
-                                let hardware = self._state.hardware.clone();
-                                let sensor_cmds =
-                                    crate::agent::commands::sensors::SensorCommands::new(
-                                        hardware, repo_root,
-                                    );
-
-                                if cmd == "get" {
-                                    if parts.len() > 1 && parts[1] == "temp" {
-                                        let location = if parts.len() > 2 {
-                                            parts[2]
-                                        } else {
-                                            "floor:1:room:101"
-                                        };
-                                        match sensor_cmds.get_temp(location, crate::agent::commands::sensors::QueryOptions::default()).await {
-                                             Ok(res) => {
-                                                 let out = format!("Temperature at {}: {:.2} {}\r\n", res.location, res.value, res.unit);
-                                                 session.data(channel, russh::CryptoVec::from(out.into_bytes()));
-                                             }
-                                             Err(e) => {
-                                                 session.data(channel, russh::CryptoVec::from(format!("Error: {}\r\n", e).into_bytes()));
-                                             }
-                                         }
-                                    } else {
-                                        session.data(
-                                            channel,
-                                            russh::CryptoVec::from(
-                                                "Usage: get temp [location]\r\n"
-                                                    .as_bytes()
-                                                    .to_vec(),
-                                            ),
-                                        );
-                                    }
-                                } else if cmd == "get" && parts.len() > 1 && parts[1] == "sensors" {
-                                    match sensor_cmds.get_sensors().await {
-                                        Ok(list) => {
-                                            let mut out = String::from("Available Sensors:\r\n");
-                                            for s in list {
-                                                out.push_str(&format!(
-                                                    "- {}:{} = {:.2} {}\r\n",
-                                                    s.location, s.sensor_type, s.value, s.unit
-                                                ));
-                                            }
-                                            session.data(
-                                                channel,
-                                                russh::CryptoVec::from(out.into_bytes()),
-                                            );
-                                        }
-                                        Err(e) => {
-                                            session.data(
-                                                channel,
-                                                russh::CryptoVec::from(
-                                                    format!("Error listing sensors: {}\r\n", e)
-                                                        .into_bytes(),
-                                                ),
-                                            );
-                                        }
-                                    }
-                                } else if cmd == "clear" {
-                                    session.data(
-                                        channel,
-                                        russh::CryptoVec::from("\x1b[2J\x1b[H".as_bytes().to_vec()),
-                                    );
-                                } else {
-                                    session.data(
-                                        channel,
-                                        russh::CryptoVec::from(
-                                            format!("Unrecognized command: {}\r\n", cmd)
-                                                .into_bytes(),
-                                        ),
-                                    );
-                                }
+                                session.data(
+                                    channel,
+                                    russh::CryptoVec::from(
+                                        format!("Unrecognized command: {}\r\n", cmd)
+                                            .into_bytes(),
+                                    ),
+                                );
                             }
                         }
                     }

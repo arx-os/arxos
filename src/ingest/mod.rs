@@ -48,56 +48,22 @@ pub fn ingest_text_script(
     Ok(result)
 }
 
-/// Finalize an in-memory Building mutation and write durable SSOT.
+/// Finalize an in-memory Building mutation and write durable SSOT under **cwd**.
+///
+/// Prefer [`persist_building_at`] when the project root is known (tests, multi-path tools).
 ///
 /// Pipeline: `finalize_ingest(Text, validate)` → hard-fail on validation errors
 /// → `PersistenceManager` save (optional Git commit).
-///
-/// All interactive/CRUD mutators should use this instead of writing YAML directly.
 pub fn persist_building(
     building: Building,
     commit: bool,
     message: Option<&str>,
 ) -> Result<Building, Box<dyn std::error::Error>> {
-    let result = finalize_ingest(
-        building,
-        IngestSource::Text,
-        IngestOptions {
-            validate: true,
-            existing: None,
-            policy: None,
-        },
-    );
-
-    if result.validation.has_errors() {
-        let details: Vec<String> = result
-            .validation
-            .errors()
-            .map(|e| match &e.field {
-                Some(f) => format!("{}: {}", f, e.message),
-                None => e.message.clone(),
-            })
-            .collect();
-        return Err(format!(
-            "Building validation failed ({} error(s)): {}",
-            details.len(),
-            details.join("; ")
-        )
-        .into());
-    }
-
-    let pm = crate::persistence::PersistenceManager::from_cwd()?;
-    if commit {
-        pm.save_and_commit(&result.building, message)?;
-    } else {
-        // Already hard-gated above; skip second validate.
-        pm.save_building_unchecked(&result.building)?;
-    }
-
-    Ok(result.building)
+    let cwd = std::env::current_dir()?;
+    persist_building_at(cwd, building, commit, message)
 }
 
-/// Like [`persist_building`], but writes under an explicit project root (no process cwd mutation).
+/// Like [`persist_building`], but writes under an explicit project root (no cwd coupling).
 pub fn persist_building_at(
     base: impl AsRef<std::path::Path>,
     building: Building,
@@ -135,6 +101,7 @@ pub fn persist_building_at(
     if commit {
         pm.save_and_commit(&result.building, message)?;
     } else {
+        // Already hard-gated above; skip second validate.
         pm.save_building_unchecked(&result.building)?;
     }
 

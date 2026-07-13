@@ -13,15 +13,12 @@ impl Command for StatusCommand {
             #[cfg(all(feature = "tui", feature = "agent"))]
             {
                 use crate::agent::auth::TokenState;
-                // Dummy state for consistency with CLI dashboard command
                 let repo_root = std::path::PathBuf::from(".");
                 let token_state = TokenState::new("dummy".to_string(), vec![]);
-                let hardware = crate::hardware::HardwareManager::new();
 
                 let state = std::sync::Arc::new(crate::agent::dispatcher::AgentState {
                     repo_root,
                     token: std::sync::Arc::new(std::sync::Mutex::new(token_state)),
-                    hardware: std::sync::Arc::new(hardware),
                 });
 
                 let rt = tokio::runtime::Runtime::new()?;

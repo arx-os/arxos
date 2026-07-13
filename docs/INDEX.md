@@ -34,6 +34,7 @@ See manifest §1.5–1.6.
 | [identity.md](./identity.md) | Arx UUID · IFC GlobalId · ArxAddress |
 | [ifc-limitations.md](./ifc-limitations.md) | IFC-only policy, L0–L2 fidelity, vendors |
 | [lidar-confidence.md](./lidar-confidence.md) | Non-probabilistic confidence honesty |
+| [resource-limits.md](./resource-limits.md) | R6 pilot import ceilings (IFC/LiDAR) |
 
 ## Hard policies
 
@@ -44,6 +45,11 @@ See manifest §1.5–1.6.
   Agent/daemon is edge bridging — not a second export authority.
 - **No unreviewed `proposed` LiDAR as official** (R1/R10).
 - **Horizon C (network scale) is frozen** until L1 exit once.
+- **Default features:** `tui` (primary UI) + compiler spine. No hardware drivers
+  or LiDAR point-cloud 3D (removed for now). See [pilot-release.md](./pilot-release.md).
+- **WASM PWA (`web`):** terminal-style interaction; camera/AR LiDAR capture later —
+  not a full CAD viewer.
+- **Single public error type:** `arxos::error::ArxError`.
 
 ## Lab / economy (not L1 success)
 

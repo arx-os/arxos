@@ -1,4 +1,4 @@
 //! Agent command handlers
-
-#[cfg(feature = "agent")]
-pub mod sensors;
+//!
+//! Hardware/sensor SSH commands were removed with the open-source hardware stack.
+//! Agent focuses on git + IFC import/export RPC.

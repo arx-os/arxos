@@ -1,9 +1,10 @@
 //! Room CRUD operations
 //!
-//! Mutates `core::Building` then persists via `ingest::persist_building`.
+//! Mutates `core::Building` then persists via `ingest::persist_building_at`
+//! using the same base path as the load (no silent cwd split).
 
 use crate::core::Room;
-use crate::ingest::persist_building;
+use crate::ingest::persist_building_at;
 use crate::persistence::{load_building_data_from_dir, PersistenceManager};
 use std::collections::HashMap;
 
@@ -16,6 +17,7 @@ pub fn create_room(
     commit: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let persistence = PersistenceManager::new(building_name)?;
+    let base = persistence.base_path().to_path_buf();
     let mut building = persistence.load_building_data()?;
     let room_name = room.name.clone();
 
@@ -43,7 +45,12 @@ pub fn create_room(
 
     wing.rooms.push(room);
 
-    persist_building(building, commit, Some(&format!("Add room: {}", room_name)))?;
+    persist_building_at(
+        base,
+        building,
+        commit,
+        Some(&format!("Add room: {}", room_name)),
+    )?;
     Ok(())
 }
 
@@ -98,6 +105,7 @@ pub fn update_room_impl(
     commit: bool,
 ) -> Result<Room, Box<dyn std::error::Error>> {
     let persistence = PersistenceManager::new(building_name)?;
+    let base = persistence.base_path().to_path_buf();
     let mut building = persistence.load_building_data()?;
 
     let room = building
@@ -108,7 +116,8 @@ pub fn update_room_impl(
     }
     let updated_room = room.clone();
 
-    let building = persist_building(
+    let building = persist_building_at(
+        base,
         building,
         commit,
         Some(&format!("Update room: {}", updated_room.name)),
@@ -128,6 +137,7 @@ pub fn delete_room_impl(
     commit: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let persistence = PersistenceManager::new(building_name)?;
+    let base = persistence.base_path().to_path_buf();
     let mut building = persistence.load_building_data()?;
 
     for floor in &mut building.floors {
@@ -136,7 +146,12 @@ pub fn delete_room_impl(
         }
     }
 
-    persist_building(building, commit, Some(&format!("Delete room: {}", room_id)))?;
+    persist_building_at(
+        base,
+        building,
+        commit,
+        Some(&format!("Delete room: {}", room_id)),
+    )?;
     Ok(())
 }
 

@@ -39,12 +39,14 @@ If IFC is incomplete, fix vendor export settings. See [ifc-limitations.md](./ifc
 ```bash
 git clone <internal-or-approved-remote> arxos
 cd arxos
-git checkout v2.0.0-pilot.3   # use the pin in the pilot charter
+git checkout v2.0.0-pilot.4   # or exact pin recorded in the pilot charter
 
-# Build CLI (default features OK; blockchain not required)
+# Default = compiler + TUI (primary UI). blockchain/agent not required for L1
 cargo install --path . --locked
 arx --version
 ```
+
+Import size/point ceilings: [resource-limits.md](./resource-limits.md) (raise only with hardware headroom).
 
 If `--locked` fails, still pin the commit hash in the charter and record it.
 
@@ -148,8 +150,12 @@ Identity after export/import: [identity.md](./identity.md).
 | Trusting `proposed` LiDAR without review | R1/R10 |
 | Floating `main` without pin | R9 |
 | Multi-building campus layout | I11 / product limit |
-| `export --delta` | Not implemented |
+| `export --delta` | Not implemented (hard-error) |
 | Agent auto-export as official IFC | Edge convenience only |
+| TUI / 3D / dashboard without explicit features | Compiler-core default has no rings |
+
+`arx contribute` / `arx access` remain available in compiler-core for lab smoke and
+optional demos; they are **not** L1 exit criteria.
 
 ---
 

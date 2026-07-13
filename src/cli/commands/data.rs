@@ -23,13 +23,19 @@ fn load_building_from_dir() -> Result<(PathBuf, crate::core::Building), Box<dyn 
 }
 
 /// Persist a mutated Building through finalize + hard validation + YAML SSOT.
+///
+/// `path` is the `building.yaml` file path; parent directory is the project root.
 fn save_building_to_path(
-    _path: &Path,
+    path: &Path,
     building: crate::core::Building,
     commit: bool,
     message: &str,
 ) -> Result<(), Box<dyn Error>> {
-    crate::ingest::persist_building(building, commit, Some(message))?;
+    let base = path
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    crate::ingest::persist_building_at(base, building, commit, Some(message))?;
     Ok(())
 }
 

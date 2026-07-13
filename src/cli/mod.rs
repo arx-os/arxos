@@ -16,7 +16,12 @@ use commands::{
 
 #[derive(Parser)]
 #[command(name = "arx")]
-#[command(about = "ArxOS - Git for Buildings")]
+#[command(about = "ArxOS building compiler — Git for Buildings (compiler-core by default)")]
+#[command(
+    long_about = "Local-first building compiler: IFC/LiDAR/text → building.yaml → Git → IFC export.\n\n\
+Default features include TUI (primary UI). Optional: --features agent | web | blockchain | full.\n\n\
+L1 pilot path: init → import → edit/review → validate → git → export --format ifc"
+)]
 #[command(version = env!("CARGO_PKG_VERSION"))]
 pub struct Cli {
     #[command(subcommand)]
@@ -196,66 +201,14 @@ impl Cli {
                 };
                 Ok(AccessCommand { action }.execute()?)
             }
-            Commands::Render {
-                building,
-                interactive,
-                brightness_style,
-                ..
-            } => {
-                #[cfg(not(feature = "render3d"))]
-                let _ = &brightness_style;
-                if interactive {
-                    #[cfg(feature = "render3d")]
-                    {
-                        // Validate and convert brightness style
-                        let brightness_ramp = match brightness_style.as_str() {
-                            "acerola" => crate::render3d::point_cloud::brightness_ramps::ACEROLA_16,
-                            "classic" => crate::render3d::point_cloud::brightness_ramps::CLASSIC,
-                            "extended" => {
-                                crate::render3d::point_cloud::brightness_ramps::EXTENDED_16
-                            }
-                            "unicode" => crate::render3d::point_cloud::brightness_ramps::UNICODE_16,
-                            _ => {
-                                eprintln!("❌ Invalid brightness style: '{}'", brightness_style);
-                                eprintln!("   Valid options: acerola, classic, extended, unicode");
-                                return Err(format!(
-                                    "Invalid brightness style: {}",
-                                    brightness_style
-                                )
-                                .into());
-                            }
-                        };
-
-                        crate::render3d::start_interactive_renderer(&building, brightness_ramp)?;
-                    }
-                    #[cfg(not(feature = "render3d"))]
-                    {
-                        println!("❌ Interactive 3D rendering requires --features render3d");
-                        return Err("Render3D feature not enabled".into());
-                    }
-                } else {
-                    #[cfg(feature = "tui")]
-                    {
-                        crate::tui::render_building(&building)?;
-                    }
-                    #[cfg(not(feature = "tui"))]
-                    {
-                        println!("📐 TUI rendering requires --features tui");
-                    }
-                }
+            #[cfg(feature = "tui")]
+            Commands::Render { building, .. } => {
+                // Hierarchy tree only — LiDAR point-cloud / Bevy viz deferred.
+                crate::tui::render_building(&building)?;
                 Ok(())
             }
-            Commands::Merge(cmd) => {
-                #[cfg(feature = "tui")]
-                {
-                    Ok(cmd.execute()?)
-                }
-                #[cfg(not(feature = "tui"))]
-                {
-                    println!("❌ Merge tool requires --features tui");
-                    Err("TUI feature not enabled".into())
-                }
-            }
+            #[cfg(feature = "tui")]
+            Commands::Merge(cmd) => Ok(cmd.execute()?),
             Commands::Status {
                 verbose,
                 interactive,
@@ -358,50 +311,23 @@ impl Cli {
             }
             #[cfg(feature = "agent")]
             Commands::Remote(cmd) => Ok(cmd.execute()?),
+            #[cfg(all(feature = "tui", feature = "agent"))]
             Commands::Dashboard => {
-                #[cfg(all(feature = "tui", feature = "agent"))]
-                {
-                    use crate::agent::auth::TokenState;
+                use crate::agent::auth::TokenState;
 
-                    let rt = tokio::runtime::Runtime::new()?;
-                    rt.block_on(async {
-                        // Import trait for connect()
-                        use crate::hardware::HardwareInterface;
+                let rt = tokio::runtime::Runtime::new()?;
+                rt.block_on(async {
+                    let state = std::sync::Arc::new(crate::agent::dispatcher::AgentState {
+                        repo_root: std::path::PathBuf::from("."),
+                        token: std::sync::Arc::new(std::sync::Mutex::new(TokenState::new(
+                            "dummy".to_string(),
+                            vec![],
+                        ))),
+                    });
 
-                        // Create and connect simulated interface
-                        let mut sim = crate::hardware::simulated::SimulatedInterface::new();
-                        // Connect explicitly (safe because we own it here)
-                        sim.connect().await.ok();
-
-                        let mut hardware = crate::hardware::HardwareManager::new();
-                        hardware.add_interface(
-                            "sim".to_string(),
-                            crate::hardware::HardwareProtocol::Simulated(sim),
-                        );
-
-                        let state = std::sync::Arc::new(crate::agent::dispatcher::AgentState {
-                            repo_root: std::path::PathBuf::from("."),
-                            token: std::sync::Arc::new(std::sync::Mutex::new(TokenState::new(
-                                "dummy".to_string(),
-                                vec![],
-                            ))),
-                            hardware: std::sync::Arc::new(hardware),
-                        });
-
-                        crate::tui::dashboard::run_dashboard(state).await
-                    })?;
-                    Ok(())
-                }
-                #[cfg(all(feature = "tui", not(feature = "agent")))]
-                {
-                    println!("⚠️  Dashboard requires both --features tui and --features agent");
-                    Err("Agent feature not enabled".into())
-                }
-                #[cfg(not(feature = "tui"))]
-                {
-                    println!("❌ TUI feature is required for dashboard");
-                    Err("TUI feature not enabled".into())
-                }
+                    crate::tui::dashboard::run_dashboard(state).await
+                })?;
+                Ok(())
             }
             Commands::Validate { path } => {
                 use crate::persistence::{load_building_at, BUILDING_YAML};
@@ -429,29 +355,6 @@ impl Cli {
                     println!("✅ Validation completed successfully");
                     Ok(())
                 }
-            }
-            Commands::Interactive {
-                building,
-                brightness_style,
-                ..
-            } => {
-                // Same interactive path as `render --interactive`
-                Self::execute(Cli {
-                    command: Commands::Render {
-                        building,
-                        floor: None,
-                        three_d: false,
-                        show_status: false,
-                        show_rooms: false,
-                        format: "ascii".into(),
-                        projection: "isometric".into(),
-                        view_angle: "isometric".into(),
-                        scale: 1.0,
-                        spatial_index: false,
-                        interactive: true,
-                        brightness_style,
-                    },
-                })
             }
         }
     }
@@ -803,7 +706,7 @@ BIM policy: ArxOS is IFC-only — no Revit/ArchiCAD plugins. Vendor tools must
 export clean IFC for import.
 
 Official pilot handoffs: `arx export --format ifc` (not agent auto-export).
---delta is not implemented and hard-errors.")]
+--delta is not implemented and hard-errors if passed.")]
     Export {
         /// Export format: ifc (recommended), yaml, json
         #[arg(long, default_value = "ifc")]
@@ -814,8 +717,8 @@ Official pilot handoffs: `arx export --format ifc` (not agent auto-export).
         /// Git repository URL (legacy; prefer arx commit for SSOT)
         #[arg(long)]
         repo: Option<String>,
-        /// Not implemented — hard-errors if set (no silent ignore)
-        #[arg(long)]
+        /// Not implemented — hard-errors if set (hidden; no silent ignore)
+        #[arg(long, hide = true)]
         delta: bool,
         /// Exclude proposed/rejected LiDAR auto entities from IFC export
         #[arg(long)]
@@ -827,12 +730,12 @@ Official pilot handoffs: `arx export --format ifc` (not agent auto-export).
         #[arg(long)]
         access_receipt: Option<String>,
     },
-    /// Buyer market: quote or pay $AXD for building data access (software remains free)
+    /// Buyer market: quote / grant receipt / pay $AXD (lab path; not required for L1 success)
     Access {
         #[command(subcommand)]
         subcommand: AccessSubcommand,
     },
-    /// Package verified building data as a contribution claim (reward path; free software)
+    /// Package verified building data as a contribution claim (lab reward path; not L1-required)
     Contribute {
         /// Output JSON path
         #[arg(long, default_value = "contribution.json")]
@@ -877,108 +780,12 @@ Official pilot handoffs: `arx export --format ifc` (not agent auto-export).
         #[arg(long)]
         rpc_url: Option<String>,
     },
-    /// Render building visualization
+    /// Print building hierarchy as text (default TUI helper — not LiDAR point-cloud viz)
+    #[cfg(feature = "tui")]
     Render {
-        /// Building identifier
+        /// Building name or id (loaded from cwd building.yaml)
         #[arg(long)]
         building: String,
-        /// Floor number
-        #[arg(long)]
-        floor: Option<i32>,
-        /// Enable 3D multi-floor visualization
-        #[arg(long)]
-        three_d: bool,
-        /// Show equipment status indicators
-        #[arg(long)]
-        show_status: bool,
-        /// Show room boundaries
-        #[arg(long)]
-        show_rooms: bool,
-        /// Output format (ascii, advanced, json, yaml)
-        #[arg(long, default_value = "ascii")]
-        format: String,
-        /// Projection type for 3D rendering (isometric, orthographic, perspective)
-        #[arg(long, default_value = "isometric")]
-        projection: String,
-        /// View angle for 3D rendering (topdown, front, side, isometric)
-        #[arg(long, default_value = "isometric")]
-        view_angle: String,
-        /// Scale factor for 3D rendering
-        #[arg(long, default_value = "1.0")]
-        scale: f64,
-        /// Enable spatial index integration for enhanced queries
-        #[arg(long)]
-        spatial_index: bool,
-        /// Enable interactive WebGL-style point cloud renderer with WASD+mouse controls
-        #[arg(long)]
-        interactive: bool,
-        /// ASCII brightness style for point cloud rendering (acerola, classic, extended, unicode)
-        ///
-        /// Controls the character set used for depth visualization:
-        /// - acerola: 16-level Acerola-style ramp (default, best for LiDAR scans)
-        /// - classic: 9-level original ramp (legacy compatibility)
-        /// - extended: 16-level extended ASCII characters
-        /// - unicode: 16-level Unicode block characters
-        #[arg(long, default_value = "acerola")]
-        brightness_style: String,
-    },
-    /// Interactive 3D building visualization with real-time controls
-    Interactive {
-        /// Building identifier
-        #[arg(long)]
-        building: String,
-        /// Projection type (isometric, orthographic, perspective)
-        #[arg(long, default_value = "isometric")]
-        projection: String,
-        /// View angle (topdown, front, side, isometric)
-        #[arg(long, default_value = "isometric")]
-        view_angle: String,
-        /// Scale factor for rendering
-        #[arg(long, default_value = "1.0")]
-        scale: f64,
-        /// Canvas width in characters
-        #[arg(long, default_value = "120")]
-        width: usize,
-        /// Canvas height in characters
-        #[arg(long, default_value = "40")]
-        height: usize,
-        /// Enable spatial index integration
-        #[arg(long)]
-        spatial_index: bool,
-        /// Show equipment status indicators
-        #[arg(long)]
-        show_status: bool,
-        /// Show room boundaries
-        #[arg(long)]
-        show_rooms: bool,
-        /// Show equipment connections
-        #[arg(long)]
-        show_connections: bool,
-        /// Target FPS for rendering (1-240)
-        #[arg(long, default_value = "30", value_parser = |s: &str| -> Result<u32, String> {
-            let val: u32 = s.parse().map_err(|_| format!("must be a number between 1 and 240"))?;
-            if val < 1 || val > 240 {
-                Err(format!("FPS must be between 1 and 240, got {}", val))
-            } else {
-                Ok(val)
-            }
-        })]
-        fps: u32,
-        /// Show FPS counter
-        #[arg(long)]
-        show_fps: bool,
-        /// Show help overlay by default
-        #[arg(long)]
-        show_help: bool,
-        /// ASCII brightness style for point cloud rendering (acerola, classic, extended, unicode)
-        ///
-        /// Controls the character set used for depth visualization:
-        /// - acerola: 16-level Acerola-style ramp (default, best for LiDAR scans)
-        /// - classic: 9-level original ramp (legacy compatibility)
-        /// - extended: 16-level extended ASCII characters
-        /// - unicode: 16-level Unicode block characters
-        #[arg(long, default_value = "acerola")]
-        brightness_style: String,
     },
     /// Validate building data
     Validate {
@@ -1141,9 +948,11 @@ Official pilot handoffs: `arx export --format ifc` (not agent auto-export).
         #[arg(long)]
         dry_run: bool,
     },
-    /// Resolve merge conflicts interactively
+    /// Resolve merge conflicts interactively (requires `--features tui`)
+    #[cfg(feature = "tui")]
     Merge(commands::MergeCommand),
-    /// Launch TUI Dashboard
+    /// Launch TUI dashboard (requires `--features tui,agent`)
+    #[cfg(all(feature = "tui", feature = "agent"))]
     Dashboard,
 }
 

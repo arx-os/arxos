@@ -349,19 +349,3 @@ impl ArxError {
 
 /// Result type alias for ArxOS operations
 pub type ArxResult<T> = Result<T, ArxError>;
-
-/// Analytics module for error tracking and reporting
-pub mod analytics {
-    use super::ArxError;
-
-    /// Manager for error analytics and reporting
-    pub struct ErrorAnalyticsManager;
-
-    impl ErrorAnalyticsManager {
-        /// Record a global error for analytics
-        pub fn record_global_error(error: &ArxError, context: Option<String>) {
-            // For now, just log the error - could be extended to send to analytics service
-            eprintln!("Error Analytics: {:?} | Context: {:?}", error, context);
-        }
-    }
-}

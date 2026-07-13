@@ -55,33 +55,15 @@ pub async fn start_agent() -> Result<(), Box<dyn std::error::Error>> {
         "auth.manage".to_string(),
     ];
 
-    // 2a. Initialize Hardware Manager
-    let mut hardware = crate::hardware::HardwareManager::new();
-
-    // Load config (basic loading for now, should be separate function)
-    if let Ok(config_str) = std::fs::read_to_string(repo_root.join(".arxos/agent.toml")) {
-        if let Ok(config) = toml::from_str::<crate::hardware::config::HardwareConfig>(&config_str) {
-            if let Some(modbus) = config.modbus {
-                let driver =
-                    crate::hardware::modbus::ModbusInterface::new(modbus.host, modbus.port);
-                hardware.add_interface(
-                    "modbus".to_string(),
-                    crate::hardware::HardwareProtocol::Modbus(driver),
-                );
-                println!("🔌 Modbus driver loaded");
-            }
-        }
-    }
-
     let token_state = TokenState::new(root_token.clone(), all_capabilities);
     let state = Arc::new(AgentState {
         repo_root,
         token: Arc::new(Mutex::new(token_state)),
-        hardware: Arc::new(hardware),
     });
 
     println!("\\n🔑 ROOT TOKEN: {}\\n", root_token);
     println!("⚠️  Keep this token secret! You will need it to connect.");
+    println!("ℹ️  Hardware/BACnet drivers not included in this build (revisit later).");
 
     // 3. Setup Router
     let app = Router::new()

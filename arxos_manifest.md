@@ -9,7 +9,7 @@
 | **Engine** | Rust 2021 (CLI + lib) · native IFC · Git SSOT · Foundry contracts · optional WASM/agent/render3d/`blockchain` |
 | **Design philosophy** | Local-first · single `Building` model · Git-native · free to use · pay only for data access |
 | **Document status** | Living plan — full vision locked; compiler + economy spine **lab-complete** (N1–N8 + Horizon A tooling); **Horizon B** (district L1 obligations) is current priority (§1.5, §1.6, §10) |
-| **Last reconciled** | 2026-07-13 (docs nuke/rebuild: `docs/INDEX.md` pilot packet; IFC-only + identity; agent export boundary) |
+| **Last reconciled** | 2026-07-13 (default tui; hardware+render3d removed; R6 limits; pilot docs) |
 | **Audience** | Vision holder, field IT pilots, core maintainers, external builders |
 
 ---
@@ -190,7 +190,7 @@ This section is the **obligation register**: each reservation must be **relegate
 | **R3** | **Live chain/mint ops not turnkey** | 2-of-3, stake, 24h finalize, keys ≠ “install and forget” | Keep L1 **off-chain**; for L3: ops runbook with two oracles + finalize; testnet only until policy OK | L1: chain optional/demo. L3: documented mint with named operators | Eng + ops | **Open** (lab E2E done) |
 | **R4** | **Host payment gate is local-file only** | `export --commercial` + receipt is bypassable; free export still works by design | Process: commercial deliveries **must** use `--commercial`. Product: host that checks `AccessPaid` / receipt server-side (L3) | L1: written process. L3: non-bypassable download path | Eng + field IT | **Partial** (CLI gate done; enforcement open) |
 | **R5** | **No second-person cold start on district env** | Hero dependency; program dies if only one tech can run it | Timed walkthrough by non-author on district laptop/network | Checklist signed; stuck points filed as backlog | Field IT | **Open** — template: `docs/second-person-checklist.md` |
-| **R6** | **Scale/performance unprofiled** | Large school models may OOM/hang; people skip validation | Profile worst-case IFC/scan on pilot hardware; set limits | Written max points/time; light-mode guidance | Eng + field | **Open** |
+| **R6** | **Scale/performance unprofiled** | Large school models may OOM/hang; people skip validation | Profile worst-case IFC/scan on pilot hardware; set limits | Written max points/time; light-mode guidance | Eng + field | **Partial** — eng defaults in `docs/resource-limits.md` + hard refuse on oversize import; **site profile still open** |
 | **R7** | **Security / compliance / classification** | Facility plans sensitive; Git remotes, exports, backups | Data class policy (internal-only default); who can clone/export; no student PII in properties | Security/IT sign-off for pilot repo location | Field IT + security | **Partial** — `docs/data-classification.md` + charter §4 (needs sign-off) |
 | **R8** | **Mainnet token / institutional fit** | Public entity crypto, custody, procurement, reputation | L1/L2: **no production token**. L3 only with Legal/Finance | Written go/no-go from leadership for any chain use | Vision + Legal | **Partial** — L1 default off-chain in charter §5 |
 | **R9** | **Support / ownership / change control** | No vendor SLA; `main` moves | Pin release tag/hash; one supported workflow page; escalation path | Pinned install + “supported loop” doc used in R5 | Eng + field IT | **Partial** — prefer tag `v2.0.0-pilot.3` @ `5449838a`; charter must record pin; R5 must walk that pin |
@@ -506,18 +506,22 @@ MVP field loop (implemented CLI):
 | Web | Leptos/WASM (optional `web`) | Review UI, not full capture |
 | Validation | In-process rules | Hard-gated on **`persist_building` path**; full surface still open (I4) |
 | Token/contracts | Solidity/Foundry under `contracts/` | **Phase Network only** |
-| CI | `compiler-ci.yml` | Intended authoritative PR gate (default features); **must be green** (I1 open until clippy clean) |
+| CI | `compiler-ci.yml` | Authoritative PR gate on **compiler-core** (empty default features); **must be green** |
 
 ### 3.8 Feature gates
 
 | Feature | Default | Role |
 | :--- | :---: | :--- |
-| `tui` | **yes** | Terminal UI rings (spreadsheet, merge tool, palette) |
-| `render3d` | no | Bevy / interactive visualization |
-| `agent` | no | WebSocket/SSH edge agent |
-| `web` | no | WASM PWA |
+| `tui` | **yes** | **Primary UI** — spreadsheet, merge, help, hierarchy text render |
+| *(spine)* | always | IFC/LiDAR ingest, YAML SSOT, Git, export, query |
+| `agent` | no | WebSocket/SSH edge (git + IFC; **no** hardware drivers) |
+| `web` | no | WASM PWA — terminal-style UI; camera/AR later |
 | `blockchain` | no | ethers clients |
-| `full` | no | All of the above |
+| `full` | no | tui + agent + web + blockchain |
+
+**Removed for now (revisit later):** `hardware` / BACnet·Modbus·MQTT, `render3d` / Bevy LiDAR point-cloud.
+
+**L1 pilot install:** `cargo install --path .` (default = compiler + TUI).
 
 ### 3.9 Target hardware (benchmarks, not blockers)
 
@@ -1099,7 +1103,7 @@ Horizon A **does not** close §1.6 district pilot obligations. It only enables l
 | Order | Package | Status | Your next action |
 | :---: | :--- | :---: | :--- |
 | **B0** | **P-Safety** | Template **done** | Fill/sign `docs/pilot-charter.md` |
-| **B1** | **P-Transfer** | **Pin cut** | Field: record pin in charter; second person + `docs/second-person-checklist.md` on `v2.0.0-pilot.3` |
+| **B1** | **P-Transfer** | **Pin tooling ready** | After commits: cut `v2.0.0-pilot.4`; field records pin; second person + checklist on that pin |
 | **B2** | **P-Data** | Template done | Complete `docs/data-classification.md` + charter §4; private Git remote |
 | **B3** | **P-Field-truth** | Template done | Fill `docs/field-truth-log.md` with real IFC/scan; eng fixes only blockers |
 | **B4** | **P-Chain-optional** | Partial | Keep L1 off-chain unless leadership requests demo |

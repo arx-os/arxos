@@ -126,6 +126,12 @@ pub fn import_ifc_path(
     strict: bool,
     validate: bool,
 ) -> Result<IngestResult> {
+    crate::resource_limits::check_file_size(
+        path,
+        crate::resource_limits::max_ifc_bytes(),
+        "IFC",
+    )?;
+
     let processor = IFCProcessor::new();
     let path_str = path
         .to_str()
@@ -179,6 +185,12 @@ pub fn import_lidar_path(
     light_mode: bool,
     validate: bool,
 ) -> Result<IngestResult> {
+    crate::resource_limits::check_file_size(
+        path,
+        crate::resource_limits::max_lidar_bytes(),
+        "LiDAR",
+    )?;
+
     let pipeline = LidarPipeline::new(voxel_size, light_mode);
     let building = pipeline
         .process(path)

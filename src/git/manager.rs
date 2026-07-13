@@ -86,26 +86,13 @@ impl BuildingGitManager {
         building: &crate::core::Building,
         metadata: &CommitMetadata,
     ) -> Result<GitOperationResult, GitError> {
-        // Record to error analytics if failed
-        let result = export_building(
+        export_building(
             &mut self.repo,
             &self.serializer,
             building,
             &self.git_config,
             metadata,
-        );
-
-        if let Err(ref err) = result {
-            use crate::error::analytics::ErrorAnalyticsManager;
-            let git_err = err.clone();
-            let arx_err: crate::error::ArxError = git_err.into();
-            ErrorAnalyticsManager::record_global_error(
-                &arx_err,
-                Some("export_building_with_metadata".to_string()),
-            );
-        }
-
-        result
+        )
     }
 
     /// Get repository status
@@ -158,17 +145,7 @@ impl BuildingGitManager {
 
     /// Commit staged changes
     pub fn commit_staged(&mut self, message: &str) -> Result<String, GitError> {
-        let result = commit_staged(&mut self.repo, &self.git_config, message);
-
-        // Record to error analytics if failed
-        if let Err(ref err) = result {
-            use crate::error::analytics::ErrorAnalyticsManager;
-            let git_err = err.clone();
-            let arx_err: crate::error::ArxError = git_err.into();
-            ErrorAnalyticsManager::record_global_error(&arx_err, Some("commit_staged".to_string()));
-        }
-
-        result
+        commit_staged(&mut self.repo, &self.git_config, message)
     }
 
     /// Helper for simple commit (alias to commit_staged)

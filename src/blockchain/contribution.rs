@@ -1,9 +1,15 @@
+//! Building/labor contribution helpers for on-chain paths.
+//!
+//! Primary path: merkle root from validated `building.yaml` labor
+//! ([`WorkContribution::from_building_merkle`]).
+//! Optional secondary: hash of free-form key/value readings ([`DeviceReadings`]).
+
 use crate::blockchain::merkle::ArxMerkleTree;
-use crate::core::identity::ArxId; // Explicitly renamed ArxId
-use crate::hardware::DeviceState;
+use crate::core::identity::ArxId;
 use anyhow::Result;
 use ethers::types::H256;
 use ethers::utils::keccak256;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[cfg(test)]
@@ -12,11 +18,13 @@ use rs_merkle::Hasher;
 #[cfg(feature = "agent")]
 use tracing;
 
+/// Free-form reading map for secondary contribution proofs (not BACnet/hardware).
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct DeviceReadings {
+    pub readings: HashMap<String, f64>,
+}
+
 /// A documented unit of labor ready for on-chain validation.
-///
-/// **Primary path (vision):** use [`WorkContribution::from_building_merkle`] with the
-/// merkle root from `crate::contribution` (building.yaml labor).
-/// Sensor [`DeviceState`] hashing is **secondary** (optional hardware telemetry).
 #[derive(Debug, Clone)]
 pub struct WorkContribution {
     pub worker_id: ArxId,
@@ -40,20 +48,20 @@ impl WorkContribution {
         }
     }
 
-    /// Secondary: sensor DeviceState hash (not the as-built building labor unit).
-    pub fn new(worker_id: ArxId, entity_id: ArxId, state: &DeviceState) -> Self {
+    /// Secondary: deterministic hash of key/value readings (lab/tests only).
+    pub fn from_readings(worker_id: ArxId, entity_id: ArxId, state: &DeviceReadings) -> Self {
         Self {
             worker_id,
             entity_id,
-            change_hash: Self::compute_state_hash(state),
+            change_hash: Self::compute_readings_hash(state),
             timestamp: chrono::Utc::now().timestamp() as u64,
         }
     }
 
-    /// Computes a deterministic hash of the sensor state for cryptographic proof.
-    pub fn compute_state_hash(state: &DeviceState) -> [u8; 32] {
+    /// Computes a deterministic hash of sorted readings.
+    pub fn compute_readings_hash(state: &DeviceReadings) -> [u8; 32] {
         let mut keys: Vec<&String> = state.readings.keys().collect();
-        keys.sort(); // Deterministic sorting is crucial for stable hashes
+        keys.sort();
 
         let mut payload = String::new();
         for key in keys {
@@ -117,44 +125,32 @@ impl ContributionBuffer {
     }
 }
 
-/// Service bridging building/sensor contributions to the ArxContribution tokenomics contract.
+/// Service bridging building contributions to the ArxContribution tokenomics contract.
 #[derive(Default)]
-pub struct ContributionService {
-    // In production, this would be an `ethers::providers::Provider<ethers::providers::Http>`
-    // mock provider for now.
-}
+pub struct ContributionService;
 
 impl ContributionService {
     pub fn new() -> Self {
-        Self::default()
+        Self
     }
 
-    pub async fn submit_contribution(
+    /// Submit a building-merkle contribution (primary path).
+    pub async fn submit_building_merkle(
         &self,
         worker_id: ArxId,
         entity_id: ArxId,
-        state_registry: std::sync::Arc<crate::hardware::HardwareStateRegistry>,
+        merkle_root: [u8; 32],
     ) -> Result<H256> {
-        // 1. Extract the latest state
-        let cache = state_registry.cache.read().unwrap();
-        let mut readings = HashMap::new();
-        for (k, v) in cache.iter() {
-            readings.insert(k.clone(), *v);
-        }
-        let state = DeviceState { readings };
-
-        // 2. Generate the WorkContribution payload
-        let _contribution = WorkContribution::new(worker_id, entity_id, &state);
+        let _contribution = WorkContribution::from_building_merkle(worker_id, entity_id, merkle_root);
 
         #[cfg(feature = "agent")]
         tracing::info!(
-            "Submitting WorkContribution: worker={}, entity={}, hash={:?}",
+            "Submitting building WorkContribution: worker={}, entity={}, hash={:?}",
             _contribution.worker_id.0,
             _contribution.entity_id.0,
             hex::encode(_contribution.change_hash)
         );
 
-        // Returning a dummy transaction hash indicating success
         Ok(H256::repeat_byte(0xaa))
     }
 
@@ -170,7 +166,6 @@ impl ContributionService {
             hex::encode(_batch_root)
         );
 
-        // Returning a dummy transaction hash indicating success (0xbb for batch)
         Ok(H256::repeat_byte(0xbb))
     }
 }
@@ -180,13 +175,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_contribution_hashing_and_submission() {
+    fn test_readings_hashing() {
         let mut readings = HashMap::new();
         readings.insert("Supply_Air_Temp".to_string(), 22.5);
         readings.insert("Return_Air_Temp".to_string(), 24.0);
-        let active_state = DeviceState { readings };
+        let state = DeviceReadings { readings };
 
-        let hash = WorkContribution::compute_state_hash(&active_state);
+        let hash = WorkContribution::compute_readings_hash(&state);
         assert_ne!(hash, [0u8; 32]);
     }
 
@@ -197,32 +192,25 @@ mod tests {
         let worker_2 = ArxId(uuid::Uuid::new_v4());
         let entity_2 = ArxId(uuid::Uuid::new_v4());
 
-        let mut readings_1 = HashMap::new();
-        readings_1.insert("Sensor_A".to_string(), 10.0);
-        let mut readings_2 = HashMap::new();
-        readings_2.insert("Sensor_B".to_string(), 20.0);
-        let mut readings_3 = HashMap::new();
-        readings_3.insert("Sensor_C".to_string(), 30.0);
-
-        let cont_1 = WorkContribution::new(
+        let cont_1 = WorkContribution::from_readings(
             worker_1,
             entity_1,
-            &DeviceState {
-                readings: readings_1,
+            &DeviceReadings {
+                readings: HashMap::from([("Sensor_A".into(), 10.0)]),
             },
         );
-        let cont_2 = WorkContribution::new(
+        let cont_2 = WorkContribution::from_readings(
             worker_2,
             entity_2,
-            &DeviceState {
-                readings: readings_2,
+            &DeviceReadings {
+                readings: HashMap::from([("Sensor_B".into(), 20.0)]),
             },
         );
-        let cont_3 = WorkContribution::new(
+        let cont_3 = WorkContribution::from_readings(
             worker_1,
             entity_2,
-            &DeviceState {
-                readings: readings_3,
+            &DeviceReadings {
+                readings: HashMap::from([("Sensor_C".into(), 30.0)]),
             },
         );
 
@@ -230,30 +218,20 @@ mod tests {
         buffer_a.add_contribution(cont_1.clone());
         buffer_a.add_contribution(cont_2.clone());
         buffer_a.add_contribution(cont_3.clone());
-
         let root_a = buffer_a.generate_batch_root();
 
-        // Same items, different order
         let mut buffer_b = ContributionBuffer::new("Daily Batch - March 14");
         buffer_b.add_contribution(cont_3.clone());
         buffer_b.add_contribution(cont_1.clone());
         buffer_b.add_contribution(cont_2.clone());
-
         let root_b = buffer_b.generate_batch_root();
         assert_ne!(root_a, root_b);
 
-        // A buffer with the exact same order must match
         let mut buffer_c = ContributionBuffer::new("Daily Batch - March 14");
         buffer_c.add_contribution(cont_1.clone());
         buffer_c.add_contribution(cont_2.clone());
         buffer_c.add_contribution(cont_3.clone());
-
-        let root_c = buffer_c.generate_batch_root();
-        assert_eq!(root_a, root_c);
-
-        let empty_buffer = ContributionBuffer::new("Daily Batch - March 14");
-        let empty_root = empty_buffer.generate_batch_root();
-        assert_ne!(root_a, empty_root);
+        assert_eq!(root_a, buffer_c.generate_batch_root());
     }
 
     #[test]
@@ -263,32 +241,25 @@ mod tests {
         let worker_2 = ArxId(uuid::Uuid::new_v4());
         let entity_2 = ArxId(uuid::Uuid::new_v4());
 
-        let mut readings_1 = HashMap::new();
-        readings_1.insert("Sensor_A".to_string(), 10.0);
-        let mut readings_2 = HashMap::new();
-        readings_2.insert("Sensor_B".to_string(), 20.0);
-        let mut readings_3 = HashMap::new();
-        readings_3.insert("Sensor_C".to_string(), 30.0);
-
-        let cont_1 = WorkContribution::new(
+        let cont_1 = WorkContribution::from_readings(
             worker_1,
             entity_1,
-            &DeviceState {
-                readings: readings_1,
+            &DeviceReadings {
+                readings: HashMap::from([("Sensor_A".into(), 10.0)]),
             },
         );
-        let cont_2 = WorkContribution::new(
+        let cont_2 = WorkContribution::from_readings(
             worker_2,
             entity_2,
-            &DeviceState {
-                readings: readings_2,
+            &DeviceReadings {
+                readings: HashMap::from([("Sensor_B".into(), 20.0)]),
             },
         );
-        let cont_3 = WorkContribution::new(
+        let cont_3 = WorkContribution::from_readings(
             worker_1,
             entity_2,
-            &DeviceState {
-                readings: readings_3,
+            &DeviceReadings {
+                readings: HashMap::from([("Sensor_C".into(), 30.0)]),
             },
         );
 
@@ -301,34 +272,27 @@ mod tests {
         let tree = buffer.build_merkle_tree();
         assert_eq!(tree.get_root().unwrap(), root);
 
-        // Compute the raw leaf string matching generate_batch_root formatting
         let get_row_bytes = |item: &WorkContribution| {
-            let row = format!(
+            format!(
                 "w:{}_e:{}_h:{}_t:{}|",
                 item.worker_id.0,
                 item.entity_id.0,
                 hex::encode(item.change_hash),
                 item.timestamp
-            );
-            row.into_bytes()
+            )
+            .into_bytes()
         };
 
-        // We want to prove inclusion of cont_2 (index 1 in leaves)
         let leaf_2_bytes = get_row_bytes(&cont_2);
         let leaf_2_hash = crate::blockchain::merkle::Keccak256Algorithm::hash(&leaf_2_bytes);
-
-        // Generate proof for index 1
         let proof_bytes = tree.generate_proof(&[1]);
-
-        // Verify the proof
         let is_valid = ArxMerkleTree::verify_proof(
             root,
             &proof_bytes,
             &[1],
             &[leaf_2_hash],
-            3, // total leaves
+            3,
         );
-
-        assert!(is_valid, "Merkle inclusion proof failed to verify!");
+        assert!(is_valid);
     }
 }

@@ -616,35 +616,6 @@ impl ConfigManager {
     pub fn get_config_mut(&mut self) -> &mut ArxConfig {
         &mut self.config
     }
-
-    /// Deprecated: use get_config() instead
-    #[deprecated(since = "2.0.0", note = "Use get_config() instead")]
-    pub fn config(&self) -> &ArxConfig {
-        &self.config
-    }
-
-    /// Deprecated: use get_config_mut() instead
-    #[deprecated(since = "2.0.0", note = "Use get_config_mut() instead")]
-    pub fn config_mut(&mut self) -> &mut ArxConfig {
-        &mut self.config
-    }
-}
-
-
-/// Get configuration with fallback to defaults
-///
-/// Attempts to load configuration with proper precedence.
-/// If loading fails, returns default configuration.
-///
-/// **Deprecated:** Use `ConfigManager::new()` for proper error handling
-#[deprecated(
-    since = "2.0.0",
-    note = "Use ConfigManager::new() instead for proper error handling"
-)]
-pub fn get_config_or_default() -> ArxConfig {
-    ConfigManager::new()
-        .map(|manager| manager.config)
-        .unwrap_or_else(|_| ArxConfig::default())
 }
 
 #[cfg(test)]

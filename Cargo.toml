@@ -79,21 +79,18 @@ dirs = "5.0"
 # Optional feature dependencies
 tokio = { version = "1.35", features = ["full"], optional = true }
 tracing = { version = "0.1", optional = true }
-tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"], optional = true }
+tracing-subscriber = { version = "0.3", optional = true, features = ["env-filter", "fmt", "json"] }
 crossterm = { version = "0.27", optional = true }
 ratatui = { version = "0.24", optional = true }
 csv = { version = "1.3", optional = true }
 arboard = { version = "3.3", optional = true }
 fuzzy-matcher = { version = "0.3", optional = true }
-bevy = { version = "0.14", optional = true, features = ["dynamic_linking"] }
 axum = { version = "0.7", features = ["ws", "macros"], optional = true }
 futures-util = { version = "0.3", optional = true }
 notify = { version = "6.1", optional = true }
 russh = { version = "0.40", optional = true }
 russh-keys = { version = "0.40", optional = true }
 ssh2 = { version = "0.9", optional = true }
-tokio-modbus = { version = "0.7", optional = true }
-rumqttc = { version = "0.23", optional = true }
 reqwest = { version = "0.11", features = ["json"], optional = true }
 base64 = "0.22.1"
 octocrab = "0.48.0"
@@ -116,15 +113,50 @@ web-sys = { version = "0.3.83", features = ["Window", "Document", "HtmlElement",
 futures = { version = "0.3", optional = true }
 
 [features]
+# Default: building compiler + primary TUI (spreadsheet, merge, hierarchy render).
+# Hardware BACnet/Modbus/MQTT and LiDAR point-cloud 3D viz removed for now (revisit later).
+# WASM PWA remains optional: terminal-style UI + camera/AR later — not in default.
 default = ["tui"]
 tui = ["crossterm", "ratatui", "csv", "arboard", "fuzzy-matcher"]
-render3d = ["bevy"]
-agent = ["tokio", "tracing", "tracing-subscriber", "axum", "futures-util", "notify", "russh", "russh-keys", "ssh2", "tokio-modbus", "rumqttc", "reqwest"]
-blockchain = ["tokio", "ethers", "ethers-contract", "ethers-signers", "hex", "rs_merkle"]
-web = ["leptos", "leptos_meta", "leptos_router", "wasm-bindgen", "wasm-bindgen-futures", "console_error_panic_hook", "web-sys", "futures"]
-full = ["tui", "render3d", "agent", "blockchain", "web"]
+# Edge agent: git/IFC RPC over WebSocket/SSH (no hardware drivers).
+agent = [
+    "tokio",
+    "tracing",
+    "tracing-subscriber",
+    "axum",
+    "futures-util",
+    "notify",
+    "russh",
+    "russh-keys",
+    "ssh2",
+    "reqwest",
+]
+blockchain = [
+    "tokio",
+    "ethers",
+    "ethers-contract",
+    "ethers-signers",
+    "hex",
+    "rs_merkle",
+]
+web = [
+    "tokio",
+    "leptos",
+    "leptos_meta",
+    "leptos_router",
+    "wasm-bindgen",
+    "wasm-bindgen-futures",
+    "console_error_panic_hook",
+    "web-sys",
+    "futures",
+]
+full = ["tui", "agent", "blockchain", "web"]
 
 [dev-dependencies]
 criterion = "0.5"
 proptest = "1.4"
 serial_test = "3.0"
+
+[[bench]]
+name = "core_benchmarks"
+harness = false

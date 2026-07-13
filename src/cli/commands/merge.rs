@@ -3,7 +3,9 @@
 #[cfg(feature = "tui")]
 use crate::tui::merge_tool::MergeTool;
 use clap::Args;
-use std::path::{Path, PathBuf};
+#[cfg(feature = "tui")]
+use std::path::Path;
+use std::path::PathBuf;
 
 /// Resolve merge conflicts interactively
 #[derive(Debug, Args)]

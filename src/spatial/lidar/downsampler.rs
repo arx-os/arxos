@@ -1,5 +1,6 @@
 use crate::core::spatial::Point3D;
-use anyhow::Result;
+use crate::resource_limits::max_lidar_input_points;
+use anyhow::{bail, Result};
 use std::collections::HashMap;
 
 pub struct IngestionStats {
@@ -45,9 +46,19 @@ impl VoxelGridFilter {
         let mut filtered_points = Vec::new();
         let mut total_points = 0;
 
+        let max_input = max_lidar_input_points();
+
         for point_result in points {
             let p = point_result?;
             total_points += 1;
+            if total_points > max_input {
+                bail!(
+                    "LiDAR input exceeded pilot point limit ({} points). \
+                     Use --light, increase --voxel-size, decimate the scan offline, \
+                     or set ARX_MAX_LIDAR_INPUT_POINTS. See docs/resource-limits.md.",
+                    max_input
+                );
+            }
 
             let key = (
                 (p.x / voxel_size).floor() as i64,

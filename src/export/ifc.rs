@@ -147,25 +147,8 @@ impl IFCExporter {
         self.export_content(&mut writer, owner_history_id)
     }
 
-    #[cfg(feature = "agent")]
-    pub fn export_delta(
-        &self,
-        _sync_state: Option<&crate::agent::git::SyncState>,
-        output_path: &Path,
-    ) -> Result<()> {
-        // For now, delta export is same as full export (placeholder)
-        // In real implementation, this would filter entities based on sync state
-        self.export(output_path)
-    }
-
-    #[cfg(not(feature = "agent"))]
-    pub fn export_delta(&self, _sync_state: Option<&()>, output_path: &Path) -> Result<()> {
-        // For now, delta export is same as full export (placeholder)
-        // In real implementation, this would filter entities based on sync state
-        self.export(output_path)
-    }
-
-    /// Collect universal paths for tracked entities (Equipment and Rooms)
+    /// Collect universal paths for tracked entities (Equipment and Rooms).
+    /// Used by agent sync-state bookkeeping only — not a second IFC writer.
     pub fn collect_universal_paths(&self) -> (Vec<String>, Vec<String>) {
         let mut equipment_paths = Vec::new();
         let mut rooms_paths = Vec::new();

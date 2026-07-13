@@ -26,7 +26,7 @@
 
 pub mod equipment_source;
 pub mod room_source;
-pub mod sensor_source;
+// Sensor spreadsheet source removed with hardware stack (revisit later).
 #[path = "trait.rs"]
 pub mod trait_def;
 

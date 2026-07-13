@@ -57,11 +57,13 @@ review enforced, or (2) pilot charter marks LiDAR **out of scope** (IFC-only).
 | :--- | :--- | :--- | :--- | :---: | :---: | :--- |
 | | | | | | [ ] | |
 
-Limits adopted for this pilot:
+Limits adopted for this pilot (defaults: [resource-limits.md](./resource-limits.md)):
 
 - Max points / file size: ________________  
+  (defaults: 20M points / 512 MiB LiDAR / 50 MiB IFC unless env raised)  
 - Prefer light mode when: ________________  
 - Prefer Mini/laptop over Pi when: ________________  
+- Env overrides used (`ARX_MAX_*`): ________________  
 
 **R6 pilot-mitigated when:** One worst-case (or representative) run is logged and limits are written.
 

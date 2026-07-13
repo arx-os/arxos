@@ -9,6 +9,11 @@ libs = ["lib"]
 test = "test"
 cache_path = "cache"
 script = "script"
+# Allow Deploy.s.sol to write env artifacts (Horizon A N8)
+fs_permissions = [
+    { access = "read-write", path = "./" },
+    { access = "read-write", path = "../" },
+]
 
 # Solidity compiler settings
 solc_version = "0.8.24"

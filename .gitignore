@@ -68,3 +68,4 @@ dist/
 pkg/
 .trunk/
 .aider*
+.env.arx

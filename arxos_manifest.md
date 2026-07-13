@@ -788,8 +788,8 @@ Contracts under `contracts/`; Rust under `src/contribution`, `src/access`, `src/
 | F3 / N3 | Oracle propose + finalize mint E2E | **Done** (Foundry) |
 | F4 / N4 | Registry building UUID + worker | **Done** (Foundry) |
 | F5 / N5 | Buyer payForAccess | **Done** (Foundry + CLI) |
-| F6 / N8 | Deploy-and-env script → `.env.arx` + register helpers | **Open** (Horizon A) |
-| F7 / N7 | Host gate: only release data after `AccessPaid` | **Open** (Horizon A) |
+| F6 / N8 | Deploy-and-env script → `.env.arx` + register helpers | **Done** (`horizon_a_deploy_env.sh`) |
+| F7 / N7 | Host gate: only release data after `AccessPaid` | **Done** (lab: `export --commercial` + receipt; not server host) |
 | F8 | Public testnet + external oracles | **Open** (Horizon C) |
 | F9 | Threat model / audit before mainnet | **Open** (Horizon C) |
 
@@ -1054,7 +1054,8 @@ test_data/             Mid-size IFC samples
 ```text
 Compiler:  init → import → edit (review) → migrate → validate → export → git
 Labor:     contribute [--sign] [--submit]
-Buyer:     access quote → access pay  (hosts must honor AccessPaid — N7 open)
+Buyer:     access quote → access pay → export --commercial (receipt / N7 CLI gate)
+Lab proof: ./scripts/full_lab_loop.sh   (see docs/full-lab-loop.md)
 ```
 
 ### 9.3 Supported surfaces matrix
@@ -1085,8 +1086,10 @@ Buyer:     access quote → access pay  (hosts must honor AccessPaid — N7 open
 | **A3** | `docs/horizon-a-ops.md` mint/pay ops | **Done** |
 | **A4** | Host gate: `export --commercial` + `access-receipt.json` | **Done** (R4 partial) |
 | **A5** | `docs/field-trial.md` | **Done** |
+| **A6** | `scripts/full_lab_loop.sh` + CI (compiler + forge mint/pay) | **Done** |
 
 Horizon A **does not** close §1.6 district pilot obligations. It only enables lab/live-local tooling.
+**Lab proof command:** `./scripts/full_lab_loop.sh` (`docs/full-lab-loop.md`).
 
 ### 10.2 Horizon B — Relegate pilot obligations (L1) — **current priority**
 
@@ -1117,11 +1120,12 @@ Horizon A **does not** close §1.6 district pilot obligations. It only enables l
 ```text
 You:    docs/field-handoff.md — sign charter + data-classification · record pin · R5 checklist
         fill field-truth-log on real IFC/scan
-Eng:    fix field blockers · keep ./scripts/l1_smoke.sh green (Compiler CI) · no L3 until L1 exit
+Eng:    ./scripts/full_lab_loop.sh green · fix field blockers only · no L3 until L1 exit
 Never:  L3 mainnet until L1 exit · fake R5/R1 evidence · public facility models
 ```
 
-**Automated smoke (eng):** `./scripts/l1_smoke.sh` (also Compiler CI) — does not close R5.
+**Automated eng proof:** `./scripts/full_lab_loop.sh` (Compiler CI + Full Lab Loop workflow).  
+**L1 sample smoke only:** `./scripts/l1_smoke.sh` — neither closes R5.
 
 ---
 
@@ -1142,6 +1146,7 @@ Never:  L3 mainnet until L1 exit · fake R5/R1 evidence · public facility model
 | **2026-07-13 pilot pin** | Annotated tag `v2.0.0-pilot.1` @ `ba33e6ba`; lib 514 + spine green; l1_smoke PASS |
 | **2026-07-13 R5 friction fixes** | `arx commit -m`; default git on init + branch `main`; honest hooks message; smoke covers approved-only + git; CI runs l1_smoke |
 | **2026-07-13 pilot.2** | Tag `v2.0.0-pilot.2` @ `d6a4567f` supersedes pilot.1 for new R5 walkthroughs |
+| **2026-07-13 full lab loop** | `scripts/full_lab_loop.sh` + CI: compiler + l1_smoke + Foundry mint/pay E2E; A6 done |
 
 ---
 

@@ -1,0 +1,39 @@
+# Full engineering closed loop: Rust compiler + L1 smoke + Foundry mint/pay E2E.
+# Does not claim district L1 exit (R5/R1 field evidence).
+
+name: Full Lab Loop
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  FOUNDRY_PROFILE: default
+
+jobs:
+  full-lab-loop:
+    name: Full lab closed loop
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Full lab loop (QUICK)
+        run: QUICK=1 ./scripts/full_lab_loop.sh

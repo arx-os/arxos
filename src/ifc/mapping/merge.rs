@@ -169,12 +169,9 @@ fn merge_incoming_base(
             .filter(|f| f.level == floor.level || f.name == floor.name || f.id == floor.id)
             .flat_map(|f| {
                 f.wings.iter().flat_map(|w| {
-                    w.rooms.iter().map(|r| {
-                        (
-                            r.id.clone(),
-                            r.spatial_properties.position.clone(),
-                        )
-                    })
+                    w.rooms
+                        .iter()
+                        .map(|r| (r.id.clone(), r.spatial_properties.position.clone()))
                 })
             })
             .collect();
@@ -231,26 +228,14 @@ fn merge_incoming_base(
                     .map(|r| {
                         r.equipment
                             .iter()
-                            .map(|e| {
-                                (
-                                    e.id.clone(),
-                                    e.position.clone(),
-                                    e.equipment_type.clone(),
-                                )
-                            })
+                            .map(|e| (e.id.clone(), e.position.clone(), e.equipment_type.clone()))
                             .collect()
                     })
                     .unwrap_or_default();
 
                 for eq in &mut room.equipment {
                     let path = format!("{}/{}/{}", wing_path, room.name, eq.name);
-                    match find_equipment(
-                        &existing_equipment,
-                        eq,
-                        &path,
-                        policy,
-                        &spatial_eq,
-                    ) {
+                    match find_equipment(&existing_equipment, eq, &path, policy, &spatial_eq) {
                         Some((key, old_eq)) => {
                             stats.equipment_matched += 1;
                             matched_eq_keys.insert(key);
@@ -343,16 +328,19 @@ fn merge_existing_base(
                     // count rooms/equipment as added
                     let w = wings.last().unwrap();
                     stats.rooms_added += w.rooms.len();
-                    stats.equipment_added += w.rooms.iter().map(|r| r.equipment.len()).sum::<usize>()
-                        + w.equipment.len();
+                    stats.equipment_added +=
+                        w.rooms.iter().map(|r| r.equipment.len()).sum::<usize>()
+                            + w.equipment.len();
                     continue;
                 }
             };
 
             for mut incoming_room in incoming_wing.rooms {
                 let room_path = format!("{}/{}", floor_name, incoming_room.name);
-                let room_path_wing =
-                    format!("{}/{}/{}", floor_name, wings[wing_idx].name, incoming_room.name);
+                let room_path_wing = format!(
+                    "{}/{}/{}",
+                    floor_name, wings[wing_idx].name, incoming_room.name
+                );
 
                 // Build temporary index of current wing rooms for matching
                 let room_match = {
@@ -379,10 +367,7 @@ fn merge_existing_base(
                         for mut inc_eq in incoming_room.equipment.drain(..) {
                             let eq_path = format!(
                                 "{}/{}/{}/{}",
-                                floor_name,
-                                wings[wing_idx].name,
-                                old_room.name,
-                                inc_eq.name
+                                floor_name, wings[wing_idx].name, old_room.name, inc_eq.name
                             );
                             let eq_match = find_equipment_in_list(
                                 &merged_eq.iter().collect::<Vec<_>>(),
@@ -496,7 +481,10 @@ fn apply_floor_identity(floor: &mut Floor, old: &Floor) {
         floor.elevation = old.elevation;
     }
     for (k, v) in &old.properties {
-        floor.properties.entry(k.clone()).or_insert_with(|| v.clone());
+        floor
+            .properties
+            .entry(k.clone())
+            .or_insert_with(|| v.clone());
     }
 }
 
@@ -552,14 +540,16 @@ fn merge_room_fields(room: &mut Room, old: &Room, _policy: &MergePolicy) {
         room.ifc_global_id = old.ifc_global_id.clone();
     }
     for (k, v) in &old.properties {
-        room.properties.entry(k.clone()).or_insert_with(|| v.clone());
+        room.properties
+            .entry(k.clone())
+            .or_insert_with(|| v.clone());
     }
 }
 
 fn merge_equipment_fields(eq: &mut Equipment, old: &Equipment, _policy: &MergePolicy) {
     eq.id = old.id.clone();
     eq.status = old.status;
-    eq.health_status = old.health_status.clone();
+    eq.health_status = old.health_status;
     if eq.sensor_mappings.is_none() {
         eq.sensor_mappings = old.sensor_mappings.clone();
     }
@@ -626,9 +616,7 @@ type FloorIndex<'a> = Vec<&'a Floor>;
 type RoomIndex<'a> = HashMap<String, &'a Room>;
 type EquipmentIndex<'a> = HashMap<String, &'a Equipment>;
 
-fn index_existing(
-    existing: &Building,
-) -> (FloorIndex<'_>, RoomIndex<'_>, EquipmentIndex<'_>) {
+fn index_existing(existing: &Building) -> (FloorIndex<'_>, RoomIndex<'_>, EquipmentIndex<'_>) {
     let mut floors = Vec::new();
     let mut rooms = HashMap::new();
     let mut equipment = HashMap::new();
@@ -751,8 +739,8 @@ fn find_room<'a>(
     None
 }
 
-fn find_room_in_list<'a>(
-    rooms: &[&'a Room],
+fn find_room_in_list(
+    rooms: &[&Room],
     room: &Room,
     path: &str,
     path_wing: &str,
@@ -916,9 +904,7 @@ mod tests {
     fn merge_matches_by_global_id_preserves_arx_state() {
         let existing = sample_building();
         let old_room_id = existing.floors[0].wings[0].rooms[0].id.clone();
-        let old_eq_id = existing.floors[0].wings[0].rooms[0].equipment[0]
-            .id
-            .clone();
+        let old_eq_id = existing.floors[0].wings[0].rooms[0].equipment[0].id.clone();
 
         let mut incoming = Building::new("HQ".into(), "/hq".into());
         let mut floor = Floor::new("F1".into(), 1);

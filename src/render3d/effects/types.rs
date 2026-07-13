@@ -3,9 +3,9 @@
 //! This module contains all type definitions for visual effects including
 //! effect types, states, data structures, and the core VisualEffect struct.
 
+use crate::core::spatial::Point3D;
 use crate::render3d::animation::EquipmentStatus;
 use crate::render3d::particles::{AlertLevel, ParticleType, Vector3D};
-use crate::core::spatial::Point3D;
 
 /// Individual visual effect
 #[derive(Debug, Clone)]

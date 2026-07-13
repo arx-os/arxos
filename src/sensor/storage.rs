@@ -1,5 +1,5 @@
 //! Sensor data storage layer
-//! 
+//!
 //! Provides Git-backed storage for sensor readings with optional audit logging.
 //! Supports both real-time queries (no Git) and historical queries (from Git).
 
@@ -63,10 +63,7 @@ impl SensorStorage {
         fs::create_dir_all(&sensors_path)?;
 
         // Generate filename: sensors/YYYY-MM-DD-HH-MM.yaml
-        let filename = format!(
-            "{}.yaml",
-            snapshot.timestamp.format("%Y-%m-%d-%H-%M")
-        );
+        let filename = format!("{}.yaml", snapshot.timestamp.format("%Y-%m-%d-%H-%M"));
         let file_path = sensors_path.join(&filename);
 
         // Serialize to YAML
@@ -88,7 +85,7 @@ impl SensorStorage {
         to: DateTime<Utc>,
     ) -> Result<Vec<SensorSnapshot>> {
         let sensors_path = self.repo_root.join(&self.config.sensors_dir);
-        
+
         if !sensors_path.exists() {
             return Ok(Vec::new());
         }
@@ -118,7 +115,7 @@ impl SensorStorage {
     /// Read the latest sensor snapshot
     pub fn read_latest(&self) -> Result<Option<SensorSnapshot>> {
         let sensors_path = self.repo_root.join(&self.config.sensors_dir);
-        
+
         if !sensors_path.exists() {
             return Ok(None);
         }
@@ -151,7 +148,7 @@ impl SensorStorage {
     /// Clean up old sensor files beyond retention period
     pub fn cleanup_old_files(&self) -> Result<usize> {
         let sensors_path = self.repo_root.join(&self.config.sensors_dir);
-        
+
         if !sensors_path.exists() {
             return Ok(0);
         }
@@ -182,9 +179,11 @@ impl SensorStorage {
         use crate::git::manager::{BuildingGitManager, GitConfigManager};
 
         let config = GitConfigManager::load_from_arx_config_or_env();
-        let repo_str = self.repo_root.to_str()
+        let repo_str = self
+            .repo_root
+            .to_str()
             .ok_or_else(|| anyhow::anyhow!("Invalid repo path"))?;
-        
+
         let mut manager = BuildingGitManager::new(repo_str, "current", config)?;
 
         // Stage the file
@@ -197,7 +196,7 @@ impl SensorStorage {
             snapshot.timestamp.format("%Y-%m-%d %H:%M:%S"),
             snapshot.source
         );
-        
+
         if let Some(user) = &snapshot.user {
             manager.commit(&format!("{} by {}", message, user))?;
         } else {
@@ -216,10 +215,7 @@ mod tests {
     #[test]
     fn test_write_and_read_snapshot() {
         let temp = TempDir::new().unwrap();
-        let storage = SensorStorage::new(
-            temp.path().to_path_buf(),
-            StorageConfig::default(),
-        );
+        let storage = SensorStorage::new(temp.path().to_path_buf(), StorageConfig::default());
 
         let mut readings = HashMap::new();
         readings.insert(
@@ -251,9 +247,11 @@ mod tests {
     #[test]
     fn test_cleanup_old_files() {
         let temp = TempDir::new().unwrap();
-        let mut config = StorageConfig::default();
-        config.retention_days = 0; // Immediate cleanup
-        
+        let config = StorageConfig {
+            retention_days: 0, // Immediate cleanup
+            ..Default::default()
+        };
+
         let storage = SensorStorage::new(temp.path().to_path_buf(), config);
 
         let snapshot = SensorSnapshot {
@@ -264,7 +262,7 @@ mod tests {
         };
 
         storage.write_snapshot(&snapshot, false).unwrap();
-        
+
         // Cleanup should remove the old file
         let removed = storage.cleanup_old_files().unwrap();
         assert_eq!(removed, 1);

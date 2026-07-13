@@ -39,7 +39,11 @@ impl Vec3 {
                 z: self.z / len,
             }
         } else {
-            Self { x: 0.0, y: 0.0, z: 0.0 }
+            Self {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            }
         }
     }
 
@@ -140,7 +144,8 @@ impl Camera {
             self.yaw.cos() * cos_pitch,
             self.pitch.sin(),
             self.yaw.sin() * cos_pitch,
-        ).normalize()
+        )
+        .normalize()
     }
 
     /// Get right direction vector (exactly like WebGL)
@@ -166,7 +171,9 @@ impl Camera {
         self.pitch -= delta_y * sensitivity;
 
         // Clamp pitch to avoid gimbal lock (just like OrbitControls)
-        self.pitch = self.pitch.clamp(-FRAC_PI_2 as f32 + 0.01, FRAC_PI_2 as f32 - 0.01);
+        self.pitch = self
+            .pitch
+            .clamp(-FRAC_PI_2 as f32 + 0.01, FRAC_PI_2 as f32 - 0.01);
 
         self.update_position();
     }
@@ -210,7 +217,7 @@ pub fn project(p: Vec3, cam: &Camera, width: u16, height: u16) -> Option<(usize,
     let up = vec3(0.0, 1.0, 0.0);
 
     let dot = dir.dot(&forward);
-    if dot < 0.01 { 
+    if dot < 0.01 {
         return None; // behind camera
     }
 
@@ -218,8 +225,8 @@ pub fn project(p: Vec3, cam: &Camera, width: u16, height: u16) -> Option<(usize,
     let u = dir.dot(&right) / dot * cam.fov_scale + width as f32 / 2.0;
     let v = dir.dot(&up) / dot * cam.fov_scale + height as f32 / 2.0;
 
-    if u < 0.0 || u >= width as f32 || v < 0.0 || v >= height as f32 { 
-        return None; 
+    if u < 0.0 || u >= width as f32 || v < 0.0 || v >= height as f32 {
+        return None;
     }
 
     Some((u as usize, v as usize, dot)) // dot = rough depth

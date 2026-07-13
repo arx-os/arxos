@@ -4,7 +4,7 @@
 //! for building entities.
 
 use crate::core::types::{Position, SpatialQueryResult};
-use crate::yaml::BuildingData;
+use crate::core::Building;
 
 /// Result of spatial validation
 #[derive(Debug, Clone)]
@@ -62,7 +62,7 @@ pub struct SpatialValidationIssue {
 ///
 /// # Arguments
 ///
-/// * `building_data` - The building data to query against
+/// * `building` - The building data to query against
 /// * `query_type` - Type of spatial query to perform
 /// * `entity` - Optional entity type filter ("room", "equipment", or empty for all)
 /// * `params` - Query-specific parameters
@@ -71,7 +71,7 @@ pub struct SpatialValidationIssue {
 ///
 /// Vector of spatial query results with entity information and calculated distances.
 pub fn spatial_query(
-    building_data: &BuildingData,
+    building: &Building,
     query_type: &str,
     entity: &str,
     params: Vec<String>,
@@ -90,7 +90,7 @@ pub fn spatial_query(
 
     // Collect all entities first
     let mut all_entities: Vec<(String, String, Point3D, bool)> = Vec::new();
-    for floor in &building_data.building.floors {
+    for floor in &building.floors {
         // Filter by entity type if specified
         let include_rooms = entity.is_empty() || entity.to_lowercase() == "room";
         let include_equipment = entity.is_empty() || entity.to_lowercase() == "equipment";
@@ -340,7 +340,7 @@ pub fn set_spatial_relationship(
 ///
 /// # Arguments
 ///
-/// * `building_data` - The building data containing coordinate system definitions
+/// * `building` - The building data containing coordinate system definitions
 /// * `from` - Source coordinate system name
 /// * `to` - Target coordinate system name
 /// * `entity` - Entity identifier to transform
@@ -349,7 +349,7 @@ pub fn set_spatial_relationship(
 ///
 /// Returns a formatted string with the transformed coordinates or status.
 pub fn transform_coordinates(
-    building_data: &BuildingData,
+    building: &Building,
     from: &str,
     to: &str,
     entity: &str,
@@ -359,7 +359,7 @@ pub fn transform_coordinates(
     let mut entity_name = String::new();
 
     // Search in rooms
-    for floor in &building_data.building.floors {
+    for floor in &building.floors {
         for wing in &floor.wings {
             for room in &wing.rooms {
                 if room.name == entity || room.id == entity {
@@ -369,7 +369,9 @@ pub fn transform_coordinates(
                 }
             }
         }
-        if entity_pos.is_some() { break; }
+        if entity_pos.is_some() {
+            break;
+        }
 
         // Search in equipment
         for equipment in &floor.equipment {
@@ -379,7 +381,9 @@ pub fn transform_coordinates(
                 break;
             }
         }
-        if entity_pos.is_some() { break; }
+        if entity_pos.is_some() {
+            break;
+        }
     }
 
     let pos = match entity_pos {
@@ -389,21 +393,27 @@ pub fn transform_coordinates(
 
     // Check if we are already in the target system
     if from == to {
-        return Ok(format!("Entity '{}' is already in coordinate system '{}' (x={:.2}, y={:.2}, z={:.2})", 
-            entity_name, to, pos.x, pos.y, pos.z));
+        return Ok(format!(
+            "Entity '{}' is already in coordinate system '{}' (x={:.2}, y={:.2}, z={:.2})",
+            entity_name, to, pos.x, pos.y, pos.z
+        ));
     }
 
     // Simple translation logic
     // If transforming from "building_local" to a defined system
     if from == "building_local" {
-        if let Some(cs) = building_data.building.coordinate_systems.iter().find(|cs| cs.name == to) {
+        if let Some(cs) = building
+            .coordinate_systems
+            .iter()
+            .find(|cs| cs.name == to)
+        {
             // Apply offset (subtract origin)
             // This is a simplified transformation assuming axes are aligned
             // A real implementation would use a transformation matrix
             let new_x = pos.x - cs.origin.x;
             let new_y = pos.y - cs.origin.y;
             let new_z = pos.z - cs.origin.z;
-            
+
             return Ok(format!("Transformed '{}' from '{}' to '{}': (x={:.2}, y={:.2}, z={:.2}) -> (x={:.2}, y={:.2}, z={:.2})",
                 entity_name, from, to, pos.x, pos.y, pos.z, new_x, new_y, new_z));
         }
@@ -411,12 +421,16 @@ pub fn transform_coordinates(
 
     // If transforming from a defined system to "building_local"
     if to == "building_local" {
-        if let Some(cs) = building_data.building.coordinate_systems.iter().find(|cs| cs.name == from) {
+        if let Some(cs) = building
+            .coordinate_systems
+            .iter()
+            .find(|cs| cs.name == from)
+        {
             // Apply offset (add origin)
             let new_x = pos.x + cs.origin.x;
             let new_y = pos.y + cs.origin.y;
             let new_z = pos.z + cs.origin.z;
-            
+
             return Ok(format!("Transformed '{}' from '{}' to '{}': (x={:.2}, y={:.2}, z={:.2}) -> (x={:.2}, y={:.2}, z={:.2})",
                 entity_name, from, to, pos.x, pos.y, pos.z, new_x, new_y, new_z));
         }
@@ -435,7 +449,7 @@ pub fn transform_coordinates(
 ///
 /// # Arguments
 ///
-/// * `building_data` - The building data to validate
+/// * `building` - The building data to validate
 /// * `entity` - Optional entity name to validate. If None, validates all entities.
 /// * `tolerance` - Optional tolerance for floating-point comparisons (default: 0.001).
 ///
@@ -443,7 +457,7 @@ pub fn transform_coordinates(
 ///
 /// Structured validation result with detailed issue information.
 pub fn validate_spatial(
-    building_data: &BuildingData,
+    building: &Building,
     entity: Option<&str>,
     tolerance: Option<f64>,
 ) -> Result<SpatialValidationResult, Box<dyn std::error::Error>> {
@@ -543,7 +557,7 @@ pub fn validate_spatial(
             let mut found = false;
 
             // Check rooms
-            for floor in &building_data.building.floors {
+            for floor in &building.floors {
                 // Check wings first (primary location)
                 for wing in &floor.wings {
                     for room in &wing.rooms {
@@ -577,7 +591,7 @@ pub fn validate_spatial(
 
             // Check equipment if not found in rooms
             if !found {
-                for floor in &building_data.building.floors {
+                for floor in &building.floors {
                     for equipment in &floor.equipment {
                         if equipment.name == entity_name || equipment.id == entity_name {
                             entities_checked = 1;
@@ -585,8 +599,16 @@ pub fn validate_spatial(
                             // Equipment doesn't have a bounding_box field directly, use position-based bbox
                             let pos = &equipment.position;
                             let bbox = crate::core::spatial::BoundingBox3D::new(
-                                crate::core::spatial::Point3D::new(pos.x - 0.5, pos.y - 0.5, pos.z - 0.5),
-                                crate::core::spatial::Point3D::new(pos.x + 0.5, pos.y + 0.5, pos.z + 0.5),
+                                crate::core::spatial::Point3D::new(
+                                    pos.x - 0.5,
+                                    pos.y - 0.5,
+                                    pos.z - 0.5,
+                                ),
+                                crate::core::spatial::Point3D::new(
+                                    pos.x + 0.5,
+                                    pos.y + 0.5,
+                                    pos.z + 0.5,
+                                ),
                             );
                             issues.extend(validate_bounding_box(
                                 &equipment.name,
@@ -610,7 +632,7 @@ pub fn validate_spatial(
         }
         None => {
             // Validate all entities
-            for floor in &building_data.building.floors {
+            for floor in &building.floors {
                 // Validate rooms in wings (primary location)
                 for wing in &floor.wings {
                     for room in &wing.rooms {
@@ -620,8 +642,12 @@ pub fn validate_spatial(
                             &room.name,
                             "Room",
                             &crate::core::spatial::BoundingBox3D::new(
-                                crate::core::spatial::Point3D::new(bbox.min.x, bbox.min.y, bbox.min.z),
-                                crate::core::spatial::Point3D::new(bbox.max.x, bbox.max.y, bbox.max.z),
+                                crate::core::spatial::Point3D::new(
+                                    bbox.min.x, bbox.min.y, bbox.min.z,
+                                ),
+                                crate::core::spatial::Point3D::new(
+                                    bbox.max.x, bbox.max.y, bbox.max.z,
+                                ),
                             ),
                         ));
                     }

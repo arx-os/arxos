@@ -36,7 +36,8 @@ impl EquipmentDataSource {
     /// * `building_name` - Name of the building for persistence
     pub fn new(building_data: Building, building_name: String) -> Self {
         // Collect all equipment from all floors using Building inherent query
-        let equipment = building_data.get_all_equipment()
+        let equipment = building_data
+            .get_all_equipment()
             .into_iter()
             .cloned()
             .collect();
@@ -177,9 +178,7 @@ impl SpreadsheetDataSource for EquipmentDataSource {
             .ok_or_else(|| format!("Column {} out of bounds", col))?;
 
         match column.id.as_str() {
-            "equipment.address" => {
-                Ok(CellValue::Text(self.get_equipment_address(equipment)))
-            }
+            "equipment.address" => Ok(CellValue::Text(self.get_equipment_address(equipment))),
             "equipment.id" => Ok(CellValue::UUID(equipment.id.clone())),
             "equipment.name" => Ok(CellValue::Text(equipment.name.clone())),
             "equipment.type" => Ok(CellValue::Enum(format!("{:?}", equipment.equipment_type))),
@@ -207,12 +206,7 @@ impl SpreadsheetDataSource for EquipmentDataSource {
         }
     }
 
-    fn set_cell(
-        &mut self,
-        row: usize,
-        col: usize,
-        value: CellValue,
-    ) -> Result<(), Box<dyn Error>> {
+    fn set_cell(&mut self, row: usize, col: usize, value: CellValue) -> Result<(), Box<dyn Error>> {
         // Get column ID first before mutable borrow
         let column_id = {
             let columns = self.columns();
@@ -288,14 +282,11 @@ impl SpreadsheetDataSource for EquipmentDataSource {
     }
 
     fn save(&mut self, commit: bool) -> Result<(), Box<dyn Error>> {
-        use crate::persistence::PersistenceManager;
+        use crate::ingest::persist_building;
 
-        // Update building data with modified equipment
-        // Match equipment by ID to update the correct equipment in building_data
-        let mut building_data = self.building_data.clone();
+        let mut building = self.building_data.clone();
         let mut modified_count = 0;
 
-        // Create a map of modified equipment by ID
         let modified_equipment: HashMap<String, &Equipment> = self
             .equipment
             .iter()
@@ -304,50 +295,20 @@ impl SpreadsheetDataSource for EquipmentDataSource {
             .map(|(_, eq)| (eq.id.clone(), eq))
             .collect();
 
-        // Update equipment in building data by matching IDs using find_equipment_mut
         for (id, modified_eq) in modified_equipment {
-            if let Some(equipment) = building_data.find_equipment_mut(&id) {
+            if let Some(equipment) = building.find_equipment_mut(&id) {
                 *equipment = (*modified_eq).clone();
                 modified_count += 1;
             }
         }
 
-        // Save via persistence manager
-        let persistence = PersistenceManager::new(&self.building_name)?;
-        persistence.save_building_data(&building_data)?;
-
-        // Update our building_data reference
-        self.building_data = building_data;
-
-        // Stage to Git if repository exists
-        if persistence.has_git_repo() {
-            use crate::git::{manager::GitConfigManager, BuildingGitManager};
-
-            let working_file_path = persistence.working_file();
-            let repo_path = working_file_path
-                .parent()
-                .and_then(|p| p.to_str())
-                .ok_or_else(|| "Invalid repository path".to_string())?;
-
-            let config = GitConfigManager::load_from_arx_config_or_env();
-            let mut git_manager = BuildingGitManager::new(repo_path, &self.building_name, config)
-                .map_err(|e| format!("Git error: {}", e))?;
-
-            git_manager.stage_all()?;
-
-            // Commit if requested
-            if commit {
-                let message = format!(
-                    "Update equipment via spreadsheet ({} items modified)",
-                    modified_count
-                );
-                git_manager.commit_staged(&message)?;
-            }
-        }
-
-        // Clear modified rows after successful save
+        let message = format!(
+            "Update equipment via spreadsheet ({} items modified)",
+            modified_count
+        );
+        let building = persist_building(building, commit, Some(&message))?;
+        self.building_data = building;
         self.modified_rows.clear();
-
         Ok(())
     }
 
@@ -362,7 +323,9 @@ impl SpreadsheetDataSource for EquipmentDataSource {
         self.building_data = building_data.clone();
 
         // Rebuild equipment list
-        self.equipment = self.building_data.get_all_equipment()
+        self.equipment = self
+            .building_data
+            .get_all_equipment()
             .into_iter()
             .cloned()
             .collect();

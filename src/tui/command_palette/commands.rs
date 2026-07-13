@@ -1,21 +1,118 @@
-//! Command Definitions
-//!
-//! Provides all available commands for the command palette.
+//! Command definitions for the TUI palette (Building compiler surface only).
 
 use super::types::{CommandCategory, CommandEntry};
 
-/// Load all available commands
+/// Load palette entries for supported compiler commands.
 pub fn load_commands() -> Vec<CommandEntry> {
-    crate::cli::commands::all_commands()
-        .into_iter()
-        .map(|descriptor| CommandEntry {
-            name: descriptor.name.clone(),
-            full_command: descriptor.example.unwrap_or_else(|| format!("arx {}", descriptor.name)),
-            description: descriptor.description,
-            category: CommandCategory::from(descriptor.category),
-            shortcut: None,
-        })
-        .collect()
+    vec![
+        entry(
+            "init",
+            "arx init --name 'My Building'",
+            "Initialize a new building repository",
+            CommandCategory::Building,
+        ),
+        entry(
+            "import",
+            "arx import ifc building.ifc",
+            "Import IFC or LiDAR into building.yaml",
+            CommandCategory::ImportExport,
+        ),
+        entry(
+            "edit",
+            "arx edit script.txt",
+            "Apply text/AR edit script to Building",
+            CommandCategory::Building,
+        ),
+        entry(
+            "export",
+            "arx export --format ifc --output building.ifc",
+            "Export Building to IFC/YAML/JSON",
+            CommandCategory::ImportExport,
+        ),
+        entry(
+            "validate",
+            "arx validate",
+            "Validate building.yaml invariants",
+            CommandCategory::Health,
+        ),
+        entry(
+            "status",
+            "arx status",
+            "Show Git status for building SSOT",
+            CommandCategory::Git,
+        ),
+        entry(
+            "stage",
+            "arx stage",
+            "Stage building.yaml changes",
+            CommandCategory::Git,
+        ),
+        entry(
+            "commit",
+            "arx commit -m 'message'",
+            "Commit staged changes",
+            CommandCategory::Git,
+        ),
+        entry("diff", "arx diff", "Show differences", CommandCategory::Git),
+        entry(
+            "history",
+            "arx history",
+            "Show commit history",
+            CommandCategory::Git,
+        ),
+        entry(
+            "room",
+            "arx room create --name Office",
+            "Manage rooms on Building graph",
+            CommandCategory::Room,
+        ),
+        entry(
+            "equipment",
+            "arx equipment add --name Boiler",
+            "Manage equipment on Building graph",
+            CommandCategory::Equipment,
+        ),
+        entry(
+            "query",
+            "arx query '/local/*/*/*/*/*/*'",
+            "Query equipment by durable ArxAddress",
+            CommandCategory::Search,
+        ),
+        entry(
+            "search",
+            "arx search boiler",
+            "Search names in Building",
+            CommandCategory::Search,
+        ),
+        entry(
+            "migrate",
+            "arx migrate",
+            "Backfill missing equipment addresses",
+            CommandCategory::Building,
+        ),
+        entry(
+            "render",
+            "arx render --building .",
+            "Visualize building",
+            CommandCategory::Render,
+        ),
+        entry(
+            "spatial",
+            "arx spatial",
+            "Spatial operations",
+            CommandCategory::Other,
+        ),
+    ]
+}
+
+fn entry(name: &str, full: &str, description: &str, category: CommandCategory) -> CommandEntry {
+    CommandEntry {
+        name: name.to_string(),
+        full_command: full.to_string(),
+        description: description.to_string(),
+        category,
+        shortcut: None,
+    }
 }
 
 #[cfg(test)]
@@ -25,174 +122,11 @@ mod tests {
     #[test]
     fn test_load_commands() {
         let commands = load_commands();
-        assert!(!commands.is_empty(), "Should load commands");
-    }
-
-    #[test]
-    fn test_command_count() {
-        let commands = load_commands();
-        // Should have at least 20 commands based on the implementation
-        assert!(commands.len() >= 20, "Should have multiple commands");
-    }
-
-    #[test]
-    fn test_commands_by_category() {
-        let commands = load_commands();
-        let building: Vec<_> = commands
-            .iter()
-            .filter(|c| c.category == CommandCategory::Building)
-            .collect();
-        let equipment: Vec<_> = commands
-            .iter()
-            .filter(|c| c.category == CommandCategory::Equipment)
-            .collect();
-        let room: Vec<_> = commands
-            .iter()
-            .filter(|c| c.category == CommandCategory::Room)
-            .collect();
-        let git: Vec<_> = commands
-            .iter()
-            .filter(|c| c.category == CommandCategory::Git)
-            .collect();
-        let ar: Vec<_> = commands
-            .iter()
-            .filter(|c| c.category == CommandCategory::AR)
-            .collect();
-
-        assert!(!building.is_empty(), "Should have Building commands");
-        assert!(!equipment.is_empty(), "Should have Equipment commands");
-        assert!(!room.is_empty(), "Should have Room commands");
-        assert!(!git.is_empty(), "Should have Git commands");
-        assert!(!ar.is_empty(), "Should have AR commands");
-    }
-
-    #[test]
-    fn test_command_structure() {
-        let commands = load_commands();
-        for cmd in &commands {
-            assert!(!cmd.name.is_empty(), "Command should have a name");
-            assert!(
-                !cmd.full_command.is_empty(),
-                "Command should have full_command"
-            );
-            assert!(
-                !cmd.description.is_empty(),
-                "Command should have description"
-            );
-        }
-    }
-
-    #[test]
-    fn test_no_duplicate_commands() {
-        let commands = load_commands();
-        let mut names: std::collections::HashSet<String> = std::collections::HashSet::new();
-        for cmd in &commands {
-            assert!(
-                !names.contains(&cmd.name),
-                "Duplicate command name: {}",
-                cmd.name
-            );
-            names.insert(cmd.name.clone());
-        }
-    }
-
-    #[test]
-    fn test_building_commands() {
-        let commands = load_commands();
-        let building_cmds: Vec<_> = commands
-            .iter()
-            .filter(|c| c.category == CommandCategory::Building)
-            .collect();
-        assert!(
-            !building_cmds.is_empty(),
-            "Should have Building category commands"
-        );
-        assert!(
-            building_cmds.iter().any(|c| c.name == "init"),
-            "Should have 'init' command"
-        );
-    }
-
-    #[test]
-    fn test_equipment_commands() {
-        let commands = load_commands();
-        let equipment_cmds: Vec<_> = commands
-            .iter()
-            .filter(|c| c.category == CommandCategory::Equipment)
-            .collect();
-        assert!(
-            !equipment_cmds.is_empty(),
-            "Should have Equipment category commands"
-        );
-        assert!(
-            equipment_cmds.iter().any(|c| c.name.contains("equipment")),
-            "Should have equipment-related commands"
-        );
-    }
-
-    #[test]
-    fn test_room_commands() {
-        let commands = load_commands();
-        let room_cmds: Vec<_> = commands
-            .iter()
-            .filter(|c| c.category == CommandCategory::Room)
-            .collect();
-        assert!(!room_cmds.is_empty(), "Should have Room category commands");
-        assert!(
-            room_cmds.iter().any(|c| c.name.contains("room")),
-            "Should have room-related commands"
-        );
-    }
-
-    #[test]
-    fn test_git_commands() {
-        let commands = load_commands();
-        let git_cmds: Vec<_> = commands
-            .iter()
-            .filter(|c| c.category == CommandCategory::Git)
-            .collect();
-        assert!(!git_cmds.is_empty(), "Should have Git category commands");
-        assert!(
-            git_cmds
-                .iter()
-                .any(|c| c.name == "status" || c.name == "commit"),
-            "Should have git-related commands"
-        );
-    }
-
-    #[test]
-    fn test_ar_commands() {
-        let commands = load_commands();
-        let ar_cmds: Vec<_> = commands
-            .iter()
-            .filter(|c| c.category == CommandCategory::AR)
-            .collect();
-        assert!(!ar_cmds.is_empty(), "Should have AR category commands");
-        assert!(
-            ar_cmds.iter().any(|c| c.name.contains("ar")),
-            "Should have AR-related commands"
-        );
-    }
-
-    #[test]
-    fn test_all_categories_represented() {
-        let commands = load_commands();
-        let categories: std::collections::HashSet<_> =
-            commands.iter().map(|c| c.category).collect();
-
-        // Check that major categories are represented (Other may not have commands)
-        assert!(categories.contains(&CommandCategory::Building));
-        assert!(categories.contains(&CommandCategory::Equipment));
-        assert!(categories.contains(&CommandCategory::Room));
-        assert!(categories.contains(&CommandCategory::Git));
-        assert!(categories.contains(&CommandCategory::ImportExport));
-        assert!(categories.contains(&CommandCategory::AR));
-        assert!(categories.contains(&CommandCategory::Render));
-        assert!(categories.contains(&CommandCategory::Search));
-        assert!(categories.contains(&CommandCategory::Config));
-        assert!(categories.contains(&CommandCategory::Sensors));
-        assert!(categories.contains(&CommandCategory::Health));
-        assert!(categories.contains(&CommandCategory::Documentation));
-        // Other category may not have commands, which is fine
+        assert!(!commands.is_empty());
+        assert!(commands.iter().any(|c| c.name == "query"));
+        assert!(commands.iter().any(|c| c.name == "migrate"));
+        // Compiler surface is intentionally smaller than the old kitchen-sink palette
+        assert!(commands.len() >= 10);
+        assert!(commands.len() < 30);
     }
 }

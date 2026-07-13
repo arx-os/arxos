@@ -93,11 +93,12 @@ impl GridCoordinate {
             .map_err(|e| format!("Invalid row number in grid coordinate '{}': {}", s, e))?;
 
         // Validate column is a letter
-        let column_char = column.chars().next()
-            .ok_or_else(|| format!(
+        let column_char = column.chars().next().ok_or_else(|| {
+            format!(
                 "Invalid column in grid coordinate '{}'. Column must be a single letter (A-Z)",
                 s
-            ))?;
+            )
+        })?;
 
         if column.len() != 1 || !column_char.is_alphabetic() {
             return Err(format!(

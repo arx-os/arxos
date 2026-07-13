@@ -335,7 +335,9 @@ impl Building {
     pub fn get_rooms_by_type(&self, room_type: &super::RoomType) -> Vec<&Room> {
         self.get_all_rooms()
             .into_iter()
-            .filter(|room| std::mem::discriminant(&room.room_type) == std::mem::discriminant(room_type))
+            .filter(|room| {
+                std::mem::discriminant(&room.room_type) == std::mem::discriminant(room_type)
+            })
             .collect()
     }
 
@@ -391,14 +393,14 @@ impl Building {
     pub fn find_equipment(&self, id: &str) -> Option<&super::Equipment> {
         self.get_all_equipment()
             .into_iter()
-            .find(|eq| eq.id == id || eq.name == id)
+            .find(|eq| eq.id.eq_ignore_ascii_case(id) || eq.name.eq_ignore_ascii_case(id))
     }
 
-    /// Find an equipment item by its unique ID (mutable reference)
+    /// Find an equipment item by its unique ID or name (mutable reference)
     pub fn find_equipment_mut(&mut self, id: &str) -> Option<&mut super::Equipment> {
         self.get_all_equipment_mut()
             .into_iter()
-            .find(|eq| eq.id == id || eq.name == id)
+            .find(|eq| eq.id.eq_ignore_ascii_case(id) || eq.name.eq_ignore_ascii_case(id))
     }
 
     /// Find equipment within a given radius of a 3D point
@@ -410,7 +412,8 @@ impl Building {
         self.get_all_equipment()
             .into_iter()
             .filter(|eq| {
-                let eq_point = super::spatial::Point3D::new(eq.position.x, eq.position.y, eq.position.z);
+                let eq_point =
+                    super::spatial::Point3D::new(eq.position.x, eq.position.y, eq.position.z);
                 center.distance_to(&eq_point) <= radius
             })
             .collect()
@@ -424,11 +427,16 @@ impl Building {
         self.get_all_equipment()
             .into_iter()
             .map(|eq| {
-                let eq_point = super::spatial::Point3D::new(eq.position.x, eq.position.y, eq.position.z);
+                let eq_point =
+                    super::spatial::Point3D::new(eq.position.x, eq.position.y, eq.position.z);
                 let distance = center.distance_to(&eq_point);
                 (eq, distance)
             })
-            .min_by(|(_, dist_a), (_, dist_b)| dist_a.partial_cmp(dist_b).unwrap_or(std::cmp::Ordering::Equal))
+            .min_by(|(_, dist_a), (_, dist_b)| {
+                dist_a
+                    .partial_cmp(dist_b)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
     }
 
     /// Add a property to the building metadata

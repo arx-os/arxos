@@ -1,8 +1,8 @@
 use std::path::Path;
 
-use anyhow::{anyhow, Context, Result};
-use crate::git::{BuildingGitManager, CommitMetadata, GitConfigManager};
 use crate::git::diff::DiffLineType;
+use crate::git::{BuildingGitManager, CommitMetadata, GitConfigManager};
+use anyhow::{anyhow, Context, Result};
 use git2::{Repository, Status, StatusOptions};
 use serde::{Deserialize, Serialize};
 
@@ -30,8 +30,8 @@ impl SyncState {
 
     pub fn load(path: &std::path::Path) -> Option<Self> {
         if path.exists() {
-             let content = std::fs::read_to_string(path).ok()?;
-             serde_yaml::from_str(&content).ok()
+            let content = std::fs::read_to_string(path).ok()?;
+            serde_yaml::from_str(&content).ok()
         } else {
             None
         }

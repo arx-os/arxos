@@ -3,8 +3,8 @@
 //! This module contains projection functions for transforming 3D coordinates
 //! to 2D screen coordinates using various projection methods.
 
-use crate::render3d::types::{Camera3D, Projection3D, ViewAngle};
 use crate::core::spatial::Point3D;
+use crate::render3d::types::{Camera3D, Projection3D, ViewAngle};
 
 /// Apply isometric projection to a 3D point
 ///

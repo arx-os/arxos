@@ -1,9 +1,12 @@
 //! IFC Resolver for domain mapping and hierarchy reconstruction.
-//! 
-//! This module takes raw STEP entities and resolves them into 
+//!
+//! This module takes raw STEP entities and resolves them into
 //! high-level ArxOS domain objects like Buildings, Floors, and Rooms.
 
-use std::collections::HashMap;
+use super::geometry::GeometryResolver;
+use super::lexer::{Param, RawEntity};
+use super::mesh::MeshResolver;
+use super::registry::EntityRegistry;
 use crate::core::domain::ArxAddress;
 use crate::core::{
     Building, Dimensions, Equipment, EquipmentType, Floor, Position, Room, RoomType, Wing,
@@ -11,14 +14,11 @@ use crate::core::{
 use crate::ifc::mapping::{
     apply_identity_on_import, apply_lidar_on_import, dimensions_from_mesh_aabb, mesh_to_local,
     normalize_imported_properties, position_from_origin, spatial_from_position_dims,
-    wing_name_from_properties, COORD_BUILDING_LOCAL, FidelityLevel, LossReport, MappingWarning,
+    wing_name_from_properties, FidelityLevel, LossReport, MappingWarning, COORD_BUILDING_LOCAL,
     PROP_ARX_WING,
 };
-use super::lexer::{Param, RawEntity};
-use super::registry::EntityRegistry;
-use super::geometry::GeometryResolver;
-use super::mesh::MeshResolver;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
+use std::collections::HashMap;
 
 /// Resolver for mapping IFC entities to ArxOS domain objects.
 pub struct IfcResolver<'a> {
@@ -58,7 +58,8 @@ impl<'a> IfcResolver<'a> {
         let mut equipment_list = Vec::new();
 
         // 1. Find the root Project entity
-        let project_id = self.find_root_entity("IFCPROJECT")
+        let project_id = self
+            .find_root_entity("IFCPROJECT")
             .ok_or_else(|| anyhow!("No IFCPROJECT found in file"))?;
 
         // 2. Start traversal from Project -> Site -> Building
@@ -107,7 +108,8 @@ impl<'a> IfcResolver<'a> {
                     for floor in &mut building.floors {
                         for wing in &mut floor.wings {
                             if let Some(room) = wing.rooms.iter_mut().find(|r| {
-                                let sanitized_r_name = r.name.to_lowercase().replace(' ', "-").replace('_', "-");
+                                let sanitized_r_name =
+                                    r.name.to_lowercase().replace([' ', '_'], "-");
                                 r.name == room_name || sanitized_r_name == room_name
                             }) {
                                 eq.set_room(room.id.clone());
@@ -125,7 +127,8 @@ impl<'a> IfcResolver<'a> {
                 if !attached && !floor_name.is_empty() {
                     // Try to find the floor
                     if let Some(floor) = building.floors.iter_mut().find(|f| {
-                        let sanitized_f_name = f.name.to_lowercase().replace(' ', "-").replace('_', "-");
+                        let sanitized_f_name =
+                            f.name.to_lowercase().replace([' ', '_'], "-");
                         f.name == floor_name || sanitized_f_name == floor_name
                     }) {
                         let wing_opt = wing_name_from_properties(&eq.properties);
@@ -133,7 +136,8 @@ impl<'a> IfcResolver<'a> {
                         if let Some(w_name) = wing_opt {
                             // Find or create wing on that floor
                             if let Some(wing) = floor.wings.iter_mut().find(|w| {
-                                let sanitized_w_name = w.name.to_lowercase().replace(' ', "-").replace('_', "-");
+                                let sanitized_w_name =
+                                    w.name.to_lowercase().replace([' ', '_'], "-");
                                 w.name == w_name || sanitized_w_name == w_name
                             }) {
                                 wing.equipment.push(eq.clone());
@@ -191,20 +195,28 @@ impl<'a> IfcResolver<'a> {
     }
 
     fn resolve_building(&mut self, id: u64) -> Result<Building> {
-        let raw = self.registry.get_raw(id).ok_or_else(|| anyhow!("Building entity #{} not found", id))?;
-        let name = self.extract_entity_name(raw).unwrap_or_else(|| "Unknown Building".to_string());
-        
+        let raw = self
+            .registry
+            .get_raw(id)
+            .ok_or_else(|| anyhow!("Building entity #{} not found", id))?;
+        let name = self
+            .extract_entity_name(raw)
+            .unwrap_or_else(|| "Unknown Building".to_string());
+
         // Generate ArxAddress for Building
         let addr = ArxAddress::new(&self.country, &self.state, &self.city, &name, "", "", "");
         self.registry.set_address(id, addr);
 
         let mut building = Building::new(name, "".to_string());
-        
+
         // Resolve Properties
         let mut props = HashMap::new();
         self.resolve_properties(id, &mut props);
 
-        let global_id = self.registry.get_raw(id).and_then(|raw| self.extract_string_param(raw, 0));
+        let global_id = self
+            .registry
+            .get_raw(id)
+            .and_then(|raw| self.extract_string_param(raw, 0));
         apply_identity_on_import(
             &mut building.id,
             &mut building.ifc_global_id,
@@ -216,7 +228,7 @@ impl<'a> IfcResolver<'a> {
         for (k, v) in props {
             building.add_metadata_property(k, v);
         }
-        
+
         let floor_ids = self.find_children_of(id, "IFCBUILDINGSTOREY");
         for floor_id in floor_ids {
             building.floors.push(self.resolve_floor(floor_id, id)?);
@@ -261,12 +273,19 @@ impl<'a> IfcResolver<'a> {
         // Generate ArxAddress for Floor
         if let Some(parent_addr) = self.registry.get_address(parent_id) {
             let (_, _, _, building_name, _, _, _) = parent_addr.parts().unwrap_or_default();
-            let addr = ArxAddress::new(&self.country, &self.state, &self.city, &building_name, &name, "", "");
+            let addr = ArxAddress::new(
+                &self.country,
+                &self.state,
+                &self.city,
+                &building_name,
+                &name,
+                "",
+                "",
+            );
             self.registry.set_address(id, addr);
         }
 
         let mut floor = Floor::new(name, 0); // Defaulting to level 0, can be refined with IfcStorey
-
 
         for room_id in self.registry.get_contained(id) {
             let is_space = if let Some(raw) = self.registry.get_raw(room_id) {
@@ -277,17 +296,17 @@ impl<'a> IfcResolver<'a> {
 
             if is_space {
                 let room = self.resolve_room(room_id, id)?;
-                
+
                 // Prefer standard IFC group/zone grouping
                 let mut wing_name = self.find_zone_of_entity(room_id);
-                
+
                 // Fallback to custom property ArxWing (clean or legacy-prefixed)
                 if wing_name.is_none() {
                     wing_name = wing_name_from_properties(&room.properties);
                 }
-                
+
                 let wing_name = wing_name.unwrap_or_else(|| "Main".to_string());
-                
+
                 // Find or create wing on the floor
                 if let Some(wing) = floor.wings.iter_mut().find(|w| w.name == wing_name) {
                     wing.rooms.push(room);
@@ -320,16 +339,30 @@ impl<'a> IfcResolver<'a> {
     fn resolve_room(&mut self, id: u64, parent_id: u64) -> Result<Room> {
         self.resolved_rooms.insert(id);
         let (name, global_id) = {
-            let raw = self.registry.get_raw(id).ok_or_else(|| anyhow!("Room entity #{} not found", id))?;
-            let name = self.extract_entity_name(raw).unwrap_or_else(|| "Unknown Room".to_string());
+            let raw = self
+                .registry
+                .get_raw(id)
+                .ok_or_else(|| anyhow!("Room entity #{} not found", id))?;
+            let name = self
+                .extract_entity_name(raw)
+                .unwrap_or_else(|| "Unknown Room".to_string());
             let global_id = self.extract_string_param(raw, 0);
             (name, global_id)
         };
-        
+
         // Generate ArxAddress for Room
         if let Some(parent_addr) = self.registry.get_address(parent_id) {
-            let (_, _, _, building_name, floor_name, _, _) = parent_addr.parts().unwrap_or_default();
-            let addr = ArxAddress::new(&self.country, &self.state, &self.city, &building_name, &floor_name, &name, "");
+            let (_, _, _, building_name, floor_name, _, _) =
+                parent_addr.parts().unwrap_or_default();
+            let addr = ArxAddress::new(
+                &self.country,
+                &self.state,
+                &self.city,
+                &building_name,
+                &floor_name,
+                &name,
+                "",
+            );
             self.registry.set_address(id, addr);
         }
 
@@ -355,19 +388,19 @@ impl<'a> IfcResolver<'a> {
         let placement_param = raw.params.get(5).or_else(|| raw.params.get(2));
         let representation_param = raw.params.get(6).or_else(|| raw.params.get(4));
 
-        let (ox, oy, oz, transform) =
-            if let Some(Param::Reference(placement_id)) = placement_param {
-                let transform = geom_resolver.resolve_placement(*placement_id);
-                let origin = transform.transform_point(&nalgebra::Vector3::new(0.0, 0.0, 0.0));
-                (origin.x, origin.y, origin.z, transform)
-            } else {
-                (
-                    0.0,
-                    0.0,
-                    0.0,
-                    crate::ifc::parser::geometry::Transform3D::identity(),
-                )
-            };
+        let (ox, oy, oz, transform) = if let Some(Param::Reference(placement_id)) = placement_param
+        {
+            let transform = geom_resolver.resolve_placement(*placement_id);
+            let origin = transform.transform_point(&nalgebra::Vector3::new(0.0, 0.0, 0.0));
+            (origin.x, origin.y, origin.z, transform)
+        } else {
+            (
+                0.0,
+                0.0,
+                0.0,
+                crate::ifc::parser::geometry::Transform3D::identity(),
+            )
+        };
 
         let position = position_from_origin(ox, oy, oz);
         let mut mesh_local = None;
@@ -400,12 +433,15 @@ impl<'a> IfcResolver<'a> {
     }
 
     fn resolve_site_metadata(&mut self, id: u64, building: &mut Building) -> Result<()> {
-        let raw = self.registry.get_raw(id).ok_or_else(|| anyhow!("Site entity #{} not found", id))?;
-        
+        let raw = self
+            .registry
+            .get_raw(id)
+            .ok_or_else(|| anyhow!("Site entity #{} not found", id))?;
+
         // Param 8: RefLatitude
         // Param 9: RefLongitude
         // Param 10: RefElevation
-        
+
         if let Some(Param::List(lat)) = raw.params.get(8) {
             let lat_deg = self.convert_dms_to_decimal(lat).unwrap_or(0.0);
             building.add_metadata_property("geo:latitude".to_string(), lat_deg.to_string());
@@ -430,32 +466,42 @@ impl<'a> IfcResolver<'a> {
 
         for &id in self.registry.get_by_class("IFCANNOTATION") {
             if let Some(raw) = self.registry.get_raw(id) {
-                let name = self.extract_string_param(raw, 2).unwrap_or_else(|| format!("Marker_{}", id));
-                
+                let name = self
+                    .extract_string_param(raw, 2)
+                    .unwrap_or_else(|| format!("Marker_{}", id));
+
                 // If it's labeled as a marker or anchor
-                if name.to_uppercase().contains("MARKER") || name.to_uppercase().contains("ANCHOR") {
-                    let mut eq = Equipment::new(name, "".to_string(), EquipmentType::Other("AR_Anchor".to_string()));
-                    
+                if name.to_uppercase().contains("MARKER") || name.to_uppercase().contains("ANCHOR")
+                {
+                    let mut eq = Equipment::new(
+                        name,
+                        "".to_string(),
+                        EquipmentType::Other("AR_Anchor".to_string()),
+                    );
+
                     if let Some(Param::Reference(placement_id)) = raw.params.get(2) {
                         let transform = geom_resolver.resolve_placement(*placement_id);
-                        let origin = transform.transform_point(&nalgebra::Vector3::new(0.0, 0.0, 0.0));
+                        let origin =
+                            transform.transform_point(&nalgebra::Vector3::new(0.0, 0.0, 0.0));
                         eq.position = Position {
                             x: origin.x,
                             y: origin.y,
                             z: origin.z,
                             coordinate_system: "building_local".to_string(),
                         };
-                        
+
                         // Resolve Properties
                         self.resolve_properties(id, &mut eq.properties);
-                        
+
                         if let Some(Param::Reference(shape_id)) = raw.params.get(4) {
-                            if let Some(mesh) = mesh_resolver.extract_mesh_from_shape(*shape_id, &transform) {
+                            if let Some(mesh) =
+                                mesh_resolver.extract_mesh_from_shape(*shape_id, &transform)
+                            {
                                 eq.mesh = Some(mesh);
                             }
                         }
                     }
-                    
+
                     anchors.push(eq);
                 }
             }
@@ -464,10 +510,10 @@ impl<'a> IfcResolver<'a> {
     }
 
     fn convert_dms_to_decimal(&self, dms: &[Param]) -> Option<f64> {
-        let d = self.extract_float(dms, 0)? as f64;
-        let m = self.extract_float(dms, 1)? as f64;
-        let s = self.extract_float(dms, 2)? as f64;
-        let ms = self.extract_float(dms, 3).unwrap_or(0.0) as f64;
+        let d = self.extract_float(dms, 0)?;
+        let m = self.extract_float(dms, 1)?;
+        let s = self.extract_float(dms, 2)?;
+        let ms = self.extract_float(dms, 3).unwrap_or(0.0);
 
         let sign = if d < 0.0 { -1.0 } else { 1.0 };
         Some(sign * (d.abs() + m / 60.0 + (s + ms / 1_000_000.0) / 3600.0))
@@ -483,24 +529,38 @@ impl<'a> IfcResolver<'a> {
 
     fn resolve_equipment_under(&mut self, _building_id: u64) -> Result<Vec<Equipment>> {
         let mut equipment_list = Vec::new();
-        
+
         let classes = [
-            "IFCFLOWTERMINAL", "IFCFLOWCONTROLLER", "IFCSENSOR", 
-            "IFCAIRTERMINAL", "IFCLIGHTFIXTURE", "IFCBOILER", 
-            "IFCCHILLER", "IFCFAN", "IFCPUMP", "IFCVALVE", 
-            "IFCLAMP", "IFCOUTLET", "IFCSWITCHINGDEVICE",
-            "IFCFIREALARM", "IFCFIRESUPRESSION",
-            "IFCAUDIOVISUALAPPLIANCE", "IFCFURNITURE",
-            "IFCDISTRIBUTIONELEMENT", "IFCCOMMUNICATIONSAPPLIANCE"
+            "IFCFLOWTERMINAL",
+            "IFCFLOWCONTROLLER",
+            "IFCSENSOR",
+            "IFCAIRTERMINAL",
+            "IFCLIGHTFIXTURE",
+            "IFCBOILER",
+            "IFCCHILLER",
+            "IFCFAN",
+            "IFCPUMP",
+            "IFCVALVE",
+            "IFCLAMP",
+            "IFCOUTLET",
+            "IFCSWITCHINGDEVICE",
+            "IFCFIREALARM",
+            "IFCFIRESUPRESSION",
+            "IFCAUDIOVISUALAPPLIANCE",
+            "IFCFURNITURE",
+            "IFCDISTRIBUTIONELEMENT",
+            "IFCCOMMUNICATIONSAPPLIANCE",
         ];
-        
+
         let geom_resolver = GeometryResolver::new(self.registry);
         let mesh_resolver = MeshResolver::new(self.registry, &geom_resolver);
- 
+
         for &class in &classes {
             for &id in self.registry.get_by_class(class) {
                 let eq_data = if let Some(raw) = self.registry.get_raw(id) {
-                    let name = self.extract_entity_name(raw).unwrap_or_else(|| format!("{}_{}", class, id));
+                    let name = self
+                        .extract_entity_name(raw)
+                        .unwrap_or_else(|| format!("{}_{}", class, id));
                     let eq_type = self.map_class_to_type(class);
                     Some((name, eq_type))
                 } else {
@@ -513,8 +573,11 @@ impl<'a> IfcResolver<'a> {
                     // Generate ArxAddress for Equipment (Fixture)
                     if let Some(container_id) = self.find_container_of(id) {
                         if let Some(container_addr) = self.registry.get_address(container_id) {
-                            let (country, state, city, building, floor, room, _) = container_addr.parts().unwrap_or_default();
-                            eq.address = Some(ArxAddress::new(&country, &state, &city, &building, &floor, &room, &eq.name));
+                            let (country, state, city, building, floor, room, _) =
+                                container_addr.parts().unwrap_or_default();
+                            eq.address = Some(ArxAddress::new(
+                                &country, &state, &city, &building, &floor, &room, &eq.name,
+                            ));
                         }
                     }
 
@@ -558,7 +621,10 @@ impl<'a> IfcResolver<'a> {
                                     mesh_resolver.extract_mesh_from_shape(*shape_id, &transform)
                                 {
                                     eq.mesh = Some(mesh_to_local(
-                                        &mesh_world, origin.x, origin.y, origin.z,
+                                        &mesh_world,
+                                        origin.x,
+                                        origin.y,
+                                        origin.z,
                                     ));
                                 }
                             }
@@ -575,10 +641,23 @@ impl<'a> IfcResolver<'a> {
 
     fn map_class_to_type(&self, class: &str) -> EquipmentType {
         match class {
-            "IFCFLOWSEGMENT" | "IFCFLOWFITTING" | "IFCFLOWTERMINAL" | "IFCFLOWMOVINGDEVICE" | "IFCBOILER" | "IFCCHILLER" | "IFCFAN" | "IFCPUMP" => EquipmentType::HVAC,
-            "IFCCABLESEGMENT" | "IFCCABLEFITTING" | "IFCSWITCHINGDEVICE" | "IFCPROTECTIVEDEVICE" | "IFCOUTLET" => EquipmentType::Electrical,
+            "IFCFLOWSEGMENT"
+            | "IFCFLOWFITTING"
+            | "IFCFLOWTERMINAL"
+            | "IFCFLOWMOVINGDEVICE"
+            | "IFCBOILER"
+            | "IFCCHILLER"
+            | "IFCFAN"
+            | "IFCPUMP" => EquipmentType::HVAC,
+            "IFCCABLESEGMENT"
+            | "IFCCABLEFITTING"
+            | "IFCSWITCHINGDEVICE"
+            | "IFCPROTECTIVEDEVICE"
+            | "IFCOUTLET" => EquipmentType::Electrical,
             "IFCLAMP" | "IFCLIGHTFIXTURE" => EquipmentType::Other("Lighting".to_string()),
-            "IFCVALVE" | "IFCPIPESEGMENT" | "IFCPIPEFITTING" | "IFCSANITARYTERMINAL" => EquipmentType::Plumbing,
+            "IFCVALVE" | "IFCPIPESEGMENT" | "IFCPIPEFITTING" | "IFCSANITARYTERMINAL" => {
+                EquipmentType::Plumbing
+            }
             "IFCAUDIOVISUALAPPLIANCE" => EquipmentType::AV,
             "IFCFURNITURE" => EquipmentType::Furniture,
             "IFCFIREALARM" | "IFCFIRESUPRESSION" | "IFCALARM" => EquipmentType::Safety,
@@ -589,7 +668,11 @@ impl<'a> IfcResolver<'a> {
 
     // --- Property Resolution ---
 
-    fn resolve_properties(&self, entity_id: u64, out_props: &mut std::collections::HashMap<String, String>) {
+    fn resolve_properties(
+        &self,
+        entity_id: u64,
+        out_props: &mut std::collections::HashMap<String, String>,
+    ) {
         // Properties are linked via IFCRELDEFINESBYPROPERTIES
         // RelatedObjects: Param 4 (List of references)
         // RelatingPropertyDefinition: Param 5 (Reference to Pset)
@@ -597,9 +680,9 @@ impl<'a> IfcResolver<'a> {
         for &rel_id in self.registry.get_by_class("IFCRELDEFINESBYPROPERTIES") {
             if let Some(rel_raw) = self.registry.get_raw(rel_id) {
                 if let Some(Param::List(related_objects)) = rel_raw.params.get(4) {
-                    let is_related = related_objects.iter().any(|p| {
-                        matches!(p, Param::Reference(id) if *id == entity_id)
-                    });
+                    let is_related = related_objects
+                        .iter()
+                        .any(|p| matches!(p, Param::Reference(id) if *id == entity_id));
 
                     if is_related {
                         if let Some(Param::Reference(pset_id)) = rel_raw.params.get(5) {
@@ -611,11 +694,17 @@ impl<'a> IfcResolver<'a> {
         }
     }
 
-    fn extract_property_set(&self, pset_id: u64, out_props: &mut std::collections::HashMap<String, String>) {
+    fn extract_property_set(
+        &self,
+        pset_id: u64,
+        out_props: &mut std::collections::HashMap<String, String>,
+    ) {
         if let Some(pset_raw) = self.registry.get_raw(pset_id) {
             if pset_raw.class == "IFCPROPERTYSET" {
-                let pset_name = self.extract_string_param(pset_raw, 2).unwrap_or_else(|| "Pset_Unknown".to_string());
-                
+                let pset_name = self
+                    .extract_string_param(pset_raw, 2)
+                    .unwrap_or_else(|| "Pset_Unknown".to_string());
+
                 // HasProperties: Param 4 (List of references)
                 if let Some(Param::List(properties)) = pset_raw.params.get(4) {
                     for prop_param in properties {
@@ -628,10 +717,17 @@ impl<'a> IfcResolver<'a> {
         }
     }
 
-    fn extract_single_property(&self, prop_id: u64, pset_name: &str, out_props: &mut std::collections::HashMap<String, String>) {
+    fn extract_single_property(
+        &self,
+        prop_id: u64,
+        pset_name: &str,
+        out_props: &mut std::collections::HashMap<String, String>,
+    ) {
         if let Some(prop_raw) = self.registry.get_raw(prop_id) {
             if prop_raw.class == "IFCPROPERTYSINGLEVALUE" {
-                let name = self.extract_string_param(prop_raw, 0).unwrap_or_else(|| "Unknown".to_string());
+                let name = self
+                    .extract_string_param(prop_raw, 0)
+                    .unwrap_or_else(|| "Unknown".to_string());
                 // NominalValue: Param 2 (Typed value or simple value)
                 if let Some(value) = self.extract_value_param(&prop_raw.params, 2) {
                     let key = format!("{}:{}", pset_name, name);
@@ -669,7 +765,10 @@ impl<'a> IfcResolver<'a> {
 
     fn find_container_of(&self, entity_id: u64) -> Option<u64> {
         // 1. Look for IFCRELCONTAINEDINSPATIALSTRUCTURE where RelatedElements contains entity_id
-        for &id in self.registry.get_by_class("IFCRELCONTAINEDINSPATIALSTRUCTURE") {
+        for &id in self
+            .registry
+            .get_by_class("IFCRELCONTAINEDINSPATIALSTRUCTURE")
+        {
             if let Some(entity) = self.registry.get_raw(id) {
                 // Param 4: RelatedObjects (List of References)
                 if let Some(Param::List(elements)) = entity.params.get(4) {
@@ -709,9 +808,9 @@ impl<'a> IfcResolver<'a> {
                 for class in &["IFCSPACE", "IFCBUILDINGSTOREY", "IFCBUILDING"] {
                     for &sp_id in self.registry.get_by_class(class) {
                         if let Some(sp_raw) = self.registry.get_raw(sp_id) {
-                            let has_placement = sp_raw.params.iter().any(|p| {
-                                matches!(p, Param::Reference(pid) if *pid == placement_id)
-                            });
+                            let has_placement = sp_raw.params.iter().any(
+                                |p| matches!(p, Param::Reference(pid) if *pid == placement_id),
+                            );
                             if has_placement {
                                 return Some(sp_id);
                             }
@@ -723,7 +822,7 @@ impl<'a> IfcResolver<'a> {
                 if let Some(place_raw) = self.registry.get_raw(placement_id) {
                     if place_raw.class == "IFCLOCALPLACEMENT" {
                         // Param 0 is PlacementRelTo
-                        if let Some(Param::Reference(parent_place_id)) = place_raw.params.get(0) {
+                        if let Some(Param::Reference(parent_place_id)) = place_raw.params.first() {
                             placement_id = *parent_place_id;
                             continue;
                         }
@@ -761,7 +860,7 @@ impl<'a> IfcResolver<'a> {
                 }
             }
         }
-        
+
         if children.is_empty() {
             // Fallback: look for direct reference to parent in child entities
             for &id in self.registry.get_by_class(child_class) {
@@ -777,7 +876,7 @@ impl<'a> IfcResolver<'a> {
                 }
             }
         }
-        
+
         children
     }
 
@@ -787,9 +886,9 @@ impl<'a> IfcResolver<'a> {
             if let Some(rel) = self.registry.get_raw(rel_id) {
                 // Param 4: RelatedObjects (List of References)
                 if let Some(Param::List(related)) = rel.params.get(4) {
-                    let contains_entity = related.iter().any(|item| {
-                        matches!(item, Param::Reference(id) if *id == entity_id)
-                    });
+                    let contains_entity = related
+                        .iter()
+                        .any(|item| matches!(item, Param::Reference(id) if *id == entity_id));
                     if contains_entity {
                         // Param 6: RelatingGroup (Reference to IfcZone/IfcGroup)
                         if let Some(Param::Reference(group_id)) = rel.params.get(6) {
@@ -826,7 +925,7 @@ impl<'a> IfcResolver<'a> {
             return Some(s.clone());
         }
         // Fallback to GlobalId (index 0)
-        if let Some(Param::String(s)) = entity.params.get(0) {
+        if let Some(Param::String(s)) = entity.params.first() {
             return Some(s.clone());
         }
         None
@@ -842,14 +941,17 @@ mod tests {
     fn test_extract_string_param() {
         let mut registry = EntityRegistry::new();
         let resolver = IfcResolver::new(&mut registry);
-        
+
         let entity = RawEntity {
             id: 1,
             class: "TEST".to_string(),
-            params: vec![Param::String("Hello".to_string())]
+            params: vec![Param::String("Hello".to_string())],
         };
-        
-        assert_eq!(resolver.extract_string_param(&entity, 0), Some("Hello".to_string()));
+
+        assert_eq!(
+            resolver.extract_string_param(&entity, 0),
+            Some("Hello".to_string())
+        );
         assert_eq!(resolver.extract_string_param(&entity, 1), None);
     }
 }

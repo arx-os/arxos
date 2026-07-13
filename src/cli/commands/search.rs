@@ -17,11 +17,11 @@ pub struct SearchCommand {
     /// Maximum number of results
     #[arg(short = 'n', long, default_value = "50")]
     max_results: usize,
-    
+
     /// Filter by result type (room, equipment, floor, building)
     #[arg(short = 't', long)]
     result_type: Option<String>,
-    
+
     /// Filter by floor level
     #[arg(short = 'f', long)]
     floor: Option<i32>,
@@ -37,7 +37,7 @@ impl Command for SearchCommand {
 
         // Create search browser
         let mut browser = SearchBrowser::new(building_data);
-        
+
         // Apply CLI filters
         if let Some(ref type_str) = self.result_type {
             use crate::tui::search::SearchResultType;
@@ -47,17 +47,20 @@ impl Command for SearchCommand {
                 "floor" => Some(SearchResultType::Floor),
                 "building" => Some(SearchResultType::Building),
                 _ => {
-                    eprintln!("Invalid result type: {}. Use: room, equipment, floor, building", type_str);
+                    eprintln!(
+                        "Invalid result type: {}. Use: room, equipment, floor, building",
+                        type_str
+                    );
                     None
                 }
             };
             browser.set_type_filter(filter_type);
         }
-        
+
         if let Some(floor_level) = self.floor {
             browser.set_floor_filter(Some(floor_level));
         }
-        
+
         if let Some(ref query) = self.query {
             // Set initial query if provided
             for c in query.chars() {
@@ -92,7 +95,12 @@ impl Command for SearchCommand {
         // Display selected result
         match result {
             Ok(result) => {
-                println!("Selected: {} {} - {}", result.icon(), result.title, result.subtitle);
+                println!(
+                    "Selected: {} {} - {}",
+                    result.icon(),
+                    result.title,
+                    result.subtitle
+                );
                 println!("ID: {}", result.id);
                 Ok(())
             }

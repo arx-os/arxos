@@ -74,12 +74,7 @@ pub trait SpreadsheetDataSource: Send + Sync {
     /// - Indices are out of bounds
     /// - Column is read-only
     /// - Value fails validation
-    fn set_cell(
-        &mut self,
-        row: usize,
-        col: usize,
-        value: CellValue,
-    ) -> Result<(), Box<dyn Error>>;
+    fn set_cell(&mut self, row: usize, col: usize, value: CellValue) -> Result<(), Box<dyn Error>>;
 
     /// Save changes to building.yaml and optionally commit to Git
     ///

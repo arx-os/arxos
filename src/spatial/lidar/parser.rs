@@ -1,9 +1,9 @@
+use crate::core::spatial::Point3D;
+use anyhow::{anyhow, Result};
+use las::Read;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
-use anyhow::{Result, anyhow};
-use crate::spatial::Point3D;
-use las::Read;
 
 /// Stream points from a point cloud file (CSV, XYZ, PLY, or LAS)
 pub fn stream_points(path: &Path) -> Result<Box<dyn Iterator<Item = Result<Point3D>>>> {
@@ -22,20 +22,15 @@ pub fn stream_points(path: &Path) -> Result<Box<dyn Iterator<Item = Result<Point
     }
 
     // 2. Fallback to extension check
-    let extension = path.extension()
+    let extension = path
+        .extension()
         .and_then(|ext| ext.to_str())
         .map(|s| s.to_lowercase());
 
     match extension.as_deref() {
-        Some("csv") | Some("xyz") | Some("txt") => {
-            Ok(Box::new(stream_xyz_csv(path)?))
-        }
-        Some("ply") => {
-            Ok(Box::new(stream_ply(path)?))
-        }
-        Some("las") | Some("laz") => {
-            Ok(Box::new(stream_las(path)?))
-        }
+        Some("csv") | Some("xyz") | Some("txt") => Ok(Box::new(stream_xyz_csv(path)?)),
+        Some("ply") => Ok(Box::new(stream_ply(path)?)),
+        Some("las") | Some("laz") => Ok(Box::new(stream_las(path)?)),
         _ => {
             // Default fallback to text-based parsing
             Ok(Box::new(stream_xyz_csv(path)?))
@@ -62,7 +57,7 @@ impl Iterator for XyzIterator {
                         continue;
                     }
                     let parts: Vec<&str> = trimmed
-                        .split(|c| c == ',' || c == ' ' || c == '\t' || c == ';')
+                        .split([',', ' ', '\t', ';'])
                         .filter(|s| !s.is_empty())
                         .collect();
 
@@ -123,15 +118,21 @@ impl Iterator for PlyIterator {
 
                     let x = match parts[0].parse::<f64>() {
                         Ok(val) => val,
-                        Err(_) => return Some(Err(anyhow!("Failed to parse PLY x: '{}'", parts[0]))),
+                        Err(_) => {
+                            return Some(Err(anyhow!("Failed to parse PLY x: '{}'", parts[0])))
+                        }
                     };
                     let y = match parts[1].parse::<f64>() {
                         Ok(val) => val,
-                        Err(_) => return Some(Err(anyhow!("Failed to parse PLY y: '{}'", parts[1]))),
+                        Err(_) => {
+                            return Some(Err(anyhow!("Failed to parse PLY y: '{}'", parts[1])))
+                        }
                     };
                     let z = match parts[2].parse::<f64>() {
                         Ok(val) => val,
-                        Err(_) => return Some(Err(anyhow!("Failed to parse PLY z: '{}'", parts[2]))),
+                        Err(_) => {
+                            return Some(Err(anyhow!("Failed to parse PLY z: '{}'", parts[2])))
+                        }
                     };
 
                     return Some(Ok(Point3D::new(x, y, z)));
@@ -150,14 +151,14 @@ fn stream_ply(path: &Path) -> Result<impl Iterator<Item = Result<Point3D>>> {
     // 1. Parse header
     let mut header_ended = false;
     let mut line = String::new();
-    
+
     while !header_ended {
         line.clear();
         let bytes_read = reader.read_line(&mut line)?;
         if bytes_read == 0 {
             return Err(anyhow!("Reached EOF before PLY header ended"));
         }
-        
+
         let trimmed = line.trim();
         if trimmed == "end_header" {
             header_ended = true;

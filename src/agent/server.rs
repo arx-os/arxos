@@ -1,32 +1,32 @@
 //! WebSocket server implementation
 
 #[cfg(feature = "agent")]
-use std::{net::SocketAddr, sync::{Arc, Mutex}};
-
-#[cfg(feature = "agent")]
-use axum::{
-    extract::{
-        ws::{Message, WebSocket, WebSocketUpgrade},
-        State, Query,
-    },
-    http::{StatusCode, HeaderMap},
-    response::IntoResponse,
-    routing::{get, post},
-    Json,
-    Router,
+use std::{
+    net::SocketAddr,
+    sync::{Arc, Mutex},
 };
-#[cfg(feature = "agent")]
-use serde::Deserialize;
-#[cfg(feature = "agent")]
 
-
+#[cfg(feature = "agent")]
 #[cfg(feature = "agent")]
 use crate::agent::{
     auth::{generate_did_key, TokenState},
     dispatcher::{dispatch, AgentState},
-    protocol::{JsonRpcRequest, PARSE_ERROR, JsonRpcResponse},
+    protocol::{JsonRpcRequest, JsonRpcResponse, PARSE_ERROR},
     workspace::detect_repo_root,
 };
+#[cfg(feature = "agent")]
+use axum::{
+    extract::{
+        ws::{Message, WebSocket, WebSocketUpgrade},
+        Query, State,
+    },
+    http::{HeaderMap, StatusCode},
+    response::IntoResponse,
+    routing::{get, post},
+    Json, Router,
+};
+#[cfg(feature = "agent")]
+use serde::Deserialize;
 
 #[cfg(feature = "agent")]
 #[derive(Deserialize)]
@@ -54,19 +54,23 @@ pub async fn start_agent() -> Result<(), Box<dyn std::error::Error>> {
         "collab.sync".to_string(),
         "auth.manage".to_string(),
     ];
-    
+
     // 2a. Initialize Hardware Manager
     let mut hardware = crate::hardware::HardwareManager::new();
-    
+
     // Load config (basic loading for now, should be separate function)
     if let Ok(config_str) = std::fs::read_to_string(repo_root.join(".arxos/agent.toml")) {
-         if let Ok(config) = toml::from_str::<crate::hardware::config::HardwareConfig>(&config_str) {
-             if let Some(modbus) = config.modbus {
-                 let driver = crate::hardware::modbus::ModbusInterface::new(modbus.host, modbus.port);
-                 hardware.add_interface("modbus".to_string(), crate::hardware::HardwareProtocol::Modbus(driver));
-                 println!("🔌 Modbus driver loaded");
-             }
-         }
+        if let Ok(config) = toml::from_str::<crate::hardware::config::HardwareConfig>(&config_str) {
+            if let Some(modbus) = config.modbus {
+                let driver =
+                    crate::hardware::modbus::ModbusInterface::new(modbus.host, modbus.port);
+                hardware.add_interface(
+                    "modbus".to_string(),
+                    crate::hardware::HardwareProtocol::Modbus(driver),
+                );
+                println!("🔌 Modbus driver loaded");
+            }
+        }
     }
 
     let token_state = TokenState::new(root_token.clone(), all_capabilities);
@@ -125,7 +129,7 @@ async fn ws_handler(
     let token_str = if let Some(bearer) = headers
         .get("Authorization")
         .and_then(|h| h.to_str().ok())
-        .and_then(|s| s.strip_prefix("Bearer ")) 
+        .and_then(|s| s.strip_prefix("Bearer "))
     {
         Some(bearer.to_string())
     } else {
@@ -141,7 +145,11 @@ async fn ws_handler(
     };
 
     if !valid {
-        return (StatusCode::UNAUTHORIZED, "Unauthorized: Invalid or missing token").into_response();
+        return (
+            StatusCode::UNAUTHORIZED,
+            "Unauthorized: Invalid or missing token",
+        )
+            .into_response();
     }
 
     ws.on_upgrade(|socket| handle_socket(socket, state))
@@ -172,7 +180,11 @@ async fn rpc_handler(
     };
 
     if !valid {
-        return (StatusCode::UNAUTHORIZED, "Unauthorized: Invalid or missing token").into_response();
+        return (
+            StatusCode::UNAUTHORIZED,
+            "Unauthorized: Invalid or missing token",
+        )
+            .into_response();
     }
 
     let response = dispatch(state, request).await;
@@ -194,17 +206,13 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AgentState>) {
             Message::Text(text) => {
                 // Parse JSON-RPC Request
                 let response = match serde_json::from_str::<JsonRpcRequest>(&text) {
-                    Ok(request) => {
-                        dispatch(state.clone(), request).await
-                    }
-                    Err(e) => {
-                        JsonRpcResponse::error(
-                            None, 
-                            PARSE_ERROR, 
-                            format!("Invalid JSON: {}", e), 
-                            None
-                        )
-                    }
+                    Ok(request) => dispatch(state.clone(), request).await,
+                    Err(e) => JsonRpcResponse::error(
+                        None,
+                        PARSE_ERROR,
+                        format!("Invalid JSON: {}", e),
+                        None,
+                    ),
                 };
 
                 // Send Response
@@ -227,7 +235,10 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AgentState>) {
 async fn run_auto_export_watcher(state: Arc<AgentState>) -> Result<(), Box<dyn std::error::Error>> {
     use std::time::Duration;
 
-    let watcher = crate::agent::watcher::FileWatcher::new(&state.repo_root, vec!["yaml".to_string(), "yml".to_string()])?;
+    let watcher = crate::agent::watcher::FileWatcher::new(
+        &state.repo_root,
+        vec!["yaml".to_string(), "yml".to_string()],
+    )?;
     println!("👀 Watching {} for YAML changes", state.repo_root.display());
 
     loop {
@@ -240,7 +251,10 @@ async fn run_auto_export_watcher(state: Arc<AgentState>) -> Result<(), Box<dyn s
 
             match crate::agent::ifc::export_ifc(&state.repo_root, None, true) {
                 Ok(result) => {
-                    println!("✅ Auto-export complete: {} ({} bytes)", result.filename, result.size_bytes);
+                    println!(
+                        "✅ Auto-export complete: {} ({} bytes)",
+                        result.filename, result.size_bytes
+                    );
                 }
                 Err(e) => {
                     eprintln!("❌ Auto-export failed: {}", e);
@@ -254,8 +268,12 @@ async fn run_auto_export_watcher(state: Arc<AgentState>) -> Result<(), Box<dyn s
 async fn run_auto_import_watcher(state: Arc<AgentState>) -> Result<(), Box<dyn std::error::Error>> {
     use std::time::Duration;
 
-    let watcher = crate::agent::watcher::FileWatcher::new(&state.repo_root, vec!["ifc".to_string()])?;
-    println!("👀 Watching {} for new IFC files", state.repo_root.display());
+    let watcher =
+        crate::agent::watcher::FileWatcher::new(&state.repo_root, vec!["ifc".to_string()])?;
+    println!(
+        "👀 Watching {} for new IFC files",
+        state.repo_root.display()
+    );
 
     loop {
         tokio::time::sleep(Duration::from_millis(1000)).await;
@@ -266,8 +284,10 @@ async fn run_auto_import_watcher(state: Arc<AgentState>) -> Result<(), Box<dyn s
 
             match crate::agent::ifc::import_ifc_local(&state.repo_root, &changed_path) {
                 Ok(result) => {
-                    println!("✅ Auto-import complete: {} ({} floors, {} equipment)", 
-                        result.building_name, result.floors, result.equipment);
+                    println!(
+                        "✅ Auto-import complete: {} ({} floors, {} equipment)",
+                        result.building_name, result.floors, result.equipment
+                    );
                 }
                 Err(e) => {
                     eprintln!("❌ Auto-import failed: {}", e);

@@ -1,11 +1,11 @@
 //! Geometric utilities for the custom IFC parser.
-//! 
-//! This module provides high-precision (f64) transformation logic 
+//!
+//! This module provides high-precision (f64) transformation logic
 //! using nalgebra, tailored for STEP-21 entity resolution.
 
-use nalgebra::{Matrix3, Vector3, Matrix4};
-use super::lexer::{RawEntity, Param};
+use super::lexer::{Param, RawEntity};
 use super::registry::EntityRegistry;
+use nalgebra::{Matrix3, Matrix4, Vector3};
 
 #[derive(Debug, Clone)]
 pub struct Transform3D {
@@ -14,7 +14,9 @@ pub struct Transform3D {
 
 impl Transform3D {
     pub fn identity() -> Self {
-        Self { matrix: Matrix4::identity() }
+        Self {
+            matrix: Matrix4::identity(),
+        }
     }
 
     pub fn from_translation_rotation(translation: Vector3<f64>, rotation: Matrix3<f64>) -> Self {
@@ -25,7 +27,9 @@ impl Transform3D {
     }
 
     pub fn compose(&self, other: &Transform3D) -> Self {
-        Self { matrix: self.matrix * other.matrix }
+        Self {
+            matrix: self.matrix * other.matrix,
+        }
     }
 
     pub fn transform_point(&self, point: &Vector3<f64>) -> Vector3<f64> {
@@ -60,7 +64,7 @@ impl<'a> GeometryResolver<'a> {
     fn resolve_local_placement(&self, entity: &RawEntity) -> Transform3D {
         // Param 0: Parent Placement (Optional)
         // Param 1: Relative Placement
-        let parent_transform = if let Some(Param::Reference(parent_id)) = entity.params.get(0) {
+        let parent_transform = if let Some(Param::Reference(parent_id)) = entity.params.first() {
             self.resolve_placement(*parent_id)
         } else {
             Transform3D::identity()
@@ -79,21 +83,23 @@ impl<'a> GeometryResolver<'a> {
         // Param 0: Location (IfcCartesianPoint)
         // Param 1: Axis (IfcDirection) - Z direction
         // Param 2: RefDirection (IfcDirection) - X direction
-        
-        let location = if let Some(Param::Reference(loc_id)) = entity.params.get(0) {
+
+        let location = if let Some(Param::Reference(loc_id)) = entity.params.first() {
             self.resolve_cartesian_point(*loc_id)
         } else {
             Vector3::new(0.0, 0.0, 0.0)
         };
 
         let z_axis = if let Some(Param::Reference(axis_id)) = entity.params.get(1) {
-            self.resolve_direction(*axis_id).unwrap_or(Vector3::new(0.0, 0.0, 1.0))
+            self.resolve_direction(*axis_id)
+                .unwrap_or(Vector3::new(0.0, 0.0, 1.0))
         } else {
             Vector3::new(0.0, 0.0, 1.0)
         };
 
         let x_axis_raw = if let Some(Param::Reference(ref_id)) = entity.params.get(2) {
-            self.resolve_direction(*ref_id).unwrap_or(Vector3::new(1.0, 0.0, 0.0))
+            self.resolve_direction(*ref_id)
+                .unwrap_or(Vector3::new(1.0, 0.0, 0.0))
         } else {
             Vector3::new(1.0, 0.0, 0.0)
         };
@@ -110,10 +116,10 @@ impl<'a> GeometryResolver<'a> {
     pub fn resolve_cartesian_point(&self, point_id: u64) -> Vector3<f64> {
         if let Some(entity) = self.registry.get_raw(point_id) {
             if entity.class == "IFCCARTESIANPOINT" {
-                if let Some(Param::List(coords)) = entity.params.get(0) {
-                    let x = self.extract_float(&coords, 0).unwrap_or(0.0);
-                    let y = self.extract_float(&coords, 1).unwrap_or(0.0);
-                    let z = self.extract_float(&coords, 2).unwrap_or(0.0);
+                if let Some(Param::List(coords)) = entity.params.first() {
+                    let x = self.extract_float(coords, 0).unwrap_or(0.0);
+                    let y = self.extract_float(coords, 1).unwrap_or(0.0);
+                    let z = self.extract_float(coords, 2).unwrap_or(0.0);
                     return Vector3::new(x, y, z);
                 }
             }
@@ -124,10 +130,10 @@ impl<'a> GeometryResolver<'a> {
     pub fn resolve_direction(&self, dir_id: u64) -> Option<Vector3<f64>> {
         if let Some(entity) = self.registry.get_raw(dir_id) {
             if entity.class == "IFCDIRECTION" {
-                if let Some(Param::List(ratios)) = entity.params.get(0) {
-                    let x = self.extract_float(&ratios, 0).unwrap_or(0.0);
-                    let y = self.extract_float(&ratios, 1).unwrap_or(0.0);
-                    let z = self.extract_float(&ratios, 2).unwrap_or(0.0);
+                if let Some(Param::List(ratios)) = entity.params.first() {
+                    let x = self.extract_float(ratios, 0).unwrap_or(0.0);
+                    let y = self.extract_float(ratios, 1).unwrap_or(0.0);
+                    let z = self.extract_float(ratios, 2).unwrap_or(0.0);
                     let vec = Vector3::new(x, y, z);
                     if vec.norm() > 0.0 {
                         return Some(vec.normalize());
@@ -142,12 +148,18 @@ impl<'a> GeometryResolver<'a> {
         if let Some(entity) = self.registry.get_raw(point_id) {
             if entity.class == "IFCSPHERICALPOINT" {
                 let r = self.extract_float(&entity.params, 0).unwrap_or(0.0);
-                let theta = self.extract_float(&entity.params, 1).unwrap_or(0.0).to_radians();
-                let phi = self.extract_float(&entity.params, 2).unwrap_or(0.0).to_radians();
+                let theta = self
+                    .extract_float(&entity.params, 1)
+                    .unwrap_or(0.0)
+                    .to_radians();
+                let phi = self
+                    .extract_float(&entity.params, 2)
+                    .unwrap_or(0.0)
+                    .to_radians();
                 return Vector3::new(
                     r * phi.sin() * theta.cos(),
                     r * phi.sin() * theta.sin(),
-                    r * phi.cos()
+                    r * phi.cos(),
                 );
             }
         }
@@ -158,13 +170,12 @@ impl<'a> GeometryResolver<'a> {
         if let Some(entity) = self.registry.get_raw(point_id) {
             if entity.class == "IFCCYLINDRICALPOINT" {
                 let rho = self.extract_float(&entity.params, 0).unwrap_or(0.0);
-                let phi = self.extract_float(&entity.params, 1).unwrap_or(0.0).to_radians();
+                let phi = self
+                    .extract_float(&entity.params, 1)
+                    .unwrap_or(0.0)
+                    .to_radians();
                 let z = self.extract_float(&entity.params, 2).unwrap_or(0.0);
-                return Vector3::new(
-                    rho * phi.cos(),
-                    rho * phi.sin(),
-                    z
-                );
+                return Vector3::new(rho * phi.cos(), rho * phi.sin(), z);
             }
         }
         Vector3::new(0.0, 0.0, 0.0)
@@ -175,7 +186,7 @@ impl<'a> GeometryResolver<'a> {
         let mut points = Vec::new();
         if let Some(entity) = self.registry.get_raw(polyline_id) {
             if entity.class == "IFCPOLYLINE" {
-                if let Some(Param::List(point_refs)) = entity.params.get(0) {
+                if let Some(Param::List(point_refs)) = entity.params.first() {
                     for p_ref in point_refs {
                         if let Param::Reference(p_id) = p_ref {
                             points.push(self.resolve_cartesian_point(*p_id));
@@ -229,23 +240,23 @@ mod tests {
     #[test]
     fn test_coordinate_resolutions() {
         let mut registry = EntityRegistry::new();
-        
+
         // Spherical: R=1.0, Theta=0, Phi=90 (Should be X=1, Y=0, Z=0)
-        registry.register(RawEntity { 
-            id: 1, 
-            class: "IFCSPHERICALPOINT".to_string(), 
-            params: vec![Param::Float(1.0), Param::Float(0.0), Param::Float(90.0)] 
+        registry.register(RawEntity {
+            id: 1,
+            class: "IFCSPHERICALPOINT".to_string(),
+            params: vec![Param::Float(1.0), Param::Float(0.0), Param::Float(90.0)],
         });
 
         // Cylindrical: Rho=1.0, Phi=90, Z=5.0 (Should be X=0, Y=1, Z=5)
-        registry.register(RawEntity { 
-            id: 2, 
-            class: "IFCCYLINDRICALPOINT".to_string(), 
-            params: vec![Param::Float(1.0), Param::Float(90.0), Param::Float(5.0)] 
+        registry.register(RawEntity {
+            id: 2,
+            class: "IFCCYLINDRICALPOINT".to_string(),
+            params: vec![Param::Float(1.0), Param::Float(90.0), Param::Float(5.0)],
         });
 
         let resolver = GeometryResolver::new(&registry);
-        
+
         let sphere = resolver.resolve_spherical_point(1);
         assert!((sphere.x - 1.0).abs() < 1e-6);
         assert!(sphere.y.abs() < 1e-6);

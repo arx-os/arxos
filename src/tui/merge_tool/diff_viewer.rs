@@ -32,7 +32,10 @@ pub struct MergeViewer {
 
 impl MergeViewer {
     /// Create a new merge viewer
-    pub fn new(conflicts: &[Conflict], file_path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(
+        conflicts: &[Conflict],
+        file_path: &Path,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         Ok(Self {
             conflicts: conflicts.to_vec(),
             file_path: file_path.to_path_buf(),
@@ -93,9 +96,9 @@ impl MergeViewer {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(3),  // Header
-                Constraint::Min(0),     // Diff area
-                Constraint::Length(3),  // Footer with help
+                Constraint::Length(3), // Header
+                Constraint::Min(0),    // Diff area
+                Constraint::Length(3), // Footer with help
             ])
             .split(size);
 
@@ -162,13 +165,7 @@ impl MergeViewer {
             .split(area);
 
         // Render "ours" column
-        self.render_section(
-            f,
-            columns[0],
-            &conflict.sections.ours,
-            "OURS",
-            Color::Green,
-        );
+        self.render_section(f, columns[0], &conflict.sections.ours, "OURS", Color::Green);
 
         // Render "theirs" column
         self.render_section(
@@ -231,8 +228,20 @@ impl MergeViewer {
 
     /// Check if a section is currently selected in the resolution
     fn is_section_selected(&self, section_name: &str) -> bool {
-        if let Some(resolution) = self.resolutions.iter().find(|r| r.conflict_index == self.current_conflict) {
-            matches!((section_name, resolution.choice), ("OURS", ResolutionChoice::Ours) | ("THEIRS", ResolutionChoice::Theirs) | ("OURS" | "THEIRS", ResolutionChoice::Both | ResolutionChoice::BothReversed))
+        if let Some(resolution) = self
+            .resolutions
+            .iter()
+            .find(|r| r.conflict_index == self.current_conflict)
+        {
+            matches!(
+                (section_name, resolution.choice),
+                ("OURS", ResolutionChoice::Ours)
+                    | ("THEIRS", ResolutionChoice::Theirs)
+                    | (
+                        "OURS" | "THEIRS",
+                        ResolutionChoice::Both | ResolutionChoice::BothReversed
+                    )
+            )
         } else {
             false
         }
@@ -267,7 +276,10 @@ impl MergeViewer {
         );
 
         // Clear background
-        f.render_widget(Block::default().style(Style::default().bg(Color::Black)), popup_area);
+        f.render_widget(
+            Block::default().style(Style::default().bg(Color::Black)),
+            popup_area,
+        );
         f.render_widget(list, popup_area);
     }
 
@@ -302,10 +314,7 @@ impl MergeViewer {
             "Press any key to close help...",
         ];
 
-        let items: Vec<ListItem> = help_text
-            .iter()
-            .map(|line| ListItem::new(*line))
-            .collect();
+        let items: Vec<ListItem> = help_text.iter().map(|line| ListItem::new(*line)).collect();
 
         let help = List::new(items).block(
             Block::default()

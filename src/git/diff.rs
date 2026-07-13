@@ -64,17 +64,23 @@ pub struct DiffStats {
 pub fn get_status(repo: &Repository, default_branch: &str) -> Result<GitStatus, GitError> {
     // Get working directory status
     let mut modified_files = Vec::new();
-    let statuses = repo.statuses(None).map_err(|e| GitError::GitError(e.message().to_string()))?;
-    
+    let statuses = repo
+        .statuses(None)
+        .map_err(|e| GitError::GitError(e.message().to_string()))?;
+
     for entry in statuses.iter() {
         let status = entry.status();
-        if status.is_wt_new() || status.is_wt_modified() || status.is_index_new() || status.is_index_modified() {
+        if status.is_wt_new()
+            || status.is_wt_modified()
+            || status.is_index_new()
+            || status.is_index_modified()
+        {
             if let Some(path) = entry.path() {
                 modified_files.push(path.to_string());
             }
         }
     }
-    
+
     let is_clean = modified_files.is_empty();
 
     match repo.head() {

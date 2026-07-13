@@ -5,8 +5,8 @@
 
 use super::canvas::{render_equipment, render_floors, render_rooms, AsciiCanvas, DepthBuffer};
 use super::characters::LEGEND;
-use crate::render3d::types::{ProjectionType, Scene3D};
 use crate::core::spatial::Point3D;
+use crate::render3d::types::{ProjectionType, Scene3D};
 
 /// ASCII renderer for 3D scenes
 pub struct AsciiRenderer;
@@ -98,12 +98,7 @@ impl AsciiRenderer {
 
         // Render scene elements
         render_floors(&scene.floors, &mut canvas, &mut depth_buffer, project_fn);
-        render_equipment(
-            &scene.equipment,
-            &mut canvas,
-            &mut depth_buffer,
-            project_fn,
-        );
+        render_equipment(&scene.equipment, &mut canvas, &mut depth_buffer, project_fn);
         render_rooms(&scene.rooms, &mut canvas, &mut depth_buffer, project_fn);
 
         // Add header
@@ -158,12 +153,7 @@ impl AsciiRenderer {
 
         // Render scene elements
         render_floors(&scene.floors, &mut canvas, &mut depth_buffer, project_fn);
-        render_equipment(
-            &scene.equipment,
-            &mut canvas,
-            &mut depth_buffer,
-            project_fn,
-        );
+        render_equipment(&scene.equipment, &mut canvas, &mut depth_buffer, project_fn);
         render_rooms(&scene.rooms, &mut canvas, &mut depth_buffer, project_fn);
 
         Ok(canvas.to_string())
@@ -218,8 +208,8 @@ pub struct ProjectionInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::render3d::types::{Floor3D, SceneMetadata};
     use crate::core::spatial::BoundingBox3D;
+    use crate::render3d::types::{Floor3D, SceneMetadata};
     use std::sync::Arc;
 
     fn create_test_scene() -> Scene3D {

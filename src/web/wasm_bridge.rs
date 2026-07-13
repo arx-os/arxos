@@ -8,13 +8,13 @@
 //!   suitable for display in a `<pre>` element or Xterm.js terminal pane.
 //! - [`render_building_ascii_simple`]: As above but without borders/legend.
 
-use wasm_bindgen::prelude::*;
 use crate::core::BuildingMetadata;
 use crate::ifc::IFCProcessor;
 use crate::ingest::{
     apply_text_to_sync_json, finalize_ingest, merge_sync_json, BuildingSyncEnvelope, IngestOptions,
     IngestSource, SyncSource, STORAGE_KEY_ACTIVE_BUILDING, STORAGE_KEY_LEGACY_BUILDING,
 };
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub fn init_panic_hook() {
@@ -81,9 +81,11 @@ pub fn parse_ifc_data_with_report(content: &str) -> Result<String, JsValue> {
 
 /// Merge two sync-envelope (or bare Building) JSON documents; returns envelope JSON.
 #[wasm_bindgen]
-pub fn merge_building_sync_json(existing_json: &str, incoming_json: &str) -> Result<String, JsValue> {
-    merge_sync_json(existing_json, incoming_json)
-        .map_err(|e| JsValue::from_str(&e))
+pub fn merge_building_sync_json(
+    existing_json: &str,
+    incoming_json: &str,
+) -> Result<String, JsValue> {
+    merge_sync_json(existing_json, incoming_json).map_err(|e| JsValue::from_str(&e))
 }
 
 /// Apply a text/AR command script to a sync envelope JSON; returns updated envelope.
@@ -134,9 +136,7 @@ pub fn load_active_building() -> Result<String, JsValue> {
     if let Ok(Some(json)) = storage.get_item(STORAGE_KEY_ACTIVE_BUILDING) {
         // Normalize
         let env = BuildingSyncEnvelope::from_json(&json).map_err(|e| JsValue::from_str(&e))?;
-        return env
-            .to_json()
-            .map_err(|e| JsValue::from_str(&e.to_string()));
+        return env.to_json().map_err(|e| JsValue::from_str(&e.to_string()));
     }
     if let Ok(Some(json)) = storage.get_item(STORAGE_KEY_LEGACY_BUILDING) {
         let env = BuildingSyncEnvelope::from_json(&json).map_err(|e| JsValue::from_str(&e))?;
@@ -169,9 +169,9 @@ pub fn load_active_building() -> Result<String, JsValue> {
 /// ```
 #[wasm_bindgen]
 pub fn render_building_ascii(building_json: &str, canvas_width: u32, canvas_height: u32) -> String {
+    use crate::core::spatial::{BoundingBox3D, Point3D};
     use crate::render3d::ascii::AsciiRenderer;
     use crate::render3d::Scene3D;
-    use crate::core::spatial::{BoundingBox3D, Point3D};
     use std::sync::Arc;
 
     // Deserialize the building
@@ -188,7 +188,11 @@ pub fn render_building_ascii(building_json: &str, canvas_width: u32, canvas_heig
     let height = canvas_height.max(8) as usize;
 
     // Identity projection (flat top-down view; full 3D projection requires camera setup)
-    let project_fn = |p: &Point3D| Point3D { x: p.x, y: p.y, z: p.z };
+    let project_fn = |p: &Point3D| Point3D {
+        x: p.x,
+        y: p.y,
+        z: p.z,
+    };
 
     match renderer.render_ascii_art(&scene, width, height, project_fn) {
         Ok(output) => output,
@@ -200,9 +204,13 @@ pub fn render_building_ascii(building_json: &str, canvas_width: u32, canvas_heig
 ///
 /// Lighter-weight alternative to [`render_building_ascii`] for embedding in custom UI.
 #[wasm_bindgen]
-pub fn render_building_ascii_simple(building_json: &str, canvas_width: u32, canvas_height: u32) -> String {
-    use crate::render3d::ascii::AsciiRenderer;
+pub fn render_building_ascii_simple(
+    building_json: &str,
+    canvas_width: u32,
+    canvas_height: u32,
+) -> String {
     use crate::core::spatial::Point3D;
+    use crate::render3d::ascii::AsciiRenderer;
 
     let building: crate::core::Building = match serde_json::from_str(building_json) {
         Ok(b) => b,
@@ -214,7 +222,11 @@ pub fn render_building_ascii_simple(building_json: &str, canvas_width: u32, canv
     let width = canvas_width.max(20) as usize;
     let height = canvas_height.max(8) as usize;
 
-    let project_fn = |p: &Point3D| Point3D { x: p.x, y: p.y, z: p.z };
+    let project_fn = |p: &Point3D| Point3D {
+        x: p.x,
+        y: p.y,
+        z: p.z,
+    };
 
     match renderer.render_simple(&scene, width, height, project_fn) {
         Ok(output) => output,
@@ -229,11 +241,9 @@ pub fn render_building_ascii_simple(building_json: &str, canvas_width: u32, canv
 /// Extracts floor slabs, rooms, and equipment from the building hierarchy and
 /// builds the lightweight scene representation used by `AsciiRenderer`.
 fn building_to_scene3d(building: &crate::core::Building) -> crate::render3d::Scene3D {
-    use crate::render3d::{
-        Equipment3D, Floor3D, Room3D, Scene3D, SceneMetadata,
-    };
     use crate::core::spatial::{BoundingBox3D, Point3D};
     use crate::core::{EquipmentStatus, RoomType};
+    use crate::render3d::{Equipment3D, Floor3D, Room3D, Scene3D, SceneMetadata};
     use std::sync::Arc;
 
     let mut floors_3d: Vec<Floor3D> = Vec::new();
@@ -242,14 +252,23 @@ fn building_to_scene3d(building: &crate::core::Building) -> crate::render3d::Sce
 
     // Empty bounding box — used as a placeholder for entities without known size
     let empty_bbox = BoundingBox3D {
-        min: Point3D { x: 0.0, y: 0.0, z: 0.0 },
-        max: Point3D { x: 1.0, y: 1.0, z: 1.0 },
+        min: Point3D {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        max: Point3D {
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+        },
     };
 
     for floor in &building.floors {
         let z = floor.level as f64 * 3.0;
 
-        let floor_room_ids: Vec<Arc<String>> = floor.wings
+        let floor_room_ids: Vec<Arc<String>> = floor
+            .wings
             .iter()
             .flat_map(|w| w.rooms.iter().map(|r| Arc::new(r.id.clone())))
             .collect();
@@ -272,7 +291,8 @@ fn building_to_scene3d(building: &crate::core::Building) -> crate::render3d::Sce
                     z,
                 };
 
-                let room_eq_ids: Vec<Arc<String>> = room.equipment
+                let room_eq_ids: Vec<Arc<String>> = room
+                    .equipment
                     .iter()
                     .map(|e| Arc::new(e.id.clone()))
                     .collect();
@@ -330,7 +350,11 @@ fn building_to_scene3d(building: &crate::core::Building) -> crate::render3d::Sce
         rooms: all_rooms,
         equipment: all_equipment,
         bounding_box: BoundingBox3D {
-            min: Point3D { x: 0.0, y: 0.0, z: 0.0 },
+            min: Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
             max: Point3D {
                 x: 100.0,
                 y: 100.0,
@@ -347,5 +371,3 @@ fn building_to_scene3d(building: &crate::core::Building) -> crate::render3d::Sce
         },
     }
 }
-
-

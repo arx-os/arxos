@@ -69,15 +69,25 @@ impl Handler for AgentServerHandler {
         public_key: &PublicKey,
     ) -> Result<(Self, Auth), Self::Error> {
         let key_fingerprint = public_key.fingerprint();
-        log::info!("SSH authentication attempt: user={}, key_fingerprint={}", user, key_fingerprint);
-        
+        log::info!(
+            "SSH authentication attempt: user={}, key_fingerprint={}",
+            user,
+            key_fingerprint
+        );
+
         if let Some(resolved_user) = self.authenticator.verify_key(public_key) {
             if resolved_user == user {
-                if self.authenticator.check_permission(&resolved_user, "connect") {
+                if self
+                    .authenticator
+                    .check_permission(&resolved_user, "connect")
+                {
                     log::info!("SSH authentication accepted for user={}", user);
                     return Ok((self, Auth::Accept));
                 } else {
-                    log::warn!("SSH authentication rejected: user={} lacks 'connect' permission", user);
+                    log::warn!(
+                        "SSH authentication rejected: user={} lacks 'connect' permission",
+                        user
+                    );
                 }
             } else {
                 log::warn!(
@@ -89,8 +99,13 @@ impl Handler for AgentServerHandler {
         } else {
             log::warn!("SSH authentication rejected: public key not authorized");
         }
-        
-        Ok((self, Auth::Reject { proceed_with_methods: None }))
+
+        Ok((
+            self,
+            Auth::Reject {
+                proceed_with_methods: None,
+            },
+        ))
     }
 
     async fn channel_open_session(
@@ -100,7 +115,7 @@ impl Handler for AgentServerHandler {
     ) -> Result<(Self, bool, Session), Self::Error> {
         Ok((self, true, session))
     }
-    
+
     async fn pty_request(
         self,
         _channel: ChannelId,
@@ -136,7 +151,7 @@ impl Handler for AgentServerHandler {
     ) -> Result<(Self, Session), Self::Error> {
         let command_line = String::from_utf8_lossy(data).to_string();
         println!("SSH Exec: {}", command_line);
-        
+
         let parts: Vec<&str> = command_line.split_whitespace().collect();
         let response = if parts.is_empty() {
             "Empty command".to_string()
@@ -144,35 +159,50 @@ impl Handler for AgentServerHandler {
             let cmd = parts[0];
             let repo_root = self._state.repo_root.clone();
             let hardware = self._state.hardware.clone();
-            let sensor_cmds = crate::agent::commands::sensors::SensorCommands::new(hardware, repo_root);
-            
+            let sensor_cmds =
+                crate::agent::commands::sensors::SensorCommands::new(hardware, repo_root);
+
             match cmd {
                 "get" => {
                     if parts.len() < 2 {
                         "Usage: get <sensor_type> [location]".to_string()
                     } else {
                         let sensor_type = parts[1];
-                        let location = if parts.len() > 2 { parts[2] } else { "floor:1:room:101" };
-                        
+                        let location = if parts.len() > 2 {
+                            parts[2]
+                        } else {
+                            "floor:1:room:101"
+                        };
+
                         match sensor_type {
                             "temp" => {
-                                match sensor_cmds.get_temp(location, crate::agent::commands::sensors::QueryOptions::default()).await {
-                                    Ok(res) => format!("Temperature at {}: {:.2} {}", res.location, res.value, res.unit),
+                                match sensor_cmds
+                                    .get_temp(
+                                        location,
+                                        crate::agent::commands::sensors::QueryOptions::default(),
+                                    )
+                                    .await
+                                {
+                                    Ok(res) => format!(
+                                        "Temperature at {}: {:.2} {}",
+                                        res.location, res.value, res.unit
+                                    ),
                                     Err(e) => format!("Error reading temp: {}", e),
                                 }
                             }
-                            "sensors" => {
-                                match sensor_cmds.get_sensors().await {
-                                    Ok(list) => {
-                                        let mut out = String::from("Available Sensors:\n");
-                                        for s in list {
-                                            out.push_str(&format!("- {}:{} = {:.2} {}\n", s.location, s.sensor_type, s.value, s.unit));
-                                        }
-                                        out
+                            "sensors" => match sensor_cmds.get_sensors().await {
+                                Ok(list) => {
+                                    let mut out = String::from("Available Sensors:\n");
+                                    for s in list {
+                                        out.push_str(&format!(
+                                            "- {}:{} = {:.2} {}\n",
+                                            s.location, s.sensor_type, s.value, s.unit
+                                        ));
                                     }
-                                    Err(e) => format!("Error listing sensors: {}", e),
+                                    out
                                 }
-                            }
+                                Err(e) => format!("Error listing sensors: {}", e),
+                            },
                             _ => format!("Unknown sensor type: {}", sensor_type),
                         }
                     }
@@ -183,23 +213,28 @@ impl Handler for AgentServerHandler {
                     } else {
                         let location = parts[1];
                         if let Ok(val) = parts[2].parse::<f64>() {
-                             match sensor_cmds.set_temp(location, val, true).await {
+                            match sensor_cmds.set_temp(location, val, true).await {
                                 Ok(msg) => msg,
                                 Err(e) => format!("Error setting temp: {}", e),
-                             }
+                            }
                         } else {
                             "Invalid value".to_string()
                         }
                     }
                 }
-                "help" => "Available commands: get temp [loc], get sensors, set [loc] [val]".to_string(),
+                "help" => {
+                    "Available commands: get temp [loc], get sensors, set [loc] [val]".to_string()
+                }
                 _ => format!("Unknown command: {}", cmd),
             }
         };
 
-        session.data(channel, russh::CryptoVec::from(format!("{}\n", response).into_bytes()));
+        session.data(
+            channel,
+            russh::CryptoVec::from(format!("{}\n", response).into_bytes()),
+        );
         session.close(channel);
-        
+
         Ok((self, session))
     }
 
@@ -210,34 +245,46 @@ impl Handler for AgentServerHandler {
         mut session: Session,
     ) -> Result<(Self, Session), Self::Error> {
         let input = String::from_utf8_lossy(data);
-        
+
         for c in input.chars() {
             match c {
                 '\r' | '\n' => {
                     session.data(channel, russh::CryptoVec::from("\r\n".as_bytes().to_vec()));
-                    
+
                     let cmd_line = std::mem::take(&mut self.input_buffer);
                     if !cmd_line.trim().is_empty() {
-                         let parts: Vec<&str> = cmd_line.split_whitespace().collect();
-                         let cmd = parts[0];
-                         
-                         match cmd {
-                             "exit" | "quit" => {
-                                 session.close(channel);
-                                 return Ok((self, session));
-                             }
-                             "help" => {
-                                 session.data(channel, russh::CryptoVec::from("Commands: get, set, exit\r\n".as_bytes().to_vec()));
-                             }
-                             _ => {
-                                 let repo_root = self._state.repo_root.clone();
-                                 let hardware = self._state.hardware.clone();
-                                 let sensor_cmds = crate::agent::commands::sensors::SensorCommands::new(hardware, repo_root);
-                                 
-                                 if cmd == "get" {
-                                     if parts.len() > 1 && parts[1] == "temp" {
-                                         let location = if parts.len() > 2 { parts[2] } else { "floor:1:room:101" };
-                                          match sensor_cmds.get_temp(location, crate::agent::commands::sensors::QueryOptions::default()).await {
+                        let parts: Vec<&str> = cmd_line.split_whitespace().collect();
+                        let cmd = parts[0];
+
+                        match cmd {
+                            "exit" | "quit" => {
+                                session.close(channel);
+                                return Ok((self, session));
+                            }
+                            "help" => {
+                                session.data(
+                                    channel,
+                                    russh::CryptoVec::from(
+                                        "Commands: get, set, exit\r\n".as_bytes().to_vec(),
+                                    ),
+                                );
+                            }
+                            _ => {
+                                let repo_root = self._state.repo_root.clone();
+                                let hardware = self._state.hardware.clone();
+                                let sensor_cmds =
+                                    crate::agent::commands::sensors::SensorCommands::new(
+                                        hardware, repo_root,
+                                    );
+
+                                if cmd == "get" {
+                                    if parts.len() > 1 && parts[1] == "temp" {
+                                        let location = if parts.len() > 2 {
+                                            parts[2]
+                                        } else {
+                                            "floor:1:room:101"
+                                        };
+                                        match sensor_cmds.get_temp(location, crate::agent::commands::sensors::QueryOptions::default()).await {
                                              Ok(res) => {
                                                  let out = format!("Temperature at {}: {:.2} {}\r\n", res.location, res.value, res.unit);
                                                  session.data(channel, russh::CryptoVec::from(out.into_bytes()));
@@ -246,49 +293,87 @@ impl Handler for AgentServerHandler {
                                                  session.data(channel, russh::CryptoVec::from(format!("Error: {}\r\n", e).into_bytes()));
                                              }
                                          }
-                                     } else {
-                                          session.data(channel, russh::CryptoVec::from("Usage: get temp [location]\r\n".as_bytes().to_vec()));
-                                     }
-                                 } else if cmd == "get" && parts.len() > 1 && parts[1] == "sensors" {
-                                      match sensor_cmds.get_sensors().await {
-                                         Ok(list) => {
-                                             let mut out = String::from("Available Sensors:\r\n");
-                                             for s in list {
-                                                 out.push_str(&format!("- {}:{} = {:.2} {}\r\n", s.location, s.sensor_type, s.value, s.unit));
-                                             }
-                                             session.data(channel, russh::CryptoVec::from(out.into_bytes()));
-                                         }
-                                         Err(e) => {
-                                             session.data(channel, russh::CryptoVec::from(format!("Error listing sensors: {}\r\n", e).into_bytes()));
-                                         }
-                                     }
-                                 } else if cmd == "clear" {
-                                     session.data(channel, russh::CryptoVec::from("\x1b[2J\x1b[H".as_bytes().to_vec()));
-                                 } else {
-                                     session.data(channel, russh::CryptoVec::from(format!("Unrecognized command: {}\r\n", cmd).into_bytes()));
-                                 }
-                             }
-                         }
+                                    } else {
+                                        session.data(
+                                            channel,
+                                            russh::CryptoVec::from(
+                                                "Usage: get temp [location]\r\n"
+                                                    .as_bytes()
+                                                    .to_vec(),
+                                            ),
+                                        );
+                                    }
+                                } else if cmd == "get" && parts.len() > 1 && parts[1] == "sensors" {
+                                    match sensor_cmds.get_sensors().await {
+                                        Ok(list) => {
+                                            let mut out = String::from("Available Sensors:\r\n");
+                                            for s in list {
+                                                out.push_str(&format!(
+                                                    "- {}:{} = {:.2} {}\r\n",
+                                                    s.location, s.sensor_type, s.value, s.unit
+                                                ));
+                                            }
+                                            session.data(
+                                                channel,
+                                                russh::CryptoVec::from(out.into_bytes()),
+                                            );
+                                        }
+                                        Err(e) => {
+                                            session.data(
+                                                channel,
+                                                russh::CryptoVec::from(
+                                                    format!("Error listing sensors: {}\r\n", e)
+                                                        .into_bytes(),
+                                                ),
+                                            );
+                                        }
+                                    }
+                                } else if cmd == "clear" {
+                                    session.data(
+                                        channel,
+                                        russh::CryptoVec::from("\x1b[2J\x1b[H".as_bytes().to_vec()),
+                                    );
+                                } else {
+                                    session.data(
+                                        channel,
+                                        russh::CryptoVec::from(
+                                            format!("Unrecognized command: {}\r\n", cmd)
+                                                .into_bytes(),
+                                        ),
+                                    );
+                                }
+                            }
+                        }
                     }
-                    
+
                     session.data(channel, russh::CryptoVec::from("> ".as_bytes().to_vec()));
                 }
                 '\x08' | '\x7f' => {
                     // Backspace
                     if !self.input_buffer.is_empty() {
                         self.input_buffer.pop();
-                        session.data(channel, russh::CryptoVec::from("\x08 \x08".as_bytes().to_vec()));
+                        session.data(
+                            channel,
+                            russh::CryptoVec::from("\x08 \x08".as_bytes().to_vec()),
+                        );
                     }
                 }
-                '\x03' => { // Ctrl-C
-                    session.data(channel, russh::CryptoVec::from("^C\r\n".as_bytes().to_vec()));
+                '\x03' => {
+                    // Ctrl-C
+                    session.data(
+                        channel,
+                        russh::CryptoVec::from("^C\r\n".as_bytes().to_vec()),
+                    );
                     self.input_buffer.clear();
                     session.data(channel, russh::CryptoVec::from("> ".as_bytes().to_vec()));
                 }
                 _ => {
                     self.input_buffer.push(c);
                     let mut buf = [0; 4];
-                    session.data(channel, russh::CryptoVec::from(c.encode_utf8(&mut buf).as_bytes().to_vec()));
+                    session.data(
+                        channel,
+                        russh::CryptoVec::from(c.encode_utf8(&mut buf).as_bytes().to_vec()),
+                    );
                 }
             }
         }
@@ -298,22 +383,19 @@ impl Handler for AgentServerHandler {
 }
 
 /// Start the SSH server
-pub async fn start_ssh_server(
-    config: SshServerConfig,
-    state: Arc<AgentState>,
-) -> Result<()> {
+pub async fn start_ssh_server(config: SshServerConfig, state: Arc<AgentState>) -> Result<()> {
     let addr = format!("{}:{}", config.host, config.port);
     println!("🔐 SSH server listening on {}", addr);
 
     // Initialize authenticator
     let authenticator = Arc::new(SshAuthenticator::new(&config.repo_root)?);
-    
+
     let mut keys = Vec::new();
     // Generate a temporary key (ed25519) if file doesn't exist
     // In production, this should be loaded from config.host_key_path
     let key = russh_keys::key::KeyPair::generate_ed25519().unwrap();
     keys.push(key);
-    
+
     let ssh_config = russh::server::Config {
         inactivity_timeout: Some(std::time::Duration::from_secs(3600)),
         auth_rejection_time: std::time::Duration::from_secs(3),
@@ -321,15 +403,15 @@ pub async fn start_ssh_server(
         keys,
         ..Default::default()
     };
-    
+
     let config_arc = Arc::new(ssh_config);
     let server = AgentServer {
         state,
         authenticator,
     };
-    
+
     // Russh's run function handles the accept loop
     russh::server::run(config_arc, addr, server).await?;
-    
+
     Ok(())
 }

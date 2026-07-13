@@ -4,13 +4,13 @@ use clap::{Parser, Subcommand};
 pub mod args;
 pub mod commands;
 
-use commands::{
-    Command, ImportCommand, ExportCommand, InitCommand,
-    git::{StatusCommand, CommitCommand, StageCommand, UnstageCommand, DiffCommand},
-    data::{RoomCommand, EquipmentCommand, SpatialCommand},
-};
 #[cfg(feature = "agent")]
 use commands::RemoteCommand;
+use commands::{
+    data::{EquipmentCommand, RoomCommand, SpatialCommand},
+    git::{CommitCommand, DiffCommand, StageCommand, StatusCommand, UnstageCommand},
+    Command, ExportCommand, ImportCommand, InitCommand, MigrateCommand,
+};
 
 #[derive(Parser)]
 #[command(name = "arx")]
@@ -24,57 +24,95 @@ pub struct Cli {
 impl Cli {
     pub fn execute(self) -> Result<(), Box<dyn std::error::Error>> {
         match self.command {
-            Commands::Init { .. } => {
+            Commands::Init { name, git_init, .. } => {
                 let cmd = InitCommand {
                     directory: std::path::PathBuf::from("."),
-                    name: None,
+                    name: Some(name),
                     install_hooks: true,
-                    init_git: true,
+                    init_git: git_init,
                 };
                 Ok(cmd.execute()?)
-            },
-            Commands::Import { subcommand } => {
-                match subcommand {
-                    ImportSubcommand::Ifc { ifc_file, repo, dry_run, strict } => {
-                        let cmd = ImportCommand { ifc_file, repo, dry_run, strict };
-                        Ok(cmd.execute()?)
-                    }
-                    ImportSubcommand::Lidar { file_path, voxel_size, light, dry_run, merge, building } => {
-                        let cmd = commands::import_lidar::ImportLidarCommand {
-                            file_path,
-                            voxel_size,
-                            light,
-                            dry_run,
-                            merge,
-                            building,
-                        };
-                        Ok(cmd.execute()?)
-                    }
-                    ImportSubcommand::Text { script, building, dry_run } => {
-                        let cmd = commands::edit::EditCommand {
-                            script,
-                            building,
-                            dry_run,
-                        };
-                        Ok(cmd.execute()?)
-                    }
+            }
+            Commands::Import { subcommand } => match subcommand {
+                ImportSubcommand::Ifc {
+                    ifc_file,
+                    repo,
+                    dry_run,
+                    strict,
+                } => {
+                    let cmd = ImportCommand {
+                        ifc_file,
+                        repo,
+                        dry_run,
+                        strict,
+                    };
+                    Ok(cmd.execute()?)
+                }
+                ImportSubcommand::Lidar {
+                    file_path,
+                    voxel_size,
+                    light,
+                    dry_run,
+                    merge,
+                    building,
+                } => {
+                    let cmd = commands::import_lidar::ImportLidarCommand {
+                        file_path,
+                        voxel_size,
+                        light,
+                        dry_run,
+                        merge,
+                        building,
+                    };
+                    Ok(cmd.execute()?)
+                }
+                ImportSubcommand::Text {
+                    script,
+                    building,
+                    dry_run,
+                } => {
+                    let cmd = commands::edit::EditCommand {
+                        script,
+                        building,
+                        dry_run,
+                    };
+                    Ok(cmd.execute()?)
                 }
             },
-            Commands::Edit { script, building, dry_run } => {
+            Commands::Edit {
+                script,
+                building,
+                dry_run,
+            } => {
                 let cmd = commands::edit::EditCommand {
                     script,
                     building,
                     dry_run,
                 };
                 Ok(cmd.execute()?)
-            },
-            Commands::Export { format, output, repo, delta } => {
-                let cmd = ExportCommand { format, output, repo, delta };
+            }
+            Commands::Export {
+                format,
+                output,
+                repo,
+                delta,
+            } => {
+                let cmd = ExportCommand {
+                    format,
+                    output,
+                    repo,
+                    delta,
+                };
                 Ok(cmd.execute()?)
-            },
-            Commands::Render { building, interactive, brightness_style, .. } => {
-                #[allow(unused_variables)]
-                let brightness_style = brightness_style; // Used only when render3d feature is enabled
+            }
+            Commands::Render {
+                building,
+                interactive,
+                brightness_style,
+                ..
+            } => {
+                #[cfg(not(feature = "render3d"))]
+                let _ = &brightness_style;
                 if interactive {
                     #[cfg(feature = "render3d")]
                     {
@@ -82,15 +120,21 @@ impl Cli {
                         let brightness_ramp = match brightness_style.as_str() {
                             "acerola" => crate::render3d::point_cloud::brightness_ramps::ACEROLA_16,
                             "classic" => crate::render3d::point_cloud::brightness_ramps::CLASSIC,
-                            "extended" => crate::render3d::point_cloud::brightness_ramps::EXTENDED_16,
+                            "extended" => {
+                                crate::render3d::point_cloud::brightness_ramps::EXTENDED_16
+                            }
                             "unicode" => crate::render3d::point_cloud::brightness_ramps::UNICODE_16,
                             _ => {
                                 eprintln!("❌ Invalid brightness style: '{}'", brightness_style);
                                 eprintln!("   Valid options: acerola, classic, extended, unicode");
-                                return Err(format!("Invalid brightness style: {}", brightness_style).into());
+                                return Err(format!(
+                                    "Invalid brightness style: {}",
+                                    brightness_style
+                                )
+                                .into());
                             }
                         };
-                        
+
                         crate::render3d::start_interactive_renderer(&building, brightness_ramp)?;
                     }
                     #[cfg(not(feature = "render3d"))]
@@ -109,7 +153,7 @@ impl Cli {
                     }
                 }
                 Ok(())
-            },
+            }
             Commands::Merge(cmd) => {
                 #[cfg(feature = "tui")]
                 {
@@ -120,57 +164,106 @@ impl Cli {
                     println!("❌ Merge tool requires --features tui");
                     Err("TUI feature not enabled".into())
                 }
-            },
-            Commands::Status { verbose, interactive } => {
-                let cmd = StatusCommand { verbose, interactive };
+            }
+            Commands::Status {
+                verbose,
+                interactive,
+            } => {
+                let cmd = StatusCommand {
+                    verbose,
+                    interactive,
+                };
                 cmd.execute()
-            },
+            }
             Commands::Stage { all, file } => {
                 let cmd = StageCommand { all, file };
                 cmd.execute()
-            },
+            }
             Commands::Unstage { all, file } => {
                 let cmd = UnstageCommand { all, file };
                 cmd.execute()
-            },
+            }
             Commands::Commit { message } => {
                 let cmd = CommitCommand { message };
                 cmd.execute()
-            },
-            Commands::Diff { commit, file, stat, interactive } => {
-                let cmd = DiffCommand { commit, file, stat, interactive };
+            }
+            Commands::Diff {
+                commit,
+                file,
+                stat,
+                interactive,
+            } => {
+                let cmd = DiffCommand {
+                    commit,
+                    file,
+                    stat,
+                    interactive,
+                };
                 cmd.execute()
-            },
-            Commands::History { limit, verbose, file } => {
-                Self::handle_history(limit, verbose, file)
-            },
-            Commands::Search { query, equipment, rooms, buildings, case_sensitive, regex, limit, verbose, interactive } => {
-                Self::handle_search(query, equipment, rooms, buildings, case_sensitive, regex, limit, verbose, interactive)
-            },
-            Commands::Query { pattern, format, verbose } => {
-                Self::handle_query(pattern, format, verbose)
-            },
-            Commands::Room { command } => {
-                let cmd = RoomCommand { subcommand: command };
-                cmd.execute()
-            },
-            Commands::Equipment { command } => {
-                let cmd = EquipmentCommand { subcommand: command };
-                cmd.execute()
-            },
-            Commands::Spatial { command } => {
-                let cmd = SpatialCommand { subcommand: command };
-                cmd.execute()
-            },
-            #[cfg(feature = "agent")]
-            Commands::Remote(cmd) => {
+            }
+            Commands::History {
+                limit,
+                verbose,
+                file,
+            } => Self::handle_history(limit, verbose, file),
+            Commands::Search {
+                query,
+                equipment,
+                rooms,
+                buildings,
+                case_sensitive,
+                regex,
+                limit,
+                verbose,
+                interactive,
+            } => Self::handle_search(
+                query,
+                equipment,
+                rooms,
+                buildings,
+                case_sensitive,
+                regex,
+                limit,
+                verbose,
+                interactive,
+            ),
+            Commands::Query {
+                pattern,
+                format,
+                verbose,
+            } => commands::query::run_address_query(&pattern, &format, verbose),
+            Commands::Migrate { dry_run } => {
+                let cmd = MigrateCommand {
+                    dry_run,
+                    path: None,
+                };
                 Ok(cmd.execute()?)
-            },
+            }
+            Commands::Room { command } => {
+                let cmd = RoomCommand {
+                    subcommand: command,
+                };
+                cmd.execute()
+            }
+            Commands::Equipment { command } => {
+                let cmd = EquipmentCommand {
+                    subcommand: command,
+                };
+                cmd.execute()
+            }
+            Commands::Spatial { command } => {
+                let cmd = SpatialCommand {
+                    subcommand: command,
+                };
+                cmd.execute()
+            }
+            #[cfg(feature = "agent")]
+            Commands::Remote(cmd) => Ok(cmd.execute()?),
             Commands::Dashboard => {
                 #[cfg(all(feature = "tui", feature = "agent"))]
                 {
                     use crate::agent::auth::TokenState;
-                    
+
                     let rt = tokio::runtime::Runtime::new()?;
                     rt.block_on(async {
                         // Import trait for connect()
@@ -179,17 +272,23 @@ impl Cli {
                         // Create and connect simulated interface
                         let mut sim = crate::hardware::simulated::SimulatedInterface::new();
                         // Connect explicitly (safe because we own it here)
-                        sim.connect().await.ok(); 
-                         
+                        sim.connect().await.ok();
+
                         let mut hardware = crate::hardware::HardwareManager::new();
-                        hardware.add_interface("sim".to_string(), crate::hardware::HardwareProtocol::Simulated(sim));
-                         
+                        hardware.add_interface(
+                            "sim".to_string(),
+                            crate::hardware::HardwareProtocol::Simulated(sim),
+                        );
+
                         let state = std::sync::Arc::new(crate::agent::dispatcher::AgentState {
                             repo_root: std::path::PathBuf::from("."),
-                            token: std::sync::Arc::new(std::sync::Mutex::new(TokenState::new("dummy".to_string(), vec![]))),
+                            token: std::sync::Arc::new(std::sync::Mutex::new(TokenState::new(
+                                "dummy".to_string(),
+                                vec![],
+                            ))),
                             hardware: std::sync::Arc::new(hardware),
                         });
-                        
+
                         crate::tui::dashboard::run_dashboard(state).await
                     })?;
                     Ok(())
@@ -204,14 +303,61 @@ impl Cli {
                     println!("❌ TUI feature is required for dashboard");
                     Err("TUI feature not enabled".into())
                 }
-            },
-            _ => {
-                Err("Command not yet implemented in restructured CLI".into())
-            },
+            }
+            Commands::Validate { path } => {
+                use crate::persistence::{load_building_at, BUILDING_YAML};
+                use crate::validation::validate_building;
+
+                let base = path
+                    .as_deref()
+                    .map(std::path::PathBuf::from)
+                    .unwrap_or_else(|| std::path::PathBuf::from("."));
+                let building = load_building_at(&base).map_err(|e| {
+                    format!(
+                        "Failed to load {} under {}: {}",
+                        BUILDING_YAML,
+                        base.display(),
+                        e
+                    )
+                })?;
+                let report = validate_building(&building);
+                for line in report.summary_lines() {
+                    println!("{}", line);
+                }
+                if report.has_errors() {
+                    Err("Building validation failed".into())
+                } else {
+                    println!("✅ Validation completed successfully");
+                    Ok(())
+                }
+            }
+            Commands::Interactive {
+                building,
+                brightness_style,
+                ..
+            } => {
+                // Same interactive path as `render --interactive`
+                Self::execute(Cli {
+                    command: Commands::Render {
+                        building,
+                        floor: None,
+                        three_d: false,
+                        show_status: false,
+                        show_rooms: false,
+                        format: "ascii".into(),
+                        projection: "isometric".into(),
+                        view_angle: "isometric".into(),
+                        scale: 1.0,
+                        spatial_index: false,
+                        interactive: true,
+                        brightness_style,
+                    },
+                })
+            }
         }
     }
 
-    fn handle_history(
+    pub(crate) fn handle_history(
         limit: usize,
         verbose: bool,
         file: Option<String>,
@@ -264,7 +410,8 @@ impl Cli {
         Ok(())
     }
 
-    fn handle_search(
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn handle_search(
         query: String,
         equipment: bool,
         rooms: bool,
@@ -326,7 +473,12 @@ impl Cli {
                 // Display selected result
                 match result {
                     Ok(result) => {
-                        println!("Selected: {} {} - {}", result.icon(), result.title, result.subtitle);
+                        println!(
+                            "Selected: {} {} - {}",
+                            result.icon(),
+                            result.title,
+                            result.subtitle
+                        );
                         println!("ID: {}", result.id);
                         return Ok(());
                     }
@@ -394,7 +546,10 @@ impl Cli {
                     }
                 }
                 if matches.len() > limit {
-                    println!("  ... and {} more (use --limit to see more)", matches.len() - limit);
+                    println!(
+                        "  ... and {} more (use --limit to see more)",
+                        matches.len() - limit
+                    );
                 }
                 println!();
                 total_results += matches.len();
@@ -434,7 +589,10 @@ impl Cli {
                     }
                 }
                 if matches.len() > limit {
-                    println!("  ... and {} more (use --limit to see more)", matches.len() - limit);
+                    println!(
+                        "  ... and {} more (use --limit to see more)",
+                        matches.len() - limit
+                    );
                 }
                 println!();
                 total_results += matches.len();
@@ -460,7 +618,9 @@ impl Cli {
                 if verbose {
                     println!("  Name: {}", building_name);
                     println!("  Floors: {}", building.floors.len());
-                    let total_rooms: usize = building.floors.iter()
+                    let total_rooms: usize = building
+                        .floors
+                        .iter()
                         .flat_map(|f| f.wings.iter())
                         .map(|w| w.rooms.len())
                         .sum();
@@ -478,109 +638,6 @@ impl Cli {
             println!("❌ No results found");
         } else {
             println!("✅ Total: {} result(s)", total_results);
-        }
-
-        Ok(())
-    }
-
-    fn handle_query(
-        pattern: String,
-        format: String,
-        verbose: bool,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        use crate::core::operations::equipment as eq_ops;
-
-        println!("🔍 Query pattern: {}", pattern);
-        println!();
-
-        // Parse pattern into glob-compatible format
-        // ArxAddress format: /country/state/city/building/floor/room/fixture
-        let pattern_parts: Vec<&str> = pattern.trim_start_matches('/').split('/').collect();
-
-        if pattern_parts.len() != 7 {
-            return Err(format!(
-                "Invalid ArxAddress pattern. Expected 7 parts, got {}.\nFormat: /country/state/city/building/floor/room/fixture",
-                pattern_parts.len()
-            ).into());
-        }
-
-        // Load equipment and filter by pattern
-        let equipment_list = eq_ops::list_equipment(None)?;
-        let mut matches = Vec::new();
-
-        for item in equipment_list {
-            // Try to construct ArxAddress for this equipment
-            // For now, we'll do simple pattern matching on the ArxAddress path field if it exists
-            // Note: Equipment might not have ArxAddress yet, so we'll need to construct it or skip
-
-            // Simple glob-style matching on equipment name
-            let matches_pattern = if pattern_parts[6] == "*" {
-                true // Match all fixtures
-            } else if pattern_parts[6].contains('*') {
-                // Simple wildcard matching
-                let pattern_prefix = pattern_parts[6].trim_end_matches('*');
-                item.name.starts_with(pattern_prefix)
-            } else {
-                item.name == pattern_parts[6]
-            };
-
-            if matches_pattern {
-                matches.push(item);
-            }
-        }
-
-        if matches.is_empty() {
-            println!("❌ No equipment found matching pattern");
-            return Ok(());
-        }
-
-        // Format output
-        match format.as_str() {
-            "json" => {
-                let json = serde_json::to_string_pretty(&matches)?;
-                println!("{}", json);
-            }
-            "yaml" => {
-                let yaml = serde_yaml::to_string(&matches)?;
-                println!("{}", yaml);
-            }
-            "table" | _ => {
-                println!("📦 Equipment ({} found):", matches.len());
-                println!();
-                println!("  {:<30} {:<15} {:<20}", "Name", "Type", "ID");
-                println!("  {}", "-".repeat(70));
-
-                for item in &matches {
-                    let eq_type = format!("{:?}", item.equipment_type);
-                    let name = if item.name.len() > 28 {
-                        format!("{}...", &item.name[..28])
-                    } else {
-                        item.name.clone()
-                    };
-                    let id = if item.id.len() > 18 {
-                        format!("{}...", &item.id[..18])
-                    } else {
-                        item.id.clone()
-                    };
-                    println!("  {:<30} {:<15} {:<20}", name, eq_type, id);
-
-                    if verbose {
-                        if !item.properties.is_empty() {
-                            println!("     Properties:");
-                            for (key, value) in item.properties.iter().take(3) {
-                                println!("       {}: {}", key, value);
-                            }
-                            if item.properties.len() > 3 {
-                                println!("       ... and {} more", item.properties.len() - 3);
-                            }
-                        }
-                        println!();
-                    }
-                }
-
-                println!();
-                println!("✅ Total: {} result(s)", matches.len());
-            }
         }
 
         Ok(())
@@ -640,18 +697,6 @@ pub enum Commands {
         /// Git repository URL (required for git format)
         #[arg(long)]
         repo: Option<String>,
-        /// Export only changes (delta mode)
-        #[arg(long)]
-        delta: bool,
-    },
-    /// Sync building data to IFC file (continuous or one-time)
-    Sync {
-        /// Path to IFC file
-        #[arg(long)]
-        ifc: Option<String>,
-        /// Enable watch mode (daemon) for continuous sync
-        #[arg(long)]
-        watch: bool,
         /// Export only changes (delta mode)
         #[arg(long)]
         delta: bool,
@@ -829,24 +874,6 @@ pub enum Commands {
         #[arg(long)]
         file: Option<String>,
     },
-    /// Manage configuration
-    Config {
-        /// Show current configuration
-        #[arg(long)]
-        show: bool,
-        /// Set configuration value (format: section.key=value)
-        #[arg(long)]
-        set: Option<String>,
-        /// Reset to defaults
-        #[arg(long)]
-        reset: bool,
-        /// Edit configuration file
-        #[arg(long)]
-        edit: bool,
-        /// Open interactive wizard
-        #[arg(long)]
-        interactive: bool,
-    },
     /// Room management commands
     Room {
         #[command(subcommand)]
@@ -861,31 +888,6 @@ pub enum Commands {
     Spatial {
         #[command(subcommand)]
         command: SpatialCommands,
-    },
-    /// Live monitoring dashboard
-    Watch {
-        #[arg(long)]
-        building: Option<String>,
-        #[arg(long)]
-        floor: Option<i32>,
-        #[arg(long)]
-        room: Option<String>,
-        /// Refresh interval in seconds (1-3600)
-        #[arg(long, default_value = "5", value_parser = |s: &str| -> Result<u64, String> {
-            let val: u64 = s.parse().map_err(|_| format!("must be a number between 1 and 3600"))?;
-            if val < 1 || val > 3600 {
-                Err(format!("Refresh interval must be between 1 and 3600 seconds, got {}", val))
-            } else {
-                Ok(val)
-            }
-        })]
-        refresh_interval: u64,
-        #[arg(long)]
-        sensors_only: bool,
-        #[arg(long)]
-        alerts_only: bool,
-        #[arg(long)]
-        log_level: Option<String>,
     },
     /// Search building data
     Search {
@@ -922,7 +924,6 @@ pub enum Commands {
         /// Open interactive browser
         #[arg(long)]
         interactive: bool,
-
     },
     /// Manage remote building connections via SSH
     #[cfg(feature = "agent")]
@@ -954,221 +955,17 @@ pub enum Commands {
         #[arg(long)]
         verbose: bool,
     },
-    /// Integrate AR scan data
-    ///
-    /// **Note:** This command directly integrates AR scans without user review.
-    /// For mobile apps, consider using `ar pending` workflow instead.
-    ArIntegrate {
-        /// AR scan data file (JSON)
-        #[arg(long)]
-        scan_file: String,
-        /// Room name for the scan
-        #[arg(long)]
-        room: String,
-        /// Floor level
-        #[arg(long)]
-        floor: i32,
-        /// Building identifier
-        #[arg(long)]
-        building: String,
-        /// Commit changes to Git
-        #[arg(long)]
-        commit: bool,
-        /// Commit message
-        #[arg(long)]
-        message: Option<String>,
-    },
-    /// AR integration commands
-    Ar {
-        #[command(subcommand)]
-        subcommand: ArCommands,
-    },
-    /// Process sensor data and update equipment status
-    ProcessSensors {
-        /// Directory containing sensor data files
-        #[arg(long, default_value = "./sensor-data")]
-        sensor_dir: String,
-
-        /// Building name to update
-        #[arg(long)]
-        building: String,
-
-        /// Commit changes to Git
-        #[arg(long)]
-        commit: bool,
-
-        /// Watch mode: continuously monitor for new sensor data
-        #[arg(long)]
-        watch: bool,
-    },
-    /// Start HTTP server for real-time sensor data ingestion
-    SensorsHttp {
-        /// Building name to update
-        #[arg(long)]
-        building: String,
-
-        /// Host address to bind to
-        #[arg(long, default_value = "127.0.0.1")]
-        host: String,
-
-        /// Port to listen on (1-65535)
-        #[arg(long, default_value = "3000", value_parser = |s: &str| -> Result<u16, String> {
-            let val: u16 = s.parse().map_err(|_| format!("must be a number between 1 and 65535"))?;
-            if val == 0 {
-                Err(format!("Port must be between 1 and 65535, got 0"))
-            } else {
-                Ok(val)
-            }
-        })]
-        port: u16,
-    },
-    /// Start MQTT subscriber for real-time sensor data ingestion
-    SensorsMqtt {
-        /// Building name to update
-        #[arg(long)]
-        building: String,
-
-        /// MQTT broker URL
-        #[arg(long, default_value = "localhost")]
-        broker: String,
-
-        /// MQTT broker port
-        #[arg(long, default_value = "1883")]
-        port: u16,
-
-        /// MQTT username (optional)
-        #[arg(long)]
-        username: Option<String>,
-
-        /// MQTT password (optional)
-        #[arg(long)]
-        password: Option<String>,
-
-        /// MQTT topics to subscribe to (comma-separated)
-        #[arg(long, default_value = "arxos/sensors/#")]
-        topics: String,
-    },
-    /// IFC file processing commands
-    #[command(name = "ifc")]
-    Ifc {
-        #[command(subcommand)]
-        subcommand: IfcCommands,
-    },
-    /// Run system health diagnostics
-    Health {
-        /// Check specific component (all, git, config, persistence, yaml)
-        #[arg(long)]
-        component: Option<String>,
-        /// Show detailed diagnostics
-        #[arg(long)]
-        verbose: bool,
-        /// Open interactive dashboard
-        #[arg(long)]
-        interactive: bool,
-        /// Generate comprehensive diagnostic report
-        #[arg(long)]
-        diagnostic: bool,
-    },
-    /// Generate HTML documentation for a building
-    Doc {
-        /// Building name to document
-        #[arg(long)]
-        building: String,
-        /// Output file path (default: ./docs/{building}.html)
-        #[arg(long)]
-        output: Option<String>,
-    },
-    /// Gamified PR review and planning commands
-    Game {
-        #[command(subcommand)]
-        subcommand: GameCommands,
-    },
-    /// Filter building data
-    Filter {
-        /// Equipment type filter
-        #[arg(long)]
-        equipment_type: Option<String>,
-        /// Equipment status filter
-        #[arg(long)]
-        status: Option<String>,
-        /// Floor filter
-        #[arg(long)]
-        floor: Option<i32>,
-        /// Room filter
-        #[arg(long)]
-        room: Option<String>,
-        /// Building filter
-        #[arg(long)]
-        building: Option<String>,
-        /// Show only critical equipment
-        #[arg(long)]
-        critical_only: bool,
-        /// Show only healthy equipment
-        #[arg(long)]
-        healthy_only: bool,
-        /// Show only equipment with alerts
-        #[arg(long)]
-        alerts_only: bool,
-        /// Output format (table, json, yaml)
-        #[arg(long, default_value = "table")]
-        format: String,
-        /// Maximum number of results
-        #[arg(long, default_value = "100")]
-        limit: usize,
-        /// Show detailed results
-        #[arg(long)]
-        verbose: bool,
-    },
-    /// Spreadsheet interface for editing building data
-    Spreadsheet {
-        #[command(subcommand)]
-        subcommand: SpreadsheetCommands,
-    },
-    /// User management commands (admin permissions required for verify/revoke)
-    ///
-    /// The first user added to the registry automatically becomes an admin with
-    /// 'verify_users' and 'revoke_users' permissions. Only admins can verify or
-    /// revoke other users.
-    Users {
-        #[command(subcommand)]
-        subcommand: UsersCommands,
-    },
-    /// Verify GPG signatures on Git commits
-    ///
-    /// Checks commit signatures and displays verification status.
-    /// Requires GPG to be configured and public keys to be available.
-    Verify {
-        /// Commit hash to verify (default: HEAD)
-        #[arg(long)]
-        commit: Option<String>,
-        /// Verify all commits in current branch
-        #[arg(long)]
-        all: bool,
-        /// Show detailed verification information
-        #[arg(long)]
-        verbose: bool,
-    },
-    /// Migrate existing fixtures to ArxAddress format
-    ///
-    /// One-shot migration that fills address: for every existing fixture
-    /// in building YAML files by inferring from grid/floor/room data.
-    /// Old data becomes instantly searchable with the new address system.
+    /// Backfill missing durable ArxAddress fields on equipment in building.yaml
     Migrate {
-        /// Show what would be migrated without making changes
+        /// Preview changes without writing
         #[arg(long)]
         dry_run: bool,
-    },
-    /// Economy and token operations
-    Economy {
-        #[command(subcommand)]
-        command: EconomyCommands,
     },
     /// Resolve merge conflicts interactively
     Merge(commands::MergeCommand),
     /// Launch TUI Dashboard
     Dashboard,
 }
-
 
 // Sub-command definitions
 pub mod subcommands;

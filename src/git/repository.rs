@@ -24,11 +24,9 @@ pub fn initialize_repository(
 
     // Detect path traversal attempts in relative paths
     if !repo_path_buf.is_absolute() {
-        PathSafety::detect_path_traversal(repo_path).map_err(|e| {
-            GitError::OperationFailed {
-                operation: "validate repository path".to_string(),
-                reason: format!("Path traversal detected: {}", e),
-            }
+        PathSafety::detect_path_traversal(repo_path).map_err(|e| GitError::OperationFailed {
+            operation: "validate repository path".to_string(),
+            reason: format!("Path traversal detected: {}", e),
         })?;
     }
 

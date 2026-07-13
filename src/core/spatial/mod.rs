@@ -2,14 +2,13 @@
 use nalgebra::Point3;
 
 pub mod grid;
-pub mod types;
 pub mod mesh;
-pub use types::*;
+pub mod types;
 pub use mesh::*;
+pub use types::*;
 
 /// Alias for Point3D representing a 3D position
 pub type Position3D = Point3D;
-
 
 // Re-export grid address utilities
 

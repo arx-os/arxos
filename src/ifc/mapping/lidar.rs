@@ -39,17 +39,11 @@ pub fn lidar_enrichment_to_pset(enrichment: &LidarEnrichment) -> HashMap<String,
         format_f64(enrichment.confidence_score),
     );
     if let Some(ts) = enrichment.last_scan_timestamp {
-        map.insert(
-            PROP_LAST_SCAN_TIMESTAMP.to_string(),
-            ts.to_rfc3339(),
-        );
+        map.insert(PROP_LAST_SCAN_TIMESTAMP.to_string(), ts.to_rfc3339());
     }
     if let Some(ref heuristic) = enrichment.classification_heuristic {
         if !heuristic.is_empty() {
-            map.insert(
-                PROP_CLASSIFICATION_HEURISTIC.to_string(),
-                heuristic.clone(),
-            );
+            map.insert(PROP_CLASSIFICATION_HEURISTIC.to_string(), heuristic.clone());
         }
     }
     map
@@ -80,11 +74,11 @@ pub fn take_lidar_enrichment_from_properties(
         .and_then(|s| s.parse::<f64>().ok())
         .unwrap_or(0.0);
 
-    let last_scan_timestamp = take_prop(properties, PROP_LAST_SCAN_TIMESTAMP)
-        .and_then(|s| parse_timestamp(&s));
+    let last_scan_timestamp =
+        take_prop(properties, PROP_LAST_SCAN_TIMESTAMP).and_then(|s| parse_timestamp(&s));
 
-    let classification_heuristic = take_prop(properties, PROP_CLASSIFICATION_HEURISTIC)
-        .filter(|s| !s.is_empty());
+    let classification_heuristic =
+        take_prop(properties, PROP_CLASSIFICATION_HEURISTIC).filter(|s| !s.is_empty());
 
     // Drop any leftover keys with the LiDAR pset prefix (forward compatibility)
     let prefix = format!("{}:", PSET_ARX_LIDAR);
@@ -139,9 +133,11 @@ fn parse_timestamp(s: &str) -> Option<DateTime<Utc>> {
     DateTime::parse_from_rfc3339(s)
         .map(|dt| dt.with_timezone(&Utc))
         .ok()
-        .or_else(|| DateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S%.f%z")
-            .map(|dt| dt.with_timezone(&Utc))
-            .ok())
+        .or_else(|| {
+            DateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S%.f%z")
+                .map(|dt| dt.with_timezone(&Utc))
+                .ok()
+        })
 }
 
 #[cfg(test)]

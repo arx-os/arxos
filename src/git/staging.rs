@@ -124,7 +124,14 @@ mod tests {
         let tree = repo_for_commit.find_tree(tree_id).expect("find tree");
         let signature = Signature::now("Test User", "test@example.com").expect("signature");
         repo_for_commit
-            .commit(Some("HEAD"), &signature, &signature, "initial commit", &tree, &[])
+            .commit(
+                Some("HEAD"),
+                &signature,
+                &signature,
+                "initial commit",
+                &tree,
+                &[],
+            )
             .expect("create initial commit");
         drop(tree);
         drop(index);

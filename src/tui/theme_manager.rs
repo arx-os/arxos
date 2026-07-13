@@ -6,8 +6,8 @@
 //! - Built-in theme presets
 //! - Custom theme creation
 
-use crate::tui::Theme;
 use crate::config::ConfigManager;
+use crate::tui::Theme;
 use ratatui::style::Color;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

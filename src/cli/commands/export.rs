@@ -1,8 +1,8 @@
 use crate::cli::commands::Command;
 use crate::export::ifc::IFCExporter;
 use crate::ifc::mapping::report_export_losses;
+use crate::persistence::{load_building_at, BUILDING_YAML};
 use crate::utils::path_safety::PathSafety;
-use crate::yaml::BuildingYamlSerializer;
 use anyhow::anyhow;
 use std::error::Error;
 use std::path::Path;
@@ -16,24 +16,29 @@ pub struct ExportCommand {
 
 impl Command for ExportCommand {
     fn execute(&self) -> Result<(), Box<dyn Error>> {
+        if self.delta {
+            return Err(
+                "export --delta is not implemented (no silent ignore). \
+                 Export a full model, or remove --delta."
+                    .into(),
+            );
+        }
+
         let repo_root = Path::new(".");
-        
+
         match self.format.as_str() {
             "ifc" => {
                 println!("📤 Exporting to IFC format...");
-                
-                // Load building data
-                let source_path = repo_root.join("building.yaml");
-                if !source_path.exists() {
-                    return Err("No building.yaml found to export".into());
-                }
 
-                let yaml_content = std::fs::read_to_string(&source_path)?;
-                let building = BuildingYamlSerializer::deserialize_building(&yaml_content)?;
+                let building = load_building_at(repo_root)
+                    .map_err(|e| format!("No {} to export: {}", BUILDING_YAML, e))?;
 
-                let output_file = self.output.clone().unwrap_or_else(|| format!("{}.ifc", building.name));
+                let output_file = self
+                    .output
+                    .clone()
+                    .unwrap_or_else(|| format!("{}.ifc", building.name));
                 let output_path = repo_root.join(&output_file);
-                
+
                 PathSafety::validate_path_for_write(&output_path).map_err(|e| anyhow!(e))?;
 
                 let export_notes = report_export_losses(&building);
@@ -48,15 +53,18 @@ impl Command for ExportCommand {
             }
             "yaml" => {
                 println!("📤 Exporting to YAML format...");
-                let output_file = self.output.clone().unwrap_or_else(|| "building.yaml".to_string());
+                let output_file = self
+                    .output
+                    .clone()
+                    .unwrap_or_else(|| BUILDING_YAML.to_string());
                 let output_path = repo_root.join(&output_file);
-                let source_path = repo_root.join("building.yaml");
+                let source_path = repo_root.join(BUILDING_YAML);
 
                 if !source_path.exists() {
-                    return Err("No building.yaml found to export".into());
+                    return Err(format!("No {} found to export", BUILDING_YAML).into());
                 }
 
-                if output_file != "building.yaml" {
+                if output_file != BUILDING_YAML {
                     std::fs::copy(&source_path, &output_path)?;
                     println!("✅ Export successful: {}", output_file);
                 } else {
@@ -66,12 +74,15 @@ impl Command for ExportCommand {
             }
             "json" => {
                 println!("📤 Exporting to JSON format...");
-                let output_file = self.output.clone().unwrap_or_else(|| "building.json".to_string());
+                let output_file = self
+                    .output
+                    .clone()
+                    .unwrap_or_else(|| "building.json".to_string());
                 let output_path = repo_root.join(&output_file);
-                let source_path = repo_root.join("building.yaml");
+                let source_path = repo_root.join(BUILDING_YAML);
 
                 if !source_path.exists() {
-                    return Err("No building.yaml found to export".into());
+                    return Err(format!("No {} found to export", BUILDING_YAML).into());
                 }
 
                 let yaml_content = std::fs::read_to_string(&source_path)?;
@@ -82,7 +93,11 @@ impl Command for ExportCommand {
                 println!("✅ Export successful: {}", output_file);
                 Ok(())
             }
-            _ => Err(format!("Unsupported export format: '{}'. Use: ifc, yaml, json", self.format).into()),
+            _ => Err(format!(
+                "Unsupported export format: '{}'. Use: ifc, yaml, json",
+                self.format
+            )
+            .into()),
         }
     }
 

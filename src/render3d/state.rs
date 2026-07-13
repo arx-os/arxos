@@ -3,8 +3,8 @@
 //! This module provides state management for interactive 3D rendering sessions,
 //! including camera state, selection state, and session data.
 
-use crate::render3d::{ProjectionType, ViewAngle};
 use crate::core::spatial::Point3D;
+use crate::render3d::{ProjectionType, ViewAngle};
 use std::collections::HashSet;
 
 /// Interactive session state for 3D rendering

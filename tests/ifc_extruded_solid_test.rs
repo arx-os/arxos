@@ -43,12 +43,36 @@ fn test_extruded_solid_bounding_box_manual() {
     println!("Min: ({}, {}, {})", min.x, min.y, min.z);
     println!("Max: ({}, {}, {})", max.x, max.y, max.z);
 
-    assert!((min.x - 0.0).abs() < 1e-6, "min.x should be 0.0, got {}", min.x);
-    assert!((min.y - 0.0).abs() < 1e-6, "min.y should be 0.0, got {}", min.y);
-    assert!((min.z - 0.0).abs() < 1e-6, "min.z should be 0.0, got {}", min.z);
-    assert!((max.x - 4.0).abs() < 1e-6, "max.x should be 4.0, got {}", max.x);
-    assert!((max.y - 3.0).abs() < 1e-6, "max.y should be 3.0, got {}", max.y);
-    assert!((max.z - 3.0).abs() < 1e-6, "max.z should be 3.0, got {}", max.z);
+    assert!(
+        (min.x - 0.0).abs() < 1e-6,
+        "min.x should be 0.0, got {}",
+        min.x
+    );
+    assert!(
+        (min.y - 0.0).abs() < 1e-6,
+        "min.y should be 0.0, got {}",
+        min.y
+    );
+    assert!(
+        (min.z - 0.0).abs() < 1e-6,
+        "min.z should be 0.0, got {}",
+        min.z
+    );
+    assert!(
+        (max.x - 4.0).abs() < 1e-6,
+        "max.x should be 4.0, got {}",
+        max.x
+    );
+    assert!(
+        (max.y - 3.0).abs() < 1e-6,
+        "max.y should be 3.0, got {}",
+        max.y
+    );
+    assert!(
+        (max.z - 3.0).abs() < 1e-6,
+        "max.z should be 3.0, got {}",
+        max.z
+    );
 
     println!("✅ Manual test passed: Bounding box is correct!");
 }

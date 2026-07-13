@@ -65,7 +65,7 @@ mod tests {
     fn test_contract_types_compile() {
         // Verify that the contract bindings compile correctly
         // Actual contract interaction tests are in integration test files
-        
+
         // Type check - these should all be valid types
         let _: Option<ethers::types::Address> = None;
         let _token_type: Option<TokenContract<Provider<Http>>> = None;

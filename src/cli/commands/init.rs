@@ -26,7 +26,7 @@ pub struct InitCommand {
 impl InitCommand {
     pub fn execute(&self) -> Result<()> {
         let dir = &self.directory;
-        
+
         // Create directory if it doesn't exist
         if !dir.exists() {
             fs::create_dir_all(dir)
@@ -58,8 +58,7 @@ impl InitCommand {
 
         // Create exports directory
         let exports_dir = dir.join("exports");
-        fs::create_dir_all(&exports_dir)
-            .context("Failed to create exports directory")?;
+        fs::create_dir_all(&exports_dir).context("Failed to create exports directory")?;
         println!("📂 Created exports directory");
 
         println!("\n✅ ArxOS repository initialized!");
@@ -67,7 +66,7 @@ impl InitCommand {
         println!("  1. Edit building.yaml to define your building");
         println!("  2. Run 'arx export --format ifc' to generate IFC");
         println!("  3. Commit your changes: git add . && git commit -m 'Initial building'");
-        
+
         if self.install_hooks {
             println!("\n🔗 Git hooks installed - IFC will auto-export after git pull");
         }
@@ -77,7 +76,7 @@ impl InitCommand {
 
     fn init_git_repo(&self, dir: &Path) -> Result<()> {
         use std::process::Command;
-        
+
         let output = Command::new("git")
             .arg("init")
             .current_dir(dir)
@@ -88,38 +87,47 @@ impl InitCommand {
             println!("🔧 Initialized Git repository");
             Ok(())
         } else {
-            anyhow::bail!("Git init failed: {}", String::from_utf8_lossy(&output.stderr))
+            anyhow::bail!(
+                "Git init failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            )
         }
     }
 
     fn copy_gitignore(&self, dir: &Path) -> Result<()> {
         let template = include_str!("../../../templates/.gitignore");
         let gitignore_path = dir.join(".gitignore");
-        
+
         if gitignore_path.exists() {
             println!("⚠️  .gitignore already exists, skipping");
         } else {
-            fs::write(&gitignore_path, template)
-                .context("Failed to write .gitignore")?;
+            fs::write(&gitignore_path, template).context("Failed to write .gitignore")?;
             println!("📝 Created .gitignore");
         }
-        
+
         Ok(())
     }
 
     fn create_building_yaml(&self, dir: &Path) -> Result<()> {
-        let mut template = include_str!("../../../templates/building.yaml").to_string();
-        
-        // Replace name if provided
-        if let Some(name) = &self.name {
-            template = template.replace("name: My Building", &format!("name: {}", name));
-        }
-        
-        let yaml_path = dir.join("building.yaml");
-        fs::write(&yaml_path, template)
-            .context("Failed to write building.yaml")?;
-        
-        println!("📄 Created building.yaml");
+        use crate::core::{Building, Floor};
+
+        let name = self
+            .name
+            .clone()
+            .unwrap_or_else(|| "My Building".to_string());
+        let path = format!("/{}", name.replace(' ', "-").to_lowercase());
+        let mut building = Building::new(name, path);
+        building.description = Some("A sample building managed with ArxOS".into());
+        building.add_floor(Floor::new("Ground Floor".to_string(), 0));
+
+        crate::persistence::save_building_at(dir, &building)
+            .map_err(|e| anyhow::anyhow!("Failed to write building.yaml: {}", e))?;
+
+        println!(
+            "📄 Created building.yaml (id={}, 1 floor)",
+            building.id
+        );
+        println!("   Next: arx import ifc|lidar … or arx edit to grow the model");
         Ok(())
     }
 
@@ -131,9 +139,8 @@ impl InitCommand {
 
         let template = include_str!("../../../templates/post-merge");
         let hook_path = hooks_dir.join("post-merge");
-        
-        fs::write(&hook_path, template)
-            .context("Failed to write post-merge hook")?;
+
+        fs::write(&hook_path, template).context("Failed to write post-merge hook")?;
 
         // Make executable (Unix only)
         #[cfg(unix)]

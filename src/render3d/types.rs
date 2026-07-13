@@ -1,7 +1,7 @@
 //! Type definitions for 3D rendering
 
-use crate::core::{EquipmentStatus, EquipmentType, RoomType};
 use crate::core::spatial::{BoundingBox3D, Point3D};
+use crate::core::{EquipmentStatus, EquipmentType, RoomType};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -52,7 +52,11 @@ impl Default for Camera3D {
         Self {
             position: Point3D::new(0.0, 0.0, 10.0),
             target: Point3D::new(0.0, 0.0, 0.0),
-            up: Vector3D { x: 0.0, y: 1.0, z: 0.0 },
+            up: Vector3D {
+                x: 0.0,
+                y: 1.0,
+                z: 0.0,
+            },
             fov: 45.0,
             near_clip: 0.1,
             far_clip: 1000.0,

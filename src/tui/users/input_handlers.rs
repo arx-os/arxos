@@ -99,14 +99,11 @@ pub fn handle_view_switching(state: &mut UserBrowserState, key_code: KeyCode) ->
                 false
             }
         }
-        KeyCode::Char('q') | KeyCode::Esc => {
-            if state.view_mode != ViewMode::List {
+        KeyCode::Char('q') | KeyCode::Esc
+            if state.view_mode != ViewMode::List => {
                 state.view_mode = ViewMode::List;
                 true
-            } else {
-                false
             }
-        }
         _ => false,
     }
 }
@@ -137,7 +134,9 @@ pub fn handle_clipboard_copy(
 }
 
 /// Handle user selection (Enter key)
-pub fn handle_user_selection(state: &mut UserBrowserState) -> Result<(), Box<dyn std::error::Error>> {
+pub fn handle_user_selection(
+    state: &mut UserBrowserState,
+) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(user) = state.selected_user() {
         let email = user.email.clone();
         if state.view_mode == ViewMode::List {

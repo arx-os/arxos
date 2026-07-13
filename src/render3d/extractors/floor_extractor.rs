@@ -3,9 +3,9 @@
 //! Converts building floor data into 3D floor representations with
 //! proper elevations, bounding boxes, and entity references.
 
-use crate::render3d::types::Floor3D;
 use crate::core::spatial::{BoundingBox3D, Point3D};
 use crate::core::Building;
+use crate::render3d::types::Floor3D;
 use std::sync::Arc;
 
 /// Extract 3D floor representations from building data
@@ -80,7 +80,7 @@ pub fn extract_floors_3d(building: &Building) -> Vec<Floor3D> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::{Building, Floor, Wing, Room};
+    use crate::core::{Building, Floor, Room, Wing};
 
     #[test]
     fn test_extract_floors_3d() {

@@ -1,43 +1,40 @@
-//! Export operations for building data to Git repository
+//! Export canonical Building to the Git working tree as a single YAML SSOT.
 
 use super::commit::commit_changes_with_metadata;
 use super::{CommitMetadata, GitConfig, GitError, GitOperationResult};
+use crate::persistence::BUILDING_YAML;
 use crate::utils::path_safety::PathSafety;
-use crate::yaml::{BuildingData, BuildingYamlSerializer};
+use crate::yaml::BuildingYamlSerializer;
 use git2::Repository;
 use log::info;
-use std::collections::HashMap;
-use std::path::Path;
 
-/// Export building data to Git repository
+/// Write `building.yaml` and commit it with metadata.
 pub fn export_building(
     repo: &mut Repository,
-    serializer: &BuildingYamlSerializer,
+    _serializer: &BuildingYamlSerializer,
     building: &crate::core::Building,
     config: &GitConfig,
     metadata: &CommitMetadata,
 ) -> Result<GitOperationResult, GitError> {
-    info!("Exporting building data to Git repository");
+    info!(
+        "Exporting building data to Git repository ({})",
+        BUILDING_YAML
+    );
 
-    // Check total size before exporting
-    let total_size_mb = estimate_building_size(serializer, building)?;
-    const WARNING_SIZE_MB: usize = 50;
+    let yaml = BuildingYamlSerializer::serialize_building(building)
+        .map_err(|e| GitError::Generic(e.to_string()))?;
 
-    if total_size_mb > WARNING_SIZE_MB {
+    let size_mb = yaml.len() / (1024 * 1024);
+    if size_mb > 50 {
         info!(
             "Warning: Large building dataset ({}MB). Git operations may be slow.",
-            total_size_mb
+            size_mb
         );
     }
 
-    // Create directory structure
-    let file_structure = create_file_structure(serializer, building)?;
+    let files_changed = write_building_yaml(repo, &yaml)?;
+    let file_paths = vec![BUILDING_YAML.to_string()];
 
-    // Write files to repository
-    let files_changed = write_building_files(repo, &file_structure)?;
-    let file_paths: Vec<String> = file_structure.keys().cloned().collect();
-
-    // Commit changes with metadata
     let commit_id = commit_changes_with_metadata(repo, config, metadata, &file_paths)?;
 
     info!(
@@ -52,60 +49,7 @@ pub fn export_building(
     })
 }
 
-/// Estimate building data size in megabytes
-fn estimate_building_size(
-    serializer: &BuildingYamlSerializer,
-    building: &crate::core::Building,
-) -> Result<usize, GitError> {
-    let building_data = BuildingData::from_building(building);
-    let main_yaml = serializer
-        .to_yaml(&building_data)
-        .map_err(|e| GitError::Generic(e.to_string()))?;
-    let mut size = main_yaml.len();
-
-    // Estimate size of all floor/room/equipment files
-    for floor in &building.floors {
-        let floor_yaml = serializer
-            .to_yaml(floor)
-            .map_err(|e| GitError::Generic(e.to_string()))?;
-        size += floor_yaml.len();
-        // Rooms are in wings
-        for wing in &floor.wings {
-            for room in &wing.rooms {
-                let room_yaml = serializer
-                    .to_yaml(room)
-                    .map_err(|e| GitError::Generic(e.to_string()))?;
-                size += room_yaml.len();
-                for equipment in &room.equipment {
-                    let equipment_yaml = serializer
-                        .to_yaml(equipment)
-                        .map_err(|e| GitError::Generic(e.to_string()))?;
-                    size += equipment_yaml.len();
-                }
-            }
-            for equipment in &wing.equipment {
-                let equipment_yaml = serializer
-                    .to_yaml(equipment)
-                    .map_err(|e| GitError::Generic(e.to_string()))?;
-                size += equipment_yaml.len();
-            }
-        }
-        for equipment in &floor.equipment {
-            let equipment_yaml = serializer
-                .to_yaml(equipment)
-                .map_err(|e| GitError::Generic(e.to_string()))?;
-            size += equipment_yaml.len();
-        }
-    }
-
-    Ok(size / (1024 * 1024)) // Convert to MB
-}
-
-/// Write building files to repository with path validation
-fn write_building_files(
-    repo: &Repository,
-    file_structure: &HashMap<String, String>,
-) -> Result<usize, GitError> {
+fn write_building_yaml(repo: &Repository, content: &str) -> Result<usize, GitError> {
     let repo_workdir = repo
         .workdir()
         .ok_or_else(|| GitError::OperationFailed {
@@ -114,171 +58,13 @@ fn write_building_files(
         })?
         .to_path_buf();
 
-    let mut files_changed = 0;
+    let full_path = repo_workdir.join(BUILDING_YAML);
 
-    for (file_path, content) in file_structure {
-        let file_path_buf = Path::new(file_path);
-        let full_path = repo_workdir.join(file_path_buf);
+    PathSafety::validate_path_for_write(&full_path).map_err(|e| GitError::OperationFailed {
+        operation: format!("validate file path: {}", BUILDING_YAML),
+        reason: format!("Path validation failed: {}", e),
+    })?;
 
-        // Create parent directories first
-        if let Some(parent) = full_path.parent() {
-            std::fs::create_dir_all(parent).map_err(|e| GitError::OperationFailed {
-                operation: format!("create directory: {}", parent.display()),
-                reason: format!("Failed to create directory structure: {}", e),
-            })?;
-        }
-
-        // Validate the path
-        PathSafety::validate_path_for_write(&full_path)
-            .map_err(|e| GitError::OperationFailed {
-                operation: format!("validate file path: {}", file_path),
-                reason: format!("Path validation failed: {}", e),
-            })?;
-
-        std::fs::write(&full_path, content)?;
-        files_changed += 1;
-    }
-
-    Ok(files_changed)
-}
-
-/// Create file structure for building data
-pub fn create_file_structure(
-    serializer: &BuildingYamlSerializer,
-    building: &crate::core::Building,
-) -> Result<HashMap<String, String>, GitError> {
-    let mut files = HashMap::new();
-
-    // Main building file (projected as BuildingData DTO)
-    let building_data = BuildingData::from_building(building);
-    let building_yaml = serializer
-        .to_yaml(&building_data)
-        .map_err(|e| GitError::Generic(e.to_string()))?;
-    files.insert("building.yml".to_string(), building_yaml);
-
-    // Floor files
-    for floor in &building.floors {
-        let floor_path = format!("floors/floor-{}.yml", floor.level);
-        let floor_yaml = serializer
-            .to_yaml(floor)
-            .map_err(|e| GitError::Generic(e.to_string()))?;
-        files.insert(floor_path, floor_yaml);
-
-        // Room files (rooms are in wings)
-        for wing in &floor.wings {
-            for room in &wing.rooms {
-                let room_path = format!(
-                    "floors/floor-{}/rooms/{}.yml",
-                    floor.level,
-                    room.name.to_lowercase().replace(" ", "-")
-                );
-                let room_yaml = serializer
-                    .to_yaml(room)
-                    .map_err(|e| GitError::Generic(e.to_string()))?;
-                files.insert(room_path, room_yaml);
-
-                // Room-level equipment files
-                for equipment in &room.equipment {
-                    let path = format!(
-                        "floors/floor-{}/rooms/{}/equipment/{}.yml",
-                        floor.level,
-                        room.name.to_lowercase().replace(" ", "-"),
-                        equipment.name.to_lowercase().replace(" ", "-")
-                    );
-                    write_equipment_file(&mut files, serializer, path, equipment)?;
-                }
-            }
-
-            // Wing-level equipment files
-            for equipment in &wing.equipment {
-                let path = format!(
-                    "floors/floor-{}/wings/{}/equipment/{}.yml",
-                    floor.level,
-                    wing.name.to_lowercase().replace(" ", "-"),
-                    equipment.name.to_lowercase().replace(" ", "-")
-                );
-                write_equipment_file(&mut files, serializer, path, equipment)?;
-            }
-        }
-
-        // Floor-level equipment files
-        for equipment in &floor.equipment {
-            let path = format!(
-                "floors/floor-{}/equipment/{}.yml",
-                floor.level,
-                equipment.name.to_lowercase().replace(" ", "-")
-            );
-            write_equipment_file(&mut files, serializer, path, equipment)?;
-        }
-    }
-
-    // Create index file for easy navigation
-    let index_content = create_index_file(serializer, building)?;
-    files.insert("index.yml".to_string(), index_content);
-
-    Ok(files)
-}
-
-/// Helper to write equipment file using hierarchy-derived path
-fn write_equipment_file(
-    files: &mut HashMap<String, String>,
-    serializer: &BuildingYamlSerializer,
-    equipment_path: String,
-    equipment: &crate::core::Equipment,
-) -> Result<(), GitError> {
-    let equipment_yaml = serializer
-        .to_yaml(equipment)
-        .map_err(|e| GitError::Generic(e.to_string()))?;
-    files.insert(equipment_path, equipment_yaml);
-    Ok(())
-}
-
-/// Create index file for building navigation
-fn create_index_file(
-    _serializer: &BuildingYamlSerializer,
-    building: &crate::core::Building,
-) -> Result<String, GitError> {
-    use serde_yaml::{Mapping, Value};
-
-    let mut index_map = Mapping::new();
-
-    // Add building metadata
-    let mut building_map = Mapping::new();
-    building_map.insert(
-        Value::String("id".to_string()),
-        Value::String(building.id.clone()),
-    );
-    building_map.insert(
-        Value::String("name".to_string()),
-        Value::String(building.name.clone()),
-    );
-    index_map.insert(
-        Value::String("building".to_string()),
-        Value::Mapping(building_map),
-    );
-
-    // Add floors index
-    let mut floors_list = Vec::new();
-    for floor in &building.floors {
-        let mut floor_map = Mapping::new();
-        floor_map.insert(
-            Value::String("level".to_string()),
-            Value::Number(floor.level.into()),
-        );
-        floor_map.insert(
-            Value::String("name".to_string()),
-            Value::String(floor.name.clone()),
-        );
-        floors_list.push(Value::Mapping(floor_map));
-    }
-    index_map.insert(
-        Value::String("floors".to_string()),
-        Value::Sequence(floors_list),
-    );
-
-    // Serialize to YAML string
-    let yaml_string = serde_yaml::to_string(&index_map)
-        .map_err(|e| GitError::SerializationError(e.to_string()))?;
-
-    Ok(yaml_string)
+    std::fs::write(&full_path, content)?;
+    Ok(1)
 }

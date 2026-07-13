@@ -263,7 +263,7 @@ impl GitConfigManager {
                 crate::config::ConfigManager::new()
                     .ok()
                     .map(|m| m.get_config().user.name.clone())
-                    .unwrap_or_else(|| whoami::realname())
+                    .unwrap_or_else(whoami::realname)
             });
 
         let author_email = env::var("GIT_AUTHOR_EMAIL")
@@ -351,7 +351,6 @@ mod tests {
         .unwrap();
 
         // Create a minimal building data for testing
-        use crate::yaml::BuildingData;
         use crate::core::{Building, BuildingMetadata};
         use chrono::Utc;
 

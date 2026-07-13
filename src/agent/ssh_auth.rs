@@ -33,21 +33,23 @@ impl SshAuthenticator {
             authorized_keys: HashMap::new(),
             permissions: PermissionsConfig::default(),
         };
-        
+
         // Load authorized keys
         let auth_keys_path = repo_root.join(".arxos/authorized_keys");
         if auth_keys_path.exists() {
-            authenticator.load_authorized_keys(&auth_keys_path)
+            authenticator
+                .load_authorized_keys(&auth_keys_path)
                 .context("Failed to load authorized_keys")?;
         }
 
         // Load permissions
         let perm_path = repo_root.join(".arxos/permissions.yaml");
         if perm_path.exists() {
-            authenticator.load_permissions(&perm_path)
+            authenticator
+                .load_permissions(&perm_path)
                 .context("Failed to load permissions.yaml")?;
         }
-        
+
         Ok(authenticator)
     }
 
@@ -64,7 +66,8 @@ impl SshAuthenticator {
                 // Key data is commonly the second part
                 let key_data = parts[1];
                 let username = if parts.len() > 2 { parts[2] } else { "unknown" };
-                self.authorized_keys.insert(key_data.to_string(), username.to_string());
+                self.authorized_keys
+                    .insert(key_data.to_string(), username.to_string());
             }
         }
         Ok(())
@@ -92,13 +95,16 @@ impl SshAuthenticator {
         }
         false
     }
-    
+
     pub fn get_user_role(&self, user_id: &str) -> Option<&String> {
         self.permissions.users.get(user_id).map(|u| &u.role)
     }
-    
+
     pub fn get_role_permissions(&self, role_name: &str) -> Option<&Vec<String>> {
-        self.permissions.roles.get(role_name).map(|r| &r.permissions)
+        self.permissions
+            .roles
+            .get(role_name)
+            .map(|r| &r.permissions)
     }
 }
 

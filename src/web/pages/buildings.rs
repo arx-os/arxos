@@ -1,7 +1,7 @@
-use leptos::*;
-use leptos::prelude::*;
-use leptos_router::components::A;
 use crate::core::Building;
+use leptos::prelude::*;
+use leptos::*;
+use leptos_router::components::A;
 
 #[component]
 pub fn Buildings() -> impl IntoView {
@@ -47,9 +47,9 @@ pub fn Buildings() -> impl IntoView {
                         </div>
                     }
                 }).collect_view()}
-                
+
                 {move || if buildings.get().is_empty() {
-                    view! { 
+                    view! {
                         <div class="empty-state">
                             <p>"No buildings found."</p>
                             <A href="/import" attr:class="btn btn-primary">"Import a Building"</A>

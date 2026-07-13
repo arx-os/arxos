@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-use ethers::types::{H256, U256};
-use ethers::utils::keccak256;
+use crate::blockchain::merkle::ArxMerkleTree;
 use crate::core::identity::ArxId; // Explicitly renamed ArxId
 use crate::hardware::DeviceState;
-use crate::blockchain::merkle::ArxMerkleTree;
 use anyhow::Result;
+use ethers::types::{H256, U256};
+use ethers::utils::keccak256;
 use rs_merkle::Hasher;
+use std::collections::HashMap;
 
 #[cfg(feature = "agent")]
 use tracing;
@@ -40,7 +40,7 @@ impl WorkContribution {
                 payload.push_str(&format!("{}:{}|", key, val));
             }
         }
-        
+
         keccak256(payload.as_bytes())
     }
 }
@@ -71,21 +71,26 @@ impl ContributionBuffer {
         }
 
         let tree = self.build_merkle_tree();
-        tree.get_root().unwrap_or_else(|| keccak256(self.window_name.as_bytes()))
+        tree.get_root()
+            .unwrap_or_else(|| keccak256(self.window_name.as_bytes()))
     }
 
     /// Builds a proper binary Merkle Tree from the batched contributions.
     pub fn build_merkle_tree(&self) -> ArxMerkleTree {
-        let leaves_data: Vec<Vec<u8>> = self.items.iter().map(|item| {
-            let row = format!(
-                "w:{}_e:{}_h:{}_t:{}|", 
-                item.worker_id.0, 
-                item.entity_id.0, 
-                hex::encode(item.change_hash),
-                item.timestamp
-            );
-            row.into_bytes()
-        }).collect();
+        let leaves_data: Vec<Vec<u8>> = self
+            .items
+            .iter()
+            .map(|item| {
+                let row = format!(
+                    "w:{}_e:{}_h:{}_t:{}|",
+                    item.worker_id.0,
+                    item.entity_id.0,
+                    hex::encode(item.change_hash),
+                    item.timestamp
+                );
+                row.into_bytes()
+            })
+            .collect();
 
         ArxMerkleTree::build_tree(&leaves_data)
     }
@@ -103,10 +108,10 @@ impl ContributionService {
     }
 
     pub async fn submit_contribution(
-        &self, 
-        worker_id: ArxId, 
-        entity_id: ArxId, 
-        state_registry: std::sync::Arc<crate::hardware::HardwareStateRegistry>
+        &self,
+        worker_id: ArxId,
+        entity_id: ArxId,
+        state_registry: std::sync::Arc<crate::hardware::HardwareStateRegistry>,
     ) -> Result<H256> {
         // 1. Extract the latest state
         let cache = state_registry.cache.read().unwrap();
@@ -121,9 +126,9 @@ impl ContributionService {
 
         #[cfg(feature = "agent")]
         tracing::info!(
-            "Submitting WorkContribution: worker={}, entity={}, hash={:?}", 
-            _contribution.worker_id.0, 
-            _contribution.entity_id.0, 
+            "Submitting WorkContribution: worker={}, entity={}, hash={:?}",
+            _contribution.worker_id.0,
+            _contribution.entity_id.0,
             hex::encode(_contribution.change_hash)
         );
 
@@ -134,15 +139,15 @@ impl ContributionService {
     /// Submits an entire batch of `WorkContribution` items via a single Merkle root.
     pub async fn submit_batch(&self, buffer: &ContributionBuffer) -> Result<H256> {
         let _batch_root = buffer.generate_batch_root();
-        
+
         #[cfg(feature = "agent")]
         tracing::info!(
-            "Submitting ContributionBuffer: window='{}', items={}, root={:?}", 
+            "Submitting ContributionBuffer: window='{}', items={}, root={:?}",
             buffer.window_name,
             buffer.items.len(),
             hex::encode(_batch_root)
         );
-        
+
         // Returning a dummy transaction hash indicating success (0xbb for batch)
         Ok(H256::repeat_byte(0xbb))
     }
@@ -177,9 +182,27 @@ mod tests {
         let mut readings_3 = HashMap::new();
         readings_3.insert("Sensor_C".to_string(), 30.0);
 
-        let cont_1 = WorkContribution::new(worker_1.clone(), entity_1.clone(), &DeviceState { readings: readings_1 });
-        let cont_2 = WorkContribution::new(worker_2.clone(), entity_2.clone(), &DeviceState { readings: readings_2 });
-        let cont_3 = WorkContribution::new(worker_1.clone(), entity_2.clone(), &DeviceState { readings: readings_3 });
+        let cont_1 = WorkContribution::new(
+            worker_1.clone(),
+            entity_1.clone(),
+            &DeviceState {
+                readings: readings_1,
+            },
+        );
+        let cont_2 = WorkContribution::new(
+            worker_2.clone(),
+            entity_2.clone(),
+            &DeviceState {
+                readings: readings_2,
+            },
+        );
+        let cont_3 = WorkContribution::new(
+            worker_1.clone(),
+            entity_2.clone(),
+            &DeviceState {
+                readings: readings_3,
+            },
+        );
 
         let mut buffer_a = ContributionBuffer::new("Daily Batch - March 14");
         buffer_a.add_contribution(cont_1.clone());
@@ -205,7 +228,7 @@ mod tests {
 
         let root_c = buffer_c.generate_batch_root();
         assert_eq!(root_a, root_c);
-        
+
         let empty_buffer = ContributionBuffer::new("Daily Batch - March 14");
         let empty_root = empty_buffer.generate_batch_root();
         assert_ne!(root_a, empty_root);
@@ -225,9 +248,27 @@ mod tests {
         let mut readings_3 = HashMap::new();
         readings_3.insert("Sensor_C".to_string(), 30.0);
 
-        let cont_1 = WorkContribution::new(worker_1.clone(), entity_1.clone(), &DeviceState { readings: readings_1 });
-        let cont_2 = WorkContribution::new(worker_2.clone(), entity_2.clone(), &DeviceState { readings: readings_2 });
-        let cont_3 = WorkContribution::new(worker_1.clone(), entity_2.clone(), &DeviceState { readings: readings_3 });
+        let cont_1 = WorkContribution::new(
+            worker_1.clone(),
+            entity_1.clone(),
+            &DeviceState {
+                readings: readings_1,
+            },
+        );
+        let cont_2 = WorkContribution::new(
+            worker_2.clone(),
+            entity_2.clone(),
+            &DeviceState {
+                readings: readings_2,
+            },
+        );
+        let cont_3 = WorkContribution::new(
+            worker_1.clone(),
+            entity_2.clone(),
+            &DeviceState {
+                readings: readings_3,
+            },
+        );
 
         let mut buffer = ContributionBuffer::new("Daily Batch - March 14");
         buffer.add_contribution(cont_1.clone());
@@ -241,9 +282,9 @@ mod tests {
         // Compute the raw leaf string matching generate_batch_root formatting
         let get_row_bytes = |item: &WorkContribution| {
             let row = format!(
-                "w:{}_e:{}_h:{}_t:{}|", 
-                item.worker_id.0, 
-                item.entity_id.0, 
+                "w:{}_e:{}_h:{}_t:{}|",
+                item.worker_id.0,
+                item.entity_id.0,
                 hex::encode(item.change_hash),
                 item.timestamp
             );

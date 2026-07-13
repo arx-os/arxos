@@ -6,9 +6,9 @@
 //! - View mode and rendering stats
 //! - Quick actions and controls
 
+use crate::core::{EquipmentHealthStatus, EquipmentStatus};
 use crate::render3d::state::{CameraState, InteractiveState, ViewMode};
 use crate::tui::{StatusColor, Theme};
-use crate::core::{EquipmentHealthStatus, EquipmentStatus};
 use crate::yaml::BuildingData;
 use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},

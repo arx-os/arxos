@@ -1,13 +1,13 @@
 //! Mesh extraction for the native IFC parser.
-//! 
+//!
 //! This module resolves geometric entities into ArxOS Mesh structures
 //! (vertices and indices), ensuring 1:1 fidelity with the source STEP data.
 
+use super::geometry::{GeometryResolver, Transform3D};
+use super::lexer::{Param, RawEntity};
+use super::registry::EntityRegistry;
 use crate::core::spatial::mesh::Mesh;
 use crate::core::spatial::types::Point3D;
-use super::lexer::{RawEntity, Param};
-use super::registry::EntityRegistry;
-use super::geometry::{GeometryResolver, Transform3D};
 use nalgebra::Vector3;
 
 pub struct MeshResolver<'a> {
@@ -93,7 +93,7 @@ impl<'a> MeshResolver<'a> {
         if solid.class != "IFCEXTRUDEDAREASOLID" {
             return None;
         }
-        let profile_id = match solid.params.get(0)? {
+        let profile_id = match solid.params.first()? {
             Param::Reference(id) => *id,
             _ => return None,
         };
@@ -123,7 +123,11 @@ impl<'a> MeshResolver<'a> {
         Some((width, depth, height))
     }
 
-    fn extract_mesh_from_representation(&self, rep_id: u64, transform: &Transform3D) -> Option<Mesh> {
+    fn extract_mesh_from_representation(
+        &self,
+        rep_id: u64,
+        transform: &Transform3D,
+    ) -> Option<Mesh> {
         let rep_entity = self.registry.get_raw(rep_id)?;
         if rep_entity.class != "IFCSHAPEREPRESENTATION" {
             return None;
@@ -148,7 +152,9 @@ impl<'a> MeshResolver<'a> {
         match item_entity.class.as_str() {
             "IFCTRIANGULATEDFACESET" => self.resolve_triangulated_face_set(item_entity, transform),
             "IFCEXTRUDEDAREASOLID" => self.resolve_extruded_area_solid(item_entity, transform),
-            "IFCSHELLBASEDSURFACEMODEL" => self.resolve_shell_based_surface_model(item_entity, transform),
+            "IFCSHELLBASEDSURFACEMODEL" => {
+                self.resolve_shell_based_surface_model(item_entity, transform)
+            }
             "IFCFACETEDBREP" => self.resolve_faceted_brep(item_entity, transform),
             "IFCCLOSEDSHELL" | "IFCOPENSHELL" => self.resolve_shell(item_id, transform),
             "IFCBOOLEANRESULT" => self.resolve_boolean_result(item_entity, transform),
@@ -161,8 +167,8 @@ impl<'a> MeshResolver<'a> {
         // Param 0: Operator (.UNION., .INTERSECTION., .DIFFERENCE.)
         // Param 1: FirstOperand
         // Param 2: SecondOperand
-        
-        let op = if let Some(Param::Enum(op_str)) = entity.params.get(0) {
+
+        let op = if let Some(Param::Enum(op_str)) = entity.params.first() {
             op_str.as_str()
         } else {
             ".UNION."
@@ -197,9 +203,13 @@ impl<'a> MeshResolver<'a> {
         first_mesh
     }
 
-    fn resolve_triangulated_face_set(&self, entity: &RawEntity, transform: &Transform3D) -> Option<Mesh> {
+    fn resolve_triangulated_face_set(
+        &self,
+        entity: &RawEntity,
+        transform: &Transform3D,
+    ) -> Option<Mesh> {
         // Param 0: Coordinates (Reference to IfcCartesianPointList3D)
-        let coords_id = match entity.params.get(0)? {
+        let coords_id = match entity.params.first()? {
             Param::Reference(id) => *id,
             _ => return None,
         };
@@ -228,17 +238,21 @@ impl<'a> MeshResolver<'a> {
         Some(Mesh { vertices, indices })
     }
 
-    fn resolve_extruded_area_solid(&self, entity: &RawEntity, transform: &Transform3D) -> Option<Mesh> {
+    fn resolve_extruded_area_solid(
+        &self,
+        entity: &RawEntity,
+        transform: &Transform3D,
+    ) -> Option<Mesh> {
         // Param 0: SweptArea (IfcProfileDef)
         // Param 1: Position (IfcAxis2Placement3D) - Local origin of extrusion
         // Param 2: ExtrudedDirection (IfcDirection)
         // Param 3: Depth (Real)
 
-        let profile_id = match entity.params.get(0)? {
+        let profile_id = match entity.params.first()? {
             Param::Reference(id) => *id,
             _ => return None,
         };
-        
+
         let local_pos_id = match entity.params.get(1)? {
             Param::Reference(id) => *id,
             _ => return None,
@@ -286,16 +300,24 @@ impl<'a> MeshResolver<'a> {
             let t2 = next + n;
 
             // Two triangles per side face
-            indices.push(b1); indices.push(b2); indices.push(t1);
-            indices.push(b2); indices.push(t2); indices.push(t1);
+            indices.push(b1);
+            indices.push(b2);
+            indices.push(t1);
+            indices.push(b2);
+            indices.push(t2);
+            indices.push(t1);
         }
 
         // 4. Bottom and Top caps (Simple fan for convexity)
         for i in 1..(n - 1) {
             // Bottom cap
-            indices.push(0); indices.push(i + 1); indices.push(i);
+            indices.push(0);
+            indices.push(i + 1);
+            indices.push(i);
             // Top cap
-            indices.push(n); indices.push(n + i); indices.push(n + i + 1);
+            indices.push(n);
+            indices.push(n + i);
+            indices.push(n + i + 1);
         }
 
         Some(Mesh { vertices, indices })
@@ -309,16 +331,16 @@ impl<'a> MeshResolver<'a> {
 
         // Param 0: CoordList
         let mut vertices = Vec::new();
-        if let Some(Param::List(coord_list)) = list_entity.params.get(0) {
+        if let Some(Param::List(coord_list)) = list_entity.params.first() {
             for point_param in coord_list {
                 if let Param::List(coords) = point_param {
-                    let x = self.extract_float(&coords, 0).unwrap_or(0.0);
-                    let y = self.extract_float(&coords, 1).unwrap_or(0.0);
-                    let z = self.extract_float(&coords, 2).unwrap_or(0.0);
-                    
+                    let x = self.extract_float(coords, 0).unwrap_or(0.0);
+                    let y = self.extract_float(coords, 1).unwrap_or(0.0);
+                    let z = self.extract_float(coords, 2).unwrap_or(0.0);
+
                     let v = Vector3::new(x, y, z);
                     let transformed = transform.transform_point(&v);
-                    
+
                     vertices.push(Point3D::new(transformed.x, transformed.y, transformed.z));
                 }
             }
@@ -327,12 +349,16 @@ impl<'a> MeshResolver<'a> {
         Some(vertices)
     }
 
-    fn resolve_shell_based_surface_model(&self, entity: &RawEntity, transform: &Transform3D) -> Option<Mesh> {
+    fn resolve_shell_based_surface_model(
+        &self,
+        entity: &RawEntity,
+        transform: &Transform3D,
+    ) -> Option<Mesh> {
         // Param 0: SbsmBoundary (List of shells)
         let mut all_vertices = Vec::new();
         let mut all_indices = Vec::new();
 
-        if let Some(Param::List(shells)) = entity.params.get(0) {
+        if let Some(Param::List(shells)) = entity.params.first() {
             for shell_param in shells {
                 if let Param::Reference(shell_id) = shell_param {
                     if let Some(mesh) = self.resolve_shell(*shell_id, transform) {
@@ -348,12 +374,15 @@ impl<'a> MeshResolver<'a> {
             return None;
         }
 
-        Some(Mesh { vertices: all_vertices, indices: all_indices })
+        Some(Mesh {
+            vertices: all_vertices,
+            indices: all_indices,
+        })
     }
 
     fn resolve_faceted_brep(&self, entity: &RawEntity, transform: &Transform3D) -> Option<Mesh> {
         // Param 0: Outer (IfcClosedShell)
-        if let Some(Param::Reference(shell_id)) = entity.params.get(0) {
+        if let Some(Param::Reference(shell_id)) = entity.params.first() {
             return self.resolve_shell(*shell_id, transform);
         }
         None
@@ -363,11 +392,11 @@ impl<'a> MeshResolver<'a> {
         let shell_entity = self.registry.get_raw(shell_id)?;
         // IfcClosedShell or IfcOpenShell
         // Param 0: CfsFaces (List of IfcFace)
-        
+
         let mut all_vertices = Vec::new();
         let mut all_indices = Vec::new();
 
-        if let Some(Param::List(faces)) = shell_entity.params.get(0) {
+        if let Some(Param::List(faces)) = shell_entity.params.first() {
             for face_param in faces {
                 if let Param::Reference(face_id) = face_param {
                     if let Some(mesh) = self.resolve_face(*face_id, transform) {
@@ -383,19 +412,22 @@ impl<'a> MeshResolver<'a> {
             return None;
         }
 
-        Some(Mesh { vertices: all_vertices, indices: all_indices })
+        Some(Mesh {
+            vertices: all_vertices,
+            indices: all_indices,
+        })
     }
 
     fn resolve_face(&self, face_id: u64, transform: &Transform3D) -> Option<Mesh> {
         let face_entity = self.registry.get_raw(face_id)?;
         // IfcFace
         // Param 0: Bounds (List of IfcFaceBound)
-        
+
         let mut all_bounds_vertices = Vec::new();
         let mut hole_indices = Vec::new();
         let mut current_offset = 0;
 
-        if let Some(Param::List(bounds)) = face_entity.params.get(0) {
+        if let Some(Param::List(bounds)) = face_entity.params.first() {
             for (i, bound_param) in bounds.iter().enumerate() {
                 if let Param::Reference(bound_id) = bound_param {
                     if let Some(vertices) = self.resolve_bound_points(*bound_id, transform) {
@@ -418,10 +450,10 @@ impl<'a> MeshResolver<'a> {
         // However, it works best in 2D. We need to project to the face plane.
         // For now, let's try 3D earcutr if available, otherwise project to 2D.
         // earcutr usually takes [[f64; 2]], so we need to project.
-        
+
         let n = all_bounds_vertices.len();
         let mut flat_coords = Vec::with_capacity(n * 2);
-        
+
         // Find best projection plane (X, Y, or Z) based on normal
         let normal = calculate_normal(&all_bounds_vertices[..all_bounds_vertices.len().min(3)]);
         let (idx1, idx2) = if normal.z.abs() > normal.x.abs() && normal.z.abs() > normal.y.abs() {
@@ -441,21 +473,28 @@ impl<'a> MeshResolver<'a> {
         let result = earcutr::earcut(&flat_coords, &hole_indices, 2).ok()?;
         let indices: Vec<u32> = result.into_iter().map(|i| i as u32).collect();
 
-        Some(Mesh { vertices: all_bounds_vertices, indices })
+        Some(Mesh {
+            vertices: all_bounds_vertices,
+            indices,
+        })
     }
 
     fn resolve_bound_points(&self, bound_id: u64, transform: &Transform3D) -> Option<Vec<Point3D>> {
         let bound_entity = self.registry.get_raw(bound_id)?;
-        if let Some(Param::Reference(loop_id)) = bound_entity.params.get(0) {
+        if let Some(Param::Reference(loop_id)) = bound_entity.params.first() {
             let loop_entity = self.registry.get_raw(*loop_id)?;
             if loop_entity.class == "IFCPOLYLOOP" {
                 let mut vertices = Vec::new();
-                if let Some(Param::List(points)) = loop_entity.params.get(0) {
+                if let Some(Param::List(points)) = loop_entity.params.first() {
                     for p_param in points {
                         if let Param::Reference(p_id) = p_param {
                             let v = self.geometry.resolve_cartesian_point(*p_id);
                             let transformed = transform.transform_point(&v);
-                            vertices.push(Point3D::new(transformed.x, transformed.y, transformed.z));
+                            vertices.push(Point3D::new(
+                                transformed.x,
+                                transformed.y,
+                                transformed.z,
+                            ));
                         }
                     }
                 }
@@ -478,8 +517,16 @@ pub fn calculate_normal(points: &[Point3D]) -> Vector3<f64> {
     if points.len() < 3 {
         return Vector3::new(0.0, 0.0, 1.0);
     }
-    let v1 = Vector3::new(points[1].x - points[0].x, points[1].y - points[0].y, points[1].z - points[0].z);
-    let v2 = Vector3::new(points[2].x - points[0].x, points[2].y - points[0].y, points[2].z - points[0].z);
+    let v1 = Vector3::new(
+        points[1].x - points[0].x,
+        points[1].y - points[0].y,
+        points[1].z - points[0].z,
+    );
+    let v2 = Vector3::new(
+        points[2].x - points[0].x,
+        points[2].y - points[0].y,
+        points[2].z - points[0].z,
+    );
     v1.cross(&v2).normalize()
 }
 
@@ -492,11 +539,10 @@ mod tests {
         let p1 = Point3D::new(0.0, 0.0, 0.0);
         let p2 = Point3D::new(1.0, 0.0, 0.0);
         let p3 = Point3D::new(0.0, 1.0, 0.0);
-        
+
         let normal = calculate_normal(&[p1, p2, p3]);
         assert!((normal.z - 1.0).abs() < 1e-6);
         assert!(normal.x.abs() < 1e-6);
         assert!(normal.y.abs() < 1e-6);
     }
 }
-

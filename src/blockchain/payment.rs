@@ -27,25 +27,22 @@ pub struct PaymentClient {
 #[cfg(feature = "blockchain")]
 impl PaymentClient {
     /// Create a new payment client
-    pub async fn new(
-        config: NetworkConfig,
-        private_key: &str,
-    ) -> Result<Self> {
+    pub async fn new(config: NetworkConfig, private_key: &str) -> Result<Self> {
         // Create provider
         let provider = Provider::<Http>::try_from(config.get_rpc_url())?;
-        
+
         // Create wallet
         let wallet: LocalWallet = private_key
             .parse::<LocalWallet>()?
             .with_chain_id(config.chain_id as u64);
-        
+
         // Create signer middleware
         let client = Arc::new(SignerMiddleware::new(provider, wallet));
-        
+
         // Create contract instances
         let token_address: Address = config.addresses.token.parse()?;
         let router_address: Address = config.addresses.payment_router.parse()?;
-        
+
         let token_contract = TokenContract::new(token_address, client.clone());
         let router_contract = PaymentRouterContract::new(router_address, client.clone());
 
@@ -76,7 +73,8 @@ impl PaymentClient {
         let amount_wei = U256::from((amount_arxo * 1e18) as u128);
 
         // Check minimum payment
-        let minimum = self.router_contract
+        let minimum = self
+            .router_contract
             .get_minimum_payment(building_id.to_string())
             .call()
             .await
@@ -92,7 +90,8 @@ impl PaymentClient {
         }
 
         // Check if nonce already used
-        let nonce_used = self.router_contract
+        let nonce_used = self
+            .router_contract
             .is_nonce_used(nonce)
             .call()
             .await
@@ -107,9 +106,15 @@ impl PaymentClient {
 
         // Call contract - this returns a PendingTransaction
         // Assume the 4th argument is a lock duration or expiry, or signature
-        let call = self.router_contract.pay_for_access(building_id.to_string(), amount_wei, nonce, U256::zero());
-        
-        let pending_tx = call.send()
+        let call = self.router_contract.pay_for_access(
+            building_id.to_string(),
+            amount_wei,
+            nonce,
+            U256::zero(),
+        );
+
+        let pending_tx = call
+            .send()
             .await
             .map_err(|e| BlockchainError::TransactionFailed(e.to_string()))?;
 
@@ -132,7 +137,8 @@ impl PaymentClient {
         let user_address = self.client.address();
 
         // Check current allowance
-        let allowance = self.token_contract
+        let allowance = self
+            .token_contract
             .allowance(user_address, router_address)
             .call()
             .await
@@ -141,11 +147,12 @@ impl PaymentClient {
         if allowance < amount {
             // Approve maximum amount for convenience
             let max_approval = U256::MAX;
-            
+
             println!("💳 Approving $AXD spending...");
-            
+
             let call = self.token_contract.approve(router_address, max_approval);
-            let pending_tx = call.send()
+            let pending_tx = call
+                .send()
                 .await
                 .map_err(|e| BlockchainError::TransactionFailed(e.to_string()))?;
 
@@ -163,7 +170,8 @@ impl PaymentClient {
     /// Get user's $AXD balance
     pub async fn get_balance(&self) -> Result<f64> {
         let user_address = self.client.address();
-        let balance = self.token_contract
+        let balance = self
+            .token_contract
             .balance_of(user_address)
             .call()
             .await
@@ -174,7 +182,8 @@ impl PaymentClient {
 
     /// Get minimum payment for a building
     pub async fn get_minimum_payment(&self, building_id: &str) -> Result<f64> {
-        let minimum = self.router_contract
+        let minimum = self
+            .router_contract
             .get_minimum_payment(building_id.to_string())
             .call()
             .await
@@ -198,9 +207,12 @@ impl PaymentClient {
     pub fn parse_nonce(nonce_hex: &str) -> Result<[u8; 32]> {
         let nonce_hex = nonce_hex.trim_start_matches("0x");
         let bytes = hex::decode(nonce_hex)?;
-        
+
         if bytes.len() != 32 {
-            anyhow::bail!("Invalid nonce length: expected 32 bytes, got {}", bytes.len());
+            anyhow::bail!(
+                "Invalid nonce length: expected 32 bytes, got {}",
+                bytes.len()
+            );
         }
 
         let mut nonce = [0u8; 32];

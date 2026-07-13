@@ -1,11 +1,11 @@
+use futures::channel::oneshot;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{ErrorEvent, MessageEvent, WebSocket};
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use futures::channel::oneshot;
 
 // JSON-RPC Request structure
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -74,10 +74,10 @@ pub async fn connect_to_agent_async(token: &str) -> Result<(), String> {
 
     let url = format!("ws://127.0.0.1:8787/ws?token={}", token);
     let ws = WebSocket::new(&url).map_err(|e| format!("Failed to create WebSocket: {:?}", e))?;
-    
+
     let (tx, rx) = oneshot::channel::<Result<(), String>>();
     let mut tx_open = Some(tx);
-    
+
     let onopen_callback = Closure::wrap(Box::new(move |_| {
         if let Some(tx) = tx_open.take() {
             let _ = tx.send(Ok(()));
@@ -88,7 +88,7 @@ pub async fn connect_to_agent_async(token: &str) -> Result<(), String> {
 
     let (err_tx, err_rx) = oneshot::channel::<Result<(), String>>();
     let mut tx_err = Some(err_tx);
-    
+
     let onerror_callback = Closure::wrap(Box::new(move |e: ErrorEvent| {
         if let Some(tx) = tx_err.take() {
             let _ = tx.send(Err(format!("WebSocket connection error: {:?}", e)));
@@ -106,7 +106,7 @@ pub async fn connect_to_agent_async(token: &str) -> Result<(), String> {
                         Value::Number(n) => n.to_string(),
                         _ => return,
                     };
-                    
+
                     PENDING_RESPONSES.with(|pending| {
                         if let Some(tx) = pending.borrow_mut().remove(&id_str) {
                             if let Some(error) = response.error {
@@ -159,9 +159,9 @@ pub async fn connect_to_agent_async(token: &str) -> Result<(), String> {
 
 /// Send a JSON-RPC request to the local agent daemon
 pub async fn send_rpc(method: &str, params: Value) -> Result<Value, String> {
-    let ws = WS_CONNECTION.with(|conn| {
-        conn.borrow().clone()
-    }).ok_or_else(|| "WebSocket is not connected. Connect to the agent first.".to_string())?;
+    let ws = WS_CONNECTION
+        .with(|conn| conn.borrow().clone())
+        .ok_or_else(|| "WebSocket is not connected. Connect to the agent first.".to_string())?;
 
     if ws.ready_state() != WebSocket::OPEN {
         return Err("WebSocket connection is not open. Try reconnecting.".to_string());
@@ -188,13 +188,12 @@ pub async fn send_rpc(method: &str, params: Value) -> Result<Value, String> {
     let serialized = serde_json::to_string(&request)
         .map_err(|e| format!("Failed to serialize request: {}", e))?;
 
-    ws.send_with_str(&serialized)
-        .map_err(|e| {
-            PENDING_RESPONSES.with(|pending| {
-                pending.borrow_mut().remove(&request_id);
-            });
-            format!("Failed to send message: {:?}", e)
-        })?;
+    ws.send_with_str(&serialized).map_err(|e| {
+        PENDING_RESPONSES.with(|pending| {
+            pending.borrow_mut().remove(&request_id);
+        });
+        format!("Failed to send message: {:?}", e)
+    })?;
 
     rx.await
         .map_err(|_| "Communication channel closed".to_string())?

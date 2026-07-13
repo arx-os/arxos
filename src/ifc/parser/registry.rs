@@ -1,13 +1,14 @@
 //! Entity Registry for IFC reference resolution.
-//! 
-//! This module manages the graph of STEP entities and their mapping 
+//!
+//! This module manages the graph of STEP entities and their mapping
 //! to the ArxOS domain (ArxAddress).
 
-use std::collections::HashMap;
+use super::lexer::{Param, RawEntity};
 use crate::core::domain::ArxAddress;
-use super::lexer::{RawEntity, Param};
+use std::collections::HashMap;
 
 /// A graph-aware cache for STEP entities and their ArxOS counterparts.
+#[derive(Default)]
 pub struct EntityRegistry {
     /// Mapping from STEP ID (#123) to raw entity data.
     entities: HashMap<u64, RawEntity>,
@@ -20,11 +21,7 @@ pub struct EntityRegistry {
 impl EntityRegistry {
     /// Create a new empty registry.
     pub fn new() -> Self {
-        Self {
-            entities: HashMap::new(),
-            class_map: HashMap::new(),
-            address_map: HashMap::new(),
-        }
+        Self::default()
     }
 
     /// Register a raw entity into the cache.
@@ -42,7 +39,10 @@ impl EntityRegistry {
 
     /// Get all entity IDs for a specific class.
     pub fn get_by_class(&self, class: &str) -> &[u64] {
-        self.class_map.get(class).map(|v| v.as_slice()).unwrap_or(&[])
+        self.class_map
+            .get(class)
+            .map(|v| v.as_slice())
+            .unwrap_or(&[])
     }
 
     /// Map a STEP ID to an ArxAddress.
@@ -82,7 +82,9 @@ impl EntityRegistry {
                 if matches!(rel.params.get(4), Some(Param::Reference(id)) if *id == container_id) {
                     if let Some(Param::List(related)) = rel.params.get(5) {
                         for p in related {
-                            if let Param::Reference(id) = p { kids.push(*id); }
+                            if let Param::Reference(id) = p {
+                                kids.push(*id);
+                            }
                         }
                     }
                 }
@@ -93,7 +95,9 @@ impl EntityRegistry {
                 if matches!(rel.params.get(5), Some(Param::Reference(id)) if *id == container_id) {
                     if let Some(Param::List(related)) = rel.params.get(4) {
                         for p in related {
-                            if let Param::Reference(id) = p { kids.push(*id); }
+                            if let Param::Reference(id) = p {
+                                kids.push(*id);
+                            }
                         }
                     }
                 }
@@ -117,7 +121,8 @@ impl EntityRegistry {
         }
 
         let spatial_classes = ["IFCSITE", "IFCBUILDING", "IFCBUILDINGSTOREY", "IFCSPACE"];
-        let spatial_entities = spatial_classes.iter()
+        let spatial_entities = spatial_classes
+            .iter()
             .map(|&c| self.class_map.get(c).map(|v| v.len()).unwrap_or(0))
             .sum();
 
@@ -136,9 +141,17 @@ mod tests {
     #[test]
     fn test_registry_basic() {
         let mut registry = EntityRegistry::new();
-        registry.register(RawEntity { id: 1, class: "IFCSPACE".to_string(), params: vec![] });
-        registry.register(RawEntity { id: 2, class: "IFCSPACE".to_string(), params: vec![] });
-        
+        registry.register(RawEntity {
+            id: 1,
+            class: "IFCSPACE".to_string(),
+            params: vec![],
+        });
+        registry.register(RawEntity {
+            id: 2,
+            class: "IFCSPACE".to_string(),
+            params: vec![],
+        });
+
         assert_eq!(registry.entity_count(), 2);
         assert_eq!(registry.get_by_class("IFCSPACE").len(), 2);
         assert!(registry.get_raw(1).is_some());
@@ -147,9 +160,17 @@ mod tests {
     #[test]
     fn test_registry_stats() {
         let mut registry = EntityRegistry::new();
-        registry.register(RawEntity { id: 1, class: "IFCBUILDING".to_string(), params: vec![] });
-        registry.register(RawEntity { id: 2, class: "IFCWALL".to_string(), params: vec![] });
-        
+        registry.register(RawEntity {
+            id: 1,
+            class: "IFCBUILDING".to_string(),
+            params: vec![],
+        });
+        registry.register(RawEntity {
+            id: 2,
+            class: "IFCWALL".to_string(),
+            params: vec![],
+        });
+
         let stats = registry.get_stats();
         assert_eq!(stats.total_entities, 2);
         assert_eq!(stats.spatial_entities, 1);

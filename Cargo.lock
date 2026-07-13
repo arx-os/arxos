@@ -365,7 +365,6 @@ dependencies = [
  "git2",
  "glob",
  "hex",
- "ifc_rs",
  "indicatif",
  "las",
  "leptos",
@@ -2186,7 +2185,7 @@ dependencies = [
  "pathdiff",
  "serde_core",
  "toml 0.9.8",
- "winnow 0.7.13",
+ "winnow",
 ]
 
 [[package]]
@@ -4663,36 +4662,6 @@ checksum = "3acae9609540aa318d1bc588455225fb2085b9ed0c4f6bd0d9d5bcd86f1a0344"
 dependencies = [
  "icu_normalizer",
  "icu_properties",
-]
-
-[[package]]
-name = "ifc_rs"
-version = "0.1.0-alpha.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "35d95c2bc2b3efc16e33439270a7afa73605fd414f86f20cbdc0e524505560fa"
-dependencies = [
- "anyhow",
- "bevy_math",
- "chrono",
- "downcast-rs",
- "ifc_rs_verify_derive",
- "itertools 0.13.0",
- "serde",
- "serde_json",
- "strum 0.26.3",
- "uuid 1.18.1",
- "winnow 0.6.26",
-]
-
-[[package]]
-name = "ifc_rs_verify_derive"
-version = "0.1.0-alpha.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31b9e1dce0c4dcc3e1964d6bedf3aafcf7110c74a51a359ed7f3d289bca62e91"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.107",
 ]
 
 [[package]]
@@ -9156,7 +9125,7 @@ dependencies = [
  "serde_spanned 1.0.3",
  "toml_datetime 0.7.3",
  "toml_parser",
- "winnow 0.7.13",
+ "winnow",
 ]
 
 [[package]]
@@ -9188,7 +9157,7 @@ dependencies = [
  "serde_spanned 0.6.9",
  "toml_datetime 0.6.11",
  "toml_write",
- "winnow 0.7.13",
+ "winnow",
 ]
 
 [[package]]
@@ -9200,7 +9169,7 @@ dependencies = [
  "indexmap",
  "toml_datetime 0.7.3",
  "toml_parser",
- "winnow 0.7.13",
+ "winnow",
 ]
 
 [[package]]
@@ -9209,7 +9178,7 @@ version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c0cbe268d35bdb4bb5a56a2de88d0ad0eb70af5384a99d648cd4b3d04039800e"
 dependencies = [
- "winnow 0.7.13",
+ "winnow",
 ]
 
 [[package]]
@@ -10473,15 +10442,6 @@ dependencies = [
  "x11-dl",
  "x11rb",
  "xkbcommon-dl",
-]
-
-[[package]]
-name = "winnow"
-version = "0.6.26"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e90edd2ac1aa278a5c4599b1d89cf03074b610800f866d4026dc199d7929a28"
-dependencies = [
- "memchr",
 ]
 
 [[package]]

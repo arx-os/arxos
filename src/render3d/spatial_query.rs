@@ -39,7 +39,11 @@ impl<'a> SpatialQueryHelper<'a> {
     ///
     /// # Returns
     /// Vector of entities found within the radius
-    pub fn query_entities_within_radius(&self, center: &Point3D, radius: f64) -> Vec<SpatialQueryResult> {
+    pub fn query_entities_within_radius(
+        &self,
+        center: &Point3D,
+        radius: f64,
+    ) -> Vec<SpatialQueryResult> {
         self.spatial_index.find_within_radius(*center, radius)
     }
 
@@ -287,8 +291,16 @@ mod tests {
     #[test]
     fn test_query_spatial_entities_no_index() {
         let bbox = BoundingBox3D {
-            min: Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            max: Point3D { x: 10.0, y: 10.0, z: 10.0 },
+            min: Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            max: Point3D {
+                x: 10.0,
+                y: 10.0,
+                z: 10.0,
+            },
         };
 
         let results = query_spatial_entities(None, &bbox);
@@ -297,7 +309,11 @@ mod tests {
 
     #[test]
     fn test_query_entities_within_radius_no_index() {
-        let center = Point3D { x: 5.0, y: 5.0, z: 5.0 };
+        let center = Point3D {
+            x: 5.0,
+            y: 5.0,
+            z: 5.0,
+        };
         let radius = 10.0;
 
         let results = query_entities_within_radius(None, &center, radius);
@@ -306,7 +322,11 @@ mod tests {
 
     #[test]
     fn test_find_nearest_entity_no_index() {
-        let point = Point3D { x: 5.0, y: 5.0, z: 5.0 };
+        let point = Point3D {
+            x: 5.0,
+            y: 5.0,
+            z: 5.0,
+        };
 
         let result = find_nearest_entity(None, &point);
         assert!(result.is_none());

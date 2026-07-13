@@ -94,8 +94,8 @@ impl BuildingSyncEnvelope {
         if let Ok(env) = serde_json::from_str::<BuildingSyncEnvelope>(json) {
             return Ok(env);
         }
-        let building: Building = serde_json::from_str(json)
-            .map_err(|e| format!("invalid building/sync JSON: {}", e))?;
+        let building: Building =
+            serde_json::from_str(json).map_err(|e| format!("invalid building/sync JSON: {}", e))?;
         Ok(Self::new(
             building,
             SyncSource::Unknown,
@@ -118,11 +118,8 @@ pub fn building_to_envelope(building: Building, source: SyncSource) -> BuildingS
 pub fn merge_sync_json(existing_json: &str, incoming_json: &str) -> Result<String, String> {
     let existing = BuildingSyncEnvelope::from_json(existing_json)?;
     let incoming = BuildingSyncEnvelope::from_json(incoming_json)?;
-    let merge = merge_building_with_policy(
-        &existing.building,
-        incoming.building,
-        &MergePolicy::ifc(),
-    );
+    let merge =
+        merge_building_with_policy(&existing.building, incoming.building, &MergePolicy::ifc());
     let mut report = vec![
         "sync merge (IFC policy)".to_string(),
         format!(
@@ -185,15 +182,15 @@ mod tests {
         )
         .unwrap();
         let env2 = BuildingSyncEnvelope::from_json(&updated).unwrap();
-        let lab = env2
-            .building
-            .floors[0]
-            .wings[0]
+        let lab = env2.building.floors[0].wings[0]
             .rooms
             .iter()
             .find(|r| r.name == "Lab")
             .expect("Lab");
-        assert_eq!(lab.properties.get("finish").map(String::as_str), Some("epoxy"));
+        assert_eq!(
+            lab.properties.get("finish").map(String::as_str),
+            Some("epoxy")
+        );
     }
 
     #[test]

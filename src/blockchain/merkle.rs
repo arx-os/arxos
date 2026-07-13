@@ -4,8 +4,8 @@
 //! nodes are hashed using Keccak256, and parent nodes are sorted before hashing
 //! to ensure compatibility with OpenZeppelin's `MerkleProof.sol` contract helper.
 
-use rs_merkle::{MerkleTree, MerkleProof, Hasher};
 use ethers::utils::keccak256;
+use rs_merkle::{Hasher, MerkleProof, MerkleTree};
 
 /// Custom Hasher wrapper implementing Keccak256 for `rs_merkle`.
 /// Automatically sorts pair hashes before concatenating and hashing

@@ -1,9 +1,9 @@
+use arxos::spatial::lidar::downsampler::VoxelGridFilter;
+use arxos::spatial::lidar::parser;
+use arxos::spatial::lidar::LidarPipeline;
+use arxos::spatial::Point3D;
 use std::io::Write;
 use tempfile::NamedTempFile;
-use arxos::spatial::Point3D;
-use arxos::spatial::lidar::parser;
-use arxos::spatial::lidar::downsampler::VoxelGridFilter;
-use arxos::spatial::lidar::LidarPipeline;
 
 #[test]
 fn test_xyz_parser_streaming() -> Result<(), Box<dyn std::error::Error>> {
@@ -65,7 +65,7 @@ fn test_ply_parser_streaming() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn test_voxel_grid_filter_downsample() -> Result<(), Box<dyn std::error::Error>> {
     let filter = VoxelGridFilter::new(1.0, false);
-    
+
     // Create 4 points inside the same voxel [0.0, 1.0)
     let points = vec![
         Ok(Point3D::new(0.1, 0.1, 0.1)),
@@ -97,7 +97,7 @@ fn test_voxel_filter_capacity_flush() -> Result<(), Box<dyn std::error::Error>> 
     // To test flush logic with large defaults:
     // Let's verify voxel filter works correctly with light mode limits
     let filter = VoxelGridFilter::new(0.20, true); // light mode on
-    
+
     let mut points = Vec::new();
     for i in 0..150 {
         // Generate points in unique voxels
@@ -125,7 +125,7 @@ fn test_lidar_pipeline_end_to_end() -> Result<(), Box<dyn std::error::Error>> {
 
     assert_eq!(building.floors.len(), 1);
     assert_eq!(building.floors[0].name, "Floor 1");
-    
+
     let metadata = building.metadata.as_ref().unwrap();
     assert_eq!(metadata.total_entities, 3);
     assert_eq!(metadata.properties.get("bbox_min_x").unwrap(), "1");
@@ -143,7 +143,7 @@ fn test_lidar_pipeline_phase2_detection() -> Result<(), Box<dyn std::error::Erro
     // Generate two stories: Floor 1 at Z = 0.0, Floor 2 at Z = 4.0
     // Story 1: Z in [0.0, 3.0]
     // Story 2: Z in [4.0, 7.0]
-    
+
     // We add dense floor slabs to trigger peaks in histogram
     for x in 0..10 {
         for y in 0..10 {
@@ -196,12 +196,20 @@ fn test_lidar_pipeline_phase2_detection() -> Result<(), Box<dyn std::error::Erro
 
     // Floor 1 Rooms (should detect 2 rooms because of dividing wall at X=4)
     let f1_rooms = room_detector.detect_rooms(&points, 1.0, 5.0);
-    println!("Floor 1 Rooms count: {}, details: {:#?}", f1_rooms.len(), f1_rooms);
+    println!(
+        "Floor 1 Rooms count: {}, details: {:#?}",
+        f1_rooms.len(),
+        f1_rooms
+    );
     assert_eq!(f1_rooms.len(), 2);
 
     // Floor 2 Rooms (should detect 1 room)
     let f2_rooms = room_detector.detect_rooms(&points, 5.0, 8.0);
-    println!("Floor 2 Rooms count: {}, details: {:#?}", f2_rooms.len(), f2_rooms);
+    println!(
+        "Floor 2 Rooms count: {}, details: {:#?}",
+        f2_rooms.len(),
+        f2_rooms
+    );
     assert_eq!(f2_rooms.len(), 1);
 
     Ok(())
@@ -210,7 +218,7 @@ fn test_lidar_pipeline_phase2_detection() -> Result<(), Box<dyn std::error::Erro
 #[test]
 fn test_lidar_pipeline_phase3_detection() -> Result<(), Box<dyn std::error::Error>> {
     use arxos::core::EquipmentType;
-    use arxos::spatial::lidar::detector::{RoomDetector, EquipmentDetector};
+    use arxos::spatial::lidar::detector::{EquipmentDetector, RoomDetector};
 
     let mut points = Vec::new();
 
@@ -269,8 +277,12 @@ fn test_lidar_pipeline_phase3_detection() -> Result<(), Box<dyn std::error::Erro
     println!("Detected Equipment inside Room 1: {:#?}", equipment);
     assert_eq!(equipment.len(), 2);
 
-    let hvac_item = equipment.iter().find(|e| e.equipment_type == EquipmentType::HVAC);
-    let elec_item = equipment.iter().find(|e| e.equipment_type == EquipmentType::Electrical);
+    let hvac_item = equipment
+        .iter()
+        .find(|e| e.equipment_type == EquipmentType::HVAC);
+    let elec_item = equipment
+        .iter()
+        .find(|e| e.equipment_type == EquipmentType::Electrical);
 
     assert!(hvac_item.is_some());
     assert!(elec_item.is_some());
@@ -280,29 +292,60 @@ fn test_lidar_pipeline_phase3_detection() -> Result<(), Box<dyn std::error::Erro
 
 #[test]
 fn test_lidar_pipeline_incremental_merge() -> Result<(), Box<dyn std::error::Error>> {
-    use arxos::core::{Building, Floor, Wing, Room, RoomType, Equipment, EquipmentType, Position, Dimensions, BoundingBox, SpatialProperties};
-    use arxos::spatial::lidar::merger::ModelMerger;
+    use arxos::core::{
+        BoundingBox, Building, Dimensions, Equipment, EquipmentType, Floor, Position, Room,
+        RoomType, SpatialProperties, Wing,
+    };
+    use arxos::ifc::mapping::{merge_building_with_policy, MergePolicy};
 
     // 1. Create existing building model
     let mut existing = Building::new("Test Building".to_string(), "test-building".to_string());
     let mut floor = Floor::new("Floor 1".to_string(), 0);
     let mut wing = Wing::new("Main".to_string());
-    
+
     let mut room1 = Room::new("Room 1".to_string(), RoomType::Office);
     room1.spatial_properties = SpatialProperties {
-        position: Position { x: 2.0, y: 2.0, z: 0.0, coordinate_system: "building_local".to_string() },
-        dimensions: Dimensions { width: 4.0, height: 3.0, depth: 4.0 },
+        position: Position {
+            x: 2.0,
+            y: 2.0,
+            z: 0.0,
+            coordinate_system: "building_local".to_string(),
+        },
+        dimensions: Dimensions {
+            width: 4.0,
+            height: 3.0,
+            depth: 4.0,
+        },
         bounding_box: BoundingBox {
-            min: Position { x: 0.0, y: 0.0, z: 0.0, coordinate_system: "building_local".to_string() },
-            max: Position { x: 4.0, y: 4.0, z: 3.0, coordinate_system: "building_local".to_string() },
+            min: Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                coordinate_system: "building_local".to_string(),
+            },
+            max: Position {
+                x: 4.0,
+                y: 4.0,
+                z: 3.0,
+                coordinate_system: "building_local".to_string(),
+            },
         },
         mesh: None,
         coordinate_system: "building_local".to_string(),
     };
     let room1_id = room1.id.clone();
 
-    let mut eq1 = Equipment::new("HVAC Item 1".to_string(), "/building/floor-1/room-1/hvac-item-1".to_string(), EquipmentType::HVAC);
-    eq1.position = Position { x: 2.2, y: 2.2, z: 0.5, coordinate_system: "building_local".to_string() };
+    let mut eq1 = Equipment::new(
+        "HVAC Item 1".to_string(),
+        "/building/floor-1/room-1/hvac-item-1".to_string(),
+        EquipmentType::HVAC,
+    );
+    eq1.position = Position {
+        x: 2.2,
+        y: 2.2,
+        z: 0.5,
+        coordinate_system: "building_local".to_string(),
+    };
     let eq1_id = eq1.id.clone();
 
     room1.add_equipment(eq1);
@@ -318,11 +361,30 @@ fn test_lidar_pipeline_incremental_merge() -> Result<(), Box<dyn std::error::Err
     // Matches Room 1 (centroid [2.1, 2.1, 0.0] is within 2.0m of [2.0, 2.0, 0.0])
     let mut room1_in = Room::new("Room 1".to_string(), RoomType::Office);
     room1_in.spatial_properties = SpatialProperties {
-        position: Position { x: 2.1, y: 2.1, z: 0.0, coordinate_system: "building_local".to_string() },
-        dimensions: Dimensions { width: 4.0, height: 3.0, depth: 4.0 },
+        position: Position {
+            x: 2.1,
+            y: 2.1,
+            z: 0.0,
+            coordinate_system: "building_local".to_string(),
+        },
+        dimensions: Dimensions {
+            width: 4.0,
+            height: 3.0,
+            depth: 4.0,
+        },
         bounding_box: BoundingBox {
-            min: Position { x: 0.1, y: 0.1, z: 0.0, coordinate_system: "building_local".to_string() },
-            max: Position { x: 4.1, y: 4.1, z: 3.0, coordinate_system: "building_local".to_string() },
+            min: Position {
+                x: 0.1,
+                y: 0.1,
+                z: 0.0,
+                coordinate_system: "building_local".to_string(),
+            },
+            max: Position {
+                x: 4.1,
+                y: 4.1,
+                z: 3.0,
+                coordinate_system: "building_local".to_string(),
+            },
         },
         mesh: None,
         coordinate_system: "building_local".to_string(),
@@ -335,8 +397,17 @@ fn test_lidar_pipeline_incremental_merge() -> Result<(), Box<dyn std::error::Err
     });
 
     // Matches eq1 (HVAC, position [2.25, 2.25, 0.5] is within 1.5m of [2.2, 2.2, 0.5])
-    let mut eq1_in = Equipment::new("HVAC Item 1".to_string(), "/building/floor-1/room-1/hvac-item-1".to_string(), EquipmentType::HVAC);
-    eq1_in.position = Position { x: 2.25, y: 2.25, z: 0.5, coordinate_system: "building_local".to_string() };
+    let mut eq1_in = Equipment::new(
+        "HVAC Item 1".to_string(),
+        "/building/floor-1/room-1/hvac-item-1".to_string(),
+        EquipmentType::HVAC,
+    );
+    eq1_in.position = Position {
+        x: 2.25,
+        y: 2.25,
+        z: 0.5,
+        coordinate_system: "building_local".to_string(),
+    };
     eq1_in.lidar_enrichment = Some(arxos::core::LidarEnrichment {
         point_count: 111,
         confidence_score: 0.8,
@@ -345,8 +416,17 @@ fn test_lidar_pipeline_incremental_merge() -> Result<(), Box<dyn std::error::Err
     });
 
     // New Equipment (Electrical, position [3.0, 3.0, 1.0])
-    let mut eq2_in = Equipment::new("Electrical Item 2".to_string(), "/building/floor-1/room-1/electrical-item-2".to_string(), EquipmentType::Electrical);
-    eq2_in.position = Position { x: 3.0, y: 3.0, z: 1.0, coordinate_system: "building_local".to_string() };
+    let mut eq2_in = Equipment::new(
+        "Electrical Item 2".to_string(),
+        "/building/floor-1/room-1/electrical-item-2".to_string(),
+        EquipmentType::Electrical,
+    );
+    eq2_in.position = Position {
+        x: 3.0,
+        y: 3.0,
+        z: 1.0,
+        coordinate_system: "building_local".to_string(),
+    };
 
     room1_in.add_equipment(eq1_in);
     room1_in.add_equipment(eq2_in);
@@ -355,11 +435,30 @@ fn test_lidar_pipeline_incremental_merge() -> Result<(), Box<dyn std::error::Err
     // New Room (Room 2)
     let mut room2_in = Room::new("Room 2".to_string(), RoomType::Office);
     room2_in.spatial_properties = SpatialProperties {
-        position: Position { x: 6.0, y: 6.0, z: 0.0, coordinate_system: "building_local".to_string() },
-        dimensions: Dimensions { width: 2.0, height: 3.0, depth: 2.0 },
+        position: Position {
+            x: 6.0,
+            y: 6.0,
+            z: 0.0,
+            coordinate_system: "building_local".to_string(),
+        },
+        dimensions: Dimensions {
+            width: 2.0,
+            height: 3.0,
+            depth: 2.0,
+        },
         bounding_box: BoundingBox {
-            min: Position { x: 5.0, y: 5.0, z: 0.0, coordinate_system: "building_local".to_string() },
-            max: Position { x: 7.0, y: 7.0, z: 3.0, coordinate_system: "building_local".to_string() },
+            min: Position {
+                x: 5.0,
+                y: 5.0,
+                z: 0.0,
+                coordinate_system: "building_local".to_string(),
+            },
+            max: Position {
+                x: 7.0,
+                y: 7.0,
+                z: 3.0,
+                coordinate_system: "building_local".to_string(),
+            },
         },
         mesh: None,
         coordinate_system: "building_local".to_string(),
@@ -369,8 +468,8 @@ fn test_lidar_pipeline_incremental_merge() -> Result<(), Box<dyn std::error::Err
     f_in.add_wing(w_in);
     incoming.add_floor(f_in);
 
-    // 3. Merge models
-    let merged = ModelMerger::merge(existing, incoming);
+    // 3. Merge models (canonical mapping merge with LiDAR policy)
+    let merged = merge_building_with_policy(&existing, incoming, &MergePolicy::lidar()).building;
 
     // 4. Verification
     assert_eq!(merged.floors.len(), 1);
@@ -378,8 +477,16 @@ fn test_lidar_pipeline_incremental_merge() -> Result<(), Box<dyn std::error::Err
     let wing_merged = &floor_merged.wings[0];
     assert_eq!(wing_merged.rooms.len(), 2);
 
-    let r1 = wing_merged.rooms.iter().find(|r| r.name == "Room 1").unwrap();
-    let r2 = wing_merged.rooms.iter().find(|r| r.name == "Room 2").unwrap();
+    let r1 = wing_merged
+        .rooms
+        .iter()
+        .find(|r| r.name == "Room 1")
+        .unwrap();
+    let r2 = wing_merged
+        .rooms
+        .iter()
+        .find(|r| r.name == "Room 2")
+        .unwrap();
 
     // Verify room ID preservation
     assert_eq!(r1.id, room1_id);
@@ -391,8 +498,16 @@ fn test_lidar_pipeline_incremental_merge() -> Result<(), Box<dyn std::error::Err
 
     // Verify room 1 equipment merging
     assert_eq!(r1.equipment.len(), 2);
-    let hvac = r1.equipment.iter().find(|e| e.equipment_type == EquipmentType::HVAC).unwrap();
-    let elec = r1.equipment.iter().find(|e| e.equipment_type == EquipmentType::Electrical).unwrap();
+    let hvac = r1
+        .equipment
+        .iter()
+        .find(|e| e.equipment_type == EquipmentType::HVAC)
+        .unwrap();
+    let elec = r1
+        .equipment
+        .iter()
+        .find(|e| e.equipment_type == EquipmentType::Electrical)
+        .unwrap();
 
     // Verify equipment ID preservation
     assert_eq!(hvac.id, eq1_id);
@@ -413,26 +528,51 @@ fn test_lidar_pipeline_incremental_merge() -> Result<(), Box<dyn std::error::Err
 
 #[test]
 fn test_lidar_enrichment_yaml_round_trip() -> Result<(), Box<dyn std::error::Error>> {
-    use arxos::core::{Building, Floor, Wing, Room, RoomType, Equipment, EquipmentType, LidarEnrichment, Position, Dimensions, BoundingBox, SpatialProperties};
+    use arxos::core::{
+        BoundingBox, Building, Dimensions, Equipment, EquipmentType, Floor, LidarEnrichment,
+        Position, Room, RoomType, SpatialProperties, Wing,
+    };
     use arxos::yaml::BuildingYamlSerializer;
 
     // 1. Create a building with detailed LiDAR enrichment
-    let mut building = Building::new("Enriched Building".to_string(), "enriched-building".to_string());
+    let mut building = Building::new(
+        "Enriched Building".to_string(),
+        "enriched-building".to_string(),
+    );
     let mut floor = Floor::new("Floor 1".to_string(), 0);
     let mut wing = Wing::new("Main".to_string());
-    
+
     let mut room = Room::new("Room 101".to_string(), RoomType::Office);
     room.spatial_properties = SpatialProperties {
-        position: Position { x: 2.0, y: 2.0, z: 0.0, coordinate_system: "building_local".to_string() },
-        dimensions: Dimensions { width: 4.0, height: 3.0, depth: 4.0 },
+        position: Position {
+            x: 2.0,
+            y: 2.0,
+            z: 0.0,
+            coordinate_system: "building_local".to_string(),
+        },
+        dimensions: Dimensions {
+            width: 4.0,
+            height: 3.0,
+            depth: 4.0,
+        },
         bounding_box: BoundingBox {
-            min: Position { x: 0.0, y: 0.0, z: 0.0, coordinate_system: "building_local".to_string() },
-            max: Position { x: 4.0, y: 4.0, z: 3.0, coordinate_system: "building_local".to_string() },
+            min: Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                coordinate_system: "building_local".to_string(),
+            },
+            max: Position {
+                x: 4.0,
+                y: 4.0,
+                z: 3.0,
+                coordinate_system: "building_local".to_string(),
+            },
         },
         mesh: None,
         coordinate_system: "building_local".to_string(),
     };
-    
+
     let now = chrono::Utc::now();
     let room_lidar = LidarEnrichment {
         point_count: 15420,
@@ -442,9 +582,18 @@ fn test_lidar_enrichment_yaml_round_trip() -> Result<(), Box<dyn std::error::Err
     };
     room.lidar_enrichment = Some(room_lidar.clone());
 
-    let mut eq = Equipment::new("HVAC Unit 1".to_string(), "/building/floor-1/room-101/hvac-1".to_string(), EquipmentType::HVAC);
-    eq.position = Position { x: 2.2, y: 2.2, z: 0.5, coordinate_system: "building_local".to_string() };
-    
+    let mut eq = Equipment::new(
+        "HVAC Unit 1".to_string(),
+        "/building/floor-1/room-101/hvac-1".to_string(),
+        EquipmentType::HVAC,
+    );
+    eq.position = Position {
+        x: 2.2,
+        y: 2.2,
+        z: 0.5,
+        coordinate_system: "building_local".to_string(),
+    };
+
     let eq_lidar = LidarEnrichment {
         point_count: 320,
         confidence_score: 0.90,
@@ -472,25 +621,37 @@ fn test_lidar_enrichment_yaml_round_trip() -> Result<(), Box<dyn std::error::Err
     let des_eq = &des_room.equipment[0];
 
     // Room assertion
-    let des_room_lidar = des_room.lidar_enrichment.as_ref().expect("Room lidar enrichment missing");
+    let des_room_lidar = des_room
+        .lidar_enrichment
+        .as_ref()
+        .expect("Room lidar enrichment missing");
     assert_eq!(des_room_lidar.point_count, room_lidar.point_count);
     assert_eq!(des_room_lidar.confidence_score, room_lidar.confidence_score);
-    assert_eq!(des_room_lidar.classification_heuristic, room_lidar.classification_heuristic);
+    assert_eq!(
+        des_room_lidar.classification_heuristic,
+        room_lidar.classification_heuristic
+    );
     // Since timestamp is serialized to string and parsed back, check that their absolute difference is zero or extremely tiny
-    if let (Some(t1), Some(t2)) = (des_room_lidar.last_scan_timestamp, room_lidar.last_scan_timestamp) {
+    if let (Some(t1), Some(t2)) = (
+        des_room_lidar.last_scan_timestamp,
+        room_lidar.last_scan_timestamp,
+    ) {
         assert!((t1 - t2).num_milliseconds() == 0);
     } else {
         panic!("Timestamp was lost");
     }
 
     // Equipment assertion
-    let des_eq_lidar = des_eq.lidar_enrichment.as_ref().expect("Equipment lidar enrichment missing");
+    let des_eq_lidar = des_eq
+        .lidar_enrichment
+        .as_ref()
+        .expect("Equipment lidar enrichment missing");
     assert_eq!(des_eq_lidar.point_count, eq_lidar.point_count);
     assert_eq!(des_eq_lidar.confidence_score, eq_lidar.confidence_score);
-    assert_eq!(des_eq_lidar.classification_heuristic, eq_lidar.classification_heuristic);
+    assert_eq!(
+        des_eq_lidar.classification_heuristic,
+        eq_lidar.classification_heuristic
+    );
 
     Ok(())
 }
-
-
-

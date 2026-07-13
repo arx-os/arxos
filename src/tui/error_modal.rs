@@ -5,8 +5,8 @@
 //! - Error suggestions and recovery steps
 //! - Action buttons for error handling
 
-use crate::tui::Theme;
 use crate::error::ArxError;
+use crate::tui::Theme;
 use crossterm::event::{Event, KeyCode};
 use ratatui::{
     layout::{Alignment, Rect},
@@ -189,8 +189,12 @@ pub fn render_error_modal<'a>(
         ArxError::AddressValidation { message, .. } => {
             format!("Address Validation Error: {}", message)
         }
-        ArxError::CounterOverflow { counter_name } => format!("Counter Overflow Error: {}", counter_name),
-        ArxError::PathInvalid { path, expected } => format!("Path Invalid Error: '{}' (expected: {})", path, expected),
+        ArxError::CounterOverflow { counter_name } => {
+            format!("Counter Overflow Error: {}", counter_name)
+        }
+        ArxError::PathInvalid { path, expected } => {
+            format!("Path Invalid Error: '{}' (expected: {})", path, expected)
+        }
         ArxError::Io(err) => format!("IO Error: {}", err),
         ArxError::Serialization(msg) => format!("Serialization Error: {}", msg),
         ArxError::Git(msg) => format!("Git Error: {}", msg),

@@ -1,13 +1,13 @@
 //! Modbus TCP Implementation
 
-use super::{HardwareInterface, SensorReading, ReadingQuality};
-use anyhow::{Result, Context as AnyhowContext};
+use super::{HardwareInterface, ReadingQuality, SensorReading};
+use anyhow::{Context as AnyhowContext, Result};
 use async_trait::async_trait;
-use tokio::sync::Mutex;
-use tokio_modbus::prelude::*;
-use tokio_modbus::client::Context;
-use std::time::Duration;
 use std::sync::Arc;
+use std::time::Duration;
+use tokio::sync::Mutex;
+use tokio_modbus::client::Context;
+use tokio_modbus::prelude::*;
 
 pub struct ModbusInterface {
     host: String,
@@ -28,7 +28,7 @@ impl ModbusInterface {
     // Helper to parse location: "holding:100" or just "100"
     fn parse_address(location: &str) -> Result<(String, u16)> {
         if let Some((type_str, addr_str)) = location.split_once(':') {
-             Ok((type_str.to_lowercase(), addr_str.parse()?))
+            Ok((type_str.to_lowercase(), addr_str.parse()?))
         } else {
             // Default to holding register if no prefix
             Ok(("holding".to_string(), location.parse()?))
@@ -41,17 +41,19 @@ impl HardwareInterface for ModbusInterface {
     async fn connect(&mut self) -> Result<()> {
         tracing::info!("Connecting to Modbus TCP at {}:{}", self.host, self.port);
         let socket_addr = format!("{}:{}", self.host, self.port).parse()?;
-        
+
         // Create a new client context
         // We use a timeout to prevent hanging
         let ctx = tokio::time::timeout(
             Duration::from_secs(5),
-            tokio_modbus::client::tcp::connect(socket_addr)
-        ).await.context("Connection timed out")??;
-        
+            tokio_modbus::client::tcp::connect(socket_addr),
+        )
+        .await
+        .context("Connection timed out")??;
+
         let mut client_lock = self.client.lock().await;
         *client_lock = Some(ctx);
-        
+
         tracing::info!("Modbus connected successfully");
         Ok(())
     }
@@ -59,8 +61,8 @@ impl HardwareInterface for ModbusInterface {
     async fn disconnect(&mut self) -> Result<()> {
         let mut client_lock = self.client.lock().await;
         if client_lock.is_some() {
-             tracing::info!("Disconnecting Modbus client");
-             *client_lock = None;
+            tracing::info!("Disconnecting Modbus client");
+            *client_lock = None;
         }
         Ok(())
     }
@@ -72,31 +74,47 @@ impl HardwareInterface for ModbusInterface {
 
     async fn read_sensor(&self, location: &str, _sensor_type: &str) -> Result<SensorReading> {
         let (reg_type, addr) = Self::parse_address(location)?;
-        
+
         let mut client_lock = self.client.lock().await;
         let client = client_lock.as_mut().context("Not connected to Modbus")?;
-        
+
         let value = match reg_type.as_str() {
             "holding" => {
                 let params = client.read_holding_registers(addr, 1).await?;
-                if params.is_empty() { anyhow::bail!("No data returned"); }
+                if params.is_empty() {
+                    anyhow::bail!("No data returned");
+                }
                 params[0] as f64
-            },
+            }
             "input" => {
                 let params = client.read_input_registers(addr, 1).await?;
-                if params.is_empty() { anyhow::bail!("No data returned"); }
+                if params.is_empty() {
+                    anyhow::bail!("No data returned");
+                }
                 params[0] as f64
-            },
+            }
             "coil" => {
                 let params = client.read_coils(addr, 1).await?;
-                if params.is_empty() { anyhow::bail!("No data returned"); }
-                if params[0] { 1.0 } else { 0.0 }
-            },
+                if params.is_empty() {
+                    anyhow::bail!("No data returned");
+                }
+                if params[0] {
+                    1.0
+                } else {
+                    0.0
+                }
+            }
             "discrete" => {
                 let params = client.read_discrete_inputs(addr, 1).await?;
-                if params.is_empty() { anyhow::bail!("No data returned"); }
-                if params[0] { 1.0 } else { 0.0 }
-            },
+                if params.is_empty() {
+                    anyhow::bail!("No data returned");
+                }
+                if params[0] {
+                    1.0
+                } else {
+                    0.0
+                }
+            }
             _ => anyhow::bail!("Unknown Modbus register type: {}", reg_type),
         };
 
@@ -107,29 +125,29 @@ impl HardwareInterface for ModbusInterface {
             quality: ReadingQuality::Good,
         })
     }
-    
+
     async fn write_control(&self, location: &str, _control_type: &str, value: f64) -> Result<()> {
-         let (reg_type, addr) = Self::parse_address(location)?;
-         
-         let mut client_lock = self.client.lock().await;
-         let client = client_lock.as_mut().context("Not connected to Modbus")?;
-         
-         match reg_type.as_str() {
+        let (reg_type, addr) = Self::parse_address(location)?;
+
+        let mut client_lock = self.client.lock().await;
+        let client = client_lock.as_mut().context("Not connected to Modbus")?;
+
+        match reg_type.as_str() {
             "holding" => {
                 client.write_single_register(addr, value as u16).await?;
-            },
+            }
             "coil" => {
                 client.write_single_coil(addr, value != 0.0).await?;
-            },
+            }
             _ => anyhow::bail!("Write not supported for type: {}", reg_type),
-         }
-         
-         Ok(())
+        }
+
+        Ok(())
     }
-    
+
     async fn list_sensors(&self) -> Result<Vec<String>> {
         // Modbus doesn't support discovery, so we return a static list or empty
         // In a real app, this would be config-driven
-        Ok(vec![]) 
+        Ok(vec![])
     }
 }

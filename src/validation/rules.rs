@@ -1,8 +1,8 @@
 //! Validation rules and constraints engine
 
 use crate::error::ArxResult;
-use serde::{Deserialize, Serialize};
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationRuleType {
@@ -59,7 +59,11 @@ impl ValidationEngine {
     }
 
     /// Validate a string value against applicable rules
-    pub fn validate_field(&self, field_name: &str, value: &str) -> ArxResult<Vec<ValidationResult>> {
+    pub fn validate_field(
+        &self,
+        field_name: &str,
+        value: &str,
+    ) -> ArxResult<Vec<ValidationResult>> {
         let mut results = Vec::new();
 
         for rule in &self.rules {

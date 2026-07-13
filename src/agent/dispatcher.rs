@@ -30,12 +30,7 @@ pub async fn dispatch(state: Arc<AgentState>, request: JsonRpcRequest) -> JsonRp
     };
 
     if let Err(e) = ensure_capability(method, &capabilities) {
-        return JsonRpcResponse::error(
-            id,
-            AUTH_ERROR,
-            format!("Permission denied: {}", e),
-            None,
-        );
+        return JsonRpcResponse::error(id, AUTH_ERROR, format!("Permission denied: {}", e), None);
     }
 
     // 2. Dispatch to handler
@@ -71,7 +66,7 @@ fn handle_git_status(root: &std::path::Path) -> Result<Value> {
 fn handle_git_diff(root: &std::path::Path, params: Value) -> Result<Value> {
     let commit = params.get("commit").and_then(|v| v.as_str());
     let file = params.get("file").and_then(|v| v.as_str());
-    
+
     let diff = git::diff(root, commit, file)?;
     Ok(serde_json::to_value(diff)?)
 }
@@ -81,7 +76,7 @@ fn handle_git_commit(state: &AgentState, params: Value) -> Result<Value> {
         .get("message")
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("Missing 'message' parameter"))?;
-        
+
     let stage_all = params
         .get("stageAll")
         .and_then(|v| v.as_bool())
@@ -112,7 +107,7 @@ fn handle_ifc_import(root: &std::path::Path, params: Value) -> Result<Value> {
         .get("filename")
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("Missing 'filename' parameter"))?;
-        
+
     let data_base64 = params
         .get("data")
         .and_then(|v| v.as_str())
@@ -123,8 +118,14 @@ fn handle_ifc_import(root: &std::path::Path, params: Value) -> Result<Value> {
 }
 
 fn handle_ifc_export(root: &std::path::Path, params: Value) -> Result<Value> {
-    let filename = params.get("filename").and_then(|v| v.as_str()).map(|s| s.to_string());
-    let delta = params.get("delta").and_then(|v| v.as_bool()).unwrap_or(false);
+    let filename = params
+        .get("filename")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    let delta = params
+        .get("delta")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
 
     let result = ifc::export_ifc(root, filename, delta)?;
     Ok(serde_json::to_value(result)?)
@@ -134,13 +135,13 @@ async fn handle_collab_sync(params: Value) -> Result<Value> {
     let messages_val = params
         .get("messages")
         .ok_or_else(|| anyhow::anyhow!("Missing 'messages' parameter"))?;
-        
+
     let messages: Vec<collab::CollabMessage> = serde_json::from_value(messages_val.clone())
         .map_err(|e| anyhow::anyhow!("Invalid messages format: {}", e))?;
 
-    let config = collab::load_config()?
-        .ok_or_else(|| anyhow::anyhow!("Collaboration config not found"))?;
-        
+    let config =
+        collab::load_config()?.ok_or_else(|| anyhow::anyhow!("Collaboration config not found"))?;
+
     let token = collab::github_token()?.unwrap_or_default();
 
     let outcome = collab::sync_messages(&messages, &config, &token).await?;

@@ -1,7 +1,7 @@
 //! Import page for IFC file upload — stores shared BuildingSyncEnvelope.
 
-use leptos::*;
 use leptos::prelude::*;
+use leptos::*;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::Event;
@@ -37,16 +37,15 @@ pub fn Import() -> impl IntoView {
                                 if let Err(e) =
                                     crate::web::wasm_bridge::store_active_building(&envelope_json)
                                 {
-                                    set_result.set(Some(format!(
-                                        "Parsed but failed to store: {:?}",
-                                        e
-                                    )));
+                                    set_result
+                                        .set(Some(format!("Parsed but failed to store: {:?}", e)));
                                 } else {
                                     // Surface report lines if present
                                     if let Ok(val) =
                                         serde_json::from_str::<serde_json::Value>(&envelope_json)
                                     {
-                                        if let Some(arr) = val.get("report").and_then(|r| r.as_array())
+                                        if let Some(arr) =
+                                            val.get("report").and_then(|r| r.as_array())
                                         {
                                             let lines: Vec<String> = arr
                                                 .iter()

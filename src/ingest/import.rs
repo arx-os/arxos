@@ -73,9 +73,7 @@ pub fn finalize_ingest(
     source: IngestSource,
     options: IngestOptions,
 ) -> IngestResult {
-    let policy = options
-        .policy
-        .unwrap_or_else(|| source.merge_policy());
+    let policy = options.policy.unwrap_or_else(|| source.merge_policy());
     let mut report = LossReport::new(FidelityLevel::L2);
 
     if let Some(existing) = options.existing {

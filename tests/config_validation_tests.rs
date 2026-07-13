@@ -39,9 +39,8 @@ struct CurrentDirGuard {
 
 impl CurrentDirGuard {
     fn new() -> Self {
-        let original = env::current_dir().unwrap_or_else(|_| {
-            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        });
+        let original = env::current_dir()
+            .unwrap_or_else(|_| std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")));
         Self { original }
     }
 }

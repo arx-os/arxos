@@ -3,9 +3,9 @@
 //! These tests verify properties that should hold for all inputs,
 //! not just specific test cases.
 
-use arxos::core::{EquipmentHealthStatus, EquipmentStatus, EquipmentType, Position};
 use arxos::core::domain::address::ArxAddress;
 use arxos::core::spatial::{BoundingBox3D, Point3D};
+use arxos::core::{EquipmentHealthStatus, EquipmentStatus, EquipmentType, Position};
 use proptest::prelude::*;
 
 // ============================================================================

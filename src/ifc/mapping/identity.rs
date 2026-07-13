@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::core::{Building, Equipment, Floor, Room};
 
-use super::{pset_prop_key, PSET_ARX_IDENTITY, PROP_ARX_ID};
+use super::{pset_prop_key, PROP_ARX_ID, PSET_ARX_IDENTITY};
 
 /// IFC compressed-GUID alphabet (22-char GlobalId).
 const IFC_GUID_CHARS: &[u8; 64] =

@@ -62,7 +62,12 @@ pub fn handle_user_browser() -> Result<(), Box<dyn std::error::Error>> {
             match event {
                 Event::Key(key_event) if state.search_mode => {
                     // Search mode input handling
-                    handle_search_input(&mut state, &mut search_input, &mut list_state, key_event.code)?;
+                    handle_search_input(
+                        &mut state,
+                        &mut search_input,
+                        &mut list_state,
+                        key_event.code,
+                    )?;
                 }
                 Event::Key(key_event) => {
                     // Normal mode input handling
@@ -147,7 +152,8 @@ fn render_ui(
         }
         ViewMode::Activity => {
             if let Some(_user) = state.selected_user() {
-                let activity = render_user_activity(&state.selected_user_activity, theme, chunks[1]);
+                let activity =
+                    render_user_activity(&state.selected_user_activity, theme, chunks[1]);
                 frame.render_widget(activity, chunks[1]);
             }
         }

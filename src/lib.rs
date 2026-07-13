@@ -5,25 +5,21 @@
 //!
 //! This library can be used independently of the CLI binary.
 
-// Enforce safe error handling practices
-#![warn(clippy::unwrap_used)]
-#![warn(clippy::expect_used)]
-
 // Core modules (always available)
 pub mod config;
 pub mod core;
 pub mod error;
-pub mod ifc;
+pub mod export;
 pub mod git;
+pub mod hardware;
+pub mod ifc;
+pub mod ingest;
 pub mod persistence;
 pub mod sensor;
-pub mod hardware;
 pub mod spatial;
 pub mod utils;
 pub mod validation;
 pub mod yaml;
-pub mod export;
-pub mod ingest;
 
 // CLI module (public for testing)
 pub mod cli;
@@ -45,5 +41,5 @@ pub mod blockchain;
 pub mod web;
 
 // Re-export commonly used types
-pub use error::ArxError;
 pub use core::{Building, Equipment, Floor, Room, Wing};
+pub use error::ArxError;

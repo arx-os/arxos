@@ -18,9 +18,9 @@ use ratatui::{
 use std::collections::VecDeque;
 
 #[cfg(feature = "tui")]
-use fuzzy_matcher::FuzzyMatcher;
-#[cfg(feature = "tui")]
 use fuzzy_matcher::skim::SkimMatcherV2;
+#[cfg(feature = "tui")]
+use fuzzy_matcher::FuzzyMatcher;
 
 /// Types of searchable entities
 #[derive(Debug, Clone, PartialEq)]
@@ -126,7 +126,7 @@ impl SearchBrowser {
         match (key.code, key.modifiers) {
             // Exit
             (KeyCode::Esc, _) | (KeyCode::Char('q'), KeyModifiers::NONE) => SearchAction::Exit,
-            
+
             // Navigation (with history on Up/Down when query is empty)
             (KeyCode::Down, _) | (KeyCode::Char('j'), KeyModifiers::NONE) => {
                 if self.query.is_empty() && self.history_index.is_none() {
@@ -162,12 +162,12 @@ impl SearchBrowser {
                 self.select_previous();
                 SearchAction::Continue
             }
-            
+
             // Select result
             (KeyCode::Enter, _) => {
                 let query = self.query.clone();
                 let selected_idx = self.selected;
-                
+
                 if let Some(result) = self.results.get(selected_idx).cloned() {
                     // Add to search history
                     if !query.is_empty() {
@@ -178,7 +178,7 @@ impl SearchBrowser {
                     SearchAction::Continue
                 }
             }
-            
+
             // Query editing
             (KeyCode::Backspace, _) => {
                 self.query.pop();
@@ -192,7 +192,7 @@ impl SearchBrowser {
                 self.update_results();
                 SearchAction::Continue
             }
-            
+
             // Clear query
             (KeyCode::Char('u'), KeyModifiers::CONTROL) => {
                 self.query.clear();
@@ -200,11 +200,12 @@ impl SearchBrowser {
                 self.update_results();
                 SearchAction::Continue
             }
-            
+
             // Filter toggles
             (KeyCode::Char('r'), KeyModifiers::CONTROL) => {
                 // Toggle room filter
-                self.filter.result_type = if self.filter.result_type == Some(SearchResultType::Room) {
+                self.filter.result_type = if self.filter.result_type == Some(SearchResultType::Room)
+                {
                     None
                 } else {
                     Some(SearchResultType::Room)
@@ -214,21 +215,23 @@ impl SearchBrowser {
             }
             (KeyCode::Char('e'), KeyModifiers::CONTROL) => {
                 // Toggle equipment filter
-                self.filter.result_type = if self.filter.result_type == Some(SearchResultType::Equipment) {
-                    None
-                } else {
-                    Some(SearchResultType::Equipment)
-                };
+                self.filter.result_type =
+                    if self.filter.result_type == Some(SearchResultType::Equipment) {
+                        None
+                    } else {
+                        Some(SearchResultType::Equipment)
+                    };
                 self.update_results();
                 SearchAction::Continue
             }
             (KeyCode::Char('f'), KeyModifiers::CONTROL) => {
                 // Toggle floor filter
-                self.filter.result_type = if self.filter.result_type == Some(SearchResultType::Floor) {
-                    None
-                } else {
-                    Some(SearchResultType::Floor)
-                };
+                self.filter.result_type =
+                    if self.filter.result_type == Some(SearchResultType::Floor) {
+                        None
+                    } else {
+                        Some(SearchResultType::Floor)
+                    };
                 self.update_results();
                 SearchAction::Continue
             }
@@ -237,7 +240,7 @@ impl SearchBrowser {
                 self.clear_filters();
                 SearchAction::Continue
             }
-            
+
             _ => SearchAction::Continue,
         }
     }
@@ -274,7 +277,7 @@ impl SearchBrowser {
                     continue;
                 }
             }
-            
+
             for wing in &floor.wings {
                 for room in &wing.rooms {
                     if let Some((score, indices)) = self.match_room_with_indices(room) {
@@ -284,7 +287,7 @@ impl SearchBrowser {
                                 continue;
                             }
                         }
-                        
+
                         self.results.push(SearchResult {
                             result_type: SearchResultType::Room,
                             title: room.name.clone(),
@@ -306,7 +309,7 @@ impl SearchBrowser {
                     continue;
                 }
             }
-            
+
             // Floor-level equipment
             for equip in &floor.equipment {
                 if let Some((score, indices)) = self.match_equipment_with_indices(equip) {
@@ -357,7 +360,8 @@ impl SearchBrowser {
                                     continue;
                                 }
                             }
-                            let location = format!("Floor {}, {}, Room {}", floor.level, wing.name, room.name);
+                            let location =
+                                format!("Floor {}, {}, Room {}", floor.level, wing.name, room.name);
                             self.results.push(SearchResult {
                                 result_type: SearchResultType::Equipment,
                                 title: equip.name.clone(),
@@ -380,14 +384,14 @@ impl SearchBrowser {
                     continue;
                 }
             }
-            
+
             // Apply floor filter
             if let Some(filter_level) = self.filter.floor_level {
                 if floor.level != filter_level {
                     continue;
                 }
             }
-            
+
             let floor_text = format!("Floor {}", floor.level);
             if let Some((score, indices)) = self.matcher.fuzzy_indices(&floor_text, &self.query) {
                 let room_count: usize = floor.wings.iter().map(|w| w.rooms.len()).sum();
@@ -404,8 +408,13 @@ impl SearchBrowser {
 
         // Search building
         // Apply type filter
-        if self.filter.result_type.is_none() || self.filter.result_type == Some(SearchResultType::Building) {
-            if let Some((score, indices)) = self.matcher.fuzzy_indices(&self.building_data.name, &self.query) {
+        if self.filter.result_type.is_none()
+            || self.filter.result_type == Some(SearchResultType::Building)
+        {
+            if let Some((score, indices)) = self
+                .matcher
+                .fuzzy_indices(&self.building_data.name, &self.query)
+            {
                 self.results.push(SearchResult {
                     result_type: SearchResultType::Building,
                     title: self.building_data.name.clone(),
@@ -418,7 +427,7 @@ impl SearchBrowser {
         }
 
         // Sort by score descending
-        self.results.sort_by(|a, b| b.score.cmp(&a.score));
+        self.results.sort_by_key(|b| std::cmp::Reverse(b.score));
         self.results.truncate(self.max_results);
     }
 
@@ -466,7 +475,10 @@ impl SearchBrowser {
                     self.results.push(SearchResult {
                         result_type: SearchResultType::Equipment,
                         title: equip.name.clone(),
-                        subtitle: format!("{:?} - Floor {}, {}", equip.equipment_type, floor.level, wing.name),
+                        subtitle: format!(
+                            "{:?} - Floor {}, {}",
+                            equip.equipment_type, floor.level, wing.name
+                        ),
                         id: equip.id.clone(),
                         score: 0,
                         match_indices: Vec::new(),
@@ -477,7 +489,10 @@ impl SearchBrowser {
                         self.results.push(SearchResult {
                             result_type: SearchResultType::Equipment,
                             title: equip.name.clone(),
-                            subtitle: format!("{:?} - Floor {}, {}, Room {}", equip.equipment_type, floor.level, wing.name, room.name),
+                            subtitle: format!(
+                                "{:?} - Floor {}, {}, Room {}",
+                                equip.equipment_type, floor.level, wing.name, room.name
+                            ),
                             id: equip.id.clone(),
                             score: 0,
                             match_indices: Vec::new(),
@@ -511,8 +526,8 @@ impl SearchBrowser {
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Length(3), // Search input
-                Constraint::Min(1),     // Results list
-                Constraint::Length(4),  // Help + filters
+                Constraint::Min(1),    // Results list
+                Constraint::Length(4), // Help + filters
             ])
             .split(area);
 
@@ -524,7 +539,7 @@ impl SearchBrowser {
         if let Some(floor) = self.filter.floor_level {
             title.push_str(&format!(" [Floor: {}]", floor));
         }
-        
+
         let input = Paragraph::new(self.query.as_str())
             .style(Style::default().fg(Color::Yellow))
             .block(
@@ -600,7 +615,11 @@ impl SearchBrowser {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .title(format!("Results ({}/{})", self.results.len(), self.max_results))
+                    .title(format!(
+                        "Results ({}/{})",
+                        self.results.len(),
+                        self.max_results
+                    ))
                     .border_style(Style::default().fg(Color::White)),
             )
             .highlight_style(
@@ -615,7 +634,9 @@ impl SearchBrowser {
         // Help text with filter shortcuts
         let help_text = vec![
             Line::from("↑↓ Navigate │ Enter: Select │ Esc: Cancel │ Ctrl+U: Clear"),
-            Line::from("Ctrl+R: Rooms │ Ctrl+E: Equipment │ Ctrl+F: Floors │ Ctrl+X: Clear Filters"),
+            Line::from(
+                "Ctrl+R: Rooms │ Ctrl+E: Equipment │ Ctrl+F: Floors │ Ctrl+X: Clear Filters",
+            ),
         ];
         let help = Paragraph::new(help_text)
             .style(Style::default().fg(Color::DarkGray))
@@ -646,7 +667,7 @@ mod tests {
             score: 100,
             match_indices: vec![0, 5],
         };
-        
+
         assert_eq!(result.icon(), "🚪");
         assert_eq!(result.result_type, SearchResultType::Room);
     }
@@ -661,7 +682,7 @@ mod tests {
             score: 90,
             match_indices: Vec::new(),
         };
-        
+
         assert_eq!(result.icon(), "⚙️ ");
     }
 }

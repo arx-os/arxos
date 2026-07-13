@@ -1,7 +1,6 @@
 use crate::cli::commands::Command;
 use crate::ingest::import_lidar_path;
-use crate::utils::path_safety::PathSafety;
-use crate::yaml::BuildingYamlSerializer;
+use crate::persistence::{save_building_at, BUILDING_YAML};
 use anyhow::anyhow;
 use std::error::Error;
 use std::path::Path;
@@ -30,22 +29,12 @@ impl Command for ImportLidarCommand {
         let lidar_path = Path::new(&self.file_path);
 
         let existing = if self.merge {
-            let name_hint = self.building.clone().unwrap_or_default();
-            let candidates = [
-                if !name_hint.is_empty() {
-                    Some(repo_root.join(format!(
-                        "{}.yaml",
-                        name_hint.replace(' ', "_").to_lowercase()
-                    )))
-                } else {
-                    None
-                },
-                Some(repo_root.join("building.yaml")),
-            ];
-            candidates
-                .into_iter()
-                .flatten()
-                .find(|p| p.exists())
+            let building_yaml = repo_root.join(BUILDING_YAML);
+            if building_yaml.exists() {
+                Some(building_yaml)
+            } else {
+                None
+            }
         } else {
             None
         };
@@ -58,6 +47,13 @@ impl Command for ImportLidarCommand {
             true,
         )
         .map_err(|e| format!("LiDAR import failed: {}", e))?;
+
+        if result.validation.has_errors() {
+            for line in result.summary_lines() {
+                println!("  {}", line);
+            }
+            return Err("LiDAR import validation failed; refusing to write building.yaml".into());
+        }
 
         if self.dry_run {
             println!("Parsed successfully (dry-run):");
@@ -73,19 +69,10 @@ impl Command for ImportLidarCommand {
             return Ok(());
         }
 
-        let yaml_filename = format!(
-            "{}.yaml",
-            result.building.name.replace(' ', "_").to_lowercase()
-        );
-        let yaml_path = repo_root.join(&yaml_filename);
-        PathSafety::validate_path_for_write(&yaml_path).map_err(|e| anyhow!(e))?;
+        save_building_at(repo_root, &result.building)
+            .map_err(|e| anyhow!("Failed to write {}: {}", BUILDING_YAML, e))?;
 
-        let yaml_content = BuildingYamlSerializer::serialize_building(&result.building)
-            .map_err(|e| anyhow!("Failed to serialize YAML: {}", e))?;
-        std::fs::write(&yaml_path, yaml_content)
-            .map_err(|e| anyhow!("Failed to write YAML to {}: {}", yaml_path.display(), e))?;
-
-        println!("Imported successfully to {}", yaml_path.display());
+        println!("Imported successfully to {}", BUILDING_YAML);
         for line in result.summary_lines() {
             println!("  {}", line);
         }

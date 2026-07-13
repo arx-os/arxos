@@ -48,26 +48,6 @@ pub enum CommandCategory {
     Other,
 }
 
-impl From<crate::cli::commands::CommandCategory> for CommandCategory {
-    fn from(value: crate::cli::commands::CommandCategory) -> Self {
-        match value {
-            crate::cli::commands::CommandCategory::Building => CommandCategory::Building,
-            crate::cli::commands::CommandCategory::Equipment => CommandCategory::Equipment,
-            crate::cli::commands::CommandCategory::Room => CommandCategory::Room,
-            crate::cli::commands::CommandCategory::Git => CommandCategory::Git,
-            crate::cli::commands::CommandCategory::ImportExport => CommandCategory::ImportExport,
-            crate::cli::commands::CommandCategory::AR => CommandCategory::AR,
-            crate::cli::commands::CommandCategory::Render => CommandCategory::Render,
-            crate::cli::commands::CommandCategory::Search => CommandCategory::Search,
-            crate::cli::commands::CommandCategory::Config => CommandCategory::Config,
-            crate::cli::commands::CommandCategory::Sensors => CommandCategory::Sensors,
-            crate::cli::commands::CommandCategory::Health => CommandCategory::Health,
-            crate::cli::commands::CommandCategory::Documentation => CommandCategory::Documentation,
-            crate::cli::commands::CommandCategory::Other => CommandCategory::Other,
-        }
-    }
-}
-
 impl CommandCategory {
     /// Get category name
     pub fn name(&self) -> &'static str {

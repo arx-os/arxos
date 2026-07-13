@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use crate::core::spatial::Point3D;
 use anyhow::Result;
-use crate::spatial::Point3D;
+use std::collections::HashMap;
 
 pub struct IngestionStats {
     pub total_points: usize,
@@ -27,7 +27,10 @@ impl VoxelGridFilter {
         }
     }
 
-    pub fn filter(&self, points: impl Iterator<Item = Result<Point3D>>) -> Result<(Vec<Point3D>, IngestionStats)> {
+    pub fn filter(
+        &self,
+        points: impl Iterator<Item = Result<Point3D>>,
+    ) -> Result<(Vec<Point3D>, IngestionStats)> {
         // Enforce light mode constraints
         let voxel_size = if self.light_mode {
             self.voxel_size.max(0.20)
@@ -35,13 +38,10 @@ impl VoxelGridFilter {
             self.voxel_size.max(0.01) // Prevent division-by-zero or extremely tiny voxels
         };
 
-        let max_capacity = if self.light_mode {
-            100_000
-        } else {
-            500_000
-        };
+        let max_capacity = if self.light_mode { 100_000 } else { 500_000 };
 
-        let mut voxel_map: HashMap<(i64, i64, i64), VoxelAccumulator> = HashMap::with_capacity(max_capacity);
+        let mut voxel_map: HashMap<(i64, i64, i64), VoxelAccumulator> =
+            HashMap::with_capacity(max_capacity);
         let mut filtered_points = Vec::new();
         let mut total_points = 0;
 

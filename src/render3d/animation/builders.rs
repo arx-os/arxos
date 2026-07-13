@@ -108,12 +108,8 @@ mod tests {
 
     #[test]
     fn test_create_linear_animation() {
-        let anim = create_linear_animation(
-            "test".to_string(),
-            0.0,
-            100.0,
-            Duration::from_millis(500),
-        );
+        let anim =
+            create_linear_animation("test".to_string(), 0.0, 100.0, Duration::from_millis(500));
 
         assert_eq!(anim.id, "test");
         assert_eq!(anim.animation_type, AnimationType::Linear);
@@ -151,12 +147,8 @@ mod tests {
             target_z: 5.0,
         };
 
-        let anim = create_camera_move_animation(
-            "camera".to_string(),
-            start,
-            end,
-            Duration::from_secs(1),
-        );
+        let anim =
+            create_camera_move_animation("camera".to_string(), start, end, Duration::from_secs(1));
 
         assert_eq!(anim.animation_type, AnimationType::CameraMove);
     }

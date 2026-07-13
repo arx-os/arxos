@@ -235,15 +235,14 @@ impl ArxAddress {
                         .into());
                     }
                 }
-                "furniture" => {
-                    if !fixture.starts_with("desk-") && !fixture.starts_with("chair-") {
+                "furniture"
+                    if !fixture.starts_with("desk-") && !fixture.starts_with("chair-") => {
                         return Err(ArxError::address_validation(
                             self.path.clone(),
                             "Furniture fixture must start with desk- or chair-".to_string(),
                         )
                         .into());
                     }
-                }
                 _ => {}
             }
         }
@@ -298,6 +297,22 @@ impl ArxAddress {
         ))
     }
 
+    /// Whether this address matches a glob pattern against the full path.
+    ///
+    /// Patterns use standard glob wildcards (`*`, `?`) on the full path string,
+    /// e.g. `/usa/ny/*/floor-*/mech/boiler-*`.
+    pub fn matches_glob(&self, pattern: &str) -> bool {
+        let pat = if pattern.starts_with('/') {
+            pattern.to_string()
+        } else {
+            format!("/{}", pattern)
+        };
+        match glob::Pattern::new(&pat) {
+            Ok(p) => p.matches(&self.path),
+            Err(_) => false,
+        }
+    }
+
     /// Sanitize a path part for use in addresses
     /// Converts to lowercase, replaces invalid characters with hyphens
     fn sanitize_part(part: &str) -> String {
@@ -327,6 +342,23 @@ impl fmt::Display for ArxAddress {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_matches_glob() {
+        let addr = ArxAddress::new(
+            "usa",
+            "ny",
+            "brooklyn",
+            "ps-118",
+            "floor-02",
+            "mech",
+            "boiler-01",
+        );
+        assert!(addr.matches_glob("/usa/ny/*/floor-*/mech/boiler-*"));
+        assert!(addr.matches_glob("/usa/ny/brooklyn/ps-118/floor-02/mech/*"));
+        assert!(!addr.matches_glob("/usa/ny/brooklyn/ps-118/floor-02/kitchen/*"));
+        assert!(!addr.matches_glob("/usa/ca/*/floor-*/mech/*"));
+    }
 
     #[test]
     fn test_new_address() {

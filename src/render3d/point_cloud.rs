@@ -1,7 +1,7 @@
 //! WebGL-style point cloud renderer with Z-buffer and LOD
 //! Exactly matches the 5-step implementation pattern
 
-use super::camera::{Camera, Vec3, vec3, project};
+use super::camera::{project, vec3, Camera, Vec3};
 use super::types::*;
 use crate::core::EquipmentType;
 use crossterm::event::{Event, KeyCode, MouseEventKind};
@@ -21,7 +21,7 @@ pub mod brightness_ramps {
     /// Simple progression from space to full block.
     /// Good for basic visualization but limited depth perception.
     pub const CLASSIC: &str = " .,:;+*#█";
-    
+
     /// Acerola-style 16-level density ramp (RECOMMENDED)
     ///
     /// Based on Acerola's ASCII shader technique with 16 luminance values.
@@ -30,13 +30,13 @@ pub mod brightness_ramps {
     ///
     /// Reference: https://www.youtube.com/watch?v=3Z4AenUGRSs
     pub const ACEROLA_16: &str = " .:-=+*#%@MWBQ&$";
-    
+
     /// Extended ASCII 16-level ramp
     ///
     /// Uses punctuation and special characters for varied texture.
     /// May not render consistently across all terminal fonts.
     pub const EXTENDED_16: &str = " .'`^\",:;Il!i><~+";
-    
+
     /// Unicode block elements 16-level ramp
     ///
     /// Uses Unicode box-drawing and block characters.
@@ -245,7 +245,7 @@ impl UniformGrid {
                 return true;
             }
         }
-        
+
         false
     }
 }
@@ -259,7 +259,14 @@ impl GridCell {
         }
     }
 
-    fn calculate_metadata(&mut self, grid_min: &Vec3, cell_size: f32, x: usize, y: usize, z: usize) {
+    fn calculate_metadata(
+        &mut self,
+        grid_min: &Vec3,
+        cell_size: f32,
+        x: usize,
+        y: usize,
+        z: usize,
+    ) {
         if self.points.is_empty() {
             return;
         }
@@ -313,13 +320,13 @@ impl PointCloudRenderer {
     /// ```
     pub fn new(points: Vec<Point3DColored>) -> Self {
         let (width, height) = size().unwrap_or((120, 40));
-        
+
         Self {
             camera: Camera::new(),
-            grid: if points.len() > 10000 { 
-                Some(UniformGrid::new(&points, 64)) 
-            } else { 
-                None 
+            grid: if points.len() > 10000 {
+                Some(UniformGrid::new(&points, 64))
+            } else {
+                None
             },
             points,
             zbuffer: ZBuffer::new(width as usize, height as usize),
@@ -458,7 +465,7 @@ impl PointCloudRenderer {
             Event::Key(key) => {
                 match key.code {
                     KeyCode::Esc => return false,
-                    
+
                     // WASD movement (Step 1)
                     KeyCode::Char('w') | KeyCode::Char('W') => {
                         self.camera.move_camera(1.0, 0.0, 0.0, 5.0);
@@ -478,7 +485,7 @@ impl PointCloudRenderer {
                     KeyCode::Char('q') | KeyCode::Char('Q') => {
                         return false; // Quit on Q
                     }
-                    
+
                     // Arrow keys for orbit (Step 1)
                     KeyCode::Left => {
                         self.camera.orbit(-0.1, 0.0, 1.0);
@@ -492,7 +499,7 @@ impl PointCloudRenderer {
                     KeyCode::Down => {
                         self.camera.orbit(0.0, -0.1, 1.0);
                     }
-                    
+
                     // Zoom with +/-
                     KeyCode::Char('+') | KeyCode::Char('=') => {
                         self.camera.zoom(-0.1, 0.1);
@@ -500,7 +507,7 @@ impl PointCloudRenderer {
                     KeyCode::Char('-') | KeyCode::Char('_') => {
                         self.camera.zoom(0.1, 0.1);
                     }
-                    
+
                     _ => {}
                 }
                 true
@@ -595,14 +602,46 @@ pub fn building_to_point_cloud(scene: &Scene3D) -> Vec<Point3DColored> {
     // Convert room corners to points
     for room in &scene.rooms {
         let corners = [
-            vec3(room.bounding_box.min.x as f32, room.bounding_box.min.y as f32, room.bounding_box.min.z as f32),
-            vec3(room.bounding_box.max.x as f32, room.bounding_box.min.y as f32, room.bounding_box.min.z as f32),
-            vec3(room.bounding_box.min.x as f32, room.bounding_box.max.y as f32, room.bounding_box.min.z as f32),
-            vec3(room.bounding_box.max.x as f32, room.bounding_box.max.y as f32, room.bounding_box.min.z as f32),
-            vec3(room.bounding_box.min.x as f32, room.bounding_box.min.y as f32, room.bounding_box.max.z as f32),
-            vec3(room.bounding_box.max.x as f32, room.bounding_box.min.y as f32, room.bounding_box.max.z as f32),
-            vec3(room.bounding_box.min.x as f32, room.bounding_box.max.y as f32, room.bounding_box.max.z as f32),
-            vec3(room.bounding_box.max.x as f32, room.bounding_box.max.y as f32, room.bounding_box.max.z as f32),
+            vec3(
+                room.bounding_box.min.x as f32,
+                room.bounding_box.min.y as f32,
+                room.bounding_box.min.z as f32,
+            ),
+            vec3(
+                room.bounding_box.max.x as f32,
+                room.bounding_box.min.y as f32,
+                room.bounding_box.min.z as f32,
+            ),
+            vec3(
+                room.bounding_box.min.x as f32,
+                room.bounding_box.max.y as f32,
+                room.bounding_box.min.z as f32,
+            ),
+            vec3(
+                room.bounding_box.max.x as f32,
+                room.bounding_box.max.y as f32,
+                room.bounding_box.min.z as f32,
+            ),
+            vec3(
+                room.bounding_box.min.x as f32,
+                room.bounding_box.min.y as f32,
+                room.bounding_box.max.z as f32,
+            ),
+            vec3(
+                room.bounding_box.max.x as f32,
+                room.bounding_box.min.y as f32,
+                room.bounding_box.max.z as f32,
+            ),
+            vec3(
+                room.bounding_box.min.x as f32,
+                room.bounding_box.max.y as f32,
+                room.bounding_box.max.z as f32,
+            ),
+            vec3(
+                room.bounding_box.max.x as f32,
+                room.bounding_box.max.y as f32,
+                room.bounding_box.max.z as f32,
+            ),
         ];
 
         for corner in corners {
@@ -630,13 +669,13 @@ mod tests {
     #[test]
     fn test_zbuffer_depth_test() {
         let mut zbuffer = ZBuffer::new(10, 5);
-        
+
         // First pixel should be set
         assert!(zbuffer.set_pixel(5, 2, 1.0, 'A'));
-        
+
         // Closer pixel should replace
         assert!(zbuffer.set_pixel(5, 2, 2.0, 'B'));
-        
+
         // Further pixel should not replace
         assert!(!zbuffer.set_pixel(5, 2, 0.5, 'C'));
     }
@@ -644,10 +683,16 @@ mod tests {
     #[test]
     fn test_uniform_grid_creation() {
         let points = vec![
-            Point3DColored { pos: vec3(0.0, 0.0, 0.0), color: Color::Red },
-            Point3DColored { pos: vec3(10.0, 10.0, 10.0), color: Color::Blue },
+            Point3DColored {
+                pos: vec3(0.0, 0.0, 0.0),
+                color: Color::Red,
+            },
+            Point3DColored {
+                pos: vec3(10.0, 10.0, 10.0),
+                color: Color::Blue,
+            },
         ];
-        
+
         let grid = UniformGrid::new(&points, 8);
         assert_eq!(grid.grid_size, 8);
         assert!(!grid.cells[0][0][0].points.is_empty() || !grid.cells[7][7][7].points.is_empty());
@@ -657,11 +702,15 @@ mod tests {
     fn test_camera_controls() {
         let mut camera = Camera::new();
         let initial_pos = camera.pos;
-        
+
         // Test movement
         camera.move_camera(1.0, 0.0, 0.0, 5.0);
-        assert!(camera.pos.x != initial_pos.x || camera.pos.y != initial_pos.y || camera.pos.z != initial_pos.z);
-        
+        assert!(
+            camera.pos.x != initial_pos.x
+                || camera.pos.y != initial_pos.y
+                || camera.pos.z != initial_pos.z
+        );
+
         // Test orbit
         let initial_yaw = camera.yaw;
         camera.orbit(0.1, 0.0, 1.0);
@@ -686,7 +735,7 @@ mod tests {
         // All ramps should start with space (darkest)
         assert_eq!(brightness_ramps::CLASSIC.chars().next().unwrap(), ' ');
         assert_eq!(brightness_ramps::ACEROLA_16.chars().next().unwrap(), ' ');
-        
+
         // ACEROLA_16 should end with '$' (brightest)
         assert_eq!(brightness_ramps::ACEROLA_16.chars().last().unwrap(), '$');
     }
@@ -694,10 +743,10 @@ mod tests {
     #[test]
     fn test_get_brightness_char_bounds() {
         let ramp = brightness_ramps::ACEROLA_16;
-        
+
         // Depth 0.0 should give first character (space)
         assert_eq!(get_brightness_char(0.0, ramp), ' ');
-        
+
         // Depth 1.0 should give last character ($)
         assert_eq!(get_brightness_char(1.0, ramp), '$');
     }
@@ -705,11 +754,11 @@ mod tests {
     #[test]
     fn test_get_brightness_char_midrange() {
         let ramp = brightness_ramps::ACEROLA_16;
-        
+
         // Mid-range depth should give middle character
         let ch = get_brightness_char(0.5, ramp);
         assert!(ch != ' ' && ch != '$');
-        
+
         // Should be around index 7-8 for 16-character ramp
         let expected_chars = ['#', '%', '@'];
         assert!(expected_chars.contains(&ch));
@@ -718,15 +767,15 @@ mod tests {
     #[test]
     fn test_get_brightness_char_progression() {
         let ramp = brightness_ramps::ACEROLA_16;
-        
+
         // Verify smooth progression from dark to bright
         let depths = [0.0, 0.25, 0.5, 0.75, 1.0];
         let mut prev_idx = 0;
-        
+
         for depth in depths {
             let ch = get_brightness_char(depth, ramp);
             let idx = ramp.chars().position(|c| c == ch).unwrap();
-            
+
             // Each step should be at same or higher brightness
             assert!(idx >= prev_idx);
             prev_idx = idx;
@@ -736,43 +785,39 @@ mod tests {
     #[test]
     fn test_get_brightness_char_edge_cases() {
         let ramp = brightness_ramps::ACEROLA_16;
-        
+
         // Negative depth should clamp to 0
         assert_eq!(get_brightness_char(-0.5, ramp), ' ');
-        
+
         // Depth > 1.0 should clamp to max
         assert_eq!(get_brightness_char(2.0, ramp), '$');
     }
 
     #[test]
     fn test_point_cloud_renderer_default_ramp() {
-        let points = vec![
-            Point3DColored { 
-                pos: vec3(0.0, 0.0, 0.0), 
-                color: Color::White 
-            },
-        ];
-        
+        let points = vec![Point3DColored {
+            pos: vec3(0.0, 0.0, 0.0),
+            color: Color::White,
+        }];
+
         let renderer = PointCloudRenderer::new(points);
-        
+
         // Should default to ACEROLA_16
         assert_eq!(renderer.brightness_ramp, brightness_ramps::ACEROLA_16);
     }
 
     #[test]
     fn test_point_cloud_renderer_custom_ramp() {
-        let points = vec![
-            Point3DColored { 
-                pos: vec3(0.0, 0.0, 0.0), 
-                color: Color::White 
-            },
-        ];
-        
+        let points = vec![Point3DColored {
+            pos: vec3(0.0, 0.0, 0.0),
+            color: Color::White,
+        }];
+
         // Test builder pattern with different ramps
-        let renderer = PointCloudRenderer::new(points.clone())
-            .with_brightness_ramp(brightness_ramps::CLASSIC);
+        let renderer =
+            PointCloudRenderer::new(points.clone()).with_brightness_ramp(brightness_ramps::CLASSIC);
         assert_eq!(renderer.brightness_ramp, brightness_ramps::CLASSIC);
-        
+
         let renderer = PointCloudRenderer::new(points.clone())
             .with_brightness_ramp(brightness_ramps::UNICODE_16);
         assert_eq!(renderer.brightness_ramp, brightness_ramps::UNICODE_16);
@@ -783,12 +828,12 @@ mod tests {
         // Verify the exact Acerola character set
         let expected = " .:-=+*#%@MWBQ&$";
         assert_eq!(brightness_ramps::ACEROLA_16, expected);
-        
+
         // Verify key characters at specific positions
         let chars: Vec<char> = brightness_ramps::ACEROLA_16.chars().collect();
-        assert_eq!(chars[0], ' ');   // Darkest
-        assert_eq!(chars[8], '%');   // Mid-range
-        assert_eq!(chars[15], '$');  // Brightest
+        assert_eq!(chars[0], ' '); // Darkest
+        assert_eq!(chars[8], '%'); // Mid-range
+        assert_eq!(chars[15], '$'); // Brightest
     }
 
     #[test]
@@ -800,10 +845,10 @@ mod tests {
                 color: Color::White,
             })
             .collect();
-        
+
         let renderer = PointCloudRenderer::new(small_points);
         assert!(renderer.grid.is_none());
-        
+
         // Large point cloud should use LOD
         let large_points: Vec<Point3DColored> = (0..15000)
             .map(|i| Point3DColored {
@@ -811,7 +856,7 @@ mod tests {
                 color: Color::White,
             })
             .collect();
-        
+
         let renderer = PointCloudRenderer::new(large_points);
         assert!(renderer.grid.is_some());
     }
@@ -827,9 +872,13 @@ mod tests {
         ] {
             let chars: Vec<char> = ramp.chars().collect();
             let unique_chars: std::collections::HashSet<char> = chars.iter().copied().collect();
-            
-            assert_eq!(chars.len(), unique_chars.len(),
-                "{} ramp should have no duplicate characters", name);
+
+            assert_eq!(
+                chars.len(),
+                unique_chars.len(),
+                "{} ramp should have no duplicate characters",
+                name
+            );
         }
     }
 }

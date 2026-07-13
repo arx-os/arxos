@@ -235,8 +235,7 @@ impl AnimationSystem {
         to_status: EquipmentStatus,
         duration: Duration,
     ) -> Result<(), String> {
-        let animation =
-            create_status_transition_animation(id, from_status, to_status, duration);
+        let animation = create_status_transition_animation(id, from_status, to_status, duration);
         self.start_animation(animation)
     }
 
@@ -326,7 +325,6 @@ impl AnimationSystem {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -367,10 +365,7 @@ mod tests {
     #[test]
     fn test_easing_functions() {
         // Test linear easing
-        assert_eq!(
-            apply_easing(0.5, &EasingFunction::Linear),
-            0.5
-        );
+        assert_eq!(apply_easing(0.5, &EasingFunction::Linear), 0.5);
 
         // Test ease-in
         let ease_in = apply_easing(0.5, &EasingFunction::EaseIn);

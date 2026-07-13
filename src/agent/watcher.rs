@@ -16,13 +16,12 @@ impl FileWatcher {
     /// Create a new file watcher for the given repository root and extensions
     pub fn new(repo_root: &Path, extensions: Vec<String>) -> Result<Self> {
         let (tx, rx) = channel();
-        
+
         let mut watcher = RecommendedWatcher::new(
             move |res| {
                 let _ = tx.send(res);
             },
-            Config::default()
-                .with_poll_interval(Duration::from_millis(500)),
+            Config::default().with_poll_interval(Duration::from_millis(500)),
         )?;
 
         // Watch for relevant files in the repository root (non-recursive)
@@ -58,10 +57,7 @@ impl FileWatcher {
     /// Check if an event represents a relevant file modification
     fn is_relevant_modification(&self, event: &Event) -> bool {
         // Only care about modify/create events
-        let is_relevant_event = matches!(
-            event.kind,
-            EventKind::Modify(_) | EventKind::Create(_)
-        );
+        let is_relevant_event = matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_));
 
         if !is_relevant_event {
             return false;
@@ -87,8 +83,9 @@ mod tests {
     fn detects_yaml_changes() {
         let temp = TempDir::new().unwrap();
         let repo_root = temp.path();
-        
-        let watcher = FileWatcher::new(repo_root, vec!["yaml".to_string(), "yml".to_string()]).unwrap();
+
+        let watcher =
+            FileWatcher::new(repo_root, vec!["yaml".to_string(), "yml".to_string()]).unwrap();
 
         // Create a YAML file
         let yaml_path = repo_root.join("building.yaml");
@@ -110,8 +107,9 @@ mod tests {
     fn ignores_non_yaml_files() {
         let temp = TempDir::new().unwrap();
         let repo_root = temp.path();
-        
-        let watcher = FileWatcher::new(repo_root, vec!["yaml".to_string(), "yml".to_string()]).unwrap();
+
+        let watcher =
+            FileWatcher::new(repo_root, vec!["yaml".to_string(), "yml".to_string()]).unwrap();
 
         // Create a non-YAML file
         fs::write(repo_root.join("README.md"), "# Test").unwrap();

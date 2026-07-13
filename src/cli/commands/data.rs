@@ -5,57 +5,31 @@
 
 use super::Command;
 use crate::cli::subcommands::{EquipmentCommands, RoomCommands, SpatialCommands};
-use crate::core::{Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType, Room, RoomType};
-use crate::core::{Dimensions, Position, SpatialProperties};
 use crate::core::domain::ArxAddress;
-use crate::git::manager::{BuildingGitManager, GitConfigManager};
-use crate::yaml::BuildingYamlSerializer;
+use crate::core::{Dimensions, Position, SpatialProperties};
+use crate::core::{
+    Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType, Room, RoomType,
+};
 use std::collections::HashMap;
 use std::error::Error;
-use std::fs;
 use std::path::{Path, PathBuf};
 
-fn load_building_from_dir() -> Result<(PathBuf, crate::yaml::BuildingData), Box<dyn Error>> {
-    let current_dir = std::env::current_dir()?;
-    let entries = fs::read_dir(&current_dir)?;
-
-    for entry in entries {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() {
-            if let Some(extension) = path.extension() {
-                if extension == "yaml" || extension == "yml" {
-                    let contents = fs::read_to_string(&path)?;
-                    if let Ok(building_data) = serde_yaml::from_str::<crate::yaml::BuildingData>(&contents) {
-                        return Ok((path, building_data));
-                    }
-                }
-            }
-        }
-    }
-
-    Err("No valid building YAML file found in current directory".into())
+fn load_building_from_dir() -> Result<(PathBuf, crate::core::Building), Box<dyn Error>> {
+    use crate::persistence::PersistenceManager;
+    let pm = PersistenceManager::from_cwd()?;
+    let path = pm.building_yaml_path();
+    let building = pm.load_building_data()?;
+    Ok((path, building))
 }
 
-fn save_building_to_path(path: &Path, data: &crate::yaml::BuildingData) -> Result<(), Box<dyn Error>> {
-    let yaml = BuildingYamlSerializer::serialize(data)?;
-    fs::write(path, yaml)?;
-    Ok(())
-}
-
-fn commit_if_requested(path: &Path, message: &str) -> Result<(), Box<dyn Error>> {
-    if !Path::new(".git").exists() {
-        return Ok(());
-    }
-
-    let config = GitConfigManager::load_from_arx_config_or_env();
-    let mut manager = BuildingGitManager::new(".", "current", config)?;
-
-    let current_dir = std::env::current_dir()?;
-    let rel_path = path.strip_prefix(&current_dir).unwrap_or(path);
-    manager.stage_file(&rel_path.to_string_lossy())?;
-    manager.commit_staged(message)?;
-
+/// Persist a mutated Building through finalize + hard validation + YAML SSOT.
+fn save_building_to_path(
+    _path: &Path,
+    building: crate::core::Building,
+    commit: bool,
+    message: &str,
+) -> Result<(), Box<dyn Error>> {
+    crate::ingest::persist_building(building, commit, Some(message))?;
     Ok(())
 }
 
@@ -70,12 +44,16 @@ fn parse_dimensions(input: &str) -> Result<Dimensions, Box<dyn Error>> {
     let depth: f64 = parts[1].trim().parse()?;
     let height: f64 = parts[2].trim().parse()?;
 
-    Ok(Dimensions { width, height, depth })
+    Ok(Dimensions {
+        width,
+        height,
+        depth,
+    })
 }
 
 fn parse_position(input: &str, coordinate_system: &str) -> Result<Position, Box<dyn Error>> {
     let parts: Vec<&str> = input
-        .split(|c| c == ',' || c == ' ')
+        .split([',', ' '])
         .filter(|s| !s.trim().is_empty())
         .collect();
 
@@ -173,7 +151,8 @@ fn apply_room_updates(room: &mut Room, props: &[String]) -> Result<(), Box<dyn E
                 room.spatial_properties.coordinate_system = value.trim().to_string();
             }
             other => {
-                room.properties.insert(other.to_string(), value.trim().to_string());
+                room.properties
+                    .insert(other.to_string(), value.trim().to_string());
             }
         }
     }
@@ -209,7 +188,9 @@ fn apply_equipment_updates(
                 equipment.set_position(pos);
             }
             other => {
-                equipment.properties.insert(other.to_string(), value.trim().to_string());
+                equipment
+                    .properties
+                    .insert(other.to_string(), value.trim().to_string());
             }
         }
     }
@@ -240,11 +221,11 @@ impl Command for RoomCommand {
                 position,
                 commit,
             } => {
-                let (path, mut building_data) = load_building_from_dir()?;
-                if building_data.building.name != *building {
+                let (path, mut model) = load_building_from_dir()?;
+                if model.name != *building {
                     return Err(format!(
                         "Building name mismatch: expected '{}', found '{}'",
-                        building, building_data.building.name
+                        building, model.name
                     )
                     .into());
                 }
@@ -274,13 +255,12 @@ impl Command for RoomCommand {
 
                 room.spatial_properties = SpatialProperties::new(pos, dims, coordinate_system);
 
-                let floor_ref = if let Some(floor_ref) = building_data.building.find_floor_mut(*floor) {
+                let floor_ref = if let Some(floor_ref) = model.find_floor_mut(*floor) {
                     floor_ref
                 } else {
                     let new_floor = crate::core::Floor::new(format!("Floor {}", floor), *floor);
-                    building_data.building.add_floor(new_floor);
-                    building_data
-                        .building
+                    model.add_floor(new_floor);
+                    model
                         .find_floor_mut(*floor)
                         .ok_or_else(|| format!("Failed to create floor {}", floor))?
                 };
@@ -298,11 +278,7 @@ impl Command for RoomCommand {
 
                 wing_ref.rooms.push(room.clone());
 
-                save_building_to_path(&path, &building_data)?;
-
-                if *commit {
-                    commit_if_requested(&path, &format!("Add room: {}", room.name))?;
-                }
+                save_building_to_path(&path, model, *commit, &format!("Add room: {}", room.name))?;
 
                 println!("✅ Created room: {}", room.name);
                 Ok(())
@@ -318,19 +294,19 @@ impl Command for RoomCommand {
                     return Err("Interactive room explorer requires --features tui".into());
                 }
 
-                let (_path, building_data) = load_building_from_dir()?;
+                let (_path, model) = load_building_from_dir()?;
                 if let Some(ref b) = building {
-                    if building_data.building.name != *b {
+                    if model.name != *b {
                         return Err(format!(
                             "Building name mismatch: expected '{}', found '{}'",
-                            b, building_data.building.name
+                            b, model.name
                         )
                         .into());
                     }
                 }
 
                 let mut rooms: Vec<&Room> = Vec::new();
-                for floor_ref in &building_data.building.floors {
+                for floor_ref in &model.floors {
                     if let Some(level) = floor {
                         if floor_ref.level != *level {
                             continue;
@@ -366,16 +342,14 @@ impl Command for RoomCommand {
                 Ok(())
             }
             RoomCommands::Show { room, equipment } => {
-                let (_path, building_data) = load_building_from_dir()?;
+                let (_path, model) = load_building_from_dir()?;
 
                 let mut found_room: Option<&Room> = None;
-                for floor_ref in &building_data.building.floors {
+                for floor_ref in &model.floors {
                     for wing_ref in &floor_ref.wings {
-                        if let Some(r) = wing_ref
-                            .rooms
-                            .iter()
-                            .find(|r| r.name.eq_ignore_ascii_case(room) || r.id.eq_ignore_ascii_case(room))
-                        {
+                        if let Some(r) = wing_ref.rooms.iter().find(|r| {
+                            r.name.eq_ignore_ascii_case(room) || r.id.eq_ignore_ascii_case(room)
+                        }) {
                             found_room = Some(r);
                             break;
                         }
@@ -399,17 +373,19 @@ impl Command for RoomCommand {
 
                 Ok(())
             }
-            RoomCommands::Update { room, property, commit } => {
-                let (path, mut building_data) = load_building_from_dir()?;
+            RoomCommands::Update {
+                room,
+                property,
+                commit,
+            } => {
+                let (path, mut model) = load_building_from_dir()?;
 
                 let mut updated_room = None;
-                for floor_ref in &mut building_data.building.floors {
+                for floor_ref in &mut model.floors {
                     for wing_ref in &mut floor_ref.wings {
-                        if let Some(room_ref) = wing_ref
-                            .rooms
-                            .iter_mut()
-                            .find(|r| r.name.eq_ignore_ascii_case(room) || r.id.eq_ignore_ascii_case(room))
-                        {
+                        if let Some(room_ref) = wing_ref.rooms.iter_mut().find(|r| {
+                            r.name.eq_ignore_ascii_case(room) || r.id.eq_ignore_ascii_case(room)
+                        }) {
                             apply_room_updates(room_ref, property)?;
                             updated_room = Some(room_ref.clone());
                             break;
@@ -422,11 +398,12 @@ impl Command for RoomCommand {
 
                 let updated = updated_room.ok_or_else(|| format!("Room '{}' not found", room))?;
 
-                save_building_to_path(&path, &building_data)?;
-
-                if *commit {
-                    commit_if_requested(&path, &format!("Update room: {}", updated.name))?;
-                }
+                save_building_to_path(
+                    &path,
+                    model,
+                    *commit,
+                    &format!("Update room: {}", updated.name),
+                )?;
 
                 println!("✅ Updated room: {}", updated.name);
                 Ok(())
@@ -437,13 +414,16 @@ impl Command for RoomCommand {
                 }
 
                 if let RoomCommands::Delete { room, commit, .. } = &self.subcommand {
-                    let (path, mut building_data) = load_building_from_dir()?;
+                    let (path, mut model) = load_building_from_dir()?;
 
                     let mut removed = false;
-                    for floor_ref in &mut building_data.building.floors {
+                    for floor_ref in &mut model.floors {
                         for wing_ref in &mut floor_ref.wings {
                             let before = wing_ref.rooms.len();
-                            wing_ref.rooms.retain(|r| !r.name.eq_ignore_ascii_case(room) && !r.id.eq_ignore_ascii_case(room));
+                            wing_ref.rooms.retain(|r| {
+                                !r.name.eq_ignore_ascii_case(room)
+                                    && !r.id.eq_ignore_ascii_case(room)
+                            });
                             if wing_ref.rooms.len() < before {
                                 removed = true;
                             }
@@ -454,11 +434,12 @@ impl Command for RoomCommand {
                         return Err(format!("Room '{}' not found", room).into());
                     }
 
-                    save_building_to_path(&path, &building_data)?;
-
-                    if *commit {
-                        commit_if_requested(&path, &format!("Delete room: {}", room))?;
-                    }
+                    save_building_to_path(
+                        &path,
+                        model,
+                        *commit,
+                        &format!("Delete room: {}", room),
+                    )?;
 
                     println!("✅ Deleted room: {}", room);
                     Ok(())
@@ -491,7 +472,7 @@ impl Command for EquipmentCommand {
                 property,
                 commit,
             } => {
-                let (path, mut building_data) = load_building_from_dir()?;
+                let (path, mut model) = load_building_from_dir()?;
 
                 let eq_type = parse_equipment_type(equipment_type)?;
                 let mut equipment = Equipment::new(
@@ -515,7 +496,7 @@ impl Command for EquipmentCommand {
                 equipment.properties = parse_properties(property)?;
 
                 let mut added = false;
-                for floor_ref in &mut building_data.building.floors {
+                for floor_ref in &mut model.floors {
                     for wing_ref in &mut floor_ref.wings {
                         if let Some(room_ref) = wing_ref
                             .rooms
@@ -537,11 +518,12 @@ impl Command for EquipmentCommand {
                     return Err(format!("Room '{}' not found", room).into());
                 }
 
-                save_building_to_path(&path, &building_data)?;
-
-                if *commit {
-                    commit_if_requested(&path, &format!("Add equipment: {}", equipment.name))?;
-                }
+                save_building_to_path(
+                    &path,
+                    model,
+                    *commit,
+                    &format!("Add equipment: {}", equipment.name),
+                )?;
 
                 println!("✅ Added equipment: {}", equipment.name);
                 Ok(())
@@ -556,24 +538,43 @@ impl Command for EquipmentCommand {
                     return Err("Interactive equipment browser requires --features tui".into());
                 }
 
-                let (_path, building_data) = load_building_from_dir()?;
-                let mut items: Vec<&Equipment> = Vec::new();
-
-                for floor_ref in &building_data.building.floors {
-                    for eq in &floor_ref.equipment {
+                let (_path, model) = load_building_from_dir()?;
+                let all = model.get_all_equipment();
+                let items: Vec<&Equipment> = all
+                    .into_iter()
+                    .filter(|eq| {
                         if let Some(ref r) = room {
-                            if eq.room_id.as_deref() != Some(r.as_str()) {
-                                continue;
+                            let mut in_room = false;
+                            for floor in &model.floors {
+                                for wing in &floor.wings {
+                                    for rm in &wing.rooms {
+                                        if (rm.name.eq_ignore_ascii_case(r)
+                                            || rm.id.eq_ignore_ascii_case(r))
+                                            && rm.equipment.iter().any(|e| e.id == eq.id)
+                                        {
+                                            in_room = true;
+                                        }
+                                    }
+                                }
+                            }
+                            if !in_room
+                                && !eq
+                                    .room_id
+                                    .as_deref()
+                                    .map(|id| id.eq_ignore_ascii_case(r))
+                                    .unwrap_or(false)
+                            {
+                                return false;
                             }
                         }
                         if let Some(ref t) = equipment_type {
                             if eq.equipment_type.to_string().to_lowercase() != t.to_lowercase() {
-                                continue;
+                                return false;
                             }
                         }
-                        items.push(eq);
-                    }
-                }
+                        true
+                    })
+                    .collect();
 
                 if items.is_empty() {
                     println!("📋 No equipment found");
@@ -595,29 +596,30 @@ impl Command for EquipmentCommand {
 
                 Ok(())
             }
-            EquipmentCommands::Update { equipment, property, position, commit } => {
-                let (path, mut building_data) = load_building_from_dir()?;
+            EquipmentCommands::Update {
+                equipment,
+                property,
+                position,
+                commit,
+            } => {
+                let (path, mut model) = load_building_from_dir()?;
 
-                let mut updated = None;
-                for floor_ref in &mut building_data.building.floors {
-                    if let Some(eq) = floor_ref
-                        .equipment
-                        .iter_mut()
-                        .find(|e| e.id.eq_ignore_ascii_case(equipment) || e.name.eq_ignore_ascii_case(equipment))
-                    {
-                        apply_equipment_updates(eq, property, position.as_deref())?;
-                        updated = Some(eq.clone());
-                        break;
-                    }
-                }
+                let updated = if let Some(eq) = model.find_equipment_mut(equipment) {
+                    apply_equipment_updates(eq, property, position.as_deref())?;
+                    Some(eq.clone())
+                } else {
+                    None
+                };
 
-                let updated_eq = updated.ok_or_else(|| format!("Equipment '{}' not found", equipment))?;
+                let updated_eq =
+                    updated.ok_or_else(|| format!("Equipment '{}' not found", equipment))?;
 
-                save_building_to_path(&path, &building_data)?;
-
-                if *commit {
-                    commit_if_requested(&path, &format!("Update equipment: {}", updated_eq.name))?;
-                }
+                save_building_to_path(
+                    &path,
+                    model,
+                    *commit,
+                    &format!("Update equipment: {}", updated_eq.name),
+                )?;
 
                 println!("✅ Updated equipment: {}", updated_eq.name);
                 Ok(())
@@ -627,35 +629,43 @@ impl Command for EquipmentCommand {
                     return Err("Equipment removal requires --confirm flag".into());
                 }
 
-                if let EquipmentCommands::Remove { equipment, commit, .. } = &self.subcommand {
-                    let (path, mut building_data) = load_building_from_dir()?;
+                if let EquipmentCommands::Remove {
+                    equipment, commit, ..
+                } = &self.subcommand
+                {
+                    let (path, mut model) = load_building_from_dir()?;
 
-                    let mut removed = false;
-                    for floor_ref in &mut building_data.building.floors {
-                        let before = floor_ref.equipment.len();
-                        floor_ref
-                            .equipment
-                            .retain(|e| !e.id.eq_ignore_ascii_case(equipment) && !e.name.eq_ignore_ascii_case(equipment));
-                        if floor_ref.equipment.len() < before {
-                            removed = true;
-                        }
-
+                    let before = model.get_all_equipment().len();
+                    for floor_ref in &mut model.floors {
+                        floor_ref.equipment.retain(|e| {
+                            !e.id.eq_ignore_ascii_case(equipment)
+                                && !e.name.eq_ignore_ascii_case(equipment)
+                        });
                         for wing_ref in &mut floor_ref.wings {
+                            wing_ref.equipment.retain(|e| {
+                                !e.id.eq_ignore_ascii_case(equipment)
+                                    && !e.name.eq_ignore_ascii_case(equipment)
+                            });
                             for room_ref in &mut wing_ref.rooms {
-                                room_ref.equipment.retain(|e| !e.id.eq_ignore_ascii_case(equipment) && !e.name.eq_ignore_ascii_case(equipment));
+                                room_ref.equipment.retain(|e| {
+                                    !e.id.eq_ignore_ascii_case(equipment)
+                                        && !e.name.eq_ignore_ascii_case(equipment)
+                                });
                             }
                         }
                     }
+                    let removed = model.get_all_equipment().len() < before;
 
                     if !removed {
                         return Err(format!("Equipment '{}' not found", equipment).into());
                     }
 
-                    save_building_to_path(&path, &building_data)?;
-
-                    if *commit {
-                        commit_if_requested(&path, &format!("Remove equipment: {}", equipment))?;
-                    }
+                    save_building_to_path(
+                        &path,
+                        model,
+                        *commit,
+                        &format!("Remove equipment: {}", equipment),
+                    )?;
 
                     println!("✅ Removed equipment: {}", equipment);
                     Ok(())
@@ -678,111 +688,80 @@ pub struct SpatialCommand {
 
 impl Command for SpatialCommand {
     fn execute(&self) -> Result<(), Box<dyn Error>> {
+        use crate::core::operations::spatial::{
+            spatial_query, transform_coordinates, validate_spatial,
+        };
+        use crate::persistence::load_building_at;
+        use std::path::Path;
+
         match &self.subcommand {
-            SpatialCommands::GridToReal { grid, building } => {
-                println!("🗺️  Converting grid to real coordinates...");
-                println!("   Grid: {}", grid);
-
-                if let Some(ref b) = building {
-                    println!("   Building: {}", b);
-                }
-
-                // Example output:
-                // println!("   Real coordinates: x=10.5, y=20.3, z=0.0");
-
-                Ok(())
-            }
-            SpatialCommands::RealToGrid { x, y, z, building } => {
-                println!("🗺️  Converting real to grid coordinates...");
-                println!("   Real: x={}, y={}", x, y);
-
-                if let Some(z_val) = z {
-                    println!("         z={}", z_val);
-                }
-
-                if let Some(ref b) = building {
-                    println!("   Building: {}", b);
-                }
-
-                // Example output:
-                // println!("   Grid: D-4");
-
-                Ok(())
-            }
+            SpatialCommands::GridToReal { .. } => Err(
+                "arx spatial grid-to-real is not implemented (no fake success). \
+                 Use arx query for address-based lookup."
+                    .into(),
+            ),
+            SpatialCommands::RealToGrid { .. } => Err(
+                "arx spatial real-to-grid is not implemented (no fake success). \
+                 Use arx query for address-based lookup."
+                    .into(),
+            ),
             SpatialCommands::Query {
                 query_type,
                 entity,
                 params,
             } => {
-                println!("🔍 Spatial query...");
-                println!("   Type: {}", query_type);
-                println!("   Entity: {}", entity);
-
-                if !params.is_empty() {
-                    println!("   Parameters:");
-                    for param in params {
-                        println!("     - {}", param);
+                let building = load_building_at(Path::new("."))
+                    .map_err(|e| format!("load building.yaml: {}", e))?;
+                let results = spatial_query(&building, query_type, entity, params.clone())?;
+                if results.is_empty() {
+                    println!("No spatial matches for query type '{}'", query_type);
+                } else {
+                    for r in &results {
+                        println!(
+                            "{} ({}) dist={:.3} @ ({:.2},{:.2},{:.2})",
+                            r.entity_name,
+                            r.entity_type,
+                            r.distance,
+                            r.position.x,
+                            r.position.y,
+                            r.position.z
+                        );
                     }
+                    println!("Total: {} result(s)", results.len());
                 }
-
-                // - within distance
-                // - intersects
-                // - contains
-                // - nearest neighbors
-
                 Ok(())
             }
-            SpatialCommands::Relate {
-                entity1,
-                entity2,
-                relationship,
-            } => {
-                println!("🔗 Setting spatial relationship...");
-                println!("   Entity 1: {}", entity1);
-                println!("   Entity 2: {}", entity2);
-                println!("   Relationship: {}", relationship);
-
-                // - adjacent_to
-                // - above
-                // - below
-                // - inside
-
-                println!("✅ Relationship set successfully");
-                Ok(())
-            }
+            SpatialCommands::Relate { .. } => Err(
+                "arx spatial relate is not implemented (relationships are implicit via hierarchy/bbox; no fake success)."
+                    .into(),
+            ),
             SpatialCommands::Transform { from, to, entity } => {
-                println!("🔄 Transforming coordinates...");
-                println!("   From: {}", from);
-                println!("   To: {}", to);
-                println!("   Entity: {}", entity);
-
-                // - Grid <-> World
-                // - World <-> Local
-                // - Local <-> Grid
-
-                println!("✅ Transform completed successfully");
+                let building = load_building_at(Path::new("."))
+                    .map_err(|e| format!("load building.yaml: {}", e))?;
+                let msg = transform_coordinates(&building, from, to, entity)?;
+                println!("{}", msg);
                 Ok(())
             }
             SpatialCommands::Validate { entity, tolerance } => {
-                println!("✓ Validating spatial data...");
-
-                if let Some(ref e) = entity {
-                    println!("   Entity: {}", e);
+                let building = load_building_at(Path::new("."))
+                    .map_err(|e| format!("load building.yaml: {}", e))?;
+                let result =
+                    validate_spatial(&building, entity.as_deref(), *tolerance)?;
+                println!(
+                    "Spatial validation: checked={} issues={} valid={}",
+                    result.entities_checked, result.issues_found, result.is_valid
+                );
+                for issue in &result.issues {
+                    println!(
+                        "  [{}] {} ({}): {}",
+                        issue.severity, issue.entity_name, issue.issue_type, issue.message
+                    );
+                }
+                if result.is_valid {
+                    Ok(())
                 } else {
-                    println!("   Validating all entities");
+                    Err("Spatial validation found issues".into())
                 }
-
-                if let Some(tol) = tolerance {
-                    println!("   Tolerance: {}", tol);
-                }
-
-                // - Check for overlaps
-                // - Verify bounding boxes
-                // - Validate coordinates
-                // - Check relationships
-
-                println!("✅ Validation completed");
-                Ok(())
             }
         }
     }
@@ -797,7 +776,6 @@ mod tests {
     use super::*;
     use serial_test::serial;
     use tempfile::tempdir;
-    use std::fs;
 
     #[test]
     #[serial]
@@ -805,16 +783,13 @@ mod tests {
         let tmp = tempdir().expect("tempdir");
         let dir = tmp.path();
 
-        let building = crate::core::Building::new("My Building".to_string(), "/building".to_string());
-        let data = crate::yaml::BuildingData {
-            building,
-            equipment: Vec::new(),
-        };
-        let yaml = BuildingYamlSerializer::serialize(&data).expect("serialize building");
-        fs::write(dir.join("building.yaml"), yaml).expect("write building.yaml");
+        let building =
+            crate::core::Building::new("My Building".to_string(), "/building".to_string());
+        crate::persistence::save_building_at(dir, &building).expect("write building.yaml");
 
         let original_dir = std::env::current_dir().unwrap_or_else(|_| {
-            let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR env var");
+            let manifest_dir =
+                std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR env var");
             let path = PathBuf::from(manifest_dir);
             let _ = std::env::set_current_dir(&path);
             path
@@ -837,7 +812,8 @@ mod tests {
         assert_eq!(cmd.name(), "room");
         assert!(cmd.execute().is_ok());
 
-        let building = crate::persistence::load_building_data_from_dir().expect("load building data");
+        let building =
+            crate::persistence::load_building_data_from_dir().expect("load building data");
         assert_eq!(building.floors.len(), 1);
         assert_eq!(building.floors[0].wings.len(), 1);
         assert_eq!(building.floors[0].wings[0].rooms.len(), 1);
@@ -851,12 +827,13 @@ mod tests {
         let tmp = tempdir().expect("tempdir");
         let dir = tmp.path();
 
-        let building = crate::core::Building::new("My Building".to_string(), "/building".to_string());
-        let yaml = BuildingYamlSerializer::serialize_building(&building).expect("serialize building");
-        fs::write(dir.join("building.yaml"), yaml).expect("write building.yaml");
+        let building =
+            crate::core::Building::new("My Building".to_string(), "/building".to_string());
+        crate::persistence::save_building_at(dir, &building).expect("write building.yaml");
 
         let original_dir = std::env::current_dir().unwrap_or_else(|_| {
-            let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR env var");
+            let manifest_dir =
+                std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR env var");
             let path = PathBuf::from(manifest_dir);
             let _ = std::env::set_current_dir(&path);
             path
@@ -892,7 +869,8 @@ mod tests {
         assert_eq!(cmd.name(), "equipment");
         assert!(cmd.execute().is_ok());
 
-        let building = crate::persistence::load_building_data_from_dir().expect("load building data");
+        let building =
+            crate::persistence::load_building_data_from_dir().expect("load building data");
         let eq_count = building.get_all_equipment().len();
         assert_eq!(eq_count, 1);
 
@@ -900,7 +878,7 @@ mod tests {
     }
 
     #[test]
-    fn test_spatial_grid_to_real_command() {
+    fn test_spatial_grid_to_real_command_is_not_theater() {
         let cmd = SpatialCommand {
             subcommand: SpatialCommands::GridToReal {
                 grid: "D-4".to_string(),
@@ -909,6 +887,19 @@ mod tests {
         };
 
         assert_eq!(cmd.name(), "spatial");
-        assert!(cmd.execute().is_ok());
+        // Unimplemented subcommands must fail — never print fake success.
+        assert!(cmd.execute().is_err());
+    }
+
+    #[test]
+    fn test_spatial_relate_is_not_theater() {
+        let cmd = SpatialCommand {
+            subcommand: SpatialCommands::Relate {
+                entity1: "a".into(),
+                entity2: "b".into(),
+                relationship: "adjacent".into(),
+            },
+        };
+        assert!(cmd.execute().is_err());
     }
 }

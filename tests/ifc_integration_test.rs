@@ -1,4 +1,4 @@
-// Integration test: Verify IFC files parse with correct bounding boxes
+// Integration test: Verify IFC files parse with the native path into core::Building
 use std::path::Path;
 
 #[test]
@@ -16,25 +16,39 @@ fn test_ifc_files_parse_with_bounding_boxes() {
         }
 
         println!("📄 Testing IFC file: {}", file_path);
-        
-        // Use ArxOS IFC processor to parse
+
         let processor = arxos::ifc::IFCProcessor::new();
-        match processor.process_file(file_path) {
-            Ok((building, spatial_entities)) => {
+        match processor.parse_native(file_path, false) {
+            Ok(result) => {
+                let building = result.building;
                 println!("  ✅ Parsed successfully");
                 println!("  📊 Building: {}", building.name);
                 println!("  🏢 Floors: {}", building.floors.len());
-                println!("  📦 Spatial entities: {}", spatial_entities.len());
-                
-                // Verify spatial entities have valid bounding boxes where applicable
-                for entity in &spatial_entities {
-                    let bbox = &entity.bounding_box;
-                    // Basic sanity check: max >= min for all dimensions
-                    assert!(bbox.max.x >= bbox.min.x, "Invalid bbox X for entity {}", entity.id);
-                    assert!(bbox.max.y >= bbox.min.y, "Invalid bbox Y for entity {}", entity.id);
-                    assert!(bbox.max.z >= bbox.min.z, "Invalid bbox Z for entity {}", entity.id);
+
+                // Validate room bounding boxes on the canonical Building graph
+                for floor in &building.floors {
+                    for wing in &floor.wings {
+                        for room in &wing.rooms {
+                            let bbox = &room.spatial_properties.bounding_box;
+                            assert!(
+                                bbox.max.x >= bbox.min.x,
+                                "Invalid bbox X for room {}",
+                                room.id
+                            );
+                            assert!(
+                                bbox.max.y >= bbox.min.y,
+                                "Invalid bbox Y for room {}",
+                                room.id
+                            );
+                            assert!(
+                                bbox.max.z >= bbox.min.z,
+                                "Invalid bbox Z for room {}",
+                                room.id
+                            );
+                        }
+                    }
                 }
-                println!("  ✅ All bounding boxes valid");
+                println!("  ✅ Room bounding boxes valid");
             }
             Err(e) => {
                 panic!("❌ Failed to parse {}: {:?}", file_path, e);

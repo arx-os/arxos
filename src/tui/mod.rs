@@ -24,29 +24,28 @@ pub mod users;
 pub mod widgets;
 pub mod workspace_manager;
 
-pub use error_modal::{
-    handle_error_modal_event, render_error_modal, ErrorAction, ErrorModal,
-};
-pub use help::{
-    handle_help_event, render_help_overlay, HelpContext, HelpSystem,
-};
+pub use error_modal::{handle_error_modal_event, render_error_modal, ErrorAction, ErrorModal};
+pub use help::{handle_help_event, render_help_overlay, HelpContext, HelpSystem};
 pub use terminal::TerminalManager;
 pub use theme::{StatusColor, Theme};
 
 /// Simple building renderer for ASCII output
 pub fn render_building(building_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("🏠 Rendering building: {}", building_name);
-    
+
     // Load building from current directory
     let building = crate::persistence::load_building_data_from_dir()?;
-    
+
     if building.name != building_name && building.id != building_name {
-        println!("⚠️  Warning: Loaded building '{}' does not match requested '{}'", building.name, building_name);
+        println!(
+            "⚠️  Warning: Loaded building '{}' does not match requested '{}'",
+            building.name, building_name
+        );
     }
-    
+
     println!("🏢 {}", building.name);
     println!("   ID: {}", building.id);
-    
+
     for floor in &building.floors {
         println!("   ├──  Floor {} (Level: {})", floor.name, floor.level);
         for wing in &floor.wings {
@@ -67,6 +66,6 @@ pub fn render_building(building_name: &str) -> Result<(), Box<dyn std::error::Er
             }
         }
     }
-    
+
     Ok(())
 }

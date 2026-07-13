@@ -3,8 +3,8 @@
 //! Utility methods for identifying entity types and extracting properties
 //! from IFC entities during hierarchy building.
 
-use crate::core::{EquipmentType, RoomType};
 use super::types::IFCEntity;
+use crate::core::{EquipmentType, RoomType};
 use std::error::Error;
 
 /// Check if entity is a storey (floor)

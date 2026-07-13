@@ -2,8 +2,8 @@
 //!
 //! Provides utilities for integrating error modals into TUI components
 
-use crate::tui::{handle_error_modal_event, render_error_modal, ErrorAction, ErrorModal};
 use crate::error::ArxError;
+use crate::tui::{handle_error_modal_event, render_error_modal, ErrorAction, ErrorModal};
 use crossterm::event::Event;
 use ratatui::Frame;
 
@@ -126,7 +126,10 @@ mod tests {
         if let Some(ArxError::Io(_)) = modal.error {
             // Correct conversion
         } else {
-            panic!("Generic error should be converted to Io error, got: {:?}", modal.error);
+            panic!(
+                "Generic error should be converted to Io error, got: {:?}",
+                modal.error
+            );
         }
     }
 

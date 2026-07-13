@@ -39,7 +39,7 @@ pub use renderer::Building3DRenderer;
 pub use utils::format_scene_output;
 
 // Re-export point cloud renderer
-pub use point_cloud::{PointCloudRenderer, Point3DColored, building_to_point_cloud};
+pub use point_cloud::{building_to_point_cloud, Point3DColored, PointCloudRenderer};
 
 // Re-export interactive components
 pub use animation::{
@@ -228,7 +228,10 @@ mod tests {
             ifc_global_id: None,
         };
 
-        let mut building = crate::core::Building::new("Test Building".to_string(), "Test building for 3D rendering".to_string());
+        let mut building = crate::core::Building::new(
+            "Test Building".to_string(),
+            "Test building for 3D rendering".to_string(),
+        );
         building.id = "TEST_BUILDING".to_string();
         building.add_floor(floor1);
         building.add_floor(floor2);

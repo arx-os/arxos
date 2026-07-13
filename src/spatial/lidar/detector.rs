@@ -1,6 +1,9 @@
-use crate::spatial::Point3D;
-use crate::core::{Room, RoomType, Position, Dimensions, BoundingBox, SpatialProperties, Equipment, EquipmentType, LidarEnrichment};
-use std::collections::{VecDeque, HashMap};
+use crate::core::spatial::Point3D;
+use crate::core::{
+    BoundingBox, Dimensions, Equipment, EquipmentType, LidarEnrichment, Position, Room, RoomType,
+    SpatialProperties,
+};
+use std::collections::{HashMap, VecDeque};
 
 pub struct DetectedFloor {
     pub elevation: f64,
@@ -32,8 +35,12 @@ impl FloorDetector {
         let mut min_z = f64::MAX;
         let mut max_z = f64::MIN;
         for p in points {
-            if p.z < min_z { min_z = p.z; }
-            if p.z > max_z { max_z = p.z; }
+            if p.z < min_z {
+                min_z = p.z;
+            }
+            if p.z > max_z {
+                max_z = p.z;
+            }
         }
 
         // If the vertical spread is too small, assume a single floor
@@ -66,15 +73,14 @@ impl FloorDetector {
             }
 
             // Check local maximum
-            let start = if i > window { i - window } else { 0 };
+            let start = i.saturating_sub(window);
             let end = (i + window).min(bin_count - 1);
-            let mut is_max = true;
-            for j in start..=end {
-                if i != j && bins[j] > count {
-                    is_max = false;
-                    break;
-                }
-            }
+            let is_max = bins
+                .iter()
+                .enumerate()
+                .take(end + 1)
+                .skip(start)
+                .all(|(j, &c)| i == j || c <= count);
 
             if is_max {
                 let elevation = min_z + (i as f64 * self.bin_size);
@@ -83,7 +89,7 @@ impl FloorDetector {
         }
 
         // Sort candidates by density (descending)
-        candidates.sort_by(|a, b| b.1.cmp(&a.1));
+        candidates.sort_by_key(|b| std::cmp::Reverse(b.1));
 
         // Enforce story separation (Non-maximum suppression vertically)
         let mut selected_elevations: Vec<f64> = Vec::new();
@@ -101,7 +107,7 @@ impl FloorDetector {
         }
 
         selected_elevations.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-        
+
         // Ensure we always return at least one floor level if candidates were empty
         if selected_elevations.is_empty() {
             selected_elevations.push(min_z);
@@ -127,12 +133,7 @@ impl RoomDetector {
     }
 
     /// Detect rooms for a given floor slice
-    pub fn detect_rooms(
-        &self,
-        points: &[Point3D],
-        floor_elev: f64,
-        ceil_elev: f64,
-    ) -> Vec<Room> {
+    pub fn detect_rooms(&self, points: &[Point3D], floor_elev: f64, ceil_elev: f64) -> Vec<Room> {
         let slice_points: Vec<&Point3D> = points
             .iter()
             .filter(|p| p.z >= (floor_elev + 0.5) && p.z < (ceil_elev - 0.5))
@@ -149,10 +150,18 @@ impl RoomDetector {
         let mut max_y = f64::MIN;
 
         for p in &slice_points {
-            if p.x < min_x { min_x = p.x; }
-            if p.x > max_x { max_x = p.x; }
-            if p.y < min_y { min_y = p.y; }
-            if p.y > max_y { max_y = p.y; }
+            if p.x < min_x {
+                min_x = p.x;
+            }
+            if p.x > max_x {
+                max_x = p.x;
+            }
+            if p.y < min_y {
+                min_y = p.y;
+            }
+            if p.y > max_y {
+                max_y = p.y;
+            }
         }
 
         let cols = ((max_x - min_x) / self.grid_resolution).ceil() as usize + 1;
@@ -202,7 +211,11 @@ impl RoomDetector {
                         ];
 
                         for &(nr, nc) in &neighbors {
-                            if nr < rows && nc < cols && !visited[nr][nc] && grid[nr][nc] < self.wall_threshold {
+                            if nr < rows
+                                && nc < cols
+                                && !visited[nr][nc]
+                                && grid[nr][nc] < self.wall_threshold
+                            {
                                 visited[nr][nc] = true;
                                 queue.push_back((nr, nc));
                             }
@@ -217,10 +230,18 @@ impl RoomDetector {
                         let mut r_max_r = usize::MIN;
 
                         for &(cr, cc) in &component {
-                            if cc < r_min_c { r_min_c = cc; }
-                            if cc > r_max_c { r_max_c = cc; }
-                            if cr < r_min_r { r_min_r = cr; }
-                            if cr > r_max_r { r_max_r = cr; }
+                            if cc < r_min_c {
+                                r_min_c = cc;
+                            }
+                            if cc > r_max_c {
+                                r_max_c = cc;
+                            }
+                            if cr < r_min_r {
+                                r_min_r = cr;
+                            }
+                            if cr > r_max_r {
+                                r_max_r = cr;
+                            }
                         }
 
                         let room_min_x = min_x + (r_min_c as f64 * self.grid_resolution);
@@ -233,10 +254,8 @@ impl RoomDetector {
                         let width = room_max_x - room_min_x;
                         let depth = room_max_y - room_min_y;
 
-                        let mut room = Room::new(
-                            format!("Room {}", room_counter),
-                            RoomType::Office,
-                        );
+                        let mut room =
+                            Room::new(format!("Room {}", room_counter), RoomType::Office);
 
                         room.spatial_properties = SpatialProperties {
                             position: Position {
@@ -282,7 +301,9 @@ impl RoomDetector {
                             point_count: room_points_count,
                             confidence_score: 0.90,
                             last_scan_timestamp: Some(chrono::Utc::now()),
-                            classification_heuristic: Some("2D Occupancy Grid Connected Components".to_string()),
+                            classification_heuristic: Some(
+                                "2D Occupancy Grid Connected Components".to_string(),
+                            ),
                         });
 
                         rooms.push(room);
@@ -396,9 +417,8 @@ impl EquipmentDetector {
 
         // 4. Classify each cluster and instantiate Equipment
         let mut equipment_list = Vec::new();
-        let mut eq_counter = 1;
 
-        for cluster in clusters {
+        for (eq_counter, cluster) in (1..).zip(clusters) {
             let mut min_x = f64::MAX;
             let mut max_x = f64::MIN;
             let mut min_y = f64::MAX;
@@ -407,12 +427,24 @@ impl EquipmentDetector {
             let mut max_z = f64::MIN;
 
             for p in &cluster {
-                if p.x < min_x { min_x = p.x; }
-                if p.x > max_x { max_x = p.x; }
-                if p.y < min_y { min_y = p.y; }
-                if p.y > max_y { max_y = p.y; }
-                if p.z < min_z { min_z = p.z; }
-                if p.z > max_z { max_z = p.z; }
+                if p.x < min_x {
+                    min_x = p.x;
+                }
+                if p.x > max_x {
+                    max_x = p.x;
+                }
+                if p.y < min_y {
+                    min_y = p.y;
+                }
+                if p.y > max_y {
+                    max_y = p.y;
+                }
+                if p.z < min_z {
+                    min_z = p.z;
+                }
+                if p.z > max_z {
+                    max_z = p.z;
+                }
             }
 
             let width = max_x - min_x;
@@ -426,7 +458,7 @@ impl EquipmentDetector {
             // Classify equipment type using rules
             let eq_type = if height > 1.4 && volume < 0.8 {
                 EquipmentType::Electrical
-            } else if volume > 0.4 && height >= 0.6 && height <= 1.8 {
+            } else if volume > 0.4 && (0.6..=1.8).contains(&height) {
                 EquipmentType::HVAC
             } else if height < 0.5 && volume < 0.2 {
                 EquipmentType::Plumbing
@@ -453,26 +485,38 @@ impl EquipmentDetector {
             };
 
             // Save estimated dimensions as properties
-            equipment.properties.insert("width".to_string(), width.to_string());
-            equipment.properties.insert("depth".to_string(), depth.to_string());
-            equipment.properties.insert("height".to_string(), height.to_string());
-            equipment.properties.insert("volume".to_string(), volume.to_string());
-            equipment.properties.insert("point_count".to_string(), cluster.len().to_string());
+            equipment
+                .properties
+                .insert("width".to_string(), width.to_string());
+            equipment
+                .properties
+                .insert("depth".to_string(), depth.to_string());
+            equipment
+                .properties
+                .insert("height".to_string(), height.to_string());
+            equipment
+                .properties
+                .insert("volume".to_string(), volume.to_string());
+            equipment
+                .properties
+                .insert("point_count".to_string(), cluster.len().to_string());
 
             let confidence_score = match &equipment.equipment_type {
                 EquipmentType::Furniture => 0.75, // Default fallback
-                _ => 0.90, // Rule-based match
+                _ => 0.90,                        // Rule-based match
             };
 
             equipment.lidar_enrichment = Some(LidarEnrichment {
                 point_count: cluster.len(),
                 confidence_score,
                 last_scan_timestamp: Some(chrono::Utc::now()),
-                classification_heuristic: Some(format!("Rule-based geometric filter (height: {:.2}, vol: {:.3})", height, volume)),
+                classification_heuristic: Some(format!(
+                    "Rule-based geometric filter (height: {:.2}, vol: {:.3})",
+                    height, volume
+                )),
             });
 
             equipment_list.push(equipment);
-            eq_counter += 1;
         }
 
         equipment_list

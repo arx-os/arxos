@@ -9,9 +9,9 @@
 //! These tests follow security best practices and should be run
 //! as part of the CI/CD pipeline.
 
-use std::path::Path;
 use std::ffi::CString;
 use std::os::raw::c_char;
+use std::path::Path;
 use tempfile::TempDir;
 
 #[cfg(test)]
@@ -110,8 +110,7 @@ mod path_traversal_tests {
             let symlink_path = base.join("link");
             if symlink(&safe_file, &symlink_path).is_ok() {
                 // Symlink created, test that it's handled safely
-                let result =
-                    path_safety::PathSafety::canonicalize_and_validate(&symlink_path);
+                let result = path_safety::PathSafety::canonicalize_and_validate(&symlink_path);
                 // Should resolve to canonical path (safe file)
                 assert!(result.is_ok(), "Symlink should resolve to safe path");
             }
@@ -222,8 +221,7 @@ mod input_validation_tests {
             // 1. Path safety utilities when used in file operations
             // 2. Validation rules for reserved systems
             // 3. Sanitization when creating addresses via new()
-            if result.is_ok() {
-                let _addr = result.unwrap();
+            if let Ok(_addr) = result {
                 // Even if parsed, the path should be safe to use (path safety utilities protect file operations)
                 // The path itself may contain special characters, but they won't cause security issues
                 // when used with proper path safety utilities

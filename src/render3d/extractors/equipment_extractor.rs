@@ -3,9 +3,9 @@
 //! Extracts equipment from both floor-level and room-level locations,
 //! creating unified 3D representations with positions and bounding boxes.
 
-use crate::render3d::types::Equipment3D;
 use crate::core::spatial::{BoundingBox3D, Point3D};
 use crate::core::Building;
+use crate::render3d::types::Equipment3D;
 use std::sync::Arc;
 
 /// Extract 3D equipment representations from building data
@@ -142,7 +142,10 @@ pub fn extract_equipment_3d(building: &Building) -> Vec<Equipment3D> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::{Building, Equipment, EquipmentStatus, EquipmentHealthStatus, EquipmentType, Floor, Room, RoomType, SpatialProperties, Wing};
+    use crate::core::{
+        Building, Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType, Floor, Room,
+        RoomType, SpatialProperties, Wing,
+    };
 
     #[test]
     fn test_extract_floor_level_equipment() {

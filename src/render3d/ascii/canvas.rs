@@ -4,8 +4,8 @@
 //! when rendering 3D building elements to ASCII.
 
 use super::characters::{get_equipment_symbol, FLOOR_CHAR, ROOM_CHAR};
-use crate::render3d::types::{Equipment3D, Floor3D, Room3D};
 use crate::core::spatial::Point3D;
+use crate::render3d::types::{Equipment3D, Floor3D, Room3D};
 
 /// ASCII canvas for 2D rendering
 pub struct AsciiCanvas {

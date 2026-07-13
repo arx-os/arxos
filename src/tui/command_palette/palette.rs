@@ -215,23 +215,19 @@ mod tests {
     #[test]
     fn test_palette_filter_by_description() {
         let mut palette = CommandPalette::new();
-        palette.update_query("interactive".to_string());
+        palette.update_query("validate".to_string());
         let filtered = palette.filtered_commands();
-        // Should find commands that have "interactive" in description
         assert!(
-            !filtered.is_empty()
-                || palette
-                    .commands()
-                    .iter()
-                    .any(|c| c.description.contains("interactive")),
-            "Should find by description"
+            !filtered.is_empty(),
+            "Should find by description/name containing 'validate'"
         );
     }
 
     #[test]
     fn test_palette_filter_by_full_command() {
         let mut palette = CommandPalette::new();
-        palette.update_query("arxos".to_string());
+        // Compiler CLI examples use the `arx` binary name
+        palette.update_query("arx".to_string());
         let filtered = palette.filtered_commands();
         assert!(!filtered.is_empty(), "Should find commands by full_command");
     }

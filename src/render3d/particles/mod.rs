@@ -5,8 +5,8 @@
 
 pub mod emitters;
 pub mod physics;
-pub mod types;
 pub mod system;
+pub mod types;
 
 pub use system::ParticleSystem;
 

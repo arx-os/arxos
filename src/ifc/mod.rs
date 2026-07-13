@@ -1,24 +1,24 @@
-// IFC processing for ArxOS using ifc_rs crate
-use crate::core::Building;
-use crate::utils::progress::ProgressContext;
-use log::{info, warn};
+//! IFC processing for ArxOS (native STEP parser only).
+//!
+//! External IFC bytes become a `core::Building` via `parse_native` /
+//! `parse_native_content`. Production imports must continue through
+//! `ingest::import_ifc_path` so merge + validation finalize the model.
+
+use log::info;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 
 mod error;
 mod geometry;
-mod identifiers;
 mod hierarchy;
-mod bim_parser;
-mod ifc_rs_converter;
+mod identifiers;
 pub mod mapping;
 pub mod parser;
 pub mod spatial;
 
 pub use error::{IFCError, IFCResult};
 pub use hierarchy::{HierarchyBuilder, IFCEntity};
-pub use bim_parser::BimParser;
 pub use mapping::{
     assign_missing_global_ids, merge_building, merge_building_with_policy, merge_into_report,
     merge_into_report_with_policy, report_export_losses, resolve_product_global_id, FidelityLevel,
@@ -26,13 +26,10 @@ pub use mapping::{
 };
 pub use spatial::{SpatialIndex, SpatialQueryResult, SpatialRelationship};
 
-/// IFC (Industry Foundation Classes) file processor
+/// IFC (Industry Foundation Classes) file processor.
 ///
-/// Handles parsing and processing of IFC files to extract building data.
-/// Uses the `ifc_rs` crate for parsing, then converts to ArxOS building models.
-pub struct IFCProcessor {
-    // Delegates to BimParser which uses ifc_rs
-}
+/// Canonical construction path: native STEP lexer/registry/resolver → `Building`.
+pub struct IFCProcessor;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EntityStats {
@@ -45,7 +42,7 @@ pub struct EntityStats {
 pub struct ParsingResult {
     pub building: crate::core::Building,
     pub stats: EntityStats,
-    /// Structured fidelity / loss report (Phase 5).
+    /// Structured fidelity / loss report.
     pub report: mapping::LossReport,
     /// Flattened warning messages (derived from `report` for simple consumers).
     pub warnings: Vec<String>,
@@ -59,59 +56,27 @@ impl Default for IFCProcessor {
 
 impl IFCProcessor {
     pub fn new() -> Self {
-        Self {}
+        Self
     }
 
-
-    pub fn process_file(
+    /// Parse IFC file using the native STEP parser into a `Building`.
+    pub fn parse_native(
         &self,
         file_path: &str,
-    ) -> IFCResult<(Building, Vec<crate::core::spatial::SpatialEntity>)> {
-        // Try native parser first
-        if let Ok(result) = self.parse_native(file_path, false) {
-            if !result.building.floors.is_empty() {
-                return Ok((result.building, Vec::new()));
-            }
-        }
-
-        info!("Processing IFC file (Legacy): {}", file_path);
-
-        // Check if file exists
+        validate_strict: bool,
+    ) -> anyhow::Result<ParsingResult> {
+        info!(
+            "Processing IFC file (Native, strict={}): {}",
+            validate_strict, file_path
+        );
         if !Path::new(file_path).exists() {
-            return Err(IFCError::FileNotFound {
-                path: file_path.to_string(),
-            });
+            return Err(anyhow::anyhow!("IFC file not found: {}", file_path));
         }
-
-        // Check file extension
-        if !file_path.to_lowercase().ends_with(".ifc") {
-            warn!("File does not have .ifc extension: {}", file_path);
-        }
-
-        // Use ifc_rs parser via BimParser
-        let parser = BimParser::new();
-        match parser.parse_ifc_file(file_path) {
-            Ok((building, spatial_entities)) => {
-                info!("Successfully parsed IFC file");
-                Ok((building, spatial_entities))
-            }
-            Err(e) => {
-                warn!("IFC parsing failed: {}", e);
-                Err(IFCError::ParsingError {
-                    message: e.to_string(),
-                })
-            }
-        }
-    }
-
-    /// Parse IFC file using the new high-performance native parser
-    pub fn parse_native(&self, file_path: &str, validate_strict: bool) -> anyhow::Result<ParsingResult> {
-        info!("Processing IFC file (Native, strict={}): {}", validate_strict, file_path);
         let content = std::fs::read_to_string(file_path)?;
         self.parse_native_content(&content, validate_strict)
     }
 
-    /// Parse IFC from an in-memory STEP string (CLI / WASM shared path).
+    /// Parse IFC from an in-memory STEP string (CLI / WASM / ingest shared path).
     pub fn parse_native_content(
         &self,
         content: &str,
@@ -151,102 +116,10 @@ impl IFCProcessor {
         })
     }
 
-    /// Extract hierarchical building data from an IFC file
-    /// Returns a Building structure directly
+    /// Extract hierarchical building data from an IFC file.
     pub fn extract_hierarchy(&self, file_path: &str) -> anyhow::Result<crate::core::Building> {
-        // Try native parser first
-        if let Ok(result) = self.parse_native(file_path, false) {
-            if !result.building.floors.is_empty() {
-                return Ok(result.building);
-            }
-        }
-
-        warn!("Native parser failed, falling back to legacy for hierarchy: {}", file_path);
-
-        let (building, _) = self.process_file(file_path)?;
-        
-        Ok(building)
+        Ok(self.parse_native(file_path, false)?.building)
     }
-
-    /// Process IFC file with parallel processing and progress reporting
-    pub fn process_file_parallel(
-        &self,
-        file_path: &str,
-    ) -> IFCResult<(Building, Vec<crate::core::spatial::SpatialEntity>)> {
-        info!(
-            "Processing IFC file with parallel processing: {}",
-            file_path
-        );
-
-        // Check if file exists
-        if !Path::new(file_path).exists() {
-            return Err(IFCError::FileNotFound {
-                path: file_path.to_string(),
-            });
-        }
-
-        // Check file extension
-        if !file_path.to_lowercase().ends_with(".ifc") {
-            warn!("File does not have .ifc extension: {}", file_path);
-        }
-
-        // Note: ifc_rs is efficient, no explicit parallel mode needed
-        let parser = BimParser::new();
-        match parser.parse_ifc_file(file_path) {
-            Ok((building, spatial_entities)) => {
-                info!("Successfully parsed IFC file");
-                Ok((building, spatial_entities))
-            }
-            Err(e) => {
-                warn!("IFC parsing failed: {}", e);
-                Err(IFCError::ParsingError {
-                    message: e.to_string(),
-                })
-            }
-        }
-    }
-
-    /// Process IFC file with progress reporting
-    pub fn process_file_with_progress(
-        &self,
-        file_path: &str,
-        mut progress: ProgressContext,
-    ) -> IFCResult<(Building, Vec<crate::core::spatial::SpatialEntity>)> {
-        info!("Processing IFC file with progress reporting: {}", file_path);
-
-        progress.update(10, "Reading IFC file...");
-
-        // Check if file exists
-        if !Path::new(file_path).exists() {
-            progress.finish_error("IFC file not found");
-            return Err(IFCError::FileNotFound {
-                path: file_path.to_string(),
-            });
-        }
-
-        // Check file extension
-        if !file_path.to_lowercase().ends_with(".ifc") {
-            warn!("File does not have .ifc extension: {}", file_path);
-        }
-
-        progress.update(20, "Parsing IFC entities...");
-
-        // Use ifc_rs parser via BimParser with progress reporting
-        let parser = BimParser::new();
-        match parser.parse_ifc_file_with_progress(file_path, progress) {
-            Ok((building, spatial_entities)) => {
-                info!("Successfully parsed IFC file");
-                Ok((building, spatial_entities))
-            }
-            Err(e) => {
-                warn!("IFC parsing failed: {}", e);
-                Err(IFCError::ParsingError {
-                    message: e.to_string(),
-                })
-            }
-        }
-    }
-
 
     pub fn validate_ifc_file(&self, file_path: &str) -> IFCResult<bool> {
         info!("Validating IFC file: {}", file_path);
@@ -257,14 +130,12 @@ impl IFCProcessor {
             });
         }
 
-        // Check file extension
         if !file_path.to_lowercase().ends_with(".ifc") {
             return Err(IFCError::InvalidFormat {
                 reason: "File must have .ifc extension".to_string(),
             });
         }
 
-        // Check file size
         let metadata = std::fs::metadata(file_path)?;
         if metadata.len() == 0 {
             return Err(IFCError::InvalidFormat {
@@ -272,7 +143,6 @@ impl IFCProcessor {
             });
         }
 
-        // Read file content for format validation with path safety
         use crate::utils::path_safety::PathSafety;
         let base_dir = std::env::current_dir().map_err(|e| IFCError::FileNotFound {
             path: format!("Failed to get current directory: {}", e),
@@ -283,15 +153,12 @@ impl IFCProcessor {
                 path: format!("Failed to read IFC file '{}': {}", file_path, e),
             })?;
 
-        // Validate IFC file structure
         self.validate_ifc_structure(&content)?;
 
         info!("IFC file validation passed");
         Ok(true)
     }
 
-
-    /// Validate IFC file structure and format
     fn validate_ifc_structure(&self, content: &str) -> IFCResult<()> {
         let lines: Vec<&str> = content.lines().collect();
 
@@ -301,14 +168,12 @@ impl IFCProcessor {
             });
         }
 
-        // Check for ISO-10303-21 header
         if !lines[0].starts_with("ISO-10303-21;") {
             return Err(IFCError::InvalidFormat {
                 reason: "Missing ISO-10303-21 header".to_string(),
             });
         }
 
-        // Check for required sections
         let mut has_header = false;
         let mut has_data = false;
         let mut has_endsec = false;
@@ -342,14 +207,12 @@ impl IFCProcessor {
             });
         }
 
-        // Check for proper ending
         if !content.trim_end().ends_with("END-ISO-10303-21;") {
             return Err(IFCError::InvalidFormat {
                 reason: "Missing END-ISO-10303-21 footer".to_string(),
             });
         }
 
-        // Check for at least one entity definition
         let has_entities = lines
             .iter()
             .any(|line| line.starts_with("#") && line.contains("="));

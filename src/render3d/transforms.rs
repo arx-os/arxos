@@ -15,7 +15,11 @@ use crate::core::spatial::{BoundingBox3D, Point3D};
 ///
 /// # Returns
 /// Vector of transformed floors with updated bounding boxes
-pub fn transform_floors(floors: &[Floor3D], projection: &Projection3D, camera: &Camera3D) -> Vec<Floor3D> {
+pub fn transform_floors(
+    floors: &[Floor3D],
+    projection: &Projection3D,
+    camera: &Camera3D,
+) -> Vec<Floor3D> {
     floors
         .iter()
         .map(|floor| {
@@ -42,7 +46,11 @@ pub fn transform_floors(floors: &[Floor3D], projection: &Projection3D, camera: &
 ///
 /// # Returns
 /// Vector of transformed equipment with updated positions and bounding boxes
-pub fn transform_equipment(equipment: &[Equipment3D], projection: &Projection3D, camera: &Camera3D) -> Vec<Equipment3D> {
+pub fn transform_equipment(
+    equipment: &[Equipment3D],
+    projection: &Projection3D,
+    camera: &Camera3D,
+) -> Vec<Equipment3D> {
     equipment
         .iter()
         .map(|eq| {
@@ -74,7 +82,11 @@ pub fn transform_equipment(equipment: &[Equipment3D], projection: &Projection3D,
 ///
 /// # Returns
 /// Vector of transformed rooms with updated positions and bounding boxes
-pub fn transform_rooms(rooms: &[Room3D], projection: &Projection3D, camera: &Camera3D) -> Vec<Room3D> {
+pub fn transform_rooms(
+    rooms: &[Room3D],
+    projection: &Projection3D,
+    camera: &Camera3D,
+) -> Vec<Room3D> {
     rooms
         .iter()
         .map(|room| {
@@ -119,7 +131,11 @@ pub fn transform_point(point: &Point3D, projection: &Projection3D, camera: &Came
 ///
 /// # Returns
 /// Transformed bounding box in screen space
-pub fn transform_bounding_box(bbox: &BoundingBox3D, projection: &Projection3D, camera: &Camera3D) -> BoundingBox3D {
+pub fn transform_bounding_box(
+    bbox: &BoundingBox3D,
+    projection: &Projection3D,
+    camera: &Camera3D,
+) -> BoundingBox3D {
     let transformed_min = transform_point(&bbox.min, projection, camera);
     let transformed_max = transform_point(&bbox.max, projection, camera);
 
@@ -136,7 +152,11 @@ mod tests {
 
     #[test]
     fn test_transform_point_isometric() {
-        let point = Point3D { x: 10.0, y: 10.0, z: 5.0 };
+        let point = Point3D {
+            x: 10.0,
+            y: 10.0,
+            z: 5.0,
+        };
         let projection = Projection3D::new(ProjectionType::Isometric, ViewAngle::Isometric, 1.0);
         let camera = Camera3D::default();
 
@@ -149,8 +169,16 @@ mod tests {
     #[test]
     fn test_transform_bounding_box() {
         let bbox = BoundingBox3D {
-            min: Point3D { x: 1.0, y: 1.0, z: 1.0 },
-            max: Point3D { x: 10.0, y: 10.0, z: 5.0 },
+            min: Point3D {
+                x: 1.0,
+                y: 1.0,
+                z: 1.0,
+            },
+            max: Point3D {
+                x: 10.0,
+                y: 10.0,
+                z: 5.0,
+            },
         };
         let projection = Projection3D::new(ProjectionType::Isometric, ViewAngle::Isometric, 1.0);
         let camera = Camera3D::default();
@@ -164,20 +192,26 @@ mod tests {
 
     #[test]
     fn test_transform_floors_preserves_count() {
-        let floors = vec![
-            Floor3D {
-                id: Arc::new("F1".to_string()),
-                name: Arc::new("Floor 1".to_string()),
-                level: 1,
-                elevation: 0.0,
-                bounding_box: BoundingBox3D {
-                    min: Point3D { x: 0.0, y: 0.0, z: 0.0 },
-                    max: Point3D { x: 100.0, y: 100.0, z: 3.0 },
+        let floors = vec![Floor3D {
+            id: Arc::new("F1".to_string()),
+            name: Arc::new("Floor 1".to_string()),
+            level: 1,
+            elevation: 0.0,
+            bounding_box: BoundingBox3D {
+                min: Point3D {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
                 },
-                rooms: vec![],
-                equipment: vec![],
+                max: Point3D {
+                    x: 100.0,
+                    y: 100.0,
+                    z: 3.0,
+                },
             },
-        ];
+            rooms: vec![],
+            equipment: vec![],
+        }];
         let projection = Projection3D::new(ProjectionType::Isometric, ViewAngle::Isometric, 1.0);
         let camera = Camera3D::default();
 

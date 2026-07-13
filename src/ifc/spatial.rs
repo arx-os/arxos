@@ -54,9 +54,12 @@ impl SpatialIndex {
             .filter(|e| {
                 // Simple bounding box intersection check
                 let e_bbox = &e.bounding_box;
-                e_bbox.min.x <= bbox.max.x && e_bbox.max.x >= bbox.min.x &&
-                e_bbox.min.y <= bbox.max.y && e_bbox.max.y >= bbox.min.y &&
-                e_bbox.min.z <= bbox.max.z && e_bbox.max.z >= bbox.min.z
+                e_bbox.min.x <= bbox.max.x
+                    && e_bbox.max.x >= bbox.min.x
+                    && e_bbox.min.y <= bbox.max.y
+                    && e_bbox.max.y >= bbox.min.y
+                    && e_bbox.min.z <= bbox.max.z
+                    && e_bbox.max.z >= bbox.min.z
             })
             .map(|e| SpatialQueryResult {
                 entity_id: e.id().to_string(),
@@ -125,7 +128,11 @@ impl SpatialIndex {
     }
 
     /// Find spatial clusters of equipment
-    pub fn find_equipment_clusters(&self, _distance: f64, _min_cluster_size: usize) -> Vec<Vec<SpatialEntity>> {
+    pub fn find_equipment_clusters(
+        &self,
+        _distance: f64,
+        _min_cluster_size: usize,
+    ) -> Vec<Vec<SpatialEntity>> {
         Vec::new()
     }
 }

@@ -62,11 +62,11 @@ pub struct Equipment {
     pub id: String,
     /// Human-readable equipment name
     pub name: String,
-    /// Universal path identifier (legacy, kept for backward compatibility in memory)
-    #[serde(skip)]
+    /// Universal path identifier (legacy string form; prefer `address` when set)
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub path: String,
-    /// ArxOS Address (legacy hierarchical addressing system, kept for backward compatibility in memory)
-    #[serde(skip)]
+    /// Hierarchical ArxOS address (durable on Building YAML SSOT)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub address: Option<ArxAddress>,
     /// Type categorization of the equipment
     pub equipment_type: EquipmentType,

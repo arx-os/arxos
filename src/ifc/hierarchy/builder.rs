@@ -2,16 +2,6 @@
 //!
 //! Main builder implementation for extracting and assembling building hierarchies from IFC files.
 
-use crate::core::{
-    BoundingBox, Building, Dimensions, Equipment, Floor, Position, Room,
-    SpatialProperties, Wing,
-};
-use crate::ifc::{
-    geometry::{extract_all_references, extract_reference_id, parameters_from_definition},
-    identifiers::derive_building_identifiers,
-};
-use crate::utils::string::slugify;
-use chrono::Utc;
 use super::{
     geometry_extraction,
     helpers::{
@@ -21,6 +11,15 @@ use super::{
     types::IFCEntity,
     utils::ensure_unique_path,
 };
+use crate::core::{
+    BoundingBox, Building, Dimensions, Equipment, Floor, Position, Room, SpatialProperties, Wing,
+};
+use crate::ifc::{
+    geometry::{extract_all_references, extract_reference_id, parameters_from_definition},
+    identifiers::derive_building_identifiers,
+};
+use crate::utils::string::slugify;
+use chrono::Utc;
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
 
@@ -272,7 +271,9 @@ impl HierarchyBuilder {
             let param = param.trim();
             if param.starts_with("#") {
                 // This is likely the placement reference
-                if let Some(coords) = geometry_extraction::extract_coordinates_from_placement(param, &self.entity_map) {
+                if let Some(coords) =
+                    geometry_extraction::extract_coordinates_from_placement(param, &self.entity_map)
+                {
                     return Some(coords);
                 }
             }
@@ -412,7 +413,9 @@ impl HierarchyBuilder {
                     point_id,
                     point_entity.definition
                 );
-                if let Some((x, y, _z)) = geometry_extraction::parse_cartesian_point_2d(&point_entity.definition) {
+                if let Some((x, y, _z)) =
+                    geometry_extraction::parse_cartesian_point_2d(&point_entity.definition)
+                {
                     log::debug!("Parsed coordinates: ({}, {})", x, y);
                     points.push(format!("{},{}", x, y));
                 } else {
@@ -497,7 +500,9 @@ impl HierarchyBuilder {
         for param in params {
             let param = param.trim();
             if param.starts_with("#") {
-                if let Some(coords) = geometry_extraction::extract_coordinates_from_placement(param, &self.entity_map) {
+                if let Some(coords) =
+                    geometry_extraction::extract_coordinates_from_placement(param, &self.entity_map)
+                {
                     return Some(coords);
                 }
             }
@@ -589,43 +594,43 @@ impl HierarchyBuilder {
             self.extract_rooms(Some(&room_ids))?
         };
 
-        let mut rooms_map: HashMap<String, Room> =
-            rooms.drain(..).map(|room| (room.id.clone(), room)).collect();
+        let mut rooms_map: HashMap<String, Room> = rooms
+            .drain(..)
+            .map(|room| (room.id.clone(), room))
+            .collect();
         let mut room_location: HashMap<String, (usize, usize, usize)> = HashMap::new();
 
         for (structure_id, room_list) in &self.rooms_by_structure {
             if let Some(&floor_idx) = floor_lookup.get(structure_id) {
-                let floor = floors.get_mut(floor_idx)
-                    .ok_or_else(|| format!("Floor index {} out of bounds (structure: {})", floor_idx, structure_id))?;
+                let floor = floors.get_mut(floor_idx).ok_or_else(|| {
+                    format!(
+                        "Floor index {} out of bounds (structure: {})",
+                        floor_idx, structure_id
+                    )
+                })?;
                 Self::ensure_default_wing(floor);
                 let wing_idx = 0;
                 for room_id in room_list {
-                if let Some(mut room) = rooms_map.remove(room_id) {
-                    let base_path = floor_paths
-                        .get(structure_id)
-                        .cloned()
-                        .or_else(|| {
-                            floor
-                                .properties
-                                .get("canonical_path")
-                                .cloned()
-                        })
-                        .unwrap_or_else(|| building_path.clone());
+                    if let Some(mut room) = rooms_map.remove(room_id) {
+                        let base_path = floor_paths
+                            .get(structure_id)
+                            .cloned()
+                            .or_else(|| floor.properties.get("canonical_path").cloned())
+                            .unwrap_or_else(|| building_path.clone());
 
-                    let mut room_slug = slugify(&room.name);
-                    if room_slug.is_empty() {
-                        room_slug = room.id.to_lowercase();
-                    }
-                    let candidate = format!("{}/{}", base_path, room_slug);
-                    let canonical = ensure_unique_path(&candidate, &mut used_paths);
-                    room
-                        .properties
-                        .insert("canonical_path".to_string(), canonical.clone());
+                        let mut room_slug = slugify(&room.name);
+                        if room_slug.is_empty() {
+                            room_slug = room.id.to_lowercase();
+                        }
+                        let candidate = format!("{}/{}", base_path, room_slug);
+                        let canonical = ensure_unique_path(&candidate, &mut used_paths);
+                        room.properties
+                            .insert("canonical_path".to_string(), canonical.clone());
 
-                    let position = floor.wings[wing_idx].rooms.len();
-                    let room_id_clone = room.id.clone();
-                    floor.wings[wing_idx].rooms.push(room);
-                    room_location.insert(room_id_clone, (floor_idx, wing_idx, position));
+                        let position = floor.wings[wing_idx].rooms.len();
+                        let room_id_clone = room.id.clone();
+                        floor.wings[wing_idx].rooms.push(room);
+                        room_location.insert(room_id_clone, (floor_idx, wing_idx, position));
                     }
                 }
             }
@@ -636,25 +641,24 @@ impl HierarchyBuilder {
                 Self::ensure_default_wing(first_floor);
                 let wing_idx = 0;
                 let floor_idx = 0;
-            let base_path = first_floor
-                .properties
-                .get("canonical_path")
-                .cloned()
-                .unwrap_or_else(|| building_path.clone());
-            for (_, mut room) in rooms_map.into_iter() {
-                let mut room_slug = slugify(&room.name);
-                if room_slug.is_empty() {
-                    room_slug = room.id.to_lowercase();
-                }
-                let candidate = format!("{}/{}", base_path, room_slug);
-                let canonical = ensure_unique_path(&candidate, &mut used_paths);
-                room
+                let base_path = first_floor
                     .properties
-                    .insert("canonical_path".to_string(), canonical.clone());
-                let position = first_floor.wings[wing_idx].rooms.len();
-                let room_id_clone = room.id.clone();
-                first_floor.wings[wing_idx].rooms.push(room);
-                room_location.insert(room_id_clone, (floor_idx, wing_idx, position));
+                    .get("canonical_path")
+                    .cloned()
+                    .unwrap_or_else(|| building_path.clone());
+                for (_, mut room) in rooms_map.into_iter() {
+                    let mut room_slug = slugify(&room.name);
+                    if room_slug.is_empty() {
+                        room_slug = room.id.to_lowercase();
+                    }
+                    let candidate = format!("{}/{}", base_path, room_slug);
+                    let canonical = ensure_unique_path(&candidate, &mut used_paths);
+                    room.properties
+                        .insert("canonical_path".to_string(), canonical.clone());
+                    let position = first_floor.wings[wing_idx].rooms.len();
+                    let room_id_clone = room.id.clone();
+                    first_floor.wings[wing_idx].rooms.push(room);
+                    room_location.insert(room_id_clone, (floor_idx, wing_idx, position));
                 }
             }
         }
@@ -670,62 +674,12 @@ impl HierarchyBuilder {
             let mut placed = false;
             if let Some(parent_id) = self.element_parents.get(&equipment.id) {
                 if let Some(&(floor_idx, wing_idx, room_idx)) = room_location.get(parent_id) {
-                    let floor = floors.get_mut(floor_idx)
-                        .ok_or_else(|| format!("Floor index {} out of bounds (equipment parent: {})", floor_idx, parent_id))?;
-                let room_id = floor.wings[wing_idx].rooms[room_idx].id.clone();
-                let room_path = floor.wings[wing_idx].rooms[room_idx]
-                    .properties
-                    .get("canonical_path")
-                    .cloned()
-                    .unwrap_or_else(|| {
-                        floor
-                            .properties
-                            .get("canonical_path")
-                            .cloned()
-                            .unwrap_or_else(|| building_path.clone())
-                    });
-                let mut slug = slugify(&equipment.name);
-                if slug.is_empty() {
-                    slug = equipment.id.to_lowercase();
-                }
-                let candidate = format!("{}/{}", room_path, slug);
-                let canonical = ensure_unique_path(&candidate, &mut used_paths);
-                equipment.path = canonical.clone();
-                equipment
-                    .properties
-                    .insert("canonical_path".to_string(), canonical.clone());
-                equipment.room_id = Some(room_id.clone());
-                floor.wings[wing_idx].rooms[room_idx]
-                        .equipment
-                        .push(equipment.clone());
-                floor.equipment.push(equipment.clone());
-                    placed = true;
-                } else if let Some(&floor_idx) = floor_lookup.get(parent_id) {
-                let floor = floors.get_mut(floor_idx)
-                    .ok_or_else(|| format!("Floor index {} out of bounds (equipment floor parent: {})", floor_idx, parent_id))?;
-                let floor_path = floor
-                    .properties
-                    .get("canonical_path")
-                    .cloned()
-                    .unwrap_or_else(|| building_path.clone());
-                let mut slug = slugify(&equipment.name);
-                if slug.is_empty() {
-                    slug = equipment.id.to_lowercase();
-                }
-                let candidate = format!("{}/{}", floor_path, slug);
-                let canonical = ensure_unique_path(&candidate, &mut used_paths);
-                equipment.path = canonical.clone();
-                equipment
-                    .properties
-                    .insert("canonical_path".to_string(), canonical.clone());
-                floor.equipment.push(equipment.clone());
-                    placed = true;
-                } else if let Some(room_parent) = self.room_parents.get(parent_id) {
-                    if let Some(&(floor_idx, wing_idx, room_idx)) =
-                        room_location.get(room_parent)
-                    {
-                        let floor = floors.get_mut(floor_idx)
-                            .ok_or_else(|| format!("Floor index {} out of bounds (equipment room parent: {})", floor_idx, room_parent))?;
+                    let floor = floors.get_mut(floor_idx).ok_or_else(|| {
+                        format!(
+                            "Floor index {} out of bounds (equipment parent: {})",
+                            floor_idx, parent_id
+                        )
+                    })?;
                     let room_id = floor.wings[wing_idx].rooms[room_idx].id.clone();
                     let room_path = floor.wings[wing_idx].rooms[room_idx]
                         .properties
@@ -750,38 +704,97 @@ impl HierarchyBuilder {
                         .insert("canonical_path".to_string(), canonical.clone());
                     equipment.room_id = Some(room_id.clone());
                     floor.wings[wing_idx].rooms[room_idx]
+                        .equipment
+                        .push(equipment.clone());
+                    floor.equipment.push(equipment.clone());
+                    placed = true;
+                } else if let Some(&floor_idx) = floor_lookup.get(parent_id) {
+                    let floor = floors.get_mut(floor_idx).ok_or_else(|| {
+                        format!(
+                            "Floor index {} out of bounds (equipment floor parent: {})",
+                            floor_idx, parent_id
+                        )
+                    })?;
+                    let floor_path = floor
+                        .properties
+                        .get("canonical_path")
+                        .cloned()
+                        .unwrap_or_else(|| building_path.clone());
+                    let mut slug = slugify(&equipment.name);
+                    if slug.is_empty() {
+                        slug = equipment.id.to_lowercase();
+                    }
+                    let candidate = format!("{}/{}", floor_path, slug);
+                    let canonical = ensure_unique_path(&candidate, &mut used_paths);
+                    equipment.path = canonical.clone();
+                    equipment
+                        .properties
+                        .insert("canonical_path".to_string(), canonical.clone());
+                    floor.equipment.push(equipment.clone());
+                    placed = true;
+                } else if let Some(room_parent) = self.room_parents.get(parent_id) {
+                    if let Some(&(floor_idx, wing_idx, room_idx)) = room_location.get(room_parent) {
+                        let floor = floors.get_mut(floor_idx).ok_or_else(|| {
+                            format!(
+                                "Floor index {} out of bounds (equipment room parent: {})",
+                                floor_idx, room_parent
+                            )
+                        })?;
+                        let room_id = floor.wings[wing_idx].rooms[room_idx].id.clone();
+                        let room_path = floor.wings[wing_idx].rooms[room_idx]
+                            .properties
+                            .get("canonical_path")
+                            .cloned()
+                            .unwrap_or_else(|| {
+                                floor
+                                    .properties
+                                    .get("canonical_path")
+                                    .cloned()
+                                    .unwrap_or_else(|| building_path.clone())
+                            });
+                        let mut slug = slugify(&equipment.name);
+                        if slug.is_empty() {
+                            slug = equipment.id.to_lowercase();
+                        }
+                        let candidate = format!("{}/{}", room_path, slug);
+                        let canonical = ensure_unique_path(&candidate, &mut used_paths);
+                        equipment.path = canonical.clone();
+                        equipment
+                            .properties
+                            .insert("canonical_path".to_string(), canonical.clone());
+                        equipment.room_id = Some(room_id.clone());
+                        floor.wings[wing_idx].rooms[room_idx]
                             .equipment
                             .push(equipment.clone());
-                    floor.equipment.push(equipment.clone());
+                        floor.equipment.push(equipment.clone());
                         placed = true;
                     }
                 }
             }
 
             if !placed {
-            if let Some(first_floor) = floors.first_mut() {
-                let floor_path = first_floor
-                    .properties
-                    .get("canonical_path")
-                    .cloned()
-                    .unwrap_or_else(|| building_path.clone());
-                let mut slug = slugify(&equipment.name);
-                if slug.is_empty() {
-                    slug = equipment.id.to_lowercase();
-                }
-                let candidate = format!("{}/{}", floor_path, slug);
-                let canonical = ensure_unique_path(&candidate, &mut used_paths);
-                equipment.path = canonical.clone();
-                equipment
-                    .properties
-                    .insert("canonical_path".to_string(), canonical.clone());
-                first_floor.equipment.push(equipment.clone());
+                if let Some(first_floor) = floors.first_mut() {
+                    let floor_path = first_floor
+                        .properties
+                        .get("canonical_path")
+                        .cloned()
+                        .unwrap_or_else(|| building_path.clone());
+                    let mut slug = slugify(&equipment.name);
+                    if slug.is_empty() {
+                        slug = equipment.id.to_lowercase();
+                    }
+                    let candidate = format!("{}/{}", floor_path, slug);
+                    let canonical = ensure_unique_path(&candidate, &mut used_paths);
+                    equipment.path = canonical.clone();
+                    equipment
+                        .properties
+                        .insert("canonical_path".to_string(), canonical.clone());
+                    first_floor.equipment.push(equipment.clone());
                 }
             }
         }
 
-        let mut building =
-        Building::new(identifiers.display_name.clone(), building_path.clone());
+        let mut building = Building::new(identifiers.display_name.clone(), building_path.clone());
 
         for floor in floors {
             building.add_floor(floor);
@@ -789,6 +802,4 @@ impl HierarchyBuilder {
 
         Ok(building)
     }
-
 }
-

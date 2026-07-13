@@ -53,7 +53,12 @@ mod tests {
         std::env::set_var("ARXOS_REPO_ROOT", tmp.path());
 
         let root = detect_repo_root().expect("Failed to detect repo root");
-        assert_eq!(root.canonicalize().unwrap(), tmp.path().canonicalize().expect("Failed to canonicalize temp path"));
+        assert_eq!(
+            root.canonicalize().unwrap(),
+            tmp.path()
+                .canonicalize()
+                .expect("Failed to canonicalize temp path")
+        );
 
         std::env::remove_var("ARXOS_REPO_ROOT");
     }
@@ -67,7 +72,12 @@ mod tests {
         std::env::set_current_dir(tmp.path()).expect("Failed to change to temp directory");
 
         let root = detect_repo_root().expect("Failed to detect repo root");
-        assert_eq!(root.canonicalize().unwrap(), tmp.path().canonicalize().expect("Failed to canonicalize temp path"));
+        assert_eq!(
+            root.canonicalize().unwrap(),
+            tmp.path()
+                .canonicalize()
+                .expect("Failed to canonicalize temp path")
+        );
 
         std::env::set_current_dir(original).expect("Failed to restore original directory");
     }

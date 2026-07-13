@@ -1,5 +1,5 @@
 //! Hardware interface layer for building control systems
-//! 
+//!
 //! Provides abstract interfaces for various building automation protocols:
 //! - BACnet (HVAC, lighting, access control)
 //! - Modbus (sensors, meters)
@@ -13,13 +13,13 @@ use std::collections::HashMap;
 #[cfg(feature = "agent")]
 pub mod bacnet;
 #[cfg(feature = "agent")]
-pub mod modbus;
+pub mod config;
 #[cfg(feature = "agent")]
-pub mod simulated;
+pub mod modbus;
 #[cfg(feature = "agent")]
 pub mod mqtt;
 #[cfg(feature = "agent")]
-pub mod config;
+pub mod simulated;
 
 /// Sensor reading with timestamp
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,19 +43,19 @@ pub enum ReadingQuality {
 pub trait HardwareInterface: Send + Sync {
     /// Read a sensor value
     async fn read_sensor(&self, _location: &str, _sensor_type: &str) -> Result<SensorReading>;
-    
+
     /// Write a control value
     async fn write_control(&self, _location: &str, _control_type: &str, _value: f64) -> Result<()>;
-    
+
     /// Get all available sensors
     async fn list_sensors(&self) -> Result<Vec<String>>;
-    
+
     /// Check if the interface is connected
     async fn is_connected(&self) -> bool;
-    
+
     /// Connect to the hardware
     async fn connect(&mut self) -> Result<()>;
-    
+
     /// Disconnect from the hardware
     async fn disconnect(&mut self) -> Result<()>;
 }
@@ -87,12 +87,21 @@ impl HardwareProtocol {
             #[cfg(feature = "agent")]
             Self::Simulated(i) => i.read_sensor(location, sensor_type).await,
             #[cfg(not(feature = "agent"))]
-            Self::Disabled => anyhow::bail!("Agent feature disabled (attempted to read {} sensor at {})", sensor_type, location),
+            Self::Disabled => anyhow::bail!(
+                "Agent feature disabled (attempted to read {} sensor at {})",
+                sensor_type,
+                location
+            ),
         }
     }
 
     #[cfg_attr(not(feature = "agent"), allow(unused_variables))]
-    pub async fn write_control(&self, location: &str, control_type: &str, value: f64) -> Result<()> {
+    pub async fn write_control(
+        &self,
+        location: &str,
+        control_type: &str,
+        value: f64,
+    ) -> Result<()> {
         match self {
             #[cfg(feature = "agent")]
             Self::Bacnet(i) => i.write_control(location, control_type, value).await,
@@ -103,7 +112,12 @@ impl HardwareProtocol {
             #[cfg(feature = "agent")]
             Self::Simulated(i) => i.write_control(location, control_type, value).await,
             #[cfg(not(feature = "agent"))]
-            Self::Disabled => anyhow::bail!("Agent feature disabled (attempted to write {} control at {} with value {})", control_type, location, value),
+            Self::Disabled => anyhow::bail!(
+                "Agent feature disabled (attempted to write {} control at {} with value {})",
+                control_type,
+                location,
+                value
+            ),
         }
     }
 
@@ -123,7 +137,7 @@ impl HardwareProtocol {
     }
 
     pub async fn list_sensors(&self) -> Result<Vec<String>> {
-         match self {
+        match self {
             #[cfg(feature = "agent")]
             Self::Bacnet(i) => i.list_sensors().await,
             #[cfg(feature = "agent")]
@@ -149,11 +163,11 @@ impl HardwareManager {
             interfaces: HashMap::new(),
         }
     }
-    
+
     pub fn add_interface(&mut self, name: String, interface: HardwareProtocol) {
         self.interfaces.insert(name, interface);
     }
-    
+
     pub async fn read_sensor(&self, location: &str, sensor_type: &str) -> Result<SensorReading> {
         // Try each interface until one succeeds
         for (name, interface) in &self.interfaces {
@@ -170,11 +184,16 @@ impl HardwareManager {
                 }
             }
         }
-        
+
         anyhow::bail!("No interface could read sensor at {}", location)
     }
-    
-    pub async fn write_control(&self, location: &str, control_type: &str, value: f64) -> Result<()> {
+
+    pub async fn write_control(
+        &self,
+        location: &str,
+        control_type: &str,
+        value: f64,
+    ) -> Result<()> {
         // Try each interface until one succeeds
         for (name, interface) in &self.interfaces {
             if interface.is_connected().await {
@@ -190,7 +209,7 @@ impl HardwareManager {
                 }
             }
         }
-        
+
         anyhow::bail!("No interface could write control at {}", location)
     }
 

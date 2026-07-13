@@ -34,9 +34,7 @@ pub fn positions_approx_eq(a: &Position, b: &Position) -> bool {
 
 /// True if dimensions match within epsilon.
 pub fn dimensions_approx_eq(a: &Dimensions, b: &Dimensions) -> bool {
-    approx_eq(a.width, b.width)
-        && approx_eq(a.height, b.height)
-        && approx_eq(a.depth, b.depth)
+    approx_eq(a.width, b.width) && approx_eq(a.height, b.height) && approx_eq(a.depth, b.depth)
 }
 
 /// Build `SpatialProperties` from position + dimensions in `building_local`.
@@ -165,10 +163,7 @@ mod tests {
     #[test]
     fn dimensions_from_aabb() {
         let mesh = Mesh {
-            vertices: vec![
-                Point3D::new(-2.0, -1.0, 0.0),
-                Point3D::new(2.0, 1.0, 3.0),
-            ],
+            vertices: vec![Point3D::new(-2.0, -1.0, 0.0), Point3D::new(2.0, 1.0, 3.0)],
             indices: vec![],
         };
         let d = dimensions_from_mesh_aabb(&mesh).unwrap();

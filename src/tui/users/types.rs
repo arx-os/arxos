@@ -218,7 +218,7 @@ impl UserBrowserState {
         }
 
         // Sort by timestamp (newest first)
-        activities.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        activities.sort_by_key(|b| std::cmp::Reverse(b.timestamp));
         self.selected_user_activity = activities;
 
         Ok(())

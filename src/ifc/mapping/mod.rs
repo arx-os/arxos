@@ -31,12 +31,10 @@ pub use merge::{
     HierarchyBase, MergePolicy, MergeResult, MergeSource,
 };
 pub use properties::{
-    normalize_imported_properties, properties_for_export, wing_name_from_properties,
-    PROP_ARX_WING, PROP_WING,
+    normalize_imported_properties, properties_for_export, wing_name_from_properties, PROP_ARX_WING,
+    PROP_WING,
 };
-pub use report::{
-    FidelityLevel, LossReport, MappingResult, MappingWarning, MergeStats,
-};
+pub use report::{FidelityLevel, LossReport, MappingResult, MappingWarning, MergeStats};
 
 /// Property set carrying Arx identity across the IFC boundary.
 pub const PSET_ARX_IDENTITY: &str = "Pset_ArxIdentity";

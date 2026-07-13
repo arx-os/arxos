@@ -1,13 +1,13 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, bail, Result};
-use crate::utils::path_safety::PathSafety;
-use crate::export::ifc::IFCExporter;
 use crate::agent::git::SyncState;
-use crate::ingest::import_ifc_path;
-use crate::yaml::{BuildingData, BuildingYamlSerializer};
 use crate::core::Building;
+use crate::export::ifc::IFCExporter;
+use crate::ingest::import_ifc_path;
+use crate::persistence::{load_building_at, save_building_at, BUILDING_YAML};
+use crate::utils::path_safety::PathSafety;
+use anyhow::{anyhow, bail, Result};
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{DateTime, Utc};
 
@@ -72,6 +72,14 @@ fn finish_import(repo_root: &Path, ifc_path: &Path) -> Result<IfcImportResult> {
     let result = import_ifc_path(ifc_path, existing, false, true)
         .map_err(|e| anyhow!("IFC import failed: {}", e))?;
 
+    if result.validation.has_errors() {
+        return Err(anyhow!(
+            "IFC import validation failed; refusing to write {}: {}",
+            BUILDING_YAML,
+            result.summary_lines().join("; ")
+        ));
+    }
+
     let report_summary = result.summary_lines();
     let building = result.building;
     let floors = building.floors.len();
@@ -82,16 +90,12 @@ fn finish_import(repo_root: &Path, ifc_path: &Path) -> Result<IfcImportResult> {
         .sum();
     let equipment = building.get_all_equipment().len();
 
-    let yaml_filename = format!("{}.yaml", sanitize_filename(&building.name, "building"));
-    let yaml_path = repo_root.join(&yaml_filename);
-    let relative_yaml = relative_display_path(repo_root, &yaml_path);
-    let yaml_string = BuildingYamlSerializer::serialize_building(&building)
-        .map_err(|e| anyhow!("Failed to serialize YAML: {}", e))?;
-    fs::write(&yaml_path, yaml_string)?;
+    save_building_at(repo_root, &building)
+        .map_err(|e| anyhow!("Failed to write {}: {}", BUILDING_YAML, e))?;
 
     Ok(IfcImportResult {
         building_name: building.name,
-        yaml_path: relative_yaml,
+        yaml_path: BUILDING_YAML.to_string(),
         floors,
         rooms,
         equipment,
@@ -104,17 +108,14 @@ pub fn export_ifc(
     filename: Option<String>,
     delta: bool,
 ) -> Result<IfcExportResult> {
-    let building_data = load_building_data(repo_root)?;
-    let building = building_data.into_building();
+    let building = load_building_at(repo_root)
+        .map_err(|e| anyhow!("Failed to load {}: {}", BUILDING_YAML, e))?;
     let exporter = IFCExporter::new(building.clone());
 
     let exports_dir = repo_root.join("exports");
     fs::create_dir_all(&exports_dir)?;
 
-    let default_name = format!(
-        "{}.ifc",
-        sanitize_filename(&building.name, "building")
-    );
+    let default_name = format!("{}.ifc", sanitize_filename(&building.name, "building"));
     let export_filename = ensure_extension(
         &sanitize_filename(filename.as_deref().unwrap_or(&default_name), &default_name),
         ".ifc",
@@ -208,34 +209,6 @@ fn relative_display_path(root: &Path, target: &Path) -> String {
         .to_string()
 }
 
-fn load_building_data(repo_root: &Path) -> Result<BuildingData> {
-    let mut yaml_candidates = Vec::new();
-    // Safe directory reading with path validation
-    PathSafety::validate_path(repo_root)
-        .map_err(|e| anyhow!("Invalid path: {}", e))?;
-        
-    for entry in fs::read_dir(repo_root)? {
-        let entry = entry?;
-        let path = entry.path();
-        if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
-            if ext.eq_ignore_ascii_case("yaml") || ext.eq_ignore_ascii_case("yml") {
-                yaml_candidates.push(path);
-            }
-        }
-    }
-
-    let yaml_path = yaml_candidates
-        .first()
-        .ok_or_else(|| anyhow!("No YAML building data found in repository"))?;
-
-    // Safe file reading
-    let content = PathSafety::read_file_safely(yaml_path, repo_root)
-        .map_err(|e| anyhow::anyhow!("Failed to read safe file: {}", e))?;
-    let data: BuildingData = serde_yaml::from_str(&content)
-        .map_err(|e| anyhow!("Failed to parse YAML file {}: {}", yaml_path.display(), e))?;
-    Ok(data)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -288,30 +261,10 @@ mod tests {
         floor.wings.push(wing);
         building.floors.push(floor);
 
-        let data = BuildingYamlSerializer::serialize_building(&building).unwrap();
-        let yaml_path = repo_root.join("test_facility.yaml");
-        std::fs::write(&yaml_path, data).unwrap();
+        save_building_at(repo_root, &building).unwrap();
 
         let export = export_ifc(repo_root, None, false).unwrap();
         assert!(export.size_bytes > 0);
         assert!(!export.data.is_empty());
-    }
-}
-
-struct DirGuard {
-    original: PathBuf,
-}
-
-impl DirGuard {
-    fn change_to(path: &Path) -> Result<Self> {
-        let original = std::env::current_dir()?;
-        std::env::set_current_dir(path)?;
-        Ok(Self { original })
-    }
-}
-
-impl Drop for DirGuard {
-    fn drop(&mut self) {
-        let _ = std::env::set_current_dir(&self.original);
     }
 }

@@ -33,19 +33,40 @@ pub enum ArxError {
 
     // Additional structured error variants for TUI error handling
     /// Git operation error with context
-    GitOperation { message: String, context: Option<String> },
+    GitOperation {
+        message: String,
+        context: Option<String>,
+    },
     /// Configuration error with details
-    Configuration { message: String, details: Option<String> },
+    Configuration {
+        message: String,
+        details: Option<String>,
+    },
     /// Validation error
-    Validation { message: String, field: Option<String> },
+    Validation {
+        message: String,
+        field: Option<String>,
+    },
     /// IFC processing error with context
-    IfcProcessing { message: String, line: Option<usize> },
+    IfcProcessing {
+        message: String,
+        line: Option<usize>,
+    },
     /// IO error with context
-    IoError { message: String, path: Option<String> },
+    IoError {
+        message: String,
+        path: Option<String>,
+    },
     /// YAML processing error
-    YamlProcessing { message: String, line: Option<usize> },
+    YamlProcessing {
+        message: String,
+        line: Option<usize>,
+    },
     /// Spatial data error
-    SpatialData { message: String, entity: Option<String> },
+    SpatialData {
+        message: String,
+        entity: Option<String>,
+    },
     /// Counter overflow error
     CounterOverflow { counter_name: String },
 }
@@ -57,7 +78,11 @@ impl fmt::Display for ArxError {
                 write!(f, "Invalid path '{}', expected format: {}", path, expected)
             }
             ArxError::AddressValidation { address, message } => {
-                write!(f, "Address validation failed for '{}': {}", address, message)
+                write!(
+                    f,
+                    "Address validation failed for '{}': {}",
+                    address, message
+                )
             }
             ArxError::Io(err) => write!(f, "IO error: {}", err),
             ArxError::Serialization(msg) => write!(f, "Serialization error: {}", msg),
@@ -66,25 +91,74 @@ impl fmt::Display for ArxError {
             ArxError::Config(msg) => write!(f, "Configuration error: {}", msg),
             ArxError::General(msg) => write!(f, "{}", msg),
             ArxError::GitOperation { message, context } => {
-                write!(f, "Git operation error: {}{}", message, context.as_ref().map(|c| format!(" ({})", c)).unwrap_or_default())
+                write!(
+                    f,
+                    "Git operation error: {}{}",
+                    message,
+                    context
+                        .as_ref()
+                        .map(|c| format!(" ({})", c))
+                        .unwrap_or_default()
+                )
             }
             ArxError::Configuration { message, details } => {
-                write!(f, "Configuration error: {}{}", message, details.as_ref().map(|d| format!(" - {}", d)).unwrap_or_default())
+                write!(
+                    f,
+                    "Configuration error: {}{}",
+                    message,
+                    details
+                        .as_ref()
+                        .map(|d| format!(" - {}", d))
+                        .unwrap_or_default()
+                )
             }
             ArxError::Validation { message, field } => {
-                write!(f, "Validation error{}: {}", field.as_ref().map(|fld| format!(" for field '{}'", fld)).unwrap_or_default(), message)
+                write!(
+                    f,
+                    "Validation error{}: {}",
+                    field
+                        .as_ref()
+                        .map(|fld| format!(" for field '{}'", fld))
+                        .unwrap_or_default(),
+                    message
+                )
             }
             ArxError::IfcProcessing { message, line } => {
-                write!(f, "IFC processing error{}: {}", line.map(|l| format!(" at line {}", l)).unwrap_or_default(), message)
+                write!(
+                    f,
+                    "IFC processing error{}: {}",
+                    line.map(|l| format!(" at line {}", l)).unwrap_or_default(),
+                    message
+                )
             }
             ArxError::IoError { message, path } => {
-                write!(f, "IO error{}: {}", path.as_ref().map(|p| format!(" at '{}'", p)).unwrap_or_default(), message)
+                write!(
+                    f,
+                    "IO error{}: {}",
+                    path.as_ref()
+                        .map(|p| format!(" at '{}'", p))
+                        .unwrap_or_default(),
+                    message
+                )
             }
             ArxError::YamlProcessing { message, line } => {
-                write!(f, "YAML processing error{}: {}", line.map(|l| format!(" at line {}", l)).unwrap_or_default(), message)
+                write!(
+                    f,
+                    "YAML processing error{}: {}",
+                    line.map(|l| format!(" at line {}", l)).unwrap_or_default(),
+                    message
+                )
             }
             ArxError::SpatialData { message, entity } => {
-                write!(f, "Spatial data error{}: {}", entity.as_ref().map(|e| format!(" for entity '{}'", e)).unwrap_or_default(), message)
+                write!(
+                    f,
+                    "Spatial data error{}: {}",
+                    entity
+                        .as_ref()
+                        .map(|e| format!(" for entity '{}'", e))
+                        .unwrap_or_default(),
+                    message
+                )
             }
             ArxError::CounterOverflow { counter_name } => {
                 write!(f, "Counter overflow: {}", counter_name)
@@ -144,11 +218,9 @@ impl ArxError {
                 }
                 ErrorContext {
                     suggestions,
-                    recovery_steps: vec![
-                        "Correct the validation error and try again".to_string(),
-                    ],
+                    recovery_steps: vec!["Correct the validation error and try again".to_string()],
                 }
-            },
+            }
             ArxError::IfcProcessing { line, .. } => {
                 let mut suggestions = vec!["Check IFC file format".to_string()];
                 if let Some(l) = line {
@@ -161,7 +233,7 @@ impl ArxError {
                         "Try re-exporting from the source application".to_string(),
                     ],
                 }
-            },
+            }
             ArxError::IoError { path, .. } => {
                 let mut suggestions = vec!["Check file permissions".to_string()];
                 if path.is_some() {
@@ -174,7 +246,7 @@ impl ArxError {
                         "Check available disk space".to_string(),
                     ],
                 }
-            },
+            }
             ArxError::YamlProcessing { line, .. } => {
                 let mut suggestions = vec!["Check YAML syntax".to_string()];
                 if let Some(l) = line {
@@ -187,7 +259,7 @@ impl ArxError {
                         "Check for proper indentation".to_string(),
                     ],
                 }
-            },
+            }
             ArxError::SpatialData { entity, .. } => {
                 let mut suggestions = vec!["Verify spatial coordinates".to_string()];
                 if let Some(e) = entity {
@@ -200,14 +272,13 @@ impl ArxError {
                         "Validate coordinate system configuration".to_string(),
                     ],
                 }
-            },
+            }
             ArxError::CounterOverflow { counter_name } => ErrorContext {
-                suggestions: vec![
-                    format!("The {} counter has reached its maximum value", counter_name),
-                ],
-                recovery_steps: vec![
-                    "Contact support for assistance".to_string(),
-                ],
+                suggestions: vec![format!(
+                    "The {} counter has reached its maximum value",
+                    counter_name
+                )],
+                recovery_steps: vec!["Contact support for assistance".to_string()],
             },
             _ => ErrorContext::default(),
         }

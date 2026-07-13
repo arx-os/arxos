@@ -18,10 +18,8 @@ impl DiffView {
     pub fn new() -> Result<Self, Box<dyn Error>> {
         let config = GitConfigManager::load_from_arx_config_or_env();
         let git_manager = BuildingGitManager::new(".", "current", config)?;
-        
-        Ok(Self {
-            git_manager,
-        })
+
+        Ok(Self { git_manager })
     }
 
     pub fn run(&self) -> Result<(), Box<dyn Error>> {
@@ -30,7 +28,7 @@ impl DiffView {
         loop {
             terminal_manager.terminal().draw(|f| {
                 let size = f.size();
-                
+
                 let chunks = Layout::default()
                     .direction(Direction::Vertical)
                     .margin(1)
@@ -45,7 +43,11 @@ impl DiffView {
                     .split(size);
 
                 let title = Paragraph::new("ArxOS Diff Viewer")
-                    .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+                    .style(
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD),
+                    )
                     .alignment(Alignment::Center)
                     .block(Block::default().borders(Borders::ALL));
                 f.render_widget(title, chunks[0]);
@@ -65,7 +67,9 @@ impl DiffView {
                 f.render_widget(footer, chunks[2]);
             })?;
 
-            if let Some(Event::Key(key)) = terminal_manager.poll_event(Duration::from_millis(100))? {
+            if let Some(Event::Key(key)) =
+                terminal_manager.poll_event(Duration::from_millis(100))?
+            {
                 match key.code {
                     KeyCode::Char('q') | KeyCode::Esc => break,
                     _ => {}
@@ -85,7 +89,7 @@ impl DiffView {
                     lines.push(Line::from("No changes detected."));
                 } else {
                     let mut current_file = String::new();
-                    
+
                     for file_diff in diff_result.file_diffs {
                         // Add file header if file changes
                         if file_diff.file_path != current_file {
@@ -93,23 +97,27 @@ impl DiffView {
                                 lines.push(Line::from(""));
                             }
                             current_file = file_diff.file_path.clone();
-                            lines.push(Line::from(vec![
-                                Span::styled(format!("File: {}", current_file), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-                            ]));
+                            lines.push(Line::from(vec![Span::styled(
+                                format!("File: {}", current_file),
+                                Style::default()
+                                    .fg(Color::Yellow)
+                                    .add_modifier(Modifier::BOLD),
+                            )]));
                         }
-                        
+
                         let (prefix, color) = match file_diff.line_type {
                             crate::git::diff::DiffLineType::Addition => ("+ ", Color::Green),
                             crate::git::diff::DiffLineType::Deletion => ("- ", Color::Red),
                             crate::git::diff::DiffLineType::Context => ("  ", Color::White),
                         };
-                        
-                        lines.push(Line::from(vec![
-                            Span::styled(format!("{}{}", prefix, file_diff.content), Style::default().fg(color)),
-                        ]));
+
+                        lines.push(Line::from(vec![Span::styled(
+                            format!("{}{}", prefix, file_diff.content),
+                            Style::default().fg(color),
+                        )]));
                     }
                 }
-            },
+            }
             Err(e) => {
                 lines.push(Line::from(vec![
                     Span::styled("Error getting diff: ", Style::default().fg(Color::Red)),
@@ -117,7 +125,7 @@ impl DiffView {
                 ]));
             }
         }
-        
+
         lines
     }
 }

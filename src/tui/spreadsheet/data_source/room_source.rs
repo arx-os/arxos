@@ -37,10 +37,7 @@ impl RoomDataSource {
     /// * `building_name` - Name of the building for persistence
     pub fn new(building_data: Building, building_name: String) -> Self {
         // Collect all rooms from all floors (rooms are now in wings) using Building inherent query
-        let rooms = building_data.get_all_rooms()
-            .into_iter()
-            .cloned()
-            .collect();
+        let rooms = building_data.get_all_rooms().into_iter().cloned().collect();
 
         Self {
             rooms,
@@ -169,12 +166,7 @@ impl SpreadsheetDataSource for RoomDataSource {
         }
     }
 
-    fn set_cell(
-        &mut self,
-        row: usize,
-        col: usize,
-        value: CellValue,
-    ) -> Result<(), Box<dyn Error>> {
+    fn set_cell(&mut self, row: usize, col: usize, value: CellValue) -> Result<(), Box<dyn Error>> {
         // Get column ID first before mutable borrow
         let column_id = {
             let columns = self.columns();
@@ -262,13 +254,11 @@ impl SpreadsheetDataSource for RoomDataSource {
     }
 
     fn save(&mut self, commit: bool) -> Result<(), Box<dyn Error>> {
-        use crate::persistence::PersistenceManager;
+        use crate::ingest::persist_building;
 
-        // Update building data with modified rooms
-        let mut building_data = self.building_data.clone();
+        let mut building = self.building_data.clone();
         let mut modified_count = 0;
 
-        // Create a map of modified rooms by ID
         let modified_rooms: HashMap<String, &Room> = self
             .rooms
             .iter()
@@ -277,50 +267,20 @@ impl SpreadsheetDataSource for RoomDataSource {
             .map(|(_, room)| (room.id.clone(), room))
             .collect();
 
-        // Update rooms in building data by matching IDs using find_room_mut
         for (id, modified_room) in modified_rooms {
-            if let Some(room) = building_data.find_room_mut(&id) {
+            if let Some(room) = building.find_room_mut(&id) {
                 *room = (*modified_room).clone();
                 modified_count += 1;
             }
         }
 
-        // Save via persistence manager
-        let persistence = PersistenceManager::new(&self.building_name)?;
-        persistence.save_building_data(&building_data)?;
-
-        // Update our building_data reference
-        self.building_data = building_data;
-
-        // Stage to Git if repository exists
-        if persistence.has_git_repo() {
-            use crate::git::{manager::GitConfigManager, BuildingGitManager};
-
-            let working_file_path = persistence.working_file();
-            let repo_path = working_file_path
-                .parent()
-                .and_then(|p| p.to_str())
-                .ok_or_else(|| "Invalid repository path".to_string())?;
-
-            let config = GitConfigManager::load_from_arx_config_or_env();
-            let mut git_manager = BuildingGitManager::new(repo_path, &self.building_name, config)
-                .map_err(|e| format!("Git error: {}", e))?;
-
-            git_manager.stage_all()?;
-
-            // Commit if requested
-            if commit {
-                let message = format!(
-                    "Update rooms via spreadsheet ({} items modified)",
-                    modified_count
-                );
-                git_manager.commit_staged(&message)?;
-            }
-        }
-
-        // Clear modified rows after successful save
+        let message = format!(
+            "Update rooms via spreadsheet ({} items modified)",
+            modified_count
+        );
+        let building = persist_building(building, commit, Some(&message))?;
+        self.building_data = building;
         self.modified_rows.clear();
-
         Ok(())
     }
 
@@ -335,7 +295,9 @@ impl SpreadsheetDataSource for RoomDataSource {
         self.building_data = building_data.clone();
 
         // Rebuild rooms list using Building inherent query
-        self.rooms = self.building_data.get_all_rooms()
+        self.rooms = self
+            .building_data
+            .get_all_rooms()
             .into_iter()
             .cloned()
             .collect();

@@ -1,7 +1,7 @@
 //! Home page
 
-use leptos::*;
 use leptos::prelude::*;
+use leptos::*;
 use leptos_router::components::A;
 
 #[component]
@@ -11,7 +11,7 @@ pub fn Home() -> impl IntoView {
             <div class="hero">
                 <h1>"Welcome to ArxOS"</h1>
                 <p class="subtitle">"Git for Buildings - Version control for building management data"</p>
-                
+
                 <div class="cta-buttons">
                     <A href="/import" attr:class="btn btn-primary">
                         "Import IFC File"

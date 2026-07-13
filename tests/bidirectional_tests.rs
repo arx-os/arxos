@@ -4,8 +4,9 @@ use arxos::core::{
 };
 use arxos::export::ifc::IFCExporter;
 use arxos::ifc::mapping::{
-    approx_eq, dimensions_approx_eq, merge_building, positions_approx_eq, resolve_product_global_id,
-    spatial_from_position_dims, PSET_ARX_IDENTITY, PSET_ARX_LIDAR, PROP_ARX_ID, PROP_POINT_COUNT,
+    approx_eq, dimensions_approx_eq, merge_building, positions_approx_eq,
+    resolve_product_global_id, spatial_from_position_dims, PROP_ARX_ID, PROP_POINT_COUNT,
+    PSET_ARX_IDENTITY, PSET_ARX_LIDAR,
 };
 use arxos::ifc::IFCProcessor;
 use arxos::yaml::BuildingYamlSerializer;
@@ -17,10 +18,12 @@ use tempfile::NamedTempFile;
 fn test_bidirectional_roundtrip_synthetic() -> anyhow::Result<()> {
     // 1. Create a rich canonical building
     let mut building = Building::new("HQ Building".to_string(), "/hq".to_string());
-    
+
     // Add floor-level metadata
     let mut floor = Floor::new("Floor 1".to_string(), 1);
-    floor.properties.insert("fire_rating".to_string(), "1h".to_string());
+    floor
+        .properties
+        .insert("fire_rating".to_string(), "1h".to_string());
 
     // Create wings
     let mut wing_east = Wing::new("East Wing".to_string());
@@ -32,7 +35,9 @@ fn test_bidirectional_roundtrip_synthetic() -> anyhow::Result<()> {
 
     // Create room inside East Wing
     let mut room_conf = Room::new("Conference room 101".to_string(), RoomType::Office);
-    room_conf.properties.insert("max_occupancy".to_string(), "20".to_string());
+    room_conf
+        .properties
+        .insert("max_occupancy".to_string(), "20".to_string());
 
     // Add room-level equipment
     let mut eq_projector = Equipment::new(
@@ -46,7 +51,9 @@ fn test_bidirectional_roundtrip_synthetic() -> anyhow::Result<()> {
         z: 2.5,
         coordinate_system: "building_local".to_string(),
     };
-    eq_projector.properties.insert("brand".to_string(), "Epson".to_string());
+    eq_projector
+        .properties
+        .insert("brand".to_string(), "Epson".to_string());
     room_conf.add_equipment(eq_projector);
     wing_east.add_room(room_conf);
 
@@ -107,14 +114,24 @@ fn test_bidirectional_roundtrip_synthetic() -> anyhow::Result<()> {
     // Verify Floor-Level Equipment
     assert_eq!(imp_floor.equipment.len(), 1);
     assert_eq!(imp_floor.equipment[0].name, "panel-floor1");
-    assert_eq!(imp_floor.equipment[0].equipment_type, EquipmentType::Electrical);
+    assert_eq!(
+        imp_floor.equipment[0].equipment_type,
+        EquipmentType::Electrical
+    );
 
     // Verify Wings and Wing-Level Equipment
     assert_eq!(imp_floor.wings.len(), 2);
-    let imp_wing_east = imp_floor.wings.iter().find(|w| w.name == "East Wing").expect("East Wing should exist");
+    let imp_wing_east = imp_floor
+        .wings
+        .iter()
+        .find(|w| w.name == "East Wing")
+        .expect("East Wing should exist");
     assert_eq!(imp_wing_east.equipment.len(), 1);
     assert_eq!(imp_wing_east.equipment[0].name, "thermostat-east");
-    assert_eq!(imp_wing_east.equipment[0].equipment_type, EquipmentType::HVAC);
+    assert_eq!(
+        imp_wing_east.equipment[0].equipment_type,
+        EquipmentType::HVAC
+    );
 
     // Verify Room and Room-Level Equipment
     assert_eq!(imp_wing_east.rooms.len(), 1);
@@ -133,10 +150,7 @@ fn test_bidirectional_roundtrip_synthetic() -> anyhow::Result<()> {
     let imp_eq = &imp_room.equipment[0];
     assert_eq!(imp_eq.name, "projector-01");
     assert_eq!(imp_eq.equipment_type, EquipmentType::AV);
-    assert_eq!(
-        imp_eq.properties.get("brand"),
-        Some(&"Epson".to_string())
-    );
+    assert_eq!(imp_eq.properties.get("brand"), Some(&"Epson".to_string()));
 
     // 5. Serialize to YAML and verify round-trip rehydration
     let yaml = BuildingYamlSerializer::serialize_building(&imported_building)
@@ -146,12 +160,16 @@ fn test_bidirectional_roundtrip_synthetic() -> anyhow::Result<()> {
 
     assert_eq!(yaml_building.name, imported_building.name);
     assert_eq!(yaml_building.floors.len(), 1);
-    
+
     let y_floor = &yaml_building.floors[0];
     assert_eq!(y_floor.equipment.len(), 1);
     assert_eq!(y_floor.equipment[0].name, "panel-floor1");
 
-    let y_wing_east = y_floor.wings.iter().find(|w| w.name == "East Wing").expect("East Wing in YAML");
+    let y_wing_east = y_floor
+        .wings
+        .iter()
+        .find(|w| w.name == "East Wing")
+        .expect("East Wing in YAML");
     assert_eq!(y_wing_east.equipment.len(), 1);
     assert_eq!(y_wing_east.equipment[0].name, "thermostat-east");
 
@@ -172,15 +190,15 @@ fn test_bidirectional_roundtrip_real_fixture() -> anyhow::Result<()> {
     // Verify simple.ifc contents
     assert_eq!(building.name, "TestBuilding");
     assert_eq!(building.floors.len(), 1);
-    
+
     let floor = &building.floors[0];
     assert_eq!(floor.name, "Floor1");
     assert_eq!(floor.wings.len(), 1);
-    
+
     let wing = &floor.wings[0];
     assert_eq!(wing.name, "Main"); // Default zone/wing name
     assert_eq!(wing.rooms.len(), 1);
-    
+
     let room = &wing.rooms[0];
     assert_eq!(room.name, "Conference Room");
 
@@ -198,7 +216,10 @@ fn test_bidirectional_roundtrip_real_fixture() -> anyhow::Result<()> {
     assert_eq!(re_building.floors[0].wings.len(), 1);
     assert_eq!(re_building.floors[0].wings[0].name, "Main");
     assert_eq!(re_building.floors[0].wings[0].rooms.len(), 1);
-    assert_eq!(re_building.floors[0].wings[0].rooms[0].name, "Conference Room");
+    assert_eq!(
+        re_building.floors[0].wings[0].rooms[0].name,
+        "Conference Room"
+    );
 
     Ok(())
 }
@@ -272,7 +293,10 @@ fn test_identity_stable_across_export_and_import() -> anyhow::Result<()> {
         "Pset_ArxIdentity must be written"
     );
     assert!(ifc1.contains(PROP_ARX_ID) || ifc1.contains("ArxId"));
-    assert!(ifc1.contains(&room_id), "Arx room id must appear in identity Pset");
+    assert!(
+        ifc1.contains(&room_id),
+        "Arx room id must appear in identity Pset"
+    );
     assert!(
         ifc1.contains(&equipment_id),
         "Arx equipment id must appear in identity Pset"
@@ -346,8 +370,7 @@ fn test_identity_stable_across_export_and_import() -> anyhow::Result<()> {
 /// L1: `lidar_enrichment` survives Model → IFC → Model and Model → YAML → Model.
 #[test]
 fn test_lidar_enrichment_roundtrip_via_ifc_and_yaml() -> anyhow::Result<()> {
-    let scan_ts = DateTime::parse_from_rfc3339("2026-06-01T14:30:00Z")?
-        .with_timezone(&Utc);
+    let scan_ts = DateTime::parse_from_rfc3339("2026-06-01T14:30:00Z")?.with_timezone(&Utc);
 
     let mut building = Building::new("LiDAR Building".to_string(), "/lidar".to_string());
     let mut floor = Floor::new("Ground".to_string(), 0);
@@ -389,7 +412,9 @@ fn test_lidar_enrichment_roundtrip_via_ifc_and_yaml() -> anyhow::Result<()> {
         ifc_text.contains(PROP_POINT_COUNT) || ifc_text.contains("PointCount"),
         "export must include PointCount"
     );
-    assert!(ifc_text.contains("12500") || ifc_text.contains("12_500") || ifc_text.contains("12500"));
+    assert!(
+        ifc_text.contains("12500") || ifc_text.contains("12_500") || ifc_text.contains("12500")
+    );
 
     // IFC → Model
     let processor = IFCProcessor::new();
@@ -459,10 +484,7 @@ fn test_lidar_enrichment_roundtrip_via_ifc_and_yaml() -> anyhow::Result<()> {
         .find(|r| r.name == "Scan Room")
         .expect("Scan Room in YAML");
     assert_eq!(
-        y_room
-            .lidar_enrichment
-            .as_ref()
-            .map(|e| e.point_count),
+        y_room.lidar_enrichment.as_ref().map(|e| e.point_count),
         Some(12_500)
     );
 
@@ -480,10 +502,7 @@ fn test_lidar_enrichment_roundtrip_via_ifc_and_yaml() -> anyhow::Result<()> {
         .find(|r| r.name == "Scan Room")
         .expect("Scan Room after second IFC pass");
     assert_eq!(
-        again_room
-            .lidar_enrichment
-            .as_ref()
-            .map(|e| e.point_count),
+        again_room.lidar_enrichment.as_ref().map(|e| e.point_count),
         Some(12_500)
     );
 
@@ -630,11 +649,7 @@ fn test_geometry_position_and_dimensions_roundtrip() -> anyhow::Result<()> {
     // Explicitly no mesh — extruded box path
     room.spatial_properties.mesh = None;
 
-    let mut equipment = Equipment::new(
-        "sensor-a".to_string(),
-        "".to_string(),
-        EquipmentType::HVAC,
-    );
+    let mut equipment = Equipment::new("sensor-a".to_string(), "".to_string(), EquipmentType::HVAC);
     let eq_pos = Position {
         x: 14.0,
         y: -2.0,

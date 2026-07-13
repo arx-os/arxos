@@ -179,7 +179,10 @@ pub fn validate_building(building: &Building) -> BuildingValidationReport {
                 if !room.spatial_properties.bounding_box.is_valid() {
                     report.results.push(ValidationResult {
                         rule_id: "room.bbox.invalid".into(),
-                        message: format!("Room '{}' has invalid bounding box (min > max)", room.name),
+                        message: format!(
+                            "Room '{}' has invalid bounding box (min > max)",
+                            room.name
+                        ),
                         severity: ValidationSeverity::Warning,
                         field: Some(format!("room[{}].bounding_box", room.name)),
                     });
@@ -199,7 +202,10 @@ pub fn validate_building(building: &Building) -> BuildingValidationReport {
                     if k.contains("Pset_Arx") && k.matches("Pset_").count() > 1 {
                         report.results.push(ValidationResult {
                             rule_id: "props.double_prefix".into(),
-                            message: format!("Room '{}' has double-prefixed property key '{}'", room.name, k),
+                            message: format!(
+                                "Room '{}' has double-prefixed property key '{}'",
+                                room.name, k
+                            ),
                             severity: ValidationSeverity::Warning,
                             field: Some(k.clone()),
                         });
@@ -268,7 +274,10 @@ fn validate_enrichment(
                 field_prefix, confidence
             ),
             severity: ValidationSeverity::Warning,
-            field: Some(format!("{}.lidar_enrichment.confidence_score", field_prefix)),
+            field: Some(format!(
+                "{}.lidar_enrichment.confidence_score",
+                field_prefix
+            )),
         });
     }
     // point_count is usize — always non-negative; nothing to check beyond presence
@@ -309,6 +318,8 @@ mod tests {
         b.add_floor(floor);
         let report = validate_building(&b);
         assert!(report.has_errors());
-        assert!(report.warnings().any(|w| w.rule_id == "lidar.confidence.range"));
+        assert!(report
+            .warnings()
+            .any(|w| w.rule_id == "lidar.confidence.range"));
     }
 }

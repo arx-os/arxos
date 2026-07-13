@@ -3,10 +3,10 @@
 //! This module handles frame rendering and overlay display for the
 //! interactive 3D building renderer.
 
+use crate::core::Building;
 use crate::render3d::events::EventHandler;
 use crate::render3d::state::{InteractiveState, ViewMode};
 use crate::render3d::{Building3DRenderer, InfoPanelState, Scene3D, VisualEffectsEngine};
-use crate::core::Building;
 use std::io::{self, Write};
 use std::time::Instant;
 
@@ -193,7 +193,11 @@ fn render_game_overlay(overlay: &mut String, game_state: &GameState) {
 }
 
 /// Render session information
-fn render_session_info(overlay: &mut String, state: &InteractiveState, info_panel: &InfoPanelState) {
+fn render_session_info(
+    overlay: &mut String,
+    state: &InteractiveState,
+    info_panel: &InfoPanelState,
+) {
     overlay.push_str(&format!(
         "Session: {}s | ",
         state.session_duration().as_secs()
@@ -205,10 +209,7 @@ fn render_session_info(overlay: &mut String, state: &InteractiveState, info_pane
             .map(|f| f.to_string())
             .unwrap_or("All".to_string())
     ));
-    overlay.push_str(&format!(
-        "Selected: {} | ",
-        state.selected_equipment.len()
-    ));
+    overlay.push_str(&format!("Selected: {} | ", state.selected_equipment.len()));
     overlay.push_str(&format!("Mode: {:?}", state.view_mode));
     if info_panel.show_panel {
         overlay.push_str(" | Info Panel: ON");
@@ -267,10 +268,7 @@ fn render_info_panel(
     } else {
         0.0
     };
-    overlay.push_str(&format!(
-        "║ FPS: {:.1} | Frames: {}\n",
-        fps, frame_count
-    ));
+    overlay.push_str(&format!("║ FPS: {:.1} | Frames: {}\n", fps, frame_count));
 
     overlay.push_str("╚════════════════════════════════════════════════════════════╝\n");
 

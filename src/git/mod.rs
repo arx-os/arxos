@@ -15,4 +15,3 @@ pub mod staging;
 pub use diff::{CommitInfo, DiffResult, DiffStats, GitStatus};
 pub use manager::CommitMetadata;
 pub use manager::*;
-

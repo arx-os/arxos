@@ -3,9 +3,9 @@
 //! This module contains all event handling logic including camera movement,
 //! zoom controls, view mode changes, and floor navigation.
 
+use crate::core::Building;
 use crate::render3d::events::{Action, CameraAction, ViewModeAction, ZoomAction};
 use crate::render3d::state::{CameraState, InteractiveState, Vector3D, ViewMode};
-use crate::core::Building;
 
 /// Handle a specific action on the interactive state
 ///
@@ -166,8 +166,7 @@ pub fn handle_view_mode_action(
             state.set_view_mode(ViewMode::Maintenance);
         }
         ViewModeAction::ToggleRooms => {
-            state.session_data.preferences.show_rooms =
-                !state.session_data.preferences.show_rooms;
+            state.session_data.preferences.show_rooms = !state.session_data.preferences.show_rooms;
         }
         ViewModeAction::ToggleStatus => {
             state.session_data.preferences.show_status =
@@ -200,18 +199,8 @@ pub fn handle_floor_change(
     let new_floor = current_floor + floor_delta;
 
     // Validate floor exists in building
-    let max_floor = building
-        .floors
-        .iter()
-        .map(|f| f.level)
-        .max()
-        .unwrap_or(0);
-    let min_floor = building
-        .floors
-        .iter()
-        .map(|f| f.level)
-        .min()
-        .unwrap_or(0);
+    let max_floor = building.floors.iter().map(|f| f.level).max().unwrap_or(0);
+    let min_floor = building.floors.iter().map(|f| f.level).min().unwrap_or(0);
 
     if new_floor >= min_floor && new_floor <= max_floor {
         state.current_floor = Some(new_floor);

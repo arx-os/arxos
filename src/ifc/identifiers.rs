@@ -47,10 +47,7 @@ pub(crate) fn derive_building_identifiers(
         slug = "building".to_string();
     }
 
-    BuildingIdentifiers {
-        display_name,
-        slug,
-    }
+    BuildingIdentifiers { display_name, slug }
 }
 
 #[cfg(test)]
@@ -79,4 +76,3 @@ mod tests {
         assert_eq!(ids.slug, "hq-east");
     }
 }
-

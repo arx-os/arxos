@@ -7,10 +7,10 @@ use super::spatial_query;
 use super::transforms;
 use super::types::*;
 use super::views;
-use crate::core::{EquipmentStatus, EquipmentType};
 use crate::core::spatial::{BoundingBox3D, Point3D};
-use crate::ifc::{SpatialIndex, SpatialQueryResult, SpatialRelationship};
 use crate::core::Building;
+use crate::core::{EquipmentStatus, EquipmentType};
+use crate::ifc::{SpatialIndex, SpatialQueryResult, SpatialRelationship};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -171,8 +171,10 @@ impl Building3DRenderer {
         let bounding_box = self.calculate_overall_bounds(floors, equipment, rooms);
 
         // Apply 3D transformations
-        let transformed_floors = transforms::transform_floors(floors, &self.projection, &self.camera);
-        let transformed_equipment = transforms::transform_equipment(equipment, &self.projection, &self.camera);
+        let transformed_floors =
+            transforms::transform_floors(floors, &self.projection, &self.camera);
+        let transformed_equipment =
+            transforms::transform_equipment(equipment, &self.projection, &self.camera);
         let transformed_rooms = transforms::transform_rooms(rooms, &self.projection, &self.camera);
 
         // Create scene
@@ -191,10 +193,7 @@ impl Building3DRenderer {
                     .flat_map(|f| f.wings.iter())
                     .map(|w| w.rooms.len())
                     .sum(),
-                total_equipment: self
-                    .building
-                    .get_all_equipment()
-                    .len(),
+                total_equipment: self.building.get_all_equipment().len(),
                 render_time_ms: start_time.elapsed().as_millis() as u64,
                 projection_type: format!("{:?}", self.projection.projection_type),
                 view_angle: format!("{:?}", self.projection.view_angle),
@@ -224,8 +223,10 @@ impl Building3DRenderer {
         };
 
         // Apply 3D transformations
-        let transformed_floors = transforms::transform_floors(floors, &self.projection, &self.camera);
-        let transformed_equipment = transforms::transform_equipment(&enhanced_equipment, &self.projection, &self.camera);
+        let transformed_floors =
+            transforms::transform_floors(floors, &self.projection, &self.camera);
+        let transformed_equipment =
+            transforms::transform_equipment(&enhanced_equipment, &self.projection, &self.camera);
         let transformed_rooms = transforms::transform_rooms(rooms, &self.projection, &self.camera);
 
         // Create scene with enhanced metadata
@@ -480,10 +481,7 @@ impl Building3DRenderer {
                     .flat_map(|f| f.wings.iter())
                     .map(|w| w.rooms.len())
                     .sum(),
-                total_equipment: self
-                    .building
-                    .get_all_equipment()
-                    .len(),
+                total_equipment: self.building.get_all_equipment().len(),
                 render_time_ms: start_time.elapsed().as_millis() as u64,
                 projection_type: format!("{:?}", self.config.projection_type),
                 view_angle: format!("{:?}", self.config.view_angle),
@@ -692,7 +690,6 @@ impl Building3DRenderer {
 
         Ok(output)
     }
-
 
     /// Isometric projection (delegates to projections module)
     pub fn isometric_projection(&self, point: &Point3D) -> Point3D {

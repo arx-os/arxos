@@ -37,14 +37,24 @@ impl Command for DiffCommand {
             println!("  Deletions:     {}", stats.deletions);
         } else {
             let diff_result = manager.get_diff(self.commit.as_deref(), self.file.as_deref())?;
-            println!("📊 Diff: {} → {}", diff_result.compare_hash[..8.min(diff_result.compare_hash.len())].to_string(), diff_result.commit_hash[..8.min(diff_result.commit_hash.len())].to_string());
+            println!(
+                "📊 Diff: {} → {}",
+                &diff_result.compare_hash[..8.min(diff_result.compare_hash.len())],
+                &diff_result.commit_hash[..8.min(diff_result.commit_hash.len())]
+            );
             println!("Files changed: {}", diff_result.files_changed);
             println!();
             for file_diff in &diff_result.file_diffs {
                 match file_diff.line_type {
-                    crate::git::diff::DiffLineType::Addition => println!("+{}: {}", file_diff.line_number, file_diff.content),
-                    crate::git::diff::DiffLineType::Deletion => println!("-{}: {}", file_diff.line_number, file_diff.content),
-                    crate::git::diff::DiffLineType::Context => println!(" {}: {}", file_diff.line_number, file_diff.content),
+                    crate::git::diff::DiffLineType::Addition => {
+                        println!("+{}: {}", file_diff.line_number, file_diff.content)
+                    }
+                    crate::git::diff::DiffLineType::Deletion => {
+                        println!("-{}: {}", file_diff.line_number, file_diff.content)
+                    }
+                    crate::git::diff::DiffLineType::Context => {
+                        println!(" {}: {}", file_diff.line_number, file_diff.content)
+                    }
                 }
             }
         }

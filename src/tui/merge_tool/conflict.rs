@@ -80,7 +80,10 @@ impl ConflictParser {
     }
 
     /// Parse conflicts from file content
-    pub fn parse_content(&self, content: &str) -> Result<Vec<Conflict>, Box<dyn std::error::Error>> {
+    pub fn parse_content(
+        &self,
+        content: &str,
+    ) -> Result<Vec<Conflict>, Box<dyn std::error::Error>> {
         let lines: Vec<String> = content.lines().map(String::from).collect();
         let mut conflicts = Vec::new();
         let mut i = 0;

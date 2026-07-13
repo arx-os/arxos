@@ -1,7 +1,7 @@
-use leptos::*;
-use leptos::prelude::*;
-use leptos_router::hooks::use_params_map;
 use crate::core::Building;
+use leptos::prelude::*;
+use leptos::*;
+use leptos_router::hooks::use_params_map;
 use serde_json::Value;
 use wasm_bindgen_futures::spawn_local;
 
@@ -12,7 +12,7 @@ pub fn BuildingDetail() -> impl IntoView {
 
     // Signals for local building data
     let (building, set_building) = create_signal(Option::<Building>::None);
-    
+
     // Signals for agent state
     let (git_status, set_git_status) = create_signal(Option::<Value>::None);
     let (commit_message, set_commit_message) = create_signal(String::new());
@@ -85,8 +85,10 @@ pub fn BuildingDetail() -> impl IntoView {
                 serde_json::json!({
                     "message": message,
                     "stageAll": true
-                })
-            ).await {
+                }),
+            )
+            .await
+            {
                 Ok(result) => {
                     set_action_message.set(format!("Committed: {}", result));
                     set_commit_message.set(String::new());
@@ -100,37 +102,43 @@ pub fn BuildingDetail() -> impl IntoView {
     };
 
     // Compute stats from local building representation
-    let floors_count = move || {
-        building.get().map(|b| b.floors.len()).unwrap_or(0)
-    };
-    
-    let rooms_count = move || {
-        building.get().map(|b| b.get_all_rooms().len()).unwrap_or(0)
-    };
+    let floors_count = move || building.get().map(|b| b.floors.len()).unwrap_or(0);
+
+    let rooms_count = move || building.get().map(|b| b.get_all_rooms().len()).unwrap_or(0);
 
     /// Count all equipment across the full hierarchy:
     /// floor common areas + wing-level equipment + room-level equipment.
     let equipment_count = move || {
-        building.get().map(|b| {
-            b.floors.iter().flat_map(|f| {
-                // Floor-level common-area equipment
-                let floor_eq = f.equipment.len();
-                // Wing-level equipment + room-level equipment
-                let wing_and_room_eq: usize = f.wings.iter().map(|w| {
-                    w.equipment.len()
-                        + w.rooms.iter().map(|r| r.equipment.len()).sum::<usize>()
-                }).sum();
-                std::iter::once(floor_eq + wing_and_room_eq)
-            }).sum::<usize>()
-        }).unwrap_or(0)
+        building
+            .get()
+            .map(|b| {
+                b.floors
+                    .iter()
+                    .flat_map(|f| {
+                        // Floor-level common-area equipment
+                        let floor_eq = f.equipment.len();
+                        // Wing-level equipment + room-level equipment
+                        let wing_and_room_eq: usize = f
+                            .wings
+                            .iter()
+                            .map(|w| {
+                                w.equipment.len()
+                                    + w.rooms.iter().map(|r| r.equipment.len()).sum::<usize>()
+                            })
+                            .sum();
+                        std::iter::once(floor_eq + wing_and_room_eq)
+                    })
+                    .sum::<usize>()
+            })
+            .unwrap_or(0)
     };
 
     /// Render an ASCII 3D view of the building using the WASM binding.
     let ascii_view = move || {
         building.get().and_then(|b| {
-            serde_json::to_string(&b).ok().map(|json| {
-                crate::web::wasm_bridge::render_building_ascii(&json, 78, 20)
-            })
+            serde_json::to_string(&b)
+                .ok()
+                .map(|json| crate::web::wasm_bridge::render_building_ascii(&json, 78, 20))
         })
     };
 
@@ -165,26 +173,26 @@ pub fn BuildingDetail() -> impl IntoView {
                 // Git status & actions from Agent daemon
                 <div class="agent-workspace" style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; background-color: #fcfcfc;">
                     <h2 style="margin-top: 0;">"Git Workspace Status (Local Agent)"</h2>
-                    
+
                     {move || if crate::web::ws_client::is_connected() {
                         view! {
                             <div>
                                 <button on:click=move |_| fetch_git_status() class="btn btn-sm" style="margin-bottom: 10px; padding: 4px 8px; cursor: pointer;">
                                     "Refresh Status"
                                 </button>
-                                
+
                                 {move || match git_status.get() {
                                     Some(status) => {
                                         let modified = status.get("modified").and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
                                         let staged = status.get("staged").and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
                                         let untracked = status.get("untracked").and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
-                                        
+
                                         view! {
                                             <div style="font-size: 14px; line-height: 1.6;">
                                                 <p><strong>"Staged Files: "</strong> {staged}</p>
                                                 <p><strong>"Modified Files: "</strong> {modified}</p>
                                                 <p><strong>"Untracked Files: "</strong> {untracked}</p>
-                                                
+
                                                 {move || if modified > 0 || untracked > 0 || staged > 0 {
                                                     view! {
                                                         <form on:submit=commit_action style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">

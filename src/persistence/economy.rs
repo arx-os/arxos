@@ -40,7 +40,7 @@ pub fn append_contribution(base_dir: &Path, record: ContributionRecord) -> Persi
 
     let path = economy_path(base_dir, CONTRIBUTIONS_FILE);
     let content = serde_yaml::to_string(&record)?;
-    
+
     // Append to file
     if path.exists() {
         let mut existing = fs::read_to_string(&path)?;
@@ -49,7 +49,7 @@ pub fn append_contribution(base_dir: &Path, record: ContributionRecord) -> Persi
     } else {
         fs::write(path, content)?;
     }
-    
+
     Ok(())
 }
 
@@ -74,7 +74,7 @@ mod tests {
         let snapshot = EconomySnapshot {
             valuations: vec![BuildingValuation {
                 building: "alpha".into(),
-                assessed_value: Money::usd_cents(1_250_000_00),
+                assessed_value: Money::usd_cents(125_000_000),
                 assessor: "NYC DOB".into(),
                 assessment_reference: Some("NYC-2025-0123".into()),
                 assessed_at: Utc::now(),
@@ -82,10 +82,10 @@ mod tests {
             contributions: vec![],
             revenue_history: vec![RevenuePayout {
                 period: "2025-03".into(),
-                total_revenue: Money::usd_cents(500_00),
-                staker_allocation: Money::usd_cents(300_00),
-                burn_allocation: Money::usd_cents(100_00),
-                treasury_allocation: Money::usd_cents(100_00),
+                total_revenue: Money::usd_cents(50_000),
+                staker_allocation: Money::usd_cents(30_000),
+                burn_allocation: Money::usd_cents(10_000),
+                treasury_allocation: Money::usd_cents(10_000),
             }],
         };
 

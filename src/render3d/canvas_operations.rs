@@ -3,9 +3,9 @@
 //! This module contains functions for rendering 3D building elements
 //! (floors, equipment, rooms) to ASCII canvas with depth buffering.
 
-use crate::render3d::types::{Equipment3D, Floor3D, Room3D};
-use crate::core::EquipmentType;
 use crate::core::spatial::Point3D;
+use crate::core::EquipmentType;
+use crate::render3d::types::{Equipment3D, Floor3D, Room3D};
 
 /// Render floors to ASCII canvas
 ///

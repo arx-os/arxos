@@ -29,7 +29,12 @@ pub fn report_export_losses(building: &Building) -> LossReport {
                     );
                 }
                 for eq in &room.equipment {
-                    if eq.mesh.as_ref().map(|m| m.vertices.is_empty()).unwrap_or(true) {
+                    if eq
+                        .mesh
+                        .as_ref()
+                        .map(|m| m.vertices.is_empty())
+                        .unwrap_or(true)
+                    {
                         // Position-only is intentional L2 policy — info-level note only when
                         // we want visibility; keep quiet to avoid noise. Uncomment if needed:
                         // report.warn_entity("export_position_only", "...", &eq.name);

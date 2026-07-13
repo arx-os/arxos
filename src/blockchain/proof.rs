@@ -25,16 +25,16 @@ pub struct QualityMetrics {
 pub struct ContributionProof {
     /// Root of spatial data Merkle tree (IFC entities, sensor data, etc.)
     pub merkle_root: [u8; 32],
-    
+
     /// Hash of GPS coordinates: keccak256(abi.encodePacked(lat, lon, timestamp))
     pub location_hash: [u8; 32],
-    
+
     /// Hash of building ID: keccak256(buildingId)
     pub building_hash: [u8; 32],
-    
+
     /// Proof creation timestamp (Unix seconds)
     pub timestamp: u64,
-    
+
     /// Size of contributed data in bytes
     pub data_size: u64,
 
@@ -52,13 +52,13 @@ impl ContributionProof {
         data_size: u64,
     ) -> Self {
         let timestamp = chrono::Utc::now().timestamp() as u64;
-        
+
         // Hash location: keccak256(abi.encodePacked(lat, lon, timestamp))
         let location_hash = Self::hash_location(latitude, longitude, timestamp);
-        
+
         // Hash building ID: keccak256(buildingId)
         let building_hash = Self::hash_building_id(building_id);
-        
+
         Self {
             merkle_root,
             location_hash,
@@ -78,13 +78,13 @@ impl ContributionProof {
         {
             let lat_val = (latitude * 1_000_000.0) as i64;
             let lon_val = (longitude * 1_000_000.0) as i64;
-            
+
             let lat_u256 = if lat_val >= 0 {
                 U256::from(lat_val as u64)
             } else {
                 !U256::from((-lat_val) as u64) + 1
             };
-            
+
             let lon_u256 = if lon_val >= 0 {
                 U256::from(lon_val as u64)
             } else {
@@ -98,7 +98,7 @@ impl ContributionProof {
             ]);
             keccak256(&encoded)
         }
-        
+
         #[cfg(not(feature = "blockchain"))]
         {
             // Fallback to SHA256 if blockchain feature disabled
@@ -116,7 +116,7 @@ impl ContributionProof {
         {
             keccak256(building_id.as_bytes())
         }
-        
+
         #[cfg(not(feature = "blockchain"))]
         {
             let mut hasher = Sha256::new();
@@ -129,9 +129,7 @@ impl ContributionProof {
     #[cfg(feature = "blockchain")]
     pub fn struct_hash(&self) -> H256 {
         // EIP-712 typehash for QualityMetrics
-        let quality_type_hash = keccak256(
-            b"QualityMetrics(uint8 accuracy,uint8 completeness)"
-        );
+        let quality_type_hash = keccak256(b"QualityMetrics(uint8 accuracy,uint8 completeness)");
         let quality_encoded = ethers::abi::encode(&[
             ethers::abi::Token::FixedBytes(quality_type_hash.to_vec()),
             ethers::abi::Token::Uint(U256::from(self.quality.accuracy)),
@@ -178,13 +176,9 @@ struct Eip712Domain {
 #[cfg(feature = "blockchain")]
 impl ProofSigner {
     /// Create a new proof signer
-    pub fn new(
-        private_key: &str,
-        chain_id: u64,
-        oracle_address: &str,
-    ) -> Result<Self> {
+    pub fn new(private_key: &str, chain_id: u64, oracle_address: &str) -> Result<Self> {
         let wallet: LocalWallet = private_key.parse()?;
-        
+
         let domain = Eip712Domain {
             name: "ArxOS Contribution Oracle".to_string(),
             version: "1".to_string(),
@@ -199,23 +193,23 @@ impl ProofSigner {
     pub async fn sign_proof(&self, proof: &ContributionProof) -> Result<Vec<u8>> {
         // Create EIP-712 domain separator
         let domain_separator = self.domain_separator();
-        
+
         // Get struct hash
         let struct_hash = proof.struct_hash();
-        
+
         // Create digest: keccak256("\x19\x01" || domainSeparator || structHash)
         let digest = self.create_digest(domain_separator, struct_hash);
-        
+
         // Sign digest directly using sign_hash (correct EIP-712 signing)
         let signature = self.wallet.sign_hash(digest)?;
-        
+
         Ok(signature.to_vec())
     }
 
     /// Create EIP-712 domain separator
     fn domain_separator(&self) -> H256 {
         let type_hash = keccak256(
-            b"EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+            b"EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)",
         );
 
         let encoded = ethers::abi::encode(&[
@@ -235,7 +229,7 @@ impl ProofSigner {
         digest_input.extend_from_slice(&[0x19, 0x01]);
         digest_input.extend_from_slice(domain_separator.as_bytes());
         digest_input.extend_from_slice(struct_hash.as_bytes());
-        
+
         H256::from(keccak256(&digest_input))
     }
 
@@ -252,11 +246,9 @@ mod tests {
     #[test]
     fn test_contribution_proof_creation() {
         let proof = ContributionProof::new(
-            [0u8; 32],
-            40.7128,  // NYC latitude
+            [0u8; 32], 40.7128,  // NYC latitude
             -74.0060, // NYC longitude
-            "ps-118",
-            1024000,  // 1 MB
+            "ps-118", 1024000, // 1 MB
         );
 
         assert!(proof.timestamp > 0);
@@ -278,28 +270,24 @@ mod tests {
     async fn test_proof_signing_and_verification() {
         let private_key_hex = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
         let wallet: LocalWallet = private_key_hex.parse().unwrap();
-        
+
         let signer = ProofSigner::new(
             &private_key_hex,
             8453,
             "0x0000000000000000000000000000000000000001",
-        ).unwrap();
-        
-        let proof = ContributionProof::new(
-            [0u8; 32],
-            40.7128,
-            -74.0060,
-            "ps-118",
-            1024000,
-        );
-        
+        )
+        .unwrap();
+
+        let proof = ContributionProof::new([0u8; 32], 40.7128, -74.0060, "ps-118", 1024000);
+
         let signature_bytes = signer.sign_proof(&proof).await.unwrap();
-        let signature = ethers::core::types::Signature::try_from(signature_bytes.as_slice()).unwrap();
-        
+        let signature =
+            ethers::core::types::Signature::try_from(signature_bytes.as_slice()).unwrap();
+
         let domain_separator = signer.domain_separator();
         let struct_hash = proof.struct_hash();
         let digest = signer.create_digest(domain_separator, struct_hash);
-        
+
         let recovered_address = signature.recover(digest).unwrap();
         assert_eq!(recovered_address, wallet.address());
     }

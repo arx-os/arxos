@@ -3,9 +3,9 @@
 //! This module provides configuration loading, validation, and default values.
 
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
-use std::env;
 use std::collections::HashSet;
+use std::env;
+use std::path::PathBuf;
 
 /// Configuration error types
 #[derive(Debug, thiserror::Error)]
@@ -13,11 +13,11 @@ pub enum ConfigError {
     /// I/O error when reading config file
     #[error("Failed to read config file: {0}")]
     IoError(#[from] std::io::Error),
-    
+
     /// TOML parsing error
     #[error("Failed to parse config file: {0}")]
     ParseError(#[from] toml::de::Error),
-    
+
     /// Configuration validation failed
     #[error("Configuration validation failed for '{field}': {message}")]
     ValidationFailed {
@@ -313,13 +313,14 @@ impl Default for UiConfig {
 }
 
 /// Configuration manager for loading and saving config
+#[derive(Default)]
 pub struct ConfigManager {
     config: ArxConfig,
 }
 
 impl ConfigManager {
     /// Create a new config manager with proper precedence hierarchy
-    /// 
+    ///
     /// Precedence (highest to lowest):
     /// 1. Environment variables (ARX_* prefix)
     /// 2. Project config (.arxos/config.toml in current directory)
@@ -328,26 +329,26 @@ impl ConfigManager {
     pub fn new() -> Result<Self, ConfigError> {
         // Start with defaults
         let mut config = ArxConfig::default();
-        
+
         // Load user config if exists
         if let Ok(user_config) = Self::load_user_config() {
             Self::merge_config(&mut config, user_config);
         }
-        
+
         // Load project config if exists (overrides user config)
         if let Ok(project_config) = Self::load_project_config() {
             Self::merge_config(&mut config, project_config);
         }
-        
+
         // Apply environment variable overrides (highest priority)
         Self::apply_env_overrides(&mut config);
-        
+
         // Validate the final configuration
         Self::validate_config(&config)?;
-        
+
         Ok(Self { config })
     }
-    
+
     /// Load user config from ~/.arxos/config.toml
     fn load_user_config() -> Result<ArxConfig, ConfigError> {
         let config_path = if cfg!(windows) {
@@ -361,7 +362,7 @@ impl ConfigManager {
             // Unix: ~/.arxos/config.toml
             default_data_dir().join("config.toml")
         };
-        
+
         if config_path.exists() {
             let contents = std::fs::read_to_string(&config_path)?;
             let config = toml::from_str(&contents)?;
@@ -369,15 +370,15 @@ impl ConfigManager {
         } else {
             Err(ConfigError::IoError(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                "User config not found"
+                "User config not found",
             )))
         }
     }
-    
+
     /// Load project config from .arxos/config.toml in current directory
     fn load_project_config() -> Result<ArxConfig, ConfigError> {
         let config_path = PathBuf::from(".arxos").join("config.toml");
-        
+
         if config_path.exists() {
             let contents = std::fs::read_to_string(&config_path)?;
             let config = toml::from_str(&contents)?;
@@ -385,11 +386,11 @@ impl ConfigManager {
         } else {
             Err(ConfigError::IoError(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                "Project config not found"
+                "Project config not found",
             )))
         }
     }
-    
+
     /// Merge source config into target config (non-default values only)
     fn merge_config(target: &mut ArxConfig, source: ArxConfig) {
         // For simplicity, we'll replace entire sections if they differ from defaults
@@ -401,7 +402,7 @@ impl ConfigManager {
         target.performance = source.performance;
         target.ui = source.ui;
     }
-    
+
     /// Apply environment variable overrides (ARX_* prefix)
     fn apply_env_overrides(config: &mut ArxConfig) {
         // User overrides
@@ -414,7 +415,7 @@ impl ConfigManager {
         if let Ok(val) = env::var("ARX_USER_ORGANIZATION") {
             config.user.organization = Some(val);
         }
-        
+
         // Git overrides
         if let Ok(val) = env::var("ARX_GIT_BRANCH") {
             config.git.default_branch = val;
@@ -422,7 +423,7 @@ impl ConfigManager {
         if let Ok(val) = env::var("ARX_GPG_SIGN") {
             config.git.gpg_sign = val.parse().unwrap_or(false);
         }
-        
+
         // Building overrides
         if let Ok(val) = env::var("ARX_COORDINATE_SYSTEM") {
             config.building.default_coordinate_system = val;
@@ -430,7 +431,7 @@ impl ConfigManager {
         if let Ok(val) = env::var("ARX_AUTO_COMMIT") {
             config.building.auto_commit = val.parse().unwrap_or(true);
         }
-        
+
         // Performance overrides
         if let Ok(val) = env::var("ARX_MAX_THREADS") {
             if let Ok(num) = val.parse() {
@@ -445,7 +446,7 @@ impl ConfigManager {
         if let Ok(val) = env::var("ARX_CACHE_ENABLED") {
             config.performance.cache_enabled = val.parse().unwrap_or(true);
         }
-        
+
         // UI overrides
         if let Ok(val) = env::var("ARX_USE_EMOJI") {
             config.ui.use_emoji = val.parse().unwrap_or(true);
@@ -457,7 +458,7 @@ impl ConfigManager {
             config.ui.color_scheme = val;
         }
     }
-    
+
     /// Validate configuration
     pub fn validate_config(config: &ArxConfig) -> Result<(), ConfigError> {
         // Validate user email
@@ -467,7 +468,7 @@ impl ConfigManager {
                 message: "Email must contain '@' character".to_string(),
             });
         }
-        
+
         // Validate user name not empty
         if config.user.name.trim().is_empty() {
             return Err(ConfigError::ValidationFailed {
@@ -475,15 +476,17 @@ impl ConfigManager {
                 message: "User name cannot be empty".to_string(),
             });
         }
-        
+
         // Validate thread count
-        if config.performance.max_parallel_threads == 0 || config.performance.max_parallel_threads > 64 {
+        if config.performance.max_parallel_threads == 0
+            || config.performance.max_parallel_threads > 64
+        {
             return Err(ConfigError::ValidationFailed {
                 field: "performance.max_parallel_threads".to_string(),
                 message: "Thread count must be between 1 and 64".to_string(),
             });
         }
-        
+
         // Validate memory limit
         if config.performance.memory_limit_mb == 0 || config.performance.memory_limit_mb > 16384 {
             return Err(ConfigError::ValidationFailed {
@@ -491,7 +494,7 @@ impl ConfigManager {
                 message: "Memory limit must be between 1 and 16384 MB".to_string(),
             });
         }
-        
+
         // Validate coordinate system
         let valid_coord_systems = ["WGS84", "UTM", "LOCAL"];
         if !valid_coord_systems.contains(&config.building.default_coordinate_system.as_str()) {
@@ -503,27 +506,26 @@ impl ConfigManager {
                 ),
             });
         }
-        
+
         // Validate naming pattern has at least one placeholder
         if !config.building.naming_pattern.contains('{') {
             return Err(ConfigError::ValidationFailed {
                 field: "building.naming_pattern".to_string(),
-                message: "Naming pattern must contain at least one placeholder (e.g., {building_name})".to_string(),
+                message:
+                    "Naming pattern must contain at least one placeholder (e.g., {building_name})"
+                        .to_string(),
             });
         }
-        
+
         // Validate verbosity level
         let valid_verbosity = ["Silent", "Normal", "Verbose", "Debug"];
         if !valid_verbosity.contains(&config.ui.verbosity.as_str()) {
             return Err(ConfigError::ValidationFailed {
                 field: "ui.verbosity".to_string(),
-                message: format!(
-                    "Verbosity must be one of: {}",
-                    valid_verbosity.join(", ")
-                ),
+                message: format!("Verbosity must be one of: {}", valid_verbosity.join(", ")),
             });
         }
-        
+
         // Validate color scheme
         let valid_color_schemes = ["Auto", "Always", "Never"];
         if !valid_color_schemes.contains(&config.ui.color_scheme.as_str()) {
@@ -535,32 +537,40 @@ impl ConfigManager {
                 ),
             });
         }
-        
+
         // Validate path conflicts - collect all paths and check for duplicates
         let mut paths = HashSet::new();
         let path_fields = vec![
-            (&config.paths.default_import_path, "paths.default_import_path"),
+            (
+                &config.paths.default_import_path,
+                "paths.default_import_path",
+            ),
             (&config.paths.backup_path, "paths.backup_path"),
             (&config.paths.template_path, "paths.template_path"),
             (&config.paths.temp_path, "paths.temp_path"),
         ];
-        
+
         for (path, field_name) in &path_fields {
             let canonical = path.canonicalize().unwrap_or_else(|_| (*path).clone());
             if !paths.insert(canonical.clone()) {
                 return Err(ConfigError::ValidationFailed {
                     field: "paths".to_string(),
-                    message: format!("Path conflict detected: {} points to same location as another path", field_name),
+                    message: format!(
+                        "Path conflict detected: {} points to same location as another path",
+                        field_name
+                    ),
                 });
             }
         }
-        
+
         // Validate cache path doesn't conflict with other paths if caching enabled
         if config.performance.cache_enabled {
-            let cache_canonical = config.performance.cache_path
+            let cache_canonical = config
+                .performance
+                .cache_path
                 .canonicalize()
                 .unwrap_or_else(|_| config.performance.cache_path.clone());
-            
+
             if paths.contains(&cache_canonical) {
                 return Err(ConfigError::ValidationFailed {
                     field: "performance.cache_path".to_string(),
@@ -568,7 +578,7 @@ impl ConfigManager {
                 });
             }
         }
-        
+
         Ok(())
     }
 
@@ -582,11 +592,11 @@ impl ConfigManager {
 
     /// Save config to file
     pub fn save(&self, path: &PathBuf) -> Result<(), ConfigError> {
-        let contents = toml::to_string_pretty(&self.config)
-            .map_err(|e| ConfigError::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("TOML serialization failed: {}", e)
-            )))?;
+        let contents = toml::to_string_pretty(&self.config).map_err(|e| {
+            ConfigError::IoError(std::io::Error::other(
+                format!("TOML serialization failed: {}", e),
+            ))
+        })?;
 
         // Create parent directory if it doesn't exist
         if let Some(parent) = path.parent() {
@@ -606,7 +616,7 @@ impl ConfigManager {
     pub fn get_config_mut(&mut self) -> &mut ArxConfig {
         &mut self.config
     }
-    
+
     /// Deprecated: use get_config() instead
     #[deprecated(since = "2.0.0", note = "Use get_config() instead")]
     pub fn config(&self) -> &ArxConfig {
@@ -620,23 +630,17 @@ impl ConfigManager {
     }
 }
 
-impl Default for ConfigManager {
-    fn default() -> Self {
-        // For Default trait, we return defaults without validation failure
-        // This is useful for tests that need a ConfigManager without I/O
-        Self {
-            config: ArxConfig::default(),
-        }
-    }
-}
 
 /// Get configuration with fallback to defaults
 ///
 /// Attempts to load configuration with proper precedence.
 /// If loading fails, returns default configuration.
-/// 
+///
 /// **Deprecated:** Use `ConfigManager::new()` for proper error handling
-#[deprecated(since = "2.0.0", note = "Use ConfigManager::new() instead for proper error handling")]
+#[deprecated(
+    since = "2.0.0",
+    note = "Use ConfigManager::new() instead for proper error handling"
+)]
 pub fn get_config_or_default() -> ArxConfig {
     ConfigManager::new()
         .map(|manager| manager.config)
@@ -668,10 +672,10 @@ mod tests {
     fn test_config_validation_invalid_email() {
         let mut config = ArxConfig::default();
         config.user.email = "invalid-email".to_string();
-        
+
         let result = ConfigManager::validate_config(&config);
         assert!(result.is_err());
-        
+
         if let Err(ConfigError::ValidationFailed { field, .. }) = result {
             assert_eq!(field, "user.email");
         } else {
@@ -683,7 +687,7 @@ mod tests {
     fn test_config_validation_invalid_threads() {
         let mut config = ArxConfig::default();
         config.performance.max_parallel_threads = 0;
-        
+
         let result = ConfigManager::validate_config(&config);
         assert!(result.is_err());
     }
@@ -692,7 +696,7 @@ mod tests {
     fn test_config_validation_invalid_coordinate_system() {
         let mut config = ArxConfig::default();
         config.building.default_coordinate_system = "INVALID".to_string();
-        
+
         let result = ConfigManager::validate_config(&config);
         assert!(result.is_err());
     }
@@ -701,17 +705,17 @@ mod tests {
     fn test_env_override() {
         env::set_var("ARX_USER_NAME", "Test User");
         env::set_var("ARX_MAX_THREADS", "8");
-        
+
         let mut config = ArxConfig::default();
         ConfigManager::apply_env_overrides(&mut config);
-        
+
         assert_eq!(config.user.name, "Test User");
         assert_eq!(config.performance.max_parallel_threads, 8);
-        
+
         env::remove_var("ARX_USER_NAME");
         env::remove_var("ARX_MAX_THREADS");
     }
-    
+
     #[test]
     fn test_default_manager() {
         let manager = ConfigManager::default();

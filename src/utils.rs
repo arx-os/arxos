@@ -24,13 +24,16 @@ pub mod progress {
 
         pub fn increment(&mut self) {
             self.current += 1;
-            if self.current % 10 == 0 || self.current == self.total {
+            if self.current.is_multiple_of(10) || self.current == self.total {
                 println!("{}: {}/{}", self.description, self.current, self.total);
             }
         }
 
         pub fn finish(&self) {
-            println!("{}: Complete ({}/{})", self.description, self.current, self.total);
+            println!(
+                "{}: Complete ({}/{})",
+                self.description, self.current, self.total
+            );
         }
     }
 
@@ -122,9 +125,15 @@ pub mod path_safety {
         }
 
         /// Safely read a file's contents with path validation
-        pub fn read_file_safely(file_path: &Path, _base_dir: &Path) -> Result<String, Box<dyn std::error::Error>> {
+        pub fn read_file_safely(
+            file_path: &Path,
+            _base_dir: &Path,
+        ) -> Result<String, Box<dyn std::error::Error>> {
             // Validate the path is safe
-            Self::validate_path(file_path).map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::InvalidInput, e)) as Box<dyn std::error::Error>)?;
+            Self::validate_path(file_path).map_err(|e| {
+                Box::new(std::io::Error::new(std::io::ErrorKind::InvalidInput, e))
+                    as Box<dyn std::error::Error>
+            })?;
 
             // Read the file
             let content = std::fs::read_to_string(file_path)?;
@@ -139,7 +148,10 @@ pub mod path_safety {
             // Check if parent directory exists
             if let Some(parent) = path.parent() {
                 if !parent.exists() {
-                    return Err(format!("Parent directory does not exist: {}", parent.display()));
+                    return Err(format!(
+                        "Parent directory does not exist: {}",
+                        parent.display()
+                    ));
                 }
             }
 
@@ -170,7 +182,10 @@ pub mod path_safety {
             // Check path length limits (4096 is a common filesystem limit)
             const MAX_PATH_LENGTH: usize = 4096;
             if path.len() > MAX_PATH_LENGTH {
-                return Err(format!("Path exceeds maximum length of {} bytes", MAX_PATH_LENGTH));
+                return Err(format!(
+                    "Path exceeds maximum length of {} bytes",
+                    MAX_PATH_LENGTH
+                ));
             }
 
             // Check for invalid characters (platform-specific)
@@ -233,7 +248,8 @@ pub mod string {
 
     /// Normalize a label for consistent formatting
     pub fn normalize_label(label: &str) -> String {
-        label.trim()
+        label
+            .trim()
             .chars()
             .map(|c| if c.is_whitespace() { ' ' } else { c })
             .collect::<String>()
@@ -250,7 +266,7 @@ pub mod string {
                 if c.is_alphanumeric() {
                     c
                 } else {
-                    '-'  // Normalize separators and special chars to dash
+                    '-' // Normalize separators and special chars to dash
                 }
             })
             .collect::<String>()
@@ -263,7 +279,6 @@ pub mod string {
 
 /// Loading utilities module
 pub mod loading {
-    
 
     /// Simple loading indicator
     pub fn show_loading_message(message: &str) {
@@ -306,7 +321,13 @@ where
 pub fn sanitize_name(name: &str) -> String {
     name.to_lowercase()
         .chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '-' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '-'
+            }
+        })
         .collect::<String>()
         .trim_matches('-')
         .to_string()
@@ -321,8 +342,7 @@ pub fn generate_id(prefix: &str) -> String {
             // System clock is before UNIX epoch - use a random fallback
             use std::collections::hash_map::RandomState;
             use std::hash::BuildHasher;
-            
-            
+
             std::time::Duration::from_millis(RandomState::new().hash_one(prefix))
         })
         .as_millis();

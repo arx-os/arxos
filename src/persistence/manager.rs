@@ -1,191 +1,175 @@
-//! Persistence manager for building data and other core entities
+//! Persistence for the canonical `core::Building` durable store.
+//!
+//! Single layout: `{base_path}/building.yaml` via `BuildingYamlSerializer`.
 
 use super::{PersistenceError, PersistenceResult};
+use crate::core::Building;
+use crate::yaml::BuildingYamlSerializer;
 use std::path::{Path, PathBuf};
 
-/// Manager for persisting building and related data
+/// Canonical durable filename for a building model.
+pub const BUILDING_YAML: &str = "building.yaml";
+
+/// Manager for loading and saving the Building SSOT on disk.
+///
+/// Does not own Git versioning — use `BuildingGitManager` for commits.
 pub struct PersistenceManager {
     base_path: PathBuf,
-    building_name: String,
 }
 
 impl PersistenceManager {
-    pub fn new(building_name: &str) -> PersistenceResult<Self> {
-        let base_path = std::env::current_dir()
-            .map_err(PersistenceError::IoError)?;
-        
-        Ok(Self {
-            base_path,
-            building_name: building_name.to_string(),
-        })
+    /// Open persistence at the current working directory.
+    ///
+    /// The `building_name` argument is accepted for call-site compatibility but
+    /// no longer selects a subdirectory. SSOT is always `building.yaml` under
+    /// the base path.
+    pub fn new(_building_name: &str) -> PersistenceResult<Self> {
+        Self::from_cwd()
     }
 
-    pub fn with_path<P: AsRef<Path>>(base_path: P, building_name: &str) -> Self {
+    /// Open persistence at the current working directory.
+    pub fn from_cwd() -> PersistenceResult<Self> {
+        let base_path = std::env::current_dir().map_err(PersistenceError::IoError)?;
+        Ok(Self { base_path })
+    }
+
+    /// Open persistence at an explicit repository / project root.
+    pub fn with_path<P: AsRef<Path>>(base_path: P, _building_name: &str) -> Self {
         Self {
             base_path: base_path.as_ref().to_path_buf(),
-            building_name: building_name.to_string(),
         }
     }
 
-    pub fn building_path(&self) -> PathBuf {
-        self.base_path.join(&self.building_name)
+    /// Open persistence at an explicit base path (preferred constructor).
+    pub fn at(base_path: impl AsRef<Path>) -> Self {
+        Self {
+            base_path: base_path.as_ref().to_path_buf(),
+        }
     }
 
-    /// Save building data to YAML file
-    pub fn save_building_data(&self, building: &crate::core::Building) -> PersistenceResult<()> {
+    /// Project / repo root used for `building.yaml`.
+    pub fn base_path(&self) -> &Path {
+        &self.base_path
+    }
+
+    /// Absolute path to the durable Building YAML.
+    pub fn building_yaml_path(&self) -> PathBuf {
+        self.base_path.join(BUILDING_YAML)
+    }
+
+    /// Alias for older call sites (`{name}/building.yaml` layout removed).
+    pub fn building_path(&self) -> PathBuf {
+        self.base_path.clone()
+    }
+
+    /// Path to the working Building file.
+    pub fn working_file(&self) -> PathBuf {
+        self.building_yaml_path()
+    }
+
+    /// Save `building` to `{base}/building.yaml` after validation hard-gate.
+    ///
+    /// Refuses to write when `validate_building` reports errors. Prefer this
+    /// (or `ingest::persist_building`) for all production writers.
+    pub fn save_building_data(&self, building: &Building) -> PersistenceResult<()> {
+        self.save_building_validated(building)
+    }
+
+    /// Serialize-only save **without** validation.
+    ///
+    /// Intended for tests and internal use after an upstream validate gate
+    /// (e.g. `persist_building` / import already checked `has_errors()`).
+    /// Do not call from CLI/agent entry points for untrusted models.
+    pub fn save_building_unchecked(&self, building: &Building) -> PersistenceResult<()> {
         use std::fs;
 
-        // Ensure the building directory exists
-        let building_dir = self.building_path();
-        if !building_dir.exists() {
-            fs::create_dir_all(&building_dir)?;
+        if !self.base_path.exists() {
+            fs::create_dir_all(&self.base_path)?;
         }
 
-        // Serialize building data to YAML (deterministic ordering via DTO)
-        let yaml_content = crate::yaml::BuildingYamlSerializer::serialize_building(building)
+        let yaml_content = BuildingYamlSerializer::serialize_building(building)
             .map_err(|e| PersistenceError::SerializationError(e.to_string()))?;
 
-        // Write to building.yaml file
-        let file_path = building_dir.join("building.yaml");
+        let file_path = self.building_yaml_path();
         fs::write(&file_path, yaml_content)?;
 
         Ok(())
     }
 
-    /// Load building data from YAML file
-    pub fn load_building_data(&self) -> PersistenceResult<crate::core::Building> {
+    /// Validate then save; hard-fail on validation errors.
+    pub fn save_building_validated(&self, building: &Building) -> PersistenceResult<()> {
+        let report = crate::validation::validate_building(building);
+        if report.has_errors() {
+            let details: Vec<String> = report
+                .errors()
+                .map(|e| match &e.field {
+                    Some(f) => format!("{}: {}", f, e.message),
+                    None => e.message.clone(),
+                })
+                .collect();
+            return Err(PersistenceError::ValidationError(format!(
+                "Building validation failed ({} error(s)): {}",
+                details.len(),
+                details.join("; ")
+            )));
+        }
+        self.save_building_unchecked(building)
+    }
+
+    /// Load `Building` from `{base}/building.yaml` only (no multi-file discovery).
+    pub fn load_building_data(&self) -> PersistenceResult<Building> {
         use std::fs;
 
-        // Try to load from building.yaml first
-        let file_path = self.building_path().join("building.yaml");
-
-        if file_path.exists() {
-            let yaml_content = fs::read_to_string(&file_path)?;
-            let building = crate::yaml::BuildingYamlSerializer::deserialize_building(&yaml_content)
-                .map_err(|e| PersistenceError::SerializationError(e.to_string()))?;
-            return Ok(building);
+        let file_path = self.building_yaml_path();
+        if !file_path.exists() {
+            return Err(PersistenceError::ValidationError(format!(
+                "No building SSOT found at {}",
+                file_path.display()
+            )));
         }
 
-        // If building.yaml doesn't exist, search for any YAML file in the directory
-        let building_dir = self.building_path();
-        if building_dir.exists() && building_dir.is_dir() {
-            for entry in fs::read_dir(&building_dir)? {
-                let entry = entry?;
-                let path = entry.path();
-
-                if path.is_file() {
-                    if let Some(extension) = path.extension() {
-                        if extension == "yaml" || extension == "yml" {
-                            if let Ok(yaml_content) = fs::read_to_string(&path) {
-                                if let Ok(building) = crate::yaml::BuildingYamlSerializer::deserialize_building(&yaml_content) {
-                                    return Ok(building);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // If no valid file found, return validation error
-        Err(PersistenceError::ValidationError(
-            format!("No valid building data found at {}", file_path.display())
-        ))
+        let yaml_content = fs::read_to_string(&file_path)?;
+        BuildingYamlSerializer::deserialize_building(&yaml_content)
+            .map_err(|e| PersistenceError::SerializationError(e.to_string()))
     }
 
-    /// Save and commit building data with optional commit message
-    ///
-    /// Saves the building data to disk and, if a Git repository exists,
-    /// stages and commits the changes.
-    pub fn save_and_commit(&self, building: &crate::core::Building, message: Option<&str>) -> PersistenceResult<()> {
-        // First, save the data to disk
-        self.save_building_data(building)?;
+    /// Save Building, then commit with `BuildingGitManager` when a repo exists.
+    pub fn save_and_commit(
+        &self,
+        building: &Building,
+        message: Option<&str>,
+    ) -> PersistenceResult<()> {
+        // Caller (persist_building) already validated; avoid double work but keep gate if used alone.
+        self.save_building_validated(building)?;
 
-        // If there's a Git repository, commit the changes
-        if self.has_git_repo() {
-            self.commit_changes(message)?;
+        if !self.has_git_repo() {
+            return Ok(());
         }
+
+        use crate::git::manager::{BuildingGitManager, GitConfigManager};
+
+        let config = GitConfigManager::load_from_arx_config_or_env();
+        let base = self.base_path.to_str().ok_or_else(|| {
+            PersistenceError::SerializationError("base path is not valid UTF-8".into())
+        })?;
+
+        let mut git = BuildingGitManager::new(base, "building", config)
+            .map_err(|e| PersistenceError::SerializationError(format!("Git open failed: {}", e)))?;
+
+        git.stage_file(BUILDING_YAML).map_err(|e| {
+            PersistenceError::SerializationError(format!("Git stage failed: {}", e))
+        })?;
+
+        let msg = message.unwrap_or("Update building data");
+        git.commit_staged(msg).map_err(|e| {
+            PersistenceError::SerializationError(format!("Git commit failed: {}", e))
+        })?;
 
         Ok(())
     }
 
-    /// Commit changes to Git repository
-    fn commit_changes(&self, message: Option<&str>) -> PersistenceResult<()> {
-        use git2::{Repository, Signature};
-
-        let repo = Repository::open(&self.base_path)
-            .map_err(|e| PersistenceError::SerializationError(format!("Failed to open Git repository: {}", e)))?;
-
-        // Stage all changes
-        let mut index = repo.index()
-            .map_err(|e| PersistenceError::SerializationError(format!("Failed to get Git index: {}", e)))?;
-
-        index.add_all(["*"].iter(), git2::IndexAddOption::DEFAULT, None)
-            .map_err(|e| PersistenceError::SerializationError(format!("Failed to stage changes: {}", e)))?;
-
-        index.write()
-            .map_err(|e| PersistenceError::SerializationError(format!("Failed to write Git index: {}", e)))?;
-
-        let tree_id = index.write_tree()
-            .map_err(|e| PersistenceError::SerializationError(format!("Failed to write tree: {}", e)))?;
-
-        let tree = repo.find_tree(tree_id)
-            .map_err(|e| PersistenceError::SerializationError(format!("Failed to find tree: {}", e)))?;
-
-        // Get or create signature
-        let signature = match Signature::now("ArxOS", "arxos@example.com") {
-            Ok(sig) => sig,
-            Err(_) => {
-                // If signature creation fails, try to get from config
-                let config = repo.config()
-                    .map_err(|e| PersistenceError::SerializationError(format!("Failed to get Git config: {}", e)))?;
-
-                let name = config.get_string("user.name").unwrap_or_else(|_| "ArxOS".to_string());
-                let email = config.get_string("user.email").unwrap_or_else(|_| "arxos@example.com".to_string());
-
-                Signature::now(&name, &email)
-                    .map_err(|e| PersistenceError::SerializationError(format!("Failed to create signature: {}", e)))?
-            }
-        };
-
-        // Get parent commits
-        let parents: Vec<git2::Commit> = match repo.head() {
-            Ok(head) => {
-                if let Some(target) = head.target() {
-                    match repo.find_commit(target) {
-                        Ok(parent) => vec![parent],
-                        Err(_) => vec![],
-                    }
-                } else {
-                    vec![]
-                }
-            }
-            Err(_) => vec![],
-        };
-
-        let parent_refs: Vec<&git2::Commit> = parents.iter().collect();
-
-        // Create commit
-        let commit_message = message.unwrap_or("Update building data");
-        repo.commit(
-            Some("HEAD"),
-            &signature,
-            &signature,
-            commit_message,
-            &tree,
-            &parent_refs,
-        ).map_err(|e| PersistenceError::SerializationError(format!("Failed to create commit: {}", e)))?;
-
-        Ok(())
-    }
-
-    /// Check if the base path has a Git repository
+    /// Whether `base_path` contains a Git repository.
     pub fn has_git_repo(&self) -> bool {
         self.base_path.join(".git").exists()
-    }
-
-    /// Get the working file path (building.yaml or similar)
-    pub fn working_file(&self) -> PathBuf {
-        self.building_path().join("building.yaml")
     }
 }

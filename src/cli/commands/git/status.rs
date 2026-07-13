@@ -17,13 +17,13 @@ impl Command for StatusCommand {
                 let repo_root = std::path::PathBuf::from(".");
                 let token_state = TokenState::new("dummy".to_string(), vec![]);
                 let hardware = crate::hardware::HardwareManager::new();
-                
+
                 let state = std::sync::Arc::new(crate::agent::dispatcher::AgentState {
                     repo_root,
                     token: std::sync::Arc::new(std::sync::Mutex::new(token_state)),
                     hardware: std::sync::Arc::new(hardware),
                 });
-                
+
                 let rt = tokio::runtime::Runtime::new()?;
                 rt.block_on(crate::tui::dashboard::run_dashboard(state))?;
                 return Ok(());
@@ -49,7 +49,14 @@ impl Command for StatusCommand {
         println!("📊 Repository Status");
         println!();
         println!("Branch: {}", status.current_branch);
-        println!("Last commit: {}", if status.last_commit.is_empty() { "(none)" } else { &status.last_commit[..8.min(status.last_commit.len())] });
+        println!(
+            "Last commit: {}",
+            if status.last_commit.is_empty() {
+                "(none)"
+            } else {
+                &status.last_commit[..8.min(status.last_commit.len())]
+            }
+        );
         println!("Message: {}", status.last_commit_message);
         println!();
 

@@ -5,8 +5,8 @@
 
 #![allow(deprecated)] // This module intentionally uses deprecated YAML types for backward compatibility
 
-use crate::core::{BoundingBox, Equipment, EquipmentHealthStatus, EquipmentStatus, Position};
 use crate::core::spatial::{BoundingBox3D, Point3D};
+use crate::core::{BoundingBox, Equipment, EquipmentHealthStatus, EquipmentStatus, Position};
 use crate::yaml::EquipmentStatus as YamlEquipmentStatus;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 

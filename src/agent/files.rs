@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
-use anyhow::Result;
 use crate::utils::path_safety::PathSafety;
+use anyhow::Result;
 use serde::Serialize;
 
 #[derive(Serialize)]

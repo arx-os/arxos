@@ -72,8 +72,7 @@ pub fn parse_text_script(script: &str) -> Result<Vec<TextEdit>> {
         if line.is_empty() || line.starts_with('#') {
             continue;
         }
-        let edit = parse_text_line(line)
-            .with_context(|| format!("line {}: {}", i + 1, line))?;
+        let edit = parse_text_line(line).with_context(|| format!("line {}: {}", i + 1, line))?;
         edits.push(edit);
     }
     Ok(edits)
@@ -100,9 +99,7 @@ pub fn parse_text_line(line: &str) -> Result<TextEdit> {
         return parse_rename_room(&line[12..]);
     }
 
-    bail!(
-        "unknown command (expected add room|add equipment|set room|set equipment|rename room)"
-    );
+    bail!("unknown command (expected add room|add equipment|set room|set equipment|rename room)");
 }
 
 /// Apply edits to `building` in order.
@@ -189,8 +186,7 @@ fn apply_one(building: &mut Building, edit: &TextEdit, report: &mut TextEditRepo
                         room.room_type = parse_room_type(v)?;
                     }
                     "pos" | "position" => {
-                        room.spatial_properties.position =
-                            parse_position(v, COORD_BUILDING_LOCAL)?;
+                        room.spatial_properties.position = parse_position(v, COORD_BUILDING_LOCAL)?;
                     }
                     "dims" | "dimensions" => {
                         let dims = parse_dimensions(v)?;
@@ -437,7 +433,7 @@ fn tokenize(s: &str) -> Vec<String> {
 
 fn parse_position(input: &str, coordinate_system: &str) -> Result<Position> {
     let parts: Vec<&str> = input
-        .split(|c| c == ',' || c == ' ')
+        .split([',', ' '])
         .filter(|s| !s.is_empty())
         .collect();
     if parts.len() != 3 {
@@ -526,7 +522,10 @@ mod tests {
         let room = &b.floors[0].wings[0].rooms[0];
         assert_eq!(room.name, "Studio A");
         assert!((room.spatial_properties.dimensions.width - 4.0).abs() < 1e-9);
-        assert_eq!(room.properties.get("finish").map(String::as_str), Some("epoxy"));
+        assert_eq!(
+            room.properties.get("finish").map(String::as_str),
+            Some("epoxy")
+        );
         assert_eq!(room.equipment[0].name, "cam-1");
         assert_eq!(room.equipment[0].status, EquipmentStatus::Maintenance);
     }

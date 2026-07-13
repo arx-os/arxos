@@ -58,9 +58,9 @@ mod tests {
 
     #[test]
     fn test_render_isometric_view_empty_scene() {
-        use crate::render3d::types::SceneMetadata;
         use crate::core::spatial::BoundingBox3D;
         use crate::core::spatial::Point3D;
+        use crate::render3d::types::SceneMetadata;
         use std::sync::Arc;
 
         let scene = Scene3D {

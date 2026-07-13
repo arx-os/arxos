@@ -1,7 +1,7 @@
 //! STEP-21 Lexer implementation for high-speed IFC parsing.
-//! 
-//! This module implements a streamlined ISO-10303-21 lexer optimized for 
-//! large BIM datasets. It avoids complex parser combinators for maximum 
+//!
+//! This module implements a streamlined ISO-10303-21 lexer optimized for
+//! large BIM datasets. It avoids complex parser combinators for maximum
 //! throughput and memory efficiency.
 
 use std::str::FromStr;
@@ -63,7 +63,7 @@ impl StepLexer {
     }
 
     /// Parse the next entity from the current position.
-    /// 
+    ///
     /// Returns None if no more entities are found.
     pub fn next_entity(&mut self) -> Option<RawEntity> {
         // Skip until we find the start of an entity (#)
@@ -84,7 +84,7 @@ impl StepLexer {
 
         // 3. Read Class Name (e.g., IFCSPACE)
         let class = self.read_while(|c| c.is_ascii_alphanumeric() || c == '_');
-        
+
         // 4. Read Parameters (...)
         self.skip_whitespace();
         let params = if self.peek() == Some('(') {
@@ -124,8 +124,10 @@ impl StepLexer {
         self.input.get(self.pos).copied()
     }
 
-    fn read_while<F>(&mut self, f: F) -> String 
-    where F: Fn(char) -> bool {
+    fn read_while<F>(&mut self, f: F) -> String
+    where
+        F: Fn(char) -> bool,
+    {
         let mut result = String::new();
         while self.pos < self.input.len() && f(self.input[self.pos]) {
             result.push(self.input[self.pos]);
@@ -140,7 +142,7 @@ impl StepLexer {
 
         while self.pos < self.input.len() {
             self.skip_whitespace();
-            
+
             if self.peek() == Some(')') {
                 self.pos += 1;
                 return Some(params);
@@ -231,7 +233,7 @@ impl StepLexer {
                 let s = self.read_while(|c| {
                     c.is_ascii_digit() || c == '-' || c == '.' || c == 'e' || c == 'E' || c == '+'
                 });
-                
+
                 if s.contains('.') || s.to_lowercase().contains('e') {
                     f64::from_str(&s).ok().map(Param::Float)
                 } else {

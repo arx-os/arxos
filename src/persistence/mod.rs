@@ -1,7 +1,6 @@
 //! Persistence layer for ArxOS data storage
 //!
-//! Provides file system and Git-based persistence for building data,
-//! economy snapshots, and other core data structures.
+//! Durable Building SSOT: `{dir}/building.yaml` via `BuildingYamlSerializer`.
 
 pub mod economy;
 pub mod manager;
@@ -29,34 +28,38 @@ impl From<serde_yaml::Error> for PersistenceError {
 
 pub type PersistenceResult<T> = Result<T, PersistenceError>;
 
-pub use manager::PersistenceManager;
+pub use manager::{PersistenceManager, BUILDING_YAML};
 
+/// Load the canonical Building from `./building.yaml`.
 pub fn load_building_data_from_dir() -> Result<crate::core::Building, Box<dyn std::error::Error>> {
-    use std::fs;
-    
-    let current_dir = std::env::current_dir()?;
+    let pm = PersistenceManager::from_cwd()?;
+    Ok(pm.load_building_data()?)
+}
 
-    // Look for YAML files in the current directory
-    let entries = fs::read_dir(&current_dir)?;
+/// Load Building from `{base}/building.yaml`.
+pub fn load_building_at(
+    base: impl AsRef<std::path::Path>,
+) -> Result<crate::core::Building, Box<dyn std::error::Error>> {
+    let pm = PersistenceManager::at(base.as_ref());
+    Ok(pm.load_building_data()?)
+}
 
-    for entry in entries {
-        let entry = entry?;
-        let path = entry.path();
+/// Save Building to `{base}/building.yaml` with validation hard-gate.
+pub fn save_building_at(
+    base: impl AsRef<std::path::Path>,
+    building: &crate::core::Building,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let pm = PersistenceManager::at(base.as_ref());
+    pm.save_building_validated(building)?;
+    Ok(())
+}
 
-        // Check if it's a YAML file
-        if path.is_file() {
-            if let Some(extension) = path.extension() {
-                if extension == "yaml" || extension == "yml" {
-                    // Try to load it as building data
-                    if let Ok(contents) = fs::read_to_string(&path) {
-                        if let Ok(building) = crate::yaml::BuildingYamlSerializer::deserialize_building(&contents) {
-                            return Ok(building);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Err("No valid building YAML file found in current directory".into())
+/// Serialize-only save (no validation). Prefer `save_building_at` for production.
+pub fn save_building_unchecked_at(
+    base: impl AsRef<std::path::Path>,
+    building: &crate::core::Building,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let pm = PersistenceManager::at(base.as_ref());
+    pm.save_building_unchecked(building)?;
+    Ok(())
 }

@@ -1,13 +1,13 @@
 //! Main Leptos App component
 
-use leptos::*;
 use leptos::prelude::*;
+use leptos::*;
 use leptos_meta::*;
-use leptos_router::*;
-use leptos_router::components::{A, Router, Routes, Route};
+use leptos_router::components::{Route, Router, Routes, A};
 use leptos_router::path;
+use leptos_router::*;
 
-use crate::web::pages::{Home, Import, Buildings, BuildingDetail};
+use crate::web::pages::{BuildingDetail, Buildings, Home, Import};
 use wasm_bindgen_futures::spawn_local;
 
 #[component]
@@ -19,7 +19,7 @@ pub fn App() -> impl IntoView {
         <Stylesheet id="leptos" href="/pkg/arxos.css"/>
         <Title text="ArxOS - Git for Buildings"/>
         <Meta name="description" content="Version control for building management data"/>
-        
+
         <Router>
             <div class="app-container">
                 <Header/>
@@ -39,7 +39,8 @@ pub fn App() -> impl IntoView {
 #[component]
 fn Header() -> impl IntoView {
     let (connected, set_connected) = create_signal(crate::web::ws_client::is_connected());
-    let (token_input, set_token_input) = create_signal(crate::web::ws_client::get_saved_token().unwrap_or_default());
+    let (token_input, set_token_input) =
+        create_signal(crate::web::ws_client::get_saved_token().unwrap_or_default());
     let (status_msg, set_status_msg) = create_signal(String::new());
 
     // Attempt auto-connect on mount

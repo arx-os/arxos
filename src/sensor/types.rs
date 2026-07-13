@@ -1,9 +1,9 @@
 //! Sensor data types
 
+use crate::core::spatial::Point3D;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
-use crate::core::spatial::Point3D;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SensorReading {

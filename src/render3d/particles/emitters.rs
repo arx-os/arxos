@@ -246,7 +246,9 @@ mod tests {
         let particles = create_burst(position, 10, ParticleType::Spark);
 
         assert_eq!(particles.len(), 10);
-        assert!(particles.iter().all(|p| p.particle_type == ParticleType::Spark));
+        assert!(particles
+            .iter()
+            .all(|p| p.particle_type == ParticleType::Spark));
     }
 
     #[test]
@@ -288,11 +290,8 @@ mod tests {
     #[test]
     fn test_create_status_indicator() {
         let position = Point3D::new(10.0, 10.0, 10.0);
-        let particle = create_status_indicator(
-            position,
-            "equipment_1".to_string(),
-            StatusType::Warning,
-        );
+        let particle =
+            create_status_indicator(position, "equipment_1".to_string(), StatusType::Warning);
 
         assert_eq!(particle.particle_type, ParticleType::StatusIndicator);
         assert!(particle.max_lifetime.is_infinite());

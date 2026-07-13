@@ -155,7 +155,11 @@ pub async fn sync_messages(
         let mut peer_url = endpoint.clone();
         let mut peer_token = String::new();
         if let Ok(parsed) = url::Url::parse(endpoint) {
-            if let Some(tok_val) = parsed.query_pairs().find(|(k, _)| k == "token").map(|(_, v)| v.into_owned()) {
+            if let Some(tok_val) = parsed
+                .query_pairs()
+                .find(|(k, _)| k == "token")
+                .map(|(_, v)| v.into_owned())
+            {
                 peer_token = tok_val;
                 if let Some(pos) = peer_url.find('?') {
                     peer_url.truncate(pos);
@@ -168,7 +172,7 @@ pub async fn sync_messages(
         if !peer_token.is_empty() {
             req = req.query(&[("token", &peer_token)]);
         }
-        
+
         let body = serde_json::json!({
             "jsonrpc": "2.0",
             "method": "collab.sync",
@@ -182,7 +186,9 @@ pub async fn sync_messages(
             Ok(resp) => {
                 if let Ok(rpc_resp) = resp.json::<serde_json::Value>().await {
                     if let Some(result_val) = rpc_resp.get("result") {
-                        if let Ok(outcome) = serde_json::from_value::<SyncOutcome>(result_val.clone()) {
+                        if let Ok(outcome) =
+                            serde_json::from_value::<SyncOutcome>(result_val.clone())
+                        {
                             successes.extend(outcome.successes);
                             errors.extend(outcome.errors);
                             sync_success = true;
@@ -198,7 +204,8 @@ pub async fn sync_messages(
 
     // 3. Fallback to centralized GitHub comment sync if local peers didn't succeed and config is present
     if !sync_success {
-        let has_github_config = config.owner.is_some() && config.repo.is_some() && config.target.is_some();
+        let has_github_config =
+            config.owner.is_some() && config.repo.is_some() && config.target.is_some();
         if has_github_config && !token.is_empty() {
             let client = Octocrab::builder()
                 .personal_token(token.to_owned())
@@ -219,7 +226,8 @@ pub async fn sync_messages(
             for message in messages {
                 errors.push(SyncError {
                     id: message.id.clone(),
-                    error: "No local peers reached and GitHub collaboration is not configured.".to_string(),
+                    error: "No local peers reached and GitHub collaboration is not configured."
+                        .to_string(),
                 });
             }
         }
@@ -233,9 +241,18 @@ async fn post_comment(
     config: &CollabConfig,
     message: &CollabMessage,
 ) -> Result<SyncSuccess> {
-    let owner = config.owner.as_ref().ok_or_else(|| anyhow!("Missing owner"))?;
-    let repo = config.repo.as_ref().ok_or_else(|| anyhow!("Missing repo"))?;
-    let target = config.target.as_ref().ok_or_else(|| anyhow!("Missing target"))?;
+    let owner = config
+        .owner
+        .as_ref()
+        .ok_or_else(|| anyhow!("Missing owner"))?;
+    let repo = config
+        .repo
+        .as_ref()
+        .ok_or_else(|| anyhow!("Missing repo"))?;
+    let target = config
+        .target
+        .as_ref()
+        .ok_or_else(|| anyhow!("Missing target"))?;
 
     let number = match target {
         CollabTarget::Issue { number } | CollabTarget::PullRequest { number } => *number,
@@ -273,16 +290,10 @@ fn format_comment(message: &CollabMessage) -> String {
 
 fn validate_config(config: &CollabConfig) -> Result<()> {
     if let Some(ref owner) = config.owner {
-        ensure!(
-            !owner.trim().is_empty(),
-            "GitHub owner cannot be empty"
-        );
+        ensure!(!owner.trim().is_empty(), "GitHub owner cannot be empty");
     }
     if let Some(ref repo) = config.repo {
-        ensure!(
-            !repo.trim().is_empty(),
-            "GitHub repo cannot be empty"
-        );
+        ensure!(!repo.trim().is_empty(), "GitHub repo cannot be empty");
     }
     if let Some(ref target) = config.target {
         match target {
@@ -336,4 +347,3 @@ mod tests {
         assert!(validate_config(&config).is_err());
     }
 }
-

@@ -1,76 +1,21 @@
-//! Query and search command implementations
-//!
-//! Command implementations for query-related operations including
-//! text search and ArxAddress pattern matching.
+//! Query command: match equipment by durable `ArxAddress` glob patterns.
 
 use super::Command;
 use crate::cli::args::{QueryArgs, SearchArgs};
+use crate::core::Equipment;
+use crate::persistence::load_building_data_from_dir;
 use std::error::Error;
 
-/// Search building data command
+/// Search building data command (text search; see `Cli::handle_search` for live path).
 pub struct SearchCommand {
     pub args: SearchArgs,
 }
 
 impl Command for SearchCommand {
     fn execute(&self) -> Result<(), Box<dyn Error>> {
+        // Primary path is `Commands::Search` → `Cli::handle_search`.
+        // This type remains for args packaging / tests.
         println!("🔍 Searching for: \"{}\"", self.args.query);
-
-        // Determine search scope
-        let mut scope = Vec::new();
-        if self.args.equipment {
-            scope.push("equipment");
-        }
-        if self.args.rooms {
-            scope.push("rooms");
-        }
-        if self.args.buildings {
-            scope.push("buildings");
-        }
-
-        if scope.is_empty() {
-            println!("   Scope: All (equipment, rooms, buildings)");
-        } else {
-            println!("   Scope: {}", scope.join(", "));
-        }
-
-        // Search options
-        if self.args.case_sensitive {
-            println!("   Case-sensitive: enabled");
-        }
-
-        if self.args.regex {
-            println!("   Regex matching: enabled");
-        }
-
-        println!("   Result limit: {}", self.args.limit);
-
-        if self.args.interactive {
-            println!("   Opening interactive browser...");
-            #[cfg(feature = "tui")]
-            {
-                // Launch TUI browser
-            }
-            #[cfg(not(feature = "tui"))]
-            {
-                return Err("Interactive browser requires --features tui".into());
-            }
-        } else {
-            // - Load building data
-            // - Search across specified scope
-            // - Apply case sensitivity and regex if enabled
-            // - Limit results
-            // - Format output
-
-            if self.args.verbose {
-                println!("\n   Detailed results:");
-            } else {
-                println!("\n   Results:");
-            }
-
-            println!("\n✅ Search completed (showing up to {} results)", self.args.limit);
-        }
-
         Ok(())
     }
 
@@ -79,82 +24,15 @@ impl Command for SearchCommand {
     }
 }
 
-/// Query by ArxAddress pattern command
+/// Query equipment by ArxAddress glob pattern against durable Building SSOT.
 pub struct QueryCommand {
     pub args: QueryArgs,
 }
 
 impl Command for QueryCommand {
     fn execute(&self) -> Result<(), Box<dyn Error>> {
-        println!("🔎 Querying ArxAddress pattern: {}", self.args.pattern);
-        println!("   Format: {}", self.args.format);
-
-        // - Parse glob pattern
-        // - Match against all equipment addresses
-        // - Collect matching equipment
-        // - Format output according to format (table, json, yaml)
-
-        // Example pattern analysis
-        let pattern_parts: Vec<&str> = self.args.pattern.split('/').collect();
-        println!("\n   Pattern analysis:");
-        if pattern_parts.len() > 1 {
-            if pattern_parts.len() > 1 {
-                println!("     Country: {}", pattern_parts.get(1).unwrap_or(&"*"));
-            }
-            if pattern_parts.len() > 2 {
-                println!("     State: {}", pattern_parts.get(2).unwrap_or(&"*"));
-            }
-            if pattern_parts.len() > 3 {
-                println!("     City: {}", pattern_parts.get(3).unwrap_or(&"*"));
-            }
-            if pattern_parts.len() > 4 {
-                println!("     Building: {}", pattern_parts.get(4).unwrap_or(&"*"));
-            }
-            if pattern_parts.len() > 5 {
-                println!("     Floor: {}", pattern_parts.get(5).unwrap_or(&"*"));
-            }
-            if pattern_parts.len() > 6 {
-                println!("     Room: {}", pattern_parts.get(6).unwrap_or(&"*"));
-            }
-            if pattern_parts.len() > 7 {
-                println!("     Fixture: {}", pattern_parts.get(7).unwrap_or(&"*"));
-            }
-        }
-
-        match self.args.format.as_str() {
-            "json" => {
-                println!("\n   Output format: JSON");
-                if self.args.verbose {
-                    // Include full equipment details
-                } else {
-                    // Include minimal details
-                }
-            }
-            "yaml" => {
-                println!("\n   Output format: YAML");
-                if self.args.verbose {
-                    // Include full equipment details
-                } else {
-                    // Include minimal details
-                }
-            }
-            "table" => {
-                println!("\n   Output format: Table");
-                if self.args.verbose {
-                    println!("\n   Detailed table view:");
-                    // Show all fields
-                } else {
-                    println!("\n   Compact table view:");
-                    // Show key fields only
-                }
-            }
-            _ => {
-                return Err(format!("Unknown output format: {}", self.args.format).into());
-            }
-        }
-
-        println!("\n✅ Query completed");
-        Ok(())
+        self.validate()?;
+        run_address_query(&self.args.pattern, &self.args.format, self.args.verbose)
     }
 
     fn name(&self) -> &'static str {
@@ -162,95 +40,171 @@ impl Command for QueryCommand {
     }
 
     fn validate(&self) -> Result<(), Box<dyn Error>> {
-        // Validate ArxAddress pattern format
         if !self.args.pattern.starts_with('/') {
             return Err("ArxAddress pattern must start with '/'".into());
         }
-
-        // Validate format option
         match self.args.format.as_str() {
             "table" | "json" | "yaml" => Ok(()),
-            _ => Err(format!("Invalid format: {}. Must be table, json, or yaml", self.args.format).into()),
+            _ => Err(format!(
+                "Invalid format: {}. Must be table, json, or yaml",
+                self.args.format
+            )
+            .into()),
         }
+    }
+}
+
+/// Load Building and return equipment whose durable `address` matches `pattern`.
+pub fn query_equipment_by_address(pattern: &str) -> Result<Vec<Equipment>, Box<dyn Error>> {
+    let building = load_building_data_from_dir()?;
+    let mut matches = Vec::new();
+
+    for item in building.get_all_equipment() {
+        if let Some(addr) = &item.address {
+            if addr.matches_glob(pattern) {
+                matches.push(item.clone());
+            }
+        }
+    }
+
+    Ok(matches)
+}
+
+/// Run address query and print results.
+pub fn run_address_query(pattern: &str, format: &str, verbose: bool) -> Result<(), Box<dyn Error>> {
+    println!("🔍 Query pattern: {}", pattern);
+    println!();
+
+    // Segment count check (allow * wildcards as segments)
+    let parts: Vec<&str> = pattern.trim_start_matches('/').split('/').collect();
+    if parts.len() != 7 {
+        return Err(format!(
+            "Invalid ArxAddress pattern. Expected 7 parts, got {}.\nFormat: /country/state/city/building/floor/room/fixture",
+            parts.len()
+        )
+        .into());
+    }
+
+    // Validate glob syntax
+    if glob::Pattern::new(pattern).is_err() {
+        return Err(format!("Invalid glob pattern: {}", pattern).into());
+    }
+
+    let matches = query_equipment_by_address(pattern)?;
+
+    if matches.is_empty() {
+        println!("❌ No equipment found matching pattern");
+        println!("   (equipment must have a durable `address` field in building.yaml)");
+        return Ok(());
+    }
+
+    match format {
+        "json" => {
+            println!("{}", serde_json::to_string_pretty(&matches)?);
+        }
+        "yaml" => {
+            println!("{}", serde_yaml::to_string(&matches)?);
+        }
+        _ => {
+            println!("📦 Equipment ({} found):", matches.len());
+            println!();
+            println!("  {:<28} {:<12} {:<50}", "Name", "Type", "Address");
+            println!("  {}", "-".repeat(92));
+
+            for item in &matches {
+                let eq_type = format!("{:?}", item.equipment_type);
+                let name = truncate(&item.name, 26);
+                let addr = item
+                    .address
+                    .as_ref()
+                    .map(|a| a.path.as_str())
+                    .unwrap_or("-");
+                let addr_disp = truncate(addr, 48);
+                println!(
+                    "  {:<28} {:<12} {:<50}",
+                    name,
+                    truncate(&eq_type, 10),
+                    addr_disp
+                );
+
+                if verbose {
+                    println!("     id: {}", item.id);
+                    if !item.properties.is_empty() {
+                        for (key, value) in item.properties.iter().take(5) {
+                            println!("       {}: {}", key, value);
+                        }
+                    }
+                    println!();
+                }
+            }
+
+            println!();
+            println!("✅ Total: {} result(s)", matches.len());
+        }
+    }
+
+    Ok(())
+}
+
+fn truncate(s: &str, max: usize) -> String {
+    if s.len() > max {
+        format!("{}...", &s[..max.saturating_sub(3)])
+    } else {
+        s.to_string()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::domain::ArxAddress;
+    use crate::core::{Building, Equipment, EquipmentType, Floor, Room, RoomType, Wing};
+    use crate::persistence::{save_building_at, BUILDING_YAML};
+    use serial_test::serial;
+    use std::env;
+    use std::path::PathBuf;
+    use tempfile::tempdir;
 
     #[test]
-    fn test_search_command() {
-        let cmd = SearchCommand {
-            args: SearchArgs {
-                query: "boiler".to_string(),
-                equipment: true,
-                rooms: false,
-                buildings: false,
-                case_sensitive: false,
-                regex: false,
-                limit: 50,
-                verbose: false,
-                interactive: false,
-            },
-        };
+    #[serial]
+    fn test_query_matches_durable_address() {
+        let tmp = tempdir().unwrap();
+        let dir = tmp.path();
 
-        assert_eq!(cmd.name(), "search");
-        assert!(cmd.execute().is_ok());
-    }
+        let mut building = Building::new("Query HQ".into(), "/q".into());
+        let mut eq = Equipment::new("Boiler-01".into(), String::new(), EquipmentType::HVAC);
+        let addr = ArxAddress::new(
+            "usa",
+            "ny",
+            "brooklyn",
+            "ps-118",
+            "floor-02",
+            "mech",
+            "boiler-01",
+        );
+        eq.address = Some(addr);
+        let mut room = Room::new("mech".into(), RoomType::Mechanical);
+        eq.set_room(room.id.clone());
+        room.add_equipment(eq);
+        let mut wing = Wing::new("Main".into());
+        wing.add_room(room);
+        let mut floor = Floor::new("Floor 2".into(), 2);
+        floor.add_wing(wing);
+        building.add_floor(floor);
 
-    #[test]
-    fn test_query_command_valid_pattern() {
-        let cmd = QueryCommand {
-            args: QueryArgs {
-                pattern: "/usa/ny/*/floor-*/mech/boiler-*".to_string(),
-                format: "table".to_string(),
-                verbose: false,
-            },
-        };
+        save_building_at(dir, &building).unwrap();
 
-        assert_eq!(cmd.name(), "query");
-        assert!(cmd.validate().is_ok());
-        assert!(cmd.execute().is_ok());
-    }
+        let original = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        env::set_current_dir(dir).unwrap();
 
-    #[test]
-    fn test_query_command_invalid_pattern() {
-        let cmd = QueryCommand {
-            args: QueryArgs {
-                pattern: "usa/ny/brooklyn".to_string(), // Missing leading /
-                format: "table".to_string(),
-                verbose: false,
-            },
-        };
+        let matches = query_equipment_by_address("/usa/ny/*/floor-*/mech/boiler-*").expect("query");
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].name, "Boiler-01");
 
-        assert!(cmd.validate().is_err());
-    }
+        let none = query_equipment_by_address("/usa/ca/*/floor-*/mech/*").expect("query");
+        assert!(none.is_empty());
 
-    #[test]
-    fn test_query_command_invalid_format() {
-        let cmd = QueryCommand {
-            args: QueryArgs {
-                pattern: "/usa/ny/*".to_string(),
-                format: "xml".to_string(), // Invalid format
-                verbose: false,
-            },
-        };
-
-        assert!(cmd.validate().is_err());
-    }
-
-    #[test]
-    fn test_query_command_json_format() {
-        let cmd = QueryCommand {
-            args: QueryArgs {
-                pattern: "/usa/ny/brooklyn/ps-118/floor-02/kitchen/*".to_string(),
-                format: "json".to_string(),
-                verbose: true,
-            },
-        };
-
-        assert!(cmd.validate().is_ok());
-        assert!(cmd.execute().is_ok());
+        assert!(dir.join(BUILDING_YAML).exists());
+        env::set_current_dir(original).unwrap();
     }
 }

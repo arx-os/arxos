@@ -3,14 +3,14 @@
 //! This module contains the main VisualEffectsEngine struct and its implementation.
 //! The engine coordinates particles, animations, and various visual effects.
 
-use super::config::{EffectsConfig, EffectQuality};
+use super::config::{EffectQuality, EffectsConfig};
 use super::stats::EffectsStats;
 use super::types::{EffectData, EffectState, EffectType, VisualEffect};
+use crate::core::spatial::Point3D;
 use crate::render3d::animation::{AnimationSystem, EquipmentStatus};
 use crate::render3d::particles::{
     AlertLevel, Particle, ParticleData, ParticleSystem, ParticleType, StatusType, Vector3D,
 };
-use crate::core::spatial::Point3D;
 use std::collections::HashMap;
 
 /// Visual effects engine for terminal rendering
@@ -35,7 +35,7 @@ impl Default for VisualEffectsEngine {
 
 impl VisualEffectsEngine {
     // ==================== CONSTRUCTORS ====================
-    
+
     /// Create a new visual effects engine
     pub fn new() -> Self {
         Self::with_config(EffectsConfig::default())

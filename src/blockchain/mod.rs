@@ -67,7 +67,7 @@ pub use payment::PaymentClient;
 pub use proof::{ContributionProof, ProofSigner};
 
 #[cfg(feature = "blockchain")]
-pub use types::{NetworkConfig, ChainId};
+pub use types::{ChainId, NetworkConfig};
 
 #[cfg(not(feature = "blockchain"))]
 pub fn blockchain_disabled() -> anyhow::Result<()> {

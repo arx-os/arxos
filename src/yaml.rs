@@ -36,13 +36,17 @@ impl BuildingYamlSerializer {
     }
 
     /// Serialize a canonical Building by projecting it to BuildingData DTO first
-    pub fn serialize_building(building: &crate::core::Building) -> Result<String, Box<dyn std::error::Error>> {
+    pub fn serialize_building(
+        building: &crate::core::Building,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let data = BuildingData::from_building(building);
         Self::serialize(&data)
     }
 
     /// Deserialize YAML and rehydrate it into a rich canonical Building
-    pub fn deserialize_building(yaml: &str) -> Result<crate::core::Building, Box<dyn std::error::Error>> {
+    pub fn deserialize_building(
+        yaml: &str,
+    ) -> Result<crate::core::Building, Box<dyn std::error::Error>> {
         let data = Self::deserialize(yaml)?;
         Ok(data.into_building())
     }
@@ -84,14 +88,14 @@ impl BuildingData {
         for floor in &mut self.building.floors {
             // 2. Sort Wings by name (alphabetical)
             floor.wings.sort_by(|a, b| a.name.cmp(&b.name));
-            
+
             // 3. Sort Floor-level (common area) equipment
             floor.equipment.sort_by(|a, b| a.name.cmp(&b.name));
 
             for wing in &mut floor.wings {
                 // 4. Sort Rooms by name
                 wing.rooms.sort_by(|a, b| a.name.cmp(&b.name));
-                
+
                 // 5. Sort Wing-level equipment
                 wing.equipment.sort_by(|a, b| a.name.cmp(&b.name));
 
@@ -103,12 +107,11 @@ impl BuildingData {
         }
 
         // 7. Sort Global equipment list by ArxAddress path (or name fallback)
-        self.equipment.sort_by(|a, b| {
-            match (&a.address, &b.address) {
+        self.equipment
+            .sort_by(|a, b| match (&a.address, &b.address) {
                 (Some(addr_a), Some(addr_b)) => addr_a.path.cmp(&addr_b.path),
                 _ => a.name.cmp(&b.name),
-            }
-        });
+            });
     }
 
     /// Rehydrate room equipment lists after YAML deserialization.
@@ -180,7 +183,6 @@ impl BuildingData {
     }
 }
 
-
 /// Legacy equipment status enum for YAML backward compatibility
 ///
 /// **Note:** This type is deprecated but MUST be kept for backward compatibility
@@ -193,7 +195,9 @@ impl BuildingData {
 ///
 /// For new code, use `core::EquipmentStatus` and `core::EquipmentHealthStatus`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[deprecated(note = "Use core::EquipmentStatus and core::EquipmentHealthStatus instead. Kept for YAML backward compatibility only.")]
+#[deprecated(
+    note = "Use core::EquipmentStatus and core::EquipmentHealthStatus instead. Kept for YAML backward compatibility only."
+)]
 pub enum EquipmentStatus {
     Healthy,
     Warning,
@@ -214,9 +218,7 @@ pub fn from_yaml<T: for<'a> Deserialize<'a>>(yaml: &str) -> Result<T, serde_yaml
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::{
-        Building, Equipment, EquipmentStatus, EquipmentType, Floor, Position, Room, RoomType, Wing,
-    };
+    use crate::core::{Building, Equipment, EquipmentType, Floor, Room, RoomType, Wing};
 
     /// Build a minimal `BuildingData` with one equipment item attached to a room.
     fn build_test_data_with_room_equipment() -> BuildingData {
@@ -254,8 +256,8 @@ mod tests {
         let original = build_test_data_with_room_equipment();
 
         // Serialize
-        let yaml = BuildingYamlSerializer::serialize(&original)
-            .expect("serialization should succeed");
+        let yaml =
+            BuildingYamlSerializer::serialize(&original).expect("serialization should succeed");
 
         // Deserialize (now calls rehydrate_room_equipment internally)
         let restored =
@@ -317,12 +319,64 @@ mod tests {
         floor.add_wing(wing);
         building.add_floor(floor);
 
-        let data = BuildingData { building, equipment: vec![] };
+        let data = BuildingData {
+            building,
+            equipment: vec![],
+        };
 
         let yaml = BuildingYamlSerializer::serialize(&data).expect("serialize");
         let restored = BuildingYamlSerializer::deserialize(&yaml).expect("deserialize");
 
         let rooms = &restored.building.floors[0].wings[0].rooms[0];
-        assert_eq!(rooms.equipment.len(), 0, "empty room should have 0 equipment");
+        assert_eq!(
+            rooms.equipment.len(),
+            0,
+            "empty room should have 0 equipment"
+        );
+    }
+
+    /// ArxAddress on equipment must survive Building YAML SSOT round-trip.
+    #[test]
+    fn test_equipment_address_yaml_round_trip() {
+        use crate::core::domain::ArxAddress;
+
+        let mut building = Building::new("Addr HQ".to_string(), "/addr".to_string());
+        let mut equip = Equipment::new("Boiler-01".to_string(), String::new(), EquipmentType::HVAC);
+        let addr = ArxAddress::new(
+            "usa",
+            "ny",
+            "brooklyn",
+            "ps-118",
+            "floor-02",
+            "mech",
+            "boiler-01",
+        );
+        equip.address = Some(addr.clone());
+        equip.path = addr.path.clone();
+
+        let mut room = Room::new("Mech".to_string(), RoomType::Mechanical);
+        equip.set_room(room.id.clone());
+        room.add_equipment(equip);
+
+        let mut wing = Wing::new("Main".to_string());
+        wing.add_room(room);
+        let mut floor = Floor::new("Floor 2".to_string(), 2);
+        floor.add_wing(wing);
+        building.add_floor(floor);
+
+        let yaml = BuildingYamlSerializer::serialize_building(&building).expect("serialize");
+        assert!(
+            yaml.contains("boiler-01") || yaml.contains("/usa/ny/brooklyn"),
+            "serialized YAML should include address path"
+        );
+
+        let restored = BuildingYamlSerializer::deserialize_building(&yaml).expect("deserialize");
+        let eq = restored
+            .get_all_equipment()
+            .into_iter()
+            .next()
+            .expect("equipment present");
+        let restored_addr = eq.address.as_ref().expect("address should be durable");
+        assert_eq!(restored_addr.path, addr.path);
     }
 }

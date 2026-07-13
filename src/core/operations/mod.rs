@@ -24,16 +24,18 @@
 //! let results = spatial_query("nearest", "room", vec!["0.0", "0.0", "0.0"])?;
 //! ```
 
-pub mod room;
+pub mod address;
 pub mod equipment;
+pub mod room;
 pub mod spatial;
 #[cfg(test)]
 mod spatial_tests;
 
+pub use address::backfill_equipment_addresses;
+
 // Re-export room operations
 pub use room::{
-    create_room, delete_room, delete_room_impl, get_room, list_rooms, update_room,
-    update_room_impl,
+    create_room, delete_room, delete_room_impl, get_room, list_rooms, update_room, update_room_impl,
 };
 
 // Re-export equipment operations

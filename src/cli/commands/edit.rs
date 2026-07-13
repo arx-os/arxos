@@ -2,17 +2,16 @@
 
 use crate::cli::commands::Command;
 use crate::ingest::ingest_text_script;
-use crate::utils::path_safety::PathSafety;
-use crate::yaml::BuildingYamlSerializer;
+use crate::persistence::{load_building_at, save_building_at, BUILDING_YAML};
 use anyhow::anyhow;
 use std::error::Error;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub struct EditCommand {
     /// Path to script file, or "-" for stdin
     pub script: String,
-    /// Building YAML path (default: first building.yaml / named yaml)
+    /// Building YAML path (default: building.yaml)
     pub building: Option<String>,
     pub dry_run: bool,
 }
@@ -29,11 +28,9 @@ impl Command for EditCommand {
                 .map_err(|e| format!("read script {}: {}", self.script, e))?
         };
 
-        let yaml_path = resolve_building_yaml(self.building.as_deref())?;
-        let yaml = fs::read_to_string(&yaml_path)
-            .map_err(|e| format!("read {}: {}", yaml_path.display(), e))?;
-        let building = BuildingYamlSerializer::deserialize_building(&yaml)
-            .map_err(|e| format!("deserialize building: {}", e))?;
+        let (base, yaml_path) = resolve_building_base(self.building.as_deref())?;
+        let building =
+            load_building_at(&base).map_err(|e| format!("load {}: {}", yaml_path.display(), e))?;
 
         let result = ingest_text_script(building, &script_body, true)
             .map_err(|e| format!("text edit failed: {}", e))?;
@@ -43,15 +40,17 @@ impl Command for EditCommand {
             println!("  {}", line);
         }
 
+        if result.validation.has_errors() {
+            return Err("Edit validation failed; refusing to write building.yaml".into());
+        }
+
         if self.dry_run {
             println!("Dry run — not writing YAML");
             return Ok(());
         }
 
-        PathSafety::validate_path_for_write(&yaml_path).map_err(|e| anyhow!(e))?;
-        let out = BuildingYamlSerializer::serialize_building(&result.building)
-            .map_err(|e| anyhow!("serialize: {}", e))?;
-        fs::write(&yaml_path, out)?;
+        save_building_at(&base, &result.building)
+            .map_err(|e| anyhow!("save {}: {}", yaml_path.display(), e))?;
         println!("Saved {}", yaml_path.display());
         Ok(())
     }
@@ -61,39 +60,37 @@ impl Command for EditCommand {
     }
 }
 
-fn resolve_building_yaml(explicit: Option<&str>) -> Result<std::path::PathBuf, Box<dyn Error>> {
+/// Resolve project base directory and expected `building.yaml` path.
+fn resolve_building_base(explicit: Option<&str>) -> Result<(PathBuf, PathBuf), Box<dyn Error>> {
     if let Some(p) = explicit {
         let path = Path::new(p);
-        if path.exists() {
-            return Ok(path.to_path_buf());
-        }
-        // Treat as building name
-        let candidate = Path::new(".").join(format!(
-            "{}.yaml",
-            p.replace(' ', "_").to_lowercase()
-        ));
-        if candidate.exists() {
-            return Ok(candidate);
-        }
-        return Err(format!("building YAML not found: {}", p).into());
-    }
-    let building_yaml = Path::new("building.yaml");
-    if building_yaml.exists() {
-        return Ok(building_yaml.to_path_buf());
-    }
-    // First *.yaml in cwd that deserializes
-    for entry in fs::read_dir(".")? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.extension().and_then(|e| e.to_str()) == Some("yaml")
-            || path.extension().and_then(|e| e.to_str()) == Some("yml")
-        {
-            if let Ok(contents) = fs::read_to_string(&path) {
-                if BuildingYamlSerializer::deserialize_building(&contents).is_ok() {
-                    return Ok(path);
-                }
+        if path.is_dir() {
+            let yaml = path.join(BUILDING_YAML);
+            if yaml.exists() {
+                return Ok((path.to_path_buf(), yaml));
             }
+            return Err(format!("no {} in {}", BUILDING_YAML, path.display()).into());
         }
+        if path.exists()
+            && path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .map(|n| n.eq_ignore_ascii_case(BUILDING_YAML))
+                .unwrap_or(false)
+        {
+            let base = path
+                .parent()
+                .map(|p| p.to_path_buf())
+                .unwrap_or_else(|| PathBuf::from("."));
+            return Ok((base, path.to_path_buf()));
+        }
+        return Err(format!("building SSOT must be {} (got {})", BUILDING_YAML, p).into());
     }
-    Err("no building YAML found (pass --building path)".into())
+
+    let base = PathBuf::from(".");
+    let yaml = base.join(BUILDING_YAML);
+    if !yaml.exists() {
+        return Err(format!("no {} found in current directory", BUILDING_YAML).into());
+    }
+    Ok((base, yaml))
 }

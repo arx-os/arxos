@@ -64,8 +64,10 @@ impl SceneCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::{Building, Floor, Wing, Room, Equipment};
-    use crate::core::{SpatialProperties, EquipmentType, EquipmentStatus, EquipmentHealthStatus, RoomType};
+    use crate::core::{Building, Equipment, Floor, Room, Wing};
+    use crate::core::{
+        EquipmentHealthStatus, EquipmentStatus, EquipmentType, RoomType, SpatialProperties,
+    };
 
     fn create_test_building() -> Building {
         let mut building = Building::default();
@@ -139,5 +141,4 @@ mod tests {
         assert_eq!(cache.rooms().len(), 1);
         assert_eq!(cache.equipment().len(), 1);
     }
-
 }

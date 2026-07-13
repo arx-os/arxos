@@ -3,9 +3,9 @@
 //! Converts room data from all floors and wings into 3D representations
 //! with spatial properties and equipment references.
 
-use crate::render3d::types::Room3D;
 use crate::core::spatial::{BoundingBox3D, Point3D};
 use crate::core::Building;
+use crate::render3d::types::Room3D;
 use std::sync::Arc;
 
 /// Extract 3D room representations from building data
@@ -70,7 +70,10 @@ pub fn extract_rooms_3d(building: &Building) -> Vec<Room3D> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::{Building, Equipment, EquipmentStatus, EquipmentType, Floor, Room, RoomType, SpatialProperties, Wing};
+    use crate::core::{
+        Building, Equipment, EquipmentStatus, EquipmentType, Floor, Room, RoomType,
+        SpatialProperties, Wing,
+    };
 
     fn create_test_spatial_properties() -> SpatialProperties {
         SpatialProperties {

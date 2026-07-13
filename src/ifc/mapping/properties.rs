@@ -7,8 +7,8 @@
 use std::collections::HashMap;
 
 use super::{
-    pset_prop_key, PSET_ARX_BUILDING, PSET_ARX_EQUIPMENT, PSET_ARX_FLOOR, PSET_ARX_IDENTITY,
-    PSET_ARX_LIDAR, PSET_ARX_ROOM, PROP_ARX_ID, PROP_ENTITY_KIND,
+    pset_prop_key, PROP_ARX_ID, PROP_ENTITY_KIND, PSET_ARX_BUILDING, PSET_ARX_EQUIPMENT,
+    PSET_ARX_FLOOR, PSET_ARX_IDENTITY, PSET_ARX_LIDAR, PSET_ARX_ROOM,
 };
 
 /// Arx free-form Psets whose properties become clean domain keys on import.
@@ -191,10 +191,7 @@ mod tests {
     fn normalize_collapses_double_prefix() {
         let mut bag = HashMap::new();
         bag.insert(
-            format!(
-                "{}:{}:brand",
-                PSET_ARX_EQUIPMENT, PSET_ARX_EQUIPMENT
-            ),
+            format!("{}:{}:brand", PSET_ARX_EQUIPMENT, PSET_ARX_EQUIPMENT),
             "Epson".to_string(),
         );
         normalize_imported_properties(&mut bag);
@@ -205,10 +202,7 @@ mod tests {
     fn export_uses_clean_keys_and_drops_consumed() {
         let mut bag = HashMap::new();
         bag.insert("brand".to_string(), "Epson".to_string());
-        bag.insert(
-            pset_prop_key(PSET_ARX_EQUIPMENT, "model"),
-            "X1".to_string(),
-        );
+        bag.insert(pset_prop_key(PSET_ARX_EQUIPMENT, "model"), "X1".to_string());
         bag.insert(
             pset_prop_key(PSET_ARX_IDENTITY, PROP_ARX_ID),
             "uuid".to_string(),

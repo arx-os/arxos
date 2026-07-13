@@ -12,7 +12,11 @@ impl Command for CommitCommand {
         let mut manager = BuildingGitManager::new(".", "current", config)?;
 
         let commit_id = manager.commit_staged(&self.message)?;
-        let short_id = if commit_id.len() >= 8 { &commit_id[..8] } else { &commit_id };
+        let short_id = if commit_id.len() >= 8 {
+            &commit_id[..8]
+        } else {
+            &commit_id
+        };
         println!("✅ Committed: {}", short_id);
         println!("📝 Message: {}", self.message);
 

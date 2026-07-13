@@ -72,7 +72,10 @@ mod tests {
         assert_eq!(get_equipment_symbol(&EquipmentType::Network), '↯');
         assert_eq!(get_equipment_symbol(&EquipmentType::AV), '♫');
         assert_eq!(get_equipment_symbol(&EquipmentType::Furniture), '⌂');
-        assert_eq!(get_equipment_symbol(&EquipmentType::Other("Generic".to_string())), '╬');
+        assert_eq!(
+            get_equipment_symbol(&EquipmentType::Other("Generic".to_string())),
+            '╬'
+        );
     }
 
     #[test]

@@ -22,14 +22,13 @@ pub use handlers::{
 pub use rendering::{render_frame, render_overlay};
 
 // Imports
-use crate::render3d::events::{EventHandler, InteractiveEvent};
-use crate::render3d::state::{InteractiveState, CameraState};
-use crate::render3d::{
-    Building3DRenderer, InfoPanelState, Render3DConfig, VisualEffectsEngine,
-    Scene3D, ViewMode,
-};
 use crate::core::spatial::Point3D;
 use crate::core::Building;
+use crate::render3d::events::{EventHandler, InteractiveEvent};
+use crate::render3d::state::{CameraState, InteractiveState};
+use crate::render3d::{
+    Building3DRenderer, InfoPanelState, Render3DConfig, Scene3D, ViewMode, VisualEffectsEngine,
+};
 use crossterm::event::KeyCode;
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 use log::info;
@@ -56,7 +55,7 @@ pub struct InteractiveRenderer {
     game_state: Option<GameState>,
     /// Info panel state
     info_panel: InfoPanelState,
-    
+
     // Caching state fields for dirty frame optimization
     last_rendered_camera: Option<CameraState>,
     last_rendered_floor: Option<i32>,
@@ -271,7 +270,10 @@ impl InteractiveRenderer {
     }
 
     /// Handle specific actions (delegates to handlers module)
-    fn handle_action(&mut self, action: crate::render3d::events::Action) -> Result<(), Box<dyn std::error::Error>> {
+    fn handle_action(
+        &mut self,
+        action: crate::render3d::events::Action,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         handlers::handle_action(&mut self.state, action, &self.renderer.building)
     }
 
@@ -364,7 +366,10 @@ impl InteractiveRenderer {
             (new_scene, new_ascii)
         } else {
             // Reuse cached outputs
-            (self.cached_scene.clone().unwrap(), self.cached_ascii_output.clone().unwrap())
+            (
+                self.cached_scene.clone().unwrap(),
+                self.cached_ascii_output.clone().unwrap(),
+            )
         };
 
         // 3. Update visual effects
@@ -435,7 +440,7 @@ impl InteractiveRenderer {
                 self.last_game_violations = Some(stats.violations);
             }
             self.last_rendered_duration_secs = session_duration_secs;
-            
+
             self.state.increment_render_count();
             self.frame_count += 1;
         }
@@ -454,7 +459,7 @@ impl InteractiveRenderer {
         if is_display_dirty {
             io::stdout().flush()?;
         }
-        
+
         Ok(())
     }
 
@@ -730,9 +735,9 @@ impl Default for InteractiveConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::{Building, Floor, Room, RoomType, Wing};
     use crate::render3d::{ProjectionType, ViewAngle};
     use crate::yaml::BuildingData;
-    use crate::core::{Building, Floor, Room, RoomType, Wing};
     use chrono::Utc;
 
     fn create_test_building() -> Building {

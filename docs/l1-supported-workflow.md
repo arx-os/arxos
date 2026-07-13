@@ -55,7 +55,7 @@ arx init --name "SITE_NAME"
 
 ```bash
 # IFC
-arx import path/to/model.ifc
+arx import ifc path/to/model.ifc
 
 # LiDAR (if in scope)
 arx import lidar path/to/scan.ply
@@ -127,6 +127,18 @@ Commercial / paid delivery (`--commercial`) is **out of L1 success path** unless
 
 ---
 
+## Automated smoke (does not replace R5)
+
+From repo root, after `cargo build`:
+
+```bash
+./scripts/l1_smoke.sh
+# optional path: ./scripts/l1_smoke.sh /path/to/file.ifc
+```
+
+This checks init → import sample IFC → validate → export → contribute → commercial gate.  
+It does **not** close second-person district transfer (R5).
+
 ## Escalation
 
 1. Reproduce with pinned version.  
@@ -134,4 +146,4 @@ Commercial / paid delivery (`--commercial`) is **out of L1 success path** unless
 3. File issue or pilot log entry.  
 4. Do not invent parallel tools mid-pilot.
 
-**Related:** `docs/pilot-charter.md` · `docs/second-person-checklist.md` · `docs/install.md`
+**Related:** `docs/pilot-charter.md` · `docs/second-person-checklist.md` · `docs/install.md` · `docs/field-truth-log.md` · `docs/data-classification.md`

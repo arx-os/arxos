@@ -188,7 +188,7 @@ This section is the **obligation register**: each reservation must be **relegate
 | **R4** | **Host payment gate is local-file only** | `export --commercial` + receipt is bypassable; free export still works by design | Process: commercial deliveries **must** use `--commercial`. Product: host that checks `AccessPaid` / receipt server-side (L3) | L1: written process. L3: non-bypassable download path | Eng + field IT | **Partial** (CLI gate done; enforcement open) |
 | **R5** | **No second-person cold start on district env** | Hero dependency; program dies if only one tech can run it | Timed walkthrough by non-author on district laptop/network | Checklist signed; stuck points filed as backlog | Field IT | **Open** — template: `docs/second-person-checklist.md` |
 | **R6** | **Scale/performance unprofiled** | Large school models may OOM/hang; people skip validation | Profile worst-case IFC/scan on pilot hardware; set limits | Written max points/time; light-mode guidance | Eng + field | **Open** |
-| **R7** | **Security / compliance / classification** | Facility plans sensitive; Git remotes, exports, backups | Data class policy (internal-only default); who can clone/export; no student PII in properties | Security/IT sign-off for pilot repo location | Field IT + security | **Open** — fields in `docs/pilot-charter.md` §4 |
+| **R7** | **Security / compliance / classification** | Facility plans sensitive; Git remotes, exports, backups | Data class policy (internal-only default); who can clone/export; no student PII in properties | Security/IT sign-off for pilot repo location | Field IT + security | **Partial** — `docs/data-classification.md` + charter §4 (needs sign-off) |
 | **R8** | **Mainnet token / institutional fit** | Public entity crypto, custody, procurement, reputation | L1/L2: **no production token**. L3 only with Legal/Finance | Written go/no-go from leadership for any chain use | Vision + Legal | **Partial** — L1 default off-chain in charter §5 |
 | **R9** | **Support / ownership / change control** | No vendor SLA; `main` moves | Pin release tag/hash; one supported workflow page; escalation path | Pinned install + “supported loop” doc used in R5 | Eng + field IT | **Partial** — `docs/pilot-release.md`, `docs/l1-supported-workflow.md`, `scripts/pin_pilot_release.sh` (tag not cut until you pin) |
 | **R10** | **Safety / professional liability framing** | Model must not replace LOTO, licensed drawings, or code docs | Pilot disclaimer policy; culture: human + licensed docs win | Signed pilot charter with disclaimer language | Field IT + leadership | **Partial** — template `docs/pilot-charter.md` (needs signature) |
@@ -199,8 +199,8 @@ This section is the **obligation register**: each reservation must be **relegate
 | :---: | :--- | :--- | :---: |
 | **P-Safety** | R10, R1 (process) | `docs/pilot-charter.md`; no unreviewed `proposed` as official | **Template done** — sign to close R10 |
 | **P-Transfer** | R5, R9 | `docs/l1-supported-workflow.md`; `docs/second-person-checklist.md`; `docs/pilot-release.md`; `scripts/pin_pilot_release.sh` | **Artifacts done** — walkthrough + tag to close R5/R9 |
-| **P-Data** | R7 | Classification + private Git; export approval same class as CAD | **Open** (charter §4 skeleton) |
-| **P-Field-truth** | R1, R2, R6 | Real scan + real IFC matrix + one performance profile on pilot hardware | **Open** |
+| **P-Data** | R7 | Classification + private Git; export approval same class as CAD | **Template done** — `docs/data-classification.md` (sign to close) |
+| **P-Field-truth** | R1, R2, R6 | Real scan + real IFC matrix + one performance profile on pilot hardware | **Template done** — `docs/field-truth-log.md`; **site evidence open** |
 | **P-Chain-optional** | R3, R8 | Explicit “compiler pilot = off-chain”; testnet demo only if requested | **Partial** (charter §5 + L1 workflow) |
 | **P-Market-enforcement** | R4 | L1 process; L3 host service that gates download on payment | **Partial** (CLI gate; process in charter optional) |
 
@@ -1094,8 +1094,8 @@ Horizon A **does not** close §1.6 district pilot obligations. It only enables l
 | :---: | :--- | :---: | :--- |
 | **B0** | **P-Safety** | Template **done** | Fill/sign `docs/pilot-charter.md` |
 | **B1** | **P-Transfer** | Artifacts **done** | Run `./scripts/pin_pilot_release.sh v2.0.0-pilot.1`; second person uses `docs/second-person-checklist.md` |
-| **B2** | **P-Data** | Open | Complete charter §4; place private Git remote |
-| **B3** | **P-Field-truth** | Open | Deliver 1 district IFC (+ optional scan); eng logs matrix/perf |
+| **B2** | **P-Data** | Template done | Complete `docs/data-classification.md` + charter §4; private Git remote |
+| **B3** | **P-Field-truth** | Template done | Fill `docs/field-truth-log.md` with real IFC/scan; eng fixes only blockers |
 | **B4** | **P-Chain-optional** | Partial | Keep L1 off-chain unless leadership requests demo |
 | **B5** | Scorecard | Open | After B0–B3 evidence, update §1.6 statuses |
 
@@ -1113,11 +1113,13 @@ Horizon A **does not** close §1.6 district pilot obligations. It only enables l
 ### 10.4 Next actions (field + eng)
 
 ```text
-You:    sign pilot-charter.md · pin version in charter · second-person checklist
-Eng:    cut tag when tree clean (pin_pilot_release.sh) · fix only walkthrough/field blockers
-Then:   P-Field-truth on one real building
+You:    sign pilot-charter + data-classification · pin in charter · second-person checklist
+        fill field-truth-log on real IFC/scan
+Eng:    cut tag (pin_pilot_release.sh) · ./scripts/l1_smoke.sh green · fix field blockers only
 Never:  L3 mainnet until L1 exit
 ```
+
+**Automated smoke (eng):** `./scripts/l1_smoke.sh` — does not close R5.
 
 ---
 

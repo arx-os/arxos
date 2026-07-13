@@ -53,6 +53,8 @@ Initials — Pilot owner: ______  Reviewer: ______
 
 ## 4. Data classification (R7)
 
+Complete **`docs/data-classification.md`** and summarize here:
+
 | Rule | Agreed |
 | :--- | :---: |
 | Pilot repo and exports are **internal-only** (not public GitHub by default) | [ ] |
@@ -60,6 +62,7 @@ Initials — Pilot owner: ______  Reviewer: ______
 | Facility sensitivity treated at least as strictly as CAD/as-built drawings | [ ] |
 | Who may clone the repo: ________________ | [ ] |
 | Who may export IFC/YAML off the capture node: ________________ | [ ] |
+| Classification form completed (`docs/data-classification.md`) | [ ] |
 
 ## 5. Chain / token (R8)
 

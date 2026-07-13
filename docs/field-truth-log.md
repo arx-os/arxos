@@ -3,23 +3,45 @@
 **Purpose:** Evidence to relegate “lab only” claims. One file per pilot building
 (or attach privately if data cannot live in git).
 
-**Pin under test:** ________________  
+**Authority:** [`arxos_manifest.md`](../arxos_manifest.md) §1.6 · living plan [horizon-b-roadmap.md](./horizon-b-roadmap.md)  
+**Pin under test:** `v2.0.0-pilot.4` @ `659bbd9f` (or charter pin): ________________  
 **Site / building:** ________________  
 **Date:** ________________  
 **Operator:** ________________  
 
 **BIM path used:** Vendor BIM → clean IFC export → `arx import ifc`  
-**No CAD plugins:** [ ] Confirmed
+**No CAD plugins:** [ ] Confirmed  
+
+**How to close R\*:** Only with filled rows below + sign-off. Eng must not mark
+R1/R2/R5/R6/R7/R10 **Done** without a path to this log (or private redacted
+copy) and the matching checklist/charter. See roadmap § evidence guardrails.
 
 ---
 
 ## A. Vendor IFC interop matrix (R2)
 
-| Source file (redacted name) | Tool / version | Import OK? | Floors in | Floors out | Rooms in | Rooms out | GlobalIds preserved? | Notes (drops, panics, units) |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| | | [ ] | | | | | [ ] | |
-| | | [ ] | | | | | [ ] | |
-| | | [ ] | | | | | [ ] | |
+| Source file (redacted name) | Tool / version | Import OK? | Floors in | Floors out | Rooms in | Rooms out | GlobalIds preserved? | `unmapped_products`? | Notes (drops, panics, units) |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| | | [ ] | | | | | [ ] | [ ] | |
+| | | [ ] | | | | | [ ] | [ ] | |
+| | | [ ] | | | | | [ ] | [ ] | |
+
+### A2. LossReport capture (required per import)
+
+Paste or summarize CLI warnings after import (codes + counts).  
+Expect `unmapped_products` when walls/slabs/doors/windows exist in file.
+
+```text
+# from arx import ifc output:
+# Warnings (N):
+#   - [unmapped_products] …
+#   - [other codes] …
+```
+
+| Import # | Codes seen | Total unmapped (if any) | Surprised? (Y/N) | Action |
+| :---: | :--- | :--- | :---: | :--- |
+| 1 | | | | |
+| 2 | | | | |
 
 Commands used:
 
@@ -32,8 +54,9 @@ arx import ifc roundtrip.ifc
 ```
 
 **R2 pilot-mitigated when:** ≥1 real district-class IFC imported without panic;
-preserve/drop list written above. Revit/ArchiCAD slots remain open until real
-files are logged (see [ifc-limitations.md](./ifc-limitations.md)).
+preserve/drop list written above **and** LossReport/A2 filled. Revit/ArchiCAD
+slots remain open until real files are logged (see [ifc-limitations.md](./ifc-limitations.md)).  
+Lab buildingSMART alone does **not** close R2.
 
 ---
 
@@ -85,4 +108,4 @@ Limits adopted for this pilot (defaults: [resource-limits.md](./resource-limits.
 | Operator | | |
 | Pilot owner | | |
 
-**Related:** [l1-supported-workflow.md](./l1-supported-workflow.md) · [ifc-limitations.md](./ifc-limitations.md) · [`arxos_manifest.md`](../arxos_manifest.md) §1.6
+**Related:** [horizon-b-roadmap.md](./horizon-b-roadmap.md) · [l1-supported-workflow.md](./l1-supported-workflow.md) · [ifc-limitations.md](./ifc-limitations.md) · [`arxos_manifest.md`](../arxos_manifest.md) §1.6

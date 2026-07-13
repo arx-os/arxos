@@ -7,7 +7,8 @@
 This is the **only** workflow supported for L1 pilot success.  
 Do **not** require `blockchain`, mint, access pay, or agent for L1 exit.
 
-**Map:** [INDEX.md](./INDEX.md) · **Authority:** [`arxos_manifest.md`](../arxos_manifest.md)
+**Map:** [INDEX.md](./INDEX.md) · **Authority:** [`arxos_manifest.md`](../arxos_manifest.md) §1.1a · §1.6  
+**Living plan:** [horizon-b-roadmap.md](./horizon-b-roadmap.md) · **Packet:** [field-handoff.md](./field-handoff.md)
 
 ---
 
@@ -17,7 +18,11 @@ Do **not** require `blockchain`, mint, access pay, or agent for L1 exit.
 install (pinned) → init → import → edit/review → validate → git → export (internal)
 ```
 
-Optional later (not L1 success criteria): `contribute`, `access`, `--commercial`, Anvil — see [lab/](./lab/).
+Read **import warnings** (LossReport). `unmapped_products` means walls/slabs/doors/…
+were present but not mapped into Arx rooms/equipment — not a silent success.
+
+Optional later (not L1 success criteria): `contribute`, `access`, `--commercial`, Anvil — see [lab/](./lab/).  
+Device PWA walk-in capture is the §1.1a north star but **not** required for early HB0–HB2.
 
 ---
 
@@ -40,6 +45,7 @@ If IFC is incomplete, fix vendor export settings. See [ifc-limitations.md](./ifc
 git clone <internal-or-approved-remote> arxos
 cd arxos
 git checkout v2.0.0-pilot.4   # or exact pin recorded in the pilot charter
+git rev-parse HEAD            # expect 659bbd9f369c0b942f150983b204ea054fc595a0 for pilot.4
 
 # Default = compiler + TUI (primary UI). blockchain/agent not required for L1
 cargo install --path . --locked

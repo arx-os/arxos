@@ -5,7 +5,9 @@
 **Fill in blanks · print or PDF · sign before pilot start**
 
 **Maturity:** Lab compiler ~8/10; district L1 readiness ~4/10 until process +
-field evidence close obligations in `arxos_manifest.md` §1.6.
+field evidence close obligations in `arxos_manifest.md` §1.6.  
+**Site north star (full §1.1a):** see `docs/horizon-b-roadmap.md` — this charter
+gates **controlled L1** (CLI/TUI first); PWA walk-in is later (HB6), not a day-1 requirement.
 
 ---
 

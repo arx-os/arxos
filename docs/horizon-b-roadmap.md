@@ -3,7 +3,7 @@
 **Authority:** [`arxos_manifest.md`](../arxos_manifest.md) §1.1a · §1.5–1.6 · §10.2  
 **Field packet (policy order):** [field-handoff.md](./field-handoff.md)  
 **Preferred pin:** `v2.0.0-pilot.4` @ `659bbd9f` — [pilot-release.md](./pilot-release.md)  
-**Last updated:** 2026-07-13  
+**Last updated:** 2026-07-13 (sprint execution + evidence guardrails locked)  
 
 This file is the **living** Horizon B plan. Update status/dates when evidence lands; reconcile scores in the manifest.  
 Do **not** start Horizon C work until L1 exit criteria here are met once.
@@ -225,49 +225,237 @@ Phases are sequential **gates**. Later phases may **prep** (docs, dry lab) but d
 
 ---
 
-## 5. Immediate next sprint (1–2 weeks)
+## 5. Sprint execution plan (HB0–HB2 focus) — 1–2 weeks
 
-**Theme:** Policy + transfer + first real evidence — **not** PWA rebuild.
+**Theme:** Policy + transfer + first real IFC evidence. **Not** PWA rebuild, wall mapping, or Horizon C.  
+**Pin:** `v2.0.0-pilot.4` @ `659bbd9f369c0b942f150983b204ea054fc595a0`  
+**Code changes:** **none** unless S7 stuck-list item is approved.
 
-| # | Task | Owner | Gate / approval | Done when |
-| :---: | :--- | :---: | :--- | :--- |
-| S1 | Fill + **sign** pilot charter (site, pin `v2.0.0-pilot.4` @ `659bbd9f`) | Field / leadership | Leadership | Signature on charter |
-| S2 | Complete data-classification + name private Git remote | Field IT | Security/IT | Charter §4 ticked |
-| S3 | Install pin on pilot laptop; `arx --version` + `./scripts/l1_smoke.sh` | Field | Eng if install fails | Smoke PASS on pin |
-| S4 | Second-person checklist (non-author) | Field | — | Checklist signed or stuck-list filed |
-| S5 | Obtain **1 real IFC** (anonymized if needed); import → LossReport → export | Field + eng standby | Data class before share | Matrix row in field-truth-log |
-| S6 | If LiDAR hardware available: **1 room/wing** scan → proposed → accept/reject → approved export | Field | Charter before “official” | R1 log section started |
-| S7 | Eng: fix **only** S3–S6 blockers (import crash, pin install, doc error) | Eng | Stuck-list ID | Green re-run |
-| S8 | Update this file + manifest §1.6 statuses for any closed row | Eng | Evidence path | Commit |
+### 5.0 Sprint calendar (suggested)
 
-**Explicitly deferred this sprint:** HB6 PWA productization, wall class mapping, Horizon C, hardware BACnet, 3D viz restore, multi-building campus.
+| Day | Focus | Exit |
+| :---: | :--- | :--- |
+| D1 | S1 charter draft + pin line; name Q5/Q8 people | Draft charter exists |
+| D1–D2 | S2 data class; S3 pin install on pilot laptop | Smoke PASS |
+| D2–D3 | S4 second-person dry-run | Checklist pass/conditional |
+| D3–D7 | S5 real IFC (access may dominate) | ≥1 field-truth matrix row |
+| D5–D10 | S6 optional if hardware ready | R1 section started or N/A |
+| Rolling | S7 eng blockers only | Green re-run of failing step |
+| End | S8 reconcile docs/manifest | Status log entry |
 
-**Approval gates for vision holder:**
-1. Confirm **target building** (~250k class or smaller first site).
-2. Confirm **capture hardware** path (device LiDAR → which file format? capture node model?).
-3. Approve whether HB6 may **overlap** HB3/HB4 or must wait for evidence.
+### 5.1 Task detail (S1–S8)
+
+#### S1 — Pilot charter (HB0 / R10)
+
+| | |
+| :--- | :--- |
+| **Owner** | Pilot owner + leadership |
+| **Template** | [pilot-charter.md](./pilot-charter.md) |
+| **Steps** | 1) Fill parties (§1) incl. second person + reviewer. 2) Scope (§2): site name, inputs IFC [x], LiDAR [ ] or [x], pin **exactly** `v2.0.0-pilot.4` + full SHA. 3) Initial safety §3. 4) Data class ticks when S2 ready. 5) **Sign**. |
+| **Verify** | Pin SHA matches [pilot-release.md](./pilot-release.md); go level L1 only; chain off unless §5 names demo |
+| **Acceptance** | Signed charter on file (PDF or wet); pin recorded; building name non-empty |
+| **Eng** | None |
+
+#### S2 — Data classification + private remote (HB0 / R7)
+
+| | |
+| :--- | :--- |
+| **Owner** | Field IT + security |
+| **Template** | [data-classification.md](./data-classification.md) |
+| **Steps** | 1) Complete classification (internal default). 2) Name private Git host/path. 3) Who may clone/export. 4) No student PII rule. 5) Tick charter §4. |
+| **Verify** | Remote is **not** public GitHub by default; export path matches class |
+| **Acceptance** | Classification complete; charter §4 ticked; remote URL recorded (may be private-only) |
+| **Eng** | None (unless docs wrong — then S7) |
+
+#### S3 — Pin install + smoke (HB0–HB1 / R9)
+
+| | |
+| :--- | :--- |
+| **Owner** | Field capture tech |
+| **Steps** | See commands below; use only [l1-supported-workflow.md](./l1-supported-workflow.md) |
+| **Verify** | `git rev-parse HEAD` = `659bbd9f…`; `arx --version` works; smoke PASS |
+| **Acceptance** | Install on pilot machine succeeds; smoke PASS logged (date/machine) |
+| **Eng subtasks (if fail)** | See §5.3 — approval before code |
+
+```bash
+git clone <approved-remote> arxos && cd arxos
+git checkout v2.0.0-pilot.4
+git rev-parse HEAD   # 659bbd9f369c0b942f150983b204ea054fc595a0
+cargo install --path . --locked
+arx --version
+# From repo root (needs cargo build of pin tree):
+./scripts/l1_smoke.sh
+```
+
+If smoke script path awkward after `cargo install`, run smoke from the pin checkout after `cargo build`.
+
+#### S4 — Second-person dry-run (HB1 / R5)
+
+| | |
+| :--- | :--- |
+| **Owner** | Named second person (**not** doc author) |
+| **Template** | [second-person-checklist.md](./second-person-checklist.md) |
+| **Steps** | Timed run steps 1–10; include **5b** (note LossReport warnings); owner observes only |
+| **Verify** | Pin SHA on form matches charter; no blockchain/agent/CAD; stuck >10m written |
+| **Acceptance** | Pass **or** Conditional with ≤3 stuck points filed as backlog; Fail → eng S7 + re-walk |
+| **Eng** | Only for stuck-list items that are software/doc defects |
+
+#### S5 — One real IFC + LossReport (HB2 / R2 field)
+
+| | |
+| :--- | :--- |
+| **Owner** | Field provides file · eng standby |
+| **Template** | [field-truth-log.md](./field-truth-log.md) §A + §A2 |
+| **Gate** | S2 data class before sharing facility IFC off-prem |
+| **Steps** | 1) Obtain clean IFC from vendor BIM (no plugins). 2) Init pilot repo. 3) Import. 4) **Copy warnings** to A2. 5) Validate. 6) Export IFC. 7) Optional re-import. 8) Fill matrix row (floors/rooms/GIDs/`unmapped_products`). 9) Performance notes → §C if large. |
+| **Verify** | No panic; LossReport not ignored; matrix not empty |
+| **Acceptance** | ≥1 district-class (or real site) IFC row + A2 filled. **Does not** require perfect wall mapping. |
+| **Eng** | Crash / refuse-without-message / wrong pin docs only |
+
+```bash
+mkdir -p ~/arx-pilots/SITE && cd ~/arx-pilots/SITE
+arx init --name "SITE"
+arx import ifc /path/to/vendor.ifc    # capture full stdout
+arx validate
+arx export --format ifc --output exports/out.ifc
+# paste warnings into field-truth-log A2
+```
+
+#### S6 — Optional first LiDAR room/wing (HB3 start / R1)
+
+| | |
+| :--- | :--- |
+| **Owner** | Field (if hardware + Q2 answered) |
+| **Template** | field-truth-log §B |
+| **Gate** | Charter marks LiDAR in scope for official claims; else lab-only practice |
+| **Steps** | Import scan → list `proposed` → accept/reject ≥1 → export `--approved-only` → log false +/− |
+| **Acceptance** | §B started **or** charter LiDAR **out of scope** (IFC-only pilot) |
+| **Skip OK** | If no hardware this sprint — log “deferred to next sprint” |
+
+#### S7 — Eng blocker fixes only
+
+| | |
+| :--- | :--- |
+| **Owner** | Eng |
+| **Gate** | Each fix has stuck-list ID + **approval before apply** if code change |
+| **In scope** | Pin install fails; import panic; confusing error on refuse; checklist/doc wrong path; smoke regression |
+| **Out of scope** | PWA features, wall mapping, new optional rings, spine rewrite |
+| **Acceptance** | Failing S3–S6 step re-runs green; clippy `-D warnings` if code touched |
+
+#### S8 — Reconcile living plan
+
+| | |
+| :--- | :--- |
+| **Owner** | Eng (+ field for evidence paths) |
+| **Steps** | Update this file §7 status log; if R5/R2/R7/R10 evidence exists, update manifest §1.6 status cells with **path to evidence** (not “Done” without path) |
+| **Acceptance** | Commit on `main`; no fake closures |
+
+### 5.2 Field checklist pack (print)
+
+- [ ] [pilot-charter.md](./pilot-charter.md)  
+- [ ] [data-classification.md](./data-classification.md)  
+- [ ] [pilot-release.md](./pilot-release.md) (pin table)  
+- [ ] [l1-supported-workflow.md](./l1-supported-workflow.md)  
+- [ ] [second-person-checklist.md](./second-person-checklist.md)  
+- [ ] [field-truth-log.md](./field-truth-log.md)  
+- [ ] [ifc-limitations.md](./ifc-limitations.md) (read once)  
+- [ ] [resource-limits.md](./resource-limits.md)  
+
+### 5.3 Proposed eng improvements (approval required — not applied)
+
+Spine-safe, small, only if sprint pain appears. **Default: implement none until approved.**
+
+| ID | Proposal | Why | Risk | LOC sense |
+| :---: | :--- | :--- | :--- | :---: |
+| E1 | Ensure `arx import ifc` always prints warning **codes** (incl. `unmapped_products`) clearly | S4 5b / S5 A2 | Low | Tiny |
+| E2 | On resource refuse, print limit value + env var name + link path `docs/resource-limits.md` | S3/S5 large files | Low | Tiny |
+| E3 | `arx import ifc --help` one-line: “vendor BIM → clean IFC only; no plugins” | R5 transfer | Low | Tiny |
+| E4 | Document-only: copy-paste “import capture” snippet into field-truth-log (done in templates) | Evidence | None | Docs |
+| E5 | **Defer:** PWA bridge stability, camera LiDAR | HB6 | Medium | Skip |
+| E6 | **Defer:** wall/slab domain mapping | Product | High scope | Skip |
+
+**No proposed diffs applied in this reconcile.** Paste stuck-list → approve E* → then implement.
+
+### 5.4 Explicitly deferred this sprint
+
+HB6 PWA productization · wall class mapping · Horizon C · hardware BACnet · 3D viz · multi-building campus · new pins unless install-breaking bug.
 
 ---
 
-## 6. Open questions / blockers (need owner input)
+## 6. Risk & dependency management
 
-| ID | Question | Blocks | Suggested default |
-| :---: | :--- | :--- | :--- |
-| Q1 | Which building is L1 site #1 (name, ~sqft, access window)? | HB2–HB5 | Smaller wing first if 250k access is slow |
-| Q2 | LiDAR hardware + export format (iPad Pro PLY/E57? Matterport? BLK?) | HB3 | Prefer formats `import lidar` already accepts; log gaps |
-| Q3 | Capture node hardware (Mac Mini / Windows laptop / Pi)? | R6 | Mini/laptop; Pi only IFC-light |
-| Q4 | Is first pilot **IFC-first** or **scan-first**? | HB2 vs HB3 order | IFC-first if BIM exists; else scan-first room |
-| Q5 | Who is second person for R5 (named)? | HB1 | Name before sprint mid-point |
-| Q6 | May eng start **minimal PWA review** (HB6 slice) in parallel with HB3? | LOC / focus | **No** until Q1–Q2 answered + one field log row — unless you override |
-| Q7 | Vendor IFC available under data class (Revit export settings owner)? | HB2 | Facilities BIM contact |
-| Q8 | Charter signer + data-class approver (named)? | HB0 | Required for “official” export language |
+| # | Risk | Likelihood | Impact | Mitigation |
+| :---: | :--- | :---: | :---: | :--- |
+| K1 | Leadership delay on charter/signatures | H | Blocks “official” | Dry-run (S4) may use draft charter; no official export language until signed |
+| K2 | No second person named | M | R5 fails | Q5 default: name by D2 or pilot pauses |
+| K3 | Facility IFC not available / wrong class | H | R2 stuck | Redacted extract; or smaller non-public sample with same schema; escalate Q7 |
+| K4 | Import “OK” culture ignores LossReport | M | False BIM confidence | Checklist 5b + field-truth A2 required |
+| K5 | Scope creep to walls/PWA mid-sprint | M | LOC / delay evidence | Kill list §4; S7 gate |
+| K6 | Large IFC hits default 50 MiB refuse | M | Panic-as-failure | Use env raise + log §C; never disable validation |
+| K7 | Floating `main` install | M | R9 regression | Charter pin only; smoke from tag |
+| K8 | Public Git with facility model | L/H | R7 / legal | S2 before S5 share |
+| K9 | Single hero continues | H | Pilot dies | S4 hard gate before HB4 |
+| K10 | Premature HB6 eng | M | Distraction | Q6 default **No** |
+
+**Dependencies:** S5 → S2 (data class) · S4 → S3 (install) · official export claims → S1 · R2 close → S5 evidence · R5 close → S4 pass/conditional.
 
 ---
 
-## 7. Status log
+## 7. Evidence-driven guardrails (when R\* may close)
+
+| Obligation | May mark **Partial** | May mark **Done / pilot-mitigated** | Never mark Done if |
+| :--- | :--- | :--- | :--- |
+| **R10** | Template exists | Signed charter path cited | Unsigned |
+| **R9** | Pin cut | Charter records pin + R5 used that pin | “Just use main” |
+| **R7** | Template | Classification + private remote evidence | Public facility model |
+| **R5** | Checklist template | Completed checklist (pass/conditional) path | Author walked themselves only |
+| **R2** | Lab fixtures + LossReport eng | ≥1 real site/district IFC matrix + A2 | buildingSMART only |
+| **R1** | Synthetic CI | Real scan §B **or** charter LiDAR out-of-scope | Fake false +/− |
+| **R6** | Eng defaults | §C filled for site hardware | Defaults alone |
+| **R8** | L1 off-chain default | Leadership go/no-go written | Mainnet without go |
+| **R3/R4** | Lab E2E | Not required for L1 exit | Claiming L3 |
+
+**Logging rules:**
+1. Prefer private copy of field-truth-log if models are sensitive; cite path in manifest status cell.
+2. Every eng “close” PR must link evidence path in commit message.
+3. Scores in manifest §2.1 update only in S8-style reconcile after evidence.
+
+---
+
+## 8. Open questions (recommendations if unanswered)
+
+| ID | Question | Recommendation (default until you override) |
+| :---: | :--- | :--- |
+| **Q1** | L1 site #1 (name, ~sqft, window)? | Start with **one wing / floor** of the 250k building if full access is slow; name the parent building in charter |
+| **Q2** | LiDAR hardware + format? | Prefer formats already accepted by `arx import lidar`; if unknown, **IFC-only sprint** (skip S6) |
+| **Q3** | Capture node? | **Laptop/Mac Mini**; not Pi for first real IFC |
+| **Q4** | IFC-first vs scan-first? | **IFC-first** this sprint (HB2); LiDAR room next if hardware ready |
+| **Q5** | Second person name? | **Required by D2**; without name, S4 blocked |
+| **Q6** | PWA eng parallel? | **No** until S5 has one matrix row **and** Q1–Q2 answered |
+| **Q7** | Vendor IFC contact? | Facilities/BIM coordinator; export IFC4 with spaces if possible |
+| **Q8** | Charter + data-class signers? | Pilot owner + security/IT named on D1 |
+
+---
+
+## 9. After this sprint (next actions)
+
+| Priority | Action | Phase |
+| :---: | :--- | :---: |
+| 1 | Close any Conditional R5 stuck-list (eng) | HB1 |
+| 2 | Second real IFC or second vendor if first was thin | HB2 |
+| 3 | First real LiDAR room if S6 skipped | HB3 |
+| 4 | Begin HB4 site loop only if S1+S4+S5 green | HB4 |
+| 5 | HB5 profile when large model available | HB5 |
+| 6 | HB6 PWA review slice **only** after gate or override | HB6 |
+| 7 | Never Horizon C until HB7 once | — |
+
+---
+
+## 10. Status log
 
 | Date | Note |
 | :--- | :--- |
-| 2026-07-13 | Plan created post–pilot.4. Package A (LossReport, buildingSMART) closed. HB0–HB7 defined. Sprint = field policy + first evidence. |
+| 2026-07-13 | Plan created post–pilot.4. Package A closed. HB0–HB7 defined. |
+| 2026-07-13 | Reconcile: field-truth A2 LossReport, checklist 5b, sprint S1–S8 detail, risks K1–K10, evidence guardrails, eng E1–E6 (not applied). Cross-links INDEX/README/pilot docs. |
 
-**Related:** [INDEX.md](./INDEX.md) · [l1-supported-workflow.md](./l1-supported-workflow.md) · [ifc-limitations.md](./ifc-limitations.md) · [field-truth-log.md](./field-truth-log.md) · [resource-limits.md](./resource-limits.md)
+**Related:** [INDEX.md](./INDEX.md) · [l1-supported-workflow.md](./l1-supported-workflow.md) · [ifc-limitations.md](./ifc-limitations.md) · [field-truth-log.md](./field-truth-log.md) · [resource-limits.md](./resource-limits.md) · [field-handoff.md](./field-handoff.md)

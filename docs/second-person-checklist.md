@@ -29,6 +29,7 @@
 | 3 | `arx init --name "…"` in a new directory | 5 | | [ ] | |
 | 4 | `arx validate` on fresh init | 2 | | [ ] | |
 | 5 | Import **sample or pilot IFC** (`test_data/sample_building.ifc` from the pin checkout is OK) | 15 | | [ ] | |
+| 5b | Note import **warnings** (any `unmapped_products` or other codes) — do not ignore | 5 | | [ ] | |
 | 6 | `arx validate` after import | 5 | | [ ] | |
 | 7 | If LiDAR in scope: import + set one `review_status` | 20 | | [ ] | |
 | 8 | `arx export --format ifc --output out.ifc` | 10 | | [ ] | |
@@ -69,6 +70,7 @@
 
 ---
 
-After pass/conditional: update `arxos_manifest.md` §1.6 **R5** status and link this completed checklist path (even if stored outside git for privacy).
+After pass/conditional: update `arxos_manifest.md` §1.6 **R5** status and link this completed checklist path (even if stored outside git for privacy).  
+Living plan: [horizon-b-roadmap.md](./horizon-b-roadmap.md) phase **HB1**.
 
 **Related:** [l1-supported-workflow.md](./l1-supported-workflow.md) · [pilot-charter.md](./pilot-charter.md) · [pilot-release.md](./pilot-release.md)

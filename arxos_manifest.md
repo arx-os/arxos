@@ -9,7 +9,7 @@
 | **Engine** | Rust 2021 (CLI + lib) · native IFC · Git SSOT · Foundry contracts · optional WASM/agent/render3d/`blockchain` |
 | **Design philosophy** | Local-first · single `Building` model · Git-native · free to use · pay only for data access |
 | **Document status** | Living plan — full vision locked; compiler + economy spine **lab-complete** (N1–N8 + Horizon A tooling); **Horizon B** (district L1 + site capture path) is current priority (§1.1, §1.5–1.6, §10; `docs/horizon-b-roadmap.md`) |
-| **Last reconciled** | 2026-07-13 (Definition of Working + Horizon B living roadmap; pilot.4) |
+| **Last reconciled** | 2026-07-13 (HB sprint S1–S8 locked; evidence guardrails; pilot.4; no code) |
 | **Audience** | Vision holder, field IT pilots, core maintainers, external builders |
 
 ---

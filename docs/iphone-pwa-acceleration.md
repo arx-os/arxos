@@ -1,6 +1,6 @@
 # iPhone PWA + agent acceleration plan
 
-**Status:** Planning / backlog — **no code applied until approval**  
+**Status:** **Batch A implemented** (P0.1–P0.5) — confirm Pass A on devices before Batch B  
 **North star (accelerated HB6):** Open ArxOS PWA on iPhone on-site → connect to laptop agent (hotspot/LAN) → import LiDAR/files → label/review `proposed` → see LossReport → trigger validated export (`--approved-only`) with human gates.  
 **Pin baseline:** `v2.0.0-pilot.4` @ `659bbd9f` (runtime). Work lands on `main` behind features `web` + `agent`.  
 **Spine rules:** Agent remains **bridge only**; durable write = validate + `building.yaml`; official IFC = same `export::ifc` path; honesty (LossReport) never skipped.
@@ -217,4 +217,5 @@ L1 pin `v2.0.0-pilot.4` **unchanged** until a later pilot.5 if field needs the p
 | Include P1 lidar RPC in first week? | [ ] yes / [ ] after B |
 | ARKit (P2.1) in scope this month? | [ ] no (recommended) / [ ] research only |
 
-**Until you mark yes on Batch A: no code merges.**
+**Batch A:** merged (host config, mobile header, agent hints, field status, `docs/iphone-field-loop.md`).  
+**Next approval:** Batch B (review UI + export) after Pass A.

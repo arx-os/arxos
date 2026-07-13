@@ -41,7 +41,7 @@ Record in the pilot charter:
 
 | Tag | Commit SHA | Date | Notes |
 | :--- | :--- | :--- | :--- |
-| `v2.0.0-pilot.1` | _(after cut: `git rev-list -n1 v2.0.0-pilot.1`)_ | | First L1 eng pin — also record in charter |
+| `v2.0.0-pilot.1` | `ba33e6ba7ebad55a61a54a9dae68d4508dbdd9d7` | 2026-07-12 | First L1 eng pin — record same values in pilot charter |
 
 Update this table in a **follow-up commit after** the tag is cut (do not retag to include the table row).
 

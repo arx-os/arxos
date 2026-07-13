@@ -1147,6 +1147,7 @@ Never:  L3 mainnet until L1 exit · fake R5/R1 evidence · public facility model
 | **2026-07-13 R5 friction fixes** | `arx commit -m`; default git on init + branch `main`; honest hooks message; smoke covers approved-only + git; CI runs l1_smoke |
 | **2026-07-13 pilot.2** | Tag `v2.0.0-pilot.2` @ `d6a4567f` supersedes pilot.1 for new R5 walkthroughs |
 | **2026-07-13 full lab loop** | `scripts/full_lab_loop.sh` + CI: compiler + l1_smoke + Foundry mint/pay E2E; A6 done |
+| **2026-07-13 pilot.3** | Tag `v2.0.0-pilot.3` @ `5449838a`; Deploy.s.sol writes deployed.env; N8 reliable |
 
 ---
 

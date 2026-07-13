@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./ArxosToken.sol" // ArxDenariusToken ($AXD);
+import "./ArxosToken.sol"; // ArxDenariusToken ($AXD)
 import "./ArxRegistry.sol";
 import "./ArxAddresses.sol";
 

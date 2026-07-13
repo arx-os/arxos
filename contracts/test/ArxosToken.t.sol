@@ -39,14 +39,14 @@ contract ArxosTokenTest is Test {
     // ============ Constructor Tests ============
 
     function test_Constructor() public view {
-        assertEq(token.name(), "ArxOS Token");
-        assertEq(token.symbol(), "ARXO");
+        assertEq(token.name(), "Arx Denarius");
+        assertEq(token.symbol(), "AXD");
         assertEq(token.decimals(), 18);
         assertTrue(token.hasRole(token.DEFAULT_ADMIN_ROLE(), admin));
     }
 
     function test_RevertWhen_ConstructorWithZeroAdmin() public {
-        vm.expectRevert("ArxosToken: zero admin");
+        vm.expectRevert("ArxDenariusToken: zero admin");
         new ArxosToken(address(0));
     }
 
@@ -108,13 +108,13 @@ contract ArxosTokenTest is Test {
 
     function test_RevertWhen_MintToZeroAddress() public {
         vm.prank(minter);
-        vm.expectRevert("ArxosToken: zero address");
+        vm.expectRevert("ArxDenariusToken: zero address");
         token.mint(address(0), 1000 ether);
     }
 
     function test_RevertWhen_MintZeroAmount() public {
         vm.prank(minter);
-        vm.expectRevert("ArxosToken: zero amount");
+        vm.expectRevert("ArxDenariusToken: zero amount");
         token.mint(worker, 0);
     }
 
@@ -151,7 +151,7 @@ contract ArxosTokenTest is Test {
         uint256[] memory amounts = new uint256[](4);
         
         vm.prank(minter);
-        vm.expectRevert("ArxosToken: length mismatch");
+        vm.expectRevert("ArxDenariusToken: length mismatch");
         token.mintBatch(recipients, amounts);
     }
 
@@ -160,7 +160,7 @@ contract ArxosTokenTest is Test {
         uint256[] memory amounts = new uint256[](0);
         
         vm.prank(minter);
-        vm.expectRevert("ArxosToken: empty arrays");
+        vm.expectRevert("ArxDenariusToken: empty arrays");
         token.mintBatch(recipients, amounts);
     }
 
@@ -174,7 +174,7 @@ contract ArxosTokenTest is Test {
         amounts[1] = 500 ether;
         
         vm.prank(minter);
-        vm.expectRevert("ArxosToken: zero address");
+        vm.expectRevert("ArxDenariusToken: zero address");
         token.mintBatch(recipients, amounts);
     }
 
@@ -188,7 +188,7 @@ contract ArxosTokenTest is Test {
         amounts[1] = 0;
         
         vm.prank(minter);
-        vm.expectRevert("ArxosToken: zero amount");
+        vm.expectRevert("ArxDenariusToken: zero amount");
         token.mintBatch(recipients, amounts);
     }
 
@@ -251,31 +251,31 @@ contract ArxosTokenTest is Test {
 
     function test_RevertWhen_MintContributionZeroWorker() public {
         vm.prank(minter);
-        vm.expectRevert("ArxosToken: zero worker");
+        vm.expectRevert("ArxDenariusToken: zero worker");
         token.mintContribution(address(0), building, maintainer, treasury, 1000 ether);
     }
 
     function test_RevertWhen_MintContributionZeroBuilding() public {
         vm.prank(minter);
-        vm.expectRevert("ArxosToken: zero building");
+        vm.expectRevert("ArxDenariusToken: zero building");
         token.mintContribution(worker, address(0), maintainer, treasury, 1000 ether);
     }
 
     function test_RevertWhen_MintContributionZeroMaintainer() public {
         vm.prank(minter);
-        vm.expectRevert("ArxosToken: zero maintainer");
+        vm.expectRevert("ArxDenariusToken: zero maintainer");
         token.mintContribution(worker, building, address(0), treasury, 1000 ether);
     }
 
     function test_RevertWhen_MintContributionZeroTreasury() public {
         vm.prank(minter);
-        vm.expectRevert("ArxosToken: zero treasury");
+        vm.expectRevert("ArxDenariusToken: zero treasury");
         token.mintContribution(worker, building, maintainer, address(0), 1000 ether);
     }
 
     function test_RevertWhen_MintContributionZeroAmount() public {
         vm.prank(minter);
-        vm.expectRevert("ArxosToken: zero amount");
+        vm.expectRevert("ArxDenariusToken: zero amount");
         token.mintContribution(worker, building, maintainer, treasury, 0);
     }
 
@@ -319,7 +319,7 @@ contract ArxosTokenTest is Test {
 
     function test_RevertWhen_BurnZeroAmount() public {
         vm.prank(worker);
-        vm.expectRevert("ArxosToken: zero amount");
+        vm.expectRevert("ArxDenariusToken: zero amount");
         token.burn(0);
     }
 
@@ -368,7 +368,7 @@ contract ArxosTokenTest is Test {
 
     function test_RevertWhen_BurnFromZeroAmount() public {
         vm.prank(user1);
-        vm.expectRevert("ArxosToken: zero amount");
+        vm.expectRevert("ArxDenariusToken: zero amount");
         token.burnFrom(worker, 0);
     }
 
@@ -471,7 +471,7 @@ contract ArxosTokenTest is Test {
         return keccak256(
             abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256(bytes("ArxOS Token")),
+                keccak256(bytes("Arx Denarius")),
                 keccak256(bytes("1")),
                 block.chainid,
                 address(token)
@@ -595,7 +595,7 @@ contract ArxosTokenTest is Test {
         address to = address(0xB0B);
         (uint8 v2, bytes32 r2, bytes32 s2) = signTransferAuthorization(privateKey, authorizer, to, 100, 0, block.timestamp + 1 hours, nonce);
         
-        vm.expectRevert("ArxosToken: authorization used");
+        vm.expectRevert("ArxDenariusToken: authorization used");
         token.transferWithAuthorization(authorizer, to, 100, 0, block.timestamp + 1 hours, nonce, v2, r2, s2);
     }
 }

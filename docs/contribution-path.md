@@ -31,7 +31,7 @@ arx contribute --output contribution.json
 
 See `ContributionPackage` in `src/contribution/package.rs`:
 
-- `building_id` — model UUID (Registry candidate)
+- `building_id` — model UUID; **must** match `ArxRegistry.registerBuilding(buildingId, …)`
 - `merkle_root_hex` — primary commitment for oracle `ContributionProof.merkleRoot`
 - `content_hash_hex` — YAML body hash
 - `accuracy` / `completeness` — 0–100 quality
@@ -68,16 +68,37 @@ Helpers:
 
 Local deploy sketch: `scripts/local_oracle_e2e.sh` (requires `anvil` + `forge`).
 
-Mint finalization still follows contract rules: **2-of-3** confirms + **24h** delay (use Foundry cheatcodes in tests to warp time).
+Mint finalization follows contract rules: **2-of-3** confirms + **24h** delay.
+
+### On-chain E2E (Foundry) — **Done**
+
+```bash
+cd contracts
+forge test --match-contract BuildingContributionE2E -vv
+# Full suite:
+forge test
+```
+
+`BuildingContributionE2E` proves:
+
+1. Register worker + **building UUID** (`Building.id` / package `building_id`)
+2. Stake two oracles
+3. Worker-signed proof over building merkle root + quality
+4. Both oracles propose the **same** proof
+5. Warp 24h → finalize → **$AXD mint 70/10/10/10** (quality-scaled)
+6. Unregistered UUID reverts
+
+Oracle proof hash is locked on first propose (second oracle cannot swap merkle roots).
 
 ## Remaining
 
 | Step | Status |
 | :--- | :--- |
-| EIP-712 sign package as Solidity `ContributionProof` | **Done** (`--sign`, `from_package`) |
-| Submit `proposeContribution` | **Done** (CLI `--submit`; needs live registry/stake) |
-| One-shot Anvil mint E2E (register+stake+2 oracles+warp) | Partial — script sketch; full automation open |
-| Buyer pay-for-query in $AXD | Open |
+| EIP-712 sign package as Solidity `ContributionProof` | **Done** |
+| Submit `proposeContribution` | **Done** (CLI + contracts) |
+| Building UUID ↔ Registry `buildingId` E2E mint | **Done** (Foundry `BuildingContributionE2E`) |
+| Live Anvil script auto-register/stake/mint | Partial — `scripts/local_oracle_e2e.sh` + forge E2E is source of truth |
+| Buyer pay-for-query in $AXD | Open (N5) |
 
 ## Module map
 

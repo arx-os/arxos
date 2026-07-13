@@ -101,8 +101,8 @@ No longer “ignore forever.” Built **on** the compiler spine:
 | :--- | :--- | :---: |
 | N1 | Building commitment package from validated model | **Done** (`arx contribute`, `src/contribution/`) |
 | N2 | EIP-712 proof matches Solidity `ContributionProof` | **Done** (`from_package` + `--sign`) |
-| N3 | Local Anvil: package → oracle propose | **Partial** (`--submit` + deploy script; full mint needs 2-of-3 + delay) |
-| N4 | Registry worker + building identities | Contracts exist; CLI wiring **Open** |
+| N3 | Package → 2-of-3 propose → finalize mint | **Done** (Foundry `BuildingContributionE2E`; CLI propose path) |
+| N4 | Registry worker + building UUID identities | **Done** in E2E (building_id = Building UUID); CLI still needs live addresses |
 | N5 | Data-buyer payment path ($AXD) | **Open** |
 | N6 | Multi-peer via Git remotes (not CRDT-first) | Process + docs; forge-agnostic |
 
@@ -969,11 +969,11 @@ test_data/             Mid-size IFC samples
 
 ### 10.1 This week (operating cadence)
 
-1. ~~**N1–N3 (partial)**~~ package + EIP-712 sign + propose CLI **Done**.
-2. **N3 residual** — automated Anvil: register worker/building, stake, 2nd oracle, time-warp finalize/mint.
-3. **N4** — wire Registry buildingId/worker into contribute flow.
+1. ~~**N1–N4 reward spine (Foundry E2E)**~~ **Done**.
+2. **N5** — data-buyer payment path ($AXD) for query/access.
+3. Optional: Anvil ops script that prints registered addresses for CLI `--submit`.
 4. Peripherals (PWA/hardware/3D): **ask before expand**.
-5. Field vendor IFC remains optional until you supply files.
+5. Field vendor IFC when you supply files.
 
 ### 10.2 Then (critical path)
 
@@ -1005,6 +1005,7 @@ B1 (first vendor fixture) → B2 (CI goldens) → continue critical path
 | **2026-07 B/C/D** | vendor_ifc_test + limitations; review_status + export --approved-only; lidar-confidence + pilot-runbook/install |
 | **2026-07 full product contribution** | Vision locked; N1 package path |
 | **2026-07 N2–N3** | EIP-712 from package; `arx contribute --sign/--submit`; local_oracle_e2e sketch |
+| **2026-07 N3/N4 E2E** | Fixed oracle proof lock; BuildingContributionE2E mint; ArxosToken alias; forge suite green |
 
 ---
 

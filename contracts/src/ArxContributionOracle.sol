@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
-import "./ArxosToken.sol" // ArxDenariusToken ($AXD);
+import "./ArxosToken.sol"; // ArxDenariusToken ($AXD)
 import "./ArxRegistry.sol";
 import "./ArxAddresses.sol";
 import "./ArxOracleStaking.sol";
@@ -236,19 +236,20 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
         require(registry.isWorkerActive(worker), "ArxContributionOracle: worker not active");
         require(registry.isBuildingRegistered(buildingId), "Building not registered");
 
-        // Verify proof
+        // Verify proof (worker EIP-712 signature)
         _verifyProof(proof, worker, signature);
 
-        // Generate unique contribution ID
+        // Contribution identity: building + worker + amount (same claim across oracles)
         bytes32 contributionId = keccak256(abi.encodePacked(buildingId, worker, amount));
-
-        // Store proof hash for replay protection at finalization
-        contributionProofHashes[contributionId] = proofHash;
-
         PendingContribution storage pending = pendingContributions[contributionId];
 
-        // First proposal initializes the contribution
+        // First oracle initializes the claim and locks the proof hash.
+        // Later oracles must submit the *same* proof (multi-oracle consensus, not new claims).
         if (pending.confirmations == 0) {
+            require(!usedProofs[proofHash], "ArxContributionOracle: proof already used");
+            usedProofs[proofHash] = true;
+            contributionProofHashes[contributionId] = proofHash;
+
             pending.worker = worker;
             pending.building = registry.getBuildingWallet(buildingId);
             pending.buildingId = buildingId;
@@ -258,21 +259,17 @@ contract ArxContributionOracle is AccessControl, ReentrancyGuard, EIP712 {
             pending.proposedAt = uint40(block.timestamp);
 
             emit ContributionProposed(contributionId, worker, buildingId, amount, msg.sender);
+        } else {
+            require(
+                contributionProofHashes[contributionId] == proofHash,
+                "ArxContributionOracle: proof mismatch"
+            );
+            require(!pending.finalized, "ArxContributionOracle: already finalized");
+            require(!pending.disputed, "ArxContributionOracle: contribution disputed");
         }
 
-        // Oracle confirms
         require(staking.hasMinStake(msg.sender), "ArxContributionOracle: insufficient stake");
         require(!pending.confirmed[msg.sender], "ArxContributionOracle: already confirmed");
-        
-        // Replay protection:
-        // 1. If new contribution (confirms == 0), proof must be unused
-        // 2. If existing, proof must match the one used to initialize it
-        if (pending.confirmations == 0) {
-            require(!usedProofs[proofHash], "ArxContributionOracle: proof already used");
-            usedProofs[proofHash] = true;
-        } else {
-            require(contributionProofHashes[contributionId] == proofHash, "Proof mismatch");
-        }
 
         pending.confirmed[msg.sender] = true;
         pending.confirmations++;

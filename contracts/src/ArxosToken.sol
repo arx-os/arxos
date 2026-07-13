@@ -442,3 +442,12 @@ contract ArxDenariusToken is ERC20, AccessControl, EIP712, IERC3009 {
         return block.timestamp;
     }
 }
+
+/**
+ * @title ArxosToken
+ * @notice Compatibility alias for deploy scripts and tests that still import `ArxosToken`.
+ * @dev Same implementation as {@link ArxDenariusToken} ($AXD).
+ */
+contract ArxosToken is ArxDenariusToken {
+    constructor(address admin) ArxDenariusToken(admin) {}
+}

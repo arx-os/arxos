@@ -210,6 +210,22 @@ contract ArxContributionTest is Test {
         return abi.encodePacked(r, s, v);
     }
 
+
+    /// @dev Multi-oracle consensus: every oracle submits the same worker-signed proof.
+    function proposeWithOracles(
+        address[] memory oracles,
+        string memory buildingId,
+        address worker,
+        uint256 amount,
+        ArxContributionOracle.ContributionProof memory proof,
+        bytes memory signature
+    ) internal {
+        for (uint256 i = 0; i < oracles.length; i++) {
+            vm.prank(oracles[i]);
+            oracle.proposeContribution(buildingId, worker, amount, proof, signature);
+        }
+    }
+
     function calculateContributionId(
         string memory buildingId,
         address worker,
@@ -280,34 +296,20 @@ contract ArxContributionTest is Test {
 
     function test_ConfirmContribution() public {
         uint256 amount = 1000 ether;
-        uint256 timestamp = block.timestamp;
-        ArxContributionOracle.ContributionProof memory proof1 = createProof(timestamp);
-        ArxContributionOracle.ContributionProof memory proof2 = createProof(timestamp + 1);
-        
-        // Oracle 1 proposes
-        bytes memory sig1 = signProof(proof1, WORKER1_KEY); 
-        bytes32 contributionId = calculateContributionId(BUILDING_ID, worker1, amount, proof1);
+        ArxContributionOracle.ContributionProof memory proof = createProof(block.timestamp);
+        bytes memory sig = signProof(proof, WORKER1_KEY);
+        bytes32 contributionId = calculateContributionId(BUILDING_ID, worker1, amount, proof);
 
         vm.prank(oracle1);
-        oracle.proposeContribution(
-            BUILDING_ID,
-            worker1,
-            amount,
-            proof1,
-            sig1
-        );
-        
-        // Oracle 2 confirms with different proof
-        bytes memory sig2 = signProof(proof2, WORKER1_KEY);
-        
+        oracle.proposeContribution(BUILDING_ID, worker1, amount, proof, sig);
+
         vm.expectEmit(true, true, false, true);
         emit ContributionConfirmed(contributionId, oracle2, 2);
-        
+
         vm.prank(oracle2);
-        oracle.proposeContribution(BUILDING_ID, worker1, amount, proof2, sig2);
-        
-        // Verify confirmations increased
-        (, , , uint256 confirmations, ,) = oracle.getContribution(contributionId);
+        oracle.proposeContribution(BUILDING_ID, worker1, amount, proof, sig);
+
+        (, , , uint256 confirmations, , ) = oracle.getContribution(contributionId);
         assertEq(confirmations, 2);
     }
 
@@ -382,86 +384,48 @@ contract ArxContributionTest is Test {
     function test_FinalizeContribution() public {
         uint256 amount = 1000 ether;
         uint256 timestamp = block.timestamp;
-        
-        // Oracle 1 proposes with first proof
-        ArxContributionOracle.ContributionProof memory proof1 = createProof(timestamp);
-        bytes memory sig1 = signProof(proof1, WORKER1_KEY);
-        bytes32 contributionId = calculateContributionId(BUILDING_ID, worker1, amount, proof1);
-        
+        ArxContributionOracle.ContributionProof memory proof = createProof(timestamp);
+        bytes memory sig = signProof(proof, WORKER1_KEY);
+        bytes32 contributionId = calculateContributionId(BUILDING_ID, worker1, amount, proof);
+
         vm.prank(oracle1);
-        oracle.proposeContribution(
-            BUILDING_ID,
-            worker1,
-            amount,
-            proof1,
-            sig1
-        );
-        
-        // Oracle 2 confirms with different proof (different timestamp to avoid replay)
-        ArxContributionOracle.ContributionProof memory proof2 = createProof(timestamp + 1);
-        bytes memory sig2 = signProof(proof2, WORKER1_KEY);
-        
+        oracle.proposeContribution(BUILDING_ID, worker1, amount, proof, sig);
+
         vm.prank(oracle2);
-        oracle.proposeContribution(
-            BUILDING_ID,
-            worker1,
-            amount,
-            proof2,
-            sig2
-        );
-        
-        // Fast forward past delay
+        oracle.proposeContribution(BUILDING_ID, worker1, amount, proof, sig);
+
         vm.warp(timestamp + 24 hours + 1);
-        
+
         uint256 workerBalanceBefore = token.balanceOf(worker1);
         uint256 buildingBalanceBefore = token.balanceOf(buildingWallet);
         uint256 maintainerBalanceBefore = token.balanceOf(maintainerVault);
         uint256 treasuryBalanceBefore = token.balanceOf(treasury);
-        
+
         vm.expectEmit(true, true, false, true);
         emit ContributionFinalized(contributionId, worker1, amount);
-        
+
         oracle.finalizeContribution(contributionId);
-        
-        // Verify 70/10/10/10 distribution
+
         assertEq(token.balanceOf(worker1), workerBalanceBefore + (amount * 70 / 100));
         assertEq(token.balanceOf(buildingWallet), buildingBalanceBefore + (amount * 10 / 100));
         assertEq(token.balanceOf(maintainerVault), maintainerBalanceBefore + (amount * 10 / 100));
         assertEq(token.balanceOf(treasury), treasuryBalanceBefore + (amount * 10 / 100));
-        
-        // Verify finalized state
+
         (, , , , , bool finalized) = oracle.getContribution(contributionId);
         assertTrue(finalized);
     }
 
     function test_RevertWhen_FinalizeBeforeDelay() public {
-        ArxContributionOracle.ContributionProof memory proof1 = createProof(block.timestamp);
-        ArxContributionOracle.ContributionProof memory proof2 = createProof(block.timestamp + 1);
-        bytes memory signature1 = signProof(proof1, WORKER1_KEY);
-        bytes memory signature2 = signProof(proof2, WORKER1_KEY);
-        bytes32 contributionId = calculateContributionId(BUILDING_ID, worker1, 1000 ether, proof1);
-        
+        ArxContributionOracle.ContributionProof memory proof = createProof(block.timestamp);
+        bytes memory signature = signProof(proof, WORKER1_KEY);
+        bytes32 contributionId = calculateContributionId(BUILDING_ID, worker1, 1000 ether, proof);
+
         vm.prank(oracle1);
-        oracle.proposeContribution(
-            BUILDING_ID,
-            worker1,
-            1000 ether,
-            proof1,
-            signature1
-        );
-        
+        oracle.proposeContribution(BUILDING_ID, worker1, 1000 ether, proof, signature);
+
         vm.prank(oracle2);
-        oracle.proposeContribution(
-            BUILDING_ID,
-            worker1,
-            1000 ether,
-            proof2,
-            signature2
-        );
-        
-        // Try to finalize before delay
-        vm.warp(block.timestamp + 12 hours);
-        
+        oracle.proposeContribution(BUILDING_ID, worker1, 1000 ether, proof, signature);
+
         vm.expectRevert("ArxContributionOracle: finalization delay not met");
         oracle.finalizeContribution(contributionId);
     }
@@ -507,8 +471,8 @@ contract ArxContributionTest is Test {
             BUILDING_ID,
             worker1,
             1000 ether,
-            proof2,
-            signature2
+            proof1,
+            signature1
         );
         
         vm.warp(block.timestamp + 24 hours + 1);
@@ -587,8 +551,8 @@ contract ArxContributionTest is Test {
             BUILDING_ID,
             worker1,
             1000 ether,
-            proof2,
-            signature2
+            proof1,
+            signature1
         );
         
         vm.warp(block.timestamp + 24 hours + 1);
@@ -603,52 +567,23 @@ contract ArxContributionTest is Test {
 
     function test_ThreeOracleConsensus() public {
         uint256 amount = 5000 ether;
-        ArxContributionOracle.ContributionProof memory proof1 = createProof(block.timestamp);
-        ArxContributionOracle.ContributionProof memory proof2 = createProof(block.timestamp + 1);
-        ArxContributionOracle.ContributionProof memory proof3 = createProof(block.timestamp + 2);
-        
-        bytes memory signature1 = signProof(proof1, WORKER1_KEY);
-        bytes memory signature2 = signProof(proof2, WORKER1_KEY);
-        bytes memory signature3 = signProof(proof3, WORKER1_KEY);
-        
-        bytes32 contributionId = calculateContributionId(BUILDING_ID, worker1, amount, proof1);
-        
-        // All three oracles confirm with distinct proofs
+        ArxContributionOracle.ContributionProof memory proof = createProof(block.timestamp);
+        bytes memory signature = signProof(proof, WORKER1_KEY);
+        bytes32 contributionId = calculateContributionId(BUILDING_ID, worker1, amount, proof);
+
         vm.prank(oracle1);
-        oracle.proposeContribution(
-            BUILDING_ID,
-            worker1,
-            amount,
-            proof1,
-            signature1
-        );
-        
+        oracle.proposeContribution(BUILDING_ID, worker1, amount, proof, signature);
         vm.prank(oracle2);
-        oracle.proposeContribution(
-            BUILDING_ID,
-            worker1,
-            amount,
-            proof2,
-            signature2
-        );
-        
+        oracle.proposeContribution(BUILDING_ID, worker1, amount, proof, signature);
         vm.prank(oracle3);
-        oracle.proposeContribution(
-            BUILDING_ID,
-            worker1,
-            amount,
-            proof3,
-            signature3
-        );
-        
-        // Verify 3 confirmations
+        oracle.proposeContribution(BUILDING_ID, worker1, amount, proof, signature);
+
         (, , , uint256 confirmations, ,) = oracle.getContribution(contributionId);
         assertEq(confirmations, 3);
-        
-        // Should still be able to finalize
+
         vm.warp(block.timestamp + 24 hours + 1);
         oracle.finalizeContribution(contributionId);
-        
+
         (, , , , , bool finalized) = oracle.getContribution(contributionId);
         assertTrue(finalized);
     }

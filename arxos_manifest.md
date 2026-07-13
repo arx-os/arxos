@@ -3,14 +3,14 @@
 | Property | Details |
 | :--- | :--- |
 | **Document type** | Engineering design + implementation plan (source of truth for build priority) |
-| **Product name** | ArxOS (“Git for Buildings”) |
+| **Product name** | ArxOS (“Git for Buildings” / version control for the built world) |
 | **Version (crate)** | 2.0.0 (`arx` binary / `arxos` lib) |
-| **Primary goal** | A working local-first **building compiler**: field/BIM inputs → canonical model → YAML/Git → IFC (and back) |
-| **Engine** | Rust 2021 (native CLI + lib) + optional WASM (PWA), agent, render3d, blockchain features |
-| **Design philosophy** | Local-first, database-less, Git-native, single domain model |
-| **Document status** | Living plan — codebase + **operating program** (tracks A–F + **I integrity**, pilot gate, refuse list) reconciled after architecture convergence **and brutal honesty audit** |
-| **Last reconciled** | 2026-07-12 (integrity debt inventory §2.6 closed the gap vs brutal review) |
-| **Audience** | Core maintainers and external development teams |
+| **Primary goal** | **Full product:** free local software to map buildings as code + peer review + **$AXD rewards** for verified as-built data + **buyer market** for data access |
+| **Engine** | Rust 2021 (CLI + lib) · native IFC · Git SSOT · Foundry contracts · optional WASM/agent/render3d/`blockchain` |
+| **Design philosophy** | Local-first · single `Building` model · Git-native · free to use · pay only for data access |
+| **Document status** | Living plan — full vision locked; compiler + economy spine **lab-complete** (N1–N5); path to live loop is Horizon A–C (§1.5, §10) |
+| **Last reconciled** | 2026-07-13 (post N1–N5 economy spine + field-loop strategy) |
+| **Audience** | Vision holder, core maintainers, external builders |
 
 ---
 
@@ -18,50 +18,71 @@
 
 This file is the engineering source of truth for:
 
-1. **What ArxOS is trying to be** (final goal).
-2. **What exists today** (honest maturity after recent refactor).
-3. **Engineering design** of the system as implemented and as targeted.
-4. **A phased plan** for remaining work to reach a real pilot (including **Track I integrity**).
-5. **Handoff criteria**, risks, non-goals, and the **brutal-review integrity ledger** (§2.6).
+1. **What ArxOS is** (vision + definition of working).
+2. **What exists today** (honest maturity — lab vs field).
+3. **System design** (compiler + contribution + oracle + payment).
+4. **Phased plan** to a live closed loop (not feature sprawl).
+5. **Handoff criteria**, risks, non-goals, integrity ledger (§2.6).
 
-It is intentionally blunt. Marketing claims are secondary to engineering truth. If a claim in this document conflicts with §2.6 open blockers, **§2.6 wins** until closed.
+It is intentionally blunt. Marketing is secondary to engineering truth.
 
 ---
 
-## 0.1 Full product vision (locked 2026-07)
+## 0.1 Product vision (locked)
 
 **One sentence:** Version control for the built world — free to use; peer built, reviewed, and rewarded.
+
+### Why buildings
+
+Most buildings are **as-built black holes**. That kills and injures workers (e.g. live electrical work without circuit truth), forces contractors to price **unknowns**, and leaves infrastructure builders underpaid for documenting reality. ArxOS makes as-built data a durable **open ledger** of “A Building’s Life,” and **financially rewards** those who map it.
+
+### Principles → engineering
 
 | Principle | Engineering consequence |
 | :--- | :--- |
 | Free software | Compiler/CLI is not paywalled |
-| Peer built + reviewed | Field capture + `review_status` + validation |
-| Rewarded | Verified **building data** → contribution package → oracle mint $AXD |
-| Data market | Buyers pay $AXD for data access; demand drives token |
-| Local-first | World runs capture nodes; maintainers do not host every building |
-| Git collaboration | Any Git host; GitHub is convenience, not the product lock-in |
+| Peer built + reviewed | Capture + `review_status` + validation hard gates |
+| Rewarded labor | Verified **building data** → package → oracle mint **$AXD** |
+| Data market | Buyers pay **$AXD** for access; demand supports token |
+| Local-first / edge | World runs capture nodes; maintainers cannot host every building |
+| Git collaboration | Any Git host; GitHub is convenience, not lock-in |
+| Standard ambition | As standard as building code for representing the building itself |
 
-### Contribution root of truth (architect defaults — locked)
+### Locked architect defaults
 
-1. **Primary labor unit:** validated `Building` / `building.yaml` (optional Git commit oid).
-2. **`buildingId`:** building UUID string (Registry).
+1. **Primary labor unit:** validated `Building` / `building.yaml` (optional Git commit). Not sensor `DeviceState` as primary.
+2. **`buildingId`:** building UUID (= Registry `buildingId`).
 3. **Quality:** validation + LiDAR review coverage (`src/contribution/quality.rs`).
-4. **Chain bring-up:** Anvil E2E after package path is solid → public testnet later.
-5. **Oracles v1:** 2-of-3 as in contracts; operable by ArxOS keys for bring-up.
-6. **Peripherals:** ask before expanding PWA / hardware / 3D.
+4. **Chain bring-up:** Foundry E2E green → Anvil/live env script → public testnet → Base.
+5. **Oracles v1:** 2-of-3; ArxOS keys for bring-up, external stakers later.
+6. **Peripherals:** ask before expanding PWA / hardware / 3D / multi-building campus layouts.
 
-### Full-product spine (target)
+### Full-product spine
 
 ```text
-field work → Building → building.yaml / Git → contribution.json
-         → EIP-712 proof → Oracle (2-of-3) → mint $AXD (70/10/10/10)
-         → data buyers pay $AXD for access
+FIELD (free software)
+  LiDAR / IFC / text → Building → review → building.yaml + Git
+           │
+           ▼ arx contribute
+  contribution.json (merkle + quality + building UUID)
+           │
+           ▼ EIP-712 + oracles (2-of-3) + delay
+  mint $AXD  (70 worker / 10 building / 10 maintainers / 10 treasury)
+           │
+BUYER MARKET
+  arx access quote → pay $AXD → AccessPaid → host gates data delivery
 ```
 
-**Implemented now:** left half through `arx contribute` / `src/contribution/`.  
-**Next:** sign + submit package to local Oracle; payment router for buyers.
+| Segment | Lab status | Live / field status |
+| :--- | :---: | :---: |
+| Compiler (G1–G8 core) | **Done** (synthetic CI) | Field unproven |
+| Contribute package (N1) | **Done** | Needs deploy env |
+| Sign / propose (N2–N3) | **Done** (Foundry + CLI) | Needs live addresses + ops |
+| Registry UUID (N4) | **Done** (Foundry E2E) | Needs register helpers |
+| Buyer access (N5) | **Done** (Foundry + CLI) | Needs host gate on `AccessPaid` |
+| Multi-peer Git (N6) | Partial (docs) | Process only |
 
-See `docs/contribution-path.md`.
+See `docs/contribution-path.md`, `docs/data-access.md`.
 
 ---
 
@@ -69,78 +90,102 @@ See `docs/contribution-path.md`.
 
 ### 1.1 Product mission
 
-ArxOS treats a building as **versioned structured state**, not a row in a cloud database.
+ArxOS treats a building as **versioned structured state** — an open ledger of as-built truth — not a row in a cloud database.
 
-**Working** means a field or facilities team can:
+**Working (full product)** means all of the following can happen for a real building:
 
-1. Ingest reality (LiDAR and/or existing IFC) on local hardware.
-2. Hold a single **canonical building model** in memory.
-3. Persist it as **Git-diffable YAML** (`building.yaml`).
-4. Export/import **IFC** without losing Arx identity, structure, or LiDAR metadata (within a defined fidelity contract).
-5. Correct the model via **text/AR command scripts** (and later richer AR UI).
-6. Review losses/warnings; commit; hand IFC or YAML to other tools or teammates.
+1. **Map** — ingest LiDAR and/or IFC on local hardware into one canonical model.
+2. **Persist** — durable `building.yaml` + Git (any host).
+3. **Interchange** — export/import IFC within the fidelity contract (identity, structure, LiDAR metadata).
+4. **Correct & review** — text/AR edits; LiDAR autos start `proposed`; humans accept/reject before approved export.
+5. **Reward** — verified model labor becomes a contribution commitment; oracles mint **$AXD**.
+6. **Transact** — a data buyer pays **$AXD** for access; data is only released after payment proof.
 
-### 1.2 Success criteria (MVP “works”)
+Compiler without reward is incomplete for the vision. Reward without trusted as-built data is hollow.
+
+### 1.2 Success criteria — compiler (trust root)
 
 | ID | Criterion | Measurable exit | Status (2026-07) |
 | :--- | :--- | :--- | :---: |
-| G1 | Single ingest spine | Supported writers use `finalize_ingest` / `persist_building` + validate | **Done** (validated public save; I4 closed) |
-| G2 | Canonical model freeze | YAML + envelope schema versioned; breaking changes require bump | **Done** (YAML schema_version=1 + envelope) |
-| G3 | IFC L0–L2 for Arx-authored data | Automated tests pass (identity, LiDAR Psets, box geometry, props) | **Done** (automated) |
-| G4 | LiDAR → YAML → IFC → YAML | Documented CLI workflow; CI on synthetic path | **Partial** (synthetic CI; field unproven) |
-| G5 | Text/AR edits | `arx edit` applies, validates, saves; WASM can apply script to envelope | **Done** (CLI); **Partial** (WASM) |
-| G6 | Human-in-the-loop | LiDAR structure reviewable/correctable before IFC is “approved” | **Partial** (edit/query exist; no review_status productization) |
-| G7 | Pilot scale path | Documented limits + profiled path for ~250k ft² | **Open** |
-| G8 | One supported IFC stack | Native STEP parser is the only production path | **Done** (legacy removed) |
+| G1 | Single ingest spine | Writers use finalize / validate / save gates | **Done** |
+| G2 | YAML schema versioned | `schema_version: 1` on building document | **Done** |
+| G3 | IFC L0–L2 Arx-authored | Automated identity/enrichment/geometry tests | **Done** |
+| G4 | LiDAR → YAML → IFC path | Synthetic CI + CLI workflow | **Partial** (field unproven) |
+| G5 | Text/AR edits | `arx edit` + validate/save | **Done** (CLI); WASM partial |
+| G6 | Human-in-the-loop LiDAR | `review_status` + export warn / `--approved-only` | **Done** (lab) |
+| G7 | Pilot scale path | Runbook + profiled ~250k ft² | **Open** (docs partial) |
+| G8 | One IFC stack | Native STEP only | **Done** |
 
-### 1.3 Success criteria (full product: “network works”)
-
-No longer “ignore forever.” Built **on** the compiler spine:
+### 1.3 Success criteria — economy / network
 
 | ID | Criterion | Status |
 | :--- | :--- | :---: |
-| N1 | Building commitment package from validated model | **Done** (`arx contribute`, `src/contribution/`) |
-| N2 | EIP-712 proof matches Solidity `ContributionProof` | **Done** (`from_package` + `--sign`) |
-| N3 | Package → 2-of-3 propose → finalize mint | **Done** (Foundry `BuildingContributionE2E`; CLI propose path) |
-| N4 | Registry worker + building UUID identities | **Done** in E2E (building_id = Building UUID); CLI still needs live addresses |
-| N5 | Data-buyer payment path ($AXD) | **Done** (`arx access`, DataAccessPaymentE2E) |
-| N6 | Multi-peer via Git remotes (not CRDT-first) | Process + docs; forge-agnostic |
+| N1 | Building commitment package from validated model | **Done** |
+| N2 | EIP-712 `ContributionProof` from package | **Done** |
+| N3 | 2-of-3 propose → finalize mint (quality-scaled 70/10/10/10) | **Done** (Foundry) |
+| N4 | Registry: worker + building UUID | **Done** (Foundry); live CLI env open |
+| N5 | Buyer `payForAccess` $AXD path | **Done** (Foundry + `arx access`) |
+| N6 | Multi-peer via Git remotes (not CRDT-first) | **Partial** |
+| N7 | **Host gates data on `AccessPaid`** | **Open** — critical for market truth |
+| N8 | **One-command local deploy env** (addresses + register helpers) | **Open** — Horizon A |
+| N9 | **One real-building closed loop** (field) | **Open** — Horizon B |
 
-Compiler G1–G8 remain the trust root. Network without N1 is invalid.
+### 1.4 Explicit non-goals (near term)
 
-### 1.4 Explicit non-goals (MVP)
+- Full BIM CAD parity (materials, openings, every IFC class).
+- Survey-grade auto reconstruction without human review.
+- NL “chat to edit building” as primary interface.
+- Browser-only full campus LiDAR.
+- Multi-device CRDT collaboration before Git multi-remote is boring.
+- Expanding peripherals (PWA/hardware/3D) before Horizon A–B exit.
 
-- Full BIM CAD parity (materials, openings, full MEP systems, every IFC class).
-- Survey-grade automatic reconstruction without human review.
-- Natural-language “chat to edit building” as a primary interface.
-- Browser-only processing of full campus LiDAR.
-- Multi-device CRDT collaboration in v1.
-- Shipping tokenomics as part of pilot software.
+### 1.5 Path to “it works” (horizons)
+
+```text
+HORIZON A — Lab → live local (current priority)
+  Deploy env script → .env.arx addresses
+  Register worker + building UUID from building.yaml
+  contribute --sign/--submit + second oracle + finalize (test warp or real delay)
+  access pay; document host must check AccessPaid
+  Exit: cold engineer completes mint + pay without reading Solidity
+
+HORIZON B — First real building (vision holder field test)
+  One site, real as-built pain, capture node + reviewer (+ buyer if possible)
+  Measure: unknowns reduced? mint/pay understandable?
+  Exit: one successful closed loop on messy real data; fix only blockers
+
+HORIZON C — Network scale (after B works ≥1–2 times)
+  External oracles, public testnet → Base
+  Host product that enforces payment before data
+  Optional: own forge; more vendor IFC; multi-building later
+```
+
+**Rule:** Do not start Horizon C feature work until Horizon B has succeeded at least once.
 
 ---
 
 ## 2. Current state assessment (honest)
 
-### 2.1 Scorecard (post-convergence + brutal honesty audit)
+### 2.1 Scorecard (2026-07-13 — lab vs field)
 
 | Link | Score | Truth |
 | :--- | :---: | :--- |
-| Domain model | **8/10** | Clear `Building` hierarchy; durable `ArxAddress` on equipment |
-| YAML persistence | **8.5/10** | Single `building.yaml` SSOT; validated public save; no `schema_version` on Building doc yet (A1) |
-| IFC native adapter | **8/10** | Only stack; goldens for Arx-shaped + sample fixtures; not vendor-complete |
-| LiDAR pipeline | **6.5/10** | Synthetic/CI path solid; field heuristics still unproven |
-| Text/AR DSL | **7.5/10** | Real protocol via `arx edit` + ingest text |
-| PWA / WASM | **4/10** | Envelope + IFC import path; not pilot-ready review product |
-| Merge + validation | **8.5/10** | Hard gate on production save paths (`save_building_at` / `persist_building`) |
-| Agent / WS | **4.5/10** | IFC import/export + git RPC; not full model product |
-| Contracts / token | n/a | Parallel under `contracts/`; not compiler MVP |
-| CLI surface | **7.5/10** | Spine real; spatial Query/Validate/Transform wired; unimplemented subcommands hard-error (no theater) |
-| CI discipline | **7.5/10** | `compiler-ci.yml` gate; clippy `-D warnings` green (unwrap debt allow-listed + documented) |
-| Process / recoverability | **7/10** | Integrity close-out committed; prefer small PRs going forward |
-| **Compiler spine overall** | **~7.5/10** | Spine + integrity blockers closed; pilot packaging still open |
-| **Field pilot readiness** | **~5/10** (target **~7/10** at pilot gate §7.4) | Needs runbook walkthrough, vendor IFC, LiDAR review, scale profiling |
+| Domain model | **8/10** | Building hierarchy; durable `ArxAddress`; review_status |
+| YAML + Git SSOT | **8.5/10** | Single `building.yaml`; `schema_version: 1`; validated saves |
+| IFC native | **8/10** | Only stack; Arx goldens + SketchUp/HVAC non-panic samples |
+| LiDAR | **6.5/10** | Synthetic CI + proposed review; **field unproven** |
+| Text/AR DSL | **8/10** | `arx edit` + review_status keys |
+| Contribution / reward | **7.5/10** | Package + EIP-712 + Foundry mint E2E; **live env incomplete** |
+| Buyer access market | **7/10** | Router E2E + `arx access`; **no host gate on AccessPaid yet (N7)** |
+| PWA / WASM | **4/10** | Optional; not Horizon A blocker |
+| Contracts ($AXD) | **8/10** | Foundry suite green (~150 tests); oracle proof lock fixed |
+| CLI surface | **8/10** | Compiler + contribute + access; spatial honesty |
+| CI | **8/10** | Compiler CI + forge; clippy green (unwrap allow-listed) |
+| **Lab closed-loop** | **~7.5/10** | N1–N5 proven in tests/CLI shapes |
+| **Live closed-loop** | **~3/10** | Needs N7–N8 + field (Horizon A–B) |
+| **Field readiness** | **~5/10** | Runbook outline exists; real building not run |
 
-**Audit rule:** Scores reflect **what a second engineer would experience if they ran the documented CI and CLI today**, not design intent alone.
+**Audit rule:** Scores reflect what a second engineer experiences **today** (CI, CLI, forge)—not aspiration.
 
 ### 2.2 Architecture convergence completed (do not re-open without cause)
 
@@ -169,47 +214,38 @@ The following dual authorities were **eliminated** in the 2026-07 convergence wo
 - **Persistence**: `{base}/building.yaml` via `BuildingYamlSerializer`; Git via `BuildingGitManager`.
 - **Addressing**: `ArxAddress` on equipment; `arx migrate` backfill; `arx query` glob match.
 - **Automated spine tests**: `compiler_spine_test`, `ifc_compiler_path_test`, `bidirectional_tests`, `lidar_tests`, `ifc_native_tests`.
-- **Compiler CLI spine commands** (import/edit/export/validate/query/migrate/git) — see §9.2 honesty map; **do not** treat `spatial` / stubs as solid until §2.6 closes.
+- **Compiler + economy CLI** — import/edit/export/contribute/access (see §9.2); Foundry mint + pay E2E.
+- **Integrity close-out** — §2.6 I1–I11 done; residual process I12.
 
 ### 2.4 What is still weak or missing
 
-| Gap | Why it still matters | Track |
+| Gap | Why it still matters | Horizon |
 | :--- | :--- | :---: |
-| ~~No `schema_version` on durable YAML Building document~~ | **Done (A1)** — `BuildingData.schema_version` default 1 | — |
-| No checked-in **vendor** IFC matrix (Revit/ArchiCAD/etc.) | Sample/Arx-authored fixtures only | **B** |
-| LiDAR heuristics without field ground truth | Cannot claim pilot auto-structure quality | **C** |
-| PWA not a polished review product | Tablet story incomplete | **E** |
-| No pilot runbook / scale profile | Second team cannot cold-start reliably | **D** |
-| Optional rings still large (TUI spreadsheet, render3d, agent, chain) | Attention tax; keep feature-gated | refuse list |
-| Review/approval state for auto-detected entities | Human-in-the-loop not productized | **C** |
-| **Integrity debt** (CLI theater, CI red, unvalidated public save, residual duals, process risk) | Undermines every pilot claim; full inventory §2.6 | **I** |
+| **No one-command deploy env** (addresses + register worker/building) | Cold engineer cannot mint/pay without reading Solidity | **A / N8** |
+| **Hosts do not gate data on `AccessPaid`** | Buyers can pay into a void; market story incomplete | **A / N7** |
+| **No real-building closed loop** | Lab ≠ as-built value; safety/quote claims unproven | **B / N9** |
+| LiDAR without field ground truth | Auto structure quality unknown on site | **B** |
+| Revit/ArchiCAD anonymized fixtures | Vendor IFC confidence limited | **C** (after B) |
+| External oracles / public testnet | Still ArxOS-key bring-up model | **C** |
+| Pilot scale profile (~250k ft²) | Resource bounds unmeasured | **B/D** |
+| Optional rings (PWA, hardware, 3D) | Attention tax if expanded early | freeze |
 
 ### 2.5 Target workflow (current + end state)
 
 ```text
-┌──────────────────────────────────────────────────────────────────────────┐
-│                         FIELD / EDGE DEVICE                                │
-│  LiDAR files │ AR app (DSL) │ text script │ IFC from BIM                    │
-└───────────────────────────────┬────────────────────────────────────────────┘
-                                │
+┌──────────────────────── FIELD (free software) ───────────────────────────┐
+│  LiDAR │ IFC │ text/AR edit │ human review_status                        │
+└───────────────────────────────┬──────────────────────────────────────────┘
                                 v
-┌──────────────────────────────────────────────────────────────────────────┐
-│  COMPILER (Rust) — IMPLEMENTED SPINE                                       │
-│  adapters → Building → merge_building_with_policy? → validate_building     │
-│            → hard-fail on errors → building.yaml → Git                     │
-└───────────────────────────────┬────────────────────────────────────────────┘
-                                │
-              ┌─────────────────┼─────────────────┐
-              v                 v                 v
-         YAML/Git            IFC export      PWA review UI
-         (SSOT)              (interchange)   (envelope; partial)
-              │                 │
-              └────────┬────────┘
-                       v
-              re-import / merge / correct / query
-                       │
-                       v
-              [LATER] Oracle / DePIN / $AXD
+┌──────────────────────── COMPILER (lab done) ─────────────────────────────┐
+│  adapters → Building → merge? → validate → building.yaml → Git           │
+│  export IFC (warn / --approved-only) · query · migrate                     │
+└───────────────────────────────┬──────────────────────────────────────────┘
+                                v
+┌────────────────── ECONOMY (lab done; live open) ─────────────────────────┐
+│  arx contribute → package → EIP-712 → oracles → mint $AXD                │
+│  arx access quote/pay → $AXD → AccessPaid → [N7 host must gate data]     │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 2.6 Integrity debt inventory (brutal review — must stay closed)
@@ -431,15 +467,25 @@ MVP field loop (implemented CLI):
 | OptiPlex / Mac Mini | Heavy parse + IFC | Primary capture node for pilot |
 | Tablet browser | Review only | No full-cloud process in WASM for pilot |
 
-### 3.10 DePIN / Oracle / $AXD (deferred)
+### 3.10 Economy: Oracle / $AXD / access (implemented in lab)
 
 ```text
-Compiler produces signed state deltas
-        → Oracle verifies labor / integrity
-        → Consumers pay; burn $AXD
+Compiler produces verified Building SSOT
+        → contribution package (merkle + quality + building UUID)
+        → worker EIP-712 proof → oracles 2-of-3 → finalize → mint $AXD
+        → buyers pay $AXD via PaymentRouter for data access
 ```
 
-**Implementation rule:** No pilot feature depends on chain liveness. Contracts under `contracts/` must not block G1–G8.
+| Path | Split (lab) |
+| :--- | :--- |
+| **Mint (labor)** | 70% worker · 10% building · 10% maintainers · 10% treasury (quality-scaled) |
+| **Access payment** | 70% building · 10% maintainers · 20% treasury (remainder) |
+
+**Rules:**
+
+- Software remains free; chain rewards **verified building data**, not CLI licenses.
+- Multi-oracle consensus requires the **same** proof (hash locked on first propose).
+- Live ops still need N7 (host gate) + N8 (deploy env). Contracts must not regress G1–G8.
 
 ---
 
@@ -674,16 +720,21 @@ Cap scope ruthlessly.
 | 6.3 | Mesh round-trip quality tests | Known epsilon |
 | 6.4 | ~~Deprecate legacy parser~~ | **Done** |
 
-### 4.9 Track F / Phase 7 — Network layer (frozen)
+### 4.9 Track F / Economy layer (active — lab done; live open)
 
-**No calendar commitment** until pilot has used the compiler on real buildings. Contracts stay isolated under `contracts/`.
+Contracts under `contracts/`; Rust under `src/contribution`, `src/access`, `src/blockchain` (feature-gated).
 
-| ID | Task |
-| :--- | :--- |
-| 7.1 / **F** | Signed contribution payload from YAML delta / merkle |
-| 7.2 | Oracle acceptance rules |
-| 7.3 | Minimal consumer payment → burn flow |
-| 7.4 | Threat model and audit before mainnet |
+| ID | Task | Status |
+| :--- | :--- | :---: |
+| F1 / N1 | Building commitment package | **Done** |
+| F2 / N2 | EIP-712 from package | **Done** |
+| F3 / N3 | Oracle propose + finalize mint E2E | **Done** (Foundry) |
+| F4 / N4 | Registry building UUID + worker | **Done** (Foundry) |
+| F5 / N5 | Buyer payForAccess | **Done** (Foundry + CLI) |
+| F6 / N8 | Deploy-and-env script → `.env.arx` + register helpers | **Open** (Horizon A) |
+| F7 / N7 | Host gate: only release data after `AccessPaid` | **Open** (Horizon A) |
+| F8 | Public testnet + external oracles | **Open** (Horizon C) |
+| F9 | Threat model / audit before mainnet | **Open** (Horizon C) |
 
 ---
 
@@ -924,68 +975,80 @@ test_data/             Mid-size IFC samples
 .github/workflows/compiler-ci.yml   Authoritative CI
 ```
 
-### 9.2 Compiler CLI surface (`arx`)
+### 9.2 CLI surface (`arx`)
 
-| Command | Role | Honesty status |
+| Command | Role | Status |
 | :--- | :--- | :--- |
-| `init` | Seed `building.yaml` (+ optional Git) | **Weak template** (empty id / empty floors) — **I6** |
-| `import ifc\|lidar\|text` | Adapters → finalize → SSOT | Production spine |
-| `edit` | Text/AR script → finalize → SSOT | Production spine |
-| `export` | Building → IFC / yaml / json | Production spine; **`--delta` unused** — **I8** |
-| `validate` | Load SSOT → validation report | Production spine |
-| `migrate` | Backfill missing equipment addresses | Works; uses **chdir** — **I10** |
-| `room` / `equipment` | Domain CRUD → `persist_building` | Production spine |
-| `spatial` | Intended spatial ops | **THEATER** — success without work — **I3** |
-| `query` / `search` | Address globs / name search | Production spine |
-| `status` / `stage` / `commit` / `unstage` / `diff` / `history` | Git | Production spine |
-| `render` / `interactive` | Visualization | **Experimental / stub-ish**; needs `render3d` — **I7** |
-| `merge` | Conflict UI (`tui`) | Optional ring |
-| `dashboard` | Live UI (`tui` + `agent`) | Optional; may pull hardware stubs — **I9** |
-| `remote` | Edge agent (`agent`) | Optional ring |
+| `init` | Seed validated `building.yaml` (UUID + floor) | Production |
+| `import ifc\|lidar\|text` | Adapters → finalize → SSOT | Production |
+| `edit` | Text/AR script (incl. `review_status`) | Production |
+| `export` | IFC/yaml/json; warn on proposed LiDAR; `--approved-only` | Production |
+| `validate` / `migrate` / `query` | Trust + address tools | Production |
+| `room` / `equipment` | CRUD via `persist_building` | Production |
+| `contribute` | Building labor → `contribution.json` (+ `--sign`/`--submit` w/ blockchain) | Production (economy) |
+| `access quote` / `access pay` | Buyer request + $AXD payForAccess | Production (economy) |
+| Git: `status` / `stage` / `commit` / … | Version SSOT | Production |
+| `spatial` | Query/transform/validate real; grid/relate hard-error | Partial |
+| `render` / `interactive` | Visualization | Experimental (`render3d`) |
+| `merge` / `dashboard` / `remote` | Optional rings | Feature-gated |
 
-**Pilot-supported CLI loop:** `init` (after I6) → `import` → `edit` → `migrate` → `validate` → `query` → `export` → git commands.  
-**Do not advertise** `spatial`, `interactive`, hardware, or `--delta` as pilot-ready until their §2.6 rows close.
+**Supported loops:**
+
+```text
+Compiler:  init → import → edit (review) → migrate → validate → export → git
+Labor:     contribute [--sign] [--submit]
+Buyer:     access quote → access pay  (hosts must honor AccessPaid — N7 open)
+```
 
 ### 9.3 Supported surfaces matrix
 
-| Surface | Production (compiler MVP) | Experimental / optional | Notes |
-| :--- | :---: | :---: | :--- |
-| CLI spine (init/import/edit/export/validate/query/migrate/git) | **Yes** | | After I1/I3/I4/I6 honesty |
-| Native IFC import/export | **Yes** | | Full export; delta **not** |
-| LiDAR import | **Yes** (synthetic-proven) | Field quality TBD | |
-| Text/AR DSL | **Yes** | | |
-| `arx spatial` | | **No / broken honesty** | Close I3 before any claim |
-| TUI spreadsheet / merge tool | Usable | Not pilot-blocking | I12 |
-| Agent WS/SSH | | **Yes** — feature-gated | |
-| WASM PWA | | **Yes** — review only | Track E |
-| Bevy render3d / interactive | | **Yes** — feature-gated | I7; not pilot product |
-| Hardware / MQTT / BACnet / simulated | | **Non-MVP stubs** | I9; do not expand |
-| Blockchain / contracts | | **Yes** — Phase 7 only | Track F |
-| Multi-building durable layout | **No** | | I11 hard limit |
+| Surface | Production | Notes |
+| :--- | :---: | :--- |
+| CLI compiler spine | **Yes** | Free software |
+| Contribute / access economy CLI | **Yes** | Chain calls need `blockchain` + live addresses |
+| Native IFC | **Yes** | L0–L2; vendor matrix limited |
+| LiDAR import | **Yes** | Synthetic proven; field TBD |
+| Foundry contracts | **Yes** (lab) | Mint + pay E2E green |
+| Host gate on payment | **No** | **N7 open** |
+| Multi-building layout | **No** | One `building.yaml` per repo (I11) |
+| PWA / agent / 3D / hardware | Optional | Frozen until Horizon A–B unless approved |
 
 ---
 
 ## 10. Immediate next actions (start here)
 
-### 10.1 This week (operating cadence)
+**Goal:** One closed loop that is easy to run, then a real building.
 
-1. ~~**N1–N5 economy spine**~~ contribute mint + access pay **Done** (Foundry E2E + CLI).
-2. Optional: Anvil ops script printing deployed addresses for live CLI.
-3. Multi-peer Git collab polish (N6) / field vendor IFC when needed.
-4. Peripherals (PWA/hardware/3D): **ask before expand**.
+### 10.1 Horizon A — Lab → live local (**current priority**)
 
-### 10.2 Then (critical path)
+| Order | Work | Exit |
+| :---: | :--- | :--- |
+| **A1** | Deploy-and-env script (Anvil + forge Deploy → `.env.arx`) | Addresses without log-scraping |
+| **A2** | Register helpers from `building.yaml` UUID + worker key | Package `building_id` matches chain |
+| **A3** | Ops runbook: stake oracles → contribute submit → confirm → finalize | Mint without reading Solidity |
+| **A4** | Host gate (N7): release data only after `AccessPaid` | Buyers cannot pay into a void |
+| **A5** | Field-trial one-pager | Ready for Horizon B |
 
-1. **B1–B2** — vendor fixtures + CI non-panic goldens.
-3. **C2 then C1** — export warning / approved-only, then review status productization.
-4. **D1–D5** — finish runbook, install, resource bounds, sample project.
-5. **E** only if tablet is in pilot scope.
-6. **F** blocked until after pilot learnings.
+**Freeze:** PWA / hardware / 3D / multi-building unless vision explicitly approves.
 
-### 10.3 Correct next commit series
+### 10.2 Horizon B — First real building (vision holder)
+
+| Order | Work | Exit |
+| :---: | :--- | :--- |
+| **B1** | Name one building with real as-built pain | Site + capture owner |
+| **B2** | Free software loop on real IFC/LiDAR | Model trustworthy enough |
+| **B3** | Contribute + reward + access pay | One closed economic loop |
+| **B4** | Fix only blockers from B2–B3 | No parallel products |
+| **B5** | Update scorecard from field evidence | Honest G4/G7/N9 |
+
+### 10.3 Horizon C — Network scale (only after B)
+
+External oracles · public testnet → Base · host product · vendor IFC · scale · audit.
+
+### 10.4 Next commit series
 
 ```text
-B1 (first vendor fixture) → B2 (CI goldens) → continue critical path
+A1 deploy-env → A2 register helpers → A3 ops runbook → A4 host gate (N7) → A5 field one-pager → [B field]
 ```
 
 ---
@@ -995,34 +1058,28 @@ B1 (first vendor fixture) → B2 (CI goldens) → continue critical path
 | Version | Notes |
 | :--- | :--- |
 | Pre-rewrite | Product manifesto (DePIN/compiler/oracle/token overview) |
-| Post-ingest plan | Full phased plan; dual IFC and soft validation called out as gaps |
-| **2026-07 reconciliation** | Architecture convergence: single IFC stack, single YAML SSOT, hard write gate, durable addresses, slim CLI, spine tests, Compiler CI authority; scorecard and phases updated |
-| **2026-07 operating plan** | §4.0 program rules (refuse list, PR checklist, cadence, critical path, tracks A–F); §7 solo path, 90-day sketch, pilot gate go/no-go; §10 this-week moves — aligns manifest with chief execution plan |
-| **2026-07 integrity audit compliance** | Brutal review line items fully inventoried in **§2.6** (I1–I13); Track **I** added as phase −1; scorecard §2.1 de-inflated (CLI/CI/process honesty); §2.2 residuals; write-path contract; refuse list/PR checklist; pilot gate no-go on I1–I4; risks; CLI honesty map §9.2–9.3; handoff checklist; §10 starts with integrity |
-| **2026-07 integrity close-out** | Executed Track I: clippy CI green (unwrap allow-list documented); spatial honesty; validated saves; Building spatial ops; honest init; `--delta` error; path-safe migrate; pilot-runbook outline; scorecard uplift |
-| **2026-07 A1** | `BuildingData.schema_version` (default 1); legacy load OK; new writes emit version |
-| **2026-07 B/C/D** | vendor_ifc_test + limitations; review_status + export --approved-only; lidar-confidence + pilot-runbook/install |
-| **2026-07 full product contribution** | Vision locked; N1 package path |
-| **2026-07 N2–N3** | EIP-712 from package; `arx contribute --sign/--submit`; local_oracle_e2e sketch |
-| **2026-07 N3/N4 E2E** | Fixed oracle proof lock; BuildingContributionE2E mint; ArxosToken alias; forge suite green |
-| **2026-07 N5** | Data access market: access quote/pay CLI; PaymentClient maxPrice fix; DataAccessPaymentE2E |
+| **2026-07 reconciliation** | Architecture convergence: single IFC, single YAML SSOT, hard write gate, slim CLI, Compiler CI |
+| **2026-07 integrity** | Brutal audit ledger §2.6; Track I; honesty on CLI/CI/save |
+| **2026-07 integrity + A1 + B/C** | Close-out I1–I11; schema_version; vendor goldens; review/export policy |
+| **2026-07 full product N1–N5** | Vision locked; contribute → EIP-712 → mint E2E; access pay E2E; economy CLI |
+| **2026-07-13 vision status rewrite** | Manifest primary goal = full product; scorecard lab vs field; horizons A–C; N7–N9; §10 = path to live closed loop |
 
 ---
 
 ## 12. Closing statement
 
-ArxOS works when the **compiler spine** is boringly reliable **and honest**:
+ArxOS is **version control for the built world**: free software so peers can map as-built truth; peer review so the ledger is trustworthy; **$AXD** so labor is rewarded and buyers can pay for data.
 
-**LiDAR / text / IFC → one model → building.yaml / Git → IFC → back**, with explicit loss reports, hard validation on write, **no fake CLI success**, **CI that actually passes its own gates**, and human review of automated structure.
+**Lab status:** The compiler spine and economy spine (N1–N5) are **implemented and test-proven**. Integrity theater that blocked trust has been closed.
 
-As of this reconciliation, the spine is **implemented for production mutators**—but **not yet integrity-complete** (§2.6). The architecture fight is over. Remaining work is an **integrity-then-trust pipeline**:
+**Field status:** The product does **not** yet work end-to-end for a stranger on a real building. Missing pieces are operational and delivery-shaped—not another rewrite:
 
 ```text
-Stop lying (CI / CLI / save)  →  Version the contract  →  Prove interop  →  Make LiDAR reviewable  →  Package for a second team
+Horizon A: deploy env + register + mint/pay ops + host gate on AccessPaid
+Horizon B: one real building closed loop
+Horizon C: external oracles, public chain, scale
 ```
 
-Measure success only by **pilot gate criteria (§7.4)**, **§2.6 blockers closed**, and **Compiler CI green under the flags it declares**—not by LOC, feature count, or optional rings.
+Measure success by **closed loops** (map → review → mint → pay → data release), not by LOC or optional rings.
 
-Everything else—PWA polish, DePIN, token, advanced CAD—is a multiplier **after** that spine is trusted in the field.
-
-This document is the **engineering design**, the **operating plan**, and the **integrity ledger** required to get there without lying about readiness.
+This document is the engineering design, the vision lock, and the ordered plan to get there without lying about readiness.

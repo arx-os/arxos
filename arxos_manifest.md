@@ -48,7 +48,7 @@ ArxOS treats a building as **versioned structured state**, not a row in a cloud 
 | ID | Criterion | Measurable exit | Status (2026-07) |
 | :--- | :--- | :--- | :---: |
 | G1 | Single ingest spine | Supported writers use `finalize_ingest` / `persist_building` + validate | **Done** (validated public save; I4 closed) |
-| G2 | Canonical model freeze | YAML + envelope schema versioned; breaking changes require bump | **Partial** (envelope only) |
+| G2 | Canonical model freeze | YAML + envelope schema versioned; breaking changes require bump | **Done** (YAML schema_version=1 + envelope) |
 | G3 | IFC L0–L2 for Arx-authored data | Automated tests pass (identity, LiDAR Psets, box geometry, props) | **Done** (automated) |
 | G4 | LiDAR → YAML → IFC → YAML | Documented CLI workflow; CI on synthetic path | **Partial** (synthetic CI; field unproven) |
 | G5 | Text/AR edits | `arx edit` applies, validates, saves; WASM can apply script to envelope | **Done** (CLI); **Partial** (WASM) |
@@ -133,7 +133,7 @@ The following dual authorities were **eliminated** in the 2026-07 convergence wo
 
 | Gap | Why it still matters | Track |
 | :--- | :--- | :---: |
-| No `schema_version` on durable YAML Building document | Integration churn risk across handoffs | **A1** |
+| ~~No `schema_version` on durable YAML Building document~~ | **Done (A1)** — `BuildingData.schema_version` default 1 | — |
 | No checked-in **vendor** IFC matrix (Revit/ArchiCAD/etc.) | Sample/Arx-authored fixtures only | **B** |
 | LiDAR heuristics without field ground truth | Cannot claim pilot auto-structure quality | **C** |
 | PWA not a polished review product | Tablet story incomplete | **E** |
@@ -268,7 +268,7 @@ Mapped to IFC as `Pset_ArxLidarEnrichment`.
 
 | Format | Role | Schema versioning |
 | :--- | :--- | :--- |
-| **`building.yaml`** | Durable Git SSOT (**one building per repo root** — multi-building campus is **not** a durable layout; I11) | **Still needed:** `schema_version` on building document (open work A1) |
+| **`building.yaml`** | Durable Git SSOT (**one building per repo root** — multi-building campus is **not** a durable layout; I11) | **`schema_version: 1`** on document (`BuildingData`; A1 done) |
 | **BuildingSyncEnvelope JSON** | PWA/agent portable cache | `schema_version: 1` (`src/ingest/sync.rs`) |
 | **IFC4 STEP** | Industry interchange | Fidelity contract, not full schema |
 
@@ -493,7 +493,7 @@ Success is measured by **pilot gate criteria** (§7.4), **§2.6 blockers closed*
 | Phase | Track | Name | Outcome | Status |
 | :---: | :---: | :--- | :--- | :---: |
 | **−1** | **I** | Integrity honesty | CI green; no CLI theater; no silent save bypass; committed baseline | **Done** (I1–I11; I12 process hold) |
-| **0** | **A** | Contract freeze & hygiene | Clear supported surface; schema versions | **Mostly done** (schema_version open) |
+| **0** | **A** | Contract freeze & hygiene | Clear supported surface; schema versions | **Done** (A1 schema_version) |
 | **1** | — | Single spine enforcement | Every write through finalize/validate | **Partial** — production mutators **Done**; public save APIs still open (I4) |
 | **2** | **B** | Golden fixtures & CI gates | Spine CI + IFC/LiDAR goldens | **Partial** (Arx/sample goldens; vendor open; CI red on clippy) |
 | **3** | **C** | LiDAR pilot quality | Human review workflow + known limits | **Open** |
@@ -542,7 +542,7 @@ Success is measured by **pilot gate criteria** (§7.4), **§2.6 blockers closed*
 
 | ID | Task | Done when |
 | :--- | :--- | :--- |
-| 0.1 / **A1** | Add `schema_version` to Building YAML document (default `1`) | Old YAML loads; new writes emit version; spine tests green |
+| 0.1 / **A1** | Add `schema_version` to Building YAML document (default `1`) | **Done** — old YAML loads; new writes emit version; tests green |
 | 0.2 / **A2** | Supported-surfaces doc: short `docs/supported-surfaces.md` **or** this manifest §9.3 + README as linked SSOT | Linked from README |
 | 0.3 | ~~Native-only IFC~~ | **Done** — legacy removed |
 | 0.4 | ~~Slim CLI to MVP~~ | **Done** — compiler surface + honesty (I3/I8) |
@@ -798,7 +798,7 @@ Adjust calendar; **do not** claim vendor/interop success while CI is red (I1), o
 - [x] Stubs labeled: interactive/3D, `--delta`, hardware (Tracks **I7–I9**)
 - [x] Migrate path-safe (Track **I10**)
 - [x] Single-building limit documented (Track **I11** / D5)
-- [ ] `schema_version` on YAML Building (Track A)
+- [x] `schema_version` on YAML Building (Track A1)
 - [ ] Vendor IFC limitations table (Track B)
 - [x] `docs/pilot-runbook.md` outline (Track D1 partial — needs non-author walkthrough)
 
@@ -809,7 +809,7 @@ Field pilot readiness target is **~7/10**, not 10/10. Pilot is **learning**, not
 All of the following must be true:
 
 0. **Integrity blockers:** §2.6 rows **I1–I4** closed (CI green under policy; committed baseline; no spatial theater; no unvalidated production save). Prefer **I5–I6** closed; **I7–I11** documented if not fully coded.
-1. **G2 residual:** `schema_version` on new YAML; documented bump policy.
+1. ~~**G2 residual:** `schema_version` on new YAML~~ **Done (A1)**; bump policy: increment `BUILDING_YAML_SCHEMA_VERSION` on breaking doc changes.
 2. **G4 residual:** At least one real-ish scan path profiled; limits written.
 3. **G6 residual:** Auto entities can be rejected/accepted before approved IFC (or export clearly warns).
 4. **G7:** Pilot runbook + install path exists; walked by a non-author; includes D5 non-surfaces and I11 limit.
@@ -928,15 +928,14 @@ test_data/             Mid-size IFC samples
 ### 10.1 This week (operating cadence)
 
 1. ~~**Track I** integrity blockers~~ — **Done** (I1–I11).
-2. **Track A1** — add `schema_version` to durable Building YAML (default `1`); keep spine tests green.
+2. ~~**Track A1**~~ **Done** — `schema_version` on durable Building YAML.
 3. **Identify 1–2 vendor IFC files** for anonymized fixtures (Track B1 prep).
 4. **Complete pilot runbook** (`docs/pilot-runbook.md`) walkthrough by non-author (Track D1).
 5. **Hold a freeze:** no features outside Tracks A/B/C/D until pilot gate (§7.4).
 
 ### 10.2 Then (critical path)
 
-1. **A1** — `schema_version` on durable Building YAML.
-2. **B1–B2** — vendor fixtures + CI non-panic goldens.
+1. **B1–B2** — vendor fixtures + CI non-panic goldens.
 3. **C2 then C1** — export warning / approved-only, then review status productization.
 4. **D1–D5** — finish runbook, install, resource bounds, sample project.
 5. **E** only if tablet is in pilot scope.
@@ -945,7 +944,7 @@ test_data/             Mid-size IFC samples
 ### 10.3 Correct next commit series
 
 ```text
-A1 (schema_version) → B1 (first vendor fixture) → continue critical path
+B1 (first vendor fixture) → B2 (CI goldens) → continue critical path
 ```
 
 ---
@@ -959,7 +958,8 @@ A1 (schema_version) → B1 (first vendor fixture) → continue critical path
 | **2026-07 reconciliation** | Architecture convergence: single IFC stack, single YAML SSOT, hard write gate, durable addresses, slim CLI, spine tests, Compiler CI authority; scorecard and phases updated |
 | **2026-07 operating plan** | §4.0 program rules (refuse list, PR checklist, cadence, critical path, tracks A–F); §7 solo path, 90-day sketch, pilot gate go/no-go; §10 this-week moves — aligns manifest with chief execution plan |
 | **2026-07 integrity audit compliance** | Brutal review line items fully inventoried in **§2.6** (I1–I13); Track **I** added as phase −1; scorecard §2.1 de-inflated (CLI/CI/process honesty); §2.2 residuals; write-path contract; refuse list/PR checklist; pilot gate no-go on I1–I4; risks; CLI honesty map §9.2–9.3; handoff checklist; §10 starts with integrity |
-| **2026-07 integrity close-out** | Executed Track I: clippy CI green (unwrap allow-list documented); spatial honesty; validated saves; Building spatial ops; honest init; `--delta` error; path-safe migrate; pilot-runbook outline; scorecard uplift; next = A1 schema_version |
+| **2026-07 integrity close-out** | Executed Track I: clippy CI green (unwrap allow-list documented); spatial honesty; validated saves; Building spatial ops; honest init; `--delta` error; path-safe migrate; pilot-runbook outline; scorecard uplift |
+| **2026-07 A1** | `BuildingData.schema_version` (default 1); legacy load OK; new writes emit version |
 
 ---
 

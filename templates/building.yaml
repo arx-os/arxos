@@ -1,6 +1,7 @@
 # Reference skeleton only. `arx init` generates building.yaml in code
 # (UUID id + Ground Floor) and writes via validated save (Track I6).
 # Do not ship empty id/floors as a pilot cold-start path.
+schema_version: 1
 building:
   id: "REPLACE_WITH_UUID"
   name: My Building

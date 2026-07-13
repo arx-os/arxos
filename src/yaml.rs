@@ -57,11 +57,24 @@ impl BuildingYamlSerializer {
     }
 }
 
+/// Durable YAML document schema version for `building.yaml`.
+///
+/// Bump when the on-disk document shape changes in a breaking way.
+/// Missing field on load defaults to `1` (pre-versioned files).
+pub const BUILDING_YAML_SCHEMA_VERSION: u32 = 1;
+
 /// Building data structure for YAML serialization
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuildingData {
+    /// On-disk document schema version (Track A1). Default `1` when absent.
+    #[serde(default = "default_building_yaml_schema_version")]
+    pub schema_version: u32,
     pub building: crate::core::Building,
     pub equipment: Vec<crate::core::Equipment>,
+}
+
+fn default_building_yaml_schema_version() -> u32 {
+    BUILDING_YAML_SCHEMA_VERSION
 }
 
 impl BuildingData {
@@ -76,6 +89,7 @@ impl BuildingData {
         // Collect all equipment from the hierarchy into a flat list
         let equipment = building.get_all_equipment().into_iter().cloned().collect();
         Self {
+            schema_version: BUILDING_YAML_SCHEMA_VERSION,
             building: building.clone(),
             equipment,
         }
@@ -244,6 +258,7 @@ mod tests {
         building.add_floor(floor);
 
         BuildingData {
+            schema_version: BUILDING_YAML_SCHEMA_VERSION,
             building,
             equipment: vec![equip],
         }
@@ -320,6 +335,7 @@ mod tests {
         building.add_floor(floor);
 
         let data = BuildingData {
+            schema_version: BUILDING_YAML_SCHEMA_VERSION,
             building,
             equipment: vec![],
         };
@@ -378,5 +394,34 @@ mod tests {
             .expect("equipment present");
         let restored_addr = eq.address.as_ref().expect("address should be durable");
         assert_eq!(restored_addr.path, addr.path);
+    }
+
+    #[test]
+    fn test_schema_version_emitted_on_write() {
+        let building = Building::new("Schema HQ".to_string(), "/schema".to_string());
+        let yaml = BuildingYamlSerializer::serialize_building(&building).expect("serialize");
+        assert!(
+            yaml.contains("schema_version: 1") || yaml.contains("schema_version:1"),
+            "new YAML must emit schema_version: {BUILDING_YAML_SCHEMA_VERSION}"
+        );
+    }
+
+    #[test]
+    fn test_schema_version_defaults_on_legacy_load() {
+        // Pre-A1 files omit schema_version; must still load as version 1.
+        let legacy = r#"
+building:
+  id: "legacy-id"
+  name: Legacy Building
+  path: /legacy
+  created_at: 2026-01-01T00:00:00Z
+  updated_at: 2026-01-01T00:00:00Z
+  floors: []
+  coordinate_systems: []
+equipment: []
+"#;
+        let data = BuildingYamlSerializer::deserialize(legacy).expect("legacy load");
+        assert_eq!(data.schema_version, BUILDING_YAML_SCHEMA_VERSION);
+        assert_eq!(data.building.name, "Legacy Building");
     }
 }

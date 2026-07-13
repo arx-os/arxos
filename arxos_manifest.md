@@ -186,23 +186,23 @@ This section is the **obligation register**: each reservation must be **relegate
 | **R2** | **Vendor BIM/IFC incomplete** | District Revit/etc. exports may drop structure/IDs | Import 2–3 **real** anonymized district IFCs; round-trip matrix | Local interop matrix (preserve/drop) checked in or attached to pilot | Field + eng | **Open** |
 | **R3** | **Live chain/mint ops not turnkey** | 2-of-3, stake, 24h finalize, keys ≠ “install and forget” | Keep L1 **off-chain**; for L3: ops runbook with two oracles + finalize; testnet only until policy OK | L1: chain optional/demo. L3: documented mint with named operators | Eng + ops | **Open** (lab E2E done) |
 | **R4** | **Host payment gate is local-file only** | `export --commercial` + receipt is bypassable; free export still works by design | Process: commercial deliveries **must** use `--commercial`. Product: host that checks `AccessPaid` / receipt server-side (L3) | L1: written process. L3: non-bypassable download path | Eng + field IT | **Partial** (CLI gate done; enforcement open) |
-| **R5** | **No second-person cold start on district env** | Hero dependency; program dies if only one tech can run it | Timed walkthrough by non-author on district laptop/network | Checklist signed; stuck points filed as backlog | Field IT | **Open** |
+| **R5** | **No second-person cold start on district env** | Hero dependency; program dies if only one tech can run it | Timed walkthrough by non-author on district laptop/network | Checklist signed; stuck points filed as backlog | Field IT | **Open** — template: `docs/second-person-checklist.md` |
 | **R6** | **Scale/performance unprofiled** | Large school models may OOM/hang; people skip validation | Profile worst-case IFC/scan on pilot hardware; set limits | Written max points/time; light-mode guidance | Eng + field | **Open** |
-| **R7** | **Security / compliance / classification** | Facility plans sensitive; Git remotes, exports, backups | Data class policy (internal-only default); who can clone/export; no student PII in properties | Security/IT sign-off for pilot repo location | Field IT + security | **Open** |
-| **R8** | **Mainnet token / institutional fit** | Public entity crypto, custody, procurement, reputation | L1/L2: **no production token**. L3 only with Legal/Finance | Written go/no-go from leadership for any chain use | Vision + Legal | **Open** (default: no mainnet) |
-| **R9** | **Support / ownership / change control** | No vendor SLA; `main` moves | Pin release tag/hash; one supported workflow page; escalation path | Pinned install + “supported loop” doc used in R5 | Eng + field IT | **Open** |
-| **R10** | **Safety / professional liability framing** | Model must not replace LOTO, licensed drawings, or code docs | Pilot disclaimer policy; culture: human + licensed docs win | Signed pilot charter with disclaimer language | Field IT + leadership | **Open** |
+| **R7** | **Security / compliance / classification** | Facility plans sensitive; Git remotes, exports, backups | Data class policy (internal-only default); who can clone/export; no student PII in properties | Security/IT sign-off for pilot repo location | Field IT + security | **Open** — fields in `docs/pilot-charter.md` §4 |
+| **R8** | **Mainnet token / institutional fit** | Public entity crypto, custody, procurement, reputation | L1/L2: **no production token**. L3 only with Legal/Finance | Written go/no-go from leadership for any chain use | Vision + Legal | **Partial** — L1 default off-chain in charter §5 |
+| **R9** | **Support / ownership / change control** | No vendor SLA; `main` moves | Pin release tag/hash; one supported workflow page; escalation path | Pinned install + “supported loop” doc used in R5 | Eng + field IT | **Partial** — `docs/pilot-release.md`, `docs/l1-supported-workflow.md`, `scripts/pin_pilot_release.sh` (tag not cut until you pin) |
+| **R10** | **Safety / professional liability framing** | Model must not replace LOTO, licensed drawings, or code docs | Pilot disclaimer policy; culture: human + licensed docs win | Signed pilot charter with disclaimer language | Field IT + leadership | **Partial** — template `docs/pilot-charter.md` (needs signature) |
 
 #### Work packages to relegate obligations (ordered)
 
-| Package | Obligations hit | Deliverables |
-| :---: | :--- | :--- |
-| **P-Safety** | R10, R1 (process) | Pilot charter + disclaimer; “no unreviewed proposed as official” rule in runbook |
-| **P-Transfer** | R5, R9 | Pinned release; second-person walkthrough; supported-workflow page |
-| **P-Data** | R7 | Classification + private Git; export approval same class as CAD |
-| **P-Field-truth** | R1, R2, R6 | Real scan + real IFC matrix + one performance profile on pilot hardware |
-| **P-Chain-optional** | R3, R8 | Explicit “compiler pilot = off-chain”; testnet demo only if requested |
-| **P-Market-enforcement** | R4 | L1 process; L3 host service that gates download on payment |
+| Package | Obligations hit | Deliverables | Status |
+| :---: | :--- | :--- | :---: |
+| **P-Safety** | R10, R1 (process) | `docs/pilot-charter.md`; no unreviewed `proposed` as official | **Template done** — sign to close R10 |
+| **P-Transfer** | R5, R9 | `docs/l1-supported-workflow.md`; `docs/second-person-checklist.md`; `docs/pilot-release.md`; `scripts/pin_pilot_release.sh` | **Artifacts done** — walkthrough + tag to close R5/R9 |
+| **P-Data** | R7 | Classification + private Git; export approval same class as CAD | **Open** (charter §4 skeleton) |
+| **P-Field-truth** | R1, R2, R6 | Real scan + real IFC matrix + one performance profile on pilot hardware | **Open** |
+| **P-Chain-optional** | R3, R8 | Explicit “compiler pilot = off-chain”; testnet demo only if requested | **Partial** (charter §5 + L1 workflow) |
+| **P-Market-enforcement** | R4 | L1 process; L3 host service that gates download on payment | **Partial** (CLI gate; process in charter optional) |
 
 **Relegation rule:** Do not mark an obligation **Done** without exit criteria evidence (doc path, test name, or signed checklist). Update this table when evidence lands.
 
@@ -271,16 +271,21 @@ The following dual authorities were **eliminated** in the 2026-07 convergence wo
 
 ### 2.4 What is still weak or missing
 
-| Gap | Why it still matters | Horizon |
-| :--- | :--- | :---: |
-| **No one-command deploy env** (addresses + register worker/building) | Cold engineer cannot mint/pay without reading Solidity | **A / N8** |
-| **Hosts do not gate data on `AccessPaid`** | Buyers can pay into a void; market story incomplete | **A / N7** |
-| **No real-building closed loop** | Lab ≠ as-built value; safety/quote claims unproven | **B / N9** |
-| LiDAR without field ground truth | Auto structure quality unknown on site | **B** |
-| Revit/ArchiCAD anonymized fixtures | Vendor IFC confidence limited | **C** (after B) |
-| External oracles / public testnet | Still ArxOS-key bring-up model | **C** |
-| Pilot scale profile (~250k ft²) | Resource bounds unmeasured | **B/D** |
-| Optional rings (PWA, hardware, 3D) | Attention tax if expanded early | freeze |
+| Gap | Obligation | Horizon |
+| :--- | :---: | :---: |
+| Field LiDAR truth unknown | **R1** | B |
+| District vendor IFC unproven | **R2** | B |
+| Live mint ops / institutional token | **R3, R8** | B off-chain; C for L3 |
+| Payment gate bypassable / no portal | **R4** | B process; C product |
+| Second-person district cold start | **R5** | B |
+| Scale unprofiled | **R6** | B |
+| Data classification / security | **R7** | B (before multi-user) |
+| Support pin + ownership | **R9** | B |
+| Safety / liability framing | **R10** | B (before any “official” use) |
+| Real-building closed loop (N9) | R1–R2, R5, R10 | B |
+| Optional rings (PWA, hardware, 3D) | freeze | — |
+
+Full obligation register and exit criteria: **§1.6**.
 
 ### 2.5 Target workflow (current + end state)
 
@@ -1061,7 +1066,7 @@ Buyer:     access quote → access pay  (hosts must honor AccessPaid — N7 open
 | Native IFC | **Yes** | L0–L2; vendor matrix limited |
 | LiDAR import | **Yes** | Synthetic proven; field TBD |
 | Foundry contracts | **Yes** (lab) | Mint + pay E2E green |
-| Host gate on payment | **No** | **N7 open** |
+| Host gate on payment | **Partial** | CLI `--commercial` + receipt (**R4** process; not server enforcement) |
 | Multi-building layout | **No** | One `building.yaml` per repo (I11) |
 | PWA / agent / 3D / hardware | Optional | Frozen until Horizon A–B unless approved |
 
@@ -1078,30 +1083,40 @@ Buyer:     access quote → access pay  (hosts must honor AccessPaid — N7 open
 | **A1** | `scripts/horizon_a_deploy_env.sh` → `.env.arx` | **Done** |
 | **A2** | `Register.s.sol` + script `--register` (YAML UUID) | **Done** |
 | **A3** | `docs/horizon-a-ops.md` mint/pay ops | **Done** |
-| **A4** | Host gate: `export --commercial` + `access-receipt.json` | **Done** |
+| **A4** | Host gate: `export --commercial` + `access-receipt.json` | **Done** (R4 partial) |
 | **A5** | `docs/field-trial.md` | **Done** |
 
-**Next:** Horizon B field trial (vision holder).  
-**Freeze:** PWA / hardware / 3D / multi-building unless vision approves.
+Horizon A **does not** close §1.6 district pilot obligations. It only enables lab/live-local tooling.
 
-### 10.2 Horizon B — First real building (vision holder)
+### 10.2 Horizon B — Relegate pilot obligations (L1) — **current priority**
 
-| Order | Work | Exit |
-| :---: | :--- | :--- |
-| **B1** | Name one building with real as-built pain | Site + capture owner |
-| **B2** | Free software loop on real IFC/LiDAR | Model trustworthy enough |
-| **B3** | Contribute + reward + access pay | One closed economic loop |
-| **B4** | Fix only blockers from B2–B3 | No parallel products |
-| **B5** | Update scorecard from field evidence | Honest G4/G7/N9 |
+| Order | Package | Status | Your next action |
+| :---: | :--- | :---: | :--- |
+| **B0** | **P-Safety** | Template **done** | Fill/sign `docs/pilot-charter.md` |
+| **B1** | **P-Transfer** | Artifacts **done** | Run `./scripts/pin_pilot_release.sh v2.0.0-pilot.1`; second person uses `docs/second-person-checklist.md` |
+| **B2** | **P-Data** | Open | Complete charter §4; place private Git remote |
+| **B3** | **P-Field-truth** | Open | Deliver 1 district IFC (+ optional scan); eng logs matrix/perf |
+| **B4** | **P-Chain-optional** | Partial | Keep L1 off-chain unless leadership requests demo |
+| **B5** | Scorecard | Open | After B0–B3 evidence, update §1.6 statuses |
 
-### 10.3 Horizon C — Network scale (only after B)
+**L1 exit:** R1,R2,R5,R7,R8,R9,R10 pilot-mitigated; free software loop valuable on one site; **no mainnet token dependency**.
 
-External oracles · public testnet → Base · host product · vendor IFC · scale · audit.
+### 10.3 Horizon C — Relegate L2/L3 obligations (only after L1)
 
-### 10.4 Next commit series
+| Order | Work | Obligations |
+| :---: | :--- | :---: |
+| **C1** | Server-side host gate on `AccessPaid` | R4 → Done |
+| **C2** | Testnet/production oracle ops (2+ operators) | R3 |
+| **C3** | Legal/Finance go for any token path | R8 |
+| **C4** | Multi-building program + vendor matrix + scale | R2, R6 at program scale |
+
+### 10.4 Next actions (field + eng)
 
 ```text
-A1 deploy-env → A2 register helpers → A3 ops runbook → A4 host gate (N7) → A5 field one-pager → [B field]
+You:    sign pilot-charter.md · pin version in charter · second-person checklist
+Eng:    cut tag when tree clean (pin_pilot_release.sh) · fix only walkthrough/field blockers
+Then:   P-Field-truth on one real building
+Never:  L3 mainnet until L1 exit
 ```
 
 ---
@@ -1116,6 +1131,8 @@ A1 deploy-env → A2 register helpers → A3 ops runbook → A4 host gate (N7) �
 | **2026-07 integrity + A1 + B/C** | Close-out I1–I11; schema_version; vendor goldens; review/export policy |
 | **2026-07 full product N1–N5** | Vision locked; contribute → EIP-712 → mint E2E; access pay E2E; economy CLI |
 | **2026-07-13 vision status rewrite** | Manifest primary goal = full product; scorecard lab vs field; horizons A–C; N7–N9; §10 = path to live closed loop |
+| **2026-07-13 deployment obligations** | §1.6 R1–R10 reservation register + work packages + L0–L3 go levels; Horizon B = relegate pilot obligations |
+| **2026-07-13 P-Safety + P-Transfer** | `pilot-charter`, `l1-supported-workflow`, `second-person-checklist`, `pilot-release`, `pin_pilot_release.sh`; R8–R10 partial |
 
 ---
 
@@ -1123,16 +1140,16 @@ A1 deploy-env → A2 register helpers → A3 ops runbook → A4 host gate (N7) �
 
 ArxOS is **version control for the built world**: free software so peers can map as-built truth; peer review so the ledger is trustworthy; **$AXD** so labor is rewarded and buyers can pay for data.
 
-**Lab status:** The compiler spine and economy spine (N1–N5) are **implemented and test-proven**. Integrity theater that blocked trust has been closed.
+**Lab status:** Compiler + economy spine (N1–N8 tooling) are **implemented and test-proven**.
 
-**Field status:** The product does **not** yet work end-to-end for a stranger on a real building. Missing pieces are operational and delivery-shaped—not another rewrite:
+**District / field status:** **Not** production-ready by default. Readiness is gated by **§1.6 obligations** (LiDAR/IFC truth, transfer, safety, data class, support pin, chain policy). Horizon A tooling does not clear those obligations.
 
 ```text
-Horizon A: deploy env + register + mint/pay ops + host gate on AccessPaid
-Horizon B: one real building closed loop
-Horizon C: external oracles, public chain, scale
+L0 lab → L1 controlled pilot (relegate R1,R2,R5,R7–R10)
+      → L2 multi-building program
+      → L3 full vision economy (R3,R4,R8 production)
 ```
 
-Measure success by **closed loops** (map → review → mint → pay → data release), not by LOC or optional rings.
+Measure success by **closed loops with evidence**, and by **obligation exit criteria**—not by LOC or optional rings.
 
-This document is the engineering design, the vision lock, and the ordered plan to get there without lying about readiness.
+This document is the engineering design, the vision lock, the obligation register, and the ordered plan to relegate reservations without lying about readiness.

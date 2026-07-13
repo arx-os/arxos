@@ -36,11 +36,22 @@ arx validate
 # expect success (Ground Floor seed)
 ```
 
-## Release artifacts
+## Release artifacts / pilot pin (R9)
 
-When published: download the release binary for your OS, place on `PATH`, run the same smoke check. Track D2 may add Docker later.
+For **L1 district pilot**, do **not** install floating `main`.
+
+1. Follow **`docs/pilot-release.md`** (tag + commit SHA in the charter).  
+2. Use **`docs/l1-supported-workflow.md`** only for supported commands.  
+3. Cut tags with `./scripts/pin_pilot_release.sh v2.0.0-pilot.N`.
+
+When binary artifacts are published later: install that artifact and still record its version in the charter.
 
 ## See also
 
-- `docs/pilot-runbook.md` — full field loop
-- `arxos_manifest.md` §9 — supported surfaces
+- `docs/pilot-charter.md` — L1 sign-off (R10)
+- `docs/l1-supported-workflow.md` — supported free-software loop
+- `docs/second-person-checklist.md` — R5 transfer
+- `docs/pilot-runbook.md` — broader field notes
+- `docs/field-trial.md` — Horizon B one-pager
+- `docs/horizon-a-ops.md` — optional chain demo (not L1 success)
+- `arxos_manifest.md` §1.6 — obligation register

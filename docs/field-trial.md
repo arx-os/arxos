@@ -1,7 +1,12 @@
-# Field trial one-pager (Horizon B)
+# Field trial one-pager (Horizon B / L1)
 
 **Purpose:** Prove ArxOS on one real building with messy data.  
 **Not:** Mainnet launch, multi-oracle market, or PWA polish.
+
+**Before start:** complete and sign **`docs/pilot-charter.md`**.  
+**Install:** pinned release per **`docs/pilot-release.md`**.  
+**Workflow:** **`docs/l1-supported-workflow.md`** only for L1 success.  
+**Transfer:** **`docs/second-person-checklist.md`** (R5).
 
 ## People
 
@@ -20,23 +25,26 @@
 
 ## Loop (do in order)
 
-1. **Install** — `cargo install --path .` (see `docs/install.md`)  
+Follow **`docs/l1-supported-workflow.md`** in full. Summary:
+
+1. **Install** — pinned tag only (`docs/pilot-release.md`)  
 2. **Init** — `arx init --name "…"`  
-3. **Import** — `arx import …` IFC and/or LiDAR  
-4. **Review** — `arx edit` with `review_status=accepted|rejected` on autos  
-5. **Validate** — `arx validate` must be clean for contribute  
-6. **Git** — `arx stage && arx commit -m "…"`  
-7. **Export internal** — `arx export --format ifc` (or `--approved-only`)  
-8. **Contribute** — `arx contribute` → package; chain steps if testnet/Anvil ready (`docs/horizon-a-ops.md`)  
-9. **Buyer** — `arx access quote` → `pay` → `export --commercial` only with receipt  
+3. **Import** — IFC and/or LiDAR  
+4. **Review** — accept/reject autos; no official use of unreviewed `proposed`  
+5. **Validate** — clean errors  
+6. **Git** — stage/commit; push only to internal remote  
+7. **Export internal** — free export; use `--approved-only` for reviewed LiDAR handoff  
+
+**Optional demo only (not L1 success):** contribute / access / commercial (`docs/horizon-a-ops.md`).
 
 ## Success (yes/no)
 
 | Question | Y/N |
 | :--- | :---: |
+| Charter signed (`docs/pilot-charter.md`)? | |
+| Second-person checklist pass/conditional? | |
 | Did the model reduce unknowns vs walking in blind? | |
-| Could a second person re-run steps 2–7 from the runbook? | |
-| Was mint/pay understandable (if used)? | |
+| Site IFC/LiDAR limits written (R1/R2)? | |
 | What broke first? ________________ | |
 
 ## Rules

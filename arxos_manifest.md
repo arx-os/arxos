@@ -1141,6 +1141,7 @@ Never:  L3 mainnet until L1 exit · fake R5/R1 evidence · public facility model
 | **2026-07-13 eng B1 closeout** | `contracts/out` gitignored; `docs/field-handoff.md`; pin path ready |
 | **2026-07-13 pilot pin** | Annotated tag `v2.0.0-pilot.1` @ `ba33e6ba`; lib 514 + spine green; l1_smoke PASS |
 | **2026-07-13 R5 friction fixes** | `arx commit -m`; default git on init + branch `main`; honest hooks message; smoke covers approved-only + git; CI runs l1_smoke |
+| **2026-07-13 pilot.2** | Tag `v2.0.0-pilot.2` @ `d6a4567f` supersedes pilot.1 for new R5 walkthroughs |
 
 ---
 

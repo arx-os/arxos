@@ -108,4 +108,17 @@ Limits adopted for this pilot (defaults: [resource-limits.md](./resource-limits.
 | Operator | | |
 | Pilot owner | | |
 
-**Related:** [horizon-b-roadmap.md](./horizon-b-roadmap.md) · [l1-supported-workflow.md](./l1-supported-workflow.md) · [ifc-limitations.md](./ifc-limitations.md) · [`arxos_manifest.md`](../arxos_manifest.md) §1.6
+### R\* pilot-mitigation ticks (for S8 / manifest)
+
+Use with [s8-reconciliation-template.md](./s8-reconciliation-template.md).  
+Manifest §1.6 Status example: `Partial — pilot-mitigated: <this file path or private ref> · <date>`.
+
+```text
+R2: [ ] pilot-mitigated — §A rows: __ · §A2 filled: [ ] · date: ____
+R1: [ ] pilot-mitigated / [ ] LiDAR out of scope in charter — date: ____
+R6: [ ] pilot-mitigated — §C rows: __ · date: ____
+R5: see second-person-checklist (not this file)
+R7/R10: see charter + data-classification (not this file)
+```
+
+**Related:** [horizon-b-roadmap.md](./horizon-b-roadmap.md) · [field-day-1-runbook.md](./field-day-1-runbook.md) · [l1-supported-workflow.md](./l1-supported-workflow.md) · [ifc-limitations.md](./ifc-limitations.md) · [`arxos_manifest.md`](../arxos_manifest.md) §1.6

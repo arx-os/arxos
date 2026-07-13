@@ -35,6 +35,9 @@ Details: [ifc-limitations.md](./ifc-limitations.md) · report: [`tests/ifc_build
 | Doc | Role |
 | :--- | :--- |
 | [horizon-b-roadmap.md](./horizon-b-roadmap.md) | **Living** phases HB0–HB7 → site capture + L1 exit (~250k / PWA north star) |
+| [field-day-1-runbook.md](./field-day-1-runbook.md) | **S3+S5** non-author Day 1: pin install → real IFC → LossReport evidence |
+| [s8-reconciliation-template.md](./s8-reconciliation-template.md) | Post-sprint R\* / scorecard reconcile |
+| [eng-blocker-queue.md](./eng-blocker-queue.md) | E1–E3 proposals (approval before code) |
 | [`../arxos_manifest.md`](../arxos_manifest.md) §1.1a · §10.2 | Authority: Definition of Working + phase summary |
 
 ## L1 pilot packet (do in order)

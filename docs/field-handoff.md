@@ -33,7 +33,8 @@ Do these in order. Do **not** skip to chain/token work or CAD plugins.
 ## B3 — Field truth (R1, R2, R6)
 
 1. On **real** district IFC (clean export from vendor BIM — **no plugins**) and/or scan hardware, fill **[field-truth-log.md](./field-truth-log.md)** (interop matrix, false +/−, timing/OOM notes).  
-2. Escalate only true blockers to engineering; eng does not invent field evidence.
+2. Day-1 commands: **[field-day-1-runbook.md](./field-day-1-runbook.md)** (S3 pin + S5 IFC + LossReport).  
+3. Escalate only true blockers to engineering; eng does not invent field evidence.
 
 ## B4 — Chain stays optional (R3, R8)
 

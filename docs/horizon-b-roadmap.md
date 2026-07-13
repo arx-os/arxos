@@ -3,7 +3,7 @@
 **Authority:** [`arxos_manifest.md`](../arxos_manifest.md) §1.1a · §1.5–1.6 · §10.2  
 **Field packet (policy order):** [field-handoff.md](./field-handoff.md)  
 **Preferred pin:** `v2.0.0-pilot.4` @ `659bbd9f` — [pilot-release.md](./pilot-release.md)  
-**Last updated:** 2026-07-13 (sprint execution + evidence guardrails locked)  
+**Last updated:** 2026-07-13 (Day 1 runbook + S8 template + eng queue)  
 
 This file is the **living** Horizon B plan. Update status/dates when evidence lands; reconcile scores in the manifest.  
 Do **not** start Horizon C work until L1 exit criteria here are met once.
@@ -457,5 +457,6 @@ HB6 PWA productization · wall class mapping · Horizon C · hardware BACnet · 
 | :--- | :--- |
 | 2026-07-13 | Plan created post–pilot.4. Package A closed. HB0–HB7 defined. |
 | 2026-07-13 | Reconcile: field-truth A2 LossReport, checklist 5b, sprint S1–S8 detail, risks K1–K10, evidence guardrails, eng E1–E6 (not applied). Cross-links INDEX/README/pilot docs. |
+| 2026-07-13 | Field Day 1 runbook (S3+S5); eng-blocker-queue (E1–E3 diffs, not applied); S8 reconciliation template; sprint readiness confirm. |
 
 **Related:** [INDEX.md](./INDEX.md) · [l1-supported-workflow.md](./l1-supported-workflow.md) · [ifc-limitations.md](./ifc-limitations.md) · [field-truth-log.md](./field-truth-log.md) · [resource-limits.md](./resource-limits.md) · [field-handoff.md](./field-handoff.md)

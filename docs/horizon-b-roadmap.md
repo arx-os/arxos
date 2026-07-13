@@ -3,7 +3,7 @@
 **Authority:** [`arxos_manifest.md`](../arxos_manifest.md) §1.1a · §1.5–1.6 · §10.2  
 **Field packet (policy order):** [field-handoff.md](./field-handoff.md)  
 **Preferred pin:** `v2.0.0-pilot.4` @ `659bbd9f` — [pilot-release.md](./pilot-release.md)  
-**Last updated:** 2026-07-13 (Day 1 runbook + S8 template + eng queue)  
+**Last updated:** 2026-07-13 (HB6-accel: iPhone PWA + agent prioritized)  
 
 This file is the **living** Horizon B plan. Update status/dates when evidence lands; reconcile scores in the manifest.  
 Do **not** start Horizon C work until L1 exit criteria here are met once.
@@ -166,20 +166,20 @@ Phases are sequential **gates**. Later phases may **prep** (docs, dry lab) but d
 | **Risks** | OOM hidden by skipping validation (forbidden); Pi-class underpowered |
 | **Status** | Eng defaults **done** · site profile **open** |
 
-### Phase HB6 — Device UX (PWA / agent) for walk-in scenario (G10)
+### Phase HB6 — Device UX (PWA / agent) for walk-in scenario (G10) — **ACCELERATED**
 
 | | |
 | :--- | :--- |
-| **Goal** | Device is **field-usable** for review/label (and optional bridge), not a lab demo |
-| **Maps to** | G5/G10 · §1.1a device clause |
-| **Owner** | Eng primary · field UAT |
-| **Effort** | 1–3 weeks eng after HB3–HB4 evidence (or explicit early approval) |
-| **Depends on** | **Gate:** HB3 or HB4 evidence **or** vision-holder approval to parallelize |
-| **Success** | Second person completes review/label handoff on tablet; files land on capture node; export still CLI spine; no dual write path |
-| **Risks** | Premature PWA rebuild; browser LiDAR overpromise; LOC / ring bloat |
-| **Status** | Lab WASM ~4/10 · **gated** |
-| **In scope (incremental)** | Envelope load/save, hierarchy, review_status actions, LossReport visibility, clear “export happens on capture node” UX |
-| **Out of scope until proven** | Full building LiDAR meshing in-browser; CAD-like 3D; hardware BACnet restore |
+| **Goal** | **iPhone-usable** loop: PWA → laptop agent → review/label → LossReport → import/export triggers; then scale to site |
+| **Maps to** | G5/G10 · §1.1a device clause · **vision-holder Q6 override** |
+| **Owner** | Eng primary · field UAT on iPhone + laptop hotspot |
+| **Effort** | Batch A connect (days) → B review/export (≤1 wk) → C one-room LiDAR upload (≤1 wk) |
+| **Depends on** | **Accelerated now** (parallel to HB0–HB5 field process). Full 250k still needs HB3–HB5 evidence. |
+| **Success** | One-room: connect from iPhone · see hierarchy · accept/reject proposed · see LossReport · `approved_only` export on capture node |
+| **Risks** | iOS cleartext WS; large uploads; scope creep to ARKit; dual SSOT if phone saves without agent |
+| **Status** | Lab WASM ~4/10 · **in acceleration** — plan: [iphone-pwa-acceleration.md](./iphone-pwa-acceleration.md) |
+| **In scope (P0–P1)** | Configurable agent host; mobile connect; hierarchy; review_status; LossReport panel; agent ifc/lidar import + approved export |
+| **Out of scope (near term)** | In-browser full-building LiDAR; ARKit product (P2); CAD 3D; Horizon C |
 
 ### Phase HB7 — L1 exit scorecard
 
@@ -378,7 +378,9 @@ Spine-safe, small, only if sprint pain appears. **Default: implement none until 
 
 ### 5.4 Explicitly deferred this sprint
 
-HB6 PWA productization · wall class mapping · Horizon C · hardware BACnet · 3D viz · multi-building campus · new pins unless install-breaking bug.
+**Parallel eng (HB6-accel):** iPhone PWA+agent Batches A–C — [iphone-pwa-acceleration.md](./iphone-pwa-acceleration.md) (does **not** replace S1–S5 field evidence).  
+
+**Still deferred:** wall class mapping · Horizon C · hardware BACnet · 3D viz · multi-building · ARKit product · new pins unless install-breaking.
 
 ---
 
@@ -395,7 +397,7 @@ HB6 PWA productization · wall class mapping · Horizon C · hardware BACnet · 
 | K7 | Floating `main` install | M | R9 regression | Charter pin only; smoke from tag |
 | K8 | Public Git with facility model | L/H | R7 / legal | S2 before S5 share |
 | K9 | Single hero continues | H | Pilot dies | S4 hard gate before HB4 |
-| K10 | Premature HB6 eng | M | Distraction | Q6 default **No** |
+| K10 | HB6 scope creep (ARKit/full BIM in browser) | M | Distraction | Stick to P0–P1 batches; capture node = laptop |
 
 **Dependencies:** S5 → S2 (data class) · S4 → S3 (install) · official export claims → S1 · R2 close → S5 evidence · R5 close → S4 pass/conditional.
 
@@ -431,7 +433,7 @@ HB6 PWA productization · wall class mapping · Horizon C · hardware BACnet · 
 | **Q3** | Capture node? | **Laptop/Mac Mini**; not Pi for first real IFC |
 | **Q4** | IFC-first vs scan-first? | **IFC-first** this sprint (HB2); LiDAR room next if hardware ready |
 | **Q5** | Second person name? | **Required by D2**; without name, S4 blocked |
-| **Q6** | PWA eng parallel? | **No** until S5 has one matrix row **and** Q1–Q2 answered |
+| **Q6** | PWA eng parallel? | **Override: YES** — accelerate iPhone PWA+agent ([iphone-pwa-acceleration.md](./iphone-pwa-acceleration.md)); field S1–S5 still required for L1 exit |
 | **Q7** | Vendor IFC contact? | Facilities/BIM coordinator; export IFC4 with spaces if possible |
 | **Q8** | Charter + data-class signers? | Pilot owner + security/IT named on D1 |
 
@@ -446,7 +448,7 @@ HB6 PWA productization · wall class mapping · Horizon C · hardware BACnet · 
 | 3 | First real LiDAR room if S6 skipped | HB3 |
 | 4 | Begin HB4 site loop only if S1+S4+S5 green | HB4 |
 | 5 | HB5 profile when large model available | HB5 |
-| 6 | HB6 PWA review slice **only** after gate or override | HB6 |
+| 6 | **HB6-accel in flight** — Batch A connect → B review → C room LiDAR | HB6 |
 | 7 | Never Horizon C until HB7 once | — |
 
 ---
@@ -459,5 +461,6 @@ HB6 PWA productization · wall class mapping · Horizon C · hardware BACnet · 
 | 2026-07-13 | Reconcile: field-truth A2 LossReport, checklist 5b, sprint S1–S8 detail, risks K1–K10, evidence guardrails, eng E1–E6 (not applied). Cross-links INDEX/README/pilot docs. |
 | 2026-07-13 | Field Day 1 runbook (S3+S5); eng-blocker-queue (E1–E3 diffs, not applied); S8 reconciliation template; sprint readiness confirm. |
 | 2026-07-13 | Pilot starter pack; field-truth S5/S6 templates; sprint-status-dashboard; HB3 LiDAR plan outline; E1–E3 reconfirmed low priority. |
+| 2026-07-13 | **HB6-accel:** iPhone PWA+agent north star; audit+P0 backlog in `iphone-pwa-acceleration.md`; Q6 override; no code until Batch A approval. |
 
 **Related:** [INDEX.md](./INDEX.md) · [l1-supported-workflow.md](./l1-supported-workflow.md) · [ifc-limitations.md](./ifc-limitations.md) · [field-truth-log.md](./field-truth-log.md) · [resource-limits.md](./resource-limits.md) · [field-handoff.md](./field-handoff.md)

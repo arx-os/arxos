@@ -9,7 +9,7 @@
 | **Engine** | Rust 2021 (CLI + lib) · native IFC · Git SSOT · Foundry contracts · optional WASM/agent/render3d/`blockchain` |
 | **Design philosophy** | Local-first · single `Building` model · Git-native · free to use · pay only for data access |
 | **Document status** | Living plan — full vision locked; compiler + economy spine **lab-complete** (N1–N8 + Horizon A tooling); **Horizon B** (district L1 + site capture path) is current priority (§1.1, §1.5–1.6, §10; `docs/horizon-b-roadmap.md`) |
-| **Last reconciled** | 2026-07-13 (pilot starter pack; sprint dashboard; HB3 outline; field-truth S5/S6; E1–E3 still optional) |
+| **Last reconciled** | 2026-07-13 (HB6-accel iPhone PWA+agent plan; field packet intact; no phone code until Batch A approve) |
 | **Audience** | Vision holder, field IT pilots, core maintainers, external builders |
 
 ---
@@ -1145,7 +1145,7 @@ Horizon A **does not** close §1.6 district pilot obligations. It only enables l
 | **HB3** | Real LiDAR field truth (R1) | Field + eng | Open | Room/wing scan: false +/− log; review gates used |
 | **HB4** | Site capture loop (G9) | Field + eng | Open | Scan → label → validate → Git → usable IFC on one building |
 | **HB5** | Scale profile ~250k (R6/G7) | Field + eng | Eng defaults only | Timing/RAM/limits logged; light-mode guidance real |
-| **HB6** | Device UX PWA/agent (G10) | Eng + field | Lab ~4/10 | Walk-in review/label path reliable under charter |
+| **HB6** | Device UX PWA/agent (G10) | Eng + field | **Accel** | iPhone↔agent plan (`docs/iphone-pwa-acceleration.md`); Batch A await approve |
 | **HB7** | L1 exit scorecard | Both | Open | R1,R2,R5,R7–R10 pilot-mitigated; §2.1 scores updated |
 
 **L1 exit:** §1.1a free-software loop valuable on one messy real building under policy; **no mainnet token dependency**. Chain stays optional (HB-chain).

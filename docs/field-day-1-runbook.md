@@ -11,7 +11,9 @@
 - [ ] You have the IFC file path (USB / secure share — not public GitHub)
 - [ ] Laptop/Mini with Rust toolchain (or prebuilt `arx` from pin — prefer install from pin)
 
-**Rules:** No CAD plugins · No `agent` as export · Do not ignore import warnings · Do not use floating `main`.
+**Rules:** No CAD plugins · Agent is **bridge only** (export spine still `arx export` / agent `ifc.export` same exporter) · Do not ignore import warnings · Do not use floating `main`.
+
+**iPhone PWA (accelerated HB6):** Optional same-day companion once agent runs on the laptop — see [iphone-pwa-acceleration.md](./iphone-pwa-acceleration.md). CLI S3+S5 remains the **pin/evidence** path; phone loop is for review/capture UX once Batch A+ ships.
 
 ---
 
@@ -162,6 +164,7 @@ Incomplete wall mapping is **expected** — do not block on full BIM.
 | `arx stage` + `arx commit -m "import vendor ifc"` | If Git remote approved |
 | Second-person checklist ([second-person-checklist.md](./second-person-checklist.md)) | S4 — different person |
 | LiDAR room scan | S6 only if hardware + charter allows |
+| iPhone ↔ agent connect smoke | After eng Batch A (configurable host); same Wi-Fi/hotspot as laptop |
 
 ---
 

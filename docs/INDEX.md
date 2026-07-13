@@ -40,6 +40,7 @@ Details: [ifc-limitations.md](./ifc-limitations.md) · report: [`tests/ifc_build
 | [sprint-status-dashboard.md](./sprint-status-dashboard.md) | Weekly S1–S8 + R\* status table |
 | [s8-reconciliation-template.md](./s8-reconciliation-template.md) | Post-sprint R\* / scorecard reconcile |
 | [hb3-lidar-plan.md](./hb3-lidar-plan.md) | After S1–S8: first real LiDAR + review (outline) |
+| [iphone-pwa-acceleration.md](./iphone-pwa-acceleration.md) | **HB6-accel:** iPhone PWA + agent audit, P0 backlog, test plan |
 | [eng-blocker-queue.md](./eng-blocker-queue.md) | E1–E3 optional polish (approval before code) |
 | [`../arxos_manifest.md`](../arxos_manifest.md) §1.1a · §10.2 | Authority: Definition of Working + phase summary |
 

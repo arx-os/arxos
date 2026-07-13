@@ -7,7 +7,9 @@
 **Maturity:** Lab compiler ~8/10; district L1 readiness ~4/10 until process +
 field evidence close obligations in `arxos_manifest.md` §1.6.  
 **Site north star (full §1.1a):** see `docs/horizon-b-roadmap.md` — this charter
-gates **controlled L1** (CLI/TUI first); PWA walk-in is later (HB6), not a day-1 requirement.
+gates **controlled L1**. CLI/TUI remains the pin + evidence path; **iPhone PWA + laptop agent**
+is under **HB6 acceleration** (`docs/iphone-pwa-acceleration.md`) for on-site review/capture UX,
+still with human gates and the same IFC export spine.
 
 ---
 

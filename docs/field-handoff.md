@@ -6,7 +6,8 @@
 
 Do these in order. Do **not** skip to chain/token work or CAD plugins.
 
-**Map:** [INDEX.md](./INDEX.md) · **Authority:** [`arxos_manifest.md`](../arxos_manifest.md) §1.5–1.6
+**Map:** [INDEX.md](./INDEX.md) · **Authority:** [`arxos_manifest.md`](../arxos_manifest.md) §1.1a · §1.5–1.6  
+**Living roadmap (phases HB0–HB7):** [horizon-b-roadmap.md](./horizon-b-roadmap.md)
 
 ---
 

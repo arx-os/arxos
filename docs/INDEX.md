@@ -30,6 +30,13 @@ See manifest §1.5–1.6.
 
 Details: [ifc-limitations.md](./ifc-limitations.md) · report: [`tests/ifc_buildingsmart_report.md`](../tests/ifc_buildingsmart_report.md)
 
+## Living plan (Horizon B)
+
+| Doc | Role |
+| :--- | :--- |
+| [horizon-b-roadmap.md](./horizon-b-roadmap.md) | **Living** phases HB0–HB7 → site capture + L1 exit (~250k / PWA north star) |
+| [`../arxos_manifest.md`](../arxos_manifest.md) §1.1a · §10.2 | Authority: Definition of Working + phase summary |
+
 ## L1 pilot packet (do in order)
 
 1. [pilot-charter.md](./pilot-charter.md) — sign (R10, R8)

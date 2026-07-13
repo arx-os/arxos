@@ -8,8 +8,8 @@
 | **Primary goal** | **Full product:** free local software to map buildings as code + peer review + **$AXD rewards** for verified as-built data + **buyer market** for data access |
 | **Engine** | Rust 2021 (CLI + lib) · native IFC · Git SSOT · Foundry contracts · optional WASM/agent/render3d/`blockchain` |
 | **Design philosophy** | Local-first · single `Building` model · Git-native · free to use · pay only for data access |
-| **Document status** | Living plan — full vision locked; compiler + economy spine **lab-complete** (N1–N8 + Horizon A tooling); **Horizon B** (district L1 obligations) is current priority (§1.5, §1.6, §10) |
-| **Last reconciled** | 2026-07-13 (pilot.4 pin; LossReport unmapped_products; buildingSMART; R2 eng half) |
+| **Document status** | Living plan — full vision locked; compiler + economy spine **lab-complete** (N1–N8 + Horizon A tooling); **Horizon B** (district L1 + site capture path) is current priority (§1.1, §1.5–1.6, §10; `docs/horizon-b-roadmap.md`) |
+| **Last reconciled** | 2026-07-13 (Definition of Working + Horizon B living roadmap; pilot.4) |
 | **Audience** | Vision holder, field IT pilots, core maintainers, external builders |
 
 ---
@@ -106,6 +106,28 @@ ArxOS treats a building as **versioned structured state** — an open ledger of 
 
 Compiler without reward is incomplete for the vision. Reward without trusted as-built data is hollow.
 
+### 1.1a Definition of Working — site capture target (L1 north star)
+
+**Ultimate L1 “it works on a real site” scenario (~250k sqft class building):**
+
+> I can walk into the building tomorrow with a device running the **WASM PWA** (and/or **edge agent**), perform **LiDAR scanning + labeling / AR corrections**, have the system produce a **validated `Building` model**, and **export a usable IFC** — with **human review gates**, **clear LossReport**, and **Git versioning**. Reliable enough for **controlled L1 pilot use under a signed charter**.
+
+| Layer | Required behavior | Honesty constraint |
+| :--- | :--- | :--- |
+| **Capture** | LiDAR (file or device pipeline) + optional vendor IFC base | Autos start `proposed`; never skip review |
+| **Correct** | Label / text / AR corrections on device or capture node | PWA may start as review+edit; full in-browser LiDAR is **not** claimed until proven |
+| **Validate** | Hard validate on durable write | No serialize-only “approved” saves |
+| **Loss** | LossReport + `unmapped_products` (and LiDAR miss modes) | “Validate OK” ≠ complete BIM |
+| **Version** | `building.yaml` + Git on approved internal remote | Pin install (`v2.0.0-pilot.N`) |
+| **Export** | `arx export --format ifc` (prefer `--approved-only`) | Agent is bridge only — not second export spine |
+| **Policy** | Signed charter + data class + second-person handoff | R5/R7/R10; human + licensed docs win |
+
+**L1 exit bar (controlled pilot — not full product economy):** One named building, messy real data, free-software loop above under policy; **chain optional**. Does **not** require mint, buyer market, or mainnet.
+
+**Full product bar (L3):** L1 + multi-building program (L2) + production reward/market (R3/R4/R8).
+
+**Living plan:** detailed Horizon B phases, sprints, and risks live in [`docs/horizon-b-roadmap.md`](docs/horizon-b-roadmap.md). Update that file when evidence lands; reconcile scores here.
+
 ### 1.2 Success criteria — compiler (trust root)
 
 | ID | Criterion | Measurable exit | Status (2026-07) |
@@ -116,8 +138,10 @@ Compiler without reward is incomplete for the vision. Reward without trusted as-
 | G4 | LiDAR → YAML → IFC path | Synthetic CI + CLI workflow | **Partial** (field unproven) |
 | G5 | Text/AR edits | `arx edit` + validate/save | **Done** (CLI); WASM partial |
 | G6 | Human-in-the-loop LiDAR | `review_status` + export warn / `--approved-only` | **Done** (lab) |
-| G7 | Pilot scale path | Runbook + profiled ~250k ft² | **Open** (docs partial) |
+| G7 | Pilot scale path | Runbook + profiled ~250k ft² | **Open** (defaults only; site profile open) |
 | G8 | One IFC stack | Native STEP only | **Done** |
+| G9 | Site capture loop (§1.1a) | Real building: scan → review → validate → Git → IFC | **Open** — Horizon B |
+| G10 | Device path (PWA/agent) | Field-usable review/label path on pilot hardware | **Open** (lab WASM ~4/10) |
 
 ### 1.3 Success criteria — economy / network
 
@@ -131,7 +155,7 @@ Compiler without reward is incomplete for the vision. Reward without trusted as-
 | N6 | Multi-peer via Git remotes (not CRDT-first) | **Partial** |
 | N7 | **Host gates data on `AccessPaid`** | **Done** (lab: `export --commercial` + receipt) |
 | N8 | **One-command local deploy env** (addresses + register helpers) | **Done** (`horizon_a_deploy_env.sh`) |
-| N9 | **One real-building closed loop** (field) | **Open** — Horizon B |
+| N9 | **One real-building closed loop** (field) | **Open** — Horizon B / G9 |
 
 ### 1.4 Explicit non-goals (near term)
 
@@ -139,10 +163,12 @@ Compiler without reward is incomplete for the vision. Reward without trusted as-
 - **Revit / ArchiCAD / CAD plugins or direct CAD integrations** — IFC export from the vendor tool is the only supported BIM path (`docs/ifc-limitations.md`).
 - Survey-grade auto reconstruction without human review.
 - NL “chat to edit building” as primary interface.
-- Browser-only full campus LiDAR.
+- **Browser-only full-building LiDAR** for ~250k sqft (device does review/label; heavy ingest stays on capture node until proven otherwise).
 - Multi-device CRDT collaboration before Git multi-remote is boring.
-- Expanding peripherals (PWA/hardware/3D) before Horizon A–B exit.
+- **Horizon C** (network scale, production mint, server host gate) before **L1 exit once**.
+- Expanding optional rings (3D viz, hardware BACnet, campus multi-building) before §1.1a site loop has evidence.
 - Agent/daemon as official IFC export authority (edge bridge only; spine is `arx export --format ifc`).
+- Rewriting the compiler spine (`ingest` / YAML / Git / IFC identity / validate) for convenience.
 
 ### 1.5 Path to “it works” (horizons)
 
@@ -152,10 +178,11 @@ HORIZON A — Lab → live local (eng CLOSED for tooling)
   full_lab_loop.sh = compiler + l1_smoke + Foundry mint/pay E2E
   Exit: cold engineer runs lab mint/pay proof without reading Solidity — met via Foundry + ops docs
 
-HORIZON B — First real building / district L1 (CURRENT PRIORITY)
-  Relegate §1.6: R1,R2,R5,R7–R10 via field-handoff (charter, pin, walkthrough, site truth)
-  Free-software loop on one building; chain optional/demo only
-  Exit: pilot-mitigated obligations + valuable loop on messy real data
+HORIZON B — First real building / district L1 + site capture (CURRENT PRIORITY)
+  Policy packet (charter, pin, R5, data class) → field IFC/LiDAR truth
+  → room/wing capture loop → ~250k scale profile → device (PWA/agent) usability
+  Free-software loop; chain optional/demo only
+  Exit: §1.1a L1 bar + pilot-mitigated R1,R2,R5,R7–R10  (detail: docs/horizon-b-roadmap.md)
 
 HORIZON C — Network scale (after L1 exit, then L2)
   External oracles, public testnet → Base
@@ -163,14 +190,18 @@ HORIZON C — Network scale (after L1 exit, then L2)
   Optional: more vendor IFC; multi-building later
 ```
 
-**Rule:** Do not start Horizon C feature work until Horizon B (L1 exit) has succeeded at least once.
+**Rules:**
+1. Do **not** start Horizon C feature work until Horizon B (L1 exit) has succeeded at least once.
+2. **Field evidence before features** — do not map walls or polish PWA capture to hide missing site logs.
+3. **Compiler spine and honesty first** — never sacrifice validation or LossReport for speed.
+4. **CLI/TUI capture node first**, then harden PWA/agent for the walk-in scenario (G10 after G9 partial).
 
 ### 1.6 Deployment obligations (reservations → work)
 
 **Hard truth:** Lab-complete (N1–N5, Horizon A tooling) is **not** “absolutely ready for district production.”  
 This section is the **obligation register**: each reservation must be **relegated** (reduced or closed) by named work before the corresponding go-level is claimed.
 
-**Current state (2026-07-13, pin `v2.0.0-pilot.4` @ `659bbd9f`):** Engineering has a green lab compiler loop (import → validate → export → Git → optional contribute/commercial gate), TUI as default UI, hard resource refuse, and IFC **honesty** via `unmapped_products` LossReport plus buildingSMART ISO fixtures—**R2 eng half** and **R9 pin** are landed. District L1 is still ~**4/10**: blocked on **field-owned** evidence and process (signed charter **R10**, second-person walkthrough **R5**, data-class sign-off **R7**, real site IFC/LiDAR log **R1/R2/R6**). Do not claim L1 exit, full BIM parity, or production chain. Next work is Horizon B field packet (`docs/field-handoff.md`), not Horizon C or CAD plugins.
+**Current state (2026-07-13, pin `v2.0.0-pilot.4` @ `659bbd9f`):** Engineering has a green lab compiler loop (import → validate → export → Git → optional contribute/commercial gate), TUI as default UI, hard resource refuse, and IFC **honesty** via `unmapped_products` LossReport plus buildingSMART ISO fixtures—**R2 eng half** and **R9 pin** are landed. District L1 is still ~**4/10**: blocked on **field-owned** evidence and process (signed charter **R10**, second-person walkthrough **R5**, data-class sign-off **R7**, real site IFC/LiDAR log **R1/R2/R6**). Site-capture north star is §1.1a (~250k walk-in PWA/agent + LiDAR + review + IFC under charter); phased plan **HB0–HB7** lives in `docs/horizon-b-roadmap.md`. Do not claim L1 exit, full BIM parity, or production chain. Next work is Horizon B field packet + evidence — not Horizon C, CAD plugins, or premature PWA rebuild.
 
 #### Go levels (do not skip)
 
@@ -1078,7 +1109,7 @@ Lab proof: ./scripts/full_lab_loop.sh   (see docs/lab/full-lab-loop.md)
 | Foundry contracts | **Yes** (lab) | Mint + pay E2E green |
 | Host gate on payment | **Partial** | CLI `--commercial` + receipt (**R4** process; not server enforcement) |
 | Multi-building layout | **No** | One `building.yaml` per repo (I11) |
-| PWA / agent / 3D / hardware | Optional | Frozen until Horizon A–B unless approved |
+| PWA / agent / 3D / hardware | Optional | PWA/agent on HB6 after field evidence (or explicit go); 3D/hardware frozen |
 
 ---
 
@@ -1100,20 +1131,34 @@ Lab proof: ./scripts/full_lab_loop.sh   (see docs/lab/full-lab-loop.md)
 Horizon A **does not** close §1.6 district pilot obligations. It only enables lab/live-local tooling.
 **Lab proof command:** `./scripts/full_lab_loop.sh` (`docs/lab/full-lab-loop.md`).
 
-### 10.2 Horizon B — Relegate pilot obligations (L1) — **current priority**
+### 10.2 Horizon B — Site capture + L1 exit — **current priority**
 
-| Order | Package | Status | Your next action |
-| :---: | :--- | :---: | :--- |
-| **B0** | **P-Safety** | Template **done** | Fill/sign `docs/pilot-charter.md` |
-| **B1** | **P-Transfer** | **Pin cut** | Field records `v2.0.0-pilot.4` @ `659bbd9f`; second person + checklist on that pin (R5 still open) |
-| **B2** | **P-Data** | Template done | Complete `docs/data-classification.md` + charter §4; private Git remote |
-| **B3** | **P-Field-truth** | Template done | Fill `docs/field-truth-log.md` with real IFC/scan; eng fixes only blockers |
-| **B4** | **P-Chain-optional** | Partial | Keep L1 off-chain unless leadership requests demo |
-| **B5** | Scorecard | Open | After B0–B3 evidence, update §1.6 statuses |
+**Living detail:** [`docs/horizon-b-roadmap.md`](docs/horizon-b-roadmap.md) (phases, risks, sprints — update when evidence lands).  
+**Field packet (policy order):** [`docs/field-handoff.md`](docs/field-handoff.md).  
+**Target scenario:** §1.1a (~250k sqft walk-in capture under charter).
 
-**L1 exit:** R1,R2,R5,R7,R8,R9,R10 pilot-mitigated; free software loop valuable on one site; **no mainnet token dependency**.
+| Phase | Name | Owner | Status | Success criteria (summary) |
+| :---: | :--- | :---: | :---: | :--- |
+| **HB0** | Policy gate (charter, pin, data class) | Field | Templates done | Signed charter + pin in §2 + private remote class |
+| **HB1** | Controlled dry-run (R5 on pin) | Field | Open | Second-person checklist on `v2.0.0-pilot.4` |
+| **HB2** | Real IFC field truth (R2) | Field + eng | Lab half done | District IFC preserve/drop matrix in field-truth-log |
+| **HB3** | Real LiDAR field truth (R1) | Field + eng | Open | Room/wing scan: false +/− log; review gates used |
+| **HB4** | Site capture loop (G9) | Field + eng | Open | Scan → label → validate → Git → usable IFC on one building |
+| **HB5** | Scale profile ~250k (R6/G7) | Field + eng | Eng defaults only | Timing/RAM/limits logged; light-mode guidance real |
+| **HB6** | Device UX PWA/agent (G10) | Eng + field | Lab ~4/10 | Walk-in review/label path reliable under charter |
+| **HB7** | L1 exit scorecard | Both | Open | R1,R2,R5,R7–R10 pilot-mitigated; §2.1 scores updated |
 
-**Field packet (ordered):** `docs/field-handoff.md`
+**L1 exit:** §1.1a free-software loop valuable on one messy real building under policy; **no mainnet token dependency**. Chain stays optional (HB-chain).
+
+**Integration spine (do not fork):**
+
+```text
+[device PWA/agent] ──bridge/files──► [capture node: arx CLI/TUI]
+   LiDAR file / labels / review          import lidar|ifc → finalize → validate
+                                         → building.yaml + Git
+                                         → arx export --format ifc (--approved-only)
+                                         → LossReport visible at every ingest
+```
 
 ### 10.3 Horizon C — Relegate L2/L3 obligations (only after L1)
 
@@ -1128,13 +1173,15 @@ Horizon A **does not** close §1.6 district pilot obligations. It only enables l
 
 ```text
 You:    docs/field-handoff.md — sign charter + data-classification · record pin · R5 checklist
-        fill field-truth-log on real IFC/scan
-Eng:    ./scripts/full_lab_loop.sh green · fix field blockers only · no L3 until L1 exit
+        open site access; fill field-truth-log on real IFC/scan
+Eng:    keep pin green · fix field blockers only · no Horizon C until L1 exit
+        device/PWA work only after HB3–HB4 evidence or explicit approval
 Never:  L3 mainnet until L1 exit · fake R5/R1 evidence · public facility models
+        rewrite spine · CAD plugins · skip LossReport/validation
 ```
 
 **Automated eng proof:** `./scripts/full_lab_loop.sh` (Compiler CI + Full Lab Loop workflow).  
-**L1 sample smoke only:** `./scripts/l1_smoke.sh` — neither closes R5.
+**L1 sample smoke only:** `./scripts/l1_smoke.sh` — neither closes R5 or R1.
 
 ---
 
@@ -1160,6 +1207,7 @@ Never:  L3 mainnet until L1 exit · fake R5/R1 evidence · public facility model
 | **2026-07-13 concurrent pass** | Header/§0.1/§1.5/P-Transfer/phase 1.6–1.7 aligned to pilot.3 + Horizon B current |
 | **2026-07-13 Package A / R2 eng** | LossReport `unmapped_products`; buildingSMART ISO fixtures + report; R2 Partial |
 | **2026-07-13 pilot.4** | Tag `v2.0.0-pilot.4` @ `659bbd9f`; TUI default, no hardware/render3d, unmapped honesty |
+| **2026-07-13 Definition of Working + HB roadmap** | §1.1a site/PWA/250k target; G9/G10; `docs/horizon-b-roadmap.md` HB0–HB7 living plan |
 
 ---
 

@@ -111,8 +111,8 @@ impl Cli {
             Commands::Export {
                 format,
                 output,
+                path,
                 repo,
-                delta,
                 approved_only,
                 commercial,
                 access_receipt,
@@ -120,8 +120,8 @@ impl Cli {
                 let cmd = ExportCommand {
                     format,
                     output,
+                    path,
                     repo,
-                    delta,
                     approved_only,
                     commercial,
                     access_receipt,

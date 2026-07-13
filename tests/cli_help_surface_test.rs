@@ -106,3 +106,20 @@ fn remote_absent_without_agent_feature() {
         );
     }
 }
+
+#[test]
+fn export_help_has_path_flag_not_delta() {
+    let mut cmd = arxos::cli::Cli::command();
+    let export = cmd
+        .find_subcommand_mut("export")
+        .expect("export subcommand");
+    let help = export.render_long_help().to_string();
+    assert!(
+        help.contains("--path") || help.contains("path"),
+        "export should document --path for project root"
+    );
+    assert!(
+        !help.contains("--delta"),
+        "export --delta was removed; must not appear in help"
+    );
+}

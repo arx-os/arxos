@@ -77,7 +77,7 @@ BIM policy: ArxOS is IFC-only — no Revit/ArchiCAD plugins. Vendor tools must
 export clean IFC for import.
 
 Official pilot handoffs: `arx export --format ifc` (not agent auto-export).
---delta is not implemented and hard-errors if passed.")]
+Use --path to select a project root without changing cwd.")]
     Export {
         /// Export format: ifc (recommended), yaml, json
         #[arg(long, default_value = "ifc")]
@@ -85,12 +85,12 @@ Official pilot handoffs: `arx export --format ifc` (not agent auto-export).
         /// Output file path
         #[arg(long)]
         output: Option<String>,
+        /// Project root containing building.yaml (default: cwd)
+        #[arg(long)]
+        path: Option<String>,
         /// Git repository URL (legacy; prefer arx commit for SSOT)
         #[arg(long)]
         repo: Option<String>,
-        /// Not implemented — hard-errors if set (hidden; no silent ignore)
-        #[arg(long, hide = true)]
-        delta: bool,
         /// Exclude proposed/rejected LiDAR auto entities from IFC export
         #[arg(long)]
         approved_only: bool,

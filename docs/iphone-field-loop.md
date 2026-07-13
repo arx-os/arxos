@@ -86,13 +86,37 @@ On iPhone open: `http://<LAPTOP_LAN_IP>:8080/` (not https).
 
 ## After Pass A → Batch B readiness
 
-Batch A only proves **connect**. Ready for Batch B when Pass A is green:
+Batch A only proves **connect**. **B1–B3 (read-only Review)** is on `main` after approval.
 
-- Agent `building.get`  
-- Hierarchy + accept/reject  
-- LossReport panel  
-- `ifc.export` `approved_only` from phone  
+### Pass B read-only (B1–B3)
 
-Do **not** start Batch B code until you confirm Pass A on real devices (or explicit go).
+**Laptop**
 
-**Related:** [iphone-pwa-acceleration.md](./iphone-pwa-acceleration.md) · [field-day-1-runbook.md](./field-day-1-runbook.md)
+```bash
+# Pilot project with building.yaml (optionally mark a room proposed for badges)
+cd ~/arx-pilots/SITE
+# ensure building.yaml exists; agent detects repo root from cwd / walk-up
+# start agent with --features agent
+```
+
+**iPhone**
+
+1. Pass A: header **● Online** (LAN host, not 127.0.0.1).  
+2. Open **Review** (nav or Home → Review).  
+3. Tap **Refresh** (or auto-load).  
+4. Expect building name, floor/room/equip counts, hierarchy rows (≥48px).  
+5. Toggle **Proposed only** — list filters to `proposed` badges.  
+6. If any proposed/rejected LiDAR autos: **Review warnings** section lists them.  
+7. **Export (soon)** stays disabled until B7.
+
+| Pass B (read-only) | |
+| :--- | :---: |
+| `building.get` succeeds from phone | [ ] |
+| Hierarchy shows rooms/equip from laptop YAML | [ ] |
+| Proposed badges visible when status set | [ ] |
+| Proposed-only filter works | [ ] |
+| Offline → clear error, no fake data | [ ] |
+
+**Not yet (B4–B7):** Accept/Reject, durable edit, approved export button.
+
+**Related:** [iphone-pwa-acceleration.md](./iphone-pwa-acceleration.md) · [batch-b-proposal.md](./batch-b-proposal.md) · [field-day-1-runbook.md](./field-day-1-runbook.md)

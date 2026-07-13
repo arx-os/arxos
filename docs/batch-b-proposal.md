@@ -1,6 +1,6 @@
 # Batch B proposal — iPhone review + approved export (await approval)
 
-**Status:** Proposal only — **do not merge until vision holder approves**  
+**Status:** **B1–B3 implemented** (building.get + Review page + hierarchy/badges). B4–B7 await approval.  
 **Depends on:** Batch A Pass A green ✅  
 **Goal:** Phone views laptop model, reviews `proposed`, triggers `approved_only` IFC export on capture node.  
 **Constraint:** Thin agent RPC wrappers only; **no** IFC/YAML/validate spine rewrite. Reversible feature-gated work (`agent` + `web`).

@@ -55,7 +55,10 @@ pub fn Home() -> impl IntoView {
             {status_block}
 
             <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
-                <A href="/import" attr:style="display: block; text-align: center; min-height: 48px; line-height: 48px; background: #2563eb; color: white; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 16px;">
+                <A href="/review" attr:style="display: block; text-align: center; min-height: 48px; line-height: 48px; background: #2563eb; color: white; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 16px;">
+                    "Review (agent)"
+                </A>
+                <A href="/import" attr:style="display: block; text-align: center; min-height: 48px; line-height: 48px; background: #e2e8f0; color: #0f172a; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 16px;">
                     "Import IFC (browser)"
                 </A>
                 <A href="/buildings" attr:style="display: block; text-align: center; min-height: 48px; line-height: 48px; background: #e2e8f0; color: #0f172a; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 16px;">

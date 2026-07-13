@@ -463,5 +463,6 @@ Spine-safe, small, only if sprint pain appears. **Default: implement none until 
 | 2026-07-13 | Pilot starter pack; field-truth S5/S6 templates; sprint-status-dashboard; HB3 LiDAR plan outline; E1–E3 reconfirmed low priority. |
 | 2026-07-13 | **HB6-accel:** iPhone PWA+agent north star; audit+P0 backlog in `iphone-pwa-acceleration.md`; Q6 override; no code until Batch A approval. |
 | 2026-07-13 | **Batch A shipped:** configurable agent host, mobile connect UI, agent LAN hints, field status, `iphone-field-loop.md`. Await Pass A then Batch B. |
+| 2026-07-13 | **Batch B1–B3:** `building.get` RPC, PWA `/review` hierarchy + proposed badges, Pass B read-only docs. B4–B7 next. |
 
 **Related:** [INDEX.md](./INDEX.md) · [l1-supported-workflow.md](./l1-supported-workflow.md) · [ifc-limitations.md](./ifc-limitations.md) · [field-truth-log.md](./field-truth-log.md) · [resource-limits.md](./resource-limits.md) · [field-handoff.md](./field-handoff.md)

@@ -85,6 +85,7 @@ fn action_required_capability(action: &str) -> Option<&'static str> {
         "git.diff" => Some("git.diff"),
         "git.commit" => Some("git.commit"),
         "files.read" => Some("files.read"),
+        "building.get" => Some("building.get"),
         "ifc.import" => Some("ifc.import"),
         "ifc.export" => Some("ifc.export"),
         "auth.rotate" | "auth.negotiate" => Some("auth.manage"),

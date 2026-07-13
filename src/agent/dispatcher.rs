@@ -9,7 +9,7 @@ use crate::agent::protocol::{
     JsonRpcError, JsonRpcRequest, JsonRpcResponse, AUTH_ERROR, INTERNAL_ERROR, INVALID_PARAMS,
     METHOD_NOT_FOUND,
 };
-use crate::agent::{collab, files, git, ifc};
+use crate::agent::{building, collab, files, git, ifc};
 
 pub struct AgentState {
     pub repo_root: PathBuf,
@@ -37,6 +37,7 @@ pub async fn dispatch(state: Arc<AgentState>, request: JsonRpcRequest) -> JsonRp
         "git.diff" => handle_git_diff(&state.repo_root, params),
         "git.commit" => handle_git_commit(&state, params),
         "files.read" => handle_files_read(&state.repo_root, params),
+        "building.get" => handle_building_get(&state.repo_root),
         "ifc.import" => handle_ifc_import(&state.repo_root, params),
         "ifc.export" => handle_ifc_export(&state.repo_root, params),
         "collab.sync" => handle_collab_sync(params).await,
@@ -98,6 +99,11 @@ fn handle_files_read(root: &std::path::Path, params: Value) -> Result<Value> {
 
     let content = files::read_file(root, path)?;
     Ok(serde_json::to_value(content)?)
+}
+
+fn handle_building_get(root: &std::path::Path) -> Result<Value> {
+    let result = building::get_building(root)?;
+    Ok(serde_json::to_value(result)?)
 }
 
 fn handle_ifc_import(root: &std::path::Path, params: Value) -> Result<Value> {

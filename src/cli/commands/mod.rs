@@ -1,5 +1,6 @@
 //! CLI command implementations for the Building compiler surface.
 
+pub mod access;
 pub mod command_trait;
 pub mod contribute;
 pub mod data;
@@ -16,6 +17,7 @@ pub mod query;
 #[cfg(feature = "tui")]
 pub mod search;
 
+pub use access::AccessCommand;
 pub use command_trait::Command;
 pub use contribute::ContributeCommand;
 pub use export::ExportCommand;

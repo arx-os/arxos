@@ -6,6 +6,7 @@
 //! This library can be used independently of the CLI binary.
 
 // Core modules (always available)
+pub mod access;
 pub mod config;
 pub mod contribution;
 pub mod core;

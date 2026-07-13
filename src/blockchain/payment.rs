@@ -104,13 +104,12 @@ impl PaymentClient {
         // Approve token spending if needed
         self.approve_if_needed(amount_wei).await?;
 
-        // Call contract - this returns a PendingTransaction
-        // Assume the 4th argument is a lock duration or expiry, or signature
+        // maxPrice = amount (slippage cap: refuse if on-chain minimum rose above what we pay)
         let call = self.router_contract.pay_for_access(
             building_id.to_string(),
             amount_wei,
             nonce,
-            U256::zero(),
+            amount_wei,
         );
 
         let pending_tx = call
@@ -125,10 +124,30 @@ impl PaymentClient {
 
         Ok(TxReceipt {
             tx_hash: format!("{:?}", tx.transaction_hash),
-            block_number: tx.block_number.unwrap().as_u64(),
-            gas_used: tx.gas_used.unwrap().as_u64(),
-            status: tx.status.unwrap().as_u64() == 1,
+            block_number: tx.block_number.map(|n| n.as_u64()).unwrap_or(0),
+            gas_used: tx.gas_used.map(|g| g.as_u64()).unwrap_or(0),
+            status: tx.status.map(|s| s.as_u64() == 1).unwrap_or(false),
         })
+    }
+
+    /// Pay using whole-token integer amount (preferred over f64).
+    pub async fn pay_for_access_tokens(
+        &self,
+        building_id: &str,
+        amount_whole_axd: u64,
+        nonce: [u8; 32],
+    ) -> Result<TxReceipt> {
+        self.pay_for_access(building_id, amount_whole_axd as f64, nonce)
+            .await
+    }
+
+    /// Current minimum payment for a building (wei).
+    pub async fn minimum_payment_wei(&self, building_id: &str) -> Result<U256> {
+        self.router_contract
+            .get_minimum_payment(building_id.to_string())
+            .call()
+            .await
+            .map_err(|e| BlockchainError::Contract(e.to_string()).into())
     }
 
     /// Approve token spending if allowance is insufficient

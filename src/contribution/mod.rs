@@ -15,5 +15,7 @@ pub use commitment::{
     building_content_hash, building_entity_merkle_root, commit_building, BuildingCommitment,
     HASH_ALG_LABEL,
 };
-pub use package::{build_contribution_package, ContributionPackage, PackageOptions};
+pub use package::{
+    build_contribution_package, parse_hex32, ContributionPackage, PackageOptions,
+};
 pub use quality::{quality_from_building, QualityScores};

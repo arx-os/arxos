@@ -7,9 +7,11 @@ pub mod commands;
 #[cfg(feature = "agent")]
 use commands::RemoteCommand;
 use commands::{
+    access::AccessAction,
     data::{EquipmentCommand, RoomCommand, SpatialCommand},
     git::{CommitCommand, DiffCommand, StageCommand, StatusCommand, UnstageCommand},
-    Command, ContributeCommand, ExportCommand, ImportCommand, InitCommand, MigrateCommand,
+    AccessCommand, Command, ContributeCommand, ExportCommand, ImportCommand, InitCommand,
+    MigrateCommand,
 };
 
 #[derive(Parser)]
@@ -140,6 +142,41 @@ impl Cli {
                     rpc_url,
                 };
                 Ok(cmd.execute()?)
+            }
+            Commands::Access { subcommand } => {
+                let action = match subcommand {
+                    AccessSubcommand::Quote {
+                        building_id,
+                        amount,
+                        output,
+                    } => AccessAction::Quote {
+                        building_id,
+                        amount_axd: amount,
+                        output: std::path::PathBuf::from(output),
+                    },
+                    AccessSubcommand::Pay {
+                        building_id,
+                        amount,
+                        nonce,
+                        private_key,
+                        router,
+                        token,
+                        rpc_url,
+                        chain_id,
+                        request,
+                    } => AccessAction::Pay {
+                        building_id,
+                        amount_axd: amount,
+                        nonce_hex: nonce,
+                        private_key,
+                        router,
+                        token,
+                        rpc_url,
+                        chain_id,
+                        request_file: request.map(std::path::PathBuf::from),
+                    },
+                };
+                Ok(AccessCommand { action }.execute()?)
             }
             Commands::Render {
                 building,
@@ -740,6 +777,11 @@ pub enum Commands {
         #[arg(long)]
         approved_only: bool,
     },
+    /// Buyer market: quote or pay $AXD for building data access (software remains free)
+    Access {
+        #[command(subcommand)]
+        subcommand: AccessSubcommand,
+    },
     /// Package verified building data as a contribution claim (reward path; free software)
     Contribute {
         /// Output JSON path
@@ -1054,6 +1096,52 @@ pub enum Commands {
 // Sub-command definitions
 pub mod subcommands;
 pub use subcommands::*;
+
+#[derive(Subcommand)]
+pub enum AccessSubcommand {
+    /// Create an access request JSON (building id + nonce) for the data market
+    Quote {
+        /// Building UUID (default: load from building.yaml)
+        #[arg(long)]
+        building_id: Option<String>,
+        /// Whole $AXD to offer
+        #[arg(long, default_value = "1")]
+        amount: u64,
+        /// Output path
+        #[arg(long, default_value = "access-request.json")]
+        output: String,
+    },
+    /// Pay $AXD on-chain via ArxPaymentRouter (requires --features blockchain)
+    Pay {
+        /// Building UUID (or use --request)
+        #[arg(long)]
+        building_id: Option<String>,
+        /// Whole $AXD amount
+        #[arg(long, default_value = "1")]
+        amount: u64,
+        /// Hex nonce (or from --request)
+        #[arg(long)]
+        nonce: Option<String>,
+        /// Path to access-request.json from `arx access quote`
+        #[arg(long)]
+        request: Option<String>,
+        /// Buyer private key or env name
+        #[arg(long)]
+        private_key: Option<String>,
+        /// Payment router address
+        #[arg(long)]
+        router: Option<String>,
+        /// $AXD token address
+        #[arg(long)]
+        token: Option<String>,
+        /// RPC URL
+        #[arg(long)]
+        rpc_url: Option<String>,
+        /// Chain id
+        #[arg(long, default_value = "31337")]
+        chain_id: u64,
+    },
+}
 
 #[derive(Subcommand)]
 pub enum ImportSubcommand {

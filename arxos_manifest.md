@@ -103,7 +103,7 @@ No longer “ignore forever.” Built **on** the compiler spine:
 | N2 | EIP-712 proof matches Solidity `ContributionProof` | **Done** (`from_package` + `--sign`) |
 | N3 | Package → 2-of-3 propose → finalize mint | **Done** (Foundry `BuildingContributionE2E`; CLI propose path) |
 | N4 | Registry worker + building UUID identities | **Done** in E2E (building_id = Building UUID); CLI still needs live addresses |
-| N5 | Data-buyer payment path ($AXD) | **Open** |
+| N5 | Data-buyer payment path ($AXD) | **Done** (`arx access`, DataAccessPaymentE2E) |
 | N6 | Multi-peer via Git remotes (not CRDT-first) | Process + docs; forge-agnostic |
 
 Compiler G1–G8 remain the trust root. Network without N1 is invalid.
@@ -969,11 +969,10 @@ test_data/             Mid-size IFC samples
 
 ### 10.1 This week (operating cadence)
 
-1. ~~**N1–N4 reward spine (Foundry E2E)**~~ **Done**.
-2. **N5** — data-buyer payment path ($AXD) for query/access.
-3. Optional: Anvil ops script that prints registered addresses for CLI `--submit`.
+1. ~~**N1–N5 economy spine**~~ contribute mint + access pay **Done** (Foundry E2E + CLI).
+2. Optional: Anvil ops script printing deployed addresses for live CLI.
+3. Multi-peer Git collab polish (N6) / field vendor IFC when needed.
 4. Peripherals (PWA/hardware/3D): **ask before expand**.
-5. Field vendor IFC when you supply files.
 
 ### 10.2 Then (critical path)
 
@@ -1006,6 +1005,7 @@ B1 (first vendor fixture) → B2 (CI goldens) → continue critical path
 | **2026-07 full product contribution** | Vision locked; N1 package path |
 | **2026-07 N2–N3** | EIP-712 from package; `arx contribute --sign/--submit`; local_oracle_e2e sketch |
 | **2026-07 N3/N4 E2E** | Fixed oracle proof lock; BuildingContributionE2E mint; ArxosToken alias; forge suite green |
+| **2026-07 N5** | Data access market: access quote/pay CLI; PaymentClient maxPrice fix; DataAccessPaymentE2E |
 
 ---
 

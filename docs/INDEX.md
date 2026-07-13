@@ -35,20 +35,25 @@ Details: [ifc-limitations.md](./ifc-limitations.md) · report: [`tests/ifc_build
 | Doc | Role |
 | :--- | :--- |
 | [horizon-b-roadmap.md](./horizon-b-roadmap.md) | **Living** phases HB0–HB7 → site capture + L1 exit (~250k / PWA north star) |
+| [pilot-starter-pack.md](./pilot-starter-pack.md) | **Zip-ready** checklist of all site-team docs |
 | [field-day-1-runbook.md](./field-day-1-runbook.md) | **S3+S5** non-author Day 1: pin install → real IFC → LossReport evidence |
+| [sprint-status-dashboard.md](./sprint-status-dashboard.md) | Weekly S1–S8 + R\* status table |
 | [s8-reconciliation-template.md](./s8-reconciliation-template.md) | Post-sprint R\* / scorecard reconcile |
-| [eng-blocker-queue.md](./eng-blocker-queue.md) | E1–E3 proposals (approval before code) |
+| [hb3-lidar-plan.md](./hb3-lidar-plan.md) | After S1–S8: first real LiDAR + review (outline) |
+| [eng-blocker-queue.md](./eng-blocker-queue.md) | E1–E3 optional polish (approval before code) |
 | [`../arxos_manifest.md`](../arxos_manifest.md) §1.1a · §10.2 | Authority: Definition of Working + phase summary |
 
 ## L1 pilot packet (do in order)
 
-1. [pilot-charter.md](./pilot-charter.md) — sign (R10, R8)
-2. [pilot-release.md](./pilot-release.md) — pin install (R9)
-3. [data-classification.md](./data-classification.md) — private remote (R7)
-4. [l1-supported-workflow.md](./l1-supported-workflow.md) — only supported loop
-5. [second-person-checklist.md](./second-person-checklist.md) — cold start (R5)
-6. [field-truth-log.md](./field-truth-log.md) — real IFC/LiDAR evidence (R1/R2/R6)
-7. [field-handoff.md](./field-handoff.md) — ordered packet checklist
+0. [pilot-starter-pack.md](./pilot-starter-pack.md) — assemble zip for site team  
+1. [pilot-charter.md](./pilot-charter.md) — sign (R10, R8)  
+2. [pilot-release.md](./pilot-release.md) — pin install (R9)  
+3. [data-classification.md](./data-classification.md) — private remote (R7)  
+4. [l1-supported-workflow.md](./l1-supported-workflow.md) — only supported loop  
+5. [second-person-checklist.md](./second-person-checklist.md) — cold start (R5)  
+6. [field-day-1-runbook.md](./field-day-1-runbook.md) — S3+S5 execution  
+7. [field-truth-log.md](./field-truth-log.md) — real IFC/LiDAR evidence (R1/R2/R6)  
+8. [field-handoff.md](./field-handoff.md) — ordered packet checklist
 
 ## Compiler reference
 

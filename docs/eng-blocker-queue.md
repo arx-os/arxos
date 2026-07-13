@@ -24,12 +24,15 @@ Resource refuse already names `ARX_MAX_*` and `docs/resource-limits.md`.
 
 | ID | Priority | Unblocks | Recommendation | Apply? |
 | :---: | :---: | :--- | :--- | :---: |
-| **E1** | P3 | S4 5b / S5 A2 discipline | One tip line after warnings | Optional |
-| **E2** | P3 | Large-IFC confusion | Name **specific** env var from `kind` | Optional |
-| **E3** | P2 | R5 BIM path | Longer `import ifc --help` | Optional (docs-in-CLI) |
-| **E4** | — | Evidence | Templates/runbook (docs) | **Done** in docs |
+| **E1** | **P3 (low)** | S4 5b / S5 A2 discipline | One tip line after warnings | Optional — **not required for field** |
+| **E2** | **P3 (low)** | Large-IFC confusion | Name **specific** env var from `kind` | Optional — refuse text already OK |
+| **E3** | **P2 (low–med)** | R5 BIM path | Longer `import ifc --help` | Optional polish |
+| **E4** | — | Evidence | Templates/runbook/pack (docs) | **Done** in docs |
 | **E5** | — | HB6 | PWA bridge | **Defer** (need Q6) |
 | **E6** | — | Product | Wall mapping | **Defer** |
+
+**Reconfirm (2026-07):** E1–E3 are **low-priority polish**. Critical path remains S1–S6 field evidence.  
+Default decision if silent: **do not implement**. If approved, apply only the minimal diffs below (no scope creep).
 
 ---
 

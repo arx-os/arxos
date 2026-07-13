@@ -1,100 +1,154 @@
 # Field-truth log (R1 / R2 / R6 / P-Field-truth)
 
-**Purpose:** Evidence to relegate “lab only” claims. One file per pilot building
+**Purpose:** Evidence to relegate “lab only” claims. One file per pilot building  
 (or attach privately if data cannot live in git).
 
-**Authority:** [`arxos_manifest.md`](../arxos_manifest.md) §1.6 · living plan [horizon-b-roadmap.md](./horizon-b-roadmap.md)  
-**Pin under test:** `v2.0.0-pilot.4` @ `659bbd9f` (or charter pin): ________________  
-**Site / building:** ________________  
-**Date:** ________________  
-**Operator:** ________________  
+**Authority:** [`arxos_manifest.md`](../arxos_manifest.md) §1.6 · [horizon-b-roadmap.md](./horizon-b-roadmap.md)  
+**Day-1 commands:** [field-day-1-runbook.md](./field-day-1-runbook.md)  
+**HB3 LiDAR plan:** [hb3-lidar-plan.md](./hb3-lidar-plan.md)
 
-**BIM path used:** Vendor BIM → clean IFC export → `arx import ifc`  
-**No CAD plugins:** [ ] Confirmed  
+| Header | Value |
+| :--- | :--- |
+| **Pin under test** | `v2.0.0-pilot.4` @ `659bbd9f` (or charter): ________ |
+| **Site / building** | ________ |
+| **Operator** | ________ |
+| **Date opened** | ________ |
+| **BIM path** | Vendor BIM → clean IFC → `arx import ifc` |
+| **No CAD plugins** | [ ] Confirmed |
 
-**How to close R\*:** Only with filled rows below + sign-off. Eng must not mark
-R1/R2/R5/R6/R7/R10 **Done** without a path to this log (or private redacted
-copy) and the matching checklist/charter. See roadmap § evidence guardrails.
-
----
-
-## A. Vendor IFC interop matrix (R2)
-
-| Source file (redacted name) | Tool / version | Import OK? | Floors in | Floors out | Rooms in | Rooms out | GlobalIds preserved? | `unmapped_products`? | Notes (drops, panics, units) |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| | | [ ] | | | | | [ ] | [ ] | |
-| | | [ ] | | | | | [ ] | [ ] | |
-| | | [ ] | | | | | [ ] | [ ] | |
-
-### A2. LossReport capture (required per import)
-
-Paste or summarize CLI warnings after import (codes + counts).  
-Expect `unmapped_products` when walls/slabs/doors/windows exist in file.
-
-```text
-# from arx import ifc output:
-# Warnings (N):
-#   - [unmapped_products] …
-#   - [other codes] …
-```
-
-| Import # | Codes seen | Total unmapped (if any) | Surprised? (Y/N) | Action |
-| :---: | :--- | :--- | :---: | :--- |
-| 1 | | | | |
-| 2 | | | | |
-
-Commands used:
-
-```text
-arx import ifc <file>
-arx validate
-arx export --format ifc --output roundtrip.ifc
-# optional:
-arx import ifc roundtrip.ifc
-```
-
-**R2 pilot-mitigated when:** ≥1 real district-class IFC imported without panic;
-preserve/drop list written above **and** LossReport/A2 filled. Revit/ArchiCAD
-slots remain open until real files are logged (see [ifc-limitations.md](./ifc-limitations.md)).  
-Lab buildingSMART alone does **not** close R2.
+**How to close R\*:** Filled rows + sign-off. Eng must not mark R1/R2/R6 **Done** without  
+a path to this log (or private redacted copy). Lab buildingSMART alone ≠ R2 closed.
 
 ---
 
-## B. LiDAR failure modes (R1)
+## A. S5 — Real IFC import row (R2)
 
-| Scan (redacted) | Environment | False rooms (+) | Missed rooms (−) | Split/merge issues | Review actions | Notes |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| | | | | | accepted/rejected | |
+Use **one row per distinct source IFC**. Prefer district/vendor files (not repo samples).
 
-**Policy check:** No unreviewed `proposed` used as official? [ ] Yes  
-Confidence scores are **not** probabilistic — see [lidar-confidence.md](./lidar-confidence.md).
+### A1. Preservation matrix
 
-**R1 pilot-mitigated when:** Either (1) LiDAR in scope and failure log filled +
-review enforced, or (2) pilot charter marks LiDAR **out of scope** (IFC-only).
+| Field | Row 1 | Row 2 (optional) |
+| :--- | :--- | :--- |
+| Source file (redacted name) | | |
+| Tool / version (Revit, etc.) | | |
+| Schema if known (IFC4/…) | | |
+| File size (approx) | | |
+| Import OK? (no panic) | [ ] Y / [ ] N | [ ] Y / [ ] N |
+| Floors in file (approx) | | |
+| Floors in Arx after import | | |
+| Rooms/spaces in → out | | |
+| Equipment in → out (approx) | | |
+| GlobalIds preserved on kept entities? | [ ] Y / [ ] N / [ ] partial | |
+| Export OK? (`arx export --format ifc`) | [ ] Y / [ ] N | |
+| Re-import OK? (optional) | [ ] Y / [ ] N / [ ] skip | |
+| Wall time import (min) | | |
+| Notes (units, drops, surprises) | | |
+
+### A2. LossReport summary (required)
+
+From `arx import ifc` stdout (or `import-ifc.log`). Codes look like `[unmapped_products]`.
+
+| Import # | Warning codes (list) | `unmapped_products` detail (classes×counts) | Other codes | Surprised? | Action taken |
+| :---: | :--- | :--- | :--- | :---: | :--- |
+| 1 | | | | Y/N | |
+| 2 | | | | Y/N | |
+
+**Paste block (optional, redacted):**
+
+```text
+Warnings (N):
+  - [code] message…
+```
+
+| Honesty check | |
+| :--- | :---: |
+| Operator read warnings (did not assume “validate OK” = full BIM) | [ ] |
+| `unmapped_products` expected if walls/doors present | [ ] understood |
+
+### A3. Commands used
+
+```text
+arx import ifc <file> 2>&1 | tee import-ifc.log
+arx validate 2>&1 | tee validate.log
+arx export --format ifc --output exports/out.ifc 2>&1 | tee export.log
+# optional: arx import ifc exports/out.ifc
+```
+
+**R2 pilot-mitigated when:** ≥1 real site/district IFC row in A1 **and** A2 filled.  
+See [ifc-limitations.md](./ifc-limitations.md).
+
+---
+
+## B. S6 / HB3 — Real LiDAR row (R1)
+
+Skip if charter marks LiDAR **out of scope**. Otherwise one row per scan session.
+
+### B1. Capture + review matrix
+
+| Field | Session 1 | Session 2 (optional) |
+| :--- | :--- | :--- |
+| Scan file (redacted) | | |
+| Format (PLY/LAS/…) | | |
+| Hardware / device | | |
+| Environment (room/wing/floor) | | |
+| Import OK? | [ ] Y / [ ] N | |
+| Light mode / voxel size | | |
+| Auto rooms created (approx) | | |
+| False rooms (+) | | |
+| Missed rooms (−) | | |
+| Split/merge issues | | |
+| Auto equipment (+) / false | | |
+| Review: accepted count | | |
+| Review: rejected count | | |
+| Still `proposed` at export? | [ ] none official | |
+| `--approved-only` export OK? | [ ] Y / [ ] N | |
+| Notes | | |
+
+### B2. LiDAR LossReport / warnings
+
+| Session | Codes / messages from import log | Action |
+| :---: | :--- | :--- |
+| 1 | | |
+| 2 | | |
+
+### B3. Policy
+
+| Check | |
+| :--- | :---: |
+| No unreviewed `proposed` used as official | [ ] |
+| Confidence not presented as calibrated % accuracy | [ ] |
+| Reviewer name | ________ |
+
+Confidence policy: [lidar-confidence.md](./lidar-confidence.md).  
+Commands: [hb3-lidar-plan.md](./hb3-lidar-plan.md).
+
+**R1 pilot-mitigated when:** B1 filled + review enforced **or** charter LiDAR out of scope.
 
 ---
 
 ## C. Performance profile (R6)
 
-| Hardware | OS | Input | Wall time | Peak RAM (approx) | Light mode? | Result |
-| :--- | :--- | :--- | :--- | :---: | :---: | :--- |
+| Hardware | OS | Input (IFC/scan) | Wall time | Peak RAM (approx) | Light mode? | Result |
+| :--- | :--- | :--- | :--- | :--- | :---: | :--- |
+| | | | | | [ ] | |
 | | | | | | [ ] | |
 
-Limits adopted for this pilot (defaults: [resource-limits.md](./resource-limits.md)):
+**Limits for this pilot** ([resource-limits.md](./resource-limits.md)):
 
-- Max points / file size: ________________  
-  (defaults: 20M points / 512 MiB LiDAR / 50 MiB IFC unless env raised)  
-- Prefer light mode when: ________________  
-- Prefer Mini/laptop over Pi when: ________________  
-- Env overrides used (`ARX_MAX_*`): ________________  
+| Setting | Value used |
+| :--- | :--- |
+| Max IFC / LiDAR / points | |
+| Env overrides (`ARX_MAX_*`) | |
+| Prefer light mode when | |
+| Prefer Mini/laptop over Pi when | |
 
-**R6 pilot-mitigated when:** One worst-case (or representative) run is logged and limits are written.
+**R6 pilot-mitigated when:** ≥1 representative run logged above.
 
 ---
 
 ## D. Product bugs to file
 
-| # | Symptom | Command | Severity | Issue link |
+| # | Symptom | Command | Severity | Stuck-list / issue |
 | :---: | :--- | :--- | :---: | :--- |
 | 1 | | | | |
 | 2 | | | | |
@@ -103,22 +157,25 @@ Limits adopted for this pilot (defaults: [resource-limits.md](./resource-limits.
 
 ## Sign-off
 
-| Role | Name | Date |
-| :--- | :--- | :--- |
-| Operator | | |
-| Pilot owner | | |
+| Role | Name | Date | Signature / initials |
+| :--- | :--- | :--- | :--- |
+| Operator | | | |
+| Pilot owner | | | |
+| Reviewer (if LiDAR) | | | |
 
-### R\* pilot-mitigation ticks (for S8 / manifest)
+### R\* pilot-mitigation ticks (S8 / manifest)
 
-Use with [s8-reconciliation-template.md](./s8-reconciliation-template.md).  
-Manifest §1.6 Status example: `Partial — pilot-mitigated: <this file path or private ref> · <date>`.
+Use [s8-reconciliation-template.md](./s8-reconciliation-template.md).  
+Manifest example: `Partial — pilot-mitigated: <path or private ref> · <date> · <name>`
 
 ```text
-R2: [ ] pilot-mitigated — §A rows: __ · §A2 filled: [ ] · date: ____
-R1: [ ] pilot-mitigated / [ ] LiDAR out of scope in charter — date: ____
-R6: [ ] pilot-mitigated — §C rows: __ · date: ____
-R5: see second-person-checklist (not this file)
-R7/R10: see charter + data-classification (not this file)
+R2: [ ] pilot-mitigated — A1 rows: __ · A2 filled: [ ] · date: ____
+R1: [ ] pilot-mitigated / [ ] LiDAR out of scope — date: ____
+R6: [ ] pilot-mitigated — C rows: __ · date: ____
+R5: second-person-checklist path: ________
+R7/R10: charter + data-classification paths: ________
 ```
 
-**Related:** [horizon-b-roadmap.md](./horizon-b-roadmap.md) · [field-day-1-runbook.md](./field-day-1-runbook.md) · [l1-supported-workflow.md](./l1-supported-workflow.md) · [ifc-limitations.md](./ifc-limitations.md) · [`arxos_manifest.md`](../arxos_manifest.md) §1.6
+**Evidence pack (private):** `import-*.log` · `validate*.log` · `export*.log` · this form · pin SHA screenshot.
+
+**Related:** [pilot-starter-pack.md](./pilot-starter-pack.md) · [field-day-1-runbook.md](./field-day-1-runbook.md) · [sprint-status-dashboard.md](./sprint-status-dashboard.md) · [ifc-limitations.md](./ifc-limitations.md)

@@ -458,5 +458,6 @@ HB6 PWA productization · wall class mapping · Horizon C · hardware BACnet · 
 | 2026-07-13 | Plan created post–pilot.4. Package A closed. HB0–HB7 defined. |
 | 2026-07-13 | Reconcile: field-truth A2 LossReport, checklist 5b, sprint S1–S8 detail, risks K1–K10, evidence guardrails, eng E1–E6 (not applied). Cross-links INDEX/README/pilot docs. |
 | 2026-07-13 | Field Day 1 runbook (S3+S5); eng-blocker-queue (E1–E3 diffs, not applied); S8 reconciliation template; sprint readiness confirm. |
+| 2026-07-13 | Pilot starter pack; field-truth S5/S6 templates; sprint-status-dashboard; HB3 LiDAR plan outline; E1–E3 reconfirmed low priority. |
 
 **Related:** [INDEX.md](./INDEX.md) · [l1-supported-workflow.md](./l1-supported-workflow.md) · [ifc-limitations.md](./ifc-limitations.md) · [field-truth-log.md](./field-truth-log.md) · [resource-limits.md](./resource-limits.md) · [field-handoff.md](./field-handoff.md)

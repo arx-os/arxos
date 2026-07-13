@@ -170,6 +170,8 @@ HORIZON C — Network scale (after L1 exit, then L2)
 **Hard truth:** Lab-complete (N1–N5, Horizon A tooling) is **not** “absolutely ready for district production.”  
 This section is the **obligation register**: each reservation must be **relegated** (reduced or closed) by named work before the corresponding go-level is claimed.
 
+**Current state (2026-07-13, pin `v2.0.0-pilot.4` @ `659bbd9f`):** Engineering has a green lab compiler loop (import → validate → export → Git → optional contribute/commercial gate), TUI as default UI, hard resource refuse, and IFC **honesty** via `unmapped_products` LossReport plus buildingSMART ISO fixtures—**R2 eng half** and **R9 pin** are landed. District L1 is still ~**4/10**: blocked on **field-owned** evidence and process (signed charter **R10**, second-person walkthrough **R5**, data-class sign-off **R7**, real site IFC/LiDAR log **R1/R2/R6**). Do not claim L1 exit, full BIM parity, or production chain. Next work is Horizon B field packet (`docs/field-handoff.md`), not Horizon C or CAD plugins.
+
 #### Go levels (do not skip)
 
 | Level | Allowed claim | Requires |

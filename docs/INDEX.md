@@ -17,6 +17,19 @@ If a doc here conflicts with the manifest, **the manifest wins**.
 L1 is blocked on **process + field evidence**, not missing framework code.  
 See manifest §1.5–1.6.
 
+**Preferred pin:** `v2.0.0-pilot.4` @ `659bbd9f` — [pilot-release.md](./pilot-release.md).  
+**Install:** `git checkout v2.0.0-pilot.4 && cargo install --path . --locked` (default = compiler + TUI).
+
+### Lab IFC honesty (Package A, 2026-07)
+
+| Item | Status |
+| :--- | :---: |
+| Non-panic import on buildingSMART ISO + PCERT samples | Yes |
+| `unmapped_products` LossReport (walls/slabs/doors/…) | Yes (pilot.4) |
+| District Revit/ArchiCAD anonymized evidence | **Open** (R2 field) |
+
+Details: [ifc-limitations.md](./ifc-limitations.md) · report: [`tests/ifc_buildingsmart_report.md`](../tests/ifc_buildingsmart_report.md)
+
 ## L1 pilot packet (do in order)
 
 1. [pilot-charter.md](./pilot-charter.md) — sign (R10, R8)
@@ -32,7 +45,7 @@ See manifest §1.5–1.6.
 | Doc | Topic |
 | :--- | :--- |
 | [identity.md](./identity.md) | Arx UUID · IFC GlobalId · ArxAddress |
-| [ifc-limitations.md](./ifc-limitations.md) | IFC-only policy, L0–L2 fidelity, vendors |
+| [ifc-limitations.md](./ifc-limitations.md) | IFC-only policy, L0–L2 fidelity, unmapped products, vendors |
 | [lidar-confidence.md](./lidar-confidence.md) | Non-probabilistic confidence honesty |
 | [resource-limits.md](./resource-limits.md) | R6 pilot import ceilings (IFC/LiDAR) |
 

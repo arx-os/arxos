@@ -65,6 +65,16 @@ Walls/slabs/doors/windows are typically **not** first-class Arx entities; import
 `unmapped_products` LossReport warnings with class counts (do not treat “validate OK” as full BIM).  
 **District readiness** still needs real Revit (or similar) exports in the field-truth log (**R2**).
 
+**As of pin `v2.0.0-pilot.4` @ `659bbd9f`:**
+
+| Check | Result |
+| :--- | :---: |
+| CI: `buildingsmart_ifc_test` (basin + wall/opening) | Green |
+| CI: vendor IFC non-panic + Arx sample round-trip | Green |
+| `unmapped_products` on wall-with-opening fixture | Required |
+| Full BIM / CoordinationView certification | **Not claimed** |
+| Real district IFC interop matrix | **Open** (field) |
+
 ## What is mapped today (domain)
 
 | IFC concept | Arx domain | Notes |

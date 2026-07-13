@@ -34,14 +34,18 @@
 
 ## How to install a pin (field)
 
-**L1 recommended install:** default features = **compiler + TUI** (primary UI).
+**Current preferred pin:** `v2.0.0-pilot.4` @ `659bbd9f369c0b942f150983b204ea054fc595a0`  
+**L1 recommended install:** default features = **compiler + TUI** (primary UI). Slim surface: no hardware drivers, no LiDAR point-cloud 3D.
 
 ```bash
 git clone <approved-remote> arxos
 cd arxos
-git checkout v2.0.0-pilot.4   # or the pin recorded in the pilot charter
+git checkout v2.0.0-pilot.4   # must match charter §2
+git rev-parse HEAD            # expect 659bbd9f369c0b942f150983b204ea054fc595a0
 cargo install --path . --locked
 arx --version
+# optional sanity:
+./scripts/l1_smoke.sh
 ```
 
 If `cargo install --locked` fails on the target machine, still checkout the tag

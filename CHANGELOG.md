@@ -5,6 +5,32 @@ All notable changes to ArxOS will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0-pilot.4] - 2026-07-13
+
+**Tag:** `v2.0.0-pilot.4` @ `659bbd9f`  
+**Install:** `git checkout v2.0.0-pilot.4 && cargo install --path . --locked`  
+**Default features:** compiler spine + **TUI** (primary UI).
+
+### Added
+- LossReport `unmapped_products` — class counts for walls/slabs/doors/windows/etc. present in IFC but not mapped into the Arx domain (R2 eng honesty)
+- buildingSMART ISO RV fixtures + `buildingsmart_ifc_test` (non-panic + unmapped warning)
+- Assessment report: `tests/ifc_buildingsmart_report.md`
+- Resource limits (`docs/resource-limits.md`) and hard refuse on oversize import (R6 eng defaults)
+- L1 pilot packet docs (charter, field-handoff, second-person checklist, pilot-release)
+
+### Changed
+- Default feature set: **TUI on**; hardware BACnet/Modbus/MQTT and Bevy/LiDAR 3D viz **removed** from product surface
+- CLI: compiler-first help order; `export --path` for project root; `--delta` removed
+- Manifest **R2** → Partial (lab battery + LossReport; district IFC evidence still open)
+- Preferred R9 pin supersedes pilot.3 for new field installs
+
+### Not claimed
+- Full BIM / CoordinationView certification
+- District L1 exit (R1, R5, R7, R10, field R2 still open)
+- Production chain / mainnet $AXD
+
+---
+
 ## [2.0.0] - 2025-12-09
 
 ### 🎉 Major Release: ArxAddress System

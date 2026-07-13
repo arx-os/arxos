@@ -2,10 +2,12 @@
 
 **Obligation:** R9 (supported surface), R8 (no chain required)  
 **Audience:** District pilot capture tech  
-**Install:** Pinned release only — see `docs/pilot-release.md`
+**Install:** Pinned release only — see [pilot-release.md](./pilot-release.md)
 
 This is the **only** workflow supported for L1 pilot success.  
-Do **not** require `blockchain`, mint, or access pay for L1 exit.
+Do **not** require `blockchain`, mint, access pay, or agent for L1 exit.
+
+**Map:** [INDEX.md](./INDEX.md) · **Authority:** [`arxos_manifest.md`](../arxos_manifest.md)
 
 ---
 
@@ -15,14 +17,26 @@ Do **not** require `blockchain`, mint, or access pay for L1 exit.
 install (pinned) → init → import → edit/review → validate → git → export (internal)
 ```
 
-Optional later (not L1 success criteria): `contribute`, `access`, `--commercial`, Anvil.
+Optional later (not L1 success criteria): `contribute`, `access`, `--commercial`, Anvil — see [lab/](./lab/).
+
+---
+
+## BIM path (only)
+
+```text
+Vendor BIM (Revit / ArchiCAD / …)
+  → clean IFC export from that tool
+  → arx import ifc
+```
+
+**No plugins. No direct RVT/PLN open.**  
+If IFC is incomplete, fix vendor export settings. See [ifc-limitations.md](./ifc-limitations.md).
 
 ---
 
 ## 1. Install (pinned)
 
 ```bash
-# Preferred: from tagged release (example)
 git clone <internal-or-approved-remote> arxos
 cd arxos
 git checkout v2.0.0-pilot.3   # use the pin in the pilot charter
@@ -52,15 +66,17 @@ arx init --name "SITE_NAME"
 # Record building id from output or building.yaml → pilot charter
 ```
 
+**Limit:** one building / one `building.yaml` per repo root.
+
 ## 3. Import
 
 ```bash
-# IFC
+# IFC (primary district path)
 arx import ifc path/to/model.ifc
 
-# LiDAR (if in scope)
+# LiDAR (if in charter scope)
 arx import lidar path/to/scan.ply
-# or with merge into existing model:
+# merge into existing model:
 # arx import lidar path/to/scan.ply --merge
 ```
 
@@ -82,7 +98,8 @@ set room BadBlob review_status=rejected
 arx edit reviews.txt
 ```
 
-**Policy:** Do not hand contractors an “official” IFC that still has unreviewed `proposed` LiDAR entities. Prefer:
+**Policy:** Do not hand contractors an “official” IFC that still has unreviewed
+`proposed` LiDAR entities. Prefer:
 
 ```bash
 arx export --format ifc --approved-only --output site-approved.ifc
@@ -101,18 +118,23 @@ arx validate
 arx status
 arx stage
 arx commit -m "pilot: import and review SITE"
-# equivalent: arx commit "pilot: import and review SITE"
 # push only to approved internal remote
 ```
 
-## 7. Internal export
+## 7. Internal export (compiler spine)
 
 ```bash
 arx export --format ifc --output exports/internal.ifc
 # free software path — no access receipt required
 ```
 
-Commercial / paid delivery (`--commercial`) is **out of L1 success path** unless leadership adds it under a separate demo.
+**Export authority:** This CLI command (and `export::ifc`) is the only official
+IFC export path. Do **not** treat agent auto-export as pilot handoff.
+
+Commercial / paid delivery (`--commercial`) is **out of L1 success path** unless
+leadership adds it under a separate demo.
+
+Identity after export/import: [identity.md](./identity.md).
 
 ---
 
@@ -120,12 +142,14 @@ Commercial / paid delivery (`--commercial`) is **out of L1 success path** unless
 
 | Action | Why |
 | :--- | :--- |
+| Revit/ArchiCAD plugins or direct CAD integration | IFC-only policy |
 | `arx contribute --submit` / mainnet mint | R3/R8 — not required for L1 |
 | Public GitHub for facility models | R7 |
 | Trusting `proposed` LiDAR without review | R1/R10 |
 | Floating `main` without pin | R9 |
 | Multi-building campus layout | I11 / product limit |
 | `export --delta` | Not implemented |
+| Agent auto-export as official IFC | Edge convenience only |
 
 ---
 
@@ -138,7 +162,7 @@ From repo root, after `cargo build`:
 # optional path: ./scripts/l1_smoke.sh /path/to/file.ifc
 ```
 
-This checks init → import sample IFC → validate → export → contribute → commercial gate.  
+This checks init → import sample IFC → validate → export (and lab extras if present).  
 It does **not** close second-person district transfer (R5).
 
 ## Escalation
@@ -148,4 +172,4 @@ It does **not** close second-person district transfer (R5).
 3. File issue or pilot log entry.  
 4. Do not invent parallel tools mid-pilot.
 
-**Related:** `docs/pilot-charter.md` · `docs/second-person-checklist.md` · `docs/install.md` · `docs/field-truth-log.md` · `docs/data-classification.md`
+**Related:** [pilot-charter.md](./pilot-charter.md) · [second-person-checklist.md](./second-person-checklist.md) · [field-truth-log.md](./field-truth-log.md) · [data-classification.md](./data-classification.md)

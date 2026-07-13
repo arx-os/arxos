@@ -110,7 +110,11 @@ pub async fn start_agent() -> Result<(), Box<dyn std::error::Error>> {
     // 6. Start WebSocket Server
     let addr = SocketAddr::from(([0, 0, 0, 0], 8787));
     println!("📡 Server listening on http://{}", addr);
-    println!("🔍 Auto-export enabled: watching for YAML changes...\\n");
+    println!(
+        "ℹ️  Agent is edge bridging only (WebSocket/SSH). \
+         Official IFC export for pilots: `arx export --format ifc`."
+    );
+    println!("🔍 Auto-export convenience: watching for YAML changes (full export, not official)...\\n");
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
@@ -247,9 +251,13 @@ async fn run_auto_export_watcher(state: Arc<AgentState>) -> Result<(), Box<dyn s
 
         if let Some(changed_path) = watcher.check_for_changes() {
             println!("📝 Detected change: {}", changed_path.display());
-            println!("🔄 Auto-exporting IFC (delta mode)...");
+            println!(
+                "🔄 Auto-exporting IFC (full export via export::ifc; convenience only — \
+                 official pilot handoffs use `arx export --format ifc`)..."
+            );
 
-            match crate::agent::ifc::export_ifc(&state.repo_root, None, true) {
+            // delta=false: same spine as CLI; no alternate delta semantics.
+            match crate::agent::ifc::export_ifc(&state.repo_root, None, false) {
                 Ok(result) => {
                     println!(
                         "✅ Auto-export complete: {} ({} bytes)",

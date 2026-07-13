@@ -788,21 +788,36 @@ pub enum Commands {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Export building data to Git repository or other formats
+    /// Export building SSOT (IFC is the compiler interchange spine).
+    ///
+    /// IFC export uses `export::ifc` only — review-gated, deterministic GlobalIds.
+    /// Vendor BIM: export clean IFC from the CAD tool, then `arx import ifc`.
+    /// No CAD plugins. Agent/daemon is not the L1 export authority.
+    #[command(long_about = "\
+Export the durable Building model (building.yaml).
+
+IFC (`--format ifc`) is the only official industry interchange path. It runs
+through export::ifc with review warnings and optional --approved-only.
+
+BIM policy: ArxOS is IFC-only — no Revit/ArchiCAD plugins. Vendor tools must
+export clean IFC for import.
+
+Official pilot handoffs: `arx export --format ifc` (not agent auto-export).
+--delta is not implemented and hard-errors.")]
     Export {
-        /// Export format (git, ifc, gltf, usdz)
-        #[arg(long, default_value = "git")]
+        /// Export format: ifc (recommended), yaml, json
+        #[arg(long, default_value = "ifc")]
         format: String,
-        /// Output file path (required for non-git formats)
+        /// Output file path
         #[arg(long)]
         output: Option<String>,
-        /// Git repository URL (required for git format)
+        /// Git repository URL (legacy; prefer arx commit for SSOT)
         #[arg(long)]
         repo: Option<String>,
-        /// Export only changes (delta mode) — not implemented; errors if set
+        /// Not implemented — hard-errors if set (no silent ignore)
         #[arg(long)]
         delta: bool,
-        /// Exclude proposed/rejected LiDAR auto entities from IFC export (Track C2)
+        /// Exclude proposed/rejected LiDAR auto entities from IFC export
         #[arg(long)]
         approved_only: bool,
         /// Commercial export: require access-receipt.json proving $AXD payment (N7 host gate)

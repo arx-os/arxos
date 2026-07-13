@@ -39,6 +39,6 @@ CI: `.github/workflows/full-lab-loop.yml` runs `QUICK=1 ./scripts/full_lab_loop.
 | `./scripts/l1_smoke.sh` | Free-software + commercial gate only |
 | `./scripts/horizon_a_deploy_env.sh` | Anvil deploy → `.env.arx` |
 | `./scripts/pin_pilot_release.sh` | R9 pilot pin |
-| `docs/horizon-a-ops.md` | Manual mint/pay ops |
+| `docs/lab/horizon-a-ops.md` | Manual mint/pay ops |
 | `docs/field-handoff.md` | District B0–B3 (field) |
 | `arxos_manifest.md` §1.6 / §10 | Obligations + horizons |

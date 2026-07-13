@@ -126,8 +126,13 @@ fn handle_ifc_export(root: &std::path::Path, params: Value) -> Result<Value> {
         .get("delta")
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
+    let approved_only = params
+        .get("approved_only")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
 
-    let result = ifc::export_ifc(root, filename, delta)?;
+    // Edge RPC only — same IFCExporter spine as CLI; delta rejected.
+    let result = ifc::export_ifc_with_options(root, filename, delta, approved_only)?;
     Ok(serde_json::to_value(result)?)
 }
 

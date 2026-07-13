@@ -35,9 +35,9 @@ impl Command for ExportCommand {
 
         match self.format.as_str() {
             "ifc" => {
-                println!("📤 Exporting to IFC format...");
+                println!("📤 Exporting to IFC (compiler spine: export::ifc)...");
 
-                let building = load_building_at(repo_root)
+                let mut building = load_building_at(repo_root)
                     .map_err(|e| format!("No {} to export: {}", BUILDING_YAML, e))?;
 
                 if self.commercial {
@@ -58,6 +58,9 @@ impl Command for ExportCommand {
                         receipt.tx_hash
                     );
                 }
+
+                // Deterministic product GlobalIds for stable re-export (docs/identity.md).
+                crate::ifc::mapping::assign_missing_global_ids(&mut building);
 
                 let review = summarize_review(&building);
                 for line in review.warning_lines() {

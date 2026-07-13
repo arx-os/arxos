@@ -13,51 +13,37 @@
 - incident review,  
 - comparing before/after a bugfix.
 
-## How to cut a pilot tag (engineering)
-
-**Preferred:** script enforces clean tree, runs lib + spine tests, creates annotated tag:
-
-```bash
-./scripts/pin_pilot_release.sh v2.0.0-pilot.1 --dry-run   # preview
-./scripts/pin_pilot_release.sh v2.0.0-pilot.1             # create tag
-```
-
-Manual equivalent if needed:
-
-```bash
-cargo test --lib
-cargo test --test compiler_spine_test
-# optional: cd contracts && forge test
-git tag -a v2.0.0-pilot.1 -m "L1 pilot pin"
-# git push origin v2.0.0-pilot.1   # only if remote policy allows
-```
-
-Record in the pilot charter:
-
-- tag name, **and**  
-- full commit SHA (`git rev-list -n1 v2.0.0-pilot.1`).
-
-### Active pin log
+## Active pin log
 
 | Tag | Commit SHA | Date | Notes |
 | :--- | :--- | :--- | :--- |
-| `v2.0.0-pilot.3` | `5449838a565b43efc9c9c9185a3389c9895e791c` | 2026-07-12 | **Preferred pin** — full lab loop + reliable N8 deploy env |
-| `v2.0.0-pilot.2` | `d6a4567f98c74d324041d1461c7a310b706ecc1b` | 2026-07-12 | R5 friction fixes (commit -m, default git/main) |
-| `v2.0.0-pilot.1` | `ba33e6ba7ebad55a61a54a9dae68d4508dbdd9d7` | 2026-07-12 | Superseded for new pilots |
+| `v2.0.0-pilot.3` | `5449838a565b43efc9c9c9185a3389c9895e791c` | 2026-07-12 | **Preferred pin** |
+| `v2.0.0-pilot.2` | `d6a4567f98c74d324041d1461c7a310b706ecc1b` | 2026-07-12 | R5 friction fixes |
+| `v2.0.0-pilot.1` | `ba33e6ba7ebad55a61a54a9dae68d4508dbdd9d7` | 2026-07-12 | Superseded |
 
-Update this table in a **follow-up commit after** the tag is cut (do not retag to include the table row).
+Update this table in a **follow-up commit after** a new tag is cut.
 
 ## How to install a pin (field)
 
 ```bash
 git clone <approved-remote> arxos
 cd arxos
-git checkout v2.0.0-pilot.1
+git checkout v2.0.0-pilot.3
 cargo install --path . --locked
 arx --version
 ```
 
-If `cargo install --locked` fails on the target machine, still checkout the tag and install without `--locked`, but **record the commit SHA** in the charter.
+If `cargo install --locked` fails on the target machine, still checkout the tag
+and install without `--locked`, but **record the commit SHA** in the charter.
+
+## How to cut a pilot tag (engineering)
+
+```bash
+./scripts/pin_pilot_release.sh v2.0.0-pilot.N --dry-run
+./scripts/pin_pilot_release.sh v2.0.0-pilot.N
+```
+
+Record tag **and** full SHA in the pilot charter.
 
 ## What not to do
 
@@ -70,8 +56,8 @@ If `cargo install --locked` fails on the target machine, still checkout the tag 
 ## Upgrade path mid-pilot
 
 1. Document why upgrade is required.  
-2. Cut `v2.0.0-pilot.2` from fixed commit.  
+2. Cut a new `v2.0.0-pilot.N` from a fixed commit.  
 3. Re-run **second-person checklist** on the new pin (abbreviated OK if only bugfix).  
 4. Amend charter pin field.
 
-**Related:** `docs/field-handoff.md` · `docs/l1-supported-workflow.md` · `docs/second-person-checklist.md` · `docs/install.md`
+**Related:** [field-handoff.md](./field-handoff.md) · [l1-supported-workflow.md](./l1-supported-workflow.md) · [second-person-checklist.md](./second-person-checklist.md)

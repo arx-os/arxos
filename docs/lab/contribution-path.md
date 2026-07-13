@@ -98,7 +98,7 @@ Oracle proof hash is locked on first propose (second oracle cannot swap merkle r
 | Submit `proposeContribution` | **Done** (CLI + contracts) |
 | Building UUID ↔ Registry `buildingId` E2E mint | **Done** (Foundry `BuildingContributionE2E`) |
 | Live Anvil script auto-register/stake/mint | Partial — `scripts/local_oracle_e2e.sh` + forge E2E is source of truth |
-| Buyer pay-for-query in $AXD | **Done** (N5 — see `docs/data-access.md`) |
+| Buyer pay-for-query in $AXD | **Done** (N5 — see `docs/lab/data-access.md`) |
 
 ## Module map
 

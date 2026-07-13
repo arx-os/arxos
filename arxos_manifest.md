@@ -9,7 +9,7 @@
 | **Engine** | Rust 2021 (CLI + lib) · native IFC · Git SSOT · Foundry contracts · optional WASM/agent/render3d/`blockchain` |
 | **Design philosophy** | Local-first · single `Building` model · Git-native · free to use · pay only for data access |
 | **Document status** | Living plan — full vision locked; compiler + economy spine **lab-complete** (N1–N8 + Horizon A tooling); **Horizon B** (district L1 obligations) is current priority (§1.5, §1.6, §10) |
-| **Last reconciled** | 2026-07-13 (manifest concurrent pass: pilot.3, full lab loop, Horizon A eng closed) |
+| **Last reconciled** | 2026-07-13 (docs nuke/rebuild: `docs/INDEX.md` pilot packet; IFC-only + identity; agent export boundary) |
 | **Audience** | Vision holder, field IT pilots, core maintainers, external builders |
 
 ---
@@ -85,7 +85,7 @@ BUYER MARKET
 | Multi-peer Git (N6) | Partial (docs) | Process only |
 | Real building (N9) | **Open** | Horizon B field evidence |
 
-See `docs/contribution-path.md`, `docs/data-access.md`.
+See `docs/INDEX.md` (pilot), `docs/lab/` (contribute/access; not L1 success), `docs/identity.md`.
 
 ---
 
@@ -136,11 +136,13 @@ Compiler without reward is incomplete for the vision. Reward without trusted as-
 ### 1.4 Explicit non-goals (near term)
 
 - Full BIM CAD parity (materials, openings, every IFC class).
+- **Revit / ArchiCAD / CAD plugins or direct CAD integrations** — IFC export from the vendor tool is the only supported BIM path (`docs/ifc-limitations.md`).
 - Survey-grade auto reconstruction without human review.
 - NL “chat to edit building” as primary interface.
 - Browser-only full campus LiDAR.
 - Multi-device CRDT collaboration before Git multi-remote is boring.
 - Expanding peripherals (PWA/hardware/3D) before Horizon A–B exit.
+- Agent/daemon as official IFC export authority (edge bridge only; spine is `arx export --format ifc`).
 
 ### 1.5 Path to “it works” (horizons)
 
@@ -322,7 +324,7 @@ This section is the **complete ledger** of honesty/integrity findings from the p
 | **I8** | **`export --delta` placeholder** | **Done:** `--delta` hard-errors (no silent ignore) | **Done** | No silent ignore | I8 |
 | **I9** | **Hardware / MQTT / BACnet stubs** | **Done (doc):** §9.3 + pilot-runbook non-MVP; do not expand | **Done** | Documented quarantine | I9 |
 | **I10** | **`arx migrate` chdir footgun** | **Done:** `persist_building_at`; migrate path-aware | **Done** | No cwd mutation | I10 |
-| **I11** | **Multi-building single-file limit** | **Done (doc):** §3.3 + `docs/pilot-runbook.md` | **Done** | Documented | I11 |
+| **I11** | **Multi-building single-file limit** | **Done (doc):** §3.3 + `docs/l1-supported-workflow.md` | **Done** | Documented | I11 |
 | **I12** | **Optional-ring cognitive load** | **Open process:** refuse list + feature gates | **Low** | Hold freeze | I12 |
 | **I13** | **Scorecard honesty** | **Ongoing** biweekly reconcile | **Process** | Keep honest | I13 |
 
@@ -469,7 +471,7 @@ Key entry points:
 | Ops | Merge + loss reports | Done |
 | L3+ | Materials, openings, systems, vendor edge cases | **Limited / planned** |
 
-Detail: `docs/ifc-mapping.md`.
+Detail: `docs/ifc-limitations.md`, `docs/identity.md`.
 
 ### 3.6 Field roles (MVP operational design)
 
@@ -746,8 +748,8 @@ Success is measured by **pilot gate criteria** (§7.4), **§2.6 blockers closed*
 
 | ID | Task | Done when |
 | :--- | :--- | :--- |
-| 4.1 / **D1** | `docs/pilot-runbook.md` (hardware, voxel defaults, light mode, full CLI loop, git, **single-building limit I11**, known stubs) | **Partial** — written; non-author walkthrough open |
-| 4.2 / **D2** | Release binary path: documented `cargo install` / release artifact; optional Dockerfile | **Partial** — `docs/install.md` |
+| 4.1 / **D1** | `docs/l1-supported-workflow.md` (full CLI loop, git, **single-building limit I11**, known stubs) | **Partial** — written; non-author walkthrough open |
+| 4.2 / **D2** | Release binary path: documented pin install | **Partial** — `docs/pilot-release.md` |
 | 4.3 / **D3** | Resource limits: max points, voxel defaults, light mode (Pi vs Mini) | Written + smoke profile once |
 | 4.4 / **D4** | Sample pilot project: `arx init` + example edit script + sample IFC path | **Partial** — `examples/pilot-corrections.txt` + fixtures |
 | 4.5 | Structured ingest summary logs | Operators can debug |
@@ -937,8 +939,8 @@ Adjust calendar; **do not** claim vendor/interop success while CI is red (I1), o
 ### 7.3 Handoff package checklist
 
 - [x] This manifest (`arxos_manifest.md`) — reconciled 2026-07; operating rules §4.0; **§2.6 integrity debt inventory**
-- [x] `docs/ifc-mapping.md` (existing)
-- [x] README aligned to compiler CLI + CI table
+- [x] `docs/INDEX.md` + pilot packet (identity, IFC-only, L1 workflow)
+- [x] README aligned to compiler CLI + CI table + IFC-only policy
 - [x] **Compiler CI actually green** under documented flags (Track **I1**)
 - [x] Experimental modules feature-gated (agent, chain, render3d, web)
 - [x] Convergence work committed / recoverable (Track **I2**)
@@ -950,8 +952,8 @@ Adjust calendar; **do not** claim vendor/interop success while CI is red (I1), o
 - [x] Migrate path-safe (Track **I10**)
 - [x] Single-building limit documented (Track **I11** / D5)
 - [x] `schema_version` on YAML Building (Track A1)
-- [ ] Vendor IFC limitations table (Track B)
-- [x] `docs/pilot-runbook.md` outline (Track D1 partial — needs non-author walkthrough)
+- [x] Vendor IFC limitations table (`docs/ifc-limitations.md`; Revit slots open — R2)
+- [x] `docs/l1-supported-workflow.md` (Track D1 partial — needs non-author walkthrough)
 
 ### 7.4 Pilot gate — definition of “remaining items complete”
 
@@ -1056,7 +1058,7 @@ test_data/             Mid-size IFC samples
 Compiler:  init → import → edit (review) → migrate → validate → export → git
 Labor:     contribute [--sign] [--submit]
 Buyer:     access quote → access pay → export --commercial (receipt / N7 CLI gate)
-Lab proof: ./scripts/full_lab_loop.sh   (see docs/full-lab-loop.md)
+Lab proof: ./scripts/full_lab_loop.sh   (see docs/lab/full-lab-loop.md)
 ```
 
 ### 9.3 Supported surfaces matrix
@@ -1084,13 +1086,13 @@ Lab proof: ./scripts/full_lab_loop.sh   (see docs/full-lab-loop.md)
 | :---: | :--- | :---: |
 | **A1** | `scripts/horizon_a_deploy_env.sh` → `.env.arx` | **Done** |
 | **A2** | `Register.s.sol` + script `--register` (YAML UUID) | **Done** |
-| **A3** | `docs/horizon-a-ops.md` mint/pay ops | **Done** |
+| **A3** | `docs/lab/horizon-a-ops.md` mint/pay ops | **Done** |
 | **A4** | Host gate: `export --commercial` + `access-receipt.json` | **Done** (R4 partial) |
-| **A5** | `docs/field-trial.md` | **Done** |
+| **A5** | Field trial templates → `docs/field-handoff.md` + field-truth-log | **Done** (supersedes archived field-trial) |
 | **A6** | `scripts/full_lab_loop.sh` + CI (compiler + forge mint/pay) | **Done** |
 
 Horizon A **does not** close §1.6 district pilot obligations. It only enables lab/live-local tooling.
-**Lab proof command:** `./scripts/full_lab_loop.sh` (`docs/full-lab-loop.md`).
+**Lab proof command:** `./scripts/full_lab_loop.sh` (`docs/lab/full-lab-loop.md`).
 
 ### 10.2 Horizon B — Relegate pilot obligations (L1) — **current priority**
 

@@ -123,4 +123,4 @@ arx export --format ifc --commercial -o paid.ifc
 - [ ] `arx export --commercial` succeeds only with receipt  
 - [ ] Foundry E2E still green: `cd contracts && forge test`  
 
-Next: **Horizon B** — one real building (`docs/field-trial.md`).
+Next: **Horizon B** — one real building (`docs/field-handoff.md`).

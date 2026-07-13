@@ -1,8 +1,11 @@
 # Pilot data classification (R7 / P-Data)
 
 **Obligation:** R7 — security / compliance / where models live  
-**Use with:** `docs/pilot-charter.md` §4  
+**Use with:** [pilot-charter.md](./pilot-charter.md) §4  
 **Default for public school districts:** **internal-only**
+
+Facility models are as sensitive as CAD / as-built drawings (security systems,
+electrical, floor plans). Treat `building.yaml` and IFC exports accordingly.
 
 ---
 
@@ -20,7 +23,7 @@
 
 | Allowed | Not allowed (without separate approval) |
 | :--- | :--- |
-| Room names, floor labels used operationally | Student names, IDs, grades (FERPA) |
+| Room names, floor labels used operationally | Student names, IDs, grades (FERPA / student PII) |
 | Equipment tags, panel IDs as used by facilities | Camera coverage maps labeled for adversaries |
 | Generic properties for ops | Passwords, lock codes, alarm PINs |
 | IFC geometry / structure | Unredacted security vulnerability notes |
@@ -37,6 +40,7 @@ When in doubt: treat like CAD / as-built drawings.
 | Who may export IFC/YAML off capture node | Pilot owner | [ ] |
 | Backup location classified same or higher | Pilot owner | [ ] |
 | Personal cloud sync (OneDrive/Dropbox) disallowed for pilot tree | Pilot owner | [ ] |
+| Agent/SSH edge endpoints (if any) scoped to approved network only | Pilot owner | [ ] |
 
 ## Export policy (L1)
 
@@ -53,4 +57,4 @@ When in doubt: treat like CAD / as-built drawings.
 | Pilot owner | | |
 | Security / IT (if required) | | |
 
-**Related:** `docs/pilot-charter.md` · `arxos_manifest.md` §1.6 R7
+**Related:** [pilot-charter.md](./pilot-charter.md) · [`arxos_manifest.md`](../arxos_manifest.md) §1.6 R7

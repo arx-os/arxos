@@ -1,15 +1,13 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::agent::git::SyncState;
-use crate::core::Building;
 use crate::export::ifc::IFCExporter;
 use crate::ingest::import_ifc_path;
 use crate::persistence::{load_building_at, save_building_at, BUILDING_YAML};
 use crate::utils::path_safety::PathSafety;
 use anyhow::{anyhow, bail, Result};
 use base64::{engine::general_purpose, Engine as _};
-use chrono::{DateTime, Utc};
 
 const MAX_IFC_BYTES: usize = 50 * 1024 * 1024; // 50 MB ceiling for uploads
 
@@ -103,14 +101,52 @@ fn finish_import(repo_root: &Path, ifc_path: &Path) -> Result<IfcImportResult> {
     })
 }
 
+/// Export IFC via the **same** compiler spine as `arx export --format ifc`
+/// (`export::ifc::IFCExporter`).
+///
+/// Agent/daemon is edge bridging only: it must not invent alternate STEP writers
+/// or delta semantics. Official L1 pilot handoffs use the CLI.
+///
+/// * `delta` — always rejected (matches CLI: not implemented).
+/// * `approved_only` — same filter as CLI `--approved-only` (drop proposed/rejected LiDAR autos).
 pub fn export_ifc(
     repo_root: &Path,
     filename: Option<String>,
     delta: bool,
 ) -> Result<IfcExportResult> {
-    let building = load_building_at(repo_root)
+    export_ifc_with_options(repo_root, filename, delta, false)
+}
+
+/// See [`export_ifc`]. Prefer this when the RPC client can pass review flags.
+pub fn export_ifc_with_options(
+    repo_root: &Path,
+    filename: Option<String>,
+    delta: bool,
+    approved_only: bool,
+) -> Result<IfcExportResult> {
+    if delta {
+        bail!(
+            "agent ifc.export delta is not supported (same as `arx export --delta`). \
+             Use full export via export::ifc. Official pilot handoffs: `arx export --format ifc`."
+        );
+    }
+
+    let mut building = load_building_at(repo_root)
         .map_err(|e| anyhow!("Failed to load {}: {}", BUILDING_YAML, e))?;
-    let exporter = IFCExporter::new(building.clone());
+
+    // Stabilize product GlobalIds before write (same contract as identity docs).
+    crate::ifc::mapping::assign_missing_global_ids(&mut building);
+
+    let review = crate::core::summarize_review(&building);
+    for line in review.warning_lines() {
+        eprintln!("  {}", line);
+    }
+    if approved_only {
+        eprintln!("  approved_only: excluding proposed/rejected LiDAR auto entities");
+    }
+    let export_building = crate::core::filter_building_for_export(&building, approved_only);
+
+    let exporter = IFCExporter::new(export_building);
 
     let exports_dir = repo_root.join("exports");
     fs::create_dir_all(&exports_dir)?;
@@ -123,6 +159,9 @@ pub fn export_ifc(
 
     let ifc_path = exports_dir.join(&export_filename);
     PathSafety::validate_path_for_write(&ifc_path).map_err(|e| anyhow!(e))?;
+
+    // Full export only — single IFCExporter path (no delta theater).
+    exporter.export(&ifc_path)?;
 
     let sync_state_path = repo_root.join(SyncState::default_path());
     let mut sync_state = SyncState::load(&sync_state_path).unwrap_or_else(|| {
@@ -137,13 +176,6 @@ pub fn export_ifc(
         .strip_prefix(repo_root)
         .unwrap_or(&ifc_path)
         .to_path_buf();
-
-    let has_previous_export = sync_state.last_export_timestamp > DateTime::<Utc>::UNIX_EPOCH;
-    if delta && has_previous_export {
-        exporter.export_delta(Some(&sync_state), &ifc_path)?;
-    } else {
-        exporter.export(&ifc_path)?;
-    }
 
     let (equipment_paths, rooms_paths) = exporter.collect_universal_paths();
     sync_state.update_after_export(equipment_paths, rooms_paths);

@@ -1,7 +1,7 @@
 //! IFC ↔ core data model mapping policy (identity, Psets, fidelity).
 //!
 //! The core `Building` graph is canonical. This module owns constants and pure
-//! helpers so import and export stay consistent. See `docs/ifc-mapping.md`.
+//! helpers so import and export stay consistent. See `docs/ifc-limitations.md` and `docs/identity.md`.
 
 mod export_report;
 mod geometry;

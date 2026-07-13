@@ -263,10 +263,11 @@ impl ArxAddress {
         }
     }
 
-    /// Generate stable GUID for IFC export using SHA-256 hash
+    /// Stable hex token derived from the address path (SHA-256).
     ///
-    /// # Returns
-    /// * Hexadecimal string representation of the hash
+    /// **Not** the IFC product GlobalId. Product GlobalIds come from
+    /// `ifc_global_id` / `resolve_product_global_id` / `ifc_global_id_from_uuid`
+    /// (see `docs/identity.md`). This helper is for address-keyed fixtures only.
     pub fn guid(&self) -> String {
         let mut hasher = Sha256::new();
         hasher.update(self.path.as_bytes());

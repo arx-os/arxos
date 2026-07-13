@@ -1,39 +1,63 @@
-# IFC interop limitations table (Track B3)
+# IFC limitations & policy
 
-Authoritative for what ArxOS claims to preserve. Update when adding fixtures.
+**Policy (hard):** ArxOS is an **IFC compiler / interchange** tool only.  
+There are **no Revit, ArchiCAD, or other CAD plugins** and none planned for L1.
 
-## Checked-in fixtures
+**Supported BIM path for districts:**
 
-| Fixture | Source / toolchain | Schema | In CI | Preserve (typical) | Drop / weak |
-| :--- | :--- | :---: | :---: | :--- | :--- |
-| `test_data/sample_building.ifc` | ArxOS test suite | IFC2X3 | Yes | Hierarchy, names, L0–L2 box path when present | Full CAD materials/openings |
-| `tests/fixtures/ifc/simple.ifc` | ArxOS minimal | IFC2X3 | Yes | Smoke parse | Geometry-rich models |
-| `test_data/Building-Architecture.ifc` | SketchUp + IFC-manager 5.3 | IFC4 | Yes (non-panic + optional persist) | Spatial structure if mapped; no crash | Vendor quirks, materials, openings, systems |
-| `test_data/Building-Hvac.ifc` | Project HVAC sample | IFC4-ish | Yes (non-panic + optional persist) | Equipment-ish entities when mapped | Full MEP systems, types not in Arx enum |
-| Revit / ArchiCAD anonymized | **Not yet checked in** | — | Pending real licenses | — | Provide under `tests/fixtures/ifc/vendor/` |
+```text
+Vendor BIM (Revit / ArchiCAD / …)
+        → clean IFC export from that tool
+        → arx import ifc
+        → review / edit / validate
+        → arx export --format ifc
+        → re-import to vendor tools if needed
+```
 
-## Fidelity contract (reminder)
+If the vendor IFC is incomplete, fix **export settings in the BIM tool** — not by
+embedding Arx inside CAD.
+
+**Export spine:** Only `arx export --format ifc` (or the same
+`export::ifc::IFCExporter` path). Agent/daemon may bridge files over the network;
+it must **not** invent alternate IFC semantics. Official pilot handoffs use the CLI.
+
+Identity rules: [identity.md](./identity.md).
+
+## Fidelity tiers
 
 | Tier | Content | Status |
-| :--- | :--- | :--- |
+| :--- | :--- | :---: |
 | L0 | Hierarchy, names, types, product GlobalIds | Strong on Arx-shaped data |
 | L1 | `Pset_ArxIdentity`, `Pset_ArxLidarEnrichment`, clean free-form keys | Strong on Arx round-trip |
 | L2 | Position / dims / mesh subset | Box + placement; mesh partial |
-| L3+ | Materials, openings, full systems | **Out of pilot scope** |
+| L3+ | Materials, openings, full MEP systems, type catalogs | **Out of pilot scope** |
 
-## Policy
+## Checked-in fixtures
 
-1. **Native STEP only** — do not revive `ifc_rs` for one more vendor file.
-2. A fixture is “supported” only if a **named test** exercises it (`tests/vendor_ifc_test.rs`, spine tests).
-3. “No panic” is the minimum bar for third-party files; semantic round-trip is required only when validation is clean.
-4. Real Revit/ArchiCAD files: anonymize, license notes in `tests/fixtures/ifc/vendor/README.md`, then add rows here.
+| Fixture | Source | In CI | Notes |
+| :--- | :--- | :---: | :--- |
+| `test_data/sample_building.ifc` | ArxOS | Yes | Hierarchy / L0–L2 path |
+| `tests/fixtures/ifc/simple.ifc` | Minimal | Yes | Smoke |
+| `test_data/Building-Architecture.ifc` | SketchUp | Yes | Non-panic + optional persist |
+| `test_data/Building-Hvac.ifc` | HVAC sample | Yes | Equipment-ish mapping partial |
+| Revit / ArchiCAD anonymized | **Not checked in** | Open (**R2**) | Provide under `tests/fixtures/ifc/vendor/` with license note |
 
-## Adding a vendor fixture
+“No panic” ≠ semantic completeness. District pilots must log preserve/drop in
+[field-truth-log.md](./field-truth-log.md).
 
-```text
-tests/fixtures/ifc/vendor/
-  README.md          # license + origin
-  revit_anon_01.ifc  # stripped personal data
-```
+## Merge policy (import)
 
-Then extend `tests/vendor_ifc_test.rs` with a non-panic (+ structure) case and list the file in this table.
+| Source | Policy | Meaning |
+| :--- | :--- | :--- |
+| IFC re-import | `MergePolicy::ifc()` | Hierarchy base = **incoming** (entities missing from file may drop) |
+| LiDAR re-scan | `MergePolicy::lidar()` | Hierarchy base = **existing** + spatial match |
+
+## Explicit non-support
+
+- Direct RVT / PLN open
+- Live CAD plugin bidirectional sync
+- Full CoordinationView / reference-view certification
+- Survey-grade geometry from IFC alone
+- Agent/daemon as official pilot export authority
+
+**Manifest:** §3.5, obligation **R2**.

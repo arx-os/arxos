@@ -4,16 +4,19 @@
 **Who:** Someone who did **not** write the pilot docs or invent the workflow  
 **Machine:** District laptop or equivalent (VPN, AV, path policies as production)
 
-**Pin under test:** tag/commit ________________  `arx --version`: ________________
+**Pin under test:** tag/commit ________________  `arx --version`: ________________  
+**Confirm SHA matches charter / [pilot-release.md](./pilot-release.md):** [ ] Yes
 
 ---
 
 ## Rules
 
-- Use only `docs/l1-supported-workflow.md` (no tribal knowledge from the pilot owner).  
+- Use only [l1-supported-workflow.md](./l1-supported-workflow.md) and [pilot-release.md](./pilot-release.md) (no tribal knowledge from the pilot owner).  
 - Time each phase.  
 - On stuck >10 minutes: write the stuck point; do not skip ahead without noting it.  
-- Do **not** use blockchain/mint/pay unless the charter says demo.
+- Do **not** use blockchain/mint/pay unless the charter says demo.  
+- Do **not** use `agent` / auto-export as the official path.  
+- Do **not** install CAD plugins; IFC files only.
 
 ---
 
@@ -68,4 +71,4 @@
 
 After pass/conditional: update `arxos_manifest.md` §1.6 **R5** status and link this completed checklist path (even if stored outside git for privacy).
 
-**Related:** `docs/l1-supported-workflow.md` · `docs/pilot-charter.md` · `docs/pilot-release.md`
+**Related:** [l1-supported-workflow.md](./l1-supported-workflow.md) · [pilot-charter.md](./pilot-charter.md) · [pilot-release.md](./pilot-release.md)

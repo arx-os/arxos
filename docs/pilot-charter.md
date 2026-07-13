@@ -4,6 +4,9 @@
 **Go level:** L1 — controlled free-software pilot on **one** building  
 **Fill in blanks · print or PDF · sign before pilot start**
 
+**Maturity:** Lab compiler ~8/10; district L1 readiness ~4/10 until process +
+field evidence close obligations in `arxos_manifest.md` §1.6.
+
 ---
 
 ## 1. Parties
@@ -30,7 +33,15 @@
 | Pilot end / review date | |
 
 **In scope:** Local map → review → validate → Git → internal IFC/YAML export for the named building.  
-**Out of scope for L1:** Mainnet $AXD, multi-oracle production mint, public data market, campus multi-building layout, PWA capture, safety sign-off of models.
+**Out of scope for L1:** Mainnet $AXD, multi-oracle production mint, public data market, campus multi-building layout, PWA capture, agent-as-export-authority, safety sign-off of models as licensed drawings.
+
+### 2b. BIM / interchange policy (required)
+
+- Vendor models enter Arx **only** as **IFC** files exported from the authoring tool.
+- **No** Revit, ArchiCAD, or other CAD plugin, add-in, or direct CAD integration is supported or authorized.
+- Official IFC leaving the pilot uses: `arx export --format ifc` (prefer `--approved-only` when LiDAR was used).
+- Optional `agent` feature is **edge bridging only** (WebSocket/SSH / file watch). It is **not** required for L1 and is **not** a second IFC export authority.
+- Identity rules: `docs/identity.md`. Limitations: `docs/ifc-limitations.md`.
 
 ## 3. Safety and professional liability (required)
 
@@ -47,7 +58,7 @@
 
 - Auto entities start as `review_status=proposed`.
 - **Unreviewed `proposed` entities must not be treated as official** for work planning, bidding, or safety decisions.
-- Reviewer must `accepted` or `rejected` before any “official” export or contractor handoff that claims Arx as source.
+- Reviewer must set `accepted` or `rejected` before any “official” export or contractor handoff that claims Arx as source.
 
 Initials — Pilot owner: ______  Reviewer: ______
 
@@ -104,4 +115,4 @@ Mark at end of pilot:
 
 ---
 
-**Related:** `docs/l1-supported-workflow.md` · `docs/second-person-checklist.md` · `docs/field-trial.md` · `arxos_manifest.md` §1.6
+**Related:** [l1-supported-workflow.md](./l1-supported-workflow.md) · [second-person-checklist.md](./second-person-checklist.md) · [field-handoff.md](./field-handoff.md) · [`arxos_manifest.md`](../arxos_manifest.md) §1.6

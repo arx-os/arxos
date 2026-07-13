@@ -9,7 +9,7 @@
 | **Engine** | Rust 2021 (CLI + lib) · native IFC · Git SSOT · Foundry contracts · optional WASM/agent/render3d/`blockchain` |
 | **Design philosophy** | Local-first · single `Building` model · Git-native · free to use · pay only for data access |
 | **Document status** | Living plan — full vision locked; compiler + economy spine **lab-complete** (N1–N8 + Horizon A tooling); **Horizon B** (district L1 obligations) is current priority (§1.5, §1.6, §10) |
-| **Last reconciled** | 2026-07-13 (LossReport unmapped_products; buildingSMART fixtures; R2 eng half) |
+| **Last reconciled** | 2026-07-13 (pilot.4 pin; LossReport unmapped_products; buildingSMART; R2 eng half) |
 | **Audience** | Vision holder, field IT pilots, core maintainers, external builders |
 
 ---
@@ -193,7 +193,7 @@ This section is the **obligation register**: each reservation must be **relegate
 | **R6** | **Scale/performance unprofiled** | Large school models may OOM/hang; people skip validation | Profile worst-case IFC/scan on pilot hardware; set limits | Written max points/time; light-mode guidance | Eng + field | **Partial** — eng defaults in `docs/resource-limits.md` + hard refuse on oversize import; **site profile still open** |
 | **R7** | **Security / compliance / classification** | Facility plans sensitive; Git remotes, exports, backups | Data class policy (internal-only default); who can clone/export; no student PII in properties | Security/IT sign-off for pilot repo location | Field IT + security | **Partial** — `docs/data-classification.md` + charter §4 (needs sign-off) |
 | **R8** | **Mainnet token / institutional fit** | Public entity crypto, custody, procurement, reputation | L1/L2: **no production token**. L3 only with Legal/Finance | Written go/no-go from leadership for any chain use | Vision + Legal | **Partial** — L1 default off-chain in charter §5 |
-| **R9** | **Support / ownership / change control** | No vendor SLA; `main` moves | Pin release tag/hash; one supported workflow page; escalation path | Pinned install + “supported loop” doc used in R5 | Eng + field IT | **Partial** — prefer tag `v2.0.0-pilot.3` @ `5449838a`; charter must record pin; R5 must walk that pin |
+| **R9** | **Support / ownership / change control** | No vendor SLA; `main` moves | Pin release tag/hash; one supported workflow page; escalation path | Pinned install + “supported loop” doc used in R5 | Eng + field IT | **Partial** — prefer tag `v2.0.0-pilot.4` @ `659bbd9f`; charter must record pin; R5 must walk that pin |
 | **R10** | **Safety / professional liability framing** | Model must not replace LOTO, licensed drawings, or code docs | Pilot disclaimer policy; culture: human + licensed docs win | Signed pilot charter with disclaimer language | Field IT + leadership | **Partial** — template `docs/pilot-charter.md` (needs signature) |
 
 #### Work packages to relegate obligations (ordered)
@@ -201,7 +201,7 @@ This section is the **obligation register**: each reservation must be **relegate
 | Package | Obligations hit | Deliverables | Status |
 | :---: | :--- | :--- | :---: |
 | **P-Safety** | R10, R1 (process) | `docs/pilot-charter.md`; no unreviewed `proposed` as official | **Template done** — sign to close R10 |
-| **P-Transfer** | R5, R9 | `docs/l1-supported-workflow.md`; `docs/second-person-checklist.md`; `docs/pilot-release.md`; `docs/field-handoff.md`; `scripts/pin_pilot_release.sh` | **Pin cut** (`v2.0.0-pilot.3` @ `5449838a`) — second-person walkthrough still open for R5 |
+| **P-Transfer** | R5, R9 | `docs/l1-supported-workflow.md`; `docs/second-person-checklist.md`; `docs/pilot-release.md`; `docs/field-handoff.md`; `scripts/pin_pilot_release.sh` | **Pin cut** (`v2.0.0-pilot.4` @ `659bbd9f`) — second-person walkthrough still open for R5 |
 | **P-Data** | R7 | Classification + private Git; export approval same class as CAD | **Template done** — `docs/data-classification.md` (sign to close) |
 | **P-Field-truth** | R1, R2, R6 | Real scan + real IFC matrix + one performance profile on pilot hardware | **Template done** — `docs/field-truth-log.md`; **site evidence open** |
 | **P-Chain-optional** | R3, R8 | Explicit “compiler pilot = off-chain”; testnet demo only if requested | **Partial** (charter §5 + L1 workflow) |
@@ -1103,7 +1103,7 @@ Horizon A **does not** close §1.6 district pilot obligations. It only enables l
 | Order | Package | Status | Your next action |
 | :---: | :--- | :---: | :--- |
 | **B0** | **P-Safety** | Template **done** | Fill/sign `docs/pilot-charter.md` |
-| **B1** | **P-Transfer** | **Pin tooling ready** | After commits: cut `v2.0.0-pilot.4`; field records pin; second person + checklist on that pin |
+| **B1** | **P-Transfer** | **Pin cut** | Field records `v2.0.0-pilot.4` @ `659bbd9f`; second person + checklist on that pin (R5 still open) |
 | **B2** | **P-Data** | Template done | Complete `docs/data-classification.md` + charter §4; private Git remote |
 | **B3** | **P-Field-truth** | Template done | Fill `docs/field-truth-log.md` with real IFC/scan; eng fixes only blockers |
 | **B4** | **P-Chain-optional** | Partial | Keep L1 off-chain unless leadership requests demo |
@@ -1156,6 +1156,8 @@ Never:  L3 mainnet until L1 exit · fake R5/R1 evidence · public facility model
 | **2026-07-13 full lab loop** | `scripts/full_lab_loop.sh` + CI: compiler + l1_smoke + Foundry mint/pay E2E; A6 done |
 | **2026-07-13 pilot.3** | Tag `v2.0.0-pilot.3` @ `5449838a`; Deploy.s.sol writes deployed.env; N8 reliable |
 | **2026-07-13 concurrent pass** | Header/§0.1/§1.5/P-Transfer/phase 1.6–1.7 aligned to pilot.3 + Horizon B current |
+| **2026-07-13 Package A / R2 eng** | LossReport `unmapped_products`; buildingSMART ISO fixtures + report; R2 Partial |
+| **2026-07-13 pilot.4** | Tag `v2.0.0-pilot.4` @ `659bbd9f`; TUI default, no hardware/render3d, unmapped honesty |
 
 ---
 

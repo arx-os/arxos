@@ -17,18 +17,18 @@
 
 | Tag | Commit SHA | Date | Notes |
 | :--- | :--- | :--- | :--- |
-| *(next)* `v2.0.0-pilot.4` | *cut after compiler-core commits land* | TBD | **Preferred once cut** — empty default features, resource limits, pilot docs |
-| `v2.0.0-pilot.3` | `5449838a565b43efc9c9c9185a3389c9895e791c` | 2026-07-12 | Last pin before compiler-core packaging; OK only if charter still names it |
+| **`v2.0.0-pilot.4`** | `659bbd9f369c0b942f150983b204ea054fc595a0` | 2026-07-13 | **Preferred** — TUI default, no hardware/render3d, resource limits, `unmapped_products` LossReport, buildingSMART fixtures |
+| `v2.0.0-pilot.3` | `5449838a565b43efc9c9c9185a3389c9895e791c` | 2026-07-12 | Superseded for new pilots (last pin before compiler-core packaging) |
 | `v2.0.0-pilot.2` | `d6a4567f98c74d324041d1461c7a310b706ecc1b` | 2026-07-12 | R5 friction fixes |
 | `v2.0.0-pilot.1` | `ba33e6ba7ebad55a61a54a9dae68d4508dbdd9d7` | 2026-07-12 | Superseded |
 
-**After you commit the compiler-core / docs work**, cut the next pin:
+**Next pin** (only after material eng change field must see):
 
 ```bash
 # clean tree required
-./scripts/pin_pilot_release.sh v2.0.0-pilot.4 --dry-run
-./scripts/pin_pilot_release.sh v2.0.0-pilot.4
-# then: git push origin v2.0.0-pilot.4  (when policy allows)
+./scripts/pin_pilot_release.sh v2.0.0-pilot.N --dry-run
+./scripts/pin_pilot_release.sh v2.0.0-pilot.N
+# then: git push origin v2.0.0-pilot.N  (when policy allows)
 # update this table + pilot charter §2 with tag + full SHA
 ```
 

@@ -7,6 +7,7 @@
 
 // Core modules (always available)
 pub mod config;
+pub mod contribution;
 pub mod core;
 pub mod error;
 pub mod export;

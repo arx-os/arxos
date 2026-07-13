@@ -53,7 +53,8 @@ jobs:
             --test ifc_integration_test \
             --test lidar_tests \
             --test bidirectional_tests \
-            --test vendor_ifc_test
+            --test vendor_ifc_test \
+            --test contribution_spine_test
 
       - name: Full default-feature suite
         run: cargo test --verbose

@@ -3,6 +3,10 @@
 //! This module provides integration with Ethereum smart contracts on Base L2,
 //! enabling contribution rewards, payment routing, and identity management.
 //!
+//! **Contribution root of truth:** building data commitments are built in
+//! [`crate::contribution`] (always available). This module submits/signs them
+//! on-chain when `--features blockchain` is enabled.
+//!
 //! # Features
 //!
 //! - **Contract Bindings**: Auto-generated Rust types from Solidity ABIs

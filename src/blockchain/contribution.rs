@@ -10,7 +10,11 @@ use std::collections::HashMap;
 #[cfg(feature = "agent")]
 use tracing;
 
-/// A documented unit of physical maintenance ready for on-chain validation.
+/// A documented unit of labor ready for on-chain validation.
+///
+/// **Primary path (vision):** use [`WorkContribution::from_building_merkle`] with the
+/// merkle root from `crate::contribution` (building.yaml labor).
+/// Sensor [`DeviceState`] hashing is **secondary** (optional hardware telemetry).
 #[derive(Debug, Clone)]
 pub struct WorkContribution {
     pub worker_id: ArxId,
@@ -20,6 +24,21 @@ pub struct WorkContribution {
 }
 
 impl WorkContribution {
+    /// Primary: contribution bound to a building-data merkle root (hex or raw 32 bytes).
+    pub fn from_building_merkle(
+        worker_id: ArxId,
+        building_entity_id: ArxId,
+        merkle_root: [u8; 32],
+    ) -> Self {
+        Self {
+            worker_id,
+            entity_id: building_entity_id,
+            change_hash: merkle_root,
+            timestamp: chrono::Utc::now().timestamp() as u64,
+        }
+    }
+
+    /// Secondary: sensor DeviceState hash (not the as-built building labor unit).
     pub fn new(worker_id: ArxId, entity_id: ArxId, state: &DeviceState) -> Self {
         Self {
             worker_id,

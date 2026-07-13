@@ -9,7 +9,7 @@ use commands::RemoteCommand;
 use commands::{
     data::{EquipmentCommand, RoomCommand, SpatialCommand},
     git::{CommitCommand, DiffCommand, StageCommand, StatusCommand, UnstageCommand},
-    Command, ExportCommand, ImportCommand, InitCommand, MigrateCommand,
+    Command, ContributeCommand, ExportCommand, ImportCommand, InitCommand, MigrateCommand,
 };
 
 #[derive(Parser)]
@@ -104,6 +104,24 @@ impl Cli {
                     repo,
                     delta,
                     approved_only,
+                };
+                Ok(cmd.execute()?)
+            }
+            Commands::Contribute {
+                output,
+                latitude,
+                longitude,
+                git_commit,
+                allow_invalid,
+                dry_run,
+            } => {
+                let cmd = ContributeCommand {
+                    output: std::path::PathBuf::from(output),
+                    latitude,
+                    longitude,
+                    git_commit,
+                    allow_invalid,
+                    dry_run,
                 };
                 Ok(cmd.execute()?)
             }
@@ -705,6 +723,27 @@ pub enum Commands {
         /// Exclude proposed/rejected LiDAR auto entities from IFC export (Track C2)
         #[arg(long)]
         approved_only: bool,
+    },
+    /// Package verified building data as a contribution claim (reward path; free software)
+    Contribute {
+        /// Output JSON path
+        #[arg(long, default_value = "contribution.json")]
+        output: String,
+        /// Optional site latitude for location hash
+        #[arg(long)]
+        latitude: Option<f64>,
+        /// Optional site longitude for location hash
+        #[arg(long)]
+        longitude: Option<f64>,
+        /// Bind package to an explicit Git commit oid (default: HEAD if repo)
+        #[arg(long)]
+        git_commit: Option<String>,
+        /// Allow packaging even if validation has errors (not for mint path)
+        #[arg(long)]
+        allow_invalid: bool,
+        /// Print package summary without writing a file
+        #[arg(long)]
+        dry_run: bool,
     },
     /// Render building visualization
     Render {

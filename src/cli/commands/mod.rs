@@ -1,6 +1,7 @@
 //! CLI command implementations for the Building compiler surface.
 
 pub mod command_trait;
+pub mod contribute;
 pub mod data;
 pub mod edit;
 pub mod export;
@@ -16,6 +17,7 @@ pub mod query;
 pub mod search;
 
 pub use command_trait::Command;
+pub use contribute::ContributeCommand;
 pub use export::ExportCommand;
 pub use import::ImportCommand;
 pub use init::InitCommand;

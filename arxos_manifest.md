@@ -28,6 +28,43 @@ It is intentionally blunt. Marketing claims are secondary to engineering truth. 
 
 ---
 
+## 0.1 Full product vision (locked 2026-07)
+
+**One sentence:** Version control for the built world — free to use; peer built, reviewed, and rewarded.
+
+| Principle | Engineering consequence |
+| :--- | :--- |
+| Free software | Compiler/CLI is not paywalled |
+| Peer built + reviewed | Field capture + `review_status` + validation |
+| Rewarded | Verified **building data** → contribution package → oracle mint $AXD |
+| Data market | Buyers pay $AXD for data access; demand drives token |
+| Local-first | World runs capture nodes; maintainers do not host every building |
+| Git collaboration | Any Git host; GitHub is convenience, not the product lock-in |
+
+### Contribution root of truth (architect defaults — locked)
+
+1. **Primary labor unit:** validated `Building` / `building.yaml` (optional Git commit oid).
+2. **`buildingId`:** building UUID string (Registry).
+3. **Quality:** validation + LiDAR review coverage (`src/contribution/quality.rs`).
+4. **Chain bring-up:** Anvil E2E after package path is solid → public testnet later.
+5. **Oracles v1:** 2-of-3 as in contracts; operable by ArxOS keys for bring-up.
+6. **Peripherals:** ask before expanding PWA / hardware / 3D.
+
+### Full-product spine (target)
+
+```text
+field work → Building → building.yaml / Git → contribution.json
+         → EIP-712 proof → Oracle (2-of-3) → mint $AXD (70/10/10/10)
+         → data buyers pay $AXD for access
+```
+
+**Implemented now:** left half through `arx contribute` / `src/contribution/`.  
+**Next:** sign + submit package to local Oracle; payment router for buyers.
+
+See `docs/contribution-path.md`.
+
+---
+
 ## 1. Final goal (definition of “ArxOS working”)
 
 ### 1.1 Product mission
@@ -56,15 +93,20 @@ ArxOS treats a building as **versioned structured state**, not a row in a cloud 
 | G7 | Pilot scale path | Documented limits + profiled path for ~250k ft² | **Open** |
 | G8 | One supported IFC stack | Native STEP parser is the only production path | **Done** (legacy removed) |
 
-### 1.3 Success criteria (later: “network works”)
+### 1.3 Success criteria (full product: “network works”)
 
-Deferred until G1–G8 hold for pilot use:
+No longer “ignore forever.” Built **on** the compiler spine:
 
-- Oracle / proof-of-labor verification.
-- P2P multi-node consensus.
-- $AXD token economy and consumer buy-and-burn.
+| ID | Criterion | Status |
+| :--- | :--- | :---: |
+| N1 | Building commitment package from validated model | **Done** (`arx contribute`, `src/contribution/`) |
+| N2 | EIP-712 proof matches Solidity `ContributionProof` | Partial (`blockchain` feature) |
+| N3 | Local Anvil: package → oracle confirm → mint event | **Open** |
+| N4 | Registry worker + building identities | Contracts exist; CLI wiring **Open** |
+| N5 | Data-buyer payment path ($AXD) | **Open** |
+| N6 | Multi-peer via Git remotes (not CRDT-first) | Process + docs; forge-agnostic |
 
-These remain **strategic layers**, not prerequisites for a working compiler.
+Compiler G1–G8 remain the trust root. Network without N1 is invalid.
 
 ### 1.4 Explicit non-goals (MVP)
 
@@ -927,11 +969,11 @@ test_data/             Mid-size IFC samples
 
 ### 10.1 This week (operating cadence)
 
-1. ~~**Track I / A1**~~ **Done**.
-2. ~~**B2/B3 + C1/C2/C3**~~ **Done** (vendor goldens, review status, export policy, confidence docs).
-3. **B1 residual** — real Revit/ArchiCAD anonymized files when available.
-4. **D1 walkthrough** by non-author; flesh D3 resource profiles after field data.
-5. **Hold a freeze:** no features outside Tracks B residual / C residual / D until pilot gate (§7.4).
+1. ~~**Contribution N1**~~ **Done** — `arx contribute` / building commitment package.
+2. **N2–N3** — EIP-712 sign package + Anvil oracle submit → mint event.
+3. **N4** — wire Registry buildingId/worker into contribute flow.
+4. Peripherals (PWA/hardware/3D): **ask before expand**.
+5. Field vendor IFC remains optional until you supply files.
 
 ### 10.2 Then (critical path)
 
@@ -961,6 +1003,7 @@ B1 (first vendor fixture) → B2 (CI goldens) → continue critical path
 | **2026-07 integrity close-out** | Executed Track I: clippy CI green (unwrap allow-list documented); spatial honesty; validated saves; Building spatial ops; honest init; `--delta` error; path-safe migrate; pilot-runbook outline; scorecard uplift |
 | **2026-07 A1** | `BuildingData.schema_version` (default 1); legacy load OK; new writes emit version |
 | **2026-07 B/C/D** | vendor_ifc_test + limitations; review_status + export --approved-only; lidar-confidence + pilot-runbook/install |
+| **2026-07 full product contribution** | Vision locked (interview + defaults); `src/contribution` + `arx contribute`; N1 done; oracle submit next |
 
 ---
 

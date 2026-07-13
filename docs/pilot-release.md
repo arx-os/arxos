@@ -41,8 +41,9 @@ Record in the pilot charter:
 
 | Tag | Commit SHA | Date | Notes |
 | :--- | :--- | :--- | :--- |
-| `v2.0.0-pilot.2` | `d6a4567f98c74d324041d1461c7a310b706ecc1b` | 2026-07-12 | **Preferred pin** — R5 friction fixes (commit -m, default git/main, smoke+CI) |
-| `v2.0.0-pilot.1` | `ba33e6ba7ebad55a61a54a9dae68d4508dbdd9d7` | 2026-07-12 | Superseded for new pilots; keep only if charter already locked |
+| `v2.0.0-pilot.3` | `5449838a565b43efc9c9c9185a3389c9895e791c` | 2026-07-12 | **Preferred pin** — full lab loop + reliable N8 deploy env |
+| `v2.0.0-pilot.2` | `d6a4567f98c74d324041d1461c7a310b706ecc1b` | 2026-07-12 | R5 friction fixes (commit -m, default git/main) |
+| `v2.0.0-pilot.1` | `ba33e6ba7ebad55a61a54a9dae68d4508dbdd9d7` | 2026-07-12 | Superseded for new pilots |
 
 Update this table in a **follow-up commit after** the tag is cut (do not retag to include the table row).
 

@@ -16,7 +16,7 @@ Do these in order. Do **not** skip to chain/token work.
 
 ## B1 — Transfer + pin (R5, R9)
 
-1. Engineering has cut preferred tag **`v2.0.0-pilot.2`** @ **`d6a4567f98c74d324041d1461c7a310b706ecc1b`** (see `docs/pilot-release.md`).  
+1. Engineering has cut preferred tag **`v2.0.0-pilot.3`** @ **`5449838a565b43efc9c9c9185a3389c9895e791c`** (see `docs/pilot-release.md`).  
 2. Record **that tag + SHA** in charter §2 and install from that pin only.  
 3. Second person (not the doc author) runs **`docs/second-person-checklist.md`** on a district-like machine using only **`docs/l1-supported-workflow.md`**.  
 4. File stuck points as backlog; do not invent parallel tools.

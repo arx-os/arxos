@@ -25,7 +25,7 @@
 | Building ID (Arx UUID after `arx init`) | |
 | Allowed inputs | [ ] IFC  [ ] LiDAR  [ ] text edits |
 | Git remote location (must be internal) | |
-| Pinned Arx install (tag or commit) | `v2.0.0-pilot.2` / `d6a4567f98c74d324041d1461c7a310b706ecc1b` (confirm at sign-off) |
+| Pinned Arx install (tag or commit) | `v2.0.0-pilot.3` / `5449838a565b43efc9c9c9185a3389c9895e791c` (confirm at sign-off) |
 | Pilot start date | |
 | Pilot end / review date | |
 

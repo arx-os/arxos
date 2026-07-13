@@ -5,7 +5,7 @@
 
 **Start here:** **`docs/field-handoff.md`** (ordered B0–B3).  
 **Before work:** sign **`docs/pilot-charter.md`**.  
-**Install:** pin **`v2.0.0-pilot.2`** per **`docs/pilot-release.md`**.  
+**Install:** pin **`v2.0.0-pilot.3`** per **`docs/pilot-release.md`**.  
 **Workflow:** **`docs/l1-supported-workflow.md`** only for L1 success.  
 **Transfer:** **`docs/second-person-checklist.md`** (R5).  
 **Site evidence:** **`docs/field-truth-log.md`**.

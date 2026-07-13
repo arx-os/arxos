@@ -25,7 +25,7 @@ Optional later (not L1 success criteria): `contribute`, `access`, `--commercial`
 # Preferred: from tagged release (example)
 git clone <internal-or-approved-remote> arxos
 cd arxos
-git checkout v2.0.0-pilot.2   # use the pin in the pilot charter
+git checkout v2.0.0-pilot.3   # use the pin in the pilot charter
 
 # Build CLI (default features OK; blockchain not required)
 cargo install --path . --locked

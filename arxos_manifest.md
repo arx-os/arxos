@@ -190,7 +190,7 @@ This section is the **obligation register**: each reservation must be **relegate
 | **R6** | **Scale/performance unprofiled** | Large school models may OOM/hang; people skip validation | Profile worst-case IFC/scan on pilot hardware; set limits | Written max points/time; light-mode guidance | Eng + field | **Open** |
 | **R7** | **Security / compliance / classification** | Facility plans sensitive; Git remotes, exports, backups | Data class policy (internal-only default); who can clone/export; no student PII in properties | Security/IT sign-off for pilot repo location | Field IT + security | **Partial** — `docs/data-classification.md` + charter §4 (needs sign-off) |
 | **R8** | **Mainnet token / institutional fit** | Public entity crypto, custody, procurement, reputation | L1/L2: **no production token**. L3 only with Legal/Finance | Written go/no-go from leadership for any chain use | Vision + Legal | **Partial** — L1 default off-chain in charter §5 |
-| **R9** | **Support / ownership / change control** | No vendor SLA; `main` moves | Pin release tag/hash; one supported workflow page; escalation path | Pinned install + “supported loop” doc used in R5 | Eng + field IT | **Partial** — prefer tag `v2.0.0-pilot.2` @ `d6a4567f`; charter must record pin; R5 must walk that pin |
+| **R9** | **Support / ownership / change control** | No vendor SLA; `main` moves | Pin release tag/hash; one supported workflow page; escalation path | Pinned install + “supported loop” doc used in R5 | Eng + field IT | **Partial** — prefer tag `v2.0.0-pilot.3` @ `5449838a`; charter must record pin; R5 must walk that pin |
 | **R10** | **Safety / professional liability framing** | Model must not replace LOTO, licensed drawings, or code docs | Pilot disclaimer policy; culture: human + licensed docs win | Signed pilot charter with disclaimer language | Field IT + leadership | **Partial** — template `docs/pilot-charter.md` (needs signature) |
 
 #### Work packages to relegate obligations (ordered)
@@ -1096,7 +1096,7 @@ Horizon A **does not** close §1.6 district pilot obligations. It only enables l
 | Order | Package | Status | Your next action |
 | :---: | :--- | :---: | :--- |
 | **B0** | **P-Safety** | Template **done** | Fill/sign `docs/pilot-charter.md` |
-| **B1** | **P-Transfer** | **Pin cut** | Field: record pin in charter; second person + `docs/second-person-checklist.md` on `v2.0.0-pilot.2` |
+| **B1** | **P-Transfer** | **Pin cut** | Field: record pin in charter; second person + `docs/second-person-checklist.md` on `v2.0.0-pilot.3` |
 | **B2** | **P-Data** | Template done | Complete `docs/data-classification.md` + charter §4; private Git remote |
 | **B3** | **P-Field-truth** | Template done | Fill `docs/field-truth-log.md` with real IFC/scan; eng fixes only blockers |
 | **B4** | **P-Chain-optional** | Partial | Keep L1 off-chain unless leadership requests demo |

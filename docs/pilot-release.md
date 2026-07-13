@@ -15,35 +15,35 @@
 
 ## How to cut a pilot tag (engineering)
 
-From a clean, tested tree:
+**Preferred:** script enforces clean tree, runs lib + spine tests, creates annotated tag:
 
 ```bash
-# Ensure tests you care about are green
+./scripts/pin_pilot_release.sh v2.0.0-pilot.1 --dry-run   # preview
+./scripts/pin_pilot_release.sh v2.0.0-pilot.1             # create tag
+```
+
+Manual equivalent if needed:
+
+```bash
 cargo test --lib
 cargo test --test compiler_spine_test
 # optional: cd contracts && forge test
-
-# Tag (example sequence)
-git tag -a v2.0.0-pilot.1 -m "L1 pilot pin: compiler + docs P-Safety/P-Transfer"
-git push origin v2.0.0-pilot.1   # only if remote policy allows
+git tag -a v2.0.0-pilot.1 -m "L1 pilot pin"
+# git push origin v2.0.0-pilot.1   # only if remote policy allows
 ```
 
 Record in the pilot charter:
 
 - tag name, **and**  
-- full commit SHA (`git rev-parse HEAD`).
+- full commit SHA (`git rev-list -n1 v2.0.0-pilot.1`).
 
-### Script helper
+### Active pin log
 
-```bash
-./scripts/pin_pilot_release.sh v2.0.0-pilot.1
-```
+| Tag | Commit SHA | Date | Notes |
+| :--- | :--- | :--- | :--- |
+| `v2.0.0-pilot.1` | _(after cut: `git rev-list -n1 v2.0.0-pilot.1`)_ | | First L1 eng pin — also record in charter |
 
-Dry-run without creating a tag:
-
-```bash
-./scripts/pin_pilot_release.sh v2.0.0-pilot.1 --dry-run
-```
+Update this table in a **follow-up commit after** the tag is cut (do not retag to include the table row).
 
 ## How to install a pin (field)
 
@@ -72,4 +72,4 @@ If `cargo install --locked` fails on the target machine, still checkout the tag 
 3. Re-run **second-person checklist** on the new pin (abbreviated OK if only bugfix).  
 4. Amend charter pin field.
 
-**Related:** `docs/l1-supported-workflow.md` · `docs/second-person-checklist.md` · `docs/install.md`
+**Related:** `docs/field-handoff.md` · `docs/l1-supported-workflow.md` · `docs/second-person-checklist.md` · `docs/install.md`

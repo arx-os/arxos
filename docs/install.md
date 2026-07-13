@@ -48,6 +48,7 @@ When binary artifacts are published later: install that artifact and still recor
 
 ## See also
 
+- `docs/field-handoff.md` — ordered B0–B3 packet (start here for pilot)
 - `docs/pilot-charter.md` — L1 sign-off (R10)
 - `docs/l1-supported-workflow.md` — supported free-software loop
 - `docs/second-person-checklist.md` — R5 transfer

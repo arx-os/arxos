@@ -25,7 +25,7 @@
 | 2 | `arx --version` / `arx --help` | 2 | | [ ] | |
 | 3 | `arx init --name "…"` in a new directory | 5 | | [ ] | |
 | 4 | `arx validate` on fresh init | 2 | | [ ] | |
-| 5 | Import **sample or pilot IFC** | 15 | | [ ] | |
+| 5 | Import **sample or pilot IFC** (`test_data/sample_building.ifc` from the pin checkout is OK) | 15 | | [ ] | |
 | 6 | `arx validate` after import | 5 | | [ ] | |
 | 7 | If LiDAR in scope: import + set one `review_status` | 20 | | [ ] | |
 | 8 | `arx export --format ifc --output out.ifc` | 10 | | [ ] | |

@@ -40,7 +40,7 @@ impl InitCommand {
             anyhow::bail!("Directory already contains building.yaml. Use a different directory or remove the existing file.");
         }
 
-        // Initialize Git repository if requested
+        // Initialize Git repository if requested (default on for L1 pilot path)
         if self.init_git && !dir.join(".git").exists() {
             self.init_git_repo(dir)?;
         }
@@ -51,9 +51,11 @@ impl InitCommand {
         // Create building.yaml from template
         self.create_building_yaml(dir)?;
 
-        // Install Git hooks if requested
+        // Install Git hooks only when a real .git exists (no theater)
+        let mut hooks_installed = false;
         if self.install_hooks && dir.join(".git").exists() {
             self.install_git_hooks(dir)?;
+            hooks_installed = true;
         }
 
         // Create exports directory
@@ -63,12 +65,17 @@ impl InitCommand {
 
         println!("\n✅ ArxOS repository initialized!");
         println!("\nNext steps:");
-        println!("  1. Edit building.yaml to define your building");
-        println!("  2. Run 'arx export --format ifc' to generate IFC");
-        println!("  3. Commit your changes: git add . && git commit -m 'Initial building'");
+        println!("  1. Import: arx import ifc path/to/model.ifc");
+        println!("  2. Validate: arx validate");
+        println!("  3. Stage/commit: arx stage && arx commit -m \"initial model\"");
+        println!("  4. Export: arx export --format ifc --output exports/out.ifc");
 
-        if self.install_hooks {
-            println!("\n🔗 Git hooks installed - IFC will auto-export after git pull");
+        if hooks_installed {
+            println!("\n🔗 Git hooks installed — IFC can auto-export after git pull");
+        } else if self.init_git {
+            println!("\n⚠️  Git hooks not installed (no .git directory)");
+        } else {
+            println!("\nℹ️  Git skipped (--no-git). Use arx stage later to create a repo, or re-init with Git.");
         }
 
         Ok(())
@@ -77,21 +84,39 @@ impl InitCommand {
     fn init_git_repo(&self, dir: &Path) -> Result<()> {
         use std::process::Command;
 
+        // Prefer `main` so status never flips main→master after first commit (R5 friction).
         let output = Command::new("git")
-            .arg("init")
+            .args(["init", "-b", "main"])
             .current_dir(dir)
             .output()
             .context("Failed to run 'git init'. Is Git installed?")?;
 
         if output.status.success() {
-            println!("🔧 Initialized Git repository");
-            Ok(())
-        } else {
+            println!("🔧 Initialized Git repository (branch main)");
+            return Ok(());
+        }
+
+        // Older git without -b: init then force unborn HEAD to main.
+        let fallback = Command::new("git")
+            .arg("init")
+            .current_dir(dir)
+            .output()
+            .context("Failed to run 'git init'. Is Git installed?")?;
+
+        if !fallback.status.success() {
             anyhow::bail!(
                 "Git init failed: {}",
-                String::from_utf8_lossy(&output.stderr)
+                String::from_utf8_lossy(&fallback.stderr)
             )
         }
+
+        let _ = Command::new("git")
+            .args(["symbolic-ref", "HEAD", "refs/heads/main"])
+            .current_dir(dir)
+            .output();
+
+        println!("🔧 Initialized Git repository (branch main)");
+        Ok(())
     }
 
     fn copy_gitignore(&self, dir: &Path) -> Result<()> {

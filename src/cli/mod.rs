@@ -26,12 +26,17 @@ pub struct Cli {
 impl Cli {
     pub fn execute(self) -> Result<(), Box<dyn std::error::Error>> {
         match self.command {
-            Commands::Init { name, git_init, .. } => {
+            Commands::Init {
+                name,
+                no_git,
+                ..
+            } => {
+                // Git is on by default (L1 / product path). Opt out with --no-git.
                 let cmd = InitCommand {
                     directory: std::path::PathBuf::from("."),
                     name: Some(name),
-                    install_hooks: true,
-                    init_git: git_init,
+                    install_hooks: !no_git,
+                    init_git: !no_git,
                 };
                 Ok(cmd.execute()?)
             }
@@ -269,7 +274,15 @@ impl Cli {
                 let cmd = UnstageCommand { all, file };
                 cmd.execute()
             }
-            Commands::Commit { message } => {
+            Commands::Commit {
+                message,
+                message_flag,
+            } => {
+                let message = message_flag.or(message).ok_or_else(|| {
+                    Box::<dyn std::error::Error>::from(
+                        "commit message required: arx commit \"msg\" or arx commit -m \"msg\"",
+                    )
+                })?;
                 let cmd = CommitCommand { message };
                 cmd.execute()
             }
@@ -743,9 +756,12 @@ pub enum Commands {
         /// Location/address
         #[arg(long)]
         location: Option<String>,
-        /// Initialize Git repository
-        #[arg(long = "git-init")]
+        /// Legacy flag (Git init is now the default). Kept so old scripts do not fail.
+        #[arg(long = "git-init", hide = true)]
         git_init: bool,
+        /// Skip Git repository initialization
+        #[arg(long = "no-git")]
+        no_git: bool,
         /// Commit initial building.yaml
         #[arg(long)]
         commit: bool,
@@ -974,8 +990,12 @@ pub enum Commands {
     },
     /// Commit staged changes
     Commit {
-        /// Commit message
-        message: String,
+        /// Commit message (positional)
+        #[arg(value_name = "MESSAGE")]
+        message: Option<String>,
+        /// Commit message (git-style; preferred for field techs)
+        #[arg(short = 'm', long = "message", value_name = "MESSAGE")]
+        message_flag: Option<String>,
     },
     /// Unstage changes
     Unstage {

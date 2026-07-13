@@ -1117,11 +1117,11 @@ Horizon A **does not** close §1.6 district pilot obligations. It only enables l
 ```text
 You:    docs/field-handoff.md — sign charter + data-classification · record pin · R5 checklist
         fill field-truth-log on real IFC/scan
-Eng:    clean tree · ./scripts/l1_smoke.sh · pin_pilot_release.sh · fix field blockers only
+Eng:    fix field blockers · keep ./scripts/l1_smoke.sh green (Compiler CI) · no L3 until L1 exit
 Never:  L3 mainnet until L1 exit · fake R5/R1 evidence · public facility models
 ```
 
-**Automated smoke (eng):** `./scripts/l1_smoke.sh` — does not close R5.
+**Automated smoke (eng):** `./scripts/l1_smoke.sh` (also Compiler CI) — does not close R5.
 
 ---
 
@@ -1140,6 +1140,7 @@ Never:  L3 mainnet until L1 exit · fake R5/R1 evidence · public facility model
 | **2026-07-13 P-Data + P-Field templates + L1 smoke** | `data-classification.md`, `field-truth-log.md`, `scripts/l1_smoke.sh`; R7 partial |
 | **2026-07-13 eng B1 closeout** | `contracts/out` gitignored; `docs/field-handoff.md`; pin path ready |
 | **2026-07-13 pilot pin** | Annotated tag `v2.0.0-pilot.1` @ `ba33e6ba`; lib 514 + spine green; l1_smoke PASS |
+| **2026-07-13 R5 friction fixes** | `arx commit -m`; default git on init + branch `main`; honest hooks message; smoke covers approved-only + git; CI runs l1_smoke |
 
 ---
 

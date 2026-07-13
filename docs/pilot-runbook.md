@@ -60,6 +60,7 @@ arx export --format ifc -o building.ifc
 # Pilot-approved: strip proposed + rejected auto entities
 arx export --format ifc -o building-approved.ifc --approved-only
 arx stage && arx commit -m "pilot model"
+# or: arx commit "pilot model"
 ```
 
 ## Sample edit script

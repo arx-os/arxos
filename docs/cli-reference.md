@@ -190,14 +190,17 @@ arx stage building.yaml
 Commit staged changes.
 
 ```bash
+arx commit -m <MESSAGE>
 arx commit <MESSAGE>
 
-Arguments:
-  <MESSAGE>    Commit message (required)
+Arguments / options:
+  -m, --message <MESSAGE>    Commit message (git-style; preferred)
+  <MESSAGE>                  Positional commit message (same effect)
 ```
 
 **Example:**
 ```bash
+arx commit -m "Added HVAC equipment to floor 3"
 arx commit "Added HVAC equipment to floor 3"
 ```
 

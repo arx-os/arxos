@@ -62,7 +62,7 @@ impl Command for StatusCommand {
 
         if self.verbose {
             println!("💡 Use 'arx stage <file>' to stage changes");
-            println!("💡 Use 'arx commit <message>' to commit staged changes");
+            println!("💡 Use 'arx commit -m \"message\"' (or arx commit \"message\") to commit staged changes");
             println!("💡 Use 'arx diff' to see changes");
         }
 

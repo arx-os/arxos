@@ -3,19 +3,23 @@
 **Purpose:** Prove ArxOS on one real building with messy data.  
 **Not:** Mainnet launch, multi-oracle market, or PWA polish.
 
-**Before start:** complete and sign **`docs/pilot-charter.md`**.  
-**Install:** pinned release per **`docs/pilot-release.md`**.  
+**Start here:** **`docs/field-handoff.md`** (ordered B0–B3).  
+**Before work:** sign **`docs/pilot-charter.md`**.  
+**Install:** pin **`v2.0.0-pilot.1`** per **`docs/pilot-release.md`**.  
 **Workflow:** **`docs/l1-supported-workflow.md`** only for L1 success.  
-**Transfer:** **`docs/second-person-checklist.md`** (R5).
+**Transfer:** **`docs/second-person-checklist.md`** (R5).  
+**Site evidence:** **`docs/field-truth-log.md`**.
 
-## People
+## People (L1)
 
 | Role | Who | Job |
 | :--- | :--- | :--- |
-| Capture node | | Laptop with `arx`, storage for LiDAR/IFC |
-| Reviewer | | Accept/reject auto LiDAR rooms before export |
-| Worker wallet | | Receives mint share (can be same person) |
-| Buyer (optional) | | Pays $AXD for commercial access |
+| Pilot owner | | Signs charter; authority for the site |
+| Capture / ops tech | | Laptop with pinned `arx`, storage for IFC/LiDAR |
+| Reviewer | | Accept/reject auto LiDAR rooms before official export |
+| Second person | | Cold-start walkthrough (not the doc author) |
+
+Economy roles (worker wallet, buyer) are **out of L1 success** — optional demo only (`docs/horizon-a-ops.md`).
 
 ## Site
 
@@ -32,7 +36,7 @@ Follow **`docs/l1-supported-workflow.md`** in full. Summary:
 3. **Import** — IFC and/or LiDAR  
 4. **Review** — accept/reject autos; no official use of unreviewed `proposed`  
 5. **Validate** — clean errors  
-6. **Git** — stage/commit; push only to internal remote  
+6. **Git** — `arx stage` + `arx commit -m "…"`; push only to internal remote  
 7. **Export internal** — free export; use `--approved-only` for reviewed LiDAR handoff  
 
 **Optional demo only (not L1 success):** contribute / access / commercial (`docs/horizon-a-ops.md`).
@@ -43,16 +47,18 @@ Follow **`docs/l1-supported-workflow.md`** in full. Summary:
 | :--- | :---: |
 | Charter signed (`docs/pilot-charter.md`)? | |
 | Second-person checklist pass/conditional? | |
+| Data classification completed? | |
 | Did the model reduce unknowns vs walking in blind? | |
-| Site IFC/LiDAR limits written (R1/R2)? | |
+| Site IFC/LiDAR limits written (`docs/field-truth-log.md`)? | |
 | What broke first? ________________ | |
 
 ## Rules
 
 - Fix **only** blockers from this trial.  
 - No new peripherals mid-trial.  
-- Update `arxos_manifest.md` scorecard after (G4/G7/N9).
+- No mainnet token dependency.  
+- Update `arxos_manifest.md` §1.6 after evidence lands.
 
 ## After trial
 
-Return notes to engineering. Horizon C (public chain, external oracles) only after **≥1** successful closed loop.
+Return notes to engineering. Horizon C (public chain, external oracles) only after **L1 exit** criteria in the manifest.

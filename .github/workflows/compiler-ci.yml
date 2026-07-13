@@ -59,6 +59,10 @@ jobs:
       - name: Full default-feature suite
         run: cargo test --verbose
 
+      # L1 pilot loop (R9 regression guard). Does not close R5 field transfer.
+      - name: L1 smoke (sample IFC)
+        run: ./scripts/l1_smoke.sh
+
   # Optional: single-OS release binary sanity (not multi-platform matrix)
   release-check:
     name: Release binary
@@ -75,3 +79,5 @@ jobs:
         run: |
           ./target/release/arx --help
           ./target/release/arx --version
+      - name: L1 smoke (release binary)
+        run: ARX_BIN=./target/release/arx ./scripts/l1_smoke.sh

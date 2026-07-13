@@ -48,6 +48,7 @@ arx validate
 ```bash
 mkdir -p ~/arx-pilots/SITE_NAME && cd ~/arx-pilots/SITE_NAME
 arx init --name "SITE_NAME"
+# Creates building.yaml + Git repo on branch main (opt out: --no-git)
 # Record building id from output or building.yaml → pilot charter
 ```
 
@@ -100,6 +101,7 @@ arx validate
 arx status
 arx stage
 arx commit -m "pilot: import and review SITE"
+# equivalent: arx commit "pilot: import and review SITE"
 # push only to approved internal remote
 ```
 

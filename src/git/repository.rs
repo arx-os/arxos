@@ -52,7 +52,10 @@ pub fn initialize_repository(
         Repository::open(&validated_repo_path)
             .map_err(|e| GitError::GitError(e.message().to_string()))?
     } else {
-        Repository::init(&validated_repo_path)
+        // Prefer `main` so pilot status does not flip master↔main (R5 friction).
+        let mut opts = git2::RepositoryInitOptions::new();
+        opts.initial_head("main");
+        Repository::init_opts(&validated_repo_path, &opts)
             .map_err(|e| GitError::GitError(e.message().to_string()))?
     };
 

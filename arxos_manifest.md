@@ -8,8 +8,8 @@
 | **Primary goal** | **Full product:** free local software to map buildings as code + peer review + **$AXD rewards** for verified as-built data + **buyer market** for data access |
 | **Engine** | Rust 2021 (CLI + lib) · native IFC · Git SSOT · Foundry contracts · optional WASM/agent/render3d/`blockchain` |
 | **Design philosophy** | Local-first · single `Building` model · Git-native · free to use · pay only for data access |
-| **Document status** | Living plan — full vision locked; compiler + economy spine **lab-complete** (N1–N5); path to live loop is Horizon A–C (§1.5, §10) |
-| **Last reconciled** | 2026-07-13 (deployment obligations §1.6 — school/district pilot bar) |
+| **Document status** | Living plan — full vision locked; compiler + economy spine **lab-complete** (N1–N8 + Horizon A tooling); **Horizon B** (district L1 obligations) is current priority (§1.5, §1.6, §10) |
+| **Last reconciled** | 2026-07-13 (manifest concurrent pass: pilot.3, full lab loop, Horizon A eng closed) |
 | **Audience** | Vision holder, field IT pilots, core maintainers, external builders |
 
 ---
@@ -75,12 +75,15 @@ BUYER MARKET
 
 | Segment | Lab status | Live / field status |
 | :--- | :---: | :---: |
-| Compiler (G1–G8 core) | **Done** (synthetic CI) | Field unproven |
-| Contribute package (N1) | **Done** | Needs deploy env |
-| Sign / propose (N2–N3) | **Done** (Foundry + CLI) | Needs live addresses + ops |
-| Registry UUID (N4) | **Done** (Foundry E2E) | Needs register helpers |
-| Buyer access (N5) | **Done** (Foundry + CLI) | Needs host gate on `AccessPaid` |
+| Compiler (G1–G8 core) | **Done** (synthetic CI + `l1_smoke` / full lab loop) | Field unproven (R1/R2/R5) |
+| Contribute package (N1) | **Done** | Lab proven; district not required for L1 |
+| Sign / propose (N2–N3) | **Done** (Foundry + CLI) | Live ops still hard (R3); L1 default off-chain |
+| Registry UUID (N4) | **Done** (Foundry + `Register.s.sol` / `--register`) | Production multi-oracle open (Horizon C) |
+| Buyer access (N5) | **Done** (Foundry + `arx access`) | Server host gate open (R4 partial; CLI N7 done) |
+| Host gate (N7) | **Done** (lab: `export --commercial` + receipt) | Not server-enforced |
+| Deploy env (N8) | **Done** (`horizon_a_deploy_env.sh` → `.env.arx`) | Anvil/local only |
 | Multi-peer Git (N6) | Partial (docs) | Process only |
+| Real building (N9) | **Open** | Horizon B field evidence |
 
 See `docs/contribution-path.md`, `docs/data-access.md`.
 
@@ -123,7 +126,7 @@ Compiler without reward is incomplete for the vision. Reward without trusted as-
 | N1 | Building commitment package from validated model | **Done** |
 | N2 | EIP-712 `ContributionProof` from package | **Done** |
 | N3 | 2-of-3 propose → finalize mint (quality-scaled 70/10/10/10) | **Done** (Foundry) |
-| N4 | Registry: worker + building UUID | **Done** (Foundry); live CLI env open |
+| N4 | Registry: worker + building UUID | **Done** (Foundry + register helpers) |
 | N5 | Buyer `payForAccess` $AXD path | **Done** (Foundry + `arx access`) |
 | N6 | Multi-peer via Git remotes (not CRDT-first) | **Partial** |
 | N7 | **Host gates data on `AccessPaid`** | **Done** (lab: `export --commercial` + receipt) |
@@ -142,25 +145,23 @@ Compiler without reward is incomplete for the vision. Reward without trusted as-
 ### 1.5 Path to “it works” (horizons)
 
 ```text
-HORIZON A — Lab → live local (current priority)
-  Deploy env script → .env.arx addresses
-  Register worker + building UUID from building.yaml
-  contribute --sign/--submit + second oracle + finalize (test warp or real delay)
-  access pay; document host must check AccessPaid
-  Exit: cold engineer completes mint + pay without reading Solidity
+HORIZON A — Lab → live local (eng CLOSED for tooling)
+  Deploy env → .env.arx; register helpers; commercial CLI gate
+  full_lab_loop.sh = compiler + l1_smoke + Foundry mint/pay E2E
+  Exit: cold engineer runs lab mint/pay proof without reading Solidity — met via Foundry + ops docs
 
-HORIZON B — First real building (vision holder field test)
-  One site, real as-built pain, capture node + reviewer (+ buyer if possible)
-  Measure: unknowns reduced? mint/pay understandable?
-  Exit: one successful closed loop on messy real data; fix only blockers
+HORIZON B — First real building / district L1 (CURRENT PRIORITY)
+  Relegate §1.6: R1,R2,R5,R7–R10 via field-handoff (charter, pin, walkthrough, site truth)
+  Free-software loop on one building; chain optional/demo only
+  Exit: pilot-mitigated obligations + valuable loop on messy real data
 
-HORIZON C — Network scale (after B works ≥1–2 times)
+HORIZON C — Network scale (after L1 exit, then L2)
   External oracles, public testnet → Base
   Host product that enforces payment before data
-  Optional: own forge; more vendor IFC; multi-building later
+  Optional: more vendor IFC; multi-building later
 ```
 
-**Rule:** Do not start Horizon C feature work until Horizon B has succeeded at least once.
+**Rule:** Do not start Horizon C feature work until Horizon B (L1 exit) has succeeded at least once.
 
 ### 1.6 Deployment obligations (reservations → work)
 
@@ -198,7 +199,7 @@ This section is the **obligation register**: each reservation must be **relegate
 | Package | Obligations hit | Deliverables | Status |
 | :---: | :--- | :--- | :---: |
 | **P-Safety** | R10, R1 (process) | `docs/pilot-charter.md`; no unreviewed `proposed` as official | **Template done** — sign to close R10 |
-| **P-Transfer** | R5, R9 | `docs/l1-supported-workflow.md`; `docs/second-person-checklist.md`; `docs/pilot-release.md`; `docs/field-handoff.md`; `scripts/pin_pilot_release.sh` | **Pin cut** (`v2.0.0-pilot.1`) — second-person walkthrough still open for R5 |
+| **P-Transfer** | R5, R9 | `docs/l1-supported-workflow.md`; `docs/second-person-checklist.md`; `docs/pilot-release.md`; `docs/field-handoff.md`; `scripts/pin_pilot_release.sh` | **Pin cut** (`v2.0.0-pilot.3` @ `5449838a`) — second-person walkthrough still open for R5 |
 | **P-Data** | R7 | Classification + private Git; export approval same class as CAD | **Template done** — `docs/data-classification.md` (sign to close) |
 | **P-Field-truth** | R1, R2, R6 | Real scan + real IFC matrix + one performance profile on pilot hardware | **Template done** — `docs/field-truth-log.md`; **site evidence open** |
 | **P-Chain-optional** | R3, R8 | Explicit “compiler pilot = off-chain”; testnet demo only if requested | **Partial** (charter §5 + L1 workflow) |
@@ -232,8 +233,8 @@ This section is the **obligation register**: each reservation must be **relegate
 | PWA / WASM | **4/10** | Optional; not L1 blocker |
 | Contracts ($AXD) | **8/10** | Foundry suite green; oracle proof lock fixed |
 | CLI surface | **8/10** | Compiler + contribute + access; spatial honesty |
-| CI | **8/10** | Compiler CI + forge; clippy green (unwrap allow-listed) |
-| **Lab closed-loop** | **~8/10** | N1–N8 tooling present |
+| CI | **8.5/10** | Compiler CI + Full Lab Loop workflow + forge E2E; clippy green (unwrap allow-listed) |
+| **Lab closed-loop** | **~8.5/10** | N1–N8 + `./scripts/full_lab_loop.sh` green |
 | **District pilot (L1) readiness** | **~4/10** | Blocked on §1.6 obligations R1,R2,R5,R7,R9,R10 |
 | **Full vision (L3) readiness** | **~2/10** | Needs L1+L2 + R3/R4/R8 production |
 
@@ -639,7 +640,7 @@ Success is measured by **pilot gate criteria** (§7.4), **§2.6 blockers closed*
 | :---: | :---: | :--- | :--- | :---: |
 | **−1** | **I** | Integrity honesty | CI green; no CLI theater; no silent save bypass; committed baseline | **Done** (I1–I11; I12 process hold) |
 | **0** | **A** | Contract freeze & hygiene | Clear supported surface; schema versions | **Done** (A1 schema_version) |
-| **1** | — | Single spine enforcement | Every write through finalize/validate | **Partial** — production mutators **Done**; public save APIs still open (I4) |
+| **1** | — | Single spine enforcement | Every write through finalize/validate | **Done** (I4 closed; production + public save gated) |
 | **2** | **B** | Golden fixtures & CI gates | Spine CI + IFC/LiDAR goldens | **Partial** (vendor_ifc_test + limitations; Revit/ArchiCAD slots open) |
 | **3** | **C** | LiDAR pilot quality | Human review workflow + known limits | **Partial** (C1/C2/C3 code+docs; field profile open) |
 | **4** | **D** | Field ops packaging | Pilot runbook; capture node packaging | **Partial** (runbook+install outline; walkthrough open) |
@@ -705,8 +706,8 @@ Success is measured by **pilot gate criteria** (§7.4), **§2.6 blockers closed*
 | 1.3 | Print `summary_lines()` on import/export/edit | **Done** (import/edit) |
 | 1.4 | Agent IFC via ingest | **Done** |
 | 1.5 | Centralize YAML path (`building.yaml`) | **Done** |
-| 1.6 | Close serialize-only public save bypass | **Open** → Track **I4** |
-| 1.7 | No CLI fake-success for unfinished commands | **Open** → Track **I3** |
+| 1.6 | Close serialize-only public save bypass | **Done** — Track **I4** (validate on `save_building_at`) |
+| 1.7 | No CLI fake-success for unfinished commands | **Done** — Track **I3** (spatial honesty + hard-errors) |
 
 ### 4.4 Track B / Phase 2 residual — goldens & CI (2–4 weeks; parallelizable with A tail)
 
@@ -1148,6 +1149,7 @@ Never:  L3 mainnet until L1 exit · fake R5/R1 evidence · public facility model
 | **2026-07-13 pilot.2** | Tag `v2.0.0-pilot.2` @ `d6a4567f` supersedes pilot.1 for new R5 walkthroughs |
 | **2026-07-13 full lab loop** | `scripts/full_lab_loop.sh` + CI: compiler + l1_smoke + Foundry mint/pay E2E; A6 done |
 | **2026-07-13 pilot.3** | Tag `v2.0.0-pilot.3` @ `5449838a`; Deploy.s.sol writes deployed.env; N8 reliable |
+| **2026-07-13 concurrent pass** | Header/§0.1/§1.5/P-Transfer/phase 1.6–1.7 aligned to pilot.3 + Horizon B current |
 
 ---
 
@@ -1155,9 +1157,9 @@ Never:  L3 mainnet until L1 exit · fake R5/R1 evidence · public facility model
 
 ArxOS is **version control for the built world**: free software so peers can map as-built truth; peer review so the ledger is trustworthy; **$AXD** so labor is rewarded and buyers can pay for data.
 
-**Lab status:** Compiler + economy spine (N1–N8 tooling) are **implemented and test-proven**.
+**Lab status:** Compiler + economy spine (N1–N8 tooling) are **implemented and test-proven** (`./scripts/full_lab_loop.sh`).
 
-**District / field status:** **Not** production-ready by default. Readiness is gated by **§1.6 obligations** (LiDAR/IFC truth, transfer, safety, data class, support pin, chain policy). Horizon A tooling does not clear those obligations.
+**District / field status:** **Not** production-ready by default. Readiness is gated by **§1.6 obligations** (LiDAR/IFC truth, transfer, safety, data class, support pin, chain policy). Horizon A eng closeout does not clear those obligations — **Horizon B is the remaining path to L1**.
 
 ```text
 L0 lab → L1 controlled pilot (relegate R1,R2,R5,R7–R10)

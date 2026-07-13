@@ -96,12 +96,14 @@ impl Cli {
                 output,
                 repo,
                 delta,
+                approved_only,
             } => {
                 let cmd = ExportCommand {
                     format,
                     output,
                     repo,
                     delta,
+                    approved_only,
                 };
                 Ok(cmd.execute()?)
             }
@@ -697,9 +699,12 @@ pub enum Commands {
         /// Git repository URL (required for git format)
         #[arg(long)]
         repo: Option<String>,
-        /// Export only changes (delta mode)
+        /// Export only changes (delta mode) — not implemented; errors if set
         #[arg(long)]
         delta: bool,
+        /// Exclude proposed/rejected LiDAR auto entities from IFC export (Track C2)
+        #[arg(long)]
+        approved_only: bool,
     },
     /// Render building visualization
     Render {

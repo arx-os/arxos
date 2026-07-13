@@ -1,0 +1,12 @@
+# Sample pilot edit script (Track C1 / D4)
+# Usage: arx edit examples/pilot-corrections.txt
+#
+# LiDAR auto entities are marked review_status=proposed on import.
+# Accept good structure; reject false positives before approved IFC export.
+
+# set room AutoRoom-1 review_status=accepted
+# set room NoiseBlob-2 review_status=rejected
+# set equipment HVAC Item 1 review_status=accepted
+
+# Example structural edit:
+# add room Mech Closet floor=0 wing=Main type=mechanical pos=1,2,0 dims=3x2x2.5

@@ -10,6 +10,7 @@ mod equipment;
 mod floor;
 pub mod identity;
 pub mod operations;
+pub mod review;
 mod room;
 mod serde_helpers;
 pub mod spatial;
@@ -21,6 +22,10 @@ pub use building::{Building, BuildingMetadata, CoordinateSystemInfo};
 pub use equipment::{Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType};
 pub use floor::Floor;
 pub use identity::ArxId;
+pub use review::{
+    filter_building_for_export, mark_proposed, review_status_from_props, summarize_review,
+    ReviewStatus, ReviewSummary, PROP_REVIEW_STATUS,
+};
 pub use room::{Room, RoomType};
 pub use types::{BoundingBox, Dimensions, LidarEnrichment, Position, SpatialProperties};
 pub use wing::Wing;

@@ -1,4 +1,5 @@
 use crate::cli::commands::Command;
+use crate::core::{filter_building_for_export, summarize_review};
 use crate::export::ifc::IFCExporter;
 use crate::ifc::mapping::report_export_losses;
 use crate::persistence::{load_building_at, BUILDING_YAML};
@@ -12,6 +13,8 @@ pub struct ExportCommand {
     pub output: Option<String>,
     pub repo: Option<String>,
     pub delta: bool,
+    /// When true, drop rejected + proposed LiDAR auto entities from IFC export (Track C2).
+    pub approved_only: bool,
 }
 
 impl Command for ExportCommand {
@@ -33,6 +36,18 @@ impl Command for ExportCommand {
                 let building = load_building_at(repo_root)
                     .map_err(|e| format!("No {} to export: {}", BUILDING_YAML, e))?;
 
+                let review = summarize_review(&building);
+                for line in review.warning_lines() {
+                    println!("  {}", line);
+                }
+                if self.approved_only {
+                    println!(
+                        "  --approved-only: excluding proposed and rejected LiDAR auto entities"
+                    );
+                }
+
+                let export_building = filter_building_for_export(&building, self.approved_only);
+
                 let output_file = self
                     .output
                     .clone()
@@ -41,8 +56,8 @@ impl Command for ExportCommand {
 
                 PathSafety::validate_path_for_write(&output_path).map_err(|e| anyhow!(e))?;
 
-                let export_notes = report_export_losses(&building);
-                let exporter = IFCExporter::new(building);
+                let export_notes = report_export_losses(&export_building);
+                let exporter = IFCExporter::new(export_building);
                 exporter.export(&output_path).map_err(|e| anyhow!(e))?;
 
                 println!("Export successful: {}", output_path.display());

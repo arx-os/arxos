@@ -297,6 +297,7 @@ impl RoomDetector {
                             })
                             .count();
 
+                        // Rule-based score — not a calibrated probability (see docs/lidar-confidence.md).
                         room.lidar_enrichment = Some(LidarEnrichment {
                             point_count: room_points_count,
                             confidence_score: 0.90,
@@ -305,6 +306,7 @@ impl RoomDetector {
                                 "2D Occupancy Grid Connected Components".to_string(),
                             ),
                         });
+                        crate::core::review::mark_proposed(&mut room.properties);
 
                         rooms.push(room);
                         room_counter += 1;
@@ -501,9 +503,10 @@ impl EquipmentDetector {
                 .properties
                 .insert("point_count".to_string(), cluster.len().to_string());
 
+            // Fixed heuristic tiers — not probabilistic confidence (docs/lidar-confidence.md).
             let confidence_score = match &equipment.equipment_type {
-                EquipmentType::Furniture => 0.75, // Default fallback
-                _ => 0.90,                        // Rule-based match
+                EquipmentType::Furniture => 0.75,
+                _ => 0.90,
             };
 
             equipment.lidar_enrichment = Some(LidarEnrichment {
@@ -515,6 +518,7 @@ impl EquipmentDetector {
                     height, volume
                 )),
             });
+            crate::core::review::mark_proposed(&mut equipment.properties);
 
             equipment_list.push(equipment);
         }

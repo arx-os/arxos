@@ -495,9 +495,9 @@ Success is measured by **pilot gate criteria** (§7.4), **§2.6 blockers closed*
 | **−1** | **I** | Integrity honesty | CI green; no CLI theater; no silent save bypass; committed baseline | **Done** (I1–I11; I12 process hold) |
 | **0** | **A** | Contract freeze & hygiene | Clear supported surface; schema versions | **Done** (A1 schema_version) |
 | **1** | — | Single spine enforcement | Every write through finalize/validate | **Partial** — production mutators **Done**; public save APIs still open (I4) |
-| **2** | **B** | Golden fixtures & CI gates | Spine CI + IFC/LiDAR goldens | **Partial** (Arx/sample goldens; vendor open; CI red on clippy) |
-| **3** | **C** | LiDAR pilot quality | Human review workflow + known limits | **Open** |
-| **4** | **D** | Field ops packaging | Pilot runbook; capture node packaging | **Open** |
+| **2** | **B** | Golden fixtures & CI gates | Spine CI + IFC/LiDAR goldens | **Partial** (vendor_ifc_test + limitations; Revit/ArchiCAD slots open) |
+| **3** | **C** | LiDAR pilot quality | Human review workflow + known limits | **Partial** (C1/C2/C3 code+docs; field profile open) |
+| **4** | **D** | Field ops packaging | Pilot runbook; capture node packaging | **Partial** (runbook+install outline; walkthrough open) |
 | **5** | **E** | PWA review productization | Envelope-first UI polish | **Open** (optional if no tablet pilot) |
 | **6** | **B/F** | IFC L3 / vendor expansion | Interop matrix | **Open** |
 | **7** | **F** | Network (Oracle / token) | DePIN on trusted compiler | **Deferred** |
@@ -569,14 +569,14 @@ Success is measured by **pilot gate criteria** (§7.4), **§2.6 blockers closed*
 
 | ID | Task | Status |
 | :--- | :--- | :---: |
-| 2.1 / **B1** | Vendor IFC fixtures (≥2 anonymized) + license notes under `tests/fixtures/ifc/vendor/` or `test_data/vendor/` | **Open** |
-| 2.2 / **B2** | Golden: vendor IFC → model → IFC → model (no panic; structure counts); add to Compiler CI | **Open** |
+| 2.1 / **B1** | Vendor IFC fixtures (≥2 anonymized) + license notes under `tests/fixtures/ifc/vendor/` or `test_data/vendor/` | **Partial** — SketchUp/HVAC samples in CI; Revit/ArchiCAD slots open |
+| 2.2 / **B2** | Golden: vendor IFC → model → IFC → model (no panic; structure counts); add to Compiler CI | **Done** (`tests/vendor_ifc_test.rs` in Compiler CI) |
 | 2.3 | Arx-authored IFC identity/enrichment/geometry tests | **Done** |
 | 2.4 | LiDAR synthetic → merge rescan | **Done** (`lidar_tests`) |
 | 2.5 | Compiler spine integration tests | **Done** (`compiler_spine_test`, `ifc_compiler_path_test`) |
 | 2.6 | Authoritative CI workflow | **Done** (`compiler-ci.yml`) |
 | 2.7 | Soften/retire bloated multi-OS / tarpaulin PR gates | **Done** |
-| **B3** | Per-fixture limitations table (what we preserve / drop) | **Open** |
+| **B3** | Per-fixture limitations table (what we preserve / drop) | **Done** (`docs/ifc-limitations.md`) |
 
 **Do not:** Revive `ifc_rs` for “just one more vendor file.” Fix native path or document unsupported.
 
@@ -586,9 +586,9 @@ Success is measured by **pilot gate criteria** (§7.4), **§2.6 blockers closed*
 
 | ID | Task | Done when |
 | :--- | :--- | :--- |
-| 3.1 / **C3** | Confidence scores: feature-based or documented non-probabilistic (no fake precision) | Code + docs |
-| 3.2 / **C1** | Review state: `proposed` / `accepted` / `rejected` via text DSL or properties | Editable + queryable via `arx edit` |
-| 3.3 / **C2** | Export warning by default; optional `--approved-only` (or equivalent) | CLI tested |
+| 3.1 / **C3** | Confidence scores: feature-based or documented non-probabilistic (no fake precision) | **Done** (`docs/lidar-confidence.md` + detector comments) |
+| 3.2 / **C1** | Review state: `proposed` / `accepted` / `rejected` via text DSL or properties | **Done** (`review_status` + LiDAR marks proposed; `arx edit`) |
+| 3.3 / **C2** | Export warning by default; optional `--approved-only` (or equivalent) | **Done** (`arx export --approved-only` + export warnings) |
 | 3.4 / **C4** | Profile detector on pilot sample; document failure modes (missed floors, split rooms, noise) | Runbook section |
 | 3.5 | Ensure enrichment not dual-stored (typed field is SSOT) | Grep clean |
 
@@ -600,10 +600,10 @@ Success is measured by **pilot gate criteria** (§7.4), **§2.6 blockers closed*
 
 | ID | Task | Done when |
 | :--- | :--- | :--- |
-| 4.1 / **D1** | `docs/pilot-runbook.md` (hardware, voxel defaults, light mode, full CLI loop, git, **single-building limit I11**, known stubs) | Walked by someone not on core team |
-| 4.2 / **D2** | Release binary path: documented `cargo install` / release artifact; optional Dockerfile | Install in &lt; 30 min |
+| 4.1 / **D1** | `docs/pilot-runbook.md` (hardware, voxel defaults, light mode, full CLI loop, git, **single-building limit I11**, known stubs) | **Partial** — written; non-author walkthrough open |
+| 4.2 / **D2** | Release binary path: documented `cargo install` / release artifact; optional Dockerfile | **Partial** — `docs/install.md` |
 | 4.3 / **D3** | Resource limits: max points, voxel defaults, light mode (Pi vs Mini) | Written + smoke profile once |
-| 4.4 / **D4** | Sample pilot project: `arx init` + example edit script + sample IFC path | Template in repo (**depends on I6** for honest init) |
+| 4.4 / **D4** | Sample pilot project: `arx init` + example edit script + sample IFC path | **Partial** — `examples/pilot-corrections.txt` + fixtures |
 | 4.5 | Structured ingest summary logs | Operators can debug |
 | **D5** | Document pilot **non-surfaces**: `spatial` (until I3), `interactive`/3D, hardware, `--delta`, multi-building | Operators not misled |
 
@@ -927,11 +927,11 @@ test_data/             Mid-size IFC samples
 
 ### 10.1 This week (operating cadence)
 
-1. ~~**Track I** integrity blockers~~ — **Done** (I1–I11).
-2. ~~**Track A1**~~ **Done** — `schema_version` on durable Building YAML.
-3. **Identify 1–2 vendor IFC files** for anonymized fixtures (Track B1 prep).
-4. **Complete pilot runbook** (`docs/pilot-runbook.md`) walkthrough by non-author (Track D1).
-5. **Hold a freeze:** no features outside Tracks A/B/C/D until pilot gate (§7.4).
+1. ~~**Track I / A1**~~ **Done**.
+2. ~~**B2/B3 + C1/C2/C3**~~ **Done** (vendor goldens, review status, export policy, confidence docs).
+3. **B1 residual** — real Revit/ArchiCAD anonymized files when available.
+4. **D1 walkthrough** by non-author; flesh D3 resource profiles after field data.
+5. **Hold a freeze:** no features outside Tracks B residual / C residual / D until pilot gate (§7.4).
 
 ### 10.2 Then (critical path)
 
@@ -960,6 +960,7 @@ B1 (first vendor fixture) → B2 (CI goldens) → continue critical path
 | **2026-07 integrity audit compliance** | Brutal review line items fully inventoried in **§2.6** (I1–I13); Track **I** added as phase −1; scorecard §2.1 de-inflated (CLI/CI/process honesty); §2.2 residuals; write-path contract; refuse list/PR checklist; pilot gate no-go on I1–I4; risks; CLI honesty map §9.2–9.3; handoff checklist; §10 starts with integrity |
 | **2026-07 integrity close-out** | Executed Track I: clippy CI green (unwrap allow-list documented); spatial honesty; validated saves; Building spatial ops; honest init; `--delta` error; path-safe migrate; pilot-runbook outline; scorecard uplift |
 | **2026-07 A1** | `BuildingData.schema_version` (default 1); legacy load OK; new writes emit version |
+| **2026-07 B/C/D** | vendor_ifc_test + limitations; review_status + export --approved-only; lidar-confidence + pilot-runbook/install |
 
 ---
 

@@ -11,6 +11,9 @@
 //! set room <name> <key>=<value> [...]
 //! set equipment <name> status=<status> | <key>=<value>
 //! rename room <old_name> <new_name>
+//! # Review (Track C1): review_status=proposed|accepted|rejected
+//! set room <name> review_status=accepted
+//! set equipment <name> review_status=rejected
 //! # comment
 //! ```
 
@@ -193,6 +196,18 @@ fn apply_one(building: &mut Building, edit: &TextEdit, report: &mut TextEditRepo
                         let pos = room.spatial_properties.position.clone();
                         room.spatial_properties = spatial_from_position_dims(pos, dims);
                     }
+                    "review_status" | "review" => {
+                        let status = crate::core::ReviewStatus::parse(v).ok_or_else(|| {
+                            anyhow!(
+                                "invalid review_status '{}'; use proposed|accepted|rejected",
+                                v
+                            )
+                        })?;
+                        room.properties.insert(
+                            crate::core::PROP_REVIEW_STATUS.to_string(),
+                            status.as_str().to_string(),
+                        );
+                    }
                     _ => {
                         room.properties.insert(k.clone(), v.clone());
                     }
@@ -217,6 +232,18 @@ fn apply_one(building: &mut Building, edit: &TextEdit, report: &mut TextEditRepo
                         eq.position = parse_position(v, COORD_BUILDING_LOCAL)?;
                     }
                     "type" => eq.equipment_type = parse_eq_type(v)?,
+                    "review_status" | "review" => {
+                        let status = crate::core::ReviewStatus::parse(v).ok_or_else(|| {
+                            anyhow!(
+                                "invalid review_status '{}'; use proposed|accepted|rejected",
+                                v
+                            )
+                        })?;
+                        eq.properties.insert(
+                            crate::core::PROP_REVIEW_STATUS.to_string(),
+                            status.as_str().to_string(),
+                        );
+                    }
                     _ => {
                         eq.properties.insert(k.clone(), v.clone());
                     }

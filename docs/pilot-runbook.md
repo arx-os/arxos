@@ -22,49 +22,83 @@
 | Hardware / MQTT / BACnet / simulated I/O | **Non-MVP stubs** — do not expand for pilot (I9) |
 | Agent / blockchain / full PWA capture | Feature-gated / deferred |
 
+## Install
+
+See **`docs/install.md`**. Dev path: `cargo install --path .` then `arx --version`.
+
 ## Cold-start (capture node)
 
 ```bash
 # 1. Install (dev)
-cargo install --path .   # or use a release binary when published
+cargo install --path .   # see docs/install.md
 
 # 2. Init project (writes validated building.yaml: UUID + Ground Floor)
 mkdir my-site && cd my-site
 arx init --name "Pilot Site"
+arx validate
 
 # 3. Import reality
 arx import path/to/model.ifc
 # or: arx import lidar path/to/scan.ply --merge
 
-# 4. Correct
+# 4. Review auto LiDAR structure (Track C1)
+#    Auto rooms/equipment start as review_status=proposed
+#    Accept or reject before pilot handoff:
+# arx edit corrections.txt   # contains e.g.:
+#   set room AutoRoom-1 review_status=accepted
+#   set equipment HVAC Item 1 review_status=rejected
+
+# 5. Correct + address
 arx edit corrections.txt
 arx migrate              # backfill equipment ArxAddress
 arx validate
 arx query "/…/*…"
 
-# 5. Export + version
+# 6. Export + version
+# Default: full export + warnings for proposed LiDAR entities
 arx export --format ifc -o building.ifc
+# Pilot-approved: strip proposed + rejected auto entities
+arx export --format ifc -o building-approved.ifc --approved-only
 arx stage && arx commit -m "pilot model"
 ```
 
-## Resource defaults (fill in during Track D3)
+## Sample edit script
 
-| Profile | Max points (TBD) | Voxel default (TBD) | Notes |
-| :--- | :--- | :--- | :--- |
-| Pi / light | | | Light mode |
-| Mini / laptop | | | Primary capture node |
+```text
+# examples/pilot-corrections.txt (copy into project)
+set room Ground Floor review_status=accepted
+# set room BadAutoRoom review_status=rejected
+```
+
+## Resource defaults (Track D3 — starting guidance)
+
+| Profile | Guidance | Notes |
+| :--- | :--- | :--- |
+| Pi / light | Prefer aggressive voxel; cap point cloud size; avoid full campus PLY | Light mode TBD in detector flags |
+| Mini / laptop | Primary capture node for pilot | IFC + mid-size LiDAR OK |
+| Tablet / WASM | **Review only** — no full LiDAR in browser | Track E optional |
 
 ## Known failure modes (LiDAR — Track C)
 
-- Missed floors, split rooms, noise → human edit before export.
-- Export should warn on unreviewed auto structure (C2 open).
+| Mode | Mitigation |
+| :--- | :--- |
+| Missed floors / split rooms / noise | Human edit; `review_status=rejected` on bad autos |
+| Trusting auto structure as survey truth | Export **warns** on `proposed`; use `--approved-only` for handoff IFC |
+| Over-reading confidence floats | See `docs/lidar-confidence.md` — scores are **rule tiers**, not probabilities |
+
+## IFC interop notes
+
+- Checked-in third-party-ish samples: `test_data/Building-Architecture.ifc`, `Building-Hvac.ifc`
+- Limitations: `docs/ifc-limitations.md`
+- Native STEP only; no second IFC stack
 
 ## Install checklist (Track D2)
 
 - [ ] `arx --help` / `arx --version`
 - [ ] `arx init` then `arx validate` succeeds
-- [ ] Import sample IFC from fixtures
+- [ ] Import `test_data/sample_building.ifc` (or site IFC)
 - [ ] Git commit of `building.yaml`
+- [ ] Export IFC with and without `--approved-only` (if LiDAR used)
 
 ## Walkthrough sign-off
 

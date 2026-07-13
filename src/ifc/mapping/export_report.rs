@@ -1,14 +1,26 @@
-//! Export-side loss notes (Phase 5).
+//! Export-side loss notes (Phase 5) + LiDAR review warnings (Track C2).
 
-use crate::core::Building;
+use crate::core::{summarize_review, Building};
 
 use super::report::{FidelityLevel, LossReport};
 
 /// Inspect a building before/after IFC export and record non-fatal losses.
 ///
 /// Does not modify the building. Call after a successful write if desired.
+/// Always includes warnings for unreviewed LiDAR auto-structure (Track C2).
 pub fn report_export_losses(building: &Building) -> LossReport {
     let mut report = LossReport::new(FidelityLevel::L2);
+
+    let review = summarize_review(building);
+    for line in review.warning_lines() {
+        if let Some(msg) = line.strip_prefix("warn: ") {
+            report.warn("export_unreviewed_lidar", msg);
+        } else if let Some(msg) = line.strip_prefix("info: ") {
+            report.warn("export_rejected_lidar", msg);
+        } else {
+            report.warn("export_review", &line);
+        }
+    }
 
     for floor in &building.floors {
         for wing in &floor.wings {
@@ -35,9 +47,6 @@ pub fn report_export_losses(building: &Building) -> LossReport {
                         .map(|m| m.vertices.is_empty())
                         .unwrap_or(true)
                     {
-                        // Position-only is intentional L2 policy — info-level note only when
-                        // we want visibility; keep quiet to avoid noise. Uncomment if needed:
-                        // report.warn_entity("export_position_only", "...", &eq.name);
                         let _ = eq;
                     }
                 }

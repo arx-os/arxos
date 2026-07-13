@@ -8,6 +8,21 @@ use crate::validation::validate_building;
 use super::commitment::{commit_building, BuildingCommitment};
 use super::quality::{quality_from_building, QualityScores};
 
+/// Decode a 64-char hex string (optional 0x) into 32 bytes.
+pub fn parse_hex32(hex_str: &str) -> Result<[u8; 32], String> {
+    let s = hex_str.trim().trim_start_matches("0x");
+    if s.len() != 64 {
+        return Err(format!("expected 64 hex chars, got {}", s.len()));
+    }
+    let mut out = [0u8; 32];
+    for i in 0..32 {
+        let byte = u8::from_str_radix(&s[i * 2..i * 2 + 2], 16)
+            .map_err(|e| format!("hex parse: {}", e))?;
+        out[i] = byte;
+    }
+    Ok(out)
+}
+
 /// Serializable claim ready for oracle / audit trail.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContributionPackage {
@@ -43,6 +58,18 @@ pub struct ContributionPackage {
     pub validation_errors: bool,
     /// Summary line for operators.
     pub summary: String,
+}
+
+impl ContributionPackage {
+    /// Merkle root as raw 32 bytes (for Solidity `bytes32`).
+    pub fn merkle_root_bytes(&self) -> Result<[u8; 32], String> {
+        parse_hex32(&self.merkle_root_hex)
+    }
+
+    /// Content hash as raw 32 bytes.
+    pub fn content_hash_bytes(&self) -> Result<[u8; 32], String> {
+        parse_hex32(&self.content_hash_hex)
+    }
 }
 
 /// Options for packaging a contribution.

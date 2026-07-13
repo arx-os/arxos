@@ -114,6 +114,14 @@ impl Cli {
                 git_commit,
                 allow_invalid,
                 dry_run,
+                sign,
+                private_key,
+                oracle,
+                chain_id,
+                submit,
+                worker,
+                amount,
+                rpc_url,
             } => {
                 let cmd = ContributeCommand {
                     output: std::path::PathBuf::from(output),
@@ -122,6 +130,14 @@ impl Cli {
                     git_commit,
                     allow_invalid,
                     dry_run,
+                    sign,
+                    private_key,
+                    oracle,
+                    chain_id,
+                    submit,
+                    worker,
+                    amount,
+                    rpc_url,
                 };
                 Ok(cmd.execute()?)
             }
@@ -744,6 +760,30 @@ pub enum Commands {
         /// Print package summary without writing a file
         #[arg(long)]
         dry_run: bool,
+        /// EIP-712 sign package (requires --features blockchain)
+        #[arg(long)]
+        sign: bool,
+        /// Private key hex or env var name (default: ARX_PRIVATE_KEY or Anvil #0)
+        #[arg(long)]
+        private_key: Option<String>,
+        /// Oracle contract address for EIP-712 domain / submit
+        #[arg(long)]
+        oracle: Option<String>,
+        /// Chain id (31337 = Anvil local)
+        #[arg(long, default_value = "31337")]
+        chain_id: u64,
+        /// Submit proposeContribution via RPC (oracle role + stake required)
+        #[arg(long)]
+        submit: bool,
+        /// Worker wallet that performed the field labor
+        #[arg(long)]
+        worker: Option<String>,
+        /// Whole $AXD amount to propose for mint
+        #[arg(long, default_value = "100")]
+        amount: u64,
+        /// RPC URL for --submit
+        #[arg(long)]
+        rpc_url: Option<String>,
     },
     /// Render building visualization
     Render {

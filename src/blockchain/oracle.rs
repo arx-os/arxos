@@ -67,6 +67,7 @@ impl OracleClient {
     /// * `latitude` - GPS latitude
     /// * `longitude` - GPS longitude
     /// * `data_size` - Size of contributed data in bytes
+    #[allow(clippy::too_many_arguments)]
     pub async fn report_contribution(
         &self,
         building_id: &str,
@@ -77,22 +78,40 @@ impl OracleClient {
         longitude: f64,
         data_size: u64,
     ) -> Result<TxReceipt> {
-        // Parse worker address
+        let proof =
+            ContributionProof::new(merkle_root, latitude, longitude, building_id, data_size);
+        self.propose_signed(building_id, worker, amount_arxo, &proof)
+            .await
+    }
+
+    /// Propose from a building-data contribution package (primary path).
+    pub async fn report_from_package(
+        &self,
+        package: &crate::contribution::ContributionPackage,
+        worker: &str,
+        amount_arxo: u64,
+    ) -> Result<TxReceipt> {
+        let proof =
+            ContributionProof::from_package(package).map_err(BlockchainError::Signature)?;
+        self.propose_signed(&package.building_id, worker, amount_arxo, &proof)
+            .await
+    }
+
+    /// Sign proof and call `proposeContribution` (caller must have ORACLE_ROLE + stake).
+    pub async fn propose_signed(
+        &self,
+        building_id: &str,
+        worker: &str,
+        amount_arxo: u64,
+        proof: &ContributionProof,
+    ) -> Result<TxReceipt> {
         let worker_address: Address = worker
             .parse()
             .map_err(|_| BlockchainError::InvalidAddress(worker.to_string()))?;
 
-        // Create contribution proof
-        let proof =
-            ContributionProof::new(merkle_root, latitude, longitude, building_id, data_size);
-
-        // Sign proof with EIP-712
-        let signature = self.signer.sign_proof(&proof).await?;
-
-        // Convert amount to wei (18 decimals)
+        let signature = self.signer.sign_proof(proof).await?;
         let amount_wei = U256::from(amount_arxo) * U256::exp10(18);
 
-        // Convert our proof to the contract's proof struct
         let contract_proof = arx_contribution_oracle::ContributionProof {
             merkle_root: proof.merkle_root,
             location_hash: proof.location_hash,
@@ -105,7 +124,6 @@ impl OracleClient {
             },
         };
 
-        // Call contract - this returns a PendingTransaction
         let call = self.contract.propose_contribution(
             building_id.to_string(),
             worker_address,
@@ -119,19 +137,31 @@ impl OracleClient {
             .await
             .map_err(|e| BlockchainError::TransactionFailed(e.to_string()))?;
 
-        // Wait for transaction receipt
         let tx = pending_tx
             .await
             .map_err(|e| BlockchainError::TransactionFailed(e.to_string()))?
             .ok_or_else(|| BlockchainError::TransactionFailed("No receipt".to_string()))?;
 
-        // Convert to TxReceipt
         Ok(TxReceipt {
             tx_hash: format!("{:?}", tx.transaction_hash),
-            block_number: tx.block_number.unwrap().as_u64(),
-            gas_used: tx.gas_used.unwrap().as_u64(),
-            status: tx.status.unwrap().as_u64() == 1,
+            block_number: tx.block_number.map(|n| n.as_u64()).unwrap_or(0),
+            gas_used: tx.gas_used.map(|g| g.as_u64()).unwrap_or(0),
+            status: tx.status.map(|s| s.as_u64() == 1).unwrap_or(false),
         })
+    }
+
+    /// Sign a package (uses this client's oracle address / chain).
+    pub async fn sign_package(
+        &self,
+        package: &crate::contribution::ContributionPackage,
+    ) -> Result<SignedContribution> {
+        sign_package_offline(
+            package,
+            &self.signer,
+            self.config.chain_id as u64,
+            &self.config.addresses.oracle,
+        )
+        .await
     }
 
     /// Finalize a contribution after confirmations and delay
@@ -207,6 +237,36 @@ impl OracleClient {
     pub fn get_tx_url(&self, tx_hash: &str) -> String {
         format!("{}/tx/{}", self.config.chain_id.explorer_url(), tx_hash)
     }
+}
+
+/// Signed building contribution ready for oracle proposal / audit.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct SignedContribution {
+    pub package: crate::contribution::ContributionPackage,
+    pub proof: ContributionProof,
+    pub signature_hex: String,
+    pub signer_address: String,
+    pub oracle_address: String,
+    pub chain_id: u64,
+}
+
+/// EIP-712 sign a building contribution package without opening an RPC connection.
+pub async fn sign_package_offline(
+    package: &crate::contribution::ContributionPackage,
+    signer: &ProofSigner,
+    chain_id: u64,
+    oracle_address: &str,
+) -> Result<SignedContribution> {
+    let proof = ContributionProof::from_package(package).map_err(BlockchainError::Signature)?;
+    let signature = signer.sign_proof(&proof).await?;
+    Ok(SignedContribution {
+        package: package.clone(),
+        proof,
+        signature_hex: hex::encode(&signature),
+        signer_address: signer.address(),
+        oracle_address: oracle_address.to_string(),
+        chain_id,
+    })
 }
 
 /// Contribution status information

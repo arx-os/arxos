@@ -43,7 +43,7 @@ pub struct ContributionProof {
 }
 
 impl ContributionProof {
-    /// Create a new contribution proof
+    /// Create a new contribution proof (quality defaults to 100/100 — prefer `from_package`).
     pub fn new(
         merkle_root: [u8; 32],
         latitude: f64,
@@ -51,12 +51,51 @@ impl ContributionProof {
         building_id: &str,
         data_size: u64,
     ) -> Self {
-        let timestamp = chrono::Utc::now().timestamp() as u64;
+        Self::with_quality(
+            merkle_root,
+            latitude,
+            longitude,
+            building_id,
+            data_size,
+            None,
+            QualityMetrics {
+                accuracy: 100,
+                completeness: 100,
+            },
+        )
+    }
 
-        // Hash location: keccak256(abi.encodePacked(lat, lon, timestamp))
+    /// Build proof from a building-data contribution package (primary path).
+    pub fn from_package(
+        package: &crate::contribution::ContributionPackage,
+    ) -> Result<Self, String> {
+        let merkle_root = package.merkle_root_bytes()?;
+        Ok(Self::with_quality(
+            merkle_root,
+            package.latitude,
+            package.longitude,
+            &package.building_id,
+            package.data_size,
+            Some(package.timestamp),
+            QualityMetrics {
+                accuracy: package.accuracy,
+                completeness: package.completeness,
+            },
+        ))
+    }
+
+    /// Full constructor with quality and optional fixed timestamp.
+    pub fn with_quality(
+        merkle_root: [u8; 32],
+        latitude: f64,
+        longitude: f64,
+        building_id: &str,
+        data_size: u64,
+        timestamp: Option<u64>,
+        quality: QualityMetrics,
+    ) -> Self {
+        let timestamp = timestamp.unwrap_or_else(|| chrono::Utc::now().timestamp() as u64);
         let location_hash = Self::hash_location(latitude, longitude, timestamp);
-
-        // Hash building ID: keccak256(buildingId)
         let building_hash = Self::hash_building_id(building_id);
 
         Self {
@@ -65,15 +104,12 @@ impl ContributionProof {
             building_hash,
             timestamp,
             data_size,
-            quality: QualityMetrics {
-                accuracy: 100,
-                completeness: 100,
-            },
+            quality,
         }
     }
 
     /// Hash GPS location with timestamp
-    fn hash_location(latitude: f64, longitude: f64, timestamp: u64) -> [u8; 32] {
+    pub fn hash_location(latitude: f64, longitude: f64, timestamp: u64) -> [u8; 32] {
         #[cfg(feature = "blockchain")]
         {
             let lat_val = (latitude * 1_000_000.0) as i64;
@@ -101,7 +137,7 @@ impl ContributionProof {
 
         #[cfg(not(feature = "blockchain"))]
         {
-            // Fallback to SHA256 if blockchain feature disabled
+            use sha2::{Digest, Sha256};
             let mut hasher = Sha256::new();
             hasher.update(latitude.to_le_bytes());
             hasher.update(longitude.to_le_bytes());
@@ -111,7 +147,7 @@ impl ContributionProof {
     }
 
     /// Hash building ID
-    fn hash_building_id(building_id: &str) -> [u8; 32] {
+    pub fn hash_building_id(building_id: &str) -> [u8; 32] {
         #[cfg(feature = "blockchain")]
         {
             keccak256(building_id.as_bytes())
@@ -119,6 +155,7 @@ impl ContributionProof {
 
         #[cfg(not(feature = "blockchain"))]
         {
+            use sha2::{Digest, Sha256};
             let mut hasher = Sha256::new();
             hasher.update(building_id.as_bytes());
             hasher.finalize().into()
@@ -246,13 +283,34 @@ mod tests {
     #[test]
     fn test_contribution_proof_creation() {
         let proof = ContributionProof::new(
-            [0u8; 32], 40.7128,  // NYC latitude
+            [0u8; 32],
+            40.7128,  // NYC latitude
             -74.0060, // NYC longitude
-            "ps-118", 1024000, // 1 MB
+            "ps-118",
+            1024000, // 1 MB
         );
 
         assert!(proof.timestamp > 0);
         assert_eq!(proof.data_size, 1024000);
+    }
+
+    #[test]
+    fn test_from_package_preserves_quality() {
+        use crate::contribution::{build_contribution_package, PackageOptions};
+        use crate::core::{Building, Floor};
+
+        let mut b = Building::new("Proof HQ".into(), "/proof".into());
+        b.add_floor(Floor::new("G".into(), 0));
+        let pkg = build_contribution_package(&b, PackageOptions::default()).unwrap();
+        let proof = ContributionProof::from_package(&pkg).unwrap();
+        assert_eq!(proof.quality.accuracy, pkg.accuracy);
+        assert_eq!(proof.quality.completeness, pkg.completeness);
+        assert_eq!(proof.data_size, pkg.data_size);
+        assert_eq!(proof.timestamp, pkg.timestamp);
+        assert_eq!(
+            proof.merkle_root,
+            pkg.merkle_root_bytes().unwrap()
+        );
     }
 
     #[test]
@@ -272,7 +330,7 @@ mod tests {
         let wallet: LocalWallet = private_key_hex.parse().unwrap();
 
         let signer = ProofSigner::new(
-            &private_key_hex,
+            private_key_hex,
             8453,
             "0x0000000000000000000000000000000000000001",
         )

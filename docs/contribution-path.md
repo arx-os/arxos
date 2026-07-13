@@ -38,13 +38,45 @@ See `ContributionPackage` in `src/contribution/package.rs`:
 - `git_commit` — HEAD oid when available
 - `hash_algorithm` — `sha256-v1` off-chain; on-chain path may re-encode with keccak under `--features blockchain`
 
-## Not yet wired (next engineering)
+## EIP-712 sign + submit (N2–N3)
+
+Rebuild CLI with chain support:
+
+```bash
+cargo build --features blockchain
+```
+
+```bash
+# Package + sign (offline EIP-712; default key = Anvil account #0)
+arx contribute --sign --oracle 0xYourOracle --chain-id 31337
+
+# Propose on local Anvil (caller must have ORACLE_ROLE + min stake; worker registered)
+arx contribute --sign --submit \
+  --oracle 0xYourOracle \
+  --worker 0xWorker \
+  --amount 100 \
+  --rpc-url http://127.0.0.1:8545
+```
+
+Helpers:
+
+| API | Role |
+| :--- | :--- |
+| `ContributionProof::from_package` | Package → Solidity-shaped proof + quality |
+| `sign_package_offline` | EIP-712 signature without RPC |
+| `OracleClient::report_from_package` | `proposeContribution` on-chain |
+
+Local deploy sketch: `scripts/local_oracle_e2e.sh` (requires `anvil` + `forge`).
+
+Mint finalization still follows contract rules: **2-of-3** confirms + **24h** delay (use Foundry cheatcodes in tests to warp time).
+
+## Remaining
 
 | Step | Status |
 | :--- | :--- |
-| EIP-712 sign package as Solidity `ContributionProof` | Partial (`blockchain` proof module) |
-| Submit to Anvil `ArxContributionOracle` | Open |
-| 2-of-3 confirm + mint 70/10/10/10 | Contracts exist; not end-to-end from CLI |
+| EIP-712 sign package as Solidity `ContributionProof` | **Done** (`--sign`, `from_package`) |
+| Submit `proposeContribution` | **Done** (CLI `--submit`; needs live registry/stake) |
+| One-shot Anvil mint E2E (register+stake+2 oracles+warp) | Partial — script sketch; full automation open |
 | Buyer pay-for-query in $AXD | Open |
 
 ## Module map

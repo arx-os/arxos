@@ -62,16 +62,16 @@ pub mod proof;
 pub mod types;
 
 #[cfg(feature = "blockchain")]
-pub use oracle::OracleClient;
+pub use oracle::{sign_package_offline, OracleClient, SignedContribution};
 
 #[cfg(feature = "blockchain")]
 pub use payment::PaymentClient;
 
 #[cfg(feature = "blockchain")]
-pub use proof::{ContributionProof, ProofSigner};
+pub use proof::{ContributionProof, ProofSigner, QualityMetrics};
 
 #[cfg(feature = "blockchain")]
-pub use types::{ChainId, NetworkConfig};
+pub use types::{ChainId, ContractAddresses, NetworkConfig};
 
 #[cfg(not(feature = "blockchain"))]
 pub fn blockchain_disabled() -> anyhow::Result<()> {

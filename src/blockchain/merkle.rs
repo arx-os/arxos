@@ -32,7 +32,7 @@ impl Hasher for Keccak256Algorithm {
                 let mut concat = [0u8; 64];
                 concat[..32].copy_from_slice(&a);
                 concat[32..].copy_from_slice(&b);
-                keccak256(&concat)
+                keccak256(concat)
             }
             None => *left,
         }

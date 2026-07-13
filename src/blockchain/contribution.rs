@@ -2,10 +2,12 @@ use crate::blockchain::merkle::ArxMerkleTree;
 use crate::core::identity::ArxId; // Explicitly renamed ArxId
 use crate::hardware::DeviceState;
 use anyhow::Result;
-use ethers::types::{H256, U256};
+use ethers::types::H256;
 use ethers::utils::keccak256;
-use rs_merkle::Hasher;
 use std::collections::HashMap;
+
+#[cfg(test)]
+use rs_merkle::Hasher;
 
 #[cfg(feature = "agent")]
 use tracing;
@@ -115,7 +117,8 @@ impl ContributionBuffer {
     }
 }
 
-/// Service bridging the physical hardware changes to the ArxContribution tokenomics contract.
+/// Service bridging building/sensor contributions to the ArxContribution tokenomics contract.
+#[derive(Default)]
 pub struct ContributionService {
     // In production, this would be an `ethers::providers::Provider<ethers::providers::Http>`
     // mock provider for now.
@@ -123,7 +126,7 @@ pub struct ContributionService {
 
 impl ContributionService {
     pub fn new() -> Self {
-        Self {}
+        Self::default()
     }
 
     pub async fn submit_contribution(
@@ -202,22 +205,22 @@ mod tests {
         readings_3.insert("Sensor_C".to_string(), 30.0);
 
         let cont_1 = WorkContribution::new(
-            worker_1.clone(),
-            entity_1.clone(),
+            worker_1,
+            entity_1,
             &DeviceState {
                 readings: readings_1,
             },
         );
         let cont_2 = WorkContribution::new(
-            worker_2.clone(),
-            entity_2.clone(),
+            worker_2,
+            entity_2,
             &DeviceState {
                 readings: readings_2,
             },
         );
         let cont_3 = WorkContribution::new(
-            worker_1.clone(),
-            entity_2.clone(),
+            worker_1,
+            entity_2,
             &DeviceState {
                 readings: readings_3,
             },
@@ -268,22 +271,22 @@ mod tests {
         readings_3.insert("Sensor_C".to_string(), 30.0);
 
         let cont_1 = WorkContribution::new(
-            worker_1.clone(),
-            entity_1.clone(),
+            worker_1,
+            entity_1,
             &DeviceState {
                 readings: readings_1,
             },
         );
         let cont_2 = WorkContribution::new(
-            worker_2.clone(),
-            entity_2.clone(),
+            worker_2,
+            entity_2,
             &DeviceState {
                 readings: readings_2,
             },
         );
         let cont_3 = WorkContribution::new(
-            worker_1.clone(),
-            entity_2.clone(),
+            worker_1,
+            entity_2,
             &DeviceState {
                 readings: readings_3,
             },

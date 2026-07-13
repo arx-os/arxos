@@ -100,8 +100,8 @@ No longer “ignore forever.” Built **on** the compiler spine:
 | ID | Criterion | Status |
 | :--- | :--- | :---: |
 | N1 | Building commitment package from validated model | **Done** (`arx contribute`, `src/contribution/`) |
-| N2 | EIP-712 proof matches Solidity `ContributionProof` | Partial (`blockchain` feature) |
-| N3 | Local Anvil: package → oracle confirm → mint event | **Open** |
+| N2 | EIP-712 proof matches Solidity `ContributionProof` | **Done** (`from_package` + `--sign`) |
+| N3 | Local Anvil: package → oracle propose | **Partial** (`--submit` + deploy script; full mint needs 2-of-3 + delay) |
 | N4 | Registry worker + building identities | Contracts exist; CLI wiring **Open** |
 | N5 | Data-buyer payment path ($AXD) | **Open** |
 | N6 | Multi-peer via Git remotes (not CRDT-first) | Process + docs; forge-agnostic |
@@ -969,8 +969,8 @@ test_data/             Mid-size IFC samples
 
 ### 10.1 This week (operating cadence)
 
-1. ~~**Contribution N1**~~ **Done** — `arx contribute` / building commitment package.
-2. **N2–N3** — EIP-712 sign package + Anvil oracle submit → mint event.
+1. ~~**N1–N3 (partial)**~~ package + EIP-712 sign + propose CLI **Done**.
+2. **N3 residual** — automated Anvil: register worker/building, stake, 2nd oracle, time-warp finalize/mint.
 3. **N4** — wire Registry buildingId/worker into contribute flow.
 4. Peripherals (PWA/hardware/3D): **ask before expand**.
 5. Field vendor IFC remains optional until you supply files.
@@ -1003,7 +1003,8 @@ B1 (first vendor fixture) → B2 (CI goldens) → continue critical path
 | **2026-07 integrity close-out** | Executed Track I: clippy CI green (unwrap allow-list documented); spatial honesty; validated saves; Building spatial ops; honest init; `--delta` error; path-safe migrate; pilot-runbook outline; scorecard uplift |
 | **2026-07 A1** | `BuildingData.schema_version` (default 1); legacy load OK; new writes emit version |
 | **2026-07 B/C/D** | vendor_ifc_test + limitations; review_status + export --approved-only; lidar-confidence + pilot-runbook/install |
-| **2026-07 full product contribution** | Vision locked (interview + defaults); `src/contribution` + `arx contribute`; N1 done; oracle submit next |
+| **2026-07 full product contribution** | Vision locked; N1 package path |
+| **2026-07 N2–N3** | EIP-712 from package; `arx contribute --sign/--submit`; local_oracle_e2e sketch |
 
 ---
 

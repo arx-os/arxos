@@ -126,8 +126,8 @@ Compiler without reward is incomplete for the vision. Reward without trusted as-
 | N4 | Registry: worker + building UUID | **Done** (Foundry); live CLI env open |
 | N5 | Buyer `payForAccess` $AXD path | **Done** (Foundry + `arx access`) |
 | N6 | Multi-peer via Git remotes (not CRDT-first) | **Partial** |
-| N7 | **Host gates data on `AccessPaid`** | **Open** — critical for market truth |
-| N8 | **One-command local deploy env** (addresses + register helpers) | **Open** — Horizon A |
+| N7 | **Host gates data on `AccessPaid`** | **Done** (lab: `export --commercial` + receipt) |
+| N8 | **One-command local deploy env** (addresses + register helpers) | **Done** (`horizon_a_deploy_env.sh`) |
 | N9 | **One real-building closed loop** (field) | **Open** — Horizon B |
 
 ### 1.4 Explicit non-goals (near term)
@@ -1019,17 +1019,18 @@ Buyer:     access quote → access pay  (hosts must honor AccessPaid — N7 open
 
 **Goal:** One closed loop that is easy to run, then a real building.
 
-### 10.1 Horizon A — Lab → live local (**current priority**)
+### 10.1 Horizon A — Lab → live local
 
-| Order | Work | Exit |
-| :---: | :--- | :--- |
-| **A1** | Deploy-and-env script (Anvil + forge Deploy → `.env.arx`) | Addresses without log-scraping |
-| **A2** | Register helpers from `building.yaml` UUID + worker key | Package `building_id` matches chain |
-| **A3** | Ops runbook: stake oracles → contribute submit → confirm → finalize | Mint without reading Solidity |
-| **A4** | Host gate (N7): release data only after `AccessPaid` | Buyers cannot pay into a void |
-| **A5** | Field-trial one-pager | Ready for Horizon B |
+| Order | Work | Status |
+| :---: | :--- | :---: |
+| **A1** | `scripts/horizon_a_deploy_env.sh` → `.env.arx` | **Done** |
+| **A2** | `Register.s.sol` + script `--register` (YAML UUID) | **Done** |
+| **A3** | `docs/horizon-a-ops.md` mint/pay ops | **Done** |
+| **A4** | Host gate: `export --commercial` + `access-receipt.json` | **Done** |
+| **A5** | `docs/field-trial.md` | **Done** |
 
-**Freeze:** PWA / hardware / 3D / multi-building unless vision explicitly approves.
+**Next:** Horizon B field trial (vision holder).  
+**Freeze:** PWA / hardware / 3D / multi-building unless vision approves.
 
 ### 10.2 Horizon B — First real building (vision holder)
 

@@ -99,6 +99,8 @@ impl Cli {
                 repo,
                 delta,
                 approved_only,
+                commercial,
+                access_receipt,
             } => {
                 let cmd = ExportCommand {
                     format,
@@ -106,6 +108,8 @@ impl Cli {
                     repo,
                     delta,
                     approved_only,
+                    commercial,
+                    access_receipt,
                 };
                 Ok(cmd.execute()?)
             }
@@ -152,6 +156,15 @@ impl Cli {
                     } => AccessAction::Quote {
                         building_id,
                         amount_axd: amount,
+                        output: std::path::PathBuf::from(output),
+                    },
+                    AccessSubcommand::Grant {
+                        building_id,
+                        tx_hash,
+                        output,
+                    } => AccessAction::Grant {
+                        building_id,
+                        tx_hash,
                         output: std::path::PathBuf::from(output),
                     },
                     AccessSubcommand::Pay {
@@ -776,6 +789,12 @@ pub enum Commands {
         /// Exclude proposed/rejected LiDAR auto entities from IFC export (Track C2)
         #[arg(long)]
         approved_only: bool,
+        /// Commercial export: require access-receipt.json proving $AXD payment (N7 host gate)
+        #[arg(long)]
+        commercial: bool,
+        /// Path to access receipt JSON (default: access-receipt.json)
+        #[arg(long)]
+        access_receipt: Option<String>,
     },
     /// Buyer market: quote or pay $AXD for building data access (software remains free)
     Access {
@@ -1109,6 +1128,18 @@ pub enum AccessSubcommand {
         amount: u64,
         /// Output path
         #[arg(long, default_value = "access-request.json")]
+        output: String,
+    },
+    /// Record access-receipt.json from a known payment tx (N7 host gate)
+    Grant {
+        /// Building UUID (default: from building.yaml)
+        #[arg(long)]
+        building_id: Option<String>,
+        /// Payment transaction hash
+        #[arg(long)]
+        tx_hash: String,
+        /// Output path
+        #[arg(long, default_value = "access-receipt.json")]
         output: String,
     },
     /// Pay $AXD on-chain via ArxPaymentRouter (requires --features blockchain)

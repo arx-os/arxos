@@ -1,10 +1,16 @@
-//! Data-access quotes for the buyer side of the ArxOS economy.
+//! Data-access quotes and host gating for the buyer side of the ArxOS economy.
 //!
 //! Software is free. **Access to verified building data** is what buyers pay for
 //! with $AXD via `ArxPaymentRouter.payForAccess`.
 //!
-//! This module builds off-chain access requests (nonce + building id) that the
-//! chain payment client can fulfill.
+//! - Quotes: off-chain access requests (nonce + building id).
+//! - Receipts (N7): local proof-of-payment files that **gate commercial export**.
+
+mod receipt;
+
+pub use receipt::{
+    require_access_receipt, AccessReceipt, DEFAULT_RECEIPT_FILE,
+};
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};

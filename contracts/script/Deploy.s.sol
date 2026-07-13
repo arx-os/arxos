@@ -120,13 +120,15 @@ contract DeployArxos is Script {
         console.log("ArxRegistry:", address(registry));
         console.log("ArxWorkerID:", address(registry.workerNFT()));
         console.log("ArxosToken:", address(token));
+        console.log("ArxOracleStaking:", address(staking));
         console.log("ArxContributionOracle:", address(oracle));
         console.log("ArxPaymentRouter:", address(router));
+        console.log("ArxDisputeResolver:", address(resolver));
         console.log("========================================");
         console.log("\nNext steps:");
-        console.log("1. Verify contracts on Basescan");
-        console.log("2. Add additional oracle operators");
-        console.log("3. Register first building and worker");
-        console.log("4. Transfer ownership to multisig");
+        console.log("1. source .env.arx from scripts/horizon_a_deploy_env.sh");
+        console.log("2. Register worker + building (Register.s.sol / --register)");
+        console.log("3. arx contribute --sign --submit; arx access pay");
+        console.log("4. Hosts: export --commercial requires access receipt (N7)");
     }
 }

@@ -19,6 +19,12 @@ pub enum AccessAction {
         amount_axd: u64,
         output: PathBuf,
     },
+    /// Manually record a payment receipt (N7) when pay was done outside this CLI.
+    Grant {
+        building_id: Option<String>,
+        tx_hash: String,
+        output: PathBuf,
+    },
     /// Pay on-chain via ArxPaymentRouter (requires --features blockchain).
     Pay {
         building_id: Option<String>,
@@ -41,6 +47,18 @@ impl Command for AccessCommand {
                 amount_axd,
                 output,
             } => execute_quote(building_id.as_deref(), *amount_axd, output),
+            AccessAction::Grant {
+                building_id,
+                tx_hash,
+                output,
+            } => {
+                let (id, _) = resolve_building_id(building_id.as_deref())?;
+                let receipt = crate::access::AccessReceipt::new(&id, tx_hash);
+                receipt.save(output).map_err(|e| -> Box<dyn Error> { e.into() })?;
+                println!("✅ Wrote access receipt {}", output.display());
+                println!("   Hosts: arx export --format ifc --commercial");
+                Ok(())
+            }
             AccessAction::Pay {
                 building_id,
                 amount_axd,
@@ -173,7 +191,19 @@ fn execute_pay(args: PayArgs) -> Result<(), Box<dyn Error>> {
     );
     let receipt = rt.block_on(client.pay_for_access_tokens(&building_id, amount, nonce))?;
     println!("✅ {}", receipt);
-    println!("   AccessPaid emitted on-chain; data hosts should gate delivery on this event.");
+
+    // N7: write local access receipt so hosts can gate commercial export
+    let mut access_receipt = crate::access::AccessReceipt::new(&building_id, &receipt.tx_hash);
+    access_receipt.amount_axd = Some(amount);
+    access_receipt.nonce_hex = Some(nonce.iter().map(|b| format!("{:02x}", b)).collect());
+    let receipt_path = std::path::Path::new(crate::access::DEFAULT_RECEIPT_FILE);
+    access_receipt
+        .save(receipt_path)
+        .map_err(|e| -> Box<dyn Error> { e.into() })?;
+    println!(
+        "✅ Wrote {} (hosts: arx export --commercial requires this)",
+        receipt_path.display()
+    );
     Ok(())
 }
 

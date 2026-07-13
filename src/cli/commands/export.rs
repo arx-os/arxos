@@ -15,6 +15,10 @@ pub struct ExportCommand {
     pub delta: bool,
     /// When true, drop rejected + proposed LiDAR auto entities from IFC export (Track C2).
     pub approved_only: bool,
+    /// Commercial export: require access-receipt.json (N7 host gate).
+    pub commercial: bool,
+    /// Path to access receipt (default: access-receipt.json).
+    pub access_receipt: Option<String>,
 }
 
 impl Command for ExportCommand {
@@ -35,6 +39,25 @@ impl Command for ExportCommand {
 
                 let building = load_building_at(repo_root)
                     .map_err(|e| format!("No {} to export: {}", BUILDING_YAML, e))?;
+
+                if self.commercial {
+                    let receipt_path = self
+                        .access_receipt
+                        .as_deref()
+                        .unwrap_or(crate::access::DEFAULT_RECEIPT_FILE);
+                    let receipt = crate::access::require_access_receipt(receipt_path, &building.id)
+                        .map_err(|e| {
+                            format!(
+                                "commercial export refused (N7 host gate): {}. \
+                                 Buyer must `arx access pay` and write access-receipt.json",
+                                e
+                            )
+                        })?;
+                    println!(
+                        "  🔐 commercial: access receipt OK (tx={})",
+                        receipt.tx_hash
+                    );
+                }
 
                 let review = summarize_review(&building);
                 for line in review.warning_lines() {
@@ -68,6 +91,23 @@ impl Command for ExportCommand {
             }
             "yaml" => {
                 println!("📤 Exporting to YAML format...");
+                if self.commercial {
+                    let building = load_building_at(repo_root)
+                        .map_err(|e| format!("No {} to export: {}", BUILDING_YAML, e))?;
+                    let receipt_path = self
+                        .access_receipt
+                        .as_deref()
+                        .unwrap_or(crate::access::DEFAULT_RECEIPT_FILE);
+                    crate::access::require_access_receipt(receipt_path, &building.id).map_err(
+                        |e| {
+                            format!(
+                                "commercial export refused (N7 host gate): {}",
+                                e
+                            )
+                        },
+                    )?;
+                    println!("  🔐 commercial: access receipt OK");
+                }
                 let output_file = self
                     .output
                     .clone()

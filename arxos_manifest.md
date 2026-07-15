@@ -266,6 +266,7 @@ This section is the **obligation register**: each reservation must be **relegate
 | Contribution / reward | **7.5/10** | Package + EIP-712 + Foundry mint E2E; **live ops still hard (R3)** |
 | Buyer access market | **7.5/10** | Router E2E + `arx access` + commercial export gate; **not server-enforced (R4)** |
 | PWA / WASM | **4/10** | Optional; not L1 blocker |
+| Owner Experience | **Good** | Good once the dashboard lands |
 | Contracts ($AXD) | **8/10** | Foundry suite green; oracle proof lock fixed |
 | CLI surface | **8/10** | Compiler + contribute + access; spatial honesty |
 | CI | **8.5/10** | Compiler CI + Full Lab Loop workflow + forge E2E; clippy green (unwrap allow-listed) |
@@ -657,6 +658,10 @@ To enable a trustless, incentivized data collection model, Arxos splits the repo
 - **Reward Escrow:** To prevent front-running, $AXD minted for contributions in `branch building` is held in an escrow smart contract.
 - **Release on Claim:** When the owner claims `branch main`, the escrow releases the accumulated rewards to the historical contributors' addresses. If a building remains unclaimed, rewards are locked until verification, ensuring workers are incentivized to ingest high-value target buildings.
 - **Configurable Grace Period:** To allow in-flight contributions submitted around the time of the claim to resolve, a Staging Grace Window is enforced. The duration of this window is configurable at the building level via `claim_grace_period_days` in `building.yaml` (defaulting to 14 days if not specified).
+
+### 3.12 Owner Experience Dashboard
+
+To transition ownership verification and staging reviews from the command-line to a first-class web interface, the Leptos PWA exposes a review portal for the building owner. This dashboard lists pending contributions, displays changes, and coordinates Approve and Reject actions, triggering local agent branch promotion and on-chain payouts.
 
 ---
 
@@ -1219,7 +1224,7 @@ Horizon A **does not** close §1.6 district pilot obligations. It only enables l
 | **HB3** | Real LiDAR field truth (R1) | Field + eng | Open | Room/wing scan: false +/− log; review gates used |
 | **HB4** | Site capture loop (G9) | Field + eng | Open | Scan → label → validate → Git → usable IFC on one building |
 | **HB5** | Scale profile ~250k (R6/G7) | Field + eng | Eng defaults only | Timing/RAM/limits logged; light-mode guidance real |
-| **HB6** | Device UX PWA/agent (G10) | Eng + field | **Accel** | iPhone↔agent plan (`docs/iphone-pwa-acceleration.md`); Batch A await approve |
+| **HB6** | Device UX PWA/agent (G10) | Eng + field | **In Progress** | iPhone↔agent plan (`docs/iphone-pwa-acceleration.md`); Batch A approved |
 | **HB7** | L1 exit scorecard | Both | Open | R1,R2,R5,R7–R10 pilot-mitigated; §2.1 scores updated |
 
 **L1 exit:** §1.1a free-software loop valuable on one messy real building under policy; **no mainnet token dependency**. Chain stays optional (HB-chain).

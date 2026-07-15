@@ -26,6 +26,18 @@ Walk in with a device running the **WASM PWA** (and/or **edge agent**), perform 
 
 **Principles:** compiler spine + honesty first · field evidence before features · LOC discipline · optional-ring minimization · L1 before Horizon C.
 
+### Owner Experience
+
+The Owner Experience focus establishes a first-class web interface for property/facility owners to manage spatial assets without utilizing a terminal. 
+
+#### Acceptance Criteria — Web-based Owner Staging Dashboard
+- **Route:** `/owner/staging` is accessible in the Leptos PWA and protected by the active auth token.
+- **Queue list:** Displays all grace-period claims staged for review.
+- **Card metadata:** Shows Building Address, Contributor short address/identity, estimated $AXD rewards, age of contribution, and a change summary.
+- **Actions:** Real-time Approve and Reject buttons that call the agent's claim review services.
+- **Durable effects:** Approving promotes the YAML addresses (`/building` -> `/main`), persists the change to Git, and triggers on-chain $AXD token distribution splits. Reject safely archives the contribution.
+- **Robustness:** Handles loading, empty queue, offline caching, and error banner notifications gracefully.
+
 ---
 
 ## 1. Ground truth (post–pilot.4)
@@ -40,6 +52,7 @@ Walk in with a device running the **WASM PWA** (and/or **edge agent**), perform 
 | Resource refuse defaults | Done | Site profile **open** (R6) |
 | TUI + CLI capture node | Ready | Second-person open (R5) |
 | WASM PWA / agent | ~4/10 terminal/bridge | Walk-in capture **not** proven |
+| Owner Experience | Good once dashboard lands | **In Progress** |
 | Charter / data class | Templates | **Unsigned** (R7/R10) |
 
 **Scorecard (honest):** Lab closed loop ~8–8.5/10 · District L1 ~4/10 · Full vision L3 ~2/10.
@@ -177,7 +190,7 @@ Phases are sequential **gates**. Later phases may **prep** (docs, dry lab) but d
 | **Depends on** | **Accelerated now** (parallel to HB0–HB5 field process). Full 250k still needs HB3–HB5 evidence. |
 | **Success** | One-room: connect from iPhone · see hierarchy · accept/reject proposed · see LossReport · `approved_only` export on capture node |
 | **Risks** | iOS cleartext WS; large uploads; scope creep to ARKit; dual SSOT if phone saves without agent |
-| **Status** | Lab WASM ~4/10 · **in acceleration** — plan: [iphone-pwa-acceleration.md](./iphone-pwa-acceleration.md) |
+| **Status** | **In Progress** — plan: [iphone-pwa-acceleration.md](./iphone-pwa-acceleration.md) |
 | **In scope (P0–P1)** | Configurable agent host; mobile connect; hierarchy; review_status; LossReport panel; agent ifc/lidar import + approved export |
 | **Out of scope (near term)** | In-browser full-building LiDAR; ARKit product (P2); CAD 3D; Horizon C |
 

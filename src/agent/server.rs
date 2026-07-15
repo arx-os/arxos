@@ -30,8 +30,8 @@ use serde::Deserialize;
 
 #[cfg(feature = "agent")]
 #[derive(Deserialize)]
-struct AuthParams {
-    token: Option<String>,
+pub struct AuthParams {
+    pub token: Option<String>,
 }
 
 #[cfg(feature = "agent")]
@@ -70,6 +70,9 @@ pub async fn start_agent() -> Result<(), Box<dyn std::error::Error>> {
     let app = Router::new()
         .route("/ws", get(ws_handler))
         .route("/rpc", post(rpc_handler))
+        .route("/api/claims/staging", get(http_claims_staging))
+        .route("/api/claims/:id/approve", post(http_claim_approve))
+        .route("/api/claims/:id/reject", post(http_claim_reject))
         .with_state(state.clone());
 
     // 4. Start File Watchers
@@ -153,13 +156,7 @@ fn guess_lan_ips() -> Vec<String> {
 }
 
 #[cfg(feature = "agent")]
-async fn ws_handler(
-    ws: WebSocketUpgrade,
-    headers: HeaderMap,
-    Query(params): Query<AuthParams>,
-    State(state): State<Arc<AgentState>>,
-) -> impl IntoResponse {
-    // Extract token from Header (Bearer) or Query Param
+fn check_auth(headers: &HeaderMap, query_token: Option<&str>, state: &AgentState) -> bool {
     let token_str = if let Some(bearer) = headers
         .get("Authorization")
         .and_then(|h| h.to_str().ok())
@@ -167,18 +164,199 @@ async fn ws_handler(
     {
         Some(bearer.to_string())
     } else {
-        params.token
+        query_token.map(|s| s.to_string())
     };
 
-    // Validate Token
-    let valid = if let Some(token) = token_str {
+    if let Some(token) = token_str {
         let guard = state.token.lock().unwrap();
         guard.value() == token
     } else {
         false
+    }
+}
+
+#[cfg(feature = "agent")]
+#[derive(Deserialize)]
+pub struct HttpClaimReviewRequest {
+    pub owner_address: String,
+    pub live: Option<bool>,
+}
+
+#[cfg(feature = "agent")]
+#[derive(serde::Serialize)]
+struct ClaimStagingDto {
+    index: usize,
+    building_id: String,
+    address: String,
+    contributor: String,
+    summary: String,
+    estimated_reward: String,
+    timestamp: u64,
+    status: String,
+    content: String,
+}
+
+#[cfg(feature = "agent")]
+pub async fn http_claims_staging(
+    headers: HeaderMap,
+    Query(params): Query<AuthParams>,
+    State(state): State<Arc<AgentState>>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, params.token.as_deref(), &state) {
+        return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+    }
+
+    use crate::agent::claim::GraceWindowManager;
+    use crate::yaml::BuildingYamlSerializer;
+
+    let manager = GraceWindowManager::new();
+    let repo_str = match state.repo_root.to_str() {
+        Some(s) => s,
+        None => return (StatusCode::INTERNAL_SERVER_ERROR, "Invalid repo path").into_response(),
     };
 
-    if !valid {
+    let pending = match manager.list_pending_contributions(repo_str) {
+        Ok(p) => p,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+    };
+
+    let mut dtos = Vec::new();
+    for (idx, content) in pending {
+        let (building_id, address, contributor, summary, timestamp) = match BuildingYamlSerializer::deserialize(&content) {
+            Ok(data) => {
+                let building = data.into_building();
+                let building_id = building.id.clone();
+                let address = building.address.as_ref().map(|a| a.to_string()).unwrap_or_else(|| building.path.clone());
+                let contributor = building.metadata.as_ref()
+                    .and_then(|m| m.properties.get("contributor").cloned())
+                    .unwrap_or_else(|| "0x7099...3f75".to_string());
+                let floors = building.floors.len();
+                let rooms = building.get_all_rooms().len();
+                let equipment = building.get_all_equipment().len();
+                let summary = format!("{} floors, {} rooms, {} equipment", floors, rooms, equipment);
+                let timestamp = building.updated_at.timestamp() as u64;
+                (building_id, address, contributor, summary, timestamp)
+            }
+            Err(_) => {
+                ("unknown".to_string(), "unknown".to_string(), "unknown".to_string(), "Invalid YAML contribution".to_string(), chrono::Utc::now().timestamp() as u64)
+            }
+        };
+
+        dtos.push(ClaimStagingDto {
+            index: idx,
+            building_id,
+            address,
+            contributor,
+            summary,
+            estimated_reward: "500.0 $AXD".to_string(),
+            timestamp,
+            status: "WaitingForReview".to_string(),
+            content,
+        });
+    }
+
+    Json(dtos).into_response()
+}
+
+#[cfg(feature = "agent")]
+pub async fn http_claim_approve(
+    headers: HeaderMap,
+    Query(params): Query<AuthParams>,
+    axum::extract::Path(id): axum::extract::Path<usize>,
+    State(state): State<Arc<AgentState>>,
+    Json(body): Json<HttpClaimReviewRequest>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, params.token.as_deref(), &state) {
+        return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+    }
+
+    use crate::agent::claim::GraceWindowManager;
+    let mut manager = GraceWindowManager::new();
+
+    let repo_str = match state.repo_root.to_str() {
+        Some(s) => s,
+        None => return (StatusCode::INTERNAL_SERVER_ERROR, "Invalid repo path").into_response(),
+    };
+    let building = match crate::persistence::load_building_at(&state.repo_root) {
+        Ok(b) => b,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to load building: {}", e)).into_response(),
+    };
+    let building_id = building.id.clone();
+
+    manager.register_active_claim(building_id.clone(), 14);
+
+    let live_mode = body.live.unwrap_or(false);
+
+    match manager.review_pending_contribution(
+        repo_str,
+        &building_id,
+        id,
+        true, // Approve
+        &body.owner_address,
+        live_mode,
+    ) {
+        Ok((claim_state, receipt)) => {
+            Json(serde_json::json!({
+                "status": format!("{:?}", claim_state),
+                "receipt": receipt
+            })).into_response()
+        }
+        Err(e) => (StatusCode::BAD_REQUEST, e).into_response(),
+    }
+}
+
+#[cfg(feature = "agent")]
+pub async fn http_claim_reject(
+    headers: HeaderMap,
+    Query(params): Query<AuthParams>,
+    axum::extract::Path(id): axum::extract::Path<usize>,
+    State(state): State<Arc<AgentState>>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, params.token.as_deref(), &state) {
+        return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+    }
+
+    use crate::agent::claim::GraceWindowManager;
+    let mut manager = GraceWindowManager::new();
+
+    let repo_str = match state.repo_root.to_str() {
+        Some(s) => s,
+        None => return (StatusCode::INTERNAL_SERVER_ERROR, "Invalid repo path").into_response(),
+    };
+    let building = match crate::persistence::load_building_at(&state.repo_root) {
+        Ok(b) => b,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to load building: {}", e)).into_response(),
+    };
+    let building_id = building.id.clone();
+
+    manager.register_active_claim(building_id.clone(), 14);
+
+    match manager.review_pending_contribution(
+        repo_str,
+        &building_id,
+        id,
+        false, // Reject
+        "0x0000000000000000000000000000000000000000",
+        false,
+    ) {
+        Ok((claim_state, receipt)) => {
+            Json(serde_json::json!({
+                "status": format!("{:?}", claim_state),
+                "receipt": receipt
+            })).into_response()
+        }
+        Err(e) => (StatusCode::BAD_REQUEST, e).into_response(),
+    }
+}
+
+#[cfg(feature = "agent")]
+async fn ws_handler(
+    ws: WebSocketUpgrade,
+    headers: HeaderMap,
+    Query(params): Query<AuthParams>,
+    State(state): State<Arc<AgentState>>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, params.token.as_deref(), &state) {
         return (
             StatusCode::UNAUTHORIZED,
             "Unauthorized: Invalid or missing token",
@@ -196,24 +374,7 @@ async fn rpc_handler(
     State(state): State<Arc<AgentState>>,
     Json(request): Json<JsonRpcRequest>,
 ) -> impl IntoResponse {
-    let token_str = if let Some(bearer) = headers
-        .get("Authorization")
-        .and_then(|h| h.to_str().ok())
-        .and_then(|s| s.strip_prefix("Bearer "))
-    {
-        Some(bearer.to_string())
-    } else {
-        params.token
-    };
-
-    let valid = if let Some(token) = token_str {
-        let guard = state.token.lock().unwrap();
-        guard.value() == token
-    } else {
-        false
-    };
-
-    if !valid {
+    if !check_auth(&headers, params.token.as_deref(), &state) {
         return (
             StatusCode::UNAUTHORIZED,
             "Unauthorized: Invalid or missing token",

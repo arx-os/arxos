@@ -30,7 +30,8 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("/import") view=Import/>
                         <Route path=path!("/buildings") view=Buildings/>
                         <Route path=path!("/buildings/:id") view=BuildingDetail/>
-                        <Route path=path!("/claim-review") view=ClaimReview/>
+                        <Route path=path!("/owner/staging") view=ClaimReview/>
+                        <Route path=path!("/owner/claims") view=ClaimReview/>
                     </Routes>
                 </main>
             </div>
@@ -107,6 +108,7 @@ fn Header() -> impl IntoView {
                     <A href="/review" attr:style="color: #cbd5e1; text-decoration: none; padding: 8px 10px; min-height: 44px; display: inline-flex; align-items: center;">"Review"</A>
                     <A href="/import" attr:style="color: #cbd5e1; text-decoration: none; padding: 8px 10px; min-height: 44px; display: inline-flex; align-items: center;">"Import"</A>
                     <A href="/buildings" attr:style="color: #cbd5e1; text-decoration: none; padding: 8px 10px; min-height: 44px; display: inline-flex; align-items: center;">"Buildings"</A>
+                    <A href="/owner/staging" attr:style="color: #cbd5e1; text-decoration: none; padding: 8px 10px; min-height: 44px; display: inline-flex; align-items: center;">"Owner Staging"</A>
                 </nav>
             </div>
 

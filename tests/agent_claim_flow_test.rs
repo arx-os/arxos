@@ -2,6 +2,7 @@
 
 #[cfg(feature = "agent")]
 mod agent_tests {
+    use serial_test::serial;
     use arxos::agent::claim::{
         ClaimListener, ClaimEvent, GitReconstructor, GraceWindowManager,
         RewardReleaser, ClaimState
@@ -33,6 +34,7 @@ mod agent_tests {
     }
 
     #[test]
+    #[serial]
     fn test_claim_listener_and_rewards_live() {
         // Safe check without private keys env
         let releaser = RewardReleaser::new(true);
@@ -119,5 +121,139 @@ equipment: []
         // Confirm building.yaml has been promoted
         let promoted_yaml = std::fs::read_to_string(temp_dir.path().join("building.yaml")).unwrap();
         assert!(promoted_yaml.contains("address: /main/hq"));
+    }
+
+    #[test]
+    #[serial]
+    fn test_private_key_loader_and_hardening() {
+        use arxos::agent::claim::rewards::{
+            PrivateKeyLoader, EnvironmentKeyLoader, FileKeyLoader, HybridKeyLoader,
+            DistributorConfig
+        };
+        use tempfile::tempdir;
+        use std::fs;
+
+        // 1. Test EnvironmentKeyLoader
+        std::env::set_var("PHASE_PRIVATE_KEY", "ENV_SECRET");
+        std::env::set_var("PHASE_RPC_URL", "https://env.rpc");
+        let env_loader = EnvironmentKeyLoader;
+        assert_eq!(env_loader.load_private_key().unwrap(), "ENV_SECRET");
+        assert_eq!(env_loader.load_rpc_url().unwrap(), "https://env.rpc");
+
+        // 2. Test FileKeyLoader
+        let temp_dir = tempdir().unwrap();
+        let config_path = temp_dir.path().join("payout.json");
+        let config_content = r#"{
+            "private_key": "FILE_SECRET",
+            "rpc_url": "https://file.rpc"
+        }"#;
+        fs::write(&config_path, config_content).unwrap();
+
+        let file_loader = FileKeyLoader {
+            filepath: config_path.to_str().unwrap().to_string(),
+        };
+        assert_eq!(file_loader.load_private_key().unwrap(), "FILE_SECRET");
+        assert_eq!(file_loader.load_rpc_url().unwrap(), "https://file.rpc");
+
+        // Clean env variables
+        std::env::remove_var("PHASE_PRIVATE_KEY");
+        std::env::remove_var("PHASE_RPC_URL");
+
+        // 3. Test HybridKeyLoader prioritizes env over file
+        let hybrid_loader = HybridKeyLoader {
+            env_loader: EnvironmentKeyLoader,
+            file_loader: FileKeyLoader {
+                filepath: config_path.to_str().unwrap().to_string(),
+            },
+        };
+
+        // File only (env is unset)
+        assert_eq!(hybrid_loader.load_private_key().unwrap(), "FILE_SECRET");
+        assert_eq!(hybrid_loader.load_rpc_url().unwrap(), "https://file.rpc");
+
+        // Env set
+        std::env::set_var("PHASE_PRIVATE_KEY", "ENV_PRIORITY");
+        std::env::set_var("PHASE_RPC_URL", "https://env.priority");
+        assert_eq!(hybrid_loader.load_private_key().unwrap(), "ENV_PRIORITY");
+        assert_eq!(hybrid_loader.load_rpc_url().unwrap(), "https://env.priority");
+
+        std::env::remove_var("PHASE_PRIVATE_KEY");
+        std::env::remove_var("PHASE_RPC_URL");
+    }
+
+    #[test]
+    fn test_agent_http_endpoints() {
+        use axum::{
+            http::StatusCode,
+            response::IntoResponse,
+        };
+        use tempfile::tempdir;
+        use std::fs;
+        use std::sync::{Arc, Mutex};
+        use arxos::agent::{
+            auth::TokenState,
+            dispatcher::AgentState,
+        };
+
+        let temp_dir = tempdir().unwrap();
+        let repo_path = temp_dir.path().to_str().unwrap();
+
+        // Write a mock building.yaml
+        let mock_yaml = r#"
+building:
+  id: "building-123"
+  name: "Mock Twin"
+  path: "/building/hq"
+  address: "/building/hq"
+  created_at: 2026-01-01T00:00:00Z
+  updated_at: 2026-01-01T00:00:00Z
+  floors: []
+  coordinate_systems: []
+equipment: []
+"#;
+        fs::write(temp_dir.path().join("building.yaml"), mock_yaml).unwrap();
+
+        // Queue a pending contribution
+        let grace_manager = GraceWindowManager::new();
+        let idx = grace_manager.add_pending_contribution(repo_path, mock_yaml).unwrap();
+        assert_eq!(idx, 0);
+
+        // Setup AgentState
+        let token_state = TokenState::new("secret-token".to_string(), vec![]);
+        let agent_state = Arc::new(AgentState {
+            repo_root: temp_dir.path().to_path_buf(),
+            token: Arc::new(Mutex::new(token_state)),
+        });
+
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            // 1. Test UNAUTHORIZED staging request
+            let headers = axum::http::HeaderMap::new();
+            let query = axum::extract::Query(arxos::agent::server::AuthParams { token: None });
+            let state = axum::extract::State(agent_state.clone());
+            let res = arxos::agent::server::http_claims_staging(headers, query, state).await;
+            let response = res.into_response();
+            assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+            // 2. Test AUTHORIZED staging request
+            let headers = axum::http::HeaderMap::new();
+            let query = axum::extract::Query(arxos::agent::server::AuthParams { token: Some("secret-token".to_string()) });
+            let state = axum::extract::State(agent_state.clone());
+            let res = arxos::agent::server::http_claims_staging(headers, query, state).await;
+            let response = res.into_response();
+            assert_eq!(response.status(), StatusCode::OK);
+
+            // 3. Test AUTHORIZED approve request
+            let headers = axum::http::HeaderMap::new();
+            let query = axum::extract::Query(arxos::agent::server::AuthParams { token: Some("secret-token".to_string()) });
+            let path = axum::extract::Path(0usize);
+            let state = axum::extract::State(agent_state.clone());
+            let body = axum::Json(arxos::agent::server::HttpClaimReviewRequest {
+                owner_address: "0x1234567890abcdef".to_string(),
+                live: Some(false),
+            });
+            let res = arxos::agent::server::http_claim_approve(headers, query, path, state, body).await;
+            let response = res.into_response();
+            assert_eq!(response.status(), StatusCode::OK);
+        });
     }
 }

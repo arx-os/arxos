@@ -162,13 +162,40 @@ async fn handle_collab_sync(params: Value) -> Result<Value> {
 
 fn handle_claim_list_pending(root: &std::path::Path) -> Result<Value> {
     use crate::agent::claim::GraceWindowManager;
+    use crate::yaml::BuildingYamlSerializer;
     let manager = GraceWindowManager::new();
-    let pending = manager.list_pending_contributions(root.to_str().unwrap())?;
+    let pending = manager.list_pending_contributions(root.to_str().unwrap()).map_err(map_grace_error)?;
     
     let list: Vec<Value> = pending.into_iter().map(|(idx, content)| {
+        let (building_id, address, contributor, summary, timestamp) = match BuildingYamlSerializer::deserialize(&content) {
+            Ok(data) => {
+                let building = data.into_building();
+                let building_id = building.id.clone();
+                let address = building.address.as_ref().map(|a| a.to_string()).unwrap_or_else(|| building.path.clone());
+                let contributor = building.metadata.as_ref()
+                    .and_then(|m| m.properties.get("contributor").cloned())
+                    .unwrap_or_else(|| "0x7099...3f75".to_string());
+                let floors = building.floors.len();
+                let rooms = building.get_all_rooms().len();
+                let equipment = building.get_all_equipment().len();
+                let summary = format!("{} floors, {} rooms, {} equipment", floors, rooms, equipment);
+                let timestamp = building.updated_at.timestamp() as u64;
+                (building_id, address, contributor, summary, timestamp)
+            }
+            Err(_) => {
+                ("unknown".to_string(), "unknown".to_string(), "unknown".to_string(), "Invalid YAML contribution".to_string(), chrono::Utc::now().timestamp() as u64)
+            }
+        };
+
         serde_json::json!({
             "index": idx,
-            "summary": "Staging Grace Update",
+            "building_id": building_id,
+            "address": address,
+            "contributor": contributor,
+            "summary": summary,
+            "estimated_reward": "500.0 $AXD",
+            "timestamp": timestamp,
+            "status": "WaitingForReview",
             "content": content
         })
     }).collect();
@@ -205,7 +232,7 @@ fn handle_claim_review(root: &std::path::Path, params: Value) -> Result<Value> {
         approve,
         owner_address,
         live,
-    )?;
+    ).map_err(map_grace_error)?;
 
     Ok(serde_json::json!({
         "status": format!("{:?}", state),
@@ -231,4 +258,8 @@ fn handle_claim_get_status(_root: &std::path::Path, params: Value) -> Result<Val
         "claim_grace_period_days": 14,
         "status": if active { "WaitingForReview" } else { "Expired" }
     }))
+}
+
+fn map_grace_error(e: String) -> anyhow::Error {
+    anyhow::anyhow!(e)
 }

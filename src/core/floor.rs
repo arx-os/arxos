@@ -1,6 +1,7 @@
 //! Floor data structure and implementation
 
-use super::{Equipment, Wing};
+use super::{Equipment, Wing, Anchor};
+use super::domain::ArxAddress;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -26,6 +27,12 @@ pub struct Floor {
     pub properties: HashMap<String, String>,
     /// IFC product GlobalId when known (stable interchange identity)
     pub ifc_global_id: Option<String>,
+    /// Hierarchical ArxOS address (durable on Building YAML SSOT)
+    pub address: Option<ArxAddress>,
+    /// Collection of anchors dropped on this floor
+    pub anchors: Vec<Anchor>,
+    /// Temporary list of anchor IDs parsed during deserialization
+    pub pending_anchor_ids: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -42,6 +49,10 @@ struct FloorDto {
     properties: HashMap<String, String>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     ifc_global_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    address: Option<ArxAddress>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    anchors: Vec<String>,
 }
 
 impl serde::Serialize for Floor {
@@ -50,6 +61,7 @@ impl serde::Serialize for Floor {
         S: serde::Serializer,
     {
         let equipment_ids: Vec<String> = self.equipment.iter().map(|e| e.id.clone()).collect();
+        let anchor_ids: Vec<String> = self.anchors.iter().map(|a| a.id.clone()).collect();
         let dto = FloorDto {
             id: self.id.clone(),
             name: self.name.clone(),
@@ -60,6 +72,8 @@ impl serde::Serialize for Floor {
             equipment: equipment_ids,
             properties: self.properties.clone(),
             ifc_global_id: self.ifc_global_id.clone(),
+            address: self.address.clone(),
+            anchors: anchor_ids,
         };
         dto.serialize(serializer)
     }
@@ -82,6 +96,9 @@ impl<'de> serde::Deserialize<'de> for Floor {
             pending_equipment_ids: dto.equipment,
             properties: dto.properties,
             ifc_global_id: dto.ifc_global_id,
+            address: dto.address,
+            anchors: Vec::new(),
+            pending_anchor_ids: dto.anchors,
         })
     }
 }
@@ -125,6 +142,9 @@ impl Floor {
             pending_equipment_ids: Vec::new(),
             properties: HashMap::new(),
             ifc_global_id: None,
+            address: None,
+            anchors: Vec::new(),
+            pending_anchor_ids: Vec::new(),
         }
     }
 

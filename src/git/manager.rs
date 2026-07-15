@@ -353,6 +353,10 @@ mod tests {
             }),
             coordinate_systems: vec![],
             ifc_global_id: None,
+            address: None,
+            anchors: vec![],
+            pending_anchor_ids: vec![],
+            claim_grace_period_days: None,
         };
 
         // Export building (this will create a commit)

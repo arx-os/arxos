@@ -14,12 +14,40 @@ pub fn backfill_equipment_addresses(building: &mut Building) -> usize {
     let building_slug = slug(&building.name);
     let mut count = 0;
 
+    // 1. Backfill Building address
+    if building.address.is_none() {
+        if let Ok(addr) = ArxAddress::from_path(&format!("/local/local/local/{}", building_slug)) {
+            building.address = Some(addr);
+        }
+    }
+    let bldg_addr_prefix = building.address.as_ref().map(|a| a.path.clone())
+        .unwrap_or_else(|| format!("/local/local/local/{}", building_slug));
+
+    // 2. Backfill Building-level anchors
+    for anchor in &mut building.anchors {
+        if anchor.address.is_none() {
+            let anchor_slug = slug(&anchor.name);
+            if let Ok(addr) = ArxAddress::from_path(&format!("{}/{}", bldg_addr_prefix, anchor_slug)) {
+                anchor.address = Some(addr);
+            }
+        }
+    }
+
     for floor in &mut building.floors {
         let floor_slug = if floor.name.trim().is_empty() {
             format!("floor-{}", floor.level)
         } else {
             slug(&floor.name)
         };
+
+        // Backfill Floor address
+        if floor.address.is_none() {
+            if let Ok(addr) = ArxAddress::from_path(&format!("{}/{}", bldg_addr_prefix, floor_slug)) {
+                floor.address = Some(addr);
+            }
+        }
+        let floor_addr_prefix = floor.address.as_ref().map(|a| a.path.clone())
+            .unwrap_or_else(|| format!("{}/{}", bldg_addr_prefix, floor_slug));
 
         // Floor-level equipment (no room)
         for eq in &mut floor.equipment {
@@ -33,13 +61,33 @@ pub fn backfill_equipment_addresses(building: &mut Building) -> usize {
             }
         }
 
+        // Floor-level anchors
+        for anchor in &mut floor.anchors {
+            if anchor.address.is_none() {
+                let anchor_slug = slug(&anchor.name);
+                if let Ok(addr) = ArxAddress::from_path(&format!("{}/{}", floor_addr_prefix, anchor_slug)) {
+                    anchor.address = Some(addr);
+                }
+            }
+        }
+
         for wing in &mut floor.wings {
+            let wing_slug = slug(&wing.name);
+
+            // Backfill Wing address
+            if wing.address.is_none() {
+                if let Ok(addr) = ArxAddress::from_path(&format!("{}/{}", floor_addr_prefix, wing_slug)) {
+                    wing.address = Some(addr);
+                }
+            }
+            let wing_addr_prefix = wing.address.as_ref().map(|a| a.path.clone())
+                .unwrap_or_else(|| format!("{}/{}", floor_addr_prefix, wing_slug));
+
             for eq in &mut wing.equipment {
                 if eq.address.is_some() {
                     continue;
                 }
-                let room_slug = slug(&wing.name);
-                if let Some(addr) = make_address(&building_slug, &floor_slug, &room_slug, &eq.name)
+                if let Some(addr) = make_address(&building_slug, &floor_slug, &wing_slug, &eq.name)
                 {
                     eq.path = addr.path.clone();
                     eq.address = Some(addr);
@@ -47,8 +95,27 @@ pub fn backfill_equipment_addresses(building: &mut Building) -> usize {
                 }
             }
 
+            for anchor in &mut wing.anchors {
+                if anchor.address.is_none() {
+                    let anchor_slug = slug(&anchor.name);
+                    if let Ok(addr) = ArxAddress::from_path(&format!("{}/{}", wing_addr_prefix, anchor_slug)) {
+                        anchor.address = Some(addr);
+                    }
+                }
+            }
+
             for room in &mut wing.rooms {
                 let room_slug = slug(&room.name);
+
+                // Backfill Room address
+                if room.address.is_none() {
+                    if let Ok(addr) = ArxAddress::from_path(&format!("{}/{}", wing_addr_prefix, room_slug)) {
+                        room.address = Some(addr);
+                    }
+                }
+                let room_addr_prefix = room.address.as_ref().map(|a| a.path.clone())
+                    .unwrap_or_else(|| format!("{}/{}", wing_addr_prefix, room_slug));
+
                 for eq in &mut room.equipment {
                     if eq.address.is_some() {
                         continue;
@@ -59,6 +126,15 @@ pub fn backfill_equipment_addresses(building: &mut Building) -> usize {
                         eq.path = addr.path.clone();
                         eq.address = Some(addr);
                         count += 1;
+                    }
+                }
+
+                for anchor in &mut room.anchors {
+                    if anchor.address.is_none() {
+                        let anchor_slug = slug(&anchor.name);
+                        if let Ok(addr) = ArxAddress::from_path(&format!("{}/{}", room_addr_prefix, anchor_slug)) {
+                            anchor.address = Some(addr);
+                        }
                     }
                 }
             }

@@ -4,6 +4,7 @@
 //! for representing buildings, floors, rooms, equipment, and their spatial relationships.
 
 // Core modules
+mod anchor;
 mod building;
 pub mod domain;
 mod equipment;
@@ -18,6 +19,7 @@ mod types;
 mod wing;
 
 // Re-export all public types and functions
+pub use anchor::{Anchor, RelativePose, PoseType, MapRef};
 pub use building::{Building, BuildingMetadata, CoordinateSystemInfo};
 pub use equipment::{Equipment, EquipmentHealthStatus, EquipmentStatus, EquipmentType};
 pub use floor::Floor;
@@ -31,3 +33,4 @@ pub use types::{BoundingBox, Dimensions, LidarEnrichment, Position, SpatialPrope
 pub use wing::Wing;
 
 // Re-export all operations
+

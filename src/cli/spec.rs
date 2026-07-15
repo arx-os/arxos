@@ -317,6 +317,22 @@ Use --path to select a project root without changing cwd.")]
     /// Manage remote building connections via SSH
     #[cfg(feature = "agent")]
     Remote(RemoteCommand),
+    /// Manage building ownership claims and review pending grace contributions
+    #[cfg(feature = "agent")]
+    Claim {
+        /// Building ID/UUID
+        #[arg(long)]
+        building_id: String,
+        /// Approve (true) or reject (false) the pending contribution
+        #[arg(long)]
+        approve: Option<bool>,
+        /// Index of the pending contribution to review
+        #[arg(long)]
+        pending_index: Option<usize>,
+        /// Enable live blockchain reward distribution
+        #[arg(long)]
+        live: bool,
+    },
 }
 
 #[derive(Subcommand)]

@@ -75,14 +75,10 @@ pub fn run_address_query(pattern: &str, format: &str, verbose: bool) -> Result<(
     println!("🔍 Query pattern: {}", pattern);
     println!();
 
-    // Segment count check (allow * wildcards as segments)
-    let parts: Vec<&str> = pattern.trim_start_matches('/').split('/').collect();
-    if parts.len() != 7 {
-        return Err(format!(
-            "Invalid ArxAddress pattern. Expected 7 parts, got {}.\nFormat: /country/state/city/building/floor/room/fixture",
-            parts.len()
-        )
-        .into());
+    // Segment count check (must contain at least one segment)
+    let parts: Vec<&str> = pattern.trim_start_matches('/').split('/').filter(|s| !s.is_empty()).collect();
+    if parts.is_empty() {
+        return Err("Invalid ArxAddress pattern. Must contain at least one segment".into());
     }
 
     // Validate glob syntax

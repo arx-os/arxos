@@ -1,6 +1,7 @@
 //! Building data structure and implementation
 
-use super::{BoundingBox, Floor, Room};
+use super::{BoundingBox, Floor, Room, Anchor};
+use super::domain::ArxAddress;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -35,16 +36,7 @@ pub struct BuildingMetadata {
 ///
 /// The `Building` struct is the root entity in the ArxOS hierarchy:
 /// Building → Floor → Wing → Room → Equipment
-///
-/// # Fields
-///
-/// * `id` - Unique identifier (UUID)
-/// * `name` - Human-readable building name
-/// * `path` - Universal path identifier for the building
-/// * `created_at` - Timestamp when the building was created
-/// * `updated_at` - Timestamp of last modification
-/// * `floors` - Collection of floors in the building
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Building {
     /// Unique identifier for the building
     pub id: String,
@@ -53,13 +45,10 @@ pub struct Building {
     /// Universal path identifier
     pub path: String,
     /// Building description (optional)
-    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub description: Option<String>,
     /// Building version string
-    #[serde(default = "default_version")]
     pub version: String,
     /// Global bounding box for the entire building
-    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub global_bounding_box: Option<BoundingBox>,
     /// Creation timestamp
     pub created_at: DateTime<Utc>,
@@ -72,14 +61,102 @@ pub struct Building {
     ///
     /// Contains parser metadata, source file information, and tags.
     /// This field is optional and omitted from YAML when None.
-    #[serde(flatten, skip_serializing_if = "Option::is_none", default)]
     pub metadata: Option<BuildingMetadata>,
     /// Coordinate systems information
-    #[serde(default)]
     pub coordinate_systems: Vec<CoordinateSystemInfo>,
     /// IFC product GlobalId when known (stable interchange identity)
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ifc_global_id: Option<String>,
+    /// Hierarchical ArxOS address (durable on Building YAML SSOT)
+    pub address: Option<ArxAddress>,
+    /// Collection of anchors dropped in the building
+    pub anchors: Vec<Anchor>,
+    /// Temporary list of anchor IDs parsed during deserialization
+    pub pending_anchor_ids: Vec<String>,
+    /// Configurable staging grace window in days for in-flight claims (optional, defaults to 14 days)
+    pub claim_grace_period_days: Option<u32>,
+}
+
+/// DTO for Building serialization to preserve YAML and Git layout
+#[derive(Serialize, Deserialize)]
+struct BuildingDto {
+    id: String,
+    name: String,
+    path: String,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    description: Option<String>,
+    #[serde(default = "default_version")]
+    version: String,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    global_bounding_box: Option<BoundingBox>,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+    floors: Vec<Floor>,
+    #[serde(flatten, skip_serializing_if = "Option::is_none", default)]
+    metadata: Option<BuildingMetadata>,
+    #[serde(default)]
+    coordinate_systems: Vec<CoordinateSystemInfo>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    ifc_global_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    address: Option<ArxAddress>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    anchors: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    claim_grace_period_days: Option<u32>,
+}
+
+impl serde::Serialize for Building {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let anchor_ids: Vec<String> = self.anchors.iter().map(|a| a.id.clone()).collect();
+        let dto = BuildingDto {
+            id: self.id.clone(),
+            name: self.name.clone(),
+            path: self.path.clone(),
+            description: self.description.clone(),
+            version: self.version.clone(),
+            global_bounding_box: self.global_bounding_box.clone(),
+            created_at: self.created_at,
+            updated_at: self.updated_at,
+            floors: self.floors.clone(),
+            metadata: self.metadata.clone(),
+            coordinate_systems: self.coordinate_systems.clone(),
+            ifc_global_id: self.ifc_global_id.clone(),
+            address: self.address.clone(),
+            anchors: anchor_ids,
+            claim_grace_period_days: self.claim_grace_period_days,
+        };
+        dto.serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Building {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let dto = BuildingDto::deserialize(deserializer)?;
+        Ok(Building {
+            id: dto.id,
+            name: dto.name,
+            path: dto.path,
+            description: dto.description,
+            version: dto.version,
+            global_bounding_box: dto.global_bounding_box,
+            created_at: dto.created_at,
+            updated_at: dto.updated_at,
+            floors: dto.floors,
+            metadata: dto.metadata,
+            coordinate_systems: dto.coordinate_systems,
+            ifc_global_id: dto.ifc_global_id,
+            address: dto.address,
+            anchors: Vec::new(),
+            pending_anchor_ids: dto.anchors,
+            claim_grace_period_days: dto.claim_grace_period_days,
+        })
+    }
 }
 
 /// Default version string for buildings
@@ -125,6 +202,10 @@ impl Building {
             metadata: None,
             coordinate_systems: Vec::new(),
             ifc_global_id: None,
+            address: None,
+            anchors: Vec::new(),
+            pending_anchor_ids: Vec::new(),
+            claim_grace_period_days: None,
         }
     }
 
@@ -457,6 +538,151 @@ impl Building {
             meta.properties.insert(key, value);
         }
     }
+
+    /// Get all anchors in the building tree.
+    pub fn get_all_anchors(&self) -> Vec<&super::Anchor> {
+        let mut anchors = Vec::new();
+        for anchor in &self.anchors {
+            anchors.push(anchor);
+        }
+        for floor in &self.floors {
+            for anchor in &floor.anchors {
+                anchors.push(anchor);
+            }
+            for wing in &floor.wings {
+                for anchor in &wing.anchors {
+                    anchors.push(anchor);
+                }
+                for room in &wing.rooms {
+                    for anchor in &room.anchors {
+                        anchors.push(anchor);
+                    }
+                }
+            }
+        }
+        anchors
+    }
+
+    /// Get all anchors in the building tree (mutable references).
+    pub fn get_all_anchors_mut(&mut self) -> Vec<&mut super::Anchor> {
+        let mut anchors = Vec::new();
+        for anchor in &mut self.anchors {
+            anchors.push(anchor);
+        }
+        for floor in &mut self.floors {
+            for anchor in &mut floor.anchors {
+                anchors.push(anchor);
+            }
+            for wing in &mut floor.wings {
+                for anchor in &mut wing.anchors {
+                    anchors.push(anchor);
+                }
+                for room in &mut wing.rooms {
+                    for anchor in &mut room.anchors {
+                        anchors.push(anchor);
+                    }
+                }
+            }
+        }
+        anchors
+    }
+
+    /// Promote all addresses in the building hierarchy from one branch/prefix to another.
+    pub fn promote_addresses(&mut self, from_branch: &str, to_branch: &str) {
+        if let Some(addr) = &mut self.address {
+            *addr = addr.promote_to_branch(from_branch, to_branch);
+        }
+        for floor in &mut self.floors {
+            if let Some(addr) = &mut floor.address {
+                *addr = addr.promote_to_branch(from_branch, to_branch);
+            }
+            for wing in &mut floor.wings {
+                if let Some(addr) = &mut wing.address {
+                    *addr = addr.promote_to_branch(from_branch, to_branch);
+                }
+                for room in &mut wing.rooms {
+                    if let Some(addr) = &mut room.address {
+                        *addr = addr.promote_to_branch(from_branch, to_branch);
+                    }
+                    for eq in &mut room.equipment {
+                        if let Some(addr) = &mut eq.address {
+                            *addr = addr.promote_to_branch(from_branch, to_branch);
+                            eq.path = addr.path.clone();
+                        }
+                    }
+                    for anchor in &mut room.anchors {
+                        if let Some(addr) = &mut anchor.address {
+                            *addr = addr.promote_to_branch(from_branch, to_branch);
+                        }
+                    }
+                }
+                for eq in &mut wing.equipment {
+                    if let Some(addr) = &mut eq.address {
+                        *addr = addr.promote_to_branch(from_branch, to_branch);
+                        eq.path = addr.path.clone();
+                    }
+                }
+                for anchor in &mut wing.anchors {
+                    if let Some(addr) = &mut anchor.address {
+                        *addr = addr.promote_to_branch(from_branch, to_branch);
+                    }
+                }
+            }
+            for eq in &mut floor.equipment {
+                if let Some(addr) = &mut eq.address {
+                    *addr = addr.promote_to_branch(from_branch, to_branch);
+                    eq.path = addr.path.clone();
+                }
+            }
+            for anchor in &mut floor.anchors {
+                if let Some(addr) = &mut anchor.address {
+                    *addr = addr.promote_to_branch(from_branch, to_branch);
+                }
+            }
+        }
+        for anchor in &mut self.anchors {
+            if let Some(addr) = &mut anchor.address {
+                *addr = addr.promote_to_branch(from_branch, to_branch);
+            }
+        }
+
+        // Update relative poses target_ids that are addresses
+        let all_anchors = self.get_all_anchors_mut();
+        for anchor in all_anchors {
+            for relative_pose in &mut anchor.relative_poses {
+                if relative_pose.target_id.starts_with('/') {
+                    if let Ok(addr) = super::domain::ArxAddress::from_path(&relative_pose.target_id) {
+                        let promoted = addr.promote_to_branch(from_branch, to_branch);
+                        relative_pose.target_id = promoted.path;
+                    }
+                }
+            }
+        }
+    }
+
+    /// Find anchors within a given radius of a 3D point
+    pub fn find_anchors_near(
+        &self,
+        center: super::spatial::Point3D,
+        radius: f64,
+    ) -> Vec<&super::Anchor> {
+        self.get_all_anchors()
+            .into_iter()
+            .filter(|a| {
+                let a_point =
+                    super::spatial::Point3D::new(a.position.x, a.position.y, a.position.z);
+                center.distance_to(&a_point) <= radius
+            })
+            .collect()
+    }
+
+    /// Find anchors whose confidence is below the specified threshold
+    pub fn find_low_confidence_anchors(&self, threshold: f64) -> Vec<&super::Anchor> {
+        self.get_all_anchors()
+            .into_iter()
+            .filter(|a| a.confidence < threshold)
+            .collect()
+    }
 }
 
 impl Default for Building {
@@ -475,6 +701,10 @@ impl Default for Building {
             metadata: None,
             coordinate_systems: Vec::new(),
             ifc_global_id: None,
+            address: None,
+            anchors: Vec::new(),
+            pending_anchor_ids: Vec::new(),
+            claim_grace_period_days: None,
         }
     }
 }

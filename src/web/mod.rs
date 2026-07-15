@@ -5,7 +5,13 @@
 #[cfg(feature = "web")]
 pub mod app;
 #[cfg(feature = "web")]
+pub mod cache;
+#[cfg(feature = "web")]
 pub mod components;
+#[cfg(feature = "web")]
+pub mod discovery;
+#[cfg(feature = "web")]
+pub mod overlay;
 #[cfg(feature = "web")]
 pub mod pages;
 #[cfg(feature = "web")]

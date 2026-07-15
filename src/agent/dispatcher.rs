@@ -41,6 +41,9 @@ pub async fn dispatch(state: Arc<AgentState>, request: JsonRpcRequest) -> JsonRp
         "ifc.import" => handle_ifc_import(&state.repo_root, params),
         "ifc.export" => handle_ifc_export(&state.repo_root, params),
         "collab.sync" => handle_collab_sync(params).await,
+        "claim.list_pending" => handle_claim_list_pending(&state.repo_root),
+        "claim.review" => handle_claim_review(&state.repo_root, params),
+        "claim.get_status" => handle_claim_get_status(&state.repo_root, params),
         _ => Err(anyhow::anyhow!("Method not found")),
     };
 
@@ -155,4 +158,77 @@ async fn handle_collab_sync(params: Value) -> Result<Value> {
 
     let outcome = collab::sync_messages(&messages, &config, &token).await?;
     Ok(serde_json::to_value(outcome)?)
+}
+
+fn handle_claim_list_pending(root: &std::path::Path) -> Result<Value> {
+    use crate::agent::claim::GraceWindowManager;
+    let manager = GraceWindowManager::new();
+    let pending = manager.list_pending_contributions(root.to_str().unwrap())?;
+    
+    let list: Vec<Value> = pending.into_iter().map(|(idx, content)| {
+        serde_json::json!({
+            "index": idx,
+            "summary": "Staging Grace Update",
+            "content": content
+        })
+    }).collect();
+
+    Ok(serde_json::to_value(list)?)
+}
+
+fn handle_claim_review(root: &std::path::Path, params: Value) -> Result<Value> {
+    use crate::agent::claim::GraceWindowManager;
+    
+    let building_id = params.get("building_id")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow::anyhow!("Missing building_id"))?;
+    let index = params.get("index")
+        .and_then(|v| v.as_u64())
+        .ok_or_else(|| anyhow::anyhow!("Missing index"))? as usize;
+    let approve = params.get("approve")
+        .and_then(|v| v.as_bool())
+        .ok_or_else(|| anyhow::anyhow!("Missing approve"))?;
+    let owner_address = params.get("owner_address")
+        .and_then(|v| v.as_str())
+        .unwrap_or("0x1234567890abcdef");
+    let live = params.get("live")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+    let mut manager = GraceWindowManager::new();
+    manager.register_active_claim(building_id.to_string(), 14);
+
+    let (state, receipt) = manager.review_pending_contribution(
+        root.to_str().unwrap(),
+        building_id,
+        index,
+        approve,
+        owner_address,
+        live,
+    )?;
+
+    Ok(serde_json::json!({
+        "status": format!("{:?}", state),
+        "receipt": receipt
+    }))
+}
+
+fn handle_claim_get_status(_root: &std::path::Path, params: Value) -> Result<Value> {
+    use crate::agent::claim::GraceWindowManager;
+    
+    let building_id = params.get("building_id")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow::anyhow!("Missing building_id"))?;
+
+    let mut manager = GraceWindowManager::new();
+    manager.register_active_claim(building_id.to_string(), 14);
+    
+    let active = manager.is_in_grace_window(building_id);
+    
+    Ok(serde_json::json!({
+        "building_id": building_id,
+        "grace_window_active": active,
+        "claim_grace_period_days": 14,
+        "status": if active { "WaitingForReview" } else { "Expired" }
+    }))
 }

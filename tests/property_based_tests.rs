@@ -321,3 +321,54 @@ proptest! {
         }
     }
 }
+
+#[test]
+fn test_address_promotion_flow() {
+    use arxos::core::{Building, Floor, Wing, Room, RoomType, Equipment, EquipmentType, Anchor, Position};
+    use arxos::core::domain::ArxAddress;
+
+    let mut building = Building::new("HQ".to_string(), "/building/hq".to_string());
+    building.address = Some(ArxAddress::from_path("/building/hq").unwrap());
+
+    let mut floor = Floor::new("Floor 1".to_string(), 1);
+    floor.address = Some(ArxAddress::from_path("/building/hq/floor-1").unwrap());
+
+    let mut wing = Wing::new("East".to_string());
+    wing.address = Some(ArxAddress::from_path("/building/hq/floor-1/east").unwrap());
+
+    let mut room = Room::new("Server Room".to_string(), RoomType::Mechanical);
+    room.address = Some(ArxAddress::from_path("/building/hq/floor-1/east/server-room").unwrap());
+
+    let mut eq = Equipment::new("Rack 1".to_string(), "".to_string(), EquipmentType::Network);
+    eq.address = Some(ArxAddress::from_path("/building/hq/floor-1/east/server-room/rack-1").unwrap());
+    room.add_equipment(eq);
+
+    let pos = Position { x: 1.0, y: 1.0, z: 1.0, coordinate_system: "local".to_string() };
+    let mut anchor = Anchor::new("Anchor A".to_string(), pos, 0.9);
+    anchor.address = Some(ArxAddress::from_path("/building/hq/floor-1/east/server-room/anchor-a").unwrap());
+    anchor.relative_poses.push(arxos::core::RelativePose {
+        target_id: "/building/hq/floor-1/east/server-room/rack-1".to_string(),
+        pose_type: arxos::core::PoseType::AnchorToEquipment,
+        x: 0.1, y: 0.2, z: 0.3,
+        roll: 0.0, pitch: 0.0, yaw: 0.0,
+    });
+    room.anchors.push(anchor);
+
+    wing.add_room(room);
+    floor.add_wing(wing);
+    building.add_floor(floor);
+
+    // Promote address branch from "building" to "main"
+    building.promote_addresses("building", "main");
+
+    // Verify addresses are promoted
+    assert_eq!(building.address.unwrap().path, "/main/hq");
+    assert_eq!(building.floors[0].address.as_ref().unwrap().path, "/main/hq/floor-1");
+    assert_eq!(building.floors[0].wings[0].address.as_ref().unwrap().path, "/main/hq/floor-1/east");
+    assert_eq!(building.floors[0].wings[0].rooms[0].address.as_ref().unwrap().path, "/main/hq/floor-1/east/server-room");
+    assert_eq!(building.floors[0].wings[0].rooms[0].equipment[0].address.as_ref().unwrap().path, "/main/hq/floor-1/east/server-room/rack-1");
+    assert_eq!(building.floors[0].wings[0].rooms[0].anchors[0].address.as_ref().unwrap().path, "/main/hq/floor-1/east/server-room/anchor-a");
+
+    // Verify relative pose target_id is also promoted
+    assert_eq!(building.floors[0].wings[0].rooms[0].anchors[0].relative_poses[0].target_id, "/main/hq/floor-1/east/server-room/rack-1");
+}

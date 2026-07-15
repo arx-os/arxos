@@ -6,7 +6,7 @@ use leptos_meta::*;
 use leptos_router::components::{Route, Router, Routes, A};
 use leptos_router::path;
 
-use crate::web::pages::{BuildingDetail, Buildings, Home, Import, Review};
+use crate::web::pages::{BuildingDetail, Buildings, ClaimReview, Home, Import, Review};
 use wasm_bindgen_futures::spawn_local;
 
 #[component]
@@ -30,6 +30,7 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("/import") view=Import/>
                         <Route path=path!("/buildings") view=Buildings/>
                         <Route path=path!("/buildings/:id") view=BuildingDetail/>
+                        <Route path=path!("/claim-review") view=ClaimReview/>
                     </Routes>
                 </main>
             </div>

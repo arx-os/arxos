@@ -83,6 +83,8 @@ pub fn finalize_ingest(
         building = merge.building;
     }
 
+    promote_equipment_anchors(&mut building);
+
     // Tag source on metadata
     let tag = source.tag();
     if let Some(meta) = &mut building.metadata {
@@ -221,4 +223,76 @@ fn load_existing_yaml(path: Option<&Path>) -> Result<Option<Building>> {
     let building = BuildingYamlSerializer::deserialize_building(&content)
         .map_err(|e| anyhow!("deserialize existing YAML {}: {}", path.display(), e))?;
     Ok(Some(building))
+}
+
+fn promote_equipment_anchors(building: &mut crate::core::Building) {
+    use crate::core::{Anchor, EquipmentType};
+
+    fn is_ar_anchor(eq: &crate::core::Equipment) -> bool {
+        match &eq.equipment_type {
+            EquipmentType::Other(name) => name == "AR_Anchor" || name.to_uppercase().contains("ANCHOR") || name.to_uppercase().contains("MARKER"),
+            _ => false,
+        }
+    }
+
+    fn convert_eq_to_anchor(eq: crate::core::Equipment) -> Anchor {
+        let confidence = eq.properties.get("confidence")
+            .and_then(|s| s.parse::<f64>().ok())
+            .unwrap_or(1.0);
+        let recalibration_count = eq.properties.get("recalibration_count")
+            .and_then(|s| s.parse::<u32>().ok())
+            .unwrap_or(0);
+
+        Anchor {
+            id: eq.id,
+            name: eq.name,
+            address: eq.address,
+            position: eq.position,
+            recalibration_count,
+            last_recalibrated_at: None,
+            confidence,
+            relative_poses: Vec::new(),
+            properties: eq.properties,
+            map_ref: None,
+        }
+    }
+
+    for floor in &mut building.floors {
+        let mut floor_anchors = Vec::new();
+        floor.equipment.retain(|eq| {
+            if is_ar_anchor(eq) {
+                floor_anchors.push(convert_eq_to_anchor(eq.clone()));
+                false
+            } else {
+                true
+            }
+        });
+        floor.anchors.extend(floor_anchors);
+
+        for wing in &mut floor.wings {
+            let mut wing_anchors = Vec::new();
+            wing.equipment.retain(|eq| {
+                if is_ar_anchor(eq) {
+                    wing_anchors.push(convert_eq_to_anchor(eq.clone()));
+                    false
+                } else {
+                    true
+                }
+            });
+            wing.anchors.extend(wing_anchors);
+
+            for room in &mut wing.rooms {
+                let mut room_anchors = Vec::new();
+                room.equipment.retain(|eq| {
+                    if is_ar_anchor(eq) {
+                        room_anchors.push(convert_eq_to_anchor(eq.clone()));
+                        false
+                    } else {
+                        true
+                    }
+                });
+                room.anchors.extend(room_anchors);
+            }
+        }
+    }
 }

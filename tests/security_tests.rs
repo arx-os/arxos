@@ -262,13 +262,19 @@ mod input_validation_tests {
     fn test_arx_address_validation() {
         use arxos::core::domain::ArxAddress;
 
-        // Test invalid path (too short)
+        // Test valid short paths (which are now allowed under dynamic-length rules)
         let result = ArxAddress::from_path("/usa");
-        assert!(result.is_err(), "Invalid path should be rejected");
+        assert!(result.is_ok(), "Short path should be accepted under relaxed dynamic-length rules");
 
-        // Test invalid path (missing parts)
         let result = ArxAddress::from_path("/usa/ny/brooklyn");
-        assert!(result.is_err(), "Incomplete path should be rejected");
+        assert!(result.is_ok(), "Partial path should be accepted under relaxed dynamic-length rules");
+
+        // Test invalid path formats (missing leading slash or invalid characters)
+        let result = ArxAddress::from_path("usa/ny");
+        assert!(result.is_err(), "Path missing leading slash should be rejected");
+
+        let result = ArxAddress::from_path("/usa/ny/special@char");
+        assert!(result.is_err(), "Path with special characters should be rejected");
 
         // Test valid path (custom system)
         let result = ArxAddress::from_path("/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01");

@@ -71,6 +71,8 @@ pub struct BuildingData {
     pub schema_version: u32,
     pub building: crate::core::Building,
     pub equipment: Vec<crate::core::Equipment>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub anchors: Vec<crate::core::Anchor>,
 }
 
 fn default_building_yaml_schema_version() -> u32 {
@@ -88,16 +90,21 @@ impl BuildingData {
     pub fn from_building(building: &crate::core::Building) -> Self {
         // Collect all equipment from the hierarchy into a flat list
         let equipment = building.get_all_equipment().into_iter().cloned().collect();
+        let anchors = building.get_all_anchors().into_iter().cloned().collect();
         Self {
             schema_version: BUILDING_YAML_SCHEMA_VERSION,
             building: building.clone(),
             equipment,
+            anchors,
         }
     }
     /// Sorts all hierarchical collections deterministically to ensure zero-diff Git output.
     pub fn sort_deterministically(&mut self) {
         // 1. Sort Floors by level (numerical)
         self.building.floors.sort_by_key(|f| f.level);
+
+        // Sort Building-level anchors
+        self.building.anchors.sort_by(|a, b| a.name.cmp(&b.name));
 
         for floor in &mut self.building.floors {
             // 2. Sort Wings by name (alphabetical)
@@ -106,6 +113,9 @@ impl BuildingData {
             // 3. Sort Floor-level (common area) equipment
             floor.equipment.sort_by(|a, b| a.name.cmp(&b.name));
 
+            // Sort Floor-level anchors
+            floor.anchors.sort_by(|a, b| a.name.cmp(&b.name));
+
             for wing in &mut floor.wings {
                 // 4. Sort Rooms by name
                 wing.rooms.sort_by(|a, b| a.name.cmp(&b.name));
@@ -113,15 +123,28 @@ impl BuildingData {
                 // 5. Sort Wing-level equipment
                 wing.equipment.sort_by(|a, b| a.name.cmp(&b.name));
 
+                // Sort Wing-level anchors
+                wing.anchors.sort_by(|a, b| a.name.cmp(&b.name));
+
                 for room in &mut wing.rooms {
                     // 6. Sort Room equipment
                     room.equipment.sort_by(|a, b| a.name.cmp(&b.name));
+
+                    // Sort Room anchors
+                    room.anchors.sort_by(|a, b| a.name.cmp(&b.name));
                 }
             }
         }
 
         // 7. Sort Global equipment list by ArxAddress path (or name fallback)
         self.equipment
+            .sort_by(|a, b| match (&a.address, &b.address) {
+                (Some(addr_a), Some(addr_b)) => addr_a.path.cmp(&addr_b.path),
+                _ => a.name.cmp(&b.name),
+            });
+
+        // 8. Sort Global anchor list by ArxAddress path (or name fallback)
+        self.anchors
             .sort_by(|a, b| match (&a.address, &b.address) {
                 (Some(addr_a), Some(addr_b)) => addr_a.path.cmp(&addr_b.path),
                 _ => a.name.cmp(&b.name),
@@ -157,6 +180,22 @@ impl BuildingData {
             .iter()
             .map(|e| (e.id.clone(), e.clone()))
             .collect();
+        // Build a map of anchor_id -> Anchor for O(1) lookup.
+        let anchors_by_id: std::collections::HashMap<String, crate::core::Anchor> = self
+            .anchors
+            .iter()
+            .map(|a| (a.id.clone(), a.clone()))
+            .collect();
+
+        // Rehydrate building level anchors
+        if !self.building.pending_anchor_ids.is_empty() {
+            self.building.anchors = self.building
+                .pending_anchor_ids
+                .iter()
+                .filter_map(|id| anchors_by_id.get(id).cloned())
+                .collect();
+            self.building.pending_anchor_ids.clear();
+        }
 
         for floor in &mut self.building.floors {
             // Rehydrate floor-level equipment
@@ -167,6 +206,15 @@ impl BuildingData {
                     .filter_map(|id| equipment_by_id.get(id).cloned())
                     .collect();
                 floor.pending_equipment_ids.clear();
+            }
+            // Rehydrate floor-level anchors
+            if !floor.pending_anchor_ids.is_empty() {
+                floor.anchors = floor
+                    .pending_anchor_ids
+                    .iter()
+                    .filter_map(|id| anchors_by_id.get(id).cloned())
+                    .collect();
+                floor.pending_anchor_ids.clear();
             }
 
             for wing in &mut floor.wings {
@@ -179,6 +227,15 @@ impl BuildingData {
                         .collect();
                     wing.pending_equipment_ids.clear();
                 }
+                // Rehydrate wing-level anchors
+                if !wing.pending_anchor_ids.is_empty() {
+                    wing.anchors = wing
+                        .pending_anchor_ids
+                        .iter()
+                        .filter_map(|id| anchors_by_id.get(id).cloned())
+                        .collect();
+                    wing.pending_anchor_ids.clear();
+                }
 
                 for room in &mut wing.rooms {
                     if !room.pending_equipment_ids.is_empty() {
@@ -190,6 +247,16 @@ impl BuildingData {
                             .collect();
                         // Clear the temporary ID list.
                         room.pending_equipment_ids.clear();
+                    }
+                    if !room.pending_anchor_ids.is_empty() {
+                        // Resolve IDs to Anchor objects.
+                        room.anchors = room
+                            .pending_anchor_ids
+                            .iter()
+                            .filter_map(|id| anchors_by_id.get(id).cloned())
+                            .collect();
+                        // Clear the temporary ID list.
+                        room.pending_anchor_ids.clear();
                     }
                 }
             }
@@ -261,6 +328,7 @@ mod tests {
             schema_version: BUILDING_YAML_SCHEMA_VERSION,
             building,
             equipment: vec![equip],
+            anchors: vec![],
         }
     }
 
@@ -338,6 +406,7 @@ mod tests {
             schema_version: BUILDING_YAML_SCHEMA_VERSION,
             building,
             equipment: vec![],
+            anchors: vec![],
         };
 
         let yaml = BuildingYamlSerializer::serialize(&data).expect("serialize");
@@ -423,5 +492,17 @@ equipment: []
         let data = BuildingYamlSerializer::deserialize(legacy).expect("legacy load");
         assert_eq!(data.schema_version, BUILDING_YAML_SCHEMA_VERSION);
         assert_eq!(data.building.name, "Legacy Building");
+    }
+
+    #[test]
+    fn test_claim_grace_period_yaml_roundtrip() {
+        let mut building = Building::new("Grace HQ".to_string(), "/grace".to_string());
+        building.claim_grace_period_days = Some(30);
+
+        let yaml = BuildingYamlSerializer::serialize_building(&building).expect("serialize");
+        assert!(yaml.contains("claim_grace_period_days: 30"));
+
+        let restored = BuildingYamlSerializer::deserialize_building(&yaml).expect("deserialize");
+        assert_eq!(restored.claim_grace_period_days, Some(30));
     }
 }

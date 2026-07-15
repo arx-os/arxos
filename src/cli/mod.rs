@@ -316,6 +316,48 @@ impl Cli {
             }
             #[cfg(feature = "agent")]
             Commands::Remote(cmd) => Ok(cmd.execute()?),
+            #[cfg(feature = "agent")]
+            Commands::Claim {
+                building_id,
+                approve,
+                pending_index,
+                live,
+            } => {
+                use crate::agent::claim::GraceWindowManager;
+
+                let grace_manager = GraceWindowManager::new();
+                let repo_path = ".";
+
+                if let Some(appr) = approve {
+                    let idx = pending_index.ok_or_else(|| "Error: --pending-index <INDEX> is required when reviewing a contribution".to_string())?;
+                    let owner_addr = "0x1234567890abcdef";
+                    
+                    let mut gm = grace_manager;
+                    gm.register_active_claim(building_id.clone(), 14);
+
+                    let (state, receipt) = gm.review_pending_contribution(
+                        repo_path,
+                        &building_id,
+                        idx,
+                        appr,
+                        owner_addr,
+                        live,
+                    )?;
+                    println!("Status: {:?}", state);
+                    println!("{}", receipt);
+                } else {
+                    let pending = grace_manager.list_pending_contributions(repo_path)?;
+                    if pending.is_empty() {
+                        println!("No pending contributions for building: {}", building_id);
+                    } else {
+                        println!("Pending Contributions:");
+                        for (idx, _content) in pending {
+                            println!("[{}] Pending Contribution", idx);
+                        }
+                    }
+                }
+                Ok(())
+            }
             #[cfg(all(feature = "tui", feature = "agent"))]
             Commands::Dashboard => {
                 use crate::agent::auth::TokenState;

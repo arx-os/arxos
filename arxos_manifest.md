@@ -387,20 +387,27 @@ If this ledger conflicts with an optimistic sentence elsewhere in the document, 
 ```text
 Building
   ├── id, name, path, ifc_global_id?, metadata?, coordinate_systems
+  ├── address?                 # durable ArxAddress (dynamic-length path)
+  ├── anchors[]                # building-level anchors
+  ├── claim_grace_period_days? # optional grace period configuration (defaults to 14)
   └── floors[]
         ├── id, name, level, equipment[]   # common areas
+        ├── address?
+        ├── anchors[]  # floor-level anchors
         └── wings[]
               ├── name, equipment[]
+              ├── address?
+              ├── anchors[]  # wing-level anchors
               └── rooms[]
                     ├── id, name, room_type, spatial_properties
-                    ├── properties
-                    ├── lidar_enrichment?
-                    ├── ifc_global_id?
+                    ├── properties, lidar_enrichment?, ifc_global_id?
+                    ├── address?
+                    ├── anchors[]  # room-level anchors
                     └── equipment[]
                           ├── id, name, equipment_type, position
-                          ├── address?   # durable ArxAddress (7-part path)
+                          ├── address?   # durable ArxAddress (dynamic-length path)
                           ├── path?      # legacy string; prefer address
-                          ├── properties, lidar_enrichment?, ifc_global_id?
+                          └── properties, lidar_enrichment?, ifc_global_id?
 ```
 
 #### Identity
@@ -409,14 +416,54 @@ Building
 | :--- | :--- | :--- |
 | Arx `id` (UUID string) | Always | Merge key inside Arx; YAML primary key |
 | `ifc_global_id` | Optional | Stable IFC product GlobalId (22-char compressed) |
-| `ArxAddress.path` | Optional on equipment; durable when set | Hierarchical ops query / migrate |
+| `ArxAddress` | Optional on any entity; durable when set | Hierarchical ops query / migrate; serialized as plain string |
 
 Rules (implemented; must remain):
 
 - Import GlobalId → `ifc_global_id`; restore Arx id from `Pset_ArxIdentity:ArxId` when present.
 - Export: reuse `ifc_global_id` or derive deterministically from Arx UUID.
 - Never treat STEP express ids (`#42`) as durable identity.
-- Address format: `/country/state/city/building/floor/room/fixture` (14 reserved system names for room segment when used).
+- Address format: Dynamic-length path `/segment-1/segment-2/.../segment-n` starting with a leading slash. Character safety enforces lowercase alphanumeric characters, hyphens, and underscores only to prevent directory traversals. Reserved system names validation checks if any segment matches `RESERVED_SYSTEMS` (e.g., `hvac`, `plumbing`, `electrical`) and validates its immediately following segment.
+
+#### Anchors (Spatial and Topological Reference Points)
+
+Anchors are physical or digital reference points dropped by field workers via AR/PWA. They anchor scans, equipment placement, and relative geometry.
+
+1. **Topological Saturation Heuristic:**
+   An anchor's reliability and stability is quantified via the data saturation metric:
+   $$\text{Saturation} = 0.4 \times \left(\min\left(1.0, \frac{\text{Recalibration Count}}{5}\right)\right) + 0.4 \times \text{Confidence} + 0.2 \times \left(\min\left(1.0, \frac{\text{Dependent Count}}{3}\right)\right)$$
+   Where:
+   - **Recalibration Count:** Number of field calibrations performed (maxes out at 5).
+   - **Confidence:** Precision score of the visual/AR alignment (0.0 to 1.0).
+   - **Dependent Count:** Topological dependents (equipment or other anchors relative-posed to this anchor, maxes out at 3).
+   - **Stable Threshold:** An anchor is considered fully saturated (stable) when its saturation score is $\geq 0.8$.
+
+2. **Relative Poses:**
+   Anchors support relative spatial transforms (`RelativePose`) to:
+   - `AnchorToAnchor`: Reference transforms between spatial reference frames.
+   - `AnchorToEquipment`: Connecting anchors to specific physical hardware items.
+   - `AnchorToRoom`: Relating anchor positions to structural boundary geometry.
+   - `AnchorToPoint`: Mapping to arbitrary 3D coordinates.
+
+3. **Primary Container Rule:**
+   To avoid data duplication and ensure Git cleanliness, each anchor is attached to exactly one primary container in the hierarchy tree: `Building.anchors`, `Floor.anchors`, `Wing.anchors`, or `Room.anchors`. Tree relationships are derived programmatically from the address prefix. If a provisional address matches `/building/hq/floor-1`, the anchor belongs in the `Floor` container. Let the address prefix act as the single source of truth for hierarchy position.
+
+4. **Visual Feature Database Storage:**
+   Large binary spatial data—such as visual ORB/SLAM feature maps or point clouds—are decoupled from the text model. The raw binary data is referenced in `building.yaml` via a type-safe `MapRef` enum in the `map_ref` field of the `Anchor` struct.
+   - **Supported Variants:**
+     - `GitLfs`: Serialized as `lfs:///.arx/anchors/<uuid>.map` (for large, infrequently-changing, versioned local assets).
+     - `Ipfs`: Serialized as `ipfs://<CID>` (for public or decentralized content-addressed maps).
+     - `Arweave`: Serialized as `arweave://<tx_id>` (for permanent, immutable transaction references).
+     - `Local`: Serialized as `local://<absolute/path>` (for temporary, local capture-agent testing).
+     - `None`: (Represented as `Option::None` / omitted from YAML) indicating no associated visual tracking database.
+   This enforces strong type safety, preserves git determinism, keeps diff sizes minimal, and simplifies verification logic.
+
+#### Data Storage Philosophy
+
+To scale effectively at the edge and maintain zero-diff Git histories, Arxos enforces a strict separation between **semantic metadata** and **heavy binary spatial assets**:
+
+- **Semantic Metadata (`building.yaml`):** The building hierarchy, equipment list, structural relationships, properties, and anchors are stored in a single canonical text-based YAML file. This file must be deterministically sorted on save and kept under 10MB to guarantee human-readable Git diffs and fast merge processing.
+- **Heavy Binary Assets (`Git LFS` / `Content-Addressed Storage`):** Scans (PLY, LAS), spatial meshes, and SLAM maps do not belong in `building.yaml`. They are stored in Git LFS (or content-addressed storage networks) and referenced inside the text model using unique hashes or URI locators (such as `map_ref`). This ensures the Git commit graph remains lightweight and scalable.
 
 #### LiDAR enrichment (typed)
 
@@ -583,6 +630,33 @@ Compiler produces verified Building SSOT
 - Software remains free; chain rewards **verified building data**, not CLI licenses.
 - Multi-oracle consensus requires the **same** proof (hash locked on first propose).
 - Live ops still need N7 (host gate) + N8 (deploy env). Contracts must not regress G1–G8.
+
+### 3.11 Decentralized Contribution Lifecycle, Branching, and Ownership Claim
+
+To enable a trustless, incentivized data collection model, Arxos splits the repository states and paths into two distinct lifecycles: **provisional contributions** (`branch building`) and **verified owner custody** (`branch main`).
+
+#### 1. Branching Model: `branch building` vs `branch main`
+- **Provisional Branch (`branch building`):** All contributions (IFC merges, LiDAR ingest, worker coordinates, dropped Anchors) from field workers flow into the `building` branch. This branch acts as a multi-writer staging area. Data is structured under provisional addresses starting with `/building/...`.
+- **Durable Branch (`branch main`):** When a legitimate building owner claims ownership of the building on-chain (using verifiable real estate proofs or municipal certificates), the `main` branch is created/activated. The owner gains exclusive write and merge policy controls over the `main` branch.
+
+#### 2. Provisional Data Lifecycle & Privacy
+- **Privacy-Until-Claim:** Before an ownership claim is submitted, building data remains private to protect the property owner's security. Contribution packages (consisting of Merkle roots of the files, quality metrics, and building UUID) are committed to decentralized storage (e.g. IPFS/Arweave), and only cryptographic proofs are posted on-chain.
+- **On-Prem Scoped Discovery:** Field workers on site do not download the global database. They discover nearby anchors via local contextual signals (beacons, camera/AR markers) and pull only the active sub-branches (working sets) of the `building.yaml` necessary for their task.
+- **Hybrid Oracle Claim Verification:** To verify building ownership, the owner interacts with the registry contract via a hybrid oracle validation pipeline:
+  - *Primary Route (Initial Claim):* The owner submits a zero-knowledge proof generated using TLSNotary to prove control of digital registry records (e.g. municipal portals) on-chain without revealing sensitive credentials or API keys.
+  - *Secondary Route (Lighter Attestations):* Subsequent updates or smaller sub-claims are authenticated by threshold-signed reputable oracles (or a custom Chainlink adapter) to lower gas costs and latency.
+- **Owner Claim Reconstruction:** Once ownership is verified on-chain, the registry contract emits a `BuildingClaimed(uuid, owner, root_hash)` event. The owner's local agent catches this event, downloads the encrypted contribution packages from decentralized storage, verifies the on-chain Merkle roots, decrypts the payloads, and reconstructs the historical contribution history to form the initial Git tree under the `main` branch.
+
+#### 3. Address Branch Promotion via `promote_addresses()`
+- When the local agent receives the `BuildingClaimed` event, it triggers the in-memory `promote_addresses("building", "main")` operation to rewrite all provisional addresses (e.g. `/building/hq/...` becomes `/main/hq/...`).
+- Relative pose target IDs referencing promoted entities are rewritten accordingly.
+- This rewriting occurs in-memory and is committed as a single clean merge commit in Git to avoid differential noise and git history pollution, establishing `branch main` as the active canonical custody branch.
+
+#### 4. $AXD Reward Lock-and-Release
+- Field workers receive $AXD tokens based on data quality and recalibration counts.
+- **Reward Escrow:** To prevent front-running, $AXD minted for contributions in `branch building` is held in an escrow smart contract.
+- **Release on Claim:** When the owner claims `branch main`, the escrow releases the accumulated rewards to the historical contributors' addresses. If a building remains unclaimed, rewards are locked until verification, ensuring workers are incentivized to ingest high-value target buildings.
+- **Configurable Grace Period:** To allow in-flight contributions submitted around the time of the claim to resolve, a Staging Grace Window is enforced. The duration of this window is configurable at the building level via `claim_grace_period_days` in `building.yaml` (defaulting to 14 days if not specified).
 
 ---
 

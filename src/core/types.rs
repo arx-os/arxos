@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// When serializing to YAML, this serializes as Point3D (omitting coordinate_system)
 /// for backward compatibility. When deserializing, coordinate_system defaults to "building_local".
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Position {
     pub x: f64,
     pub y: f64,

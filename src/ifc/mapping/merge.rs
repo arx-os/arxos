@@ -480,6 +480,9 @@ fn apply_floor_identity(floor: &mut Floor, old: &Floor) {
     if floor.elevation.is_none() {
         floor.elevation = old.elevation;
     }
+    if floor.address.is_none() {
+        floor.address = old.address.clone();
+    }
     for (k, v) in &old.properties {
         floor
             .properties
@@ -539,6 +542,9 @@ fn merge_room_fields(room: &mut Room, old: &Room, _policy: &MergePolicy) {
     if room.ifc_global_id.is_none() {
         room.ifc_global_id = old.ifc_global_id.clone();
     }
+    if room.address.is_none() {
+        room.address = old.address.clone();
+    }
     for (k, v) in &old.properties {
         room.properties
             .entry(k.clone())
@@ -556,6 +562,12 @@ fn merge_equipment_fields(eq: &mut Equipment, old: &Equipment, _policy: &MergePo
     eq.lidar_enrichment = prefer_existing_lidar(&old.lidar_enrichment, &eq.lidar_enrichment);
     if eq.ifc_global_id.is_none() {
         eq.ifc_global_id = old.ifc_global_id.clone();
+    }
+    if eq.address.is_none() {
+        eq.address = old.address.clone();
+    }
+    if eq.path.is_empty() {
+        eq.path = old.path.clone();
     }
     // Incoming properties win on collision; fill gaps from existing
     let mut merged = old.properties.clone();

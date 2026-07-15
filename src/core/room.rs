@@ -1,6 +1,7 @@
 //! Room data structure and implementation
 
-use super::{Equipment, SpatialProperties};
+use super::{Equipment, SpatialProperties, Anchor};
+use super::domain::ArxAddress;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -9,17 +10,6 @@ use uuid::Uuid;
 /// Represents a room in a building
 ///
 /// Rooms are containers for equipment within wings on floors.
-///
-/// # Fields
-///
-/// * `id` - Unique identifier (UUID)
-/// * `name` - Human-readable room name
-/// * `room_type` - Type categorization
-/// * `equipment` - Collection of equipment in the room
-/// * `spatial_properties` - Position, dimensions, and bounding box
-/// * `properties` - Key-value metadata
-/// * `created_at` - Creation timestamp (optional, omitted from YAML)
-/// * `updated_at` - Last modification timestamp (optional, omitted from YAML)
 #[derive(Debug, Clone)]
 pub struct Room {
     /// Unique identifier for the room
@@ -29,15 +19,8 @@ pub struct Room {
     /// Type categorization of the room
     pub room_type: RoomType,
     /// Collection of equipment physically located in the room.
-    ///
-    /// When serializing to YAML, this serializes as `Vec<String>` (equipment IDs only).
-    /// When deserializing from YAML, call `BuildingData::rehydrate_room_equipment()` after
-    /// deserialization to populate this list from the global `BuildingData.equipment` list.
     pub equipment: Vec<Equipment>,
     /// Equipment IDs captured during YAML deserialization (before rehydration).
-    ///
-    /// After calling `BuildingData::rehydrate_room_equipment()` these IDs have been
-    /// resolved into full `Equipment` objects in `self.equipment` and can be ignored.
     #[doc(hidden)]
     pub pending_equipment_ids: Vec<String>,
     /// Position, dimensions, and bounding box
@@ -52,6 +35,12 @@ pub struct Room {
     pub lidar_enrichment: Option<super::LidarEnrichment>,
     /// IFC product GlobalId when known (stable interchange identity)
     pub ifc_global_id: Option<String>,
+    /// Hierarchical ArxOS address (durable on Building YAML SSOT)
+    pub address: Option<ArxAddress>,
+    /// Collection of anchors dropped in this room
+    pub anchors: Vec<Anchor>,
+    /// Temporary list of anchor IDs parsed during deserialization
+    pub pending_anchor_ids: Vec<String>,
 }
 
 /// DTO for Room serialization to preserve YAML and Git layout
@@ -71,6 +60,10 @@ struct RoomDto {
     lidar_enrichment: Option<super::LidarEnrichment>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     ifc_global_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    address: Option<ArxAddress>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    anchors: Vec<String>,
 }
 
 // Custom Serialize implementation for Room via RoomDto
@@ -80,6 +73,7 @@ impl serde::Serialize for Room {
         S: serde::Serializer,
     {
         let equipment_ids: Vec<String> = self.equipment.iter().map(|e| e.id.clone()).collect();
+        let anchor_ids: Vec<String> = self.anchors.iter().map(|a| a.id.clone()).collect();
         let dto = RoomDto {
             id: self.id.clone(),
             name: self.name.clone(),
@@ -91,6 +85,8 @@ impl serde::Serialize for Room {
             updated_at: self.updated_at,
             lidar_enrichment: self.lidar_enrichment.clone(),
             ifc_global_id: self.ifc_global_id.clone(),
+            address: self.address.clone(),
+            anchors: anchor_ids,
         };
         dto.serialize(serializer)
     }
@@ -115,6 +111,9 @@ impl<'de> serde::Deserialize<'de> for Room {
             updated_at: dto.updated_at,
             lidar_enrichment: dto.lidar_enrichment,
             ifc_global_id: dto.ifc_global_id,
+            address: dto.address,
+            anchors: Vec::new(),
+            pending_anchor_ids: dto.anchors,
         })
     }
 }
@@ -232,6 +231,9 @@ impl Room {
             updated_at: now,
             lidar_enrichment: None,
             ifc_global_id: None,
+            address: None,
+            anchors: Vec::new(),
+            pending_anchor_ids: Vec::new(),
         }
     }
 

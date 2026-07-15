@@ -108,6 +108,32 @@ pub fn validate_building(building: &Building) -> BuildingValidationReport {
 
     let mut seen_room_ids = std::collections::HashSet::new();
     let mut seen_eq_ids = std::collections::HashSet::new();
+    let mut seen_anchor_ids = std::collections::HashSet::new();
+    let mut all_valid_addresses = std::collections::HashSet::new();
+    let mut all_anchors = Vec::new();
+
+    // Validate Building address
+    validate_address(&mut report, &building.address, "building.address");
+    if let Some(ref addr) = building.address {
+        all_valid_addresses.insert(addr.path.clone());
+    }
+
+    // Validate Building-level anchors
+    for anchor in &building.anchors {
+        all_anchors.push(anchor);
+        validate_address(&mut report, &anchor.address, &format!("building.anchor[{}].address", anchor.name));
+        if let Some(ref addr) = anchor.address {
+            all_valid_addresses.insert(addr.path.clone());
+        }
+        if !seen_anchor_ids.insert(anchor.id.clone()) {
+            report.results.push(ValidationResult {
+                rule_id: "anchor.id.duplicate".into(),
+                message: format!("Duplicate anchor id {}", anchor.id),
+                severity: ValidationSeverity::Error,
+                field: Some(anchor.id.clone()),
+            });
+        }
+    }
 
     for floor in &building.floors {
         if floor.name.trim().is_empty() {
@@ -117,6 +143,28 @@ pub fn validate_building(building: &Building) -> BuildingValidationReport {
                 severity: ValidationSeverity::Error,
                 field: Some(format!("floor[{}].name", floor.level)),
             });
+        }
+
+        validate_address(&mut report, &floor.address, &format!("floor[{}].address", floor.name));
+        if let Some(ref addr) = floor.address {
+            all_valid_addresses.insert(addr.path.clone());
+        }
+
+        // Validate Floor-level anchors
+        for anchor in &floor.anchors {
+            all_anchors.push(anchor);
+            validate_address(&mut report, &anchor.address, &format!("floor[{}].anchor[{}].address", floor.name, anchor.name));
+            if let Some(ref addr) = anchor.address {
+                all_valid_addresses.insert(addr.path.clone());
+            }
+            if !seen_anchor_ids.insert(anchor.id.clone()) {
+                report.results.push(ValidationResult {
+                    rule_id: "anchor.id.duplicate".into(),
+                    message: format!("Duplicate anchor id {}", anchor.id),
+                    severity: ValidationSeverity::Error,
+                    field: Some(anchor.id.clone()),
+                });
+            }
         }
 
         if floor.wings.is_empty() && floor.equipment.is_empty() {
@@ -129,6 +177,28 @@ pub fn validate_building(building: &Building) -> BuildingValidationReport {
         }
 
         for wing in &floor.wings {
+            validate_address(&mut report, &wing.address, &format!("floor[{}]/wing[{}].address", floor.name, wing.name));
+            if let Some(ref addr) = wing.address {
+                all_valid_addresses.insert(addr.path.clone());
+            }
+
+            // Validate Wing-level anchors
+            for anchor in &wing.anchors {
+                all_anchors.push(anchor);
+                validate_address(&mut report, &anchor.address, &format!("floor[{}]/wing[{}].anchor[{}].address", floor.name, wing.name, anchor.name));
+                if let Some(ref addr) = anchor.address {
+                    all_valid_addresses.insert(addr.path.clone());
+                }
+                if !seen_anchor_ids.insert(anchor.id.clone()) {
+                    report.results.push(ValidationResult {
+                        rule_id: "anchor.id.duplicate".into(),
+                        message: format!("Duplicate anchor id {}", anchor.id),
+                        severity: ValidationSeverity::Error,
+                        field: Some(anchor.id.clone()),
+                    });
+                }
+            }
+
             for room in &wing.rooms {
                 if room.name.trim().is_empty() {
                     report.results.push(ValidationResult {
@@ -148,9 +218,30 @@ pub fn validate_building(building: &Building) -> BuildingValidationReport {
                     });
                 }
 
+                validate_address(&mut report, &room.address, &format!("room[{}].address", room.name));
+                if let Some(ref addr) = room.address {
+                    all_valid_addresses.insert(addr.path.clone());
+                }
+
+                // Validate Room-level anchors
+                for anchor in &room.anchors {
+                    all_anchors.push(anchor);
+                    validate_address(&mut report, &anchor.address, &format!("room[{}].anchor[{}].address", room.name, anchor.name));
+                    if let Some(ref addr) = anchor.address {
+                        all_valid_addresses.insert(addr.path.clone());
+                    }
+                    if !seen_anchor_ids.insert(anchor.id.clone()) {
+                        report.results.push(ValidationResult {
+                            rule_id: "anchor.id.duplicate".into(),
+                            message: format!("Duplicate anchor id {}", anchor.id),
+                            severity: ValidationSeverity::Error,
+                            field: Some(anchor.id.clone()),
+                        });
+                    }
+                }
+
                 if let Some(ref gid) = room.ifc_global_id {
                     if !(gid.len() == 22 || gid.is_empty()) {
-                        // 22-char IFC compressed GUID, or empty/absent
                         if gid.len() != 22 {
                             report.results.push(ValidationResult {
                                 rule_id: "room.ifc_global_id.format".into(),
@@ -197,7 +288,6 @@ pub fn validate_building(building: &Building) -> BuildingValidationReport {
                     );
                 }
 
-                // Double-prefixed property keys (should have been normalized)
                 for k in room.properties.keys() {
                     if k.contains("Pset_Arx") && k.matches("Pset_").count() > 1 {
                         report.results.push(ValidationResult {
@@ -213,19 +303,61 @@ pub fn validate_building(building: &Building) -> BuildingValidationReport {
                 }
 
                 for eq in &room.equipment {
-                    validate_equipment(&mut report, eq, &mut seen_eq_ids, &room.name);
+                    validate_equipment(&mut report, eq, &mut seen_eq_ids, &room.name, &mut all_valid_addresses);
                 }
             }
             for eq in &wing.equipment {
-                validate_equipment(&mut report, eq, &mut seen_eq_ids, &wing.name);
+                validate_equipment(&mut report, eq, &mut seen_eq_ids, &wing.name, &mut all_valid_addresses);
             }
         }
         for eq in &floor.equipment {
-            validate_equipment(&mut report, eq, &mut seen_eq_ids, &floor.name);
+            validate_equipment(&mut report, eq, &mut seen_eq_ids, &floor.name, &mut all_valid_addresses);
+        }
+    }
+
+    // Validate Relative Poses target resolution
+    for anchor in all_anchors {
+        for pose in &anchor.relative_poses {
+            let target_exists = if pose.target_id.starts_with('/') {
+                all_valid_addresses.contains(&pose.target_id)
+            } else {
+                seen_anchor_ids.contains(&pose.target_id)
+                    || seen_eq_ids.contains(&pose.target_id)
+                    || seen_room_ids.contains(&pose.target_id)
+            };
+
+            if !target_exists {
+                report.results.push(ValidationResult {
+                    rule_id: "pose.target.missing".into(),
+                    message: format!(
+                        "Anchor '{}' relative pose targets missing ID or address '{}'",
+                        anchor.name, pose.target_id
+                    ),
+                    severity: ValidationSeverity::Warning,
+                    field: Some(format!("anchor[{}].relative_poses", anchor.name)),
+                });
+            }
         }
     }
 
     report
+}
+
+fn validate_address(
+    report: &mut BuildingValidationReport,
+    address: &Option<crate::core::domain::ArxAddress>,
+    field: &str,
+) {
+    if let Some(ref addr) = address {
+        if let Err(e) = addr.validate() {
+            report.results.push(ValidationResult {
+                rule_id: "address.invalid".into(),
+                message: format!("Address '{}' is invalid: {}", addr.path, e),
+                severity: ValidationSeverity::Error,
+                field: Some(field.to_string()),
+            });
+        }
+    }
 }
 
 fn validate_equipment(
@@ -233,6 +365,7 @@ fn validate_equipment(
     eq: &crate::core::Equipment,
     seen_eq_ids: &mut std::collections::HashSet<String>,
     context: &str,
+    all_valid_addresses: &mut std::collections::HashSet<String>,
 ) {
     if eq.name.trim().is_empty() {
         report.results.push(ValidationResult {
@@ -250,6 +383,12 @@ fn validate_equipment(
             field: Some(eq.id.clone()),
         });
     }
+
+    validate_address(report, &eq.address, &format!("equipment[{}].address", eq.name));
+    if let Some(ref addr) = eq.address {
+        all_valid_addresses.insert(addr.path.clone());
+    }
+
     if let Some(ref enr) = eq.lidar_enrichment {
         validate_enrichment(
             report,

@@ -290,6 +290,9 @@ mod tests {
             pending_equipment_ids: Vec::new(),
             lidar_enrichment: None,
             ifc_global_id: None,
+            address: None,
+            anchors: Vec::new(),
+            pending_anchor_ids: Vec::new(),
         };
         wing.rooms.push(room);
         floor.wings.push(wing);

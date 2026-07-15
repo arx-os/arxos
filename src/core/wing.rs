@@ -1,6 +1,7 @@
 //! Wing data structure and implementation
 
-use super::{Equipment, Room};
+use super::{Equipment, Room, Anchor};
+use super::domain::ArxAddress;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -15,6 +16,12 @@ pub struct Wing {
     /// Temporary list of equipment IDs parsed during deserialization
     pub pending_equipment_ids: Vec<String>,
     pub properties: HashMap<String, String>,
+    /// Hierarchical ArxOS address (durable on Building YAML SSOT)
+    pub address: Option<ArxAddress>,
+    /// Collection of anchors dropped in this wing
+    pub anchors: Vec<Anchor>,
+    /// Temporary list of anchor IDs parsed during deserialization
+    pub pending_anchor_ids: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -24,6 +31,10 @@ struct WingDto {
     rooms: Vec<Room>,
     equipment: Vec<String>,
     properties: HashMap<String, String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    address: Option<ArxAddress>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    anchors: Vec<String>,
 }
 
 impl serde::Serialize for Wing {
@@ -32,12 +43,15 @@ impl serde::Serialize for Wing {
         S: serde::Serializer,
     {
         let equipment_ids: Vec<String> = self.equipment.iter().map(|e| e.id.clone()).collect();
+        let anchor_ids: Vec<String> = self.anchors.iter().map(|a| a.id.clone()).collect();
         let dto = WingDto {
             id: self.id.clone(),
             name: self.name.clone(),
             rooms: self.rooms.clone(),
             equipment: equipment_ids,
             properties: self.properties.clone(),
+            address: self.address.clone(),
+            anchors: anchor_ids,
         };
         dto.serialize(serializer)
     }
@@ -56,6 +70,9 @@ impl<'de> serde::Deserialize<'de> for Wing {
             equipment: Vec::new(),
             pending_equipment_ids: dto.equipment,
             properties: dto.properties,
+            address: dto.address,
+            anchors: Vec::new(),
+            pending_anchor_ids: dto.anchors,
         })
     }
 }
@@ -92,6 +109,9 @@ impl Wing {
             equipment: Vec::new(),
             pending_equipment_ids: Vec::new(),
             properties: HashMap::new(),
+            address: None,
+            anchors: Vec::new(),
+            pending_anchor_ids: Vec::new(),
         }
     }
 

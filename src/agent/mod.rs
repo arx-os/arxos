@@ -7,6 +7,8 @@ pub mod auth;
 #[cfg(feature = "agent")]
 pub mod building;
 #[cfg(feature = "agent")]
+pub mod claim;
+#[cfg(feature = "agent")]
 pub mod collab;
 #[cfg(feature = "agent")]
 pub mod commands;

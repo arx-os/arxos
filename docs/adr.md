@@ -52,3 +52,22 @@ This document records the key architectural decisions made in the ArxOS project.
 
 > [!NOTE]
 > > **TODO (Future Enhancement):** Future iterations can integrate OpenTelemetry collectors once multi-node P2P clusters are deployed, or load agent status directly into Grafana cloud dashboards.
+
+---
+
+## Decision 7: Text AR Overlay Polish Improvements
+- **Context:** Field-workers mapping buildings require stable, readable labels on mobile screens. Noisy device gyroscope/compass sensors cause overlays to jitter rapidly. In dense spaces (like electrical rooms), labels overlap and become unreadable.
+- **Decision:** Enhance the existing text overlay system with:
+  1. Circular exponential smoothing (decomposing heading into sine/cosine components) to eliminate jitter and 0/360° wrapping jumps.
+  2. An O(N log N) greedy vertical stacking and collision avoidance algorithm that sorts labels horizontally and offsets overlapping labels vertically.
+  3. A cluster count badge (`+X`) that collapses overlapping labels when they exceed vertical screen space constraints.
+  4. An interactive settings UI drawer in the PWA displaying sliders for FOV, smoothing factor, clustering threshold, and max labels.
+- **Consequences:** More stable and readable labels under heavy motion or dense layouts; maintains a lightweight footprint without requiring WebGL or complex 3D math.
+- **Alternatives considered:** Native ARKit/RoomPlan overlay application (deferred for P2+).
+
+> [!NOTE]
+> **Default Configuration Parameters:**
+> - Field of View (FOV): `60.0°` (approximates typical phone camera horizontal viewing angle)
+> - Smoothing Factor ($\alpha$): `0.8` (balances latency with high noise rejection)
+> - Cluster Threshold: `15.0` (percentage horizontal collision window)
+> - Max Labels: `20` (prevents screen clutter and maintains excellent frame rates on constrained devices)

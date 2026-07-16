@@ -263,7 +263,7 @@ This section is the **obligation register**: each reservation must be **relegate
 | IFC native | **8/10** | Only stack; Arx goldens + SketchUp/HVAC non-panic samples |
 | LiDAR | **6.5/10** | Synthetic CI + proposed review; **field unproven (R1)** |
 | Text/AR DSL | **8/10** | `arx edit` + review_status keys |
-| Contribution / reward | **7.5/10** | Package + EIP-712 + Foundry mint E2E; **live ops still hard (R3)** |
+| Contribution / reward | **In Progress** | Hardening OnChainDistributor + Paymaster / Gas (R3) |
 | Buyer access market | **7.5/10** | Router E2E + `arx access` + commercial export gate; **not server-enforced (R4)** |
 | PWA / WASM | **4/10** | Optional; not L1 blocker |
 | Owner Experience | **Good** | Dashboard review flow + agent status metrics |
@@ -1291,6 +1291,7 @@ Never:  L3 mainnet until L1 exit · fake R5/R1 evidence · public facility model
 | **2026-07-13 Definition of Working + HB roadmap** | §1.1a site/PWA/250k target; G9/G10; `docs/horizon-b-roadmap.md` HB0–HB7 living plan |
 | **2026-07-15 Agent Obs** | Structured logging, status/metrics APIs, dynamic log level, PWA dashboard integration |
 | **2026-07-16 Text AR Overlays** | Smoothing and vertical clustering client polish implementation in progress |
+| **2026-07-16 Hardening** | OnChainDistributor gas, paymaster, key load validations, and architecture review in progress |
 
 ---
 

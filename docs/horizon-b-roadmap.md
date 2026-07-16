@@ -64,6 +64,7 @@ Structured logging, status endpoints, and operational visibility for the agent (
 | Owner Experience | Good (dashboard lands) | Done (shipped review flow) |
 | Agent Observability & Operations | In Progress | **In Progress** |
 | Text AR Label Overlays | In Progress | **In Progress** (Smoothing + Clustering) |
+| Reward Distribution Hardening | In Progress | **In Progress** (Paymaster / Gas Hardening) |
 | Charter / data class | Templates | **Unsigned** (R7/R10) |
 
 **Scorecard (honest):** Lab closed loop ~8–8.5/10 · District L1 ~4/10 · Full vision L3 ~2/10.
@@ -490,5 +491,6 @@ Spine-safe, small, only if sprint pain appears. **Default: implement none until 
 | 2026-07-13 | **Batch B1–B3:** `building.get` RPC, PWA `/review` hierarchy + proposed badges, Pass B read-only docs. B4–B7 next. |
 | 2026-07-15 | **Agent Observability & Operations:** Structured logging, status/metrics APIs, and Leptos dashboard integration in progress. |
 | 2026-07-16 | **Text AR Label Overlays:** Smoothing and vertical clustering client polish implementation in progress. |
+| 2026-07-16 | **Reward Distribution Hardening:** OnChainDistributor paymaster, retry loops, and key loader validation in progress. |
 
 **Related:** [INDEX.md](./INDEX.md) · [l1-supported-workflow.md](./l1-supported-workflow.md) · [ifc-limitations.md](./ifc-limitations.md) · [field-truth-log.md](./field-truth-log.md) · [resource-limits.md](./resource-limits.md) · [field-handoff.md](./field-handoff.md)

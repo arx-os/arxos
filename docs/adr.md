@@ -71,3 +71,29 @@ This document records the key architectural decisions made in the ArxOS project.
 > - Smoothing Factor ($\alpha$): `0.8` (balances latency with high noise rejection)
 > - Cluster Threshold: `15.0` (percentage horizontal collision window)
 > - Max Labels: `20` (prevents screen clutter and maintains excellent frame rates on constrained devices)
+
+---
+
+## Decision 8: Reward Distribution Production Hardening
+- **Context:** The `OnChainDistributor` needs to be production-ready, supporting configurable gas estimation multipliers, optional gas sponsorship via paymasters, robust format validation for loaded keys, and error recovery from transient RPC glitches.
+- **Decision:** Implement:
+  1. Hex-format validations on private keys loaded via `PrivateKeyLoader`.
+  2. Configuration options in `DistributorConfig` for gas multipliers, paymaster addresses, networks, and max gas limit caps.
+  3. A 3-attempt retry loop with exponential backoff on transient RPC providers/network errors.
+  4. Sponsored gas simulation and estimation if a paymaster is set, falling back to direct signing on failure.
+- **Consequences:** Payout releases are highly resilient to transient network glitches. Paymaster support allows gas-free payout execution for operators. Improper configurations are caught early before gas estimation runs.
+- **Alternatives considered:** Offload all keys and signing logic to an external custody vault service (deferred for pilot stage).
+
+> [!NOTE]
+> **Example hard-payout configuration file (`.arx/config/payout.json`):**
+> ```json
+> {
+>   "rpc_url": "https://rpc.phase.network",
+>   "private_key": "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+>   "gas_limit_multiplier": 1.15,
+>   "paymaster_address": "0x9560f772421234567890abcdef1234567890abcd",
+>   "network": "phase-mainnet",
+>   "max_gas_limit": 500000
+> }
+> ```
+

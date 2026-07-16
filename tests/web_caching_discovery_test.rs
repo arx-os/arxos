@@ -171,12 +171,91 @@ mod web_tests {
         );
 
         // Worker heading is 0.0 degrees (pointing directly along X positive)
-        let labels = LabelProjector::project_labels(&[anchor], &worker_pos, 0.0, None);
+        let labels = LabelProjector::project_labels(&[anchor], &worker_pos, 0.0, None, None, None);
         assert_eq!(labels.len(), 1);
         
         let label = &labels[0];
         assert_eq!(label.title, "Panel-A1");
         assert!((label.x_percent - 50.0).abs() < 1e-5); // Centered horizontally (50%)
         assert_eq!(label.distance_m, 3.0);
+    }
+
+    #[test]
+    fn test_ar_overlay_heading_circular_smoothing() {
+        // Test sine/cosine circular smoothing math
+        let raw_deg = 1.0f64;
+        let prev_deg = 359.0f64;
+        let alpha = 0.8f64;
+
+        // Circular math:
+        let raw_rad = raw_deg.to_radians();
+        let prev_rad = prev_deg.to_radians();
+        let sin_smoothed = alpha * prev_rad.sin() + (1.0 - alpha) * raw_rad.sin();
+        let cos_smoothed = alpha * prev_rad.cos() + (1.0 - alpha) * raw_rad.cos();
+        let smoothed_rad = sin_smoothed.atan2(cos_smoothed);
+        let mut smoothed_deg = smoothed_rad.to_degrees();
+        if smoothed_deg < 0.0 {
+            smoothed_deg += 360.0;
+        }
+
+        // Without circular wrapping, a naive linear filter: 0.8 * 359 + 0.2 * 1 = 287.4 degrees
+        // With circular wrapping, it should transition slightly counterclockwise, yielding ~359.4 degrees
+        assert!((smoothed_deg - 359.4).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_ar_overlay_vertical_stacking_and_clustering() {
+        use arxos::web::overlay::label::LabelProjector;
+
+        let worker_pos = Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            coordinate_system: "local".to_string(),
+        };
+
+        // Create three anchors in front of the worker close horizontally
+        let anchor1 = Anchor::new(
+            "Panel-1".to_string(),
+            Position { x: 3.0, y: 0.0, z: 0.2, coordinate_system: "local".to_string() },
+            0.9,
+        );
+        let anchor2 = Anchor::new(
+            "Panel-2".to_string(),
+            Position { x: 3.0, y: 0.01, z: 0.0, coordinate_system: "local".to_string() },
+            0.9,
+        );
+        let anchor3 = Anchor::new(
+            "Panel-3".to_string(),
+            Position { x: 3.0, y: -0.01, z: -0.2, coordinate_system: "local".to_string() },
+            0.9,
+        );
+
+        // Project them with standard 15% threshold
+        let labels = LabelProjector::project_labels(
+            &[anchor1, anchor2, anchor3],
+            &worker_pos,
+            0.0,
+            Some(60.0),
+            Some(15.0),
+            Some(10),
+        );
+
+        // They should be stacked vertically and not overlap
+        assert_eq!(labels.len(), 3);
+        
+        // Find them by title
+        let p1 = labels.iter().find(|l| l.title == "Panel-1").unwrap();
+        let p2 = labels.iter().find(|l| l.title == "Panel-2").unwrap();
+        let p3 = labels.iter().find(|l| l.title == "Panel-3").unwrap();
+
+        // Stacking vertically checks: y_percent of stacked labels must differ by at least 12.0
+        let dy12 = (p1.y_percent - p2.y_percent).abs();
+        let dy23 = (p2.y_percent - p3.y_percent).abs();
+        let dy13 = (p1.y_percent - p3.y_percent).abs();
+        
+        assert!(dy12 >= 12.0);
+        assert!(dy13 >= 12.0);
+        assert!(dy23 >= 24.0);
     }
 }

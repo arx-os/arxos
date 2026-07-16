@@ -17,48 +17,106 @@ pub fn ArOverlayScreen() -> impl IntoView {
     let (smoothed_heading, set_smoothed_heading) = signal(90.0f64); // low-pass smoothed compass
     let (sensor_confidence, set_sensor_confidence) = signal(0.85f64); // sensor quality indicator
 
-    // 2. Initial camera request
+    // 2. Settings Configuration Signals
+    let (smoothing_factor, set_smoothing_factor) = signal(0.80f64); // Alpha factor (higher = more smoothed)
+    let (cluster_threshold, set_cluster_threshold) = signal(15.0f64); // X% horizontal collision window
+    let (fov_degrees, set_fov_degrees) = signal(60.0f64); // Camera FOV
+    let (max_labels, set_max_labels) = signal(20usize); // Max displayed labels limit
+    let (settings_open, set_settings_open) = signal(false); // Settings panel open flag
+
+    // 3. Raw/Smoothed Position Signals
+    let (raw_pos, _set_raw_pos) = signal(Position {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+        coordinate_system: "local".to_string(),
+    });
+    let (smoothed_pos, set_smoothed_pos) = signal(Position {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+        coordinate_system: "local".to_string(),
+    });
+
+    // 4. Initial camera request
     Effect::new(move |_| {
         let camera = CameraManager::new();
         let _ = camera.request_camera_stream("ar-camera-feed");
     });
 
-    // 3. Compass heading smoothing (low-pass filter effect)
+    // 5. Circular Compass Heading Smoothing (sine/cosine exponential low-pass filter)
     Effect::new(move |_| {
-        let raw = heading.get();
-        let prev = smoothed_heading.get();
-        // Simple low-pass filter: 80% previous + 20% raw input
-        let smoothed = 0.8 * prev + 0.2 * raw;
-        set_smoothed_heading.set(smoothed);
+        let raw_deg = heading.get();
+        let raw_rad = raw_deg.to_radians();
+        let prev_deg = smoothed_heading.get();
+        let prev_rad = prev_deg.to_radians();
+        let alpha = smoothing_factor.get();
+
+        // Decompose raw and prev into unit vectors, smooth sin and cos separately, and reconstruct
+        let sin_smoothed = alpha * prev_rad.sin() + (1.0 - alpha) * raw_rad.sin();
+        let cos_smoothed = alpha * prev_rad.cos() + (1.0 - alpha) * raw_rad.cos();
+        let smoothed_rad = sin_smoothed.atan2(cos_smoothed);
+        
+        let mut smoothed_deg = smoothed_rad.to_degrees();
+        if smoothed_deg < 0.0 {
+            smoothed_deg += 360.0;
+        }
+        set_smoothed_heading.set(smoothed_deg);
     });
 
-    // 4. Throttled Proximity Label Query Loop (Runs every 300ms)
+    // 6. Position Exponential Smoothing
+    Effect::new(move |_| {
+        let raw = raw_pos.get();
+        let mut prev = smoothed_pos.get();
+        let alpha = smoothing_factor.get();
+
+        prev.x = alpha * prev.x + (1.0 - alpha) * raw.x;
+        prev.y = alpha * prev.y + (1.0 - alpha) * raw.y;
+        prev.z = alpha * prev.z + (1.0 - alpha) * raw.z;
+        set_smoothed_pos.set(prev);
+    });
+
+    // 7. Throttled Proximity Label Query Loop (Runs every 300ms)
     Effect::new(move |_| {
         let mut warm_cache = WarmCache::new();
         let mut manager = DiscoveryManager::new();
         let warmer = PredictiveWarming;
 
-        // Mock current position
-        let current_pos = Position {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-            coordinate_system: "local".to_string(),
-        };
+        let current_pos = smoothed_pos.get();
 
-        // Populate mock subtree in warm cache
+        // Populate multiple mock anchors to demonstrate stacking & clustering behavior
         let floor_addr = crate::core::domain::ArxAddress::from_path("/building/hq/floor-1").unwrap();
+        
+        // Anchor 1: Base Anchor (Main Distribution Panel)
         let mut anchor1 = crate::core::Anchor::new(
             "Main Distribution Panel".to_string(),
             Position { x: 2.0, y: 0.5, z: 0.2, coordinate_system: "local".to_string() },
-            0.75, // low saturation/confidence
+            0.75,
         );
         anchor1.properties.insert("circuit_id".to_string(), "MDP-A1".to_string());
         anchor1.address = Some(floor_addr.clone());
 
+        // Anchor 2: Directly overlapping horizontally and vertically (SP-B1)
+        let mut anchor2 = crate::core::Anchor::new(
+            "Sub Panel B".to_string(),
+            Position { x: 2.1, y: 0.52, z: 0.0, coordinate_system: "local".to_string() },
+            0.80,
+        );
+        anchor2.properties.insert("circuit_id".to_string(), "SP-B1".to_string());
+        anchor2.address = Some(floor_addr.clone());
+
+        // Anchor 3: Creating a stacking collision cascade (ATS-01)
+        let mut anchor3 = crate::core::Anchor::new(
+            "Transfer Switch".to_string(),
+            Position { x: 1.95, y: 0.48, z: -0.2, coordinate_system: "local".to_string() },
+            0.85,
+        );
+        anchor3.properties.insert("circuit_id".to_string(), "ATS-01".to_string());
+        anchor3.address = Some(floor_addr.clone());
+
         let envelope = crate::web::cache::warm::BuildingSyncEnvelope {
             base_address: floor_addr.clone(),
-            anchors: vec![anchor1],
+            anchors: vec![anchor1, anchor2, anchor3],
             payload: "mock metadata".to_string(),
             fetched_at_timestamp: 1000,
         };
@@ -74,9 +132,16 @@ pub fn ArOverlayScreen() -> impl IntoView {
 
         set_provisional_mode.set(manager.is_provisional());
 
-        // Read active anchors, project coordinates using the average camera FOV profile (e.g. 60 deg)
+        // Read active anchors, project coordinates with new collision & parameter configurations
         let visible = manager.get_visible_anchors(&warm_cache);
-        let projected = LabelProjector::project_labels(&visible, &current_pos, smoothed_heading.get(), Some(60.0));
+        let projected = LabelProjector::project_labels(
+            &visible,
+            &current_pos,
+            smoothed_heading.get(),
+            Some(fov_degrees.get()),
+            Some(cluster_threshold.get()),
+            Some(max_labels.get()),
+        );
         set_labels.set(projected);
     });
 
@@ -94,6 +159,18 @@ pub fn ArOverlayScreen() -> impl IntoView {
 
     view! {
         <div class="ar-overlay-container" style="position: relative; width: 100vw; height: 100vh; overflow: hidden; background: #000;">
+            <style>
+                "
+                @keyframes fadeInTag {
+                    from { opacity: 0; transform: translate(-50%, -40%); }
+                    to { opacity: 1; transform: translate(-50%, -50%); }
+                }
+                .ar-text-tag {
+                    animation: fadeInTag 0.25s ease-out;
+                }
+                "
+            </style>
+
             // Live Video Feed from Camera
             <video
                 id="ar-camera-feed"
@@ -101,6 +178,14 @@ pub fn ArOverlayScreen() -> impl IntoView {
                 playsinline=true
                 style="width: 100%; height: 100%; object-fit: cover; pointer-events: none;"
             ></video>
+
+            // Configuration settings button
+            <button
+                on:click=move |_| set_settings_open.update(|v| *v = !*v)
+                style="position: absolute; top: 16px; right: 140px; background: rgba(18, 18, 18, 0.85); color: #fff; border: 1px solid #475569; padding: 6px 12px; border-radius: 4px; font-size: 11px; z-index: 10; cursor: pointer; font-weight: bold;"
+            >
+                "⚙️ Settings"
+            </button>
 
             // Toggle simulation button to demonstrate sensor quality degradation
             <button
@@ -116,6 +201,114 @@ pub fn ArOverlayScreen() -> impl IntoView {
                 {move || format!("Simulate Sensors ({})", if sensor_confidence.get() < 0.5 { "Poor" } else { "Good" })}
             </button>
 
+            // Configurable Settings slide-out Drawer
+            <div
+                class="settings-drawer"
+                style=move || format!(
+                    "position: absolute; top: 0; right: 0; width: 280px; height: 100%; background: rgba(15, 23, 42, 0.95); border-left: 1px solid #334155; padding: 20px; color: #f8fafc; font-family: sans-serif; transition: transform 0.3s ease-in-out; transform: {}; z-index: 100; box-shadow: -4px 0 20px rgba(0,0,0,0.5);",
+                    if settings_open.get() { "translateX(0)" } else { "translateX(100%)" }
+                )
+            >
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 20px;">
+                    <h3 style="margin: 0; font-size: 14px; font-weight: 600;">"AR HUD Settings"</h3>
+                    <button
+                        on:click=move |_| set_settings_open.set(false)
+                        style="background: transparent; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; font-weight: bold; width: 24px; height: 24px;"
+                    >
+                        "✕"
+                    </button>
+                </div>
+
+                // FOV Slider
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px; color: #94a3b8;">
+                        <span>"Field of View"</span>
+                        <span style="color: #3b82f6; font-weight: bold;">{move || format!("{:.0}°", fov_degrees.get())}</span>
+                    </div>
+                    <input
+                        type="range"
+                        min="30"
+                        max="120"
+                        value=move || fov_degrees.get().to_string()
+                        on:input=move |ev| {
+                            let el: web_sys::HtmlInputElement = event_target(&ev);
+                            if let Ok(v) = el.value().parse::<f64>() {
+                                set_fov_degrees.set(v);
+                            }
+                        }
+                        style="width: 100%; cursor: pointer;"
+                    />
+                </div>
+
+                // Smoothing Slider
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px; color: #94a3b8;">
+                        <span>"Smoothing Factor (Alpha)"</span>
+                        <span style="color: #3b82f6; font-weight: bold;">{move || format!("{:.2}", smoothing_factor.get())}</span>
+                    </div>
+                    <input
+                        type="range"
+                        min="0.0"
+                        max="0.99"
+                        step="0.01"
+                        value=move || smoothing_factor.get().to_string()
+                        on:input=move |ev| {
+                            let el: web_sys::HtmlInputElement = event_target(&ev);
+                            if let Ok(v) = el.value().parse::<f64>() {
+                                set_smoothing_factor.set(v);
+                            }
+                        }
+                        style="width: 100%; cursor: pointer;"
+                    />
+                </div>
+
+                // Stacking / Cluster Threshold Slider
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px; color: #94a3b8;">
+                        <span>"Stack Threshold (X%)"</span>
+                        <span style="color: #3b82f6; font-weight: bold;">{move || format!("{:.0}%", cluster_threshold.get())}</span>
+                    </div>
+                    <input
+                        type="range"
+                        min="5"
+                        max="35"
+                        value=move || cluster_threshold.get().to_string()
+                        on:input=move |ev| {
+                            let el: web_sys::HtmlInputElement = event_target(&ev);
+                            if let Ok(v) = el.value().parse::<f64>() {
+                                set_cluster_threshold.set(v);
+                            }
+                        }
+                        style="width: 100%; cursor: pointer;"
+                    />
+                </div>
+
+                // Max Labels Slider
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px; color: #94a3b8;">
+                        <span>"Max Labels Limit"</span>
+                        <span style="color: #3b82f6; font-weight: bold;">{move || max_labels.get().to_string()}</span>
+                    </div>
+                    <input
+                        type="range"
+                        min="5"
+                        max="50"
+                        value=move || max_labels.get().to_string()
+                        on:input=move |ev| {
+                            let el: web_sys::HtmlInputElement = event_target(&ev);
+                            if let Ok(v) = el.value().parse::<usize>() {
+                                set_max_labels.set(v);
+                            }
+                        }
+                        style="width: 100%; cursor: pointer;"
+                    />
+                </div>
+
+                <div style="font-size: 10px; color: #64748b; line-height: 1.4; margin-top: 30px; border-top: 1px solid #334155; padding-top: 15px;">
+                    "Adjust sliders to tune camera heading smoothing, FOV limits, or vertical collision stacking on site."
+                </div>
+            </div>
+
             // Show active AR labels overlay only when sensor confidence is healthy (>= 0.5)
             <div
                 class="labels-overlay-layer"
@@ -128,17 +321,30 @@ pub fn ArOverlayScreen() -> impl IntoView {
                     let anchor_id = label.anchor.id.clone();
                     let click_handler = move |_| on_recalibrate_click(anchor_id.clone());
                     
+                    let cluster_badge = if label.cluster_count > 0 {
+                        view! {
+                            <span style="background: #3b82f6; color: #fff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 999px; margin-left: 6px; white-space: nowrap;">
+                                {format!("+{}", label.cluster_count)}
+                            </span>
+                        }.into_any()
+                    } else {
+                        view! { <></> }.into_any()
+                    };
+
                     view! {
                         <div
                             class="ar-text-tag"
                             style=format!(
-                                "position: absolute; left: {}%; top: {}%; transform: translate(-50%, -50%); background: rgba(18, 18, 18, 0.85); color: #fff; padding: 12px 16px; border-radius: 8px; border: 1px solid {}; font-family: sans-serif; pointer-events: auto; max-width: 250px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);",
+                                "position: absolute; left: {}%; top: {}%; transform: translate(-50%, -50%); background: rgba(18, 18, 18, 0.85); color: #fff; padding: 12px 16px; border-radius: 8px; border: 1px solid {}; font-family: sans-serif; pointer-events: auto; min-width: 200px; max-width: 250px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); transition: left 0.25s ease-out, top 0.25s ease-out, opacity 0.3s ease-in;",
                                 label.x_percent,
                                 label.y_percent,
                                 if label.is_provisional { "#ff9800" } else { "#4caf50" }
                             )
                         >
-                            <div style="font-size: 14px; font-weight: bold; margin-bottom: 4px;">{label.title}</div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="font-size: 14px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px;">{label.title}</span>
+                                {cluster_badge}
+                            </div>
                             <div style="font-size: 11px; color: #ccc; margin-bottom: 6px;">{label.subtitle}</div>
                             
                             <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">

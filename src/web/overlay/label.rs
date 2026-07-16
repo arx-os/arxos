@@ -20,6 +20,8 @@ pub struct ScreenLabel {
     pub is_provisional: bool,
     /// Distance in meters to the worker.
     pub distance_m: f64,
+    /// The number of additional labels clustered/collapsed into this one.
+    pub cluster_count: usize,
 }
 
 pub struct LabelProjector;
@@ -31,6 +33,8 @@ impl LabelProjector {
         worker_pos: &Position,
         heading_deg: f64,
         fov_degrees: Option<f64>,
+        cluster_threshold: Option<f64>,
+        max_labels: Option<usize>,
     ) -> Vec<ScreenLabel> {
         let mut labels = Vec::new();
         let heading_rad = heading_deg.to_radians();
@@ -38,6 +42,9 @@ impl LabelProjector {
         // Horizontal Field of View approximation (e.g. 60 degrees default or override)
         let fov_deg = fov_degrees.unwrap_or(60.0);
         let fov_rad = fov_deg.to_radians();
+
+        let threshold = cluster_threshold.unwrap_or(15.0);
+        let limit = max_labels.unwrap_or(20);
 
         for anchor in visible_anchors {
             let dx = anchor.position.x - worker_pos.x;
@@ -87,23 +94,71 @@ impl LabelProjector {
                     subtitle,
                     is_provisional,
                     distance_m: distance,
+                    cluster_count: 0,
                 });
             }
         }
 
-        // Post-process to resolve label overlap in viewport via vertical clustering
+        // 1. Dynamic Priority Sorting: prioritize closer labels first
+        labels.sort_by(|a, b| a.distance_m.partial_cmp(&b.distance_m).unwrap_or(std::cmp::Ordering::Equal));
+        if labels.len() > limit {
+            labels.truncate(limit);
+        }
+
+        // 2. Greedy vertical stacking and collision resolution (O(N log N))
+        // Sort by horizontal position x_percent first
         labels.sort_by(|a, b| a.x_percent.partial_cmp(&b.x_percent).unwrap_or(std::cmp::Ordering::Equal));
-        for i in 0..labels.len() {
-            for j in (i + 1)..labels.len() {
-                let dx = (labels[i].x_percent - labels[j].x_percent).abs();
-                let dy = (labels[i].y_percent - labels[j].y_percent).abs();
-                // If close horizontally and vertically, offset the second label vertically
-                if dx < 12.0 && dy < 10.0 {
-                    labels[j].y_percent = (labels[i].y_percent + 12.0).min(95.0);
+
+        let mut placed: Vec<ScreenLabel> = Vec::new();
+
+        for mut label in labels {
+            let mut stack_y = label.y_percent;
+
+            // Find previously placed labels that overlap horizontally within the cluster_threshold
+            let mut overlapping_indices: Vec<usize> = Vec::new();
+            for (idx, p) in placed.iter().enumerate() {
+                if (p.x_percent - label.x_percent).abs() < threshold {
+                    overlapping_indices.push(idx);
                 }
+            }
+
+            if !overlapping_indices.is_empty() {
+                // Sort overlapping labels by y_percent ascending (top to bottom)
+                overlapping_indices.sort_by(|&a, &b| placed[a].y_percent.partial_cmp(&placed[b].y_percent).unwrap_or(std::cmp::Ordering::Equal));
+
+                let label_height = 12.0; // visual percentage height offset in viewport
+                for idx in overlapping_indices {
+                    let p = &placed[idx];
+                    if (p.y_percent - stack_y).abs() < label_height {
+                        stack_y = p.y_percent + label_height;
+                    }
+                }
+            }
+
+            // Exceeds viewport limit check (clamp/collapse)
+            if stack_y > 90.0 {
+                // Find closest horizontal overlapping label to collapse into
+                let mut best_match: Option<usize> = None;
+                let mut min_dx = f64::MAX;
+                for (idx, p) in placed.iter().enumerate() {
+                    let dx = (p.x_percent - label.x_percent).abs();
+                    if dx < threshold && dx < min_dx {
+                        min_dx = dx;
+                        best_match = Some(idx);
+                    }
+                }
+                if let Some(idx) = best_match {
+                    placed[idx].cluster_count += 1;
+                } else {
+                    label.y_percent = 90.0;
+                    placed.push(label);
+                }
+            } else {
+                label.y_percent = stack_y;
+                placed.push(label);
             }
         }
 
-        labels
+        placed
     }
 }

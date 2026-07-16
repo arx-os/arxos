@@ -357,4 +357,93 @@ equipment: []
         assert_eq!(display, "[REDACTED]");
         assert_eq!(debug, "[REDACTED]");
     }
+
+    #[test]
+    fn test_key_loader_validation_rules() {
+        use arxos::agent::claim::rewards::validate_private_key;
+
+        // Empty key validation
+        assert!(validate_private_key("").is_err());
+
+        // Valid mock keys
+        assert!(validate_private_key("MOCK_KEY").is_ok());
+        assert!(validate_private_key("dummy").is_ok());
+
+        // Valid hex private key (64 characters)
+        let valid_key = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        assert!(validate_private_key(valid_key).is_ok());
+        assert!(validate_private_key(&format!("0x{}", valid_key)).is_ok());
+
+        // Invalid length (expected 64)
+        let invalid_len = "0123456789abcdef";
+        assert!(validate_private_key(invalid_len).is_err());
+
+        // Invalid characters (non-hex)
+        let invalid_char = "g123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        assert!(validate_private_key(invalid_char).is_err());
+    }
+
+    #[test]
+    #[serial]
+    fn test_paymaster_gas_sponsorship_and_fallback() {
+        use arxos::agent::claim::rewards::{OnChainDistributor, TokenDistributor};
+
+        // Config setup
+        std::env::set_var("PHASE_RPC_URL", "https://mock.phase.network");
+        let valid_key = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        std::env::set_var("PHASE_PRIVATE_KEY", valid_key);
+        std::env::set_var("PHASE_GAS_MULTIPLIER", "1.25");
+        std::env::set_var("PHASE_MAX_GAS_LIMIT", "200000");
+
+        // 1. Sponsored paymaster success case
+        std::env::set_var("PHASE_PAYMASTER_ADDRESS", "0x9560f772421234567890abcdef1234567890abcd");
+        let distributor = OnChainDistributor {
+            key_loader: Box::new(arxos::agent::claim::rewards::HybridKeyLoader::new()),
+        };
+        let receipt = distributor.distribute_split("building-123", "0xowner", 100.0).unwrap();
+        // Sponsored gas calculation: estimated (85000) * multiplier (1.25) = 106250
+        assert!(receipt.contains("Gas limit: 106250"));
+        assert!(receipt.contains("Sponsored: true"));
+
+        // 2. Paymaster simulation fail fallback case
+        std::env::set_var("PHASE_PAYMASTER_ADDRESS", "0x9560f77242_FAIL_abc");
+        let receipt_fallback = distributor.distribute_split("building-123", "0xowner", 100.0).unwrap();
+        // Direct signing gas calculation: estimated (65000) * multiplier (1.25) = 81250
+        assert!(receipt_fallback.contains("Gas limit: 81250"));
+        assert!(receipt_fallback.contains("Sponsored: false"));
+
+        // Clean env
+        std::env::remove_var("PHASE_RPC_URL");
+        std::env::remove_var("PHASE_PRIVATE_KEY");
+        std::env::remove_var("PHASE_GAS_MULTIPLIER");
+        std::env::remove_var("PHASE_MAX_GAS_LIMIT");
+        std::env::remove_var("PHASE_PAYMASTER_ADDRESS");
+    }
+
+    #[test]
+    #[serial]
+    fn test_transient_retry_loop_success() {
+        use arxos::agent::claim::rewards::{OnChainDistributor, TokenDistributor};
+
+        // Config setup: TRANSIENT_FAIL in RPC URL triggers retry
+        std::env::set_var("PHASE_RPC_URL", "https://mock.phase.network/TRANSIENT_FAIL");
+        let valid_key = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        std::env::set_var("PHASE_PRIVATE_KEY", valid_key);
+
+        let distributor = OnChainDistributor {
+            key_loader: Box::new(arxos::agent::claim::rewards::HybridKeyLoader::new()),
+        };
+
+        // Execution should retry and eventually succeed (we set max 3 retries, transient is cleared at attempt 3)
+        let receipt = distributor.distribute_split("building-123", "0xowner", 100.0).unwrap();
+        assert!(receipt.contains("SUCCESS"));
+
+        // Hard failure test
+        std::env::set_var("PHASE_RPC_URL", "https://mock.phase.network/HARD_FAIL");
+        let err = distributor.distribute_split("building-123", "0xowner", 100.0).unwrap_err();
+        assert!(err.contains("hard contract execution reversion"));
+
+        std::env::remove_var("PHASE_RPC_URL");
+        std::env::remove_var("PHASE_PRIVATE_KEY");
+    }
 }

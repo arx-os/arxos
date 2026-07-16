@@ -266,7 +266,8 @@ This section is the **obligation register**: each reservation must be **relegate
 | Contribution / reward | **7.5/10** | Package + EIP-712 + Foundry mint E2E; **live ops still hard (R3)** |
 | Buyer access market | **7.5/10** | Router E2E + `arx access` + commercial export gate; **not server-enforced (R4)** |
 | PWA / WASM | **4/10** | Optional; not L1 blocker |
-| Owner Experience | **Good** | Good once the dashboard lands |
+| Owner Experience | **Good** | Dashboard review flow + agent status metrics |
+| Agent Observability | **In Progress** | JSON logs + /api/status + /metrics |
 | Contracts ($AXD) | **8/10** | Foundry suite green; oracle proof lock fixed |
 | CLI surface | **8/10** | Compiler + contribute + access; spatial honesty |
 | CI | **8.5/10** | Compiler CI + Full Lab Loop workflow + forge E2E; clippy green (unwrap allow-listed) |
@@ -1287,6 +1288,7 @@ Never:  L3 mainnet until L1 exit · fake R5/R1 evidence · public facility model
 | **2026-07-13 Package A / R2 eng** | LossReport `unmapped_products`; buildingSMART ISO fixtures + report; R2 Partial |
 | **2026-07-13 pilot.4** | Tag `v2.0.0-pilot.4` @ `659bbd9f`; TUI default, no hardware/render3d, unmapped honesty |
 | **2026-07-13 Definition of Working + HB roadmap** | §1.1a site/PWA/250k target; G9/G10; `docs/horizon-b-roadmap.md` HB0–HB7 living plan |
+| **2026-07-15 Agent Obs** | Structured logging, status/metrics APIs, dynamic log level, PWA dashboard integration |
 
 ---
 

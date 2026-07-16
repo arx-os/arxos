@@ -41,3 +41,14 @@ This document records the key architectural decisions made in the ArxOS project.
 
 > [!NOTE]
 > **TODO (Future Enhancement):** Once the basic staging review flow is fully stable, investigate gas sponsorship and account abstraction paymasters to hide transaction costs from the owner dashboard entirely.
+
+---
+
+## Decision 6: Agent Observability & Status Endpoints
+- **Context:** After implementing the web owner dashboard, operators and owners need better runtime visibility into claim state, reward distribution, and agent health without relying solely on terminal logs or the dashboard.
+- **Decision:** Introduce structured logging via the `tracing` and `tracing-subscriber` crates supporting configurable stdout formats (standard text and JSON via `LOG_FORMAT=json`). Expose new HTTP endpoints under `/api/status`, `/api/claims/status`, and a Prometheus-style `/metrics` endpoint, secured by the same token auth as the staging APIs. Provide dynamic, runtime log level reconfiguration (e.g. via environment or file-based updates) without requiring an agent restart.
+- **Consequences:** Provides better operational visibility, request tracing (via trace correlation IDs in spans), and easier integration with external log collectors (like FluentBit, Prometheus, or Grafana). Minimal performance overhead on hot paths.
+- **Alternatives considered:** Heavy OpenTelemetry exporter setup (rejected for L1 pilot; keep it local-first and lightweight).
+
+> [!NOTE]
+> > **TODO (Future Enhancement):** Future iterations can integrate OpenTelemetry collectors once multi-node P2P clusters are deployed, or load agent status directly into Grafana cloud dashboards.

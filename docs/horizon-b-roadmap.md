@@ -38,6 +38,15 @@ The Owner Experience focus establishes a first-class web interface for property/
 - **Durable effects:** Approving promotes the YAML addresses (`/building` -> `/main`), persists the change to Git, and triggers on-chain $AXD token distribution splits. Reject safely archives the contribution.
 - **Robustness:** Handles loading, empty queue, offline caching, and error banner notifications gracefully.
 
+### Agent Observability & Operations
+
+Structured logging, status endpoints, and operational visibility for the agent (especially claim flows).
+
+#### Acceptance Criteria — Agent Observability & Operations
+- **Structured Logging:** Structured JSON logging is enabled via `LOG_FORMAT=json` and log level is dynamically configurable.
+- **HTTP Endpoints:** `/api/status`, `/api/claims/status`, and `/metrics` (Prometheus formatting) return real-time health and claims statistics under token-based auth.
+- **Dashboard Integration:** The `/owner/staging` page displays summary stats from the status endpoints.
+
 ---
 
 ## 1. Ground truth (post–pilot.4)
@@ -52,7 +61,8 @@ The Owner Experience focus establishes a first-class web interface for property/
 | Resource refuse defaults | Done | Site profile **open** (R6) |
 | TUI + CLI capture node | Ready | Second-person open (R5) |
 | WASM PWA / agent | ~4/10 terminal/bridge | Walk-in capture **not** proven |
-| Owner Experience | Good once dashboard lands | **In Progress** |
+| Owner Experience | Good (dashboard lands) | Done (shipped review flow) |
+| Agent Observability & Operations | In Progress | **In Progress** |
 | Charter / data class | Templates | **Unsigned** (R7/R10) |
 
 **Scorecard (honest):** Lab closed loop ~8–8.5/10 · District L1 ~4/10 · Full vision L3 ~2/10.
@@ -477,5 +487,6 @@ Spine-safe, small, only if sprint pain appears. **Default: implement none until 
 | 2026-07-13 | **HB6-accel:** iPhone PWA+agent north star; audit+P0 backlog in `iphone-pwa-acceleration.md`; Q6 override; no code until Batch A approval. |
 | 2026-07-13 | **Batch A shipped:** configurable agent host, mobile connect UI, agent LAN hints, field status, `iphone-field-loop.md`. Await Pass A then Batch B. |
 | 2026-07-13 | **Batch B1–B3:** `building.get` RPC, PWA `/review` hierarchy + proposed badges, Pass B read-only docs. B4–B7 next. |
+| 2026-07-15 | **Agent Observability & Operations:** Structured logging, status/metrics APIs, and Leptos dashboard integration in progress. |
 
 **Related:** [INDEX.md](./INDEX.md) · [l1-supported-workflow.md](./l1-supported-workflow.md) · [ifc-limitations.md](./ifc-limitations.md) · [field-truth-log.md](./field-truth-log.md) · [resource-limits.md](./resource-limits.md) · [field-handoff.md](./field-handoff.md)

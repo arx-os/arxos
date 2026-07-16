@@ -370,6 +370,8 @@ impl Cli {
                             "dummy".to_string(),
                             vec![],
                         ))),
+                        metrics: std::sync::Arc::new(crate::agent::observability::AgentMetrics::new()),
+                        reload_handle: None,
                     });
 
                     crate::tui::dashboard::run_dashboard(state).await

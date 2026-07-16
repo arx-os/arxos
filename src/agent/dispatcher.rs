@@ -14,6 +14,8 @@ use crate::agent::{building, collab, files, git, ifc};
 pub struct AgentState {
     pub repo_root: PathBuf,
     pub token: Arc<Mutex<TokenState>>,
+    pub metrics: Arc<crate::agent::observability::AgentMetrics>,
+    pub reload_handle: Option<tracing_subscriber::reload::Handle<tracing_subscriber::EnvFilter, tracing_subscriber::Registry>>,
 }
 
 pub async fn dispatch(state: Arc<AgentState>, request: JsonRpcRequest) -> JsonRpcResponse {

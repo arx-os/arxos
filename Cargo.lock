@@ -217,6 +217,7 @@ dependencies = [
  "geo",
  "git2",
  "glob",
+ "gloo-net",
  "hex",
  "indicatif",
  "las",

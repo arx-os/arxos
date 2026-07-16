@@ -28,6 +28,8 @@ pub mod ssh_server;
 pub mod watcher;
 #[cfg(feature = "agent")]
 pub mod workspace;
+#[cfg(feature = "agent")]
+pub mod observability;
 
 #[cfg(feature = "agent")]
 pub mod dispatcher;

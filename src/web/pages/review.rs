@@ -75,6 +75,11 @@ pub fn Review() -> impl IntoView {
     let (proposed_only, set_proposed_only) = create_signal(false);
     let (load_gen, set_load_gen) = create_signal(0u32);
 
+    let (claims_processed, set_claims_processed) = create_signal(0usize);
+    let (claims_approved, set_claims_approved) = create_signal(0usize);
+    let (claims_rejected, set_claims_rejected) = create_signal(0usize);
+    let (rewards_axd, set_rewards_axd) = create_signal(0.0f64);
+
     let do_load = move || {
         if !crate::web::ws_client::is_connected() {
             set_status_msg.set(
@@ -84,6 +89,30 @@ pub fn Review() -> impl IntoView {
         }
         set_loading.set(true);
         set_status_msg.set("Loading building.get…".into());
+
+        // Fetch queue stats from /api/claims/status
+        let host = crate::web::ws_client::current_agent_host();
+        let token = crate::web::ws_client::get_saved_token().unwrap_or_default();
+        let status_url = format!("http://{}/api/claims/status?token={}", host, token);
+        spawn_local(async move {
+            if let Ok(res) = gloo_net::http::Request::get(&status_url).send().await {
+                if let Ok(stats) = res.json::<serde_json::Value>().await {
+                    if let Some(processed) = stats.get("claims_processed").and_then(|v| v.as_u64()) {
+                        set_claims_processed.set(processed as usize);
+                    }
+                    if let Some(approved) = stats.get("claims_approved").and_then(|v| v.as_u64()) {
+                        set_claims_approved.set(approved as usize);
+                    }
+                    if let Some(rejected) = stats.get("claims_rejected").and_then(|v| v.as_u64()) {
+                        set_claims_rejected.set(rejected as usize);
+                    }
+                    if let Some(axd) = stats.get("rewards_distributed_axd").and_then(|v| v.as_f64()) {
+                        set_rewards_axd.set(axd);
+                    }
+                }
+            }
+        });
+
         spawn_local(async move {
             match crate::web::ws_client::send_rpc("building.get", serde_json::json!({})).await {
                 Ok(val) => {
@@ -196,6 +225,20 @@ pub fn Review() -> impl IntoView {
                         <div style="margin-bottom: 12px;">
                             <div style="font-weight: 700; font-size: 1.1rem;">{name}</div>
                             <div style="font-size: 13px; color: #64748b;">{meta.get()}</div>
+                            <div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px;">
+                                <span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: #475569; font-weight: 600;">
+                                    "Processed: " {move || claims_processed.get()}
+                                </span>
+                                <span style="background: #dcfce7; padding: 2px 6px; border-radius: 4px; color: #166534; font-weight: 600;">
+                                    "Approved: " {move || claims_approved.get()}
+                                </span>
+                                <span style="background: #fee2e2; padding: 2px 6px; border-radius: 4px; color: #991b1b; font-weight: 600;">
+                                    "Rejected: " {move || claims_rejected.get()}
+                                </span>
+                                <span style="background: #e0f2fe; padding: 2px 6px; border-radius: 4px; color: #0369a1; font-weight: 600;">
+                                    "Distributed: " {move || format!("{:.1} AXD", rewards_axd.get())}
+                                </span>
+                            </div>
                         </div>
                     }.into_any()
                 }

@@ -3,7 +3,7 @@
 #[cfg(feature = "agent")]
 use std::{
     net::SocketAddr,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, atomic::Ordering},
 };
 
 #[cfg(feature = "agent")]
@@ -36,11 +36,33 @@ pub struct AuthParams {
 
 #[cfg(feature = "agent")]
 pub async fn start_agent() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🤖 ArxOS Agent starting...");
+    // A. Setup structured logging
+    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
+    let (filter_layer, reload_handle) = tracing_subscriber::reload::Layer::new(filter);
+
+    let use_json = std::env::var("LOG_FORMAT")
+        .map(|v| v.to_lowercase() == "json")
+        .unwrap_or(false);
+
+    use tracing_subscriber::prelude::*;
+    if use_json {
+        let _ = tracing_subscriber::registry()
+            .with(filter_layer)
+            .with(tracing_subscriber::fmt::layer().json())
+            .try_init();
+    } else {
+        let _ = tracing_subscriber::registry()
+            .with(filter_layer)
+            .with(tracing_subscriber::fmt::layer())
+            .try_init();
+    }
+
+    tracing::info!("🤖 ArxOS Agent starting...");
 
     // 1. Detect Repository Root
     let repo_root = detect_repo_root()?;
-    println!("📂 Repository Root: {}", repo_root.display());
+    tracing::info!(repo_root = %repo_root.display(), "Detected repository root");
 
     // 2. Generate Root Token
     let root_token = generate_did_key();
@@ -57,19 +79,28 @@ pub async fn start_agent() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     let token_state = TokenState::new(root_token.clone(), all_capabilities);
+    let metrics = Arc::new(crate::agent::observability::AgentMetrics::new());
     let state = Arc::new(AgentState {
-        repo_root,
+        repo_root: repo_root.clone(),
         token: Arc::new(Mutex::new(token_state)),
+        metrics: metrics.clone(),
+        reload_handle: Some(reload_handle.clone()),
     });
 
+    // Spawn log watcher
+    crate::agent::observability::spawn_log_level_watcher(repo_root.clone(), reload_handle);
+
     println!("\n🔑 ROOT TOKEN: {}\n", root_token);
-    println!("⚠️  Keep this token secret! You will need it to connect.");
-    println!("ℹ️  Hardware/BACnet drivers not included in this build (revisit later).");
+    tracing::info!("⚠️  Keep this token secret! You will need it to connect.");
+    tracing::info!("ℹ️  Hardware/BACnet drivers not included in this build (revisit later).");
 
     // 3. Setup Router
     let app = Router::new()
         .route("/ws", get(ws_handler))
         .route("/rpc", post(rpc_handler))
+        .route("/api/status", get(http_agent_status))
+        .route("/api/claims/status", get(http_claims_status))
+        .route("/metrics", get(http_prometheus_metrics))
         .route("/api/claims/staging", get(http_claims_staging))
         .route("/api/claims/:id/approve", post(http_claim_approve))
         .route("/api/claims/:id/reject", post(http_claim_reject))
@@ -267,6 +298,7 @@ pub async fn http_claim_approve(
     Json(body): Json<HttpClaimReviewRequest>,
 ) -> impl IntoResponse {
     if !check_auth(&headers, params.token.as_deref(), &state) {
+        state.metrics.record_error();
         return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
     }
 
@@ -275,11 +307,17 @@ pub async fn http_claim_approve(
 
     let repo_str = match state.repo_root.to_str() {
         Some(s) => s,
-        None => return (StatusCode::INTERNAL_SERVER_ERROR, "Invalid repo path").into_response(),
+        None => {
+            state.metrics.record_error();
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Invalid repo path").into_response();
+        }
     };
     let building = match crate::persistence::load_building_at(&state.repo_root) {
         Ok(b) => b,
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to load building: {}", e)).into_response(),
+        Err(e) => {
+            state.metrics.record_error();
+            return (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to load building: {}", e)).into_response();
+        }
     };
     let building_id = building.id.clone();
 
@@ -296,12 +334,16 @@ pub async fn http_claim_approve(
         live_mode,
     ) {
         Ok((claim_state, receipt)) => {
+            state.metrics.record_claim_processed(true, 500.0);
             Json(serde_json::json!({
                 "status": format!("{:?}", claim_state),
                 "receipt": receipt
             })).into_response()
         }
-        Err(e) => (StatusCode::BAD_REQUEST, e).into_response(),
+        Err(e) => {
+            state.metrics.record_error();
+            (StatusCode::BAD_REQUEST, e).into_response()
+        }
     }
 }
 
@@ -313,6 +355,7 @@ pub async fn http_claim_reject(
     State(state): State<Arc<AgentState>>,
 ) -> impl IntoResponse {
     if !check_auth(&headers, params.token.as_deref(), &state) {
+        state.metrics.record_error();
         return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
     }
 
@@ -321,11 +364,17 @@ pub async fn http_claim_reject(
 
     let repo_str = match state.repo_root.to_str() {
         Some(s) => s,
-        None => return (StatusCode::INTERNAL_SERVER_ERROR, "Invalid repo path").into_response(),
+        None => {
+            state.metrics.record_error();
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Invalid repo path").into_response();
+        }
     };
     let building = match crate::persistence::load_building_at(&state.repo_root) {
         Ok(b) => b,
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to load building: {}", e)).into_response(),
+        Err(e) => {
+            state.metrics.record_error();
+            return (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to load building: {}", e)).into_response();
+        }
     };
     let building_id = building.id.clone();
 
@@ -340,12 +389,16 @@ pub async fn http_claim_reject(
         false,
     ) {
         Ok((claim_state, receipt)) => {
+            state.metrics.record_claim_processed(false, 0.0);
             Json(serde_json::json!({
                 "status": format!("{:?}", claim_state),
                 "receipt": receipt
             })).into_response()
         }
-        Err(e) => (StatusCode::BAD_REQUEST, e).into_response(),
+        Err(e) => {
+            state.metrics.record_error();
+            (StatusCode::BAD_REQUEST, e).into_response()
+        }
     }
 }
 
@@ -388,11 +441,22 @@ async fn rpc_handler(
 
 #[cfg(feature = "agent")]
 async fn handle_socket(mut socket: WebSocket, state: Arc<AgentState>) {
+    struct WsGuard(Arc<AgentState>);
+    impl Drop for WsGuard {
+        fn drop(&mut self) {
+            self.0.metrics.active_ws_clients.fetch_sub(1, Ordering::SeqCst);
+            tracing::info!(active = self.0.metrics.active_ws_clients.load(Ordering::SeqCst), "WebSocket client disconnected");
+        }
+    }
+    state.metrics.active_ws_clients.fetch_add(1, Ordering::SeqCst);
+    let _guard = WsGuard(state.clone());
+    tracing::info!(active = state.metrics.active_ws_clients.load(Ordering::SeqCst), "WebSocket client connected");
+
     while let Some(msg) = socket.recv().await {
         let msg = match msg {
             Ok(msg) => msg,
             Err(e) => {
-                eprintln!("Socket error: {}", e);
+                tracing::error!(error = %e, "WebSocket socket error");
                 return;
             }
         };
@@ -413,7 +477,7 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AgentState>) {
                 // Send Response
                 if let Ok(resp_text) = serde_json::to_string(&response) {
                     if let Err(e) = socket.send(Message::Text(resp_text)).await {
-                        eprintln!("Failed to send response: {}", e);
+                        tracing::error!(error = %e, "Failed to send WebSocket response");
                         return;
                     }
                 }
@@ -424,6 +488,139 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AgentState>) {
             _ => {}
         }
     }
+}
+
+#[cfg(feature = "agent")]
+#[derive(serde::Serialize)]
+struct AgentStatusDto {
+    status: String,
+    uptime_seconds: u64,
+    active_ws_clients: usize,
+    cache_stats: CacheStatsDto,
+}
+
+#[cfg(feature = "agent")]
+#[derive(serde::Serialize)]
+struct CacheStatsDto {
+    warm_cache_size: usize,
+}
+
+#[cfg(feature = "agent")]
+pub async fn http_agent_status(
+    headers: HeaderMap,
+    Query(params): Query<AuthParams>,
+    State(state): State<Arc<AgentState>>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, params.token.as_deref(), &state) {
+        state.metrics.record_error();
+        return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+    }
+
+    let uptime = state.metrics.start_time.elapsed().as_secs();
+    let cache_size = 0; // Static placeholder or simple count of active connections
+
+    let status = AgentStatusDto {
+        status: "healthy".to_string(),
+        uptime_seconds: uptime,
+        active_ws_clients: state.metrics.active_ws_clients.load(Ordering::SeqCst),
+        cache_stats: CacheStatsDto {
+            warm_cache_size: cache_size,
+        },
+    };
+
+    Json(status).into_response()
+}
+
+#[cfg(feature = "agent")]
+#[derive(serde::Serialize)]
+struct ClaimsStatusDto {
+    claims_processed: usize,
+    claims_approved: usize,
+    claims_rejected: usize,
+    rewards_distributed_axd: f64,
+}
+
+#[cfg(feature = "agent")]
+pub async fn http_claims_status(
+    headers: HeaderMap,
+    Query(params): Query<AuthParams>,
+    State(state): State<Arc<AgentState>>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, params.token.as_deref(), &state) {
+        state.metrics.record_error();
+        return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+    }
+
+    let axd = if let Ok(val) = state.metrics.rewards_distributed_axd.lock() {
+        *val
+    } else {
+        0.0
+    };
+
+    let status = ClaimsStatusDto {
+        claims_processed: state.metrics.claims_processed.load(Ordering::SeqCst),
+        claims_approved: state.metrics.claims_approved.load(Ordering::SeqCst),
+        claims_rejected: state.metrics.claims_rejected.load(Ordering::SeqCst),
+        rewards_distributed_axd: axd,
+    };
+
+    Json(status).into_response()
+}
+
+#[cfg(feature = "agent")]
+pub async fn http_prometheus_metrics(
+    headers: HeaderMap,
+    Query(params): Query<AuthParams>,
+    State(state): State<Arc<AgentState>>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, params.token.as_deref(), &state) {
+        state.metrics.record_error();
+        return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+    }
+
+    let axd = if let Ok(val) = state.metrics.rewards_distributed_axd.lock() {
+        *val
+    } else {
+        0.0
+    };
+
+    let uptime = state.metrics.start_time.elapsed().as_secs();
+
+    let metrics_text = format!(
+        "# HELP arx_agent_uptime_seconds The uptime of the ArxOS agent in seconds.\n\
+         # TYPE arx_agent_uptime_seconds gauge\n\
+         arx_agent_uptime_seconds {}\n\
+         # HELP arx_agent_active_ws_clients The number of active WebSocket client connections.\n\
+         # TYPE arx_agent_active_ws_clients gauge\n\
+         arx_agent_active_ws_clients {}\n\
+         # HELP arx_agent_claims_processed_total The total number of staging claims processed.\n\
+         # TYPE arx_agent_claims_processed_total counter\n\
+         arx_agent_claims_processed_total {}\n\
+         # HELP arx_agent_claims_approved_total The total number of staging claims approved.\n\
+         # TYPE arx_agent_claims_approved_total counter\n\
+         arx_agent_claims_approved_total {}\n\
+         # HELP arx_agent_claims_rejected_total The total number of staging claims rejected.\n\
+         # TYPE arx_agent_claims_rejected_total counter\n\
+         arx_agent_claims_rejected_total {}\n\
+         # HELP arx_agent_rewards_distributed_axd_total The total AXD token rewards distributed by the agent.\n\
+         # TYPE arx_agent_rewards_distributed_axd_total counter\n\
+         arx_agent_rewards_distributed_axd_total {:.2}\n\
+         # HELP arx_agent_errors_total The total number of errors encountered by the agent.\n\
+         # TYPE arx_agent_errors_total counter\n\
+         arx_agent_errors_total {}\n",
+        uptime,
+        state.metrics.active_ws_clients.load(Ordering::SeqCst),
+        state.metrics.claims_processed.load(Ordering::SeqCst),
+        state.metrics.claims_approved.load(Ordering::SeqCst),
+        state.metrics.claims_rejected.load(Ordering::SeqCst),
+        axd,
+        state.metrics.errors_encountered.load(Ordering::SeqCst)
+    );
+
+    (
+        [(axum::http::header::CONTENT_TYPE, "text/plain; version=0.0.4")],
+        metrics_text
+    ).into_response()
 }
 
 #[cfg(feature = "agent")]

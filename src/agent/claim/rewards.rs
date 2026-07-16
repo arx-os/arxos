@@ -135,15 +135,28 @@ impl TokenDistributor for OnChainDistributor {
         owner_address: &str,
         total_amount: f64,
     ) -> Result<String, String> {
+        let span = tracing::info_span!("distribute_split", building_id = %building_id, owner_address = %owner_address, total_amount = total_amount);
+        let _enter = span.enter();
+
         let private_key = self.key_loader.load_private_key()
-            .map_err(|e| format!("On-chain signing failed: {}", e))?;
+            .map_err(|e| {
+                let redacted_err = crate::agent::observability::redact_secrets(&e);
+                tracing::error!(error = %redacted_err, "Failed to load private key");
+                format!("On-chain signing failed: {}", redacted_err)
+            })?;
         let rpc_url = self.key_loader.load_rpc_url()
-            .map_err(|e| format!("On-chain transfer failed: {}", e))?;
+            .map_err(|e| {
+                let redacted_err = crate::agent::observability::redact_secrets(&e);
+                tracing::error!(error = %redacted_err, "Failed to load RPC URL");
+                format!("On-chain transfer failed: {}", redacted_err)
+            })?;
 
         if private_key.is_empty() || private_key == "MOCK_KEY" {
+            tracing::warn!("Rejecting token split signature: private key is placeholder/empty");
             return Err("On-chain signing failed: Private key is empty or placeholder".to_string());
         }
         if rpc_url.is_empty() {
+            tracing::error!("Rejecting token split transfer: RPC URL is empty");
             return Err("On-chain transfer failed: RPC URL is empty".to_string());
         }
 
@@ -151,7 +164,7 @@ impl TokenDistributor for OnChainDistributor {
         let owner_share = total_amount * 0.10;
         let maintainer_share = total_amount * 0.20;
 
-        log::info!("Broadcasting Phase Network transfer tx for building: {}", building_id);
+        tracing::info!("Broadcasting Phase Network transfer transaction");
         
         let tx_hash = "0x789c1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab";
         let receipt = format!(

@@ -50,6 +50,14 @@ impl GraceWindowManager {
 
     /// Add a contribution scan payload to the pending review folder.
     pub fn add_pending_contribution(&self, repo_path: &str, provisional_yaml: &str) -> Result<usize, String> {
+        let building_id = if let Ok(data) = crate::yaml::BuildingYamlSerializer::deserialize(provisional_yaml) {
+            data.building.id.clone()
+        } else {
+            "unknown".to_string()
+        };
+        let span = tracing::info_span!("add_pending_contribution", building_id = %building_id);
+        let _enter = span.enter();
+
         let pending_dir = Path::new(repo_path).join(".arx").join("claims").join("pending");
         fs::create_dir_all(&pending_dir).map_err(|e| e.to_string())?;
 
@@ -62,7 +70,7 @@ impl GraceWindowManager {
         let filepath = pending_dir.join(format!("{}.yaml", index));
         fs::write(&filepath, provisional_yaml).map_err(|e| e.to_string())?;
         
-        log::info!("Stored pending contribution index: {} at {:?}", index, filepath);
+        tracing::info!(index = index, path = ?filepath, "Stored pending contribution");
         Ok(index)
     }
 
@@ -101,6 +109,9 @@ impl GraceWindowManager {
         owner_address: &str,
         live_mode: bool,
     ) -> Result<(ClaimState, String), String> {
+        let span = tracing::info_span!("review_pending_contribution", building_id = %building_id, index = index, approve = approve);
+        let _enter = span.enter();
+
         let pending_path = Path::new(repo_path).join(".arx").join("claims").join("pending").join(format!("{}.yaml", index));
         if !pending_path.exists() {
             return Err(format!("Pending contribution index {} does not exist", index));
@@ -109,7 +120,7 @@ impl GraceWindowManager {
         let provisional_yaml = fs::read_to_string(&pending_path).map_err(|e| e.to_string())?;
 
         if approve {
-            log::info!("Approving contribution index {} for building {}", index, building_id);
+            tracing::info!("Approving contribution");
             
             // Promote provisional references to main
             let promoted_yaml = self.process_in_flight_contribution(building_id, &provisional_yaml)?;
@@ -130,7 +141,7 @@ impl GraceWindowManager {
 
             Ok((ClaimState::RewardsReleased, payout_receipt))
         } else {
-            log::warn!("Rejecting contribution index {} for building {}", index, building_id);
+            tracing::warn!("Rejecting contribution");
 
             // Move to rejected folder
             let rejected_dir = Path::new(repo_path).join(".arx").join("claims").join("rejected");

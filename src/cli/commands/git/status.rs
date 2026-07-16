@@ -19,6 +19,8 @@ impl Command for StatusCommand {
                 let state = std::sync::Arc::new(crate::agent::dispatcher::AgentState {
                     repo_root,
                     token: std::sync::Arc::new(std::sync::Mutex::new(token_state)),
+                    metrics: std::sync::Arc::new(crate::agent::observability::AgentMetrics::new()),
+                    reload_handle: None,
                 });
 
                 let rt = tokio::runtime::Runtime::new()?;

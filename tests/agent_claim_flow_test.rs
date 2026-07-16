@@ -223,6 +223,8 @@ equipment: []
         let agent_state = Arc::new(AgentState {
             repo_root: temp_dir.path().to_path_buf(),
             token: Arc::new(Mutex::new(token_state)),
+            metrics: Arc::new(arxos::agent::observability::AgentMetrics::new()),
+            reload_handle: None,
         });
 
         tokio::runtime::Runtime::new().unwrap().block_on(async {
@@ -255,5 +257,104 @@ equipment: []
             let response = res.into_response();
             assert_eq!(response.status(), StatusCode::OK);
         });
+    }
+
+    #[test]
+    fn test_agent_observability_endpoints() {
+        use axum::{
+            http::StatusCode,
+            response::IntoResponse,
+        };
+        use tempfile::tempdir;
+        use std::sync::{Arc, Mutex};
+        use arxos::agent::{
+            auth::TokenState,
+            dispatcher::AgentState,
+        };
+
+        let temp_dir = tempdir().unwrap();
+
+        // Setup AgentState with metrics
+        let token_state = TokenState::new("secret-token".to_string(), vec![]);
+        let metrics = Arc::new(arxos::agent::observability::AgentMetrics::new());
+        
+        // Record some mock metrics
+        metrics.record_claim_processed(true, 500.0); // 1 approved with 500 AXD
+        metrics.record_claim_processed(false, 0.0); // 1 rejected
+        metrics.record_error();
+
+        let agent_state = Arc::new(AgentState {
+            repo_root: temp_dir.path().to_path_buf(),
+            token: Arc::new(Mutex::new(token_state)),
+            metrics: metrics.clone(),
+            reload_handle: None,
+        });
+
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            // 1. Test status endpoint unauthorized
+            let headers = axum::http::HeaderMap::new();
+            let query = axum::extract::Query(arxos::agent::server::AuthParams { token: None });
+            let state = axum::extract::State(agent_state.clone());
+            let res = arxos::agent::server::http_agent_status(headers, query, state).await;
+            assert_eq!(res.into_response().status(), StatusCode::UNAUTHORIZED);
+
+            // 2. Test status endpoint authorized
+            let headers = axum::http::HeaderMap::new();
+            let query = axum::extract::Query(arxos::agent::server::AuthParams { token: Some("secret-token".to_string()) });
+            let state = axum::extract::State(agent_state.clone());
+            let res = arxos::agent::server::http_agent_status(headers, query, state).await;
+            let response = res.into_response();
+            assert_eq!(response.status(), StatusCode::OK);
+
+            // 3. Test claims status endpoint
+            let headers = axum::http::HeaderMap::new();
+            let query = axum::extract::Query(arxos::agent::server::AuthParams { token: Some("secret-token".to_string()) });
+            let state = axum::extract::State(agent_state.clone());
+            let res = arxos::agent::server::http_claims_status(headers, query, state).await;
+            let response = res.into_response();
+            assert_eq!(response.status(), StatusCode::OK);
+
+            let body_bytes = axum::body::to_bytes(response.into_body(), 10000).await.unwrap();
+            let val: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+            assert_eq!(val.get("claims_processed").unwrap().as_u64().unwrap(), 2);
+            assert_eq!(val.get("claims_approved").unwrap().as_u64().unwrap(), 1);
+            assert_eq!(val.get("claims_rejected").unwrap().as_u64().unwrap(), 1);
+            assert_eq!(val.get("rewards_distributed_axd").unwrap().as_f64().unwrap(), 500.0);
+
+            // 4. Test metrics endpoint
+            let headers = axum::http::HeaderMap::new();
+            let query = axum::extract::Query(arxos::agent::server::AuthParams { token: Some("secret-token".to_string()) });
+            let state = axum::extract::State(agent_state.clone());
+            let res = arxos::agent::server::http_prometheus_metrics(headers, query, state).await;
+            let response = res.into_response();
+            assert_eq!(response.status(), StatusCode::OK);
+
+            let body_bytes = axum::body::to_bytes(response.into_body(), 10000).await.unwrap();
+            let metrics_text = String::from_utf8(body_bytes.to_vec()).unwrap();
+            assert!(metrics_text.contains("arx_agent_claims_processed_total 2"));
+            assert!(metrics_text.contains("arx_agent_claims_approved_total 1"));
+            assert!(metrics_text.contains("arx_agent_claims_rejected_total 1"));
+            assert!(metrics_text.contains("arx_agent_rewards_distributed_axd_total 500.00"));
+            assert!(metrics_text.contains("arx_agent_errors_total 2"));
+        });
+    }
+
+    #[test]
+    fn test_log_redactor_and_sensitive() {
+        use arxos::agent::observability::{redact_secrets, Sensitive};
+
+        // Redactor
+        let raw = "Some error with private key MOCK_SECRET_KEY and secret key 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        let redacted = redact_secrets(raw);
+        assert!(!redacted.contains("MOCK_SECRET_KEY"));
+        assert!(!redacted.contains("0123456789abcdef"));
+        assert!(redacted.contains("[REDACTED]"));
+
+        // Sensitive
+        let sensitive = Sensitive("super-secret");
+        let display = format!("{}", sensitive);
+        let debug = format!("{:?}", sensitive);
+        assert_eq!(display, "[REDACTED]");
+        assert_eq!(debug, "[REDACTED]");
     }
 }

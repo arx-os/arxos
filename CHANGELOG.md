@@ -5,6 +5,17 @@ All notable changes to ArxOS will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0-pilot.5] - 2026-07-17
+
+**Tag:** `v2.0.0-pilot.5` @ `latest`  
+**Install:** `git checkout v2.0.0-pilot.5 && cargo install --path . --locked`  
+**Default features:** compiler spine + TUI.
+
+### Changed
+- Address Validation: Downgraded reserved system prefix mismatches from hard errors to warnings by default to support pragmatic field naming schemas. Added `--strict-addresses` flag to validation and IFC import commands to enforce strict validations (R10/R5).
+- LossReport Honesty: Expanded the static `unmapped_products` list into a dynamic registry-driven scan to ensure all unmapped physical IFC entities (including MEP elements like `IFCPIPESEGMENT` and `IFCDUCTSEGMENT`) are correctly captured in the LossReport instead of silently ignored (R2).
+- Key Determinism: Sorted all `properties` HashMap fields on serialization using a custom Serde helper to guarantee deterministic JSON and YAML output formats (G3).
+
 ## [2.0.0-pilot.4] - 2026-07-13
 
 **Tag:** `v2.0.0-pilot.4` @ `659bbd9f`  

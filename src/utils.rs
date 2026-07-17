@@ -353,3 +353,31 @@ pub fn generate_id(prefix: &str) -> String {
 pub fn is_empty_or_whitespace(s: &str) -> bool {
     s.trim().is_empty()
 }
+
+/// Serialization sorting helper for HashMaps to ensure deterministic serialization.
+///
+/// This module provides custom serialization and deserialization functions that can
+/// be used with Serde's `#[serde(with = "...")]` or `#[serde(serialize_with = "...")]`
+/// attributes to sort the keys of a `HashMap` alphabetically. This prevents non-deterministic
+/// output ordering in formats like JSON (due to Rust's randomized `HashMap` hashing).
+pub mod sorted_map {
+    use serde::{Serialize, Serializer, Deserialize, Deserializer};
+    use std::collections::{BTreeMap, HashMap};
+
+    /// Serialize a `HashMap` by collecting its keys into a sorted `BTreeMap` first.
+    pub fn serialize<S>(map: &HashMap<String, String>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let sorted: BTreeMap<&str, &str> = map.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+        sorted.serialize(serializer)
+    }
+
+    /// Deserialize a `HashMap` using the default `HashMap` deserializer.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<String, String>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        HashMap::deserialize(deserializer)
+    }
+}

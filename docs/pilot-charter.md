@@ -4,7 +4,7 @@
 **Go level:** L1 — controlled free-software pilot on **one** building  
 **Fill in blanks · print or PDF · sign before pilot start**
 
-**Maturity:** Lab compiler ~8/10; district L1 readiness ~4/10 until process +
+**Maturity:** Lab compiler ~8.5/10; district L1 readiness ~5/10 until process +
 field evidence close obligations in `arxos_manifest.md` §1.6.  
 **Site north star (full §1.1a):** see `docs/horizon-b-roadmap.md` — this charter
 gates **controlled L1**. CLI/TUI remains the pin + evidence path; **iPhone PWA + laptop agent**
@@ -32,7 +32,7 @@ still with human gates and the same IFC export spine.
 | Building ID (Arx UUID after `arx init`) | |
 | Allowed inputs | [ ] IFC  [ ] LiDAR  [ ] text edits |
 | Git remote location (must be internal) | |
-| Pinned Arx install (tag or commit) | Prefer `v2.0.0-pilot.4` @ `659bbd9f369c0b942f150983b204ea054fc595a0` (or exact pin from `docs/pilot-release.md`) |
+| Pinned Arx install (tag or commit) | Prefer `v2.0.0-pilot.5` @ `latest` (or exact pin from `docs/pilot-release.md`) |
 | Pilot start date | |
 | Pilot end / review date | |
 
@@ -45,6 +45,7 @@ still with human gates and the same IFC export spine.
 - **No** Revit, ArchiCAD, or other CAD plugin, add-in, or direct CAD integration is supported or authorized.
 - Official IFC leaving the pilot uses: `arx export --format ifc` (prefer `--approved-only` when LiDAR was used).
 - Optional `agent` feature is **edge bridging only** (WebSocket/SSH / file watch). It is **not** required for L1 and is **not** a second IFC export authority.
+- **Lenient Validation:** By default, validation permits pragmatic naming of fixtures under reserved systems (errors mapped to warnings). Enforce strict rules via `--strict-addresses` during final QA validation. Unmapped IFC products (including MEP segment classes) are reported dynamically in the `LossReport`.
 - Identity rules: `docs/identity.md`. Limitations: `docs/ifc-limitations.md`.
 
 ## 3. Safety and professional liability (required)

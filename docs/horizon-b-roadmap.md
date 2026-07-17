@@ -2,8 +2,8 @@
 
 **Authority:** [`arxos_manifest.md`](../arxos_manifest.md) §1.1a · §1.5–1.6 · §10.2  
 **Field packet (policy order):** [field-handoff.md](./field-handoff.md)  
-**Preferred pin:** `v2.0.0-pilot.4` @ `659bbd9f` — [pilot-release.md](./pilot-release.md)  
-**Last updated:** 2026-07-13 (HB6-accel: iPhone PWA + agent prioritized)  
+**Preferred pin:** `v2.0.0-pilot.5` @ `latest` — [pilot-release.md](./pilot-release.md)  
+**Last updated:** 2026-07-17 (pilot.5 address validation & dynamic LossReport polish)  
 
 This file is the **living** Horizon B plan. Update status/dates when evidence lands; reconcile scores in the manifest.  
 Do **not** start Horizon C work until L1 exit criteria here are met once.
@@ -67,7 +67,7 @@ Structured logging, status endpoints, and operational visibility for the agent (
 | Reward Distribution Hardening | In Progress | **In Progress** (Paymaster / Gas Hardening) |
 | Charter / data class | Templates | **Unsigned** (R7/R10) |
 
-**Scorecard (honest):** Lab closed loop ~8–8.5/10 · District L1 ~4/10 · Full vision L3 ~2/10.
+**Scorecard (honest):** Lab closed loop ~8.5/10 · District L1 ~5/10 · Full vision L3 ~2/10.
 
 ---
 

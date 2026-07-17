@@ -76,6 +76,7 @@ pub struct Equipment {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mesh: Option<crate::core::spatial::mesh::Mesh>,
     /// Key-value metadata
+    #[serde(default, with = "crate::utils::sorted_map")]
     pub properties: HashMap<String, String>,
     /// Operational status (whether equipment is running/active)
     pub status: EquipmentStatus,

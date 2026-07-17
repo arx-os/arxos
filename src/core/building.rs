@@ -28,7 +28,7 @@ pub struct BuildingMetadata {
     /// Tags for categorization
     pub tags: Vec<String>,
     /// Additional properties extracted during parsing
-    #[serde(default)]
+    #[serde(default, with = "crate::utils::sorted_map")]
     pub properties: HashMap<String, String>,
 }
 

@@ -349,3 +349,12 @@ impl ArxError {
 
 /// Result type alias for ArxOS operations
 pub type ArxResult<T> = Result<T, ArxError>;
+
+impl From<crate::core::domain::address::AddressValidationError> for ArxError {
+    fn from(err: crate::core::domain::address::AddressValidationError) -> Self {
+        ArxError::AddressValidation {
+            address: String::new(),
+            message: err.to_string(),
+        }
+    }
+}

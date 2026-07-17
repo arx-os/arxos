@@ -10,23 +10,23 @@ If a doc here conflicts with the manifest, **the manifest wins**.
 
 | Claim | Score |
 | :--- | :---: |
-| Lab closed loop (compiler + Foundry) | ~8/10 |
-| District L1 pilot readiness | ~4/10 |
+| Lab closed loop (compiler + Foundry) | ~8.5/10 |
+| District L1 pilot readiness | ~5/10 |
 | Owner Experience | **Good** (once dashboard lands) |
 | Full reward/market (L3) | ~2/10 |
 
 L1 is blocked on **process + field evidence**, not missing framework code.  
 See manifest §1.5–1.6.
 
-**Preferred pin:** `v2.0.0-pilot.4` @ `659bbd9f` — [pilot-release.md](./pilot-release.md).  
-**Install:** `git checkout v2.0.0-pilot.4 && cargo install --path . --locked` (default = compiler + TUI).
+**Preferred pin:** `v2.0.0-pilot.5` @ `latest` — [pilot-release.md](./pilot-release.md).  
+**Install:** `git checkout v2.0.0-pilot.5 && cargo install --path . --locked` (default = compiler + TUI).
 
 ### Lab IFC honesty (Package A, 2026-07)
 
 | Item | Status |
 | :--- | :---: |
 | Non-panic import on buildingSMART ISO + PCERT samples | Yes |
-| `unmapped_products` LossReport (walls/slabs/doors/…) | Yes (pilot.4) |
+| `unmapped_products` LossReport (MEP & structural) | Yes (pilot.5 dynamic scan) |
 | District Revit/ArchiCAD anonymized evidence | **Open** (R2 field) |
 
 Details: [ifc-limitations.md](./ifc-limitations.md) · report: [`tests/ifc_buildingsmart_report.md`](../tests/ifc_buildingsmart_report.md)

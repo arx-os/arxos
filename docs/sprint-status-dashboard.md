@@ -1,6 +1,6 @@
 # HB0–HB2 sprint status dashboard (weekly)
 
-**Pin:** `v2.0.0-pilot.4` @ `659bbd9f`  
+**Pin:** `v2.0.0-pilot.5` @ `latest`  
 **Living plan:** [horizon-b-roadmap.md](./horizon-b-roadmap.md)  
 **Update:** once per week (or after each S* closes). Copy this file privately per pilot if needed.
 

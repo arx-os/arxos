@@ -44,8 +44,8 @@ If IFC is incomplete, fix vendor export settings. See [ifc-limitations.md](./ifc
 ```bash
 git clone <internal-or-approved-remote> arxos
 cd arxos
-git checkout v2.0.0-pilot.4   # or exact pin recorded in the pilot charter
-git rev-parse HEAD            # expect 659bbd9f369c0b942f150983b204ea054fc595a0 for pilot.4
+git checkout v2.0.0-pilot.5   # or exact pin recorded in the pilot charter
+git rev-parse HEAD            # expect latest pilot.5 commit SHA
 
 # Default = compiler + TUI (primary UI). blockchain/agent not required for L1
 cargo install --path . --locked
@@ -116,8 +116,11 @@ arx export --format ifc --approved-only --output site-approved.ifc
 ## 5. Validate
 
 ```bash
+# Lenient address validations by default (address mismatches trigger warnings only):
 arx validate
-# fix errors before treating model as pilot SSOT
+
+# Pass --strict-addresses to escalate system prefix mismatches into hard errors for final QA checks:
+arx validate --strict-addresses
 ```
 
 ## 6. Git

@@ -51,6 +51,7 @@ struct RoomDto {
     room_type: RoomType,
     equipment: Vec<String>,
     spatial_properties: super::SpatialProperties,
+    #[serde(default, with = "crate::utils::sorted_map")]
     properties: HashMap<String, String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     created_at: Option<DateTime<Utc>>,

@@ -1,7 +1,7 @@
 # Field Day 1 Runbook (S3 + S5)
 
 **Audience:** Non-author capture tech (or second person after S4)  
-**Pin:** `v2.0.0-pilot.4` @ `659bbd9f369c0b942f150983b204ea054fc595a0`  
+**Pin:** `v2.0.0-pilot.5` @ `latest`  
 **Maps to:** Sprint **S3** (install + smoke) then **S5** (real IFC + LossReport log)  
 **Living plan:** [horizon-b-roadmap.md](./horizon-b-roadmap.md) · Packet: [field-handoff.md](./field-handoff.md)
 
@@ -24,9 +24,9 @@
 ```bash
 git clone <approved-arxos-remote> arxos
 cd arxos
-git checkout v2.0.0-pilot.4
+git checkout v2.0.0-pilot.5
 git rev-parse HEAD
-# MUST print: 659bbd9f369c0b942f150983b204ea054fc595a0
+# MUST print: (latest pilot.5 commit SHA)
 ```
 
 | Evidence | What to capture |
@@ -106,7 +106,7 @@ Imported successfully to building.yaml
 | If you see… | Meaning | Action |
 | :--- | :--- | :--- |
 | `Imported successfully` + `Validation: ok` | Write succeeded | Continue |
-| `[unmapped_products]` | Walls/etc. present but not Arx domain | **Log in A2** — honesty, not crash |
+| `[unmapped_products]` | Wall/slab/door/window and MEP (duct/pipe) segments present but not Arx domain | **Log in A2** — dynamic registry scan honesty, not crash |
 | `file too large` / `ARX_MAX_IFC_BYTES` | R6 refuse | See [resource-limits.md](./resource-limits.md); raise env only with headroom; log §C |
 | `IFC import failed` / panic | Blocker | Stop; eng S7 + stuck-list |
 | `Validation failed; refusing to write` | Hard gate worked | Fix model or file eng; do not bypass |
@@ -115,6 +115,8 @@ Imported successfully to building.yaml
 
 ```bash
 arx validate 2>&1 | tee validate.log
+# Note: validate is lenient by default. Use --strict-addresses to run strict QA validations:
+# arx validate --strict-addresses 2>&1 | tee validate-strict.log
 mkdir -p exports
 arx export --format ifc --output exports/out.ifc 2>&1 | tee export.log
 ls -la exports/out.ifc

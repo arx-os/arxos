@@ -99,4 +99,18 @@ Walls/slabs/doors/windows are typically **not** first-class Arx entities; import
 - Survey-grade geometry from IFC alone
 - Agent/daemon as official pilot export authority
 
-**Manifest:** §3.5, obligation **R2**.
+## Dynamic LossReport & Address Validation (2.0.0-pilot.5 Polish)
+
+To support L1 pilot capture loops on real-world buildings, two critical enhancements were introduced:
+
+### 1. Dynamic LossReport Mapping (Honesty-First)
+Rather than checking against a static hardcoded array, the import resolver now executes a **dynamic registry scan**. It evaluates all entity classes present in the incoming STEP file, automatically filtering out known helper/relation/spatial/mapped structures.
+- **MEP Elements Captured:** Unmapped equipment classes like `IFCPIPESEGMENT`, `IFCDUCTSEGMENT`, `IFCTRANSFORMER`, and `IFCMOTOR` are dynamically logged as `unmapped_products` in the `LossReport` rather than silently ignored.
+- **Benefits:** Ensures complete visibility of data loss during imports, allowing field operators to review dropped MEP networks and structural assets.
+
+### 2. Lenient Address Naming Validation
+By default, the compiler now treats `ReservedSystemPrefixMismatch` issues as **warnings** instead of hard errors. 
+- **Usability:** Initial on-site LiDAR scans or pragmatic naming schemas (e.g. `/usa/ny/brooklyn/hq/floor-01/plumbing/faucet-01`) will no longer block `persist_building` from saving to the canonical `building.yaml`.
+- **Enforcement:** To run strict QA validations where prefix rules must be strictly adhered to, operators must pass the `--strict-addresses` CLI flag (e.g. `arx validate --strict-addresses` or `arx import ifc --strict-addresses`).
+
+**Manifest:** §1.6, §3.5, obligation **R2**.

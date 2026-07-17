@@ -2,8 +2,11 @@
 
 use crate::core::Building;
 use crate::ifc::mapping::COORD_BUILDING_LOCAL;
-
 use super::rules::{ValidationResult, ValidationSeverity};
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// Global flag controlling whether address validation checks reserved system prefixes strictly (as errors) or leniently (as warnings).
+pub static STRICT_ADDRESSES: AtomicBool = AtomicBool::new(false);
 
 /// Aggregated validation outcome for a building after ingest.
 #[derive(Debug, Clone, Default)]
@@ -348,10 +351,22 @@ fn validate_address(
 ) {
     if let Some(ref addr) = address {
         if let Err(e) = addr.validate() {
+            use crate::core::domain::address::AddressValidationError;
+            let is_prefix_error = matches!(&e, AddressValidationError::ReservedSystemPrefixMismatch { .. });
+
+            let severity = if is_prefix_error && !STRICT_ADDRESSES.load(Ordering::Relaxed) {
+                ValidationSeverity::Warning
+            } else {
+                ValidationSeverity::Error
+            };
+
             report.results.push(ValidationResult {
-                rule_id: "address.invalid".into(),
-                message: format!("Address '{}' is invalid: {}", addr.path, e),
-                severity: ValidationSeverity::Error,
+                rule_id: match &e {
+                    AddressValidationError::ReservedSystemPrefixMismatch { .. } => "address.system_prefix".into(),
+                    _ => "address.invalid".into(),
+                },
+                message: format!("Address '{}' has issue: {}", addr.path, e),
+                severity,
                 field: Some(field.to_string()),
             });
         }
@@ -458,5 +473,37 @@ mod tests {
         assert!(report
             .warnings()
             .any(|w| w.rule_id == "lidar.confidence.range"));
+    }
+
+    #[test]
+    fn test_lenient_vs_strict_address_validation() {
+        use crate::core::Equipment;
+        use crate::core::EquipmentType;
+        use crate::core::domain::ArxAddress;
+
+        let mut b = Building::new("HQ".into(), "/hq".into());
+        let mut floor = Floor::new("F1".into(), 0);
+        let mut wing = Wing::new("Main".into());
+        let mut room = Room::new("R1".into(), RoomType::Mechanical);
+        
+        // This is a prefix mismatch (faucet is plumbing, but it's under hvac system)
+        let mut eq = Equipment::new("Faucet 1".into(), String::new(), EquipmentType::Plumbing);
+        eq.address = Some(ArxAddress::from_path("/usa/ny/brooklyn/hq/floor-01/hvac/faucet-01").unwrap());
+        room.add_equipment(eq);
+        wing.add_room(room);
+        floor.add_wing(wing);
+        b.add_floor(floor);
+
+        // Under default lenient validation, this is a warning, so has_errors() is false
+        STRICT_ADDRESSES.store(false, Ordering::Relaxed);
+        let report = validate_building(&b);
+        assert!(!report.has_errors());
+        assert!(report.results.iter().any(|r| r.rule_id == "address.system_prefix" && r.severity == ValidationSeverity::Warning));
+
+        // Under strict validation, this becomes a hard error
+        STRICT_ADDRESSES.store(true, Ordering::Relaxed);
+        let report = validate_building(&b);
+        assert!(report.has_errors());
+        assert!(report.results.iter().any(|r| r.rule_id == "address.system_prefix" && r.severity == ValidationSeverity::Error));
     }
 }

@@ -134,7 +134,7 @@ pub struct Anchor {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub relative_poses: Vec<RelativePose>,
     /// Key-value properties metadata.
-    #[serde(default)]
+    #[serde(default, with = "crate::utils::sorted_map")]
     pub properties: HashMap<String, String>,
     /// Reference to external SLAM/feature map.
     #[serde(default, skip_serializing_if = "Option::is_none")]

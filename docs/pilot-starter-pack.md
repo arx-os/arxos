@@ -1,6 +1,6 @@
 # Pilot Starter Pack (zip-ready checklist)
 
-**Pin:** `v2.0.0-pilot.4` @ `659bbd9f369c0b942f150983b204ea054fc595a0`  
+**Pin:** `v2.0.0-pilot.5` @ `latest`  
 **Audience:** Site team (pilot owner, capture tech, second person)  
 **Authority:** [`arxos_manifest.md`](../arxos_manifest.md) §1.1a · §1.6 · [horizon-b-roadmap.md](./horizon-b-roadmap.md)
 
@@ -45,8 +45,8 @@ Copy these files from the pin checkout (`docs/` unless noted):
 ## 2. Build the zip (from pin checkout)
 
 ```bash
-git checkout v2.0.0-pilot.4
-git rev-parse HEAD   # 659bbd9f369c0b942f150983b204ea054fc595a0
+git checkout v2.0.0-pilot.5
+git rev-parse HEAD   # latest pilot.5 commit SHA
 
 mkdir -p /tmp/arxos-pilot-starter-pack
 cp docs/pilot-charter.md \
@@ -71,13 +71,13 @@ cp docs/horizon-b-roadmap.md docs/s8-reconciliation-template.md \
 
 printf '%s\n' \
   "ArxOS Pilot Starter Pack" \
-  "Pin: v2.0.0-pilot.4 @ 659bbd9f369c0b942f150983b204ea054fc595a0" \
+  "Pin: v2.0.0-pilot.5 @ latest" \
   "Built: $(date -u +%Y-%m-%dT%H:%MZ)" \
   "Start: field-day-1-runbook.md after charter/data-class" \
   > /tmp/arxos-pilot-starter-pack/README-PACK.txt
 
-cd /tmp && zip -r arxos-pilot-starter-pack-pilot.4.zip arxos-pilot-starter-pack
-# share arxos-pilot-starter-pack-pilot.4.zip on internal channel only
+cd /tmp && zip -r arxos-pilot-starter-pack-pilot.5.zip arxos-pilot-starter-pack
+# share arxos-pilot-starter-pack-pilot.5.zip on internal channel only
 ```
 
 ---

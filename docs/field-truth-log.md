@@ -9,7 +9,7 @@
 
 | Header | Value |
 | :--- | :--- |
-| **Pin under test** | `v2.0.0-pilot.4` @ `659bbd9f` (or charter): ________ |
+| **Pin under test** | `v2.0.0-pilot.5` @ `latest` (or charter): ________ |
 | **Site / building** | ________ |
 | **Operator** | ________ |
 | **Date opened** | ________ |
@@ -69,7 +69,8 @@ Warnings (N):
 
 ```text
 arx import ifc <file> 2>&1 | tee import-ifc.log
-arx validate 2>&1 | tee validate.log
+# Lenient address validation is default. Add --strict-addresses for strict QA gating:
+arx validate --strict-addresses 2>&1 | tee validate.log
 arx export --format ifc --output exports/out.ifc 2>&1 | tee export.log
 # optional: arx import ifc exports/out.ifc
 ```

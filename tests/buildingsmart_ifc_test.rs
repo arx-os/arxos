@@ -68,3 +68,29 @@ fn buildingsmart_wall_opening_import_reports_unmapped_products() {
         .expect("export");
     assert!(out.metadata().unwrap().len() > 0);
 }
+
+#[test]
+#[serial]
+fn test_mep_unmapped_loss_reporting() {
+    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/ifc/buildingsmart/basin-tessellation.ifc");
+    assert!(path.exists());
+    let result = import_ifc_path(&path, None, false, true).expect("import basin");
+    
+    let unmapped = result
+        .report
+        .warnings
+        .iter()
+        .find(|w| w.code == "unmapped_products");
+    assert!(
+        unmapped.is_some(),
+        "expected unmapped_products warning; got warnings={:?}",
+        result.report.warnings
+    );
+    let msg = &unmapped.unwrap().message;
+    assert!(
+        msg.contains("IFCSANITARYTERMINAL"),
+        "expected unmapped message to cite IFCSANITARYTERMINAL: {}",
+        msg
+    );
+}

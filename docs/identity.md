@@ -47,6 +47,9 @@ ArxAddress is intentionally **path-like** (filesystem / URL mental model) with
 14 reserved system room segments (`hvac`, `electrical`, …). It is **not** a
 substitute for UUID or GlobalId.
 
+- **Lenient Naming Rules:** Syntax structure is validated strictly (lowercase, valid characters, leading slash, segment count). However, system prefix mismatches (e.g. placing a non-prefixed fixture under a reserved system category like `hvac`) trigger warnings by default rather than hard validation errors, allowing initial saves. Pass the `--strict-addresses` CLI flag during QA to enforce strict prefix rules.
+
+
 `ArxAddress::guid()` (SHA-256 of path) is a **helper for stable fixture-derived
 tokens only**. It is **not** the product GlobalId used by the IFC exporter
 (`resolve_product_global_id` / `ifc_global_id_from_uuid`).

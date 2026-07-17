@@ -56,7 +56,11 @@ impl Cli {
                     repo,
                     dry_run,
                     strict,
+                    strict_addresses,
                 } => {
+                    if strict_addresses {
+                        crate::validation::STRICT_ADDRESSES.store(true, std::sync::atomic::Ordering::Relaxed);
+                    }
                     let cmd = ImportCommand {
                         ifc_file,
                         repo,
@@ -378,9 +382,14 @@ impl Cli {
                 })?;
                 Ok(())
             }
-            Commands::Validate { path } => {
+            Commands::Validate { path, strict_addresses } => {
                 use crate::persistence::{load_building_at, BUILDING_YAML};
-                use crate::validation::validate_building;
+                use crate::validation::{validate_building, STRICT_ADDRESSES};
+                use std::sync::atomic::Ordering;
+
+                if strict_addresses {
+                    STRICT_ADDRESSES.store(true, Ordering::Relaxed);
+                }
 
                 let base = path
                     .as_deref()

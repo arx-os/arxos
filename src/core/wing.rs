@@ -30,6 +30,7 @@ struct WingDto {
     name: String,
     rooms: Vec<Room>,
     equipment: Vec<String>,
+    #[serde(default, with = "crate::utils::sorted_map")]
     properties: HashMap<String, String>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     address: Option<ArxAddress>,

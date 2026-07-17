@@ -61,6 +61,9 @@ pub enum Commands {
         /// Path to project root containing building.yaml
         #[arg(long)]
         path: Option<String>,
+        /// Enable strict address prefix checking
+        #[arg(long)]
+        strict_addresses: bool,
     },
     /// Export building SSOT (IFC is the compiler interchange spine)
     ///
@@ -408,6 +411,9 @@ pub enum ImportSubcommand {
         /// Enable strict validation (fail on missing spatial entities)
         #[arg(long)]
         strict: bool,
+        /// Enable strict address prefix checking
+        #[arg(long)]
+        strict_addresses: bool,
     },
     /// Import LiDAR point cloud (assistive structure; review proposed entities)
     Lidar {

@@ -127,32 +127,20 @@ impl ArxAddress {
     /// For custom systems, any fixture name is allowed.
     ///
     /// # Returns
-    /// * `Result<()>` - Ok if valid, error if validation fails
-    pub fn validate(&self) -> Result<()> {
+    /// * `Ok(())` if valid, or `Err(AddressValidationError)`
+    pub fn validate(&self) -> Result<(), AddressValidationError> {
         let parts: Vec<&str> = self.path.trim_start_matches('/').split('/').filter(|s| !s.is_empty()).collect();
         if parts.is_empty() {
-            return Err(ArxError::path_invalid(
-                self.path.clone(),
-                "Path must contain at least one segment".to_string(),
-            )
-            .into());
+            return Err(AddressValidationError::MissingSegments);
         }
 
         // Validate each part contains only lowercase/valid characters
         for part in &parts {
             if part.to_lowercase() != *part {
-                return Err(ArxError::address_validation(
-                    self.path.clone(),
-                    format!("Segment '{}' must be lowercase", part),
-                )
-                .into());
+                return Err(AddressValidationError::NotLowercase { part: part.to_string() });
             }
             if !part.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
-                return Err(ArxError::address_validation(
-                    self.path.clone(),
-                    format!("Segment '{}' contains invalid characters", part),
-                )
-                .into());
+                return Err(AddressValidationError::InvalidCharacters { part: part.to_string() });
             }
         }
 
@@ -160,134 +148,120 @@ impl ArxAddress {
         for (i, part) in parts.iter().enumerate() {
             if RESERVED_SYSTEMS.contains(part) && i + 1 < parts.len() {
                 let fixture = parts[i + 1];
-                    match *part {
-                        "hvac" => {
-                            if !fixture.starts_with("boiler-") && !fixture.starts_with("ahu-") && !fixture.starts_with("vav-") {
-                                return Err(ArxError::address_validation(
-                                    self.path.clone(),
-                                    "HVAC fixture must start with boiler-, ahu-, or vav-".to_string(),
-                                )
-                                .into());
-                            }
+                match *part {
+                    "hvac" => {
+                        if !fixture.starts_with("boiler-") && !fixture.starts_with("ahu-") && !fixture.starts_with("vav-") {
+                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
+                                system: part.to_string(),
+                                message: "HVAC fixture must start with boiler-, ahu-, or vav-".to_string(),
+                            });
                         }
-                        "plumbing" => {
-                            if !fixture.starts_with("valve-") && !fixture.starts_with("pump-") {
-                                return Err(ArxError::address_validation(
-                                    self.path.clone(),
-                                    "Plumbing fixture must start with valve- or pump-".to_string(),
-                                )
-                                .into());
-                            }
-                        }
-                        "electrical" => {
-                            if !fixture.starts_with("panel-") && !fixture.starts_with("breaker-") {
-                                return Err(ArxError::address_validation(
-                                    self.path.clone(),
-                                    "Electrical fixture must start with panel- or breaker-".to_string(),
-                                )
-                                .into());
-                            }
-                        }
-                        "fire" => {
-                            if !fixture.starts_with("sprinkler-") && !fixture.starts_with("alarm-") {
-                                return Err(ArxError::address_validation(
-                                    self.path.clone(),
-                                    "Fire fixture must start with sprinkler- or alarm-".to_string(),
-                                )
-                                .into());
-                            }
-                        }
-                        "lighting" => {
-                            if !fixture.starts_with("fixture-") && !fixture.starts_with("control-") {
-                                return Err(ArxError::address_validation(
-                                    self.path.clone(),
-                                    "Lighting fixture must start with fixture- or control-".to_string(),
-                                )
-                                .into());
-                            }
-                        }
-                        "security" => {
-                            if !fixture.starts_with("camera-") && !fixture.starts_with("access-") {
-                                return Err(ArxError::address_validation(
-                                    self.path.clone(),
-                                    "Security fixture must start with camera- or access-".to_string(),
-                                )
-                                .into());
-                            }
-                        }
-                        "elevators" => {
-                            if !fixture.starts_with("car-") && !fixture.starts_with("control-") {
-                                return Err(ArxError::address_validation(
-                                    self.path.clone(),
-                                    "Elevator fixture must start with car- or control-".to_string(),
-                                )
-                                .into());
-                            }
-                        }
-                        "roof" => {
-                            if !fixture.starts_with("unit-") && !fixture.starts_with("drain-") {
-                                return Err(ArxError::address_validation(
-                                    self.path.clone(),
-                                    "Roof fixture must start with unit- or drain-".to_string(),
-                                )
-                                .into());
-                            }
-                        }
-                        "windows" => {
-                            if !fixture.starts_with("frame-") && !fixture.starts_with("glass-") {
-                                return Err(ArxError::address_validation(
-                                    self.path.clone(),
-                                    "Window fixture must start with frame- or glass-".to_string(),
-                                )
-                                .into());
-                            }
-                        }
-                        "doors" => {
-                            if !fixture.starts_with("hinge-") && !fixture.starts_with("lock-") {
-                                return Err(ArxError::address_validation(
-                                    self.path.clone(),
-                                    "Door fixture must start with hinge- or lock-".to_string(),
-                                )
-                                .into());
-                            }
-                        }
-                        "structure" => {
-                            if !fixture.starts_with("column-") && !fixture.starts_with("beam-") {
-                                return Err(ArxError::address_validation(
-                                    self.path.clone(),
-                                    "Structure fixture must start with column- or beam-".to_string(),
-                                )
-                                .into());
-                            }
-                        }
-                        "envelope" => {
-                            if !fixture.starts_with("wall-") && !fixture.starts_with("insulation-") {
-                                return Err(ArxError::address_validation(
-                                    self.path.clone(),
-                                    "Envelope fixture must start with wall- or insulation-".to_string(),
-                                )
-                                .into());
-                            }
-                        }
-                        "it" => {
-                            if !fixture.starts_with("switch-") && !fixture.starts_with("ap-") {
-                                return Err(ArxError::address_validation(
-                                    self.path.clone(),
-                                    "IT fixture must start with switch- or ap-".to_string(),
-                                )
-                                .into());
-                            }
-                        }
-                        "furniture" if !fixture.starts_with("desk-") && !fixture.starts_with("chair-") => {
-                            return Err(ArxError::address_validation(
-                                self.path.clone(),
-                                "Furniture fixture must start with desk- or chair-".to_string(),
-                            )
-                            .into());
-                        }
-                        _ => {}
                     }
+                    "plumbing" => {
+                        if !fixture.starts_with("valve-") && !fixture.starts_with("pump-") {
+                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
+                                system: part.to_string(),
+                                message: "Plumbing fixture must start with valve- or pump-".to_string(),
+                            });
+                        }
+                    }
+                    "electrical" => {
+                        if !fixture.starts_with("panel-") && !fixture.starts_with("breaker-") {
+                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
+                                system: part.to_string(),
+                                message: "Electrical fixture must start with panel- or breaker-".to_string(),
+                            });
+                        }
+                    }
+                    "fire" => {
+                        if !fixture.starts_with("sprinkler-") && !fixture.starts_with("alarm-") {
+                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
+                                system: part.to_string(),
+                                message: "Fire fixture must start with sprinkler- or alarm-".to_string(),
+                            });
+                        }
+                    }
+                    "lighting" => {
+                        if !fixture.starts_with("fixture-") && !fixture.starts_with("control-") {
+                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
+                                system: part.to_string(),
+                                message: "Lighting fixture must start with fixture- or control-".to_string(),
+                            });
+                        }
+                    }
+                    "security" => {
+                        if !fixture.starts_with("camera-") && !fixture.starts_with("access-") {
+                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
+                                system: part.to_string(),
+                                message: "Security fixture must start with camera- or access-".to_string(),
+                            });
+                        }
+                    }
+                    "elevators" => {
+                        if !fixture.starts_with("car-") && !fixture.starts_with("control-") {
+                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
+                                system: part.to_string(),
+                                message: "Elevator fixture must start with car- or control-".to_string(),
+                            });
+                        }
+                    }
+                    "roof" => {
+                        if !fixture.starts_with("unit-") && !fixture.starts_with("drain-") {
+                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
+                                system: part.to_string(),
+                                message: "Roof fixture must start with unit- or drain-".to_string(),
+                            });
+                        }
+                    }
+                    "windows" => {
+                        if !fixture.starts_with("frame-") && !fixture.starts_with("glass-") {
+                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
+                                system: part.to_string(),
+                                message: "Window fixture must start with frame- or glass-".to_string(),
+                            });
+                        }
+                    }
+                    "doors" => {
+                        if !fixture.starts_with("hinge-") && !fixture.starts_with("lock-") {
+                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
+                                system: part.to_string(),
+                                message: "Door fixture must start with hinge- or lock-".to_string(),
+                            });
+                        }
+                    }
+                    "structure" => {
+                        if !fixture.starts_with("column-") && !fixture.starts_with("beam-") {
+                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
+                                system: part.to_string(),
+                                message: "Structure fixture must start with column- or beam-".to_string(),
+                            });
+                        }
+                    }
+                    "envelope" => {
+                        if !fixture.starts_with("wall-") && !fixture.starts_with("insulation-") {
+                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
+                                system: part.to_string(),
+                                message: "Envelope fixture must start with wall- or insulation-".to_string(),
+                            });
+                        }
+                    }
+                    "it" => {
+                        if !fixture.starts_with("switch-") && !fixture.starts_with("ap-") {
+                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
+                                system: part.to_string(),
+                                message: "IT fixture must start with switch- or ap-".to_string(),
+                            });
+                        }
+                    }
+                    "furniture" if !fixture.starts_with("desk-") && !fixture.starts_with("chair-") => {
+                        return Err(AddressValidationError::ReservedSystemPrefixMismatch {
+                            system: part.to_string(),
+                            message: "Furniture fixture must start with desk- or chair-".to_string(),
+                        });
+                    }
+                    _ => {}
                 }
+            }
         }
         Ok(())
     }
@@ -401,6 +375,30 @@ impl ArxAddress {
     }
 }
 
+/// Detailed validation errors and warnings that can occur when checking the syntax 
+/// and semantic rules of an [`ArxAddress`].
+#[derive(Debug, Clone, thiserror::Error, PartialEq, Eq)]
+pub enum AddressValidationError {
+    /// A segment contains uppercase characters, violating lowercase-only naming.
+    #[error("Segment '{part}' must be lowercase")]
+    NotLowercase { part: String },
+    /// A segment contains non-alphanumeric, non-hyphen, non-underscore characters.
+    #[error("Segment '{part}' contains invalid characters")]
+    InvalidCharacters { part: String },
+    /// The address path does not start with a leading slash.
+    #[error("Path must start with '/'")]
+    MissingLeadingSlash,
+    /// The address path is an empty string.
+    #[error("Path cannot be empty")]
+    EmptyPath,
+    /// The address path has no segments.
+    #[error("Path must contain at least one segment")]
+    MissingSegments,
+    /// A fixture name inside a reserved system (e.g. `hvac`) does not follow standard naming prefixes.
+    #[error("Address validation failed for system '{system}': {message}")]
+    ReservedSystemPrefixMismatch { system: String, message: String },
+}
+
 impl fmt::Display for ArxAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.path)
@@ -470,6 +468,19 @@ mod tests {
     fn test_validate_custom() {
         let addr =
             ArxAddress::from_path("/usa/ny/brooklyn/ps-118/floor-02/kitchen/fridge-01").unwrap();
+        assert!(addr.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_pragmatic() {
+        // Pragmatic names inside reserved systems should return a PrefixMismatch error
+        let addr = ArxAddress::from_path("/usa/ny/brooklyn/ps-118/floor-02/plumbing/faucet-01").unwrap();
+        let res = addr.validate();
+        assert!(res.is_err());
+        assert!(matches!(res.unwrap_err(), AddressValidationError::ReservedSystemPrefixMismatch { .. }));
+
+        // Non-prefixed custom items under non-reserved categories are Ok
+        let addr = ArxAddress::from_path("/usa/ny/brooklyn/ps-118/floor-02/classroom/projector-01").unwrap();
         assert!(addr.validate().is_ok());
     }
 

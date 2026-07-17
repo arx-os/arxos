@@ -44,6 +44,40 @@ echo "==> import ifc / validate"
 "$ARX" import ifc "$IFC"
 "$ARX" validate
 
+echo "==> address validation check (lenient default vs strict)"
+"$ARX" edit - <<EOF
+add room Mech floor="Ground Floor" type=mechanical
+add equipment faucet-01 room=Mech type=plumbing
+EOF
+
+python3 -c '
+import sys
+content = open("building.yaml").read()
+target = "name: faucet-01"
+if target in content:
+    replacement = target + "\n  address: /usa/ny/brooklyn/smoke/floor-02/hvac/faucet-01"
+    content = content.replace(target, replacement)
+    with open("building.yaml", "w") as f:
+        f.write(content)
+else:
+    print("faucet-01 not found")
+    sys.exit(1)
+'
+
+# 1. Lenient validation (default): must pass (warning only, no hard validation error)
+"$ARX" validate
+
+# 2. Strict validation (--strict-addresses): must fail validation
+set +e
+"$ARX" validate --strict-addresses >/dev/null 2>&1
+STRICT_FAIL=$?
+set -e
+if [[ "$STRICT_FAIL" -eq 0 ]]; then
+  echo "ERROR: validate --strict-addresses should have failed with prefix mismatch"
+  exit 1
+fi
+echo "Strict address validation correctly caught and blocked mismatch."
+
 echo "==> export (internal + approved-only)"
 mkdir -p exports
 "$ARX" export --format ifc --output exports/out.ifc

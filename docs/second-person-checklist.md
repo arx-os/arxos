@@ -29,8 +29,8 @@
 | 3 | `arx init --name "…"` in a new directory | 5 | | [ ] | |
 | 4 | `arx validate` on fresh init | 2 | | [ ] | |
 | 5 | Import **sample or pilot IFC** (`test_data/sample_building.ifc` from the pin checkout is OK) | 15 | | [ ] | |
-| 5b | Note import **warnings** (any `unmapped_products` or other codes) — do not ignore | 5 | | [ ] | |
-| 6 | `arx validate` after import | 5 | | [ ] | |
+| 5b | Note import **warnings** (check dynamic `unmapped_products` log for MEP/structural classes) | 5 | | [ ] | |
+| 6 | `arx validate` after import (default lenient mode; optionally test strict mode with `--strict-addresses`) | 5 | | [ ] | |
 | 7 | If LiDAR in scope: import + set one `review_status` | 20 | | [ ] | |
 | 8 | `arx export --format ifc --output out.ifc` | 10 | | [ ] | |
 | 9 | Git stage + commit (local is enough) | 10 | | [ ] | |

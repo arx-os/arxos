@@ -192,40 +192,25 @@ impl<'a> IfcResolver<'a> {
     /// slabs, doors, etc. are silently dropped. Spaces and MEP equipment classes
     /// that `resolve_equipment_under` already walks are **not** listed here.
     fn append_unmapped_product_warnings(&mut self) {
-        /// IFC product classes Arx does not currently map into Room/Equipment.
-        const UNMAPPED_PRODUCT_CLASSES: &[&str] = &[
-            "IFCWALL",
-            "IFCWALLSTANDARDCASE",
-            "IFCSLAB",
-            "IFCDOOR",
-            "IFCWINDOW",
-            "IFCCOLUMN",
-            "IFCBEAM",
-            "IFCROOF",
-            "IFCBUILDINGELEMENTPROXY",
-            "IFCCOVERING",
-            "IFCSTAIR",
-            "IFCSTAIRFLIGHT",
-            "IFCMEMBER",
-            "IFCPLATE",
-            "IFCRAILING",
-            "IFCFURNISHINGELEMENT",
-            "IFCFOOTING",
-            "IFCPILE",
-            "IFCCURTAINWALL",
-            "IFCRAMP",
-            "IFCCHIMNEY",
-        ];
-
+        let stats = self.registry.get_stats();
         let mut parts: Vec<String> = Vec::new();
         let mut total = 0usize;
-        for class in UNMAPPED_PRODUCT_CLASSES {
-            let n = self.registry.get_by_class(class).len();
+
+        // Sort keys to maintain deterministic warnings formatting
+        let mut classes: Vec<&String> = stats.class_counts.keys().collect();
+        classes.sort();
+
+        for class in classes {
+            if Self::is_ignored_class(class) {
+                continue;
+            }
+            let n = stats.class_counts.get(class).copied().unwrap_or(0);
             if n > 0 {
                 total += n;
                 parts.push(format!("{}×{}", class, n));
             }
         }
+
         if total > 0 {
             self.warnings.push(MappingWarning::new(
                 "unmapped_products",
@@ -237,6 +222,67 @@ impl<'a> IfcResolver<'a> {
             ));
         }
     }
+
+fn is_ignored_class(class: &str) -> bool {
+    if class.starts_with("IFCREL") {
+        return true;
+    }
+    if class.starts_with("IFCMATERIAL") {
+        return true;
+    }
+    if class.starts_with("IFCUNIT") {
+        return true;
+    }
+    if class.starts_with("IFCCARTESIAN") {
+        return true;
+    }
+    if class.starts_with("IFCMAPPED") {
+        return true;
+    }
+    if class.ends_with("TYPE") {
+        return true;
+    }
+    if class.contains("REPRESENTATION") {
+        return true;
+    }
+    if class.contains("PLACEMENT") {
+        return true;
+    }
+    if class.contains("PROPERTY") {
+        return true;
+    }
+    if class.contains("GEOMETRIC") {
+        return true;
+    }
+
+    const IGNORED: &[&str] = &[
+        // Mapped spatial
+        "IFCPROJECT", "IFCSITE", "IFCBUILDING", "IFCBUILDINGSTOREY", "IFCSPACE", "IFCZONE", "IFCGROUP",
+        // Mapped equipment
+        "IFCFLOWTERMINAL", "IFCFLOWCONTROLLER", "IFCSENSOR", "IFCAIRTERMINAL", "IFCLIGHTFIXTURE",
+        "IFCBOILER", "IFCCHILLER", "IFCFAN", "IFCPUMP", "IFCVALVE", "IFCLAMP", "IFCOUTLET",
+        "IFCSWITCHINGDEVICE", "IFCFIREALARM", "IFCFIRESUPRESSION", "IFCAUDIOVISUALAPPLIANCE",
+        "IFCFURNITURE", "IFCDISTRIBUTIONELEMENT", "IFCCOMMUNICATIONSAPPLIANCE",
+        // Geometric representation helpers
+        "IFCCARTESIANPOINT", "IFCDIRECTION", "IFCVECTOR", "IFCAXIS2PLACEMENT2D", "IFCAXIS2PLACEMENT3D",
+        "IFCPRODUCTDEFINITIONSHAPE", "IFCTRIANGULATEDFACESET", "IFCCARTESIANPOINTLIST3D",
+        "IFCPOLYLOOP", "IFCFACEOUTERBOUND", "IFCFACE", "IFCPOLYGONALBOUNDEDHALFSPACE",
+        "IFCSHELLBASEDSURFACEMODEL", "IFCCLOSEDSHELL", "IFCOPTIONAL", "IFCCOLOURRGB",
+        "IFCSURFACESTYLE", "IFCSURFACESTYLESHADING", "IFCPRESENTATIONSTYLEASSIGNMENT",
+        "IFCSTYLEDITEM", "IFCMAPCONVERSION", "IFCPROJECTEDCRS", "IFCEXTRUDEDAREASOLID",
+        "IFCARBITRARYCLOSEDPROFILEDEF", "IFCPLANE", "IFCPOLYLINE", "IFCTRANSFORMATION",
+        "IFCGRID", "IFCGRIDAXIS", "IFCGRIDCONVERGENCE", "IFCDIMENSIONALEXPONENTS",
+        // Property, Unit, and Metadata helpers
+        "IFCSIUNIT", "IFCPERSON", "IFCORGANIZATION", "IFCPERSONANDORGANIZATION", "IFCAPPLICATION",
+        "IFCOWNERHISTORY", "IFCPOSTALADDRESS", "IFCTELECOMADDRESS", "IFCCOMPLEXPROPERTY",
+        "IFCREFERENCE", "IFCLABEL", "IFCIDENTIFIER", "IFCMEASUREWITHUNIT", "IFCMONETARYUNIT",
+        "IFCVALUETYPE", "IFCCURRENCYMEASURE", "IFCTYPEPRODUCT", "IFCTYPEOBJECT", "IFCSYSTEM",
+        "IFCPRESENTATIONLAYERASSIGNMENT", "IFCSHAPEASPECT", "IFCCONVERSIONBASEDUNIT",
+        "IFCDERIVEDUNIT", "IFCDERIVEDUNITELEMENT", "IFCPRODUCTREPRESENTATION"
+    ];
+
+    IGNORED.contains(&class)
+}
 
     // --- Traversal Helpers ---
 

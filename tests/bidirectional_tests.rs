@@ -892,3 +892,34 @@ fn test_backbone_yaml_ifc_merge_roundtrip() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_deterministic_properties_serialization() {
+    use arxos::core::{Building, Floor, Wing, Room, RoomType};
+    use std::collections::HashMap;
+
+    let mut b = Building::new("PS 118".into(), "/ps".into());
+    let mut floor = Floor::new("Floor 2".into(), 2);
+    let mut wing = Wing::new("Main".into());
+    let mut room = Room::new("Mech".into(), RoomType::Mechanical);
+    
+    // Insert keys in non-alphabetical order
+    let mut props = HashMap::new();
+    props.insert("z_key".to_string(), "last".to_string());
+    props.insert("a_key".to_string(), "first".to_string());
+    props.insert("m_key".to_string(), "middle".to_string());
+    
+    room.properties = props;
+    wing.add_room(room);
+    floor.add_wing(wing);
+    b.add_floor(floor);
+
+    // Serialize to JSON and check sorted key order
+    let json = serde_json::to_string(&b).unwrap();
+    // The keys should appear alphabetically: a_key, m_key, z_key
+    let a_pos = json.find("a_key").unwrap();
+    let m_pos = json.find("m_key").unwrap();
+    let z_pos = json.find("z_key").unwrap();
+    assert!(a_pos < m_pos);
+    assert!(m_pos < z_pos);
+}

@@ -1,6 +1,7 @@
 //! Web-sys wrapper for accessing mobile device camera feeds.
 
 /// Camera management wrapper binding video elements to device streams.
+#[derive(Default)]
 pub struct CameraManager;
 
 impl CameraManager {

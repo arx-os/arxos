@@ -277,7 +277,7 @@ async fn post_comment(
 
 fn format_comment(message: &CollabMessage) -> String {
     let submitted_at =
-        DateTime::<Utc>::from_timestamp_millis(message.timestamp).unwrap_or_else(|| Utc::now());
+        DateTime::<Utc>::from_timestamp_millis(message.timestamp).unwrap_or_else(Utc::now);
 
     format!(
         "### ArxOS Update for `{}`\n\n{}\n\n— _{}_ @ {} UTC_",

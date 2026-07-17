@@ -5,6 +5,9 @@
 //!
 //! This library can be used independently of the CLI binary.
 
+#![allow(deprecated)]
+#![allow(clippy::unit_arg)]
+
 // Core modules (always available) — building compiler spine
 pub mod access;
 pub mod config;

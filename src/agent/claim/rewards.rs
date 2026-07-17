@@ -103,6 +103,12 @@ pub struct HybridKeyLoader {
     pub file_loader: FileKeyLoader,
 }
 
+impl Default for HybridKeyLoader {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HybridKeyLoader {
     pub fn new() -> Self {
         Self {

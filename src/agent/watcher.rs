@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
 use anyhow::Result;
@@ -7,6 +7,7 @@ use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watche
 
 /// File watcher for YAML building data files
 pub struct FileWatcher {
+    #[allow(dead_code)]
     watcher: RecommendedWatcher,
     receiver: Receiver<Result<Event, notify::Error>>,
     extensions: Vec<String>,

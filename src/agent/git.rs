@@ -107,7 +107,7 @@ pub fn status(repo_root: &Path) -> Result<GitStatusSummary> {
     let status = manager.get_status().context("Failed to fetch Git status")?;
     let diff_stats = manager
         .get_diff_stats(None)
-        .unwrap_or_else(|_| crate::git::DiffStats {
+        .unwrap_or(crate::git::DiffStats {
             files_changed: 0,
             insertions: 0,
             deletions: 0,
@@ -268,11 +268,10 @@ mod tests {
             Self
         }
     }
-
     impl Drop for EnvGuard {
         fn drop(&mut self) {
-            let _ = std::env::remove_var("GIT_AUTHOR_NAME");
-            let _ = std::env::remove_var("GIT_AUTHOR_EMAIL");
+            std::env::remove_var("GIT_AUTHOR_NAME");
+            std::env::remove_var("GIT_AUTHOR_EMAIL");
         }
     }
 

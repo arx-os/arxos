@@ -40,6 +40,12 @@ pub struct WarmCache {
     pub recency_vs_proximity_weight: f64,
 }
 
+impl Default for WarmCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WarmCache {
     /// Initialize the Warm Cache with a 100MB budget.
     pub fn new() -> Self {

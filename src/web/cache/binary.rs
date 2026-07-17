@@ -26,6 +26,12 @@ pub struct BinaryAssetCache {
     pub last_latency_ms: u64,
 }
 
+impl Default for BinaryAssetCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BinaryAssetCache {
     /// Initialize the Binary Asset Cache with a 200MB budget.
     pub fn new() -> Self {

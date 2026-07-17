@@ -8,6 +8,7 @@ use crate::core::spatial::BoundingBox3D;
 use std::collections::HashMap;
 
 /// In-memory cache holding active AR trackers, room bounds, and relative transform matrices.
+#[derive(Default)]
 pub struct HotCache {
     /// Active re-localization anchors in the immediate tracking field.
     pub active_anchors: HashMap<String, Anchor>,
@@ -22,12 +23,7 @@ pub struct HotCache {
 impl HotCache {
     /// Initialize an empty Hot Cache.
     pub fn new() -> Self {
-        Self {
-            active_anchors: HashMap::new(),
-            current_room_id: None,
-            current_room_bounds: None,
-            estimated_memory_bytes: 0,
-        }
+        Self::default()
     }
 
     /// Clear the tracking loop memory to release WASM heap space.

@@ -20,6 +20,12 @@ pub struct AgentMetrics {
     pub active_ws_clients: AtomicUsize,
 }
 
+impl Default for AgentMetrics {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AgentMetrics {
     pub fn new() -> Self {
         Self {

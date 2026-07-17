@@ -43,12 +43,12 @@ pub struct JsonRpcError {
 }
 
 thread_local! {
-    static WS_CONNECTION: RefCell<Option<WebSocket>> = RefCell::new(None);
+    static WS_CONNECTION: RefCell<Option<WebSocket>> = const { RefCell::new(None) };
     static PENDING_RESPONSES: RefCell<HashMap<String, oneshot::Sender<Result<Value, String>>>> = RefCell::new(HashMap::new());
-    static REQUEST_ID_COUNTER: RefCell<u64> = RefCell::new(0);
+    static REQUEST_ID_COUNTER: RefCell<u64> = const { RefCell::new(0) };
     /// Last successful connect host (session); also mirrored in localStorage.
     static LAST_HOST: RefCell<String> = RefCell::new(DEFAULT_HOST.to_string());
-    static LAST_ERROR: RefCell<Option<String>> = RefCell::new(None);
+    static LAST_ERROR: RefCell<Option<String>> = const { RefCell::new(None) };
 }
 
 fn with_local_storage<F, R>(f: F) -> Option<R>

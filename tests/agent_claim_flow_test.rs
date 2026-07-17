@@ -127,8 +127,7 @@ equipment: []
     #[serial]
     fn test_private_key_loader_and_hardening() {
         use arxos::agent::claim::rewards::{
-            PrivateKeyLoader, EnvironmentKeyLoader, FileKeyLoader, HybridKeyLoader,
-            DistributorConfig
+            PrivateKeyLoader, EnvironmentKeyLoader, FileKeyLoader, HybridKeyLoader
         };
         use tempfile::tempdir;
         use std::fs;

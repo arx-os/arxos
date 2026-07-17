@@ -241,19 +241,17 @@ pub fn validate_building(building: &Building) -> BuildingValidationReport {
                 }
 
                 if let Some(ref gid) = room.ifc_global_id {
-                    if !(gid.len() == 22 || gid.is_empty()) {
-                        if gid.len() != 22 {
-                            report.results.push(ValidationResult {
-                                rule_id: "room.ifc_global_id.format".into(),
-                                message: format!(
-                                    "Room '{}' ifc_global_id length {} (expected 22 for IFC GlobalId)",
-                                    room.name,
-                                    gid.len()
-                                ),
-                                severity: ValidationSeverity::Warning,
-                                field: Some(format!("room[{}].ifc_global_id", room.name)),
-                            });
-                        }
+                    if !(gid.len() == 22 || gid.is_empty()) && gid.len() != 22 {
+                        report.results.push(ValidationResult {
+                            rule_id: "room.ifc_global_id.format".into(),
+                            message: format!(
+                                "Room '{}' ifc_global_id length {} (expected 22 for IFC GlobalId)",
+                                room.name,
+                                gid.len()
+                            ),
+                            severity: ValidationSeverity::Warning,
+                            field: Some(format!("room[{}].ifc_global_id", room.name)),
+                        });
                     }
                 }
 

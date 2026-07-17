@@ -21,6 +21,12 @@ pub struct ClaimManager {
     pub reward_releaser: RewardReleaser,
 }
 
+impl Default for ClaimManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ClaimManager {
     pub fn new() -> Self {
         Self {

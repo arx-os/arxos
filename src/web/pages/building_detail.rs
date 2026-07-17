@@ -106,8 +106,8 @@ pub fn BuildingDetail() -> impl IntoView {
 
     let rooms_count = move || building.get().map(|b| b.get_all_rooms().len()).unwrap_or(0);
 
-    /// Count all equipment across the full hierarchy:
-    /// floor common areas + wing-level equipment + room-level equipment.
+    // Count all equipment across the full hierarchy:
+    // floor common areas + wing-level equipment + room-level equipment.
     let equipment_count = move || {
         building
             .get()
@@ -133,7 +133,7 @@ pub fn BuildingDetail() -> impl IntoView {
             .unwrap_or(0)
     };
 
-    /// Render an ASCII 3D view of the building using the WASM binding.
+    // Render an ASCII 3D view of the building using the WASM binding.
     let ascii_view = move || {
         building.get().and_then(|b| {
             serde_json::to_string(&b)

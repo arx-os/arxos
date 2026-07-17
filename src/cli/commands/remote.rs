@@ -257,7 +257,7 @@ async fn connect_and_run(
         // Enter raw mode if possible logic
         #[cfg(feature = "tui")]
         {
-            use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
+            use crossterm::terminal::enable_raw_mode;
             enable_raw_mode()?;
 
             // We need to restore raw mode on any exit.

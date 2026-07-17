@@ -5,6 +5,7 @@
 
 use crate::yaml::BuildingYamlSerializer;
 
+#[derive(Default)]
 pub struct GitReconstructor;
 
 impl GitReconstructor {

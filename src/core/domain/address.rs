@@ -35,28 +35,10 @@ pub const RESERVED_SYSTEMS: [&str; 14] = [
 ///
 /// Example (Standardized): /usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01
 /// Example (Custom): /usa/ny/brooklyn/ps-118/floor-02/kitchen/fridge/pbj-sandwich
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct ArxAddress {
     pub path: String,
-}
-
-impl serde::Serialize for ArxAddress {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(&self.path)
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for ArxAddress {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let path = String::deserialize(deserializer)?;
-        Ok(ArxAddress { path })
-    }
 }
 
 impl ArxAddress {
@@ -176,9 +158,8 @@ impl ArxAddress {
 
         // If there's a reserved system segment, validate the following segment (if any)
         for (i, part) in parts.iter().enumerate() {
-            if RESERVED_SYSTEMS.contains(part) {
-                if i + 1 < parts.len() {
-                    let fixture = parts[i + 1];
+            if RESERVED_SYSTEMS.contains(part) && i + 1 < parts.len() {
+                let fixture = parts[i + 1];
                     match *part {
                         "hvac" => {
                             if !fixture.starts_with("boiler-") && !fixture.starts_with("ahu-") && !fixture.starts_with("vav-") {
@@ -297,19 +278,16 @@ impl ArxAddress {
                                 .into());
                             }
                         }
-                        "furniture" => {
-                            if !fixture.starts_with("desk-") && !fixture.starts_with("chair-") {
-                                return Err(ArxError::address_validation(
-                                    self.path.clone(),
-                                    "Furniture fixture must start with desk- or chair-".to_string(),
-                                )
-                                .into());
-                            }
+                        "furniture" if !fixture.starts_with("desk-") && !fixture.starts_with("chair-") => {
+                            return Err(ArxError::address_validation(
+                                self.path.clone(),
+                                "Furniture fixture must start with desk- or chair-".to_string(),
+                            )
+                            .into());
                         }
                         _ => {}
                     }
                 }
-            }
         }
         Ok(())
     }

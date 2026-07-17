@@ -112,12 +112,10 @@ pub fn store_active_building(envelope_json: &str) -> Result<(), JsValue> {
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
     let window = web_sys::window().ok_or_else(|| JsValue::from_str("no window"))?;
     let storage = window
-        .local_storage()
-        .map_err(|e| e)?
+        .local_storage()?
         .ok_or_else(|| JsValue::from_str("no localStorage"))?;
     storage
-        .set_item(STORAGE_KEY_ACTIVE_BUILDING, &json)
-        .map_err(|e| e)?;
+        .set_item(STORAGE_KEY_ACTIVE_BUILDING, &json)?;
     // Keep legacy key as bare building for older pages during migration
     if let Ok(bare) = serde_json::to_string(&env.building) {
         let _ = storage.set_item(STORAGE_KEY_LEGACY_BUILDING, &bare);
@@ -130,8 +128,7 @@ pub fn store_active_building(envelope_json: &str) -> Result<(), JsValue> {
 pub fn load_active_building() -> Result<String, JsValue> {
     let window = web_sys::window().ok_or_else(|| JsValue::from_str("no window"))?;
     let storage = window
-        .local_storage()
-        .map_err(|e| e)?
+        .local_storage()?
         .ok_or_else(|| JsValue::from_str("no localStorage"))?;
     if let Ok(Some(json)) = storage.get_item(STORAGE_KEY_ACTIVE_BUILDING) {
         // Normalize

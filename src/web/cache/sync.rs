@@ -31,6 +31,7 @@ pub enum Mutation {
 }
 
 /// Persistent offline mutation queue.
+#[derive(Default)]
 pub struct SyncQueue {
     /// Enqueued mutations waiting to be transmitted.
     pub queue: Vec<Mutation>,
@@ -41,10 +42,7 @@ pub struct SyncQueue {
 impl SyncQueue {
     /// Initialize an empty sync queue.
     pub fn new() -> Self {
-        Self {
-            queue: Vec::new(),
-            last_sync_commit: None,
-        }
+        Self::default()
     }
 
     /// Add a mutation to the persistent queue.

@@ -247,7 +247,6 @@ fn relative_display_path(root: &Path, target: &Path) -> String {
 mod tests {
     use super::*;
     use crate::core::{Building, Floor, Room, RoomType, SpatialProperties, Wing};
-    use crate::yaml::BuildingYamlSerializer;
     use tempfile::TempDir;
 
     fn sample_ifc_bytes() -> Vec<u8> {

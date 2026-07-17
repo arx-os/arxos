@@ -1,7 +1,7 @@
 //! Home page — field status strip (Batch A P0.4)
 
 use leptos::prelude::*;
-use leptos::*;
+use leptos::{component, view, IntoView};
 use leptos_router::components::A;
 
 #[component]

@@ -6,7 +6,7 @@ use serde_json::Value;
 
 use crate::agent::auth::{ensure_capability, TokenState};
 use crate::agent::protocol::{
-    JsonRpcError, JsonRpcRequest, JsonRpcResponse, AUTH_ERROR, INTERNAL_ERROR, INVALID_PARAMS,
+    JsonRpcRequest, JsonRpcResponse, AUTH_ERROR, INTERNAL_ERROR,
     METHOD_NOT_FOUND,
 };
 use crate::agent::{building, collab, files, git, ifc};

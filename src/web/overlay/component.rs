@@ -13,7 +13,7 @@ pub fn ArOverlayScreen() -> impl IntoView {
     // 1. Core State Signals
     let (labels, set_labels) = signal(Vec::<ScreenLabel>::new());
     let (provisional_mode, set_provisional_mode) = signal(true);
-    let (heading, set_heading) = signal(90.0f64); // raw compass reading
+    let (heading, _set_heading) = signal(90.0f64); // raw compass reading
     let (smoothed_heading, set_smoothed_heading) = signal(90.0f64); // low-pass smoothed compass
     let (sensor_confidence, set_sensor_confidence) = signal(0.85f64); // sensor quality indicator
 

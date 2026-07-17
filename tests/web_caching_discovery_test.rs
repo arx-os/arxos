@@ -47,11 +47,9 @@ mod web_tests {
 
         // Hydrating assets for the first time should cause a miss, run retries, and measure latency
         let data = binary_cache.load_asset(&map_ref).unwrap();
-        assert!(data.len() > 0);
+        assert!(!data.is_empty());
         assert_eq!(binary_cache.misses, 1);
         assert_eq!(binary_cache.hits, 0);
-        assert!(binary_cache.last_latency_ms >= 0);
-
         // Next fetch is a hit
         let hit_data = binary_cache.load_asset(&map_ref).unwrap();
         assert_eq!(hit_data, data);

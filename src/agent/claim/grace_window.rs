@@ -19,6 +19,7 @@ pub enum ClaimState {
     Failed(String),
 }
 
+#[derive(Default)]
 pub struct GraceWindowManager {
     /// Active claims mapped to expiration timestamps (Unix epoch seconds).
     pub active_claims: HashMap<String, u64>,
@@ -26,9 +27,7 @@ pub struct GraceWindowManager {
 
 impl GraceWindowManager {
     pub fn new() -> Self {
-        Self {
-            active_claims: HashMap::new(),
-        }
+        Self::default()
     }
 
     /// Register a newly claimed building, setting the grace window duration threshold.

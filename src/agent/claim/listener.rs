@@ -9,15 +9,14 @@ pub struct ClaimEvent {
     pub git_repo_url: String,
 }
 
+#[derive(Default)]
 pub struct ClaimListener {
     pub polled_events: Vec<ClaimEvent>,
 }
 
 impl ClaimListener {
     pub fn new() -> Self {
-        Self {
-            polled_events: Vec::new(),
-        }
+        Self::default()
     }
 
     /// Simulate or poll RPC endpoints for newly emitted BuildingClaimed events.

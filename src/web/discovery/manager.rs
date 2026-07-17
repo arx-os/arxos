@@ -3,9 +3,7 @@
 //! Restricts visible anchors based on geofenced radius settings and separates
 //! provisional staging zones from verified production assets.
 
-use crate::core::domain::ArxAddress;
 use crate::core::Anchor;
-use crate::core::spatial::Point3D;
 use crate::web::cache::WarmCache;
 use crate::web::cache::warming::PredictiveWarming;
 use super::location::LocationContext;
@@ -16,6 +14,12 @@ pub struct DiscoveryManager {
     pub active_location: Option<LocationContext>,
     /// Global default radius for visibility checks (in meters).
     pub default_discovery_radius: f64,
+}
+
+impl Default for DiscoveryManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DiscoveryManager {

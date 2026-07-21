@@ -251,9 +251,11 @@ mod tests {
 
     fn sample_ifc_bytes() -> Vec<u8> {
         let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("test_data")
-            .join("sample_building.ifc");
-        fs::read(path).expect("sample IFC should exist")
+            .join("tests")
+            .join("fixtures")
+            .join("ifc")
+            .join("simple.ifc");
+        fs::read(path).expect("tests/fixtures/ifc/simple.ifc should exist")
     }
 
     #[test]

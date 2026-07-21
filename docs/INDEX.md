@@ -44,6 +44,7 @@ Details: [ifc-limitations.md](./ifc-limitations.md) · report: [`tests/ifc_build
 | [hb3-lidar-plan.md](./hb3-lidar-plan.md) | After S1–S8: first real LiDAR + review (outline) |
 | [iphone-pwa-acceleration.md](./iphone-pwa-acceleration.md) | **HB6-accel:** iPhone PWA + agent audit, P0 backlog, test plan |
 | [iphone-field-loop.md](./iphone-field-loop.md) | iPhone + laptop connect (A) + Review Pass B read-only (B1–B3) |
+| [bedroom-loop.md](./bedroom-loop.md) | **E2E:** Capture → Label fan/switch → Validate → Export IFC (PWA+agent) |
 | [batch-b-proposal.md](./batch-b-proposal.md) | Batch B plan; B1–B3 done, B4–B7 pending |
 | [eng-blocker-queue.md](./eng-blocker-queue.md) | E1–E3 optional polish (approval before code) |
 | [`../arxos_manifest.md`](../arxos_manifest.md) §1.1a · §10.2 | Authority: Definition of Working + phase summary |

@@ -9,7 +9,7 @@ use crate::agent::protocol::{
     JsonRpcRequest, JsonRpcResponse, AUTH_ERROR, INTERNAL_ERROR,
     METHOD_NOT_FOUND,
 };
-use crate::agent::{building, collab, files, git, ifc};
+use crate::agent::{building, collab, edit, files, git, ifc, lidar};
 
 pub struct AgentState {
     pub repo_root: PathBuf,
@@ -40,8 +40,11 @@ pub async fn dispatch(state: Arc<AgentState>, request: JsonRpcRequest) -> JsonRp
         "git.commit" => handle_git_commit(&state, params),
         "files.read" => handle_files_read(&state.repo_root, params),
         "building.get" => handle_building_get(&state.repo_root),
+        "building.validate" => handle_building_validate(&state.repo_root),
+        "edit.apply" => handle_edit_apply(&state.repo_root, params),
         "ifc.import" => handle_ifc_import(&state.repo_root, params),
         "ifc.export" => handle_ifc_export(&state.repo_root, params),
+        "lidar.import" => handle_lidar_import(&state.repo_root, params),
         "collab.sync" => handle_collab_sync(params).await,
         "claim.list_pending" => handle_claim_list_pending(&state.repo_root),
         "claim.review" => handle_claim_review(&state.repo_root, params),
@@ -108,6 +111,45 @@ fn handle_files_read(root: &std::path::Path, params: Value) -> Result<Value> {
 
 fn handle_building_get(root: &std::path::Path) -> Result<Value> {
     let result = building::get_building(root)?;
+    Ok(serde_json::to_value(result)?)
+}
+
+fn handle_building_validate(root: &std::path::Path) -> Result<Value> {
+    let result = edit::validate_building_rpc(root)?;
+    Ok(serde_json::to_value(result)?)
+}
+
+fn handle_edit_apply(root: &std::path::Path, params: Value) -> Result<Value> {
+    let script = params
+        .get("script")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow::anyhow!("Missing 'script' parameter"))?;
+    let result = edit::apply_edit(root, script)?;
+    Ok(serde_json::to_value(result)?)
+}
+
+fn handle_lidar_import(root: &std::path::Path, params: Value) -> Result<Value> {
+    let filename = params
+        .get("filename")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow::anyhow!("Missing 'filename' parameter"))?;
+    let data_base64 = params
+        .get("data")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow::anyhow!("Missing 'data' parameter"))?;
+    let merge = params
+        .get("merge")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    let light_mode = params
+        .get("light_mode")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    let voxel_size = params
+        .get("voxel_size")
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.05);
+    let result = lidar::import_lidar(root, filename, data_base64, merge, light_mode, voxel_size)?;
     Ok(serde_json::to_value(result)?)
 }
 

@@ -72,8 +72,11 @@ pub async fn start_agent() -> Result<(), Box<dyn std::error::Error>> {
         "git.commit".to_string(),
         "files.read".to_string(),
         "building.get".to_string(),
+        "building.validate".to_string(),
+        "edit.apply".to_string(),
         "ifc.import".to_string(),
         "ifc.export".to_string(),
+        "lidar.import".to_string(),
         "collab.sync".to_string(),
         "auth.manage".to_string(),
     ];

@@ -6,7 +6,9 @@ use leptos_meta::*;
 use leptos_router::components::{Route, Router, Routes, A};
 use leptos_router::path;
 
-use crate::web::pages::{BuildingDetail, Buildings, ClaimReview, Home, Import, Review};
+use crate::web::pages::{
+    BuildingDetail, Buildings, Capture, ClaimReview, Home, Import, Label, Review,
+};
 use wasm_bindgen_futures::spawn_local;
 
 #[component]
@@ -26,6 +28,8 @@ pub fn App() -> impl IntoView {
                 <main class="main-content" style="padding: 12px; max-width: 960px; margin: 0 auto;">
                     <Routes fallback=|| "Not Found">
                         <Route path=path!("/") view=Home/>
+                        <Route path=path!("/capture") view=Capture/>
+                        <Route path=path!("/label") view=Label/>
                         <Route path=path!("/review") view=Review/>
                         <Route path=path!("/import") view=Import/>
                         <Route path=path!("/buildings") view=Buildings/>
@@ -103,12 +107,12 @@ fn Header() -> impl IntoView {
                 <h1 class="app-title" style="margin: 0; font-size: 1.15rem; font-weight: 700;">
                     <A href="/" attr:style="color: #f8fafc; text-decoration: none;">"ArxOS"</A>
                 </h1>
-                <nav class="main-nav" style="display: flex; flex-wrap: wrap; gap: 8px;">
-                    <A href="/" attr:style="color: #cbd5e1; text-decoration: none; padding: 8px 10px; min-height: 44px; display: inline-flex; align-items: center;">"Home"</A>
-                    <A href="/review" attr:style="color: #cbd5e1; text-decoration: none; padding: 8px 10px; min-height: 44px; display: inline-flex; align-items: center;">"Review"</A>
-                    <A href="/import" attr:style="color: #cbd5e1; text-decoration: none; padding: 8px 10px; min-height: 44px; display: inline-flex; align-items: center;">"Import"</A>
-                    <A href="/buildings" attr:style="color: #cbd5e1; text-decoration: none; padding: 8px 10px; min-height: 44px; display: inline-flex; align-items: center;">"Buildings"</A>
-                    <A href="/owner/staging" attr:style="color: #cbd5e1; text-decoration: none; padding: 8px 10px; min-height: 44px; display: inline-flex; align-items: center;">"Owner Staging"</A>
+                <nav class="main-nav" style="display: flex; flex-wrap: wrap; gap: 4px;">
+                    <A href="/" attr:style="color: #cbd5e1; text-decoration: none; padding: 8px 8px; min-height: 44px; display: inline-flex; align-items: center;">"Home"</A>
+                    <A href="/capture" attr:style="color: #cbd5e1; text-decoration: none; padding: 8px 8px; min-height: 44px; display: inline-flex; align-items: center;">"Capture"</A>
+                    <A href="/label" attr:style="color: #cbd5e1; text-decoration: none; padding: 8px 8px; min-height: 44px; display: inline-flex; align-items: center;">"Label"</A>
+                    <A href="/review" attr:style="color: #cbd5e1; text-decoration: none; padding: 8px 8px; min-height: 44px; display: inline-flex; align-items: center;">"Review"</A>
+                    <A href="/import" attr:style="color: #94a3b8; text-decoration: none; padding: 8px 8px; min-height: 44px; display: inline-flex; align-items: center; font-size: 13px;">"Import*" </A>
                 </nav>
             </div>
 

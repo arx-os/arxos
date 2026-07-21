@@ -18,10 +18,10 @@ if [[ ! -x "$ARX" ]]; then
   ARX="$ROOT/target/debug/arx"
 fi
 
-IFC="${1:-$ROOT/test_data/sample_building.ifc}"
+IFC="${1:-$ROOT/tests/fixtures/ifc/simple.ifc}"
 if [[ ! -f "$IFC" ]]; then
   echo "ERROR: IFC not found: $IFC"
-  echo "  Sample path: $ROOT/test_data/sample_building.ifc"
+  echo "  Sample path: $ROOT/tests/fixtures/ifc/simple.ifc"
   exit 1
 fi
 

@@ -15,11 +15,15 @@ pub mod commands;
 #[cfg(feature = "agent")]
 pub mod discovery;
 #[cfg(feature = "agent")]
+pub mod edit;
+#[cfg(feature = "agent")]
 pub mod files;
 #[cfg(feature = "agent")]
 pub mod git;
 #[cfg(feature = "agent")]
 pub mod ifc;
+#[cfg(feature = "agent")]
+pub mod lidar;
 #[cfg(feature = "agent")]
 pub mod ssh_auth;
 #[cfg(feature = "agent")]

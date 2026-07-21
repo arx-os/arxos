@@ -319,6 +319,16 @@ impl Cli {
                 cmd.execute()
             }
             #[cfg(feature = "agent")]
+            Commands::Agent { path } => {
+                if let Some(p) = path {
+                    std::env::set_var("ARXOS_REPO_ROOT", &p);
+                }
+                let rt = tokio::runtime::Runtime::new()?;
+                // start_agent is async (server) when feature agent is on
+                rt.block_on(async { crate::agent::start_agent().await })?;
+                Ok(())
+            }
+            #[cfg(feature = "agent")]
             Commands::Remote(cmd) => Ok(cmd.execute()?),
             #[cfg(feature = "agent")]
             Commands::Claim {

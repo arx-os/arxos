@@ -4,12 +4,17 @@
 [build]
 target = "index.html"
 release = true
+# PWA must not pull TUI/crossterm or other host defaults (wasm-incompatible).
+no_default_features = true
+features = ["web"]
 
 [watch]
 ignore = ["dist"]
 
 [serve]
-addresses = ["0.0.0.0"]
+# Bind IPv4 + IPv6. Safari resolves "localhost" to ::1 first; IPv4-only
+# causes "Safari can't open the page" even when 127.0.0.1 works.
+addresses = ["0.0.0.0", "::"]
 port = 8080
 open = false
 

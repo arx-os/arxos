@@ -15,6 +15,8 @@ pub mod contribution;
 pub mod core;
 pub mod error;
 pub mod export;
+// libgit2 — native only (not available on wasm32 PWA)
+#[cfg(not(target_arch = "wasm32"))]
 pub mod git;
 pub mod ifc;
 pub mod ingest;
@@ -25,7 +27,8 @@ pub mod utils;
 pub mod validation;
 pub mod yaml;
 
-// CLI module (public for testing)
+// CLI module (public for testing) — host binary only
+#[cfg(not(target_arch = "wasm32"))]
 pub mod cli;
 
 // Feature-gated optional rings

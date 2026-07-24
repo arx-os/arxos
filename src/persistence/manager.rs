@@ -146,26 +146,37 @@ impl PersistenceManager {
             return Ok(());
         }
 
-        use crate::git::manager::{BuildingGitManager, GitConfigManager};
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = message;
+            // PWA has no libgit2 — durable write is save only; Git is host/agent.
+            return Ok(());
+        }
 
-        let config = GitConfigManager::load_from_arx_config_or_env();
-        let base = self.base_path.to_str().ok_or_else(|| {
-            PersistenceError::SerializationError("base path is not valid UTF-8".into())
-        })?;
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            use crate::git::manager::{BuildingGitManager, GitConfigManager};
 
-        let mut git = BuildingGitManager::new(base, "building", config)
-            .map_err(|e| PersistenceError::SerializationError(format!("Git open failed: {}", e)))?;
+            let config = GitConfigManager::load_from_arx_config_or_env();
+            let base = self.base_path.to_str().ok_or_else(|| {
+                PersistenceError::SerializationError("base path is not valid UTF-8".into())
+            })?;
 
-        git.stage_file(BUILDING_YAML).map_err(|e| {
-            PersistenceError::SerializationError(format!("Git stage failed: {}", e))
-        })?;
+            let mut git = BuildingGitManager::new(base, "building", config).map_err(|e| {
+                PersistenceError::SerializationError(format!("Git open failed: {}", e))
+            })?;
 
-        let msg = message.unwrap_or("Update building data");
-        git.commit_staged(msg).map_err(|e| {
-            PersistenceError::SerializationError(format!("Git commit failed: {}", e))
-        })?;
+            git.stage_file(BUILDING_YAML).map_err(|e| {
+                PersistenceError::SerializationError(format!("Git stage failed: {}", e))
+            })?;
 
-        Ok(())
+            let msg = message.unwrap_or("Update building data");
+            git.commit_staged(msg).map_err(|e| {
+                PersistenceError::SerializationError(format!("Git commit failed: {}", e))
+            })?;
+
+            Ok(())
+        }
     }
 
     /// Whether `base_path` contains a Git repository.

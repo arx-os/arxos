@@ -1,25 +1,34 @@
 # iOS lab loop — system acceptance (pre-field)
 
-**Goal:** Prove host + agent + iOS client end-to-end **in lab** before real-building field testing.  
+**Goal:** Prove **core agent** + **iOS companion** end-to-end **in lab** before real-building field testing.  
 **Not** a district L1 pilot; not Horizon C.
+
+## Repositories (Decision 12)
+
+| Repo | Path / remote |
+| :--- | :--- |
+| **Core** | this repo — `arx-os/arxos` |
+| **iOS companion** | sibling `../arxos-ios` → push to `arx-os/arxos-ios` |
+
+Interface: [agent-client-interface.md](./agent-client-interface.md) (protocol v1).
 
 ## Prerequisites
 
-- Laptop: Rust, `cargo build --features agent --bin arx`  
-- iPhone or Simulator: Xcode project `ios/ArxOS/ArxOS.xcodeproj`  
+- Laptop: Rust, `cargo build --features agent --bin arx` (core)  
+- iPhone or Simulator: **Xcode** project from **`arxos-ios`**  
 - Same Wi‑Fi/hotspot (device) or Mac LAN IP (Simulator)
 
 ## Steps
 
-1. **Laptop pilot dir**
+1. **Laptop pilot dir (core)**
    ```bash
    mkdir -p ~/arx-pilots/ios-lab && cd ~/arx-pilots/ios-lab
    arx init --name "iOS Lab"
    arx agent
    ```
 2. **Copy** ROOT TOKEN + `IP:8787`  
-3. **Run iOS app** → Connect  
-4. **Scan file** with a small XYZ/PLY (or export from a scan app)  
+3. **iOS companion** (`arxos-ios`): open `ArxOS/ArxOS.xcodeproj` → Run → Connect  
+4. **Scan file** with XYZ/PLY (or fixture from companion `fixtures/lab-room.xyz`)  
 5. **Label** → **Accept room** (optional) → **Commit** → **Export IFC**  
 6. **Laptop:** `git log -1` and open `exports/*.ifc`
 
@@ -35,4 +44,4 @@
 
 ## Related
 
-[ios/README.md](../ios/README.md) · [native-file-handoff.md](./native-file-handoff.md) · Decision 11
+[agent-client-interface.md](./agent-client-interface.md) · [native-file-handoff.md](./native-file-handoff.md) · Decision 11–12

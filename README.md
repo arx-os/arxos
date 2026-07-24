@@ -104,18 +104,19 @@ arx render --building "My Building"        # hierarchy text (TUI feature)
 - **Identity:** Arx UUID + optional `ifc_global_id` + durable `ArxAddress` on equipment
 - **Agent:** capture node / bridge only — durable writes still through the spine
 
-## iOS field client (lab)
+## iOS companion (separate repository)
 
-Terminal-style peripheral app: connect to laptop **agent**, import scan files, label, commit, export IFC.  
-See [`ios/README.md`](./ios/README.md) and [`docs/ios-lab-loop.md`](./docs/ios-lab-loop.md).  
-Requires **Xcode** to build/run on Simulator or device (sources live in-repo).
+Native field client lives in **`arx-os/arxos-ios`** (not this monorepo) — Decision 12.  
+This core repo provides the **agent** and the versioned contract: [`docs/agent-client-interface.md`](./docs/agent-client-interface.md).  
+Lab loop: [`docs/ios-lab-loop.md`](./docs/ios-lab-loop.md).
 
 ## Documentation
 
 | Doc | Role |
 |---|---|
 | [`arxos_manifest.md`](./arxos_manifest.md) | **Engineering source of truth** |
-| [`docs/adr-web-demotion.md`](./docs/adr-web-demotion.md) | Device/web surface decision (landing only; native iOS future) |
+| [`docs/adr-repo-structure.md`](./docs/adr-repo-structure.md) | Core vs `arxos-ios` repos |
+| [`docs/agent-client-interface.md`](./docs/agent-client-interface.md) | Versioned agent JSON-RPC for clients |
 | [`docs/INDEX.md`](./docs/INDEX.md) | Pilot doc map |
 | [`docs/l1-supported-workflow.md`](./docs/l1-supported-workflow.md) | Only L1 supported loop |
 | [`docs/field-handoff.md`](./docs/field-handoff.md) | Ordered pilot packet |

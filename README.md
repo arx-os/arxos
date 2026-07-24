@@ -104,6 +104,12 @@ arx render --building "My Building"        # hierarchy text (TUI feature)
 - **Identity:** Arx UUID + optional `ifc_global_id` + durable `ArxAddress` on equipment
 - **Agent:** capture node / bridge only — durable writes still through the spine
 
+## iOS field client (lab)
+
+Terminal-style peripheral app: connect to laptop **agent**, import scan files, label, commit, export IFC.  
+See [`ios/README.md`](./ios/README.md) and [`docs/ios-lab-loop.md`](./docs/ios-lab-loop.md).  
+Requires **Xcode** to build/run on Simulator or device (sources live in-repo).
+
 ## Documentation
 
 | Doc | Role |

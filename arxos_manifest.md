@@ -9,9 +9,10 @@
 | **Engine** | Rust 2021 (CLI + lib) · native IFC · Git SSOT · Foundry contracts · optional agent/`blockchain` · static web landing |
 | **Design philosophy** | Local-first · single `Building` model · Git-native · free to use · pay only for data access |
 | **Document status** | Living plan — full vision locked; compiler + economy spine **lab-complete** (N1–N8 + Horizon A tooling); **Horizon B** (district L1 + site capture path) is current priority (§1.1, §1.5–1.6, §10; `docs/horizon-b-roadmap.md`) |
-| **Last reconciled** | 2026-07-24 — Decision 9 applied in living text: interactive PWA purged; web = landing only; device path = future native iOS ([`docs/adr-web-demotion.md`](docs/adr-web-demotion.md)) |
+| **Last reconciled** | 2026-07-24 — Decision 9 (web landing) + Decision 10 (capture model: proposed-first, geometry as input) |
 | **Audience** | Vision holder, field IT pilots, core maintainers, external builders |
-| **Device / web surface (locked)** | **Web = static landing only.** No browser LiDAR/RoomPlan/ARKit. Future phone capture = **native iOS companion** (not started). Durable authority = **agent + `building.yaml`**. Full decision: [`docs/adr-web-demotion.md`](docs/adr-web-demotion.md). |
+| **Device / web surface (locked)** | **Web = static landing only.** No browser LiDAR/RoomPlan/ARKit. Future phone capture = **native iOS companion** (not started). Durable authority = **agent + `building.yaml`**. [`docs/adr-web-demotion.md`](docs/adr-web-demotion.md). |
+| **Capture model (locked)** | Geometry → **proposed** structure via spine only; not a mesh product; PR-like contributions; thin interface. [`docs/adr-capture-model.md`](docs/adr-capture-model.md) (Decision 10). |
 
 ---
 

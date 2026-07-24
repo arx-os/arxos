@@ -4,7 +4,8 @@ This document records the key architectural decisions made in the ArxOS project.
 
 **Product-surface reset (2026-07-24):** Interactive WASM/PWA as a field capture client is **abandoned**. See the dedicated record:
 
-→ **[`adr-web-demotion.md`](./adr-web-demotion.md)** (Decision 9 — authoritative for the role of `web`)
+→ **[`adr-web-demotion.md`](./adr-web-demotion.md)** (Decision 9 — authoritative for the role of `web`)  
+→ **[`adr-capture-model.md`](./adr-capture-model.md)** (Decision 10 — near-term field capture: proposed-first, geometry as input)
 
 Decisions 5–7 below describe earlier work that assumed a Leptos PWA field/owner UI. Their **implementation history** remains; their **product role as the field device path** is superseded by Decision 9.
 
@@ -112,4 +113,14 @@ Decisions 5–7 below describe earlier work that assumed a Leptos PWA field/owne
 - **Consequences:** Interactive Leptos/WASM client removed; HB6 PWA docs archived; agent/CLI/TUI/compiler kept; §1.1a device language = file capture + future native iOS.
 - **Full record:** [`adr-web-demotion.md`](./adr-web-demotion.md)
 - **Alternatives considered:** RGB-only PWA as “capture product” (rejected); wait for Safari ARKit-in-browser (rejected); delete agent with PWA (rejected).
+
+---
+
+## Decision 10: Near-term field capture model (proposed-first, geometry as input)
+
+- **Context:** Contributors need on-site capture that yields immediately usable **proposed** structure. ArxOS is a protocol for building truth, not a mesh store. Dense geometry must not become the SSOT; clients must not write `building.yaml` outside the spine.
+- **Decision:** Near-term capture goal = geometry → **proposed** domain entities via agent/`finalize_ingest`/validate → `building.yaml`. Geometry is temporary input. Current honest paths = file LiDAR + IFC + agent + TUI; real phone LiDAR = future native iOS. Contributions are PR-like (proposed first). Prefer thin domain payloads over new heavy formats. Ownership/municipal/3D viewer/Horizon C/PWA capture are out of scope.
+- **Consequences:** Native clients (when built) must obey the write gate and proposed-first rules; product stays compiler-shaped.
+- **Full record:** [`adr-capture-model.md`](./adr-capture-model.md)
+- **Alternatives considered:** Mesh-as-SSOT (rejected); client-direct YAML (rejected); default-accepted field entities (rejected).
 

@@ -31,7 +31,7 @@ See manifest §1.5–1.6.
 | **Native iOS** | Future phone LiDAR/RoomPlan (not started) |
 
 **Non-claims:** no browser LiDAR · no ARKit/RoomPlan in Safari · no walk-in PWA as product.  
-**ADR:** [adr-web-demotion.md](./adr-web-demotion.md)
+**ADRs:** [adr-web-demotion.md](./adr-web-demotion.md) (Decision 9) · [adr-capture-model.md](./adr-capture-model.md) (Decision 10 — proposed-first capture)
 
 ### Lab IFC honesty (Package A, 2026-07)
 
@@ -48,8 +48,9 @@ Details: [ifc-limitations.md](./ifc-limitations.md) · report: [`tests/ifc_build
 | Doc | Role |
 | :--- | :--- |
 | [horizon-b-roadmap.md](./horizon-b-roadmap.md) | **Living** phases HB0–HB7 → site capture + L1 exit |
-| [adr.md](./adr.md) | Architecture Decision Record — Decisions 1–9 |
+| [adr.md](./adr.md) | Architecture Decision Record — Decisions 1–10 |
 | [adr-web-demotion.md](./adr-web-demotion.md) | **Decision 9:** PWA abandoned; web = landing; native iOS future |
+| [adr-capture-model.md](./adr-capture-model.md) | **Decision 10:** near-term capture — proposed-first, geometry as input |
 | [pilot-starter-pack.md](./pilot-starter-pack.md) | **Zip-ready** checklist of all site-team docs |
 | [field-day-1-runbook.md](./field-day-1-runbook.md) | **S3+S5** non-author Day 1: pin install → real IFC → LossReport evidence |
 | [sprint-status-dashboard.md](./sprint-status-dashboard.md) | Weekly S1–S8 + R\* status table |

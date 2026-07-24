@@ -1,7 +1,7 @@
 # Field Day 1 Runbook (S3 + S5)
 
 **Audience:** Non-author capture tech (or second person after S4)  
-**Pin:** `v2.0.0-pilot.5` @ `latest`  
+**Pin:** `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d`  
 **Maps to:** Sprint **S3** (install + smoke) then **S5** (real IFC + LossReport log)  
 **Living plan:** [horizon-b-roadmap.md](./horizon-b-roadmap.md) · Packet: [field-handoff.md](./field-handoff.md)
 
@@ -26,7 +26,7 @@ git clone <approved-arxos-remote> arxos
 cd arxos
 git checkout v2.0.0-pilot.5
 git rev-parse HEAD
-# MUST print: (latest pilot.5 commit SHA)
+# MUST print: ad5213dca08cef52cc90d9b80037f0dbaaa14a8d
 ```
 
 | Evidence | What to capture |

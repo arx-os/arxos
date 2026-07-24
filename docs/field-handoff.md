@@ -20,7 +20,7 @@ Do these in order. Do **not** skip to chain/token work or CAD plugins.
 
 ## B1 — Transfer + pin (R5, R9)
 
-1. Use the **preferred pin** in [pilot-release.md](./pilot-release.md): **`v2.0.0-pilot.5`** @ `latest`.  
+1. Use the **preferred pin** in [pilot-release.md](./pilot-release.md): **`v2.0.0-pilot.5`** @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d`.  
 2. Record **that tag + full SHA** in charter §2 and install from that pin only (`cargo install --path .` = default: compiler + TUI).  
 3. Second person (not the doc author) runs **[second-person-checklist.md](./second-person-checklist.md)** on a district-like machine using only **[l1-supported-workflow.md](./l1-supported-workflow.md)**.  
 4. File stuck points as backlog; do not invent parallel tools or CAD plugins.

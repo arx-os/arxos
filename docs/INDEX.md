@@ -18,7 +18,7 @@ If a doc here conflicts with the manifest, **the manifest wins**.
 L1 is blocked on **process + field evidence**, not missing framework code.  
 See manifest §1.5–1.6.
 
-**Preferred pin:** `v2.0.0-pilot.5` @ `latest` — [pilot-release.md](./pilot-release.md).  
+**Preferred pin:** `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d` — [pilot-release.md](./pilot-release.md).  
 **Install:** `git checkout v2.0.0-pilot.5 && cargo install --path . --locked` (default = compiler + TUI).
 
 ### Lab IFC honesty (Package A, 2026-07)

@@ -1,6 +1,6 @@
 # Pilot Starter Pack (zip-ready checklist)
 
-**Pin:** `v2.0.0-pilot.5` @ `latest`  
+**Pin:** `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d`  
 **Audience:** Site team (pilot owner, capture tech, second person)  
 **Authority:** [`arxos_manifest.md`](../arxos_manifest.md) §1.1a · §1.6 · [horizon-b-roadmap.md](./horizon-b-roadmap.md)
 
@@ -46,7 +46,7 @@ Copy these files from the pin checkout (`docs/` unless noted):
 
 ```bash
 git checkout v2.0.0-pilot.5
-git rev-parse HEAD   # latest pilot.5 commit SHA
+git rev-parse HEAD   # must be ad5213dca08cef52cc90d9b80037f0dbaaa14a8d
 
 mkdir -p /tmp/arxos-pilot-starter-pack
 cp docs/pilot-charter.md \
@@ -71,7 +71,7 @@ cp docs/horizon-b-roadmap.md docs/s8-reconciliation-template.md \
 
 printf '%s\n' \
   "ArxOS Pilot Starter Pack" \
-  "Pin: v2.0.0-pilot.5 @ latest" \
+  "Pin: v2.0.0-pilot.5 @ ad5213dca08cef52cc90d9b80037f0dbaaa14a8d" \
   "Built: $(date -u +%Y-%m-%dT%H:%MZ)" \
   "Start: field-day-1-runbook.md after charter/data-class" \
   > /tmp/arxos-pilot-starter-pack/README-PACK.txt

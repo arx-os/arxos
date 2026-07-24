@@ -32,7 +32,7 @@ still with human gates and the same IFC export spine.
 | Building ID (Arx UUID after `arx init`) | |
 | Allowed inputs | [ ] IFC  [ ] LiDAR  [ ] text edits |
 | Git remote location (must be internal) | |
-| Pinned Arx install (tag or commit) | Prefer `v2.0.0-pilot.5` @ `latest` (or exact pin from `docs/pilot-release.md`) |
+| Pinned Arx install (tag or commit) | Prefer `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d` (or exact pin from `docs/pilot-release.md`) |
 | Pilot start date | |
 | Pilot end / review date | |
 

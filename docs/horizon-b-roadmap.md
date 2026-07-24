@@ -2,8 +2,8 @@
 
 **Authority:** [`arxos_manifest.md`](../arxos_manifest.md) §1.1a · §1.5–1.6 · §10.2  
 **Field packet (policy order):** [field-handoff.md](./field-handoff.md)  
-**Preferred pin:** `v2.0.0-pilot.5` @ `latest` — [pilot-release.md](./pilot-release.md)  
-**Last updated:** 2026-07-17 (pilot.5 address validation & dynamic LossReport polish)  
+**Preferred pin:** `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d` — [pilot-release.md](./pilot-release.md)  
+**Last updated:** 2026-07-24 (pilot.5 tag cut + full SHA in pin docs; HB6 camera path on main only)  
 
 This file is the **living** Horizon B plan. Update status/dates when evidence lands; reconcile scores in the manifest.  
 Do **not** start Horizon C work until L1 exit criteria here are met once.
@@ -492,5 +492,8 @@ Spine-safe, small, only if sprint pain appears. **Default: implement none until 
 | 2026-07-15 | **Agent Observability & Operations:** Structured logging, status/metrics APIs, and Leptos dashboard integration in progress. |
 | 2026-07-16 | **Text AR Label Overlays:** Smoothing and vertical clustering client polish implementation in progress. |
 | 2026-07-16 | **Reward Distribution Hardening:** OnChainDistributor paymaster, retry loops, and key loader validation in progress. |
+| 2026-07-17 | **pilot.5 content** at `ad5213dc` (address validation, dynamic LossReport, sorted properties). |
+| 2026-07-21–24 | **HB6 on main (not L1 pin):** bedroom loop + Create New camera (`capture.from_camera`). |
+| 2026-07-24 | **R9:** annotated tag `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d` cut + pushed; pin docs use full SHA (no “latest”). |
 
 **Related:** [INDEX.md](./INDEX.md) · [l1-supported-workflow.md](./l1-supported-workflow.md) · [ifc-limitations.md](./ifc-limitations.md) · [field-truth-log.md](./field-truth-log.md) · [resource-limits.md](./resource-limits.md) · [field-handoff.md](./field-handoff.md)

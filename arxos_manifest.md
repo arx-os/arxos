@@ -201,7 +201,7 @@ HORIZON C — Network scale (after L1 exit, then L2)
 **Hard truth:** Lab-complete (N1–N5, Horizon A tooling) is **not** “absolutely ready for district production.”  
 This section is the **obligation register**: each reservation must be **relegated** (reduced or closed) by named work before the corresponding go-level is claimed.
 
-**Current state (2026-07-17, pin `v2.0.0-pilot.5` @ `latest`):** Engineering has a green lab compiler loop (import → validate → export → Git → optional contribute/commercial gate), TUI as default UI, hard resource refuse, and IFC **honesty** via dynamic registry-driven `unmapped_products` LossReport plus buildingSMART ISO fixtures—**R2 eng half** and **R9 pin** are landed. Address prefix validation checks are default lenient (warnings) and strictly gateable via `--strict-addresses`. District L1 is still ~**5/10**: blocked on **field-owned** evidence and process (signed charter **R10**, second-person walkthrough **R5**, data-class sign-off **R7**, real site IFC/LiDAR log **R1/R2/R6**). Site-capture north star is §1.1a (~250k walk-in PWA/agent + LiDAR + review + IFC under charter); phased plan **HB0–HB7** lives in `docs/horizon-b-roadmap.md`. Do not claim L1 exit, full BIM parity, or production chain. Next work is Horizon B field packet + evidence — not Horizon C, CAD plugins, or premature PWA rebuild.
+**Current state (2026-07-24, pin `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d`):** Engineering has a green lab compiler loop (import → validate → export → Git → optional contribute/commercial gate), TUI as default UI, hard resource refuse, and IFC **honesty** via dynamic registry-driven `unmapped_products` LossReport plus buildingSMART ISO fixtures—**R2 eng half** landed; **R9 pin tag is cut and documented with full SHA**. Address prefix validation checks are default lenient (warnings) and strictly gateable via `--strict-addresses`. District L1 is still ~**5/10**: blocked on **field-owned** evidence and process (signed charter **R10**, second-person walkthrough **R5**, data-class sign-off **R7**, real site IFC/LiDAR log **R1/R2/R6**). Site-capture north star is §1.1a (~250k walk-in PWA/agent + LiDAR + review + IFC under charter); phased plan **HB0–HB7** lives in `docs/horizon-b-roadmap.md`. HB6 agent/web (bedroom loop, Create New camera) may exist on later `main` — **not** part of the L1 preferred pin. Do not claim L1 exit, full BIM parity, or production chain. Next work is Horizon B field packet + evidence — not Horizon C, CAD plugins, or premature PWA rebuild.
 
 #### Go levels (do not skip)
 
@@ -226,7 +226,7 @@ This section is the **obligation register**: each reservation must be **relegate
 | **R6** | **Scale/performance unprofiled** | Large school models may OOM/hang; people skip validation | Profile worst-case IFC/scan on pilot hardware; set limits | Written max points/time; light-mode guidance | Eng + field | **Partial** — eng defaults in `docs/resource-limits.md` + hard refuse on oversize import; **site profile still open** |
 | **R7** | **Security / compliance / classification** | Facility plans sensitive; Git remotes, exports, backups | Data class policy (internal-only default); who can clone/export; no student PII in properties | Security/IT sign-off for pilot repo location | Field IT + security | **Partial** — `docs/data-classification.md` + charter §4 (needs sign-off) |
 | **R8** | **Mainnet token / institutional fit** | Public entity crypto, custody, procurement, reputation | L1/L2: **no production token**. L3 only with Legal/Finance | Written go/no-go from leadership for any chain use | Vision + Legal | **Partial** — L1 default off-chain in charter §5 |
-| **R9** | **Support / ownership / change control** | No vendor SLA; `main` moves | Pin release tag/hash; one supported workflow page; escalation path | Pinned install + “supported loop” doc used in R5 | Eng + field IT | **Partial** — prefer tag `v2.0.0-pilot.4` @ `659bbd9f`; charter must record pin; R5 must walk that pin |
+| **R9** | **Support / ownership / change control** | No vendor SLA; `main` moves | Pin release tag/hash; one supported workflow page; escalation path | Pinned install + “supported loop” doc used in R5 | Eng + field IT | **Partial** — tag `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d` cut; charter must record pin; R5 must walk that pin (process still open) |
 | **R10** | **Safety / professional liability framing** | Model must not replace LOTO, licensed drawings, or code docs | Pilot disclaimer policy; culture: human + licensed docs win | Signed pilot charter with disclaimer language | Field IT + leadership | **Partial** — template `docs/pilot-charter.md` (needs signature) |
 
 #### Work packages to relegate obligations (ordered)
@@ -234,7 +234,7 @@ This section is the **obligation register**: each reservation must be **relegate
 | Package | Obligations hit | Deliverables | Status |
 | :---: | :--- | :--- | :---: |
 | **P-Safety** | R10, R1 (process) | `docs/pilot-charter.md`; no unreviewed `proposed` as official | **Template done** — sign to close R10 |
-| **P-Transfer** | R5, R9 | `docs/l1-supported-workflow.md`; `docs/second-person-checklist.md`; `docs/pilot-release.md`; `docs/field-handoff.md`; `scripts/pin_pilot_release.sh` | **Pin cut** (`v2.0.0-pilot.4` @ `659bbd9f`) — second-person walkthrough still open for R5 |
+| **P-Transfer** | R5, R9 | `docs/l1-supported-workflow.md`; `docs/second-person-checklist.md`; `docs/pilot-release.md`; `docs/field-handoff.md`; `scripts/pin_pilot_release.sh` | **Pin cut** (`v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d`) — second-person walkthrough still open for R5 |
 | **P-Data** | R7 | Classification + private Git; export approval same class as CAD | **Template done** — `docs/data-classification.md` (sign to close) |
 | **P-Field-truth** | R1, R2, R6 | Real scan + real IFC matrix + one performance profile on pilot hardware | **Template done** — `docs/field-truth-log.md`; **site evidence open** |
 | **P-Chain-optional** | R3, R8 | Explicit “compiler pilot = off-chain”; testnet demo only if requested | **Partial** (charter §5 + L1 workflow) |
@@ -1221,7 +1221,7 @@ Horizon A **does not** close §1.6 district pilot obligations. It only enables l
 | Phase | Name | Owner | Status | Success criteria (summary) |
 | :---: | :--- | :---: | :---: | :--- |
 | **HB0** | Policy gate (charter, pin, data class) | Field | Templates done | Signed charter + pin in §2 + private remote class |
-| **HB1** | Controlled dry-run (R5 on pin) | Field | Open | Second-person checklist on `v2.0.0-pilot.4` |
+| **HB1** | Controlled dry-run (R5 on pin) | Field | Open | Second-person checklist on `v2.0.0-pilot.5` @ `ad5213dc…` |
 | **HB2** | Real IFC field truth (R2) | Field + eng | Lab half done | District IFC preserve/drop matrix in field-truth-log |
 | **HB3** | Real LiDAR field truth (R1) | Field + eng | Open | Room/wing scan: false +/− log; review gates used |
 | **HB4** | Site capture loop (G9) | Field + eng | Open | Scan → label → validate → Git → usable IFC on one building |

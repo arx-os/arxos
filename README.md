@@ -7,7 +7,7 @@ Git-diffable YAML (`building.yaml`), with **IFC as industry interchange**.
 
 **Maturity (honest):** lab closed loop ~8.5/10 · district L1 pilot ~5/10  
 (blocked on field evidence + process — see `arxos_manifest.md` §1.1a · §1.6).  
-**Living plan:** `docs/horizon-b-roadmap.md` · **Preferred pin:** `v2.0.0-pilot.5`
+**Living plan:** `docs/horizon-b-roadmap.md` · **Preferred pin:** `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d`
 
 ## What it does
 

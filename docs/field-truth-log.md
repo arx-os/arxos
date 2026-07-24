@@ -9,7 +9,7 @@
 
 | Header | Value |
 | :--- | :--- |
-| **Pin under test** | `v2.0.0-pilot.5` @ `latest` (or charter): ________ |
+| **Pin under test** | `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d` (or charter): ________ |
 | **Site / building** | ________ |
 | **Operator** | ________ |
 | **Date opened** | ________ |

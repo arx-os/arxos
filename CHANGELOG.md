@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0-pilot.5] - 2026-07-17
 
-**Tag:** `v2.0.0-pilot.5` @ `latest`  
+**Tag:** `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d`  
 **Install:** `git checkout v2.0.0-pilot.5 && cargo install --path . --locked`  
 **Default features:** compiler spine + TUI.
 

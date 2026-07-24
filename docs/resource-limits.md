@@ -1,7 +1,8 @@
 # Resource limits (R6 pilot defaults)
 
 **Obligation:** R6 — avoid OOM/hang on capture nodes; make failures explicit.  
-**Code:** `src/resource_limits.rs` · enforced on `arx import ifc|lidar` (and agent IFC upload).
+**Code:** `src/resource_limits.rs` · enforced on `arx import ifc|lidar` (and agent IFC/LiDAR upload).  
+**Capture model:** Decision 10 — geometry is disposable input; structure starts as `proposed`.
 
 These are **pilot defaults**, not survey-grade ceilings. Field teams should log real
 timings in [field-truth-log.md](./field-truth-log.md) §C and may raise limits on
@@ -46,7 +47,7 @@ If import refuses with “too large” or “exceeded pilot point limit”:
 | :--- | :--- |
 | Raspberry Pi class | LiDAR only with aggressive `--light` + large voxel; prefer IFC-only pilots |
 | OptiPlex / Mac Mini | Primary capture node for school-scale IFC + moderate scans |
-| Tablet / WASM | Review only — no full LiDAR in browser |
+| Static web landing | Not a capture client — file LiDAR on capture node only |
 
 ## What this does **not** close
 

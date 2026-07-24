@@ -306,7 +306,11 @@ impl RoomDetector {
                                 "2D Occupancy Grid Connected Components".to_string(),
                             ),
                         });
-                        crate::core::review::mark_proposed(&mut room.properties);
+                        stamp_lidar_room_provenance(
+                            &mut room,
+                            "occupancy_grid",
+                            "Closed free-space component (not survey-grade)",
+                        );
 
                         rooms.push(room);
                         room_counter += 1;
@@ -317,6 +321,107 @@ impl RoomDetector {
 
         rooms
     }
+}
+
+/// Provenance for Decision 10: field capture entities start proposed with honest source tags.
+pub fn stamp_lidar_room_provenance(room: &mut Room, heuristic: &str, note: &str) {
+    crate::core::review::mark_proposed(&mut room.properties);
+    room.properties
+        .insert("capture_source".into(), "lidar_file".into());
+    room.properties
+        .insert("capture_heuristic".into(), heuristic.into());
+    room.properties
+        .insert("capture_note".into(), note.into());
+}
+
+/// When occupancy-grid segmentation finds no enclosed rooms (common on open/incomplete
+/// field scans), create one **proposed** room from the point bbox of the floor band.
+///
+/// This is structure assist, not wall extraction — confidence tier is lower than grid hits.
+pub fn proposed_room_from_point_bbox(
+    name: String,
+    points: &[Point3D],
+    floor_elev: f64,
+    ceil_elev: f64,
+) -> Option<Room> {
+    if points.is_empty() {
+        return None;
+    }
+
+    let mut min_x = f64::MAX;
+    let mut max_x = f64::MIN;
+    let mut min_y = f64::MAX;
+    let mut max_y = f64::MIN;
+    for p in points {
+        min_x = min_x.min(p.x);
+        max_x = max_x.max(p.x);
+        min_y = min_y.min(p.y);
+        max_y = max_y.max(p.y);
+    }
+
+    // Degenerate cloud (single point / line) — still produce a tiny usable footprint
+    if (max_x - min_x).abs() < 0.05 {
+        min_x -= 0.5;
+        max_x += 0.5;
+    }
+    if (max_y - min_y).abs() < 0.05 {
+        min_y -= 0.5;
+        max_y += 0.5;
+    }
+
+    let floor_height = (ceil_elev - floor_elev).max(2.0);
+    let center_x = (min_x + max_x) / 2.0;
+    let center_y = (min_y + max_y) / 2.0;
+    let width = max_x - min_x;
+    let depth = max_y - min_y;
+
+    let mut room = Room::new(name, RoomType::Other("lidar_bbox".into()));
+    room.spatial_properties = SpatialProperties {
+        position: Position {
+            x: center_x,
+            y: center_y,
+            z: floor_elev,
+            coordinate_system: "building_local".to_string(),
+        },
+        dimensions: Dimensions {
+            width,
+            height: floor_height,
+            depth,
+        },
+        bounding_box: BoundingBox {
+            min: Position {
+                x: min_x,
+                y: min_y,
+                z: floor_elev,
+                coordinate_system: "building_local".to_string(),
+            },
+            max: Position {
+                x: max_x,
+                y: max_y,
+                z: floor_elev + floor_height,
+                coordinate_system: "building_local".to_string(),
+            },
+        },
+        mesh: None,
+        coordinate_system: "building_local".to_string(),
+    };
+
+    room.lidar_enrichment = Some(LidarEnrichment {
+        point_count: points.len(),
+        // Lower fixed tier than enclosed occupancy-grid rooms (docs/lidar-confidence.md).
+        confidence_score: 0.55,
+        last_scan_timestamp: Some(chrono::Utc::now()),
+        classification_heuristic: Some(
+            "BBox fallback — no closed free-space rooms; footprint from point extent".to_string(),
+        ),
+    });
+    stamp_lidar_room_provenance(
+        &mut room,
+        "bbox_fallback",
+        "No enclosed rooms detected; proposed footprint from point cloud extent (requires human review)",
+    );
+
+    Some(room)
 }
 
 pub struct EquipmentDetector {

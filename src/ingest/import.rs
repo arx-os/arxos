@@ -194,21 +194,40 @@ pub fn import_lidar_path(
     )?;
 
     let pipeline = LidarPipeline::new(voxel_size, light_mode);
-    let building = pipeline
+    let processed = pipeline
         .process(path)
         .with_context(|| format!("LiDAR pipeline failed for {}", path.display()))?;
 
     let existing = load_existing_yaml(existing_yaml)?;
 
-    Ok(finalize_ingest(
-        building,
+    let mut result = finalize_ingest(
+        processed.building,
         IngestSource::Lidar,
         IngestOptions {
             validate,
             existing,
             policy: Some(MergePolicy::lidar()),
         },
-    ))
+    );
+
+    // Honesty lines for operators (Decision 10 — proposed structure assist).
+    for (code, message) in processed.warnings {
+        result.report.warn(code, message);
+    }
+    result.report.warn(
+        "lidar_ingest_summary",
+        format!(
+            "points {}→{} · floors {} · rooms {} seg + {} fallback · equip {}",
+            processed.total_points,
+            processed.downsampled_points,
+            processed.floors_detected,
+            processed.rooms_segmented,
+            processed.rooms_fallback,
+            processed.equipment
+        ),
+    );
+
+    Ok(result)
 }
 
 fn load_existing_yaml(path: Option<&Path>) -> Result<Option<Building>> {

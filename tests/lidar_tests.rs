@@ -121,16 +121,88 @@ fn test_lidar_pipeline_end_to_end() -> Result<(), Box<dyn std::error::Error>> {
     temp.flush()?;
 
     let pipeline = LidarPipeline::new(0.1, false);
-    let building = pipeline.process(temp.path())?;
+    let result = pipeline.process(temp.path())?;
+    let building = result.building;
 
     assert_eq!(building.floors.len(), 1);
     assert_eq!(building.floors[0].name, "Floor 1");
+    // Sparse cloud has no enclosed free-space → bbox fallback proposed room
+    assert!(
+        result.rooms_fallback >= 1 || !building.get_all_rooms().is_empty(),
+        "expected at least one proposed room on sparse cloud"
+    );
+    let room = &building.get_all_rooms()[0];
+    assert_eq!(
+        room.properties.get("review_status").map(String::as_str),
+        Some("proposed")
+    );
+    assert_eq!(
+        room.properties.get("capture_source").map(String::as_str),
+        Some("lidar_file")
+    );
 
     let metadata = building.metadata.as_ref().unwrap();
     assert_eq!(metadata.total_entities, 3);
     assert_eq!(metadata.properties.get("bbox_min_x").unwrap(), "1");
     assert_eq!(metadata.properties.get("bbox_max_x").unwrap(), "3");
+    assert_eq!(
+        metadata.properties.get("capture_source").map(String::as_str),
+        Some("lidar_file")
+    );
 
+    Ok(())
+}
+
+#[test]
+fn test_lidar_empty_file_fails_honestly() -> Result<(), Box<dyn std::error::Error>> {
+    let mut temp = NamedTempFile::new()?;
+    writeln!(temp, "# no points")?;
+    temp.flush()?;
+
+    let pipeline = LidarPipeline::new(0.1, false);
+    let err = pipeline.process(temp.path()).unwrap_err();
+    let msg = err.to_string();
+    assert!(
+        msg.contains("zero points") || msg.to_lowercase().contains("empty"),
+        "unexpected error: {}",
+        msg
+    );
+    Ok(())
+}
+
+#[test]
+fn test_lidar_import_path_emits_proposed_and_report() -> Result<(), Box<dyn std::error::Error>> {
+    use arxos::core::PROP_REVIEW_STATUS;
+    use arxos::ingest::import_lidar_path;
+
+    let mut temp = NamedTempFile::new()?;
+    // Loose cloud (no closed walls) — must still produce proposed structure
+    for i in 0..20 {
+        for j in 0..20 {
+            writeln!(temp, "{} {} {}", i as f64 * 0.3, j as f64 * 0.3, 1.2)?;
+        }
+    }
+    temp.flush()?;
+
+    let result = import_lidar_path(temp.path(), None, 0.25, true, true)?;
+    assert!(!result.validation.has_errors());
+    assert!(!result.building.get_all_rooms().is_empty());
+    for room in result.building.get_all_rooms() {
+        assert_eq!(
+            room.properties.get(PROP_REVIEW_STATUS).map(String::as_str),
+            Some("proposed")
+        );
+        assert_eq!(
+            room.properties.get("capture_source").map(String::as_str),
+            Some("lidar_file")
+        );
+    }
+    let summary = result.summary_lines().join("\n");
+    assert!(
+        summary.contains("lidar_") || summary.contains("proposed") || summary.contains("Fidelity"),
+        "expected lidar honesty lines, got: {}",
+        summary
+    );
     Ok(())
 }
 

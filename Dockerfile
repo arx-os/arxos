@@ -25,7 +25,8 @@ RUN apt-get update && \
     unzip && \
     rm -rf /var/lib/apt/lists/*
 
-# Install tooling needed by build.rs (cbindgen) and optional wasm support
+# Install tooling needed by build.rs (cbindgen). wasm-pack retained only if
+# external tooling still expects it — not used for a product WASM field client.
 RUN cargo install --locked cbindgen wasm-pack
 
 WORKDIR /workspace

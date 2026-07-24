@@ -22,7 +22,7 @@ use crate::ingest::{finalize_ingest, IngestOptions, IngestSource};
 use crate::persistence::{load_building_at, save_building_at, BUILDING_YAML};
 use crate::utils::path_safety::PathSafety;
 
-/// Max frames accepted in one Create New request.
+/// Max frames accepted in one capture request.
 const MAX_FRAMES: usize = 8;
 /// Soft cap per decoded JPEG (~4 MiB) to avoid OOM on pilot laptops.
 const MAX_FRAME_BYTES: usize = 4 * 1024 * 1024;
@@ -99,8 +99,7 @@ pub fn from_camera(
 
     // Manifest for operators / future vision pipeline
     let manifest = serde_json::json!({
-        "source": "pwa_getUserMedia",
-        "facing_mode_preferred": "environment",
+        "source": "client_jpeg_frames",
         "captured_at": Utc::now().to_rfc3339(),
         "frame_count": saved.len(),
         "frames": saved.iter().map(|p| p.file_name().and_then(|s| s.to_str()).unwrap_or("").to_string()).collect::<Vec<_>>(),
@@ -108,6 +107,7 @@ pub fn from_camera(
         "depth": false,
         "point_cloud": false,
         "mesh": false,
+        "note": "not LiDAR/RoomPlan/ARKit — evidence frames only",
     });
     fs::write(
         capture_dir.join("manifest.json"),

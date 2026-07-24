@@ -1,7 +1,8 @@
 # Authoritative CI for the Building compiler (default = tui + compiler spine).
 # Product path: ingest → building.yaml → validate/query → IFC export + TUI.
 #
-# Optional rings (agent, web, blockchain) are not PR blockers.
+# Optional rings (agent, blockchain) are not PR blockers.
+# Interactive web/WASM client removed (Decision 9); static landing needs no CI feature.
 # Hardware drivers and render3d LiDAR viz are out of tree for now.
 #
 # Other workflows (rust-ci, ci, quality) are optional / scheduled and must not

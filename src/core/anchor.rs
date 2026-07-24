@@ -1,6 +1,7 @@
 //! Anchor data structure and implementation
 //!
-//! Anchors represent physical or digital reference points dropped by field workers via AR/PWA.
+//! Anchors represent physical or digital reference points dropped by field workers
+//! (capture node or future native AR client).
 //! They support recalibration over time, data saturation analysis, and relative poses to other anchors or geometry.
 
 use super::domain::ArxAddress;

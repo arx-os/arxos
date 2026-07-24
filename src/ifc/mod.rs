@@ -76,7 +76,7 @@ impl IFCProcessor {
         self.parse_native_content(&content, validate_strict)
     }
 
-    /// Parse IFC from an in-memory STEP string (CLI / WASM / ingest shared path).
+    /// Parse IFC from an in-memory STEP string (CLI / agent / ingest shared path).
     pub fn parse_native_content(
         &self,
         content: &str,

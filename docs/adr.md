@@ -5,7 +5,8 @@ This document records the key architectural decisions made in the ArxOS project.
 **Product-surface reset (2026-07-24):** Interactive WASM/PWA as a field capture client is **abandoned**. See the dedicated record:
 
 → **[`adr-web-demotion.md`](./adr-web-demotion.md)** (Decision 9 — authoritative for the role of `web`)  
-→ **[`adr-capture-model.md`](./adr-capture-model.md)** (Decision 10 — near-term field capture: proposed-first, geometry as input)
+→ **[`adr-capture-model.md`](./adr-capture-model.md)** (Decision 10 — near-term field capture: proposed-first, geometry as input)  
+→ **[`adr-native-capture-interface.md`](./adr-native-capture-interface.md)** (Decision 11 — native iOS ↔ agent thin hand-off; v1 = file LiDAR)
 
 Decisions 5–7 below describe earlier work that assumed a Leptos PWA field/owner UI. Their **implementation history** remains; their **product role as the field device path** is superseded by Decision 9.
 
@@ -123,4 +124,14 @@ Decisions 5–7 below describe earlier work that assumed a Leptos PWA field/owne
 - **Consequences:** Native clients (when built) must obey the write gate and proposed-first rules; product stays compiler-shaped.
 - **Full record:** [`adr-capture-model.md`](./adr-capture-model.md)
 - **Alternatives considered:** Mesh-as-SSOT (rejected); client-direct YAML (rejected); default-accepted field entities (rejected).
+
+---
+
+## Decision 11: Native iOS ↔ agent capture interface (thin hand-off)
+
+- **Context:** Phone LiDAR requires native iOS; need a thin interface to the agent without a heavy new package format or dual structure-extraction stacks.
+- **Decision:** **v1 primary = A** — native client delivers supported cloud files (PLY/LAS/XYZ) to existing agent `lidar.import` (or inbox + same spine). Agent owns structure assist, proposed marking, finalize/validate, durable write. Domain RPC (B) and hybrid (C) deferred. Client is peripheral only.
+- **Consequences:** Native work (when started) is capture + file hand-off + auth; no client-side `building.yaml`; no mesh product store.
+- **Full record:** [`adr-native-capture-interface.md`](./adr-native-capture-interface.md)
+- **Alternatives considered:** Domain-only RPC first (deferred); hybrid first (over-scope for v1).
 

@@ -9,8 +9,9 @@
 | **Engine** | Rust 2021 (CLI + lib) · native IFC · Git SSOT · Foundry contracts · optional WASM/agent/render3d/`blockchain` |
 | **Design philosophy** | Local-first · single `Building` model · Git-native · free to use · pay only for data access |
 | **Document status** | Living plan — full vision locked; compiler + economy spine **lab-complete** (N1–N8 + Horizon A tooling); **Horizon B** (district L1 + site capture path) is current priority (§1.1, §1.5–1.6, §10; `docs/horizon-b-roadmap.md`) |
-| **Last reconciled** | 2026-07-13 (HB6-accel iPhone PWA+agent plan; field packet intact; no phone code until Batch A approve) |
+| **Last reconciled** | 2026-07-24 (**ADR:** interactive WASM/PWA demoted — [`docs/adr-web-demotion.md`](docs/adr-web-demotion.md); §1.1a / HB6 body text still pending Phase 3 rewrite after code purge) |
 | **Audience** | Vision holder, field IT pilots, core maintainers, external builders |
+| **Device / web surface (locked)** | **Web = static landing only.** No browser LiDAR/RoomPlan/ARKit. Future phone capture = **native iOS companion** (not started). Durable authority = **agent + `building.yaml`**. Full decision: [`docs/adr-web-demotion.md`](docs/adr-web-demotion.md). |
 
 ---
 

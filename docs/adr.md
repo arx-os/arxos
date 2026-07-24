@@ -2,6 +2,12 @@
 
 This document records the key architectural decisions made in the ArxOS project.
 
+**Product-surface reset (2026-07-24):** Interactive WASM/PWA as a field capture client is **abandoned**. See the dedicated record:
+
+→ **[`adr-web-demotion.md`](./adr-web-demotion.md)** (Decision 9 — authoritative for the role of `web`)
+
+Decisions 5–7 below describe earlier work that assumed a Leptos PWA field/owner UI. Their **implementation history** remains; their **product role as the field device path** is superseded by Decision 9.
+
 ---
 
 ## Decision 1: EquipmentStatus and Health Semantic Unification
@@ -96,4 +102,14 @@ This document records the key architectural decisions made in the ArxOS project.
 >   "max_gas_limit": 500000
 > }
 > ```
+
+---
+
+## Decision 9: Demotion of interactive WASM/PWA (web = landing only)
+
+- **Context:** The pure browser client cannot access iOS ARKit, RoomPlan, or LiDAR depth. Continuing to treat the WASM PWA as a walk-in spatial capture / primary field surface was architecturally false and damaged honesty.
+- **Decision:** Abandon the interactive PWA as a product capture/review client. **Web** is reduced to a **static landing page** only. Future phone spatial capture is a **native iOS companion** (not started in the purge). **Agent + `building.yaml`** remain the durable authority. Explicit non-claims: no browser LiDAR, no RoomPlan/ARKit in Safari, no walk-in PWA capture as product.
+- **Consequences:** Interactive Leptos/WASM client and HB6 PWA docs are purged or demoted in follow-on work; agent/CLI/TUI/compiler kept; §1.1a device language must be reconciled to native + file paths.
+- **Full record:** [`adr-web-demotion.md`](./adr-web-demotion.md)
+- **Alternatives considered:** RGB-only PWA as “capture product” (rejected); wait for Safari ARKit-in-browser (rejected); delete agent with PWA (rejected).
 

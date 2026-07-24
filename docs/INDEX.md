@@ -36,7 +36,8 @@ Details: [ifc-limitations.md](./ifc-limitations.md) · report: [`tests/ifc_build
 | Doc | Role |
 | :--- | :--- |
 | [horizon-b-roadmap.md](./horizon-b-roadmap.md) | **Living** phases HB0–HB7 → site capture + L1 exit (~250k / PWA north star) |
-| [adr.md](./adr.md) | **Architecture Decision Record** — Decisions 1–5 |
+| [adr.md](./adr.md) | Architecture Decision Record — Decisions 1–9 |
+| [adr-web-demotion.md](./adr-web-demotion.md) | **Decision 9:** interactive PWA abandoned; web = landing only; native iOS future |
 | [pilot-starter-pack.md](./pilot-starter-pack.md) | **Zip-ready** checklist of all site-team docs |
 | [field-day-1-runbook.md](./field-day-1-runbook.md) | **S3+S5** non-author Day 1: pin install → real IFC → LossReport evidence |
 | [sprint-status-dashboard.md](./sprint-status-dashboard.md) | Weekly S1–S8 + R\* status table |

@@ -1,6 +1,6 @@
-//! Portable Building sync envelope for PWA / agent / CLI interchange.
+//! Portable Building sync envelope for agent / CLI interchange.
 //!
-//! Single JSON shape used by WASM localStorage, future agent push/pull, and tests:
+//! Single JSON shape used by agent push/pull, tooling, and tests:
 //!
 //! ```json
 //! {
@@ -26,7 +26,7 @@ pub const SYNC_SCHEMA_VERSION: u32 = 1;
 /// localStorage key for the last imported / active building envelope.
 pub const STORAGE_KEY_ACTIVE_BUILDING: &str = "arxos_active_building_v1";
 
-/// Legacy key used by earlier PWA builds (still readable).
+/// Legacy localStorage key from removed interactive web client (still readable if present).
 pub const STORAGE_KEY_LEGACY_BUILDING: &str = "last_imported_building";
 
 /// Source label inside the sync envelope.
@@ -90,7 +90,7 @@ impl BuildingSyncEnvelope {
     }
 
     pub fn from_json(json: &str) -> Result<Self, String> {
-        // Prefer full envelope; fall back to bare Building for legacy PWA storage
+        // Prefer full envelope; fall back to bare Building for legacy storage
         if let Ok(env) = serde_json::from_str::<BuildingSyncEnvelope>(json) {
             return Ok(env);
         }
@@ -114,7 +114,7 @@ pub fn building_to_envelope(building: Building, source: SyncSource) -> BuildingS
 
 /// Merge two envelope JSON strings (incoming into existing) with IFC-style policy.
 ///
-/// Returns a new envelope JSON. Used by PWA multi-device sync and agent reconcile.
+/// Returns a new envelope JSON. Used by multi-client sync and agent reconcile.
 pub fn merge_sync_json(existing_json: &str, incoming_json: &str) -> Result<String, String> {
     let existing = BuildingSyncEnvelope::from_json(existing_json)?;
     let incoming = BuildingSyncEnvelope::from_json(incoming_json)?;

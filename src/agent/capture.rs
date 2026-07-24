@@ -1,11 +1,11 @@
 //! Camera frame capture ingest (`capture.from_camera` RPC).
 //!
-//! PWA sends JPEG frames (base64) from getUserMedia. Agent stores frames under
+//! Clients may send JPEG frames (base64). Agent stores frames under
 //! `imports/captures/`, ensures a floor + room on the durable Building, marks the
 //! room `proposed`, and finalizes via the shared ingest spine.
 //!
 //! **Honesty:** frames only — no depth, no mesh, no point cloud. Room geometry is
-//! a placeholder so labeling/review can begin.
+//! a placeholder so labeling/review can begin. Not LiDAR / RoomPlan / ARKit.
 
 use std::fs;
 use std::path::{Path, PathBuf};

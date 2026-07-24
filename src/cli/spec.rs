@@ -317,10 +317,11 @@ Use --path to select a project root without changing cwd.")]
     },
 
     // ── Agent ring ──────────────────────────────────────────────────────
-    /// Start edge agent WebSocket daemon (PWA bridge: git + IFC/LiDAR + edit)
+    /// Start edge agent WebSocket daemon (capture node: git + IFC/LiDAR + edit)
     ///
     /// Run from a pilot project directory (with Git + building.yaml), or pass
-    /// `--path`. Prints ROOT TOKEN + LAN connect hints for the PWA.
+    /// `--path`. Prints ROOT TOKEN + LAN connect hints for clients (CLI tooling,
+    /// future native app). Not a second IFC export authority.
     #[cfg(feature = "agent")]
     Agent {
         /// Project root (default: discover from cwd / ARXOS_REPO_ROOT)

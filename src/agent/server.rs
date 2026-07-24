@@ -132,7 +132,7 @@ pub async fn start_agent() -> Result<(), Box<dyn std::error::Error>> {
     let port: u16 = 8787;
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     println!("📡 Server listening on http://{}", addr);
-    print_iphone_connect_hints(&root_token, port);
+    print_client_connect_hints(&root_token, port);
     println!(
         "ℹ️  Agent is edge bridging only (WebSocket/SSH). \
          Official IFC export for pilots: `arx export --format ifc`."
@@ -147,28 +147,28 @@ pub async fn start_agent() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Field-facing connect card for iPhone PWA on the same LAN/hotspot (Batch A P0.2).
+/// Field-facing connect card for LAN clients (future native app / tooling).
 #[cfg(feature = "agent")]
-fn print_iphone_connect_hints(token: &str, port: u16) {
+fn print_client_connect_hints(token: &str, port: u16) {
     let ips = guess_lan_ips();
     println!("┌─────────────────────────────────────────────────────────────");
-    println!("│ iPhone / PWA connect (same Wi-Fi or personal hotspot)");
-    println!("│ 1) Serve PWA over http:// (not https) so ws:// is allowed");
-    println!("│ 2) In PWA header set Agent host to laptop LAN IP:{port}");
+    println!("│ Agent connect (capture node — same Wi-Fi / hotspot as clients)");
+    println!("│ 1) Clients use WebSocket JSON-RPC on this host (not a browser app)");
+    println!("│ 2) Web surface is a static landing page only (docs/adr-web-demotion.md)");
     if ips.is_empty() {
         println!("│    (could not auto-detect LAN IP — run: ipconfig getifaddr en0");
         println!("│     or: hostname -I / ip -4 addr)");
-        println!("│    Example host field: 192.168.1.20:{port}");
+        println!("│    Example: ws://192.168.1.20:{port}/ws?token=<token>");
     } else {
         for ip in &ips {
-            println!("│    Agent host: {ip}:{port}");
+            println!("│    Host: {ip}:{port}");
             println!("│    WebSocket:  ws://{ip}:{port}/ws?token=<token>");
         }
     }
-    println!("│ 3) Paste ROOT TOKEN into PWA Agent token field");
-    println!("│ 4) Tap Connect → header should show ● Online");
+    println!("│ 3) Authenticate with ROOT TOKEN (capability-scoped)");
+    println!("│ 4) Durable writes: validate/finalize → building.yaml on this machine");
     println!("│ Token (copy once): {token}");
-    println!("│ Docs: docs/iphone-field-loop.md");
+    println!("│ Future phone LiDAR: native iOS companion (not Safari PWA)");
     println!("└─────────────────────────────────────────────────────────────");
 }
 

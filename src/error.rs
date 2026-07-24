@@ -181,7 +181,6 @@ impl From<serde_yaml::Error> for ArxError {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl From<crate::git::manager::GitError> for ArxError {
     fn from(err: crate::git::manager::GitError) -> Self {
         ArxError::Git(err.to_string())

@@ -1,6 +1,7 @@
 //! WebSocket agent daemon (feature-gated)
 //!
-//! Provides a local WebSocket server for PWA integration when agent feature is enabled.
+//! Local edge capture node / bridge: clients talk JSON-RPC over WebSocket/SSH;
+//! durable writes go through the compiler spine to `building.yaml`.
 
 #[cfg(feature = "agent")]
 pub mod auth;

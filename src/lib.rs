@@ -15,8 +15,6 @@ pub mod contribution;
 pub mod core;
 pub mod error;
 pub mod export;
-// libgit2 — native only (not available on wasm32 PWA)
-#[cfg(not(target_arch = "wasm32"))]
 pub mod git;
 pub mod ifc;
 pub mod ingest;
@@ -27,8 +25,7 @@ pub mod utils;
 pub mod validation;
 pub mod yaml;
 
-// CLI module (public for testing) — host binary only
-#[cfg(not(target_arch = "wasm32"))]
+// CLI module (public for testing)
 pub mod cli;
 
 // Feature-gated optional rings
@@ -40,9 +37,6 @@ pub mod agent;
 
 #[cfg(feature = "blockchain")]
 pub mod blockchain;
-
-#[cfg(feature = "web")]
-pub mod web;
 
 // Re-export commonly used types
 pub use core::{Building, Equipment, Floor, Room, Wing};

@@ -1,4 +1,4 @@
-//! Read-only building snapshot for PWA review (Batch B1).
+//! Read-only building snapshot (`building.get` RPC).
 //!
 //! Thin wrapper around `load_building_at` + `summarize_review` — no IFC spine changes.
 

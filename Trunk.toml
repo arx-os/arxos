@@ -1,23 +1,5 @@
-# Trunk 0.21+ config for ArxOS PWA (feature `web`).
-# Features come from index.html: data-cargo-features="web"
-
-[build]
-target = "index.html"
-release = true
-# PWA must not pull TUI/crossterm or other host defaults (wasm-incompatible).
-no_default_features = true
-features = ["web"]
-
-[watch]
-ignore = ["dist"]
-
-[serve]
-# Bind IPv4 + IPv6. Safari resolves "localhost" to ::1 first; IPv4-only
-# causes "Safari can't open the page" even when 127.0.0.1 works.
-addresses = ["0.0.0.0", "::"]
-port = 8080
-open = false
-
-[clean]
-dist = "dist"
-cargo = false
+# Static landing only (Decision 9 — docs/adr-web-demotion.md).
+# No Rust/WASM build. Serve the repo root files with any static server, e.g.:
+#   python3 -m http.server 8080
+#   npx serve .
+# Trunk is no longer required for ArxOS web.

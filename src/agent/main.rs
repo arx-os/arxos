@@ -6,7 +6,7 @@ use std::time::Duration;
 #[cfg(feature = "agent")]
 pub async fn start_agent() -> Result<(), Box<dyn std::error::Error>> {
     println!("🤖 ArxOS Agent starting...");
-    println!("📡 This agent will provide WebSocket API for PWA integration");
+    println!("📡 WebSocket API for edge clients (capture node / bridge)");
     
     // Simple event loop
     loop {

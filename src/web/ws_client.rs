@@ -101,6 +101,18 @@ fn set_last_error(msg: Option<String>) {
     LAST_ERROR.with(|e| *e.borrow_mut() = msg);
 }
 
+/// WebSocket scheme for agent connect: `wss` on HTTPS pages, else `ws`.
+fn websocket_scheme() -> &'static str {
+    if let Some(window) = web_sys::window() {
+        if let Ok(loc) = window.location().protocol() {
+            if loc == "https:" {
+                return "wss";
+            }
+        }
+    }
+    "ws"
+}
+
 /// Normalize user input to `host:port` (no scheme/path).
 ///
 /// Accepts `192.168.1.5`, `192.168.1.5:8787`, `ws://192.168.1.5:8787/ws`, etc.
@@ -171,7 +183,10 @@ pub async fn connect_to_agent_at(host: &str, token: &str) -> Result<(), String> 
     });
     PENDING_RESPONSES.with(|pending| pending.borrow_mut().clear());
 
-    let url = format!("ws://{}/ws?token={}", host, token.trim());
+    // Prefer wss when the PWA is served over HTTPS (mixed content blocks ws://).
+    // When PWA is http:// (or localhost), use ws:// as today.
+    let scheme = websocket_scheme();
+    let url = format!("{}://{}/ws?token={}", scheme, host, token.trim());
     LAST_HOST.with(|h| *h.borrow_mut() = host.clone());
 
     let ws = WebSocket::new(&url).map_err(|e| {
@@ -243,18 +258,18 @@ pub async fn connect_to_agent_at(host: &str, token: &str) -> Result<(), String> 
     save_agent_host(&host);
     let _ = with_local_storage(|storage| storage.set_item(STORAGE_TOKEN, token.trim()));
 
-    let result = tokio::select! {
-        open_res = rx => {
-            match open_res {
+    // Prefer open or error — no tokio on wasm (use futures::select).
+    let result = {
+        use futures::future::{self, Either};
+        match future::select(rx, err_rx).await {
+            Either::Left((open_res, _)) => match open_res {
                 Ok(Ok(())) => Ok(()),
                 _ => Err(format!("WebSocket to {} failed to open", host)),
-            }
-        }
-        err_res = err_rx => {
-            match err_res {
+            },
+            Either::Right((err_res, _)) => match err_res {
                 Ok(Err(e)) => Err(e),
                 _ => Err("Error during connection setup".to_string()),
-            }
+            },
         }
     };
 

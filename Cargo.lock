@@ -223,6 +223,7 @@ dependencies = [
  "gloo-net",
  "hex",
  "indicatif",
+ "js-sys",
  "las",
  "leptos",
  "leptos_meta",

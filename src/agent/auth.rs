@@ -91,6 +91,7 @@ fn action_required_capability(action: &str) -> Option<&'static str> {
         "ifc.import" => Some("ifc.import"),
         "ifc.export" => Some("ifc.export"),
         "lidar.import" => Some("lidar.import"),
+        "capture.from_camera" => Some("capture.from_camera"),
         "auth.rotate" | "auth.negotiate" => Some("auth.manage"),
         "collab.sync" => Some("collab.sync"),
         "collab.config.get" | "collab.config.set" => Some("collab.config"),

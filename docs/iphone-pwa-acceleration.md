@@ -28,7 +28,8 @@
 | **Export** | Agent `ifc.export` + `approved_only` ✅ | **No** PWA button; auto-export watcher is convenience only (not official UX) |
 | **Git** | `git.status` / `git.commit` from detail page | Usable once connected; needs large touch targets |
 | **Offline** | localStorage envelope | Offline review of last building OK; capture/export needs agent online |
-| **Files / Photos** | `<input type=file accept=.ifc>` | iOS Files OK for IFC/PLY if accept expanded; Photos LiDAR not ARKit mesh export without extra work |
+| **Files / Photos** | `<input type=file accept=.ifc>` | Secondary path only; Create New uses camera |
+| **Create New / camera** | **getUserMedia** live preview + `capture.from_camera` → proposed room | Requires **HTTPS** (or localhost); JPEG frames only — no RoomPlan mesh. See [create-new-camera.md](./create-new-camera.md) |
 | **ARKit / RoomPlan** | **None** | **Defer** (P2+): export USDZ/PLY offline → agent import; no in-app AR this sprint |
 | **Touch UX** | Small 12px token field | Need mobile CSS, sticky connect bar, 44px targets |
 | **Spine safety** | Agent IFC import/export uses ingest/export spine | Keep; do not add second export path |

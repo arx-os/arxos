@@ -93,7 +93,8 @@ russh-keys = { version = "0.40", optional = true }
 ssh2 = { version = "0.9", optional = true }
 reqwest = { version = "0.11", features = ["json"], optional = true }
 base64 = "0.22.1"
-octocrab = "0.48.0"
+# Optional: GitHub collab only (agent). Must not be default — pulls tokio/mio and breaks wasm32 web.
+octocrab = { version = "0.48.0", optional = true }
 async-trait = "0.1.77"
 
 # Blockchain dependencies (for tokenomics)
@@ -108,8 +109,32 @@ leptos_meta = { version = "0.8.5", optional = true }
 leptos_router = { version = "0.8.10", optional = true }
 wasm-bindgen = { version = "0.2.106", optional = true }
 wasm-bindgen-futures = { version = "0.4.45", optional = true }
+js-sys = { version = "0.3", optional = true }
 console_error_panic_hook = { version = "0.1.7", optional = true }
-web-sys = { version = "0.3.83", features = ["Window", "Document", "HtmlElement", "Storage", "FileList", "File", "FileReader"], optional = true }
+web-sys = { version = "0.3.83", features = [
+    "Window",
+    "Document",
+    "Element",
+    "HtmlElement",
+    "HtmlMediaElement",
+    "HtmlVideoElement",
+    "HtmlCanvasElement",
+    "HtmlInputElement",
+    "CanvasRenderingContext2d",
+    "MediaDevices",
+    "MediaStream",
+    "MediaStreamConstraints",
+    "MediaStreamTrack",
+    "MediaTrackConstraints",
+    "Navigator",
+    "Storage",
+    "FileList",
+    "File",
+    "FileReader",
+    "Blob",
+    "Url",
+    "console",
+], optional = true }
 futures = { version = "0.3", optional = true }
 gloo-net = { version = "0.6", optional = true }
 
@@ -131,6 +156,7 @@ agent = [
     "russh-keys",
     "ssh2",
     "reqwest",
+    "octocrab",
 ]
 blockchain = [
     "tokio",
@@ -140,13 +166,14 @@ blockchain = [
     "hex",
     "rs_merkle",
 ]
+# WASM PWA — do not pull `tokio` (mio/net breaks wasm32). Agent is a separate host binary.
 web = [
-    "tokio",
     "leptos",
     "leptos_meta",
     "leptos_router",
     "wasm-bindgen",
     "wasm-bindgen-futures",
+    "js-sys",
     "console_error_panic_hook",
     "web-sys",
     "futures",

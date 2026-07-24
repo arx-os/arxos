@@ -77,6 +77,7 @@ pub async fn start_agent() -> Result<(), Box<dyn std::error::Error>> {
         "ifc.import".to_string(),
         "ifc.export".to_string(),
         "lidar.import".to_string(),
+        "capture.from_camera".to_string(),
         "collab.sync".to_string(),
         "auth.manage".to_string(),
     ];

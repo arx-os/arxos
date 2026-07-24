@@ -33,11 +33,11 @@ pub fn Home() -> impl IntoView {
                 </div>
                 <div style="margin-top: 4px; font-size: 13px; opacity: 0.9;">
                     {if online {
-                        "Connected — run bedroom loop: Capture → Label → Review → Export.".to_string()
+                        "Connected — Create New (camera) → Label → Review → Export.".to_string()
                     } else if let Some(e) = err {
                         format!("Last error: {}", e)
                     } else {
-                        "Enter laptop LAN IP:8787 + token in the header, then Connect. Use http:// PWA (not https) for ws://.".to_string()
+                        "Enter laptop LAN IP:8787 + token, then Connect. Camera needs HTTPS (or localhost); see docs/create-new-camera.md.".to_string()
                     }}
                 </div>
             </div>
@@ -54,8 +54,8 @@ pub fn Home() -> impl IntoView {
             {status_block}
 
             <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
-                <A href="/capture" attr:style="display: block; text-align: center; min-height: 48px; line-height: 48px; background: #2563eb; color: white; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 16px;">
-                    "1. Capture"
+                <A href="/capture" attr:style="display: block; text-align: center; min-height: 56px; line-height: 56px; background: #2563eb; color: white; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 18px; box-shadow: 0 4px 12px rgba(37,99,235,0.35);">
+                    "Create New (camera)"
                 </A>
                 <A href="/label" attr:style="display: block; text-align: center; min-height: 48px; line-height: 48px; background: #0f172a; color: white; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 16px;">
                     "2. Label (fan + switch)"
@@ -66,17 +66,17 @@ pub fn Home() -> impl IntoView {
             </div>
 
             <section style="font-size: 14px; color: #475569; line-height: 1.45;">
-                <h2 style="font-size: 1rem; color: #0f172a;">"Bedroom loop (≈15 min)"</h2>
+                <h2 style="font-size: 1rem; color: #0f172a;">"Create New → label loop"</h2>
                 <ol style="padding-left: 1.2rem; margin: 8px 0;">
                     <li>"Laptop: arx init + arx agent in pilot dir"</li>
-                    <li>"Phone/browser: Connect (LAN IP + token)"</li>
-                    <li>"Capture: Create Bedroom (optional scan upload)"</li>
+                    <li>"Phone: serve PWA over HTTPS (camera) — docs/create-new-camera.md"</li>
+                    <li>"Connect (LAN IP + token) → Create New → Open camera → Capture"</li>
+                    <li>"Review: new proposed room appears in hierarchy"</li>
                     <li>"Label: Ceiling Fan + Light Switch → Accept"</li>
                     <li>"Review: Validate + Export approved_only IFC"</li>
-                    <li>"Laptop: confirm building.yaml has both equipment"</li>
                 </ol>
                 <p style="margin: 8px 0 0;">
-                    "Runbook: " <code>"docs/bedroom-loop.md"</code>
+                    "Runbooks: " <code>"docs/create-new-camera.md"</code>" · " <code>"docs/bedroom-loop.md"</code>
                 </p>
             </section>
         </div>

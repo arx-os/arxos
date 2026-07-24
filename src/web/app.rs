@@ -109,7 +109,7 @@ fn Header() -> impl IntoView {
                 </h1>
                 <nav class="main-nav" style="display: flex; flex-wrap: wrap; gap: 4px;">
                     <A href="/" attr:style="color: #cbd5e1; text-decoration: none; padding: 8px 8px; min-height: 44px; display: inline-flex; align-items: center;">"Home"</A>
-                    <A href="/capture" attr:style="color: #cbd5e1; text-decoration: none; padding: 8px 8px; min-height: 44px; display: inline-flex; align-items: center;">"Capture"</A>
+                    <A href="/capture" attr:style="color: #93c5fd; text-decoration: none; padding: 8px 10px; min-height: 44px; display: inline-flex; align-items: center; font-weight: 700;">"Create New"</A>
                     <A href="/label" attr:style="color: #cbd5e1; text-decoration: none; padding: 8px 8px; min-height: 44px; display: inline-flex; align-items: center;">"Label"</A>
                     <A href="/review" attr:style="color: #cbd5e1; text-decoration: none; padding: 8px 8px; min-height: 44px; display: inline-flex; align-items: center;">"Review"</A>
                     <A href="/import" attr:style="color: #94a3b8; text-decoration: none; padding: 8px 8px; min-height: 44px; display: inline-flex; align-items: center; font-size: 13px;">"Import*" </A>

@@ -6,8 +6,11 @@
 **Spine:** agent is bridge only; durable writes go through ingest/validate → `building.yaml` → `export::ifc`.
 
 **Platform honesty:** Pure WASM/PWA **cannot** access iOS ARKit/RoomPlan LiDAR. Capture is:
-1. **Create Bedroom room** (form), and/or  
-2. **File upload** `.ply` / `.las` / `.xyz` / `.ifc` → agent `lidar.import` / `ifc.import`.
+1. **Create New (camera)** — `getUserMedia` → JPEG frames → agent `capture.from_camera` → proposed room ([create-new-camera.md](./create-new-camera.md)), and/or  
+2. **Create Bedroom room** (structure-only form), and/or  
+3. **File upload** `.ply` / `.las` / `.xyz` / `.ifc` → agent `lidar.import` / `ifc.import`.
+
+**Camera + HTTPS:** Phone LAN HTTP cannot open the camera. Prefer `http://127.0.0.1` for laptop tests, or HTTPS reverse proxy for iPhone — see [create-new-camera.md](./create-new-camera.md).
 
 ---
 
@@ -56,10 +59,11 @@ $ARX agent
 
 ## 3. Capture
 
-1. Nav → **Capture** (or Home → 1. Capture).  
-2. Tap **Create / ensure Bedroom room**.  
-3. Optional: **Choose scan or IFC file** (`.ply`/`.xyz`/`.ifc`) — LossReport panel fills.  
-4. Proceed to Label.
+1. Nav → **Create New** (or Home → **Create New (camera)**).  
+2. Preferred: **Create New — Open camera** → **Capture & send to agent** (proposed room appears).  
+3. Or structure-only: **Create / ensure Bedroom room**.  
+4. Optional secondary: **Choose scan or IFC file** (`.ply`/`.xyz`/`.ifc`) — LossReport panel fills.  
+5. Proceed to Label (use the new room name if camera path).
 
 ---
 

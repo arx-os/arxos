@@ -9,7 +9,7 @@ use crate::agent::protocol::{
     JsonRpcRequest, JsonRpcResponse, AUTH_ERROR, INTERNAL_ERROR,
     METHOD_NOT_FOUND,
 };
-use crate::agent::{building, collab, edit, files, git, ifc, lidar};
+use crate::agent::{building, capture, collab, edit, files, git, ifc, lidar};
 
 pub struct AgentState {
     pub repo_root: PathBuf,
@@ -45,6 +45,7 @@ pub async fn dispatch(state: Arc<AgentState>, request: JsonRpcRequest) -> JsonRp
         "ifc.import" => handle_ifc_import(&state.repo_root, params),
         "ifc.export" => handle_ifc_export(&state.repo_root, params),
         "lidar.import" => handle_lidar_import(&state.repo_root, params),
+        "capture.from_camera" => handle_capture_from_camera(&state.repo_root, params),
         "collab.sync" => handle_collab_sync(params).await,
         "claim.list_pending" => handle_claim_list_pending(&state.repo_root),
         "claim.review" => handle_claim_review(&state.repo_root, params),
@@ -150,6 +151,22 @@ fn handle_lidar_import(root: &std::path::Path, params: Value) -> Result<Value> {
         .and_then(|v| v.as_f64())
         .unwrap_or(0.05);
     let result = lidar::import_lidar(root, filename, data_base64, merge, light_mode, voxel_size)?;
+    Ok(serde_json::to_value(result)?)
+}
+
+fn handle_capture_from_camera(root: &std::path::Path, params: Value) -> Result<Value> {
+    let frames: Vec<String> = params
+        .get("frames")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect()
+        })
+        .ok_or_else(|| anyhow::anyhow!("Missing 'frames' array (base64 JPEG strings)"))?;
+    let room_name = params.get("room_name").and_then(|v| v.as_str());
+    let floor = params.get("floor").and_then(|v| v.as_str());
+    let result = capture::from_camera(root, &frames, room_name, floor)?;
     Ok(serde_json::to_value(result)?)
 }
 

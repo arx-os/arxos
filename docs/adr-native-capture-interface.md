@@ -106,7 +106,7 @@ provenance: {
 }
 ```
 
-v1 may fold provenance into filename + agent-side metadata if RPC params stay flat; **do not** invent a second envelope product until needed.
+**Implemented on agent:** optional `provenance` object on `lidar.import` is stamped onto building metadata and rooms (`capture_client`, …). Pipeline still uses `capture_source=lidar_file`. See [native-file-handoff.md](./native-file-handoff.md).
 
 ### 3.2 Proposed marking (mandatory)
 
@@ -194,12 +194,12 @@ Path **C** = A + optional B in one session; design later.
 
 ---
 
-## 8. Implementation sequence (future; not this session)
+## 8. Implementation sequence
 
-1. Prove A with laptop file path (done / hardening continues).  
-2. Native app: capture → export supported cloud file → call existing `lidar.import` (or file drop).  
-3. Add provenance fields if missing on wire.  
-4. Field-test one room; log false +/− (R1).  
+1. ~~Prove A with laptop file path~~ — file ingest hardened + agent import.  
+2. ~~Provenance on wire~~ — optional `provenance` on `lidar.import` (agent).  
+3. **Next:** Native app (when opened): capture → export cloud file → `lidar.import` with provenance.  
+4. Field-test one room; log false +/− (R1) in [field-truth-log.md](./field-truth-log.md).  
 5. Only then consider B for RoomPlan-native structure.
 
 ---

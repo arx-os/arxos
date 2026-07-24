@@ -142,15 +142,29 @@ fn handle_lidar_import(root: &std::path::Path, params: Value) -> Result<Value> {
         .get("merge")
         .and_then(|v| v.as_bool())
         .unwrap_or(true);
+    // Decision 11: mobile-originated uploads default light_mode true
     let light_mode = params
         .get("light_mode")
         .and_then(|v| v.as_bool())
         .unwrap_or(true);
+    // Default 0.25 m is safer for field uploads than 0.05 (still clamped in light mode)
     let voxel_size = params
         .get("voxel_size")
         .and_then(|v| v.as_f64())
-        .unwrap_or(0.05);
-    let result = lidar::import_lidar(root, filename, data_base64, merge, light_mode, voxel_size)?;
+        .unwrap_or(0.25);
+    let provenance = params
+        .get("provenance")
+        .cloned()
+        .and_then(|v| serde_json::from_value::<lidar::CaptureProvenance>(v).ok());
+    let result = lidar::import_lidar(
+        root,
+        filename,
+        data_base64,
+        merge,
+        light_mode,
+        voxel_size,
+        provenance,
+    )?;
     Ok(serde_json::to_value(result)?)
 }
 

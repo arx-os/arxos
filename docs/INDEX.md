@@ -52,6 +52,7 @@ Details: [ifc-limitations.md](./ifc-limitations.md) · report: [`tests/ifc_build
 | [adr-web-demotion.md](./adr-web-demotion.md) | **Decision 9:** PWA abandoned; web = landing; native iOS future |
 | [adr-capture-model.md](./adr-capture-model.md) | **Decision 10:** near-term capture — proposed-first, geometry as input |
 | [adr-native-capture-interface.md](./adr-native-capture-interface.md) | **Decision 11:** native ↔ agent thin hand-off (v1 = file LiDAR) |
+| [native-file-handoff.md](./native-file-handoff.md) | Operator: scan file → CLI or agent `lidar.import` + provenance |
 | [pilot-starter-pack.md](./pilot-starter-pack.md) | **Zip-ready** checklist of all site-team docs |
 | [field-day-1-runbook.md](./field-day-1-runbook.md) | **S3+S5** non-author Day 1: pin install → real IFC → LossReport evidence |
 | [sprint-status-dashboard.md](./sprint-status-dashboard.md) | Weekly S1–S8 + R\* status table |

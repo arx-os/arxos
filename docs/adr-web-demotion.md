@@ -73,10 +73,10 @@ Do **not** claim, document, or demo as product truth:
 
 | Area | Consequence |
 | :--- | :--- |
-| **Code** | Interactive Leptos/WASM app (`src/web/*` client surface, `arx-web` binary, Trunk interactive build) is scheduled for **purge**; residual web packaging reduced to **static landing**. |
+| **Code** | Interactive Leptos/WASM app **removed** (2026-07-24); residual web = static `index.html` landing. |
 | **Agent** | **Kept.** Remains capture node / bridge for CLI, future native, and file workflows (including existing RPCs such as import/edit/export and `capture.from_camera` until a later decision retires them). |
 | **Compiler / TUI / IFC / file LiDAR / Git** | **Unchanged** product spine. |
-| **Docs** | Living SoT (§1.1a, Horizon B HB6, INDEX, pilot packet, README) must be rewritten to match this ADR. HB6 PWA guides demoted or archived. |
+| **Docs** | Living SoT rewritten to match this ADR (Phase 3). HB6 PWA guides in `docs/_archive/` with banners. |
 | **G10 / device path** | Reinterpreted as **native iOS + agent**, not WASM PWA. Native scaffolding is **out of scope** of the purge session. |
 | **Horizon C / rewards / CAD** | **Not** affected by this ADR. |
 
@@ -93,11 +93,11 @@ Do **not** claim, document, or demo as product truth:
 
 ---
 
-## Follow-on work (ordered, not part of this ADR commit)
+## Follow-on work
 
-1. **Code purge** — remove interactive WASM client; static landing only.  
-2. **Docs purge** — manifest §1.1a, horizon-b, pilot packet, README, INDEX.  
-3. **Verification** — default + agent builds/tests/clippy green.  
+1. ~~**Code purge**~~ — done (`refactor!(web)` 2026-07-24).  
+2. ~~**Docs purge**~~ — done (Phase 3, 2026-07-24).  
+3. ~~**Verification**~~ — default + agent builds/tests/clippy green (Phase 2).  
 4. **Later:** native iOS companion scaffolding (new decision when started).
 
 ---

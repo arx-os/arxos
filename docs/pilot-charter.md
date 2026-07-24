@@ -7,9 +7,10 @@
 **Maturity:** Lab compiler ~8.5/10; district L1 readiness ~5/10 until process +
 field evidence close obligations in `arxos_manifest.md` §1.6.  
 **Site north star (full §1.1a):** see `docs/horizon-b-roadmap.md` — this charter
-gates **controlled L1**. CLI/TUI remains the pin + evidence path; **iPhone PWA + laptop agent**
-is under **HB6 acceleration** (`docs/iphone-pwa-acceleration.md`) for on-site review/capture UX,
-still with human gates and the same IFC export spine.
+gates **controlled L1**. **CLI/TUI + optional agent** on a capture node is the pin +
+evidence path (file IFC/LiDAR). **Web is a static landing page only.** Real phone
+LiDAR is a **future native iOS companion** (not started) — not Safari/PWA  
+([adr-web-demotion.md](./adr-web-demotion.md)).
 
 ---
 
@@ -37,7 +38,7 @@ still with human gates and the same IFC export spine.
 | Pilot end / review date | |
 
 **In scope:** Local map → review → validate → Git → internal IFC/YAML export for the named building.  
-**Out of scope for L1:** Mainnet $AXD, multi-oracle production mint, public data market, campus multi-building layout, PWA capture, agent-as-export-authority, safety sign-off of models as licensed drawings.
+**Out of scope for L1:** Mainnet $AXD, multi-oracle production mint, public data market, campus multi-building layout, browser/PWA capture, native iOS (future), agent-as-export-authority, safety sign-off of models as licensed drawings.
 
 ### 2b. BIM / interchange policy (required)
 

@@ -7,12 +7,13 @@ Git-diffable YAML (`building.yaml`), with **IFC as industry interchange**.
 
 **Maturity (honest):** lab closed loop ~8.5/10 · district L1 pilot ~5/10  
 (blocked on field evidence + process — see `arxos_manifest.md` §1.1a · §1.6).  
-**Living plan:** `docs/horizon-b-roadmap.md` · **Preferred pin:** `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d`
+**Living plan:** `docs/horizon-b-roadmap.md` · **Preferred pin:** `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d`  
+**Device policy:** [`docs/adr-web-demotion.md`](docs/adr-web-demotion.md) — web is a **static landing page only**; real phone LiDAR is a **future native iOS companion** (not started).
 
 ## What it does
 
 ```text
-IFC / LiDAR / text script
+IFC / LiDAR file / text script
         │
         ▼
   finalize_ingest + validation
@@ -23,6 +24,9 @@ IFC / LiDAR / text script
         ├── arx query / room / equipment / TUI
         └── arx export --format ifc
 ```
+
+**Honest capture paths today:** file-based IFC + LiDAR + **CLI/TUI** + optional **agent** (capture node).  
+**Not product:** browser LiDAR, ARKit/RoomPlan in Safari, walk-in pure PWA capture.
 
 ## IFC-only BIM policy
 
@@ -53,7 +57,7 @@ Do not run pilots on floating `main`.
 ```bash
 arx init --name "My Building"
 arx import ifc path/to/building.ifc
-arx import lidar scan.ply --merge          # optional as-built assist
+arx import lidar scan.ply --merge          # optional as-built assist (file)
 arx edit corrections.txt                   # text / review_status
 arx validate
 arx query "/local/local/local/*/*/*/*"
@@ -82,11 +86,12 @@ arx render --building "My Building"        # hierarchy text (TUI feature)
 | Feature | Default | Role |
 |---|---|---|
 | `tui` | **yes** | Primary UI (spreadsheet, merge, help, hierarchy render) |
-| `agent` | no | Edge WebSocket/SSH (git + IFC; no BACnet/hardware) |
-| `web` | no | WASM PWA — terminal-style pane (+ camera/AR later) |
+| `agent` | no | Edge capture node — WebSocket/SSH (git + IFC/LiDAR import; no BACnet) |
 | `blockchain` | no | ethers clients |
-| `full` | no | tui + agent + web + blockchain |
+| `full` | no | tui + agent + blockchain |
 
+**Web:** static `index.html` landing only (no Cargo feature; no interactive client).  
+**Removed:** interactive WASM/PWA field client (Decision 9).  
 **Removed for now (revisit later):** open-source hardware (BACnet/Modbus/MQTT), Bevy / LiDAR point-cloud 3D viz.
 
 ## Architecture (short)
@@ -95,14 +100,16 @@ arx render --building "My Building"        # hierarchy text (TUI feature)
 - **Durable SSOT:** `building.yaml` via `BuildingYamlSerializer` (`schema_version: 1`)
 - **Completion:** `ingest::finalize_ingest` / `persist_building` (merge + validate)
 - **IFC:** native STEP only; export via `export::ifc`
-- **LiDAR ingest:** PLY/LAS/XYZ → structure assist (`proposed`); not TUI point-cloud render
+- **LiDAR ingest:** PLY/LAS/XYZ **files** → structure assist (`proposed`); not browser sensors
 - **Identity:** Arx UUID + optional `ifc_global_id` + durable `ArxAddress` on equipment
+- **Agent:** capture node / bridge only — durable writes still through the spine
 
 ## Documentation
 
 | Doc | Role |
 |---|---|
 | [`arxos_manifest.md`](./arxos_manifest.md) | **Engineering source of truth** |
+| [`docs/adr-web-demotion.md`](./docs/adr-web-demotion.md) | Device/web surface decision (landing only; native iOS future) |
 | [`docs/INDEX.md`](./docs/INDEX.md) | Pilot doc map |
 | [`docs/l1-supported-workflow.md`](./docs/l1-supported-workflow.md) | Only L1 supported loop |
 | [`docs/field-handoff.md`](./docs/field-handoff.md) | Ordered pilot packet |

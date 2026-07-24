@@ -3,7 +3,7 @@
 **Status:** Outline only. **Start only after S1 + S4 + S5 green** (or charter marks practice scan non-official).  
 **Pin:** `v2.0.0-pilot.4` @ `659bbd9f`  
 **Maps to:** Horizon B phase HB3 · R1 · G4/G6 field · sprint S6 expanded  
-**CLI-first:** capture node runs `arx import lidar`; PWA capture is **out of scope** until Q6 + HB6.
+**CLI-first:** capture node runs `arx import lidar` on **files**. Browser capture is **out of scope** (Decision 9).
 
 ---
 
@@ -114,7 +114,7 @@ Fill [field-truth-log.md](./field-truth-log.md) **§B S6 template**:
 ## 7. Explicit non-goals (HB3)
 
 - Full-floor or 250k capture (→ HB4/HB5)  
-- PWA in-browser LiDAR  
+- Browser / Safari LiDAR or RoomPlan
 - Detector “accuracy product” without logs  
 - Wall/slab IFC mapping  
 - Horizon C  

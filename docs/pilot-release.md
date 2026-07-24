@@ -17,7 +17,7 @@
 
 | Tag | Commit SHA | Date | Notes |
 | :--- | :--- | :--- | :--- |
-| **`v2.0.0-pilot.5`** | `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d` | 2026-07-17 (tag cut 2026-07-24) | **Preferred L1 pin** — Lenient address validation, dynamic registry LossReport (MEP/structural), deterministic properties. **Does not** include post-pin HB6 agent/web (bedroom loop, Create New camera) on later `main`. |
+| **`v2.0.0-pilot.5`** | `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d` | 2026-07-17 (tag cut 2026-07-24) | **Preferred L1 pin** — Lenient address validation, dynamic registry LossReport (MEP/structural), deterministic properties. Compiler + TUI default. |
 | `v2.0.0-pilot.4` | `659bbd9f369c0b942f150983b204ea054fc595a0` | 2026-07-13 | Superseded — TUI default, no hardware/render3d, resource limits, `unmapped_products` LossReport, buildingSMART fixtures |
 | `v2.0.0-pilot.3` | `5449838a565b43efc9c9c9185a3389c9895e791c` | 2026-07-12 | Superseded for new pilots (last pin before compiler-core packaging) |
 | `v2.0.0-pilot.2` | `d6a4567f98c74d324041d1461c7a310b706ecc1b` | 2026-07-12 | R5 friction fixes |
@@ -56,12 +56,15 @@ and install without `--locked`, but **record the commit SHA** in the charter.
 
 | Need | Build | Notes |
 | :--- | :--- | :--- |
-| Edge agent (SSH/WebSocket git+IFC) | `--features agent` | No BACnet/hardware drivers |
-| WASM terminal PWA | `--features web` | Camera/AR later; hierarchy text now |
+| Edge agent (capture node: WS/SSH + git/IFC/LiDAR import) | `--features agent` | No BACnet/hardware; not a second export authority |
 | On-chain contribute/pay | `--features blockchain` | EIP-712 sign/submit |
-| Everything current | `--features full` | tui+agent+web+blockchain |
+| Everything current | `--features full` | tui+agent+blockchain |
 
-**Not in tree for now:** hardware (BACnet/Modbus/MQTT), Bevy/LiDAR point-cloud 3D.
+**Web:** static `index.html` landing only — **no** interactive client, **no** `--features web`  
+(Decision 9: [`adr-web-demotion.md`](./adr-web-demotion.md)).
+
+**Not in tree for now:** interactive WASM/PWA field client; hardware (BACnet/Modbus/MQTT); Bevy/LiDAR point-cloud 3D.  
+**Future (not this pin):** native iOS companion for phone LiDAR.
 
 `contribute` / `access` remain available for lab packaging (not L1-required).
 

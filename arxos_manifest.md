@@ -6,10 +6,10 @@
 | **Product name** | ArxOS (“Git for Buildings” / version control for the built world) |
 | **Version (crate)** | 2.0.0 (`arx` binary / `arxos` lib) |
 | **Primary goal** | **Full product:** free local software to map buildings as code + peer review + **$AXD rewards** for verified as-built data + **buyer market** for data access |
-| **Engine** | Rust 2021 (CLI + lib) · native IFC · Git SSOT · Foundry contracts · optional WASM/agent/render3d/`blockchain` |
+| **Engine** | Rust 2021 (CLI + lib) · native IFC · Git SSOT · Foundry contracts · optional agent/`blockchain` · static web landing |
 | **Design philosophy** | Local-first · single `Building` model · Git-native · free to use · pay only for data access |
 | **Document status** | Living plan — full vision locked; compiler + economy spine **lab-complete** (N1–N8 + Horizon A tooling); **Horizon B** (district L1 + site capture path) is current priority (§1.1, §1.5–1.6, §10; `docs/horizon-b-roadmap.md`) |
-| **Last reconciled** | 2026-07-24 (**ADR:** interactive WASM/PWA demoted — [`docs/adr-web-demotion.md`](docs/adr-web-demotion.md); §1.1a / HB6 body text still pending Phase 3 rewrite after code purge) |
+| **Last reconciled** | 2026-07-24 — Decision 9 applied in living text: interactive PWA purged; web = landing only; device path = future native iOS ([`docs/adr-web-demotion.md`](docs/adr-web-demotion.md)) |
 | **Audience** | Vision holder, field IT pilots, core maintainers, external builders |
 | **Device / web surface (locked)** | **Web = static landing only.** No browser LiDAR/RoomPlan/ARKit. Future phone capture = **native iOS companion** (not started). Durable authority = **agent + `building.yaml`**. Full decision: [`docs/adr-web-demotion.md`](docs/adr-web-demotion.md). |
 
@@ -56,7 +56,7 @@ Most buildings are **as-built black holes**. That kills and injures workers (e.g
 3. **Quality:** validation + LiDAR review coverage (`src/contribution/quality.rs`).
 4. **Chain bring-up:** Foundry E2E green → Anvil/live env script → public testnet → Base.
 5. **Oracles v1:** 2-of-3; ArxOS keys for bring-up, external stakers later.
-6. **Peripherals:** ask before expanding PWA / hardware / 3D / multi-building campus layouts.
+6. **Peripherals:** ask before expanding native mobile, hardware, 3D, or multi-building campus layouts.
 
 ### Full-product spine
 
@@ -111,19 +111,22 @@ Compiler without reward is incomplete for the vision. Reward without trusted as-
 
 **Ultimate L1 “it works on a real site” scenario (~250k sqft class building):**
 
-> I can walk into the building tomorrow with a device running the **WASM PWA** (and/or **edge agent**), perform **LiDAR scanning + labeling / AR corrections**, have the system produce a **validated `Building` model**, and **export a usable IFC** — with **human review gates**, **clear LossReport**, and **Git versioning**. Reliable enough for **controlled L1 pilot use under a signed charter**.
+> On a **capture node** (laptop/Mini: CLI/TUI + optional **agent**), I ingest **file-based LiDAR** and/or **vendor IFC**, apply **text/review corrections**, produce a **validated `Building`**, and **export usable IFC** — with **human review gates**, **clear LossReport**, and **Git versioning** on an approved internal remote. Reliable enough for **controlled L1 pilot use under a signed charter**.
+
+**Device path (future, not L1 blocker today):** Real phone LiDAR / RoomPlan / ARKit-class capture is a **native iOS companion** (not started) that talks to the **agent**. Safari / pure PWA **cannot** do that — see [`docs/adr-web-demotion.md`](docs/adr-web-demotion.md).
 
 | Layer | Required behavior | Honesty constraint |
 | :--- | :--- | :--- |
-| **Capture** | LiDAR (file or device pipeline) + optional vendor IFC base | Autos start `proposed`; never skip review |
-| **Correct** | Label / text / AR corrections on device or capture node | PWA may start as review+edit; full in-browser LiDAR is **not** claimed until proven |
+| **Capture** | File LiDAR (PLY/LAS/…) and/or vendor IFC → agent/CLI import | Autos start `proposed`; never skip review |
+| **Correct** | Label / text / review on capture node (TUI/CLI); future native client | **No** browser LiDAR or RoomPlan |
 | **Validate** | Hard validate on durable write | No serialize-only “approved” saves |
 | **Loss** | LossReport + `unmapped_products` (and LiDAR miss modes) | “Validate OK” ≠ complete BIM |
 | **Version** | `building.yaml` + Git on approved internal remote | Pin install (`v2.0.0-pilot.N`) |
 | **Export** | `arx export --format ifc` (prefer `--approved-only`) | Agent is bridge only — not second export spine |
 | **Policy** | Signed charter + data class + second-person handoff | R5/R7/R10; human + licensed docs win |
+| **Web** | Static landing page only (marketing / docs pointers) | Not a capture, review, or Create New client |
 
-**L1 exit bar (controlled pilot — not full product economy):** One named building, messy real data, free-software loop above under policy; **chain optional**. Does **not** require mint, buyer market, or mainnet.
+**L1 exit bar (controlled pilot — not full product economy):** One named building, messy real data, free-software loop above under policy; **chain optional**. Does **not** require mint, buyer market, mainnet, or native iOS.
 
 **Full product bar (L3):** L1 + multi-building program (L2) + production reward/market (R3/R4/R8).
 
@@ -137,12 +140,12 @@ Compiler without reward is incomplete for the vision. Reward without trusted as-
 | G2 | YAML schema versioned | `schema_version: 1` on building document | **Done** |
 | G3 | IFC L0–L2 Arx-authored | Automated identity/enrichment/geometry tests | **Done** |
 | G4 | LiDAR → YAML → IFC path | Synthetic CI + CLI workflow | **Partial** (field unproven) |
-| G5 | Text/AR edits | `arx edit` + validate/save | **Done** (CLI); WASM partial |
+| G5 | Text/AR edits | `arx edit` + validate/save | **Done** (CLI/TUI) |
 | G6 | Human-in-the-loop LiDAR | `review_status` + export warn / `--approved-only` | **Done** (lab) |
 | G7 | Pilot scale path | Runbook + profiled ~250k ft² | **Open** (defaults only; site profile open) |
 | G8 | One IFC stack | Native STEP only | **Done** |
-| G9 | Site capture loop (§1.1a) | Real building: scan → review → validate → Git → IFC | **Open** — Horizon B |
-| G10 | Device path (PWA/agent) | Field-usable review/label path on pilot hardware | **Open** (lab WASM ~4/10) |
+| G9 | Site capture loop (§1.1a) | Real building: file scan/IFC → review → validate → Git → IFC | **Open** — Horizon B |
+| G10 | Device path (native iOS + agent) | Field phone LiDAR via **native iOS** companion (not started) | **Open** — interactive PWA **abandoned** (Decision 9) |
 
 ### 1.3 Success criteria — economy / network
 
@@ -164,12 +167,14 @@ Compiler without reward is incomplete for the vision. Reward without trusted as-
 - **Revit / ArchiCAD / CAD plugins or direct CAD integrations** — IFC export from the vendor tool is the only supported BIM path (`docs/ifc-limitations.md`).
 - Survey-grade auto reconstruction without human review.
 - NL “chat to edit building” as primary interface.
-- **Browser-only full-building LiDAR** for ~250k sqft (device does review/label; heavy ingest stays on capture node until proven otherwise).
+- **Browser / Safari LiDAR, ARKit, or RoomPlan** — pure PWA cannot access iPhone depth/mesh (Decision 9).
+- **Interactive WASM/PWA as field capture, review, label, or Create New client** — web is static landing only.
 - Multi-device CRDT collaboration before Git multi-remote is boring.
 - **Horizon C** (network scale, production mint, server host gate) before **L1 exit once**.
 - Expanding optional rings (3D viz, hardware BACnet, campus multi-building) before §1.1a site loop has evidence.
 - Agent/daemon as official IFC export authority (edge bridge only; spine is `arx export --format ifc`).
 - Rewriting the compiler spine (`ingest` / YAML / Git / IFC identity / validate) for convenience.
+- Shipping native iOS companion before foundation decision is opened (not part of L1 exit bar).
 
 ### 1.5 Path to “it works” (horizons)
 
@@ -180,8 +185,9 @@ HORIZON A — Lab → live local (eng CLOSED for tooling)
   Exit: cold engineer runs lab mint/pay proof without reading Solidity — met via Foundry + ops docs
 
 HORIZON B — First real building / district L1 + site capture (CURRENT PRIORITY)
-  Policy packet (charter, pin, R5, data class) → field IFC/LiDAR truth
-  → room/wing capture loop → ~250k scale profile → device (PWA/agent) usability
+  Policy packet (charter, pin, R5, data class) → field IFC/file-LiDAR truth
+  → room/wing capture loop on capture node (CLI/TUI + agent) → ~250k scale profile
+  → later: native iOS companion for phone LiDAR (G10; not started)
   Free-software loop; chain optional/demo only
   Exit: §1.1a L1 bar + pilot-mitigated R1,R2,R5,R7–R10  (detail: docs/horizon-b-roadmap.md)
 
@@ -193,16 +199,16 @@ HORIZON C — Network scale (after L1 exit, then L2)
 
 **Rules:**
 1. Do **not** start Horizon C feature work until Horizon B (L1 exit) has succeeded at least once.
-2. **Field evidence before features** — do not map walls or polish PWA capture to hide missing site logs.
+2. **Field evidence before features** — do not map walls or polish UI to hide missing site logs.
 3. **Compiler spine and honesty first** — never sacrifice validation or LossReport for speed.
-4. **CLI/TUI capture node first**, then harden PWA/agent for the walk-in scenario (G10 after G9 partial).
+4. **CLI/TUI + agent capture node first**; native iOS for phone LiDAR later (G10 after G9 partial).
 
 ### 1.6 Deployment obligations (reservations → work)
 
 **Hard truth:** Lab-complete (N1–N5, Horizon A tooling) is **not** “absolutely ready for district production.”  
 This section is the **obligation register**: each reservation must be **relegated** (reduced or closed) by named work before the corresponding go-level is claimed.
 
-**Current state (2026-07-24, pin `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d`):** Engineering has a green lab compiler loop (import → validate → export → Git → optional contribute/commercial gate), TUI as default UI, hard resource refuse, and IFC **honesty** via dynamic registry-driven `unmapped_products` LossReport plus buildingSMART ISO fixtures—**R2 eng half** landed; **R9 pin tag is cut and documented with full SHA**. Address prefix validation checks are default lenient (warnings) and strictly gateable via `--strict-addresses`. District L1 is still ~**5/10**: blocked on **field-owned** evidence and process (signed charter **R10**, second-person walkthrough **R5**, data-class sign-off **R7**, real site IFC/LiDAR log **R1/R2/R6**). Site-capture north star is §1.1a (~250k walk-in PWA/agent + LiDAR + review + IFC under charter); phased plan **HB0–HB7** lives in `docs/horizon-b-roadmap.md`. HB6 agent/web (bedroom loop, Create New camera) may exist on later `main` — **not** part of the L1 preferred pin. Do not claim L1 exit, full BIM parity, or production chain. Next work is Horizon B field packet + evidence — not Horizon C, CAD plugins, or premature PWA rebuild.
+**Current state (2026-07-24, pin `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d`):** Engineering has a green lab compiler loop (import → validate → export → Git → optional contribute/commercial gate), TUI as default UI, hard resource refuse, and IFC **honesty** via dynamic registry-driven `unmapped_products` LossReport plus buildingSMART ISO fixtures—**R2 eng half** landed; **R9 pin tag is cut and documented with full SHA**. Address prefix validation checks are default lenient (warnings) and strictly gateable via `--strict-addresses`. **Decision 9:** interactive WASM/PWA field client **removed**; **web = static landing only**; real phone LiDAR = **future native iOS** (not started). Agent remains capture node/bridge. District L1 is still ~**5/10**: blocked on **field-owned** evidence and process (signed charter **R10**, second-person walkthrough **R5**, data-class sign-off **R7**, real site IFC/file-LiDAR log **R1/R2/R6**). Site-capture north star is §1.1a (file IFC/LiDAR + agent + TUI under charter). Phased plan **HB0–HB7** lives in `docs/horizon-b-roadmap.md`. Do not claim L1 exit, full BIM parity, browser LiDAR, or production chain. Next work is Horizon B field packet + evidence — not Horizon C, CAD plugins, or browser capture.
 
 #### Go levels (do not skip)
 
@@ -266,10 +272,9 @@ This section is the **obligation register**: each reservation must be **relegate
 | Text/AR DSL | **8/10** | `arx edit` + review_status keys |
 | Contribution / reward | **In Progress** | Hardening OnChainDistributor + Paymaster / Gas (R3) |
 | Buyer access market | **7.5/10** | Router E2E + `arx access` + commercial export gate; **not server-enforced (R4)** |
-| PWA / WASM | **4/10** | Optional; not L1 blocker |
-| Owner Experience | **Good** | Dashboard review flow + agent status metrics |
-| Agent Observability | **In Progress** | JSON logs + /api/status + /metrics |
-| Text AR Label Overlays | **In Progress** | Client Polish (Smoothing + Clustering) |
+| Web (landing) | **Landing only** | Static `index.html`; **not** a field client (Decision 9) |
+| Agent (capture node) | **Lab ready** | WebSocket/SSH bridge; durable spine; not L1-required |
+| Native iOS companion | **Not started** | Future G10 phone LiDAR path |
 | Contracts ($AXD) | **8/10** | Foundry suite green; oracle proof lock fixed |
 | CLI surface | **8/10** | Compiler + contribute + access; spatial honesty |
 | CI | **8.5/10** | Compiler CI + Full Lab Loop workflow + forge E2E; clippy green (unwrap allow-listed) |
@@ -323,7 +328,7 @@ The following dual authorities were **eliminated** in the 2026-07 convergence wo
 | Support pin + ownership | **R9** | B |
 | Safety / liability framing | **R10** | B (before any “official” use) |
 | Real-building closed loop (N9) | R1–R2, R5, R10 | B |
-| Optional rings (PWA, hardware, 3D) | freeze | — |
+| Optional rings (native mobile, hardware, 3D) | freeze until L1 evidence | — |
 
 Full obligation register and exit criteria: **§1.6**.
 
@@ -376,7 +381,7 @@ If this ledger conflicts with an optimistic sentence elsewhere in the document, 
 ### 3.1 Principles
 
 1. **One canonical model.** `Building` in memory is the only source of truth for application logic.
-2. **Adapters at the edge.** IFC, LiDAR, text, WASM are projections/sources—not parallel databases.
+2. **Adapters at the edge.** IFC, LiDAR, text (and future native clients) are projections/sources—not parallel databases.
 3. **YAML is durable SSOT for Git.** Single file: `building.yaml`. IFC is interchange; envelope JSON is portable cache.
 4. **Loss is explicit.** Never silently drop identity, enrichment, or structure without a report.
 5. **Fidelity is tiered.** Round-trips are semantic, not byte-identical.
@@ -431,7 +436,7 @@ Rules (implemented; must remain):
 
 #### Anchors (Spatial and Topological Reference Points)
 
-Anchors are physical or digital reference points dropped by field workers via AR/PWA. They anchor scans, equipment placement, and relative geometry.
+Anchors are physical or digital reference points dropped by field workers (capture node or future native AR). They anchor scans, equipment placement, and relative geometry.
 
 1. **Topological Saturation Heuristic:**
    An anchor's reliability and stability is quantified via the data saturation metric:
@@ -491,7 +496,7 @@ Mapped to IFC as `Pset_ArxLidarEnrichment`.
 | Format | Role | Schema versioning |
 | :--- | :--- | :--- |
 | **`building.yaml`** | Durable Git SSOT (**one building per repo root** — multi-building campus is **not** a durable layout; I11) | **`schema_version: 1`** on document (`BuildingData`; A1 done) |
-| **BuildingSyncEnvelope JSON** | PWA/agent portable cache | `schema_version: 1` (`src/ingest/sync.rs`) |
+| **BuildingSyncEnvelope JSON** | Agent/CLI portable cache | `schema_version: 1` (`src/ingest/sync.rs`) |
 | **IFC4 STEP** | Industry interchange | Fidelity contract, not full schema |
 
 Envelope shape:
@@ -564,7 +569,7 @@ Do **not** require full campus LiDAR inside the phone browser.
 | Role | Device | Responsibilities |
 | :--- | :--- | :--- |
 | **Capture node** | Laptop / Mini / Pi with storage | Run LiDAR pipeline; write YAML; Git commit |
-| **Review tablet (PWA)** | Browser WASM | Import IFC, view model, apply text corrections, show reports |
+| **Review on capture node** | CLI/TUI + agent | Import IFC/file LiDAR, review, LossReport; future: native iOS |
 | **BIM exchange** | CLI or agent | Export IFC for facilities / consultants |
 | **Agent (optional)** | Always-on edge | IFC import/export + git RPC today; fuller sync later |
 
@@ -587,7 +592,7 @@ MVP field loop (implemented CLI):
 | Persistence | YAML + Git | `building.yaml`, `git2`, `BuildingGitManager` |
 | IFC | Native STEP only | Legacy `ifc_rs` path **removed** |
 | LiDAR | PLY/LAS/XYZ + voxel filter | |
-| Web | Leptos/WASM (optional `web`) | Review UI, not full capture |
+| Web | Static `index.html` only | Landing / docs pointers — **not** capture UI |
 | Validation | In-process rules | Hard-gated on **`persist_building` path**; full surface still open (I4) |
 | Token/contracts | Solidity/Foundry under `contracts/` | **Phase Network only** |
 | CI | `compiler-ci.yml` | Authoritative PR gate on **compiler-core** (empty default features); **must be green** |
@@ -598,11 +603,11 @@ MVP field loop (implemented CLI):
 | :--- | :---: | :--- |
 | `tui` | **yes** | **Primary UI** — spreadsheet, merge, help, hierarchy text render |
 | *(spine)* | always | IFC/LiDAR ingest, YAML SSOT, Git, export, query |
-| `agent` | no | WebSocket/SSH edge (git + IFC; **no** hardware drivers) |
-| `web` | no | WASM PWA — terminal-style UI; camera/AR later |
+| `agent` | no | WebSocket/SSH edge capture node (git + IFC + LiDAR import; **no** hardware drivers) |
 | `blockchain` | no | ethers clients |
-| `full` | no | tui + agent + web + blockchain |
+| `full` | no | tui + agent + blockchain |
 
+**Removed:** interactive `web` / WASM PWA client (Decision 9). Static landing needs no Cargo feature.  
 **Removed for now (revisit later):** `hardware` / BACnet·Modbus·MQTT, `render3d` / Bevy LiDAR point-cloud.
 
 **L1 pilot install:** `cargo install --path .` (default = compiler + TUI).
@@ -613,7 +618,7 @@ MVP field loop (implemented CLI):
 | :--- | :--- | :--- |
 | Raspberry Pi 4B | Edge agent / light LiDAR | Documented max points; may require aggressive voxel |
 | OptiPlex / Mac Mini | Heavy parse + IFC | Primary capture node for pilot |
-| Tablet browser | Review only | No full-cloud process in WASM for pilot |
+| Future native iOS | Phone LiDAR / RoomPlan | Not started; talks to agent |
 
 ### 3.10 Economy: Oracle / $AXD / access (implemented in lab)
 
@@ -664,7 +669,7 @@ To enable a trustless, incentivized data collection model, Arxos splits the repo
 
 ### 3.12 Owner Experience Dashboard
 
-To transition ownership verification and staging reviews from the command-line to a first-class web interface, the Leptos PWA exposes a review portal for the building owner. This dashboard lists pending contributions, displays changes, and coordinates Approve and Reject actions, triggering local agent branch promotion and on-chain payouts.
+Owner staging review for contributions is served by the **agent** claim APIs (HTTP). The interactive browser owner dashboard was removed with Decision 9; owner review for L1 remains CLI/agent-process based until a later client decision (native or other) — not a Safari field app.
 
 ---
 
@@ -738,13 +743,13 @@ Every PR that mutates durable Building state must answer **yes**:
                Track B (vendor IFC) ───────────────┼──► Track D (runbook/package) ──► Pilot gate
               /                                    │
      Track C (LiDAR review) ──────────────────────┘
-                                                   Track E (PWA) optional alongside D
+                                                   Track E (device UI) deferred — native iOS later
                                                    Track F (network) blocked until pilot learnings
                                                    Track I residual (I5–I12) parallel / before gate as marked
 ```
 
 **Critical path to pilot:** **I (blockers)** → A → B → D, with **C required** for any LiDAR-heavy site.  
-**PWA (E)** is optional if tablet is not in pilot scope.  
+**Device UI (E):** interactive PWA **abandoned** (Decision 9); native iOS companion is future G10 — **not** L1-required.  
 **Network (F)** has no calendar commitment until the compiler has been used on real buildings.
 
 #### Trust pipeline (one-line program)
@@ -765,7 +770,7 @@ Success is measured by **pilot gate criteria** (§7.4), **§2.6 blockers closed*
 | **2** | **B** | Golden fixtures & CI gates | Spine CI + IFC/LiDAR goldens | **Partial** (vendor_ifc_test + limitations; Revit/ArchiCAD slots open) |
 | **3** | **C** | LiDAR pilot quality | Human review workflow + known limits | **Partial** (C1/C2/C3 code+docs; field profile open) |
 | **4** | **D** | Field ops packaging | Pilot runbook; capture node packaging | **Partial** (runbook+install outline; walkthrough open) |
-| **5** | **E** | PWA review productization | Envelope-first UI polish | **Open** (optional if no tablet pilot) |
+| **5** | **E** | Device UI (was PWA; now native iOS later) | Decision 9 | **Abandoned PWA** / native not started |
 | **6** | **B/F** | IFC L3 / vendor expansion | Interop matrix | **Open** |
 | **7** | **F** | Network (Oracle / token) | DePIN on trusted compiler | **Deferred** |
 
@@ -876,19 +881,18 @@ Success is measured by **pilot gate criteria** (§7.4), **§2.6 blockers closed*
 
 **Success metric:** Cold-start sample workflow in **&lt; 1 day**.
 
-### 4.7 Track E / Phase 5 — PWA review productization (optional; after D starts)
+### 4.7 Track E / Phase 5 — Device UI (Decision 9)
 
-**Why last among MVP tracks:** Tablet is **review/correct**, not capture. **Skip Track E** if tablet is not in pilot scope.
+**Status:** Interactive **WASM/PWA field client abandoned** (2026-07-24). See [`docs/adr-web-demotion.md`](docs/adr-web-demotion.md).
 
-| ID | Task | Done when |
-| :--- | :--- | :--- |
-| 5.1 / **E1** | Report panel for loss/validation on import | UX usable |
-| 5.2 / **E2** | Text edit UI → `apply_text_script_json` | Works offline |
-| 5.3 / **E3** | Envelope-only active storage + download JSON for capture node | No dual-key bugs; file export |
-| 5.4 | Download YAML/JSON for handoff to capture node | File export |
-| 5.5 / **E4** | Do **not** port full LiDAR to WASM | Explicit non-goal |
+| ID | Task | Status |
+| :--- | :--- | :---: |
+| E-PWA | Leptos/WASM capture/review/Create New client | **Removed** |
+| E-web | Static landing (`index.html`) | **Done** (marketing only) |
+| E-native | Native iOS companion for RoomPlan/LiDAR | **Not started** (G10; not L1-required) |
+| E4 | Do **not** claim browser LiDAR / ARKit / RoomPlan | **Policy** (Decision 9) |
 
-Cap scope ruthlessly.
+L1 review/correct stays on **CLI/TUI + agent**.
 
 ### 4.8 Phase 6 — IFC vendor expansion
 
@@ -949,11 +953,11 @@ Contracts under `contracts/`; Rust under `src/contribution`, `src/access`, `src/
 
 AR devices should emit this DSL—not free-form NL—in MVP.
 
-### 5.4 Sync / PWA
+### 5.4 Sync / portable envelope
 
 **Path:** Building → `BuildingSyncEnvelope` → localStorage / file.
 
-**WASM:** parse IFC envelope, store/load, merge, apply text (`src/web/wasm_bridge.rs`).
+**Note:** In-browser WASM parse/UI was removed (Decision 9). Envelope helpers remain in `src/ingest/sync.rs` for agent/CLI.
 
 ### 5.5 Validation + durable write
 
@@ -1142,7 +1146,7 @@ src/persistence/       building.yaml load/save
 src/git/               BuildingGitManager (single-file SSOT)
 src/yaml.rs            Serializer + BuildingData DTO (internal)
 src/cli/               Compiler CLI surface
-src/web/               PWA (optional feature)
+index.html             Static landing only (no interactive client)
 src/agent/             Edge agent (optional feature)
 src/tui/               Terminal UI rings (default feature)
 src/render3d/          Visualization (optional feature)
@@ -1191,7 +1195,7 @@ Lab proof: ./scripts/full_lab_loop.sh   (see docs/lab/full-lab-loop.md)
 | Foundry contracts | **Yes** (lab) | Mint + pay E2E green |
 | Host gate on payment | **Partial** | CLI `--commercial` + receipt (**R4** process; not server enforcement) |
 | Multi-building layout | **No** | One `building.yaml` per repo (I11) |
-| PWA / agent / 3D / hardware | Optional | PWA/agent on HB6 after field evidence (or explicit go); 3D/hardware frozen |
+| Agent / native iOS / 3D / hardware | Optional | Agent = capture node now; native iOS = HB6/G10 not started; 3D/hardware frozen |
 
 ---
 
@@ -1227,19 +1231,20 @@ Horizon A **does not** close §1.6 district pilot obligations. It only enables l
 | **HB3** | Real LiDAR field truth (R1) | Field + eng | Open | Room/wing scan: false +/− log; review gates used |
 | **HB4** | Site capture loop (G9) | Field + eng | Open | Scan → label → validate → Git → usable IFC on one building |
 | **HB5** | Scale profile ~250k (R6/G7) | Field + eng | Eng defaults only | Timing/RAM/limits logged; light-mode guidance real |
-| **HB6** | Device UX PWA/agent (G10) | Eng + field | **In Progress** | iPhone↔agent plan (`docs/iphone-pwa-acceleration.md`); Batch A approved |
+| **HB6** | Device path native iOS + agent (G10) | Eng | **Not started** | Native iOS companion (Decision 9); interactive PWA **abandoned** |
 | **HB7** | L1 exit scorecard | Both | Open | R1,R2,R5,R7–R10 pilot-mitigated; §2.1 scores updated |
 
-**L1 exit:** §1.1a free-software loop valuable on one messy real building under policy; **no mainnet token dependency**. Chain stays optional (HB-chain).
+**L1 exit:** §1.1a free-software loop valuable on one messy real building under policy; **no mainnet token dependency**. Chain stays optional (HB-chain). Native iOS **not** required for L1 exit.
 
 **Integration spine (do not fork):**
 
 ```text
-[device PWA/agent] ──bridge/files──► [capture node: arx CLI/TUI]
-   LiDAR file / labels / review          import lidar|ifc → finalize → validate
-                                         → building.yaml + Git
-                                         → arx export --format ifc (--approved-only)
-                                         → LossReport visible at every ingest
+[future native iOS] ──WS/files──► [capture node: arx CLI/TUI + agent]
+[file LiDAR / IFC]  ──import──►     import lidar|ifc → finalize → validate
+                                    → building.yaml + Git
+                                    → arx export --format ifc (--approved-only)
+                                    → LossReport visible at every ingest
+[static web landing]  (marketing only — not a client)
 ```
 
 ### 10.3 Horizon C — Relegate L2/L3 obligations (only after L1)
@@ -1257,7 +1262,7 @@ Horizon A **does not** close §1.6 district pilot obligations. It only enables l
 You:    docs/field-handoff.md — sign charter + data-classification · record pin · R5 checklist
         open site access; fill field-truth-log on real IFC/scan
 Eng:    keep pin green · fix field blockers only · no Horizon C until L1 exit
-        device/PWA work only after HB3–HB4 evidence or explicit approval
+        native iOS only after explicit go (not L1-required); no browser capture
 Never:  L3 mainnet until L1 exit · fake R5/R1 evidence · public facility models
         rewrite spine · CAD plugins · skip LossReport/validation
 ```

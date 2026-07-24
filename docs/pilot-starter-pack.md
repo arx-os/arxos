@@ -124,7 +124,7 @@ S1 charter → S2 data class → S3 pin smoke → S4 second person
 | :--- | :--- |
 | Facility IFC / point clouds | Sensitive; supply separately under data class |
 | Blockchain / mint docs | Not L1 success |
-| PWA / agent field guide | HB6 later; CLI-first |
+| Native iOS companion | Future only; CLI-first for L1 |
 | CAD plugins | Unsupported forever for L1 |
 
 **Related:** [field-handoff.md](./field-handoff.md) · [sprint-status-dashboard.md](./sprint-status-dashboard.md)

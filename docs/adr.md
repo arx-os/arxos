@@ -109,7 +109,7 @@ Decisions 5–7 below describe earlier work that assumed a Leptos PWA field/owne
 
 - **Context:** The pure browser client cannot access iOS ARKit, RoomPlan, or LiDAR depth. Continuing to treat the WASM PWA as a walk-in spatial capture / primary field surface was architecturally false and damaged honesty.
 - **Decision:** Abandon the interactive PWA as a product capture/review client. **Web** is reduced to a **static landing page** only. Future phone spatial capture is a **native iOS companion** (not started in the purge). **Agent + `building.yaml`** remain the durable authority. Explicit non-claims: no browser LiDAR, no RoomPlan/ARKit in Safari, no walk-in PWA capture as product.
-- **Consequences:** Interactive Leptos/WASM client and HB6 PWA docs are purged or demoted in follow-on work; agent/CLI/TUI/compiler kept; §1.1a device language must be reconciled to native + file paths.
+- **Consequences:** Interactive Leptos/WASM client removed; HB6 PWA docs archived; agent/CLI/TUI/compiler kept; §1.1a device language = file capture + future native iOS.
 - **Full record:** [`adr-web-demotion.md`](./adr-web-demotion.md)
 - **Alternatives considered:** RGB-only PWA as “capture product” (rejected); wait for Safari ARKit-in-browser (rejected); delete agent with PWA (rejected).
 

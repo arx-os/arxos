@@ -76,7 +76,7 @@ Never mark **Done** without evidence path. Lab buildingSMART ≠ R2 closed.
 | Q2 LiDAR hardware | [ ] / N/A | |
 | Q3 Capture node | [ ] | |
 | Q4 IFC- vs scan-first | [ ] | |
-| Q6 PWA parallel | [ ] default No | |
+| Q6 Device eng (native iOS later; PWA abandoned) | [ ] N/A for L1 | |
 | Q7 BIM / IFC contact | [ ] | |
 
 ---
@@ -95,6 +95,6 @@ Risks:
 
 - [ ] Run [s8-reconciliation-template.md](./s8-reconciliation-template.md)
 - [ ] If S1+S4+S5 green → start [hb3-lidar-plan.md](./hb3-lidar-plan.md)
-- [ ] No Horizon C · no PWA productization without Q6
+- [ ] No Horizon C · no browser capture claims · native iOS only after explicit go
 
 **Related:** [pilot-starter-pack.md](./pilot-starter-pack.md) · [field-day-1-runbook.md](./field-day-1-runbook.md) · [field-truth-log.md](./field-truth-log.md)

@@ -13,7 +13,9 @@
 
 **Rules:** No CAD plugins · Agent is **bridge only** (export spine still `arx export` / agent `ifc.export` same exporter) · Do not ignore import warnings · Do not use floating `main`.
 
-**iPhone PWA (accelerated HB6):** Optional same-day companion once agent runs on the laptop — see [iphone-pwa-acceleration.md](./iphone-pwa-acceleration.md). CLI S3+S5 remains the **pin/evidence** path; phone loop is for review/capture UX once Batch A+ ships.
+**Device note:** Interactive browser/PWA capture is **not** part of L1 field day  
+([adr-web-demotion.md](./adr-web-demotion.md)). Optional laptop **agent** may run for tooling;  
+CLI S3+S5 remains the **pin/evidence** path.
 
 ---
 

@@ -125,7 +125,7 @@ Update unit test assert if it keys on full string.
 
 | Idea | Why not now |
 | :--- | :--- |
-| PWA capture / camera LiDAR | HB6; needs Q6 override |
+| Browser capture / camera LiDAR | Closed — Decision 9; native iOS later |
 | Wall/slab domain mapping | Product; honesty already landed |
 | Auto-upload field-truth | Scope |
 | Raise default 50 MiB globally | Hide R6; use env per site instead |

@@ -1,3 +1,12 @@
+<!--
+ARCHIVED — not living product documentation.
+Reason: Decision 9 (docs/adr-web-demotion.md) — interactive WASM/PWA field client abandoned.
+Web = static landing only. Phone LiDAR = future native iOS. Capture = file IFC/LiDAR + agent + TUI.
+Do not treat this file as current design or supported workflow.
+-->
+
+> **ARCHIVED (2026-07-24).** Historical only. Interactive PWA/device guides are no longer product truth. See [`docs/adr-web-demotion.md`](../adr-web-demotion.md) and [`docs/INDEX.md`](../INDEX.md).
+
 # iPhone + laptop agent field loop (Batch A)
 
 **Pin / features:** build from `main` with `--features agent` (laptop) and `--features web` (PWA).  

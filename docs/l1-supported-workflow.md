@@ -22,7 +22,9 @@ Read **import warnings** (LossReport). `unmapped_products` means walls/slabs/doo
 were present but not mapped into Arx rooms/equipment — not a silent success.
 
 Optional later (not L1 success criteria): `contribute`, `access`, `--commercial`, Anvil — see [lab/](./lab/).  
-Device PWA walk-in capture is the §1.1a north star but **not** required for early HB0–HB2.
+Optional agent (`--features agent`) is a capture-node bridge — **not** required for L1 exit.  
+**Not product:** browser LiDAR, Safari RoomPlan/ARKit, walk-in pure PWA capture  
+([adr-web-demotion.md](./adr-web-demotion.md)). Honest spatial path today = **file** IFC/LiDAR + CLI/TUI.
 
 ---
 

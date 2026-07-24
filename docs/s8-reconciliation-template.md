@@ -69,7 +69,7 @@ R6: [ ] pilot-mitigated — §C rows: __ · date:
 | District L1 readiness | ~4/10 | | |
 | IFC native | 8/10 | | |
 | LiDAR | 6.5/10 | | |
-| PWA / WASM | 4/10 | 4/10 unless HB6 | |
+| Web (landing only) | Landing | Landing | Decision 9 |
 
 ---
 
@@ -95,7 +95,7 @@ Update [horizon-b-roadmap.md](./horizon-b-roadmap.md) §10 status log with one r
 - [ ] Approved E1–E3 only  
 - [ ] Other: ________  
 
-**Forbidden without explicit go:** Horizon C · wall mapping · PWA productization (unless Q6 override).
+**Forbidden without explicit go:** Horizon C · wall mapping · browser capture claims · native iOS without explicit go.
 
 ---
 

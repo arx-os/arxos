@@ -12,7 +12,6 @@ If a doc here conflicts with the manifest, **the manifest wins**.
 | :--- | :---: |
 | Lab closed loop (compiler + Foundry) | ~8.5/10 |
 | District L1 pilot readiness | ~5/10 |
-| Owner Experience | **Good** (once dashboard lands) |
 | Full reward/market (L3) | ~2/10 |
 
 L1 is blocked on **process + field evidence**, not missing framework code.  
@@ -20,6 +19,19 @@ See manifest §1.5–1.6.
 
 **Preferred pin:** `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d` — [pilot-release.md](./pilot-release.md).  
 **Install:** `git checkout v2.0.0-pilot.5 && cargo install --path . --locked` (default = compiler + TUI).
+
+### Product surfaces (Decision 9)
+
+| Surface | Role |
+| :--- | :--- |
+| **CLI + TUI** | Primary operator UI |
+| **Agent** | Capture node / bridge → `building.yaml` |
+| **File IFC + LiDAR** | Current honest spatial/BIM ingest |
+| **Web** | **Static landing only** (`index.html`) — not capture/review |
+| **Native iOS** | Future phone LiDAR/RoomPlan (not started) |
+
+**Non-claims:** no browser LiDAR · no ARKit/RoomPlan in Safari · no walk-in PWA as product.  
+**ADR:** [adr-web-demotion.md](./adr-web-demotion.md)
 
 ### Lab IFC honesty (Package A, 2026-07)
 
@@ -35,19 +47,14 @@ Details: [ifc-limitations.md](./ifc-limitations.md) · report: [`tests/ifc_build
 
 | Doc | Role |
 | :--- | :--- |
-| [horizon-b-roadmap.md](./horizon-b-roadmap.md) | **Living** phases HB0–HB7 → site capture + L1 exit (~250k / PWA north star) |
+| [horizon-b-roadmap.md](./horizon-b-roadmap.md) | **Living** phases HB0–HB7 → site capture + L1 exit |
 | [adr.md](./adr.md) | Architecture Decision Record — Decisions 1–9 |
-| [adr-web-demotion.md](./adr-web-demotion.md) | **Decision 9:** interactive PWA abandoned; web = landing only; native iOS future |
+| [adr-web-demotion.md](./adr-web-demotion.md) | **Decision 9:** PWA abandoned; web = landing; native iOS future |
 | [pilot-starter-pack.md](./pilot-starter-pack.md) | **Zip-ready** checklist of all site-team docs |
 | [field-day-1-runbook.md](./field-day-1-runbook.md) | **S3+S5** non-author Day 1: pin install → real IFC → LossReport evidence |
 | [sprint-status-dashboard.md](./sprint-status-dashboard.md) | Weekly S1–S8 + R\* status table |
 | [s8-reconciliation-template.md](./s8-reconciliation-template.md) | Post-sprint R\* / scorecard reconcile |
-| [hb3-lidar-plan.md](./hb3-lidar-plan.md) | After S1–S8: first real LiDAR + review (outline) |
-| [iphone-pwa-acceleration.md](./iphone-pwa-acceleration.md) | **HB6-accel:** iPhone PWA + agent audit, P0 backlog, test plan |
-| [iphone-field-loop.md](./iphone-field-loop.md) | iPhone + laptop connect (A) + Review Pass B read-only (B1–B3) |
-| [bedroom-loop.md](./bedroom-loop.md) | **E2E:** Capture → Label fan/switch → Validate → Export IFC (PWA+agent) |
-| [create-new-camera.md](./create-new-camera.md) | **Create New:** getUserMedia → frames → proposed room; HTTPS runbook |
-| [batch-b-proposal.md](./batch-b-proposal.md) | Batch B plan; B1–B3 done, B4–B7 pending |
+| [hb3-lidar-plan.md](./hb3-lidar-plan.md) | After S1–S8: first real **file** LiDAR + review (outline) |
 | [eng-blocker-queue.md](./eng-blocker-queue.md) | E1–E3 optional polish (approval before code) |
 | [`../arxos_manifest.md`](../arxos_manifest.md) §1.1a · §10.2 | Authority: Definition of Working + phase summary |
 
@@ -83,14 +90,17 @@ Details: [ifc-limitations.md](./ifc-limitations.md) · report: [`tests/ifc_build
 - **Horizon C (network scale) is frozen** until L1 exit once.
 - **Default features:** `tui` (primary UI) + compiler spine. No hardware drivers
   or LiDAR point-cloud 3D (removed for now). See [pilot-release.md](./pilot-release.md).
-- **WASM PWA (`web`):** terminal-style interaction; camera/AR LiDAR capture later —
-  not a full CAD viewer.
+- **Web:** static landing only — **not** a capture, review, or Create New client  
+  ([adr-web-demotion.md](./adr-web-demotion.md)).
+- **Phone LiDAR:** future **native iOS** companion — not Safari/PWA.
 - **Single public error type:** `arxos::error::ArxError`.
 
 ## Lab / economy (not L1 success)
 
 See [lab/](./lab/) for mint/pay/Anvil loops. L1 exit does **not** require chain.
 
-## Do not use
+## Do not use (archived / historical)
 
-[`_archive/`](./_archive/) holds pre-convergence material. Do not treat as current design.
+[`_archive/`](./_archive/) holds pre-convergence material **and** retired interactive-PWA guides
+(create-new-camera, bedroom-loop, iphone-pwa-*, batch-b-proposal).  
+**Do not** treat archive as current design or supported workflow.

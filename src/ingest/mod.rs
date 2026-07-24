@@ -3,10 +3,15 @@
 //! All adapters (IFC, LiDAR, text/AR) should finish through this module
 //! so merge policy and validation stay consistent.
 
+mod field_script;
 mod import;
 mod sync;
 pub mod text;
 
+pub use field_script::{
+    accept_room_script, create_room_and_label_script, grammar_help, label_equipment_script,
+    mark_equipment_proposed_script, quote_token, validate_name, MAX_NAME_LEN,
+};
 pub use import::{
     finalize_ingest, import_ifc_path, import_lidar_path, IngestOptions, IngestResult, IngestSource,
 };

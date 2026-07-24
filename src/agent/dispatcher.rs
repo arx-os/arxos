@@ -9,7 +9,7 @@ use crate::agent::protocol::{
     JsonRpcRequest, JsonRpcResponse, AUTH_ERROR, INTERNAL_ERROR,
     METHOD_NOT_FOUND,
 };
-use crate::agent::{building, capture, collab, edit, files, git, ifc, lidar};
+use crate::agent::{building, capture, collab, edit, field, files, git, ifc, lidar};
 
 pub struct AgentState {
     pub repo_root: PathBuf,
@@ -35,6 +35,8 @@ pub async fn dispatch(state: Arc<AgentState>, request: JsonRpcRequest) -> JsonRp
 
     // 2. Dispatch to handler
     let result = match method {
+        "session.hello" => serde_json::to_value(field::session_hello())
+            .map_err(|e| anyhow::anyhow!("session.hello serialize: {e}")),
         "git.status" => handle_git_status(&state.repo_root),
         "git.diff" => handle_git_diff(&state.repo_root, params),
         "git.commit" => handle_git_commit(&state, params),
@@ -42,6 +44,8 @@ pub async fn dispatch(state: Arc<AgentState>, request: JsonRpcRequest) -> JsonRp
         "building.get" => handle_building_get(&state.repo_root),
         "building.validate" => handle_building_validate(&state.repo_root),
         "edit.apply" => handle_edit_apply(&state.repo_root, params),
+        "field.label" => handle_field_label(&state.repo_root, params),
+        "field.accept_room" => handle_field_accept_room(&state.repo_root, params),
         "ifc.import" => handle_ifc_import(&state.repo_root, params),
         "ifc.export" => handle_ifc_export(&state.repo_root, params),
         "lidar.import" => handle_lidar_import(&state.repo_root, params),
@@ -126,6 +130,16 @@ fn handle_edit_apply(root: &std::path::Path, params: Value) -> Result<Value> {
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("Missing 'script' parameter"))?;
     let result = edit::apply_edit(root, script)?;
+    Ok(serde_json::to_value(result)?)
+}
+
+fn handle_field_label(root: &std::path::Path, params: Value) -> Result<Value> {
+    let result = field::field_label(root, &params)?;
+    Ok(serde_json::to_value(result)?)
+}
+
+fn handle_field_accept_room(root: &std::path::Path, params: Value) -> Result<Value> {
+    let result = field::field_accept_room(root, &params)?;
     Ok(serde_json::to_value(result)?)
 }
 

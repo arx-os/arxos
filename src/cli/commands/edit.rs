@@ -1,7 +1,7 @@
 //! Apply text / AR command scripts to a building model.
 
 use crate::cli::commands::Command;
-use crate::ingest::ingest_text_script;
+use crate::ingest::{grammar_help, ingest_text_script};
 use crate::persistence::{load_building_at, save_building_at, BUILDING_YAML};
 use anyhow::anyhow;
 use std::error::Error;
@@ -9,7 +9,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 pub struct EditCommand {
-    /// Path to script file, or "-" for stdin
+    /// Path to script file, or "-" for stdin. Use "help" or "--grammar" to print DSL grammar.
     pub script: String,
     /// Building YAML path (default: building.yaml)
     pub building: Option<String>,
@@ -18,6 +18,22 @@ pub struct EditCommand {
 
 impl Command for EditCommand {
     fn execute(&self) -> Result<(), Box<dyn Error>> {
+        let key = self.script.trim();
+        if key.eq_ignore_ascii_case("help")
+            || key == "--grammar"
+            || key.eq_ignore_ascii_case("grammar")
+        {
+            println!("{}", grammar_help());
+            println!("\nExamples:");
+            println!("  arx edit corrections.txt");
+            println!("  arx edit - <<'EOF'");
+            println!("  add room \"Studio A\" floor=0 type=office");
+            println!("  set room \"Studio A\" review_status=accepted");
+            println!("  EOF");
+            println!("\nSee docs/field-language.md for field verbs and agent RPCs.");
+            return Ok(());
+        }
+
         let script_body = if self.script == "-" {
             use std::io::Read;
             let mut buf = String::new();

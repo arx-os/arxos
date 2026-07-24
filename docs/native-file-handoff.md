@@ -1,7 +1,8 @@
 # File hand-off: external scan → agent (Decision 11 path A)
 
-**Status:** Living operator note for the **thin v1 interface** (no native app required yet).  
-**Authority:** [adr-native-capture-interface.md](./adr-native-capture-interface.md) · [adr-capture-model.md](./adr-capture-model.md)
+**Status:** Living operator note for the **thin v1 interface** (Decision 11 path A).  
+**Authority:** [adr-native-capture-interface.md](./adr-native-capture-interface.md) · [adr-capture-model.md](./adr-capture-model.md)  
+**Companion:** lab shell in [arx-os/ios](https://github.com/arx-os/ios) can upload via `lidar.import` (no RoomPlan UI yet). See [ios-lab-loop.md](./ios-lab-loop.md).
 
 ArxOS does not store dense clouds as product. You deliver a **file**; the **agent** (or CLI) runs structure assist, marks everything **`proposed`**, and writes **`building.yaml`**.
 
@@ -13,7 +14,7 @@ ArxOS does not store dense clouds as product. You deliver a **file**; the **agen
 | :--- | :--- |
 | Capture node | Laptop/Mini with pilot project + pin or `main` agent build |
 | Scan file | PLY / LAS / LAZ / XYZ (meters preferred) |
-| Optional | Future native iOS app — same RPC as below |
+| Optional | Native iOS lab app — same `lidar.import` RPC; prefer HTTP `/rpc` |
 
 ---
 
@@ -38,7 +39,9 @@ Agent must be running in the pilot project:
 
 ```bash
 arx agent   # --features agent build
-# ROOT TOKEN + ws://LAN:8787/ws?token=…
+# ROOT TOKEN printed once in that terminal
+# HTTP (recommended):  POST http://LAN:8787/rpc?token=…
+# WebSocket:           ws://LAN:8787/ws?token=…
 ```
 
 ### Request (JSON-RPC params)

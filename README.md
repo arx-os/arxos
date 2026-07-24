@@ -8,7 +8,7 @@ Git-diffable YAML (`building.yaml`), with **IFC as industry interchange**.
 **Maturity (honest):** lab closed loop ~8.5/10 · district L1 pilot ~5/10  
 (blocked on field evidence + process — see `arxos_manifest.md` §1.1a · §1.6).  
 **Living plan:** `docs/horizon-b-roadmap.md` · **Preferred pin:** `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d`  
-**Device policy:** [`docs/adr-web-demotion.md`](docs/adr-web-demotion.md) — web is a **static landing page only**; real phone LiDAR is a **future native iOS companion** (not started).
+**Device policy:** [`docs/adr-web-demotion.md`](docs/adr-web-demotion.md) — web is a **static landing page only**; phone path = **native iOS lab shell** ([`arx-os/ios`](https://github.com/arx-os/ios)) over agent HTTP/RPC (file LiDAR path A; RoomPlan UI not started). See [`docs/field-language.md`](docs/field-language.md).
 
 ## What it does
 
@@ -72,7 +72,7 @@ arx render --building "My Building"        # hierarchy text (TUI feature)
 |---|---|
 | `init` | Seed `building.yaml` (+ optional Git) |
 | `import ifc\|lidar\|text` | Adapters → finalize → SSOT |
-| `edit` | Apply text/AR script → finalize → SSOT |
+| `edit` | Apply text/AR script → finalize → SSOT (`arx edit help` for grammar) |
 | `export` | Building → IFC / yaml / json (**IFC spine**) |
 | `validate` | Load SSOT → validation rules |
 | `migrate` | Backfill missing `ArxAddress` fields |

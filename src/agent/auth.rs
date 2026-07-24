@@ -88,6 +88,9 @@ fn action_required_capability(action: &str) -> Option<&'static str> {
         "building.get" => Some("building.get"),
         "building.validate" => Some("building.validate"),
         "edit.apply" => Some("edit.apply"),
+        // Structured field ops share edit.apply capability (same durable spine).
+        "field.label" | "field.accept_room" => Some("edit.apply"),
+        "session.hello" => None, // reachability / protocol discovery
         "ifc.import" => Some("ifc.import"),
         "ifc.export" => Some("ifc.export"),
         "lidar.import" => Some("lidar.import"),

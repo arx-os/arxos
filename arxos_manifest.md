@@ -116,7 +116,7 @@ Compiler without reward is incomplete for the vision. Reward without trusted as-
 
 > On a **capture node** (laptop/Mini: CLI/TUI + optional **agent**), I ingest **file-based LiDAR** and/or **vendor IFC**, apply **text/review corrections**, produce a **validated `Building`**, and **export usable IFC** — with **human review gates**, **clear LossReport**, and **Git versioning** on an approved internal remote. Reliable enough for **controlled L1 pilot use under a signed charter**.
 
-**Device path (future, not L1 blocker today):** Real phone LiDAR / RoomPlan / ARKit-class capture is a **native iOS companion** (not started) that talks to the **agent**. Safari / pure PWA **cannot** do that — see [`docs/adr-web-demotion.md`](docs/adr-web-demotion.md).
+**Device path (not L1 blocker today):** Phone capture is a **native iOS companion** ([`arx-os/ios`](https://github.com/arx-os/ios)) that talks to the **agent**. Lab shell **connects** over HTTP JSON-RPC (file LiDAR path A); **RoomPlan / live camera UI not started**. Safari / pure PWA **cannot** do depth capture — see [`docs/adr-web-demotion.md`](docs/adr-web-demotion.md). Contract: [`docs/agent-client-interface.md`](docs/agent-client-interface.md) · language: [`docs/field-language.md`](docs/field-language.md).
 
 | Layer | Required behavior | Honesty constraint |
 | :--- | :--- | :--- |
@@ -148,7 +148,7 @@ Compiler without reward is incomplete for the vision. Reward without trusted as-
 | G7 | Pilot scale path | Runbook + profiled ~250k ft² | **Open** (defaults only; site profile open) |
 | G8 | One IFC stack | Native STEP only | **Done** |
 | G9 | Site capture loop (§1.1a) | Real building: file scan/IFC → review → validate → Git → IFC | **Open** — Horizon B |
-| G10 | Device path (native iOS + agent) | Field phone LiDAR via **native iOS** companion (not started) | **Open** — interactive PWA **abandoned** (Decision 9) |
+| G10 | Device path (native iOS + agent) | Field phone LiDAR via **native iOS** companion | **Partial** — lab shell + HTTP agent connect (2026-07); RoomPlan UI **not started**; PWA **abandoned** (Decision 9) |
 
 ### 1.3 Success criteria — economy / network
 
@@ -277,7 +277,7 @@ This section is the **obligation register**: each reservation must be **relegate
 | Buyer access market | **7.5/10** | Router E2E + `arx access` + commercial export gate; **not server-enforced (R4)** |
 | Web (landing) | **Landing only** | Static `index.html`; **not** a field client (Decision 9) |
 | Agent (capture node) | **Lab ready** | WebSocket/SSH bridge; durable spine; not L1-required |
-| Native iOS companion | **Not started** | Future G10 phone LiDAR path |
+| Native iOS companion | **Lab shell** (`arx-os/ios`) | Connect + file scan + label/commit; RoomPlan UI not started |
 | Contracts ($AXD) | **8/10** | Foundry suite green; oracle proof lock fixed |
 | CLI surface | **8/10** | Compiler + contribute + access; spatial honesty |
 | CI | **8.5/10** | Compiler CI + Full Lab Loop workflow + forge E2E; clippy green (unwrap allow-listed) |
@@ -892,7 +892,7 @@ Success is measured by **pilot gate criteria** (§7.4), **§2.6 blockers closed*
 | :--- | :--- | :---: |
 | E-PWA | Leptos/WASM capture/review/Create New client | **Removed** |
 | E-web | Static landing (`index.html`) | **Done** (marketing only) |
-| E-native | Native iOS companion for RoomPlan/LiDAR | **Not started** (G10; not L1-required) |
+| E-native | Native iOS companion for RoomPlan/LiDAR | **Lab shell** (connect/RPC/file path A); RoomPlan UI open (G10; not L1-required) |
 | E4 | Do **not** claim browser LiDAR / ARKit / RoomPlan | **Policy** (Decision 9) |
 
 L1 review/correct stays on **CLI/TUI + agent**.
@@ -1234,7 +1234,7 @@ Horizon A **does not** close §1.6 district pilot obligations. It only enables l
 | **HB3** | Real LiDAR field truth (R1) | Field + eng | Open | Room/wing scan: false +/− log; review gates used |
 | **HB4** | Site capture loop (G9) | Field + eng | Open | Scan → label → validate → Git → usable IFC on one building |
 | **HB5** | Scale profile ~250k (R6/G7) | Field + eng | Eng defaults only | Timing/RAM/limits logged; light-mode guidance real |
-| **HB6** | Device path native iOS + agent (G10) | Eng | **Not started** | Native iOS companion (Decision 9); interactive PWA **abandoned** |
+| **HB6** | Device path native iOS + agent (G10) | Eng | **Partial** | Lab shell + agent HTTP; RoomPlan UI open; PWA **abandoned** (Decision 9) |
 | **HB7** | L1 exit scorecard | Both | Open | R1,R2,R5,R7–R10 pilot-mitigated; §2.1 scores updated |
 
 **L1 exit:** §1.1a free-software loop valuable on one messy real building under policy; **no mainnet token dependency**. Chain stays optional (HB-chain). Native iOS **not** required for L1 exit.

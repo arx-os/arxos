@@ -97,6 +97,10 @@ pub async fn start_agent() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🔑 ROOT TOKEN: {}\n", root_token);
     tracing::info!("⚠️  Keep this token secret! You will need it to connect.");
     tracing::info!("ℹ️  Hardware/BACnet drivers not included in this build (revisit later).");
+    tracing::info!(
+        "ℹ️  Field clients: HTTP POST /rpc recommended; session.hello + field.label available (protocol v{})",
+        crate::agent::field::PROTOCOL_VERSION
+    );
 
     // 3. Setup Router
     let app = Router::new()
@@ -147,28 +151,30 @@ pub async fn start_agent() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Field-facing connect card for LAN clients (future native app / tooling).
+/// Field-facing connect card for LAN clients (iOS companion / tooling).
 #[cfg(feature = "agent")]
 fn print_client_connect_hints(token: &str, port: u16) {
     let ips = guess_lan_ips();
     println!("┌─────────────────────────────────────────────────────────────");
     println!("│ Agent connect (capture node — same Wi-Fi / hotspot as clients)");
-    println!("│ 1) Clients use WebSocket JSON-RPC on this host (not a browser app)");
+    println!("│ 1) Clients use JSON-RPC on this host (not a browser app)");
     println!("│ 2) Web surface is a static landing page only (docs/adr-web-demotion.md)");
     if ips.is_empty() {
         println!("│    (could not auto-detect LAN IP — run: ipconfig getifaddr en0");
         println!("│     or: hostname -I / ip -4 addr)");
-        println!("│    Example: ws://192.168.1.20:{port}/ws?token=<token>");
+        println!("│    Example HTTP:  http://192.168.1.20:{port}/rpc?token=<token>");
+        println!("│    Example WS:    ws://192.168.1.20:{port}/ws?token=<token>");
     } else {
         for ip in &ips {
             println!("│    Host: {ip}:{port}");
+            println!("│    HTTP RPC:   http://{ip}:{port}/rpc?token=<token>  (iOS lab recommended)");
             println!("│    WebSocket:  ws://{ip}:{port}/ws?token=<token>");
         }
     }
-    println!("│ 3) Authenticate with ROOT TOKEN (capability-scoped)");
+    println!("│ 3) Authenticate with ROOT TOKEN (capability-scoped) — copy from this terminal");
     println!("│ 4) Durable writes: validate/finalize → building.yaml on this machine");
     println!("│ Token (copy once): {token}");
-    println!("│ Future phone LiDAR: native iOS companion (not Safari PWA)");
+    println!("│ iOS: lab shell + file LiDAR path A; RoomPlan UI not started (docs/field-language.md)");
     println!("└─────────────────────────────────────────────────────────────");
 }
 

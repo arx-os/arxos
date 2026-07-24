@@ -28,9 +28,9 @@ See manifest §1.5–1.6.
 | **Agent** | Capture node / bridge → `building.yaml` |
 | **File IFC + LiDAR** | Current honest spatial/BIM ingest |
 | **Web** | **Static landing only** (`index.html`) — not capture/review |
-| **Native iOS** | Future phone LiDAR/RoomPlan (not started) |
+| **Native iOS** | **Lab shell** in `arx-os/ios` — connect + file scan + label/commit (no RoomPlan UI yet) |
 
-**Non-claims:** no browser LiDAR · no ARKit/RoomPlan in Safari · no walk-in PWA as product.  
+**Non-claims:** no browser LiDAR · no ARKit/RoomPlan in Safari · no walk-in PWA as product · no live camera in companion yet.  
 **ADRs:** [adr-web-demotion.md](./adr-web-demotion.md) (Decision 9) · [adr-capture-model.md](./adr-capture-model.md) (Decision 10 — proposed-first capture)
 
 ### Lab IFC honesty (Package A, 2026-07)
@@ -54,8 +54,9 @@ Details: [ifc-limitations.md](./ifc-limitations.md) · report: [`tests/ifc_build
 | [adr-native-capture-interface.md](./adr-native-capture-interface.md) | **Decision 11:** native ↔ agent thin hand-off (v1 = file LiDAR) |
 | [adr-repo-structure.md](./adr-repo-structure.md) | **Decision 12:** core vs **`ios`** separate repos |
 | [agent-client-interface.md](./agent-client-interface.md) | **Versioned** agent JSON-RPC contract for peripheral clients |
+| [field-language.md](./field-language.md) | Shared CLI/agent/iOS vocabulary; `field.*` vs text DSL |
 | [native-file-handoff.md](./native-file-handoff.md) | Operator: scan file → CLI or agent `lidar.import` + provenance |
-| [ios-lab-loop.md](./ios-lab-loop.md) | Lab E2E: companion app ↔ agent ↔ commit ↔ IFC |
+| [ios-lab-loop.md](./ios-lab-loop.md) | Lab E2E status: companion ↔ agent ↔ commit ↔ IFC |
 | [pilot-starter-pack.md](./pilot-starter-pack.md) | **Zip-ready** checklist of all site-team docs |
 | [field-day-1-runbook.md](./field-day-1-runbook.md) | **S3+S5** non-author Day 1: pin install → real IFC → LossReport evidence |
 | [sprint-status-dashboard.md](./sprint-status-dashboard.md) | Weekly S1–S8 + R\* status table |

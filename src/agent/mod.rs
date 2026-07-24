@@ -20,6 +20,8 @@ pub mod discovery;
 #[cfg(feature = "agent")]
 pub mod edit;
 #[cfg(feature = "agent")]
+pub mod field;
+#[cfg(feature = "agent")]
 pub mod files;
 #[cfg(feature = "agent")]
 pub mod git;

@@ -2,7 +2,7 @@
 
 | Property | Value |
 | :--- | :--- |
-| **Status** | **Accepted** (2026-07-24) — design only; **no implementation** in this decision |
+| **Status** | **Accepted** (2026-07-24) — design; **lab implementation started** (file path A + companion shell; no RoomPlan UI yet) |
 | **Decision** | **11** |
 | **Type** | Interface design (native peripheral → agent spine) |
 | **Complements** | Decision 9 (web landing) · Decision 10 (proposed-first capture) |

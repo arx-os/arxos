@@ -447,8 +447,11 @@ pub enum ImportSubcommand {
         building: Option<String>,
     },
     /// Apply a text / AR command script (same as `arx edit`)
+    ///
+    /// Multi-word names need double quotes. Print grammar: `arx edit help`.
+    /// Field clients prefer agent `field.label` / `field.accept_room` (docs/field-language.md).
     Text {
-        /// Script file path, or "-" for stdin
+        /// Script file path, "-" for stdin, or "help" for DSL grammar
         script: String,
         /// Building YAML path or name
         #[arg(long)]

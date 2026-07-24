@@ -4,7 +4,7 @@
 **Status:** Living contract for peripheral clients (iOS companion, tooling)  
 **Authority:** Decision 11 · Decision 12 · Decision 10  
 
-This document is the **only** supported integration surface between **core** (`arx-os/arxos`) and **external clients** (especially `arx-os/arxos-ios`). Clients must not open or write `building.yaml` as SSOT.
+This document is the **only** supported integration surface between **core** (`arx-os/arxos`) and **external clients** (especially `arx-os/ios`). Clients must not open or write `building.yaml` as SSOT.
 
 ---
 
@@ -13,7 +13,7 @@ This document is the **only** supported integration surface between **core** (`a
 | Side | Repo | Responsibility |
 | :--- | :--- | :--- |
 | **Agent (host)** | `arxos` | Durable write: finalize → validate → `building.yaml`; Git; IFC export |
-| **Client** | e.g. `arxos-ios` | Capture geometry / labels; call RPCs; show status |
+| **Client** | e.g. `ios` | Capture geometry / labels; call RPCs; show status |
 
 ---
 
@@ -74,7 +74,7 @@ Stamped on building metadata / rooms as `capture_client*` fields. Pipeline keeps
 | Concern | Where |
 | :--- | :--- |
 | Compiler / TUI / IFC fidelity | Core only |
-| App Store / signing / TestFlight | `arxos-ios` only |
+| App Store / signing / TestFlight | `ios` only |
 | Horizon C / mainnet rewards | Frozen unless opened |
 
 ---
@@ -82,5 +82,5 @@ Stamped on building metadata / rooms as `capture_client*` fields. Pipeline keeps
 ## Lab references
 
 - Core operator: [native-file-handoff.md](./native-file-handoff.md)  
-- Companion bootstrap: sibling repo `arxos-ios` (see Decision 12)  
+- Companion repo: [arx-os/ios](https://github.com/arx-os/ios) (Decision 12)
 - Design: [adr-native-capture-interface.md](./adr-native-capture-interface.md)

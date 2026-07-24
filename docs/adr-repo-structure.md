@@ -15,13 +15,13 @@
 | Repository | Contents | Role |
 | :--- | :--- | :--- |
 | **`arx-os/arxos`** (this repo) | Rust compiler, domain model, ingest, validation, YAML SSOT, Git, IFC, TUI, CLI, **agent** | Core system / capture node / durable authority |
-| **`arx-os/arxos-ios`** (separate) | Native iOS companion (SwiftUI, Xcode, RoomPlan/ARKit, signing, TestFlight) | Peripheral field client only |
+| **`arx-os/ios`** (separate) | Native iOS companion (SwiftUI, Xcode, RoomPlan/ARKit, signing, TestFlight) | Peripheral field client only |
 
 - The two repos **do not** share a monorepo.  
 - They communicate **only** through an **explicit, versioned interface** (agent JSON-RPC + file LiDAR hand-off — Decision 11).  
 - No shared Cargo+Xcode tree, no iOS binary artifacts or App Store secrets in core.
 
-**Recommended remote:** `https://github.com/arx-os/arxos-ios` (same org as core).
+**Recommended remote:** `https://github.com/arx-os/ios` (same org as core).
 
 ---
 
@@ -56,7 +56,7 @@ See Decision 10–11 for capture model and wire contract details. Living summary
 - Pilot docs, ADRs, static web landing  
 - **Interface contract docs** (versioned for companion consumers)
 
-### Companion (`arxos-ios`)
+### Companion (`ios`)
 
 - Xcode project / SwiftUI terminal field client  
 - RoomPlan / ARKit / camera / local network UX  
@@ -73,7 +73,7 @@ See Decision 10–11 for capture model and wire contract details. Living summary
 ## Bootstrap / migration notes
 
 1. Core monorepo **must not** carry a full iOS app tree after this decision.  
-2. Companion is seeded as a **sibling git repository** (e.g. `../arxos-ios`) and pushed to `arx-os/arxos-ios` when org credentials allow.  
+2. Companion remote: **https://github.com/arx-os/ios** (local clone often `~/repos/arxos-ios` or `~/repos/ios`).
 3. Interface breakage requires a **version bump** note in `agent-client-interface.md` and a matching companion release.
 
 ---
@@ -83,7 +83,7 @@ See Decision 10–11 for capture model and wire contract details. Living summary
 | Area | Effect |
 | :--- | :--- |
 | **Core CI** | No iOS jobs required |
-| **Companion CI** | Xcode cloud / macOS runners in `arxos-ios` only |
+| **Companion CI** | Xcode cloud / macOS runners in `ios` only |
 | **Developers** | Clone both repos for full walk-in lab loop |
 | **Pilots** | Pin **core** tag; install **iOS** build that targets that agent protocol version |
 
@@ -101,4 +101,4 @@ See Decision 10–11 for capture model and wire contract details. Living summary
 
 ## One-sentence summary
 
-**Core stays Rust in `arxos`; native iOS lives in `arxos-ios`; they only talk over the versioned agent interface, and only the agent writes the building model.**
+**Core stays Rust in `arxos`; native iOS lives in `ios`; they only talk over the versioned agent interface, and only the agent writes the building model.**

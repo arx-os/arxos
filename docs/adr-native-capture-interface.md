@@ -198,8 +198,8 @@ Path **C** = A + optional B in one session; design later.
 
 1. ~~Prove A with laptop file path~~ — file ingest hardened + agent import.  
 2. ~~Provenance on wire~~ — optional `provenance` on `lidar.import` (agent).  
-3. ~~Repo split~~ — companion in **`arxos-ios`** (Decision 12); contract in [agent-client-interface.md](./agent-client-interface.md).  
-4. **Next:** Develop RoomPlan/ARKit + polish in `arxos-ios`; lab loop [ios-lab-loop.md](./ios-lab-loop.md).  
+3. ~~Repo split~~ — companion in **`ios`** (Decision 12); contract in [agent-client-interface.md](./agent-client-interface.md).  
+4. **Next:** Develop RoomPlan/ARKit + polish in **arx-os/ios**; lab loop [ios-lab-loop.md](./ios-lab-loop.md).
 5. Field-test one room after lab E2E; log false +/− (R1).  
 6. Only then consider B for RoomPlan-native structure RPC.
 

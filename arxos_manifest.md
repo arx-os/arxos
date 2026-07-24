@@ -9,12 +9,12 @@
 | **Engine** | Rust 2021 (CLI + lib) · native IFC · Git SSOT · Foundry contracts · optional agent/`blockchain` · static web landing |
 | **Design philosophy** | Local-first · single `Building` model · Git-native · free to use · pay only for data access |
 | **Document status** | Living plan — full vision locked; compiler + economy spine **lab-complete** (N1–N8 + Horizon A tooling); **Horizon B** (district L1 + site capture path) is current priority (§1.1, §1.5–1.6, §10; `docs/horizon-b-roadmap.md`) |
-| **Last reconciled** | 2026-07-24 — Decisions 9–12 (web · capture · agent interface · **repo split core vs arxos-ios**) |
+| **Last reconciled** | 2026-07-24 — Decisions 9–12 (web · capture · agent interface · **repo split core vs ios**) |
 | **Audience** | Vision holder, field IT pilots, core maintainers, external builders |
-| **Device / web surface (locked)** | **Web = static landing only.** Phone capture = **native iOS companion** in **`arx-os/arxos-ios`** (separate repo). Durable authority = **agent + `building.yaml`** in this core repo. [`docs/adr-web-demotion.md`](docs/adr-web-demotion.md). |
+| **Device / web surface (locked)** | **Web = static landing only.** Phone capture = **native iOS companion** in **`arx-os/ios`** (separate repo). Durable authority = **agent + `building.yaml`** in this core repo. [`docs/adr-web-demotion.md`](docs/adr-web-demotion.md). |
 | **Capture model (locked)** | Geometry → **proposed** structure via spine only; not a mesh product; PR-like contributions; thin interface. [`docs/adr-capture-model.md`](docs/adr-capture-model.md) (Decision 10). |
 | **Native↔agent interface** | **v1 = file LiDAR** via agent `lidar.import` + provenance. Contract: [`docs/agent-client-interface.md`](docs/agent-client-interface.md). Design: Decision 11. |
-| **Repo structure (locked)** | Core = this repo. iOS companion = **`arx-os/arxos-ios`** (not monorepo). [`docs/adr-repo-structure.md`](docs/adr-repo-structure.md) (Decision 12). |
+| **Repo structure (locked)** | Core = this repo. iOS companion = **`arx-os/ios`** (not monorepo). [`docs/adr-repo-structure.md`](docs/adr-repo-structure.md) (Decision 12). |
 
 ---
 

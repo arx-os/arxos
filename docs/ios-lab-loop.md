@@ -8,14 +8,14 @@
 | Repo | Path / remote |
 | :--- | :--- |
 | **Core** | this repo — `arx-os/arxos` |
-| **iOS companion** | sibling `../arxos-ios` → push to `arx-os/arxos-ios` |
+| **iOS companion** | [arx-os/ios](https://github.com/arx-os/ios) (clone next to core) |
 
 Interface: [agent-client-interface.md](./agent-client-interface.md) (protocol v1).
 
 ## Prerequisites
 
 - Laptop: Rust, `cargo build --features agent --bin arx` (core)  
-- iPhone or Simulator: **Xcode** project from **`arxos-ios`**  
+- iPhone or Simulator: **Xcode** project from **`ios`**  
 - Same Wi‑Fi/hotspot (device) or Mac LAN IP (Simulator)
 
 ## Steps
@@ -27,7 +27,7 @@ Interface: [agent-client-interface.md](./agent-client-interface.md) (protocol v1
    arx agent
    ```
 2. **Copy** ROOT TOKEN + `IP:8787`  
-3. **iOS companion** (`arxos-ios`): open `ArxOS/ArxOS.xcodeproj` → Run → Connect  
+3. **iOS companion** ([arx-os/ios](https://github.com/arx-os/ios)): open `ArxOS/ArxOS.xcodeproj` → Run → Connect
 4. **Scan file** with XYZ/PLY (or fixture from companion `fixtures/lab-room.xyz`)  
 5. **Label** → **Accept room** (optional) → **Commit** → **Export IFC**  
 6. **Laptop:** `git log -1` and open `exports/*.ifc`

@@ -7,7 +7,7 @@ This document records the key architectural decisions made in the ArxOS project.
 → **[`adr-web-demotion.md`](./adr-web-demotion.md)** (Decision 9 — authoritative for the role of `web`)  
 → **[`adr-capture-model.md`](./adr-capture-model.md)** (Decision 10 — near-term field capture: proposed-first, geometry as input)  
 → **[`adr-native-capture-interface.md`](./adr-native-capture-interface.md)** (Decision 11 — native iOS ↔ agent thin hand-off; v1 = file LiDAR)  
-→ **[`adr-repo-structure.md`](./adr-repo-structure.md)** (Decision 12 — core vs `arxos-ios` separate repos)
+→ **[`adr-repo-structure.md`](./adr-repo-structure.md)** (Decision 12 — core vs `ios` separate repos)
 
 Decisions 5–7 below describe earlier work that assumed a Leptos PWA field/owner UI. Their **implementation history** remains; their **product role as the field device path** is superseded by Decision 9.
 
@@ -141,7 +141,7 @@ Decisions 5–7 below describe earlier work that assumed a Leptos PWA field/owne
 ## Decision 12: Repository structure — core vs native iOS companion
 
 - **Context:** Native iOS needs Xcode, signing, and TestFlight; core is Rust/Cargo. Mixing them blurs the agent authority boundary and couples releases.
-- **Decision:** Core remains **`arx-os/arxos`**. Native companion lives in a **separate** repo **`arx-os/arxos-ios`**. Communication only via the versioned agent client interface. iOS never writes durable building SSOT.
+- **Decision:** Core remains **`arx-os/arxos`**. Native companion lives in a **separate** repo **`arx-os/ios`**. Communication only via the versioned agent client interface. iOS never writes durable building SSOT.
 - **Consequences:** No full iOS app tree in core; independent release cycles; interface breakage requires contract version notes.
 - **Full record:** [`adr-repo-structure.md`](./adr-repo-structure.md)
 - **Alternatives considered:** Monorepo `ios/` (rejected); SPM package inside core (rejected).

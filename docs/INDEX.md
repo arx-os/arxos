@@ -52,7 +52,7 @@ Details: [ifc-limitations.md](./ifc-limitations.md) · report: [`tests/ifc_build
 | [adr-web-demotion.md](./adr-web-demotion.md) | **Decision 9:** PWA abandoned; web = landing only |
 | [adr-capture-model.md](./adr-capture-model.md) | **Decision 10:** near-term capture — proposed-first, geometry as input |
 | [adr-native-capture-interface.md](./adr-native-capture-interface.md) | **Decision 11:** native ↔ agent thin hand-off (v1 = file LiDAR) |
-| [adr-repo-structure.md](./adr-repo-structure.md) | **Decision 12:** core vs **`arxos-ios`** separate repos |
+| [adr-repo-structure.md](./adr-repo-structure.md) | **Decision 12:** core vs **`ios`** separate repos |
 | [agent-client-interface.md](./agent-client-interface.md) | **Versioned** agent JSON-RPC contract for peripheral clients |
 | [native-file-handoff.md](./native-file-handoff.md) | Operator: scan file → CLI or agent `lidar.import` + provenance |
 | [ios-lab-loop.md](./ios-lab-loop.md) | Lab E2E: companion app ↔ agent ↔ commit ↔ IFC |

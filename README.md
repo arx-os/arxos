@@ -106,7 +106,7 @@ arx render --building "My Building"        # hierarchy text (TUI feature)
 
 ## iOS companion (separate repository)
 
-Native field client lives in **`arx-os/arxos-ios`** (not this monorepo) — Decision 12.  
+Native field client lives in **`arx-os/ios`** (not this monorepo) — Decision 12.  
 This core repo provides the **agent** and the versioned contract: [`docs/agent-client-interface.md`](./docs/agent-client-interface.md).  
 Lab loop: [`docs/ios-lab-loop.md`](./docs/ios-lab-loop.md).
 
@@ -115,7 +115,7 @@ Lab loop: [`docs/ios-lab-loop.md`](./docs/ios-lab-loop.md).
 | Doc | Role |
 |---|---|
 | [`arxos_manifest.md`](./arxos_manifest.md) | **Engineering source of truth** |
-| [`docs/adr-repo-structure.md`](./docs/adr-repo-structure.md) | Core vs `arxos-ios` repos |
+| [`docs/adr-repo-structure.md`](./docs/adr-repo-structure.md) | Core vs `ios` repos |
 | [`docs/agent-client-interface.md`](./docs/agent-client-interface.md) | Versioned agent JSON-RPC for clients |
 | [`docs/INDEX.md`](./docs/INDEX.md) | Pilot doc map |
 | [`docs/l1-supported-workflow.md`](./docs/l1-supported-workflow.md) | Only L1 supported loop |

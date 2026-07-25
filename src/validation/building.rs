@@ -115,7 +115,13 @@ pub fn validate_building(building: &Building) -> BuildingValidationReport {
     let mut all_valid_addresses = std::collections::HashSet::new();
     let mut all_anchors = Vec::new();
 
-    // Validate Building address
+    // Validate Building address (ADR 0001: required on significant entities)
+    validate_address_presence(
+        &mut report,
+        &building.address,
+        "building.address",
+        "Building",
+    );
     validate_address(&mut report, &building.address, "building.address");
     if let Some(ref addr) = building.address {
         all_valid_addresses.insert(addr.path.clone());
@@ -148,6 +154,12 @@ pub fn validate_building(building: &Building) -> BuildingValidationReport {
             });
         }
 
+        validate_address_presence(
+            &mut report,
+            &floor.address,
+            &format!("floor[{}].address", floor.name),
+            &format!("Floor '{}'", floor.name),
+        );
         validate_address(&mut report, &floor.address, &format!("floor[{}].address", floor.name));
         if let Some(ref addr) = floor.address {
             all_valid_addresses.insert(addr.path.clone());
@@ -221,6 +233,12 @@ pub fn validate_building(building: &Building) -> BuildingValidationReport {
                     });
                 }
 
+                validate_address_presence(
+                    &mut report,
+                    &room.address,
+                    &format!("room[{}].address", room.name),
+                    &format!("Room '{}'", room.name),
+                );
                 validate_address(&mut report, &room.address, &format!("room[{}].address", room.name));
                 if let Some(ref addr) = room.address {
                     all_valid_addresses.insert(addr.path.clone());
@@ -344,6 +362,31 @@ pub fn validate_building(building: &Building) -> BuildingValidationReport {
     report
 }
 
+/// ADR 0001: missing addresses are first-class (warn by default; error under `--strict-addresses`).
+fn validate_address_presence(
+    report: &mut BuildingValidationReport,
+    address: &Option<crate::core::domain::ArxAddress>,
+    field: &str,
+    entity_label: &str,
+) {
+    if address.is_none() {
+        let severity = if STRICT_ADDRESSES.load(Ordering::Relaxed) {
+            ValidationSeverity::Error
+        } else {
+            ValidationSeverity::Warning
+        };
+        report.results.push(ValidationResult {
+            rule_id: "address.missing".into(),
+            message: format!(
+                "{} has no arx_address (operational identity required by ADR 0001)",
+                entity_label
+            ),
+            severity,
+            field: Some(field.to_string()),
+        });
+    }
+}
+
 fn validate_address(
     report: &mut BuildingValidationReport,
     address: &Option<crate::core::domain::ArxAddress>,
@@ -397,6 +440,12 @@ fn validate_equipment(
         });
     }
 
+    validate_address_presence(
+        report,
+        &eq.address,
+        &format!("equipment[{}].address", eq.name),
+        &format!("Equipment '{}'", eq.name),
+    );
     validate_address(report, &eq.address, &format!("equipment[{}].address", eq.name));
     if let Some(ref addr) = eq.address {
         all_valid_addresses.insert(addr.path.clone());
@@ -440,17 +489,73 @@ fn validate_enrichment(
 mod tests {
     use super::*;
     use crate::core::{Building, Floor, LidarEnrichment, Room, RoomType, Wing};
+    use serial_test::serial;
+
+    /// RAII reset for the process-global STRICT_ADDRESSES flag (parallel test safety).
+    struct StrictGuard {
+        prev: bool,
+    }
+    impl StrictGuard {
+        fn set(strict: bool) -> Self {
+            let prev = STRICT_ADDRESSES.load(Ordering::Relaxed);
+            STRICT_ADDRESSES.store(strict, Ordering::Relaxed);
+            Self { prev }
+        }
+    }
+    impl Drop for StrictGuard {
+        fn drop(&mut self) {
+            STRICT_ADDRESSES.store(self.prev, Ordering::Relaxed);
+        }
+    }
 
     #[test]
     fn accepts_minimal_valid_building() {
+        use crate::core::domain::ArxAddress;
+        let mut b = Building::new("HQ".into(), "/hq".into());
+        b.address = Some(ArxAddress::lab_building_root("hq"));
+        let mut floor = Floor::new("F1".into(), 0);
+        floor.address = Some(b.address.as_ref().unwrap().join("fl.1").unwrap());
+        let mut wing = Wing::new("Main".into());
+        let mut room = Room::new("R1".into(), RoomType::Office);
+        room.address = Some(floor.address.as_ref().unwrap().join("rm.r1").unwrap());
+        wing.add_room(room);
+        floor.add_wing(wing);
+        b.add_floor(floor);
+        let report = validate_building(&b);
+        assert!(!report.has_errors());
+        assert!(!report.results.iter().any(|r| r.rule_id == "address.missing"));
+    }
+
+    #[test]
+    #[serial]
+    fn missing_address_is_warning_lenient_error_strict() {
         let mut b = Building::new("HQ".into(), "/hq".into());
         let mut floor = Floor::new("F1".into(), 0);
         let mut wing = Wing::new("Main".into());
         wing.add_room(Room::new("R1".into(), RoomType::Office));
         floor.add_wing(wing);
         b.add_floor(floor);
-        let report = validate_building(&b);
-        assert!(!report.has_errors());
+
+        {
+            let _g = StrictGuard::set(false);
+            let report = validate_building(&b);
+            assert!(!report.has_errors());
+            assert!(report
+                .results
+                .iter()
+                .any(|r| r.rule_id == "address.missing"
+                    && r.severity == ValidationSeverity::Warning));
+        }
+        {
+            let _g = StrictGuard::set(true);
+            let report = validate_building(&b);
+            assert!(report.has_errors());
+            assert!(report
+                .results
+                .iter()
+                .any(|r| r.rule_id == "address.missing"
+                    && r.severity == ValidationSeverity::Error));
+        }
     }
 
     #[test]
@@ -476,17 +581,21 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_lenient_vs_strict_address_validation() {
         use crate::core::Equipment;
         use crate::core::EquipmentType;
         use crate::core::domain::ArxAddress;
 
         let mut b = Building::new("HQ".into(), "/hq".into());
+        b.address = Some(ArxAddress::from_path("/usa/ny/brooklyn/hq").unwrap());
         let mut floor = Floor::new("F1".into(), 0);
+        floor.address = Some(ArxAddress::from_path("/usa/ny/brooklyn/hq/floor-01").unwrap());
         let mut wing = Wing::new("Main".into());
         let mut room = Room::new("R1".into(), RoomType::Mechanical);
-        
-        // This is a prefix mismatch (faucet is plumbing, but it's under hvac system)
+        room.address = Some(ArxAddress::from_path("/usa/ny/brooklyn/hq/floor-01/hvac").unwrap());
+
+        // Prefix mismatch (faucet is plumbing, but it's under hvac system)
         let mut eq = Equipment::new("Faucet 1".into(), String::new(), EquipmentType::Plumbing);
         eq.address = Some(ArxAddress::from_path("/usa/ny/brooklyn/hq/floor-01/hvac/faucet-01").unwrap());
         room.add_equipment(eq);
@@ -494,16 +603,21 @@ mod tests {
         floor.add_wing(wing);
         b.add_floor(floor);
 
-        // Under default lenient validation, this is a warning, so has_errors() is false
-        STRICT_ADDRESSES.store(false, Ordering::Relaxed);
-        let report = validate_building(&b);
-        assert!(!report.has_errors());
-        assert!(report.results.iter().any(|r| r.rule_id == "address.system_prefix" && r.severity == ValidationSeverity::Warning));
-
-        // Under strict validation, this becomes a hard error
-        STRICT_ADDRESSES.store(true, Ordering::Relaxed);
-        let report = validate_building(&b);
-        assert!(report.has_errors());
-        assert!(report.results.iter().any(|r| r.rule_id == "address.system_prefix" && r.severity == ValidationSeverity::Error));
+        {
+            let _g = StrictGuard::set(false);
+            let report = validate_building(&b);
+            assert!(!report.has_errors());
+            assert!(report.results.iter().any(|r| {
+                r.rule_id == "address.system_prefix" && r.severity == ValidationSeverity::Warning
+            }));
+        }
+        {
+            let _g = StrictGuard::set(true);
+            let report = validate_building(&b);
+            assert!(report.has_errors());
+            assert!(report.results.iter().any(|r| {
+                r.rule_id == "address.system_prefix" && r.severity == ValidationSeverity::Error
+            }));
+        }
     }
 }

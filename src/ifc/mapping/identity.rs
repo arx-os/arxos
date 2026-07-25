@@ -48,10 +48,19 @@ pub fn uuid_from_arx_id(arx_id: &str) -> Option<Uuid> {
     Uuid::parse_str(arx_id).ok()
 }
 
+/// True when `ifc_global_id` is present and non-empty (IFC-origin / already assigned).
+pub fn has_ifc_global_id(ifc_global_id: &Option<String>) -> bool {
+    ifc_global_id
+        .as_ref()
+        .map(|g| !g.trim().is_empty())
+        .unwrap_or(false)
+}
+
 /// Resolve the product GlobalId to write for an entity.
 ///
-/// Prefers a stored `ifc_global_id`; otherwise derives from Arx UUID when
-/// parseable; otherwise mints a new UUID-based GlobalId.
+/// Prefers a stored non-empty `ifc_global_id`; otherwise derives from Arx UUID when
+/// parseable (deterministic for Arxos-native entities that use UUID ids);
+/// otherwise mints a new UUID-based GlobalId.
 pub fn resolve_product_global_id(ifc_global_id: &Option<String>, arx_id: &str) -> String {
     if let Some(g) = ifc_global_id {
         let trimmed = g.trim();
@@ -65,50 +74,78 @@ pub fn resolve_product_global_id(ifc_global_id: &Option<String>, arx_id: &str) -
     ifc_global_id_from_uuid(&Uuid::new_v4())
 }
 
+/// Stats from [`assign_missing_global_ids`] (export identity bookkeeping).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct GlobalIdAssignStats {
+    /// Entities that already had a non-empty `ifc_global_id` (preserved).
+    pub preserved: usize,
+    /// Entities that received a newly assigned GlobalId (Arxos-native → first export).
+    pub assigned: usize,
+}
+
+impl GlobalIdAssignStats {
+    pub fn summary_lines(&self) -> Vec<String> {
+        vec![
+            format!(
+                "Identity: {} GlobalId(s) preserved (IFC-origin / prior export)",
+                self.preserved
+            ),
+            format!(
+                "Identity: {} new GlobalId(s) assigned (Arxos-native)",
+                self.assigned
+            ),
+        ]
+    }
+}
+
 /// Assign `ifc_global_id` on all product entities that lack one.
 ///
 /// Call before IFC export so the written GlobalIds match values persisted on
-/// the model (and subsequent exports stay stable).
-pub fn assign_missing_global_ids(building: &mut Building) {
-    if building.ifc_global_id.is_none() {
-        building.ifc_global_id = Some(resolve_product_global_id(&None, &building.id));
-    }
+/// the model (and subsequent exports stay stable). Returns counts of preserved
+/// vs newly assigned IDs.
+pub fn assign_missing_global_ids(building: &mut Building) -> GlobalIdAssignStats {
+    let mut stats = GlobalIdAssignStats::default();
+    assign_slot(&mut building.ifc_global_id, &building.id, &mut stats);
 
     for floor in &mut building.floors {
-        assign_floor_ids(floor);
+        assign_floor_ids(floor, &mut stats);
     }
+    stats
 }
 
-fn assign_floor_ids(floor: &mut Floor) {
-    if floor.ifc_global_id.is_none() {
-        floor.ifc_global_id = Some(resolve_product_global_id(&None, &floor.id));
+fn assign_slot(slot: &mut Option<String>, arx_id: &str, stats: &mut GlobalIdAssignStats) {
+    if has_ifc_global_id(slot) {
+        stats.preserved += 1;
+        return;
     }
+    *slot = Some(resolve_product_global_id(&None, arx_id));
+    stats.assigned += 1;
+}
+
+fn assign_floor_ids(floor: &mut Floor, stats: &mut GlobalIdAssignStats) {
+    assign_slot(&mut floor.ifc_global_id, &floor.id, stats);
     for eq in &mut floor.equipment {
-        assign_equipment_ids(eq);
+        assign_equipment_ids(eq, stats);
     }
     for wing in &mut floor.wings {
         for eq in &mut wing.equipment {
-            assign_equipment_ids(eq);
+            assign_equipment_ids(eq, stats);
         }
         for room in &mut wing.rooms {
-            assign_room_ids(room);
+            assign_room_ids(room, stats);
         }
     }
 }
 
-fn assign_room_ids(room: &mut Room) {
-    if room.ifc_global_id.is_none() {
-        room.ifc_global_id = Some(resolve_product_global_id(&None, &room.id));
-    }
+fn assign_room_ids(room: &mut Room, stats: &mut GlobalIdAssignStats) {
+    assign_slot(&mut room.ifc_global_id, &room.id, stats);
     for eq in &mut room.equipment {
-        assign_equipment_ids(eq);
+        assign_equipment_ids(eq, stats);
     }
 }
 
-fn assign_equipment_ids(eq: &mut Equipment) {
-    if eq.ifc_global_id.is_none() {
-        eq.ifc_global_id = Some(resolve_product_global_id(&None, &eq.id));
-    }
+fn assign_equipment_ids(eq: &mut Equipment, stats: &mut GlobalIdAssignStats) {
+    assign_slot(&mut eq.ifc_global_id, &eq.id, stats);
 }
 
 /// Apply IFC product GlobalId and optional `Pset_ArxIdentity` onto domain fields.
@@ -180,6 +217,68 @@ mod tests {
         let arx = "550e8400-e29b-41d4-a716-446655440000";
         let expected = ifc_global_id_from_uuid(&Uuid::parse_str(arx).unwrap());
         assert_eq!(resolve_product_global_id(&None, arx), expected);
+    }
+
+    #[test]
+    fn assign_missing_preserves_and_assigns() {
+        use crate::core::{Building, Equipment, EquipmentType, Floor, Room, RoomType, Wing};
+
+        let mut b = Building::new("HQ".into(), "/hq".into());
+        b.ifc_global_id = Some("StoredBuildingGid000001".into());
+        let mut floor = Floor::new("F1".into(), 1);
+        floor.ifc_global_id = Some("StoredFloorGid000000001".into());
+        let mut wing = Wing::new("Main".into());
+        let mut room = Room::new("R1".into(), RoomType::Office);
+        room.ifc_global_id = Some("StoredRoomGid0000000001".into());
+        let mut native =
+            Equipment::new("Outlet".into(), String::new(), EquipmentType::Electrical);
+        // Arxos-native: no GlobalId
+        native.ifc_global_id = None;
+        let mut imported =
+            Equipment::new("Imported".into(), String::new(), EquipmentType::Electrical);
+        imported.ifc_global_id = Some("StoredEquipGid000000001".into());
+        room.add_equipment(native);
+        room.add_equipment(imported);
+        wing.add_room(room);
+        floor.add_wing(wing);
+        b.add_floor(floor);
+
+        let stats = assign_missing_global_ids(&mut b);
+        assert_eq!(stats.preserved, 4); // building, floor, room, imported equip
+        assert_eq!(stats.assigned, 1); // native outlet
+
+        let eqs = b.get_all_equipment();
+        let native_eq = eqs.iter().find(|e| e.name == "Outlet").unwrap();
+        let imported_eq = eqs.iter().find(|e| e.name == "Imported").unwrap();
+        assert!(has_ifc_global_id(&native_eq.ifc_global_id));
+        let expected = resolve_product_global_id(&None, &native_eq.id);
+        assert_eq!(native_eq.ifc_global_id.as_deref(), Some(expected.as_str()));
+        assert_eq!(
+            imported_eq.ifc_global_id.as_deref(),
+            Some("StoredEquipGid000000001")
+        );
+
+        // Second assign: all preserved, no churn
+        let g1 = native_eq.ifc_global_id.clone();
+        let stats2 = assign_missing_global_ids(&mut b);
+        assert_eq!(stats2.assigned, 0);
+        assert_eq!(stats2.preserved, 5);
+        let g2 = b
+            .get_all_equipment()
+            .into_iter()
+            .find(|e| e.name == "Outlet")
+            .unwrap()
+            .ifc_global_id
+            .clone();
+        assert_eq!(g1, g2);
+    }
+
+    #[test]
+    fn empty_global_id_treated_as_missing() {
+        assert!(!has_ifc_global_id(&None));
+        assert!(!has_ifc_global_id(&Some("".into())));
+        assert!(!has_ifc_global_id(&Some("   ".into())));
+        assert!(has_ifc_global_id(&Some("0123456789012345678901".into())));
     }
 
     #[test]

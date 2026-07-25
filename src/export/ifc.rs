@@ -123,6 +123,44 @@ pub struct IFCExporter {
     building: Building,
 }
 
+/// Map equipment to IFC product type (identity-focused export).
+///
+/// Prefers ADR electrical address leaf prefixes when present so `arx add`
+/// outlets/lights/switches emit appropriate IFC classes.
+pub fn ifc_product_type_for_equipment(equipment: &Equipment) -> &'static str {
+    if let Some(ref addr) = equipment.address {
+        let leaf = addr.path.rsplit('/').next().unwrap_or("");
+        if leaf.starts_with("rec.") {
+            return "IFCOUTLET";
+        }
+        if leaf.starts_with("ltg.") {
+            return "IFCLIGHTFIXTURE";
+        }
+        if leaf.starts_with("sw.") {
+            return "IFCSWITCHINGDEVICE";
+        }
+        if leaf.starts_with("panel.") {
+            return "IFCELECTRICDISTRIBUTIONBOARD";
+        }
+        if leaf.starts_with("ckt.") || leaf.starts_with("jbox.") || leaf.starts_with("dev.") {
+            return "IFCDISTRIBUTIONELEMENT";
+        }
+    }
+    match equipment.equipment_type {
+        crate::core::EquipmentType::Furniture => "IFCFURNITURE",
+        crate::core::EquipmentType::AV => "IFCAUDIOVISUALAPPLIANCE",
+        crate::core::EquipmentType::Electrical => "IFCOUTLET",
+        crate::core::EquipmentType::HVAC => "IFCFLOWTERMINAL",
+        crate::core::EquipmentType::Safety => "IFCFIREALARM",
+        crate::core::EquipmentType::Network => "IFCCOMMUNICATIONSAPPLIANCE",
+        crate::core::EquipmentType::Plumbing => "IFCFLOWTERMINAL",
+        crate::core::EquipmentType::Other(ref s) if s.eq_ignore_ascii_case("Lighting") => {
+            "IFCLIGHTFIXTURE"
+        }
+        _ => "IFCDISTRIBUTIONELEMENT",
+    }
+}
+
 impl IFCExporter {
     pub fn new(building: Building) -> Self {
         Self { building }
@@ -649,16 +687,7 @@ impl IFCExporter {
 
         let placement = self.create_local_placement(writer, None, x, y, z)?;
 
-        let ifc_entity_type = match equipment.equipment_type {
-            crate::core::EquipmentType::Furniture => "IFCFURNITURE",
-            crate::core::EquipmentType::AV => "IFCAUDIOVISUALAPPLIANCE",
-            crate::core::EquipmentType::Electrical => "IFCSWITCHINGDEVICE",
-            crate::core::EquipmentType::HVAC => "IFCFLOWTERMINAL",
-            crate::core::EquipmentType::Safety => "IFCFIREALARM",
-            crate::core::EquipmentType::Network => "IFCCOMMUNICATIONSAPPLIANCE",
-            crate::core::EquipmentType::Plumbing => "IFCFLOWTERMINAL",
-            _ => "IFCDISTRIBUTIONELEMENT",
-        };
+        let ifc_entity_type = ifc_product_type_for_equipment(equipment);
 
         let representation = if let Some(mesh) = &equipment.mesh {
             if !mesh.vertices.is_empty() {
@@ -879,8 +908,8 @@ impl IFCExporter {
     // --- Utility ---
 
     fn generate_guid(&self) -> String {
-        // IFC GUIDs are 22-character strings using a custom base64 encoding
-        // of the 128-bit UUID.
+        // Helper-entity GlobalIds (relationships, placements) — not product identity.
+        // Product GlobalIds use resolve_product_global_id / assign_missing_global_ids.
         // Alphabet: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$"
 
         let uuid = Uuid::new_v4();

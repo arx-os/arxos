@@ -71,8 +71,25 @@ impl Command for ExportCommand {
                     );
                 }
 
-                // Deterministic product GlobalIds for stable re-export (docs/identity.md).
-                crate::ifc::mapping::assign_missing_global_ids(&mut building);
+                // ADR 0001: assign GlobalIds to Arxos-native entities; preserve IFC-origin.
+                let gid_stats =
+                    crate::ifc::mapping::assign_missing_global_ids(&mut building);
+                for line in gid_stats.summary_lines() {
+                    println!("  {}", line);
+                }
+                // Persist newly assigned GlobalIds so re-export stays stable.
+                if gid_stats.assigned > 0 {
+                    crate::persistence::save_building_at(&repo_root, &building).map_err(|e| {
+                        format!(
+                            "Failed to write back GlobalIds to {}: {}",
+                            BUILDING_YAML, e
+                        )
+                    })?;
+                    println!(
+                        "  Wrote {} new GlobalId(s) back to {}",
+                        gid_stats.assigned, BUILDING_YAML
+                    );
+                }
 
                 let review = summarize_review(&building);
                 for line in review.warning_lines() {

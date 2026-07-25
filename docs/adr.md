@@ -9,7 +9,21 @@ This document records the key architectural decisions made in the ArxOS project.
 → **[`adr-native-capture-interface.md`](./adr-native-capture-interface.md)** (Decision 11 — native iOS ↔ agent thin hand-off; v1 = file LiDAR)  
 → **[`adr-repo-structure.md`](./adr-repo-structure.md)** (Decision 12 — core vs `ios` separate repos)
 
+**Identity & addressing (2026-07-25):**
+
+→ **[`adr-0001-identity-and-addressing.md`](./adr-0001-identity-and-addressing.md)** (**ADR 0001 / Decision 13** — `arx_address` primary ops identity; GlobalId provenance; dots legal; fully qualified `bldg.` roots; IFC round-trip)  
+→ Detailed design: [`identity-and-addressing.md`](./identity-and-addressing.md)
+
 Decisions 5–7 below describe earlier work that assumed a Leptos PWA field/owner UI. Their **implementation history** remains; their **product role as the field device path** is superseded by Decision 9.
+
+---
+
+## Decision 13 / ADR 0001: Identity & Addressing (Accepted 2026-07-25)
+
+- **Context:** UUID-primary identity + optional geo-style addresses conflicted with human/CLI hierarchical navigation and worldwide building uniqueness.
+- **Decision:** See full record — [`adr-0001-identity-and-addressing.md`](./adr-0001-identity-and-addressing.md). Summary: `arx_address` is primary operational identity; `ifc_global_id` is provenance only; UUID is internal; dots legal in segments; building roots are fully qualified `bldg.<country>.<region>.<city>.…`; IFC export must update-or-create with honesty.
+- **Consequences:** Import/validate/CLI/export migrate incrementally toward this model immediately; older `identity.md` statements that UUID is the human primary key are superseded.
+- **Alternatives considered:** UUID-primary ops, GlobalId-as-address, short building roots, no dots, defer to pilot.6 — all rejected in ADR.
 
 ---
 

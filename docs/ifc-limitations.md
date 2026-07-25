@@ -21,7 +21,15 @@ embedding Arx inside CAD.
 `export::ifc::IFCExporter` path). Agent/daemon may bridge files over the network;
 it must **not** invent alternate IFC semantics. Official pilot handoffs use the CLI.
 
-Identity rules: [identity.md](./identity.md).
+Identity rules: [ADR 0001](./adr-0001-identity-and-addressing.md) · [identity.md](./identity.md) (code map).
+
+**Export identity (ADR 0001):**
+
+| Entity | On export |
+| :--- | :--- |
+| Has non-empty `ifc_global_id` | Re-emit **same** GlobalId |
+| Arxos-native (`arx add`, no GlobalId) | Mint 22-char GlobalId (from entity UUID when possible); **write back** to `building.yaml` |
+| Electrical address leaves | `rec.*`→`IFCOUTLET`, `ltg.*`→`IFCLIGHTFIXTURE`, `sw.*`→`IFCSWITCHINGDEVICE`, `panel.*`→`IFCELECTRICDISTRIBUTIONBOARD` |
 
 ## Fidelity tiers
 

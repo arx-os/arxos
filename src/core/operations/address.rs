@@ -1,139 +1,193 @@
-//! Backfill durable `ArxAddress` values on Building equipment.
+//! Backfill durable ArxAddress values (ADR 0001).
 
 use crate::core::domain::ArxAddress;
 use crate::core::Building;
 
-/// Assign `address` (and `path`) to equipment that lack one, using hierarchy context.
+/// Rewrite all entity addresses that sit under `old_root` to use `new_root`.
 ///
-/// Layout: `/local/local/local/{building}/{floor}/{room}/{fixture}`
-/// where fixture is derived from the equipment name. Room segments that would
-/// fail reserved-system validation fall back to `items`.
+/// Used when applying a postal-derived root to a building that already has
+/// lab-style (or other) addresses. Returns the number of entities updated.
+pub fn reroot_addresses(building: &mut Building, new_root: &ArxAddress) -> usize {
+    let old_root = match building.address.clone() {
+        Some(r) => r,
+        None => {
+            building.address = Some(new_root.clone());
+            return 1 + backfill_equipment_addresses(building);
+        }
+    };
+    if old_root.path == new_root.path {
+        return 0;
+    }
+    let mut count = 0usize;
+    let mut rewrite = |addr: &mut Option<ArxAddress>| {
+        if let Some(a) = addr {
+            if let Some(rewritten) = rewrite_path_prefix(&a.path, &old_root.path, &new_root.path) {
+                if let Ok(na) = ArxAddress::from_path(&rewritten) {
+                    *a = na;
+                    count += 1;
+                }
+            }
+        }
+    };
+
+    rewrite(&mut building.address);
+    for anchor in &mut building.anchors {
+        rewrite(&mut anchor.address);
+    }
+    for floor in &mut building.floors {
+        rewrite(&mut floor.address);
+        for anchor in &mut floor.anchors {
+            rewrite(&mut anchor.address);
+        }
+        for eq in &mut floor.equipment {
+            rewrite(&mut eq.address);
+            if let Some(ref a) = eq.address {
+                eq.path = a.path.clone();
+            }
+        }
+        for wing in &mut floor.wings {
+            rewrite(&mut wing.address);
+            for eq in &mut wing.equipment {
+                rewrite(&mut eq.address);
+                if let Some(ref a) = eq.address {
+                    eq.path = a.path.clone();
+                }
+            }
+            for room in &mut wing.rooms {
+                rewrite(&mut room.address);
+                for eq in &mut room.equipment {
+                    rewrite(&mut eq.address);
+                    if let Some(ref a) = eq.address {
+                        eq.path = a.path.clone();
+                    }
+                }
+                for anchor in &mut room.anchors {
+                    rewrite(&mut anchor.address);
+                }
+            }
+        }
+    }
+    count
+}
+
+fn rewrite_path_prefix(path: &str, old_root: &str, new_root: &str) -> Option<String> {
+    let old = old_root.trim_end_matches('/');
+    let new = new_root.trim_end_matches('/');
+    if path == old {
+        return Some(new.to_string());
+    }
+    let prefix = format!("{}/", old);
+    if let Some(rest) = path.strip_prefix(&prefix) {
+        return Some(format!("{}/{}", new, rest));
+    }
+    None
+}
+
+/// Assign `address` to entities that lack one, using hierarchy context.
 ///
-/// Returns the number of equipment items updated.
+/// Target layout:
+/// `bldg.lab.local.sample.<building-slug>/fl.<n>/rm.<slug>/<equipment-slug>`
+///
+/// Returns the number of **entities** updated (building, floors, wings, rooms, equipment, anchors).
 pub fn backfill_equipment_addresses(building: &mut Building) -> usize {
-    let building_slug = slug(&building.name);
     let mut count = 0;
 
-    // 1. Backfill Building address
+    // Building root
     if building.address.is_none() {
-        if let Ok(addr) = ArxAddress::from_path(&format!("/local/local/local/{}", building_slug)) {
-            building.address = Some(addr);
-        }
+        building.address = Some(ArxAddress::lab_building_root(&building.name));
+        count += 1;
     }
-    let bldg_addr_prefix = building.address.as_ref().map(|a| a.path.clone())
-        .unwrap_or_else(|| format!("/local/local/local/{}", building_slug));
+    let bldg = building
+        .address
+        .clone()
+        .unwrap_or_else(|| ArxAddress::lab_building_root(&building.name));
 
-    // 2. Backfill Building-level anchors
-    for anchor in &mut building.anchors {
-        if anchor.address.is_none() {
-            let anchor_slug = slug(&anchor.name);
-            if let Ok(addr) = ArxAddress::from_path(&format!("{}/{}", bldg_addr_prefix, anchor_slug)) {
-                anchor.address = Some(addr);
-            }
-        }
-    }
-
-    for floor in &mut building.floors {
-        let floor_slug = if floor.name.trim().is_empty() {
-            format!("floor-{}", floor.level)
-        } else {
-            slug(&floor.name)
-        };
-
-        // Backfill Floor address
+    for (fi, floor) in building.floors.iter_mut().enumerate() {
         if floor.address.is_none() {
-            if let Ok(addr) = ArxAddress::from_path(&format!("{}/{}", bldg_addr_prefix, floor_slug)) {
+            let seg = ArxAddress::floor_segment(&floor.name, fi);
+            if let Ok(addr) = bldg.join(&seg) {
                 floor.address = Some(addr);
-            }
-        }
-        let floor_addr_prefix = floor.address.as_ref().map(|a| a.path.clone())
-            .unwrap_or_else(|| format!("{}/{}", bldg_addr_prefix, floor_slug));
-
-        // Floor-level equipment (no room)
-        for eq in &mut floor.equipment {
-            if eq.address.is_some() {
-                continue;
-            }
-            if let Some(addr) = make_address(&building_slug, &floor_slug, "common", &eq.name) {
-                eq.path = addr.path.clone();
-                eq.address = Some(addr);
                 count += 1;
             }
         }
+        let floor_addr = floor
+            .address
+            .clone()
+            .unwrap_or_else(|| bldg.join(&format!("fl.{}", fi)).expect("fl segment"));
 
-        // Floor-level anchors
         for anchor in &mut floor.anchors {
             if anchor.address.is_none() {
-                let anchor_slug = slug(&anchor.name);
-                if let Ok(addr) = ArxAddress::from_path(&format!("{}/{}", floor_addr_prefix, anchor_slug)) {
+                let seg = ArxAddress::stable_slug(&anchor.name);
+                if let Ok(addr) = floor_addr.join(&seg) {
                     anchor.address = Some(addr);
+                    count += 1;
                 }
             }
         }
 
-        for wing in &mut floor.wings {
-            let wing_slug = slug(&wing.name);
-
-            // Backfill Wing address
-            if wing.address.is_none() {
-                if let Ok(addr) = ArxAddress::from_path(&format!("{}/{}", floor_addr_prefix, wing_slug)) {
-                    wing.address = Some(addr);
-                }
-            }
-            let wing_addr_prefix = wing.address.as_ref().map(|a| a.path.clone())
-                .unwrap_or_else(|| format!("{}/{}", floor_addr_prefix, wing_slug));
-
-            for eq in &mut wing.equipment {
-                if eq.address.is_some() {
-                    continue;
-                }
-                if let Some(addr) = make_address(&building_slug, &floor_slug, &wing_slug, &eq.name)
-                {
+        for eq in &mut floor.equipment {
+            if eq.address.is_none() {
+                let leaf = ArxAddress::equipment_segment(&eq.name);
+                if let Ok(addr) = floor_addr.join(&leaf) {
                     eq.path = addr.path.clone();
                     eq.address = Some(addr);
                     count += 1;
                 }
             }
+        }
 
-            for anchor in &mut wing.anchors {
-                if anchor.address.is_none() {
-                    let anchor_slug = slug(&anchor.name);
-                    if let Ok(addr) = ArxAddress::from_path(&format!("{}/{}", wing_addr_prefix, anchor_slug)) {
-                        anchor.address = Some(addr);
-                    }
+        for wing in &mut floor.wings {
+            // Wings are organizational; address optional but fill for navigation
+            if wing.address.is_none() {
+                let seg = format!("wing.{}", ArxAddress::stable_slug(&wing.name));
+                if let Ok(addr) = floor_addr.join(&seg) {
+                    wing.address = Some(addr);
+                    count += 1;
                 }
             }
 
-            for room in &mut wing.rooms {
-                let room_slug = slug(&room.name);
-
-                // Backfill Room address
-                if room.address.is_none() {
-                    if let Ok(addr) = ArxAddress::from_path(&format!("{}/{}", wing_addr_prefix, room_slug)) {
-                        room.address = Some(addr);
-                    }
-                }
-                let room_addr_prefix = room.address.as_ref().map(|a| a.path.clone())
-                    .unwrap_or_else(|| format!("{}/{}", wing_addr_prefix, room_slug));
-
-                for eq in &mut room.equipment {
-                    if eq.address.is_some() {
-                        continue;
-                    }
-                    if let Some(addr) =
-                        make_address(&building_slug, &floor_slug, &room_slug, &eq.name)
-                    {
+            for eq in &mut wing.equipment {
+                if eq.address.is_none() {
+                    let leaf = ArxAddress::equipment_segment(&eq.name);
+                    if let Ok(addr) = floor_addr.join(&leaf) {
                         eq.path = addr.path.clone();
                         eq.address = Some(addr);
                         count += 1;
                     }
                 }
+            }
+
+            for room in &mut wing.rooms {
+                if room.address.is_none() {
+                    let seg = ArxAddress::room_segment(&room.name);
+                    if let Ok(addr) = floor_addr.join(&seg) {
+                        room.address = Some(addr);
+                        count += 1;
+                    }
+                }
+                let room_addr = room.address.clone().unwrap_or_else(|| {
+                    floor_addr
+                        .join(&ArxAddress::room_segment(&room.name))
+                        .unwrap_or_else(|_| floor_addr.clone())
+                });
+
+                for eq in &mut room.equipment {
+                    if eq.address.is_none() {
+                        let leaf = ArxAddress::equipment_segment(&eq.name);
+                        if let Ok(addr) = room_addr.join(&leaf) {
+                            eq.path = addr.path.clone();
+                            eq.address = Some(addr);
+                            count += 1;
+                        }
+                    }
+                }
 
                 for anchor in &mut room.anchors {
                     if anchor.address.is_none() {
-                        let anchor_slug = slug(&anchor.name);
-                        if let Ok(addr) = ArxAddress::from_path(&format!("{}/{}", room_addr_prefix, anchor_slug)) {
+                        let seg = ArxAddress::stable_slug(&anchor.name);
+                        if let Ok(addr) = room_addr.join(&seg) {
                             anchor.address = Some(addr);
+                            count += 1;
                         }
                     }
                 }
@@ -141,86 +195,98 @@ pub fn backfill_equipment_addresses(building: &mut Building) -> usize {
         }
     }
 
-    count
-}
-
-fn slug(s: &str) -> String {
-    let s = s.trim().to_lowercase();
-    if s.is_empty() {
-        return "unknown".into();
-    }
-    s.chars()
-        .map(|c| {
-            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
-                c
-            } else {
-                '-'
+    // Building-level anchors
+    for anchor in &mut building.anchors {
+        if anchor.address.is_none() {
+            let seg = ArxAddress::stable_slug(&anchor.name);
+            if let Ok(addr) = bldg.join(&seg) {
+                anchor.address = Some(addr);
+                count += 1;
             }
-        })
-        .collect::<String>()
-        .split('-')
-        .filter(|p| !p.is_empty())
-        .collect::<Vec<_>>()
-        .join("-")
-}
+        }
+    }
 
-fn make_address(building: &str, floor: &str, room: &str, fixture: &str) -> Option<ArxAddress> {
-    let fixture = slug(fixture);
-    let room = slug(room);
-    let floor = slug(floor);
-    let building = slug(building);
-
-    let candidates = [
-        ArxAddress::new(
-            "local", "local", "local", &building, &floor, &room, &fixture,
-        ),
-        // Reserved-system rooms may reject arbitrary fixture names — use open bucket.
-        ArxAddress::new(
-            "local", "local", "local", &building, &floor, "items", &fixture,
-        ),
-    ];
-
-    candidates.into_iter().find(|addr| addr.validate().is_ok())
+    count
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::{Equipment, EquipmentType, Floor, Room, RoomType, Wing};
+    use crate::core::domain::ArxAddress;
+    use crate::core::{Building, Equipment, EquipmentType, Floor, Room, RoomType, Wing};
 
     #[test]
     fn backfill_assigns_missing_addresses_only() {
-        let mut b = Building::new("PS 118".into(), "/ps".into());
-        let mut floor = Floor::new("Floor 2".into(), 2);
+        let mut b = Building::new("HQ".into(), "/hq".into());
+        let mut floor = Floor::new("Level 1".into(), 0);
         let mut wing = Wing::new("Main".into());
-        let mut room = Room::new("Mech".into(), RoomType::Mechanical);
-
-        let eq = Equipment::new("Boiler 01".into(), String::new(), EquipmentType::HVAC);
-        assert!(eq.address.is_none());
-        room.add_equipment(eq);
-
-        let mut already = Equipment::new("Panel".into(), String::new(), EquipmentType::Electrical);
-        already.address = Some(ArxAddress::new(
-            "usa", "ny", "brooklyn", "ps-118", "floor-02", "elec", "panel-01",
-        ));
+        let mut room = Room::new("A101".into(), RoomType::Office);
+        let mut already = Equipment::new("Boiler".into(), String::new(), EquipmentType::HVAC);
+        already.address = Some(
+            ArxAddress::from_path("bldg.lab.local.sample.hq/fl.1/rm.a101/keep-me").unwrap(),
+        );
         room.add_equipment(already);
-
+        room.add_equipment(Equipment::new(
+            "Pump".into(),
+            String::new(),
+            EquipmentType::Plumbing,
+        ));
         wing.add_room(room);
         floor.add_wing(wing);
         b.add_floor(floor);
 
         let n = backfill_equipment_addresses(&mut b);
-        assert_eq!(n, 1, "only missing address should be filled");
-
-        let all = b.get_all_equipment();
-        let boiler = all.iter().find(|e| e.name == "Boiler 01").unwrap();
-        assert!(boiler.address.is_some());
-        assert!(boiler.address.as_ref().unwrap().path.contains("boiler-01"));
-
-        let panel = all.iter().find(|e| e.name == "Panel").unwrap();
+        assert!(n >= 1);
+        assert!(b.address.is_some());
+        assert!(b.address.as_ref().unwrap().path.starts_with("/bldg.lab.local.sample."));
+        let room = &b.floors[0].wings[0].rooms[0];
+        assert!(room.address.is_some());
+        assert!(room.address.as_ref().unwrap().path.contains("/rm."));
+        // Preserved existing
         assert_eq!(
-            panel.address.as_ref().unwrap().path,
-            "/usa/ny/brooklyn/ps-118/floor-02/elec/panel-01"
+            room.equipment[0].address.as_ref().unwrap().path,
+            "/bldg.lab.local.sample.hq/fl.1/rm.a101/keep-me"
+        );
+        // Filled missing
+        assert!(room.equipment[1].address.is_some());
+    }
+
+    #[test]
+    fn reroot_lab_to_postal() {
+        use crate::core::domain::postal_building_root_from_str;
+        let mut b = Building::new("HQ".into(), "/hq".into());
+        let lab = ArxAddress::lab_building_root("hq");
+        b.address = Some(lab.clone());
+        let mut floor = Floor::new("Level 1".into(), 1);
+        floor.address = Some(lab.join("fl.1").unwrap());
+        let mut wing = Wing::new("Main".into());
+        let mut room = Room::new("A101".into(), RoomType::Office);
+        room.address = Some(floor.address.as_ref().unwrap().join("rm.a101").unwrap());
+        wing.add_room(room);
+        floor.add_wing(wing);
+        b.add_floor(floor);
+
+        let postal = postal_building_root_from_str(
+            "143677 N. Dale Mabry Hwy, Suite 2, Tampa, FL, 33622",
+        )
+        .unwrap();
+        let n = reroot_addresses(&mut b, &postal);
+        assert!(n >= 3);
+        assert_eq!(
+            b.address.as_ref().unwrap().path,
+            "/bldg.us.fl.tampa.dale-mabry.143677.s2"
+        );
+        assert_eq!(
+            b.floors[0].address.as_ref().unwrap().path,
+            "/bldg.us.fl.tampa.dale-mabry.143677.s2/fl.1"
+        );
+        assert_eq!(
+            b.floors[0].wings[0].rooms[0]
+                .address
+                .as_ref()
+                .unwrap()
+                .path,
+            "/bldg.us.fl.tampa.dale-mabry.143677.s2/fl.1/rm.a101"
         );
     }
 }

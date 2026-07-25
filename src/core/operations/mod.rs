@@ -25,13 +25,20 @@
 //! ```
 
 pub mod address;
+pub mod address_mutate;
+pub mod address_nav;
 pub mod equipment;
 pub mod room;
 pub mod spatial;
 #[cfg(test)]
 mod spatial_tests;
 
-pub use address::backfill_equipment_addresses;
+pub use address::{backfill_equipment_addresses, reroot_addresses};
+pub use address_mutate::{add_under_address, allocate_child_address, next_numeric_id, AddKind, AddResult};
+pub use address_nav::{
+    build_tree, collect_all_addressed, format_ls, format_show, format_tree, list_children,
+    parse_address, resolve, ChildEntry, EntityKind, EntityRef, TreeNode,
+};
 
 // Re-export room operations
 pub use room::{

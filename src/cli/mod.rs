@@ -39,12 +39,26 @@ impl Cli {
             Commands::Init {
                 name,
                 no_git,
+                postal,
+                country,
+                region,
+                city,
+                street,
+                number,
+                unit,
                 ..
             } => {
                 // Git is on by default (L1 / product path). Opt out with --no-git.
                 let cmd = InitCommand {
                     directory: std::path::PathBuf::from("."),
                     name: Some(name),
+                    postal,
+                    country,
+                    region,
+                    city,
+                    street,
+                    number,
+                    unit,
                     install_hooks: !no_git,
                     init_git: !no_git,
                 };
@@ -57,6 +71,13 @@ impl Cli {
                     dry_run,
                     strict,
                     strict_addresses,
+                    postal,
+                    country,
+                    region,
+                    city,
+                    street,
+                    number,
+                    unit,
                 } => {
                     if strict_addresses {
                         crate::validation::STRICT_ADDRESSES.store(true, std::sync::atomic::Ordering::Relaxed);
@@ -66,6 +87,13 @@ impl Cli {
                         repo,
                         dry_run,
                         strict,
+                        postal,
+                        country,
+                        region,
+                        city,
+                        street,
+                        number,
+                        unit,
                     };
                     Ok(cmd.execute()?)
                 }
@@ -293,10 +321,26 @@ impl Cli {
                 format,
                 verbose,
             } => commands::query::run_address_query(&pattern, &format, verbose),
-            Commands::Migrate { dry_run } => {
+            Commands::Migrate {
+                dry_run,
+                postal,
+                country,
+                region,
+                city,
+                street,
+                number,
+                unit,
+            } => {
                 let cmd = MigrateCommand {
                     dry_run,
                     path: None,
+                    postal,
+                    country,
+                    region,
+                    city,
+                    street,
+                    number,
+                    unit,
                 };
                 Ok(cmd.execute()?)
             }
@@ -423,6 +467,31 @@ impl Cli {
                     println!("✅ Validation completed successfully");
                     Ok(())
                 }
+            }
+            Commands::Show { address, path } => {
+                commands::browse::run_show(&address, path.as_deref())?;
+                Ok(())
+            }
+            Commands::Ls { address, path } => {
+                commands::browse::run_ls(&address, path.as_deref())?;
+                Ok(())
+            }
+            Commands::Tree {
+                address,
+                depth,
+                path,
+            } => {
+                commands::browse::run_tree(&address, depth, path.as_deref())?;
+                Ok(())
+            }
+            Commands::Add {
+                parent,
+                kind,
+                name,
+                path,
+            } => {
+                commands::add::run_add(&parent, &kind, name.as_deref(), path.as_deref())?;
+                Ok(())
             }
         }
     }

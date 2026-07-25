@@ -72,17 +72,23 @@ arx validate
 ```bash
 mkdir -p ~/arx-pilots/SITE_NAME && cd ~/arx-pilots/SITE_NAME
 arx init --name "SITE_NAME"
+# Optional ADR postal root (recommended when site address is known):
+# arx init --name "SITE_NAME" \
+#   --postal "143677 N. Dale Mabry Hwy, Suite 2, Tampa, FL, 33622"
 # Creates building.yaml + Git repo on branch main (opt out: --no-git)
-# Record building id from output or building.yaml → pilot charter
+# Record building id / address from output or building.yaml → pilot charter
 ```
 
-**Limit:** one building / one `building.yaml` per repo root.
+**Limit:** one building / one `building.yaml` per repo root.  
+**Identity:** hierarchical `address` is the operational identity — see [identity.md](./identity.md).
 
 ## 3. Import
 
 ```bash
 # IFC (primary district path)
 arx import ifc path/to/model.ifc
+# Optional: re-root all addresses under a postal building root:
+# arx import ifc path/to/model.ifc --postal "…"
 
 # LiDAR (if in charter scope)
 arx import lidar path/to/scan.ply
@@ -91,6 +97,19 @@ arx import lidar path/to/scan.ply
 ```
 
 If import fails: stop, capture error + file type/version, do not “force” bad YAML.
+
+**After import (optional navigation):**
+
+```bash
+ROOT=$(grep -E '^  address:' building.yaml | head -1 | awk '{print $2}')
+arx show "$ROOT"
+arx ls "${ROOT}/fl.1"
+arx tree "$ROOT" --depth 2
+# Label electrical (Arxos-native; GlobalId assigned on export):
+# arx add "$ROOT" panel --name L1
+# arx add "${ROOT}/elec/panel.l1" ckt --name 14
+# arx add "${ROOT}/elec/panel.l1/ckt.14" outlet
+```
 
 ## 4. Review (mandatory for LiDAR autos)
 
@@ -139,6 +158,7 @@ arx commit -m "pilot: import and review SITE"
 ```bash
 arx export --format ifc --output exports/internal.ifc
 # free software path — no access receipt required
+# Identity: preserves IFC GlobalIds; assigns + writes back GlobalIds for arx-add entities
 ```
 
 **Export authority:** This CLI command (and `export::ifc`) is the only official

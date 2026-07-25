@@ -1,9 +1,13 @@
-//! ArxOS Address System
+//! ArxOS Address System (ADR 0001)
 //!
-//! Provides hierarchical addressing for building components using a 7-part path format:
-//! /country/state/city/building/floor/room/fixture
+//! Hierarchical operational identity. Canonical form examples:
+//! - `bldg.us.fl.tampa.dale-mabry.143677.s2/fl.2/rm.215`
+//! - `bldg.lab.local.sample.duplex/fl.1/rm.a101`
 //!
-//! Supports both standardized engineering systems (14 reserved) and custom items.
+//! Dots are legal inside segments (`fl.2`, `panel.L1`). Paths are stored with a
+//! leading `/` for historical compatibility; `from_path` accepts both forms.
+//!
+//! Legacy geo-style paths (`/usa/ny/brooklyn/...`) still parse for existing YAML.
 
 use crate::error::ArxError;
 use anyhow::Result;
@@ -11,30 +15,32 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fmt;
 
-/// Reserved system names for standardized engineering components
-pub const RESERVED_SYSTEMS: [&str; 14] = [
+/// Reserved system names for standardized engineering components.
+/// Includes ADR short roots (`elec`, `plumb`, `vert`) and legacy long names.
+pub const RESERVED_SYSTEMS: [&str; 18] = [
     "hvac",       // boilers, AHUs
-    "plumbing",   // valves, pumps
-    "electrical", // panels, breakers
+    "plumbing",   // valves, pumps (legacy)
+    "plumb",      // ADR short root
+    "electrical", // panels, breakers (legacy)
+    "elec",       // ADR short root
     "fire",       // sprinklers, alarms
     "lighting",   // fixtures, controls
     "security",   // cameras, access
-    "elevators",  // cars, controls
+    "elevators",  // cars, controls (legacy)
+    "vert",       // ADR vertical transport
     "roof",       // units, drains
     "windows",    // frames, glass
     "doors",      // hinges, locks
     "structure",  // columns, beams
+    "struct",     // ADR short root
     "envelope",   // walls, insulation
     "it",         // switches, APs
     "furniture",  // desks, chairs
 ];
 
-/// ArxOS Address - hierarchical path for building components
+/// ArxOS Address — hierarchical operational identity (ADR 0001).
 ///
-/// Format: /country/state/city/building/floor/room/fixture
-///
-/// Example (Standardized): /usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01
-/// Example (Custom): /usa/ny/brooklyn/ps-118/floor-02/kitchen/fridge/pbj-sandwich
+/// Stored path always has a leading `/` (e.g. `/bldg.lab.local.sample.x/fl.1`).
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct ArxAddress {
@@ -42,16 +48,8 @@ pub struct ArxAddress {
 }
 
 impl ArxAddress {
-    /// Build address from parts (all lower-case, sanitized)
-    ///
-    /// # Arguments
-    /// * `country` - Country code (e.g., "usa")
-    /// * `state` - State/province code (e.g., "ny")
-    /// * `city` - City name (e.g., "brooklyn")
-    /// * `building` - Building identifier (e.g., "ps-118")
-    /// * `floor` - Floor identifier (e.g., "floor-02")
-    /// * `room` - Room/system name (e.g., "mech" or "kitchen")
-    /// * `fixture` - Fixture/equipment name (e.g., "boiler-01" or "pbj-sandwich")
+    /// Legacy geo-style constructor (7 optional segments). Prefer [`Self::from_segments`]
+    /// or [`Self::lab_building_root`] for new ADR-shaped addresses.
     pub fn new(
         country: &str,
         state: &str,
@@ -71,47 +69,127 @@ impl ArxAddress {
             Self::sanitize_part(fixture),
         ];
         let non_empty: Vec<String> = parts.into_iter().filter(|s| !s.is_empty()).collect();
-        let path = format!("/{}", non_empty.join("/"));
-        Self { path }
+        Self {
+            path: format!("/{}", non_empty.join("/")),
+        }
     }
 
-    /// Parse a full path string into an ArxAddress
+    /// Build an address from ordered path segments (already semantic, will be sanitized).
+    pub fn from_segments(segments: &[&str]) -> Result<Self> {
+        let mut parts = Vec::with_capacity(segments.len());
+        for seg in segments {
+            let s = Self::sanitize_part(seg);
+            if s.is_empty() {
+                continue;
+            }
+            if !Self::is_valid_segment(&s) {
+                return Err(ArxError::path_invalid(
+                    &segments.join("/"),
+                    &format!("Invalid address segment '{}'", seg),
+                )
+                .into());
+            }
+            parts.push(s);
+        }
+        if parts.is_empty() {
+            return Err(ArxError::path_invalid("", "Path cannot be empty").into());
+        }
+        Ok(Self {
+            path: format!("/{}", parts.join("/")),
+        })
+    }
+
+    /// Deterministic lab/sample building root when no postal address is available (ADR 0001).
     ///
-    /// # Arguments
-    /// * `path` - Full path string (e.g., "/usa/ny/brooklyn/ps-118/floor-02/mech/boiler-01")
+    /// Form: `bldg.lab.local.sample.<slug>`
+    pub fn lab_building_root(sample_key: &str) -> Self {
+        let slug = Self::stable_slug(sample_key);
+        // Root is a single multi-dot segment.
+        Self {
+            path: format!("/bldg.lab.local.sample.{}", slug),
+        }
+    }
+
+    /// Fully-qualified postal-derived building root (ADR 0001 §4).
     ///
-    /// # Returns
-    /// * `Result<ArxAddress>` - Parsed address or error if format is invalid
-    pub fn from_path(path: &str) -> Result<Self> {
-        if !path.starts_with('/') {
+    /// Prefer [`super::postal::postal_building_root_fields`] for full street simplification.
+    /// This constructor applies basic sanitize only (no directional/suffix stripping).
+    pub fn postal_building_root(
+        country: &str,
+        region: &str,
+        city: &str,
+        street: &str,
+        number: &str,
+        unit: Option<&str>,
+    ) -> Self {
+        let mut core = format!(
+            "bldg.{}.{}.{}.{}-{}",
+            Self::sanitize_part(country),
+            Self::sanitize_part(region),
+            Self::sanitize_part(city),
+            Self::sanitize_part(street),
+            Self::sanitize_part(number),
+        );
+        if let Some(u) = unit {
+            let u = Self::sanitize_part(u);
+            if !u.is_empty() {
+                core.push('.');
+                core.push_str(&u);
+            }
+        }
+        Self {
+            path: format!("/{}", core),
+        }
+    }
+
+    /// Append one child segment (sanitized). Returns error if the child is invalid.
+    pub fn join(&self, child: &str) -> Result<Self> {
+        let seg = Self::sanitize_part(child);
+        if !Self::is_valid_segment(&seg) {
             return Err(ArxError::path_invalid(
-                path,
-                "Path must start with '/'",
+                child,
+                "Invalid child address segment",
             )
             .into());
         }
-        let clean = path.trim_start_matches('/');
+        Ok(Self {
+            path: format!("{}/{}", self.path.trim_end_matches('/'), seg),
+        })
+    }
+
+    /// True if `self` is equal to `prefix` or is a strict descendant path.
+    pub fn starts_with_address(&self, prefix: &ArxAddress) -> bool {
+        let p = prefix.path.trim_end_matches('/');
+        self.path == p || self.path.starts_with(&format!("{}/", p))
+    }
+
+    /// Parse a full path string into an ArxAddress.
+    ///
+    /// Accepts with or without a leading `/`. Rejects empty, `.`, `..`, and illegal chars.
+    /// Dots are allowed inside segments (ADR 0001 §3).
+    pub fn from_path(path: &str) -> Result<Self> {
+        let clean = path.trim().trim_start_matches('/');
         if clean.is_empty() {
-            return Err(ArxError::path_invalid(
-                path,
-                "Path cannot be empty",
-            )
-            .into());
+            return Err(ArxError::path_invalid(path, "Path cannot be empty").into());
         }
         let parts: Vec<&str> = clean.split('/').filter(|s| !s.is_empty()).collect();
         if parts.is_empty() {
-            return Err(ArxError::path_invalid(
-                path,
-                "Path cannot be empty",
-            )
-            .into());
+            return Err(ArxError::path_invalid(path, "Path cannot be empty").into());
         }
-        // Check for invalid characters in any segment (traversal safety)
         for part in &parts {
-            if part.is_empty() || !part.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
+            if !Self::is_valid_segment(part) {
                 return Err(ArxError::path_invalid(
                     path,
-                    "Path segments must be alphanumeric, hyphen, or underscore",
+                    "Path segments must be lowercase alphanumeric with '-', '_', or '.' (no '..')",
+                )
+                .into());
+            }
+            // from_path accepts already-cased input but validate() enforces lowercase;
+            // normalize: reject uppercase here for consistency with sanitize on write paths
+            if part.chars().any(|c| c.is_ascii_uppercase()) {
+                return Err(ArxError::path_invalid(
+                    path,
+                    "Path segments must be lowercase",
                 )
                 .into());
             }
@@ -121,149 +199,132 @@ impl ArxAddress {
         })
     }
 
-    /// Validate address format and reserved system rules
-    ///
-    /// For reserved systems, validates that fixture names follow expected patterns.
-    /// For custom systems, any fixture name is allowed.
-    ///
-    /// # Returns
-    /// * `Ok(())` if valid, or `Err(AddressValidationError)`
+    /// Validate address format and reserved system rules.
     pub fn validate(&self) -> Result<(), AddressValidationError> {
-        let parts: Vec<&str> = self.path.trim_start_matches('/').split('/').filter(|s| !s.is_empty()).collect();
+        let parts: Vec<&str> = self
+            .path
+            .trim_start_matches('/')
+            .split('/')
+            .filter(|s| !s.is_empty())
+            .collect();
         if parts.is_empty() {
             return Err(AddressValidationError::MissingSegments);
         }
 
-        // Validate each part contains only lowercase/valid characters
         for part in &parts {
             if part.to_lowercase() != *part {
-                return Err(AddressValidationError::NotLowercase { part: part.to_string() });
+                return Err(AddressValidationError::NotLowercase {
+                    part: part.to_string(),
+                });
             }
-            if !part.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
-                return Err(AddressValidationError::InvalidCharacters { part: part.to_string() });
+            if !Self::is_valid_segment(part) {
+                return Err(AddressValidationError::InvalidCharacters {
+                    part: part.to_string(),
+                });
             }
         }
 
-        // If there's a reserved system segment, validate the following segment (if any)
+        // Reserved system child naming (legacy prefixes + ADR dotted mnemonics)
         for (i, part) in parts.iter().enumerate() {
             if RESERVED_SYSTEMS.contains(part) && i + 1 < parts.len() {
                 let fixture = parts[i + 1];
-                match *part {
-                    "hvac" => {
-                        if !fixture.starts_with("boiler-") && !fixture.starts_with("ahu-") && !fixture.starts_with("vav-") {
-                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
-                                system: part.to_string(),
-                                message: "HVAC fixture must start with boiler-, ahu-, or vav-".to_string(),
-                            });
-                        }
-                    }
-                    "plumbing" => {
-                        if !fixture.starts_with("valve-") && !fixture.starts_with("pump-") {
-                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
-                                system: part.to_string(),
-                                message: "Plumbing fixture must start with valve- or pump-".to_string(),
-                            });
-                        }
-                    }
-                    "electrical" => {
-                        if !fixture.starts_with("panel-") && !fixture.starts_with("breaker-") {
-                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
-                                system: part.to_string(),
-                                message: "Electrical fixture must start with panel- or breaker-".to_string(),
-                            });
-                        }
-                    }
-                    "fire" => {
-                        if !fixture.starts_with("sprinkler-") && !fixture.starts_with("alarm-") {
-                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
-                                system: part.to_string(),
-                                message: "Fire fixture must start with sprinkler- or alarm-".to_string(),
-                            });
-                        }
-                    }
-                    "lighting" => {
-                        if !fixture.starts_with("fixture-") && !fixture.starts_with("control-") {
-                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
-                                system: part.to_string(),
-                                message: "Lighting fixture must start with fixture- or control-".to_string(),
-                            });
-                        }
-                    }
-                    "security" => {
-                        if !fixture.starts_with("camera-") && !fixture.starts_with("access-") {
-                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
-                                system: part.to_string(),
-                                message: "Security fixture must start with camera- or access-".to_string(),
-                            });
-                        }
-                    }
-                    "elevators" => {
-                        if !fixture.starts_with("car-") && !fixture.starts_with("control-") {
-                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
-                                system: part.to_string(),
-                                message: "Elevator fixture must start with car- or control-".to_string(),
-                            });
-                        }
-                    }
-                    "roof" => {
-                        if !fixture.starts_with("unit-") && !fixture.starts_with("drain-") {
-                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
-                                system: part.to_string(),
-                                message: "Roof fixture must start with unit- or drain-".to_string(),
-                            });
-                        }
-                    }
-                    "windows" => {
-                        if !fixture.starts_with("frame-") && !fixture.starts_with("glass-") {
-                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
-                                system: part.to_string(),
-                                message: "Window fixture must start with frame- or glass-".to_string(),
-                            });
-                        }
-                    }
-                    "doors" => {
-                        if !fixture.starts_with("hinge-") && !fixture.starts_with("lock-") {
-                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
-                                system: part.to_string(),
-                                message: "Door fixture must start with hinge- or lock-".to_string(),
-                            });
-                        }
-                    }
-                    "structure" => {
-                        if !fixture.starts_with("column-") && !fixture.starts_with("beam-") {
-                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
-                                system: part.to_string(),
-                                message: "Structure fixture must start with column- or beam-".to_string(),
-                            });
-                        }
-                    }
-                    "envelope" => {
-                        if !fixture.starts_with("wall-") && !fixture.starts_with("insulation-") {
-                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
-                                system: part.to_string(),
-                                message: "Envelope fixture must start with wall- or insulation-".to_string(),
-                            });
-                        }
-                    }
-                    "it" => {
-                        if !fixture.starts_with("switch-") && !fixture.starts_with("ap-") {
-                            return Err(AddressValidationError::ReservedSystemPrefixMismatch {
-                                system: part.to_string(),
-                                message: "IT fixture must start with switch- or ap-".to_string(),
-                            });
-                        }
-                    }
-                    "furniture" if !fixture.starts_with("desk-") && !fixture.starts_with("chair-") => {
-                        return Err(AddressValidationError::ReservedSystemPrefixMismatch {
-                            system: part.to_string(),
-                            message: "Furniture fixture must start with desk- or chair-".to_string(),
-                        });
-                    }
-                    _ => {}
+                if !Self::reserved_child_ok(part, fixture) {
+                    return Err(AddressValidationError::ReservedSystemPrefixMismatch {
+                        system: part.to_string(),
+                        message: format!(
+                            "Child '{}' under system '{}' does not match allowed prefixes",
+                            fixture, part
+                        ),
+                    });
                 }
             }
         }
         Ok(())
+    }
+
+    /// Whether a reserved-system child segment is acceptable (legacy or ADR form).
+    fn reserved_child_ok(system: &str, fixture: &str) -> bool {
+        // ADR dotted mnemonics: panel.l1, ahu.1, ckt.14, rec.7
+        if let Some((head, _rest)) = fixture.split_once('.') {
+            return match system {
+                "hvac" => matches!(
+                    head,
+                    "boiler"
+                        | "ahu"
+                        | "vav"
+                        | "chiller"
+                        | "fan"
+                        | "coil"
+                        | "diff"
+                        | "pump"
+                        | "exhaust"
+                ),
+                "electrical" | "elec" => matches!(
+                    head,
+                    "panel" | "breaker" | "ckt" | "jbox" | "rec" | "ltg" | "sw" | "xfmr" | "mdp"
+                ),
+                "plumbing" | "plumb" => matches!(
+                    head,
+                    "valve" | "pump" | "fixture" | "sink" | "wc" | "urinal" | "main" | "ris" | "branch"
+                ),
+                "fire" => matches!(head, "sprinkler" | "alarm" | "riser" | "head" | "panel" | "zone" | "device"),
+                "lighting" => matches!(head, "fixture" | "control" | "ltg"),
+                "security" => matches!(head, "camera" | "access" | "panel"),
+                "elevators" | "vert" => matches!(head, "car" | "control" | "elev" | "escalator" | "stair"),
+                "roof" => matches!(head, "unit" | "drain"),
+                "windows" => matches!(head, "frame" | "glass" | "win"),
+                "doors" => matches!(head, "hinge" | "lock" | "door"),
+                "structure" | "struct" => matches!(head, "column" | "beam" | "col" | "slab"),
+                "envelope" => matches!(head, "wall" | "insulation" | "win" | "door" | "roof"),
+                "it" => matches!(head, "switch" | "ap" | "rack" | "controller"),
+                "furniture" => matches!(head, "desk" | "chair"),
+                _ => true,
+            };
+        }
+
+        // Legacy hyphen prefixes
+        match system {
+            "hvac" => {
+                fixture.starts_with("boiler-")
+                    || fixture.starts_with("ahu-")
+                    || fixture.starts_with("vav-")
+            }
+            "plumbing" | "plumb" => {
+                fixture.starts_with("valve-") || fixture.starts_with("pump-")
+            }
+            "electrical" | "elec" => {
+                fixture.starts_with("panel-") || fixture.starts_with("breaker-")
+            }
+            "fire" => fixture.starts_with("sprinkler-") || fixture.starts_with("alarm-"),
+            "lighting" => fixture.starts_with("fixture-") || fixture.starts_with("control-"),
+            "security" => fixture.starts_with("camera-") || fixture.starts_with("access-"),
+            "elevators" | "vert" => fixture.starts_with("car-") || fixture.starts_with("control-"),
+            "roof" => fixture.starts_with("unit-") || fixture.starts_with("drain-"),
+            "windows" => fixture.starts_with("frame-") || fixture.starts_with("glass-"),
+            "doors" => fixture.starts_with("hinge-") || fixture.starts_with("lock-"),
+            "structure" | "struct" => {
+                fixture.starts_with("column-") || fixture.starts_with("beam-")
+            }
+            "envelope" => fixture.starts_with("wall-") || fixture.starts_with("insulation-"),
+            "it" => fixture.starts_with("switch-") || fixture.starts_with("ap-"),
+            "furniture" => fixture.starts_with("desk-") || fixture.starts_with("chair-"),
+            _ => true,
+        }
+    }
+
+    /// Segment charset + traversal safety (ADR 0001: dots allowed).
+    pub fn is_valid_segment(part: &str) -> bool {
+        if part.is_empty() || part == "." || part == ".." {
+            return false;
+        }
+        if part.starts_with('.') || part.ends_with('.') {
+            return false;
+        }
+        if part.contains("..") {
+            return false;
+        }
+        part.chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
     }
 
     /// Get parent path (up to room, excluding fixture)
@@ -355,23 +416,91 @@ impl ArxAddress {
         }
     }
 
-    /// Sanitize a path part for use in addresses
-    /// Converts to lowercase, replaces invalid characters with hyphens
-    fn sanitize_part(part: &str) -> String {
-        part.to_lowercase()
+    /// Sanitize a path part for use in addresses.
+    /// Lowercase; keep alphanumerics, `-`, `_`, `.`; other chars become `-`.
+    pub fn sanitize_part(part: &str) -> String {
+        let mapped: String = part
+            .to_lowercase()
             .chars()
             .map(|c| {
-                if c.is_alphanumeric() || c == '-' || c == '_' {
+                if c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.' {
                     c
                 } else {
                     '-'
                 }
             })
-            .collect::<String>()
+            .collect();
+        // Collapse consecutive hyphens; strip leading/trailing hyphens (not dots mid-token).
+        let collapsed = mapped
             .split('-')
             .filter(|s| !s.is_empty())
             .collect::<Vec<_>>()
-            .join("-")
+            .join("-");
+        // Reject pure-dot garbage after collapse
+        if collapsed == "." || collapsed == ".." || collapsed.is_empty() {
+            return String::new();
+        }
+        collapsed
+            .trim_matches('.')
+            .trim_matches('-')
+            .to_string()
+    }
+
+    /// Stable lowercase slug for lab roots and equipment leaves.
+    pub fn stable_slug(input: &str) -> String {
+        let s = Self::sanitize_part(input);
+        if s.is_empty() {
+            // Fallback: short hash of raw input for GlobalId-like opaque names
+            let mut hasher = Sha256::new();
+            hasher.update(input.as_bytes());
+            let hex = format!("{:x}", hasher.finalize());
+            return hex[..12].to_string();
+        }
+        // Prefer short slug; if still very long (e.g. IFC-ish), hash
+        if s.len() > 48 || s.chars().filter(|c| c.is_ascii_uppercase()).count() > 0 {
+            // already lowercased by sanitize
+        }
+        if s.len() > 48 {
+            let mut hasher = Sha256::new();
+            hasher.update(s.as_bytes());
+            let hex = format!("{:x}", hasher.finalize());
+            return hex[..12].to_string();
+        }
+        s
+    }
+
+    /// Floor segment `fl.<n>` from storey name + index.
+    pub fn floor_segment(name: &str, index: usize) -> String {
+        // Prefer last contiguous digit group (e.g. "Level 2" → 2, "Floor 12" → 12)
+        let mut last_group = String::new();
+        let mut cur = String::new();
+        for c in name.chars() {
+            if c.is_ascii_digit() {
+                cur.push(c);
+            } else if !cur.is_empty() {
+                last_group = cur.clone();
+                cur.clear();
+            }
+        }
+        if !cur.is_empty() {
+            last_group = cur;
+        }
+        if !last_group.is_empty() && last_group.len() <= 3 {
+            if let Ok(n) = last_group.parse::<u32>() {
+                return format!("fl.{}", n);
+            }
+        }
+        format!("fl.{}", index)
+    }
+
+    /// Room segment `rm.<slug>`.
+    pub fn room_segment(name: &str) -> String {
+        format!("rm.{}", Self::stable_slug(name))
+    }
+
+    /// Equipment / fixture leaf segment from name.
+    pub fn equipment_segment(name: &str) -> String {
+        Self::stable_slug(name)
     }
 }
 
@@ -382,10 +511,10 @@ pub enum AddressValidationError {
     /// A segment contains uppercase characters, violating lowercase-only naming.
     #[error("Segment '{part}' must be lowercase")]
     NotLowercase { part: String },
-    /// A segment contains non-alphanumeric, non-hyphen, non-underscore characters.
+    /// A segment contains characters outside the allowed set (alnum, `-`, `_`, `.`).
     #[error("Segment '{part}' contains invalid characters")]
     InvalidCharacters { part: String },
-    /// The address path does not start with a leading slash.
+    /// Legacy: path did not start with `/` (no longer raised — both forms accepted).
     #[error("Path must start with '/'")]
     MissingLeadingSlash,
     /// The address path is an empty string.
@@ -449,8 +578,37 @@ mod tests {
 
     #[test]
     fn test_from_path_invalid() {
-        assert!(ArxAddress::from_path("usa/ny").is_err());
+        // Leading slash optional — bare segments are valid
+        assert!(ArxAddress::from_path("usa/ny").is_ok());
         assert!(ArxAddress::from_path("/usa/ny/../invalid").is_err());
+        assert!(ArxAddress::from_path("/usa/ny/special@char").is_err());
+    }
+
+    #[test]
+    fn test_adr_dots_and_bldg_root() {
+        let root = "bldg.us.fl.tampa.dale-mabry.143677.s2";
+        let addr = ArxAddress::from_path(&format!("{}/fl.2/rm.215/panel.l1", root)).unwrap();
+        assert!(addr.validate().is_ok());
+        assert_eq!(
+            addr.path,
+            "/bldg.us.fl.tampa.dale-mabry.143677.s2/fl.2/rm.215/panel.l1"
+        );
+
+        let lab = ArxAddress::lab_building_root("Duplex A");
+        assert!(lab.path.starts_with("/bldg.lab.local.sample."));
+        let floor = lab.join("fl.1").unwrap();
+        let room = floor.join("rm.a101").unwrap();
+        assert!(room.starts_with_address(&lab));
+        assert!(room.validate().is_ok());
+    }
+
+    #[test]
+    fn test_elec_dotted_mnemonic() {
+        let addr = ArxAddress::from_path(
+            "bldg.lab.local.sample.hq/elec/panel.l1/ckt.14/rec.7",
+        )
+        .unwrap();
+        assert!(addr.validate().is_ok());
     }
 
     #[test]
@@ -662,9 +820,16 @@ mod tests {
 
     #[test]
     fn test_invalid_path_rejected() {
-        // Test that invalid paths are rejected
         assert!(ArxAddress::from_path("").is_err());
         assert!(ArxAddress::from_path("/").is_err());
         assert!(ArxAddress::from_path("/usa/ny/special@char").is_err());
+        assert!(ArxAddress::from_path("/usa/ny/foo..bar").is_err());
+    }
+
+    #[test]
+    fn test_floor_room_segments() {
+        assert_eq!(ArxAddress::floor_segment("Level 2", 0), "fl.2");
+        assert_eq!(ArxAddress::floor_segment("Roof", 3), "fl.3");
+        assert_eq!(ArxAddress::room_segment("A101"), "rm.a101");
     }
 }

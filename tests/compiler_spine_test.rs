@@ -48,7 +48,15 @@ fn compiler_spine_seed_mutate_query_export() {
     // --- Backfill addresses + persist through finalize gate ---
     let mut building = load_building_at(".").expect("load");
     let filled = backfill_equipment_addresses(&mut building);
-    assert_eq!(filled, 1);
+    // building + floor + wing + room + equipment (ADR 0001 multi-entity backfill)
+    assert!(
+        filled >= 1,
+        "expected at least equipment address filled, got {filled}"
+    );
+    assert!(
+        building.address.is_some(),
+        "building root address required"
+    );
     let building = persist_building(building, false, Some("spine: backfill")).expect("persist");
 
     let report = validate_building(&building);
@@ -57,15 +65,19 @@ fn compiler_spine_seed_mutate_query_export() {
         "validation errors: {:?}",
         report.summary_lines()
     );
+    assert!(
+        !report.results.iter().any(|r| r.rule_id == "address.missing"),
+        "no missing-address warnings after backfill: {:?}",
+        report.summary_lines()
+    );
 
-    // --- Query by durable address glob ---
+    // --- Query by durable address glob (ADR lab root) ---
     let matches = arxos::cli::commands::query::query_equipment_by_address(
-        "/local/local/local/*/floor-1/*/sensor-a",
+        "/bldg.lab.local.sample.*/fl.*/rm.*/sensor-a",
     )
     .expect("query");
-    // floor slug may be "floor-1" from name "Floor 1"
     let matches2 = arxos::cli::commands::query::query_equipment_by_address(
-        "/local/local/local/*/*/*/sensor-a",
+        "/bldg.lab.local.sample.*/*/rm.*/sensor-a",
     )
     .expect("query wildcard");
     assert!(
@@ -85,6 +97,10 @@ fn compiler_spine_seed_mutate_query_export() {
         .and_then(|e| e.address.as_ref())
         .map(|a| a.path.clone())
         .expect("address present");
+    assert!(
+        path.starts_with("/bldg.lab.local.sample."),
+        "ADR lab root expected, got {path}"
+    );
     let exact = arxos::cli::commands::query::query_equipment_by_address(&path).expect("exact");
     assert_eq!(exact.len(), 1);
     assert_eq!(exact[0].name, "Sensor-A");
@@ -101,7 +117,7 @@ fn compiler_spine_seed_mutate_query_export() {
 
     // Round-trip address type API
     let addr = ArxAddress::from_path(&path).expect("parse path");
-    assert!(addr.matches_glob("/local/local/local/*/*/*"));
+    assert!(addr.matches_glob("/bldg.lab.local.sample.*/*/*/*"));
 
     env::set_current_dir(original).ok();
 }

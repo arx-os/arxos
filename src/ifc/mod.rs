@@ -65,6 +65,16 @@ impl IFCProcessor {
         file_path: &str,
         validate_strict: bool,
     ) -> anyhow::Result<ParsingResult> {
+        self.parse_native_with_root(file_path, validate_strict, None)
+    }
+
+    /// Parse IFC with an optional ADR building root override (postal-derived).
+    pub fn parse_native_with_root(
+        &self,
+        file_path: &str,
+        validate_strict: bool,
+        building_root: Option<crate::core::domain::ArxAddress>,
+    ) -> anyhow::Result<ParsingResult> {
         info!(
             "Processing IFC file (Native, strict={}): {}",
             validate_strict, file_path
@@ -73,7 +83,7 @@ impl IFCProcessor {
             return Err(anyhow::anyhow!("IFC file not found: {}", file_path));
         }
         let content = std::fs::read_to_string(file_path)?;
-        self.parse_native_content(&content, validate_strict)
+        self.parse_native_content_with_root(&content, validate_strict, building_root)
     }
 
     /// Parse IFC from an in-memory STEP string (CLI / agent / ingest shared path).
@@ -81,6 +91,16 @@ impl IFCProcessor {
         &self,
         content: &str,
         validate_strict: bool,
+    ) -> anyhow::Result<ParsingResult> {
+        self.parse_native_content_with_root(content, validate_strict, None)
+    }
+
+    /// Parse IFC content with optional building root (ADR 0001 postal).
+    pub fn parse_native_content_with_root(
+        &self,
+        content: &str,
+        validate_strict: bool,
+        building_root: Option<crate::core::domain::ArxAddress>,
     ) -> anyhow::Result<ParsingResult> {
         let lexer = parser::StepLexer::new(content);
         let mut registry = parser::EntityRegistry::new();
@@ -95,6 +115,9 @@ impl IFCProcessor {
         }
 
         let mut resolver = parser::IfcResolver::new(&mut registry);
+        if let Some(root) = building_root {
+            resolver = resolver.with_building_root(root);
+        }
         let (building, report) = resolver.resolve_all()?;
         let warnings = report
             .warnings

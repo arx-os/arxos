@@ -1,6 +1,8 @@
 //! CLI command implementations for the Building compiler surface.
 
 pub mod access;
+pub mod add;
+pub mod browse;
 pub mod command_trait;
 pub mod contribute;
 pub mod data;

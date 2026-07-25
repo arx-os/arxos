@@ -20,13 +20,47 @@ use crate::ifc::mapping::{
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 
+/// Attach equipment to the longest matching room (or false if none).
+fn attach_by_spatial_prefix(
+    building: &mut Building,
+    eq: &mut Equipment,
+    spatial: &ArxAddress,
+) -> bool {
+    let mut best: Option<(usize, usize, usize)> = None;
+    let mut best_len = 0usize;
+    for (fi, floor) in building.floors.iter().enumerate() {
+        for (wi, wing) in floor.wings.iter().enumerate() {
+            for (ri, room) in wing.rooms.iter().enumerate() {
+                if let Some(ref ra) = room.address {
+                    if spatial.starts_with_address(ra) && ra.path.len() > best_len {
+                        best_len = ra.path.len();
+                        best = Some((fi, wi, ri));
+                    }
+                }
+            }
+        }
+    }
+    if let Some((fi, wi, ri)) = best {
+        let room = &mut building.floors[fi].wings[wi].rooms[ri];
+        eq.set_room(room.id.clone());
+        room.equipment.push(eq.clone());
+        return true;
+    }
+    false
+}
+
 /// Resolver for mapping IFC entities to ArxOS domain objects.
 pub struct IfcResolver<'a> {
     registry: &'a mut EntityRegistry,
-    // Building metadata for ArxAddress
+    /// Optional postal-derived building root override (ADR 0001 fully-qualified root).
+    /// When unset, import uses a deterministic `bldg.lab.local.sample.<slug>` root.
+    building_root_override: Option<ArxAddress>,
+    /// Legacy geo metadata (deprecated); used only if explicitly set via `with_metadata`.
     country: String,
     state: String,
     city: String,
+    use_legacy_geo_root: bool,
+    floor_index: usize,
     resolved_rooms: std::collections::HashSet<u64>,
     warnings: Vec<MappingWarning>,
 }
@@ -36,20 +70,64 @@ impl<'a> IfcResolver<'a> {
     pub fn new(registry: &'a mut EntityRegistry) -> Self {
         Self {
             registry,
-            country: "Global".to_string(),
-            state: "HQ".to_string(),
-            city: "Main".to_string(),
+            building_root_override: None,
+            country: String::new(),
+            state: String::new(),
+            city: String::new(),
+            use_legacy_geo_root: false,
+            floor_index: 0,
             resolved_rooms: std::collections::HashSet::new(),
             warnings: Vec::new(),
         }
     }
 
-    /// Set building metadata for ArxAddress generation.
+    /// Override the building root with a fully-qualified ADR address (no child segments).
+    pub fn with_building_root(mut self, root: ArxAddress) -> Self {
+        self.building_root_override = Some(root);
+        self
+    }
+
+    /// Legacy geo metadata for ArxAddress generation (pre-ADR). Prefer `with_building_root`.
     pub fn with_metadata(mut self, country: &str, state: &str, city: &str) -> Self {
         self.country = country.to_string();
         self.state = state.to_string();
         self.city = city.to_string();
+        self.use_legacy_geo_root = true;
         self
+    }
+
+    /// Compute durable building root address (ADR 0001).
+    fn compute_building_root(&self, name: &str, ifc_global_id: Option<&str>) -> ArxAddress {
+        if let Some(ref root) = self.building_root_override {
+            return root.clone();
+        }
+        if self.use_legacy_geo_root {
+            return ArxAddress::new(
+                &self.country,
+                &self.state,
+                &self.city,
+                name,
+                "",
+                "",
+                "",
+            );
+        }
+        // Prefer human name; if name looks like IFC compressed GUID, use GlobalId/hash key.
+        let key = if Self::looks_like_ifc_guid(name) {
+            ifc_global_id.unwrap_or(name)
+        } else if name.trim().is_empty() || name == "Unknown Building" {
+            ifc_global_id.unwrap_or("building")
+        } else {
+            name
+        };
+        ArxAddress::lab_building_root(key)
+    }
+
+    fn looks_like_ifc_guid(s: &str) -> bool {
+        let t = s.trim();
+        t.len() == 22
+            && t.chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '$')
     }
 
     /// Resolve the entire building hierarchy into a rich Building + loss report.
@@ -94,61 +172,87 @@ impl<'a> IfcResolver<'a> {
             ));
         }
 
-        // Rehydrate the building hierarchy with the resolved equipment
+        // Rehydrate hierarchy: spatial_attach / spatial address prefix / legacy names.
+        // Operational address may be under /elec while spatial graph uses room containment.
         let mut fallback_attach = 0usize;
         for mut eq in equipment_list {
             let mut attached = false;
-            if let Some(ref addr) = eq.address {
-                let parts = addr.parts().unwrap_or_default();
-                let floor_name = parts.4;
-                let room_name = parts.5;
 
-                if !room_name.is_empty() {
-                    // Try to find the room and attach it
-                    for floor in &mut building.floors {
-                        for wing in &mut floor.wings {
-                            if let Some(room) = wing.rooms.iter_mut().find(|r| {
-                                let sanitized_r_name =
-                                    r.name.to_lowercase().replace([' ', '_'], "-");
-                                r.name == room_name || sanitized_r_name == room_name
-                            }) {
-                                eq.set_room(room.id.clone());
-                                room.equipment.push(eq.clone());
-                                attached = true;
-                                break;
-                            }
-                        }
-                        if attached {
-                            break;
-                        }
-                    }
+            // 0) Explicit spatial attach path (used when operational address is /elec/...)
+            if let Some(attach) = eq
+                .properties
+                .get("arx.spatial_attach")
+                .cloned()
+                .and_then(|p| ArxAddress::from_path(&p).ok())
+            {
+                attached = attach_by_spatial_prefix(&mut building, &mut eq, &attach);
+                eq.properties.remove("arx.spatial_attach");
+            }
+
+            // 1) Longest room address prefix match on operational address
+            if !attached {
+                if let Some(eq_addr) = eq.address.clone() {
+                    attached = attach_by_spatial_prefix(&mut building, &mut eq, &eq_addr);
                 }
+            }
 
-                if !attached && !floor_name.is_empty() {
-                    // Try to find the floor
+            // 2) Floor address prefix (floor-level equipment)
+            if !attached {
+                if let Some(ref eq_addr) = eq.address {
                     if let Some(floor) = building.floors.iter_mut().find(|f| {
-                        let sanitized_f_name =
-                            f.name.to_lowercase().replace([' ', '_'], "-");
-                        f.name == floor_name || sanitized_f_name == floor_name
+                        f.address
+                            .as_ref()
+                            .map(|fa| eq_addr.starts_with_address(fa))
+                            .unwrap_or(false)
                     }) {
                         let wing_opt = wing_name_from_properties(&eq.properties);
-
                         if let Some(w_name) = wing_opt {
-                            // Find or create wing on that floor
-                            if let Some(wing) = floor.wings.iter_mut().find(|w| {
-                                let sanitized_w_name =
-                                    w.name.to_lowercase().replace([' ', '_'], "-");
-                                w.name == w_name || sanitized_w_name == w_name
-                            }) {
+                            if let Some(wing) = floor.wings.iter_mut().find(|w| w.name == w_name) {
                                 wing.equipment.push(eq.clone());
-                                attached = true;
                             } else {
                                 let mut wing = Wing::new(w_name);
                                 wing.equipment.push(eq.clone());
                                 floor.wings.push(wing);
-                                attached = true;
                             }
                         } else {
+                            floor.equipment.push(eq.clone());
+                        }
+                        attached = true;
+                    }
+                }
+            }
+
+            // 3) Legacy name-based attach via geo parts (pre-ADR paths)
+            if !attached {
+                if let Some(ref addr) = eq.address {
+                    let parts = addr.parts().unwrap_or_default();
+                    let floor_name = parts.4;
+                    let room_name = parts.5;
+                    if !room_name.is_empty() {
+                        for floor in &mut building.floors {
+                            for wing in &mut floor.wings {
+                                if let Some(room) = wing.rooms.iter_mut().find(|r| {
+                                    let sanitized_r_name =
+                                        r.name.to_lowercase().replace([' ', '_'], "-");
+                                    r.name == room_name || sanitized_r_name == room_name
+                                }) {
+                                    eq.set_room(room.id.clone());
+                                    room.equipment.push(eq.clone());
+                                    attached = true;
+                                    break;
+                                }
+                            }
+                            if attached {
+                                break;
+                            }
+                        }
+                    }
+                    if !attached && !floor_name.is_empty() {
+                        if let Some(floor) = building.floors.iter_mut().find(|f| {
+                            let sanitized_f_name =
+                                f.name.to_lowercase().replace([' ', '_'], "-");
+                            f.name == floor_name || sanitized_f_name == floor_name
+                        }) {
                             floor.equipment.push(eq.clone());
                             attached = true;
                         }
@@ -157,9 +261,16 @@ impl<'a> IfcResolver<'a> {
             }
 
             if !attached {
-                // Fallback: attach to first floor
                 if let Some(floor) = building.floors.first_mut() {
                     let name = eq.name.clone();
+                    // Ensure fallback equipment still has an address under first floor when possible
+                    if eq.address.is_none() {
+                        if let Some(ref fa) = floor.address {
+                            if let Ok(a) = fa.join(&ArxAddress::equipment_segment(&name)) {
+                                eq.address = Some(a);
+                            }
+                        }
+                    }
                     floor.equipment.push(eq);
                     fallback_attach += 1;
                     self.warnings.push(
@@ -304,11 +415,7 @@ fn is_ignored_class(class: &str) -> bool {
             .extract_entity_name(raw)
             .unwrap_or_else(|| "Unknown Building".to_string());
 
-        // Generate ArxAddress for Building
-        let addr = ArxAddress::new(&self.country, &self.state, &self.city, &name, "", "", "");
-        self.registry.set_address(id, addr);
-
-        let mut building = Building::new(name, "".to_string());
+        let mut building = Building::new(name.clone(), "".to_string());
 
         // Resolve Properties
         let mut props = HashMap::new();
@@ -321,18 +428,25 @@ fn is_ignored_class(class: &str) -> bool {
         apply_identity_on_import(
             &mut building.id,
             &mut building.ifc_global_id,
-            global_id,
+            global_id.clone(),
             &props,
         );
         normalize_imported_properties(&mut props);
+
+        // ADR 0001: durable building root on domain entity + registry
+        let root = self.compute_building_root(&name, building.ifc_global_id.as_deref());
+        building.address = Some(root.clone());
+        self.registry.set_address(id, root);
 
         for (k, v) in props {
             building.add_metadata_property(k, v);
         }
 
         let floor_ids = self.find_children_of(id, "IFCBUILDINGSTOREY");
+        self.floor_index = 0;
         for floor_id in floor_ids {
             building.floors.push(self.resolve_floor(floor_id, id)?);
+            self.floor_index += 1;
         }
 
         // --- FALLBACK FOR UNRESOLVED SPACES (ROOMS) ---
@@ -371,22 +485,16 @@ fn is_ignored_class(class: &str) -> bool {
             (name, floor_global_id)
         };
 
-        // Generate ArxAddress for Floor
-        if let Some(parent_addr) = self.registry.get_address(parent_id) {
-            let (_, _, _, building_name, _, _, _) = parent_addr.parts().unwrap_or_default();
-            let addr = ArxAddress::new(
-                &self.country,
-                &self.state,
-                &self.city,
-                &building_name,
-                &name,
-                "",
-                "",
-            );
-            self.registry.set_address(id, addr);
-        }
+        let mut floor = Floor::new(name.clone(), self.floor_index as i32);
 
-        let mut floor = Floor::new(name, 0); // Defaulting to level 0, can be refined with IfcStorey
+        // ADR 0001: ROOT/fl.<n> on domain + registry
+        if let Some(parent_addr) = self.registry.get_address(parent_id) {
+            let seg = ArxAddress::floor_segment(&name, self.floor_index);
+            if let Ok(addr) = parent_addr.join(&seg) {
+                floor.address = Some(addr.clone());
+                self.registry.set_address(id, addr);
+            }
+        }
 
         for room_id in self.registry.get_contained(id) {
             let is_space = if let Some(raw) = self.registry.get_raw(room_id) {
@@ -451,24 +559,7 @@ fn is_ignored_class(class: &str) -> bool {
             (name, global_id)
         };
 
-        // Generate ArxAddress for Room
-        if let Some(parent_addr) = self.registry.get_address(parent_id) {
-            let (_, _, _, building_name, floor_name, _, _) =
-                parent_addr.parts().unwrap_or_default();
-            let addr = ArxAddress::new(
-                &self.country,
-                &self.state,
-                &self.city,
-                &building_name,
-                &floor_name,
-                &name,
-                "",
-            );
-            self.registry.set_address(id, addr);
-        }
-
-        let mut room = Room::new(name, RoomType::Other("Space".to_string()));
-        let raw = self.registry.get_raw(id).unwrap();
+        let mut room = Room::new(name.clone(), RoomType::Other("Space".to_string()));
 
         // Resolve Properties
         self.resolve_properties(id, &mut room.properties);
@@ -478,6 +569,15 @@ fn is_ignored_class(class: &str) -> bool {
             global_id,
             &room.properties,
         );
+
+        // ADR 0001: parent is floor (or building) address → …/rm.<slug>
+        if let Some(parent_addr) = self.registry.get_address(parent_id) {
+            let seg = ArxAddress::room_segment(&name);
+            if let Ok(addr) = parent_addr.join(&seg) {
+                room.address = Some(addr.clone());
+                self.registry.set_address(id, addr);
+            }
+        }
         apply_lidar_on_import(&mut room.lidar_enrichment, &mut room.properties);
         normalize_imported_properties(&mut room.properties);
 
@@ -486,8 +586,18 @@ fn is_ignored_class(class: &str) -> bool {
         let mesh_resolver = MeshResolver::new(self.registry, &geom_resolver);
 
         // IFC4 product: ObjectPlacement @5, Representation @6; fall back for sparse files
-        let placement_param = raw.params.get(5).or_else(|| raw.params.get(2));
-        let representation_param = raw.params.get(6).or_else(|| raw.params.get(4));
+        let (placement_param, representation_param) = {
+            let raw = self
+                .registry
+                .get_raw(id)
+                .ok_or_else(|| anyhow!("Room entity #{} not found", id))?;
+            (
+                raw.params.get(5).or_else(|| raw.params.get(2)).cloned(),
+                raw.params.get(6).or_else(|| raw.params.get(4)).cloned(),
+            )
+        };
+        let placement_param = placement_param.as_ref();
+        let representation_param = representation_param.as_ref();
 
         let (ox, oy, oz, transform) = if let Some(Param::Reference(placement_id)) = placement_param
         {
@@ -671,14 +781,11 @@ fn is_ignored_class(class: &str) -> bool {
                 if let Some((name, eq_type)) = eq_data {
                     let mut eq = Equipment::new(name, "".to_string(), eq_type); // Empty path, using address instead
 
-                    // Generate ArxAddress for Equipment (Fixture)
+                    // Spatial container for graph placement (may differ from operational address)
+                    let mut spatial_attach: Option<ArxAddress> = None;
                     if let Some(container_id) = self.find_container_of(id) {
                         if let Some(container_addr) = self.registry.get_address(container_id) {
-                            let (country, state, city, building, floor, room, _) =
-                                container_addr.parts().unwrap_or_default();
-                            eq.address = Some(ArxAddress::new(
-                                &country, &state, &city, &building, &floor, &room, &eq.name,
-                            ));
+                            spatial_attach = Some(container_addr.clone());
                         }
                     }
 
@@ -687,7 +794,7 @@ fn is_ignored_class(class: &str) -> bool {
                         eq.properties.insert(PROP_ARX_WING.to_string(), w_name);
                     }
 
-                    // Resolve Properties + identity
+                    // Resolve Properties + identity before address choice (panel/circuit props)
                     self.resolve_properties(id, &mut eq.properties);
                     let global_id = self
                         .registry
@@ -701,6 +808,46 @@ fn is_ignored_class(class: &str) -> bool {
                     );
                     apply_lidar_on_import(&mut eq.lidar_enrichment, &mut eq.properties);
                     normalize_imported_properties(&mut eq.properties);
+
+                    // ADR 0001: prefer electrical system address when IFC class/signal is clear
+                    let building_root = self
+                        .registry
+                        .get_by_class("IFCBUILDING")
+                        .first()
+                        .and_then(|bid| self.registry.get_address(*bid));
+                    if let Some(root) = building_root {
+                        if let Some(elec_addr) = crate::core::domain::elec::try_elec_address_from_import(
+                            root,
+                            class,
+                            &eq.name,
+                            &eq.equipment_type,
+                            &eq.properties,
+                        ) {
+                            eq.address = Some(elec_addr);
+                            // Keep spatial attach path so rehydrate can place into room graph
+                            if let Some(sa) = spatial_attach.as_ref() {
+                                eq.properties
+                                    .insert("arx.spatial_attach".into(), sa.path.clone());
+                            }
+                        }
+                    }
+                    // Spatial operational address when not on the elec tree
+                    if eq.address.is_none() {
+                        if let Some(container_addr) = spatial_attach.as_ref() {
+                            let leaf = ArxAddress::equipment_segment(&eq.name);
+                            if let Ok(addr) = container_addr.join(&leaf) {
+                                eq.address = Some(addr);
+                            }
+                        }
+                    }
+                    if eq.address.is_none() {
+                        if let Some(root) = building_root {
+                            let leaf = ArxAddress::equipment_segment(&eq.name);
+                            if let Ok(addr) = root.join(&leaf) {
+                                eq.address = Some(addr);
+                            }
+                        }
+                    }
 
                     // Placement + optional body (L2)
                     if let Some(raw) = self.registry.get_raw(id) {

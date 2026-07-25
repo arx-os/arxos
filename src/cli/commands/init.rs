@@ -14,6 +14,23 @@ pub struct InitCommand {
     #[arg(short, long)]
     pub name: Option<String>,
 
+    /// Free-form postal address for ADR building root
+    #[arg(long = "postal")]
+    pub postal: Option<String>,
+
+    #[arg(long)]
+    pub country: Option<String>,
+    #[arg(long)]
+    pub region: Option<String>,
+    #[arg(long)]
+    pub city: Option<String>,
+    #[arg(long)]
+    pub street: Option<String>,
+    #[arg(long)]
+    pub number: Option<String>,
+    #[arg(long)]
+    pub unit: Option<String>,
+
     /// Install Git hooks for auto-export
     #[arg(long, default_value = "true")]
     pub install_hooks: bool,
@@ -134,6 +151,7 @@ impl InitCommand {
     }
 
     fn create_building_yaml(&self, dir: &Path) -> Result<()> {
+        use crate::core::domain::{resolve_building_root_from_options, ArxAddress};
         use crate::core::{Building, Floor};
 
         let name = self
@@ -141,16 +159,38 @@ impl InitCommand {
             .clone()
             .unwrap_or_else(|| "My Building".to_string());
         let path = format!("/{}", name.replace(' ', "-").to_lowercase());
-        let mut building = Building::new(name, path);
+        let mut building = Building::new(name.clone(), path);
         building.description = Some("A sample building managed with ArxOS".into());
-        building.add_floor(Floor::new("Ground Floor".to_string(), 0));
+        // ADR 0001: postal root when provided, else lab root
+        let root = resolve_building_root_from_options(
+            self.postal.as_deref(),
+            self.country.as_deref(),
+            self.region.as_deref(),
+            self.city.as_deref(),
+            self.street.as_deref(),
+            self.number.as_deref(),
+            self.unit.as_deref(),
+        )?
+        .unwrap_or_else(|| ArxAddress::lab_building_root(&name));
+        building.address = Some(root.clone());
+        let mut floor = Floor::new("Ground Floor".to_string(), 0);
+        floor.address = Some(
+            root.join(&ArxAddress::floor_segment("Ground Floor", 0))
+                .unwrap_or_else(|_| root.join("fl.0").expect("fl.0")),
+        );
+        building.add_floor(floor);
 
         crate::persistence::save_building_at(dir, &building)
             .map_err(|e| anyhow::anyhow!("Failed to write building.yaml: {}", e))?;
 
         println!(
-            "📄 Created building.yaml (id={}, 1 floor)",
-            building.id
+            "📄 Created building.yaml (id={}, 1 floor, address={})",
+            building.id,
+            building
+                .address
+                .as_ref()
+                .map(|a| a.path.as_str())
+                .unwrap_or("(none)")
         );
         println!("   Next: arx import ifc|lidar … or arx edit to grow the model");
         Ok(())

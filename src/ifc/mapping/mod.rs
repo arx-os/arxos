@@ -18,7 +18,8 @@ pub use geometry::{
     COORD_BUILDING_LOCAL, GEOMETRY_EPSILON,
 };
 pub use identity::{
-    apply_identity_on_import, assign_missing_global_ids, identity_property_map,
+    apply_identity_on_import, assign_missing_global_ids, has_ifc_global_id, identity_property_map,
+    GlobalIdAssignStats,
     ifc_global_id_from_uuid, resolve_product_global_id, uuid_from_arx_id,
 };
 pub use lidar::{

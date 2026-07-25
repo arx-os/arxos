@@ -13,7 +13,8 @@ pub use field_script::{
     mark_equipment_proposed_script, quote_token, validate_name, MAX_NAME_LEN,
 };
 pub use import::{
-    finalize_ingest, import_ifc_path, import_lidar_path, IngestOptions, IngestResult, IngestSource,
+    finalize_ingest, import_ifc_path, import_ifc_path_with_root, import_lidar_path, IngestOptions,
+    IngestResult, IngestSource,
 };
 pub use sync::{
     apply_text_to_sync_json, building_to_envelope, merge_sync_json, BuildingSyncEnvelope,

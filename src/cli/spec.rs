@@ -21,9 +21,28 @@ pub enum Commands {
         /// Building description
         #[arg(long)]
         description: Option<String>,
-        /// Location/address
+        /// Free-form postal address for ADR building root
+        /// (e.g. "143677 N. Dale Mabry Hwy, Suite 2, Tampa, FL, 33622")
+        #[arg(long = "postal", visible_alias = "location")]
+        postal: Option<String>,
+        /// Structured postal: country code (e.g. us)
         #[arg(long)]
-        location: Option<String>,
+        country: Option<String>,
+        /// Structured postal: region/state (e.g. fl)
+        #[arg(long)]
+        region: Option<String>,
+        /// Structured postal: city
+        #[arg(long)]
+        city: Option<String>,
+        /// Structured postal: street name (directionals/suffixes stripped)
+        #[arg(long)]
+        street: Option<String>,
+        /// Structured postal: street number
+        #[arg(long)]
+        number: Option<String>,
+        /// Structured postal: unit/suite (e.g. "Suite 2" or s2)
+        #[arg(long)]
+        unit: Option<String>,
         /// Legacy flag (Git init is now the default). Kept so old scripts do not fail.
         #[arg(long = "git-init", hide = true)]
         git_init: bool,
@@ -57,6 +76,10 @@ pub enum Commands {
         dry_run: bool,
     },
     /// Validate building.yaml
+    ///
+    /// Validates the whole building model. Address-scoped validation is not
+    /// implemented yet — use `arx show` / `arx ls` / `arx tree` to navigate,
+    /// then `arx validate` for full-model checks (ADR 0001).
     Validate {
         /// Path to project root containing building.yaml
         #[arg(long)]
@@ -64,6 +87,58 @@ pub enum Commands {
         /// Enable strict address prefix checking
         #[arg(long)]
         strict_addresses: bool,
+    },
+    /// Show a single entity by ArxAddress (ADR 0001)
+    ///
+    /// Example: arx show /bldg.lab.local.sample.duplex/fl.1/rm.a101
+    Show {
+        /// Hierarchical address (leading `/` optional)
+        address: String,
+        /// Project root containing building.yaml (default: cwd)
+        #[arg(long)]
+        path: Option<String>,
+    },
+    /// List direct children of an ArxAddress (ADR 0001)
+    ///
+    /// Example: arx ls /bldg.lab.local.sample.duplex/fl.1
+    Ls {
+        /// Hierarchical address (leading `/` optional)
+        address: String,
+        /// Project root containing building.yaml (default: cwd)
+        #[arg(long)]
+        path: Option<String>,
+    },
+    /// Print a hierarchical tree under an ArxAddress (ADR 0001)
+    ///
+    /// Example: arx tree /bldg.lab.local.sample.duplex --depth 3
+    Tree {
+        /// Hierarchical address (leading `/` optional)
+        address: String,
+        /// Max depth below the root (default: 3)
+        #[arg(long, default_value = "3")]
+        depth: usize,
+        /// Project root containing building.yaml (default: cwd)
+        #[arg(long)]
+        path: Option<String>,
+    },
+    /// Add equipment under a parent ArxAddress (ADR 0001)
+    ///
+    /// Examples:
+    ///   arx add bldg…/elec/panel.l1/ckt.14 outlet
+    ///   arx add bldg…/fl.1/rm.a101 light --name Hall
+    ///
+    /// Kinds: outlet|rec, light|ltg, switch|sw, jbox, ckt|circuit, panel
+    Add {
+        /// Parent hierarchical address
+        parent: String,
+        /// Entity kind to create
+        kind: String,
+        /// Optional display name (also used for leaf slug when set)
+        #[arg(long)]
+        name: Option<String>,
+        /// Project root containing building.yaml (default: cwd)
+        #[arg(long)]
+        path: Option<String>,
     },
     /// Export building SSOT (IFC is the compiler interchange spine)
     ///
@@ -119,11 +194,26 @@ Use --path to select a project root without changing cwd.")]
         #[arg(long)]
         verbose: bool,
     },
-    /// Backfill missing ArxAddress fields on equipment
+    /// Backfill missing ArxAddress fields; optionally apply postal building root
     Migrate {
         /// Preview changes without writing
         #[arg(long)]
         dry_run: bool,
+        /// Free-form postal address to re-root the building (ADR 0001)
+        #[arg(long = "postal")]
+        postal: Option<String>,
+        #[arg(long)]
+        country: Option<String>,
+        #[arg(long)]
+        region: Option<String>,
+        #[arg(long)]
+        city: Option<String>,
+        #[arg(long)]
+        street: Option<String>,
+        #[arg(long)]
+        number: Option<String>,
+        #[arg(long)]
+        unit: Option<String>,
     },
 
     // ── Model CRUD ──────────────────────────────────────────────────────
@@ -425,6 +515,27 @@ pub enum ImportSubcommand {
         /// Enable strict address prefix checking
         #[arg(long)]
         strict_addresses: bool,
+        /// Free-form postal address for ADR building root
+        #[arg(long = "postal")]
+        postal: Option<String>,
+        /// Structured postal: country code (e.g. us)
+        #[arg(long)]
+        country: Option<String>,
+        /// Structured postal: region/state (e.g. fl)
+        #[arg(long)]
+        region: Option<String>,
+        /// Structured postal: city
+        #[arg(long)]
+        city: Option<String>,
+        /// Structured postal: street
+        #[arg(long)]
+        street: Option<String>,
+        /// Structured postal: street number
+        #[arg(long)]
+        number: Option<String>,
+        /// Structured postal: unit/suite
+        #[arg(long)]
+        unit: Option<String>,
     },
     /// Import LiDAR point cloud (assistive structure; review proposed entities)
     Lidar {

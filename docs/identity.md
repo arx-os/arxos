@@ -1,111 +1,130 @@
-# Identity model: Arx UUID · IFC GlobalId · ArxAddress
+# Identity model (code map + GlobalId mechanics)
 
-**Code:** `src/core/`, `src/ifc/mapping/identity.rs`, `src/export/ifc.rs`, `src/core/domain/address.rs`  
-**Manifest:** §3.2 Identity
+> **Binding decisions:** [`adr-0001-identity-and-addressing.md`](./adr-0001-identity-and-addressing.md)  
+> **Detailed design:** [`identity-and-addressing.md`](./identity-and-addressing.md)  
+>
+> This page is the **implementation map** for engineers. On conflict, ADR 0001 wins.
 
-ArxOS keeps **three complementary identities**. Do not collapse them.
+**Code:** `src/core/domain/address.rs`, `postal.rs`, `elec.rs` · `src/core/operations/address_nav.rs`, `address_mutate.rs` · `src/ifc/mapping/identity.rs` · `src/export/ifc.rs` · `src/cli/commands/{browse,add,export,init,import,migrate}.rs`  
+**Field YAML name:** `address` (not yet renamed to `arx_address`)
 
-## Summary
+---
 
-| Layer | Storage | Format | Role |
-| :--- | :--- | :--- | :--- |
-| **Arx UUID** | entity `id` (always) | UUID string | Merge key inside Arx; YAML primary key; registry `buildingId` |
-| **IFC GlobalId** | `ifc_global_id` (optional) | 22-char IFC compressed GUID | Stable product id in STEP interchange |
-| **ArxAddress** | equipment `address` (optional, durable when set) | `/country/state/city/building/floor/room/fixture` | Human/ops query path; file-tree style navigation |
+## Three layers (ADR 0001)
+
+| Layer | Storage | Role |
+| :--- | :--- | :--- |
+| **Operational** | `address: Option<ArxAddress>` | Primary human/CLI identity — hierarchical path |
+| **Provenance** | `ifc_global_id: Option<String>` | IFC GlobalId; preserved on import; assigned on first export for native entities |
+| **Internal** | `id: String` (UUID) | Merge stability / implementation only — not CLI primary |
 
 **Never** treat STEP express ids (`#42`) as durable identity.
 
-## How they work together
+---
 
-```text
-                    ┌─────────────────┐
-   YAML SSOT        │  Arx UUID (id)  │  ← always present
-                    └────────┬────────┘
-                             │ export: prefer stored ifc_global_id
-                             │ else derive GlobalId from UUID (deterministic)
-                             ▼
-                    ┌─────────────────┐
-   IFC STEP         │  GlobalId (22)  │  + Pset_ArxIdentity.ArxId
-                    └────────┬────────┘
-                             │ import: GlobalId → ifc_global_id
-                             │         Pset ArxId → restore Arx id when present
-                             ▼
-                    ┌─────────────────┐
-   Ops / query      │  ArxAddress     │  ← equipment only; backfill via `arx migrate`
-                    └─────────────────┘
-```
+## Implemented behavior (2026-07)
 
-### Suitability for engineering / file-tree navigation
-
-| Use case | Prefer |
+### Building roots
+| Source | Root form |
 | :--- | :--- |
-| Merge, Git, contribution package, building registry | **Arx UUID** |
-| Round-trip with Revit/ArchiCAD/other IFC tools | **IFC GlobalId** |
-| Ops query, crew language, hierarchical paths | **ArxAddress** |
+| `arx init --postal "…"` / `import ifc --postal "…"` | `bldg.<country>.<region>.<city>.<street>.<number>[.<unit>]` |
+| No postal data | `bldg.lab.local.sample.<slug>` (lab default) |
 
-ArxAddress is intentionally **path-like** (filesystem / URL mental model) with
-14 reserved system room segments (`hvac`, `electrical`, …). It is **not** a
-substitute for UUID or GlobalId.
-
-- **Lenient Naming Rules:** Syntax structure is validated strictly (lowercase, valid characters, leading slash, segment count). However, system prefix mismatches (e.g. placing a non-prefixed fixture under a reserved system category like `hvac`) trigger warnings by default rather than hard validation errors, allowing initial saves. Pass the `--strict-addresses` CLI flag during QA to enforce strict prefix rules.
-
-
-`ArxAddress::guid()` (SHA-256 of path) is a **helper for stable fixture-derived
-tokens only**. It is **not** the product GlobalId used by the IFC exporter
-(`resolve_product_global_id` / `ifc_global_id_from_uuid`).
-
-## Sync rules (must not regress)
-
-### Import (`apply_identity_on_import`)
-
-1. IFC product GlobalId (when present) → entity `ifc_global_id`.
-2. If property set `Pset_ArxIdentity` contains `ArxId` → **overwrite** entity `id` with that Arx UUID.
-3. Missing ArxId → keep newly generated Arx UUID; still store GlobalId if present.
-4. STEP `#expressId` is never stored as durable id.
-
-### Export (`resolve_product_global_id` + `assign_missing_global_ids`)
-
-1. Prefer existing `ifc_global_id` if non-empty.
-2. Else if Arx `id` parses as UUID → **deterministic** 22-char GlobalId via `ifc_global_id_from_uuid`.
-3. Else mint new UUID-based GlobalId (should be rare after assign pass).
-4. Write `Pset_ArxIdentity` with `ArxId` = Arx UUID and entity kind.
-5. Assign missing GlobalIds before export so subsequent exports stay stable when YAML is re-saved.
-
-### Round-trip contract (L0 identity)
-
-**Arx-authored path:**
+Example postal derivation:
 
 ```text
-Building (UUID) → export IFC → import IFC → same Arx UUID (via Pset) + same GlobalId
+143677 N. Dale Mabry Hwy, Suite 2, Tampa, FL, 33622
+→ bldg.us.fl.tampa.dale-mabry.143677.s2
 ```
 
-**Vendor IFC without Arx Psets:**
-
+### Spatial paths
 ```text
-import → new Arx UUIDs + store vendor GlobalIds → export → preserve GlobalIds
+ROOT/fl.<n>/rm.<slug>/…
 ```
 
-Double export without model change must not churn GlobalIds once `ifc_global_id` is populated.
+### Electrical system tree (first system)
+```text
+ROOT/elec
+ROOT/elec/panel.<id>
+ROOT/elec/panel.<id>/ckt.<n>
+ROOT/elec/panel.<id>/ckt.<n>/rec.<id>   # outlet
+ROOT/elec/…/ltg.<id> | sw.<id> | jbox.<id>
+```
 
-## CLI / pilot guidance
+Import assigns `/elec/...` only when IFC class/signal is clear; does not invent panel/circuit topology without properties.
+
+### CLI (address-native)
 
 ```bash
-arx migrate              # backfill missing ArxAddress on equipment
-arx query "/…/*/*/boiler-*"
-arx export --format ifc  # identity via export::ifc only
+arx show  <address>
+arx ls    <address>
+arx tree  <address> [--depth N]
+arx add   <parent-address> <kind> [--name NAME]
+# kinds: outlet|rec, light|ltg, switch|sw, jbox, ckt|circuit, panel
+
+arx init  --name SITE [--postal "…"] [--country us --region fl …]
+arx import ifc model.ifc [--postal "…"]
+arx migrate [--postal "…"]   # backfill + optional postal re-root
+arx query  "/bldg…/elec/panel.*/ckt.*"   # equipment glob (legacy helper)
+arx validate [--strict-addresses]        # whole building; missing address = warn (error if strict)
+arx export --format ifc --output out.ifc
 ```
+
+### GlobalId rules (must not regress)
+
+| Situation | Behavior |
+| :--- | :--- |
+| Import product with GlobalId | Store in `ifc_global_id`; never use as operational address |
+| `arx add` (Arxos-native) | **No** GlobalId at creation |
+| First `arx export` | Assign missing GlobalIds (deterministic from entity UUID when possible); **write back** to `building.yaml` |
+| Re-export | Preserve existing GlobalIds (no churn) |
+| Export product type | `rec.*`→`IFCOUTLET`, `ltg.*`→`IFCLIGHTFIXTURE`, `sw.*`→`IFCSWITCHINGDEVICE`, `panel.*`→`IFCELECTRICDISTRIBUTIONBOARD` |
+
+```text
+FIELD / CLI
+  address  = operational identity (humans, show/ls/tree/add)
+  id       = internal UUID (invisible in browse output)
+
+IMPORT
+  IFC GlobalId → ifc_global_id
+  Pset_ArxIdentity:ArxId → restore internal id when present
+
+EXPORT
+  ifc_global_id present → re-emit same GlobalId
+  ifc_global_id absent  → mint from UUID, persist, emit as new IFC product
+```
+
+### Validation
+- Syntax: lowercase segments; alnum, `-`, `_`, `.` allowed; leading `/` optional on parse
+- Missing `address` on Building/Floor/Room/Equipment → **warning** (error under `--strict-addresses`)
+- Reserved-system prefix mismatches → warning by default, error if strict
+
+### Not yet implemented
+- Other system trees (`hvac`, `plumb`, `fire`, `vert`, …)
+- `arx link` / relationship graph
+- Scoped `arx validate <address>`
+- YAML field rename `address` → `arx_address`
+- Full IFC electrical topology extraction from `IfcRel*` networks
+
+---
 
 ## Tests that guard this
 
-| Test area | What it proves |
+| Area | What |
 | :--- | :--- |
-| `src/ifc/mapping/identity.rs` unit tests | 22-char length, deterministic UUID→GlobalId, prefer stored, restore ArxId |
-| `tests/bidirectional_tests.rs` / `ifc_compiler_path_test` | Identity/enrichment on compiler path |
-| `tests/compiler_spine_test.rs` | Persist + query address after migrate |
-| Double-export GlobalId stability | Integration coverage in bidirectional / export path |
+| `src/core/domain/{address,postal,elec}.rs` | Parser, postal root, elec segments |
+| `src/core/operations/{address_nav,address_mutate}.rs` | show/ls/tree/add |
+| `src/ifc/mapping/identity.rs` | GlobalId assign/preserve |
+| `tests/postal_root_test.rs` | Postal import root |
+| `tests/address_add_test.rs` | Add + persist |
+| `tests/export_identity_test.rs` | Native assign + imported preserve |
+| `tests/bidirectional_tests.rs` | Compiler identity round-trip |
 
-## Non-goals
+---
 
-- Byte-identical STEP
-- Using ArxAddress as IFC GlobalId
-- CAD plugin sync of identities (no plugins — see [ifc-limitations.md](./ifc-limitations.md))
+## Related
+
+- [ADR 0001](./adr-0001-identity-and-addressing.md) — binding decisions  
+- [identity-and-addressing.md](./identity-and-addressing.md) — full hierarchy design  
+- [ifc-limitations.md](./ifc-limitations.md) — IFC fidelity contract  
+- [l1-supported-workflow.md](./l1-supported-workflow.md) — pilot loop  

@@ -48,7 +48,8 @@ Details: [ifc-limitations.md](./ifc-limitations.md) · report: [`tests/ifc_build
 | Doc | Role |
 | :--- | :--- |
 | [horizon-b-roadmap.md](./horizon-b-roadmap.md) | **Living** phases HB0–HB7 → site capture + L1 exit |
-| [adr.md](./adr.md) | Architecture Decision Record — Decisions 1–12 |
+| [adr.md](./adr.md) | Architecture Decision Record index — Decisions 1–13 |
+| [adr-0001-identity-and-addressing.md](./adr-0001-identity-and-addressing.md) | **ADR 0001 / Decision 13:** identity & addressing final |
 | [adr-web-demotion.md](./adr-web-demotion.md) | **Decision 9:** PWA abandoned; web = landing only |
 | [adr-capture-model.md](./adr-capture-model.md) | **Decision 10:** near-term capture — proposed-first, geometry as input |
 | [adr-native-capture-interface.md](./adr-native-capture-interface.md) | **Decision 11:** native ↔ agent thin hand-off (v1 = file LiDAR) |
@@ -81,7 +82,9 @@ Details: [ifc-limitations.md](./ifc-limitations.md) · report: [`tests/ifc_build
 
 | Doc | Topic |
 | :--- | :--- |
-| [identity.md](./identity.md) | Arx UUID · IFC GlobalId · ArxAddress |
+| **[adr-0001-identity-and-addressing.md](./adr-0001-identity-and-addressing.md)** | **Binding** identity decisions (ADR 0001) |
+| [identity-and-addressing.md](./identity-and-addressing.md) | Address trees + CLI language (design + impl status) |
+| [identity.md](./identity.md) | **Implementation map** — roots, elec tree, show/ls/tree/add, GlobalId export rules |
 | [ifc-limitations.md](./ifc-limitations.md) | IFC-only policy, L0–L2 fidelity, unmapped products, vendors |
 | [lidar-confidence.md](./lidar-confidence.md) | Non-probabilistic confidence honesty |
 | [resource-limits.md](./resource-limits.md) | R6 pilot import ceilings (IFC/LiDAR) |

@@ -268,7 +268,7 @@ This section is the **obligation register**: each reservation must be **relegate
 
 | Link | Score | Truth |
 | :--- | :---: | :--- |
-| Domain model | **8/10** | Building hierarchy; durable `ArxAddress`; review_status |
+| Domain model | **8.5/10** | Building hierarchy; ADR 0001 addresses + elec tree; review_status |
 | YAML + Git SSOT | **8.5/10** | Single `building.yaml`; `schema_version: 1`; validated saves |
 | IFC native | **8/10** | Only stack; Arx goldens + SketchUp/HVAC non-panic samples |
 | LiDAR | **6.5/10** | Synthetic CI + proposed review; **field unproven (R1)** |
@@ -312,9 +312,9 @@ The following dual authorities were **eliminated** in the 2026-07 convergence wo
 - **Native IFC only**: parser under `src/ifc/parser/`; export under `src/export/ifc.rs`.
 - **LiDAR pipeline**: parse → downsample → detect → enrich → Building; merge via `MergePolicy::lidar()` (no separate `ModelMerger` type).
 - **Persistence**: `{base}/building.yaml` via `BuildingYamlSerializer`; Git via `BuildingGitManager`.
-- **Addressing**: `ArxAddress` on equipment; `arx migrate` backfill; `arx query` glob match.
-- **Automated spine tests**: `compiler_spine_test`, `ifc_compiler_path_test`, `bidirectional_tests`, `lidar_tests`, `ifc_native_tests`.
-- **Compiler + economy CLI** — import/edit/export/contribute/access (see §9.2); Foundry mint + pay E2E.
+- **Addressing (ADR 0001)**: hierarchical `address` on Building/Floor/Room/Equipment; postal + lab roots; electrical `/elec` tree; CLI `show`/`ls`/`tree`/`add`; export GlobalId preserve + assign/write-back — `docs/adr-0001-identity-and-addressing.md`, `docs/identity.md`.
+- **Automated spine tests**: `compiler_spine_test`, `ifc_compiler_path_test`, `bidirectional_tests`, `lidar_tests`, `ifc_native_tests`, `postal_root_test`, `address_add_test`, `export_identity_test`.
+- **Compiler + economy CLI** — import/edit/export/show/ls/tree/add/contribute/access (see §9.2); Foundry mint + pay E2E.
 - **Integrity close-out** — §2.6 I1–I11 done; residual process I12.
 
 ### 2.4 What is still weak or missing

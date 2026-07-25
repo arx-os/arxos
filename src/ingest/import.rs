@@ -128,6 +128,17 @@ pub fn import_ifc_path(
     strict: bool,
     validate: bool,
 ) -> Result<IngestResult> {
+    import_ifc_path_with_root(path, existing_yaml, strict, validate, None)
+}
+
+/// IFC import with optional ADR building root (from postal derivation).
+pub fn import_ifc_path_with_root(
+    path: &Path,
+    existing_yaml: Option<&Path>,
+    strict: bool,
+    validate: bool,
+    building_root: Option<crate::core::domain::ArxAddress>,
+) -> Result<IngestResult> {
     crate::resource_limits::check_file_size(
         path,
         crate::resource_limits::max_ifc_bytes(),
@@ -139,7 +150,7 @@ pub fn import_ifc_path(
         .to_str()
         .ok_or_else(|| anyhow!("Invalid IFC path encoding"))?;
     let parsed = processor
-        .parse_native(path_str, strict)
+        .parse_native_with_root(path_str, strict, building_root)
         .with_context(|| format!("native IFC parse failed for {}", path.display()))?;
 
     let mut building = parsed.building;

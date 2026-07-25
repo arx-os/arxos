@@ -5,6 +5,48 @@ All notable changes to ArxOS will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added (ADR 0001 — CLI browse)
+- **`arx show <address>`** — human summary of Building / Floor / Wing / Room / Equipment by hierarchical address.
+- **`arx ls <address>`** — list direct children (stable path order).
+- **`arx tree <address> [--depth N]`** — hierarchical subtree view (default depth 3).
+- Core helpers in `core::operations::address_nav` (resolve / list / tree / format).
+
+### Added (ADR 0001 — export identity round-trip)
+- Export classifies IFC-origin vs Arxos-native entities by `ifc_global_id`.
+- **`assign_missing_global_ids`** returns preserve/assign stats; empty GlobalIds treated as missing.
+- New GlobalIds derived deterministically from entity UUID when possible; written back to `building.yaml` on first export.
+- IFC product type from address leaf: `rec.*`→`IFCOUTLET`, `ltg.*`→`IFCLIGHTFIXTURE`, `sw.*`→`IFCSWITCHINGDEVICE`, `panel.*`→`IFCELECTRICDISTRIBUTIONBOARD`.
+- Export CLI prints identity summary (preserved vs newly assigned).
+
+### Added (ADR 0001 — writable addresses)
+- **`arx add <parent> <kind> [--name …]`** creates Arxos-native equipment under a hierarchical address.
+- Kinds: `outlet`/`rec`, `light`/`ltg`, `switch`/`sw`, `jbox`, `ckt`/`circuit`, `panel`.
+- Deterministic leaf allocation (`rec.1`, `rec.2`, … or slug from `--name`); collision errors; no `ifc_global_id` at creation.
+- Core: `core::operations::address_mutate` (`add_under_address`, `allocate_child_address`).
+
+### Added (ADR 0001 — electrical system tree)
+- Official system root **`elec`** with segment helpers (`panel.*`, `ckt.*`, `rec.*`, `ltg.*`, `sw.*`, …) in `core::domain::elec`.
+- IFC import assigns `/elec/...` operational addresses for clear electrical classes (outlets, lights, switches, panels) when signal is present; uses panel/circuit properties when available; never invents hierarchy.
+- Spatial room containment preserved via `arx.spatial_attach` when operational address is under `/elec`.
+- Browse (`show` / `ls` / `tree`) resolves virtual intermediate system nodes (`…/elec`, `…/elec/panel.l1`).
+
+### Added (ADR 0001 — postal building roots)
+- Pure postal derivation in `core::domain::postal` → `bldg.<country>.<region>.<city>.<street>.<number>[.<unit>]`.
+- Example: `143677 N. Dale Mabry Hwy, Suite 2, Tampa, FL, 33622` → `bldg.us.fl.tampa.dale-mabry.143677.s2`.
+- **`arx init --postal "..."`** / structured `--country --region --city --street --number --unit`.
+- **`arx import ifc --postal "..."`** (same structured flags) seeds all addresses under the postal root.
+- **`arx migrate --postal "..."`** re-roots existing lab addresses onto a postal root.
+- Lab root (`bldg.lab.local.sample.*`) remains the default when no postal data is supplied.
+
+### Changed (ADR 0001 — Identity & Addressing)
+- **ArxAddress:** dots legal in segments (`fl.2`, `panel.l1`); multi-dot building roots (`bldg.lab.local.sample.*`); leading `/` optional on parse.
+- **IFC import:** writes durable addresses on Building, Floor, and Room (not equipment-only); lab roots when no postal metadata.
+- **Validation:** missing addresses warn by default; `--strict-addresses` elevates missing + prefix issues to errors. Whole-building only (scoped `validate <address>` deferred).
+- **Backfill (`arx migrate`):** ADR lab-root scheme instead of `/local/local/local/...`.
+- Docs: `docs/adr-0001-identity-and-addressing.md` binding; `identity.md` superseded on primary-key conflicts.
+
 ## [2.0.0-pilot.5] - 2026-07-17
 
 **Tag:** `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d`  

@@ -12,9 +12,12 @@ This document is the **shared vocabulary** for growing the building model from t
 | Surface | What exists | What does not |
 | :--- | :--- | :--- |
 | **CLI `arx edit`** | Text DSL → finalize → `building.yaml` | Polished interactive editor |
+| **CLI address-native** | `show` / `ls` / `tree` / `add` under hierarchical `address` (ADR 0001) | `link`, scoped validate, other system trees |
 | **Agent** | JSON-RPC methods + **structured `field.*`** | Domain-only RoomPlan RPC (path B deferred) |
 | **iOS companion** | Lab terminal: connect, file scan, label, commit, export | Camera / RoomPlan view, rich review UI |
 | **Grammar** | `arx edit help` · this doc · ingest `text.rs` | Stable “product English” without DSL |
+
+**Identity language:** Prefer hierarchical addresses (`arx show` / `arx add`) over internal UUIDs. See [identity.md](./identity.md).
 
 **Lab green (2026-07-24):** iOS companion **connects** to agent via **HTTP `POST /rpc`**, can call building/git methods. Full scan→label→commit→IFC lab pass is the next system test, not a claim of field readiness.
 

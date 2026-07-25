@@ -134,6 +134,7 @@ Lab loop: [`docs/reference/ios-lab-loop.md`](./docs/reference/ios-lab-loop.md).
 | [`docs/pilot/`](./docs/pilot/) | L1 pilot packet (charter → evidence) |
 | [`docs/process/`](./docs/process/) | Horizon B roadmap + sprint tooling |
 | [`docs/lab/`](./docs/lab/) | Economy / Anvil lab (not L1 exit) |
+| [`SECURITY.md`](./SECURITY.md) | Reporting, agent/key rules, residual advisories |
 
 ## Development
 

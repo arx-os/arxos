@@ -11,7 +11,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 RPC="${RPC_URL:-http://127.0.0.1:8545}"
 # Anvil account #0
+# Public Anvil account #0 — lab/local only. Never fund on a public network.
 export PRIVATE_KEY="${PRIVATE_KEY:-0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80}"
+export ARX_PRIVATE_KEY="${ARX_PRIVATE_KEY:-$PRIVATE_KEY}"
+export ARX_ALLOW_ANVIL_DEFAULT_KEY="${ARX_ALLOW_ANVIL_DEFAULT_KEY:-1}"
 export MAINTAINER_VAULT="${MAINTAINER_VAULT:-0x70997970C51812dc3A010C7d01b50e0d17dc79C8}"
 export TREASURY="${TREASURY:-0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC}"
 # Anvil #1 as worker by default

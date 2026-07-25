@@ -269,10 +269,14 @@ mod input_validation_tests {
         let result = ArxAddress::from_path("/usa/ny/brooklyn");
         assert!(result.is_ok(), "Partial path should be accepted under relaxed dynamic-length rules");
 
-        // Test invalid path formats (missing leading slash or invalid characters)
+        // Leading slash is optional (ADR 0001); both forms must parse.
         let result = ArxAddress::from_path("usa/ny");
-        assert!(result.is_err(), "Path missing leading slash should be rejected");
+        assert!(
+            result.is_ok(),
+            "Path without leading slash should be accepted (normalized)"
+        );
 
+        // Special characters outside the allowed set must still be rejected.
         let result = ArxAddress::from_path("/usa/ny/special@char");
         assert!(result.is_err(), "Path with special characters should be rejected");
 

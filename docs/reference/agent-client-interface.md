@@ -23,10 +23,11 @@ This document is the **only** supported integration surface between **core** (`a
 | :--- | :--- | :--- |
 | **HTTP JSON-RPC** | `POST http://<host>:8787/rpc?token=<ROOT_TOKEN>` | **Recommended for iOS lab** (stable request/response) |
 | **WebSocket** | `ws://<host>:8787/ws?token=<ROOT_TOKEN>` | Supported; URLSession WS was flaky on iOS — use HTTP for now |
-| Auth | Token query param; capability-scoped on agent | ROOT TOKEN printed once at `arx agent` start |
+| Auth | Prefer `Authorization: Bearer <token>`; `?token=` also accepted | ROOT TOKEN printed once at `arx agent` start — never broadcast |
 | Body | JSON-RPC 2.0 (`jsonrpc`, `id`, `method`, `params`) | |
 
-Default agent bind: `0.0.0.0:8787` (LAN/hotspot).
+Default agent bind: `0.0.0.0:8787` (LAN/hotspot). Override with `ARX_AGENT_BIND` / `ARX_AGENT_PORT` (e.g. `127.0.0.1` for local-only).  
+UDP LAN discovery is **off** by default; set `ARX_AGENT_DISCOVERY=1` only on trusted networks (broadcasts a **non-secret** peer id — never the root token).
 
 **Simulator:** host `127.0.0.1:8787`.  
 **Physical device:** laptop LAN IP `:8787`, same Wi‑Fi, Local Network permission.

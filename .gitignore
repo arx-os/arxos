@@ -50,12 +50,26 @@ Thumbs.db
 
 # Security and secrets
 .env
+.env.*
+!.env.example
+!**/.env.example
 .env.local
 .env.*.local
+.env.arx
 *.secret
 *.key
 *.pem
 *.p12
+*.pfx
+*.jks
+id_rsa
+id_ed25519
+*.keystore
+
+# Local Foundry / deploy artifacts with keys (never commit)
+contracts/deployed.env
+contracts/.env
+**/broadcast/**/run-latest.json
 
 # Note: .secrets.baseline should be committed to track false positives
 # secrets.baseline
@@ -68,4 +82,3 @@ dist/
 pkg/
 .trunk/
 .aider*
-.env.arx

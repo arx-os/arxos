@@ -21,8 +21,20 @@ pub fn get_peers() -> Arc<Mutex<Vec<PeerInfo>>> {
         .clone()
 }
 
-/// Start background UDP broadcast and listener tasks for local network node discovery
+/// Start background UDP broadcast and listener tasks for local network node discovery.
+///
+/// **Security:** `peer_id` must be a **non-secret** identifier (e.g. random agent id).
+/// Never pass the agent ROOT TOKEN — payloads are broadcast to the LAN in cleartext.
 pub fn start_discovery(peer_id: String, port: u16) {
+    // Defense in depth: refuse ids that look like auth tokens.
+    if peer_id.starts_with("did:key:") {
+        tracing::error!(
+            "refusing discovery start: peer_id looks like an auth token (did:key:…). \
+             Use a non-secret discovery id."
+        );
+        return;
+    }
+
     let peer_id_clone = peer_id.clone();
 
     // 1. Spawner thread for Broadcasting our node endpoint

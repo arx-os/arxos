@@ -129,13 +129,34 @@ pub async fn start_agent() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    // 5. Start P2P Local Discovery
-    crate::agent::discovery::start_discovery(root_token.clone(), 8787);
+    // 5. Local discovery (non-secret peer id only — never the auth token)
+    let discovery_id = format!("arx-agent-{}", uuid::Uuid::new_v4());
+    let discovery_enabled = std::env::var("ARX_AGENT_DISCOVERY")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+    if discovery_enabled {
+        crate::agent::discovery::start_discovery(discovery_id, 8787);
+        tracing::info!("LAN UDP discovery enabled (ARX_AGENT_DISCOVERY); peer id is non-secret");
+    } else {
+        tracing::info!("LAN UDP discovery off (set ARX_AGENT_DISCOVERY=1 to enable)");
+    }
 
-    // 6. Start WebSocket Server
-    let port: u16 = 8787;
-    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    // 6. Start WebSocket / HTTP server
+    // Bind: default 0.0.0.0 for LAN capture clients; override with ARX_AGENT_BIND (e.g. 127.0.0.1).
+    let port: u16 = std::env::var("ARX_AGENT_PORT")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(8787);
+    let bind_host = std::env::var("ARX_AGENT_BIND").unwrap_or_else(|_| "0.0.0.0".into());
+    let addr: SocketAddr = format!("{bind_host}:{port}")
+        .parse()
+        .map_err(|e| format!("Invalid ARX_AGENT_BIND/PORT ({bind_host}:{port}): {e}"))?;
     println!("📡 Server listening on http://{}", addr);
+    if bind_host == "0.0.0.0" {
+        println!(
+            "⚠️  Bound to all interfaces — use only on trusted LAN/hotspot; set ARX_AGENT_BIND=127.0.0.1 for local-only."
+        );
+    }
     print_client_connect_hints(&root_token, port);
     println!(
         "ℹ️  Agent is edge bridging only (WebSocket/SSH). \
@@ -205,15 +226,29 @@ fn check_auth(headers: &HeaderMap, query_token: Option<&str>, state: &AgentState
     {
         Some(bearer.to_string())
     } else {
+        // Query tokens appear in access logs / history — prefer Authorization: Bearer.
         query_token.map(|s| s.to_string())
     };
 
     if let Some(token) = token_str {
         let guard = state.token.lock().unwrap();
-        guard.value() == token
+        // Constant-time compare to avoid trivial timing oracles on the root token.
+        constant_time_eq(guard.value().as_bytes(), token.as_bytes())
     } else {
         false
     }
+}
+
+/// Best-effort constant-time equality for equal-length secrets.
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut diff = 0u8;
+    for (x, y) in a.iter().zip(b.iter()) {
+        diff |= x ^ y;
+    }
+    diff == 0
 }
 
 #[cfg(feature = "agent")]

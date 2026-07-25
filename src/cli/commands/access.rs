@@ -227,5 +227,6 @@ fn resolve_key(arg: Option<&str>) -> Result<String, Box<dyn Error>> {
     if let Ok(k) = std::env::var("ARX_PRIVATE_KEY") {
         return Ok(k.trim().trim_start_matches("0x").to_string());
     }
-    Ok("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80".into())
+    // Never silently use Anvil account #0 on real networks.
+    crate::cli::blockchain_key::resolve_anvil_lab_default()
 }

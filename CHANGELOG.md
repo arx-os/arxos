@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **Agent:** stop broadcasting ROOT TOKEN on LAN discovery; discovery off by default (`ARX_AGENT_DISCOVERY=1` to enable); non-secret peer id only
+- **Agent:** optional `ARX_AGENT_BIND` / `ARX_AGENT_PORT`; warn when bound to all interfaces; constant-time token compare
+- **Blockchain CLI:** refuse silent Anvil account #0 key unless `ARX_ALLOW_ANVIL_DEFAULT_KEY=1`
+- **Repo hygiene:** tighten `.gitignore` for env/key material; add `SECURITY.md`
+- Residual dependency advisories documented in `SECURITY.md` (`cargo audit --features full`)
+
 ### Documentation
 - Reorganized `docs/` by audience: `adr/`, `reference/`, `pilot/`, `process/`, `lab/`, `_archive/`
 - Rewrote `docs/INDEX.md` with authority hierarchy (ADRs > manifest plan > reference > pilot > process)

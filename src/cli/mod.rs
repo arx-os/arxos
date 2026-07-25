@@ -4,6 +4,7 @@
 use clap::Parser;
 
 pub mod args;
+pub mod blockchain_key;
 pub mod commands;
 pub mod spec;
 

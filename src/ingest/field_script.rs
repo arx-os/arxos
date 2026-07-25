@@ -93,7 +93,7 @@ Quoting: multi-word names use double quotes, e.g. add room "Studio A" floor=0
   Names may not contain " or newlines.
 
 Field clients should prefer structured agent RPCs (field.label, field.accept_room)
-instead of free-form scripts when possible. See docs/field-language.md."#
+instead of free-form scripts when possible. See docs/reference/field-language.md."#
 }
 
 #[cfg(test)]

@@ -206,10 +206,10 @@ Supported equipment types:
 
 ## 🔗 Related Documentation
 
-- **[User Guide](../../docs/core/USER_GUIDE.md)** - Complete usage guide
-- **[API Reference](../../docs/core/API_REFERENCE.md)** - API documentation
-- **[Architecture](../../docs/core/ARCHITECTURE.md)** - System architecture
-- **[IFC Processing](../../docs/features/IFC_PROCESSING.md)** - IFC import guide
+- **[Documentation map](../../docs/INDEX.md)**
+- **[IFC limitations](../../docs/reference/ifc-limitations.md)**
+- **[Identity](../../docs/reference/identity.md)**
+- **[L1 workflow](../../docs/pilot/supported-workflow.md)**
 
 ---
 

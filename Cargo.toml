@@ -104,7 +104,7 @@ git2 = { version = "0.20", features = ["vendored-openssl"] }
 [features]
 # Default: building compiler + primary TUI (spreadsheet, merge, hierarchy render).
 # Hardware BACnet/Modbus/MQTT and LiDAR point-cloud 3D viz removed for now.
-# Interactive WASM/PWA client removed (Decision 9 — docs/adr-web-demotion.md).
+# Interactive WASM/PWA client removed (Decision 9 — docs/adr/web-demotion.md).
 # Static landing lives at repo-root index.html (no Cargo feature).
 default = ["tui"]
 tui = ["crossterm", "ratatui", "csv", "arboard", "fuzzy-matcher"]

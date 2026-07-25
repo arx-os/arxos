@@ -1,4 +1,4 @@
-# Static landing only (Decision 9 — docs/adr-web-demotion.md).
+# Static landing only (Decision 9 — docs/adr/web-demotion.md).
 # No Rust/WASM build. Serve the repo root files with any static server, e.g.:
 #   python3 -m http.server 8080
 #   npx serve .

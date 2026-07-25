@@ -68,7 +68,7 @@ pub fn import_lidar(
     }
     if bytes.len() > max_lidar {
         bail!(
-            "LiDAR payload exceeds {} bytes (ARX_MAX_LIDAR_BYTES / pilot default). See docs/resource-limits.md.",
+            "LiDAR payload exceeds {} bytes (ARX_MAX_LIDAR_BYTES / pilot default). See docs/reference/resource-limits.md.",
             max_lidar
         );
     }

@@ -4,7 +4,7 @@
 //! Revit/ArchiCAD fixtures are licensed. Goal: **no panic**, structure counts,
 //! optional re-export when validation is clean.
 //!
-//! See `docs/ifc-limitations.md`.
+//! See `docs/reference/ifc-limitations.md`.
 
 use arxos::export::ifc::IFCExporter;
 use arxos::ingest::import_ifc_path;

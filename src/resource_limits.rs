@@ -3,7 +3,7 @@
 //! Hard-fail with actionable messages instead of silent OOM/hang on edge hardware.
 //! Override with env vars when a capture node is intentionally provisioned larger.
 //!
-//! See `docs/resource-limits.md`.
+//! See `docs/reference/resource-limits.md`.
 
 use anyhow::{bail, Context, Result};
 use std::path::Path;
@@ -56,7 +56,7 @@ pub fn check_file_size(path: &Path, max_bytes: u64, kind: &str) -> Result<()> {
         bail!(
             "{kind} file too large for pilot defaults: {} ({} bytes) exceeds limit {} bytes. \
              Re-export a lighter model, use a capture node with more RAM, or raise the limit via \
-             env (ARX_MAX_IFC_BYTES / ARX_MAX_LIDAR_BYTES). See docs/resource-limits.md.",
+             env (ARX_MAX_IFC_BYTES / ARX_MAX_LIDAR_BYTES). See docs/reference/resource-limits.md.",
             path.display(),
             len,
             max_bytes

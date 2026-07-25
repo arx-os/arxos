@@ -269,7 +269,7 @@ tokio = "1.35"
 
 ## See Also
 
-- [x402 Protocol Specification](../../docs/x402-protocol.md)
+- [x402 Protocol Specification](../../docs/_archive/x402-protocol.md)
 - [Smart Contract Documentation](../../contracts/README.md)
 - [Tokenomics Implementation Plan](../../AXD_TOKENOMICS_IMPLEMENTATION.md)
 

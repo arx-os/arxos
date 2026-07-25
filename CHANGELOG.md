@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- Reorganized `docs/` by audience: `adr/`, `reference/`, `pilot/`, `process/`, `lab/`, `_archive/`
+- Rewrote `docs/INDEX.md` with authority hierarchy (ADRs > manifest plan > reference > pilot > process)
+- Fixed stale pilot.4 baselines, postal root segment form, and path references after moves
+
 ### Added (ADR 0001 — CLI browse)
 - **`arx show <address>`** — human summary of Building / Floor / Wing / Room / Equipment by hierarchical address.
 - **`arx ls <address>`** — list direct children (stable path order).
@@ -45,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IFC import:** writes durable addresses on Building, Floor, and Room (not equipment-only); lab roots when no postal metadata.
 - **Validation:** missing addresses warn by default; `--strict-addresses` elevates missing + prefix issues to errors. Whole-building only (scoped `validate <address>` deferred).
 - **Backfill (`arx migrate`):** ADR lab-root scheme instead of `/local/local/local/...`.
-- Docs: `docs/adr-0001-identity-and-addressing.md` binding; `identity.md` superseded on primary-key conflicts.
+- Docs: `docs/adr/0001-identity-and-addressing.md` binding; `identity.md` superseded on primary-key conflicts.
 
 ## [2.0.0-pilot.5] - 2026-07-17
 
@@ -68,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - LossReport `unmapped_products` — class counts for walls/slabs/doors/windows/etc. present in IFC but not mapped into the Arx domain (R2 eng honesty)
 - buildingSMART ISO RV fixtures + `buildingsmart_ifc_test` (non-panic + unmapped warning)
 - Assessment report: `tests/ifc_buildingsmart_report.md`
-- Resource limits (`docs/resource-limits.md`) and hard refuse on oversize import (R6 eng defaults)
+- Resource limits (`docs/reference/resource-limits.md`) and hard refuse on oversize import (R6 eng defaults)
 - L1 pilot packet docs (charter, field-handoff, second-person checklist, pilot-release)
 
 ### Changed

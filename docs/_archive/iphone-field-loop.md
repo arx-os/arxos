@@ -1,11 +1,11 @@
 <!--
 ARCHIVED — not living product documentation.
-Reason: Decision 9 (docs/adr-web-demotion.md) — interactive WASM/PWA field client abandoned.
+Reason: Decision 9 (docs/adr/web-demotion.md) — interactive WASM/PWA field client abandoned.
 Web = static landing only. Phone LiDAR = future native iOS. Capture = file IFC/LiDAR + agent + TUI.
 Do not treat this file as current design or supported workflow.
 -->
 
-> **ARCHIVED (2026-07-24).** Historical only. Interactive PWA/device guides are no longer product truth. See [`docs/adr-web-demotion.md`](../adr-web-demotion.md) and [`docs/INDEX.md`](../INDEX.md).
+> **ARCHIVED (2026-07-24).** Historical only. Interactive PWA/device guides are no longer product truth. See [`docs/adr/web-demotion.md`](../adr/web-demotion.md) and [`docs/INDEX.md`](../INDEX.md).
 
 # iPhone + laptop agent field loop (Batch A)
 
@@ -128,4 +128,4 @@ cd ~/arx-pilots/SITE
 
 **Not yet (B4–B7):** Accept/Reject, durable edit, approved export button.
 
-**Related:** [iphone-pwa-acceleration.md](./iphone-pwa-acceleration.md) · [batch-b-proposal.md](./batch-b-proposal.md) · [field-day-1-runbook.md](./field-day-1-runbook.md)
+**Related:** [iphone-pwa-acceleration.md](./iphone-pwa-acceleration.md) · [batch-b-proposal.md](./batch-b-proposal.md) · [field-day-1-runbook.md](../pilot/day-1-runbook.md)

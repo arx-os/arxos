@@ -25,7 +25,7 @@ use commands::{
 #[command(name = "arx")]
 #[command(about = "ArxOS building compiler — Git for Buildings")]
 #[command(
-    long_about = "Local-first building compiler: IFC / LiDAR / text → building.yaml → Git → IFC export.\n\nDefault features: compiler spine + TUI (primary UI). Optional: --features agent | web | blockchain | full.\n\nL1 pilot loop: init → import → edit/review → validate → git → export --format ifc\n(see docs/l1-supported-workflow.md). Lab contribute/access are optional."
+    long_about = "Local-first building compiler: IFC / LiDAR / text → building.yaml → Git → IFC export.\n\nDefault features: compiler spine + TUI (primary UI). Optional: --features agent | web | blockchain | full.\n\nL1 pilot loop: init → import → edit/review → validate → git → export --format ifc\n(see docs/pilot/supported-workflow.md). Lab contribute/access are optional."
 )]
 #[command(version = env!("CARGO_PKG_VERSION"))]
 pub struct Cli {

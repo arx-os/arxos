@@ -47,7 +47,7 @@ impl LidarPipeline {
             bail!(
                 "LiDAR file produced zero points after read/downsample ({}). \
                  Check format (PLY/LAS/XYZ), units, and that the file is not empty. \
-                 See docs/resource-limits.md and docs/lidar-confidence.md.",
+                 See docs/reference/resource-limits.md and docs/reference/lidar-confidence.md.",
                 path.display()
             );
         }

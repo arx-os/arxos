@@ -3,12 +3,12 @@
 **Purpose:** Prove ArxOS on one real building with messy data.  
 **Not:** Mainnet launch, multi-oracle market, or PWA polish.
 
-**Start here:** **`docs/field-handoff.md`** (ordered B0–B3).  
-**Before work:** sign **`docs/pilot-charter.md`**.  
-**Install:** pin **`v2.0.0-pilot.3`** per **`docs/pilot-release.md`**.  
-**Workflow:** **`docs/l1-supported-workflow.md`** only for L1 success.  
-**Transfer:** **`docs/second-person-checklist.md`** (R5).  
-**Site evidence:** **`docs/field-truth-log.md`**.
+**Start here:** **`docs/pilot/field-handoff.md`** (ordered B0–B3).  
+**Before work:** sign **`docs/pilot/charter.md`**.  
+**Install:** pin **`v2.0.0-pilot.3`** per **`docs/pilot/release.md`**.  
+**Workflow:** **`docs/pilot/supported-workflow.md`** only for L1 success.  
+**Transfer:** **`docs/pilot/second-person-checklist.md`** (R5).  
+**Site evidence:** **`docs/pilot/field-truth-log.md`**.
 
 ## People (L1)
 
@@ -29,9 +29,9 @@ Economy roles (worker wallet, buyer) are **out of L1 success** — optional demo
 
 ## Loop (do in order)
 
-Follow **`docs/l1-supported-workflow.md`** in full. Summary:
+Follow **`docs/pilot/supported-workflow.md`** in full. Summary:
 
-1. **Install** — pinned tag only (`docs/pilot-release.md`)  
+1. **Install** — pinned tag only (`docs/pilot/release.md`)  
 2. **Init** — `arx init --name "…"`  
 3. **Import** — IFC and/or LiDAR  
 4. **Review** — accept/reject autos; no official use of unreviewed `proposed`  
@@ -45,11 +45,11 @@ Follow **`docs/l1-supported-workflow.md`** in full. Summary:
 
 | Question | Y/N |
 | :--- | :---: |
-| Charter signed (`docs/pilot-charter.md`)? | |
+| Charter signed (`docs/pilot/charter.md`)? | |
 | Second-person checklist pass/conditional? | |
 | Data classification completed? | |
 | Did the model reduce unknowns vs walking in blind? | |
-| Site IFC/LiDAR limits written (`docs/field-truth-log.md`)? | |
+| Site IFC/LiDAR limits written (`docs/pilot/field-truth-log.md`)? | |
 | What broke first? ________________ | |
 
 ## Rules

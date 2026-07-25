@@ -55,7 +55,7 @@ impl VoxelGridFilter {
                 bail!(
                     "LiDAR input exceeded pilot point limit ({} points). \
                      Use --light, increase --voxel-size, decimate the scan offline, \
-                     or set ARX_MAX_LIDAR_INPUT_POINTS. See docs/resource-limits.md.",
+                     or set ARX_MAX_LIDAR_INPUT_POINTS. See docs/reference/resource-limits.md.",
                     max_input
                 );
             }

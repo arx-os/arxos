@@ -7,8 +7,8 @@ Git-diffable YAML (`building.yaml`), with **IFC as industry interchange**.
 
 **Maturity (honest):** lab closed loop ~8.5/10 · district L1 pilot ~5/10  
 (blocked on field evidence + process — see `arxos_manifest.md` §1.1a · §1.6).  
-**Living plan:** `docs/horizon-b-roadmap.md` · **Preferred pin:** `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d`  
-**Device policy:** [`docs/adr-web-demotion.md`](docs/adr-web-demotion.md) — web is a **static landing page only**; phone path = **native iOS lab shell** ([`arx-os/ios`](https://github.com/arx-os/ios)) over agent HTTP/RPC (file LiDAR path A; RoomPlan UI not started). See [`docs/field-language.md`](docs/field-language.md).
+**Living plan:** [`docs/process/horizon-b-roadmap.md`](docs/process/horizon-b-roadmap.md) · **Doc map:** [`docs/INDEX.md`](docs/INDEX.md) · **Preferred pin:** `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d`  
+**Device policy:** [`docs/adr/web-demotion.md`](docs/adr/web-demotion.md) — web is a **static landing page only**; phone path = **native iOS lab shell** ([`arx-os/ios`](https://github.com/arx-os/ios)) over agent HTTP/RPC (file LiDAR path A; RoomPlan UI not started). See [`docs/reference/field-language.md`](docs/reference/field-language.md).
 
 ## What it does
 
@@ -38,7 +38,7 @@ ArxOS is an **IFC compiler**, not a CAD host.
 - Official export: **`arx export --format ifc`** only (review-gated).
 - Optional `agent` feature is edge bridging (WebSocket/SSH) — not a second export authority.
 
-Details: `docs/ifc-limitations.md`, `docs/adr-0001-identity-and-addressing.md`, `docs/identity-and-addressing.md`.
+Details: `docs/reference/ifc-limitations.md`, `docs/adr/0001-identity-and-addressing.md`, `docs/reference/identity-and-addressing.md`.
 
 ## Install
 
@@ -50,7 +50,7 @@ cargo build --release
 cargo install --path .
 ```
 
-**District pilot:** install a **pinned** release only — see `docs/pilot-release.md`.  
+**District pilot:** install a **pinned** release only — see `docs/pilot/release.md`.  
 Do not run pilots on floating `main`.
 
 ## Quick start
@@ -114,28 +114,26 @@ arx status && arx stage && arx commit -m "Import and label first model"
 - **Completion:** `ingest::finalize_ingest` / `persist_building` (merge + validate)
 - **IFC:** native STEP only; export via `export::ifc`
 - **LiDAR ingest:** PLY/LAS/XYZ **files** → structure assist (`proposed`); not browser sensors
-- **Identity (ADR 0001):** hierarchical `address` primary ops · `ifc_global_id` provenance · UUID internal — [`docs/adr-0001-identity-and-addressing.md`](docs/adr-0001-identity-and-addressing.md) · [`docs/identity.md`](docs/identity.md)
+- **Identity (ADR 0001):** hierarchical `address` primary ops · `ifc_global_id` provenance · UUID internal — [`docs/adr/0001-identity-and-addressing.md`](docs/adr/0001-identity-and-addressing.md) · [`docs/reference/identity.md`](docs/reference/identity.md)
 - **Agent:** capture node / bridge only — durable writes still through the spine
 
 ## iOS companion (separate repository)
 
 Native field client lives in **`arx-os/ios`** (not this monorepo) — Decision 12.  
-This core repo provides the **agent** and the versioned contract: [`docs/agent-client-interface.md`](./docs/agent-client-interface.md).  
-Lab loop: [`docs/ios-lab-loop.md`](./docs/ios-lab-loop.md).
+This core repo provides the **agent** and the versioned contract: [`docs/reference/agent-client-interface.md`](./docs/reference/agent-client-interface.md).  
+Lab loop: [`docs/reference/ios-lab-loop.md`](./docs/reference/ios-lab-loop.md).
 
 ## Documentation
 
 | Doc | Role |
 |---|---|
-| [`arxos_manifest.md`](./arxos_manifest.md) | **Engineering source of truth** |
-| [`docs/adr-repo-structure.md`](./docs/adr-repo-structure.md) | Core vs `ios` repos |
-| [`docs/agent-client-interface.md`](./docs/agent-client-interface.md) | Versioned agent JSON-RPC for clients |
-| [`docs/INDEX.md`](./docs/INDEX.md) | Pilot doc map |
-| [`docs/adr-0001-identity-and-addressing.md`](./docs/adr-0001-identity-and-addressing.md) | **Binding** identity decisions (ADR 0001) |
-| [`docs/identity.md`](./docs/identity.md) | Identity code map + GlobalId / CLI surface |
-| [`docs/l1-supported-workflow.md`](./docs/l1-supported-workflow.md) | Only L1 supported loop |
-| [`docs/field-handoff.md`](./docs/field-handoff.md) | Ordered pilot packet |
-| [`docs/resource-limits.md`](./docs/resource-limits.md) | Import size/point ceilings |
+| [`arxos_manifest.md`](./arxos_manifest.md) | Engineering plan SSOT (maturity, obligations, horizons) |
+| [`docs/INDEX.md`](./docs/INDEX.md) | **Doc map** — authority hierarchy + folder layout |
+| [`docs/adr/`](./docs/adr/) | Accepted ADRs (identity, web, capture, repos) |
+| [`docs/reference/`](./docs/reference/) | Implementation maps (identity, IFC, agent, limits) |
+| [`docs/pilot/`](./docs/pilot/) | L1 pilot packet (charter → evidence) |
+| [`docs/process/`](./docs/process/) | Horizon B roadmap + sprint tooling |
+| [`docs/lab/`](./docs/lab/) | Economy / Anvil lab (not L1 exit) |
 
 ## Development
 

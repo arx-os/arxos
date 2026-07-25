@@ -33,7 +33,7 @@ pub fn import_ifc(repo_root: &Path, filename: &str, data_base64: &str) -> Result
     let max_ifc = crate::resource_limits::max_ifc_bytes() as usize;
     if bytes.len() > max_ifc {
         bail!(
-            "IFC payload exceeds {} bytes (ARX_MAX_IFC_BYTES / pilot default). See docs/resource-limits.md.",
+            "IFC payload exceeds {} bytes (ARX_MAX_IFC_BYTES / pilot default). See docs/reference/resource-limits.md.",
             max_ifc
         );
     }

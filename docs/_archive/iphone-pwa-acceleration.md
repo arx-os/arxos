@@ -1,11 +1,11 @@
 <!--
 ARCHIVED — not living product documentation.
-Reason: Decision 9 (docs/adr-web-demotion.md) — interactive WASM/PWA field client abandoned.
+Reason: Decision 9 (docs/adr/web-demotion.md) — interactive WASM/PWA field client abandoned.
 Web = static landing only. Phone LiDAR = future native iOS. Capture = file IFC/LiDAR + agent + TUI.
 Do not treat this file as current design or supported workflow.
 -->
 
-> **ARCHIVED (2026-07-24).** Historical only. Interactive PWA/device guides are no longer product truth. See [`docs/adr-web-demotion.md`](../adr-web-demotion.md) and [`docs/INDEX.md`](../INDEX.md).
+> **ARCHIVED (2026-07-24).** Historical only. Interactive PWA/device guides are no longer product truth. See [`docs/adr/web-demotion.md`](../adr/web-demotion.md) and [`docs/INDEX.md`](../INDEX.md).
 
 # iPhone PWA + agent acceleration plan
 
@@ -14,7 +14,7 @@ Do not treat this file as current design or supported workflow.
 **Pin baseline:** `v2.0.0-pilot.4` @ `659bbd9f` (runtime). Work lands on `main` behind features `web` + `agent`.  
 **Spine rules:** Agent remains **bridge only**; durable write = validate + `building.yaml`; official IFC = same `export::ifc` path; honesty (LossReport) never skipped.
 
-**Related:** [horizon-b-roadmap.md](./horizon-b-roadmap.md) · eng queue later · [field-day-1-runbook.md](./field-day-1-runbook.md)
+**Related:** [horizon-b-roadmap.md](../process/horizon-b-roadmap.md) · eng queue later · [field-day-1-runbook.md](../pilot/day-1-runbook.md)
 
 ---
 

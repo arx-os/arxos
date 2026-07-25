@@ -8,13 +8,13 @@
 | **Primary goal** | **Full product:** free local software to map buildings as code + peer review + **$AXD rewards** for verified as-built data + **buyer market** for data access |
 | **Engine** | Rust 2021 (CLI + lib) · native IFC · Git SSOT · Foundry contracts · optional agent/`blockchain` · static web landing |
 | **Design philosophy** | Local-first · single `Building` model · Git-native · free to use · pay only for data access |
-| **Document status** | Living plan — full vision locked; compiler + economy spine **lab-complete** (N1–N8 + Horizon A tooling); **Horizon B** (district L1 + site capture path) is current priority (§1.1, §1.5–1.6, §10; `docs/horizon-b-roadmap.md`) |
-| **Last reconciled** | 2026-07-24 — Decisions 9–12 (web · capture · agent interface · **repo split core vs ios**) |
+| **Document status** | Living plan — full vision locked; compiler + economy spine **lab-complete** (N1–N8 + Horizon A tooling); **Horizon B** (district L1 + site capture path) is current priority (§1.1, §1.5–1.6, §10; `docs/process/horizon-b-roadmap.md`) |
+| **Last reconciled** | 2026-07-25 — ADR 0001 identity landed; `docs/` reorganized (adr/reference/pilot/process) |
 | **Audience** | Vision holder, field IT pilots, core maintainers, external builders |
-| **Device / web surface (locked)** | **Web = static landing only.** Phone capture = **native iOS companion** in **`arx-os/ios`** (separate repo). Durable authority = **agent + `building.yaml`** in this core repo. [`docs/adr-web-demotion.md`](docs/adr-web-demotion.md). |
-| **Capture model (locked)** | Geometry → **proposed** structure via spine only; not a mesh product; PR-like contributions; thin interface. [`docs/adr-capture-model.md`](docs/adr-capture-model.md) (Decision 10). |
-| **Native↔agent interface** | **v1 = file LiDAR** via agent `lidar.import` + provenance. Contract: [`docs/agent-client-interface.md`](docs/agent-client-interface.md). Design: Decision 11. |
-| **Repo structure (locked)** | Core = this repo. iOS companion = **`arx-os/ios`** (not monorepo). [`docs/adr-repo-structure.md`](docs/adr-repo-structure.md) (Decision 12). |
+| **Device / web surface (locked)** | **Web = static landing only.** Phone capture = **native iOS companion** in **`arx-os/ios`** (separate repo). Durable authority = **agent + `building.yaml`** in this core repo. [`docs/adr/web-demotion.md`](docs/adr/web-demotion.md). |
+| **Capture model (locked)** | Geometry → **proposed** structure via spine only; not a mesh product; PR-like contributions; thin interface. [`docs/adr/capture-model.md`](docs/adr/capture-model.md) (Decision 10). |
+| **Native↔agent interface** | **v1 = file LiDAR** via agent `lidar.import` + provenance. Contract: [`docs/reference/agent-client-interface.md`](docs/reference/agent-client-interface.md). Design: Decision 11. |
+| **Repo structure (locked)** | Core = this repo. iOS companion = **`arx-os/ios`** (not monorepo). [`docs/adr/repo-structure.md`](docs/adr/repo-structure.md) (Decision 12). |
 
 ---
 
@@ -89,7 +89,7 @@ BUYER MARKET
 | Multi-peer Git (N6) | Partial (docs) | Process only |
 | Real building (N9) | **Open** | Horizon B field evidence |
 
-See `docs/INDEX.md` (pilot), `docs/lab/` (contribute/access; not L1 success), `docs/identity.md`.
+See `docs/INDEX.md` (authority map + folders), `docs/adr/`, `docs/reference/`, `docs/pilot/`, `docs/process/`, `docs/lab/` (economy; not L1 success).
 
 ---
 
@@ -116,7 +116,7 @@ Compiler without reward is incomplete for the vision. Reward without trusted as-
 
 > On a **capture node** (laptop/Mini: CLI/TUI + optional **agent**), I ingest **file-based LiDAR** and/or **vendor IFC**, apply **text/review corrections**, produce a **validated `Building`**, and **export usable IFC** — with **human review gates**, **clear LossReport**, and **Git versioning** on an approved internal remote. Reliable enough for **controlled L1 pilot use under a signed charter**.
 
-**Device path (not L1 blocker today):** Phone capture is a **native iOS companion** ([`arx-os/ios`](https://github.com/arx-os/ios)) that talks to the **agent**. Lab shell **connects** over HTTP JSON-RPC (file LiDAR path A); **RoomPlan / live camera UI not started**. Safari / pure PWA **cannot** do depth capture — see [`docs/adr-web-demotion.md`](docs/adr-web-demotion.md). Contract: [`docs/agent-client-interface.md`](docs/agent-client-interface.md) · language: [`docs/field-language.md`](docs/field-language.md).
+**Device path (not L1 blocker today):** Phone capture is a **native iOS companion** ([`arx-os/ios`](https://github.com/arx-os/ios)) that talks to the **agent**. Lab shell **connects** over HTTP JSON-RPC (file LiDAR path A); **RoomPlan / live camera UI not started**. Safari / pure PWA **cannot** do depth capture — see [`docs/adr/web-demotion.md`](docs/adr/web-demotion.md). Contract: [`docs/reference/agent-client-interface.md`](docs/reference/agent-client-interface.md) · language: [`docs/reference/field-language.md`](docs/reference/field-language.md).
 
 | Layer | Required behavior | Honesty constraint |
 | :--- | :--- | :--- |
@@ -133,7 +133,7 @@ Compiler without reward is incomplete for the vision. Reward without trusted as-
 
 **Full product bar (L3):** L1 + multi-building program (L2) + production reward/market (R3/R4/R8).
 
-**Living plan:** detailed Horizon B phases, sprints, and risks live in [`docs/horizon-b-roadmap.md`](docs/horizon-b-roadmap.md). Update that file when evidence lands; reconcile scores here.
+**Living plan:** detailed Horizon B phases, sprints, and risks live in [`docs/process/horizon-b-roadmap.md`](docs/process/horizon-b-roadmap.md). Update that file when evidence lands; reconcile scores here.
 
 ### 1.2 Success criteria — compiler (trust root)
 
@@ -167,7 +167,7 @@ Compiler without reward is incomplete for the vision. Reward without trusted as-
 ### 1.4 Explicit non-goals (near term)
 
 - Full BIM CAD parity (materials, openings, every IFC class).
-- **Revit / ArchiCAD / CAD plugins or direct CAD integrations** — IFC export from the vendor tool is the only supported BIM path (`docs/ifc-limitations.md`).
+- **Revit / ArchiCAD / CAD plugins or direct CAD integrations** — IFC export from the vendor tool is the only supported BIM path (`docs/reference/ifc-limitations.md`).
 - Survey-grade auto reconstruction without human review.
 - NL “chat to edit building” as primary interface.
 - **Browser / Safari LiDAR, ARKit, or RoomPlan** — pure PWA cannot access iPhone depth/mesh (Decision 9).
@@ -192,7 +192,7 @@ HORIZON B — First real building / district L1 + site capture (CURRENT PRIORITY
   → room/wing capture loop on capture node (CLI/TUI + agent) → ~250k scale profile
   → later: native iOS companion for phone LiDAR (G10; not started)
   Free-software loop; chain optional/demo only
-  Exit: §1.1a L1 bar + pilot-mitigated R1,R2,R5,R7–R10  (detail: docs/horizon-b-roadmap.md)
+  Exit: §1.1a L1 bar + pilot-mitigated R1,R2,R5,R7–R10  (detail: docs/process/horizon-b-roadmap.md)
 
 HORIZON C — Network scale (after L1 exit, then L2)
   External oracles, public testnet → Base
@@ -211,7 +211,7 @@ HORIZON C — Network scale (after L1 exit, then L2)
 **Hard truth:** Lab-complete (N1–N5, Horizon A tooling) is **not** “absolutely ready for district production.”  
 This section is the **obligation register**: each reservation must be **relegated** (reduced or closed) by named work before the corresponding go-level is claimed.
 
-**Current state (2026-07-24, pin `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d`):** Engineering has a green lab compiler loop (import → validate → export → Git → optional contribute/commercial gate), TUI as default UI, hard resource refuse, and IFC **honesty** via dynamic registry-driven `unmapped_products` LossReport plus buildingSMART ISO fixtures—**R2 eng half** landed; **R9 pin tag is cut and documented with full SHA**. Address prefix validation checks are default lenient (warnings) and strictly gateable via `--strict-addresses`. **Decision 9:** interactive WASM/PWA field client **removed**; **web = static landing only**; real phone LiDAR = **future native iOS** (not started). Agent remains capture node/bridge. District L1 is still ~**5/10**: blocked on **field-owned** evidence and process (signed charter **R10**, second-person walkthrough **R5**, data-class sign-off **R7**, real site IFC/file-LiDAR log **R1/R2/R6**). Site-capture north star is §1.1a (file IFC/LiDAR + agent + TUI under charter). Phased plan **HB0–HB7** lives in `docs/horizon-b-roadmap.md`. Do not claim L1 exit, full BIM parity, browser LiDAR, or production chain. Next work is Horizon B field packet + evidence — not Horizon C, CAD plugins, or browser capture.
+**Current state (2026-07-24, pin `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d`):** Engineering has a green lab compiler loop (import → validate → export → Git → optional contribute/commercial gate), TUI as default UI, hard resource refuse, and IFC **honesty** via dynamic registry-driven `unmapped_products` LossReport plus buildingSMART ISO fixtures—**R2 eng half** landed; **R9 pin tag is cut and documented with full SHA**. Address prefix validation checks are default lenient (warnings) and strictly gateable via `--strict-addresses`. **Decision 9:** interactive WASM/PWA field client **removed**; **web = static landing only**; real phone LiDAR = **future native iOS** (not started). Agent remains capture node/bridge. District L1 is still ~**5/10**: blocked on **field-owned** evidence and process (signed charter **R10**, second-person walkthrough **R5**, data-class sign-off **R7**, real site IFC/file-LiDAR log **R1/R2/R6**). Site-capture north star is §1.1a (file IFC/LiDAR + agent + TUI under charter). Phased plan **HB0–HB7** lives in `docs/process/horizon-b-roadmap.md`. Do not claim L1 exit, full BIM parity, browser LiDAR, or production chain. Next work is Horizon B field packet + evidence — not Horizon C, CAD plugins, or browser capture.
 
 #### Go levels (do not skip)
 
@@ -232,21 +232,21 @@ This section is the **obligation register**: each reservation must be **relegate
 | **R2** | **Vendor BIM/IFC incomplete** | District Revit/etc. exports may drop structure/IDs | Import 2–3 **real** anonymized district IFCs; round-trip matrix | Local interop matrix (preserve/drop) checked in or attached to pilot | Field + eng | **Relegated (Eng)** — Dynamic registry-driven LossReport captures all MEP/structural unmapped products; **district IFC evidence still open** |
 | **R3** | **Live chain/mint ops not turnkey** | 2-of-3, stake, 24h finalize, keys ≠ “install and forget” | Keep L1 **off-chain**; for L3: ops runbook with two oracles + finalize; testnet only until policy OK | L1: chain optional/demo. L3: documented mint with named operators | Eng + ops | **Open** (lab E2E done) |
 | **R4** | **Host payment gate is local-file only** | `export --commercial` + receipt is bypassable; free export still works by design | Process: commercial deliveries **must** use `--commercial`. Product: host that checks `AccessPaid` / receipt server-side (L3) | L1: written process. L3: non-bypassable download path | Eng + field IT | **Partial** (CLI gate done; enforcement open) |
-| **R5** | **No second-person cold start on district env** | Hero dependency; program dies if only one tech can run it | Timed walkthrough by non-author on district laptop/network | Checklist signed; stuck points filed as backlog | Field IT | **Open** — template: `docs/second-person-checklist.md` |
-| **R6** | **Scale/performance unprofiled** | Large school models may OOM/hang; people skip validation | Profile worst-case IFC/scan on pilot hardware; set limits | Written max points/time; light-mode guidance | Eng + field | **Partial** — eng defaults in `docs/resource-limits.md` + hard refuse on oversize import; **site profile still open** |
-| **R7** | **Security / compliance / classification** | Facility plans sensitive; Git remotes, exports, backups | Data class policy (internal-only default); who can clone/export; no student PII in properties | Security/IT sign-off for pilot repo location | Field IT + security | **Partial** — `docs/data-classification.md` + charter §4 (needs sign-off) |
+| **R5** | **No second-person cold start on district env** | Hero dependency; program dies if only one tech can run it | Timed walkthrough by non-author on district laptop/network | Checklist signed; stuck points filed as backlog | Field IT | **Open** — template: `docs/pilot/second-person-checklist.md` |
+| **R6** | **Scale/performance unprofiled** | Large school models may OOM/hang; people skip validation | Profile worst-case IFC/scan on pilot hardware; set limits | Written max points/time; light-mode guidance | Eng + field | **Partial** — eng defaults in `docs/reference/resource-limits.md` + hard refuse on oversize import; **site profile still open** |
+| **R7** | **Security / compliance / classification** | Facility plans sensitive; Git remotes, exports, backups | Data class policy (internal-only default); who can clone/export; no student PII in properties | Security/IT sign-off for pilot repo location | Field IT + security | **Partial** — `docs/pilot/data-classification.md` + charter §4 (needs sign-off) |
 | **R8** | **Mainnet token / institutional fit** | Public entity crypto, custody, procurement, reputation | L1/L2: **no production token**. L3 only with Legal/Finance | Written go/no-go from leadership for any chain use | Vision + Legal | **Partial** — L1 default off-chain in charter §5 |
 | **R9** | **Support / ownership / change control** | No vendor SLA; `main` moves | Pin release tag/hash; one supported workflow page; escalation path | Pinned install + “supported loop” doc used in R5 | Eng + field IT | **Partial** — tag `v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d` cut; charter must record pin; R5 must walk that pin (process still open) |
-| **R10** | **Safety / professional liability framing** | Model must not replace LOTO, licensed drawings, or code docs | Pilot disclaimer policy; culture: human + licensed docs win | Signed pilot charter with disclaimer language | Field IT + leadership | **Partial** — template `docs/pilot-charter.md` (needs signature) |
+| **R10** | **Safety / professional liability framing** | Model must not replace LOTO, licensed drawings, or code docs | Pilot disclaimer policy; culture: human + licensed docs win | Signed pilot charter with disclaimer language | Field IT + leadership | **Partial** — template `docs/pilot/charter.md` (needs signature) |
 
 #### Work packages to relegate obligations (ordered)
 
 | Package | Obligations hit | Deliverables | Status |
 | :---: | :--- | :--- | :---: |
-| **P-Safety** | R10, R1 (process) | `docs/pilot-charter.md`; no unreviewed `proposed` as official | **Template done** — sign to close R10 |
-| **P-Transfer** | R5, R9 | `docs/l1-supported-workflow.md`; `docs/second-person-checklist.md`; `docs/pilot-release.md`; `docs/field-handoff.md`; `scripts/pin_pilot_release.sh` | **Pin cut** (`v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d`) — second-person walkthrough still open for R5 |
-| **P-Data** | R7 | Classification + private Git; export approval same class as CAD | **Template done** — `docs/data-classification.md` (sign to close) |
-| **P-Field-truth** | R1, R2, R6 | Real scan + real IFC matrix + one performance profile on pilot hardware | **Template done** — `docs/field-truth-log.md`; **site evidence open** |
+| **P-Safety** | R10, R1 (process) | `docs/pilot/charter.md`; no unreviewed `proposed` as official | **Template done** — sign to close R10 |
+| **P-Transfer** | R5, R9 | `docs/pilot/supported-workflow.md`; `docs/pilot/second-person-checklist.md`; `docs/pilot/release.md`; `docs/pilot/field-handoff.md`; `scripts/pin_pilot_release.sh` | **Pin cut** (`v2.0.0-pilot.5` @ `ad5213dca08cef52cc90d9b80037f0dbaaa14a8d`) — second-person walkthrough still open for R5 |
+| **P-Data** | R7 | Classification + private Git; export approval same class as CAD | **Template done** — `docs/pilot/data-classification.md` (sign to close) |
+| **P-Field-truth** | R1, R2, R6 | Real scan + real IFC matrix + one performance profile on pilot hardware | **Template done** — `docs/pilot/field-truth-log.md`; **site evidence open** |
 | **P-Chain-optional** | R3, R8 | Explicit “compiler pilot = off-chain”; testnet demo only if requested | **Partial** (charter §5 + L1 workflow) |
 | **P-Market-enforcement** | R4 | L1 process; L3 host service that gates download on payment | **Partial** (CLI gate; process in charter optional) |
 
@@ -312,7 +312,7 @@ The following dual authorities were **eliminated** in the 2026-07 convergence wo
 - **Native IFC only**: parser under `src/ifc/parser/`; export under `src/export/ifc.rs`.
 - **LiDAR pipeline**: parse → downsample → detect → enrich → Building; merge via `MergePolicy::lidar()` (no separate `ModelMerger` type).
 - **Persistence**: `{base}/building.yaml` via `BuildingYamlSerializer`; Git via `BuildingGitManager`.
-- **Addressing (ADR 0001)**: hierarchical `address` on Building/Floor/Room/Equipment; postal + lab roots; electrical `/elec` tree; CLI `show`/`ls`/`tree`/`add`; export GlobalId preserve + assign/write-back — `docs/adr-0001-identity-and-addressing.md`, `docs/identity.md`.
+- **Addressing (ADR 0001)**: hierarchical `address` on Building/Floor/Room/Equipment; postal + lab roots; electrical `/elec` tree; CLI `show`/`ls`/`tree`/`add`; export GlobalId preserve + assign/write-back — `docs/adr/0001-identity-and-addressing.md`, `docs/reference/identity.md`.
 - **Automated spine tests**: `compiler_spine_test`, `ifc_compiler_path_test`, `bidirectional_tests`, `lidar_tests`, `ifc_native_tests`, `postal_root_test`, `address_add_test`, `export_identity_test`.
 - **Compiler + economy CLI** — import/edit/export/show/ls/tree/add/contribute/access (see §9.2); Foundry mint + pay E2E.
 - **Integrity close-out** — §2.6 I1–I11 done; residual process I12.
@@ -369,7 +369,7 @@ This section is the **complete ledger** of honesty/integrity findings from the p
 | **I8** | **`export --delta` placeholder** | **Done:** `--delta` hard-errors (no silent ignore) | **Done** | No silent ignore | I8 |
 | **I9** | **Hardware / MQTT / BACnet stubs** | **Done (doc):** §9.3 + pilot-runbook non-MVP; do not expand | **Done** | Documented quarantine | I9 |
 | **I10** | **`arx migrate` chdir footgun** | **Done:** `persist_building_at`; migrate path-aware | **Done** | No cwd mutation | I10 |
-| **I11** | **Multi-building single-file limit** | **Done (doc):** §3.3 + `docs/l1-supported-workflow.md` | **Done** | Documented | I11 |
+| **I11** | **Multi-building single-file limit** | **Done (doc):** §3.3 + `docs/pilot/supported-workflow.md` | **Done** | Documented | I11 |
 | **I12** | **Optional-ring cognitive load** | **Open process:** refuse list + feature gates | **Low** | Hold freeze | I12 |
 | **I13** | **Scorecard honesty** | **Ongoing** biweekly reconcile | **Process** | Keep honest | I13 |
 
@@ -563,7 +563,7 @@ Key entry points:
 | Ops | Merge + loss reports | Done |
 | L3+ | Materials, openings, systems, vendor edge cases | **Limited / planned** |
 
-Detail: `docs/ifc-limitations.md`, `docs/identity.md`.
+Detail: `docs/reference/ifc-limitations.md`, `docs/reference/identity.md`.
 
 ### 3.6 Field roles (MVP operational design)
 
@@ -851,7 +851,7 @@ Success is measured by **pilot gate criteria** (§7.4), **§2.6 blockers closed*
 | 2.5 | Compiler spine integration tests | **Done** (`compiler_spine_test`, `ifc_compiler_path_test`) |
 | 2.6 | Authoritative CI workflow | **Done** (`compiler-ci.yml`) |
 | 2.7 | Soften/retire bloated multi-OS / tarpaulin PR gates | **Done** |
-| **B3** | Per-fixture limitations table (what we preserve / drop) | **Done** (`docs/ifc-limitations.md`) |
+| **B3** | Per-fixture limitations table (what we preserve / drop) | **Done** (`docs/reference/ifc-limitations.md`) |
 
 **Do not:** Revive `ifc_rs` for “just one more vendor file.” Fix native path or document unsupported.
 
@@ -861,7 +861,7 @@ Success is measured by **pilot gate criteria** (§7.4), **§2.6 blockers closed*
 
 | ID | Task | Done when |
 | :--- | :--- | :--- |
-| 3.1 / **C3** | Confidence scores: feature-based or documented non-probabilistic (no fake precision) | **Done** (`docs/lidar-confidence.md` + detector comments) |
+| 3.1 / **C3** | Confidence scores: feature-based or documented non-probabilistic (no fake precision) | **Done** (`docs/reference/lidar-confidence.md` + detector comments) |
 | 3.2 / **C1** | Review state: `proposed` / `accepted` / `rejected` via text DSL or properties | **Done** (`review_status` + LiDAR marks proposed; `arx edit`) |
 | 3.3 / **C2** | Export warning by default; optional `--approved-only` (or equivalent) | **Done** (`arx export --approved-only` + export warnings) |
 | 3.4 / **C4** | Profile detector on pilot sample; document failure modes (missed floors, split rooms, noise) | Runbook section |
@@ -875,8 +875,8 @@ Success is measured by **pilot gate criteria** (§7.4), **§2.6 blockers closed*
 
 | ID | Task | Done when |
 | :--- | :--- | :--- |
-| 4.1 / **D1** | `docs/l1-supported-workflow.md` (full CLI loop, git, **single-building limit I11**, known stubs) | **Partial** — written; non-author walkthrough open |
-| 4.2 / **D2** | Release binary path: documented pin install | **Partial** — `docs/pilot-release.md` |
+| 4.1 / **D1** | `docs/pilot/supported-workflow.md` (full CLI loop, git, **single-building limit I11**, known stubs) | **Partial** — written; non-author walkthrough open |
+| 4.2 / **D2** | Release binary path: documented pin install | **Partial** — `docs/pilot/release.md` |
 | 4.3 / **D3** | Resource limits: max points, voxel defaults, light mode (Pi vs Mini) | Written + smoke profile once |
 | 4.4 / **D4** | Sample pilot project: `arx init` + example edit script + sample IFC path | **Partial** — `examples/pilot-corrections.txt` + fixtures |
 | 4.5 | Structured ingest summary logs | Operators can debug |
@@ -886,7 +886,7 @@ Success is measured by **pilot gate criteria** (§7.4), **§2.6 blockers closed*
 
 ### 4.7 Track E / Phase 5 — Device UI (Decision 9)
 
-**Status:** Interactive **WASM/PWA field client abandoned** (2026-07-24). See [`docs/adr-web-demotion.md`](docs/adr-web-demotion.md).
+**Status:** Interactive **WASM/PWA field client abandoned** (2026-07-24). See [`docs/adr/web-demotion.md`](docs/adr/web-demotion.md).
 
 | ID | Task | Status |
 | :--- | :--- | :---: |
@@ -1078,8 +1078,8 @@ Adjust calendar; **do not** claim vendor/interop success while CI is red (I1), o
 - [x] Migrate path-safe (Track **I10**)
 - [x] Single-building limit documented (Track **I11** / D5)
 - [x] `schema_version` on YAML Building (Track A1)
-- [x] Vendor IFC limitations table (`docs/ifc-limitations.md`; Revit slots open — R2)
-- [x] `docs/l1-supported-workflow.md` (Track D1 partial — needs non-author walkthrough)
+- [x] Vendor IFC limitations table (`docs/reference/ifc-limitations.md`; Revit slots open — R2)
+- [x] `docs/pilot/supported-workflow.md` (Track D1 partial — needs non-author walkthrough)
 
 ### 7.4 Pilot gate — definition of “remaining items complete”
 
@@ -1214,7 +1214,7 @@ Lab proof: ./scripts/full_lab_loop.sh   (see docs/lab/full-lab-loop.md)
 | **A2** | `Register.s.sol` + script `--register` (YAML UUID) | **Done** |
 | **A3** | `docs/lab/horizon-a-ops.md` mint/pay ops | **Done** |
 | **A4** | Host gate: `export --commercial` + `access-receipt.json` | **Done** (R4 partial) |
-| **A5** | Field trial templates → `docs/field-handoff.md` + field-truth-log | **Done** (supersedes archived field-trial) |
+| **A5** | Field trial templates → `docs/pilot/field-handoff.md` + field-truth-log | **Done** (supersedes archived field-trial) |
 | **A6** | `scripts/full_lab_loop.sh` + CI (compiler + forge mint/pay) | **Done** |
 
 Horizon A **does not** close §1.6 district pilot obligations. It only enables lab/live-local tooling.
@@ -1222,8 +1222,8 @@ Horizon A **does not** close §1.6 district pilot obligations. It only enables l
 
 ### 10.2 Horizon B — Site capture + L1 exit — **current priority**
 
-**Living detail:** [`docs/horizon-b-roadmap.md`](docs/horizon-b-roadmap.md) (phases, risks, sprints — update when evidence lands).  
-**Field packet (policy order):** [`docs/field-handoff.md`](docs/field-handoff.md).  
+**Living detail:** [`docs/process/horizon-b-roadmap.md`](docs/process/horizon-b-roadmap.md) (phases, risks, sprints — update when evidence lands).  
+**Field packet (policy order):** [`docs/pilot/field-handoff.md`](docs/pilot/field-handoff.md).  
 **Target scenario:** §1.1a (~250k sqft walk-in capture under charter).
 
 | Phase | Name | Owner | Status | Success criteria (summary) |
@@ -1262,7 +1262,7 @@ Horizon A **does not** close §1.6 district pilot obligations. It only enables l
 ### 10.4 Next actions (field + eng)
 
 ```text
-You:    docs/field-handoff.md — sign charter + data-classification · record pin · R5 checklist
+You:    docs/pilot/field-handoff.md — sign charter + data-classification · record pin · R5 checklist
         open site access; fill field-truth-log on real IFC/scan
 Eng:    keep pin green · fix field blockers only · no Horizon C until L1 exit
         native iOS only after explicit go (not L1-required); no browser capture
@@ -1288,7 +1288,7 @@ Never:  L3 mainnet until L1 exit · fake R5/R1 evidence · public facility model
 | **2026-07-13 deployment obligations** | §1.6 R1–R10 reservation register + work packages + L0–L3 go levels; Horizon B = relegate pilot obligations |
 | **2026-07-13 P-Safety + P-Transfer** | `pilot-charter`, `l1-supported-workflow`, `second-person-checklist`, `pilot-release`, `pin_pilot_release.sh`; R8–R10 partial |
 | **2026-07-13 P-Data + P-Field templates + L1 smoke** | `data-classification.md`, `field-truth-log.md`, `scripts/l1_smoke.sh`; R7 partial |
-| **2026-07-13 eng B1 closeout** | `contracts/out` gitignored; `docs/field-handoff.md`; pin path ready |
+| **2026-07-13 eng B1 closeout** | `contracts/out` gitignored; `docs/pilot/field-handoff.md`; pin path ready |
 | **2026-07-13 pilot pin** | Annotated tag `v2.0.0-pilot.1` @ `ba33e6ba`; lib 514 + spine green; l1_smoke PASS |
 | **2026-07-13 R5 friction fixes** | `arx commit -m`; default git on init + branch `main`; honest hooks message; smoke covers approved-only + git; CI runs l1_smoke |
 | **2026-07-13 pilot.2** | Tag `v2.0.0-pilot.2` @ `d6a4567f` supersedes pilot.1 for new R5 walkthroughs |
@@ -1297,7 +1297,7 @@ Never:  L3 mainnet until L1 exit · fake R5/R1 evidence · public facility model
 | **2026-07-13 concurrent pass** | Header/§0.1/§1.5/P-Transfer/phase 1.6–1.7 aligned to pilot.3 + Horizon B current |
 | **2026-07-13 Package A / R2 eng** | LossReport `unmapped_products`; buildingSMART ISO fixtures + report; R2 Partial |
 | **2026-07-13 pilot.4** | Tag `v2.0.0-pilot.4` @ `659bbd9f`; TUI default, no hardware/render3d, unmapped honesty |
-| **2026-07-13 Definition of Working + HB roadmap** | §1.1a site/PWA/250k target; G9/G10; `docs/horizon-b-roadmap.md` HB0–HB7 living plan |
+| **2026-07-13 Definition of Working + HB roadmap** | §1.1a site/PWA/250k target; G9/G10; `docs/process/horizon-b-roadmap.md` HB0–HB7 living plan |
 | **2026-07-15 Agent Obs** | Structured logging, status/metrics APIs, dynamic log level, PWA dashboard integration |
 | **2026-07-16 Text AR Overlays** | Smoothing and vertical clustering client polish implementation in progress |
 | **2026-07-16 Hardening** | OnChainDistributor gas, paymaster, key load validations, and architecture review in progress |

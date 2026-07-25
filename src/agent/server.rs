@@ -158,7 +158,7 @@ fn print_client_connect_hints(token: &str, port: u16) {
     println!("┌─────────────────────────────────────────────────────────────");
     println!("│ Agent connect (capture node — same Wi-Fi / hotspot as clients)");
     println!("│ 1) Clients use JSON-RPC on this host (not a browser app)");
-    println!("│ 2) Web surface is a static landing page only (docs/adr-web-demotion.md)");
+    println!("│ 2) Web surface is a static landing page only (docs/adr/web-demotion.md)");
     if ips.is_empty() {
         println!("│    (could not auto-detect LAN IP — run: ipconfig getifaddr en0");
         println!("│     or: hostname -I / ip -4 addr)");
@@ -174,7 +174,7 @@ fn print_client_connect_hints(token: &str, port: u16) {
     println!("│ 3) Authenticate with ROOT TOKEN (capability-scoped) — copy from this terminal");
     println!("│ 4) Durable writes: validate/finalize → building.yaml on this machine");
     println!("│ Token (copy once): {token}");
-    println!("│ iOS: lab shell + file LiDAR path A; RoomPlan UI not started (docs/field-language.md)");
+    println!("│ iOS: lab shell + file LiDAR path A; RoomPlan UI not started (docs/reference/field-language.md)");
     println!("└─────────────────────────────────────────────────────────────");
 }
 

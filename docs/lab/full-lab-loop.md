@@ -1,7 +1,7 @@
 # Full ArxOS lab closed loop (engineering)
 
 **Purpose:** One command that proves the product spine in the lab.  
-**Not:** District L1 exit (see `docs/field-handoff.md` and §1.6 obligations).
+**Not:** District L1 exit (see `docs/pilot/field-handoff.md` and §1.6 obligations).
 
 ## What “full loop” means here
 
@@ -40,5 +40,5 @@ CI: `.github/workflows/full-lab-loop.yml` runs `QUICK=1 ./scripts/full_lab_loop.
 | `./scripts/horizon_a_deploy_env.sh` | Anvil deploy → `.env.arx` |
 | `./scripts/pin_pilot_release.sh` | R9 pilot pin |
 | `docs/lab/horizon-a-ops.md` | Manual mint/pay ops |
-| `docs/field-handoff.md` | District B0–B3 (field) |
+| `docs/pilot/field-handoff.md` | District B0–B3 (field) |
 | `arxos_manifest.md` §1.6 / §10 | Obligations + horizons |

@@ -30,7 +30,7 @@ impl Command for EditCommand {
             println!("  add room \"Studio A\" floor=0 type=office");
             println!("  set room \"Studio A\" review_status=accepted");
             println!("  EOF");
-            println!("\nSee docs/field-language.md for field verbs and agent RPCs.");
+            println!("\nSee docs/reference/field-language.md for field verbs and agent RPCs.");
             return Ok(());
         }
 

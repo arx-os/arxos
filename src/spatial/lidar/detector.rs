@@ -297,7 +297,7 @@ impl RoomDetector {
                             })
                             .count();
 
-                        // Rule-based score — not a calibrated probability (see docs/lidar-confidence.md).
+                        // Rule-based score — not a calibrated probability (see docs/reference/lidar-confidence.md).
                         room.lidar_enrichment = Some(LidarEnrichment {
                             point_count: room_points_count,
                             confidence_score: 0.90,
@@ -408,7 +408,7 @@ pub fn proposed_room_from_point_bbox(
 
     room.lidar_enrichment = Some(LidarEnrichment {
         point_count: points.len(),
-        // Lower fixed tier than enclosed occupancy-grid rooms (docs/lidar-confidence.md).
+        // Lower fixed tier than enclosed occupancy-grid rooms (docs/reference/lidar-confidence.md).
         confidence_score: 0.55,
         last_scan_timestamp: Some(chrono::Utc::now()),
         classification_heuristic: Some(
@@ -608,7 +608,7 @@ impl EquipmentDetector {
                 .properties
                 .insert("point_count".to_string(), cluster.len().to_string());
 
-            // Fixed heuristic tiers — not probabilistic confidence (docs/lidar-confidence.md).
+            // Fixed heuristic tiers — not probabilistic confidence (docs/reference/lidar-confidence.md).
             let confidence_score = match &equipment.equipment_type {
                 EquipmentType::Furniture => 0.75,
                 _ => 0.90,

@@ -16,4 +16,4 @@ CI uses:
 - `test_data/Building-Hvac.ifc`
 - `test_data/sample_building.ifc` (Arx-authored)
 
-See `docs/ifc-limitations.md`.
+See `docs/reference/ifc-limitations.md`.

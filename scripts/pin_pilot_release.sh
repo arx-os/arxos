@@ -60,8 +60,8 @@ echo "==> Tag message"
 MSG="L1 pilot pin ${TAG}
 Commit: ${SHA}
 Build: default features (tui + compiler; no hardware/render3d)
-Supported workflow: docs/l1-supported-workflow.md
-Resource limits: docs/resource-limits.md
+Supported workflow: docs/pilot/supported-workflow.md
+Resource limits: docs/reference/resource-limits.md
 Obligations: arxos_manifest.md §1.6 (R9)
 "
 
@@ -79,4 +79,4 @@ fi
 git tag -a "$TAG" -m "$MSG"
 echo "Created tag $TAG -> $SHA"
 echo "Push when policy allows: git push origin $TAG"
-echo "Then update docs/pilot-release.md pin log + charter §2 with tag and SHA."
+echo "Then update docs/pilot/release.md pin log + charter §2 with tag and SHA."

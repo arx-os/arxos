@@ -201,7 +201,7 @@ Lexer/registry/resolver survived IFC4 + IFC4X3_ADD2 PCERT and ISO RV files. **Ro
 
 7. **Script** `scripts/ifc_sample_battery.sh` wrapping this battery (env `ARX_MAX_IFC_BYTES`, summary table).
 
-8. **Update `docs/ifc-limitations.md`** with buildingSMART table (draft below).
+8. **Update `docs/reference/ifc-limitations.md`** with buildingSMART table (draft below).
 
 9. **Do not** promise Revit parity from these samples — PCERT is a small house, not a district school.
 
@@ -214,7 +214,7 @@ Lexer/registry/resolver survived IFC4 + IFC4X3_ADD2 PCERT and ISO RV files. **Ro
 
 ---
 
-## 6. Draft `docs/ifc-limitations.md` additions (proposal)
+## 6. Draft `docs/reference/ifc-limitations.md` additions (proposal)
 
 ```markdown
 ## buildingSMART Sample-Test-Files (2026-07 assessment)

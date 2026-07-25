@@ -58,8 +58,9 @@ let building: BuildingData = serde_yaml::from_str(&content)?;
 ## 📖 Documentation
 
 - **[Building Examples Guide](./buildings/README.md)** - Detailed building data examples
-- **[User Guide](../docs/core/USER_GUIDE.md)** - Complete ArxOS usage guide
-- **[API Reference](../docs/core/API_REFERENCE.md)** - API documentation
+- **[Documentation map](../docs/INDEX.md)** — authority, pilot packet, reference
+- **[Identity (code map)](../docs/reference/identity.md)** — addresses, CLI, GlobalId
+- **[L1 supported workflow](../docs/pilot/supported-workflow.md)** — district loop
 
 ## 🔗 Related Resources
 
@@ -84,5 +85,5 @@ When adding new examples:
 
 ---
 
-**Questions?** See [Documentation Index](../docs/DOCUMENTATION_INDEX.md) for complete documentation.
+**Questions?** See [Documentation Index](../docs/INDEX.md) for complete documentation.
 

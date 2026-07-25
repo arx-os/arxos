@@ -85,12 +85,12 @@ set room Ground Floor review_status=accepted
 | :--- | :--- |
 | Missed floors / split rooms / noise | Human edit; `review_status=rejected` on bad autos |
 | Trusting auto structure as survey truth | Export **warns** on `proposed`; use `--approved-only` for handoff IFC |
-| Over-reading confidence floats | See `docs/lidar-confidence.md` — scores are **rule tiers**, not probabilities |
+| Over-reading confidence floats | See `docs/reference/lidar-confidence.md` — scores are **rule tiers**, not probabilities |
 
 ## IFC interop notes
 
 - Checked-in third-party-ish samples: `test_data/Building-Architecture.ifc`, `Building-Hvac.ifc`
-- Limitations: `docs/ifc-limitations.md`
+- Limitations: `docs/reference/ifc-limitations.md`
 - Native STEP only; no second IFC stack
 
 ## Install checklist (Track D2)

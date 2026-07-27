@@ -12,7 +12,9 @@ path = "src/main.rs"
 
 [dependencies]
 arxos-core = { workspace = true }
+arxos-networking = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true }
 hex = { workspace = true }
 serde_json = { workspace = true }
+tokio = { workspace = true }

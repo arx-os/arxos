@@ -1,20 +1,61 @@
-//! Arxos networking (Iroh) — scaffold for Phase 2.
+//! # arxos-networking
 //!
-//! Phase 0 intentionally ships a stub so the workspace builds cleanly.
-//! Phase 2 will add: announce roots via gossip, fetch objects by CID,
-//! direct connections + relays, and mDNS local discovery.
+//! Multi-device object sync for Arxos buildings.
+//!
+//! ## Design
+//!
+//! - **Source of truth remains CIDs** in the local CAS — networking only moves bytes.
+//! - **Protocol**: length-prefixed CBOR over bi-directional streams ([`protocol`]).
+//! - **Transports**:
+//!   - [`memory::MemoryMesh`] — in-process, for unit/integration tests
+//!   - [`iroh_node::IrohNode`] — Iroh QUIC (feature `iroh`, default)
+//! - **Discovery**: mDNS on the LAN (feature `mdns`) advertising building heads
+//! - **Sync**: [`sync::pull_root`] materializes a root closure and can adopt head
+//!
+//! ## Phase 2 scope
+//!
+//! Publish Root + objects, second device pull by CID, basic nearby query (via core),
+//! mDNS local discovery.
 
 #![allow(missing_docs)]
 
-/// Placeholder until Iroh integration lands in Phase 2.
-pub fn status() -> &'static str {
-    "arxos-networking: stub (Phase 2)"
+pub mod discovery;
+pub mod error;
+pub mod memory;
+pub mod protocol;
+pub mod sync;
+pub mod transport;
+
+#[cfg(feature = "iroh")]
+pub mod iroh_node;
+
+pub use discovery::{DiscoveredPeer, MdnsDiscovery, SERVICE_TYPE};
+pub use error::{NetError, Result};
+pub use memory::{MemoryMesh, MemoryNode};
+pub use protocol::{BuildingHeadAd, Message, ObjectBlob, ARXOS_ALPN, PROTOCOL_VERSION};
+pub use sync::{building_ads_from_store, pull_root, PullResult};
+pub use transport::{ObjectTransport, PeerId};
+
+#[cfg(feature = "iroh")]
+pub use iroh_node::IrohNode;
+
+/// Crate status string for smoke checks.
+pub fn status() -> String {
+    let mut parts = vec!["arxos-networking".to_string()];
+    #[cfg(feature = "iroh")]
+    parts.push("iroh".into());
+    #[cfg(feature = "mdns")]
+    parts.push("mdns".into());
+    parts.push(format!("alpn={}", String::from_utf8_lossy(ARXOS_ALPN)));
+    parts.join(" ")
 }
 
 #[cfg(test)]
 mod tests {
     #[test]
-    fn stub() {
-        assert!(super::status().contains("Phase 2"));
+    fn status_smoke() {
+        let s = super::status();
+        assert!(s.contains("arxos-networking"));
+        assert!(s.contains("arxos/sync/1"));
     }
 }

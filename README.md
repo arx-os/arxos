@@ -39,8 +39,8 @@ arxos/
 |-------|--------|--------|
 | **0** | Object, CAS, Root, UniFFI, CLI | Done |
 | **1** | Mobile capture loop (Space / PointCloud / Annotation → commit) | Done |
-| **2** | Multi-device + Iroh | Next |
-| **3** | Spatial index & scale | Planned |
+| **2** | Multi-device + Iroh + mDNS | Done |
+| **3** | Spatial index & scale | Next |
 | **4** | USD / IFC interop | Planned |
 | **5** | DePIN & hardening | Planned |
 
@@ -71,6 +71,24 @@ cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" building near "$BID" --x 1.2
 ```
 
 Low-level object/root commands remain available (`object put`, `root create`, …).
+
+### Multi-device sync (Phase 2)
+
+```bash
+# Device A — serve CAS over Iroh
+export ARXOS_STORE=/tmp/device-a
+arxos net serve                 # prints ticket=…  (add --no-mdns to skip LAN ads)
+
+# Device B — pull root + objects, adopt head
+export ARXOS_STORE=/tmp/device-b
+arxos net fetch --peer "$TICKET" --root "$ROOT_CID" --building-id "$BID" --set-head
+arxos building near "$BID" --x 1.2 --y 1.4 --z 1.1
+
+arxos net peers --timeout 3     # mDNS browse on site Wi‑Fi
+arxos net status
+```
+
+See [`docs/architecture/PHASE2.md`](docs/architecture/PHASE2.md).
 
 ## iOS (Phase 1)
 

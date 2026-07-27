@@ -412,6 +412,119 @@ impl BuildingRepository {
     pub fn parse_building_id(s: &str) -> Result<BuildingId> {
         BuildingId::from_str(s)
     }
+
+    /// Put raw object bytes into the CAS (used by network sync).
+    pub fn put_object_bytes(&self, bytes: &[u8]) -> Result<Cid> {
+        self.store.put_bytes(bytes)
+    }
+
+    /// Fetch raw object bytes by CID if present.
+    pub fn get_object_bytes(&self, cid: &Cid) -> Result<Vec<u8>> {
+        self.store.get_bytes(cid)
+    }
+
+    /// Whether the store holds this CID.
+    pub fn contains(&self, cid: &Cid) -> bool {
+        self.store.contains(cid)
+    }
+
+    /// Collect the full object-set closure for a root CID (root object + members).
+    ///
+    /// Returns `(root_cid, ordered list of (cid, bytes))` including the root itself.
+    pub fn root_closure_bytes(&self, root_cid: &Cid) -> Result<Vec<(Cid, Vec<u8>)>> {
+        let root_bytes = self.store.get_bytes(root_cid)?;
+        let root_obj = Object::from_canonical_bytes(&root_bytes)?;
+        let root_body = RootBody::from_object(&root_obj)?;
+        let mut out = Vec::with_capacity(root_body.objects.len() + 1);
+        out.push((*root_cid, root_bytes));
+        for cid in &root_body.objects {
+            // Skip if root somehow listed itself.
+            if cid == root_cid {
+                continue;
+            }
+            match self.store.get_bytes(cid) {
+                Ok(bytes) => out.push((*cid, bytes)),
+                Err(Error::NotFound(_)) => {
+                    // Partial peer: skip missing; caller may request again later.
+                }
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(out)
+    }
+
+    /// Adopt a remote root as this building's head (after objects are in the CAS).
+    ///
+    /// Validates that the root object exists, is a Root, and matches `building_id`.
+    /// Does **not** require the device key (fork/follow is open).
+    pub fn adopt_root(&mut self, root_cid: Cid) -> Result<CommitResult> {
+        let obj = self.store.get(&root_cid)?;
+        let root = RootBody::from_object(&obj)?.clone();
+        if root.building_id != self.record.building_id {
+            return Err(Error::Validation(format!(
+                "root building_id {} does not match repository {}",
+                root.building_id, self.record.building_id
+            )));
+        }
+        let _ = root.verify_authors(); // warn-only at adopt time for forks
+
+        let previous = self.record.head_root;
+        let object_count = root.objects.len() as u64;
+        self.record.head_root = Some(root_cid);
+        self.record.pending.clear();
+        self.record.updated = now_secs();
+        Self::write_record(self.store.root(), &self.record)?;
+
+        self.working_set.clear_staged();
+        self.working_set.pin(root_cid);
+        self.working_set.cache_only(root_cid, obj);
+        for cid in &root.objects {
+            if let Ok(o) = self.store.get(cid) {
+                self.working_set.pin(*cid);
+                self.working_set.cache_only(*cid, o);
+            }
+        }
+
+        Ok(CommitResult {
+            root_cid,
+            building_id: self.record.building_id.clone(),
+            object_count,
+            previous_root: previous,
+        })
+    }
+
+    /// Create or open a building record that will follow a remote building id
+    /// (no local key required until the device wants to author new roots).
+    pub fn open_or_follow(
+        store_path: impl AsRef<Path>,
+        building_id: &BuildingId,
+        name: Option<String>,
+    ) -> Result<Self> {
+        let store = ObjectStore::open(store_path.as_ref())?;
+        fs::create_dir_all(store.root().join("meta").join("buildings"))?;
+        match Self::read_record(store.root(), building_id) {
+            Ok(_) => Self::open(store_path, building_id),
+            Err(Error::NotFound(_)) => {
+                let record = BuildingRecord {
+                    building_id: building_id.clone(),
+                    name,
+                    building_object: None,
+                    head_root: None,
+                    pending: BTreeSet::new(),
+                    updated: now_secs(),
+                };
+                Self::write_record(store.root(), &record)?;
+                let keypair = Self::read_seed(store.root()).ok();
+                Ok(Self {
+                    store,
+                    record,
+                    working_set: WorkingSet::new(),
+                    keypair,
+                })
+            }
+            Err(e) => Err(e),
+        }
+    }
 }
 
 #[cfg(test)]

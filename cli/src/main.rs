@@ -1,11 +1,11 @@
-//! Arxos CLI — Phase 0/1: objects, roots, building capture loop.
+//! Arxos CLI — Phase 0–2: objects, capture loop, multi-device sync.
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::{bail, Context, Result};
 use arxos_core::capture::{AnnotationCapture, PointCloudCapture, SpaceCapture};
@@ -16,6 +16,8 @@ use arxos_core::repository::BuildingRepository;
 use arxos_core::root::{RootBody, RootBuilder};
 use arxos_core::store::ObjectStore;
 use arxos_core::{Cid, Keypair};
+use arxos_networking::sync::{building_ads_from_store, pull_root};
+use arxos_networking::{IrohNode, MdnsDiscovery, ObjectTransport};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
@@ -56,8 +58,60 @@ enum Commands {
         #[command(subcommand)]
         command: CaptureCommands,
     },
+    /// Multi-device networking (Phase 2)
+    Net {
+        #[command(subcommand)]
+        command: NetCommands,
+    },
     /// Print core version / hello
     Version,
+}
+
+#[derive(Subcommand, Debug)]
+enum NetCommands {
+    /// Serve the local CAS over Iroh QUIC (and optionally mDNS)
+    Serve {
+        /// Disable mDNS advertising (on by default)
+        #[arg(long, default_value_t = false)]
+        no_mdns: bool,
+        /// Print ticket and exit accept-loop setup info only (for scripting)
+        #[arg(long)]
+        ticket_only: bool,
+    },
+    /// Fetch a root (+ objects) from a peer ticket and store locally
+    Fetch {
+        /// Peer dial ticket (JSON EndpointAddr from `net serve`)
+        #[arg(long)]
+        peer: String,
+        /// Root CID to pull
+        #[arg(long)]
+        root: String,
+        /// Building id (optional; inferred from root when omitted)
+        #[arg(long)]
+        building_id: Option<String>,
+        /// Adopt pulled root as local head
+        #[arg(long, default_value_t = true)]
+        set_head: bool,
+    },
+    /// Refresh advertisements / print current building heads for publish
+    Publish {
+        /// Optional peer ticket to announce to (best-effort)
+        #[arg(long)]
+        peer: Option<String>,
+        /// Building to announce (all if omitted)
+        #[arg(long)]
+        building_id: Option<String>,
+    },
+    /// Browse mDNS for local Arxos peers
+    Peers {
+        /// How long to wait for discoveries (seconds)
+        #[arg(long, default_value_t = 3)]
+        timeout: u64,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Networking stack status
+    Status,
 }
 
 #[derive(Subcommand, Debug)]
@@ -283,6 +337,214 @@ fn keypair_from_seed_hex(seed_hex: &str) -> Result<Keypair> {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
+    // Async net commands need a runtime.
+    if matches!(cli.command, Commands::Net { .. }) {
+        let rt = tokio::runtime::Runtime::new()?;
+        return rt.block_on(async_main(cli));
+    }
+
+    sync_main(cli)
+}
+
+async fn async_main(cli: Cli) -> Result<()> {
+    match cli.command {
+        Commands::Net { command } => match command {
+            NetCommands::Status => {
+                println!("{}", arxos_networking::status());
+            }
+            NetCommands::Serve {
+                no_mdns,
+                ticket_only,
+            } => {
+                let node = std::sync::Arc::new(
+                    IrohNode::bind(&cli.store)
+                        .await
+                        .with_context(|| format!("bind iroh on {}", cli.store.display()))?,
+                );
+                node.refresh_buildings().await?;
+                let ticket = node.ticket().await?;
+                println!("peer_id={}", node.peer_id());
+                println!("ticket={ticket}");
+                println!("store={}", cli.store.display());
+                let ads = building_ads_from_store(&cli.store)?;
+                for ad in &ads {
+                    println!(
+                        "advertise building={} root={} objects={}",
+                        ad.building_id, ad.root_cid, ad.object_count
+                    );
+                }
+
+                let mut mdns_handle = None;
+                if !no_mdns {
+                    match MdnsDiscovery::new() {
+                        Ok(d) => {
+                            let instance = format!(
+                                "arxos-{}",
+                                &node.peer_id()[..8.min(node.peer_id().len())]
+                            );
+                            if let Err(e) = d.announce(
+                                &instance,
+                                node.peer_id(),
+                                11223,
+                                Some(&ticket),
+                                &ads,
+                            ) {
+                                eprintln!("warning: mDNS announce failed: {e}");
+                            } else {
+                                println!("mdns=advertising as {instance}");
+                                mdns_handle = Some(d);
+                            }
+                        }
+                        Err(e) => eprintln!("warning: mDNS unavailable: {e}"),
+                    }
+                }
+
+                if ticket_only {
+                    if let Some(d) = mdns_handle {
+                        let _ = d.shutdown();
+                    }
+                    node.close().await;
+                    return Ok(());
+                }
+
+                println!("serving… (Ctrl-C to stop)");
+                let accept = {
+                    let n = std::sync::Arc::clone(&node);
+                    tokio::spawn(async move {
+                        if let Err(e) = n.accept_loop().await {
+                            eprintln!("accept loop ended: {e}");
+                        }
+                    })
+                };
+                // Wait until interrupted.
+                tokio::signal::ctrl_c().await?;
+                println!("shutting down…");
+                accept.abort();
+                if let Some(d) = mdns_handle {
+                    let _ = d.shutdown();
+                }
+                // Endpoint closes when Arc drops after abort.
+            }
+            NetCommands::Fetch {
+                peer,
+                root,
+                building_id,
+                set_head,
+            } => {
+                // Ephemeral client node (own store path for outbound).
+                let node = IrohNode::bind(&cli.store)
+                    .await
+                    .context("bind client endpoint")?;
+                let result = pull_root(
+                    &node,
+                    &peer,
+                    &cli.store,
+                    &root,
+                    building_id.as_deref(),
+                    set_head,
+                )
+                .await
+                .context("pull root")?;
+                println!("root_cid={}", result.root_cid);
+                println!("objects_stored={}", result.objects_stored);
+                println!("objects_skipped={}", result.objects_skipped_existing);
+                if let Some(adopted) = result.adopted {
+                    println!("adopted_head={}", adopted.root_cid);
+                    println!("building_id={}", adopted.building_id);
+                    println!("object_count={}", adopted.object_count);
+                }
+                node.close().await;
+            }
+            NetCommands::Publish {
+                peer,
+                building_id,
+            } => {
+                let mut ads = building_ads_from_store(&cli.store)?;
+                if let Some(bid) = &building_id {
+                    ads.retain(|a| &a.building_id == bid);
+                }
+                if ads.is_empty() {
+                    bail!("no building heads to publish");
+                }
+                for ad in &ads {
+                    println!(
+                        "building={} root={} objects={} name={:?}",
+                        ad.building_id, ad.root_cid, ad.object_count, ad.name
+                    );
+                }
+                if let Some(peer_ticket) = peer {
+                    let node = IrohNode::bind(&cli.store).await?;
+                    for ad in &ads {
+                        node.announce_root(
+                            &peer_ticket,
+                            &ad.building_id,
+                            &ad.root_cid,
+                            ad.object_count,
+                            None,
+                        )
+                        .await
+                        .with_context(|| format!("announce {}", ad.building_id))?;
+                        println!("announced {} -> peer", ad.building_id);
+                    }
+                    node.close().await;
+                } else {
+                    println!("(no --peer; printed local heads only. Run `net serve` to share.)");
+                }
+            }
+            NetCommands::Peers { timeout, json } => {
+                let discovery = MdnsDiscovery::new().context("start mDNS")?;
+                discovery.start_browse().context("browse")?;
+                println!("browsing mDNS for {timeout}s…");
+                let peers = discovery.wait_for_peers(Duration::from_secs(timeout));
+                if json {
+                    let v: Vec<_> = peers
+                        .iter()
+                        .map(|p| {
+                            serde_json::json!({
+                                "instance": p.instance_name,
+                                "peer_id": p.peer_id,
+                                "ticket": p.ticket,
+                                "port": p.port,
+                                "buildings": p.buildings.iter().map(|b| {
+                                    serde_json::json!({
+                                        "building_id": b.building_id,
+                                        "root_cid": b.root_cid,
+                                        "name": b.name,
+                                        "object_count": b.object_count,
+                                    })
+                                }).collect::<Vec<_>>(),
+                            })
+                        })
+                        .collect();
+                    println!("{}", serde_json::to_string_pretty(&v)?);
+                } else if peers.is_empty() {
+                    println!("(no peers discovered)");
+                } else {
+                    for p in peers {
+                        println!(
+                            "{}  peer={}  port={}  buildings={}",
+                            p.instance_name,
+                            p.peer_id,
+                            p.port,
+                            p.buildings.len()
+                        );
+                        for b in &p.buildings {
+                            println!(
+                                "    {}  root={}  objects={}",
+                                b.building_id, b.root_cid, b.object_count
+                            );
+                        }
+                    }
+                }
+                let _ = discovery.shutdown();
+            }
+        },
+        _ => unreachable!("async_main only for Net"),
+    }
+    Ok(())
+}
+
+fn sync_main(cli: Cli) -> Result<()> {
     match cli.command {
         Commands::Version => {
             println!(
@@ -809,6 +1071,9 @@ fn main() -> Result<()> {
                     }
                 }
             }
+        }
+        Commands::Net { .. } => {
+            bail!("net commands require async runtime (internal error)");
         }
     }
 

@@ -1,6 +1,6 @@
 # Arxos
 
-## Architecture (non-negotiable)
+## Architecture
 
 - **Databaseless**: no general-purpose DB in the critical path
 - **Source of truth**: content-addressed objects + signed Merkle roots
@@ -28,17 +28,6 @@ arxos/
     ├── architecture/
     └── schema/
 ```
-
-## Phase status
-
-| Phase | Focus | Status |
-|-------|--------|--------|
-| **0** | Object, CAS, Root, UniFFI, CLI | Done |
-| **1** | Mobile capture loop (Space / PointCloud / Annotation → commit) | Done |
-| **2** | Multi-device + Iroh + mDNS | Done |
-| **3** | Spatial index, partial load, merge | Done |
-| **4** | USD / IFC interop | Done |
-| **5** | DePIN & hardening | Done (foundation) |
 
 ## Build & test
 

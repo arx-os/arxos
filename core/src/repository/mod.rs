@@ -158,23 +158,21 @@ impl BuildingRepository {
         let keypair = Self::read_seed(store.root()).ok();
         let mut working_set = WorkingSet::new();
 
-        // Materialize head root + its object set (partial: only annotations get
-        // distance queries later; we load all root members for Phase 1 reload).
+        // Phase 3: partial by default — pin head root + building only.
+        // Domain objects load via load_region / annotations_near / explicit get.
         if let Some(head) = record.head_root {
-            let root_obj = store.get(&head)?;
-            working_set.pin(head);
-            working_set.cache_only(head, root_obj.clone());
-            if let ObjectBody::Root(root) = &root_obj.body {
-                for cid in &root.objects {
-                    if let Ok(obj) = store.get(cid) {
-                        working_set.pin(*cid);
-                        working_set.cache_only(*cid, obj);
-                    }
-                }
+            if let Ok(root_obj) = store.get(&head) {
+                working_set.pin(head);
+                working_set.cache_only(head, root_obj);
             }
         }
         if let Some(b) = record.building_object {
-            working_set.pin(b);
+            if let Ok(obj) = store.get(&b) {
+                working_set.pin(b);
+                working_set.cache_only(b, obj);
+            } else {
+                working_set.pin(b);
+            }
         }
 
         // Restore pending captures into the session working set.
@@ -270,11 +268,23 @@ impl BuildingRepository {
     }
 
     /// Commit staged (+ existing head set) to a new signed Root and advance head.
+    ///
+    /// Rebuilds the versioned spatial index and attaches it to the root.
     pub fn commit(&mut self, message: Option<String>) -> Result<CommitResult> {
+        self.commit_with_options(message, true)
+    }
+
+    /// Commit with control over spatial index rebuild.
+    pub fn commit_with_options(
+        &mut self,
+        message: Option<String>,
+        rebuild_spatial: bool,
+    ) -> Result<CommitResult> {
         let kp = self
             .keypair
             .as_ref()
-            .ok_or_else(|| Error::Crypto("no device keypair loaded for signing".into()))?;
+            .ok_or_else(|| Error::Crypto("no device keypair loaded for signing".into()))?
+            .clone();
 
         let mut objects = BTreeSet::new();
 
@@ -295,16 +305,26 @@ impl BuildingRepository {
             ));
         }
 
+        let spatial_index_root = if rebuild_spatial {
+            let entries = crate::spatial::collect_entries(&self.store, objects.iter().copied())?;
+            crate::spatial::build_index(&self.store, entries)?
+        } else {
+            None
+        };
+
         let previous = self.record.head_root;
         let mut builder =
             RootBuilder::new(self.record.building_id.clone(), now_secs()).objects(objects.clone());
         if let Some(prev) = previous {
             builder = builder.previous_root(prev);
         }
+        if let Some(si) = spatial_index_root {
+            builder = builder.spatial_index(si);
+        }
         if let Some(msg) = message {
             builder = builder.message(msg);
         }
-        let (root_obj, root_cid) = builder.build_signed(kp)?;
+        let (root_obj, root_cid) = builder.build_signed(&kp)?;
         self.store.put(&root_obj)?;
 
         self.record.head_root = Some(root_cid);
@@ -324,9 +344,147 @@ impl BuildingRepository {
         })
     }
 
-    /// Annotations within radius of a pose (from current head object set).
+    /// Rebuild spatial index for current head object set (does not create a new root).
+    pub fn rebuild_spatial_index(&mut self) -> Result<Option<Cid>> {
+        let cids = self.head_object_cids()?;
+        let entries = crate::spatial::collect_entries(&self.store, cids)?;
+        let index_root = crate::spatial::build_index(&self.store, entries)?;
+        // Optionally re-commit with index — caller may commit. Store index CID on a
+        // lightweight side path: for Phase 3 we require a commit to attach.
+        Ok(index_root)
+    }
+
+    /// Query objects intersecting a volume using the head's spatial index when present.
+    pub fn query_volume(
+        &self,
+        volume: &crate::spatial::QueryVolume,
+    ) -> Result<Vec<crate::spatial::SpatialHit>> {
+        let Some(head) = self.record.head_root else {
+            return Ok(Vec::new());
+        };
+        let root_obj = self.store.get(&head)?;
+        let root = RootBody::from_object(&root_obj)?;
+        if let Some(si) = root.spatial_index_root {
+            return crate::spatial::query_index_refined(&self.store, &si, volume);
+        }
+        // Fallback: linear scan of head objects.
+        let mut hits = Vec::new();
+        for cid in &root.objects {
+            let obj = match self.store.get(cid) {
+                Ok(o) => o,
+                Err(Error::NotFound(_)) => continue,
+                Err(e) => return Err(e),
+            };
+            if let Some(entry) = crate::spatial::entry_from_object(*cid, &obj) {
+                if entry.bounds.intersects(&volume.bounds) {
+                    hits.push(crate::spatial::SpatialHit {
+                        object: *cid,
+                        bounds: Some(entry.bounds),
+                    });
+                }
+            }
+        }
+        Ok(hits)
+    }
+
+    /// Partial materialization: load objects in `volume` into the working set.
+    ///
+    /// Returns number of newly materialized objects. Respects `limit` (0 = unlimited).
+    pub fn load_region(
+        &mut self,
+        volume: &crate::spatial::QueryVolume,
+        limit: usize,
+    ) -> Result<usize> {
+        let hits = self.query_volume(volume)?;
+        let mut loaded = 0usize;
+        for hit in hits {
+            if limit > 0 && loaded >= limit {
+                break;
+            }
+            if self.working_set.get_cached(&hit.object).is_some() {
+                continue;
+            }
+            self.working_set.materialize(&self.store, &hit.object)?;
+            loaded += 1;
+        }
+        Ok(loaded)
+    }
+
+    /// Load objects associated with a floor (by floor object CID or elevation slab).
+    pub fn load_floor(&mut self, floor_cid: &Cid, limit: usize) -> Result<usize> {
+        // Prefer explicit floor links; also slab from Floor body.
+        let floor_obj = self.store.get(floor_cid)?;
+        let volume = if let ObjectBody::Floor(f) = &floor_obj.body {
+            crate::spatial::QueryVolume {
+                bounds: crate::object::Aabb {
+                    min: [-1.0e6, f.elevation_m - 1.5, -1.0e6],
+                    max: [1.0e6, f.elevation_m + 1.5, 1.0e6],
+                },
+            }
+        } else {
+            crate::spatial::QueryVolume {
+                bounds: crate::object::Aabb::from_min_max(
+                    [-1.0e6, -1.0e6, -1.0e6],
+                    [1.0e6, 1.0e6, 1.0e6],
+                ),
+            }
+        };
+        let hits = self.query_volume(&volume)?;
+        let mut loaded = 0usize;
+        // Always pin the floor object.
+        self.working_set.materialize(&self.store, floor_cid)?;
+        for hit in hits {
+            if limit > 0 && loaded >= limit {
+                break;
+            }
+            // Prefer objects that reference this floor when available.
+            if let Ok(obj) = self.store.get(&hit.object) {
+                if let Some(entry) = crate::spatial::entry_from_object(hit.object, &obj) {
+                    if entry.floor.as_ref() == Some(floor_cid)
+                        || entry.bounds.intersects(&volume.bounds)
+                    {
+                        if self.working_set.get_cached(&hit.object).is_none() {
+                            self.working_set.materialize(&self.store, &hit.object)?;
+                            loaded += 1;
+                        }
+                    }
+                }
+            }
+        }
+        Ok(loaded)
+    }
+
+    /// Merge another root into this repository (same building_id), adopt result as head.
+    pub fn merge_root(
+        &mut self,
+        other_root: Cid,
+        message: Option<String>,
+    ) -> Result<crate::merge::MergeResult> {
+        let kp = self
+            .keypair
+            .as_ref()
+            .ok_or_else(|| Error::Crypto("no device keypair for merge signing".into()))?
+            .clone();
+        let head = self
+            .record
+            .head_root
+            .ok_or_else(|| Error::Validation("no local head to merge into".into()))?;
+        let result =
+            crate::merge::merge_roots(&self.store, head, other_root, &kp, message, true)?;
+        self.adopt_root(result.root_cid)?;
+        Ok(result)
+    }
+
+    /// Annotations within radius of a pose.
+    ///
+    /// Uses the spatial index when present (partial candidate set); otherwise
+    /// falls back to the full head object list.
     pub fn annotations_near(&mut self, origin: &Pose, radius_m: f64) -> Result<Vec<AnnotationHit>> {
-        let candidates = self.head_object_cids()?;
+        let volume = crate::spatial::volume_around_pose(origin, radius_m);
+        let candidates: Vec<Cid> = match self.query_volume(&volume) {
+            Ok(hits) if !hits.is_empty() => hits.into_iter().map(|h| h.object).collect(),
+            _ => self.head_object_cids()?,
+        };
         self.working_set
             .annotations_near(&self.store, origin, radius_m, candidates)
     }
@@ -478,12 +636,7 @@ impl BuildingRepository {
         self.working_set.clear_staged();
         self.working_set.pin(root_cid);
         self.working_set.cache_only(root_cid, obj);
-        for cid in &root.objects {
-            if let Ok(o) = self.store.get(cid) {
-                self.working_set.pin(*cid);
-                self.working_set.cache_only(*cid, o);
-            }
-        }
+        // Do not eagerly materialize the full object set (partial by default).
 
         Ok(CommitResult {
             root_cid,

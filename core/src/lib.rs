@@ -18,6 +18,7 @@ pub mod canonical;
 pub mod cid;
 pub mod crypto;
 pub mod error;
+pub mod merge;
 pub mod object;
 pub mod repository;
 pub mod root;
@@ -58,8 +59,11 @@ pub use object::{
     AnnotationBody, BlobBody, BuildingBody, BuildingId, FloorBody, Object, ObjectBody,
     ObjectHeader, ObjectType, Pose, SCHEMA_VERSION,
 };
+pub use merge::{merge_roots, plan_merge, MergePlan, MergeResult, ANNOTATION_DEDUP_M};
+pub use object::Aabb;
 pub use repository::{BuildingRecord, BuildingRepository, CaptureResult, CommitResult};
 pub use root::{RootBody, RootBuilder};
+pub use spatial::{QueryVolume, SpatialEntry, SpatialHit};
 pub use store::ObjectStore;
 pub use working_set::{AnnotationHit, WorkingSet};
 

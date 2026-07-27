@@ -40,8 +40,8 @@ arxos/
 | **0** | Object, CAS, Root, UniFFI, CLI | Done |
 | **1** | Mobile capture loop (Space / PointCloud / Annotation → commit) | Done |
 | **2** | Multi-device + Iroh + mDNS | Done |
-| **3** | Spatial index & scale | Next |
-| **4** | USD / IFC interop | Planned |
+| **3** | Spatial index, partial load, merge | Done |
+| **4** | USD / IFC interop | Next |
 | **5** | DePIN & hardening | Planned |
 
 ## Build & test
@@ -89,6 +89,21 @@ arxos net status
 ```
 
 See [`docs/architecture/PHASE2.md`](docs/architecture/PHASE2.md).
+
+### Spatial index & merge (Phase 3)
+
+```bash
+# After capture commits (index is built automatically on commit):
+arxos spatial query "$BID" --min-x 0 --min-y 0 --min-z 0 --max-x 5 --max-y 3 --max-z 5
+arxos spatial load  "$BID" --min-x 0 --min-y 0 --min-z 0 --max-x 5 --max-y 3 --max-z 5
+arxos spatial build "$BID" --commit   # rebuild + attach index on a new root
+
+# Concurrent scans:
+arxos merge plan  "$ROOT_A" "$ROOT_B"
+arxos merge apply "$BID" "$OTHER_ROOT"
+```
+
+See [`docs/architecture/PHASE3.md`](docs/architecture/PHASE3.md).
 
 ## iOS (Phase 1)
 

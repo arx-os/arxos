@@ -9,11 +9,13 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::{bail, Context, Result};
 use arxos_core::capture::{AnnotationCapture, PointCloudCapture, SpaceCapture};
+use arxos_core::merge::plan_merge;
 use arxos_core::object::{
     AnnotationBody, BlobBody, BuildingBody, BuildingId, Object, ObjectBody, ObjectType, Pose,
 };
 use arxos_core::repository::BuildingRepository;
 use arxos_core::root::{RootBody, RootBuilder};
+use arxos_core::spatial::QueryVolume;
 use arxos_core::store::ObjectStore;
 use arxos_core::{Cid, Keypair};
 use arxos_networking::sync::{building_ads_from_store, pull_root};
@@ -63,8 +65,91 @@ enum Commands {
         #[command(subcommand)]
         command: NetCommands,
     },
+    /// Spatial index & partial load (Phase 3)
+    Spatial {
+        #[command(subcommand)]
+        command: SpatialCommands,
+    },
+    /// Merge concurrent roots (Phase 3)
+    Merge {
+        #[command(subcommand)]
+        command: MergeCommands,
+    },
     /// Print core version / hello
     Version,
+}
+
+#[derive(Subcommand, Debug)]
+enum SpatialCommands {
+    /// Rebuild spatial index for a building head (reports CID; commit to attach)
+    Build {
+        building_id: String,
+        /// Create a new root that attaches the index
+        #[arg(long)]
+        commit: bool,
+        #[arg(long)]
+        message: Option<String>,
+    },
+    /// Query objects intersecting a volume
+    Query {
+        building_id: String,
+        #[arg(long)]
+        min_x: f64,
+        #[arg(long)]
+        min_y: f64,
+        #[arg(long)]
+        min_z: f64,
+        #[arg(long)]
+        max_x: f64,
+        #[arg(long)]
+        max_y: f64,
+        #[arg(long)]
+        max_z: f64,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Partially materialize objects in a volume into the working set
+    Load {
+        building_id: String,
+        #[arg(long)]
+        min_x: f64,
+        #[arg(long)]
+        min_y: f64,
+        #[arg(long)]
+        min_z: f64,
+        #[arg(long)]
+        max_x: f64,
+        #[arg(long)]
+        max_y: f64,
+        #[arg(long)]
+        max_z: f64,
+        /// Max objects to load (0 = unlimited)
+        #[arg(long, default_value_t = 0)]
+        limit: usize,
+    },
+    /// Load objects for a floor (by floor object CID)
+    LoadFloor {
+        building_id: String,
+        floor_cid: String,
+        #[arg(long, default_value_t = 0)]
+        limit: usize,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum MergeCommands {
+    /// Dry-run merge plan for two root CIDs
+    Plan {
+        root_a: String,
+        root_b: String,
+    },
+    /// Merge other_root into the building's current head
+    Apply {
+        building_id: String,
+        other_root: String,
+        #[arg(long)]
+        message: Option<String>,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -1075,6 +1160,142 @@ fn sync_main(cli: Cli) -> Result<()> {
         Commands::Net { .. } => {
             bail!("net commands require async runtime (internal error)");
         }
+        Commands::Spatial { command } => match command {
+            SpatialCommands::Build {
+                building_id,
+                commit,
+                message,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let mut repo = BuildingRepository::open(&cli.store, &bid)?;
+                if commit {
+                    // No pending changes required — recommit head set with fresh index.
+                    // Stage nothing; commit rebuilds index from head+pending.
+                    let res = repo.commit_with_options(
+                        message.or_else(|| Some("rebuild spatial index".into())),
+                        true,
+                    )?;
+                    println!("root_cid={}", res.root_cid);
+                    println!("object_count={}", res.object_count);
+                    if let Some(root) = repo.load_head_root()? {
+                        println!(
+                            "spatial_index_root={}",
+                            root.spatial_index_root
+                                .map(|c| c.to_string())
+                                .unwrap_or_else(|| "none".into())
+                        );
+                    }
+                } else {
+                    let idx = repo.rebuild_spatial_index()?;
+                    println!(
+                        "spatial_index_root={}",
+                        idx.map(|c| c.to_string())
+                            .unwrap_or_else(|| "none".into())
+                    );
+                    println!("(use --commit to attach index to a new root)");
+                }
+            }
+            SpatialCommands::Query {
+                building_id,
+                min_x,
+                min_y,
+                min_z,
+                max_x,
+                max_y,
+                max_z,
+                json,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let repo = BuildingRepository::open(&cli.store, &bid)?;
+                let volume = QueryVolume::from_min_max(
+                    [min_x, min_y, min_z],
+                    [max_x, max_y, max_z],
+                );
+                let hits = repo.query_volume(&volume)?;
+                if json {
+                    let v: Vec<_> = hits
+                        .iter()
+                        .map(|h| {
+                            serde_json::json!({
+                                "cid": h.object.to_string(),
+                                "bounds": h.bounds.as_ref().map(|b| {
+                                    serde_json::json!({"min": b.min, "max": b.max})
+                                }),
+                            })
+                        })
+                        .collect();
+                    println!("{}", serde_json::to_string_pretty(&v)?);
+                } else {
+                    println!("hits={}", hits.len());
+                    for h in hits {
+                        println!("{}", h.object);
+                    }
+                }
+            }
+            SpatialCommands::Load {
+                building_id,
+                min_x,
+                min_y,
+                min_z,
+                max_x,
+                max_y,
+                max_z,
+                limit,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let mut repo = BuildingRepository::open(&cli.store, &bid)?;
+                let volume = QueryVolume::from_min_max(
+                    [min_x, min_y, min_z],
+                    [max_x, max_y, max_z],
+                );
+                let n = repo.load_region(&volume, limit)?;
+                println!("loaded={n}");
+                println!("cache_len={}", repo.working_set().cache_len());
+            }
+            SpatialCommands::LoadFloor {
+                building_id,
+                floor_cid,
+                limit,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let floor = Cid::from_str(&floor_cid)?;
+                let mut repo = BuildingRepository::open(&cli.store, &bid)?;
+                let n = repo.load_floor(&floor, limit)?;
+                println!("loaded={n}");
+                println!("cache_len={}", repo.working_set().cache_len());
+            }
+        },
+        Commands::Merge { command } => match command {
+            MergeCommands::Plan { root_a, root_b } => {
+                let store = ObjectStore::open(&cli.store)?;
+                let a = Cid::from_str(&root_a)?;
+                let b = Cid::from_str(&root_b)?;
+                let plan = plan_merge(&store, a, b)?;
+                println!("building_id={}", plan.building_id);
+                println!("union_size={}", plan.union_size);
+                println!("would_dedupe={}", plan.would_dedupe);
+            }
+            MergeCommands::Apply {
+                building_id,
+                other_root,
+                message,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let other = Cid::from_str(&other_root)?;
+                let mut repo = BuildingRepository::open(&cli.store, &bid)?;
+                let res = repo.merge_root(other, message)?;
+                println!("root_cid={}", res.root_cid);
+                println!("object_count={}", res.object_count);
+                println!("deduped_annotations={}", res.deduped_annotations);
+                println!(
+                    "spatial_index_root={}",
+                    res.spatial_index_root
+                        .map(|c| c.to_string())
+                        .unwrap_or_else(|| "none".into())
+                );
+                println!("parents={},{}", res.parents.0, res.parents.1);
+            }
+        },
     }
 
     Ok(())

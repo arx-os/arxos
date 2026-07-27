@@ -29,10 +29,10 @@
 ## CLI
 
 ```bash
-arxos export usd $BID -o out.usda
-arxos export ifc $BID -o out.ifc [--project-name Name]
-arxos import usd out.usda
-arxos import ifc out.ifc
+arx export usd $BID -o out.usda
+arx export ifc $BID -o out.ifc [--project-name Name]
+arx import usd out.usda
+arx import ifc out.ifc
 ```
 
 ## Edge

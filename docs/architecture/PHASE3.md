@@ -55,13 +55,13 @@
 ### CLI
 
 ```bash
-arxos spatial build $BID --commit
-arxos spatial query $BID --min-x … --max-z …
-arxos spatial load  $BID --min-x … --max-z … [--limit N]
-arxos spatial load-floor $BID $FLOOR_CID
+arx spatial build $BID --commit
+arx spatial query $BID --min-x … --max-z …
+arx spatial load  $BID --min-x … --max-z … [--limit N]
+arx spatial load-floor $BID $FLOOR_CID
 
-arxos merge plan  $ROOT_A $ROOT_B
-arxos merge apply $BID $OTHER_ROOT [--message …]
+arx merge plan  $ROOT_A $ROOT_B
+arx merge apply $BID $OTHER_ROOT [--message …]
 ```
 
 ## Tests

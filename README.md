@@ -22,7 +22,7 @@ Full design: [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTUR
 ```
 arxos/
 ├── core/           # arxos-core (Rust): objects, CID, CAS, roots, crypto
-├── cli/            # arxos CLI
+├── cli/            # arx CLI
 ├── networking/     # Iroh (Phase 2)
 ├── ios/            # SwiftUI + ARKit client
 ├── edge/           # Edge node binary
@@ -77,15 +77,15 @@ Low-level object/root commands remain available (`object put`, `root create`, �
 ```bash
 # Device A — serve CAS over Iroh
 export ARXOS_STORE=/tmp/device-a
-arxos net serve                 # prints ticket=…  (add --no-mdns to skip LAN ads)
+arx net serve                 # prints ticket=…  (add --no-mdns to skip LAN ads)
 
 # Device B — pull root + objects, adopt head
 export ARXOS_STORE=/tmp/device-b
-arxos net fetch --peer "$TICKET" --root "$ROOT_CID" --building-id "$BID" --set-head
-arxos building near "$BID" --x 1.2 --y 1.4 --z 1.1
+arx net fetch --peer "$TICKET" --root "$ROOT_CID" --building-id "$BID" --set-head
+arx building near "$BID" --x 1.2 --y 1.4 --z 1.1
 
-arxos net peers --timeout 3     # mDNS browse on site Wi‑Fi
-arxos net status
+arx net peers --timeout 3     # mDNS browse on site Wi‑Fi
+arx net status
 ```
 
 See [`docs/architecture/PHASE2.md`](docs/architecture/PHASE2.md).
@@ -94,13 +94,13 @@ See [`docs/architecture/PHASE2.md`](docs/architecture/PHASE2.md).
 
 ```bash
 # After capture commits (index is built automatically on commit):
-arxos spatial query "$BID" --min-x 0 --min-y 0 --min-z 0 --max-x 5 --max-y 3 --max-z 5
-arxos spatial load  "$BID" --min-x 0 --min-y 0 --min-z 0 --max-x 5 --max-y 3 --max-z 5
-arxos spatial build "$BID" --commit   # rebuild + attach index on a new root
+arx spatial query "$BID" --min-x 0 --min-y 0 --min-z 0 --max-x 5 --max-y 3 --max-z 5
+arx spatial load  "$BID" --min-x 0 --min-y 0 --min-z 0 --max-x 5 --max-y 3 --max-z 5
+arx spatial build "$BID" --commit   # rebuild + attach index on a new root
 
 # Concurrent scans:
-arxos merge plan  "$ROOT_A" "$ROOT_B"
-arxos merge apply "$BID" "$OTHER_ROOT"
+arx merge plan  "$ROOT_A" "$ROOT_B"
+arx merge apply "$BID" "$OTHER_ROOT"
 ```
 
 See [`docs/architecture/PHASE3.md`](docs/architecture/PHASE3.md).
@@ -108,10 +108,10 @@ See [`docs/architecture/PHASE3.md`](docs/architecture/PHASE3.md).
 ### Interop — USD & IFC (Phase 4)
 
 ```bash
-arxos export usd "$BID" -o building.usda
-arxos export ifc "$BID" -o building.ifc
-arxos import usd building.usda
-arxos import ifc building.ifc
+arx export usd "$BID" -o building.usda
+arx export ifc "$BID" -o building.ifc
+arx import usd building.usda
+arx import ifc building.ifc
 
 # Edge node
 arxos-edge export-usd "$BID" -o building.usda
@@ -124,10 +124,10 @@ See [`docs/architecture/PHASE4.md`](docs/architecture/PHASE4.md).
 ### DePIN & hardening (Phase 5)
 
 ```bash
-arxos depin score "$BID"
-arxos depin verify "$ROOT_CID"
-arxos depin attest "$ROOT_CID" --device-id field-phone-1
-arxos depin registry "$BID" --abi
+arx depin score "$BID"
+arx depin verify "$ROOT_CID"
+arx depin attest "$ROOT_CID" --device-id field-phone-1
+arx depin registry "$BID" --abi
 
 # Edge packaging
 docker build -f edge/Dockerfile -t arxos-edge .

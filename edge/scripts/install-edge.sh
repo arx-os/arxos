@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install arxos + arxos-edge binaries and optional systemd unit (root).
+# Install arx + arxos-edge binaries and optional systemd unit (root).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 PREFIX="${PREFIX:-/usr/local}"
@@ -9,8 +9,10 @@ echo "Building release binaries…"
 cargo build --release -p arxos-cli -p arxos-edge --manifest-path "$ROOT/Cargo.toml"
 
 install -d "$PREFIX/bin"
-install -m 755 "$ROOT/target/release/arxos" "$PREFIX/bin/arxos"
+install -m 755 "$ROOT/target/release/arx" "$PREFIX/bin/arx"
 install -m 755 "$ROOT/target/release/arxos-edge" "$PREFIX/bin/arxos-edge"
+# Remove legacy binary name if present from earlier installs.
+rm -f "$PREFIX/bin/arxos"
 
 if [[ "${INSTALL_SYSTEMD:-0}" == "1" ]]; then
   install -d /var/lib/arxos

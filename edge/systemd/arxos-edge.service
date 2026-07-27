@@ -9,7 +9,7 @@ User=arxos
 Group=arxos
 Environment=ARXOS_STORE=/var/lib/arxos/store
 # Serve the local object store over Iroh (Phase 2 protocol).
-ExecStart=/usr/local/bin/arxos --store ${ARXOS_STORE} net serve
+ExecStart=/usr/local/bin/arx --store ${ARXOS_STORE} net serve
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true

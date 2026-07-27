@@ -14,7 +14,7 @@ arxos-edge export-ifc $BID -o out.ifc
 Networking (Iroh serve) uses the main CLI:
 
 ```bash
-arxos --store /var/lib/arxos/store net serve
+arx --store /var/lib/arxos/store net serve
 ```
 
 ## Packaging
@@ -42,6 +42,6 @@ sudo systemctl enable --now arxos-edge
 ## Phase 5 hardening
 
 - Device keys under `$ARXOS_STORE/keys/device.seed` (mode 0600)
-- Root verification: `arxos depin verify $ROOT`
-- Contribution scores: `arxos depin score $BID`
-- Registry snapshot: `arxos depin registry $BID --abi`
+- Root verification: `arx depin verify $ROOT`
+- Contribution scores: `arx depin score $BID`
+- Registry snapshot: `arx depin registry $BID --abi`

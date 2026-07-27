@@ -1,4 +1,4 @@
-//! Arxos CLI — Phase 0–4: objects, capture, networking, spatial, interop.
+//! Arx CLI — Phase 0–4: objects, capture, networking, spatial, interop.
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
@@ -28,7 +28,7 @@ use arxos_ifc::{export_building_ifc, import_ifc, ExportOptions as IfcExportOptio
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
-#[command(name = "arxos", version, about = "Arxos content-addressed building repository tools")]
+#[command(name = "arx", version, about = "Arxos content-addressed building repository tools")]
 struct Cli {
     /// Path to the local object store directory.
     #[arg(long, global = true, default_value = ".arxos/store", env = "ARXOS_STORE")]
@@ -731,7 +731,7 @@ fn sync_main(cli: Cli) -> Result<()> {
     match cli.command {
         Commands::Version => {
             println!(
-                "arxos {} (core {})",
+                "arx {} (core {})",
                 env!("CARGO_PKG_VERSION"),
                 arxos_core::version()
             );

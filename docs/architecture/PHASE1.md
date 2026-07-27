@@ -28,7 +28,7 @@
    RoomPlan/mesh data becomes `PointCloudChunk` / future USD export. AR shows annotation billboards only.
 
 6. **Simulator / CI path.**  
-   `arxos capture simulate` and Swift `ArxosDemo` exercise the full loop without LiDAR.
+   `arx capture simulate` and Swift `ArxosDemo` exercise the full loop without LiDAR.
 
 ## Commands
 

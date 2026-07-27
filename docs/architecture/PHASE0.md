@@ -12,7 +12,7 @@
 | Root + ed25519 sign/verify | `core/src/{root,crypto}/` |
 | UniFFI skeleton | `core/src/arxos.udl`, feature `uniffi` |
 | SwiftUI shell + hello | `ios/Arxos/` |
-| CLI | `cli/` → binary `arxos` |
+| CLI | `cli/` → binary `arx` |
 | Object schema docs | `docs/schema/` |
 
 ## Verify

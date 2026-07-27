@@ -16,7 +16,7 @@ RUN cargo build --release -p arxos-edge -p arxos-cli
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /src/target/release/arxos-edge /usr/local/bin/arxos-edge
-COPY --from=builder /src/target/release/arxos /usr/local/bin/arxos
+COPY --from=builder /src/target/release/arx /usr/local/bin/arx
 ENV ARXOS_STORE=/data/store
 VOLUME ["/data"]
 EXPOSE 0

@@ -46,19 +46,19 @@ ALPN: `arxos/sync/1`
 ```bash
 # Device A
 export ARXOS_STORE=/tmp/a
-arxos building init --name Site
-arxos capture simulate "$BID" --commit
-arxos net serve                  # prints ticket=… ; mDNS on by default
-# arxos net serve --no-mdns
+arx building init --name Site
+arx capture simulate "$BID" --commit
+arx net serve                  # prints ticket=… ; mDNS on by default
+# arx net serve --no-mdns
 
 # Device B
 export ARXOS_STORE=/tmp/b
-arxos net fetch --peer "$TICKET" --root "$ROOT" --building-id "$BID" --set-head
-arxos building near "$BID" --x … --y … --z …
+arx net fetch --peer "$TICKET" --root "$ROOT" --building-id "$BID" --set-head
+arx building near "$BID" --x … --y … --z …
 
-arxos net peers --timeout 3      # mDNS browse
-arxos net publish                # list local heads
-arxos net status
+arx net peers --timeout 3      # mDNS browse
+arx net publish                # list local heads
+arx net status
 ```
 
 ## Layout

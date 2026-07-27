@@ -12,8 +12,8 @@ OpenUSD **projection** of the Arxos object graph (Phase 4).
 ## Usage
 
 ```bash
-arxos export usd $BUILDING_ID -o building.usda
-arxos import usd building.usda
+arx export usd $BUILDING_ID -o building.usda
+arx import usd building.usda
 ```
 
 ## Expanding coverage

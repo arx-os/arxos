@@ -29,10 +29,10 @@
 ## CLI
 
 ```bash
-arxos depin score $BID [--root CID] [--json]
-arxos depin verify $ROOT_CID [--json]
-arxos depin attest $ROOT_CID --device-id mock-1
-arxos depin registry $BID [--abi]   # JSON + optional bytes32 digests
+arx depin score $BID [--root CID] [--json]
+arx depin verify $ROOT_CID [--json]
+arx depin attest $ROOT_CID --device-id mock-1
+arx depin registry $BID [--abi]   # JSON + optional bytes32 digests
 ```
 
 ## Contracts
@@ -44,7 +44,7 @@ BuildingId on-chain: `bytes32(blake3(building_id_utf8))` (CLI `--abi` helper).
 
 ## Edge packaging
 
-* `edge/Dockerfile` — multi-arch image with `arxos` + `arxos-edge`
+* `edge/Dockerfile` — multi-arch image with `arx` + `arxos-edge`
 * `edge/systemd/arxos-edge.service` — net serve under systemd
 * `edge/scripts/install-edge.sh` — install binaries (+ optional unit)
 

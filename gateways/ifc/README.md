@@ -14,8 +14,8 @@ IFC4 **bidirectional** projection of the Arxos object graph (Phase 4).
 ## Usage
 
 ```bash
-arxos export ifc $BUILDING_ID -o building.ifc
-arxos import ifc building.ifc
+arx export ifc $BUILDING_ID -o building.ifc
+arx import ifc building.ifc
 ```
 
 ## Fidelity

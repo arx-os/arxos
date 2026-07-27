@@ -179,5 +179,5 @@ See the full plan in project history. Phase 0 deliverables:
 1. Monorepo structure
 2. arxos-core skeleton
 3. UniFFI + Swift hello-world
-4. CLI: `object put`, `root create`, `root show`
+4. CLI (`arx`): `object put`, `root create`, `root show`
 5. Initial object schema documentation

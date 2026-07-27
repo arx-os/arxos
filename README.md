@@ -1,9 +1,5 @@
 # Arxos
 
-**Lived-experience building repository** — content-addressed objects, signed Merkle roots, iOS-first capture, databaseless by design.
-
-> Greenfield rebuild (2026-07-27). Previous database / YAML / Git-centric architectures are discarded.
-
 ## Architecture (non-negotiable)
 
 - **Databaseless**: no general-purpose DB in the critical path

@@ -1,4 +1,4 @@
-//! Arxos CLI — Phase 0: object put, root create, root show.
+//! Arxos CLI — Phase 0/1: objects, roots, building capture loop.
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
@@ -8,9 +8,11 @@ use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{bail, Context, Result};
+use arxos_core::capture::{AnnotationCapture, PointCloudCapture, SpaceCapture};
 use arxos_core::object::{
     AnnotationBody, BlobBody, BuildingBody, BuildingId, Object, ObjectBody, ObjectType, Pose,
 };
+use arxos_core::repository::BuildingRepository;
 use arxos_core::root::{RootBody, RootBuilder};
 use arxos_core::store::ObjectStore;
 use arxos_core::{Cid, Keypair};
@@ -44,8 +46,119 @@ enum Commands {
         #[command(subcommand)]
         command: KeyCommands,
     },
+    /// Building repository (Phase 1)
+    Building {
+        #[command(subcommand)]
+        command: BuildingCommands,
+    },
+    /// Capture into a building working set (Phase 1)
+    Capture {
+        #[command(subcommand)]
+        command: CaptureCommands,
+    },
     /// Print core version / hello
     Version,
+}
+
+#[derive(Subcommand, Debug)]
+enum BuildingCommands {
+    /// Create a new building repository (CAS + head + device key)
+    Init {
+        #[arg(long)]
+        name: Option<String>,
+        #[arg(long)]
+        quiet: bool,
+    },
+    /// Open / show a building by ID
+    Show {
+        building_id: String,
+        #[arg(long)]
+        json: bool,
+    },
+    /// List buildings in the store
+    List {
+        #[arg(long)]
+        json: bool,
+    },
+    /// Commit pending captures to a new signed root
+    Commit {
+        building_id: String,
+        #[arg(long)]
+        message: Option<String>,
+        #[arg(long)]
+        quiet: bool,
+    },
+    /// Query annotations near a pose
+    Near {
+        building_id: String,
+        #[arg(long, default_value = "0")]
+        x: f64,
+        #[arg(long, default_value = "0")]
+        y: f64,
+        #[arg(long, default_value = "0")]
+        z: f64,
+        #[arg(long, default_value = "10")]
+        radius: f64,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum CaptureCommands {
+    /// Capture a Space object at a pose
+    Space {
+        building_id: String,
+        #[arg(long)]
+        name: Option<String>,
+        #[arg(long, default_value = "0")]
+        x: f64,
+        #[arg(long, default_value = "0")]
+        y: f64,
+        #[arg(long, default_value = "0")]
+        z: f64,
+        #[arg(long)]
+        quiet: bool,
+    },
+    /// Capture a text Annotation at a pose
+    Annotation {
+        building_id: String,
+        #[arg(long)]
+        text: String,
+        #[arg(long, default_value = "0")]
+        x: f64,
+        #[arg(long, default_value = "0")]
+        y: f64,
+        #[arg(long, default_value = "0")]
+        z: f64,
+        #[arg(long)]
+        quiet: bool,
+    },
+    /// Capture a synthetic / file-based point cloud (xyz f32 LE)
+    PointCloud {
+        building_id: String,
+        /// Path to raw xyz f32 LE bytes; if omitted, generates a small synthetic room sample
+        #[arg(long)]
+        file: Option<PathBuf>,
+        #[arg(long, default_value = "0")]
+        x: f64,
+        #[arg(long, default_value = "0")]
+        y: f64,
+        #[arg(long, default_value = "0")]
+        z: f64,
+        #[arg(long)]
+        quiet: bool,
+    },
+    /// Simulate a full RoomPlan-like capture: space + point cloud + annotation
+    Simulate {
+        building_id: String,
+        #[arg(long, default_value = "Simulated Room")]
+        name: String,
+        #[arg(long, default_value = "simulated note")]
+        text: String,
+        #[arg(long)]
+        commit: bool,
+        #[arg(long)]
+        message: Option<String>,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -184,6 +297,301 @@ fn main() -> Result<()> {
                 let kp = Keypair::generate();
                 println!("seed={}", hex::encode(kp.seed()));
                 println!("public_key={}", kp.public_key());
+            }
+        },
+        Commands::Building { command } => match command {
+            BuildingCommands::Init { name, quiet } => {
+                let repo = BuildingRepository::init(&cli.store, name, None)
+                    .with_context(|| format!("init building in {}", cli.store.display()))?;
+                if quiet {
+                    println!("{}", repo.building_id());
+                } else {
+                    println!("building_id={}", repo.building_id());
+                    println!(
+                        "name={}",
+                        repo.record().name.clone().unwrap_or_default()
+                    );
+                    println!(
+                        "head_root={}",
+                        repo.head_root()
+                            .map(|c| c.to_string())
+                            .unwrap_or_else(|| "none".into())
+                    );
+                    println!(
+                        "building_object={}",
+                        repo.record()
+                            .building_object
+                            .map(|c| c.to_string())
+                            .unwrap_or_else(|| "none".into())
+                    );
+                }
+            }
+            BuildingCommands::Show {
+                building_id,
+                json,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let repo = BuildingRepository::open(&cli.store, &bid)?;
+                let r = repo.record();
+                if json {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&serde_json::json!({
+                            "building_id": r.building_id.to_string(),
+                            "name": r.name,
+                            "head_root": r.head_root.map(|c| c.to_string()),
+                            "building_object": r.building_object.map(|c| c.to_string()),
+                            "pending": r.pending.iter().map(|c| c.to_string()).collect::<Vec<_>>(),
+                            "pending_count": r.pending.len(),
+                            "updated": r.updated,
+                        }))?
+                    );
+                } else {
+                    println!("building_id={}", r.building_id);
+                    println!("name={:?}", r.name);
+                    println!(
+                        "head_root={}",
+                        r.head_root
+                            .map(|c| c.to_string())
+                            .unwrap_or_else(|| "none".into())
+                    );
+                    println!("pending={}", r.pending.len());
+                    for c in &r.pending {
+                        println!("  pending {c}");
+                    }
+                    if let Some(root) = repo.load_head_root()? {
+                        println!("head_objects={}", root.objects.len());
+                        println!("head_message={:?}", root.message);
+                    }
+                }
+            }
+            BuildingCommands::List { json } => {
+                let list = BuildingRepository::list_buildings(&cli.store)?;
+                if json {
+                    let v: Vec<_> = list
+                        .iter()
+                        .map(|r| {
+                            serde_json::json!({
+                                "building_id": r.building_id.to_string(),
+                                "name": r.name,
+                                "head_root": r.head_root.map(|c| c.to_string()),
+                                "pending_count": r.pending.len(),
+                            })
+                        })
+                        .collect();
+                    println!("{}", serde_json::to_string_pretty(&v)?);
+                } else {
+                    for r in list {
+                        println!(
+                            "{}  name={:?}  head={}  pending={}",
+                            r.building_id,
+                            r.name,
+                            r.head_root
+                                .map(|c| c.to_string())
+                                .unwrap_or_else(|| "-".into()),
+                            r.pending.len()
+                        );
+                    }
+                }
+            }
+            BuildingCommands::Commit {
+                building_id,
+                message,
+                quiet,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let mut repo = BuildingRepository::open(&cli.store, &bid)?;
+                let res = repo.commit(message)?;
+                if quiet {
+                    println!("{}", res.root_cid);
+                } else {
+                    println!("root_cid={}", res.root_cid);
+                    println!("building_id={}", res.building_id);
+                    println!("object_count={}", res.object_count);
+                    println!(
+                        "previous_root={}",
+                        res.previous_root
+                            .map(|c| c.to_string())
+                            .unwrap_or_else(|| "none".into())
+                    );
+                }
+            }
+            BuildingCommands::Near {
+                building_id,
+                x,
+                y,
+                z,
+                radius,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let mut repo = BuildingRepository::open(&cli.store, &bid)?;
+                let origin = Pose {
+                    position: [x, y, z],
+                    orientation: [0.0, 0.0, 0.0, 1.0],
+                };
+                let hits = repo.annotations_near(&origin, radius)?;
+                for h in hits {
+                    println!(
+                        "{:.2}m  {}  pose=[{:.2},{:.2},{:.2}]  {}",
+                        h.distance_m,
+                        h.cid,
+                        h.pose.position[0],
+                        h.pose.position[1],
+                        h.pose.position[2],
+                        h.text
+                    );
+                }
+            }
+        },
+        Commands::Capture { command } => match command {
+            CaptureCommands::Space {
+                building_id,
+                name,
+                x,
+                y,
+                z,
+                quiet,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let mut repo = BuildingRepository::open(&cli.store, &bid)?;
+                let res = repo.capture_space(&SpaceCapture {
+                    name,
+                    pose: Pose {
+                        position: [x, y, z],
+                        orientation: [0.0, 0.0, 0.0, 1.0],
+                    },
+                    bounds: None,
+                    floor: None,
+                    properties: BTreeMap::new(),
+                })?;
+                if quiet {
+                    println!("{}", res.cid);
+                } else {
+                    println!("cid={}", res.cid);
+                    println!("type={}", res.object_type);
+                }
+            }
+            CaptureCommands::Annotation {
+                building_id,
+                text,
+                x,
+                y,
+                z,
+                quiet,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let mut repo = BuildingRepository::open(&cli.store, &bid)?;
+                let res = repo.capture_annotation(&AnnotationCapture::new(
+                    text,
+                    Pose {
+                        position: [x, y, z],
+                        orientation: [0.0, 0.0, 0.0, 1.0],
+                    },
+                ))?;
+                if quiet {
+                    println!("{}", res.cid);
+                } else {
+                    println!("cid={}", res.cid);
+                    println!("type={}", res.object_type);
+                }
+            }
+            CaptureCommands::PointCloud {
+                building_id,
+                file,
+                x,
+                y,
+                z,
+                quiet,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let mut repo = BuildingRepository::open(&cli.store, &bid)?;
+                let pose = Pose {
+                    position: [x, y, z],
+                    orientation: [0.0, 0.0, 0.0, 1.0],
+                };
+                let capture = if let Some(path) = file {
+                    let bytes = fs::read(&path)
+                        .with_context(|| format!("read {}", path.display()))?;
+                    let mut properties = BTreeMap::new();
+                    properties.insert("format".into(), "xyz_f32_le".into());
+                    properties.insert("source".into(), "file".into());
+                    PointCloudCapture {
+                        pose,
+                        bounds: None,
+                        points_xyz_f32_le: bytes,
+                        properties,
+                    }
+                } else {
+                    // Synthetic 2×2 m room floor sample (for CI / no device).
+                    let mut pts = Vec::new();
+                    for i in 0..5 {
+                        for j in 0..5 {
+                            pts.push([i as f32 * 0.5, 0.0, j as f32 * 0.5]);
+                        }
+                    }
+                    PointCloudCapture::from_xyz(&pts, pose, None)
+                };
+                let point_count = capture.point_count();
+                let res = repo.capture_point_cloud(&capture)?;
+                if quiet {
+                    println!("{}", res.cid);
+                } else {
+                    println!("cid={}", res.cid);
+                    println!("type={}", res.object_type);
+                    println!("points={point_count}");
+                }
+            }
+            CaptureCommands::Simulate {
+                building_id,
+                name,
+                text,
+                commit,
+                message,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let mut repo = BuildingRepository::open(&cli.store, &bid)?;
+                let space = repo.capture_space(&SpaceCapture {
+                    name: Some(name),
+                    pose: Pose {
+                        position: [1.0, 0.0, 1.0],
+                        orientation: [0.0, 0.0, 0.0, 1.0],
+                    },
+                    bounds: None,
+                    floor: None,
+                    properties: {
+                        let mut p = BTreeMap::new();
+                        p.insert("source".into(), "simulate".into());
+                        p
+                    },
+                })?;
+                println!("space={}", space.cid);
+                let mut pts = Vec::new();
+                for i in 0..8 {
+                    for j in 0..8 {
+                        pts.push([i as f32 * 0.25, 0.0, j as f32 * 0.25]);
+                    }
+                }
+                let cloud = repo.capture_point_cloud(&PointCloudCapture::from_xyz(
+                    &pts,
+                    Pose::default(),
+                    None,
+                ))?;
+                println!("point_cloud={} points={}", cloud.cid, 64);
+                let ann = repo.capture_annotation(&AnnotationCapture::new(
+                    text,
+                    Pose {
+                        position: [1.2, 1.4, 1.1],
+                        orientation: [0.0, 0.0, 0.0, 1.0],
+                    },
+                ))?;
+                println!("annotation={}", ann.cid);
+                if commit {
+                    let res = repo.commit(message.or_else(|| Some("simulate capture".into())))?;
+                    println!("root_cid={}", res.root_cid);
+                    println!("object_count={}", res.object_count);
+                } else {
+                    println!("pending={} (use building commit to finish)", repo.record().pending.len());
+                }
             }
         },
         Commands::Object { command } => {

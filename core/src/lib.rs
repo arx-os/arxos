@@ -13,15 +13,18 @@
 // Module-level docs are required; per-field docs are encouraged but not denied in Phase 0.
 #![allow(missing_docs)]
 
+pub mod capture;
 pub mod canonical;
 pub mod cid;
 pub mod crypto;
 pub mod error;
 pub mod object;
+pub mod repository;
 pub mod root;
 pub mod schema;
 pub mod spatial;
 pub mod store;
+pub mod working_set;
 
 /// UniFFI foreign-language API (feature `uniffi`).
 ///
@@ -35,13 +38,19 @@ mod uniffi_api;
 #[cfg(feature = "uniffi")]
 #[allow(missing_docs, unused_imports)]
 pub use uniffi_api::{
-    create_root, generate_building_id, generate_keypair, public_key_hex, put_blob, show_root,
-    KeypairData, ObjectPutResult, RootCreateResult,
+    annotations_near, capture_annotation, capture_point_cloud, capture_space, commit_building,
+    create_root, generate_building_id, generate_keypair, init_building, list_buildings,
+    open_building, public_key_hex, put_blob, show_root, AnnotationOverlay, BuildingSummary,
+    CapturePutResult, CommitSummary, KeypairData, ObjectPutResult, RootCreateResult,
 };
 
 #[cfg(feature = "uniffi")]
 uniffi::include_scaffolding!("arxos");
 
+pub use capture::{
+    annotation_object, point_cloud_object, space_object, AnnotationCapture, PointCloudCapture,
+    SpaceCapture,
+};
 pub use cid::Cid;
 pub use crypto::{AuthorSignature, Keypair, PublicKey, Signature};
 pub use error::{Error, Result};
@@ -49,8 +58,10 @@ pub use object::{
     AnnotationBody, BlobBody, BuildingBody, BuildingId, FloorBody, Object, ObjectBody,
     ObjectHeader, ObjectType, Pose, SCHEMA_VERSION,
 };
+pub use repository::{BuildingRecord, BuildingRepository, CaptureResult, CommitResult};
 pub use root::{RootBody, RootBuilder};
 pub use store::ObjectStore;
+pub use working_set::{AnnotationHit, WorkingSet};
 
 /// Library version string.
 ///

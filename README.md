@@ -33,17 +33,16 @@ arxos/
     └── schema/
 ```
 
-## Phase 0 status
+## Phase status
 
-| Deliverable | Status |
-|-------------|--------|
-| Monorepo structure | Done |
-| Object + CBOR + BLAKE3 CID | Done |
-| Local CAS store | Done |
-| Root + ed25519 signing | Done |
-| CLI: `object put`, `root create`, `root show` | Done |
-| UniFFI skeleton + Swift hello | Done |
-| Initial object schema docs | Done |
+| Phase | Focus | Status |
+|-------|--------|--------|
+| **0** | Object, CAS, Root, UniFFI, CLI | Done |
+| **1** | Mobile capture loop (Space / PointCloud / Annotation → commit) | Done |
+| **2** | Multi-device + Iroh | Next |
+| **3** | Spatial index & scale | Planned |
+| **4** | USD / IFC interop | Planned |
+| **5** | DePIN & hardening | Planned |
 
 ## Build & test
 
@@ -55,45 +54,31 @@ cargo test --workspace
 cargo run -p arxos-cli -- version
 ```
 
-### CLI quickstart
+### CLI quickstart (Phase 1 capture loop)
 
 ```bash
 export ARXOS_STORE=/tmp/arxos-demo
 
-# Keys
-cargo run -p arxos-cli -- key generate
-# → seed=...  public_key=ed25519:...
+# New building repository (CAS + head + device key)
+BID=$(cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" building init --name "Demo Hall" --quiet)
 
-# Put objects
-cargo run -p arxos-cli -- --store "$ARXOS_STORE" object put --type blob --text "hello"
-cargo run -p arxos-cli -- --store "$ARXOS_STORE" object put --type annotation --text "valve behind panel"
-cargo run -p arxos-cli -- --store "$ARXOS_STORE" object put --type building --name "Demo Hall" --sign-seed "$SEED"
+# Simulate RoomPlan-like capture (space + point cloud + annotation) and commit
+cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" capture simulate "$BID" --commit
 
-# Create signed root
-cargo run -p arxos-cli -- --store "$ARXOS_STORE" root create \
-  --building-id "$BUILDING_ID" \
-  --all \
-  --seed "$SEED" \
-  --message "initial"
-
-# Show root
-cargo run -p arxos-cli -- --store "$ARXOS_STORE" root show "$ROOT_CID"
+# Reload + spatial-ish annotation query
+cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" building show "$BID"
+cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" building near "$BID" --x 1.2 --y 1.4 --z 1.1 --radius 5
 ```
 
-## iOS (Phase 0)
+Low-level object/root commands remain available (`object put`, `root create`, …).
 
-Open `ios/Arxos/Arxos.xcodeproj` (or the Swift package under `ios/`) for a blank SwiftUI app that calls the UniFFI `hello` binding once the XCFramework is built.
+## iOS (Phase 1)
 
-See [`ios/README.md`](ios/README.md).
+```bash
+cd ios/Arxos && swift run ArxosDemo
+```
 
-## Phases
-
-0. **Foundation** (current)  
-1. Mobile capture loop  
-2. Multi-device + Iroh  
-3. Spatial index & scale  
-4. USD / IFC interop  
-5. DePIN & hardening  
+SwiftUI app sources: `ios/Arxos/Sources/ArxosApp/` — init/open building, simulate or RoomPlan capture, pin annotations, commit root, AR annotation overlay. See [`ios/README.md`](ios/README.md) and [`docs/architecture/PHASE1.md`](docs/architecture/PHASE1.md).
 
 ## License
 

@@ -9,20 +9,25 @@ let package = Package(
     ],
     products: [
         .library(name: "ArxosCore", targets: ["ArxosCore"]),
+        .library(name: "ArxosAppLib", targets: ["ArxosApp"]),
         .executable(name: "ArxosDemo", targets: ["ArxosDemo"]),
     ],
     targets: [
-        // UniFFI-generated (or Phase 0 shim) Swift API over arxos-core.
         .target(
             name: "ArxosCore",
             path: "Sources/ArxosCore"
+        ),
+        // App sources as a library so `swift build` typechecks UI without @main iOS app.
+        .target(
+            name: "ArxosApp",
+            dependencies: ["ArxosCore"],
+            path: "Sources/ArxosApp",
+            exclude: ["ArxosApp.swift"] // @main app entry is for Xcode; demo uses ArxosDemo
         ),
         .executableTarget(
             name: "ArxosDemo",
             dependencies: ["ArxosCore"],
             path: "Sources/ArxosDemo"
         ),
-        // SwiftUI app sources live under Sources/ArxosApp for Xcode (Phase 1).
-        // Not a SPM product here — @main apps need an Xcode target / iOS SDK.
     ]
 )

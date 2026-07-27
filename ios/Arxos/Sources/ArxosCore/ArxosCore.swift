@@ -1,9 +1,8 @@
-// Phase 0 UniFFI surface for arxos-core.
+// Phase 1 UniFFI surface for arxos-core.
 //
-// When `Scripts/generate_bindings.sh` has been run against a UniFFI-enabled
-// build, replace this shim with the generated `arxos_core.swift` (or keep this
-// file as a thin re-export). Until the native library is linked, the pure-Swift
-// fallback implements the same API for UI compile checks.
+// When native FFI is linked (`ArxosCoreFFI`), calls go to Rust.
+// Otherwise a pure-Swift local CAS shim enables UI + capture-loop development
+// on macOS / simulator without an XCFramework.
 
 import Foundation
 
@@ -11,18 +10,64 @@ import Foundation
 import ArxosCoreFFI
 #endif
 
+// MARK: - Public models
+
+public struct BuildingSummary: Equatable, Sendable {
+    public var buildingId: String
+    public var name: String?
+    public var headRoot: String?
+    public var buildingObject: String?
+    public var stagedCount: UInt64
+
+    public init(
+        buildingId: String,
+        name: String? = nil,
+        headRoot: String? = nil,
+        buildingObject: String? = nil,
+        stagedCount: UInt64 = 0
+    ) {
+        self.buildingId = buildingId
+        self.name = name
+        self.headRoot = headRoot
+        self.buildingObject = buildingObject
+        self.stagedCount = stagedCount
+    }
+}
+
+public struct CapturePutResult: Equatable, Sendable {
+    public var cid: String
+    public var objectType: String
+}
+
+public struct CommitSummary: Equatable, Sendable {
+    public var rootCid: String
+    public var buildingId: String
+    public var objectCount: UInt64
+    public var previousRoot: String?
+}
+
+public struct AnnotationOverlay: Equatable, Identifiable, Sendable {
+    public var id: String { cid }
+    public var cid: String
+    public var text: String
+    public var x: Double
+    public var y: Double
+    public var z: Double
+    public var distanceM: Double
+}
+
+// MARK: - Facade
+
 /// Public Swift façade matching the UniFFI namespace `arxos_core`.
 public enum ArxosCore {
-    /// Library version string (e.g. "0.1.0").
     public static func version() -> String {
         #if canImport(ArxosCoreFFI)
         return ArxosCoreFFI.version()
         #else
-        return Phase0Shim.version
+        return LocalStore.shared.version
         #endif
     }
 
-    /// Smoke-test greeting used by the blank SwiftUI app.
     public static func hello(name: String) -> String {
         #if canImport(ArxosCoreFFI)
         return ArxosCoreFFI.hello(name: name)
@@ -31,23 +76,437 @@ public enum ArxosCore {
         #endif
     }
 
-    /// Generate a new BuildingId (ULID string).
     public static func generateBuildingId() -> String {
         #if canImport(ArxosCoreFFI)
         return ArxosCoreFFI.generateBuildingId()
         #else
-        return Phase0Shim.generateBuildingId()
+        return LocalStore.shared.generateBuildingId()
+        #endif
+    }
+
+    public static func defaultStorePath() -> String {
+        let base = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        let path = base.appendingPathComponent("arxos-store", isDirectory: true).path
+        try? FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
+        return path
+    }
+
+    public static func initBuilding(storePath: String, name: String?) -> BuildingSummary {
+        #if canImport(ArxosCoreFFI)
+        let s = ArxosCoreFFI.initBuilding(storePath: storePath, name: name)
+        return BuildingSummary(
+            buildingId: s.buildingId,
+            name: s.name,
+            headRoot: s.headRoot,
+            buildingObject: s.buildingObject,
+            stagedCount: s.stagedCount
+        )
+        #else
+        return LocalStore.shared.initBuilding(storePath: storePath, name: name)
+        #endif
+    }
+
+    public static func openBuilding(storePath: String, buildingId: String) -> BuildingSummary {
+        #if canImport(ArxosCoreFFI)
+        let s = ArxosCoreFFI.openBuilding(storePath: storePath, buildingId: buildingId)
+        return BuildingSummary(
+            buildingId: s.buildingId,
+            name: s.name,
+            headRoot: s.headRoot,
+            buildingObject: s.buildingObject,
+            stagedCount: s.stagedCount
+        )
+        #else
+        return LocalStore.shared.openBuilding(storePath: storePath, buildingId: buildingId)
+        #endif
+    }
+
+    public static func listBuildings(storePath: String) -> [BuildingSummary] {
+        #if canImport(ArxosCoreFFI)
+        return ArxosCoreFFI.listBuildings(storePath: storePath).map {
+            BuildingSummary(
+                buildingId: $0.buildingId,
+                name: $0.name,
+                headRoot: $0.headRoot,
+                buildingObject: $0.buildingObject,
+                stagedCount: $0.stagedCount
+            )
+        }
+        #else
+        return LocalStore.shared.listBuildings(storePath: storePath)
+        #endif
+    }
+
+    public static func captureSpace(
+        storePath: String,
+        buildingId: String,
+        name: String?,
+        x: Double, y: Double, z: Double
+    ) -> CapturePutResult {
+        #if canImport(ArxosCoreFFI)
+        let r = ArxosCoreFFI.captureSpace(
+            storePath: storePath, buildingId: buildingId, name: name, x: x, y: y, z: z
+        )
+        return CapturePutResult(cid: r.cid, objectType: r.objectType)
+        #else
+        return LocalStore.shared.captureSpace(
+            storePath: storePath, buildingId: buildingId, name: name, x: x, y: y, z: z
+        )
+        #endif
+    }
+
+    public static func captureAnnotation(
+        storePath: String,
+        buildingId: String,
+        text: String,
+        x: Double, y: Double, z: Double
+    ) -> CapturePutResult {
+        #if canImport(ArxosCoreFFI)
+        let r = ArxosCoreFFI.captureAnnotation(
+            storePath: storePath, buildingId: buildingId, text: text, x: x, y: y, z: z
+        )
+        return CapturePutResult(cid: r.cid, objectType: r.objectType)
+        #else
+        return LocalStore.shared.captureAnnotation(
+            storePath: storePath, buildingId: buildingId, text: text, x: x, y: y, z: z
+        )
+        #endif
+    }
+
+    public static func capturePointCloud(
+        storePath: String,
+        buildingId: String,
+        pointsXYZF32LE: Data,
+        x: Double, y: Double, z: Double
+    ) -> CapturePutResult {
+        #if canImport(ArxosCoreFFI)
+        let r = ArxosCoreFFI.capturePointCloud(
+            storePath: storePath,
+            buildingId: buildingId,
+            pointsXyzF32Le: pointsXYZF32LE,
+            x: x, y: y, z: z
+        )
+        return CapturePutResult(cid: r.cid, objectType: r.objectType)
+        #else
+        return LocalStore.shared.capturePointCloud(
+            storePath: storePath, buildingId: buildingId,
+            points: pointsXYZF32LE, x: x, y: y, z: z
+        )
+        #endif
+    }
+
+    public static func commitBuilding(
+        storePath: String,
+        buildingId: String,
+        message: String?
+    ) -> CommitSummary {
+        #if canImport(ArxosCoreFFI)
+        let r = ArxosCoreFFI.commitBuilding(
+            storePath: storePath, buildingId: buildingId, message: message
+        )
+        return CommitSummary(
+            rootCid: r.rootCid,
+            buildingId: r.buildingId,
+            objectCount: r.objectCount,
+            previousRoot: r.previousRoot
+        )
+        #else
+        return LocalStore.shared.commitBuilding(
+            storePath: storePath, buildingId: buildingId, message: message
+        )
+        #endif
+    }
+
+    public static func annotationsNear(
+        storePath: String,
+        buildingId: String,
+        x: Double, y: Double, z: Double,
+        radiusM: Double
+    ) -> [AnnotationOverlay] {
+        #if canImport(ArxosCoreFFI)
+        return ArxosCoreFFI.annotationsNear(
+            storePath: storePath, buildingId: buildingId,
+            x: x, y: y, z: z, radiusM: radiusM
+        ).map {
+            AnnotationOverlay(
+                cid: $0.cid, text: $0.text,
+                x: $0.x, y: $0.y, z: $0.z, distanceM: $0.distanceM
+            )
+        }
+        #else
+        return LocalStore.shared.annotationsNear(
+            storePath: storePath, buildingId: buildingId,
+            x: x, y: y, z: z, radiusM: radiusM
+        )
         #endif
     }
 }
 
-/// Pure-Swift fallback so the app compiles without a linked staticlib.
-enum Phase0Shim {
-    static let version = "0.1.0"
+// MARK: - Local Swift shim (no Rust link)
 
-    static func generateBuildingId() -> String {
-        // Not a real ULID; only for offline UI previews.
+/// File-backed capture store for UI development without UniFFI native lib.
+/// Not the production CAS — production uses arxos-core via UniFFI.
+final class LocalStore: @unchecked Sendable {
+    static let shared = LocalStore()
+    let version = "0.1.0"
+
+    private let lock = NSLock()
+    private var buildings: [String: BuildingRecord] = [:]
+    private var objects: [String: LocalObject] = [:]
+
+    struct BuildingRecord {
+        var buildingId: String
+        var name: String?
+        var headRoot: String?
+        var buildingObject: String?
+        var pending: [String]
+        var headObjects: Set<String>
+    }
+
+    struct LocalObject {
+        var type: String
+        var text: String?
+        var name: String?
+        var x: Double
+        var y: Double
+        var z: Double
+        var pointCount: Int
+    }
+
+    private func key(_ storePath: String, _ buildingId: String) -> String {
+        "\(storePath)||\(buildingId)"
+    }
+
+    private func cid(for payload: String) -> String {
+        // Stable-ish pseudo CID for shim only (not BLAKE3).
+        let digest = payload.utf8.reduce(into: UInt64(5381)) { h, b in
+            h = ((h << 5) &+ h) &+ UInt64(b)
+        }
+        return String(format: "b3:shim%056llx", digest)
+    }
+
+    func generateBuildingId() -> String {
         let ts = UInt64(Date().timeIntervalSince1970 * 1000)
-        return String(format: "01PREVIEW%010llX", ts)
+        let r = UInt64.random(in: 0...UInt64.max)
+        return String(format: "01%010llX%016llX", ts & 0xFFFFFFFFFF, r)
+    }
+
+    func initBuilding(storePath: String, name: String?) -> BuildingSummary {
+        lock.lock(); defer { lock.unlock() }
+        let id = generateBuildingId()
+        let buildingCid = cid(for: "building:\(id)")
+        let rootCid = cid(for: "root:\(id):init")
+        let rec = BuildingRecord(
+            buildingId: id,
+            name: name,
+            headRoot: rootCid,
+            buildingObject: buildingCid,
+            pending: [],
+            headObjects: [buildingCid]
+        )
+        buildings[key(storePath, id)] = rec
+        objects[buildingCid] = LocalObject(
+            type: "building", text: nil, name: name, x: 0, y: 0, z: 0, pointCount: 0
+        )
+        persist(storePath: storePath)
+        return BuildingSummary(
+            buildingId: id, name: name, headRoot: rootCid,
+            buildingObject: buildingCid, stagedCount: 0
+        )
+    }
+
+    func openBuilding(storePath: String, buildingId: String) -> BuildingSummary {
+        lock.lock(); defer { lock.unlock() }
+        load(storePath: storePath)
+        guard let rec = buildings[key(storePath, buildingId)] else {
+            return BuildingSummary(buildingId: buildingId)
+        }
+        return BuildingSummary(
+            buildingId: rec.buildingId,
+            name: rec.name,
+            headRoot: rec.headRoot,
+            buildingObject: rec.buildingObject,
+            stagedCount: UInt64(rec.pending.count)
+        )
+    }
+
+    func listBuildings(storePath: String) -> [BuildingSummary] {
+        lock.lock(); defer { lock.unlock() }
+        load(storePath: storePath)
+        return buildings
+            .filter { $0.key.hasPrefix(storePath + "||") }
+            .map {
+                BuildingSummary(
+                    buildingId: $0.value.buildingId,
+                    name: $0.value.name,
+                    headRoot: $0.value.headRoot,
+                    buildingObject: $0.value.buildingObject,
+                    stagedCount: UInt64($0.value.pending.count)
+                )
+            }
+            .sorted { $0.buildingId < $1.buildingId }
+    }
+
+    func captureSpace(
+        storePath: String, buildingId: String, name: String?,
+        x: Double, y: Double, z: Double
+    ) -> CapturePutResult {
+        put(storePath: storePath, buildingId: buildingId, type: "space",
+            text: nil, name: name, x: x, y: y, z: z, pointCount: 0)
+    }
+
+    func captureAnnotation(
+        storePath: String, buildingId: String, text: String,
+        x: Double, y: Double, z: Double
+    ) -> CapturePutResult {
+        put(storePath: storePath, buildingId: buildingId, type: "annotation",
+            text: text, name: nil, x: x, y: y, z: z, pointCount: 0)
+    }
+
+    func capturePointCloud(
+        storePath: String, buildingId: String, points: Data,
+        x: Double, y: Double, z: Double
+    ) -> CapturePutResult {
+        put(storePath: storePath, buildingId: buildingId, type: "point_cloud_chunk",
+            text: nil, name: nil, x: x, y: y, z: z, pointCount: points.count / 12)
+    }
+
+    private func put(
+        storePath: String, buildingId: String, type: String,
+        text: String?, name: String?,
+        x: Double, y: Double, z: Double, pointCount: Int
+    ) -> CapturePutResult {
+        lock.lock(); defer { lock.unlock() }
+        load(storePath: storePath)
+        let k = key(storePath, buildingId)
+        guard var rec = buildings[k] else {
+            return CapturePutResult(cid: "b3:error", objectType: type)
+        }
+        let objectCid = cid(for: "\(type):\(buildingId):\(UUID().uuidString):\(x):\(y):\(z):\(text ?? name ?? "")")
+        objects[objectCid] = LocalObject(
+            type: type, text: text, name: name, x: x, y: y, z: z, pointCount: pointCount
+        )
+        rec.pending.append(objectCid)
+        buildings[k] = rec
+        persist(storePath: storePath)
+        return CapturePutResult(cid: objectCid, objectType: type)
+    }
+
+    func commitBuilding(storePath: String, buildingId: String, message: String?) -> CommitSummary {
+        lock.lock(); defer { lock.unlock() }
+        load(storePath: storePath)
+        let k = key(storePath, buildingId)
+        guard var rec = buildings[k] else {
+            return CommitSummary(rootCid: "b3:error", buildingId: buildingId, objectCount: 0, previousRoot: nil)
+        }
+        let prev = rec.headRoot
+        for p in rec.pending { rec.headObjects.insert(p) }
+        let rootCid = cid(for: "root:\(buildingId):\(rec.headObjects.sorted().joined()):\(message ?? "")")
+        rec.headRoot = rootCid
+        let count = UInt64(rec.headObjects.count)
+        rec.pending.removeAll()
+        buildings[k] = rec
+        persist(storePath: storePath)
+        return CommitSummary(
+            rootCid: rootCid, buildingId: buildingId,
+            objectCount: count, previousRoot: prev
+        )
+    }
+
+    func annotationsNear(
+        storePath: String, buildingId: String,
+        x: Double, y: Double, z: Double, radiusM: Double
+    ) -> [AnnotationOverlay] {
+        lock.lock(); defer { lock.unlock() }
+        load(storePath: storePath)
+        let k = key(storePath, buildingId)
+        guard let rec = buildings[k] else { return [] }
+        var hits: [AnnotationOverlay] = []
+        for cid in rec.headObjects.union(Set(rec.pending)) {
+            guard let obj = objects[cid], obj.type == "annotation" else { continue }
+            let dx = obj.x - x, dy = obj.y - y, dz = obj.z - z
+            let d = (dx * dx + dy * dy + dz * dz).squareRoot()
+            if d <= radiusM {
+                hits.append(AnnotationOverlay(
+                    cid: cid, text: obj.text ?? "",
+                    x: obj.x, y: obj.y, z: obj.z, distanceM: d
+                ))
+            }
+        }
+        return hits.sorted { $0.distanceM < $1.distanceM }
+    }
+
+    // Persist as JSON under storePath/shim for reload across launches.
+    private func metaURL(storePath: String) -> URL {
+        URL(fileURLWithPath: storePath).appendingPathComponent("shim-meta.json")
+    }
+
+    private func persist(storePath: String) {
+        let relevant = buildings.filter { $0.key.hasPrefix(storePath + "||") }
+        var payload: [String: Any] = [:]
+        var bmap: [String: Any] = [:]
+        for (_, rec) in relevant {
+            bmap[rec.buildingId] = [
+                "name": rec.name as Any,
+                "headRoot": rec.headRoot as Any,
+                "buildingObject": rec.buildingObject as Any,
+                "pending": rec.pending,
+                "headObjects": Array(rec.headObjects),
+            ]
+        }
+        payload["buildings"] = bmap
+        var omap: [String: Any] = [:]
+        for (cid, obj) in objects {
+            omap[cid] = [
+                "type": obj.type,
+                "text": obj.text as Any,
+                "name": obj.name as Any,
+                "x": obj.x, "y": obj.y, "z": obj.z,
+                "pointCount": obj.pointCount,
+            ]
+        }
+        payload["objects"] = omap
+        if let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]) {
+            try? FileManager.default.createDirectory(
+                at: URL(fileURLWithPath: storePath), withIntermediateDirectories: true
+            )
+            try? data.write(to: metaURL(storePath: storePath))
+        }
+    }
+
+    private func load(storePath: String) {
+        let url = metaURL(storePath: storePath)
+        guard let data = try? Data(contentsOf: url),
+              let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return }
+
+        if let bmap = payload["buildings"] as? [String: [String: Any]] {
+            for (id, v) in bmap {
+                let pending = v["pending"] as? [String] ?? []
+                let headObjects = Set(v["headObjects"] as? [String] ?? [])
+                buildings[key(storePath, id)] = BuildingRecord(
+                    buildingId: id,
+                    name: v["name"] as? String,
+                    headRoot: v["headRoot"] as? String,
+                    buildingObject: v["buildingObject"] as? String,
+                    pending: pending,
+                    headObjects: headObjects
+                )
+            }
+        }
+        if let omap = payload["objects"] as? [String: [String: Any]] {
+            for (cid, v) in omap {
+                objects[cid] = LocalObject(
+                    type: v["type"] as? String ?? "blob",
+                    text: v["text"] as? String,
+                    name: v["name"] as? String,
+                    x: v["x"] as? Double ?? 0,
+                    y: v["y"] as? Double ?? 0,
+                    z: v["z"] as? Double ?? 0,
+                    pointCount: v["pointCount"] as? Int ?? 0
+                )
+            }
+        }
     }
 }

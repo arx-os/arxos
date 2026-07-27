@@ -1,52 +1,50 @@
-# Arxos iOS Client (Phase 0)
+# Arxos iOS Client
 
-SwiftUI shell that exercises the Rust core via UniFFI.
+Lived-experience capture client: ARKit / RoomPlan → content-addressed objects → signed Root.
 
-## Phase 0 scope
+## Phase 1 capabilities
 
-* Blank SwiftUI app
-* Call `ArxosCore.hello(name:)` from the Rust core
-* No AR / LiDAR yet (Phase 1)
+* Init / open / list building repositories (local CAS)
+* Capture **Space**, **PointCloudChunk**, **Annotation** at camera pose
+* **Mock / simulate** scan without LiDAR (Simulator + macOS demo)
+* **RoomPlan** path on device (iOS 16+, non-Simulator)
+* Commit pending captures → new signed Root; reload same building
+* AR overlay of **annotation labels only** (no general 3D model viewer)
 
 ## Layout
 
 ```
-ios/
-├── README.md
-├── Arxos/
-│   ├── Package.swift          # local Swift package (bindings + UI target)
-│   ├── Sources/
-│   │   ├── ArxosApp/          # SwiftUI app
-│   │   └── ArxosCore/         # UniFFI-generated (or hand shim) Swift
-│   └── Scripts/
-│       └── generate_bindings.sh
+ios/Arxos/
+├── Package.swift
+├── Scripts/generate_bindings.sh
+└── Sources/
+    ├── ArxosCore/       # UniFFI façade + local shim
+    ├── ArxosApp/        # SwiftUI + AR + capture session
+    └── ArxosDemo/       # CLI smoke test for capture loop
 ```
 
-## Generate UniFFI Swift bindings
-
-From the monorepo root (requires Rust toolchain):
-
-```bash
-# Build core with UniFFI feature
-cargo build -p arxos-core --features uniffi
-
-# Generate Swift bindings into ios package
-./ios/Arxos/Scripts/generate_bindings.sh
-```
-
-## Run (SwiftPM)
+## Quick check (no device)
 
 ```bash
 cd ios/Arxos
-swift build
-# On macOS, the demo executable prints the hello string:
 swift run ArxosDemo
+# → Phase 1 demo OK
 ```
 
-For a full Xcode + device AR workflow, Phase 1 will add an `.xcodeproj` / XcodeGen spec and XCFramework packaging of `arxos_core`.
+## Device (LiDAR)
 
-## Expected Phase 0 output
+1. Create an Xcode iOS App target that depends on `ArxosApp` + `ArxosCore`.
+2. Build Rust with UniFFI and link the static library / XCFramework:
 
-```
-Hello, iOS — Arxos core 0.1.0
-```
+   ```bash
+   cargo build -p arxos-core --features uniffi --release
+   ./ios/Arxos/Scripts/generate_bindings.sh
+   ```
+
+3. Run on a LiDAR-capable iPhone. Use **Simulate RoomPlan scan** when hardware capture is unavailable.
+
+## Architecture notes
+
+* Production path: Swift → UniFFI → `arxos-core` (`BuildingRepository`).
+* Shim path: pure-Swift `LocalStore` for UI compile / demo without native lib (not BLAKE3-identical).
+* Geometry from RoomPlan is stored as data (`PointCloudChunk`); visualization of full meshes is out of scope (USD in Phase 4).

@@ -42,7 +42,7 @@ arxos/
 | **2** | Multi-device + Iroh + mDNS | Done |
 | **3** | Spatial index, partial load, merge | Done |
 | **4** | USD / IFC interop | Done |
-| **5** | DePIN & hardening | Next |
+| **5** | DePIN & hardening | Done (foundation) |
 
 ## Build & test
 
@@ -120,6 +120,22 @@ arxos-edge export-ifc "$BID" -o building.ifc
 
 Projections preserve identity (`arxos:cid` / `Pset_ArxosIdentity`).  
 See [`docs/architecture/PHASE4.md`](docs/architecture/PHASE4.md).
+
+### DePIN & hardening (Phase 5)
+
+```bash
+arxos depin score "$BID"
+arxos depin verify "$ROOT_CID"
+arxos depin attest "$ROOT_CID" --device-id field-phone-1
+arxos depin registry "$BID" --abi
+
+# Edge packaging
+docker build -f edge/Dockerfile -t arxos-edge .
+# or: sudo INSTALL_SYSTEMD=1 ./edge/scripts/install-edge.sh
+```
+
+On-chain: `contracts/BuildingRegistry.sol` (Base L2).  
+See [`docs/architecture/PHASE5.md`](docs/architecture/PHASE5.md).
 
 ## iOS (Phase 1)
 

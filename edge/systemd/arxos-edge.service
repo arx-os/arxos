@@ -1,0 +1,22 @@
+[Unit]
+Description=Arxos edge node (CAS + optional net serve)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=arxos
+Group=arxos
+Environment=ARXOS_STORE=/var/lib/arxos/store
+# Serve the local object store over Iroh (Phase 2 protocol).
+ExecStart=/usr/local/bin/arxos --store ${ARXOS_STORE} net serve
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/arxos
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

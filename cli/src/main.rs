@@ -17,6 +17,9 @@ use arxos_core::repository::BuildingRepository;
 use arxos_core::root::{RootBody, RootBuilder};
 use arxos_core::spatial::QueryVolume;
 use arxos_core::store::ObjectStore;
+use arxos_core::attest::{AttestationStatement, DefaultAttestationVerifier, AttestationVerifier};
+use arxos_core::depin::{registry_snapshot, score_root};
+use arxos_core::verify::verify_root_transition;
 use arxos_core::{Cid, Keypair};
 use arxos_networking::sync::{building_ads_from_store, pull_root};
 use arxos_networking::{IrohNode, MdnsDiscovery, ObjectTransport};
@@ -87,8 +90,51 @@ enum Commands {
         #[command(subcommand)]
         command: ImportCommands,
     },
+    /// DePIN: scoring, verification, attestation, registry helpers (Phase 5)
+    Depin {
+        #[command(subcommand)]
+        command: DepinCommands,
+    },
     /// Print core version / hello
     Version,
+}
+
+#[derive(Subcommand, Debug)]
+enum DepinCommands {
+    /// Score contributions under a building head (or explicit root)
+    Score {
+        building_id: String,
+        #[arg(long)]
+        root: Option<String>,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Verify root transition + signatures + canonicalization
+    Verify {
+        /// Root CID to verify
+        root: String,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Create a mock device attestation provenance object for a root
+    Attest {
+        /// Subject root CID
+        root: String,
+        #[arg(long, default_value = "mock-device")]
+        device_id: String,
+        /// Sign provenance with store device key when present
+        #[arg(long, default_value_t = true)]
+        sign: bool,
+    },
+    /// Emit registry snapshot JSON for on-chain / indexer handoff
+    Registry {
+        building_id: String,
+        #[arg(long)]
+        root: Option<String>,
+        /// Also print Solidity-friendly bytes32 digests
+        #[arg(long)]
+        abi: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -1384,6 +1430,111 @@ fn sync_main(cli: Cli) -> Result<()> {
                     println!("wrote {} bytes to {}", ifc.len(), path.display());
                 } else {
                     print!("{ifc}");
+                }
+            }
+        },
+        Commands::Depin { command } => match command {
+            DepinCommands::Score {
+                building_id,
+                root,
+                json,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let repo = BuildingRepository::open(&cli.store, &bid)?;
+                let root_cid = match root {
+                    Some(s) => Cid::from_str(&s)?,
+                    None => repo
+                        .head_root()
+                        .ok_or_else(|| anyhow::anyhow!("building has no head root"))?,
+                };
+                let report = score_root(repo.store(), &root_cid, &Default::default())?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&report)?);
+                } else {
+                    println!("building_id={}", report.building_id);
+                    println!("root_cid={:?}", report.root_cid);
+                    println!("total_objects={}", report.total_objects);
+                    println!("total_score={:.4}", report.total_score);
+                    for c in &report.contributors {
+                        println!(
+                            "  author={} score={:.4} objects={} signed_ok={} ann={} clouds={}",
+                            c.author.as_deref().unwrap_or("anonymous"),
+                            c.score,
+                            c.objects,
+                            c.signed_valid,
+                            c.annotations,
+                            c.point_cloud_chunks
+                        );
+                    }
+                }
+            }
+            DepinCommands::Verify { root, json } => {
+                let store = ObjectStore::open(&cli.store)?;
+                let cid = Cid::from_str(&root)?;
+                let report = verify_root_transition(&store, &cid)?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&report)?);
+                } else {
+                    println!("ok={}", report.ok);
+                    for f in &report.findings {
+                        println!("  [{:?}] {} — {}", f.severity, f.code, f.message);
+                    }
+                    if !report.ok {
+                        std::process::exit(1);
+                    }
+                }
+            }
+            DepinCommands::Attest {
+                root,
+                device_id,
+                sign,
+            } => {
+                let store = ObjectStore::open(&cli.store)?;
+                let root_cid = Cid::from_str(&root)?;
+                // Ensure subject exists
+                let _ = store.get(&root_cid)?;
+                let stmt = AttestationStatement::mock(root_cid, &device_id);
+                let verdict = DefaultAttestationVerifier::default().verify(&stmt)?;
+                if !verdict.valid {
+                    bail!("attestation invalid: {}", verdict.detail);
+                }
+                let kp = if sign {
+                    load_device_keypair(&cli.store)
+                } else {
+                    None
+                };
+                let obj = stmt.into_provenance_object(kp.as_ref())?;
+                let cid = store.put(&obj)?;
+                println!("attest_cid={cid}");
+                println!("subject={root}");
+                println!("device_id={device_id}");
+                println!("detail={}", verdict.detail);
+            }
+            DepinCommands::Registry {
+                building_id,
+                root,
+                abi,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let repo = BuildingRepository::open(&cli.store, &bid)?;
+                let root_cid = match root {
+                    Some(s) => Cid::from_str(&s)?,
+                    None => repo
+                        .head_root()
+                        .ok_or_else(|| anyhow::anyhow!("building has no head root"))?,
+                };
+                let snap = registry_snapshot(repo.store(), &root_cid)?;
+                println!("{}", serde_json::to_string_pretty(&snap)?);
+                if abi {
+                    // bytes32 digests for Solidity
+                    let root_bytes = root_cid.as_bytes();
+                    println!(
+                        "officialRoot_bytes32=0x{}",
+                        hex::encode(root_bytes)
+                    );
+                    // BuildingId as blake3 of ULID string for on-chain key (document convention)
+                    let bid_hash = blake3::hash(bid.as_str().as_bytes());
+                    println!("buildingId_bytes32=0x{}", hex::encode(bid_hash.as_bytes()));
                 }
             }
         },

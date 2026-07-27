@@ -91,6 +91,10 @@ impl RootBody {
     }
 
     /// Wrap as a full Object (for CAS storage).
+    ///
+    /// Author signatures live on [`RootBody::authors`] (they cover the root
+    /// body payload, not the object envelope). The header only records the
+    /// primary author public key for attribution — use `verify_authors`.
     pub fn into_object(self, created: u64) -> Object {
         Object {
             header: ObjectHeader {
@@ -98,7 +102,7 @@ impl RootBody {
                 schema_version: SCHEMA_VERSION,
                 created,
                 author: self.authors.first().map(|a| a.public_key),
-                signature: self.authors.first().cloned(),
+                signature: None,
             },
             body: ObjectBody::Root(self),
         }

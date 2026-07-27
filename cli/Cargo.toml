@@ -16,6 +16,7 @@ arxos-networking = { workspace = true }
 arxos-usd = { workspace = true }
 arxos-ifc = { workspace = true }
 anyhow = { workspace = true }
+blake3 = { workspace = true }
 clap = { workspace = true }
 hex = { workspace = true }
 serde_json = { workspace = true }

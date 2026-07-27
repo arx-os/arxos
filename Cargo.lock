@@ -147,6 +147,7 @@ dependencies = [
  "arxos-ifc",
  "arxos-networking",
  "arxos-usd",
+ "blake3",
  "clap",
  "hex",
  "serde_json",

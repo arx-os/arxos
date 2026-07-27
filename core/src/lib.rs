@@ -13,10 +13,12 @@
 // Module-level docs are required; per-field docs are encouraged but not denied in Phase 0.
 #![allow(missing_docs)]
 
+pub mod attest;
 pub mod capture;
 pub mod canonical;
 pub mod cid;
 pub mod crypto;
+pub mod depin;
 pub mod error;
 pub mod merge;
 pub mod object;
@@ -25,6 +27,7 @@ pub mod root;
 pub mod schema;
 pub mod spatial;
 pub mod store;
+pub mod verify;
 pub mod working_set;
 
 /// UniFFI foreign-language API (feature `uniffi`).
@@ -48,23 +51,35 @@ pub use uniffi_api::{
 #[cfg(feature = "uniffi")]
 uniffi::include_scaffolding!("arxos");
 
+pub use attest::{
+    AppAttestVerifier, AttestationKind, AttestationStatement, AttestationVerdict,
+    AttestationVerifier, DefaultAttestationVerifier, MockAttestationVerifier,
+};
 pub use capture::{
     annotation_object, point_cloud_object, space_object, AnnotationCapture, PointCloudCapture,
     SpaceCapture,
 };
 pub use cid::Cid;
 pub use crypto::{AuthorSignature, Keypair, PublicKey, Signature};
+pub use depin::{
+    attribute_object, registry_snapshot, score_cids, score_contributions, score_root, Contribution,
+    ContributorScore, RegistrySnapshot, ScoreReport, ScoreWeights,
+};
 pub use error::{Error, Result};
+pub use merge::{merge_roots, plan_merge, MergePlan, MergeResult, ANNOTATION_DEDUP_M};
 pub use object::{
     AnnotationBody, BlobBody, BuildingBody, BuildingId, FloorBody, Object, ObjectBody,
     ObjectHeader, ObjectType, Pose, SCHEMA_VERSION,
 };
-pub use merge::{merge_roots, plan_merge, MergePlan, MergeResult, ANNOTATION_DEDUP_M};
 pub use object::Aabb;
 pub use repository::{BuildingRecord, BuildingRepository, CaptureResult, CommitResult};
 pub use root::{RootBody, RootBuilder};
 pub use spatial::{QueryVolume, SpatialEntry, SpatialHit};
 pub use store::ObjectStore;
+pub use verify::{
+    verify_object_canonicalization, verify_root_body_determinism, verify_root_transition, Finding,
+    Severity, VerificationReport,
+};
 pub use working_set::{AnnotationHit, WorkingSet};
 
 /// Library version string.

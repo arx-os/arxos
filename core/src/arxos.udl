@@ -1,0 +1,26 @@
+namespace arxos_core {
+    string hello(string name);
+    string version();
+    string generate_building_id();
+    KeypairData generate_keypair();
+    string public_key_hex(KeypairData keypair);
+    ObjectPutResult put_blob(string store_path, bytes data, string? content_type);
+    RootCreateResult create_root(string store_path, string building_id, sequence<string> object_cids, string seed_hex, string? message);
+    string? show_root(string store_path, string root_cid);
+};
+
+dictionary KeypairData {
+    bytes seed;
+    string public_key_hex;
+};
+
+dictionary ObjectPutResult {
+    string cid;
+    string object_type;
+};
+
+dictionary RootCreateResult {
+    string root_cid;
+    string building_id;
+    u64 object_count;
+};

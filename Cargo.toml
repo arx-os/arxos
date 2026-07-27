@@ -1,142 +1,31 @@
-[package]
-name = "arx"
-version = "2.0.0"
+[workspace]
+resolver = "2"
+members = [
+    "core",
+    "cli",
+    "networking",
+    "edge",
+]
+default-members = ["core", "cli"]
+
+[workspace.package]
+version = "0.1.0"
 edition = "2021"
-authors = ["Joel <joel@arxos.io>"]
-license = "MIT"
-repository = "https://github.com/arx-os/arxos"
-description = "ArxOS - Git for Buildings"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/arxos/arxos"
+rust-version = "1.75"
 
-[lints.rust]
-unsafe_code = "warn"
-missing_docs = "allow"  # Too many to fix at once, enable later
-
-[lints.clippy]
-# Integrity Track I1: keep Compiler CI (`-D warnings`) green while the tree still
-# has large historical unwrap/expect/panic debt (mostly unit tests + older rings).
-# These are explicitly allow-listed — not forgotten. Prefer `?` / map_err on new
-# production code; do not add new panics on the compiler spine.
-# Gradual removal is tracked in arxos_manifest.md §2.6 I1 follow-on.
-unwrap_used = "allow"
-expect_used = "allow"
-panic = "allow"
-todo = "allow"
-unimplemented = "allow"
-
-[lib]
-name = "arxos"
-path = "src/lib.rs"
-
-[[bin]]
-name = "arx"
-path = "src/main.rs"
-
-[dependencies]
-# Core dependencies
-serde = { version = "1.0", features = ["derive", "rc"] }
-serde_yaml = "0.9"
-serde_json = "1.0"
-chrono = { version = "0.4", features = ["serde"] }
-uuid = { version = "1.0", features = ["v4", "serde"] }
-thiserror = "1.0"
-anyhow = "1.0"
-
-# Git
-url = "2.4"
-
-# Spatial dependencies
-nalgebra = { version = "0.32", features = ["serde-serialize"] }
-geo = "0.25"
-rstar = "0.10"
-ply-rs = "0.1"
-las = "0.8"
-
-# CLI dependencies
-clap = { version = "4.4", features = ["derive"] }
-glob = "0.3"
-regex = "1.10"
-sha2 = "0.10"
-log = "0.4"
-
-# Performance dependencies
-rayon = "1.8"
-indicatif = "0.17"
-earcutr = "0.4"
-
-# Configuration dependencies
-toml = "0.8"
-num_cpus = "1.16"
-tempfile = "3.8"
-whoami = "1.4"
-dirs = "5.0"
-
-# Optional feature dependencies
-tokio = { version = "1.35", features = ["full"], optional = true }
-tracing = { version = "0.1", optional = true }
-tracing-subscriber = { version = "0.3", optional = true, features = ["env-filter", "fmt", "json"] }
-crossterm = { version = "0.27", optional = true }
-ratatui = { version = "0.24", optional = true }
-csv = { version = "1.3", optional = true }
-arboard = { version = "3.3", optional = true }
-fuzzy-matcher = { version = "0.3", optional = true }
-axum = { version = "0.7", features = ["ws", "macros"], optional = true }
-futures-util = { version = "0.3", optional = true }
-notify = { version = "6.1", optional = true }
-russh = { version = "0.40", optional = true }
-russh-keys = { version = "0.40", optional = true }
-ssh2 = { version = "0.9", optional = true }
-reqwest = { version = "0.11", features = ["json"], optional = true }
-base64 = "0.22.1"
-# Optional: GitHub collab only (agent).
-octocrab = { version = "0.48.0", optional = true }
-async-trait = "0.1.77"
-
-# Blockchain dependencies (for tokenomics)
-ethers = { version = "2.0", optional = true, features = ["abigen", "ws"] }
-ethers-contract = { version = "2.0", optional = true }
-ethers-signers = { version = "2.0", optional = true }
-hex = { version = "0.4", optional = true }
-rs_merkle = { version = "1.4", optional = true }
-
-# Git (libgit2) — host CLI / agent only
-git2 = { version = "0.20", features = ["vendored-openssl"] }
-
-[features]
-# Default: building compiler + primary TUI (spreadsheet, merge, hierarchy render).
-# Hardware BACnet/Modbus/MQTT and LiDAR point-cloud 3D viz removed for now.
-# Interactive WASM/PWA client removed (Decision 9 — docs/adr/web-demotion.md).
-# Static landing lives at repo-root index.html (no Cargo feature).
-default = ["tui"]
-tui = ["crossterm", "ratatui", "csv", "arboard", "fuzzy-matcher"]
-# Edge agent: git/IFC/LiDAR/edit RPC over WebSocket/SSH (capture node / bridge).
-agent = [
-    "tokio",
-    "tracing",
-    "tracing-subscriber",
-    "axum",
-    "futures-util",
-    "notify",
-    "russh",
-    "russh-keys",
-    "ssh2",
-    "reqwest",
-    "octocrab",
-]
-blockchain = [
-    "tokio",
-    "ethers",
-    "ethers-contract",
-    "ethers-signers",
-    "hex",
-    "rs_merkle",
-]
-full = ["tui", "agent", "blockchain"]
-
-[dev-dependencies]
-criterion = "0.5"
-proptest = "1.4"
-serial_test = "3.0"
-
-[[bench]]
-name = "core_benchmarks"
-harness = false
+[workspace.dependencies]
+arxos-core = { path = "core" }
+anyhow = "1"
+blake3 = "1"
+ciborium = "0.2"
+clap = { version = "4", features = ["derive", "env"] }
+ed25519-dalek = { version = "2", features = ["rand_core", "serde"] }
+hex = "0.4"
+rand = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+ulid = { version = "1", features = ["serde"] }
+tempfile = "3"

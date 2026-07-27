@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arxos.dev/schema/v1/root-body.schema.json",
+  "title": "Arxos Root Body",
+  "description": "Repository state commit. Stored as ObjectBody::Root. Wire format is CBOR.",
+  "type": "object",
+  "required": [
+    "building_id",
+    "objects",
+    "timestamp",
+    "authors"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "building_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable BuildingId (ULID in Phase 0)"
+    },
+    "previous_root": {
+      "type": ["string", "null"],
+      "description": "CID of previous root (b3:hex)"
+    },
+    "objects": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "description": "Ordered set of object CIDs in the commit"
+    },
+    "spatial_index_root": {
+      "type": ["string", "null"],
+      "description": "CID of spatial index root object"
+    },
+    "timestamp": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "authors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["public_key", "signature"],
+        "properties": {
+          "public_key": { "type": "string" },
+          "signature": { "type": "string" }
+        }
+      }
+    },
+    "message": {
+      "type": ["string", "null"]
+    }
+  }
+}

@@ -1,84 +1,30 @@
-# Rust build artifacts
-/target
+# Build
+/target/
+**/target/
+**/*.rs.bk
 
-# Rust cargo config (local per-project settings)
-.cargo/
-
-# Output directories
-output/
-
-# Test data directories (ignore build artifacts, but track fixtures)
-# test_data/ contains tracked test fixtures (IFC files, samples, etc.)
-test_data/*.tmp
-test_data/*.bak
-test_data/*~
-# Allow all fixture files in test_data/ to be tracked
-
-# Test generated files
-test-*.ifc.yaml
-test-repo/
-test-office-repo/
-
-# User-generated building files in root (privacy)
-/building.yaml
-/* House.yaml
-/* Scan.yaml
-/*-scan-*.yaml
-# But allow building.yaml in test/example directories
-!tests/**/building.yaml
-!examples/**/building.yaml
-!docs/**/building.yaml
-!test-data/**/building.yaml
-
-# IDE directories and editor files
-.vs/
-.vscode/
-.idea/
-/.cursor/
-*.swp
-*.swo
-*~
-
-# OS files
+# IDE / OS
 .DS_Store
-Thumbs.db
+*.swp
+.idea/
+.vscode/
+*.iml
 
-# Temporary files
-*.log
-*.tmp
-*.temp
+# iOS / Swift
+ios/**/DerivedData/
+ios/**/xcuserdata/
+ios/**/*.xcuserstate
+ios/**/build/
+ios/**/.build/
+ios/Arxos/.build/
+ios/**/*.framework
+ios/Arxos/Sources/ArxosCore/Generated/
 
-# Security and secrets
+# Env / secrets
 .env
 .env.*
 !.env.example
-!**/.env.example
-.env.local
-.env.*.local
-.env.arx
-*.secret
-*.key
-*.pem
-*.p12
-*.pfx
-*.jks
-id_rsa
-id_ed25519
-*.keystore
 
-# Local Foundry / deploy artifacts with keys (never commit)
-contracts/deployed.env
-contracts/.env
-**/broadcast/**/run-latest.json
-
-# Note: .secrets.baseline should be committed to track false positives
-# secrets.baseline
-
-# Pre-commit hooks cache
-.pre-commit-cache/
-
-# Trunk/WASM build artifacts
-dist/
-pkg/
-.trunk/
-.aider*
+# Misc
+*.log
+.coverage/

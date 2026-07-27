@@ -1,0 +1,35 @@
+[package]
+name = "arxos-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Arxos core: content-addressed objects, Merkle roots, CAS store, crypto"
+readme = "README.md"
+
+[lib]
+name = "arxos_core"
+crate-type = ["lib", "staticlib", "cdylib"]
+
+[features]
+default = []
+uniffi = ["dep:uniffi"]
+
+[dependencies]
+blake3 = { workspace = true }
+ciborium = { workspace = true }
+ed25519-dalek = { workspace = true }
+hex = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+ulid = { workspace = true }
+uniffi = { version = "0.28", optional = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+proptest = "1"
+
+[build-dependencies]
+uniffi = { version = "0.28", optional = true, features = ["build"] }

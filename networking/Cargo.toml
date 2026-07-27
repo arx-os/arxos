@@ -1,0 +1,13 @@
+[package]
+name = "arxos-networking"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Arxos networking fabric (Iroh) — Phase 2"
+
+[dependencies]
+arxos-core = { workspace = true }
+
+[lib]
+path = "src/lib.rs"

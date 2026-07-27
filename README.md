@@ -39,7 +39,7 @@ cargo test --workspace
 cargo run -p arxos-cli -- version
 ```
 
-### CLI quickstart (Phase 1 capture loop)
+### CLI quickstart
 
 ```bash
 export ARXOS_STORE=/tmp/arxos-demo
@@ -57,7 +57,7 @@ cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" building near "$BID" --x 1.2
 
 Low-level object/root commands remain available (`object put`, `root create`, …).
 
-### Multi-device sync (Phase 2)
+### Multi-device sync
 
 ```bash
 # Device A — serve CAS over Iroh
@@ -75,7 +75,7 @@ arx net status
 
 See [`docs/architecture/PHASE2.md`](docs/architecture/PHASE2.md).
 
-### Spatial index & merge (Phase 3)
+### Spatial index & merge
 
 ```bash
 # After capture commits (index is built automatically on commit):
@@ -90,7 +90,7 @@ arx merge apply "$BID" "$OTHER_ROOT"
 
 See [`docs/architecture/PHASE3.md`](docs/architecture/PHASE3.md).
 
-### Interop — USD & IFC (Phase 4)
+### Interop — USD & IFC
 
 ```bash
 arx export usd "$BID" -o building.usda
@@ -106,7 +106,7 @@ arxos-edge export-ifc "$BID" -o building.ifc
 Projections preserve identity (`arxos:cid` / `Pset_ArxosIdentity`).  
 See [`docs/architecture/PHASE4.md`](docs/architecture/PHASE4.md).
 
-### DePIN & hardening (Phase 5)
+### DePIN & hardening
 
 ```bash
 arx depin score "$BID"
@@ -122,7 +122,7 @@ docker build -f edge/Dockerfile -t arxos-edge .
 On-chain: `contracts/BuildingRegistry.sol` (Base L2).  
 See [`docs/architecture/PHASE5.md`](docs/architecture/PHASE5.md).
 
-## iOS (Phase 1)
+## iOS
 
 ```bash
 cd ios/Arxos && swift run ArxosDemo

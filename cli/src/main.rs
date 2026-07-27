@@ -1,4 +1,4 @@
-//! Arxos CLI — Phase 0–2: objects, capture loop, multi-device sync.
+//! Arxos CLI — Phase 0–4: objects, capture, networking, spatial, interop.
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
@@ -20,6 +20,8 @@ use arxos_core::store::ObjectStore;
 use arxos_core::{Cid, Keypair};
 use arxos_networking::sync::{building_ads_from_store, pull_root};
 use arxos_networking::{IrohNode, MdnsDiscovery, ObjectTransport};
+use arxos_usd::{export_building_usda, import_usda, ExportOptions as UsdExportOptions};
+use arxos_ifc::{export_building_ifc, import_ifc, ExportOptions as IfcExportOptions};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
@@ -75,8 +77,58 @@ enum Commands {
         #[command(subcommand)]
         command: MergeCommands,
     },
+    /// Interop projections: USD / IFC (Phase 4)
+    Export {
+        #[command(subcommand)]
+        command: ExportCommands,
+    },
+    /// Import projections into the object store (Phase 4)
+    Import {
+        #[command(subcommand)]
+        command: ImportCommands,
+    },
     /// Print core version / hello
     Version,
+}
+
+#[derive(Subcommand, Debug)]
+enum ExportCommands {
+    /// Export building head as OpenUSD ASCII (USDA)
+    Usd {
+        building_id: String,
+        /// Output path (default: stdout)
+        #[arg(long, short)]
+        out: Option<PathBuf>,
+        /// Omit point-cloud points
+        #[arg(long)]
+        no_points: bool,
+    },
+    /// Export building head as IFC4 STEP
+    Ifc {
+        building_id: String,
+        #[arg(long, short)]
+        out: Option<PathBuf>,
+        #[arg(long)]
+        project_name: Option<String>,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum ImportCommands {
+    /// Import USDA into a local store (new/follow building + commit)
+    Usd {
+        /// Path to .usda file
+        file: PathBuf,
+        /// Sign imported objects with device seed if present
+        #[arg(long, default_value_t = true)]
+        sign: bool,
+    },
+    /// Import IFC STEP into a local store
+    Ifc {
+        file: PathBuf,
+        #[arg(long, default_value_t = true)]
+        sign: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -1296,9 +1348,105 @@ fn sync_main(cli: Cli) -> Result<()> {
                 println!("parents={},{}", res.parents.0, res.parents.1);
             }
         },
+        Commands::Export { command } => match command {
+            ExportCommands::Usd {
+                building_id,
+                out,
+                no_points,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let opts = UsdExportOptions {
+                    include_point_clouds: !no_points,
+                    ..UsdExportOptions::default()
+                };
+                let usda = export_building_usda(&cli.store, &bid, &opts)
+                    .with_context(|| "usd export")?;
+                if let Some(path) = out {
+                    fs::write(&path, &usda)
+                        .with_context(|| format!("write {}", path.display()))?;
+                    println!("wrote {} bytes to {}", usda.len(), path.display());
+                } else {
+                    print!("{usda}");
+                }
+            }
+            ExportCommands::Ifc {
+                building_id,
+                out,
+                project_name,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let opts = IfcExportOptions { project_name };
+                let ifc = export_building_ifc(&cli.store, &bid, &opts)
+                    .with_context(|| "ifc export")?;
+                if let Some(path) = out {
+                    fs::write(&path, &ifc)
+                        .with_context(|| format!("write {}", path.display()))?;
+                    println!("wrote {} bytes to {}", ifc.len(), path.display());
+                } else {
+                    print!("{ifc}");
+                }
+            }
+        },
+        Commands::Import { command } => match command {
+            ImportCommands::Usd { file, sign } => {
+                let text = fs::read_to_string(&file)
+                    .with_context(|| format!("read {}", file.display()))?;
+                let kp = if sign {
+                    load_device_keypair(&cli.store)
+                } else {
+                    None
+                };
+                let res = import_usda(&cli.store, &text, kp.as_ref())
+                    .with_context(|| "usd import")?;
+                println!("building_id={}", res.building_id);
+                println!("objects={}", res.object_cids.len());
+                println!(
+                    "root_cid={}",
+                    res.root_cid
+                        .map(|c| c.to_string())
+                        .unwrap_or_else(|| "none".into())
+                );
+                if let Some(s) = res.source_root_cid {
+                    println!("source_root_cid={s}");
+                }
+            }
+            ImportCommands::Ifc { file, sign } => {
+                let text = fs::read_to_string(&file)
+                    .with_context(|| format!("read {}", file.display()))?;
+                let kp = if sign {
+                    load_device_keypair(&cli.store)
+                } else {
+                    None
+                };
+                let res = import_ifc(&cli.store, &text, kp.as_ref())
+                    .with_context(|| "ifc import")?;
+                println!("building_id={}", res.building_id);
+                println!("objects={}", res.object_cids.len());
+                println!(
+                    "root_cid={}",
+                    res.root_cid
+                        .map(|c| c.to_string())
+                        .unwrap_or_else(|| "none".into())
+                );
+                if let Some(s) = res.source_root_cid {
+                    println!("source_root_cid={s}");
+                }
+            }
+        },
     }
 
     Ok(())
+}
+
+fn load_device_keypair(store: &std::path::Path) -> Option<Keypair> {
+    let path = store.join("keys").join("device.seed");
+    let bytes = fs::read(path).ok()?;
+    if bytes.len() != 32 {
+        return None;
+    }
+    let mut seed = [0u8; 32];
+    seed.copy_from_slice(&bytes);
+    Some(Keypair::from_seed(seed))
 }
 
 fn print_object(obj: &Object, cid: &Cid) {

@@ -41,8 +41,8 @@ arxos/
 | **1** | Mobile capture loop (Space / PointCloud / Annotation → commit) | Done |
 | **2** | Multi-device + Iroh + mDNS | Done |
 | **3** | Spatial index, partial load, merge | Done |
-| **4** | USD / IFC interop | Next |
-| **5** | DePIN & hardening | Planned |
+| **4** | USD / IFC interop | Done |
+| **5** | DePIN & hardening | Next |
 
 ## Build & test
 
@@ -104,6 +104,22 @@ arxos merge apply "$BID" "$OTHER_ROOT"
 ```
 
 See [`docs/architecture/PHASE3.md`](docs/architecture/PHASE3.md).
+
+### Interop — USD & IFC (Phase 4)
+
+```bash
+arxos export usd "$BID" -o building.usda
+arxos export ifc "$BID" -o building.ifc
+arxos import usd building.usda
+arxos import ifc building.ifc
+
+# Edge node
+arxos-edge export-usd "$BID" -o building.usda
+arxos-edge export-ifc "$BID" -o building.ifc
+```
+
+Projections preserve identity (`arxos:cid` / `Pset_ArxosIdentity`).  
+See [`docs/architecture/PHASE4.md`](docs/architecture/PHASE4.md).
 
 ## iOS (Phase 1)
 

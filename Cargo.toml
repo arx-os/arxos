@@ -5,6 +5,8 @@ members = [
     "cli",
     "networking",
     "edge",
+    "gateways/usd",
+    "gateways/ifc",
 ]
 default-members = ["core", "cli"]
 
@@ -18,6 +20,8 @@ rust-version = "1.75"
 [workspace.dependencies]
 arxos-core = { path = "core" }
 arxos-networking = { path = "networking" }
+arxos-usd = { path = "gateways/usd" }
+arxos-ifc = { path = "gateways/ifc" }
 anyhow = "1"
 blake3 = "1"
 ciborium = "0.2"

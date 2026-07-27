@@ -144,7 +144,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arxos-core",
+ "arxos-ifc",
  "arxos-networking",
+ "arxos-usd",
  "clap",
  "hex",
  "serde_json",
@@ -173,7 +175,22 @@ dependencies = [
 name = "arxos-edge"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "arxos-core",
+ "arxos-ifc",
+ "arxos-usd",
+ "clap",
+]
+
+[[package]]
+name = "arxos-ifc"
+version = "0.1.0"
+dependencies = [
+ "arxos-core",
+ "hex",
+ "tempfile",
+ "thiserror 2.0.19",
+ "ulid",
 ]
 
 [[package]]
@@ -194,6 +211,16 @@ dependencies = [
  "thiserror 2.0.19",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "arxos-usd"
+version = "0.1.0"
+dependencies = [
+ "arxos-core",
+ "serde",
+ "tempfile",
+ "thiserror 2.0.19",
 ]
 
 [[package]]

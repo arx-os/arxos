@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-description = "Arxos edge node binary — Phase 5 packaging target"
+description = "Arxos edge node — serve store + export interop projections"
 
 [[bin]]
 name = "arxos-edge"
@@ -12,3 +12,7 @@ path = "src/main.rs"
 
 [dependencies]
 arxos-core = { workspace = true }
+arxos-usd = { workspace = true }
+arxos-ifc = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }

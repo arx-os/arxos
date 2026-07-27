@@ -1,0 +1,16 @@
+[package]
+name = "arxos-ifc"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Arxos ↔ IFC bidirectional translator (identity-preserving subset) — Phase 4"
+
+[dependencies]
+arxos-core = { workspace = true }
+thiserror = { workspace = true }
+hex = { workspace = true }
+ulid = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

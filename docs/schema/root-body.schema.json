@@ -6,7 +6,8 @@
   "type": "object",
   "required": [
     "building_id",
-    "objects",
+    "added",
+    "removed",
     "timestamp",
     "authors"
   ],
@@ -15,7 +16,7 @@
     "building_id": {
       "type": "string",
       "minLength": 1,
-      "description": "Stable BuildingId (ULID in Phase 0)"
+      "description": "Stable BuildingId (ULID)"
     },
     "previous_root": {
       "type": ["string", "null"],
@@ -25,7 +26,19 @@
       "type": "array",
       "items": { "type": "string" },
       "uniqueItems": true,
-      "description": "Ordered set of object CIDs in the commit"
+      "description": "Optional ordered set of active object CIDs in checkpoint/legacy roots"
+    },
+    "added": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "description": "Set of object CIDs added in this delta commit"
+    },
+    "removed": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "description": "Set of object CIDs removed in this delta commit"
     },
     "spatial_index_root": {
       "type": ["string", "null"],

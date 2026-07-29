@@ -1,13 +1,13 @@
 # arxos-usd
 
-OpenUSD **projection** of the Arxos object graph (Phase 4).
+OpenUSD ASCII (USDA) gateway for the Arxos spatial object graph.
 
 ## Scope
 
-- **Wire format:** USDA 1.0 (ASCII) — loadable by OpenUSD tools (`usdview`, etc.)
-- **Hierarchy:** Building → Floor → Space → Annotation / Points / Equipment
-- **Identity:** `arxos:cid`, `arxos:type`, `arxos:buildingId`, layer `customLayerData`
-- Geometry is **data only** (points, extents, xforms). Arxos never owns general 3D rendering.
+- **Format**: USDA 1.0 (ASCII) — compatible with standard OpenUSD tools (e.g., `usdview`).
+- **Hierarchy Mapping**: Building → Floor → Space → Annotation / Surface / Equipment.
+- **Identity Preservation**: Embeds custom metadata attributes (`arxos:cid`, `arxos:type`, `arxos:buildingId`, and layer `customLayerData`) to allow reconstruction and round-trip verification.
+- **Fidelity**: Focuses on spatial geometry as data (transforms, point lists, bounds). Arxos does not own 3D rendering.
 
 ## Usage
 
@@ -15,8 +15,3 @@ OpenUSD **projection** of the Arxos object graph (Phase 4).
 arx export usd $BUILDING_ID -o building.usda
 arx import usd building.usda
 ```
-
-## Expanding coverage
-
-Prefer growing the projection map deliberately (more IFC/USD schema classes)
-rather than pulling full OpenUSD C++ until a host app needs USDC/crate I/O.

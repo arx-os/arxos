@@ -1,6 +1,6 @@
-# Arxos edge node
+# Arxos Edge Node
 
-Site / Raspberry Pi class deployment of the shared Rust core.
+Edge deployment binary for local network and Raspberry Pi class nodes.
 
 ## Commands
 
@@ -11,37 +11,28 @@ arxos-edge export-usd $BID -o out.usda
 arxos-edge export-ifc $BID -o out.ifc
 ```
 
-Networking (Iroh serve) uses the main CLI:
-
+To run networking and synchronize files across the network, use the main `arx` CLI:
 ```bash
 arx --store /var/lib/arxos/store net serve
 ```
 
-## Packaging
+## Packaging & Deployment
 
-### Docker
-
-```bash
-docker build -f edge/Dockerfile -t arxos-edge .
-docker run --rm -v arxos-data:/data -e ARXOS_STORE=/data/store arxos-edge version
-```
-
-Multi-arch (Pi + x86):
-
+### Docker Multi-Arch Build
+Build for ARM64 (e.g., Raspberry Pi) and AMD64 platforms:
 ```bash
 docker buildx build --platform linux/arm64,linux/amd64 -f edge/Dockerfile -t arxos-edge .
 ```
 
-### systemd
-
+### systemd Service Installation
+Install the service daemon and start:
 ```bash
 sudo INSTALL_SYSTEMD=1 ./edge/scripts/install-edge.sh
 sudo systemctl enable --now arxos-edge
 ```
 
-## Phase 5 hardening
+## Security & Verification Utilities
 
-- Device keys under `$ARXOS_STORE/keys/device.seed` (mode 0600)
-- Root verification: `arx depin verify $ROOT`
-- Contribution scores: `arx depin score $BID`
-- Registry snapshot: `arx depin registry $BID --abi`
+- **Access Controls**: Device seed keys are stored locally at `$ARXOS_STORE/keys/device.seed` with restricted read-only permissions (`0600`).
+- **Chain Verification**: Assert root transition validity via `arx depin verify $ROOT`.
+- **Scoring**: Evaluate contributor score matrices via `arx depin score $BID`.

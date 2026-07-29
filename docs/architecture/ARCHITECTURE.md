@@ -1,196 +1,164 @@
-# Arxos Technical Architecture, Design & Engineering Plan
+# Arxos Technical Architecture & Design Specification
 
-**Greenfield rebuild based on the lived-experience architecture**  
-**Version 0.1 — 2026-07-27**
+This document provides the formal architectural specification for Arxos, a local-first, content-addressed spatial data repository system designed for the built environment.
 
-This document is the single source of truth for rebuilding Arxos from scratch according to the architecture we defined. It prioritizes the lived experience (iOS LiDAR + text capture, AR registration in physical space, building-as-repository, databaseless, DePIN) and explicitly excludes general 3D rendering ownership.
+---
 
-## 1. Guiding Principles
+## 1. System Overview
 
-* **Lived experience first**: The primary loop is a person standing in a real building with a phone.
-* **Databaseless**: No central or general-purpose database in the critical path. State is content-addressed objects + signed content-addressed roots.
-* **Building = Repository**: Each building is an independent, versioned, forkable object graph identified by a stable ID and a current root hash.
-* **No 3D rendering by Arxos**: Geometry exists as data for spatial reasoning, AR anchoring, and export only. Visualization belongs to external tools.
-* **Partial by default**: Devices only ever materialize the objects they need (spatial region, system, or explicit set).
-* **Interoperability as projection**: The object graph is canonical. USD is the preferred modern interchange; IFC is a first-class legacy gateway; native CAD plugins are optional accelerators.
-* **DePIN native**: Every meaningful write is signed and attributable. Economic signals can flow to real-world contributors.
-* **Rust core, thin native shells**: Shared logic in Rust; iOS is a first-class client via UniFFI; edge nodes run the same core natively.
-
-## 2. High-Level Architecture
+Arxos functions as a versioned, local-first object graph representing buildings and spatial structures. The system is designed to run on resource-constrained mobile hardware and edge devices without requiring a centralized database in the critical path.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    iOS Capture / AR Client                  │
-│          (SwiftUI + ARKit + RealityKit + UniFFI)            │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────┐
-│                     Rust Core Library                       │
-│  Object Model · Hashing · Signed Roots · Spatial Index ·    │
-│  Validation · Canonicalization · Format Translators         │
-└──────┬──────────────────────────────┬───────────────────────┘
-       │                              │
-       ▼                              ▼
-┌──────────────┐              ┌──────────────────────┐
-│ Local Object │              │  Networking Fabric   │
-│ Store (CAS)  │◄────────────►│  (Iroh primary)      │
-└──────────────┘              └──────────────────────┘
-       │                              │
-       │                              ▼
-       │                      ┌──────────────────────┐
-       │                      │ Discovery & Root     │
-       │                      │ Anchoring (mDNS +    │
-       │                      │ optional L2 registry)│
-       │                      └──────────────────────┘
-       │
-       ▼
-┌─────────────────────────────────────────────────────────────┐
-│              Interop Gateways (projections)                 │
-│         OpenUSD (primary) · IFC · Native CAD plugins        │
+│                    iOS Capture Client                       │
+│          (SwiftUI + RoomPlan Ingestion + UniFFI)            │
+│                            │                                │
+│                            ▼                                │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │                  UniFFI FFI Gateway                     │ │
+│ └──────────────────────────┬──────────────────────────────┘ │
+│                            │                                │
+│ ┌──────────────────────────▼──────────────────────────────┐ │
+│ │                     Rust Core Library                   │ │
+│ │   Object Model · Hashing · signed Roots · R-Tree        │ │
+│ └──────┬──────────────────────────────┬───────────────────┘ │
+│        │                              │                     │
+│        ▼                              ▼                     │
+│ ┌──────────────┐              ┌──────────────────────┐      │
+│ │ Local Object │              │  Networking Fabric   │      │
+│ │ Store (CAS)  │◄────────────►│  (Iroh Sync Protocol)│      │
+│ └──────────────┘              └──────────────────────┘      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-DePIN verification and incentive logic sits alongside root transitions and can be evaluated by any node that holds the relevant objects.
+---
 
-## 3. Core Data Model
+## 2. Core Data Model & Content Addressing
 
-### 3.1 Object
-
-Every piece of data is an immutable, content-addressed object:
+### 2.1 Immutable Objects
+Every data element is stored as an immutable, content-addressed envelope:
 
 ```rust
-struct Object {
-    header: ObjectHeader,          // type, schema version, created, author, signature
-    body: ObjectBody,              // typed payload
+pub struct Object {
+    pub header: ObjectHeader,
+    pub body: ObjectBody,
+}
+
+pub struct ObjectHeader {
+    pub object_type: ObjectType,
+    pub schema_version: u32,
+    pub created: u64,
+    pub author: Option<PublicKey>,
+    pub signature: Option<AuthorSignature>,
 }
 ```
 
-* **CID**: BLAKE3 hash of the canonical CBOR serialization of the object.
-* **Types (initial set)**: Building, Floor, Space, Surface, Opening, Equipment, System, Circuit, Sensor, Fixture, Annotation, PointCloudChunk, Mesh, BoundingVolume, Relationship, SpatialIndexNode, Root, Provenance / attestation wrappers.
-* Objects may reference other objects only by CID. No mutable pointers.
+- **Content Address (CID)**: The unique identifier of an object is a `Cid`, computed as the BLAKE3-256 hash of the canonical CBOR serialization of the entire object (including header and body payload).
+- **Signing Flow**:
+  1. Construct the object with `signature = None`.
+  2. Serialize using canonical CBOR (`ciborium`).
+  3. Sign the bytes using Ed25519; store the resulting `AuthorSignature` in the header.
+  4. Compute the final CID over the signed canonical CBOR bytes.
 
-### 3.2 Root (Repository State)
+---
+
+## 3. Roots, Version Control, & History Materialization
+
+### 3.1 Root Schema
+A `Root` object represents a repository commit and defines the active state of a building.
 
 ```rust
-struct Root {
-    building_id: BuildingId,
-    previous_root: Option<Cid>,
-    objects: Option<BTreeSet<Cid>>,  // None for delta roots; Some(set) for checkpoint roots
-    added: BTreeSet<Cid>,            // Delta additions
-    removed: BTreeSet<Cid>,          // Delta removals
-    spatial_index_root: Option<Cid>,
-    timestamp: u64,
-    authors: Vec<Signature>,
+pub struct RootBody {
+    pub building_id: BuildingId,
+    pub previous_root: Option<Cid>,
+    pub added: BTreeSet<Cid>,
+    pub removed: BTreeSet<Cid>,
+    pub objects: Option<BTreeSet<Cid>>,
+    pub spatial_index_root: Option<Cid>,
+    pub timestamp: u64,
+    pub authors: Vec<AuthorSignature>,
+    pub message: Option<String>,
 }
 ```
 
-The CID of a Root is the current state of the building repository. A Root's closure includes all the referenced domain objects as well as the spatial index tree nodes under `spatial_index_root`.
-* **Checkpoint Policy**: To scale to large buildings with many commits, Arxos utilizes delta roots. Commit/merge operations write only the `added` and `removed` sets. To prevent materialization latency from growing linearly with history, a full-set checkpoint root (where `objects` is `Some`) is emitted every $N = 50$ commits, bounding the history materialization walk to $O(\text{checkpoint\_interval})$.
+### 3.2 Checkpoint Policy
+- **Delta-Friendly Commits**: To prevent the CBOR size of roots from scaling linearly with the number of objects, commits write only the `added` and `removed` sets relative to the parent.
+- **Emission Policy**: A full-set checkpoint root (where the `objects` field is populated with `Some(BTreeSet)`) is emitted:
+  - On the initial commit (`previous_root = None`).
+  - When the delta depth (number of consecutive delta commits since the last checkpoint) reaches $N = 50$.
+- **Materialization Walk**: Reconstructing the active object set starts at the head root and walks backwards along the `previous_root` chain, accumulating additions and subtracting removals. The walk terminates immediately when it hits the nearest checkpoint root, bounding materialization latency to $O(\text{checkpoint\_interval})$.
 
-### 3.3 Building Identity
+### 3.3 Bounded Closure Sync
+Sync operations utilize `get_root_closure_blobs` to calculate the minimal set of objects required to transfer a root state:
+1. Walk the root history backwards, terminating at the nearest checkpoint root.
+2. Collect the bytes of all traversed roots and the active domain objects within the materialized active set of the target tip.
+3. Recursively collect all `SpatialIndexNode`s branching from the root's `spatial_index_root`.
+- **Guarantee**: Devices sync complete, queryable root states without fetching unbounded history.
 
-* Stable BuildingId (DID or ULID + controller keys).
-* Controller key(s) or multisig that can designate “official” roots.
-* Anyone can fork by creating a new root that references a previous one.
+---
 
-### 3.4 Spatial Handling
+## 4. Spatial Indexing
 
-* Every spatially relevant object carries a pose or is attached to a parent that does.
-* A versioned spatial index (binary R-tree) is stored as ordinary objects and referenced from the Root.
-* **Incremental Index Updates**: Inserting new geometry updates the R-tree incrementally in $O(\log N)$ logarithmic time via structural sharing. Unchanged subtrees are reused, yielding stable CIDs.
-* **Reachability & Read Caching**: The builder caches intermediate traversal reads and split node writes in an in-memory RefCell cache. At the end of the batch insertion, only nodes reachable from the final R-tree root are flushed to disk, eliminating redundant I/O and orphaned intermediate nodes.
-* Queries are “give me all objects intersecting this volume / floor / frustum”.
+Spatially queryable geometry is stored in a versioned binary R-tree index structured as ordinary content-addressed objects (`SpatialIndexNode`).
 
-## 4. Key Subsystems
+### 4.1 Index Construction Determinism
+To guarantee that identical geometry produces identical CIDs across different runs:
+- Nodes use a fixed timestamp of `created: 0` in their headers.
+- Centroids are sorted stably, tie-breaking by CID comparison during splits.
+- Leaf node lists and child references are sorted deterministically.
 
-### 4.1 Local Content-Addressed Store
+### 4.2 Incremental R-Tree Builder
+Instead of rebuilding the R-tree from scratch on every commit, new geometry is added via `insert_incremental` in $O(\log N)$ logarithmic write time:
+- **Structural Sharing**: Unchanged subtrees are reused by reference, keeping new index node allocations minimal.
+- **In-Memory Caching**: Reads and parent splits are cached inside an in-memory `RefCell<BTreeMap<Cid, Object>>` during insertion traversal.
+- **Reachability Garbage Collection**: A DFS sweep starting from the final mutated root CID checks the cache, flushing only reachable index nodes to the disk store. Unreferenced intermediate split states are discarded in-memory.
 
-Directory of objects named by CID (Git-style fan-out). Optional thin index (rebuildable) mapping CID → type + coarse bounds for fast filtering.
+---
 
-### 4.2 Rust Core Library (arxos-core) & FFI Glue (arxos-ffi)
+## 5. Repository State & Partial Materialization
 
-* **arxos-core**: Canonical serialization (CBOR), BLAKE3 + CID generation, signed root computation, spatial index construction and query, object validation and schema evolution rules, signature verification.
-* **arxos-ffi**: A dedicated FFI glue crate compiling down to the static library `libarxos_core.a` (`ArxosCoreFFI`). It resolves cargo dependency graph circularity by sitting atop `core`, `networking`, `usd`, and `ifc`, enabling a unified on-device FFI boundary without native cycles.
+### 5.1 Caching & Staging
+- **Memory Cache**: `BuildingRepository` maintains a private `active_objects: BTreeSet<Cid>` representing the materialized set of the current head root. This cache is populated at repository open time and updated incrementally during commit or adopt operations, keeping active membership checks at $O(1)$.
+- **Partial Materialization**: Opening or adopting a root pins only the head Root and the core Building metadata in memory. Domain objects (surfaces, spaces) are lazily loaded into the session `WorkingSet` via spatial query refinement filters (`load_region`, `load_floor`).
 
-### 4.3 iOS Client & RoomPlan Geometry Ingestion
+---
 
-AR session management, LiDAR / RoomPlan capture pipeline, annotation UI, working-set management, commit flow, and AR overlays.
-* **Compile-Time Gate**: The Swift `LocalStore` shim is gated at compile time via `#if !canImport(ArxosCoreFFI) && !ALLOW_SHIM #error(...) #endif`. This ensures all production builds link the real native FFI module.
-* **RoomPlan Coordinate & Pose Conversion**:
-  - RoomPlan is Y-up, right-handed (meters), matching Arxos local space conventions.
-  - **Pose**: Translation is extracted from column 3 of the 4x4 matrix `[tx, ty, tz] = [m[12], m[13], m[14]]`. The 3x3 rotation component is mapped to a normalized quaternion `[qx, qy, qz, qw]`.
-  - **World AABB**: Constructed by generating the 8 local vertices from dimension vectors (`[+/- w/2, +/- h/2, +/- d/2]`), transforming them using the 4x4 column-major matrix, and computing the minimum/maximum bounds along world axes.
-  - **Stability**: Objects ingested from RoomPlan are assigned a stable `created: 0` timestamp so that identical captures result in completely stable CIDs.
+## 6. Mobile Capture & RoomPlan Ingestion
 
-### 4.4 Networking (Iroh)
+### 6.1 Matrix Transformation Math
+Ingesting ARKit/RoomPlan geometry (Y-up, right-handed, meters) requires explicit coordinate transformation into the canonical Arxos object schema:
+- **Pose Extraction**: The 4x4 column-major matrix `T` is decomposed. Translation is mapped directly from column 3: `[tx, ty, tz] = [T[12], T[13], T[14]]`. The upper-left 3x3 rotation matrix is converted to a normalized quaternion `[qx, qy, qz, qw]`.
+- **World Bounding Box (AABB)**: Local boundary dimensions `[w, h, d]` are used to reconstruct the 8 local vertices `[+/- w/2, +/- h/2, +/- d/2]`. These are transformed to world coordinates via matrix multiplication, and the absolute minimum and maximum values along each axis are computed to yield a tight world-space `Aabb`.
+- **Timestamp Gating**: Ingested geometry structures are assigned a stable `created: 0` timestamp to ensure stable CID generation.
 
-Announce new Roots via gossip, request objects by CID, direct connections preferred; relays as fallback, local-network discovery via mDNS.
-
-### 4.5 Interop Gateways
-
-* `arxos-usd`: high-quality bidirectional OpenUSD mapping
-* `arxos-ifc`: bidirectional IFC translator with identity preservation
-* Future: thin native plugins (Revit etc.)
-
-### 4.6 DePIN Layer
-
-All Roots and important objects are signed; App Attest + optional spatial consistency proofs; minimal on-chain registry on Base or equivalent; scoring and rewards can begin off-chain.
-
-## 5. Technology Stack (Locked)
-
-| Layer | Choice | Notes |
-|-------|--------|-------|
-| Core logic | Rust | Single source of truth |
-| Hashing | BLAKE3 | Fast, secure |
-| Object serialization | CBOR (ciborium) | Compact + deterministic |
-| Signatures | ed25519-dalek | |
-| Spatial index | rstar or custom hierarchical | Versioned as objects |
-| Mobile UI / AR | Swift + SwiftUI + ARKit + RealityKit | |
-| Rust ↔ Swift | UniFFI | |
-| Local store | Content-addressed files | |
-| Networking | Iroh (primary) | |
-| USD | OpenUSD | Preferred interchange |
-| IFC | Custom Rust translator | Strong legacy support |
-| Discovery | mDNS + optional L2 registry | |
-| Token / anchoring | Base L2 | Minimal contracts only |
-
-## 6. Repository & Project Structure
-
-```
-arxos/
-├── core/                 # arxos-core (Rust)
-├── ffi/                  # arxos-ffi (UniFFI staticlib glue)
-├── gateways/
-│   ├── usd/
-│   └── ifc/
-├── networking/           # Iroh integration
-├── ios/                  # SwiftUI app
-├── edge/                 # Native edge node binary
-├── cli/                  # Inspection & admin tools
-├── contracts/            # Minimal L2 registry (optional early)
-└── docs/
-    └── architecture/     # This document
+### 6.2 Xcode Linking Gating
+The Swift façade utilizes a compile-time hard-gate to prevent debug shims from leaking into production:
+```swift
+#if !canImport(ArxosCoreFFI) && !ALLOW_SHIM
+#error("Real UniFFI backend (ArxosCoreFFI) is required for production builds. Define ALLOW_SHIM if you are working on UI styling / demo without the Rust backend.")
+#endif
 ```
 
-## 7. Phased Engineering Plan
+---
 
-| Phase | Focus | Duration |
-|-------|--------|----------|
-| **0** | Foundation: Object, CAS, Root, UniFFI, CLI | 2–3 weeks |
-| **1** | Mobile capture loop (AR + LiDAR + commit) | 3–4 weeks |
-| **2** | Multi-device & Iroh networking | 3 weeks |
-| **3** | Spatial index, partial load, merge | 2–3 weeks |
-| **4** | OpenUSD + IFC interop | 4 weeks |
-| **5** | DePIN & hardening | ongoing |
+## 7. Interop Gateways
 
-Each phase ends with a working, demonstrable vertical slice and automated tests.
+Gateways project the canonical Arxos object graph into standardized engineering formats.
 
-## 8–10. Testing, Risks, Next Steps
+| Gateway | Crate | Role & Projection Mechanics |
+|---------|-------|-----------------------------|
+| **OpenUSD** | `arxos-usd` | Generates human-readable OpenUSD ASCII (`.usda`) layers. Spatial bounding volumes map to USD Xforms. Identity is preserved by embedding `arxos:cid` and `arxos:buildingId` layer metadata. |
+| **IFC** | `arxos-ifc` | Converts spaces and surfaces into standard IFC4 STEP text files. identity is preserved by attaching `Pset_ArxosIdentity` property sets containing the BLAKE3 CID, and deriving stable IFC GlobalIds deterministically from the object CIDs. |
 
-See the full plan in project history. Phase 0 deliverables:
+---
 
-1. Monorepo structure
-2. arxos-core skeleton
-3. UniFFI + Swift hello-world
-4. CLI (`arx`): `object put`, `root create`, `root show`
-5. Initial object schema documentation
+## 8. Guarantees & Limitations
+
+### 8.1 Factual System Guarantees
+- **Integrity**: Any object read is verified by recalculating its BLAKE3 hash. Signature validation fails closed on invalid remote root pulls by default.
+- **Bounded Sync**: Networking fetches only the objects back to the nearest checkpoint, avoiding full repository history transfers.
+- **Logarithmic Commits**: Incremental indexing ensures spatial write complexity is $O(\log N)$ relative to building size.
+
+### 8.2 Current Design Limitations
+- **No Rendering**: Arxos does not perform 3D graphics rendering; geometry translation is limited to spatial reasoning, queries, and file export formats.
+- **Scope Limits**: True distributed multi-building spatial indexing, tree compression/packing, MEP system details in IFC export, and C++ OpenUSD bindings are explicitly out of scope.

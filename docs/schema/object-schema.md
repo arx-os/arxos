@@ -73,7 +73,9 @@ Aabb
 RootBody
 ├── building_id: BuildingId
 ├── previous_root: Option<Cid>
-├── objects: BTreeSet<Cid>
+├── objects: Option<BTreeSet<Cid>>
+├── added: BTreeSet<Cid>
+├── removed: BTreeSet<Cid>
 ├── spatial_index_root: Option<Cid>
 ├── timestamp: u64
 ├── authors: Vec<AuthorSignature>

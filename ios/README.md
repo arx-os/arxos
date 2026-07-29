@@ -1,15 +1,15 @@
 # Arxos iOS Client
 
-Lived-experience capture client: ARKit / RoomPlan → content-addressed objects → signed Root.
+The capture client façade for iOS, bridging ARKit / RoomPlan scans to signed content-addressed repositories.
 
-## Phase 1 capabilities
+## Capabilities
 
-* Init / open / list building repositories (local CAS)
-* Capture **Space**, **PointCloudChunk**, **Annotation** at camera pose
-* **Mock / simulate** scan without LiDAR (Simulator + macOS demo)
-* **RoomPlan** path on device (iOS 16+, non-Simulator)
-* Commit pending captures → new signed Root; reload same building
-* AR overlay of **annotation labels only** (no general 3D model viewer)
+* Create, open, and list building repositories locally.
+* Capture Spaces, PointCloudChunks, and Annotations at the device's camera pose.
+* **Simulator Integration**: Ingest mock scans for development on macOS or Xcode Simulator.
+* **RoomPlan Ingestion**: Convert wall, floor, ceiling, and object dimensions to canonical domain models using matrix transformations.
+* Commit working-set changes to local signed Roots.
+* Render AR annotation overlays relative to real-world coordinate frames.
 
 ## Layout
 
@@ -18,33 +18,27 @@ ios/Arxos/
 ├── Package.swift
 ├── Scripts/generate_bindings.sh
 └── Sources/
-    ├── ArxosCore/       # UniFFI façade + local shim
-    ├── ArxosApp/        # SwiftUI + AR + capture session
-    └── ArxosDemo/       # CLI smoke test for capture loop
+    ├── ArxosCore/       # Swift UniFFI gateway and gated debug shim
+    ├── ArxosApp/        # SwiftUI, ARKit, and RoomPlan capture pipelines
+    └── ArxosDemo/       # CLI verification tool for the capture loop
 ```
 
-## Quick check (no device)
+## Quick Check (macOS / Simulator)
 
+Run the local façade smoke test:
 ```bash
 cd ios/Arxos
-swift run ArxosDemo
-# → Phase 1 demo OK
+swift run -Xswiftc -DALLOW_SHIM ArxosDemo
 ```
 
-## Device (LiDAR)
+## Production Device Builds
 
-1. Create an Xcode iOS App target that depends on `ArxosApp` + `ArxosCore`.
-2. Build Rust with UniFFI and link the static library / XCFramework:
-
+1. Compile the Rust static library FFI gateway:
    ```bash
-   cargo build -p arxos-core --features uniffi --release
+   cargo build -p arxos-ffi --release
+   ```
+2. Generate the Swift bindings:
+   ```bash
    ./ios/Arxos/Scripts/generate_bindings.sh
    ```
-
-3. Run on a LiDAR-capable iPhone. Use **Simulate RoomPlan scan** when hardware capture is unavailable.
-
-## Architecture notes
-
-* Production path: Swift → UniFFI → `arxos-core` (`BuildingRepository`).
-* Shim path: pure-Swift `LocalStore` for UI compile / demo without native lib (not BLAKE3-identical).
-* Geometry from RoomPlan is stored as data (`PointCloudChunk`); visualization of full meshes is out of scope (USD in Phase 4).
+3. Open `ios/Arxos` or embed it in an iOS App project, linking the compiled static library, and run on a LiDAR-capable iOS device.

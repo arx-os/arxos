@@ -1,24 +1,18 @@
 # arxos-core
 
-Rust core library for Arxos (Phase 0 foundation).
+The core library for the Arxos spatial data repository system.
 
 ## Responsibilities
 
-- Content-addressed **objects** (header + typed body)
-- **Canonical CBOR** serialization + **BLAKE3** CIDs
-- **Root** repository state with ed25519 author signatures
-- Local **CAS** object store (Git-style fan-out)
-- Optional **UniFFI** bindings for Swift
+- **Content Addressing**: Canonical CBOR serialization and BLAKE3 CID generation.
+- **Object Schema**: Implements core types (Space, Surface, Equipment, BoundingVolume) and signature verification.
+- **Root Management**: Handles delta roots, materialization walks, checkpoint policies, and sync closures.
+- **Spatial Index**: Implements incremental R-tree index builds, query logic, and reachability garbage collection.
+- **Repository**: Manages local BuildingRecord instances, WorkingSet staging, and memory-cached active object sets.
 
-## Features
+## Verification
 
-| Feature | Description |
-|---------|-------------|
-| *(default)* | Core library only |
-| `uniffi` | Generate UniFFI scaffolding for mobile |
-
-## Quick test
-
+Run the core unit and integration test suites:
 ```bash
 cargo test -p arxos-core
 ```

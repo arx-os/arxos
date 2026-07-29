@@ -82,8 +82,8 @@ impl Aabb {
     }
 
     pub fn contains_point(&self, p: [f64; 3]) -> bool {
-        for i in 0..3 {
-            if p[i] < self.min[i] || p[i] > self.max[i] {
+        for (i, &coord) in p.iter().enumerate() {
+            if coord < self.min[i] || coord > self.max[i] {
                 return false;
             }
         }

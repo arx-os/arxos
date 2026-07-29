@@ -22,25 +22,13 @@ fn now_secs() -> u64 {
 }
 
 /// Input for creating a Space object from RoomPlan / manual capture.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct SpaceCapture {
     pub name: Option<String>,
     pub pose: Pose,
     pub bounds: Option<Aabb>,
     pub floor: Option<crate::cid::Cid>,
     pub properties: BTreeMap<String, String>,
-}
-
-impl Default for SpaceCapture {
-    fn default() -> Self {
-        Self {
-            name: None,
-            pose: Pose::default(),
-            bounds: None,
-            floor: None,
-            properties: BTreeMap::new(),
-        }
-    }
 }
 
 /// Packed XYZ point cloud from LiDAR / RoomPlan mesh sampling.

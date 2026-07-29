@@ -72,19 +72,11 @@ pub struct CommitResult {
 }
 
 /// Options for adopting a remote root.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct AdoptOptions {
     /// Allow untrusted root signatures (invalid or missing author signatures).
     /// If false, verification failures cause adoption to fail with a signature error.
     pub allow_untrusted: bool,
-}
-
-impl Default for AdoptOptions {
-    fn default() -> Self {
-        Self {
-            allow_untrusted: false,
-        }
-    }
 }
 
 /// Building repository handle: CAS + head metadata + session working set.
@@ -520,13 +512,12 @@ impl BuildingRepository {
             // Prefer objects that reference this floor when available.
             if let Ok(obj) = self.store.get(&hit.object) {
                 if let Some(entry) = crate::spatial::entry_from_object(hit.object, &obj) {
-                    if entry.floor.as_ref() == Some(floor_cid)
-                        || entry.bounds.intersects(&volume.bounds)
+                    if (entry.floor.as_ref() == Some(floor_cid)
+                        || entry.bounds.intersects(&volume.bounds))
+                        && self.working_set.get_cached(&hit.object).is_none()
                     {
-                        if self.working_set.get_cached(&hit.object).is_none() {
-                            self.working_set.materialize(&self.store, &hit.object)?;
-                            loaded += 1;
-                        }
+                        self.working_set.materialize(&self.store, &hit.object)?;
+                        loaded += 1;
                     }
                 }
             }

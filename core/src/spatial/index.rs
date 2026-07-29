@@ -172,7 +172,7 @@ pub fn build_index(store: &ObjectStore, mut entries: Vec<SpatialEntry>) -> Resul
         return Ok(None);
     }
     // Stable order for deterministic CIDs.
-    entries.sort_by(|a, b| a.cid.cmp(&b.cid));
+    entries.sort_by_key(|e| e.cid);
     let root = build_recursive(store, entries, 0)?;
     Ok(Some(root))
 }
@@ -244,7 +244,7 @@ pub fn query_index(
         }
     }
     // Dedupe CIDs (can appear if overlapping leaves — shouldn't with our build).
-    hits.sort_by(|a, b| a.object.cmp(&b.object));
+    hits.sort_by_key(|h| h.object);
     hits.dedup_by(|a, b| a.object == b.object);
     Ok(hits)
 }

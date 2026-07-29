@@ -61,7 +61,7 @@ fn import_stage(
                 .find_map(|p| attr_string(p, "arxos:buildingId"))
                 .and_then(|s| BuildingId::from_str(&s).ok())
         })
-        .unwrap_or_else(BuildingId::new);
+        .unwrap_or_default();
 
     // Ensure building record exists.
     let repo = BuildingRepository::open_or_follow(

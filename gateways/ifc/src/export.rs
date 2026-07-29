@@ -102,7 +102,7 @@ pub fn export_root_ifc(
     let store = ObjectStore::open(store_path.as_ref())?;
     let root_obj = store.get(root_cid)?;
     let root = RootBody::from_object(&root_obj)?;
-    write_ifc(&store, root_cid, &root, opts)
+    write_ifc(&store, root_cid, root, opts)
 }
 
 fn write_ifc(

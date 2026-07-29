@@ -187,19 +187,10 @@ impl AttestationVerifier for MockAttestationVerifier {
 /// Attest root certs and the expected `app_id` / challenge. Phase 5 ships
 /// structural checks only so the pipeline is wired; do not treat as secure
 /// production verification.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct AppAttestVerifier {
     pub expected_app_id: Option<String>,
     pub allow_empty_statement: bool,
-}
-
-impl Default for AppAttestVerifier {
-    fn default() -> Self {
-        Self {
-            expected_app_id: None,
-            allow_empty_statement: false,
-        }
-    }
 }
 
 impl AttestationVerifier for AppAttestVerifier {

@@ -52,7 +52,7 @@ pub fn export_root_usda(
     let store = ObjectStore::open(store_path.as_ref())?;
     let root_obj = store.get(root_cid)?;
     let root = RootBody::from_object(&root_obj)?;
-    let stage = project_root(&store, root_cid, &root, opts)?;
+    let stage = project_root(&store, root_cid, root, opts)?;
     Ok(stage.to_usda())
 }
 

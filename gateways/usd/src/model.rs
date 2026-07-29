@@ -135,8 +135,6 @@ pub fn sanitize_name(s: &str) -> String {
     for (i, c) in s.chars().enumerate() {
         if c.is_ascii_alphanumeric() || c == '_' {
             out.push(c);
-        } else if c == '-' {
-            out.push('_');
         } else {
             out.push('_');
         }

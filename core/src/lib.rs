@@ -30,26 +30,7 @@ pub mod store;
 pub mod verify;
 pub mod working_set;
 
-/// UniFFI foreign-language API (feature `uniffi`).
-///
-/// UDL scaffolding requires exported items at the crate root; we re-export
-/// UniFFI-only helpers here. `hello` / `version` are defined on the crate root
-/// so both native Rust and UniFFI share one implementation.
-#[cfg(feature = "uniffi")]
-#[allow(missing_docs)]
-mod uniffi_api;
 
-#[cfg(feature = "uniffi")]
-#[allow(missing_docs, unused_imports)]
-pub use uniffi_api::{
-    annotations_near, capture_annotation, capture_point_cloud, capture_space, commit_building,
-    create_root, generate_building_id, generate_keypair, init_building, list_buildings,
-    open_building, public_key_hex, put_blob, show_root, AnnotationOverlay, BuildingSummary,
-    CapturePutResult, CommitSummary, KeypairData, ObjectPutResult, RootCreateResult,
-};
-
-#[cfg(feature = "uniffi")]
-uniffi::include_scaffolding!("arxos");
 
 pub use attest::{
     AppAttestVerifier, AttestationKind, AttestationStatement, AttestationVerdict,
@@ -72,8 +53,8 @@ pub use object::{
     ObjectHeader, ObjectType, Pose, SCHEMA_VERSION,
 };
 pub use object::Aabb;
-pub use repository::{BuildingRecord, BuildingRepository, CaptureResult, CommitResult};
-pub use root::{RootBody, RootBuilder};
+pub use repository::{AdoptOptions, BuildingRecord, BuildingRepository, CaptureResult, CommitResult};
+pub use root::{get_root_closure_blobs, RootBody, RootBuilder};
 pub use spatial::{QueryVolume, SpatialEntry, SpatialHit};
 pub use store::ObjectStore;
 pub use verify::{
@@ -156,6 +137,6 @@ mod tests {
         let loaded = store.get(&root_cid).unwrap();
         let root = RootBody::from_object(&loaded).unwrap();
         root.verify_authors().unwrap();
-        assert_eq!(root.objects.len(), 2);
+        assert_eq!(root.materialize_active_objects(&store).unwrap().len(), 2);
     }
 }

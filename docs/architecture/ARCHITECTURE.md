@@ -8,7 +8,7 @@ This document is the single source of truth for rebuilding Arxos from scratch ac
 ## 1. Guiding Principles
 
 * **Lived experience first**: The primary loop is a person standing in a real building with a phone.
-* **Databaseless**: No central or general-purpose database in the critical path. State is content-addressed objects + signed Merkle roots.
+* **Databaseless**: No central or general-purpose database in the critical path. State is content-addressed objects + signed content-addressed roots.
 * **Building = Repository**: Each building is an independent, versioned, forkable object graph identified by a stable ID and a current root hash.
 * **No 3D rendering by Arxos**: Geometry exists as data for spatial reasoning, AR anchoring, and export only. Visualization belongs to external tools.
 * **Partial by default**: Devices only ever materialize the objects they need (spatial region, system, or explicit set).
@@ -26,7 +26,7 @@ This document is the single source of truth for rebuilding Arxos from scratch ac
                              │
 ┌────────────────────────────▼────────────────────────────────┐
 │                     Rust Core Library                       │
-│  Object Model · Hashing · Merkle Roots · Spatial Index ·    │
+│  Object Model · Hashing · Signed Roots · Spatial Index ·    │
 │  Validation · Canonicalization · Format Translators         │
 └──────┬──────────────────────────────┬───────────────────────┘
        │                              │
@@ -75,14 +75,17 @@ struct Object {
 struct Root {
     building_id: BuildingId,
     previous_root: Option<Cid>,
-    objects: BTreeSet<Cid>,
+    objects: Option<BTreeSet<Cid>>,  // None for delta roots; Some(set) for checkpoint roots
+    added: BTreeSet<Cid>,            // Delta additions
+    removed: BTreeSet<Cid>,          // Delta removals
     spatial_index_root: Option<Cid>,
     timestamp: u64,
     authors: Vec<Signature>,
 }
 ```
 
-The CID of a Root is the current state of the building repository.
+The CID of a Root is the current state of the building repository. A Root's closure includes all the referenced domain objects as well as the spatial index tree nodes under `spatial_index_root`.
+* **Checkpoint Policy**: To scale to large buildings with many commits, Arxos utilizes delta roots. Commit/merge operations write only the `added` and `removed` sets. To prevent materialization latency from growing linearly with history, a full-set checkpoint root (where `objects` is `Some`) is emitted every $N = 50$ commits, bounding the history materialization walk to $O(\text{checkpoint\_interval})$.
 
 ### 3.3 Building Identity
 
@@ -93,7 +96,9 @@ The CID of a Root is the current state of the building repository.
 ### 3.4 Spatial Handling
 
 * Every spatially relevant object carries a pose or is attached to a parent that does.
-* A versioned spatial index (R-tree or hierarchical grid) is stored as ordinary objects and referenced from the Root.
+* A versioned spatial index (binary R-tree) is stored as ordinary objects and referenced from the Root.
+* **Incremental Index Updates**: Inserting new geometry updates the R-tree incrementally in $O(\log N)$ logarithmic time via structural sharing. Unchanged subtrees are reused, yielding stable CIDs.
+* **Reachability & Read Caching**: The builder caches intermediate traversal reads and split node writes in an in-memory RefCell cache. At the end of the batch insertion, only nodes reachable from the final R-tree root are flushed to disk, eliminating redundant I/O and orphaned intermediate nodes.
 * Queries are “give me all objects intersecting this volume / floor / frustum”.
 
 ## 4. Key Subsystems
@@ -102,13 +107,20 @@ The CID of a Root is the current state of the building repository.
 
 Directory of objects named by CID (Git-style fan-out). Optional thin index (rebuildable) mapping CID → type + coarse bounds for fast filtering.
 
-### 4.2 Rust Core Library (arxos-core)
+### 4.2 Rust Core Library (arxos-core) & FFI Glue (arxos-ffi)
 
-Canonical serialization (CBOR), BLAKE3 + CID generation, Merkle / root computation, spatial index construction and query, object validation and schema evolution rules, signature verification, UniFFI surface for Swift.
+* **arxos-core**: Canonical serialization (CBOR), BLAKE3 + CID generation, signed root computation, spatial index construction and query, object validation and schema evolution rules, signature verification.
+* **arxos-ffi**: A dedicated FFI glue crate compiling down to the static library `libarxos_core.a` (`ArxosCoreFFI`). It resolves cargo dependency graph circularity by sitting atop `core`, `networking`, `usd`, and `ifc`, enabling a unified on-device FFI boundary without native cycles.
 
-### 4.3 iOS Client
+### 4.3 iOS Client & RoomPlan Geometry Ingestion
 
-AR session management and relocalization, LiDAR / RoomPlan capture pipeline → object creation, annotation UI, working-set management, commit flow, AR overlay of nearby annotations (no general 3D model viewer).
+AR session management, LiDAR / RoomPlan capture pipeline, annotation UI, working-set management, commit flow, and AR overlays.
+* **Compile-Time Gate**: The Swift `LocalStore` shim is gated at compile time via `#if !canImport(ArxosCoreFFI) && !ALLOW_SHIM #error(...) #endif`. This ensures all production builds link the real native FFI module.
+* **RoomPlan Coordinate & Pose Conversion**:
+  - RoomPlan is Y-up, right-handed (meters), matching Arxos local space conventions.
+  - **Pose**: Translation is extracted from column 3 of the 4x4 matrix `[tx, ty, tz] = [m[12], m[13], m[14]]`. The 3x3 rotation component is mapped to a normalized quaternion `[qx, qy, qz, qw]`.
+  - **World AABB**: Constructed by generating the 8 local vertices from dimension vectors (`[+/- w/2, +/- h/2, +/- d/2]`), transforming them using the 4x4 column-major matrix, and computing the minimum/maximum bounds along world axes.
+  - **Stability**: Objects ingested from RoomPlan are assigned a stable `created: 0` timestamp so that identical captures result in completely stable CIDs.
 
 ### 4.4 Networking (Iroh)
 
@@ -147,6 +159,7 @@ All Roots and important objects are signed; App Attest + optional spatial consis
 ```
 arxos/
 ├── core/                 # arxos-core (Rust)
+├── ffi/                  # arxos-ffi (UniFFI staticlib glue)
 ├── gateways/
 │   ├── usd/
 │   └── ifc/

@@ -21,7 +21,7 @@ use arxos_core::attest::{AttestationStatement, DefaultAttestationVerifier, Attes
 use arxos_core::depin::{registry_snapshot, score_root};
 use arxos_core::verify::verify_root_transition;
 use arxos_core::{Cid, Keypair};
-use arxos_networking::sync::{building_ads_from_store, pull_root};
+use arxos_networking::sync::{building_ads_from_store, pull_root_with_options};
 use arxos_networking::{IrohNode, MdnsDiscovery, ObjectTransport};
 use arxos_usd::{export_building_usda, import_usda, ExportOptions as UsdExportOptions};
 use arxos_ifc::{export_building_ifc, import_ifc, ExportOptions as IfcExportOptions};
@@ -261,7 +261,6 @@ enum NetCommands {
         #[arg(long)]
         ticket_only: bool,
     },
-    /// Fetch a root (+ objects) from a peer ticket and store locally
     Fetch {
         /// Peer dial ticket (JSON EndpointAddr from `net serve`)
         #[arg(long)]
@@ -275,6 +274,9 @@ enum NetCommands {
         /// Adopt pulled root as local head
         #[arg(long, default_value_t = true)]
         set_head: bool,
+        /// Allow adopting untrusted roots (verification failure becomes warning)
+        #[arg(long, default_value_t = false)]
+        allow_untrusted: bool,
     },
     /// Refresh advertisements / print current building heads for publish
     Publish {
@@ -613,18 +615,20 @@ async fn async_main(cli: Cli) -> Result<()> {
                 root,
                 building_id,
                 set_head,
+                allow_untrusted,
             } => {
                 // Ephemeral client node (own store path for outbound).
                 let node = IrohNode::bind(&cli.store)
                     .await
                     .context("bind client endpoint")?;
-                let result = pull_root(
+                let result = pull_root_with_options(
                     &node,
                     &peer,
                     &cli.store,
                     &root,
                     building_id.as_deref(),
                     set_head,
+                    allow_untrusted,
                 )
                 .await
                 .context("pull root")?;
@@ -805,7 +809,7 @@ fn sync_main(cli: Cli) -> Result<()> {
                         println!("  pending {c}");
                     }
                     if let Some(root) = repo.load_head_root()? {
-                        println!("head_objects={}", root.objects.len());
+                        println!("head_objects={}", repo.head_object_cids()?.len());
                         println!("head_message={:?}", root.message);
                     }
                 }
@@ -1205,7 +1209,8 @@ fn sync_main(cli: Cli) -> Result<()> {
                     } else {
                         println!("root_cid={root_cid}");
                         println!("building_id={bid}");
-                        println!("objects={}", root.objects.len());
+                        let active = root.materialize_active_objects(&store)?;
+                        println!("objects={}", active.len());
                         println!("authors={}", root.authors.len());
                         if let Some(msg) = &root.message {
                             println!("message={msg}");
@@ -1247,8 +1252,9 @@ fn sync_main(cli: Cli) -> Result<()> {
                         for (i, a) in root.authors.iter().enumerate() {
                             println!("  author[{i}]={}", a.public_key);
                         }
-                        println!("objects={}", root.objects.len());
-                        for o in &root.objects {
+                        let active = root.materialize_active_objects(&store)?;
+                        println!("objects={}", active.len());
+                        for o in &active {
                             println!("  {o}");
                         }
                     }
@@ -1625,7 +1631,12 @@ fn print_object(obj: &Object, cid: &Cid) {
         }
         ObjectBody::Root(r) => {
             println!("building_id={}", r.building_id);
-            println!("objects={}", r.objects.len());
+            if let Some(ref objs) = r.objects {
+                println!("objects={}", objs.len());
+            } else {
+                println!("added={}", r.added.len());
+                println!("removed={}", r.removed.len());
+            }
         }
         other => {
             println!("body_type={}", other.object_type());
@@ -1645,7 +1656,7 @@ fn object_summary(obj: &Object, cid: &Cid) -> serde_json::Value {
 }
 
 fn root_summary(root: &RootBody, cid: &Cid) -> serde_json::Value {
-    serde_json::json!({
+    let mut summary = serde_json::json!({
         "root_cid": cid.to_string(),
         "building_id": root.building_id.to_string(),
         "previous_root": root.previous_root.map(|c| c.to_string()),
@@ -1653,7 +1664,15 @@ fn root_summary(root: &RootBody, cid: &Cid) -> serde_json::Value {
         "message": root.message,
         "spatial_index_root": root.spatial_index_root.map(|c| c.to_string()),
         "authors": root.authors.iter().map(|a| a.public_key.to_string()).collect::<Vec<_>>(),
-        "objects": root.objects.iter().map(|c| c.to_string()).collect::<Vec<_>>(),
-        "object_count": root.objects.len(),
-    })
+    });
+    if let Some(ref objs) = root.objects {
+        summary["objects"] = serde_json::json!(objs.iter().map(|c| c.to_string()).collect::<Vec<_>>());
+        summary["object_count"] = serde_json::json!(objs.len());
+    } else {
+        summary["added"] = serde_json::json!(root.added.iter().map(|c| c.to_string()).collect::<Vec<_>>());
+        summary["removed"] = serde_json::json!(root.removed.iter().map(|c| c.to_string()).collect::<Vec<_>>());
+        summary["added_count"] = serde_json::json!(root.added.len());
+        summary["removed_count"] = serde_json::json!(root.removed.len());
+    }
+    summary
 }

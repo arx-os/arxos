@@ -9,11 +9,10 @@ readme = "README.md"
 
 [lib]
 name = "arxos_core"
-crate-type = ["lib", "staticlib", "cdylib"]
+crate-type = ["lib"]
 
 [features]
 default = []
-uniffi = ["dep:uniffi"]
 
 [dependencies]
 blake3 = { workspace = true }
@@ -25,11 +24,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 ulid = { workspace = true }
-uniffi = { version = "0.28", optional = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
 proptest = "1"
-
-[build-dependencies]
-uniffi = { version = "0.28", optional = true, features = ["build"] }

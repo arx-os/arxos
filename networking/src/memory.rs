@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use arxos_core::store::ObjectStore;
-use arxos_core::{Cid, Object, RootBody};
+use arxos_core::Cid;
 
 use crate::error::{NetError, Result};
 use crate::protocol::{BuildingHeadAd, ObjectBlob};
@@ -136,24 +136,15 @@ impl ObjectTransport for MemoryNode {
         Box::pin(async move {
             let root = Cid::parse_str(root_cid).map_err(|e| NetError::Protocol(e.to_string()))?;
             self.with_peer(peer, |n| {
-                let root_bytes = n.store.get_bytes(&root).map_err(NetError::from)?;
-                let root_obj = Object::from_canonical_bytes(&root_bytes).map_err(NetError::from)?;
-                let body = RootBody::from_object(&root_obj).map_err(NetError::from)?;
-                let mut out = vec![ObjectBlob {
-                    cid: root.to_string(),
-                    bytes: root_bytes,
-                }];
-                for cid in &body.objects {
-                    if cid == &root {
-                        continue;
-                    }
-                    if let Ok(bytes) = n.store.get_bytes(cid) {
-                        out.push(ObjectBlob {
-                            cid: cid.to_string(),
-                            bytes,
-                        });
-                    }
-                }
+                let closure = arxos_core::root::get_root_closure_blobs(&n.store, &root)
+                    .map_err(NetError::from)?;
+                let out = closure
+                    .into_iter()
+                    .map(|(cid, bytes)| ObjectBlob {
+                        cid: cid.to_string(),
+                        bytes,
+                    })
+                    .collect();
                 Ok(out)
             })?
         })

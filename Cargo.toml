@@ -7,6 +7,7 @@ members = [
     "edge",
     "gateways/usd",
     "gateways/ifc",
+    "ffi",
 ]
 default-members = ["core", "cli"]
 

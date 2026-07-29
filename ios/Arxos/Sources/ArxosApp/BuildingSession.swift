@@ -151,6 +151,23 @@ final class BuildingSession: ObservableObject {
         refreshNearby()
     }
 
+    /// Ingest RoomPlan structured geometry.
+    func ingestRoomPlan(surfaces: [RoomPlanSurface], objects: [RoomPlanObject]) {
+        guard let id = buildingId else {
+            status = "No building open"
+            return
+        }
+        let res = ArxosCore.ingestRoomPlan(
+            storePath: storePath,
+            buildingId: id,
+            surfaces: surfaces,
+            objects: objects
+        )
+        status = "RoomPlan ingested: space \(res.spaceCid.prefix(8)), \(res.surfaceCids.count) surfaces, \(res.objectCids.count) objects staged"
+        summary = ArxosCore.openBuilding(storePath: storePath, buildingId: id)
+        refreshNearby()
+    }
+
     func refreshNearby(radiusM: Double = 15) {
         guard let id = buildingId else {
             nearbyAnnotations = []

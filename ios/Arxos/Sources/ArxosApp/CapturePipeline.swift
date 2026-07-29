@@ -70,23 +70,88 @@ final class RoomPlanCapturePipeline: NSObject, RoomCaptureSessionDelegate {
 
     @MainActor
     private func ingest(data: CapturedRoomData) {
-        // RoomPlan → Space
-        session.captureSpace(name: "RoomPlan capture")
+        let builder = RoomBuilder(options: .none)
+        onStatus?("Processing RoomPlan data…")
+        Task {
+            do {
+                let room = try await builder.capturedRoom(from: data)
+                
+                func doubleArray(from matrix: simd_float4x4) -> [Double] {
+                    return [
+                        Double(matrix.columns.0.x), Double(matrix.columns.0.y), Double(matrix.columns.0.z), Double(matrix.columns.0.w),
+                        Double(matrix.columns.1.x), Double(matrix.columns.1.y), Double(matrix.columns.1.z), Double(matrix.columns.1.w),
+                        Double(matrix.columns.2.x), Double(matrix.columns.2.y), Double(matrix.columns.2.z), Double(matrix.columns.2.w),
+                        Double(matrix.columns.3.x), Double(matrix.columns.3.y), Double(matrix.columns.3.z), Double(matrix.columns.3.w)
+                    ]
+                }
 
-        // Sample a coarse point set from room dimensions (data-only; not a mesh viewer).
-        // Full mesh export belongs in Phase 4 (USD). Here we store a PointCloudChunk sample.
-        var pts: [SIMD3<Float>] = []
-        // Fallback sample if we cannot walk surfaces: unit grid in front of camera.
-        let origin = session.cameraPose
-        for i in 0..<10 {
-            for j in 0..<10 {
-                pts.append(origin + SIMD3(Float(i) * 0.2 - 1, 0, Float(j) * 0.2 - 1))
+                func doubleArray(from vec: simd_float3) -> [Double] {
+                    return [Double(vec.x), Double(vec.y), Double(vec.z)]
+                }
+
+                var surfaces: [RoomPlanSurface] = []
+                
+                for item in room.walls {
+                    surfaces.append(RoomPlanSurface(
+                        id: item.identifier.uuidString,
+                        category: "wall",
+                        transform: doubleArray(from: item.transform),
+                        dimensions: doubleArray(from: item.dimensions)
+                    ))
+                }
+                for item in room.floors {
+                    surfaces.append(RoomPlanSurface(
+                        id: item.identifier.uuidString,
+                        category: "floor",
+                        transform: doubleArray(from: item.transform),
+                        dimensions: doubleArray(from: item.dimensions)
+                    ))
+                }
+                for item in room.ceilings {
+                    surfaces.append(RoomPlanSurface(
+                        id: item.identifier.uuidString,
+                        category: "ceiling",
+                        transform: doubleArray(from: item.transform),
+                        dimensions: doubleArray(from: item.dimensions)
+                    ))
+                }
+                for item in room.doors {
+                    surfaces.append(RoomPlanSurface(
+                        id: item.identifier.uuidString,
+                        category: "door",
+                        transform: doubleArray(from: item.transform),
+                        dimensions: doubleArray(from: item.dimensions)
+                    ))
+                }
+                for item in room.windows {
+                    surfaces.append(RoomPlanSurface(
+                        id: item.identifier.uuidString,
+                        category: "window",
+                        transform: doubleArray(from: item.transform),
+                        dimensions: doubleArray(from: item.dimensions)
+                    ))
+                }
+
+                var objects: [RoomPlanObject] = []
+                for item in room.objects {
+                    objects.append(RoomPlanObject(
+                        id: item.identifier.uuidString,
+                        category: String(describing: item.category),
+                        transform: doubleArray(from: item.transform),
+                        dimensions: doubleArray(from: item.dimensions)
+                    ))
+                }
+
+                await MainActor.run {
+                    self.session.ingestRoomPlan(surfaces: surfaces, objects: objects)
+                    self.onStatus?("RoomPlan ingested → geometry staged")
+                }
+            } catch {
+                await MainActor.run {
+                    self.onStatus?("RoomPlan ingest failed: \(error.localizedDescription)")
+                }
             }
         }
-        session.capturePointCloud(pointsXYZ: pts, pose: origin)
-        onStatus?("RoomPlan ingested → space + point cloud staged")
-        // Keep `data` available for future USD export (Phase 4).
-        _ = data
     }
 }
 #endif

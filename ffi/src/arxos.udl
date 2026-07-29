@@ -1,0 +1,130 @@
+namespace arxos_core {
+    string hello(string name);
+    string version();
+    string generate_building_id();
+    KeypairData generate_keypair();
+    string public_key_hex(KeypairData keypair);
+    ObjectPutResult put_blob(string store_path, bytes data, string? content_type);
+    RootCreateResult create_root(string store_path, string building_id, sequence<string> object_cids, string seed_hex, string? message);
+    string? show_root(string store_path, string root_cid);
+
+    // Phase 1 — building repository + capture loop
+    FfiBuildingSummary init_building(string store_path, string? name);
+    FfiBuildingSummary open_building(string store_path, string building_id);
+    sequence<FfiBuildingSummary> list_buildings(string store_path);
+    FfiCapturePutResult capture_space(string store_path, string building_id, string? name, f64 x, f64 y, f64 z);
+    FfiCapturePutResult capture_annotation(string store_path, string building_id, string text, f64 x, f64 y, f64 z);
+    FfiCapturePutResult capture_point_cloud(string store_path, string building_id, bytes points_xyz_f32_le, f64 x, f64 y, f64 z);
+    FfiCommitSummary commit_building(string store_path, string building_id, string? message);
+    sequence<FfiAnnotationOverlay> annotations_near(string store_path, string building_id, f64 x, f64 y, f64 z, f64 radius_m);
+
+    // Phase 1 Mobile Production Surface Expansion
+    IngestResult ingest_room_plan(string store_path, string building_id, RoomPlanGeometry geometry);
+    sequence<SpatialQueryResult> query_spatial_volume(string store_path, string building_id, f64 min_x, f64 min_y, f64 min_z, f64 max_x, f64 max_y, f64 max_z);
+    MergeSummary merge_building_root(string store_path, string building_id, string other_root_cid, string? message);
+    PullResultSummary pull_remote_root(string store_path, string peer_ticket, string root_cid, string? building_id, boolean set_head, boolean allow_untrusted);
+    boolean export_usd(string store_path, string building_id, string output_path);
+    boolean export_ifc(string store_path, string building_id, string output_path);
+};
+
+dictionary KeypairData {
+    bytes seed;
+    string public_key_hex;
+};
+
+dictionary ObjectPutResult {
+    string cid;
+    string object_type;
+};
+
+dictionary RootCreateResult {
+    string root_cid;
+    string building_id;
+    u64 object_count;
+};
+
+dictionary FfiBuildingSummary {
+    string building_id;
+    string? name;
+    string? head_root;
+    string? building_object;
+    u64 staged_count;
+};
+
+dictionary FfiCapturePutResult {
+    string cid;
+    string object_type;
+};
+
+dictionary FfiCommitSummary {
+    string root_cid;
+    string building_id;
+    u64 object_count;
+    string? previous_root;
+};
+
+dictionary FfiAnnotationOverlay {
+    string cid;
+    string text;
+    f64 x;
+    f64 y;
+    f64 z;
+    f64 distance_m;
+};
+
+dictionary RoomPlanGeometry {
+    sequence<FfiRoomPlanSurface> surfaces;
+    sequence<FfiRoomPlanObject> objects;
+};
+
+dictionary FfiRoomPlanSurface {
+    string id;
+    string category; // "wall", "floor", "ceiling", "door", "window"
+    sequence<f64> transform; // 16 float elements (4x4 column-major matrix)
+    sequence<f64> dimensions; // 3 float elements (width, height, depth)
+};
+
+dictionary FfiRoomPlanObject {
+    string id;
+    string category; // object type category
+    sequence<f64> transform;
+    sequence<f64> dimensions;
+};
+
+dictionary IngestResult {
+    string space_cid;
+    sequence<string> surface_cids;
+    sequence<string> object_cids;
+};
+
+dictionary StringKeyValuePair {
+    string key;
+    string value;
+};
+
+dictionary SpatialQueryResult {
+    string cid;
+    string object_type;
+    string? name;
+    f64 pose_x;
+    f64 pose_y;
+    f64 pose_z;
+    sequence<StringKeyValuePair> properties;
+};
+
+dictionary MergeSummary {
+    string root_cid;
+    u64 object_count;
+    u64 kept;
+    u64 deduped_annotations;
+    string? spatial_index_root;
+    string parent_a;
+    string parent_b;
+};
+
+dictionary PullResultSummary {
+    string root_cid;
+    u64 objects_stored;
+    u64 objects_skipped;
+    string? adopted_root;
+};

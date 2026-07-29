@@ -1,0 +1,34 @@
+[package]
+name = "arxos-ffi"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "UniFFI FFI static library for Arxos iOS production path"
+# Note: The library name is set to 'arxos_core' (generating libarxos_core.a) to maintain
+# compatibility with Xcode target linking which expects the native FFI library name
+# to be arxos_core.
+
+[lib]
+name = "arxos_core"
+crate-type = ["staticlib", "cdylib"]
+
+[dependencies]
+arxos-core = { path = "../core" }
+arxos-networking = { path = "../networking" }
+arxos-usd = { path = "../gateways/usd" }
+arxos-ifc = { path = "../gateways/ifc" }
+uniffi = { version = "0.28", features = ["cli"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
+hex = "0.4"
+anyhow = "1"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/uniffi-bindgen.rs"
+
+[build-dependencies]
+uniffi = { version = "0.28", features = ["build"] }
+
+[dev-dependencies]
+tempfile = { workspace = true }

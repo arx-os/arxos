@@ -10,7 +10,7 @@ use arxos_core::object::{
 };
 use arxos_core::repository::BuildingRepository;
 use arxos_core::store::ObjectStore;
-use arxos_core::{Cid, Keypair};
+use arxos_core::{AdoptOptions, Cid, Keypair};
 
 use crate::error::{Result, UsdError};
 use crate::model::{parse_usda, UsdPrim, UsdStage, UsdValue};
@@ -223,7 +223,7 @@ fn import_stage(
         body.message = Some("usd import".into());
         let obj = body.into_object(ts);
         let root_cid = store.put(&obj)?;
-        repo.adopt_root(root_cid)?;
+        repo.adopt_root_with_options(root_cid, &AdoptOptions { allow_untrusted: true })?;
         Some(root_cid)
     };
 

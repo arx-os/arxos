@@ -9,6 +9,7 @@ use crate::cid::Cid;
 use crate::crypto::{AuthorSignature, Keypair};
 use crate::error::{Error, Result};
 use crate::object::{BuildingId, Object, ObjectBody, ObjectHeader, SCHEMA_VERSION};
+use crate::store::ObjectStore;
 
 /// Root body: the committed state of a building repository.
 ///
@@ -17,8 +18,19 @@ use crate::object::{BuildingId, Object, ObjectBody, ObjectHeader, SCHEMA_VERSION
 pub struct RootBody {
     pub building_id: BuildingId,
     pub previous_root: Option<Cid>,
-    /// Content-addressed object set (ordered for determinism).
-    pub objects: BTreeSet<Cid>,
+    
+    /// Incremental added object CIDs.
+    #[serde(default)]
+    pub added: BTreeSet<Cid>,
+    
+    /// Incremental removed object CIDs.
+    #[serde(default)]
+    pub removed: BTreeSet<Cid>,
+    
+    /// Content-addressed object set for legacy full-set roots.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub objects: Option<BTreeSet<Cid>>,
+    
     pub spatial_index_root: Option<Cid>,
     /// Unix timestamp in seconds.
     pub timestamp: u64,
@@ -29,7 +41,7 @@ pub struct RootBody {
 }
 
 impl RootBody {
-    /// Create a new root without signatures.
+    /// Create a new legacy-style full-set root.
     pub fn new(
         building_id: BuildingId,
         previous_root: Option<Cid>,
@@ -39,12 +51,87 @@ impl RootBody {
         Self {
             building_id,
             previous_root,
-            objects,
+            added: BTreeSet::new(),
+            removed: BTreeSet::new(),
+            objects: Some(objects),
             spatial_index_root: None,
             timestamp,
             authors: Vec::new(),
             message: None,
         }
+    }
+
+    /// Create a new delta-style root.
+    pub fn new_delta(
+        building_id: BuildingId,
+        previous_root: Option<Cid>,
+        added: BTreeSet<Cid>,
+        removed: BTreeSet<Cid>,
+        timestamp: u64,
+    ) -> Self {
+        Self {
+            building_id,
+            previous_root,
+            added,
+            removed,
+            objects: None,
+            spatial_index_root: None,
+            timestamp,
+            authors: Vec::new(),
+            message: None,
+        }
+    }
+
+    /// Materialize the full set of active object CIDs by walking the root chain
+    /// backwards (if this is a delta root) until hitting a checkpoint (legacy/checkpoint full-set root).
+    pub fn materialize_active_objects(&self, store: &ObjectStore) -> Result<BTreeSet<Cid>> {
+        if let Some(ref legacy_set) = self.objects {
+            return Ok(legacy_set.clone());
+        }
+
+        let mut active = BTreeSet::new();
+        let mut removed = BTreeSet::new();
+        let mut visited = BTreeSet::new();
+
+        // Start with this root's deltas
+        for item in &self.added {
+            active.insert(*item);
+        }
+        for item in &self.removed {
+            removed.insert(*item);
+        }
+
+        let mut current_prev = self.previous_root;
+        while let Some(prev_cid) = current_prev {
+            if !visited.insert(prev_cid) {
+                return Err(Error::Validation("cyclic root chain detected".into()));
+            }
+            let obj = store.get(&prev_cid)?;
+            let root = RootBody::from_object(&obj)?;
+
+            if let Some(ref legacy_set) = root.objects {
+                // Checkpoint hit! Accumulate all active and stop walking.
+                for item in legacy_set {
+                    if !removed.contains(item) {
+                        active.insert(*item);
+                    }
+                }
+                break;
+            }
+
+            for item in &root.added {
+                if !removed.contains(item) {
+                    active.insert(*item);
+                }
+            }
+            for item in &root.removed {
+                removed.insert(*item);
+            }
+
+            current_prev = root.previous_root;
+        }
+
+        Ok(active)
     }
 
     pub fn with_message(mut self, message: impl Into<String>) -> Self {
@@ -62,6 +149,8 @@ impl RootBody {
         let unsigned = RootBody {
             building_id: self.building_id.clone(),
             previous_root: self.previous_root,
+            added: self.added.clone(),
+            removed: self.removed.clone(),
             objects: self.objects.clone(),
             spatial_index_root: self.spatial_index_root,
             timestamp: self.timestamp,
@@ -91,10 +180,6 @@ impl RootBody {
     }
 
     /// Wrap as a full Object (for CAS storage).
-    ///
-    /// Author signatures live on [`RootBody::authors`] (they cover the root
-    /// body payload, not the object envelope). The header only records the
-    /// primary author public key for attribution — use `verify_authors`.
     pub fn into_object(self, created: u64) -> Object {
         Object {
             header: ObjectHeader {
@@ -124,7 +209,9 @@ impl RootBody {
 pub struct RootBuilder {
     building_id: BuildingId,
     previous_root: Option<Cid>,
-    objects: BTreeSet<Cid>,
+    added: BTreeSet<Cid>,
+    removed: BTreeSet<Cid>,
+    objects: Option<BTreeSet<Cid>>,
     spatial_index_root: Option<Cid>,
     timestamp: u64,
     message: Option<String>,
@@ -135,7 +222,9 @@ impl RootBuilder {
         Self {
             building_id,
             previous_root: None,
-            objects: BTreeSet::new(),
+            added: BTreeSet::new(),
+            removed: BTreeSet::new(),
+            objects: None,
             spatial_index_root: None,
             timestamp,
             message: None,
@@ -148,12 +237,22 @@ impl RootBuilder {
     }
 
     pub fn objects(mut self, objects: BTreeSet<Cid>) -> Self {
-        self.objects = objects;
+        self.objects = Some(objects);
+        self
+    }
+
+    pub fn added(mut self, added: BTreeSet<Cid>) -> Self {
+        self.added = added;
+        self
+    }
+
+    pub fn removed(mut self, removed: BTreeSet<Cid>) -> Self {
+        self.removed = removed;
         self
     }
 
     pub fn insert(mut self, cid: Cid) -> Self {
-        self.objects.insert(cid);
+        self.added.insert(cid);
         self
     }
 
@@ -169,15 +268,17 @@ impl RootBuilder {
 
     /// Build unsigned root body.
     pub fn build(self) -> RootBody {
-        let mut root = RootBody::new(
-            self.building_id,
-            self.previous_root,
-            self.objects,
-            self.timestamp,
-        );
-        root.spatial_index_root = self.spatial_index_root;
-        root.message = self.message;
-        root
+        RootBody {
+            building_id: self.building_id,
+            previous_root: self.previous_root,
+            added: self.added,
+            removed: self.removed,
+            objects: self.objects,
+            spatial_index_root: self.spatial_index_root,
+            timestamp: self.timestamp,
+            authors: Vec::new(),
+            message: self.message,
+        }
     }
 
     /// Build, sign with keypair, and wrap as Object. Returns (object, root_cid).
@@ -189,6 +290,81 @@ impl RootBuilder {
         let cid = obj.cid()?;
         Ok((obj, cid))
     }
+}
+
+/// Computes the complete deterministic closure of objects belonging to a Root
+/// up to the nearest checkpoint root in history.
+pub fn get_root_closure_blobs(store: &ObjectStore, root_cid: &Cid) -> Result<Vec<(Cid, Vec<u8>)>> {
+    let mut visited = BTreeSet::new();
+    let mut out = Vec::new();
+
+    // 1. Walk root chain backwards to collect all Root CIDs and the active domain objects up to the nearest checkpoint.
+    let mut active_objects = BTreeSet::new();
+    let mut removed_set = BTreeSet::new();
+    let mut current_prev = Some(*root_cid);
+
+    while let Some(cid) = current_prev {
+        if !visited.insert(cid) {
+            break;
+        }
+        let bytes = store.get_bytes(&cid)?;
+        out.push((cid, bytes.clone()));
+
+        let obj = Object::from_canonical_bytes(&bytes)?;
+        let root = RootBody::from_object(&obj)?;
+
+        if let Some(ref legacy_set) = root.objects {
+            // Checkpoint/Legacy full-set root. Stop walking.
+            for item in legacy_set {
+                if !removed_set.contains(item) {
+                    active_objects.insert(*item);
+                }
+            }
+            break;
+        }
+
+        for item in &root.added {
+            if !removed_set.contains(item) {
+                active_objects.insert(*item);
+            }
+        }
+        for item in &root.removed {
+            removed_set.insert(*item);
+        }
+
+        current_prev = root.previous_root;
+    }
+
+    // 2. Add domain objects.
+    for cid in &active_objects {
+        if visited.insert(*cid) {
+            if let Ok(bytes) = store.get_bytes(cid) {
+                out.push((*cid, bytes));
+            }
+        }
+    }
+
+    // 3. Add spatial index nodes recursively from the newest root.
+    let root_bytes = store.get_bytes(root_cid)?;
+    let root_obj = Object::from_canonical_bytes(&root_bytes)?;
+    let root_body = RootBody::from_object(&root_obj)?;
+    if let Some(si_root) = root_body.spatial_index_root {
+        let mut stack = vec![si_root];
+        while let Some(node_cid) = stack.pop() {
+            if visited.insert(node_cid) {
+                if let Ok(bytes) = store.get_bytes(&node_cid) {
+                    out.push((node_cid, bytes.clone()));
+                    if let Ok(obj) = Object::from_canonical_bytes(&bytes) {
+                        if let ObjectBody::SpatialIndexNode(node) = obj.body {
+                            stack.extend(node.children);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(out)
 }
 
 /// CID of a root body alone (without object envelope). Prefer object CID in store.
@@ -219,7 +395,7 @@ mod tests {
         let root = RootBody::from_object(&obj).unwrap();
         root.verify_authors().unwrap();
         assert_eq!(obj.cid().unwrap(), cid);
-        assert_eq!(root.objects.len(), 2);
+        assert_eq!(root.objects.as_ref().unwrap().len(), 2);
     }
 
     #[test]

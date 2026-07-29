@@ -4,28 +4,24 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 OUT_DIR="$ROOT/ios/Arxos/Sources/ArxosCore/Generated"
-UDL="$ROOT/core/src/arxos.udl"
+UDL="$ROOT/ffi/src/arxos.udl"
 
 mkdir -p "$OUT_DIR"
 
-echo "Building arxos-core with uniffi feature…"
-cargo build -p arxos-core --features uniffi --manifest-path "$ROOT/Cargo.toml"
+echo "Building arxos-ffi…"
+cargo build -p arxos-ffi --manifest-path "$ROOT/Cargo.toml"
 
-echo "Generating Swift bindings…"
-if command -v uniffi-bindgen >/dev/null 2>&1; then
-  uniffi-bindgen generate "$UDL" --language swift --out-dir "$OUT_DIR"
-elif cargo run -p uniffi-bindgen --quiet --generate --language swift --out-dir "$OUT_DIR" "$UDL" 2>/dev/null; then
-  true
-else
-  # Use the library's built-in bindgen via a small helper if installed:
-  cargo install uniffi-bindgen --version 0.28.3 --locked 2>/dev/null || true
-  if command -v uniffi-bindgen >/dev/null 2>&1; then
-    uniffi-bindgen generate "$UDL" --language swift --out-dir "$OUT_DIR"
-  else
-    echo "warning: uniffi-bindgen not available; leaving Phase 0 Swift shim in place."
-    echo "Install with: cargo install uniffi-bindgen --version 0.28.3"
-    exit 0
-  fi
+cargo run --manifest-path "$ROOT/Cargo.toml" -p arxos-ffi --bin uniffi-bindgen generate "$UDL" --language swift --out-dir "$OUT_DIR"
+
+SWIFT_FILE="$OUT_DIR/arxos_core.swift"
+if [ -f "$SWIFT_FILE" ]; then
+  echo "Wrapping generated swift bindings in conditional compilation gates..."
+  TMP_FILE=$(mktemp)
+  echo "#if canImport(ArxosCoreFFI)" > "$TMP_FILE"
+  cat "$SWIFT_FILE" >> "$TMP_FILE"
+  echo "" >> "$TMP_FILE"
+  echo "#endif" >> "$TMP_FILE"
+  mv "$TMP_FILE" "$SWIFT_FILE"
 fi
 
 echo "Bindings written to $OUT_DIR"

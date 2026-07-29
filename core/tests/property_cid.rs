@@ -113,7 +113,7 @@ fn graph_root_rematerialize_identical() {
     let loaded_root = store.get(&root_cid).unwrap();
     let root = RootBody::from_object(&loaded_root).unwrap();
     root.verify_authors().unwrap();
-    assert_eq!(root.objects, cids);
+    assert_eq!(root.objects.as_ref().unwrap(), &cids);
     assert_eq!(loaded_root.cid().unwrap(), root_cid);
 
     // Rebuild signed root with same inputs + same key → same CID only if

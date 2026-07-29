@@ -106,7 +106,8 @@ fn project_root(
     let mut spaces: Vec<(Cid, Object)> = Vec::new();
     let mut other: Vec<(Cid, Object)> = Vec::new();
 
-    for cid in &root.objects {
+    let active = root.materialize_active_objects(store)?;
+    for cid in &active {
         let obj = match store.get(cid) {
             Ok(o) => o,
             Err(_) => continue,

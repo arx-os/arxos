@@ -10,6 +10,10 @@ import Foundation
 import ArxosCoreFFI
 #endif
 
+#if !canImport(ArxosCoreFFI) && !ALLOW_SHIM
+#error("Real UniFFI backend (ArxosCoreFFI) is required for production builds. Define ALLOW_SHIM if you are working on UI styling / demo without the Rust backend.")
+#endif
+
 // MARK: - Public models
 
 public struct BuildingSummary: Equatable, Sendable {
@@ -240,6 +244,232 @@ public enum ArxosCore {
             x: x, y: y, z: z, radiusM: radiusM
         )
         #endif
+    }
+
+    public static func ingestRoomPlan(
+        storePath: String,
+        buildingId: String,
+        surfaces: [RoomPlanSurface],
+        objects: [RoomPlanObject]
+    ) -> IngestSummary {
+        #if canImport(ArxosCoreFFI)
+        let geom = ArxosCoreFFI.RoomPlanGeometry(
+            surfaces: surfaces.map { ArxosCoreFFI.RoomPlanSurface(id: $0.id, category: $0.category, transform: $0.transform, dimensions: $0.dimensions) },
+            objects: objects.map { ArxosCoreFFI.RoomPlanObject(id: $0.id, category: $0.category, transform: $0.transform, dimensions: $0.dimensions) }
+        )
+        let r = ArxosCoreFFI.ingestRoomPlan(storePath: storePath, buildingId: buildingId, geometry: geom)
+        return IngestSummary(
+            spaceCid: r.spaceCid,
+            surfaceCids: r.surfaceCids,
+            objectCids: r.objectCids
+        )
+        #else
+        // LocalStore Shim fallback if allowed (just return dummy)
+        return IngestSummary(
+            spaceCid: "b3:shimspace",
+            surfaceCids: surfaces.map { _ in "b3:shimsurface" },
+            objectCids: objects.map { _ in "b3:shimobject" }
+        )
+        #endif
+    }
+
+    public static func querySpatialVolume(
+        storePath: String,
+        buildingId: String,
+        minX: Double, minY: Double, minZ: Double,
+        maxX: Double, maxY: Double, maxZ: Double
+    ) -> [SpatialItem] {
+        #if canImport(ArxosCoreFFI)
+        return ArxosCoreFFI.querySpatialVolume(
+            storePath: storePath, buildingId: buildingId,
+            minX: minX, minY: minY, minZ: minZ,
+            maxX: maxX, maxY: maxY, maxZ: maxZ
+        ).map { item in
+            var props = [String: String]()
+            for kv in item.properties {
+                props[kv.key] = kv.value
+            }
+            return SpatialItem(
+                cid: item.cid,
+                objectType: item.objectType,
+                name: item.name,
+                x: item.poseX,
+                y: item.poseY,
+                z: item.poseZ,
+                properties: props
+            )
+        }
+        #else
+        return []
+        #endif
+    }
+
+    public static func mergeBuildingRoot(
+        storePath: String,
+        buildingId: String,
+        otherRootCid: String,
+        message: String?
+    ) -> MergeResultSummary {
+        #if canImport(ArxosCoreFFI)
+        let r = ArxosCoreFFI.mergeBuildingRoot(
+            storePath: storePath, buildingId: buildingId,
+            otherRootCid: otherRootCid, message: message
+        )
+        return MergeResultSummary(
+            rootCid: r.rootCid,
+            objectCount: r.objectCount,
+            kept: r.kept,
+            dedupedAnnotations: r.dedupedAnnotations,
+            spatialIndexRoot: r.spatialIndexRoot,
+            parentA: r.parentA,
+            parentB: r.parentB
+        )
+        #else
+        fatalError("Shim mergeBuildingRoot not supported")
+        #endif
+    }
+
+    public static func pullRemoteRoot(
+        storePath: String,
+        peerTicket: String,
+        rootCid: String,
+        buildingId: String?,
+        setHead: Bool,
+        allowUntrusted: Bool
+    ) -> PullSummary {
+        #if canImport(ArxosCoreFFI)
+        let r = ArxosCoreFFI.pullRemoteRoot(
+            storePath: storePath, peerTicket: peerTicket,
+            rootCid: rootCid, buildingId: buildingId,
+            setHead: setHead, allowUntrusted: allowUntrusted
+        )
+        return PullSummary(
+            rootCid: r.rootCid,
+            objectsStored: r.objectsStored,
+            objectsSkipped: r.objectsSkipped,
+            adoptedRoot: r.adoptedRoot
+        )
+        #else
+        fatalError("Shim pullRemoteRoot not supported")
+        #endif
+    }
+
+    public static func exportUsd(
+        storePath: String,
+        buildingId: String,
+        outputPath: String
+    ) -> Bool {
+        #if canImport(ArxosCoreFFI)
+        return ArxosCoreFFI.exportUsd(storePath: storePath, buildingId: buildingId, outputPath: outputPath)
+        #else
+        return false
+        #endif
+    }
+
+    public static func exportIfc(
+        storePath: String,
+        buildingId: String,
+        outputPath: String
+    ) -> Bool {
+        #if canImport(ArxosCoreFFI)
+        return ArxosCoreFFI.exportIfc(storePath: storePath, buildingId: buildingId, outputPath: outputPath)
+        #else
+        return false
+        #endif
+    }
+}
+
+public struct RoomPlanSurface: Equatable, Sendable {
+    public var id: String
+    public var category: String
+    public var transform: [Double]
+    public var dimensions: [Double]
+
+    public init(id: String, category: String, transform: [Double], dimensions: [Double]) {
+        self.id = id
+        self.category = category
+        self.transform = transform
+        self.dimensions = dimensions
+    }
+}
+
+public struct RoomPlanObject: Equatable, Sendable {
+    public var id: String
+    public var category: String
+    public var transform: [Double]
+    public var dimensions: [Double]
+
+    public init(id: String, category: String, transform: [Double], dimensions: [Double]) {
+        self.id = id
+        self.category = category
+        self.transform = transform
+        self.dimensions = dimensions
+    }
+}
+
+public struct IngestSummary: Equatable, Sendable {
+    public var spaceCid: String
+    public var surfaceCids: [String]
+    public var objectCids: [String]
+
+    public init(spaceCid: String, surfaceCids: [String], objectCids: [String]) {
+        self.spaceCid = spaceCid
+        self.surfaceCids = surfaceCids
+        self.objectCids = objectCids
+    }
+}
+
+public struct SpatialItem: Equatable, Sendable {
+    public var cid: String
+    public var objectType: String
+    public var name: String?
+    public var x: Double
+    public var y: Double
+    public var z: Double
+    public var properties: [String: String]
+
+    public init(cid: String, objectType: String, name: String?, x: Double, y: Double, z: Double, properties: [String: String]) {
+        self.cid = cid
+        self.objectType = objectType
+        self.name = name
+        self.x = x
+        self.y = y
+        self.z = z
+        self.properties = properties
+    }
+}
+
+public struct MergeResultSummary: Equatable, Sendable {
+    public var rootCid: String
+    public var objectCount: UInt64
+    public var kept: UInt64
+    public var dedupedAnnotations: UInt64
+    public var spatialIndexRoot: String?
+    public var parentA: String
+    public var parentB: String
+
+    public init(rootCid: String, objectCount: UInt64, kept: UInt64, dedupedAnnotations: UInt64, spatialIndexRoot: String?, parentA: String, parentB: String) {
+        self.rootCid = rootCid
+        self.objectCount = objectCount
+        self.kept = kept
+        self.dedupedAnnotations = dedupedAnnotations
+        self.spatialIndexRoot = spatialIndexRoot
+        self.parentA = parentA
+        self.parentB = parentB
+    }
+}
+
+public struct PullSummary: Equatable, Sendable {
+    public var rootCid: String
+    public var objectsStored: UInt64
+    public var objectsSkipped: UInt64
+    public var adoptedRoot: String?
+
+    public init(rootCid: String, objectsStored: UInt64, objectsSkipped: UInt64, adoptedRoot: String?) {
+        self.rootCid = rootCid
+        self.objectsStored = objectsStored
+        self.objectsSkipped = objectsSkipped
+        self.adoptedRoot = adoptedRoot
     }
 }
 

@@ -137,7 +137,8 @@ pub fn verify_root_transition(
 
     // Every listed object should exist (or warn if partial).
     let mut missing = 0u64;
-    for cid in &root.objects {
+    let active = root.materialize_active_objects(store)?;
+    for cid in &active {
         if !store.contains(cid) {
             missing += 1;
         }
@@ -183,8 +184,8 @@ pub fn verify_root_transition(
                 }
                 // Transition property: objects may grow (union) or change via merge;
                 // we only require both sets are well-formed BTreeSets (always true).
-                let prev_set: BTreeSet<Cid> = prev.objects.clone();
-                let cur_set: BTreeSet<Cid> = root.objects.clone();
+                let prev_set: BTreeSet<Cid> = prev.materialize_active_objects(store)?;
+                let cur_set: BTreeSet<Cid> = root.materialize_active_objects(store)?;
                 let added = cur_set.difference(&prev_set).count();
                 let removed = prev_set.difference(&cur_set).count();
                 report.push(

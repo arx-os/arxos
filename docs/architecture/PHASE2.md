@@ -25,7 +25,7 @@
    `GetRootClosure` returns root + members the peer holds; missing members can be requested later with `GetObject`.
 
 5. **Follow without authoring keys.**  
-   `BuildingRepository::open_or_follow` + `adopt_root` let a device track a remote head without signing.
+   `BuildingRepository::open_or_follow` + `adopt_root` let a device track a remote head without signing. Root adoption verifies the remote root's signature and fails closed by default unless explicitly overridden (e.g. via `AdoptOptions` or the `--allow-untrusted` CLI flag).
 
 6. **Local-first.**  
    Capture never blocks on network. Sync is explicit (`net fetch` / future auto-pull).

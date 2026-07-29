@@ -138,7 +138,9 @@ pub fn merge_roots(
         )));
     }
 
-    let mut objects: BTreeSet<Cid> = a.objects.iter().chain(b.objects.iter()).copied().collect();
+    let active_a = a.materialize_active_objects(store)?;
+    let active_b = b.materialize_active_objects(store)?;
+    let mut objects: BTreeSet<Cid> = active_a.iter().chain(active_b.iter()).copied().collect();
     // Do not include the parent root objects themselves in the object set.
     objects.remove(&root_a);
     objects.remove(&root_b);
@@ -165,14 +167,45 @@ pub fn merge_roots(
         root_b
     };
 
+    // Calculate checkpoint distance along the previous root line
+    let mut checkpoint_dist = 0;
+    let mut current = Some(previous);
+    let mut visited = BTreeSet::new();
+    while let Some(cid) = current {
+        if !visited.insert(cid) {
+            break;
+        }
+        if let Ok(obj) = store.get(&cid) {
+            if let Ok(root) = RootBody::from_object(&obj) {
+                if root.objects.is_some() {
+                    break;
+                }
+                checkpoint_dist += 1;
+                current = root.previous_root;
+            } else {
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+    let is_checkpoint = checkpoint_dist >= 50;
+
     let mut builder = RootBuilder::new(a.building_id.clone(), timestamp)
-        .objects(objects.clone())
         .previous_root(previous);
+    if is_checkpoint {
+        builder = builder.objects(objects.clone());
+    } else {
+        let prev_obj = store.get(&previous)?;
+        let prev_root = RootBody::from_object(&prev_obj)?;
+        let prev_active = prev_root.materialize_active_objects(store)?;
+        let added: BTreeSet<Cid> = objects.difference(&prev_active).copied().collect();
+        let removed: BTreeSet<Cid> = prev_active.difference(&objects).copied().collect();
+        builder = builder.added(added).removed(removed);
+    }
+
     if let Some(si) = spatial_index_root {
         builder = builder.spatial_index(si);
-        // Include spatial index nodes in the commit set for completeness.
-        // (Index nodes are already in store; optional to list them — Phase 3 lists only domain objects.
-        // Spatial index is referenced from root field only.)
         let _ = si;
     }
     if let Some(msg) = message {
@@ -209,7 +242,9 @@ pub fn plan_merge(store: &ObjectStore, root_a: Cid, root_b: Cid) -> Result<Merge
     if a.building_id != b.building_id {
         return Err(Error::Validation("building_id mismatch".into()));
     }
-    let mut objects: BTreeSet<Cid> = a.objects.iter().chain(b.objects.iter()).copied().collect();
+    let active_a = a.materialize_active_objects(store)?;
+    let active_b = b.materialize_active_objects(store)?;
+    let mut objects: BTreeSet<Cid> = active_a.iter().chain(active_b.iter()).copied().collect();
     objects.remove(&root_a);
     objects.remove(&root_b);
     let drops = annotation_dedupe_drops(store, &objects)?;
@@ -311,9 +346,10 @@ mod tests {
 
         let root = store.get(&merged.root_cid).unwrap();
         let body = RootBody::from_object(&root).unwrap();
-        assert!(body.objects.contains(&ann_a));
-        assert!(body.objects.contains(&ann_c_conflict));
-        assert!(!body.objects.contains(&ann_b_dup));
+        let active = body.materialize_active_objects(&store).unwrap();
+        assert!(active.contains(&ann_a));
+        assert!(active.contains(&ann_c_conflict));
+        assert!(!active.contains(&ann_b_dup));
         assert!(body.spatial_index_root.is_some());
     }
 }

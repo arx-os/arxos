@@ -13,11 +13,11 @@
 
 1. **Index is data, not a sidecar DB.**  
    Nodes are `SpatialIndexNode` objects in the CAS. The Root stores
-   `spatial_index_root: Option<Cid>`.
+   `spatial_index_root: Option<Cid>`, and the full index tree is fetched as part of the Root sync closure.
 
 2. **Hierarchical AABB tree.**  
    Leaf capacity 16; split on longest axis by centroid median; max depth 24.
-   Deterministic ordering for stable CIDs.
+   Deterministic ordering and a fixed header creation time (0) ensure stable CIDs.
 
 3. **Partial by default (enforced).**  
    `open` / `adopt_root` pin only the head Root (+ building). Domain objects
@@ -34,9 +34,12 @@
    - Same pose region, different text → **keep both**  
    - Rebuild spatial index on merge  
 
-6. **Scale.**  
-   CI scale test: 40×40 annotation grid (~1.6k objects), index build + partial
-   load of a 5×5 m region. Larger floors use the same algorithms.
+6. **Scale & Performance.**
+   - **Delta Roots**: To scale root sizes to hundreds of thousands of objects, root commits are stored as deltas (`added`/`removed` CIDs).
+   - **Checkpointing Policy**: A full-set checkpoint root is written every $N = 50$ commits (or on initial commit), bounding the history materialization walk to $O(checkpoint\_interval)$.
+   - **Incremental R-Tree Updates**: Committing new geometry batches inserts into the versioned R-Tree incrementally in logarithmic $O(\log N)$ write time, using structural sharing to preserve unchanged node CIDs.
+   - **Reachability & Read Caching**: R-tree build runs are optimized via an in-memory RefCell cache. Intermediate traversal reads and split nodes are cached in memory; at the end of the batch insertion, only reachable tree nodes are flushed in bulk to disk.
+   - **Closure/Sync Bounding**: Bounded closure sync (`get_root_closure_blobs`) halts at the nearest checkpoint root to avoid transferring unbounded historical chains over the network.
 
 ## API surface
 
@@ -44,7 +47,8 @@
 
 | API | Role |
 |-----|------|
-| `spatial::build_index` | Write index nodes; return root CID |
+| `spatial::build_index` | Write initial index nodes; return root CID |
+| `spatial::insert_incremental` | Recursively insert batches of entries in $O(\log N)$ time |
 | `spatial::query_index_refined` | Volume query |
 | `BuildingRepository::query_volume` | Head-aware query |
 | `BuildingRepository::load_region` | Partial materialize |
@@ -66,12 +70,15 @@ arx merge apply $BID $OTHER_ROOT [--message …]
 
 ## Tests
 
-* Unit: AABB, index build/query, merge dedupe  
-* Integration: `spatial_scale` floor grid + partial load  
-* CLI vertical slice: simulate → query → load → rebuild  
+* Unit: AABB, index build/query, merge dedupe, and strict R-tree determinism
+* Integration: `spatial_scale` floor grid + partial load, and `scale_large` 5,000-object incremental commits verifying constant root size and correct spatial hits
+* CLI vertical slice: simulate → query → load → rebuild
 
 ## Out of scope (later)
 
-* R-tree / rstar swap-in (API stays the same)  
-* 3-way CRDT merge with economic attribution  
-* GPU/accelerate index build  
+* True distributed spatial index (queries remain single-building scoped)
+* Tree compression/packing optimization
+* R-tree / rstar library swap-in (internal API stays the same)
+* 3-way CRDT merge with economic attribution
+* GPU/accelerate index build
+

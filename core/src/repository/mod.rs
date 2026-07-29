@@ -71,12 +71,29 @@ pub struct CommitResult {
     pub previous_root: Option<Cid>,
 }
 
+/// Options for adopting a remote root.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AdoptOptions {
+    /// Allow untrusted root signatures (invalid or missing author signatures).
+    /// If false, verification failures cause adoption to fail with a signature error.
+    pub allow_untrusted: bool,
+}
+
+impl Default for AdoptOptions {
+    fn default() -> Self {
+        Self {
+            allow_untrusted: false,
+        }
+    }
+}
+
 /// Building repository handle: CAS + head metadata + session working set.
 pub struct BuildingRepository {
     store: ObjectStore,
     record: BuildingRecord,
     working_set: WorkingSet,
     keypair: Option<Keypair>,
+    active_objects: BTreeSet<Cid>,
 }
 
 impl BuildingRepository {
@@ -127,6 +144,9 @@ impl BuildingRepository {
         };
 
         // Initial root commits the building object alone.
+        let mut active_objects = BTreeSet::new();
+        active_objects.insert(building_cid);
+
         let mut objects = BTreeSet::new();
         objects.insert(building_cid);
         let (root_obj, root_cid) = RootBuilder::new(building_id.clone(), now_secs())
@@ -148,6 +168,7 @@ impl BuildingRepository {
             record,
             working_set,
             keypair: Some(kp),
+            active_objects,
         })
     }
 
@@ -157,13 +178,19 @@ impl BuildingRepository {
         let record = Self::read_record(store.root(), building_id)?;
         let keypair = Self::read_seed(store.root()).ok();
         let mut working_set = WorkingSet::new();
+        let mut active_objects = BTreeSet::new();
 
         // Phase 3: partial by default — pin head root + building only.
         // Domain objects load via load_region / annotations_near / explicit get.
         if let Some(head) = record.head_root {
             if let Ok(root_obj) = store.get(&head) {
                 working_set.pin(head);
-                working_set.cache_only(head, root_obj);
+                working_set.cache_only(head, root_obj.clone());
+                if let Ok(root) = RootBody::from_object(&root_obj) {
+                    if let Ok(set) = root.materialize_active_objects(&store) {
+                        active_objects = set;
+                    }
+                }
             }
         }
         if let Some(b) = record.building_object {
@@ -187,6 +214,7 @@ impl BuildingRepository {
             record,
             working_set,
             keypair,
+            active_objects,
         })
     }
 
@@ -257,6 +285,11 @@ impl BuildingRepository {
         self.put_staged(obj)
     }
 
+    /// Put and stage any captured object directly into the repository.
+    pub fn stage_captured_object(&mut self, obj: Object) -> Result<CaptureResult> {
+        self.put_staged(obj)
+    }
+
     fn put_staged(&mut self, obj: Object) -> Result<CaptureResult> {
         let object_type = obj.header.object_type;
         let cid = self.store.put(&obj)?;
@@ -286,35 +319,79 @@ impl BuildingRepository {
             .ok_or_else(|| Error::Crypto("no device keypair loaded for signing".into()))?
             .clone();
 
-        let mut objects = BTreeSet::new();
+        // 1. Calculate new active set in memory
+        let mut new_active = self.active_objects.clone();
+        let staged_and_pending: BTreeSet<Cid> = self.working_set.staged().iter().copied()
+            .chain(self.record.pending.iter().copied())
+            .collect();
+        new_active.extend(staged_and_pending.clone());
 
-        // Carry forward previous root object set if present.
-        if let Some(prev) = self.record.head_root {
-            let prev_obj = self.store.get(&prev)?;
-            if let ObjectBody::Root(root) = prev_obj.body {
-                objects.extend(root.objects);
-            }
-        }
-        // Add staged + durable pending captures.
-        objects.extend(self.working_set.staged().iter().copied());
-        objects.extend(self.record.pending.iter().copied());
-
-        if objects.is_empty() {
+        if new_active.is_empty() {
             return Err(Error::Validation(
                 "cannot commit empty object set".into(),
             ));
         }
 
+        let added: BTreeSet<Cid> = staged_and_pending.difference(&self.active_objects).copied().collect();
+        let removed = BTreeSet::new(); // Currently no deletion API exists
+
+        // 2. Walk backwards to calculate checkpoint distance
+        let previous = self.record.head_root;
+        let mut checkpoint_dist = 0;
+        if let Some(prev) = previous {
+            let mut current = Some(prev);
+            let mut visited = BTreeSet::new();
+            while let Some(cid) = current {
+                if !visited.insert(cid) {
+                    break;
+                }
+                if let Ok(obj) = self.store.get(&cid) {
+                    if let Ok(root) = RootBody::from_object(&obj) {
+                        if root.objects.is_some() {
+                            break; // hit a checkpoint!
+                        }
+                        checkpoint_dist += 1;
+                        current = root.previous_root;
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
+
+        let is_checkpoint = previous.is_none() || checkpoint_dist >= 50;
+
+        // 3. Spatial index update (incremental or full build)
         let spatial_index_root = if rebuild_spatial {
-            let entries = crate::spatial::collect_entries(&self.store, objects.iter().copied())?;
-            crate::spatial::build_index(&self.store, entries)?
+            let mut prev_si = None;
+            if let Some(prev_cid) = previous {
+                if let Ok(prev_obj) = self.store.get(&prev_cid) {
+                    if let Ok(prev_root) = RootBody::from_object(&prev_obj) {
+                        prev_si = prev_root.spatial_index_root;
+                    }
+                }
+            }
+            if let Some(si) = prev_si {
+                let new_entries = crate::spatial::collect_entries(&self.store, added.iter().copied())?;
+                crate::spatial::insert_incremental(&self.store, Some(si), new_entries)?
+            } else {
+                let entries = crate::spatial::collect_entries(&self.store, new_active.iter().copied())?;
+                crate::spatial::build_index(&self.store, entries)?
+            }
         } else {
             None
         };
 
-        let previous = self.record.head_root;
-        let mut builder =
-            RootBuilder::new(self.record.building_id.clone(), now_secs()).objects(objects.clone());
+        // 4. Construct Root using Builder
+        let mut builder = RootBuilder::new(self.record.building_id.clone(), now_secs());
+        if is_checkpoint {
+            builder = builder.objects(new_active.clone());
+        } else {
+            builder = builder.added(added).removed(removed);
+        }
+
         if let Some(prev) = previous {
             builder = builder.previous_root(prev);
         }
@@ -324,9 +401,12 @@ impl BuildingRepository {
         if let Some(msg) = message {
             builder = builder.message(msg);
         }
+
         let (root_obj, root_cid) = builder.build_signed(&kp)?;
         self.store.put(&root_obj)?;
 
+        // Update state
+        self.active_objects = new_active;
         self.record.head_root = Some(root_cid);
         self.record.pending.clear();
         self.record.updated = now_secs();
@@ -339,7 +419,7 @@ impl BuildingRepository {
         Ok(CommitResult {
             root_cid,
             building_id: self.record.building_id.clone(),
-            object_count: objects.len() as u64,
+            object_count: self.active_objects.len() as u64,
             previous_root: previous,
         })
     }
@@ -369,7 +449,7 @@ impl BuildingRepository {
         }
         // Fallback: linear scan of head objects.
         let mut hits = Vec::new();
-        for cid in &root.objects {
+        for cid in &self.active_objects {
             let obj = match self.store.get(cid) {
                 Ok(o) => o,
                 Err(Error::NotFound(_)) => continue,
@@ -491,14 +571,7 @@ impl BuildingRepository {
 
     /// All CIDs in the current head root (empty if no head).
     pub fn head_object_cids(&self) -> Result<Vec<Cid>> {
-        let Some(head) = self.record.head_root else {
-            return Ok(Vec::new());
-        };
-        let obj = self.store.get(&head)?;
-        match obj.body {
-            ObjectBody::Root(root) => Ok(root.objects.into_iter().collect()),
-            _ => Err(Error::Validation("head is not a root object".into())),
-        }
+        Ok(self.active_objects.iter().copied().collect())
     }
 
     /// Load and verify the current head root.
@@ -590,32 +663,23 @@ impl BuildingRepository {
     ///
     /// Returns `(root_cid, ordered list of (cid, bytes))` including the root itself.
     pub fn root_closure_bytes(&self, root_cid: &Cid) -> Result<Vec<(Cid, Vec<u8>)>> {
-        let root_bytes = self.store.get_bytes(root_cid)?;
-        let root_obj = Object::from_canonical_bytes(&root_bytes)?;
-        let root_body = RootBody::from_object(&root_obj)?;
-        let mut out = Vec::with_capacity(root_body.objects.len() + 1);
-        out.push((*root_cid, root_bytes));
-        for cid in &root_body.objects {
-            // Skip if root somehow listed itself.
-            if cid == root_cid {
-                continue;
-            }
-            match self.store.get_bytes(cid) {
-                Ok(bytes) => out.push((*cid, bytes)),
-                Err(Error::NotFound(_)) => {
-                    // Partial peer: skip missing; caller may request again later.
-                }
-                Err(e) => return Err(e),
-            }
-        }
-        Ok(out)
+        crate::root::get_root_closure_blobs(&self.store, root_cid)
     }
+
 
     /// Adopt a remote root as this building's head (after objects are in the CAS).
     ///
-    /// Validates that the root object exists, is a Root, and matches `building_id`.
-    /// Does **not** require the device key (fork/follow is open).
+    /// Fail closed by default if the root authors' signatures are missing or invalid.
     pub fn adopt_root(&mut self, root_cid: Cid) -> Result<CommitResult> {
+        self.adopt_root_with_options(root_cid, &AdoptOptions::default())
+    }
+
+    /// Adopt a remote root with explicit control over signature validation.
+    pub fn adopt_root_with_options(
+        &mut self,
+        root_cid: Cid,
+        opts: &AdoptOptions,
+    ) -> Result<CommitResult> {
         let obj = self.store.get(&root_cid)?;
         let root = RootBody::from_object(&obj)?.clone();
         if root.building_id != self.record.building_id {
@@ -624,10 +688,20 @@ impl BuildingRepository {
                 root.building_id, self.record.building_id
             )));
         }
-        let _ = root.verify_authors(); // warn-only at adopt time for forks
+
+        if !opts.allow_untrusted {
+            root.verify_authors().map_err(|e| {
+                Error::Signature(format!("root author verification failed: {e}"))
+            })?;
+        } else {
+            let _ = root.verify_authors();
+        }
+
+        let active_set = root.materialize_active_objects(&self.store)?;
+        let object_count = active_set.len() as u64;
 
         let previous = self.record.head_root;
-        let object_count = root.objects.len() as u64;
+        self.active_objects = active_set;
         self.record.head_root = Some(root_cid);
         self.record.pending.clear();
         self.record.updated = now_secs();
@@ -673,6 +747,7 @@ impl BuildingRepository {
                     record,
                     working_set: WorkingSet::new(),
                     keypair,
+                    active_objects: BTreeSet::new(),
                 })
             }
             Err(e) => Err(e),
@@ -793,5 +868,41 @@ mod tests {
             .unwrap();
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].text, "staged offline");
+    }
+
+    #[test]
+    fn test_adopt_root_validation() {
+        let dir = tempdir().unwrap();
+        let path = dir.path();
+        let mut repo = BuildingRepository::init(path, Some("AdoptTest".into()), None).unwrap();
+        let bid = repo.building_id().clone();
+        let kp = Keypair::generate();
+
+        // 1. Create a correctly signed root for this building
+        let mut objects = BTreeSet::new();
+        objects.insert(repo.record().building_object.unwrap());
+        let (root_obj, signed_root_cid) = RootBuilder::new(bid.clone(), 100)
+            .objects(objects.clone())
+            .message("signed commit")
+            .build_signed(&kp)
+            .unwrap();
+        repo.store().put(&root_obj).unwrap();
+
+        // Adopting correctly signed root must succeed
+        assert!(repo.adopt_root(signed_root_cid).is_ok());
+
+        // 2. Create an unsigned root for this building
+        let body = RootBody::new(bid.clone(), Some(signed_root_cid), objects, 101);
+        let obj = body.into_object(101);
+        let unsigned_root_cid = repo.store().put(&obj).unwrap();
+
+        // Adopting unsigned root must fail by default
+        let err = repo.adopt_root(unsigned_root_cid);
+        assert!(err.is_err());
+        assert!(matches!(err.unwrap_err(), Error::Signature(_)));
+
+        // 3. Adopting unsigned root with allow_untrusted = true must succeed
+        let res = repo.adopt_root_with_options(unsigned_root_cid, &AdoptOptions { allow_untrusted: true });
+        assert!(res.is_ok());
     }
 }

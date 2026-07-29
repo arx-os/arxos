@@ -33,7 +33,7 @@ pub use discovery::{DiscoveredPeer, MdnsDiscovery, SERVICE_TYPE};
 pub use error::{NetError, Result};
 pub use memory::{MemoryMesh, MemoryNode};
 pub use protocol::{BuildingHeadAd, Message, ObjectBlob, ARXOS_ALPN, PROTOCOL_VERSION};
-pub use sync::{building_ads_from_store, pull_root, PullResult};
+pub use sync::{building_ads_from_store, pull_root, pull_root_with_options, pull_building_head, pull_building_head_with_options, PullResult};
 pub use transport::{ObjectTransport, PeerId};
 
 #[cfg(feature = "iroh")]

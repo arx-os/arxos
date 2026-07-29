@@ -1,6 +1,6 @@
 # Phase 1 — Mobile Capture Loop
 
-**Status:** Implemented (2026-07-27)
+**Status:** Foundation + real geometry path now present (2026-07-28); AR relocalization and production polish remain outstanding.
 
 ## Goals
 
@@ -45,10 +45,10 @@ cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" building near "$BID" --x 1.2
 ## iOS
 
 ```bash
-cd ios/Arxos && swift run ArxosDemo
+cd ios/Arxos && swift run -Xswiftc -DALLOW_SHIM ArxosDemo
 ```
 
-Device: open `Sources/ArxosApp` in Xcode, link UniFFI XCFramework (`cargo build -p arxos-core --features uniffi` + bindgen), run on LiDAR hardware. Use **Simulate RoomPlan scan** without hardware.
+Device: open `Sources/ArxosApp` in Xcode, link UniFFI XCFramework (`cargo build -p arxos-ffi`), run on LiDAR hardware. Use **Simulate RoomPlan scan** without hardware. The local Swift `LocalStore` shim is compile-time gated and disabled by default unless `-DALLOW_SHIM` is explicitly set.
 
 ## Tests
 

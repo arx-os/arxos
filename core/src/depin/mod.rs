@@ -121,7 +121,7 @@ pub fn score_root(
 ) -> Result<ScoreReport> {
     let root_obj = store.get(root_cid)?;
     let root = RootBody::from_object(&root_obj)?;
-    let mut cids: BTreeSet<Cid> = root.objects.iter().copied().collect();
+    let mut cids: BTreeSet<Cid> = root.materialize_active_objects(store)?;
     cids.insert(*root_cid);
     score_cids(
         store,
@@ -242,8 +242,9 @@ pub struct RegistrySnapshot {
 pub fn registry_snapshot(store: &ObjectStore, root_cid: &Cid) -> Result<RegistrySnapshot> {
     let root_obj = store.get(root_cid)?;
     let root = RootBody::from_object(&root_obj)?;
+    let active = root.materialize_active_objects(store)?;
     let mut controllers = Vec::new();
-    for cid in &root.objects {
+    for cid in &active {
         if let Ok(obj) = store.get(cid) {
             if let ObjectBody::Building(b) = &obj.body {
                 for k in &b.controller_keys {
@@ -264,7 +265,7 @@ pub fn registry_snapshot(store: &ObjectStore, root_cid: &Cid) -> Result<Registry
         building_id: root.building_id.to_string(),
         official_root_cid: root_cid.to_string(),
         controllers,
-        object_count: root.objects.len() as u64,
+        object_count: active.len() as u64,
         updated: root.timestamp,
     })
 }

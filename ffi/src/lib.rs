@@ -204,22 +204,29 @@ pub fn create_root(
     })
 }
 
-/// Show a root as a summary string, or None if missing.
-pub fn show_root(store_path: String, root_cid: String) -> Option<String> {
-    let store = ObjectStore::open(&store_path).ok()?;
-    let cid = Cid::from_str(&root_cid).ok()?;
-    let obj = store.get(&cid).ok()?;
-    let root = RootBody::from_object(&obj).ok()?;
-    let active_count = root.materialize_active_objects(&store).ok()?.len();
-    Some(format!(
-        "building_id={} previous={:?} objects={} authors={} message={:?} timestamp={}",
-        root.building_id,
-        root.previous_root.map(|c| c.to_string()),
-        active_count,
-        root.authors.len(),
-        root.message,
-        root.timestamp
-    ))
+/// Show a root as a summary string, or None if the CID is absent from the store.
+pub fn show_root(store_path: String, root_cid: String) -> Result<Option<String>, ArxosError> {
+    let store = ObjectStore::open(&store_path)?;
+    let cid = Cid::from_str(&root_cid).map_err(|e| ArxosError::InvalidInput {
+        message: e.to_string(),
+    })?;
+    match store.get(&cid) {
+        Err(CoreError::NotFound(_)) => return Ok(None),
+        Err(e) => return Err(e.into()),
+        Ok(obj) => {
+            let root = RootBody::from_object(&obj)?;
+            let active_count = root.materialize_active_objects(&store)?.len();
+            Ok(Some(format!(
+                "building_id={} previous={:?} objects={} authors={} message={:?} timestamp={}",
+                root.building_id,
+                root.previous_root.map(|c| c.to_string()),
+                active_count,
+                root.authors.len(),
+                root.message,
+                root.timestamp
+            )))
+        }
+    }
 }
 
 // ─── Building repository + capture ───
@@ -503,142 +510,15 @@ pub struct PullResultSummary {
 }
 
 fn pose_from_transform(transform: &[f64]) -> Result<Pose, ArxosError> {
-    if transform.len() != 16 {
-        return Err(ArxosError::InvalidInput {
-            message: format!(
-                "transform matrix must have 16 elements, got {}",
-                transform.len()
-            ),
-        });
-    }
-
-    let tx = transform[12];
-    let ty = transform[13];
-    let tz = transform[14];
-
-    let m00 = transform[0];
-    let m10 = transform[4];
-    let m20 = transform[8];
-    let m01 = transform[1];
-    let m11 = transform[5];
-    let m21 = transform[9];
-    let m02 = transform[2];
-    let m12 = transform[6];
-    let m22 = transform[10];
-
-    let tr = m00 + m11 + m22;
-
-    let (qx, qy, qz, qw) = if tr > 0.0 {
-        let s = (tr + 1.0).sqrt() * 2.0;
-        let qw = 0.25 * s;
-        let qx = (m21 - m12) / s;
-        let qy = (m02 - m20) / s;
-        let qz = (m10 - m01) / s;
-        (qx, qy, qz, qw)
-    } else if (m00 > m11) && (m00 > m22) {
-        let s = (1.0 + m00 - m11 - m22).sqrt() * 2.0;
-        let qw = (m21 - m12) / s;
-        let qx = 0.25 * s;
-        let qy = (m01 + m10) / s;
-        let qz = (m02 + m20) / s;
-        (qx, qy, qz, qw)
-    } else if m11 > m22 {
-        let s = (1.0 + m11 - m00 - m22).sqrt() * 2.0;
-        let qw = (m02 - m20) / s;
-        let qx = (m01 + m10) / s;
-        let qy = 0.25 * s;
-        let qz = (m12 + m21) / s;
-        (qx, qy, qz, qw)
-    } else {
-        let s = (1.0 + m22 - m00 - m11).sqrt() * 2.0;
-        let qw = (m10 - m01) / s;
-        let qx = (m02 + m20) / s;
-        let qy = (m12 + m21) / s;
-        let qz = 0.25 * s;
-        (qx, qy, qz, qw)
-    };
-
-    let len = (qx * qx + qy * qy + qz * qz + qw * qw).sqrt();
-    let orientation = if len > 0.0 {
-        [qx / len, qy / len, qz / len, qw / len]
-    } else {
-        [0.0, 0.0, 0.0, 1.0]
-    };
-
-    Ok(Pose {
-        position: [tx, ty, tz],
-        orientation,
-    })
+    arxos_core::capture::pose_from_column_major_matrix(transform).map_err(Into::into)
 }
 
 fn world_aabb_from_transform_and_dimensions(
     transform: &[f64],
     dimensions: &[f64],
 ) -> Result<Aabb, ArxosError> {
-    if transform.len() != 16 {
-        return Err(ArxosError::InvalidInput {
-            message: format!(
-                "transform must be 4x4 matrix (16 elements), got {}",
-                transform.len()
-            ),
-        });
-    }
-    if dimensions.len() != 3 {
-        return Err(ArxosError::InvalidInput {
-            message: format!("dimensions must have 3 elements, got {}", dimensions.len()),
-        });
-    }
-    let w = dimensions[0] / 2.0;
-    let h = dimensions[1] / 2.0;
-    let d = dimensions[2] / 2.0;
-
-    let corners = [
-        [-w, -h, -d],
-        [w, -h, -d],
-        [-w, h, -d],
-        [w, h, -d],
-        [-w, -h, d],
-        [w, -h, d],
-        [-w, h, d],
-        [w, h, d],
-    ];
-
-    let mut min_x = f64::MAX;
-    let mut min_y = f64::MAX;
-    let mut min_z = f64::MAX;
-    let mut max_x = f64::MIN;
-    let mut max_y = f64::MIN;
-    let mut max_z = f64::MIN;
-
-    for [cx, cy, cz] in corners {
-        let px = transform[0] * cx + transform[4] * cy + transform[8] * cz + transform[12];
-        let py = transform[1] * cx + transform[5] * cy + transform[9] * cz + transform[13];
-        let pz = transform[2] * cx + transform[6] * cy + transform[10] * cz + transform[14];
-
-        if px < min_x {
-            min_x = px;
-        }
-        if py < min_y {
-            min_y = py;
-        }
-        if pz < min_z {
-            min_z = pz;
-        }
-        if px > max_x {
-            max_x = px;
-        }
-        if py > max_y {
-            max_y = py;
-        }
-        if pz > max_z {
-            max_z = pz;
-        }
-    }
-
-    Ok(Aabb {
-        min: [min_x, min_y, min_z],
-        max: [max_x, max_y, max_z],
-    })
+    arxos_core::capture::world_aabb_from_transform_and_dimensions(transform, dimensions)
+        .map_err(Into::into)
 }
 
 /// Ingest RoomPlan structured surfaces and objects, group into a Space, and stage.
@@ -923,31 +803,43 @@ pub fn pull_remote_root(
 }
 
 /// Export to USD file.
-pub fn export_usd(store_path: String, building_id: String, output_path: String) -> bool {
-    let Ok(bid) = BuildingId::from_str(&building_id) else {
-        return false;
-    };
+pub fn export_usd(
+    store_path: String,
+    building_id: String,
+    output_path: String,
+) -> Result<(), ArxosError> {
+    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
+        message: e.to_string(),
+    })?;
     let opts = arxos_usd::ExportOptions::default();
-    let Ok(content) =
-        arxos_usd::export_building_usda(std::path::Path::new(&store_path), &bid, &opts)
-    else {
-        return false;
-    };
-    std::fs::write(&output_path, content).is_ok()
+    let content = arxos_usd::export_building_usda(std::path::Path::new(&store_path), &bid, &opts)
+        .map_err(|e| ArxosError::Store {
+            message: e.to_string(),
+        })?;
+    std::fs::write(&output_path, content).map_err(|e| ArxosError::Store {
+        message: format!("write {}: {e}", output_path),
+    })?;
+    Ok(())
 }
 
 /// Export to IFC file.
-pub fn export_ifc(store_path: String, building_id: String, output_path: String) -> bool {
-    let Ok(bid) = BuildingId::from_str(&building_id) else {
-        return false;
-    };
+pub fn export_ifc(
+    store_path: String,
+    building_id: String,
+    output_path: String,
+) -> Result<(), ArxosError> {
+    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
+        message: e.to_string(),
+    })?;
     let opts = arxos_ifc::ExportOptions::default();
-    let Ok(content) =
-        arxos_ifc::export_building_ifc(std::path::Path::new(&store_path), &bid, &opts)
-    else {
-        return false;
-    };
-    std::fs::write(&output_path, content).is_ok()
+    let content = arxos_ifc::export_building_ifc(std::path::Path::new(&store_path), &bid, &opts)
+        .map_err(|e| ArxosError::Store {
+            message: e.to_string(),
+        })?;
+    std::fs::write(&output_path, content).map_err(|e| ArxosError::Store {
+        message: format!("write {}: {e}", output_path),
+    })?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -976,7 +868,10 @@ mod tests {
     #[test]
     fn bad_transform_returns_error_not_panic() {
         let err = pose_from_transform(&[1.0, 2.0]).unwrap_err();
-        assert!(matches!(err, ArxosError::InvalidInput { .. }));
+        assert!(
+            matches!(err, ArxosError::Validation { .. }),
+            "expected Validation, got {err:?}"
+        );
     }
 
     #[test]
@@ -985,6 +880,33 @@ mod tests {
         let path = dir.path().to_str().unwrap().to_string();
         let err = open_building(path, "01NOTAREALBUILDINGID00000000".into()).unwrap_err();
         assert!(matches!(err, ArxosError::NotFound { .. }));
+    }
+
+    #[test]
+    fn unauthorized_commit_surfaces_as_authorization_error() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().to_str().unwrap().to_string();
+        let summary = init_building(path.clone(), Some("Auth".into())).unwrap();
+        let bid = summary.building_id;
+        // Overwrite device seed with an outsider key (not a controller).
+        let outsider = Keypair::generate();
+        let seed_path = std::path::Path::new(&path).join("keys").join("device.seed");
+        std::fs::write(&seed_path, outsider.seed()).unwrap();
+
+        capture_annotation(
+            path.clone(),
+            bid.clone(),
+            "note".into(),
+            0.0,
+            0.0,
+            0.0,
+        )
+        .unwrap();
+        let err = commit_building(path, bid, Some("should fail".into())).unwrap_err();
+        assert!(
+            matches!(err, ArxosError::Authorization { .. }),
+            "expected Authorization, got {err:?}"
+        );
     }
 
     #[test]

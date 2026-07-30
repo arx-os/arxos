@@ -59,6 +59,13 @@ public struct CaptureHomeView: View {
                                 showList = true
                             }
                             .font(.footnote)
+
+                            if let err = session.lastError {
+                                Text(err)
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                                    .textSelection(.enabled)
+                            }
                         }
 
                         GroupBox("Capture") {

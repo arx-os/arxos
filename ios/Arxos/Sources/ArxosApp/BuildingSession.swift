@@ -11,6 +11,7 @@ final class BuildingSession: ObservableObject {
     @Published var lastCommit: CommitSummary?
     @Published var nearbyAnnotations: [AnnotationOverlay] = []
     @Published var status: String = "Idle"
+    @Published var lastError: String?
     @Published var cameraPose: SIMD3<Float> = .zero
     @Published var annotationDraft: String = ""
     @Published var isTracking: Bool = false
@@ -23,24 +24,46 @@ final class BuildingSession: ObservableObject {
 
     var buildingId: String? { summary?.buildingId }
 
+    private func report(_ error: Error) {
+        let message = error.localizedDescription
+        lastError = message
+        status = "Error: \(message)"
+    }
+
     func initBuilding(name: String) {
         status = "Initializing…"
-        let s = ArxosCore.initBuilding(storePath: storePath, name: name)
-        summary = s
-        status = "Building \(s.buildingId.prefix(12))… ready"
-        refreshNearby()
+        lastError = nil
+        do {
+            let s = try ArxosCore.initBuilding(storePath: storePath, name: name)
+            summary = s
+            status = "Building \(s.buildingId.prefix(12))… ready"
+            refreshNearby()
+        } catch {
+            report(error)
+        }
     }
 
     func openBuilding(id: String) {
         status = "Opening…"
-        let s = ArxosCore.openBuilding(storePath: storePath, buildingId: id)
-        summary = s
-        status = "Opened \(s.buildingId.prefix(12))… head=\(s.headRoot?.prefix(16) ?? "none")…"
-        refreshNearby()
+        lastError = nil
+        do {
+            let s = try ArxosCore.openBuilding(storePath: storePath, buildingId: id)
+            summary = s
+            status = "Opened \(s.buildingId.prefix(12))… head=\(s.headRoot?.prefix(16) ?? "none")…"
+            refreshNearby()
+        } catch {
+            report(error)
+        }
     }
 
     func listBuildings() -> [BuildingSummary] {
-        ArxosCore.listBuildings(storePath: storePath)
+        lastError = nil
+        do {
+            return try ArxosCore.listBuildings(storePath: storePath)
+        } catch {
+            report(error)
+            return []
+        }
     }
 
     func updateCameraPose(_ position: SIMD3<Float>) {
@@ -53,15 +76,20 @@ final class BuildingSession: ObservableObject {
             status = "No building open"
             return
         }
+        lastError = nil
         let p = cameraPose
-        let r = ArxosCore.captureSpace(
-            storePath: storePath, buildingId: id, name: name,
-            x: Double(p.x), y: Double(p.y), z: Double(p.z)
-        )
-        lastCapture = r
-        summary = ArxosCore.openBuilding(storePath: storePath, buildingId: id)
-        status = "Space \(r.cid.prefix(18))…"
-        refreshNearby()
+        do {
+            let r = try ArxosCore.captureSpace(
+                storePath: storePath, buildingId: id, name: name,
+                x: Double(p.x), y: Double(p.y), z: Double(p.z)
+            )
+            lastCapture = r
+            summary = try ArxosCore.openBuilding(storePath: storePath, buildingId: id)
+            status = "Space \(r.cid.prefix(18))…"
+            refreshNearby()
+        } catch {
+            report(error)
+        }
     }
 
     /// Capture annotation text at current camera pose.
@@ -75,16 +103,21 @@ final class BuildingSession: ObservableObject {
             status = "Annotation text empty"
             return
         }
+        lastError = nil
         let p = cameraPose
-        let r = ArxosCore.captureAnnotation(
-            storePath: storePath, buildingId: id, text: text,
-            x: Double(p.x), y: Double(p.y), z: Double(p.z)
-        )
-        lastCapture = r
-        annotationDraft = ""
-        summary = ArxosCore.openBuilding(storePath: storePath, buildingId: id)
-        status = "Annotation \(r.cid.prefix(18))…"
-        refreshNearby()
+        do {
+            let r = try ArxosCore.captureAnnotation(
+                storePath: storePath, buildingId: id, text: text,
+                x: Double(p.x), y: Double(p.y), z: Double(p.z)
+            )
+            lastCapture = r
+            annotationDraft = ""
+            summary = try ArxosCore.openBuilding(storePath: storePath, buildingId: id)
+            status = "Annotation \(r.cid.prefix(18))…"
+            refreshNearby()
+        } catch {
+            report(error)
+        }
     }
 
     /// Ingest a LiDAR / RoomPlan point sample as PointCloudChunk.
@@ -93,6 +126,7 @@ final class BuildingSession: ObservableObject {
             status = "No building open"
             return
         }
+        lastError = nil
         var data = Data(capacity: pointsXYZ.count * 12)
         for p in pointsXYZ {
             var x = p.x, y = p.y, z = p.z
@@ -101,13 +135,17 @@ final class BuildingSession: ObservableObject {
             withUnsafeBytes(of: &z) { data.append(contentsOf: $0) }
         }
         let origin = pose ?? cameraPose
-        let r = ArxosCore.capturePointCloud(
-            storePath: storePath, buildingId: id, pointsXYZF32LE: data,
-            x: Double(origin.x), y: Double(origin.y), z: Double(origin.z)
-        )
-        lastCapture = r
-        summary = ArxosCore.openBuilding(storePath: storePath, buildingId: id)
-        status = "PointCloud \(pointsXYZ.count) pts \(r.cid.prefix(16))…"
+        do {
+            let r = try ArxosCore.capturePointCloud(
+                storePath: storePath, buildingId: id, pointsXYZF32LE: data,
+                x: Double(origin.x), y: Double(origin.y), z: Double(origin.z)
+            )
+            lastCapture = r
+            summary = try ArxosCore.openBuilding(storePath: storePath, buildingId: id)
+            status = "PointCloud \(pointsXYZ.count) pts \(r.cid.prefix(16))…"
+        } catch {
+            report(error)
+        }
     }
 
     /// Simulate a full RoomPlan-like capture (no device LiDAR required).
@@ -116,7 +154,6 @@ final class BuildingSession: ObservableObject {
             status = "No building open"
             return
         }
-        // Place camera at a synthetic pose if still at origin.
         if cameraPose == .zero {
             cameraPose = SIMD3(1.0, 1.5, 2.0)
         }
@@ -134,7 +171,9 @@ final class BuildingSession: ObservableObject {
             annotationDraft = "Room note @ \(roomName)"
         }
         captureAnnotation()
-        status = "Simulated capture staged (pending commit)"
+        if lastError == nil {
+            status = "Simulated capture staged (pending commit)"
+        }
     }
 
     func commit(message: String = "device capture") {
@@ -142,13 +181,18 @@ final class BuildingSession: ObservableObject {
             status = "No building open"
             return
         }
-        let r = ArxosCore.commitBuilding(
-            storePath: storePath, buildingId: id, message: message
-        )
-        lastCommit = r
-        summary = ArxosCore.openBuilding(storePath: storePath, buildingId: id)
-        status = "Committed root \(r.rootCid.prefix(18))… (\(r.objectCount) objects)"
-        refreshNearby()
+        lastError = nil
+        do {
+            let r = try ArxosCore.commitBuilding(
+                storePath: storePath, buildingId: id, message: message
+            )
+            lastCommit = r
+            summary = try ArxosCore.openBuilding(storePath: storePath, buildingId: id)
+            status = "Committed root \(r.rootCid.prefix(18))… (\(r.objectCount) objects)"
+            refreshNearby()
+        } catch {
+            report(error)
+        }
     }
 
     /// Ingest RoomPlan structured geometry.
@@ -157,15 +201,20 @@ final class BuildingSession: ObservableObject {
             status = "No building open"
             return
         }
-        let res = ArxosCore.ingestRoomPlan(
-            storePath: storePath,
-            buildingId: id,
-            surfaces: surfaces,
-            objects: objects
-        )
-        status = "RoomPlan ingested: space \(res.spaceCid.prefix(8)), \(res.surfaceCids.count) surfaces, \(res.objectCids.count) objects staged"
-        summary = ArxosCore.openBuilding(storePath: storePath, buildingId: id)
-        refreshNearby()
+        lastError = nil
+        do {
+            let res = try ArxosCore.ingestRoomPlan(
+                storePath: storePath,
+                buildingId: id,
+                surfaces: surfaces,
+                objects: objects
+            )
+            status = "RoomPlan ingested: space \(res.spaceCid.prefix(8)), \(res.surfaceCids.count) surfaces, \(res.objectCids.count) objects staged"
+            summary = try ArxosCore.openBuilding(storePath: storePath, buildingId: id)
+            refreshNearby()
+        } catch {
+            report(error)
+        }
     }
 
     func refreshNearby(radiusM: Double = 15) {
@@ -174,10 +223,15 @@ final class BuildingSession: ObservableObject {
             return
         }
         let p = cameraPose
-        nearbyAnnotations = ArxosCore.annotationsNear(
-            storePath: storePath, buildingId: id,
-            x: Double(p.x), y: Double(p.y), z: Double(p.z),
-            radiusM: radiusM
-        )
+        do {
+            nearbyAnnotations = try ArxosCore.annotationsNear(
+                storePath: storePath, buildingId: id,
+                x: Double(p.x), y: Double(p.y), z: Double(p.z),
+                radiusM: radiusM
+            )
+        } catch {
+            nearbyAnnotations = []
+            report(error)
+        }
     }
 }

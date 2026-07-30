@@ -1,0 +1,4 @@
+module arxos_coreFFI {
+    header "arxos_coreFFI.h"
+    export *
+}

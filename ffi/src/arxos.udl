@@ -24,6 +24,7 @@ namespace arxos_core {
     [Throws=ArxosError]
     RootCreateResult create_root(string store_path, string building_id, sequence<string> object_cids, string seed_hex, string? message);
 
+    [Throws=ArxosError]
     string? show_root(string store_path, string root_cid);
 
     [Throws=ArxosError]
@@ -62,8 +63,11 @@ namespace arxos_core {
     [Throws=ArxosError]
     PullResultSummary pull_remote_root(string store_path, string peer_ticket, string root_cid, string? building_id, boolean set_head, boolean allow_untrusted);
 
-    boolean export_usd(string store_path, string building_id, string output_path);
-    boolean export_ifc(string store_path, string building_id, string output_path);
+    [Throws=ArxosError]
+    void export_usd(string store_path, string building_id, string output_path);
+
+    [Throws=ArxosError]
+    void export_ifc(string store_path, string building_id, string output_path);
 };
 
 dictionary KeypairData {

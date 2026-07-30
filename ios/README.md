@@ -1,15 +1,10 @@
 # Arxos iOS Client
 
-The capture client façade for iOS, bridging ARKit / RoomPlan scans to signed content-addressed repositories.
+Capture client for iOS: ARKit / RoomPlan scans into signed content-addressed repositories via UniFFI → Rust `arxos-core`.
 
-## Capabilities
+## Single data path
 
-* Create, open, and list building repositories locally.
-* Capture Spaces, PointCloudChunks, and Annotations at the device's camera pose.
-* **Simulator Integration**: Ingest mock scans for development on macOS or Xcode Simulator.
-* **RoomPlan Ingestion**: Convert wall, floor, ceiling, and object dimensions to canonical domain models using matrix transformations.
-* Commit working-set changes to local signed Roots.
-* Render AR annotation overlays relative to real-world coordinate frames.
+There is **no** Swift-side fake CAS. All store operations go through UniFFI to the real Rust core and throw `ArxosError` on failure (authorization, missing building, validation, …).
 
 ## Layout
 
@@ -18,27 +13,36 @@ ios/Arxos/
 ├── Package.swift
 ├── Scripts/generate_bindings.sh
 └── Sources/
-    ├── ArxosCore/       # Swift UniFFI gateway and gated debug shim
-    ├── ArxosApp/        # SwiftUI, ARKit, and RoomPlan capture pipelines
-    └── ArxosDemo/       # CLI verification tool for the capture loop
+    ├── CArxosCoreFFI/   # UniFFI C header + module map
+    ├── ArxosCore/       # Generated bindings + throwing Swift façade
+    ├── ArxosApp/        # SwiftUI / ARKit / RoomPlan
+    └── ArxosDemo/       # CLI smoke test (requires linked libarxos_core)
 ```
 
-## Quick Check (macOS / Simulator)
+## Build the native library + bindings
 
-Run the local façade smoke test:
 ```bash
-cd ios/Arxos
-swift run -Xswiftc -DALLOW_SHIM ArxosDemo
+# From repo root
+cargo build -p arxos-ffi --release
+./ios/Arxos/Scripts/generate_bindings.sh
 ```
 
-## Production Device Builds
+## Run the demo (macOS, real store)
 
-1. Compile the Rust static library FFI gateway:
-   ```bash
-   cargo build -p arxos-ffi --release
-   ```
-2. Generate the Swift bindings:
-   ```bash
-   ./ios/Arxos/Scripts/generate_bindings.sh
-   ```
-3. Open `ios/Arxos` or embed it in an iOS App project, linking the compiled static library, and run on a LiDAR-capable iOS device.
+```bash
+cargo build -p arxos-ffi   # produces target/debug/libarxos_core.a
+cd ios/Arxos
+swift run ArxosDemo
+```
+
+`Package.swift` links `libarxos_core` from `../../target/release` or `../../target/debug`.
+
+## Production device builds
+
+1. `cargo build -p arxos-ffi --release` (iOS target triple as needed)
+2. `./ios/Arxos/Scripts/generate_bindings.sh`
+3. Link the static library into the Xcode app target and run on a LiDAR-capable device.
+
+## Error handling
+
+Swift call sites must use `do/catch` (or `try`). Ordinary core failures surface as `ArxosError` — they must not crash the process.

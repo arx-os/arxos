@@ -113,7 +113,11 @@ pub async fn pull_root_with_options<T: ObjectTransport + ?Sized>(
             NetError::Protocol("could not determine building_id for adopt".into())
         })?;
         let mut repo = BuildingRepository::open_or_follow(store_path, &bid, None)?;
-        let opts = AdoptOptions { allow_untrusted };
+        let opts = AdoptOptions {
+            allow_untrusted,
+            // Fail closed: incomplete closures must not become head under normal pull.
+            allow_partial: false,
+        };
         Some(repo.adopt_root_with_options(root, &opts)?)
     } else {
         None

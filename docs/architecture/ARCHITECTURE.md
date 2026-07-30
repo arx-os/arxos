@@ -71,6 +71,7 @@ A `Root` object represents a repository commit and defines the active state of a
 pub struct RootBody {
     pub building_id: BuildingId,
     pub previous_root: Option<Cid>,
+    pub merge_parents: BTreeSet<Cid>, // concurrent tips when this is a merge
     pub added: BTreeSet<Cid>,
     pub removed: BTreeSet<Cid>,
     pub objects: Option<BTreeSet<Cid>>,
@@ -80,6 +81,15 @@ pub struct RootBody {
     pub message: Option<String>,
 }
 ```
+
+### 3.1.1 Root authorization
+
+Every root author signature is verified cryptographically **and** against the
+building's controller set: each author public key must appear in
+`Building.controller_keys` for the Building object in the root's materialized
+active set. Commit and adopt fail closed on unauthorized authors. The optional
+`AdoptOptions::allow_untrusted` flag disables this check for import / recovery
+paths only.
 
 ### 3.2 Checkpoint Policy
 - **Delta-Friendly Commits**: To prevent the CBOR size of roots from scaling linearly with the number of objects, commits write only the `added` and `removed` sets relative to the parent.
@@ -94,6 +104,13 @@ Sync operations utilize `get_root_closure_blobs` to calculate the minimal set of
 2. Collect the bytes of all traversed roots and the active domain objects within the materialized active set of the target tip.
 3. Recursively collect all `SpatialIndexNode`s branching from the root's `spatial_index_root`.
 - **Guarantee**: Devices sync complete, queryable root states without fetching unbounded history.
+- **Fail closed**: Missing active objects or index nodes cause the closure collection (and subsequent adopt) to fail unless an explicit `allow_partial` option is set. Incomplete closures must not become head under normal operation.
+
+### 3.4 Merge parents
+When two concurrent roots are merged, the result records both tips in
+`merge_parents` while keeping a single linear `previous_root` (the newer tip)
+for delta materialization. This preserves honest multi-device history without
+requiring a full multi-parent CRDT.
 
 ---
 
@@ -156,8 +173,11 @@ Gateways project the canonical Arxos object graph into standardized engineering 
 
 ### 8.1 Factual System Guarantees
 - **Integrity**: Any object read is verified by recalculating its BLAKE3 hash. Signature validation fails closed on invalid remote root pulls by default.
+- **Authorization**: Root authors must be members of `Building.controller_keys` (fail closed on commit/adopt).
+- **Complete Closures**: Root sync closures and adopt require all active objects (and spatial index root when set) to be present unless `allow_partial` is explicit.
 - **Bounded Sync**: Networking fetches only the objects back to the nearest checkpoint, avoiding full repository history transfers.
-- **Logarithmic Commits**: Incremental indexing ensures spatial write complexity is $O(\log N)$ relative to building size.
+- **CAS hot path**: Object puts write only content-addressed files (temp + rename). The optional thin `index.cbor` is rebuild-on-demand, not updated per put.
+- **Logarithmic Commits**: Incremental indexing aims for $O(\log N)$ spatial write complexity relative to building size (binary tree implementation; fanout improvements are future work).
 
 ### 8.2 Current Design Limitations
 - **No Rendering**: Arxos does not perform 3D graphics rendering; geometry translation is limited to spatial reasoning, queries, and file export formats.

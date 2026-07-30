@@ -20,7 +20,13 @@
     },
     "previous_root": {
       "type": ["string", "null"],
-      "description": "CID of previous root (b3:hex)"
+      "description": "CID of previous root (b3:hex); linear primary parent for materialization"
+    },
+    "merge_parents": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "description": "When set, CIDs of concurrent parent roots merged into this commit (honest multi-device history). Empty/absent for non-merge commits."
     },
     "objects": {
       "type": "array",

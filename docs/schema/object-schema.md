@@ -72,7 +72,8 @@ Aabb
 ```text
 RootBody
 ├── building_id: BuildingId
-├── previous_root: Option<Cid>
+├── previous_root: Option<Cid>           # linear primary parent
+├── merge_parents: BTreeSet<Cid>         # concurrent parents when this is a merge
 ├── objects: Option<BTreeSet<Cid>>
 ├── added: BTreeSet<Cid>
 ├── removed: BTreeSet<Cid>
@@ -84,10 +85,26 @@ RootBody
 
 The **object CID** of a `Root` object is the repository state identifier.
 
+### Root authorization
+
+Root authors must present valid ed25519 signatures over the unsigned root payload
+**and** every author public key must appear in `Building.controller_keys` for the
+building object in the root's active set. Adoption and commit fail closed when
+authorization fails. `AdoptOptions::allow_untrusted` is an explicit escape hatch.
+
+### Closure completeness
+
+Serving or adopting a root requires the full active object set (and spatial index
+root, when present) to be present in the local store unless
+`AdoptOptions::allow_partial` / `ClosureOptions::allow_partial` is set.
+
 ## Building identity
 
 Phase 0: `BuildingId` is a ULID string.  
 Later: DID-based controllers and on-chain registry (Base L2).
+
+`Building.controller_keys` is the authoritative set of keys allowed to sign
+repository roots for that building.
 
 ## JSON Schema (documentation)
 

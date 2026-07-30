@@ -54,7 +54,10 @@ pub use object::{
 };
 pub use object::Aabb;
 pub use repository::{AdoptOptions, BuildingRecord, BuildingRepository, CaptureResult, CommitResult};
-pub use root::{get_root_closure_blobs, RootBody, RootBuilder};
+pub use root::{
+    get_root_closure_blobs, get_root_closure_blobs_with_options, missing_active_objects,
+    resolve_controller_keys, ClosureOptions, ClosureResult, RootBody, RootBuilder,
+};
 pub use spatial::{QueryVolume, SpatialEntry, SpatialHit};
 pub use store::ObjectStore;
 pub use verify::{

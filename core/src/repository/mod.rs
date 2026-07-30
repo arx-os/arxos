@@ -74,9 +74,12 @@ pub struct CommitResult {
 /// Options for adopting a remote root.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct AdoptOptions {
-    /// Allow untrusted root signatures (invalid or missing author signatures).
-    /// If false, verification failures cause adoption to fail with a signature error.
+    /// Allow untrusted root signatures / unauthorized authors.
+    /// If false, verification failures cause adoption to fail.
     pub allow_untrusted: bool,
+    /// Allow adopting a root even when some active objects (or the spatial index)
+    /// are missing from the local store. Default is false (fail closed).
+    pub allow_partial: bool,
 }
 
 /// Building repository handle: CAS + head metadata + session working set.
@@ -145,6 +148,11 @@ impl BuildingRepository {
             .objects(objects)
             .message("init")
             .build_signed(&kp)?;
+        // Fail closed: init root must be signed by a controller (the seed key we just registered).
+        {
+            let root = RootBody::from_object(&root_obj)?;
+            root.verify_with_store(&store)?;
+        }
         store.put(&root_obj)?;
         record.head_root = Some(root_cid);
         record.updated = now_secs();
@@ -395,6 +403,13 @@ impl BuildingRepository {
         }
 
         let (root_obj, root_cid) = builder.build_signed(&kp)?;
+        // Fail closed: author must be in Building.controller_keys of the new active set.
+        {
+            let root = RootBody::from_object(&root_obj)?;
+            // Building may only be resolvable after domain objects are in the store;
+            // new_active is already staged into the CAS via capture.
+            root.verify_with_store(&self.store)?;
+        }
         self.store.put(&root_obj)?;
 
         // Update state
@@ -680,15 +695,45 @@ impl BuildingRepository {
             )));
         }
 
+        // Always materialize first so we can resolve controllers from the root's active set.
+        let active_set = root.materialize_active_objects(&self.store)?;
+
+        if !opts.allow_partial {
+            let missing = crate::root::missing_active_objects(&self.store, &active_set)?;
+            if !missing.is_empty() {
+                let preview: Vec<String> =
+                    missing.iter().take(8).map(|c| c.to_string()).collect();
+                return Err(Error::NotFound(format!(
+                    "incomplete root for adopt: missing {} active object(s), e.g. {}",
+                    missing.len(),
+                    preview.join(", ")
+                )));
+            }
+            if let Some(si) = root.spatial_index_root {
+                if !self.store.contains(&si) {
+                    return Err(Error::NotFound(format!(
+                        "incomplete root for adopt: spatial_index_root {si} missing"
+                    )));
+                }
+            }
+        }
+
         if !opts.allow_untrusted {
-            root.verify_authors().map_err(|e| {
-                Error::Signature(format!("root author verification failed: {e}"))
+            // Fail closed: valid signatures AND authors ∈ Building.controller_keys.
+            root.verify_with_store(&self.store).map_err(|e| match e {
+                Error::Authorization(msg) => Error::Authorization(format!(
+                    "root author authorization failed: {msg}"
+                )),
+                Error::Signature(msg) => {
+                    Error::Signature(format!("root author verification failed: {msg}"))
+                }
+                other => other,
             })?;
         } else {
+            // Escape hatch: still attempt crypto verify for diagnostics, ignore failure.
             let _ = root.verify_authors();
         }
 
-        let active_set = root.materialize_active_objects(&self.store)?;
         let object_count = active_set.len() as u64;
 
         let previous = self.record.head_root;
@@ -867,33 +912,115 @@ mod tests {
         let path = dir.path();
         let mut repo = BuildingRepository::init(path, Some("AdoptTest".into()), None).unwrap();
         let bid = repo.building_id().clone();
-        let kp = Keypair::generate();
+        let controller = repo.keypair().unwrap().clone();
+        let outsider = Keypair::generate();
 
-        // 1. Create a correctly signed root for this building
+        // 1. Authorized controller signs a root — adopt succeeds.
         let mut objects = BTreeSet::new();
         objects.insert(repo.record().building_object.unwrap());
         let (root_obj, signed_root_cid) = RootBuilder::new(bid.clone(), 100)
             .objects(objects.clone())
             .message("signed commit")
-            .build_signed(&kp)
+            .build_signed(&controller)
             .unwrap();
         repo.store().put(&root_obj).unwrap();
-
-        // Adopting correctly signed root must succeed
         assert!(repo.adopt_root(signed_root_cid).is_ok());
 
-        // 2. Create an unsigned root for this building
-        let body = RootBody::new(bid.clone(), Some(signed_root_cid), objects, 101);
-        let obj = body.into_object(101);
-        let unsigned_root_cid = repo.store().put(&obj).unwrap();
+        // 2. Valid signature from a non-controller — rejected under default options.
+        let (bad_obj, bad_cid) = RootBuilder::new(bid.clone(), 101)
+            .objects(objects.clone())
+            .previous_root(signed_root_cid)
+            .message("outsider")
+            .build_signed(&outsider)
+            .unwrap();
+        repo.store().put(&bad_obj).unwrap();
+        let err = repo.adopt_root(bad_cid).unwrap_err();
+        assert!(
+            matches!(err, Error::Authorization(_)),
+            "expected Authorization, got {err:?}"
+        );
 
-        // Adopting unsigned root must fail by default
+        // 3. Unsigned root — rejected by default.
+        let body = RootBody::new(bid.clone(), Some(signed_root_cid), objects, 102);
+        let obj = body.into_object(102);
+        let unsigned_root_cid = repo.store().put(&obj).unwrap();
         let err = repo.adopt_root(unsigned_root_cid);
         assert!(err.is_err());
         assert!(matches!(err.unwrap_err(), Error::Signature(_)));
 
-        // 3. Adopting unsigned root with allow_untrusted = true must succeed
-        let res = repo.adopt_root_with_options(unsigned_root_cid, &AdoptOptions { allow_untrusted: true });
+        // 4. allow_untrusted escape hatch accepts unauthorized / unsigned roots.
+        let res = repo.adopt_root_with_options(
+            unsigned_root_cid,
+            &AdoptOptions {
+                allow_untrusted: true,
+                allow_partial: false,
+            },
+        );
         assert!(res.is_ok());
+    }
+
+    #[test]
+    fn adopt_incomplete_closure_fails_by_default() {
+        let dir = tempdir().unwrap();
+        let path = dir.path();
+        let mut repo = BuildingRepository::init(path, Some("Partial".into()), None).unwrap();
+        let bid = repo.building_id().clone();
+        let controller = repo.keypair().unwrap().clone();
+        let building_cid = repo.record().building_object.unwrap();
+
+        // Phantom CID listed as active but never stored.
+        let ghost = Cid::from_canonical_bytes(b"ghost-object-not-in-store");
+        let mut objects = BTreeSet::new();
+        objects.insert(building_cid);
+        objects.insert(ghost);
+        let (root_obj, root_cid) = RootBuilder::new(bid, 200)
+            .objects(objects)
+            .message("incomplete")
+            .build_signed(&controller)
+            .unwrap();
+        repo.store().put(&root_obj).unwrap();
+
+        let err = repo.adopt_root(root_cid).unwrap_err();
+        assert!(
+            matches!(err, Error::NotFound(_)),
+            "expected NotFound for incomplete adopt, got {err:?}"
+        );
+
+        // Explicit allow_partial still needs authz unless also allow_untrusted.
+        // Building is present so authz can succeed; ghost remains missing.
+        let res = repo.adopt_root_with_options(
+            root_cid,
+            &AdoptOptions {
+                allow_untrusted: false,
+                allow_partial: true,
+            },
+        );
+        assert!(res.is_ok(), "{res:?}");
+    }
+
+    #[test]
+    fn commit_requires_controller_keypair() {
+        let dir = tempdir().unwrap();
+        let path = dir.path();
+        // Init with known controller, then replace seed with an outsider key.
+        let repo = BuildingRepository::init(path, Some("Ctrl".into()), None).unwrap();
+        let bid = repo.building_id().clone();
+        let outsider = Keypair::generate();
+        BuildingRepository::write_seed(path, &outsider).unwrap();
+
+        let mut repo = BuildingRepository::open(path, &bid).unwrap();
+        repo.capture_annotation(&AnnotationCapture::new(
+            "x",
+            Pose {
+                position: [0.0, 0.0, 0.0],
+                orientation: [0.0, 0.0, 0.0, 1.0],
+            },
+        ))
+        .unwrap();
+        let err = repo.commit(Some("should fail".into())).unwrap_err();
+        assert!(
+            matches!(err, Error::Authorization(_)),
+            "expected Authorization, got {err:?}"
+        );
     }
 }

@@ -99,7 +99,8 @@ fn import_stage(
                 ObjectBody::Building(BuildingBody {
                     building_id: building_id.clone(),
                     name: attr_string(prim, "arxos:name"),
-                    controller_keys: Vec::new(),
+                    // Importer key becomes the controller so signed import roots authorize.
+                    controller_keys: sign.map(|k| vec![k.public_key()]).unwrap_or_default(),
                     properties: props,
                 })
             }
@@ -170,7 +171,7 @@ fn import_stage(
         let mut obj = Object::new(ObjectBody::Building(BuildingBody {
             building_id: building_id.clone(),
             name: None,
-            controller_keys: Vec::new(),
+            controller_keys: sign.map(|k| vec![k.public_key()]).unwrap_or_default(),
             properties: BTreeMap::new(),
         }));
         if let Some(kp) = sign {
@@ -223,7 +224,13 @@ fn import_stage(
         body.message = Some("usd import".into());
         let obj = body.into_object(ts);
         let root_cid = store.put(&obj)?;
-        repo.adopt_root_with_options(root_cid, &AdoptOptions { allow_untrusted: true })?;
+        repo.adopt_root_with_options(
+            root_cid,
+            &AdoptOptions {
+                allow_untrusted: true,
+                allow_partial: false,
+            },
+        )?;
         Some(root_cid)
     };
 

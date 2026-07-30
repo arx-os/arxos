@@ -126,13 +126,23 @@ pub fn verify_root_transition(
         }
     };
 
-    match root.verify_authors() {
-        Ok(()) => report.push(Severity::Info, "ROOT_SIG_OK", "all root authors verify"),
-        Err(e) => report.push(
-            Severity::Error,
-            "ROOT_SIG_FAIL",
-            format!("root author verification failed: {e}"),
+    match root.verify_with_store(store) {
+        Ok(()) => report.push(
+            Severity::Info,
+            "ROOT_AUTH_OK",
+            "all root authors verify and are building controllers",
         ),
+        Err(e) => {
+            let code = match &e {
+                Error::Authorization(_) => "ROOT_AUTH_FAIL",
+                _ => "ROOT_SIG_FAIL",
+            };
+            report.push(
+                Severity::Error,
+                code,
+                format!("root author verification failed: {e}"),
+            );
+        }
     }
 
     // Every listed object should exist (or warn if partial).

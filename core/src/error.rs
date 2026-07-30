@@ -26,6 +26,10 @@ pub enum Error {
     #[error("signature error: {0}")]
     Signature(String),
 
+    /// Author is not in the building controller set (or controllers could not be resolved).
+    #[error("authorization error: {0}")]
+    Authorization(String),
+
     #[error("validation error: {0}")]
     Validation(String),
 

@@ -160,12 +160,16 @@ pub fn merge_roots(
     };
 
     let timestamp = a.timestamp.max(b.timestamp).saturating_add(1);
-    // previous_root: prefer the newer parent tip.
+    // Linear primary parent: prefer the newer tip for delta materialization.
     let previous = if a.timestamp >= b.timestamp {
         root_a
     } else {
         root_b
     };
+    // Honest multi-parent history: record both concurrent tips.
+    let mut merge_parents = BTreeSet::new();
+    merge_parents.insert(root_a);
+    merge_parents.insert(root_b);
 
     // Calculate checkpoint distance along the previous root line
     let mut checkpoint_dist = 0;
@@ -192,7 +196,8 @@ pub fn merge_roots(
     let is_checkpoint = checkpoint_dist >= 50;
 
     let mut builder = RootBuilder::new(a.building_id.clone(), timestamp)
-        .previous_root(previous);
+        .previous_root(previous)
+        .merge_parents(merge_parents);
     if is_checkpoint {
         builder = builder.objects(objects.clone());
     } else {
@@ -215,6 +220,11 @@ pub fn merge_roots(
     }
 
     let (root_obj, root_cid) = builder.build_signed(keypair)?;
+    // Fail closed: merge author must be a building controller.
+    {
+        let root = RootBody::from_object(&root_obj)?;
+        root.verify_with_store(store)?;
+    }
     store.put(&root_obj)?;
 
     Ok(MergeResult {
@@ -351,5 +361,12 @@ mod tests {
         assert!(active.contains(&ann_c_conflict));
         assert!(!active.contains(&ann_b_dup));
         assert!(body.spatial_index_root.is_some());
+
+        // Multi-parent history: both concurrent tips recorded.
+        assert_eq!(body.merge_parents.len(), 2);
+        assert!(body.merge_parents.contains(&ca));
+        assert!(body.merge_parents.contains(&cb));
+        assert!(body.previous_root == Some(ca) || body.previous_root == Some(cb));
+        assert_eq!(merged.parents, (ca, cb));
     }
 }

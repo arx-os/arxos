@@ -1,11 +1,14 @@
 //! UniFFI FFI static library implementation for Arxos iOS production path.
+//!
+//! All fallible public entry points return [`Result`] with [`ArxosError`] —
+//! ordinary failures must never panic across the FFI boundary.
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use arxos_core::capture::{AnnotationCapture, PointCloudCapture, SpaceCapture, maybe_sign};
+use arxos_core::capture::{maybe_sign, AnnotationCapture, PointCloudCapture, SpaceCapture};
 use arxos_core::cid::Cid;
 use arxos_core::crypto::Keypair;
 use arxos_core::object::{
@@ -14,6 +17,59 @@ use arxos_core::object::{
 use arxos_core::repository::BuildingRepository;
 use arxos_core::root::{RootBody, RootBuilder};
 use arxos_core::store::ObjectStore;
+use arxos_core::Error as CoreError;
+
+/// UniFFI-facing error. Maps core and networking failures without panicking.
+#[derive(Debug, thiserror::Error)]
+pub enum ArxosError {
+    #[error("not found: {message}")]
+    NotFound { message: String },
+    #[error("signature: {message}")]
+    Signature { message: String },
+    #[error("authorization: {message}")]
+    Authorization { message: String },
+    #[error("validation: {message}")]
+    Validation { message: String },
+    #[error("store: {message}")]
+    Store { message: String },
+    #[error("crypto: {message}")]
+    Crypto { message: String },
+    #[error("network: {message}")]
+    Network { message: String },
+    #[error("invalid input: {message}")]
+    InvalidInput { message: String },
+    #[error("internal: {message}")]
+    Internal { message: String },
+}
+
+impl From<CoreError> for ArxosError {
+    fn from(e: CoreError) -> Self {
+        match e {
+            CoreError::NotFound(message) => ArxosError::NotFound { message },
+            CoreError::Signature(message) => ArxosError::Signature { message },
+            CoreError::Authorization(message) => ArxosError::Authorization { message },
+            CoreError::Validation(message) => ArxosError::Validation { message },
+            CoreError::Store(message) => ArxosError::Store { message },
+            CoreError::Crypto(message) => ArxosError::Crypto { message },
+            CoreError::InvalidCid(message) => ArxosError::InvalidInput { message },
+            CoreError::Serialization(message) | CoreError::Deserialization(message) => {
+                ArxosError::Store { message }
+            }
+            CoreError::Schema(message) => ArxosError::Validation { message },
+            CoreError::Io(err) => ArxosError::Store {
+                message: err.to_string(),
+            },
+        }
+    }
+}
+
+impl From<arxos_networking::NetError> for ArxosError {
+    fn from(e: arxos_networking::NetError) -> Self {
+        ArxosError::Network {
+            message: e.to_string(),
+        }
+    }
+}
 
 uniffi::include_scaffolding!("arxos");
 
@@ -65,18 +121,18 @@ pub fn put_blob(
     store_path: String,
     data: Vec<u8>,
     content_type: Option<String>,
-) -> ObjectPutResult {
-    let store = ObjectStore::open(&store_path).expect("open store");
+) -> Result<ObjectPutResult, ArxosError> {
+    let store = ObjectStore::open(&store_path)?;
     let obj = Object::new(ObjectBody::Blob(BlobBody {
         content_type,
         data,
         properties: BTreeMap::new(),
     }));
-    let cid = store.put(&obj).expect("put object");
-    ObjectPutResult {
+    let cid = store.put(&obj)?;
+    Ok(ObjectPutResult {
         cid: cid.to_string(),
         object_type: "blob".into(),
-    }
+    })
 }
 
 /// Result of creating a signed root.
@@ -94,6 +150,20 @@ fn now_secs() -> u64 {
         .unwrap_or(0)
 }
 
+fn keypair_from_seed_hex(seed_hex: &str) -> Result<Keypair, ArxosError> {
+    let seed_bytes = hex::decode(seed_hex).map_err(|e| ArxosError::InvalidInput {
+        message: format!("invalid seed hex: {e}"),
+    })?;
+    if seed_bytes.len() != 32 {
+        return Err(ArxosError::InvalidInput {
+            message: format!("seed must be 32 bytes, got {}", seed_bytes.len()),
+        });
+    }
+    let mut seed = [0u8; 32];
+    seed.copy_from_slice(&seed_bytes);
+    Ok(Keypair::from_seed(seed))
+}
+
 /// Create and store a signed root from existing object CID strings.
 pub fn create_root(
     store_path: String,
@@ -101,33 +171,37 @@ pub fn create_root(
     object_cids: Vec<String>,
     seed_hex: String,
     message: Option<String>,
-) -> RootCreateResult {
-    let store = ObjectStore::open(&store_path).expect("open store");
-    let seed_bytes = hex::decode(&seed_hex).expect("seed hex");
-    assert_eq!(seed_bytes.len(), 32, "seed must be 32 bytes");
-    let mut seed = [0u8; 32];
-    seed.copy_from_slice(&seed_bytes);
-    let kp = Keypair::from_seed(seed);
+) -> Result<RootCreateResult, ArxosError> {
+    let store = ObjectStore::open(&store_path)?;
+    let kp = keypair_from_seed_hex(&seed_hex)?;
 
     let mut set = BTreeSet::new();
     for s in &object_cids {
-        set.insert(Cid::from_str(s).expect("cid"));
+        set.insert(Cid::from_str(s).map_err(|e| ArxosError::InvalidInput {
+            message: format!("invalid object cid '{s}': {e}"),
+        })?);
     }
     let count = set.len() as u64;
-    let bid = BuildingId::from_str(&building_id).expect("building id");
+    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
+        message: format!("invalid building id: {e}"),
+    })?;
 
     let mut builder = RootBuilder::new(bid.clone(), now_secs()).objects(set);
     if let Some(msg) = message {
         builder = builder.message(msg);
     }
-    let (obj, root_cid) = builder.build_signed(&kp).expect("sign root");
-    store.put(&obj).expect("store root");
+    let (obj, root_cid) = builder.build_signed(&kp)?;
+    {
+        let root = RootBody::from_object(&obj)?;
+        root.verify_with_store(&store)?;
+    }
+    store.put(&obj)?;
 
-    RootCreateResult {
+    Ok(RootCreateResult {
         root_cid: root_cid.to_string(),
         building_id: bid.to_string(),
         object_count: count,
-    }
+    })
 }
 
 /// Show a root as a summary string, or None if missing.
@@ -148,7 +222,7 @@ pub fn show_root(store_path: String, root_cid: String) -> Option<String> {
     ))
 }
 
-// ─── Phase 1 ───
+// ─── Building repository + capture ───
 
 /// Building summary for mobile UI.
 #[derive(Debug, Clone)]
@@ -172,22 +246,30 @@ fn summary_from_repo(repo: &BuildingRepository) -> FfiBuildingSummary {
 }
 
 /// Initialize a new building repository.
-pub fn init_building(store_path: String, name: Option<String>) -> FfiBuildingSummary {
-    let repo = BuildingRepository::init(&store_path, name, None).expect("init building");
-    summary_from_repo(&repo)
+pub fn init_building(
+    store_path: String,
+    name: Option<String>,
+) -> Result<FfiBuildingSummary, ArxosError> {
+    let repo = BuildingRepository::init(&store_path, name, None)?;
+    Ok(summary_from_repo(&repo))
 }
 
 /// Open an existing building and materialize its head working set.
-pub fn open_building(store_path: String, building_id: String) -> FfiBuildingSummary {
-    let bid = BuildingId::from_str(&building_id).expect("building id");
-    let repo = BuildingRepository::open(&store_path, &bid).expect("open building");
-    summary_from_repo(&repo)
+pub fn open_building(
+    store_path: String,
+    building_id: String,
+) -> Result<FfiBuildingSummary, ArxosError> {
+    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
+        message: e.to_string(),
+    })?;
+    let repo = BuildingRepository::open(&store_path, &bid)?;
+    Ok(summary_from_repo(&repo))
 }
 
 /// List buildings in a store.
-pub fn list_buildings(store_path: String) -> Vec<FfiBuildingSummary> {
-    BuildingRepository::list_buildings(&store_path)
-        .expect("list buildings")
+pub fn list_buildings(store_path: String) -> Result<Vec<FfiBuildingSummary>, ArxosError> {
+    let list = BuildingRepository::list_buildings(&store_path)?;
+    Ok(list
         .into_iter()
         .map(|r| FfiBuildingSummary {
             building_id: r.building_id.to_string(),
@@ -196,7 +278,7 @@ pub fn list_buildings(store_path: String) -> Vec<FfiBuildingSummary> {
             building_object: r.building_object.map(|c| c.to_string()),
             staged_count: 0,
         })
-        .collect()
+        .collect())
 }
 
 /// Capture put result.
@@ -221,22 +303,22 @@ pub fn capture_space(
     x: f64,
     y: f64,
     z: f64,
-) -> FfiCapturePutResult {
-    let bid = BuildingId::from_str(&building_id).expect("building id");
-    let mut repo = BuildingRepository::open(&store_path, &bid).expect("open");
-    let res = repo
-        .capture_space(&SpaceCapture {
-            name,
-            pose: pose(x, y, z),
-            bounds: None,
-            floor: None,
-            properties: BTreeMap::new(),
-        })
-        .expect("capture space");
-    FfiCapturePutResult {
+) -> Result<FfiCapturePutResult, ArxosError> {
+    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
+        message: e.to_string(),
+    })?;
+    let mut repo = BuildingRepository::open(&store_path, &bid)?;
+    let res = repo.capture_space(&SpaceCapture {
+        name,
+        pose: pose(x, y, z),
+        bounds: None,
+        floor: None,
+        properties: BTreeMap::new(),
+    })?;
+    Ok(FfiCapturePutResult {
         cid: res.cid.to_string(),
         object_type: res.object_type.to_string(),
-    }
+    })
 }
 
 /// Capture a text annotation at a world pose.
@@ -247,16 +329,16 @@ pub fn capture_annotation(
     x: f64,
     y: f64,
     z: f64,
-) -> FfiCapturePutResult {
-    let bid = BuildingId::from_str(&building_id).expect("building id");
-    let mut repo = BuildingRepository::open(&store_path, &bid).expect("open");
-    let res = repo
-        .capture_annotation(&AnnotationCapture::new(text, pose(x, y, z)))
-        .expect("capture annotation");
-    FfiCapturePutResult {
+) -> Result<FfiCapturePutResult, ArxosError> {
+    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
+        message: e.to_string(),
+    })?;
+    let mut repo = BuildingRepository::open(&store_path, &bid)?;
+    let res = repo.capture_annotation(&AnnotationCapture::new(text, pose(x, y, z)))?;
+    Ok(FfiCapturePutResult {
         cid: res.cid.to_string(),
         object_type: res.object_type.to_string(),
-    }
+    })
 }
 
 /// Capture a packed XYZ f32 little-endian point cloud.
@@ -267,24 +349,24 @@ pub fn capture_point_cloud(
     x: f64,
     y: f64,
     z: f64,
-) -> FfiCapturePutResult {
-    let bid = BuildingId::from_str(&building_id).expect("building id");
-    let mut repo = BuildingRepository::open(&store_path, &bid).expect("open");
+) -> Result<FfiCapturePutResult, ArxosError> {
+    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
+        message: e.to_string(),
+    })?;
+    let mut repo = BuildingRepository::open(&store_path, &bid)?;
     let mut properties = BTreeMap::new();
     properties.insert("format".into(), "xyz_f32_le".into());
     properties.insert("source".into(), "device".into());
-    let res = repo
-        .capture_point_cloud(&PointCloudCapture {
-            pose: pose(x, y, z),
-            bounds: None,
-            points_xyz_f32_le,
-            properties,
-        })
-        .expect("capture point cloud");
-    FfiCapturePutResult {
+    let res = repo.capture_point_cloud(&PointCloudCapture {
+        pose: pose(x, y, z),
+        bounds: None,
+        points_xyz_f32_le,
+        properties,
+    })?;
+    Ok(FfiCapturePutResult {
         cid: res.cid.to_string(),
         object_type: res.object_type.to_string(),
-    }
+    })
 }
 
 /// Commit staged captures to a new root.
@@ -301,16 +383,18 @@ pub fn commit_building(
     store_path: String,
     building_id: String,
     message: Option<String>,
-) -> FfiCommitSummary {
-    let bid = BuildingId::from_str(&building_id).expect("building id");
-    let mut repo = BuildingRepository::open(&store_path, &bid).expect("open");
-    let res = repo.commit(message).expect("commit");
-    FfiCommitSummary {
+) -> Result<FfiCommitSummary, ArxosError> {
+    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
+        message: e.to_string(),
+    })?;
+    let mut repo = BuildingRepository::open(&store_path, &bid)?;
+    let res = repo.commit(message)?;
+    Ok(FfiCommitSummary {
         root_cid: res.root_cid.to_string(),
         building_id: res.building_id.to_string(),
         object_count: res.object_count,
         previous_root: res.previous_root.map(|c| c.to_string()),
-    }
+    })
 }
 
 /// Annotation overlay data for AR.
@@ -332,11 +416,13 @@ pub fn annotations_near(
     y: f64,
     z: f64,
     radius_m: f64,
-) -> Vec<FfiAnnotationOverlay> {
-    let bid = BuildingId::from_str(&building_id).expect("building id");
-    let mut repo = BuildingRepository::open(&store_path, &bid).expect("open");
-    repo.annotations_near(&pose(x, y, z), radius_m)
-        .expect("annotations near")
+) -> Result<Vec<FfiAnnotationOverlay>, ArxosError> {
+    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
+        message: e.to_string(),
+    })?;
+    let mut repo = BuildingRepository::open(&store_path, &bid)?;
+    let hits = repo.annotations_near(&pose(x, y, z), radius_m)?;
+    Ok(hits
         .into_iter()
         .map(|h| FfiAnnotationOverlay {
             cid: h.cid.to_string(),
@@ -346,10 +432,10 @@ pub fn annotations_near(
             z: h.pose.position[2],
             distance_m: h.distance_m,
         })
-        .collect()
+        .collect())
 }
 
-// ─── Phase 1 Mobile Production Surface Expansion ───
+// ─── Mobile production surface ───
 
 #[derive(Debug, Clone)]
 pub struct FfiRoomPlanSurface {
@@ -416,16 +502,29 @@ pub struct PullResultSummary {
     pub adopted_root: Option<String>,
 }
 
-fn pose_from_transform(transform: &[f64]) -> Pose {
-    assert_eq!(transform.len(), 16, "transform matrix must have 16 elements");
-    
+fn pose_from_transform(transform: &[f64]) -> Result<Pose, ArxosError> {
+    if transform.len() != 16 {
+        return Err(ArxosError::InvalidInput {
+            message: format!(
+                "transform matrix must have 16 elements, got {}",
+                transform.len()
+            ),
+        });
+    }
+
     let tx = transform[12];
     let ty = transform[13];
     let tz = transform[14];
 
-    let m00 = transform[0]; let m10 = transform[4]; let m20 = transform[8];
-    let m01 = transform[1]; let m11 = transform[5]; let m21 = transform[9];
-    let m02 = transform[2]; let m12 = transform[6]; let m22 = transform[10];
+    let m00 = transform[0];
+    let m10 = transform[4];
+    let m20 = transform[8];
+    let m01 = transform[1];
+    let m11 = transform[5];
+    let m21 = transform[9];
+    let m02 = transform[2];
+    let m12 = transform[6];
+    let m22 = transform[10];
 
     let tr = m00 + m11 + m22;
 
@@ -459,22 +558,36 @@ fn pose_from_transform(transform: &[f64]) -> Pose {
         (qx, qy, qz, qw)
     };
 
-    let len = (qx*qx + qy*qy + qz*qz + qw*qw).sqrt();
+    let len = (qx * qx + qy * qy + qz * qz + qw * qw).sqrt();
     let orientation = if len > 0.0 {
         [qx / len, qy / len, qz / len, qw / len]
     } else {
         [0.0, 0.0, 0.0, 1.0]
     };
 
-    Pose {
+    Ok(Pose {
         position: [tx, ty, tz],
         orientation,
-    }
+    })
 }
 
-fn world_aabb_from_transform_and_dimensions(transform: &[f64], dimensions: &[f64]) -> Aabb {
-    assert_eq!(transform.len(), 16, "transform must be 4x4 matrix (16 elements)");
-    assert_eq!(dimensions.len(), 3, "dimensions must have 3 elements");
+fn world_aabb_from_transform_and_dimensions(
+    transform: &[f64],
+    dimensions: &[f64],
+) -> Result<Aabb, ArxosError> {
+    if transform.len() != 16 {
+        return Err(ArxosError::InvalidInput {
+            message: format!(
+                "transform must be 4x4 matrix (16 elements), got {}",
+                transform.len()
+            ),
+        });
+    }
+    if dimensions.len() != 3 {
+        return Err(ArxosError::InvalidInput {
+            message: format!("dimensions must have 3 elements, got {}", dimensions.len()),
+        });
+    }
     let w = dimensions[0] / 2.0;
     let h = dimensions[1] / 2.0;
     let d = dimensions[2] / 2.0;
@@ -502,18 +615,30 @@ fn world_aabb_from_transform_and_dimensions(transform: &[f64], dimensions: &[f64
         let py = transform[1] * cx + transform[5] * cy + transform[9] * cz + transform[13];
         let pz = transform[2] * cx + transform[6] * cy + transform[10] * cz + transform[14];
 
-        if px < min_x { min_x = px; }
-        if py < min_y { min_y = py; }
-        if pz < min_z { min_z = pz; }
-        if px > max_x { max_x = px; }
-        if py > max_y { max_y = py; }
-        if pz > max_z { max_z = pz; }
+        if px < min_x {
+            min_x = px;
+        }
+        if py < min_y {
+            min_y = py;
+        }
+        if pz < min_z {
+            min_z = pz;
+        }
+        if px > max_x {
+            max_x = px;
+        }
+        if py > max_y {
+            max_y = py;
+        }
+        if pz > max_z {
+            max_z = pz;
+        }
     }
 
-    Aabb {
+    Ok(Aabb {
         min: [min_x, min_y, min_z],
         max: [max_x, max_y, max_z],
-    }
+    })
 }
 
 /// Ingest RoomPlan structured surfaces and objects, group into a Space, and stage.
@@ -521,9 +646,11 @@ pub fn ingest_room_plan(
     store_path: String,
     building_id: String,
     geometry: RoomPlanGeometry,
-) -> IngestResult {
-    let bid = BuildingId::from_str(&building_id).expect("building id");
-    let mut repo = BuildingRepository::open(&store_path, &bid).expect("open");
+) -> Result<IngestResult, ArxosError> {
+    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
+        message: e.to_string(),
+    })?;
+    let mut repo = BuildingRepository::open(&store_path, &bid)?;
     let kp = repo.keypair().cloned();
 
     let mut surface_objs = Vec::new();
@@ -531,8 +658,8 @@ pub fn ingest_room_plan(
     let mut room_bounds: Option<Aabb> = None;
 
     for s in &geometry.surfaces {
-        let pose = pose_from_transform(&s.transform);
-        let bounds = world_aabb_from_transform_and_dimensions(&s.transform, &s.dimensions);
+        let pose = pose_from_transform(&s.transform)?;
+        let bounds = world_aabb_from_transform_and_dimensions(&s.transform, &s.dimensions)?;
 
         if let Some(ref mut rb) = room_bounds {
             rb.min[0] = rb.min[0].min(bounds.min[0]);
@@ -548,16 +675,25 @@ pub fn ingest_room_plan(
         let mut properties = BTreeMap::new();
         properties.insert("identifier".into(), s.id.clone());
         properties.insert("source".into(), "roomplan".into());
-        properties.insert("width".into(), s.dimensions.first().cloned().unwrap_or(0.0).to_string());
-        properties.insert("height".into(), s.dimensions.get(1).cloned().unwrap_or(0.0).to_string());
-        properties.insert("depth".into(), s.dimensions.get(2).cloned().unwrap_or(0.0).to_string());
+        properties.insert(
+            "width".into(),
+            s.dimensions.first().cloned().unwrap_or(0.0).to_string(),
+        );
+        properties.insert(
+            "height".into(),
+            s.dimensions.get(1).cloned().unwrap_or(0.0).to_string(),
+        );
+        properties.insert(
+            "depth".into(),
+            s.dimensions.get(2).cloned().unwrap_or(0.0).to_string(),
+        );
 
         surface_objs.push((s.category.clone(), pose, bounds, properties));
     }
 
     for o in &geometry.objects {
-        let pose = pose_from_transform(&o.transform);
-        let bounds = world_aabb_from_transform_and_dimensions(&o.transform, &o.dimensions);
+        let pose = pose_from_transform(&o.transform)?;
+        let bounds = world_aabb_from_transform_and_dimensions(&o.transform, &o.dimensions)?;
 
         if let Some(ref mut rb) = room_bounds {
             rb.min[0] = rb.min[0].min(bounds.min[0]);
@@ -567,7 +703,7 @@ pub fn ingest_room_plan(
             rb.max[1] = rb.max[1].max(bounds.max[1]);
             rb.max[2] = rb.max[2].max(bounds.max[2]);
         } else {
-            room_bounds = Some(bounds.clone());
+            room_bounds = Some(bounds);
         }
 
         let mut properties = BTreeMap::new();
@@ -577,7 +713,6 @@ pub fn ingest_room_plan(
         object_objs.push((o.category.clone(), pose, properties));
     }
 
-    // 2. Create the Space object
     let space_pose = if let Some(ref rb) = room_bounds {
         Pose {
             position: [
@@ -601,10 +736,9 @@ pub fn ingest_room_plan(
         properties: space_props,
     };
     let space_object = Object::new_with_created(ObjectBody::Space(space_body), 0);
-    let signed_space = maybe_sign(space_object, kp.as_ref()).expect("sign space");
-    let space_cid = repo.stage_captured_object(signed_space).expect("stage space").cid;
+    let signed_space = maybe_sign(space_object, kp.as_ref())?;
+    let space_cid = repo.stage_captured_object(signed_space)?.cid;
 
-    // 3. Create and stage all surfaces referencing space_cid
     let mut surface_cids = Vec::new();
     for (category, pose, bounds, properties) in surface_objs {
         let surface_body = SurfaceBody {
@@ -615,12 +749,11 @@ pub fn ingest_room_plan(
             properties,
         };
         let surface_object = Object::new_with_created(ObjectBody::Surface(surface_body), 0);
-        let signed_surface = maybe_sign(surface_object, kp.as_ref()).expect("sign surface");
-        let cid = repo.stage_captured_object(signed_surface).expect("stage surface").cid;
+        let signed_surface = maybe_sign(surface_object, kp.as_ref())?;
+        let cid = repo.stage_captured_object(signed_surface)?.cid;
         surface_cids.push(cid.to_string());
     }
 
-    // 4. Create and stage all objects referencing space_cid
     let mut object_cids = Vec::new();
     for (category, pose, mut properties) in object_objs {
         properties.insert("space".into(), space_cid.to_string());
@@ -632,16 +765,16 @@ pub fn ingest_room_plan(
             properties,
         };
         let equipment_object = Object::new_with_created(ObjectBody::Equipment(equipment_body), 0);
-        let signed_equipment = maybe_sign(equipment_object, kp.as_ref()).expect("sign equipment");
-        let cid = repo.stage_captured_object(signed_equipment).expect("stage equipment").cid;
+        let signed_equipment = maybe_sign(equipment_object, kp.as_ref())?;
+        let cid = repo.stage_captured_object(signed_equipment)?.cid;
         object_cids.push(cid.to_string());
     }
 
-    IngestResult {
+    Ok(IngestResult {
         space_cid: space_cid.to_string(),
         surface_cids,
         object_cids,
-    }
+    })
 }
 
 /// Query spatial volume for indexed objects.
@@ -654,34 +787,50 @@ pub fn query_spatial_volume(
     max_x: f64,
     max_y: f64,
     max_z: f64,
-) -> Vec<SpatialQueryResult> {
-    let bid = BuildingId::from_str(&building_id).expect("building id");
-    let repo = BuildingRepository::open(&store_path, &bid).expect("open");
-    let volume = arxos_core::QueryVolume::from_min_max(
-        [min_x, min_y, min_z],
-        [max_x, max_y, max_z],
-    );
+) -> Result<Vec<SpatialQueryResult>, ArxosError> {
+    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
+        message: e.to_string(),
+    })?;
+    let repo = BuildingRepository::open(&store_path, &bid)?;
+    let volume =
+        arxos_core::QueryVolume::from_min_max([min_x, min_y, min_z], [max_x, max_y, max_z]);
 
-    let hits = repo.query_volume(&volume).unwrap_or_default();
+    let hits = repo.query_volume(&volume)?;
     let mut out = Vec::new();
     for hit in hits {
         if let Ok(obj) = repo.store().get(&hit.object) {
             let object_type = obj.header.object_type.as_str().to_string();
             let (name, pose_pos, properties) = match &obj.body {
                 ObjectBody::Space(s) => {
-                    let pos = s.pose.as_ref().map(|p| p.position).unwrap_or([0.0, 0.0, 0.0]);
+                    let pos = s
+                        .pose
+                        .as_ref()
+                        .map(|p| p.position)
+                        .unwrap_or([0.0, 0.0, 0.0]);
                     (s.name.clone(), pos, s.properties.clone())
                 }
                 ObjectBody::Surface(s) => {
-                    let pos = s.pose.as_ref().map(|p| p.position).unwrap_or([0.0, 0.0, 0.0]);
+                    let pos = s
+                        .pose
+                        .as_ref()
+                        .map(|p| p.position)
+                        .unwrap_or([0.0, 0.0, 0.0]);
                     (None, pos, s.properties.clone())
                 }
                 ObjectBody::Equipment(e) => {
-                    let pos = e.pose.as_ref().map(|p| p.position).unwrap_or([0.0, 0.0, 0.0]);
+                    let pos = e
+                        .pose
+                        .as_ref()
+                        .map(|p| p.position)
+                        .unwrap_or([0.0, 0.0, 0.0]);
                     (e.name.clone(), pos, e.properties.clone())
                 }
                 ObjectBody::Annotation(a) => {
-                    let pos = a.pose.as_ref().map(|p| p.position).unwrap_or([0.0, 0.0, 0.0]);
+                    let pos = a
+                        .pose
+                        .as_ref()
+                        .map(|p| p.position)
+                        .unwrap_or([0.0, 0.0, 0.0]);
                     (a.text.clone(), pos, a.properties.clone())
                 }
                 _ => (None, [0.0, 0.0, 0.0], BTreeMap::new()),
@@ -703,7 +852,7 @@ pub fn query_spatial_volume(
             });
         }
     }
-    out
+    Ok(out)
 }
 
 /// Merge remote head root.
@@ -712,12 +861,16 @@ pub fn merge_building_root(
     building_id: String,
     other_root_cid: String,
     message: Option<String>,
-) -> MergeSummary {
-    let bid = BuildingId::from_str(&building_id).expect("building id");
-    let mut repo = BuildingRepository::open(&store_path, &bid).expect("open");
-    let other = Cid::from_str(&other_root_cid).expect("other root");
-    let res = repo.merge_root(other, message).expect("merge");
-    MergeSummary {
+) -> Result<MergeSummary, ArxosError> {
+    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
+        message: e.to_string(),
+    })?;
+    let mut repo = BuildingRepository::open(&store_path, &bid)?;
+    let other = Cid::from_str(&other_root_cid).map_err(|e| ArxosError::InvalidInput {
+        message: format!("invalid other root cid: {e}"),
+    })?;
+    let res = repo.merge_root(other, message)?;
+    Ok(MergeSummary {
         root_cid: res.root_cid.to_string(),
         object_count: res.object_count,
         kept: res.kept,
@@ -725,7 +878,7 @@ pub fn merge_building_root(
         spatial_index_root: res.spatial_index_root.map(|c| c.to_string()),
         parent_a: res.parents.0.to_string(),
         parent_b: res.parents.1.to_string(),
-    }
+    })
 }
 
 /// Pull a remote root closure using a temporary local Tokio executor runtime.
@@ -736,17 +889,17 @@ pub fn pull_remote_root(
     building_id: Option<String>,
     set_head: bool,
     allow_untrusted: bool,
-) -> PullResultSummary {
+) -> Result<PullResultSummary, ArxosError> {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
-        .expect("tokio runtime");
-    
+        .map_err(|e| ArxosError::Internal {
+            message: format!("tokio runtime: {e}"),
+        })?;
+
     rt.block_on(async move {
-        let node = arxos_networking::IrohNode::bind(std::path::Path::new(&store_path))
-            .await
-            .expect("bind client endpoint");
-        
+        let node = arxos_networking::IrohNode::bind(std::path::Path::new(&store_path)).await?;
+
         let result = arxos_networking::sync::pull_root_with_options(
             &node,
             &peer_ticket,
@@ -756,54 +909,45 @@ pub fn pull_remote_root(
             set_head,
             allow_untrusted,
         )
-        .await
-        .expect("pull remote root");
+        .await?;
 
         node.close().await;
 
-        PullResultSummary {
+        Ok(PullResultSummary {
             root_cid: result.root_cid.to_string(),
             objects_stored: result.objects_stored,
             objects_skipped: result.objects_skipped_existing,
             adopted_root: result.adopted.as_ref().map(|a| a.root_cid.to_string()),
-        }
+        })
     })
 }
 
 /// Export to USD file.
 pub fn export_usd(store_path: String, building_id: String, output_path: String) -> bool {
-    let bid = BuildingId::from_str(&building_id).ok();
-    if let Some(bid) = bid {
-        let opts = arxos_usd::ExportOptions::default();
-        if let Ok(content) = arxos_usd::export_building_usda(
-            std::path::Path::new(&store_path),
-            &bid,
-            &opts,
-        ) {
-            if std::fs::write(&output_path, content).is_ok() {
-                return true;
-            }
-        }
-    }
-    false
+    let Ok(bid) = BuildingId::from_str(&building_id) else {
+        return false;
+    };
+    let opts = arxos_usd::ExportOptions::default();
+    let Ok(content) =
+        arxos_usd::export_building_usda(std::path::Path::new(&store_path), &bid, &opts)
+    else {
+        return false;
+    };
+    std::fs::write(&output_path, content).is_ok()
 }
 
 /// Export to IFC file.
 pub fn export_ifc(store_path: String, building_id: String, output_path: String) -> bool {
-    let bid = BuildingId::from_str(&building_id).ok();
-    if let Some(bid) = bid {
-        let opts = arxos_ifc::ExportOptions::default();
-        if let Ok(content) = arxos_ifc::export_building_ifc(
-            std::path::Path::new(&store_path),
-            &bid,
-            &opts,
-        ) {
-            if std::fs::write(&output_path, content).is_ok() {
-                return true;
-            }
-        }
-    }
-    false
+    let Ok(bid) = BuildingId::from_str(&building_id) else {
+        return false;
+    };
+    let opts = arxos_ifc::ExportOptions::default();
+    let Ok(content) =
+        arxos_ifc::export_building_ifc(std::path::Path::new(&store_path), &bid, &opts)
+    else {
+        return false;
+    };
+    std::fs::write(&output_path, content).is_ok()
 }
 
 #[cfg(test)]
@@ -813,26 +957,34 @@ mod tests {
 
     #[test]
     fn test_matrix_to_pose_conversion() {
-        // Identity matrix
         let identity = vec![
-            1.0, 0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0, 0.0,
-            0.0, 0.0, 1.0, 0.0,
-            1.5, -2.0, 3.5, 1.0, // translation col 3
+            1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.5, -2.0, 3.5, 1.0,
         ];
-        let p = pose_from_transform(&identity);
+        let p = pose_from_transform(&identity).unwrap();
         assert_eq!(p.position, [1.5, -2.0, 3.5]);
-        // orientation should be identity [0, 0, 0, 1]
         assert!((p.orientation[0] - 0.0).abs() < 1e-5);
         assert!((p.orientation[1] - 0.0).abs() < 1e-5);
         assert!((p.orientation[2] - 0.0).abs() < 1e-5);
         assert!((p.orientation[3] - 1.0).abs() < 1e-5);
 
-        // Simple dimensions world-AABB check
         let dims = vec![2.0, 4.0, 6.0];
-        let bounds = world_aabb_from_transform_and_dimensions(&identity, &dims);
+        let bounds = world_aabb_from_transform_and_dimensions(&identity, &dims).unwrap();
         assert_eq!(bounds.min, [0.5, -4.0, 0.5]);
         assert_eq!(bounds.max, [2.5, 0.0, 6.5]);
+    }
+
+    #[test]
+    fn bad_transform_returns_error_not_panic() {
+        let err = pose_from_transform(&[1.0, 2.0]).unwrap_err();
+        assert!(matches!(err, ArxosError::InvalidInput { .. }));
+    }
+
+    #[test]
+    fn open_missing_building_returns_error() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().to_str().unwrap().to_string();
+        let err = open_building(path, "01NOTAREALBUILDINGID00000000".into()).unwrap_err();
+        assert!(matches!(err, ArxosError::NotFound { .. }));
     }
 
     #[test]
@@ -840,18 +992,14 @@ mod tests {
         let dir = tempdir().unwrap();
         let path = dir.path().to_str().unwrap().to_string();
 
-        let summary = init_building(path.clone(), Some("RoomPlan Site".into()));
+        let summary = init_building(path.clone(), Some("RoomPlan Site".into())).unwrap();
         let bid = summary.building_id;
 
-        // Generate geometry: 1 wall, 1 chair
         let wall = FfiRoomPlanSurface {
             id: "wall-1".into(),
             category: "wall".into(),
             transform: vec![
-                1.0, 0.0, 0.0, 0.0,
-                0.0, 1.0, 0.0, 0.0,
-                0.0, 0.0, 1.0, 0.0,
-                2.0, 0.0, 0.0, 1.0,
+                1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 2.0, 0.0, 0.0, 1.0,
             ],
             dimensions: vec![0.1, 2.5, 4.0],
         };
@@ -860,10 +1008,7 @@ mod tests {
             id: "chair-1".into(),
             category: "chair".into(),
             transform: vec![
-                1.0, 0.0, 0.0, 0.0,
-                0.0, 1.0, 0.0, 0.0,
-                0.0, 0.0, 1.0, 0.0,
-                0.0, 0.0, 0.0, 1.0,
+                1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
             ],
             dimensions: vec![0.6, 0.8, 0.6],
         };
@@ -873,22 +1018,20 @@ mod tests {
             objects: vec![chair.clone()],
         };
 
-        // Ingest first time
-        let res1 = ingest_room_plan(path.clone(), bid.clone(), geom1.clone());
+        let res1 = ingest_room_plan(path.clone(), bid.clone(), geom1.clone()).unwrap();
         assert!(!res1.space_cid.is_empty());
         assert_eq!(res1.surface_cids.len(), 1);
         assert_eq!(res1.object_cids.len(), 1);
 
-        // Commit to update spatial index
-        let commit = commit_building(path.clone(), bid.clone(), Some("RP commit".into()));
+        let commit = commit_building(path.clone(), bid.clone(), Some("RP commit".into())).unwrap();
         assert!(!commit.root_cid.is_empty());
 
-        // Perform query
-        let query_res = query_spatial_volume(path.clone(), bid.clone(), -5.0, -5.0, -5.0, 5.0, 5.0, 5.0);
-        assert_eq!(query_res.len(), 3); // space, surface, and equipment
+        let query_res =
+            query_spatial_volume(path.clone(), bid.clone(), -5.0, -5.0, -5.0, 5.0, 5.0, 5.0)
+                .unwrap();
+        assert_eq!(query_res.len(), 3);
 
-        // Verify CIDs are stable for identical inputs
-        let res2 = ingest_room_plan(path.clone(), bid.clone(), geom1);
+        let res2 = ingest_room_plan(path.clone(), bid.clone(), geom1).unwrap();
         assert_eq!(res1.space_cid, res2.space_cid);
         assert_eq!(res1.surface_cids[0], res2.surface_cids[0]);
         assert_eq!(res1.object_cids[0], res2.object_cids[0]);

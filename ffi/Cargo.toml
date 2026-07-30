@@ -21,7 +21,7 @@ arxos-ifc = { path = "../gateways/ifc" }
 uniffi = { version = "0.28", features = ["cli"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
 hex = "0.4"
-anyhow = "1"
+thiserror = { workspace = true }
 
 [[bin]]
 name = "uniffi-bindgen"

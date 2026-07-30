@@ -1,28 +1,67 @@
+[Error]
+interface ArxosError {
+    NotFound(string message);
+    Signature(string message);
+    Authorization(string message);
+    Validation(string message);
+    Store(string message);
+    Crypto(string message);
+    Network(string message);
+    InvalidInput(string message);
+    Internal(string message);
+};
+
 namespace arxos_core {
     string hello(string name);
     string version();
     string generate_building_id();
     KeypairData generate_keypair();
     string public_key_hex(KeypairData keypair);
+
+    [Throws=ArxosError]
     ObjectPutResult put_blob(string store_path, bytes data, string? content_type);
+
+    [Throws=ArxosError]
     RootCreateResult create_root(string store_path, string building_id, sequence<string> object_cids, string seed_hex, string? message);
+
     string? show_root(string store_path, string root_cid);
 
-    // Phase 1 — building repository + capture loop
+    [Throws=ArxosError]
     FfiBuildingSummary init_building(string store_path, string? name);
+
+    [Throws=ArxosError]
     FfiBuildingSummary open_building(string store_path, string building_id);
+
+    [Throws=ArxosError]
     sequence<FfiBuildingSummary> list_buildings(string store_path);
+
+    [Throws=ArxosError]
     FfiCapturePutResult capture_space(string store_path, string building_id, string? name, f64 x, f64 y, f64 z);
+
+    [Throws=ArxosError]
     FfiCapturePutResult capture_annotation(string store_path, string building_id, string text, f64 x, f64 y, f64 z);
+
+    [Throws=ArxosError]
     FfiCapturePutResult capture_point_cloud(string store_path, string building_id, bytes points_xyz_f32_le, f64 x, f64 y, f64 z);
+
+    [Throws=ArxosError]
     FfiCommitSummary commit_building(string store_path, string building_id, string? message);
+
+    [Throws=ArxosError]
     sequence<FfiAnnotationOverlay> annotations_near(string store_path, string building_id, f64 x, f64 y, f64 z, f64 radius_m);
 
-    // Phase 1 Mobile Production Surface Expansion
+    [Throws=ArxosError]
     IngestResult ingest_room_plan(string store_path, string building_id, RoomPlanGeometry geometry);
+
+    [Throws=ArxosError]
     sequence<SpatialQueryResult> query_spatial_volume(string store_path, string building_id, f64 min_x, f64 min_y, f64 min_z, f64 max_x, f64 max_y, f64 max_z);
+
+    [Throws=ArxosError]
     MergeSummary merge_building_root(string store_path, string building_id, string other_root_cid, string? message);
+
+    [Throws=ArxosError]
     PullResultSummary pull_remote_root(string store_path, string peer_ticket, string root_cid, string? building_id, boolean set_head, boolean allow_untrusted);
+
     boolean export_usd(string store_path, string building_id, string output_path);
     boolean export_ifc(string store_path, string building_id, string output_path);
 };
@@ -79,14 +118,14 @@ dictionary RoomPlanGeometry {
 
 dictionary FfiRoomPlanSurface {
     string id;
-    string category; // "wall", "floor", "ceiling", "door", "window"
-    sequence<f64> transform; // 16 float elements (4x4 column-major matrix)
-    sequence<f64> dimensions; // 3 float elements (width, height, depth)
+    string category;
+    sequence<f64> transform;
+    sequence<f64> dimensions;
 };
 
 dictionary FfiRoomPlanObject {
     string id;
-    string category; // object type category
+    string category;
     sequence<f64> transform;
     sequence<f64> dimensions;
 };

@@ -27,8 +27,11 @@ pub struct IndexEntry {
 ///   objects/
 ///     ab/
 ///       cdef...   # remaining hex of CID
-///   index.cbor    # optional thin index (rebuildable)
+///   index.cbor    # optional thin index (rebuildable; not updated on put)
 /// ```
+///
+/// The thin `index.cbor` is **not** maintained on the put hot path. Call
+/// [`ObjectStore::rebuild_index`] when an offline type/size catalog is needed.
 #[derive(Debug, Clone)]
 pub struct ObjectStore {
     root: PathBuf,
@@ -54,6 +57,9 @@ impl ObjectStore {
     }
 
     /// Put an object; returns its CID. Idempotent if content already present.
+    ///
+    /// Crash-safe on the same filesystem (temp file + rename). Does not update
+    /// the optional thin index — use [`rebuild_index`] when needed.
     pub fn put(&self, object: &Object) -> Result<Cid> {
         object.validate()?;
         let bytes = object.to_canonical_bytes()?;
@@ -69,7 +75,6 @@ impl ObjectStore {
         let tmp = path.with_extension("tmp");
         fs::write(&tmp, &bytes)?;
         fs::rename(&tmp, &path)?;
-        self.index_insert(&cid, object, bytes.len() as u64)?;
         Ok(cid)
     }
 
@@ -161,24 +166,17 @@ impl ObjectStore {
 
     fn save_index(&self, index: &BTreeMap<String, IndexEntry>) -> Result<()> {
         let bytes = to_canonical_cbor(index)?;
-        fs::write(self.index_path(), bytes)?;
+        let path = self.index_path();
+        let tmp = path.with_extension("tmp");
+        fs::write(&tmp, &bytes)?;
+        fs::rename(tmp, path)?;
         Ok(())
     }
 
-    fn index_insert(&self, cid: &Cid, object: &Object, size: u64) -> Result<()> {
-        let mut index = self.load_index()?;
-        index.insert(
-            cid.to_string(),
-            IndexEntry {
-                object_type: object.header.object_type,
-                schema_version: object.header.schema_version,
-                size,
-            },
-        );
-        self.save_index(&index)
-    }
-
-    /// Rebuild thin index by scanning all objects.
+    /// Rebuild the optional thin index by scanning all objects.
+    ///
+    /// The index is not required for CAS correctness; it is a rebuildable
+    /// catalog for tooling. Written atomically via temp + rename.
     pub fn rebuild_index(&self) -> Result<usize> {
         let mut index = BTreeMap::new();
         for cid in self.list_cids()? {
@@ -198,7 +196,7 @@ impl ObjectStore {
         Ok(n)
     }
 
-    /// Look up thin index entry if present.
+    /// Look up thin index entry if present (after [`rebuild_index`]).
     pub fn index_get(&self, cid: &Cid) -> Result<Option<IndexEntry>> {
         let index = self.load_index()?;
         Ok(index.get(&cid.to_string()).cloned())
@@ -243,5 +241,29 @@ mod tests {
         let store = ObjectStore::open(dir.path()).unwrap();
         let cid = Cid::from_canonical_bytes(b"nope");
         assert!(store.get(&cid).is_err());
+    }
+
+    #[test]
+    fn put_does_not_write_index_file() {
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        for i in 0..20u8 {
+            let obj = Object::new_with_created(
+                ObjectBody::Blob(BlobBody {
+                    content_type: None,
+                    data: vec![i],
+                    properties: BTreeMap::new(),
+                }),
+                i as u64,
+            );
+            store.put(&obj).unwrap();
+        }
+        assert!(
+            !store.index_path().exists(),
+            "put must not maintain index.cbor on the hot path"
+        );
+        let n = store.rebuild_index().unwrap();
+        assert_eq!(n, 20);
+        assert!(store.index_path().exists());
     }
 }

@@ -1222,8 +1222,8 @@ fn sync_main(cli: Cli) -> Result<()> {
                     let obj = store.get(&cid)?;
                     let root = RootBody::from_object(&obj)
                         .context("object is not a root")?;
-                    if let Err(e) = root.verify_authors() {
-                        eprintln!("warning: signature verify failed: {e}");
+                    if let Err(e) = root.verify_with_store(&store) {
+                        eprintln!("warning: root verification failed: {e}");
                     }
                     if json {
                         let summary = root_summary(root, &cid);

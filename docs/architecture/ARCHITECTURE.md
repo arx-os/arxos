@@ -124,11 +124,17 @@ To guarantee that identical geometry produces identical CIDs across different ru
 - Centroids are sorted stably, tie-breaking by CID comparison during splits.
 - Leaf node lists and child references are sorted deterministically.
 
-### 4.2 Incremental R-Tree Builder
-Instead of rebuilding the R-tree from scratch on every commit, new geometry is added via `insert_incremental` in $O(\log N)$ logarithmic write time:
-- **Structural Sharing**: Unchanged subtrees are reused by reference, keeping new index node allocations minimal.
-- **In-Memory Caching**: Reads and parent splits are cached inside an in-memory `RefCell<BTreeMap<Cid, Object>>` during insertion traversal.
-- **Reachability Garbage Collection**: A DFS sweep starting from the final mutated root CID checks the cache, flushing only reachable index nodes to the disk store. Unreferenced intermediate split states are discarded in-memory.
+### 4.2 Construction paths
+Two construction algorithms exist under `spatial::index`:
+
+| Path | Module | Used when |
+|------|--------|-----------|
+| **Full build** | `build_index` | Empty index, merge rebuild, explicit rebuild |
+| **Incremental** | `insert_incremental` | Day-to-day commits adding geometry |
+
+- **Structural sharing** (incremental): unchanged subtrees are reused by CID.
+- **Query equivalence**: refined queries over the same entry set must return the same object CIDs regardless of construction path (tested). Index *node* CIDs may differ between algorithms.
+- **Canonical full build** is preferred when determinism of the index root CID itself matters (e.g. merge).
 
 ---
 
@@ -148,13 +154,13 @@ Ingesting ARKit/RoomPlan geometry (Y-up, right-handed, meters) requires explicit
 - **World Bounding Box (AABB)**: Local boundary dimensions `[w, h, d]` are used to reconstruct the 8 local vertices `[+/- w/2, +/- h/2, +/- d/2]`. These are transformed to world coordinates via matrix multiplication, and the absolute minimum and maximum values along each axis are computed to yield a tight world-space `Aabb`.
 - **Timestamp Gating**: Ingested geometry structures are assigned a stable `created: 0` timestamp to ensure stable CID generation.
 
-### 6.2 Xcode Linking Gating
-The Swift façade utilizes a compile-time hard-gate to prevent debug shims from leaking into production:
-```swift
-#if !canImport(ArxosCoreFFI) && !ALLOW_SHIM
-#error("Real UniFFI backend (ArxosCoreFFI) is required for production builds. Define ALLOW_SHIM if you are working on UI styling / demo without the Rust backend.")
-#endif
-```
+### 6.2 iOS / UniFFI path
+There is **exactly one** store path: Swift façade → UniFFI (`ArxosError` / throws) → Rust `arxos-core` CAS.
+
+- Bindings are generated with `./ios/Arxos/Scripts/generate_bindings.sh` (requires `cargo build -p arxos-ffi`).
+- Low-level C API lives under `ios/Arxos/Sources/CArxosCoreFFI/`; generated Swift under `Sources/ArxosCore/Generated/` (gitignored — regenerate after UDL changes).
+- No parallel Swift CAS, no pseudo-CIDs, no `ALLOW_SHIM` fallback.
+- App call sites handle errors with `do/catch` (see `BuildingSession`).
 
 ---
 
@@ -181,4 +187,58 @@ Gateways project the canonical Arxos object graph into standardized engineering 
 
 ### 8.2 Current Design Limitations
 - **No Rendering**: Arxos does not perform 3D graphics rendering; geometry translation is limited to spatial reasoning, queries, and file export formats.
-- **Scope Limits**: True distributed multi-building spatial indexing, tree compression/packing, MEP system details in IFC export, and C++ OpenUSD bindings are explicitly out of scope.
+- **Index node CIDs**: Full rebuild vs incremental construction may produce different index-root CIDs for the same geometry; refined **query sets** are required to match (see §4.2).
+- **On-chain registry**: `BuildingRegistry` controllers are EVM addresses, not ed25519 building keys — not the same authorization model as roots.
+- **Single-writer store**: Concurrent writers on the same store path are not supported (no flock/daemon yet).
+
+---
+
+## 9. Engineering status & continuation map
+
+This section records **what is already true in the tree** and **where to work next**, so future development does not rediscover policy locations.
+
+### 9.1 Policy single sources of truth
+
+| Concern | Module / API |
+|---------|----------------|
+| Checkpoint interval & “should checkpoint?” | `core/src/root/checkpoint.rs` — `CHECKPOINT_INTERVAL`, `should_checkpoint_at` |
+| Root author authorization | `core/src/root/auth.rs` — `RootBody::verify_with_store` (use this from CLI, adopt, commit, merge) |
+| Sync / adopt completeness | `core/src/root/closure.rs` + `AdoptOptions::allow_partial` (default false) |
+| Merge multi-parent history | `RootBody::merge_parents`; linear walk still uses `previous_root` |
+| Spatial full rebuild | `core/src/spatial/index/build.rs` |
+| Spatial incremental insert | `core/src/spatial/index/incremental.rs` |
+| Spatial query | `core/src/spatial/index/query.rs` |
+| RoomPlan matrix → pose / AABB | `core/src/capture/mod.rs` (FFI only maps errors) |
+| Repository commit / adopt / meta / query | `core/src/repository/{commit,adopt,meta,query}.rs` |
+
+### 9.2 Completed hardening cycles (summary)
+
+1. Controller-key authorization on roots (fail closed).
+2. UniFFI `ArxosError` + throwing Swift façade; iOS demo against real CAS.
+3. Fail-closed root closures and incomplete adopt rejection.
+4. CAS put hot path no longer rewrites thin index.
+5. Merge records both parent tips.
+6. Deleted iOS `LocalStore` / shim entirely.
+7. Split root, repository, and spatial index god-modules into focused files.
+
+### 9.3 Recommended next engineering (ordered)
+
+1. Blob tiering for large geometry payloads (sync + Pi memory).
+2. Spatial fanout / split quality (keep query-equivalence tests).
+3. Store single-writer lock or edge daemon as exclusive writer.
+4. Structured `Error` variants (less stringly) for UniFFI.
+5. Controller rotation objects; optional transport↔author key binding.
+6. Align or deliberately separate on-chain registry from ed25519 controllers.
+7. Modularize `cli/src/main.rs` without behavior change.
+
+### 9.4 Verification commands
+
+```bash
+cargo test --workspace
+cargo build -p arxos-ffi
+./ios/Arxos/Scripts/generate_bindings.sh
+cd ios/Arxos && swift build && swift run ArxosDemo
+```
+
+### 8.3 Out of scope (unchanged product boundaries)
+- True distributed multi-building spatial indexing, tree compression/packing, full MEP IFC export, and native C++ OpenUSD bindings.

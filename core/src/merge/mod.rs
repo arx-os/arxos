@@ -171,29 +171,7 @@ pub fn merge_roots(
     merge_parents.insert(root_a);
     merge_parents.insert(root_b);
 
-    // Calculate checkpoint distance along the previous root line
-    let mut checkpoint_dist = 0;
-    let mut current = Some(previous);
-    let mut visited = BTreeSet::new();
-    while let Some(cid) = current {
-        if !visited.insert(cid) {
-            break;
-        }
-        if let Ok(obj) = store.get(&cid) {
-            if let Ok(root) = RootBody::from_object(&obj) {
-                if root.objects.is_some() {
-                    break;
-                }
-                checkpoint_dist += 1;
-                current = root.previous_root;
-            } else {
-                break;
-            }
-        } else {
-            break;
-        }
-    }
-    let is_checkpoint = checkpoint_dist >= 50;
+    let is_checkpoint = crate::root::should_checkpoint_at(store, Some(previous))?;
 
     let mut builder = RootBuilder::new(a.building_id.clone(), timestamp)
         .previous_root(previous)

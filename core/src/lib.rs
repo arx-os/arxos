@@ -37,8 +37,8 @@ pub use attest::{
     AttestationVerifier, DefaultAttestationVerifier, MockAttestationVerifier,
 };
 pub use capture::{
-    annotation_object, point_cloud_object, space_object, AnnotationCapture, PointCloudCapture,
-    SpaceCapture,
+    annotation_object, point_cloud_object, pose_from_column_major_matrix, space_object,
+    world_aabb_from_transform_and_dimensions, AnnotationCapture, PointCloudCapture, SpaceCapture,
 };
 pub use cid::Cid;
 pub use crypto::{AuthorSignature, Keypair, PublicKey, Signature};
@@ -55,8 +55,9 @@ pub use object::{
 pub use object::Aabb;
 pub use repository::{AdoptOptions, BuildingRecord, BuildingRepository, CaptureResult, CommitResult};
 pub use root::{
-    get_root_closure_blobs, get_root_closure_blobs_with_options, missing_active_objects,
-    resolve_controller_keys, ClosureOptions, ClosureResult, RootBody, RootBuilder,
+    distance_from_checkpoint, get_root_closure_blobs, get_root_closure_blobs_with_options,
+    missing_active_objects, resolve_controller_keys, should_checkpoint_at, should_emit_checkpoint,
+    ClosureOptions, ClosureResult, RootBody, RootBuilder, CHECKPOINT_INTERVAL,
 };
 pub use spatial::{QueryVolume, SpatialEntry, SpatialHit};
 pub use store::ObjectStore;

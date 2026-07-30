@@ -168,6 +168,136 @@ pub fn pose_distance(a: &Pose, b: &Pose) -> f64 {
     (dx * dx + dy * dy + dz * dz).sqrt()
 }
 
+/// Decompose a 4×4 column-major transform into a [`Pose`] (RoomPlan / ARKit).
+///
+/// `transform` must be 16 elements. Translation is column 3; rotation is the
+/// upper-left 3×3 converted to a unit quaternion `(x,y,z,w)`.
+pub fn pose_from_column_major_matrix(transform: &[f64]) -> crate::error::Result<Pose> {
+    if transform.len() != 16 {
+        return Err(crate::error::Error::Validation(format!(
+            "transform matrix must have 16 elements, got {}",
+            transform.len()
+        )));
+    }
+
+    let tx = transform[12];
+    let ty = transform[13];
+    let tz = transform[14];
+
+    let m00 = transform[0];
+    let m10 = transform[4];
+    let m20 = transform[8];
+    let m01 = transform[1];
+    let m11 = transform[5];
+    let m21 = transform[9];
+    let m02 = transform[2];
+    let m12 = transform[6];
+    let m22 = transform[10];
+
+    let tr = m00 + m11 + m22;
+
+    let (qx, qy, qz, qw) = if tr > 0.0 {
+        let s = (tr + 1.0).sqrt() * 2.0;
+        let qw = 0.25 * s;
+        let qx = (m21 - m12) / s;
+        let qy = (m02 - m20) / s;
+        let qz = (m10 - m01) / s;
+        (qx, qy, qz, qw)
+    } else if (m00 > m11) && (m00 > m22) {
+        let s = (1.0 + m00 - m11 - m22).sqrt() * 2.0;
+        let qw = (m21 - m12) / s;
+        let qx = 0.25 * s;
+        let qy = (m01 + m10) / s;
+        let qz = (m02 + m20) / s;
+        (qx, qy, qz, qw)
+    } else if m11 > m22 {
+        let s = (1.0 + m11 - m00 - m22).sqrt() * 2.0;
+        let qw = (m02 - m20) / s;
+        let qx = (m01 + m10) / s;
+        let qy = 0.25 * s;
+        let qz = (m12 + m21) / s;
+        (qx, qy, qz, qw)
+    } else {
+        let s = (1.0 + m22 - m00 - m11).sqrt() * 2.0;
+        let qw = (m10 - m01) / s;
+        let qx = (m02 + m20) / s;
+        let qy = (m12 + m21) / s;
+        let qz = 0.25 * s;
+        (qx, qy, qz, qw)
+    };
+
+    let len = (qx * qx + qy * qy + qz * qz + qw * qw).sqrt();
+    let orientation = if len > 0.0 {
+        [qx / len, qy / len, qz / len, qw / len]
+    } else {
+        [0.0, 0.0, 0.0, 1.0]
+    };
+
+    Ok(Pose {
+        position: [tx, ty, tz],
+        orientation,
+    })
+}
+
+/// Tight world-space AABB from a 4×4 column-major transform and local dimensions
+/// `(width, height, depth)` (RoomPlan surface/object extents).
+pub fn world_aabb_from_transform_and_dimensions(
+    transform: &[f64],
+    dimensions: &[f64],
+) -> crate::error::Result<Aabb> {
+    if transform.len() != 16 {
+        return Err(crate::error::Error::Validation(format!(
+            "transform must be 4x4 matrix (16 elements), got {}",
+            transform.len()
+        )));
+    }
+    if dimensions.len() != 3 {
+        return Err(crate::error::Error::Validation(format!(
+            "dimensions must have 3 elements, got {}",
+            dimensions.len()
+        )));
+    }
+    let w = dimensions[0] / 2.0;
+    let h = dimensions[1] / 2.0;
+    let d = dimensions[2] / 2.0;
+
+    let corners = [
+        [-w, -h, -d],
+        [w, -h, -d],
+        [-w, h, -d],
+        [w, h, -d],
+        [-w, -h, d],
+        [w, -h, d],
+        [-w, h, d],
+        [w, h, d],
+    ];
+
+    let mut min_x = f64::MAX;
+    let mut min_y = f64::MAX;
+    let mut min_z = f64::MAX;
+    let mut max_x = f64::MIN;
+    let mut max_y = f64::MIN;
+    let mut max_z = f64::MIN;
+
+    for [cx, cy, cz] in corners {
+        let px = transform[0] * cx + transform[4] * cy + transform[8] * cz + transform[12];
+        let py = transform[1] * cx + transform[5] * cy + transform[9] * cz + transform[13];
+        let pz = transform[2] * cx + transform[6] * cy + transform[10] * cz + transform[14];
+
+        min_x = min_x.min(px);
+        min_y = min_y.min(py);
+        min_z = min_z.min(pz);
+        max_x = max_x.max(px);
+        max_y = max_y.max(py);
+        max_z = max_z.max(pz);
+    }
+
+    Ok(Aabb {
+        min: [min_x, min_y, min_z],
+        max: [max_x, max_y, max_z],
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

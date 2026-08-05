@@ -188,8 +188,9 @@ Gateways project the canonical Arxos object graph into standardized engineering 
 ### 8.2 Current Design Limitations
 - **No Rendering**: Arxos does not perform 3D graphics rendering; geometry translation is limited to spatial reasoning, queries, and file export formats.
 - **Index node CIDs**: Full rebuild vs incremental construction may produce different index-root CIDs for the same geometry; refined **query sets** are required to match (see §4.2).
-- **On-chain registry**: `BuildingRegistry` controllers are EVM addresses, not ed25519 building keys — not the same authorization model as roots.
+- **No blockchain settlement**: EVM material is archived under `archive/contracts-evm-deprecated/`; authorization remains ed25519 `Building.controller_keys`.
 - **Single-writer store**: Concurrent writers on the same store path are not supported (no flock/daemon yet).
+- **Money / KYC / entitlements**: never stored in the object CAS (see ADR-001).
 
 ---
 
@@ -210,6 +211,7 @@ This section records **what is already true in the tree** and **where to work ne
 | Spatial query | `core/src/spatial/index/query.rs` |
 | RoomPlan matrix → pose / AABB | `core/src/capture/mod.rs` (FFI only maps errors) |
 | Repository commit / adopt / meta / query | `core/src/repository/{commit,adopt,meta,query}.rs` |
+| Contributor scoring (points, diagnostic) | `core/src/scoring/mod.rs` — pure function of store + root + policy version |
 
 ### 9.2 Completed hardening cycles (summary)
 
@@ -228,8 +230,11 @@ This section records **what is already true in the tree** and **where to work ne
 3. Store single-writer lock or edge daemon as exclusive writer.
 4. Structured `Error` variants (less stringly) for UniFFI.
 5. Controller rotation objects; optional transport↔author key binding.
-6. Align or deliberately separate on-chain registry from ed25519 controllers.
+6. Multi-signal scoring + control-plane points/fiat ledger (P1; scoring is diagnostic-only today).
 7. Modularize `cli/src/main.rs` without behavior change.
+
+Pure-fiat split: [`ADR-001-data-plane-vs-control-plane.md`](ADR-001-data-plane-vs-control-plane.md).  
+Audit: [`FIAT_MODEL_AUDIT.md`](FIAT_MODEL_AUDIT.md).
 
 ### 9.4 Verification commands
 

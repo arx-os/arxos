@@ -85,10 +85,10 @@ store (`meta/buildings/<building_id>.cbor`). The object graph itself is pure CAS
 - Device keys are ed25519 keypairs (seed stored at `keys/device.seed`, mode
   `0600` on Unix).
 - Only keys in `Building.controller_keys` may advance the building head.
-- Controllers are **rotatable without re-init**: a current controller can
-  `add_controller_key` (stages a new Building object + removes the old), then
-  commit. The new device can then author roots. Sole-controller loss still
-  requires offline recovery (`allow_untrusted` adopt) — not automated.
+- Controllers can be **added and removed** without re-init (current controller
+  must sign the change). Removing the last controller is rejected. Losing all
+  controller seeds requires offline recovery (`allow_untrusted` adopt) — not
+  automated.
 - Object gets recompute the CID on read; mismatched bytes fail.
 - Sync closures fail closed if active objects or the spatial index root are
   missing (unless an explicit partial option is set).
@@ -99,6 +99,9 @@ store (`meta/buildings/<building_id>.cbor`). The object graph itself is pure CAS
 - **Discovery:** LAN mDNS (`_arxos._udp.local.`).
 - **Operation:** pull a root closure (history back to the nearest checkpoint +
   active objects + spatial index nodes), verify CIDs on the wire, adopt head.
+- **Metadata-first:** `arx net fetch … --metadata-only` pulls domain objects
+  without `Blob` payloads (point-cloud / mesh bytes). Default remains a full
+  pull including blobs. Blobs can be fetched later by CID when needed.
 - Source of truth remains the local CAS; networking only moves bytes.
 
 ### Scoring (DePIN data plane, fiat settlement)
@@ -190,13 +193,18 @@ Common commands (see `cargo run -p arxos-cli -- --help` for the full surface):
 
 | Area | Examples |
 |------|----------|
-| Building | `building init`, `building list`, `building near` |
-| Capture | `capture simulate`, `capture annotate` |
+| Building | `building init`, `building list`, `building show`, `building near` |
+| Controllers | `building add-controller`, `building remove-controller`, `building controllers` |
+| Entities | `entity list`, `entity remove` (commits by default; `--no-commit` to stage only) |
+| Capture | `capture simulate`, `capture annotation`, `capture point-cloud` |
 | Roots | `root show`, `merge plan` / `merge apply` |
 | Integrity | `verify`, `attest` |
 | Economy (data plane) | `score` |
 | Export | `export usd`, `export ifc` |
-| Net | sync / discovery commands under the networking feature set |
+| Net | `net serve`, `net fetch --peer … --root … [--metadata-only]`, `net peers` |
+
+CLI source layout: `cli/src/main.rs` (entry), `cli/src/args.rs` (clap),
+`cli/src/commands/` (handlers), `cli/src/util.rs` (helpers).
 
 Store layout:
 
@@ -226,8 +234,9 @@ $ARXOS_STORE/
 ### Storage policy
 
 - Single object max size: **4 MiB** (`MAX_OBJECT_BYTES`). Oversized puts fail closed.
-- New point-cloud captures **tier** raw bytes into a separate `Blob` object; the
-  domain `PointCloudChunk` stays skinny and references `points_blob`.
+- New point-cloud and mesh captures **tier** raw bytes into separate `Blob`
+  objects; domain objects stay skinny (`points_blob` / `vertices_blob` /
+  `indices_blob`). Legacy inline payloads still deserialize.
 - Root closures support metadata-first pulls (`ClosureOptions::include_blobs =
   false`) that omit Blob payloads while still transferring domain objects.
 - **Single-writer lock**: `BuildingRepository` takes an exclusive flock on
@@ -245,7 +254,8 @@ per store path.
 
 ### Known hardening targets (not promises)
 
-- Controller **removal** / multi-sig rotation policy
+- Multi-sig / delayed controller rotation policy
+- On-demand blob fetch CLI convenience (raw object get already works by CID)
 - Multi-signal scoring (still points only; still offline-replayable)
 
 ---
@@ -299,13 +309,13 @@ cargo test --workspace
 | Object schema / CID / crypto | `core/src/object`, `canonical`, `cid`, `crypto` |
 | Entity identity / collapse | `core/src/entity.rs` |
 | Roots, auth, checkpoints, closures | `core/src/root/` |
-| Commit / adopt / query | `core/src/repository/` |
+| Commit / adopt / query / controllers | `core/src/repository/` |
 | Spatial index | `core/src/spatial/` |
-| Capture conversion | `core/src/capture/` |
+| Capture conversion (incl. blob tiering) | `core/src/capture/` |
 | Merge | `core/src/merge/` |
 | Scoring | `core/src/scoring/` |
 | Sync protocol | `networking/` |
-| CLI | `cli/src/main.rs` |
+| CLI | `cli/src/{main,args,util,commands}.rs` |
 
 ---
 

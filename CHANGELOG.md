@@ -17,7 +17,8 @@
 ### Changed
 
 - Economic model: DePIN contribution → scoring; **fiat** settlement (not tokens).
-  See `docs/architecture/ADR-001-fiat-settled-depin.md`.
+  Public product identity and architecture live in the root `README.md` only.
+- Design notes / ADRs are local-only (`docs/` gitignored); not part of the public tree.
 
 ### Notes
 

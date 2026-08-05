@@ -1,129 +1,290 @@
 # Arxos
 
-Arxos is a **DePIN for the built environment**: a local-first, content-addressed spatial data repository for capturing, versioning, verifying, and scoring real-world building geometry and annotations. Physical space captures map to signed, cryptographically linked state graphs.
+**Arxos is a local-first content-addressed as-built repository.**
+
+It stores signed, versioned building state as a content-addressed graph of
+objects, supports multi-device offline capture and sync, and produces
+offline-replayable contribution scores that can drive **fiat** rewards for
+real-world data contribution.
+
+| Arxos **is** | Arxos **is not** |
+|--------------|------------------|
+| A local CAS of immutable building objects (BLAKE3 CIDs over canonical CBOR) | A Git repository of YAML files |
+| Signed delta roots with controller authorization | A blockchain or token mint |
+| Multi-device offline capture + P2P pull sync | A mandatory cloud service |
+| Deterministic scoring for fiat ops (off-band) | An on-chain reward / `$AXD` economy |
 
 ---
 
-## 1. Project Status
+## Status
 
-Arxos is foundation-complete for the core pipeline (local content-addressed store, RoomPlan geometry ingestion, delta root materialization, spatial query, multi-device synchronization, and gateway format export). It is an experimental codebase and is **not** a production-ready CAD platform or finished consumer mobile app.
+Foundation-complete for the core data plane: local CAS, RoomPlan geometry
+ingestion, delta root materialization, spatial query, multi-device pull sync
+(Iroh QUIC + mDNS), and gateway export (OpenUSD / IFC subset).
 
-### 1.1 Economic model (DePIN, fiat settlement)
-
-The technical architecture remains contribution → verification → **scoring**. The economic settlement layer is **fiat**, not tokens:
-
-| Role | Economics |
-|------|-----------|
-| **Data buyers** | Pay **fiat** for access to data and derived products. |
-| **Contributors** | Submit real-world building/spatial data; scoring produces **points** / reputation signals. |
-| **Rewards** | Contributors are paid in **fiat** according to scored value (ops-controlled; off-band). |
-| **Tokens / chain** | **None.** No minting, wallets, or blockchain settlement of rewards. |
-
-See [`docs/architecture/ADR-001-fiat-settled-depin.md`](docs/architecture/ADR-001-fiat-settled-depin.md).
-
-**Scoring today is diagnostic only** (`arx score`). Do not treat type-count scores as a payment basis.
-
-### 1.2 Recently landed (integrity & structure)
-
-| Area | Status |
-|------|--------|
-| Root **authorization** (`Building.controller_keys`) | Fail-closed on commit / adopt / merge |
-| **UniFFI** error surface (`ArxosError`) | Throwing APIs; no panics on ordinary store failures |
-| **Fail-closed sync closures** | Incomplete closures rejected unless `allow_partial` |
-| CAS **index off put hot path** | Optional `index.cbor` rebuild-on-demand only |
-| **Merge parents** on `RootBody` | Concurrent tips recorded |
-| **iOS real store only** | UniFFI → Rust CAS only |
-| **P0 crypto→fiat course correction** | EVM contracts archived; `depin` → `scoring`; CLI `score` / `verify` / `attest` |
-
-Details: [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md) §9.
-
-### 1.3 Sensible next increments
-
-1. **Multi-signal scoring** — depth, coverage, attestation, review (still points/reputation in core).  
-2. **Blob tiering** — externalize point-cloud / mesh bytes for mobile and edge sync.  
-3. **Spatial index hardening** — higher fanout / better splits; keep query-equivalence tests.  
-4. **Store concurrency** — single-writer flock or local daemon.  
-5. **Structured errors** — typed variants for cleaner UniFFI mapping.  
-6. **Controller rotation & multi-device policy** — signed controller-set updates.  
-7. **CLI modularization** — split the monofile CLI into subcommand modules.
+This is an experimental codebase — **not** a production CAD platform or
+finished consumer mobile app. Scoring is **diagnostic only** today; do not use
+type-count scores as a payment basis.
 
 ---
 
-## 2. Core Concepts
+## Architecture (what actually exists)
 
-- **Content-Addressed Objects**: Immutable data identified by BLAKE3-256 CIDs over canonical CBOR.
-- **Signed Delta Roots with Checkpoints**: Repository commits with delta adds/removes; full-set checkpoints every `CHECKPOINT_INTERVAL` (50).
-- **Authorized roots**: Authors must be in `Building.controller_keys`.
-- **Incremental Spatial Indexing**: Versioned R-tree as content-addressed nodes.
-- **Local-First, Databaseless Path**: Capture and query run on local CAS files.
-- **Gateway Projections**: OpenUSD and IFC export/import with identity preserved.
-- **Contributor scoring**: Deterministic points reports (`arxos_core::scoring`) for DePIN contribution attribution; fiat settlement is off-band.
+```
+┌─────────────────────────────────────────────────────────────┐
+│              Capture clients (iOS RoomPlan / CLI)           │
+│                            │                                │
+│                            ▼                                │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │                   arxos-core (Rust)                     │ │
+│ │  Objects · CIDs · signed Roots · R-tree · scoring       │ │
+│ └──────┬──────────────────────────────┬───────────────────┘ │
+│        │                              │                     │
+│        ▼                              ▼                     │
+│ ┌──────────────┐              ┌──────────────────────┐      │
+│ │ Local Object │              │  Networking fabric   │      │
+│ │ Store (CAS)  │◄────────────►│  Iroh QUIC + mDNS    │      │
+│ └──────────────┘              └──────────────────────┘      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Data model
+
+Every record is an **immutable object**: header + typed body, serialized as
+canonical CBOR. Its **CID** is `b3:` + hex(BLAKE3-256 of those bytes).
+
+Important types include: `Building`, `Floor`, `Space`, `Surface`, `Opening`,
+`Equipment`, `Annotation`, `PointCloudChunk`, `Mesh`, `SpatialIndexNode`,
+`Root`, `Provenance`, `Blob`.
+
+Cross-object references are always CIDs (or, as the model hardens, stable
+entity IDs that point at the current version CID).
+
+### Roots (version control)
+
+A **Root** is a signed commit for one building:
+
+- **Delta commits** carry `added` / `removed` CID sets relative to the parent.
+- **Checkpoints** (every 50 commits, and on the first commit) store the full
+  active object set so materialization stays bounded.
+- **Authors** must present valid ed25519 signatures **and** be listed in
+  `Building.controller_keys` (fail closed on commit, adopt, and merge).
+- Concurrent tips can be merged; both parents are recorded in `merge_parents`.
+
+The head pointer for each building lives in a small metadata file under the
+store (`meta/buildings/<building_id>.cbor`). The object graph itself is pure CAS.
+
+### Controllers & integrity
+
+- Device keys are ed25519 keypairs (seed stored at `keys/device.seed`, mode
+  `0600` on Unix).
+- Only keys in `Building.controller_keys` may advance the building head.
+- Object gets recompute the CID on read; mismatched bytes fail.
+- Sync closures fail closed if active objects or the spatial index root are
+  missing (unless an explicit partial option is set).
+
+### Sync
+
+- **Transport:** Iroh QUIC (ALPN `arxos/sync/1`), length-prefixed CBOR messages.
+- **Discovery:** LAN mDNS (`_arxos._udp.local.`).
+- **Operation:** pull a root closure (history back to the nearest checkpoint +
+  active objects + spatial index nodes), verify CIDs on the wire, adopt head.
+- Source of truth remains the local CAS; networking only moves bytes.
+
+### Scoring (DePIN data plane, fiat settlement)
+
+Contribution → verification → **scoring** → fiat payout **outside this repo**.
+
+- `arxos_core::scoring` attributes signed objects under a root and produces a
+  deterministic `ScoreReport` (points / reputation signals).
+- Settlement is **fiat**, ops-controlled, and never stored in CIDs or objects.
+- No native token, mint path, wallet settlement, or chain rewards.
+- Current weights are type-count heuristics — diagnostic only.
+
+### Capture
+
+iOS RoomPlan / ARKit transforms are converted in pure Rust
+(`pose_from_column_major_matrix`, world AABB from local extents) into Space,
+PointCloudChunk, and Annotation objects. There is no general 3D renderer in
+Arxos; geometry is data for query, export, and scoring.
+
+### Gateways
+
+| Gateway | Role |
+|---------|------|
+| **OpenUSD** (`arxos-usd`) | USDA ASCII export/import; identity via `arxos:cid` metadata |
+| **IFC** (`arxos-ifc`) | IFC4 STEP subset (Project/Site/Storey/Space); `Pset_ArxosIdentity` |
 
 ---
 
-## 3. Repository Layout
+## Repository layout
 
 ```
 arxos/
 ├── core/           # arxos-core: CAS, roots, spatial index, scoring
-├── ffi/            # UniFFI bindings (iOS RoomPlan bridge)
-├── gateways/       # Interop translators
-│   ├── usd/        # OpenUSD (USDA) ASCII
-│   └── ifc/        # IFC4 STEP
-├── networking/     # QUIC sync via Iroh
+├── ffi/            # UniFFI bindings (iOS)
+├── gateways/       # usd, ifc interop
+├── networking/     # Iroh + mDNS sync
 ├── cli/            # arx CLI
 ├── ios/            # SwiftUI capture client
-├── edge/           # Edge node packaging
-├── archive/        # Historical material (not built)
-│   └── contracts-evm-deprecated/
-└── docs/           # Architecture, ADR, schema
+├── edge/           # Edge node packaging / tools
+└── archive/        # Historical material (not built), e.g. deprecated EVM
 ```
+
+Deep design notes and ADRs live in a **local-only** `docs/` tree (gitignored).
+The public documentation surface is this README.
 
 ---
 
-## 4. Quick Start
+## Build & test
+
+Requirements: Rust 1.75+, cargo. Optional: iOS toolchain for mobile bindings.
 
 ```bash
 cargo build --release
 cargo test --workspace --release
 ```
 
-```bash
-export ARXOS_STORE=/tmp/arxos-store
+iOS bindings (optional):
 
-BID=$(cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" building init --name "Main Hall" --quiet)
-cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" capture simulate "$BID" --commit
-cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" building near "$BID" --x 1.2 --y 1.4 --z 1.1 --radius 5
-cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" score "$BID"
+```bash
+cargo build -p arxos-ffi
+./ios/Arxos/Scripts/generate_bindings.sh
 ```
 
 ---
 
-## 5. Capabilities & Limitations
+## Quick start
 
-| Capability | Technical Guarantee | Limitation / Out-of-Scope |
-|------------|---------------------|---------------------------|
-| **Data Integrity** | BLAKE3 CIDs; fail-closed root auth | Key recovery/rotation out of scope |
-| **Commit Scalability** | Delta roots + N=50 checkpoints; O(log N) index updates | Multi-building distributed spatial index out of scope |
-| **Synchronization** | Bounded pull to nearest checkpoint | Global DHT gossip out of scope |
-| **Geometry Ingestion** | RoomPlan matrices → pose / AABB | No built-in 3D renderer |
-| **Interoperability** | USDA / IFC4 with CID identity | Full MEP IFC / native C++ USD out of scope |
-| **Settlement** | Scores support fiat rewards (off-band) | No token mint; no in-repo billing product |
+```bash
+export ARXOS_STORE=/tmp/arxos-store
+
+# Initialize a building (prints building id)
+BID=$(cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" building init --name "Main Hall" --quiet)
+
+# Simulated capture + commit
+cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" capture simulate "$BID" --commit
+
+# Spatial query near a point
+cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" building near "$BID" \
+  --x 1.2 --y 1.4 --z 1.1 --radius 5
+
+# Diagnostic contribution score
+cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" score "$BID"
+
+# Verify head integrity
+cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" verify "$BID"
+```
+
+Common commands (see `cargo run -p arxos-cli -- --help` for the full surface):
+
+| Area | Examples |
+|------|----------|
+| Building | `building init`, `building list`, `building near` |
+| Capture | `capture simulate`, `capture annotate` |
+| Roots | `root show`, `merge plan` / `merge apply` |
+| Integrity | `verify`, `attest` |
+| Economy (data plane) | `score` |
+| Export | `export usd`, `export ifc` |
+| Net | sync / discovery commands under the networking feature set |
+
+Store layout:
+
+```text
+$ARXOS_STORE/
+  objects/ab/cdef…     # CAS fan-out by CID hex
+  meta/buildings/…     # head pointers (BuildingRecord)
+  keys/device.seed     # ed25519 seed (0600)
+  index.cbor           # optional thin catalog (rebuild-on-demand)
+```
 
 ---
 
-## 6. Documentation Map
+## Capabilities & Phase-0 boundaries
 
-- **ADR-001 (fiat-settled DePIN)**: [`docs/architecture/ADR-001-fiat-settled-depin.md`](docs/architecture/ADR-001-fiat-settled-depin.md)
-- **Architecture Overview**: [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md)
-- **Object Schema Spec**: [`docs/schema/object-schema.md`](docs/schema/object-schema.md)
-- **Changelog**: [`CHANGELOG.md`](CHANGELOG.md)
+| Area | Guaranteed today | Explicit non-goals (Phase 0) |
+|------|------------------|------------------------------|
+| Integrity | BLAKE3 CIDs; fail-closed root auth | Full key recovery UX |
+| Commits | Delta roots + N=50 checkpoints | Multi-building distributed spatial index |
+| Sync | Bounded pull to nearest checkpoint | Global DHT / gossip mesh |
+| Capture | RoomPlan matrices → pose / AABB | Dense LiDAR ML segmentation pipeline |
+| Interop | USDA / IFC4 subset with CID identity | Full MEP IFC; native C++ OpenUSD |
+| Settlement | Offline scores for fiat ops | Tokens, minting, in-repo billing |
+| Rendering | Spatial query + file export | Built-in 3D viewer / game engine |
+| Edge | Local store + export tools | Full Pi image product (in progress) |
+
+### Known hardening targets (not promises)
+
+- Stable entity identity + remove/replace of version heads
+- Blob tiering for large point clouds / meshes
+- Single-writer store lock and long-running edge `serve`
+- Controller rotation / multi-device key policy
+- Multi-signal scoring (still points only; still offline-replayable)
 
 ---
 
-## 7. License
+## Economic model
+
+| Role | Economics |
+|------|-----------|
+| **Data buyers** | Pay **fiat** for access to data and derived products (off-band) |
+| **Contributors** | Submit real-world building / spatial data |
+| **Scoring** | Deterministic points for attribution (`arx score`) |
+| **Rewards** | Fiat, ops-controlled; never written into the object graph |
+| **Tokens / chain** | **None** |
+
+Archived EVM material under `archive/contracts-evm-deprecated/` is historical
+reference only and is not built or shipped.
+
+---
+
+## Contributing
+
+1. **Keep it tight.** Prefer deleting surface area over adding it. No renderers,
+   drivers, token layers, or SaaS control planes without a clear need.
+2. **Preserve determinism.** CIDs must be pure functions of object bytes. Do not
+   put wall-clock or non-deterministic data into hashed content unless the path
+   is explicitly gated and tested.
+3. **Fail closed.** Authorization, signature, and closure completeness checks
+   stay mandatory defaults.
+4. **Offline-first.** Features must work without a cloud dependency. Prefer pure
+   functions for scoring and validation.
+5. **Public docs = this README.** Design notes and ADRs stay local (`docs/` is
+   gitignored). If a change alters public behavior, update this README in the
+   same change.
+
+### Workflow
+
+```bash
+# Branch from main
+git checkout -b feat/your-change
+
+# Develop with tests
+cargo test --workspace
+
+# Open a PR with a short description of intent and any README updates
+```
+
+### Code map (where to start)
+
+| Concern | Location |
+|---------|----------|
+| Object schema / CID / crypto | `core/src/object`, `canonical`, `cid`, `crypto` |
+| Roots, auth, checkpoints, closures | `core/src/root/` |
+| Commit / adopt / query | `core/src/repository/` |
+| Spatial index | `core/src/spatial/` |
+| Capture conversion | `core/src/capture/` |
+| Merge | `core/src/merge/` |
+| Scoring | `core/src/scoring/` |
+| Sync protocol | `networking/` |
+| CLI | `cli/src/main.rs` |
+
+---
+
+## License
 
 Licensed under either of:
+
 - Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0)
 - MIT license (http://opensource.org/licenses/MIT)
 

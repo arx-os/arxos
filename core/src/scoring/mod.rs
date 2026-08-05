@@ -5,8 +5,7 @@
 //! Scoring attributes contributions under a root and produces **points** /
 //! reputation-style aggregates. Settlement is **fiat** (not tokens): ops may
 //! use scores later to pay contributors in fiat. This module never embeds
-//! money in the CAS. See
-//! [`ADR-001`](../../../docs/architecture/ADR-001-fiat-settled-depin.md).
+//! money in the CAS. See the root README (economic model).
 //!
 //! # Determinism
 //!

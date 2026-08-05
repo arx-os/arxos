@@ -25,6 +25,9 @@ ios/Arxos/Sources/ArxosCore/Generated/
 .env.*
 !.env.example
 
+# Local-only design notes, ADRs, progress trackers (never commit)
+/docs/
+
 # Misc
 *.log
 .coverage/

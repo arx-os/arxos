@@ -9,7 +9,7 @@ tokenomics suite removed in the greenfield rewrite). Historical reference only.
 
 - **Do not** build, deploy, or extend these contracts for product features.  
 - **Do not** reintroduce them into the Cargo workspace or CI.  
-- Product docs: [`docs/architecture/ADR-001-fiat-settled-depin.md`](../../docs/architecture/ADR-001-fiat-settled-depin.md)
+- Product identity / economic model: root [`README.md`](../../README.md)
 
 ## Contents (snapshot)
 

@@ -1,19 +1,17 @@
 # arxos-core
 
-Core library for the Arxos DePIN spatial data repository.
+Core library for Arxos: local-first content-addressed as-built repository.
 
 ## Responsibilities
 
-- **Content Addressing**: Canonical CBOR serialization and BLAKE3 CID generation.
-- **Object Schema**: Space, Surface, Equipment, BoundingVolume, and signature verification.
-- **Root Management**: Delta roots, materialization walks, checkpoint policies, sync closures.
-- **Spatial Index**: Incremental R-tree builds, query, and related policies.
-- **Repository**: BuildingRecord, WorkingSet, active object cache.
-- **Scoring**: Deterministic contributor points reports (`scoring` module). Diagnostic type-count
-  weights today — not a payment basis; never embeds fiat amounts in objects.
+- **Content addressing**: Canonical CBOR + BLAKE3 CIDs
+- **Object schema**: Building, Floor, Space, Equipment, Annotation, … + signatures
+- **Roots**: Delta commits, checkpoints, materialization, sync closures, controller auth
+- **Spatial index**: Versioned R-tree as ordinary CAS objects
+- **Repository**: Building head, working set, capture/commit
+- **Scoring**: Deterministic contributor points (diagnostic; fiat settlement is off-band)
 
-Settlement (buyers and contributors in **fiat**) is an economic layer outside this crate; see
-[`docs/architecture/ADR-001-fiat-settled-depin.md`](../docs/architecture/ADR-001-fiat-settled-depin.md).
+See the root [README](../README.md) for product identity, architecture, and Phase-0 boundaries.
 
 ## Verification
 

@@ -1,31 +1,20 @@
-# Arxos Smart Contracts
+# ARCHIVED — EVM contracts (not product)
 
-Minimal EVM-compatible Building registry contract.
+**Status:** Archived 2026-08-04  
+**Reason:** Arxos pure-fiat commercial model permanently drops blockchain settlement, tokens, and on-chain registries.
 
-## Contract Architecture
+This tree previously held a minimal `BuildingRegistry.sol` (and historically a much larger tokenomics suite removed in the greenfield rewrite). It is preserved only for historical reference.
 
-The `BuildingRegistry.sol` contract maps a stable `BuildingId` to an official Root CID and a set of designated controller addresses:
-`BuildingId (bytes32) → official Root CID (bytes32) + controllers`
+- **Do not** build, deploy, or extend these contracts for product features.  
+- **Do not** reintroduce them into the Cargo workspace or CI.  
+- Active product docs: [`docs/architecture/ADR-001-data-plane-vs-control-plane.md`](../../docs/architecture/ADR-001-data-plane-vs-control-plane.md) and [`docs/architecture/FIAT_MODEL_AUDIT.md`](../../docs/architecture/FIAT_MODEL_AUDIT.md).
 
-### Interface Summary
+## Contents (snapshot)
 
-| Function | Access | Description |
-|----------|--------|-------------|
-| `register(buildingId, initialRoot)` | Public | Registers a new building ID; caller becomes the first controller. |
-| `setOfficialRoot(buildingId, newRoot)` | Controller | Updates the official Root CID tip. |
-| `addController` / `removeController` | Controller | Manages the controller address set. |
-| `getOfficialRoot` / `getBuilding` | View | Read API for clients and indexers. |
+| Path | Former role |
+|------|-------------|
+| `BuildingRegistry.sol` | EVM map of building id → official root + controllers |
+| `script/Deploy.s.sol` | Foundry deploy script |
+| `foundry.toml` | Foundry config |
 
-- **CID Encoding**: The registry stores the raw 32-byte BLAKE3 digest (obtained by decoding the hex representation and stripping the `b3:` prefix). Off-chain tools reconstruct the `b3:` prefix for CAS lookups.
-
-## Build and Deployment (Foundry)
-
-```bash
-forge build
-forge create BuildingRegistry --rpc-url $RPC_URL --private-key $PK
-```
-
-## Limitations & Scope
-
-- **Off-chain scoring**: Token incentives and contributor scoring are evaluated off-chain via the core DePIN module.
-- **Identity mapping**: Repository controller addresses are EVM accounts; ed25519 author keys map to these accounts via off-chain controller designations.
+Contributor scoring and commercial access live entirely off-chain in the data plane (`arxos-core` scoring) and a future control-plane service.

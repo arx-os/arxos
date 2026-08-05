@@ -410,10 +410,12 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 let bid = BuildingId::from_str(&building_id)?;
                 let pk = PublicKey::from_str(&pubkey)
                     .with_context(|| format!("invalid public key: {pubkey}"))?;
-                let mut repo = BuildingRepository::open(&cli.store, &bid)?;
+                let mut repo = BuildingRepository::open(&cli.store, &bid).with_context(|| {
+                    format!("open building {bid} (store may be locked by edge serve or another arx process)")
+                })?;
                 let res = repo
                     .add_controller_key(pk)
-                    .with_context(|| "add_controller_key")?;
+                    .with_context(|| "add_controller_key failed (caller must be a current controller)")?;
                 if !quiet {
                     println!("building_object={}", res.cid);
                     println!("controllers={}", repo.controller_keys()?.len());
@@ -444,10 +446,12 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 let bid = BuildingId::from_str(&building_id)?;
                 let pk = PublicKey::from_str(&pubkey)
                     .with_context(|| format!("invalid public key: {pubkey}"))?;
-                let mut repo = BuildingRepository::open(&cli.store, &bid)?;
-                let res = repo
-                    .remove_controller_key(pk)
-                    .with_context(|| "remove_controller_key")?;
+                let mut repo = BuildingRepository::open(&cli.store, &bid).with_context(|| {
+                    format!("open building {bid} (store may be locked by edge serve or another arx process)")
+                })?;
+                let res = repo.remove_controller_key(pk).with_context(|| {
+                    "remove_controller_key failed (unknown key, or would remove last controller)"
+                })?;
                 if !quiet {
                     println!("building_object={}", res.cid);
                     println!("controllers={}", repo.controller_keys()?.len());
@@ -473,7 +477,12 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 json,
             } => {
                 let bid = BuildingId::from_str(&building_id)?;
-                let repo = BuildingRepository::open(&cli.store, &bid)?;
+                let repo = BuildingRepository::open(&cli.store, &bid)
+                    .with_context(|| {
+                        format!(
+                            "open building {bid} (is the store locked by edge serve or another arx process?)"
+                        )
+                    })?;
                 let keys = repo.controller_keys()?;
                 if json {
                     let v: Vec<_> = keys.iter().map(|k| k.to_string()).collect();
@@ -484,6 +493,69 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                     for k in keys {
                         println!("  {k}");
                     }
+                }
+            }
+            BuildingCommands::Status {
+                building_id,
+                json,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                // Probe exclusive lock without holding a repository session.
+                let lock_status = {
+                    let store = ObjectStore::open(&cli.store)?;
+                    match store.try_lock_exclusive() {
+                        Ok(_g) => "available",
+                        Err(_) => "held",
+                    }
+                };
+                let repo = BuildingRepository::open(&cli.store, &bid).with_context(|| {
+                    format!(
+                        "open building {bid} (store lock status was {lock_status}; another writer may hold store.lock)"
+                    )
+                })?;
+                let r = repo.record();
+                let controllers = repo.controller_keys().unwrap_or_default();
+                let heads = repo.list_entity_heads().unwrap_or_default();
+                let mut by_type: BTreeMap<String, u64> = BTreeMap::new();
+                for (_, _, ty) in &heads {
+                    *by_type.entry(ty.to_string()).or_default() += 1;
+                }
+                let active_n = repo.head_object_cids().map(|c| c.len()).unwrap_or(0);
+                if json {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&serde_json::json!({
+                            "building_id": bid.to_string(),
+                            "name": r.name,
+                            "head_root": r.head_root.map(|c| c.to_string()),
+                            "active_objects": active_n,
+                            "pending": r.pending.len(),
+                            "pending_removes": r.pending_removes.len(),
+                            "controllers": controllers.len(),
+                            "controller_keys": controllers.iter().map(|k| k.to_string()).collect::<Vec<_>>(),
+                            "entities": heads.len(),
+                            "entities_by_type": by_type,
+                            "store_lock": lock_status,
+                        }))?
+                    );
+                } else {
+                    println!("building_id={bid}");
+                    println!("name={:?}", r.name);
+                    println!(
+                        "head_root={}",
+                        r.head_root
+                            .map(|c| c.to_string())
+                            .unwrap_or_else(|| "none".into())
+                    );
+                    println!("active_objects={active_n}");
+                    println!("pending={}", r.pending.len());
+                    println!("pending_removes={}", r.pending_removes.len());
+                    println!("controllers={}", controllers.len());
+                    println!("entities={}", heads.len());
+                    for (ty, n) in by_type {
+                        println!("  entities.{ty}={n}");
+                    }
+                    println!("store_lock={lock_status}");
                 }
             }
         },
@@ -498,12 +570,14 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 let bid = BuildingId::from_str(&building_id)?;
                 let eid = EntityId::from_str(&entity_id)
                     .with_context(|| format!("invalid entity id: {entity_id}"))?;
-                let mut repo = BuildingRepository::open(&cli.store, &bid)?;
+                let mut repo = BuildingRepository::open(&cli.store, &bid).with_context(|| {
+                    format!("open building {bid} (store may be locked by edge serve or another arx process)")
+                })?;
                 let n = repo
                     .remove_entity(&eid)
                     .with_context(|| "remove_entity")?;
                 if n == 0 {
-                    bail!("no active versions found for entity {eid}");
+                    bail!("no active versions found for entity {eid} (unknown or already removed)");
                 }
                 if !quiet {
                     println!("entity_id={eid}");
@@ -530,7 +604,9 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 json,
             } => {
                 let bid = BuildingId::from_str(&building_id)?;
-                let repo = BuildingRepository::open(&cli.store, &bid)?;
+                let repo = BuildingRepository::open(&cli.store, &bid).with_context(|| {
+                    format!("open building {bid} (store may be locked by another process)")
+                })?;
                 let heads = repo.list_entity_heads()?;
                 if json {
                     let v: Vec<_> = heads
@@ -549,6 +625,117 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                     println!("entities={}", heads.len());
                     for (eid, cid, ty) in heads {
                         println!("  {eid}  {ty}  {cid}");
+                    }
+                }
+            }
+            EntityCommands::Show {
+                building_id,
+                entity_id,
+                json,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let eid = EntityId::from_str(&entity_id)
+                    .with_context(|| format!("invalid entity id: {entity_id}"))?;
+                let repo = BuildingRepository::open(&cli.store, &bid).with_context(|| {
+                    format!("open building {bid} (store may be locked by another process)")
+                })?;
+                let heads = repo.list_entity_heads()?;
+                let Some((_, cid, ty)) = heads.into_iter().find(|(e, _, _)| e == &eid) else {
+                    bail!("entity {eid} not found in active set of building {bid}");
+                };
+                let obj = repo.store().get(&cid)?;
+                let created = obj.header.created;
+                let author = obj.header.author.map(|a| a.to_string());
+                let (name, floor, pose, bounds, kind) = match &obj.body {
+                    ObjectBody::Space(b) => (
+                        b.name.clone(),
+                        b.floor.map(|c| c.to_string()),
+                        b.pose.clone(),
+                        b.bounds.clone(),
+                        None,
+                    ),
+                    ObjectBody::Floor(b) => (
+                        b.name.clone(),
+                        None,
+                        None,
+                        None,
+                        Some(format!("level={}", b.level_index)),
+                    ),
+                    ObjectBody::Equipment(b) => (
+                        b.name.clone(),
+                        None,
+                        b.pose.clone(),
+                        None,
+                        b.equipment_kind.clone(),
+                    ),
+                    ObjectBody::Surface(b) => {
+                        (None, None, b.pose.clone(), b.bounds.clone(), b.surface_kind.clone())
+                    }
+                    ObjectBody::Sensor(b) => {
+                        (b.name.clone(), None, b.pose.clone(), None, b.sensor_kind.clone())
+                    }
+                    ObjectBody::Fixture(b) => {
+                        (b.name.clone(), None, b.pose.clone(), None, b.fixture_kind.clone())
+                    }
+                    ObjectBody::Opening(b) => {
+                        (None, None, b.pose.clone(), None, b.opening_kind.clone())
+                    }
+                    ObjectBody::System(b) => {
+                        (b.name.clone(), None, None, None, b.system_kind.clone())
+                    }
+                    ObjectBody::Circuit(b) => (b.name.clone(), None, None, None, None),
+                    _ => (None, None, None, None, None),
+                };
+                if json {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&serde_json::json!({
+                            "entity_id": eid.to_string(),
+                            "cid": cid.to_string(),
+                            "type": ty.to_string(),
+                            "created": created,
+                            "author": author,
+                            "name": name,
+                            "floor": floor,
+                            "kind": kind,
+                            "pose": pose.as_ref().map(|p| serde_json::json!({
+                                "position": p.position,
+                                "orientation": p.orientation,
+                            })),
+                            "bounds": bounds.as_ref().map(|b| serde_json::json!({
+                                "min": b.min,
+                                "max": b.max,
+                            })),
+                        }))?
+                    );
+                } else {
+                    println!("entity_id={eid}");
+                    println!("cid={cid}");
+                    println!("type={ty}");
+                    println!("created={created}");
+                    if let Some(a) = author {
+                        println!("author={a}");
+                    }
+                    if let Some(n) = name {
+                        println!("name={n}");
+                    }
+                    if let Some(k) = kind {
+                        println!("kind={k}");
+                    }
+                    if let Some(f) = floor {
+                        println!("floor={f}");
+                    }
+                    if let Some(p) = pose {
+                        println!(
+                            "pose=[{:.3},{:.3},{:.3}]",
+                            p.position[0], p.position[1], p.position[2]
+                        );
+                    }
+                    if let Some(b) = bounds {
+                        println!(
+                            "bounds min=[{:.3},{:.3},{:.3}] max=[{:.3},{:.3},{:.3}]",
+                            b.min[0], b.min[1], b.min[2], b.max[0], b.max[1], b.max[2]
+                        );
                     }
                 }
             }

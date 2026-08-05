@@ -1,24 +1,25 @@
-//! Merge concurrent building roots (union + entity collapse + annotation rules).
+//! Merge concurrent building roots (three-way + entity collapse + annotation rules).
 //!
 //! Rules:
-//! 1. **Union** of object CID sets (and carry the newer previous_root chain tip).
-//! 2. **Entity collapse**: at most one version CID per [`crate::entity::EntityId`]
-//!    (newer `created`, then higher CID).
-//! 3. **Annotation proximity dedupe**: if two annotations are within
-//!    [`ANNOTATION_DEDUP_M`] and share the same normalized text, keep the one
-//!    with the later `created` timestamp (tie-break by CID).
-//! 4. **Annotation conflict keep-both**: same pose proximity but different text
-//!    → keep both (field truth is multi-author).
-//! 5. Spatial index is **rebuilt** after merge (not merged node-by-node).
+//! 1. **Three-way set merge** relative to the nearest common ancestor on the
+//!    `previous_root` chain (not naive union). Concurrent removals are preserved;
+//!    concurrent adds are unioned. If one tip is an ancestor of the other, the
+//!    descendant wins (fast-forward).
+//! 2. **Entity collapse**: at most one version CID per [`crate::entity::EntityId`].
+//! 3. **Building collapse**: at most one Building object per `building_id`
+//!    (controller rotation produces successive Building CIDs).
+//! 4. **Annotation proximity dedupe**: nearby identical text → keep newer.
+//! 5. **Annotation conflict keep-both**: nearby different text → keep both.
+//! 6. Spatial index is **rebuilt** after merge (not merged node-by-node).
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::capture::pose_distance;
 use crate::cid::Cid;
 use crate::crypto::Keypair;
 use crate::entity::collapse_active_set;
 use crate::error::{Error, Result};
-use crate::object::{Object, ObjectBody, ObjectType, Pose};
+use crate::object::{BuildingId, Object, ObjectBody, ObjectType, Pose};
 use crate::root::{RootBody, RootBuilder};
 use crate::spatial;
 use crate::store::ObjectStore;
@@ -118,6 +119,124 @@ pub fn annotation_dedupe_drops(store: &ObjectStore, objects: &BTreeSet<Cid>) -> 
     Ok(drop)
 }
 
+/// Walk `previous_root` from `tip` collecting ancestor CIDs (including tip).
+fn ancestor_chain(store: &ObjectStore, tip: Cid) -> Result<Vec<Cid>> {
+    let mut chain = Vec::new();
+    let mut visited = BTreeSet::new();
+    let mut cur = Some(tip);
+    while let Some(cid) = cur {
+        if !visited.insert(cid) {
+            return Err(Error::Validation("cyclic root chain during merge LCA".into()));
+        }
+        chain.push(cid);
+        let (_, body) = load_root(store, &cid)?;
+        cur = body.previous_root;
+    }
+    Ok(chain)
+}
+
+/// Nearest common ancestor of two root tips on the linear `previous_root` chain.
+///
+/// Returns `None` only when histories are disjoint (no shared ancestor).
+pub fn find_common_ancestor(
+    store: &ObjectStore,
+    root_a: Cid,
+    root_b: Cid,
+) -> Result<Option<Cid>> {
+    let chain_a = ancestor_chain(store, root_a)?;
+    let set_a: BTreeSet<Cid> = chain_a.into_iter().collect();
+    for cid in ancestor_chain(store, root_b)? {
+        if set_a.contains(&cid) {
+            return Ok(Some(cid));
+        }
+    }
+    Ok(None)
+}
+
+/// True if `ancestor` appears on the `previous_root` chain of `desc` (inclusive).
+fn is_ancestor_of(store: &ObjectStore, ancestor: Cid, desc: Cid) -> Result<bool> {
+    Ok(ancestor_chain(store, desc)?.contains(&ancestor))
+}
+
+/// Three-way object-set merge of two concurrent tips.
+///
+/// Given base B (LCA):
+/// `result = (active_base ∪ (active_a − active_base) ∪ (active_b − active_base))
+///           − (active_base − active_a) − (active_base − active_b)`
+///
+/// Equivalently: start from base, apply both sides' additions, then both sides'
+/// removals. Concurrent remove+add of different CIDs composes correctly;
+/// concurrent remove of the same CID is idempotent.
+pub fn three_way_object_set(
+    active_base: &BTreeSet<Cid>,
+    active_a: &BTreeSet<Cid>,
+    active_b: &BTreeSet<Cid>,
+) -> BTreeSet<Cid> {
+    let adds_a: BTreeSet<Cid> = active_a.difference(active_base).copied().collect();
+    let adds_b: BTreeSet<Cid> = active_b.difference(active_base).copied().collect();
+    let rems_a: BTreeSet<Cid> = active_base.difference(active_a).copied().collect();
+    let rems_b: BTreeSet<Cid> = active_base.difference(active_b).copied().collect();
+
+    let mut result = active_base.clone();
+    result.extend(adds_a);
+    result.extend(adds_b);
+    for r in rems_a.iter().chain(rems_b.iter()) {
+        result.remove(r);
+    }
+    result
+}
+
+/// Keep at most one Building object per [`BuildingId`] (newest `created`, then CID).
+fn collapse_buildings(
+    store: &ObjectStore,
+    objects: &BTreeSet<Cid>,
+) -> Result<(BTreeSet<Cid>, u64)> {
+    let mut best: BTreeMap<BuildingId, (Cid, u64)> = BTreeMap::new();
+    let mut building_cids: BTreeSet<Cid> = BTreeSet::new();
+    let mut non_building: BTreeSet<Cid> = BTreeSet::new();
+
+    for cid in objects {
+        let obj = match store.get(cid) {
+            Ok(o) => o,
+            Err(Error::NotFound(_)) => {
+                non_building.insert(*cid);
+                continue;
+            }
+            Err(e) => return Err(e),
+        };
+        if let ObjectBody::Building(b) = &obj.body {
+            building_cids.insert(*cid);
+            let created = obj.header.created;
+            match best.get(&b.building_id) {
+                None => {
+                    best.insert(b.building_id.clone(), (*cid, created));
+                }
+                Some((prev_cid, prev_created)) => {
+                    if created > *prev_created
+                        || (created == *prev_created && *cid > *prev_cid)
+                    {
+                        best.insert(b.building_id.clone(), (*cid, created));
+                    }
+                }
+            }
+        } else {
+            non_building.insert(*cid);
+        }
+    }
+
+    let mut kept = non_building;
+    let mut superseded = 0u64;
+    let winners: BTreeSet<Cid> = best.values().map(|(c, _)| *c).collect();
+    for cid in building_cids {
+        if winners.contains(&cid) {
+            kept.insert(cid);
+        } else {
+            superseded += 1;
+        }
+    }
+    Ok((kept, superseded))
+}
+
 /// Merge two root objects already present in `store`.
 ///
 /// The merged root is signed by `keypair` and written to the store.
@@ -143,19 +262,44 @@ pub fn merge_roots(
 
     let active_a = a.materialize_active_objects(store)?;
     let active_b = b.materialize_active_objects(store)?;
-    let mut objects: BTreeSet<Cid> = active_a.iter().chain(active_b.iter()).copied().collect();
+
+    // Fast-forward when one tip is a linear descendant of the other.
+    let mut objects = if is_ancestor_of(store, root_a, root_b)? {
+        active_b.clone()
+    } else if is_ancestor_of(store, root_b, root_a)? {
+        active_a.clone()
+    } else if let Some(lca) = find_common_ancestor(store, root_a, root_b)? {
+        let active_base = if lca == root_a {
+            active_a.clone()
+        } else if lca == root_b {
+            active_b.clone()
+        } else {
+            let (_, base_body) = load_root(store, &lca)?;
+            base_body.materialize_active_objects(store)?
+        };
+        three_way_object_set(&active_base, &active_a, &active_b)
+    } else {
+        // Disjoint histories (should be rare for same building_id): fall back to union.
+        active_a.iter().chain(active_b.iter()).copied().collect()
+    };
+
     // Do not include the parent root objects themselves in the object set.
     objects.remove(&root_a);
     objects.remove(&root_b);
 
     let before = objects.len() as u64;
 
-    // Entity collapse first (same physical entity → one version).
+    // Entity collapse (same physical entity → one version).
     let collapsed = collapse_active_set(store, &objects)?;
     objects = collapsed.kept;
 
+    // Building collapse (controller rotation → one Building per building_id).
+    let (after_bldg, bldg_superseded) = collapse_buildings(store, &objects)?;
+    objects = after_bldg;
+
     let drops = annotation_dedupe_drops(store, &objects)?;
-    let deduped = drops.len() as u64 + collapsed.superseded.len() as u64;
+    let deduped =
+        drops.len() as u64 + collapsed.superseded.len() as u64 + bldg_superseded;
     for d in drops {
         objects.remove(&d);
     }
@@ -240,14 +384,31 @@ pub fn plan_merge(store: &ObjectStore, root_a: Cid, root_b: Cid) -> Result<Merge
     }
     let active_a = a.materialize_active_objects(store)?;
     let active_b = b.materialize_active_objects(store)?;
-    let mut objects: BTreeSet<Cid> = active_a.iter().chain(active_b.iter()).copied().collect();
+    let mut objects = if is_ancestor_of(store, root_a, root_b)? {
+        active_b
+    } else if is_ancestor_of(store, root_b, root_a)? {
+        active_a
+    } else if let Some(lca) = find_common_ancestor(store, root_a, root_b)? {
+        let active_base = if lca == root_a {
+            active_a.clone()
+        } else if lca == root_b {
+            active_b.clone()
+        } else {
+            let (_, base_body) = load_root(store, &lca)?;
+            base_body.materialize_active_objects(store)?
+        };
+        three_way_object_set(&active_base, &active_a, &active_b)
+    } else {
+        active_a.iter().chain(active_b.iter()).copied().collect()
+    };
     objects.remove(&root_a);
     objects.remove(&root_b);
     let collapsed = collapse_active_set(store, &objects)?;
-    let drops = annotation_dedupe_drops(store, &collapsed.kept)?;
+    let (after_bldg, bldg_super) = collapse_buildings(store, &collapsed.kept)?;
+    let drops = annotation_dedupe_drops(store, &after_bldg)?;
     Ok(MergePlan {
-        union_size: collapsed.kept.len(),
-        would_dedupe: drops.len() + collapsed.superseded.len(),
+        union_size: after_bldg.len(),
+        would_dedupe: drops.len() + collapsed.superseded.len() + bldg_super as usize,
         building_id: a.building_id.to_string(),
     })
 }
@@ -356,6 +517,99 @@ mod tests {
         assert!(body.merge_parents.contains(&cb));
         assert!(body.previous_root == Some(ca) || body.previous_root == Some(cb));
         assert_eq!(merged.parents, (ca, cb));
+    }
+
+    #[test]
+    fn three_way_preserves_concurrent_removal() {
+        // base has space S; tip A keeps S; tip B removes S → merge must drop S.
+        let base: BTreeSet<Cid> = [
+            Cid::from_canonical_bytes(b"building"),
+            Cid::from_canonical_bytes(b"space-v1"),
+        ]
+        .into_iter()
+        .collect();
+        let a = base.clone();
+        let mut b = base.clone();
+        b.remove(&Cid::from_canonical_bytes(b"space-v1"));
+        let merged = three_way_object_set(&base, &a, &b);
+        assert!(!merged.contains(&Cid::from_canonical_bytes(b"space-v1")));
+        assert!(merged.contains(&Cid::from_canonical_bytes(b"building")));
+    }
+
+    #[test]
+    fn three_way_unions_concurrent_adds() {
+        let base: BTreeSet<Cid> = [Cid::from_canonical_bytes(b"building")]
+            .into_iter()
+            .collect();
+        let mut a = base.clone();
+        a.insert(Cid::from_canonical_bytes(b"ann-a"));
+        let mut b = base.clone();
+        b.insert(Cid::from_canonical_bytes(b"ann-b"));
+        let merged = three_way_object_set(&base, &a, &b);
+        assert!(merged.contains(&Cid::from_canonical_bytes(b"ann-a")));
+        assert!(merged.contains(&Cid::from_canonical_bytes(b"ann-b")));
+    }
+
+    #[test]
+    fn merge_concurrent_entity_remove_vs_keep() {
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let kp = Keypair::generate();
+        let bid = BuildingId::new();
+        let building = put_building(&store, &bid, &kp);
+        let eid = EntityId::from("01ENTITYRMCONCURRENT000000".to_string());
+
+        let mut space = space_object(&SpaceCapture {
+            entity_id: Some(eid.clone()),
+            name: Some("room".into()),
+            pose: Pose::default(),
+            bounds: None,
+            floor: None,
+            properties: BTreeMap::new(),
+        });
+        space.header.created = 10;
+        space.sign(&kp).unwrap();
+        let space_cid = store.put(&space).unwrap();
+
+        let base_set: BTreeSet<Cid> = [building, space_cid].into_iter().collect();
+        let (rb, base_cid) = RootBuilder::new(bid.clone(), 1000)
+            .objects(base_set)
+            .build_signed(&kp)
+            .unwrap();
+        store.put(&rb).unwrap();
+
+        // Tip A: keep space, add annotation
+        let mut ann = annotation_object(&AnnotationCapture::new("note", Pose::default()));
+        ann.header.created = 20;
+        ann.sign(&kp).unwrap();
+        let ann_cid = store.put(&ann).unwrap();
+        let set_a: BTreeSet<Cid> = [building, space_cid, ann_cid].into_iter().collect();
+        let (ra, tip_a) = RootBuilder::new(bid.clone(), 1001)
+            .previous_root(base_cid)
+            .objects(set_a)
+            .build_signed(&kp)
+            .unwrap();
+        store.put(&ra).unwrap();
+
+        // Tip B: remove space (only building)
+        let set_b: BTreeSet<Cid> = [building].into_iter().collect();
+        let (rbb, tip_b) = RootBuilder::new(bid, 1002)
+            .previous_root(base_cid)
+            .objects(set_b)
+            .build_signed(&kp)
+            .unwrap();
+        store.put(&rbb).unwrap();
+
+        let merged = merge_roots(&store, tip_a, tip_b, &kp, None, false).unwrap();
+        let root = store.get(&merged.root_cid).unwrap();
+        let body = RootBody::from_object(&root).unwrap();
+        let active = body.materialize_active_objects(&store).unwrap();
+        assert!(
+            !active.contains(&space_cid),
+            "concurrent removal must win over keep"
+        );
+        assert!(active.contains(&ann_cid), "concurrent add must be kept");
+        assert!(active.contains(&building));
     }
 
     #[test]

@@ -453,6 +453,187 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn multi_device_metadata_pull_entity_merge_cycle() {
+        use arxos_core::capture::SpaceCapture;
+        use arxos_core::entity::EntityId;
+        use arxos_core::Keypair;
+        use std::collections::BTreeMap;
+
+        let mesh = MemoryMesh::new();
+        let dir_a = tempdir().unwrap();
+        let dir_b = tempdir().unwrap();
+        let dir_edge = tempdir().unwrap();
+
+        // A init + entity + annotation
+        let mut repo_a =
+            BuildingRepository::init(dir_a.path(), Some("Cycle".into()), None).unwrap();
+        let bid = repo_a.building_id().clone();
+        let kp_a = repo_a.keypair().unwrap().clone();
+        let kp_b = Keypair::generate();
+        repo_a.add_controller_key(kp_b.public_key()).unwrap();
+        let eid = EntityId::from("01CYCLEENTITY0000000000000".to_string());
+        repo_a
+            .capture_space(&SpaceCapture {
+                entity_id: Some(eid.clone()),
+                name: Some("room".into()),
+                pose: Pose::default(),
+                bounds: None,
+                floor: None,
+                properties: BTreeMap::new(),
+            })
+            .unwrap();
+        // Point cloud so metadata-only is meaningful
+        use arxos_core::capture::PointCloudCapture;
+        let pts = [[0.0f32; 3], [1.0, 0.0, 0.0]];
+        repo_a
+            .capture_point_cloud(&PointCloudCapture::from_xyz(&pts, Pose::default(), None))
+            .unwrap();
+        let base = repo_a.commit(Some("base".into())).unwrap();
+        let root = base.root_cid.to_string();
+        drop(repo_a);
+
+        let node_a = mesh
+            .attach(
+                arxos_core::store::ObjectStore::open(dir_a.path()).unwrap(),
+                vec![BuildingHeadAd {
+                    building_id: bid.to_string(),
+                    root_cid: root.clone(),
+                    name: Some("Cycle".into()),
+                    object_count: base.object_count,
+                }],
+            )
+            .unwrap();
+
+        // Edge metadata-only pull
+        {
+            let _ = BuildingRepository::open_or_follow(
+                dir_edge.path(),
+                &bid,
+                Some("Cycle".into()),
+            )
+            .unwrap();
+        }
+        let node_edge = mesh
+            .attach(
+                arxos_core::store::ObjectStore::open(dir_edge.path()).unwrap(),
+                vec![],
+            )
+            .unwrap();
+        let pull_edge = pull_root_with_options(
+            &node_edge,
+            node_a.peer_id(),
+            dir_edge.path(),
+            &root,
+            Some(bid.as_str()),
+            true,
+            false,
+            true,
+        )
+        .await
+        .unwrap();
+        assert!(pull_edge.adopted.is_some());
+
+        // B full pull then offline entity update
+        {
+            let _ =
+                BuildingRepository::open_or_follow(dir_b.path(), &bid, Some("Cycle".into()))
+                    .unwrap();
+        }
+        // Install B's seed as controller
+        let seed_path = dir_b.path().join("keys").join("device.seed");
+        std::fs::create_dir_all(seed_path.parent().unwrap()).unwrap();
+        std::fs::write(&seed_path, kp_b.seed()).unwrap();
+
+        let node_b = mesh
+            .attach(
+                arxos_core::store::ObjectStore::open(dir_b.path()).unwrap(),
+                vec![],
+            )
+            .unwrap();
+        let pull_b = pull_root(
+            &node_b,
+            node_a.peer_id(),
+            dir_b.path(),
+            &root,
+            Some(bid.as_str()),
+            true,
+        )
+        .await
+        .unwrap();
+        assert!(pull_b.adopted.is_some());
+
+        let mut repo_b = BuildingRepository::open(dir_b.path(), &bid).unwrap();
+        repo_b
+            .capture_space(&SpaceCapture {
+                entity_id: Some(eid.clone()),
+                name: Some("room-v2".into()),
+                pose: Pose {
+                    position: [1.0, 0.0, 0.0],
+                    orientation: [0.0, 0.0, 0.0, 1.0],
+                },
+                bounds: None,
+                floor: None,
+                properties: BTreeMap::new(),
+            })
+            .unwrap();
+        let tip_b = repo_b.commit(Some("B update".into())).unwrap();
+        drop(repo_b);
+
+        // A concurrent annotation
+        std::fs::write(dir_a.path().join("keys").join("device.seed"), kp_a.seed()).unwrap();
+        let mut repo_a = BuildingRepository::open(dir_a.path(), &bid).unwrap();
+        repo_a
+            .capture_annotation(&AnnotationCapture::new("A concurrent", Pose::default()))
+            .unwrap();
+        let tip_a = repo_a.commit(Some("A note".into())).unwrap();
+        drop(repo_a);
+
+        // Pull B's tip into A (full), merge
+        let node_a2 = mesh
+            .attach(
+                arxos_core::store::ObjectStore::open(dir_a.path()).unwrap(),
+                vec![],
+            )
+            .unwrap();
+        // Publish B for pull
+        let node_b2 = mesh
+            .attach(
+                arxos_core::store::ObjectStore::open(dir_b.path()).unwrap(),
+                vec![BuildingHeadAd {
+                    building_id: bid.to_string(),
+                    root_cid: tip_b.root_cid.to_string(),
+                    name: None,
+                    object_count: tip_b.object_count,
+                }],
+            )
+            .unwrap();
+        let pull_ab = pull_root(
+            &node_a2,
+            node_b2.peer_id(),
+            dir_a.path(),
+            &tip_b.root_cid.to_string(),
+            Some(bid.as_str()),
+            false, // store objects only; don't adopt B over A
+        )
+        .await
+        .unwrap();
+        assert!(pull_ab.objects_stored > 0);
+
+        let mut repo_a = BuildingRepository::open(dir_a.path(), &bid).unwrap();
+        assert_eq!(repo_a.head_root(), Some(tip_a.root_cid));
+        let merged = repo_a
+            .merge_root(tip_b.root_cid, Some("merge cycle".into()))
+            .unwrap();
+        let heads = repo_a.list_entity_heads().unwrap();
+        assert!(
+            heads.iter().any(|(e, _, _)| e == &eid),
+            "entity still present after merge"
+        );
+        assert_eq!(repo_a.controller_keys().unwrap().len(), 2);
+        let _ = merged;
+    }
+
+    #[tokio::test]
     async fn metadata_only_pull_omits_blobs() {
         use arxos_core::capture::PointCloudCapture;
         use arxos_core::object::ObjectBody;

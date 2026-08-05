@@ -336,6 +336,12 @@ pub enum BuildingCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Compact head status: root, controllers, entity counts, lock probe
+    Status {
+        building_id: String,
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -355,6 +361,13 @@ pub enum EntityCommands {
     /// List entity heads in the building active set
     List {
         building_id: String,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Show the current head version of one entity
+    Show {
+        building_id: String,
+        entity_id: String,
         #[arg(long)]
         json: bool,
     },

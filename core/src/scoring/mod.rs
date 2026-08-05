@@ -23,7 +23,7 @@
 //! - Richer versioned [`ScoringPolicy`] tables
 //! - Multi-dimension fields on [`ScoreReport`] (depth, coverage, review, …)
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
@@ -199,7 +199,11 @@ pub fn score_root_with_policy(
 ) -> Result<ScoreReport> {
     let root_obj = store.get(root_cid)?;
     let root = RootBody::from_object(&root_obj)?;
-    let mut cids: BTreeSet<Cid> = root.materialize_active_objects(store)?;
+    // Score only the active set (removals already excluded). Collapse entity
+    // versions defensively so historical supersessions cannot double-count.
+    let active = root.materialize_active_objects(store)?;
+    let collapsed = crate::entity::collapse_active_set(store, &active)?;
+    let mut cids = collapsed.kept;
     cids.insert(*root_cid);
     score_cids_with_policy(
         store,

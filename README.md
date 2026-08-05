@@ -75,7 +75,10 @@ A **Root** is a signed commit for one building:
   active object set so materialization stays bounded.
 - **Authors** must present valid ed25519 signatures **and** be listed in
   `Building.controller_keys` (fail closed on commit, adopt, and merge).
-- Concurrent tips can be merged; both parents are recorded in `merge_parents`.
+- Concurrent tips are merged with a **three-way** object-set merge relative to
+  the nearest common ancestor on `previous_root` (concurrent removals are
+  preserved; not a naive set union). Both parents are recorded in
+  `merge_parents`.
 
 The head pointer for each building lives in a small metadata file under the
 store (`meta/buildings/<building_id>.cbor`). The object graph itself is pure CAS.
@@ -185,17 +188,21 @@ cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" building near "$BID" \
 # Diagnostic contribution score
 cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" score "$BID"
 
-# Verify head integrity
-cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" verify "$BID"
+# Head status (controllers, entity counts, store lock probe)
+cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" building status "$BID"
+
+# List entity heads; show one entity
+cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" entity list "$BID"
+# cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" entity show "$BID" <entity-id>
 ```
 
 Common commands (see `cargo run -p arxos-cli -- --help` for the full surface):
 
 | Area | Examples |
 |------|----------|
-| Building | `building init`, `building list`, `building show`, `building near` |
+| Building | `building init`, `building list`, `building show`, `building status`, `building near` |
 | Controllers | `building add-controller`, `building remove-controller`, `building controllers` |
-| Entities | `entity list`, `entity remove` (commits by default; `--no-commit` to stage only) |
+| Entities | `entity list`, `entity show`, `entity remove` (remove commits by default; `--no-commit` to stage only) |
 | Capture | `capture simulate`, `capture annotation`, `capture point-cloud` |
 | Roots | `root show`, `merge plan` / `merge apply` |
 | Integrity | `verify`, `attest` |

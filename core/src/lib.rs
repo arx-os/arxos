@@ -59,7 +59,10 @@ pub use scoring::{
     ContributorScore, ScoreReport, ScoreWeights, ScoringPolicy, DEFAULT_POLICY_VERSION,
 };
 pub use error::{Error, Result};
-pub use merge::{merge_roots, plan_merge, MergePlan, MergeResult, ANNOTATION_DEDUP_M};
+pub use merge::{
+    find_common_ancestor, merge_roots, plan_merge, three_way_object_set, MergePlan, MergeResult,
+    ANNOTATION_DEDUP_M,
+};
 pub use object::{
     AnnotationBody, BlobBody, BuildingBody, BuildingId, FloorBody, Object, ObjectBody,
     ObjectHeader, ObjectType, Pose, SCHEMA_VERSION,

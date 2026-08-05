@@ -12,8 +12,9 @@ use crate::crypto::Keypair;
 use crate::entity::EntityId;
 use crate::error::Result;
 use crate::object::{
-    Aabb, AnnotationBody, Object, ObjectBody, PointCloudChunkBody, Pose, SpaceBody,
+    Aabb, AnnotationBody, BlobBody, Object, ObjectBody, PointCloudChunkBody, Pose, SpaceBody,
 };
+use crate::store::ObjectStore;
 
 fn now_secs() -> u64 {
     SystemTime::now()
@@ -114,7 +115,10 @@ pub fn space_object(capture: &SpaceCapture) -> Object {
     )
 }
 
-/// Convert a point-cloud capture into an unsigned Object.
+/// Convert a point-cloud capture into an unsigned Object with **inline** points.
+///
+/// Prefer [`put_point_cloud_chunk`] for production paths so payloads are tiered
+/// into a separate Blob (skinny domain object + content-addressed bytes).
 pub fn point_cloud_object(capture: &PointCloudCapture) -> Object {
     let mut props = capture.properties.clone();
     props
@@ -125,11 +129,70 @@ pub fn point_cloud_object(capture: &PointCloudCapture) -> Object {
             pose: Some(capture.pose.clone()),
             bounds: capture.bounds.clone(),
             points: capture.points_xyz_f32_le.clone(),
+            points_blob: None,
             point_count: capture.point_count(),
             properties: props,
         }),
         now_secs(),
     )
+}
+
+/// Put point payload as a Blob, return a skinny PointCloudChunk object (unsigned).
+///
+/// The blob is stored first; the returned object references it via `points_blob`
+/// and keeps `points` empty.
+pub fn put_point_cloud_chunk(
+    store: &ObjectStore,
+    capture: &PointCloudCapture,
+) -> Result<Object> {
+    let mut blob_props = BTreeMap::new();
+    blob_props.insert("format".into(), "xyz_f32_le".into());
+    blob_props.insert("role".into(), "point_cloud".into());
+    let blob = Object::new_with_created(
+        ObjectBody::Blob(BlobBody {
+            content_type: Some("application/x-arxos-xyz-f32-le".into()),
+            data: capture.points_xyz_f32_le.clone(),
+            properties: blob_props,
+        }),
+        0, // stable timestamp for pure data blobs
+    );
+    let blob_cid = store.put(&blob)?;
+
+    let mut props = capture.properties.clone();
+    props
+        .entry("format".into())
+        .or_insert_with(|| "xyz_f32_le".into());
+    props.insert("points_blob".into(), blob_cid.to_string());
+
+    Ok(Object::new_with_created(
+        ObjectBody::PointCloudChunk(PointCloudChunkBody {
+            pose: Some(capture.pose.clone()),
+            bounds: capture.bounds.clone(),
+            points: Vec::new(),
+            points_blob: Some(blob_cid),
+            point_count: capture.point_count(),
+            properties: props,
+        }),
+        now_secs(),
+    ))
+}
+
+/// Resolve point bytes from a chunk (blob ref preferred, else legacy inline).
+pub fn resolve_point_bytes(
+    store: &ObjectStore,
+    body: &PointCloudChunkBody,
+) -> Result<Vec<u8>> {
+    if let Some(cid) = &body.points_blob {
+        let obj = store.get(cid)?;
+        match obj.body {
+            ObjectBody::Blob(b) => Ok(b.data),
+            _ => Err(crate::error::Error::Validation(format!(
+                "points_blob {cid} is not a Blob object"
+            ))),
+        }
+    } else {
+        Ok(body.points.clone())
+    }
 }
 
 /// Convert an annotation capture into an unsigned Object.
@@ -323,6 +386,30 @@ mod tests {
         assert_eq!(obj.header.object_type.as_str(), "point_cloud_chunk");
         let cid = obj.cid().unwrap();
         assert!(!cid.to_string().is_empty());
+    }
+
+    #[test]
+    fn point_cloud_tiered_blob_roundtrip() {
+        use crate::store::ObjectStore;
+        use tempfile::tempdir;
+
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let pts = [[0.0f32, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
+        let cap = PointCloudCapture::from_xyz(&pts, Pose::default(), aabb_from_xyz(&pts));
+        let obj = put_point_cloud_chunk(&store, &cap).unwrap();
+        if let ObjectBody::PointCloudChunk(ref b) = obj.body {
+            assert!(b.points.is_empty());
+            assert!(b.points_blob.is_some());
+            assert_eq!(b.point_count, 3);
+            let resolved = resolve_point_bytes(&store, b).unwrap();
+            assert_eq!(resolved, cap.points_xyz_f32_le);
+            // Skinny domain object is much smaller than inline payload + header.
+            let domain_bytes = obj.to_canonical_bytes().unwrap();
+            assert!(domain_bytes.len() < 512);
+        } else {
+            panic!("expected point cloud chunk");
+        }
     }
 
     #[test]

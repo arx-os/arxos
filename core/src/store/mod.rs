@@ -11,6 +11,12 @@ use crate::cid::Cid;
 use crate::error::{Error, Result};
 use crate::object::{Object, ObjectType};
 
+/// Hard cap on a single object's canonical CBOR size (4 MiB).
+///
+/// Dense point clouds must be chunked into multiple Blob objects rather than
+/// packing unbounded bytes into one domain object.
+pub const MAX_OBJECT_BYTES: u64 = 4 * 1024 * 1024;
+
 /// Optional rebuildable thin index entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndexEntry {
@@ -63,7 +69,30 @@ impl ObjectStore {
     pub fn put(&self, object: &Object) -> Result<Cid> {
         object.validate()?;
         let bytes = object.to_canonical_bytes()?;
-        let cid = Cid::from_canonical_bytes(&bytes);
+        self.put_canonical_bytes(&bytes)
+    }
+
+    /// Put already-canonical object bytes (must decode to a valid Object).
+    pub fn put_bytes(&self, bytes: &[u8]) -> Result<Cid> {
+        if bytes.len() as u64 > MAX_OBJECT_BYTES {
+            return Err(Error::Validation(format!(
+                "object exceeds max size {MAX_OBJECT_BYTES} bytes (got {})",
+                bytes.len()
+            )));
+        }
+        let object = Object::from_canonical_bytes(bytes)?;
+        // Re-encode via put so validate + size policy stay single-pathed.
+        self.put(&object)
+    }
+
+    fn put_canonical_bytes(&self, bytes: &[u8]) -> Result<Cid> {
+        if bytes.len() as u64 > MAX_OBJECT_BYTES {
+            return Err(Error::Validation(format!(
+                "object exceeds max size {MAX_OBJECT_BYTES} bytes (got {})",
+                bytes.len()
+            )));
+        }
+        let cid = Cid::from_canonical_bytes(bytes);
         let path = self.object_path(&cid);
         if path.exists() {
             return Ok(cid);
@@ -73,15 +102,9 @@ impl ObjectStore {
         }
         // Write temp then rename for atomicity on same filesystem.
         let tmp = path.with_extension("tmp");
-        fs::write(&tmp, &bytes)?;
+        fs::write(&tmp, bytes)?;
         fs::rename(&tmp, &path)?;
         Ok(cid)
-    }
-
-    /// Put raw canonical bytes (must decode to a valid Object).
-    pub fn put_bytes(&self, bytes: &[u8]) -> Result<Cid> {
-        let object = Object::from_canonical_bytes(bytes)?;
-        self.put(&object)
     }
 
     /// Get an object by CID.
@@ -241,6 +264,27 @@ mod tests {
         let store = ObjectStore::open(dir.path()).unwrap();
         let cid = Cid::from_canonical_bytes(b"nope");
         assert!(store.get(&cid).is_err());
+    }
+
+    #[test]
+    fn put_rejects_oversized_object() {
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        // Slightly over the cap (header overhead means we need data near the limit).
+        let data = vec![0u8; (MAX_OBJECT_BYTES as usize) + 1024];
+        let obj = Object::new_with_created(
+            ObjectBody::Blob(BlobBody {
+                content_type: None,
+                data,
+                properties: BTreeMap::new(),
+            }),
+            1,
+        );
+        let err = store.put(&obj).unwrap_err();
+        assert!(
+            matches!(err, Error::Validation(ref m) if m.contains("max size")),
+            "{err:?}"
+        );
     }
 
     #[test]

@@ -219,9 +219,16 @@ $ARXOS_STORE/
 | Rendering | Spatial query + file export | Built-in 3D viewer / game engine |
 | Edge | Local store + export tools | Full Pi image product (in progress) |
 
+### Storage policy
+
+- Single object max size: **4 MiB** (`MAX_OBJECT_BYTES`). Oversized puts fail closed.
+- New point-cloud captures **tier** raw bytes into a separate `Blob` object; the
+  domain `PointCloudChunk` stays skinny and references `points_blob`.
+- Root closures support metadata-first pulls (`ClosureOptions::include_blobs =
+  false`) that omit Blob payloads while still transferring domain objects.
+
 ### Known hardening targets (not promises)
 
-- Blob tiering for large point clouds / meshes
 - Single-writer store lock and long-running edge `serve`
 - Controller rotation / multi-device key policy
 - Multi-signal scoring (still points only; still offline-replayable)

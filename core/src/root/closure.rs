@@ -10,12 +10,24 @@ use crate::store::ObjectStore;
 use super::RootBody;
 
 /// Options for collecting a root object closure.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ClosureOptions {
     /// When true, missing domain/index objects are listed in
     /// [`ClosureResult::missing`] instead of failing the call.
     /// Default is false (fail closed).
     pub allow_partial: bool,
+    /// When false, skip `Blob` objects and do not follow `points_blob` /
+    /// mesh blob references (metadata-first sync). Default is true.
+    pub include_blobs: bool,
+}
+
+impl Default for ClosureOptions {
+    fn default() -> Self {
+        Self {
+            allow_partial: false,
+            include_blobs: true,
+        }
+    }
 }
 
 /// Result of collecting the objects required to materialize and query a root.
@@ -84,16 +96,50 @@ pub fn get_root_closure_blobs_with_options(
     }
 
     // 2. Domain objects (fail closed unless allow_partial).
+    //    Optionally skip Blob payloads for metadata-first sync; still collect
+    //    skinny domain objects and follow blob refs only when include_blobs.
+    let mut blob_refs: BTreeSet<Cid> = BTreeSet::new();
     for cid in &active_objects {
         if !visited.insert(*cid) {
             continue;
         }
         match store.get_bytes(cid) {
-            Ok(bytes) => out.push((*cid, bytes)),
+            Ok(bytes) => {
+                if let Ok(obj) = Object::from_canonical_bytes(&bytes) {
+                    if !opts.include_blobs && obj.header.object_type == crate::object::ObjectType::Blob
+                    {
+                        // Metadata-first: omit blob payloads from the wire set.
+                        continue;
+                    }
+                    if opts.include_blobs {
+                        for b in referenced_blob_cids(&obj) {
+                            blob_refs.insert(b);
+                        }
+                    }
+                }
+                out.push((*cid, bytes));
+            }
             Err(Error::NotFound(_)) => {
                 missing.insert(*cid);
             }
             Err(e) => return Err(e),
+        }
+    }
+
+    // 2b. Blob objects referenced by skinny domain objects but not in the
+    //     active set (defensive; capture normally stages them into the set).
+    if opts.include_blobs {
+        for cid in blob_refs {
+            if !visited.insert(cid) {
+                continue;
+            }
+            match store.get_bytes(&cid) {
+                Ok(bytes) => out.push((cid, bytes)),
+                Err(Error::NotFound(_)) => {
+                    missing.insert(cid);
+                }
+                Err(e) => return Err(e),
+            }
         }
     }
 
@@ -138,6 +184,19 @@ pub fn get_root_closure_blobs_with_options(
         blobs: out,
         missing,
     })
+}
+
+/// CIDs of blob payloads referenced by a domain object.
+fn referenced_blob_cids(obj: &Object) -> Vec<Cid> {
+    match &obj.body {
+        ObjectBody::PointCloudChunk(b) => b.points_blob.into_iter().collect(),
+        ObjectBody::Mesh(b) => [b.vertices_blob, b.indices_blob]
+            .into_iter()
+            .flatten()
+            .collect(),
+        ObjectBody::Annotation(b) => b.media_ref.into_iter().collect(),
+        _ => Vec::new(),
+    }
 }
 
 /// Ensure every CID in `active` is present in `store`.
@@ -198,10 +257,68 @@ mod tests {
             &root_cid,
             &ClosureOptions {
                 allow_partial: true,
+                include_blobs: true,
             },
         )
         .unwrap();
         assert!(partial.missing.contains(&ghost));
         assert!(!partial.blobs.is_empty());
+    }
+
+    #[test]
+    fn metadata_first_skips_blob_payloads() {
+        use crate::capture::{put_point_cloud_chunk, PointCloudCapture};
+        use crate::object::Pose;
+
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let kp = Keypair::generate();
+        let bid = BuildingId::new();
+
+        let building = Object::new_with_created(
+            ObjectBody::Building(BuildingBody {
+                building_id: bid.clone(),
+                name: None,
+                controller_keys: vec![kp.public_key()],
+                properties: BTreeMap::new(),
+            }),
+            1,
+        );
+        let bc = store.put(&building).unwrap();
+
+        let pts = [[0.0f32, 0.0, 0.0], [1.0, 0.0, 0.0]];
+        let cap = PointCloudCapture::from_xyz(&pts, Pose::default(), None);
+        let chunk = put_point_cloud_chunk(&store, &cap).unwrap();
+        let blob_cid = match &chunk.body {
+            ObjectBody::PointCloudChunk(b) => b.points_blob.unwrap(),
+            _ => panic!("chunk"),
+        };
+        let chunk_cid = store.put(&chunk).unwrap();
+
+        let mut objects = BTreeSet::new();
+        objects.insert(bc);
+        objects.insert(chunk_cid);
+        objects.insert(blob_cid);
+
+        let (root_obj, root_cid) = RootBuilder::new(bid, 10)
+            .objects(objects)
+            .build_signed(&kp)
+            .unwrap();
+        store.put(&root_obj).unwrap();
+
+        let full = get_root_closure_blobs(&store, &root_cid).unwrap();
+        assert!(full.iter().any(|(c, _)| *c == blob_cid));
+
+        let meta = get_root_closure_blobs_with_options(
+            &store,
+            &root_cid,
+            &ClosureOptions {
+                allow_partial: false,
+                include_blobs: false,
+            },
+        )
+        .unwrap();
+        assert!(!meta.blobs.iter().any(|(c, _)| *c == blob_cid));
+        assert!(meta.blobs.iter().any(|(c, _)| *c == chunk_cid));
     }
 }

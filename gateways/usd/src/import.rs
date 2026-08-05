@@ -142,6 +142,7 @@ fn import_stage(
                     bounds: extent_to_aabb(prim),
                     point_count: pts.len() as u64,
                     points: bytes,
+                    points_blob: None,
                     properties: props,
                 })
             }

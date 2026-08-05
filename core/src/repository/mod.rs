@@ -21,7 +21,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 
 use crate::capture::{
-    annotation_object, maybe_sign, point_cloud_object, space_object, AnnotationCapture,
+    annotation_object, maybe_sign, put_point_cloud_chunk, space_object, AnnotationCapture,
     PointCloudCapture, SpaceCapture,
 };
 use crate::canonical::from_cbor;
@@ -271,9 +271,21 @@ impl BuildingRepository {
         self.put_staged(obj)
     }
 
-    /// Capture a point cloud chunk → put → stage.
+    /// Capture a point cloud chunk → tier bytes into a Blob → put → stage.
+    ///
+    /// Also stages the blob CID into pending so it is included in the next root.
     pub fn capture_point_cloud(&mut self, capture: &PointCloudCapture) -> Result<CaptureResult> {
-        let obj = maybe_sign(point_cloud_object(capture), self.keypair.as_ref())?;
+        let obj = put_point_cloud_chunk(&self.store, capture)?;
+        // Ensure the blob is part of the active set (referenced + present).
+        if let ObjectBody::PointCloudChunk(ref b) = obj.body {
+            if let Some(blob_cid) = b.points_blob {
+                if let Ok(blob_obj) = self.store.get(&blob_cid) {
+                    self.working_set.stage(blob_cid, blob_obj);
+                    self.record.pending.insert(blob_cid);
+                }
+            }
+        }
+        let obj = maybe_sign(obj, self.keypair.as_ref())?;
         self.put_staged(obj)
     }
 

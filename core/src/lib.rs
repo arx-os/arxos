@@ -42,8 +42,9 @@ pub use attest::{
     AttestationVerifier, DefaultAttestationVerifier, MockAttestationVerifier,
 };
 pub use capture::{
-    annotation_object, point_cloud_object, pose_from_column_major_matrix, space_object,
-    world_aabb_from_transform_and_dimensions, AnnotationCapture, PointCloudCapture, SpaceCapture,
+    annotation_object, point_cloud_object, pose_from_column_major_matrix, put_point_cloud_chunk,
+    resolve_point_bytes, space_object, world_aabb_from_transform_and_dimensions, AnnotationCapture,
+    PointCloudCapture, SpaceCapture,
 };
 pub use cid::Cid;
 pub use crypto::{AuthorSignature, Keypair, PublicKey, Signature};
@@ -70,7 +71,7 @@ pub use root::{
     ClosureOptions, ClosureResult, RootBody, RootBuilder, CHECKPOINT_INTERVAL,
 };
 pub use spatial::{QueryVolume, SpatialEntry, SpatialHit};
-pub use store::ObjectStore;
+pub use store::{ObjectStore, MAX_OBJECT_BYTES};
 pub use verify::{
     verify_object_canonicalization, verify_root_body_determinism, verify_root_transition, Finding,
     Severity, VerificationReport,

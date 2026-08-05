@@ -354,8 +354,12 @@ pub struct AnnotationBody {
 pub struct PointCloudChunkBody {
     pub pose: Option<Pose>,
     pub bounds: Option<Aabb>,
-    /// Raw point payload (e.g. packed xyz); format noted in properties.
+    /// Legacy inline payload. Prefer [`Self::points_blob`] for new captures.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub points: Vec<u8>,
+    /// Content-addressed blob holding packed point bytes (e.g. xyz f32 LE).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub points_blob: Option<Cid>,
     pub point_count: u64,
     pub properties: BTreeMap<String, String>,
 }
@@ -364,8 +368,16 @@ pub struct PointCloudChunkBody {
 pub struct MeshBody {
     pub pose: Option<Pose>,
     pub bounds: Option<Aabb>,
+    /// Legacy inline vertices. Prefer [`Self::vertices_blob`].
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub vertices: Vec<u8>,
+    /// Legacy inline indices. Prefer [`Self::indices_blob`].
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub indices: Vec<u8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vertices_blob: Option<Cid>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub indices_blob: Option<Cid>,
     pub properties: BTreeMap<String, String>,
 }
 

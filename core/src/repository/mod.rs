@@ -86,8 +86,13 @@ pub struct AdoptOptions {
 }
 
 /// Building repository handle: CAS + head metadata + session working set.
+///
+/// Holds an exclusive [`crate::store::WriteGuard`] for the store for the
+/// lifetime of the repository (single-writer policy).
 pub struct BuildingRepository {
     store: ObjectStore,
+    /// Exclusive store lock — released on drop.
+    _write_lock: crate::store::WriteGuard,
     record: BuildingRecord,
     working_set: WorkingSet,
     keypair: Option<Keypair>,
@@ -107,6 +112,7 @@ impl BuildingRepository {
         keypair: Option<Keypair>,
     ) -> Result<Self> {
         let store = ObjectStore::open(store_path.as_ref())?;
+        let write_lock = store.try_lock_exclusive()?;
         fs::create_dir_all(store.root().join("meta").join("buildings"))?;
         fs::create_dir_all(store.root().join("keys"))?;
 
@@ -163,6 +169,7 @@ impl BuildingRepository {
 
         Ok(Self {
             store,
+            _write_lock: write_lock,
             record,
             working_set,
             keypair: Some(kp),
@@ -173,6 +180,7 @@ impl BuildingRepository {
     /// Open an existing building by ID (loads head metadata + optional seed).
     pub fn open(store_path: impl AsRef<Path>, building_id: &BuildingId) -> Result<Self> {
         let store = ObjectStore::open(store_path.as_ref())?;
+        let write_lock = store.try_lock_exclusive()?;
         let record = Self::read_record(store.root(), building_id)?;
         let keypair = Self::read_seed(store.root()).ok();
         let mut working_set = WorkingSet::new();
@@ -209,6 +217,7 @@ impl BuildingRepository {
 
         Ok(Self {
             store,
+            _write_lock: write_lock,
             record,
             working_set,
             keypair,
@@ -403,9 +412,14 @@ impl BuildingRepository {
         name: Option<String>,
     ) -> Result<Self> {
         let store = ObjectStore::open(store_path.as_ref())?;
+        let write_lock = store.try_lock_exclusive()?;
         fs::create_dir_all(store.root().join("meta").join("buildings"))?;
         match Self::read_record(store.root(), building_id) {
-            Ok(_) => Self::open(store_path, building_id),
+            Ok(_) => {
+                // Re-open through open() so we don't hold two locks; drop this one first.
+                drop(write_lock);
+                Self::open(store_path, building_id)
+            }
             Err(Error::NotFound(_)) => {
                 let record = BuildingRecord {
                     building_id: building_id.clone(),
@@ -420,6 +434,7 @@ impl BuildingRepository {
                 let keypair = Self::read_seed(store.root()).ok();
                 Ok(Self {
                     store,
+                    _write_lock: write_lock,
                     record,
                     working_set: WorkingSet::new(),
                     keypair,
@@ -557,6 +572,7 @@ mod tests {
         assert_ne!(commit.root_cid, head0);
         assert_eq!(commit.previous_root, Some(head0));
         assert!(commit.object_count >= 4);
+        drop(repo); // release exclusive store lock before re-open
 
         // Reload same building on "same device"
         let mut repo2 = BuildingRepository::open(path, &bid).unwrap();
@@ -724,6 +740,7 @@ mod tests {
         let bid = repo.building_id().clone();
         let outsider = Keypair::generate();
         BuildingRepository::write_seed(path, &outsider).unwrap();
+        drop(repo); // release exclusive store lock before re-open
 
         let mut repo = BuildingRepository::open(path, &bid).unwrap();
         repo.capture_annotation(&AnnotationCapture::new(

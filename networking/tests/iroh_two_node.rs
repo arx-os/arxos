@@ -43,8 +43,11 @@ async fn iroh_publish_and_pull() {
     tokio::time::sleep(Duration::from_millis(200)).await;
 
     let node_b = IrohNode::bind(dir_b.path()).await.expect("bind B");
-    let _follow =
-        BuildingRepository::open_or_follow(dir_b.path(), &bid, Some("Iroh Site".into())).unwrap();
+    {
+        let _follow =
+            BuildingRepository::open_or_follow(dir_b.path(), &bid, Some("Iroh Site".into()))
+                .unwrap();
+    } // drop lock before pull adopt
 
     let pull = pull_root(
         &node_b,

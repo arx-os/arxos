@@ -71,7 +71,7 @@ pub use root::{
     ClosureOptions, ClosureResult, RootBody, RootBuilder, CHECKPOINT_INTERVAL,
 };
 pub use spatial::{QueryVolume, SpatialEntry, SpatialHit};
-pub use store::{ObjectStore, MAX_OBJECT_BYTES};
+pub use store::{ObjectStore, WriteGuard, MAX_OBJECT_BYTES, STORE_LOCK_FILE};
 pub use verify::{
     verify_object_canonicalization, verify_root_body_determinism, verify_root_transition, Finding,
     Severity, VerificationReport,

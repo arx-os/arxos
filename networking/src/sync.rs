@@ -20,15 +20,22 @@ pub struct PullResult {
 }
 
 /// Build mDNS / Hello advertisements from a local store path.
+///
+/// Read-only: does not acquire the exclusive store write lock.
 pub fn building_ads_from_store(store_path: &std::path::Path) -> Result<Vec<BuildingHeadAd>> {
     let list = BuildingRepository::list_buildings(store_path)?;
+    let store = arxos_core::store::ObjectStore::open(store_path)?;
     let mut ads = Vec::new();
     for rec in list {
         let Some(root) = rec.head_root else {
             continue;
         };
-        let object_count = BuildingRepository::open(store_path, &rec.building_id)
-            .map(|r| r.head_object_cids().map(|cids| cids.len() as u64).unwrap_or(0))
+        let object_count = store
+            .get(&root)
+            .ok()
+            .and_then(|obj| arxos_core::root::RootBody::from_object(&obj).ok().cloned())
+            .and_then(|body| body.materialize_active_objects(&store).ok())
+            .map(|set| set.len() as u64)
             .unwrap_or(0);
         ads.push(BuildingHeadAd {
             building_id: rec.building_id.to_string(),
@@ -259,9 +266,12 @@ mod tests {
             )
             .unwrap();
 
-        // Device B: empty follow
-        let _repo_b =
-            BuildingRepository::open_or_follow(dir_b.path(), &bid, Some("Site A".into())).unwrap();
+        // Device B: empty follow (drop before pull so adopt can take the write lock)
+        {
+            let _repo_b =
+                BuildingRepository::open_or_follow(dir_b.path(), &bid, Some("Site A".into()))
+                    .unwrap();
+        }
         let node_b = mesh
             .attach(arxos_core::store::ObjectStore::open(dir_b.path()).unwrap(), vec![])
             .unwrap();
@@ -342,9 +352,15 @@ mod tests {
             )
             .unwrap();
 
-        // 2. Device B: empty follow
-        let _repo_b =
-            BuildingRepository::open_or_follow(dir_b.path(), &bid, Some("Site Spatial B".into())).unwrap();
+        // 2. Device B: empty follow (drop before pull so adopt can take the write lock)
+        {
+            let _repo_b = BuildingRepository::open_or_follow(
+                dir_b.path(),
+                &bid,
+                Some("Site Spatial B".into()),
+            )
+            .unwrap();
+        }
         let node_b = mesh
             .attach(arxos_core::store::ObjectStore::open(dir_b.path()).unwrap(), vec![])
             .unwrap();

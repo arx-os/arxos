@@ -49,6 +49,7 @@ fn ifc_roundtrip_identity() {
     ))
     .unwrap();
     let commit = repo.commit(Some("ifc source".into())).unwrap();
+    drop(repo); // release exclusive store lock before export re-opens the building
 
     let ifc = export_building_ifc(path, &bid, &ExportOptions::default()).unwrap();
     assert!(ifc.contains("ISO-10303-21"));

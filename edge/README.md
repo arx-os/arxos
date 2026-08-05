@@ -9,13 +9,13 @@ arxos-edge version
 arxos-edge buildings
 arxos-edge export-usd $BID -o out.usda
 arxos-edge export-ifc $BID -o out.ifc
+
+# Long-running node: exclusive store lock + Iroh (+ mDNS when enabled)
+arxos-edge --store /var/lib/arxos/store serve
 ```
 
-To synchronize files across the network, use the main `arx` CLI:
-
-```bash
-arx --store /var/lib/arxos/store net serve
-```
+`serve` prints a peer id and ticket for pullers, holds `store.lock` for the
+process lifetime, and exits cleanly on Ctrl-C (heads remain on disk).
 
 ## Packaging & Deployment
 
@@ -32,11 +32,11 @@ sudo INSTALL_SYSTEMD=1 ./edge/scripts/install-edge.sh
 sudo systemctl enable --now arxos-edge
 ```
 
-## Security & Verification Utilities
+## Security notes
 
-- **Access controls**: Device seed keys at `$ARXOS_STORE/keys/device.seed` (`0600`).
-- **Root verification**: `arx verify $ROOT`
-- **Contributor scoring** (diagnostic points only): `arx score $BID`
+- Device seed keys at `$ARXOS_STORE/keys/device.seed` (`0600`).
+- Only one exclusive writer per store path (edge `serve` or CLI repository open).
+- Root verification: `arx verify $BID`
+- Contributor scoring (diagnostic points): `arx score $BID`
 
-Scoring attributes DePIN contributions; it is **not** a payment basis by itself. Fiat
-settlement is off-band (see ADR-001).
+Settlement is fiat off-band; see the root README economic model.

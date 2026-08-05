@@ -18,6 +18,7 @@ default = []
 blake3 = { workspace = true }
 ciborium = { workspace = true }
 ed25519-dalek = { workspace = true }
+fs2 = "0.4"
 hex = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true }

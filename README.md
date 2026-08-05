@@ -226,11 +226,22 @@ $ARXOS_STORE/
   domain `PointCloudChunk` stays skinny and references `points_blob`.
 - Root closures support metadata-first pulls (`ClosureOptions::include_blobs =
   false`) that omit Blob payloads while still transferring domain objects.
+- **Single-writer lock**: `BuildingRepository` takes an exclusive flock on
+  `store.lock`. Concurrent writers fail closed. Read-only CAS opens do not lock.
+
+### Edge serve
+
+```bash
+cargo run -p arxos-edge -- --store "$ARXOS_STORE" serve
+# holds store.lock, binds Iroh QUIC, optional mDNS; Ctrl-C releases the lock
+```
+
+Head metadata survives process restart on disk. Only one edge/writer process
+per store path.
 
 ### Known hardening targets (not promises)
 
-- Single-writer store lock and long-running edge `serve`
-- Controller rotation / multi-device key policy
+- Controller rotation / multi-device key policy (minimal add-key path in progress)
 - Multi-signal scoring (still points only; still offline-replayable)
 
 ---

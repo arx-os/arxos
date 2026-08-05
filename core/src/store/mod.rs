@@ -1,9 +1,10 @@
 //! Local content-addressed object store (Git-style fan-out).
 
 use std::collections::BTreeMap;
-use std::fs;
+use std::fs::{self, File, OpenOptions};
 use std::path::{Path, PathBuf};
 
+use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 
 use crate::canonical::{from_cbor, to_canonical_cbor};
@@ -17,12 +18,24 @@ use crate::object::{Object, ObjectType};
 /// packing unbounded bytes into one domain object.
 pub const MAX_OBJECT_BYTES: u64 = 4 * 1024 * 1024;
 
+/// Filename for the exclusive single-writer advisory lock.
+pub const STORE_LOCK_FILE: &str = "store.lock";
+
 /// Optional rebuildable thin index entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndexEntry {
     pub object_type: ObjectType,
     pub schema_version: u32,
     pub size: u64,
+}
+
+/// RAII exclusive write lock on a store (`store.lock` via flock).
+///
+/// Dropping the guard releases the lock. Concurrent writers on the same path
+/// fail with a clear store error.
+#[derive(Debug)]
+pub struct WriteGuard {
+    _file: File,
 }
 
 /// Local CAS: objects stored as files named by CID under a fan-out directory.
@@ -33,22 +46,60 @@ pub struct IndexEntry {
 ///   objects/
 ///     ab/
 ///       cdef...   # remaining hex of CID
+///   store.lock    # exclusive writer flock (see [`WriteGuard`])
 ///   index.cbor    # optional thin index (rebuildable; not updated on put)
 /// ```
 ///
 /// The thin `index.cbor` is **not** maintained on the put hot path. Call
 /// [`ObjectStore::rebuild_index`] when an offline type/size catalog is needed.
+///
+/// Read-only opens (`open`) do not take the lock. Writers should call
+/// [`try_lock_exclusive`] and hold the guard for the write session.
 #[derive(Debug, Clone)]
 pub struct ObjectStore {
     root: PathBuf,
 }
 
 impl ObjectStore {
-    /// Open or create a store at `root`.
+    /// Open or create a store at `root` (no lock acquired).
     pub fn open(root: impl AsRef<Path>) -> Result<Self> {
         let root = root.as_ref().to_path_buf();
         fs::create_dir_all(root.join("objects"))?;
         Ok(Self { root })
+    }
+
+    /// Acquire an exclusive advisory lock on this store (non-blocking).
+    ///
+    /// Returns an error immediately if another process holds the lock.
+    pub fn try_lock_exclusive(&self) -> Result<WriteGuard> {
+        let path = self.root.join(STORE_LOCK_FILE);
+        let file = OpenOptions::new()
+            .create(true)
+            .read(true)
+            .write(true)
+            .open(&path)
+            .map_err(|e| Error::Store(format!("open store lock: {e}")))?;
+        file.try_lock_exclusive().map_err(|e| {
+            Error::Store(format!(
+                "store is locked by another process ({}): {e}",
+                path.display()
+            ))
+        })?;
+        Ok(WriteGuard { _file: file })
+    }
+
+    /// Acquire an exclusive advisory lock, blocking until available.
+    pub fn lock_exclusive(&self) -> Result<WriteGuard> {
+        let path = self.root.join(STORE_LOCK_FILE);
+        let file = OpenOptions::new()
+            .create(true)
+            .read(true)
+            .write(true)
+            .open(&path)
+            .map_err(|e| Error::Store(format!("open store lock: {e}")))?;
+        file.lock_exclusive()
+            .map_err(|e| Error::Store(format!("store lock: {e}")))?;
+        Ok(WriteGuard { _file: file })
     }
 
     pub fn root(&self) -> &Path {

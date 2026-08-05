@@ -70,6 +70,8 @@ fn usd_roundtrip_identity() {
     // then for roundtrip we only need building+space+annotation which we have.
     let _ = floor_cid;
     let commit = repo.commit(Some("usd source".into())).unwrap();
+    let _ = commit;
+    drop(repo); // release exclusive store lock before export re-opens the building
 
     let usda = export_building_usda(path, &bid, &ExportOptions::default()).unwrap();
     assert!(usda.contains("#usda 1.0"));

@@ -10,9 +10,15 @@ description = "Arxos edge node — serve store + export interop projections"
 name = "arxos-edge"
 path = "src/main.rs"
 
+[features]
+default = ["mdns-announce"]
+mdns-announce = []
+
 [dependencies]
 arxos-core = { workspace = true }
+arxos-networking = { workspace = true }
 arxos-usd = { workspace = true }
 arxos-ifc = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true }
+tokio = { workspace = true }

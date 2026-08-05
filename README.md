@@ -85,6 +85,10 @@ store (`meta/buildings/<building_id>.cbor`). The object graph itself is pure CAS
 - Device keys are ed25519 keypairs (seed stored at `keys/device.seed`, mode
   `0600` on Unix).
 - Only keys in `Building.controller_keys` may advance the building head.
+- Controllers are **rotatable without re-init**: a current controller can
+  `add_controller_key` (stages a new Building object + removes the old), then
+  commit. The new device can then author roots. Sole-controller loss still
+  requires offline recovery (`allow_untrusted` adopt) — not automated.
 - Object gets recompute the CID on read; mismatched bytes fail.
 - Sync closures fail closed if active objects or the spatial index root are
   missing (unless an explicit partial option is set).
@@ -241,7 +245,7 @@ per store path.
 
 ### Known hardening targets (not promises)
 
-- Controller rotation / multi-device key policy (minimal add-key path in progress)
+- Controller **removal** / multi-sig rotation policy
 - Multi-signal scoring (still points only; still offline-replayable)
 
 ---

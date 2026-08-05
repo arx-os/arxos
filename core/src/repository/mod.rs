@@ -26,7 +26,7 @@ use crate::capture::{
 };
 use crate::canonical::from_cbor;
 use crate::cid::Cid;
-use crate::crypto::Keypair;
+use crate::crypto::{Keypair, PublicKey};
 use crate::error::{Error, Result};
 use crate::object::{BuildingBody, BuildingId, Object, ObjectBody, ObjectType};
 use crate::root::{RootBody, RootBuilder};
@@ -333,6 +333,78 @@ impl BuildingRepository {
             self.remove_object(cid)?;
         }
         Ok(n)
+    }
+
+    /// Add a controller public key without re-initializing the building.
+    ///
+    /// Stages a **new** Building object (new CID) with an expanded
+    /// `controller_keys` set and stages removal of the previous Building
+    /// object. Call [`commit`] afterward; the **current** controller must
+    /// sign that commit (fail-closed).
+    ///
+    /// Idempotent if `key` is already a controller (returns the existing
+    /// building object CID without staging changes).
+    pub fn add_controller_key(&mut self, key: PublicKey) -> Result<CaptureResult> {
+        let (old_cid, body) = self.current_building_body()?;
+        if body.controller_keys.iter().any(|k| k == &key) {
+            return Ok(CaptureResult {
+                cid: old_cid,
+                object_type: ObjectType::Building,
+            });
+        }
+        let mut keys = body.controller_keys;
+        keys.push(key);
+        // Stable order for deterministic CIDs when the same set is rebuilt.
+        keys.sort();
+        keys.dedup();
+
+        let mut new_obj = Object::new_with_created(
+            ObjectBody::Building(BuildingBody {
+                building_id: body.building_id,
+                name: body.name,
+                controller_keys: keys,
+                properties: body.properties,
+            }),
+            now_secs(),
+        );
+        if let Some(kp) = self.keypair.as_ref() {
+            new_obj.sign(kp)?;
+        }
+
+        self.remove_object(old_cid)?;
+        let res = self.put_staged(new_obj)?;
+        self.record.building_object = Some(res.cid);
+        Self::write_record(self.store.root(), &self.record)?;
+        Ok(res)
+    }
+
+    /// Current Building object CID and body from the active set (fail closed).
+    fn current_building_body(&self) -> Result<(Cid, BuildingBody)> {
+        let mut found: Option<(Cid, BuildingBody)> = None;
+        for cid in &self.active_objects {
+            let obj = match self.store.get(cid) {
+                Ok(o) => o,
+                Err(Error::NotFound(_)) => continue,
+                Err(e) => return Err(e),
+            };
+            if let ObjectBody::Building(b) = &obj.body {
+                if b.building_id == self.record.building_id {
+                    if found.is_some() {
+                        return Err(Error::Authorization(format!(
+                            "multiple Building objects for {} in active set",
+                            self.record.building_id
+                        )));
+                    }
+                    found = Some((*cid, b.clone()));
+                }
+            }
+        }
+        found.ok_or_else(|| {
+            Error::Authorization(format!(
+                "no Building object for {} in active set",
+                self.record.building_id
+            ))
+        })
     }
 
     fn put_staged(&mut self, obj: Object) -> Result<CaptureResult> {
@@ -729,6 +801,40 @@ mod tests {
             },
         );
         assert!(res.is_ok(), "{res:?}");
+    }
+
+    #[test]
+    fn add_controller_key_allows_second_device_commit() {
+        let dir = tempdir().unwrap();
+        let path = dir.path();
+        let mut repo = BuildingRepository::init(path, Some("Multi".into()), None).unwrap();
+        let bid = repo.building_id().clone();
+        let second = Keypair::generate();
+        let second_pk = second.public_key();
+
+        repo.add_controller_key(second_pk).unwrap();
+        let commit = repo.commit(Some("add device B".into())).unwrap();
+        assert!(commit.object_count >= 1);
+        drop(repo);
+
+        // Device B: write its seed and open; can commit as new controller.
+        BuildingRepository::write_seed(path, &second).unwrap();
+        let mut repo_b = BuildingRepository::open(path, &bid).unwrap();
+        repo_b
+            .capture_annotation(&AnnotationCapture::new(
+                "from B",
+                Pose {
+                    position: [0.0, 0.0, 0.0],
+                    orientation: [0.0, 0.0, 0.0, 1.0],
+                },
+            ))
+            .unwrap();
+        let c2 = repo_b.commit(Some("B scan".into())).unwrap();
+        assert_eq!(c2.previous_root, Some(commit.root_cid));
+
+        let (_, body) = repo_b.current_building_body().unwrap();
+        assert_eq!(body.controller_keys.len(), 2);
+        assert!(body.controller_keys.contains(&second_pk));
     }
 
     #[test]

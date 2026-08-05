@@ -34,8 +34,9 @@ sudo systemctl enable --now arxos-edge
 
 ## Security & Verification Utilities
 
-- **Access controls**: Device seed keys are stored locally at `$ARXOS_STORE/keys/device.seed` with restricted permissions (`0600`).
+- **Access controls**: Device seed keys at `$ARXOS_STORE/keys/device.seed` (`0600`).
 - **Root verification**: `arx verify $ROOT`
 - **Contributor scoring** (diagnostic points only): `arx score $BID`
 
-Scoring is data-plane only and is **not** a payment basis. Fiat payouts are a control-plane concern (see ADR-001).
+Scoring attributes DePIN contributions; it is **not** a payment basis by itself. Fiat
+settlement is off-band (see ADR-001).

@@ -101,7 +101,7 @@ root, when present) to be present in the local store unless
 ## Building identity
 
 Phase 0: `BuildingId` is a ULID string.  
-Later: account/DID-linked controllers in the commercial control plane (pure fiat; no on-chain registry).
+Later: optional richer identity for controllers (still ed25519 / data-plane keyed; no on-chain registry).
 
 `Building.controller_keys` is the authoritative set of keys allowed to sign
 repository roots for that building.

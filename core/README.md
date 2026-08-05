@@ -1,21 +1,22 @@
 # arxos-core
 
-The core library for the Arxos spatial data repository system (data plane).
+Core library for the Arxos DePIN spatial data repository.
 
 ## Responsibilities
 
 - **Content Addressing**: Canonical CBOR serialization and BLAKE3 CID generation.
-- **Object Schema**: Implements core types (Space, Surface, Equipment, BoundingVolume) and signature verification.
-- **Root Management**: Handles delta roots, materialization walks, checkpoint policies, and sync closures.
-- **Spatial Index**: Implements incremental R-tree index builds, query logic, and reachability garbage collection.
-- **Repository**: Manages local BuildingRecord instances, WorkingSet staging, and memory-cached active object sets.
-- **Scoring**: Deterministic contributor points reports (`scoring` module). Diagnostic only until multi-signal policy + control-plane ledger; never embeds fiat or accounts.
+- **Object Schema**: Space, Surface, Equipment, BoundingVolume, and signature verification.
+- **Root Management**: Delta roots, materialization walks, checkpoint policies, sync closures.
+- **Spatial Index**: Incremental R-tree builds, query, and related policies.
+- **Repository**: BuildingRecord, WorkingSet, active object cache.
+- **Scoring**: Deterministic contributor points reports (`scoring` module). Diagnostic type-count
+  weights today — not a payment basis; never embeds fiat amounts in objects.
 
-Money, KYC, billing, and entitlements live outside this crate (control plane). See ADR-001.
+Settlement (buyers and contributors in **fiat**) is an economic layer outside this crate; see
+[`docs/architecture/ADR-001-fiat-settled-depin.md`](../docs/architecture/ADR-001-fiat-settled-depin.md).
 
 ## Verification
 
-Run the core unit and integration test suites:
 ```bash
 cargo test -p arxos-core
 ```

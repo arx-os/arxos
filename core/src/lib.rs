@@ -1,10 +1,10 @@
 //! # arxos-core
 //!
 //! Content-addressed object model, Merkle roots, local CAS store, ed25519
-//! integrity signatures, and contributor scoring for the Arxos data plane.
+//! integrity signatures, and contributor scoring for the Arxos DePIN data plane.
 //!
-//! Pure-fiat commercial model: no tokens or blockchain settlement. Accounts,
-//! billing, and payouts belong in a separate control plane (ADR-001).
+//! Economic settlement is **fiat** (not tokens / chain mint). Scoring produces
+//! points for contribution attribution; the core never embeds money in CIDs.
 //!
 //! ## Surface
 //! - Canonical CBOR serialization + BLAKE3 CIDs
@@ -49,8 +49,7 @@ pub use crypto::{AuthorSignature, Keypair, PublicKey, Signature};
 pub use scoring::{
     attribute_object, score_cids, score_cids_with_policy, score_contributions,
     score_contributions_with_policy, score_root, score_root_with_policy, Contribution,
-    ContributorScore, NullPointsLedger, PointsLedgerHook, ScoreReport, ScoreWeights,
-    ScoringPolicy, DEFAULT_POLICY_VERSION,
+    ContributorScore, ScoreReport, ScoreWeights, ScoringPolicy, DEFAULT_POLICY_VERSION,
 };
 pub use error::{Error, Result};
 pub use merge::{merge_roots, plan_merge, MergePlan, MergeResult, ANNOTATION_DEDUP_M};

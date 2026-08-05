@@ -1,12 +1,12 @@
-//! Contributor scoring (data-plane Oracle input).
+//! Contributor scoring (DePIN oracle input on the data plane).
 //!
-//! # Economic role (pure fiat)
+//! # Economic role
 //!
-//! Scoring attributes contributions under a root and produces **points** (and
-//! diagnostic aggregates). Fiat conversion, accounts, KYC, and payout batches
-//! belong in the **control plane** — never in this module or the object CAS.
-//! See [`ADR-001`](../../../docs/architecture/ADR-001-data-plane-vs-control-plane.md)
-//! and the [fiat-model audit](../../../docs/architecture/FIAT_MODEL_AUDIT.md).
+//! Scoring attributes contributions under a root and produces **points** /
+//! reputation-style aggregates. Settlement is **fiat** (not tokens): ops may
+//! use scores later to pay contributors in fiat. This module never embeds
+//! money in the CAS. See
+//! [`ADR-001`](../../../docs/architecture/ADR-001-fiat-settled-depin.md).
 //!
 //! # Determinism
 //!
@@ -16,15 +16,13 @@
 //!
 //! # Safety
 //!
-//! **Diagnostic only until P1 multi-signal scoring + control-plane ledger.**
-//! Do not use current type-count scores as a payment basis.
+//! **Diagnostic only** (type-count weights). Do not use as a payment basis
+//! until multi-signal quality scoring is intentional product work.
 //!
-//! # P1 extension points (not implemented here)
+//! # Future scoring extensions (data plane only)
 //!
-//! - Richer versioned [`ScoringPolicy`] tables beyond default weights
+//! - Richer versioned [`ScoringPolicy`] tables
 //! - Multi-dimension fields on [`ScoreReport`] (depth, coverage, review, …)
-//! - Control-plane points ledger that records `report` hashes as score events
-//!   (see [`PointsLedgerHook`] stub)
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -37,7 +35,7 @@ use crate::object::{Object, ObjectBody, ObjectType};
 use crate::root::RootBody;
 use crate::store::ObjectStore;
 
-/// Policy version embedded in every report for offline replay and future ledgers.
+/// Policy version embedded in every report for offline replay.
 ///
 /// Bump when weight tables or aggregation rules change in a breaking way.
 pub const DEFAULT_POLICY_VERSION: u32 = 1;
@@ -74,10 +72,8 @@ pub struct ContributorScore {
 
 /// Full scoring report for a root (or explicit object set).
 ///
-/// # P1
-/// Multi-dimension signals (structure depth, coverage, attestation, review,
-/// multi-source confirmation) will extend this struct under a new
-/// `policy_version` without embedding money fields.
+/// Future multi-dimension signals may extend this under a new `policy_version`
+/// without embedding money fields.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ScoreReport {
     /// Scoring policy version used to produce this report.
@@ -125,7 +121,6 @@ impl Default for ScoreWeights {
 
 /// Versioned scoring policy (weights + metadata).
 ///
-/// # P1
 /// Expand with additional signal coefficients without changing the pure
 /// function shape: `score_*(…, &ScoringPolicy)`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -148,29 +143,6 @@ impl ScoringPolicy {
         Self { version, weights }
     }
 }
-
-/// Stub extension point for a future control-plane points ledger.
-///
-/// The data plane must not implement balances or fiat conversion. A control
-/// plane service may hash a [`ScoreReport`] and append a score event; this
-/// trait documents the intended boundary only.
-///
-/// # P1
-/// Implement in the control-plane service, not in `arxos-core`.
-pub trait PointsLedgerHook {
-    /// Record that a score report was produced (idempotent by report identity).
-    ///
-    /// Implementations must not live in the object store.
-    fn record_score_event(&self, _report: &ScoreReport) -> Result<()> {
-        Ok(())
-    }
-}
-
-/// No-op ledger hook (default until control plane exists).
-#[derive(Debug, Default, Clone, Copy)]
-pub struct NullPointsLedger;
-
-impl PointsLedgerHook for NullPointsLedger {}
 
 fn weight_for(ty: ObjectType, w: &ScoreWeights) -> f64 {
     match ty {
@@ -496,17 +468,6 @@ mod tests {
         let r1 = score_root_with_policy(repo.store(), &commit.root_cid, &policy).unwrap();
         let r2 = score_root_with_policy(repo.store(), &commit.root_cid, &policy).unwrap();
         assert_eq!(r1, r2);
-    }
-
-    #[test]
-    fn null_ledger_hook_is_noop() {
-        let report = score_contributions(
-            vec![],
-            None,
-            "b".into(),
-            &ScoreWeights::default(),
-        );
-        NullPointsLedger.record_score_event(&report).unwrap();
     }
 
     #[test]

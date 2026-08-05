@@ -188,9 +188,9 @@ Gateways project the canonical Arxos object graph into standardized engineering 
 ### 8.2 Current Design Limitations
 - **No Rendering**: Arxos does not perform 3D graphics rendering; geometry translation is limited to spatial reasoning, queries, and file export formats.
 - **Index node CIDs**: Full rebuild vs incremental construction may produce different index-root CIDs for the same geometry; refined **query sets** are required to match (see §4.2).
-- **No blockchain settlement**: EVM material is archived under `archive/contracts-evm-deprecated/`; authorization remains ed25519 `Building.controller_keys`.
+- **No blockchain reward settlement**: EVM material is archived under `archive/contracts-evm-deprecated/`; authorization remains ed25519 `Building.controller_keys`. Fiat settlement is off-band (see ADR-001).
 - **Single-writer store**: Concurrent writers on the same store path are not supported (no flock/daemon yet).
-- **Money / KYC / entitlements**: never stored in the object CAS (see ADR-001).
+- **Settlement amounts**: never stored in the object CAS.
 
 ---
 
@@ -230,11 +230,10 @@ This section records **what is already true in the tree** and **where to work ne
 3. Store single-writer lock or edge daemon as exclusive writer.
 4. Structured `Error` variants (less stringly) for UniFFI.
 5. Controller rotation objects; optional transport↔author key binding.
-6. Multi-signal scoring + control-plane points/fiat ledger (P1; scoring is diagnostic-only today).
+6. Multi-signal scoring (diagnostic-only type-count scoring today).
 7. Modularize `cli/src/main.rs` without behavior change.
 
-Pure-fiat split: [`ADR-001-data-plane-vs-control-plane.md`](ADR-001-data-plane-vs-control-plane.md).  
-Audit: [`FIAT_MODEL_AUDIT.md`](FIAT_MODEL_AUDIT.md).
+Fiat-settled DePIN: [`ADR-001-fiat-settled-depin.md`](ADR-001-fiat-settled-depin.md).
 
 ### 9.4 Verification commands
 

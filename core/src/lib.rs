@@ -1,13 +1,17 @@
 //! # arxos-core
 //!
-//! Content-addressed object model, Merkle roots, local CAS store, and crypto
-//! for the Arxos lived-experience architecture.
+//! Content-addressed object model, Merkle roots, local CAS store, ed25519
+//! integrity signatures, and contributor scoring for the Arxos data plane.
 //!
-//! ## Phase 0 surface
+//! Pure-fiat commercial model: no tokens or blockchain settlement. Accounts,
+//! billing, and payouts belong in a separate control plane (ADR-001).
+//!
+//! ## Surface
 //! - Canonical CBOR serialization + BLAKE3 CIDs
 //! - Object header/body model and typed payloads
 //! - Root (repository state) with ed25519 multi-author signatures
 //! - Local content-addressed file store
+//! - Deterministic contributor scoring (`scoring`)
 //! - Optional UniFFI bindings for Swift
 
 // Module-level docs are required; per-field docs are encouraged but not denied in Phase 0.
@@ -18,13 +22,13 @@ pub mod capture;
 pub mod canonical;
 pub mod cid;
 pub mod crypto;
-pub mod depin;
 pub mod error;
 pub mod merge;
 pub mod object;
 pub mod repository;
 pub mod root;
 pub mod schema;
+pub mod scoring;
 pub mod spatial;
 pub mod store;
 pub mod verify;
@@ -42,9 +46,11 @@ pub use capture::{
 };
 pub use cid::Cid;
 pub use crypto::{AuthorSignature, Keypair, PublicKey, Signature};
-pub use depin::{
-    attribute_object, registry_snapshot, score_cids, score_contributions, score_root, Contribution,
-    ContributorScore, RegistrySnapshot, ScoreReport, ScoreWeights,
+pub use scoring::{
+    attribute_object, score_cids, score_cids_with_policy, score_contributions,
+    score_contributions_with_policy, score_root, score_root_with_policy, Contribution,
+    ContributorScore, NullPointsLedger, PointsLedgerHook, ScoreReport, ScoreWeights,
+    ScoringPolicy, DEFAULT_POLICY_VERSION,
 };
 pub use error::{Error, Result};
 pub use merge::{merge_roots, plan_merge, MergePlan, MergeResult, ANNOTATION_DEDUP_M};

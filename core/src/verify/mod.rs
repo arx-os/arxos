@@ -1,8 +1,7 @@
 //! Formal-ish verification of canonicalization and root transitions.
 //!
-//! Phase 5: deterministic checks that any node can re-run. These are not a
-//! full proof assistant, but they encode the critical safety properties of
-//! the lived-experience architecture.
+//! Deterministic checks that any node can re-run. These are not a full proof
+//! assistant, but they encode critical data-plane safety properties.
 
 use std::collections::BTreeSet;
 

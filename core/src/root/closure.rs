@@ -321,4 +321,68 @@ mod tests {
         assert!(!meta.blobs.iter().any(|(c, _)| *c == blob_cid));
         assert!(meta.blobs.iter().any(|(c, _)| *c == chunk_cid));
     }
+
+    #[test]
+    fn metadata_first_skips_mesh_blobs() {
+        use crate::capture::{put_mesh, MeshCapture};
+        use crate::object::Pose;
+
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let kp = Keypair::generate();
+        let bid = BuildingId::new();
+
+        let building = Object::new_with_created(
+            ObjectBody::Building(BuildingBody {
+                building_id: bid.clone(),
+                name: None,
+                controller_keys: vec![kp.public_key()],
+                properties: BTreeMap::new(),
+            }),
+            1,
+        );
+        let bc = store.put(&building).unwrap();
+
+        let mesh = put_mesh(
+            &store,
+            &MeshCapture {
+                pose: Pose::default(),
+                bounds: None,
+                vertices: vec![9, 8, 7, 6],
+                indices: vec![0, 1, 2],
+                properties: BTreeMap::new(),
+            },
+        )
+        .unwrap();
+        let (v_blob, i_blob) = match &mesh.body {
+            ObjectBody::Mesh(b) => (b.vertices_blob.unwrap(), b.indices_blob.unwrap()),
+            _ => panic!("mesh"),
+        };
+        let mesh_cid = store.put(&mesh).unwrap();
+
+        let mut objects = BTreeSet::new();
+        objects.insert(bc);
+        objects.insert(mesh_cid);
+        objects.insert(v_blob);
+        objects.insert(i_blob);
+
+        let (root_obj, root_cid) = RootBuilder::new(bid, 10)
+            .objects(objects)
+            .build_signed(&kp)
+            .unwrap();
+        store.put(&root_obj).unwrap();
+
+        let meta = get_root_closure_blobs_with_options(
+            &store,
+            &root_cid,
+            &ClosureOptions {
+                allow_partial: false,
+                include_blobs: false,
+            },
+        )
+        .unwrap();
+        assert!(meta.blobs.iter().any(|(c, _)| *c == mesh_cid));
+        assert!(!meta.blobs.iter().any(|(c, _)| *c == v_blob));
+        assert!(!meta.blobs.iter().any(|(c, _)| *c == i_blob));
+    }
 }

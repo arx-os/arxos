@@ -12,7 +12,8 @@ use crate::crypto::Keypair;
 use crate::entity::EntityId;
 use crate::error::Result;
 use crate::object::{
-    Aabb, AnnotationBody, BlobBody, Object, ObjectBody, PointCloudChunkBody, Pose, SpaceBody,
+    Aabb, AnnotationBody, BlobBody, MeshBody, Object, ObjectBody, PointCloudChunkBody, Pose,
+    SpaceBody,
 };
 use crate::store::ObjectStore;
 
@@ -192,6 +193,107 @@ pub fn resolve_point_bytes(
         }
     } else {
         Ok(body.points.clone())
+    }
+}
+
+/// Input for a mesh capture (packed vertex / index bytes).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct MeshCapture {
+    pub pose: Pose,
+    pub bounds: Option<Aabb>,
+    pub vertices: Vec<u8>,
+    pub indices: Vec<u8>,
+    pub properties: BTreeMap<String, String>,
+}
+
+/// Convert a mesh capture into an unsigned Object with **inline** payloads.
+/// Prefer [`put_mesh`] for production paths.
+pub fn mesh_object(capture: &MeshCapture) -> Object {
+    Object::new_with_created(
+        ObjectBody::Mesh(MeshBody {
+            pose: Some(capture.pose.clone()),
+            bounds: capture.bounds.clone(),
+            vertices: capture.vertices.clone(),
+            indices: capture.indices.clone(),
+            vertices_blob: None,
+            indices_blob: None,
+            properties: capture.properties.clone(),
+        }),
+        now_secs(),
+    )
+}
+
+/// Put mesh vertex/index payloads as Blobs; return a skinny Mesh object.
+pub fn put_mesh(store: &ObjectStore, capture: &MeshCapture) -> Result<Object> {
+    let mut v_props = BTreeMap::new();
+    v_props.insert("role".into(), "mesh_vertices".into());
+    let v_blob = Object::new_with_created(
+        ObjectBody::Blob(BlobBody {
+            content_type: Some("application/x-arxos-mesh-vertices".into()),
+            data: capture.vertices.clone(),
+            properties: v_props,
+        }),
+        0,
+    );
+    let vertices_blob = store.put(&v_blob)?;
+
+    let mut i_props = BTreeMap::new();
+    i_props.insert("role".into(), "mesh_indices".into());
+    let i_blob = Object::new_with_created(
+        ObjectBody::Blob(BlobBody {
+            content_type: Some("application/x-arxos-mesh-indices".into()),
+            data: capture.indices.clone(),
+            properties: i_props,
+        }),
+        0,
+    );
+    let indices_blob = store.put(&i_blob)?;
+
+    let mut props = capture.properties.clone();
+    props.insert("vertices_blob".into(), vertices_blob.to_string());
+    props.insert("indices_blob".into(), indices_blob.to_string());
+
+    Ok(Object::new_with_created(
+        ObjectBody::Mesh(MeshBody {
+            pose: Some(capture.pose.clone()),
+            bounds: capture.bounds.clone(),
+            vertices: Vec::new(),
+            indices: Vec::new(),
+            vertices_blob: Some(vertices_blob),
+            indices_blob: Some(indices_blob),
+            properties: props,
+        }),
+        now_secs(),
+    ))
+}
+
+/// Resolve mesh vertex bytes (blob preferred, else legacy inline).
+pub fn resolve_mesh_vertices(store: &ObjectStore, body: &MeshBody) -> Result<Vec<u8>> {
+    if let Some(cid) = &body.vertices_blob {
+        let obj = store.get(cid)?;
+        match obj.body {
+            ObjectBody::Blob(b) => Ok(b.data),
+            _ => Err(crate::error::Error::Validation(format!(
+                "vertices_blob {cid} is not a Blob object"
+            ))),
+        }
+    } else {
+        Ok(body.vertices.clone())
+    }
+}
+
+/// Resolve mesh index bytes (blob preferred, else legacy inline).
+pub fn resolve_mesh_indices(store: &ObjectStore, body: &MeshBody) -> Result<Vec<u8>> {
+    if let Some(cid) = &body.indices_blob {
+        let obj = store.get(cid)?;
+        match obj.body {
+            ObjectBody::Blob(b) => Ok(b.data),
+            _ => Err(crate::error::Error::Validation(format!(
+                "indices_blob {cid} is not a Blob object"
+            ))),
+        }
+    } else {
+        Ok(body.indices.clone())
     }
 }
 
@@ -409,6 +511,34 @@ mod tests {
             assert!(domain_bytes.len() < 512);
         } else {
             panic!("expected point cloud chunk");
+        }
+    }
+
+    #[test]
+    fn mesh_tiered_blob_roundtrip() {
+        use crate::store::ObjectStore;
+        use tempfile::tempdir;
+
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let cap = MeshCapture {
+            pose: Pose::default(),
+            bounds: None,
+            vertices: vec![1, 2, 3, 4, 5, 6],
+            indices: vec![0, 1, 2],
+            properties: BTreeMap::new(),
+        };
+        let obj = put_mesh(&store, &cap).unwrap();
+        if let ObjectBody::Mesh(ref b) = obj.body {
+            assert!(b.vertices.is_empty());
+            assert!(b.indices.is_empty());
+            assert!(b.vertices_blob.is_some());
+            assert!(b.indices_blob.is_some());
+            assert_eq!(resolve_mesh_vertices(&store, b).unwrap(), cap.vertices);
+            assert_eq!(resolve_mesh_indices(&store, b).unwrap(), cap.indices);
+            assert!(obj.to_canonical_bytes().unwrap().len() < 512);
+        } else {
+            panic!("expected mesh");
         }
     }
 

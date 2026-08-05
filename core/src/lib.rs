@@ -42,8 +42,9 @@ pub use attest::{
     AttestationVerifier, DefaultAttestationVerifier, MockAttestationVerifier,
 };
 pub use capture::{
-    annotation_object, point_cloud_object, pose_from_column_major_matrix, put_point_cloud_chunk,
-    resolve_point_bytes, space_object, world_aabb_from_transform_and_dimensions, AnnotationCapture,
+    annotation_object, mesh_object, point_cloud_object, pose_from_column_major_matrix, put_mesh,
+    put_point_cloud_chunk, resolve_mesh_indices, resolve_mesh_vertices, resolve_point_bytes,
+    space_object, world_aabb_from_transform_and_dimensions, AnnotationCapture, MeshCapture,
     PointCloudCapture, SpaceCapture,
 };
 pub use cid::Cid;

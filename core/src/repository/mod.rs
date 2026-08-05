@@ -352,12 +352,99 @@ impl BuildingRepository {
                 object_type: ObjectType::Building,
             });
         }
-        let mut keys = body.controller_keys;
+        let mut keys = body.controller_keys.clone();
         keys.push(key);
         // Stable order for deterministic CIDs when the same set is rebuilt.
         keys.sort();
         keys.dedup();
+        self.replace_building_object(old_cid, body, keys)
+    }
 
+    /// Remove a controller public key without re-initializing the building.
+    ///
+    /// Fail-closed rules:
+    /// - Key must currently be a controller.
+    /// - Cannot remove the last remaining controller.
+    /// - Stages a new Building object + removal of the prior one; caller must
+    ///   [`commit`] with a remaining controller key.
+    pub fn remove_controller_key(&mut self, key: PublicKey) -> Result<CaptureResult> {
+        let (old_cid, body) = self.current_building_body()?;
+        if !body.controller_keys.iter().any(|k| k == &key) {
+            return Err(Error::Validation(format!(
+                "public key {key} is not in building controller_keys"
+            )));
+        }
+        if body.controller_keys.len() <= 1 {
+            return Err(Error::Authorization(
+                "cannot remove the last remaining controller; offline recovery required".into(),
+            ));
+        }
+        let mut keys: Vec<PublicKey> = body
+            .controller_keys
+            .iter()
+            .copied()
+            .filter(|k| k != &key)
+            .collect();
+        keys.sort();
+        keys.dedup();
+        if keys.is_empty() {
+            return Err(Error::Authorization(
+                "cannot remove the last remaining controller; offline recovery required".into(),
+            ));
+        }
+        self.replace_building_object(old_cid, body, keys)
+    }
+
+    /// Controller public keys on the current Building object in the active set.
+    pub fn controller_keys(&self) -> Result<Vec<PublicKey>> {
+        let (_, body) = self.current_building_body()?;
+        Ok(body.controller_keys)
+    }
+
+    /// List entity heads in the active set: `(EntityId, version Cid, ObjectType)`.
+    ///
+    /// Deterministic order by entity id string. Objects without `entity_id` are omitted.
+    /// When multiple versions of the same entity appear (should not after collapse),
+    /// the higher `created` (then higher CID) wins.
+    pub fn list_entity_heads(&self) -> Result<Vec<(crate::entity::EntityId, Cid, ObjectType)>> {
+        use crate::entity::entity_id_of;
+        let mut by_entity: std::collections::BTreeMap<
+            crate::entity::EntityId,
+            (Cid, u64, ObjectType),
+        > = std::collections::BTreeMap::new();
+        for cid in &self.active_objects {
+            let obj = match self.store.get(cid) {
+                Ok(o) => o,
+                Err(Error::NotFound(_)) => continue,
+                Err(e) => return Err(e),
+            };
+            let Some(eid) = entity_id_of(&obj).cloned() else {
+                continue;
+            };
+            let created = obj.header.created;
+            let ty = obj.header.object_type;
+            let replace = match by_entity.get(&eid) {
+                None => true,
+                Some((prev_cid, prev_created, _)) => {
+                    created > *prev_created || (created == *prev_created && *cid > *prev_cid)
+                }
+            };
+            if replace {
+                by_entity.insert(eid, (*cid, created, ty));
+            }
+        }
+        Ok(by_entity
+            .into_iter()
+            .map(|(eid, (cid, _, ty))| (eid, cid, ty))
+            .collect())
+    }
+
+    fn replace_building_object(
+        &mut self,
+        old_cid: Cid,
+        body: BuildingBody,
+        keys: Vec<PublicKey>,
+    ) -> Result<CaptureResult> {
         let mut new_obj = Object::new_with_created(
             ObjectBody::Building(BuildingBody {
                 building_id: body.building_id,
@@ -379,7 +466,7 @@ impl BuildingRepository {
     }
 
     /// Current Building object CID and body from the active set (fail closed).
-    fn current_building_body(&self) -> Result<(Cid, BuildingBody)> {
+    pub fn current_building_body(&self) -> Result<(Cid, BuildingBody)> {
         let mut found: Option<(Cid, BuildingBody)> = None;
         for cid in &self.active_objects {
             let obj = match self.store.get(cid) {
@@ -809,6 +896,7 @@ mod tests {
         let path = dir.path();
         let mut repo = BuildingRepository::init(path, Some("Multi".into()), None).unwrap();
         let bid = repo.building_id().clone();
+        let first_pk = repo.keypair().unwrap().public_key();
         let second = Keypair::generate();
         let second_pk = second.public_key();
 
@@ -835,6 +923,89 @@ mod tests {
         let (_, body) = repo_b.current_building_body().unwrap();
         assert_eq!(body.controller_keys.len(), 2);
         assert!(body.controller_keys.contains(&second_pk));
+        assert!(body.controller_keys.contains(&first_pk));
+    }
+
+    #[test]
+    fn remove_controller_key_success_and_remaining_can_commit() {
+        let dir = tempdir().unwrap();
+        let path = dir.path();
+        let mut repo = BuildingRepository::init(path, Some("Rm".into()), None).unwrap();
+        let bid = repo.building_id().clone();
+        let first = repo.keypair().unwrap().clone();
+        let second = Keypair::generate();
+        repo.add_controller_key(second.public_key()).unwrap();
+        repo.commit(Some("add B".into())).unwrap();
+        drop(repo);
+
+        BuildingRepository::write_seed(path, &first).unwrap();
+        let mut repo = BuildingRepository::open(path, &bid).unwrap();
+        repo.remove_controller_key(second.public_key()).unwrap();
+        let c = repo.commit(Some("remove B".into())).unwrap();
+        assert_eq!(repo.controller_keys().unwrap().len(), 1);
+        assert!(repo.controller_keys().unwrap().contains(&first.public_key()));
+        drop(repo);
+
+        // Remaining controller can still author.
+        BuildingRepository::write_seed(path, &first).unwrap();
+        let mut repo = BuildingRepository::open(path, &bid).unwrap();
+        repo.capture_annotation(&AnnotationCapture::new("still here", Pose::default()))
+            .unwrap();
+        let c2 = repo.commit(Some("after remove".into())).unwrap();
+        assert_eq!(c2.previous_root, Some(c.root_cid));
+    }
+
+    #[test]
+    fn remove_last_controller_rejected() {
+        let dir = tempdir().unwrap();
+        let path = dir.path();
+        let mut repo = BuildingRepository::init(path, Some("Last".into()), None).unwrap();
+        let only = repo.keypair().unwrap().public_key();
+        let err = repo.remove_controller_key(only).unwrap_err();
+        assert!(
+            matches!(err, Error::Authorization(_)),
+            "expected Authorization, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn remove_unknown_controller_rejected() {
+        let dir = tempdir().unwrap();
+        let path = dir.path();
+        let mut repo = BuildingRepository::init(path, Some("Unk".into()), None).unwrap();
+        let stranger = Keypair::generate().public_key();
+        let err = repo.remove_controller_key(stranger).unwrap_err();
+        assert!(
+            matches!(err, Error::Validation(_)),
+            "expected Validation, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn removed_controller_cannot_author() {
+        let dir = tempdir().unwrap();
+        let path = dir.path();
+        let mut repo = BuildingRepository::init(path, Some("Authz".into()), None).unwrap();
+        let bid = repo.building_id().clone();
+        let first = repo.keypair().unwrap().clone();
+        let second = Keypair::generate();
+        repo.add_controller_key(second.public_key()).unwrap();
+        repo.commit(Some("add B".into())).unwrap();
+        // First removes second.
+        repo.remove_controller_key(second.public_key()).unwrap();
+        repo.commit(Some("drop B".into())).unwrap();
+        drop(repo);
+
+        BuildingRepository::write_seed(path, &second).unwrap();
+        let mut repo = BuildingRepository::open(path, &bid).unwrap();
+        repo.capture_annotation(&AnnotationCapture::new("nope", Pose::default()))
+            .unwrap();
+        let err = repo.commit(Some("should fail".into())).unwrap_err();
+        assert!(
+            matches!(err, Error::Authorization(_)),
+            "expected Authorization, got {err:?}"
+        );
+        let _ = first;
     }
 
     #[test]

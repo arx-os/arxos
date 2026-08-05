@@ -1,19 +1,22 @@
-//! Merge concurrent building roots (union + simple conflict rules).
+//! Merge concurrent building roots (union + entity collapse + annotation rules).
 //!
-//! Phase 3 rules:
+//! Rules:
 //! 1. **Union** of object CID sets (and carry the newer previous_root chain tip).
-//! 2. **Annotation proximity dedupe**: if two annotations are within
+//! 2. **Entity collapse**: at most one version CID per [`crate::entity::EntityId`]
+//!    (newer `created`, then higher CID).
+//! 3. **Annotation proximity dedupe**: if two annotations are within
 //!    [`ANNOTATION_DEDUP_M`] and share the same normalized text, keep the one
 //!    with the later `created` timestamp (tie-break by CID).
-//! 3. **Annotation conflict keep-both**: same pose proximity but different text
+//! 4. **Annotation conflict keep-both**: same pose proximity but different text
 //!    → keep both (field truth is multi-author).
-//! 4. Spatial index is **rebuilt** after merge (not merged node-by-node).
+//! 5. Spatial index is **rebuilt** after merge (not merged node-by-node).
 
 use std::collections::BTreeSet;
 
 use crate::capture::pose_distance;
 use crate::cid::Cid;
 use crate::crypto::Keypair;
+use crate::entity::collapse_active_set;
 use crate::error::{Error, Result};
 use crate::object::{Object, ObjectBody, ObjectType, Pose};
 use crate::root::{RootBody, RootBuilder};
@@ -146,8 +149,13 @@ pub fn merge_roots(
     objects.remove(&root_b);
 
     let before = objects.len() as u64;
+
+    // Entity collapse first (same physical entity → one version).
+    let collapsed = collapse_active_set(store, &objects)?;
+    objects = collapsed.kept;
+
     let drops = annotation_dedupe_drops(store, &objects)?;
-    let deduped = drops.len() as u64;
+    let deduped = drops.len() as u64 + collapsed.superseded.len() as u64;
     for d in drops {
         objects.remove(&d);
     }
@@ -235,10 +243,11 @@ pub fn plan_merge(store: &ObjectStore, root_a: Cid, root_b: Cid) -> Result<Merge
     let mut objects: BTreeSet<Cid> = active_a.iter().chain(active_b.iter()).copied().collect();
     objects.remove(&root_a);
     objects.remove(&root_b);
-    let drops = annotation_dedupe_drops(store, &objects)?;
+    let collapsed = collapse_active_set(store, &objects)?;
+    let drops = annotation_dedupe_drops(store, &collapsed.kept)?;
     Ok(MergePlan {
-        union_size: objects.len(),
-        would_dedupe: drops.len(),
+        union_size: collapsed.kept.len(),
+        would_dedupe: drops.len() + collapsed.superseded.len(),
         building_id: a.building_id.to_string(),
     })
 }
@@ -246,8 +255,9 @@ pub fn plan_merge(store: &ObjectStore, root_a: Cid, root_b: Cid) -> Result<Merge
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::capture::{annotation_object, AnnotationCapture};
-    use crate::object::{BuildingBody, BuildingId, ObjectBody};
+    use crate::capture::{annotation_object, space_object, AnnotationCapture, SpaceCapture};
+    use crate::entity::{entity_id_of, EntityId};
+    use crate::object::{BuildingBody, BuildingId, ObjectBody, Pose};
     use crate::crypto::Keypair;
     use std::collections::BTreeMap;
     use tempfile::tempdir;
@@ -346,5 +356,68 @@ mod tests {
         assert!(body.merge_parents.contains(&cb));
         assert!(body.previous_root == Some(ca) || body.previous_root == Some(cb));
         assert_eq!(merged.parents, (ca, cb));
+    }
+
+    #[test]
+    fn merge_collapses_same_entity_to_newer_version() {
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let kp = Keypair::generate();
+        let bid = BuildingId::new();
+        let building = put_building(&store, &bid, &kp);
+        let eid = EntityId::from("01ENTITYMERGE000000000000".to_string());
+
+        let mut older = space_object(&SpaceCapture {
+            entity_id: Some(eid.clone()),
+            name: Some("older".into()),
+            pose: Pose {
+                position: [0.0, 0.0, 0.0],
+                orientation: [0.0, 0.0, 0.0, 1.0],
+            },
+            bounds: None,
+            floor: None,
+            properties: BTreeMap::new(),
+        });
+        older.header.created = 10;
+        older.sign(&kp).unwrap();
+        let c_old = store.put(&older).unwrap();
+
+        let mut newer = space_object(&SpaceCapture {
+            entity_id: Some(eid.clone()),
+            name: Some("newer".into()),
+            pose: Pose {
+                position: [5.0, 0.0, 0.0],
+                orientation: [0.0, 0.0, 0.0, 1.0],
+            },
+            bounds: None,
+            floor: None,
+            properties: BTreeMap::new(),
+        });
+        newer.header.created = 20;
+        newer.sign(&kp).unwrap();
+        let c_new = store.put(&newer).unwrap();
+
+        let set_a: BTreeSet<Cid> = [building, c_old].into_iter().collect();
+        let set_b: BTreeSet<Cid> = [building, c_new].into_iter().collect();
+        let (ra, ca) = RootBuilder::new(bid.clone(), 2000)
+            .objects(set_a)
+            .build_signed(&kp)
+            .unwrap();
+        store.put(&ra).unwrap();
+        let (rb, cb) = RootBuilder::new(bid, 2001)
+            .objects(set_b)
+            .build_signed(&kp)
+            .unwrap();
+        store.put(&rb).unwrap();
+
+        let merged = merge_roots(&store, ca, cb, &kp, None, false).unwrap();
+        let root = store.get(&merged.root_cid).unwrap();
+        let body = RootBody::from_object(&root).unwrap();
+        let active = body.materialize_active_objects(&store).unwrap();
+        assert!(active.contains(&c_new));
+        assert!(!active.contains(&c_old));
+        assert_eq!(entity_id_of(&store.get(&c_new).unwrap()).unwrap(), &eid);
+        // building + one space version
+        assert_eq!(active.len(), 2);
     }
 }

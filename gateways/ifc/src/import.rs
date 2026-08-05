@@ -131,6 +131,7 @@ fn import_file(
                 })
             }
             "floor" => ObjectBody::Floor(FloorBody {
+                entity_id: Some(arxos_core::EntityId::new()),
                 building_id: building_id.clone(),
                 name,
                 level_index: 0,
@@ -138,6 +139,7 @@ fn import_file(
                 properties: props,
             }),
             "space" => ObjectBody::Space(SpaceBody {
+                entity_id: Some(arxos_core::EntityId::new()),
                 name,
                 floor: None,
                 pose,

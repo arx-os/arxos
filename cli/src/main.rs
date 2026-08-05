@@ -887,6 +887,7 @@ fn sync_main(cli: Cli) -> Result<()> {
                 let bid = BuildingId::from_str(&building_id)?;
                 let mut repo = BuildingRepository::open(&cli.store, &bid)?;
                 let res = repo.capture_space(&SpaceCapture {
+                    entity_id: None,
                     name,
                     pose: Pose {
                         position: [x, y, z],
@@ -983,6 +984,7 @@ fn sync_main(cli: Cli) -> Result<()> {
                 let bid = BuildingId::from_str(&building_id)?;
                 let mut repo = BuildingRepository::open(&cli.store, &bid)?;
                 let space = repo.capture_space(&SpaceCapture {
+                    entity_id: None,
                     name: Some(name),
                     pose: Pose {
                         position: [1.0, 0.0, 1.0],

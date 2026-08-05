@@ -57,14 +57,20 @@ Important types include: `Building`, `Floor`, `Space`, `Surface`, `Opening`,
 `Equipment`, `Annotation`, `PointCloudChunk`, `Mesh`, `SpatialIndexNode`,
 `Root`, `Provenance`, `Blob`.
 
-Cross-object references are always CIDs (or, as the model hardens, stable
-entity IDs that point at the current version CID).
+Cross-object references are CIDs. Physical entities (Floor, Space, Surface,
+Opening, Equipment, Sensor, Fixture, System, Circuit) also carry an optional
+stable **`EntityId`** (ULID). Each update produces a **new version object**
+(new CID); commit and merge **collapse** the active set so at most one version
+per `EntityId` remains. Legacy objects without `entity_id` never collapse
+with peers (pure-CID identity).
 
 ### Roots (version control)
 
 A **Root** is a signed commit for one building:
 
-- **Delta commits** carry `added` / `removed` CID sets relative to the parent.
+- **Delta commits** carry `added` / `removed` CID sets relative to the parent
+  (removes include superseded entity versions and explicit `remove_object` /
+  `remove_entity` operations).
 - **Checkpoints** (every 50 commits, and on the first commit) store the full
   active object set so materialization stays bounded.
 - **Authors** must present valid ed25519 signatures **and** be listed in
@@ -215,7 +221,6 @@ $ARXOS_STORE/
 
 ### Known hardening targets (not promises)
 
-- Stable entity identity + remove/replace of version heads
 - Blob tiering for large point clouds / meshes
 - Single-writer store lock and long-running edge `serve`
 - Controller rotation / multi-device key policy
@@ -270,6 +275,7 @@ cargo test --workspace
 | Concern | Location |
 |---------|----------|
 | Object schema / CID / crypto | `core/src/object`, `canonical`, `cid`, `crypto` |
+| Entity identity / collapse | `core/src/entity.rs` |
 | Roots, auth, checkpoints, closures | `core/src/root/` |
 | Commit / adopt / query | `core/src/repository/` |
 | Spatial index | `core/src/spatial/` |

@@ -68,6 +68,11 @@ impl WorkingSet {
         self.insert_cache(cid, object);
     }
 
+    /// Drop a CID from the staged set (e.g. when staging a removal).
+    pub fn unstaged(&mut self, cid: &Cid) {
+        self.staged.remove(cid);
+    }
+
     /// Cache an object without marking it staged (used on open/reload).
     pub fn cache_only(&mut self, cid: Cid, object: Object) {
         self.insert_cache(cid, object);

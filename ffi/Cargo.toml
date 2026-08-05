@@ -18,6 +18,7 @@ arxos-core = { path = "../core" }
 arxos-networking = { path = "../networking" }
 arxos-usd = { path = "../gateways/usd" }
 arxos-ifc = { path = "../gateways/ifc" }
+blake3 = { workspace = true }
 uniffi = { version = "0.28", features = ["cli"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
 hex = "0.4"

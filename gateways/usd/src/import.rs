@@ -105,6 +105,7 @@ fn import_stage(
                 })
             }
             "floor" => ObjectBody::Floor(FloorBody {
+                entity_id: Some(arxos_core::EntityId::new()),
                 building_id: building_id.clone(),
                 name: attr_string(prim, "arxos:name"),
                 level_index: attr_string(prim, "arxos:levelIndex")
@@ -114,6 +115,7 @@ fn import_stage(
                 properties: props,
             }),
             "space" => ObjectBody::Space(SpaceBody {
+                entity_id: Some(arxos_core::EntityId::new()),
                 name: attr_string(prim, "arxos:name"),
                 floor: None,
                 pose,
@@ -144,6 +146,7 @@ fn import_stage(
                 })
             }
             "equipment" => ObjectBody::Equipment(arxos_core::object::EquipmentBody {
+                entity_id: Some(arxos_core::EntityId::new()),
                 name: attr_string(prim, "arxos:name"),
                 equipment_kind: attr_string(prim, "arxos:kind"),
                 pose,

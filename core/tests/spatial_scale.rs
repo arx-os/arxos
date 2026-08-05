@@ -38,6 +38,7 @@ fn floor_scale_index_and_partial_load() {
 
     let floor = Object::new_with_created(
         ObjectBody::Floor(FloorBody {
+            entity_id: Some(arxos_core::EntityId::new()),
             building_id: bid.clone(),
             name: Some("L1".into()),
             level_index: 0,
@@ -49,6 +50,7 @@ fn floor_scale_index_and_partial_load() {
     let floor_cid = store.put(&floor).unwrap();
 
     let space = space_object(&SpaceCapture {
+                    entity_id: None,
         name: Some("Open office".into()),
         pose: Pose {
             position: [25.0, 0.0, 25.0],

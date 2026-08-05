@@ -22,6 +22,7 @@ pub mod capture;
 pub mod canonical;
 pub mod cid;
 pub mod crypto;
+pub mod entity;
 pub mod error;
 pub mod merge;
 pub mod object;
@@ -46,6 +47,10 @@ pub use capture::{
 };
 pub use cid::Cid;
 pub use crypto::{AuthorSignature, Keypair, PublicKey, Signature};
+pub use entity::{
+    collapse_active_set, collapse_active_set_preferring, entity_id_of, find_entity_versions,
+    CollapseResult, EntityId,
+};
 pub use scoring::{
     attribute_object, score_cids, score_cids_with_policy, score_contributions,
     score_contributions_with_policy, score_root, score_root_with_policy, Contribution,

@@ -74,6 +74,7 @@ impl BuildingRepository {
         self.active_objects = active_set;
         self.record.head_root = Some(root_cid);
         self.record.pending.clear();
+        self.record.pending_removes.clear();
         self.record.updated = now_secs();
         Self::write_record(self.store.root(), &self.record)?;
 

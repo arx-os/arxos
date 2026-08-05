@@ -19,6 +19,7 @@ fn ifc_roundtrip_identity() {
     let bid = repo.building_id().clone();
 
     let floor = Object::new(ObjectBody::Floor(FloorBody {
+        entity_id: Some(arxos_core::EntityId::new()),
         building_id: bid.clone(),
         name: Some("Ground".into()),
         level_index: 0,
@@ -28,6 +29,7 @@ fn ifc_roundtrip_identity() {
     let floor_cid = repo.store().put(&floor).unwrap();
 
     repo.capture_space(&SpaceCapture {
+                    entity_id: None,
         name: Some("Mech".into()),
         pose: Pose {
             position: [1.0, 0.0, 2.0],

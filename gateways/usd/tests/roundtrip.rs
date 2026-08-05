@@ -21,6 +21,7 @@ fn usd_roundtrip_identity() {
 
     // Floor + space + annotation
     let floor = Object::new(ObjectBody::Floor(FloorBody {
+        entity_id: Some(arxos_core::EntityId::new()),
         building_id: bid.clone(),
         name: Some("L1".into()),
         level_index: 0,
@@ -31,6 +32,7 @@ fn usd_roundtrip_identity() {
     // stage floor by putting into pending via capture_space path — use raw put + pending
     // Through capture APIs:
     repo.capture_space(&SpaceCapture {
+                    entity_id: None,
         name: Some("Room A".into()),
         pose: Pose {
             position: [2.0, 0.0, 3.0],

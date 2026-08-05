@@ -9,6 +9,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 
 use crate::crypto::Keypair;
+use crate::entity::EntityId;
 use crate::error::Result;
 use crate::object::{
     Aabb, AnnotationBody, Object, ObjectBody, PointCloudChunkBody, Pose, SpaceBody,
@@ -24,6 +25,9 @@ fn now_secs() -> u64 {
 /// Input for creating a Space object from RoomPlan / manual capture.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct SpaceCapture {
+    /// Stable entity id. When `None`, a new [`EntityId`] is assigned on convert.
+    /// Pass an existing id to create a **replacement version** of the same space.
+    pub entity_id: Option<EntityId>,
     pub name: Option<String>,
     pub pose: Pose,
     pub bounds: Option<Aabb>,
@@ -89,9 +93,17 @@ impl AnnotationCapture {
 }
 
 /// Convert a space capture into an unsigned Object.
+///
+/// Always stamps an [`EntityId`] (generated when the capture omits one) so
+/// subsequent pose/property updates can supersede this version on commit/merge.
 pub fn space_object(capture: &SpaceCapture) -> Object {
+    let entity_id = capture
+        .entity_id
+        .clone()
+        .unwrap_or_else(EntityId::new);
     Object::new_with_created(
         ObjectBody::Space(SpaceBody {
+            entity_id: Some(entity_id),
             name: capture.name.clone(),
             floor: capture.floor,
             pose: Some(capture.pose.clone()),
@@ -316,6 +328,7 @@ mod tests {
     #[test]
     fn annotation_and_space_objects() {
         let space = space_object(&SpaceCapture {
+                    entity_id: None,
             name: Some("Electrical".into()),
             pose: Pose {
                 position: [1.0, 0.0, 2.0],

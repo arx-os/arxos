@@ -11,6 +11,7 @@ use ulid::Ulid;
 use crate::canonical::{cid_of, from_cbor, to_canonical_cbor};
 use crate::cid::Cid;
 use crate::crypto::{AuthorSignature, Keypair, PublicKey};
+use crate::entity::EntityId;
 use crate::error::{Error, Result};
 use crate::root::RootBody;
 
@@ -244,6 +245,9 @@ pub struct BuildingBody {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FloorBody {
+    /// Stable identity across pose/property updates. `None` = legacy pure-CID.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entity_id: Option<EntityId>,
     pub building_id: BuildingId,
     pub name: Option<String>,
     pub level_index: i32,
@@ -253,6 +257,9 @@ pub struct FloorBody {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SpaceBody {
+    /// Stable identity across pose/property updates. `None` = legacy pure-CID.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entity_id: Option<EntityId>,
     pub name: Option<String>,
     pub floor: Option<Cid>,
     pub pose: Option<Pose>,
@@ -262,6 +269,8 @@ pub struct SpaceBody {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SurfaceBody {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entity_id: Option<EntityId>,
     pub space: Option<Cid>,
     pub pose: Option<Pose>,
     pub bounds: Option<Aabb>,
@@ -271,6 +280,8 @@ pub struct SurfaceBody {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OpeningBody {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entity_id: Option<EntityId>,
     pub host_surface: Option<Cid>,
     pub pose: Option<Pose>,
     pub opening_kind: Option<String>,
@@ -279,6 +290,8 @@ pub struct OpeningBody {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EquipmentBody {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entity_id: Option<EntityId>,
     pub name: Option<String>,
     pub equipment_kind: Option<String>,
     pub pose: Option<Pose>,
@@ -288,6 +301,8 @@ pub struct EquipmentBody {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SystemBody {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entity_id: Option<EntityId>,
     pub name: Option<String>,
     pub system_kind: Option<String>,
     pub members: Vec<Cid>,
@@ -296,6 +311,8 @@ pub struct SystemBody {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CircuitBody {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entity_id: Option<EntityId>,
     pub name: Option<String>,
     pub panel: Option<Cid>,
     pub members: Vec<Cid>,
@@ -304,6 +321,8 @@ pub struct CircuitBody {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SensorBody {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entity_id: Option<EntityId>,
     pub name: Option<String>,
     pub sensor_kind: Option<String>,
     pub pose: Option<Pose>,
@@ -312,6 +331,8 @@ pub struct SensorBody {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FixtureBody {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entity_id: Option<EntityId>,
     pub name: Option<String>,
     pub fixture_kind: Option<String>,
     pub pose: Option<Pose>,

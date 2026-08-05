@@ -52,6 +52,9 @@ pub struct BuildingRecord {
     /// Captures not yet included in a committed root (survives process restarts).
     #[serde(default)]
     pub pending: BTreeSet<Cid>,
+    /// Object CIDs staged for removal on the next commit (explicit delete).
+    #[serde(default)]
+    pub pending_removes: BTreeSet<Cid>,
     pub updated: u64,
 }
 
@@ -129,6 +132,7 @@ impl BuildingRepository {
             building_object: Some(building_cid),
             head_root: None,
             pending: BTreeSet::new(),
+            pending_removes: BTreeSet::new(),
             updated: now_secs(),
         };
 
@@ -284,9 +288,38 @@ impl BuildingRepository {
         self.put_staged(obj)
     }
 
+    /// Stage an object CID for removal on the next commit.
+    ///
+    /// The object remains in the CAS (content-addressed history); it is dropped
+    /// from the active set via the root `removed` delta.
+    pub fn remove_object(&mut self, cid: Cid) -> Result<()> {
+        self.record.pending.remove(&cid);
+        self.working_set.unstaged(&cid);
+        self.record.pending_removes.insert(cid);
+        self.record.updated = now_secs();
+        Self::write_record(self.store.root(), &self.record)?;
+        Ok(())
+    }
+
+    /// Stage all active (and pending) versions of `entity_id` for removal.
+    pub fn remove_entity(&mut self, entity_id: &crate::entity::EntityId) -> Result<u64> {
+        let mut candidates = self.active_objects.clone();
+        candidates.extend(self.record.pending.iter().copied());
+        let versions =
+            crate::entity::find_entity_versions(&self.store, &candidates, entity_id)?;
+        let n = versions.len() as u64;
+        for cid in versions {
+            self.remove_object(cid)?;
+        }
+        Ok(n)
+    }
+
     fn put_staged(&mut self, obj: Object) -> Result<CaptureResult> {
         let object_type = obj.header.object_type;
         let cid = self.store.put(&obj)?;
+        // If this is a new version of an existing entity, clear any staged remove
+        // of this cid (re-add) and leave older versions to entity collapse on commit.
+        self.record.pending_removes.remove(&cid);
         self.working_set.stage(cid, obj);
         self.record.pending.insert(cid);
         self.record.updated = now_secs();
@@ -368,6 +401,7 @@ impl BuildingRepository {
                     building_object: None,
                     head_root: None,
                     pending: BTreeSet::new(),
+                    pending_removes: BTreeSet::new(),
                     updated: now_secs(),
                 };
                 Self::write_record(store.root(), &record)?;
@@ -389,8 +423,84 @@ impl BuildingRepository {
 mod tests {
     use super::*;
     use crate::capture::PointCloudCapture;
+    use crate::entity::{entity_id_of, EntityId};
     use crate::object::Pose;
     use tempfile::tempdir;
+
+    #[test]
+    fn entity_replace_on_commit_drops_old_version() {
+        let dir = tempdir().unwrap();
+        let path = dir.path();
+        let mut repo = BuildingRepository::init(path, Some("E".into()), None).unwrap();
+        let eid = EntityId::from("01ENTITYREPLACE0000000000".to_string());
+
+        let r1 = repo
+            .capture_space(&SpaceCapture {
+                entity_id: Some(eid.clone()),
+                name: Some("v1".into()),
+                pose: Pose {
+                    position: [0.0, 0.0, 0.0],
+                    orientation: [0.0, 0.0, 0.0, 1.0],
+                },
+                bounds: None,
+                floor: None,
+                properties: BTreeMap::new(),
+            })
+            .unwrap();
+        repo.commit(Some("add v1".into())).unwrap();
+        assert!(repo.active_objects.contains(&r1.cid));
+
+        let r2 = repo
+            .capture_space(&SpaceCapture {
+                entity_id: Some(eid.clone()),
+                name: Some("v2".into()),
+                pose: Pose {
+                    position: [1.0, 0.0, 0.0],
+                    orientation: [0.0, 0.0, 0.0, 1.0],
+                },
+                bounds: None,
+                floor: None,
+                properties: BTreeMap::new(),
+            })
+            .unwrap();
+        let commit = repo.commit(Some("replace v1".into())).unwrap();
+        assert!(repo.active_objects.contains(&r2.cid));
+        assert!(!repo.active_objects.contains(&r1.cid));
+
+        // Root delta records the removal.
+        let head = repo.load_head_root().unwrap().unwrap();
+        if head.objects.is_none() {
+            assert!(head.removed.contains(&r1.cid));
+            assert!(head.added.contains(&r2.cid));
+        }
+        let _ = commit;
+        // Entity id preserved on the new head object.
+        let obj = repo.store().get(&r2.cid).unwrap();
+        assert_eq!(entity_id_of(&obj).map(|e| e.as_str()), Some(eid.as_str()));
+    }
+
+    #[test]
+    fn entity_remove_without_replace() {
+        let dir = tempdir().unwrap();
+        let path = dir.path();
+        let mut repo = BuildingRepository::init(path, Some("R".into()), None).unwrap();
+        let eid = EntityId::from("01ENTITYREMOVE00000000000".to_string());
+        let r = repo
+            .capture_space(&SpaceCapture {
+                entity_id: Some(eid.clone()),
+                name: Some("gone".into()),
+                pose: Pose::default(),
+                bounds: None,
+                floor: None,
+                properties: BTreeMap::new(),
+            })
+            .unwrap();
+        repo.commit(Some("add".into())).unwrap();
+        let n = repo.remove_entity(&eid).unwrap();
+        assert_eq!(n, 1);
+        repo.commit(Some("remove".into())).unwrap();
+        assert!(!repo.active_objects.contains(&r.cid));
+    }
 
     #[test]
     fn init_capture_commit_reload() {
@@ -402,6 +512,7 @@ mod tests {
         let head0 = repo.head_root().unwrap();
 
         repo.capture_space(&SpaceCapture {
+                    entity_id: None,
             name: Some("Mech Room".into()),
             pose: Pose {
                 position: [2.0, 0.0, 1.0],

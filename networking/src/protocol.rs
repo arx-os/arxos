@@ -45,9 +45,14 @@ pub enum Message {
     GetObjectMissing {
         cid: String,
     },
-    /// Request root object + all members present on the server.
+    /// Request root object + members present on the server.
+    ///
+    /// When `include_blobs` is false, the server omits `Blob` objects
+    /// (metadata-first sync). Defaults to true for wire compatibility.
     GetRootClosure {
         root_cid: String,
+        #[serde(default = "default_include_blobs")]
+        include_blobs: bool,
     },
     RootClosure {
         root_cid: String,
@@ -68,6 +73,10 @@ pub enum Message {
     Error {
         message: String,
     },
+}
+
+fn default_include_blobs() -> bool {
+    true
 }
 
 /// One content-addressed object payload.

@@ -820,6 +820,7 @@ pub fn pull_remote_root(
             building_id.as_deref(),
             set_head,
             allow_untrusted,
+            false, // full closure (include blobs)
         )
         .await?;
 

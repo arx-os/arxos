@@ -29,11 +29,21 @@ pub trait ObjectTransport: Send + Sync {
         cid: &'a str,
     ) -> BoxFuture<'a, Result<Option<Vec<u8>>>>;
 
-    /// Fetch a root and all members the peer holds.
+    /// Fetch a root and all members the peer holds (includes blobs).
     fn fetch_root_closure<'a>(
         &'a self,
         peer: &'a PeerId,
         root_cid: &'a str,
+    ) -> BoxFuture<'a, Result<Vec<ObjectBlob>>> {
+        self.fetch_root_closure_with_options(peer, root_cid, true)
+    }
+
+    /// Fetch a root closure; set `include_blobs` false for metadata-first pulls.
+    fn fetch_root_closure_with_options<'a>(
+        &'a self,
+        peer: &'a PeerId,
+        root_cid: &'a str,
+        include_blobs: bool,
     ) -> BoxFuture<'a, Result<Vec<ObjectBlob>>>;
 
     /// Optional: notify peer of a new root (best-effort).

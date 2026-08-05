@@ -50,6 +50,7 @@ pub fn building_ads_from_store(store_path: &std::path::Path) -> Result<Vec<Build
 /// Pull a root closure from `peer` into `store_path`, optionally adopting as head.
 ///
 /// Fail closed by default if signature verification fails.
+/// Full closure (including blobs) by default.
 pub async fn pull_root<T: ObjectTransport + ?Sized>(
     transport: &T,
     peer: &PeerId,
@@ -58,10 +59,27 @@ pub async fn pull_root<T: ObjectTransport + ?Sized>(
     building_id: Option<&str>,
     set_head: bool,
 ) -> Result<PullResult> {
-    pull_root_with_options(transport, peer, store_path, root_cid, building_id, set_head, false).await
+    pull_root_with_options(
+        transport,
+        peer,
+        store_path,
+        root_cid,
+        building_id,
+        set_head,
+        false,
+        false,
+    )
+    .await
 }
 
-/// Pull a root closure with options controlling signature verification behavior.
+/// Pull a root closure with options controlling signature verification and
+/// whether large blob payloads are included.
+///
+/// When `metadata_only` is true, the peer is asked for a closure that omits
+/// `Blob` objects (skinny domain objects only). Adopting a metadata-only pull
+/// as head requires `allow_partial` semantics for missing blob-backed payloads
+/// that remain referenced — we allow partial adopt only when `metadata_only`
+/// is set so incomplete blob presence does not fail the adopt.
 pub async fn pull_root_with_options<T: ObjectTransport + ?Sized>(
     transport: &T,
     peer: &PeerId,
@@ -70,8 +88,15 @@ pub async fn pull_root_with_options<T: ObjectTransport + ?Sized>(
     building_id: Option<&str>,
     set_head: bool,
     allow_untrusted: bool,
+    metadata_only: bool,
 ) -> Result<PullResult> {
-    let blobs = transport.fetch_root_closure(peer, root_cid).await?;
+    let blobs = if metadata_only {
+        transport
+            .fetch_root_closure_with_options(peer, root_cid, false)
+            .await?
+    } else {
+        transport.fetch_root_closure(peer, root_cid).await?
+    };
     if blobs.is_empty() {
         return Err(NetError::ObjectMissing(root_cid.to_string()));
     }
@@ -122,8 +147,9 @@ pub async fn pull_root_with_options<T: ObjectTransport + ?Sized>(
         let mut repo = BuildingRepository::open_or_follow(store_path, &bid, None)?;
         let opts = AdoptOptions {
             allow_untrusted,
-            // Fail closed: incomplete closures must not become head under normal pull.
-            allow_partial: false,
+            // Metadata-first pulls intentionally omit blobs; allow partial adopt
+            // only in that mode. Full pulls stay fail-closed.
+            allow_partial: metadata_only,
         };
         Some(repo.adopt_root_with_options(root, &opts)?)
     } else {
@@ -188,6 +214,7 @@ pub async fn pull_building_head_with_options<T: ObjectTransport + ?Sized>(
         Some(building_id),
         set_head,
         allow_untrusted,
+        false,
     )
     .await
 }
@@ -203,16 +230,35 @@ pub fn serve_get_object(store_path: &std::path::Path, cid: &str) -> Result<Optio
     }
 }
 
-/// Serve helper: root closure for protocol handlers.
+/// Serve helper: full root closure for protocol handlers.
 pub fn serve_root_closure(
     store_path: &std::path::Path,
     root_cid: &str,
 ) -> Result<Vec<crate::protocol::ObjectBlob>> {
+    serve_root_closure_with_options(store_path, root_cid, true)
+}
+
+/// Serve helper: root closure with optional blob exclusion (metadata-first).
+pub fn serve_root_closure_with_options(
+    store_path: &std::path::Path,
+    root_cid: &str,
+    include_blobs: bool,
+) -> Result<Vec<crate::protocol::ObjectBlob>> {
+    use arxos_core::root::{get_root_closure_blobs_with_options, ClosureOptions};
+
     let store = arxos_core::store::ObjectStore::open(store_path)?;
     let root = Cid::from_str(root_cid).map_err(|e| NetError::Protocol(e.to_string()))?;
-    let closure = arxos_core::root::get_root_closure_blobs(&store, &root)
-        .map_err(|e| NetError::Core(e.to_string()))?;
-    let out = closure
+    let result = get_root_closure_blobs_with_options(
+        &store,
+        &root,
+        &ClosureOptions {
+            allow_partial: false,
+            include_blobs,
+        },
+    )
+    .map_err(|e| NetError::Core(e.to_string()))?;
+    let out = result
+        .blobs
         .into_iter()
         .map(|(cid, bytes)| crate::protocol::ObjectBlob {
             cid: cid.to_string(),
@@ -404,5 +450,75 @@ mod tests {
         // Let's assert repo_b.query_volume succeeds and does not hit linear scan (meaning it uses the index).
         let hits = repo_b.query_volume(&volume).unwrap();
         assert!(!hits.is_empty(), "should find hits via spatial index");
+    }
+
+    #[tokio::test]
+    async fn metadata_only_pull_omits_blobs() {
+        use arxos_core::capture::PointCloudCapture;
+        use arxos_core::object::ObjectBody;
+
+        let mesh = MemoryMesh::new();
+        let dir_a = tempdir().unwrap();
+        let dir_b = tempdir().unwrap();
+
+        let mut repo_a =
+            BuildingRepository::init(dir_a.path(), Some("Meta".into()), None).unwrap();
+        let bid = repo_a.building_id().clone();
+        let pts = [[0.0f32, 0.0, 0.0], [1.0, 0.0, 0.0]];
+        let cap = PointCloudCapture::from_xyz(&pts, Pose::default(), None);
+        let capture_res = repo_a.capture_point_cloud(&cap).unwrap();
+        let chunk_obj = repo_a.store().get(&capture_res.cid).unwrap();
+        let blob_cid = match chunk_obj.body {
+            ObjectBody::PointCloudChunk(b) => b.points_blob.expect("tiered blob"),
+            _ => panic!("expected point cloud"),
+        };
+        let commit = repo_a.commit(Some("with cloud".into())).unwrap();
+        let root = commit.root_cid.to_string();
+        drop(repo_a);
+
+        let node_a = mesh
+            .attach(
+                arxos_core::store::ObjectStore::open(dir_a.path()).unwrap(),
+                vec![BuildingHeadAd {
+                    building_id: bid.to_string(),
+                    root_cid: root.clone(),
+                    name: Some("Meta".into()),
+                    object_count: commit.object_count,
+                }],
+            )
+            .unwrap();
+
+        {
+            let _ = BuildingRepository::open_or_follow(dir_b.path(), &bid, Some("Meta".into()))
+                .unwrap();
+        }
+        let node_b = mesh
+            .attach(
+                arxos_core::store::ObjectStore::open(dir_b.path()).unwrap(),
+                vec![],
+            )
+            .unwrap();
+
+        let pull = pull_root_with_options(
+            &node_b,
+            node_a.peer_id(),
+            dir_b.path(),
+            &root,
+            Some(bid.as_str()),
+            true,
+            false,
+            true, // metadata_only
+        )
+        .await
+        .unwrap();
+        assert!(pull.adopted.is_some());
+
+        let store_b = arxos_core::store::ObjectStore::open(dir_b.path()).unwrap();
+        assert!(
+            !store_b.contains(&blob_cid),
+            "metadata-only pull must not transfer blob {blob_cid}"
+        );
+        assert!(store_b.contains(&commit.root_cid));
+        assert!(store_b.contains(&capture_res.cid));
     }
 }

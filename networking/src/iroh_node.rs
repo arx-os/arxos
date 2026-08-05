@@ -14,7 +14,9 @@ use crate::protocol::{
     decode_message, encode_message, BuildingHeadAd, Message, ObjectBlob, ARXOS_ALPN,
     PROTOCOL_VERSION,
 };
-use crate::sync::{building_ads_from_store, serve_get_object, serve_root_closure};
+use crate::sync::{
+    building_ads_from_store, serve_get_object, serve_root_closure_with_options,
+};
 use crate::transport::{BoxFuture, ObjectTransport, PeerId};
 
 /// Running Iroh node bound to a local object store.
@@ -157,8 +159,14 @@ impl IrohNode {
                     message: e.to_string(),
                 },
             },
-            Message::GetRootClosure { root_cid } => match serve_root_closure(&self.store_path, &root_cid)
-            {
+            Message::GetRootClosure {
+                root_cid,
+                include_blobs,
+            } => match serve_root_closure_with_options(
+                &self.store_path,
+                &root_cid,
+                include_blobs,
+            ) {
                 Ok(objects) => Message::RootClosure { root_cid, objects },
                 Err(e) => Message::Error {
                     message: e.to_string(),
@@ -247,12 +255,23 @@ impl IrohNode {
         ticket: &str,
         root_cid: &str,
     ) -> Result<Vec<ObjectBlob>> {
+        self.fetch_root_closure_ticket_with_options(ticket, root_cid, true)
+            .await
+    }
+
+    pub async fn fetch_root_closure_ticket_with_options(
+        &self,
+        ticket: &str,
+        root_cid: &str,
+        include_blobs: bool,
+    ) -> Result<Vec<ObjectBlob>> {
         let addr = Self::parse_ticket(ticket)?;
         match self
             .request(
                 addr,
                 Message::GetRootClosure {
                     root_cid: root_cid.to_string(),
+                    include_blobs,
                 },
             )
             .await?
@@ -324,12 +343,16 @@ impl ObjectTransport for IrohNode {
         Box::pin(async move { self.fetch_object_ticket(peer, cid).await })
     }
 
-    fn fetch_root_closure<'a>(
+    fn fetch_root_closure_with_options<'a>(
         &'a self,
         peer: &'a PeerId,
         root_cid: &'a str,
+        include_blobs: bool,
     ) -> BoxFuture<'a, Result<Vec<ObjectBlob>>> {
-        Box::pin(async move { self.fetch_root_closure_ticket(peer, root_cid).await })
+        Box::pin(async move {
+            self.fetch_root_closure_ticket_with_options(peer, root_cid, include_blobs)
+                .await
+        })
     }
 
     fn announce_root<'a>(

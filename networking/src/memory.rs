@@ -128,17 +128,28 @@ impl ObjectTransport for MemoryNode {
         })
     }
 
-    fn fetch_root_closure<'a>(
+    fn fetch_root_closure_with_options<'a>(
         &'a self,
         peer: &'a PeerId,
         root_cid: &'a str,
+        include_blobs: bool,
     ) -> BoxFuture<'a, Result<Vec<ObjectBlob>>> {
         Box::pin(async move {
-            let root = Cid::parse_str(root_cid).map_err(|e| NetError::Protocol(e.to_string()))?;
+            use arxos_core::root::{get_root_closure_blobs_with_options, ClosureOptions};
+            use std::str::FromStr;
+            let root = Cid::from_str(root_cid).map_err(|e| NetError::Protocol(e.to_string()))?;
             self.with_peer(peer, |n| {
-                let closure = arxos_core::root::get_root_closure_blobs(&n.store, &root)
-                    .map_err(NetError::from)?;
-                let out = closure
+                let result = get_root_closure_blobs_with_options(
+                    &n.store,
+                    &root,
+                    &ClosureOptions {
+                        allow_partial: false,
+                        include_blobs,
+                    },
+                )
+                .map_err(NetError::from)?;
+                let out = result
+                    .blobs
                     .into_iter()
                     .map(|(cid, bytes)| ObjectBlob {
                         cid: cid.to_string(),

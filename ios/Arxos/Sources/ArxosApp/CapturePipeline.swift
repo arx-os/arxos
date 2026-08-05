@@ -1,6 +1,8 @@
 import Foundation
 import simd
+#if canImport(ArxosCore)
 import ArxosCore
+#endif
 
 #if canImport(RoomPlan) && canImport(ARKit) && !targetEnvironment(simulator)
 import RoomPlan
@@ -8,7 +10,7 @@ import ARKit
 
 /// Device capture pipeline: RoomPlan → Space + PointCloudChunk objects.
 /// Geometry is data only — no general 3D model viewer in Arxos.
-@available(iOS 16.0, *)
+@available(iOS 17.0, *)
 final class RoomPlanCapturePipeline: NSObject, RoomCaptureSessionDelegate {
     private let session: BuildingSession
     private var roomSession: RoomCaptureSession?
@@ -70,7 +72,7 @@ final class RoomPlanCapturePipeline: NSObject, RoomCaptureSessionDelegate {
 
     @MainActor
     private func ingest(data: CapturedRoomData) {
-        let builder = RoomBuilder(options: .none)
+        let builder = RoomBuilder(options: [])
         onStatus?("Processing RoomPlan data…")
         Task {
             do {
@@ -107,14 +109,7 @@ final class RoomPlanCapturePipeline: NSObject, RoomCaptureSessionDelegate {
                         dimensions: doubleArray(from: item.dimensions)
                     ))
                 }
-                for item in room.ceilings {
-                    surfaces.append(RoomPlanSurface(
-                        id: item.identifier.uuidString,
-                        category: "ceiling",
-                        transform: doubleArray(from: item.transform),
-                        dimensions: doubleArray(from: item.dimensions)
-                    ))
-                }
+                // Note: CapturedRoom has no separate ceilings array on current SDKs.
                 for item in room.doors {
                     surfaces.append(RoomPlanSurface(
                         id: item.identifier.uuidString,
@@ -131,6 +126,14 @@ final class RoomPlanCapturePipeline: NSObject, RoomCaptureSessionDelegate {
                         dimensions: doubleArray(from: item.dimensions)
                     ))
                 }
+                for item in room.openings {
+                    surfaces.append(RoomPlanSurface(
+                        id: item.identifier.uuidString,
+                        category: "opening",
+                        transform: doubleArray(from: item.transform),
+                        dimensions: doubleArray(from: item.dimensions)
+                    ))
+                }
 
                 var objects: [RoomPlanObject] = []
                 for item in room.objects {
@@ -143,8 +146,14 @@ final class RoomPlanCapturePipeline: NSObject, RoomCaptureSessionDelegate {
                 }
 
                 await MainActor.run {
-                    self.session.ingestRoomPlan(surfaces: surfaces, objects: objects)
-                    self.onStatus?("RoomPlan ingested → geometry staged")
+                    // Auto-commits so force-quit cannot lose the scan.
+                    self.session.ingestRoomPlan(
+                        surfaces: surfaces,
+                        objects: objects,
+                        autoCommit: true
+                    )
+                    self.session.isRoomPlanActive = false
+                    self.onStatus?(self.session.status)
                 }
             } catch {
                 await MainActor.run {

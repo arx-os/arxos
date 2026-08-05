@@ -1,48 +1,102 @@
-# Arxos iOS Client
+# Arxos iOS client
 
-Capture client for iOS: ARKit / RoomPlan scans into signed content-addressed repositories via UniFFI → Rust `arxos-core`.
+Physical iPhone capture client: **RoomPlan → ingest → auto-commit → CAS in Documents**.
 
-## Single data path
+## Requirements
 
-There is **no** Swift-side fake CAS. All store operations go through UniFFI to the real Rust core and throw `ArxosError` on failure (authorization, missing building, validation, …).
+- Full **Xcode** (not Command Line Tools only)
+- Physical **LiDAR iPhone**, **iOS 17+**
+- Rust with target: `rustup target add aarch64-apple-ios`
 
-## Layout
-
-```
-ios/Arxos/
-├── Package.swift
-├── Scripts/generate_bindings.sh
-└── Sources/
-    ├── CArxosCoreFFI/   # UniFFI C header + module map
-    ├── ArxosCore/       # Generated bindings + throwing Swift façade
-    ├── ArxosApp/        # SwiftUI / ARKit / RoomPlan
-    └── ArxosDemo/       # CLI smoke test (requires linked libarxos_core)
-```
-
-## Build the native library + bindings
+Point Xcode at the app install:
 
 ```bash
-# From repo root
-cargo build -p arxos-ffi --release
+sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+```
+
+## 1. Build the iOS Rust library
+
+From the **repo root**:
+
+```bash
+./ios/scripts/build-ios-lib.sh
+```
+
+Produces:
+
+```text
+ios/ArxosApp/Vendor/libarxos_core.a   # aarch64-apple-ios release staticlib
+```
+
+Also regenerate Swift bindings if the UniFFI surface changed:
+
+```bash
+cargo build -p arxos-ffi
 ./ios/Arxos/Scripts/generate_bindings.sh
 ```
 
-## Run the demo (macOS, real store)
+## 2. Open and run the app
 
 ```bash
-cargo build -p arxos-ffi   # produces target/debug/libarxos_core.a
-cd ios/Arxos
-swift run ArxosDemo
+open ios/ArxosApp/ArxosApp.xcodeproj
 ```
 
-`Package.swift` links `libarxos_core` from `../../target/release` or `../../target/debug`.
+In Xcode:
 
-## Production device builds
+1. Select the **ArxosApp** target and your physical iPhone.
+2. Set your **Team** under Signing & Capabilities (Automatic).
+3. Build & Run (⌘R).
 
-1. `cargo build -p arxos-ffi --release` (iOS target triple as needed)
-2. `./ios/Arxos/Scripts/generate_bindings.sh`
-3. Link the static library into the Xcode app target and run on a LiDAR-capable device.
+### Field loop
 
-## Error handling
+1. **Init** a building (or reopen last — restored automatically after force-quit).
+2. **Start RoomPlan scan** → walk the room → **Stop**.
+3. Ingest + **auto-commit** runs (status shows committed root).
+4. Force-quit → reopen → same building and head.
+5. **Export store…** (or Files → On My iPhone → Arxos → `arxos-store`) to a Mac.
 
-Swift call sites must use `do/catch` (or `try`). Ordinary core failures surface as `ArxosError` — they must not crash the process.
+## 3. Inspect on Mac CLI
+
+After AirDrop / Files copy of the store folder (name may be `arxos-store-…`):
+
+```bash
+export ARXOS_STORE=/path/to/arxos-store   # directory that contains objects/ and meta/
+
+cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" building list
+BID=…   # from list or from the phone UI
+
+cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" building status "$BID"
+cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" entity list "$BID"
+cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" entity show "$BID" <entity-id>
+```
+
+The store path on device is:
+
+```text
+Documents/arxos-store
+```
+
+(`UIFileSharingEnabled` is on so Finder can show it when the phone is connected.)
+
+## Layout
+
+```text
+ios/
+├── scripts/build-ios-lib.sh     # cross-compile aarch64-apple-ios
+├── ArxosApp/                    # Xcode iOS application
+│   ├── ArxosApp.xcodeproj
+│   ├── Info.plist
+│   └── Vendor/libarxos_core.a   # gitignored; rebuild with script
+└── Arxos/                       # Shared Swift sources + UniFFI façade
+    ├── Package.swift            # macOS demo / library only
+    └── Sources/
+        ├── ArxosApp/            # UI + RoomPlan
+        ├── ArxosCore/           # UniFFI façade
+        └── CArxosCoreFFI/       # C header + modulemap
+```
+
+## Notes
+
+- **Simulate** is under Advanced — not the real RoomPlan path.
+- RoomPlan owns the camera while scanning (AR overlay is paused).
+- Dense mesh/point-cloud export from RoomPlan is out of scope for this loop; surfaces + objects become stable entities via `ingestRoomPlan`.

@@ -17,8 +17,12 @@ ios/**/*.xcuserstate
 ios/**/build/
 ios/**/.build/
 ios/Arxos/.build/
+ios/ArxosApp/build/
 ios/**/*.framework
 ios/Arxos/Sources/ArxosCore/Generated/
+# Cross-compiled static lib (rebuild: ios/scripts/build-ios-lib.sh)
+ios/ArxosApp/Vendor/libarxos_core.a
+ios/ArxosApp/Vendor/include/
 
 # Env / secrets
 .env

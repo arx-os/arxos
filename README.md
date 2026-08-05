@@ -142,7 +142,7 @@ arxos/
 ├── gateways/       # usd, ifc interop
 ├── networking/     # Iroh + mDNS sync
 ├── cli/            # arx CLI
-├── ios/            # SwiftUI capture client
+├── ios/            # iPhone app (ArxosApp.xcodeproj) + shared Swift / UniFFI
 ├── edge/           # Edge node packaging / tools
 └── archive/        # Historical material (not built), e.g. deprecated EVM
 ```
@@ -161,12 +161,29 @@ cargo build --release
 cargo test --workspace --release
 ```
 
-iOS bindings (optional):
+### iPhone RoomPlan capture (physical device)
+
+Requires full Xcode, LiDAR iPhone, iOS 17+.
 
 ```bash
-cargo build -p arxos-ffi
-./ios/Arxos/Scripts/generate_bindings.sh
+# 1) Cross-compile Rust staticlib for device
+./ios/scripts/build-ios-lib.sh
+# → ios/ArxosApp/Vendor/libarxos_core.a
+
+# 2) Open the app project
+open ios/ArxosApp/ArxosApp.xcodeproj
+# Select your iPhone, set Signing Team, Run (⌘R)
 ```
+
+Field loop: **Init building → Start RoomPlan scan → Stop → auto-commit → force-quit → reopen**.  
+Export the store (in-app **Export store…** or Files → Arxos → `arxos-store`) to a Mac, then:
+
+```bash
+arx --store /path/to/arxos-store building status <building-id>
+arx --store /path/to/arxos-store entity list <building-id>
+```
+
+Details: [`ios/README.md`](ios/README.md).
 
 ---
 

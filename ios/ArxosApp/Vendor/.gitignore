@@ -1,0 +1,3 @@
+# Large cross-compiled artifact; rebuild with ios/scripts/build-ios-lib.sh
+libarxos_core.a
+include/

@@ -1,6 +1,9 @@
 import SwiftUI
+#if canImport(ArxosCore)
+import ArxosCore
+#endif
 
-/// iOS application entry point (include this file in an Xcode app target).
+/// iOS application entry point (Xcode target: ios/ArxosApp).
 @main
 struct ArxosAppMain: App {
     var body: some Scene {

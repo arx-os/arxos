@@ -1,0 +1,373 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1D652D46D9374D4CAB03F6DE /* ArxosApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A901F6DEF34D48C2852C1891 /* ArxosApp.swift */; };
+		F700D395CF3F4EA8AD16CCBE /* CaptureHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3F53E82837246DCB54F50F1 /* CaptureHomeView.swift */; };
+		C9A8F58F939C40C8BBE9A94C /* BuildingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF9322A0828C4FC19A8A496D /* BuildingSession.swift */; };
+		9C44B922542A4644BF545B41 /* CapturePipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA11D3DF450B485899F1C32E /* CapturePipeline.swift */; };
+		F95672E9792F442CB74E2CD4 /* ARCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AC5B9C5410640EFB2F32186 /* ARCaptureView.swift */; };
+		9C9A4E5FCA504F0DA4E4CE0F /* ArxosCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9410E29EDFF1451FB16DB6F4 /* ArxosCore.swift */; };
+		8603BCA59D004592A003F0BA /* UniffiBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F66BAD213680445C93E61CAC /* UniffiBridge.swift */; };
+		6EF7BAB03A964F75AF926235 /* AppAttest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51A3D3BAD8E6448E88E72D56 /* AppAttest.swift */; };
+		BCE5840C4EB84BED8D3247B6 /* arxos_core.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B7E1873B5A44D4928A9849 /* arxos_core.swift */; };
+		97F383BA554D4C4798BC1996 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9743E9EAE2F4A2BA0CBAC48 /* SwiftUI.framework */; };
+		5E34EC96A6CB4392AC27A250 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6E6B98D8D3CD4E179B9558D3 /* UIKit.framework */; };
+		1AB21ACDC787485CBBB74FF4 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7833A30B4A0F4302B91F461C /* Foundation.framework */; };
+		57D99E8E2BE741B9947BC491 /* ARKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B76EBFBC567A424CAC537534 /* ARKit.framework */; };
+		E38FF4C51D2C4841AE7FEEB0 /* RoomPlan.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 885AA66DB30943C69D115251 /* RoomPlan.framework */; };
+		27FE3B1868F04F8F9C217C84 /* RealityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1F1B1C726614DA88FA71C60 /* RealityKit.framework */; };
+		C5EAF7EF3A9D4D20949A03CD /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3C13EE8D3A79403A9A8AEDB4 /* SystemConfiguration.framework */; };
+		3C2B0A2A03B3474A916A305E /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 03A406A33C444A229A89103B /* Security.framework */; };
+		593587AF1B54428483DB42E6 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A46A0CC6D3DF4DFAAA3D90F2 /* CoreFoundation.framework */; };
+		67BB2F57EF5647D09381D9A6 /* Network.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BCAD548544114150B21B40D7 /* Network.framework */; };
+		7D5B3E3F7873483490DC11D5 /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D1BBF718AEE4404AB367D3D9 /* libc++.tbd */; };
+		4E2F91445FEB45CE971DD39A /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 26DF6229EF7A409D982BA25C /* libresolv.tbd */; };
+		52EADD630F3042318DCE4AF0 /* libarxos_core.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E741F6FD6B1B4C54B222B971 /* libarxos_core.a */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		74B8DA74387F4C65B856C06F /* ArxosApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ArxosApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A901F6DEF34D48C2852C1891 /* ArxosApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "ArxosApp.swift"; path = "../Arxos/Sources/ArxosApp/ArxosApp.swift"; sourceTree = "<group>"; };
+		E3F53E82837246DCB54F50F1 /* CaptureHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "CaptureHomeView.swift"; path = "../Arxos/Sources/ArxosApp/CaptureHomeView.swift"; sourceTree = "<group>"; };
+		EF9322A0828C4FC19A8A496D /* BuildingSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "BuildingSession.swift"; path = "../Arxos/Sources/ArxosApp/BuildingSession.swift"; sourceTree = "<group>"; };
+		FA11D3DF450B485899F1C32E /* CapturePipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "CapturePipeline.swift"; path = "../Arxos/Sources/ArxosApp/CapturePipeline.swift"; sourceTree = "<group>"; };
+		2AC5B9C5410640EFB2F32186 /* ARCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "ARCaptureView.swift"; path = "../Arxos/Sources/ArxosApp/ARCaptureView.swift"; sourceTree = "<group>"; };
+		9410E29EDFF1451FB16DB6F4 /* ArxosCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "ArxosCore.swift"; path = "../Arxos/Sources/ArxosCore/ArxosCore.swift"; sourceTree = "<group>"; };
+		F66BAD213680445C93E61CAC /* UniffiBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "UniffiBridge.swift"; path = "../Arxos/Sources/ArxosCore/UniffiBridge.swift"; sourceTree = "<group>"; };
+		51A3D3BAD8E6448E88E72D56 /* AppAttest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "AppAttest.swift"; path = "../Arxos/Sources/ArxosCore/AppAttest.swift"; sourceTree = "<group>"; };
+		19B7E1873B5A44D4928A9849 /* arxos_core.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "arxos_core.swift"; path = "../Arxos/Sources/ArxosCore/Generated/arxos_core.swift"; sourceTree = "<group>"; };
+		113CDB1A164F43068D7383F2 /* arxos_coreFFI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "arxos_coreFFI.h"; path = "../Arxos/Sources/CArxosCoreFFI/arxos_coreFFI.h"; sourceTree = "<group>"; };
+		99ED91ACC91644898137A16F /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.module-map; name = "module.modulemap"; path = "../Arxos/Sources/CArxosCoreFFI/module.modulemap"; sourceTree = "<group>"; };
+		2AA05E623D1A40219F7A5A5A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Info.plist"; path = "Info.plist"; sourceTree = "<group>"; };
+		E741F6FD6B1B4C54B222B971 /* libarxos_core.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libarxos_core.a"; path = "Vendor/libarxos_core.a"; sourceTree = "<group>"; };
+		C9743E9EAE2F4A2BA0CBAC48 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		6E6B98D8D3CD4E179B9558D3 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		7833A30B4A0F4302B91F461C /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		B76EBFBC567A424CAC537534 /* ARKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ARKit.framework; path = System/Library/Frameworks/ARKit.framework; sourceTree = SDKROOT; };
+		885AA66DB30943C69D115251 /* RoomPlan.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = RoomPlan.framework; path = System/Library/Frameworks/RoomPlan.framework; sourceTree = SDKROOT; };
+		B1F1B1C726614DA88FA71C60 /* RealityKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = RealityKit.framework; path = System/Library/Frameworks/RealityKit.framework; sourceTree = SDKROOT; };
+		3C13EE8D3A79403A9A8AEDB4 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
+		03A406A33C444A229A89103B /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		A46A0CC6D3DF4DFAAA3D90F2 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		BCAD548544114150B21B40D7 /* Network.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Network.framework; path = System/Library/Frameworks/Network.framework; sourceTree = SDKROOT; };
+		D1BBF718AEE4404AB367D3D9 /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
+		26DF6229EF7A409D982BA25C /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libresolv.tbd"; path = "usr/lib/libresolv.tbd"; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D35C3C52210940399B02C6A7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				97F383BA554D4C4798BC1996 /* SwiftUI.framework in Frameworks */,
+				5E34EC96A6CB4392AC27A250 /* UIKit.framework in Frameworks */,
+				1AB21ACDC787485CBBB74FF4 /* Foundation.framework in Frameworks */,
+				57D99E8E2BE741B9947BC491 /* ARKit.framework in Frameworks */,
+				E38FF4C51D2C4841AE7FEEB0 /* RoomPlan.framework in Frameworks */,
+				27FE3B1868F04F8F9C217C84 /* RealityKit.framework in Frameworks */,
+				C5EAF7EF3A9D4D20949A03CD /* SystemConfiguration.framework in Frameworks */,
+				3C2B0A2A03B3474A916A305E /* Security.framework in Frameworks */,
+				593587AF1B54428483DB42E6 /* CoreFoundation.framework in Frameworks */,
+				67BB2F57EF5647D09381D9A6 /* Network.framework in Frameworks */,
+				7D5B3E3F7873483490DC11D5 /* libc++.tbd in Frameworks */,
+				4E2F91445FEB45CE971DD39A /* libresolv.tbd in Frameworks */,
+				52EADD630F3042318DCE4AF0 /* libarxos_core.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AFEA5E2C382F49A6A9EBEDFE = {
+			isa = PBXGroup;
+			children = (
+				4C5ADB6802084C46971A1A77 /* App */,
+				50AA330336214185AE53240C /* ArxosCore */,
+				E8EE010B220A402CA61D2A5A /* CArxosCoreFFI */,
+				6C671AD3A294439B9B278A46 /* Vendor */,
+				2AA05E623D1A40219F7A5A5A /* Info.plist */,
+				5C126C65E73A4ABB9944F7D1 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		5C126C65E73A4ABB9944F7D1 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				74B8DA74387F4C65B856C06F /* ArxosApp.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		4C5ADB6802084C46971A1A77 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				A901F6DEF34D48C2852C1891 /* ArxosApp.swift */,
+				E3F53E82837246DCB54F50F1 /* CaptureHomeView.swift */,
+				EF9322A0828C4FC19A8A496D /* BuildingSession.swift */,
+				FA11D3DF450B485899F1C32E /* CapturePipeline.swift */,
+				2AC5B9C5410640EFB2F32186 /* ARCaptureView.swift */,
+			);
+			name = App;
+			sourceTree = "<group>";
+		};
+		50AA330336214185AE53240C /* ArxosCore */ = {
+			isa = PBXGroup;
+			children = (
+				9410E29EDFF1451FB16DB6F4 /* ArxosCore.swift */,
+				F66BAD213680445C93E61CAC /* UniffiBridge.swift */,
+				51A3D3BAD8E6448E88E72D56 /* AppAttest.swift */,
+				19B7E1873B5A44D4928A9849 /* arxos_core.swift */,
+			);
+			name = ArxosCore;
+			sourceTree = "<group>";
+		};
+		E8EE010B220A402CA61D2A5A /* CArxosCoreFFI */ = {
+			isa = PBXGroup;
+			children = (
+				113CDB1A164F43068D7383F2 /* arxos_coreFFI.h */,
+				99ED91ACC91644898137A16F /* module.modulemap */,
+			);
+			name = CArxosCoreFFI;
+			sourceTree = "<group>";
+		};
+		6C671AD3A294439B9B278A46 /* Vendor */ = {
+			isa = PBXGroup;
+			children = (
+				E741F6FD6B1B4C54B222B971 /* libarxos_core.a */,
+			);
+			name = Vendor;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		9B712C3CBAD048DAA6B3449F /* ArxosApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2172973D479E4983AF0E48B4 /* Build configuration list for PBXNativeTarget "ArxosApp" */;
+			buildPhases = (
+				A22C7590A6B0469490D56432 /* Sources */,
+				D35C3C52210940399B02C6A7 /* Frameworks */,
+				18461D366B084B2F97CCF1B7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ArxosApp;
+			productName = ArxosApp;
+			productReference = 74B8DA74387F4C65B856C06F /* ArxosApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		C0ADF59E66E94B739C641944 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+			};
+			buildConfigurationList = F32534203E8846F8BCDA0F59 /* Build configuration list for PBXProject "ArxosApp" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AFEA5E2C382F49A6A9EBEDFE;
+			productRefGroup = 5C126C65E73A4ABB9944F7D1 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				9B712C3CBAD048DAA6B3449F /* ArxosApp */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		18461D366B084B2F97CCF1B7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A22C7590A6B0469490D56432 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1D652D46D9374D4CAB03F6DE /* ArxosApp.swift in Sources */,
+				F700D395CF3F4EA8AD16CCBE /* CaptureHomeView.swift in Sources */,
+				C9A8F58F939C40C8BBE9A94C /* BuildingSession.swift in Sources */,
+				9C44B922542A4644BF545B41 /* CapturePipeline.swift in Sources */,
+				F95672E9792F442CB74E2CD4 /* ARCaptureView.swift in Sources */,
+				9C9A4E5FCA504F0DA4E4CE0F /* ArxosCore.swift in Sources */,
+				8603BCA59D004592A003F0BA /* UniffiBridge.swift in Sources */,
+				6EF7BAB03A964F75AF926235 /* AppAttest.swift in Sources */,
+				BCE5840C4EB84BED8D3247B6 /* arxos_core.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1AE95DCE868E41ED824F8528 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		D7C01CD53CBA4228989719AF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		8FEDA9BF227748A5B0C2FD95 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Vendor",
+				);
+				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-larxos_core",
+					"-lc++",
+					"-lresolv",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.arxos.ArxosApp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/../Arxos/Sources/CArxosCoreFFI",
+				);
+				SWIFT_INCLUDE_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/../Arxos/Sources/CArxosCoreFFI",
+				);
+
+				CODE_SIGN_IDENTITY = "Apple Development";
+			};
+			name = Debug;
+		};
+		17BF07379BCA4BB2BD0824EA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Vendor",
+				);
+				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-larxos_core",
+					"-lc++",
+					"-lresolv",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.arxos.ArxosApp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/../Arxos/Sources/CArxosCoreFFI",
+				);
+				SWIFT_INCLUDE_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/../Arxos/Sources/CArxosCoreFFI",
+				);
+
+				CODE_SIGN_IDENTITY = "Apple Development";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F32534203E8846F8BCDA0F59 /* Build configuration list for PBXProject "ArxosApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1AE95DCE868E41ED824F8528 /* Debug */,
+				D7C01CD53CBA4228989719AF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		2172973D479E4983AF0E48B4 /* Build configuration list for PBXNativeTarget "ArxosApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8FEDA9BF227748A5B0C2FD95 /* Debug */,
+				17BF07379BCA4BB2BD0824EA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = C0ADF59E66E94B739C641944 /* Project object */;
+}

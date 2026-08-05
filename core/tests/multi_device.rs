@@ -81,11 +81,8 @@ fn concurrent_entity_update_and_remove_merge() {
     // field work we add B as controller on A first, then re-mirror.
     let kp_b = Keypair::generate();
     {
-        let _repo_a = BuildingRepository::open(dir_a.path(), &bid).unwrap();
-        // Restore A's seed
         write_device_seed(dir_a.path(), &kp_a);
-        drop(repo_a);
-        let _repo_a = BuildingRepository::open(dir_a.path(), &bid).unwrap();
+        let mut repo_a = BuildingRepository::open(dir_a.path(), &bid).unwrap();
         repo_a.add_controller_key(kp_b.public_key()).unwrap();
         let _ = repo_a.commit(Some("add B".into())).unwrap();
         drop(repo_a);

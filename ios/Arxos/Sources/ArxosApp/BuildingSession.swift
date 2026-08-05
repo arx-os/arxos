@@ -1,11 +1,15 @@
 import Foundation
 import Combine
 import simd
+#if canImport(ArxosCore)
 import ArxosCore
+#endif
 
 /// Observable session state for one building repository on device.
 @MainActor
 final class BuildingSession: ObservableObject {
+    private static let lastBuildingKey = "arxos.lastBuildingId"
+
     @Published var summary: BuildingSummary?
     @Published var lastCapture: CapturePutResult?
     @Published var lastCommit: CommitSummary?
@@ -15,11 +19,23 @@ final class BuildingSession: ObservableObject {
     @Published var cameraPose: SIMD3<Float> = .zero
     @Published var annotationDraft: String = ""
     @Published var isTracking: Bool = false
+    /// True while a real RoomPlan scan is running (AR overlay paused).
+    @Published var isRoomPlanActive: Bool = false
+    /// True when last ingest is staged but not yet committed.
+    @Published var hasUncommittedStaging: Bool = false
 
     let storePath: String
 
     init(storePath: String = ArxosCore.defaultStorePath()) {
         self.storePath = storePath
+        // Restore last building after force-quit if still present on disk.
+        if let last = UserDefaults.standard.string(forKey: Self.lastBuildingKey), !last.isEmpty {
+            openBuilding(id: last, quiet: true)
+        }
+    }
+
+    private func rememberBuilding(_ id: String) {
+        UserDefaults.standard.set(id, forKey: Self.lastBuildingKey)
     }
 
     var buildingId: String? { summary?.buildingId }
@@ -36,6 +52,8 @@ final class BuildingSession: ObservableObject {
         do {
             let s = try ArxosCore.initBuilding(storePath: storePath, name: name)
             summary = s
+            rememberBuilding(s.buildingId)
+            hasUncommittedStaging = s.stagedCount > 0
             status = "Building \(s.buildingId.prefix(12))… ready"
             refreshNearby()
         } catch {
@@ -43,16 +61,26 @@ final class BuildingSession: ObservableObject {
         }
     }
 
-    func openBuilding(id: String) {
-        status = "Opening…"
+    func openBuilding(id: String, quiet: Bool = false) {
+        if !quiet {
+            status = "Opening…"
+        }
         lastError = nil
         do {
             let s = try ArxosCore.openBuilding(storePath: storePath, buildingId: id)
             summary = s
-            status = "Opened \(s.buildingId.prefix(12))… head=\(s.headRoot?.prefix(16) ?? "none")…"
+            rememberBuilding(s.buildingId)
+            hasUncommittedStaging = s.stagedCount > 0
+            status = "Opened \(s.buildingId.prefix(12))… head=\(s.headRoot?.prefix(16) ?? "none")… pending=\(s.stagedCount)"
             refreshNearby()
         } catch {
-            report(error)
+            if quiet {
+                // Stale last-building id after store wipe — clear quietly.
+                UserDefaults.standard.removeObject(forKey: Self.lastBuildingKey)
+                status = "No saved building (start a new scan)"
+            } else {
+                report(error)
+            }
         }
     }
 
@@ -188,15 +216,21 @@ final class BuildingSession: ObservableObject {
             )
             lastCommit = r
             summary = try ArxosCore.openBuilding(storePath: storePath, buildingId: id)
-            status = "Committed root \(r.rootCid.prefix(18))… (\(r.objectCount) objects)"
+            hasUncommittedStaging = false
+            rememberBuilding(id)
+            status = "Committed root \(r.rootCid.prefix(18))… (\(r.objectCount) objects) — safe to force-quit"
             refreshNearby()
         } catch {
             report(error)
         }
     }
 
-    /// Ingest RoomPlan structured geometry.
-    func ingestRoomPlan(surfaces: [RoomPlanSurface], objects: [RoomPlanObject]) {
+    /// Ingest RoomPlan structured geometry, then **auto-commit** so force-quit cannot lose the scan.
+    func ingestRoomPlan(
+        surfaces: [RoomPlanSurface],
+        objects: [RoomPlanObject],
+        autoCommit: Bool = true
+    ) {
         guard let id = buildingId else {
             status = "No building open"
             return
@@ -209,12 +243,46 @@ final class BuildingSession: ObservableObject {
                 surfaces: surfaces,
                 objects: objects
             )
-            status = "RoomPlan ingested: space \(res.spaceCid.prefix(8)), \(res.surfaceCids.count) surfaces, \(res.objectCids.count) objects staged"
+            hasUncommittedStaging = true
             summary = try ArxosCore.openBuilding(storePath: storePath, buildingId: id)
-            refreshNearby()
+            status = "RoomPlan staged: space \(res.spaceCid.prefix(8)), \(res.surfaceCids.count) surfaces, \(res.objectCids.count) objects"
+            if autoCommit {
+                commit(message: "roomplan scan")
+            } else {
+                refreshNearby()
+            }
         } catch {
             report(error)
         }
+    }
+
+    /// Copy the CAS directory to a temporary folder for the share sheet / AirDrop.
+    ///
+    /// On Mac, unzip/copy into a path and run:
+    ///   `arx --store /path/to/arxos-store building status <id>`
+    /// The live store is also visible under Files → On My iPhone → Arxos when
+    /// file sharing is enabled (Info.plist UIFileSharingEnabled).
+    func exportStoreForShare() throws -> URL {
+        let fm = FileManager.default
+        let src = URL(fileURLWithPath: storePath, isDirectory: true)
+        guard fm.fileExists(atPath: src.path) else {
+            throw NSError(
+                domain: "Arxos",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Store not found at \(storePath)"]
+            )
+        }
+        let stamp = Int(Date().timeIntervalSince1970)
+        let dirCopy = fm.temporaryDirectory
+            .appendingPathComponent(
+                "arxos-store-\(buildingId?.prefix(8) ?? "export")-\(stamp)",
+                isDirectory: true
+            )
+        if fm.fileExists(atPath: dirCopy.path) {
+            try fm.removeItem(at: dirCopy)
+        }
+        try fm.copyItem(at: src, to: dirCopy)
+        return dirCopy
     }
 
     func refreshNearby(radiusM: Double = 15) {

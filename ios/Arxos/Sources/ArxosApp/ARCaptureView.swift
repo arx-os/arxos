@@ -1,6 +1,8 @@
 import SwiftUI
 import simd
+#if canImport(ArxosCore)
 import ArxosCore
+#endif
 
 #if canImport(ARKit) && canImport(RealityKit) && !os(macOS)
 import ARKit

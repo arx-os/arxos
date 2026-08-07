@@ -93,6 +93,11 @@ fn import_stage(
             }
         }
 
+        // Prefer exported arxos:entityId so multi-device collapse survives CAD round-trips.
+        let entity_id = attr_string(prim, "arxos:entityId")
+            .and_then(|s| arxos_core::EntityId::from_str(&s).ok())
+            .or_else(|| Some(arxos_core::EntityId::new()));
+
         let body = match ty.as_str() {
             "building" => {
                 building_seen = true;
@@ -105,7 +110,7 @@ fn import_stage(
                 })
             }
             "floor" => ObjectBody::Floor(FloorBody {
-                entity_id: Some(arxos_core::EntityId::new()),
+                entity_id,
                 building_id: building_id.clone(),
                 name: attr_string(prim, "arxos:name"),
                 level_index: attr_string(prim, "arxos:levelIndex")
@@ -115,7 +120,7 @@ fn import_stage(
                 properties: props,
             }),
             "space" => ObjectBody::Space(SpaceBody {
-                entity_id: Some(arxos_core::EntityId::new()),
+                entity_id,
                 name: attr_string(prim, "arxos:name"),
                 floor: None,
                 pose,
@@ -147,7 +152,7 @@ fn import_stage(
                 })
             }
             "equipment" => ObjectBody::Equipment(arxos_core::object::EquipmentBody {
-                entity_id: Some(arxos_core::EntityId::new()),
+                entity_id,
                 name: attr_string(prim, "arxos:name"),
                 equipment_kind: attr_string(prim, "arxos:kind"),
                 pose,

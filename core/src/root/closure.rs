@@ -59,10 +59,12 @@ pub fn get_root_closure_blobs_with_options(
     let mut missing = BTreeSet::new();
 
     // 1. Walk root chain backwards to collect Root CIDs and active domain objects
-    //    up to the nearest checkpoint.
+    //    up to the nearest checkpoint. Fail closed if no checkpoint is reached
+    //    (same rule as RootBody::materialize_active_objects).
     let mut active_objects = BTreeSet::new();
     let mut removed_set = BTreeSet::new();
     let mut current_prev = Some(*root_cid);
+    let mut hit_checkpoint = false;
 
     while let Some(cid) = current_prev {
         if !visited.insert(cid) {
@@ -80,6 +82,7 @@ pub fn get_root_closure_blobs_with_options(
                     active_objects.insert(*item);
                 }
             }
+            hit_checkpoint = true;
             break;
         }
 
@@ -93,6 +96,13 @@ pub fn get_root_closure_blobs_with_options(
         }
 
         current_prev = root.previous_root;
+    }
+
+    if !hit_checkpoint {
+        return Err(Error::Validation(
+            "incomplete root chain for closure: delta walk requires a checkpoint ancestor"
+                .into(),
+        ));
     }
 
     // 2. Domain objects (fail closed unless allow_partial).

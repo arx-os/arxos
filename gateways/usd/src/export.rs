@@ -253,6 +253,12 @@ fn object_to_prim(
         "arxos:created".into(),
         UsdValue::String(obj.header.created.to_string()),
     );
+    if let Some(eid) = arxos_core::entity::entity_id_of(obj) {
+        prim.attrs.insert(
+            "arxos:entityId".into(),
+            UsdValue::String(eid.to_string()),
+        );
+    }
 
     if let Some(pose) = extract_pose(obj) {
         prim.attrs.insert(

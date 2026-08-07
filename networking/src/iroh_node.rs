@@ -27,33 +27,61 @@ pub struct IrohNode {
     buildings: Arc<RwLock<Vec<BuildingHeadAd>>>,
 }
 
+/// Relative path for a durable Iroh endpoint secret under the store root.
+pub const IROH_SEED_FILE: &str = "keys/iroh.seed";
+
+fn load_or_create_iroh_seed(store_path: &Path) -> Result<SecretKey> {
+    let path = store_path.join(IROH_SEED_FILE);
+    if path.exists() {
+        let bytes = std::fs::read(&path)
+            .map_err(|e| NetError::Transport(format!("read iroh seed: {e}")))?;
+        if bytes.len() != 32 {
+            return Err(NetError::Transport(format!(
+                "iroh seed must be 32 bytes, got {}",
+                bytes.len()
+            )));
+        }
+        let mut seed = [0u8; 32];
+        seed.copy_from_slice(&bytes);
+        return Ok(SecretKey::from_bytes(&seed));
+    }
+    let secret = SecretKey::generate();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| NetError::Transport(format!("create keys dir: {e}")))?;
+    }
+    let seed_bytes = secret.to_bytes();
+    std::fs::write(&path, seed_bytes)
+        .map_err(|e| NetError::Transport(format!("write iroh seed: {e}")))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
+    }
+    Ok(secret)
+}
+
 impl IrohNode {
     /// Bind a new endpoint serving `store_path`.
+    ///
+    /// Peer identity is durable: the secret is loaded from (or written to)
+    /// `<store>/keys/iroh.seed` so tickets remain stable across restarts.
     pub async fn bind(store_path: impl AsRef<Path>) -> Result<Self> {
         let store_path = store_path.as_ref().to_path_buf();
-        let secret = SecretKey::generate();
-        let endpoint = Endpoint::builder(presets::N0)
-            .secret_key(secret)
-            .alpns(vec![ARXOS_ALPN.to_vec()])
-            .bind()
-            .await
-            .map_err(|e| NetError::Transport(format!("iroh bind: {e}")))?;
-
-        let peer_id = endpoint.id().to_string();
-        let buildings = building_ads_from_store(&store_path).unwrap_or_default();
-
-        Ok(Self {
-            endpoint,
-            store_path,
-            peer_id,
-            buildings: Arc::new(RwLock::new(buildings)),
-        })
+        let secret = load_or_create_iroh_seed(&store_path)?;
+        Self::bind_with_secret(store_path, secret).await
     }
 
     /// Bind with an explicit 32-byte seed (deterministic peer id for tests).
+    ///
+    /// Does **not** overwrite `keys/iroh.seed` (test isolation).
     pub async fn bind_with_seed(store_path: impl AsRef<Path>, seed: [u8; 32]) -> Result<Self> {
         let store_path = store_path.as_ref().to_path_buf();
         let secret = SecretKey::from_bytes(&seed);
+        Self::bind_with_secret(store_path, secret).await
+    }
+
+    async fn bind_with_secret(store_path: PathBuf, secret: SecretKey) -> Result<Self> {
         let endpoint = Endpoint::builder(presets::N0)
             .secret_key(secret)
             .alpns(vec![ARXOS_ALPN.to_vec()])

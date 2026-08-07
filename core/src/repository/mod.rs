@@ -188,16 +188,13 @@ impl BuildingRepository {
 
         // Phase 3: partial by default — pin head root + building only.
         // Domain objects load via load_region / annotations_near / explicit get.
+        // Fail closed if head exists but materialization fails (e.g. missing checkpoint).
         if let Some(head) = record.head_root {
-            if let Ok(root_obj) = store.get(&head) {
-                working_set.pin(head);
-                working_set.cache_only(head, root_obj.clone());
-                if let Ok(root) = RootBody::from_object(&root_obj) {
-                    if let Ok(set) = root.materialize_active_objects(&store) {
-                        active_objects = set;
-                    }
-                }
-            }
+            let root_obj = store.get(&head)?;
+            working_set.pin(head);
+            working_set.cache_only(head, root_obj.clone());
+            let root = RootBody::from_object(&root_obj)?;
+            active_objects = root.materialize_active_objects(&store)?;
         }
         if let Some(b) = record.building_object {
             if let Ok(obj) = store.get(&b) {

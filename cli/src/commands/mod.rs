@@ -41,6 +41,17 @@ pub async fn run_async(cli: Cli) -> Result<()> {
                 no_mdns,
                 ticket_only,
             } => {
+                // Exclusive single-writer lock for the serve process lifetime
+                // (same discipline as arxos-edge). Refuse if another writer holds it.
+                let store = ObjectStore::open(&cli.store)
+                    .with_context(|| format!("open store at {}", cli.store.display()))?;
+                let _write_lock = store.try_lock_exclusive().with_context(|| {
+                    format!(
+                        "acquire store write lock on {} (is arx / arxos-edge / another writer running?)",
+                        cli.store.display()
+                    )
+                })?;
+
                 let node = std::sync::Arc::new(
                     IrohNode::bind(&cli.store)
                         .await
@@ -51,6 +62,7 @@ pub async fn run_async(cli: Cli) -> Result<()> {
                 println!("peer_id={}", node.peer_id());
                 println!("ticket={ticket}");
                 println!("store={}", cli.store.display());
+                println!("store_lock=held");
                 let ads = building_ads_from_store(&cli.store)?;
                 for ad in &ads {
                     println!(
@@ -89,10 +101,11 @@ pub async fn run_async(cli: Cli) -> Result<()> {
                         let _ = d.shutdown();
                     }
                     node.close().await;
+                    // _write_lock drops here
                     return Ok(());
                 }
 
-                println!("serving… (Ctrl-C to stop)");
+                println!("serving… (Ctrl-C to stop; store lock held)");
                 let accept = {
                     let n = std::sync::Arc::clone(&node);
                     tokio::spawn(async move {
@@ -108,7 +121,8 @@ pub async fn run_async(cli: Cli) -> Result<()> {
                 if let Some(d) = mdns_handle {
                     let _ = d.shutdown();
                 }
-                // Endpoint closes when Arc drops after abort.
+                node.close().await;
+                // _write_lock dropped → flock released
             }
             NetCommands::Fetch {
                 peer,
@@ -1052,6 +1066,13 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                         builder = builder.message(msg);
                     }
                     let (root_obj, root_cid) = builder.build_signed(&kp)?;
+                    // Fail closed: authors must be building controllers (same as commit/adopt).
+                    {
+                        let root = RootBody::from_object(&root_obj)?;
+                        root.verify_with_store(&store).with_context(|| {
+                            "root author authorization failed (seed must be in Building.controller_keys)"
+                        })?;
+                    }
                     store.put(&root_obj)?;
                     let root = RootBody::from_object(&root_obj)?;
                     if quiet {

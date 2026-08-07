@@ -150,6 +150,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 2172973D479E4983AF0E48B4 /* Build configuration list for PBXNativeTarget "ArxosApp" */;
 			buildPhases = (
+				A1B2C3D4E5F64789A0B1C2D3 /* Check UniFFI bindings */,
 				A22C7590A6B0469490D56432 /* Sources */,
 				D35C3C52210940399B02C6A7 /* Frameworks */,
 				18461D366B084B2F97CCF1B7 /* Resources */,
@@ -200,6 +201,31 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		A1B2C3D4E5F64789A0B1C2D3 /* Check UniFFI bindings */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/../scripts/check-bindings.sh",
+				"$(SRCROOT)/../../ffi/src/arxos.udl",
+			);
+			name = "Check UniFFI bindings";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "set -euo pipefail\n\"${SRCROOT}/../scripts/check-bindings.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		A22C7590A6B0469490D56432 /* Sources */ = {

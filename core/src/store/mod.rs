@@ -123,7 +123,15 @@ impl ObjectStore {
         self.put_canonical_bytes(&bytes)
     }
 
-    /// Put already-canonical object bytes (must decode to a valid Object).
+    /// Put already-canonical object bytes (network / import path).
+    ///
+    /// Fail closed for untrusted wire data:
+    /// 1. Size limit
+    /// 2. Decode + validate as an [`Object`]
+    /// 3. Re-encode and require **exact** byte equality with the wire payload
+    /// 4. Store the **wire** bytes under `BLAKE3(wire)` (no silent re-encode drift)
+    ///
+    /// Typed construction should use [`put`] instead.
     pub fn put_bytes(&self, bytes: &[u8]) -> Result<Cid> {
         if bytes.len() as u64 > MAX_OBJECT_BYTES {
             return Err(Error::Validation(format!(
@@ -132,8 +140,15 @@ impl ObjectStore {
             )));
         }
         let object = Object::from_canonical_bytes(bytes)?;
-        // Re-encode via put so validate + size policy stay single-pathed.
-        self.put(&object)
+        let reencoded = object.to_canonical_bytes()?;
+        if reencoded.as_slice() != bytes {
+            return Err(Error::Validation(
+                "wire object bytes are not canonical (re-encode differs from input); refusing put"
+                    .into(),
+            ));
+        }
+        // Store exact wire bytes so CID on the wire matches the CAS path.
+        self.put_canonical_bytes(bytes)
     }
 
     fn put_canonical_bytes(&self, bytes: &[u8]) -> Result<Cid> {
@@ -360,5 +375,49 @@ mod tests {
         let n = store.rebuild_index().unwrap();
         assert_eq!(n, 20);
         assert!(store.index_path().exists());
+    }
+
+    #[test]
+    fn put_bytes_stores_exact_wire_bytes() {
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let obj = Object::new_with_created(
+            ObjectBody::Blob(BlobBody {
+                content_type: Some("text/plain".into()),
+                data: b"wire-exact".to_vec(),
+                properties: BTreeMap::new(),
+            }),
+            99,
+        );
+        let wire = obj.to_canonical_bytes().unwrap();
+        let cid = store.put_bytes(&wire).unwrap();
+        assert_eq!(cid, Cid::from_canonical_bytes(&wire));
+        assert_eq!(store.get_bytes(&cid).unwrap(), wire);
+    }
+
+    #[test]
+    fn put_bytes_rejects_non_canonical_wire() {
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let obj = Object::new_with_created(
+            ObjectBody::Blob(BlobBody {
+                content_type: None,
+                data: b"x".to_vec(),
+                properties: BTreeMap::new(),
+            }),
+            1,
+        );
+        let mut wire = obj.to_canonical_bytes().unwrap();
+        // Corrupt trailing bytes while keeping a parseable prefix is hard for CBOR;
+        // append garbage so decode fails OR if still decodes, re-encode differs.
+        wire.push(0xff);
+        let err = store.put_bytes(&wire).unwrap_err();
+        assert!(
+            matches!(
+                err,
+                Error::Deserialization(_) | Error::Validation(_) | Error::Schema(_)
+            ),
+            "{err:?}"
+        );
     }
 }

@@ -135,11 +135,36 @@ final class RoomPlanCapturePipeline: NSObject, RoomCaptureSessionDelegate {
                     ))
                 }
 
+                // Stable category strings for equipment_kind / CIDs (never String(describing:)).
+                // Doors/windows/openings above are Surfaces with surface_kind (not Opening objects) —
+                // intentional Phase-0 mapping; see docs/design/ios-field-loop.md if present.
+                func roomPlanObjectCategory(_ category: CapturedRoom.Object.Category) -> String {
+                    switch category {
+                    case .storage: return "storage"
+                    case .refrigerator: return "refrigerator"
+                    case .stove: return "stove"
+                    case .bed: return "bed"
+                    case .sink: return "sink"
+                    case .washerDryer: return "washer_dryer"
+                    case .toilet: return "toilet"
+                    case .bathtub: return "bathtub"
+                    case .oven: return "oven"
+                    case .dishwasher: return "dishwasher"
+                    case .table: return "table"
+                    case .sofa: return "sofa"
+                    case .chair: return "chair"
+                    case .fireplace: return "fireplace"
+                    case .television: return "television"
+                    case .stairs: return "stairs"
+                    @unknown default: return "unknown"
+                    }
+                }
+
                 var objects: [RoomPlanObject] = []
                 for item in room.objects {
                     objects.append(RoomPlanObject(
                         id: item.identifier.uuidString,
-                        category: String(describing: item.category),
+                        category: roomPlanObjectCategory(item.category),
                         transform: doubleArray(from: item.transform),
                         dimensions: doubleArray(from: item.dimensions)
                     ))

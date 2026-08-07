@@ -112,6 +112,10 @@ impl RootBody {
 
     /// Materialize the full set of active object CIDs by walking the root chain
     /// backwards (if this is a delta root) until hitting a checkpoint (legacy/checkpoint full-set root).
+    ///
+    /// Fail closed: a pure delta chain that never reaches a checkpoint (full-set
+    /// root with `objects: Some(_)`) is rejected. Repository genesis always
+    /// checkpoints; this guards hand-built or corrupted history.
     pub fn materialize_active_objects(&self, store: &ObjectStore) -> Result<BTreeSet<Cid>> {
         if let Some(ref legacy_set) = self.objects {
             return Ok(legacy_set.clone());
@@ -120,6 +124,7 @@ impl RootBody {
         let mut active = BTreeSet::new();
         let mut removed = BTreeSet::new();
         let mut visited = BTreeSet::new();
+        let mut hit_checkpoint = false;
 
         // Start with this root's deltas
         for item in &self.added {
@@ -144,6 +149,7 @@ impl RootBody {
                         active.insert(*item);
                     }
                 }
+                hit_checkpoint = true;
                 break;
             }
 
@@ -157,6 +163,14 @@ impl RootBody {
             }
 
             current_prev = root.previous_root;
+        }
+
+        if !hit_checkpoint {
+            return Err(Error::Validation(
+                "incomplete root chain: delta materialization requires a checkpoint ancestor \
+                 (objects: Some(...)); refuse incomplete active set"
+                    .into(),
+            ));
         }
 
         Ok(active)
@@ -372,5 +386,29 @@ mod tests {
         let r1 = RootBody::new(building.clone(), None, s1, 1);
         let r2 = RootBody::new(building, None, s2, 1);
         assert_eq!(root_body_cid(&r1).unwrap(), root_body_cid(&r2).unwrap());
+    }
+
+    #[test]
+    fn materialize_delta_without_checkpoint_fails() {
+        use crate::store::ObjectStore;
+        use tempfile::tempdir;
+
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let kp = Keypair::generate();
+        let building = BuildingId::new();
+
+        // Pure delta root with no previous and no objects set — incomplete chain.
+        let (obj, _) = RootBuilder::new(building, 1)
+            .added(BTreeSet::from([Cid::from_canonical_bytes(b"ghost")]))
+            .build_signed(&kp)
+            .unwrap();
+        store.put(&obj).unwrap();
+        let root = RootBody::from_object(&obj).unwrap();
+        let err = root.materialize_active_objects(&store).unwrap_err();
+        assert!(
+            matches!(err, crate::error::Error::Validation(ref m) if m.contains("checkpoint")),
+            "{err:?}"
+        );
     }
 }

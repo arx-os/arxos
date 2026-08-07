@@ -114,6 +114,12 @@ fn import_file(
         let name = entity_name(ent);
         let pose = None; // placement reverse-parse is best-effort; Phase 4 keeps identity + labels
 
+        // Prefer Pset_ArxosIdentity EntityId so multi-device collapse survives CAD round-trips.
+        let entity_id = ident
+            .and_then(|i| i.entity_id.as_ref())
+            .and_then(|s| arxos_core::EntityId::from_str(s).ok())
+            .or_else(|| Some(arxos_core::EntityId::new()));
+
         let body = match ty.as_str() {
             "building" => {
                 building_seen = true;
@@ -131,7 +137,7 @@ fn import_file(
                 })
             }
             "floor" => ObjectBody::Floor(FloorBody {
-                entity_id: Some(arxos_core::EntityId::new()),
+                entity_id,
                 building_id: building_id.clone(),
                 name,
                 level_index: 0,
@@ -139,7 +145,7 @@ fn import_file(
                 properties: props,
             }),
             "space" => ObjectBody::Space(SpaceBody {
-                entity_id: Some(arxos_core::EntityId::new()),
+                entity_id,
                 name,
                 floor: None,
                 pose,
@@ -230,6 +236,7 @@ struct Identity {
     source_cid: Option<String>,
     building_id: Option<String>,
     object_type: Option<String>,
+    entity_id: Option<String>,
     text: Option<String>,
 }
 
@@ -295,6 +302,9 @@ fn collect_identities(file: &IfcFile) -> BTreeMap<u64, Identity> {
                 }
                 if let Some(v) = props.get("ObjectType") {
                     entry.object_type = Some(v.clone());
+                }
+                if let Some(v) = props.get("EntityId") {
+                    entry.entity_id = Some(v.clone());
                 }
                 if let Some(v) = props.get("Text") {
                     entry.text = Some(v.clone());

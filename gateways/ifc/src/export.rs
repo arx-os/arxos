@@ -208,6 +208,7 @@ fn write_ifc(
         &b_cid,
         "building",
         &root.building_id,
+        None,
     );
 
     w.emit(&format!(
@@ -243,7 +244,8 @@ fn write_ifc(
             ifc_str(&gid),
             ifc_opt_str(name.as_deref()),
         ));
-        emit_identity_pset(&mut w, owner, storey, cid, "floor", &root.building_id);
+        let eid = arxos_core::entity::entity_id_of(obj).map(|e| e.as_str());
+        emit_identity_pset(&mut w, owner, storey, cid, "floor", &root.building_id, eid);
         storey_map.insert(*cid, storey);
         storey_list.push(storey);
     }
@@ -288,7 +290,8 @@ fn write_ifc(
             ifc_str(&gid),
             ifc_opt_str(name.as_deref()),
         ));
-        emit_identity_pset(&mut w, owner, space, cid, "space", &root.building_id);
+        let eid = arxos_core::entity::entity_id_of(obj).map(|e| e.as_str());
+        emit_identity_pset(&mut w, owner, space, cid, "space", &root.building_id, eid);
         w.emit(&format!(
             "IFCRELCONTAINEDINSPATIALSTRUCTURE({},#{owner},$,$,(#{space}),#{parent_storey})",
             ifc_str(&global_id_from_cid(&Cid::from_canonical_bytes(
@@ -317,6 +320,7 @@ fn write_ifc(
             cid,
             "annotation",
             &root.building_id,
+            None,
         );
         if let Some(t) = &text {
             let p = w.emit(&format!(
@@ -378,6 +382,7 @@ fn emit_identity_pset(
     cid: &Cid,
     object_type: &str,
     building_id: &BuildingId,
+    entity_id: Option<&str>,
 ) {
     let p_cid = w.emit(&format!(
         "IFCPROPERTYSINGLEVALUE({},$,IFCTEXT({}),$)",
@@ -394,8 +399,17 @@ fn emit_identity_pset(
         ifc_str("ObjectType"),
         ifc_str(object_type)
     ));
+    let mut prop_refs = format!("#{p_cid},#{p_bid},#{p_ty}");
+    if let Some(eid) = entity_id {
+        let p_eid = w.emit(&format!(
+            "IFCPROPERTYSINGLEVALUE({},$,IFCTEXT({}),$)",
+            ifc_str("EntityId"),
+            ifc_str(eid)
+        ));
+        prop_refs.push_str(&format!(",#{p_eid}"));
+    }
     let pset = w.emit(&format!(
-        "IFCPROPERTYSET({},#{owner},{},$,(#{p_cid},#{p_bid},#{p_ty}))",
+        "IFCPROPERTYSET({},#{owner},{},$,({prop_refs}))",
         ifc_str(&global_id_from_cid(&Cid::from_canonical_bytes(
             format!("pset:id:{cid}").as_bytes()
         ))),

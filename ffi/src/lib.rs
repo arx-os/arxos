@@ -78,9 +78,9 @@ pub fn hello(name: String) -> String {
     format!("Hello, {name}!")
 }
 
-/// Return library version.
+/// Return library version (workspace package version).
 pub fn version() -> String {
-    "0.1.0".to_string()
+    env!("CARGO_PKG_VERSION").to_string()
 }
 
 /// Generate a new BuildingId string (ULID).

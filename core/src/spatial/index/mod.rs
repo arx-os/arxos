@@ -25,8 +25,56 @@ use super::aabb::POINT_HALF_EXTENT_M;
 /// Max object refs in a leaf before splitting.
 pub const LEAF_CAPACITY: usize = 16;
 
+/// Max children of an internal node (N-ary fanout). `children: Vec<Cid>`
+/// already allows this; both full build and incremental insert honour it.
+pub const MAX_CHILDREN: usize = 16;
+
 /// Max tree depth (guards pathological inputs).
 pub const MAX_DEPTH: usize = 24;
+
+/// Sort entries by longest-axis centroid, then CID (deterministic split order).
+pub(super) fn sort_entries_for_split(entries: &mut [SpatialEntry], bounds: &Aabb) {
+    let axis = bounds.longest_axis();
+    entries.sort_by(|a, b| {
+        crate::canonical::cmp_f64(a.bounds.centroid()[axis], b.bounds.centroid()[axis])
+            .then_with(|| a.cid.cmp(&b.cid))
+    });
+}
+
+/// Sort (cid, bounds) pairs the same way as [`sort_entries_for_split`].
+pub(super) fn sort_cid_bounds_for_split(items: &mut [(Cid, Aabb)], bounds: &Aabb) {
+    let axis = bounds.longest_axis();
+    items.sort_by(|a, b| {
+        crate::canonical::cmp_f64(a.1.centroid()[axis], b.1.centroid()[axis])
+            .then_with(|| a.0.cmp(&b.0))
+    });
+}
+
+/// Pack a pre-sorted list into at most `max_parts` nearly equal groups.
+pub(super) fn split_evenly<T>(mut items: Vec<T>, max_parts: usize) -> Vec<Vec<T>> {
+    let n = items.len();
+    if n == 0 {
+        return Vec::new();
+    }
+    let parts = max_parts.min(n).max(1);
+    if parts == 1 {
+        return vec![items];
+    }
+    let mut groups = Vec::with_capacity(parts);
+    for remaining_parts in (1..parts).rev() {
+        let take = items.len() / (remaining_parts + 1);
+        if take == 0 || items.len() <= take {
+            break;
+        }
+        let rest = items.split_off(take);
+        groups.push(items);
+        items = rest;
+    }
+    if !items.is_empty() {
+        groups.push(items);
+    }
+    groups
+}
 
 /// One indexable object with bounds.
 #[derive(Debug, Clone, PartialEq)]
@@ -118,6 +166,8 @@ pub fn entry_from_object(cid: Cid, obj: &Object) -> Option<SpatialEntry> {
         }
         _ => return None,
     };
+    let mut bounds = bounds;
+    bounds.canonicalize().ok()?;
     Some(SpatialEntry {
         cid,
         bounds,
@@ -319,5 +369,60 @@ mod tests {
         c2.sort();
         assert_eq!(c1, c2, "query results must match across construction paths");
         assert_eq!(c1.len(), 32);
+    }
+
+    fn max_internal_children(store: &ObjectStore, root: &Cid) -> usize {
+        let mut max_c = 0usize;
+        let mut stack = vec![*root];
+        while let Some(cid) = stack.pop() {
+            let obj = store.get(&cid).unwrap();
+            let ObjectBody::SpatialIndexNode(node) = obj.body else {
+                continue;
+            };
+            if !node.children.is_empty() {
+                max_c = max_c.max(node.children.len());
+                stack.extend(node.children);
+            }
+        }
+        max_c
+    }
+
+    #[test]
+    fn split_evenly_preserves_order_and_count() {
+        let items: Vec<u32> = (0..17).collect();
+        let groups = split_evenly(items.clone(), MAX_CHILDREN);
+        assert!(groups.len() >= 2 && groups.len() <= MAX_CHILDREN);
+        let flat: Vec<u32> = groups.into_iter().flatten().collect();
+        assert_eq!(flat, items);
+        let one = split_evenly(vec![1u32], 16);
+        assert_eq!(one, vec![vec![1]]);
+    }
+
+    #[test]
+    fn full_build_uses_nary_fanout() {
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        // Well above LEAF_CAPACITY so the root must be internal; N-ary packing
+        // should produce more than two children on the first level.
+        let n = LEAF_CAPACITY * 4;
+        let mut cids = Vec::new();
+        for i in 0..n {
+            let obj = annotation_object(&AnnotationCapture::new(
+                format!("fan-{i}"),
+                Pose {
+                    position: [i as f64, 0.0, 0.0],
+                    orientation: [0.0, 0.0, 0.0, 1.0],
+                },
+            ));
+            cids.push(store.put(&obj).unwrap());
+        }
+        let entries = collect_entries(&store, cids.iter().copied()).unwrap();
+        let root = build_index(&store, entries).unwrap().unwrap();
+        let fanout = max_internal_children(&store, &root);
+        assert!(
+            fanout > 2,
+            "expected N-ary internal node (MAX_CHILDREN={MAX_CHILDREN}), got max children={fanout}"
+        );
+        assert!(fanout <= MAX_CHILDREN);
     }
 }

@@ -372,7 +372,7 @@ mod tests {
         let mut repo = BuildingRepository::init(
             dir.path(),
             Some("Scoring".into()),
-            Some(kp.clone()),
+            Some(Keypair::from_seed(*kp.seed())),
         )
         .unwrap();
         repo.capture_annotation(&AnnotationCapture::new(
@@ -457,7 +457,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let kp = Keypair::generate();
         let mut repo =
-            BuildingRepository::init(dir.path(), Some("Det".into()), Some(kp.clone())).unwrap();
+            BuildingRepository::init(dir.path(), Some("Det".into()), Some(Keypair::from_seed(*kp.seed()))).unwrap();
         repo.capture_annotation(&AnnotationCapture::new(
             "a",
             Pose {

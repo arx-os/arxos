@@ -5,7 +5,10 @@ use crate::error::{Error, Result};
 use crate::store::ObjectStore;
 
 use super::super::aabb::union_all;
-use super::{node_object, SpatialEntry, LEAF_CAPACITY, MAX_DEPTH};
+use super::{
+    node_object, sort_entries_for_split, split_evenly, SpatialEntry, LEAF_CAPACITY, MAX_CHILDREN,
+    MAX_DEPTH,
+};
 
 pub fn build_index(store: &ObjectStore, mut entries: Vec<SpatialEntry>) -> Result<Option<Cid>> {
     if entries.is_empty() {
@@ -28,23 +31,20 @@ fn build_recursive(store: &ObjectStore, entries: Vec<SpatialEntry>, depth: usize
         return store.put(&obj);
     }
 
-    let axis = bounds.longest_axis();
     let mut sorted = entries;
-    sorted.sort_by(|a, b| {
-        let ca = a.bounds.centroid()[axis];
-        let cb = b.bounds.centroid()[axis];
-        ca.partial_cmp(&cb).unwrap_or(std::cmp::Ordering::Equal)
-    });
-    let mid = sorted.len() / 2;
-    if mid == 0 || mid == sorted.len() {
-        let refs: Vec<Cid> = sorted.into_iter().map(|e| e.cid).collect();
+    sort_entries_for_split(&mut sorted, &bounds);
+    let groups = split_evenly(sorted, MAX_CHILDREN);
+    if groups.len() < 2 {
+        let refs: Vec<Cid> = groups.into_iter().flatten().map(|e| e.cid).collect();
         let obj = node_object(bounds, Vec::new(), refs);
         return store.put(&obj);
     }
-    let right = sorted.split_off(mid);
-    let left = sorted;
-    let left_cid = build_recursive(store, left, depth + 1)?;
-    let right_cid = build_recursive(store, right, depth + 1)?;
-    let obj = node_object(bounds, vec![left_cid, right_cid], Vec::new());
+
+    let mut children = Vec::with_capacity(groups.len());
+    for group in groups {
+        children.push(build_recursive(store, group, depth + 1)?);
+    }
+    children.sort();
+    let obj = node_object(bounds, children, Vec::new());
     store.put(&obj)
 }

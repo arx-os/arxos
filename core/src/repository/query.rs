@@ -117,14 +117,13 @@ impl BuildingRepository {
         let kp = self
             .keypair
             .as_ref()
-            .ok_or_else(|| Error::Crypto("no device keypair for merge signing".into()))?
-            .clone();
+            .ok_or_else(|| Error::Crypto("no device keypair for merge signing".into()))?;
         let head = self
             .record
             .head_root
             .ok_or_else(|| Error::Validation("no local head to merge into".into()))?;
         let result =
-            crate::merge::merge_roots(&self.store, head, other_root, &kp, message, true)?;
+            crate::merge::merge_roots(&self.store, head, other_root, kp, message, true)?;
         self.adopt_root(result.root_cid)?;
         Ok(result)
     }

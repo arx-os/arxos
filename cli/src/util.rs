@@ -1,6 +1,5 @@
 //! Shared CLI helpers.
 
-use std::fs;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -8,6 +7,7 @@ use anyhow::{bail, Context, Result};
 use arxos_core::object::{Object, ObjectBody};
 use arxos_core::root::RootBody;
 use arxos_core::{Cid, Keypair};
+use zeroize::Zeroize;
 
 pub fn now_secs() -> u64 {
     SystemTime::now()
@@ -17,24 +17,21 @@ pub fn now_secs() -> u64 {
 }
 
 pub fn keypair_from_seed_hex(seed_hex: &str) -> Result<Keypair> {
-    let bytes = hex::decode(seed_hex).context("decode seed hex")?;
+    let mut bytes = hex::decode(seed_hex).context("decode seed hex")?;
     if bytes.len() != 32 {
+        bytes.zeroize();
         bail!("seed must be 32 bytes (64 hex chars), got {}", bytes.len());
     }
     let mut seed = [0u8; 32];
     seed.copy_from_slice(&bytes);
+    bytes.zeroize();
     Ok(Keypair::from_seed(seed))
 }
 
 pub fn load_device_keypair(store: &Path) -> Option<Keypair> {
     let path = store.join("keys").join("device.seed");
-    let bytes = fs::read(path).ok()?;
-    if bytes.len() != 32 {
-        return None;
-    }
-    let mut seed = [0u8; 32];
-    seed.copy_from_slice(&bytes);
-    Some(Keypair::from_seed(seed))
+    let seed = arxos_core::read_secret_32(&path).ok()?;
+    Some(Keypair::from_seed(*seed))
 }
 
 pub fn print_object(obj: &Object, cid: &Cid) {

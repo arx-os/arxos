@@ -28,8 +28,7 @@ impl BuildingRepository {
         let kp = self
             .keypair
             .as_ref()
-            .ok_or_else(|| Error::Crypto("no device keypair loaded for signing".into()))?
-            .clone();
+            .ok_or_else(|| Error::Crypto("no device keypair loaded for signing".into()))?;
 
         // 1. Proposed active set: previous + staged − explicit removes.
         let mut proposed = self.active_objects.clone();

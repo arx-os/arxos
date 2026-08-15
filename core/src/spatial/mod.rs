@@ -11,8 +11,8 @@ mod index;
 pub use aabb::{union_all, POINT_HALF_EXTENT_M};
 pub use index::{
     build_index, collect_entries, entry_from_object, filter_by_floor, query_index,
-    query_index_refined, volume_around_pose, SpatialEntry, LEAF_CAPACITY, MAX_DEPTH,
-    insert_incremental,
+    query_index_refined, volume_around_pose, SpatialEntry, LEAF_CAPACITY, MAX_CHILDREN,
+    MAX_DEPTH, insert_incremental,
 };
 
 use serde::{Deserialize, Serialize};

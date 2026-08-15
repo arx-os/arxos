@@ -15,7 +15,7 @@ fn ifc_roundtrip_identity() {
     let path = dir.path();
     let kp = Keypair::generate();
     let mut repo =
-        BuildingRepository::init(path, Some("IFC Hall".into()), Some(kp.clone())).unwrap();
+        BuildingRepository::init(path, Some("IFC Hall".into()), Some(Keypair::from_seed(*kp.seed()))).unwrap();
     let bid = repo.building_id().clone();
 
     let floor = Object::new(ObjectBody::Floor(FloorBody {

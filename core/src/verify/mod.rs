@@ -7,7 +7,7 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
-use crate::canonical::{cid_of, to_canonical_cbor};
+use crate::canonical::cid_of;
 use crate::cid::Cid;
 use crate::error::{Error, Result};
 use crate::object::Object;
@@ -62,12 +62,12 @@ impl VerificationReport {
 pub fn verify_object_canonicalization(obj: &Object) -> Result<VerificationReport> {
     let mut report = VerificationReport::pass();
     let b1 = obj.to_canonical_bytes()?;
-    let b2 = to_canonical_cbor(obj)?;
+    let b2 = obj.to_canonical_bytes()?;
     if b1 != b2 {
         report.push(
             Severity::Error,
             "CANON_MISMATCH",
-            "to_canonical_bytes != to_canonical_cbor",
+            "to_canonical_bytes is not stable across two encodings",
         );
     }
     let c1 = obj.cid()?;

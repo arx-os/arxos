@@ -537,6 +537,11 @@ impl BuildingRepository {
         BuildingId::from_str(s)
     }
 
+    /// Put a typed object into the CAS while this repository holds the write lock.
+    pub fn put_object(&self, obj: &Object) -> Result<Cid> {
+        self.store.put(obj)
+    }
+
     /// Put raw object bytes into the CAS (used by network sync).
     pub fn put_object_bytes(&self, bytes: &[u8]) -> Result<Cid> {
         self.store.put_bytes(bytes)
@@ -801,7 +806,7 @@ mod tests {
         let path = dir.path();
         let mut repo = BuildingRepository::init(path, Some("AdoptTest".into()), None).unwrap();
         let bid = repo.building_id().clone();
-        let controller = repo.keypair().unwrap().clone();
+        let controller = repo.keypair().unwrap();
         let outsider = Keypair::generate();
 
         // 1. Authorized controller signs a root — adopt succeeds.
@@ -810,7 +815,7 @@ mod tests {
         let (root_obj, signed_root_cid) = RootBuilder::new(bid.clone(), 100)
             .objects(objects.clone())
             .message("signed commit")
-            .build_signed(&controller)
+            .build_signed(controller)
             .unwrap();
         repo.store().put(&root_obj).unwrap();
         assert!(repo.adopt_root(signed_root_cid).is_ok());
@@ -854,7 +859,7 @@ mod tests {
         let path = dir.path();
         let mut repo = BuildingRepository::init(path, Some("Partial".into()), None).unwrap();
         let bid = repo.building_id().clone();
-        let controller = repo.keypair().unwrap().clone();
+        let controller = repo.keypair().unwrap();
         let building_cid = repo.record().building_object.unwrap();
 
         // Phantom CID listed as active but never stored.
@@ -865,7 +870,7 @@ mod tests {
         let (root_obj, root_cid) = RootBuilder::new(bid, 200)
             .objects(objects)
             .message("incomplete")
-            .build_signed(&controller)
+            .build_signed(controller)
             .unwrap();
         repo.store().put(&root_obj).unwrap();
 
@@ -929,7 +934,8 @@ mod tests {
         let path = dir.path();
         let mut repo = BuildingRepository::init(path, Some("Rm".into()), None).unwrap();
         let bid = repo.building_id().clone();
-        let first = repo.keypair().unwrap().clone();
+        let first_pk = repo.keypair().unwrap().public_key();
+        let first = Keypair::from_seed(*repo.keypair().unwrap().seed());
         let second = Keypair::generate();
         repo.add_controller_key(second.public_key()).unwrap();
         repo.commit(Some("add B".into())).unwrap();
@@ -940,7 +946,7 @@ mod tests {
         repo.remove_controller_key(second.public_key()).unwrap();
         let c = repo.commit(Some("remove B".into())).unwrap();
         assert_eq!(repo.controller_keys().unwrap().len(), 1);
-        assert!(repo.controller_keys().unwrap().contains(&first.public_key()));
+        assert!(repo.controller_keys().unwrap().contains(&first_pk));
         drop(repo);
 
         // Remaining controller can still author.
@@ -984,7 +990,6 @@ mod tests {
         let path = dir.path();
         let mut repo = BuildingRepository::init(path, Some("Authz".into()), None).unwrap();
         let bid = repo.building_id().clone();
-        let first = repo.keypair().unwrap().clone();
         let second = Keypair::generate();
         repo.add_controller_key(second.public_key()).unwrap();
         repo.commit(Some("add B".into())).unwrap();
@@ -1002,7 +1007,6 @@ mod tests {
             matches!(err, Error::Authorization(_)),
             "expected Authorization, got {err:?}"
         );
-        let _ = first;
     }
 
     #[test]
@@ -1030,5 +1034,21 @@ mod tests {
             matches!(err, Error::Authorization(_)),
             "expected Authorization, got {err:?}"
         );
+    }
+
+    #[test]
+    fn init_writes_device_seed_owner_rw_only() {
+        let dir = tempdir().unwrap();
+        let _repo = BuildingRepository::init(dir.path(), Some("Keys".into()), None).unwrap();
+        let path = dir.path().join("keys").join("device.seed");
+        assert!(path.exists());
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+            assert_eq!(mode, 0o600, "device.seed must be 0o600, got {mode:#o}");
+        }
+        let kp = BuildingRepository::read_seed(dir.path()).unwrap();
+        assert_eq!(kp.public_key(), _repo.keypair().unwrap().public_key());
     }
 }

@@ -6,6 +6,7 @@ use std::collections::BTreeSet;
 use arxos_core::object::{
     AnnotationBody, BlobBody, BuildingBody, BuildingId, Object, ObjectBody, Pose,
 };
+
 use arxos_core::root::{RootBody, RootBuilder};
 use arxos_core::store::ObjectStore;
 use arxos_core::Keypair;
@@ -35,6 +36,58 @@ proptest! {
     }
 
     #[test]
+    fn pose_cid_stable_under_signed_zero_and_hemisphere(
+        x in -1_000.0f64..1_000.0,
+        y in -1_000.0f64..1_000.0,
+        z in -1_000.0f64..1_000.0,
+        qx in -1.0f64..1.0,
+        qy in -1.0f64..1.0,
+        qz in -1.0f64..1.0,
+        qw in -1.0f64..1.0,
+        created in 1u64..2_000_000_000u64
+    ) {
+        // Skip the degenerate all-zero quaternion only if every component
+        // canonicalizes to +0.0 — hemisphere is then a no-op either way.
+        let pose = Pose {
+            position: [x, y, z],
+            orientation: [qx, qy, qz, qw],
+        };
+        let flipped = Pose {
+            position: [if x == 0.0 { -0.0 } else { x }, y, z],
+            orientation: [-qx, -qy, -qz, -qw],
+        };
+        let a = Object::new_with_created(
+            ObjectBody::Annotation(AnnotationBody {
+                text: Some("prop-float".into()),
+                transcript: None,
+                media_ref: None,
+                pose: Some(pose),
+                space: None,
+                properties: BTreeMap::new(),
+            }),
+            created,
+        );
+        let b = Object {
+            header: a.header.clone(),
+            body: ObjectBody::Annotation(AnnotationBody {
+                text: Some("prop-float".into()),
+                transcript: None,
+                media_ref: None,
+                pose: Some(flipped),
+                space: None,
+                properties: BTreeMap::new(),
+            }),
+        };
+        let c1 = a.cid().unwrap();
+        let c2 = b.cid().unwrap();
+        prop_assert_eq!(c1, c2);
+        prop_assert_eq!(a.to_canonical_bytes().unwrap(), b.to_canonical_bytes().unwrap());
+        // Encode → decode → CID is identity.
+        let bytes = a.to_canonical_bytes().unwrap();
+        let decoded = Object::from_canonical_bytes(&bytes).unwrap();
+        prop_assert_eq!(decoded.cid().unwrap(), c1);
+    }
+
     fn store_roundtrip_preserves_cid(
         data in arb_bytes(),
         created in 1u64..2_000_000_000u64
@@ -119,7 +172,7 @@ fn graph_root_rematerialize_identical() {
     // Rebuild signed root with same inputs + same key → same CID only if
     // timestamp and author signatures match; signature includes random-free
     // deterministic ed25519, so same seed + same payload → same signature.
-    let kp2 = Keypair::from_seed(kp.seed());
+    let kp2 = Keypair::from_seed(*kp.seed());
     let (root2, cid2) = RootBuilder::new(building_id, 1_700_000_400)
         .objects(cids)
         .message("property graph")

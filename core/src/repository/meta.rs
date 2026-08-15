@@ -28,10 +28,7 @@ impl BuildingRepository {
             fs::create_dir_all(parent)?;
         }
         let bytes = to_canonical_cbor(record)?;
-        let tmp = path.with_extension("tmp");
-        fs::write(&tmp, &bytes)?;
-        fs::rename(tmp, path)?;
-        Ok(())
+        crate::store::atomic_write(&path, &bytes)
     }
 
     pub(super) fn read_record(store_root: &Path, building_id: &BuildingId) -> Result<BuildingRecord> {
@@ -46,31 +43,12 @@ impl BuildingRepository {
     }
 
     pub(super) fn write_seed(store_root: &Path, kp: &Keypair) -> Result<()> {
-        let path = Self::keys_path(store_root);
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        // Restrictive permissions where supported.
-        fs::write(&path, kp.seed())?;
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let _ = fs::set_permissions(&path, fs::Permissions::from_mode(0o600));
-        }
-        Ok(())
+        let seed = kp.seed();
+        crate::crypto::write_secret_bytes(&Self::keys_path(store_root), seed.as_ref())
     }
 
     pub(super) fn read_seed(store_root: &Path) -> Result<Keypair> {
-        let path = Self::keys_path(store_root);
-        let bytes = fs::read(path).map_err(|e| Error::Crypto(format!("read seed: {e}")))?;
-        if bytes.len() != 32 {
-            return Err(Error::Crypto(format!(
-                "seed must be 32 bytes, got {}",
-                bytes.len()
-            )));
-        }
-        let mut seed = [0u8; 32];
-        seed.copy_from_slice(&bytes);
-        Ok(Keypair::from_seed(seed))
+        let seed = crate::crypto::read_secret_32(&Self::keys_path(store_root))?;
+        Ok(Keypair::from_seed(*seed))
     }
 }

@@ -8,7 +8,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 
-use crate::canonical::{cid_of, from_cbor, to_canonical_cbor};
+use crate::canonical::{canonicalize_f64, from_cbor, is_finite_f64, to_canonical_cbor};
 use crate::cid::Cid;
 use crate::crypto::{AuthorSignature, Keypair, PublicKey};
 use crate::entity::EntityId;
@@ -186,6 +186,170 @@ pub enum ObjectBody {
 }
 
 impl ObjectBody {
+    /// Fold geometry floats in place. Errors on NaN / ±Inf.
+    pub fn canonicalize_geometry(&mut self) -> Result<()> {
+        match self {
+            Self::Floor(b) => {
+                b.elevation_m = canonicalize_f64(b.elevation_m)?;
+            }
+            Self::Space(b) => {
+                if let Some(p) = &mut b.pose {
+                    p.canonicalize()?;
+                }
+                if let Some(a) = &mut b.bounds {
+                    a.canonicalize()?;
+                }
+            }
+            Self::Surface(b) => {
+                if let Some(p) = &mut b.pose {
+                    p.canonicalize()?;
+                }
+                if let Some(a) = &mut b.bounds {
+                    a.canonicalize()?;
+                }
+            }
+            Self::Opening(b) => {
+                if let Some(p) = &mut b.pose {
+                    p.canonicalize()?;
+                }
+            }
+            Self::Equipment(b) => {
+                if let Some(p) = &mut b.pose {
+                    p.canonicalize()?;
+                }
+            }
+            Self::Sensor(b) => {
+                if let Some(p) = &mut b.pose {
+                    p.canonicalize()?;
+                }
+            }
+            Self::Fixture(b) => {
+                if let Some(p) = &mut b.pose {
+                    p.canonicalize()?;
+                }
+            }
+            Self::Annotation(b) => {
+                if let Some(p) = &mut b.pose {
+                    p.canonicalize()?;
+                }
+            }
+            Self::PointCloudChunk(b) => {
+                if let Some(p) = &mut b.pose {
+                    p.canonicalize()?;
+                }
+                if let Some(a) = &mut b.bounds {
+                    a.canonicalize()?;
+                }
+            }
+            Self::Mesh(b) => {
+                if let Some(p) = &mut b.pose {
+                    p.canonicalize()?;
+                }
+                if let Some(a) = &mut b.bounds {
+                    a.canonicalize()?;
+                }
+            }
+            Self::BoundingVolume(b) => {
+                b.bounds.canonicalize()?;
+            }
+            Self::SpatialIndexNode(b) => {
+                b.bounds.canonicalize()?;
+            }
+            Self::Building(_)
+            | Self::System(_)
+            | Self::Circuit(_)
+            | Self::Relationship(_)
+            | Self::Root(_)
+            | Self::Provenance(_)
+            | Self::Blob(_) => {}
+        }
+        Ok(())
+    }
+
+    /// Reject non-finite geometry (does not mutate).
+    pub fn validate_geometry(&self) -> Result<()> {
+        match self {
+            Self::Floor(b) => {
+                if !is_finite_f64(b.elevation_m) {
+                    return Err(Error::Validation(
+                        "floor.elevation_m is not finite".into(),
+                    ));
+                }
+            }
+            Self::Space(b) => {
+                if let Some(p) = &b.pose {
+                    p.validate_finite()?;
+                }
+                if let Some(a) = &b.bounds {
+                    a.validate_finite()?;
+                }
+            }
+            Self::Surface(b) => {
+                if let Some(p) = &b.pose {
+                    p.validate_finite()?;
+                }
+                if let Some(a) = &b.bounds {
+                    a.validate_finite()?;
+                }
+            }
+            Self::Opening(b) => {
+                if let Some(p) = &b.pose {
+                    p.validate_finite()?;
+                }
+            }
+            Self::Equipment(b) => {
+                if let Some(p) = &b.pose {
+                    p.validate_finite()?;
+                }
+            }
+            Self::Sensor(b) => {
+                if let Some(p) = &b.pose {
+                    p.validate_finite()?;
+                }
+            }
+            Self::Fixture(b) => {
+                if let Some(p) = &b.pose {
+                    p.validate_finite()?;
+                }
+            }
+            Self::Annotation(b) => {
+                if let Some(p) = &b.pose {
+                    p.validate_finite()?;
+                }
+            }
+            Self::PointCloudChunk(b) => {
+                if let Some(p) = &b.pose {
+                    p.validate_finite()?;
+                }
+                if let Some(a) = &b.bounds {
+                    a.validate_finite()?;
+                }
+            }
+            Self::Mesh(b) => {
+                if let Some(p) = &b.pose {
+                    p.validate_finite()?;
+                }
+                if let Some(a) = &b.bounds {
+                    a.validate_finite()?;
+                }
+            }
+            Self::BoundingVolume(b) => {
+                b.bounds.validate_finite()?;
+            }
+            Self::SpatialIndexNode(b) => {
+                b.bounds.validate_finite()?;
+            }
+            Self::Building(_)
+            | Self::System(_)
+            | Self::Circuit(_)
+            | Self::Relationship(_)
+            | Self::Root(_)
+            | Self::Provenance(_)
+            | Self::Blob(_) => {}
+        }
+        Ok(())
+    }
+
     pub fn object_type(&self) -> ObjectType {
         match self {
             Self::Building(_) => ObjectType::Building,
@@ -228,11 +392,94 @@ impl Default for Pose {
     }
 }
 
+impl Pose {
+    /// Fail if any component is NaN or ±Inf.
+    pub fn validate_finite(&self) -> Result<()> {
+        for (i, &v) in self.position.iter().enumerate() {
+            if !is_finite_f64(v) {
+                return Err(Error::Validation(format!(
+                    "pose.position[{i}] is not finite"
+                )));
+            }
+        }
+        for (i, &v) in self.orientation.iter().enumerate() {
+            if !is_finite_f64(v) {
+                return Err(Error::Validation(format!(
+                    "pose.orientation[{i}] is not finite"
+                )));
+            }
+        }
+        Ok(())
+    }
+
+    /// Apply the float CID policy in place: finite-only, `-0.0` → `+0.0`,
+    /// quaternion hemisphere `(w, x, y, z)` first non-zero `>= 0`.
+    pub fn canonicalize(&mut self) -> Result<()> {
+        self.validate_finite()?;
+        for v in &mut self.position {
+            *v = canonicalize_f64(*v)?;
+        }
+        for v in &mut self.orientation {
+            *v = canonicalize_f64(*v)?;
+        }
+        // Stored as (x, y, z, w). Hemisphere key is (w, x, y, z).
+        let key = [
+            self.orientation[3],
+            self.orientation[0],
+            self.orientation[1],
+            self.orientation[2],
+        ];
+        let flip = key
+            .iter()
+            .copied()
+            .find(|&c| c != 0.0)
+            .map(|c| c < 0.0)
+            .unwrap_or(false);
+        if flip {
+            for v in &mut self.orientation {
+                *v = canonicalize_f64(-*v)?;
+            }
+        }
+        Ok(())
+    }
+}
+
 /// Axis-aligned bounding box.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Aabb {
     pub min: [f64; 3],
     pub max: [f64; 3],
+}
+
+impl Aabb {
+    /// Fail if any corner component is NaN or ±Inf.
+    pub fn validate_finite(&self) -> Result<()> {
+        for (i, &v) in self.min.iter().enumerate() {
+            if !is_finite_f64(v) {
+                return Err(Error::Validation(format!("aabb.min[{i}] is not finite")));
+            }
+        }
+        for (i, &v) in self.max.iter().enumerate() {
+            if !is_finite_f64(v) {
+                return Err(Error::Validation(format!("aabb.max[{i}] is not finite")));
+            }
+        }
+        Ok(())
+    }
+
+    /// Apply the float CID policy: finite-only, `-0.0` → `+0.0`, then
+    /// swap inverted axes (`min[i] <= max[i]`).
+    pub fn canonicalize(&mut self) -> Result<()> {
+        self.validate_finite()?;
+        for v in &mut self.min {
+            *v = canonicalize_f64(*v)?;
+        }
+        for v in &mut self.max {
+            *v = canonicalize_f64(*v)?;
+        }
+        self.normalize();
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -438,9 +685,12 @@ fn now_secs() -> u64 {
 
 impl Object {
     /// Create an unsigned object with the given body.
+    ///
+    /// Geometry floats are canonicalized when finite; non-finite values are
+    /// left in place and rejected by [`validate`] / [`to_canonical_bytes`].
     pub fn new(body: ObjectBody) -> Self {
         let object_type = body.object_type();
-        Self {
+        let mut obj = Self {
             header: ObjectHeader {
                 object_type,
                 schema_version: SCHEMA_VERSION,
@@ -449,7 +699,9 @@ impl Object {
                 signature: None,
             },
             body,
-        }
+        };
+        let _ = obj.body.canonicalize_geometry();
+        obj
     }
 
     /// Create with explicit timestamp (for tests / deterministic fixtures).
@@ -460,20 +712,27 @@ impl Object {
     }
 
     /// Canonical CBOR of this object (as stored / hashed).
+    ///
+    /// Applies the geometry float policy to a clone, then encodes. The
+    /// in-memory object is not mutated.
     pub fn to_canonical_bytes(&self) -> Result<Vec<u8>> {
-        to_canonical_cbor(self)
+        let mut obj = self.clone();
+        obj.body.canonicalize_geometry()?;
+        to_canonical_cbor(&obj)
     }
 
     /// CID of this object (BLAKE3 of canonical CBOR including signature fields).
     pub fn cid(&self) -> Result<Cid> {
-        cid_of(self)
+        let bytes = self.to_canonical_bytes()?;
+        Ok(Cid::from_canonical_bytes(&bytes))
     }
 
     /// Bytes that are signed: header without signature + body.
     ///
     /// Signature is excluded so the signed payload is stable before signing.
+    /// Geometry is canonicalized so the signature covers the same bytes as the CID path.
     fn signing_payload(&self) -> Result<Vec<u8>> {
-        let unsigned = Object {
+        let mut unsigned = Object {
             header: ObjectHeader {
                 object_type: self.header.object_type,
                 schema_version: self.header.schema_version,
@@ -483,11 +742,13 @@ impl Object {
             },
             body: self.body.clone(),
         };
+        unsigned.body.canonicalize_geometry()?;
         to_canonical_cbor(&unsigned)
     }
 
     /// Sign this object in place. Sets author + signature; CID changes after signing.
     pub fn sign(&mut self, keypair: &Keypair) -> Result<()> {
+        self.body.canonicalize_geometry()?;
         self.header.author = Some(keypair.public_key());
         self.header.signature = None;
         let payload = self.signing_payload()?;
@@ -535,6 +796,7 @@ impl Object {
             // Full crypto verify is optional at validate time; callers may call verify_signature.
             let _ = sig;
         }
+        self.body.validate_geometry()?;
         Ok(())
     }
 
@@ -596,5 +858,154 @@ mod tests {
         let s = id.to_string();
         let id2 = BuildingId::from_str(&s).unwrap();
         assert_eq!(id, id2);
+    }
+
+    fn annotation_with_pose(pose: Pose) -> Object {
+        Object::new_with_created(
+            ObjectBody::Annotation(AnnotationBody {
+                text: Some("float-policy".into()),
+                transcript: None,
+                media_ref: None,
+                pose: Some(pose),
+                space: None,
+                properties: BTreeMap::new(),
+            }),
+            1_700_000_500,
+        )
+    }
+
+    #[test]
+    fn signed_zero_does_not_change_cid() {
+        let pos = annotation_with_pose(Pose {
+            position: [0.0, 1.0, 0.0],
+            orientation: [0.0, 0.0, 0.0, 1.0],
+        });
+        let neg = Object {
+            header: pos.header.clone(),
+            body: ObjectBody::Annotation(AnnotationBody {
+                text: Some("float-policy".into()),
+                transcript: None,
+                media_ref: None,
+                pose: Some(Pose {
+                    position: [-0.0, 1.0, -0.0],
+                    orientation: [-0.0, 0.0, 0.0, 1.0],
+                }),
+                space: None,
+                properties: BTreeMap::new(),
+            }),
+        };
+        assert_eq!(pos.cid().unwrap(), neg.cid().unwrap());
+        assert_eq!(
+            pos.to_canonical_bytes().unwrap(),
+            neg.to_canonical_bytes().unwrap()
+        );
+    }
+
+    #[test]
+    fn opposite_quaternion_same_cid() {
+        let q = annotation_with_pose(Pose {
+            position: [1.0, 2.0, 3.0],
+            orientation: [0.0, 0.0, 0.0, 1.0],
+        });
+        let nq = Object {
+            header: q.header.clone(),
+            body: ObjectBody::Annotation(AnnotationBody {
+                text: Some("float-policy".into()),
+                transcript: None,
+                media_ref: None,
+                pose: Some(Pose {
+                    position: [1.0, 2.0, 3.0],
+                    orientation: [0.0, 0.0, 0.0, -1.0],
+                }),
+                space: None,
+                properties: BTreeMap::new(),
+            }),
+        };
+        assert_eq!(q.cid().unwrap(), nq.cid().unwrap());
+    }
+
+    #[test]
+    fn nan_pose_rejected_by_validate_and_cid() {
+        let obj = Object {
+            header: ObjectHeader {
+                object_type: ObjectType::Annotation,
+                schema_version: SCHEMA_VERSION,
+                created: 1,
+                author: None,
+                signature: None,
+            },
+            body: ObjectBody::Annotation(AnnotationBody {
+                text: Some("nan".into()),
+                transcript: None,
+                media_ref: None,
+                pose: Some(Pose {
+                    position: [f64::NAN, 0.0, 0.0],
+                    orientation: [0.0, 0.0, 0.0, 1.0],
+                }),
+                space: None,
+                properties: BTreeMap::new(),
+            }),
+        };
+        assert!(obj.validate().is_err());
+        assert!(obj.cid().is_err());
+        assert!(obj.to_canonical_bytes().is_err());
+    }
+
+    #[test]
+    fn inf_aabb_rejected() {
+        let obj = Object {
+            header: ObjectHeader {
+                object_type: ObjectType::BoundingVolume,
+                schema_version: SCHEMA_VERSION,
+                created: 1,
+                author: None,
+                signature: None,
+            },
+            body: ObjectBody::BoundingVolume(BoundingVolumeBody {
+                bounds: Aabb {
+                    min: [f64::NEG_INFINITY, 0.0, 0.0],
+                    max: [1.0, 1.0, 1.0],
+                },
+                target: None,
+                properties: BTreeMap::new(),
+            }),
+        };
+        assert!(obj.validate().is_err());
+        assert!(obj.cid().is_err());
+    }
+
+    #[test]
+    fn sign_covers_canonical_geometry() {
+        let kp = Keypair::generate();
+        let mut obj = Object {
+            header: ObjectHeader {
+                object_type: ObjectType::Annotation,
+                schema_version: SCHEMA_VERSION,
+                created: 9,
+                author: None,
+                signature: None,
+            },
+            body: ObjectBody::Annotation(AnnotationBody {
+                text: Some("signed-zero".into()),
+                transcript: None,
+                media_ref: None,
+                pose: Some(Pose {
+                    position: [-0.0, 0.0, 0.0],
+                    orientation: [0.0, 0.0, 0.0, -1.0],
+                }),
+                space: None,
+                properties: BTreeMap::new(),
+            }),
+        };
+        obj.sign(&kp).unwrap();
+        obj.verify_signature().unwrap();
+        // In-memory pose is folded so it matches the signed payload.
+        if let ObjectBody::Annotation(a) = &obj.body {
+            let p = a.pose.as_ref().unwrap();
+            assert_eq!(p.position[0].to_bits(), 0.0f64.to_bits());
+            assert_eq!(p.orientation, [0.0, 0.0, 0.0, 1.0]);
+        } else {
+            panic!("expected annotation");
+        }
     }
 }

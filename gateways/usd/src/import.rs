@@ -9,7 +9,6 @@ use arxos_core::object::{
     Pose, SpaceBody,
 };
 use arxos_core::repository::BuildingRepository;
-use arxos_core::store::ObjectStore;
 use arxos_core::{AdoptOptions, Cid, Keypair};
 
 use crate::error::{Result, UsdError};
@@ -39,7 +38,6 @@ fn import_stage(
     stage: &UsdStage,
     sign: Option<&Keypair>,
 ) -> Result<ImportResult> {
-    let store = ObjectStore::open(store_path.as_ref())?;
     let source_root = stage
         .custom_layer_data
         .get("arxosRootCid")
@@ -63,8 +61,8 @@ fn import_stage(
         })
         .unwrap_or_default();
 
-    // Ensure building record exists.
-    let repo = BuildingRepository::open_or_follow(
+    // Exclusive write session for all CAS + head updates.
+    let mut repo = BuildingRepository::open_or_follow(
         store_path.as_ref(),
         &building_id,
         stage
@@ -169,11 +167,8 @@ fn import_stage(
         if let Some(kp) = sign {
             obj.sign(kp)?;
         }
-        let cid = store.put(&obj)?;
+        let cid = repo.put_object(&obj)?;
         object_cids.push(cid);
-        // Stage via pending for commit
-        // Use capture path: put already done; add pending by staging through a dummy reopen
-        let _ = cid;
     }
 
     if !building_seen {
@@ -186,24 +181,9 @@ fn import_stage(
         if let Some(kp) = sign {
             obj.sign(kp)?;
         }
-        object_cids.push(store.put(&obj)?);
+        object_cids.push(repo.put_object(&obj)?);
     }
 
-    // Manually stage pending into record by putting through capture APIs is heavy;
-    // instead write objects then commit via root builder on the repository.
-    // Rebuild pending set:
-    for cid in &object_cids {
-        // Open mutably — re-fetch repo
-        let _ = cid;
-    }
-    drop(repo);
-
-    // Commit: open repo, inject pending by re-putting isn't needed; use RootBuilder via store.
-    let mut repo = BuildingRepository::open_or_follow(store_path.as_ref(), &building_id, None)?;
-    // Stage each object into pending by reading and re-staging through internal path:
-    // BuildingRepository doesn't expose stage_cid; use commit after putting via capture no-ops.
-    // Workaround: use merge-style — put objects already in store, then create root with open_or_follow
-    // and adopt after manual root creation.
     use arxos_core::root::RootBuilder;
     use std::collections::BTreeSet;
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -217,13 +197,12 @@ fn import_stage(
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    let kp_owned = sign.cloned().or_else(|| repo.keypair().cloned());
-    let root_cid = if let Some(kp) = kp_owned.as_ref() {
+    let root_cid = if let Some(kp) = sign.or_else(|| repo.keypair()) {
         let (root_obj, root_cid) = RootBuilder::new(building_id.clone(), ts)
             .objects(set)
             .message("usd import")
             .build_signed(kp)?;
-        store.put(&root_obj)?;
+        repo.put_object(&root_obj)?;
         repo.adopt_root(root_cid)?;
         Some(root_cid)
     } else {
@@ -232,7 +211,7 @@ fn import_stage(
             arxos_core::root::RootBody::new(building_id.clone(), repo.head_root(), set, ts);
         body.message = Some("usd import".into());
         let obj = body.into_object(ts);
-        let root_cid = store.put(&obj)?;
+        let root_cid = repo.put_object(&obj)?;
         repo.adopt_root_with_options(
             root_cid,
             &AdoptOptions {

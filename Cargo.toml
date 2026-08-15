@@ -27,7 +27,8 @@ anyhow = "1"
 blake3 = "1"
 ciborium = "0.2"
 clap = { version = "4", features = ["derive", "env"] }
-ed25519-dalek = { version = "2", features = ["rand_core", "serde"] }
+ed25519-dalek = { version = "2", features = ["rand_core", "serde", "zeroize"] }
+zeroize = { version = "1", features = ["std", "derive"] }
 hex = "0.4"
 iroh = "1"
 mdns-sd = "0.11"

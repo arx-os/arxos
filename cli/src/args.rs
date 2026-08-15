@@ -530,7 +530,7 @@ pub enum RootCommands {
 
 #[derive(Subcommand, Debug)]
 pub enum KeyCommands {
-    /// Generate a new ed25519 keypair (seed + public key)
+    /// Explicitly export a new ed25519 seed + public key (prints secret material)
     Generate,
 }
 

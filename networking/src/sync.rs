@@ -101,11 +101,7 @@ pub async fn pull_root_with_options<T: ObjectTransport + ?Sized>(
         return Err(NetError::ObjectMissing(root_cid.to_string()));
     }
 
-    // Ensure store exists.
-    let _ = arxos_core::store::ObjectStore::open(store_path)?;
-
-    let mut stored = 0u64;
-    let mut skipped = 0u64;
+    // Validate CIDs and learn building_id in memory — no store writes yet.
     let mut resolved_building: Option<BuildingId> = building_id
         .map(BuildingId::from_str)
         .transpose()
@@ -113,7 +109,6 @@ pub async fn pull_root_with_options<T: ObjectTransport + ?Sized>(
 
     for blob in &blobs {
         let cid = Cid::from_str(&blob.cid).map_err(|e| NetError::Protocol(e.to_string()))?;
-        // Integrity: recompute CID from bytes.
         let actual = Cid::from_canonical_bytes(&blob.bytes);
         if actual != cid {
             return Err(NetError::Protocol(format!(
@@ -121,15 +116,6 @@ pub async fn pull_root_with_options<T: ObjectTransport + ?Sized>(
                 blob.cid, cid, actual
             )));
         }
-        let store = arxos_core::store::ObjectStore::open(store_path)?;
-        if store.contains(&cid) {
-            skipped += 1;
-            continue;
-        }
-        store.put_bytes(&blob.bytes)?;
-        stored += 1;
-
-        // Learn building_id from root object if not provided.
         if resolved_building.is_none() {
             if let Ok(obj) = arxos_core::Object::from_canonical_bytes(&blob.bytes) {
                 if let Ok(root) = arxos_core::root::RootBody::from_object(&obj) {
@@ -140,21 +126,15 @@ pub async fn pull_root_with_options<T: ObjectTransport + ?Sized>(
     }
 
     let root = Cid::from_str(root_cid).map_err(|e| NetError::Protocol(e.to_string()))?;
-    let adopted = if set_head {
-        let bid = resolved_building.ok_or_else(|| {
-            NetError::Protocol("could not determine building_id for adopt".into())
-        })?;
-        let mut repo = BuildingRepository::open_or_follow(store_path, &bid, None)?;
-        let opts = AdoptOptions {
-            allow_untrusted,
-            // Metadata-first pulls intentionally omit blobs; allow partial adopt
-            // only in that mode. Full pulls stay fail-closed.
-            allow_partial: metadata_only,
-        };
-        Some(repo.adopt_root_with_options(root, &opts)?)
-    } else {
-        None
-    };
+    let (stored, skipped, adopted) = ingest_pulled_blobs(
+        store_path,
+        &blobs,
+        resolved_building,
+        root,
+        set_head,
+        allow_untrusted,
+        metadata_only,
+    )?;
 
     Ok(PullResult {
         root_cid: root,
@@ -162,6 +142,82 @@ pub async fn pull_root_with_options<T: ObjectTransport + ?Sized>(
         objects_skipped_existing: skipped,
         adopted,
     })
+}
+
+/// Write a fetched closure under the exclusive store lock.
+///
+/// When a building id is known (adopt path, or a Root in the payload), ingest
+/// and adopt share one [`BuildingRepository`] session. Otherwise a bare
+/// [`WriteGuard`] covers CAS-only puts.
+fn ingest_pulled_blobs(
+    store_path: &std::path::Path,
+    blobs: &[crate::protocol::ObjectBlob],
+    building_id: Option<BuildingId>,
+    root: Cid,
+    set_head: bool,
+    allow_untrusted: bool,
+    metadata_only: bool,
+) -> Result<(u64, u64, Option<CommitResult>)> {
+    if set_head || building_id.is_some() {
+        let bid = building_id.ok_or_else(|| {
+            NetError::Protocol("could not determine building_id for adopt".into())
+        })?;
+        let mut repo = BuildingRepository::open_or_follow(store_path, &bid, None)?;
+        let (stored, skipped) = put_blobs_into_repo(&repo, blobs)?;
+        let adopted = if set_head {
+            let opts = AdoptOptions {
+                allow_untrusted,
+                // Metadata-first pulls intentionally omit blobs; allow partial adopt
+                // only in that mode. Full pulls stay fail-closed.
+                allow_partial: metadata_only,
+            };
+            Some(repo.adopt_root_with_options(root, &opts)?)
+        } else {
+            None
+        };
+        Ok((stored, skipped, adopted))
+    } else {
+        let store = arxos_core::store::ObjectStore::open(store_path)?;
+        let _write_lock = store.try_lock_exclusive()?;
+        let (stored, skipped) = put_blobs_into_store(&store, blobs)?;
+        Ok((stored, skipped, None))
+    }
+}
+
+fn put_blobs_into_repo(
+    repo: &BuildingRepository,
+    blobs: &[crate::protocol::ObjectBlob],
+) -> Result<(u64, u64)> {
+    let mut stored = 0u64;
+    let mut skipped = 0u64;
+    for blob in blobs {
+        let cid = Cid::from_str(&blob.cid).map_err(|e| NetError::Protocol(e.to_string()))?;
+        if repo.contains(&cid) {
+            skipped += 1;
+            continue;
+        }
+        repo.put_object_bytes(&blob.bytes)?;
+        stored += 1;
+    }
+    Ok((stored, skipped))
+}
+
+fn put_blobs_into_store(
+    store: &arxos_core::store::ObjectStore,
+    blobs: &[crate::protocol::ObjectBlob],
+) -> Result<(u64, u64)> {
+    let mut stored = 0u64;
+    let mut skipped = 0u64;
+    for blob in blobs {
+        let cid = Cid::from_str(&blob.cid).map_err(|e| NetError::Protocol(e.to_string()))?;
+        if store.contains(&cid) {
+            skipped += 1;
+            continue;
+        }
+        store.put_bytes(&blob.bytes)?;
+        stored += 1;
+    }
+    Ok((stored, skipped))
 }
 
 /// Pull whatever head a peer advertises for `building_id`.
@@ -468,7 +524,7 @@ mod tests {
         let mut repo_a =
             BuildingRepository::init(dir_a.path(), Some("Cycle".into()), None).unwrap();
         let bid = repo_a.building_id().clone();
-        let kp_a = repo_a.keypair().unwrap().clone();
+        let kp_a = Keypair::from_seed(*repo_a.keypair().unwrap().seed());
         let kp_b = Keypair::generate();
         repo_a.add_controller_key(kp_b.public_key()).unwrap();
         let eid = EntityId::from("01CYCLEENTITY0000000000000".to_string());
@@ -542,7 +598,7 @@ mod tests {
         // Install B's seed as controller
         let seed_path = dir_b.path().join("keys").join("device.seed");
         std::fs::create_dir_all(seed_path.parent().unwrap()).unwrap();
-        std::fs::write(&seed_path, kp_b.seed()).unwrap();
+        arxos_core::write_secret_bytes(&seed_path, kp_b.seed().as_ref()).unwrap();
 
         let node_b = mesh
             .attach(
@@ -580,7 +636,11 @@ mod tests {
         drop(repo_b);
 
         // A concurrent annotation
-        std::fs::write(dir_a.path().join("keys").join("device.seed"), kp_a.seed()).unwrap();
+        arxos_core::write_secret_bytes(
+            &dir_a.path().join("keys").join("device.seed"),
+            kp_a.seed().as_ref(),
+        )
+        .unwrap();
         let mut repo_a = BuildingRepository::open(dir_a.path(), &bid).unwrap();
         repo_a
             .capture_annotation(&AnnotationCapture::new("A concurrent", Pose::default()))
@@ -701,5 +761,63 @@ mod tests {
         );
         assert!(store_b.contains(&commit.root_cid));
         assert!(store_b.contains(&capture_res.cid));
+    }
+
+    #[test]
+    fn pull_ingest_fails_closed_when_store_locked() {
+        use arxos_core::object::{BlobBody, Object, ObjectBody};
+        use std::collections::BTreeMap;
+
+        if std::env::var_os("ARXOS_PULL_LOCK_CHILD").is_some() {
+            let path = std::env::var("ARXOS_LOCK_PATH").expect("ARXOS_LOCK_PATH");
+            let obj = Object::new_with_created(
+                ObjectBody::Blob(BlobBody {
+                    content_type: None,
+                    data: b"pull-lock".to_vec(),
+                    properties: BTreeMap::new(),
+                }),
+                1,
+            );
+            let bytes = obj.to_canonical_bytes().unwrap();
+            let cid = Cid::from_canonical_bytes(&bytes);
+            let blobs = vec![crate::protocol::ObjectBlob {
+                cid: cid.to_string(),
+                bytes,
+            }];
+            let r = ingest_pulled_blobs(
+                std::path::Path::new(&path),
+                &blobs,
+                None,
+                cid,
+                false,
+                false,
+                false,
+            );
+            let blocked = match r {
+                Err(e) => {
+                    let s = e.to_string();
+                    s.contains("locked") || s.contains("store")
+                }
+                Ok(_) => false,
+            };
+            std::process::exit(if blocked { 0 } else { 1 });
+        }
+
+        let dir = tempdir().unwrap();
+        let store = arxos_core::store::ObjectStore::open(dir.path()).unwrap();
+        let _guard = store.try_lock_exclusive().unwrap();
+
+        let exe = std::env::current_exe().expect("current_exe");
+        let status = std::process::Command::new(exe)
+            .arg("--exact")
+            .arg("sync::tests::pull_ingest_fails_closed_when_store_locked")
+            .env("ARXOS_PULL_LOCK_CHILD", "1")
+            .env("ARXOS_LOCK_PATH", dir.path())
+            .status()
+            .expect("spawn pull lock probe");
+        assert!(
+            status.success(),
+            "pull ingest must fail closed while another writer holds store.lock; {status}"
+        );
     }
 }

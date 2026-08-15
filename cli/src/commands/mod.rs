@@ -260,8 +260,11 @@ pub fn run_sync(cli: Cli) -> Result<()> {
         }
         Commands::Key { command } => match command {
             KeyCommands::Generate => {
+                // Explicit seed export — this command exists to print secret material.
                 let kp = Keypair::generate();
-                println!("seed={}", hex::encode(kp.seed()));
+                let seed = kp.seed();
+                eprintln!("note: seed is secret key material (explicit export)");
+                println!("seed={}", hex::encode(seed.as_ref()));
                 println!("public_key={}", kp.public_key());
             }
         },
@@ -983,6 +986,12 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                         let kp = crate::util::keypair_from_seed_hex(&seed)?;
                         obj.sign(&kp)?;
                     }
+                    let _write_lock = store.try_lock_exclusive().with_context(|| {
+                        format!(
+                            "acquire store write lock on {} (is arx / arxos-edge / another writer running?)",
+                            cli.store.display()
+                        )
+                    })?;
                     let cid = store.put(&obj)?;
                     if quiet {
                         println!("{cid}");
@@ -1073,6 +1082,12 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                             "root author authorization failed (seed must be in Building.controller_keys)"
                         })?;
                     }
+                    let _write_lock = store.try_lock_exclusive().with_context(|| {
+                        format!(
+                            "acquire store write lock on {} (is arx / arxos-edge / another writer running?)",
+                            cli.store.display()
+                        )
+                    })?;
                     store.put(&root_obj)?;
                     let root = RootBody::from_object(&root_obj)?;
                     if quiet {
@@ -1383,6 +1398,12 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 None
             };
             let obj = stmt.into_provenance_object(kp.as_ref())?;
+            let _write_lock = store.try_lock_exclusive().with_context(|| {
+                format!(
+                    "acquire store write lock on {} (is arx / arxos-edge / another writer running?)",
+                    cli.store.display()
+                )
+            })?;
             let cid = store.put(&obj)?;
             println!("attest_cid={cid}");
             println!("subject={root}");

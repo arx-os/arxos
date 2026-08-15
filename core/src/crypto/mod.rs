@@ -1,11 +1,15 @@
 //! Cryptographic primitives: ed25519 keys and signatures.
 
 use std::fmt;
+use std::fs::{self, OpenOptions};
+use std::io::Write;
+use std::path::Path;
 use std::str::FromStr;
 
 use ed25519_dalek::{Signature as DalekSignature, Signer, SigningKey, Verifier, VerifyingKey};
 use rand::rngs::OsRng;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use crate::error::{Error, Result};
 
@@ -14,19 +18,52 @@ use crate::error::{Error, Result};
 pub struct PublicKey([u8; 32]);
 
 /// ed25519 private/signing key (32-byte seed).
-#[derive(Clone)]
+///
+/// Not `Clone`. Memory is wiped on drop (`ZeroizeOnDrop`).
 pub struct SecretKey(SigningKey);
+
+impl Zeroize for SecretKey {
+    fn zeroize(&mut self) {
+        // ed25519-dalek 2's SigningKey is ZeroizeOnDrop but does not impl Zeroize.
+        // Replace so the previous key is dropped (and wiped) immediately.
+        self.0 = SigningKey::from_bytes(&[0u8; 32]);
+    }
+}
+
+impl Drop for SecretKey {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for SecretKey {}
 
 /// ed25519 signature (64 bytes).
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Signature([u8; 64]);
 
 /// A signing identity: secret + derived public key.
-#[derive(Clone)]
+///
+/// Not `Clone` — sign with `&Keypair`. Reconstruct from a seed only when an
+/// owned copy is required (tests / seed-file install). The secret is wiped on drop.
 pub struct Keypair {
     secret: SecretKey,
     public: PublicKey,
 }
+
+impl Zeroize for Keypair {
+    fn zeroize(&mut self) {
+        self.secret.zeroize();
+    }
+}
+
+impl Drop for Keypair {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for Keypair {}
 
 impl PublicKey {
     pub fn from_bytes(bytes: [u8; 32]) -> Self {
@@ -223,9 +260,13 @@ impl Keypair {
     }
 
     /// Reconstruct from a 32-byte seed.
-    pub fn from_seed(seed: [u8; 32]) -> Self {
+    ///
+    /// The input array is zeroized before this function returns. Callers that
+    /// still hold another copy should wrap it in [`Zeroizing`].
+    pub fn from_seed(mut seed: [u8; 32]) -> Self {
         let secret = SigningKey::from_bytes(&seed);
         let public = PublicKey(*secret.verifying_key().as_bytes());
+        seed.zeroize();
         Self {
             secret: SecretKey(secret),
             public,
@@ -236,8 +277,12 @@ impl Keypair {
         self.public
     }
 
-    pub fn seed(&self) -> [u8; 32] {
-        self.secret.0.to_bytes()
+    /// Export the 32-byte seed into a zeroizing buffer (wiped on drop).
+    ///
+    /// This is an explicit export. Prefer signing with `&Keypair` instead of
+    /// copying the seed.
+    pub fn seed(&self) -> Zeroizing<[u8; 32]> {
+        Zeroizing::new(self.secret.0.to_bytes())
     }
 
     /// Sign an arbitrary message.
@@ -252,6 +297,50 @@ impl Keypair {
 pub struct AuthorSignature {
     pub public_key: PublicKey,
     pub signature: Signature,
+}
+
+/// Write `bytes` to `path`, creating the file with mode `0o600` on Unix so
+/// there is no world-readable window before chmod.
+pub fn write_secret_bytes(path: &Path, bytes: &[u8]) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let mut opts = OpenOptions::new();
+    opts.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        opts.mode(0o600);
+    }
+    let mut file = opts
+        .open(path)
+        .map_err(|e| Error::Crypto(format!("open secret file {}: {e}", path.display())))?;
+    file.write_all(bytes)
+        .map_err(|e| Error::Crypto(format!("write secret file {}: {e}", path.display())))?;
+    file.sync_all()
+        .map_err(|e| Error::Crypto(format!("sync secret file {}: {e}", path.display())))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = fs::set_permissions(path, fs::Permissions::from_mode(0o600));
+    }
+    Ok(())
+}
+
+/// Read a 32-byte seed file into a zeroizing buffer.
+pub fn read_secret_32(path: &Path) -> Result<Zeroizing<[u8; 32]>> {
+    let bytes = Zeroizing::new(
+        fs::read(path).map_err(|e| Error::Crypto(format!("read secret file {}: {e}", path.display())))?,
+    );
+    if bytes.len() != 32 {
+        return Err(Error::Crypto(format!(
+            "seed must be 32 bytes, got {}",
+            bytes.len()
+        )));
+    }
+    let mut seed = Zeroizing::new([0u8; 32]);
+    seed.copy_from_slice(&bytes);
+    Ok(seed)
 }
 
 impl AuthorSignature {
@@ -284,7 +373,32 @@ mod tests {
     fn seed_roundtrip() {
         let kp = Keypair::generate();
         let seed = kp.seed();
-        let kp2 = Keypair::from_seed(seed);
+        let kp2 = Keypair::from_seed(*seed);
         assert_eq!(kp.public_key(), kp2.public_key());
+    }
+
+    #[test]
+    fn secret_types_are_zeroize_on_drop() {
+        fn assert_zod<T: ZeroizeOnDrop>() {}
+        assert_zod::<SecretKey>();
+        assert_zod::<Keypair>();
+        assert_zod::<Zeroizing<[u8; 32]>>();
+    }
+
+    #[test]
+    fn write_secret_file_is_owner_rw_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("device.seed");
+        let kp = Keypair::generate();
+        let seed = kp.seed();
+        write_secret_bytes(&path, seed.as_ref()).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+            assert_eq!(mode, 0o600, "seed file must be 0o600, got {mode:#o}");
+        }
+        let loaded = read_secret_32(&path).unwrap();
+        assert_eq!(&*loaded, seed.as_ref());
     }
 }

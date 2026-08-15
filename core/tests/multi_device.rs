@@ -42,8 +42,8 @@ fn mirror_store(src: &std::path::Path, dst: &std::path::Path) {
 
 fn write_device_seed(store: &std::path::Path, kp: &Keypair) {
     let path = store.join("keys").join("device.seed");
-    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-    std::fs::write(&path, kp.seed()).unwrap();
+    let seed = kp.seed();
+    arxos_core::write_secret_bytes(&path, seed.as_ref()).unwrap();
 }
 
 #[test]
@@ -54,7 +54,7 @@ fn concurrent_entity_update_and_remove_merge() {
     // Device A: init + space entity + commit base.
     let mut repo_a = BuildingRepository::init(dir_a.path(), Some("Site".into()), None).unwrap();
     let bid = repo_a.building_id().clone();
-    let kp_a = repo_a.keypair().unwrap().clone();
+    let kp_a = Keypair::from_seed(*repo_a.keypair().unwrap().seed());
     let eid = EntityId::from("01MULTIDEVICEENTITY0000000".to_string());
 
     let r1 = repo_a
@@ -154,7 +154,7 @@ fn concurrent_entity_update_and_remove_merge() {
 fn concurrent_remove_only_drops_entity() {
     let dir = tempdir().unwrap();
     let mut repo = BuildingRepository::init(dir.path(), Some("Rm".into()), None).unwrap();
-    let kp = repo.keypair().unwrap().clone();
+    let kp = Keypair::from_seed(*repo.keypair().unwrap().seed());
     let bid = repo.building_id().clone();
     let eid = EntityId::from("01ONLYREMOVE00000000000000".to_string());
 
@@ -223,7 +223,7 @@ fn controller_add_survives_sync_and_enforce() {
 
     let mut repo_a = BuildingRepository::init(dir_a.path(), Some("Ctrl".into()), None).unwrap();
     let bid = repo_a.building_id().clone();
-    let kp_a = repo_a.keypair().unwrap().clone();
+    let kp_a = Keypair::from_seed(*repo_a.keypair().unwrap().seed());
     let kp_b = Keypair::generate();
     repo_a.add_controller_key(kp_b.public_key()).unwrap();
     let _ = repo_a.commit(Some("add B".into())).unwrap();
@@ -329,7 +329,7 @@ fn scoring_after_merge_matches_active_set() {
     let dir = tempdir().unwrap();
     let mut repo = BuildingRepository::init(dir.path(), Some("MScore".into()), None).unwrap();
     let bid = repo.building_id().clone();
-    let kp = repo.keypair().unwrap().clone();
+    let kp = Keypair::from_seed(*repo.keypair().unwrap().seed());
     let eid = EntityId::from("01MERGESCORE00000000000000".to_string());
 
     repo.capture_space(&SpaceCapture {

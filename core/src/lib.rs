@@ -48,7 +48,9 @@ pub use capture::{
     PointCloudCapture, SpaceCapture,
 };
 pub use cid::Cid;
-pub use crypto::{AuthorSignature, Keypair, PublicKey, Signature};
+pub use crypto::{
+    read_secret_32, write_secret_bytes, AuthorSignature, Keypair, PublicKey, Signature,
+};
 pub use entity::{
     collapse_active_set, collapse_active_set_preferring, entity_id_of, find_entity_versions,
     CollapseResult, EntityId,
@@ -75,7 +77,10 @@ pub use root::{
     ClosureOptions, ClosureResult, RootBody, RootBuilder, CHECKPOINT_INTERVAL,
 };
 pub use spatial::{QueryVolume, SpatialEntry, SpatialHit};
-pub use store::{ObjectStore, WriteGuard, MAX_OBJECT_BYTES, STORE_LOCK_FILE};
+pub use store::{
+    atomic_write, is_tmp_name, unique_tmp_path, ObjectStore, WriteGuard, MAX_OBJECT_BYTES,
+    STORE_LOCK_FILE,
+};
 pub use verify::{
     verify_object_canonicalization, verify_root_body_determinism, verify_root_transition, Finding,
     Severity, VerificationReport,

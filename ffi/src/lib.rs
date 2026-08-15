@@ -89,17 +89,34 @@ pub fn generate_building_id() -> String {
 }
 
 /// Keypair data exposed to foreign languages.
-#[derive(Debug, Clone)]
+///
+/// This is an **explicit seed export**. The seed field is secret material;
+/// `Debug` redacts it. Prefer device-store identity over calling this on a
+/// hot path.
+#[derive(Clone)]
 pub struct KeypairData {
     pub seed: Vec<u8>,
     pub public_key_hex: String,
 }
 
-/// Generate a random ed25519 keypair.
+impl std::fmt::Debug for KeypairData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KeypairData")
+            .field("seed", &"<redacted>")
+            .field("public_key_hex", &self.public_key_hex)
+            .finish()
+    }
+}
+
+/// Generate a random ed25519 keypair and **export** the seed.
+///
+/// Explicit export surface (UniFFI). The returned `seed` is plaintext in the
+/// foreign heap; callers must treat it as secret.
 pub fn generate_keypair() -> KeypairData {
     let kp = Keypair::generate();
+    let seed = kp.seed();
     KeypairData {
-        seed: kp.seed().to_vec(),
+        seed: seed.to_vec(),
         public_key_hex: kp.public_key().to_hex(),
     }
 }
@@ -123,6 +140,7 @@ pub fn put_blob(
     content_type: Option<String>,
 ) -> Result<ObjectPutResult, ArxosError> {
     let store = ObjectStore::open(&store_path)?;
+    let _write_lock = store.try_lock_exclusive()?;
     let obj = Object::new(ObjectBody::Blob(BlobBody {
         content_type,
         data,
@@ -151,16 +169,19 @@ fn now_secs() -> u64 {
 }
 
 fn keypair_from_seed_hex(seed_hex: &str) -> Result<Keypair, ArxosError> {
-    let seed_bytes = hex::decode(seed_hex).map_err(|e| ArxosError::InvalidInput {
+    use zeroize::Zeroize;
+    let mut seed_bytes = hex::decode(seed_hex).map_err(|e| ArxosError::InvalidInput {
         message: format!("invalid seed hex: {e}"),
     })?;
     if seed_bytes.len() != 32 {
+        seed_bytes.zeroize();
         return Err(ArxosError::InvalidInput {
             message: format!("seed must be 32 bytes, got {}", seed_bytes.len()),
         });
     }
     let mut seed = [0u8; 32];
     seed.copy_from_slice(&seed_bytes);
+    seed_bytes.zeroize();
     Ok(Keypair::from_seed(seed))
 }
 
@@ -173,6 +194,7 @@ pub fn create_root(
     message: Option<String>,
 ) -> Result<RootCreateResult, ArxosError> {
     let store = ObjectStore::open(&store_path)?;
+    let _write_lock = store.try_lock_exclusive()?;
     let kp = keypair_from_seed_hex(&seed_hex)?;
 
     let mut set = BTreeSet::new();
@@ -556,7 +578,9 @@ pub fn ingest_room_plan(
         message: e.to_string(),
     })?;
     let mut repo = BuildingRepository::open(&store_path, &bid)?;
-    let kp = repo.keypair().cloned();
+    // Owned copy so we can sign while mutably staging (no Keypair: Clone).
+    let kp_owned = repo.keypair().map(|k| Keypair::from_seed(*k.seed()));
+    let kp = kp_owned.as_ref();
 
     let mut surface_objs = Vec::new();
     let mut object_objs = Vec::new();
@@ -646,7 +670,7 @@ pub fn ingest_room_plan(
         properties: space_props,
     };
     let space_object = Object::new_with_created(ObjectBody::Space(space_body), 0);
-    let signed_space = maybe_sign(space_object, kp.as_ref())?;
+    let signed_space = maybe_sign(space_object, kp)?;
     let space_cid = repo.stage_captured_object(signed_space)?.cid;
 
     let mut surface_cids = Vec::new();
@@ -660,7 +684,7 @@ pub fn ingest_room_plan(
             properties,
         };
         let surface_object = Object::new_with_created(ObjectBody::Surface(surface_body), 0);
-        let signed_surface = maybe_sign(surface_object, kp.as_ref())?;
+        let signed_surface = maybe_sign(surface_object, kp)?;
         let cid = repo.stage_captured_object(signed_surface)?.cid;
         surface_cids.push(cid.to_string());
     }
@@ -677,7 +701,7 @@ pub fn ingest_room_plan(
             properties,
         };
         let equipment_object = Object::new_with_created(ObjectBody::Equipment(equipment_body), 0);
-        let signed_equipment = maybe_sign(equipment_object, kp.as_ref())?;
+        let signed_equipment = maybe_sign(equipment_object, kp)?;
         let cid = repo.stage_captured_object(signed_equipment)?.cid;
         object_cids.push(cid.to_string());
     }
@@ -924,7 +948,7 @@ mod tests {
         // Overwrite device seed with an outsider key (not a controller).
         let outsider = Keypair::generate();
         let seed_path = std::path::Path::new(&path).join("keys").join("device.seed");
-        std::fs::write(&seed_path, outsider.seed()).unwrap();
+        arxos_core::write_secret_bytes(&seed_path, outsider.seed().as_ref()).unwrap();
 
         capture_annotation(
             path.clone(),

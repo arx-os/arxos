@@ -16,7 +16,7 @@ fn usd_roundtrip_identity() {
     let path = dir.path();
     let kp = Keypair::generate();
     let mut repo =
-        BuildingRepository::init(path, Some("USD Hall".into()), Some(kp.clone())).unwrap();
+        BuildingRepository::init(path, Some("USD Hall".into()), Some(Keypair::from_seed(*kp.seed()))).unwrap();
     let bid = repo.building_id().clone();
 
     // Floor + space + annotation

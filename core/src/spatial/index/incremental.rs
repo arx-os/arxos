@@ -7,7 +7,10 @@ use crate::store::ObjectStore;
 
 use super::super::aabb::union_all;
 use super::build::build_index;
-use super::{entry_from_object, node_object, SpatialEntry, LEAF_CAPACITY};
+use super::{
+    entry_from_object, node_object, sort_cid_bounds_for_split, sort_entries_for_split,
+    SpatialEntry, LEAF_CAPACITY, MAX_CHILDREN,
+};
 
 enum InsertResult {
     Unsplit(Cid),
@@ -155,14 +158,7 @@ where
                 }
             }
 
-            let split_axis = new_bounds.longest_axis();
-            leaf_entries.sort_by(|a, b| {
-                let ca = a.bounds.centroid()[split_axis];
-                let cb = b.bounds.centroid()[split_axis];
-                ca.partial_cmp(&cb)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-                    .then_with(|| a.cid.cmp(&b.cid)) // Stable sorting tie-breaker
-            });
+            sort_entries_for_split(&mut leaf_entries, &new_bounds);
 
             let mid = leaf_entries.len() / 2;
             let left_entries = &leaf_entries[..mid];
@@ -250,7 +246,7 @@ where
                 new_children.push(right_cid);
                 new_children.sort(); // Determinism
 
-                if new_children.len() <= 2 {
+                if new_children.len() <= MAX_CHILDREN {
                     let mut bounds_union: Option<Aabb> = None;
                     for child_cid in &new_children {
                         let child_obj = get_obj(child_cid, cache, store)?;
@@ -273,7 +269,7 @@ where
                     cache.borrow_mut().insert(new_parent_cid, new_parent);
                     Ok(InsertResult::Unsplit(new_parent_cid))
                 } else {
-                    // Split the internal node itself
+                    // Overflow: longest-axis median-of-centroids (same as full build).
                     let mut child_entries = Vec::new();
                     for child_cid in &new_children {
                         let child_obj = get_obj(child_cid, cache, store)?;
@@ -282,24 +278,28 @@ where
                         }
                     }
 
-                    let split_axis = new_bounds.longest_axis();
-                    child_entries.sort_by(|a, b| {
-                        let ca = a.1.centroid()[split_axis];
-                        let cb = b.1.centroid()[split_axis];
-                        ca.partial_cmp(&cb)
-                            .unwrap_or(std::cmp::Ordering::Equal)
-                            .then_with(|| a.0.cmp(&b.0)) // Stable sorting tie-breaker
-                    });
+                    sort_cid_bounds_for_split(&mut child_entries, &new_bounds);
+                    let mid = child_entries.len() / 2;
+                    if mid == 0 || mid == child_entries.len() {
+                        return Err(Error::Validation(
+                            "internal node overflow could not be split".into(),
+                        ));
+                    }
+                    let left_c = &child_entries[..mid];
+                    let right_c = &child_entries[mid..];
 
-                    let left_c = &child_entries[..1];
-                    let right_c = &child_entries[1..];
-
-                    let left_bounds = left_c[0].1.clone();
+                    let left_bounds = union_all(left_c.iter().map(|e| e.1.clone()))
+                        .ok_or_else(|| Error::Validation("empty left split".into()))?;
                     let right_bounds = union_all(right_c.iter().map(|e| e.1.clone()))
                         .ok_or_else(|| Error::Validation("empty right split".into()))?;
 
-                    let left_node = node_object(left_bounds, vec![left_c[0].0], Vec::new());
-                    let right_node = node_object(right_bounds, right_c.iter().map(|e| e.0).collect(), Vec::new());
+                    let mut left_kids: Vec<Cid> = left_c.iter().map(|e| e.0).collect();
+                    let mut right_kids: Vec<Cid> = right_c.iter().map(|e| e.0).collect();
+                    left_kids.sort();
+                    right_kids.sort();
+
+                    let left_node = node_object(left_bounds, left_kids, Vec::new());
+                    let right_node = node_object(right_bounds, right_kids, Vec::new());
 
                     let left_parent_cid = left_node.cid()?;
                     let right_parent_cid = right_node.cid()?;

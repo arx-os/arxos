@@ -410,10 +410,12 @@ pub fn pose_from_column_major_matrix(transform: &[f64]) -> crate::error::Result<
         [0.0, 0.0, 0.0, 1.0]
     };
 
-    Ok(Pose {
+    let mut pose = Pose {
         position: [tx, ty, tz],
         orientation,
-    })
+    };
+    pose.canonicalize()?;
+    Ok(pose)
 }
 
 /// Tight world-space AABB from a 4×4 column-major transform and local dimensions
@@ -469,10 +471,12 @@ pub fn world_aabb_from_transform_and_dimensions(
         max_z = max_z.max(pz);
     }
 
-    Ok(Aabb {
+    let mut bounds = Aabb {
         min: [min_x, min_y, min_z],
         max: [max_x, max_y, max_z],
-    })
+    };
+    bounds.canonicalize()?;
+    Ok(bounds)
 }
 
 #[cfg(test)]

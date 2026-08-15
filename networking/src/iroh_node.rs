@@ -33,31 +33,14 @@ pub const IROH_SEED_FILE: &str = "keys/iroh.seed";
 fn load_or_create_iroh_seed(store_path: &Path) -> Result<SecretKey> {
     let path = store_path.join(IROH_SEED_FILE);
     if path.exists() {
-        let bytes = std::fs::read(&path)
+        let seed = arxos_core::read_secret_32(&path)
             .map_err(|e| NetError::Transport(format!("read iroh seed: {e}")))?;
-        if bytes.len() != 32 {
-            return Err(NetError::Transport(format!(
-                "iroh seed must be 32 bytes, got {}",
-                bytes.len()
-            )));
-        }
-        let mut seed = [0u8; 32];
-        seed.copy_from_slice(&bytes);
-        return Ok(SecretKey::from_bytes(&seed));
+        return Ok(SecretKey::from_bytes(&*seed));
     }
     let secret = SecretKey::generate();
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| NetError::Transport(format!("create keys dir: {e}")))?;
-    }
-    let seed_bytes = secret.to_bytes();
-    std::fs::write(&path, seed_bytes)
+    let seed_bytes = zeroize::Zeroizing::new(secret.to_bytes());
+    arxos_core::write_secret_bytes(&path, seed_bytes.as_ref())
         .map_err(|e| NetError::Transport(format!("write iroh seed: {e}")))?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
-    }
     Ok(secret)
 }
 

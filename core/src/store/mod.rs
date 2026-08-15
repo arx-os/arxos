@@ -5,12 +5,51 @@ use std::fs::{self, File, OpenOptions};
 use std::path::{Path, PathBuf};
 
 use fs2::FileExt;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::canonical::{from_cbor, to_canonical_cbor};
 use crate::cid::Cid;
 use crate::error::{Error, Result};
 use crate::object::{Object, ObjectType};
+
+/// Temporary sibling of `final_path`, unique per process and write attempt.
+///
+/// Format: `<name>.tmp.<pid>.<16 hex nonce>`. Callers must rename onto
+/// `final_path` (or delete the temp on failure) so two writers of the same
+/// CID cannot tear a shared `.tmp` file.
+pub fn unique_tmp_path(final_path: &Path) -> PathBuf {
+    let pid = std::process::id();
+    let nonce: u64 = rand::thread_rng().gen();
+    let name = final_path
+        .file_name()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "tmp".into());
+    final_path.with_file_name(format!("{name}.tmp.{pid}.{nonce:016x}"))
+}
+
+/// True if a directory entry is a leftover atomic-write temp (old `.tmp`
+/// suffix or the unique `*.tmp.<pid>.<nonce>` form).
+pub fn is_tmp_name(name: &str) -> bool {
+    name.ends_with(".tmp") || name.contains(".tmp.")
+}
+
+/// Write `bytes` to `path` via a unique temp file + rename.
+pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let tmp = unique_tmp_path(path);
+    fs::write(&tmp, bytes).map_err(|e| {
+        let _ = fs::remove_file(&tmp);
+        e
+    })?;
+    if let Err(e) = fs::rename(&tmp, path) {
+        let _ = fs::remove_file(&tmp);
+        return Err(e.into());
+    }
+    Ok(())
+}
 
 /// Hard cap on a single object's canonical CBOR size (4 MiB).
 ///
@@ -163,13 +202,9 @@ impl ObjectStore {
         if path.exists() {
             return Ok(cid);
         }
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        // Write temp then rename for atomicity on same filesystem.
-        let tmp = path.with_extension("tmp");
-        fs::write(&tmp, bytes)?;
-        fs::rename(&tmp, &path)?;
+        // Unique temp + rename: two writers of the same CID cannot tear a
+        // shared `.tmp` file even if they skipped the exclusive store lock.
+        atomic_write(&path, bytes)?;
         Ok(cid)
     }
 
@@ -227,7 +262,7 @@ impl ObjectStore {
                     continue;
                 }
                 let name = file_ent.file_name().to_string_lossy().to_string();
-                if name.ends_with(".tmp") {
+                if is_tmp_name(&name) {
                     continue;
                 }
                 let hex = format!("{prefix}{name}");
@@ -255,11 +290,7 @@ impl ObjectStore {
 
     fn save_index(&self, index: &BTreeMap<String, IndexEntry>) -> Result<()> {
         let bytes = to_canonical_cbor(index)?;
-        let path = self.index_path();
-        let tmp = path.with_extension("tmp");
-        fs::write(&tmp, &bytes)?;
-        fs::rename(tmp, path)?;
-        Ok(())
+        atomic_write(&self.index_path(), &bytes)
     }
 
     /// Rebuild the optional thin index by scanning all objects.
@@ -393,6 +424,108 @@ mod tests {
         let cid = store.put_bytes(&wire).unwrap();
         assert_eq!(cid, Cid::from_canonical_bytes(&wire));
         assert_eq!(store.get_bytes(&cid).unwrap(), wire);
+    }
+
+    #[test]
+    fn put_bytes_rejects_non_canonical_signed_zero() {
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        // Bypass Object::new so -0.0 survives into raw CBOR.
+        let obj = Object {
+            header: crate::object::ObjectHeader {
+                object_type: ObjectType::Annotation,
+                schema_version: crate::object::SCHEMA_VERSION,
+                created: 1,
+                author: None,
+                signature: None,
+            },
+            body: ObjectBody::Annotation(crate::object::AnnotationBody {
+                text: Some("neg-zero".into()),
+                transcript: None,
+                media_ref: None,
+                pose: Some(crate::object::Pose {
+                    position: [-0.0, 0.0, 0.0],
+                    orientation: [0.0, 0.0, 0.0, 1.0],
+                }),
+                space: None,
+                properties: BTreeMap::new(),
+            }),
+        };
+        let mut wire = Vec::new();
+        ciborium::into_writer(&obj, &mut wire).unwrap();
+        let err = store.put_bytes(&wire).unwrap_err();
+        assert!(
+            matches!(err, Error::Validation(ref m) if m.contains("not canonical")),
+            "{err:?}"
+        );
+    }
+
+    #[test]
+    fn unique_tmp_path_is_unique_and_detectable() {
+        let base = PathBuf::from("/tmp/objects/ab/cdef");
+        let a = unique_tmp_path(&base);
+        let b = unique_tmp_path(&base);
+        assert_ne!(a, b, "two writes must not share a temp path");
+        let name_a = a.file_name().unwrap().to_string_lossy();
+        assert!(
+            name_a.contains(".tmp."),
+            "unique tmp must use .tmp.<pid>.<nonce> form: {name_a}"
+        );
+        assert!(is_tmp_name(&name_a));
+        assert!(is_tmp_name("cdef.tmp"));
+        assert!(!is_tmp_name("cdef"));
+        assert_eq!(a.parent(), base.parent());
+    }
+
+    #[test]
+    fn list_cids_skips_tmp_artifacts() {
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let obj = Object::new_with_created(
+            ObjectBody::Blob(BlobBody {
+                content_type: None,
+                data: vec![7],
+                properties: BTreeMap::new(),
+            }),
+            1,
+        );
+        let cid = store.put(&obj).unwrap();
+        let path = store.object_path(&cid);
+        let leftover = unique_tmp_path(&path);
+        fs::write(&leftover, b"partial").unwrap();
+        let listed = store.list_cids().unwrap();
+        assert_eq!(listed, vec![cid]);
+        assert!(is_tmp_name(
+            leftover.file_name().unwrap().to_string_lossy().as_ref()
+        ));
+    }
+
+    #[test]
+    fn exclusive_lock_blocks_other_process() {
+        // Child probe: parent holds the lock; this process must fail to acquire it.
+        if std::env::var_os("ARXOS_LOCK_CHILD").is_some() {
+            let path = std::env::var("ARXOS_LOCK_PATH").expect("ARXOS_LOCK_PATH");
+            let store = ObjectStore::open(path).unwrap();
+            let blocked = store.try_lock_exclusive().is_err();
+            std::process::exit(if blocked { 0 } else { 1 });
+        }
+
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let _guard = store.try_lock_exclusive().unwrap();
+
+        let exe = std::env::current_exe().expect("current_exe");
+        let status = std::process::Command::new(exe)
+            .arg("--exact")
+            .arg("store::tests::exclusive_lock_blocks_other_process")
+            .env("ARXOS_LOCK_CHILD", "1")
+            .env("ARXOS_LOCK_PATH", dir.path())
+            .status()
+            .expect("spawn lock probe");
+        assert!(
+            status.success(),
+            "second process should fail try_lock_exclusive while parent holds WriteGuard; {status}"
+        );
     }
 
     #[test]

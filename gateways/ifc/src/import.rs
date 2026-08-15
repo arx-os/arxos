@@ -10,7 +10,6 @@ use arxos_core::object::{
 };
 use arxos_core::repository::BuildingRepository;
 use arxos_core::root::RootBuilder;
-use arxos_core::store::ObjectStore;
 use arxos_core::{AdoptOptions, Cid, Keypair};
 
 use crate::error::{IfcError, Result};
@@ -41,7 +40,6 @@ fn import_file(
     file: &IfcFile,
     sign: Option<&Keypair>,
 ) -> Result<ImportResult> {
-    let store = ObjectStore::open(store_path.as_ref())?;
     let source_root = file.comments.iter().find_map(|c| {
         c.split_whitespace()
             .find(|t| t.starts_with("arxos_root="))
@@ -67,7 +65,7 @@ fn import_file(
         })
         .unwrap_or_else(BuildingId::new);
 
-    let mut object_cids = Vec::new();
+    let mut pending: Vec<Object> = Vec::new();
     let mut building_seen = false;
 
     // Floors: IfcBuildingStorey
@@ -172,7 +170,7 @@ fn import_file(
         if let Some(kp) = sign {
             obj.sign(kp)?;
         }
-        object_cids.push(store.put(&obj)?);
+        pending.push(obj);
     }
 
     if !building_seen {
@@ -185,10 +183,14 @@ fn import_file(
         if let Some(kp) = sign {
             obj.sign(kp)?;
         }
-        object_cids.push(store.put(&obj)?);
+        pending.push(obj);
     }
 
     let mut repo = BuildingRepository::open_or_follow(store_path.as_ref(), &building_id, None)?;
+    let mut object_cids = Vec::new();
+    for obj in pending {
+        object_cids.push(repo.put_object(&obj)?);
+    }
     let mut set: BTreeSet<Cid> = object_cids.iter().copied().collect();
     if let Ok(cids) = repo.head_object_cids() {
         set.extend(cids);
@@ -198,13 +200,12 @@ fn import_file(
         .map(|d| d.as_secs())
         .unwrap_or(0);
 
-    let kp_owned = sign.cloned().or_else(|| repo.keypair().cloned());
-    let root_cid = if let Some(kp) = kp_owned.as_ref() {
+    let root_cid = if let Some(kp) = sign.or_else(|| repo.keypair()) {
         let (root_obj, root_cid) = RootBuilder::new(building_id.clone(), ts)
             .objects(set)
             .message("ifc import")
             .build_signed(kp)?;
-        store.put(&root_obj)?;
+        repo.put_object(&root_obj)?;
         repo.adopt_root(root_cid)?;
         Some(root_cid)
     } else {
@@ -212,7 +213,7 @@ fn import_file(
             arxos_core::root::RootBody::new(building_id.clone(), repo.head_root(), set, ts);
         body.message = Some("ifc import".into());
         let obj = body.into_object(ts);
-        let root_cid = store.put(&obj)?;
+        let root_cid = repo.put_object(&obj)?;
         repo.adopt_root_with_options(
             root_cid,
             &AdoptOptions {
